@@ -9,6 +9,7 @@ import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { DragGhost } from "./DragGhost";
 import type { DragState } from "./drag";
+import { loadDraft, localStorageStore, saveDraft, type DraftScope, type DraftStore } from "./draft";
 import {
   canUndo,
   init,
@@ -26,6 +27,7 @@ import "./ranking.css";
 interface RankingBoardProps {
   list: PublishedList;
   hitTest?: HitTest;
+  store?: DraftStore;
 }
 
 type PointerDownFor = (item: number) => (event: ReactPointerEvent<HTMLElement>) => void;
@@ -66,12 +68,28 @@ function Tile({ list, item, selected, lifted, dispatch, onPointerDown }: TilePro
   );
 }
 
-function useBoard(list: PublishedList) {
-  return useReducer(reduce, list, (l) => init(l.tiers.length, l.items.length));
+const scopeOf = (list: PublishedList): DraftScope => ({
+  id: list.id,
+  updatedAt: list.updatedAt,
+  itemCount: list.items.length,
+  tierCount: list.tiers.length,
+});
+
+function useBoard(list: PublishedList, store: DraftStore) {
+  const scope = scopeOf(list);
+  const [state, dispatch] = useReducer(reduce, list, (l) =>
+    init(l.tiers.length, l.items.length, loadDraft(store, scope)),
+  );
+  useEffect(() => {
+    saveDraft(store, scope, state.rows);
+    // Only the rows are worth keeping; scope fields are derived from the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.rows, store, list.id, list.updatedAt, list.items.length, list.tiers.length]);
+  return [state, dispatch] as const;
 }
 
-export function RankingBoard({ list, hitTest }: RankingBoardProps) {
-  const [state, dispatch] = useBoard(list);
+export function RankingBoard({ list, hitTest, store = localStorageStore }: RankingBoardProps) {
+  const [state, dispatch] = useBoard(list, store);
   const drag = useTileDrag(dispatch, hitTest);
   const lifted = drag.state.phase === "dragging" ? drag.state.item : null;
   const selected = state.selected;
