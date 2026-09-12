@@ -29,7 +29,10 @@ export function getFirebaseStorage(): FirebaseStorage {
 
 function appCheckFor(env: Env): AppCheck | null {
   if (appCheck !== undefined) return appCheck;
-  if (env.recaptchaSiteKey === null) {
+  // Localhost is not on the reCAPTCHA key's domains, so in development App
+  // Check runs only through a registered debug token.
+  const missingDebugToken = env.isDev && env.appCheckDebugToken === null;
+  if (env.recaptchaSiteKey === null || missingDebugToken) {
     appCheck = null;
     return appCheck;
   }

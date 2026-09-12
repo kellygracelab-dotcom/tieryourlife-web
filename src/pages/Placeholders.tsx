@@ -15,11 +15,6 @@ function Opening({ text, id }: { text: string; id: string }) {
   );
 }
 
-export function ListPage() {
-  const { id = "" } = useParams();
-  return <Opening text={strings.list.opening} id={id} />;
-}
-
 export function RankingPage() {
   const { code = "" } = useParams();
   return <Opening text={strings.ranking.opening} id={code} />;
