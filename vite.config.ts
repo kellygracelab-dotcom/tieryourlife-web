@@ -13,7 +13,7 @@ const proxyFor = (functionsBase: string) => {
     changeOrigin: true,
     rewrite: (path: string) => `/${name}${path}`,
   });
-  return { "/lists": to("lists"), "/3/search": to("tmdb") };
+  return { "/lists": to("lists"), "/3/search": to("tmdb"), "/api": to("web") };
 };
 
 export default defineConfig(({ mode }) => {

@@ -1,0 +1,21 @@
+{
+  "name": "tieryourlife-web-functions",
+  "description": "Server side of the TierYourLife website: keeps the rankings visitors make and serves the pages that need OpenGraph tags",
+  "private": true,
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc -p tsconfig.test.json && node --test \"lib-test/test/**/*.test.js\"",
+    "check": "npm run build && npm test"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

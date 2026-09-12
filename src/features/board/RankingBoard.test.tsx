@@ -1,9 +1,13 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { ApiFailure } from "../../api/errors";
+import { MemoryRouter } from "react-router";
 import type { PublishedList } from "../../api/types";
 import type { DraftStore } from "./draft";
 import { RankingBoard } from "./RankingBoard";
+
+vi.mock("../../lib/api", () => ({ keepRanking: vi.fn(), noteTake: vi.fn() }));
 
 const list: PublishedList = {
   id: "abc",
@@ -45,7 +49,11 @@ const progress = () => screen.getByText(/of 3 placed/);
 
 describe("RankingBoard", () => {
   it("starts empty whatever the author did, with every card in the pool", () => {
-    render(<RankingBoard list={list} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
     expect(progress()).toHaveTextContent("0 of 3 placed");
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("3 items left");
     expect(within(tierList("S")).queryAllByRole("button")).toHaveLength(0);
@@ -54,7 +62,11 @@ describe("RankingBoard", () => {
   });
 
   it("places a card by tapping it and then a tier", async () => {
-    render(<RankingBoard list={list} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
     await userEvent.click(card("Ex Machina"));
     expect(card("Ex Machina")).toHaveAttribute("aria-pressed", "true");
     expect(
@@ -70,7 +82,11 @@ describe("RankingBoard", () => {
   });
 
   it("places the selected card with a number key and clears with Escape", async () => {
-    render(<RankingBoard list={list} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
     await userEvent.click(card("The Witch"));
     await userEvent.keyboard("2");
     expect(within(tierList("A")).getByRole("button", { name: "The Witch" })).toBeInTheDocument();
@@ -83,7 +99,11 @@ describe("RankingBoard", () => {
   });
 
   it("moves a placed card to another tier and undoes with the button or Ctrl+Z", async () => {
-    render(<RankingBoard list={list} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
     await userEvent.click(card("Ex Machina"));
     await userEvent.keyboard("1");
     await userEvent.click(within(tierList("S")).getByRole("button", { name: "Ex Machina" }));
@@ -112,7 +132,11 @@ describe("RankingBoard", () => {
   });
 
   it("places a card by tapping anywhere on the tier row", async () => {
-    render(<RankingBoard list={list} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
     await userEvent.click(card("Climax"));
     await userEvent.click(tierList("A"));
     expect(within(tierList("A")).getByRole("button", { name: "Climax" })).toBeInTheDocument();
@@ -122,13 +146,21 @@ describe("RankingBoard", () => {
 
   it("keeps the placements in the store and picks them up again", async () => {
     const store = memoryStore();
-    const { unmount } = render(<RankingBoard list={list} store={store} />);
+    const { unmount } = render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={store} />
+      </MemoryRouter>,
+    );
     await userEvent.click(card("Ex Machina"));
     await userEvent.keyboard("1");
     expect(store.data.get("tyl:draft:abc")).toContain('"rows":[[0],[]]');
     unmount();
 
-    render(<RankingBoard list={list} store={store} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={store} />
+      </MemoryRouter>,
+    );
     expect(progress()).toHaveTextContent("1 of 3 placed");
     expect(within(tierList("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
   });
@@ -139,12 +171,68 @@ describe("RankingBoard", () => {
       "tyl:draft:abc",
       JSON.stringify({ listId: "abc", updatedAt: 999, itemCount: 3, rows: [[0], [1]] }),
     );
-    render(<RankingBoard list={list} store={store} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={store} />
+      </MemoryRouter>,
+    );
     expect(progress()).toHaveTextContent("0 of 3 placed");
   });
 
+  it("keeps the ranking on Finish, locks the board and offers the link", async () => {
+    const store = memoryStore();
+    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
+    const take = vi.fn(async () => undefined);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={store} keep={keep} take={take} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("button", { name: "Finish" })).toBeDisabled();
+
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("1");
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+
+    expect(keep).toHaveBeenCalledWith("abc", [[0], []]);
+    expect(await screen.findByRole("status")).toHaveTextContent("Your ranking is live at");
+    expect(take).toHaveBeenCalledWith("abc");
+    expect(store.data.get("tyl:ranking:abc")).toContain('"code":"abcdefgh"');
+    expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
+    expect(card("The Witch")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Change ranking" }));
+    expect(screen.getByRole("button", { name: "Finish" })).toBeEnabled();
+    expect(card("The Witch")).toBeEnabled();
+  });
+
+  it("keeps the board editable when saving fails, and tries again", async () => {
+    const keep = vi
+      .fn<() => Promise<{ code: string; claimToken: string }>>()
+      .mockRejectedValueOnce(new ApiFailure({ kind: "offline" }))
+      .mockResolvedValueOnce({ code: "zzzzzzzz", claimToken: "t" });
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={memoryStore()} keep={keep} take={async () => {}} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("Climax"));
+    await userEvent.keyboard("2");
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("No connection");
+    expect(card("Ex Machina")).toBeEnabled();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("zzzzzzzz");
+  });
+
   it("shows the number of each of the first nine tiers on its band", () => {
-    render(<RankingBoard list={list} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
     const s = tierList("S").parentElement!;
     expect(s.querySelector(".tier__key")).toHaveTextContent("1");
   });

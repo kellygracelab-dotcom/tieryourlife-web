@@ -18,8 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm run coverage && npm run build",
-    "deploy": "npm run check && firebase deploy --only hosting:web",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run coverage && npm run build && npm --prefix functions run check",
+    "deploy": "npm run check && firebase deploy --only hosting:web,functions:web",
     "dev:live": "vite --mode live"
   },
   "dependencies": {

@@ -23,6 +23,12 @@ describe("firebase.json", () => {
     }
   });
 
+  it("owns exactly one functions codebase, named web, and never the backend's", () => {
+    const codebases = config.functions as { codebase: string; source: string }[];
+    expect(codebases.map((c) => c.codebase)).toEqual(["web"]);
+    expect(codebases[0]?.source).toBe("functions");
+  });
+
   it("deploys one site, the web target, from the Vite build", () => {
     expect(hosting).toHaveLength(1);
     expect(hosting[0]?.target).toBe("web");
@@ -36,7 +42,8 @@ describe("firebase.json", () => {
 
     expect(rewrites[byFunction("lists")]?.source).toBe("/lists{,/**}");
     expect(rewrites[byFunction("tmdb")]?.source).toBe("/3/search/**");
-    for (const id of ["lists", "tmdb"]) {
+    expect(rewrites[byFunction("web")]?.source).toBe("/api/**");
+    for (const id of ["lists", "tmdb", "web"]) {
       expect(rewrites[byFunction(id)]?.function?.region).toBe("europe-west1");
       expect(byFunction(id)).toBeLessThan(catchAll);
     }

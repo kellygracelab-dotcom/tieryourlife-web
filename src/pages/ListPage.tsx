@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import type { ApiError } from "../api/errors";
+import { arrange } from "../features/board/arrange";
 import { RankingBoard } from "../features/board/RankingBoard";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { useList } from "../features/list/useList";
@@ -98,7 +99,12 @@ export function ListPage() {
       {view === "yours" ? (
         <RankingBoard key={list.id} list={list} />
       ) : (
-        <ReadOnlyBoard list={list} />
+        <ReadOnlyBoard
+          label={strings.board.authorsVersion}
+          tiers={list.tiers}
+          items={list.items}
+          {...arrange(list)}
+        />
       )}
       <p className="list-page__foot">
         <Link to="/">{strings.list.home}</Link>

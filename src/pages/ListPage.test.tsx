@@ -7,7 +7,12 @@ import type { PublishedList } from "../api/types";
 import { routes } from "../app/routes";
 
 const mocks = vi.hoisted(() => ({ loadList: vi.fn<(id: string) => Promise<PublishedList>>() }));
-vi.mock("../lib/api", () => ({ loadList: mocks.loadList }));
+vi.mock("../lib/api", () => ({
+  loadList: mocks.loadList,
+  keepRanking: vi.fn(),
+  noteTake: vi.fn(),
+  loadRanking: vi.fn(),
+}));
 
 const list: PublishedList = {
   id: "abc",

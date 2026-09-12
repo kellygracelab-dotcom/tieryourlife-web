@@ -27,6 +27,7 @@ dist-ssr
 coverage
 .firebase
 functions/lib
+functions/lib-test
 firebase-debug.log
 
 # Working notes with personal details; the public roadmap lives in the README

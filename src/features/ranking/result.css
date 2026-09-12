@@ -1,0 +1,39 @@
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.result p {
+  font: var(--text-lead);
+  color: var(--ink);
+}
+
+.result--busy p,
+.result__note {
+  color: var(--ink-dim);
+}
+
+.result--failed {
+  box-shadow: inset 0 0 0 1px var(--error);
+}
+
+.result__lead {
+  font-size: 15px;
+}
+
+.result__address {
+  font: 500 20px/1.3 var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.result__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
