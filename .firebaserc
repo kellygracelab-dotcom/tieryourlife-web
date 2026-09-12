@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "tieryourlife"
+  },
+  "targets": {
+    "tieryourlife": {
+      "hosting": {
+        "web": ["tieryourlife-web"]
+      }
+    }
+  }
+}

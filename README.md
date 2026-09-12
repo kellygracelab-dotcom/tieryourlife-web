@@ -30,6 +30,24 @@ npm run check
 
 `check` is what CI runs: typecheck, lint, formatting, tests with coverage, build.
 
+## Deploying
+
+Deploys are run by hand:
+
+```bash
+npm run deploy
+```
+
+That runs the full check first and then `firebase deploy --only hosting:web`, which publishes the build
+to the second Hosting site of the project, `tieryourlife-web.web.app`. Never run a bare `firebase deploy`
+here or in the backend repository: the backend's `firebase.json` carries an untargeted hosting block that
+would overwrite the main site with its three static pages. Rolling back is the release history in the
+Firebase console, Hosting section.
+
+`/lists` and `/3/search` are rewritten to the backend's Cloud Functions, so the browser talks to its own
+origin and never runs into CORS. In development, `vite` proxies the same two paths to the backend's
+Firebase emulator on port 5001.
+
 ## Working agreement
 
 - Branch, pull request, green CI, squash-merge, delete the branch. `main` is the only long-lived branch.

@@ -1,0 +1,30 @@
+{
+  "hosting": [
+    {
+      "target": "web",
+      "public": "dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "rewrites": [
+        {
+          "source": "/lists{,/**}",
+          "function": { "functionId": "lists", "region": "europe-west1" }
+        },
+        {
+          "source": "/3/search/**",
+          "function": { "functionId": "tmdb", "region": "europe-west1" }
+        },
+        { "source": "**", "destination": "/index.html" }
+      ],
+      "headers": [
+        {
+          "source": "/assets/**",
+          "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+        },
+        {
+          "source": "/index.html",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        }
+      ]
+    }
+  ]
+}
