@@ -67,7 +67,7 @@ describe("ResultBar", () => {
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
 
-    show({ status: "failed", error: { kind: "unknown", status: 500 } });
+    show({ status: "failed", error: { kind: "unavailable" } });
     expect(screen.getAllByRole("alert")[1]).toHaveTextContent("Could not save");
 
     show({ status: "failed", error: { kind: "notFound" } });

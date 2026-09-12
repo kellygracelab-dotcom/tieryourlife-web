@@ -79,7 +79,7 @@ describe("ListPage", () => {
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
   });
 
-  it.each<ApiError>([{ kind: "notFound" }, { kind: "unavailable" }])(
+  it.each<ApiError>([{ kind: "notFound" }])(
     "says the list is not available on %o, without blame",
     async (error) => {
       refuse(error);
@@ -113,12 +113,15 @@ describe("ListPage", () => {
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Every A24 film");
   });
 
-  it("names any other failure and still offers a retry", async () => {
-    refuse({ kind: "unknown", status: 500 });
-    open();
-    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
-      "Could not open this list",
-    );
-    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
-  });
+  it.each<ApiError>([{ kind: "unknown", status: 500 }, { kind: "unavailable" }])(
+    "names any other failure and still offers a retry: %o",
+    async (error) => {
+      refuse(error);
+      open();
+      expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
+        "Could not open this list",
+      );
+      expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    },
+  );
 });

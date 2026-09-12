@@ -6,12 +6,32 @@ import {
   dayKey,
   decideListId,
   decideRows,
+  fromStoredRows,
   isCode,
   makeCode,
   MIN_WRITE_GAP_MS,
   snapshotOf,
   tooSoon,
+  toStoredRows,
 } from "../src/ranking";
+
+describe("stored rows", () => {
+  it("wrap each row in a map, because Firestore refuses nested arrays, and unwrap it", () => {
+    const stored = toStoredRows([[2, 0], [], [1]]);
+    assert.deepEqual(stored, [{ items: [2, 0] }, { items: [] }, { items: [1] }]);
+    assert.deepEqual(fromStoredRows(stored), [[2, 0], [], [1]]);
+  });
+
+  it("read anything odd as empty rows rather than throwing", () => {
+    assert.deepEqual(fromStoredRows(null), []);
+    assert.deepEqual(fromStoredRows([null, {}, { items: "x" }, { items: [1, "a", 2.5] }]), [
+      [],
+      [],
+      [],
+      [1],
+    ]);
+  });
+});
 
 describe("decideRows", () => {
   it("accepts rows that place each card at most once", () => {
