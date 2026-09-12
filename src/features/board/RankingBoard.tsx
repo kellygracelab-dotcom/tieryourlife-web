@@ -10,6 +10,7 @@ import type { PublishedList } from "../../api/types";
 import { keepRanking, noteTake } from "../../lib/api";
 import { writeKept } from "../ranking/kept";
 import { ResultBar, type FinishState } from "../ranking/ResultBar";
+import { downloadShare, type Share } from "../ranking/shareImage";
 import { errorOf } from "../list/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -38,6 +39,7 @@ interface RankingBoardProps {
   store?: DraftStore;
   keep?: Keep;
   take?: (listId: string) => Promise<void>;
+  share?: Share;
 }
 
 type PointerDownFor = (item: number) => (event: ReactPointerEvent<HTMLElement>) => void;
@@ -71,7 +73,13 @@ function Tile({ list, item, selected, lifted, locked, dispatch, onPointerDown }:
         onPointerDown={locked ? undefined : onPointerDown}
       >
         {card.imageUrl !== null ? (
-          <img src={card.imageUrl} alt="" loading="lazy" draggable={false} />
+          <img
+            src={card.imageUrl}
+            alt=""
+            loading="lazy"
+            draggable={false}
+            crossOrigin="anonymous"
+          />
         ) : (
           <span className="tile__name">{card.title}</span>
         )}
@@ -106,6 +114,7 @@ export function RankingBoard({
   store = localStorageStore,
   keep = keepRanking,
   take = noteTake,
+  share = downloadShare,
 }: RankingBoardProps) {
   const [state, dispatch] = useBoard(list, store);
   const [finish, setFinish] = useState<FinishState>({ status: "idle" });
@@ -179,6 +188,7 @@ export function RankingBoard({
         finish={finish}
         onRetry={onFinish}
         onChange={() => setFinish({ status: "idle" })}
+        download={(address) => share(list, state.rows, address)}
       />
 
       <div className="board">

@@ -15,7 +15,7 @@ function Tile({ item }: { item: PublishedItem }) {
   return (
     <li className="tile" title={item.title}>
       {item.imageUrl !== null ? (
-        <img src={item.imageUrl} alt={item.title} loading="lazy" />
+        <img src={item.imageUrl} alt={item.title} loading="lazy" crossOrigin="anonymous" />
       ) : (
         <span className="tile__name">{item.title}</span>
       )}

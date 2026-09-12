@@ -17,7 +17,7 @@ export function DragGhost({ state, items }: DragGhostProps) {
       aria-hidden="true"
     >
       {card.imageUrl !== null ? (
-        <img src={card.imageUrl} alt="" />
+        <img src={card.imageUrl} alt="" crossOrigin="anonymous" />
       ) : (
         <span className="tile__name">{card.title}</span>
       )}
