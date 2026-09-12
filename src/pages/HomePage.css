@@ -1,8 +1,36 @@
 .home {
-  max-width: var(--width-reading);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-width: var(--width-board);
   margin: 0 auto;
   padding-top: var(--space-8);
+}
+
+.home__intro {
+  max-width: var(--width-reading);
+  width: 100%;
+  margin: 0 auto;
   text-align: center;
+}
+
+.home__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+
+.home__heading h2 {
+  margin: 0;
+  font: 400 22px/28px var(--font);
+}
+
+.home__heading p {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
 }
 
 .home__hero {

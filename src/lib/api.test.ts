@@ -17,7 +17,7 @@ vi.mock("./preload", () => ({
   preloadedRanking: (code: string) => (code === "embedded" ? { code: "embedded" } : null),
 }));
 
-import { api, keepRanking, loadList, loadRanking, noteTake } from "./api";
+import { api, keepRanking, loadFeed, loadList, loadRanking, noteTake } from "./api";
 
 describe("api", () => {
   it("is one client built on the Firebase token providers", () => {
@@ -34,6 +34,13 @@ describe("api", () => {
     await expect(loadList("embedded")).resolves.toEqual({ id: "embedded", title: "From HTML" });
     await expect(loadRanking("embedded")).resolves.toEqual({ code: "embedded" });
     expect(mocks.request).not.toHaveBeenCalled();
+  });
+
+  it("loads a page of the feed for a query", async () => {
+    await loadFeed({ category: "anime", sort: "popular" });
+    expect(mocks.request).toHaveBeenCalledWith("GET", "/lists", {
+      query: { category: "anime", sort: "popular" },
+    });
   });
 
   it("loads a ranking and keeps one", async () => {

@@ -1,0 +1,9 @@
+.category {
+  max-width: var(--width-board);
+  margin: 0 auto;
+}
+
+.category__title {
+  margin: var(--space-4) 0 var(--space-5);
+  font: var(--text-headline);
+}

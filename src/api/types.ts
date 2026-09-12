@@ -12,6 +12,9 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
+export const isCategory = (value: string): value is Category =>
+  (CATEGORIES as readonly string[]).includes(value);
+
 export type FeedSort = "recent" | "popular";
 
 export interface ListSummary {
