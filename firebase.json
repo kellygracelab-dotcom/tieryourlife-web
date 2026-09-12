@@ -26,6 +26,14 @@
           "source": "/api/**",
           "function": { "functionId": "web", "region": "europe-west1" }
         },
+        {
+          "source": "/l/**",
+          "function": { "functionId": "web", "region": "europe-west1" }
+        },
+        {
+          "source": "/r/**",
+          "function": { "functionId": "web", "region": "europe-west1" }
+        },
         { "source": "**", "destination": "/index.html" }
       ],
       "headers": [

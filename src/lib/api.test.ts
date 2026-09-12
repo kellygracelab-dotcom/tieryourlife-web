@@ -11,6 +11,11 @@ const mocks = vi.hoisted(() => {
 
 vi.mock("../api/client", () => ({ createApiClient: mocks.createApiClient }));
 vi.mock("./firebase", () => ({ tokenProviders: mocks.tokenProviders }));
+vi.mock("./preload", () => ({
+  preloadedList: (id: string) =>
+    id === "embedded" ? { id: "embedded", title: "From HTML" } : null,
+  preloadedRanking: (code: string) => (code === "embedded" ? { code: "embedded" } : null),
+}));
 
 import { api, keepRanking, loadList, loadRanking, noteTake } from "./api";
 
@@ -22,6 +27,13 @@ describe("api", () => {
   it("loads a list through that client", async () => {
     await expect(loadList("abc")).resolves.toEqual({ id: "abc" });
     expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/abc");
+  });
+
+  it("takes what the page already carries without asking the network", async () => {
+    mocks.request.mockClear();
+    await expect(loadList("embedded")).resolves.toEqual({ id: "embedded", title: "From HTML" });
+    await expect(loadRanking("embedded")).resolves.toEqual({ code: "embedded" });
+    expect(mocks.request).not.toHaveBeenCalled();
   });
 
   it("loads a ranking and keeps one", async () => {

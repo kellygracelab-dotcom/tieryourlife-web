@@ -42,7 +42,11 @@ describe("firebase.json", () => {
 
     expect(rewrites[byFunction("lists")]?.source).toBe("/lists{,/**}");
     expect(rewrites[byFunction("tmdb")]?.source).toBe("/3/search/**");
-    expect(rewrites[byFunction("web")]?.source).toBe("/api/**");
+    expect(rewrites.filter((r) => r.function?.functionId === "web").map((r) => r.source)).toEqual([
+      "/api/**",
+      "/l/**",
+      "/r/**",
+    ]);
     for (const id of ["lists", "tmdb", "web"]) {
       expect(rewrites[byFunction(id)]?.function?.region).toBe("europe-west1");
       expect(byFunction(id)).toBeLessThan(catchAll);
