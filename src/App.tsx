@@ -1,8 +1,8 @@
+import { createBrowserRouter, RouterProvider } from "react-router";
+import { routes } from "./app/routes";
+
+const router = createBrowserRouter(routes);
+
 export function App() {
-  return (
-    <main>
-      <h1>TierYourLife</h1>
-      <p>Rank anything.</p>
-    </main>
-  );
+  return <RouterProvider router={router} />;
 }

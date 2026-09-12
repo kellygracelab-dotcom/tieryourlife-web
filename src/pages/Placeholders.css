@@ -1,0 +1,26 @@
+.opening {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: var(--width-reading);
+  margin: 0 auto;
+}
+
+.opening__title {
+  font: var(--text-headline);
+}
+
+.opening__text {
+  font: var(--text-lead);
+  color: var(--ink-dim);
+}
+
+.opening__id {
+  font: var(--text-small);
+  font-family: var(--font-mono);
+  color: var(--ink-faint);
+}
+
+.opening__row {
+  border-radius: var(--radius-card);
+}

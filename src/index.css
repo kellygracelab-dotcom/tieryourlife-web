@@ -1,10 +1,4 @@
-:root {
-  color-scheme: light;
-  --ink: #1a1a1a;
-  --dim: rgba(0, 0, 0, 0.62);
-  --paper: #e9e7e2;
-  --link: #4a5baa;
-}
+@import "./ui/tokens.css";
 
 *,
 *::before,
@@ -12,15 +6,16 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
   background: var(--paper);
   color: var(--ink);
-  font:
-    400 15px/1.5 Roboto,
-    system-ui,
-    sans-serif;
+  font: var(--text-body);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -29,17 +24,38 @@ a {
   text-decoration: none;
 }
 
-main {
-  padding: 32px;
+a:hover {
+  color: var(--link-hover);
 }
 
-h1 {
-  margin: 0 0 8px;
-  font-size: 22px;
-  font-weight: 500;
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
+button {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
 p {
   margin: 0;
-  color: var(--dim);
+}
+
+.ms {
+  font-family: "Material Symbols Outlined";
+  font-weight: 400;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  direction: ltr;
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
 }

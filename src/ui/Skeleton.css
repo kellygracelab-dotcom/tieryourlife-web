@@ -1,0 +1,22 @@
+.skeleton {
+  display: block;
+  border-radius: var(--radius-tile);
+  background: linear-gradient(90deg, var(--hover) 25%, rgba(0, 0, 0, 0.1) 37%, var(--hover) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shine 1.4s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+@keyframes skeleton-shine {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
