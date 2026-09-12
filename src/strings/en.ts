@@ -29,10 +29,22 @@ export const en = {
     offlineBody: "Nothing was lost. Try again once you are back online.",
     failedTitle: "Could not open this list",
     failedBody: "Something went wrong on the way. Try again.",
+    views: "Whose arrangement to show",
   },
   board: {
     authorsVersion: "Author's version",
     unranked: { one: "{n} unranked", other: "{n} unranked" },
+  },
+  rank: {
+    yours: "Your ranking",
+    ownCopy: "you are ranking your own copy",
+    placed: "{n} of {total} placed",
+    left: { one: "{n} item left", other: "{n} items left" },
+    hintPick: "Pick a card, then tap a tier or press {keys}",
+    hintPlace: "Tap a tier to place {name}, or press its number",
+    placeIn: "Place {name} in {tier}",
+    undo: "Undo",
+    finish: "Finish",
   },
   ranking: {
     opening: "Opening the ranking…",

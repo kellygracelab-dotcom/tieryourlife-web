@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import type { ApiError } from "../api/errors";
+import { RankingBoard } from "../features/board/RankingBoard";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { useList } from "../features/list/useList";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
+import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import "./ListPage.css";
@@ -54,9 +57,12 @@ function Trouble({ error, retry }: { error: ApiError; retry: () => void }) {
   );
 }
 
+type View = "yours" | "authors";
+
 export function ListPage() {
   const { id = "" } = useParams();
   const { state, retry } = useList(id);
+  const [view, setView] = useState<View>("yours");
 
   if (state.status === "loading") return <Loading />;
   if (state.status === "error") return <Trouble error={state.error} retry={retry} />;
@@ -71,7 +77,7 @@ export function ListPage() {
           <p className="list-head__meta">
             {fill(strings.list.by, { name: list.authorName })}
             {" · "}
-            {plural(strings.card.items, list.itemCount)}
+            {strings.rank.ownCopy}
             {" · "}
             {plural(strings.card.rankings, list.takeCount)}
           </p>
@@ -81,8 +87,15 @@ export function ListPage() {
           {address}
         </span>
       </header>
-      <p className="list-page__status">{strings.board.authorsVersion}</p>
-      <ReadOnlyBoard list={list} />
+      <div className="list-page__views" role="group" aria-label={strings.list.views}>
+        <Chip selected={view === "yours"} onClick={() => setView("yours")}>
+          {strings.rank.yours}
+        </Chip>
+        <Chip selected={view === "authors"} onClick={() => setView("authors")}>
+          {strings.board.authorsVersion}
+        </Chip>
+      </div>
+      {view === "yours" ? <RankingBoard list={list} /> : <ReadOnlyBoard list={list} />}
       <p className="list-page__foot">
         <Link to="/">{strings.list.home}</Link>
       </p>

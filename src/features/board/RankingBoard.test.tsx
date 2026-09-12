@@ -1,0 +1,117 @@
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
+import type { PublishedList } from "../../api/types";
+import { RankingBoard } from "./RankingBoard";
+
+const list: PublishedList = {
+  id: "abc",
+  title: "Every A24 film, ranked",
+  authorUid: "u1",
+  authorName: "danylo",
+  authorPhotoUrl: null,
+  category: "film_tv",
+  itemCount: 3,
+  coverImageUrl: null,
+  previewImages: [],
+  tierColors: [],
+  updatedAt: 0,
+  takeCount: 0,
+  tiers: [
+    { label: "S", caption: "Masterpiece", colorLight: "#b03a32", colorDark: "#f1948c" },
+    { label: "A", caption: null, colorLight: "#c06a25", colorDark: "#e9a867" },
+  ],
+  items: [
+    { title: "Ex Machina", imageUrl: "https://img/ex.jpg", tierIndex: 0 },
+    { title: "The Witch", imageUrl: null, tierIndex: 1 },
+    { title: "Climax", imageUrl: null, tierIndex: null },
+  ],
+};
+
+const tierList = (label: string) => screen.getByRole("list", { name: label });
+const card = (title: string) => screen.getByRole("button", { name: title });
+const progress = () => screen.getByText(/of 3 placed/);
+
+describe("RankingBoard", () => {
+  it("starts empty whatever the author did, with every card in the pool", () => {
+    render(<RankingBoard list={list} />);
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("3 items left");
+    expect(within(tierList("S")).queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Finish" })).toBeDisabled();
+  });
+
+  it("places a card by tapping it and then a tier", async () => {
+    render(<RankingBoard list={list} />);
+    await userEvent.click(card("Ex Machina"));
+    expect(card("Ex Machina")).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByText("Tap a tier to place Ex Machina, or press its number"),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Place Ex Machina in S" }));
+
+    expect(within(tierList("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
+    expect(progress()).toHaveTextContent("1 of 3 placed");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2 items left");
+    expect(screen.getByText("Pick a card, then tap a tier or press 1–2")).toBeInTheDocument();
+  });
+
+  it("places the selected card with a number key and clears with Escape", async () => {
+    render(<RankingBoard list={list} />);
+    await userEvent.click(card("The Witch"));
+    await userEvent.keyboard("2");
+    expect(within(tierList("A")).getByRole("button", { name: "The Witch" })).toBeInTheDocument();
+
+    await userEvent.click(card("Climax"));
+    await userEvent.keyboard("{Escape}");
+    expect(card("Climax")).toHaveAttribute("aria-pressed", "false");
+    await userEvent.keyboard("1");
+    expect(progress()).toHaveTextContent("1 of 3 placed");
+  });
+
+  it("moves a placed card to another tier and undoes with the button or Ctrl+Z", async () => {
+    render(<RankingBoard list={list} />);
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("1");
+    await userEvent.click(within(tierList("S")).getByRole("button", { name: "Ex Machina" }));
+    await userEvent.keyboard("2");
+    expect(within(tierList("A")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(within(tierList("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
+
+    await userEvent.keyboard("{Control>}z{/Control}");
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+  });
+
+  it("does not steal number keys from a text field", async () => {
+    render(
+      <>
+        <input aria-label="note" />
+        <RankingBoard list={list} />
+      </>,
+    );
+    await userEvent.click(card("Climax"));
+    await userEvent.click(screen.getByRole("textbox", { name: "note" }));
+    await userEvent.keyboard("1");
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+  });
+
+  it("places a card by tapping anywhere on the tier row", async () => {
+    render(<RankingBoard list={list} />);
+    await userEvent.click(card("Climax"));
+    await userEvent.click(tierList("A"));
+    expect(within(tierList("A")).getByRole("button", { name: "Climax" })).toBeInTheDocument();
+    await userEvent.click(tierList("A"));
+    expect(progress()).toHaveTextContent("1 of 3 placed");
+  });
+
+  it("shows the number of each of the first nine tiers on its band", () => {
+    render(<RankingBoard list={list} />);
+    const s = tierList("S").parentElement!;
+    expect(s.querySelector(".tier__key")).toHaveTextContent("1");
+  });
+});

@@ -43,3 +43,10 @@ describe("firebase.json", () => {
     expect(rewrites[catchAll]?.destination).toBe("/index.html");
   });
 });
+
+describe("until the site moves to its final address", () => {
+  it("asks search engines to stay away from the temporary one", () => {
+    expect(readFileSync("public/robots.txt", "utf8")).toMatch(/Disallow: \/\s*$/);
+    expect(readFileSync("index.html", "utf8")).toContain('name="robots" content="noindex"');
+  });
+});
