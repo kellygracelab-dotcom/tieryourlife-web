@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm run coverage && npm run build && npm --prefix functions run check",
+    "e2e": "playwright test",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run coverage && npm run build && npm --prefix functions run check && npm run e2e",
     "deploy": "npm run check && firebase deploy --only hosting:web,functions:web",
     "dev:live": "vite --mode live"
   },
@@ -29,6 +30,7 @@
     "react-router": "^8.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",

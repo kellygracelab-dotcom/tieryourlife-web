@@ -12,7 +12,7 @@ and never to Firestore directly.
 - Vite, React 19, TypeScript. A single-page app served by Firebase Hosting.
 - Firebase JS SDK for Auth (Google and anonymous), App Check and Storage.
 - One small Cloud Functions codebase, `web`, for the pages that need OpenGraph tags and for saving rankings.
-- oxlint and Prettier for style, Vitest for tests, GitHub Actions for CI.
+- oxlint and Prettier for style, Vitest for tests, Playwright for two browser smokes, GitHub Actions for CI.
 
 ## Commands
 
@@ -28,7 +28,7 @@ npm run dev
 npm run check
 ```
 
-`check` is what CI runs: typecheck, lint, formatting, tests with coverage, build.
+`check` is what CI runs: typecheck, lint, formatting, tests with coverage, build, the functions' own checks, and the browser smokes (`npm run e2e`; once, `npx playwright install chromium`).
 
 ## Deploying
 

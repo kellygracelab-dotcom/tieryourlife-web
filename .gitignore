@@ -25,6 +25,8 @@ dist-ssr
 
 # Test and deploy output
 coverage
+test-results
+playwright-report
 .firebase
 functions/lib
 functions/lib-test
