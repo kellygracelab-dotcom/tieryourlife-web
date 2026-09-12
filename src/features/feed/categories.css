@@ -1,0 +1,68 @@
+.cats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.cat {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 96px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  overflow: hidden;
+  color: #ffffff;
+  font: 500 15px/20px var(--font);
+  text-decoration: none;
+  background-image:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.62)), var(--cat-art);
+  transition: filter 120ms ease;
+}
+
+.cat:hover,
+.cat:focus-visible {
+  color: #ffffff;
+  filter: brightness(1.08);
+}
+
+.cat__glyph {
+  font-size: 18px;
+}
+
+.cat--anime {
+  --cat-art: linear-gradient(135deg, #b03a32, #d4638a);
+}
+
+.cat--film_tv {
+  --cat-art: linear-gradient(135deg, #2c3a80, #4a5baa);
+}
+
+.cat--games {
+  --cat-art: linear-gradient(135deg, #3f7f55, #a98b1f);
+}
+
+.cat--music {
+  --cat-art: linear-gradient(135deg, #6a3d9a, #b03a32);
+}
+
+.cat--books {
+  --cat-art: linear-gradient(135deg, #c06a25, #a98b1f);
+}
+
+.cat--food {
+  --cat-art: linear-gradient(135deg, #d9822b, #b03a32);
+}
+
+.cat--sport {
+  --cat-art: linear-gradient(135deg, #3c6e99, #3f7f55);
+}
+
+.cat--people {
+  --cat-art: linear-gradient(135deg, #8a5a44, #c06a25);
+}
+
+.cat--other {
+  --cat-art: linear-gradient(135deg, #5d5c66, #8a8a99);
+}

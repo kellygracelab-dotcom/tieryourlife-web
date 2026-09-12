@@ -1,0 +1,42 @@
+.feed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feed li {
+  display: flex;
+}
+
+.feed .list-card {
+  flex: 1;
+  min-width: 0;
+}
+
+.feed__placeholder {
+  border-radius: var(--radius-card);
+}
+
+.feed__trouble,
+.feed__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+  font: var(--text-body);
+  color: var(--ink-dim);
+}
+
+.feed__more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  font: var(--text-small);
+  color: var(--error);
+}

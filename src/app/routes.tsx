@@ -1,4 +1,5 @@
 import type { RouteObject } from "react-router";
+import { CategoryPage } from "../pages/CategoryPage";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
 import { MePage, NotFoundPage } from "../pages/Placeholders";
@@ -11,6 +12,7 @@ export const routes: RouteObject[] = [
     element: <Shell />,
     children: [
       { index: true, element: <HomePage /> },
+      { path: "c/:category", element: <CategoryPage /> },
       { path: "l/:id", element: <ListPage /> },
       { path: "r/:code", element: <RankingPage /> },
       { path: "me", element: <MePage /> },

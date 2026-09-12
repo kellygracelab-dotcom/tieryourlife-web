@@ -8,6 +8,7 @@ import { routes } from "../app/routes";
 
 const mocks = vi.hoisted(() => ({ loadList: vi.fn<(id: string) => Promise<PublishedList>>() }));
 vi.mock("../lib/api", () => ({
+  loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: mocks.loadList,
   keepRanking: vi.fn(),
   noteTake: vi.fn(),
