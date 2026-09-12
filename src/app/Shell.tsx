@@ -1,10 +1,9 @@
 import { Link, Outlet } from "react-router";
+import { PLAY_URL } from "../lib/links";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import "./Shell.css";
-
-export const PLAY_URL = "https://play.google.com/store/apps/details?id=com.artiuillab.tieryourlife";
 
 export function Shell() {
   return (
