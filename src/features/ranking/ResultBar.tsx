@@ -16,15 +16,25 @@ interface ResultBarProps {
   finish: FinishState;
   onRetry: () => void;
   onChange: () => void;
+  download: (address: string) => Promise<void>;
   copy?: (text: string) => Promise<void>;
 }
+
+type ImageState = { code: string; status: "busy" | "failed" } | null;
 
 const clipboardCopy = (text: string): Promise<void> => navigator.clipboard.writeText(text);
 
 const addressOf = (code: string) => `${window.location.host}/r/${code}`;
 
-export function ResultBar({ finish, onRetry, onChange, copy = clipboardCopy }: ResultBarProps) {
+export function ResultBar({
+  finish,
+  onRetry,
+  onChange,
+  download,
+  copy = clipboardCopy,
+}: ResultBarProps) {
   const [copied, setCopied] = useState(false);
+  const [image, setImage] = useState<ImageState>(null);
 
   useEffect(() => {
     if (!copied) return;
@@ -70,6 +80,15 @@ export function ResultBar({ finish, onRetry, onChange, copy = clipboardCopy }: R
       () => setCopied(false),
     );
   };
+  const imageStatus = image?.code === finish.code ? image.status : null;
+  const onDownload = () => {
+    const code = finish.code;
+    setImage({ code, status: "busy" });
+    download(address).then(
+      () => setImage(null),
+      () => setImage({ code, status: "failed" }),
+    );
+  };
   return (
     <div className="result result--done" role="status">
       <p className="result__lead">
@@ -80,12 +99,25 @@ export function ResultBar({ finish, onRetry, onChange, copy = clipboardCopy }: R
         <Button variant="filled" icon={copied ? "check" : "link"} onClick={onCopy}>
           {copied ? strings.rank.copied : strings.rank.copy}
         </Button>
+        <Button
+          variant="tonal"
+          icon="download"
+          onClick={onDownload}
+          disabled={imageStatus === "busy"}
+        >
+          {imageStatus === "busy" ? strings.rank.downloading : strings.rank.download}
+        </Button>
         <Link className="btn btn--tonal" to={`/r/${finish.code}`}>
           <Icon name="open_in_new" className="btn__icon" />
           <span>{strings.rank.open}</span>
         </Link>
         <Button onClick={onChange}>{strings.rank.change}</Button>
       </div>
+      {imageStatus === "failed" && (
+        <p className="result__error" role="alert">
+          {strings.rank.downloadFailed}
+        </p>
+      )}
     </div>
   );
 }

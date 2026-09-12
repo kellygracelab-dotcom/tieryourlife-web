@@ -37,3 +37,8 @@
   gap: 8px;
   margin-top: 4px;
 }
+
+.result__error {
+  color: var(--error);
+  font-size: 14px;
+}

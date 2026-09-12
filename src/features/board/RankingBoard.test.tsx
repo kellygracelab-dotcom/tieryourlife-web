@@ -183,9 +183,10 @@ describe("RankingBoard", () => {
     const store = memoryStore();
     const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
     const take = vi.fn(async () => undefined);
+    const share = vi.fn(async () => undefined);
     render(
       <MemoryRouter>
-        <RankingBoard list={list} store={store} keep={keep} take={take} />
+        <RankingBoard list={list} store={store} keep={keep} take={take} share={share} />
       </MemoryRouter>,
     );
     expect(screen.getByRole("button", { name: "Finish" })).toBeDisabled();
@@ -201,6 +202,9 @@ describe("RankingBoard", () => {
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
     expect(card("The Witch")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Download image" }));
+    expect(share).toHaveBeenCalledWith(list, [[0], []], `${window.location.host}/r/abcdefgh`);
 
     await userEvent.click(screen.getByRole("button", { name: "Change ranking" }));
     expect(screen.getByRole("button", { name: "Finish" })).toBeEnabled();

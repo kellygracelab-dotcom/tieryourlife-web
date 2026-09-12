@@ -4,22 +4,37 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { ResultBar, type FinishState } from "./ResultBar";
 
-const show = (finish: FinishState, copy = vi.fn(async () => undefined)) => {
+const show = (
+  finish: FinishState,
+  copy = vi.fn(async () => undefined),
+  download: (address: string) => Promise<void> = vi.fn(async () => undefined),
+) => {
   const onRetry = vi.fn();
   const onChange = vi.fn();
   render(
     <MemoryRouter>
-      <ResultBar finish={finish} onRetry={onRetry} onChange={onChange} copy={copy} />
+      <ResultBar
+        finish={finish}
+        onRetry={onRetry}
+        onChange={onChange}
+        copy={copy}
+        download={download}
+      />
     </MemoryRouter>,
   );
-  return { onRetry, onChange, copy };
+  return { onRetry, onChange, copy, download };
 };
 
 describe("ResultBar", () => {
   it("is nothing before Finish and a status while saving", () => {
     const { container } = render(
       <MemoryRouter>
-        <ResultBar finish={{ status: "idle" }} onRetry={() => {}} onChange={() => {}} />
+        <ResultBar
+          finish={{ status: "idle" }}
+          onRetry={() => {}}
+          onChange={() => {}}
+          download={async () => {}}
+        />
       </MemoryRouter>,
     );
     expect(container).toBeEmptyDOMElement();
@@ -59,6 +74,30 @@ describe("ResultBar", () => {
     show({ status: "done", code: "zzzzzzzz" }, failing);
     await userEvent.click(screen.getAllByRole("button", { name: "Copy link" })[1]!);
     expect(screen.queryByRole("button", { name: "Copied" })).toBeNull();
+  });
+
+  it("makes the image on request, says so meanwhile, and names a failure", async () => {
+    let settle: () => void = () => {};
+    const download = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    show({ status: "done", code: "abcdefgh" }, undefined, download);
+    await userEvent.click(screen.getByRole("button", { name: "Download image" }));
+    expect(download).toHaveBeenCalledWith(`${window.location.host}/r/abcdefgh`);
+    expect(screen.getByRole("button", { name: "Making the image…" })).toBeDisabled();
+    await act(async () => settle());
+    expect(screen.getByRole("button", { name: "Download image" })).toBeEnabled();
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    const failing = vi.fn(async () => {
+      throw new Error("no canvas");
+    });
+    show({ status: "done", code: "zzzzzzzz" }, undefined, failing);
+    await userEvent.click(screen.getAllByRole("button", { name: "Download image" })[1]!);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not make the image");
   });
 
   it("names a failure and lets a person try again, except when the list is gone", async () => {
