@@ -4,6 +4,7 @@ import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
 import { requireAppCheck } from "./appCheck";
 import { requireUser, type Identity } from "./auth";
+import { listPage, rankingPage } from "./pages";
 import {
   DAILY_CEILING,
   dayKey,
@@ -44,17 +45,28 @@ export const web = onRequest(
     maxInstances: 10,
   },
   async (request, response) => {
-    // Everything after /api: "rank" alone, or "rank" and a code.
     const segments = request.path
       .replace(/^\/+|\/+$/g, "")
       .split("/")
-      .filter((part) => part !== "api" && part.length > 0);
-    const [resource, code] = segments;
-    if (resource !== "rank" || segments.length > 2) {
-      return void response.status(404).json({ error: "No such address", code: "NOT_FOUND" });
-    }
+      .filter((part) => part.length > 0);
 
     try {
+      // Pages: /l/{id} and /r/{code} are the site's own shell with the words a
+      // chat needs and the data the board needs.
+      if (request.method === "GET" && segments.length === 2 && segments[0] === "l") {
+        return await listPage(request, response, segments[1] ?? "");
+      }
+      if (request.method === "GET" && segments.length === 2 && segments[0] === "r") {
+        return await rankingPage(request, response, segments[1] ?? "");
+      }
+
+      // The API: /api/rank alone, or /api/rank and a code.
+      const api = segments[0] === "api" ? segments.slice(1) : null;
+      const [resource, code] = api ?? [];
+      if (api === null || resource !== "rank" || api.length > 2) {
+        return void response.status(404).json({ error: "No such address", code: "NOT_FOUND" });
+      }
+
       if (request.method === "GET" && code !== undefined) {
         if (!(await requireAppCheck(request, response))) return;
         return await readRanking(response, code);
