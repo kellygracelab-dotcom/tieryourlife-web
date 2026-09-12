@@ -1,6 +1,7 @@
 import type { RouteObject } from "react-router";
 import { HomePage } from "../pages/HomePage";
-import { ListPage, MePage, NotFoundPage, RankingPage } from "../pages/Placeholders";
+import { ListPage } from "../pages/ListPage";
+import { MePage, NotFoundPage, RankingPage } from "../pages/Placeholders";
 import { Shell } from "./Shell";
 
 export const routes: RouteObject[] = [

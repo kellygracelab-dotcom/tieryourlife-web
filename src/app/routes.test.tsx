@@ -1,9 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PLAY_URL } from "./Shell";
 import { routes } from "./routes";
+
+vi.mock("../lib/api", () => ({ loadList: vi.fn(() => new Promise(() => undefined)) }));
 
 const open = (path: string) =>
   render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />);
@@ -18,7 +20,6 @@ describe("routes", () => {
   it("opens a list by id", () => {
     open("/l/abc123");
     expect(screen.getByText("Opening the list…")).toBeInTheDocument();
-    expect(screen.getByText("abc123")).toBeInTheDocument();
   });
 
   it("opens a ranking by code", () => {

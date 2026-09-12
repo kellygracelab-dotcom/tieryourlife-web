@@ -101,6 +101,7 @@ describe("getAppCheckToken", () => {
   it("sets the debug token only in development", async () => {
     await getAppCheckToken(env({ recaptchaSiteKey: "site", appCheckDebugToken: "debug" }));
     expect(self).not.toHaveProperty("FIREBASE_APPCHECK_DEBUG_TOKEN");
+    expect(mocks.initializeAppCheck).toHaveBeenCalledTimes(1);
 
     resetFirebaseForTests();
     await getAppCheckToken(
@@ -109,13 +110,23 @@ describe("getAppCheckToken", () => {
     expect(self).toHaveProperty("FIREBASE_APPCHECK_DEBUG_TOKEN", "debug");
   });
 
+  it("waits for a debug token in development", async () => {
+    await expect(
+      getAppCheckToken(env({ recaptchaSiteKey: "site", isDev: true })),
+    ).resolves.toBeNull();
+    expect(mocks.initializeAppCheck).not.toHaveBeenCalled();
+  });
+
   it("is null when the token cannot be fetched", async () => {
     mocks.getToken.mockRejectedValue(new Error("no network"));
     await expect(getAppCheckToken(env({ recaptchaSiteKey: "site" }))).resolves.toBeNull();
   });
 
   it("reads the real environment by default", async () => {
+    vi.stubEnv("VITE_RECAPTCHA_SITE_KEY", "");
     await expect(getAppCheckToken()).resolves.toBeNull();
+    expect(mocks.initializeAppCheck).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
   });
 });
 
@@ -155,7 +166,9 @@ describe("signOutToGuest", () => {
 
 describe("tokenProviders", () => {
   it("is what the API client expects", async () => {
+    vi.stubEnv("VITE_RECAPTCHA_SITE_KEY", "");
     await expect(tokenProviders.appCheckToken()).resolves.toBeNull();
+    vi.unstubAllEnvs();
     await expect(tokenProviders.idToken({ forceRefresh: true })).resolves.toBe("guest:true");
     await expect(tokenProviders.idToken()).resolves.toBe("guest:false");
   });

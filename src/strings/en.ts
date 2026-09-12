@@ -17,6 +17,22 @@ export const en = {
   },
   list: {
     opening: "Opening the list…",
+    by: "by {name}",
+    home: "Go to the front page",
+    tryAgain: "Try again",
+    unavailableTitle: "This list isn’t available",
+    unavailableBody:
+      "It was taken down or is waiting for someone to look at it. Whoever sent you the link did nothing wrong.",
+    unverifiedTitle: "This copy of the site could not be verified",
+    unverifiedBody: "The list is still there. Try opening it in a regular browser window.",
+    offlineTitle: "No connection",
+    offlineBody: "Nothing was lost. Try again once you are back online.",
+    failedTitle: "Could not open this list",
+    failedBody: "Something went wrong on the way. Try again.",
+  },
+  board: {
+    authorsVersion: "Author's version",
+    unranked: { one: "{n} unranked", other: "{n} unranked" },
   },
   ranking: {
     opening: "Opening the ranking…",

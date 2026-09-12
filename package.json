@@ -19,7 +19,8 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run coverage && npm run build",
-    "deploy": "npm run check && firebase deploy --only hosting:web"
+    "deploy": "npm run check && firebase deploy --only hosting:web",
+    "dev:live": "vite --mode live"
   },
   "dependencies": {
     "firebase": "^12.19.0",
