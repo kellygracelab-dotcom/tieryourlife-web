@@ -2,7 +2,10 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PublishedList } from "../../api/types";
 import { TOUCH_HOLD_MS } from "./drag";
+import { MemoryRouter } from "react-router";
 import { RankingBoard } from "./RankingBoard";
+
+vi.mock("../../lib/api", () => ({ keepRanking: vi.fn(), noteTake: vi.fn() }));
 import type { HitTest } from "./useTileDrag";
 
 const list: PublishedList = {
@@ -66,7 +69,11 @@ afterEach(() => {
 
 describe("dragging a card", () => {
   it("drops a card on a tier with the mouse and lifts it while it travels", () => {
-    render(<RankingBoard list={list} hitTest={hitTest} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} hitTest={hitTest} />
+      </MemoryRouter>,
+    );
     pointer("pointerdown", card("Anora"), 10, 10, { button: 0 });
     pointer("pointermove", window, 12, 10);
     expect(card("Anora")).not.toHaveClass("tile--lifted");
@@ -86,7 +93,11 @@ describe("dragging a card", () => {
   });
 
   it("does nothing when let go outside every target, or on a right button", () => {
-    render(<RankingBoard list={list} hitTest={hitTest} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} hitTest={hitTest} />
+      </MemoryRouter>,
+    );
     pointer("pointerdown", card("Anora"), 10, 10, { button: 2 });
     pointer("pointermove", window, 80, 80);
     expect(document.querySelector(".ghost")).toBeNull();
@@ -99,7 +110,11 @@ describe("dragging a card", () => {
   });
 
   it("sends a placed card back to the pool when dropped there, and cancels cleanly", () => {
-    render(<RankingBoard list={list} hitTest={hitTest} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} hitTest={hitTest} />
+      </MemoryRouter>,
+    );
     fireEvent.click(card("Conclave"));
     fireEvent.click(tierRow("A"));
     expect(screen.getByText(/of 2 placed/)).toHaveTextContent("1 of 2 placed");
@@ -119,7 +134,11 @@ describe("dragging a card", () => {
   });
 
   it("lets a finger scroll but drags after a hold", () => {
-    render(<RankingBoard list={list} hitTest={hitTest} />);
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} hitTest={hitTest} />
+      </MemoryRouter>,
+    );
     pointer("pointerdown", card("Anora"), 10, 10, { button: 0, pointerType: "touch" });
     pointer("pointermove", window, 10, 40);
     act(() => {

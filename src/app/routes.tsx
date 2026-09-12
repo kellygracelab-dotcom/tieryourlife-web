@@ -1,7 +1,8 @@
 import type { RouteObject } from "react-router";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
-import { MePage, NotFoundPage, RankingPage } from "../pages/Placeholders";
+import { MePage, NotFoundPage } from "../pages/Placeholders";
+import { RankingPage } from "../pages/RankingPage";
 import { Shell } from "./Shell";
 
 export const routes: RouteObject[] = [

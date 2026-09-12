@@ -3,6 +3,8 @@ coverage
 node_modules
 package-lock.json
 PLAN.md
+functions/lib
+functions/lib-test
 docs
 public/privacy.html
 public/delete-account.html

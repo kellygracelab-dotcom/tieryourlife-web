@@ -5,7 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 import { PLAY_URL } from "./Shell";
 import { routes } from "./routes";
 
-vi.mock("../lib/api", () => ({ loadList: vi.fn(() => new Promise(() => undefined)) }));
+vi.mock("../lib/api", () => ({
+  loadList: vi.fn(() => new Promise(() => undefined)),
+  loadRanking: vi.fn(() => new Promise(() => undefined)),
+  keepRanking: vi.fn(),
+  noteTake: vi.fn(),
+}));
 
 const open = (path: string) =>
   render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />);
@@ -23,9 +28,8 @@ describe("routes", () => {
   });
 
   it("opens a ranking by code", () => {
-    open("/r/9tq4");
+    open("/r/abcdefgh");
     expect(screen.getByText("Opening the ranking…")).toBeInTheDocument();
-    expect(screen.getByText("9tq4")).toBeInTheDocument();
   });
 
   it("has a place for a person's own rankings", () => {

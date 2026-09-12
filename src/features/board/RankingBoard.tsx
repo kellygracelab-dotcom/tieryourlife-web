@@ -1,10 +1,16 @@
 import {
   useEffect,
   useReducer,
+  useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import type { SavedRanking } from "../../api/rank";
 import type { PublishedList } from "../../api/types";
+import { keepRanking, noteTake } from "../../lib/api";
+import { writeKept } from "../ranking/kept";
+import { ResultBar, type FinishState } from "../ranking/ResultBar";
+import { errorOf } from "../list/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { DragGhost } from "./DragGhost";
@@ -24,10 +30,14 @@ import { useTileDrag, type HitTest } from "./useTileDrag";
 import "./board.css";
 import "./ranking.css";
 
+export type Keep = (listId: string, rows: readonly (readonly number[])[]) => Promise<SavedRanking>;
+
 interface RankingBoardProps {
   list: PublishedList;
   hitTest?: HitTest;
   store?: DraftStore;
+  keep?: Keep;
+  take?: (listId: string) => Promise<void>;
 }
 
 type PointerDownFor = (item: number) => (event: ReactPointerEvent<HTMLElement>) => void;
@@ -37,11 +47,12 @@ interface TileProps {
   item: number;
   selected: boolean;
   lifted: boolean;
+  locked: boolean;
   dispatch: (action: BoardAction) => void;
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
 }
 
-function Tile({ list, item, selected, lifted, dispatch, onPointerDown }: TileProps) {
+function Tile({ list, item, selected, lifted, locked, dispatch, onPointerDown }: TileProps) {
   const card = list.items[item];
   if (card === undefined) return null;
   const classes = ["tile", selected && "tile--selected", lifted && "tile--lifted"]
@@ -55,8 +66,9 @@ function Tile({ list, item, selected, lifted, dispatch, onPointerDown }: TilePro
         aria-pressed={selected}
         aria-label={card.title}
         title={card.title}
+        disabled={locked}
         onClick={() => dispatch({ type: "select", item })}
-        onPointerDown={onPointerDown}
+        onPointerDown={locked ? undefined : onPointerDown}
       >
         {card.imageUrl !== null ? (
           <img src={card.imageUrl} alt="" loading="lazy" draggable={false} />
@@ -88,14 +100,35 @@ function useBoard(list: PublishedList, store: DraftStore) {
   return [state, dispatch] as const;
 }
 
-export function RankingBoard({ list, hitTest, store = localStorageStore }: RankingBoardProps) {
+export function RankingBoard({
+  list,
+  hitTest,
+  store = localStorageStore,
+  keep = keepRanking,
+  take = noteTake,
+}: RankingBoardProps) {
   const [state, dispatch] = useBoard(list, store);
+  const [finish, setFinish] = useState<FinishState>({ status: "idle" });
+  const locked = finish.status === "saving" || finish.status === "done";
   const drag = useTileDrag(dispatch, hitTest);
   const lifted = drag.state.phase === "dragging" ? drag.state.item : null;
   const selected = state.selected;
   const selectedTitle = selected === null ? null : (list.items[selected]?.title ?? null);
 
+  const onFinish = () => {
+    setFinish({ status: "saving" });
+    keep(list.id, state.rows).then(
+      (kept) => {
+        writeKept(store, list.id, kept);
+        setFinish({ status: "done", code: kept.code });
+        void take(list.id);
+      },
+      (reason: unknown) => setFinish({ status: "failed", error: errorOf(reason) }),
+    );
+  };
+
   useEffect(() => {
+    if (locked) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
@@ -110,7 +143,7 @@ export function RankingBoard({ list, hitTest, store = localStorageStore }: Ranki
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dispatch, list.tiers.length, selected]);
+  }, [dispatch, list.tiers.length, selected, locked]);
 
   const left = pool(state);
   const keyboardTiers = Math.min(list.tiers.length, 9);
@@ -122,14 +155,31 @@ export function RankingBoard({ list, hitTest, store = localStorageStore }: Ranki
           {fill(strings.rank.placed, { n: placedCount(state), total: list.items.length })}
         </p>
         <div className="ranking__actions">
-          <Button icon="undo" onClick={() => dispatch({ type: "undo" })} disabled={!canUndo(state)}>
+          <Button
+            icon="undo"
+            onClick={() => dispatch({ type: "undo" })}
+            disabled={locked || !canUndo(state)}
+          >
             {strings.rank.undo}
           </Button>
-          <Button variant="filled" icon="check" disabled>
-            {strings.rank.finish}
-          </Button>
+          {finish.status !== "done" && (
+            <Button
+              variant="filled"
+              icon="check"
+              onClick={onFinish}
+              disabled={locked || placedCount(state) === 0}
+            >
+              {strings.rank.finish}
+            </Button>
+          )}
         </div>
       </div>
+
+      <ResultBar
+        finish={finish}
+        onRetry={onFinish}
+        onChange={() => setFinish({ status: "idle" })}
+      />
 
       <div className="board">
         {list.tiers.map((tier, index) => (
@@ -143,6 +193,7 @@ export function RankingBoard({ list, hitTest, store = localStorageStore }: Ranki
             dragState={drag.state}
             pointerDownFor={drag.onPointerDown}
             lifted={lifted}
+            locked={locked}
           />
         ))}
       </div>
@@ -171,6 +222,7 @@ export function RankingBoard({ list, hitTest, store = localStorageStore }: Ranki
               item={item}
               selected={selected === item}
               lifted={lifted === item}
+              locked={locked}
               dispatch={dispatch}
               onPointerDown={drag.onPointerDown(item)}
             />
@@ -191,6 +243,7 @@ interface TierRowProps {
   dragState: DragState;
   pointerDownFor: PointerDownFor;
   lifted: number | null;
+  locked: boolean;
 }
 
 function TierRow({
@@ -202,12 +255,13 @@ function TierRow({
   dragState,
   pointerDownFor,
   lifted,
+  locked,
 }: TierRowProps) {
   const meta = list.tiers[tier];
   const row = state.rows[tier] ?? [];
   if (meta === undefined) return null;
   const selected = state.selected;
-  const armed = selected !== null && !row.includes(selected);
+  const armed = !locked && selected !== null && !row.includes(selected);
   const targeted =
     dragState.phase === "dragging" &&
     dragState.target?.kind === "tier" &&
@@ -247,6 +301,7 @@ function TierRow({
             item={item}
             selected={selected === item}
             lifted={lifted === item}
+            locked={locked}
             dispatch={dispatch}
             onPointerDown={pointerDownFor(item)}
           />

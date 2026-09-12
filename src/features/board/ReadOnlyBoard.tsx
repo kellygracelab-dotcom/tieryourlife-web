@@ -1,11 +1,14 @@
 import type { CSSProperties } from "react";
-import type { PublishedItem, PublishedList } from "../../api/types";
+import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
-import { arrange, type Row } from "./arrange";
 import "./board.css";
 
 interface ReadOnlyBoardProps {
-  list: PublishedList;
+  label: string;
+  tiers: readonly PublishedTier[];
+  items: readonly PublishedItem[];
+  rows: readonly (readonly number[])[];
+  pool: readonly number[];
 }
 
 function Tile({ item }: { item: PublishedItem }) {
@@ -20,37 +23,32 @@ function Tile({ item }: { item: PublishedItem }) {
   );
 }
 
-function TierRow({ tier, items }: Row) {
+export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoardProps) {
+  const tileOf = (position: number) => {
+    const item = items[position];
+    return item === undefined ? null : <Tile key={`${position}-${item.title}`} item={item} />;
+  };
   return (
-    <div className="tier" style={{ "--band": tier.colorLight } as CSSProperties}>
-      <div className="tier__band">
-        <span className="tier__label">{tier.label}</span>
-        {tier.caption !== null && <span className="tier__caption">{tier.caption}</span>}
-      </div>
-      <ul className="tier__items" aria-label={tier.label}>
-        {items.map((item, index) => (
-          <Tile key={`${index}-${item.title}`} item={item} />
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export function ReadOnlyBoard({ list }: ReadOnlyBoardProps) {
-  const { rows, pool } = arrange(list);
-  return (
-    <section className="board" aria-label={strings.board.authorsVersion}>
-      {rows.map((row, index) => (
-        <TierRow key={`${index}-${row.tier.label}`} {...row} />
+    <section className="board" aria-label={label}>
+      {tiers.map((tier, index) => (
+        <div
+          key={`${index}-${tier.label}`}
+          className="tier"
+          style={{ "--band": tier.colorLight } as CSSProperties}
+        >
+          <div className="tier__band">
+            <span className="tier__label">{tier.label}</span>
+            {tier.caption !== null && <span className="tier__caption">{tier.caption}</span>}
+          </div>
+          <ul className="tier__items" aria-label={tier.label}>
+            {(rows[index] ?? []).map(tileOf)}
+          </ul>
+        </div>
       ))}
       {pool.length > 0 && (
         <div className="pool">
           <h2 className="pool__title">{plural(strings.board.unranked, pool.length)}</h2>
-          <ul className="pool__items">
-            {pool.map((item, index) => (
-              <Tile key={`${index}-${item.title}`} item={item} />
-            ))}
-          </ul>
+          <ul className="pool__items">{pool.map(tileOf)}</ul>
         </div>
       )}
     </section>
