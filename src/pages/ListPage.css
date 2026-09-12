@@ -68,3 +68,8 @@
   font-size: 16px;
   color: var(--ink-dim);
 }
+
+.list-page__views {
+  display: flex;
+  gap: 8px;
+}

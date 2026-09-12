@@ -45,19 +45,33 @@ describe("ListPage", () => {
     expect(screen.getByText("Opening the list…")).toBeInTheDocument();
   });
 
-  it("shows the author's version with the address in the header", async () => {
+  it("opens on an empty board of your own, with the address in the header", async () => {
     mocks.loadList.mockResolvedValue(list);
     open();
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
       "Every A24 film, ranked",
     );
-    expect(screen.getByText("by danylo · 2 items · 2,140 rankings")).toBeInTheDocument();
+    expect(
+      screen.getByText("by danylo · you are ranking your own copy · 2,140 rankings"),
+    ).toBeInTheDocument();
     expect(screen.getByText(`${window.location.host}/l/abc`)).toBeInTheDocument();
+    const yours = screen.getByRole("region", { name: "Your ranking" });
+    expect(yours).toHaveTextContent("0 of 2 placed");
+    expect(yours).toHaveTextContent("2 items left");
+    expect(mocks.loadList).toHaveBeenCalledWith("abc");
+  });
+
+  it("can show the author's version and come back", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Author's version" }));
     expect(screen.getByRole("region", { name: "Author's version" })).toHaveTextContent(
       "Ex Machina",
     );
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
-    expect(mocks.loadList).toHaveBeenCalledWith("abc");
+    await userEvent.click(screen.getByRole("button", { name: "Your ranking" }));
+    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
   });
 
   it.each<ApiError>([{ kind: "notFound" }, { kind: "unavailable" }])(
