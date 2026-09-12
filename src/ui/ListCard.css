@@ -1,0 +1,61 @@
+.list-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+  transition: box-shadow 120ms ease;
+}
+
+.list-card:hover {
+  color: var(--ink);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.list-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 12px;
+}
+
+.list-card__title {
+  font: var(--text-label);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-card__author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.list-card__face {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+
+.list-card__face--initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pool);
+  color: var(--tile-label);
+  font: var(--text-caption);
+  font-weight: 500;
+}
+
+.list-card__meta {
+  font: var(--text-caption);
+  color: var(--ink-faint);
+}
