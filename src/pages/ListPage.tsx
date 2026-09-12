@@ -95,7 +95,11 @@ export function ListPage() {
           {strings.board.authorsVersion}
         </Chip>
       </div>
-      {view === "yours" ? <RankingBoard list={list} /> : <ReadOnlyBoard list={list} />}
+      {view === "yours" ? (
+        <RankingBoard key={list.id} list={list} />
+      ) : (
+        <ReadOnlyBoard list={list} />
+      )}
       <p className="list-page__foot">
         <Link to="/">{strings.list.home}</Link>
       </p>

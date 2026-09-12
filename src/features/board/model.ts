@@ -19,10 +19,10 @@ export const MAX_HISTORY = 200;
 
 export const KEYBOARD_TIERS = 9;
 
-export function init(tierCount: number, itemCount: number): BoardState {
+export function init(tierCount: number, itemCount: number, rows?: Rows | null): BoardState {
   return {
     itemCount,
-    rows: Array.from({ length: tierCount }, () => []),
+    rows: rows ?? Array.from({ length: tierCount }, () => []),
     selected: null,
     history: [],
   };

@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { PublishedList } from "../../api/types";
+import type { DraftStore } from "./draft";
 import { RankingBoard } from "./RankingBoard";
 
 const list: PublishedList = {
@@ -27,6 +28,16 @@ const list: PublishedList = {
     { title: "Climax", imageUrl: null, tierIndex: null },
   ],
 };
+
+function memoryStore(): DraftStore & { data: Map<string, string> } {
+  const data = new Map<string, string>();
+  return {
+    data,
+    read: (key) => data.get(key) ?? null,
+    write: (key, value) => void data.set(key, value),
+    remove: (key) => void data.delete(key),
+  };
+}
 
 const tierList = (label: string) => screen.getByRole("list", { name: label });
 const card = (title: string) => screen.getByRole("button", { name: title });
@@ -107,6 +118,29 @@ describe("RankingBoard", () => {
     expect(within(tierList("A")).getByRole("button", { name: "Climax" })).toBeInTheDocument();
     await userEvent.click(tierList("A"));
     expect(progress()).toHaveTextContent("1 of 3 placed");
+  });
+
+  it("keeps the placements in the store and picks them up again", async () => {
+    const store = memoryStore();
+    const { unmount } = render(<RankingBoard list={list} store={store} />);
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("1");
+    expect(store.data.get("tyl:draft:abc")).toContain('"rows":[[0],[]]');
+    unmount();
+
+    render(<RankingBoard list={list} store={store} />);
+    expect(progress()).toHaveTextContent("1 of 3 placed");
+    expect(within(tierList("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
+  });
+
+  it("starts fresh when the stored draft is for another snapshot of the list", () => {
+    const store = memoryStore();
+    store.write(
+      "tyl:draft:abc",
+      JSON.stringify({ listId: "abc", updatedAt: 999, itemCount: 3, rows: [[0], [1]] }),
+    );
+    render(<RankingBoard list={list} store={store} />);
+    expect(progress()).toHaveTextContent("0 of 3 placed");
   });
 
   it("shows the number of each of the first nine tiers on its band", () => {
