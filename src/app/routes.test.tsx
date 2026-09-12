@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
-import { PLAY_URL } from "./Shell";
+import { PLAY_URL } from "../lib/links";
 import { routes } from "./routes";
 
 vi.mock("../lib/api", () => ({

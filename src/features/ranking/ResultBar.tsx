@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import type { ApiError } from "../../api/errors";
+import { PLAY_URL } from "../../lib/links";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -35,6 +36,7 @@ export function ResultBar({
 }: ResultBarProps) {
   const [copied, setCopied] = useState(false);
   const [image, setImage] = useState<ImageState>(null);
+  const [acted, setActed] = useState(false);
 
   useEffect(() => {
     if (!copied) return;
@@ -76,7 +78,10 @@ export function ResultBar({
   const address = addressOf(finish.code);
   const onCopy = () => {
     copy(`https://${address}`).then(
-      () => setCopied(true),
+      () => {
+        setCopied(true);
+        setActed(true);
+      },
       () => setCopied(false),
     );
   };
@@ -85,7 +90,10 @@ export function ResultBar({
     const code = finish.code;
     setImage({ code, status: "busy" });
     download(address).then(
-      () => setImage(null),
+      () => {
+        setImage(null);
+        setActed(true);
+      },
       () => setImage({ code, status: "failed" }),
     );
   };
@@ -116,6 +124,14 @@ export function ResultBar({
       {imageStatus === "failed" && (
         <p className="result__error" role="alert">
           {strings.rank.downloadFailed}
+        </p>
+      )}
+      {acted && (
+        <p className="result__invite">
+          <a href={PLAY_URL} target="_blank" rel="noopener">
+            {strings.rank.invite}
+          </a>{" "}
+          {strings.rank.inviteNote}
         </p>
       )}
     </div>

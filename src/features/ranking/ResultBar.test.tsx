@@ -2,6 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
+import { PLAY_URL } from "../../lib/links";
 import { ResultBar, type FinishState } from "./ResultBar";
 
 const show = (
@@ -98,6 +99,31 @@ describe("ResultBar", () => {
     show({ status: "done", code: "zzzzzzzz" }, undefined, failing);
     await userEvent.click(screen.getAllByRole("button", { name: "Download image" })[1]!);
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not make the image");
+  });
+
+  it("mentions the app only once the link is copied or the image is made", async () => {
+    const invite = () => screen.queryAllByRole("link", { name: "Keep your lists on your phone" });
+    show({ status: "done", code: "abcdefgh" });
+    expect(invite()).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(invite()).toHaveLength(1);
+    expect(invite()[0]).toHaveAttribute("href", PLAY_URL);
+    expect(invite()[0]).toHaveAttribute("target", "_blank");
+    expect(screen.getByText(/Flip cover/)).toBeInTheDocument();
+
+    show({ status: "done", code: "zzzzzzzz" });
+    expect(invite()).toHaveLength(1);
+    await userEvent.click(screen.getAllByRole("button", { name: "Download image" })[1]!);
+    expect(
+      await screen.findAllByRole("link", { name: "Keep your lists on your phone" }),
+    ).toHaveLength(2);
+
+    const failing = vi.fn(async () => {
+      throw new Error("no clipboard");
+    });
+    show({ status: "done", code: "yyyyyyyy" }, failing);
+    await userEvent.click(screen.getAllByRole("button", { name: "Copy link" })[2]!);
+    expect(invite()).toHaveLength(2);
   });
 
   it("names a failure and lets a person try again, except when the list is gone", async () => {

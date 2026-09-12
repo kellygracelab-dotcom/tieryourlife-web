@@ -54,6 +54,8 @@ export const en = {
     download: "Download image",
     downloading: "Making the image…",
     downloadFailed: "Could not make the image. Try again.",
+    invite: "Keep your lists on your phone",
+    inviteNote: "Offline, with a ranking history, AI card images and the Flip cover.",
     open: "Open",
     change: "Change ranking",
     tryAgain: "Try again",
