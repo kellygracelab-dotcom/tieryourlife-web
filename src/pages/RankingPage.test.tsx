@@ -90,7 +90,7 @@ describe("RankingPage", () => {
     expect(screen.getByText(/The list this ranking was made from/)).toBeInTheDocument();
   });
 
-  it.each<ApiError>([{ kind: "notFound" }, { kind: "unavailable" }])(
+  it.each<ApiError>([{ kind: "notFound" }])(
     "says a ranking is not available on %o",
     async (error) => {
       load.mockRejectedValue(new ApiFailure(error));

@@ -26,7 +26,7 @@ function Loading() {
 }
 
 function Trouble({ error, retry }: { error: ApiError; retry: () => void }) {
-  const gone = error.kind === "notFound" || error.kind === "unavailable";
+  const gone = error.kind === "notFound";
   if (gone) {
     return (
       <section className="list-page list-page--trouble">

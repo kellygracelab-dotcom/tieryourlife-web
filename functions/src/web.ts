@@ -8,12 +8,15 @@ import {
   DAILY_CEILING,
   dayKey,
   decideRows,
+  fromStoredRows,
   isCode,
   makeCode,
   MAX_BODY_BYTES,
   snapshotOf,
   tooSoon,
+  toStoredRows,
   type Snapshot,
+  type StoredRow,
 } from "./ranking";
 
 const RANKINGS = "rankings";
@@ -26,7 +29,7 @@ const CODE_ATTEMPTS = 3;
 interface RankingDocument {
   listId: string;
   snapshot: Snapshot;
-  rows: number[][];
+  rows: StoredRow[];
   ownerUid: string | null;
   ownerAnonymous: boolean;
   claimHash: string;
@@ -91,7 +94,7 @@ async function readRanking(response: Response, code: string): Promise<void> {
     listId: ranking.listId,
     listAvailable,
     snapshot: ranking.snapshot,
-    rows: ranking.rows,
+    rows: fromStoredRows(ranking.rows),
     createdAt: ranking.createdAt?.toMillis() ?? 0,
   });
 }
@@ -144,7 +147,7 @@ async function saveRanking(body: unknown, identity: Identity, response: Response
   const document: RankingDocument = {
     listId: decision.listId,
     snapshot,
-    rows: decision.rows,
+    rows: toStoredRows(decision.rows),
     ownerUid: identity.uid,
     ownerAnonymous: identity.isAnonymous,
     claimHash: createHash("sha256").update(claimToken).digest("hex"),

@@ -102,6 +102,21 @@ export function dayKey(nowMs: number): string {
   return new Date(nowMs).toISOString().slice(0, 10);
 }
 
+/** Firestore refuses an array inside an array, so rows travel as a list of maps. */
+export interface StoredRow {
+  items: number[];
+}
+
+export const toStoredRows = (rows: number[][]): StoredRow[] => rows.map((items) => ({ items }));
+
+export function fromStoredRows(stored: unknown): number[][] {
+  if (!Array.isArray(stored)) return [];
+  return stored.map((row) => {
+    const items = (row as { items?: unknown } | null)?.items;
+    return Array.isArray(items) ? items.filter((i): i is number => Number.isInteger(i)) : [];
+  });
+}
+
 /** The snapshot a ranking keeps: enough to draw the board after the list is gone. */
 export function snapshotOf(list: Record<string, unknown>): Snapshot {
   const text = (value: unknown): string => (typeof value === "string" ? value : "");

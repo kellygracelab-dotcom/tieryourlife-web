@@ -44,7 +44,7 @@ export function ResultBar({ finish, onRetry, onChange, copy = clipboardCopy }: R
 
   if (finish.status === "failed") {
     const { error } = finish;
-    const gone = error.kind === "notFound" || error.kind === "unavailable";
+    const gone = error.kind === "notFound";
     const text =
       error.kind === "offline"
         ? strings.rank.failedOffline

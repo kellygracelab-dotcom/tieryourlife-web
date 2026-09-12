@@ -32,7 +32,7 @@ function Loading() {
 }
 
 function Trouble({ error, retry }: { error: ApiError; retry: () => void }) {
-  if (error.kind === "notFound" || error.kind === "unavailable") {
+  if (error.kind === "notFound") {
     return (
       <section className="list-page list-page--trouble">
         <h1>{strings.ranking.unavailableTitle}</h1>
