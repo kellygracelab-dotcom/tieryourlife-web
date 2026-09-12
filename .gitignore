@@ -35,6 +35,7 @@ firebase-debug.log
 # Working notes with personal details; the public roadmap lives in the README
 PLAN.md
 docs/
+coordinator-log.md
 
 # Local tooling of the desktop app
 .claude/
