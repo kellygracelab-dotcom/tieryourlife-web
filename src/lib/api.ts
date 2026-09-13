@@ -1,4 +1,5 @@
 import { createApiClient } from "../api/client";
+import { adoptGuest, type AdoptedGuest } from "../api/guest";
 import { getFeed, getList, recordTake } from "../api/lists";
 import { getRanking, saveRanking, type Ranking, type SavedRanking } from "../api/rank";
 import type { FeedPage, FeedQuery, PublishedList } from "../api/types";
@@ -25,6 +26,9 @@ export const keepRanking = (
   listId: string,
   rows: readonly (readonly number[])[],
 ): Promise<SavedRanking> => saveRanking(api, listId, rows);
+
+export const carryGuest = (guestToken: string): Promise<AdoptedGuest> =>
+  adoptGuest(api, guestToken);
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.

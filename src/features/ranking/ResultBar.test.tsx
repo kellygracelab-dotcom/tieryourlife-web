@@ -126,6 +126,38 @@ describe("ResultBar", () => {
     expect(invite()).toHaveLength(2);
   });
 
+  it("offers a guest to save the ranking, and tells a member it is already kept", async () => {
+    const save = vi.fn();
+    render(
+      <MemoryRouter>
+        <ResultBar
+          finish={{ status: "done", code: "abcdefgh" }}
+          onRetry={() => {}}
+          onChange={() => {}}
+          download={async () => {}}
+          save={save}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/It stays without an account/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Save to my account" }));
+    expect(save).toHaveBeenCalledTimes(1);
+
+    render(
+      <MemoryRouter>
+        <ResultBar
+          finish={{ status: "done", code: "zzzzzzzz" }}
+          onRetry={() => {}}
+          onChange={() => {}}
+          download={async () => {}}
+          kept
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/kept in your rankings/)).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Save to my account" })).toHaveLength(1);
+  });
+
   it("names a failure and lets a person try again, except when the list is gone", async () => {
     const { onRetry } = show({ status: "failed", error: { kind: "offline" } });
     expect(screen.getByRole("alert")).toHaveTextContent("No connection");

@@ -3,6 +3,11 @@ export const en = {
   tagline: "Web app",
   nav: {
     signIn: "Sign in",
+    signOut: "Sign out",
+    account: "Your account",
+    you: "You",
+    yourRankings: "Your rankings",
+    signInFailed: "Could not sign in. Try again.",
     more: "More",
     keepOnPhone: "Keep your lists on your phone",
   },
@@ -72,11 +77,14 @@ export const en = {
     live: "Your ranking is live at",
     liveNote:
       "Anyone with that link sees your version next to the author’s. It stays without an account.",
+    liveNoteKept:
+      "Anyone with that link sees your version next to the author’s. It’s kept in your rankings.",
     copy: "Copy link",
     copied: "Copied",
     download: "Download image",
     downloading: "Making the image…",
     downloadFailed: "Could not make the image. Try again.",
+    save: "Save to my account",
     invite: "Keep your lists on your phone",
     inviteNote: "Offline, with a ranking history, AI card images and the Flip cover.",
     open: "Open",
@@ -86,6 +94,14 @@ export const en = {
       "No connection. Nothing was lost: your placements are safe on this device. Try again once you are back online.",
     failedGone: "This list isn’t available anymore, so the ranking cannot be kept.",
     failedOther: "Could not save the ranking. Nothing was lost. Try again.",
+  },
+  keep: {
+    title: "Keep this ranking",
+    body: "The link works either way. An account puts it in one place, lets you edit it later, and unlocks making your own lists.",
+    google: "Continue with Google",
+    busy: "Signing in…",
+    linkOnly: "Keep the link only",
+    failed: "Could not sign in. Try again, or keep the link.",
   },
   ranking: {
     opening: "Opening the ranking…",

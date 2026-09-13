@@ -57,7 +57,7 @@ describe("Shell", () => {
       expect(link).toHaveAttribute("href", PLAY_URL);
       expect(link).toHaveAttribute("target", "_blank");
     }
-    expect(screen.getByRole("button", { name: "Sign in" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "Privacy policy" })).toHaveAttribute(
       "href",
       "/privacy.html",

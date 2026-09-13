@@ -14,6 +14,9 @@ const card = (page: Page, title: string) => page.getByRole("button", { name: tit
 const finish = async (page: Page) => {
   await page.getByRole("button", { name: "Finish" }).click();
   await expect(page.getByText("Your ranking is live at")).toBeVisible();
+  // A guest is offered an account exactly once, after the link exists.
+  await page.getByRole("button", { name: "Keep the link only" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Open" })).toHaveAttribute("href", `/r/${CODE}`);
 };
 

@@ -100,6 +100,54 @@
   background: var(--hover);
 }
 
+.menu__button--face {
+  overflow: hidden;
+}
+
+.face {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.face--initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--link);
+  color: #ffffff;
+  font: var(--text-label);
+}
+
+.menu__who {
+  padding: 8px 16px 4px;
+  font: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+.menu__action {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--ink);
+  font: var(--text-small);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.menu__action:hover {
+  background: var(--hover);
+}
+
+.top__note {
+  font: var(--text-small);
+  color: var(--error);
+}
+
 .shell__main {
   flex: 1;
   width: 100%;

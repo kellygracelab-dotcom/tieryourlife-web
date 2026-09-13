@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useReducer,
   useState,
@@ -7,7 +8,9 @@ import {
 } from "react";
 import type { SavedRanking } from "../../api/rank";
 import type { PublishedList } from "../../api/types";
+import { useSession } from "../../app/session";
 import { keepRanking, noteTake } from "../../lib/api";
+import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
 import { writeKept } from "../ranking/kept";
 import { ResultBar, type FinishState } from "../ranking/ResultBar";
 import { downloadShare, type Share } from "../ranking/shareImage";
@@ -119,6 +122,9 @@ export function RankingBoard({
   const [state, dispatch] = useBoard(list, store);
   const [finish, setFinish] = useState<FinishState>({ status: "idle" });
   const locked = finish.status === "saving" || finish.status === "done";
+  const { account, signIn } = useSession();
+  const guest = account?.kind !== "signedIn";
+  const [offer, setOffer] = useState<KeepState>("closed");
   const drag = useTileDrag(dispatch, hitTest);
   const lifted = drag.state.phase === "dragging" ? drag.state.item : null;
   const selected = state.selected;
@@ -130,11 +136,25 @@ export function RankingBoard({
       (kept) => {
         writeKept(store, list.id, kept);
         setFinish({ status: "done", code: kept.code });
+        if (guest) setOffer("open");
         void take(list.id);
       },
       (reason: unknown) => setFinish({ status: "failed", error: errorOf(reason) }),
     );
   };
+
+  const onGoogle = () => {
+    setOffer("busy");
+    signIn().then((outcome) =>
+      setOffer((now) => {
+        if (now === "closed") return now;
+        if (outcome.kind === "signedIn") return "closed";
+        if (outcome.kind === "cancelled") return "open";
+        return outcome.kind === "redirecting" ? "busy" : "failed";
+      }),
+    );
+  };
+  const onLinkOnly = useCallback(() => setOffer("closed"), []);
 
   useEffect(() => {
     if (locked) return;
@@ -187,9 +207,15 @@ export function RankingBoard({
       <ResultBar
         finish={finish}
         onRetry={onFinish}
-        onChange={() => setFinish({ status: "idle" })}
+        onChange={() => {
+          setFinish({ status: "idle" });
+          setOffer("closed");
+        }}
         download={(address) => share(list, state.rows, address)}
+        kept={!guest}
+        save={guest ? () => setOffer("open") : undefined}
       />
+      <KeepDialog state={offer} onGoogle={onGoogle} onLinkOnly={onLinkOnly} />
 
       <div className="board">
         {list.tiers.map((tier, index) => (
