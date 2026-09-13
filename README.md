@@ -12,6 +12,7 @@ and never to Firestore directly.
 - Vite, React 19, TypeScript. A single-page app served by Firebase Hosting.
 - Firebase JS SDK for Auth (Google and anonymous), App Check and Storage.
 - One small Cloud Functions codebase, `web`, for the pages that need OpenGraph tags and for saving rankings.
+- In the same codebase, `onUserDeleted` runs when a Firebase user is deleted: their rankings stay, without an owner, as every ranking page promises.
 - oxlint and Prettier for style, Vitest for tests, Playwright for two browser smokes, GitHub Actions for CI.
 
 ## Commands
