@@ -1,7 +1,15 @@
 import { createApiClient } from "../api/client";
 import { adoptGuest, type AdoptedGuest } from "../api/guest";
 import { getFeed, getList, recordTake } from "../api/lists";
-import { getRanking, saveRanking, type Ranking, type SavedRanking } from "../api/rank";
+import {
+  claimRanking,
+  getMyRankings,
+  getRanking,
+  saveRanking,
+  type MyRankings,
+  type Ranking,
+  type SavedRanking,
+} from "../api/rank";
 import type { FeedPage, FeedQuery, PublishedList } from "../api/types";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
@@ -29,6 +37,11 @@ export const keepRanking = (
 
 export const carryGuest = (guestToken: string): Promise<AdoptedGuest> =>
   adoptGuest(api, guestToken);
+
+export const claimKept = (code: string, claimToken: string): Promise<{ code: string }> =>
+  claimRanking(api, code, claimToken);
+
+export const loadMyRankings = (): Promise<MyRankings> => getMyRankings(api);
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.

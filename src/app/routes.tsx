@@ -2,7 +2,8 @@ import type { RouteObject } from "react-router";
 import { CategoryPage } from "../pages/CategoryPage";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
-import { MePage, NotFoundPage } from "../pages/Placeholders";
+import { MePage } from "../pages/MePage";
+import { NotFoundPage } from "../pages/Placeholders";
 import { RankingPage } from "../pages/RankingPage";
 import { Shell } from "./Shell";
 

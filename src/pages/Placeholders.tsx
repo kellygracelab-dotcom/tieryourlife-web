@@ -2,15 +2,6 @@ import { Link } from "react-router";
 import { strings } from "../strings";
 import "./Placeholders.css";
 
-export function MePage() {
-  return (
-    <section className="opening">
-      <h1 className="opening__title">{strings.me.title}</h1>
-      <p className="opening__text">{strings.me.empty}</p>
-    </section>
-  );
-}
-
 export function NotFoundPage() {
   return (
     <section className="opening">

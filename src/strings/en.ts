@@ -118,6 +118,12 @@ export const en = {
   me: {
     title: "Your rankings",
     empty: "Rankings you keep will show up here.",
+    signInFirst:
+      "Sign in to see the rankings you keep. Whatever you finished on this device comes along.",
+    placedOf: "{placed} of {total} placed",
+    failed: "Could not load your rankings.",
+    tryAgain: "Try again",
+    more: "Only the newest {n} are shown.",
   },
   notFound: {
     title: "There is nothing at this address.",
