@@ -39,3 +39,36 @@ export function getRanking(client: ApiClient, code: string): Promise<Ranking> {
     auth: "appCheckOnly",
   });
 }
+
+export function claimRanking(
+  client: ApiClient,
+  code: string,
+  claimToken: string,
+): Promise<{ code: string }> {
+  return client.request<{ code: string }>("PATCH", `/api/rank/${encodeURIComponent(code)}`, {
+    body: { claimToken },
+  });
+}
+
+export interface RankingSummary {
+  code: string;
+  listId: string;
+  title: string;
+  authorName: string;
+  authorPhotoUrl: string | null;
+  category: Category;
+  placed: number;
+  itemCount: number;
+  imageUrl: string | null;
+  createdAt: number;
+}
+
+export interface MyRankings {
+  rankings: RankingSummary[];
+  // The server stops at a fixed number; true means there were rankings beyond it.
+  more: boolean;
+}
+
+export function getMyRankings(client: ApiClient): Promise<MyRankings> {
+  return client.request<MyRankings>("GET", "/api/me/rankings");
+}

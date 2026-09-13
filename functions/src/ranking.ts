@@ -4,6 +4,8 @@
  * these decisions into reads and writes.
  */
 
+import { createHash, timingSafeEqual } from "node:crypto";
+
 /** No 0/O, 1/l/I: a code is read off a stream and typed by hand. */
 export const CODE_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
 export const CODE_LENGTH = 8;
@@ -33,11 +35,16 @@ export interface Snapshot {
   items: { title: string; imageUrl: string | null; tierIndex: number | null }[];
 }
 
-export type RankDecision =
-  | { ok: true; listId: string; rows: number[][] }
-  | { ok: false; status: number; code: string; error: string };
+export interface Refusal {
+  ok: false;
+  status: number;
+  code: string;
+  error: string;
+}
 
-const refuse = (status: number, code: string, error: string): RankDecision => ({
+export type RankDecision = { ok: true; listId: string; rows: number[][] } | Refusal;
+
+const refuse = (status: number, code: string, error: string): Refusal => ({
   ok: false,
   status,
   code,
@@ -142,3 +149,97 @@ export function snapshotOf(list: Record<string, unknown>): Snapshot {
     })),
   };
 }
+
+/** Longer than any token the server hands out (32 characters of base64url). */
+export const MAX_CLAIM_TOKEN_LENGTH = 64;
+
+/** Only the hash is stored: a leaked document does not hand out the ranking. */
+export const claimHashOf = (claimToken: string): string =>
+  createHash("sha256").update(claimToken).digest("hex");
+
+export function claimMatches(claimHash: string, claimToken: string): boolean {
+  const stored = Buffer.from(claimHash);
+  const offered = Buffer.from(claimHashOf(claimToken));
+  return stored.length === offered.length && timingSafeEqual(stored, offered);
+}
+
+export function decideClaimToken(body: unknown): string | null {
+  const token = (body as { claimToken?: unknown } | null)?.claimToken;
+  return typeof token === "string" && token.length > 0 && token.length <= MAX_CLAIM_TOKEN_LENGTH
+    ? token
+    : null;
+}
+
+export interface StoredOwner {
+  ownerUid: string | null;
+  ownerAnonymous: boolean;
+  claimHash: string;
+}
+
+export type ClaimDecision = { ok: true; write: boolean } | Refusal;
+
+/**
+ * Whether [uid], showing [claimToken], may keep the ranking. `write` says the
+ * document must change hands, or stop calling its owner a guest: a guest who
+ * signs in keeps the uid, so the same uid can still owe a claim.
+ */
+export function decideClaim(owner: StoredOwner, uid: string, claimToken: string): ClaimDecision {
+  if (!claimMatches(owner.claimHash, claimToken)) {
+    return refuse(403, "NOT_YOURS", "That token does not open this ranking");
+  }
+  if (owner.ownerUid === uid) return { ok: true, write: owner.ownerAnonymous };
+  if (owner.ownerUid !== null && !owner.ownerAnonymous) {
+    return refuse(409, "CLAIMED", "Already kept by another account");
+  }
+  return { ok: true, write: true };
+}
+
+/** The most rankings one person is shown; beyond that the answer says there are more. */
+export const MY_RANKINGS_CAP = 200;
+
+export interface RankingSummary {
+  code: string;
+  listId: string;
+  title: string;
+  authorName: string;
+  authorPhotoUrl: string | null;
+  category: string;
+  placed: number;
+  itemCount: number;
+  imageUrl: string | null;
+  createdAt: number;
+}
+
+/** The fields of a stored ranking these helpers read; a Firestore Timestamp fits createdAt. */
+export interface StoredRanking {
+  listId: string;
+  snapshot: Snapshot;
+  rows: unknown;
+  createdAt?: { toMillis(): number };
+}
+
+export const placedCount = (rows: number[][]): number =>
+  rows.reduce((sum, row) => sum + row.length, 0);
+
+export const firstImageOf = (items: Snapshot["items"]): string | null =>
+  items.find((item) => item.imageUrl?.startsWith("https://"))?.imageUrl ?? null;
+
+/** One ranking as a card on the person's own page: enough to recognise it, not to draw it. */
+export function summaryOf(code: string, doc: StoredRanking): RankingSummary {
+  const { snapshot } = doc;
+  return {
+    code,
+    listId: doc.listId,
+    title: snapshot.title,
+    authorName: snapshot.authorName,
+    authorPhotoUrl: snapshot.authorPhotoUrl,
+    category: snapshot.category,
+    placed: placedCount(fromStoredRows(doc.rows)),
+    itemCount: snapshot.items.length,
+    imageUrl: firstImageOf(snapshot.items),
+    createdAt: doc.createdAt?.toMillis() ?? 0,
+  };
+}
+
+export const newestFirst = (rankings: readonly RankingSummary[]): RankingSummary[] =>
+  [...rankings].sort((a, b) => b.createdAt - a.createdAt);

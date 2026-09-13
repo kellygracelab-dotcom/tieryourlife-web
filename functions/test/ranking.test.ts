@@ -1,18 +1,29 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  claimHashOf,
+  claimMatches,
   CODE_ALPHABET,
   CODE_LENGTH,
   dayKey,
+  decideClaim,
+  decideClaimToken,
   decideListId,
   decideRows,
+  firstImageOf,
   fromStoredRows,
   isCode,
   makeCode,
+  MAX_CLAIM_TOKEN_LENGTH,
   MIN_WRITE_GAP_MS,
+  newestFirst,
+  placedCount,
   snapshotOf,
+  summaryOf,
   tooSoon,
   toStoredRows,
+  type RankingSummary,
+  type StoredOwner,
 } from "../src/ranking";
 
 describe("stored rows", () => {
@@ -154,5 +165,179 @@ describe("snapshotOf", () => {
       tiers: [],
       items: [],
     });
+  });
+});
+
+describe("claim tokens", () => {
+  it("are kept as their sha256 hex and matched against it", () => {
+    assert.equal(
+      claimHashOf("abc"),
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    );
+    assert.equal(claimMatches(claimHashOf("abc"), "abc"), true);
+    assert.equal(claimMatches(claimHashOf("abc"), "abd"), false);
+  });
+
+  it("never match a hash of another length, and do not throw on one", () => {
+    assert.equal(claimMatches("", "abc"), false);
+    assert.equal(claimMatches(claimHashOf("abc").slice(1), "abc"), false);
+  });
+});
+
+describe("decideClaimToken", () => {
+  it("takes a non-empty string up to the longest token handed out", () => {
+    const longest = "x".repeat(MAX_CLAIM_TOKEN_LENGTH);
+    assert.equal(decideClaimToken({ claimToken: "t" }), "t");
+    assert.equal(decideClaimToken({ claimToken: longest }), longest);
+  });
+
+  const refusals: [string, unknown][] = [
+    ["no body", null],
+    ["no token", {}],
+    ["an empty token", { claimToken: "" }],
+    ["a token that is not text", { claimToken: 42 }],
+    ["a token longer than any handed out", { claimToken: "x".repeat(MAX_CLAIM_TOKEN_LENGTH + 1) }],
+  ];
+  for (const [name, body] of refusals) {
+    it(`refuses ${name}`, () => {
+      assert.equal(decideClaimToken(body), null);
+    });
+  }
+});
+
+describe("decideClaim", () => {
+  const token = "the-token";
+  const owned = (ownerUid: string | null, ownerAnonymous: boolean): StoredOwner => ({
+    ownerUid,
+    ownerAnonymous,
+    claimHash: claimHashOf(token),
+  });
+
+  it("hands a guest's ranking to the account showing the token", () => {
+    assert.deepEqual(decideClaim(owned("guest", true), "person", token), { ok: true, write: true });
+  });
+
+  it("hands a ranking nobody owns to the account showing the token", () => {
+    assert.deepEqual(decideClaim(owned(null, false), "person", token), { ok: true, write: true });
+  });
+
+  it("keeps a ranking the same account already kept, with nothing to write", () => {
+    assert.deepEqual(decideClaim(owned("person", false), "person", token), {
+      ok: true,
+      write: false,
+    });
+  });
+
+  it("stops calling the owner a guest once that uid has signed in", () => {
+    assert.deepEqual(decideClaim(owned("person", true), "person", token), {
+      ok: true,
+      write: true,
+    });
+  });
+
+  const refusals: [string, StoredOwner, string, number, string][] = [
+    ["a wrong token for a guest's ranking", owned("guest", true), "other", 403, "NOT_YOURS"],
+    ["a wrong token for a ranking nobody owns", owned(null, false), "other", 403, "NOT_YOURS"],
+    ["a wrong token even from the owner", owned("person", false), "other", 403, "NOT_YOURS"],
+    ["a ranking another account keeps", owned("someone", false), token, 409, "CLAIMED"],
+  ];
+  for (const [name, owner, offered, status, code] of refusals) {
+    it(`refuses ${name} with ${status} ${code}`, () => {
+      const decision = decideClaim(owner, "person", offered);
+      assert.equal(decision.ok, false);
+      if (!decision.ok) {
+        assert.equal(decision.status, status);
+        assert.equal(decision.code, code);
+      }
+    });
+  }
+});
+
+describe("placedCount", () => {
+  it("counts the cards across every row", () => {
+    assert.equal(placedCount([[2, 0], [], [1]]), 3);
+    assert.equal(placedCount([]), 0);
+  });
+});
+
+describe("firstImageOf", () => {
+  it("skips cards without a picture and anything that is not https", () => {
+    const items = [
+      { title: "a", imageUrl: null, tierIndex: null },
+      { title: "b", imageUrl: "http://x/b", tierIndex: null },
+      { title: "c", imageUrl: "https://x/c", tierIndex: null },
+    ];
+    assert.equal(firstImageOf(items), "https://x/c");
+    assert.equal(firstImageOf([]), null);
+  });
+});
+
+describe("summaryOf", () => {
+  const snapshot = snapshotOf({
+    title: "Films",
+    authorName: "danylo",
+    authorPhotoUrl: "https://img/face",
+    category: "film_tv",
+    tiers: [{ label: "S" }, { label: "A" }],
+    items: [
+      { title: "Old", imageUrl: null },
+      { title: "Ex Machina", imageUrl: "https://img/ex.jpg" },
+      { title: "Her", imageUrl: "https://img/her.jpg" },
+    ],
+  });
+
+  it("is the card of a ranking: what it ranked, how far, and its first picture", () => {
+    const summary = summaryOf("abcdefgh", {
+      listId: "wMRMFDxo8UejcAi2VVMW",
+      snapshot,
+      rows: toStoredRows([[2], [1]]),
+      createdAt: { toMillis: () => 1_700_000_000_000 },
+    });
+    assert.deepEqual(summary, {
+      code: "abcdefgh",
+      listId: "wMRMFDxo8UejcAi2VVMW",
+      title: "Films",
+      authorName: "danylo",
+      authorPhotoUrl: "https://img/face",
+      category: "film_tv",
+      placed: 2,
+      itemCount: 3,
+      imageUrl: "https://img/ex.jpg",
+      createdAt: 1_700_000_000_000,
+    });
+  });
+
+  it("has no picture when no card has one, and no time before the server stamped it", () => {
+    const summary = summaryOf("abcdefgh", {
+      listId: "wMRMFDxo8UejcAi2VVMW",
+      snapshot: { ...snapshot, items: [{ title: "Old", imageUrl: null, tierIndex: null }] },
+      rows: null,
+    });
+    assert.equal(summary.imageUrl, null);
+    assert.equal(summary.placed, 0);
+    assert.equal(summary.itemCount, 1);
+    assert.equal(summary.createdAt, 0);
+  });
+});
+
+describe("newestFirst", () => {
+  const card = (code: string, createdAt: number): RankingSummary => ({
+    code,
+    listId: "wMRMFDxo8UejcAi2VVMW",
+    title: "",
+    authorName: "",
+    authorPhotoUrl: null,
+    category: "other",
+    placed: 0,
+    itemCount: 0,
+    imageUrl: null,
+    createdAt,
+  });
+
+  it("puts the latest ranking first and leaves the given order alone", () => {
+    const given = [card("aaaaaaaa", 1), card("cccccccc", 3), card("bbbbbbbb", 2)];
+    const codes = (list: RankingSummary[]) => list.map((item) => item.code);
+    assert.deepEqual(codes(newestFirst(given)), ["cccccccc", "bbbbbbbb", "aaaaaaaa"]);
+    assert.deepEqual(codes(given), ["aaaaaaaa", "cccccccc", "bbbbbbbb"]);
   });
 });

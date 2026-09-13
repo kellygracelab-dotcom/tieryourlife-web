@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "./client";
-import { getRanking, saveRanking } from "./rank";
+import { claimRanking, getMyRankings, getRanking, saveRanking } from "./rank";
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -29,5 +29,24 @@ describe("rank", () => {
     await expect(getRanking(client, "abcdefgh")).resolves.toEqual({ code: "abcdefgh" });
 
     expect(request).toHaveBeenCalledWith("GET", "/api/rank/abcdefgh", { auth: "appCheckOnly" });
+  });
+
+  it("claims a ranking by code with the token Finish handed out", async () => {
+    const { client, request } = recordingClient({ code: "abcdefgh" });
+
+    await expect(claimRanking(client, "abcdefgh", "t")).resolves.toEqual({ code: "abcdefgh" });
+
+    expect(request).toHaveBeenCalledWith("PATCH", "/api/rank/abcdefgh", {
+      body: { claimToken: "t" },
+    });
+  });
+
+  it("lists the signed-in person's own rankings", async () => {
+    const page = { rankings: [], more: false };
+    const { client, request } = recordingClient(page);
+
+    await expect(getMyRankings(client)).resolves.toEqual(page);
+
+    expect(request).toHaveBeenCalledWith("GET", "/api/me/rankings");
   });
 });
