@@ -11,6 +11,8 @@ import {
   type Auth,
   type User,
 } from "firebase/auth";
+import { localStorageStore } from "../features/board/draft";
+import { claimKeptRankings } from "../features/ranking/claim";
 import { carryGuest } from "./api";
 import { getFirebaseAuth } from "./firebase";
 
@@ -23,6 +25,8 @@ export type SignInOutcome =
 
 export interface SignInDeps {
   carry: (guestToken: string) => Promise<unknown>;
+  /** Hands the rankings this device finished to the account that signed in. */
+  keep: (uid: string) => Promise<unknown>;
   stash: Stash;
 }
 
@@ -63,7 +67,11 @@ export const sessionStash: Stash = {
   },
 };
 
-const defaultDeps: SignInDeps = { carry: carryGuest, stash: sessionStash };
+const defaultDeps: SignInDeps = {
+  carry: carryGuest,
+  keep: (uid) => claimKeptRankings(localStorageStore, uid),
+  stash: sessionStash,
+};
 
 const codeOf = (error: unknown): string =>
   error instanceof FirebaseError ? error.code : "unknown";
@@ -102,6 +110,7 @@ async function switchAccount(
   if (guestToken !== null) {
     await deps.carry(guestToken).catch(() => undefined);
   }
+  await deps.keep(user.uid).catch(() => undefined);
   return { kind: "signedIn", switched: true };
 }
 
@@ -121,6 +130,7 @@ export async function signInWithGoogle(deps: SignInDeps = defaultDeps): Promise<
     const result =
       user === null ? await signInWithPopup(auth, google()) : await linkWithPopup(user, google());
     await adoptProfile(result.user);
+    await deps.keep(result.user.uid).catch(() => undefined);
     return { kind: "signedIn", switched: false };
   } catch (error) {
     const code = codeOf(error);
@@ -148,6 +158,7 @@ export async function completeSignIn(
     const result = await getRedirectResult(auth);
     if (result === null) return null;
     await adoptProfile(result.user);
+    await deps.keep(result.user.uid).catch(() => undefined);
     return { kind: "signedIn", switched: false };
   } catch (error) {
     if (codeOf(error) === CODE.inUse && error instanceof FirebaseError) {

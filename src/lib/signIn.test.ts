@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   credentialFromError: vi.fn(),
   setCustomParameters: vi.fn(),
   carryGuest: vi.fn(async () => ({ credits: 1, moved: true })),
+  keep: vi.fn(async () => 0),
 }));
 
 vi.mock("firebase/auth", () => {
@@ -37,7 +38,7 @@ vi.mock("firebase/auth", () => {
   };
 });
 vi.mock("./firebase", () => ({ getFirebaseAuth: () => mocks.auth }));
-vi.mock("./api", () => ({ carryGuest: mocks.carryGuest }));
+vi.mock("./api", () => ({ carryGuest: mocks.carryGuest, claimKept: vi.fn() }));
 
 import { completeSignIn, sessionStash, signInWithGoogle, type SignInDeps } from "./signIn";
 
@@ -78,6 +79,7 @@ function deps(stashed: string | null = null): SignInDeps & { stashed: string[] }
   const stashed_: string[] = [];
   return {
     carry: mocks.carryGuest,
+    keep: mocks.keep,
     stash: {
       take: () => stashed,
       put: (token) => {
@@ -97,6 +99,7 @@ beforeEach(() => {
   mocks.credentialFromError.mockReset();
   mocks.updateProfile.mockClear();
   mocks.carryGuest.mockClear();
+  mocks.keep.mockClear();
   mocks.linkWithRedirect.mockClear();
   mocks.signInWithRedirect.mockClear();
 });
@@ -116,6 +119,13 @@ describe("signInWithGoogle", () => {
     });
     expect(user.getIdToken).toHaveBeenCalledWith(true);
     expect(mocks.carryGuest).not.toHaveBeenCalled();
+    expect(mocks.keep).toHaveBeenCalledWith("u1");
+  });
+
+  it("still signs in when handing the rankings over fails", async () => {
+    mocks.signInWithPopup.mockResolvedValue({ user: fakeUser() });
+    mocks.keep.mockRejectedValueOnce(new Error("offline"));
+    await expect(signInWithGoogle(deps())).resolves.toEqual({ kind: "signedIn", switched: false });
   });
 
   it("links a guest so its uid stays, taking the guest token before the popup", async () => {
@@ -155,6 +165,7 @@ describe("signInWithGoogle", () => {
     });
     expect(mocks.carryGuest).toHaveBeenCalledWith("guest-token");
     expect(existing.getIdToken).toHaveBeenCalledWith(true);
+    expect(mocks.keep).toHaveBeenCalledWith("existing");
   });
 
   it("is still signed in when carrying the guest over fails", async () => {
@@ -242,6 +253,7 @@ describe("completeSignIn", () => {
     await expect(completeSignIn(deps())).resolves.toEqual({ kind: "signedIn", switched: false });
     expect(mocks.updateProfile).toHaveBeenCalled();
     expect(user.getIdToken).toHaveBeenCalledWith(true);
+    expect(mocks.keep).toHaveBeenCalledWith("u1");
   });
 
   it("switches accounts after a redirect collision, carrying the stashed guest", async () => {

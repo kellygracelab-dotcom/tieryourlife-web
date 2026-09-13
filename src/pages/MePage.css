@@ -1,0 +1,96 @@
+.me {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--width-board);
+  margin: 0 auto;
+}
+
+.me__title {
+  margin: 0;
+  font: var(--text-headline);
+}
+
+.me__text {
+  margin: 0;
+  font: var(--text-lead);
+  color: var(--ink-dim);
+}
+
+.me__trouble {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.me__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.me__placeholder {
+  border-radius: var(--radius-card);
+}
+
+.me-card__link {
+  display: flex;
+  gap: 12px;
+  height: 100%;
+  padding: 10px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 120ms ease;
+}
+
+.me-card__link:hover {
+  color: var(--ink);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.me-card img,
+.me-card__blank {
+  flex: none;
+  width: 56px;
+  height: 80px;
+  border-radius: var(--radius-tile);
+  object-fit: cover;
+  background: var(--tile-placeholder);
+}
+
+.me-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.me-card__title {
+  font: var(--text-label);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.me-card__meta {
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.me-card__date {
+  font: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+.me__more {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-faint);
+}

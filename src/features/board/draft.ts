@@ -4,6 +4,7 @@ export interface DraftStore {
   read(key: string): string | null;
   write(key: string, value: string): void;
   remove(key: string): void;
+  keys?(): string[];
 }
 
 /** The parts of a list a draft is only valid for. A republish changes them. */
@@ -45,6 +46,13 @@ export const localStorageStore: DraftStore = {
       window.localStorage.removeItem(key);
     } catch {
       /* nothing to remove */
+    }
+  },
+  keys() {
+    try {
+      return Object.keys(window.localStorage);
+    } catch {
+      return [];
     }
   },
 };

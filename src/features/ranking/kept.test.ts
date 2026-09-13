@@ -21,6 +21,21 @@ describe("kept ranking", () => {
     expect(readKept(store, "other")).toBeNull();
   });
 
+  it("remembers which account a ranking went to, and ignores a claim that is not a uid", () => {
+    const store = memoryStore();
+    writeKept(store, "abc", { code: "abcdefgh", claimToken: "secret", claimedBy: "u1" });
+    expect(readKept(store, "abc")).toEqual({
+      code: "abcdefgh",
+      claimToken: "secret",
+      claimedBy: "u1",
+    });
+    store.write(
+      keptKey("abc"),
+      JSON.stringify({ code: "abcdefgh", claimToken: "secret", claimedBy: 7 }),
+    );
+    expect(readKept(store, "abc")).toEqual({ code: "abcdefgh", claimToken: "secret" });
+  });
+
   it.each(["{", "null", "7", JSON.stringify({ code: 1, claimToken: "x" })])(
     "ignores what it cannot read: %s",
     (text) => {
