@@ -2,7 +2,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
 import { describeList, describeRanking, renderPage, type PageMeta } from "./og";
-import { fromStoredRows, isCode, type Snapshot } from "./ranking";
+import { firstImageOf, fromStoredRows, isCode, placedCount, type StoredRanking } from "./ranking";
 
 const PUBLISHED = "publishedLists";
 const RANKINGS = "rankings";
@@ -119,13 +119,6 @@ export async function listPage(request: Request, response: Response, id: string)
   send(response, renderPage(html, meta, { kind: "list", list }));
 }
 
-interface StoredRanking {
-  listId: string;
-  snapshot: Snapshot;
-  rows: unknown;
-  createdAt?: FirebaseFirestore.Timestamp;
-}
-
 export async function rankingPage(
   request: Request,
   response: Response,
@@ -148,16 +141,15 @@ export async function rankingPage(
     rows,
     createdAt: stored.createdAt?.toMillis() ?? 0,
   };
-  const first = stored.snapshot.items.find((item) => item.imageUrl !== null);
   const meta: PageMeta = {
     title: stored.snapshot.title,
     description: describeRanking({
-      placed: rows.reduce((sum, row) => sum + row.length, 0),
+      placed: placedCount(rows),
       itemCount: stored.snapshot.items.length,
       authorName: stored.snapshot.authorName,
       category: stored.snapshot.category,
     }),
-    image: first?.imageUrl ?? null,
+    image: firstImageOf(stored.snapshot.items),
     url: `https://${host}/r/${code}`,
   };
   send(response, renderPage(html, meta, { kind: "ranking", ranking }));

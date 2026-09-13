@@ -1,19 +1,25 @@
-import { createHash, randomBytes, randomInt } from "node:crypto";
+import { randomBytes, randomInt } from "node:crypto";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
 import { requireAppCheck } from "./appCheck";
-import { requireUser, type Identity } from "./auth";
+import { requireAccount, requireUser, type Identity } from "./auth";
 import { listPage, rankingPage } from "./pages";
 import {
+  claimHashOf,
   DAILY_CEILING,
   dayKey,
+  decideClaim,
+  decideClaimToken,
   decideRows,
   fromStoredRows,
   isCode,
   makeCode,
   MAX_BODY_BYTES,
+  MY_RANKINGS_CAP,
+  newestFirst,
   snapshotOf,
+  summaryOf,
   tooSoon,
   toStoredRows,
   type Snapshot,
@@ -35,7 +41,14 @@ interface RankingDocument {
   ownerAnonymous: boolean;
   claimHash: string;
   createdAt?: FirebaseFirestore.Timestamp;
+  claimedAt?: FirebaseFirestore.Timestamp;
 }
+
+const notFound = (response: Response, error: string): void =>
+  void response.status(404).json({ error, code: "NOT_FOUND" });
+
+const methodNotAllowed = (response: Response): void =>
+  void response.status(405).json({ error: "Use GET, POST or PATCH", code: "METHOD_NOT_ALLOWED" });
 
 export const web = onRequest(
   {
@@ -60,13 +73,22 @@ export const web = onRequest(
         return await rankingPage(request, response, segments[1] ?? "");
       }
 
-      // The API: /api/rank alone, or /api/rank and a code.
+      // The API: /api/rank, /api/rank/{code} and /api/me/rankings.
       const api = segments[0] === "api" ? segments.slice(1) : null;
-      const [resource, code] = api ?? [];
-      if (api === null || resource !== "rank" || api.length > 2) {
-        return void response.status(404).json({ error: "No such address", code: "NOT_FOUND" });
-      }
+      if (api === null || api.length > 2) return notFound(response, "No such address");
+      const [resource, rest] = api;
 
+      if (resource === "me") {
+        if (rest !== "rankings") return notFound(response, "No such address");
+        if (request.method !== "GET") return methodNotAllowed(response);
+        if (!(await requireAppCheck(request, response))) return;
+        const identity = await requireAccount(request, response);
+        if (!identity) return;
+        return await listMyRankings(identity, response);
+      }
+      if (resource !== "rank") return notFound(response, "No such address");
+
+      const code = rest;
       if (request.method === "GET" && code !== undefined) {
         if (!(await requireAppCheck(request, response))) return;
         return await readRanking(response, code);
@@ -77,7 +99,13 @@ export const web = onRequest(
         if (!identity) return;
         return await saveRanking(request.body, identity, response);
       }
-      response.status(405).json({ error: "Use GET or POST" });
+      if (request.method === "PATCH" && code !== undefined) {
+        if (!(await requireAppCheck(request, response))) return;
+        const identity = await requireAccount(request, response);
+        if (!identity) return;
+        return await claimRanking(request.body, identity, response, code);
+      }
+      methodNotAllowed(response);
     } catch (error) {
       console.error("Ranking request failed", error);
       response.status(503).json({ error: "Unavailable", code: "UNAVAILABLE" });
@@ -86,14 +114,10 @@ export const web = onRequest(
 );
 
 async function readRanking(response: Response, code: string): Promise<void> {
-  if (!isCode(code)) {
-    return void response.status(404).json({ error: "No such ranking", code: "NOT_FOUND" });
-  }
+  if (!isCode(code)) return notFound(response, "No such ranking");
   const db = getFirestore();
   const doc = await db.collection(RANKINGS).doc(code).get();
-  if (!doc.exists) {
-    return void response.status(404).json({ error: "No such ranking", code: "NOT_FOUND" });
-  }
+  if (!doc.exists) return notFound(response, "No such ranking");
   const ranking = doc.data() as RankingDocument;
   // A ranking outlives its list; the page only needs to know whether the
   // list is still there to link back to.
@@ -122,7 +146,7 @@ async function saveRanking(body: unknown, identity: Identity, response: Response
       ? await db.collection(PUBLISHED).doc(listId).get()
       : null;
   if (list === null || !list.exists || list.get("underReview") === true) {
-    return void response.status(404).json({ error: "No such list", code: "NOT_FOUND" });
+    return notFound(response, "No such list");
   }
   const snapshot = snapshotOf(list.data() ?? {});
   const decision = decideRows(body, snapshot.tiers.length, snapshot.items.length);
@@ -162,7 +186,7 @@ async function saveRanking(body: unknown, identity: Identity, response: Response
     rows: toStoredRows(decision.rows),
     ownerUid: identity.uid,
     ownerAnonymous: identity.isAnonymous,
-    claimHash: createHash("sha256").update(claimToken).digest("hex"),
+    claimHash: claimHashOf(claimToken),
   };
 
   for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
@@ -179,4 +203,60 @@ async function saveRanking(body: unknown, identity: Identity, response: Response
     }
   }
   response.status(503).json({ error: "Could not find a free code", code: "UNAVAILABLE" });
+}
+
+async function claimRanking(
+  body: unknown,
+  identity: Identity,
+  response: Response,
+  code: string,
+): Promise<void> {
+  if (!isCode(code)) return notFound(response, "No such ranking");
+  const claimToken = decideClaimToken(body);
+  if (claimToken === null) {
+    return void response.status(400).json({ error: "Which ranking?", code: "INVALID" });
+  }
+
+  const db = getFirestore();
+  const ref = db.collection(RANKINGS).doc(code);
+  // Decided and written in one transaction, so two accounts racing for the
+  // same token cannot both be told the ranking is theirs.
+  const decision = await db.runTransaction(async (transaction) => {
+    const doc = await transaction.get(ref);
+    if (!doc.exists) return null;
+    const verdict = decideClaim(doc.data() as RankingDocument, identity.uid, claimToken);
+    if (verdict.ok && verdict.write) {
+      transaction.update(ref, {
+        ownerUid: identity.uid,
+        ownerAnonymous: false,
+        claimedAt: FieldValue.serverTimestamp(),
+      });
+    }
+    return verdict;
+  });
+  if (decision === null) return notFound(response, "No such ranking");
+  if (!decision.ok) {
+    return void response
+      .status(decision.status)
+      .json({ error: decision.error, code: decision.code });
+  }
+
+  response.setHeader("Cache-Control", "no-store");
+  response.status(200).json({ code });
+}
+
+async function listMyRankings(identity: Identity, response: Response): Promise<void> {
+  // No orderBy: a where and an orderBy on different fields need a composite
+  // index, and this repository deploys no indexes; the sort happens here.
+  const found = await getFirestore()
+    .collection(RANKINGS)
+    .where("ownerUid", "==", identity.uid)
+    .limit(MY_RANKINGS_CAP)
+    .get();
+  const rankings = newestFirst(
+    found.docs.map((doc) => summaryOf(doc.id, doc.data() as RankingDocument)),
+  );
+
+  response.setHeader("Cache-Control", "no-store");
+  response.status(200).json({ rankings, more: found.size === MY_RANKINGS_CAP });
 }

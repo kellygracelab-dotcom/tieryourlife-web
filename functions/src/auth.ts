@@ -23,3 +23,17 @@ export async function requireUser(request: Request, response: Response): Promise
     return null;
   }
 }
+
+/** A person with an account: what is kept must outlive the browser's guest uid. */
+export async function requireAccount(
+  request: Request,
+  response: Response,
+): Promise<Identity | null> {
+  const identity = await requireUser(request, response);
+  if (identity === null) return null;
+  if (identity.isAnonymous) {
+    response.status(403).json({ error: "Sign in first", code: "NOT_SIGNED_IN" });
+    return null;
+  }
+  return identity;
+}
