@@ -18,6 +18,10 @@ interface ResultBarProps {
   onRetry: () => void;
   onChange: () => void;
   download: (address: string) => Promise<void>;
+  /** Whether the ranking already sits in the person's account. */
+  kept?: boolean;
+  /** Offered to a guest; absent once the ranking is kept. */
+  save?: () => void;
   copy?: (text: string) => Promise<void>;
 }
 
@@ -32,6 +36,8 @@ export function ResultBar({
   onRetry,
   onChange,
   download,
+  kept = false,
+  save,
   copy = clipboardCopy,
 }: ResultBarProps) {
   const [copied, setCopied] = useState(false);
@@ -102,7 +108,7 @@ export function ResultBar({
       <p className="result__lead">
         {strings.rank.live} <span className="result__address">{address}</span>
       </p>
-      <p className="result__note">{strings.rank.liveNote}</p>
+      <p className="result__note">{kept ? strings.rank.liveNoteKept : strings.rank.liveNote}</p>
       <div className="result__actions">
         <Button variant="filled" icon={copied ? "check" : "link"} onClick={onCopy}>
           {copied ? strings.rank.copied : strings.rank.copy}
@@ -115,6 +121,11 @@ export function ResultBar({
         >
           {imageStatus === "busy" ? strings.rank.downloading : strings.rank.download}
         </Button>
+        {save !== undefined && (
+          <Button variant="tonal" icon="bookmark" onClick={save}>
+            {strings.rank.save}
+          </Button>
+        )}
         <Link className="btn btn--tonal" to={`/r/${finish.code}`}>
           <Icon name="open_in_new" className="btn__icon" />
           <span>{strings.rank.open}</span>

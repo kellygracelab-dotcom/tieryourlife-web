@@ -17,7 +17,7 @@ vi.mock("./preload", () => ({
   preloadedRanking: (code: string) => (code === "embedded" ? { code: "embedded" } : null),
 }));
 
-import { api, keepRanking, loadFeed, loadList, loadRanking, noteTake } from "./api";
+import { api, carryGuest, keepRanking, loadFeed, loadList, loadRanking, noteTake } from "./api";
 
 describe("api", () => {
   it("is one client built on the Firebase token providers", () => {
@@ -51,6 +51,13 @@ describe("api", () => {
     await keepRanking("abc", [[1], []]);
     expect(mocks.request).toHaveBeenCalledWith("POST", "/api/rank", {
       body: { listId: "abc", rows: [[1], []] },
+    });
+  });
+
+  it("carries a guest over to the account that was signed into instead", async () => {
+    await carryGuest("guest.jwt");
+    expect(mocks.request).toHaveBeenCalledWith("POST", "/adoptGuestCredits", {
+      body: { guestToken: "guest.jwt" },
     });
   });
 

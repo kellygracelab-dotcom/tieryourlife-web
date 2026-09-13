@@ -23,6 +23,10 @@
           "function": { "functionId": "tmdb", "region": "europe-west1" }
         },
         {
+          "source": "/adoptGuestCredits",
+          "function": { "functionId": "adoptGuestCredits", "region": "europe-west1" }
+        },
+        {
           "source": "/api/**",
           "function": { "functionId": "web", "region": "europe-west1" }
         },
