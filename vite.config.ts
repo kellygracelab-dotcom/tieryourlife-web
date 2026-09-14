@@ -1,6 +1,13 @@
 /// <reference types="vitest/config" />
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
+import {
+  DEBUG_TOKEN_VAR,
+  debugTokenDefine,
+  keepOutOfBundle,
+  LEAKY_DEBUG_TOKEN_VAR,
+  refuseLeakyDebugToken,
+} from "./config/debug-token.ts";
 
 // The same two paths are Hosting rewrites in production, so the client never
 // needs a different base URL. In development they go to the backend's Firebase
@@ -16,10 +23,12 @@ const proxyFor = (functionsBase: string) => {
   return { "/lists": to("lists"), "/3/search": to("tmdb"), "/api": to("web") };
 };
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
+  refuseLeakyDebugToken(command, env);
   return {
-    plugins: [react()],
+    plugins: [react(), keepOutOfBundle([env[DEBUG_TOKEN_VAR], env[LEAKY_DEBUG_TOKEN_VAR]])],
+    define: debugTokenDefine(command, env),
     server: {
       proxy: proxyFor(env.PROXY_TARGET || EMULATOR),
     },
