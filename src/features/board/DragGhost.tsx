@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { PublishedItem } from "../../api/types";
 import type { DragState } from "./drag";
 
@@ -10,14 +11,16 @@ export function DragGhost({ state, items }: DragGhostProps) {
   if (state.phase !== "dragging") return null;
   const card = items[state.item];
   if (card === undefined) return null;
+  const { at, grab } = state;
+  // The ghost sits exactly where the card was, so the card appears to be the thing moving.
+  const style: CSSProperties = {
+    transform: `translate(${at.x - grab.x}px, ${at.y - grab.y}px)`,
+    ...(grab.width > 0 && grab.height > 0 ? { width: grab.width, height: grab.height } : {}),
+  };
   return (
-    <div
-      className="ghost"
-      style={{ transform: `translate(${state.at.x}px, ${state.at.y}px)` }}
-      aria-hidden="true"
-    >
+    <div className="ghost" style={style} aria-hidden="true">
       {card.imageUrl !== null ? (
-        <img src={card.imageUrl} alt="" crossOrigin="anonymous" />
+        <img src={card.imageUrl} alt="" />
       ) : (
         <span className="tile__name">{card.title}</span>
       )}

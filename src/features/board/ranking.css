@@ -56,11 +56,12 @@
 
 .ghost {
   position: fixed;
-  top: -45px;
-  left: -32px;
+  top: 0;
+  left: 0;
   z-index: 100;
   width: 64px;
   height: 90px;
+  pointer-events: none;
   overflow: hidden;
   border-radius: var(--radius-tile);
   background: var(--tile-placeholder);

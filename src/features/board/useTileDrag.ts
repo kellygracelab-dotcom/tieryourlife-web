@@ -46,7 +46,14 @@ export function useTileDrag(
     (item: number) => (event: ReactPointerEvent<HTMLElement>) => {
       if (event.button !== 0) return;
       const at = { x: event.clientX, y: event.clientY };
-      const next = press(item, at, event.pointerType ?? "mouse", Date.now());
+      const rect = event.currentTarget.getBoundingClientRect();
+      const grab = {
+        x: at.x - rect.left,
+        y: at.y - rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+      const next = press(item, at, event.pointerType ?? "mouse", Date.now(), grab);
       setState(next);
       if (next.phase === "pressed" && next.holdUntil !== null) {
         clearHold();

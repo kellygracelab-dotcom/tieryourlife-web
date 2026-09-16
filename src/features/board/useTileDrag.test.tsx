@@ -82,7 +82,8 @@ describe("dragging a card", () => {
     pointer("pointermove", window, 40, 40);
     expect(card("Anora")).toHaveClass("tile--lifted");
     expect(tierRow("S")).toHaveClass("tier--target");
-    expect(document.querySelector(".ghost")).toHaveStyle({ transform: "translate(40px, 40px)" });
+    // Grabbed 10px into a tile that jsdom lays out at the origin, so the ghost trails by that much.
+    expect(document.querySelector(".ghost")).toHaveStyle({ transform: "translate(30px, 30px)" });
 
     pointer("pointerup", window, 40, 40);
     expect(
