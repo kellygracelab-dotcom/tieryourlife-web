@@ -76,13 +76,7 @@ function Tile({ list, item, selected, lifted, locked, dispatch, onPointerDown }:
         onPointerDown={locked ? undefined : onPointerDown}
       >
         {card.imageUrl !== null ? (
-          <img
-            src={card.imageUrl}
-            alt=""
-            loading="lazy"
-            draggable={false}
-            crossOrigin="anonymous"
-          />
+          <img src={card.imageUrl} alt="" loading="lazy" draggable={false} />
         ) : (
           <span className="tile__name">{card.title}</span>
         )}
