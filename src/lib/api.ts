@@ -1,6 +1,13 @@
 import { eraseAccount, refreshAuthor } from "../api/account";
 import { createApiClient } from "../api/client";
 import { reportList, type ReportRequest } from "../api/community";
+import {
+  dismissReports,
+  getReports,
+  takeDown,
+  type BanLength,
+  type QueuedList,
+} from "../api/moderation";
 import { adoptGuest, type AdoptedGuest } from "../api/guest";
 import { searchCatalogue, type CatalogueItem } from "../api/catalogue";
 import {
@@ -80,6 +87,13 @@ export const refreshPublishedAuthor = (): Promise<{ updated: number }> => refres
 
 export const report = (id: string, request: ReportRequest): Promise<void> =>
   reportList(api, id, request);
+
+export const loadReports = (): Promise<{ reports: QueuedList[] }> => getReports(api);
+
+export const takeDownList = (id: string, ban: BanLength | null): Promise<void> =>
+  takeDown(api, id, ban);
+
+export const leaveListUp = (id: string): Promise<void> => dismissReports(api, id);
 
 export const eraseMyAccount = (): Promise<void> => eraseAccount(api);
 

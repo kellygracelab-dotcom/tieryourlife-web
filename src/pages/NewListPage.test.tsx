@@ -14,6 +14,7 @@ import { PictureRefused } from "../lib/pictures";
 import { NewListPage, type LoadList, type Publish, type Republish } from "./NewListPage";
 
 vi.mock("../lib/api", () => ({
+  loadReports: vi.fn(() => new Promise(() => undefined)),
   report: vi.fn(),
   publish: vi.fn(),
   republish: vi.fn(),

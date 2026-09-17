@@ -100,6 +100,25 @@
   background: var(--hover);
 }
 
+.menu__row {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.menu__pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--error) 16%, var(--surface));
+  font: var(--text-caption);
+  font-weight: 500;
+  color: var(--error);
+}
+
 .menu__button--face {
   overflow: hidden;
 }
