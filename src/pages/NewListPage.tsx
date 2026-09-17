@@ -1,17 +1,20 @@
-import { useEffect, useReducer, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useEffect, useReducer, useState, type ReactNode } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import type { ApiError } from "../api/errors";
-import { CATEGORIES } from "../api/types";
-import { useSession } from "../app/session";
+import { CATEGORIES, type PublishedList } from "../api/types";
+import { useSession, type Session } from "../app/session";
 import { localStorageStore, type DraftStore } from "../features/board/draft";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { CardsEditor, type Upload } from "../features/editor/CardsEditor";
 import {
   clearEditorDraft,
+  draftOf,
+  editDraftKey,
   emptyDraft,
   isBlankDraft,
   LIMITS,
   loadEditorDraft,
+  NEW_DRAFT_KEY,
   ownPicturesOf,
   problemsOf,
   publishBodyOf,
@@ -19,27 +22,38 @@ import {
   saveEditorDraft,
   type Draft,
   type Problem,
+  type PublishBody,
 } from "../features/editor/model";
+import { bodyForRepublish, type CopyBack } from "../features/editor/republish";
 import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
-import { errorOf } from "../features/list/useResource";
-import { publish as publishList } from "../lib/api";
-import { discardPictures, PictureRefused, uploadPicture } from "../lib/pictures";
+import { errorOf, useResource } from "../features/list/useResource";
+import { loadList, publish as publishList, republish as republishList } from "../lib/api";
+import { copyPublishedBack, discardPictures, PictureRefused, uploadPicture } from "../lib/pictures";
 import type { SignInOutcome } from "../lib/signIn";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
+import { Skeleton } from "../ui/Skeleton";
 import "../features/editor/editor.css";
 
 export type Publish = typeof publishList;
+export type Republish = typeof republishList;
+export type LoadList = (id: string) => Promise<PublishedList>;
+type Discard = (pictureIds: readonly string[]) => Promise<void>;
 
 interface NewListPageProps {
   store?: DraftStore;
   lookup?: Lookup;
   publish?: Publish;
+  republish?: Republish;
+  load?: LoadList;
   upload?: Upload;
-  discard?: (pictureIds: readonly string[]) => Promise<void>;
+  copyBack?: CopyBack;
+  discard?: Discard;
 }
+
+type Mode = "new" | "edit";
 
 type PublishState = { status: "idle" } | { status: "busy" } | { status: "failed"; error: ApiError };
 
@@ -53,7 +67,7 @@ const PROBLEM_TEXT: Record<Problem, string> = {
   tooManyItems: strings.new.tooManyCards,
 };
 
-function failureText(error: ApiError): string {
+function failureText(error: ApiError, mode: Mode): string {
   switch (error.kind) {
     case "offline":
       return strings.new.failedOffline;
@@ -64,6 +78,10 @@ function failureText(error: ApiError): string {
     case "notSignedIn":
     case "unauthenticated":
       return strings.new.failedSignedOut;
+    case "notFound":
+      return mode === "edit" ? strings.new.failedGone : strings.new.failedOther;
+    case "notYours":
+      return strings.new.notYours;
     case "tooLarge":
       return fill(strings.new.failedTooLarge, { detail: error.detail ?? "" }).trim();
     case "invalid":
@@ -74,44 +92,59 @@ function failureText(error: ApiError): string {
 }
 
 interface EditorProps {
+  mode: Mode;
   store: DraftStore;
-  lookup: Lookup | undefined;
-  publish: Publish;
-  upload: Upload;
-  discard: (pictureIds: readonly string[]) => Promise<void>;
-  guest: boolean;
-  signIn: () => Promise<SignInOutcome>;
+  /** Where this editor keeps its draft: the new list and every edit have their own. */
+  draftKey: string;
+  /** What the editor holds when nothing is kept under that key. */
+  opening: () => Draft;
   /** A title brought from elsewhere, such as a search that found nothing. */
   suggestedTitle: string | null;
+  lookup: Lookup | undefined;
+  submit: (draft: Draft, body: PublishBody) => Promise<{ id: string }>;
+  upload: Upload;
+  discard: Discard;
+  guest: boolean;
+  signIn: () => Promise<SignInOutcome>;
 }
 
 // A suggested title fills an empty editor; a draft with anything in it is
 // somebody's work and stays as it is.
-const openingDraft = (store: DraftStore, suggestedTitle: string | null): Draft => {
-  const draft = loadEditorDraft(store) ?? emptyDraft();
+const openingDraft = (
+  store: DraftStore,
+  draftKey: string,
+  opening: () => Draft,
+  suggestedTitle: string | null,
+): Draft => {
+  const draft = loadEditorDraft(store, draftKey) ?? opening();
   return suggestedTitle !== null && isBlankDraft(draft)
     ? reduce(draft, { type: "title", title: suggestedTitle })
     : draft;
 };
 
 function Editor({
+  mode,
   store,
+  draftKey,
+  opening,
+  suggestedTitle,
   lookup,
-  publish,
+  submit,
   upload,
   discard,
   guest,
   signIn,
-  suggestedTitle,
 }: EditorProps) {
-  const [draft, dispatch] = useReducer(reduce, store, (s) => openingDraft(s, suggestedTitle));
+  const [draft, dispatch] = useReducer(reduce, undefined, () =>
+    openingDraft(store, draftKey, opening, suggestedTitle),
+  );
   const [preview, setPreview] = useState(false);
   const [publishing, setPublishing] = useState<PublishState>({ status: "idle" });
   const navigate = useNavigate();
 
   useEffect(() => {
-    saveEditorDraft(store, draft);
-  }, [store, draft]);
+    saveEditorDraft(store, draft, draftKey);
+  }, [store, draftKey, draft]);
 
   const problems = problemsOf(draft);
   const busy = publishing.status === "busy";
@@ -133,9 +166,9 @@ function Editor({
         return;
       }
     }
-    publish(body).then(
+    submit(draft, body).then(
       ({ id }) => {
-        clearEditorDraft(store);
+        clearEditorDraft(store, draftKey);
         // The feed has its copies now; the originals in the private folder are litter.
         void discard(ownPicturesOf(draft));
         void navigate(`/l/${encodeURIComponent(id)}`);
@@ -145,9 +178,9 @@ function Editor({
   };
 
   const startOver = () => {
-    clearEditorDraft(store);
+    clearEditorDraft(store, draftKey);
     void discard(ownPicturesOf(draft));
-    dispatch({ type: "reset" });
+    dispatch({ type: "replace", draft: mode === "new" ? emptyDraft() : opening() });
     setPublishing({ status: "idle" });
   };
 
@@ -160,10 +193,12 @@ function Editor({
     return upload(file);
   };
 
+  const editing = mode === "edit";
+
   return (
     <div className="editor">
       <header className="editor__top">
-        <h1 className="editor__title">{strings.new.title}</h1>
+        <h1 className="editor__title">{editing ? strings.new.editTitle : strings.new.title}</h1>
         <div className="editor__actions">
           <Button
             variant="tonal"
@@ -179,16 +214,20 @@ function Editor({
             onClick={() => void onPublish()}
             disabled={busy || problems.length > 0}
           >
-            {busy ? strings.new.publishing : strings.new.publish}
+            {busy
+              ? strings.new.publishing
+              : editing
+                ? strings.new.publishChanges
+                : strings.new.publish}
           </Button>
         </div>
       </header>
 
-      {guest && <p className="editor__hint">{strings.new.guestNote}</p>}
+      {guest && !editing && <p className="editor__hint">{strings.new.guestNote}</p>}
 
       {publishing.status === "failed" && (
         <p className="editor__failed" role="alert">
-          {failureText(publishing.error)}
+          {failureText(publishing.error, mode)}
         </p>
       )}
 
@@ -266,35 +305,193 @@ function Editor({
           <p className="editor__todo editor__todo--ready">{strings.new.ready}</p>
         )}
         <Button onClick={startOver} disabled={busy}>
-          {strings.new.startOver}
+          {editing ? strings.new.discardChanges : strings.new.startOver}
         </Button>
       </footer>
     </div>
   );
 }
 
+interface EditListProps {
+  id: string;
+  account: Session["account"];
+  signIn: Session["signIn"];
+  store: DraftStore;
+  lookup: Lookup | undefined;
+  load: LoadList;
+  republish: Republish;
+  upload: Upload;
+  copyBack: CopyBack;
+  discard: Discard;
+}
+
+function EditNotice({ children }: { children: ReactNode }) {
+  return (
+    <div className="editor">
+      <header className="editor__top">
+        <h1 className="editor__title">{strings.new.editTitle}</h1>
+      </header>
+      {children}
+    </div>
+  );
+}
+
+function EditLoaded({
+  id,
+  uid,
+  store,
+  lookup,
+  load,
+  republish,
+  upload,
+  copyBack,
+  discard,
+  signIn,
+}: Omit<EditListProps, "account"> & { uid: string }) {
+  const { state, retry } = useResource(id, load);
+
+  if (state.status === "loading") {
+    return (
+      <EditNotice>
+        <div aria-busy="true">
+          <Skeleton height="20px" width="40%" />
+        </div>
+        <p className="editor__hint">{strings.new.openingList}</p>
+      </EditNotice>
+    );
+  }
+  if (state.status === "error") {
+    const { error } = state;
+    return (
+      <EditNotice>
+        <p className="editor__failed" role="alert">
+          {error.kind === "notFound"
+            ? strings.new.listGone
+            : error.kind === "offline"
+              ? strings.new.failedOffline
+              : strings.new.listFailed}
+        </p>
+        {error.kind !== "notFound" && (
+          <div>
+            <Button variant="filled" icon="refresh" onClick={retry}>
+              {strings.new.tryAgain}
+            </Button>
+          </div>
+        )}
+      </EditNotice>
+    );
+  }
+
+  const list = state.value;
+  if (list.authorUid !== uid) {
+    return (
+      <EditNotice>
+        <p className="editor__hint">{strings.new.notYours}</p>
+        <p>
+          <Link to={`/l/${encodeURIComponent(id)}`}>{strings.new.openList}</Link>
+        </p>
+      </EditNotice>
+    );
+  }
+
+  // The private copies made for the republish are litter either way once the
+  // backend has answered: it copied them, or it refused the whole thing.
+  const submit = async (_draft: Draft, body: PublishBody) => {
+    const ready = await bodyForRepublish(id, body, list.coverImageUrl, copyBack);
+    try {
+      return await republish(id, ready.body);
+    } finally {
+      void discard(ready.copied);
+    }
+  };
+
+  return (
+    <Editor
+      mode="edit"
+      store={store}
+      draftKey={editDraftKey(id)}
+      opening={() => draftOf(list)}
+      suggestedTitle={null}
+      lookup={lookup}
+      submit={submit}
+      upload={upload}
+      discard={discard}
+      guest={false}
+      signIn={signIn}
+    />
+  );
+}
+
+function EditList({ account, signIn, ...rest }: EditListProps) {
+  if (account === null) {
+    return (
+      <EditNotice>
+        <div aria-busy="true">
+          <Skeleton height="20px" width="40%" />
+        </div>
+      </EditNotice>
+    );
+  }
+  if (account.kind === "guest") {
+    return (
+      <EditNotice>
+        <p className="editor__hint">{strings.new.editSignIn}</p>
+        <div>
+          <Button variant="filled" onClick={() => void signIn()}>
+            {strings.nav.signIn}
+          </Button>
+        </div>
+      </EditNotice>
+    );
+  }
+  return <EditLoaded {...rest} uid={account.uid} signIn={signIn} />;
+}
+
 export function NewListPage({
   store = localStorageStore,
   lookup,
   publish = publishList,
+  republish = republishList,
+  load = loadList,
   upload = (file) => uploadPicture(file),
+  copyBack = copyPublishedBack,
   discard = discardPictures,
 }: NewListPageProps) {
   const { account, signIn } = useSession();
   const [params] = useSearchParams();
+  const listId = params.get("list");
+  if (listId !== null && listId !== "") {
+    return (
+      <EditList
+        id={listId}
+        account={account}
+        signIn={signIn}
+        store={store}
+        lookup={lookup}
+        load={load}
+        republish={republish}
+        upload={upload}
+        copyBack={copyBack}
+        discard={discard}
+      />
+    );
+  }
   const suggestedTitle = params.get("title");
   return (
     <Editor
+      mode="new"
       store={store}
+      draftKey={NEW_DRAFT_KEY}
+      opening={emptyDraft}
+      suggestedTitle={
+        suggestedTitle !== null && suggestedTitle.trim() !== "" ? suggestedTitle : null
+      }
       lookup={lookup}
-      publish={publish}
+      submit={(_, body) => publish(body)}
       upload={upload}
       discard={discard}
       guest={account?.kind !== "signedIn"}
       signIn={signIn}
-      suggestedTitle={
-        suggestedTitle !== null && suggestedTitle.trim() !== "" ? suggestedTitle : null
-      }
     />
   );
 }

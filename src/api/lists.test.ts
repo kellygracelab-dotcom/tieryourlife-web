@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "./client";
-import { getFeed, getList, recordTake, unpublishList } from "./lists";
+import {
+  getFeed,
+  getList,
+  recordTake,
+  republishList,
+  unpublishList,
+  type PublishRequest,
+} from "./lists";
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -33,6 +40,22 @@ describe("lists", () => {
     await getFeed(client);
 
     expect(request).toHaveBeenCalledWith("GET", "/lists", { query: {} });
+  });
+
+  it("republishes one list in place, escaping the id", async () => {
+    const { client, request } = recordingClient({ id: "a b" });
+    const body: PublishRequest = {
+      title: "T",
+      category: "anime",
+      coverImageUrl: null,
+      coverPictureId: null,
+      tiers: [],
+      items: [],
+    };
+
+    await expect(republishList(client, "a b", body)).resolves.toEqual({ id: "a b" });
+
+    expect(request).toHaveBeenCalledWith("POST", "/lists/a%20b", { body });
   });
 
   it("unpublishes one list by id, escaping the id", async () => {

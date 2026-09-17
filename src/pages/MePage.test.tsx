@@ -173,6 +173,10 @@ describe("MePage", () => {
       "/l/l1",
     );
     expect(screen.getAllByText("34 items · 2,140 rankings")).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "Edit" })[0]).toHaveAttribute(
+      "href",
+      "/new?list=l1",
+    );
     expect(mocks.loadMyRankings).not.toHaveBeenCalled();
   });
 

@@ -7,6 +7,7 @@ import {
   getMyLists,
   publishList,
   recordTake,
+  republishList,
   unpublishList,
   type PublishRequest,
 } from "../api/lists";
@@ -67,6 +68,9 @@ export const findInCatalogue = (query: string): Promise<CatalogueItem[]> =>
 
 export const publish = (request: PublishRequest): Promise<{ id: string }> =>
   publishList(api, request);
+
+export const republish = (id: string, request: PublishRequest): Promise<{ id: string }> =>
+  republishList(api, id, request);
 
 export const unpublish = (id: string): Promise<void> => unpublishList(api, id);
 

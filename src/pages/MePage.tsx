@@ -8,6 +8,7 @@ import { errorOf, useResource } from "../features/list/useResource";
 import { loadMyLists, loadMyRankings, unpublish as unpublishList } from "../lib/api";
 import { fill, formatCount, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
+import { Icon } from "../ui/Icon";
 import { ListCard } from "../ui/ListCard";
 import { Skeleton } from "../ui/Skeleton";
 import "../features/feed/feed.css";
@@ -163,6 +164,10 @@ function PublishedCard({
                 : strings.me.unpublishFailed}
             </p>
           )}
+          <Link className="btn btn--text" to={`/new?list=${encodeURIComponent(list.id)}`}>
+            <Icon name="edit" className="btn__icon" />
+            <span>{strings.me.edit}</span>
+          </Link>
           <Button
             icon="unpublished"
             onClick={() => setState({ status: "asking" })}
