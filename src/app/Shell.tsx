@@ -36,6 +36,9 @@ function AccountMenu({
           <Link to="/me">{strings.nav.yourRankings}</Link>
         </li>
         <li>
+          <Link to="/me/lists">{strings.nav.myLists}</Link>
+        </li>
+        <li>
           <button type="button" className="menu__action" onClick={onSignOut}>
             {strings.nav.signOut}
           </button>

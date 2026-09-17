@@ -24,6 +24,7 @@ import {
   keepRanking,
   loadFeed,
   loadList,
+  loadMyLists,
   loadMyRankings,
   loadRanking,
   noteTake,
@@ -92,6 +93,8 @@ describe("api", () => {
     });
     await loadMyRankings();
     expect(mocks.request).toHaveBeenCalledWith("GET", "/api/me/rankings");
+    await loadMyLists();
+    expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/mine");
   });
 
   it("notes a take and swallows a refusal", async () => {

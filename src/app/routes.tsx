@@ -17,6 +17,7 @@ export const routes: RouteObject[] = [
       { path: "l/:id", element: <ListPage /> },
       { path: "r/:code", element: <RankingPage /> },
       { path: "me", element: <MePage /> },
+      { path: "me/lists", element: <MePage tab="lists" /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
