@@ -234,7 +234,12 @@ export function ListPage({ report = sendReport }: { report?: Report }) {
         <div className="list-head__text">
           <h1 className="list-head__title">{list.title}</h1>
           <p className="list-head__meta">
-            {fill(strings.list.by, { name: list.authorName })}
+            <Link
+              to={`/u/${encodeURIComponent(list.authorUid)}`}
+              state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
+            >
+              {fill(strings.list.by, { name: list.authorName })}
+            </Link>
             {" · "}
             {strings.rank.ownCopy}
             {" · "}

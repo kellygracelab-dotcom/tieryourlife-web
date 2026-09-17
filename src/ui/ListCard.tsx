@@ -10,21 +10,28 @@ interface ListCardProps {
 
 const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
+/** The feed's card: the list under the picture and the title, the author under their name. */
 export function ListCard({ list }: ListCardProps) {
   const meta = [
     plural(strings.card.items, list.itemCount),
     plural(strings.card.rankings, list.takeCount),
   ];
   return (
-    <Link className="list-card" to={`/l/${encodeURIComponent(list.id)}`}>
-      <ListArt
-        cover={list.coverImageUrl}
-        previews={list.previewImages}
-        tierColors={list.tierColors}
-      />
-      <span className="list-card__body">
+    <article className="list-card">
+      <Link className="list-card__main" to={`/l/${encodeURIComponent(list.id)}`}>
+        <ListArt
+          cover={list.coverImageUrl}
+          previews={list.previewImages}
+          tierColors={list.tierColors}
+        />
         <span className="list-card__title">{list.title}</span>
-        <span className="list-card__author">
+      </Link>
+      <span className="list-card__body">
+        <Link
+          className="list-card__author"
+          to={`/u/${encodeURIComponent(list.authorUid)}`}
+          state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
+        >
           {list.authorPhotoUrl !== null ? (
             <img className="list-card__face" src={list.authorPhotoUrl} alt="" loading="lazy" />
           ) : (
@@ -33,9 +40,9 @@ export function ListCard({ list }: ListCardProps) {
             </span>
           )}
           <span>{fill(strings.card.by, { name: list.authorName })}</span>
-        </span>
+        </Link>
         <span className="list-card__meta">{meta.join(" · ")}</span>
       </span>
-    </Link>
+    </article>
   );
 }

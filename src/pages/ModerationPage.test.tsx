@@ -10,6 +10,11 @@ import { agoText, reasonCounts } from "../features/moderation/queue";
 import { ModerationPage, type LeaveUp, type LoadQueue, type TakeDown } from "./ModerationPage";
 
 vi.mock("../lib/api", () => ({
+  report: vi.fn(),
+  followState: vi.fn(() => new Promise(() => undefined)),
+  followAuthor: vi.fn(),
+  unfollowAuthor: vi.fn(),
+  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
   loadReports: vi.fn(),
   takeDownList: vi.fn(),
   leaveListUp: vi.fn(),

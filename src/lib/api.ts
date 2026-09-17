@@ -1,6 +1,15 @@
 import { eraseAccount, refreshAuthor } from "../api/account";
 import { createApiClient } from "../api/client";
-import { reportList, type ReportRequest } from "../api/community";
+import {
+  followAuthor as followAuthorOf,
+  getFollowState,
+  getSuggestedAuthors,
+  reportList,
+  unfollowAuthor as unfollowAuthorOf,
+  type FollowState,
+  type ReportRequest,
+  type SuggestedAuthor,
+} from "../api/community";
 import {
   dismissReports,
   getReports,
@@ -89,6 +98,18 @@ export const report = (id: string, request: ReportRequest): Promise<void> =>
   reportList(api, id, request);
 
 export const loadReports = (): Promise<{ reports: QueuedList[] }> => getReports(api);
+
+export const followState = (authorUid: string): Promise<FollowState> =>
+  getFollowState(api, authorUid);
+
+export const followAuthor = (authorUid: string): Promise<{ following: true }> =>
+  followAuthorOf(api, authorUid);
+
+export const unfollowAuthor = (authorUid: string): Promise<{ following: false }> =>
+  unfollowAuthorOf(api, authorUid);
+
+export const suggestedAuthors = (): Promise<{ authors: SuggestedAuthor[] }> =>
+  getSuggestedAuthors(api);
 
 export const takeDownList = (id: string, ban: BanLength | null): Promise<void> =>
   takeDown(api, id, ban);

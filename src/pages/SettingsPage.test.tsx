@@ -19,6 +19,10 @@ import {
 } from "./SettingsPage";
 
 vi.mock("../lib/api", () => ({
+  followState: vi.fn(() => new Promise(() => undefined)),
+  followAuthor: vi.fn(),
+  unfollowAuthor: vi.fn(),
+  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
   loadReports: vi.fn(() => new Promise(() => undefined)),
   report: vi.fn(),
   loadMyLists: vi.fn(),

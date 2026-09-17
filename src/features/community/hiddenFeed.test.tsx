@@ -42,7 +42,7 @@ const open = (lists: ListSummary[], hiddenNote = false) =>
     <MemoryRouter>
       <Hider id="a" />
       <FeedGrid
-        state={{ status: "ready", lists, next: null, more: "idle" }}
+        state={{ status: "ready", lists, next: null, more: "idle", followingNobody: false }}
         label="Feed"
         retry={() => undefined}
         more={() => undefined}

@@ -27,7 +27,7 @@ const ready = (
   next: string | null = null,
   more: "idle" | "loading" | "failed" = "idle",
   items = lists,
-): FeedState => ({ status: "ready", lists: items, next, more });
+): FeedState => ({ status: "ready", lists: items, next, more, followingNobody: false });
 
 const show = (state: FeedState, paged?: boolean) => {
   const retry = vi.fn();
