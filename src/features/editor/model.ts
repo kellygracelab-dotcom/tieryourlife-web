@@ -1,0 +1,256 @@
+import type { Category, PublishedTier } from "../../api/types";
+
+/** The phone's eight pairs, light and dark, so boards look the same everywhere. */
+export const TIER_PRESETS: readonly { light: string; dark: string }[] = [
+  { light: "#B03A32", dark: "#F1948C" },
+  { light: "#C06A25", dark: "#E9A867" },
+  { light: "#A98B1F", dark: "#D8C05A" },
+  { light: "#3F7F55", dark: "#8FD3A3" },
+  { light: "#3C6E99", dark: "#8FC3E8" },
+  { light: "#6B4E9E", dark: "#C9A9F0" },
+  { light: "#2F7D7D", dark: "#7ED4D4" },
+  { light: "#A63A66", dark: "#F09BB9" },
+];
+
+/** What a new board starts with, the same as in the app. */
+export const DEFAULT_TIERS: readonly PublishedTier[] = [
+  { label: "S", caption: "Masterpiece", colorLight: "#B03A32", colorDark: "#F1948C" },
+  { label: "A", caption: "Great", colorLight: "#C06A25", colorDark: "#E9A867" },
+  { label: "B", caption: "Good", colorLight: "#A98B1F", colorDark: "#D8C05A" },
+  { label: "C", caption: "Watchable", colorLight: "#3F7F55", colorDark: "#7FC393" },
+  { label: "D", caption: "No", colorLight: "#3C6E99", colorDark: "#86B8DE" },
+];
+
+/** The backend's ceilings, so the form can say no before the network does. */
+export const LIMITS = {
+  title: 80,
+  label: 80,
+  caption: 60,
+  tiers: 20,
+  items: 2000,
+} as const;
+
+export interface EditorItem {
+  /** Stable within the draft; a catalogue id when the card came from there. */
+  key: string;
+  title: string;
+  imageUrl: string | null;
+}
+
+export interface EditorTier extends PublishedTier {
+  key: string;
+}
+
+export interface Draft {
+  title: string;
+  category: Category | null;
+  tiers: EditorTier[];
+  items: EditorItem[];
+  /** Counts up so every card and tier gets a key of its own. */
+  serial: number;
+}
+
+export type EditorAction =
+  | { type: "title"; title: string }
+  | { type: "category"; category: Category }
+  | { type: "addItem"; title: string; imageUrl: string | null; key?: string }
+  | { type: "removeItem"; key: string }
+  | { type: "addTier" }
+  | { type: "removeTier"; key: string }
+  | { type: "renameTier"; key: string; label: string; caption: string }
+  | { type: "recolourTier"; key: string; colorLight: string; colorDark: string }
+  | { type: "moveTier"; key: string; by: -1 | 1 }
+  | { type: "reset" };
+
+export function emptyDraft(): Draft {
+  return {
+    title: "",
+    category: null,
+    tiers: DEFAULT_TIERS.map((tier, index) => ({ ...tier, key: `t${index}` })),
+    items: [],
+    serial: DEFAULT_TIERS.length,
+  };
+}
+
+const clip = (text: string, max: number): string => text.replace(/\s+/g, " ").slice(0, max);
+
+export function reduce(draft: Draft, action: EditorAction): Draft {
+  switch (action.type) {
+    case "reset":
+      return emptyDraft();
+    case "title":
+      return { ...draft, title: action.title.slice(0, LIMITS.title) };
+    case "category":
+      return { ...draft, category: action.category };
+    case "addItem": {
+      const title = clip(action.title, LIMITS.title).trim();
+      if (title.length === 0 && action.imageUrl === null) return draft;
+      if (draft.items.length >= LIMITS.items) return draft;
+      if (action.key !== undefined && draft.items.some((item) => item.key === action.key)) {
+        return draft;
+      }
+      const key = action.key ?? `i${draft.serial}`;
+      return {
+        ...draft,
+        serial: draft.serial + 1,
+        items: [...draft.items, { key, title, imageUrl: action.imageUrl }],
+      };
+    }
+    case "removeItem":
+      return { ...draft, items: draft.items.filter((item) => item.key !== action.key) };
+    case "addTier": {
+      if (draft.tiers.length >= LIMITS.tiers) return draft;
+      const preset = TIER_PRESETS[draft.tiers.length % TIER_PRESETS.length] ?? TIER_PRESETS[0]!;
+      return {
+        ...draft,
+        serial: draft.serial + 1,
+        tiers: [
+          ...draft.tiers,
+          {
+            key: `t${draft.serial}`,
+            label: nextLabel(draft.tiers),
+            caption: null,
+            colorLight: preset.light,
+            colorDark: preset.dark,
+          },
+        ],
+      };
+    }
+    case "removeTier":
+      return draft.tiers.length <= 1
+        ? draft
+        : { ...draft, tiers: draft.tiers.filter((tier) => tier.key !== action.key) };
+    case "renameTier": {
+      const label = clip(action.label, LIMITS.label);
+      const caption = clip(action.caption, LIMITS.caption);
+      return {
+        ...draft,
+        tiers: draft.tiers.map((tier) =>
+          tier.key === action.key
+            ? { ...tier, label, caption: caption.trim().length === 0 ? null : caption }
+            : tier,
+        ),
+      };
+    }
+    case "recolourTier":
+      return {
+        ...draft,
+        tiers: draft.tiers.map((tier) =>
+          tier.key === action.key
+            ? { ...tier, colorLight: action.colorLight, colorDark: action.colorDark }
+            : tier,
+        ),
+      };
+    case "moveTier": {
+      const from = draft.tiers.findIndex((tier) => tier.key === action.key);
+      const to = from + action.by;
+      if (from < 0 || to < 0 || to >= draft.tiers.length) return draft;
+      const tiers = [...draft.tiers];
+      const [moved] = tiers.splice(from, 1);
+      tiers.splice(to, 0, moved!);
+      return { ...draft, tiers };
+    }
+  }
+}
+
+/** S, A, B, C, D, then E, F, … past the letters, a number. */
+function nextLabel(tiers: readonly EditorTier[]): string {
+  const taken = new Set(tiers.map((tier) => tier.label.trim().toUpperCase()));
+  for (const letter of "SABCDEFGHIJKLMNOPQRTUVWXYZ") {
+    if (!taken.has(letter)) return letter;
+  }
+  return String(tiers.length + 1);
+}
+
+export type Problem =
+  "title" | "category" | "noItems" | "noTiers" | "tierLabel" | "tooManyTiers" | "tooManyItems";
+
+/** What stands between the draft and Publish, in the order the page shows things. */
+export function problemsOf(draft: Draft): Problem[] {
+  const problems: Problem[] = [];
+  if (draft.title.trim().length === 0) problems.push("title");
+  if (draft.category === null) problems.push("category");
+  if (draft.items.length === 0) problems.push("noItems");
+  if (draft.items.length > LIMITS.items) problems.push("tooManyItems");
+  if (draft.tiers.length === 0) problems.push("noTiers");
+  if (draft.tiers.length > LIMITS.tiers) problems.push("tooManyTiers");
+  if (draft.tiers.some((tier) => tier.label.trim().length === 0)) problems.push("tierLabel");
+  return problems;
+}
+
+export interface PublishBody {
+  title: string;
+  category: Category;
+  coverImageUrl: null;
+  coverPictureId: null;
+  tiers: PublishedTier[];
+  items: { title: string; imageUrl: string | null; pictureId: null; tierIndex: null }[];
+}
+
+/** The request the backend expects; only for a draft without problems. */
+export function publishBodyOf(draft: Draft): PublishBody | null {
+  if (problemsOf(draft).length > 0 || draft.category === null) return null;
+  return {
+    title: draft.title.trim(),
+    category: draft.category,
+    coverImageUrl: null,
+    coverPictureId: null,
+    tiers: draft.tiers.map(({ label, caption, colorLight, colorDark }) => ({
+      label: label.trim(),
+      caption,
+      colorLight,
+      colorDark,
+    })),
+    // Cards go out unranked: the author's own arrangement is made on the phone,
+    // and the people who rank the list get every tier empty anyway.
+    items: draft.items.map((item) => ({
+      title: item.title,
+      imageUrl: item.imageUrl,
+      pictureId: null,
+      tierIndex: null,
+    })),
+  };
+}
+
+const DRAFT_KEY = "tyl:new";
+
+export interface DraftStoreLike {
+  read(key: string): string | null;
+  write(key: string, value: string): void;
+  remove(key: string): void;
+}
+
+export function loadEditorDraft(store: DraftStoreLike): Draft | null {
+  const text = store.read(DRAFT_KEY);
+  if (text === null) return null;
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (parsed === null || typeof parsed !== "object") return null;
+    const draft = parsed as Partial<Draft>;
+    if (
+      typeof draft.title !== "string" ||
+      !Array.isArray(draft.tiers) ||
+      !Array.isArray(draft.items) ||
+      typeof draft.serial !== "number"
+    ) {
+      return null;
+    }
+    return {
+      title: draft.title,
+      category: typeof draft.category === "string" ? (draft.category as Category) : null,
+      tiers: draft.tiers,
+      items: draft.items,
+      serial: draft.serial,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveEditorDraft(store: DraftStoreLike, draft: Draft): void {
+  store.write(DRAFT_KEY, JSON.stringify(draft));
+}
+
+export function clearEditorDraft(store: DraftStoreLike): void {
+  store.remove(DRAFT_KEY);
+}

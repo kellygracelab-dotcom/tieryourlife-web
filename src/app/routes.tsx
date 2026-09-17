@@ -3,6 +3,7 @@ import { CategoryPage } from "../pages/CategoryPage";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
 import { MePage } from "../pages/MePage";
+import { NewListPage } from "../pages/NewListPage";
 import { NotFoundPage } from "../pages/Placeholders";
 import { RankingPage } from "../pages/RankingPage";
 import { SearchPage } from "../pages/SearchPage";
@@ -15,6 +16,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <HomePage /> },
       { path: "search", element: <SearchPage /> },
+      { path: "new", element: <NewListPage /> },
       { path: "c/:category", element: <CategoryPage /> },
       { path: "l/:id", element: <ListPage /> },
       { path: "r/:code", element: <RankingPage /> },

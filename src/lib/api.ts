@@ -1,6 +1,14 @@
 import { createApiClient } from "../api/client";
 import { adoptGuest, type AdoptedGuest } from "../api/guest";
-import { getFeed, getList, getMyLists, recordTake } from "../api/lists";
+import { searchCatalogue, type CatalogueItem } from "../api/catalogue";
+import {
+  getFeed,
+  getList,
+  getMyLists,
+  publishList,
+  recordTake,
+  type PublishRequest,
+} from "../api/lists";
 import {
   claimRanking,
   getMyRankings,
@@ -52,6 +60,12 @@ export const claimKept = (code: string, claimToken: string): Promise<{ code: str
 export const loadMyRankings = (): Promise<MyRankings> => getMyRankings(api);
 
 export const loadMyLists = (): Promise<{ lists: ListSummary[] }> => getMyLists(api);
+
+export const findInCatalogue = (query: string): Promise<CatalogueItem[]> =>
+  searchCatalogue(api, query);
+
+export const publish = (request: PublishRequest): Promise<{ id: string }> =>
+  publishList(api, request);
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.
