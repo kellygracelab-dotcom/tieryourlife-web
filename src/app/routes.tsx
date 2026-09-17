@@ -6,6 +6,7 @@ import { MePage } from "../pages/MePage";
 import { ModerationPage } from "../pages/ModerationPage";
 import { NewListPage } from "../pages/NewListPage";
 import { NotFoundPage } from "../pages/Placeholders";
+import { ProfilePage } from "../pages/ProfilePage";
 import { RankingPage } from "../pages/RankingPage";
 import { SearchPage } from "../pages/SearchPage";
 import { SettingsPage } from "../pages/SettingsPage";
@@ -26,6 +27,7 @@ export const routes: RouteObject[] = [
       { path: "me/lists", element: <MePage tab="lists" /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "mod", element: <ModerationPage /> },
+      { path: "u/:uid", element: <ProfilePage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

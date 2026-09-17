@@ -27,14 +27,14 @@ const renderCard = (overrides: Partial<ListSummary> = {}) =>
   );
 
 describe("ListCard", () => {
-  it("links to the list and says who made it and how many ranked it", () => {
+  it("links to the list, and the author to their page, and says how many ranked it", () => {
     renderCard();
-    const link = screen.getByRole("link");
+    const link = screen.getByRole("link", { name: /Every A24 film, ranked/ });
     expect(link).toHaveAttribute("href", "/l/abc%20def");
-    expect(link).toHaveTextContent("Every A24 film, ranked");
-    expect(link).toHaveTextContent("by danylo");
-    expect(link).toHaveTextContent("34 items · 2,140 rankings");
-    expect(link).toHaveTextContent("D");
+    const author = screen.getByRole("link", { name: /by danylo/ });
+    expect(author).toHaveAttribute("href", "/u/u1");
+    expect(author).toHaveTextContent("D");
+    expect(screen.getByText("34 items · 2,140 rankings")).toBeInTheDocument();
   });
 
   it("shows the author's face when there is one", () => {
@@ -48,6 +48,6 @@ describe("ListCard", () => {
 
   it("uses a question mark when the author has no name", () => {
     renderCard({ authorName: "  " });
-    expect(screen.getByRole("link")).toHaveTextContent("?");
+    expect(screen.getByRole("link", { name: /by/ })).toHaveTextContent("?");
   });
 });

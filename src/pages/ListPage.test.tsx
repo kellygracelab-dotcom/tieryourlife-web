@@ -15,6 +15,10 @@ const mocks = vi.hoisted(() => ({
   report: vi.fn<(id: string, request: unknown) => Promise<void>>(),
 }));
 vi.mock("../lib/api", () => ({
+  followState: vi.fn(() => new Promise(() => undefined)),
+  followAuthor: vi.fn(),
+  unfollowAuthor: vi.fn(),
+  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
   loadReports: vi.fn(() => new Promise(() => undefined)),
   report: mocks.report,
   loadMyLists: vi.fn(),
@@ -184,9 +188,11 @@ describe("ListPage", () => {
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
       "Every A24 film, ranked",
     );
-    expect(
-      screen.getByText("by danylo · you are ranking your own copy · 2,140 rankings"),
-    ).toBeInTheDocument();
+    const author = screen.getByRole("link", { name: "by danylo" });
+    expect(author).toHaveAttribute("href", "/u/u1");
+    expect(author.closest("p")).toHaveTextContent(
+      "by danylo · you are ranking your own copy · 2,140 rankings",
+    );
     expect(screen.getByText(`${window.location.host}/l/abc`)).toBeInTheDocument();
     const yours = screen.getByRole("region", { name: "Your ranking" });
     expect(yours).toHaveTextContent("0 of 2 placed");

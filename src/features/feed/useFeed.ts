@@ -12,6 +12,8 @@ export type FeedState =
       lists: ListSummary[];
       next: string | null;
       more: "idle" | "loading" | "failed";
+      /** A Following feed of somebody who follows nobody yet. */
+      followingNobody: boolean;
     };
 
 type Ready = Extract<FeedState, { status: "ready" }>;
@@ -41,7 +43,14 @@ export function useFeed(query: FeedQuery, load: LoadFeed = loadFeed) {
     let current = true;
     const settle = (state: FeedState) => current && setLoaded({ key, attempt, state });
     load(stable).then(
-      (page) => settle({ status: "ready", lists: page.lists, next: page.nextCursor, more: "idle" }),
+      (page) =>
+        settle({
+          status: "ready",
+          lists: page.lists,
+          next: page.nextCursor,
+          more: "idle",
+          followingNobody: page.followingNobody === true,
+        }),
       (reason: unknown) => settle({ status: "error", error: errorOf(reason) }),
     );
     return () => {
@@ -69,6 +78,7 @@ export function useFeed(query: FeedQuery, load: LoadFeed = loadFeed) {
           lists: [...now.lists, ...page.lists],
           next: page.nextCursor,
           more: "idle",
+          followingNobody: now.followingNobody,
         })),
       () => patch((now) => ({ ...now, more: "failed" })),
     );

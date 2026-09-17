@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
 vi.mock("./lib/api", () => ({
+  report: vi.fn(),
+  loadReports: vi.fn(() => new Promise(() => undefined)),
+  followState: vi.fn(() => new Promise(() => undefined)),
+  followAuthor: vi.fn(),
+  unfollowAuthor: vi.fn(),
+  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
   loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: vi.fn(),
   loadRanking: vi.fn(),

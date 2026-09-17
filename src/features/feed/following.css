@@ -1,0 +1,123 @@
+.feed-source {
+  width: max-content;
+  padding: 0;
+}
+
+.feed-source .theme__option {
+  flex: none;
+  padding: 8px 20px;
+}
+
+.following-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 30px 0 10px;
+  text-align: center;
+}
+
+.following-empty__icon {
+  font-size: 34px;
+  color: var(--ink-faint);
+}
+
+.following-empty__title {
+  margin: 0;
+  font: 400 20px/26px var(--font);
+}
+
+.following-empty__body {
+  margin: 0;
+  font: var(--text-lead);
+  color: var(--ink-dim);
+}
+
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: var(--space-5);
+}
+
+.suggestions__title {
+  margin: 0;
+  font: var(--text-label);
+  font-size: 14px;
+}
+
+.suggestions__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.suggestion__who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--ink);
+}
+
+.suggestion__face {
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  object-fit: cover;
+}
+
+.suggestion__face--initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--link) 22%, var(--surface));
+  color: var(--link-hover);
+  font: 500 24px/1 var(--font);
+}
+
+.suggestion__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--text-label);
+  font-size: 14px;
+}
+
+.suggestion__meta {
+  font: var(--text-caption);
+  color: var(--ink-faint);
+}
+
+@media (max-width: 599px) {
+  .suggestions__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .feed-source {
+    width: 100%;
+  }
+
+  .feed-source .theme__option {
+    flex: 1;
+  }
+}
