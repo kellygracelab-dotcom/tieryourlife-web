@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Link, Outlet } from "react-router";
+import { useModerator } from "../features/moderation/useModerator";
 import type { Account } from "../lib/account";
 import { PLAY_URL } from "../lib/links";
 import { strings } from "../strings";
@@ -19,6 +20,7 @@ function AccountMenu({
   onSignOut: () => void;
 }) {
   const menu = useRef<HTMLDetailsElement>(null);
+  const moderator = useModerator();
   const close = () => {
     if (menu.current !== null) menu.current.open = false;
   };
@@ -42,6 +44,16 @@ function AccountMenu({
         <li>
           <Link to="/settings">{strings.nav.settings}</Link>
         </li>
+        {moderator.status === "yes" && (
+          <li>
+            <Link to="/mod" className="menu__row">
+              <span>{strings.nav.reports}</span>
+              {moderator.reports.length > 0 && (
+                <span className="menu__pill">{moderator.reports.length}</span>
+              )}
+            </Link>
+          </li>
+        )}
         <li>
           <button type="button" className="menu__action" onClick={onSignOut}>
             {strings.nav.signOut}

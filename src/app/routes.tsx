@@ -3,6 +3,7 @@ import { CategoryPage } from "../pages/CategoryPage";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
 import { MePage } from "../pages/MePage";
+import { ModerationPage } from "../pages/ModerationPage";
 import { NewListPage } from "../pages/NewListPage";
 import { NotFoundPage } from "../pages/Placeholders";
 import { RankingPage } from "../pages/RankingPage";
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
       { path: "me", element: <MePage /> },
       { path: "me/lists", element: <MePage tab="lists" /> },
       { path: "settings", element: <SettingsPage /> },
+      { path: "mod", element: <ModerationPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

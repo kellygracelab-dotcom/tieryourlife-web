@@ -6,6 +6,7 @@ import { routes } from "./routes";
 import { SessionContext, type Session } from "./session";
 
 vi.mock("../lib/api", () => ({
+  loadReports: vi.fn(() => new Promise(() => undefined)),
   report: vi.fn(),
   loadMyLists: vi.fn(),
   rearrangeRanking: vi.fn(),
@@ -31,6 +32,38 @@ const open = (session: Partial<Session>) => {
   );
   return value;
 };
+
+describe("Shell moderator", () => {
+  it("shows Reports with a count only to the person the backend answers", async () => {
+    const { resetModeratorForTests } = await import("../features/moderation/useModerator");
+    resetModeratorForTests();
+    const api = await import("../lib/api");
+    vi.mocked(api.loadReports).mockResolvedValueOnce({
+      reports: [
+        {
+          listId: "l1",
+          listTitle: "One",
+          authorName: "x",
+          authorUid: null,
+          authorPhotoUrl: null,
+          coverImageUrl: null,
+          reasons: ["spam"],
+          notes: [],
+          reportCount: 1,
+          newestAtMs: 0,
+          hidden: false,
+          reviewed: false,
+        },
+      ],
+    });
+    open({ account: { kind: "signedIn", uid: "mod1", displayName: "Danylo", photoUrl: null } });
+    await userEvent.click(screen.getByLabelText("Your account"));
+    const reports = await screen.findByRole("link", { name: /Reports/ });
+    expect(reports).toHaveAttribute("href", "/mod");
+    expect(reports).toHaveTextContent("1");
+    resetModeratorForTests();
+  });
+});
 
 describe("Shell theme", () => {
   it("offers System, Light and Dark under More, keeps the choice and puts it on the page", async () => {

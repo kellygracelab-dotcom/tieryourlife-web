@@ -6,6 +6,7 @@ import { PLAY_URL } from "../lib/links";
 import { routes } from "./routes";
 
 vi.mock("../lib/api", () => ({
+  loadReports: vi.fn(() => new Promise(() => undefined)),
   report: vi.fn(),
   loadMyLists: vi.fn(),
   unpublish: vi.fn(),
