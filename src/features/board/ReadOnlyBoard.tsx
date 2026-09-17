@@ -33,8 +33,10 @@ export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoard
       {tiers.map((tier, index) => (
         <div
           key={`${index}-${tier.label}`}
-          className="tier"
-          style={{ "--band": tier.colorLight } as CSSProperties}
+          className="tier band"
+          style={
+            { "--band-light": tier.colorLight, "--band-dark": tier.colorDark } as CSSProperties
+          }
         >
           <div className="tier__band">
             <span className="tier__label">{tier.label}</span>

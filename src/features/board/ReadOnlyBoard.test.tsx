@@ -33,7 +33,7 @@ describe("ReadOnlyBoard", () => {
     );
     expect(within(board).getByRole("list", { name: "A" })).toHaveTextContent("The Witch");
     expect(board).toHaveTextContent("Masterpiece");
-    expect(board.querySelector(".tier")).toHaveStyle({ "--band": "#b03a32" });
+    expect(board.querySelector(".tier")).toHaveStyle({ "--band-light": "#b03a32" });
   });
 
   it("shows what was left unranked under the tiers", () => {

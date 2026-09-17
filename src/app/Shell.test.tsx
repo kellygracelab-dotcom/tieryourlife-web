@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -29,6 +29,24 @@ const open = (session: Partial<Session>) => {
   );
   return value;
 };
+
+describe("Shell theme", () => {
+  it("offers System, Light and Dark under More, keeps the choice and puts it on the page", async () => {
+    open({});
+    await userEvent.click(screen.getByLabelText("More"));
+    const group = screen.getByRole("radiogroup", { name: "Theme" });
+    expect(within(group).getByRole("radio", { name: "System" })).toBeChecked();
+
+    await userEvent.click(within(group).getByRole("radio", { name: "Dark" }));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(localStorage.getItem("tyl:theme")).toBe("dark");
+    expect(within(group).getByRole("radio", { name: "Dark" })).toBeChecked();
+
+    await userEvent.click(within(group).getByRole("radio", { name: "System" }));
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(localStorage.getItem("tyl:theme")).toBeNull();
+  });
+});
 
 describe("Shell account", () => {
   it("lets a guest sign in, and says so when that fails", async () => {

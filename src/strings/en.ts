@@ -12,6 +12,10 @@ export const en = {
     signInFailed: "Could not sign in. Try again.",
     more: "More",
     keepOnPhone: "Keep your lists on your phone",
+    theme: "Theme",
+    themeSystem: "System",
+    themeLight: "Light",
+    themeDark: "Dark",
   },
   footer: {
     privacy: "Privacy policy",
