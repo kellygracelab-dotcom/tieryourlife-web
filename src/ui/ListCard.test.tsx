@@ -34,7 +34,7 @@ describe("ListCard", () => {
     const author = screen.getByRole("link", { name: /by danylo/ });
     expect(author).toHaveAttribute("href", "/u/u1");
     expect(author).toHaveTextContent("D");
-    expect(screen.getByText("34 items · 2,140 rankings")).toBeInTheDocument();
+    expect(screen.getByText("34 cards · 2,140 rankings")).toBeInTheDocument();
   });
 
   it("shows the author's face when there is one", () => {

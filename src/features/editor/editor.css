@@ -357,7 +357,7 @@
   gap: var(--space-2);
   padding: 8px;
   border-radius: var(--radius-card);
-  background: color-mix(in srgb, var(--band) var(--band-tint), var(--surface));
+  background: color-mix(in oklab, var(--band-base) var(--band-tint), var(--surface));
 }
 
 .tiers__row--lifted {
@@ -452,6 +452,19 @@
 .tiers__tool:disabled {
   color: var(--ink-faint);
   cursor: default;
+}
+
+/* With a mouse the handle reorders; the arrows appear for the keyboard. */
+@media (hover: hover) {
+  .tiers__tool--arrow {
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .tiers__row:focus-within .tiers__tool--arrow,
+  .tiers__row:hover .tiers__tool--arrow {
+    opacity: 1;
+  }
 }
 
 .tiers__palette {

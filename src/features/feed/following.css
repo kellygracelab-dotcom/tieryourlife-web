@@ -1,11 +1,11 @@
 .feed-source {
   width: max-content;
-  padding: 0;
+  margin: 0;
 }
 
 .feed-source .theme__option {
   flex: none;
-  padding: 8px 20px;
+  padding: 0 20px;
 }
 
 .following-empty {

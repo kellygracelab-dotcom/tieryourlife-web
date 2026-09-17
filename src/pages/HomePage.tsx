@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useSession } from "../app/session";
 import { localStorageStore } from "../features/board/draft";
+import { coversOf } from "../features/feed/categories";
 import { CategoryTiles } from "../features/feed/CategoryTiles";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { keepFeedSource, readFeedSource, type FeedSource } from "../features/feed/feedSource";
@@ -50,10 +51,11 @@ function SignedInFeed({
     keepFeedSource(uid, next, (key, value) => localStorageStore.write(key, value));
   };
 
+  const covers = popular.state.status === "ready" ? coversOf(popular.state.lists) : {};
   return (
     <>
       <FeedSourceSwitch source={source} onChange={choose} />
-      <CategoryTiles />
+      <CategoryTiles covers={covers} />
       <section className="home__popular" aria-labelledby="popular">
         <div className="home__heading">
           <h2 id="popular">
@@ -86,9 +88,10 @@ function SignedInFeed({
 
 function GuestFeed({ load }: { load: LoadFeed | undefined }) {
   const popular = useFeed({ sort: "popular" }, load);
+  const covers = popular.state.status === "ready" ? coversOf(popular.state.lists) : {};
   return (
     <>
-      <CategoryTiles />
+      <CategoryTiles covers={covers} />
       <section className="home__popular" aria-labelledby="popular">
         <div className="home__heading">
           <h2 id="popular">{strings.home.popular}</h2>

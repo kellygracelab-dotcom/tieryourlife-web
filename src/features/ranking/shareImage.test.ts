@@ -117,7 +117,7 @@ describe("drawShare", () => {
     expect(texts()).toEqual(
       expect.arrayContaining([
         "Oscar films 2025 @48,100",
-        "Danylo · 3 items @48,146",
+        "Danylo · 3 cards @48,146",
         "S @108,264",
         "best @108,298",
         "A @108,442",
@@ -170,7 +170,7 @@ describe("drawShare", () => {
     );
     expect(texts()).toEqual(
       expect.arrayContaining([
-        "Danylo · 1 item @48,146",
+        "Danylo · 1 card @48,146",
         "A @108,276",
         "Alpha @226,258",
         "Beta @226,276",

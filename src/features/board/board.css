@@ -6,9 +6,9 @@
 
 .tier {
   display: flex;
-  min-height: 106px;
+  min-height: 114px;
   border-radius: var(--radius-card);
-  background: color-mix(in srgb, var(--band) var(--band-tint), var(--paper));
+  background: color-mix(in oklab, var(--band-base) var(--band-tint), var(--paper));
   overflow: hidden;
 }
 
@@ -19,7 +19,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: 84px;
+  width: 96px;
   padding: 8px;
   background: var(--band);
   color: var(--on-band);
@@ -40,9 +40,9 @@
 .pool__items {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  padding: 8px;
+  padding: 12px;
   list-style: none;
 }
 
@@ -58,7 +58,7 @@
   width: 64px;
   height: 90px;
   overflow: hidden;
-  border-radius: var(--radius-tile);
+  border-radius: 8px;
   background: var(--tile-placeholder);
   color: var(--tile-label);
 }
@@ -82,21 +82,29 @@
   overflow-wrap: anywhere;
 }
 
+/* The pool is a surface of its own: a band under the board, not loose cards on the page. */
 .pool {
   margin-top: 8px;
-  padding: 8px 0 0;
+  padding: 14px 4px 18px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
   border-top: 1px solid var(--line);
 }
 
 .pool__title {
-  padding: 4px 8px 0;
-  font: var(--text-label);
-  color: var(--ink-dim);
+  padding: 0 8px;
+  font: 500 15px/21px var(--font);
+  color: var(--ink);
+}
+
+.pool .tile {
+  width: 52px;
+  height: 74px;
 }
 
 @media (max-width: 599px) {
   .tier__band {
-    width: 64px;
+    width: 72px;
   }
 
   .tier__label {

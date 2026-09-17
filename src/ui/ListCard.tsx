@@ -23,6 +23,7 @@ export function ListCard({ list }: ListCardProps) {
           cover={list.coverImageUrl}
           previews={list.previewImages}
           tierColors={list.tierColors}
+          title={list.title}
         />
         <span className="list-card__title">{list.title}</span>
       </Link>

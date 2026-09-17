@@ -25,21 +25,27 @@ describe("ListArt", () => {
     expect(container.querySelectorAll("img")).toHaveLength(6);
   });
 
-  it("falls back to at most five tier colours as bars", () => {
+  it("falls back to a titled tile with at most five tier colours along the bottom", () => {
     render(
       <ListArt
         cover={null}
         previews={[]}
         tierColors={["#b03a32", "#c06a25", "#a98b1f", "#3f7f55", "#3c6e99", "#000000"]}
+        title="Every A24 film, ranked"
       />,
     );
-    const bars = screen.getByRole("img", { name: "No picture" });
-    expect(bars.querySelectorAll("span")).toHaveLength(5);
-    expect(bars.querySelectorAll("span")[0]).toHaveStyle({ background: "#b03a32" });
+    const tile = screen.getByRole("img", { name: "Every A24 film, ranked" });
+    expect(tile).toHaveClass("art--titled");
+    expect(tile.querySelector(".art__title")).toHaveTextContent("Every A24 film, ranked");
+    expect(tile.querySelectorAll(".art__bars span")).toHaveLength(5);
+    expect(tile.querySelectorAll(".art__bars span")[0]).toHaveStyle({ background: "#b03a32" });
   });
 
-  it("is an empty tile when a list has nothing at all", () => {
+  it("is a bare tile when a list has nothing at all, not even a title", () => {
     render(<ListArt cover={null} previews={[]} tierColors={[]} />);
-    expect(screen.getByRole("img", { name: "No picture" })).toHaveClass("art--empty");
+    const tile = screen.getByRole("img", { name: "No picture" });
+    expect(tile).toHaveClass("art--titled");
+    expect(tile.querySelector(".art__title")).toBeNull();
+    expect(tile.querySelector(".art__bars")).toBeNull();
   });
 });

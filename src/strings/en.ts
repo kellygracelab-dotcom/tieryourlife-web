@@ -426,7 +426,7 @@ export const en = {
   },
   card: {
     by: "by {name}",
-    items: { one: "{n} item", other: "{n} items" },
+    items: { one: "{n} card", other: "{n} cards" },
     rankings: { one: "{n} ranking", other: "{n} rankings" },
     noArt: "No picture",
   },

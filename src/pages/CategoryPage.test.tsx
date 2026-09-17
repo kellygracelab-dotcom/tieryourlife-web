@@ -52,7 +52,7 @@ describe("CategoryPage", () => {
     open("/c/games");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Games");
     expect(mocks.loadFeed).toHaveBeenCalledWith({ category: "games", sort: "popular" });
-    expect(await screen.findByText("Zelda, ranked")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Zelda, ranked/ })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Show more" }));
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({
@@ -60,7 +60,7 @@ describe("CategoryPage", () => {
       sort: "popular",
       after: "c1",
     });
-    expect(await screen.findByText("Mario, ranked")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Mario, ranked/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
   });
 
