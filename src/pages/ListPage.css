@@ -33,12 +33,21 @@
   color: var(--ink-dim);
 }
 
+/* One row on a wide screen: the words, the views, the address and the menu. */
 .list-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px 16px;
+  align-items: center;
+  gap: 10px 18px;
+}
+
+.list-head__text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.list-head__tools {
+  margin-left: auto;
 }
 
 .list-head__title {
@@ -90,5 +99,6 @@
 
 .list-page__views {
   display: flex;
+  flex: none;
   gap: 8px;
 }
