@@ -34,7 +34,10 @@ export interface EditorItem {
   /** Stable within the draft; a catalogue id when the card came from there. */
   key: string;
   title: string;
+  /** A catalogue address, or for an own picture the preview the editor shows. */
   imageUrl: string | null;
+  /** Set for a picture uploaded to the person's own folder; published by id, not by address. */
+  pictureId: string | null;
 }
 
 export interface EditorTier extends PublishedTier {
@@ -53,7 +56,7 @@ export interface Draft {
 export type EditorAction =
   | { type: "title"; title: string }
   | { type: "category"; category: Category }
-  | { type: "addItem"; title: string; imageUrl: string | null; key?: string }
+  | { type: "addItem"; title: string; imageUrl: string | null; key?: string; pictureId?: string }
   | { type: "removeItem"; key: string }
   | { type: "addTier" }
   | { type: "removeTier"; key: string }
@@ -84,7 +87,8 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
       return { ...draft, category: action.category };
     case "addItem": {
       const title = clip(action.title, LIMITS.title).trim();
-      if (title.length === 0 && action.imageUrl === null) return draft;
+      const pictureId = action.pictureId ?? null;
+      if (title.length === 0 && action.imageUrl === null && pictureId === null) return draft;
       if (draft.items.length >= LIMITS.items) return draft;
       if (action.key !== undefined && draft.items.some((item) => item.key === action.key)) {
         return draft;
@@ -93,7 +97,7 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
       return {
         ...draft,
         serial: draft.serial + 1,
-        items: [...draft.items, { key, title, imageUrl: action.imageUrl }],
+        items: [...draft.items, { key, title, imageUrl: action.imageUrl, pictureId }],
       };
     }
     case "removeItem":
@@ -184,8 +188,13 @@ export interface PublishBody {
   coverImageUrl: null;
   coverPictureId: null;
   tiers: PublishedTier[];
-  items: { title: string; imageUrl: string | null; pictureId: null; tierIndex: null }[];
+  items: { title: string; imageUrl: string | null; pictureId: string | null; tierIndex: null }[];
 }
+
+/** Every own picture the draft names, once each. */
+export const ownPicturesOf = (draft: Draft): string[] => [
+  ...new Set(draft.items.flatMap((item) => (item.pictureId === null ? [] : [item.pictureId]))),
+];
 
 /** The request the backend expects; only for a draft without problems. */
 export function publishBodyOf(draft: Draft): PublishBody | null {
@@ -202,11 +211,13 @@ export function publishBodyOf(draft: Draft): PublishBody | null {
       colorDark,
     })),
     // Cards go out unranked: the author's own arrangement is made on the phone,
-    // and the people who rank the list get every tier empty anyway.
+    // and the people who rank the list get every tier empty anyway. An own
+    // picture goes by id: the backend makes the feed's copy, and the preview
+    // address would only point back into the private folder.
     items: draft.items.map((item) => ({
       title: item.title,
-      imageUrl: item.imageUrl,
-      pictureId: null,
+      imageUrl: item.pictureId === null ? item.imageUrl : null,
+      pictureId: item.pictureId,
       tierIndex: null,
     })),
   };
@@ -239,7 +250,13 @@ export function loadEditorDraft(store: DraftStoreLike): Draft | null {
       title: draft.title,
       category: typeof draft.category === "string" ? (draft.category as Category) : null,
       tiers: draft.tiers,
-      items: draft.items,
+      // Drafts kept before own pictures existed carry no pictureId.
+      items: draft.items.map((item: Partial<EditorItem>) => ({
+        key: String(item.key ?? ""),
+        title: typeof item.title === "string" ? item.title : "",
+        imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : null,
+        pictureId: typeof item.pictureId === "string" ? item.pictureId : null,
+      })),
       serial: draft.serial,
     };
   } catch {
