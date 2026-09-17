@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import type { ApiError } from "../api/errors";
 import type { MyRankings, RankingSummary } from "../api/rank";
 import type { ListSummary } from "../api/types";
+import { AccountTabs } from "../app/AccountTabs";
 import { useSession } from "../app/session";
 import { errorOf, useResource } from "../features/list/useResource";
 import { loadMyLists, loadMyRankings, unpublish as unpublishList } from "../lib/api";
@@ -232,14 +233,7 @@ export function MePage({
   return (
     <section className="me">
       <h1 className="me__title">{title}</h1>
-      <nav className="me__tabs" aria-label={strings.me.tabs}>
-        <Link to="/me" aria-current={tab === "rankings" ? "page" : undefined}>
-          {strings.me.title}
-        </Link>
-        <Link to="/me/lists" aria-current={tab === "lists" ? "page" : undefined}>
-          {strings.me.lists}
-        </Link>
-      </nav>
+      <AccountTabs current={tab} />
       {account === null && <Skeleton height="20px" width="40%" />}
       {account?.kind === "guest" && (
         <>

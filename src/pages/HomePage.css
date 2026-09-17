@@ -7,6 +7,13 @@
   padding-top: var(--space-8);
 }
 
+.home__notice {
+  margin: 0;
+  text-align: center;
+  font: var(--text-lead);
+  color: var(--ink-dim);
+}
+
 .home__intro {
   max-width: var(--width-reading);
   width: 100%;

@@ -7,6 +7,7 @@ import { NewListPage } from "../pages/NewListPage";
 import { NotFoundPage } from "../pages/Placeholders";
 import { RankingPage } from "../pages/RankingPage";
 import { SearchPage } from "../pages/SearchPage";
+import { SettingsPage } from "../pages/SettingsPage";
 import { Shell } from "./Shell";
 
 export const routes: RouteObject[] = [
@@ -22,6 +23,7 @@ export const routes: RouteObject[] = [
       { path: "r/:code", element: <RankingPage /> },
       { path: "me", element: <MePage /> },
       { path: "me/lists", element: <MePage tab="lists" /> },
+      { path: "settings", element: <SettingsPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

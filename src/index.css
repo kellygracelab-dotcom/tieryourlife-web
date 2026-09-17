@@ -59,3 +59,15 @@ p {
   font-feature-settings: "liga";
   -webkit-font-smoothing: antialiased;
 }
+
+/* Under every dialog: the page dims, the dialog sits in the middle. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.42);
+}
