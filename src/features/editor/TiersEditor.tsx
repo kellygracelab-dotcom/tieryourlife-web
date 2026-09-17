@@ -1,8 +1,9 @@
-import { useState, type CSSProperties } from "react";
+import { useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { LIMITS, TIER_PRESETS, type EditorAction, type EditorTier } from "./model";
+import { indexAt, middlesOf } from "./tierDrag";
 
 interface TiersEditorProps {
   tiers: readonly EditorTier[];
@@ -16,6 +17,8 @@ function TierRow({
   dispatch,
   paletteOpen,
   onPalette,
+  lifted,
+  handle,
 }: {
   tier: EditorTier;
   index: number;
@@ -23,13 +26,30 @@ function TierRow({
   dispatch: (action: EditorAction) => void;
   paletteOpen: boolean;
   onPalette: () => void;
+  lifted: boolean;
+  handle: Handle;
 }) {
   const name = tier.label.trim().length > 0 ? tier.label : strings.new.tierUnnamed;
   const rename = (label: string, caption: string) =>
     dispatch({ type: "renameTier", key: tier.key, label, caption });
   return (
-    <li className="tiers__row" style={{ "--band": tier.colorLight } as CSSProperties}>
+    <li
+      className={lifted ? "tiers__row tiers__row--lifted" : "tiers__row"}
+      style={{ "--band": tier.colorLight } as CSSProperties}
+    >
       <div className="tiers__main">
+        <span
+          className="tiers__handle"
+          title={fill(strings.new.dragTier, { name })}
+          aria-hidden="true"
+          onPointerDown={handle.down(tier.key)}
+          onPointerMove={handle.move(tier.key)}
+          onPointerUp={handle.up}
+          onPointerCancel={handle.up}
+          onLostPointerCapture={handle.up}
+        >
+          <Icon name="drag_indicator" />
+        </span>
         <button
           type="button"
           className="tiers__swatch"
@@ -109,8 +129,36 @@ function TierRow({
   );
 }
 
+interface Handle {
+  down: (key: string) => (event: PointerEvent<HTMLElement>) => void;
+  move: (key: string) => (event: PointerEvent<HTMLElement>) => void;
+  up: () => void;
+}
+
 export function TiersEditor({ tiers, dispatch }: TiersEditorProps) {
   const [palette, setPalette] = useState<string | null>(null);
+  const [lifted, setLifted] = useState<string | null>(null);
+  const list = useRef<HTMLOListElement>(null);
+
+  // Dragging by the handle reorders the rows live under the pointer; the
+  // arrows stay for keyboards. Pointer capture keeps the events coming to the
+  // handle after the row has moved out from under the pointer.
+  const handle: Handle = {
+    down: (key) => (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setLifted(key);
+    },
+    move: (key) => (event) => {
+      if (lifted !== key || list.current === null) return;
+      const from = tiers.findIndex((tier) => tier.key === key);
+      const index = indexAt(event.clientY, middlesOf(list.current.children), from);
+      if (index !== from) dispatch({ type: "placeTier", key, index });
+    },
+    up: () => setLifted(null),
+  };
+
   return (
     <section className="tiers" aria-labelledby="tiers-title">
       <div className="editor__heading">
@@ -123,7 +171,7 @@ export function TiersEditor({ tiers, dispatch }: TiersEditorProps) {
           {strings.new.addTier}
         </Button>
       </div>
-      <ol className="tiers__list" aria-label={strings.new.tiers}>
+      <ol className="tiers__list" aria-label={strings.new.tiers} ref={list}>
         {tiers.map((tier, index) => (
           <TierRow
             key={tier.key}
@@ -133,6 +181,8 @@ export function TiersEditor({ tiers, dispatch }: TiersEditorProps) {
             dispatch={dispatch}
             paletteOpen={palette === tier.key}
             onPalette={() => setPalette((open) => (open === tier.key ? null : tier.key))}
+            lifted={lifted === tier.key}
+            handle={handle}
           />
         ))}
       </ol>

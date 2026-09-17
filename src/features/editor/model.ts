@@ -63,6 +63,7 @@ export type EditorAction =
   | { type: "renameTier"; key: string; label: string; caption: string }
   | { type: "recolourTier"; key: string; colorLight: string; colorDark: string }
   | { type: "moveTier"; key: string; by: -1 | 1 }
+  | { type: "placeTier"; key: string; index: number }
   | { type: "reset" };
 
 export function emptyDraft(): Draft {
@@ -147,14 +148,23 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
       };
     case "moveTier": {
       const from = draft.tiers.findIndex((tier) => tier.key === action.key);
-      const to = from + action.by;
-      if (from < 0 || to < 0 || to >= draft.tiers.length) return draft;
-      const tiers = [...draft.tiers];
-      const [moved] = tiers.splice(from, 1);
-      tiers.splice(to, 0, moved!);
-      return { ...draft, tiers };
+      return placeTier(draft, from, from + action.by);
     }
+    case "placeTier":
+      return placeTier(
+        draft,
+        draft.tiers.findIndex((tier) => tier.key === action.key),
+        action.index,
+      );
   }
+}
+
+function placeTier(draft: Draft, from: number, to: number): Draft {
+  if (from < 0 || to < 0 || to >= draft.tiers.length || to === from) return draft;
+  const tiers = [...draft.tiers];
+  const [moved] = tiers.splice(from, 1);
+  tiers.splice(to, 0, moved!);
+  return { ...draft, tiers };
 }
 
 /** S, A, B, C, D, then E, F, … past the letters, a number. */
