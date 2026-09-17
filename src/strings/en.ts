@@ -337,7 +337,7 @@ export const en = {
     yours: "Your ranking",
     ownCopy: "you are ranking your own copy",
     placed: "{n} of {total} placed",
-    left: { one: "{n} item left", other: "{n} items left" },
+    left: { one: "{n} card left", other: "{n} cards left" },
     hintPick: "Pick a card, then tap a tier or press {keys}",
     hintPlace: "Tap a tier to place {name}, or press its number",
     placeIn: "Place {name} in {tier}",

@@ -79,6 +79,7 @@
   position: absolute;
   right: 0;
   top: calc(100% + 4px);
+  z-index: 70;
   min-width: 240px;
   margin: 0;
   padding: 6px 0;

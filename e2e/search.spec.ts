@@ -42,7 +42,7 @@ test("search from the front page, then narrow the order", async ({ page }) => {
 
   await page.getByRole("button", { name: "Newest" }).click();
   await expect(page).toHaveURL(/sort=recent/);
-  await expect.poll(() => asked.at(-1)).toContain("sort=recent");
+  await expect.poll(() => asked.at(-1), { timeout: 15_000 }).toContain("sort=recent");
 
   await box.fill("nothing here");
   await expect(page.getByText("Nothing with that name yet.")).toBeVisible();

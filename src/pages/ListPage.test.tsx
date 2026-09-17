@@ -196,7 +196,7 @@ describe("ListPage", () => {
     expect(screen.getByText(`${window.location.host}/l/abc`)).toBeInTheDocument();
     const yours = screen.getByRole("region", { name: "Your ranking" });
     expect(yours).toHaveTextContent("0 of 2 placed");
-    expect(yours).toHaveTextContent("2 items left");
+    expect(yours).toHaveTextContent("2 cards left");
     expect(mocks.loadList).toHaveBeenCalledWith("abc");
   });
 

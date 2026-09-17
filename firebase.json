@@ -62,7 +62,7 @@
           "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
         },
         {
-          "source": "/@(new|search|me|c){,/**}",
+          "source": "/@(new|search|me|c|settings|mod|u){,/**}",
           "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
         }
       ]
