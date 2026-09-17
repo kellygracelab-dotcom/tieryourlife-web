@@ -4,14 +4,21 @@ import { createMemoryRouter, RouterProvider, type RouteObject } from "react-rout
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CatalogueItem } from "../api/catalogue";
 import { ApiFailure } from "../api/errors";
+import type { PublishedList } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
 import { memoryStore } from "../features/board/draft";
 import type { Upload } from "../features/editor/CardsEditor";
+import type { CopyBack } from "../features/editor/republish";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { PictureRefused } from "../lib/pictures";
-import { NewListPage, type Publish } from "./NewListPage";
+import { NewListPage, type LoadList, type Publish, type Republish } from "./NewListPage";
 
-vi.mock("../lib/api", () => ({ publish: vi.fn(), findInCatalogue: vi.fn() }));
+vi.mock("../lib/api", () => ({
+  publish: vi.fn(),
+  republish: vi.fn(),
+  loadList: vi.fn(),
+  findInCatalogue: vi.fn(),
+}));
 vi.mock("../lib/pictures", async (original) => ({
   ...(await original<typeof import("../lib/pictures")>()),
   uploadPicture: vi.fn(),
@@ -34,6 +41,38 @@ const lookup = vi.fn<Lookup>(async () => found);
 const publish = vi.fn<Publish>();
 const upload = vi.fn<Upload>();
 const discard = vi.fn(async () => {});
+const load = vi.fn<LoadList>();
+const republish = vi.fn<Republish>();
+const copyBack = vi.fn<CopyBack>(async (url) => ({
+  pictureId: `copy-${url.split("%2F").at(-1)?.split("?")[0]}`,
+  previewUrl: url,
+}));
+
+const published = (listId: string, pictureId: string) =>
+  `https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2F${listId}%2F${pictureId}?alt=media`;
+
+const theirs = (): PublishedList => ({
+  id: "l1",
+  title: "Ghibli, ranked",
+  authorUid: "u1",
+  authorName: "Danylo",
+  authorPhotoUrl: null,
+  category: "anime",
+  itemCount: 2,
+  coverImageUrl: published("l1", "cover1"),
+  previewImages: [],
+  tierColors: [],
+  updatedAt: 0,
+  takeCount: 3,
+  tiers: [
+    { label: "Top", caption: "Best", colorLight: "#B03A32", colorDark: "#F1948C" },
+    { label: "Rest", caption: null, colorLight: "#3C6E99", colorDark: "#8FC3E8" },
+  ],
+  items: [
+    { title: "Totoro", imageUrl: "https://image.tmdb.org/t/p/w500/t.jpg" },
+    { title: "", imageUrl: published("l1", "pic1") },
+  ],
+});
 
 const open = (
   account: Session["account"] = member,
@@ -49,7 +88,10 @@ const open = (
           store={store}
           lookup={lookup}
           publish={publish}
+          republish={republish}
+          load={load}
           upload={upload}
+          copyBack={copyBack}
           discard={discard}
         />
       ),
@@ -82,6 +124,9 @@ beforeEach(() => {
   publish.mockReset();
   upload.mockReset();
   discard.mockClear();
+  load.mockReset();
+  republish.mockReset();
+  copyBack.mockClear();
 });
 
 describe("NewListPage", () => {
@@ -327,6 +372,87 @@ describe("NewListPage", () => {
     expect(await screen.findByText("1 added")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Start over" }));
     expect(discard).toHaveBeenCalledWith(["pic-1"]);
+  });
+
+  it("opens a published list of the account for editing and publishes the changes in place", async () => {
+    load.mockResolvedValue(theirs());
+    republish.mockResolvedValue({ id: "l1" });
+    const { router, store } = open(member, memoryStore(), undefined, "/new?list=l1");
+    expect(await screen.findByLabelText("Title")).toHaveValue("Ghibli, ranked");
+    expect(screen.getByRole("heading", { level: 1, name: "Edit list" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Anime" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("2 added")).toBeInTheDocument();
+    expect(screen.getByLabelText("Label of tier 1")).toHaveValue("Top");
+    expect(screen.queryByText(/Sign in when you publish/)).toBeNull();
+
+    await userEvent.type(screen.getByLabelText("Title"), " and more");
+    await userEvent.click(screen.getByRole("button", { name: "Publish changes" }));
+    expect(republish).toHaveBeenCalledWith("l1", {
+      title: "Ghibli, ranked and more",
+      category: "anime",
+      coverImageUrl: null,
+      coverPictureId: "copy-cover1",
+      tiers: [
+        { label: "Top", caption: "Best", colorLight: "#B03A32", colorDark: "#F1948C" },
+        { label: "Rest", caption: null, colorLight: "#3C6E99", colorDark: "#8FC3E8" },
+      ],
+      items: [
+        {
+          title: "Totoro",
+          imageUrl: "https://image.tmdb.org/t/p/w500/t.jpg",
+          pictureId: null,
+          tierIndex: null,
+        },
+        { title: "", imageUrl: null, pictureId: "copy-pic1", tierIndex: null },
+      ],
+    });
+    expect(await screen.findByText("Published list page")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/l/l1");
+    expect(discard).toHaveBeenCalledWith(["copy-pic1", "copy-cover1"]);
+    expect(store.read("tyl:edit:l1")).toBeNull();
+    expect(store.read("tyl:new")).toBeNull();
+  });
+
+  it("keeps the edits on this device, apart from a new list, and lets them go on Discard changes", async () => {
+    load.mockResolvedValue(theirs());
+    const store = memoryStore();
+    const first = open(member, store, undefined, "/new?list=l1");
+    await userEvent.type(await screen.findByLabelText("Title"), "!");
+    expect(store.read("tyl:edit:l1")).toContain("Ghibli, ranked!");
+    expect(store.read("tyl:new")).toBeNull();
+    first.unmount();
+
+    open(member, store, undefined, "/new?list=l1");
+    expect(await screen.findByLabelText("Title")).toHaveValue("Ghibli, ranked!");
+    await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(screen.getByLabelText("Title")).toHaveValue("Ghibli, ranked");
+  });
+
+  it("turns away a guest, somebody else's list, and one that is gone", async () => {
+    open({ kind: "guest", uid: "g1" }, memoryStore(), undefined, "/new?list=l1");
+    expect(screen.getByText("Sign in to edit the lists you published.")).toBeInTheDocument();
+    expect(load).not.toHaveBeenCalled();
+
+    load.mockResolvedValueOnce({ ...theirs(), authorUid: "u2" });
+    const other = open(member, memoryStore(), undefined, "/new?list=l1");
+    expect(await screen.findByText("This list was published by someone else.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/l1");
+    other.unmount();
+
+    load.mockRejectedValueOnce(new ApiFailure({ kind: "notFound" }));
+    open(member, memoryStore(), undefined, "/new?list=l1");
+    expect(await screen.findByRole("alert")).toHaveTextContent("isn’t published anymore");
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("names a republish of a list that is no longer there, and keeps the edits", async () => {
+    load.mockResolvedValue(theirs());
+    republish.mockRejectedValue(new ApiFailure({ kind: "notFound" }));
+    open(member, memoryStore(), undefined, "/new?list=l1");
+    await userEvent.click(await screen.findByRole("button", { name: "Publish changes" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("nothing to change");
+    expect(screen.getByLabelText("Title")).toHaveValue("Ghibli, ranked");
+    expect(discard).toHaveBeenCalledWith(["copy-pic1", "copy-cover1"]);
   });
 
   it.each([

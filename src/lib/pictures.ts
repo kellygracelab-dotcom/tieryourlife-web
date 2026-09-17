@@ -87,6 +87,63 @@ export async function uploadPicture(
   }
 }
 
+/** The id of a picture the backend copied for this list, when the address is one of those. */
+export function publishedPictureOf(url: string, listId: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.hostname !== "firebasestorage.googleapis.com") return null;
+  const match = /^\/v0\/b\/[^/]+\/o\/(.+)$/.exec(parsed.pathname);
+  if (match === null) return null;
+  let path: string;
+  try {
+    path = decodeURIComponent(match[1]!);
+  } catch {
+    return null;
+  }
+  const [folder, owner, pictureId, ...rest] = path.split("/");
+  return folder === "published" &&
+    owner === listId &&
+    pictureId !== undefined &&
+    rest.length === 0 &&
+    /^[A-Za-z0-9_-]+$/.test(pictureId)
+    ? pictureId
+    : null;
+}
+
+/**
+ * The feed's copy brought back into the private folder under a new id, so a
+ * republish can name it: the backend keeps only the copies the new snapshot
+ * names, and it names them by id, never by address.
+ */
+export async function copyPublishedBack(
+  url: string,
+  newId: () => string = () => crypto.randomUUID(),
+): Promise<UploadedPicture> {
+  const uid = ownerUid();
+  if (uid === null) throw new PictureRefused("signIn");
+  let bytes: Blob;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`${response.status}`);
+    bytes = await response.blob();
+  } catch {
+    throw new PictureRefused("upload");
+  }
+  const pictureId = newId();
+  try {
+    await uploadBytes(ref(getFirebaseStorage(), picturePath(uid, pictureId)), bytes, {
+      contentType: bytes.type.startsWith("image/") ? bytes.type : "image/jpeg",
+    });
+  } catch {
+    throw new PictureRefused("upload");
+  }
+  return { pictureId, previewUrl: url };
+}
+
 /**
  * Once a list is live the feed has its own copies; the originals would only
  * sit in the private folder until a sweep, or forever. Best effort: a copy

@@ -1,4 +1,4 @@
-import type { Category, PublishedTier } from "../../api/types";
+import type { Category, PublishedList, PublishedTier } from "../../api/types";
 
 /** The phone's eight pairs, light and dark, so boards look the same everywhere. */
 export const TIER_PRESETS: readonly { light: string; dark: string }[] = [
@@ -64,6 +64,7 @@ export type EditorAction =
   | { type: "recolourTier"; key: string; colorLight: string; colorDark: string }
   | { type: "moveTier"; key: string; by: -1 | 1 }
   | { type: "placeTier"; key: string; index: number }
+  | { type: "replace"; draft: Draft }
   | { type: "reset" };
 
 export function emptyDraft(): Draft {
@@ -73,6 +74,24 @@ export function emptyDraft(): Draft {
     tiers: DEFAULT_TIERS.map((tier, index) => ({ ...tier, key: `t${index}` })),
     items: [],
     serial: DEFAULT_TIERS.length,
+  };
+}
+
+/** A published list back in the editor, every card and tier with a key of its own. */
+export function draftOf(list: PublishedList): Draft {
+  return {
+    title: list.title,
+    category: list.category,
+    tiers: list.tiers.map((tier, index) => ({ ...tier, key: `t${index}` })),
+    // The feed's own pictures come back by address; the republish sorts out
+    // which of those are this list's and brings them back by id.
+    items: list.items.map((item, index) => ({
+      key: `p${index}`,
+      title: item.title,
+      imageUrl: item.imageUrl,
+      pictureId: null,
+    })),
+    serial: list.tiers.length + list.items.length,
   };
 }
 
@@ -86,6 +105,8 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
   switch (action.type) {
     case "reset":
       return emptyDraft();
+    case "replace":
+      return action.draft;
     case "title":
       return { ...draft, title: action.title.slice(0, LIMITS.title) };
     case "category":
@@ -199,8 +220,8 @@ export function problemsOf(draft: Draft): Problem[] {
 export interface PublishBody {
   title: string;
   category: Category;
-  coverImageUrl: null;
-  coverPictureId: null;
+  coverImageUrl: string | null;
+  coverPictureId: string | null;
   tiers: PublishedTier[];
   items: { title: string; imageUrl: string | null; pictureId: string | null; tierIndex: null }[];
 }
@@ -237,7 +258,10 @@ export function publishBodyOf(draft: Draft): PublishBody | null {
   };
 }
 
-const DRAFT_KEY = "tyl:new";
+export const NEW_DRAFT_KEY = "tyl:new";
+
+/** Each list being edited keeps its own draft, apart from the new one. */
+export const editDraftKey = (listId: string): string => `tyl:edit:${listId}`;
 
 export interface DraftStoreLike {
   read(key: string): string | null;
@@ -245,8 +269,8 @@ export interface DraftStoreLike {
   remove(key: string): void;
 }
 
-export function loadEditorDraft(store: DraftStoreLike): Draft | null {
-  const text = store.read(DRAFT_KEY);
+export function loadEditorDraft(store: DraftStoreLike, key = NEW_DRAFT_KEY): Draft | null {
+  const text = store.read(key);
   if (text === null) return null;
   try {
     const parsed: unknown = JSON.parse(text);
@@ -278,10 +302,10 @@ export function loadEditorDraft(store: DraftStoreLike): Draft | null {
   }
 }
 
-export function saveEditorDraft(store: DraftStoreLike, draft: Draft): void {
-  store.write(DRAFT_KEY, JSON.stringify(draft));
+export function saveEditorDraft(store: DraftStoreLike, draft: Draft, key = NEW_DRAFT_KEY): void {
+  store.write(key, JSON.stringify(draft));
 }
 
-export function clearEditorDraft(store: DraftStoreLike): void {
-  store.remove(DRAFT_KEY);
+export function clearEditorDraft(store: DraftStoreLike, key = NEW_DRAFT_KEY): void {
+  store.remove(key);
 }

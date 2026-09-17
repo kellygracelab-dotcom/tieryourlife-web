@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   clearEditorDraft,
   DEFAULT_TIERS,
+  draftOf,
+  editDraftKey,
   emptyDraft,
   LIMITS,
   isBlankDraft,
@@ -191,6 +193,53 @@ describe("the draft between visits", () => {
     expect(loadEditorDraft(store)).toEqual(draft);
     clearEditorDraft(store);
     expect(loadEditorDraft(store)).toBeNull();
+  });
+
+  it("puts a published list back into the editor with keys of its own, and replaces a draft whole", () => {
+    const draft = draftOf({
+      id: "l1",
+      title: "Ghibli, ranked",
+      authorUid: "u1",
+      authorName: "Danylo",
+      authorPhotoUrl: null,
+      category: "anime",
+      itemCount: 2,
+      coverImageUrl: null,
+      previewImages: [],
+      tierColors: [],
+      updatedAt: 0,
+      takeCount: 0,
+      tiers: [{ label: "Top", caption: null, colorLight: "#B03A32", colorDark: "#F1948C" }],
+      items: [
+        { title: "Totoro", imageUrl: "https://img/t.jpg" },
+        { title: "", imageUrl: "https://dl/published" },
+      ],
+    });
+    expect(draft).toEqual({
+      title: "Ghibli, ranked",
+      category: "anime",
+      tiers: [
+        { key: "t0", label: "Top", caption: null, colorLight: "#B03A32", colorDark: "#F1948C" },
+      ],
+      items: [
+        { key: "p0", title: "Totoro", imageUrl: "https://img/t.jpg", pictureId: null },
+        { key: "p1", title: "", imageUrl: "https://dl/published", pictureId: null },
+      ],
+      serial: 3,
+    });
+    expect(problemsOf(draft)).toEqual([]);
+    expect(reduce(emptyDraft(), { type: "replace", draft })).toBe(draft);
+  });
+
+  it("keeps each edit under its own key, apart from the new list", () => {
+    const store = memoryStore();
+    const draft = reduce(emptyDraft(), { type: "title", title: "Edited" });
+    saveEditorDraft(store, draft, editDraftKey("l1"));
+    expect(loadEditorDraft(store)).toBeNull();
+    expect(loadEditorDraft(store, editDraftKey("l1"))).toEqual(draft);
+    expect(store.read("tyl:edit:l1")).not.toBeNull();
+    clearEditorDraft(store, editDraftKey("l1"));
+    expect(loadEditorDraft(store, editDraftKey("l1"))).toBeNull();
   });
 
   it("is blank until a title or a card is in", () => {

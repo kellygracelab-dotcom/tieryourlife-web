@@ -109,6 +109,18 @@ export const en = {
     failedTooLarge: "The list is too big to publish. {detail}",
     failedInvalid: "The list was refused. {detail}",
     failedOther: "Could not publish. Nothing was lost. Try again.",
+    editTitle: "Edit list",
+    editSignIn: "Sign in to edit the lists you published.",
+    openingList: "Opening the list…",
+    listGone: "This list isn’t published anymore.",
+    listFailed: "Could not open the list. Try again.",
+    tryAgain: "Try again",
+    notYours: "This list was published by someone else.",
+    openList: "Open the list",
+    publishChanges: "Publish changes",
+    discardChanges: "Discard changes",
+    failedGone:
+      "This list isn’t published anymore, so there is nothing to change. Make it again from Make a list.",
   },
   category: {
     anime: "Anime",

@@ -19,7 +19,17 @@ vi.mock("./firebase", () => ({
   getFirebaseAuth: () => mocks.auth,
 }));
 
-import { discardPictures, MAX_BYTES, PictureRefused, uploadPicture } from "./pictures";
+import {
+  copyPublishedBack,
+  discardPictures,
+  MAX_BYTES,
+  PictureRefused,
+  publishedPictureOf,
+  uploadPicture,
+} from "./pictures";
+
+const published = (listId: string, pictureId: string) =>
+  `https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2F${listId}%2F${pictureId}?alt=media`;
 
 const image = (size = 10, type = "image/png") => new Blob([new Uint8Array(size)], { type });
 const shrink = vi.fn(async (file: Blob) => new Blob([file], { type: "image/jpeg" }));
@@ -76,6 +86,75 @@ describe("uploadPicture", () => {
     const failure = await uploadPicture(image(), shrink).catch((e: unknown) => e);
     expect(failure).toBeInstanceOf(PictureRefused);
     expect((failure as PictureRefused).reason).toBe("upload");
+  });
+});
+
+describe("publishedPictureOf", () => {
+  it("recognises this list's published copies and nothing else", () => {
+    expect(publishedPictureOf(published("l1", "pic_1-A"), "l1")).toBe("pic_1-A");
+    expect(publishedPictureOf(published("l2", "pic1"), "l1")).toBeNull();
+    expect(publishedPictureOf("https://image.tmdb.org/t/p/w500/a.jpg", "l1")).toBeNull();
+    expect(
+      publishedPictureOf(
+        "https://firebasestorage.googleapis.com/v0/b/b/o/users%2Fu1%2Fpictures%2Fp?alt=media",
+        "l1",
+      ),
+    ).toBeNull();
+    expect(
+      publishedPictureOf(
+        "https://firebasestorage.googleapis.com/v0/b/b/o/published%2Fl1%2Fp%2Fmore",
+        "l1",
+      ),
+    ).toBeNull();
+    expect(publishedPictureOf("not a url", "l1")).toBeNull();
+    expect(
+      publishedPictureOf("https://firebasestorage.googleapis.com/v0/b/b/o/%E0%A4%A", "l1"),
+    ).toBeNull();
+  });
+});
+
+describe("copyPublishedBack", () => {
+  it("fetches the feed's copy and puts it in the private folder under a new id", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(new Blob([new Uint8Array(3)], { type: "image/png" }))),
+    );
+    const url = published("l1", "pic1");
+    await expect(copyPublishedBack(url, () => "new-1")).resolves.toEqual({
+      pictureId: "new-1",
+      previewUrl: url,
+    });
+    expect(mocks.uploadBytes).toHaveBeenCalledWith(
+      { path: "users/u1/pictures/new-1" },
+      expect.any(Blob),
+      { contentType: expect.stringMatching(/^image\//) },
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it("needs an account, and names a copy that could not be fetched or stored", async () => {
+    mocks.auth.currentUser = null;
+    await expect(copyPublishedBack(published("l1", "p"))).rejects.toMatchObject({
+      reason: "signIn",
+    });
+    mocks.auth.currentUser = { uid: "u1", isAnonymous: false };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 503 })),
+    );
+    await expect(copyPublishedBack(published("l1", "p"))).rejects.toMatchObject({
+      reason: "upload",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(new Blob([new Uint8Array(3)], { type: "image/jpeg" }))),
+    );
+    mocks.uploadBytes.mockRejectedValueOnce(new Error("storage/unauthorized"));
+    await expect(copyPublishedBack(published("l1", "p"))).rejects.toMatchObject({
+      reason: "upload",
+    });
+    vi.unstubAllGlobals();
   });
 });
 
