@@ -6,6 +6,7 @@ import { routes } from "./routes";
 import { SessionContext, type Session } from "./session";
 
 vi.mock("../lib/api", () => ({
+  loadMyLists: vi.fn(),
   rearrangeRanking: vi.fn(),
   loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: vi.fn(),
@@ -59,6 +60,7 @@ describe("Shell account", () => {
     expect(screen.getByText("D")).toHaveClass("face--initial");
     expect(screen.getByText("Danylo")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Your rankings" })).toHaveAttribute("href", "/me");
+    expect(screen.getByRole("link", { name: "My lists" })).toHaveAttribute("href", "/me/lists");
     await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
     expect(signOut).toHaveBeenCalledTimes(1);
   });

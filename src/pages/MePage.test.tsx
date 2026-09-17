@@ -4,11 +4,16 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
 import type { MyRankings, RankingSummary } from "../api/rank";
+import type { ListSummary } from "../api/types";
 import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
 
-const mocks = vi.hoisted(() => ({ loadMyRankings: vi.fn<() => Promise<MyRankings>>() }));
+const mocks = vi.hoisted(() => ({
+  loadMyRankings: vi.fn<() => Promise<MyRankings>>(),
+  loadMyLists: vi.fn<() => Promise<{ lists: ListSummary[] }>>(),
+}));
 vi.mock("../lib/api", () => ({
+  loadMyLists: mocks.loadMyLists,
   rearrangeRanking: vi.fn(),
   loadMyRankings: mocks.loadMyRankings,
   loadFeed: vi.fn(),
@@ -47,17 +52,34 @@ const member: Session["account"] = {
 const open = (
   account: Session["account"],
   signIn = vi.fn(async () => ({ kind: "cancelled" as const })),
+  path = "/me",
 ) => {
   render(
     <SessionContext.Provider value={{ account, signIn, signOut: async () => undefined }}>
-      <RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/me"] })} />
+      <RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />
     </SessionContext.Provider>,
   );
   return signIn;
 };
 
+const published = (id: string, title: string): ListSummary => ({
+  id,
+  title,
+  authorUid: "u1",
+  authorName: "Danylo",
+  authorPhotoUrl: null,
+  category: "film_tv",
+  itemCount: 34,
+  coverImageUrl: null,
+  previewImages: [],
+  tierColors: [],
+  updatedAt: 0,
+  takeCount: 2140,
+});
+
 beforeEach(() => {
   mocks.loadMyRankings.mockReset();
+  mocks.loadMyLists.mockReset();
 });
 
 describe("MePage", () => {
@@ -115,6 +137,56 @@ describe("MePage", () => {
     });
     open(member);
     expect(await screen.findByText("Only the newest 1 are shown.")).toBeInTheDocument();
+  });
+
+  it("counts what is kept and leads to the lists tab", async () => {
+    mocks.loadMyRankings.mockResolvedValue({
+      rankings: [summary("aaaaaaaa", "One")],
+      more: false,
+    });
+    open(member);
+    expect(await screen.findByText("1 kept on this account")).toBeInTheDocument();
+    const tabs = screen.getByRole("navigation", { name: "Your account" });
+    expect(within(tabs).getByRole("link", { name: "Your rankings" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(tabs).getByRole("link", { name: "My lists" })).toHaveAttribute(
+      "href",
+      "/me/lists",
+    );
+  });
+
+  it("lists what the account published from the app, with the feed's cards", async () => {
+    mocks.loadMyLists.mockResolvedValue({
+      lists: [published("l1", "Every A24 film, ranked"), published("l2", "Ghibli, ranked")],
+    });
+    open(member, undefined, "/me/lists");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("My lists");
+    expect(await screen.findByText("2 published from the app")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Every A24 film, ranked/ })).toHaveAttribute(
+      "href",
+      "/l/l1",
+    );
+    expect(screen.getAllByText("34 items · 2,140 rankings")).toHaveLength(2);
+    expect(mocks.loadMyRankings).not.toHaveBeenCalled();
+  });
+
+  it("says how to publish when nothing is published, and names a failure", async () => {
+    mocks.loadMyLists.mockResolvedValueOnce({ lists: [] });
+    open(member, undefined, "/me/lists");
+    expect(await screen.findByText("Nothing published yet.")).toBeInTheDocument();
+    expect(screen.getByText(/tap Publish/)).toBeInTheDocument();
+
+    mocks.loadMyLists.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    open(member, undefined, "/me/lists");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load your lists.");
+  });
+
+  it("asks a guest to sign in for their lists too", () => {
+    open({ kind: "guest", uid: "g1" }, undefined, "/me/lists");
+    expect(screen.getByText(/Sign in to see the lists/)).toBeInTheDocument();
+    expect(mocks.loadMyLists).not.toHaveBeenCalled();
   });
 
   it("names a failure and tries again", async () => {

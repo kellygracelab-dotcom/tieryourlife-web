@@ -7,6 +7,7 @@ export const en = {
     account: "Your account",
     you: "You",
     yourRankings: "Your rankings",
+    myLists: "My lists",
     signInFailed: "Could not sign in. Try again.",
     more: "More",
     keepOnPhone: "Keep your lists on your phone",
@@ -132,6 +133,15 @@ export const en = {
     more: "Only the newest {n} are shown.",
     edit: "Edit",
     fromPhone: "Lists you published from the app live in My lists.",
+    tabs: "Your account",
+    kept: { one: "{n} kept on this account", other: "{n} kept on this account" },
+    lists: "My lists",
+    signInForLists: "Sign in to see the lists you published from the app.",
+    published: { one: "{n} published from the app", other: "{n} published from the app" },
+    listsEmpty: "Nothing published yet.",
+    listsHow:
+      "In the app, open a list, add cards, set the tiers and tap Publish. It shows up here under the same Google account.",
+    listsFailed: "Could not load your lists.",
   },
   notFound: {
     title: "There is nothing at this address.",
