@@ -360,10 +360,31 @@
   background: color-mix(in srgb, var(--band) var(--band-tint), var(--surface));
 }
 
+.tiers__row--lifted {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
 .tiers__main {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.tiers__handle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--ink-faint);
+  cursor: grab;
+  /* The finger drags the row; the page must not scroll under it. */
+  touch-action: none;
+  user-select: none;
+}
+
+.tiers__row--lifted .tiers__handle {
+  cursor: grabbing;
 }
 
 .tiers__swatch {

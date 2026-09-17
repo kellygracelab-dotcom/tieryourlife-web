@@ -81,6 +81,7 @@ export const en = {
     labelOf: "Label of tier {n}",
     captionOf: "Caption of {name}",
     captionPlaceholder: "Caption, optional",
+    dragTier: "Drag {name} to reorder",
     moveUp: "Move {name} up",
     moveDown: "Move {name} down",
     removeTier: "Remove {name}",

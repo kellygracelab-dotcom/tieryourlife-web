@@ -139,6 +139,9 @@ describe("tiers", () => {
     expect(draft.tiers[0]).toMatchObject({ key: a, colorLight: "#6B4E9E", colorDark: "#C9A9F0" });
     expect(draft.tiers[1]).toMatchObject({ key: s, label: " Top ", caption: null });
     expect(reduce(draft, { type: "moveTier", key: a, by: -1 })).toBe(draft);
+    expect(reduce(draft, { type: "placeTier", key: a, index: 0 })).toBe(draft);
+    expect(reduce(draft, { type: "placeTier", key: a, index: 99 })).toBe(draft);
+    expect(reduce(draft, { type: "placeTier", key: a, index: 4 }).tiers.at(-1)?.key).toBe(a);
 
     draft = apply(draft, { type: "removeTier", key: a });
     expect(draft.tiers.map((tier) => tier.key)).not.toContain(a);
