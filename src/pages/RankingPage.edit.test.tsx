@@ -47,7 +47,12 @@ const open = (path = "/r/abcdefgh", account: Session["account"] = member) => {
   ];
   render(
     <SessionContext.Provider
-      value={{ account, signIn: async () => ({ kind: "cancelled" }), signOut: async () => {} }}
+      value={{
+        account,
+        signIn: async () => ({ kind: "cancelled" }),
+        signOut: async () => {},
+        refresh: () => undefined,
+      }}
     >
       <RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />
     </SessionContext.Provider>,

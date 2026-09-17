@@ -20,6 +20,7 @@ const open = (session: Partial<Session>) => {
     account: { kind: "guest", uid: null },
     signIn: vi.fn(async () => ({ kind: "signedIn" as const, switched: false })),
     signOut: vi.fn(async () => undefined),
+    refresh: vi.fn(),
     ...session,
   };
   render(
@@ -66,6 +67,12 @@ describe("Shell account", () => {
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  });
+
+  it("leads a signed-in person to their settings", async () => {
+    open({ account: { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: null } });
+    await userEvent.click(screen.getByLabelText("Your account"));
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
   });
 
   it("gives a signed-in person their initial, their rankings and a way out", async () => {

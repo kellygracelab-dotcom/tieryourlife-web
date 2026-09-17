@@ -27,6 +27,10 @@
           "function": { "functionId": "adoptGuestCredits", "region": "europe-west1" }
         },
         {
+          "source": "/boards{,/**}",
+          "function": { "functionId": "boards", "region": "europe-west1" }
+        },
+        {
           "source": "/api/**",
           "function": { "functionId": "web", "region": "europe-west1" }
         },

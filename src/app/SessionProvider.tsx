@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { subscribeToAccount, type Account } from "../lib/account";
+import { currentAccount, subscribeToAccount, type Account } from "../lib/account";
 import { signOutToGuest } from "../lib/firebase";
 import { completeSignIn, signInWithGoogle, type SignInOutcome } from "../lib/signIn";
 import { SessionContext } from "./session";
@@ -10,6 +10,7 @@ interface SessionProviderProps {
   signIn?: () => Promise<SignInOutcome>;
   signOut?: () => Promise<void>;
   complete?: () => Promise<unknown>;
+  current?: () => Account;
 }
 
 const defaultSignIn = () => signInWithGoogle();
@@ -21,6 +22,7 @@ export function SessionProvider({
   signIn = defaultSignIn,
   signOut = signOutToGuest,
   complete = defaultComplete,
+  current = currentAccount,
 }: SessionProviderProps) {
   const [account, setAccount] = useState<Account | null>(null);
 
@@ -31,6 +33,9 @@ export function SessionProvider({
     void complete();
   }, [complete]);
 
-  const session = useMemo(() => ({ account, signIn, signOut }), [account, signIn, signOut]);
+  const session = useMemo(
+    () => ({ account, signIn, signOut, refresh: () => setAccount(current()) }),
+    [account, signIn, signOut, current],
+  );
   return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
 }

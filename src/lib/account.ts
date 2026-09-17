@@ -21,6 +21,9 @@ export function accountOf(user: User | null): Account {
   };
 }
 
+/** Who is here right now; a profile change fires no auth event, so pages ask. */
+export const currentAccount = (): Account => accountOf(getFirebaseAuth().currentUser);
+
 export function subscribeToAccount(listener: (account: Account) => void): () => void {
   return onAuthStateChanged(getFirebaseAuth(), (user) => listener(accountOf(user)));
 }

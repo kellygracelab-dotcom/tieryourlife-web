@@ -9,7 +9,10 @@ vi.mock("./lib/api", () => ({
   keepRanking: vi.fn(),
   noteTake: vi.fn(),
 }));
-vi.mock("./lib/account", () => ({ subscribeToAccount: vi.fn(() => () => undefined) }));
+vi.mock("./lib/account", () => ({
+  subscribeToAccount: vi.fn(() => () => undefined),
+  currentAccount: vi.fn(),
+}));
 vi.mock("./lib/firebase", () => ({ signOutToGuest: vi.fn() }));
 vi.mock("./lib/signIn", () => ({
   signInWithGoogle: vi.fn(),

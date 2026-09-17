@@ -57,7 +57,9 @@ const open = (
   path = "/me",
 ) => {
   render(
-    <SessionContext.Provider value={{ account, signIn, signOut: async () => undefined }}>
+    <SessionContext.Provider
+      value={{ account, signIn, signOut: async () => undefined, refresh: () => undefined }}
+    >
       <RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />
     </SessionContext.Provider>,
   );

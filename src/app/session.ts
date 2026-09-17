@@ -7,6 +7,8 @@ export interface Session {
   account: Account | null;
   signIn: () => Promise<SignInOutcome>;
   signOut: () => Promise<void>;
+  /** Re-reads the account after a change Firebase fires no event for, such as a new name. */
+  refresh: () => void;
 }
 
 export const GUEST: Account = { kind: "guest", uid: null };
@@ -16,6 +18,7 @@ export const SessionContext = createContext<Session>({
   account: GUEST,
   signIn: () => Promise.resolve({ kind: "failed", code: "no-session" }),
   signOut: () => Promise.resolve(),
+  refresh: () => undefined,
 });
 
 export const useSession = (): Session => useContext(SessionContext);

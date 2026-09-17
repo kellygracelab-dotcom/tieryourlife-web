@@ -1,3 +1,4 @@
+import { eraseAccount, refreshAuthor } from "../api/account";
 import { createApiClient } from "../api/client";
 import { adoptGuest, type AdoptedGuest } from "../api/guest";
 import { searchCatalogue, type CatalogueItem } from "../api/catalogue";
@@ -73,6 +74,10 @@ export const republish = (id: string, request: PublishRequest): Promise<{ id: st
   republishList(api, id, request);
 
 export const unpublish = (id: string): Promise<void> => unpublishList(api, id);
+
+export const refreshPublishedAuthor = (): Promise<{ updated: number }> => refreshAuthor(api);
+
+export const eraseMyAccount = (): Promise<void> => eraseAccount(api);
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.

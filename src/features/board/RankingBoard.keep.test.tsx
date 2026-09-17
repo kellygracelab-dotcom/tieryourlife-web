@@ -46,7 +46,9 @@ const member: Session["account"] = {
 
 const finished = async (account: Session["account"], signIn: () => Promise<SignInOutcome>) => {
   render(
-    <SessionContext.Provider value={{ account, signIn, signOut: async () => undefined }}>
+    <SessionContext.Provider
+      value={{ account, signIn, signOut: async () => undefined, refresh: () => undefined }}
+    >
       <MemoryRouter>
         <RankingBoard
           list={list}

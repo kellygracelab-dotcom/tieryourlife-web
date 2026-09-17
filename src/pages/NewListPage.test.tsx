@@ -100,7 +100,9 @@ const open = (
   ];
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   const { unmount } = render(
-    <SessionContext.Provider value={{ account, signIn, signOut: async () => {} }}>
+    <SessionContext.Provider
+      value={{ account, signIn, signOut: async () => {}, refresh: () => undefined }}
+    >
       <RouterProvider router={router} />
     </SessionContext.Provider>,
   );
