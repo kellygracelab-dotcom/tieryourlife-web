@@ -13,8 +13,8 @@ export const SHARE_HEIGHT = 630;
 export const SHARE_TIERS = 5;
 /** Pictures per tier row on a ranking card. */
 export const ROW_TILES = 9;
-/** Pictures on a list card, in two rows. */
-export const LIST_TILES = 8;
+/** Pictures on a list card, in two rows of five. */
+export const LIST_TILES = 10;
 /** Pictures fetched for one card, at most. */
 export const SHARE_PICTURES = 24;
 
@@ -93,7 +93,10 @@ export function picturesWanted(card: ShareCard): string[] {
     }
   };
   if (card.kind === "list") {
-    card.items.filter((item) => item.imageUrl !== null).slice(0, LIST_TILES).forEach(take);
+    card.items
+      .filter((item) => item.imageUrl !== null)
+      .slice(0, LIST_TILES)
+      .forEach(take);
   } else {
     for (const row of card.rows.slice(0, SHARE_TIERS)) {
       row.slice(0, ROW_TILES).forEach((index) => take(card.items[index]));
@@ -108,12 +111,7 @@ export const tileSizeOf = (url: string): string => url.replace("/t/p/w500/", "/t
 const tile = (item: ShareItem, pictures: Pictures, width: number, height: number): Node => {
   const src = item.imageUrl === null ? undefined : pictures.get(item.imageUrl);
   if (src !== undefined) {
-    return el(
-      "img",
-      { width, height, borderRadius: 6, objectFit: "cover" },
-      undefined,
-      { src },
-    );
+    return el("img", { width, height, borderRadius: 6, objectFit: "cover" }, undefined, { src });
   }
   return el(
     "div",
@@ -127,12 +125,18 @@ const tile = (item: ShareItem, pictures: Pictures, width: number, height: number
       borderRadius: 6,
       background: POOL,
       color: INK_DIM,
-      fontSize: Math.round(height / 6.5),
-      lineHeight: 1.2,
-      textAlign: "center",
       overflow: "hidden",
     },
-    item.title.slice(0, 40),
+    el(
+      "div",
+      {
+        fontSize: Math.round(height / 6.5),
+        lineHeight: 1.2,
+        textAlign: "center",
+        lineClamp: height > 100 ? 4 : 3,
+      },
+      item.title.slice(0, 40),
+    ),
   );
 };
 
@@ -180,29 +184,25 @@ const heading = (card: ShareCard, line: string): Node =>
   ]);
 
 const brand = (): Node =>
-  el(
-    "div",
-    { display: "flex", alignItems: "center", gap: 8, color: INK_FAINT, fontSize: 18 },
-    [
-      el(
-        "div",
-        {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 24,
-          height: 24,
-          borderRadius: 6,
-          background: "#4a5baa",
-          color: SURFACE,
-          fontSize: 14,
-          fontWeight: 500,
-        },
-        "T",
-      ),
-      SITE_NAME,
-    ],
-  );
+  el("div", { display: "flex", alignItems: "center", gap: 8, color: INK_FAINT, fontSize: 18 }, [
+    el(
+      "div",
+      {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        background: "#4a5baa",
+        color: SURFACE,
+        fontSize: 14,
+        fontWeight: 500,
+      },
+      "T",
+    ),
+    SITE_NAME,
+  ]);
 
 const frame = (children: (Node | string)[]): Node =>
   el(
@@ -229,17 +229,13 @@ function listCard(card: ShareList, pictures: Pictures): Node {
   );
   return frame([
     heading(card, line),
-    el("div", { display: "flex", alignItems: "flex-end", justifyContent: "space-between" }, [
+    el("div", { display: "flex", alignItems: "flex-start", gap: 48 }, [
       el(
         "div",
         { display: "flex", flexDirection: "column", gap: 8 },
         card.tiers.slice(0, SHARE_TIERS).map((tier) => band(tier, 56)),
       ),
-      el(
-        "div",
-        { display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: 10, width: 4 * 96 + 3 * 10 },
-        tiles,
-      ),
+      el("div", { display: "flex", flexWrap: "wrap", gap: 10, width: 5 * 96 + 4 * 10 }, tiles),
     ]),
     brand(),
   ]);

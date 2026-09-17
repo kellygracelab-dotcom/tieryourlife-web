@@ -21,6 +21,8 @@ export interface PageMeta {
   title: string;
   description: string;
   image: string | null;
+  /** Set when the image is the site's own card, so a chat lays it out before fetching it. */
+  imageSize?: { width: number; height: number };
   url: string;
 }
 
@@ -83,6 +85,12 @@ export function renderPage(shell: string, page: PageMeta, preload: unknown): str
     meta("property", "og:site_name", SITE_NAME),
     meta("property", "og:url", page.url),
     page.image === null ? "" : meta("property", "og:image", page.image),
+    page.image === null || page.imageSize === undefined
+      ? ""
+      : meta("property", "og:image:width", String(page.imageSize.width)),
+    page.image === null || page.imageSize === undefined
+      ? ""
+      : meta("property", "og:image:height", String(page.imageSize.height)),
     meta("name", "twitter:card", page.image === null ? "summary" : "summary_large_image"),
     `<script id="${PRELOAD_ID}" type="application/json">${scriptJson(preload)}</script>`,
   ]
