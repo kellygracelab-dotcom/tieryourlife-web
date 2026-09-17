@@ -350,13 +350,13 @@ function TierRow({
   const place = () => {
     if (selected !== null) dispatch({ type: "place", item: selected, tier });
   };
-  const classes = ["tier", armed && "tier--armed", targeted && "tier--target"]
+  const classes = ["tier", "band", armed && "tier--armed", targeted && "tier--target"]
     .filter(Boolean)
     .join(" ");
   return (
     <div
       className={classes}
-      style={{ "--band": meta.colorLight } as CSSProperties}
+      style={{ "--band-light": meta.colorLight, "--band-dark": meta.colorDark } as CSSProperties}
       onClick={armed ? place : undefined}
       data-drop={`tier:${tier}`}
     >

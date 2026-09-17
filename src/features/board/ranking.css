@@ -16,7 +16,7 @@
   margin: 0 -8px;
   padding: 8px;
   border-radius: var(--radius-card);
-  background: rgba(233, 231, 226, 0.92);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
   backdrop-filter: blur(12px);
 }
 

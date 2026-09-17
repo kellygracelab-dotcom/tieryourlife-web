@@ -1,3 +1,8 @@
+/*
+ * The app's palette, light and dark (docs/design/spec.md). The dark values
+ * live twice: once for the system's choice, once for the person's, because
+ * a media query and an attribute cannot share a rule.
+ */
 :root {
   color-scheme: light;
 
@@ -12,7 +17,9 @@
   --hover: rgba(0, 0, 0, 0.06);
   --link: #4a5baa;
   --link-hover: #2c3a80;
+  --on-link: #ffffff;
   --accent: #1a1a1a;
+  --accent-hover: #333333;
   --on-accent: #ffffff;
   --error: #b3261e;
   --focus: #4a5baa;
@@ -55,4 +62,89 @@
   --width-reading: 640px;
   --width-board: 1080px;
   --header-height: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --paper: #121318;
+    --surface: #1f1f25;
+    --surface-soft: rgba(31, 31, 37, 0.5);
+    --ink: #e4e1e9;
+    --ink-dim: rgba(228, 225, 233, 0.7);
+    --ink-faint: rgba(228, 225, 233, 0.45);
+    --line: rgba(255, 255, 255, 0.12);
+    --line-strong: rgba(255, 255, 255, 0.28);
+    --hover: rgba(255, 255, 255, 0.08);
+    --link: #bac3ff;
+    --link-hover: #dde1ff;
+    --on-link: #201f26;
+    --accent: #e4e1e9;
+    --accent-hover: #c7c5d0;
+    --on-accent: #1b1b21;
+    --error: #ffb4ab;
+    --focus: #bac3ff;
+
+    --tier-s: #f1948c;
+    --tier-a: #e9a867;
+    --tier-b: #d8c05a;
+    --tier-c: #8fd3a3;
+    --tier-d: #8fc3e8;
+    --pool: #35353c;
+    --on-band: #201f26;
+    --band-tint: 18%;
+    --band-tint-hover: 30%;
+    --tile-placeholder: #35353c;
+    --tile-label: #c7c5d0;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper: #121318;
+  --surface: #1f1f25;
+  --surface-soft: rgba(31, 31, 37, 0.5);
+  --ink: #e4e1e9;
+  --ink-dim: rgba(228, 225, 233, 0.7);
+  --ink-faint: rgba(228, 225, 233, 0.45);
+  --line: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.28);
+  --hover: rgba(255, 255, 255, 0.08);
+  --link: #bac3ff;
+  --link-hover: #dde1ff;
+  --on-link: #201f26;
+  --accent: #e4e1e9;
+  --accent-hover: #c7c5d0;
+  --on-accent: #1b1b21;
+  --error: #ffb4ab;
+  --focus: #bac3ff;
+
+  --tier-s: #f1948c;
+  --tier-a: #e9a867;
+  --tier-b: #d8c05a;
+  --tier-c: #8fd3a3;
+  --tier-d: #8fc3e8;
+  --pool: #35353c;
+  --on-band: #201f26;
+  --band-tint: 18%;
+  --band-tint-hover: 30%;
+  --tile-placeholder: #35353c;
+  --tile-label: #c7c5d0;
+}
+
+/* A tier carries both of its colours; the scheme picks the one on show. */
+.band {
+  --band: var(--band-light);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .band {
+    --band: var(--band-dark);
+  }
+}
+
+:root[data-theme="dark"] .band {
+  --band: var(--band-dark);
 }

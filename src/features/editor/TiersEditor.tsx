@@ -40,8 +40,8 @@ function TierRow({
     dispatch({ type: "renameTier", key: tier.key, label, caption });
   return (
     <li
-      className={lifted ? "tiers__row tiers__row--lifted" : "tiers__row"}
-      style={{ "--band": tier.colorLight } as CSSProperties}
+      className={lifted ? "tiers__row band tiers__row--lifted" : "tiers__row band"}
+      style={{ "--band-light": tier.colorLight, "--band-dark": tier.colorDark } as CSSProperties}
       data-key={tier.key}
     >
       <div className="tiers__main">

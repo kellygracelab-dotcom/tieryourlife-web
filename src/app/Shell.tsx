@@ -2,11 +2,39 @@ import { useRef, useState } from "react";
 import { Link, Outlet } from "react-router";
 import type { Account } from "../lib/account";
 import { PLAY_URL } from "../lib/links";
+import { THEMES, type Theme } from "../lib/theme";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { useSession } from "./session";
+import { useTheme } from "./useTheme";
 import "./Shell.css";
+
+const THEME_TEXT: Record<Theme, string> = {
+  system: strings.nav.themeSystem,
+  light: strings.nav.themeLight,
+  dark: strings.nav.themeDark,
+};
+
+function ThemeSwitch() {
+  const { theme, choose } = useTheme();
+  return (
+    <div className="theme" role="radiogroup" aria-label={strings.nav.theme}>
+      {THEMES.map((option) => (
+        <button
+          key={option}
+          type="button"
+          role="radio"
+          aria-checked={theme === option}
+          className="theme__option"
+          onClick={() => choose(option)}
+        >
+          {THEME_TEXT[option]}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
 
@@ -93,6 +121,10 @@ export function Shell() {
                 <a href={PLAY_URL} target="_blank" rel="noopener">
                   {strings.nav.keepOnPhone}
                 </a>
+              </li>
+              <li className="menu__theme">
+                <span className="menu__who">{strings.nav.theme}</span>
+                <ThemeSwitch />
               </li>
             </ul>
           </details>

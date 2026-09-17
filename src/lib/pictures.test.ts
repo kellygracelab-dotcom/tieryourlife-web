@@ -113,11 +113,14 @@ describe("publishedPictureOf", () => {
   });
 });
 
+// A response by hand: Node 22's Response does not take jsdom's Blob as a body.
+const answer = (blob: Blob) => ({ ok: true, status: 200, blob: async () => blob });
+
 describe("copyPublishedBack", () => {
   it("fetches the feed's copy and puts it in the private folder under a new id", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(new Blob([new Uint8Array(3)], { type: "image/png" }))),
+      vi.fn(async () => answer(new Blob([new Uint8Array(3)], { type: "image/png" }))),
     );
     const url = published("l1", "pic1");
     await expect(copyPublishedBack(url, () => "new-1")).resolves.toEqual({
@@ -141,14 +144,14 @@ describe("copyPublishedBack", () => {
 
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(null, { status: 503 })),
+      vi.fn(async () => ({ ok: false, status: 503 })),
     );
     await expect(copyPublishedBack(published("l1", "p"))).rejects.toMatchObject({
       reason: "upload",
     });
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(new Blob([new Uint8Array(3)], { type: "image/jpeg" }))),
+      vi.fn(async () => answer(new Blob([new Uint8Array(3)], { type: "image/jpeg" }))),
     );
     mocks.uploadBytes.mockRejectedValueOnce(new Error("storage/unauthorized"));
     await expect(copyPublishedBack(published("l1", "p"))).rejects.toMatchObject({
