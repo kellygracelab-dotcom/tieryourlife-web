@@ -49,6 +49,24 @@ const placeholderFor = (category: Category | null): string => {
   }
 };
 
+/** A picture just uploaded is sometimes not served on the first read. */
+export const TILE_RETRY_MS = 1500;
+
+function TileImage({ src, alt }: { src: string; alt: string }) {
+  const [retried, setRetried] = useState(false);
+  const url = retried ? `${src}${src.includes("?") ? "&" : "?"}retry=1` : src;
+  return (
+    <img
+      src={url}
+      alt={alt}
+      loading="lazy"
+      onError={() => {
+        if (!retried) setTimeout(() => setRetried(true), TILE_RETRY_MS);
+      }}
+    />
+  );
+}
+
 function Thumb({ imageUrl, title }: { imageUrl: string | null; title: string }) {
   return imageUrl !== null ? (
     <img className="cards__thumb" src={imageUrl} alt="" loading="lazy" />
@@ -206,7 +224,7 @@ export function CardsEditor({ items, category, dispatch, lookup, upload }: Cards
             return (
               <li key={item.key} className="cards__tile" title={name}>
                 {item.imageUrl !== null ? (
-                  <img src={item.imageUrl} alt={name} loading="lazy" />
+                  <TileImage src={item.imageUrl} alt={name} />
                 ) : (
                   <span className="cards__tile-name">{name}</span>
                 )}
