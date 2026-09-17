@@ -93,6 +93,9 @@ export function Shell() {
               <Icon name="more_vert" />
             </summary>
             <ul className="menu__list">
+              <li className="menu__phone-only">
+                <Link to="/new">{strings.nav.makeList}</Link>
+              </li>
               <li>
                 <a href={PLAY_URL} target="_blank" rel="noopener">
                   {strings.nav.keepOnPhone}
