@@ -67,6 +67,9 @@ export function Shell() {
           <span className="brand__name">{strings.brand}</span>
         </Link>
         <nav className="top__actions" aria-label="Site">
+          <Link className="btn btn--tonal top__make" to="/new">
+            <span>{strings.nav.makeList}</span>
+          </Link>
           {account?.kind === "signedIn" ? (
             <AccountMenu account={account} onSignOut={() => void signOut()} />
           ) : (

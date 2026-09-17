@@ -143,6 +143,16 @@
   background: var(--hover);
 }
 
+.top__make {
+  margin-right: var(--space-2);
+}
+
+@media (max-width: 599px) {
+  .top__make {
+    display: none;
+  }
+}
+
 .top__note {
   font: var(--text-small);
   color: var(--error);

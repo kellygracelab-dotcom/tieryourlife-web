@@ -28,6 +28,8 @@ import {
   loadMyRankings,
   loadRanking,
   noteTake,
+  findInCatalogue,
+  publish,
   rearrangeRanking,
 } from "./api";
 
@@ -95,6 +97,25 @@ describe("api", () => {
     expect(mocks.request).toHaveBeenCalledWith("GET", "/api/me/rankings");
     await loadMyLists();
     expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/mine");
+  });
+
+  it("searches the catalogue and publishes a list through the same client", async () => {
+    mocks.request.mockResolvedValueOnce({ results: [] } as unknown as { id: string });
+    await expect(findInCatalogue("ghibli")).resolves.toEqual([]);
+    expect(mocks.request).toHaveBeenCalledWith("GET", "/3/search/multi", {
+      query: { query: "ghibli", include_adult: false, language: "en-US", page: 1 },
+      auth: "appCheckOnly",
+    });
+    const request = {
+      title: "T",
+      category: "anime" as const,
+      coverImageUrl: null,
+      coverPictureId: null,
+      tiers: [],
+      items: [],
+    };
+    await publish(request);
+    expect(mocks.request).toHaveBeenCalledWith("POST", "/lists", { body: request });
   });
 
   it("notes a take and swallows a refusal", async () => {
