@@ -5,12 +5,13 @@ import { CATEGORIES } from "../api/types";
 import { useSession } from "../app/session";
 import { localStorageStore, type DraftStore } from "../features/board/draft";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
-import { CardsEditor } from "../features/editor/CardsEditor";
+import { CardsEditor, type Upload } from "../features/editor/CardsEditor";
 import {
   clearEditorDraft,
   emptyDraft,
   LIMITS,
   loadEditorDraft,
+  ownPicturesOf,
   problemsOf,
   publishBodyOf,
   reduce,
@@ -21,6 +22,7 @@ import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { errorOf } from "../features/list/useResource";
 import { publish as publishList } from "../lib/api";
+import { discardPictures, PictureRefused, uploadPicture } from "../lib/pictures";
 import type { SignInOutcome } from "../lib/signIn";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
@@ -33,6 +35,8 @@ interface NewListPageProps {
   store?: DraftStore;
   lookup?: Lookup;
   publish?: Publish;
+  upload?: Upload;
+  discard?: (pictureIds: readonly string[]) => Promise<void>;
 }
 
 type PublishState = { status: "idle" } | { status: "busy" } | { status: "failed"; error: ApiError };
@@ -71,11 +75,13 @@ interface EditorProps {
   store: DraftStore;
   lookup: Lookup | undefined;
   publish: Publish;
+  upload: Upload;
+  discard: (pictureIds: readonly string[]) => Promise<void>;
   guest: boolean;
   signIn: () => Promise<SignInOutcome>;
 }
 
-function Editor({ store, lookup, publish, guest, signIn }: EditorProps) {
+function Editor({ store, lookup, publish, upload, discard, guest, signIn }: EditorProps) {
   const [draft, dispatch] = useReducer(reduce, store, (s) => loadEditorDraft(s) ?? emptyDraft());
   const [preview, setPreview] = useState(false);
   const [publishing, setPublishing] = useState<PublishState>({ status: "idle" });
@@ -108,6 +114,8 @@ function Editor({ store, lookup, publish, guest, signIn }: EditorProps) {
     publish(body).then(
       ({ id }) => {
         clearEditorDraft(store);
+        // The feed has its copies now; the originals in the private folder are litter.
+        void discard(ownPicturesOf(draft));
         void navigate(`/l/${encodeURIComponent(id)}`);
       },
       (reason: unknown) => setPublishing({ status: "failed", error: errorOf(reason) }),
@@ -116,8 +124,18 @@ function Editor({ store, lookup, publish, guest, signIn }: EditorProps) {
 
   const startOver = () => {
     clearEditorDraft(store);
+    void discard(ownPicturesOf(draft));
     dispatch({ type: "reset" });
     setPublishing({ status: "idle" });
+  };
+
+  // A picture belongs to an account, so a guest is signed in before the first one goes up.
+  const uploadAsAccount: Upload = async (file) => {
+    if (guest) {
+      const outcome = await signIn();
+      if (outcome.kind !== "signedIn") throw new PictureRefused("signIn");
+    }
+    return upload(file);
   };
 
   return (
@@ -210,6 +228,7 @@ function Editor({ store, lookup, publish, guest, signIn }: EditorProps) {
               category={draft.category}
               dispatch={dispatch}
               lookup={lookup}
+              upload={uploadAsAccount}
             />
           </div>
           <div className="editor__column">
@@ -236,6 +255,8 @@ export function NewListPage({
   store = localStorageStore,
   lookup,
   publish = publishList,
+  upload = (file) => uploadPicture(file),
+  discard = discardPictures,
 }: NewListPageProps) {
   const { account, signIn } = useSession();
   return (
@@ -243,6 +264,8 @@ export function NewListPage({
       store={store}
       lookup={lookup}
       publish={publish}
+      upload={upload}
+      discard={discard}
       guest={account?.kind !== "signedIn"}
       signIn={signIn}
     />

@@ -159,6 +159,18 @@
 
 /* Cards */
 
+.cards__upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.cards__note--warn {
+  padding: 0;
+  color: var(--error);
+}
+
 .cards__add {
   position: relative;
   display: flex;

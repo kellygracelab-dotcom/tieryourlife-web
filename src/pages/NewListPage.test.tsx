@@ -6,10 +6,17 @@ import type { CatalogueItem } from "../api/catalogue";
 import { ApiFailure } from "../api/errors";
 import { SessionContext, type Session } from "../app/session";
 import { memoryStore } from "../features/board/draft";
+import type { Upload } from "../features/editor/CardsEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
+import { PictureRefused } from "../lib/pictures";
 import { NewListPage, type Publish } from "./NewListPage";
 
 vi.mock("../lib/api", () => ({ publish: vi.fn(), findInCatalogue: vi.fn() }));
+vi.mock("../lib/pictures", async (original) => ({
+  ...(await original<typeof import("../lib/pictures")>()),
+  uploadPicture: vi.fn(),
+  discardPictures: vi.fn(),
+}));
 
 const member: Session["account"] = {
   kind: "signedIn",
@@ -25,6 +32,8 @@ const found: CatalogueItem[] = [
 
 const lookup = vi.fn<Lookup>(async () => found);
 const publish = vi.fn<Publish>();
+const upload = vi.fn<Upload>();
+const discard = vi.fn(async () => {});
 
 const open = (
   account: Session["account"] = member,
@@ -32,7 +41,18 @@ const open = (
   signIn: Session["signIn"] = async () => ({ kind: "cancelled" }),
 ) => {
   const routes: RouteObject[] = [
-    { path: "/new", element: <NewListPage store={store} lookup={lookup} publish={publish} /> },
+    {
+      path: "/new",
+      element: (
+        <NewListPage
+          store={store}
+          lookup={lookup}
+          publish={publish}
+          upload={upload}
+          discard={discard}
+        />
+      ),
+    },
     { path: "/l/:id", element: <h1>Published list page</h1> },
   ];
   const router = createMemoryRouter(routes, { initialEntries: ["/new"] });
@@ -54,9 +74,13 @@ const suggestions = () => within(screen.getByRole("group", { name: "Suggestions"
 
 const publishButton = () => screen.getByRole("button", { name: /Publish/ });
 
+const picture = (name: string) => new File(["x"], name, { type: "image/png" });
+
 beforeEach(() => {
   lookup.mockClear();
   publish.mockReset();
+  upload.mockReset();
+  discard.mockClear();
 });
 
 describe("NewListPage", () => {
@@ -217,6 +241,78 @@ describe("NewListPage", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Back to editing" }));
     expect(screen.getByLabelText("Title")).toBeInTheDocument();
+  });
+
+  it("uploads own pictures as cards, publishes them by id and discards the originals", async () => {
+    publish.mockResolvedValue({ id: "newlist" });
+    upload
+      .mockResolvedValueOnce({ pictureId: "pic-1", previewUrl: "https://dl/pic-1" })
+      .mockResolvedValueOnce({ pictureId: "pic-2", previewUrl: "https://dl/pic-2" });
+    open();
+    await fillIn();
+    await userEvent.upload(screen.getByLabelText("Upload images"), [
+      picture("a.png"),
+      picture("b.png"),
+    ]);
+    expect(upload).toHaveBeenCalledTimes(2);
+    expect(screen.getByText("3 added")).toBeInTheDocument();
+    const grid = screen.getByRole("list", { name: "Cards" });
+    expect(
+      within(grid)
+        .getAllByRole("img")
+        .map((img) => img.getAttribute("src")),
+    ).toEqual(["https://dl/pic-1", "https://dl/pic-2"]);
+
+    await userEvent.click(publishButton());
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          { title: "One", imageUrl: null, pictureId: null, tierIndex: null },
+          { title: "", imageUrl: null, pictureId: "pic-1", tierIndex: null },
+          { title: "", imageUrl: null, pictureId: "pic-2", tierIndex: null },
+        ],
+      }),
+    );
+    expect(await screen.findByText("Published list page")).toBeInTheDocument();
+    expect(discard).toHaveBeenCalledWith(["pic-1", "pic-2"]);
+  });
+
+  it("names the picture that was refused and keeps the rest", async () => {
+    upload
+      .mockRejectedValueOnce(new PictureRefused("tooBig"))
+      .mockResolvedValueOnce({ pictureId: "pic-2", previewUrl: "https://dl/pic-2" });
+    open();
+    await userEvent.upload(screen.getByLabelText("Upload images"), [
+      picture("huge.png"),
+      picture("fine.png"),
+    ]);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "huge.png is too big even after shrinking.",
+    );
+    expect(screen.getByText("1 added")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload images" })).toBeEnabled();
+  });
+
+  it("signs a guest in before the first picture, and stops when they change their mind", async () => {
+    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
+    open({ kind: "guest", uid: "g1" }, memoryStore(), signIn);
+    await userEvent.upload(screen.getByLabelText("Upload images"), [
+      picture("a.png"),
+      picture("b.png"),
+    ]);
+    expect(signIn).toHaveBeenCalledTimes(1);
+    expect(upload).not.toHaveBeenCalled();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sign in to add your own pictures");
+    expect(screen.getByText(/No cards yet/)).toBeInTheDocument();
+  });
+
+  it("lets go of the originals on Start over", async () => {
+    upload.mockResolvedValueOnce({ pictureId: "pic-1", previewUrl: "https://dl/pic-1" });
+    open();
+    await userEvent.upload(screen.getByLabelText("Upload images"), picture("a.png"));
+    expect(await screen.findByText("1 added")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Start over" }));
+    expect(discard).toHaveBeenCalledWith(["pic-1"]);
   });
 
   it.each([

@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import type { CatalogueItem } from "../../api/catalogue";
 import type { Category } from "../../api/types";
+import { PictureRefused, type UploadedPicture } from "../../lib/pictures";
 import { fill, plural, strings } from "../../strings";
+import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import type { EditorAction, EditorItem } from "./model";
 import { useCatalogue, type Lookup } from "./useCatalogue";
@@ -9,11 +11,28 @@ import { useCatalogue, type Lookup } from "./useCatalogue";
 /** More than this and the list under the box stops being a list and becomes a page. */
 const RESULTS_SHOWN = 8;
 
+export type Upload = (file: File) => Promise<UploadedPicture>;
+
 interface CardsEditorProps {
   items: readonly EditorItem[];
   category: Category | null;
   dispatch: (action: EditorAction) => void;
   lookup?: Lookup;
+  upload: Upload;
+}
+
+function pictureFailureText(name: string, failure: unknown): string {
+  const reason = failure instanceof PictureRefused ? failure.reason : "upload";
+  switch (reason) {
+    case "signIn":
+      return strings.new.pictureSignIn;
+    case "notAnImage":
+      return fill(strings.new.pictureNotImage, { name });
+    case "tooBig":
+      return fill(strings.new.pictureTooBig, { name });
+    default:
+      return fill(strings.new.pictureFailed, { name });
+  }
 }
 
 /** What the box invites, by what the list is about; the catalogue knows films, series and people. */
@@ -40,10 +59,39 @@ function Thumb({ imageUrl, title }: { imageUrl: string | null; title: string }) 
   );
 }
 
-export function CardsEditor({ items, category, dispatch, lookup }: CardsEditorProps) {
+export function CardsEditor({ items, category, dispatch, lookup, upload }: CardsEditorProps) {
   const [typed, setTyped] = useState("");
+  const [uploading, setUploading] = useState(0);
+  const [pictureNote, setPictureNote] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
   const catalogue = useCatalogue(typed, lookup);
   const name = typed.trim();
+
+  // One card per file, in the order chosen; a file that fails names itself
+  // and the rest still go in.
+  const onFiles = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = [...(event.target.files ?? [])];
+    event.target.value = "";
+    if (files.length === 0) return;
+    setPictureNote(null);
+    setUploading(files.length);
+    for (const file of files) {
+      try {
+        const picture = await upload(file);
+        dispatch({
+          type: "addItem",
+          title: "",
+          imageUrl: picture.previewUrl,
+          pictureId: picture.pictureId,
+        });
+      } catch (failure) {
+        setPictureNote(pictureFailureText(file.name, failure));
+        if (failure instanceof PictureRefused && failure.reason === "signIn") break;
+      } finally {
+        setUploading((n) => n - 1);
+      }
+    }
+  };
 
   const addName = () => {
     if (name.length === 0) return;
@@ -66,6 +114,31 @@ export function CardsEditor({ items, category, dispatch, lookup }: CardsEditorPr
       <div className="editor__heading">
         <h2 id="cards-title">{strings.new.cards}</h2>
         <p>{plural(strings.new.cardsAdded, items.length)}</p>
+      </div>
+
+      <div className="cards__upload">
+        <input
+          ref={picker}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          aria-label={strings.new.upload}
+          onChange={(event) => void onFiles(event)}
+        />
+        <Button
+          variant="tonal"
+          icon="upload"
+          onClick={() => picker.current?.click()}
+          disabled={uploading > 0}
+        >
+          {uploading > 0 ? fill(strings.new.uploading, { n: uploading }) : strings.new.upload}
+        </Button>
+        {pictureNote !== null && (
+          <p className="cards__note cards__note--warn" role="alert">
+            {pictureNote}
+          </p>
+        )}
       </div>
 
       <form className="cards__add" onSubmit={onSubmit}>

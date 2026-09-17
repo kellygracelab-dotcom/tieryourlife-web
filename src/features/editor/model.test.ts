@@ -5,6 +5,7 @@ import {
   emptyDraft,
   LIMITS,
   loadEditorDraft,
+  ownPicturesOf,
   problemsOf,
   publishBodyOf,
   reduce,
@@ -72,6 +73,24 @@ describe("cards", () => {
       ["i6", "", "https://img/only.jpg"],
       ["tmdb:9", "Twice", null],
     ]);
+    expect(draft.items.every((item) => item.pictureId === null)).toBe(true);
+  });
+
+  it("takes an own picture without a name, and publishes it by id alone", () => {
+    const draft = apply(
+      ready(),
+      { type: "addItem", title: "", imageUrl: "https://dl/preview", pictureId: "pic-1" },
+      { type: "addItem", title: "Same again", imageUrl: "https://dl/preview", pictureId: "pic-1" },
+    );
+    expect(draft.items.at(-1)).toMatchObject({
+      pictureId: "pic-1",
+      imageUrl: "https://dl/preview",
+    });
+    expect(ownPicturesOf(draft)).toEqual(["pic-1"]);
+    expect(publishBodyOf(draft)?.items.slice(2)).toEqual([
+      { title: "", imageUrl: null, pictureId: "pic-1", tierIndex: null },
+      { title: "Same again", imageUrl: null, pictureId: "pic-1", tierIndex: null },
+    ]);
   });
 
   it("removes a card by its key and stops at the backend's ceiling", () => {
@@ -85,6 +104,7 @@ describe("cards", () => {
         key: `k${i}`,
         title: `${i}`,
         imageUrl: null,
+        pictureId: null,
       })),
     };
     expect(reduce(draft, { type: "addItem", title: "More", imageUrl: null }).items).toHaveLength(
@@ -167,6 +187,23 @@ describe("the draft between visits", () => {
     expect(loadEditorDraft(store)).toEqual(draft);
     clearEditorDraft(store);
     expect(loadEditorDraft(store)).toBeNull();
+  });
+
+  it("reads a draft kept before own pictures existed", () => {
+    const store = memoryStore();
+    store.write(
+      "tyl:new",
+      JSON.stringify({
+        title: "Old",
+        category: "anime",
+        tiers: [],
+        items: [{ key: "i1", title: "Card", imageUrl: null }],
+        serial: 6,
+      }),
+    );
+    expect(loadEditorDraft(store)?.items).toEqual([
+      { key: "i1", title: "Card", imageUrl: null, pictureId: null },
+    ]);
   });
 
   it.each([
