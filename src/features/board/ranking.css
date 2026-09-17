@@ -67,9 +67,6 @@
   background: var(--tile-placeholder);
   color: var(--tile-label);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
-  rotate: -4deg;
-  scale: 1.06;
-  pointer-events: none;
 }
 
 .ghost img {
