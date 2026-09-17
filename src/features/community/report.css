@@ -1,0 +1,184 @@
+.report {
+  gap: 0;
+  width: min(420px, 100%);
+}
+
+.report__reasons {
+  display: flex;
+  flex-direction: column;
+  margin: 12px 0 0;
+  padding: 0;
+  border: none;
+}
+
+.report__legend {
+  padding: 0 0 4px;
+  font: var(--text-label);
+  color: var(--ink-dim);
+}
+
+.report__reason {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 4px;
+  border-radius: var(--radius-tile);
+  font: var(--text-body);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.report__reason:hover {
+  background: var(--hover);
+}
+
+.report__reason input,
+.report__hide input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--link);
+}
+
+.report__note-label {
+  margin-top: 12px;
+  font: var(--text-caption);
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+
+.report__note {
+  width: 100%;
+  min-height: 88px;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  font: var(--text-body);
+  font-size: 14px;
+  color: var(--ink);
+  resize: vertical;
+  outline: none;
+}
+
+.report__note:focus {
+  box-shadow: inset 0 0 0 2px var(--focus);
+}
+
+.report__counter {
+  margin: 4px 0 0;
+  text-align: right;
+  font: var(--text-caption);
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.report__counter--full {
+  color: var(--error);
+}
+
+.report__hide {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  margin-top: 8px;
+  font: var(--text-body);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.report__footnote {
+  margin: 6px 0 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.report__sent-icon {
+  font-size: 32px;
+  color: var(--tier-c);
+}
+
+.report__sent-title {
+  margin-top: 8px;
+  font: 400 22px/28px var(--font);
+}
+
+/* The list page: the menu beside the address, and the hidden view. */
+.list-head__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.menu__divider {
+  height: 1px;
+  margin: 6px 0;
+  background: var(--line);
+}
+
+.list-page__hidden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 520px;
+  margin: var(--space-6) auto 0;
+  text-align: center;
+}
+
+.list-page__hidden-icon {
+  font-size: 34px;
+  color: var(--ink-faint);
+}
+
+.list-page__hidden h2 {
+  margin: 0;
+  font: 400 22px/28px var(--font);
+}
+
+.list-page__hidden p {
+  margin: 0;
+  font: var(--text-lead);
+  color: var(--ink-dim);
+}
+
+.list-page__hidden-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* The feed: a hidden card keeps its place for the session, with a way back. */
+.feed__hidden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 200px;
+  height: 100%;
+  border-radius: var(--radius-card);
+  background: var(--pool);
+  color: var(--ink-dim);
+  font: var(--text-lead);
+}
+
+.feed__hidden .ms {
+  font-size: 20px;
+  color: var(--ink-faint);
+}
+
+.feed__omitted {
+  margin: 0 0 var(--space-2);
+  font: var(--text-caption);
+  font-size: 12px;
+  color: var(--ink-faint);
+}

@@ -152,6 +152,7 @@ export function SearchPage() {
           label={strings.search.results}
           retry={feed.retry}
           more={feed.more}
+          hiddenNote
         />
       )}
     </section>

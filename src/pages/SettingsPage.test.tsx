@@ -5,6 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ListSummary } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
 import { faceChoicesOf } from "../features/account/faces";
+import { memoryStore } from "../features/board/draft";
+import { HIDDEN_KEY } from "../features/community/hidden";
+import { useHiddenStoreForTests } from "../features/community/useHidden";
 import {
   SAVED_NOTE_MS,
   SettingsPage,
@@ -16,6 +19,7 @@ import {
 } from "./SettingsPage";
 
 vi.mock("../lib/api", () => ({
+  report: vi.fn(),
   loadMyLists: vi.fn(),
   refreshPublishedAuthor: vi.fn(),
   eraseMyAccount: vi.fn(),
@@ -256,6 +260,29 @@ describe("SettingsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Delete for good" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("nothing was changed");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("lists what is hidden on this device, for a guest too, and shows it again", async () => {
+    const store = memoryStore();
+    store.write(
+      HIDDEN_KEY,
+      JSON.stringify({
+        lists: [{ id: "l1", title: "Ghibli, ranked" }],
+        authors: [{ uid: "u2", name: "someone" }],
+      }),
+    );
+    useHiddenStoreForTests(store);
+    open({ kind: "guest", uid: "g1" });
+    const card = screen.getByRole("list", { name: "Hidden" });
+    expect(card).toHaveTextContent("Ghibli, ranked");
+    expect(card).toHaveTextContent("Everything from someone");
+    const [first, second] = within(card).getAllByRole("button", { name: "Show again" });
+    await userEvent.click(first!);
+    expect(card).not.toHaveTextContent("Ghibli, ranked");
+    await userEvent.click(second!);
+    expect(screen.queryByRole("list", { name: "Hidden" })).toBeNull();
+    expect(store.read(HIDDEN_KEY)).toBeNull();
+    useHiddenStoreForTests(memoryStore());
   });
 
   it("signs out from here too", async () => {

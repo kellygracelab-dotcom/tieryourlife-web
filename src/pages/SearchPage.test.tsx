@@ -8,6 +8,7 @@ import { SEARCH_DEBOUNCE_MS } from "./SearchPage";
 
 const mocks = vi.hoisted(() => ({ loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>() }));
 vi.mock("../lib/api", () => ({
+  report: vi.fn(),
   loadFeed: mocks.loadFeed,
   loadList: vi.fn(),
   loadRanking: vi.fn(),
