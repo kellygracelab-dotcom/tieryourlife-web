@@ -48,6 +48,14 @@
         {
           "source": "/index.html",
           "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        },
+        {
+          "source": "/",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+        },
+        {
+          "source": "/@(new|search|me|c){,/**}",
+          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
         }
       ]
     }

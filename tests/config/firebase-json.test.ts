@@ -7,10 +7,13 @@ type Rewrite = {
   function?: { functionId: string; region: string };
 };
 
+type Header = { source: string; headers: { key: string; value: string }[] };
+
 type HostingSite = {
   target: string;
   public: string;
   rewrites: Rewrite[];
+  headers: Header[];
 };
 
 const config = JSON.parse(readFileSync("firebase.json", "utf8")) as Record<string, unknown>;
@@ -53,6 +56,20 @@ describe("firebase.json", () => {
       expect(byFunction(id)).toBeLessThan(catchAll);
     }
     expect(rewrites[catchAll]?.destination).toBe("/index.html");
+  });
+
+  // The pages the catch-all serves are index.html under another name; without
+  // a rule of their own they get the default hour of caching, and a deploy
+  // reaches people an hour late.
+  it("keeps the app pages fresh and the hashed assets forever", () => {
+    const cacheOf = (source: string) =>
+      hosting[0]!.headers
+        .find((h) => h.source === source)
+        ?.headers.find((h) => h.key === "Cache-Control")?.value;
+    expect(cacheOf("/assets/**")).toBe("public, max-age=31536000, immutable");
+    for (const source of ["/index.html", "/", "/@(new|search|me|c){,/**}"]) {
+      expect(cacheOf(source)).toBe("no-cache");
+    }
   });
 });
 
