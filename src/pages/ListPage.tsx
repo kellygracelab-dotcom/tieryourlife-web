@@ -246,6 +246,16 @@ export function ListPage({ report = sendReport }: { report?: Report }) {
             {plural(strings.card.rankings, list.takeCount)}
           </p>
         </div>
+        {!outOfSight && (
+          <div className="list-page__views" role="group" aria-label={strings.list.views}>
+            <Chip selected={view === "yours"} onClick={() => setView("yours")}>
+              {strings.rank.yours}
+            </Chip>
+            <Chip selected={view === "authors"} onClick={() => setView("authors")}>
+              {strings.board.authorsVersion}
+            </Chip>
+          </div>
+        )}
         <span className="list-head__tools">
           <span className="list-head__address">
             <Icon name="link" />
@@ -257,14 +267,6 @@ export function ListPage({ report = sendReport }: { report?: Report }) {
       {outOfSight && <HiddenView list={list} />}
       {!outOfSight && (
         <>
-          <div className="list-page__views" role="group" aria-label={strings.list.views}>
-            <Chip selected={view === "yours"} onClick={() => setView("yours")}>
-              {strings.rank.yours}
-            </Chip>
-            <Chip selected={view === "authors"} onClick={() => setView("authors")}>
-              {strings.board.authorsVersion}
-            </Chip>
-          </div>
           {view === "yours" ? (
             <RankingBoard key={list.id} list={list} />
           ) : (
