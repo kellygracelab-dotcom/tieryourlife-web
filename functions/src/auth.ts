@@ -24,6 +24,23 @@ export async function requireUser(request: Request, response: Response): Promise
   }
 }
 
+/**
+ * Who is asking, when that only adds to the answer: a missing, stale or guest
+ * token means nobody in particular, and nothing is refused.
+ */
+export async function optionalAccount(request: Request): Promise<Identity | null> {
+  const header = request.header("authorization") ?? "";
+  const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
+  if (token.length === 0) return null;
+  try {
+    const decoded = await getAuth().verifyIdToken(token);
+    const isAnonymous = decoded.firebase?.sign_in_provider === "anonymous";
+    return isAnonymous ? null : { uid: decoded.uid, isAnonymous };
+  } catch {
+    return null;
+  }
+}
+
 /** A person with an account: what is kept must outlive the browser's guest uid. */
 export async function requireAccount(
   request: Request,

@@ -1,12 +1,16 @@
-import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router";
 import type { ApiError } from "../api/errors";
 import type { Ranking } from "../api/rank";
+import type { PublishedList } from "../api/types";
+import { useSession } from "../app/session";
 import { arrange, poolOf } from "../features/board/arrange";
-import { localStorageStore, type DraftStore } from "../features/board/draft";
+import { localStorageStore, memoryStore, type DraftStore } from "../features/board/draft";
+import { RankingBoard, type EditMode } from "../features/board/RankingBoard";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { readKept } from "../features/ranking/kept";
 import { useRanking, type LoadRanking } from "../features/ranking/useRanking";
+import { rearrangeRanking } from "../lib/api";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
@@ -14,10 +18,16 @@ import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import "./ListPage.css";
 
+export type Rearrange = (code: string, rows: readonly (readonly number[])[]) => Promise<unknown>;
+
 interface RankingPageProps {
   load?: LoadRanking;
   store?: DraftStore;
+  rearrange?: Rearrange;
 }
+
+/** How long "Saved" stays on the page. */
+export const SAVED_NOTE_MS = 6000;
 
 function Loading() {
   return (
@@ -65,11 +75,41 @@ function Trouble({ error, retry }: { error: ApiError; retry: () => void }) {
 
 type View = "visitor" | "author";
 
-function Body({ ranking, mine }: { ranking: Ranking; mine: boolean }) {
+/** The board only knows lists; a ranking's snapshot is one, frozen at Finish. */
+const listOf = (ranking: Ranking): PublishedList => ({
+  id: ranking.listId,
+  title: ranking.snapshot.title,
+  authorUid: "",
+  authorName: ranking.snapshot.authorName,
+  authorPhotoUrl: ranking.snapshot.authorPhotoUrl,
+  category: ranking.snapshot.category,
+  itemCount: ranking.snapshot.items.length,
+  coverImageUrl: null,
+  previewImages: [],
+  tierColors: ranking.snapshot.tiers.map((tier) => tier.colorLight),
+  updatedAt: ranking.createdAt,
+  takeCount: 0,
+  tiers: ranking.snapshot.tiers,
+  items: ranking.snapshot.items,
+});
+
+interface BodyProps {
+  ranking: Ranking;
+  mine: boolean;
+  editing: boolean;
+  onEdit: () => void;
+  edit: EditMode;
+  store: DraftStore;
+  savedNote: boolean;
+}
+
+function Body({ ranking, mine, editing, onEdit, edit, store, savedNote }: BodyProps) {
   const [view, setView] = useState<View>("visitor");
   const { snapshot } = ranking;
   const author = arrange(snapshot);
-  const visitorLabel = mine ? strings.rank.yours : strings.ranking.visitors;
+  const owned = ranking.yours === true;
+  const visitorLabel = mine || owned ? strings.rank.yours : strings.ranking.visitors;
+  const byline = mine || owned ? strings.ranking.byYou : strings.ranking.byVisitor;
   return (
     <>
       <header className="list-head">
@@ -78,7 +118,13 @@ function Body({ ranking, mine }: { ranking: Ranking; mine: boolean }) {
           <p className="list-head__meta">
             {fill(strings.list.by, { name: snapshot.authorName })}
             {" · "}
-            {mine ? strings.ranking.byYou : strings.ranking.byVisitor}
+            {byline}
+            {owned && (
+              <>
+                {" · "}
+                {strings.ranking.editNote}
+              </>
+            )}
           </p>
         </div>
         <span className="list-head__address">
@@ -86,63 +132,132 @@ function Body({ ranking, mine }: { ranking: Ranking; mine: boolean }) {
           {`${window.location.host}/r/${ranking.code}`}
         </span>
       </header>
-      <div className="list-page__views" role="group" aria-label={strings.list.views}>
-        <Chip selected={view === "visitor"} onClick={() => setView("visitor")}>
-          {visitorLabel}
-        </Chip>
-        {author.known && (
-          <Chip selected={view === "author"} onClick={() => setView("author")}>
-            {strings.board.authorsVersion}
-          </Chip>
-        )}
-      </div>
-      {!author.known && (
-        <p className="list-page__status">
-          {fill(strings.ranking.noAuthorVersion, { name: snapshot.authorName })}
+      {savedNote && (
+        <p className="list-page__saved" role="status">
+          <Icon name="check_circle" />
+          {strings.ranking.saved}
         </p>
       )}
-      {view === "visitor" ? (
-        <ReadOnlyBoard
-          label={visitorLabel}
-          tiers={snapshot.tiers}
-          items={snapshot.items}
-          rows={ranking.rows}
-          pool={poolOf(ranking.rows, snapshot.items.length)}
+      {editing ? (
+        <RankingBoard
+          key={`edit-${ranking.code}`}
+          list={listOf(ranking)}
+          store={store}
+          edit={edit}
         />
       ) : (
-        <ReadOnlyBoard
-          label={strings.board.authorsVersion}
-          tiers={snapshot.tiers}
-          items={snapshot.items}
-          rows={author.rows}
-          pool={author.pool}
-        />
+        <>
+          <div className="list-page__views" role="group" aria-label={strings.list.views}>
+            <Chip selected={view === "visitor"} onClick={() => setView("visitor")}>
+              {visitorLabel}
+            </Chip>
+            {author.known && (
+              <Chip selected={view === "author"} onClick={() => setView("author")}>
+                {strings.board.authorsVersion}
+              </Chip>
+            )}
+            {owned && (
+              <Button variant="tonal" icon="edit" onClick={onEdit} className="list-page__edit">
+                {strings.ranking.edit}
+              </Button>
+            )}
+          </div>
+          {!author.known && (
+            <p className="list-page__status">
+              {fill(strings.ranking.noAuthorVersion, { name: snapshot.authorName })}
+            </p>
+          )}
+          {view === "visitor" ? (
+            <ReadOnlyBoard
+              label={visitorLabel}
+              tiers={snapshot.tiers}
+              items={snapshot.items}
+              rows={ranking.rows}
+              pool={poolOf(ranking.rows, snapshot.items.length)}
+            />
+          ) : (
+            <ReadOnlyBoard
+              label={strings.board.authorsVersion}
+              tiers={snapshot.tiers}
+              items={snapshot.items}
+              rows={author.rows}
+              pool={author.pool}
+            />
+          )}
+          <p className="list-page__foot">
+            {ranking.listAvailable ? (
+              <Link to={`/l/${encodeURIComponent(ranking.listId)}`}>
+                {strings.ranking.rankYourself}
+              </Link>
+            ) : (
+              strings.ranking.listGone
+            )}
+          </p>
+        </>
       )}
-      <p className="list-page__foot">
-        {ranking.listAvailable ? (
-          <Link to={`/l/${encodeURIComponent(ranking.listId)}`}>
-            {strings.ranking.rankYourself}
-          </Link>
-        ) : (
-          strings.ranking.listGone
-        )}
-      </p>
     </>
   );
 }
 
-export function RankingPage({ load, store = localStorageStore }: RankingPageProps) {
+export function RankingPage({
+  load,
+  store = localStorageStore,
+  rearrange = rearrangeRanking,
+}: RankingPageProps) {
   const { code = "" } = useParams();
-  const { state, retry } = useRanking(code, load);
+  const [params, setParams] = useSearchParams();
+  const { account } = useSession();
+  const asAccount = account?.kind === "signedIn";
+  const { state, retry } = useRanking(code, load, asAccount);
+  // What the owner saved here, until the page is loaded afresh.
+  const [rows, setRows] = useState<number[][] | null>(null);
+  // null until the person chooses; before that `?edit` in the address decides.
+  const [chosen, setChosen] = useState<boolean | null>(null);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const scratch = useMemo(() => memoryStore(), []);
+
+  const wantsEdit = params.has("edit");
+  const ranking = state.status === "ready" ? state.value : null;
+  const owned = ranking?.yours === true;
+  const editing = owned && (chosen ?? wantsEdit);
+  const leaveEditing = useCallback(() => {
+    setChosen(false);
+    if (wantsEdit) setParams({}, { replace: true });
+  }, [wantsEdit, setParams]);
+
+  useEffect(() => {
+    if (savedAt === null) return;
+    const timer = setTimeout(() => setSavedAt(null), SAVED_NOTE_MS);
+    return () => clearTimeout(timer);
+  }, [savedAt]);
+
+  const save = useCallback(
+    async (next: readonly (readonly number[])[]) => {
+      await rearrange(code, next);
+      setRows(next.map((row) => [...row]));
+      leaveEditing();
+      setSavedAt(Date.now());
+    },
+    [rearrange, code, leaveEditing],
+  );
 
   if (state.status === "loading") return <Loading />;
   if (state.status === "error") return <Trouble error={state.error} retry={retry} />;
+  if (ranking === null) return <Loading />;
 
-  const ranking = state.value;
+  const shown = rows === null ? ranking : { ...ranking, rows };
   const mine = readKept(store, ranking.listId)?.code === ranking.code;
   return (
     <article className="list-page">
-      <Body ranking={ranking} mine={mine} />
+      <Body
+        ranking={shown}
+        mine={mine}
+        editing={editing}
+        onEdit={() => setChosen(true)}
+        edit={{ rows: shown.rows, save, cancel: leaveEditing }}
+        store={scratch}
+        savedNote={savedAt !== null}
+      />
     </article>
   );
 }

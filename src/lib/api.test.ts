@@ -27,6 +27,7 @@ import {
   loadMyRankings,
   loadRanking,
   noteTake,
+  rearrangeRanking,
 } from "./api";
 
 describe("api", () => {
@@ -50,6 +51,19 @@ describe("api", () => {
     await loadFeed({ category: "anime", sort: "popular" });
     expect(mocks.request).toHaveBeenCalledWith("GET", "/lists", {
       query: { category: "anime", sort: "popular" },
+    });
+  });
+
+  it("asks the network for an embedded ranking when an account wants to know if it is theirs", async () => {
+    mocks.request.mockClear();
+    await loadRanking("embedded", true);
+    expect(mocks.request).toHaveBeenCalledWith("GET", "/api/rank/embedded", {});
+  });
+
+  it("puts a new arrangement under the same code", async () => {
+    await rearrangeRanking("abcdefgh", [[0], [1]]);
+    expect(mocks.request).toHaveBeenCalledWith("PUT", "/api/rank/abcdefgh", {
+      body: { rows: [[0], [1]] },
     });
   });
 

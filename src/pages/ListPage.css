@@ -69,6 +69,22 @@
   color: var(--ink-dim);
 }
 
+.list-page__saved {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  font: var(--text-lead);
+  color: var(--ink);
+}
+
+.list-page__edit {
+  margin-left: auto;
+}
+
 .list-page__views {
   display: flex;
   gap: 8px;

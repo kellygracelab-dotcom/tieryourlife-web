@@ -37,6 +37,30 @@
   border-radius: var(--radius-card);
 }
 
+.me-card {
+  position: relative;
+}
+
+.me-card__edit {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  font: var(--text-label);
+  color: var(--link);
+}
+
+.me-card__edit:hover {
+  background: var(--hover);
+}
+
+.me__note {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-faint);
+}
+
 .me-card__link {
   display: flex;
   gap: 12px;

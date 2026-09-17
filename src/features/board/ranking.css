@@ -20,6 +20,16 @@
   backdrop-filter: blur(12px);
 }
 
+.ranking__error {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--error);
+  font: var(--text-lead);
+  color: var(--ink);
+}
+
 .ranking__progress {
   font: var(--text-label);
   color: var(--ink-dim);

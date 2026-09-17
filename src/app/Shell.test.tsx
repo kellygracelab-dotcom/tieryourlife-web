@@ -6,6 +6,7 @@ import { routes } from "./routes";
 import { SessionContext, type Session } from "./session";
 
 vi.mock("../lib/api", () => ({
+  rearrangeRanking: vi.fn(),
   loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: vi.fn(),
   loadRanking: vi.fn(),

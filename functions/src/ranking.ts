@@ -61,12 +61,14 @@ export function decideListId(body: unknown): string | null {
  * one array per tier, in the order the cards were dropped. Everything the
  * rows do not mention stays unranked.
  */
-export function decideRows(body: unknown, tierCount: number, itemCount: number): RankDecision {
-  const source = body as { listId?: unknown; rows?: unknown } | null;
-  const listId = decideListId(source);
-  if (listId === null) return refuse(400, "INVALID", "Which list?");
+export type PlacementDecision = { ok: true; rows: number[][] } | Refusal;
 
-  const rows = source?.rows;
+/** Rows as the client sends them: one list of card indexes per tier, each card at most once. */
+export function decidePlacement(
+  rows: unknown,
+  tierCount: number,
+  itemCount: number,
+): PlacementDecision {
   if (!Array.isArray(rows) || rows.length !== tierCount) {
     return refuse(400, "INVALID", "Rows do not match the list's tiers");
   }
@@ -84,8 +86,31 @@ export function decideRows(body: unknown, tierCount: number, itemCount: number):
     clean.push(row as number[]);
   }
   if (seen.size === 0) return refuse(400, "INVALID", "Nothing is placed yet");
-  return { ok: true, listId, rows: clean };
+  return { ok: true, rows: clean };
 }
+
+export function decideRows(body: unknown, tierCount: number, itemCount: number): RankDecision {
+  const source = body as { listId?: unknown; rows?: unknown } | null;
+  const listId = decideListId(source);
+  if (listId === null) return refuse(400, "INVALID", "Which list?");
+  const placement = decidePlacement(source?.rows, tierCount, itemCount);
+  return placement.ok ? { ok: true, listId, rows: placement.rows } : placement;
+}
+
+/** A new arrangement for a ranking that already exists; the rows are all it can change. */
+export function decideEdit(body: unknown, tierCount: number, itemCount: number): PlacementDecision {
+  return decidePlacement((body as { rows?: unknown } | null)?.rows, tierCount, itemCount);
+}
+
+/** Only the account that keeps a ranking may change it; a guest's copy is not an account. */
+export function decideOwner(owner: StoredOwner, uid: string): { ok: true } | Refusal {
+  return owner.ownerUid === uid && !owner.ownerAnonymous
+    ? { ok: true }
+    : refuse(403, "NOT_YOURS", "This ranking is kept by someone else");
+}
+
+export const isKeptBy = (owner: StoredOwner, uid: string | null): boolean =>
+  uid !== null && owner.ownerUid === uid && !owner.ownerAnonymous;
 
 export function isCode(value: unknown): value is string {
   return typeof value === "string" && CODE_PATTERN.test(value);

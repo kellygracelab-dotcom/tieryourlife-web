@@ -9,6 +9,7 @@ import { SessionContext, type Session } from "../app/session";
 
 const mocks = vi.hoisted(() => ({ loadMyRankings: vi.fn<() => Promise<MyRankings>>() }));
 vi.mock("../lib/api", () => ({
+  rearrangeRanking: vi.fn(),
   loadMyRankings: mocks.loadMyRankings,
   loadFeed: vi.fn(),
   loadList: vi.fn(),
@@ -95,6 +96,10 @@ describe("MePage", () => {
     expect(screen.getByRole("link", { name: /Ghibli, ranked/ })).toHaveTextContent(
       "3 of 12 placed",
     );
+    expect(screen.getAllByRole("link", { name: "Edit" })[0]).toHaveAttribute(
+      "href",
+      "/r/aaaaaaaa?edit",
+    );
     expect(screen.queryByText(/Only the newest/)).toBeNull();
   });
 
@@ -102,6 +107,7 @@ describe("MePage", () => {
     mocks.loadMyRankings.mockResolvedValueOnce({ rankings: [], more: false });
     open(member);
     expect(await screen.findByText("Rankings you keep will show up here.")).toBeInTheDocument();
+    expect(screen.getByText(/live in My lists/)).toBeInTheDocument();
 
     mocks.loadMyRankings.mockResolvedValueOnce({
       rankings: [summary("cccccccc", "Capped")],

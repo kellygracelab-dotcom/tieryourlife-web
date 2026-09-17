@@ -9,6 +9,7 @@ import {
   type MyRankings,
   type Ranking,
   type SavedRanking,
+  updateRanking,
 } from "../api/rank";
 import type { FeedPage, FeedQuery, PublishedList } from "../api/types";
 import { tokenProviders } from "./firebase";
@@ -25,10 +26,17 @@ export const loadList = (id: string): Promise<PublishedList> => {
 
 export const loadFeed = (query: FeedQuery): Promise<FeedPage> => getFeed(api, query);
 
-export const loadRanking = (code: string): Promise<Ranking> => {
-  const preloaded = preloadedRanking(code);
-  return preloaded === null ? getRanking(api, code) : Promise.resolve(preloaded);
+// An account asks the network even when the page carries the ranking: only
+// the server can say whether the ranking is theirs.
+export const loadRanking = (code: string, asAccount = false): Promise<Ranking> => {
+  const preloaded = asAccount ? null : preloadedRanking(code);
+  return preloaded === null ? getRanking(api, code, asAccount) : Promise.resolve(preloaded);
 };
+
+export const rearrangeRanking = (
+  code: string,
+  rows: readonly (readonly number[])[],
+): Promise<{ code: string }> => updateRanking(api, code, rows);
 
 export const keepRanking = (
   listId: string,

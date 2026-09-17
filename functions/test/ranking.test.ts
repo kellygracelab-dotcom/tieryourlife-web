@@ -8,11 +8,14 @@ import {
   dayKey,
   decideClaim,
   decideClaimToken,
+  decideEdit,
   decideListId,
+  decideOwner,
   decideRows,
   firstImageOf,
   fromStoredRows,
   isCode,
+  isKeptBy,
   makeCode,
   MAX_CLAIM_TOKEN_LENGTH,
   MIN_WRITE_GAP_MS,
@@ -203,6 +206,65 @@ describe("decideClaimToken", () => {
       assert.equal(decideClaimToken(body), null);
     });
   }
+});
+
+describe("decideEdit", () => {
+  it("accepts a new arrangement for the ranking's own tiers and cards", () => {
+    assert.deepEqual(decideEdit({ rows: [[2], [0, 1]] }, 2, 3), { ok: true, rows: [[2], [0, 1]] });
+  });
+
+  const refusals: [string, unknown][] = [
+    ["no body", null],
+    ["no rows", {}],
+    ["rows for another number of tiers", { rows: [[0]] }],
+    ["a card outside the list", { rows: [[3], []] }],
+    ["a card placed twice", { rows: [[0], [0]] }],
+    ["nothing placed", { rows: [[], []] }],
+  ];
+  for (const [name, body] of refusals) {
+    it(`refuses ${name} with 400 INVALID`, () => {
+      const decision = decideEdit(body, 2, 3);
+      assert.equal(decision.ok, false);
+      if (!decision.ok) {
+        assert.equal(decision.status, 400);
+        assert.equal(decision.code, "INVALID");
+      }
+    });
+  }
+});
+
+describe("decideOwner and isKeptBy", () => {
+  const owner = (ownerUid: string | null, ownerAnonymous: boolean): StoredOwner => ({
+    ownerUid,
+    ownerAnonymous,
+    claimHash: "h",
+  });
+
+  it("lets the account that keeps a ranking change it", () => {
+    assert.deepEqual(decideOwner(owner("person", false), "person"), { ok: true });
+    assert.equal(isKeptBy(owner("person", false), "person"), true);
+  });
+
+  const refusals: [string, StoredOwner, string][] = [
+    ["another account", owner("someone", false), "person"],
+    ["a guest's copy, even with the same uid", owner("person", true), "person"],
+    ["a ranking nobody keeps", owner(null, false), "person"],
+  ];
+  for (const [name, stored, uid] of refusals) {
+    it(`refuses ${name} with 403 NOT_YOURS`, () => {
+      const decision = decideOwner(stored, uid);
+      assert.equal(decision.ok, false);
+      if (!decision.ok) {
+        assert.equal(decision.status, 403);
+        assert.equal(decision.code, "NOT_YOURS");
+      }
+      assert.equal(isKeptBy(stored, uid), false);
+    });
+  }
+
+  it("is nobody's when nobody is asking", () => {
+    assert.equal(isKeptBy(owner("person", false), null), false);
+  });
 });
 
 describe("decideClaim", () => {

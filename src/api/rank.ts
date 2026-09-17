@@ -17,6 +17,8 @@ export interface Ranking {
   snapshot: RankingSnapshot;
   rows: number[][];
   createdAt: number;
+  /** Set when the caller's account keeps this ranking; pages made before it asked never carry it. */
+  yours?: boolean;
 }
 
 export interface SavedRanking {
@@ -34,9 +36,22 @@ export function saveRanking(
   });
 }
 
-export function getRanking(client: ApiClient, code: string): Promise<Ranking> {
-  return client.request<Ranking>("GET", `/api/rank/${encodeURIComponent(code)}`, {
-    auth: "appCheckOnly",
+/** Read as an account when there is one, so the answer can say whether it is yours. */
+export function getRanking(client: ApiClient, code: string, asAccount = false): Promise<Ranking> {
+  return client.request<Ranking>(
+    "GET",
+    `/api/rank/${encodeURIComponent(code)}`,
+    asAccount ? {} : { auth: "appCheckOnly" },
+  );
+}
+
+export function updateRanking(
+  client: ApiClient,
+  code: string,
+  rows: readonly (readonly number[])[],
+): Promise<{ code: string }> {
+  return client.request<{ code: string }>("PUT", `/api/rank/${encodeURIComponent(code)}`, {
+    body: { rows: rows.map((row) => [...row]) },
   });
 }
 
