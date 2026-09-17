@@ -6,7 +6,9 @@ import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed } from "../features/feed/useFeed";
 import { fill, formatCount, plural, strings } from "../strings";
 import { Chip } from "../ui/Chip";
+import { Icon } from "../ui/Icon";
 import { ListCard } from "../ui/ListCard";
+import "../ui/Button.css";
 import "./SearchPage.css";
 
 /** Typing pauses this long before the address, and the feed, follow. */
@@ -135,6 +137,12 @@ export function SearchPage() {
         <>
           <p className="search__empty">
             {strings.search.nothing} {strings.search.browseOr} {where}.
+          </p>
+          <p className="search__make">
+            <Link className="btn btn--tonal" to={`/new?title=${encodeURIComponent(filters.q)}`}>
+              <Icon name="add" className="btn__icon" />
+              <span>{strings.search.makeThis}</span>
+            </Link>
           </p>
           <Suggestions category={filters.category} />
         </>

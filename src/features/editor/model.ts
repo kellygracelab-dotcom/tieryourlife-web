@@ -78,6 +78,10 @@ export function emptyDraft(): Draft {
 
 const clip = (text: string, max: number): string => text.replace(/\s+/g, " ").slice(0, max);
 
+/** Nothing typed yet: a title from elsewhere may go in without losing anything. */
+export const isBlankDraft = (draft: Draft): boolean =>
+  draft.title.trim().length === 0 && draft.items.length === 0;
+
 export function reduce(draft: Draft, action: EditorAction): Draft {
   switch (action.type) {
     case "reset":

@@ -41,6 +41,10 @@
   color: var(--ink-dim);
 }
 
+.search__make {
+  margin: 0 0 var(--space-3);
+}
+
 .search__suggestions {
   display: flex;
   flex-direction: column;

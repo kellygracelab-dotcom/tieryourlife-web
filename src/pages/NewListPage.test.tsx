@@ -39,6 +39,7 @@ const open = (
   account: Session["account"] = member,
   store = memoryStore(),
   signIn: Session["signIn"] = async () => ({ kind: "cancelled" }),
+  path = "/new",
 ) => {
   const routes: RouteObject[] = [
     {
@@ -55,7 +56,7 @@ const open = (
     },
     { path: "/l/:id", element: <h1>Published list page</h1> },
   ];
-  const router = createMemoryRouter(routes, { initialEntries: ["/new"] });
+  const router = createMemoryRouter(routes, { initialEntries: [path] });
   const { unmount } = render(
     <SessionContext.Provider value={{ account, signIn, signOut: async () => {} }}>
       <RouterProvider router={router} />
@@ -228,6 +229,19 @@ describe("NewListPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Start over" }));
     expect(screen.getByLabelText("Title")).toHaveValue("");
     expect(store.read("tyl:new")).toContain('"title":""');
+  });
+
+  it("takes a title from the address into an empty editor, but never over a draft", async () => {
+    const suggested = open(member, memoryStore(), undefined, "/new?title=Every%20A24%20film");
+    expect(screen.getByLabelText("Title")).toHaveValue("Every A24 film");
+    suggested.unmount();
+
+    const store = memoryStore();
+    const first = open(member, store);
+    await userEvent.type(screen.getByLabelText("Title"), "Mine");
+    first.unmount();
+    open(member, store, undefined, "/new?title=Theirs");
+    expect(screen.getByLabelText("Title")).toHaveValue("Mine");
   });
 
   it("shows the preview with every card unranked, and comes back", async () => {

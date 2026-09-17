@@ -11,9 +11,11 @@ import { SessionContext, type Session } from "../app/session";
 const mocks = vi.hoisted(() => ({
   loadMyRankings: vi.fn<() => Promise<MyRankings>>(),
   loadMyLists: vi.fn<() => Promise<{ lists: ListSummary[] }>>(),
+  unpublish: vi.fn<(id: string) => Promise<void>>(),
 }));
 vi.mock("../lib/api", () => ({
   loadMyLists: mocks.loadMyLists,
+  unpublish: mocks.unpublish,
   rearrangeRanking: vi.fn(),
   loadMyRankings: mocks.loadMyRankings,
   loadFeed: vi.fn(),
@@ -80,6 +82,7 @@ const published = (id: string, title: string): ListSummary => ({
 beforeEach(() => {
   mocks.loadMyRankings.mockReset();
   mocks.loadMyLists.mockReset();
+  mocks.unpublish.mockReset();
 });
 
 describe("MePage", () => {
@@ -182,6 +185,64 @@ describe("MePage", () => {
     mocks.loadMyLists.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     open(member, undefined, "/me/lists");
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load your lists.");
+  });
+
+  it("unpublishes a list after asking, and takes the card away", async () => {
+    mocks.loadMyLists.mockResolvedValue({
+      lists: [published("l1", "Every A24 film, ranked"), published("l2", "Ghibli, ranked")],
+    });
+    mocks.unpublish.mockResolvedValue(undefined);
+    open(member, undefined, "/me/lists");
+    expect(await screen.findByText("2 published from the app")).toBeInTheDocument();
+
+    const [first] = screen.getAllByRole("button", { name: "Unpublish" });
+    await userEvent.click(first!);
+    const ask = screen.getByRole("group", { name: "Unpublish" });
+    expect(ask).toHaveTextContent("Unpublish “Every A24 film, ranked”?");
+    await userEvent.click(within(ask).getByRole("button", { name: "Keep it" }));
+    expect(screen.queryByRole("group", { name: "Unpublish" })).toBeNull();
+    expect(mocks.unpublish).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getAllByRole("button", { name: "Unpublish" })[0]!);
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Unpublish" })).getByRole("button", {
+        name: "Unpublish",
+      }),
+    );
+    expect(mocks.unpublish).toHaveBeenCalledWith("l1");
+    expect(await screen.findByText("1 published from the app")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Every A24 film/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Ghibli/ })).toBeInTheDocument();
+  });
+
+  it("names a failed unpublish and keeps the card; a list already gone counts as done", async () => {
+    mocks.loadMyLists.mockResolvedValue({
+      lists: [published("l1", "One"), published("l2", "Two")],
+    });
+    mocks.unpublish
+      .mockRejectedValueOnce(new ApiFailure({ kind: "offline" }))
+      .mockRejectedValueOnce(new ApiFailure({ kind: "notFound" }));
+    open(member, undefined, "/me/lists");
+    await screen.findByText("2 published from the app");
+
+    const cards = within(screen.getByRole("list", { name: "My lists" })).getAllByRole("listitem");
+    await userEvent.click(within(cards[0]!).getByRole("button", { name: "Unpublish" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Unpublish" })).getByRole("button", {
+        name: "Unpublish",
+      }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("No connection");
+    expect(screen.getByRole("link", { name: /One/ })).toBeInTheDocument();
+
+    await userEvent.click(within(cards[1]!).getByRole("button", { name: "Unpublish" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Unpublish" })).getByRole("button", {
+        name: "Unpublish",
+      }),
+    );
+    expect(await screen.findByText("1 published from the app")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Two/ })).toBeNull();
   });
 
   it("asks a guest to sign in for their lists too", () => {

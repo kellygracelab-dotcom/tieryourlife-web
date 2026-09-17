@@ -106,6 +106,10 @@ describe("SearchPage", () => {
     open("/search?q=zzzz&category=anime");
     expect(await screen.findByText(/Nothing with that name yet/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Anime" })).toHaveAttribute("href", "/c/anime");
+    expect(screen.getByRole("link", { name: "Make this list" })).toHaveAttribute(
+      "href",
+      "/new?title=zzzz",
+    );
     expect(mocks.loadFeed).toHaveBeenCalledWith({ category: "anime", sort: "popular" });
     expect(await screen.findByRole("heading", { name: "Popular in Anime" })).toBeInTheDocument();
     expect(

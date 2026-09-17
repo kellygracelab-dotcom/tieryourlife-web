@@ -7,6 +7,7 @@ import {
   getMyLists,
   publishList,
   recordTake,
+  unpublishList,
   type PublishRequest,
 } from "../api/lists";
 import {
@@ -66,6 +67,8 @@ export const findInCatalogue = (query: string): Promise<CatalogueItem[]> =>
 
 export const publish = (request: PublishRequest): Promise<{ id: string }> =>
   publishList(api, request);
+
+export const unpublish = (id: string): Promise<void> => unpublishList(api, id);
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.
