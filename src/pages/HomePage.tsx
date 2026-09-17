@@ -1,26 +1,25 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import { CategoryTiles } from "../features/feed/CategoryTiles";
 import { FeedGrid } from "../features/feed/FeedGrid";
+import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed } from "../features/feed/useFeed";
 import { strings } from "../strings";
-import { Icon } from "../ui/Icon";
 import "./HomePage.css";
 
 export function HomePage() {
   const popular = useFeed({ sort: "popular" });
+  const [query, setQuery] = useState("");
+  const navigate = useNavigate();
   return (
     <div className="home">
       <section className="home__intro">
         <h1 className="home__hero">{strings.home.hero}</h1>
-        <div className="home__search" role="search">
-          <Icon name="search" />
-          <input
-            type="search"
-            placeholder={strings.home.searchPlaceholder}
-            aria-label={strings.home.searchPlaceholder}
-            disabled
-          />
-        </div>
-        <p className="home__note">{strings.home.searchSoon}</p>
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          onSubmit={(q) => void navigate(`/search?q=${encodeURIComponent(q)}`)}
+        />
       </section>
 
       <CategoryTiles />

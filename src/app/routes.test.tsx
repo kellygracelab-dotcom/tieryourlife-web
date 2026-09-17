@@ -20,10 +20,10 @@ const open = (path: string) =>
   render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />);
 
 describe("routes", () => {
-  it("shows the hero and a search that is not ready yet on the front page", () => {
+  it("shows the hero and a search box on the front page", () => {
     open("/");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Rank anything");
-    expect(screen.getByRole("searchbox")).toBeDisabled();
+    expect(screen.getByRole("searchbox")).toBeEnabled();
   });
 
   it("opens a list by id", () => {
