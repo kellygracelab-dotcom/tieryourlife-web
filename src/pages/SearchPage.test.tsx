@@ -145,6 +145,21 @@ describe("SearchPage", () => {
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({ q: "ghibli", sort: "popular" });
     vi.useRealTimers();
   });
+
+  it("keeps a chip pressed during the pause", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const router = open("/search?q=anime");
+    const box = screen.getByRole("searchbox");
+    await userEvent.clear(box);
+    await userEvent.type(box, "ghibli");
+    await userEvent.click(screen.getByRole("button", { name: "Newest" }));
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS + 50);
+    });
+    expect(router.state.location.search).toBe("?q=ghibli&sort=recent");
+    expect(mocks.loadFeed).toHaveBeenLastCalledWith({ q: "ghibli", sort: "recent" });
+    vi.useRealTimers();
+  });
 });
 
 describe("the search box on the front page", () => {

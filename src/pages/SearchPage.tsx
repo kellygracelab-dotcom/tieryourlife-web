@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { CATEGORIES, isCategory, type Category, type FeedSort } from "../api/types";
 import { FeedGrid } from "../features/feed/FeedGrid";
@@ -72,16 +72,21 @@ export function SearchPage() {
 
   const set = (next: Partial<Filters>) => setParams(write({ ...filters, ...next }));
 
+  // The wait reads the filters as they are when it ends, not as they were when
+  // the typing started: a chip pressed during the pause must not be undone.
+  const latest = useRef(filters);
   useEffect(() => {
-    if (typed.trim() === filters.q) return;
+    latest.current = filters;
+  });
+
+  useEffect(() => {
+    if (typed.trim() === latest.current.q) return;
     const timer = setTimeout(
-      () => setParams(write({ ...filters, q: typed.trim() }), { replace: true }),
+      () => setParams(write({ ...latest.current, q: typed.trim() }), { replace: true }),
       SEARCH_DEBOUNCE_MS,
     );
     return () => clearTimeout(timer);
-    // Only what was typed should restart the wait; the filters travel with it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [typed]);
+  }, [typed, setParams]);
 
   const feed = useFeed({
     q: searching ? filters.q : undefined,

@@ -55,7 +55,7 @@ describe("RankingBoard", () => {
       </MemoryRouter>,
     );
     expect(progress()).toHaveTextContent("0 of 3 placed");
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("3 items left");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("3 cards left");
     expect(within(tierList("S")).queryAllByRole("button")).toHaveLength(0);
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Finish" })).toBeDisabled();
@@ -77,7 +77,7 @@ describe("RankingBoard", () => {
 
     expect(within(tierList("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
     expect(progress()).toHaveTextContent("1 of 3 placed");
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2 items left");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2 cards left");
     expect(screen.getByText("Pick a card, then tap a tier or press 1–2")).toBeInTheDocument();
   });
 
