@@ -277,9 +277,6 @@ export function ListPage({ report = sendReport }: { report?: Report }) {
           )}
         </>
       )}
-      <p className="list-page__foot">
-        <Link to="/">{strings.list.home}</Link>
-      </p>
       <Snackbar notice={notice} onDone={clearNotice} />
     </article>
   );

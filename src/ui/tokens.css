@@ -18,6 +18,8 @@
   --link: #4a5baa;
   --link-hover: #2c3a80;
   --on-link: #ffffff;
+  --primary-container: #dee0ff;
+  --on-primary-container: #2c3a80;
   --accent: #1a1a1a;
   --accent-hover: #333333;
   --on-accent: #ffffff;
@@ -68,18 +70,20 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --paper: #121318;
-    --surface: #1f1f25;
-    --surface-soft: rgba(31, 31, 37, 0.5);
+    --paper: #131318;
+    --surface: #1e1e24;
+    --surface-soft: rgba(30, 30, 36, 0.5);
     --ink: #e4e1e9;
-    --ink-dim: rgba(228, 225, 233, 0.7);
-    --ink-faint: rgba(228, 225, 233, 0.45);
-    --line: rgba(255, 255, 255, 0.12);
-    --line-strong: rgba(255, 255, 255, 0.28);
+    --ink-dim: #c7c5d0;
+    --ink-faint: #8f8d98;
+    --line: #46464f;
+    --line-strong: #8f8d98;
     --hover: rgba(255, 255, 255, 0.08);
     --link: #bac3ff;
     --link-hover: #dde1ff;
     --on-link: #201f26;
+    --primary-container: #333e8f;
+    --on-primary-container: #dde1ff;
     --accent: #e4e1e9;
     --accent-hover: #c7c5d0;
     --on-accent: #1b1b21;
@@ -91,11 +95,11 @@
     --tier-b: #d8c05a;
     --tier-c: #8fd3a3;
     --tier-d: #8fc3e8;
-    --pool: #35353c;
+    --pool: #26262c;
     --on-band: #201f26;
-    --band-tint: 18%;
-    --band-tint-hover: 30%;
-    --tile-placeholder: #35353c;
+    --band-tint: 20%;
+    --band-tint-hover: 32%;
+    --tile-placeholder: #26262c;
     --tile-label: #c7c5d0;
   }
 }
@@ -103,18 +107,20 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --paper: #121318;
-  --surface: #1f1f25;
-  --surface-soft: rgba(31, 31, 37, 0.5);
+  --paper: #131318;
+  --surface: #1e1e24;
+  --surface-soft: rgba(30, 30, 36, 0.5);
   --ink: #e4e1e9;
-  --ink-dim: rgba(228, 225, 233, 0.7);
-  --ink-faint: rgba(228, 225, 233, 0.45);
-  --line: rgba(255, 255, 255, 0.12);
-  --line-strong: rgba(255, 255, 255, 0.28);
+  --ink-dim: #c7c5d0;
+  --ink-faint: #8f8d98;
+  --line: #46464f;
+  --line-strong: #8f8d98;
   --hover: rgba(255, 255, 255, 0.08);
   --link: #bac3ff;
   --link-hover: #dde1ff;
   --on-link: #201f26;
+  --primary-container: #333e8f;
+  --on-primary-container: #dde1ff;
   --accent: #e4e1e9;
   --accent-hover: #c7c5d0;
   --on-accent: #1b1b21;
@@ -126,17 +132,22 @@
   --tier-b: #d8c05a;
   --tier-c: #8fd3a3;
   --tier-d: #8fc3e8;
-  --pool: #35353c;
+  --pool: #26262c;
   --on-band: #201f26;
-  --band-tint: 18%;
-  --band-tint-hover: 30%;
-  --tile-placeholder: #35353c;
+  --band-tint: 20%;
+  --band-tint-hover: 32%;
+  --tile-placeholder: #26262c;
   --tile-label: #c7c5d0;
 }
 
-/* A tier carries both of its colours; the scheme picks the one on show. */
+/*
+ * A tier carries both of its colours; the scheme picks the one on the block,
+ * while the row's tint always starts from the base colour, mixed into the
+ * paper in oklab, so dark rows do not turn to mud.
+ */
 .band {
   --band: var(--band-light);
+  --band-base: var(--band-light);
 }
 
 @media (prefers-color-scheme: dark) {

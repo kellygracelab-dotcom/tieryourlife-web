@@ -32,6 +32,7 @@ function AccountMenu({
         ) : (
           <span className="face face--initial">{initialOf(account.displayName)}</span>
         )}
+        <Icon name="expand_more" className="menu__chevron" />
       </summary>
       <ul className="menu__list" onClick={close}>
         <li className="menu__who">{account.displayName ?? strings.nav.you}</li>

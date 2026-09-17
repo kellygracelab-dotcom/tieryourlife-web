@@ -133,7 +133,7 @@ function QueueCard({
           {item.coverImageUrl !== null ? (
             <img src={item.coverImageUrl} alt="" loading="lazy" />
           ) : (
-            <span className="queue__cover-none">{strings.mod.noCover}</span>
+            <span className="queue__cover-none">{item.listTitle}</span>
           )}
           {blur && !revealed && <Icon name="visibility_off" className="queue__cover-icon" />}
         </button>

@@ -1,5 +1,6 @@
 import { THEMES, type Theme } from "../lib/theme";
 import { strings } from "../strings";
+import { Icon } from "../ui/Icon";
 import { useTheme } from "./useTheme";
 
 const THEME_TEXT: Record<Theme, string> = {
@@ -22,6 +23,7 @@ export function ThemeSwitch() {
           className="theme__option"
           onClick={() => choose(option)}
         >
+          {theme === option && <Icon name="check" className="theme__check" />}
           {THEME_TEXT[option]}
         </button>
       ))}

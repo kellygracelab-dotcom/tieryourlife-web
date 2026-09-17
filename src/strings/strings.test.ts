@@ -8,8 +8,8 @@ describe("strings", () => {
   });
 
   it("picks the plural form and groups thousands", () => {
-    expect(plural(strings.card.items, 1)).toBe("1 item");
-    expect(plural(strings.card.items, 0)).toBe("0 items");
+    expect(plural(strings.card.items, 1)).toBe("1 card");
+    expect(plural(strings.card.items, 0)).toBe("0 cards");
     expect(plural(strings.card.rankings, 2140)).toBe("2,140 rankings");
     expect(formatCount(1000000)).toBe("1,000,000");
   });

@@ -137,8 +137,9 @@
 }
 
 .pool__hint {
-  font: var(--text-small);
-  color: var(--ink-faint);
+  font: var(--text-caption);
+  font-size: 12px;
+  color: var(--ink-dim);
 }
 
 @media (max-width: 599px) {

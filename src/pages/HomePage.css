@@ -23,9 +23,8 @@
 
 .home__heading {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: 2px;
   padding-bottom: var(--space-4);
 }
 
@@ -36,7 +35,7 @@
 
 .home__heading p {
   margin: 0;
-  font: var(--text-small);
+  font: var(--text-lead);
   color: var(--ink-dim);
 }
 

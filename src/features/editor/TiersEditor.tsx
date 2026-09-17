@@ -78,7 +78,7 @@ function TierRow({
         <span className="tiers__tools">
           <button
             type="button"
-            className="tiers__tool"
+            className="tiers__tool tiers__tool--arrow"
             aria-label={fill(strings.new.moveUp, { name })}
             disabled={index === 0}
             onClick={() => dispatch({ type: "moveTier", key: tier.key, by: -1 })}
@@ -87,7 +87,7 @@ function TierRow({
           </button>
           <button
             type="button"
-            className="tiers__tool"
+            className="tiers__tool tiers__tool--arrow"
             aria-label={fill(strings.new.moveDown, { name })}
             disabled={index === count - 1}
             onClick={() => dispatch({ type: "moveTier", key: tier.key, by: 1 })}

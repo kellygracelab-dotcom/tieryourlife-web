@@ -178,11 +178,14 @@
 }
 
 .queue__cover-none {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
   height: 100%;
-  font: var(--text-caption);
+  padding: 12px;
+  text-align: left;
+  font: 500 15px/21px var(--font);
   color: var(--tile-label);
 }
 

@@ -31,6 +31,8 @@ interface SettingsPageProps {
 
 /** "Saved." stays this long. */
 export const SAVED_NOTE_MS = 6000;
+/** A caption longer than this would be an ellipsis under a 64 px face; the name goes in the tooltip. */
+const CAPTION_MAX = 12;
 
 const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
 
@@ -234,15 +236,16 @@ function FaceSection({
               type="button"
               className="settings__choice"
               aria-label={fill(strings.settings.faceChoice, { list: choice.from })}
+              title={choice.from}
               aria-pressed={choice.url === current}
               onClick={() => choose(choice.url)}
             >
               <img src={choice.url} alt="" loading="lazy" />
               {choice.url === current && <Icon name="check" className="settings__choice-check" />}
             </button>
-            <span className="settings__face-from" title={choice.from}>
-              {choice.from}
-            </span>
+            {choice.from.length <= CAPTION_MAX && (
+              <span className="settings__face-from">{choice.from}</span>
+            )}
           </li>
         ))}
         {state.status === "loading" && (

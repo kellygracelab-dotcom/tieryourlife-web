@@ -36,6 +36,7 @@ export function FeedSourceSwitch({
           className="theme__option"
           onClick={() => onChange(option.id)}
         >
+          {source === option.id && <Icon name="check" className="theme__check" />}
           {option.text}
         </button>
       ))}

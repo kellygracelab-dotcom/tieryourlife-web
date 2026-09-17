@@ -60,7 +60,7 @@ describe("SearchPage", () => {
     open("/search?q=anime");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("“anime”");
     expect(mocks.loadFeed).toHaveBeenCalledWith({ q: "anime", sort: "popular" });
-    expect(await screen.findByText("Ghibli, ranked")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Ghibli, ranked/ })).toBeInTheDocument();
     expect(screen.getByText("2 lists, and more")).toBeInTheDocument();
     expect(screen.getByRole("searchbox")).toHaveValue("anime");
     expect(screen.getByRole("button", { name: "Most ranked" })).toHaveAttribute(
