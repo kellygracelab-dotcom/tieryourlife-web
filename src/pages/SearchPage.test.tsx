@@ -42,7 +42,7 @@ const open = (path: string) => {
 
 beforeEach(() => {
   mocks.loadFeed.mockReset();
-  mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+  mocks.loadFeed.mockResolvedValue({ lists: [summary("d1", "Something")], nextCursor: null });
 });
 
 describe("SearchPage", () => {
@@ -89,16 +89,36 @@ describe("SearchPage", () => {
     expect(await screen.findByText("1 list")).toBeInTheDocument();
   });
 
-  it("says when nothing has that name and points at the category, or the front page", async () => {
+  it("says when nothing has that name, points at the category and shows what is popular there", async () => {
+    mocks.loadFeed.mockImplementation(async (query) =>
+      query.q === undefined
+        ? {
+            lists: [
+              summary("p1", "Popular one"),
+              summary("p2", "Two"),
+              summary("p3", "Three"),
+              summary("p4", "Four"),
+            ],
+            nextCursor: null,
+          }
+        : { lists: [], nextCursor: null },
+    );
     open("/search?q=zzzz&category=anime");
     expect(await screen.findByText(/Nothing with that name yet/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Anime" })).toHaveAttribute("href", "/c/anime");
+    expect(mocks.loadFeed).toHaveBeenCalledWith({ category: "anime", sort: "popular" });
+    expect(await screen.findByRole("heading", { name: "Popular in Anime" })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list", { name: "Popular in Anime" })).getAllByRole("listitem"),
+    ).toHaveLength(3);
+    expect(screen.queryByText("Four")).toBeNull();
 
     open("/search?q=zzzz");
     expect((await screen.findAllByRole("link", { name: "the front page" }))[0]).toHaveAttribute(
       "href",
       "/",
     );
+    expect(await screen.findAllByRole("heading", { name: "Popular" })).not.toHaveLength(0);
   });
 
   it("follows what is typed after a pause", async () => {

@@ -130,6 +130,7 @@ describe("MePage", () => {
     open(member);
     expect(await screen.findByText("Rankings you keep will show up here.")).toBeInTheDocument();
     expect(screen.getByText(/live in My lists/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Browse lists" })).toHaveAttribute("href", "/");
 
     mocks.loadMyRankings.mockResolvedValueOnce({
       rankings: [summary("cccccccc", "Capped")],

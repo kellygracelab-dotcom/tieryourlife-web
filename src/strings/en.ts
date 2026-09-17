@@ -37,6 +37,7 @@ export const en = {
     nothing: "Nothing with that name yet.",
     browseOr: "Try fewer words, or browse",
     browseHome: "the front page",
+    popularIn: "Popular in {category}",
   },
   category: {
     anime: "Anime",
@@ -147,6 +148,7 @@ export const en = {
     more: "Only the newest {n} are shown.",
     edit: "Edit",
     fromPhone: "Lists you published from the app live in My lists.",
+    browse: "Browse lists",
     tabs: "Your account",
     kept: { one: "{n} kept on this account", other: "{n} kept on this account" },
     lists: "My lists",

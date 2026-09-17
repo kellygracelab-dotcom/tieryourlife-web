@@ -78,6 +78,11 @@ function Rankings({ uid, load }: { uid: string; load: LoadMine }) {
     return (
       <>
         <p className="me__text">{strings.me.empty}</p>
+        <div>
+          <Button variant="filled" href="/">
+            {strings.me.browse}
+          </Button>
+        </div>
         <p className="me__note">{strings.me.fromPhone}</p>
       </>
     );
