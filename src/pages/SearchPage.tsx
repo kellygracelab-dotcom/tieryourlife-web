@@ -6,6 +6,7 @@ import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed } from "../features/feed/useFeed";
 import { fill, formatCount, plural, strings } from "../strings";
 import { Chip } from "../ui/Chip";
+import { ListCard } from "../ui/ListCard";
 import "./SearchPage.css";
 
 /** Typing pauses this long before the address, and the feed, follow. */
@@ -33,6 +34,33 @@ const write = (filters: Filters): Record<string, string> => ({
   ...(filters.sort === "recent" ? { sort: "recent" } : {}),
   ...(filters.category !== undefined ? { category: filters.category } : {}),
 });
+
+/** How many popular lists an empty search points at instead. */
+const SUGGESTIONS = 3;
+
+/** Something to open when the words led nowhere: what people rank most, in the category if one is set. */
+function Suggestions({ category }: { category: Category | undefined }) {
+  const popular = useFeed({ category, sort: "popular" });
+  if (popular.state.status !== "ready" || popular.state.lists.length === 0) return null;
+  const heading =
+    category === undefined
+      ? strings.home.popular
+      : fill(strings.search.popularIn, { category: strings.category[category] });
+  return (
+    <section className="search__suggestions" aria-labelledby="search-popular">
+      <h2 id="search-popular" className="search__subtitle">
+        {heading}
+      </h2>
+      <ul className="feed" aria-label={heading}>
+        {popular.state.lists.slice(0, SUGGESTIONS).map((list) => (
+          <li key={list.id}>
+            <ListCard list={list} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 export function SearchPage() {
   const [params, setParams] = useSearchParams();
@@ -104,9 +132,12 @@ export function SearchPage() {
         ))}
       </div>
       {nothing ? (
-        <p className="search__empty">
-          {strings.search.nothing} {strings.search.browseOr} {where}.
-        </p>
+        <>
+          <p className="search__empty">
+            {strings.search.nothing} {strings.search.browseOr} {where}.
+          </p>
+          <Suggestions category={filters.category} />
+        </>
       ) : (
         <FeedGrid
           state={feed.state}
