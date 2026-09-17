@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import type { ApiError } from "../api/errors";
 import { CATEGORIES } from "../api/types";
 import { useSession } from "../app/session";
@@ -9,6 +9,7 @@ import { CardsEditor, type Upload } from "../features/editor/CardsEditor";
 import {
   clearEditorDraft,
   emptyDraft,
+  isBlankDraft,
   LIMITS,
   loadEditorDraft,
   ownPicturesOf,
@@ -16,6 +17,7 @@ import {
   publishBodyOf,
   reduce,
   saveEditorDraft,
+  type Draft,
   type Problem,
 } from "../features/editor/model";
 import { TiersEditor } from "../features/editor/TiersEditor";
@@ -79,10 +81,30 @@ interface EditorProps {
   discard: (pictureIds: readonly string[]) => Promise<void>;
   guest: boolean;
   signIn: () => Promise<SignInOutcome>;
+  /** A title brought from elsewhere, such as a search that found nothing. */
+  suggestedTitle: string | null;
 }
 
-function Editor({ store, lookup, publish, upload, discard, guest, signIn }: EditorProps) {
-  const [draft, dispatch] = useReducer(reduce, store, (s) => loadEditorDraft(s) ?? emptyDraft());
+// A suggested title fills an empty editor; a draft with anything in it is
+// somebody's work and stays as it is.
+const openingDraft = (store: DraftStore, suggestedTitle: string | null): Draft => {
+  const draft = loadEditorDraft(store) ?? emptyDraft();
+  return suggestedTitle !== null && isBlankDraft(draft)
+    ? reduce(draft, { type: "title", title: suggestedTitle })
+    : draft;
+};
+
+function Editor({
+  store,
+  lookup,
+  publish,
+  upload,
+  discard,
+  guest,
+  signIn,
+  suggestedTitle,
+}: EditorProps) {
+  const [draft, dispatch] = useReducer(reduce, store, (s) => openingDraft(s, suggestedTitle));
   const [preview, setPreview] = useState(false);
   const [publishing, setPublishing] = useState<PublishState>({ status: "idle" });
   const navigate = useNavigate();
@@ -259,6 +281,8 @@ export function NewListPage({
   discard = discardPictures,
 }: NewListPageProps) {
   const { account, signIn } = useSession();
+  const [params] = useSearchParams();
+  const suggestedTitle = params.get("title");
   return (
     <Editor
       store={store}
@@ -268,6 +292,9 @@ export function NewListPage({
       discard={discard}
       guest={account?.kind !== "signedIn"}
       signIn={signIn}
+      suggestedTitle={
+        suggestedTitle !== null && suggestedTitle.trim() !== "" ? suggestedTitle : null
+      }
     />
   );
 }

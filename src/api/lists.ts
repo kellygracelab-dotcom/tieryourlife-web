@@ -40,6 +40,11 @@ export function publishList(client: ApiClient, request: PublishRequest): Promise
   return client.request<{ id: string }>("POST", "/lists", { body: request });
 }
 
+/** Takes the list out of the feed and off its address; the backend answers 204 either way. */
+export function unpublishList(client: ApiClient, id: string): Promise<void> {
+  return client.request<void>("DELETE", `/lists/${encodeURIComponent(id)}`);
+}
+
 export function recordTake(client: ApiClient, id: string): Promise<{ counted: boolean }> {
   return client.request<{ counted: boolean }>("POST", `/lists/${encodeURIComponent(id)}/taken`);
 }

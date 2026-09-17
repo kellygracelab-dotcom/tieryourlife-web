@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "./client";
-import { getFeed, getList, recordTake } from "./lists";
+import { getFeed, getList, recordTake, unpublishList } from "./lists";
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -33,6 +33,14 @@ describe("lists", () => {
     await getFeed(client);
 
     expect(request).toHaveBeenCalledWith("GET", "/lists", { query: {} });
+  });
+
+  it("unpublishes one list by id, escaping the id", async () => {
+    const { client, request } = recordingClient(undefined);
+
+    await expect(unpublishList(client, "a/b")).resolves.toBeUndefined();
+
+    expect(request).toHaveBeenCalledWith("DELETE", "/lists/a%2Fb");
   });
 
   it("records a take once per person", async () => {

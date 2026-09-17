@@ -39,6 +39,7 @@ export const en = {
     browseOr: "Try fewer words, or browse",
     browseHome: "the front page",
     popularIn: "Popular in {category}",
+    makeThis: "Make this list",
   },
   new: {
     title: "Make a list",
@@ -228,6 +229,13 @@ export const en = {
     listsHow:
       "In the app, open a list, add cards, set the tiers and tap Publish. It shows up here under the same Google account.",
     listsFailed: "Could not load your lists.",
+    unpublish: "Unpublish",
+    unpublishAsk:
+      "Unpublish “{title}”? It leaves the feed and its link stops working. Rankings people already made from it stay.",
+    keepIt: "Keep it",
+    unpublishing: "Unpublishing…",
+    unpublishFailed: "Could not unpublish. Try again.",
+    unpublishOffline: "No connection. Try again once you are back online.",
   },
   notFound: {
     title: "There is nothing at this address.",

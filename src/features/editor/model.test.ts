@@ -4,6 +4,7 @@ import {
   DEFAULT_TIERS,
   emptyDraft,
   LIMITS,
+  isBlankDraft,
   loadEditorDraft,
   ownPicturesOf,
   problemsOf,
@@ -190,6 +191,15 @@ describe("the draft between visits", () => {
     expect(loadEditorDraft(store)).toEqual(draft);
     clearEditorDraft(store);
     expect(loadEditorDraft(store)).toBeNull();
+  });
+
+  it("is blank until a title or a card is in", () => {
+    expect(isBlankDraft(emptyDraft())).toBe(true);
+    expect(isBlankDraft(reduce(emptyDraft(), { type: "title", title: "  " }))).toBe(true);
+    expect(isBlankDraft(reduce(emptyDraft(), { type: "title", title: "T" }))).toBe(false);
+    expect(
+      isBlankDraft(reduce(emptyDraft(), { type: "addItem", title: "One", imageUrl: null })),
+    ).toBe(false);
   });
 
   it("reads a draft kept before own pictures existed", () => {
