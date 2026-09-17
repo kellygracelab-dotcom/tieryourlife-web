@@ -33,8 +33,11 @@ export function useTileDrag(
   hitTest: HitTest = domHitTest,
 ): TileDrag {
   const [state, setState] = useState<DragState>(idle);
+  // The window listeners below outlive a render, so they read the latest state from here.
   const stateRef = useRef(state);
-  stateRef.current = state;
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearHold = () => {
