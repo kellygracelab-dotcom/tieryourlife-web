@@ -202,9 +202,17 @@
   margin-right: var(--space-2);
 }
 
+.menu__phone-only {
+  display: none;
+}
+
 @media (max-width: 599px) {
   .top__make {
     display: none;
+  }
+
+  .menu__phone-only {
+    display: block;
   }
 }
 
