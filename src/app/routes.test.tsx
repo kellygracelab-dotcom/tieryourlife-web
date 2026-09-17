@@ -6,6 +6,7 @@ import { PLAY_URL } from "../lib/links";
 import { routes } from "./routes";
 
 vi.mock("../lib/api", () => ({
+  report: vi.fn(),
   loadMyLists: vi.fn(),
   unpublish: vi.fn(),
   rearrangeRanking: vi.fn(),

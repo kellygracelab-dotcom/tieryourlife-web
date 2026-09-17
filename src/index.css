@@ -71,3 +71,64 @@ p {
   padding: 16px;
   background: rgba(0, 0, 0, 0.42);
 }
+
+/* Every dialog: on the scrim, in the middle. */
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(360px, 100%);
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.34);
+}
+
+.dialog__title {
+  margin: 0;
+  font: 400 24px/32px var(--font);
+  color: var(--ink);
+}
+
+.dialog__body {
+  margin: 16px 0 0;
+  font: 400 14px/20px var(--font);
+  color: var(--ink-dim);
+}
+
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.dialog__danger {
+  background: color-mix(in srgb, var(--error) 20%, var(--surface));
+  color: var(--error);
+}
+
+.dialog__danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error) 28%, var(--surface));
+  color: var(--error);
+}
+
+.dialog--narrow {
+  width: min(360px, 100%);
+}
+
+.dialog__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--error) 16%, var(--surface));
+  font: var(--text-lead);
+  color: var(--error);
+}
+
+.dialog__bar-icon {
+  font-size: 16px;
+}

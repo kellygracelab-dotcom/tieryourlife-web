@@ -1,5 +1,6 @@
 import { eraseAccount, refreshAuthor } from "../api/account";
 import { createApiClient } from "../api/client";
+import { reportList, type ReportRequest } from "../api/community";
 import { adoptGuest, type AdoptedGuest } from "../api/guest";
 import { searchCatalogue, type CatalogueItem } from "../api/catalogue";
 import {
@@ -76,6 +77,9 @@ export const republish = (id: string, request: PublishRequest): Promise<{ id: st
 export const unpublish = (id: string): Promise<void> => unpublishList(api, id);
 
 export const refreshPublishedAuthor = (): Promise<{ updated: number }> => refreshAuthor(api);
+
+export const report = (id: string, request: ReportRequest): Promise<void> =>
+  reportList(api, id, request);
 
 export const eraseMyAccount = (): Promise<void> => eraseAccount(api);
 

@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   unpublish: vi.fn<(id: string) => Promise<void>>(),
 }));
 vi.mock("../lib/api", () => ({
+  report: vi.fn(),
   loadMyLists: mocks.loadMyLists,
   unpublish: mocks.unpublish,
   rearrangeRanking: vi.fn(),

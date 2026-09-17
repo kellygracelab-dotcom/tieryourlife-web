@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import type { ListSummary } from "../api/types";
 import { faceChoicesOf } from "../features/account/faces";
 import { AccountTabs } from "../app/AccountTabs";
+import { useHidden } from "../features/community/useHidden";
 import { useSession } from "../app/session";
 import { ThemeSwitch } from "../app/ThemeSwitch";
 import { useResource } from "../features/list/useResource";
@@ -276,6 +277,35 @@ function ThemeCard({ note }: { note: string | null }) {
   );
 }
 
+function HiddenCard() {
+  const { hidden, showList, showAuthor } = useHidden();
+  if (hidden.lists.length === 0 && hidden.authors.length === 0) return null;
+  return (
+    <section className="settings__card" aria-labelledby="hidden-title">
+      <h2 id="hidden-title" className="settings__title">
+        {strings.settings.hiddenTitle}
+      </h2>
+      <p className="settings__helper">{strings.settings.hiddenBody}</p>
+      <ul className="settings__hidden" aria-label={strings.settings.hiddenTitle}>
+        {hidden.lists.map((list) => (
+          <li key={`l-${list.id}`} className="settings__hidden-row">
+            <span className="settings__hidden-name">{list.title}</span>
+            <Button onClick={() => showList(list.id)}>{strings.settings.showAgain}</Button>
+          </li>
+        ))}
+        {hidden.authors.map((author) => (
+          <li key={`a-${author.uid}`} className="settings__hidden-row">
+            <span className="settings__hidden-name">
+              {fill(strings.settings.hiddenAuthor, { name: author.name })}
+            </span>
+            <Button onClick={() => showAuthor(author.uid)}>{strings.settings.showAgain}</Button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function PrivacyCard() {
   return (
     <section className="settings__card" aria-labelledby="privacy-title">
@@ -469,6 +499,7 @@ export function SettingsPage({
       )}
 
       <ThemeCard note={account?.kind === "guest" ? strings.settings.themeGuestNote : null} />
+      <HiddenCard />
       <PrivacyCard />
 
       {account?.kind === "signedIn" && (
