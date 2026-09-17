@@ -241,6 +241,7 @@ export interface StoredRanking {
   snapshot: Snapshot;
   rows: unknown;
   createdAt?: { toMillis(): number };
+  updatedAt?: { toMillis(): number };
 }
 
 export const placedCount = (rows: number[][]): number =>

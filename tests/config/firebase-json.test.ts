@@ -51,6 +51,7 @@ describe("firebase.json", () => {
       "/api/**",
       "/l/**",
       "/r/**",
+      "/og/**",
     ]);
     for (const id of ["lists", "tmdb", "adoptGuestCredits", "boards", "web"]) {
       expect(rewrites[byFunction(id)]?.function?.region).toBe("europe-west1");

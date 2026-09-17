@@ -12,8 +12,10 @@
     "check": "npm run build && npm test"
   },
   "dependencies": {
+    "@resvg/resvg-wasm": "^2.6.2",
     "firebase-admin": "^13.0.0",
-    "firebase-functions": "^6.1.0"
+    "firebase-functions": "^6.1.0",
+    "satori": "^0.33.4"
   },
   "devDependencies": {
     "typescript": "^5.6.0"

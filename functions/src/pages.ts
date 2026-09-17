@@ -2,7 +2,16 @@ import { getFirestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
 import { describeList, describeRanking, renderPage, type PageMeta } from "./og";
-import { firstImageOf, fromStoredRows, isCode, placedCount, type StoredRanking } from "./ranking";
+import { fromStoredRows, isCode, placedCount, type StoredRanking } from "./ranking";
+import {
+  SHARE_HEIGHT,
+  SHARE_WIDTH,
+  shareImageUrl,
+  type ShareCard,
+  type ShareItem,
+  type ShareTier,
+} from "./share";
+import { sendShareImage, shareImageFor } from "./shareImage";
 
 const PUBLISHED = "publishedLists";
 const RANKINGS = "rankings";
@@ -113,10 +122,79 @@ export async function listPage(request: Request, response: Response, id: string)
   const meta: PageMeta = {
     title: list.title,
     description: describeList(list),
-    image: list.coverImageUrl ?? list.previewImages[0] ?? null,
+    image: shareImageUrl(host, "l", id, list.updatedAt),
+    imageSize: { width: SHARE_WIDTH, height: SHARE_HEIGHT },
     url: `https://${host}/l/${id}`,
   };
   send(response, renderPage(html, meta, { kind: "list", list }));
+}
+
+const SHARE_SIZE = { width: SHARE_WIDTH, height: SHARE_HEIGHT };
+
+/** Whatever the stored tiers and items look like, the card gets what it can draw. */
+function shareTiersOf(raw: unknown[] | undefined): ShareTier[] {
+  return (raw ?? []).map((tier) => {
+    const t = (tier ?? {}) as { label?: unknown; caption?: unknown; colorLight?: unknown };
+    return {
+      label: typeof t.label === "string" ? t.label : "",
+      caption: typeof t.caption === "string" ? t.caption : null,
+      colorLight: typeof t.colorLight === "string" ? t.colorLight : "#5d5c66",
+    };
+  });
+}
+
+function shareItemsOf(raw: unknown[] | undefined): ShareItem[] {
+  return (raw ?? []).map((item) => {
+    const i = (item ?? {}) as { title?: unknown; imageUrl?: unknown };
+    return {
+      title: typeof i.title === "string" ? i.title : "",
+      imageUrl:
+        typeof i.imageUrl === "string" && i.imageUrl.startsWith("https://") ? i.imageUrl : null,
+    };
+  });
+}
+
+/** The version a card is drawn for: the list's last change, or nothing yet. */
+const listVersion = (data: StoredList): number => data.updatedAt?.toMillis() ?? 0;
+
+export async function listShareImage(response: Response, id: string): Promise<void> {
+  const doc = LIST_ID.test(id) ? await getFirestore().collection(PUBLISHED).doc(id).get() : null;
+  const data = doc?.exists ? (doc.data() as StoredList) : null;
+  if (data === null || data.underReview === true) return sendShareImage(response, null);
+  const card: ShareCard = {
+    kind: "list",
+    title: data.title ?? "",
+    authorName: data.authorName ?? "",
+    category: data.category ?? "other",
+    itemCount: data.itemCount ?? data.items?.length ?? 0,
+    takeCount: data.takeCount ?? 0,
+    tiers: shareTiersOf(data.tiers),
+    items: shareItemsOf(data.items),
+  };
+  sendShareImage(response, await shareImageFor("l", id, listVersion(data), async () => card));
+}
+
+/** A ranking changes only when its owner edits it. */
+const rankingVersion = (stored: StoredRanking): number =>
+  stored.updatedAt?.toMillis() ?? stored.createdAt?.toMillis() ?? 0;
+
+export async function rankingShareImage(response: Response, code: string): Promise<void> {
+  const doc = isCode(code) ? await getFirestore().collection(RANKINGS).doc(code).get() : null;
+  if (doc === null || !doc.exists) return sendShareImage(response, null);
+  const stored = doc.data() as StoredRanking;
+  const card: ShareCard = {
+    kind: "ranking",
+    title: stored.snapshot.title,
+    authorName: stored.snapshot.authorName,
+    category: stored.snapshot.category,
+    tiers: shareTiersOf(stored.snapshot.tiers),
+    items: shareItemsOf(stored.snapshot.items),
+    rows: fromStoredRows(stored.rows),
+  };
+  sendShareImage(
+    response,
+    await shareImageFor("r", code, rankingVersion(stored), async () => card),
+  );
 }
 
 export async function rankingPage(
@@ -149,7 +227,8 @@ export async function rankingPage(
       authorName: stored.snapshot.authorName,
       category: stored.snapshot.category,
     }),
-    image: firstImageOf(stored.snapshot.items),
+    image: shareImageUrl(host, "r", code, rankingVersion(stored)),
+    imageSize: SHARE_SIZE,
     url: `https://${host}/r/${code}`,
   };
   send(response, renderPage(html, meta, { kind: "ranking", ranking }));

@@ -4,7 +4,7 @@ import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
 import { requireAppCheck } from "./appCheck";
 import { optionalAccount, requireAccount, requireUser, type Identity } from "./auth";
-import { listPage, rankingPage } from "./pages";
+import { listPage, listShareImage, rankingPage, rankingShareImage } from "./pages";
 import {
   claimHashOf,
   DAILY_CEILING,
@@ -60,7 +60,8 @@ export const web = onRequest(
   {
     region: "europe-west1",
     timeoutSeconds: 30,
-    memory: "256MiB",
+    // Drawing a share card holds the fonts, the layout engine and a few posters at once.
+    memory: "512MiB",
     maxInstances: 10,
   },
   async (request, response) => {
@@ -70,6 +71,13 @@ export const web = onRequest(
       .filter((part) => part.length > 0);
 
     try {
+      // The picture a chat shows for a page: /og/l/{id}.png and /og/r/{code}.png.
+      if (request.method === "GET" && segments.length === 3 && segments[0] === "og") {
+        const id = (segments[2] ?? "").replace(/\.png$/, "");
+        if (segments[1] === "l") return await listShareImage(response, id);
+        if (segments[1] === "r") return await rankingShareImage(response, id);
+        return notFound(response, "No such address");
+      }
       // Pages: /l/{id} and /r/{code} are the site's own shell with the words a
       // chat needs and the data the board needs.
       if (request.method === "GET" && segments.length === 2 && segments[0] === "l") {
