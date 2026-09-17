@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
 import type { PublishedList } from "../../api/types";
 import { useSession } from "../../app/session";
@@ -36,6 +37,13 @@ import "./ranking.css";
 
 export type Keep = (listId: string, rows: readonly (readonly number[])[]) => Promise<SavedRanking>;
 
+/** The board as the owner's editor: it starts from what is saved, and Save writes it back. */
+export interface EditMode {
+  rows: readonly (readonly number[])[];
+  save: (rows: readonly (readonly number[])[]) => Promise<unknown>;
+  cancel: () => void;
+}
+
 interface RankingBoardProps {
   list: PublishedList;
   hitTest?: HitTest;
@@ -43,7 +51,10 @@ interface RankingBoardProps {
   keep?: Keep;
   take?: (listId: string) => Promise<void>;
   share?: Share;
+  edit?: EditMode;
 }
+
+type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
 
 type PointerDownFor = (item: number) => (event: ReactPointerEvent<HTMLElement>) => void;
 
@@ -92,10 +103,14 @@ const scopeOf = (list: PublishedList): DraftScope => ({
   tierCount: list.tiers.length,
 });
 
-function useBoard(list: PublishedList, store: DraftStore) {
+function useBoard(
+  list: PublishedList,
+  store: DraftStore,
+  initialRows: readonly (readonly number[])[] | null = null,
+) {
   const scope = scopeOf(list);
   const [state, dispatch] = useReducer(reduce, list, (l) =>
-    init(l.tiers.length, l.items.length, loadDraft(store, scope)),
+    init(l.tiers.length, l.items.length, loadDraft(store, scope) ?? initialRows),
   );
   useEffect(() => {
     saveDraft(store, scope, state.rows);
@@ -112,10 +127,12 @@ export function RankingBoard({
   keep = keepRanking,
   take = noteTake,
   share = downloadShare,
+  edit,
 }: RankingBoardProps) {
-  const [state, dispatch] = useBoard(list, store);
+  const [state, dispatch] = useBoard(list, store, edit?.rows ?? null);
   const [finish, setFinish] = useState<FinishState>({ status: "idle" });
-  const locked = finish.status === "saving" || finish.status === "done";
+  const [save, setSave] = useState<SaveState>({ status: "idle" });
+  const locked = finish.status === "saving" || finish.status === "done" || save.status === "saving";
   const { account, signIn } = useSession();
   const guest = account?.kind !== "signedIn";
   const [offer, setOffer] = useState<KeepState>("closed");
@@ -149,6 +166,15 @@ export function RankingBoard({
     );
   };
   const onLinkOnly = useCallback(() => setOffer("closed"), []);
+
+  const onSave = () => {
+    if (edit === undefined) return;
+    setSave({ status: "saving" });
+    edit.save(state.rows).then(
+      () => setSave({ status: "idle" }),
+      (reason: unknown) => setSave({ status: "failed", error: errorOf(reason) }),
+    );
+  };
 
   useEffect(() => {
     if (locked) return;
@@ -185,7 +211,22 @@ export function RankingBoard({
           >
             {strings.rank.undo}
           </Button>
-          {finish.status !== "done" && (
+          {edit !== undefined && (
+            <Button onClick={edit.cancel} disabled={locked}>
+              {strings.rank.cancel}
+            </Button>
+          )}
+          {edit !== undefined && (
+            <Button
+              variant="filled"
+              icon="check"
+              onClick={onSave}
+              disabled={locked || placedCount(state) === 0}
+            >
+              {save.status === "saving" ? strings.rank.savingShort : strings.rank.saveChanges}
+            </Button>
+          )}
+          {edit === undefined && finish.status !== "done" && (
             <Button
               variant="filled"
               icon="check"
@@ -198,18 +239,28 @@ export function RankingBoard({
         </div>
       </div>
 
-      <ResultBar
-        finish={finish}
-        onRetry={onFinish}
-        onChange={() => {
-          setFinish({ status: "idle" });
-          setOffer("closed");
-        }}
-        download={(address) => share(list, state.rows, address)}
-        kept={!guest}
-        save={guest ? () => setOffer("open") : undefined}
-      />
-      <KeepDialog state={offer} onGoogle={onGoogle} onLinkOnly={onLinkOnly} />
+      {save.status === "failed" && (
+        <p className="ranking__error" role="alert">
+          {save.error.kind === "offline" ? strings.rank.failedOffline : strings.rank.failedOther}
+        </p>
+      )}
+
+      {edit === undefined && (
+        <ResultBar
+          finish={finish}
+          onRetry={onFinish}
+          onChange={() => {
+            setFinish({ status: "idle" });
+            setOffer("closed");
+          }}
+          download={(address) => share(list, state.rows, address)}
+          kept={!guest}
+          save={guest ? () => setOffer("open") : undefined}
+        />
+      )}
+      {edit === undefined && (
+        <KeepDialog state={offer} onGoogle={onGoogle} onLinkOnly={onLinkOnly} />
+      )}
 
       <div className="board">
         {list.tiers.map((tier, index) => (

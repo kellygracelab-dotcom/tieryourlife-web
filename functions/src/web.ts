@@ -3,7 +3,7 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
 import { requireAppCheck } from "./appCheck";
-import { requireAccount, requireUser, type Identity } from "./auth";
+import { optionalAccount, requireAccount, requireUser, type Identity } from "./auth";
 import { listPage, rankingPage } from "./pages";
 import {
   claimHashOf,
@@ -11,9 +11,12 @@ import {
   dayKey,
   decideClaim,
   decideClaimToken,
+  decideEdit,
+  decideOwner,
   decideRows,
   fromStoredRows,
   isCode,
+  isKeptBy,
   makeCode,
   MAX_BODY_BYTES,
   MY_RANKINGS_CAP,
@@ -42,13 +45,16 @@ interface RankingDocument {
   claimHash: string;
   createdAt?: FirebaseFirestore.Timestamp;
   claimedAt?: FirebaseFirestore.Timestamp;
+  updatedAt?: FirebaseFirestore.Timestamp;
 }
 
 const notFound = (response: Response, error: string): void =>
   void response.status(404).json({ error, code: "NOT_FOUND" });
 
 const methodNotAllowed = (response: Response): void =>
-  void response.status(405).json({ error: "Use GET, POST or PATCH", code: "METHOD_NOT_ALLOWED" });
+  void response
+    .status(405)
+    .json({ error: "Use GET, POST, PATCH or PUT", code: "METHOD_NOT_ALLOWED" });
 
 export const web = onRequest(
   {
@@ -73,7 +79,7 @@ export const web = onRequest(
         return await rankingPage(request, response, segments[1] ?? "");
       }
 
-      // The API: /api/rank, /api/rank/{code} and /api/me/rankings.
+      // The API: /api/rank, /api/rank/{code} (read, claim, edit) and /api/me/rankings.
       const api = segments[0] === "api" ? segments.slice(1) : null;
       if (api === null || api.length > 2) return notFound(response, "No such address");
       const [resource, rest] = api;
@@ -91,7 +97,7 @@ export const web = onRequest(
       const code = rest;
       if (request.method === "GET" && code !== undefined) {
         if (!(await requireAppCheck(request, response))) return;
-        return await readRanking(response, code);
+        return await readRanking(response, code, await optionalAccount(request));
       }
       if (request.method === "POST" && code === undefined) {
         if (!(await requireAppCheck(request, response))) return;
@@ -105,6 +111,12 @@ export const web = onRequest(
         if (!identity) return;
         return await claimRanking(request.body, identity, response, code);
       }
+      if (request.method === "PUT" && code !== undefined) {
+        if (!(await requireAppCheck(request, response))) return;
+        const identity = await requireAccount(request, response);
+        if (!identity) return;
+        return await editRanking(request.body, identity, response, code);
+      }
       methodNotAllowed(response);
     } catch (error) {
       console.error("Ranking request failed", error);
@@ -113,7 +125,11 @@ export const web = onRequest(
   },
 );
 
-async function readRanking(response: Response, code: string): Promise<void> {
+async function readRanking(
+  response: Response,
+  code: string,
+  viewer: Identity | null,
+): Promise<void> {
   if (!isCode(code)) return notFound(response, "No such ranking");
   const db = getFirestore();
   const doc = await db.collection(RANKINGS).doc(code).get();
@@ -132,6 +148,7 @@ async function readRanking(response: Response, code: string): Promise<void> {
     snapshot: ranking.snapshot,
     rows: fromStoredRows(ranking.rows),
     createdAt: ranking.createdAt?.toMillis() ?? 0,
+    yours: isKeptBy(ranking, viewer?.uid ?? null),
   });
 }
 
@@ -241,6 +258,42 @@ async function claimRanking(
       .json({ error: decision.error, code: decision.code });
   }
 
+  response.setHeader("Cache-Control", "no-store");
+  response.status(200).json({ code });
+}
+
+async function editRanking(
+  body: unknown,
+  identity: Identity,
+  response: Response,
+  code: string,
+): Promise<void> {
+  if (!isCode(code)) return notFound(response, "No such ranking");
+  if (JSON.stringify(body ?? null).length > MAX_BODY_BYTES) {
+    return void response.status(413).json({ error: "Too large", code: "TOO_LARGE" });
+  }
+  const db = getFirestore();
+  const ref = db.collection(RANKINGS).doc(code);
+  const decision = await db.runTransaction(async (transaction) => {
+    const doc = await transaction.get(ref);
+    if (!doc.exists) return null;
+    const ranking = doc.data() as RankingDocument;
+    const owner = decideOwner(ranking, identity.uid);
+    if (!owner.ok) return owner;
+    const edit = decideEdit(body, ranking.snapshot.tiers.length, ranking.snapshot.items.length);
+    if (!edit.ok) return edit;
+    transaction.update(ref, {
+      rows: toStoredRows(edit.rows),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return edit;
+  });
+  if (decision === null) return notFound(response, "No such ranking");
+  if (!decision.ok) {
+    return void response
+      .status(decision.status)
+      .json({ error: decision.error, code: decision.code });
+  }
   response.setHeader("Cache-Control", "no-store");
   response.status(200).json({ code });
 }

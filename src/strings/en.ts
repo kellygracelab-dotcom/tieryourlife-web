@@ -73,6 +73,9 @@ export const en = {
     placeIn: "Place {name} in {tier}",
     undo: "Undo",
     finish: "Finish",
+    cancel: "Cancel",
+    saveChanges: "Save",
+    savingShort: "Saving…",
     saving: "Saving your ranking…",
     live: "Your ranking is live at",
     liveNote:
@@ -108,6 +111,9 @@ export const en = {
     visitors: "Visitor's ranking",
     byVisitor: "ranked by a visitor",
     byYou: "ranked by you",
+    edit: "Edit",
+    editNote: "the link stays the same when you edit",
+    saved: "Saved. Same link, new arrangement.",
     noAuthorVersion: "{name} hasn’t arranged this list.",
     rankYourself: "Disagree? Rank it yourself.",
     listGone: "The list this ranking was made from isn’t available anymore.",
@@ -124,6 +130,8 @@ export const en = {
     failed: "Could not load your rankings.",
     tryAgain: "Try again",
     more: "Only the newest {n} are shown.",
+    edit: "Edit",
+    fromPhone: "Lists you published from the app live in My lists.",
   },
   notFound: {
     title: "There is nothing at this address.",

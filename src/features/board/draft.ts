@@ -24,6 +24,17 @@ interface Draft {
 
 export const draftKey = (listId: string): string => `tyl:draft:${listId}`;
 
+/** A store that forgets on reload, for boards whose draft must not outlive the page. */
+export function memoryStore(): DraftStore {
+  const data = new Map<string, string>();
+  return {
+    read: (key) => data.get(key) ?? null,
+    write: (key, value) => void data.set(key, value),
+    remove: (key) => void data.delete(key),
+    keys: () => [...data.keys()],
+  };
+}
+
 // Private mode, a full disk and a browser told to block storage all throw;
 // the board must work anyway, it just forgets on reload.
 export const localStorageStore: DraftStore = {

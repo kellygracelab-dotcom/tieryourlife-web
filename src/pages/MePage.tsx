@@ -34,6 +34,9 @@ function RankingCard({ ranking }: { ranking: RankingSummary }) {
           </time>
         </span>
       </Link>
+      <Link className="me-card__edit" to={`/r/${encodeURIComponent(ranking.code)}?edit`}>
+        {strings.me.edit}
+      </Link>
     </li>
   );
 }
@@ -62,7 +65,14 @@ function Rankings({ uid, load }: { uid: string; load: LoadMine }) {
     );
   }
   const { rankings, more } = state.value;
-  if (rankings.length === 0) return <p className="me__text">{strings.me.empty}</p>;
+  if (rankings.length === 0) {
+    return (
+      <>
+        <p className="me__text">{strings.me.empty}</p>
+        <p className="me__note">{strings.me.fromPhone}</p>
+      </>
+    );
+  }
   return (
     <>
       <ul className="me__list" aria-label={strings.me.title}>
