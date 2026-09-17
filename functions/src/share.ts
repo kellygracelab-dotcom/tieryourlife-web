@@ -130,6 +130,7 @@ const tile = (item: ShareItem, pictures: Pictures, width: number, height: number
     el(
       "div",
       {
+        display: "block",
         fontSize: Math.round(height / 6.5),
         lineHeight: 1.2,
         textAlign: "center",
