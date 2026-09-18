@@ -50,10 +50,16 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
       if (state.rows[action.tier]?.includes(action.item)) {
         return state.selected === null ? state : { ...state, selected: null };
       }
+      const fromPool = tierOf(state, action.item) === null;
       const rows = without(state.rows, action.item).map((row, index) =>
         index === action.tier ? [...row, action.item] : row,
       );
-      return remember(state, rows);
+      const next = remember(state, rows);
+      // Working through the pool by taps or keys, the next card picks itself,
+      // so a whole list is one tap a card. A drag selects nothing.
+      return fromPool && state.selected === action.item
+        ? { ...next, selected: nextInPool(next, action.item) }
+        : next;
     }
     case "unplace": {
       if (tierOf(state, action.item) === null) return state;
@@ -62,7 +68,17 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
     case "undo": {
       const previous = state.history[state.history.length - 1];
       if (previous === undefined) return state;
-      return { ...state, rows: previous, selected: null, history: state.history.slice(0, -1) };
+      const restored = {
+        ...state,
+        rows: previous,
+        selected: null,
+        history: state.history.slice(0, -1),
+      };
+      // The card that went back to the pool comes back picked: undo and
+      // another tier is two taps.
+      const before = new Set(pool(state));
+      const back = pool(restored).filter((item) => !before.has(item));
+      return back.length === 1 ? { ...restored, selected: back[0] ?? null } : restored;
     }
   }
 }
@@ -85,6 +101,12 @@ export function placedCount(state: BoardState): number {
 export function pool(state: BoardState): number[] {
   const placed = new Set(state.rows.flat());
   return Array.from({ length: state.itemCount }, (_, i) => i).filter((i) => !placed.has(i));
+}
+
+/** The card after this one in the pool, or the first when it was the last. */
+function nextInPool(state: BoardState, after: number): number | null {
+  const left = pool(state);
+  return left.find((item) => item > after) ?? left[0] ?? null;
 }
 
 export const canUndo = (state: BoardState): boolean => state.history.length > 0;

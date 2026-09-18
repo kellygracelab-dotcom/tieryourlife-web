@@ -61,7 +61,7 @@ describe("RankingBoard as an editor", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Climax" }));
     await userEvent.keyboard("2");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(screen.getAllByRole("button", { name: "Save" })[0]!);
     expect(mode.save).toHaveBeenCalledWith([[1], [0, 2]]);
 
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -77,14 +77,14 @@ describe("RankingBoard as an editor", () => {
         }),
     );
     show({ save });
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.click(screen.getAllByRole("button", { name: "Save" })[0]!);
     expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "The Witch" })).toBeDisabled();
 
     settle(new ApiFailure({ kind: "unavailable" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not save the ranking");
-    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    expect(screen.getAllByRole("button", { name: "Save" })[0]).toBeEnabled();
     expect(screen.getByRole("button", { name: "The Witch" })).toBeEnabled();
   });
 });

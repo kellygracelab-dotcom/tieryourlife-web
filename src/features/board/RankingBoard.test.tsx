@@ -78,6 +78,11 @@ describe("RankingBoard", () => {
     expect(within(tierList("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
     expect(progress()).toHaveTextContent("1 of 3 placed");
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2 cards left");
+    // The next card is picked already; with nothing picked the hint asks for one.
+    expect(
+      screen.getByText("Tap a tier to place The Witch, or press its number"),
+    ).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
     expect(screen.getByText("Pick a card, then tap a tier or press 1–2")).toBeInTheDocument();
   });
 
@@ -131,17 +136,90 @@ describe("RankingBoard", () => {
     expect(progress()).toHaveTextContent("0 of 3 placed");
   });
 
-  it("places a card by tapping anywhere on the tier row", async () => {
+  it("places a card by tapping anywhere on the tier row, and a row with nothing picked ignores the tap", async () => {
     render(
       <MemoryRouter>
         <RankingBoard list={list} />
       </MemoryRouter>,
     );
+    await userEvent.click(tierList("A"));
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+
     await userEvent.click(card("Climax"));
     await userEvent.click(tierList("A"));
     expect(within(tierList("A")).getByRole("button", { name: "Climax" })).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
     await userEvent.click(tierList("A"));
     expect(progress()).toHaveTextContent("1 of 3 placed");
+  });
+
+  it("picks the next card by itself, so the rest of the list is one tap a card", async () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Tap a card, then a tier")).toBeInTheDocument();
+    await userEvent.click(card("Ex Machina"));
+    expect(screen.getByText("Tap a tier to place it")).toBeInTheDocument();
+
+    // The band's own button, the way a finger or a screen reader gets there.
+    await userEvent.click(screen.getByRole("button", { name: "Place Ex Machina in S" }));
+    expect(card("The Witch")).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Place The Witch in A" }));
+    expect(card("Climax")).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(tierList("A"));
+    expect(progress()).toHaveTextContent("3 of 3 placed");
+    expect(screen.queryByRole("button", { pressed: true })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(card("Climax")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 card left");
+  });
+
+  it("takes a tap on a placed card as picking that card, not as placing the picked one on its row", async () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("1");
+    expect(card("The Witch")).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(within(tierList("S")).getByRole("button", { name: "Ex Machina" }));
+    expect(progress()).toHaveTextContent("1 of 3 placed");
+    expect(card("Ex Machina")).toHaveAttribute("aria-pressed", "true");
+    expect(card("The Witch")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("turns the pool into the way out once every card has a tier", async () => {
+    const keep = vi.fn().mockResolvedValue({ code: "abcdefgh", claimToken: "t" });
+    render(
+      <MemoryRouter>
+        <RankingBoard
+          list={list}
+          keep={keep}
+          take={() => Promise.resolve()}
+          store={memoryStore()}
+        />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("112");
+    expect(screen.getByText("All 3 placed")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+    expect(
+      screen.getByText("Change your mind by dragging a card, or finish and get your link."),
+    ).toBeInTheDocument();
+
+    const finishes = screen.getAllByRole("button", { name: "Finish" });
+    expect(finishes).toHaveLength(2);
+    await userEvent.click(finishes[1]!);
+    expect(keep).toHaveBeenCalledWith("abc", [[0, 1], [2]]);
+    expect(await screen.findByText(/\/r\/abcdefgh/)).toBeInTheDocument();
+    expect(screen.queryByText("All 3 placed")).toBeNull();
   });
 
   it("keeps the placements in the store and picks them up again", async () => {

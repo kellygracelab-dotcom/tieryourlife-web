@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useReducer,
+  useRef,
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
@@ -18,6 +19,7 @@ import { downloadShare, type Share } from "../ranking/shareImage";
 import { errorOf } from "../list/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { Icon } from "../../ui/Icon";
 import { DragGhost } from "./DragGhost";
 import type { DragState } from "./drag";
 import { loadDraft, localStorageStore, saveDraft, type DraftScope, type DraftStore } from "./draft";
@@ -83,7 +85,12 @@ function Tile({ list, item, selected, lifted, locked, dispatch, onPointerDown }:
         aria-label={card.title}
         title={card.title}
         disabled={locked}
-        onClick={() => dispatch({ type: "select", item })}
+        data-item={item}
+        onClick={(event) => {
+          // The armed row underneath would take the same tap as "place here".
+          event.stopPropagation();
+          dispatch({ type: "select", item });
+        }}
         onPointerDown={locked ? undefined : onPointerDown}
       >
         {card.imageUrl !== null ? (
@@ -140,6 +147,30 @@ export function RankingBoard({
   const lifted = drag.state.phase === "dragging" ? drag.state.item : null;
   const selected = state.selected;
   const selectedTitle = selected === null ? null : (list.items[selected]?.title ?? null);
+  const section = useRef<HTMLElement>(null);
+  const tray = useRef<HTMLUListElement>(null);
+
+  // On a phone the pool is one scrolling row; the picked card comes to its
+  // start. Only the row scrolls: on a wide screen the pool may be off screen,
+  // and the page must not jump to it after every key press.
+  useEffect(() => {
+    const row = tray.current;
+    if (row === null || selected === null || typeof row.scrollTo !== "function") return;
+    const tile = row.querySelector<HTMLElement>(`[data-item="${selected}"]`);
+    const holder = tile?.parentElement;
+    if (holder == null) return;
+    row.scrollTo({ left: holder.offsetLeft - row.offsetLeft - 14, behavior: "smooth" });
+  }, [selected]);
+
+  // The result opens above the board, and the person may be far below it.
+  const finished = finish.status !== "idle";
+  useEffect(() => {
+    if (!finished) return;
+    const result = section.current?.querySelector(".result");
+    if (result != null && typeof result.scrollIntoView === "function") {
+      result.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [finished]);
 
   const onFinish = () => {
     setFinish({ status: "saving" });
@@ -196,9 +227,20 @@ export function RankingBoard({
 
   const left = pool(state);
   const keyboardTiers = Math.min(list.tiers.length, 9);
+  const picked = selected !== null && left.includes(selected);
+  const allPlaced = left.length === 0 && finish.status !== "done";
+  const poolClasses = [
+    "pool",
+    drag.state.phase === "dragging" && drag.state.target?.kind === "pool" && "pool--target",
+    picked && "pool--picked",
+    lifted !== null && left.includes(lifted) && "pool--dragging",
+    finish.status === "done" && "pool--rest",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <section className="ranking" aria-label={strings.rank.yours}>
+    <section className="ranking" aria-label={strings.rank.yours} ref={section}>
       <div className="ranking__bar">
         <p className="ranking__progress" aria-live="polite">
           {fill(strings.rank.placed, { n: placedCount(state), total: list.items.length })}
@@ -279,36 +321,54 @@ export function RankingBoard({
         ))}
       </div>
 
-      <div
-        className={
-          drag.state.phase === "dragging" && drag.state.target?.kind === "pool"
-            ? "pool pool--target"
-            : "pool"
-        }
-        data-drop="pool"
-      >
-        <div className="pool__head">
-          <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
-          <p className="pool__hint">
-            {selectedTitle === null
-              ? fill(strings.rank.hintPick, { keys: `1–${keyboardTiers}` })
-              : fill(strings.rank.hintPlace, { name: selectedTitle })}
-          </p>
-        </div>
-        <ul className="pool__items">
-          {left.map((item) => (
-            <Tile
-              key={item}
-              list={list}
-              item={item}
-              selected={selected === item}
-              lifted={lifted === item}
-              locked={locked}
-              dispatch={dispatch}
-              onPointerDown={drag.onPointerDown(item)}
-            />
-          ))}
-        </ul>
+      <div className={poolClasses} data-drop="pool">
+        {allPlaced ? (
+          <div className="pool__done">
+            <p className="pool__done-title">
+              <Icon name="check_circle" className="pool__done-icon" />
+              {plural(strings.rank.allPlaced, list.items.length)}
+            </p>
+            <p className="pool__done-note">
+              {edit === undefined ? strings.rank.allPlacedNote : strings.rank.allPlacedNoteEdit}
+            </p>
+            <Button
+              variant="filled"
+              icon="check"
+              onClick={edit === undefined ? onFinish : onSave}
+              disabled={locked}
+            >
+              {edit === undefined ? strings.rank.finish : strings.rank.saveChanges}
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="pool__head">
+              <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
+              <p className="pool__hint pool__hint--keys">
+                {selectedTitle === null
+                  ? fill(strings.rank.hintPick, { keys: `1–${keyboardTiers}` })
+                  : fill(strings.rank.hintPlace, { name: selectedTitle })}
+              </p>
+              <p className="pool__hint pool__hint--touch">
+                {selectedTitle === null ? strings.rank.hintPickTouch : strings.rank.hintPlaceTouch}
+              </p>
+            </div>
+            <ul className="pool__items" ref={tray}>
+              {left.map((item) => (
+                <Tile
+                  key={item}
+                  list={list}
+                  item={item}
+                  selected={selected === item}
+                  lifted={lifted === item}
+                  locked={locked}
+                  dispatch={dispatch}
+                  onPointerDown={drag.onPointerDown(item)}
+                />
+              ))}
+            </ul>
+          </>
+        )}
       </div>
       <DragGhost state={drag.state} items={list.items} />
     </section>
@@ -369,7 +429,15 @@ function TierRow({
           </span>
         )}
         {armed && selectedTitle !== null && (
-          <button type="button" className="tier__place" onClick={place}>
+          <button
+            type="button"
+            className="tier__place"
+            onClick={(event) => {
+              // The row would place it a second time and drop the pick of the next card.
+              event.stopPropagation();
+              place();
+            }}
+          >
             {fill(strings.rank.placeIn, { name: selectedTitle, tier: meta.label })}
           </button>
         )}

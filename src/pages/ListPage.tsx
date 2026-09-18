@@ -101,13 +101,21 @@ function ListMenu({
     });
   };
 
+  const link = `${window.location.origin}/l/${encodeURIComponent(list.id)}`;
+
   const copyLink = () => {
     close();
-    const link = `${window.location.origin}/l/${encodeURIComponent(list.id)}`;
     void navigator.clipboard?.writeText(link).then(
       () => notify({ text: strings.list.linkCopied }),
       () => undefined,
     );
+  };
+
+  // The phone's own share sheet, where there is one; closing it is not a failure.
+  const canShare = typeof navigator.share === "function";
+  const shareLink = () => {
+    close();
+    void navigator.share({ title: list.title, url: link }).catch(() => undefined);
   };
 
   const onSignIn = () => {
@@ -137,6 +145,19 @@ function ListMenu({
         </summary>
         <ul className="menu__list">
           <li>
+            <button type="button" className="menu__action" onClick={copyLink}>
+              {strings.list.copyLink}
+            </button>
+          </li>
+          {canShare && (
+            <li>
+              <button type="button" className="menu__action" onClick={shareLink}>
+                {strings.list.share}
+              </button>
+            </li>
+          )}
+          <li className="menu__divider" role="separator" />
+          <li>
             <button
               type="button"
               className="menu__action"
@@ -158,12 +179,6 @@ function ListMenu({
               }}
             >
               {strings.list.hide}
-            </button>
-          </li>
-          <li className="menu__divider" role="separator" />
-          <li>
-            <button type="button" className="menu__action" onClick={copyLink}>
-              {strings.list.copyLink}
             </button>
           </li>
         </ul>
@@ -240,8 +255,10 @@ export function ListPage({ report = sendReport }: { report?: Report }) {
             >
               {fill(strings.list.by, { name: list.authorName })}
             </Link>
-            {" · "}
-            {strings.rank.ownCopy}
+            <span className="list-head__own">
+              {" · "}
+              {strings.rank.ownCopy}
+            </span>
             {" · "}
             {plural(strings.card.rankings, list.takeCount)}
           </p>

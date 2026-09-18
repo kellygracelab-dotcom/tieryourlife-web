@@ -102,3 +102,34 @@
   flex: none;
   gap: 8px;
 }
+
+/* On a phone the head gives its room to the board: the address is in the menu as Copy link. */
+@media (max-width: 599px) and (hover: none) and (pointer: coarse) {
+  .list-head {
+    gap: 8px 10px;
+  }
+
+  .list-head__title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font: 500 18px/23px var(--font);
+  }
+
+  .list-head__meta {
+    margin-top: 2px;
+    font: 400 11px/15px var(--font);
+  }
+
+  .list-head__own,
+  .list-head__address {
+    display: none;
+  }
+
+  .list-page__views .chip {
+    min-height: 32px;
+    padding: 4px 14px;
+    font-size: 13px;
+  }
+}
