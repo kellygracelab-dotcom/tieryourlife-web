@@ -113,7 +113,18 @@ export const en = {
   },
   footer: {
     privacy: "Privacy policy",
+    about: "About",
+  },
+  about: {
+    title: "About",
+    what: "Rank anything into tiers, or take someone else's list and rank it your way. Ranking a list needs no account.",
+    creditsTitle: "Credits",
+    catalogue: "The details and pictures of films, series and people come from TMDB.",
+    tmdbLogo: "TMDB",
+    // TMDB's terms give this sentence word for word.
     tmdb: "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+    dataTitle: "Your data",
+    deleteAccount: "Delete your account",
   },
   home: {
     hero: "Rank anything, or take someone else's list and rank it your way.",
@@ -195,6 +206,7 @@ export const en = {
     searchAnime: "Search anime to add, or type a name",
     searchPeople: "Search people to add, or type a name",
     suggestions: "Suggestions",
+    fromTmdb: "From TMDB",
     searching: "Looking in the catalogue…",
     nothingFound: "Nothing in the catalogue by that name. Add it as a card anyway.",
     catalogueDown: "The catalogue is not answering. Cards by name still work.",

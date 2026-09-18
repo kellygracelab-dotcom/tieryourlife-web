@@ -1,0 +1,85 @@
+.about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.about__heading {
+  margin: 0;
+  font: var(--text-headline);
+}
+
+.about__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 20px 22px 22px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.about__title {
+  margin: 0;
+  font: var(--text-title);
+}
+
+.about__text {
+  margin: 0;
+  font: var(--text-lead);
+  color: var(--ink-dim);
+}
+
+.about__tmdb {
+  align-self: flex-start;
+  display: flex;
+  padding: 4px 0;
+}
+
+.about__tmdb img {
+  display: block;
+}
+
+.about__notice {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.about__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  margin: 0 -8px;
+  padding: 0 8px;
+  border-radius: var(--radius-tile);
+  color: var(--ink);
+  font: var(--text-body);
+  font-size: 14px;
+}
+
+.about__row:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.about__row + .about__row {
+  margin-top: calc(-1 * var(--space-3));
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+}
+
+.about__row-icon {
+  font-size: 18px;
+  color: var(--ink-dim);
+}
+
+@media (max-width: 420px) {
+  .about__card {
+    padding: 16px 16px 18px;
+  }
+}

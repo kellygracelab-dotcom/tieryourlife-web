@@ -69,7 +69,7 @@ describe("firebase.json", () => {
         .find((h) => h.source === source)
         ?.headers.find((h) => h.key === "Cache-Control")?.value;
     expect(cacheOf("/assets/**")).toBe("public, max-age=31536000, immutable");
-    for (const source of ["/index.html", "/", "/@(new|search|me|c|settings|mod|u){,/**}"]) {
+    for (const source of ["/index.html", "/", "/@(new|search|me|c|settings|mod|u|about){,/**}"]) {
       expect(cacheOf(source)).toBe("no-cache");
     }
   });

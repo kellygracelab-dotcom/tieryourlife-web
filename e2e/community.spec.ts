@@ -94,3 +94,18 @@ test("an author's page from a card, with a follow that asks a guest to sign in",
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
 });
+
+test("the foot of every page leads to the credits, with TMDB's logo and sentence", async ({
+  page,
+}) => {
+  await mockBackend(page);
+  await page.goto(`/l/${list.id}`);
+  await page.getByRole("link", { name: "About" }).click();
+  await expect(page).toHaveURL("/about");
+  await expect(
+    page.getByText("This product uses the TMDB API but is not endorsed or certified by TMDB."),
+  ).toBeVisible();
+  const logo = page.getByRole("img", { name: "TMDB" });
+  await expect(logo).toBeVisible();
+  expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+});

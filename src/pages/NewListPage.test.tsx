@@ -193,6 +193,8 @@ describe("NewListPage", () => {
     await userEvent.type(box, "ex");
     expect(await suggestions().findByRole("button", { name: /Ex Machina/ })).toBeInTheDocument();
     expect(lookup).toHaveBeenCalledWith("ex");
+    // What the catalogue found says whose it is, right where it is shown.
+    expect(suggestions().getByText("From TMDB")).toBeInTheDocument();
     await userEvent.click(suggestions().getByRole("button", { name: /Ex Machina/ }));
     expect(box).toHaveValue("");
     expect(screen.getByText("1 added")).toBeInTheDocument();

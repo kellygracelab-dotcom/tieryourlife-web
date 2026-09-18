@@ -264,12 +264,6 @@
   color: var(--ink-dim);
 }
 
-.foot__attribution {
-  flex-basis: 100%;
-  font: var(--text-caption);
-  color: var(--ink-faint);
-}
-
 @media (max-width: 599px) {
   .top,
   .shell__main,

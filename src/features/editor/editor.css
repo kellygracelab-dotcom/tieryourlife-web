@@ -187,6 +187,13 @@
   overflow: hidden;
 }
 
+.cards__source {
+  margin: 0;
+  padding: 8px 12px 2px;
+  font: var(--text-caption);
+  color: var(--ink-faint);
+}
+
 .cards__note {
   margin: 0;
   padding: 10px 12px;
