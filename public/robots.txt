@@ -1,2 +1,4 @@
+# Until the launch the pages themselves ask not to be indexed. Crawling stays
+# open: the bots that draw a link's preview in a chat obey this file too.
 User-agent: *
-Disallow: /
+Allow: /

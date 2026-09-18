@@ -18,12 +18,12 @@ const RANKINGS = "rankings";
 
 /** The sites this function may be asked to render; anything else is a stranger. */
 const HOSTS = new Set([
-  "tieryourlife-web.web.app",
-  "tieryourlife-web.firebaseapp.com",
   "tieryourlife.web.app",
   "tieryourlife.firebaseapp.com",
+  "tieryourlife-web.web.app",
+  "tieryourlife-web.firebaseapp.com",
 ]);
-const DEFAULT_HOST = "tieryourlife-web.web.app";
+const DEFAULT_HOST = "tieryourlife.web.app";
 
 /**
  * A hosting-only deploy changes the asset names inside index.html; a minute
