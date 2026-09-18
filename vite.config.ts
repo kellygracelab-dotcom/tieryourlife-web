@@ -8,6 +8,7 @@ import {
   LEAKY_DEBUG_TOKEN_VAR,
   refuseLeakyDebugToken,
 } from "./config/debug-token.ts";
+import { preloadApp } from "./config/preload-app.ts";
 
 // The same two paths are Hosting rewrites in production, so the client never
 // needs a different base URL. In development they go to the backend's Firebase
@@ -27,7 +28,11 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   refuseLeakyDebugToken(command, env);
   return {
-    plugins: [react(), keepOutOfBundle([env[DEBUG_TOKEN_VAR], env[LEAKY_DEBUG_TOKEN_VAR]])],
+    plugins: [
+      react(),
+      keepOutOfBundle([env[DEBUG_TOKEN_VAR], env[LEAKY_DEBUG_TOKEN_VAR]]),
+      preloadApp(),
+    ],
     define: debugTokenDefine(command, env),
     server: {
       proxy: proxyFor(env.PROXY_TARGET || EMULATOR),
