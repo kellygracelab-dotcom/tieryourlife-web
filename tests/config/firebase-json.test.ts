@@ -75,9 +75,22 @@ describe("firebase.json", () => {
   });
 });
 
-describe("until the site moves to its final address", () => {
-  it("asks search engines to stay away from the temporary one", () => {
-    expect(readFileSync("public/robots.txt", "utf8")).toMatch(/Disallow: \/\s*$/);
+describe(".firebaserc", () => {
+  // Links sent before the move point at the first address, and a storage origin
+  // holds a guest's drafts: dropping it from the target would strand both.
+  it("publishes the web target to the main address and keeps the first one alive", () => {
+    const rc = JSON.parse(readFileSync(".firebaserc", "utf8")) as {
+      targets: Record<string, { hosting: Record<string, string[]> }>;
+    };
+    expect(rc.targets.tieryourlife?.hosting.web).toEqual(["tieryourlife", "tieryourlife-web"]);
+  });
+});
+
+describe("until the launch", () => {
+  // A blocked crawler never sees the noindex, and Discord, X and WhatsApp skip
+  // the preview of a link their bots may not fetch.
+  it("keeps the pages out of search without closing them to link previews", () => {
     expect(readFileSync("index.html", "utf8")).toContain('name="robots" content="noindex"');
+    expect(readFileSync("public/robots.txt", "utf8")).not.toMatch(/^Disallow:\s*\/\s*$/m);
   });
 });

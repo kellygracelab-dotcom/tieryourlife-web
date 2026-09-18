@@ -9,8 +9,8 @@ describe("hostOf", () => {
   it("takes a known forwarded host and falls back for strangers", () => {
     assert.equal(hostOf(requestWith("tieryourlife-web.web.app")), "tieryourlife-web.web.app");
     assert.equal(hostOf(requestWith("tieryourlife.web.app, other")), "tieryourlife.web.app");
-    assert.equal(hostOf(requestWith("evil.example")), "tieryourlife-web.web.app");
-    assert.equal(hostOf(requestWith(undefined)), "tieryourlife-web.web.app");
+    assert.equal(hostOf(requestWith("evil.example")), "tieryourlife.web.app");
+    assert.equal(hostOf(requestWith(undefined)), "tieryourlife.web.app");
   });
 });
 

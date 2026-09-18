@@ -39,11 +39,11 @@ Deploys are run by hand:
 npm run deploy
 ```
 
-That runs the full check first and then `firebase deploy --only hosting:web`, which publishes the build
-to the second Hosting site of the project, `tieryourlife-web.web.app`. Never run a bare `firebase deploy`
-here or in the backend repository: the backend's `firebase.json` carries an untargeted hosting block that
-would overwrite the main site with its three static pages. Rolling back is the release history in the
-Firebase console, Hosting section.
+That runs the full check first and then `firebase deploy --only hosting:web,functions:web`. The `web`
+target is two Hosting sites: `tieryourlife.web.app`, the address the phone app shares and the one to give
+out, and `tieryourlife-web.web.app`, where the site first lived and where links already sent still point.
+Both get the same build. Never run a bare `firebase deploy` here: it would reach for everything in the
+project. Rolling back is the release history in the Firebase console, Hosting section, once per site.
 
 `/lists` and `/3/search` are rewritten to the backend's Cloud Functions, so the browser talks to its own
 origin and never runs into CORS. In development, `vite` proxies the same two paths to the backend's
