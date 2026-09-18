@@ -134,6 +134,8 @@ const tile = (item: ShareItem, pictures: Pictures, width: number, height: number
         fontSize: Math.round(height / 6.5),
         lineHeight: 1.2,
         textAlign: "center",
+        // One long word is wider than a tile and used to lose its last letters.
+        wordBreak: "break-word",
         lineClamp: height > 100 ? 4 : 3,
       },
       item.title.slice(0, 40),
@@ -184,24 +186,50 @@ const heading = (card: ShareCard, line: string): Node =>
     el("div", { fontSize: 22, color: INK_DIM, lineClamp: 1 }, line),
   ]);
 
+const MARK_BANDS = ["#b03a32", "#c06a25", "#a98b1f", "#3f7f55", "#3c6e99"];
+
+/** The app's icon at the size of a line of text: five tier bands behind a dark tile with the S. */
+const mark = (size: number): Node =>
+  el(
+    "div",
+    {
+      display: "flex",
+      flexDirection: "column",
+      position: "relative",
+      width: size,
+      height: size,
+      borderRadius: Math.round(size * 0.22),
+      overflow: "hidden",
+      flexShrink: 0,
+    },
+    [
+      ...MARK_BANDS.map((color) => el("div", { display: "flex", flex: 1, background: color })),
+      el(
+        "div",
+        {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "absolute",
+          left: Math.round(size * 0.21),
+          top: Math.round(size * 0.21),
+          width: Math.round(size * 0.58),
+          height: Math.round(size * 0.58),
+          borderRadius: Math.round(size * 0.17),
+          background: "#121318",
+          color: "#f7f5fa",
+          fontSize: Math.round(size * 0.46),
+          fontWeight: 500,
+          lineHeight: 1,
+        },
+        "S",
+      ),
+    ],
+  );
+
 const brand = (): Node =>
-  el("div", { display: "flex", alignItems: "center", gap: 8, color: INK_FAINT, fontSize: 18 }, [
-    el(
-      "div",
-      {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: 24,
-        height: 24,
-        borderRadius: 6,
-        background: "#4a5baa",
-        color: SURFACE,
-        fontSize: 14,
-        fontWeight: 500,
-      },
-      "T",
-    ),
+  el("div", { display: "flex", alignItems: "center", gap: 10, color: INK_FAINT, fontSize: 18 }, [
+    mark(28),
     SITE_NAME,
   ]);
 
@@ -297,9 +325,16 @@ export const shareCardOf = (card: ShareCard, pictures: Pictures): Node =>
   card.kind === "list" ? listCard(card, pictures) : rankingCard(card, pictures);
 
 /** Where a chat fetches the picture from; versioned, so a republish gets a new one. */
-export const shareImageUrl = (host: string, kind: "l" | "r", id: string, version: number): string =>
-  `https://${host}/og/${kind}/${encodeURIComponent(id)}.png?v=${version}`;
+/**
+ * The look of the card. A copy is kept for good per version of a list, and a
+ * chat keeps a picture by its address, so a change in the drawing has to
+ * change both or nobody ever sees it.
+ */
+export const SHARE_LOOK = 2;
 
-/** The one copy kept per version of a list or ranking. */
+export const shareImageUrl = (host: string, kind: "l" | "r", id: string, version: number): string =>
+  `https://${host}/og/${kind}/${encodeURIComponent(id)}.png?v=${version}.${SHARE_LOOK}`;
+
+/** The one copy kept per version of a list or ranking, and per look of the card. */
 export const shareImagePath = (kind: "l" | "r", id: string, version: number): string =>
-  `share/${kind}/${id}/${version}.png`;
+  `share/${kind}/${id}/${version}.${SHARE_LOOK}.png`;

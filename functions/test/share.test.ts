@@ -110,6 +110,11 @@ describe("shareCardOf", () => {
     assert.match(text, /Masterpiece/);
     assert.equal(count(tree, "img"), LIST_TILES);
     assert.ok(text.includes("TierYourLife"));
+    // The name stands beside the app's icon: five tier bands behind the S.
+    assert.match(text, /S \| TierYourLife$/);
+    for (const band of ["#b03a32", "#c06a25", "#a98b1f", "#3f7f55", "#3c6e99"]) {
+      assert.ok(JSON.stringify(tree).includes(`"background":"${band}"`), band);
+    }
   });
 
   it("draws a ranking row by row, with a +N tile and the tiers it left out", () => {
@@ -147,9 +152,9 @@ describe("addresses", () => {
   it("points a chat at a versioned picture and keeps one copy per version", () => {
     assert.equal(
       shareImageUrl("tieryourlife-web.web.app", "l", "abc def", 17),
-      "https://tieryourlife-web.web.app/og/l/abc%20def.png?v=17",
+      "https://tieryourlife-web.web.app/og/l/abc%20def.png?v=17.2",
     );
-    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.png");
+    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.2.png");
     assert.equal(
       tileSizeOf("https://image.tmdb.org/t/p/w500/a.jpg"),
       "https://image.tmdb.org/t/p/w185/a.jpg",

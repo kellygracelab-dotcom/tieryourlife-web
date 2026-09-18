@@ -31,16 +31,12 @@
   color: var(--ink);
 }
 
+/* The phone app's icon; its corners are in the drawing. */
 .brand__mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  flex: none;
   width: 26px;
   height: 26px;
-  border-radius: 7px;
-  background: var(--link);
-  color: var(--on-link);
-  font-weight: 500;
 }
 
 .top__actions {
