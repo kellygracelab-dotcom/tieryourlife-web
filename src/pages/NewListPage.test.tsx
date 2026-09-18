@@ -222,9 +222,7 @@ describe("NewListPage", () => {
       category: "film_tv",
       coverImageUrl: null,
       coverPictureId: null,
-      tiers: expect.arrayContaining([
-        expect.objectContaining({ label: "S", caption: "Best" }),
-      ]),
+      tiers: expect.arrayContaining([expect.objectContaining({ label: "S", caption: "Best" })]),
       items: [
         { title: "Ex Machina", imageUrl: "https://img/ex.jpg", pictureId: null, tierIndex: null },
       ],
