@@ -5,7 +5,7 @@
   "targets": {
     "tieryourlife": {
       "hosting": {
-        "web": ["tieryourlife", "tieryourlife-web"]
+        "web": ["tieryourlife"]
       }
     }
   }
