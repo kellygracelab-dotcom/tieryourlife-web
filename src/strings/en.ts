@@ -105,6 +105,7 @@ export const en = {
     deleting: "Deleting…",
     deleteFailed: "Couldn’t delete the account — nothing was changed. Try again in a minute.",
     deleted: "Your account was deleted.",
+    languageTitle: "Language",
     hiddenTitle: "Hidden",
     hiddenBody: "Lists and authors you hid on this device. Nobody else is told.",
     hiddenAuthor: "Everything from {name}",
