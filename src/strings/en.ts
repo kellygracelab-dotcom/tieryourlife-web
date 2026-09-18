@@ -10,7 +10,6 @@ export const en = {
     myLists: "My lists",
     makeList: "Make a list",
     signInFailed: "Could not sign in. Try again.",
-    more: "More",
     keepOnPhone: "Keep your lists on your phone",
     theme: "Theme",
     themeSystem: "System",

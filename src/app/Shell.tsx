@@ -1,40 +1,36 @@
-import { useRef, useState } from "react";
-import { Link, Outlet } from "react-router";
+import { useState } from "react";
+import { Link, Outlet, ScrollRestoration } from "react-router";
 import { useModerator } from "../features/moderation/useModerator";
 import type { Account } from "../lib/account";
 import { PLAY_URL } from "../lib/links";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
+import { Menu } from "../ui/Menu";
 import { useSession } from "./session";
-import { ThemeSwitch } from "./ThemeSwitch";
 import "./Shell.css";
 
 const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
 
-function AccountMenu({
-  account,
-  onSignOut,
-}: {
-  account: Extract<Account, { kind: "signedIn" }>;
-  onSignOut: () => void;
-}) {
-  const menu = useRef<HTMLDetailsElement>(null);
+/** Where a signed-in person's own things are. Signing out is a setting, and lives with the settings. */
+function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn" }> }) {
   const moderator = useModerator();
-  const close = () => {
-    if (menu.current !== null) menu.current.open = false;
-  };
   return (
-    <details className="menu" ref={menu}>
-      <summary className="menu__button menu__button--face" aria-label={strings.nav.account}>
-        {account.photoUrl !== null ? (
-          <img className="face" src={account.photoUrl} alt="" referrerPolicy="no-referrer" />
-        ) : (
-          <span className="face face--initial">{initialOf(account.displayName)}</span>
-        )}
-        <Icon name="expand_more" className="menu__chevron" />
-      </summary>
-      <ul className="menu__list" onClick={close}>
+    <Menu
+      label={strings.nav.account}
+      buttonClassName="menu__button menu__button--face"
+      button={
+        <>
+          {account.photoUrl !== null ? (
+            <img className="face" src={account.photoUrl} alt="" referrerPolicy="no-referrer" />
+          ) : (
+            <span className="face face--initial">{initialOf(account.displayName)}</span>
+          )}
+          <Icon name="expand_more" className="menu__chevron" />
+        </>
+      }
+    >
+      <>
         <li className="menu__who">{account.displayName ?? strings.nav.you}</li>
         <li>
           <Link to="/me">{strings.nav.yourRankings}</Link>
@@ -55,18 +51,13 @@ function AccountMenu({
             </Link>
           </li>
         )}
-        <li>
-          <button type="button" className="menu__action" onClick={onSignOut}>
-            {strings.nav.signOut}
-          </button>
-        </li>
-      </ul>
-    </details>
+      </>
+    </Menu>
   );
 }
 
 export function Shell() {
-  const { account, signIn, signOut } = useSession();
+  const { account, signIn } = useSession();
   const [signing, setSigning] = useState<"idle" | "busy" | "failed">("idle");
 
   const onSignIn = () => {
@@ -82,11 +73,12 @@ export function Shell() {
           <span className="brand__name">{strings.brand}</span>
         </Link>
         <nav className="top__actions" aria-label="Site">
-          <Link className="btn btn--tonal top__make" to="/new">
-            <span>{strings.nav.makeList}</span>
+          <Link className="btn btn--tonal top__make" to="/new" aria-label={strings.nav.makeList}>
+            <Icon name="add" className="btn__icon top__make-icon" />
+            <span className="top__make-text">{strings.nav.makeList}</span>
           </Link>
           {account?.kind === "signedIn" ? (
-            <AccountMenu account={account} onSignOut={() => void signOut()} />
+            <AccountMenu account={account} />
           ) : (
             <>
               {signing === "failed" && (
@@ -99,25 +91,6 @@ export function Shell() {
               </Button>
             </>
           )}
-          <details className="menu">
-            <summary className="menu__button" aria-label={strings.nav.more}>
-              <Icon name="more_vert" />
-            </summary>
-            <ul className="menu__list">
-              <li className="menu__phone-only">
-                <Link to="/new">{strings.nav.makeList}</Link>
-              </li>
-              <li>
-                <a href={PLAY_URL} target="_blank" rel="noopener">
-                  {strings.nav.keepOnPhone}
-                </a>
-              </li>
-              <li className="menu__theme">
-                <span className="menu__who">{strings.nav.theme}</span>
-                <ThemeSwitch />
-              </li>
-            </ul>
-          </details>
         </nav>
       </header>
       <main className="shell__main">
@@ -129,7 +102,11 @@ export function Shell() {
           {strings.nav.keepOnPhone}
         </a>
         <Link to="/about">{strings.footer.about}</Link>
+        {/* The theme is a setting a guest has too, and a guest has no account menu to find it in. */}
+        <Link to="/settings">{strings.nav.settings}</Link>
       </footer>
+      {/* A new page opens at its top, and Back returns to where the person was. */}
+      <ScrollRestoration />
     </div>
   );
 }

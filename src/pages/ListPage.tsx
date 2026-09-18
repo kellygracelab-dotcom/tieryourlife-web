@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Link, useParams } from "react-router";
 import type { ReportReason } from "../api/community";
 import type { ApiError } from "../api/errors";
@@ -17,6 +17,7 @@ import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
+import { Menu } from "../ui/Menu";
 import { Skeleton } from "../ui/Skeleton";
 import "../features/community/report.css";
 import "./ListPage.css";
@@ -88,10 +89,6 @@ function ListMenu({
   const { account, signIn } = useSession();
   const { hideList, showList, hideAuthor } = useHidden();
   const [reporting, setReporting] = useState<ReportState>("closed");
-  const menu = useRef<HTMLDetailsElement>(null);
-  const close = () => {
-    if (menu.current !== null) menu.current.open = false;
-  };
 
   const hideNow = () => {
     hideList({ id: list.id, title: list.title });
@@ -104,7 +101,6 @@ function ListMenu({
   const link = `${window.location.origin}/l/${encodeURIComponent(list.id)}`;
 
   const copyLink = () => {
-    close();
     void navigator.clipboard?.writeText(link).then(
       () => notify({ text: strings.list.linkCopied }),
       () => undefined,
@@ -114,7 +110,6 @@ function ListMenu({
   // The phone's own share sheet, where there is one; closing it is not a failure.
   const canShare = typeof navigator.share === "function";
   const shareLink = () => {
-    close();
     void navigator.share({ title: list.title, url: link }).catch(() => undefined);
   };
 
@@ -139,11 +134,8 @@ function ListMenu({
 
   return (
     <>
-      <details className="menu" ref={menu}>
-        <summary className="menu__button" aria-label={strings.list.more}>
-          <Icon name="more_vert" />
-        </summary>
-        <ul className="menu__list">
+      <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
+        <>
           <li>
             <button type="button" className="menu__action" onClick={copyLink}>
               {strings.list.copyLink}
@@ -161,28 +153,18 @@ function ListMenu({
             <button
               type="button"
               className="menu__action"
-              onClick={() => {
-                close();
-                setReporting(account?.kind === "signedIn" ? "open" : "signIn");
-              }}
+              onClick={() => setReporting(account?.kind === "signedIn" ? "open" : "signIn")}
             >
               {strings.list.report}
             </button>
           </li>
           <li>
-            <button
-              type="button"
-              className="menu__action"
-              onClick={() => {
-                close();
-                hideNow();
-              }}
-            >
+            <button type="button" className="menu__action" onClick={hideNow}>
               {strings.list.hide}
             </button>
           </li>
-        </ul>
-      </details>
+        </>
+      </Menu>
       <ReportDialog
         state={reporting}
         authorName={list.authorName}
