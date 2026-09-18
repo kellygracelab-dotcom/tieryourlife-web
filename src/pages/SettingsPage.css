@@ -211,6 +211,46 @@
   border-radius: 32px;
 }
 
+.settings__languages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings__language {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-tile);
+  background: transparent;
+  color: var(--ink);
+  font: var(--text-body);
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.settings__language:hover {
+  background: var(--hover);
+}
+
+.settings__language[aria-checked="true"] {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.settings__language-check {
+  font-size: 18px;
+}
+
 .settings__hidden {
   display: flex;
   flex-direction: column;

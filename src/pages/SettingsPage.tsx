@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import type { ListSummary } from "../api/types";
+import { LanguageCard } from "../features/account/LanguageCard";
 import { faceChoicesOf } from "../features/account/faces";
 import { AccountTabs } from "../app/AccountTabs";
 import { useHidden } from "../features/community/useHidden";
@@ -502,6 +503,7 @@ export function SettingsPage({
       )}
 
       <ThemeCard note={account?.kind === "guest" ? strings.settings.themeGuestNote : null} />
+      <LanguageCard />
       <HiddenCard />
       <PrivacyCard />
 
