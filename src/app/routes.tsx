@@ -1,4 +1,5 @@
 import type { RouteObject } from "react-router";
+import { AboutPage } from "../pages/AboutPage";
 import { CategoryPage } from "../pages/CategoryPage";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
@@ -28,6 +29,7 @@ export const routes: RouteObject[] = [
       { path: "settings", element: <SettingsPage /> },
       { path: "mod", element: <ModerationPage /> },
       { path: "u/:uid", element: <ProfilePage /> },
+      { path: "about", element: <AboutPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

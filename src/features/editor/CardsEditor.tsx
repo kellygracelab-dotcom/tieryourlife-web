@@ -186,6 +186,9 @@ export function CardsEditor({ items, category, dispatch, lookup, upload }: Cards
             {catalogue.status === "ready" && catalogue.items.length === 0 && (
               <p className="cards__note">{strings.new.nothingFound}</p>
             )}
+            {catalogue.status === "ready" && catalogue.items.length > 0 && (
+              <p className="cards__source">{strings.new.fromTmdb}</p>
+            )}
             {catalogue.status === "ready" &&
               catalogue.items.slice(0, RESULTS_SHOWN).map((found) => (
                 <button

@@ -130,7 +130,7 @@ export function Shell() {
         <a href={PLAY_URL} target="_blank" rel="noopener">
           {strings.nav.keepOnPhone}
         </a>
-        <p className="foot__attribution">{strings.footer.tmdb}</p>
+        <Link to="/about">{strings.footer.about}</Link>
       </footer>
     </div>
   );

@@ -15,7 +15,7 @@ describe("strings", () => {
   });
 
   it("keeps the attribution TMDB requires word for word", () => {
-    expect(strings.footer.tmdb).toBe(
+    expect(strings.about.tmdb).toBe(
       "This product uses the TMDB API but is not endorsed or certified by TMDB.",
     );
   });

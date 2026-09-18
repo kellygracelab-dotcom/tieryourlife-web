@@ -72,9 +72,25 @@ describe("Shell", () => {
       "href",
       "/privacy.html",
     );
+    // TMDB's sentence lives on the About page, which every page's foot leads to.
+    expect(screen.getByRole("link", { name: "About" })).toHaveAttribute("href", "/about");
+  });
+
+  it("credits TMDB on the About page with their logo and their sentence, word for word", () => {
+    open("/about");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("About");
     expect(
       screen.getByText("This product uses the TMDB API but is not endorsed or certified by TMDB."),
     ).toBeInTheDocument();
+    const logo = screen.getByRole("img", { name: "TMDB" });
+    expect(logo.closest("a")).toHaveAttribute("href", "https://www.themoviedb.org");
+    expect(screen.getByRole("link", { name: /Delete your account/ })).toHaveAttribute(
+      "href",
+      "/delete-account.html",
+    );
+    expect(
+      screen.getAllByRole("link", { name: /Privacy policy/ }).map((a) => a.getAttribute("href")),
+    ).toEqual(["/privacy.html", "/privacy.html"]);
   });
 
   it("labels the overflow menu for assistive tech", () => {
