@@ -48,8 +48,8 @@ jobs:
       - name: Build and test functions
         run: npm --prefix functions run check
 
-      - name: Install the smoke browser
-        run: npx playwright install --with-deps chromium
+      - name: Install the smoke browsers
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Browser smokes
         run: npm run e2e
