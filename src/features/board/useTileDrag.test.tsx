@@ -95,6 +95,32 @@ describe("dragging a card", () => {
     expect(screen.getByText(/of 2 placed/)).toHaveTextContent("1 of 2 placed");
   });
 
+  // A quick flick: the move that starts the drag and the release arrive before
+  // React has committed anything. The card used to fall back into the pool.
+  it("drops the card even when the release comes before React has drawn the drag", async () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} hitTest={hitTest} />
+      </MemoryRouter>,
+    );
+    pointer("pointerdown", card("Anora"), 10, 10, { button: 0 });
+    under = tierRow("S");
+    const raw = (type: string, x: number, y: number) => {
+      const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0 });
+      Object.defineProperty(event, "pointerType", { value: "mouse" });
+      window.dispatchEvent(event);
+    };
+    await act(async () => {
+      raw("pointermove", 40, 40);
+      raw("pointermove", 60, 60);
+      raw("pointerup", 60, 60);
+    });
+    expect(
+      within(screen.getByRole("list", { name: "S" })).getByRole("button", { name: "Anora" }),
+    ).toBeInTheDocument();
+    expect(document.querySelector(".ghost")).toBeNull();
+  });
+
   it("does nothing when let go outside every target, or on a right button", () => {
     render(
       <MemoryRouter>
