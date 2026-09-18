@@ -69,21 +69,37 @@ describe("Shell moderator", () => {
   });
 });
 
-describe("Shell theme", () => {
-  it("offers System, Light and Dark under More, keeps the choice and puts it on the page", async () => {
+describe("Shell header", () => {
+  // The theme and signing out are settings, and the header used to repeat both
+  // behind three dots of its own.
+  it("has no second menu: the theme is a setting, and a guest reaches settings from the foot", () => {
     open({});
-    await userEvent.click(screen.getByLabelText("More"));
-    const group = screen.getByRole("radiogroup", { name: "Theme" });
-    expect(within(group).getByRole("radio", { name: "System" })).toBeChecked();
+    expect(screen.queryByLabelText("More")).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "Theme" })).toBeNull();
+    const foot = within(screen.getByRole("contentinfo"));
+    expect(foot.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
+    expect(screen.getByRole("link", { name: "Make a list" })).toHaveAttribute("href", "/new");
+  });
 
-    await userEvent.click(within(group).getByRole("radio", { name: "Dark" }));
-    expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(localStorage.getItem("tyl:theme")).toBe("dark");
-    expect(within(group).getByRole("radio", { name: "Dark" })).toBeChecked();
+  it("closes the account menu on a press anywhere else, on Escape, and after a choice", async () => {
+    open({ account: { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: null } });
+    const button = screen.getByLabelText("Your account");
+    const menu = button.closest("details")!;
 
-    await userEvent.click(within(group).getByRole("radio", { name: "System" }));
-    expect(document.documentElement.dataset.theme).toBeUndefined();
-    expect(localStorage.getItem("tyl:theme")).toBeNull();
+    await userEvent.click(button);
+    expect(menu.open).toBe(true);
+    await userEvent.click(screen.getByRole("main"));
+    expect(menu.open).toBe(false);
+
+    await userEvent.click(button);
+    expect(menu.open).toBe(true);
+    await userEvent.keyboard("{Escape}");
+    expect(menu.open).toBe(false);
+    expect(button).toHaveFocus();
+
+    await userEvent.click(button);
+    await userEvent.click(screen.getByRole("link", { name: "My lists" }));
+    expect(menu.open).toBe(false);
   });
 });
 
@@ -110,22 +126,18 @@ describe("Shell account", () => {
   it("leads a signed-in person to their settings", async () => {
     open({ account: { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: null } });
     await userEvent.click(screen.getByLabelText("Your account"));
-    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
+    const menu = within(screen.getByLabelText("Your account").closest("details")!);
+    expect(menu.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
   });
 
-  it("gives a signed-in person their initial, their rankings and a way out", async () => {
-    const signOut = vi.fn(async () => undefined);
-    open({
-      account: { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: null },
-      signOut,
-    });
+  it("gives a signed-in person their initial and their rankings, and leaves signing out to the settings", () => {
+    open({ account: { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: null } });
     expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
     expect(screen.getByText("D")).toHaveClass("face--initial");
     expect(screen.getByText("Danylo")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Your rankings" })).toHaveAttribute("href", "/me");
     expect(screen.getByRole("link", { name: "My lists" })).toHaveAttribute("href", "/me/lists");
-    await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
-    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 
   it("shows the Google photo when there is one, without telling Google where from", () => {

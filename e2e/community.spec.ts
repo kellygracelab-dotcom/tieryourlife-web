@@ -109,3 +109,23 @@ test("the foot of every page leads to the credits, with TMDB's logo and sentence
   await expect(logo).toBeVisible();
   expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 });
+
+test("a menu closes on a press anywhere else, and a new page opens at its top", async ({
+  page,
+}) => {
+  await mockBackend(page);
+  await page.goto(`/l/${list.id}`);
+  await page.getByLabel("More about this list").click();
+  await expect(page.getByRole("button", { name: "Hide this list" })).toBeVisible();
+  await page.getByRole("heading", { level: 1 }).click();
+  await expect(page.getByRole("button", { name: "Hide this list" })).toBeHidden();
+
+  // The page a link leads to used to open as far down as the one it was pressed on.
+  await page.evaluate(() => {
+    document.body.style.minHeight = "3000px";
+    window.scrollTo(0, 1200);
+  });
+  await page.getByRole("link", { name: "About" }).click();
+  await expect(page).toHaveURL("/about");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+});

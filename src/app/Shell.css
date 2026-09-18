@@ -144,14 +144,6 @@
   font: var(--text-label);
 }
 
-.menu__theme {
-  padding-bottom: 8px;
-}
-
-.menu__theme .menu__who {
-  display: block;
-}
-
 /* A segmented control: one pill, equal segments, hairlines between. */
 .theme {
   display: flex;
@@ -222,17 +214,26 @@
   margin-right: var(--space-2);
 }
 
-.menu__phone-only {
+.top__make-icon {
   display: none;
 }
 
+/* A phone has no room for the words: the button is a plus. */
 @media (max-width: 599px) {
   .top__make {
-    display: none;
+    justify-content: center;
+    width: 40px;
+    min-height: 40px;
+    margin-right: 0;
+    padding: 0;
   }
 
-  .menu__phone-only {
+  .top__make-icon {
     display: block;
+  }
+
+  .top__make-text {
+    display: none;
   }
 }
 

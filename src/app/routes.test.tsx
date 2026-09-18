@@ -59,14 +59,11 @@ describe("routes", () => {
 });
 
 describe("Shell", () => {
-  it("offers the phone app in the menu and the footer, never as a modal", () => {
+  it("offers the phone app in the footer, never as a modal", () => {
     open("/");
-    const phoneLinks = screen.getAllByRole("link", { name: "Keep your lists on your phone" });
-    expect(phoneLinks).toHaveLength(2);
-    for (const link of phoneLinks) {
-      expect(link).toHaveAttribute("href", PLAY_URL);
-      expect(link).toHaveAttribute("target", "_blank");
-    }
+    const phoneLink = screen.getByRole("link", { name: "Keep your lists on your phone" });
+    expect(phoneLink).toHaveAttribute("href", PLAY_URL);
+    expect(phoneLink).toHaveAttribute("target", "_blank");
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "Privacy policy" })).toHaveAttribute(
       "href",
@@ -91,10 +88,5 @@ describe("Shell", () => {
     expect(
       screen.getAllByRole("link", { name: /Privacy policy/ }).map((a) => a.getAttribute("href")),
     ).toEqual(["/privacy.html", "/privacy.html"]);
-  });
-
-  it("labels the overflow menu for assistive tech", () => {
-    open("/");
-    expect(screen.getByLabelText("More")).toBeInTheDocument();
   });
 });
