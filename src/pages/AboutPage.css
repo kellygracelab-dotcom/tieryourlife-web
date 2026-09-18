@@ -27,6 +27,12 @@
   font: var(--text-title);
 }
 
+.about__title--brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .about__text {
   margin: 0;
   font: var(--text-lead);

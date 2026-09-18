@@ -78,9 +78,7 @@ export function Shell() {
     <div className="shell">
       <header className="top">
         <Link className="brand" to="/">
-          <span className="brand__mark" aria-hidden="true">
-            T
-          </span>
+          <img className="brand__mark" src="/favicon.svg" alt="" width="26" height="26" />
           <span className="brand__name">{strings.brand}</span>
         </Link>
         <nav className="top__actions" aria-label="Site">

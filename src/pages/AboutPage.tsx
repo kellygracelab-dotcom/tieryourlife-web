@@ -17,7 +17,8 @@ export function AboutPage() {
       <h1 className="about__heading">{strings.about.title}</h1>
 
       <section className="about__card" aria-labelledby="about-what">
-        <h2 id="about-what" className="about__title">
+        <h2 id="about-what" className="about__title about__title--brand">
+          <img src="/favicon.svg" alt="" width="40" height="40" />
           {strings.brand}
         </h2>
         <p className="about__text">{strings.about.what}</p>
