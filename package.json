@@ -20,7 +20,7 @@
     "coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run coverage && npm run build && npm --prefix functions run check && npm run e2e",
-    "deploy": "npm run check && firebase deploy --only hosting:web,functions:web",
+    "deploy": "npm run check && firebase deploy --only hosting:web,functions:web && firebase hosting:clone tieryourlife:live tieryourlife-web:live",
     "dev:live": "vite --mode live"
   },
   "dependencies": {

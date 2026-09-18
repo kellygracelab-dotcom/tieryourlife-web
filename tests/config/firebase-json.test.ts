@@ -75,14 +75,23 @@ describe("firebase.json", () => {
   });
 });
 
-describe(".firebaserc", () => {
-  // Links sent before the move point at the first address, and a storage origin
-  // holds a guest's drafts: dropping it from the target would strand both.
-  it("publishes the web target to the main address and keeps the first one alive", () => {
+describe("where a deploy goes", () => {
+  it("publishes the web target to the main address", () => {
     const rc = JSON.parse(readFileSync(".firebaserc", "utf8")) as {
       targets: Record<string, { hosting: Record<string, string[]> }>;
     };
-    expect(rc.targets.tieryourlife?.hosting.web).toEqual(["tieryourlife", "tieryourlife-web"]);
+    expect(rc.targets.tieryourlife?.hosting.web).toEqual(["tieryourlife"]);
+  });
+
+  // Links sent before the move point at the first address, and its storage
+  // holds a guest's drafts: a deploy that skipped it would leave both behind.
+  it("then copies the same release to the first address", () => {
+    const scripts = (
+      JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> }
+    ).scripts;
+    expect(scripts.deploy).toMatch(
+      /firebase deploy --only hosting:web,functions:web && firebase hosting:clone tieryourlife:live tieryourlife-web:live$/,
+    );
   });
 });
 
