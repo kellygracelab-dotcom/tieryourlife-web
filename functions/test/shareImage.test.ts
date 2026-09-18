@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { SHARE_HEIGHT, SHARE_WIDTH, type ShareList } from "../src/share";
-import { fetchPicture, fetchPictures, renderShareImage, type Fetcher } from "../src/shareImage";
+import {
+  discardOlderCopies,
+  fetchPicture,
+  fetchPictures,
+  renderShareImage,
+  type CopyShelf,
+  type Fetcher,
+} from "../src/shareImage";
 
 const answering =
   (status: number, type: string, bytes: number): Fetcher =>
@@ -85,5 +92,59 @@ describe("renderShareImage", () => {
       new Map([["https://image.tmdb.org/t/p/w500/a.jpg", pixel]]),
     );
     assert.deepEqual(sizeOf(withPicture), { width: SHARE_WIDTH, height: SHARE_HEIGHT });
+  });
+});
+
+describe("discardOlderCopies", () => {
+  const shelfOf = (names: string[], failing: string[] = []) => {
+    const deleted: string[] = [];
+    const asked: string[] = [];
+    const shelf: CopyShelf = {
+      getFiles: async ({ prefix }) => {
+        asked.push(prefix);
+        return [
+          names
+            .filter((name) => name.startsWith(prefix))
+            .map((name) => ({
+              name,
+              delete: async () => {
+                if (failing.includes(name)) throw new Error("refused");
+                deleted.push(name);
+              },
+            })),
+          null,
+          {},
+        ] as const;
+      },
+    };
+    return { shelf, deleted, asked };
+  };
+
+  it("removes every earlier copy in the card's own folder and keeps the new one", async () => {
+    const { shelf, deleted, asked } = shelfOf([
+      "share/l/abc/17.png",
+      "share/l/abc/17.2.png",
+      "share/l/abc/21.2.png",
+      "share/l/abcd/5.2.png",
+      "share/r/abc/9.2.png",
+    ]);
+    const removed = await discardOlderCopies(shelf, "l", "abc", "share/l/abc/21.2.png");
+    assert.equal(removed, 2);
+    assert.deepEqual(deleted.sort(), ["share/l/abc/17.2.png", "share/l/abc/17.png"]);
+    assert.deepEqual(asked, ["share/l/abc/"]);
+  });
+
+  it("does nothing when the new copy is the only one", async () => {
+    const { shelf, deleted } = shelfOf(["share/r/xfruzbap/0.2.png"]);
+    assert.equal(await discardOlderCopies(shelf, "r", "xfruzbap", "share/r/xfruzbap/0.2.png"), 0);
+    assert.deepEqual(deleted, []);
+  });
+
+  it("lets a refusal be heard, so the caller can say the folder was not tidied", async () => {
+    const { shelf } = shelfOf(
+      ["share/l/abc/1.2.png", "share/l/abc/2.2.png"],
+      ["share/l/abc/1.2.png"],
+    );
+    await assert.rejects(discardOlderCopies(shelf, "l", "abc", "share/l/abc/2.2.png"), /refused/);
   });
 });

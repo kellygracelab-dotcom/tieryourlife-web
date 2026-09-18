@@ -71,6 +71,12 @@ describe("RankingPage", () => {
     open();
     expect(await screen.findByText("by danylo · ranked by you")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+
+    // One's own ranking gets the phone app's words, the same as on the list's page.
+    expect(screen.queryByRole("button", { name: "Author's version" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Mine" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Their ranking" }));
+    expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Climax");
   });
 
   it("has no author's version when the snapshot never carried one", async () => {

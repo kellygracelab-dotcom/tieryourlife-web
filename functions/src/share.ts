@@ -337,4 +337,7 @@ export const shareImageUrl = (host: string, kind: "l" | "r", id: string, version
 
 /** The one copy kept per version of a list or ranking, and per look of the card. */
 export const shareImagePath = (kind: "l" | "r", id: string, version: number): string =>
-  `share/${kind}/${id}/${version}.${SHARE_LOOK}.png`;
+  `${shareImageFolder(kind, id)}${version}.${SHARE_LOOK}.png`;
+
+/** Where every copy of one list's or ranking's card lives. The slash keeps `abc` out of `abcd`. */
+export const shareImageFolder = (kind: "l" | "r", id: string): string => `share/${kind}/${id}/`;

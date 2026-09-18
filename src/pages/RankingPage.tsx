@@ -109,6 +109,10 @@ function Body({ ranking, mine, editing, onEdit, edit, store, savedNote }: BodyPr
   const author = arrange(snapshot);
   const owned = ranking.yours === true;
   const visitorLabel = mine || owned ? strings.rank.yours : strings.ranking.visitors;
+  // The chips use the phone app's words when the ranking is this person's own;
+  // somebody else's ranking has three parties, and "Mine" would name the wrong one.
+  const visitorChip = mine || owned ? strings.list.viewMine : strings.ranking.visitors;
+  const authorChip = mine || owned ? strings.list.viewTheirs : strings.board.authorsVersion;
   const byline = mine || owned ? strings.ranking.byYou : strings.ranking.byVisitor;
   return (
     <>
@@ -149,11 +153,11 @@ function Body({ ranking, mine, editing, onEdit, edit, store, savedNote }: BodyPr
         <>
           <div className="list-page__views" role="group" aria-label={strings.list.views}>
             <Chip selected={view === "visitor"} onClick={() => setView("visitor")}>
-              {visitorLabel}
+              {visitorChip}
             </Chip>
             {author.known && (
               <Chip selected={view === "author"} onClick={() => setView("author")}>
-                {strings.board.authorsVersion}
+                {authorChip}
               </Chip>
             )}
             {owned && (
@@ -177,7 +181,7 @@ function Body({ ranking, mine, editing, onEdit, edit, store, savedNote }: BodyPr
             />
           ) : (
             <ReadOnlyBoard
-              label={strings.board.authorsVersion}
+              label={authorChip}
               tiers={snapshot.tiers}
               items={snapshot.items}
               rows={author.rows}

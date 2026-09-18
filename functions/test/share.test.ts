@@ -7,6 +7,7 @@ import {
   SHARE_PICTURES,
   SHARE_TIERS,
   shareCardOf,
+  shareImageFolder,
   shareImagePath,
   shareImageUrl,
   tileSizeOf,
@@ -155,6 +156,9 @@ describe("addresses", () => {
       "https://tieryourlife-web.web.app/og/l/abc%20def.png?v=17.2",
     );
     assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.2.png");
+    // The folder ends in a slash, or tidying `abc` would reach into `abcd`.
+    assert.equal(shareImageFolder("r", "xfruzbap"), "share/r/xfruzbap/");
+    assert.ok(shareImagePath("l", "abc", 5).startsWith(shareImageFolder("l", "abc")));
     assert.equal(
       tileSizeOf("https://image.tmdb.org/t/p/w500/a.jpg"),
       "https://image.tmdb.org/t/p/w185/a.jpg",
