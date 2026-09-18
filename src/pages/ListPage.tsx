@@ -427,12 +427,17 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
         <div className="list-head__text">
           <h1 className="list-head__title">{list.title}</h1>
           <p className="list-head__meta">
-            <Link
-              to={`/u/${encodeURIComponent(list.authorUid)}`}
-              state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
-            >
-              {fill(strings.list.by, { name: list.authorName })}
-            </Link>
+            {list.authorUid === "" ? (
+              // A snapshot without the uid has no author's page to lead to.
+              fill(strings.list.by, { name: list.authorName })
+            ) : (
+              <Link
+                to={`/u/${encodeURIComponent(list.authorUid)}`}
+                state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
+              >
+                {fill(strings.list.by, { name: list.authorName })}
+              </Link>
+            )}
             <span className="list-head__own">
               {" · "}
               {own ? strings.list.yourList : strings.rank.ownCopy}
