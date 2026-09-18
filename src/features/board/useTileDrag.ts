@@ -33,12 +33,16 @@ export function useTileDrag(
   hitTest: HitTest = domHitTest,
 ): TileDrag {
   const [state, setState] = useState<DragState>(idle);
-  // The window listeners below outlive a render, so they read the latest state from here.
-  const stateRef = useRef(state);
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  // The truth is here, and the state above only draws it. Events can come
+  // faster than React commits: a quick flick delivered its pointerup while the
+  // committed state still said "pressed", and the card fell back to the pool.
+  const latest = useRef<DragState>(idle);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const become = useCallback((next: DragState) => {
+    latest.current = next;
+    setState(next);
+  }, []);
 
   const clearHold = () => {
     if (holdTimer.current !== null) clearTimeout(holdTimer.current);
@@ -57,57 +61,64 @@ export function useTileDrag(
         height: rect.height,
       };
       const next = press(item, at, event.pointerType ?? "mouse", Date.now(), grab);
-      setState(next);
+      become(next);
       if (next.phase === "pressed" && next.holdUntil !== null) {
         clearHold();
         holdTimer.current = setTimeout(() => {
-          setState((current) => hold(current, targetOf(hitTest(at))));
+          become(hold(latest.current, targetOf(hitTest(at))));
         }, TOUCH_HOLD_MS);
       }
     },
-    [hitTest],
+    [become, hitTest],
   );
 
+  // Always listening: a listener added after the press can miss the release.
   useEffect(() => {
-    if (state.phase === "idle") return;
-
     const onMove = (event: PointerEvent) => {
+      const current = latest.current;
+      if (current.phase === "idle") return;
       const at = { x: event.clientX, y: event.clientY };
-      setState((current) => {
-        const next = move(current, at, current.phase === "pressed" ? null : targetOf(hitTest(at)));
-        if (next.phase === "dragging" && current.phase !== "dragging") {
-          return { ...next, target: targetOf(hitTest(at)) };
-        }
-        return next;
-      });
+      const next = move(current, at, current.phase === "pressed" ? null : targetOf(hitTest(at)));
+      become(
+        next.phase === "dragging" && current.phase !== "dragging"
+          ? { ...next, target: targetOf(hitTest(at)) }
+          : next,
+      );
     };
     const finish = (drop: boolean) => {
       clearHold();
-      const current = stateRef.current;
+      const current = latest.current;
+      if (current.phase === "idle") return;
       if (drop && current.phase === "dragging" && current.target !== null) {
         if (current.target.kind === "pool") dispatch({ type: "unplace", item: current.item });
         else dispatch({ type: "place", item: current.item, tier: current.target.tier });
       }
-      setState(idle);
+      become(idle);
     };
     const onUp = () => finish(true);
     const onCancel = () => finish(false);
-    // Once a drag is on, the page must not scroll under the finger.
-    const onTouchMove = (event: TouchEvent) => {
-      if (stateRef.current.phase === "dragging") event.preventDefault();
-    };
 
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onCancel);
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
-      window.removeEventListener("touchmove", onTouchMove);
     };
-  }, [state.phase, dispatch, hitTest]);
+  }, [become, dispatch, hitTest]);
+
+  // Once a drag is on, the page must not scroll under the finger. A listener
+  // that may cancel slows every scroll down, so it lives only while a card is held.
+  const held = state.phase !== "idle";
+  useEffect(() => {
+    if (!held) return;
+    const onTouchMove = (event: TouchEvent) => {
+      if (latest.current.phase === "dragging") event.preventDefault();
+    };
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => window.removeEventListener("touchmove", onTouchMove);
+  }, [held]);
 
   useEffect(() => clearHold, []);
 
