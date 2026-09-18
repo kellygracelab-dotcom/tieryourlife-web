@@ -176,7 +176,7 @@ describe("NewListPage", () => {
       within(screen.getByRole("list", { name: "Tiers" })).getAllByRole("listitem"),
     ).toHaveLength(5);
     expect(screen.getByLabelText("Label of tier 1")).toHaveValue("S");
-    expect(screen.getByLabelText("Caption of S")).toHaveValue("Masterpiece");
+    expect(screen.getByLabelText("Caption of S")).toHaveValue("Best");
     expect(screen.getByText("0 added")).toBeInTheDocument();
   });
 
@@ -223,7 +223,7 @@ describe("NewListPage", () => {
       coverImageUrl: null,
       coverPictureId: null,
       tiers: expect.arrayContaining([
-        expect.objectContaining({ label: "S", caption: "Masterpiece" }),
+        expect.objectContaining({ label: "S", caption: "Best" }),
       ]),
       items: [
         { title: "Ex Machina", imageUrl: "https://img/ex.jpg", pictureId: null, tierIndex: null },
@@ -251,7 +251,7 @@ describe("NewListPage", () => {
     const label = screen.getByLabelText("Label of tier 1");
     await userEvent.clear(label);
     await userEvent.type(label, "Top");
-    expect(screen.getByLabelText("Caption of Top")).toHaveValue("Masterpiece");
+    expect(screen.getByLabelText("Caption of Top")).toHaveValue("Best");
 
     await userEvent.click(screen.getByRole("button", { name: "Colour of Top" }));
     const palette = screen.getByRole("group", { name: "Colours" });

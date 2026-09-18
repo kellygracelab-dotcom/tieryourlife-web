@@ -132,7 +132,8 @@ export const en = {
     popular: "Popular",
     popularNote: "Open one and start dragging. No account needed.",
     source: "Whose lists to show",
-    everyone: "Everyone",
+    // "All" is the phone app's word for the same switch.
+    everyone: "All",
     following: "Following",
     followingHeading: "New from people you follow",
     newestFirst: "Newest first.",
@@ -140,7 +141,7 @@ export const en = {
     followingNobodyBody: "Follow someone and their new lists arrive here first.",
     worthFollowing: "People worth following",
     followingNothing: "Nobody you follow has published anything yet.",
-    seeEveryone: "See Everyone",
+    seeEveryone: "See all lists",
     followingFailed: "Couldn’t load your feed.",
   },
   profile: {
@@ -216,6 +217,12 @@ export const en = {
     remove: "Remove {name}",
     noCardsYet: "No cards yet. Search the catalogue or type a name and press Enter.",
     tiers: "Tiers",
+    // The phone app's names for the five tiers a new list starts with.
+    tierBest: "Best",
+    tierGreat: "Great",
+    tierGood: "Good",
+    tierOkay: "Okay",
+    tierWorst: "Worst",
     addTier: "Add tier",
     tierUnnamed: "this tier",
     colourOf: "Colour of {name}",

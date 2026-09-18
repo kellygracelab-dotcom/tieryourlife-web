@@ -139,9 +139,9 @@ describe("HomePage for a signed-in person", () => {
     expect(
       await screen.findByText("Nobody you follow has published anything yet."),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "See Everyone" }));
+    await userEvent.click(screen.getByRole("button", { name: "See all lists" }));
     expect(await screen.findByRole("link", { name: /List p1/ })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Everyone" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true");
   });
 
   it("shows the lists of the people followed, and names a feed that would not load", async () => {
