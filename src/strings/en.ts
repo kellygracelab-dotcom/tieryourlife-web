@@ -301,9 +301,25 @@ export const en = {
     failedTitle: "Could not open this list",
     failedBody: "Something went wrong on the way. Try again.",
     views: "Whose arrangement to show",
+    // The phone app's words for the same switch.
+    viewMine: "Mine",
+    viewTheirs: "Their ranking",
+    yourList: "your list",
+    yourArrangement: "Your arrangement",
     more: "More about this list",
     report: "Report this list",
     hide: "Hide this list",
+    hideAuthorNow: "Hide everything from {name}",
+    hiddenAuthorNotice: "Everything from {name} is hidden for you",
+    edit: "Edit",
+    delete: "Delete",
+    deleteTitle: "Delete this list?",
+    deleteBody:
+      "“{title}” leaves the feed and its link stops working. Rankings people already made from it stay. A board on your phone stays on your phone.",
+    keepIt: "Keep it",
+    deleting: "Deleting…",
+    deleteFailed: "Could not delete it. Try again in a minute.",
+    deleteOffline: "No connection. Try again once you are back online.",
     copyLink: "Copy link",
     share: "Share",
     linkCopied: "Link copied",
@@ -429,13 +445,14 @@ export const en = {
     listsHow:
       "In the app, open a list, add cards, set the tiers and tap Publish. It shows up here under the same Google account.",
     listsFailed: "Could not load your lists.",
-    unpublish: "Unpublish",
-    unpublishAsk:
-      "Unpublish “{title}”? It leaves the feed and its link stops working. Rankings people already made from it stay.",
+    // A list made on the site has no other copy: taking it down deletes it, and the word says so.
+    remove: "Delete",
+    removeAsk:
+      "Delete “{title}”? It leaves the feed and its link stops working. Rankings people already made from it stay. A board on your phone stays on your phone.",
     keepIt: "Keep it",
-    unpublishing: "Unpublishing…",
-    unpublishFailed: "Could not unpublish. Try again.",
-    unpublishOffline: "No connection. Try again once you are back online.",
+    removing: "Deleting…",
+    removeFailed: "Could not delete it. Try again.",
+    removeOffline: "No connection. Try again once you are back online.",
   },
   notFound: {
     title: "There is nothing at this address.",

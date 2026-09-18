@@ -199,7 +199,7 @@ describe("MePage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load your lists.");
   });
 
-  it("unpublishes a list after asking, and takes the card away", async () => {
+  it("deletes a list after asking, and takes the card away", async () => {
     mocks.loadMyLists.mockResolvedValue({
       lists: [published("l1", "Every A24 film, ranked"), published("l2", "Ghibli, ranked")],
     });
@@ -207,18 +207,18 @@ describe("MePage", () => {
     open(member, undefined, "/me/lists");
     expect(await screen.findByText("2 published from the app")).toBeInTheDocument();
 
-    const [first] = screen.getAllByRole("button", { name: "Unpublish" });
+    const [first] = screen.getAllByRole("button", { name: "Delete" });
     await userEvent.click(first!);
-    const ask = screen.getByRole("group", { name: "Unpublish" });
-    expect(ask).toHaveTextContent("Unpublish “Every A24 film, ranked”?");
+    const ask = screen.getByRole("group", { name: "Delete" });
+    expect(ask).toHaveTextContent("Delete “Every A24 film, ranked”?");
     await userEvent.click(within(ask).getByRole("button", { name: "Keep it" }));
-    expect(screen.queryByRole("group", { name: "Unpublish" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Delete" })).toBeNull();
     expect(mocks.unpublish).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Unpublish" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]!);
     await userEvent.click(
-      within(screen.getByRole("group", { name: "Unpublish" })).getByRole("button", {
-        name: "Unpublish",
+      within(screen.getByRole("group", { name: "Delete" })).getByRole("button", {
+        name: "Delete",
       }),
     );
     expect(mocks.unpublish).toHaveBeenCalledWith("l1");
@@ -227,7 +227,7 @@ describe("MePage", () => {
     expect(screen.getByRole("link", { name: /Ghibli/ })).toBeInTheDocument();
   });
 
-  it("names a failed unpublish and keeps the card; a list already gone counts as done", async () => {
+  it("names a failed delete and keeps the card; a list already gone counts as done", async () => {
     mocks.loadMyLists.mockResolvedValue({
       lists: [published("l1", "One"), published("l2", "Two")],
     });
@@ -238,19 +238,19 @@ describe("MePage", () => {
     await screen.findByText("2 published from the app");
 
     const cards = within(screen.getByRole("list", { name: "My lists" })).getAllByRole("listitem");
-    await userEvent.click(within(cards[0]!).getByRole("button", { name: "Unpublish" }));
+    await userEvent.click(within(cards[0]!).getByRole("button", { name: "Delete" }));
     await userEvent.click(
-      within(screen.getByRole("group", { name: "Unpublish" })).getByRole("button", {
-        name: "Unpublish",
+      within(screen.getByRole("group", { name: "Delete" })).getByRole("button", {
+        name: "Delete",
       }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent("No connection");
     expect(screen.getByRole("link", { name: /One/ })).toBeInTheDocument();
 
-    await userEvent.click(within(cards[1]!).getByRole("button", { name: "Unpublish" }));
+    await userEvent.click(within(cards[1]!).getByRole("button", { name: "Delete" }));
     await userEvent.click(
-      within(screen.getByRole("group", { name: "Unpublish" })).getByRole("button", {
-        name: "Unpublish",
+      within(screen.getByRole("group", { name: "Delete" })).getByRole("button", {
+        name: "Delete",
       }),
     );
     expect(await screen.findByText("1 published from the app")).toBeInTheDocument();

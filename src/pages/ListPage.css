@@ -60,25 +60,34 @@
   color: var(--ink-dim);
 }
 
-.list-head__address {
+.list-head__copy {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: none;
   border-radius: var(--radius-pill);
   background: var(--surface-soft);
   box-shadow: inset 0 0 0 1px var(--line-strong);
-  max-width: 100%;
-  font: 500 14px/1 var(--font-mono);
+  font: var(--text-label);
   color: var(--ink);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  cursor: pointer;
 }
 
-.list-head__address .ms {
-  font-size: 16px;
+.list-head__copy:hover {
+  background: var(--hover);
+}
+
+.list-head__copy .ms {
+  font-size: 18px;
   color: var(--ink-dim);
+}
+
+/* On a wide screen the button beside the menu copies the link; the menu need not repeat it. */
+.list-menu__copy {
+  display: none;
 }
 
 .list-page__saved {
@@ -123,8 +132,12 @@
   }
 
   .list-head__own,
-  .list-head__address {
+  .list-head__copy {
     display: none;
+  }
+
+  .list-menu__copy {
+    display: block;
   }
 
   .list-page__views .chip {

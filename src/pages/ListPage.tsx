@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
 import type { ReportReason } from "../api/community";
 import type { ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
@@ -11,7 +11,8 @@ import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
 import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
 import { useHidden } from "../features/community/useHidden";
 import { useList } from "../features/list/useList";
-import { report as sendReport } from "../lib/api";
+import { errorOf } from "../features/list/useResource";
+import { report as sendReport, unpublish as unpublishList } from "../lib/api";
 import { fill, plural, strings } from "../strings";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { Button } from "../ui/Button";
@@ -68,27 +69,106 @@ function Trouble({ error, retry }: { error: ApiError; retry: () => void }) {
   );
 }
 
-type View = "yours" | "authors";
+type View = "mine" | "theirs";
 
 export type Report = typeof sendReport;
+export type Unpublish = typeof unpublishList;
+
+type Notify = (notice: SnackbarNotice) => void;
+
+/** The list's address, and the two ways to hand it to someone. */
+function useListLink(list: PublishedList) {
+  const link = `${window.location.origin}/l/${encodeURIComponent(list.id)}`;
+  const copy = (): Promise<void> =>
+    navigator.clipboard?.writeText(link) ?? Promise.reject(new Error("no clipboard"));
+  // The phone's own share sheet, where there is one; closing it is not a failure.
+  const canShare = typeof navigator.share === "function";
+  const share = () => {
+    void navigator.share({ title: list.title, url: link }).catch(() => undefined);
+  };
+  return { copy, canShare, share };
+}
 
 /**
- * What a visitor can do about a list besides ranking it: complain, keep it
- * out of sight, or copy its link. Reporting needs an account, so a guest is
- * asked to sign in first; hiding is this device's business alone.
+ * One press and the link is on the clipboard. The address itself used to be
+ * spelled out here, forty characters nobody reads and everybody had to select.
  */
-function ListMenu({
+function CopyLinkButton({ list }: { list: PublishedList }) {
+  const { copy } = useListLink(list);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  return (
+    <button
+      type="button"
+      className="list-head__copy"
+      onClick={() => {
+        copy().then(
+          () => setCopied(true),
+          () => undefined,
+        );
+      }}
+    >
+      <Icon name={copied ? "check" : "link"} />
+      <span aria-live="polite">{copied ? strings.list.linkCopied : strings.list.copyLink}</span>
+    </button>
+  );
+}
+
+/** What the button does on a wide screen, the menu does on a phone, where the head has no room. */
+function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
+  const { copy, canShare, share } = useListLink(list);
+  return (
+    <>
+      <li className="list-menu__copy">
+        <button
+          type="button"
+          className="menu__action"
+          onClick={() => {
+            copy().then(
+              () => notify({ text: strings.list.linkCopied }),
+              () => undefined,
+            );
+          }}
+        >
+          {strings.list.copyLink}
+        </button>
+      </li>
+      {canShare && (
+        <li>
+          <button type="button" className="menu__action" onClick={share}>
+            {strings.list.share}
+          </button>
+        </li>
+      )}
+    </>
+  );
+}
+
+/**
+ * What a visitor can do about a list besides ranking it: pass it on, complain,
+ * or keep it, or everything from its author, out of sight. Reporting needs an
+ * account, so a guest is asked to sign in first; hiding is this device's
+ * business alone.
+ */
+function VisitorMenu({
   list,
   report,
   notify,
 }: {
   list: PublishedList;
   report: Report;
-  notify: (notice: SnackbarNotice) => void;
+  notify: Notify;
 }) {
   const { account, signIn } = useSession();
-  const { hideList, showList, hideAuthor } = useHidden();
+  const { hideList, showList, hideAuthor, showAuthor } = useHidden();
   const [reporting, setReporting] = useState<ReportState>("closed");
+  const { canShare } = useListLink(list);
 
   const hideNow = () => {
     hideList({ id: list.id, title: list.title });
@@ -98,19 +178,12 @@ function ListMenu({
     });
   };
 
-  const link = `${window.location.origin}/l/${encodeURIComponent(list.id)}`;
-
-  const copyLink = () => {
-    void navigator.clipboard?.writeText(link).then(
-      () => notify({ text: strings.list.linkCopied }),
-      () => undefined,
-    );
-  };
-
-  // The phone's own share sheet, where there is one; closing it is not a failure.
-  const canShare = typeof navigator.share === "function";
-  const shareLink = () => {
-    void navigator.share({ title: list.title, url: link }).catch(() => undefined);
+  const hideAuthorNow = () => {
+    hideAuthor({ uid: list.authorUid, name: list.authorName });
+    notify({
+      text: fill(strings.list.hiddenAuthorNotice, { name: list.authorName }),
+      action: { text: strings.list.undo, onClick: () => showAuthor(list.authorUid) },
+    });
   };
 
   const onSignIn = () => {
@@ -136,19 +209,11 @@ function ListMenu({
     <>
       <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
         <>
-          <li>
-            <button type="button" className="menu__action" onClick={copyLink}>
-              {strings.list.copyLink}
-            </button>
-          </li>
-          {canShare && (
-            <li>
-              <button type="button" className="menu__action" onClick={shareLink}>
-                {strings.list.share}
-              </button>
-            </li>
-          )}
-          <li className="menu__divider" role="separator" />
+          <LinkItems list={list} notify={notify} />
+          <li
+            className={canShare ? "menu__divider" : "menu__divider list-menu__copy"}
+            role="separator"
+          />
           <li>
             <button
               type="button"
@@ -161,6 +226,11 @@ function ListMenu({
           <li>
             <button type="button" className="menu__action" onClick={hideNow}>
               {strings.list.hide}
+            </button>
+          </li>
+          <li>
+            <button type="button" className="menu__action" onClick={hideAuthorNow}>
+              {fill(strings.list.hideAuthorNow, { name: list.authorName })}
             </button>
           </li>
         </>
@@ -176,6 +246,116 @@ function ListMenu({
         }}
         onClose={closeReport}
       />
+    </>
+  );
+}
+
+type Deleting =
+  | { status: "closed" }
+  | { status: "asking" }
+  | { status: "busy" }
+  | { status: "failed"; error: ApiError };
+
+/**
+ * The author's own menu. A list made on the site has no other copy, so taking
+ * it down is deleting it, and the word says so; a board on the phone is the
+ * phone's and stays.
+ */
+function AuthorMenu({
+  list,
+  unpublish,
+  notify,
+}: {
+  list: PublishedList;
+  unpublish: Unpublish;
+  notify: Notify;
+}) {
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState<Deleting>({ status: "closed" });
+  const { canShare } = useListLink(list);
+  const busy = deleting.status === "busy";
+
+  const gone = () => void navigate("/me/lists");
+  const confirm = () => {
+    setDeleting({ status: "busy" });
+    unpublish(list.id).then(gone, (reason: unknown) => {
+      const error = errorOf(reason);
+      // Already gone is what was asked for.
+      if (error.kind === "notFound") gone();
+      else setDeleting({ status: "failed", error });
+    });
+  };
+  const close = useCallback(() => setDeleting({ status: "closed" }), []);
+
+  useEffect(() => {
+    if (deleting.status === "closed" || busy) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [deleting.status, busy, close]);
+
+  return (
+    <>
+      <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
+        <>
+          <LinkItems list={list} notify={notify} />
+          <li
+            className={canShare ? "menu__divider" : "menu__divider list-menu__copy"}
+            role="separator"
+          />
+          <li>
+            <Link to={`/new?list=${encodeURIComponent(list.id)}`}>{strings.list.edit}</Link>
+          </li>
+          <li>
+            <button
+              type="button"
+              className="menu__action"
+              onClick={() => setDeleting({ status: "asking" })}
+            >
+              {strings.list.delete}
+            </button>
+          </li>
+        </>
+      </Menu>
+      {deleting.status !== "closed" && (
+        <div className="scrim" onClick={busy ? undefined : close}>
+          <div
+            className="dialog dialog--narrow"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-list-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="delete-list-title" className="dialog__title">
+              {strings.list.deleteTitle}
+            </h2>
+            <p className="dialog__body">{fill(strings.list.deleteBody, { title: list.title })}</p>
+            {deleting.status === "failed" && (
+              <p className="dialog__bar" role="alert">
+                <Icon name="cloud_off" className="dialog__bar-icon" />
+                {deleting.error.kind === "offline"
+                  ? strings.list.deleteOffline
+                  : strings.list.deleteFailed}
+              </p>
+            )}
+            <div className="dialog__actions">
+              <Button onClick={close} disabled={busy}>
+                {strings.list.keepIt}
+              </Button>
+              <button
+                type="button"
+                className="btn dialog__danger"
+                onClick={confirm}
+                disabled={busy}
+              >
+                <span>{busy ? strings.list.deleting : strings.list.delete}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -211,10 +391,16 @@ function HiddenView({ list }: { list: PublishedList }) {
   );
 }
 
-export function ListPage({ report = sendReport }: { report?: Report }) {
+interface ListPageProps {
+  report?: Report;
+  unpublish?: Unpublish;
+}
+
+export function ListPage({ report = sendReport, unpublish = unpublishList }: ListPageProps) {
   const { id = "" } = useParams();
   const { state, retry } = useList(id);
-  const [view, setView] = useState<View>("yours");
+  const { account } = useSession();
+  const [view, setView] = useState<View>("mine");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
   const { hidden } = useHidden();
@@ -223,8 +409,18 @@ export function ListPage({ report = sendReport }: { report?: Report }) {
   if (state.status === "error") return <Trouble error={state.error} retry={retry} />;
 
   const { list } = state;
-  const address = `${window.location.host}/l/${id}`;
-  const outOfSight = isOutOfSight(hidden, list);
+  // The author has nobody's arrangement to compare with but their own: they
+  // see the list as they published it, and the way to change it.
+  const own = account?.kind === "signedIn" && account.uid === list.authorUid;
+  const outOfSight = !own && isOutOfSight(hidden, list);
+  const published = (
+    <ReadOnlyBoard
+      label={own ? strings.list.yourArrangement : strings.list.viewTheirs}
+      tiers={list.tiers}
+      items={list.items}
+      {...arrange(list)}
+    />
+  );
   return (
     <article className="list-page">
       <header className="list-head">
@@ -239,45 +435,42 @@ export function ListPage({ report = sendReport }: { report?: Report }) {
             </Link>
             <span className="list-head__own">
               {" · "}
-              {strings.rank.ownCopy}
+              {own ? strings.list.yourList : strings.rank.ownCopy}
             </span>
             {" · "}
             {plural(strings.card.rankings, list.takeCount)}
           </p>
         </div>
-        {!outOfSight && (
+        {!outOfSight && !own && (
           <div className="list-page__views" role="group" aria-label={strings.list.views}>
-            <Chip selected={view === "yours"} onClick={() => setView("yours")}>
-              {strings.rank.yours}
+            <Chip selected={view === "mine"} onClick={() => setView("mine")}>
+              {strings.list.viewMine}
             </Chip>
-            <Chip selected={view === "authors"} onClick={() => setView("authors")}>
-              {strings.board.authorsVersion}
+            <Chip selected={view === "theirs"} onClick={() => setView("theirs")}>
+              {strings.list.viewTheirs}
             </Chip>
           </div>
         )}
         <span className="list-head__tools">
-          <span className="list-head__address">
-            <Icon name="link" />
-            {address}
-          </span>
-          <ListMenu list={list} report={report} notify={setNotice} />
+          {own && (
+            <Link className="btn btn--tonal" to={`/new?list=${encodeURIComponent(list.id)}`}>
+              <Icon name="edit" className="btn__icon" />
+              <span>{strings.list.edit}</span>
+            </Link>
+          )}
+          <CopyLinkButton list={list} />
+          {own ? (
+            <AuthorMenu list={list} unpublish={unpublish} notify={setNotice} />
+          ) : (
+            <VisitorMenu list={list} report={report} notify={setNotice} />
+          )}
         </span>
       </header>
       {outOfSight && <HiddenView list={list} />}
-      {!outOfSight && (
-        <>
-          {view === "yours" ? (
-            <RankingBoard key={list.id} list={list} />
-          ) : (
-            <ReadOnlyBoard
-              label={strings.board.authorsVersion}
-              tiers={list.tiers}
-              items={list.items}
-              {...arrange(list)}
-            />
-          )}
-        </>
-      )}
+      {!outOfSight && own && published}
+      {!outOfSight &&
+        !own &&
+        (view === "mine" ? <RankingBoard key={list.id} list={list} /> : published)}
       <Snackbar notice={notice} onDone={clearNotice} />
     </article>
   );

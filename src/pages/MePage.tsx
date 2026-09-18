@@ -145,13 +145,11 @@ function PublishedCard({
     <li className="me-list">
       <ListCard list={list} />
       {state.status === "asking" ? (
-        <div className="me-list__ask" role="group" aria-label={strings.me.unpublish}>
-          <p className="me-list__question">
-            {fill(strings.me.unpublishAsk, { title: list.title })}
-          </p>
+        <div className="me-list__ask" role="group" aria-label={strings.me.remove}>
+          <p className="me-list__question">{fill(strings.me.removeAsk, { title: list.title })}</p>
           <div className="me-list__answers">
             <Button variant="filled" onClick={confirm}>
-              {strings.me.unpublish}
+              {strings.me.remove}
             </Button>
             <Button onClick={() => setState({ status: "idle" })}>{strings.me.keepIt}</Button>
           </div>
@@ -160,9 +158,7 @@ function PublishedCard({
         <div className="me-list__actions">
           {state.status === "failed" && (
             <p className="me-list__error" role="alert">
-              {state.error.kind === "offline"
-                ? strings.me.unpublishOffline
-                : strings.me.unpublishFailed}
+              {state.error.kind === "offline" ? strings.me.removeOffline : strings.me.removeFailed}
             </p>
           )}
           <Link className="btn btn--text" to={`/new?list=${encodeURIComponent(list.id)}`}>
@@ -170,11 +166,11 @@ function PublishedCard({
             <span>{strings.me.edit}</span>
           </Link>
           <Button
-            icon="unpublished"
+            icon="delete"
             onClick={() => setState({ status: "asking" })}
             disabled={state.status === "busy"}
           >
-            {state.status === "busy" ? strings.me.unpublishing : strings.me.unpublish}
+            {state.status === "busy" ? strings.me.removing : strings.me.remove}
           </Button>
         </div>
       )}

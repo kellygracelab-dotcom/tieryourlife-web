@@ -13,6 +13,7 @@ import { useHiddenStoreForTests } from "../features/community/useHidden";
 const mocks = vi.hoisted(() => ({
   loadList: vi.fn<(id: string) => Promise<PublishedList>>(),
   report: vi.fn<(id: string, request: unknown) => Promise<void>>(),
+  unpublish: vi.fn<(id: string) => Promise<void>>(),
 }));
 vi.mock("../lib/api", () => ({
   followState: vi.fn(() => new Promise(() => undefined)),
@@ -21,7 +22,9 @@ vi.mock("../lib/api", () => ({
   suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
   loadReports: vi.fn(() => new Promise(() => undefined)),
   report: mocks.report,
-  loadMyLists: vi.fn(),
+  unpublish: mocks.unpublish,
+  loadMyLists: vi.fn(() => new Promise(() => undefined)),
+  loadMyRankings: vi.fn(() => new Promise(() => undefined)),
   rearrangeRanking: vi.fn(),
   loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: mocks.loadList,
@@ -80,6 +83,7 @@ let hiddenStore = memoryStore();
 beforeEach(() => {
   mocks.loadList.mockReset();
   mocks.report.mockReset();
+  mocks.unpublish.mockReset();
   hiddenStore = memoryStore();
   useHiddenStoreForTests(hiddenStore);
 });
@@ -163,8 +167,10 @@ describe("ListPage report and hide", () => {
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
     openAs(member);
     await screen.findByRole("heading", { level: 1 });
+    // The menu's own Copy link is what a phone has, where the head has no room for the button.
     await userEvent.click(screen.getByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    const menu = within(screen.getByLabelText("More about this list").closest("details")!);
+    await userEvent.click(menu.getByRole("button", { name: "Copy link" }));
     expect(writeText).toHaveBeenCalledWith("http://localhost:3000/l/abc");
     expect(await screen.findByText("Link copied")).toBeInTheDocument();
 
@@ -215,24 +221,97 @@ describe("ListPage", () => {
     expect(author.closest("p")).toHaveTextContent(
       "by danylo · you are ranking your own copy · 2,140 rankings",
     );
-    expect(screen.getByText(`${window.location.host}/l/abc`)).toBeInTheDocument();
+    // The address is not spelled out any more: one press copies it.
+    expect(screen.queryByText(`${window.location.host}/l/abc`)).toBeNull();
     const yours = screen.getByRole("region", { name: "Your ranking" });
     expect(yours).toHaveTextContent("0 of 2 placed");
     expect(yours).toHaveTextContent("2 cards left");
     expect(mocks.loadList).toHaveBeenCalledWith("abc");
   });
 
-  it("can show the author's version and come back", async () => {
+  it("can show their ranking and come back to mine, in the phone app's words", async () => {
     mocks.loadList.mockResolvedValue(list);
     open();
     await screen.findByRole("heading", { level: 1 });
-    await userEvent.click(screen.getByRole("button", { name: "Author's version" }));
-    expect(screen.getByRole("region", { name: "Author's version" })).toHaveTextContent(
+    await userEvent.click(screen.getByRole("button", { name: "Their ranking" }));
+    expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Ex Machina");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
+    await userEvent.click(screen.getByRole("button", { name: "Mine" }));
+    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+  });
+
+  it("copies the link with one press of the button in the head, and says so there", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    const button = screen.getAllByRole("button", { name: "Copy link" })[0]!;
+    expect(button).toHaveClass("list-head__copy");
+    await userEvent.click(button);
+    expect(writeText).toHaveBeenCalledWith("http://localhost:3000/l/abc");
+    expect(button).toHaveTextContent("Link copied");
+  });
+});
+
+describe("ListPage for its author", () => {
+  const author: Session["account"] = {
+    kind: "signedIn",
+    uid: "u1",
+    displayName: "danylo",
+    photoUrl: null,
+  };
+
+  it("shows the list as it was published, with Edit, and no switch to compare with oneself", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    openAs(author);
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByRole("link", { name: "by danylo" }).closest("p")).toHaveTextContent(
+      "by danylo · your list · 2,140 rankings",
+    );
+    expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your ranking" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Your arrangement" })).toHaveTextContent(
       "Ex Machina",
     );
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
-    await userEvent.click(screen.getByRole("button", { name: "Your ranking" }));
-    expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Edit" })[0]).toHaveAttribute(
+      "href",
+      "/new?list=abc",
+    );
+
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    expect(screen.queryByRole("button", { name: "Report this list" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Hide this list" })).toBeNull();
+  });
+
+  it("deletes the list after asking, names a failure, and leaves for My lists when it is gone", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    mocks.unpublish.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    mocks.unpublish.mockResolvedValueOnce(undefined);
+    openAs(author);
+    await screen.findByRole("heading", { level: 1 });
+
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    const dialog = screen.getByRole("dialog", { name: "Delete this list?" });
+    expect(dialog).toHaveTextContent("A board on your phone stays on your phone.");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Keep it" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(mocks.unpublish).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not delete it");
+
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }),
+    );
+    expect(await screen.findByRole("heading", { level: 1, name: "My lists" })).toBeInTheDocument();
+    expect(mocks.unpublish).toHaveBeenCalledTimes(2);
+    expect(mocks.unpublish).toHaveBeenLastCalledWith("abc");
   });
 
   it.each<ApiError>([{ kind: "notFound" }])(
