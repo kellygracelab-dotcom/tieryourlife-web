@@ -75,6 +75,7 @@ function send(response: Response, html: string): void {
 
 interface StoredList {
   title?: string;
+  authorUid?: string;
   authorName?: string;
   authorPhotoUrl?: string | null;
   category?: string;
@@ -89,12 +90,17 @@ interface StoredList {
   items?: unknown[];
 }
 
-/** The same shape the proxy answers with, minus the author's uid. */
-function listPayload(id: string, data: StoredList) {
+/**
+ * The same shape the proxy answers with. The author's uid is as public there
+ * as it is here, and the page needs it: it is the address of the author's
+ * page, and how an author is told from a visitor. An empty one broke both on
+ * every list opened by its link.
+ */
+export function listPayload(id: string, data: StoredList) {
   return {
     id,
     title: data.title ?? "",
-    authorUid: "",
+    authorUid: typeof data.authorUid === "string" ? data.authorUid : "",
     authorName: data.authorName ?? "",
     authorPhotoUrl: data.authorPhotoUrl ?? null,
     category: data.category ?? "other",

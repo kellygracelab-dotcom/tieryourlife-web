@@ -240,6 +240,14 @@ describe("ListPage", () => {
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
   });
 
+  it("names the author without a link when the list came without their uid", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, authorUid: "" });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByText(/by danylo/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "by danylo" })).toBeNull();
+  });
+
   it("copies the link with one press of the button in the head, and says so there", async () => {
     mocks.loadList.mockResolvedValue(list);
     const writeText = vi.fn(async () => undefined);
