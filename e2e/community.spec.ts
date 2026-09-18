@@ -100,6 +100,10 @@ test("the foot of every page leads to the credits, with TMDB's logo and sentence
 }) => {
   await mockBackend(page);
   await page.goto(`/l/${list.id}`);
+  // The foot is drawn before the list is. Pressed then, the link is aimed at
+  // where it was: the list arrives, the foot moves down, and the press lands
+  // on nothing. A person waits for the page too.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
   await page.getByRole("link", { name: "About" }).click();
   await expect(page).toHaveURL("/about");
   await expect(
