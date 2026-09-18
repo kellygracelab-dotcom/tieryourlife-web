@@ -16,6 +16,9 @@ export default defineConfig({
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     { name: "phone", use: { ...devices["Pixel 7"] } },
+    // Safari's engine: the nearest thing to an iPhone a machine without one can run.
+    { name: "safari", use: { ...devices["Desktop Safari"] } },
+    { name: "iphone", use: { ...devices["iPhone 14"] } },
   ],
   webServer: {
     // The e2e mode runs without App Check, and every request the page makes
