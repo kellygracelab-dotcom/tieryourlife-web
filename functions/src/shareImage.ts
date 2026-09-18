@@ -11,6 +11,7 @@ import type { Response } from "express";
 import {
   picturesWanted,
   shareCardOf,
+  shareImageFolder,
   shareImagePath,
   SHARE_HEIGHT,
   SHARE_WIDTH,
@@ -127,6 +128,37 @@ export async function renderShareImage(card: ShareCard, pictures: Pictures): Pro
   return Buffer.from(png);
 }
 
+interface KeptCopy {
+  name: string;
+  delete(): Promise<unknown>;
+}
+
+/**
+ * As much of a bucket as the tidying needs, so a test can stand in for one.
+ * The real answer carries paging and the raw response after the files.
+ */
+export interface CopyShelf {
+  getFiles(query: { prefix: string }): Promise<readonly [KeptCopy[], ...unknown[]]>;
+}
+
+/**
+ * A card is kept per version of a list and per look of the card, and nothing
+ * ever asked for the earlier ones again: each edit and each change of the
+ * drawing left an orphan behind. Once a new copy is safely kept, the others
+ * in its folder go. They are a cache; anything removed here can be drawn again.
+ */
+export async function discardOlderCopies(
+  shelf: CopyShelf,
+  kind: "l" | "r",
+  id: string,
+  keep: string,
+): Promise<number> {
+  const [files] = await shelf.getFiles({ prefix: shareImageFolder(kind, id) });
+  const old = files.filter((file) => file.name !== keep);
+  await Promise.all(old.map((file) => file.delete()));
+  return old.length;
+}
+
 /**
  * The picture for one version of a list or a ranking: from the bucket when it
  * has been drawn before, drawn and kept otherwise. A copy that will not save
@@ -139,9 +171,9 @@ export async function shareImageFor(
   card: () => Promise<ShareCard | null>,
   fetchImpl: Fetcher = fetch,
 ): Promise<Buffer | null> {
-  const file = getStorage()
-    .bucket()
-    .file(shareImagePath(kind, id, version));
+  const bucket = getStorage().bucket();
+  const kept = shareImagePath(kind, id, version);
+  const file = bucket.file(kept);
   const [exists] = await file.exists().catch(() => [false] as [boolean]);
   if (exists) {
     const [bytes] = await file.download();
@@ -156,6 +188,8 @@ export async function shareImageFor(
       resumable: false,
       metadata: { cacheControl: "public, max-age=31536000, immutable" },
     })
+    // Only after the new copy is in: a failed save must not leave the folder empty.
+    .then(() => discardOlderCopies(bucket, kind, id, kept))
     .catch((error: unknown) => console.warn("Share image not kept", error));
   return png;
 }
