@@ -1,4 +1,5 @@
 import type { Category, PublishedList, PublishedTier } from "../../api/types";
+import { strings } from "../../strings";
 
 /** The phone's eight pairs, light and dark, so boards look the same everywhere. */
 export const TIER_PRESETS: readonly { light: string; dark: string }[] = [
@@ -12,13 +13,17 @@ export const TIER_PRESETS: readonly { light: string; dark: string }[] = [
   { light: "#A63A66", dark: "#F09BB9" },
 ];
 
-/** What a new board starts with, the same as in the app. */
+/**
+ * What a new list starts with, the same as in the app. The names fit anything
+ * a person might rank: "Watchable" under a list of dishes was a leftover from
+ * the days when every list was films.
+ */
 export const DEFAULT_TIERS: readonly PublishedTier[] = [
-  { label: "S", caption: "Masterpiece", colorLight: "#B03A32", colorDark: "#F1948C" },
-  { label: "A", caption: "Great", colorLight: "#C06A25", colorDark: "#E9A867" },
-  { label: "B", caption: "Good", colorLight: "#A98B1F", colorDark: "#D8C05A" },
-  { label: "C", caption: "Watchable", colorLight: "#3F7F55", colorDark: "#7FC393" },
-  { label: "D", caption: "No", colorLight: "#3C6E99", colorDark: "#86B8DE" },
+  { label: "S", caption: strings.new.tierBest, colorLight: "#B03A32", colorDark: "#F1948C" },
+  { label: "A", caption: strings.new.tierGreat, colorLight: "#C06A25", colorDark: "#E9A867" },
+  { label: "B", caption: strings.new.tierGood, colorLight: "#A98B1F", colorDark: "#D8C05A" },
+  { label: "C", caption: strings.new.tierOkay, colorLight: "#3F7F55", colorDark: "#7FC393" },
+  { label: "D", caption: strings.new.tierWorst, colorLight: "#3C6E99", colorDark: "#86B8DE" },
 ];
 
 /** The backend's ceilings, so the form can say no before the network does. */
