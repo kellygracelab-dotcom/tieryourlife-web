@@ -82,7 +82,7 @@ describe("board model", () => {
     expect(cleared).toBe(cleared);
   });
 
-  it("undoes placements one at a time and forgets the selection", () => {
+  it("undoes placements one at a time and picks the card that came back", () => {
     const state = run(
       init(2, 2),
       { type: "place", item: 0, tier: 0 },
@@ -91,11 +91,50 @@ describe("board model", () => {
     );
     const once = reduce(state, { type: "undo" });
     expect(once.rows).toEqual([[0], []]);
-    expect(once.selected).toBeNull();
+    expect(once.selected).toBe(1);
     const twice = reduce(once, { type: "undo" });
     expect(twice.rows).toEqual([[], []]);
+    expect(twice.selected).toBe(0);
     expect(canUndo(twice)).toBe(false);
     expect(reduce(twice, { type: "undo" })).toBe(twice);
+  });
+
+  it("undoes a move between tiers without picking anything", () => {
+    const state = run(
+      init(2, 2),
+      { type: "place", item: 0, tier: 0 },
+      { type: "place", item: 0, tier: 1 },
+    );
+    const back = reduce(state, { type: "undo" });
+    expect(back.rows).toEqual([[0], []]);
+    expect(back.selected).toBeNull();
+  });
+
+  it("picks the next card of the pool after the picked one is placed", () => {
+    const first = run(init(2, 4), { type: "select", item: 1 }, { type: "place", item: 1, tier: 0 });
+    expect(first.selected).toBe(2);
+    const second = reduce(first, { type: "place", item: 2, tier: 1 });
+    expect(second.selected).toBe(3);
+    // The last card of the pool hands over to the first one still there.
+    const wrapped = reduce(second, { type: "place", item: 3, tier: 1 });
+    expect(wrapped.selected).toBe(0);
+    const done = reduce(wrapped, { type: "place", item: 0, tier: 0 });
+    expect(done.selected).toBeNull();
+    expect(pool(done)).toEqual([]);
+  });
+
+  it("picks nothing after a drag, or after a placed card changes its tier", () => {
+    const dragged = run(init(2, 3), { type: "place", item: 0, tier: 0 });
+    expect(dragged.selected).toBeNull();
+    const draggedPastThePick = run(
+      init(2, 3),
+      { type: "select", item: 2 },
+      { type: "place", item: 0, tier: 0 },
+    );
+    expect(draggedPastThePick.selected).toBeNull();
+    const moved = run(dragged, { type: "select", item: 0 }, { type: "place", item: 0, tier: 1 });
+    expect(moved.rows).toEqual([[], [0]]);
+    expect(moved.selected).toBeNull();
   });
 
   it("keeps only the last few hundred steps", () => {

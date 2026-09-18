@@ -66,4 +66,36 @@ test.describe("ranking a list on a phone", () => {
     await finish(page);
     expect(backend.rankRequests[0]?.postDataJSON()).toEqual({ listId: LIST_ID, rows: [[], [2]] });
   });
+
+  // The pool used to start two screens down: a visitor saw empty tiers and
+  // nothing to rank, and every card cost a scroll down and a scroll back.
+  test("the cards and the tiers share the first screen, and the rest is one tap a card", async ({
+    page,
+  }) => {
+    await openList(page);
+    const screenHeight = page.viewportSize()?.height ?? 0;
+    for (const target of [card(page, "Ex Machina"), tier(page, "A")]) {
+      const box = await target.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.y).toBeGreaterThanOrEqual(0);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(screenHeight);
+    }
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+    await card(page, "Ex Machina").tap();
+    await expect(page.getByText("Tap a tier to place it")).toBeVisible();
+    await page.getByRole("button", { name: "Place Ex Machina in S" }).tap();
+    await page.getByRole("button", { name: "Place The Witch in A" }).tap();
+    await page.getByRole("button", { name: "Place Climax in A" }).tap();
+    await expect(page.getByText("All 3 placed")).toBeVisible();
+    await expect(page.getByText("3 of 3 placed")).toBeVisible();
+
+    await page.getByRole("button", { name: "Undo" }).tap();
+    // Picked again, so the rows offer "Place Climax in …" too: the card itself is the exact name.
+    await expect(page.getByRole("button", { name: "Climax", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(page.getByRole("heading", { level: 2 })).toHaveText("1 card left");
+  });
 });

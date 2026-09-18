@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -172,6 +172,28 @@ describe("ListPage report and hide", () => {
     await userEvent.click(screen.getByRole("button", { name: "Hide this list" }));
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
     expect(screen.getByRole("link", { name: "Go to home" })).toHaveAttribute("href", "/");
+  });
+
+  it("offers the device's own share sheet where there is one, and shrugs when it is closed", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    openAs(member);
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    expect(screen.queryByRole("button", { name: "Share" })).toBeNull();
+    cleanup();
+
+    const share = vi.fn(() => Promise.reject(new DOMException("closed", "AbortError")));
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    try {
+      openAs(member);
+      await screen.findByRole("heading", { level: 1 });
+      await userEvent.click(screen.getByLabelText("More about this list"));
+      await userEvent.click(screen.getByRole("button", { name: "Share" }));
+      expect(share).toHaveBeenCalledWith({ title: list.title, url: "http://localhost:3000/l/abc" });
+      expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    } finally {
+      Reflect.deleteProperty(navigator, "share");
+    }
   });
 });
 

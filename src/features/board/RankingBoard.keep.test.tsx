@@ -61,7 +61,7 @@ const finished = async (account: Session["account"], signIn: () => Promise<SignI
   );
   await userEvent.click(screen.getByRole("button", { name: "Ex Machina" }));
   await userEvent.keyboard("1");
-  await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+  await userEvent.click(screen.getAllByRole("button", { name: "Finish" })[0]!);
   await screen.findByText("Your ranking is live at");
 };
 
