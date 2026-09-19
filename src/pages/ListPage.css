@@ -47,7 +47,7 @@
 }
 
 .list-head__tools {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .list-head__title {
@@ -103,7 +103,7 @@
 }
 
 .list-page__edit {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .list-page__views {

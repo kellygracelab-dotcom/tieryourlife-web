@@ -60,6 +60,9 @@ type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed";
 
 type PointerDownFor = (item: number) => (event: ReactPointerEvent<HTMLElement>) => void;
 
+/** The tray's side padding in ranking.css: a picked card stops this far from the edge. */
+const TRAY_INSET = 14;
+
 interface TileProps {
   list: PublishedList;
   item: number;
@@ -152,14 +155,22 @@ export function RankingBoard({
 
   // On a phone the pool is one scrolling row; the picked card comes to its
   // start. Only the row scrolls: on a wide screen the pool may be off screen,
-  // and the page must not jump to it after every key press.
+  // and the page must not jump to it after every key press. The distance is
+  // measured on the screen and scrolled by, because where a row's scroll
+  // position counts from differs between left-to-right and right-to-left,
+  // and "start" is the right edge in Arabic.
   useEffect(() => {
     const row = tray.current;
-    if (row === null || selected === null || typeof row.scrollTo !== "function") return;
-    const tile = row.querySelector<HTMLElement>(`[data-item="${selected}"]`);
-    const holder = tile?.parentElement;
+    if (row === null || selected === null || typeof row.scrollBy !== "function") return;
+    const holder = row.querySelector<HTMLElement>(`[data-item="${selected}"]`)?.parentElement;
     if (holder == null) return;
-    row.scrollTo({ left: holder.offsetLeft - row.offsetLeft - 14, behavior: "smooth" });
+    const card = holder.getBoundingClientRect();
+    const edge = row.getBoundingClientRect();
+    const rightToLeft = getComputedStyle(row).direction === "rtl";
+    const left = rightToLeft
+      ? card.right - edge.right + TRAY_INSET
+      : card.left - edge.left - TRAY_INSET;
+    row.scrollBy({ left, behavior: "smooth" });
   }, [selected]);
 
   // The result opens above the board, and the person may be far below it.
