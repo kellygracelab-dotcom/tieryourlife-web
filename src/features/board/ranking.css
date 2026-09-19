@@ -205,7 +205,13 @@
  * under the board, and a very short screen has no room for a docked tray.
  */
 @media (max-width: 599px) and (min-height: 421px) and (hover: none) and (pointer: coarse) {
+  /*
+   * One line in any language. "Разложено 0 из 15 · Отменить · Завершить" is half
+   * again as long as its English and wrapped the bar onto two lines, which took
+   * a tier's worth of height from the board. The count gives way first.
+   */
   .ranking__bar {
+    flex-wrap: nowrap;
     min-height: 48px;
     margin: 0 calc(-1 * var(--space-4));
     padding: 4px 14px;
@@ -215,9 +221,38 @@
     backdrop-filter: none;
   }
 
+  .ranking__progress {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ranking__actions {
+    flex: none;
+  }
+
   .ranking__bar .btn--filled {
     min-height: 36px;
     padding: 6px 16px;
+  }
+
+  /* Undo is its arrow here; the word stays for a screen reader. Cancel has no icon and keeps its word. */
+  .ranking__actions .btn--text:has(.btn__icon) {
+    justify-content: center;
+    min-width: 40px;
+    padding: 8px;
+  }
+
+  /* The icon is a span too: only the word goes. */
+  .ranking__actions .btn--text:has(.btn__icon) > span:not(.btn__icon) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .board {
