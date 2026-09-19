@@ -462,6 +462,12 @@ export const en = {
     removeFailed: "Could not delete it. Try again.",
     removeOffline: "No connection. Try again once you are back online.",
   },
+  // Shown by plain DOM when the site itself could not load; see src/boot.ts.
+  boot: {
+    title: "The site could not start",
+    body: "Part of it did not arrive: the connection dropped, or the site was updated this very minute. Reloading usually does it.",
+    reload: "Reload",
+  },
   notFound: {
     title: "There is nothing at this address.",
     home: "Go to the front page",
