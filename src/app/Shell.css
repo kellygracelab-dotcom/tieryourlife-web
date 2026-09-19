@@ -13,7 +13,9 @@
   gap: var(--space-4);
   min-height: var(--header-height);
   padding: 10px var(--space-8);
-  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  /* Nearly solid: the blur behind is a nicety, and where it is not drawn the page's
+     title read through at 92%, a ghost of text under the logo. */
+  background: color-mix(in srgb, var(--paper) 97%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
 }
@@ -266,5 +268,13 @@
   .shell__main,
   .foot {
     padding-inline: var(--space-4);
+  }
+}
+
+/* Someone who asked their system for less transparency gets none. */
+@media (prefers-reduced-transparency: reduce) {
+  .top {
+    background: var(--paper);
+    backdrop-filter: none;
   }
 }
