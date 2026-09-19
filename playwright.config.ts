@@ -6,7 +6,15 @@ const HOST = "127.0.0.1";
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,
+  // On a desk where someone is also working, ten browsers at once starve
+  // WebKit: it stops passing the "element is stable" check and a press times
+  // out after 30 s, a different smoke each time. Five whole runs with ten: two
+  // failed, 25 to 45 s. Five with four: none failed, 32 s every time. The
+  // cause below that is not established. CI keeps its own count, and its retry.
+  workers: process.env.CI === undefined ? 4 : undefined,
   forbidOnly: process.env.CI !== undefined,
+  // None here on purpose: a smoke that needs a second go is how a real race
+  // was found (the press on a page still assembling itself).
   retries: process.env.CI === undefined ? 0 : 1,
   reporter: process.env.CI === undefined ? "list" : "github",
   use: {
