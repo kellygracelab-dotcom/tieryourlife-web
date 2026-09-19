@@ -107,7 +107,7 @@
 .tier__key {
   position: absolute;
   top: 4px;
-  right: 6px;
+  inset-inline-end: 6px;
   font: var(--text-caption);
   font-weight: 500;
   opacity: 0.7;
@@ -290,7 +290,7 @@
 
   .tier__key {
     top: 5px;
-    right: 5px;
+    inset-inline-end: 5px;
     min-width: 14px;
     height: 14px;
     border-radius: 4px;
@@ -318,7 +318,7 @@
   /* Small enough to stay clear of the letter in a row 56 px high. */
   .tier--armed .tier__key {
     top: 3px;
-    right: 3px;
+    inset-inline-end: 3px;
     min-width: 18px;
     height: 18px;
     border-radius: 9px;
@@ -363,7 +363,7 @@
     display: block;
     font: 400 11px/15px var(--font);
     color: var(--ink-faint);
-    text-align: right;
+    text-align: end;
   }
 
   .pool--picked .pool__hint--touch {
@@ -377,7 +377,7 @@
     padding: 8px 14px 6px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
-    scroll-padding-left: 14px;
+    scroll-padding-inline-start: 14px;
     scroll-snap-type: x proximity;
     scrollbar-width: none;
   }

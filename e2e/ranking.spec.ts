@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CODE, LIST_ID, mockBackend } from "./fixtures";
+import { CODE, LIST_ID, list, mockBackend } from "./fixtures";
 
 const openList = async (page: Page) => {
   const backend = await mockBackend(page);
@@ -98,4 +98,44 @@ test.describe("ranking a list on a phone", () => {
     );
     await expect(page.getByRole("heading", { level: 2 })).toHaveText("1 card left");
   });
+
+  // Twelve cards do not fit a phone's tray, so it scrolls. A card picked from the
+  // middle comes to the start of the tray, and the start is the right edge when
+  // the text runs right to left: measured from the left, it went off the screen.
+  for (const direction of ["ltr", "rtl"] as const) {
+    test(`a card picked from the middle of a long tray comes to its start, ${direction}`, async ({
+      page,
+    }) => {
+      await mockBackend(page);
+      const items = Array.from({ length: 12 }, (_, i) => ({
+        title: `Film ${i + 1}`,
+        imageUrl: null,
+        tierIndex: null,
+      }));
+      await page.route("**/lists/longlist1", (route) =>
+        route.fulfill({ json: { ...list, id: "longlist1", itemCount: items.length, items } }),
+      );
+      await page.goto("/l/longlist1");
+      await expect(page.getByRole("heading", { level: 2 })).toHaveText("12 cards left");
+      await page.evaluate((dir) => {
+        document.documentElement.dir = dir;
+      }, direction);
+
+      await page.getByRole("button", { name: "Film 6", exact: true }).tap();
+      await expect
+        .poll(async () => {
+          const gap = await page.evaluate(() => {
+            const tray = document.querySelector(".pool__items")!.getBoundingClientRect();
+            // The picked card is drawn 4% larger; its holder is what is lined up.
+            const picked = document
+              .querySelector(".tile--selected")!
+              .parentElement!.getBoundingClientRect();
+            const rtl = document.documentElement.dir === "rtl";
+            return rtl ? tray.right - picked.right : picked.left - tray.left;
+          });
+          return Math.round(gap);
+        })
+        .toBe(14);
+    });
+  }
 });

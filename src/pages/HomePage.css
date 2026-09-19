@@ -46,5 +46,5 @@
 
 .home__intro .search-box {
   margin-top: var(--space-6);
-  text-align: left;
+  text-align: start;
 }

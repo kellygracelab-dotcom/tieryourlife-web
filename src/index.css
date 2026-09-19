@@ -60,6 +60,11 @@ p {
   -webkit-font-smoothing: antialiased;
 }
 
+/* An arrow that means "back" or "out" points the other way when the text runs right to left. */
+[dir="rtl"] .ms--mirrored {
+  transform: scaleX(-1);
+}
+
 /* Under every dialog: the page dims, the dialog sits in the middle. */
 .scrim {
   position: fixed;
