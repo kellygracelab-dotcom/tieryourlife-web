@@ -116,8 +116,11 @@ describe("SearchPage", () => {
       "href",
       "/new?title=zzzz",
     );
-    expect(mocks.loadFeed).toHaveBeenCalledWith({ category: "anime", sort: "popular" });
+    // The heading first: it is there only once the second request has been
+    // answered. Asked about before that, the request is an effect that may not
+    // have run yet, which is how this failed on a slow CI machine.
     expect(await screen.findByRole("heading", { name: "Popular in Anime" })).toBeInTheDocument();
+    expect(mocks.loadFeed).toHaveBeenCalledWith({ category: "anime", sort: "popular" });
     expect(
       within(screen.getByRole("list", { name: "Popular in Anime" })).getAllByRole("listitem"),
     ).toHaveLength(3);
