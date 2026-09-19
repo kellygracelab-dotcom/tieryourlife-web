@@ -89,6 +89,28 @@ describe("another language", () => {
     expect(strings.category.anime).toBe("Anime");
   });
 
+  // The type of a dictionary had the same flaw after the merge was mended, and
+  // no test saw it: `{ other }` alone passes for plural forms. A category named
+  // beside Other is what a real dictionary writes, and what did not compile.
+  it("lets a dictionary name the categories, and still takes four forms for a count", () => {
+    const dictionary: Translation = {
+      category: { anime: "Аниме", other: "Другое" },
+      card: {
+        items: {
+          one: "{n} карточка",
+          few: "{n} карточки",
+          many: "{n} карточек",
+          other: "{n} карточки",
+        },
+      },
+    };
+    setStrings("ru", dictionary);
+    expect(strings.category.anime).toBe("Аниме");
+    expect(strings.category.other).toBe("Другое");
+    expect(strings.category.games).toBe("Games");
+    expect(plural(strings.card.items, 3)).toBe("3 карточки");
+  });
+
   it("ignores what is not text where text is due, and keys English does not have", () => {
     const merged = overlay(en, { brand: 5, nav: "no", stranger: { a: "b" } });
     expect(merged.brand).toBe(en.brand);
@@ -130,9 +152,13 @@ describe("the dictionaries", () => {
     });
   };
 
-  it("offers English and only the languages that have a file", () => {
+  it("offers English and only the languages that have a file, in the phone app's order", () => {
     expect(availableLocales()[0]).toBe("en");
     expect(availableLocales()).toHaveLength(1 + Object.keys(files).length);
+    // The files come off the disk as ru, uk; the app's picker says Ukrainian first.
+    const offered = availableLocales();
+    expect(offered).toEqual(LOCALES.filter((locale) => offered.includes(locale)));
+    expect(offered.indexOf("uk")).toBeLessThan(offered.indexOf("ru"));
   });
 
   it("carry nothing English lacks, and keep every hole of every text", () => {

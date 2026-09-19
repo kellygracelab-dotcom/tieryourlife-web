@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, isLocale, type Locale } from "../lib/locale";
+import { DEFAULT_LOCALE, LOCALES, type Locale } from "../lib/locale";
 import { en } from "./en";
 
 /**
@@ -38,11 +38,15 @@ export type Strings = Widen<typeof en>;
 /** A translation may lag behind English; what it lacks is read from English. */
 export type Translation = { [K in keyof Strings]?: PartialDeep<Strings[K]> };
 
-type PartialDeep<T> = T extends PluralForms
-  ? PluralForms
-  : T extends string
-    ? string
-    : { [K in keyof T]?: PartialDeep<T[K]> };
+// The same test as in Widen, and for the same reason. `T extends PluralForms`
+// looked right and was not: the categories, nine texts one of them `other`,
+// satisfy it structurally, and a dictionary could not name a category.
+type PartialDeep<T> =
+  IsPlural<T> extends true
+    ? PluralForms
+    : T extends string
+      ? string
+      : { [K in keyof T]?: PartialDeep<T[K]> };
 
 /**
  * Read where it is used, never copied at import time by anything that loads
@@ -59,13 +63,14 @@ export const currentLocale = (): Locale => locale;
 /** Every language but English is a file of its own, fetched only by the people who read it. */
 const files = import.meta.glob<{ default: Translation }>("./locales/*.ts");
 
-const localeOfFile = (path: string): string => path.replace("./locales/", "").replace(".ts", "");
+const hasFile = (locale: Locale): boolean => `./locales/${locale}.ts` in files;
 
-/** English, and whatever has a dictionary: a language without one is not offered. */
-export const availableLocales = (): Locale[] => [
-  DEFAULT_LOCALE,
-  ...Object.keys(files).map(localeOfFile).filter(isLocale),
-];
+/**
+ * English, and whatever has a dictionary: a language without one is not
+ * offered. In the phone app's order, not the order files come off a disk.
+ */
+export const availableLocales = (): Locale[] =>
+  LOCALES.filter((locale) => locale === DEFAULT_LOCALE || hasFile(locale));
 
 const PLURAL_KEYS = new Set(["zero", "one", "two", "few", "many", "other"]);
 
