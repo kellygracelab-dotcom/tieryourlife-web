@@ -29,6 +29,7 @@ vi.mock("firebase/auth", () => {
   }
   return {
     GoogleAuthProvider,
+    browserPopupRedirectResolver: "the resolver",
     linkWithPopup: mocks.linkWithPopup,
     signInWithPopup: mocks.signInWithPopup,
     linkWithRedirect: mocks.linkWithRedirect,
@@ -113,7 +114,13 @@ describe("signInWithGoogle", () => {
 
     await expect(signInWithGoogle(deps())).resolves.toEqual({ kind: "signedIn", switched: false });
 
-    expect(mocks.signInWithPopup).toHaveBeenCalledWith(mocks.auth, expect.any(Object));
+    // The resolver rides with the call: the Auth instance carries none, so a page
+    // that never signs in never fetches Google's iframe.
+    expect(mocks.signInWithPopup).toHaveBeenCalledWith(
+      mocks.auth,
+      expect.any(Object),
+      "the resolver",
+    );
     expect(mocks.setCustomParameters).toHaveBeenCalledWith({ prompt: "select_account" });
     expect(mocks.updateProfile).toHaveBeenCalledWith(user, {
       displayName: "Danylo",
@@ -144,7 +151,7 @@ describe("signInWithGoogle", () => {
 
     await expect(signInWithGoogle(deps())).resolves.toEqual({ kind: "signedIn", switched: false });
 
-    expect(mocks.linkWithPopup).toHaveBeenCalledWith(user, expect.any(Object));
+    expect(mocks.linkWithPopup).toHaveBeenCalledWith(user, expect.any(Object), "the resolver");
     const tokenOrder = user.getIdToken.mock.invocationCallOrder[0] ?? Infinity;
     const linkOrder = mocks.linkWithPopup.mock.invocationCallOrder[0] ?? 0;
     expect(tokenOrder).toBeLessThan(linkOrder);
@@ -216,7 +223,7 @@ describe("signInWithGoogle", () => {
     await expect(signInWithGoogle(d)).resolves.toEqual({ kind: "redirecting" });
 
     expect(d.stashed).toEqual(["guest-token"]);
-    expect(mocks.linkWithRedirect).toHaveBeenCalledWith(user, expect.any(Object));
+    expect(mocks.linkWithRedirect).toHaveBeenCalledWith(user, expect.any(Object), "the resolver");
   });
 
   it("redirects a first-time visitor without anything to stash", async () => {
@@ -226,7 +233,11 @@ describe("signInWithGoogle", () => {
     const d = deps();
     await expect(signInWithGoogle(d)).resolves.toEqual({ kind: "redirecting" });
     expect(d.stashed).toEqual([]);
-    expect(mocks.signInWithRedirect).toHaveBeenCalledWith(mocks.auth, expect.any(Object));
+    expect(mocks.signInWithRedirect).toHaveBeenCalledWith(
+      mocks.auth,
+      expect.any(Object),
+      "the resolver",
+    );
   });
 
   it("names any other failure by its code, and an unknown one as unknown", async () => {

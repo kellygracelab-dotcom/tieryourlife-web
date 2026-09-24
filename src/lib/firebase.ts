@@ -5,13 +5,22 @@ import {
   ReCaptchaEnterpriseProvider,
   type AppCheck,
 } from "firebase/app-check";
-import { getAuth, signInAnonymously, signOut, type Auth, type User } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  indexedDBLocalPersistence,
+  initializeAuth,
+  signInAnonymously,
+  signOut,
+  type Auth,
+  type User,
+} from "firebase/auth";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 import type { TokenProviders } from "../api/client";
 import { readEnv, type Env } from "./env";
 import { firebaseConfig } from "./firebase-config";
 
 let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
 let appCheck: AppCheck | null | undefined;
 
 export function getFirebaseApp(): FirebaseApp {
@@ -19,8 +28,15 @@ export function getFirebaseApp(): FirebaseApp {
   return app;
 }
 
+// The same persistence getAuth() would set up, without its popup-and-redirect
+// resolver: with the resolver in place the SDK fetched apis.google.com/js/api.js
+// on every page a phone opened, to look for a redirect that had not happened.
+// The sign-in calls bring the resolver along themselves.
 export function getFirebaseAuth(): Auth {
-  return getAuth(getFirebaseApp());
+  auth ??= initializeAuth(getFirebaseApp(), {
+    persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+  });
+  return auth;
 }
 
 export function getFirebaseStorage(): FirebaseStorage {
@@ -87,4 +103,5 @@ export const tokenProviders: TokenProviders = {
 export function resetFirebaseForTests(): void {
   app = undefined;
   appCheck = undefined;
+  auth = undefined;
 }
