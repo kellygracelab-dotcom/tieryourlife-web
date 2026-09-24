@@ -1,42 +1,58 @@
+/* The colour belongs to the action; the state one is already in stays quiet. */
 .follow {
+  justify-content: center;
+  min-width: 132px;
   height: 44px;
   padding: 0 24px;
   border-radius: 22px;
   font-size: 15px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.follow:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--on-primary-container) 8%, var(--primary-container));
 }
 
 .follow--card {
   width: 100%;
+  min-width: 0;
   height: 36px;
   padding: 0 12px;
   border-radius: 18px;
   font-size: 13px;
-  justify-content: center;
 }
 
-.follow--on {
+.follow--on,
+.follow--on:hover:not(:disabled) {
   background: transparent;
-  box-shadow: inset 0 0 0 1px var(--line-strong);
+  box-shadow: inset 0 0 0 1px var(--line);
   color: var(--ink);
+}
+
+.follow__check {
+  color: var(--ink-dim);
 }
 
 .follow__unfollow {
   display: none;
 }
 
-.follow--on:hover:not(:disabled) {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--error);
-  color: var(--error);
-}
+/* Only a pointer hovers; a finger's tap unfollows at once and gets an Undo. */
+@media (hover: hover) {
+  .follow--on:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1px var(--error);
+    color: var(--error);
+  }
 
-.follow--on:hover:not(:disabled) .follow__label,
-.follow--on:hover:not(:disabled) .follow__check {
-  display: none;
-}
+  .follow--on:hover:not(:disabled) .follow__label,
+  .follow--on:hover:not(:disabled) .follow__check {
+    display: none;
+  }
 
-.follow--on:hover:not(:disabled) .follow__unfollow {
-  display: inline;
+  .follow--on:hover:not(:disabled) .follow__unfollow {
+    display: inline;
+  }
 }
 
 .follow__failed {

@@ -46,12 +46,20 @@ const member: Session["account"] = {
 const load = vi.fn<(query: FeedQuery) => Promise<FeedPage>>();
 const loadSuggestions = vi.fn<LoadSuggestions>();
 const follow = vi.fn<Follow>();
+const unfollow = vi.fn<Follow>();
 
 const open = (account: Session["account"] = member) => {
   const routes: RouteObject[] = [
     {
       path: "/",
-      element: <HomePage load={load} loadSuggestions={loadSuggestions} follow={follow} />,
+      element: (
+        <HomePage
+          load={load}
+          loadSuggestions={loadSuggestions}
+          follow={follow}
+          unfollow={unfollow}
+        />
+      ),
     },
     { path: "/u/:uid", element: <h1>Profile page</h1> },
   ];
@@ -86,6 +94,8 @@ beforeEach(() => {
   });
   follow.mockReset();
   follow.mockResolvedValue(undefined);
+  unfollow.mockReset();
+  unfollow.mockResolvedValue(undefined);
   useHiddenStoreForTests(memoryStore());
 });
 
@@ -127,6 +137,13 @@ describe("HomePage for a signed-in person", () => {
     expect(within(cards[0]!).getByRole("link", { name: /someone/ })).toHaveAttribute(
       "href",
       "/u/u2",
+    );
+
+    await userEvent.click(within(cards[0]!).getByRole("button", { name: /Following/ }));
+    expect(unfollow).toHaveBeenCalledWith("u2");
+    expect(within(cards[0]!).getByRole("button", { name: "Follow" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
     );
   });
 

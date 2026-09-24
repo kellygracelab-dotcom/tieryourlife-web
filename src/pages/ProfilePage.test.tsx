@@ -114,6 +114,36 @@ describe("ProfilePage", () => {
     expect(screen.getByText("1,203 followers · 2 public lists")).toBeInTheDocument();
   });
 
+  it("unfollows on press and keeps an Undo in a snackbar, which follows again", async () => {
+    vi.mocked(follow.state).mockResolvedValue({ following: true, followers: 1204 });
+    open();
+    await userEvent.click(await screen.findByRole("button", { name: /Following/ }));
+    expect(follow.unfollow).toHaveBeenCalledWith("u2");
+    expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("1,203 followers · 2 public lists")).toBeInTheDocument();
+    const notice = screen.getByText("Unfollowed Someone Nice").parentElement!;
+    expect(notice).toHaveAttribute("role", "status");
+
+    await userEvent.click(within(notice).getByRole("button", { name: "Undo" }));
+    expect(follow.follow).toHaveBeenCalledWith("u2");
+    expect(screen.queryByText("Unfollowed Someone Nice")).toBeNull();
+    expect(screen.getByRole("button", { name: /Following/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("1,204 followers · 2 public lists")).toBeInTheDocument();
+
+    // An Undo the backend refuses comes back to the unfollowed state it was
+    // pressed in, not to the state the snackbar was made in.
+    vi.mocked(follow.follow).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    await userEvent.click(screen.getByRole("button", { name: /Following/ }));
+    const again = screen.getByText("Unfollowed Someone Nice").parentElement!;
+    await userEvent.click(within(again).getByRole("button", { name: "Undo" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t follow");
+    expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("1,203 followers · 2 public lists")).toBeInTheDocument();
+  });
+
   it("asks a guest to sign in and follows by itself once they have", async () => {
     const signIn = vi
       .fn<Session["signIn"]>()

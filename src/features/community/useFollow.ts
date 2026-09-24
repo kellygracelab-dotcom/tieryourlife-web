@@ -25,7 +25,7 @@ export interface FollowControls {
   failed: boolean;
   /** The one answer a guest gets: sign in first. */
   toggle: () => "signIn" | "done";
-  /** Follows without asking, for right after a sign-in. */
+  /** Follows without asking: right after a sign-in, or to undo an unfollow. */
   followNow: () => void;
 }
 
@@ -40,6 +40,13 @@ export function useFollow(authorUid: string, deps: FollowDeps = defaultDeps): Fo
   const [followers, setFollowers] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // What the page shows at the moment of a press: the place to come back to
+  // if the backend says no. Read at the press rather than closed over, so an
+  // Undo kept in a snackbar undoes the unfollow, not the state before it.
+  const shown = useRef({ following, followers });
+  useEffect(() => {
+    shown.current = { following, followers };
+  });
 
   useEffect(() => {
     if (account === null) return;
@@ -69,7 +76,7 @@ export function useFollow(authorUid: string, deps: FollowDeps = defaultDeps): Fo
 
   const change = useCallback(
     (next: boolean) => {
-      const before = { following, followers };
+      const before = shown.current;
       setFollowing(next);
       setFollowers((n) => (n === null ? null : Math.max(0, n + (next ? 1 : -1))));
       setFailed(false);
@@ -81,14 +88,14 @@ export function useFollow(authorUid: string, deps: FollowDeps = defaultDeps): Fo
         timer.current = setTimeout(() => setFailed(false), FOLLOW_FAILED_MS);
       });
     },
-    [authorUid, deps, following, followers],
+    [authorUid, deps],
   );
 
   const toggle = useCallback((): "signIn" | "done" => {
     if (!signedIn) return "signIn";
-    change(!(following ?? false));
+    change(!(shown.current.following ?? false));
     return "done";
-  }, [signedIn, following, change]);
+  }, [signedIn, change]);
 
   const followNow = useCallback(() => change(true), [change]);
 

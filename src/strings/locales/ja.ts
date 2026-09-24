@@ -162,6 +162,8 @@ const ja: Translation = {
     follow: "フォロー",
     following: "フォロー中",
     unfollow: "フォロー解除",
+    unfollowed: "{name}のフォローを解除しました",
+    undo: "元に戻す",
     failed: "フォローできませんでした。もう一度お試しください。",
     cancel: "キャンセル",
     signInTitle: "フォローするにはログイン",

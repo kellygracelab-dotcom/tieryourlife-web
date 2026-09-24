@@ -160,6 +160,8 @@ export const en = {
     follow: "Follow",
     following: "Following",
     unfollow: "Unfollow",
+    unfollowed: "Unfollowed {name}",
+    undo: "Undo",
     failed: "Couldn’t follow — try again.",
     cancel: "Cancel",
     signInTitle: "Sign in to follow",
