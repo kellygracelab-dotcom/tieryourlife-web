@@ -40,6 +40,39 @@ test.describe("a wide screen", () => {
     await expect(side.getByRole("button", { name: "Ex Machina" })).toBeInViewport();
   });
 
+  // A wide, tall window docks the pool under the board; the choice to put it beside is kept.
+  test("docks the pool under the board on a wide window and remembers a choice", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await mockBackend(page);
+    // Twelve tiers, so the page is taller than the window and the dock has something to stick to.
+    const tiers = Array.from({ length: 12 }, (_, i) => ({
+      label: `T${i + 1}`,
+      caption: null,
+      colorLight: "#b03a32",
+      colorDark: "#f1948c",
+    }));
+    await page.route(`**/lists/${LIST_ID}`, (route) => route.fulfill({ json: { ...list, tiers } }));
+    await page.goto(`/l/${LIST_ID}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+    const board = page.locator(".ranking");
+    await expect(board).toHaveClass(/ranking--under/);
+    await expect(page.locator(".pool")).toHaveCSS("position", "sticky");
+    await expect(page.locator(".list-head").getByRole("button", { name: "Finish" })).toBeVisible();
+    const poolBox = (await page.locator(".pool").boundingBox())!;
+    expect(Math.round(poolBox.y + poolBox.height)).toBe(900);
+
+    await page.getByRole("button", { name: "Cards beside the board" }).click();
+    await expect(board).not.toHaveClass(/ranking--under/);
+    await expect(page.locator(".ranking__side")).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+    await expect(page.locator(".ranking")).not.toHaveClass(/ranking--under/);
+    await page.getByRole("button", { name: "Cards under the board" }).click();
+    await expect(page.locator(".ranking")).toHaveClass(/ranking--under/);
+  });
+
   // The /r/ page: the panel with the chips, the invitation, the link and the picture beside the board.
   test("stands the ranking's handout beside its board", async ({ page }) => {
     await mockBackend(page);

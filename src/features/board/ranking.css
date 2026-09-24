@@ -40,6 +40,15 @@
   display: none;
 }
 
+/* Only a wide screen has two places for the cards; the toggle waits for it. */
+.dock {
+  display: none;
+}
+
+.pool__lead {
+  display: contents;
+}
+
 .pool__none {
   margin: 0;
   padding: 0 8px;
@@ -607,98 +616,30 @@
 }
 
 /*
- * A laptop or a tablet on its side. The pool is a column beside the board
- * with the count and the buttons above it: a card and its tier are one short
- * move apart, and the column shows two dozen cards where the strip under the
- * board showed fifteen. It keeps its height and scrolls inside itself.
+ * A laptop or a tablet on its side. Two shapes, the person's to choose: the
+ * pool in a column beside the board, or docked under it. Both follow the
+ * window — the column stands at its edge, the dock spans it — and only the
+ * board's own block is capped, at 1760, where rows get too long to read.
  */
 @media (min-width: 840px) {
   .ranking {
-    --side: 280px;
-
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--side);
-    align-items: start;
-    gap: 0;
+    --board-cap: 1760px;
   }
 
-  .ranking__main {
+  .pool__lead {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
     gap: 12px;
-    min-width: 0;
-    max-width: 1080px;
-    padding: 16px 24px 24px 0;
   }
 
-  .ranking__side {
-    position: sticky;
-    top: var(--header-height);
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    height: calc(100vh - var(--header-height));
-    padding: 16px;
-    background: var(--surface);
-    border-inline-start: 1px solid var(--line);
-  }
-
-  .ranking__bar {
-    position: static;
-    flex-wrap: nowrap;
-    margin: 0;
+  .pool__title {
     padding: 0;
-    border-radius: 0;
-    background: none;
-    backdrop-filter: none;
   }
 
-  .ranking__progress {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font: 400 13px/18px var(--font);
-  }
-
-  .ranking__actions {
-    flex: none;
-  }
-
-  .ranking__bar .btn {
-    min-height: 40px;
-  }
-
-  /* Undo is its arrow in an outlined circle: the column has no room for the word next to Finish. */
-  .ranking__actions .btn--text:has(.btn__icon) {
-    justify-content: center;
-    min-width: 40px;
-    padding: 8px;
-    border-radius: 20px;
-    box-shadow: inset 0 0 0 1px var(--line-strong);
-  }
-
-  .ranking__actions .btn--text:has(.btn__icon) > span:not(.btn__icon) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .ranking .pool {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 10px;
-    min-height: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: none;
+  .ranking .pool .tile {
+    width: 64px;
+    height: 90px;
   }
 
   .pool--target {
@@ -709,20 +650,8 @@
     box-shadow: inset 0 0 0 3px var(--ink);
   }
 
-  /* The head's pieces become the column's own: the title on top, the hint at the foot. */
-  .pool__head {
-    display: contents;
-  }
-
-  .pool__title {
-    order: 1;
-    padding: 0;
-  }
-
   .pool__search {
-    order: 2;
     display: block;
-    width: 100%;
     height: 36px;
     padding: 0 14px;
     border: none;
@@ -739,12 +668,8 @@
   }
 
   .pool__items {
-    order: 3;
     display: grid;
-    flex: 1;
     grid-template-columns: repeat(auto-fill, 64px);
-    /* 8, not the board's 10: four columns of 64 in the 320 px column, three in the 280. */
-    gap: 8px;
     align-content: start;
     justify-content: start;
     min-height: 0;
@@ -752,30 +677,336 @@
     overflow-y: auto;
   }
 
-  .ranking .pool .tile {
-    width: 64px;
-    height: 90px;
-  }
-
-  .pool__none {
-    order: 3;
-    padding: 0;
-  }
-
   .pool__hint--keys {
-    order: 5;
-    margin-top: auto;
     font: 400 12px/16px var(--font);
     color: var(--ink-faint);
   }
 
-  .pool__done {
+  /* Switching shapes is a cross-fade, with nothing else moving. */
+  .ranking .pool {
+    animation: dock-in 180ms ease;
+  }
+
+  /* The two segments: the cards beside the board, or under it. */
+  .dock {
+    display: inline-flex;
+    flex: none;
+    height: 32px;
+    overflow: hidden;
+    border-radius: 16px;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+
+  .dock__seg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 32px;
     padding: 0;
+    overflow: hidden;
+    border: none;
+    background: none;
+    color: var(--ink-dim);
+    cursor: pointer;
+  }
+
+  /* A fixed box for the glyph: without the icon font its name would spill over the neighbour. */
+  .dock__seg .ms {
+    width: 18px;
+    height: 18px;
+    overflow: hidden;
+    font-size: 18px;
+    line-height: 18px;
+  }
+
+  .dock__seg--on {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+  }
+
+  .dock__seg:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+
+  /* Beside: a grid edge to edge, the column flush with the window's edge. */
+  .ranking:not(.ranking--under) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--side);
+    align-items: start;
+    gap: 0;
+    margin-inline: calc(-1 * var(--space-8));
+  }
+
+  .ranking:not(.ranking--under) .ranking__main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    padding: 16px var(--space-8) 24px;
+  }
+
+  .ranking:not(.ranking--under) .ranking__main > * {
+    width: 100%;
+    max-width: var(--board-cap);
+    margin-inline: auto;
+  }
+
+  .ranking:not(.ranking--under) .ranking__side {
+    position: sticky;
+    top: var(--header-height);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    height: calc(100vh - var(--header-height));
+    padding: 16px;
+    background: var(--surface);
+    border-inline-start: 1px solid var(--line);
+  }
+
+  .ranking:not(.ranking--under) .ranking__bar {
+    position: static;
+    flex-wrap: nowrap;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+  }
+
+  .ranking:not(.ranking--under) .ranking__progress {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 400 13px/18px var(--font);
+  }
+
+  .ranking:not(.ranking--under) .ranking__actions {
+    flex: none;
+  }
+
+  .ranking:not(.ranking--under) .ranking__bar .btn {
+    min-height: 40px;
+  }
+
+  /* Undo is its arrow in an outlined circle: the column has no room for the word next to Finish. */
+  .ranking:not(.ranking--under) .ranking__actions .btn--text:has(.btn__icon) {
+    justify-content: center;
+    min-width: 40px;
+    padding: 8px;
+    border-radius: 20px;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+
+  .ranking:not(.ranking--under)
+    .ranking__actions
+    .btn--text:has(.btn__icon)
+    > span:not(.btn__icon) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .ranking:not(.ranking--under) .pool {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  /* The head's pieces become the column's own: the title on top, the hint at the foot. */
+  .ranking:not(.ranking--under) .pool__head {
+    display: contents;
+  }
+
+  .ranking:not(.ranking--under) .pool__lead {
+    order: 1;
+  }
+
+  .ranking:not(.ranking--under) .pool__search {
+    order: 2;
+    width: 100%;
+  }
+
+  .ranking:not(.ranking--under) .pool__items {
+    order: 3;
+    flex: 1;
+    /* 8, not the board's 10: four columns of 64 in the 320 px column, three in the 280. */
+    gap: 8px;
+  }
+
+  .ranking:not(.ranking--under) .pool__none {
+    order: 3;
+    padding: 0;
+  }
+
+  .ranking:not(.ranking--under) .pool__hint--keys {
+    order: 5;
+    margin-top: auto;
+  }
+
+  .ranking:not(.ranking--under) .pool__done {
+    padding: 0;
+  }
+
+  /*
+   * Under: the board takes the width, capped at 1760 and centred, and the
+   * pool is a dock at the foot of the window — sticky, full width, two rows
+   * of cards by default, resized by its top edge. The bar goes to the page's
+   * header when the page offers it a place.
+   */
+  .ranking--under .ranking__main,
+  .ranking--under .ranking__side {
+    display: contents;
+  }
+
+  .ranking--under > .ranking__main > * {
+    width: 100%;
+    max-width: var(--board-cap);
+    margin-inline: auto;
+  }
+
+  .ranking__bar--head {
+    position: static;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+  }
+
+  .ranking__bar--head .ranking__progress {
+    white-space: nowrap;
+    font: 400 13px/18px var(--font);
+  }
+
+  .ranking--under .pool {
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 12px calc(-1 * var(--space-8)) 0;
+    padding: 12px max(var(--space-8), calc((100vw - var(--board-cap)) / 2)) 14px;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: var(--surface);
+    box-shadow: var(--shadow-up);
+  }
+
+  .ranking--under .pool__grip {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 6px;
+    cursor: ns-resize;
+  }
+
+  .ranking--under .pool__grip::after {
+    content: "";
+    position: absolute;
+    top: 1px;
+    inset-inline-start: calc(50% - 16px);
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .ranking--under .pool__grip:hover::after {
+    opacity: 1;
+  }
+
+  .ranking--under .pool__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 36px;
+    padding: 0;
+  }
+
+  .ranking--under .pool__lead {
+    display: contents;
+  }
+
+  .ranking--under .pool__title {
+    order: 1;
+    font: 500 15px/21px var(--font);
+  }
+
+  .ranking--under .pool__search {
+    order: 2;
+    flex: 1 1 200px;
+    max-width: 360px;
+  }
+
+  .ranking--under .pool__hint--keys {
+    order: 3;
+    margin-inline-start: auto;
+  }
+
+  .ranking--under .dock {
+    order: 4;
+  }
+
+  .ranking--under .pool__items {
+    gap: 10px;
+    max-height: calc(var(--dock-rows, 2) * 90px + (var(--dock-rows, 2) - 1) * 10px + 6px);
+  }
+
+  .ranking--under .pool__none {
+    padding: 0;
+  }
+
+  /* Every card placed: one line, with Finish at its end. */
+  .ranking--under .pool__done {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    min-height: 32px;
+    padding: 0;
+  }
+
+  .ranking--under .pool__done-note {
+    display: none;
+  }
+
+  .ranking--under .pool__done .btn {
+    margin-inline-start: auto;
   }
 }
 
-@media (min-width: 1024px) {
-  .ranking {
-    --side: 320px;
+@keyframes dock-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ranking .pool {
+    animation: none;
   }
 }

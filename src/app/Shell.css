@@ -356,9 +356,9 @@
   padding: var(--space-6) var(--space-8) var(--space-8);
 }
 
-/* A list page has a side column from 840 px: the board's 1080 and the column's 320. */
+/* A list page follows the window: the board grows with it (capped at 1760 in the page's own rules). */
 .shell__main:has(.list-page) {
-  max-width: 1400px;
+  max-width: none;
 }
 
 /* The home page's feed is four across. */

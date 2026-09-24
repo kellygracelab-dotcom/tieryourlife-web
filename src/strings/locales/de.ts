@@ -395,6 +395,9 @@ const de: Translation = {
     hintPlaceTouch: "Stufe antippen zum Platzieren",
     search: "Karte suchen",
     searchNone: "Keine Karte mit diesem Namen.",
+    dock: "Wo die Karten liegen",
+    dockBeside: "Karten neben den Stufen",
+    dockUnder: "Karten unter den Stufen",
     allPlaced: { one: "Die Karte ist platziert", other: "Alle {n} platziert" },
     allPlacedNote:
       "Überleg es dir anders, indem du eine Karte ziehst, oder schließ ab und hol dir deinen Link.",

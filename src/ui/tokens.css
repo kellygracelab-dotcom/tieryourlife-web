@@ -25,6 +25,7 @@
   --on-accent: #ffffff;
   --error: #b3261e;
   --ok: #3f7f55;
+  --shadow-up: 0 -6px 20px rgba(0, 0, 0, 0.1);
   --focus: #4a5baa;
 
   --tier-s: #b03a32;
@@ -90,6 +91,7 @@
     --on-accent: #1b1b21;
     --error: #ffb4ab;
     --ok: #7bd394;
+    --shadow-up: 0 -6px 20px rgba(0, 0, 0, 0.34);
     --focus: #bac3ff;
 
     --tier-s: #f1948c;
@@ -128,6 +130,7 @@
   --on-accent: #1b1b21;
   --error: #ffb4ab;
   --ok: #7bd394;
+  --shadow-up: 0 -6px 20px rgba(0, 0, 0, 0.34);
   --focus: #bac3ff;
 
   --tier-s: #f1948c;
