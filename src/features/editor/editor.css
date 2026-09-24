@@ -181,6 +181,9 @@
   font: var(--text-body);
   color: var(--ink);
   outline: none;
+  /* "Search films and series to add, or type a name" is longer than a phone's box: the
+     placeholder takes the input's own text-overflow; the pseudo-element ignores it. */
+  text-overflow: ellipsis;
 }
 
 .editor__chips {

@@ -308,6 +308,8 @@ export function RankingBoard({
   }, [readPage, shown.length]);
   const picked = selected !== null && left.includes(selected);
   const allPlaced = left.length === 0 && finish.status !== "done";
+  // Finished with every card placed: the tray has nothing to say and goes.
+  const restEmpty = finish.status === "done" && left.length === 0;
   const poolClasses = [
     "pool",
     drag.state.phase === "dragging" && drag.state.target?.kind === "pool" && "pool--target",
@@ -401,86 +403,88 @@ export function RankingBoard({
           </div>
         </div>
 
-        <div className={poolClasses} data-drop="pool">
-          {allPlaced ? (
-            <div className="pool__done">
-              <p className="pool__done-title">
-                <Icon name="check_circle" className="pool__done-icon" />
-                {plural(strings.rank.allPlaced, list.items.length)}
-              </p>
-              <p className="pool__done-note">
-                {edit === undefined ? strings.rank.allPlacedNote : strings.rank.allPlacedNoteEdit}
-              </p>
-              <Button
-                variant="filled"
-                icon="check"
-                onClick={edit === undefined ? onFinish : onSave}
-                disabled={locked}
-              >
-                {edit === undefined ? strings.rank.finish : strings.rank.saveChanges}
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="pool__head">
-                <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
-                <p className="pool__hint pool__hint--keys">
-                  {selectedTitle === null
-                    ? fill(strings.rank.hintPick, { keys: `1–${keyboardTiers}` })
-                    : fill(strings.rank.hintPlace, { name: selectedTitle })}
+        {!restEmpty && (
+          <div className={poolClasses} data-drop="pool">
+            {allPlaced ? (
+              <div className="pool__done">
+                <p className="pool__done-title">
+                  <Icon name="check_circle" className="pool__done-icon" />
+                  {plural(strings.rank.allPlaced, list.items.length)}
                 </p>
-                <p className="pool__hint pool__hint--touch">
-                  {selectedTitle === null
-                    ? strings.rank.hintPickTouch
-                    : strings.rank.hintPlaceTouch}
+                <p className="pool__done-note">
+                  {edit === undefined ? strings.rank.allPlacedNote : strings.rank.allPlacedNoteEdit}
                 </p>
+                <Button
+                  variant="filled"
+                  icon="check"
+                  onClick={edit === undefined ? onFinish : onSave}
+                  disabled={locked}
+                >
+                  {edit === undefined ? strings.rank.finish : strings.rank.saveChanges}
+                </Button>
               </div>
-              {left.length > POOL_SEARCH_FROM && (
-                <input
-                  className="pool__search"
-                  type="search"
-                  value={query}
-                  placeholder={strings.rank.search}
-                  aria-label={strings.rank.search}
-                  onChange={(event) => setQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Escape") return;
-                    setQuery("");
-                    event.currentTarget.blur();
-                  }}
-                />
-              )}
-              <ul className="pool__items" ref={tray} onScroll={readPage}>
-                {shown.map((item) => (
-                  <Tile
-                    key={item}
-                    list={list}
-                    item={item}
-                    selected={selected === item}
-                    lifted={lifted === item}
-                    locked={locked}
-                    dispatch={dispatch}
-                    onPointerDown={drag.onPointerDown(item)}
+            ) : (
+              <>
+                <div className="pool__head">
+                  <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
+                  <p className="pool__hint pool__hint--keys">
+                    {selectedTitle === null
+                      ? fill(strings.rank.hintPick, { keys: `1–${keyboardTiers}` })
+                      : fill(strings.rank.hintPlace, { name: selectedTitle })}
+                  </p>
+                  <p className="pool__hint pool__hint--touch">
+                    {selectedTitle === null
+                      ? strings.rank.hintPickTouch
+                      : strings.rank.hintPlaceTouch}
+                  </p>
+                </div>
+                {left.length > POOL_SEARCH_FROM && (
+                  <input
+                    className="pool__search"
+                    type="search"
+                    value={query}
+                    placeholder={strings.rank.search}
+                    aria-label={strings.rank.search}
+                    onChange={(event) => setQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Escape") return;
+                      setQuery("");
+                      event.currentTarget.blur();
+                    }}
                   />
-                ))}
-              </ul>
-              {shown.length === 0 && <p className="pool__none">{strings.rank.searchNone}</p>}
-              {pages > 1 && (
-                <div className="pool__dots" aria-hidden="true">
-                  {Array.from({ length: Math.min(pages, TRAY_DOTS) }, (_, i) => (
-                    <span
-                      key={i}
-                      className={i === page ? "pool__dot pool__dot--on" : "pool__dot"}
+                )}
+                <ul className="pool__items" ref={tray} onScroll={readPage}>
+                  {shown.map((item) => (
+                    <Tile
+                      key={item}
+                      list={list}
+                      item={item}
+                      selected={selected === item}
+                      lifted={lifted === item}
+                      locked={locked}
+                      dispatch={dispatch}
+                      onPointerDown={drag.onPointerDown(item)}
                     />
                   ))}
-                  {pages > TRAY_DOTS && (
-                    <span className="pool__dots-more">+{pages - TRAY_DOTS}</span>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+                </ul>
+                {shown.length === 0 && <p className="pool__none">{strings.rank.searchNone}</p>}
+                {pages > 1 && (
+                  <div className="pool__dots" aria-hidden="true">
+                    {Array.from({ length: Math.min(pages, TRAY_DOTS) }, (_, i) => (
+                      <span
+                        key={i}
+                        className={i === page ? "pool__dot pool__dot--on" : "pool__dot"}
+                      />
+                    ))}
+                    {pages > TRAY_DOTS && (
+                      <span className="pool__dots-more">+{pages - TRAY_DOTS}</span>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {edit === undefined && (

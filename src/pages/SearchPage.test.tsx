@@ -166,6 +166,18 @@ describe("SearchPage", () => {
 });
 
 describe("the search box on the front page", () => {
+  it("takes the words the bar's field brings, instead of writing its own back", async () => {
+    open("/search?q=anime&sort=recent");
+    await screen.findByRole("heading", { level: 1 });
+    const bar = within(screen.getByRole("banner"));
+    await userEvent.clear(bar.getByRole("searchbox"));
+    await userEvent.type(bar.getByRole("searchbox"), "zzz{Enter}");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“zzz”");
+    expect(within(screen.getByRole("main")).getByRole("searchbox")).toHaveValue("zzz");
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("“zzz”");
+  });
+
   it("leads to the results for what was typed", async () => {
     const router = open("/");
     const box = within(screen.getByRole("main")).getByRole("searchbox");
