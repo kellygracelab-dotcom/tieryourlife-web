@@ -116,3 +116,32 @@
     height: 74px;
   }
 }
+
+/* A tablet held upright, or a narrow window: rows a size between the phone's and the desktop's. */
+@media (min-width: 600px) and (max-width: 839px) {
+  .board {
+    gap: 8px;
+  }
+
+  .tier {
+    min-height: 64px;
+  }
+
+  .tier:has(.tier__items > li) {
+    min-height: 100px;
+  }
+
+  .tier__band {
+    width: 80px;
+  }
+
+  .tier__items,
+  .pool__items {
+    gap: 8px;
+  }
+
+  .tile {
+    width: 56px;
+    height: 78px;
+  }
+}
