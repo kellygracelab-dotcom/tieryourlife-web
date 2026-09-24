@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import type { ReportReason } from "../api/community";
 import type { ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
+import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
 import { arrange } from "../features/board/arrange";
 import { RankingBoard } from "../features/board/RankingBoard";
@@ -424,6 +425,7 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
   return (
     <article className="list-page">
       <header className="list-head">
+        <PageTitle title={list.title} />
         <div className="list-head__text">
           <h1 className="list-head__title">{list.title}</h1>
           <p className="list-head__meta">

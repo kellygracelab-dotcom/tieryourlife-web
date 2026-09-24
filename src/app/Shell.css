@@ -48,6 +48,28 @@
   margin-inline-start: auto;
 }
 
+/* The page's title in the brand's place, once the page has scrolled: a phone thing. */
+.top__title {
+  display: none;
+}
+
+@media (max-width: 599px) {
+  .top--titled .brand__name {
+    display: none;
+  }
+
+  .top--titled .top__title {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 500 13px/18px var(--font);
+    color: var(--ink);
+  }
+}
+
 .menu {
   position: relative;
 }

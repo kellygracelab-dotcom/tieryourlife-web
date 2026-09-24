@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, ScrollRestoration } from "react-router";
 import { useModerator } from "../features/moderation/useModerator";
 import type { Account } from "../lib/account";
@@ -8,6 +8,7 @@ import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
+import { PageTitleContext, TITLE_AFTER_PX } from "./pageTitle";
 import { useSession } from "./session";
 import "./Shell.css";
 
@@ -61,6 +62,18 @@ export function Shell() {
   const { account, signIn } = useSession();
   const [signing, setSigning] = useState<"idle" | "busy" | "failed" | "inApp">("idle");
 
+  // On a phone the list's heading scrolls away under the tray's work; once it
+  // has, the app bar says what the page is instead of the brand.
+  const [pageTitle, setPageTitle] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > TITLE_AFTER_PX);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const titled = pageTitle !== null && scrolled;
+
   const onSignIn = () => {
     setSigning("busy");
     signIn().then((outcome) =>
@@ -72,11 +85,17 @@ export function Shell() {
 
   return (
     <div className="shell">
-      <header className="top">
+      <header className={titled ? "top top--titled" : "top"}>
         <Link className="brand" to="/">
           <img className="brand__mark" src="/favicon.svg" alt="" width="26" height="26" />
           <span className="brand__name">{strings.brand}</span>
         </Link>
+        {/* The page's own heading is still there for a screen reader; this is for the eye. */}
+        {titled && (
+          <span className="top__title" aria-hidden="true">
+            {pageTitle}
+          </span>
+        )}
         <nav className="top__actions" aria-label="Site">
           <Link className="btn btn--tonal top__make" to="/new" aria-label={strings.nav.makeList}>
             <Icon name="add" className="btn__icon top__make-icon" />
@@ -104,7 +123,9 @@ export function Shell() {
         </p>
       )}
       <main className="shell__main">
-        <Outlet />
+        <PageTitleContext.Provider value={setPageTitle}>
+          <Outlet />
+        </PageTitleContext.Provider>
       </main>
       <footer className="foot">
         <a href="/privacy.html">{strings.footer.privacy}</a>
