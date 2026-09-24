@@ -166,4 +166,40 @@ describe("the dictionaries", () => {
       expect(problemsOf(en, module.default, file)).toEqual([]);
     }
   });
+
+  // What a dictionary may leave in English: the brand, two counters made of
+  // digits, and TMDB's logo text and sentence, which TMDB's terms fix.
+  const LEFT_IN_ENGLISH = new Set([
+    "brand",
+    "settings.nameCounter",
+    "report.noteCounter",
+    "about.tmdbLogo",
+    "about.tmdb",
+  ]);
+
+  // Every text English has. Which plural forms a group spells out is the
+  // translator's call: a form left out reads as `other`, and Russian says
+  // «{n} добавлено» whatever the count.
+  const gapsOf = (base: unknown, over: unknown, path: string): string[] => {
+    if (typeof base === "string") {
+      return typeof over === "string" || LEFT_IN_ENGLISH.has(path) ? [] : [path];
+    }
+    const english = base as Record<string, unknown>;
+    const given = (typeof over === "object" && over !== null ? over : {}) as Record<
+      string,
+      unknown
+    >;
+    if (typeof english.other === "string" && typeof english.one === "string") {
+      return typeof given.other === "string" ? [] : [path];
+    }
+    return Object.entries(english).flatMap(([key, value]) =>
+      gapsOf(value, given[key], path === "" ? key : `${path}.${key}`),
+    );
+  };
+
+  it("translate every text", () => {
+    for (const [file, module] of Object.entries(files)) {
+      expect(gapsOf(en, module.default, ""), file).toEqual([]);
+    }
+  });
 });
