@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { devices, expect, test } from "@playwright/test";
 import { LIST_ID, list, mockBackend } from "./fixtures";
 
 // From 840 px the pool is a column beside the board, with the count and the
@@ -38,5 +38,23 @@ test.describe("a wide screen", () => {
       .poll(async () => Math.round((await side.boundingBox())!.y))
       .toBe(Math.round(header));
     await expect(side.getByRole("button", { name: "Ex Machina" })).toBeInViewport();
+  });
+
+  // A tablet held upright: the docked tray one size up, rows one size down.
+  test("docks a taller tray on a tablet held upright", async ({ browser }) => {
+    const tablet = await browser.newContext({ ...devices["iPad (gen 7)"] });
+    const page = await tablet.newPage();
+    await mockBackend(page);
+    await page.goto(`/l/${LIST_ID}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+
+    const pool = page.locator(".pool");
+    await expect(pool).toHaveCSS("position", "fixed");
+    const tile = (await page.getByRole("button", { name: "Ex Machina" }).boundingBox())!;
+    expect([Math.round(tile.width), Math.round(tile.height)]).toEqual([56, 78]);
+    const band = (await page.locator(".tier__band").first().boundingBox())!;
+    expect(Math.round(band.width)).toBe(80);
+    await expect(page.getByRole("button", { name: "Copy link" })).toBeHidden();
+    await tablet.close();
   });
 });

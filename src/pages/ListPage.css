@@ -123,8 +123,11 @@
   gap: 8px;
 }
 
-/* On a phone the head gives its room to the board: the address is in the menu as Copy link. */
-@media (max-width: 599px) and (hover: none) and (pointer: coarse) {
+/*
+ * Below 840 the head gives its room to the board: the address is in the menu
+ * as Copy link. A narrow window on a laptop is as short of room as a phone.
+ */
+@media (max-width: 839px) {
   .list-head {
     gap: 8px 10px;
   }
@@ -145,6 +148,12 @@
   .list-head__own,
   .list-head__copy {
     display: none;
+  }
+
+  @media (min-width: 600px) {
+    .list-head__meta {
+      font: 400 12px/16px var(--font);
+    }
   }
 
   .list-menu__copy {

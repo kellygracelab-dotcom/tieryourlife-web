@@ -261,7 +261,7 @@
  * and every tier share the screen. A narrow desktop window keeps the pool
  * under the board, and a very short screen has no room for a docked tray.
  */
-@media (max-width: 599px) and (min-height: 421px) and (hover: none) and (pointer: coarse) {
+@media (max-width: 839px) and (min-height: 421px) and (hover: none) and (pointer: coarse) {
   /*
    * One line in any language. "Разложено 0 из 15 · Отменить · Завершить" is half
    * again as long as its English and wrapped the bar onto two lines, which took
@@ -513,6 +513,83 @@
 
   html:has(.pool:not(.pool--rest)) {
     scroll-padding-bottom: 168px;
+  }
+}
+
+/*
+ * A tablet held upright is tall: the docked tray costs little, so it stays,
+ * one size up — tiles 56×78, the rows the desktop's a size down — and the
+ * bar reaches the page's wider gutters.
+ */
+@media (min-width: 600px) and (max-width: 839px) and (hover: none) and (pointer: coarse) {
+  .ranking__bar {
+    margin: 0 calc(-1 * var(--space-8));
+    padding: 4px var(--space-8);
+  }
+
+  .tier {
+    min-height: 64px;
+  }
+
+  .tier:has(.tier__items > li) {
+    min-height: 100px;
+  }
+
+  .tier__band {
+    gap: 4px;
+    width: 80px;
+    padding: 8px;
+  }
+
+  .tier__label {
+    font: var(--text-band-letter);
+  }
+
+  .tier__caption {
+    font: var(--text-caption);
+    font-weight: 500;
+    opacity: 1;
+  }
+
+  .tier:not(:has(.tier__items > li)) .tier__caption {
+    display: block;
+  }
+
+  .tier__items {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .tier__items .tile,
+  .pool .tile {
+    width: 56px;
+    height: 78px;
+  }
+
+  .pool:not(.pool--rest) {
+    padding: 12px 0 calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .pool__head,
+  .pool__done {
+    padding: 0 24px;
+  }
+
+  .pool__items {
+    padding: 8px 24px 6px;
+    scroll-padding-inline-start: 24px;
+  }
+
+  body:has(.pool:not(.pool--rest)) .foot {
+    padding-bottom: calc(180px + env(safe-area-inset-bottom));
+  }
+
+  body:has(.pool:not(.pool--rest)) .snackbar {
+    bottom: calc(172px + env(safe-area-inset-bottom));
+  }
+
+  html:has(.pool:not(.pool--rest)) {
+    scroll-padding-bottom: 180px;
   }
 }
 
