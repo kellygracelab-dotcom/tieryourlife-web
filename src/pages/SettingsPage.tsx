@@ -469,7 +469,17 @@ export function SettingsPage({
       <h1 className="settings__heading">{strings.settings.title}</h1>
       {account?.kind === "signedIn" && <AccountTabs current="settings" />}
 
-      {account === null && <Skeleton height="20px" width="40%" />}
+      {account === null && (
+        // The guest card's shape while Firebase says who is here: it arrives some
+        // 400 ms after the first paint, and a bare line in its place let the cards
+        // below jump 200 px when it came (WebKit's click landed on the wrong one).
+        <section className="settings__card settings__card--guest" aria-busy="true">
+          <Skeleton height="34px" width="34px" />
+          <Skeleton height="26px" width="70%" />
+          <Skeleton height="44px" width="90%" />
+          <Skeleton height="40px" width="200px" />
+        </section>
+      )}
 
       {account?.kind === "guest" && (
         <section className="settings__card settings__card--guest">
