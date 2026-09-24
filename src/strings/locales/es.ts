@@ -162,6 +162,8 @@ const es: Translation = {
     follow: "Seguir",
     following: "Siguiendo",
     unfollow: "Dejar de seguir",
+    unfollowed: "Dejaste de seguir a {name}",
+    undo: "Deshacer",
     failed: "No se pudo seguir. Inténtalo de nuevo.",
     cancel: "Cancelar",
     signInTitle: "Inicia sesión para seguir",

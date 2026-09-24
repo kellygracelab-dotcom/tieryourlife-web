@@ -187,6 +187,8 @@ const ru: Translation = {
     follow: "Подписаться",
     following: "Вы подписаны",
     unfollow: "Отписаться",
+    unfollowed: "Вы отписались от {name}",
+    undo: "Отменить",
     failed: "Не удалось подписаться — попробуйте ещё раз.",
     cancel: "Отмена",
     signInTitle: "Войдите, чтобы подписаться",

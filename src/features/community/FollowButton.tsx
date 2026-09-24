@@ -10,16 +10,13 @@ interface FollowButtonProps {
 }
 
 /**
- * Follow, or Following with a check that turns into Unfollow under the
- * pointer. Never a spinner: one tap, and the answer is assumed.
+ * Follow in the primary-container colours, or Following with a check that
+ * turns into Unfollow under a pointer. Never a spinner: one tap, and the
+ * answer is assumed.
  */
 export function FollowButton({ following, onClick, size = "profile" }: FollowButtonProps) {
   const on = following === true;
-  const classes = [
-    "btn",
-    on ? "btn--tonal follow follow--on" : "btn--filled follow",
-    size === "card" ? "follow--card" : "",
-  ]
+  const classes = ["btn", "follow", on && "follow--on", size === "card" && "follow--card"]
     .filter(Boolean)
     .join(" ");
   return (

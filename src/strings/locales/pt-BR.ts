@@ -163,6 +163,8 @@ const ptBR: Translation = {
     follow: "Seguir",
     following: "Seguindo",
     unfollow: "Deixar de seguir",
+    unfollowed: "Você deixou de seguir {name}",
+    undo: "Desfazer",
     failed: "Não foi possível seguir. Tente de novo.",
     cancel: "Cancelar",
     signInTitle: "Entre para seguir",

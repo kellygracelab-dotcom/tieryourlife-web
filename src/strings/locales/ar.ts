@@ -207,6 +207,8 @@ const ar: Translation = {
     follow: "متابعة",
     following: "تتابعه",
     unfollow: "إلغاء المتابعة",
+    unfollowed: "ألغيت متابعة {name}",
+    undo: "تراجع",
     failed: "تعذّرت المتابعة. حاول مرة أخرى.",
     cancel: "إلغاء",
     signInTitle: "سجّل الدخول للمتابعة",

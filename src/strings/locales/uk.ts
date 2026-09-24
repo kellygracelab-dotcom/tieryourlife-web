@@ -186,6 +186,8 @@ const uk: Translation = {
     follow: "Підписатися",
     following: "Ви підписані",
     unfollow: "Відписатися",
+    unfollowed: "Ви відписалися від {name}",
+    undo: "Скасувати",
     failed: "Не вдалося підписатися — спробуйте ще раз.",
     cancel: "Скасувати",
     signInTitle: "Увійдіть, щоб підписатися",

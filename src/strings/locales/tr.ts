@@ -164,6 +164,8 @@ const tr: Translation = {
     follow: "Takip et",
     following: "Takiptesiniz",
     unfollow: "Takibi bırak",
+    unfollowed: "{name} artık takip edilmiyor",
+    undo: "Geri al",
     failed: "Takip edilemedi. Tekrar deneyin.",
     cancel: "İptal",
     signInTitle: "Takip etmek için oturum açın",

@@ -193,6 +193,8 @@ const pl: Translation = {
     follow: "Obserwuj",
     following: "Obserwujesz",
     unfollow: "Przestań obserwować",
+    unfollowed: "Już nie obserwujesz {name}",
+    undo: "Cofnij",
     failed: "Nie udało się zaobserwować – spróbuj ponownie.",
     cancel: "Anuluj",
     signInTitle: "Zaloguj się, aby obserwować",

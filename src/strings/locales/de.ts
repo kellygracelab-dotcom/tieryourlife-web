@@ -167,6 +167,8 @@ const de: Translation = {
     follow: "Folgen",
     following: "Abonniert",
     unfollow: "Nicht mehr folgen",
+    unfollowed: "Du folgst {name} nicht mehr",
+    undo: "Rückgängig",
     failed: "Folgen hat nicht geklappt – versuch es noch einmal.",
     cancel: "Abbrechen",
     signInTitle: "Zum Folgen anmelden",

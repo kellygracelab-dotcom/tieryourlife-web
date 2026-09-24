@@ -8,9 +8,10 @@ import { useFollow, type FollowDeps } from "../features/community/useFollow";
 import { useHidden } from "../features/community/useHidden";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
-import { plural, strings } from "../strings";
+import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
+import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./ProfilePage.css";
 
 /** What a link to a profile may carry along, so the head is drawn before any answer. */
@@ -37,6 +38,8 @@ export function ProfilePage({ load, follow }: ProfilePageProps) {
   const following = useFollow(uid, follow);
   const { hidden, showAuthor } = useHidden();
   const [asking, setAsking] = useState<Asking>("closed");
+  const [notice, setNotice] = useState<SnackbarNotice | null>(null);
+  const clearNotice = useCallback(() => setNotice(null), []);
 
   const lists = feed.state.status === "ready" ? feed.state.lists : [];
   const first = lists[0];
@@ -44,8 +47,18 @@ export function ProfilePage({ load, follow }: ProfilePageProps) {
   const photoUrl = hint?.photoUrl ?? first?.authorPhotoUrl ?? null;
   const own = account?.kind === "signedIn" && account.uid === uid;
 
+  // A finger gets no hover to say that Following means Unfollow, so an
+  // unfollow happens at once and the way back is offered instead.
   const onFollow = () => {
-    if (following.toggle() === "signIn") setAsking("open");
+    const wasFollowing = following.following === true;
+    if (following.toggle() === "signIn") {
+      setAsking("open");
+    } else if (wasFollowing) {
+      setNotice({
+        text: fill(strings.follow.unfollowed, { name }),
+        action: { text: strings.follow.undo, onClick: following.followNow },
+      });
+    }
   };
 
   // Follow was the reason for the sign-in, so it is applied right after it:
@@ -138,6 +151,7 @@ export function ProfilePage({ load, follow }: ProfilePageProps) {
         onSignIn={onSignIn}
         onCancel={closeAsk}
       />
+      <Snackbar notice={notice} onDone={clearNotice} />
     </section>
   );
 }

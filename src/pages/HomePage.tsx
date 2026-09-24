@@ -24,6 +24,7 @@ interface HomePageProps {
   load?: LoadFeed;
   loadSuggestions?: LoadSuggestions;
   follow?: Follow;
+  unfollow?: Follow;
 }
 
 function SignedInFeed({
@@ -31,11 +32,13 @@ function SignedInFeed({
   load,
   loadSuggestions,
   follow,
+  unfollow,
 }: {
   uid: string;
   load: LoadFeed | undefined;
   loadSuggestions: LoadSuggestions | undefined;
   follow: Follow | undefined;
+  unfollow: Follow | undefined;
 }) {
   const [source, setSource] = useState<FeedSource>(() =>
     readFeedSource(uid, (key) => localStorageStore.read(key)),
@@ -71,6 +74,7 @@ function SignedInFeed({
             onSeeEveryone={() => choose("everyone")}
             loadSuggestions={loadSuggestions}
             follow={follow}
+            unfollow={unfollow}
           />
         ) : (
           <FeedGrid
@@ -109,7 +113,7 @@ function GuestFeed({ load }: { load: LoadFeed | undefined }) {
   );
 }
 
-export function HomePage({ load, loadSuggestions, follow }: HomePageProps) {
+export function HomePage({ load, loadSuggestions, follow, unfollow }: HomePageProps) {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
@@ -147,6 +151,7 @@ export function HomePage({ load, loadSuggestions, follow }: HomePageProps) {
           load={load}
           loadSuggestions={loadSuggestions}
           follow={follow}
+          unfollow={unfollow}
         />
       ) : (
         <GuestFeed load={load} />

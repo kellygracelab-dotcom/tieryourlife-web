@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Link } from "react-router";
 import type { SuggestedAuthor } from "../../api/community";
 import { useSession } from "../../app/session";
-import { followAuthor, suggestedAuthors } from "../../lib/api";
+import { followAuthor, suggestedAuthors, unfollowAuthor } from "../../lib/api";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -49,11 +49,24 @@ export type Follow = (authorUid: string) => Promise<unknown>;
 
 const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
-function SuggestionCard({ author, follow }: { author: SuggestedAuthor; follow: Follow }) {
+function SuggestionCard({
+  author,
+  follow,
+  unfollow,
+}: {
+  author: SuggestedAuthor;
+  follow: Follow;
+  unfollow: Follow;
+}) {
   const [state, setState] = useState<"idle" | "following" | "failed">("idle");
-  const onFollow = () => {
-    setState("following");
-    follow(author.uid).catch(() => setState("failed"));
+  const toggle = () => {
+    if (state === "following") {
+      setState("idle");
+      unfollow(author.uid).catch(() => setState("following"));
+    } else {
+      setState("following");
+      follow(author.uid).catch(() => setState("failed"));
+    }
   };
   return (
     <li className="suggestion">
@@ -72,7 +85,7 @@ function SuggestionCard({ author, follow }: { author: SuggestedAuthor; follow: F
         <span className="suggestion__name">{author.name.trim() || strings.profile.someone}</span>
         <span className="suggestion__meta">{plural(strings.card.rankings, author.takeCount)}</span>
       </Link>
-      <FollowButton following={state === "following"} onClick={onFollow} size="card" />
+      <FollowButton following={state === "following"} onClick={toggle} size="card" />
       {state === "failed" && (
         <p className="follow__failed" role="alert">
           <Icon name="cloud_off" />
@@ -88,10 +101,12 @@ export function Suggestions({
   uid,
   load = suggestedAuthors,
   follow = followAuthor,
+  unfollow = unfollowAuthor,
 }: {
   uid: string;
   load?: LoadSuggestions;
   follow?: Follow;
+  unfollow?: Follow;
 }) {
   const loadFor = useCallback(() => load(), [load]);
   const { state } = useResource(uid, loadFor);
@@ -103,7 +118,7 @@ export function Suggestions({
       </h3>
       <ul className="suggestions__grid">
         {state.value.authors.map((author) => (
-          <SuggestionCard key={author.uid} author={author} follow={follow} />
+          <SuggestionCard key={author.uid} author={author} follow={follow} unfollow={unfollow} />
         ))}
       </ul>
     </section>
@@ -118,6 +133,7 @@ export function FollowingFeed({
   onSeeEveryone,
   loadSuggestions,
   follow,
+  unfollow,
 }: {
   state: FeedState;
   retry: () => void;
@@ -125,6 +141,7 @@ export function FollowingFeed({
   onSeeEveryone: () => void;
   loadSuggestions?: LoadSuggestions;
   follow?: Follow;
+  unfollow?: Follow;
 }) {
   const { account } = useSession();
   const uid = account?.kind === "signedIn" ? account.uid : "";
@@ -146,7 +163,7 @@ export function FollowingFeed({
           <p className="following-empty__title">{strings.home.followingNobody}</p>
           <p className="following-empty__body">{strings.home.followingNobodyBody}</p>
         </div>
-        <Suggestions uid={uid} load={loadSuggestions} follow={follow} />
+        <Suggestions uid={uid} load={loadSuggestions} follow={follow} unfollow={unfollow} />
       </>
     );
   }
