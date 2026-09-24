@@ -46,7 +46,14 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
 // dictionary, by language alone. Through the real build, so the hyphen in
 // pt-BR's file name is proven to come through import.meta.glob. Three cards
 // on the fixture list: Russian's form for 2–4, which English does not have.
-const SPOKEN = [
+const SPOKEN: {
+  browser: string;
+  lang: string;
+  dir?: "rtl";
+  left: string | RegExp;
+  placed: string | RegExp;
+  about: string;
+}[] = [
   {
     browser: "ru-RU",
     lang: "ru",
@@ -96,9 +103,25 @@ const SPOKEN = [
     placed: "0 / 3 yerleştirildi",
     about: "Hakkında",
   },
+  {
+    browser: "ja-JP",
+    lang: "ja",
+    left: "残り 3 枚",
+    placed: "3 枚中 0 枚を配置",
+    about: "このサイトについて",
+  },
+  // The digits: Western in engines on CLDR 42 and later, Arabic-Indic before.
+  {
+    browser: "ar-EG",
+    lang: "ar",
+    dir: "rtl",
+    left: /بقيت [3٣] بطاقات/,
+    placed: /وُضع [0٠] من [3٣]/,
+    about: "حول الموقع",
+  },
 ];
 
-for (const { browser, lang, left, placed, about } of SPOKEN) {
+for (const { browser, lang, dir, left, placed, about } of SPOKEN) {
   test.describe(`a browser set to ${browser}`, () => {
     test.use({ locale: browser });
 
@@ -106,6 +129,7 @@ for (const { browser, lang, left, placed, about } of SPOKEN) {
       await mockBackend(page);
       await page.goto("/l/abc");
       await expect(page.locator("html")).toHaveAttribute("lang", lang);
+      await expect(page.locator("html")).toHaveAttribute("dir", dir ?? "ltr");
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
       await expect(page.getByRole("heading", { level: 2 })).toHaveText(left);
       await expect(page.getByText(placed)).toBeVisible();

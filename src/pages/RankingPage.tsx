@@ -133,7 +133,8 @@ function Body({ ranking, mine, editing, onEdit, edit, store, savedNote }: BodyPr
         </div>
         <span className="list-head__address">
           <Icon name="link" />
-          {`${window.location.host}/r/${ranking.code}`}
+          {/* An address reads left to right in any language. */}
+          <span dir="ltr">{`${window.location.host}/r/${ranking.code}`}</span>
         </span>
       </header>
       {savedNote && (
