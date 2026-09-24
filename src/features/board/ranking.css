@@ -188,6 +188,10 @@
   scroll-margin-top: calc(var(--header-height) + 72px);
 }
 
+.pool__dots {
+  display: none;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .tier__items .tile {
     animation: tile-land 180ms ease-out;
@@ -419,6 +423,34 @@
 
   .pool__done {
     padding: 0 14px;
+  }
+
+  /* One per five tiles, the lit one is the page in view. The spec's 16 px row. */
+  .pool__dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 16px;
+  }
+
+  .pool__dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--ink-dim);
+    opacity: 0.35;
+  }
+
+  .pool__dot--on {
+    background: var(--link);
+    opacity: 1;
+  }
+
+  .pool__dots-more {
+    margin-inline-start: 2px;
+    font: var(--text-caption);
+    color: var(--ink-dim);
   }
 
   .pool__done .btn {
