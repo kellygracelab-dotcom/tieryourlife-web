@@ -82,6 +82,20 @@ const SPOKEN = [
     placed: "0 sur 3 placées",
     about: "À propos",
   },
+  {
+    browser: "pl-PL",
+    lang: "pl",
+    left: "Zostały 3 karty",
+    placed: "Umieszczono 0 z 3",
+    about: "O stronie",
+  },
+  {
+    browser: "tr-TR",
+    lang: "tr",
+    left: "3 kart kaldı",
+    placed: "0 / 3 yerleştirildi",
+    about: "Hakkında",
+  },
 ];
 
 for (const { browser, lang, left, placed, about } of SPOKEN) {
