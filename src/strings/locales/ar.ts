@@ -471,6 +471,8 @@ const ar: Translation = {
     hintPlace: "انقر مستوى لوضع {name}، أو اضغط رقمه",
     hintPickTouch: "انقر بطاقة، ثم مستوى",
     hintPlaceTouch: "انقر مستوى لوضعها",
+    search: "ابحث عن بطاقة",
+    searchNone: "لا توجد بطاقة بهذا الاسم.",
     allPlaced: {
       zero: "لا بطاقات",
       one: "وُضعت البطاقة",

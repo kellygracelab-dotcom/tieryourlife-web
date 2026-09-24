@@ -381,6 +381,8 @@ const ja: Translation = {
     hintPlace: "ティアをタップして {name} を置くか、番号を押します",
     hintPickTouch: "カードをタップしてからティアをタップ",
     hintPlaceTouch: "ティアをタップして配置",
+    search: "カードを探す",
+    searchNone: "その名前のカードはありません。",
     allPlaced: { other: "{n} 枚すべて配置しました" },
     allPlacedNote: "カードをドラッグして並べ直すか、完了してリンクを受け取りましょう。",
     allPlacedNoteEdit: "カードをドラッグして並べ直すか、このまま保存しましょう。",

@@ -422,6 +422,8 @@ const pl: Translation = {
     hintPlace: "Dotknij poziomu, aby umieścić {name}, albo naciśnij jego numer",
     hintPickTouch: "Dotknij karty, potem poziomu",
     hintPlaceTouch: "Dotknij poziomu, aby ją umieścić",
+    search: "Znajdź kartę",
+    searchNone: "Nie ma karty o tej nazwie.",
     allPlaced: { one: "Karta jest umieszczona", other: "Umieszczono wszystkie: {n}" },
     allPlacedNote: "Zmień zdanie, przeciągając kartę, albo zakończ i odbierz swój link.",
     allPlacedNoteEdit: "Zmień zdanie, przeciągając kartę, albo zapisz to, co masz.",

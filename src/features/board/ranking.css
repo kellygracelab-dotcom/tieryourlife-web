@@ -4,6 +4,49 @@
   gap: 12px;
 }
 
+/*
+ * Two halves: the board, and a column with the count, the buttons and the
+ * pool. From 840 px the column stands beside the board and stays put while
+ * the page scrolls. Below that the halves are not boxes at all: the bar, the
+ * board and the pool are the section's own flex items, in the order they
+ * always had, so the sticky bar and the phone's docked tray work as before.
+ */
+.ranking__main,
+.ranking__side {
+  display: contents;
+}
+
+.ranking__bar {
+  order: 0;
+}
+
+.ranking__error {
+  order: 1;
+}
+
+.ranking .result {
+  order: 2;
+}
+
+.ranking .board {
+  order: 3;
+}
+
+.ranking .pool {
+  order: 4;
+}
+
+.pool__search {
+  display: none;
+}
+
+.pool__none {
+  margin: 0;
+  padding: 0 8px;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
 .ranking__bar {
   position: sticky;
   top: var(--header-height);
@@ -475,16 +518,186 @@
 
 /* A phone on its side: no room for a docked tray, so the pool comes before the board. */
 @media (max-height: 420px) and (hover: none) and (pointer: coarse) {
-  .ranking > .pool {
-    order: 1;
-    margin-top: 0;
-  }
-
-  .ranking > .board {
+  .ranking .pool {
     order: 2;
+    margin-top: 0;
   }
 
   .ranking__bar {
     position: static;
+  }
+}
+
+/*
+ * A laptop or a tablet on its side. The pool is a column beside the board
+ * with the count and the buttons above it: a card and its tier are one short
+ * move apart, and the column shows two dozen cards where the strip under the
+ * board showed fifteen. It keeps its height and scrolls inside itself.
+ */
+@media (min-width: 840px) {
+  .ranking {
+    --side: 280px;
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--side);
+    align-items: start;
+    gap: 0;
+  }
+
+  .ranking__main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    max-width: 1080px;
+    padding: 16px 24px 24px 0;
+  }
+
+  .ranking__side {
+    position: sticky;
+    top: var(--header-height);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    height: calc(100vh - var(--header-height));
+    padding: 16px;
+    background: var(--surface);
+    border-inline-start: 1px solid var(--line);
+  }
+
+  .ranking__bar {
+    position: static;
+    flex-wrap: nowrap;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+  }
+
+  .ranking__progress {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 400 13px/18px var(--font);
+  }
+
+  .ranking__actions {
+    flex: none;
+  }
+
+  .ranking__bar .btn {
+    min-height: 40px;
+  }
+
+  /* Undo is its arrow in an outlined circle: the column has no room for the word next to Finish. */
+  .ranking__actions .btn--text:has(.btn__icon) {
+    justify-content: center;
+    min-width: 40px;
+    padding: 8px;
+    border-radius: 20px;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+
+  .ranking__actions .btn--text:has(.btn__icon) > span:not(.btn__icon) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .ranking .pool {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .pool--target {
+    box-shadow: none;
+  }
+
+  .pool--target .pool__items {
+    box-shadow: inset 0 0 0 3px var(--ink);
+  }
+
+  /* The head's pieces become the column's own: the title on top, the hint at the foot. */
+  .pool__head {
+    display: contents;
+  }
+
+  .pool__title {
+    order: 1;
+    padding: 0;
+  }
+
+  .pool__search {
+    order: 2;
+    display: block;
+    width: 100%;
+    height: 36px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 18px;
+    background: var(--surface-soft);
+    box-shadow: inset 0 0 0 1px var(--line);
+    font: var(--text-small);
+    color: var(--ink);
+  }
+
+  .pool__search:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  .pool__items {
+    order: 3;
+    display: grid;
+    flex: 1;
+    grid-template-columns: repeat(auto-fill, 64px);
+    /* 8, not the board's 10: four columns of 64 in the 320 px column, three in the 280. */
+    gap: 8px;
+    align-content: start;
+    justify-content: start;
+    min-height: 0;
+    padding: 3px;
+    overflow-y: auto;
+  }
+
+  .ranking .pool .tile {
+    width: 64px;
+    height: 90px;
+  }
+
+  .pool__none {
+    order: 3;
+    padding: 0;
+  }
+
+  .pool__hint--keys {
+    order: 5;
+    margin-top: auto;
+    font: 400 12px/16px var(--font);
+    color: var(--ink-faint);
+  }
+
+  .pool__done {
+    padding: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ranking {
+    --side: 320px;
   }
 }

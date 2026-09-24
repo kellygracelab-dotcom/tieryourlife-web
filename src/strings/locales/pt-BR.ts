@@ -385,6 +385,8 @@ const ptBR: Translation = {
     hintPlace: "Toque em um nível para colocar {name}, ou aperte o número dele",
     hintPickTouch: "Toque em um card, depois em um nível",
     hintPlaceTouch: "Toque em um nível para colocar",
+    search: "Encontrar um card",
+    searchNone: "Nenhum card com esse nome.",
     allPlaced: { one: "O card está colocado", other: "Os {n} cards estão colocados" },
     allPlacedNote: "Mudou de ideia? Arraste um card, ou termine e pegue seu link.",
     allPlacedNoteEdit: "Mudou de ideia? Arraste um card, ou salve o que tem.",
