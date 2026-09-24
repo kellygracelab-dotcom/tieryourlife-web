@@ -437,6 +437,7 @@ const tr: Translation = {
     saved: "Kaydedildi. Aynı bağlantı, yeni sıralama.",
     noAuthorVersion: "{name} bu listeyi sıralamadı.",
     rankYourself: "Katılmıyor musunuz? Kendiniz sıralayın.",
+    rankThis: "Bu listeyi sırala",
     listGone: "Bu sıralamanın yapıldığı liste artık kullanılamıyor.",
     unavailableTitle: "Bu sıralama kullanılamıyor",
     unavailableBody: "Bu adreste bir şey yok. Bağlantı yanlış kopyalanmış olabilir.",

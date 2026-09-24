@@ -439,6 +439,7 @@ const ptBR: Translation = {
     saved: "Salvo. Mesmo link, nova organização.",
     noAuthorVersion: "{name} não organizou esta lista.",
     rankYourself: "Discorda? Classifique você.",
+    rankThis: "Classificar esta lista",
     listGone: "A lista de onde veio esta classificação não está mais disponível.",
     unavailableTitle: "Esta classificação não está disponível",
     unavailableBody: "Não há nada neste endereço. O link pode ter sido copiado errado.",

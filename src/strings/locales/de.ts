@@ -450,6 +450,7 @@ const de: Translation = {
     saved: "Gespeichert. Gleicher Link, neue Anordnung.",
     noAuthorVersion: "{name} hat diese Liste nicht angeordnet.",
     rankYourself: "Anderer Meinung? Ordne sie selbst ein.",
+    rankThis: "Diese Liste einordnen",
     listGone: "Die Liste, aus der diese Rangliste entstand, ist nicht mehr verfügbar.",
     unavailableTitle: "Diese Rangliste ist nicht verfügbar",
     unavailableBody:

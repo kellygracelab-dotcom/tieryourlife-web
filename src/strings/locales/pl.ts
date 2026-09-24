@@ -474,6 +474,7 @@ const pl: Translation = {
     saved: "Zapisano. Ten sam link, nowy układ.",
     noAuthorVersion: "{name} nie ma układu tej listy.",
     rankYourself: "Nie zgadzasz się? Oceń po swojemu.",
+    rankThis: "Ułóż tę listę",
     listGone: "Lista, z której powstał ten ranking, nie jest już dostępna.",
     unavailableTitle: "Ten ranking jest niedostępny",
     unavailableBody: "Pod tym adresem nic nie ma. Link mógł zostać źle skopiowany.",

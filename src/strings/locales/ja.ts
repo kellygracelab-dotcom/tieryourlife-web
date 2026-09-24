@@ -435,6 +435,7 @@ const ja: Translation = {
     saved: "保存しました。同じリンク、新しい並べ方です。",
     noAuthorVersion: "{name} さんはこのリストを並べていません。",
     rankYourself: "違う意見？ 自分でランク付けしてみましょう。",
+    rankThis: "このリストをランク付け",
     listGone: "このランキングの元になったリストは利用できなくなりました。",
     unavailableTitle: "このランキングは利用できません",
     unavailableBody:
