@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import type { ReportReason } from "../api/community";
 import type { ApiError } from "../api/errors";
@@ -16,6 +16,8 @@ import { errorOf } from "../features/list/useResource";
 import { report as sendReport, unpublish as unpublishList } from "../lib/api";
 import { fill, plural, strings } from "../strings";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { BoardFrameContext } from "../features/board/boardFrame";
+import type { Dock } from "../features/board/dock";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
@@ -404,6 +406,11 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
   const [view, setView] = useState<View>("mine");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
+  // The shape the board took on a wide screen, so the header lays itself out
+  // to match, and a place in the header for the bar while the pool is under.
+  const [boardDock, setBoardDock] = useState<Dock | null>(null);
+  const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
+  const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
   const { hidden } = useHidden();
 
   if (state.status === "loading") return <Loading />;
@@ -423,7 +430,7 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
     />
   );
   return (
-    <article className="list-page">
+    <article className={boardDock === null ? "list-page" : `list-page list-page--${boardDock}`}>
       <header className="list-head">
         <PageTitle title={list.title} />
         <div className="list-head__text">
@@ -472,12 +479,19 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
             <VisitorMenu list={list} report={report} notify={setNotice} />
           )}
         </span>
+        <span className="list-head__bar" ref={setHeadSlot} />
       </header>
       {outOfSight && <HiddenView list={list} />}
       {!outOfSight && own && published}
       {!outOfSight &&
         !own &&
-        (view === "mine" ? <RankingBoard key={list.id} list={list} /> : published)}
+        (view === "mine" ? (
+          <BoardFrameContext.Provider value={frame}>
+            <RankingBoard key={list.id} list={list} />
+          </BoardFrameContext.Provider>
+        ) : (
+          published
+        ))}
       <Snackbar notice={notice} onDone={clearNotice} />
     </article>
   );

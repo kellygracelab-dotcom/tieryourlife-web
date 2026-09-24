@@ -204,6 +204,30 @@ describe("ListPage report and hide", () => {
 });
 
 describe("ListPage", () => {
+  it("puts the count, Undo and Finish in its header while the pool is docked under the board", async () => {
+    const had = { width: window.innerWidth, height: window.innerHeight };
+    Object.assign(window, { innerWidth: 1600, innerHeight: 900 });
+    try {
+      mocks.loadList.mockResolvedValue(list);
+      open();
+      await screen.findByRole("heading", { level: 1 });
+      const article = document.querySelector(".list-page")!;
+      expect(article).toHaveClass("list-page--under");
+      expect(document.querySelector(".list-head .ranking__bar")).not.toBeNull();
+      expect(
+        within(document.querySelector<HTMLElement>(".list-head")!).getByRole("button", {
+          name: "Finish",
+        }),
+      ).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Cards beside the board" }));
+      expect(article).toHaveClass("list-page--beside");
+      expect(document.querySelector(".list-head .ranking__bar")).toBeNull();
+    } finally {
+      Object.assign(window, { innerWidth: had.width, innerHeight: had.height });
+    }
+  });
+
   it("shows skeleton rows while the list is on its way", () => {
     mocks.loadList.mockReturnValue(new Promise(() => undefined));
     open();

@@ -7,6 +7,8 @@ import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
 import { arrange, poolOf } from "../features/board/arrange";
 import { localStorageStore, memoryStore, type DraftStore } from "../features/board/draft";
+import { BoardFrameContext, type BoardFrame } from "../features/board/boardFrame";
+import type { Dock } from "../features/board/dock";
 import { RankingBoard, type EditMode } from "../features/board/RankingBoard";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { readKept } from "../features/ranking/kept";
@@ -112,6 +114,8 @@ interface BodyProps {
   savedNote: boolean;
   share: Share;
   copy: (text: string) => Promise<void>;
+  frame: BoardFrame;
+  setHeadSlot: (slot: HTMLElement | null) => void;
 }
 
 /**
@@ -167,7 +171,19 @@ function Handout({
   );
 }
 
-function Body({ ranking, mine, editing, onEdit, edit, store, savedNote, share, copy }: BodyProps) {
+function Body({
+  ranking,
+  mine,
+  editing,
+  onEdit,
+  edit,
+  store,
+  savedNote,
+  share,
+  copy,
+  frame,
+  setHeadSlot,
+}: BodyProps) {
   const [view, setView] = useState<View>("visitor");
   const { snapshot } = ranking;
   const author = arrange(snapshot);
@@ -201,6 +217,7 @@ function Body({ ranking, mine, editing, onEdit, edit, store, savedNote, share, c
           {/* An address reads left to right in any language. */}
           <span dir="ltr">{`${window.location.host}/r/${ranking.code}`}</span>
         </span>
+        <span className="list-head__bar" ref={setHeadSlot} />
       </header>
       {savedNote && (
         <p className="list-page__saved" role="status">
@@ -209,12 +226,14 @@ function Body({ ranking, mine, editing, onEdit, edit, store, savedNote, share, c
         </p>
       )}
       {editing ? (
-        <RankingBoard
-          key={`edit-${ranking.code}`}
-          list={listOf(ranking)}
-          store={store}
-          edit={edit}
-        />
+        <BoardFrameContext.Provider value={frame}>
+          <RankingBoard
+            key={`edit-${ranking.code}`}
+            list={listOf(ranking)}
+            store={store}
+            edit={edit}
+          />
+        </BoardFrameContext.Provider>
       ) : (
         // The board's own grid: the panel stands beside the board from 840 px
         // and its pieces fall into the page's flow below that.
@@ -300,6 +319,10 @@ export function RankingPage({
   const [chosen, setChosen] = useState<boolean | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const scratch = useMemo(() => memoryStore(), []);
+  // The shape the board takes on a wide screen while the owner edits, and the bar's place in the header.
+  const [boardDock, setBoardDock] = useState<Dock | null>(null);
+  const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
+  const frame = useMemo<BoardFrame>(() => ({ headSlot, report: setBoardDock }), [headSlot]);
 
   const wantsEdit = params.has("edit");
   const ranking = state.status === "ready" ? state.value : null;
@@ -333,7 +356,7 @@ export function RankingPage({
   const shown = rows === null ? ranking : { ...ranking, rows };
   const mine = readKept(store, ranking.listId)?.code === ranking.code;
   return (
-    <article className="list-page">
+    <article className={boardDock === null ? "list-page" : `list-page list-page--${boardDock}`}>
       <Body
         ranking={shown}
         mine={mine}
@@ -344,6 +367,8 @@ export function RankingPage({
         savedNote={savedAt !== null}
         share={share}
         copy={copy}
+        frame={frame}
+        setHeadSlot={setHeadSlot}
       />
     </article>
   );

@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useReducer,
@@ -8,6 +9,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
 import type { PublishedList } from "../../api/types";
@@ -36,6 +38,10 @@ import {
   type BoardState,
 } from "./model";
 import { useTileDrag, type HitTest } from "./useTileDrag";
+import { BoardFrameContext } from "./boardFrame";
+import type { DockRows } from "./dock";
+import { DockToggle } from "./DockToggle";
+import { useDock } from "./useDock";
 import "./board.css";
 import "./ranking.css";
 
@@ -161,6 +167,41 @@ export function RankingBoard({
   const selectedTitle = selected === null ? null : (list.items[selected]?.title ?? null);
   const section = useRef<HTMLElement>(null);
   const tray = useRef<HTMLUListElement>(null);
+
+  // The pool's place on a wide screen, and what the page lends the board: a
+  // slot in its header for the bar while the pool is docked under the board.
+  const { dock, rows, wide, choose, resize } = useDock(store);
+  const docked = wide && dock === "under";
+  const frame = useContext(BoardFrameContext);
+  useEffect(() => {
+    frame.report(wide ? dock : null);
+    return () => frame.report(null);
+  }, [frame, wide, dock]);
+
+  // The 6 px strip on the dock's top edge: drag it to show one to four rows of cards.
+  const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const grip = event.currentTarget;
+    const startY = event.clientY;
+    let last = rows;
+    grip.setPointerCapture(event.pointerId);
+    const onMove = (move: PointerEvent) => {
+      const next = Math.min(
+        4,
+        Math.max(1, rows + Math.round((startY - move.clientY) / 100)),
+      ) as DockRows;
+      if (next === last) return;
+      last = next;
+      resize(next);
+    };
+    const onEnd = () => {
+      grip.removeEventListener("pointermove", onMove);
+      grip.removeEventListener("pointerup", onEnd);
+      grip.removeEventListener("pointercancel", onEnd);
+    };
+    grip.addEventListener("pointermove", onMove);
+    grip.addEventListener("pointerup", onEnd);
+    grip.addEventListener("pointercancel", onEnd);
+  };
 
   // Where the picked card was in the tray when it was placed. Once the tile
   // is in its row it flies from there, or fades in for someone who asked for
@@ -320,8 +361,54 @@ export function RankingBoard({
     .filter(Boolean)
     .join(" ");
 
+  const bar = (
+    <div className={docked ? "ranking__bar ranking__bar--head" : "ranking__bar"}>
+      <p className="ranking__progress" aria-live="polite">
+        {fill(strings.rank.placed, { n: placedCount(state), total: list.items.length })}
+      </p>
+      <div className="ranking__actions">
+        <Button
+          icon="undo"
+          onClick={() => dispatch({ type: "undo" })}
+          disabled={locked || !canUndo(state)}
+        >
+          {strings.rank.undo}
+        </Button>
+        {edit !== undefined && (
+          <Button onClick={edit.cancel} disabled={locked}>
+            {strings.rank.cancel}
+          </Button>
+        )}
+        {edit !== undefined && (
+          <Button
+            variant="filled"
+            icon="check"
+            onClick={onSave}
+            disabled={locked || placedCount(state) === 0}
+          >
+            {save.status === "saving" ? strings.rank.savingShort : strings.rank.saveChanges}
+          </Button>
+        )}
+        {edit === undefined && finish.status !== "done" && (
+          <Button
+            variant="filled"
+            icon="check"
+            onClick={onFinish}
+            disabled={locked || placedCount(state) === 0}
+          >
+            {strings.rank.finish}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <section className="ranking" aria-label={strings.rank.yours} ref={section}>
+    <section
+      className={docked ? "ranking ranking--under" : "ranking"}
+      aria-label={strings.rank.yours}
+      ref={section}
+    >
       <div className="ranking__main">
         {save.status === "failed" && (
           <p className="ranking__error" role="alert">
@@ -363,48 +450,18 @@ export function RankingBoard({
       </div>
 
       <div className="ranking__side">
-        <div className="ranking__bar">
-          <p className="ranking__progress" aria-live="polite">
-            {fill(strings.rank.placed, { n: placedCount(state), total: list.items.length })}
-          </p>
-          <div className="ranking__actions">
-            <Button
-              icon="undo"
-              onClick={() => dispatch({ type: "undo" })}
-              disabled={locked || !canUndo(state)}
-            >
-              {strings.rank.undo}
-            </Button>
-            {edit !== undefined && (
-              <Button onClick={edit.cancel} disabled={locked}>
-                {strings.rank.cancel}
-              </Button>
-            )}
-            {edit !== undefined && (
-              <Button
-                variant="filled"
-                icon="check"
-                onClick={onSave}
-                disabled={locked || placedCount(state) === 0}
-              >
-                {save.status === "saving" ? strings.rank.savingShort : strings.rank.saveChanges}
-              </Button>
-            )}
-            {edit === undefined && finish.status !== "done" && (
-              <Button
-                variant="filled"
-                icon="check"
-                onClick={onFinish}
-                disabled={locked || placedCount(state) === 0}
-              >
-                {strings.rank.finish}
-              </Button>
-            )}
-          </div>
-        </div>
+        {docked && frame.headSlot !== null ? createPortal(bar, frame.headSlot) : bar}
 
         {!restEmpty && (
-          <div className={poolClasses} data-drop="pool">
+          <div
+            key={dock}
+            className={poolClasses}
+            data-drop="pool"
+            style={{ "--dock-rows": rows } as CSSProperties}
+          >
+            {docked && (
+              <div className="pool__grip" onPointerDown={startResize} aria-hidden="true" />
+            )}
             {allPlaced ? (
               <div className="pool__done">
                 <p className="pool__done-title">
@@ -426,7 +483,25 @@ export function RankingBoard({
             ) : (
               <>
                 <div className="pool__head">
-                  <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
+                  <div className="pool__lead">
+                    <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
+                    <DockToggle dock={dock} onChoose={choose} />
+                  </div>
+                  {left.length > POOL_SEARCH_FROM && (
+                    <input
+                      className="pool__search"
+                      type="search"
+                      value={query}
+                      placeholder={strings.rank.search}
+                      aria-label={strings.rank.search}
+                      onChange={(event) => setQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Escape") return;
+                        setQuery("");
+                        event.currentTarget.blur();
+                      }}
+                    />
+                  )}
                   <p className="pool__hint pool__hint--keys">
                     {selectedTitle === null
                       ? fill(strings.rank.hintPick, { keys: `1–${keyboardTiers}` })
@@ -438,21 +513,6 @@ export function RankingBoard({
                       : strings.rank.hintPlaceTouch}
                   </p>
                 </div>
-                {left.length > POOL_SEARCH_FROM && (
-                  <input
-                    className="pool__search"
-                    type="search"
-                    value={query}
-                    placeholder={strings.rank.search}
-                    aria-label={strings.rank.search}
-                    onChange={(event) => setQuery(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key !== "Escape") return;
-                      setQuery("");
-                      event.currentTarget.blur();
-                    }}
-                  />
-                )}
                 <ul className="pool__items" ref={tray} onScroll={readPage}>
                   {shown.map((item) => (
                     <Tile

@@ -266,6 +266,62 @@ describe("RankingBoard", () => {
     expect(tray().getAllByRole("button")).toHaveLength(30);
   });
 
+  it("docks the pool under the board on a wide, tall window, and keeps the choice to put it beside", async () => {
+    const had = { width: window.innerWidth, height: window.innerHeight };
+    Object.assign(window, { innerWidth: 1600, innerHeight: 900 });
+    try {
+      const store = memoryStore();
+      render(
+        <MemoryRouter>
+          <RankingBoard list={list} store={store} />
+        </MemoryRouter>,
+      );
+      const board = () => document.querySelector(".ranking")!;
+      expect(board()).toHaveClass("ranking--under");
+      expect(document.querySelector(".pool__grip")).not.toBeNull();
+      expect(screen.getByRole("button", { name: "Cards under the board" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Cards beside the board" }));
+      expect(board()).not.toHaveClass("ranking--under");
+      expect(document.querySelector(".pool__grip")).toBeNull();
+      expect(store.data.get("tyl:pool-dock")).toContain('"wide":{"dock":"beside"');
+      // The picked card and the search survive the move.
+      await userEvent.click(card("Ex Machina"));
+      await userEvent.click(screen.getByRole("button", { name: "Cards under the board" }));
+      expect(card("Ex Machina")).toHaveAttribute("aria-pressed", "true");
+    } finally {
+      Object.assign(window, { innerWidth: had.width, innerHeight: had.height });
+    }
+  });
+
+  it("keeps the pool beside the board on a laptop window, and offers no toggle to a phone", () => {
+    const had = { width: window.innerWidth, height: window.innerHeight };
+    Object.assign(window, { innerWidth: 1280, innerHeight: 720 });
+    try {
+      const { unmount } = render(
+        <MemoryRouter>
+          <RankingBoard list={list} store={memoryStore()} />
+        </MemoryRouter>,
+      );
+      expect(document.querySelector(".ranking")).not.toHaveClass("ranking--under");
+      expect(screen.getByRole("group", { name: "Where the cards sit" })).toBeInTheDocument();
+      unmount();
+      Object.assign(window, { innerWidth: 390, innerHeight: 800 });
+      render(
+        <MemoryRouter>
+          <RankingBoard list={list} store={memoryStore()} />
+        </MemoryRouter>,
+      );
+      // The toggle is in the tree for the stylesheet to hide; the board's shape is the phone's.
+      expect(document.querySelector(".ranking")).not.toHaveClass("ranking--under");
+    } finally {
+      Object.assign(window, { innerWidth: had.width, innerHeight: had.height });
+    }
+  });
+
   it("has no search over a pool short enough to scan", () => {
     render(
       <MemoryRouter>

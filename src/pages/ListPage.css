@@ -174,8 +174,40 @@
 
 /* Beside a side column the head holds the list's identity in one 72 px row. */
 @media (min-width: 840px) {
+  .list-page {
+    --side: 280px;
+    --board-cap: 1760px;
+  }
+
   .list-head {
     min-height: 72px;
+  }
+
+  /* Beside: the header's content ends where the column begins. */
+  .list-page--beside .list-head {
+    padding-inline-end: calc(var(--side) - var(--space-8));
+  }
+
+  /* Under: the header is a sticky row under the app bar, and holds the count, Undo and Finish. */
+  .list-page--under .list-head {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 20;
+    margin-inline: calc(-1 * var(--space-8));
+    padding-block: 8px;
+    padding-inline: max(var(--space-8), calc((100vw - var(--board-cap)) / 2));
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--paper) 97%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  .list-head__bar {
+    display: flex;
+    align-items: center;
+  }
+
+  .list-head__bar:empty {
+    display: none;
   }
 
   .list-head__title {
@@ -246,5 +278,17 @@
     min-height: 32px;
     padding: 4px 14px;
     font-size: 13px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .list-page {
+    --side: 320px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .list-page {
+    --side: 392px;
   }
 }

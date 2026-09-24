@@ -474,6 +474,9 @@ const ar: Translation = {
     hintPlaceTouch: "انقر مستوى لوضعها",
     search: "ابحث عن بطاقة",
     searchNone: "لا توجد بطاقة بهذا الاسم.",
+    dock: "مكان البطاقات",
+    dockBeside: "البطاقات بجانب المستويات",
+    dockUnder: "البطاقات أسفل المستويات",
     allPlaced: {
       zero: "لا بطاقات",
       one: "وُضعت البطاقة",
