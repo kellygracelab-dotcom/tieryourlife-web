@@ -15,6 +15,7 @@ import { localStorageStore } from "../features/board/draft";
 import { claimKeptRankings } from "../features/ranking/claim";
 import { carryGuest } from "./api";
 import { getFirebaseAuth } from "./firebase";
+import { IN_APP_BROWSER, isInAppBrowser } from "./inAppBrowser";
 
 export type SignInOutcome =
   /** `switched` when the Google account already existed and the guest was carried over to it. */
@@ -28,6 +29,8 @@ export interface SignInDeps {
   /** Hands the rankings this device finished to the account that signed in. */
   keep: (uid: string) => Promise<unknown>;
   stash: Stash;
+  /** Whether this is a browser embedded in another app, where Google refuses to sign anyone in. */
+  inApp: () => boolean;
 }
 
 /** Where the guest's token waits while a redirect sign-in leaves and comes back. */
@@ -71,6 +74,7 @@ const defaultDeps: SignInDeps = {
   carry: carryGuest,
   keep: (uid) => claimKeptRankings(localStorageStore, uid),
   stash: sessionStash,
+  inApp: () => isInAppBrowser(navigator.userAgent),
 };
 
 const codeOf = (error: unknown): string =>
@@ -124,6 +128,9 @@ export async function signInWithGoogle(deps: SignInDeps = defaultDeps): Promise<
   await auth.authStateReady();
   const user = auth.currentUser;
   if (user !== null && !user.isAnonymous) return { kind: "signedIn", switched: false };
+  // Not even tried there: the popup fails, and the redirect it falls back to
+  // ends on Google's "disallowed_useragent" page with no way back.
+  if (deps.inApp()) return { kind: "failed", code: IN_APP_BROWSER };
   // Taken before linking: afterwards the guest may be gone from this session.
   const guestToken = user === null ? null : await user.getIdToken();
   try {

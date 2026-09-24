@@ -421,6 +421,8 @@ const ptBR: Translation = {
     busy: "Entrando…",
     linkOnly: "Ficar só com o link",
     failed: "Não foi possível entrar. Tente de novo, ou fique com o link.",
+    inApp:
+      "O Google não faz login dentro do navegador de outro aplicativo. Abra esta página no Chrome ou no Safari: o menu no canto tem “Abrir no navegador”.",
   },
   ranking: {
     opening: "Abrindo a classificação…",

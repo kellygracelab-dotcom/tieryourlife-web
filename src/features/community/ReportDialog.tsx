@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { REPORT_NOTE_MAX, REPORT_REASONS, type ReportReason } from "../../api/community";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { InAppNote } from "../../ui/InAppNote";
 import { Icon } from "../../ui/Icon";
 import "./report.css";
 
@@ -83,6 +84,7 @@ export function ReportDialog({
           {strings.report.signInTitle}
         </h2>
         <p className="dialog__body">{strings.report.signInBody}</p>
+        <InAppNote />
         <div className="dialog__actions">
           <Button onClick={onHideInstead} disabled={busy}>
             {strings.report.hideInstead}

@@ -416,6 +416,8 @@ export const en = {
     busy: "Signing in…",
     linkOnly: "Keep the link only",
     failed: "Could not sign in. Try again, or keep the link.",
+    inApp:
+      "Google will not sign you in inside another app's browser. Open this page in Chrome or Safari: the menu in the corner has “Open in browser”.",
   },
   ranking: {
     opening: "Opening the ranking…",

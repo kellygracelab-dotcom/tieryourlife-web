@@ -3,6 +3,7 @@ import { Link, Outlet, ScrollRestoration } from "react-router";
 import { useModerator } from "../features/moderation/useModerator";
 import type { Account } from "../lib/account";
 import { PLAY_URL } from "../lib/links";
+import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
@@ -58,11 +59,15 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
 
 export function Shell() {
   const { account, signIn } = useSession();
-  const [signing, setSigning] = useState<"idle" | "busy" | "failed">("idle");
+  const [signing, setSigning] = useState<"idle" | "busy" | "failed" | "inApp">("idle");
 
   const onSignIn = () => {
     setSigning("busy");
-    signIn().then((outcome) => setSigning(outcome.kind === "failed" ? "failed" : "idle"));
+    signIn().then((outcome) =>
+      setSigning(
+        outcome.kind !== "failed" ? "idle" : outcome.code === IN_APP_BROWSER ? "inApp" : "failed",
+      ),
+    );
   };
 
   return (
@@ -93,6 +98,11 @@ export function Shell() {
           )}
         </nav>
       </header>
+      {signing === "inApp" && (
+        <p className="top__banner" role="alert">
+          {strings.keep.inApp}
+        </p>
+      )}
       <main className="shell__main">
         <Outlet />
       </main>

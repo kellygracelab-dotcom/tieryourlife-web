@@ -419,6 +419,8 @@ const tr: Translation = {
     busy: "Oturum açılıyor…",
     linkOnly: "Yalnızca bağlantıyı sakla",
     failed: "Oturum açılamadı. Tekrar deneyin ya da bağlantıyı saklayın.",
+    inApp:
+      "Google, başka bir uygulamanın tarayıcısı içinden oturum açmaz. Bu sayfayı Chrome veya Safari'de açın: köşedeki menüde “Tarayıcıda aç” var.",
   },
   ranking: {
     opening: "Sıralama açılıyor…",
