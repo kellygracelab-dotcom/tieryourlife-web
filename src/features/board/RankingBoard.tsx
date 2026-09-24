@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useReducer,
   useRef,
   useState,
@@ -21,6 +22,7 @@ import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { DragGhost } from "./DragGhost";
+import { flyIn } from "./flight";
 import type { DragState } from "./drag";
 import { loadDraft, localStorageStore, saveDraft, type DraftScope, type DraftStore } from "./draft";
 import {
@@ -62,6 +64,11 @@ type PointerDownFor = (item: number) => (event: ReactPointerEvent<HTMLElement>) 
 
 /** The tray's side padding in ranking.css: a picked card stops this far from the edge. */
 const TRAY_INSET = 14;
+/** The tray's dots: one per this many tiles, this many at most, then "+n". An indicator, not a control. */
+const TRAY_PAGE = 5;
+const TRAY_DOTS = 8;
+/** The gap between tiles in ranking.css, part of a tile's stride. */
+const TRAY_GAP = 8;
 
 interface TileProps {
   list: PublishedList;
@@ -153,6 +160,34 @@ export function RankingBoard({
   const section = useRef<HTMLElement>(null);
   const tray = useRef<HTMLUListElement>(null);
 
+  // Where the picked card was in the tray when it was placed. Once the tile
+  // is in its row it flies from there, or fades in for someone who asked for
+  // less motion; a card dropped by hand needs no flight, it is already there.
+  const flight = useRef<{ item: number; from: DOMRect } | null>(null);
+  const placeSelected = useCallback(
+    (tier: number) => {
+      if (selected === null) return;
+      const from = section.current
+        ?.querySelector(`.pool [data-item="${selected}"]`)
+        ?.getBoundingClientRect();
+      if (from !== undefined) flight.current = { item: selected, from };
+      dispatch({ type: "place", item: selected, tier });
+    },
+    [dispatch, selected],
+  );
+  useLayoutEffect(() => {
+    const planned = flight.current;
+    if (planned === null) return;
+    flight.current = null;
+    const tile = section.current?.querySelector<HTMLElement>(
+      `.tier__items [data-item="${planned.item}"]`,
+    );
+    if (tile != null) flyIn(tile, planned.from);
+  });
+
+  // The tray's page, for the dots under it.
+  const [page, setPage] = useState(0);
+
   // On a phone the pool is one scrolling row; the picked card comes to its
   // start. Only the row scrolls: on a wide screen the pool may be off screen,
   // and the page must not jump to it after every key press. The distance is
@@ -230,14 +265,27 @@ export function RankingBoard({
         return dispatch({ type: "undo" });
       }
       const tier = tierForKey(event.key, list.tiers.length);
-      if (tier !== null && selected !== null) dispatch({ type: "place", item: selected, tier });
+      if (tier !== null) placeSelected(tier);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dispatch, list.tiers.length, selected, locked]);
+  }, [dispatch, list.tiers.length, placeSelected, locked]);
 
   const left = pool(state);
   const keyboardTiers = Math.min(list.tiers.length, 9);
+  const pages = Math.ceil(left.length / TRAY_PAGE);
+  // Which page the tray is on: measured, because a tile's stride is the
+  // stylesheet's, and scrollLeft counts from the right in Arabic.
+  const readPage = useCallback(() => {
+    const row = tray.current;
+    const holder = row?.firstElementChild;
+    if (row == null || !(holder instanceof HTMLElement)) return;
+    const stride = holder.offsetWidth + TRAY_GAP;
+    setPage(Math.min(pages - 1, Math.round(Math.abs(row.scrollLeft) / (stride * TRAY_PAGE))));
+  }, [pages]);
+  useEffect(() => {
+    readPage();
+  }, [readPage, left.length]);
   const picked = selected !== null && left.includes(selected);
   const allPlaced = left.length === 0 && finish.status !== "done";
   const poolClasses = [
@@ -328,6 +376,7 @@ export function RankingBoard({
             pointerDownFor={drag.onPointerDown}
             lifted={lifted}
             locked={locked}
+            onPlace={placeSelected}
           />
         ))}
       </div>
@@ -364,7 +413,7 @@ export function RankingBoard({
                 {selectedTitle === null ? strings.rank.hintPickTouch : strings.rank.hintPlaceTouch}
               </p>
             </div>
-            <ul className="pool__items" ref={tray}>
+            <ul className="pool__items" ref={tray} onScroll={readPage}>
               {left.map((item) => (
                 <Tile
                   key={item}
@@ -378,6 +427,14 @@ export function RankingBoard({
                 />
               ))}
             </ul>
+            {pages > 1 && (
+              <div className="pool__dots" aria-hidden="true">
+                {Array.from({ length: Math.min(pages, TRAY_DOTS) }, (_, i) => (
+                  <span key={i} className={i === page ? "pool__dot pool__dot--on" : "pool__dot"} />
+                ))}
+                {pages > TRAY_DOTS && <span className="pool__dots-more">+{pages - TRAY_DOTS}</span>}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -396,6 +453,8 @@ interface TierRowProps {
   pointerDownFor: PointerDownFor;
   lifted: number | null;
   locked: boolean;
+  /** Places the picked card here; the board plans the tile's flight first. */
+  onPlace: (tier: number) => void;
 }
 
 function TierRow({
@@ -408,6 +467,7 @@ function TierRow({
   pointerDownFor,
   lifted,
   locked,
+  onPlace,
 }: TierRowProps) {
   const meta = list.tiers[tier];
   const row = state.rows[tier] ?? [];
@@ -418,9 +478,7 @@ function TierRow({
     dragState.phase === "dragging" &&
     dragState.target?.kind === "tier" &&
     dragState.target.tier === tier;
-  const place = () => {
-    if (selected !== null) dispatch({ type: "place", item: selected, tier });
-  };
+  const place = () => onPlace(tier);
   const classes = ["tier", "band", armed && "tier--armed", targeted && "tier--target"]
     .filter(Boolean)
     .join(" ");

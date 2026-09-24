@@ -121,6 +121,10 @@ test.describe("ranking a list on a phone", () => {
         document.documentElement.dir = dir;
       }, direction);
 
+      // Twelve cards, five to a page: three dots, the first one lit.
+      await expect(page.locator(".pool__dot")).toHaveCount(3);
+      await expect(page.locator(".pool__dot").first()).toHaveClass(/pool__dot--on/);
+
       await page.getByRole("button", { name: "Film 6", exact: true }).tap();
       await expect
         .poll(async () => {
@@ -136,6 +140,9 @@ test.describe("ranking a list on a phone", () => {
           return Math.round(gap);
         })
         .toBe(14);
+      // The sixth card at the start is the second page, in either direction.
+      await expect(page.locator(".pool__dot").nth(1)).toHaveClass(/pool__dot--on/);
+      await expect(page.locator(".pool__dot--on")).toHaveCount(1);
     });
   }
 });

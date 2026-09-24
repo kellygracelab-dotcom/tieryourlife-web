@@ -178,6 +178,58 @@ describe("RankingBoard", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 card left");
   });
 
+  it("flies a tap-placed card from the tray to its row", async () => {
+    const animate = vi.fn();
+    const had = HTMLElement.prototype.animate;
+    HTMLElement.prototype.animate = animate as unknown as HTMLElement["animate"];
+    try {
+      render(
+        <MemoryRouter>
+          <RankingBoard list={list} store={memoryStore()} />
+        </MemoryRouter>,
+      );
+      await userEvent.click(card("Ex Machina"));
+      await userEvent.click(screen.getByRole("button", { name: "Place Ex Machina in S" }));
+      expect(animate).toHaveBeenCalledOnce();
+      expect(animate.mock.calls[0]?.[1]).toMatchObject({ duration: 220 });
+      // The tile in its row is what flies, not the one that left the tray.
+      expect(animate.mock.contexts[0]).toBe(
+        within(tierList("S")).getByRole("button", { name: "Ex Machina" }),
+      );
+    } finally {
+      HTMLElement.prototype.animate = had;
+    }
+  });
+
+  it("shows a dot per five cards in the tray, and none once five or fewer are left", () => {
+    const long: PublishedList = {
+      ...list,
+      itemCount: 12,
+      items: Array.from({ length: 12 }, (_, i) => ({
+        title: `Film ${i + 1}`,
+        imageUrl: null,
+        tierIndex: null,
+      })),
+    };
+    const { unmount } = render(
+      <MemoryRouter>
+        <RankingBoard list={long} store={memoryStore()} />
+      </MemoryRouter>,
+    );
+    expect(document.querySelectorAll(".pool__dot")).toHaveLength(3);
+    expect(document.querySelectorAll(".pool__dot--on")).toHaveLength(1);
+    unmount();
+    render(
+      <MemoryRouter>
+        <RankingBoard
+          list={{ ...long, itemCount: 5, items: long.items.slice(0, 5) }}
+          store={memoryStore()}
+        />
+      </MemoryRouter>,
+    );
+    expect(document.querySelector(".pool__dots")).toBeNull();
+  });
+
   it("takes a tap on a placed card as picking that card, not as placing the picked one on its row", async () => {
     render(
       <MemoryRouter>
