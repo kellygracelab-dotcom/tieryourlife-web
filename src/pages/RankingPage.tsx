@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router";
 import type { ApiError } from "../api/errors";
 import type { Ranking } from "../api/rank";
 import type { PublishedList } from "../api/types";
+import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
 import { arrange, poolOf } from "../features/board/arrange";
 import { localStorageStore, memoryStore, type DraftStore } from "../features/board/draft";
@@ -117,6 +118,7 @@ function Body({ ranking, mine, editing, onEdit, edit, store, savedNote }: BodyPr
   return (
     <>
       <header className="list-head">
+        <PageTitle title={snapshot.title} />
         <div className="list-head__text">
           <h1 className="list-head__title">{snapshot.title}</h1>
           <p className="list-head__meta">

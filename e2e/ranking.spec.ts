@@ -99,6 +99,32 @@ test.describe("ranking a list on a phone", () => {
     await expect(page.getByRole("heading", { level: 2 })).toHaveText("1 card left");
   });
 
+  test("the app bar says which list this is once the heading has scrolled away", async ({
+    page,
+  }) => {
+    await mockBackend(page);
+    // Two tiers and three cards do not fill a tall phone's screen; twelve tiers scroll.
+    const tiers = ["S", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K"].map((label) => ({
+      label,
+      caption: null,
+      colorLight: "#b03a32",
+      colorDark: "#f1948c",
+    }));
+    await page.route("**/lists/tall1", (route) =>
+      route.fulfill({ json: { ...list, id: "tall1", tiers } }),
+    );
+    await page.goto("/l/tall1");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+    await expect(page.locator(".top__title")).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, 300));
+    await expect(page.locator(".top__title")).toHaveText("Every A24 film, ranked");
+    await expect(page.locator(".top__title")).toBeVisible();
+    await expect(page.locator(".brand__name")).toBeHidden();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.locator(".top__title")).toHaveCount(0);
+    await expect(page.locator(".brand__name")).toBeVisible();
+  });
+
   // Twelve cards do not fit a phone's tray, so it scrolls. A card picked from the
   // middle comes to the start of the tray, and the start is the right edge when
   // the text runs right to left: measured from the left, it went off the screen.

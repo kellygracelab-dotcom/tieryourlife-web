@@ -1,9 +1,11 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
+import { PageTitle } from "./pageTitle";
 import { routes } from "./routes";
+import { Shell } from "./Shell";
 import { SessionContext, type Session } from "./session";
 
 vi.mock("../lib/api", () => ({
@@ -158,5 +160,30 @@ describe("Shell account", () => {
     expect(face).toHaveAttribute("src", "https://p/x.jpg");
     expect(face).toHaveAttribute("referrerpolicy", "no-referrer");
     expect(screen.getByText("You")).toBeInTheDocument();
+  });
+});
+
+describe("Shell page title", () => {
+  it("puts the page's title in the brand's place once the page has scrolled, and takes it away again", () => {
+    const router = createMemoryRouter(
+      [
+        {
+          element: <Shell />,
+          children: [{ path: "/", element: <PageTitle title="Every A24 film, ranked" /> }],
+        },
+      ],
+      { initialEntries: ["/"] },
+    );
+    render(<RouterProvider router={router} />);
+    expect(document.querySelector(".top__title")).toBeNull();
+
+    Object.defineProperty(window, "scrollY", { value: 120, configurable: true });
+    fireEvent.scroll(window);
+    expect(document.querySelector(".top__title")).toHaveTextContent("Every A24 film, ranked");
+    expect(document.querySelector(".top")).toHaveClass("top--titled");
+
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
+    fireEvent.scroll(window);
+    expect(document.querySelector(".top__title")).toBeNull();
   });
 });
