@@ -16,7 +16,85 @@
 
 .editor__title {
   margin: 0;
+  margin-inline-end: auto;
   font: var(--text-headline);
+}
+
+/* The page's one status line: the first thing missing, or that nothing is. */
+.editor__status {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 180px;
+  max-width: 300px;
+  margin: 0;
+  font: var(--text-small);
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-dim);
+}
+
+.editor__status-body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  animation: editor-status-in 150ms ease;
+}
+
+.editor__status-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.editor__status .ms {
+  flex: none;
+  font-size: 16px;
+  color: var(--ink-faint);
+}
+
+.editor__status--ready .ms {
+  color: var(--ok);
+}
+
+.editor__status--nudged,
+.editor__status--nudged .ms {
+  color: var(--error);
+}
+
+.editor__publish--held {
+  opacity: 0.38;
+}
+
+@keyframes editor-status-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor__status-body {
+    animation: none;
+  }
+}
+
+/* Below 840 the header row has no room: the line is a strip right under it. */
+@media (max-width: 839px) {
+  .editor__status {
+    flex: 1 0 100%;
+    order: 3;
+    max-width: none;
+    height: 32px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+  }
 }
 
 .editor__actions {
@@ -126,24 +204,6 @@
   box-shadow: inset 0 0 0 1px var(--error);
   font: var(--text-lead);
   color: var(--ink);
-}
-
-.editor__foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.editor__todo {
-  margin: 0;
-  font: var(--text-small);
-  color: var(--ink-dim);
-}
-
-.editor__todo--ready {
-  color: var(--tier-c);
 }
 
 .editor__preview {

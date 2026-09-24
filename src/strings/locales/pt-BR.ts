@@ -253,6 +253,7 @@ const ptBR: Translation = {
     tooManyCards: "No máximo 2000 cards.",
     ready: "Pronto para publicar.",
     startOver: "Começar de novo",
+    more: "Mais",
     failedOffline:
       "Sem conexão. Seu rascunho está a salvo neste aparelho; tente de novo quando voltar a ficar online.",
     failedBanned: "Você não pode publicar no momento.",

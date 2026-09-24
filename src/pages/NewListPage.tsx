@@ -6,6 +6,7 @@ import { useSession, type Session } from "../app/session";
 import { localStorageStore, type DraftStore } from "../features/board/draft";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { CardsEditor, type Upload } from "../features/editor/CardsEditor";
+import { focusProblem } from "../features/editor/focusProblem";
 import {
   clearEditorDraft,
   draftOf,
@@ -34,6 +35,8 @@ import type { SignInOutcome } from "../lib/signIn";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
+import { Icon } from "../ui/Icon";
+import { Menu } from "../ui/Menu";
 import { Skeleton } from "../ui/Skeleton";
 import "../features/editor/editor.css";
 
@@ -140,6 +143,7 @@ function Editor({
   );
   const [preview, setPreview] = useState(false);
   const [publishing, setPublishing] = useState<PublishState>({ status: "idle" });
+  const [nudged, setNudged] = useState<Draft | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -148,10 +152,19 @@ function Editor({
 
   const problems = problemsOf(draft);
   const busy = publishing.status === "busy";
+  // A press on Publish while something is missing turns the status line red
+  // and puts the cursor in the field; the next change to the draft calms it.
+  const nudging = nudged === draft && problems.length > 0;
 
   // No account wall on the way in: the draft stays on this device, and the
   // sign-in comes exactly when a name has to go on the list.
   const onPublish = async () => {
+    const first = problems[0];
+    if (first !== undefined) {
+      setNudged(draft);
+      focusProblem(first);
+      return;
+    }
     const body = publishBodyOf(draft);
     if (body === null) return;
     setPublishing({ status: "busy" });
@@ -195,10 +208,30 @@ function Editor({
 
   const editing = mode === "edit";
 
+  const status = busy
+    ? { tone: "busy", icon: "cloud_upload", text: strings.new.publishing }
+    : problems.length > 0
+      ? {
+          tone: nudging ? "nudged" : "todo",
+          icon: nudging ? "error" : "edit",
+          text: PROBLEM_TEXT[problems[0]!],
+        }
+      : { tone: "ready", icon: "check_circle", text: strings.new.ready };
+
   return (
     <div className="editor">
       <header className="editor__top">
         <h1 className="editor__title">{editing ? strings.new.editTitle : strings.new.title}</h1>
+        <p
+          id="editor-status"
+          className={`editor__status editor__status--${status.tone}`}
+          aria-live="polite"
+        >
+          <span key={`${status.tone}:${status.text}`} className="editor__status-body">
+            <Icon name={status.icon} />
+            <span className="editor__status-text">{status.text}</span>
+          </span>
+        </p>
         <div className="editor__actions">
           <Button
             variant="tonal"
@@ -211,15 +244,20 @@ function Editor({
           <Button
             variant="filled"
             icon="publish"
+            className={problems.length > 0 ? "editor__publish--held" : undefined}
             onClick={() => void onPublish()}
-            disabled={busy || problems.length > 0}
+            disabled={busy}
+            aria-describedby="editor-status"
           >
-            {busy
-              ? strings.new.publishing
-              : editing
-                ? strings.new.publishChanges
-                : strings.new.publish}
+            {editing ? strings.new.publishChanges : strings.new.publish}
           </Button>
+          <Menu label={strings.new.more} button={<Icon name="more_vert" />}>
+            <li>
+              <button type="button" className="menu__action" onClick={startOver} disabled={busy}>
+                {editing ? strings.new.discardChanges : strings.new.startOver}
+              </button>
+            </li>
+          </Menu>
         </div>
       </header>
 
@@ -297,17 +335,6 @@ function Editor({
           </div>
         </div>
       )}
-
-      <footer className="editor__foot">
-        {problems.length > 0 ? (
-          <p className="editor__todo">{PROBLEM_TEXT[problems[0]!]}</p>
-        ) : (
-          <p className="editor__todo editor__todo--ready">{strings.new.ready}</p>
-        )}
-        <Button onClick={startOver} disabled={busy}>
-          {editing ? strings.new.discardChanges : strings.new.startOver}
-        </Button>
-      </footer>
     </div>
   );
 }

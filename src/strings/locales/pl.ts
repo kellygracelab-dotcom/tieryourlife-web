@@ -282,6 +282,7 @@ const pl: Translation = {
     tooManyCards: "Najwyżej 2000 kart.",
     ready: "Gotowe do publikacji.",
     startOver: "Zacznij od nowa",
+    more: "Więcej",
     failedOffline:
       "Brak połączenia. Twój szkic jest bezpieczny na tym urządzeniu; spróbuj ponownie, gdy wrócisz do sieci.",
     failedBanned: "Na razie nie możesz publikować.",

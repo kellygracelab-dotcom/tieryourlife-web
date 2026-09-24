@@ -252,6 +252,7 @@ const ja: Translation = {
     tooManyCards: "カードは2000枚までです。",
     ready: "公開できます。",
     startOver: "最初からやり直す",
+    more: "その他",
     failedOffline:
       "接続がありません。下書きはこの端末に残っています。オンラインに戻ってからもう一度お試しください。",
     failedBanned: "今は公開できません。",

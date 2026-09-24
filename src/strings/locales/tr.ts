@@ -253,6 +253,7 @@ const tr: Translation = {
     tooManyCards: "En fazla 2000 kart.",
     ready: "Yayımlamaya hazır.",
     startOver: "Baştan başla",
+    more: "Daha fazla",
     failedOffline:
       "Bağlantı yok. Taslağınız bu cihazda güvende; çevrimiçi olduğunuzda tekrar deneyin.",
     failedBanned: "Şu anda yayımlayamazsınız.",
