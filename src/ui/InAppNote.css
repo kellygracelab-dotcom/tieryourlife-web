@@ -1,0 +1,8 @@
+.inapp-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font: var(--text-small);
+  color: var(--ink);
+  background: var(--surface-soft);
+}

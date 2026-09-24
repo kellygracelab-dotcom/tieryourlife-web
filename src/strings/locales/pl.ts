@@ -456,6 +456,8 @@ const pl: Translation = {
     busy: "Logowanie…",
     linkOnly: "Zachowaj tylko link",
     failed: "Nie udało się zalogować. Spróbuj ponownie albo zachowaj link.",
+    inApp:
+      "Google nie zaloguje cię w przeglądarce innej aplikacji. Otwórz tę stronę w Chrome albo Safari: w menu w rogu jest „Otwórz w przeglądarce”.",
   },
   ranking: {
     opening: "Otwieranie rankingu…",

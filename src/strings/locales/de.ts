@@ -432,6 +432,8 @@ const de: Translation = {
     busy: "Anmeldung läuft…",
     linkOnly: "Nur den Link behalten",
     failed: "Anmeldung fehlgeschlagen. Versuch es noch einmal oder behalte den Link.",
+    inApp:
+      "Google meldet dich im Browser einer anderen App nicht an. Öffne diese Seite in Chrome oder Safari: Das Menü in der Ecke hat „Im Browser öffnen“.",
   },
   ranking: {
     opening: "Rangliste wird geöffnet…",

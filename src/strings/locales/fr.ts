@@ -430,6 +430,8 @@ const fr: Translation = {
     busy: "Connexion…",
     linkOnly: "Garder seulement le lien",
     failed: "Connexion impossible. Réessayez, ou gardez le lien.",
+    inApp:
+      "Google ne vous connecte pas depuis le navigateur d’une autre application. Ouvrez cette page dans Chrome ou Safari\u00a0: le menu dans le coin propose «\u00a0Ouvrir dans le navigateur\u00a0».",
   },
   ranking: {
     opening: "Ouverture du classement…",

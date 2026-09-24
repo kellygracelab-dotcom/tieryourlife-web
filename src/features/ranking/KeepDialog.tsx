@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { InAppNote } from "../../ui/InAppNote";
 import "./keep.css";
 
 export type KeepState = "closed" | "open" | "busy" | "failed";
@@ -44,6 +45,7 @@ export function KeepDialog({ state, onGoogle, onLinkOnly }: KeepDialogProps) {
           {strings.keep.title}
         </h2>
         <p className="keep__body">{strings.keep.body}</p>
+        <InAppNote />
         {state === "failed" && (
           <p className="keep__error" role="alert">
             {strings.keep.failed}

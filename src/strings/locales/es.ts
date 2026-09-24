@@ -420,6 +420,8 @@ const es: Translation = {
     busy: "Iniciando sesión…",
     linkOnly: "Quedarme solo con el enlace",
     failed: "No se pudo iniciar sesión. Inténtalo de nuevo, o quédate con el enlace.",
+    inApp:
+      "Google no inicia sesión dentro del navegador de otra aplicación. Abre esta página en Chrome o Safari: el menú de la esquina tiene «Abrir en el navegador».",
   },
   ranking: {
     opening: "Abriendo la clasificación…",

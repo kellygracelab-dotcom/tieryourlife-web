@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
+import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { routes } from "./routes";
 import { SessionContext, type Session } from "./session";
 
@@ -113,6 +114,15 @@ describe("Shell account", () => {
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(signIn).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign in");
+  });
+
+  it("tells a person in another app's browser how to get out, instead of the plain failure", async () => {
+    const signIn = vi.fn(async () => ({ kind: "failed" as const, code: IN_APP_BROWSER }));
+    open({ signIn });
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Open this page in Chrome or Safari",
+    );
   });
 
   it("stays quiet when the person changes their mind", async () => {

@@ -244,6 +244,16 @@
   color: var(--error);
 }
 
+/* A sentence the header cannot hold: under it, full width. */
+.top__banner {
+  margin: 0;
+  padding: 8px 16px;
+  border-block-end: 1px solid var(--line);
+  font: var(--text-small);
+  color: var(--ink);
+  background: var(--surface-soft);
+}
+
 .shell__main {
   flex: 1;
   width: 100%;

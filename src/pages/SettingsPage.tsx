@@ -12,6 +12,7 @@ import { eraseMyAccount, loadMyLists, refreshPublishedAuthor } from "../lib/api"
 import { NAME_MAX, renameAccount, setFace, tidyName } from "../lib/profile";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
+import { InAppNote } from "../ui/InAppNote";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import "./SettingsPage.css";
@@ -475,6 +476,7 @@ export function SettingsPage({
           <Icon name="settings" className="settings__guest-icon" />
           <p className="settings__guest-title">{strings.settings.guestTitle}</p>
           <p className="settings__helper">{strings.settings.guestBody}</p>
+          <InAppNote />
           <div>
             <Button variant="filled" onClick={() => void signIn()}>
               {strings.keep.google}

@@ -1,3 +1,4 @@
+import { IN_APP_BROWSER } from "./inAppBrowser";
 import { FirebaseError } from "firebase/app";
 import type { UserInfo } from "firebase/auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -80,6 +81,7 @@ function deps(stashed: string | null = null): SignInDeps & { stashed: string[] }
   return {
     carry: mocks.carryGuest,
     keep: mocks.keep,
+    inApp: () => false,
     stash: {
       take: () => stashed,
       put: (token) => {
@@ -120,6 +122,13 @@ describe("signInWithGoogle", () => {
     expect(user.getIdToken).toHaveBeenCalledWith(true);
     expect(mocks.carryGuest).not.toHaveBeenCalled();
     expect(mocks.keep).toHaveBeenCalledWith("u1");
+  });
+
+  it("does not even try in a browser embedded in another app, and names that failure", async () => {
+    const outcome = await signInWithGoogle({ ...deps(), inApp: () => true });
+    expect(outcome).toEqual({ kind: "failed", code: IN_APP_BROWSER });
+    expect(mocks.signInWithPopup).not.toHaveBeenCalled();
+    expect(mocks.linkWithPopup).not.toHaveBeenCalled();
   });
 
   it("still signs in when handing the rankings over fails", async () => {

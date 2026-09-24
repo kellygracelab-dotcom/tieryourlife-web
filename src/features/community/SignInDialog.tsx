@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { InAppNote } from "../../ui/InAppNote";
 
 interface SignInDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ export function SignInDialog({ open, busy, title, body, onSignIn, onCancel }: Si
           {title}
         </h2>
         <p className="dialog__body">{body}</p>
+        <InAppNote />
         <div className="dialog__actions">
           <Button onClick={onCancel} disabled={busy}>
             {strings.follow.cancel}
