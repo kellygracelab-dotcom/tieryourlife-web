@@ -146,6 +146,15 @@ describe("SettingsPage", () => {
     expect(load).not.toHaveBeenCalled();
   });
 
+  it("holds the guest card's place while Firebase says who is here, with the theme already usable", () => {
+    open(null);
+    const pending = document.querySelector(".settings__card[aria-busy]");
+    expect(pending).not.toBeNull();
+    expect(pending?.querySelectorAll(".skeleton")).toHaveLength(4);
+    expect(screen.queryByText("Sign in to change your settings.")).toBeNull();
+    expect(screen.getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
+  });
+
   it("saves a new name, tells the shell and the published lists, and says so for a moment", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     rename.mockImplementation(async (name) => name);
