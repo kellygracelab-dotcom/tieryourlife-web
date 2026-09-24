@@ -17,6 +17,7 @@ import { report as sendReport, unpublish as unpublishList } from "../lib/api";
 import { fill, plural, strings } from "../strings";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { BoardFrameContext } from "../features/board/boardFrame";
+import { OwnerBoard } from "../features/editor/OwnerBoard";
 import type { Dock } from "../features/board/dock";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
@@ -78,6 +79,9 @@ export type Report = typeof sendReport;
 export type Unpublish = typeof unpublishList;
 
 type Notify = (notice: SnackbarNotice) => void;
+
+/** How long "Saved" stays on the page after a republish. */
+export const SAVED_NOTE_MS = 6000;
 
 /** The list's address, and the two ways to hand it to someone. */
 function useListLink(list: PublishedList) {
@@ -411,6 +415,13 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
+  // The owner's republish: the page fetches the list again and says so for a while.
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (savedAt === null) return;
+    const timer = setTimeout(() => setSavedAt(null), SAVED_NOTE_MS);
+    return () => clearTimeout(timer);
+  }, [savedAt]);
   const { hidden } = useHidden();
 
   if (state.status === "loading") return <Loading />;
@@ -423,7 +434,7 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
   const outOfSight = !own && isOutOfSight(hidden, list);
   const published = (
     <ReadOnlyBoard
-      label={own ? strings.list.yourArrangement : strings.list.viewTheirs}
+      label={strings.list.viewTheirs}
       tiers={list.tiers}
       items={list.items}
       {...arrange(list)}
@@ -482,7 +493,24 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
       {outOfSight && <HiddenView list={list} />}
-      {!outOfSight && own && published}
+      {savedAt !== null && (
+        <p className="list-page__saved" role="status">
+          <Icon name="check_circle" />
+          {strings.owner.saved}
+        </p>
+      )}
+      {!outOfSight && own && (
+        <BoardFrameContext.Provider value={frame}>
+          <OwnerBoard
+            key={`${list.id}:${list.updatedAt}`}
+            list={list}
+            onPublished={() => {
+              setSavedAt(Date.now());
+              retry();
+            }}
+          />
+        </BoardFrameContext.Provider>
+      )}
       {!outOfSight &&
         !own &&
         (view === "mine" ? (

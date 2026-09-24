@@ -428,6 +428,11 @@ export const en = {
     inApp:
       "Google will not sign you in inside another app's browser. Open this page in Chrome or Safari: the menu in the corner has “Open in browser”.",
   },
+  owner: {
+    title: "Your list",
+    behind: "The published copy is behind this board.",
+    saved: "Saved. Same link, updated for everyone.",
+  },
   ranking: {
     opening: "Opening the ranking…",
     visitors: "Visitor's ranking",

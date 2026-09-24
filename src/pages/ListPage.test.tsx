@@ -13,6 +13,7 @@ import { useHiddenStoreForTests } from "../features/community/useHidden";
 const mocks = vi.hoisted(() => ({
   loadList: vi.fn<(id: string) => Promise<PublishedList>>(),
   report: vi.fn<(id: string, request: unknown) => Promise<void>>(),
+  republish: vi.fn(),
   unpublish: vi.fn<(id: string) => Promise<void>>(),
 }));
 vi.mock("../lib/api", () => ({
@@ -23,6 +24,8 @@ vi.mock("../lib/api", () => ({
   loadReports: vi.fn(() => new Promise(() => undefined)),
   report: mocks.report,
   unpublish: mocks.unpublish,
+  republish: mocks.republish,
+  findInCatalogue: vi.fn(async () => []),
   loadMyLists: vi.fn(() => new Promise(() => undefined)),
   loadMyRankings: vi.fn(() => new Promise(() => undefined)),
   rearrangeRanking: vi.fn(),
@@ -302,10 +305,13 @@ describe("ListPage for its author", () => {
       "by danylo · your list · 2,140 rankings",
     );
     expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "Your ranking" })).toBeNull();
-    expect(screen.getByRole("region", { name: "Your arrangement" })).toHaveTextContent(
+    // The owner's list is the board itself, editable where it stands, as on the phone.
+    const own = screen.getByRole("region", { name: "Your list" });
+    expect(within(own).getByRole("region", { name: "Your ranking" })).toHaveTextContent(
       "Ex Machina",
     );
+    expect(within(own).getByLabelText("Add a card")).toBeInTheDocument();
+    expect(within(own).getByRole("button", { name: "Publish changes" })).toBeDisabled();
     expect(screen.getAllByRole("link", { name: "Edit" })[0]).toHaveAttribute(
       "href",
       "/new?list=abc",

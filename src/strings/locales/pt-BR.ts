@@ -433,6 +433,11 @@ const ptBR: Translation = {
     inApp:
       "O Google não faz login dentro do navegador de outro aplicativo. Abra esta página no Chrome ou no Safari: o menu no canto tem “Abrir no navegador”.",
   },
+  owner: {
+    title: "Sua lista",
+    behind: "A versão publicada está desatualizada.",
+    saved: "Salvo. O mesmo link, atualizado para todos.",
+  },
   ranking: {
     opening: "Abrindo a classificação…",
     visitors: "Classificação de um visitante",

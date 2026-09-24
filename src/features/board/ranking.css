@@ -40,6 +40,43 @@
   display: none;
 }
 
+/* The owner may take a card off the list: a small cross on the tile, under the pointer or always to a finger. */
+.tile-holder--removable {
+  position: relative;
+}
+
+.tile__remove {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 2px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.tile__remove .ms {
+  font-size: 16px;
+}
+
+.tile-holder--removable:hover .tile__remove,
+.tile-holder--removable:focus-within .tile__remove {
+  display: inline-flex;
+}
+
+@media (hover: none) {
+  .tile__remove {
+    display: inline-flex;
+  }
+}
+
 /* Only a wide screen has two places for the cards; the toggle waits for it. */
 .dock {
   display: none;
@@ -786,6 +823,26 @@
 
   .ranking:not(.ranking--under) .ranking__actions {
     flex: none;
+  }
+
+  /* The owner's three buttons do not fit one line of the column: the words wrap onto the next. */
+  .ranking:not(.ranking--under) .ranking__bar--owner {
+    flex-wrap: wrap;
+  }
+
+  .ranking:not(.ranking--under) .ranking__bar--owner .ranking__actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .ranking:not(.ranking--under) .ranking__bar--owner .ranking__actions .btn--filled,
+  .ranking:not(.ranking--under)
+    .ranking__bar--owner
+    .ranking__actions
+    .btn--text:not(:has(.btn__icon)) {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 
   .ranking:not(.ranking--under) .ranking__bar .btn {

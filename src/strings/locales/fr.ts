@@ -442,6 +442,11 @@ const fr: Translation = {
     inApp:
       "Google ne vous connecte pas depuis le navigateur d’une autre application. Ouvrez cette page dans Chrome ou Safari\u00a0: le menu dans le coin propose «\u00a0Ouvrir dans le navigateur\u00a0».",
   },
+  owner: {
+    title: "Votre liste",
+    behind: "La version publiée est en retard sur ce tableau.",
+    saved: "Enregistré. Même lien, mis à jour pour tout le monde.",
+  },
   ranking: {
     opening: "Ouverture du classement…",
     visitors: "Classement d’un visiteur",

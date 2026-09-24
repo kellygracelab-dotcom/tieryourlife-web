@@ -431,6 +431,11 @@ const tr: Translation = {
     inApp:
       "Google, başka bir uygulamanın tarayıcısı içinden oturum açmaz. Bu sayfayı Chrome veya Safari'de açın: köşedeki menüde “Tarayıcıda aç” var.",
   },
+  owner: {
+    title: "Listeniz",
+    behind: "Yayımlanan sürüm bu panonun gerisinde.",
+    saved: "Kaydedildi. Aynı bağlantı, herkes için güncellendi.",
+  },
   ranking: {
     opening: "Sıralama açılıyor…",
     visitors: "Bir ziyaretçinin sıralaması",

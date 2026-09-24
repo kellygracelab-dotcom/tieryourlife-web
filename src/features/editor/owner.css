@@ -1,0 +1,44 @@
+.owner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* The box that brings cards in, above the board: the upload beside the field where there is room. */
+.owner__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 16px;
+}
+
+.owner__add .cards__add {
+  flex: 1 1 320px;
+}
+
+.owner__add .cards__upload {
+  padding-top: 26px;
+}
+
+.owner__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.owner__status .ms {
+  font-size: 18px;
+}
+
+.owner__status--failed {
+  color: var(--error);
+}
+
+@media (max-width: 599px) {
+  .owner__add .cards__upload {
+    padding-top: 0;
+  }
+}
