@@ -16,6 +16,7 @@ const ptBR: Translation = {
     yourRankings: "Suas classificações",
     myLists: "Minhas listas",
     makeList: "Criar uma lista",
+    search: "Pesquisar listas",
     signInFailed: "Não foi possível entrar. Tente de novo.",
     keepOnPhone: "Leve suas listas no celular",
     theme: "Tema",

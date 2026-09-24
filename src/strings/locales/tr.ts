@@ -18,6 +18,7 @@ const tr: Translation = {
     yourRankings: "Sıralamalarınız",
     myLists: "Listelerim",
     makeList: "Liste oluştur",
+    search: "Liste ara",
     signInFailed: "Oturum açılamadı. Tekrar deneyin.",
     keepOnPhone: "Listeleriniz telefonunuzda olsun",
     theme: "Tema",

@@ -16,6 +16,7 @@ const pl: Translation = {
     yourRankings: "Twoje rankingi",
     myLists: "Moje listy",
     makeList: "Utwórz listę",
+    search: "Szukaj list",
     signInFailed: "Nie udało się zalogować. Spróbuj ponownie.",
     keepOnPhone: "Miej swoje listy w telefonie",
     theme: "Motyw",

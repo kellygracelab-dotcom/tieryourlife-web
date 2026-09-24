@@ -16,6 +16,7 @@ const ar: Translation = {
     yourRankings: "تصنيفاتك",
     myLists: "قوائمي",
     makeList: "إنشاء قائمة",
+    search: "ابحث عن قوائم",
     signInFailed: "تعذّر تسجيل الدخول. حاول مرة أخرى.",
     keepOnPhone: "احتفظ بقوائمك على هاتفك",
     theme: "المظهر",

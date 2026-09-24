@@ -15,6 +15,7 @@ const ru: Translation = {
     yourRankings: "Ваши рейтинги",
     myLists: "Мои списки",
     makeList: "Создать список",
+    search: "Поиск списков",
     signInFailed: "Не удалось войти. Попробуйте ещё раз.",
     keepOnPhone: "Держите списки в телефоне",
     theme: "Тема",

@@ -9,6 +9,7 @@ export const en = {
     yourRankings: "Your rankings",
     myLists: "My lists",
     makeList: "Make a list",
+    search: "Search lists",
     signInFailed: "Could not sign in. Try again.",
     keepOnPhone: "Keep your lists on your phone",
     theme: "Theme",
