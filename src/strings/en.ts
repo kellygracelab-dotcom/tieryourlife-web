@@ -248,6 +248,7 @@ export const en = {
     tooManyCards: "At most 2000 cards.",
     ready: "Ready to publish.",
     startOver: "Start over",
+    more: "More",
     failedOffline:
       "No connection. Your draft is safe on this device; try again once you are back online.",
     failedBanned: "You cannot publish at the moment.",

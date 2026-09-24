@@ -24,6 +24,7 @@
   --accent-hover: #333333;
   --on-accent: #ffffff;
   --error: #b3261e;
+  --ok: #3f7f55;
   --focus: #4a5baa;
 
   --tier-s: #b03a32;
@@ -88,6 +89,7 @@
     --accent-hover: #c7c5d0;
     --on-accent: #1b1b21;
     --error: #ffb4ab;
+    --ok: #7bd394;
     --focus: #bac3ff;
 
     --tier-s: #f1948c;
@@ -125,6 +127,7 @@
   --accent-hover: #c7c5d0;
   --on-accent: #1b1b21;
   --error: #ffb4ab;
+  --ok: #7bd394;
   --focus: #bac3ff;
 
   --tier-s: #f1948c;

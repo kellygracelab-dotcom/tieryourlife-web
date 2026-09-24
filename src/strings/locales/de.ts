@@ -255,6 +255,7 @@ const de: Translation = {
     tooManyCards: "Höchstens 2000 Karten.",
     ready: "Bereit zum Veröffentlichen.",
     startOver: "Von vorn",
+    more: "Mehr",
     failedOffline:
       "Keine Verbindung. Dein Entwurf ist auf diesem Gerät sicher; versuch es erneut, sobald du wieder online bist.",
     failedBanned: "Du kannst im Moment nicht veröffentlichen.",

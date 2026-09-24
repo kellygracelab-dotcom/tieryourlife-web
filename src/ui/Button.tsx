@@ -19,6 +19,8 @@ interface LinkProps extends CommonProps {
 interface ClickProps extends CommonProps {
   onClick?: () => void;
   disabled?: boolean;
+  /** The element that says more about the press, such as a status line. */
+  "aria-describedby"?: string;
   type?: "button" | "submit";
 }
 
@@ -56,6 +58,7 @@ export function Button(props: ButtonProps) {
       type={props.type ?? "button"}
       onClick={props.onClick}
       disabled={props.disabled}
+      aria-describedby={props["aria-describedby"]}
     >
       {content}
     </button>

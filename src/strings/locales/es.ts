@@ -250,6 +250,7 @@ const es: Translation = {
     tooManyCards: "Como máximo 2000 tarjetas.",
     ready: "Todo listo para publicar.",
     startOver: "Empezar de nuevo",
+    more: "Más",
     failedOffline:
       "Sin conexión. Tu borrador está a salvo en este dispositivo; inténtalo de nuevo cuando vuelvas a estar en línea.",
     failedBanned: "Ahora mismo no puedes publicar.",

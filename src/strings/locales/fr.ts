@@ -257,6 +257,7 @@ const fr: Translation = {
     tooManyCards: "2000 cartes au maximum.",
     ready: "Prête à publier.",
     startOver: "Recommencer",
+    more: "Plus",
     failedOffline:
       "Pas de connexion. Votre brouillon est à l’abri sur cet appareil ; réessayez une fois de retour en ligne.",
     failedBanned: "Vous ne pouvez pas publier pour le moment.",

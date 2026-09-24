@@ -170,7 +170,8 @@ describe("NewListPage", () => {
 
   it("starts with the app's five tiers, no cards, and Publish held back", () => {
     open();
-    expect(publishButton()).toBeDisabled();
+    expect(publishButton()).toBeEnabled();
+    expect(publishButton()).toHaveAccessibleDescription("Give the list a title.");
     expect(screen.getByText("Give the list a title.")).toBeInTheDocument();
     expect(
       within(screen.getByRole("list", { name: "Tiers" })).getAllByRole("listitem"),
@@ -178,6 +179,35 @@ describe("NewListPage", () => {
     expect(screen.getByLabelText("Label of tier 1")).toHaveValue("S");
     expect(screen.getByLabelText("Caption of S")).toHaveValue("Best");
     expect(screen.getByText("0 added")).toBeInTheDocument();
+  });
+
+  it("points at what is missing when Publish is pressed too soon, and the next change calms it", async () => {
+    open();
+    const line = () => document.querySelector(".editor__status")!;
+    expect(line()).toHaveClass("editor__status--todo");
+
+    await userEvent.click(publishButton());
+    expect(publish).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Title")).toHaveFocus();
+    expect(line()).toHaveClass("editor__status--nudged");
+    expect(line()).toHaveTextContent("Give the list a title.");
+
+    await userEvent.keyboard("T");
+    expect(line()).toHaveClass("editor__status--todo");
+    expect(line()).toHaveTextContent("Pick a category.");
+
+    await userEvent.click(publishButton());
+    expect(screen.getByRole("button", { name: "Anime" })).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "Anime" }));
+    await userEvent.click(publishButton());
+    expect(screen.getByLabelText("Add a card")).toHaveFocus();
+    expect(line()).toHaveClass("editor__status--nudged");
+    expect(line()).toHaveTextContent("Add at least one card.");
+
+    await userEvent.type(screen.getByLabelText("Add a card"), "One{Enter}");
+    expect(line()).toHaveClass("editor__status--ready");
+    expect(line()).toHaveTextContent("Ready to publish.");
+    expect(publishButton()).toHaveAccessibleDescription("Ready to publish.");
   });
 
   it("adds cards from the catalogue and by name, removes one, and publishes", async () => {
@@ -279,6 +309,7 @@ describe("NewListPage", () => {
 
     open(member, store);
     expect(screen.getByLabelText("Title")).toHaveValue("Kept");
+    await userEvent.click(screen.getByLabelText("More"));
     await userEvent.click(screen.getByRole("button", { name: "Start over" }));
     expect(screen.getByLabelText("Title")).toHaveValue("");
     expect(store.read("tyl:new")).toContain('"title":""');
@@ -378,6 +409,7 @@ describe("NewListPage", () => {
     open();
     await userEvent.upload(screen.getByLabelText("Upload images"), picture("a.png"));
     expect(await screen.findByText("1 added")).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("More"));
     await userEvent.click(screen.getByRole("button", { name: "Start over" }));
     expect(discard).toHaveBeenCalledWith(["pic-1"]);
   });
@@ -432,6 +464,7 @@ describe("NewListPage", () => {
 
     open(member, store, undefined, "/new?list=l1");
     expect(await screen.findByLabelText("Title")).toHaveValue("Ghibli, ranked!");
+    await userEvent.click(screen.getByLabelText("More"));
     await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
     expect(screen.getByLabelText("Title")).toHaveValue("Ghibli, ranked");
   });
