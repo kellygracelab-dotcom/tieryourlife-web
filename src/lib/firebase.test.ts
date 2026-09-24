@@ -12,7 +12,7 @@ const check = { app };
 const mocks = vi.hoisted(() => ({
   getApps: vi.fn(() => [] as unknown[]),
   initializeApp: vi.fn(),
-  getAuth: vi.fn(),
+  initializeAuth: vi.fn(),
   signInAnonymously: vi.fn(),
   signOut: vi.fn(async () => undefined),
   initializeAppCheck: vi.fn(),
@@ -23,7 +23,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("firebase/app", () => ({ getApps: mocks.getApps, initializeApp: mocks.initializeApp }));
 vi.mock("firebase/auth", () => ({
-  getAuth: mocks.getAuth,
+  initializeAuth: mocks.initializeAuth,
+  indexedDBLocalPersistence: "indexedDB",
+  browserLocalPersistence: "local",
   signInAnonymously: mocks.signInAnonymously,
   signOut: mocks.signOut,
 }));
@@ -36,6 +38,7 @@ vi.mock("firebase/storage", () => ({ getStorage: mocks.getStorage }));
 
 import {
   getAppCheckToken,
+  getFirebaseAuth,
   getFirebaseApp,
   getFirebaseStorage,
   getIdToken,
@@ -52,7 +55,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.getApps.mockReturnValue([]);
   mocks.initializeApp.mockReturnValue(app);
-  mocks.getAuth.mockReturnValue(auth);
+  mocks.initializeAuth.mockReturnValue(auth);
   mocks.signInAnonymously.mockResolvedValue({ user: guest });
   mocks.initializeAppCheck.mockReturnValue(check);
   mocks.getToken.mockResolvedValue({ token: "app-check" });
@@ -72,6 +75,17 @@ describe("getFirebaseApp", () => {
     mocks.getApps.mockReturnValue([app]);
     expect(getFirebaseApp()).toBe(app);
     expect(mocks.initializeApp).not.toHaveBeenCalled();
+  });
+
+  it("sets up Auth once, with the persistence getAuth would use and no popup resolver", () => {
+    expect(getFirebaseAuth()).toBe(auth);
+    expect(getFirebaseAuth()).toBe(auth);
+    expect(mocks.initializeAuth).toHaveBeenCalledOnce();
+    // The resolver would fetch apis.google.com on every page a phone opens; it
+    // comes with the sign-in calls instead.
+    expect(mocks.initializeAuth).toHaveBeenCalledWith(app, {
+      persistence: ["indexedDB", "local"],
+    });
   });
 
   it("hands out storage for that app", () => {

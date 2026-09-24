@@ -1,5 +1,6 @@
 import { FirebaseError } from "firebase/app";
 import {
+  browserPopupRedirectResolver,
   getRedirectResult,
   GoogleAuthProvider,
   linkWithPopup,
@@ -134,8 +135,11 @@ export async function signInWithGoogle(deps: SignInDeps = defaultDeps): Promise<
   // Taken before linking: afterwards the guest may be gone from this session.
   const guestToken = user === null ? null : await user.getIdToken();
   try {
+    // The resolver comes here, not with the Auth instance: see getFirebaseAuth().
     const result =
-      user === null ? await signInWithPopup(auth, google()) : await linkWithPopup(user, google());
+      user === null
+        ? await signInWithPopup(auth, google(), browserPopupRedirectResolver)
+        : await linkWithPopup(user, google(), browserPopupRedirectResolver);
     await adoptProfile(result.user);
     await deps.keep(result.user.uid).catch(() => undefined);
     return { kind: "signedIn", switched: false };
@@ -147,8 +151,8 @@ export async function signInWithGoogle(deps: SignInDeps = defaultDeps): Promise<
     if (code === CODE.popupClosed || code === CODE.popupCancelled) return { kind: "cancelled" };
     if (code === CODE.popupBlocked || code === CODE.unsupported) {
       if (guestToken !== null) deps.stash.put(guestToken);
-      if (user === null) await signInWithRedirect(auth, google());
-      else await linkWithRedirect(user, google());
+      if (user === null) await signInWithRedirect(auth, google(), browserPopupRedirectResolver);
+      else await linkWithRedirect(user, google(), browserPopupRedirectResolver);
       return { kind: "redirecting" };
     }
     return { kind: "failed", code };
@@ -162,7 +166,7 @@ export async function completeSignIn(
   const auth = getFirebaseAuth();
   const guestToken = deps.stash.take();
   try {
-    const result = await getRedirectResult(auth);
+    const result = await getRedirectResult(auth, browserPopupRedirectResolver);
     if (result === null) return null;
     await adoptProfile(result.user);
     await deps.keep(result.user.uid).catch(() => undefined);
