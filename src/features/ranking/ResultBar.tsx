@@ -106,7 +106,11 @@ export function ResultBar({
   return (
     <div className="result result--done" role="status">
       <p className="result__lead">
-        {strings.rank.live} <span className="result__address">{address}</span>
+        {strings.rank.live}{" "}
+        {/* An address reads left to right in any language; without this, Arabic turns it inside out. */}
+        <span className="result__address" dir="ltr">
+          {address}
+        </span>
       </p>
       <p className="result__note">{kept ? strings.rank.liveNoteKept : strings.rank.liveNote}</p>
       <div className="result__actions">

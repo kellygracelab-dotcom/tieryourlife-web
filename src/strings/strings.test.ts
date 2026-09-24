@@ -133,11 +133,20 @@ describe("the dictionaries", () => {
   const files = import.meta.glob<{ default: Translation }>("./locales/*.ts", { eager: true });
   const holesOf = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
-  const problemsOf = (base: unknown, over: unknown, path: string): string[] => {
+  // In a plural group, the forms for none, one and two may say the count in
+  // the word itself (Arabic's «بطاقتان», two cards) and leave the {n} out.
+  const problemsOf = (
+    base: unknown,
+    over: unknown,
+    path: string,
+    countInWord = false,
+  ): string[] => {
     if (typeof over === "string") {
       if (typeof base !== "string") return [`${path}: text where English has a group`];
-      const same = holesOf(base).join() === holesOf(over).join();
-      return same ? [] : [`${path}: holes ${holesOf(over).join()} ≠ ${holesOf(base).join()}`];
+      const holes = (text: string) =>
+        holesOf(text).filter((hole) => !(countInWord && hole === "n"));
+      const same = holes(base).join() === holes(over).join();
+      return same ? [] : [`${path}: holes ${holes(over).join()} ≠ ${holes(base).join()}`];
     }
     if (typeof over !== "object" || over === null) return [`${path}: neither text nor a group`];
     if (typeof base !== "object" || base === null) return [`${path}: not in English`];
@@ -148,7 +157,12 @@ describe("the dictionaries", () => {
       const against = plural ? (english[key] ?? english.other) : english[key];
       return against === undefined
         ? [`${path}.${key}: not in English`]
-        : problemsOf(against, value, `${path}.${key}`);
+        : problemsOf(
+            against,
+            value,
+            `${path}.${key}`,
+            plural && ["zero", "one", "two"].includes(key),
+          );
     });
   };
 
