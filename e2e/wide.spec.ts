@@ -40,6 +40,42 @@ test.describe("a wide screen", () => {
     await expect(side.getByRole("button", { name: "Ex Machina" })).toBeInViewport();
   });
 
+  // The /r/ page: the panel with the chips, the invitation, the link and the picture beside the board.
+  test("stands the ranking's handout beside its board", async ({ page }) => {
+    await mockBackend(page);
+    await page.route("**/api/rank/abcdefgh", (route) =>
+      route.fulfill({
+        json: {
+          code: "abcdefgh",
+          listId: LIST_ID,
+          listAvailable: true,
+          createdAt: 0,
+          rows: [[1], [0]],
+          snapshot: {
+            title: list.title,
+            authorName: list.authorName,
+            authorPhotoUrl: null,
+            category: list.category,
+            tiers: list.tiers,
+            items: list.items,
+          },
+        },
+      }),
+    );
+    await page.goto("/r/abcdefgh");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+    const side = page.locator(".ranking--read .ranking__side");
+    const boardBox = (await page.locator(".board").first().boundingBox())!;
+    const sideBox = (await side.boundingBox())!;
+    expect(sideBox.x).toBeGreaterThanOrEqual(boardBox.x + boardBox.width - 1);
+    await expect(side.getByRole("link", { name: "Rank this list" })).toHaveAttribute(
+      "href",
+      `/l/${LIST_ID}`,
+    );
+    await expect(side.getByRole("button", { name: "Copy link" })).toBeVisible();
+    await expect(side.getByRole("button", { name: "Download image" })).toBeVisible();
+  });
+
   // A tablet held upright: the docked tray one size up, rows one size down.
   test("docks a taller tray on a tablet held upright", async ({ browser }) => {
     const tablet = await browser.newContext({ ...devices["iPad (gen 7)"] });

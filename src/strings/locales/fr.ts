@@ -448,6 +448,7 @@ const fr: Translation = {
     saved: "Enregistré. Même lien, nouveau classement.",
     noAuthorVersion: "{name} n’a pas classé cette liste.",
     rankYourself: "Pas d’accord ? Classez-la vous-même.",
+    rankThis: "Classer cette liste",
     listGone: "La liste dont vient ce classement n’est plus disponible.",
     unavailableTitle: "Ce classement n’est pas disponible",
     unavailableBody: "Il n’y a rien à cette adresse. Le lien a peut-être été mal copié.",

@@ -10,6 +10,7 @@ import { localStorageStore, memoryStore, type DraftStore } from "../features/boa
 import { RankingBoard, type EditMode } from "../features/board/RankingBoard";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { readKept } from "../features/ranking/kept";
+import { downloadShare, type Share } from "../features/ranking/shareImage";
 import { useRanking, type LoadRanking } from "../features/ranking/useRanking";
 import { rearrangeRanking } from "../lib/api";
 import { fill, strings } from "../strings";
@@ -25,7 +26,14 @@ interface RankingPageProps {
   load?: LoadRanking;
   store?: DraftStore;
   rearrange?: Rearrange;
+  share?: Share;
+  copy?: (text: string) => Promise<void>;
 }
+
+const clipboardCopy = (text: string): Promise<void> => navigator.clipboard.writeText(text);
+
+/** How long "Link copied" stays on the button. */
+const COPIED_MS = 2000;
 
 /** How long "Saved" stays on the page. */
 export const SAVED_NOTE_MS = 6000;
@@ -102,9 +110,64 @@ interface BodyProps {
   edit: EditMode;
   store: DraftStore;
   savedNote: boolean;
+  share: Share;
+  copy: (text: string) => Promise<void>;
 }
 
-function Body({ ranking, mine, editing, onEdit, edit, store, savedNote }: BodyProps) {
+/**
+ * The link and the picture, beside the board on a wide screen and under it
+ * on a phone: the reasons a visitor came to this address.
+ */
+function Handout({
+  ranking,
+  share,
+  copy,
+}: {
+  ranking: Ranking;
+  share: Share;
+  copy: (text: string) => Promise<void>;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [image, setImage] = useState<"idle" | "busy" | "failed">("idle");
+  const address = `${window.location.host}/r/${ranking.code}`;
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), COPIED_MS);
+    return () => clearTimeout(timer);
+  }, [copied]);
+
+  const onCopy = () => {
+    copy(`https://${address}`).then(
+      () => setCopied(true),
+      () => setCopied(false),
+    );
+  };
+  const onDownload = () => {
+    setImage("busy");
+    share(listOf(ranking), ranking.rows, address).then(
+      () => setImage("idle"),
+      () => setImage("failed"),
+    );
+  };
+  return (
+    <div className="handout">
+      <Button variant="tonal" icon={copied ? "check" : "link"} onClick={onCopy}>
+        {copied ? strings.list.linkCopied : strings.list.copyLink}
+      </Button>
+      <Button variant="tonal" icon="download" onClick={onDownload} disabled={image === "busy"}>
+        {image === "busy" ? strings.rank.downloading : strings.rank.download}
+      </Button>
+      {image === "failed" && (
+        <p className="handout__error" role="alert">
+          {strings.rank.downloadFailed}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Body({ ranking, mine, editing, onEdit, edit, store, savedNote, share, copy }: BodyProps) {
   const [view, setView] = useState<View>("visitor");
   const { snapshot } = ranking;
   const author = arrange(snapshot);
@@ -153,54 +216,67 @@ function Body({ ranking, mine, editing, onEdit, edit, store, savedNote }: BodyPr
           edit={edit}
         />
       ) : (
-        <>
-          <div className="list-page__views" role="group" aria-label={strings.list.views}>
-            <Chip selected={view === "visitor"} onClick={() => setView("visitor")}>
-              {visitorChip}
-            </Chip>
-            {author.known && (
-              <Chip selected={view === "author"} onClick={() => setView("author")}>
-                {authorChip}
-              </Chip>
+        // The board's own grid: the panel stands beside the board from 840 px
+        // and its pieces fall into the page's flow below that.
+        <div className="ranking ranking--read">
+          <div className="ranking__main">
+            {!author.known && (
+              <p className="list-page__status">
+                {fill(strings.ranking.noAuthorVersion, { name: snapshot.authorName })}
+              </p>
             )}
-            {owned && (
-              <Button variant="tonal" icon="edit" onClick={onEdit} className="list-page__edit">
-                {strings.ranking.edit}
-              </Button>
+            {view === "visitor" ? (
+              <ReadOnlyBoard
+                label={visitorLabel}
+                tiers={snapshot.tiers}
+                items={snapshot.items}
+                rows={ranking.rows}
+                pool={poolOf(ranking.rows, snapshot.items.length)}
+              />
+            ) : (
+              <ReadOnlyBoard
+                label={authorChip}
+                tiers={snapshot.tiers}
+                items={snapshot.items}
+                rows={author.rows}
+                pool={author.pool}
+              />
             )}
           </div>
-          {!author.known && (
-            <p className="list-page__status">
-              {fill(strings.ranking.noAuthorVersion, { name: snapshot.authorName })}
-            </p>
-          )}
-          {view === "visitor" ? (
-            <ReadOnlyBoard
-              label={visitorLabel}
-              tiers={snapshot.tiers}
-              items={snapshot.items}
-              rows={ranking.rows}
-              pool={poolOf(ranking.rows, snapshot.items.length)}
-            />
-          ) : (
-            <ReadOnlyBoard
-              label={authorChip}
-              tiers={snapshot.tiers}
-              items={snapshot.items}
-              rows={author.rows}
-              pool={author.pool}
-            />
-          )}
-          <p className="list-page__foot">
-            {ranking.listAvailable ? (
-              <Link to={`/l/${encodeURIComponent(ranking.listId)}`}>
-                {strings.ranking.rankYourself}
-              </Link>
-            ) : (
-              strings.ranking.listGone
-            )}
-          </p>
-        </>
+          <div className="ranking__side">
+            <div className="list-page__views" role="group" aria-label={strings.list.views}>
+              <Chip selected={view === "visitor"} onClick={() => setView("visitor")}>
+                {visitorChip}
+              </Chip>
+              {author.known && (
+                <Chip selected={view === "author"} onClick={() => setView("author")}>
+                  {authorChip}
+                </Chip>
+              )}
+              {owned && (
+                <Button variant="tonal" icon="edit" onClick={onEdit} className="list-page__edit">
+                  {strings.ranking.edit}
+                </Button>
+              )}
+            </div>
+            <div className="list-page__foot">
+              {ranking.listAvailable ? (
+                <>
+                  <p className="list-page__invite">{strings.ranking.rankYourself}</p>
+                  <Link
+                    className="btn btn--filled list-page__rank"
+                    to={`/l/${encodeURIComponent(ranking.listId)}`}
+                  >
+                    <span>{strings.ranking.rankThis}</span>
+                  </Link>
+                </>
+              ) : (
+                <p className="list-page__invite">{strings.ranking.listGone}</p>
+              )}
+            </div>
+            <Handout ranking={ranking} share={share} copy={copy} />
+          </div>
+        </div>
       )}
     </>
   );
@@ -210,6 +286,8 @@ export function RankingPage({
   load,
   store = localStorageStore,
   rearrange = rearrangeRanking,
+  share = downloadShare,
+  copy = clipboardCopy,
 }: RankingPageProps) {
   const { code = "" } = useParams();
   const [params, setParams] = useSearchParams();
@@ -264,6 +342,8 @@ export function RankingPage({
         edit={{ rows: shown.rows, save, cancel: leaveEditing }}
         store={scratch}
         savedNote={savedAt !== null}
+        share={share}
+        copy={copy}
       />
     </article>
   );

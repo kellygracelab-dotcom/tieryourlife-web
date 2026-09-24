@@ -438,6 +438,7 @@ const es: Translation = {
     saved: "Guardado. El mismo enlace, un orden nuevo.",
     noAuthorVersion: "{name} no ha ordenado esta lista.",
     rankYourself: "¿No estás de acuerdo? Clasifícala tú.",
+    rankThis: "Clasificar esta lista",
     listGone: "La lista con la que se hizo esta clasificación ya no está disponible.",
     unavailableTitle: "Esta clasificación no está disponible",
     unavailableBody: "No hay nada en esta dirección. Puede que el enlace se haya copiado mal.",

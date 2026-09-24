@@ -384,7 +384,8 @@
     font: 500 11px/18px var(--font);
   }
 
-  .pool:not(.pool--rest) {
+  /* Only the board one ranks on docks its tray; a read-only board's unranked cards stay in the page. */
+  .ranking:not(.ranking--read) .pool:not(.pool--rest) {
     position: fixed;
     right: 0;
     bottom: 0;
@@ -503,15 +504,15 @@
   }
 
   /* Whatever ends the page has to be able to scroll clear of the tray. */
-  body:has(.pool:not(.pool--rest)) .foot {
+  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .foot {
     padding-bottom: calc(168px + env(safe-area-inset-bottom));
   }
 
-  body:has(.pool:not(.pool--rest)) .snackbar {
+  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .snackbar {
     bottom: calc(160px + env(safe-area-inset-bottom));
   }
 
-  html:has(.pool:not(.pool--rest)) {
+  html:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) {
     scroll-padding-bottom: 168px;
   }
 }
@@ -566,7 +567,7 @@
     height: 78px;
   }
 
-  .pool:not(.pool--rest) {
+  .ranking:not(.ranking--read) .pool:not(.pool--rest) {
     padding: 12px 0 calc(14px + env(safe-area-inset-bottom));
   }
 
@@ -580,15 +581,15 @@
     scroll-padding-inline-start: 24px;
   }
 
-  body:has(.pool:not(.pool--rest)) .foot {
+  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .foot {
     padding-bottom: calc(180px + env(safe-area-inset-bottom));
   }
 
-  body:has(.pool:not(.pool--rest)) .snackbar {
+  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .snackbar {
     bottom: calc(172px + env(safe-area-inset-bottom));
   }
 
-  html:has(.pool:not(.pool--rest)) {
+  html:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) {
     scroll-padding-bottom: 180px;
   }
 }

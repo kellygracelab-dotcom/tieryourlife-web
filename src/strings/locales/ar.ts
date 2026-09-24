@@ -529,6 +529,7 @@ const ar: Translation = {
     saved: "تم الحفظ. الرابط نفسه، ترتيب جديد.",
     noAuthorVersion: "{name} لم يرتّب هذه القائمة.",
     rankYourself: "لا توافق؟ رتّبها بنفسك.",
+    rankThis: "رتّب هذه القائمة",
     listGone: "القائمة التي صُنع منها هذا التصنيف لم تعد متاحة.",
     unavailableTitle: "هذا التصنيف غير متاح",
     unavailableBody: "لا شيء على هذا العنوان. ربما نُسخ الرابط خطأ.",

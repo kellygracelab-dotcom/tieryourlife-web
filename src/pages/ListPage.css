@@ -14,8 +14,90 @@
 }
 
 .list-page__foot {
-  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+
+.list-page__invite {
+  margin: 0;
   font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+/* The link and the picture: a row under the board, a stack beside it. */
+.handout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.handout__error {
+  flex-basis: 100%;
+  margin: 0;
+  font: var(--text-small);
+  color: var(--error);
+}
+
+/* Below 840 the panel's pieces take the places they had: the chips above the board, the rest under it. */
+.ranking--read .list-page__views {
+  order: 0;
+}
+
+.ranking--read .list-page__status {
+  order: 1;
+}
+
+.ranking--read .list-page__foot {
+  order: 5;
+}
+
+.ranking--read .handout {
+  order: 6;
+}
+
+@media (min-width: 840px) {
+  .ranking--read .ranking__side {
+    gap: 16px;
+  }
+
+  .ranking--read .list-page__views {
+    flex-wrap: wrap;
+  }
+
+  .ranking--read .list-page__views .chip {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .ranking--read .list-page__edit {
+    flex-basis: 100%;
+    justify-content: center;
+    margin: 0;
+  }
+
+  .ranking--read .list-page__foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin: 0;
+  }
+
+  .ranking--read .list-page__rank {
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .ranking--read .handout {
+    flex-direction: column;
+  }
+
+  .ranking--read .handout .btn {
+    justify-content: center;
+    min-height: 44px;
+  }
 }
 
 .list-page--trouble {

@@ -434,6 +434,7 @@ export const en = {
     saved: "Saved. Same link, new arrangement.",
     noAuthorVersion: "{name} hasn’t arranged this list.",
     rankYourself: "Disagree? Rank it yourself.",
+    rankThis: "Rank this list",
     listGone: "The list this ranking was made from isn’t available anymore.",
     unavailableTitle: "This ranking isn’t available",
     unavailableBody: "There is nothing at this address. The link may have been copied wrong.",

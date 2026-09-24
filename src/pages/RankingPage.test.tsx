@@ -6,6 +6,7 @@ import { ApiFailure, type ApiError } from "../api/errors";
 import type { Ranking } from "../api/rank";
 import { writeKept } from "../features/ranking/kept";
 import { localStorageStore } from "../features/board/draft";
+import type { Share } from "../features/ranking/shareImage";
 import { RankingPage } from "./RankingPage";
 
 const ranking: Ranking = {
@@ -33,8 +34,13 @@ const ranking: Ranking = {
 
 const load = vi.fn<(code: string) => Promise<Ranking>>();
 
+const share = vi.fn<Share>();
+const copy = vi.fn<(text: string) => Promise<void>>();
+
 const open = (code = "abcdefgh") => {
-  const routes: RouteObject[] = [{ path: "/r/:code", element: <RankingPage load={load} /> }];
+  const routes: RouteObject[] = [
+    { path: "/r/:code", element: <RankingPage load={load} share={share} copy={copy} /> },
+  ];
   render(
     <RouterProvider router={createMemoryRouter(routes, { initialEntries: [`/r/${code}`] })} />,
   );
@@ -42,6 +48,10 @@ const open = (code = "abcdefgh") => {
 
 beforeEach(() => {
   load.mockReset();
+  share.mockReset();
+  share.mockResolvedValue(undefined);
+  copy.mockReset();
+  copy.mockResolvedValue(undefined);
 });
 
 describe("RankingPage", () => {
@@ -59,10 +69,37 @@ describe("RankingPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Author's version" }));
     expect(screen.getByRole("region", { name: "Author's version" })).toHaveTextContent("Climax");
-    expect(screen.getByRole("link", { name: "Disagree? Rank it yourself." })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Rank this list" })).toHaveAttribute(
       "href",
       "/l/wMRMFDxo8UejcAi2VVMW",
     );
+  });
+
+  it("hands out the link and the picture beside the board", async () => {
+    load.mockResolvedValue(ranking);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByText("Disagree? Rank it yourself.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Rank this list" })).toHaveAttribute(
+      "href",
+      "/l/wMRMFDxo8UejcAi2VVMW",
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(copy).toHaveBeenCalledWith(`https://${window.location.host}/r/abcdefgh`);
+    expect(screen.getByRole("button", { name: "Link copied" })).toBeInTheDocument();
+
+    share.mockRejectedValueOnce(new Error("no canvas"));
+    await userEvent.click(screen.getByRole("button", { name: "Download image" }));
+    expect(share).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "wMRMFDxo8UejcAi2VVMW", title: "Every A24 film, ranked" }),
+      ranking.rows,
+      `${window.location.host}/r/abcdefgh`,
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not make the image");
+    await userEvent.click(screen.getByRole("button", { name: "Download image" }));
+    expect(share).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("calls the ranking yours on the device that made it", async () => {
@@ -92,7 +129,7 @@ describe("RankingPage", () => {
     load.mockResolvedValue({ ...ranking, listAvailable: false });
     open();
     await screen.findByRole("heading", { level: 1 });
-    expect(screen.queryByRole("link", { name: "Disagree? Rank it yourself." })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Rank this list" })).toBeNull();
     expect(screen.getByText(/The list this ranking was made from/)).toBeInTheDocument();
   });
 
