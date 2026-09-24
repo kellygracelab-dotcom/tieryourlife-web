@@ -284,6 +284,11 @@
   padding: var(--space-6) var(--space-8) var(--space-8);
 }
 
+/* A list page has a side column from 840 px: the board's 1080 and the column's 320. */
+.shell__main:has(.list-page) {
+  max-width: 1400px;
+}
+
 .foot {
   display: flex;
   flex-wrap: wrap;

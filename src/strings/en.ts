@@ -381,6 +381,8 @@ export const en = {
     hintPlace: "Tap a tier to place {name}, or press its number",
     hintPickTouch: "Tap a card, then a tier",
     hintPlaceTouch: "Tap a tier to place it",
+    search: "Find a card",
+    searchNone: "No card by that name.",
     allPlaced: { one: "The card is placed", other: "All {n} placed" },
     allPlacedNote: "Change your mind by dragging a card, or finish and get your link.",
     allPlacedNoteEdit: "Change your mind by dragging a card, or save what you have.",

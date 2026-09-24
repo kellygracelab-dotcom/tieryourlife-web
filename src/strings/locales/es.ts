@@ -384,6 +384,8 @@ const es: Translation = {
     hintPlace: "Toca un nivel para colocar {name}, o pulsa su número",
     hintPickTouch: "Toca una tarjeta y luego un nivel",
     hintPlaceTouch: "Toca un nivel para colocarla",
+    search: "Buscar una tarjeta",
+    searchNone: "No hay ninguna tarjeta con ese nombre.",
     allPlaced: { one: "La tarjeta está colocada", other: "Las {n} tarjetas están colocadas" },
     allPlacedNote: "Cambia de idea arrastrando una tarjeta, o termina y llévate tu enlace.",
     allPlacedNoteEdit: "Cambia de idea arrastrando una tarjeta, o guarda lo que tienes.",

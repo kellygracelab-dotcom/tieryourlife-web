@@ -382,6 +382,8 @@ const tr: Translation = {
     hintPlace: "{name} kartını yerleştirmek için bir seviyeye dokunun ya da numarasına basın",
     hintPickTouch: "Bir karta, sonra bir seviyeye dokunun",
     hintPlaceTouch: "Yerleştirmek için bir seviyeye dokunun",
+    search: "Kart bul",
+    searchNone: "Bu adda kart yok.",
     allPlaced: { one: "Kart yerleştirildi", other: "{n} kartın hepsi yerleştirildi" },
     allPlacedNote:
       "Fikrinizi değiştirdiyseniz bir kartı sürükleyin ya da bitirip bağlantınızı alın.",

@@ -393,6 +393,8 @@ const fr: Translation = {
     hintPlace: "Touchez un rang pour placer {name}, ou appuyez sur son numéro",
     hintPickTouch: "Touchez une carte, puis un rang",
     hintPlaceTouch: "Touchez un rang pour la placer",
+    search: "Trouver une carte",
+    searchNone: "Aucune carte de ce nom.",
     allPlaced: { one: "La carte est placée", other: "Les {n} cartes sont placées" },
     allPlacedNote: "Changez d’avis en glissant une carte, ou terminez et prenez votre lien.",
     allPlacedNoteEdit: "Changez d’avis en glissant une carte, ou enregistrez ce que vous avez.",

@@ -230,6 +230,51 @@ describe("RankingBoard", () => {
     expect(document.querySelector(".pool__dots")).toBeNull();
   });
 
+  it("offers a search over a long pool, narrows the tray to the name typed, and / puts the cursor in it", async () => {
+    const long: PublishedList = {
+      ...list,
+      itemCount: 30,
+      items: Array.from({ length: 30 }, (_, i) => ({
+        title: i === 7 ? "The Witch" : `Film ${i + 1}`,
+        imageUrl: null,
+        tierIndex: null,
+      })),
+    };
+    render(
+      <MemoryRouter>
+        <RankingBoard list={long} store={memoryStore()} />
+      </MemoryRouter>,
+    );
+    const tray = () => within(document.querySelector(".pool__items")!);
+    const box = screen.getByRole("searchbox", { name: "Find a card" });
+    expect(tray().getAllByRole("button")).toHaveLength(30);
+
+    await userEvent.keyboard("/");
+    expect(box).toHaveFocus();
+    await userEvent.type(box, "witch");
+    expect(tray().getAllByRole("button")).toHaveLength(1);
+    expect(tray().getByRole("button", { name: "The Witch" })).toBeInTheDocument();
+
+    await userEvent.clear(box);
+    await userEvent.type(box, "zzz");
+    expect(tray().queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getByText("No card by that name.")).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+    expect(box).toHaveValue("");
+    expect(box).not.toHaveFocus();
+    expect(tray().getAllByRole("button")).toHaveLength(30);
+  });
+
+  it("has no search over a pool short enough to scan", () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
   it("takes a tap on a placed card as picking that card, not as placing the picked one on its row", async () => {
     render(
       <MemoryRouter>

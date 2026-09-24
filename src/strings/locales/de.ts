@@ -392,6 +392,8 @@ const de: Translation = {
     hintPlace: "Tipp auf eine Stufe, um {name} zu platzieren, oder drück ihre Nummer",
     hintPickTouch: "Karte antippen, dann Stufe",
     hintPlaceTouch: "Stufe antippen zum Platzieren",
+    search: "Karte suchen",
+    searchNone: "Keine Karte mit diesem Namen.",
     allPlaced: { one: "Die Karte ist platziert", other: "Alle {n} platziert" },
     allPlacedNote:
       "Überleg es dir anders, indem du eine Karte ziehst, oder schließ ab und hol dir deinen Link.",
