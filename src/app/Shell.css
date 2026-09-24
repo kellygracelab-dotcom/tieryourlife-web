@@ -85,6 +85,7 @@
   font: var(--text-small);
   color: var(--ink);
   outline: none;
+  text-overflow: ellipsis;
 }
 
 .top__search input::placeholder {

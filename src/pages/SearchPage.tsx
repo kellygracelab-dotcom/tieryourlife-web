@@ -69,6 +69,14 @@ export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const filters = read(params);
   const [typed, setTyped] = useState(filters.q);
+  // Words that arrive by the address — from the bar's field, or a link — go
+  // into the box; the box's own words, written to the address after the pause,
+  // come back unchanged and are left alone.
+  const [seen, setSeen] = useState(filters.q);
+  if (filters.q !== seen) {
+    setSeen(filters.q);
+    if (filters.q !== typed.trim()) setTyped(filters.q);
+  }
   const searching = filters.q.length >= MIN_QUERY;
 
   const set = (next: Partial<Filters>) => setParams(write({ ...filters, ...next }));

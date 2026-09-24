@@ -317,6 +317,8 @@ describe("RankingBoard", () => {
     expect(keep).toHaveBeenCalledWith("abc", [[0, 1], [2]]);
     expect(await screen.findByText(/\/r\/abcdefgh/)).toBeInTheDocument();
     expect(screen.queryByText("All 3 placed")).toBeNull();
+    // Nothing left to place and nothing to change: no tray saying "0 cards left".
+    expect(document.querySelector(".pool")).toBeNull();
   });
 
   it("keeps the placements in the store and picks them up again", async () => {
