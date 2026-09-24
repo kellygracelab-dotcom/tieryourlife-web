@@ -10,6 +10,13 @@
   max-width: var(--width-reading);
 }
 
+/* From 600 px the bar's field is the search; the page's own box would be the same thing twice. */
+@media (min-width: 600px) {
+  .search > .search-box {
+    display: none;
+  }
+}
+
 .search__head {
   display: flex;
   flex-wrap: wrap;

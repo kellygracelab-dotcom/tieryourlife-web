@@ -1,6 +1,7 @@
 .feed {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  /* Four across on the home page's 1160, three in a tablet's window, two below that. */
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-4);
   margin: 0;
   padding: 0;

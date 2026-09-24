@@ -62,7 +62,7 @@ describe("SearchPage", () => {
     expect(mocks.loadFeed).toHaveBeenCalledWith({ q: "anime", sort: "popular" });
     expect(await screen.findByRole("link", { name: /Ghibli, ranked/ })).toBeInTheDocument();
     expect(screen.getByText("2 lists, and more")).toBeInTheDocument();
-    expect(screen.getByRole("searchbox")).toHaveValue("anime");
+    expect(within(screen.getByRole("main")).getByRole("searchbox")).toHaveValue("anime");
     expect(screen.getByRole("button", { name: "Most ranked" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -137,7 +137,7 @@ describe("SearchPage", () => {
   it("follows what is typed after a pause", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const router = open("/search?q=anime");
-    const box = screen.getByRole("searchbox");
+    const box = within(screen.getByRole("main")).getByRole("searchbox");
     await userEvent.clear(box);
     await userEvent.type(box, "ghibli");
     expect(router.state.location.search).toBe("?q=anime");
@@ -152,7 +152,7 @@ describe("SearchPage", () => {
   it("keeps a chip pressed during the pause", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const router = open("/search?q=anime");
-    const box = screen.getByRole("searchbox");
+    const box = within(screen.getByRole("main")).getByRole("searchbox");
     await userEvent.clear(box);
     await userEvent.type(box, "ghibli");
     await userEvent.click(screen.getByRole("button", { name: "Newest" }));
@@ -168,7 +168,7 @@ describe("SearchPage", () => {
 describe("the search box on the front page", () => {
   it("leads to the results for what was typed", async () => {
     const router = open("/");
-    const box = within(screen.getByRole("search")).getByRole("searchbox");
+    const box = within(screen.getByRole("main")).getByRole("searchbox");
     expect(box).toBeEnabled();
     await userEvent.type(box, "ghibli{Enter}");
     expect(router.state.location.pathname).toBe("/search");

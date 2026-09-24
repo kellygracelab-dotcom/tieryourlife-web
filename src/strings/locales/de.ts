@@ -16,6 +16,7 @@ const de: Translation = {
     yourRankings: "Deine Ranglisten",
     myLists: "Meine Listen",
     makeList: "Liste erstellen",
+    search: "Listen suchen",
     signInFailed: "Anmeldung fehlgeschlagen. Versuch es noch einmal.",
     keepOnPhone: "Deine Listen aufs Telefon",
     theme: "Design",

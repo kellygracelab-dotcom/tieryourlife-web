@@ -14,6 +14,7 @@ const uk: Translation = {
     yourRankings: "Ваші рейтинги",
     myLists: "Мої списки",
     makeList: "Створити список",
+    search: "Пошук списків",
     signInFailed: "Не вдалося увійти. Спробуйте ще раз.",
     keepOnPhone: "Тримайте списки в телефоні",
     theme: "Тема",

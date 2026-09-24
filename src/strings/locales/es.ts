@@ -15,6 +15,7 @@ const es: Translation = {
     yourRankings: "Tus clasificaciones",
     myLists: "Mis listas",
     makeList: "Crear una lista",
+    search: "Buscar listas",
     signInFailed: "No se pudo iniciar sesión. Inténtalo de nuevo.",
     keepOnPhone: "Lleva tus listas en el teléfono",
     theme: "Tema",

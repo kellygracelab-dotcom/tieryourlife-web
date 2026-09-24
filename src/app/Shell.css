@@ -53,6 +53,77 @@
   display: none;
 }
 
+/*
+ * The bar's search: a field from 600 px, wider from 840; on a phone an icon
+ * that leads to the search page.
+ */
+.top__search {
+  display: none;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  max-width: 360px;
+  height: 40px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink-faint);
+}
+
+.top__search:focus-within {
+  box-shadow: inset 0 0 0 2px var(--focus);
+}
+
+.top__search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: var(--text-small);
+  color: var(--ink);
+  outline: none;
+}
+
+.top__search input::placeholder {
+  color: var(--ink-faint);
+}
+
+.top__search-link {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  color: var(--ink-dim);
+}
+
+.top__search-link:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+@media (min-width: 600px) {
+  .top__search {
+    display: flex;
+  }
+}
+
+@media (min-width: 840px) {
+  .top__search {
+    max-width: 420px;
+  }
+}
+
+@media (max-width: 599px) {
+  .top__search-link {
+    display: inline-flex;
+  }
+}
+
 @media (max-width: 599px) {
   .top--titled .brand__name {
     display: none;
@@ -242,8 +313,8 @@
   display: none;
 }
 
-/* A phone has no room for the words: the button is a plus. */
-@media (max-width: 599px) {
+/* Below 840 the bar has no room for the words next to the search: the button is a plus. */
+@media (max-width: 839px) {
   .top__make {
     justify-content: center;
     width: 40px;
@@ -287,6 +358,11 @@
 /* A list page has a side column from 840 px: the board's 1080 and the column's 320. */
 .shell__main:has(.list-page) {
   max-width: 1400px;
+}
+
+/* The home page's feed is four across. */
+.shell__main:has(.home) {
+  max-width: 1160px;
 }
 
 .foot {

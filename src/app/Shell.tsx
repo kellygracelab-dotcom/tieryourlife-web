@@ -1,5 +1,12 @@
-import { useEffect, useState } from "react";
-import { Link, Outlet, ScrollRestoration } from "react-router";
+import { useEffect, useState, type FormEvent } from "react";
+import {
+  Link,
+  Outlet,
+  ScrollRestoration,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
 import { useModerator } from "../features/moderation/useModerator";
 import type { Account } from "../lib/account";
 import { PLAY_URL } from "../lib/links";
@@ -58,6 +65,30 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
   );
 }
 
+/** The bar's field: starts with the words the page was asked for, and takes new ones to the search page. */
+function BarSearch({ asked }: { asked: string }) {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState(asked);
+  const onSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const q = query.trim();
+    if (q !== "") void navigate(`/search?q=${encodeURIComponent(q)}`);
+  };
+  return (
+    <form className="top__search" role="search" onSubmit={onSearch}>
+      <Icon name="search" />
+      <input
+        type="search"
+        value={query}
+        placeholder={strings.nav.search}
+        aria-label={strings.nav.search}
+        autoComplete="off"
+        onChange={(event) => setQuery(event.target.value)}
+      />
+    </form>
+  );
+}
+
 export function Shell() {
   const { account, signIn } = useSession();
   const [signing, setSigning] = useState<"idle" | "busy" | "failed" | "inApp">("idle");
@@ -73,6 +104,13 @@ export function Shell() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   const titled = pageTitle !== null && scrolled;
+
+  // The bar's search box. The home page has its own, larger one, so the bar
+  // goes without there; on the search page the box shows the words asked.
+  const location = useLocation();
+  const [params] = useSearchParams();
+  const home = location.pathname === "/";
+  const asked = location.pathname === "/search" ? (params.get("q") ?? "") : "";
 
   const onSignIn = () => {
     setSigning("busy");
@@ -96,7 +134,13 @@ export function Shell() {
             {pageTitle}
           </span>
         )}
+        {!home && <BarSearch key={asked} asked={asked} />}
         <nav className="top__actions" aria-label="Site">
+          {!home && (
+            <Link className="top__search-link" to="/search" aria-label={strings.nav.search}>
+              <Icon name="search" />
+            </Link>
+          )}
           <Link className="btn btn--tonal top__make" to="/new" aria-label={strings.nav.makeList}>
             <Icon name="add" className="btn__icon top__make-icon" />
             <span className="top__make-text">{strings.nav.makeList}</span>

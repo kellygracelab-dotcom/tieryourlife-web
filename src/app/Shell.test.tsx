@@ -24,7 +24,7 @@ vi.mock("../lib/api", () => ({
   noteTake: vi.fn(),
 }));
 
-const open = (session: Partial<Session>) => {
+const open = (session: Partial<Session>, at = "/") => {
   const value: Session = {
     account: { kind: "guest", uid: null },
     signIn: vi.fn(async () => ({ kind: "signedIn" as const, switched: false })),
@@ -34,11 +34,28 @@ const open = (session: Partial<Session>) => {
   };
   render(
     <SessionContext.Provider value={value}>
-      <RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/"] })} />
+      <RouterProvider router={createMemoryRouter(routes, { initialEntries: [at] })} />
     </SessionContext.Provider>,
   );
   return value;
 };
+
+describe("Shell search", () => {
+  it("has no search of its own on the home page, which has one", () => {
+    open({});
+    expect(screen.queryByRole("searchbox", { name: "Search lists" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Search lists" })).toBeNull();
+  });
+
+  it("takes the words to the search page, whose words it then shows", async () => {
+    open({}, "/about");
+    const bar = within(screen.getByRole("banner"));
+    expect(bar.getByRole("link", { name: "Search lists" })).toHaveAttribute("href", "/search");
+    await userEvent.type(bar.getByRole("searchbox", { name: "Search lists" }), "  anime {Enter}");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“anime”");
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveValue("anime");
+  });
+});
 
 describe("Shell moderator", () => {
   it("shows Reports with a count only to the person the backend answers", async () => {

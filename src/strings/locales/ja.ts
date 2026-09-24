@@ -16,6 +16,7 @@ const ja: Translation = {
     yourRankings: "あなたのランキング",
     myLists: "マイリスト",
     makeList: "リストを作る",
+    search: "リストを検索",
     signInFailed: "ログインできませんでした。もう一度お試しください。",
     keepOnPhone: "スマホでもリストを",
     theme: "テーマ",

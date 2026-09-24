@@ -76,6 +76,21 @@ test.describe("a wide screen", () => {
     await expect(side.getByRole("button", { name: "Download image" })).toBeVisible();
   });
 
+  // The bar's search field, a laptop's way to the search page.
+  test("searches from the bar", async ({ page }) => {
+    await mockBackend(page);
+    await page.route("**/lists?**", (route) =>
+      route.fulfill({ json: { lists: [list], nextCursor: null } }),
+    );
+    await page.goto("/about");
+    const box = page.getByRole("banner").getByRole("searchbox", { name: "Search lists" });
+    await box.fill("anime");
+    await box.press("Enter");
+    await expect(page).toHaveURL(/\/search\?q=anime$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("“anime”");
+    await expect(box).toHaveValue("anime");
+  });
+
   // A tablet held upright: the docked tray one size up, rows one size down.
   test("docks a taller tray on a tablet held upright", async ({ browser }) => {
     const tablet = await browser.newContext({ ...devices["iPad (gen 7)"] });
