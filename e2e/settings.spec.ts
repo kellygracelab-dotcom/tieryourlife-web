@@ -15,7 +15,7 @@ test.skip(
 test("the settings page does not jump when the account arrives", async ({ page }) => {
   await mockBackend(page);
   // Firebase's answer waits until the first measurement is taken.
-  let release = () => undefined;
+  let release: () => void = () => undefined;
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
