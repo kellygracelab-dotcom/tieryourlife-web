@@ -41,48 +41,64 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Settings");
 });
 
-test.describe("a browser set to Russian", () => {
-  test.use({ locale: "ru-RU" });
+// A browser in a language the site has opens it in that language, unasked;
+// a tag the site lacks (pt-PT, es-MX, de-AT, fr-CA) gets the nearest
+// dictionary, by language alone. Through the real build, so the hyphen in
+// pt-BR's file name is proven to come through import.meta.glob. Three cards
+// on the fixture list: Russian's form for 2–4, which English does not have.
+const SPOKEN = [
+  {
+    browser: "ru-RU",
+    lang: "ru",
+    left: "Осталось 3 карточки",
+    placed: "Разложено 0 из 3",
+    about: "О сайте",
+  },
+  {
+    browser: "pt-PT",
+    lang: "pt-BR",
+    left: "Faltam 3 cards",
+    placed: "0 de 3 colocados",
+    about: "Sobre",
+  },
+  {
+    browser: "es-MX",
+    lang: "es",
+    left: "Quedan 3 tarjetas",
+    placed: "0 de 3 colocadas",
+    about: "Acerca de",
+  },
+  {
+    browser: "de-AT",
+    lang: "de",
+    left: "Noch 3 Karten",
+    placed: "0 von 3 platziert",
+    about: "Über",
+  },
+  {
+    browser: "fr-CA",
+    lang: "fr",
+    left: "3 cartes restantes",
+    placed: "0 sur 3 placées",
+    about: "À propos",
+  },
+];
 
-  test("opens the site in Russian without being asked, and counts the Russian way", async ({
-    page,
-  }) => {
-    await mockBackend(page);
-    await page.goto("/l/abc");
-    await expect(page.locator("html")).toHaveAttribute("lang", "ru");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-    // Three cards: the form for 2–4, which English does not have.
-    await expect(page.getByRole("heading", { level: 2 })).toHaveText("Осталось 3 карточки");
-    await expect(page.getByText("Разложено 0 из 3")).toBeVisible();
-    await expect(page.getByRole("link", { name: "О сайте" })).toHaveAttribute("href", "/about");
+for (const { browser, lang, left, placed, about } of SPOKEN) {
+  test.describe(`a browser set to ${browser}`, () => {
+    test.use({ locale: browser });
+
+    test(`opens the site in ${lang} without being asked`, async ({ page }) => {
+      await mockBackend(page);
+      await page.goto("/l/abc");
+      await expect(page.locator("html")).toHaveAttribute("lang", lang);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+      await expect(page.getByRole("heading", { level: 2 })).toHaveText(left);
+      await expect(page.getByText(placed)).toBeVisible();
+      await expect(page.getByRole("link", { name: about, exact: true })).toHaveAttribute(
+        "href",
+        "/about",
+      );
+    });
   });
-});
-
-// The nearest dictionary when the browser's own tag has none: the language
-// alone decides, and the file with a hyphen in its name has to come through
-// the real build.
-test.describe("a browser set to European Portuguese", () => {
-  test.use({ locale: "pt-PT" });
-
-  test("opens the site in Brazilian Portuguese, the nearest there is", async ({ page }) => {
-    await mockBackend(page);
-    await page.goto("/l/abc");
-    await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
-    await expect(page.getByRole("heading", { level: 2 })).toHaveText("Faltam 3 cards");
-    await expect(page.getByText("0 de 3 colocados")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Sobre" })).toHaveAttribute("href", "/about");
-  });
-});
-
-test.describe("a browser set to Mexican Spanish", () => {
-  test.use({ locale: "es-MX" });
-
-  test("opens the site in Spanish", async ({ page }) => {
-    await mockBackend(page);
-    await page.goto("/l/abc");
-    await expect(page.locator("html")).toHaveAttribute("lang", "es");
-    await expect(page.getByRole("heading", { level: 2 })).toHaveText("Quedan 3 tarjetas");
-    await expect(page.getByText("0 de 3 colocadas")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Acerca de" })).toHaveAttribute("href", "/about");
-  });
-});
+}
