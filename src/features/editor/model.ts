@@ -1,4 +1,5 @@
 import type { Category, PublishedList, PublishedTier } from "../../api/types";
+import { arrange } from "../board/arrange";
 import { strings } from "../../strings";
 
 /** The phone's eight pairs, light and dark, so boards look the same everywhere. */
@@ -54,6 +55,8 @@ export interface Draft {
   category: Category | null;
   tiers: EditorTier[];
   items: EditorItem[];
+  /** The author's own arrangement: item positions per tier, in order; every other card is unplaced. */
+  rows: number[][];
   /** Counts up so every card and tier gets a key of its own. */
   serial: number;
 }
@@ -69,6 +72,7 @@ export type EditorAction =
   | { type: "recolourTier"; key: string; colorLight: string; colorDark: string }
   | { type: "moveTier"; key: string; by: -1 | 1 }
   | { type: "placeTier"; key: string; index: number }
+  | { type: "arrange"; rows: readonly (readonly number[])[] }
   | { type: "replace"; draft: Draft }
   | { type: "reset" };
 
@@ -78,6 +82,7 @@ export function emptyDraft(): Draft {
     category: null,
     tiers: DEFAULT_TIERS.map((tier, index) => ({ ...tier, key: `t${index}` })),
     items: [],
+    rows: DEFAULT_TIERS.map(() => []),
     serial: DEFAULT_TIERS.length,
   };
 }
@@ -96,9 +101,33 @@ export function draftOf(list: PublishedList): Draft {
       imageUrl: item.imageUrl,
       pictureId: null,
     })),
+    rows: arrange(list).rows,
     serial: list.tiers.length + list.items.length,
   };
 }
+
+/** Rows that name only cards the draft has, each once, one row per tier. */
+function tidyRows(rows: readonly (readonly unknown[])[], tiers: number, items: number): number[][] {
+  const seen = new Set<number>();
+  return Array.from({ length: tiers }, (_, tier) =>
+    (rows[tier] ?? []).flatMap((position) => {
+      if (
+        !Number.isInteger(position) ||
+        (position as number) < 0 ||
+        (position as number) >= items
+      ) {
+        return [];
+      }
+      if (seen.has(position as number)) return [];
+      seen.add(position as number);
+      return [position as number];
+    }),
+  );
+}
+
+/** The rows after a card has gone: its position dropped, the ones after it moved up. */
+const rowsWithout = (rows: readonly (readonly number[])[], position: number): number[][] =>
+  rows.map((row) => row.filter((i) => i !== position).map((i) => (i > position ? i - 1 : i)));
 
 const clip = (text: string, max: number): string => text.replace(/\s+/g, " ").slice(0, max);
 
@@ -131,8 +160,15 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
         items: [...draft.items, { key, title, imageUrl: action.imageUrl, pictureId }],
       };
     }
-    case "removeItem":
-      return { ...draft, items: draft.items.filter((item) => item.key !== action.key) };
+    case "removeItem": {
+      const position = draft.items.findIndex((item) => item.key === action.key);
+      if (position < 0) return draft;
+      return {
+        ...draft,
+        items: draft.items.filter((_, index) => index !== position),
+        rows: rowsWithout(draft.rows, position),
+      };
+    }
     case "addTier": {
       if (draft.tiers.length >= LIMITS.tiers) return draft;
       const preset = TIER_PRESETS[draft.tiers.length % TIER_PRESETS.length] ?? TIER_PRESETS[0]!;
@@ -149,12 +185,21 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
             colorDark: preset.dark,
           },
         ],
+        rows: [...draft.rows, []],
       };
     }
-    case "removeTier":
-      return draft.tiers.length <= 1
-        ? draft
-        : { ...draft, tiers: draft.tiers.filter((tier) => tier.key !== action.key) };
+    case "removeTier": {
+      const index = draft.tiers.findIndex((tier) => tier.key === action.key);
+      if (draft.tiers.length <= 1 || index < 0) return draft;
+      // The tier's cards are unplaced again; nothing else moves.
+      return {
+        ...draft,
+        tiers: draft.tiers.filter((_, i) => i !== index),
+        rows: draft.rows.filter((_, i) => i !== index),
+      };
+    }
+    case "arrange":
+      return { ...draft, rows: tidyRows(action.rows, draft.tiers.length, draft.items.length) };
     case "renameTier": {
       const label = clip(action.label, LIMITS.label);
       const caption = clip(action.caption, LIMITS.caption);
@@ -194,7 +239,11 @@ function placeTier(draft: Draft, from: number, to: number): Draft {
   const tiers = [...draft.tiers];
   const [moved] = tiers.splice(from, 1);
   tiers.splice(to, 0, moved!);
-  return { ...draft, tiers };
+  // The tier's cards travel with it.
+  const rows = [...draft.rows];
+  const [movedRow] = rows.splice(from, 1);
+  rows.splice(to, 0, movedRow ?? []);
+  return { ...draft, tiers, rows };
 }
 
 /** S, A, B, C, D, then E, F, … past the letters, a number. */
@@ -228,7 +277,12 @@ export interface PublishBody {
   coverImageUrl: string | null;
   coverPictureId: string | null;
   tiers: PublishedTier[];
-  items: { title: string; imageUrl: string | null; pictureId: string | null; tierIndex: null }[];
+  items: {
+    title: string;
+    imageUrl: string | null;
+    pictureId: string | null;
+    tierIndex: number | null;
+  }[];
 }
 
 /** Every own picture the draft names, once each. */
@@ -250,17 +304,33 @@ export function publishBodyOf(draft: Draft): PublishBody | null {
       colorLight,
       colorDark,
     })),
-    // Cards go out unranked: the author's own arrangement is made on the phone,
-    // and the people who rank the list get every tier empty anyway. An own
-    // picture goes by id: the backend makes the feed's copy, and the preview
-    // address would only point back into the private folder.
-    items: draft.items.map((item) => ({
-      title: item.title,
-      imageUrl: item.pictureId === null ? item.imageUrl : null,
-      pictureId: item.pictureId,
-      tierIndex: null,
-    })),
+    // Cards go out in the author's arrangement — placed ones first, tier by
+    // tier in their order, then the unplaced ones — which is what the phone
+    // sends, and what "Author's version" shows. An own picture goes by id: the
+    // backend makes the feed's copy, and the preview address would only point
+    // back into the private folder.
+    items: placementsOf(draft).map(({ position, tier }) => {
+      const item = draft.items[position]!;
+      return {
+        title: item.title,
+        imageUrl: item.pictureId === null ? item.imageUrl : null,
+        pictureId: item.pictureId,
+        tierIndex: tier,
+      };
+    }),
   };
+}
+
+/** Every card once, the placed ones first in their rows' order, then the rest as they were added. */
+export function placementsOf(draft: Draft): { position: number; tier: number | null }[] {
+  const rows = tidyRows(draft.rows, draft.tiers.length, draft.items.length);
+  const placed = new Set(rows.flat());
+  return [
+    ...rows.flatMap((row, tier) => row.map((position) => ({ position, tier }))),
+    ...draft.items.flatMap((_, position) =>
+      placed.has(position) ? [] : [{ position, tier: null }],
+    ),
+  ];
 }
 
 export const NEW_DRAFT_KEY = "tyl:new";
@@ -289,17 +359,20 @@ export function loadEditorDraft(store: DraftStoreLike, key = NEW_DRAFT_KEY): Dra
     ) {
       return null;
     }
+    const items = draft.items.map((item: Partial<EditorItem>) => ({
+      key: String(item.key ?? ""),
+      title: typeof item.title === "string" ? item.title : "",
+      imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : null,
+      pictureId: typeof item.pictureId === "string" ? item.pictureId : null,
+    }));
     return {
       title: draft.title,
       category: typeof draft.category === "string" ? (draft.category as Category) : null,
       tiers: draft.tiers,
-      // Drafts kept before own pictures existed carry no pictureId.
-      items: draft.items.map((item: Partial<EditorItem>) => ({
-        key: String(item.key ?? ""),
-        title: typeof item.title === "string" ? item.title : "",
-        imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : null,
-        pictureId: typeof item.pictureId === "string" ? item.pictureId : null,
-      })),
+      // Drafts kept before own pictures existed carry no pictureId, and drafts
+      // kept before the arrangement travelled carry no rows.
+      items,
+      rows: tidyRows(Array.isArray(draft.rows) ? draft.rows : [], draft.tiers.length, items.length),
       serial: draft.serial,
     };
   } catch {

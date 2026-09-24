@@ -168,6 +168,33 @@ describe("what stands between the draft and Publish", () => {
     ).toEqual(["tierLabel"]);
   });
 
+  it("keeps the author's arrangement through removing a card and moving a tier, and publishes in that order", () => {
+    let draft = ready();
+    draft = reduce(draft, { type: "addItem", title: "Climax", imageUrl: null });
+    // The Witch (1) and Climax (2) in S, Ex Machina (0) unplaced; a stray position is ignored.
+    draft = reduce(draft, { type: "arrange", rows: [[1, 2, 9], [], [], [], []] });
+    expect(draft.rows).toEqual([[1, 2], [], [], [], []]);
+    expect(publishBodyOf(draft)?.items.map((item) => [item.title, item.tierIndex])).toEqual([
+      ["The Witch", 0],
+      ["Climax", 0],
+      ["Ex Machina", null],
+    ]);
+
+    // Removing Ex Machina moves the others up one position.
+    draft = reduce(draft, { type: "removeItem", key: draft.items[0]!.key });
+    expect(draft.rows).toEqual([[0, 1], [], [], [], []]);
+
+    // S goes to the bottom, and its cards with it.
+    draft = reduce(draft, { type: "moveTier", key: draft.tiers[0]!.key, by: 1 });
+    expect(draft.rows).toEqual([[], [0, 1], [], [], []]);
+    expect(draft.tiers[1]!.label).toBe("S");
+    draft = reduce(draft, { type: "removeTier", key: draft.tiers[1]!.key });
+    expect(draft.rows).toEqual([[], [], [], []]);
+    expect(publishBodyOf(draft)?.items.map((item) => item.tierIndex)).toEqual([null, null]);
+    draft = reduce(draft, { type: "addTier" });
+    expect(draft.rows).toEqual([[], [], [], [], []]);
+  });
+
   it("builds the backend's request from a draft without problems, cards unranked", () => {
     const body = publishBodyOf(ready());
     expect(body).toEqual({
@@ -225,6 +252,7 @@ describe("the draft between visits", () => {
         { key: "p0", title: "Totoro", imageUrl: "https://img/t.jpg", pictureId: null },
         { key: "p1", title: "", imageUrl: "https://dl/published", pictureId: null },
       ],
+      rows: [[]],
       serial: 3,
     });
     expect(problemsOf(draft)).toEqual([]);

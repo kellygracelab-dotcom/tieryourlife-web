@@ -444,6 +444,11 @@ const de: Translation = {
     inApp:
       "Google meldet dich im Browser einer anderen App nicht an. Öffne diese Seite in Chrome oder Safari: Das Menü in der Ecke hat „Im Browser öffnen“.",
   },
+  owner: {
+    title: "Deine Liste",
+    behind: "Die veröffentlichte Fassung ist älter als dieses Board.",
+    saved: "Gespeichert. Derselbe Link, für alle aktualisiert.",
+  },
   ranking: {
     opening: "Rangliste wird geöffnet…",
     visitors: "Rangliste eines Besuchers",

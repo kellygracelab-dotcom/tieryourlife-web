@@ -432,6 +432,11 @@ const es: Translation = {
     inApp:
       "Google no inicia sesión dentro del navegador de otra aplicación. Abre esta página en Chrome o Safari: el menú de la esquina tiene «Abrir en el navegador».",
   },
+  owner: {
+    title: "Tu lista",
+    behind: "La versión publicada está desactualizada.",
+    saved: "Guardado. El mismo enlace, actualizado para todos.",
+  },
   ranking: {
     opening: "Abriendo la clasificación…",
     visitors: "Clasificación de un visitante",

@@ -17,6 +17,7 @@ import {
   loadEditorDraft,
   NEW_DRAFT_KEY,
   ownPicturesOf,
+  placementsOf,
   problemsOf,
   publishBodyOf,
   reduce,
@@ -28,11 +29,12 @@ import {
 import { bodyForRepublish, type CopyBack } from "../features/editor/republish";
 import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
+import { failureText } from "../features/editor/failureText";
 import { errorOf, useResource } from "../features/list/useResource";
 import { loadList, publish as publishList, republish as republishList } from "../lib/api";
 import { copyPublishedBack, discardPictures, PictureRefused, uploadPicture } from "../lib/pictures";
 import type { SignInOutcome } from "../lib/signIn";
-import { fill, strings } from "../strings";
+import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
@@ -69,30 +71,6 @@ const PROBLEM_TEXT: Record<Problem, string> = {
   tooManyTiers: strings.new.tooManyTiers,
   tooManyItems: strings.new.tooManyCards,
 };
-
-function failureText(error: ApiError, mode: Mode): string {
-  switch (error.kind) {
-    case "offline":
-      return strings.new.failedOffline;
-    case "banned":
-      return strings.new.failedBanned;
-    case "tooManyLists":
-      return strings.new.failedTooMany;
-    case "notSignedIn":
-    case "unauthenticated":
-      return strings.new.failedSignedOut;
-    case "notFound":
-      return mode === "edit" ? strings.new.failedGone : strings.new.failedOther;
-    case "notYours":
-      return strings.new.notYours;
-    case "tooLarge":
-      return fill(strings.new.failedTooLarge, { detail: error.detail ?? "" }).trim();
-    case "invalid":
-      return fill(strings.new.failedInvalid, { detail: error.detail ?? "" }).trim();
-    default:
-      return strings.new.failedOther;
-  }
-}
 
 interface EditorProps {
   mode: Mode;
@@ -283,8 +261,10 @@ function Editor({
               imageUrl: item.imageUrl,
               tierIndex: null,
             }))}
-            rows={draft.tiers.map(() => [])}
-            pool={draft.items.map((_, index) => index)}
+            rows={draft.rows}
+            pool={placementsOf(draft)
+              .filter(({ tier }) => tier === null)
+              .map(({ position }) => position)}
           />
         </section>
       ) : (

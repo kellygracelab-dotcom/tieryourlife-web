@@ -468,6 +468,11 @@ const pl: Translation = {
     inApp:
       "Google nie zaloguje cię w przeglądarce innej aplikacji. Otwórz tę stronę w Chrome albo Safari: w menu w rogu jest „Otwórz w przeglądarce”.",
   },
+  owner: {
+    title: "Twoja lista",
+    behind: "Opublikowana wersja jest starsza niż ta lista.",
+    saved: "Zapisano. Ten sam link, zaktualizowany dla wszystkich.",
+  },
   ranking: {
     opening: "Otwieranie rankingu…",
     visitors: "Ranking odwiedzającego",

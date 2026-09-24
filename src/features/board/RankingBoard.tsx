@@ -52,6 +52,16 @@ export interface EditMode {
   rows: readonly (readonly number[])[];
   save: (rows: readonly (readonly number[])[]) => Promise<unknown>;
   cancel: () => void;
+  /**
+   * The list's own author changing the list, not a ranking of it: Publish
+   * changes in place of Save, cards that can be taken away, and every move
+   * reported so the page can keep the draft.
+   */
+  owner?: {
+    canSave: boolean;
+    onChange: (rows: readonly (readonly number[])[]) => void;
+    remove: (item: number) => void;
+  };
 }
 
 interface RankingBoardProps {
@@ -86,16 +96,27 @@ interface TileProps {
   locked: boolean;
   dispatch: (action: BoardAction) => void;
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+  /** The owner may take a card off the list; a button beside the tile, never inside it. */
+  onRemove?: () => void;
 }
 
-function Tile({ list, item, selected, lifted, locked, dispatch, onPointerDown }: TileProps) {
+function Tile({
+  list,
+  item,
+  selected,
+  lifted,
+  locked,
+  dispatch,
+  onPointerDown,
+  onRemove,
+}: TileProps) {
   const card = list.items[item];
   if (card === undefined) return null;
   const classes = ["tile", selected && "tile--selected", lifted && "tile--lifted"]
     .filter(Boolean)
     .join(" ");
   return (
-    <li>
+    <li className={onRemove === undefined ? undefined : "tile-holder--removable"}>
       <button
         type="button"
         className={classes}
@@ -117,9 +138,30 @@ function Tile({ list, item, selected, lifted, locked, dispatch, onPointerDown }:
           <span className="tile__name">{card.title}</span>
         )}
       </button>
+      {onRemove !== undefined && (
+        <button
+          type="button"
+          className="tile__remove"
+          aria-label={fill(strings.new.remove, { name: card.title })}
+          disabled={locked}
+          onClick={onRemove}
+        >
+          <Icon name="close" />
+        </button>
+      )}
     </li>
   );
 }
+
+/** Save for a ranking, Publish changes for the owner's list; busy, the word says so. */
+const saveLabel = (edit: EditMode, busy: boolean): string =>
+  edit.owner === undefined
+    ? busy
+      ? strings.rank.savingShort
+      : strings.rank.saveChanges
+    : busy
+      ? strings.new.publishing
+      : strings.new.publishChanges;
 
 const scopeOf = (list: PublishedList): DraftScope => ({
   id: list.id,
@@ -290,6 +332,15 @@ export function RankingBoard({
   };
   const onLinkOnly = useCallback(() => setOffer("closed"), []);
 
+  // The owner's page keeps the draft: every placement goes out as it happens.
+  const report = useRef(edit?.owner?.onChange);
+  useEffect(() => {
+    report.current = edit?.owner?.onChange;
+  });
+  useEffect(() => {
+    report.current?.(state.rows);
+  }, [state.rows]);
+
   const onSave = () => {
     if (edit === undefined) return;
     setSave({ status: "saving" });
@@ -362,7 +413,15 @@ export function RankingBoard({
     .join(" ");
 
   const bar = (
-    <div className={docked ? "ranking__bar ranking__bar--head" : "ranking__bar"}>
+    <div
+      className={[
+        "ranking__bar",
+        docked && "ranking__bar--head",
+        edit?.owner !== undefined && "ranking__bar--owner",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <p className="ranking__progress" aria-live="polite">
         {fill(strings.rank.placed, { n: placedCount(state), total: list.items.length })}
       </p>
@@ -376,7 +435,7 @@ export function RankingBoard({
         </Button>
         {edit !== undefined && (
           <Button onClick={edit.cancel} disabled={locked}>
-            {strings.rank.cancel}
+            {edit.owner === undefined ? strings.rank.cancel : strings.new.discardChanges}
           </Button>
         )}
         {edit !== undefined && (
@@ -384,9 +443,11 @@ export function RankingBoard({
             variant="filled"
             icon="check"
             onClick={onSave}
-            disabled={locked || placedCount(state) === 0}
+            disabled={
+              locked || (edit.owner === undefined ? placedCount(state) === 0 : !edit.owner.canSave)
+            }
           >
-            {save.status === "saving" ? strings.rank.savingShort : strings.rank.saveChanges}
+            {saveLabel(edit, save.status === "saving")}
           </Button>
         )}
         {edit === undefined && finish.status !== "done" && (
@@ -475,9 +536,9 @@ export function RankingBoard({
                   variant="filled"
                   icon="check"
                   onClick={edit === undefined ? onFinish : onSave}
-                  disabled={locked}
+                  disabled={locked || (edit?.owner !== undefined && !edit.owner.canSave)}
                 >
-                  {edit === undefined ? strings.rank.finish : strings.rank.saveChanges}
+                  {edit === undefined ? strings.rank.finish : saveLabel(edit, false)}
                 </Button>
               </div>
             ) : (
@@ -524,6 +585,9 @@ export function RankingBoard({
                       locked={locked}
                       dispatch={dispatch}
                       onPointerDown={drag.onPointerDown(item)}
+                      onRemove={
+                        edit?.owner === undefined ? undefined : () => edit.owner?.remove(item)
+                      }
                     />
                   ))}
                 </ul>
