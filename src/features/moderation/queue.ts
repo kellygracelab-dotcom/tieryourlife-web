@@ -1,5 +1,5 @@
 import type { ReportReason } from "../../api/community";
-import { fill, strings } from "../../strings";
+import { plural, strings } from "../../strings";
 
 /** How many complaints gave each reason, most first. */
 export function reasonCounts(
@@ -19,5 +19,5 @@ export function agoText(atMs: number, nowMs: number): string {
   const days = Math.floor((nowMs - atMs) / DAY_MS);
   if (days <= 0) return strings.mod.today;
   if (days === 1) return strings.mod.yesterday;
-  return fill(strings.mod.daysAgo, { n: days });
+  return plural(strings.mod.daysAgo, days);
 }

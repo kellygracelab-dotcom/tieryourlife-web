@@ -6,7 +6,7 @@ import type { Translation } from "../index";
 // throughout. A person who publishes on the phone and ranks here should not
 // meet two vocabularies. The brand and TMDB's sentence stay as they are:
 // TMDB's terms give that sentence word for word. The space before ? ! : ;
-// and inside « » is a no-break one ( ), as French typography wants: a
+// and inside « » is a no-break one ( ), as French typography wants: a
 // line may not start with the mark.
 const fr: Translation = {
   tagline: "Version web",
@@ -42,7 +42,7 @@ const fr: Translation = {
     moreNotes: { one: "Afficher {n} note de plus", other: "Afficher {n} notes de plus" },
     today: "aujourd’hui",
     yesterday: "hier",
-    daysAgo: "il y a {n} jours",
+    daysAgo: { one: "il y a {n} jour", other: "il y a {n} jours" },
     consequence: "Le retrait ne touche pas la copie personnelle de l’auteur.",
     leaveUp: "Laisser",
     takeDown: "Retirer",
@@ -155,7 +155,7 @@ const fr: Translation = {
     someone: "Quelqu’un",
     followers: { one: "{n} abonné", other: "{n} abonnés" },
     publicLists: { one: "{n} liste publique", other: "{n} listes publiques" },
-    publicListsMore: "{n}+ listes publiques",
+    publicListsMore: { one: "{n}+ liste publique", other: "{n}+ listes publiques" },
     editInSettings: "Modifier dans les paramètres",
     lists: "Listes",
     newestFirst: "les plus récentes d’abord",
@@ -176,14 +176,14 @@ const fr: Translation = {
     browse: "Parcourir les listes",
     results: "Résultats de la recherche",
     count: { one: "{n} liste", other: "{n} listes" },
-    countMore: "{n} listes, et d’autres encore",
+    countMore: { one: "{n} liste, et d’autres encore", other: "{n} listes, et d’autres encore" },
     sortBy: "Tri",
     mostRanked: "Les plus classées",
     newest: "Récentes",
     categories: "Catégorie",
     all: "Tout",
     nothing: "Rien de ce nom pour l’instant.",
-    browseOr: "Essayez moins de mots, ou parcourez",
+    browseHint: "Essayez moins de mots, ou parcourez {where}.",
     browseHome: "la page d’accueil",
     popularIn: "Populaires : {category}",
     makeThis: "Créer cette liste",
@@ -203,7 +203,7 @@ const fr: Translation = {
     cards: "Cartes",
     cardsAdded: { one: "{n} ajoutée", other: "{n} ajoutées" },
     upload: "Importer des images",
-    uploading: "Envoi de {n}…",
+    uploading: { other: "Envoi de {n}…" },
     pictureSignIn:
       "Connectez-vous pour ajouter vos propres images ; elles restent dans votre compte.",
     pictureNotImage: "{name} n’est pas une image.",
@@ -454,7 +454,10 @@ const fr: Translation = {
     placedOf: "{placed} sur {total} placées",
     failed: "Impossible de charger vos classements.",
     tryAgain: "Réessayer",
-    more: "Seuls les {n} plus récents sont affichés.",
+    more: {
+      one: "Seul le plus récent est affiché.",
+      other: "Seuls les {n} plus récents sont affichés.",
+    },
     edit: "Modifier",
     fromPhone: "Les listes publiées depuis l’application sont dans Mes listes.",
     browse: "Parcourir les listes",

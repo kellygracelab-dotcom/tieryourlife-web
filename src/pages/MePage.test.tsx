@@ -148,7 +148,7 @@ describe("MePage", () => {
       more: true,
     });
     open(member);
-    expect(await screen.findByText("Only the newest 1 are shown.")).toBeInTheDocument();
+    expect(await screen.findByText("Only the newest 1 is shown.")).toBeInTheDocument();
   });
 
   it("counts what is kept and leads to the lists tab", async () => {
