@@ -4,7 +4,8 @@ import { CATEGORIES, isCategory, type Category, type FeedSort } from "../api/typ
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed } from "../features/feed/useFeed";
-import { fill, formatCount, plural, strings } from "../strings";
+import { fill, plural, strings } from "../strings";
+import { fillNodes } from "../strings/fillNodes";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
 import { ListCard } from "../ui/ListCard";
@@ -113,7 +114,7 @@ export function SearchPage() {
           <p className="search__count">
             {feed.state.next === null
               ? plural(strings.search.count, feed.state.lists.length)
-              : fill(strings.search.countMore, { n: formatCount(feed.state.lists.length) })}
+              : plural(strings.search.countMore, feed.state.lists.length)}
           </p>
         )}
       </div>
@@ -141,7 +142,7 @@ export function SearchPage() {
       {nothing ? (
         <>
           <p className="search__empty">
-            {strings.search.nothing} {strings.search.browseOr} {where}.
+            {strings.search.nothing} {fillNodes(strings.search.browseHint, { where })}
           </p>
           <p className="search__make">
             <Link className="btn btn--tonal" to={`/new?title=${encodeURIComponent(filters.q)}`}>

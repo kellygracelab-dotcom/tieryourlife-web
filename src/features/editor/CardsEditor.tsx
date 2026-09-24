@@ -150,7 +150,7 @@ export function CardsEditor({ items, category, dispatch, lookup, upload }: Cards
           onClick={() => picker.current?.click()}
           disabled={uploading > 0}
         >
-          {uploading > 0 ? fill(strings.new.uploading, { n: uploading }) : strings.new.upload}
+          {uploading > 0 ? plural(strings.new.uploading, uploading) : strings.new.upload}
         </Button>
         {pictureNote !== null && (
           <p className="cards__note cards__note--warn" role="alert">

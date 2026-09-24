@@ -7,7 +7,7 @@ import { AccountTabs } from "../app/AccountTabs";
 import { useSession } from "../app/session";
 import { errorOf, useResource } from "../features/list/useResource";
 import { loadMyLists, loadMyRankings, unpublish as unpublishList } from "../lib/api";
-import { fill, formatCount, plural, strings } from "../strings";
+import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { ListCard } from "../ui/ListCard";
@@ -99,9 +99,7 @@ function Rankings({ uid, load }: { uid: string; load: LoadMine }) {
           <RankingCard key={ranking.code} ranking={ranking} />
         ))}
       </ul>
-      {more && (
-        <p className="me__more">{fill(strings.me.more, { n: formatCount(rankings.length) })}</p>
-      )}
+      {more && <p className="me__more">{plural(strings.me.more, rankings.length)}</p>}
     </>
   );
 }

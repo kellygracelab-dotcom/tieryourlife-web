@@ -8,7 +8,7 @@ import { useFollow, type FollowDeps } from "../features/community/useFollow";
 import { useHidden } from "../features/community/useHidden";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
-import { fill, formatCount, plural, strings } from "../strings";
+import { plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import "./ProfilePage.css";
@@ -69,7 +69,7 @@ export function ProfilePage({ load, follow }: ProfilePageProps) {
       parts.push(
         feed.state.next === null
           ? plural(strings.profile.publicLists, lists.length)
-          : fill(strings.profile.publicListsMore, { n: formatCount(lists.length) }),
+          : plural(strings.profile.publicListsMore, lists.length),
       );
     }
     return parts.join(" · ");
