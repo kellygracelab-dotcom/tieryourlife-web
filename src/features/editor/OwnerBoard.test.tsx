@@ -131,6 +131,27 @@ describe("OwnerBoard", () => {
     expect(publishButton()).toBeDisabled();
   });
 
+  it("puts a moved card back where the published list has it on Discard changes", async () => {
+    const store = open();
+    const inTier = (label: string, name: string) =>
+      within(
+        within(screen.getByRole("region", { name: "Your ranking" })).getByRole("list", {
+          name: label,
+        }),
+      ).queryByRole("button", { name });
+    await userEvent.click(screen.getByRole("button", { name: "The Witch" }));
+    await userEvent.keyboard("1");
+    expect(inTier("S", "The Witch")).toBeInTheDocument();
+    expect(status()).toHaveTextContent("The published copy is behind this board.");
+
+    await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(inTier("S", "The Witch")).toBeNull();
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 card left");
+    expect(status()).toBeNull();
+    expect(publishButton()).toBeDisabled();
+    expect(store.read("tyl:edit:abc")).toBeNull();
+  });
+
   it("says why a publish was refused and keeps the changes", async () => {
     republish.mockRejectedValueOnce(new ApiFailure({ kind: "offline" }));
     open();

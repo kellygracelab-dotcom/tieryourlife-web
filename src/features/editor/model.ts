@@ -368,7 +368,9 @@ export function loadEditorDraft(store: DraftStoreLike, key = NEW_DRAFT_KEY): Dra
     return {
       title: draft.title,
       category: typeof draft.category === "string" ? (draft.category as Category) : null,
-      tiers: refreshedCaptions(draft.tiers),
+      // Only a list that never existed takes today's captions: a published
+      // list's own draft keeps the words its tiers were published with.
+      tiers: key === NEW_DRAFT_KEY ? refreshedCaptions(draft.tiers) : draft.tiers,
       // Drafts kept before own pictures existed carry no pictureId, and drafts
       // kept before the arrangement travelled carry no rows.
       items,
@@ -390,7 +392,7 @@ const OLD_CAPTIONS: Record<string, string> = {
 };
 
 /**
- * A draft kept before the captions changed still says Masterpiece … No.
+ * A new list's draft kept before the captions changed still says Masterpiece … No.
  * When its five tiers are exactly those, untouched, they take the words the
  * editor gives today; a caption anybody changed stays as it is.
  */

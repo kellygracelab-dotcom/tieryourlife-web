@@ -69,7 +69,9 @@ export function OwnerBoard({
   // Discarding starts the board over from the published list; the key does it.
   const [generation, setGeneration] = useState(0);
   // The board's own draft store, so its scratch never mixes with a ranking's.
-  const scratch = useMemo(() => memoryStore(), []);
+  // Discarding hands the board a new one: the board reads its store before the
+  // rows it is given, and the old one still had the arrangement being discarded.
+  const [scratch, setScratch] = useState(() => memoryStore());
 
   const published = useMemo(() => JSON.stringify(publishBodyOf(fresh(list))), [list]);
   const body = publishBodyOf(draft);
@@ -133,6 +135,7 @@ export function OwnerBoard({
     clearEditorDraft(store, key);
     dispatch({ type: "replace", draft: fresh(list) });
     setPublishing({ status: "idle" });
+    setScratch(memoryStore());
     setGeneration((n) => n + 1);
   };
 
