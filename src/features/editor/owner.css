@@ -4,19 +4,24 @@
   gap: 12px;
 }
 
-/* The box that brings cards in, above the board: the upload beside the field where there is room. */
-.owner__add {
+/*
+ * On a narrow screen the box that brings cards in stands above the board,
+ * the upload beside the field where there is room; from 840 the board puts
+ * it with the pool (see ranking.css).
+ */
+.ranking__tools {
+  order: 3;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 12px 16px;
 }
 
-.owner__add .cards__add {
+.ranking__tools .cards__add {
   flex: 1 1 320px;
 }
 
-.owner__add .cards__upload {
+.ranking__tools .cards__upload {
   padding-top: 26px;
 }
 
@@ -38,7 +43,7 @@
 }
 
 @media (max-width: 599px) {
-  .owner__add .cards__upload {
+  .ranking__tools .cards__upload {
     padding-top: 0;
   }
 }

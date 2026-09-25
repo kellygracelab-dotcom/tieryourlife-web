@@ -11,7 +11,9 @@ export type BoardAction =
   | { type: "select"; item: number | null }
   | { type: "place"; item: number; tier: number }
   | { type: "unplace"; item: number }
-  | { type: "undo" };
+  | { type: "undo" }
+  /** The list has other cards or tiers now (the owner's doing): the board starts over from these rows. */
+  | { type: "reset"; tierCount: number; itemCount: number; rows: Rows | null };
 
 // Enough for a whole evening of misdrops; unbounded would keep every board
 // state a stream ever produced.
@@ -65,6 +67,8 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
       if (tierOf(state, action.item) === null) return state;
       return remember(state, without(state.rows, action.item));
     }
+    case "reset":
+      return init(action.tierCount, action.itemCount, action.rows);
     case "undo": {
       const previous = state.history[state.history.length - 1];
       if (previous === undefined) return state;

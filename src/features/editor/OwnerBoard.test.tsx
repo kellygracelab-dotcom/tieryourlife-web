@@ -91,6 +91,20 @@ describe("OwnerBoard", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 card left");
     expect(publishButton()).toBeDisabled();
     expect(status()).toBeNull();
+    // The box that brings cards in lives with the pool, inside the board.
+    expect(within(board).getByLabelText("Add a card")).toBeInTheDocument();
+  });
+
+  it("keeps the add box where it is, untouched, while cards come in", async () => {
+    open();
+    const box = screen.getByLabelText("Add a card");
+    await userEvent.type(box, "Climax{Enter}");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2 cards left");
+    expect(screen.getByLabelText("Add a card")).toBe(box);
+    await userEvent.type(box, "Second");
+    await userEvent.click(screen.getByRole("button", { name: "Remove Climax" }));
+    expect(screen.getByLabelText("Add a card")).toBe(box);
+    expect(box).toHaveValue("Second");
   });
 
   it("takes a card in, says the published copy is behind, publishes in board order and forgets the draft", async () => {
