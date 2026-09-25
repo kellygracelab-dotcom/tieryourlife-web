@@ -4,6 +4,7 @@ import {
   defaultDock,
   keepDock,
   readDock,
+  rowsThatFit,
   type Band,
   type Dock,
   type DockChoice,
@@ -65,7 +66,8 @@ export function useDock(store: DraftStore = localStorageStore): DockState {
 
   return {
     dock: choice.dock ?? defaultDock(size.width, size.height),
-    rows: choice.rows,
+    // The choice is kept as made; a shorter window shows what it can.
+    rows: Math.min(choice.rows, rowsThatFit(size.height)) as DockRows,
     wide: size.width >= WIDE_BOARD_FROM,
     choose,
     resize,

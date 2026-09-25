@@ -549,9 +549,13 @@
     min-height: 44px;
   }
 
-  /* Whatever ends the page has to be able to scroll clear of the tray. */
-  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .foot {
+  /* Room under the board for the tray; the footer waits until the board is read. */
+  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .shell__main {
     padding-bottom: calc(168px + env(safe-area-inset-bottom));
+  }
+
+  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .foot {
+    display: none;
   }
 
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .snackbar {
@@ -627,8 +631,12 @@
     scroll-padding-inline-start: 24px;
   }
 
-  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .foot {
+  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .shell__main {
     padding-bottom: calc(180px + env(safe-area-inset-bottom));
+  }
+
+  body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .foot {
+    display: none;
   }
 
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .snackbar {
@@ -953,20 +961,51 @@
     font: 400 13px/18px var(--font);
   }
 
+  /*
+   * The dock is fixed to the window's foot and never leaves it while the
+   * board takes cards. The page keeps room under the board for it, from the
+   * height the board writes to the root (--dock-h), so the last row and the
+   * page's end scroll clear of it; the footer waits until the board is read.
+   * The shadow is there only while a row is underneath.
+   */
   .ranking--under .pool {
-    position: sticky;
+    position: fixed;
+    inset-inline: 0;
     bottom: 0;
-    z-index: 30;
+    z-index: 40;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin: 12px calc(-1 * var(--space-8)) 0;
+    margin: 0;
     padding: 12px max(var(--space-8), calc((100vw - var(--board-cap)) / 2)) 14px;
     border: 0;
     border-top: 1px solid var(--line);
     border-radius: 0;
     background: var(--surface);
+    box-shadow: none;
+    transition: box-shadow 150ms ease;
+  }
+
+  .ranking--under .pool--over {
     box-shadow: var(--shadow-up);
+  }
+
+  body:has(.ranking--under .pool) .shell__main {
+    padding-bottom: calc(var(--dock-h, 262px) + 24px);
+  }
+
+  body:has(.ranking--under .pool) .foot {
+    display: none;
+  }
+
+  body:has(.ranking--under .pool) .snackbar {
+    inset-inline-start: max(var(--space-8), calc((100vw - var(--board-cap)) / 2));
+    bottom: calc(var(--dock-h, 262px) + 16px);
+  }
+
+  html:has(.ranking--under .pool) {
+    scroll-padding-top: calc(var(--header-height) + 72px);
+    scroll-padding-bottom: calc(var(--dock-h, 262px) + 24px);
   }
 
   .ranking--under .pool__grip {

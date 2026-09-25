@@ -133,6 +133,8 @@ for (const { browser, lang, dir, left, placed, about } of SPOKEN) {
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
       await expect(page.getByRole("heading", { level: 2 })).toHaveText(left);
       await expect(page.getByText(placed)).toBeVisible();
+      // The foot waits while the tray is up on a phone; the settings page has it at every width.
+      await page.goto("/settings");
       await expect(page.getByRole("link", { name: about, exact: true })).toHaveAttribute(
         "href",
         "/about",

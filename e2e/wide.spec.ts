@@ -8,7 +8,7 @@ test.describe("a wide screen", () => {
 
   test("keeps the pool beside the board while the page scrolls", async ({ page }) => {
     await mockBackend(page);
-    const tiers = Array.from({ length: 12 }, (_, i) => ({
+    const tiers = Array.from({ length: 20 }, (_, i) => ({
       label: `T${i + 1}`,
       caption: null,
       colorLight: "#b03a32",
@@ -58,10 +58,26 @@ test.describe("a wide screen", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
     const board = page.locator(".ranking");
     await expect(board).toHaveClass(/ranking--under/);
-    await expect(page.locator(".pool")).toHaveCSS("position", "sticky");
+    await expect(page.locator(".pool")).toHaveCSS("position", "fixed");
     await expect(page.locator(".list-head").getByRole("button", { name: "Finish" })).toBeVisible();
     const poolBox = (await page.locator(".pool").boundingBox())!;
     expect(Math.round(poolBox.y + poolBox.height)).toBe(900);
+    // The page keeps room under the board for the dock: the footer waits, and at
+    // the end of the scroll the dock is still at the foot with the last row 24 px
+    // above its edge.
+    await expect(page.locator(".foot")).toBeHidden();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue("--dock-h")))
+      .toMatch(/^\d+px$/);
+    // The dock's shadow says a row is underneath it; at the end of the scroll it goes.
+    await expect(page.locator(".pool")).toHaveClass(/pool--over/);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const endBox = (await page.locator(".pool").boundingBox())!;
+    expect(Math.round(endBox.y + endBox.height)).toBe(900);
+    const lastTier = (await page.locator(".tier").last().boundingBox())!;
+    expect(Math.round(endBox.y - (lastTier.y + lastTier.height))).toBe(24);
+    await expect(page.locator(".pool")).not.toHaveClass(/pool--over/);
+    await page.evaluate(() => window.scrollTo(0, 0));
 
     await page.getByRole("button", { name: "Cards beside the board" }).click();
     await expect(board).not.toHaveClass(/ranking--under/);

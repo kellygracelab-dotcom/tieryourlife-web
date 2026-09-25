@@ -99,11 +99,11 @@ test("the foot of every page leads to the credits, with TMDB's logo and sentence
   page,
 }) => {
   await mockBackend(page);
-  await page.goto(`/l/${list.id}`);
-  // The foot is drawn before the list is. Pressed then, the link is aimed at
-  // where it was: the list arrives, the foot moves down, and the press lands
-  // on nothing. A person waits for the page too.
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
+  // A board page hides the foot while its tray or dock is up; the settings
+  // page keeps it at every width. The foot is drawn before the page is:
+  // pressed then, the link is aimed at where it was. A person waits too.
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Settings");
   await page.getByRole("link", { name: "About" }).click();
   await expect(page).toHaveURL("/about");
   await expect(
@@ -118,6 +118,12 @@ test("a menu closes on a press anywhere else, and a new page opens at its top", 
   page,
 }) => {
   await mockBackend(page);
+  await page.route("**/lists?**", (route) =>
+    route.fulfill({ json: { lists: [summary], nextCursor: null } }),
+  );
+  await page.route(`**/lists/follow/${list.authorUid}`, (route) =>
+    route.fulfill({ json: { following: false, followers: 3 } }),
+  );
   await page.goto(`/l/${list.id}`);
   await page.getByLabel("More about this list").click();
   await expect(page.getByRole("button", { name: "Hide this list" })).toBeVisible();
@@ -129,7 +135,8 @@ test("a menu closes on a press anywhere else, and a new page opens at its top", 
     document.body.style.minHeight = "3000px";
     window.scrollTo(0, 1200);
   });
-  await page.getByRole("link", { name: "About" }).click();
-  await expect(page).toHaveURL("/about");
+  await page.getByRole("link", { name: "by danylo" }).click();
+  await expect(page).toHaveURL(`/u/${list.authorUid}`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("danylo");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });

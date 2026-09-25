@@ -39,7 +39,7 @@ import {
 } from "./model";
 import { useTileDrag, type HitTest } from "./useTileDrag";
 import { BoardFrameContext } from "./boardFrame";
-import type { DockRows } from "./dock";
+import { rowsThatFit, type DockRows } from "./dock";
 import { DockToggle } from "./DockToggle";
 import { useDock } from "./useDock";
 import "./board.css";
@@ -163,6 +163,12 @@ const saveLabel = (edit: EditMode, busy: boolean): string =>
       ? strings.new.publishing
       : strings.new.publishChanges;
 
+/** The band above the dock's edge, and under the header, where a dragged card scrolls the page. */
+const EDGE_ZONE = 56;
+/** The most the page moves per frame, at the very edge. */
+const EDGE_SPEED = 14;
+const edgeSpeed = (depth: number): number => EDGE_SPEED * Math.min(1, Math.max(0, depth)) ** 2;
+
 const scopeOf = (list: PublishedList): DraftScope => ({
   id: list.id,
   updatedAt: list.updatedAt,
@@ -209,6 +215,8 @@ export function RankingBoard({
   const selectedTitle = selected === null ? null : (list.items[selected]?.title ?? null);
   const section = useRef<HTMLElement>(null);
   const tray = useRef<HTMLUListElement>(null);
+  const poolBox = useRef<HTMLDivElement>(null);
+  const boardEnd = useRef<HTMLDivElement>(null);
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
@@ -228,7 +236,7 @@ export function RankingBoard({
     grip.setPointerCapture(event.pointerId);
     const onMove = (move: PointerEvent) => {
       const next = Math.min(
-        4,
+        rowsThatFit(window.innerHeight),
         Math.max(1, rows + Math.round((startY - move.clientY) / 100)),
       ) as DockRows;
       if (next === last) return;
@@ -402,12 +410,101 @@ export function RankingBoard({
   const allPlaced = left.length === 0 && finish.status !== "done";
   // Finished with every card placed: the tray has nothing to say and goes.
   const restEmpty = finish.status === "done" && left.length === 0;
+
+  // The dock is fixed to the window's foot. The page needs room under the
+  // board for it, so the dock writes its height to the root as --dock-h, and
+  // the page's padding, its scroll padding and the snackbar follow. Resized
+  // while the page is at its end, the last row keeps its place against the
+  // dock instead of jumping under it.
+  const fixedDock = docked && !restEmpty;
+  const [dockHeight, setDockHeight] = useState(0);
+  useEffect(() => {
+    const el = poolBox.current;
+    if (!fixedDock || el === null || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    let last = 0;
+    const observer = new ResizeObserver(() => {
+      const height = el.offsetHeight;
+      if (height === last) return;
+      const atEnd = window.scrollY + window.innerHeight >= root.scrollHeight - 1;
+      root.style.setProperty("--dock-h", `${height}px`);
+      if (atEnd && last > 0 && height > last) window.scrollBy(0, height - last);
+      last = height;
+      setDockHeight(height);
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--dock-h");
+    };
+  }, [fixedDock]);
+
+  // The dock's shadow says a row is underneath. A sentinel at the board's end
+  // is watched against the window above the dock: hidden, a row is under the
+  // dock; showing, the board has ended and the shadow goes.
+  const [covered, setCovered] = useState(false);
+  useEffect(() => {
+    const end = boardEnd.current;
+    if (!fixedDock || end === null || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setCovered(!(entry?.isIntersecting ?? true)),
+      { rootMargin: `0px 0px -${dockHeight}px 0px` },
+    );
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [fixedDock, dockHeight]);
+  const over = fixedDock && covered;
+
+  // A card dragged toward a row hidden under the dock scrolls the page: a
+  // 56 px band above the dock's edge scrolls down, one under the header
+  // scrolls up, faster toward the edge, and what is under the pointer is read
+  // again after each step so the drop lands where the pointer is.
+  const dragging = drag.state.phase === "dragging";
+  const { current: dragNow, nudge } = drag;
+  useEffect(() => {
+    const el = poolBox.current;
+    if (!dragging || el === null || typeof requestAnimationFrame === "undefined") return;
+    if (getComputedStyle(el).position !== "fixed") return;
+    const bar = document.querySelector<HTMLElement>(".top");
+    const head = document.querySelector<HTMLElement>(".list-head");
+    const topEdge = () =>
+      Math.max(
+        bar?.getBoundingClientRect().bottom ?? 0,
+        head !== null && getComputedStyle(head).position === "sticky"
+          ? head.getBoundingClientRect().bottom
+          : 0,
+      );
+    let frame = 0;
+    const tick = () => {
+      const now = dragNow();
+      if (now.phase === "dragging") {
+        const y = now.at.y;
+        const bottom = el.getBoundingClientRect().top;
+        const top = topEdge();
+        let speed = 0;
+        if (y < bottom && y >= bottom - EDGE_ZONE) {
+          speed = edgeSpeed((y - (bottom - EDGE_ZONE)) / EDGE_ZONE);
+        } else if (y <= top + EDGE_ZONE) {
+          speed = -edgeSpeed((top + EDGE_ZONE - y) / EDGE_ZONE);
+        }
+        if (speed !== 0) {
+          const before = window.scrollY;
+          window.scrollBy(0, speed);
+          if (window.scrollY !== before) nudge();
+        }
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [dragging, dragNow, nudge]);
   const poolClasses = [
     "pool",
     drag.state.phase === "dragging" && drag.state.target?.kind === "pool" && "pool--target",
     picked && "pool--picked",
     lifted !== null && left.includes(lifted) && "pool--dragging",
     finish.status === "done" && "pool--rest",
+    over && "pool--over",
   ]
     .filter(Boolean)
     .join(" ");
@@ -507,6 +604,7 @@ export function RankingBoard({
               onPlace={placeSelected}
             />
           ))}
+          <div className="board__end" ref={boardEnd} aria-hidden="true" />
         </div>
       </div>
 
@@ -516,6 +614,7 @@ export function RankingBoard({
         {!restEmpty && (
           <div
             key={dock}
+            ref={poolBox}
             className={poolClasses}
             data-drop="pool"
             style={{ "--dock-rows": rows } as CSSProperties}
