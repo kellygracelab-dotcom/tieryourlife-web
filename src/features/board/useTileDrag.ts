@@ -24,6 +24,10 @@ const domHitTest: HitTest = (at) => document.elementFromPoint(at.x, at.y);
 export interface TileDrag {
   state: DragState;
   onPointerDown(item: number): (event: ReactPointerEvent<HTMLElement>) => void;
+  /** The drag as it is right now, ahead of React's commit. */
+  current(): DragState;
+  /** The page moved under a still pointer: what is under it is read again. */
+  nudge(): void;
 }
 
 // Pointer events give mouse, finger and pen one code path; the HTML5 drag API
@@ -122,5 +126,12 @@ export function useTileDrag(
 
   useEffect(() => clearHold, []);
 
-  return { state, onPointerDown };
+  const current = useCallback(() => latest.current, []);
+  const nudge = useCallback(() => {
+    const now = latest.current;
+    if (now.phase !== "dragging") return;
+    become(move(now, now.at, targetOf(hitTest(now.at))));
+  }, [become, hitTest]);
+
+  return { state, onPointerDown, current, nudge };
 }

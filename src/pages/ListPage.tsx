@@ -127,6 +127,20 @@ function CopyLinkButton({ list }: { list: PublishedList }) {
   );
 }
 
+/** The footer waits while the pool is docked, so the privacy policy ends the list's menu instead. */
+function PrivacyItem() {
+  return (
+    <>
+      <li className="menu__divider" role="separator" />
+      <li>
+        <a className="menu__action" href="/privacy.html">
+          {strings.footer.privacy}
+        </a>
+      </li>
+    </>
+  );
+}
+
 /** What the button does on a wide screen, the menu does on a phone, where the head has no room. */
 function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
   const { copy, canShare, share } = useListLink(list);
@@ -240,6 +254,7 @@ function VisitorMenu({
               {fill(strings.list.hideAuthorNow, { name: list.authorName })}
             </button>
           </li>
+          <PrivacyItem />
         </>
       </Menu>
       <ReportDialog
@@ -324,6 +339,7 @@ function AuthorMenu({
               {strings.list.delete}
             </button>
           </li>
+          <PrivacyItem />
         </>
       </Menu>
       {deleting.status !== "closed" && (
