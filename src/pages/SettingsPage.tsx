@@ -284,29 +284,41 @@ function ThemeCard({ note }: { note: string | null }) {
 
 function HiddenCard() {
   const { hidden, showList, showAuthor } = useHidden();
-  if (hidden.lists.length === 0 && hidden.authors.length === 0) return null;
+  const nothing = hidden.lists.length === 0 && hidden.authors.length === 0;
   return (
     <section className="settings__card" aria-labelledby="hidden-title">
       <h2 id="hidden-title" className="settings__title">
         {strings.settings.hiddenTitle}
       </h2>
-      <p className="settings__helper">{strings.settings.hiddenBody}</p>
-      <ul className="settings__hidden" aria-label={strings.settings.hiddenTitle}>
-        {hidden.lists.map((list) => (
-          <li key={`l-${list.id}`} className="settings__hidden-row">
-            <span className="settings__hidden-name">{list.title}</span>
-            <Button onClick={() => showList(list.id)}>{strings.settings.showAgain}</Button>
-          </li>
-        ))}
-        {hidden.authors.map((author) => (
-          <li key={`a-${author.uid}`} className="settings__hidden-row">
-            <span className="settings__hidden-name">
-              {fill(strings.settings.hiddenAuthor, { name: author.name })}
-            </span>
-            <Button onClick={() => showAuthor(author.uid)}>{strings.settings.showAgain}</Button>
-          </li>
-        ))}
-      </ul>
+      {nothing ? (
+        // The app keeps the entry with an empty state, so the place is known before it is needed.
+        <>
+          <p className="settings__helper settings__helper--lead">
+            {strings.settings.hiddenEmptyTitle}
+          </p>
+          <p className="settings__helper">{strings.settings.hiddenEmptyBody}</p>
+        </>
+      ) : (
+        <p className="settings__helper">{strings.settings.hiddenBody}</p>
+      )}
+      {!nothing && (
+        <ul className="settings__hidden" aria-label={strings.settings.hiddenTitle}>
+          {hidden.lists.map((list) => (
+            <li key={`l-${list.id}`} className="settings__hidden-row">
+              <span className="settings__hidden-name">{list.title}</span>
+              <Button onClick={() => showList(list.id)}>{strings.settings.showAgain}</Button>
+            </li>
+          ))}
+          {hidden.authors.map((author) => (
+            <li key={`a-${author.uid}`} className="settings__hidden-row">
+              <span className="settings__hidden-name">
+                {fill(strings.settings.hiddenAuthor, { name: author.name })}
+              </span>
+              <Button onClick={() => showAuthor(author.uid)}>{strings.settings.showAgain}</Button>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

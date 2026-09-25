@@ -47,6 +47,6 @@ test("search from the front page, then narrow the order", async ({ page }) => {
   // On a laptop the box is the bar's now, which searches on Enter; a phone's page box follows the typing.
   await box.fill("nothing here");
   await box.press("Enter");
-  await expect(page.getByText("Nothing with that name yet.")).toBeVisible();
+  await expect(page.getByText("No lists match “nothing here”")).toBeVisible();
   await expect(page.getByRole("link", { name: "the front page" })).toHaveAttribute("href", "/");
 });

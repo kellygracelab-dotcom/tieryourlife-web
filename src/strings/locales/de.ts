@@ -120,6 +120,9 @@ const de: Translation = {
     hiddenTitle: "Ausgeblendet",
     hiddenBody:
       "Listen und Autoren, die du auf diesem Gerät ausgeblendet hast. Niemand sonst erfährt davon.",
+    hiddenEmptyTitle: "Alles ist sichtbar",
+    hiddenEmptyBody:
+      "Listen und Menschen, die du in der Community ausblendest, warten hier, falls du es dir anders überlegst.",
     hiddenAuthor: "Alles von {name}",
     showAgain: "Wieder anzeigen",
   },
@@ -182,12 +185,13 @@ const de: Translation = {
     count: { one: "{n} Liste", other: "{n} Listen" },
     countMore: { one: "{n} Liste und mehr", other: "{n} Listen und mehr" },
     sortBy: "Sortierung",
-    mostRanked: "Am meisten eingestuft",
+    mostRanked: "Beliebt",
     newest: "Neueste",
     categories: "Kategorie",
     all: "Alle",
-    nothing: "Noch nichts mit diesem Namen.",
-    browseHint: "Versuch weniger Wörter, oder stöbere auf {where}.",
+    nothing: "Keine Liste passt zu „{q}“",
+    browseHint:
+      "Versuche ein kürzeres Wort oder überprüfe die Schreibweise. Oder schau in {where}.",
     browseHome: "der Startseite",
     popularIn: "Beliebt in {category}",
     makeThis: "Diese Liste erstellen",
@@ -294,7 +298,8 @@ const de: Translation = {
     other: "Sonstiges",
   },
   feed: {
-    empty: "Hier gibt es noch keine Listen.",
+    empty: "Noch nichts veröffentlicht",
+    emptyBody: "Hier erscheinen Listen, die andere öffentlich gemacht haben.",
     allHidden: "Alles hier ist für dich ausgeblendet. Die Liste steht in den Einstellungen.",
     hiddenTile: "Für dich ausgeblendet",
     undo: "Rückgängig",
@@ -335,13 +340,14 @@ const de: Translation = {
     hideAuthorNow: "Alles von {name} ausblenden",
     hiddenAuthorNotice: "Alles von {name} ist für dich ausgeblendet",
     edit: "Bearbeiten",
-    delete: "Löschen",
-    deleteTitle: "Diese Liste löschen?",
+    delete: "Veröffentlichung zurücknehmen",
+    deleteTitle: "Veröffentlichung dieser Liste zurücknehmen?",
     deleteBody:
       "„{title}“ verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Ein Board auf deinem Telefon bleibt auf deinem Telefon.",
     keepIt: "Behalten",
-    deleting: "Wird gelöscht…",
-    deleteFailed: "Konnte nicht löschen. Versuch es in einer Minute noch einmal.",
+    deleting: "Wird zurückgenommen…",
+    deleteFailed:
+      "Konnte die Veröffentlichung nicht zurücknehmen. Versuch es in einer Minute noch einmal.",
     deleteOffline: "Keine Verbindung. Versuch es erneut, sobald du wieder online bist.",
     copyLink: "Link kopieren",
     share: "Teilen",
@@ -363,7 +369,7 @@ const de: Translation = {
     reasonViolence: "Gewalt oder verstörende Inhalte",
     reasonSpam: "Spam oder Werbung",
     reasonOther: "Etwas anderes",
-    noteLabel: "Notiz (optional)",
+    noteLabel: "Etwas hinzufügen (optional)",
     notePlaceholder: "Worauf soll die Prüfung achten?",
     hideAuthor: "Auch alles von {name} ausblenden",
     byHand: "Ein Mensch liest jede Meldung. Genug davon blenden die Liste bis dahin aus.",
@@ -381,7 +387,6 @@ const de: Translation = {
     hideInstead: "Lieber ausblenden",
   },
   board: {
-    authorsVersion: "Fassung des Autors",
     unranked: { one: "{n} nicht eingestuft", other: "{n} nicht eingestuft" },
   },
   rank: {
@@ -488,9 +493,9 @@ const de: Translation = {
     listsHow:
       "Öffne in der App eine Liste, füge Karten hinzu, lege die Stufen fest und tipp auf Veröffentlichen. Sie erscheint hier unter demselben Google-Konto.",
     listsFailed: "Deine Listen konnten nicht geladen werden.",
-    remove: "Löschen",
+    remove: "Veröffentlichung zurücknehmen",
     removeAsk:
-      "„{title}“ löschen? Sie verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Ein Board auf deinem Telefon bleibt auf deinem Telefon.",
+      "Veröffentlichung von „{title}“ zurücknehmen? Sie verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Ein Board auf deinem Telefon bleibt auf deinem Telefon.",
     keepIt: "Behalten",
     removing: "Wird gelöscht…",
     removeFailed: "Konnte nicht löschen. Versuch es noch einmal.",
