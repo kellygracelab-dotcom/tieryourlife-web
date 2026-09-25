@@ -15,6 +15,17 @@ import {
 const run = (state: BoardState, ...actions: BoardAction[]) => actions.reduce(reduce, state);
 
 describe("board model", () => {
+  it("starts over from the rows it is given when the list changes shape", () => {
+    const before = reduce(init(2, 3), { type: "place", item: 0, tier: 0 });
+    const after = reduce(before, { type: "reset", tierCount: 2, itemCount: 4, rows: [[0], [3]] });
+    expect(after).toEqual({ itemCount: 4, rows: [[0], [3]], selected: null, history: [] });
+    expect(reduce(after, { type: "reset", tierCount: 3, itemCount: 4, rows: null }).rows).toEqual([
+      [],
+      [],
+      [],
+    ]);
+  });
+
   it("starts with every item in the pool and nothing to undo", () => {
     const state = init(3, 4);
     expect(state.rows).toEqual([[], [], []]);

@@ -152,15 +152,6 @@ export function OwnerBoard({
 
   return (
     <section className="owner" aria-label={strings.owner.title}>
-      <div className="owner__add">
-        <AddCardBox
-          items={draft.items}
-          category={draft.category}
-          dispatch={dispatch}
-          lookup={lookup}
-          upload={upload}
-        />
-      </div>
       {publishing.status === "failed" ? (
         <p className="owner__status owner__status--failed" role="alert">
           <Icon name="error" />
@@ -183,7 +174,7 @@ export function OwnerBoard({
         </p>
       ) : null}
       <RankingBoard
-        key={`${generation}:${draft.tiers.length}:${draft.items.length}`}
+        key={generation}
         list={shown}
         store={scratch}
         edit={{
@@ -197,6 +188,15 @@ export function OwnerBoard({
               const card = draft.items[item];
               if (card !== undefined) dispatch({ type: "removeItem", key: card.key });
             },
+            tools: (
+              <AddCardBox
+                items={draft.items}
+                category={draft.category}
+                dispatch={dispatch}
+                lookup={lookup}
+                upload={upload}
+              />
+            ),
           },
         }}
       />

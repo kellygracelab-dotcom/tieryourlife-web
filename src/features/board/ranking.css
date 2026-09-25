@@ -775,6 +775,86 @@
     outline-offset: -2px;
   }
 
+  /*
+   * The owner's add-cards controls live with the pool: at the top of the
+   * column, or in the dock's head row after the count. Suggestions float over
+   * the cards instead of pushing them about; in the dock they open upward.
+   */
+  .pool__tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+  }
+
+  .pool__tools .editor__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .pool__tools .cards__add {
+    flex: 1 1 200px;
+    order: 0;
+    min-width: 0;
+  }
+
+  .pool__tools .cards__upload {
+    order: 1;
+  }
+
+  .pool__tools .editor__field {
+    min-height: 36px;
+    padding: 6px 12px;
+    border-radius: 18px;
+  }
+
+  .pool__tools .cards__upload .btn {
+    min-height: 36px;
+  }
+
+  .pool__tools .cards__found {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 5;
+    max-height: min(60vh, 420px);
+    overflow-y: auto;
+    box-shadow: var(--shadow-up);
+  }
+
+  .ranking:not(.ranking--under) .pool__tools {
+    order: 0;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Stacked in the column, the field takes its own height, not a share of the column's. */
+  .ranking:not(.ranking--under) .pool__tools .cards__add {
+    flex: 0 0 auto;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .cards__found {
+    top: calc(100% + 4px);
+  }
+
+  .ranking--under .pool__tools {
+    order: 2;
+    flex: 1 1 320px;
+    flex-wrap: nowrap;
+  }
+
+  .ranking--under .pool__tools .cards__add {
+    max-width: 480px;
+  }
+
+  .ranking--under .pool__tools .cards__found {
+    bottom: calc(100% + 4px);
+  }
+
   /* Beside: a grid edge to edge, the column flush with the window's edge. */
   .ranking:not(.ranking--under) {
     display: grid;
@@ -1034,6 +1114,7 @@
 
   .ranking--under .pool__head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     min-height: 36px;

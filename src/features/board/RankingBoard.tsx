@@ -8,6 +8,7 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import type { ApiError } from "../../api/errors";
@@ -61,6 +62,8 @@ export interface EditMode {
     canSave: boolean;
     onChange: (rows: readonly (readonly number[])[]) => void;
     remove: (item: number) => void;
+    /** The owner's way of bringing cards in; it lives with the pool, wherever the pool is. */
+    tools?: ReactNode;
   };
 }
 
@@ -185,6 +188,17 @@ function useBoard(
   const [state, dispatch] = useReducer(reduce, list, (l) =>
     init(l.tiers.length, l.items.length, loadDraft(store, scope) ?? initialRows),
   );
+  // The list changed shape under the board — the owner added or took away a
+  // card — and the rows come from the page again. A state that follows a prop
+  // is adjusted during the render, React's way, not in an effect.
+  if (state.itemCount !== list.items.length || state.rows.length !== list.tiers.length) {
+    dispatch({
+      type: "reset",
+      tierCount: list.tiers.length,
+      itemCount: list.items.length,
+      rows: loadDraft(store, scope) ?? initialRows,
+    });
+  }
   useEffect(() => {
     saveDraft(store, scope, state.rows);
     // Only the rows are worth keeping; scope fields are derived from the list.
@@ -387,6 +401,7 @@ export function RankingBoard({
   }, [dispatch, list.tiers.length, placeSelected, locked]);
 
   const left = pool(state);
+  const tools = edit?.owner?.tools;
   const needle = query.trim().toLowerCase();
   const shown =
     needle === ""
@@ -588,6 +603,8 @@ export function RankingBoard({
           />
         )}
 
+        {tools !== undefined && !wide && <div className="ranking__tools">{tools}</div>}
+
         <div className="board">
           {list.tiers.map((tier, index) => (
             <TierRow
@@ -622,6 +639,7 @@ export function RankingBoard({
             {docked && (
               <div className="pool__grip" onPointerDown={startResize} aria-hidden="true" />
             )}
+            {tools !== undefined && wide && allPlaced && <div className="pool__tools">{tools}</div>}
             {allPlaced ? (
               <div className="pool__done">
                 <p className="pool__done-title">
@@ -647,7 +665,8 @@ export function RankingBoard({
                     <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
                     <DockToggle dock={dock} onChoose={choose} />
                   </div>
-                  {left.length > POOL_SEARCH_FROM && (
+                  {tools !== undefined && wide && <div className="pool__tools">{tools}</div>}
+                  {left.length > POOL_SEARCH_FROM && tools === undefined && (
                     <input
                       className="pool__search"
                       type="search"
