@@ -316,6 +316,40 @@ describe("the draft between visits", () => {
     expect(loadEditorDraft(store)?.tiers[0]?.caption).toBe("Mine");
   });
 
+  it("leaves the captions of a published list's own draft as they were published", () => {
+    const store = memoryStore();
+    const old = (caption: string, label: string) => ({
+      key: `t-${label}`,
+      label,
+      caption,
+      colorLight: "#000000",
+      colorDark: "#ffffff",
+    });
+    store.write(
+      "tyl:edit:l1",
+      JSON.stringify({
+        title: "Oscar films 2025",
+        category: "film_tv",
+        tiers: [
+          old("Masterpiece", "S"),
+          old("Great", "A"),
+          old("Good", "B"),
+          old("Watchable", "C"),
+          old("No", "D"),
+        ],
+        items: [],
+        serial: 6,
+      }),
+    );
+    expect(loadEditorDraft(store, "tyl:edit:l1")?.tiers.map((tier) => tier.caption)).toEqual([
+      "Masterpiece",
+      "Great",
+      "Good",
+      "Watchable",
+      "No",
+    ]);
+  });
+
   it("reads a draft kept before own pictures existed", () => {
     const store = memoryStore();
     store.write(
