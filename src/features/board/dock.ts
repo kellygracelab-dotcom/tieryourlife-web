@@ -12,6 +12,22 @@ export const WIDE_FROM = 1400;
 export const SHORT_BELOW = 760;
 export const DEFAULT_ROWS: DockRows = 2;
 
+/** The app bar and the list's header, above the board on a window wide enough for a dock. */
+const ABOVE_BOARD = 136;
+/** What the board keeps whatever the dock's size: two occupied rows and their gaps. */
+const BOARD_LEAST = 260;
+/** The dock around its rows: 12 padding, 36 head, 10 gap, 14 padding, less one row gap. */
+const DOCK_FRAME = 62;
+/** A row of cards with its gap. */
+const DOCK_ROW = 100;
+
+/** The most rows the dock can show on a window this tall and still leave the board two occupied rows. */
+export const rowsThatFit = (height: number): DockRows =>
+  Math.max(
+    1,
+    Math.min(4, Math.floor((height - ABOVE_BOARD - BOARD_LEAST - DOCK_FRAME) / DOCK_ROW)),
+  ) as DockRows;
+
 export interface DockChoice {
   dock: Dock | null;
   rows: DockRows;

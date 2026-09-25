@@ -1,7 +1,18 @@
 .board {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* A point at the board's end, for the dock to know whether a row is under it. */
+.board__end {
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
 
 .tier {
@@ -143,5 +154,34 @@
   .tile {
     width: 56px;
     height: 78px;
+  }
+}
+
+/*
+ * Desktop rows, as the wide spec has them: an empty row is a target the eye
+ * skips over at 72, a row with cards shows them in full at 114, and rows are
+ * 10 apart. A row grows the moment its first card lands; when its last card
+ * leaves it waits 300 ms before shrinking, so it does not collapse under the
+ * pointer in the middle of a drag.
+ */
+@media (min-width: 840px) {
+  .board {
+    gap: 10px;
+  }
+
+  .tier {
+    min-height: 72px;
+    transition: min-height 180ms ease-out 300ms;
+  }
+
+  .tier:has(.tier__items > li) {
+    min-height: 114px;
+    transition-delay: 0ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier {
+    transition: none;
   }
 }

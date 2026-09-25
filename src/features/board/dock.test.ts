@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bandOf, DOCK_KEY, defaultDock, keepDock, readDock } from "./dock";
+import { bandOf, DOCK_KEY, defaultDock, keepDock, readDock, rowsThatFit } from "./dock";
 
 const memory = () => {
   const data = new Map<string, string>();
@@ -18,6 +18,15 @@ describe("the pool's dock", () => {
     expect(defaultDock(2000, 759)).toBe("beside");
     expect(bandOf(1399)).toBe("narrow");
     expect(bandOf(1400)).toBe("wide");
+  });
+
+  it("shows only as many rows as leave the board two occupied rows on a window this tall", () => {
+    expect(rowsThatFit(970)).toBe(4);
+    expect(rowsThatFit(858)).toBe(4);
+    expect(rowsThatFit(857)).toBe(3);
+    expect(rowsThatFit(760)).toBe(3);
+    expect(rowsThatFit(700)).toBe(2);
+    expect(rowsThatFit(500)).toBe(1);
   });
 
   it("keeps a choice and the rows per band, and leaves the other band alone", () => {
