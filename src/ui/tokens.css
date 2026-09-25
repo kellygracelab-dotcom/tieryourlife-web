@@ -100,7 +100,7 @@
     --tier-c: #7fc393;
     --tier-d: #86b8de;
     --pool: #26262c;
-    --on-band: #201f26;
+    --on-band: #ffffff;
     --band-tint: 20%;
     --band-tint-hover: 32%;
     --tile-placeholder: #26262c;
@@ -139,7 +139,7 @@
   --tier-c: #7fc393;
   --tier-d: #86b8de;
   --pool: #26262c;
-  --on-band: #201f26;
+  --on-band: #ffffff;
   --band-tint: 20%;
   --band-tint-hover: 32%;
   --tile-placeholder: #26262c;
@@ -147,21 +147,13 @@
 }
 
 /*
- * A tier carries both of its colours; the scheme picks the one on the block,
- * while the row's tint always starts from the base colour, mixed into the
- * paper in oklab, so dark rows do not turn to mud.
+ * A tier carries both of its colours, but the block wears the full-strength
+ * one in either scheme with a white letter on it, as the app's dark mapping
+ * has it; the row's tint starts from the same colour, mixed into the paper
+ * in oklab, so dark rows do not turn to mud. The pastel stays with the list
+ * for whatever wants a lighter touch.
  */
 .band {
   --band: var(--band-light);
   --band-base: var(--band-light);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .band {
-    --band: var(--band-dark);
-  }
-}
-
-:root[data-theme="dark"] .band {
-  --band: var(--band-dark);
 }
