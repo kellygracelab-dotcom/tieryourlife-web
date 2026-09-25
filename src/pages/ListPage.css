@@ -172,6 +172,11 @@
   display: none;
 }
 
+/* Unless the owner is editing and the head has given the button's place to the editing row. */
+.list-menu__copy--shown {
+  display: block;
+}
+
 /* Beside a side column the head holds the list's identity in one 72 px row. */
 @media (min-width: 840px) {
   .list-page {

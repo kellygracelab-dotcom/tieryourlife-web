@@ -379,7 +379,7 @@ const tr: Translation = {
   },
   rank: {
     yours: "Sıralamanız",
-    ownCopy: "kendi kopyanızı sıralıyorsunuz",
+    ownCopy: "nasıl istersen sırala",
     placed: "{n} / {total} yerleştirildi",
     left: { other: "{n} kart kaldı" },
     hintPick: "Bir kart seçin, sonra bir seviyeye dokunun ya da {keys} tuşuna basın",

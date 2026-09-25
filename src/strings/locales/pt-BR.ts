@@ -382,7 +382,7 @@ const ptBR: Translation = {
   },
   rank: {
     yours: "Sua classificação",
-    ownCopy: "você está classificando sua própria cópia",
+    ownCopy: "organize do seu jeito",
     placed: "{n} de {total} colocados",
     left: { one: "Falta {n} card", other: "Faltam {n} cards" },
     hintPick: "Escolha um card, depois toque em um nível ou aperte {keys}",

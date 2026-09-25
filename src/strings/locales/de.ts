@@ -391,7 +391,7 @@ const de: Translation = {
   },
   rank: {
     yours: "Deine Rangliste",
-    ownCopy: "du ordnest deine eigene Kopie ein",
+    ownCopy: "ordne sie frei",
     placed: "{n} von {total} platziert",
     left: { one: "Noch {n} Karte", other: "Noch {n} Karten" },
     hintPick: "Wähl eine Karte, dann tipp auf eine Stufe oder drück {keys}",

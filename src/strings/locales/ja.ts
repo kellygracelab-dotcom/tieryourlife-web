@@ -379,7 +379,7 @@ const ja: Translation = {
   },
   rank: {
     yours: "あなたのランキング",
-    ownCopy: "自分のコピーをランク付けしています",
+    ownCopy: "好きなように並べてください",
     placed: "{total} 枚中 {n} 枚を配置",
     left: { other: "残り {n} 枚" },
     hintPick: "カードを選んでからティアをタップするか、{keys} を押します",

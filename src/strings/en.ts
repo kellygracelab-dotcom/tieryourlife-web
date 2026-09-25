@@ -378,7 +378,7 @@ export const en = {
   },
   rank: {
     yours: "Your ranking",
-    ownCopy: "you are ranking your own copy",
+    ownCopy: "rank it however you like",
     placed: "{n} of {total} placed",
     left: { one: "{n} card left", other: "{n} cards left" },
     hintPick: "Pick a card, then tap a tier or press {keys}",
