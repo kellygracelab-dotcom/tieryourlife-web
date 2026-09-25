@@ -58,7 +58,7 @@ describe("FeedGrid", () => {
 
   it("says when there is nothing", () => {
     show(ready(null, "idle", []));
-    expect(screen.getByText("No lists here yet.")).toBeInTheDocument();
+    expect(screen.getByText("Nothing published yet")).toBeInTheDocument();
   });
 
   it("lists the cards and offers more only while there is more", async () => {

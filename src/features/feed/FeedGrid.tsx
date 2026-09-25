@@ -56,7 +56,12 @@ export function FeedGrid({
   }
 
   if (state.lists.length === 0) {
-    return <p className="feed__empty">{strings.feed.empty}</p>;
+    return (
+      <div className="feed__empty">
+        <p className="feed__empty-title">{strings.feed.empty}</p>
+        <p className="feed__empty-body">{strings.feed.emptyBody}</p>
+      </div>
+    );
   }
 
   // A card hidden during this visit keeps its place with a way back, so the

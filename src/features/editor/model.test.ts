@@ -279,6 +279,43 @@ describe("the draft between visits", () => {
     ).toBe(false);
   });
 
+  it("gives a draft kept with the old five captions today's words, and leaves a changed caption alone", () => {
+    const store = memoryStore();
+    const old = (caption: string, label: string) => ({
+      key: `t-${label}`,
+      label,
+      caption,
+      colorLight: "#000000",
+      colorDark: "#ffffff",
+    });
+    const kept = {
+      title: "Old",
+      category: "anime",
+      tiers: [
+        old("Masterpiece", "S"),
+        old("Great", "A"),
+        old("Good", "B"),
+        old("Watchable", "C"),
+        old("No", "D"),
+      ],
+      items: [],
+      serial: 6,
+    };
+    store.write("tyl:new", JSON.stringify(kept));
+    expect(loadEditorDraft(store)?.tiers.map((tier) => tier.caption)).toEqual([
+      "Best",
+      "Great",
+      "Good",
+      "Okay",
+      "Worst",
+    ]);
+    store.write(
+      "tyl:new",
+      JSON.stringify({ ...kept, tiers: [old("Mine", "S"), ...kept.tiers.slice(1)] }),
+    );
+    expect(loadEditorDraft(store)?.tiers[0]?.caption).toBe("Mine");
+  });
+
   it("reads a draft kept before own pictures existed", () => {
     const store = memoryStore();
     store.write(

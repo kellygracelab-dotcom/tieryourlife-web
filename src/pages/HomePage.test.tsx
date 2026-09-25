@@ -74,7 +74,7 @@ describe("HomePage", () => {
     await userEvent.click(screen.getByRole("link", { name: "Games" }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Games");
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({ category: "games", sort: "popular" });
-    expect(await screen.findByText("No lists here yet.")).toBeInTheDocument();
+    expect(await screen.findByText("Nothing published yet")).toBeInTheDocument();
   });
 
   it("keeps the front page useful when the feed fails", async () => {

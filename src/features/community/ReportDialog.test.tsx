@@ -36,7 +36,10 @@ describe("ReportDialog", () => {
     expect(report).toBeDisabled();
 
     await userEvent.click(within(dialog).getByRole("radio", { name: "Spam or advertising" }));
-    await userEvent.type(within(dialog).getByLabelText("Note (optional)"), "  Sells things  ");
+    await userEvent.type(
+      within(dialog).getByLabelText("Anything to add (optional)"),
+      "  Sells things  ",
+    );
     expect(within(dialog).getByText("16 / 500")).toBeInTheDocument();
     await userEvent.click(
       within(dialog).getByRole("checkbox", { name: "Also hide everything from danylo" }),

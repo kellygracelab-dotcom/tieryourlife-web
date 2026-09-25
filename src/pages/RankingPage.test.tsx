@@ -67,8 +67,8 @@ describe("RankingPage", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
     expect(load).toHaveBeenCalledWith("abcdefgh", false);
 
-    await userEvent.click(screen.getByRole("button", { name: "Author's version" }));
-    expect(screen.getByRole("region", { name: "Author's version" })).toHaveTextContent("Climax");
+    await userEvent.click(screen.getByRole("button", { name: "Their ranking" }));
+    expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Climax");
     expect(screen.getByRole("link", { name: "Rank this list" })).toHaveAttribute(
       "href",
       "/l/wMRMFDxo8UejcAi2VVMW",
@@ -110,7 +110,6 @@ describe("RankingPage", () => {
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
 
     // One's own ranking gets the phone app's words, the same as on the list's page.
-    expect(screen.queryByRole("button", { name: "Author's version" })).toBeNull();
     expect(screen.getByRole("button", { name: "Mine" })).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(screen.getByRole("button", { name: "Their ranking" }));
     expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Climax");
@@ -121,7 +120,7 @@ describe("RankingPage", () => {
     load.mockResolvedValue({ ...ranking, snapshot: { ...ranking.snapshot, items } });
     open();
     await screen.findByRole("heading", { level: 1 });
-    expect(screen.queryByRole("button", { name: "Author's version" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Their ranking" })).toBeNull();
     expect(screen.getByText("danylo hasn’t arranged this list.")).toBeInTheDocument();
   });
 

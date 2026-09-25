@@ -149,9 +149,10 @@ export function SearchPage() {
       </div>
       {nothing ? (
         <>
-          <p className="search__empty">
-            {strings.search.nothing} {fillNodes(strings.search.browseHint, { where })}
-          </p>
+          <div className="search__empty">
+            <p className="search__empty-title">{fill(strings.search.nothing, { q: filters.q })}</p>
+            <p className="search__empty-body">{fillNodes(strings.search.browseHint, { where })}</p>
+          </div>
           <p className="search__make">
             <Link className="btn btn--tonal" to={`/new?title=${encodeURIComponent(filters.q)}`}>
               <Icon name="add" className="btn__icon" />

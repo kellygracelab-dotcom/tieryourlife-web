@@ -462,8 +462,12 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
               {" · "}
               {own ? strings.list.yourList : strings.rank.ownCopy}
             </span>
-            {" · "}
-            {plural(strings.card.rankings, list.takeCount)}
+            {list.takeCount > 0 && (
+              <>
+                {" · "}
+                {plural(strings.card.rankings, list.takeCount)}
+              </>
+            )}
           </p>
         </div>
         {!outOfSight && !own && (

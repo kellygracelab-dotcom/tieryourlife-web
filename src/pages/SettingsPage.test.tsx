@@ -276,6 +276,14 @@ describe("SettingsPage", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("keeps the Hidden section with the app's empty state while nothing is hidden", () => {
+    useHiddenStoreForTests(memoryStore());
+    open();
+    expect(screen.getByRole("heading", { name: "Hidden" })).toBeInTheDocument();
+    expect(screen.getByText("Everything is showing")).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Hidden" })).toBeNull();
+  });
+
   it("lists what is hidden on this device, for a guest too, and shows it again", async () => {
     const store = memoryStore();
     store.write(

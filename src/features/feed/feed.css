@@ -32,6 +32,18 @@
   color: var(--ink-dim);
 }
 
+.feed__empty-title {
+  margin: 0;
+  font: var(--text-lead);
+  color: var(--ink);
+}
+
+.feed__empty-body {
+  margin: 4px 0 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
 .feed__more {
   display: flex;
   flex-direction: column;

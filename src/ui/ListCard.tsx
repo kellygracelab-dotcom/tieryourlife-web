@@ -12,9 +12,10 @@ const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase(
 
 /** The feed's card: the list under the picture and the title, the author under their name. */
 export function ListCard({ list }: ListCardProps) {
+  // A count of nobody says nothing: the app shows the rankings only once there are some.
   const meta = [
     plural(strings.card.items, list.itemCount),
-    plural(strings.card.rankings, list.takeCount),
+    ...(list.takeCount > 0 ? [plural(strings.card.rankings, list.takeCount)] : []),
   ];
   return (
     <article className="list-card">

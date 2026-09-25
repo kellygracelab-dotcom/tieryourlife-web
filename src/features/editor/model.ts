@@ -368,7 +368,7 @@ export function loadEditorDraft(store: DraftStoreLike, key = NEW_DRAFT_KEY): Dra
     return {
       title: draft.title,
       category: typeof draft.category === "string" ? (draft.category as Category) : null,
-      tiers: draft.tiers,
+      tiers: refreshedCaptions(draft.tiers),
       // Drafts kept before own pictures existed carry no pictureId, and drafts
       // kept before the arrangement travelled carry no rows.
       items,
@@ -378,6 +378,35 @@ export function loadEditorDraft(store: DraftStoreLike, key = NEW_DRAFT_KEY): Dra
   } catch {
     return null;
   }
+}
+
+/** The five captions the editor gave before they were localised, by the tier's letter. */
+const OLD_CAPTIONS: Record<string, string> = {
+  S: "Masterpiece",
+  A: "Great",
+  B: "Good",
+  C: "Watchable",
+  D: "No",
+};
+
+/**
+ * A draft kept before the captions changed still says Masterpiece … No.
+ * When its five tiers are exactly those, untouched, they take the words the
+ * editor gives today; a caption anybody changed stays as it is.
+ */
+function refreshedCaptions(tiers: EditorTier[]): EditorTier[] {
+  const untouched =
+    tiers.length === DEFAULT_TIERS.length &&
+    tiers.every((tier, index) => {
+      const label = DEFAULT_TIERS[index]?.label;
+      return tier.label === label && tier.caption === OLD_CAPTIONS[label ?? ""];
+    });
+  return untouched
+    ? tiers.map((tier, index) => ({
+        ...tier,
+        caption: DEFAULT_TIERS[index]?.caption ?? tier.caption,
+      }))
+    : tiers;
 }
 
 export function saveEditorDraft(store: DraftStoreLike, draft: Draft, key = NEW_DRAFT_KEY): void {

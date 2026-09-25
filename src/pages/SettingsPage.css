@@ -384,3 +384,7 @@
 .settings__card .theme {
   margin: 0;
 }
+
+.settings__helper--lead {
+  color: var(--ink);
+}

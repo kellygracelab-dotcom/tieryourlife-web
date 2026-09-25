@@ -63,10 +63,7 @@ describe("SearchPage", () => {
     expect(await screen.findByRole("link", { name: /Ghibli, ranked/ })).toBeInTheDocument();
     expect(screen.getByText("2 lists, and more")).toBeInTheDocument();
     expect(within(screen.getByRole("main")).getByRole("searchbox")).toHaveValue("anime");
-    expect(screen.getByRole("button", { name: "Most ranked" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(screen.getByRole("button", { name: "Popular" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("changes the order and the category through the chips, keeping the words", async () => {
@@ -110,7 +107,7 @@ describe("SearchPage", () => {
         : { lists: [], nextCursor: null },
     );
     open("/search?q=zzzz&category=anime");
-    expect(await screen.findByText(/Nothing with that name yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/No lists match/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Anime" })).toHaveAttribute("href", "/c/anime");
     expect(screen.getByRole("link", { name: "Make this list" })).toHaveAttribute(
       "href",
