@@ -413,7 +413,7 @@ const pl: Translation = {
   },
   rank: {
     yours: "Twój ranking",
-    ownCopy: "oceniasz własną kopię",
+    ownCopy: "ułóż ją po swojemu",
     placed: "Umieszczono {n} z {total}",
     left: {
       one: "Została {n} karta",

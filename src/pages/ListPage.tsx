@@ -127,12 +127,24 @@ function CopyLinkButton({ list }: { list: PublishedList }) {
   );
 }
 
-/** What the button does on a wide screen, the menu does on a phone, where the head has no room. */
-function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
+/**
+ * What the button does on a wide screen, the menu does on a phone, where the
+ * head has no room — and on any screen while the owner is editing, when the
+ * head holds the editing row instead.
+ */
+function LinkItems({
+  list,
+  notify,
+  shown = false,
+}: {
+  list: PublishedList;
+  notify: Notify;
+  shown?: boolean;
+}) {
   const { copy, canShare, share } = useListLink(list);
   return (
     <>
-      <li className="list-menu__copy">
+      <li className={shown ? "list-menu__copy list-menu__copy--shown" : "list-menu__copy"}>
         <button
           type="button"
           className="menu__action"
@@ -272,10 +284,13 @@ function AuthorMenu({
   list,
   unpublish,
   notify,
+  copyInMenu = false,
 }: {
   list: PublishedList;
   unpublish: Unpublish;
   notify: Notify;
+  /** While the owner is editing, the head has no Copy link and the menu carries it. */
+  copyInMenu?: boolean;
 }) {
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState<Deleting>({ status: "closed" });
@@ -307,9 +322,9 @@ function AuthorMenu({
     <>
       <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
         <>
-          <LinkItems list={list} notify={notify} />
+          <LinkItems list={list} notify={notify} shown={copyInMenu} />
           <li
-            className={canShare ? "menu__divider" : "menu__divider list-menu__copy"}
+            className={canShare || copyInMenu ? "menu__divider" : "menu__divider list-menu__copy"}
             role="separator"
           />
           <li>
@@ -417,6 +432,9 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
   const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
   // The owner's republish: the page fetches the list again and says so for a while.
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  // While the owner's board has changes, the head holds the editing row: Edit
+  // steps aside and Copy link goes into the overflow.
+  const [editing, setEditing] = useState(false);
   useEffect(() => {
     if (savedAt === null) return;
     const timer = setTimeout(() => setSavedAt(null), SAVED_NOTE_MS);
@@ -481,15 +499,15 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
           </div>
         )}
         <span className="list-head__tools">
-          {own && (
+          {own && !editing && (
             <Link className="btn btn--tonal" to={`/new?list=${encodeURIComponent(list.id)}`}>
               <Icon name="edit" className="btn__icon" />
               <span>{strings.list.edit}</span>
             </Link>
           )}
-          <CopyLinkButton list={list} />
+          {!(own && editing) && <CopyLinkButton list={list} />}
           {own ? (
-            <AuthorMenu list={list} unpublish={unpublish} notify={setNotice} />
+            <AuthorMenu list={list} unpublish={unpublish} notify={setNotice} copyInMenu={editing} />
           ) : (
             <VisitorMenu list={list} report={report} notify={setNotice} />
           )}
@@ -508,6 +526,7 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
           <OwnerBoard
             key={`${list.id}:${list.updatedAt}`}
             list={list}
+            onChanges={setEditing}
             onPublished={() => {
               setSavedAt(Date.now());
               retry();

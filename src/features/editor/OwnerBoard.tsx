@@ -37,6 +37,8 @@ interface OwnerBoardProps {
   republish?: Republish;
   /** The list is published anew under the same address; the page fetches it again. */
   onPublished: () => void;
+  /** Whether the board differs from the published list; the page's header follows it. */
+  onChanges?: (dirty: boolean) => void;
 }
 
 type Publishing = { status: "idle" } | { status: "busy" } | { status: "failed"; error: ApiError };
@@ -58,6 +60,7 @@ export function OwnerBoard({
   discard = discardPictures,
   republish = republishList,
   onPublished,
+  onChanges,
 }: OwnerBoardProps) {
   const key = editDraftKey(list.id);
   const [draft, dispatch] = useReducer(
@@ -83,6 +86,12 @@ export function OwnerBoard({
     if (dirty) saveEditorDraft(store, draft, key);
     else clearEditorDraft(store, key);
   }, [store, key, draft, dirty]);
+
+  // While there are changes, the header's Edit and Copy link step aside for the editing row.
+  useEffect(() => {
+    onChanges?.(dirty);
+    return () => onChanges?.(false);
+  }, [onChanges, dirty]);
 
   // Leaving the page with changes unsent is the one place the browser's own question is worth asking.
   useEffect(() => {

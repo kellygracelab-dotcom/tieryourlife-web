@@ -460,7 +460,7 @@ const ar: Translation = {
   },
   rank: {
     yours: "تصنيفك",
-    ownCopy: "أنت ترتّب نسختك الخاصة",
+    ownCopy: "رتّبها كما يحلو لك",
     placed: "وُضع {n} من {total}",
     left: {
       zero: "لم تبقَ بطاقات",

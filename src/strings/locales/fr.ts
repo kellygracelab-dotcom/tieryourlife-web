@@ -390,7 +390,7 @@ const fr: Translation = {
   },
   rank: {
     yours: "Votre classement",
-    ownCopy: "vous classez votre propre copie",
+    ownCopy: "classez-la librement",
     placed: "{n} sur {total} placées",
     left: { one: "{n} carte restante", other: "{n} cartes restantes" },
     hintPick: "Choisissez une carte, puis touchez un rang ou appuyez sur {keys}",

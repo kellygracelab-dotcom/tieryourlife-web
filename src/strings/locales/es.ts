@@ -381,7 +381,7 @@ const es: Translation = {
   },
   rank: {
     yours: "Tu clasificación",
-    ownCopy: "estás clasificando tu propia copia",
+    ownCopy: "ordénala como quieras",
     placed: "{n} de {total} colocadas",
     left: { one: "Queda {n} tarjeta", other: "Quedan {n} tarjetas" },
     hintPick: "Elige una tarjeta y luego toca un nivel o pulsa {keys}",

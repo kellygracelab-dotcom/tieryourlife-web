@@ -412,7 +412,7 @@ const uk: Translation = {
   },
   rank: {
     yours: "Ваш рейтинг",
-    ownCopy: "ви розкладаєте свою копію",
+    ownCopy: "розкладіть його як забажаєте",
     placed: "Розкладено {n} із {total}",
     left: {
       one: "Залишилася {n} картка",

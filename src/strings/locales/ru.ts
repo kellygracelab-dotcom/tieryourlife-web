@@ -412,7 +412,7 @@ const ru: Translation = {
   },
   rank: {
     yours: "Ваш рейтинг",
-    ownCopy: "вы раскладываете свою копию",
+    ownCopy: "разложите его как захотите",
     placed: "Разложено {n} из {total}",
     left: {
       one: "Осталась {n} карточка",

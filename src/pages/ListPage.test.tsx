@@ -246,7 +246,7 @@ describe("ListPage", () => {
     const author = screen.getByRole("link", { name: "by danylo" });
     expect(author).toHaveAttribute("href", "/u/u1");
     expect(author.closest("p")).toHaveTextContent(
-      "by danylo · you are ranking your own copy · 2,140 rankings",
+      "by danylo · rank it however you like · 2,140 rankings",
     );
     // The address is not spelled out any more: one press copies it.
     expect(screen.queryByText(`${window.location.host}/l/abc`)).toBeNull();
@@ -320,6 +320,32 @@ describe("ListPage for its author", () => {
     await userEvent.click(screen.getByLabelText("More about this list"));
     expect(screen.queryByRole("button", { name: "Report this list" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Hide this list" })).toBeNull();
+  });
+
+  it("takes Edit and Copy link out of the head while the board has changes", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    openAs(author);
+    await screen.findByRole("heading", { level: 1 });
+    const headEdit = () =>
+      screen.queryAllByRole("link", { name: "Edit" }).filter((a) => a.classList.contains("btn"));
+    // The menu's own Copy link is in the tree at any width; the head's has its class.
+    const headCopy = () =>
+      screen
+        .queryAllByRole("button", { name: "Copy link" })
+        .filter((b) => b.closest("li") === null);
+    const menuCopy = () =>
+      screen.getAllByRole("button", { name: "Copy link" }).find((b) => b.closest("li") !== null)!;
+    expect(headEdit()).toHaveLength(1);
+    expect(headCopy()).toHaveLength(1);
+    expect(menuCopy().closest("li")).not.toHaveClass("list-menu__copy--shown");
+
+    await userEvent.type(screen.getByLabelText("Add a card"), "Climax{Enter}");
+    expect(headEdit()).toHaveLength(0);
+    expect(headCopy()).toHaveLength(0);
+    expect(menuCopy().closest("li")).toHaveClass("list-menu__copy--shown");
+
+    await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(headEdit()).toHaveLength(1);
   });
 
   it("deletes the list after asking, names a failure, and leaves for My lists when it is gone", async () => {
