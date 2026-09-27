@@ -1,4 +1,5 @@
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
+import { isEditorial } from "../../lib/editorial";
 import { plural, strings } from "../../strings";
 
 /**
@@ -191,7 +192,9 @@ export async function drawShare(
   paint.fillStyle = DIM;
   paint.font = `400 26px ${FONT}`;
   const count = plural(strings.card.items, data.itemCount);
-  paint.fillText(ellipsize(paint, `${data.authorName} · ${count}`, width - pad * 2), pad, pad + 98);
+  // A list without an author says how long it is, and names nobody.
+  const line = [data.authorName.trim(), count].filter((part) => part.length > 0).join(" · ");
+  paint.fillText(ellipsize(paint, line, width - pad * 2), pad, pad + 98);
 
   const pictures = await Promise.all(
     plan.rows.flatMap((row) =>
@@ -345,7 +348,7 @@ export async function downloadShare(
 ): Promise<void> {
   const blob = await render({
     title: list.title,
-    authorName: list.authorName,
+    authorName: isEditorial(list) ? "" : list.authorName,
     itemCount: list.items.length,
     tiers: list.tiers,
     items: list.items,

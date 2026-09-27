@@ -21,6 +21,7 @@ import {
   MIN_WRITE_GAP_MS,
   newestFirst,
   placedCount,
+  shownSnapshot,
   snapshotOf,
   summaryOf,
   tooSoon,
@@ -156,6 +157,43 @@ describe("snapshotOf", () => {
       ],
     });
     assert.equal("authorUid" in snapshot, false);
+  });
+
+  it("keeps no name of an editorial list, and never the author's uid", () => {
+    const snapshot = snapshotOf({
+      title: "Pixar",
+      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      authorName: "Danylo Petrov",
+      authorPhotoUrl: "https://lh3/face.jpg",
+      category: "film_tv",
+      tiers: [],
+      items: [],
+    });
+    assert.deepEqual(snapshot, {
+      title: "Pixar",
+      editorial: true,
+      authorName: "",
+      authorPhotoUrl: null,
+      category: "film_tv",
+      tiers: [],
+      items: [],
+    });
+    assert.equal("authorUid" in snapshot, false);
+    // The backend saying so itself does the same.
+    assert.equal(snapshotOf({ authorUid: "u1", authorName: "x", anonymous: true }).editorial, true);
+  });
+
+  it("shows a ranking kept earlier without the name once its list is editorial", () => {
+    const kept = snapshotOf({ title: "Pixar", authorUid: "u1", authorName: "danylo" });
+    assert.equal(shownSnapshot(kept, { authorUid: "u1" }), kept);
+    // The list is gone: nothing to ask, the snapshot stays as it was kept.
+    assert.equal(shownSnapshot(kept, null), kept);
+    assert.deepEqual(shownSnapshot(kept, { authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2" }), {
+      ...kept,
+      editorial: true,
+      authorName: "",
+      authorPhotoUrl: null,
+    });
   });
 
   it("survives a document with fields missing", () => {

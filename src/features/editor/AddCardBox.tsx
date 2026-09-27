@@ -1,10 +1,13 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import type { CatalogueItem } from "../../api/catalogue";
+import type { Category } from "../../api/types";
+import { findInCatalogue } from "../../lib/api";
 import { PictureRefused, type UploadedPicture } from "../../lib/pictures";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
-import type { EditorAction, EditorItem } from "./model";
+import { LIMITS, type EditorAction, type EditorItem } from "./model";
+import { cardsFor, preferredFor, wantedOf } from "./paste";
 import { useCatalogue, type Lookup } from "./useCatalogue";
 
 /** More than this and the list under the box stops being a list and becomes a page. */
@@ -14,6 +17,8 @@ export type Upload = (file: File) => Promise<UploadedPicture>;
 
 interface AddCardBoxProps {
   items: readonly EditorItem[];
+  /** What the list is about: it says whose picture a pasted name takes. */
+  category?: Category | null;
   dispatch: (action: EditorAction) => void;
   lookup?: Lookup;
   upload: Upload;
@@ -44,10 +49,100 @@ function Thumb({ imageUrl, title }: { imageUrl: string | null; title: string }) 
 }
 
 /**
- * The way cards come in: pictures from the device, or a name that the
- * catalogue may recognise. Shared by the editor and the owner's own board.
+ * Many cards at once: names pasted one to a line, each looked up in the
+ * catalogue for its picture. A list of fifty films is a minute, not an hour.
  */
-export function AddCardBox({ items, dispatch, lookup, upload }: AddCardBoxProps) {
+function PasteBox({
+  room,
+  category,
+  dispatch,
+  lookup,
+}: {
+  room: number;
+  category: Category | null;
+  dispatch: (action: EditorAction) => void;
+  lookup: Lookup;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const here = useRef(true);
+  useEffect(() => {
+    here.current = true;
+    return () => {
+      here.current = false;
+    };
+  }, []);
+
+  const wanted = wantedOf(text, Math.max(0, room));
+  const busy = progress !== null;
+
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (busy || wanted.length === 0) return;
+    setProgress({ done: 0, total: wanted.length });
+    void cardsFor(
+      wanted,
+      lookup,
+      (card, done) => {
+        dispatch({ type: "addItem", ...card });
+        setProgress({ done, total: wanted.length });
+      },
+      { going: () => here.current, preferred: preferredFor(category) },
+    ).finally(() => {
+      if (!here.current) return;
+      setProgress(null);
+      setText("");
+      setOpen(false);
+    });
+  };
+
+  if (!open) {
+    return (
+      <div className="cards__paste">
+        <Button icon="content_paste" onClick={() => setOpen(true)} disabled={room <= 0}>
+          {strings.new.paste}
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <form className="cards__paste cards__paste--open" onSubmit={onSubmit}>
+      <label className="editor__label" htmlFor="paste-input">
+        {strings.new.pasteLabel}
+      </label>
+      <textarea
+        id="paste-input"
+        className="cards__paste-text"
+        rows={8}
+        value={text}
+        disabled={busy}
+        aria-describedby="paste-hint"
+        onChange={(event) => setText(event.target.value)}
+      />
+      <p id="paste-hint" className="cards__note">
+        {strings.new.pasteHint}
+      </p>
+      <div className="cards__paste-actions">
+        <Button onClick={() => setOpen(false)} disabled={busy}>
+          {strings.rank.cancel}
+        </Button>
+        <Button variant="filled" type="submit" disabled={busy || wanted.length === 0}>
+          {busy
+            ? fill(strings.new.pasting, { done: progress.done, total: progress.total })
+            : plural(strings.new.pasteAdd, wanted.length)}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * The way cards come in: pictures from the device, a name that the catalogue
+ * may recognise, or many names at once. Shared by the editor and the owner's
+ * own board.
+ */
+export function AddCardBox({ items, category = null, dispatch, lookup, upload }: AddCardBoxProps) {
   const [typed, setTyped] = useState("");
   const [uploading, setUploading] = useState(0);
   const [pictureNote, setPictureNote] = useState<string | null>(null);
@@ -183,6 +278,13 @@ export function AddCardBox({ items, dispatch, lookup, upload }: AddCardBoxProps)
           </div>
         )}
       </form>
+
+      <PasteBox
+        room={LIMITS.items - items.length}
+        category={category}
+        dispatch={dispatch}
+        lookup={lookup ?? findInCatalogue}
+      />
     </>
   );
 }

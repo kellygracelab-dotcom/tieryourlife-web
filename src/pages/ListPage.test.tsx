@@ -259,6 +259,28 @@ describe("ListPage", () => {
     expect(mocks.loadList).toHaveBeenCalledWith("abc");
   });
 
+  it("stands without an author when the list is editorial", async () => {
+    mocks.loadList.mockResolvedValue({
+      ...list,
+      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      authorName: "Danylo Petrov",
+    });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByText(/Danylo Petrov/)).toBeNull();
+    expect(screen.queryByRole("link", { name: /^by / })).toBeNull();
+    expect(document.querySelector(".list-head__meta")).toHaveTextContent(
+      "rank it however you like · 2,140 rankings",
+    );
+
+    // Hiding its author would hide every editorial list; one list can still be hidden or reported.
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    expect(screen.getByRole("button", { name: "Hide this list" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Report this list" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Hide .* lists$|^Hide everything/ })).toBeNull();
+    expect(screen.queryByText(/Danylo/)).toBeNull();
+  });
+
   it("can show their ranking and come back to mine, in the phone app's words", async () => {
     mocks.loadList.mockResolvedValue(list);
     open();

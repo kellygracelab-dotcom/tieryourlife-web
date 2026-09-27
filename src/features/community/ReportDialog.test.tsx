@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ReportDialog, type ReportState } from "./ReportDialog";
 
-const open = (state: ReportState) => {
+const open = (state: ReportState, authorName: string | null = "danylo") => {
   const send = vi.fn();
   const onSignIn = vi.fn();
   const onHideInstead = vi.fn();
@@ -11,7 +11,7 @@ const open = (state: ReportState) => {
   const view = render(
     <ReportDialog
       state={state}
-      authorName="danylo"
+      authorName={authorName}
       send={send}
       onSignIn={onSignIn}
       onHideInstead={onHideInstead}
@@ -22,6 +22,15 @@ const open = (state: ReportState) => {
 };
 
 describe("ReportDialog", () => {
+  it("offers no author to hide when the list has none", async () => {
+    const { send } = open("open", null);
+    const dialog = screen.getByRole("dialog", { name: "Report this list" });
+    expect(within(dialog).queryByRole("checkbox")).toBeNull();
+    await userEvent.click(within(dialog).getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Report" }));
+    expect(send).toHaveBeenCalledWith("spam", null, false);
+  });
+
   it("is nothing while closed", () => {
     open("closed");
     expect(screen.queryByRole("dialog")).toBeNull();

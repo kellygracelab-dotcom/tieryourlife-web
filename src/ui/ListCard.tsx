@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import type { ListSummary } from "../api/types";
+import { isEditorial } from "../lib/editorial";
 import { fill, plural, strings } from "../strings";
 import { ListArt } from "./ListArt";
 import "./ListCard.css";
@@ -29,20 +30,23 @@ export function ListCard({ list }: ListCardProps) {
         <span className="list-card__title">{list.title}</span>
       </Link>
       <span className="list-card__body">
-        <Link
-          className="list-card__author"
-          to={`/u/${encodeURIComponent(list.authorUid)}`}
-          state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
-        >
-          {list.authorPhotoUrl !== null ? (
-            <img className="list-card__face" src={list.authorPhotoUrl} alt="" loading="lazy" />
-          ) : (
-            <span className="list-card__face list-card__face--initial" aria-hidden="true">
-              {initialOf(list.authorName)}
-            </span>
-          )}
-          <span>{fill(strings.card.by, { name: list.authorName })}</span>
-        </Link>
+        {/* An editorial list stands without an author, the way a template does. */}
+        {!isEditorial(list) && (
+          <Link
+            className="list-card__author"
+            to={`/u/${encodeURIComponent(list.authorUid)}`}
+            state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
+          >
+            {list.authorPhotoUrl !== null ? (
+              <img className="list-card__face" src={list.authorPhotoUrl} alt="" loading="lazy" />
+            ) : (
+              <span className="list-card__face list-card__face--initial" aria-hidden="true">
+                {initialOf(list.authorName)}
+              </span>
+            )}
+            <span>{fill(strings.card.by, { name: list.authorName })}</span>
+          </Link>
+        )}
         <span className="list-card__meta">{meta.join(" · ")}</span>
       </span>
     </article>

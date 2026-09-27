@@ -5,6 +5,7 @@
  */
 
 import { createHash, timingSafeEqual } from "node:crypto";
+import { isEditorialList } from "./editorial";
 
 /** No 0/O, 1/l/I: a code is read off a stream and typed by hand. */
 export const CODE_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
@@ -28,6 +29,12 @@ const LIST_ID = /^[A-Za-z0-9_-]{8,64}$/;
 
 export interface Snapshot {
   title: string;
+  /**
+   * The list stood without an author when it was ranked, and the snapshot
+   * keeps no name either. The author's uid is never kept: a ranking outlives
+   * its list and its author's account.
+   */
+  editorial?: boolean;
   authorName: string;
   authorPhotoUrl: string | null;
   category: string;
@@ -156,10 +163,12 @@ export function snapshotOf(list: Record<string, unknown>): Snapshot {
     typeof value === "string" && value.startsWith("https://") ? value : null;
   const tiers = Array.isArray(list.tiers) ? list.tiers : [];
   const items = Array.isArray(list.items) ? list.items : [];
+  const editorial = isEditorialList(list);
   return {
     title: text(list.title),
-    authorName: text(list.authorName),
-    authorPhotoUrl: url(list.authorPhotoUrl),
+    ...(editorial ? { editorial: true } : {}),
+    authorName: editorial ? "" : text(list.authorName),
+    authorPhotoUrl: editorial ? null : url(list.authorPhotoUrl),
     category: text(list.category) || "other",
     tiers: tiers.map((tier: Record<string, unknown>) => ({
       label: text(tier.label),
@@ -173,6 +182,19 @@ export function snapshotOf(list: Record<string, unknown>): Snapshot {
       tierIndex: typeof item.tierIndex === "number" ? item.tierIndex : null,
     })),
   };
+}
+
+/**
+ * The snapshot as it is shown today. A ranking kept before its list became
+ * editorial carries the author's name; while the list is still there to ask,
+ * the name stays out of the answer.
+ */
+export function shownSnapshot(
+  snapshot: Snapshot,
+  list: { authorUid?: unknown; anonymous?: unknown } | null,
+): Snapshot {
+  if (snapshot.editorial !== true && !isEditorialList(list)) return snapshot;
+  return { ...snapshot, editorial: true, authorName: "", authorPhotoUrl: null };
 }
 
 /** Longer than any token the server hands out (32 characters of base64url). */

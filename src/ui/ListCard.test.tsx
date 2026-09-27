@@ -37,6 +37,14 @@ describe("ListCard", () => {
     expect(screen.getByText("34 cards · 2,140 rankings")).toBeInTheDocument();
   });
 
+  it("stands without an author when the list is editorial", () => {
+    renderCard({ authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2", authorName: "Danylo Petrov" });
+    expect(screen.getByRole("link", { name: /Every A24 film, ranked/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Danylo Petrov/)).toBeNull();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByText("34 cards · 2,140 rankings")).toBeInTheDocument();
+  });
+
   it("shows the author's face when there is one", () => {
     const { container } = renderCard({ authorPhotoUrl: "https://lh3/face.jpg" });
     expect(container.querySelector(".list-card__face")).toHaveAttribute(

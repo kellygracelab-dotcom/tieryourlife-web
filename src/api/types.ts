@@ -20,6 +20,8 @@ export type FeedSort = "recent" | "popular";
 export interface ListSummary {
   id: string;
   title: string;
+  /** The list stands without an author; the backend will say so itself one day. */
+  anonymous?: boolean;
   authorUid: string;
   authorName: string;
   authorPhotoUrl: string | null;

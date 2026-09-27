@@ -8,10 +8,12 @@ import { useFollow, type FollowDeps } from "../features/community/useFollow";
 import { useHidden } from "../features/community/useHidden";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
+import { isEditorialAuthor } from "../lib/editorial";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { NotFoundPage } from "./Placeholders";
 import "./ProfilePage.css";
 
 /** What a link to a profile may carry along, so the head is drawn before any answer. */
@@ -29,7 +31,13 @@ const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase(
 
 type Asking = "closed" | "open" | "busy";
 
-export function ProfilePage({ load, follow }: ProfilePageProps) {
+/** An editorial account has no page of its own: its lists stand without an author. */
+export function ProfilePage(props: ProfilePageProps) {
+  const { uid = "" } = useParams();
+  return isEditorialAuthor(uid) ? <NotFoundPage /> : <AuthorProfile {...props} />;
+}
+
+function AuthorProfile({ load, follow }: ProfilePageProps) {
   const { uid = "" } = useParams();
   const location = useLocation();
   const hint = (location.state as { author?: AuthorHint } | null)?.author ?? null;

@@ -31,13 +31,17 @@ export const categoryLabel = (category: unknown): string =>
 
 const plural = (n: number, one: string, other: string): string => `${n} ${n === 1 ? one : other}`;
 
+/** An editorial list stands without an author: it is a list to rank, and says how long it is. */
 export function describeList(list: {
   itemCount: number;
   authorName: string;
   category: unknown;
+  editorial?: boolean;
 }): string {
+  const items = plural(list.itemCount, "item", "items");
+  if (list.editorial === true) return `${items} to rank · ${categoryLabel(list.category)}`;
   const author = list.authorName.trim() || "someone";
-  return `${plural(list.itemCount, "item", "items")} ranked by ${author} · ${categoryLabel(list.category)}`;
+  return `${items} ranked by ${author} · ${categoryLabel(list.category)}`;
 }
 
 export function describeRanking(ranking: {
@@ -45,9 +49,12 @@ export function describeRanking(ranking: {
   itemCount: number;
   authorName: string;
   category: unknown;
+  editorial?: boolean;
 }): string {
+  const ranked = `A visitor ranked ${ranking.placed} of ${plural(ranking.itemCount, "item", "items")}`;
+  if (ranking.editorial === true) return `${ranked} · ${categoryLabel(ranking.category)}`;
   const author = ranking.authorName.trim() || "someone";
-  return `A visitor ranked ${ranking.placed} of ${plural(ranking.itemCount, "item", "items")} on ${author}’s list · ${categoryLabel(ranking.category)}`;
+  return `${ranked} on ${author}’s list · ${categoryLabel(ranking.category)}`;
 }
 
 export function escapeHtml(text: string): string {

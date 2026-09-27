@@ -84,6 +84,32 @@ beforeEach(() => {
 });
 
 describe("ProfilePage", () => {
+  it("has no page for an editorial account, and asks nothing about it", () => {
+    render(
+      <SessionContext.Provider
+        value={{
+          account: member,
+          signIn: async () => ({ kind: "cancelled" }),
+          signOut: async () => undefined,
+          refresh: () => undefined,
+        }}
+      >
+        <RouterProvider
+          router={createMemoryRouter(
+            [{ path: "/u/:uid", element: <ProfilePage load={load} follow={follow} /> }],
+            { initialEntries: ["/u/85RRieyLyUPCEqHjdYCdxVlWxHx2"] },
+          )}
+        />
+      </SessionContext.Provider>,
+    );
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "There is nothing at this address.",
+    );
+    expect(screen.queryByRole("button", { name: "Follow" })).toBeNull();
+    expect(load).not.toHaveBeenCalled();
+    expect(follow.state).not.toHaveBeenCalled();
+  });
+
   it("shows the author from the link, their counts and their lists newest first", async () => {
     open();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Someone Nice");
