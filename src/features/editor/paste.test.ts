@@ -39,6 +39,23 @@ describe("wantedOf", () => {
     ]);
   });
 
+  it("takes Wikidata's number in brackets for the subject itself", () => {
+    expect(
+      wantedOf("Orange (Q13191)\n2. Football (Q2736)\nOrange (Q39338)\nQ (Q9950)", 100),
+    ).toEqual([
+      { title: "Orange", year: null, id: "wikidata:Q13191" },
+      { title: "Football", year: null, id: "wikidata:Q2736" },
+      // The colour is another subject of the same name, and another card.
+      { title: "Orange", year: null, id: "wikidata:Q39338" },
+      { title: "Q", year: null, id: "wikidata:Q9950" },
+    ]);
+    // Brackets that hold anything else are the name's own.
+    expect(wantedOf("Everybody (Backstreet's Back)\nQ (q13191)", 100)).toEqual([
+      { title: "Everybody (Backstreet's Back)", year: null },
+      { title: "Q (q13191)", year: null },
+    ]);
+  });
+
   it("takes each name once, whatever its case, and no more than there is room for", () => {
     expect(wantedOf("Up\nUP\nup\nCoco", 100).map((one) => one.title)).toEqual(["Up", "Coco"]);
     expect(wantedOf("One\nTwo\nThree", 2).map((one) => one.title)).toEqual(["One", "Two"]);
@@ -63,6 +80,33 @@ describe("pick", () => {
     expect(pick({ title: "Dune", year: "2021" }, found)?.id).toBe("tmdb:2");
     expect(pick({ title: "Dune", year: "1984" }, found)?.id).toBe("tmdb:1");
     expect(pick({ title: "Dune", year: "2000" }, found)).toBeNull();
+  });
+});
+
+describe("a line that gives the subject's id", () => {
+  const found = [
+    card("wikidata:Q187796", "Orange", "commune in Vaucluse, France"),
+    card("tmdb:7", "Orange", "2010"),
+    card("wikidata:Q13191", "orange", "citrus fruit"),
+    card("wikidata:Q2736", "association football", "team sport", null),
+  ];
+
+  it("gets that subject, whatever else carries the name", () => {
+    const fruit = { title: "Orange", year: null, id: "wikidata:Q13191" };
+    expect(pick(fruit, found)?.id).toBe("wikidata:Q13191");
+    expect(pick(fruit, found, "tmdb")?.id).toBe("wikidata:Q13191");
+    expect(pick(fruit, found, "wikidata")?.id).toBe("wikidata:Q13191");
+  });
+
+  it("gets it under the name the line gives, not the catalogue's", () => {
+    const game = { title: "Football", year: null, id: "wikidata:Q2736" };
+    expect(pick(game, found)?.id).toBe("wikidata:Q2736");
+  });
+
+  it("gets nothing when the subject is not among the answers, even with the name there", () => {
+    const colour = { title: "Orange", year: null, id: "wikidata:Q39338" };
+    expect(pick(colour, found)).toBeNull();
+    expect(pick(colour, found, "wikidata")).toBeNull();
   });
 });
 
@@ -137,7 +181,8 @@ describe("cardsFor", () => {
 
     await cardsFor(wanted, lookup, (one, done) => got.push([one, done]), { paceMs: 0 });
 
-    expect(asked).toEqual(["One", "Two", "Nobody", "Broken", "Five"]);
+    // Whoever said nothing is asked once more before the name goes alone.
+    expect(asked).toEqual(["One", "Two", "Nobody", "Nobody", "Broken", "Five", "Broken"]);
     expect(got).toEqual([
       [{ title: "One", imageUrl: "https://img/tmdb:One.jpg", key: "tmdb:One" }, 1],
       [{ title: "Two", imageUrl: "https://img/tmdb:Two.jpg", key: "tmdb:Two" }, 2],
@@ -157,7 +202,7 @@ describe("cardsFor", () => {
       wantedOf("1\n2\n3\n4", 100),
       async (query) => {
         asked.push(query);
-        return [];
+        return [card(`tmdb:${query}`, query)];
       },
       (one) => got.push(one.title),
     );
@@ -171,6 +216,54 @@ describe("cardsFor", () => {
     expect(got).toEqual(["1", "2", "3", "4"]);
     expect(vi.getTimerCount()).toBe(0);
     vi.useRealTimers();
+  });
+
+  it("asks once more when the catalogue the name is for said nothing", async () => {
+    const dish = card("wikidata:Q177", "pizza", "Italian dish");
+    const film = card("tmdb:9", "Pizza", "2012");
+    const answers = [[film], [film, dish]];
+    const lookup = vi.fn(async () => answers.shift() ?? []);
+    const got: PastedCard[] = [];
+
+    await cardsFor(wantedOf("Pizza", 100), lookup, (one) => got.push(one), {
+      preferred: "wikidata",
+      paceMs: 0,
+    });
+
+    // Wikidata was busy the first time; the film's poster was not taken for the dish.
+    expect(lookup).toHaveBeenCalledTimes(2);
+    expect(got).toEqual([
+      { title: "Pizza", imageUrl: "https://img/wikidata:Q177.jpg", key: "wikidata:Q177" },
+    ]);
+  });
+
+  it("asks a second time at most, and keeps what the first answer had", async () => {
+    const film = card("tmdb:9", "Pizza", "2012");
+    const lookup = vi.fn(async () => [film]);
+    const got: PastedCard[] = [];
+    const wanted = wantedOf("Pizza\nPizza (Q177)", 100);
+
+    await cardsFor(wanted, lookup, (one) => got.push(one), { preferred: "wikidata", paceMs: 0 });
+
+    expect(lookup).toHaveBeenCalledTimes(4);
+    expect(got).toEqual([
+      { title: "Pizza", imageUrl: null },
+      { title: "Pizza", imageUrl: null },
+    ]);
+
+    // A list of films asks TMDB's own way, and takes what Wikidata has when TMDB has nothing.
+    lookup.mockClear();
+    got.length = 0;
+    const dish = card("wikidata:Q177", "pizza", "Italian dish");
+    lookup.mockResolvedValue([dish]);
+    await cardsFor(wantedOf("Pizza", 100), lookup, (one) => got.push(one), {
+      preferred: "tmdb",
+      paceMs: 0,
+    });
+    expect(lookup).toHaveBeenCalledTimes(2);
+    expect(got).toEqual([
+      { title: "Pizza", imageUrl: "https://img/wikidata:Q177.jpg", key: "wikidata:Q177" },
+    ]);
   });
 
   it("stops when the box is gone", async () => {
