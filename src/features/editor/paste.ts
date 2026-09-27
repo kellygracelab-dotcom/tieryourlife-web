@@ -49,12 +49,21 @@ export const preferredFor = (category: Category | null): Preferred => {
     : "wikidata";
 };
 
+const from =
+  (catalogue: "tmdb" | "wikidata") =>
+  (item: CatalogueItem): boolean =>
+    item.id.startsWith(`${catalogue}:`);
+
 /**
  * The catalogue's card for a pasted name, or none. Only a card of exactly
  * that name is taken: a near miss would put the wrong poster on a card, and a
  * card with its name alone is the better mistake. With a year, only a card
  * that carries it. Of several, the first from the preferred catalogue, and
  * the first of all when that one knows nothing by the name.
+ *
+ * TMDB knows films, series and people only. Where the list is about something
+ * else and nothing of Wikidata's came at all, Wikidata did not answer, and a
+ * film's poster in its place would be a guess: the name goes alone.
  */
 export function pick(
   wanted: Wanted,
@@ -68,13 +77,34 @@ export function pick(
       item.title.trim().toLowerCase() === name &&
       (year === null || item.subtitle?.includes(year) === true),
   );
-  const own =
-    preferred === null ? undefined : named.find((item) => item.id.startsWith(`${preferred}:`));
-  return own ?? named[0] ?? null;
+  if (preferred === null) return named[0] ?? null;
+  const own = named.find(from(preferred));
+  if (own !== undefined) return own;
+  if (preferred === "wikidata" && !found.some(from("wikidata"))) return null;
+  return named[0] ?? null;
 }
 
 /** How many of the catalogue's answers are waited for at once. */
 export const PASTE_AT_ONCE = 3;
+
+/**
+ * A few names take this long at least, however soon the answers come.
+ * Wikidata answers a page two hundred times a minute and refuses after that;
+ * a long list asked at full speed would get past it and lose its pictures.
+ */
+export const PASTE_PACE_MS = 1000;
+
+export interface PasteOptions {
+  /** False once the box is gone: nothing more is asked, nothing handed over. */
+  going?: () => boolean;
+  preferred?: Preferred;
+  paceMs?: number;
+}
+
+const pause = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 export interface PastedCard {
   title: string;
@@ -92,14 +122,16 @@ export async function cardsFor(
   wanted: readonly Wanted[],
   lookup: (query: string) => Promise<CatalogueItem[]>,
   onCard: (card: PastedCard, done: number) => void,
-  going: () => boolean = () => true,
-  preferred: Preferred = null,
+  { going = () => true, preferred = null, paceMs = PASTE_PACE_MS }: PasteOptions = {},
 ): Promise<void> {
   for (let start = 0; start < wanted.length; start += PASTE_AT_ONCE) {
     const few = wanted.slice(start, start + PASTE_AT_ONCE);
-    const answers = await Promise.all(
-      few.map((one) => lookup(one.title).catch((): CatalogueItem[] => [])),
-    );
+    const last = start + PASTE_AT_ONCE >= wanted.length;
+    const [answers] = await Promise.all([
+      Promise.all(few.map((one) => lookup(one.title).catch((): CatalogueItem[] => []))),
+      // Nothing is asked after the last few, so nothing is waited for.
+      last || paceMs <= 0 ? undefined : pause(paceMs),
+    ]);
     if (!going()) return;
     few.forEach((one, index) => {
       const card = pick(one, answers[index] ?? [], preferred);

@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import type { CatalogueItem } from "../../api/catalogue";
-import { cardsFor, PASTE_AT_ONCE, pick, preferredFor, wantedOf, type PastedCard } from "./paste";
+import {
+  cardsFor,
+  PASTE_AT_ONCE,
+  PASTE_PACE_MS,
+  pick,
+  preferredFor,
+  wantedOf,
+  type PastedCard,
+} from "./paste";
 
 const card = (
   id: string,
@@ -92,14 +100,22 @@ describe("the catalogue a pasted name is taken from", () => {
     expect(pick({ title: "Ayran", year: null }, thing, "tmdb")?.id).toBe("wikidata:Q2");
   });
 
+  it("takes no film's poster for a thing when Wikidata did not answer", () => {
+    // Nothing of Wikidata's at all: it failed, or was asked too often.
+    const films = [card("tmdb:9", "Pizza", "2012"), card("tmdb:10", "Pizza Man", "1991")];
+    expect(pick({ title: "Pizza", year: null }, films, "wikidata")).toBeNull();
+    // A list of films loses nothing by it, and neither does one about nothing yet.
+    expect(pick({ title: "Pizza", year: null }, films, "tmdb")?.id).toBe("tmdb:9");
+    expect(pick({ title: "Pizza", year: null }, films)?.id).toBe("tmdb:9");
+  });
+
   it("is passed on to every name of a pasted list, and the name stays as it was written", async () => {
     const got: PastedCard[] = [];
     await cardsFor(
       wantedOf("Pizza", 100),
       async () => found,
       (one) => got.push(one),
-      () => true,
-      "wikidata",
+      { preferred: "wikidata" },
     );
     // Wikidata writes "pizza"; the card says what its maker wrote.
     expect(got).toEqual([
@@ -119,7 +135,7 @@ describe("cardsFor", () => {
     const got: [PastedCard, number][] = [];
     const wanted = wantedOf("One\nTwo\nNobody\nBroken\nFive", 100);
 
-    await cardsFor(wanted, lookup, (one, done) => got.push([one, done]));
+    await cardsFor(wanted, lookup, (one, done) => got.push([one, done]), { paceMs: 0 });
 
     expect(asked).toEqual(["One", "Two", "Nobody", "Broken", "Five"]);
     expect(got).toEqual([
@@ -133,6 +149,30 @@ describe("cardsFor", () => {
     expect(PASTE_AT_ONCE).toBe(3);
   });
 
+  it("keeps to a pace between the few, and waits for nothing after the last", async () => {
+    vi.useFakeTimers();
+    const asked: string[] = [];
+    const got: string[] = [];
+    const done = cardsFor(
+      wantedOf("1\n2\n3\n4", 100),
+      async (query) => {
+        asked.push(query);
+        return [];
+      },
+      (one) => got.push(one.title),
+    );
+    await vi.advanceTimersByTimeAsync(PASTE_PACE_MS - 1);
+    // The answers are in, and the next few are not asked for yet.
+    expect(asked).toEqual(["1", "2", "3"]);
+    expect(got).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(asked).toEqual(["1", "2", "3", "4"]);
+    await done;
+    expect(got).toEqual(["1", "2", "3", "4"]);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.useRealTimers();
+  });
+
   it("stops when the box is gone", async () => {
     const got: PastedCard[] = [];
     let going = true;
@@ -143,7 +183,7 @@ describe("cardsFor", () => {
         got.push(one);
         going = false;
       },
-      () => going,
+      { going: () => going, paceMs: 0 },
     );
     // The first few had been asked for together; nothing is asked after them.
     expect(got.map((one) => one.title)).toEqual(["1", "2", "3"]);

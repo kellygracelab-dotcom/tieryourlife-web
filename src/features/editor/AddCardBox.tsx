@@ -88,8 +88,7 @@ function PasteBox({
         dispatch({ type: "addItem", ...card });
         setProgress({ done, total: wanted.length });
       },
-      () => here.current,
-      preferredFor(category),
+      { going: () => here.current, preferred: preferredFor(category) },
     ).finally(() => {
       if (!here.current) return;
       setProgress(null);
