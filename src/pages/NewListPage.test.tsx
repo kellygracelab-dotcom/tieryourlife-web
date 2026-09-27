@@ -272,6 +272,67 @@ describe("NewListPage", () => {
     vi.useRealTimers();
   });
 
+  it("takes many names pasted at once, each with its picture when the catalogue has one", async () => {
+    open();
+    await userEvent.click(screen.getByRole("button", { name: "Paste a list" }));
+    const box = screen.getByLabelText("Names, one to a line");
+    const add = () => screen.getByRole("button", { name: /^Add \d+ cards?$/ });
+    expect(screen.getByRole("button", { name: "Add 0 cards" })).toBeDisabled();
+
+    await userEvent.type(
+      box,
+      "1. Ex Machina (2014){Enter}2. Ex Drummer{Enter}- Nobody knows this one",
+    );
+    expect(add()).toHaveTextContent("Add 3 cards");
+    await userEvent.click(add());
+
+    expect(await screen.findByText("3 added")).toBeInTheDocument();
+    const tiles = within(screen.getByRole("list", { name: "Cards" })).getAllByRole("listitem");
+    expect(tiles.map((tile) => tile.getAttribute("title"))).toEqual([
+      "Ex Machina",
+      "Ex Drummer",
+      "Nobody knows this one",
+    ]);
+    // The catalogue's picture where it has one of exactly that name and year.
+    expect(within(tiles[0]!).getByRole("img", { name: "Ex Machina" })).toHaveAttribute(
+      "src",
+      "https://img/ex.jpg",
+    );
+    expect(within(tiles[2]!).queryByRole("img")).toBeNull();
+    expect(lookup).toHaveBeenCalledWith("Ex Machina");
+    // The box closes when it is done; the button is there for the next list.
+    expect(screen.getByRole("button", { name: "Paste a list" })).toBeInTheDocument();
+  });
+
+  it("takes a pasted name's picture from the catalogue that knows what the list is about", async () => {
+    const both: CatalogueItem[] = [
+      { id: "tmdb:9", title: "Pizza", subtitle: "2012", imageUrl: "https://img/film.jpg" },
+      { id: "wikidata:Q177", title: "pizza", subtitle: "dish", imageUrl: "https://img/dish.jpg" },
+    ];
+    // Once for each time the name is pasted.
+    lookup.mockResolvedValueOnce(both).mockResolvedValueOnce(both);
+    open();
+    const paste = async (names: string) => {
+      await userEvent.click(screen.getByRole("button", { name: "Paste a list" }));
+      await userEvent.type(screen.getByLabelText("Names, one to a line"), names);
+      await userEvent.click(screen.getByRole("button", { name: /^Add \d+ cards?$/ }));
+    };
+    const pictures = () =>
+      within(screen.getByRole("list", { name: "Cards" }))
+        .getAllByRole("img")
+        .map((picture) => picture.getAttribute("src"));
+
+    await userEvent.click(screen.getByRole("button", { name: "Food" }));
+    await paste("Pizza");
+    expect(await screen.findByText("1 added")).toBeInTheDocument();
+    expect(pictures()).toEqual(["https://img/dish.jpg"]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Film & TV" }));
+    await paste("Pizza");
+    expect(await screen.findByText("2 added")).toBeInTheDocument();
+    expect(pictures()).toEqual(["https://img/dish.jpg", "https://img/film.jpg"]);
+  });
+
   it("invites the whole catalogue whatever the list is about", async () => {
     open();
     const box = screen.getByLabelText("Add a card");

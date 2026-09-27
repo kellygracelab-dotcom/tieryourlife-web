@@ -3,6 +3,7 @@
  * way the app does it, on the device and not in the account. Names are kept
  * beside the ids so Settings can show what is hidden without fetching.
  */
+import { isEditorialAuthor } from "../../lib/editorial";
 
 export const HIDDEN_KEY = "tyl:hidden";
 
@@ -90,6 +91,11 @@ export const isListHidden = (hidden: Hidden, id: string): boolean =>
 export const isAuthorHidden = (hidden: Hidden, uid: string): boolean =>
   hidden.authors.some((one) => one.uid === uid);
 
-/** Out of sight for either reason: the list itself, or everything from its author. */
+/**
+ * Out of sight for either reason: the list itself, or everything from its
+ * author. An editorial list has no author to hide: somebody who once hid the
+ * account behind it would otherwise lose every list of the site's own.
+ */
 export const isOutOfSight = (hidden: Hidden, list: { id: string; authorUid: string }): boolean =>
-  isListHidden(hidden, list.id) || isAuthorHidden(hidden, list.authorUid);
+  isListHidden(hidden, list.id) ||
+  (!isEditorialAuthor(list.authorUid) && isAuthorHidden(hidden, list.authorUid));

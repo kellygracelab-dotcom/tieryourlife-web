@@ -21,6 +21,7 @@ import {
   MAX_BODY_BYTES,
   MY_RANKINGS_CAP,
   newestFirst,
+  shownSnapshot,
   snapshotOf,
   summaryOf,
   tooSoon,
@@ -153,13 +154,17 @@ async function readRanking(
   // list is still there to link back to.
   const list = await db.collection(PUBLISHED).doc(ranking.listId).get();
   const listAvailable = list.exists && list.get("underReview") !== true;
+  // A list that stands without an author gives no name to its rankings either.
+  const standing = list.exists
+    ? { authorUid: list.get("authorUid") as unknown, anonymous: list.get("anonymous") as unknown }
+    : null;
 
   response.setHeader("Cache-Control", "no-store");
   response.status(200).json({
     code,
     listId: ranking.listId,
     listAvailable,
-    snapshot: ranking.snapshot,
+    snapshot: shownSnapshot(ranking.snapshot, standing),
     rows: fromStoredRows(ranking.rows),
     createdAt: ranking.createdAt?.toMillis() ?? 0,
     yours: isKeptBy(ranking, viewer?.uid ?? null),

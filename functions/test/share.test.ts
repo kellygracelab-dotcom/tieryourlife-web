@@ -132,6 +132,17 @@ describe("shareCardOf", () => {
     assert.ok(text.includes("Film 2"));
   });
 
+  it("names nobody on an editorial list's card, nor on a ranking made from it", () => {
+    const ofList = textOf(shareCardOf({ ...list, editorial: true }, new Map())).join(" | ");
+    assert.match(ofList, /\| 30 cards · 2,140 rankings · Film & TV/);
+    assert.ok(!ofList.includes("Danylo"));
+    assert.ok(!ofList.includes("by "));
+
+    const ofRanking = textOf(shareCardOf({ ...ranking, editorial: true }, new Map())).join(" | ");
+    assert.match(ofRanking, /ranked by a visitor · 20 of 30 cards placed( \||$)/);
+    assert.ok(!ofRanking.includes("Danylo"));
+  });
+
   it("names a card without a picture and a list without a title", () => {
     const tree = shareCardOf(
       { ...list, title: "  ", items: [{ title: "Only words", imageUrl: null }] },
@@ -153,9 +164,9 @@ describe("addresses", () => {
   it("points a chat at a versioned picture and keeps one copy per version", () => {
     assert.equal(
       shareImageUrl("tieryourlife-web.web.app", "l", "abc def", 17),
-      "https://tieryourlife-web.web.app/og/l/abc%20def.png?v=17.2",
+      "https://tieryourlife-web.web.app/og/l/abc%20def.png?v=17.3",
     );
-    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.2.png");
+    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.3.png");
     // The folder ends in a slash, or tidying `abc` would reach into `abcd`.
     assert.equal(shareImageFolder("r", "xfruzbap"), "share/r/xfruzbap/");
     assert.ok(shareImagePath("l", "abc", 5).startsWith(shareImageFolder("l", "abc")));

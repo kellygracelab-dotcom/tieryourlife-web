@@ -39,12 +39,27 @@ describe("words for a link", () => {
       describeList({ itemCount: 1, authorName: "  ", category: "games" }),
       "1 item ranked by someone · Games",
     );
+    // An editorial list stands without an author: nothing is ranked by anybody yet.
+    assert.equal(
+      describeList({ itemCount: 34, authorName: "danylo", category: "film_tv", editorial: true }),
+      "34 items to rank · Film & TV",
+    );
   });
 
   it("describe a ranking as a visitor's take on somebody's list", () => {
     assert.equal(
       describeRanking({ placed: 8, itemCount: 34, authorName: "danylo", category: "anime" }),
       "A visitor ranked 8 of 34 items on danylo’s list · Anime",
+    );
+    assert.equal(
+      describeRanking({
+        placed: 8,
+        itemCount: 34,
+        authorName: "danylo",
+        category: "anime",
+        editorial: true,
+      }),
+      "A visitor ranked 8 of 34 items · Anime",
     );
   });
 });

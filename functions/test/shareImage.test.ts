@@ -123,28 +123,28 @@ describe("discardOlderCopies", () => {
   it("removes every earlier copy in the card's own folder and keeps the new one", async () => {
     const { shelf, deleted, asked } = shelfOf([
       "share/l/abc/17.png",
-      "share/l/abc/17.2.png",
-      "share/l/abc/21.2.png",
-      "share/l/abcd/5.2.png",
-      "share/r/abc/9.2.png",
+      "share/l/abc/17.3.png",
+      "share/l/abc/21.3.png",
+      "share/l/abcd/5.3.png",
+      "share/r/abc/9.3.png",
     ]);
-    const removed = await discardOlderCopies(shelf, "l", "abc", "share/l/abc/21.2.png");
+    const removed = await discardOlderCopies(shelf, "l", "abc", "share/l/abc/21.3.png");
     assert.equal(removed, 2);
-    assert.deepEqual(deleted.sort(), ["share/l/abc/17.2.png", "share/l/abc/17.png"]);
+    assert.deepEqual(deleted.sort(), ["share/l/abc/17.3.png", "share/l/abc/17.png"]);
     assert.deepEqual(asked, ["share/l/abc/"]);
   });
 
   it("does nothing when the new copy is the only one", async () => {
-    const { shelf, deleted } = shelfOf(["share/r/xfruzbap/0.2.png"]);
-    assert.equal(await discardOlderCopies(shelf, "r", "xfruzbap", "share/r/xfruzbap/0.2.png"), 0);
+    const { shelf, deleted } = shelfOf(["share/r/xfruzbap/0.3.png"]);
+    assert.equal(await discardOlderCopies(shelf, "r", "xfruzbap", "share/r/xfruzbap/0.3.png"), 0);
     assert.deepEqual(deleted, []);
   });
 
   it("lets a refusal be heard, so the caller can say the folder was not tidied", async () => {
     const { shelf } = shelfOf(
-      ["share/l/abc/1.2.png", "share/l/abc/2.2.png"],
-      ["share/l/abc/1.2.png"],
+      ["share/l/abc/1.3.png", "share/l/abc/2.3.png"],
+      ["share/l/abc/1.3.png"],
     );
-    await assert.rejects(discardOlderCopies(shelf, "l", "abc", "share/l/abc/2.2.png"), /refused/);
+    await assert.rejects(discardOlderCopies(shelf, "l", "abc", "share/l/abc/2.3.png"), /refused/);
   });
 });

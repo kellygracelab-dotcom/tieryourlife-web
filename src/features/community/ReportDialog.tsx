@@ -11,7 +11,8 @@ export type ReportState =
 
 interface ReportDialogProps {
   state: ReportState;
-  authorName: string;
+  /** Whose lists the person may hide along with this one; nobody's when the list has no author. */
+  authorName: string | null;
   /** Sends the complaint; the caller decides what happens after. */
   send: (reason: ReportReason, note: string | null, hideAuthor: boolean) => void;
   /** A guest chose to sign in, or to hide the list instead. */
@@ -127,7 +128,9 @@ export function ReportDialog({
         onClick={(event) => event.stopPropagation()}
         onSubmit={(event) => {
           event.preventDefault();
-          if (reason !== null && !busy) send(reason, note.trim() || null, hideAuthor);
+          if (reason !== null && !busy) {
+            send(reason, note.trim() || null, hideAuthor && authorName !== null);
+          }
         }}
       >
         <h2 id="report-title" className="dialog__title">
@@ -173,15 +176,17 @@ export function ReportDialog({
         >
           {fill(strings.report.noteCounter, { n: note.length, max: REPORT_NOTE_MAX })}
         </p>
-        <label className="report__hide">
-          <input
-            type="checkbox"
-            checked={hideAuthor}
-            disabled={busy}
-            onChange={(event) => setHideAuthor(event.target.checked)}
-          />
-          <span>{fill(strings.report.hideAuthor, { name: authorName })}</span>
-        </label>
+        {authorName !== null && (
+          <label className="report__hide">
+            <input
+              type="checkbox"
+              checked={hideAuthor}
+              disabled={busy}
+              onChange={(event) => setHideAuthor(event.target.checked)}
+            />
+            <span>{fill(strings.report.hideAuthor, { name: authorName })}</span>
+          </label>
+        )}
         <p className="report__footnote">{strings.report.byHand}</p>
         {state === "failed" && (
           <p className="dialog__bar" role="alert">

@@ -14,6 +14,7 @@ import { useHidden } from "../features/community/useHidden";
 import { useList } from "../features/list/useList";
 import { errorOf } from "../features/list/useResource";
 import { report as sendReport, unpublish as unpublishList } from "../lib/api";
+import { isEditorial } from "../lib/editorial";
 import { fill, plural, strings } from "../strings";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { BoardFrameContext } from "../features/board/boardFrame";
@@ -261,17 +262,20 @@ function VisitorMenu({
               {strings.list.hide}
             </button>
           </li>
-          <li>
-            <button type="button" className="menu__action" onClick={hideAuthorNow}>
-              {fill(strings.list.hideAuthorNow, { name: list.authorName })}
-            </button>
-          </li>
+          {/* Hiding the author of an editorial list would hide every one of them. */}
+          {!isEditorial(list) && (
+            <li>
+              <button type="button" className="menu__action" onClick={hideAuthorNow}>
+                {fill(strings.list.hideAuthorNow, { name: list.authorName })}
+              </button>
+            </li>
+          )}
           <PrivacyItem />
         </>
       </Menu>
       <ReportDialog
         state={reporting}
-        authorName={list.authorName}
+        authorName={isEditorial(list) ? null : list.authorName}
         send={send}
         onSignIn={onSignIn}
         onHideInstead={() => {
@@ -465,6 +469,7 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
   // The author has nobody's arrangement to compare with but their own: they
   // see the list as they published it, and the way to change it.
   const own = account?.kind === "signedIn" && account.uid === list.authorUid;
+  const editorial = isEditorial(list);
   const outOfSight = !own && isOutOfSight(hidden, list);
   const published = (
     <ReadOnlyBoard
@@ -480,29 +485,41 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
         <PageTitle title={list.title} />
         <div className="list-head__text">
           <h1 className="list-head__title">{list.title}</h1>
-          <p className="list-head__meta">
-            {list.authorUid === "" ? (
-              // A snapshot without the uid has no author's page to lead to.
-              fill(strings.list.by, { name: list.authorName })
-            ) : (
-              <Link
-                to={`/u/${encodeURIComponent(list.authorUid)}`}
-                state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
-              >
-                {fill(strings.list.by, { name: list.authorName })}
-              </Link>
-            )}
-            <span className="list-head__own">
-              {" · "}
-              {own ? strings.list.yourList : strings.rank.ownCopy}
-            </span>
-            {list.takeCount > 0 && (
-              <>
+          {editorial ? (
+            // No author, the way a template stands. The dot goes with the words
+            // before it, which a narrow head leaves out.
+            <p className="list-head__meta">
+              <span className="list-head__own">
+                {own ? strings.list.yourList : strings.rank.ownCopy}
+                {list.takeCount > 0 && " · "}
+              </span>
+              {list.takeCount > 0 && plural(strings.card.rankings, list.takeCount)}
+            </p>
+          ) : (
+            <p className="list-head__meta">
+              {list.authorUid === "" ? (
+                // A snapshot without the uid has no author's page to lead to.
+                fill(strings.list.by, { name: list.authorName })
+              ) : (
+                <Link
+                  to={`/u/${encodeURIComponent(list.authorUid)}`}
+                  state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
+                >
+                  {fill(strings.list.by, { name: list.authorName })}
+                </Link>
+              )}
+              <span className="list-head__own">
                 {" · "}
-                {plural(strings.card.rankings, list.takeCount)}
-              </>
-            )}
-          </p>
+                {own ? strings.list.yourList : strings.rank.ownCopy}
+              </span>
+              {list.takeCount > 0 && (
+                <>
+                  {" · "}
+                  {plural(strings.card.rankings, list.takeCount)}
+                </>
+              )}
+            </p>
+          )}
         </div>
         {!outOfSight && !own && (
           <div className="list-page__views" role="group" aria-label={strings.list.views}>

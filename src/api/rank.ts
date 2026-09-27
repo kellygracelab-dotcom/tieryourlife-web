@@ -3,6 +3,8 @@ import type { Category, PublishedItem, PublishedTier } from "./types";
 
 export interface RankingSnapshot {
   title: string;
+  /** The list stands without an author, and the ranking names nobody. */
+  editorial?: boolean;
   authorName: string;
   authorPhotoUrl: string | null;
   category: Category;

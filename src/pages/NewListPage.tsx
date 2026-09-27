@@ -314,6 +314,7 @@ function Editor({
             </section>
             <CardsEditor
               items={draft.items}
+              category={draft.category}
               dispatch={dispatch}
               lookup={lookup}
               upload={uploadAsAccount}

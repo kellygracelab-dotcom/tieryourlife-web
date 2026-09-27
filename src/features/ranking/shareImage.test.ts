@@ -131,6 +131,13 @@ describe("drawShare", () => {
     expect(texts().some((text) => text.includes("more tier"))).toBe(false);
   });
 
+  it("names nobody on a list without an author", async () => {
+    const { paint, texts } = recorder();
+    await drawShare(paint, { ...data, authorName: "" }, async () => null);
+    expect(texts()).toEqual(expect.arrayContaining(["3 cards @48,146"]));
+    expect(texts().some((text) => text.includes("Danylo"))).toBe(false);
+  });
+
   it("trims a long title, marks what a line cannot hold and counts hidden tiers", async () => {
     const { paint, texts } = recorder();
     const items = Array.from({ length: 12 }, (_, n) => item(n));

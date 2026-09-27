@@ -40,6 +40,8 @@ export interface ShareItem {
 export interface ShareList {
   kind: "list";
   title: string;
+  /** An editorial list names nobody on its card. */
+  editorial?: boolean;
   authorName: string;
   category: string;
   itemCount: number;
@@ -51,6 +53,7 @@ export interface ShareList {
 export interface ShareRanking {
   kind: "ranking";
   title: string;
+  editorial?: boolean;
   authorName: string;
   category: string;
   tiers: ShareTier[];
@@ -251,7 +254,12 @@ const frame = (children: (Node | string)[]): Node =>
 
 function listCard(card: ShareList, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
-  const line = `by ${author} · ${plural(card.itemCount, "card", "cards")} · ${plural(card.takeCount, "ranking", "rankings")} · ${categoryLabel(card.category)}`;
+  const line = [
+    ...(card.editorial === true ? [] : [`by ${author}`]),
+    plural(card.itemCount, "card", "cards"),
+    plural(card.takeCount, "ranking", "rankings"),
+    categoryLabel(card.category),
+  ].join(" · ");
   const shown = card.items.filter((item) => item.imageUrl !== null).slice(0, LIST_TILES);
   const tiles = (shown.length > 0 ? shown : card.items.slice(0, LIST_TILES)).map((item) =>
     tile(item, pictures, 96, 140),
@@ -273,7 +281,11 @@ function listCard(card: ShareList, pictures: Pictures): Node {
 function rankingCard(card: ShareRanking, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
   const placed = card.rows.reduce((sum, row) => sum + row.length, 0);
-  const line = `ranked by a visitor · ${placed} of ${plural(card.items.length, "card", "cards")} placed · ${author}’s list`;
+  const line = [
+    "ranked by a visitor",
+    `${placed} of ${plural(card.items.length, "card", "cards")} placed`,
+    ...(card.editorial === true ? [] : [`${author}’s list`]),
+  ].join(" · ");
   const rows = card.tiers.slice(0, SHARE_TIERS).map((tier, index) => {
     const row = card.rows[index] ?? [];
     const items = row
@@ -330,7 +342,7 @@ export const shareCardOf = (card: ShareCard, pictures: Pictures): Node =>
  * chat keeps a picture by its address, so a change in the drawing has to
  * change both or nobody ever sees it.
  */
-export const SHARE_LOOK = 2;
+export const SHARE_LOOK = 3;
 
 export const shareImageUrl = (host: string, kind: "l" | "r", id: string, version: number): string =>
   `https://${host}/og/${kind}/${encodeURIComponent(id)}.png?v=${version}.${SHARE_LOOK}`;

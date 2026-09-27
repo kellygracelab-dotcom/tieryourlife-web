@@ -817,6 +817,11 @@
     flex: none;
   }
 
+  /* The pool's head is one row; many names at once are pasted in the editor. */
+  .pool__tools .cards__paste {
+    display: none;
+  }
+
   /* Upload images is its arrow in an outlined circle; the tooltip and the label say the words. */
   .pool__tools .cards__upload .btn {
     justify-content: center;

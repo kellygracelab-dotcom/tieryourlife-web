@@ -193,7 +193,13 @@ export function OwnerBoard({
               if (card !== undefined) dispatch({ type: "removeItem", key: card.key });
             },
             tools: (
-              <AddCardBox items={draft.items} dispatch={dispatch} lookup={lookup} upload={upload} />
+              <AddCardBox
+                items={draft.items}
+                category={draft.category}
+                dispatch={dispatch}
+                lookup={lookup}
+                upload={upload}
+              />
             ),
             status,
           },

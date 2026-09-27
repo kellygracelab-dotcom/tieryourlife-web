@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import type { SuggestedAuthor } from "../../api/community";
 import { useSession } from "../../app/session";
 import { followAuthor, suggestedAuthors, unfollowAuthor } from "../../lib/api";
+import { isEditorialAuthor } from "../../lib/editorial";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -110,14 +111,19 @@ export function Suggestions({
 }) {
   const loadFor = useCallback(() => load(), [load]);
   const { state } = useResource(uid, loadFor);
-  if (state.status !== "ready" || state.value.authors.length === 0) return null;
+  // An editorial account is nobody to follow: its lists stand without an author.
+  const authors =
+    state.status === "ready"
+      ? state.value.authors.filter((author) => !isEditorialAuthor(author.uid))
+      : [];
+  if (authors.length === 0) return null;
   return (
     <section className="suggestions" aria-labelledby="suggestions-title">
       <h3 id="suggestions-title" className="suggestions__title">
         {strings.home.worthFollowing}
       </h3>
       <ul className="suggestions__grid">
-        {state.value.authors.map((author) => (
+        {authors.map((author) => (
           <SuggestionCard key={author.uid} author={author} follow={follow} unfollow={unfollow} />
         ))}
       </ul>

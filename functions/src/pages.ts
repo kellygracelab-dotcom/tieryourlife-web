@@ -1,8 +1,9 @@
 import { getFirestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
+import { isEditorialList } from "./editorial";
 import { describeList, describeRanking, renderPage, type PageMeta } from "./og";
-import { fromStoredRows, isCode, placedCount, type StoredRanking } from "./ranking";
+import { fromStoredRows, isCode, placedCount, shownSnapshot, type StoredRanking } from "./ranking";
 import {
   SHARE_HEIGHT,
   SHARE_WIDTH,
@@ -75,6 +76,8 @@ function send(response: Response, html: string): void {
 
 interface StoredList {
   title?: string;
+  /** Set by the backend once it keeps lists without an author itself. */
+  anonymous?: boolean;
   authorUid?: string;
   authorName?: string;
   authorPhotoUrl?: string | null;
@@ -127,7 +130,7 @@ export async function listPage(request: Request, response: Response, id: string)
   const list = listPayload(id, data);
   const meta: PageMeta = {
     title: list.title,
-    description: describeList(list),
+    description: describeList({ ...list, editorial: isEditorialList(data) }),
     image: shareImageUrl(host, "l", id, list.updatedAt),
     imageSize: { width: SHARE_WIDTH, height: SHARE_HEIGHT },
     url: `https://${host}/l/${id}`,
@@ -170,6 +173,7 @@ export async function listShareImage(response: Response, id: string): Promise<vo
   const card: ShareCard = {
     kind: "list",
     title: data.title ?? "",
+    editorial: isEditorialList(data),
     authorName: data.authorName ?? "",
     category: data.category ?? "other",
     itemCount: data.itemCount ?? data.items?.length ?? 0,
@@ -180,6 +184,12 @@ export async function listShareImage(response: Response, id: string): Promise<vo
   sendShareImage(response, await shareImageFor("l", id, listVersion(data), async () => card));
 }
 
+/** What the list says of itself today, for telling an editorial one; nothing when it is gone. */
+const standingOf = (
+  list: FirebaseFirestore.DocumentSnapshot,
+): { authorUid?: unknown; anonymous?: unknown } | null =>
+  list.exists ? { authorUid: list.get("authorUid"), anonymous: list.get("anonymous") } : null;
+
 /** A ranking changes only when its owner edits it. */
 const rankingVersion = (stored: StoredRanking): number =>
   stored.updatedAt?.toMillis() ?? stored.createdAt?.toMillis() ?? 0;
@@ -188,10 +198,18 @@ export async function rankingShareImage(response: Response, code: string): Promi
   const doc = isCode(code) ? await getFirestore().collection(RANKINGS).doc(code).get() : null;
   if (doc === null || !doc.exists) return sendShareImage(response, null);
   const stored = doc.data() as StoredRanking;
+  const snapshot =
+    stored.snapshot.editorial === true
+      ? stored.snapshot
+      : shownSnapshot(
+          stored.snapshot,
+          standingOf(await getFirestore().collection(PUBLISHED).doc(stored.listId).get()),
+        );
   const card: ShareCard = {
     kind: "ranking",
     title: stored.snapshot.title,
-    authorName: stored.snapshot.authorName,
+    editorial: snapshot.editorial === true,
+    authorName: snapshot.authorName,
     category: stored.snapshot.category,
     tiers: shareTiersOf(stored.snapshot.tiers),
     items: shareItemsOf(stored.snapshot.items),
@@ -217,11 +235,12 @@ export async function rankingPage(
   const stored = doc.data() as StoredRanking;
   const list = await db.collection(PUBLISHED).doc(stored.listId).get();
   const rows = fromStoredRows(stored.rows);
+  const snapshot = shownSnapshot(stored.snapshot, standingOf(list));
   const ranking = {
     code,
     listId: stored.listId,
     listAvailable: list.exists && list.get("underReview") !== true,
-    snapshot: stored.snapshot,
+    snapshot,
     rows,
     createdAt: stored.createdAt?.toMillis() ?? 0,
   };
@@ -230,8 +249,9 @@ export async function rankingPage(
     description: describeRanking({
       placed: placedCount(rows),
       itemCount: stored.snapshot.items.length,
-      authorName: stored.snapshot.authorName,
+      authorName: snapshot.authorName,
       category: stored.snapshot.category,
+      editorial: snapshot.editorial === true,
     }),
     image: shareImageUrl(host, "r", code, rankingVersion(stored)),
     imageSize: SHARE_SIZE,

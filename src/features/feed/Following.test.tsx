@@ -147,6 +147,25 @@ describe("HomePage for a signed-in person", () => {
     );
   });
 
+  it("leaves an editorial account out of the people worth following", async () => {
+    load.mockResolvedValue({ lists: [], nextCursor: null, followingNobody: true });
+    loadSuggestions.mockResolvedValue({
+      authors: [
+        {
+          uid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+          name: "Danylo Petrov",
+          photoUrl: null,
+          takeCount: 900,
+        },
+        { uid: "u3", name: "other", photoUrl: null, takeCount: 3 },
+      ],
+    });
+    open();
+    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
+    expect(await screen.findByRole("link", { name: /other/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Danylo Petrov/)).toBeNull();
+  });
+
   it("says when the people followed have published nothing, and leads back to Everyone", async () => {
     load.mockImplementation(async (query) =>
       query.following ? { lists: [], nextCursor: null } : { lists: [list("p1")], nextCursor: null },

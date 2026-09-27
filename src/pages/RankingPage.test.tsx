@@ -123,6 +123,20 @@ describe("RankingPage", () => {
     expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Climax");
   });
 
+  it("names nobody when the list stands without an author", async () => {
+    const items = ranking.snapshot.items.map((item) => ({ ...item, tierIndex: null }));
+    load.mockResolvedValue({
+      ...ranking,
+      snapshot: { ...ranking.snapshot, items, editorial: true, authorName: "" },
+    });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(document.querySelector(".list-head__meta")).toHaveTextContent(/^ranked by a visitor$/);
+    // A template was never arranged by anybody, and the page does not say so of nobody.
+    expect(screen.queryByText(/hasn’t arranged this list/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Their ranking" })).toBeNull();
+  });
+
   it("has no author's version when the snapshot never carried one", async () => {
     const items = ranking.snapshot.items.map((item) => ({ ...item, tierIndex: null }));
     load.mockResolvedValue({ ...ranking, snapshot: { ...ranking.snapshot, items } });

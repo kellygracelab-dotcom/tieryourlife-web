@@ -91,6 +91,7 @@ const listOf = (ranking: Ranking): PublishedList => ({
   id: ranking.listId,
   title: ranking.snapshot.title,
   authorUid: "",
+  anonymous: ranking.snapshot.editorial === true,
   authorName: ranking.snapshot.authorName,
   authorPhotoUrl: ranking.snapshot.authorPhotoUrl,
   category: ranking.snapshot.category,
@@ -208,6 +209,7 @@ function Body({
   const { snapshot } = ranking;
   const author = arrange(snapshot);
   const owned = ranking.yours === true;
+  const editorial = snapshot.editorial === true;
   const visitorLabel = mine || owned ? strings.rank.yours : strings.ranking.visitors;
   // The chips use the phone app's words when the ranking is this person's own;
   // somebody else's ranking has three parties, and "Mine" would name the wrong one.
@@ -221,8 +223,12 @@ function Body({
         <div className="list-head__text">
           <h1 className="list-head__title">{snapshot.title}</h1>
           <p className="list-head__meta">
-            {fill(strings.list.by, { name: snapshot.authorName })}
-            {" · "}
+            {!editorial && (
+              <>
+                {fill(strings.list.by, { name: snapshot.authorName })}
+                {" · "}
+              </>
+            )}
             {byline}
             {owned && (
               <>
@@ -255,7 +261,8 @@ function Body({
         // and its pieces fall into the page's flow below that.
         <div className="ranking ranking--read">
           <div className="ranking__main">
-            {!author.known && (
+            {/* A template was never arranged by anybody: nothing to say about that. */}
+            {!author.known && !editorial && (
               <p className="list-page__status">
                 {fill(strings.ranking.noAuthorVersion, { name: snapshot.authorName })}
               </p>
