@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { cardOf, searchCatalogue } from "./catalogue";
+import { cardOf, mergeCatalogues, searchCatalogue, searchEverywhere } from "./catalogue";
 import type { ApiClient } from "./client";
+import type { Fetcher } from "./wikidata";
 
 describe("cardOf", () => {
   it("makes a card from a film with its poster and year", () => {
@@ -96,5 +97,72 @@ describe("searchCatalogue", () => {
   it("reads an answer without results as none", async () => {
     const client = { request: vi.fn(async () => ({})) } as unknown as ApiClient;
     await expect(searchCatalogue(client, "x")).resolves.toEqual([]);
+  });
+});
+
+describe("the two catalogues as one", () => {
+  const film = (id: number, title: string, imageUrl: string | null = "https://img/p.jpg") => ({
+    id: `tmdb:${id}`,
+    title,
+    subtitle: "1999",
+    imageUrl,
+  });
+  const subject = (
+    qid: string,
+    title: string,
+    linkedTmdbId: number | null = null,
+    imageUrl: string | null = null,
+  ) => ({ item: { id: `wikidata:${qid}`, title, subtitle: null, imageUrl }, linkedTmdbId });
+
+  it("leaves a film Wikidata knows by its TMDB number to TMDB, and takes one from each in turn", () => {
+    const merged = mergeCatalogues(
+      "zz",
+      [film(603, "The Matrix"), film(604, "The Matrix Reloaded")],
+      [subject("Q83495", "The Matrix", 603), subject("Q1", "Matrix (mathematics)")],
+    );
+    expect(merged.map((item) => item.id)).toEqual(["tmdb:603", "tmdb:604", "wikidata:Q1"]);
+  });
+
+  it("puts the exact name first, then names that begin with the words, and a picture breaks ties", () => {
+    const merged = mergeCatalogues(
+      "apple",
+      [film(1, "Pineapple Express"), film(2, "Apple", null)],
+      [
+        subject("Q89", "apple", null, "https://commons/apple.jpg"),
+        subject("Q312", "Apple Inc."),
+        subject("Q9", "Applejack", null, "https://commons/jack.jpg"),
+      ],
+    );
+    expect(merged.map((item) => item.title)).toEqual([
+      "apple",
+      "Apple",
+      "Applejack",
+      "Apple Inc.",
+      "Pineapple Express",
+    ]);
+  });
+
+  it("answers with one catalogue when the other does not, and fails when neither does", async () => {
+    const tmdb = { results: [{ id: 1, media_type: "movie", title: "One" }] };
+    const client = { request: vi.fn(async () => tmdb) } as unknown as ApiClient;
+    const down: Fetcher = vi.fn(async () => new Response("no", { status: 503 }));
+    await expect(searchEverywhere(client, "one", "en", down)).resolves.toEqual([
+      { id: "tmdb:1", title: "One", subtitle: null, imageUrl: null },
+    ]);
+
+    const silent = {
+      request: vi.fn(async () => Promise.reject(new Error("offline"))),
+    } as unknown as ApiClient;
+    const up: Fetcher = vi
+      .fn<Fetcher>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ search: [{ id: "Q89", label: "apple" }] })),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ results: { bindings: [] } })));
+    await expect(searchEverywhere(silent, "apple", "en", up)).resolves.toEqual([
+      { id: "wikidata:Q89", title: "apple", subtitle: null, imageUrl: null },
+    ]);
+
+    await expect(searchEverywhere(silent, "apple", "en", down)).rejects.toThrow("offline");
   });
 });

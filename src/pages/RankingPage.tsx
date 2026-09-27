@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import type { ApiError } from "../api/errors";
 import type { Ranking } from "../api/rank";
@@ -119,21 +119,14 @@ interface BodyProps {
 }
 
 /**
- * The link and the picture, beside the board on a wide screen and under it
- * on a phone: the reasons a visitor came to this address.
+ * The ranking's address, one press from the clipboard: nobody should have to
+ * select it. The words change for a moment and the chip keeps its width, so
+ * the header does not jump.
  */
-function Handout({
-  ranking,
-  share,
-  copy,
-}: {
-  ranking: Ranking;
-  share: Share;
-  copy: (text: string) => Promise<void>;
-}) {
+function AddressChip({ code, copy }: { code: string; copy: (text: string) => Promise<void> }) {
   const [copied, setCopied] = useState(false);
-  const [image, setImage] = useState<"idle" | "busy" | "failed">("idle");
-  const address = `${window.location.host}/r/${ranking.code}`;
+  const chip = useRef<HTMLButtonElement>(null);
+  const address = `${window.location.host}/r/${code}`;
 
   useEffect(() => {
     if (!copied) return;
@@ -142,11 +135,41 @@ function Handout({
   }, [copied]);
 
   const onCopy = () => {
+    const button = chip.current;
+    if (button !== null) button.style.minWidth = `${button.offsetWidth}px`;
     copy(`https://${address}`).then(
       () => setCopied(true),
       () => setCopied(false),
     );
   };
+  return (
+    <button
+      ref={chip}
+      type="button"
+      className="address-chip"
+      title={strings.list.copyLink}
+      onClick={onCopy}
+    >
+      <Icon
+        name={copied ? "check" : "link"}
+        className={copied ? "address-chip__icon address-chip__icon--done" : "address-chip__icon"}
+      />
+      {/* An address reads left to right in any language. */}
+      <span aria-live="polite" dir={copied ? undefined : "ltr"}>
+        {copied ? strings.list.linkCopied : address}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * The picture, beside the board on a wide screen and under it on a phone.
+ * The link is the chip in the header.
+ */
+function Handout({ ranking, share }: { ranking: Ranking; share: Share }) {
+  const [image, setImage] = useState<"idle" | "busy" | "failed">("idle");
+  const address = `${window.location.host}/r/${ranking.code}`;
+
   const onDownload = () => {
     setImage("busy");
     share(listOf(ranking), ranking.rows, address).then(
@@ -156,9 +179,6 @@ function Handout({
   };
   return (
     <div className="handout">
-      <Button variant="tonal" icon={copied ? "check" : "link"} onClick={onCopy}>
-        {copied ? strings.list.linkCopied : strings.list.copyLink}
-      </Button>
       <Button variant="tonal" icon="download" onClick={onDownload} disabled={image === "busy"}>
         {image === "busy" ? strings.rank.downloading : strings.rank.download}
       </Button>
@@ -212,11 +232,7 @@ function Body({
             )}
           </p>
         </div>
-        <span className="list-head__address">
-          <Icon name="link" />
-          {/* An address reads left to right in any language. */}
-          <span dir="ltr">{`${window.location.host}/r/${ranking.code}`}</span>
-        </span>
+        <AddressChip code={ranking.code} copy={copy} />
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
       {savedNote && (
@@ -278,22 +294,25 @@ function Body({
                 </Button>
               )}
             </div>
-            <div className="list-page__foot">
-              {ranking.listAvailable ? (
-                <>
-                  <p className="list-page__invite">{strings.ranking.rankYourself}</p>
-                  <Link
-                    className="btn btn--filled list-page__rank"
-                    to={`/l/${encodeURIComponent(ranking.listId)}`}
-                  >
-                    <span>{strings.ranking.rankThis}</span>
-                  </Link>
-                </>
-              ) : (
-                <p className="list-page__invite">{strings.ranking.listGone}</p>
-              )}
-            </div>
-            <Handout ranking={ranking} share={share} copy={copy} />
+            {/* The invitation is for a visitor: whoever made the ranking has ranked it. */}
+            {(!ranking.listAvailable || !(mine || owned)) && (
+              <div className="list-page__foot">
+                {ranking.listAvailable ? (
+                  <>
+                    <p className="list-page__invite">{strings.ranking.rankYourself}</p>
+                    <Link
+                      className="btn btn--filled list-page__rank"
+                      to={`/l/${encodeURIComponent(ranking.listId)}`}
+                    >
+                      <span>{strings.ranking.rankThis}</span>
+                    </Link>
+                  </>
+                ) : (
+                  <p className="list-page__invite">{strings.ranking.listGone}</p>
+                )}
+              </div>
+            )}
+            <Handout ranking={ranking} share={share} />
           </div>
         </div>
       )}

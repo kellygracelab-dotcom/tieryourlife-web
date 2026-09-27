@@ -17,6 +17,8 @@ import {
   type Draft,
   type DraftStoreLike,
   type EditorAction,
+  draftOfRanking,
+  forkDraftKey,
 } from "./model";
 
 const apply = (draft: Draft, ...actions: EditorAction[]): Draft => actions.reduce(reduce, draft);
@@ -314,6 +316,39 @@ describe("the draft between visits", () => {
       JSON.stringify({ ...kept, tiers: [old("Mine", "S"), ...kept.tiers.slice(1)] }),
     );
     expect(loadEditorDraft(store)?.tiers[0]?.caption).toBe("Mine");
+  });
+
+  it("opens a kept ranking as a list of one's own, without the pictures its author uploaded", () => {
+    const own =
+      "https://firebasestorage.googleapis.com/v0/b/tieryourlife.appspot.com/o/published%2Fabc%2Fpic1?alt=media";
+    const draft = draftOfRanking({
+      listId: "abc",
+      rows: [[1], [0, 7], []],
+      snapshot: {
+        title: "Every A24 film, ranked",
+        authorName: "danylo",
+        authorPhotoUrl: null,
+        category: "film_tv",
+        tiers: [
+          { label: "S", caption: "Best", colorLight: "#b03a32", colorDark: "#f1948c" },
+          { label: "A", caption: null, colorLight: "#c06a25", colorDark: "#e9a867" },
+        ],
+        items: [
+          { title: "Ex Machina", imageUrl: "https://image.tmdb.org/t/p/w500/ex.jpg", tierIndex: 0 },
+          { title: "Home video", imageUrl: own, tierIndex: null },
+        ],
+      },
+    });
+    expect(draft.title).toBe("Every A24 film, ranked");
+    expect(draft.category).toBe("film_tv");
+    expect(draft.tiers.map((tier) => tier.label)).toEqual(["S", "A"]);
+    expect(draft.items.map((item) => [item.title, item.imageUrl])).toEqual([
+      ["Ex Machina", "https://image.tmdb.org/t/p/w500/ex.jpg"],
+      ["Home video", null],
+    ]);
+    // The ranking's arrangement, not the author's; what names no card or no tier is dropped.
+    expect(draft.rows).toEqual([[1], [0]]);
+    expect(forkDraftKey("abcdefgh")).toBe("tyl:fork:abcdefgh");
   });
 
   it("leaves the captions of a published list's own draft as they were published", () => {

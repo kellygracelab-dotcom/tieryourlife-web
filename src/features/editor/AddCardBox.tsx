@@ -1,6 +1,5 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import type { CatalogueItem } from "../../api/catalogue";
-import type { Category } from "../../api/types";
 import { PictureRefused, type UploadedPicture } from "../../lib/pictures";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -15,7 +14,6 @@ export type Upload = (file: File) => Promise<UploadedPicture>;
 
 interface AddCardBoxProps {
   items: readonly EditorItem[];
-  category: Category | null;
   dispatch: (action: EditorAction) => void;
   lookup?: Lookup;
   upload: Upload;
@@ -35,20 +33,6 @@ function pictureFailureText(name: string, failure: unknown): string {
   }
 }
 
-/** What the box invites, by what the list is about; the catalogue knows films, series and people. */
-const placeholderFor = (category: Category | null): string => {
-  switch (category) {
-    case "film_tv":
-      return strings.new.searchFilms;
-    case "anime":
-      return strings.new.searchAnime;
-    case "people":
-      return strings.new.searchPeople;
-    default:
-      return strings.new.addPlaceholder;
-  }
-};
-
 function Thumb({ imageUrl, title }: { imageUrl: string | null; title: string }) {
   return imageUrl !== null ? (
     <img className="cards__thumb" src={imageUrl} alt="" loading="lazy" />
@@ -63,7 +47,7 @@ function Thumb({ imageUrl, title }: { imageUrl: string | null; title: string }) 
  * The way cards come in: pictures from the device, or a name that the
  * catalogue may recognise. Shared by the editor and the owner's own board.
  */
-export function AddCardBox({ items, category, dispatch, lookup, upload }: AddCardBoxProps) {
+export function AddCardBox({ items, dispatch, lookup, upload }: AddCardBoxProps) {
   const [typed, setTyped] = useState("");
   const [uploading, setUploading] = useState(0);
   const [pictureNote, setPictureNote] = useState<string | null>(null);
@@ -115,7 +99,7 @@ export function AddCardBox({ items, category, dispatch, lookup, upload }: AddCar
 
   return (
     <>
-      <div className="cards__upload">
+      <div className="cards__upload" title={strings.new.upload}>
         <input
           ref={picker}
           type="file"
@@ -150,7 +134,8 @@ export function AddCardBox({ items, category, dispatch, lookup, upload }: AddCar
             id="card-input"
             type="text"
             value={typed}
-            placeholder={placeholderFor(category)}
+            // The catalogue knows films and an apple alike, whatever the list is about.
+            placeholder={strings.new.addPlaceholder}
             autoComplete="off"
             maxLength={80}
             onChange={(event) => setTyped(event.target.value)}
@@ -168,7 +153,7 @@ export function AddCardBox({ items, category, dispatch, lookup, upload }: AddCar
               <p className="cards__note">{strings.new.nothingFound}</p>
             )}
             {catalogue.status === "ready" && catalogue.items.length > 0 && (
-              <p className="cards__source">{strings.new.fromTmdb}</p>
+              <p className="cards__source">{strings.new.sources}</p>
             )}
             {catalogue.status === "ready" &&
               catalogue.items.slice(0, RESULTS_SHOWN).map((found) => (

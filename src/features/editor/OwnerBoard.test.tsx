@@ -111,7 +111,7 @@ describe("OwnerBoard", () => {
     const store = open();
     await userEvent.type(screen.getByLabelText("Add a card"), "Climax{Enter}");
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2 cards left");
-    expect(status()).toHaveTextContent("The published copy is behind this board.");
+    expect(status()).toHaveTextContent("Changes not published yet");
     expect(store.read("tyl:edit:abc")).toContain("Climax");
     expect(publishButton()).toBeEnabled();
 
@@ -136,7 +136,7 @@ describe("OwnerBoard", () => {
     const store = open();
     await userEvent.click(screen.getByRole("button", { name: "Remove The Witch" }));
     expect(screen.queryByRole("button", { name: "The Witch" })).toBeNull();
-    expect(status()).toHaveTextContent("The published copy is behind this board.");
+    expect(status()).toHaveTextContent("Changes not published yet");
 
     await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
     expect(screen.getByRole("button", { name: "The Witch" })).toBeInTheDocument();
@@ -156,7 +156,7 @@ describe("OwnerBoard", () => {
     await userEvent.click(screen.getByRole("button", { name: "The Witch" }));
     await userEvent.keyboard("1");
     expect(inTier("S", "The Witch")).toBeInTheDocument();
-    expect(status()).toHaveTextContent("The published copy is behind this board.");
+    expect(status()).toHaveTextContent("Changes not published yet");
 
     await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
     expect(inTier("S", "The Witch")).toBeNull();
@@ -196,6 +196,6 @@ describe("OwnerBoard", () => {
     unmount();
     open(store);
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2 cards left");
-    expect(status()).toHaveTextContent("The published copy is behind this board.");
+    expect(status()).toHaveTextContent("Changes not published yet");
   });
 });

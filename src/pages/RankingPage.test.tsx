@@ -85,9 +85,13 @@ describe("RankingPage", () => {
       "/l/wMRMFDxo8UejcAi2VVMW",
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    // The address in the header is the button: one press copies it, nothing to select.
+    const chip = screen.getByRole("button", { name: `${window.location.host}/r/abcdefgh` });
+    expect(chip).toHaveAttribute("title", "Copy link");
+    await userEvent.click(chip);
     expect(copy).toHaveBeenCalledWith(`https://${window.location.host}/r/abcdefgh`);
-    expect(screen.getByRole("button", { name: "Link copied" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Link copied" })).toBe(chip);
+    expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
 
     share.mockRejectedValueOnce(new Error("no canvas"));
     await userEvent.click(screen.getByRole("button", { name: "Download image" }));
@@ -108,6 +112,10 @@ describe("RankingPage", () => {
     open();
     expect(await screen.findByText("by danylo · ranked by you")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+
+    // Whoever made the ranking has ranked it: the invitation is for a visitor.
+    expect(screen.queryByText("Disagree? Rank it yourself.")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Rank this list" })).toBeNull();
 
     // One's own ranking gets the phone app's words, the same as on the list's page.
     expect(screen.getByRole("button", { name: "Mine" })).toHaveAttribute("aria-pressed", "true");

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { Category } from "../../api/types";
 import { fill, plural, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { AddCardBox, type Upload } from "./AddCardBox";
@@ -10,7 +9,6 @@ export type { Upload } from "./AddCardBox";
 
 interface CardsEditorProps {
   items: readonly EditorItem[];
-  category: Category | null;
   dispatch: (action: EditorAction) => void;
   lookup?: Lookup;
   upload: Upload;
@@ -34,7 +32,7 @@ function TileImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
-export function CardsEditor({ items, category, dispatch, lookup, upload }: CardsEditorProps) {
+export function CardsEditor({ items, dispatch, lookup, upload }: CardsEditorProps) {
   return (
     <section className="cards" aria-labelledby="cards-title">
       <div className="editor__heading">
@@ -42,13 +40,7 @@ export function CardsEditor({ items, category, dispatch, lookup, upload }: Cards
         <p>{plural(strings.new.cardsAdded, items.length)}</p>
       </div>
 
-      <AddCardBox
-        items={items}
-        category={category}
-        dispatch={dispatch}
-        lookup={lookup}
-        upload={upload}
-      />
+      <AddCardBox items={items} dispatch={dispatch} lookup={lookup} upload={upload} />
 
       {items.length === 0 ? (
         <p className="editor__empty">{strings.new.noCardsYet}</p>

@@ -171,7 +171,10 @@ describe("RankingBoard", () => {
     expect(card("Climax")).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(tierList("A"));
     expect(progress()).toHaveTextContent("3 of 3 placed");
-    expect(screen.queryByRole("button", { pressed: true })).toBeNull();
+    // No card is picked; the pool's place toggle is the only pressed button left.
+    expect(
+      screen.queryByRole("button", { name: /Ex Machina|The Witch|Climax/, pressed: true }),
+    ).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(card("Climax")).toHaveAttribute("aria-pressed", "true");
@@ -363,13 +366,13 @@ describe("RankingBoard", () => {
     await userEvent.keyboard("112");
     expect(screen.getByText("All 3 placed")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
-    expect(
-      screen.getByText("Change your mind by dragging a card, or finish and get your link."),
-    ).toBeInTheDocument();
+    // On a wide screen the pool says so in one line and keeps its place toggle;
+    // Finish is the bar's, not repeated below.
+    expect(screen.getByText("Drag a card to change your mind")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Where the cards sit" })).toBeInTheDocument();
+    expect(document.querySelector(".pool .btn--filled")).toBeNull();
 
-    const finishes = screen.getAllByRole("button", { name: "Finish" });
-    expect(finishes).toHaveLength(2);
-    await userEvent.click(finishes[1]!);
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
     expect(keep).toHaveBeenCalledWith("abc", [[0, 1], [2]]);
     expect(await screen.findByText(/\/r\/abcdefgh/)).toBeInTheDocument();
     expect(screen.queryByText("All 3 placed")).toBeNull();

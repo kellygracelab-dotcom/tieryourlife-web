@@ -150,29 +150,33 @@ export function OwnerBoard({
 
   const problem = dirty && body === null ? strings.new.needCards : null;
 
+  // One line about the changes; the board puts it in the header beside the
+  // actions on a wide screen, and above itself on a narrow one.
+  const status =
+    publishing.status === "failed" ? (
+      <p className="owner__status owner__status--failed" role="alert">
+        <Icon name="error" />
+        {failureText(publishing.error, "edit")}
+      </p>
+    ) : publishing.status === "busy" ? (
+      <p className="owner__status" role="status">
+        <Icon name="cloud_upload" />
+        {strings.new.publishing}
+      </p>
+    ) : problem !== null ? (
+      <p className="owner__status owner__status--failed" role="status">
+        <Icon name="error" />
+        {problem}
+      </p>
+    ) : dirty ? (
+      <p className="owner__status" role="status">
+        <Icon name="history" />
+        {strings.owner.behind}
+      </p>
+    ) : undefined;
+
   return (
     <section className="owner" aria-label={strings.owner.title}>
-      {publishing.status === "failed" ? (
-        <p className="owner__status owner__status--failed" role="alert">
-          <Icon name="error" />
-          {failureText(publishing.error, "edit")}
-        </p>
-      ) : publishing.status === "busy" ? (
-        <p className="owner__status" role="status">
-          <Icon name="cloud_upload" />
-          {strings.new.publishing}
-        </p>
-      ) : problem !== null ? (
-        <p className="owner__status owner__status--failed" role="status">
-          <Icon name="error" />
-          {problem}
-        </p>
-      ) : dirty ? (
-        <p className="owner__status" role="status">
-          <Icon name="history" />
-          {strings.owner.behind}
-        </p>
-      ) : null}
       <RankingBoard
         key={generation}
         list={shown}
@@ -189,14 +193,9 @@ export function OwnerBoard({
               if (card !== undefined) dispatch({ type: "removeItem", key: card.key });
             },
             tools: (
-              <AddCardBox
-                items={draft.items}
-                category={draft.category}
-                dispatch={dispatch}
-                lookup={lookup}
-                upload={upload}
-              />
+              <AddCardBox items={draft.items} dispatch={dispatch} lookup={lookup} upload={upload} />
             ),
+            status,
           },
         }}
       />

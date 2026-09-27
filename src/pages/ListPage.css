@@ -167,6 +167,48 @@
   color: var(--ink-dim);
 }
 
+/* A ranking's address in its header: a chip that copies itself at a press. */
+.address-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 18px;
+  background: var(--chip);
+  color: var(--ink);
+  font: 400 13px/18px var(--font-mono);
+  cursor: pointer;
+}
+
+.address-chip:hover {
+  box-shadow: inset 0 0 0 100px var(--hover);
+}
+
+.address-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.address-chip > span:not(.ms) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.address-chip__icon {
+  font-size: 16px;
+  color: var(--ink-dim);
+}
+
+.address-chip__icon--done {
+  color: var(--ok);
+}
+
 /* On a wide screen the button beside the menu copies the link; the menu need not repeat it. */
 .list-menu__copy {
   display: none;
@@ -188,22 +230,26 @@
     min-height: 72px;
   }
 
-  /* Beside: the header's content ends where the column begins. */
+  /*
+   * Wherever the pool is, the header is a sticky row under the app bar and
+   * holds the count, Undo and Finish: moving the pool does not move them.
+   */
+  .list-page--under .list-head,
   .list-page--beside .list-head {
-    padding-inline-end: calc(var(--side) - var(--space-8));
-  }
-
-  /* Under: the header is a sticky row under the app bar, and holds the count, Undo and Finish. */
-  .list-page--under .list-head {
     position: sticky;
     top: var(--header-height);
     z-index: 20;
     margin-inline: calc(-1 * var(--space-8));
     padding-block: 8px;
-    padding-inline: max(var(--space-8), calc((100vw - var(--board-cap)) / 2));
+    padding-inline: var(--space-8);
     border-bottom: 1px solid var(--line);
     background: color-mix(in srgb, var(--paper) 97%, transparent);
     backdrop-filter: blur(12px);
+  }
+
+  /* Under, the header's content keeps to the board's own width. */
+  .list-page--under .list-head {
+    padding-inline: max(var(--space-8), calc((100vw - var(--board-cap)) / 2));
   }
 
   .list-head__bar {

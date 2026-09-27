@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "./client";
-import { claimRanking, getMyRankings, getRanking, saveRanking, updateRanking } from "./rank";
+import {
+  claimRanking,
+  deleteRanking,
+  getMyRankings,
+  getRanking,
+  saveRanking,
+  updateRanking,
+} from "./rank";
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -51,6 +58,12 @@ describe("rank", () => {
     expect(request).toHaveBeenCalledWith("PUT", "/api/rank/abcdefgh", {
       body: { rows: [[1], [0, 2]] },
     });
+  });
+
+  it("takes a ranking away by its code, as the account", async () => {
+    const { client, request } = recordingClient(undefined);
+    await expect(deleteRanking(client, "abcdefgh")).resolves.toBeUndefined();
+    expect(request).toHaveBeenCalledWith("DELETE", "/api/rank/abcdefgh");
   });
 
   it("claims a ranking by code with the token Finish handed out", async () => {

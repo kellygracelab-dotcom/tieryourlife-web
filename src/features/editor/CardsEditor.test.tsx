@@ -15,7 +15,6 @@ describe("CardsEditor tiles", () => {
     render(
       <CardsEditor
         items={items}
-        category={null}
         dispatch={() => {}}
         lookup={async () => []}
         upload={async () => ({ pictureId: "x", previewUrl: "https://dl/x" })}

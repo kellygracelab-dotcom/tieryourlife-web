@@ -64,6 +64,8 @@ export interface EditMode {
     remove: (item: number) => void;
     /** The owner's way of bringing cards in; it lives with the pool, wherever the pool is. */
     tools?: ReactNode;
+    /** What the owner has to know about the changes; it stands in the header when the bar does. */
+    status?: ReactNode;
   };
 }
 
@@ -237,6 +239,9 @@ export function RankingBoard({
   const { dock, rows, wide, choose, resize } = useDock(store);
   const docked = wide && dock === "under";
   const frame = useContext(BoardFrameContext);
+  // On a wide screen the count and the actions stand in the page's header,
+  // wherever the pool is: moving the pool does not move the buttons.
+  const inHead = wide && frame.headSlot !== null;
   useEffect(() => {
     frame.report(wide ? dock : null);
     return () => frame.report(null);
@@ -528,12 +533,13 @@ export function RankingBoard({
     <div
       className={[
         "ranking__bar",
-        docked && "ranking__bar--head",
+        inHead && "ranking__bar--head",
         edit?.owner !== undefined && "ranking__bar--owner",
       ]
         .filter(Boolean)
         .join(" ")}
     >
+      {inHead && edit?.owner?.status}
       <p className="ranking__progress" aria-live="polite">
         {fill(strings.rank.placed, { n: placedCount(state), total: list.items.length })}
       </p>
@@ -603,6 +609,7 @@ export function RankingBoard({
           />
         )}
 
+        {!inHead && edit?.owner?.status}
         {tools !== undefined && !wide && <div className="ranking__tools">{tools}</div>}
 
         <div className="board">
@@ -626,7 +633,7 @@ export function RankingBoard({
       </div>
 
       <div className="ranking__side">
-        {docked && frame.headSlot !== null ? createPortal(bar, frame.headSlot) : bar}
+        {inHead && frame.headSlot !== null ? createPortal(bar, frame.headSlot) : bar}
 
         {!restEmpty && (
           <div
@@ -636,11 +643,10 @@ export function RankingBoard({
             data-drop="pool"
             style={{ "--dock-rows": rows } as CSSProperties}
           >
-            {docked && (
+            {docked && !allPlaced && (
               <div className="pool__grip" onPointerDown={startResize} aria-hidden="true" />
             )}
-            {tools !== undefined && wide && allPlaced && <div className="pool__tools">{tools}</div>}
-            {allPlaced ? (
+            {allPlaced && !wide ? (
               <div className="pool__done">
                 <p className="pool__done-title">
                   <Icon name="check_circle" className="pool__done-icon" />
@@ -660,13 +666,20 @@ export function RankingBoard({
               </div>
             ) : (
               <>
-                <div className="pool__head">
+                <div className={allPlaced ? "pool__head pool__head--done" : "pool__head"}>
                   <div className="pool__lead">
-                    <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
+                    {allPlaced ? (
+                      <p className="pool__done-title">
+                        <Icon name="check_circle" className="pool__done-icon" />
+                        {plural(strings.rank.allPlaced, list.items.length)}
+                      </p>
+                    ) : (
+                      <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
+                    )}
                     <DockToggle dock={dock} onChoose={choose} />
                   </div>
                   {tools !== undefined && wide && <div className="pool__tools">{tools}</div>}
-                  {left.length > POOL_SEARCH_FROM && tools === undefined && (
+                  {!allPlaced && left.length > POOL_SEARCH_FROM && tools === undefined && (
                     <input
                       className="pool__search"
                       type="search"
@@ -681,47 +694,59 @@ export function RankingBoard({
                       }}
                     />
                   )}
-                  <p className="pool__hint pool__hint--keys">
-                    {selectedTitle === null
-                      ? fill(strings.rank.hintPick, { keys: `1–${keyboardTiers}` })
-                      : fill(strings.rank.hintPlace, { name: selectedTitle })}
-                  </p>
-                  <p className="pool__hint pool__hint--touch">
-                    {selectedTitle === null
-                      ? strings.rank.hintPickTouch
-                      : strings.rank.hintPlaceTouch}
-                  </p>
+                  {allPlaced ? (
+                    tools === undefined && (
+                      <p className="pool__hint pool__hint--keys">{strings.rank.allPlacedHint}</p>
+                    )
+                  ) : (
+                    <>
+                      <p className="pool__hint pool__hint--keys">
+                        {selectedTitle === null
+                          ? fill(strings.rank.hintPick, { keys: `1–${keyboardTiers}` })
+                          : fill(strings.rank.hintPlace, { name: selectedTitle })}
+                      </p>
+                      <p className="pool__hint pool__hint--touch">
+                        {selectedTitle === null
+                          ? strings.rank.hintPickTouch
+                          : strings.rank.hintPlaceTouch}
+                      </p>
+                    </>
+                  )}
                 </div>
-                <ul className="pool__items" ref={tray} onScroll={readPage}>
-                  {shown.map((item) => (
-                    <Tile
-                      key={item}
-                      list={list}
-                      item={item}
-                      selected={selected === item}
-                      lifted={lifted === item}
-                      locked={locked}
-                      dispatch={dispatch}
-                      onPointerDown={drag.onPointerDown(item)}
-                      onRemove={
-                        edit?.owner === undefined ? undefined : () => edit.owner?.remove(item)
-                      }
-                    />
-                  ))}
-                </ul>
-                {shown.length === 0 && <p className="pool__none">{strings.rank.searchNone}</p>}
-                {pages > 1 && (
-                  <div className="pool__dots" aria-hidden="true">
-                    {Array.from({ length: Math.min(pages, TRAY_DOTS) }, (_, i) => (
-                      <span
-                        key={i}
-                        className={i === page ? "pool__dot pool__dot--on" : "pool__dot"}
-                      />
-                    ))}
-                    {pages > TRAY_DOTS && (
-                      <span className="pool__dots-more">+{pages - TRAY_DOTS}</span>
+                {!allPlaced && (
+                  <>
+                    <ul className="pool__items" ref={tray} onScroll={readPage}>
+                      {shown.map((item) => (
+                        <Tile
+                          key={item}
+                          list={list}
+                          item={item}
+                          selected={selected === item}
+                          lifted={lifted === item}
+                          locked={locked}
+                          dispatch={dispatch}
+                          onPointerDown={drag.onPointerDown(item)}
+                          onRemove={
+                            edit?.owner === undefined ? undefined : () => edit.owner?.remove(item)
+                          }
+                        />
+                      ))}
+                    </ul>
+                    {shown.length === 0 && <p className="pool__none">{strings.rank.searchNone}</p>}
+                    {pages > 1 && (
+                      <div className="pool__dots" aria-hidden="true">
+                        {Array.from({ length: Math.min(pages, TRAY_DOTS) }, (_, i) => (
+                          <span
+                            key={i}
+                            className={i === page ? "pool__dot pool__dot--on" : "pool__dot"}
+                          />
+                        ))}
+                        {pages > TRAY_DOTS && (
+                          <span className="pool__dots-more">+{pages - TRAY_DOTS}</span>
+                        )}
+                      </div>
                     )}
-                  </div>
+                  </>
                 )}
               </>
             )}

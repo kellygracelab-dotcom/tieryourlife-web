@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import type { ApiError } from "../api/errors";
+import type { Ranking } from "../api/rank";
 import { CATEGORIES, type PublishedList } from "../api/types";
 import { useSession, type Session } from "../app/session";
 import { localStorageStore, type DraftStore } from "../features/board/draft";
@@ -10,8 +11,10 @@ import { focusProblem } from "../features/editor/focusProblem";
 import {
   clearEditorDraft,
   draftOf,
+  draftOfRanking,
   editDraftKey,
   emptyDraft,
+  forkDraftKey,
   isBlankDraft,
   LIMITS,
   loadEditorDraft,
@@ -31,7 +34,12 @@ import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { failureText } from "../features/editor/failureText";
 import { errorOf, useResource } from "../features/list/useResource";
-import { loadList, publish as publishList, republish as republishList } from "../lib/api";
+import {
+  loadList,
+  loadRanking,
+  publish as publishList,
+  republish as republishList,
+} from "../lib/api";
 import { copyPublishedBack, discardPictures, PictureRefused, uploadPicture } from "../lib/pictures";
 import type { SignInOutcome } from "../lib/signIn";
 import { strings } from "../strings";
@@ -45,6 +53,7 @@ import "../features/editor/editor.css";
 export type Publish = typeof publishList;
 export type Republish = typeof republishList;
 export type LoadList = (id: string) => Promise<PublishedList>;
+export type LoadKept = (code: string) => Promise<Ranking>;
 type Discard = (pictureIds: readonly string[]) => Promise<void>;
 
 interface NewListPageProps {
@@ -53,6 +62,7 @@ interface NewListPageProps {
   publish?: Publish;
   republish?: Republish;
   load?: LoadList;
+  loadKept?: LoadKept;
   upload?: Upload;
   copyBack?: CopyBack;
   discard?: Discard;
@@ -304,7 +314,6 @@ function Editor({
             </section>
             <CardsEditor
               items={draft.items}
-              category={draft.category}
               dispatch={dispatch}
               lookup={lookup}
               upload={uploadAsAccount}
@@ -332,11 +341,17 @@ interface EditListProps {
   discard: Discard;
 }
 
-function EditNotice({ children }: { children: ReactNode }) {
+function EditNotice({
+  title = strings.new.editTitle,
+  children,
+}: {
+  title?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="editor">
       <header className="editor__top">
-        <h1 className="editor__title">{strings.new.editTitle}</h1>
+        <h1 className="editor__title">{title}</h1>
       </header>
       {children}
     </div>
@@ -454,12 +469,93 @@ function EditList({ account, signIn, ...rest }: EditListProps) {
   return <EditLoaded {...rest} uid={account.uid} signIn={signIn} />;
 }
 
+interface FromRankingProps {
+  code: string;
+  store: DraftStore;
+  lookup: Lookup | undefined;
+  loadKept: LoadKept;
+  publish: Publish;
+  upload: Upload;
+  discard: Discard;
+  guest: boolean;
+  signIn: () => Promise<SignInOutcome>;
+}
+
+/**
+ * A kept ranking opened as a new list: the cards, the tiers and the
+ * arrangement are filled in, and publishing makes a list of the person's own
+ * under a link of its own. Nothing changes on the list it was ranked from.
+ */
+function FromRanking({
+  code,
+  store,
+  lookup,
+  loadKept,
+  publish,
+  upload,
+  discard,
+  guest,
+  signIn,
+}: FromRankingProps) {
+  const { state, retry } = useResource(code, loadKept);
+
+  if (state.status === "loading") {
+    return (
+      <EditNotice title={strings.new.title}>
+        <div aria-busy="true">
+          <Skeleton height="20px" width="40%" />
+        </div>
+        <p className="editor__hint">{strings.new.openingList}</p>
+      </EditNotice>
+    );
+  }
+  if (state.status === "error") {
+    const { error } = state;
+    return (
+      <EditNotice title={strings.new.title}>
+        <p className="editor__failed" role="alert">
+          {error.kind === "notFound"
+            ? strings.new.listGone
+            : error.kind === "offline"
+              ? strings.new.failedOffline
+              : strings.new.listFailed}
+        </p>
+        {error.kind !== "notFound" && (
+          <div>
+            <Button variant="filled" icon="refresh" onClick={retry}>
+              {strings.new.tryAgain}
+            </Button>
+          </div>
+        )}
+      </EditNotice>
+    );
+  }
+
+  const ranking = state.value;
+  return (
+    <Editor
+      mode="new"
+      store={store}
+      draftKey={forkDraftKey(code)}
+      opening={() => draftOfRanking(ranking)}
+      suggestedTitle={null}
+      lookup={lookup}
+      submit={(_, body) => publish(body)}
+      upload={upload}
+      discard={discard}
+      guest={guest}
+      signIn={signIn}
+    />
+  );
+}
+
 export function NewListPage({
   store = localStorageStore,
   lookup,
   publish = publishList,
   republish = republishList,
   load = loadList,
+  loadKept = (code) => loadRanking(code, true),
   upload = (file) => uploadPicture(file),
   copyBack = copyPublishedBack,
   discard = discardPictures,
@@ -480,6 +576,22 @@ export function NewListPage({
         upload={upload}
         copyBack={copyBack}
         discard={discard}
+      />
+    );
+  }
+  const rankingCode = params.get("ranking");
+  if (rankingCode !== null && rankingCode !== "") {
+    return (
+      <FromRanking
+        code={rankingCode}
+        store={store}
+        lookup={lookup}
+        loadKept={loadKept}
+        publish={publish}
+        upload={upload}
+        discard={discard}
+        guest={account?.kind !== "signedIn"}
+        signIn={signIn}
       />
     );
   }

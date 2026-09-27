@@ -54,7 +54,7 @@ const notFound = (response: Response, error: string): void =>
 const methodNotAllowed = (response: Response): void =>
   void response
     .status(405)
-    .json({ error: "Use GET, POST, PATCH or PUT", code: "METHOD_NOT_ALLOWED" });
+    .json({ error: "Use GET, POST, PATCH, PUT or DELETE", code: "METHOD_NOT_ALLOWED" });
 
 export const web = onRequest(
   {
@@ -87,7 +87,7 @@ export const web = onRequest(
         return await rankingPage(request, response, segments[1] ?? "");
       }
 
-      // The API: /api/rank, /api/rank/{code} (read, claim, edit) and /api/me/rankings.
+      // The API: /api/rank, /api/rank/{code} (read, claim, edit, delete) and /api/me/rankings.
       const api = segments[0] === "api" ? segments.slice(1) : null;
       if (api === null || api.length > 2) return notFound(response, "No such address");
       const [resource, rest] = api;
@@ -124,6 +124,12 @@ export const web = onRequest(
         const identity = await requireAccount(request, response);
         if (!identity) return;
         return await editRanking(request.body, identity, response, code);
+      }
+      if (request.method === "DELETE" && code !== undefined) {
+        if (!(await requireAppCheck(request, response))) return;
+        const identity = await requireAccount(request, response);
+        if (!identity) return;
+        return await deleteRanking(identity, response, code);
       }
       methodNotAllowed(response);
     } catch (error) {
@@ -304,6 +310,28 @@ async function editRanking(
   }
   response.setHeader("Cache-Control", "no-store");
   response.status(200).json({ code });
+}
+
+/** Takes a ranking away for good. Only the account that keeps it may; its list is not touched. */
+async function deleteRanking(identity: Identity, response: Response, code: string): Promise<void> {
+  if (!isCode(code)) return notFound(response, "No such ranking");
+  const db = getFirestore();
+  const ref = db.collection(RANKINGS).doc(code);
+  const decision = await db.runTransaction(async (transaction) => {
+    const doc = await transaction.get(ref);
+    if (!doc.exists) return null;
+    const owner = decideOwner(doc.data() as RankingDocument, identity.uid);
+    if (owner.ok) transaction.delete(ref);
+    return owner;
+  });
+  if (decision === null) return notFound(response, "No such ranking");
+  if (!decision.ok) {
+    return void response
+      .status(decision.status)
+      .json({ error: decision.error, code: decision.code });
+  }
+  response.setHeader("Cache-Control", "no-store");
+  response.status(204).end();
 }
 
 async function listMyRankings(identity: Identity, response: Response): Promise<void> {

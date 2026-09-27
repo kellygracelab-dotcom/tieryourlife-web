@@ -312,7 +312,7 @@ function AuthorMenu({
   const { canShare } = useListLink(list);
   const busy = deleting.status === "busy";
 
-  const gone = () => void navigate("/me/lists");
+  const gone = () => void navigate("/me");
   const confirm = () => {
     setDeleting({ status: "busy" });
     unpublish(list.id).then(gone, (reason: unknown) => {

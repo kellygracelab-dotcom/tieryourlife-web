@@ -813,8 +813,47 @@
     border-radius: 18px;
   }
 
+  .pool__tools .cards__upload {
+    flex: none;
+  }
+
+  /* Upload images is its arrow in an outlined circle; the tooltip and the label say the words. */
   .pool__tools .cards__upload .btn {
+    justify-content: center;
+    width: 36px;
+    min-width: 36px;
     min-height: 36px;
+    padding: 0;
+    border-radius: 18px;
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+
+  .pool__tools .cards__upload .btn .btn__icon {
+    font-size: 18px;
+  }
+
+  .pool__tools .cards__upload .btn > span:not(.btn__icon) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Every card placed: the head says so, in the dock's one row or at the top of the card. */
+  .pool__head--done .pool__done-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font: 500 15px/21px var(--font);
+    white-space: nowrap;
+  }
+
+  .pool__head--done .pool__done-icon {
+    color: var(--ok);
   }
 
   .pool__tools .cards__found {
@@ -827,14 +866,9 @@
   }
 
   .ranking:not(.ranking--under) .pool__tools {
-    order: 0;
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  /* Stacked in the column, the field takes its own height, not a share of the column's. */
-  .ranking:not(.ranking--under) .pool__tools .cards__add {
-    flex: 0 0 auto;
+    order: 1;
+    flex: none;
+    flex-wrap: nowrap;
   }
 
   .ranking:not(.ranking--under) .pool__tools .cards__found {
@@ -843,8 +877,21 @@
 
   .ranking--under .pool__tools {
     order: 2;
-    flex: 1 1 320px;
+    flex: 0 1 540px;
     flex-wrap: nowrap;
+  }
+
+  /* With every card placed the dock is its head alone: one row, and nothing to resize. */
+  .ranking--under .pool:has(.pool__head--done) {
+    padding-block: 12px;
+  }
+
+  .ranking--under .pool__head--done .pool__done-title {
+    order: 1;
+  }
+
+  .ranking--under .pool__head--done:not(:has(.pool__hint)) .dock {
+    margin-inline-start: auto;
   }
 
   .ranking--under .pool__tools .cards__add {
@@ -878,16 +925,17 @@
     margin-inline: auto;
   }
 
+  /*
+   * The column holds the pool as a card, as tall as what is in it, and the
+   * actions only when the page has no header to lend them a place in.
+   */
   .ranking:not(.ranking--under) .ranking__side {
-    position: sticky;
-    top: var(--header-height);
+    align-self: stretch;
     display: flex;
     flex-direction: column;
     gap: 14px;
-    height: calc(100vh - var(--header-height));
-    padding: 16px;
-    background: var(--surface);
-    border-inline-start: 1px solid var(--line);
+    padding-block: 16px 24px;
+    padding-inline: 0 var(--space-8);
   }
 
   .ranking:not(.ranking--under) .ranking__bar {
@@ -959,16 +1007,19 @@
   }
 
   .ranking:not(.ranking--under) .pool {
+    position: sticky;
+    top: calc(var(--header-height) + 72px + 16px);
     display: flex;
-    flex: 1;
+    flex: none;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    max-height: calc(100vh - var(--header-height) - 72px - 32px);
     min-height: 0;
     margin: 0;
-    padding: 0;
+    padding: 16px;
     border: 0;
-    border-radius: 0;
-    background: none;
+    border-radius: 16px;
+    background: var(--surface);
   }
 
   /* The head's pieces become the column's own: the title on top, the hint at the foot. */
@@ -977,7 +1028,7 @@
   }
 
   .ranking:not(.ranking--under) .pool__lead {
-    order: 1;
+    order: 0;
   }
 
   .ranking:not(.ranking--under) .pool__search {
@@ -987,9 +1038,11 @@
 
   .ranking:not(.ranking--under) .pool__items {
     order: 3;
-    flex: 1;
-    /* 8, not the board's 10: four columns of 64 in the 320 px column, three in the 280. */
-    gap: 8px;
+    flex: 0 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    gap: 10px;
+    padding: 0;
   }
 
   .ranking:not(.ranking--under) .pool__none {
@@ -999,7 +1052,6 @@
 
   .ranking:not(.ranking--under) .pool__hint--keys {
     order: 5;
-    margin-top: auto;
   }
 
   .ranking:not(.ranking--under) .pool__done {
