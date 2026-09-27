@@ -266,6 +266,28 @@ describe("cardsFor", () => {
     ]);
   });
 
+  it("asks for a subject by its number, and gives the card the name of the line", async () => {
+    const asked: string[] = [];
+    const got: PastedCard[] = [];
+    await cardsFor(
+      wantedOf("Muse (Q22151)\nMuse", 100),
+      async (query) => {
+        asked.push(query);
+        // A search by the name does not reach the band; its number does.
+        return query === "Q22151"
+          ? [card("wikidata:Q22151", "Muse", "English rock band")]
+          : [card("wikidata:Q16877643", "Muse", "family name", null)];
+      },
+      (one) => got.push(one),
+      { preferred: "wikidata", paceMs: 0 },
+    );
+    expect(asked).toEqual(["Q22151", "Muse"]);
+    expect(got).toEqual([
+      { title: "Muse", imageUrl: "https://img/wikidata:Q22151.jpg", key: "wikidata:Q22151" },
+      { title: "Muse", imageUrl: null, key: "wikidata:Q16877643" },
+    ]);
+  });
+
   it("stops when the box is gone", async () => {
     const got: PastedCard[] = [];
     let going = true;

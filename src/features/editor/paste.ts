@@ -74,7 +74,8 @@ const from =
  *
  * A line that gives the subject's id gets that subject or nothing, whatever
  * the catalogue calls it: "Football (Q2736)" is the game Wikidata knows as
- * association football.
+ * association football, and "Muse (Q22151)" the band that a search by the
+ * name does not reach.
  */
 export function pick(
   wanted: Wanted,
@@ -136,8 +137,12 @@ export async function cardsFor(
   onCard: (card: PastedCard, done: number) => void,
   { going = () => true, preferred = null, paceMs = PASTE_PACE_MS }: PasteOptions = {},
 ): Promise<void> {
+  // Wikidata finds a subject by its number as it does by a name, and then it
+  // is the only answer: nothing depends on what else carries the name.
   const ask = (one: Wanted): Promise<CatalogueItem[]> =>
-    lookup(one.title).catch((): CatalogueItem[] => []);
+    lookup(one.id === undefined ? one.title : one.id.slice(one.id.indexOf(":") + 1)).catch(
+      (): CatalogueItem[] => [],
+    );
   // A catalogue that is busy says nothing, the same as one that knows nothing.
   // The one this name is for gets a second question before the name goes alone.
   const answerFor = async (one: Wanted): Promise<CatalogueItem[]> => {
