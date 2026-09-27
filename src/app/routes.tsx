@@ -1,4 +1,4 @@
-import type { RouteObject } from "react-router";
+import { Navigate, type RouteObject } from "react-router";
 import { AboutPage } from "../pages/AboutPage";
 import { CategoryPage } from "../pages/CategoryPage";
 import { HomePage } from "../pages/HomePage";
@@ -25,7 +25,8 @@ export const routes: RouteObject[] = [
       { path: "l/:id", element: <ListPage /> },
       { path: "r/:code", element: <RankingPage /> },
       { path: "me", element: <MePage /> },
-      { path: "me/lists", element: <MePage tab="lists" /> },
+      // The lists had a page of their own once; links to it still lead home.
+      { path: "me/lists", element: <Navigate to="/me" replace /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "mod", element: <ModerationPage /> },
       { path: "u/:uid", element: <ProfilePage /> },

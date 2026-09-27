@@ -164,8 +164,9 @@ describe("Shell account", () => {
     expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
     expect(screen.getByText("D")).toHaveClass("face--initial");
     expect(screen.getByText("Danylo")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Your rankings" })).toHaveAttribute("href", "/me");
-    expect(screen.getByRole("link", { name: "My lists" })).toHaveAttribute("href", "/me/lists");
+    // One place for everything that is theirs: the lists and the rankings together.
+    expect(screen.getByRole("link", { name: "My lists" })).toHaveAttribute("href", "/me");
+    expect(screen.queryByRole("link", { name: "Your rankings" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 

@@ -65,6 +65,11 @@ export function claimRanking(
   });
 }
 
+/** Takes a kept ranking away for good; only the account that keeps it may. */
+export function deleteRanking(client: ApiClient, code: string): Promise<void> {
+  return client.request<void>("DELETE", `/api/rank/${encodeURIComponent(code)}`);
+}
+
 export interface RankingSummary {
   code: string;
   listId: string;

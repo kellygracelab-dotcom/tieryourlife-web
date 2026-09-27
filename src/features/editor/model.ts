@@ -1,4 +1,6 @@
+import type { Ranking } from "../../api/rank";
 import type { Category, PublishedList, PublishedTier } from "../../api/types";
+import { publishedPictureOf } from "../../lib/pictures";
 import { arrange } from "../board/arrange";
 import { strings } from "../../strings";
 
@@ -103,6 +105,32 @@ export function draftOf(list: PublishedList): Draft {
     })),
     rows: arrange(list).rows,
     serial: list.tiers.length + list.items.length,
+  };
+}
+
+/**
+ * A kept ranking as a new list of the person's own: the cards, the tiers and
+ * the arrangement they gave them. A picture the list's author uploaded is the
+ * author's and goes when they do, so such a card comes by its name alone;
+ * pictures from the catalogues stay.
+ */
+export function draftOfRanking(ranking: Pick<Ranking, "listId" | "snapshot" | "rows">): Draft {
+  const { snapshot } = ranking;
+  return {
+    title: snapshot.title,
+    category: snapshot.category,
+    tiers: snapshot.tiers.map((tier, index) => ({ ...tier, key: `t${index}` })),
+    items: snapshot.items.map((item, index) => ({
+      key: `p${index}`,
+      title: item.title,
+      imageUrl:
+        item.imageUrl !== null && publishedPictureOf(item.imageUrl, ranking.listId) === null
+          ? item.imageUrl
+          : null,
+      pictureId: null,
+    })),
+    rows: tidyRows(ranking.rows, snapshot.tiers.length, snapshot.items.length),
+    serial: snapshot.tiers.length + snapshot.items.length,
   };
 }
 
@@ -337,6 +365,9 @@ export const NEW_DRAFT_KEY = "tyl:new";
 
 /** Each list being edited keeps its own draft, apart from the new one. */
 export const editDraftKey = (listId: string): string => `tyl:edit:${listId}`;
+
+/** A list being made from a kept ranking has a draft of its own, one per ranking. */
+export const forkDraftKey = (code: string): string => `tyl:fork:${code}`;
 
 export interface DraftStoreLike {
   read(key: string): string | null;

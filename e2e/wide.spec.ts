@@ -1,8 +1,9 @@
 import { devices, expect, test } from "@playwright/test";
 import { LIST_ID, list, mockBackend } from "./fixtures";
 
-// From 840 px the pool is a column beside the board, with the count and the
-// buttons above it, and it stays in view while a long board scrolls.
+// From 840 px the pool is a card in a column beside the board; the count and
+// the buttons stand in the page's header, and both stay in view while a long
+// board scrolls.
 test.describe("a wide screen", () => {
   test.skip(({ hasTouch }) => hasTouch, "a laptop's layout");
 
@@ -24,8 +25,11 @@ test.describe("a wide screen", () => {
     const boardBox = (await board.boundingBox())!;
     expect(sideBox.x).toBeGreaterThanOrEqual(boardBox.x + boardBox.width - 1);
     await expect(page.locator(".pool__items")).toHaveCSS("display", "grid");
-    await expect(side.getByRole("button", { name: "Finish" })).toBeVisible();
-    await expect(side.getByText("0 of 3 placed")).toBeVisible();
+    // Moving the pool does not move the buttons: they are the header's.
+    const head = page.locator(".list-head");
+    await expect(head.getByRole("button", { name: "Finish" })).toBeVisible();
+    await expect(head.getByText("0 of 3 placed")).toBeVisible();
+    await expect(side.getByRole("button", { name: "Finish" })).toHaveCount(0);
 
     const header = await page.evaluate(() =>
       parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-height")),
@@ -34,9 +38,13 @@ test.describe("a wide screen", () => {
     await page.mouse.move(boardBox.x + 40, boardBox.y + 40);
     await page.mouse.wheel(0, 800);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(400);
+    // The header stays under the app bar, and the card 16 px under the header.
     await expect
-      .poll(async () => Math.round((await side.boundingBox())!.y))
+      .poll(async () => Math.round((await head.boundingBox())!.y))
       .toBe(Math.round(header));
+    await expect
+      .poll(async () => Math.round((await page.locator(".pool").boundingBox())!.y))
+      .toBe(Math.round(header) + 72 + 16);
     await expect(side.getByRole("button", { name: "Ex Machina" })).toBeInViewport();
   });
 
@@ -121,8 +129,11 @@ test.describe("a wide screen", () => {
       "href",
       `/l/${LIST_ID}`,
     );
-    await expect(side.getByRole("button", { name: "Copy link" })).toBeVisible();
     await expect(side.getByRole("button", { name: "Download image" })).toBeVisible();
+    // The link is the chip in the header: a press copies it.
+    await expect(
+      page.locator(".list-head").getByRole("button", { name: /\/r\/abcdefgh$/ }),
+    ).toBeVisible();
   });
 
   // The bar's search field, a laptop's way to the search page.

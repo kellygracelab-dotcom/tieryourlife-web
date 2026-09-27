@@ -42,10 +42,7 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
       <>
         <li className="menu__who">{account.displayName ?? strings.nav.you}</li>
         <li>
-          <Link to="/me">{strings.nav.yourRankings}</Link>
-        </li>
-        <li>
-          <Link to="/me/lists">{strings.nav.myLists}</Link>
+          <Link to="/me">{strings.nav.myLists}</Link>
         </li>
         <li>
           <Link to="/settings">{strings.nav.settings}</Link>

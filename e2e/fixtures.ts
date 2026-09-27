@@ -96,6 +96,12 @@ export async function mockBackend(page: Page): Promise<Backend> {
     }),
   );
 
+  // The add-card search asks Wikidata from the page itself; here it knows nothing.
+  await page.route("**/www.wikidata.org/**", (route) => route.fulfill({ json: { search: [] } }));
+  await page.route("**/query.wikidata.org/**", (route) =>
+    route.fulfill({ json: { results: { bindings: [] } } }),
+  );
+
   // Fonts are not what the smokes check.
   await page.route("**/fonts.googleapis.com/**", (route) => route.abort());
   await page.route("**/fonts.gstatic.com/**", (route) => route.abort());

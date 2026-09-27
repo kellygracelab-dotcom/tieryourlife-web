@@ -33,6 +33,7 @@ export function AboutPage() {
           {strings.about.creditsTitle}
         </h2>
         <p className="about__text">{strings.about.catalogue}</p>
+        <p className="about__text">{strings.about.wikidata}</p>
         <a className="about__tmdb" href={TMDB_URL} target="_blank" rel="noopener">
           <img src={tmdbLogo} alt={strings.about.tmdbLogo} width="123" height="16" />
         </a>

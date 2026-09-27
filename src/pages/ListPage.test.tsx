@@ -28,6 +28,7 @@ vi.mock("../lib/api", () => ({
   findInCatalogue: vi.fn(async () => []),
   loadMyLists: vi.fn(() => new Promise(() => undefined)),
   loadMyRankings: vi.fn(() => new Promise(() => undefined)),
+  removeRanking: vi.fn(),
   rearrangeRanking: vi.fn(),
   loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: mocks.loadList,
@@ -223,9 +224,11 @@ describe("ListPage", () => {
         }),
       ).toBeInTheDocument();
 
+      // Moving the pool does not move the buttons: they stay in the header.
       await userEvent.click(screen.getByRole("button", { name: "Cards beside the board" }));
       expect(article).toHaveClass("list-page--beside");
-      expect(document.querySelector(".list-head .ranking__bar")).toBeNull();
+      expect(document.querySelector(".list-head .ranking__bar")).not.toBeNull();
+      expect(document.querySelector(".ranking__side .ranking__bar")).toBeNull();
     } finally {
       Object.assign(window, { innerWidth: had.width, innerHeight: had.height });
     }
@@ -251,7 +254,7 @@ describe("ListPage", () => {
     // The address is not spelled out any more: one press copies it.
     expect(screen.queryByText(`${window.location.host}/l/abc`)).toBeNull();
     const yours = screen.getByRole("region", { name: "Your ranking" });
-    expect(yours).toHaveTextContent("0 of 2 placed");
+    expect(document.querySelector(".list-head")).toHaveTextContent("0 of 2 placed");
     expect(yours).toHaveTextContent("2 cards left");
     expect(mocks.loadList).toHaveBeenCalledWith("abc");
   });
@@ -311,7 +314,12 @@ describe("ListPage for its author", () => {
       "Ex Machina",
     );
     expect(within(own).getByLabelText("Add a card")).toBeInTheDocument();
-    expect(within(own).getByRole("button", { name: "Publish changes" })).toBeDisabled();
+    // The actions stand in the page's header.
+    expect(
+      within(document.querySelector<HTMLElement>(".list-head")!).getByRole("button", {
+        name: "Publish changes",
+      }),
+    ).toBeDisabled();
     expect(screen.getAllByRole("link", { name: "Edit" })[0]).toHaveAttribute(
       "href",
       "/new?list=abc",

@@ -18,7 +18,7 @@ import {
   type QueuedList,
 } from "../api/moderation";
 import { adoptGuest, type AdoptedGuest } from "../api/guest";
-import { searchCatalogue, type CatalogueItem } from "../api/catalogue";
+import { searchEverywhere, type CatalogueItem } from "../api/catalogue";
 import {
   getFeed,
   getList,
@@ -31,15 +31,17 @@ import {
 } from "../api/lists";
 import {
   claimRanking,
+  deleteRanking,
   getMyRankings,
   getRanking,
   saveRanking,
+  updateRanking,
   type MyRankings,
   type Ranking,
   type SavedRanking,
-  updateRanking,
 } from "../api/rank";
 import type { FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
+import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
 
@@ -79,10 +81,12 @@ export const claimKept = (code: string, claimToken: string): Promise<{ code: str
 
 export const loadMyRankings = (): Promise<MyRankings> => getMyRankings(api);
 
+export const removeRanking = (code: string): Promise<void> => deleteRanking(api, code);
+
 export const loadMyLists = (): Promise<{ lists: ListSummary[] }> => getMyLists(api);
 
 export const findInCatalogue = (query: string): Promise<CatalogueItem[]> =>
-  searchCatalogue(api, query);
+  searchEverywhere(api, query, currentLocale());
 
 export const publish = (request: PublishRequest): Promise<{ id: string }> =>
   publishList(api, request);

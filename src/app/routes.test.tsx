@@ -16,6 +16,7 @@ vi.mock("../lib/api", () => ({
   unpublish: vi.fn(),
   rearrangeRanking: vi.fn(),
   loadMyRankings: vi.fn(),
+  removeRanking: vi.fn(),
   loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: vi.fn(() => new Promise(() => undefined)),
   loadRanking: vi.fn(() => new Promise(() => undefined)),
@@ -43,9 +44,14 @@ describe("routes", () => {
     expect(screen.getByText("Opening the ranking…")).toBeInTheDocument();
   });
 
-  it("has a place for a person's own rankings", () => {
+  it("has one place for a person's own lists and rankings, and the old address leads to it", () => {
     open("/me");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Your rankings");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("My lists");
+  });
+
+  it("leads the lists' old address to the same place", () => {
+    open("/me/lists");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("My lists");
   });
 
   it("says so when there is nothing at an address, and leads home", async () => {

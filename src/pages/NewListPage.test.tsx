@@ -11,7 +11,13 @@ import type { Upload } from "../features/editor/CardsEditor";
 import type { CopyBack } from "../features/editor/republish";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { PictureRefused } from "../lib/pictures";
-import { NewListPage, type LoadList, type Publish, type Republish } from "./NewListPage";
+import {
+  NewListPage,
+  type LoadKept,
+  type LoadList,
+  type Publish,
+  type Republish,
+} from "./NewListPage";
 
 vi.mock("../lib/api", () => ({
   followState: vi.fn(() => new Promise(() => undefined)),
@@ -48,6 +54,7 @@ const publish = vi.fn<Publish>();
 const upload = vi.fn<Upload>();
 const discard = vi.fn(async () => {});
 const load = vi.fn<LoadList>();
+const loadKept = vi.fn<LoadKept>();
 const republish = vi.fn<Republish>();
 const copyBack = vi.fn<CopyBack>(async (url) => ({
   pictureId: `copy-${url.split("%2F").at(-1)?.split("?")[0]}`,
@@ -96,6 +103,7 @@ const open = (
           publish={publish}
           republish={republish}
           load={load}
+          loadKept={loadKept}
           upload={upload}
           copyBack={copyBack}
           discard={discard}
@@ -133,6 +141,7 @@ beforeEach(() => {
   upload.mockReset();
   discard.mockClear();
   load.mockReset();
+  loadKept.mockReset();
   republish.mockReset();
   copyBack.mockClear();
 });
@@ -224,7 +233,7 @@ describe("NewListPage", () => {
     expect(await suggestions().findByRole("button", { name: /Ex Machina/ })).toBeInTheDocument();
     expect(lookup).toHaveBeenCalledWith("ex");
     // What the catalogue found says whose it is, right where it is shown.
-    expect(suggestions().getByText("From TMDB")).toBeInTheDocument();
+    expect(suggestions().getByText("From TMDB and Wikidata")).toBeInTheDocument();
     await userEvent.click(suggestions().getByRole("button", { name: /Ex Machina/ }));
     expect(box).toHaveValue("");
     expect(screen.getByText("1 added")).toBeInTheDocument();
@@ -263,14 +272,12 @@ describe("NewListPage", () => {
     vi.useRealTimers();
   });
 
-  it("invites what the category is about", async () => {
+  it("invites the whole catalogue whatever the list is about", async () => {
     open();
     const box = screen.getByLabelText("Add a card");
     expect(box).toHaveAttribute("placeholder", "Search the catalogue, or type a name");
     await userEvent.click(screen.getByRole("button", { name: "Film & TV" }));
-    expect(box).toHaveAttribute("placeholder", "Search films and series to add, or type a name");
-    await userEvent.click(screen.getByRole("button", { name: "People" }));
-    expect(box).toHaveAttribute("placeholder", "Search people to add, or type a name");
+    expect(box).toHaveAttribute("placeholder", "Search the catalogue, or type a name");
   });
 
   it("edits the tiers: rename, caption, colour, order, add and remove", async () => {
@@ -412,6 +419,61 @@ describe("NewListPage", () => {
     await userEvent.click(screen.getByLabelText("More"));
     await userEvent.click(screen.getByRole("button", { name: "Start over" }));
     expect(discard).toHaveBeenCalledWith(["pic-1"]);
+  });
+
+  it("opens a kept ranking as a new list of one's own, arranged as it was ranked", async () => {
+    loadKept.mockResolvedValue({
+      code: "abcdefgh",
+      listId: "l9",
+      listAvailable: true,
+      createdAt: 0,
+      yours: true,
+      rows: [[1], [0]],
+      snapshot: {
+        title: "Ghibli, ranked",
+        authorName: "somebody",
+        authorPhotoUrl: null,
+        category: "anime",
+        tiers: [
+          { label: "Top", caption: "Best", colorLight: "#B03A32", colorDark: "#F1948C" },
+          { label: "Rest", caption: null, colorLight: "#3C6E99", colorDark: "#8FC3E8" },
+        ],
+        items: [
+          { title: "Totoro", imageUrl: "https://image.tmdb.org/t/p/w500/t.jpg", tierIndex: 0 },
+          { title: "Home video", imageUrl: published("l9", "pic1"), tierIndex: null },
+        ],
+      },
+    });
+    publish.mockResolvedValue({ id: "new1" });
+    const { router, store } = open(member, memoryStore(), undefined, "/new?ranking=abcdefgh");
+    expect(await screen.findByLabelText("Title")).toHaveValue("Ghibli, ranked");
+    expect(loadKept).toHaveBeenCalledWith("abcdefgh");
+    // A new list, not an edit of somebody's: it is published under a link of its own.
+    expect(screen.getByRole("heading", { level: 1, name: "Make a list" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Anime" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("2 added")).toBeInTheDocument();
+
+    await userEvent.click(publishButton());
+    expect(republish).not.toHaveBeenCalled();
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Ghibli, ranked",
+        category: "anime",
+        items: [
+          // The ranking's order: what was placed goes tier by tier, as it was ranked.
+          { title: "Home video", imageUrl: null, pictureId: null, tierIndex: 0 },
+          {
+            title: "Totoro",
+            imageUrl: "https://image.tmdb.org/t/p/w500/t.jpg",
+            pictureId: null,
+            tierIndex: 1,
+          },
+        ],
+      }),
+    );
+    expect(await screen.findByText("Published list page")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/l/new1");
+    expect(store.read("tyl:fork:abcdefgh")).toBeNull();
   });
 
   it("opens a published list of the account for editing and publishes the changes in place", async () => {

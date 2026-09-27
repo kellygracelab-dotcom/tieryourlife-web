@@ -1,4 +1,5 @@
 import type { ApiClient } from "./client";
+import { searchWikidata, type Fetcher, type WikidataCandidate } from "./wikidata";
 
 /** One thing the catalogue knows: enough to make a card from. */
 export interface CatalogueItem {
@@ -67,4 +68,100 @@ export async function searchCatalogue(client: ApiClient, query: string): Promise
   });
   const results = Array.isArray(page.results) ? page.results : [];
   return results.map(cardOf).filter((card): card is CatalogueItem => card !== null);
+}
+
+/** A catalogue gets this long; after it the other one's answer goes out alone. The phone waits as long. */
+export const SEARCH_TIMEOUT_MS = 5000;
+
+const tmdbNumber = (item: CatalogueItem): number | null => {
+  if (!item.id.startsWith("tmdb:")) return null;
+  const id = Number(item.id.slice("tmdb:".length));
+  return Number.isInteger(id) ? id : null;
+};
+
+const matchOf = (title: string, wanted: string): number => {
+  if (wanted.length === 0) return 2;
+  const lower = title.toLowerCase();
+  if (lower === wanted) return 0;
+  return lower.startsWith(wanted) ? 1 : 2;
+};
+
+/** One from each catalogue in turn, so a stable ranking has no reason to prefer whichever was asked first. */
+function interleave<T>(...lists: readonly (readonly T[])[]): T[] {
+  const longest = Math.max(0, ...lists.map((list) => list.length));
+  const result: T[] = [];
+  for (let index = 0; index < longest; index += 1) {
+    for (const list of lists) {
+      const item = list[index];
+      if (item !== undefined) result.push(item);
+    }
+  }
+  return result;
+}
+
+/**
+ * Best match first, and a picture breaks ties. A picture is the second
+ * question only: games, books and records have no free cover anywhere, so
+ * keeping to the illustrated would drop them entirely.
+ */
+export function rankByMatch(query: string, items: readonly CatalogueItem[]): CatalogueItem[] {
+  const wanted = query.trim().toLowerCase();
+  const place = (item: CatalogueItem): number =>
+    matchOf(item.title, wanted) * 2 + (item.imageUrl === null ? 1 : 0);
+  return [...items].sort((a, b) => place(a) - place(b));
+}
+
+/**
+ * The two catalogues as one list, the phone's way. Null is a catalogue that
+ * did not answer. A film Wikidata knows by its TMDB number is left to TMDB,
+ * which has the poster.
+ */
+export function mergeCatalogues(
+  query: string,
+  tmdb: readonly CatalogueItem[] | null,
+  wikidata: readonly WikidataCandidate[] | null,
+): CatalogueItem[] {
+  const films = tmdb ?? [];
+  const present = new Set(films.map(tmdbNumber));
+  const others = (wikidata ?? [])
+    .filter((found) => found.linkedTmdbId === null || !present.has(found.linkedTmdbId))
+    .map((found) => found.item);
+  return rankByMatch(query, interleave(films, others));
+}
+
+const within = <T>(ms: number, work: Promise<T>): Promise<T> =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("The catalogue took too long")), ms);
+    work.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (reason: unknown) => {
+        clearTimeout(timer);
+        reject(reason instanceof Error ? reason : new Error(String(reason)));
+      },
+    );
+  });
+
+/**
+ * Films, series and people from TMDB and everything else from Wikidata, asked
+ * at once. One of them failing leaves the other's answer; both failing fails.
+ */
+export async function searchEverywhere(
+  client: ApiClient,
+  query: string,
+  language: string | null,
+  fetcher?: Fetcher,
+): Promise<CatalogueItem[]> {
+  const [tmdb, wikidata] = await Promise.allSettled([
+    within(SEARCH_TIMEOUT_MS, searchCatalogue(client, query)),
+    within(SEARCH_TIMEOUT_MS, searchWikidata(query, language, fetcher)),
+  ]);
+  if (tmdb.status === "rejected" && wikidata.status === "rejected") throw tmdb.reason;
+  return mergeCatalogues(
+    query,
+    tmdb.status === "fulfilled" ? tmdb.value : null,
+    wikidata.status === "fulfilled" ? wikidata.value : null,
+  );
 }
