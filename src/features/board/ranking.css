@@ -818,7 +818,9 @@
     min-width: 0;
   }
 
-  .pool__tools .editor__label {
+  /* The field's label and the upload's word stay for screen readers only. */
+  .pool__tools .editor__label,
+  .pool__tools .cards__upload .btn > span:not(.btn__icon) {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -834,6 +836,7 @@
   }
 
   .pool__tools .cards__upload {
+    flex: none;
     order: 1;
   }
 
@@ -841,10 +844,6 @@
     min-height: 36px;
     padding: 6px 12px;
     border-radius: 18px;
-  }
-
-  .pool__tools .cards__upload {
-    flex: none;
   }
 
   /* The pool's head is one row; many names at once are pasted in the editor. */
@@ -866,15 +865,6 @@
 
   .pool__tools .cards__upload .btn .btn__icon {
     font-size: 18px;
-  }
-
-  .pool__tools .cards__upload .btn > span:not(.btn__icon) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 
   /* Every card placed: the head says so, in the dock's one row or at the top of the card. */

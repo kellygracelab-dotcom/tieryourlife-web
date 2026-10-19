@@ -319,7 +319,7 @@ describe("NewListPage", () => {
     const pictures = () =>
       within(screen.getByRole("list", { name: "Cards" }))
         .getAllByRole("img")
-        .map((picture) => picture.getAttribute("src"));
+        .map((image) => image.getAttribute("src"));
 
     await userEvent.click(screen.getByRole("button", { name: "Food" }));
     await paste("Pizza");

@@ -8,6 +8,7 @@ import { Icon } from "../../ui/Icon";
 import { LIMITS, type EditorAction, type EditorItem } from "./model";
 import { cardsFor, preferredFor, wantedOf } from "./paste";
 import { useCatalogue, type Lookup } from "./useCatalogue";
+import { sizedFor } from "../../lib/pictureSize";
 
 /** More than this and the list under the box stops being a list and becomes a page. */
 const RESULTS_SHOWN = 8;
@@ -39,7 +40,7 @@ function pictureFailureText(name: string, failure: unknown): string {
 
 function Thumb({ imageUrl, title }: { imageUrl: string | null; title: string }) {
   return imageUrl !== null ? (
-    <img className="cards__thumb" src={imageUrl} alt="" loading="lazy" />
+    <img className="cards__thumb" {...sizedFor(imageUrl, 40)} alt="" loading="lazy" />
   ) : (
     <span className="cards__thumb cards__thumb--blank" aria-hidden="true">
       {title.trim()[0]?.toUpperCase() ?? ""}

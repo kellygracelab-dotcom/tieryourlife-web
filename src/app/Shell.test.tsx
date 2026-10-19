@@ -46,7 +46,7 @@ describe("Shell search", () => {
 
   it("takes the words to the search page, whose words it then shows", async () => {
     open({}, "/about");
-    const bar = within(screen.getByRole("banner"));
+    const bar = within(await screen.findByRole("banner"));
     expect(bar.getByRole("link", { name: "Search lists" })).toHaveAttribute("href", "/search");
     await userEvent.type(bar.getByRole("searchbox", { name: "Search lists" }), "  anime {Enter}");
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“anime”");

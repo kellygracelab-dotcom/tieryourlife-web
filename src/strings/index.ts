@@ -63,14 +63,14 @@ export const currentLocale = (): Locale => locale;
 /** Every language but English is a file of its own, fetched only by the people who read it. */
 const files = import.meta.glob<{ default: Translation }>("./locales/*.ts");
 
-const hasFile = (locale: Locale): boolean => `./locales/${locale}.ts` in files;
+const hasFile = (tag: Locale): boolean => `./locales/${tag}.ts` in files;
 
 /**
  * English, and whatever has a dictionary: a language without one is not
  * offered. In the phone app's order, not the order files come off a disk.
  */
 export const availableLocales = (): Locale[] =>
-  LOCALES.filter((locale) => locale === DEFAULT_LOCALE || hasFile(locale));
+  LOCALES.filter((tag) => tag === DEFAULT_LOCALE || hasFile(tag));
 
 const PLURAL_KEYS = new Set(["zero", "one", "two", "few", "many", "other"]);
 

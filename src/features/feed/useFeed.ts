@@ -41,7 +41,7 @@ export function useFeed(query: FeedQuery, load: LoadFeed = loadFeed) {
 
   useEffect(() => {
     let current = true;
-    const settle = (state: FeedState) => current && setLoaded({ key, attempt, state });
+    const settle = (next: FeedState) => current && setLoaded({ key, attempt, state: next });
     load(stable).then(
       (page) =>
         settle({

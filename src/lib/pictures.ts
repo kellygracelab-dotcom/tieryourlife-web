@@ -100,7 +100,7 @@ export function publishedPictureOf(url: string, listId: string): string | null {
   if (match === null) return null;
   let path: string;
   try {
-    path = decodeURIComponent(match[1]!);
+    path = decodeURIComponent(match[1] ?? "");
   } catch {
     return null;
   }

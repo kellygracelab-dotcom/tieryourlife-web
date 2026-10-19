@@ -1,18 +1,22 @@
+import type { ComponentType } from "react";
 import { Navigate, type RouteObject } from "react-router";
-import { AboutPage } from "../pages/AboutPage";
 import { CategoryPage } from "../pages/CategoryPage";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
-import { MePage } from "../pages/MePage";
-import { ModerationPage } from "../pages/ModerationPage";
-import { NewListPage } from "../pages/NewListPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { RankingPage } from "../pages/RankingPage";
 import { SearchPage } from "../pages/SearchPage";
-import { SettingsPage } from "../pages/SettingsPage";
 import { RouteError } from "./RouteError";
 import { Shell } from "./Shell";
+
+/**
+ * The pages most visitors never open — making a list, the account, the
+ * moderator's queue, the credits — come as chunks of their own when asked
+ * for, so opening a list does not download the editor. A chunk that fails to
+ * come is a thrown route, and the error element says so in the person's words.
+ */
+const later = (load: () => Promise<{ Component: ComponentType }>) => ({ lazy: load });
 
 export const routes: RouteObject[] = [
   {
@@ -27,17 +31,38 @@ export const routes: RouteObject[] = [
         children: [
           { index: true, element: <HomePage /> },
           { path: "search", element: <SearchPage /> },
-          { path: "new", element: <NewListPage /> },
+          {
+            path: "new",
+            ...later(async () => ({
+              Component: (await import("../pages/NewListPage")).NewListPage,
+            })),
+          },
           { path: "c/:category", element: <CategoryPage /> },
           { path: "l/:id", element: <ListPage /> },
           { path: "r/:code", element: <RankingPage /> },
-          { path: "me", element: <MePage /> },
+          {
+            path: "me",
+            ...later(async () => ({ Component: (await import("../pages/MePage")).MePage })),
+          },
           // The lists had a page of their own once; links to it still lead home.
           { path: "me/lists", element: <Navigate to="/me" replace /> },
-          { path: "settings", element: <SettingsPage /> },
-          { path: "mod", element: <ModerationPage /> },
+          {
+            path: "settings",
+            ...later(async () => ({
+              Component: (await import("../pages/SettingsPage")).SettingsPage,
+            })),
+          },
+          {
+            path: "mod",
+            ...later(async () => ({
+              Component: (await import("../pages/ModerationPage")).ModerationPage,
+            })),
+          },
           { path: "u/:uid", element: <ProfilePage /> },
-          { path: "about", element: <AboutPage /> },
+          {
+            path: "about",
+            ...later(async () => ({ Component: (await import("../pages/AboutPage")).AboutPage })),
+          },
           { path: "*", element: <NotFoundPage /> },
         ],
       },

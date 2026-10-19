@@ -39,14 +39,15 @@ describe("routes", () => {
     expect(screen.getByText("Opening the ranking…")).toBeInTheDocument();
   });
 
-  it("has one place for a person's own lists and rankings, and the old address leads to it", () => {
+  it("has one place for a person's own lists and rankings, and the old address leads to it", async () => {
     open("/me");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("My lists");
+    // A page of its own chunk: it arrives a moment after the address.
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("My lists");
   });
 
-  it("leads the lists' old address to the same place", () => {
+  it("leads the lists' old address to the same place", async () => {
     open("/me/lists");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("My lists");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("My lists");
   });
 
   it("says so when there is nothing at an address, and leads home", async () => {
@@ -74,9 +75,9 @@ describe("Shell", () => {
     expect(screen.getByRole("link", { name: "About" })).toHaveAttribute("href", "/about");
   });
 
-  it("credits TMDB on the About page with their logo and their sentence, word for word", () => {
+  it("credits TMDB on the About page with their logo and their sentence, word for word", async () => {
     open("/about");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("About");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("About");
     expect(
       screen.getByText("This product uses the TMDB API but is not endorsed or certified by TMDB."),
     ).toBeInTheDocument();

@@ -156,7 +156,7 @@ function wrap(paint: Paint, text: string, maxWidth: number, maxLines: number): s
     }
   }
   if (line !== "") lines.push(line);
-  return lines.map((text) => ellipsize(paint, text, maxWidth));
+  return lines.map((part) => ellipsize(paint, part, maxWidth));
 }
 
 function nameTile(paint: Paint, x: number, y: number, title: string) {

@@ -40,6 +40,35 @@ describe("preloadTagsFor", () => {
     ]);
   });
 
+  it("names the chunk the app shares with its split-off pages too, but not the entry or a page", () => {
+    const split = {
+      ...bundle,
+      "assets/index-aaa.js": { ...bundle["assets/index-aaa.js"], isEntry: true },
+      "assets/App-bbb.js": {
+        ...bundle["assets/App-bbb.js"],
+        imports: ["assets/index-aaa.js", "assets/shared-eee.js"],
+      },
+      "assets/shared-eee.js": {
+        type: "chunk" as const,
+        fileName: "assets/shared-eee.js",
+        facadeModuleId: null,
+        viteMetadata: { importedCss: new Set(["assets/shared-fff.css"]) },
+      },
+      "assets/NewListPage-ggg.js": {
+        type: "chunk" as const,
+        fileName: "assets/NewListPage-ggg.js",
+        facadeModuleId: "/site/src/pages/NewListPage.tsx",
+      },
+    };
+    const hrefs = preloadTagsFor(split, "/").map((tag) => String(tag.attrs?.href));
+    expect(hrefs).toEqual([
+      "/assets/App-bbb.js",
+      "/assets/shared-eee.js",
+      "/assets/App-ccc.css",
+      "/assets/shared-fff.css",
+    ]);
+  });
+
   it("never preloads a dictionary: a visitor fetches one language, not eleven", () => {
     const hrefs = preloadTagsFor(bundle, "/").map((tag) => String(tag.attrs?.href));
     expect(hrefs.some((href) => href.includes("uk-"))).toBe(false);

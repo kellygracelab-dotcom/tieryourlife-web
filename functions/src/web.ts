@@ -5,7 +5,9 @@ import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
 import { requireAppCheck } from "./appCheck";
 import { optionalAccount, requireAccount, requireUser, type Identity } from "./auth";
+import { getStorage } from "firebase-admin/storage";
 import { listPage, listShareImage, rankingPage, rankingShareImage } from "./pages";
+import { discardOlderCopies } from "./shareImage";
 import {
   claimHashOf,
   DAILY_CEILING,
@@ -67,6 +69,8 @@ export interface WebDeps {
   viewer: (request: Request) => Promise<Identity | null>;
   /** An integer in [0, max): where a new ranking's code comes from. */
   random: (max: number) => number;
+  /** Takes a ranking's share pictures off the shelf once the ranking is gone. */
+  forgetPictures: (code: string) => Promise<unknown>;
 }
 
 const production: WebDeps = {
@@ -76,6 +80,7 @@ const production: WebDeps = {
   account: requireAccount,
   viewer: optionalAccount,
   random: (max) => randomInt(max),
+  forgetPictures: (code) => discardOlderCopies(getStorage().bucket(), "r", code, ""),
 };
 
 export const web = onRequest(
@@ -99,9 +104,11 @@ export async function route(
     .split("/")
     .filter((part) => part.length > 0);
 
+  // Link checkers and some chats ask with HEAD before they ask with GET.
+  const reading = request.method === "GET" || request.method === "HEAD";
   try {
     // The picture a chat shows for a page: /og/l/{id}.png and /og/r/{code}.png.
-    if (request.method === "GET" && segments.length === 3 && segments[0] === "og") {
+    if (reading && segments.length === 3 && segments[0] === "og") {
       const id = (segments[2] ?? "").replace(/\.png$/, "");
       if (segments[1] === "l") return await listShareImage(response, id);
       if (segments[1] === "r") return await rankingShareImage(response, id);
@@ -109,10 +116,10 @@ export async function route(
     }
     // Pages: /l/{id} and /r/{code} are the site's own shell with the words a
     // chat needs and the data the board needs.
-    if (request.method === "GET" && segments.length === 2 && segments[0] === "l") {
+    if (reading && segments.length === 2 && segments[0] === "l") {
       return await listPage(request, response, segments[1] ?? "");
     }
-    if (request.method === "GET" && segments.length === 2 && segments[0] === "r") {
+    if (reading && segments.length === 2 && segments[0] === "r") {
       return await rankingPage(request, response, segments[1] ?? "");
     }
 
@@ -158,7 +165,7 @@ export async function route(
       if (!(await deps.appCheck(request, response))) return;
       const identity = await deps.account(request, response);
       if (!identity) return;
-      return await deleteRanking(deps.db(), identity, response, code);
+      return await deleteRanking(deps.db(), identity, response, code, deps.forgetPictures);
     }
     methodNotAllowed(response);
   } catch (error) {
@@ -355,6 +362,7 @@ async function deleteRanking(
   identity: Identity,
   response: Response,
   code: string,
+  forgetPictures: WebDeps["forgetPictures"],
 ): Promise<void> {
   if (!isCode(code)) return notFound(response, "No such ranking");
   const ref = db.collection(RANKINGS).doc(code);
@@ -371,6 +379,11 @@ async function deleteRanking(
       .status(decision.status)
       .json({ error: decision.error, code: decision.code });
   }
+  // The picture would go on being served from the shelf; a failure here
+  // leaves a file nobody links to, not a ranking that came back.
+  await forgetPictures(code).catch((error: unknown) =>
+    console.warn(`Share pictures of ${code} not removed`, error),
+  );
   response.setHeader("Cache-Control", "no-store");
   response.status(204).end();
 }

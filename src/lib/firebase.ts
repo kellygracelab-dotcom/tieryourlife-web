@@ -75,9 +75,9 @@ export async function getAppCheckToken(env: Env = readEnv()): Promise<string | n
 
 // Persisted sign-ins arrive a moment after the page loads; asking before that
 // would mint a fresh guest on every visit.
-async function currentUser(auth: Auth): Promise<User> {
-  await auth.authStateReady();
-  return auth.currentUser ?? (await signInAnonymously(auth)).user;
+async function currentUser(on: Auth): Promise<User> {
+  await on.authStateReady();
+  return on.currentUser ?? (await signInAnonymously(on)).user;
 }
 
 export async function getIdToken(options: { forceRefresh?: boolean } = {}): Promise<string | null> {
@@ -90,9 +90,9 @@ export async function getIdToken(options: { forceRefresh?: boolean } = {}): Prom
 }
 
 export async function signOutToGuest(): Promise<void> {
-  const auth = getFirebaseAuth();
-  await signOut(auth);
-  await signInAnonymously(auth);
+  const signedIn = getFirebaseAuth();
+  await signOut(signedIn);
+  await signInAnonymously(signedIn);
 }
 
 export const tokenProviders: TokenProviders = {
