@@ -12,11 +12,8 @@ import {
   type Auth,
   type User,
 } from "firebase/auth";
-import { localStorageStore } from "../features/board/draft";
-import { claimKeptRankings } from "../features/ranking/claim";
-import { carryGuest } from "./api";
 import { getFirebaseAuth } from "./firebase";
-import { IN_APP_BROWSER, isInAppBrowser } from "./inAppBrowser";
+import { IN_APP_BROWSER } from "./inAppBrowser";
 
 export type SignInOutcome =
   /** `switched` when the Google account already existed and the guest was carried over to it. */
@@ -71,13 +68,6 @@ export const sessionStash: Stash = {
   },
 };
 
-const defaultDeps: SignInDeps = {
-  carry: carryGuest,
-  keep: (uid) => claimKeptRankings(localStorageStore, uid),
-  stash: sessionStash,
-  inApp: () => isInAppBrowser(navigator.userAgent),
-};
-
 const codeOf = (error: unknown): string =>
   error instanceof FirebaseError ? error.code : "unknown";
 
@@ -124,7 +114,7 @@ async function switchAccount(
  * and everything under it stay; when the Google account already exists, the
  * person is signed into it and the guest is carried over.
  */
-export async function signInWithGoogle(deps: SignInDeps = defaultDeps): Promise<SignInOutcome> {
+export async function signInWithGoogle(deps: SignInDeps): Promise<SignInOutcome> {
   const auth = getFirebaseAuth();
   await auth.authStateReady();
   const user = auth.currentUser;
@@ -160,9 +150,7 @@ export async function signInWithGoogle(deps: SignInDeps = defaultDeps): Promise<
 }
 
 /** Finishes a sign-in that left through a redirect. On an ordinary visit there is nothing to finish. */
-export async function completeSignIn(
-  deps: SignInDeps = defaultDeps,
-): Promise<SignInOutcome | null> {
+export async function completeSignIn(deps: SignInDeps): Promise<SignInOutcome | null> {
   const auth = getFirebaseAuth();
   const guestToken = deps.stash.take();
   try {

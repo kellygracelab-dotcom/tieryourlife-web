@@ -2,11 +2,11 @@ export const en = {
   brand: "TierYourLife",
   tagline: "Web app",
   nav: {
+    site: "Site",
     signIn: "Sign in",
     signOut: "Sign out",
     account: "Your account",
     you: "You",
-    yourRankings: "Your rankings",
     myLists: "My lists",
     makeList: "Make a list",
     search: "Search lists",
@@ -458,25 +458,15 @@ export const en = {
     failedTitle: "Could not open this ranking",
   },
   me: {
-    title: "Your rankings",
-    empty: "Rankings you keep will show up here.",
     signInFirst:
       "Sign in to see the rankings you keep. Whatever you finished on this device comes along.",
     placedOf: "{placed} of {total} placed",
-    failed: "Could not load your rankings.",
     tryAgain: "Try again",
     more: { one: "Only the newest {n} is shown.", other: "Only the newest {n} are shown." },
     edit: "Edit",
-    fromPhone: "Lists you published from the app live in My lists.",
     browse: "Browse lists",
     tabs: "Your account",
-    kept: { one: "{n} kept on this account", other: "{n} kept on this account" },
     lists: "My lists",
-    signInForLists: "Sign in to see the lists you published from the app.",
-    published: { one: "{n} published from the app", other: "{n} published from the app" },
-    listsEmpty: "Nothing published yet.",
-    listsHow:
-      "In the app, open a list, add cards, set the tiers and tap Publish. It shows up here under the same Google account.",
     listsFailed: "Could not load your lists.",
     // A list made on the site has no other copy: taking it down deletes it, and the word says so.
     remove: "Unpublish",

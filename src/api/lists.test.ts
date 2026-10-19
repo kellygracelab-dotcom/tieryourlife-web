@@ -1,13 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "./client";
-import {
-  getFeed,
-  getList,
-  recordTake,
-  republishList,
-  unpublishList,
-  type PublishRequest,
-} from "./lists";
+import { loadFeed, loadList, recordTake, republish, unpublish, type PublishRequest } from "./lists";
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -19,7 +12,7 @@ describe("lists", () => {
   it("reads one list by id, escaping the id", async () => {
     const { client, request } = recordingClient({ id: "a b" });
 
-    await expect(getList(client, "a b")).resolves.toEqual({ id: "a b" });
+    await expect(loadList(client, "a b")).resolves.toEqual({ id: "a b" });
 
     expect(request).toHaveBeenCalledWith("GET", "/lists/a%20b");
   });
@@ -27,7 +20,7 @@ describe("lists", () => {
   it("reads a feed page with the filters as query", async () => {
     const { client, request } = recordingClient({ lists: [], nextCursor: null });
 
-    await getFeed(client, { category: "games", sort: "popular", following: true });
+    await loadFeed(client, { category: "games", sort: "popular", following: true });
 
     expect(request).toHaveBeenCalledWith("GET", "/lists", {
       query: { category: "games", sort: "popular", following: true },
@@ -37,7 +30,7 @@ describe("lists", () => {
   it("reads the first feed page with no filters at all", async () => {
     const { client, request } = recordingClient({ lists: [], nextCursor: null });
 
-    await getFeed(client);
+    await loadFeed(client);
 
     expect(request).toHaveBeenCalledWith("GET", "/lists", { query: {} });
   });
@@ -53,7 +46,7 @@ describe("lists", () => {
       items: [],
     };
 
-    await expect(republishList(client, "a b", body)).resolves.toEqual({ id: "a b" });
+    await expect(republish(client, "a b", body)).resolves.toEqual({ id: "a b" });
 
     expect(request).toHaveBeenCalledWith("POST", "/lists/a%20b", { body });
   });
@@ -61,7 +54,7 @@ describe("lists", () => {
   it("unpublishes one list by id, escaping the id", async () => {
     const { client, request } = recordingClient(undefined);
 
-    await expect(unpublishList(client, "a/b")).resolves.toBeUndefined();
+    await expect(unpublish(client, "a/b")).resolves.toBeUndefined();
 
     expect(request).toHaveBeenCalledWith("DELETE", "/lists/a%2Fb");
   });

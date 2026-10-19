@@ -6,7 +6,12 @@ import { SessionProvider } from "./SessionProvider";
 
 vi.mock("../lib/account", () => ({ subscribeToAccount: vi.fn(), currentAccount: vi.fn() }));
 vi.mock("../lib/firebase", () => ({ signOutToGuest: vi.fn() }));
-vi.mock("../lib/signIn", () => ({ signInWithGoogle: vi.fn(), completeSignIn: vi.fn() }));
+vi.mock("../lib/signIn", () => ({
+  sessionStash: { take: vi.fn(), put: vi.fn() },
+  signInWithGoogle: vi.fn(),
+  completeSignIn: vi.fn(),
+}));
+vi.mock("../lib/api", () => ({ carryGuest: vi.fn() }));
 
 function Probe() {
   const { account } = useSession();

@@ -1,17 +1,12 @@
-import { keepLocale, LOCALE_NAMES, type Locale, type LocaleStore } from "../../lib/locale";
+import { keepLocale, LOCALE_NAMES, type Locale } from "../../lib/locale";
+import { localStorageStore } from "../../lib/storage";
 import { availableLocales, currentLocale, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
-
-const device: LocaleStore = {
-  read: (key) => window.localStorage.getItem(key),
-  write: (key, value) => window.localStorage.setItem(key, value),
-  remove: (key) => window.localStorage.removeItem(key),
-};
 
 // The texts are copied into several modules as they load, so a new language
 // takes a fresh load of the page; it opens in the language just kept.
 const keepAndReload = (locale: Locale): void => {
-  keepLocale(device, locale);
+  keepLocale(localStorageStore, locale);
   window.location.reload();
 };
 

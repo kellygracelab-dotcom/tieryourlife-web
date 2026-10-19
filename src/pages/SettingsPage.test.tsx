@@ -5,9 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ListSummary } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
 import { faceChoicesOf } from "../features/account/faces";
-import { memoryStore } from "../features/board/draft";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
+import { memoryStore } from "../lib/storage";
 import {
   SAVED_NOTE_MS,
   SettingsPage,

@@ -13,7 +13,7 @@ export interface ReportRequest {
 }
 
 /** One complaint per person per list; the backend answers 204 either way. */
-export function reportList(client: ApiClient, id: string, request: ReportRequest): Promise<void> {
+export function report(client: ApiClient, id: string, request: ReportRequest): Promise<void> {
   return client.request<void>("POST", `/lists/${encodeURIComponent(id)}/report`, {
     body: request,
   });
@@ -24,7 +24,7 @@ export interface FollowState {
   followers: number;
 }
 
-export function getFollowState(client: ApiClient, authorUid: string): Promise<FollowState> {
+export function followState(client: ApiClient, authorUid: string): Promise<FollowState> {
   return client.request<FollowState>("GET", `/lists/follow/${encodeURIComponent(authorUid)}`);
 }
 
@@ -53,6 +53,6 @@ export interface SuggestedAuthor {
 }
 
 /** Authors worth following, by how often their lists are taken; never oneself or anyone followed. */
-export function getSuggestedAuthors(client: ApiClient): Promise<{ authors: SuggestedAuthor[] }> {
+export function suggestedAuthors(client: ApiClient): Promise<{ authors: SuggestedAuthor[] }> {
   return client.request<{ authors: SuggestedAuthor[] }>("GET", "/lists/follow");
 }

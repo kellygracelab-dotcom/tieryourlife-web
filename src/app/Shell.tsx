@@ -132,7 +132,7 @@ export function Shell() {
           </span>
         )}
         {!home && <BarSearch key={asked} asked={asked} />}
-        <nav className="top__actions" aria-label="Site">
+        <nav className="top__actions" aria-label={strings.nav.site}>
           {!home && (
             <Link className="top__search-link" to="/search" aria-label={strings.nav.search}>
               <Icon name="search" />

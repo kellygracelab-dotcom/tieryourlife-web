@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { PublishedList } from "../../api/types";
-import { memoryStore } from "./draft";
+import { memoryStore } from "../../lib/storage";
 import { RankingBoard, type EditMode } from "./RankingBoard";
 
 vi.mock("../../lib/api", () => ({ keepRanking: vi.fn(), noteTake: vi.fn() }));

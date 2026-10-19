@@ -11,11 +11,11 @@ import type { Translation } from "../index";
 const fr: Translation = {
   tagline: "Version web",
   nav: {
+    site: "Site",
     signIn: "Se connecter",
     signOut: "Se déconnecter",
     account: "Votre compte",
     you: "Vous",
-    yourRankings: "Vos classements",
     myLists: "Mes listes",
     makeList: "Créer une liste",
     search: "Chercher des listes",
@@ -471,32 +471,18 @@ const fr: Translation = {
     failedTitle: "Impossible d’ouvrir ce classement",
   },
   me: {
-    title: "Vos classements",
-    empty: "Les classements que vous gardez apparaîtront ici.",
     signInFirst:
       "Connectez-vous pour voir les classements que vous gardez. Ce que vous avez terminé sur cet appareil vient avec.",
     placedOf: "{placed} sur {total} placées",
-    failed: "Impossible de charger vos classements.",
     tryAgain: "Réessayer",
     more: {
       one: "Seul le plus récent est affiché.",
       other: "Seuls les {n} plus récents sont affichés.",
     },
     edit: "Modifier",
-    fromPhone: "Les listes publiées depuis l’application sont dans Mes listes.",
     browse: "Parcourir les listes",
     tabs: "Votre compte",
-    kept: { one: "{n} gardé dans ce compte", other: "{n} gardés dans ce compte" },
     lists: "Mes listes",
-    signInForLists:
-      "Connectez-vous pour voir les listes que vous avez publiées depuis l’application.",
-    published: {
-      one: "{n} publiée depuis l’application",
-      other: "{n} publiées depuis l’application",
-    },
-    listsEmpty: "Rien de publié pour l’instant.",
-    listsHow:
-      "Dans l’application, ouvrez une liste, ajoutez des cartes, réglez les rangs et touchez Publier. Elle apparaît ici sous le même compte Google.",
     listsFailed: "Impossible de charger vos listes.",
     remove: "Dépublier",
     removeAsk:

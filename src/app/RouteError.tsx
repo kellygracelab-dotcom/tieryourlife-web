@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link, useRouteError } from "react-router";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
-import "../pages/Placeholders.css";
+import "../pages/NotFoundPage.css";
 
 /**
  * What a page that threw while drawing leaves behind: words in the person's

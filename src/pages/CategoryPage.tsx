@@ -3,7 +3,7 @@ import { isCategory, type Category } from "../api/types";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed } from "../features/feed/useFeed";
 import { strings } from "../strings";
-import { NotFoundPage } from "./Placeholders";
+import { NotFoundPage } from "./NotFoundPage";
 import "./CategoryPage.css";
 
 function CategoryFeed({ category }: { category: Category }) {

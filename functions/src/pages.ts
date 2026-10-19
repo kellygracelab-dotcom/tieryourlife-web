@@ -31,6 +31,8 @@ const DEFAULT_HOST = "tieryourlife.web.app";
  * of staleness is the most a page may point at files that no longer exist.
  */
 const SHELL_TTL_MS = 60_000;
+/** A hosting answer slower than this would hold the page toward the function's own timeout. */
+export const SHELL_TIMEOUT_MS = 5_000;
 const LIST_ID = /^[A-Za-z0-9_-]{8,64}$/;
 
 interface CachedShell {
@@ -56,6 +58,7 @@ export async function loadShell(
   }
   const response = await fetchImpl(`https://${host}/index.html`, {
     headers: { Accept: "text/html" },
+    signal: AbortSignal.timeout(SHELL_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`index.html answered ${response.status}`);
   const html = await response.text();

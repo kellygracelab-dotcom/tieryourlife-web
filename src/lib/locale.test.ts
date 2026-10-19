@@ -9,10 +9,10 @@ import {
   pickLocale,
   readLocale,
   type Locale,
-  type LocaleStore,
 } from "./locale";
+import type { KeyValueStore } from "./storage";
 
-function memoryStore(): LocaleStore & { data: Map<string, string> } {
+function memoryStore(): KeyValueStore & { data: Map<string, string> } {
   const data = new Map<string, string>();
   return {
     data,
@@ -22,7 +22,7 @@ function memoryStore(): LocaleStore & { data: Map<string, string> } {
   };
 }
 
-const refusing: LocaleStore = {
+const refusing: KeyValueStore = {
   read: () => {
     throw new Error("no storage");
   },

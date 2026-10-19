@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { memoryStore } from "../board/draft";
+import { memoryStore } from "../../lib/storage";
 import {
   HIDDEN_KEY,
   isAuthorHidden,

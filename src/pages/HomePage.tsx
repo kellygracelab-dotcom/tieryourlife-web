@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useSession } from "../app/session";
-import { localStorageStore } from "../features/board/draft";
 import { coversOf } from "../features/feed/categories";
 import { CategoryTiles } from "../features/feed/CategoryTiles";
 import { FeedGrid } from "../features/feed/FeedGrid";
@@ -14,6 +13,7 @@ import {
 } from "../features/feed/Following";
 import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
+import { localStorageStore } from "../lib/storage";
 import { strings } from "../strings";
 import "./HomePage.css";
 

@@ -9,11 +9,11 @@ import type { Translation } from "../index";
 const ja: Translation = {
   tagline: "ウェブ版",
   nav: {
+    site: "サイト",
     signIn: "ログイン",
     signOut: "ログアウト",
     account: "アカウント",
     you: "あなた",
-    yourRankings: "あなたのランキング",
     myLists: "マイリスト",
     makeList: "リストを作る",
     search: "リストを検索",
@@ -461,25 +461,15 @@ const ja: Translation = {
     failedTitle: "このランキングを開けませんでした",
   },
   me: {
-    title: "あなたのランキング",
-    empty: "保存したランキングがここに並びます。",
     signInFirst:
       "保存したランキングを見るにはログインしてください。この端末で完了したものも引き継がれます。",
     placedOf: "{total} 枚中 {placed} 枚を配置",
-    failed: "ランキングを読み込めませんでした。",
     tryAgain: "もう一度試す",
     more: { other: "新しい {n} 件だけ表示しています。" },
     edit: "編集",
-    fromPhone: "アプリから公開したリストはマイリストにあります。",
     browse: "リストを探す",
     tabs: "アカウント",
-    kept: { other: "このアカウントに {n} 件" },
     lists: "マイリスト",
-    signInForLists: "アプリから公開したリストを見るにはログインしてください。",
-    published: { other: "アプリから公開 {n} 件" },
-    listsEmpty: "まだ何も公開していません。",
-    listsHow:
-      "アプリでリストを開き、カードを追加してティアを設定し、「公開」をタップします。同じ Google アカウントでここに表示されます。",
     listsFailed: "リストを読み込めませんでした。",
     remove: "公開をやめる",
     removeAsk:

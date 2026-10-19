@@ -5,10 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
-import { memoryStore } from "../features/board/draft";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import type { FollowDeps } from "../features/community/useFollow";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
+import { memoryStore } from "../lib/storage";
 import { ProfilePage } from "./ProfilePage";
 
 vi.mock("../lib/api", () => ({

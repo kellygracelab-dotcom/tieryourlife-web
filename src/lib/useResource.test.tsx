@@ -1,36 +1,34 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { ApiFailure } from "../../api/errors";
-import type { PublishedList } from "../../api/types";
-import { useList } from "./useList";
-
-vi.mock("../../lib/api", () => ({ loadList: vi.fn() }));
+import { ApiFailure } from "../api/errors";
+import type { PublishedList } from "../api/types";
+import { useResource } from "./useResource";
 
 const list = { id: "abc", title: "Films" } as PublishedList;
 
-describe("useList", () => {
-  it("starts loading and settles on the list", async () => {
+describe("useResource", () => {
+  it("starts loading and settles on what it loaded", async () => {
     const load = vi.fn(async () => list);
-    const { result } = renderHook(() => useList("abc", load));
+    const { result } = renderHook(() => useResource("abc", load));
 
     expect(result.current.state).toEqual({ status: "loading" });
-    await waitFor(() => expect(result.current.state).toEqual({ status: "ready", list }));
+    await waitFor(() => expect(result.current.state).toEqual({ status: "ready", value: list }));
     expect(load).toHaveBeenCalledWith("abc");
   });
 
-  it("keeps the proxy's refusal and can try again", async () => {
+  it("keeps the API's refusal and can try again", async () => {
     const load = vi
       .fn<() => Promise<PublishedList>>()
       .mockRejectedValueOnce(new ApiFailure({ kind: "offline" }))
       .mockResolvedValueOnce(list);
-    const { result } = renderHook(() => useList("abc", load));
+    const { result } = renderHook(() => useResource("abc", load));
 
     await waitFor(() =>
       expect(result.current.state).toEqual({ status: "error", error: { kind: "offline" } }),
     );
     act(() => result.current.retry());
     expect(result.current.state).toEqual({ status: "loading" });
-    await waitFor(() => expect(result.current.state).toEqual({ status: "ready", list }));
+    await waitFor(() => expect(result.current.state).toEqual({ status: "ready", value: list }));
     expect(load).toHaveBeenCalledTimes(2);
   });
 
@@ -38,7 +36,7 @@ describe("useList", () => {
     const load = vi.fn(async () => {
       throw new Error("boom");
     });
-    const { result } = renderHook(() => useList("abc", load));
+    const { result } = renderHook(() => useResource("abc", load));
 
     await waitFor(() =>
       expect(result.current.state).toEqual({
@@ -48,7 +46,7 @@ describe("useList", () => {
     );
   });
 
-  it("ignores an answer that arrives after the id changed", async () => {
+  it("ignores an answer that arrives after the key changed", async () => {
     let resolveFirst: (value: PublishedList) => void = () => undefined;
     const load = vi
       .fn<(id: string) => Promise<PublishedList>>()
@@ -59,15 +57,15 @@ describe("useList", () => {
           }),
       )
       .mockResolvedValueOnce({ ...list, id: "def" });
-    const { result, rerender } = renderHook(({ id }) => useList(id, load), {
+    const { result, rerender } = renderHook(({ id }) => useResource(id, load), {
       initialProps: { id: "abc" },
     });
 
     rerender({ id: "def" });
     await waitFor(() =>
-      expect(result.current.state).toEqual({ status: "ready", list: { ...list, id: "def" } }),
+      expect(result.current.state).toEqual({ status: "ready", value: { ...list, id: "def" } }),
     );
     act(() => resolveFirst({ ...list, id: "abc" }));
-    expect(result.current.state).toEqual({ status: "ready", list: { ...list, id: "def" } });
+    expect(result.current.state).toEqual({ status: "ready", value: { ...list, id: "def" } });
   });
 });

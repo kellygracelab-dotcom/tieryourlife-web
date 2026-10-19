@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { KeyValueStore } from "../../lib/storage";
 import {
   clearEditorDraft,
   DEFAULT_TIERS,
@@ -15,7 +16,6 @@ import {
   saveEditorDraft,
   TIER_PRESETS,
   type Draft,
-  type DraftStoreLike,
   type EditorAction,
   draftOfRanking,
   forkDraftKey,
@@ -32,7 +32,7 @@ const ready = (): Draft =>
     { type: "addItem", title: "The Witch", imageUrl: null },
   );
 
-function memoryStore(): DraftStoreLike & { data: Map<string, string> } {
+function memoryStore(): KeyValueStore & { data: Map<string, string> } {
   const data = new Map<string, string>();
   return {
     data,

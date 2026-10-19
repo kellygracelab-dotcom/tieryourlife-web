@@ -2,15 +2,15 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CatalogueItem } from "../api/catalogue";
+import type { CatalogueItem } from "../api/types";
 import { ApiFailure } from "../api/errors";
 import type { PublishedList } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
-import { memoryStore } from "../features/board/draft";
 import type { Upload } from "../features/editor/CardsEditor";
 import type { CopyBack } from "../features/editor/republish";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { PictureRefused } from "../lib/pictures";
+import { memoryStore } from "../lib/storage";
 import {
   NewListPage,
   type LoadKept,

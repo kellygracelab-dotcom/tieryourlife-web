@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "./client";
 import {
-  claimRanking,
-  deleteRanking,
-  getMyRankings,
-  getRanking,
-  saveRanking,
-  updateRanking,
+  claimKept,
+  removeRanking,
+  loadMyRankings,
+  loadRanking,
+  keepRanking,
+  rearrangeRanking,
 } from "./rank";
 
 function recordingClient(result: unknown) {
@@ -20,7 +20,7 @@ describe("rank", () => {
     const { client, request } = recordingClient({ code: "abcdefgh", claimToken: "t" });
     const rows: readonly (readonly number[])[] = [[2, 0], []];
 
-    await expect(saveRanking(client, "wMRMFDxo8UejcAi2VVMW", rows)).resolves.toEqual({
+    await expect(keepRanking(client, "wMRMFDxo8UejcAi2VVMW", rows)).resolves.toEqual({
       code: "abcdefgh",
       claimToken: "t",
     });
@@ -33,7 +33,7 @@ describe("rank", () => {
   it("reads a ranking by code with App Check alone", async () => {
     const { client, request } = recordingClient({ code: "abcdefgh" });
 
-    await expect(getRanking(client, "abcdefgh")).resolves.toEqual({ code: "abcdefgh" });
+    await expect(loadRanking(client, "abcdefgh")).resolves.toEqual({ code: "abcdefgh" });
 
     expect(request).toHaveBeenCalledWith("GET", "/api/rank/abcdefgh", { auth: "appCheckOnly" });
   });
@@ -41,7 +41,7 @@ describe("rank", () => {
   it("reads a ranking as the account when asked, so the answer can call it yours", async () => {
     const { client, request } = recordingClient({ code: "abcdefgh", yours: true });
 
-    await expect(getRanking(client, "abcdefgh", true)).resolves.toEqual({
+    await expect(loadRanking(client, "abcdefgh", true)).resolves.toEqual({
       code: "abcdefgh",
       yours: true,
     });
@@ -53,7 +53,7 @@ describe("rank", () => {
     const { client, request } = recordingClient({ code: "abcdefgh" });
     const rows: readonly (readonly number[])[] = [[1], [0, 2]];
 
-    await expect(updateRanking(client, "abcdefgh", rows)).resolves.toEqual({ code: "abcdefgh" });
+    await expect(rearrangeRanking(client, "abcdefgh", rows)).resolves.toEqual({ code: "abcdefgh" });
 
     expect(request).toHaveBeenCalledWith("PUT", "/api/rank/abcdefgh", {
       body: { rows: [[1], [0, 2]] },
@@ -62,14 +62,14 @@ describe("rank", () => {
 
   it("takes a ranking away by its code, as the account", async () => {
     const { client, request } = recordingClient(undefined);
-    await expect(deleteRanking(client, "abcdefgh")).resolves.toBeUndefined();
+    await expect(removeRanking(client, "abcdefgh")).resolves.toBeUndefined();
     expect(request).toHaveBeenCalledWith("DELETE", "/api/rank/abcdefgh");
   });
 
   it("claims a ranking by code with the token Finish handed out", async () => {
     const { client, request } = recordingClient({ code: "abcdefgh" });
 
-    await expect(claimRanking(client, "abcdefgh", "t")).resolves.toEqual({ code: "abcdefgh" });
+    await expect(claimKept(client, "abcdefgh", "t")).resolves.toEqual({ code: "abcdefgh" });
 
     expect(request).toHaveBeenCalledWith("PATCH", "/api/rank/abcdefgh", {
       body: { claimToken: "t" },
@@ -80,7 +80,7 @@ describe("rank", () => {
     const page = { rankings: [], more: false };
     const { client, request } = recordingClient(page);
 
-    await expect(getMyRankings(client)).resolves.toEqual(page);
+    await expect(loadMyRankings(client)).resolves.toEqual(page);
 
     expect(request).toHaveBeenCalledWith("GET", "/api/me/rankings");
   });

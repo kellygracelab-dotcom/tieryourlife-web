@@ -54,9 +54,14 @@ async function fontsDirectory(): Promise<string> {
   throw new Error("fonts not found");
 }
 
-/** The fonts and the wasm are read once per instance, on the first card. */
+/**
+ * The fonts and the wasm are read once per instance, on the first card. A
+ * failure is not kept: the next card tries again instead of every card on
+ * this instance failing until it is recycled.
+ */
 function loadRenderer(): Promise<Renderer> {
-  renderer ??= (async () => {
+  if (renderer !== null) return renderer;
+  const loading = (async (): Promise<Renderer> => {
     const fontsDir = await fontsDirectory();
     const [regular, medium] = await Promise.all([
       readFile(path.join(fontsDir, "Roboto-Regular.ttf")),
@@ -77,7 +82,11 @@ function loadRenderer(): Promise<Renderer> {
       ],
     };
   })();
-  return renderer;
+  renderer = loading;
+  loading.catch(() => {
+    if (renderer === loading) renderer = null;
+  });
+  return loading;
 }
 
 export type Fetcher = (url: string, init?: RequestInit) => Promise<globalThis.Response>;

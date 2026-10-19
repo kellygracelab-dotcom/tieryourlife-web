@@ -16,18 +16,19 @@ import type { SavedRanking } from "../../api/rank";
 import type { PublishedList } from "../../api/types";
 import { useSession } from "../../app/session";
 import { keepRanking, noteTake } from "../../lib/api";
+import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
 import { writeKept } from "../ranking/kept";
 import { ResultBar, type FinishState } from "../ranking/ResultBar";
 import { downloadShare, type Share } from "../ranking/shareImage";
-import { errorOf } from "../list/useResource";
+import { errorOf } from "../../api/errors";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { DragGhost } from "./DragGhost";
 import { flyIn } from "./flight";
 import type { DragState } from "./drag";
-import { loadDraft, localStorageStore, saveDraft, type DraftScope, type DraftStore } from "./draft";
+import { loadDraft, saveDraft, type DraftScope } from "./draft";
 import {
   canUndo,
   init,
@@ -40,9 +41,10 @@ import {
 } from "./model";
 import { useTileDrag, type HitTest } from "./useTileDrag";
 import { BoardFrameContext } from "./boardFrame";
-import { rowsThatFit, type DockRows } from "./dock";
 import { DockToggle } from "./DockToggle";
 import { useDock } from "./useDock";
+import { useFixedDock } from "./useFixedDock";
+import { TRAY_DOTS, useTray } from "./useTray";
 import "./board.css";
 import "./ranking.css";
 
@@ -72,7 +74,7 @@ export interface EditMode {
 interface RankingBoardProps {
   list: PublishedList;
   hitTest?: HitTest;
-  store?: DraftStore;
+  store?: KeyValueStore;
   keep?: Keep;
   take?: (listId: string) => Promise<void>;
   share?: Share;
@@ -83,15 +85,8 @@ type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed";
 
 type PointerDownFor = (item: number) => (event: ReactPointerEvent<HTMLElement>) => void;
 
-/** The tray's side padding in ranking.css: a picked card stops this far from the edge. */
-const TRAY_INSET = 14;
-/** The tray's dots: one per this many tiles, this many at most, then "+n". An indicator, not a control. */
-const TRAY_PAGE = 5;
 /** A pool longer than this gets a search box in the side column. */
 export const POOL_SEARCH_FROM = 24;
-const TRAY_DOTS = 8;
-/** The gap between tiles in ranking.css, part of a tile's stride. */
-const TRAY_GAP = 8;
 
 interface TileProps {
   list: PublishedList;
@@ -168,12 +163,6 @@ const saveLabel = (edit: EditMode, busy: boolean): string =>
       ? strings.new.publishing
       : strings.new.publishChanges;
 
-/** The band above the dock's edge, and under the header, where a dragged card scrolls the page. */
-const EDGE_ZONE = 56;
-/** The most the page moves per frame, at the very edge. */
-const EDGE_SPEED = 14;
-const edgeSpeed = (depth: number): number => EDGE_SPEED * Math.min(1, Math.max(0, depth)) ** 2;
-
 const scopeOf = (list: PublishedList): DraftScope => ({
   id: list.id,
   updatedAt: list.updatedAt,
@@ -183,7 +172,7 @@ const scopeOf = (list: PublishedList): DraftScope => ({
 
 function useBoard(
   list: PublishedList,
-  store: DraftStore,
+  store: KeyValueStore,
   initialRows: readonly (readonly number[])[] | null = null,
 ) {
   const scope = scopeOf(list);
@@ -230,13 +219,12 @@ export function RankingBoard({
   const selected = state.selected;
   const selectedTitle = selected === null ? null : (list.items[selected]?.title ?? null);
   const section = useRef<HTMLElement>(null);
-  const tray = useRef<HTMLUListElement>(null);
   const poolBox = useRef<HTMLDivElement>(null);
   const boardEnd = useRef<HTMLDivElement>(null);
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
-  const { dock, rows, wide, choose, resize } = useDock(store);
+  const { dock, rows, wide, choose, startResize } = useDock(store);
   const docked = wide && dock === "under";
   const frame = useContext(BoardFrameContext);
   // On a wide screen the count and the actions stand in the page's header,
@@ -246,31 +234,6 @@ export function RankingBoard({
     frame.report(wide ? dock : null);
     return () => frame.report(null);
   }, [frame, wide, dock]);
-
-  // The 6 px strip on the dock's top edge: drag it to show one to four rows of cards.
-  const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const grip = event.currentTarget;
-    const startY = event.clientY;
-    let last = rows;
-    grip.setPointerCapture(event.pointerId);
-    const onMove = (move: PointerEvent) => {
-      const next = Math.min(
-        rowsThatFit(window.innerHeight),
-        Math.max(1, rows + Math.round((startY - move.clientY) / 100)),
-      ) as DockRows;
-      if (next === last) return;
-      last = next;
-      resize(next);
-    };
-    const onEnd = () => {
-      grip.removeEventListener("pointermove", onMove);
-      grip.removeEventListener("pointerup", onEnd);
-      grip.removeEventListener("pointercancel", onEnd);
-    };
-    grip.addEventListener("pointermove", onMove);
-    grip.addEventListener("pointerup", onEnd);
-    grip.addEventListener("pointercancel", onEnd);
-  };
 
   // Where the picked card was in the tray when it was placed. Once the tile
   // is in its row it flies from there, or fades in for someone who asked for
@@ -297,31 +260,9 @@ export function RankingBoard({
     if (tile != null) flyIn(tile, planned.from);
   });
 
-  // The tray's page, for the dots under it.
-  const [page, setPage] = useState(0);
   // The side column's search, for a pool too long to scan: it narrows what
   // the tray shows, and `/` puts the cursor in it.
   const [query, setQuery] = useState("");
-
-  // On a phone the pool is one scrolling row; the picked card comes to its
-  // start. Only the row scrolls: on a wide screen the pool may be off screen,
-  // and the page must not jump to it after every key press. The distance is
-  // measured on the screen and scrolled by, because where a row's scroll
-  // position counts from differs between left-to-right and right-to-left,
-  // and "start" is the right edge in Arabic.
-  useEffect(() => {
-    const row = tray.current;
-    if (row === null || selected === null || typeof row.scrollBy !== "function") return;
-    const holder = row.querySelector<HTMLElement>(`[data-item="${selected}"]`)?.parentElement;
-    if (holder == null) return;
-    const card = holder.getBoundingClientRect();
-    const edge = row.getBoundingClientRect();
-    const rightToLeft = getComputedStyle(row).direction === "rtl";
-    const left = rightToLeft
-      ? card.right - edge.right + TRAY_INSET
-      : card.left - edge.left - TRAY_INSET;
-    row.scrollBy({ left, behavior: "smooth" });
-  }, [selected]);
 
   // The result opens above the board, and the person may be far below it.
   const finished = finish.status !== "idle";
@@ -413,111 +354,24 @@ export function RankingBoard({
       ? left
       : left.filter((item) => list.items[item]?.title.toLowerCase().includes(needle) ?? false);
   const keyboardTiers = Math.min(list.tiers.length, 9);
-  const pages = Math.ceil(shown.length / TRAY_PAGE);
-  // Which page the tray is on: measured, because a tile's stride is the
-  // stylesheet's, and scrollLeft counts from the right in Arabic.
-  const readPage = useCallback(() => {
-    const row = tray.current;
-    const holder = row?.firstElementChild;
-    if (row == null || !(holder instanceof HTMLElement)) return;
-    const stride = holder.offsetWidth + TRAY_GAP;
-    setPage(Math.min(pages - 1, Math.round(Math.abs(row.scrollLeft) / (stride * TRAY_PAGE))));
-  }, [pages]);
-  useEffect(() => {
-    readPage();
-  }, [readPage, shown.length]);
+  // On a phone the pool is one scrolling row with dots under it.
+  const { tray, page, pages, readPage } = useTray(selected, shown.length);
   const picked = selected !== null && left.includes(selected);
   const allPlaced = left.length === 0 && finish.status !== "done";
   // Finished with every card placed: the tray has nothing to say and goes.
   const restEmpty = finish.status === "done" && left.length === 0;
 
-  // The dock is fixed to the window's foot. The page needs room under the
-  // board for it, so the dock writes its height to the root as --dock-h, and
-  // the page's padding, its scroll padding and the snackbar follow. Resized
-  // while the page is at its end, the last row keeps its place against the
-  // dock instead of jumping under it.
-  const fixedDock = docked && !restEmpty;
-  const [dockHeight, setDockHeight] = useState(0);
-  useEffect(() => {
-    const el = poolBox.current;
-    if (!fixedDock || el === null || typeof ResizeObserver === "undefined") return;
-    const root = document.documentElement;
-    let last = 0;
-    const observer = new ResizeObserver(() => {
-      const height = el.offsetHeight;
-      if (height === last) return;
-      const atEnd = window.scrollY + window.innerHeight >= root.scrollHeight - 1;
-      root.style.setProperty("--dock-h", `${height}px`);
-      if (atEnd && last > 0 && height > last) window.scrollBy(0, height - last);
-      last = height;
-      setDockHeight(height);
-    });
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-      root.style.removeProperty("--dock-h");
-    };
-  }, [fixedDock]);
-
-  // The dock's shadow says a row is underneath. A sentinel at the board's end
-  // is watched against the window above the dock: hidden, a row is under the
-  // dock; showing, the board has ended and the shadow goes.
-  const [covered, setCovered] = useState(false);
-  useEffect(() => {
-    const end = boardEnd.current;
-    if (!fixedDock || end === null || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setCovered(!(entry?.isIntersecting ?? true)),
-      { rootMargin: `0px 0px -${dockHeight}px 0px` },
-    );
-    observer.observe(end);
-    return () => observer.disconnect();
-  }, [fixedDock, dockHeight]);
-  const over = fixedDock && covered;
-
-  // A card dragged toward a row hidden under the dock scrolls the page: a
-  // 56 px band above the dock's edge scrolls down, one under the header
-  // scrolls up, faster toward the edge, and what is under the pointer is read
-  // again after each step so the drop lands where the pointer is.
-  const dragging = drag.state.phase === "dragging";
-  const { current: dragNow, nudge } = drag;
-  useEffect(() => {
-    const el = poolBox.current;
-    if (!dragging || el === null || typeof requestAnimationFrame === "undefined") return;
-    if (getComputedStyle(el).position !== "fixed") return;
-    const bar = document.querySelector<HTMLElement>(".top");
-    const head = document.querySelector<HTMLElement>(".list-head");
-    const topEdge = () =>
-      Math.max(
-        bar?.getBoundingClientRect().bottom ?? 0,
-        head !== null && getComputedStyle(head).position === "sticky"
-          ? head.getBoundingClientRect().bottom
-          : 0,
-      );
-    let frame = 0;
-    const tick = () => {
-      const now = dragNow();
-      if (now.phase === "dragging") {
-        const y = now.at.y;
-        const bottom = el.getBoundingClientRect().top;
-        const top = topEdge();
-        let speed = 0;
-        if (y < bottom && y >= bottom - EDGE_ZONE) {
-          speed = edgeSpeed((y - (bottom - EDGE_ZONE)) / EDGE_ZONE);
-        } else if (y <= top + EDGE_ZONE) {
-          speed = -edgeSpeed((top + EDGE_ZONE - y) / EDGE_ZONE);
-        }
-        if (speed !== 0) {
-          const before = window.scrollY;
-          window.scrollBy(0, speed);
-          if (window.scrollY !== before) nudge();
-        }
-      }
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [dragging, dragNow, nudge]);
+  // The dock is fixed to the window's foot; the page leaves room under the
+  // board for it, its shadow says a row is underneath, and a card dragged
+  // toward a covered row scrolls the page.
+  const { over } = useFixedDock({
+    poolBox,
+    boardEnd,
+    fixed: docked && !restEmpty,
+    dragging: drag.state.phase === "dragging",
+    dragNow: drag.current,
+    nudge: drag.nudge,
+  });
   const poolClasses = [
     "pool",
     drag.state.phase === "dragging" && drag.state.target?.kind === "pool" && "pool--target",

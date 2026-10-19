@@ -6,7 +6,7 @@ import { ListPage } from "../pages/ListPage";
 import { MePage } from "../pages/MePage";
 import { ModerationPage } from "../pages/ModerationPage";
 import { NewListPage } from "../pages/NewListPage";
-import { NotFoundPage } from "../pages/Placeholders";
+import { NotFoundPage } from "../pages/NotFoundPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { RankingPage } from "../pages/RankingPage";
 import { SearchPage } from "../pages/SearchPage";

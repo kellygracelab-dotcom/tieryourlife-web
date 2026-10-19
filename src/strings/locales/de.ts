@@ -9,11 +9,11 @@ import type { Translation } from "../index";
 const de: Translation = {
   tagline: "Web-Version",
   nav: {
+    site: "Website",
     signIn: "Anmelden",
     signOut: "Abmelden",
     account: "Dein Konto",
     you: "Du",
-    yourRankings: "Deine Ranglisten",
     myLists: "Meine Listen",
     makeList: "Liste erstellen",
     search: "Listen suchen",
@@ -476,26 +476,15 @@ const de: Translation = {
     failedTitle: "Diese Rangliste ließ sich nicht öffnen",
   },
   me: {
-    title: "Deine Ranglisten",
-    empty: "Ranglisten, die du behältst, erscheinen hier.",
     signInFirst:
       "Melde dich an, um die Ranglisten zu sehen, die du behältst. Was du auf diesem Gerät abgeschlossen hast, kommt mit.",
     placedOf: "{placed} von {total} platziert",
-    failed: "Deine Ranglisten konnten nicht geladen werden.",
     tryAgain: "Erneut versuchen",
     more: { one: "Nur die neueste wird gezeigt.", other: "Nur die neuesten {n} werden gezeigt." },
     edit: "Bearbeiten",
-    fromPhone: "Listen, die du aus der App veröffentlicht hast, stehen unter „Meine Listen“.",
     browse: "Listen durchstöbern",
     tabs: "Dein Konto",
-    kept: { one: "{n} in diesem Konto", other: "{n} in diesem Konto" },
     lists: "Meine Listen",
-    signInForLists:
-      "Melde dich an, um die Listen zu sehen, die du aus der App veröffentlicht hast.",
-    published: { one: "{n} aus der App veröffentlicht", other: "{n} aus der App veröffentlicht" },
-    listsEmpty: "Noch nichts veröffentlicht.",
-    listsHow:
-      "Öffne in der App eine Liste, füge Karten hinzu, lege die Stufen fest und tipp auf Veröffentlichen. Sie erscheint hier unter demselben Google-Konto.",
     listsFailed: "Deine Listen konnten nicht geladen werden.",
     remove: "Veröffentlichung zurücknehmen",
     removeAsk:

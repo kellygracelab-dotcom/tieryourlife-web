@@ -1,3 +1,4 @@
+import type { KeyValueStore } from "./storage";
 export type Theme = "system" | "light" | "dark";
 
 export const THEMES: readonly Theme[] = ["system", "light", "dark"];
@@ -6,16 +7,10 @@ export const THEME_KEY = "tyl:theme";
 export const isTheme = (value: unknown): value is Theme =>
   value === "system" || value === "light" || value === "dark";
 
-export interface ThemeStore {
-  read(key: string): string | null;
-  write(key: string, value: string): void;
-  remove(key: string): void;
-}
-
 /** The colour the browser paints around the page: the paper of each scheme. */
 const PAPER = { light: "#e9e7e2", dark: "#121318" } as const;
 
-export function readTheme(store: ThemeStore): Theme {
+export function readTheme(store: KeyValueStore): Theme {
   try {
     const kept = store.read(THEME_KEY);
     return isTheme(kept) ? kept : "system";
@@ -25,7 +20,7 @@ export function readTheme(store: ThemeStore): Theme {
 }
 
 /** The system choice is the absence of a choice, so it is not kept. */
-export function keepTheme(store: ThemeStore, theme: Theme): void {
+export function keepTheme(store: KeyValueStore, theme: Theme): void {
   try {
     if (theme === "system") store.remove(THEME_KEY);
     else store.write(THEME_KEY, theme);

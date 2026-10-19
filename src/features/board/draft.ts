@@ -1,11 +1,5 @@
+import type { KeyValueStore } from "../../lib/storage";
 import type { Rows } from "./model";
-
-export interface DraftStore {
-  read(key: string): string | null;
-  write(key: string, value: string): void;
-  remove(key: string): void;
-  keys?(): string[];
-}
 
 /** The parts of a list a draft is only valid for. A republish changes them. */
 export interface DraftScope {
@@ -23,50 +17,6 @@ interface Draft {
 }
 
 export const draftKey = (listId: string): string => `tyl:draft:${listId}`;
-
-/** A store that forgets on reload, for boards whose draft must not outlive the page. */
-export function memoryStore(): DraftStore {
-  const data = new Map<string, string>();
-  return {
-    read: (key) => data.get(key) ?? null,
-    write: (key, value) => void data.set(key, value),
-    remove: (key) => void data.delete(key),
-    keys: () => [...data.keys()],
-  };
-}
-
-// Private mode, a full disk and a browser told to block storage all throw;
-// the board must work anyway, it just forgets on reload.
-export const localStorageStore: DraftStore = {
-  read(key) {
-    try {
-      return window.localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-  write(key, value) {
-    try {
-      window.localStorage.setItem(key, value);
-    } catch {
-      /* forgotten on reload */
-    }
-  },
-  remove(key) {
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      /* nothing to remove */
-    }
-  },
-  keys() {
-    try {
-      return Object.keys(window.localStorage);
-    } catch {
-      return [];
-    }
-  },
-};
 
 export function serializeDraft(scope: DraftScope, rows: Rows): string {
   const draft: Draft = {
@@ -115,14 +65,14 @@ export function parseDraft(text: string | null, scope: DraftScope): Rows | null 
   return rows;
 }
 
-export function loadDraft(store: DraftStore, scope: DraftScope): Rows | null {
+export function loadDraft(store: KeyValueStore, scope: DraftScope): Rows | null {
   return parseDraft(store.read(draftKey(scope.id)), scope);
 }
 
-export function saveDraft(store: DraftStore, scope: DraftScope, rows: Rows): void {
+export function saveDraft(store: KeyValueStore, scope: DraftScope, rows: Rows): void {
   store.write(draftKey(scope.id), serializeDraft(scope, rows));
 }
 
-export function clearDraft(store: DraftStore, listId: string): void {
+export function clearDraft(store: KeyValueStore, listId: string): void {
   store.remove(draftKey(listId));
 }

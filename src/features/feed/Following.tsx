@@ -7,7 +7,7 @@ import { isEditorialAuthor } from "../../lib/editorial";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
-import { useResource } from "../list/useResource";
+import { useResource } from "../../lib/useResource";
 import { FollowButton } from "../community/FollowButton";
 import { FeedGrid } from "./FeedGrid";
 import type { FeedState } from "./useFeed";

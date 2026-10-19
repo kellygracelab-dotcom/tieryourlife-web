@@ -1,4 +1,4 @@
-import type { DraftStore } from "../board/draft";
+import type { KeyValueStore } from "../../lib/storage";
 
 export interface KeptRanking {
   code: string;
@@ -14,7 +14,7 @@ export const KEPT_PREFIX = "tyl:ranking:";
 export const keptKey = (listId: string): string => `${KEPT_PREFIX}${listId}`;
 
 /** The ranking this device finished for a list, so the page can say "yours". */
-export function readKept(store: DraftStore, listId: string): KeptRanking | null {
+export function readKept(store: KeyValueStore, listId: string): KeptRanking | null {
   const text = store.read(keptKey(listId));
   if (text === null) return null;
   try {
@@ -33,6 +33,6 @@ export function readKept(store: DraftStore, listId: string): KeptRanking | null 
   }
 }
 
-export function writeKept(store: DraftStore, listId: string, kept: KeptRanking): void {
+export function writeKept(store: KeyValueStore, listId: string, kept: KeptRanking): void {
   store.write(keptKey(listId), JSON.stringify(kept));
 }

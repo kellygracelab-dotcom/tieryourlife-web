@@ -7,7 +7,7 @@ import { AccountTabs } from "../app/AccountTabs";
 import { useHidden } from "../features/community/useHidden";
 import { useSession } from "../app/session";
 import { ThemeSwitch } from "../app/ThemeSwitch";
-import { useResource } from "../features/list/useResource";
+import { useResource } from "../lib/useResource";
 import { eraseMyAccount, loadMyLists, refreshPublishedAuthor } from "../lib/api";
 import { NAME_MAX, renameAccount, setFace, tidyName } from "../lib/profile";
 import { fill, strings } from "../strings";

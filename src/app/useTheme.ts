@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { localStorageStore } from "../features/board/draft";
-import { applyTheme, keepTheme, readTheme, type Theme, type ThemeStore } from "../lib/theme";
+import { type KeyValueStore, localStorageStore } from "../lib/storage";
+import { applyTheme, keepTheme, readTheme, type Theme } from "../lib/theme";
 
 /** The person's choice of scheme, kept on this device and applied to the page. */
-export function useTheme(store: ThemeStore = localStorageStore) {
+export function useTheme(store: KeyValueStore = localStorageStore) {
   const [theme, setTheme] = useState<Theme>(() => readTheme(store));
 
   useEffect(() => {

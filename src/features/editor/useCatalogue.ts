@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { CatalogueItem } from "../../api/catalogue";
+import type { CatalogueItem } from "../../api/types";
 import { findInCatalogue } from "../../lib/api";
 
 export type Lookup = (query: string) => Promise<CatalogueItem[]>;

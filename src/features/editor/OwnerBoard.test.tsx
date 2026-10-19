@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { PublishedList } from "../../api/types";
-import { memoryStore } from "../board/draft";
+import { memoryStore } from "../../lib/storage";
 import { OwnerBoard, type Republish } from "./OwnerBoard";
 import type { Upload } from "./AddCardBox";
 import type { CopyBack } from "./republish";
