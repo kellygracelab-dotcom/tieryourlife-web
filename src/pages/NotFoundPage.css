@@ -14,13 +14,3 @@
   font: var(--text-lead);
   color: var(--ink-dim);
 }
-
-.opening__id {
-  font: var(--text-small);
-  font-family: var(--font-mono);
-  color: var(--ink-faint);
-}
-
-.opening__row {
-  border-radius: var(--radius-card);
-}

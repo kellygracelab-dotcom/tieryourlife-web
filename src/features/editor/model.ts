@@ -1,6 +1,7 @@
 import type { Ranking } from "../../api/rank";
 import type { Category, PublishedList, PublishedTier } from "../../api/types";
 import { publishedPictureOf } from "../../lib/pictures";
+import type { KeyValueStore } from "../../lib/storage";
 import { arrange } from "../board/arrange";
 import { strings } from "../../strings";
 
@@ -369,13 +370,7 @@ export const editDraftKey = (listId: string): string => `tyl:edit:${listId}`;
 /** A list being made from a kept ranking has a draft of its own, one per ranking. */
 export const forkDraftKey = (code: string): string => `tyl:fork:${code}`;
 
-export interface DraftStoreLike {
-  read(key: string): string | null;
-  write(key: string, value: string): void;
-  remove(key: string): void;
-}
-
-export function loadEditorDraft(store: DraftStoreLike, key = NEW_DRAFT_KEY): Draft | null {
+export function loadEditorDraft(store: KeyValueStore, key = NEW_DRAFT_KEY): Draft | null {
   const text = store.read(key);
   if (text === null) return null;
   try {
@@ -442,10 +437,10 @@ function refreshedCaptions(tiers: EditorTier[]): EditorTier[] {
     : tiers;
 }
 
-export function saveEditorDraft(store: DraftStoreLike, draft: Draft, key = NEW_DRAFT_KEY): void {
+export function saveEditorDraft(store: KeyValueStore, draft: Draft, key = NEW_DRAFT_KEY): void {
   store.write(key, JSON.stringify(draft));
 }
 
-export function clearEditorDraft(store: DraftStoreLike, key = NEW_DRAFT_KEY): void {
+export function clearEditorDraft(store: KeyValueStore, key = NEW_DRAFT_KEY): void {
   store.remove(key);
 }

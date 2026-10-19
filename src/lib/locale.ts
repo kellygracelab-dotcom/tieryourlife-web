@@ -1,3 +1,4 @@
+import type { KeyValueStore } from "./storage";
 /** The phone app's eleven languages, in the order its picker shows them. */
 export const LOCALES = [
   "en",
@@ -41,14 +42,8 @@ export const isLocale = (value: unknown): value is Locale =>
 export const directionOf = (locale: Locale): "ltr" | "rtl" =>
   RIGHT_TO_LEFT.includes(locale) ? "rtl" : "ltr";
 
-export interface LocaleStore {
-  read(key: string): string | null;
-  write(key: string, value: string): void;
-  remove(key: string): void;
-}
-
 /** What the person chose on this device, or nothing: the browser's languages decide then. */
-export function readLocale(store: LocaleStore): Locale | null {
+export function readLocale(store: KeyValueStore): Locale | null {
   try {
     const kept = store.read(LOCALE_KEY);
     return isLocale(kept) ? kept : null;
@@ -57,7 +52,7 @@ export function readLocale(store: LocaleStore): Locale | null {
   }
 }
 
-export function keepLocale(store: LocaleStore, locale: Locale): void {
+export function keepLocale(store: KeyValueStore, locale: Locale): void {
   try {
     store.write(LOCALE_KEY, locale);
   } catch {

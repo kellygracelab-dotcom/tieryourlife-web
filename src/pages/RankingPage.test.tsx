@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure, type ApiError } from "../api/errors";
 import type { Ranking } from "../api/rank";
 import { writeKept } from "../features/ranking/kept";
-import { localStorageStore } from "../features/board/draft";
 import type { Share } from "../features/ranking/shareImage";
+import { localStorageStore } from "../lib/storage";
 import { RankingPage } from "./RankingPage";
 
 const ranking: Ranking = {

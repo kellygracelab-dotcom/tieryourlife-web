@@ -3,11 +3,11 @@ import type { ApiError } from "../../api/errors";
 import type { PublishedList } from "../../api/types";
 import { copyPublishedBack, discardPictures, uploadPicture } from "../../lib/pictures";
 import { republish as republishList } from "../../lib/api";
+import { type KeyValueStore, localStorageStore, memoryStore } from "../../lib/storage";
 import { strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
-import { localStorageStore, memoryStore, type DraftStore } from "../board/draft";
 import { RankingBoard } from "../board/RankingBoard";
-import { errorOf } from "../list/useResource";
+import { errorOf } from "../../api/errors";
 import { AddCardBox, type Upload } from "./AddCardBox";
 import { failureText } from "./failureText";
 import {
@@ -29,7 +29,7 @@ type Discard = (pictureIds: readonly string[]) => Promise<void>;
 
 interface OwnerBoardProps {
   list: PublishedList;
-  store?: DraftStore;
+  store?: KeyValueStore;
   lookup?: Parameters<typeof AddCardBox>[0]["lookup"];
   upload?: Upload;
   copyBack?: CopyBack;

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { DraftStore } from "../board/draft";
+import type { KeyValueStore } from "../../lib/storage";
 import { keptKey, readKept, writeKept } from "./kept";
 
-function memoryStore(): DraftStore & { data: Map<string, string> } {
+function memoryStore(): KeyValueStore & { data: Map<string, string> } {
   const data = new Map<string, string>();
   return {
     data,

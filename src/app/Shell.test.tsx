@@ -8,16 +8,13 @@ import { routes } from "./routes";
 import { Shell } from "./Shell";
 import { SessionContext, type Session } from "./session";
 
-vi.mock("../lib/api", () => ({
-  followState: vi.fn(() => new Promise(() => undefined)),
+vi.mock("../lib/api", async () => ({
+  ...(await import("../test/apiMock")).apiStubs(),
   followAuthor: vi.fn(),
   unfollowAuthor: vi.fn(),
-  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
-  loadReports: vi.fn(() => new Promise(() => undefined)),
   report: vi.fn(),
   loadMyLists: vi.fn(),
   rearrangeRanking: vi.fn(),
-  loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: vi.fn(),
   loadRanking: vi.fn(),
   keepRanking: vi.fn(),

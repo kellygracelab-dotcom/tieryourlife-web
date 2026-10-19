@@ -24,18 +24,18 @@ export interface QueuedList {
 }
 
 /** The queue; 403 NOT_YOURS for anyone but the moderator. */
-export function getReports(client: ApiClient): Promise<{ reports: QueuedList[] }> {
+export function loadReports(client: ApiClient): Promise<{ reports: QueuedList[] }> {
   return client.request<{ reports: QueuedList[] }>("GET", "/lists/reports");
 }
 
 /** Takes the list down for good and, when asked, bans its author. */
-export function takeDown(client: ApiClient, id: string, ban: BanLength | null): Promise<void> {
+export function takeDownList(client: ApiClient, id: string, ban: BanLength | null): Promise<void> {
   return client.request<void>("POST", `/lists/${encodeURIComponent(id)}/takedown`, {
     body: { ban },
   });
 }
 
 /** Leaves the list up; its complaints are answered and no longer hide it. */
-export function dismissReports(client: ApiClient, id: string): Promise<void> {
+export function leaveListUp(client: ApiClient, id: string): Promise<void> {
   return client.request<void>("POST", `/lists/${encodeURIComponent(id)}/dismiss`);
 }

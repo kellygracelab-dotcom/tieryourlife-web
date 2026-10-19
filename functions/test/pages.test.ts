@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { hostOf, listPayload, loadShell, resetShellForTests } from "../src/pages";
+import { hostOf, listPayload, loadShell, resetShellForTests, SHELL_TIMEOUT_MS } from "../src/pages";
 
 const requestWith = (forwarded?: string) =>
   ({ header: (name: string) => (name === "x-forwarded-host" ? forwarded : undefined) }) as never;
@@ -19,11 +19,13 @@ describe("loadShell", () => {
 
   const fetching = (html: string, ok = true) => {
     const calls: string[] = [];
-    const fetchImpl = (async (url: string) => {
+    const signals: unknown[] = [];
+    const fetchImpl = (async (url: string, init?: RequestInit) => {
       calls.push(url);
+      signals.push(init?.signal);
       return { ok, status: ok ? 200 : 503, text: async () => html } as Response;
     }) as unknown as typeof fetch;
-    return { fetchImpl, calls };
+    return { fetchImpl, calls, signals };
   };
 
   it("fetches the site's own index.html and keeps it for a minute", async () => {
@@ -36,6 +38,13 @@ describe("loadShell", () => {
     assert.deepEqual(calls, ["https://tieryourlife-web.web.app/index.html"]);
     await loadShell("tieryourlife-web.web.app", 70_000, fetchImpl);
     assert.equal(calls.length, 2);
+  });
+
+  it("gives hosting a few seconds, not the function's whole timeout", async () => {
+    const { fetchImpl, signals } = fetching("<html/>");
+    await loadShell("tieryourlife.web.app", 0, fetchImpl);
+    assert.ok(signals[0] instanceof AbortSignal);
+    assert.equal(SHELL_TIMEOUT_MS, 5_000);
   });
 
   it("does not hand one site's shell to another", async () => {

@@ -1,19 +1,18 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import type { KeyValueStore } from "../../lib/storage";
 import {
   clearDraft,
   draftKey,
   loadDraft,
-  localStorageStore,
   parseDraft,
   saveDraft,
   serializeDraft,
   type DraftScope,
-  type DraftStore,
 } from "./draft";
 
 const scope: DraftScope = { id: "abc", updatedAt: 1700, itemCount: 4, tierCount: 2 };
 
-function memoryStore(): DraftStore & { data: Map<string, string> } {
+function memoryStore(): KeyValueStore & { data: Map<string, string> } {
   const data = new Map<string, string>();
   return {
     data,
@@ -58,32 +57,6 @@ describe("draft", () => {
     expect(loadDraft(store, scope)).toEqual([[0], [1, 2]]);
     clearDraft(store, "abc");
     expect(loadDraft(store, scope)).toBeNull();
-  });
-
-  describe("localStorageStore", () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-      window.localStorage.clear();
-    });
-
-    it("uses the browser's storage", () => {
-      localStorageStore.write("k", "v");
-      expect(localStorageStore.read("k")).toBe("v");
-      localStorageStore.remove("k");
-      expect(localStorageStore.read("k")).toBeNull();
-    });
-
-    it("shrugs when storage throws", () => {
-      const boom = () => {
-        throw new Error("blocked");
-      };
-      vi.spyOn(Storage.prototype, "getItem").mockImplementation(boom);
-      vi.spyOn(Storage.prototype, "setItem").mockImplementation(boom);
-      vi.spyOn(Storage.prototype, "removeItem").mockImplementation(boom);
-      expect(() => localStorageStore.write("k", "v")).not.toThrow();
-      expect(localStorageStore.read("k")).toBeNull();
-      expect(() => localStorageStore.remove("k")).not.toThrow();
-    });
   });
 });
 

@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
-import { localStorageStore, type DraftStore } from "../board/draft";
+import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { claimKeptRankings } from "./claim";
 import { keptKey, readKept, writeKept } from "./kept";
 
 vi.mock("../../lib/api", () => ({ claimKept: vi.fn() }));
 
-function memoryStore(): DraftStore & { data: Map<string, string> } {
+function memoryStore(): KeyValueStore & { data: Map<string, string> } {
   const data = new Map<string, string>();
   return {
     data,
@@ -74,7 +74,7 @@ describe("claimKeptRankings", () => {
 
   it("does nothing with a store that cannot list its keys", async () => {
     const claim = vi.fn();
-    const store: DraftStore = { read: () => null, write: () => {}, remove: () => {} };
+    const store: KeyValueStore = { read: () => null, write: () => {}, remove: () => {} };
     await expect(claimKeptRankings(store, "u1", claim)).resolves.toBe(0);
     expect(claim).not.toHaveBeenCalled();
   });

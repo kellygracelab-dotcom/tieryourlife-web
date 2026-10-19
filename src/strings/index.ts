@@ -118,10 +118,12 @@ export async function loadStrings(next: Locale): Promise<void> {
 
 export const formatCount = (n: number): string => numbers.format(n);
 
+/** Numbers come out in the page's language, as plural() writes them: "٣ من ١٥" in Arabic. */
 export function fill(template: string, params: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (match, key: string) => {
     const value = params[key];
-    return value === undefined ? match : String(value);
+    if (value === undefined) return match;
+    return typeof value === "number" ? formatCount(value) : value;
   });
 }
 

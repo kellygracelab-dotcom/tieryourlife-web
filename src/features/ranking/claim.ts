@@ -1,6 +1,6 @@
 import { claimKept } from "../../lib/api";
-import type { DraftStore } from "../board/draft";
-import { errorOf } from "../list/useResource";
+import type { KeyValueStore } from "../../lib/storage";
+import { errorOf } from "../../api/errors";
 import { KEPT_PREFIX, readKept, writeKept } from "./kept";
 
 export type Claim = (code: string, claimToken: string) => Promise<unknown>;
@@ -13,7 +13,7 @@ export type Claim = (code: string, claimToken: string) => Promise<unknown>;
  * is tried again at the next sign-in.
  */
 export async function claimKeptRankings(
-  store: DraftStore,
+  store: KeyValueStore,
   uid: string,
   claim: Claim = claimKept,
 ): Promise<number> {

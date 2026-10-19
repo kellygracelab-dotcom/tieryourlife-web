@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import type { CatalogueItem } from "../../api/catalogue";
-import type { Category } from "../../api/types";
+import type { CatalogueItem, Category } from "../../api/types";
 import { findInCatalogue } from "../../lib/api";
 import { PictureRefused, type UploadedPicture } from "../../lib/pictures";
 import { fill, plural, strings } from "../../strings";

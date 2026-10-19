@@ -11,11 +11,11 @@ import type { Translation } from "../index";
 const tr: Translation = {
   tagline: "Web sürümü",
   nav: {
+    site: "Site",
     signIn: "Oturum aç",
     signOut: "Oturumu kapat",
     account: "Hesabınız",
     you: "Siz",
-    yourRankings: "Sıralamalarınız",
     myLists: "Listelerim",
     makeList: "Liste oluştur",
     search: "Liste ara",
@@ -460,25 +460,15 @@ const tr: Translation = {
     failedTitle: "Bu sıralama açılamadı",
   },
   me: {
-    title: "Sıralamalarınız",
-    empty: "Sakladığınız sıralamalar burada görünür.",
     signInFirst:
       "Sakladığınız sıralamaları görmek için oturum açın. Bu cihazda bitirdikleriniz de sizinle gelir.",
     placedOf: "{placed} / {total} yerleştirildi",
-    failed: "Sıralamalarınız yüklenemedi.",
     tryAgain: "Tekrar deneyin",
     more: { other: "Yalnızca en yeni {n} tanesi gösteriliyor." },
     edit: "Düzenle",
-    fromPhone: "Uygulamadan yayımladığınız listeler Listelerim'de.",
     browse: "Listelere göz atın",
     tabs: "Hesabınız",
-    kept: { other: "Bu hesapta {n} tane saklı" },
     lists: "Listelerim",
-    signInForLists: "Uygulamadan yayımladığınız listeleri görmek için oturum açın.",
-    published: { other: "Uygulamadan {n} tane yayımlandı" },
-    listsEmpty: "Henüz bir şey yayımlanmadı.",
-    listsHow:
-      "Uygulamada bir liste açın, kart ekleyin, seviyeleri ayarlayın ve Yayımla'ya dokunun. Aynı Google hesabıyla burada görünür.",
     listsFailed: "Listeleriniz yüklenemedi.",
     remove: "Yayından kaldır",
     removeAsk:

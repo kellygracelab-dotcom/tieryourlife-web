@@ -4,6 +4,7 @@
  * beside the ids so Settings can show what is hidden without fetching.
  */
 import { isEditorialAuthor } from "../../lib/editorial";
+import type { KeyValueStore } from "../../lib/storage";
 
 export const HIDDEN_KEY = "tyl:hidden";
 
@@ -22,12 +23,6 @@ export interface Hidden {
   authors: HiddenAuthor[];
 }
 
-export interface HiddenStore {
-  read(key: string): string | null;
-  write(key: string, value: string): void;
-  remove(key: string): void;
-}
-
 export const NOTHING_HIDDEN: Hidden = { lists: [], authors: [] };
 
 const isHiddenList = (value: unknown): value is HiddenList =>
@@ -42,7 +37,7 @@ const isHiddenAuthor = (value: unknown): value is HiddenAuthor =>
   typeof (value as HiddenAuthor).uid === "string" &&
   typeof (value as HiddenAuthor).name === "string";
 
-export function readHidden(store: HiddenStore): Hidden {
+export function readHidden(store: KeyValueStore): Hidden {
   try {
     const text = store.read(HIDDEN_KEY);
     if (text === null) return NOTHING_HIDDEN;
@@ -56,7 +51,7 @@ export function readHidden(store: HiddenStore): Hidden {
   }
 }
 
-export function writeHidden(store: HiddenStore, hidden: Hidden): void {
+export function writeHidden(store: KeyValueStore, hidden: Hidden): void {
   try {
     if (hidden.lists.length === 0 && hidden.authors.length === 0) store.remove(HIDDEN_KEY);
     else store.write(HIDDEN_KEY, JSON.stringify(hidden));

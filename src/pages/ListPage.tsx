@@ -11,9 +11,9 @@ import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
 import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
 import { useHidden } from "../features/community/useHidden";
-import { useList } from "../features/list/useList";
-import { errorOf } from "../features/list/useResource";
-import { report as sendReport, unpublish as unpublishList } from "../lib/api";
+import { useResource } from "../lib/useResource";
+import { errorOf } from "../api/errors";
+import { loadList, report as sendReport, unpublish as unpublishList } from "../lib/api";
 import { isEditorial } from "../lib/editorial";
 import { fill, plural, strings } from "../strings";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -25,55 +25,9 @@ import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
-import { Skeleton } from "../ui/Skeleton";
 import "../features/community/report.css";
+import { BoardPageLoading, BoardPageTrouble } from "./BoardPageStates";
 import "./ListPage.css";
-
-function Loading() {
-  return (
-    <div className="list-page" aria-busy="true">
-      <Skeleton height="28px" width="60%" />
-      <Skeleton height="18px" width="40%" />
-      <Skeleton height="106px" className="list-page__row" />
-      <Skeleton height="106px" className="list-page__row" />
-      <Skeleton height="106px" className="list-page__row" />
-      <p className="list-page__status">{strings.list.opening}</p>
-    </div>
-  );
-}
-
-function Trouble({ error, retry }: { error: ApiError; retry: () => void }) {
-  const gone = error.kind === "notFound";
-  if (gone) {
-    return (
-      <section className="list-page list-page--trouble">
-        <h1>{strings.list.unavailableTitle}</h1>
-        <p>{strings.list.unavailableBody}</p>
-        <Button variant="filled" href="/">
-          {strings.list.home}
-        </Button>
-      </section>
-    );
-  }
-  if (error.kind === "appUnverified") {
-    return (
-      <section className="list-page list-page--trouble">
-        <h1>{strings.list.unverifiedTitle}</h1>
-        <p>{strings.list.unverifiedBody}</p>
-      </section>
-    );
-  }
-  const offline = error.kind === "offline";
-  return (
-    <section className="list-page list-page--trouble">
-      <h1>{offline ? strings.list.offlineTitle : strings.list.failedTitle}</h1>
-      <p>{offline ? strings.list.offlineBody : strings.list.failedBody}</p>
-      <Button variant="filled" icon="refresh" onClick={retry}>
-        {strings.list.tryAgain}
-      </Button>
-    </section>
-  );
-}
 
 type View = "mine" | "theirs";
 
@@ -418,7 +372,7 @@ interface ListPageProps {
 
 export function ListPage({ report = sendReport, unpublish = unpublishList }: ListPageProps) {
   const { id = "" } = useParams();
-  const { state, retry } = useList(id);
+  const { state, retry } = useResource(id, loadList);
   const { account } = useSession();
   const [view, setView] = useState<View>("mine");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
@@ -440,10 +394,14 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
   }, [savedAt]);
   const { hidden } = useHidden();
 
-  if (state.status === "loading") return <Loading />;
-  if (state.status === "error") return <Trouble error={state.error} retry={retry} />;
+  if (state.status === "loading") {
+    return <BoardPageLoading note={strings.list.opening} rows={3} />;
+  }
+  if (state.status === "error") {
+    return <BoardPageTrouble error={state.error} retry={retry} words={strings.list} />;
+  }
 
-  const { list } = state;
+  const { value: list } = state;
   // The author has nobody's arrangement to compare with but their own: they
   // see the list as they published it, and the way to change it.
   const own = account?.kind === "signedIn" && account.uid === list.authorUid;

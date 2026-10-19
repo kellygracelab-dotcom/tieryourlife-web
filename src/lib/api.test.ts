@@ -21,16 +21,29 @@ import {
   api,
   carryGuest,
   claimKept,
+  eraseMyAccount,
+  followAuthor,
+  followState,
   keepRanking,
+  leaveListUp,
   loadFeed,
   loadList,
   loadMyLists,
   loadMyRankings,
   loadRanking,
+  loadReports,
   noteTake,
   findInCatalogue,
   publish,
   rearrangeRanking,
+  refreshPublishedAuthor,
+  removeRanking,
+  report,
+  republish,
+  suggestedAuthors,
+  takeDownList,
+  unfollowAuthor,
+  unpublish,
 } from "./api";
 
 describe("api", () => {
@@ -123,5 +136,28 @@ describe("api", () => {
     expect(mocks.request).toHaveBeenCalledWith("POST", "/lists/abc/taken");
     mocks.request.mockRejectedValueOnce(new Error("down"));
     await expect(noteTake("abc")).resolves.toBeUndefined();
+  });
+
+  // Each of these only binds the client; the request itself is tested in api/.
+  it.each([
+    ["removeRanking", () => removeRanking("abcdefgh"), "DELETE", "/api/rank/abcdefgh"],
+    ["republish", () => republish("abc", { title: "T" } as never), "POST", "/lists/abc"],
+    ["unpublish", () => unpublish("abc"), "DELETE", "/lists/abc"],
+    ["refreshPublishedAuthor", () => refreshPublishedAuthor(), "PATCH", "/lists"],
+    ["report", () => report("abc", { reason: "spam", note: null }), "POST", "/lists/abc/report"],
+    ["loadReports", () => loadReports(), "GET", "/lists/reports"],
+    ["followState", () => followState("u1"), "GET", "/lists/follow/u1"],
+    ["followAuthor", () => followAuthor("u1"), "POST", "/lists/follow/u1"],
+    ["unfollowAuthor", () => unfollowAuthor("u1"), "DELETE", "/lists/follow/u1"],
+    ["suggestedAuthors", () => suggestedAuthors(), "GET", "/lists/follow"],
+    ["takeDownList", () => takeDownList("abc", "week"), "POST", "/lists/abc/takedown"],
+    ["leaveListUp", () => leaveListUp("abc"), "POST", "/lists/abc/dismiss"],
+    ["eraseMyAccount", () => eraseMyAccount(), "DELETE", "/boards/account"],
+  ] as const)("%s goes through the one client", async (_, call, method, path) => {
+    mocks.request.mockClear();
+    await call();
+    const [sent, to] = (mocks.request.mock.calls[0] ?? []) as unknown[];
+    expect(sent).toBe(method);
+    expect(to).toBe(path);
   });
 });

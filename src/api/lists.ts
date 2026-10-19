@@ -8,16 +8,16 @@ import type {
   PublishedTier,
 } from "./types";
 
-export function getList(client: ApiClient, id: string): Promise<PublishedList> {
+export function loadList(client: ApiClient, id: string): Promise<PublishedList> {
   return client.request<PublishedList>("GET", `/lists/${encodeURIComponent(id)}`);
 }
 
-export function getFeed(client: ApiClient, query: FeedQuery = {}): Promise<FeedPage> {
+export function loadFeed(client: ApiClient, query: FeedQuery = {}): Promise<FeedPage> {
   return client.request<FeedPage>("GET", "/lists", { query });
 }
 
 /** The lists this account published from the app, newest first; the backend orders them. */
-export function getMyLists(client: ApiClient): Promise<{ lists: ListSummary[] }> {
+export function loadMyLists(client: ApiClient): Promise<{ lists: ListSummary[] }> {
   return client.request<{ lists: ListSummary[] }>("GET", "/lists/mine");
 }
 
@@ -36,12 +36,12 @@ export interface PublishRequest {
   }[];
 }
 
-export function publishList(client: ApiClient, request: PublishRequest): Promise<{ id: string }> {
+export function publish(client: ApiClient, request: PublishRequest): Promise<{ id: string }> {
   return client.request<{ id: string }>("POST", "/lists", { body: request });
 }
 
 /** Replaces a published list in place: same id, same link, a fresh snapshot. */
-export function republishList(
+export function republish(
   client: ApiClient,
   id: string,
   request: PublishRequest,
@@ -52,7 +52,7 @@ export function republishList(
 }
 
 /** Takes the list out of the feed and off its address; the backend answers 204 either way. */
-export function unpublishList(client: ApiClient, id: string): Promise<void> {
+export function unpublish(client: ApiClient, id: string): Promise<void> {
   return client.request<void>("DELETE", `/lists/${encodeURIComponent(id)}`);
 }
 

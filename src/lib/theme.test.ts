@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { applyTheme, keepTheme, readTheme, THEME_KEY, type ThemeStore } from "./theme";
+import type { KeyValueStore } from "./storage";
+import { applyTheme, keepTheme, readTheme, THEME_KEY } from "./theme";
 
-const memory = (): ThemeStore & { kept: Map<string, string> } => {
+const memory = (): KeyValueStore & { kept: Map<string, string> } => {
   const kept = new Map<string, string>();
   return {
     kept,
@@ -23,7 +24,7 @@ describe("theme", () => {
     expect(readTheme(store)).toBe("dark");
     store.kept.set(THEME_KEY, "sepia");
     expect(readTheme(store)).toBe("system");
-    const broken: ThemeStore = {
+    const broken: KeyValueStore = {
       read: () => {
         throw new Error("no storage");
       },

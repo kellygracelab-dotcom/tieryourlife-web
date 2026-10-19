@@ -43,6 +43,10 @@ function bodyOf(text: string): ErrorBody {
 
 const stringOrNull = (value: unknown): string | null => (typeof value === "string" ? value : null);
 
+/** What any rejection means to a page: an API's own refusal, or nothing it can name. */
+export const errorOf = (reason: unknown): ApiError =>
+  reason instanceof ApiFailure ? reason.error : { kind: "unknown", status: 0 };
+
 export function parseApiError(status: number, text: string): ApiError {
   const body = bodyOf(text);
   const code = stringOrNull(body.code);

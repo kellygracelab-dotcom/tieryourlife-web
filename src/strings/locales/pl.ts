@@ -9,11 +9,11 @@ import type { Translation } from "../index";
 const pl: Translation = {
   tagline: "Wersja webowa",
   nav: {
+    site: "Witryna",
     signIn: "Zaloguj się",
     signOut: "Wyloguj się",
     account: "Twoje konto",
     you: "Ty",
-    yourRankings: "Twoje rankingi",
     myLists: "Moje listy",
     makeList: "Utwórz listę",
     search: "Szukaj list",
@@ -496,25 +496,15 @@ const pl: Translation = {
     failedTitle: "Nie udało się otworzyć tego rankingu",
   },
   me: {
-    title: "Twoje rankingi",
-    empty: "Rankingi, które zachowasz, pojawią się tutaj.",
     signInFirst:
       "Zaloguj się, aby zobaczyć zachowane rankingi. To, co masz ukończone na tym urządzeniu, idzie razem z tobą.",
     placedOf: "Umieszczono {placed} z {total}",
-    failed: "Nie udało się wczytać twoich rankingów.",
     tryAgain: "Spróbuj ponownie",
     more: { other: "Pokazujemy tylko najnowsze: {n}." },
     edit: "Edytuj",
-    fromPhone: "Listy opublikowane z aplikacji są w Moich listach.",
     browse: "Przeglądaj listy",
     tabs: "Twoje konto",
-    kept: { other: "Na tym koncie: {n}" },
     lists: "Moje listy",
-    signInForLists: "Zaloguj się, aby zobaczyć listy opublikowane z aplikacji.",
-    published: { other: "Opublikowano z aplikacji: {n}" },
-    listsEmpty: "Nic jeszcze nie opublikowano.",
-    listsHow:
-      "W aplikacji otwórz listę, dodaj karty, ustaw poziomy i dotknij Opublikuj. Pojawi się tutaj na tym samym koncie Google.",
     listsFailed: "Nie udało się wczytać twoich list.",
     remove: "Cofnij publikację",
     removeAsk:

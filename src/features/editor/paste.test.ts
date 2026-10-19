@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CatalogueItem } from "../../api/catalogue";
+import type { CatalogueItem } from "../../api/types";
 import {
   cardsFor,
   PASTE_AT_ONCE,

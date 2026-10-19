@@ -68,3 +68,12 @@ export interface FeedPage {
   nextCursor: string | null;
   followingNobody?: boolean;
 }
+
+/** One thing the catalogue knows: enough to make a card from. */
+export interface CatalogueItem {
+  id: string;
+  title: string;
+  /** The year, or for a person what they are known for: names alone are a guess. */
+  subtitle: string | null;
+  imageUrl: string | null;
+}

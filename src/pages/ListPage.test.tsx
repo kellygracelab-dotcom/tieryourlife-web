@@ -6,9 +6,9 @@ import { ApiFailure, type ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
 import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
-import { memoryStore } from "../features/board/draft";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
+import { memoryStore } from "../lib/storage";
 
 const mocks = vi.hoisted(() => ({
   loadList: vi.fn<(id: string) => Promise<PublishedList>>(),
@@ -16,21 +16,16 @@ const mocks = vi.hoisted(() => ({
   republish: vi.fn(),
   unpublish: vi.fn<(id: string) => Promise<void>>(),
 }));
-vi.mock("../lib/api", () => ({
-  followState: vi.fn(() => new Promise(() => undefined)),
+vi.mock("../lib/api", async () => ({
+  ...(await import("../test/apiMock")).apiStubs(),
   followAuthor: vi.fn(),
   unfollowAuthor: vi.fn(),
-  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
-  loadReports: vi.fn(() => new Promise(() => undefined)),
   report: mocks.report,
   unpublish: mocks.unpublish,
   republish: mocks.republish,
   findInCatalogue: vi.fn(async () => []),
-  loadMyLists: vi.fn(() => new Promise(() => undefined)),
-  loadMyRankings: vi.fn(() => new Promise(() => undefined)),
   removeRanking: vi.fn(),
   rearrangeRanking: vi.fn(),
-  loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: mocks.loadList,
   keepRanking: vi.fn(),
   noteTake: vi.fn(),

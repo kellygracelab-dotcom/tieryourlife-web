@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { strings } from "../strings";
-import "./Placeholders.css";
+import "./NotFoundPage.css";
 
 export function NotFoundPage() {
   return (

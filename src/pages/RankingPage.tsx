@@ -1,32 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
-import type { ApiError } from "../api/errors";
 import type { Ranking } from "../api/rank";
 import type { PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
 import { arrange, poolOf } from "../features/board/arrange";
-import { localStorageStore, memoryStore, type DraftStore } from "../features/board/draft";
 import { BoardFrameContext, type BoardFrame } from "../features/board/boardFrame";
 import type { Dock } from "../features/board/dock";
 import { RankingBoard, type EditMode } from "../features/board/RankingBoard";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { readKept } from "../features/ranking/kept";
 import { downloadShare, type Share } from "../features/ranking/shareImage";
-import { useRanking, type LoadRanking } from "../features/ranking/useRanking";
-import { rearrangeRanking } from "../lib/api";
+import { loadRanking, rearrangeRanking } from "../lib/api";
+import { type KeyValueStore, localStorageStore, memoryStore } from "../lib/storage";
+import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
-import { Skeleton } from "../ui/Skeleton";
+import { BoardPageLoading, BoardPageTrouble } from "./BoardPageStates";
 import "./ListPage.css";
 
 export type Rearrange = (code: string, rows: readonly (readonly number[])[]) => Promise<unknown>;
 
 interface RankingPageProps {
   load?: LoadRanking;
-  store?: DraftStore;
+  store?: KeyValueStore;
   rearrange?: Rearrange;
   share?: Share;
   copy?: (text: string) => Promise<void>;
@@ -39,50 +38,6 @@ const COPIED_MS = 2000;
 
 /** How long "Saved" stays on the page. */
 export const SAVED_NOTE_MS = 6000;
-
-function Loading() {
-  return (
-    <div className="list-page" aria-busy="true">
-      <Skeleton height="28px" width="60%" />
-      <Skeleton height="18px" width="40%" />
-      <Skeleton height="106px" className="list-page__row" />
-      <Skeleton height="106px" className="list-page__row" />
-      <p className="list-page__status">{strings.ranking.opening}</p>
-    </div>
-  );
-}
-
-function Trouble({ error, retry }: { error: ApiError; retry: () => void }) {
-  if (error.kind === "notFound") {
-    return (
-      <section className="list-page list-page--trouble">
-        <h1>{strings.ranking.unavailableTitle}</h1>
-        <p>{strings.ranking.unavailableBody}</p>
-        <Button variant="filled" href="/">
-          {strings.list.home}
-        </Button>
-      </section>
-    );
-  }
-  if (error.kind === "appUnverified") {
-    return (
-      <section className="list-page list-page--trouble">
-        <h1>{strings.list.unverifiedTitle}</h1>
-        <p>{strings.list.unverifiedBody}</p>
-      </section>
-    );
-  }
-  const offline = error.kind === "offline";
-  return (
-    <section className="list-page list-page--trouble">
-      <h1>{offline ? strings.list.offlineTitle : strings.ranking.failedTitle}</h1>
-      <p>{offline ? strings.list.offlineBody : strings.list.failedBody}</p>
-      <Button variant="filled" icon="refresh" onClick={retry}>
-        {strings.list.tryAgain}
-      </Button>
-    </section>
-  );
-}
 
 type View = "visitor" | "author";
 
@@ -111,7 +66,7 @@ interface BodyProps {
   editing: boolean;
   onEdit: () => void;
   edit: EditMode;
-  store: DraftStore;
+  store: KeyValueStore;
   savedNote: boolean;
   share: Share;
   copy: (text: string) => Promise<void>;
@@ -327,8 +282,10 @@ function Body({
   );
 }
 
+export type LoadRanking = (code: string, asAccount?: boolean) => Promise<Ranking>;
+
 export function RankingPage({
-  load,
+  load = loadRanking,
   store = localStorageStore,
   rearrange = rearrangeRanking,
   share = downloadShare,
@@ -338,7 +295,9 @@ export function RankingPage({
   const [params, setParams] = useSearchParams();
   const { account } = useSession();
   const asAccount = account?.kind === "signedIn";
-  const { state, retry } = useRanking(code, load, asAccount);
+  // Loads again once an account is here, since only then can the answer say "yours".
+  const loader = useCallback(() => load(code, asAccount), [load, code, asAccount]);
+  const { state, retry } = useResource(asAccount ? `${code}@account` : code, loader);
   // What the owner saved here, until the page is loaded afresh.
   const [rows, setRows] = useState<number[][] | null>(null);
   // null until the person chooses; before that `?edit` in the address decides.
@@ -375,9 +334,10 @@ export function RankingPage({
     [rearrange, code, leaveEditing],
   );
 
-  if (state.status === "loading") return <Loading />;
-  if (state.status === "error") return <Trouble error={state.error} retry={retry} />;
-  if (ranking === null) return <Loading />;
+  if (state.status === "error") {
+    return <BoardPageTrouble error={state.error} retry={retry} words={strings.ranking} />;
+  }
+  if (ranking === null) return <BoardPageLoading note={strings.ranking.opening} rows={2} />;
 
   const shown = rows === null ? ranking : { ...ranking, rows };
   const mine = readKept(store, ranking.listId)?.code === ranking.code;

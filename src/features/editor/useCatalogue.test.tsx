@@ -1,6 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { CatalogueItem } from "../../api/catalogue";
+import type { CatalogueItem } from "../../api/types";
 import { LOOKUP_DEBOUNCE_MS, useCatalogue, type Lookup } from "./useCatalogue";
 
 vi.mock("../../lib/api", () => ({ findInCatalogue: vi.fn() }));

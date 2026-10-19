@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { claimKeptRankings } from "../features/ranking/claim";
 import { currentAccount, subscribeToAccount, type Account } from "../lib/account";
+import { carryGuest } from "../lib/api";
 import { signOutToGuest } from "../lib/firebase";
-import { completeSignIn, signInWithGoogle, type SignInOutcome } from "../lib/signIn";
+import { isInAppBrowser } from "../lib/inAppBrowser";
+import {
+  completeSignIn,
+  sessionStash,
+  signInWithGoogle,
+  type SignInDeps,
+  type SignInOutcome,
+} from "../lib/signIn";
+import { localStorageStore } from "../lib/storage";
 import { SessionContext } from "./session";
 
 interface SessionProviderProps {
@@ -13,8 +23,17 @@ interface SessionProviderProps {
   current?: () => Account;
 }
 
-const defaultSignIn = () => signInWithGoogle();
-const defaultComplete = () => completeSignIn();
+// What signing in touches beyond Firebase: the guest's credits, the rankings
+// this device finished, the redirect's stash. Gathered here, where the app is
+// put together, so lib/ knows no feature.
+const signInDeps: SignInDeps = {
+  carry: carryGuest,
+  keep: (uid) => claimKeptRankings(localStorageStore, uid),
+  stash: sessionStash,
+  inApp: () => isInAppBrowser(navigator.userAgent),
+};
+const defaultSignIn = () => signInWithGoogle(signInDeps);
+const defaultComplete = () => completeSignIn(signInDeps);
 
 export function SessionProvider({
   children,

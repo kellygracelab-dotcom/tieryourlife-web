@@ -9,11 +9,11 @@ import type { Translation } from "../index";
 const ptBR: Translation = {
   tagline: "Versão web",
   nav: {
+    site: "Site",
     signIn: "Entrar",
     signOut: "Sair",
     account: "Sua conta",
     you: "Você",
-    yourRankings: "Suas classificações",
     myLists: "Minhas listas",
     makeList: "Criar uma lista",
     search: "Pesquisar listas",
@@ -462,25 +462,15 @@ const ptBR: Translation = {
     failedTitle: "Não foi possível abrir esta classificação",
   },
   me: {
-    title: "Suas classificações",
-    empty: "As classificações que você guardar aparecem aqui.",
     signInFirst:
       "Entre para ver as classificações que você guarda. O que você terminou neste aparelho vem junto.",
     placedOf: "{placed} de {total} colocados",
-    failed: "Não foi possível carregar suas classificações.",
     tryAgain: "Tentar novamente",
     more: { one: "Só a mais recente é mostrada.", other: "Só as {n} mais recentes são mostradas." },
     edit: "Editar",
-    fromPhone: "As listas que você publicou pelo app estão em Minhas listas.",
     browse: "Explorar listas",
     tabs: "Sua conta",
-    kept: { one: "{n} guardada nesta conta", other: "{n} guardadas nesta conta" },
     lists: "Minhas listas",
-    signInForLists: "Entre para ver as listas que você publicou pelo app.",
-    published: { one: "{n} publicada pelo app", other: "{n} publicadas pelo app" },
-    listsEmpty: "Nada publicado ainda.",
-    listsHow:
-      "No app, abra uma lista, adicione cards, ajuste os níveis e toque em Publicar. Ela aparece aqui com a mesma conta do Google.",
     listsFailed: "Não foi possível carregar suas listas.",
     remove: "Despublicar",
     removeAsk:

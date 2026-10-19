@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PublishedList } from "../../api/types";
 import { SessionContext, type Session } from "../../app/session";
 import type { SignInOutcome } from "../../lib/signIn";
-import type { DraftStore } from "./draft";
+import type { KeyValueStore } from "../../lib/storage";
 import { RankingBoard } from "./RankingBoard";
 
 vi.mock("../../lib/api", () => ({ keepRanking: vi.fn(), noteTake: vi.fn() }));
@@ -27,7 +27,7 @@ const list: PublishedList = {
   items: [{ title: "Ex Machina", imageUrl: null, tierIndex: null }],
 };
 
-function memoryStore(): DraftStore {
+function memoryStore(): KeyValueStore {
   const data = new Map<string, string>();
   return {
     read: (key) => data.get(key) ?? null,

@@ -2,14 +2,12 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
-vi.mock("./lib/api", () => ({
+vi.mock("./lib/api", async () => ({
+  ...(await import("./test/apiMock")).apiStubs(),
+  carryGuest: vi.fn(),
   report: vi.fn(),
-  loadReports: vi.fn(() => new Promise(() => undefined)),
-  followState: vi.fn(() => new Promise(() => undefined)),
   followAuthor: vi.fn(),
   unfollowAuthor: vi.fn(),
-  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
-  loadFeed: vi.fn(() => new Promise(() => undefined)),
   loadList: vi.fn(),
   loadRanking: vi.fn(),
   keepRanking: vi.fn(),
@@ -21,6 +19,7 @@ vi.mock("./lib/account", () => ({
 }));
 vi.mock("./lib/firebase", () => ({ signOutToGuest: vi.fn() }));
 vi.mock("./lib/signIn", () => ({
+  sessionStash: { take: vi.fn(), put: vi.fn() },
   signInWithGoogle: vi.fn(),
   completeSignIn: vi.fn(async () => null),
 }));

@@ -1,3 +1,4 @@
+import type { KeyValueStore } from "./lib/storage";
 /**
  * Starting the site, for the day a part of it does not arrive.
  *
@@ -11,18 +12,12 @@
 
 export const RETRY_KEY = "tyl:boot-retry";
 
-export interface BootStore {
-  read(key: string): string | null;
-  write(key: string, value: string): void;
-  remove(key: string): void;
-}
-
 export interface BootDeps {
   /** Fetches everything the first screen needs and hands back the way to draw it. */
   load: () => Promise<{ mount: () => void }>;
   reload: () => void;
   /** Lives as long as the tab: the reload must remember it has been tried. */
-  store: BootStore;
+  store: KeyValueStore;
   showFailure: () => void;
 }
 
@@ -30,7 +25,7 @@ export type BootOutcome = "started" | "reloading" | "failed";
 
 // A store that refuses (a private window) only means the reload is not
 // remembered, and then there must be no reload at all, or it would never end.
-const alreadyTried = (store: BootStore): boolean | null => {
+const alreadyTried = (store: KeyValueStore): boolean | null => {
   try {
     return store.read(RETRY_KEY) !== null;
   } catch {

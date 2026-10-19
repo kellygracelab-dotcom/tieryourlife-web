@@ -1,131 +1,106 @@
-import { eraseAccount, refreshAuthor } from "../api/account";
+import * as account from "../api/account";
+import type { AdoptedGuest } from "../api/account";
+import { searchEverywhere } from "../api/catalogue";
 import { createApiClient } from "../api/client";
-import {
-  followAuthor as followAuthorOf,
-  getFollowState,
-  getSuggestedAuthors,
-  reportList,
-  unfollowAuthor as unfollowAuthorOf,
-  type FollowState,
-  type ReportRequest,
-  type SuggestedAuthor,
-} from "../api/community";
-import {
-  dismissReports,
-  getReports,
-  takeDown,
-  type BanLength,
-  type QueuedList,
-} from "../api/moderation";
-import { adoptGuest, type AdoptedGuest } from "../api/guest";
-import { searchEverywhere, type CatalogueItem } from "../api/catalogue";
-import {
-  getFeed,
-  getList,
-  getMyLists,
-  publishList,
-  recordTake,
-  republishList,
-  unpublishList,
-  type PublishRequest,
-} from "../api/lists";
-import {
-  claimRanking,
-  deleteRanking,
-  getMyRankings,
-  getRanking,
-  saveRanking,
-  updateRanking,
-  type MyRankings,
-  type Ranking,
-  type SavedRanking,
-} from "../api/rank";
-import type { FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
+import * as community from "../api/community";
+import type { FollowState, ReportRequest, SuggestedAuthor } from "../api/community";
+import * as lists from "../api/lists";
+import type { PublishRequest } from "../api/lists";
+import * as moderation from "../api/moderation";
+import type { BanLength, QueuedList } from "../api/moderation";
+import * as rank from "../api/rank";
+import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
+import type { CatalogueItem, FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
 
+/**
+ * Every call the pages make, bound to the client that carries this browser's
+ * tokens. Each operation has one name, the same here and in api/; the few
+ * that add something of their own say what.
+ */
 export const api = createApiClient(tokenProviders);
+
+type Rows = readonly (readonly number[])[];
 
 // What the page function already put into the HTML needs no request, and
 // therefore no App Check and no guest sign-in until Finish.
 export const loadList = (id: string): Promise<PublishedList> => {
   const preloaded = preloadedList(id);
-  return preloaded === null ? getList(api, id) : Promise.resolve(preloaded);
+  return preloaded === null ? lists.loadList(api, id) : Promise.resolve(preloaded);
 };
 
-export const loadFeed = (query: FeedQuery): Promise<FeedPage> => getFeed(api, query);
+export const loadFeed = (query: FeedQuery): Promise<FeedPage> => lists.loadFeed(api, query);
 
 // An account asks the network even when the page carries the ranking: only
 // the server can say whether the ranking is theirs.
 export const loadRanking = (code: string, asAccount = false): Promise<Ranking> => {
   const preloaded = asAccount ? null : preloadedRanking(code);
-  return preloaded === null ? getRanking(api, code, asAccount) : Promise.resolve(preloaded);
+  return preloaded === null ? rank.loadRanking(api, code, asAccount) : Promise.resolve(preloaded);
 };
 
-export const rearrangeRanking = (
-  code: string,
-  rows: readonly (readonly number[])[],
-): Promise<{ code: string }> => updateRanking(api, code, rows);
+export const rearrangeRanking = (code: string, rows: Rows): Promise<{ code: string }> =>
+  rank.rearrangeRanking(api, code, rows);
 
-export const keepRanking = (
-  listId: string,
-  rows: readonly (readonly number[])[],
-): Promise<SavedRanking> => saveRanking(api, listId, rows);
+export const keepRanking = (listId: string, rows: Rows): Promise<SavedRanking> =>
+  rank.keepRanking(api, listId, rows);
 
 export const carryGuest = (guestToken: string): Promise<AdoptedGuest> =>
-  adoptGuest(api, guestToken);
+  account.carryGuest(api, guestToken);
 
 export const claimKept = (code: string, claimToken: string): Promise<{ code: string }> =>
-  claimRanking(api, code, claimToken);
+  rank.claimKept(api, code, claimToken);
 
-export const loadMyRankings = (): Promise<MyRankings> => getMyRankings(api);
+export const loadMyRankings = (): Promise<MyRankings> => rank.loadMyRankings(api);
 
-export const removeRanking = (code: string): Promise<void> => deleteRanking(api, code);
+export const removeRanking = (code: string): Promise<void> => rank.removeRanking(api, code);
 
-export const loadMyLists = (): Promise<{ lists: ListSummary[] }> => getMyLists(api);
+export const loadMyLists = (): Promise<{ lists: ListSummary[] }> => lists.loadMyLists(api);
 
+// The catalogue answers in the language the page is in.
 export const findInCatalogue = (query: string): Promise<CatalogueItem[]> =>
   searchEverywhere(api, query, currentLocale());
 
 export const publish = (request: PublishRequest): Promise<{ id: string }> =>
-  publishList(api, request);
+  lists.publish(api, request);
 
 export const republish = (id: string, request: PublishRequest): Promise<{ id: string }> =>
-  republishList(api, id, request);
+  lists.republish(api, id, request);
 
-export const unpublish = (id: string): Promise<void> => unpublishList(api, id);
+export const unpublish = (id: string): Promise<void> => lists.unpublish(api, id);
 
-export const refreshPublishedAuthor = (): Promise<{ updated: number }> => refreshAuthor(api);
+export const refreshPublishedAuthor = (): Promise<{ updated: number }> =>
+  account.refreshPublishedAuthor(api);
 
 export const report = (id: string, request: ReportRequest): Promise<void> =>
-  reportList(api, id, request);
+  community.report(api, id, request);
 
-export const loadReports = (): Promise<{ reports: QueuedList[] }> => getReports(api);
+export const loadReports = (): Promise<{ reports: QueuedList[] }> => moderation.loadReports(api);
 
 export const followState = (authorUid: string): Promise<FollowState> =>
-  getFollowState(api, authorUid);
+  community.followState(api, authorUid);
 
 export const followAuthor = (authorUid: string): Promise<{ following: true }> =>
-  followAuthorOf(api, authorUid);
+  community.followAuthor(api, authorUid);
 
 export const unfollowAuthor = (authorUid: string): Promise<{ following: false }> =>
-  unfollowAuthorOf(api, authorUid);
+  community.unfollowAuthor(api, authorUid);
 
 export const suggestedAuthors = (): Promise<{ authors: SuggestedAuthor[] }> =>
-  getSuggestedAuthors(api);
+  community.suggestedAuthors(api);
 
 export const takeDownList = (id: string, ban: BanLength | null): Promise<void> =>
-  takeDown(api, id, ban);
+  moderation.takeDownList(api, id, ban);
 
-export const leaveListUp = (id: string): Promise<void> => dismissReports(api, id);
+export const leaveListUp = (id: string): Promise<void> => moderation.leaveListUp(api, id);
 
-export const eraseMyAccount = (): Promise<void> => eraseAccount(api);
+export const eraseMyAccount = (): Promise<void> => account.eraseMyAccount(api);
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.
 export const noteTake = (listId: string): Promise<void> =>
-  recordTake(api, listId).then(
+  lists.recordTake(api, listId).then(
     () => undefined,
     () => undefined,
   );

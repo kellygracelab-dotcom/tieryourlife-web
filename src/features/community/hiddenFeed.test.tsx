@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { ListSummary } from "../../api/types";
-import { memoryStore } from "../board/draft";
+import { memoryStore } from "../../lib/storage";
 import { FeedGrid } from "../feed/FeedGrid";
 import { HIDDEN_KEY } from "./hidden";
 import { useHidden, useHiddenStoreForTests } from "./useHidden";

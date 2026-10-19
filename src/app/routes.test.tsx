@@ -5,21 +5,16 @@ import { describe, expect, it, vi } from "vitest";
 import { PLAY_URL } from "../lib/links";
 import { routes } from "./routes";
 
-vi.mock("../lib/api", () => ({
-  followState: vi.fn(() => new Promise(() => undefined)),
+vi.mock("../lib/api", async () => ({
+  ...(await import("../test/apiMock")).apiStubs(),
   followAuthor: vi.fn(),
   unfollowAuthor: vi.fn(),
-  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
-  loadReports: vi.fn(() => new Promise(() => undefined)),
   report: vi.fn(),
   loadMyLists: vi.fn(),
   unpublish: vi.fn(),
   rearrangeRanking: vi.fn(),
   loadMyRankings: vi.fn(),
   removeRanking: vi.fn(),
-  loadFeed: vi.fn(() => new Promise(() => undefined)),
-  loadList: vi.fn(() => new Promise(() => undefined)),
-  loadRanking: vi.fn(() => new Promise(() => undefined)),
   keepRanking: vi.fn(),
   noteTake: vi.fn(),
 }));

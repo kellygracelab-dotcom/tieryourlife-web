@@ -6,12 +6,10 @@ import type { FeedPage, FeedQuery, ListSummary } from "../api/types";
 import { routes } from "../app/routes";
 
 const mocks = vi.hoisted(() => ({ loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>() }));
-vi.mock("../lib/api", () => ({
-  followState: vi.fn(() => new Promise(() => undefined)),
+vi.mock("../lib/api", async () => ({
+  ...(await import("../test/apiMock")).apiStubs(),
   followAuthor: vi.fn(),
   unfollowAuthor: vi.fn(),
-  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
-  loadReports: vi.fn(() => new Promise(() => undefined)),
   report: vi.fn(),
   loadMyLists: vi.fn(),
   rearrangeRanking: vi.fn(),

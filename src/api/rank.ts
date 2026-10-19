@@ -28,7 +28,7 @@ export interface SavedRanking {
   claimToken: string;
 }
 
-export function saveRanking(
+export function keepRanking(
   client: ApiClient,
   listId: string,
   rows: readonly (readonly number[])[],
@@ -39,7 +39,7 @@ export function saveRanking(
 }
 
 /** Read as an account when there is one, so the answer can say whether it is yours. */
-export function getRanking(client: ApiClient, code: string, asAccount = false): Promise<Ranking> {
+export function loadRanking(client: ApiClient, code: string, asAccount = false): Promise<Ranking> {
   return client.request<Ranking>(
     "GET",
     `/api/rank/${encodeURIComponent(code)}`,
@@ -47,7 +47,7 @@ export function getRanking(client: ApiClient, code: string, asAccount = false): 
   );
 }
 
-export function updateRanking(
+export function rearrangeRanking(
   client: ApiClient,
   code: string,
   rows: readonly (readonly number[])[],
@@ -57,7 +57,7 @@ export function updateRanking(
   });
 }
 
-export function claimRanking(
+export function claimKept(
   client: ApiClient,
   code: string,
   claimToken: string,
@@ -68,7 +68,7 @@ export function claimRanking(
 }
 
 /** Takes a kept ranking away for good; only the account that keeps it may. */
-export function deleteRanking(client: ApiClient, code: string): Promise<void> {
+export function removeRanking(client: ApiClient, code: string): Promise<void> {
   return client.request<void>("DELETE", `/api/rank/${encodeURIComponent(code)}`);
 }
 
@@ -91,6 +91,6 @@ export interface MyRankings {
   more: boolean;
 }
 
-export function getMyRankings(client: ApiClient): Promise<MyRankings> {
+export function loadMyRankings(client: ApiClient): Promise<MyRankings> {
   return client.request<MyRankings>("GET", "/api/me/rankings");
 }

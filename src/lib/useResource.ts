@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiFailure, type ApiError } from "../../api/errors";
+import { errorOf, type ApiError } from "../api/errors";
 
 export type ResourceState<T> =
   { status: "loading" } | { status: "ready"; value: T } | { status: "error"; error: ApiError };
-
-export const errorOf = (reason: unknown): ApiError =>
-  reason instanceof ApiFailure ? reason.error : { kind: "unknown", status: 0 };
 
 const LOADING = { status: "loading" } as const;
 

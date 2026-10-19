@@ -13,7 +13,7 @@ import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
-import { NotFoundPage } from "./Placeholders";
+import { NotFoundPage } from "./NotFoundPage";
 import "./ProfilePage.css";
 
 /** What a link to a profile may carry along, so the head is drawn before any answer. */

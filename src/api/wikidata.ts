@@ -1,4 +1,4 @@
-import type { CatalogueItem } from "./catalogue";
+import type { CatalogueItem } from "./types";
 
 /** What the search needs of fetch; a test hands in its own. */
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;

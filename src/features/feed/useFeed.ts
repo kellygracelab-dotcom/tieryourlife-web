@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ApiError } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
 import { loadFeed } from "../../lib/api";
-import { errorOf } from "../list/useResource";
+import { errorOf } from "../../api/errors";
 
 export type FeedState =
   | { status: "loading" }

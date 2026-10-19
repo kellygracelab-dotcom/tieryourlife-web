@@ -21,6 +21,9 @@ describe("strings", () => {
   it("fills named holes and leaves unknown ones visible", () => {
     expect(fill("by {name}", { name: "danylo" })).toBe("by danylo");
     expect(fill("{a} and {b}", { a: 1 })).toBe("1 and {b}");
+    // Numbers in the page's own way of writing them, strings as they are.
+    expect(fill("{n} of {total}", { n: 1234, total: 5000 })).toBe("1,234 of 5,000");
+    expect(fill("keys {keys}", { keys: "1–9" })).toBe("keys 1–9");
   });
 
   it("picks the plural form and groups thousands", () => {

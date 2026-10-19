@@ -4,7 +4,6 @@ import type { ApiError } from "../api/errors";
 import type { Ranking } from "../api/rank";
 import { CATEGORIES, type PublishedList } from "../api/types";
 import { useSession, type Session } from "../app/session";
-import { localStorageStore, type DraftStore } from "../features/board/draft";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { CardsEditor, type Upload } from "../features/editor/CardsEditor";
 import { focusProblem } from "../features/editor/focusProblem";
@@ -33,7 +32,8 @@ import { bodyForRepublish, type CopyBack } from "../features/editor/republish";
 import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { failureText } from "../features/editor/failureText";
-import { errorOf, useResource } from "../features/list/useResource";
+import { errorOf } from "../api/errors";
+import { useResource } from "../lib/useResource";
 import {
   loadList,
   loadRanking,
@@ -42,6 +42,7 @@ import {
 } from "../lib/api";
 import { copyPublishedBack, discardPictures, PictureRefused, uploadPicture } from "../lib/pictures";
 import type { SignInOutcome } from "../lib/signIn";
+import { type KeyValueStore, localStorageStore } from "../lib/storage";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
@@ -57,7 +58,7 @@ export type LoadKept = (code: string) => Promise<Ranking>;
 type Discard = (pictureIds: readonly string[]) => Promise<void>;
 
 interface NewListPageProps {
-  store?: DraftStore;
+  store?: KeyValueStore;
   lookup?: Lookup;
   publish?: Publish;
   republish?: Republish;
@@ -84,7 +85,7 @@ const PROBLEM_TEXT: Record<Problem, string> = {
 
 interface EditorProps {
   mode: Mode;
-  store: DraftStore;
+  store: KeyValueStore;
   /** Where this editor keeps its draft: the new list and every edit have their own. */
   draftKey: string;
   /** What the editor holds when nothing is kept under that key. */
@@ -102,7 +103,7 @@ interface EditorProps {
 // A suggested title fills an empty editor; a draft with anything in it is
 // somebody's work and stays as it is.
 const openingDraft = (
-  store: DraftStore,
+  store: KeyValueStore,
   draftKey: string,
   opening: () => Draft,
   suggestedTitle: string | null,
@@ -333,7 +334,7 @@ interface EditListProps {
   id: string;
   account: Session["account"];
   signIn: Session["signIn"];
-  store: DraftStore;
+  store: KeyValueStore;
   lookup: Lookup | undefined;
   load: LoadList;
   republish: Republish;
@@ -359,6 +360,47 @@ function EditNotice({
   );
 }
 
+/** What the editor shows while a list it opens from is on its way, or when it could not come. */
+function Opening({
+  title,
+  state,
+  retry,
+}: {
+  title?: string;
+  state: { status: "loading" } | { status: "error"; error: ApiError };
+  retry: () => void;
+}) {
+  if (state.status === "loading") {
+    return (
+      <EditNotice title={title}>
+        <div aria-busy="true">
+          <Skeleton height="20px" width="40%" />
+        </div>
+        <p className="editor__hint">{strings.new.openingList}</p>
+      </EditNotice>
+    );
+  }
+  const { error } = state;
+  return (
+    <EditNotice title={title}>
+      <p className="editor__failed" role="alert">
+        {error.kind === "notFound"
+          ? strings.new.listGone
+          : error.kind === "offline"
+            ? strings.new.failedOffline
+            : strings.new.listFailed}
+      </p>
+      {error.kind !== "notFound" && (
+        <div>
+          <Button variant="filled" icon="refresh" onClick={retry}>
+            {strings.new.tryAgain}
+          </Button>
+        </div>
+      )}
+    </EditNotice>
+  );
+}
+
 function EditLoaded({
   id,
   uid,
@@ -373,37 +415,7 @@ function EditLoaded({
 }: Omit<EditListProps, "account"> & { uid: string }) {
   const { state, retry } = useResource(id, load);
 
-  if (state.status === "loading") {
-    return (
-      <EditNotice>
-        <div aria-busy="true">
-          <Skeleton height="20px" width="40%" />
-        </div>
-        <p className="editor__hint">{strings.new.openingList}</p>
-      </EditNotice>
-    );
-  }
-  if (state.status === "error") {
-    const { error } = state;
-    return (
-      <EditNotice>
-        <p className="editor__failed" role="alert">
-          {error.kind === "notFound"
-            ? strings.new.listGone
-            : error.kind === "offline"
-              ? strings.new.failedOffline
-              : strings.new.listFailed}
-        </p>
-        {error.kind !== "notFound" && (
-          <div>
-            <Button variant="filled" icon="refresh" onClick={retry}>
-              {strings.new.tryAgain}
-            </Button>
-          </div>
-        )}
-      </EditNotice>
-    );
-  }
+  if (state.status !== "ready") return <Opening state={state} retry={retry} />;
 
   const list = state.value;
   if (list.authorUid !== uid) {
@@ -472,7 +484,7 @@ function EditList({ account, signIn, ...rest }: EditListProps) {
 
 interface FromRankingProps {
   code: string;
-  store: DraftStore;
+  store: KeyValueStore;
   lookup: Lookup | undefined;
   loadKept: LoadKept;
   publish: Publish;
@@ -500,36 +512,8 @@ function FromRanking({
 }: FromRankingProps) {
   const { state, retry } = useResource(code, loadKept);
 
-  if (state.status === "loading") {
-    return (
-      <EditNotice title={strings.new.title}>
-        <div aria-busy="true">
-          <Skeleton height="20px" width="40%" />
-        </div>
-        <p className="editor__hint">{strings.new.openingList}</p>
-      </EditNotice>
-    );
-  }
-  if (state.status === "error") {
-    const { error } = state;
-    return (
-      <EditNotice title={strings.new.title}>
-        <p className="editor__failed" role="alert">
-          {error.kind === "notFound"
-            ? strings.new.listGone
-            : error.kind === "offline"
-              ? strings.new.failedOffline
-              : strings.new.listFailed}
-        </p>
-        {error.kind !== "notFound" && (
-          <div>
-            <Button variant="filled" icon="refresh" onClick={retry}>
-              {strings.new.tryAgain}
-            </Button>
-          </div>
-        )}
-      </EditNotice>
-    );
+  if (state.status !== "ready") {
+    return <Opening title={strings.new.title} state={state} retry={retry} />;
   }
 
   const ranking = state.value;

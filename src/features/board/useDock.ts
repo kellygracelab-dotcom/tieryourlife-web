@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
   bandOf,
   defaultDock,
@@ -10,7 +11,6 @@ import {
   type DockChoice,
   type DockRows,
 } from "./dock";
-import { localStorageStore, type DraftStore } from "./draft";
 
 /** From here the board has room for a column or a dock; below it the tray or the strip is the only shape. */
 export const WIDE_BOARD_FROM = 840;
@@ -24,6 +24,8 @@ export interface DockState {
   wide: boolean;
   choose: (dock: Dock) => void;
   resize: (rows: DockRows) => void;
+  /** For the 6 px strip on the dock's top edge: drag it to show one to four rows of cards. */
+  startResize: (event: ReactPointerEvent<HTMLElement>) => void;
 }
 
 const sizeOf = () => ({ width: window.innerWidth, height: window.innerHeight });
@@ -33,7 +35,7 @@ const sizeOf = () => ({ width: window.innerWidth, height: window.innerHeight });
  * window are not the same place — with the window's default where nothing
  * was chosen: under the board only on a wide, tall window.
  */
-export function useDock(store: DraftStore = localStorageStore): DockState {
+export function useDock(store: KeyValueStore = localStorageStore): DockState {
   const [size, setSize] = useState(sizeOf);
   useEffect(() => {
     const onResize = () => setSize(sizeOf());
@@ -64,12 +66,39 @@ export function useDock(store: DraftStore = localStorageStore): DockState {
     [keep, choice.dock],
   );
 
+  // A hundred pixels of drag is a row; never more rows than the window has room for.
+  const shown = Math.min(choice.rows, rowsThatFit(size.height)) as DockRows;
+  const startResize = (event: ReactPointerEvent<HTMLElement>) => {
+    const grip = event.currentTarget;
+    const startY = event.clientY;
+    let last = shown;
+    grip.setPointerCapture(event.pointerId);
+    const onMove = (move: PointerEvent) => {
+      const next = Math.min(
+        rowsThatFit(window.innerHeight),
+        Math.max(1, shown + Math.round((startY - move.clientY) / 100)),
+      ) as DockRows;
+      if (next === last) return;
+      last = next;
+      resize(next);
+    };
+    const onEnd = () => {
+      grip.removeEventListener("pointermove", onMove);
+      grip.removeEventListener("pointerup", onEnd);
+      grip.removeEventListener("pointercancel", onEnd);
+    };
+    grip.addEventListener("pointermove", onMove);
+    grip.addEventListener("pointerup", onEnd);
+    grip.addEventListener("pointercancel", onEnd);
+  };
+
   return {
     dock: choice.dock ?? defaultDock(size.width, size.height),
     // The choice is kept as made; a shorter window shows what it can.
-    rows: Math.min(choice.rows, rowsThatFit(size.height)) as DockRows,
+    rows: shown,
     wide: size.width >= WIDE_BOARD_FROM,
     choose,
     resize,
+    startResize,
   };
 }

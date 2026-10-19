@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { boot, drawFailure, RETRY_KEY, type BootStore } from "./boot";
+import { boot, drawFailure, RETRY_KEY } from "./boot";
+import type { KeyValueStore } from "./lib/storage";
 
-function memoryStore(): BootStore & { data: Map<string, string> } {
+function memoryStore(): KeyValueStore & { data: Map<string, string> } {
   const data = new Map<string, string>();
   return {
     data,
@@ -11,7 +12,7 @@ function memoryStore(): BootStore & { data: Map<string, string> } {
   };
 }
 
-const refusing: BootStore = {
+const refusing: KeyValueStore = {
   read: () => {
     throw new Error("no storage");
   },

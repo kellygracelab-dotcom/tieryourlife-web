@@ -1,5 +1,4 @@
-import type { CatalogueItem } from "../../api/catalogue";
-import type { Category } from "../../api/types";
+import type { CatalogueItem, Category } from "../../api/types";
 
 /** A name somebody pasted, and what they put in brackets after it, if anything. */
 export interface Wanted {

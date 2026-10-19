@@ -1,14 +1,6 @@
 import type { ApiClient } from "./client";
+import type { CatalogueItem } from "./types";
 import { searchWikidata, type Fetcher, type WikidataCandidate } from "./wikidata";
-
-/** One thing the catalogue knows: enough to make a card from. */
-export interface CatalogueItem {
-  id: string;
-  title: string;
-  /** The year, or for a person what they are known for: names alone are a guess. */
-  subtitle: string | null;
-  imageUrl: string | null;
-}
 
 const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 

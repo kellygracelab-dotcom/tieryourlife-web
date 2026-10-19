@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import { MemoryRouter } from "react-router";
 import type { PublishedList } from "../../api/types";
-import type { DraftStore } from "./draft";
+import type { KeyValueStore } from "../../lib/storage";
 import { RankingBoard } from "./RankingBoard";
 
 vi.mock("../../lib/api", () => ({ keepRanking: vi.fn(), noteTake: vi.fn() }));
@@ -33,7 +33,7 @@ const list: PublishedList = {
   ],
 };
 
-function memoryStore(): DraftStore & { data: Map<string, string> } {
+function memoryStore(): KeyValueStore & { data: Map<string, string> } {
   const data = new Map<string, string>();
   return {
     data,

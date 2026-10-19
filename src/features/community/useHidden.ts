@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react";
-import { localStorageStore } from "../board/draft";
+import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
   NOTHING_HIDDEN,
   readHidden,
@@ -11,7 +11,6 @@ import {
   type Hidden,
   type HiddenAuthor,
   type HiddenList,
-  type HiddenStore,
 } from "./hidden";
 
 /**
@@ -20,7 +19,7 @@ import {
  * hidden during this visit is also remembered, so a card can keep its place
  * with an Undo instead of vanishing; after a reload it is simply gone.
  */
-let store: HiddenStore = localStorageStore;
+let store: KeyValueStore = localStorageStore;
 let current: Hidden = readHidden(store);
 let thisVisit: readonly string[] = [];
 const listeners = new Set<() => void>();
@@ -41,7 +40,7 @@ function change(next: Hidden): void {
 }
 
 /** Tests keep their own store; the page keeps the browser's. */
-export function useHiddenStoreForTests(replacement: HiddenStore): void {
+export function useHiddenStoreForTests(replacement: KeyValueStore): void {
   store = replacement;
   current = readHidden(store);
   thisVisit = [];
