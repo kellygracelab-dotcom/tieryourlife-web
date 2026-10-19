@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import { Icon } from "./Icon";
+import type { IconName } from "./icons";
 import "./Chip.css";
 
 interface ChipProps {
   selected?: boolean;
   onClick?: () => void;
-  icon?: string;
+  icon?: IconName;
   children: ReactNode;
 }
 

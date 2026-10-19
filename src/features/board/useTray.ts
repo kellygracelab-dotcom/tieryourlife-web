@@ -45,8 +45,10 @@ export function useTray(selected: number | null, shownCount: number) {
     const stride = holder.offsetWidth + TRAY_GAP;
     setPage(Math.min(pages - 1, Math.round(Math.abs(row.scrollLeft) / (stride * TRAY_PAGE))));
   }, [pages]);
+  // Read again when the cards shown change, though the count of pages may not.
   useEffect(() => {
     readPage();
+    // oxlint-disable-next-line react/exhaustive-deps -- shownCount is the reason to read, not an input
   }, [readPage, shownCount]);
 
   return { tray, page, pages, readPage };

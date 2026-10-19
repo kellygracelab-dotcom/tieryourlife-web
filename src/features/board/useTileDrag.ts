@@ -48,10 +48,10 @@ export function useTileDrag(
     setState(next);
   }, []);
 
-  const clearHold = () => {
+  const clearHold = useCallback(() => {
     if (holdTimer.current !== null) clearTimeout(holdTimer.current);
     holdTimer.current = null;
-  };
+  }, []);
 
   const onPointerDown = useCallback(
     (item: number) => (event: ReactPointerEvent<HTMLElement>) => {
@@ -73,7 +73,7 @@ export function useTileDrag(
         }, TOUCH_HOLD_MS);
       }
     },
-    [become, hitTest],
+    [become, clearHold, hitTest],
   );
 
   // Always listening: a listener added after the press can miss the release.
@@ -114,7 +114,7 @@ export function useTileDrag(
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
     };
-  }, [become, dispatch, hitTest]);
+  }, [become, clearHold, dispatch, hitTest]);
 
   // Once a drag is on, the page must not scroll under the finger. A listener
   // that may cancel slows every scroll down, so it lives only while a card is held.
@@ -128,7 +128,7 @@ export function useTileDrag(
     return () => window.removeEventListener("touchmove", onTouchMove);
   }, [held]);
 
-  useEffect(() => clearHold, []);
+  useEffect(() => clearHold, [clearHold]);
 
   const current = useCallback(() => latest.current, []);
   const nudge = useCallback(() => {

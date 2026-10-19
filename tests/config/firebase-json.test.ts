@@ -76,6 +76,18 @@ describe("firebase.json", () => {
 });
 
 describe("where a deploy goes", () => {
+  // A file served under the wrong type is not run as a script, and a link
+  // followed to another site says where it came from, never which list.
+  it("sends two plain safety headers with every answer", () => {
+    const everywhere = hosting[0]!.headers.find((h) => h.source === "**")?.headers ?? [];
+    expect(everywhere).toEqual(
+      expect.arrayContaining([
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      ]),
+    );
+  });
+
   it("publishes the web target to the main address", () => {
     const rc = JSON.parse(readFileSync(".firebaserc", "utf8")) as {
       targets: Record<string, { hosting: Record<string, string[]> }>;

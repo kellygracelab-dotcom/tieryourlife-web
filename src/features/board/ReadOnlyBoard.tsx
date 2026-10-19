@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
 import "./board.css";
+import { sizedFor } from "../../lib/pictureSize";
 
 interface ReadOnlyBoardProps {
   label: string;
@@ -15,7 +16,7 @@ function Tile({ item }: { item: PublishedItem }) {
   return (
     <li className="tile" title={item.title}>
       {item.imageUrl !== null ? (
-        <img src={item.imageUrl} alt={item.title} loading="lazy" />
+        <img {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
       ) : (
         <span className="tile__name">{item.title}</span>
       )}

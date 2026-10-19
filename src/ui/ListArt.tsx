@@ -39,7 +39,7 @@ export function ListArt({ cover, previews, tierColors, title }: ListArtProps) {
       {tierColors.length > 0 && (
         <span className="art__bars" aria-hidden="true">
           {tierColors.slice(0, BARS_MAX).map((color, index) => (
-            <span key={`${index}-${color}`} style={{ background: color }} />
+            <span key={`${index}-${color}`} style={{ backgroundColor: color }} />
           ))}
         </span>
       )}

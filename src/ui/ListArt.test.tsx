@@ -38,7 +38,7 @@ describe("ListArt", () => {
     expect(tile).toHaveClass("art--titled");
     expect(tile.querySelector(".art__title")).toHaveTextContent("Every A24 film, ranked");
     expect(tile.querySelectorAll(".art__bars span")).toHaveLength(5);
-    expect(tile.querySelectorAll(".art__bars span")[0]).toHaveStyle({ background: "#b03a32" });
+    expect(tile.querySelectorAll(".art__bars span")[0]).toHaveStyle({ backgroundColor: "#b03a32" });
   });
 
   it("is a bare tile when a list has nothing at all, not even a title", () => {

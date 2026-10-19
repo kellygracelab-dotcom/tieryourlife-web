@@ -16,6 +16,9 @@ export const APP_ENTRY = "src/App.tsx";
 interface BuiltChunk {
   type: "chunk" | "asset";
   fileName: string;
+  isEntry?: boolean;
+  /** The chunks this one imports statically: they are needed as soon as it runs. */
+  imports?: string[];
   facadeModuleId?: string | null;
   viteMetadata?: { importedCss?: Set<string> };
 }
@@ -34,13 +37,21 @@ export function preloadTagsFor(
   );
   if (app === undefined) return [];
   const at = (fileName: string) => `${base}${fileName}`;
+  // The pages split off the app share code with it; that shared chunk is part
+  // of the app's first run, so it comes in the same breath. The entry itself
+  // is already a script on the page.
+  const shared = (app.imports ?? [])
+    .map((fileName) => bundle[fileName])
+    .filter((chunk): chunk is BuiltChunk => chunk?.type === "chunk" && chunk.isEntry !== true);
+  const scripts = [app, ...shared];
+  const styles = new Set(scripts.flatMap((chunk) => [...(chunk.viteMetadata?.importedCss ?? [])]));
   return [
-    {
+    ...scripts.map((chunk): HtmlTagDescriptor => ({
       tag: "link",
-      attrs: { rel: "modulepreload", crossorigin: true, href: at(app.fileName) },
+      attrs: { rel: "modulepreload", crossorigin: true, href: at(chunk.fileName) },
       injectTo: "head",
-    },
-    ...[...(app.viteMetadata?.importedCss ?? [])].map((css): HtmlTagDescriptor => ({
+    })),
+    ...[...styles].map((css): HtmlTagDescriptor => ({
       tag: "link",
       attrs: { rel: "stylesheet", crossorigin: true, href: at(css) },
       injectTo: "head",

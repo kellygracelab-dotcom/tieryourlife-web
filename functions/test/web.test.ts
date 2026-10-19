@@ -136,6 +136,7 @@ function setup(who: { uid: string; isAnonymous: boolean } | null = GUEST, codes:
   const store = memoryFirestore();
   store.table("publishedLists").set(LIST_ID, LIST);
   let next = 0;
+  const forgotten: string[] = [];
   const sequence = codes.join("");
   const deps: WebDeps = {
     db: () => store.db,
@@ -151,10 +152,11 @@ function setup(who: { uid: string; isAnonymous: boolean } | null = GUEST, codes:
       return null;
     },
     viewer: async () => (who !== null && !who.isAnonymous ? who : null),
+    forgetPictures: async (code) => void forgotten.push(code),
     random: () =>
       sequence.length === 0 ? 0 : CODE_ALPHABET.indexOf(sequence[next++ % sequence.length] ?? "2"),
   };
-  return { deps, table: store.table };
+  return { deps, table: store.table, forgotten };
 }
 
 const ranking = (owner: string | null, anonymous: boolean, claimToken = "token") => ({
@@ -370,11 +372,12 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     assert.ok(table("rankings").has("abcdefgh"));
   });
 
-  it("deletes the owner's ranking for good", async () => {
-    const { deps, table } = setup(PERSON);
+  it("deletes the owner's ranking for good, with its share pictures", async () => {
+    const { deps, table, forgotten } = setup(PERSON);
     table("rankings").set("abcdefgh", ranking("person", false));
     assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 204);
     assert.equal(table("rankings").has("abcdefgh"), false);
+    assert.deepEqual(forgotten, ["abcdefgh"]);
     assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 404);
   });
 });
@@ -409,6 +412,35 @@ describe("the router", () => {
     assert.equal((await call(deps, "GET", "/api/rank/a/b/c")).status, 404);
     assert.equal((await call(deps, "POST", "/api/me/rankings")).status, 405);
     assert.equal((await call(deps, "DELETE", "/api/rank")).status, 405);
+  });
+
+  it("deletes the ranking even when its pictures cannot be taken off the shelf", async () => {
+    const { deps, table } = setup(PERSON);
+    table("rankings").set("abcdefgh", ranking("person", false));
+    const warned = console.warn;
+    console.warn = () => undefined;
+    try {
+      const shelfDown: WebDeps = {
+        ...deps,
+        forgetPictures: async () => {
+          throw new Error("bucket away");
+        },
+      };
+      assert.equal((await call(shelfDown, "DELETE", "/api/rank/abcdefgh")).status, 204);
+      assert.equal(table("rankings").has("abcdefgh"), false);
+    } finally {
+      console.warn = warned;
+    }
+  });
+
+  it("answers HEAD on a page's picture the way it answers GET", async () => {
+    const { deps } = setup();
+    // A malformed id is answered without the database: the picture's own 404, not the router's.
+    const head = await call(deps, "HEAD", "/og/l/bad!id.png");
+    const get = await call(deps, "GET", "/og/l/bad!id.png");
+    assert.equal(head.status, 404);
+    assert.deepEqual(head.body, get.body);
+    assert.notDeepEqual(head.body, (await call(deps, "HEAD", "/og/x/y.png")).body);
   });
 
   it("turns a failure inside a handler into one 503", async () => {

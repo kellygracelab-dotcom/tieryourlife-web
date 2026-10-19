@@ -4,9 +4,13 @@ import { boot, drawFailure } from "./boot";
 import { applyLocale, pickLocale, readLocale } from "./lib/locale";
 import { localStorageStore, sessionStorageStore } from "./lib/storage";
 import { availableLocales, currentLocale, loadStrings, strings } from "./strings";
+// Roboto from the site itself, every script it has, each fetched only when a page needs it.
+import "@fontsource/roboto/400.css";
+import "@fontsource/roboto/500.css";
 import "./index.css";
 
-const root = document.getElementById("root")!;
+const root = document.getElementById("root");
+if (root === null) throw new Error("index.html has no #root");
 const reload = () => window.location.reload();
 
 void boot({

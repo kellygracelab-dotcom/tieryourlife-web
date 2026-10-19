@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { PublishedItem } from "../../api/types";
 import type { DragState } from "./drag";
+import { sizedFor } from "../../lib/pictureSize";
 
 interface DragGhostProps {
   state: DragState;
@@ -25,7 +26,7 @@ export function DragGhost({ state, items }: DragGhostProps) {
   return (
     <div className="ghost" style={style} aria-hidden="true">
       {card.imageUrl !== null ? (
-        <img src={card.imageUrl} alt="" />
+        <img {...sizedFor(card.imageUrl, 64)} alt="" />
       ) : (
         <span className="tile__name">{card.title}</span>
       )}

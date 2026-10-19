@@ -10,7 +10,7 @@ import type { Dock } from "../features/board/dock";
 import { RankingBoard, type EditMode } from "../features/board/RankingBoard";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { readKept } from "../features/ranking/kept";
-import { downloadShare, type Share } from "../features/ranking/shareImage";
+import { downloadShare, type Share } from "../features/ranking/share";
 import { loadRanking, rearrangeRanking } from "../lib/api";
 import { type KeyValueStore, localStorageStore, memoryStore } from "../lib/storage";
 import { useResource } from "../lib/useResource";

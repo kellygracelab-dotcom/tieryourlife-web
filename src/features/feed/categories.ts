@@ -1,6 +1,7 @@
+import type { IconName } from "../../ui/icons";
 import type { Category, ListSummary } from "../../api/types";
 
-export const CATEGORY_GLYPHS: Record<Category, string> = {
+export const CATEGORY_GLYPHS: Record<Category, IconName> = {
   anime: "movie_filter",
   film_tv: "theaters",
   games: "sports_esports",

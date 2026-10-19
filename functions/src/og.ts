@@ -27,7 +27,7 @@ export interface PageMeta {
 }
 
 export const categoryLabel = (category: unknown): string =>
-  (typeof category === "string" && CATEGORY_LABELS[category]) || CATEGORY_LABELS.other!;
+  (typeof category === "string" && CATEGORY_LABELS[category]) || "Other";
 
 const plural = (n: number, one: string, other: string): string => `${n} ${n === 1 ? one : other}`;
 

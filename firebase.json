@@ -16,54 +16,123 @@
       "rewrites": [
         {
           "source": "/lists{,/**}",
-          "function": { "functionId": "lists", "region": "europe-west1" }
+          "function": {
+            "functionId": "lists",
+            "region": "europe-west1"
+          }
         },
         {
           "source": "/3/search/**",
-          "function": { "functionId": "tmdb", "region": "europe-west1" }
+          "function": {
+            "functionId": "tmdb",
+            "region": "europe-west1"
+          }
         },
         {
           "source": "/adoptGuestCredits",
-          "function": { "functionId": "adoptGuestCredits", "region": "europe-west1" }
+          "function": {
+            "functionId": "adoptGuestCredits",
+            "region": "europe-west1"
+          }
         },
         {
           "source": "/boards{,/**}",
-          "function": { "functionId": "boards", "region": "europe-west1" }
+          "function": {
+            "functionId": "boards",
+            "region": "europe-west1"
+          }
         },
         {
           "source": "/api/**",
-          "function": { "functionId": "web", "region": "europe-west1" }
+          "function": {
+            "functionId": "web",
+            "region": "europe-west1"
+          }
         },
         {
           "source": "/l/**",
-          "function": { "functionId": "web", "region": "europe-west1" }
+          "function": {
+            "functionId": "web",
+            "region": "europe-west1"
+          }
         },
         {
           "source": "/r/**",
-          "function": { "functionId": "web", "region": "europe-west1" }
+          "function": {
+            "functionId": "web",
+            "region": "europe-west1"
+          }
         },
         {
           "source": "/og/**",
-          "function": { "functionId": "web", "region": "europe-west1" }
+          "function": {
+            "functionId": "web",
+            "region": "europe-west1"
+          }
         },
-        { "source": "**", "destination": "/index.html" }
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
       ],
       "headers": [
         {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            }
+          ]
+        },
+        {
           "source": "/assets/**",
-          "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
         },
         {
           "source": "/index.html",
-          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
         },
         {
           "source": "/",
-          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
         },
         {
           "source": "/@(new|search|me|c|settings|mod|u|about){,/**}",
-          "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/fonts/**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=604800"
+            }
+          ]
         }
       ]
     }

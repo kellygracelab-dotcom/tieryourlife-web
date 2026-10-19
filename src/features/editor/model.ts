@@ -5,8 +5,13 @@ import type { KeyValueStore } from "../../lib/storage";
 import { arrange } from "../board/arrange";
 import { strings } from "../../strings";
 
+interface TierPreset {
+  light: string;
+  dark: string;
+}
+
 /** The phone's eight pairs, light and dark, so boards look the same everywhere. */
-export const TIER_PRESETS: readonly { light: string; dark: string }[] = [
+export const TIER_PRESETS: readonly [TierPreset, ...TierPreset[]] = [
   { light: "#B03A32", dark: "#F1948C" },
   { light: "#C06A25", dark: "#E9A867" },
   { light: "#A98B1F", dark: "#D8C05A" },
@@ -200,7 +205,7 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
     }
     case "addTier": {
       if (draft.tiers.length >= LIMITS.tiers) return draft;
-      const preset = TIER_PRESETS[draft.tiers.length % TIER_PRESETS.length] ?? TIER_PRESETS[0]!;
+      const preset = TIER_PRESETS[draft.tiers.length % TIER_PRESETS.length] ?? TIER_PRESETS[0];
       return {
         ...draft,
         serial: draft.serial + 1,
@@ -267,7 +272,8 @@ function placeTier(draft: Draft, from: number, to: number): Draft {
   if (from < 0 || to < 0 || to >= draft.tiers.length || to === from) return draft;
   const tiers = [...draft.tiers];
   const [moved] = tiers.splice(from, 1);
-  tiers.splice(to, 0, moved!);
+  if (moved === undefined) return draft;
+  tiers.splice(to, 0, moved);
   // The tier's cards travel with it.
   const rows = [...draft.rows];
   const [movedRow] = rows.splice(from, 1);
@@ -338,14 +344,17 @@ export function publishBodyOf(draft: Draft): PublishBody | null {
     // sends, and what "Author's version" shows. An own picture goes by id: the
     // backend makes the feed's copy, and the preview address would only point
     // back into the private folder.
-    items: placementsOf(draft).map(({ position, tier }) => {
-      const item = draft.items[position]!;
-      return {
-        title: item.title,
-        imageUrl: item.pictureId === null ? item.imageUrl : null,
-        pictureId: item.pictureId,
-        tierIndex: tier,
-      };
+    items: placementsOf(draft).flatMap(({ position, tier }) => {
+      const item = draft.items[position];
+      if (item === undefined) return [];
+      return [
+        {
+          title: item.title,
+          imageUrl: item.pictureId === null ? item.imageUrl : null,
+          pictureId: item.pictureId,
+          tierIndex: tier,
+        },
+      ];
     }),
   };
 }

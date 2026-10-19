@@ -154,17 +154,17 @@ describe("the dictionaries", () => {
     if (typeof over !== "object" || over === null) return [`${path}: neither text nor a group`];
     if (typeof base !== "object" || base === null) return [`${path}: not in English`];
     const english = base as Record<string, unknown>;
-    const plural = typeof english.other === "string" && typeof english.one === "string";
+    const isPlural = typeof english.other === "string" && typeof english.one === "string";
     return Object.entries(over).flatMap(([key, value]) => {
       // A plural form English lacks (few, many…) is compared with English's `other`.
-      const against = plural ? (english[key] ?? english.other) : english[key];
+      const against = isPlural ? (english[key] ?? english.other) : english[key];
       return against === undefined
         ? [`${path}.${key}: not in English`]
         : problemsOf(
             against,
             value,
             `${path}.${key}`,
-            plural && ["zero", "one", "two"].includes(key),
+            isPlural && ["zero", "one", "two"].includes(key),
           );
     });
   };

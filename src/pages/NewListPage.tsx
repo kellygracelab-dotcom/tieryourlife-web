@@ -47,6 +47,7 @@ import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
+import type { IconName } from "../ui/icons";
 import { Menu } from "../ui/Menu";
 import { Skeleton } from "../ui/Skeleton";
 import "../features/editor/editor.css";
@@ -197,13 +198,14 @@ function Editor({
 
   const editing = mode === "edit";
 
-  const status = busy
+  const problem = problems[0];
+  const status: { tone: string; icon: IconName; text: string } = busy
     ? { tone: "busy", icon: "cloud_upload", text: strings.new.publishing }
-    : problems.length > 0
+    : problem !== undefined
       ? {
           tone: nudging ? "nudged" : "todo",
           icon: nudging ? "error" : "edit",
-          text: PROBLEM_TEXT[problems[0]!],
+          text: PROBLEM_TEXT[problem],
         }
       : { tone: "ready", icon: "check_circle", text: strings.new.ready };
 

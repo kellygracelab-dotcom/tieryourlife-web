@@ -74,9 +74,9 @@ test.describe("moving a card along its tier", () => {
     // Playwright's touchscreen only taps; the board listens to pointer events,
     // which a held finger sends, so those are sent as the finger would.
     await page.evaluate(
-      async ({ start, end, title }) => {
+      async ({ origin, to, name }) => {
         const tile = [...document.querySelectorAll<HTMLElement>(".tier__items [data-item]")].find(
-          (element) => element.getAttribute("aria-label") === title,
+          (element) => element.getAttribute("aria-label") === name,
         );
         if (tile === undefined) throw new Error("no tile");
         const send = (target: EventTarget, type: string, at: { x: number; y: number }) =>
@@ -92,19 +92,19 @@ test.describe("moving a card along its tier", () => {
               button: 0,
             }),
           );
-        send(tile, "pointerdown", start);
+        send(tile, "pointerdown", origin);
         // Held long enough to be a drag, not a scroll.
         await new Promise((resolve) => setTimeout(resolve, 250));
         for (let step = 1; step <= 12; step++) {
           send(window, "pointermove", {
-            x: start.x + ((end.x - start.x) * step) / 12,
-            y: start.y + ((end.y - start.y) * step) / 12,
+            x: origin.x + ((to.x - origin.x) * step) / 12,
+            y: origin.y + ((to.y - origin.y) * step) / 12,
           });
           await new Promise((resolve) => requestAnimationFrame(resolve));
         }
-        send(window, "pointerup", end);
+        send(window, "pointerup", to);
       },
-      { start, end: { x, y }, title },
+      { origin: start, to: { x, y }, name: title },
     );
   };
 

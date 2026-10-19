@@ -1,5 +1,6 @@
 import { strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
+import type { IconName } from "../../ui/icons";
 import type { Dock } from "./dock";
 
 interface DockToggleProps {
@@ -9,7 +10,7 @@ interface DockToggleProps {
 
 /** Two segments, an icon each: the cards beside the board, or under it. Hidden where only the tray fits. */
 export function DockToggle({ dock, onChoose }: DockToggleProps) {
-  const segment = (value: Dock, icon: string, label: string) => (
+  const segment = (value: Dock, icon: IconName, label: string) => (
     <button
       type="button"
       className={dock === value ? "dock__seg dock__seg--on" : "dock__seg"}

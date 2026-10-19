@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import { Icon } from "./Icon";
+import type { IconName } from "./icons";
 import "./Button.css";
 
 type Variant = "filled" | "tonal" | "text";
 
 interface CommonProps {
   variant?: Variant;
-  icon?: string;
+  icon?: IconName;
   children: ReactNode;
   className?: string;
 }

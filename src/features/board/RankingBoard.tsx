@@ -20,7 +20,7 @@ import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
 import { writeKept } from "../ranking/kept";
 import { ResultBar, type FinishState } from "../ranking/ResultBar";
-import { downloadShare, type Share } from "../ranking/shareImage";
+import { downloadShare, type Share } from "../ranking/share";
 import { errorOf } from "../../api/errors";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -48,6 +48,7 @@ import { useFixedDock } from "./useFixedDock";
 import { TRAY_DOTS, useTray } from "./useTray";
 import "./board.css";
 import "./ranking.css";
+import { sizedFor } from "../../lib/pictureSize";
 
 export type Keep = (listId: string, rows: readonly (readonly number[])[]) => Promise<SavedRanking>;
 
@@ -85,6 +86,9 @@ interface RankingBoardProps {
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
 
 type PointerDownFor = (item: number) => (event: ReactPointerEvent<HTMLElement>) => void;
+
+/** The widest a tile is drawn (board.css): pictures are asked for at this size. */
+const TILE_WIDTH = 64;
 
 /** A pool longer than this gets a search box in the side column. */
 export const POOL_SEARCH_FROM = 24;
@@ -146,7 +150,7 @@ function Tile({
         onPointerDown={locked ? undefined : onPointerDown}
       >
         {card.imageUrl !== null ? (
-          <img src={card.imageUrl} alt="" loading="lazy" draggable={false} />
+          <img {...sizedFor(card.imageUrl, TILE_WIDTH)} alt="" loading="lazy" draggable={false} />
         ) : (
           <span className="tile__name">{card.title}</span>
         )}

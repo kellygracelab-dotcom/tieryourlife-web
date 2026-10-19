@@ -22,7 +22,7 @@ export function useResource<T>(key: string, load: (key: string) => Promise<T>) {
 
   useEffect(() => {
     let current = true;
-    const settle = (state: ResourceState<T>) => current && setLoaded({ key, attempt, state });
+    const settle = (next: ResourceState<T>) => current && setLoaded({ key, attempt, state: next });
     load(key).then(
       (value) => settle({ status: "ready", value }),
       (reason: unknown) => settle({ status: "error", error: errorOf(reason) }),
