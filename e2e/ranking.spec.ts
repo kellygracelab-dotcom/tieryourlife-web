@@ -52,6 +52,92 @@ test.describe("ranking a list", () => {
   });
 });
 
+// On every screen: the mouse on a desktop and in Safari, a held finger on the
+// phones. The pointer is driven on the real layout, so the place a card lands
+// is read from where the tiles actually are.
+test.describe("moving a card along its tier", () => {
+  // Exact: a name match is a substring, and "S" is in "Cards" too.
+  const row = (page: Page) => page.getByRole("list", { name: "S", exact: true });
+  // A card placed by a tap flies to its row; it is measured where it lands.
+  const settled = (page: Page) => page.waitForFunction(() => document.getAnimations().length === 0);
+  const drag = async (page: Page, hasTouch: boolean, title: string, x: number, y: number) => {
+    const from = await row(page).getByRole("button", { name: title }).boundingBox();
+    if (from === null) throw new Error("the card is not laid out");
+    const start = { x: from.x + from.width / 2, y: from.y + from.height / 2 };
+    if (!hasTouch) {
+      await page.mouse.move(start.x, start.y);
+      await page.mouse.down();
+      await page.mouse.move(x, y, { steps: 12 });
+      await page.mouse.up();
+      return;
+    }
+    // Playwright's touchscreen only taps; the board listens to pointer events,
+    // which a held finger sends, so those are sent as the finger would.
+    await page.evaluate(
+      async ({ start, end, title }) => {
+        const tile = [...document.querySelectorAll<HTMLElement>(".tier__items [data-item]")].find(
+          (element) => element.getAttribute("aria-label") === title,
+        );
+        if (tile === undefined) throw new Error("no tile");
+        const send = (target: EventTarget, type: string, at: { x: number; y: number }) =>
+          target.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              clientX: at.x,
+              clientY: at.y,
+              pointerId: 7,
+              pointerType: "touch",
+              isPrimary: true,
+              button: 0,
+            }),
+          );
+        send(tile, "pointerdown", start);
+        // Held long enough to be a drag, not a scroll.
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        for (let step = 1; step <= 12; step++) {
+          send(window, "pointermove", {
+            x: start.x + ((end.x - start.x) * step) / 12,
+            y: start.y + ((end.y - start.y) * step) / 12,
+          });
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+        send(window, "pointerup", end);
+      },
+      { start, end: { x, y }, title },
+    );
+  };
+
+  const order = (page: Page) =>
+    row(page)
+      .getByRole("button")
+      .evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute("aria-label")));
+
+  test("drag a card past its neighbours, and back to the start", async ({ page, hasTouch }) => {
+    const backend = await openList(page);
+    await card(page, "Ex Machina").click();
+    for (const title of ["Ex Machina", "The Witch", "Climax"]) {
+      await page.getByRole("button", { name: `Place ${title} in S` }).click();
+    }
+    await expect.poll(() => order(page)).toEqual(["Ex Machina", "The Witch", "Climax"]);
+    await settled(page);
+
+    // To the far side of the last card: it goes last.
+    const last = await row(page).getByRole("button", { name: "Climax" }).boundingBox();
+    if (last === null) throw new Error("the row is not laid out");
+    await drag(page, hasTouch, "Ex Machina", last.x + last.width - 3, last.y + last.height / 2);
+    await expect.poll(() => order(page)).toEqual(["The Witch", "Climax", "Ex Machina"]);
+
+    // To the near side of the first card: it goes first.
+    const first = await row(page).getByRole("button", { name: "The Witch" }).boundingBox();
+    if (first === null) throw new Error("the row is not laid out");
+    await drag(page, hasTouch, "Ex Machina", first.x + 3, first.y + first.height / 2);
+    await expect.poll(() => order(page)).toEqual(["Ex Machina", "The Witch", "Climax"]);
+    await expect(page.getByText("3 of 3 placed")).toBeVisible();
+    expect(backend.rankRequests).toHaveLength(0);
+  });
+});
+
 test.describe("ranking a list on a phone", () => {
   test.skip(({ hasTouch }) => !hasTouch, "the touch path");
 

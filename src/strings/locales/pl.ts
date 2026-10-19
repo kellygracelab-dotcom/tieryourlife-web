@@ -426,6 +426,7 @@ const pl: Translation = {
     },
     hintPick: "Wybierz kartę, potem dotknij poziomu albo naciśnij {keys}",
     hintPlace: "Dotknij poziomu, aby umieścić {name}, albo naciśnij jego numer",
+    hintMove: "← i → przesuwają {name} w rzędzie",
     hintPickTouch: "Dotknij karty, potem poziomu",
     hintPlaceTouch: "Dotknij poziomu, aby ją umieścić",
     search: "Znajdź kartę",

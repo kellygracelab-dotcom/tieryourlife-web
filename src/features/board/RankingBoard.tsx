@@ -36,6 +36,7 @@ import {
   pool,
   reduce,
   tierForKey,
+  tierOf,
   type BoardAction,
   type BoardState,
 } from "./model";
@@ -98,6 +99,8 @@ interface TileProps {
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
   /** The owner may take a card off the list; a button beside the tile, never inside it. */
   onRemove?: () => void;
+  /** Where a card dragged over this row would land, next to this one. */
+  insert?: "before" | "after";
 }
 
 function Tile({
@@ -109,6 +112,7 @@ function Tile({
   dispatch,
   onPointerDown,
   onRemove,
+  insert,
 }: TileProps) {
   const card = list.items[item];
   if (card === undefined) return null;
@@ -116,7 +120,16 @@ function Tile({
     .filter(Boolean)
     .join(" ");
   return (
-    <li className={onRemove === undefined ? undefined : "tile-holder--removable"}>
+    <li
+      className={
+        [
+          onRemove !== undefined && "tile-holder--removable",
+          insert !== undefined && `tile-holder--insert-${insert}`,
+        ]
+          .filter(Boolean)
+          .join(" ") || undefined
+      }
+    >
       <button
         type="button"
         className={classes}
@@ -335,6 +348,19 @@ export function RankingBoard({
         return;
       }
       if (event.key === "Escape") return dispatch({ type: "select", item: null });
+      if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && selected !== null) {
+        const tier = tierOf(state, selected);
+        const row = tier === null ? null : state.rows[tier];
+        if (tier === null || row == null) return;
+        // Toward the row's start is left in English and right in Arabic.
+        const rtl =
+          section.current !== null && getComputedStyle(section.current).direction === "rtl";
+        const back = (event.key === "ArrowLeft") !== rtl;
+        const index = row.indexOf(selected) + (back ? -1 : 1);
+        if (index < 0 || index >= row.length) return;
+        event.preventDefault();
+        return dispatch({ type: "place", item: selected, tier, index });
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
         return dispatch({ type: "undo" });
@@ -344,7 +370,7 @@ export function RankingBoard({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dispatch, list.tiers.length, placeSelected, locked]);
+  }, [dispatch, list.tiers.length, placeSelected, locked, selected, state]);
 
   const left = pool(state);
   const tools = edit?.owner?.tools;
@@ -557,7 +583,9 @@ export function RankingBoard({
                       <p className="pool__hint pool__hint--keys">
                         {selectedTitle === null
                           ? fill(strings.rank.hintPick, { keys: `1–${keyboardTiers}` })
-                          : fill(strings.rank.hintPlace, { name: selectedTitle })}
+                          : picked
+                            ? fill(strings.rank.hintPlace, { name: selectedTitle })
+                            : fill(strings.rank.hintMove, { name: selectedTitle })}
                       </p>
                       <p className="pool__hint pool__hint--touch">
                         {selectedTitle === null
@@ -647,10 +675,18 @@ function TierRow({
   if (meta === undefined) return null;
   const selected = state.selected;
   const armed = !locked && selected !== null && !row.includes(selected);
-  const targeted =
-    dragState.phase === "dragging" &&
-    dragState.target?.kind === "tier" &&
-    dragState.target.tier === tier;
+  const target = dragState.phase === "dragging" ? dragState.target : null;
+  const targeted = target?.kind === "tier" && target.tier === tier;
+  // The mark between two cards: before the card at the landing place, or
+  // after the last one. The held card itself does not count.
+  const others = row.filter((item) => item !== lifted);
+  const landing = targeted ? Math.min(target.index, others.length) : null;
+  const insertOf = (item: number): "before" | "after" | undefined => {
+    if (landing === null || item === lifted) return undefined;
+    const place = others.indexOf(item);
+    if (place === landing) return "before";
+    return landing === others.length && place === others.length - 1 ? "after" : undefined;
+  };
   const place = () => onPlace(tier);
   const classes = ["tier", "band", armed && "tier--armed", targeted && "tier--target"]
     .filter(Boolean)
@@ -695,6 +731,7 @@ function TierRow({
             locked={locked}
             dispatch={dispatch}
             onPointerDown={pointerDownFor(item)}
+            insert={insertOf(item)}
           />
         ))}
       </ul>

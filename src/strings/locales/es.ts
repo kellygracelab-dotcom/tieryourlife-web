@@ -389,6 +389,7 @@ const es: Translation = {
     left: { one: "Queda {n} tarjeta", other: "Quedan {n} tarjetas" },
     hintPick: "Elige una tarjeta y luego toca un nivel o pulsa {keys}",
     hintPlace: "Toca un nivel para colocar {name}, o pulsa su número",
+    hintMove: "← y → mueven {name} por su fila",
     hintPickTouch: "Toca una tarjeta y luego un nivel",
     hintPlaceTouch: "Toca un nivel para colocarla",
     search: "Buscar una tarjeta",

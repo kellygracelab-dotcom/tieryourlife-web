@@ -387,6 +387,7 @@ export const en = {
     left: { one: "{n} card left", other: "{n} cards left" },
     hintPick: "Pick a card, then tap a tier or press {keys}",
     hintPlace: "Tap a tier to place {name}, or press its number",
+    hintMove: "← and → move {name} along its row",
     hintPickTouch: "Tap a card, then a tier",
     hintPlaceTouch: "Tap a tier to place it",
     search: "Find a card",

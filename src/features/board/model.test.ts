@@ -65,6 +65,71 @@ describe("board model", () => {
     expect(again.history).toEqual(placed.history);
   });
 
+  it("puts a card at a place in a row, from the pool or from another tier", () => {
+    const three = run(
+      init(2, 5),
+      { type: "place", item: 0, tier: 0 },
+      { type: "place", item: 1, tier: 0 },
+      { type: "place", item: 2, tier: 0 },
+    );
+    expect(reduce(three, { type: "place", item: 3, tier: 0, index: 0 }).rows[0]).toEqual([
+      3, 0, 1, 2,
+    ]);
+    expect(reduce(three, { type: "place", item: 3, tier: 0, index: 2 }).rows[0]).toEqual([
+      0, 1, 3, 2,
+    ]);
+    // Past the end, or below the start, is the end or the start.
+    expect(reduce(three, { type: "place", item: 3, tier: 0, index: 99 }).rows[0]).toEqual([
+      0, 1, 2, 3,
+    ]);
+    expect(reduce(three, { type: "place", item: 3, tier: 0, index: -4 }).rows[0]).toEqual([
+      3, 0, 1, 2,
+    ]);
+    const moved = reduce(run(three, { type: "place", item: 4, tier: 1 }), {
+      type: "place",
+      item: 4,
+      tier: 0,
+      index: 1,
+    });
+    expect(moved.rows).toEqual([[0, 4, 1, 2], []]);
+  });
+
+  it("moves a card along its own row, counting places among the other cards", () => {
+    const row = run(
+      init(1, 4),
+      { type: "place", item: 0, tier: 0 },
+      { type: "place", item: 1, tier: 0 },
+      { type: "place", item: 2, tier: 0 },
+      { type: "place", item: 3, tier: 0 },
+    );
+    expect(reduce(row, { type: "place", item: 0, tier: 0, index: 3 }).rows[0]).toEqual([
+      1, 2, 3, 0,
+    ]);
+    expect(reduce(row, { type: "place", item: 3, tier: 0, index: 0 }).rows[0]).toEqual([
+      3, 0, 1, 2,
+    ]);
+    expect(reduce(row, { type: "place", item: 2, tier: 0, index: 1 }).rows[0]).toEqual([
+      0, 2, 1, 3,
+    ]);
+    // Dropped where it already is: nothing to undo.
+    expect(reduce(row, { type: "place", item: 1, tier: 0, index: 1 })).toBe(row);
+    // And undo puts the row back as it was.
+    const swapped = reduce(row, { type: "place", item: 0, tier: 0, index: 3 });
+    expect(reduce(swapped, { type: "undo" }).rows[0]).toEqual([0, 1, 2, 3]);
+  });
+
+  it("keeps a card picked while it is moved along its row by keys", () => {
+    const row = run(
+      init(1, 3),
+      { type: "place", item: 0, tier: 0 },
+      { type: "place", item: 1, tier: 0 },
+      { type: "select", item: 0 },
+    );
+    const stepped = reduce(row, { type: "place", item: 0, tier: 0, index: 1 });
+    expect(stepped.rows[0]).toEqual([1, 0]);
+    expect(stepped.selected).toBe(0);
+  });
+
   it("refuses items and tiers the board does not have", () => {
     const state = init(2, 2);
     expect(reduce(state, { type: "place", item: 5, tier: 0 })).toBe(state);

@@ -475,6 +475,7 @@ const ar: Translation = {
     },
     hintPick: "اختر بطاقة، ثم انقر مستوى أو اضغط {keys}",
     hintPlace: "انقر مستوى لوضع {name}، أو اضغط رقمه",
+    hintMove: "← و → تحرّكان {name} في صفّها",
     hintPickTouch: "انقر بطاقة، ثم مستوى",
     hintPlaceTouch: "انقر مستوى لوضعها",
     search: "ابحث عن بطاقة",

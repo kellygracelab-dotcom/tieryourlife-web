@@ -399,6 +399,7 @@ const de: Translation = {
     left: { one: "Noch {n} Karte", other: "Noch {n} Karten" },
     hintPick: "Wähl eine Karte, dann tipp auf eine Stufe oder drück {keys}",
     hintPlace: "Tipp auf eine Stufe, um {name} zu platzieren, oder drück ihre Nummer",
+    hintMove: "← und → verschieben {name} in seiner Reihe",
     hintPickTouch: "Karte antippen, dann Stufe",
     hintPlaceTouch: "Stufe antippen zum Platzieren",
     search: "Karte suchen",

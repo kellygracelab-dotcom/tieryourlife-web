@@ -121,6 +121,55 @@ describe("dragging a card", () => {
     expect(document.querySelector(".ghost")).toBeNull();
   });
 
+  it("moves a card along its own row, marking where it will land", () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} hitTest={hitTest} />
+      </MemoryRouter>,
+    );
+    // Both cards in S, Anora first; jsdom is told where each tile is.
+    for (const title of ["Anora", "Conclave"]) {
+      pointer("pointerdown", card(title), 10, 10, { button: 0 });
+      under = tierRow("S");
+      pointer("pointermove", window, 300, 40);
+      pointer("pointerup", window, 300, 40);
+    }
+    const order = () =>
+      within(screen.getByRole("list", { name: "S" }))
+        .getAllByRole("button")
+        .map((tile) => tile.getAttribute("aria-label"));
+    expect(order()).toEqual(["Anora", "Conclave"]);
+    const lay = (title: string, left: number) => {
+      within(screen.getByRole("list", { name: "S" })).getByRole("button", {
+        name: title,
+      }).getBoundingClientRect = () => ({ left, right: left + 64, top: 0, bottom: 90 }) as DOMRect;
+    };
+    lay("Anora", 0);
+    lay("Conclave", 74);
+
+    // Anora picked up and carried past Conclave's middle.
+    pointer("pointerdown", within(tierRow("S")).getByRole("button", { name: "Anora" }), 10, 10);
+    under = tierRow("S");
+    pointer("pointermove", window, 120, 40);
+    const conclave = within(tierRow("S")).getByRole("button", { name: "Conclave" }).parentElement;
+    expect(conclave).toHaveClass("tile-holder--insert-after");
+    pointer("pointerup", window, 120, 40);
+    expect(order()).toEqual(["Conclave", "Anora"]);
+    expect(document.querySelector("[class*=tile-holder--insert]")).toBeNull();
+
+    // And back to the start, before Conclave.
+    lay("Conclave", 0);
+    lay("Anora", 74);
+    pointer("pointerdown", within(tierRow("S")).getByRole("button", { name: "Anora" }), 80, 10);
+    under = tierRow("S");
+    pointer("pointermove", window, 5, 40);
+    expect(
+      within(tierRow("S")).getByRole("button", { name: "Conclave" }).parentElement,
+    ).toHaveClass("tile-holder--insert-before");
+    pointer("pointerup", window, 5, 40);
+    expect(order()).toEqual(["Anora", "Conclave"]);
+  });
+
   it("does nothing when let go outside every target, or on a right button", () => {
     render(
       <MemoryRouter>

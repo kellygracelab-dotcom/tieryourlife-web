@@ -123,6 +123,54 @@ describe("RankingBoard", () => {
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
   });
 
+  it("moves a picked card along its row with the arrow keys", async () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    // Placing one picks the next by itself, so three presses fill the row.
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("111");
+    const order = () =>
+      within(tierList("S"))
+        .getAllByRole("button")
+        .map((tile) => tile.getAttribute("aria-label"));
+    expect(order()).toEqual(["Ex Machina", "The Witch", "Climax"]);
+
+    await userEvent.click(within(tierList("S")).getByRole("button", { name: "Ex Machina" }));
+    await userEvent.keyboard("{ArrowRight}");
+    expect(order()).toEqual(["The Witch", "Ex Machina", "Climax"]);
+    // Still picked: the next press takes it further, and the end stops it.
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+    expect(order()).toEqual(["The Witch", "Climax", "Ex Machina"]);
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(order()).toEqual(["The Witch", "Ex Machina", "Climax"]);
+    await userEvent.keyboard("{Control>}z{/Control}");
+    expect(order()).toEqual(["The Witch", "Climax", "Ex Machina"]);
+  });
+
+  it("moves the other way in Arabic, where the row starts on the right", async () => {
+    render(
+      <div dir="rtl" style={{ direction: "rtl" }}>
+        <MemoryRouter>
+          <RankingBoard list={list} />
+        </MemoryRouter>
+      </div>,
+    );
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("11");
+    const section = document.querySelector("section");
+    if (section !== null) section.style.direction = "rtl";
+    await userEvent.click(within(tierList("S")).getByRole("button", { name: "Ex Machina" }));
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(
+      within(tierList("S"))
+        .getAllByRole("button")
+        .map((tile) => tile.getAttribute("aria-label")),
+    ).toEqual(["The Witch", "Ex Machina"]);
+  });
+
   it("does not steal number keys from a text field", async () => {
     render(
       <>

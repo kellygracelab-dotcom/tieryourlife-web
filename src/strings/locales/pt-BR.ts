@@ -390,6 +390,7 @@ const ptBR: Translation = {
     left: { one: "Falta {n} card", other: "Faltam {n} cards" },
     hintPick: "Escolha um card, depois toque em um nível ou aperte {keys}",
     hintPlace: "Toque em um nível para colocar {name}, ou aperte o número dele",
+    hintMove: "← e → movem {name} pela fileira",
     hintPickTouch: "Toque em um card, depois em um nível",
     hintPlaceTouch: "Toque em um nível para colocar",
     search: "Encontrar um card",

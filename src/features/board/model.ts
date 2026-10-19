@@ -9,7 +9,8 @@ export interface BoardState {
 
 export type BoardAction =
   | { type: "select"; item: number | null }
-  | { type: "place"; item: number; tier: number }
+  /** `index` is the card's place among the row's other cards; without it the card goes last. */
+  | { type: "place"; item: number; tier: number; index?: number }
   | { type: "unplace"; item: number }
   | { type: "undo" }
   /** The list has other cards or tiers now (the owner's doing): the board starts over from these rows. */
@@ -49,14 +50,24 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
     }
     case "place": {
       if (!isItem(state, action.item) || !isTier(state, action.tier)) return state;
-      if (state.rows[action.tier]?.includes(action.item)) {
-        return state.selected === null ? state : { ...state, selected: null };
-      }
+      const row = state.rows[action.tier] ?? [];
+      const was = row.indexOf(action.item);
+      const others = was === -1 ? row : row.filter((item) => item !== action.item);
+      const at =
+        action.index === undefined
+          ? was === -1
+            ? others.length
+            : was
+          : Math.min(Math.max(0, Math.trunc(action.index)), others.length);
+      // Where it already is: nothing to remember, only the pick goes.
+      if (was === at) return state.selected === null ? state : { ...state, selected: null };
       const fromPool = tierOf(state, action.item) === null;
-      const rows = without(state.rows, action.item).map((row, index) =>
-        index === action.tier ? [...row, action.item] : row,
+      const rows = without(state.rows, action.item).map((cards, tier) =>
+        tier === action.tier ? [...cards.slice(0, at), action.item, ...cards.slice(at)] : cards,
       );
       const next = remember(state, rows);
+      // Moved along its own row by keys, the card stays picked for the next step.
+      if (was !== -1 && state.selected === action.item) return { ...next, selected: action.item };
       // Working through the pool by taps or keys, the next card picks itself,
       // so a whole list is one tap a card. A drag selects nothing.
       return fromPool && state.selected === action.item

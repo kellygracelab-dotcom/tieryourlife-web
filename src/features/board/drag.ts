@@ -3,7 +3,8 @@ export interface Point {
   y: number;
 }
 
-export type DropTarget = { kind: "tier"; tier: number } | { kind: "pool" } | null;
+/** `index`: where among the row's other cards the dragged one would land. */
+export type DropTarget = { kind: "tier"; tier: number; index: number } | { kind: "pool" } | null;
 
 /** Where the card was taken hold of, and how big it is, so the ghost moves as the card itself. */
 export interface Grab {
@@ -59,10 +60,54 @@ export function hold(state: DragState, target: DropTarget): DragState {
   return { phase: "dragging", item: state.item, at: state.start, target, grab: state.grab };
 }
 
-export function targetOf(element: Element | null): DropTarget {
-  const drop = element?.closest<HTMLElement>("[data-drop]")?.dataset.drop;
-  if (drop === undefined) return null;
+/** A card's box on the screen, as much of it as the insertion point needs. */
+export interface CardBox {
+  item: number;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/**
+ * How many of a row's cards come before the point, in reading order: every
+ * card on a line above it, and on its own line every card whose middle is on
+ * the reading side of it — left in English, right in Arabic. Rows wrap, so
+ * the line matters before the side.
+ */
+export function insertionIndex(boxes: readonly CardBox[], at: Point, rtl: boolean): number {
+  let before = 0;
+  for (const box of boxes) {
+    if (box.bottom <= at.y) {
+      before += 1;
+    } else if (box.top <= at.y) {
+      const middle = (box.left + box.right) / 2;
+      if (rtl ? middle > at.x : middle < at.x) before += 1;
+    }
+  }
+  return before;
+}
+
+/**
+ * What is under the pointer: a tier and the place in it, the pool, or
+ * nothing. The card being dragged does not count among the row's cards: its
+ * place is where it would land without it.
+ */
+export function targetOf(element: Element | null, at?: Point, dragged?: number): DropTarget {
+  const zone = element?.closest<HTMLElement>("[data-drop]");
+  const drop = zone?.dataset.drop;
+  if (zone == null || drop === undefined) return null;
   if (drop === "pool") return { kind: "pool" };
   const tier = Number(drop.replace("tier:", ""));
-  return Number.isInteger(tier) ? { kind: "tier", tier } : null;
+  if (!Number.isInteger(tier)) return null;
+  if (at === undefined) return { kind: "tier", tier, index: Number.MAX_SAFE_INTEGER };
+  const boxes: CardBox[] = [];
+  for (const card of zone.querySelectorAll<HTMLElement>(".tier__items [data-item]")) {
+    const item = Number(card.dataset.item);
+    if (item === dragged) continue;
+    const rect = card.getBoundingClientRect();
+    boxes.push({ item, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
+  }
+  const rtl = getComputedStyle(zone).direction === "rtl";
+  return { kind: "tier", tier, index: insertionIndex(boxes, at, rtl) };
 }
