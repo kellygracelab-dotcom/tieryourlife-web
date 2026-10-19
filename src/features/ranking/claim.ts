@@ -7,8 +7,10 @@ export type Claim = (code: string, claimToken: string) => Promise<unknown>;
 
 /**
  * Hands every ranking this device finished to the account that just signed
- * in. A token the server no longer accepts is forgotten; anything else that
- * fails is tried again at the next sign-in.
+ * in. A token the server no longer accepts is forgotten. A ranking another
+ * account already keeps stays on the device, so the page still finds it, but
+ * the account that was refused does not ask again. Anything else that fails
+ * is tried again at the next sign-in.
  */
 export async function claimKeptRankings(
   store: DraftStore,
@@ -20,7 +22,7 @@ export async function claimKeptRankings(
   for (const key of keys) {
     const listId = key.slice(KEPT_PREFIX.length);
     const kept = readKept(store, listId);
-    if (kept === null || kept.claimedBy === uid) continue;
+    if (kept === null || kept.claimedBy === uid || kept.refusedTo === uid) continue;
     try {
       await claim(kept.code, kept.claimToken);
       writeKept(store, listId, { ...kept, claimedBy: uid });
@@ -28,6 +30,7 @@ export async function claimKeptRankings(
     } catch (reason) {
       const { kind } = errorOf(reason);
       if (kind === "notYours" || kind === "notFound") store.remove(key);
+      else if (kind === "conflict") writeKept(store, listId, { ...kept, refusedTo: uid });
     }
   }
   return claimed;

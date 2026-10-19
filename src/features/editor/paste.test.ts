@@ -215,7 +215,6 @@ describe("cardsFor", () => {
     await done;
     expect(got).toEqual(["1", "2", "3", "4"]);
     expect(vi.getTimerCount()).toBe(0);
-    vi.useRealTimers();
   });
 
   it("asks once more when the catalogue the name is for said nothing", async () => {

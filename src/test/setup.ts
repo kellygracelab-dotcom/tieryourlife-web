@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, vi } from "vitest";
 
 afterEach(cleanup);
 
@@ -8,3 +8,7 @@ afterEach(cleanup);
 window.scrollTo = () => undefined;
 
 afterEach(() => window.localStorage.clear());
+
+// A test that switches to fake timers and fails before switching back would
+// leave every later test in its file on a frozen clock.
+afterEach(() => vi.useRealTimers());

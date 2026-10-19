@@ -145,6 +145,22 @@ describe("createApiClient", () => {
     });
   });
 
+  it("gives up on a request that hangs, and reads it as offline", async () => {
+    const hanging: FetchLike = (_url, init) =>
+      new Promise((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      });
+    const client = createApiClient({
+      fetch: hanging,
+      appCheckToken: async () => null,
+      idToken: async () => null,
+      timeoutMs: 20,
+    });
+    await expect(client.request("GET", "/lists")).rejects.toMatchObject({
+      error: { kind: "offline" },
+    });
+  });
+
   it("reports a thrown fetch as offline", async () => {
     const { client } = clientWith([new TypeError("Failed to fetch")]);
 

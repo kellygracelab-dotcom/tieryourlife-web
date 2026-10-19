@@ -527,6 +527,10 @@ const fr: Translation = {
     body: "Une partie n’est pas arrivée : la connexion a lâché, ou le site a été mis à jour à cette minute même. Recharger suffit en général.",
     reload: "Recharger",
   },
+  crash: {
+    title: "Quelque chose s’est mal passé sur cette page",
+    body: "Recharger règle généralement le problème. Sinon, le reste du site fonctionne toujours.",
+  },
   notFound: {
     title: "Il n’y a rien à cette adresse.",
     home: "Aller à la page d’accueil",

@@ -52,7 +52,6 @@ describe("useCatalogue", () => {
 
     rerender(<Probe query="zebra" lookup={lookup} />);
     expect(shown()).toHaveTextContent("searching");
-    vi.useRealTimers();
   });
 
   it("drops an answer that arrives for words no longer in the box, and names a failure", async () => {
@@ -77,6 +76,5 @@ describe("useCatalogue", () => {
     });
     await act(async () => resolveFirst([item("late")]));
     expect(shown()).toHaveTextContent("failed:second");
-    vi.useRealTimers();
   });
 });

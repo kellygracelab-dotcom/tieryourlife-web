@@ -509,6 +509,10 @@ const tr: Translation = {
     body: "Bir parçası gelmedi: bağlantı koptu ya da site tam bu dakikada güncellendi. Yeniden yüklemek genellikle yeter.",
     reload: "Yeniden yükle",
   },
+  crash: {
+    title: "Bu sayfada bir şeyler ters gitti",
+    body: "Yeniden yüklemek genellikle düzeltir. Düzeltmezse sitenin geri kalanı çalışmaya devam eder.",
+  },
   notFound: {
     title: "Bu adreste bir şey yok.",
     home: "Ana sayfaya git",

@@ -527,6 +527,10 @@ const de: Translation = {
     body: "Ein Teil ist nicht angekommen: Die Verbindung ist abgerissen, oder die Seite wurde genau in dieser Minute aktualisiert. Neu laden hilft meistens.",
     reload: "Neu laden",
   },
+  crash: {
+    title: "Auf dieser Seite ist etwas schiefgegangen",
+    body: "Neu laden hilft meistens. Wenn nicht, funktioniert der Rest der Seite weiterhin.",
+  },
   notFound: {
     title: "Unter dieser Adresse gibt es nichts.",
     home: "Zur Startseite",

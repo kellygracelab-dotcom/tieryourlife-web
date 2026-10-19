@@ -98,7 +98,6 @@ describe("editing a ranking", () => {
       vi.advanceTimersByTime(SAVED_NOTE_MS + 100);
     });
     expect(screen.queryByRole("status")).toBeNull();
-    vi.useRealTimers();
   });
 
   it("opens straight into editing from the address, and Cancel keeps what was saved", async () => {

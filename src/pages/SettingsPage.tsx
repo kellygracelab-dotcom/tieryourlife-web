@@ -12,6 +12,7 @@ import { eraseMyAccount, loadMyLists, refreshPublishedAuthor } from "../lib/api"
 import { NAME_MAX, renameAccount, setFace, tidyName } from "../lib/profile";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { InAppNote } from "../ui/InAppNote";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
@@ -348,52 +349,18 @@ function DeleteDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const cancel = useRef<HTMLButtonElement>(null);
-  const open = state !== "closed";
-  const busy = state === "busy";
-
-  // Cancel takes the focus, not the destructive button, for anybody who
-  // pressed Enter before reading. While it is under way nothing dismisses it.
-  useEffect(() => {
-    if (!open) return;
-    cancel.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busy) onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, busy, onCancel]);
-
-  if (!open) return null;
+  if (state === "closed") return null;
   return (
-    <div className="scrim" onClick={busy ? undefined : onCancel}>
-      <div
-        className="dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="delete-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h2 id="delete-title" className="dialog__title">
-          {strings.settings.deleteTitle}
-        </h2>
-        <p className="dialog__body">{strings.settings.deleteBody}</p>
-        <div className="dialog__actions">
-          <button
-            ref={cancel}
-            type="button"
-            className="btn btn--text"
-            onClick={onCancel}
-            disabled={busy}
-          >
-            <span>{strings.settings.cancel}</span>
-          </button>
-          <button type="button" className="btn dialog__danger" onClick={onConfirm} disabled={busy}>
-            <span>{busy ? strings.settings.deleting : strings.settings.deleteConfirm}</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      title={strings.settings.deleteTitle}
+      body={strings.settings.deleteBody}
+      confirmLabel={strings.settings.deleteConfirm}
+      busyLabel={strings.settings.deleting}
+      cancelLabel={strings.settings.cancel}
+      busy={state === "busy"}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
   );
 }
 

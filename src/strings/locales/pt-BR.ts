@@ -511,6 +511,10 @@ const ptBR: Translation = {
     body: "Uma parte não chegou: a conexão caiu, ou o site foi atualizado neste exato minuto. Recarregar costuma resolver.",
     reload: "Recarregar",
   },
+  crash: {
+    title: "Algo deu errado nesta página",
+    body: "Recarregar costuma resolver. Se não resolver, o resto do site continua funcionando.",
+  },
   notFound: {
     title: "Não há nada neste endereço.",
     home: "Ir para a página inicial",

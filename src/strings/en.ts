@@ -509,6 +509,10 @@ export const en = {
     body: "Part of it did not arrive: the connection dropped, or the site was updated this very minute. Reloading usually does it.",
     reload: "Reload",
   },
+  crash: {
+    title: "Something went wrong on this page",
+    body: "Reloading usually fixes it. If it does not, the rest of the site still works.",
+  },
   notFound: {
     title: "There is nothing at this address.",
     home: "Go to the front page",

@@ -67,7 +67,6 @@ describe("ResultBar", () => {
       vi.advanceTimersByTime(2100);
     });
     expect(screen.getByRole("button", { name: "Copy link" })).toBeInTheDocument();
-    vi.useRealTimers();
 
     const failing = vi.fn(async () => {
       throw new Error("no clipboard");

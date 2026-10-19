@@ -21,8 +21,16 @@ export interface ApiClient {
 
 export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
+/**
+ * How long one request may hang before it reads as offline. A connection that
+ * stalls rather than drops would otherwise leave a page loading for good, with
+ * no Try again to press.
+ */
+export const REQUEST_TIMEOUT_MS = 20_000;
+
 interface ClientOptions extends TokenProviders {
   fetch?: FetchLike;
+  timeoutMs?: number;
 }
 
 function urlOf(path: string, query: Query | undefined): string {
@@ -39,6 +47,7 @@ export function createApiClient({
   fetch = (input, init) => globalThis.fetch(input, init),
   appCheckToken,
   idToken,
+  timeoutMs = REQUEST_TIMEOUT_MS,
 }: ClientOptions): ApiClient {
   async function headersFor(
     options: RequestOptions,
@@ -62,7 +71,11 @@ export function createApiClient({
     options: RequestOptions,
     forceRefresh: boolean,
   ): Promise<Response> {
-    const init: RequestInit = { method, headers: await headersFor(options, forceRefresh) };
+    const init: RequestInit = {
+      method,
+      headers: await headersFor(options, forceRefresh),
+      signal: AbortSignal.timeout(timeoutMs),
+    };
     if (options.body !== undefined) init.body = JSON.stringify(options.body);
     try {
       return await fetch(urlOf(path, options.query), init);

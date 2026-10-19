@@ -16,6 +16,7 @@ import { errorOf } from "../features/list/useResource";
 import { report as sendReport, unpublish as unpublishList } from "../lib/api";
 import { isEditorial } from "../lib/editorial";
 import { fill, plural, strings } from "../strings";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { BoardFrameContext } from "../features/board/boardFrame";
 import { OwnerBoard } from "../features/editor/OwnerBoard";
@@ -328,15 +329,6 @@ function AuthorMenu({
   };
   const close = useCallback(() => setDeleting({ status: "closed" }), []);
 
-  useEffect(() => {
-    if (deleting.status === "closed" || busy) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [deleting.status, busy, close]);
-
   return (
     <>
       <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
@@ -362,41 +354,27 @@ function AuthorMenu({
         </>
       </Menu>
       {deleting.status !== "closed" && (
-        <div className="scrim" onClick={busy ? undefined : close}>
-          <div
-            className="dialog dialog--narrow"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-list-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2 id="delete-list-title" className="dialog__title">
-              {strings.list.deleteTitle}
-            </h2>
-            <p className="dialog__body">{fill(strings.list.deleteBody, { title: list.title })}</p>
-            {deleting.status === "failed" && (
+        <ConfirmDialog
+          narrow
+          title={strings.list.deleteTitle}
+          body={fill(strings.list.deleteBody, { title: list.title })}
+          confirmLabel={strings.list.delete}
+          busyLabel={strings.list.deleting}
+          cancelLabel={strings.list.keepIt}
+          busy={busy}
+          trouble={
+            deleting.status === "failed" && (
               <p className="dialog__bar" role="alert">
                 <Icon name="cloud_off" className="dialog__bar-icon" />
                 {deleting.error.kind === "offline"
                   ? strings.list.deleteOffline
                   : strings.list.deleteFailed}
               </p>
-            )}
-            <div className="dialog__actions">
-              <Button onClick={close} disabled={busy}>
-                {strings.list.keepIt}
-              </Button>
-              <button
-                type="button"
-                className="btn dialog__danger"
-                onClick={confirm}
-                disabled={busy}
-              >
-                <span>{busy ? strings.list.deleting : strings.list.delete}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+            )
+          }
+          onConfirm={confirm}
+          onCancel={close}
+        />
       )}
     </>
   );

@@ -184,7 +184,6 @@ describe("SettingsPage", () => {
 
     act(() => vi.advanceTimersByTime(SAVED_NOTE_MS));
     expect(screen.queryByRole("status")).toBeNull();
-    vi.useRealTimers();
   });
 
   it("names a name that could not be saved with a way to try again, and Cancel brings the old one back", async () => {
