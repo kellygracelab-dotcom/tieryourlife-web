@@ -388,6 +388,7 @@ const ja: Translation = {
     left: { other: "残り {n} 枚" },
     hintPick: "カードを選んでからティアをタップするか、{keys} を押します",
     hintPlace: "ティアをタップして {name} を置くか、番号を押します",
+    hintMove: "← と → で {name} を列の中で動かせます",
     hintPickTouch: "カードをタップしてからティアをタップ",
     hintPlaceTouch: "ティアをタップして配置",
     search: "カードを探す",

@@ -398,6 +398,7 @@ const fr: Translation = {
     left: { one: "{n} carte restante", other: "{n} cartes restantes" },
     hintPick: "Choisissez une carte, puis touchez un rang ou appuyez sur {keys}",
     hintPlace: "Touchez un rang pour placer {name}, ou appuyez sur son numéro",
+    hintMove: "← et → déplacent {name} dans sa rangée",
     hintPickTouch: "Touchez une carte, puis un rang",
     hintPlaceTouch: "Touchez un rang pour la placer",
     search: "Trouver une carte",

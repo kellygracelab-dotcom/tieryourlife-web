@@ -387,6 +387,7 @@ const tr: Translation = {
     left: { other: "{n} kart kaldı" },
     hintPick: "Bir kart seçin, sonra bir seviyeye dokunun ya da {keys} tuşuna basın",
     hintPlace: "{name} kartını yerleştirmek için bir seviyeye dokunun ya da numarasına basın",
+    hintMove: "← ve → {name} kartını sırasında kaydırır",
     hintPickTouch: "Bir karta, sonra bir seviyeye dokunun",
     hintPlaceTouch: "Yerleştirmek için bir seviyeye dokunun",
     search: "Kart bul",

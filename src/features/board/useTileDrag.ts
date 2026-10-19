@@ -69,7 +69,7 @@ export function useTileDrag(
       if (next.phase === "pressed" && next.holdUntil !== null) {
         clearHold();
         holdTimer.current = setTimeout(() => {
-          become(hold(latest.current, targetOf(hitTest(at))));
+          become(hold(latest.current, targetOf(hitTest(at), at, item)));
         }, TOUCH_HOLD_MS);
       }
     },
@@ -82,10 +82,11 @@ export function useTileDrag(
       const current = latest.current;
       if (current.phase === "idle") return;
       const at = { x: event.clientX, y: event.clientY };
-      const next = move(current, at, current.phase === "pressed" ? null : targetOf(hitTest(at)));
+      const under = () => targetOf(hitTest(at), at, current.item);
+      const next = move(current, at, current.phase === "pressed" ? null : under());
       become(
         next.phase === "dragging" && current.phase !== "dragging"
-          ? { ...next, target: targetOf(hitTest(at)) }
+          ? { ...next, target: under() }
           : next,
       );
     };
@@ -95,7 +96,10 @@ export function useTileDrag(
       if (current.phase === "idle") return;
       if (drop && current.phase === "dragging" && current.target !== null) {
         if (current.target.kind === "pool") dispatch({ type: "unplace", item: current.item });
-        else dispatch({ type: "place", item: current.item, tier: current.target.tier });
+        else {
+          const { tier, index } = current.target;
+          dispatch({ type: "place", item: current.item, tier, index });
+        }
       }
       become(idle);
     };
@@ -130,7 +134,7 @@ export function useTileDrag(
   const nudge = useCallback(() => {
     const now = latest.current;
     if (now.phase !== "dragging") return;
-    become(move(now, now.at, targetOf(hitTest(now.at))));
+    become(move(now, now.at, targetOf(hitTest(now.at), now.at, now.item)));
   }, [become, hitTest]);
 
   return { state, onPointerDown, current, nudge };

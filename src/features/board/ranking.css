@@ -158,6 +158,36 @@
   box-shadow: inset 0 0 0 3px var(--ink);
 }
 
+/*
+ * Where a dragged card lands among a row's cards: a bar in the gap before the
+ * card it would push along, or after the last one. Logical sides, so the bar
+ * sits on the correct side in Arabic too; drawn outside the flow, so the
+ * cards do not move under the pointer while it is read.
+ */
+.tile-holder--insert-before,
+.tile-holder--insert-after {
+  position: relative;
+}
+
+.tile-holder--insert-before::before,
+.tile-holder--insert-after::after {
+  content: "";
+  position: absolute;
+  inset-block: -2px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--ink);
+  pointer-events: none;
+}
+
+.tile-holder--insert-before::before {
+  inset-inline-start: -7px;
+}
+
+.tile-holder--insert-after::after {
+  inset-inline-end: -7px;
+}
+
 .pool--target {
   border-radius: var(--radius-card);
   box-shadow: inset 0 0 0 3px var(--ink);
