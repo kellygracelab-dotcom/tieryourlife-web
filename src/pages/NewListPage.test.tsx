@@ -269,7 +269,6 @@ describe("NewListPage", () => {
     expect(await screen.findByText("Published list page")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/l/newlist");
     expect(store.read("tyl:new")).toBeNull();
-    vi.useRealTimers();
   });
 
   it("takes many names pasted at once, each with its picture when the catalogue has one", async () => {

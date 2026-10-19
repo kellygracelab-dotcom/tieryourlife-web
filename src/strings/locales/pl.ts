@@ -545,6 +545,10 @@ const pl: Translation = {
     body: "Część nie dotarła: zerwało połączenie albo strona została właśnie zaktualizowana. Odświeżenie zwykle pomaga.",
     reload: "Odśwież",
   },
+  crash: {
+    title: "Coś poszło nie tak na tej stronie",
+    body: "Zwykle pomaga odświeżenie. Jeśli nie, reszta serwisu nadal działa.",
+  },
   notFound: {
     title: "Pod tym adresem nic nie ma.",
     home: "Przejdź na stronę główną",

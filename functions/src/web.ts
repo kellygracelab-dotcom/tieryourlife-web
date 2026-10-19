@@ -1,5 +1,6 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, type Firestore } from "firebase-admin/firestore";
+import type { Request } from "firebase-functions/https";
 import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
 import { requireAppCheck } from "./appCheck";
@@ -57,6 +58,26 @@ const methodNotAllowed = (response: Response): void =>
     .status(405)
     .json({ error: "Use GET, POST, PATCH, PUT or DELETE", code: "METHOD_NOT_ALLOWED" });
 
+/** What a request needs from outside: the database and the two token checks. Tests hand in fakes. */
+export interface WebDeps {
+  db: () => Firestore;
+  appCheck: (request: Request, response: Response) => Promise<boolean>;
+  user: (request: Request, response: Response) => Promise<Identity | null>;
+  account: (request: Request, response: Response) => Promise<Identity | null>;
+  viewer: (request: Request) => Promise<Identity | null>;
+  /** An integer in [0, max): where a new ranking's code comes from. */
+  random: (max: number) => number;
+}
+
+const production: WebDeps = {
+  db: () => getFirestore(),
+  appCheck: requireAppCheck,
+  user: requireUser,
+  account: requireAccount,
+  viewer: optionalAccount,
+  random: (max) => randomInt(max),
+};
+
 export const web = onRequest(
   {
     region: "europe-west1",
@@ -65,88 +86,94 @@ export const web = onRequest(
     memory: "512MiB",
     maxInstances: 10,
   },
-  async (request, response) => {
-    const segments = request.path
-      .replace(/^\/+|\/+$/g, "")
-      .split("/")
-      .filter((part) => part.length > 0);
-
-    try {
-      // The picture a chat shows for a page: /og/l/{id}.png and /og/r/{code}.png.
-      if (request.method === "GET" && segments.length === 3 && segments[0] === "og") {
-        const id = (segments[2] ?? "").replace(/\.png$/, "");
-        if (segments[1] === "l") return await listShareImage(response, id);
-        if (segments[1] === "r") return await rankingShareImage(response, id);
-        return notFound(response, "No such address");
-      }
-      // Pages: /l/{id} and /r/{code} are the site's own shell with the words a
-      // chat needs and the data the board needs.
-      if (request.method === "GET" && segments.length === 2 && segments[0] === "l") {
-        return await listPage(request, response, segments[1] ?? "");
-      }
-      if (request.method === "GET" && segments.length === 2 && segments[0] === "r") {
-        return await rankingPage(request, response, segments[1] ?? "");
-      }
-
-      // The API: /api/rank, /api/rank/{code} (read, claim, edit, delete) and /api/me/rankings.
-      const api = segments[0] === "api" ? segments.slice(1) : null;
-      if (api === null || api.length > 2) return notFound(response, "No such address");
-      const [resource, rest] = api;
-
-      if (resource === "me") {
-        if (rest !== "rankings") return notFound(response, "No such address");
-        if (request.method !== "GET") return methodNotAllowed(response);
-        if (!(await requireAppCheck(request, response))) return;
-        const identity = await requireAccount(request, response);
-        if (!identity) return;
-        return await listMyRankings(identity, response);
-      }
-      if (resource !== "rank") return notFound(response, "No such address");
-
-      const code = rest;
-      if (request.method === "GET" && code !== undefined) {
-        if (!(await requireAppCheck(request, response))) return;
-        return await readRanking(response, code, await optionalAccount(request));
-      }
-      if (request.method === "POST" && code === undefined) {
-        if (!(await requireAppCheck(request, response))) return;
-        const identity = await requireUser(request, response);
-        if (!identity) return;
-        return await saveRanking(request.body, identity, response);
-      }
-      if (request.method === "PATCH" && code !== undefined) {
-        if (!(await requireAppCheck(request, response))) return;
-        const identity = await requireAccount(request, response);
-        if (!identity) return;
-        return await claimRanking(request.body, identity, response, code);
-      }
-      if (request.method === "PUT" && code !== undefined) {
-        if (!(await requireAppCheck(request, response))) return;
-        const identity = await requireAccount(request, response);
-        if (!identity) return;
-        return await editRanking(request.body, identity, response, code);
-      }
-      if (request.method === "DELETE" && code !== undefined) {
-        if (!(await requireAppCheck(request, response))) return;
-        const identity = await requireAccount(request, response);
-        if (!identity) return;
-        return await deleteRanking(identity, response, code);
-      }
-      methodNotAllowed(response);
-    } catch (error) {
-      console.error("Ranking request failed", error);
-      response.status(503).json({ error: "Unavailable", code: "UNAVAILABLE" });
-    }
-  },
+  (request, response) => route(request, response),
 );
 
+export async function route(
+  request: Request,
+  response: Response,
+  deps: WebDeps = production,
+): Promise<void> {
+  const segments = request.path
+    .replace(/^\/+|\/+$/g, "")
+    .split("/")
+    .filter((part) => part.length > 0);
+
+  try {
+    // The picture a chat shows for a page: /og/l/{id}.png and /og/r/{code}.png.
+    if (request.method === "GET" && segments.length === 3 && segments[0] === "og") {
+      const id = (segments[2] ?? "").replace(/\.png$/, "");
+      if (segments[1] === "l") return await listShareImage(response, id);
+      if (segments[1] === "r") return await rankingShareImage(response, id);
+      return notFound(response, "No such address");
+    }
+    // Pages: /l/{id} and /r/{code} are the site's own shell with the words a
+    // chat needs and the data the board needs.
+    if (request.method === "GET" && segments.length === 2 && segments[0] === "l") {
+      return await listPage(request, response, segments[1] ?? "");
+    }
+    if (request.method === "GET" && segments.length === 2 && segments[0] === "r") {
+      return await rankingPage(request, response, segments[1] ?? "");
+    }
+
+    // The API: /api/rank, /api/rank/{code} (read, claim, edit, delete) and /api/me/rankings.
+    const api = segments[0] === "api" ? segments.slice(1) : null;
+    if (api === null || api.length > 2) return notFound(response, "No such address");
+    const [resource, rest] = api;
+
+    if (resource === "me") {
+      if (rest !== "rankings") return notFound(response, "No such address");
+      if (request.method !== "GET") return methodNotAllowed(response);
+      if (!(await deps.appCheck(request, response))) return;
+      const identity = await deps.account(request, response);
+      if (!identity) return;
+      return await listMyRankings(deps.db(), identity, response);
+    }
+    if (resource !== "rank") return notFound(response, "No such address");
+
+    const code = rest;
+    if (request.method === "GET" && code !== undefined) {
+      if (!(await deps.appCheck(request, response))) return;
+      return await readRanking(deps.db(), response, code, await deps.viewer(request));
+    }
+    if (request.method === "POST" && code === undefined) {
+      if (!(await deps.appCheck(request, response))) return;
+      const identity = await deps.user(request, response);
+      if (!identity) return;
+      return await saveRanking(deps.db(), request.body, identity, response, deps.random);
+    }
+    if (request.method === "PATCH" && code !== undefined) {
+      if (!(await deps.appCheck(request, response))) return;
+      const identity = await deps.account(request, response);
+      if (!identity) return;
+      return await claimRanking(deps.db(), request.body, identity, response, code);
+    }
+    if (request.method === "PUT" && code !== undefined) {
+      if (!(await deps.appCheck(request, response))) return;
+      const identity = await deps.account(request, response);
+      if (!identity) return;
+      return await editRanking(deps.db(), request.body, identity, response, code);
+    }
+    if (request.method === "DELETE" && code !== undefined) {
+      if (!(await deps.appCheck(request, response))) return;
+      const identity = await deps.account(request, response);
+      if (!identity) return;
+      return await deleteRanking(deps.db(), identity, response, code);
+    }
+    methodNotAllowed(response);
+  } catch (error) {
+    console.error(`Request failed: ${request.method} ${request.path}`, error);
+    response.status(503).json({ error: "Unavailable", code: "UNAVAILABLE" });
+  }
+}
+
 async function readRanking(
+  db: Firestore,
   response: Response,
   code: string,
   viewer: Identity | null,
 ): Promise<void> {
   if (!isCode(code)) return notFound(response, "No such ranking");
-  const db = getFirestore();
   const doc = await db.collection(RANKINGS).doc(code).get();
   if (!doc.exists) return notFound(response, "No such ranking");
   const ranking = doc.data() as RankingDocument;
@@ -171,11 +198,16 @@ async function readRanking(
   });
 }
 
-async function saveRanking(body: unknown, identity: Identity, response: Response): Promise<void> {
+async function saveRanking(
+  db: Firestore,
+  body: unknown,
+  identity: Identity,
+  response: Response,
+  random: (max: number) => number,
+): Promise<void> {
   if (JSON.stringify(body ?? null).length > MAX_BODY_BYTES) {
     return void response.status(413).json({ error: "Too large", code: "TOO_LARGE" });
   }
-  const db = getFirestore();
   const listId = (body as { listId?: unknown } | null)?.listId;
   const list =
     typeof listId === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(listId)
@@ -226,7 +258,7 @@ async function saveRanking(body: unknown, identity: Identity, response: Response
   };
 
   for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
-    const code = makeCode((max) => randomInt(max));
+    const code = makeCode(random);
     try {
       await db
         .collection(RANKINGS)
@@ -242,6 +274,7 @@ async function saveRanking(body: unknown, identity: Identity, response: Response
 }
 
 async function claimRanking(
+  db: Firestore,
   body: unknown,
   identity: Identity,
   response: Response,
@@ -253,7 +286,6 @@ async function claimRanking(
     return void response.status(400).json({ error: "Which ranking?", code: "INVALID" });
   }
 
-  const db = getFirestore();
   const ref = db.collection(RANKINGS).doc(code);
   // Decided and written in one transaction, so two accounts racing for the
   // same token cannot both be told the ranking is theirs.
@@ -282,6 +314,7 @@ async function claimRanking(
 }
 
 async function editRanking(
+  db: Firestore,
   body: unknown,
   identity: Identity,
   response: Response,
@@ -291,7 +324,6 @@ async function editRanking(
   if (JSON.stringify(body ?? null).length > MAX_BODY_BYTES) {
     return void response.status(413).json({ error: "Too large", code: "TOO_LARGE" });
   }
-  const db = getFirestore();
   const ref = db.collection(RANKINGS).doc(code);
   const decision = await db.runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
@@ -318,9 +350,13 @@ async function editRanking(
 }
 
 /** Takes a ranking away for good. Only the account that keeps it may; its list is not touched. */
-async function deleteRanking(identity: Identity, response: Response, code: string): Promise<void> {
+async function deleteRanking(
+  db: Firestore,
+  identity: Identity,
+  response: Response,
+  code: string,
+): Promise<void> {
   if (!isCode(code)) return notFound(response, "No such ranking");
-  const db = getFirestore();
   const ref = db.collection(RANKINGS).doc(code);
   const decision = await db.runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);
@@ -339,10 +375,14 @@ async function deleteRanking(identity: Identity, response: Response, code: strin
   response.status(204).end();
 }
 
-async function listMyRankings(identity: Identity, response: Response): Promise<void> {
+async function listMyRankings(
+  db: Firestore,
+  identity: Identity,
+  response: Response,
+): Promise<void> {
   // No orderBy: a where and an orderBy on different fields need a composite
   // index, and this repository deploys no indexes; the sort happens here.
-  const found = await getFirestore()
+  const found = await db
     .collection(RANKINGS)
     .where("ownerUid", "==", identity.uid)
     .limit(MY_RANKINGS_CAP)

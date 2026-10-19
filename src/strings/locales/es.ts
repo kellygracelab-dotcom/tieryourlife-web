@@ -513,6 +513,10 @@ const es: Translation = {
     body: "Una parte no llegó: se cortó la conexión, o el sitio se actualizó en este mismo minuto. Recargar suele bastar.",
     reload: "Recargar",
   },
+  crash: {
+    title: "Algo salió mal en esta página",
+    body: "Recargar suele arreglarlo. Si no, el resto del sitio sigue funcionando.",
+  },
   notFound: {
     title: "No hay nada en esta dirección.",
     home: "Ir a la página principal",

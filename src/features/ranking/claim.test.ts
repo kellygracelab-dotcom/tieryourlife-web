@@ -57,7 +57,19 @@ describe("claimKeptRankings", () => {
     expect(readKept(store, "gone")).toBeNull();
     expect(readKept(store, "theirs")).toBeNull();
     expect(readKept(store, "later")).toEqual({ code: "llllllll", claimToken: "tl" });
-    expect(readKept(store, "taken")).toEqual({ code: "kkkkkkkk", claimToken: "tk" });
+    // Kept by another account: still this device's ranking, but this account stops asking.
+    expect(readKept(store, "taken")).toEqual({
+      code: "kkkkkkkk",
+      claimToken: "tk",
+      refusedTo: "u1",
+    });
+
+    claim.mockClear();
+    await claimKeptRankings(store, "u1", claim);
+    expect(claim.mock.calls.map(([code]) => code)).toEqual(["llllllll"]);
+    // Another account on the same device still gets to ask once.
+    await claimKeptRankings(store, "u2", claim);
+    expect(claim.mock.calls.map(([code]) => code)).toEqual(["llllllll", "llllllll", "kkkkkkkk"]);
   });
 
   it("does nothing with a store that cannot list its keys", async () => {

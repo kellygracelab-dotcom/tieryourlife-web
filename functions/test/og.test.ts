@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
   categoryLabel,
@@ -121,5 +123,32 @@ describe("renderPage", () => {
     const html = renderPage(shell, { ...page, image: null }, null);
     assert.equal(html.includes("og:image"), false);
     assert.ok(html.includes(`<meta name="twitter:card" content="summary" />`));
+  });
+
+  it("takes dollar signs in a title, a description or an item as they are", () => {
+    const odd = "Worth $& and $' and $` and $$";
+    const preload = { kind: "list", list: { title: odd, items: [{ title: "$'" }] } };
+    const html = renderPage(shell, { ...page, title: odd, description: odd }, preload);
+
+    assert.equal(html.match(/<title>/g)?.length, 1);
+    assert.ok(html.includes(`<title>${escapeHtml(odd)} · TierYourLife</title>`));
+    assert.ok(html.includes(`<meta name="description" content="${escapeHtml(odd)}" />`));
+    assert.ok(html.includes(`<meta property="og:title" content="${escapeHtml(odd)}" />`));
+    assert.equal(html.match(/<body>/g)?.length, 1);
+    const embedded = /<script id="[^"]+" type="application\/json">([^<]*)<\/script>/.exec(html);
+    assert.deepEqual(JSON.parse(embedded?.[1] ?? "null"), preload);
+  });
+
+  it("fits the site's real index.html: one title, its description replaced", () => {
+    const real = readFileSync(join(__dirname, "../../../index.html"), "utf8");
+    const html = renderPage(real, page, null);
+
+    assert.equal(html.match(/<title>/g)?.length, 1);
+    assert.ok(html.includes(`<title>Every &quot;A24&quot; film, ranked · TierYourLife</title>`));
+    assert.ok(
+      html.includes(`<meta name="description" content="${escapeHtml(page.description)}" />`),
+    );
+    assert.equal(html.includes("Rank anything, or take someone else"), false);
+    assert.ok(html.indexOf(`property="og:title"`) < html.indexOf("</head>"));
   });
 });

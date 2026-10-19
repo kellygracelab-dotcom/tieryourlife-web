@@ -5,6 +5,8 @@ export interface KeptRanking {
   claimToken: string;
   /** The account the ranking was handed to, once it has been. */
   claimedBy?: string;
+  /** An account the server said it is already kept away from; that account does not ask again. */
+  refusedTo?: string;
 }
 
 export const KEPT_PREFIX = "tyl:ranking:";
@@ -18,9 +20,14 @@ export function readKept(store: DraftStore, listId: string): KeptRanking | null 
   try {
     const parsed: unknown = JSON.parse(text);
     if (parsed === null || typeof parsed !== "object") return null;
-    const { code, claimToken, claimedBy } = parsed as Partial<KeptRanking>;
+    const { code, claimToken, claimedBy, refusedTo } = parsed as Partial<KeptRanking>;
     if (typeof code !== "string" || typeof claimToken !== "string") return null;
-    return typeof claimedBy === "string" ? { code, claimToken, claimedBy } : { code, claimToken };
+    return {
+      code,
+      claimToken,
+      ...(typeof claimedBy === "string" ? { claimedBy } : {}),
+      ...(typeof refusedTo === "string" ? { refusedTo } : {}),
+    };
   } catch {
     return null;
   }

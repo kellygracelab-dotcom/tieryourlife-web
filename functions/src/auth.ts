@@ -7,8 +7,22 @@ export interface Identity {
   isAnonymous: boolean;
 }
 
+/** Reads an ID token; the default asks Firebase Auth, a test hands in its own. */
+export type VerifyIdToken = (token: string) => Promise<DecodedToken>;
+
+export interface DecodedToken {
+  uid: string;
+  firebase?: { sign_in_provider?: string };
+}
+
+const firebaseAuth: VerifyIdToken = (token) => getAuth().verifyIdToken(token);
+
 /** Which install or person; a guest is fine here, rankings need no account. */
-export async function requireUser(request: Request, response: Response): Promise<Identity | null> {
+export async function requireUser(
+  request: Request,
+  response: Response,
+  verify: VerifyIdToken = firebaseAuth,
+): Promise<Identity | null> {
   const header = request.header("Authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
   if (!token) {
@@ -16,7 +30,7 @@ export async function requireUser(request: Request, response: Response): Promise
     return null;
   }
   try {
-    const decoded = await getAuth().verifyIdToken(token);
+    const decoded = await verify(token);
     return { uid: decoded.uid, isAnonymous: decoded.firebase?.sign_in_provider === "anonymous" };
   } catch {
     response.status(401).json({ error: "Invalid ID token", code: "UNAUTHENTICATED" });
@@ -28,12 +42,15 @@ export async function requireUser(request: Request, response: Response): Promise
  * Who is asking, when that only adds to the answer: a missing, stale or guest
  * token means nobody in particular, and nothing is refused.
  */
-export async function optionalAccount(request: Request): Promise<Identity | null> {
+export async function optionalAccount(
+  request: Request,
+  verify: VerifyIdToken = firebaseAuth,
+): Promise<Identity | null> {
   const header = request.header("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
   if (token.length === 0) return null;
   try {
-    const decoded = await getAuth().verifyIdToken(token);
+    const decoded = await verify(token);
     const isAnonymous = decoded.firebase?.sign_in_provider === "anonymous";
     return isAnonymous ? null : { uid: decoded.uid, isAnonymous };
   } catch {
@@ -45,8 +62,9 @@ export async function optionalAccount(request: Request): Promise<Identity | null
 export async function requireAccount(
   request: Request,
   response: Response,
+  verify: VerifyIdToken = firebaseAuth,
 ): Promise<Identity | null> {
-  const identity = await requireUser(request, response);
+  const identity = await requireUser(request, response, verify);
   if (identity === null) return null;
   if (identity.isAnonymous) {
     response.status(403).json({ error: "Sign in first", code: "NOT_SIGNED_IN" });

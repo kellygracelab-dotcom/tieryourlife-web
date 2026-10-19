@@ -143,7 +143,6 @@ describe("SearchPage", () => {
     });
     expect(router.state.location.search).toBe("?q=ghibli");
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({ q: "ghibli", sort: "popular" });
-    vi.useRealTimers();
   });
 
   it("keeps a chip pressed during the pause", async () => {
@@ -158,12 +157,12 @@ describe("SearchPage", () => {
     });
     expect(router.state.location.search).toBe("?q=ghibli&sort=recent");
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({ q: "ghibli", sort: "recent" });
-    vi.useRealTimers();
   });
 });
 
 describe("the search box on the front page", () => {
   it("takes the words the bar's field brings, instead of writing its own back", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     open("/search?q=anime&sort=recent");
     await screen.findByRole("heading", { level: 1 });
     const bar = within(screen.getByRole("banner"));
@@ -171,7 +170,10 @@ describe("the search box on the front page", () => {
     await userEvent.type(bar.getByRole("searchbox"), "zzz{Enter}");
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“zzz”");
     expect(within(screen.getByRole("main")).getByRole("searchbox")).toHaveValue("zzz");
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    // Longer than the page's own box waits before it writes what it holds.
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS + 50);
+    });
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("“zzz”");
   });
 

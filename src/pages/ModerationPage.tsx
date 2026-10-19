@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReportReason } from "../api/community";
 import { BAN_LENGTHS, type BanLength, type QueuedList } from "../api/moderation";
 import { useSession } from "../app/session";
@@ -9,6 +9,7 @@ import { leaveListUp, loadReports, takeDownList } from "../lib/api";
 import { agoText, reasonCounts } from "../features/moderation/queue";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
@@ -241,38 +242,16 @@ function ForeverDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const cancel = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    cancel.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
   return (
-    <div className="scrim" onClick={onCancel}>
-      <div
-        className="dialog dialog--narrow"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="forever-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h2 id="forever-title" className="dialog__title">
-          {fill(strings.mod.foreverTitle, { name })}
-        </h2>
-        <p className="dialog__body">{strings.mod.foreverBody}</p>
-        <div className="dialog__actions">
-          <button ref={cancel} type="button" className="btn btn--text" onClick={onCancel}>
-            <span>{strings.mod.cancel}</span>
-          </button>
-          <button type="button" className="btn dialog__danger" onClick={onConfirm}>
-            <span>{strings.mod.banForeverAction}</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialog
+      narrow
+      title={fill(strings.mod.foreverTitle, { name })}
+      body={strings.mod.foreverBody}
+      confirmLabel={strings.mod.banForeverAction}
+      cancelLabel={strings.mod.cancel}
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
   );
 }
 

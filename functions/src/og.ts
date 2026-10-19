@@ -104,11 +104,12 @@ export function renderPage(shell: string, page: PageMeta, preload: unknown): str
     .filter((line) => line.length > 0)
     .join("\n    ");
 
+  // Replacers, not replacement strings: in a string "$&" or "$'" from a title
+  // would pull pieces of the shell into the page.
   return shell
-    .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)}</title>`)
-    .replace(
-      /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/,
+    .replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(title)}</title>`)
+    .replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/, () =>
       meta("name", "description", page.description),
     )
-    .replace("</head>", `    ${head}\n  </head>`);
+    .replace("</head>", () => `    ${head}\n  </head>`);
 }
