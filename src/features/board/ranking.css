@@ -1368,7 +1368,8 @@
   margin-inline-start: auto;
   padding-inline-start: 12px;
   font: var(--text-caption);
-  color: var(--ink-faint);
+  /* Information, not decoration: the dim ink, 6.2:1 on the sheet, not the faint one. */
+  color: var(--ink-dim);
 }
 
 .move-sheet__actions {
@@ -1413,4 +1414,27 @@
 
 .pool__tools--sheet .cards__add {
   flex: 1 1 240px;
+}
+
+/*
+ * The buttons on a card are at least 24 px square (WCAG 2.2, target size).
+ * On a touch screen the move sheet carries "Remove from list", as the phone's
+ * does, so the cross steps aside and the sheet's button grows: two 24 px
+ * buttons do not fit side by side on a 44 px card without touching.
+ */
+.tile__more,
+.tile-holder--removable .tile__remove {
+  width: 24px;
+  height: 24px;
+}
+
+@media (hover: none) {
+  .tile-holder--removable:has(.tile__more) .tile__remove {
+    display: none;
+  }
+
+  .tile__more {
+    width: 28px;
+    height: 28px;
+  }
 }

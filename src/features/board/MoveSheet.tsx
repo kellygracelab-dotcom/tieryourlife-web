@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef, type CSSProperties } from "react";
+import { useId, useRef, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { PublishedTier } from "../../api/types";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { useModal } from "../../ui/useModal";
 
 interface MoveSheetProps {
   /** The card's name, which is the sheet's title. */
@@ -19,8 +20,8 @@ interface MoveSheetProps {
 /**
  * The phone's move sheet: every tier by a press, back to the pool, off the
  * list. It lies on the body, not in the tile, so a pool that scrolls cannot
- * clip it; Escape and a press outside close it, and the focus goes back to
- * the button that opened it.
+ * clip it; a press outside closes it, and the keyboard gets what `useModal`
+ * gives every dialog.
  */
 export function MoveSheet({
   name,
@@ -34,18 +35,7 @@ export function MoveSheet({
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    box.current?.querySelector<HTMLElement>("button:not([disabled])")?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      opener?.focus();
-    };
-  }, [onClose]);
+  useModal(box, onClose, "button:not([disabled])");
 
   return createPortal(
     <div className="scrim" onClick={onClose}>

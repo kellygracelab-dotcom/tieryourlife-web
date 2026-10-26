@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import type { FollowedAuthor, SuggestedAuthor } from "../../api/community";
@@ -7,6 +7,7 @@ import { followAuthor, loadFollowing, suggestedAuthors, unfollowAuthor } from ".
 import { isEditorialAuthor } from "../../lib/editorial";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { useModal } from "../../ui/useModal";
 import { Icon } from "../../ui/Icon";
 import { useResource } from "../../lib/useResource";
 import { FollowButton } from "../community/FollowButton";
@@ -159,32 +160,22 @@ function ManageFollowing({
 }: {
   authors: readonly FollowedAuthor[];
   unfollow: Follow;
-  onClose: (changed: boolean) => void;
+  /** The uids the account confirmed as unfollowed while the list was open. */
+  onClose: (unfollowed: readonly string[]) => void;
 }) {
   const [people, setPeople] = useState<readonly FollowedAuthor[]>(authors);
   const [failed, setFailed] = useState<string | null>(null);
-  const [changed, setChanged] = useState(false);
+  const [unfollowed, setUnfollowed] = useState<readonly string[]>([]);
   const box = useRef<HTMLDivElement>(null);
-  const close = useCallback(() => onClose(changed), [onClose, changed]);
+  const close = useCallback(() => onClose(unfollowed), [onClose, unfollowed]);
 
-  useEffect(() => {
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    box.current?.querySelector<HTMLElement>("button")?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      opener?.focus();
-    };
-  }, [close]);
+  useModal(box, close, "button");
 
   const drop = (person: FollowedAuthor) => {
     setFailed(null);
     setPeople((current) => current.filter((one) => one.uid !== person.uid));
     unfollow(person.uid).then(
-      () => setChanged(true),
+      () => setUnfollowed((done) => [...done, person.uid]),
       () => {
         setPeople((current) =>
           authors.filter((one) => one.uid === person.uid || current.includes(one)),
@@ -263,10 +254,15 @@ export function FollowedStrip({
   onChanged: () => void;
 }) {
   const loadFor = useCallback(() => load(), [load]);
-  const { state, retry } = useResource(uid, loadFor);
+  const { state } = useResource(uid, loadFor);
   const [managing, setManaging] = useState(false);
-  if (state.status !== "ready" || state.value.authors.length === 0) return null;
-  const authors = state.value.authors;
+  // Whoever the account confirmed as unfollowed leaves the strip at once. The
+  // list is not read again for it: a reload would take the strip, and with it
+  // the Manage button the focus goes back to, off the page for a moment.
+  const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
+  if (state.status !== "ready") return null;
+  const authors = state.value.authors.filter((person) => !gone.has(person.uid));
+  if (authors.length === 0) return null;
   return (
     <div className="followed">
       <div className="followed__line">
@@ -284,10 +280,10 @@ export function FollowedStrip({
         <ManageFollowing
           authors={authors}
           unfollow={unfollow}
-          onClose={(changed) => {
+          onClose={(unfollowed) => {
             setManaging(false);
-            if (changed) {
-              retry();
+            if (unfollowed.length > 0) {
+              setGone((before) => new Set([...before, ...unfollowed]));
               onChanged();
             }
           }}
@@ -319,8 +315,10 @@ export function FollowingFeed({
 }) {
   const { account } = useSession();
   const uid = account?.kind === "signedIn" ? account.uid : "";
-  // The people behind the feed, once the feed itself says there are some.
-  const strip = state.status === "ready" && !state.followingNobody && (
+  // The people behind the feed. It stays while the feed is read again after
+  // an unfollow, so the strip, and the focus on its Manage button, do not
+  // blink away; it goes only when the feed says nobody is followed.
+  const strip = !(state.status === "ready" && state.followingNobody) && (
     <FollowedStrip uid={uid} load={loadPeople} unfollow={unfollow} onChanged={retry} />
   );
   if (state.status === "error") {

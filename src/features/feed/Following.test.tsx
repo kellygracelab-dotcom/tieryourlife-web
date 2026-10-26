@@ -227,15 +227,17 @@ describe("HomePage for a signed-in person", () => {
     expect(unfollow).toHaveBeenCalledWith("u2");
     expect(within(dialog).queryByRole("link", { name: "someone" })).toBeNull();
 
-    // Done: the people and the feed behind them are read again.
-    loadFollowing.mockResolvedValue({
-      authors: [{ uid: "u3", name: "", photoUrl: "https://img/f.jpg" }],
-    });
+    // Done: the strip drops whoever the account confirmed at once, without
+    // reading the people again; the feed behind it is read again.
     const reads = load.mock.calls.length;
+    const peopleReads = loadFollowing.mock.calls.length;
     await userEvent.click(within(dialog).getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(await screen.findByText("You follow 1 person")).toBeInTheDocument();
     expect(load.mock.calls.length).toBeGreaterThan(reads);
+    expect(loadFollowing.mock.calls.length).toBe(peopleReads);
+    // Manage stayed on the page through the feed's reload, and has the focus back.
+    expect(screen.getByRole("button", { name: "Manage" })).toHaveFocus();
   });
 
   it("brings the row back with a word when unfollowing did not take", async () => {

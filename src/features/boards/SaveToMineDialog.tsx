@@ -1,8 +1,9 @@
-import { useEffect, useId, useRef } from "react";
+import { useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
-import type { SaveToMine } from "./useSaveToMine";
+import { useModal } from "../../ui/useModal";
+import type { SaveChoices, SaveToMine } from "./useSaveToMine";
 import "./boards.css";
 
 /**
@@ -10,26 +11,25 @@ import "./boards.css";
  * `useSaveToMine` is asking; the copy is made the moment one is chosen.
  */
 export function SaveToMineDialog({ saving }: { saving: SaveToMine }) {
-  const { asking, save, cancel } = saving;
+  return saving.asking === null ? null : (
+    <Question choices={saving.asking} save={saving.save} cancel={saving.cancel} />
+  );
+}
+
+/** The question itself, mounted only while it is asked, so its focus handling starts and ends with it. */
+function Question({
+  choices: asking,
+  save,
+  cancel,
+}: {
+  choices: SaveChoices;
+  save: SaveToMine["save"];
+  cancel: () => void;
+}) {
   const id = useId();
   const dialog = useRef<HTMLDivElement>(null);
-  const open = asking !== null;
+  useModal(dialog, cancel);
 
-  useEffect(() => {
-    if (!open) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog.current?.querySelector<HTMLElement>("button")?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") cancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      opener?.focus();
-    };
-  }, [open, cancel]);
-
-  if (asking === null) return null;
   return createPortal(
     <div className="scrim" onClick={cancel}>
       <div
