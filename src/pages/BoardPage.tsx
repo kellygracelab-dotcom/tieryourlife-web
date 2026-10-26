@@ -7,6 +7,7 @@ import type { Dock } from "../features/board/dock";
 import {
   addToPool,
   arrangeItems,
+  newBoard,
   poolCount,
   rankedCount,
   rename,
@@ -17,7 +18,7 @@ import {
 } from "../features/boards/model";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
 import { nextUid, useBoard } from "../features/boards/useBoards";
-import { boardView, isUntouched, uidRows } from "../features/boards/view";
+import { boardView, uidRows } from "../features/boards/view";
 import { AddCardBox, type Upload } from "../features/editor/AddCardBox";
 import type { EditorAction, EditorItem } from "../features/editor/model";
 import type { Lookup } from "../features/editor/useCatalogue";
@@ -127,11 +128,18 @@ export function BoardPage({
 }: BoardPageProps) {
   const { uid = "" } = useParams();
   const [params] = useSearchParams();
-  const board = useBoard(uid, repository);
+  const stored = useBoard(uid, repository);
   const navigate = useNavigate();
-  // The moment a new board was made, from its address: untouched since, it is thrown away on leaving.
+  // A new board is made here and kept only once it is touched: a name, a
+  // card, a star. Left as it came, it was never kept, which is what the
+  // phone's cross does with an untouched board.
   const madeAt = Number(params.get("new"));
-  const [editingTitle, setEditingTitle] = useState(Number.isFinite(madeAt) && madeAt > 0);
+  const fresh = useMemo(
+    () => (madeAt > 0 ? newBoard(uid, strings.boards.untitled, madeAt, nextUid) : null),
+    [uid, madeAt],
+  );
+  const board = stored ?? fresh;
+  const [editingTitle, setEditingTitle] = useState(madeAt > 0);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const forget = useCallback(() => setNotice(null), []);
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
@@ -142,16 +150,6 @@ export function BoardPage({
 
   usePageTitle(board === null ? null : board.title || strings.boards.untitled);
 
-  useEffect(() => {
-    if (!(madeAt > 0)) return;
-    return () => {
-      const left = repository.get(uid);
-      if (left !== null && isUntouched(left, madeAt, strings.boards.untitled)) {
-        repository.remove(uid);
-      }
-    };
-  }, [repository, uid, madeAt]);
-
   const view = useMemo(
     () => (board === null ? null : boardView(board, strings.boards.untitled)),
     [board],
@@ -159,20 +157,21 @@ export function BoardPage({
 
   if (board === null || view === null) return <NotFound />;
 
+  // What the board is right now: what is kept, or the fresh one until it is.
+  const latest = (): Board => repository.get(uid) ?? board;
   const keep = (next: Board) => {
     if (next !== board) repository.save(next);
   };
 
   const onRows = (rows: readonly (readonly number[])[]) => {
-    const current = repository.get(uid);
-    if (current === null) return;
+    const current = latest();
     keep(arrangeItems(current, uidRows(view, rows), now()));
   };
 
   const remove = (item: number) => {
     const itemUid = view.uids[item];
-    const current = repository.get(uid);
-    if (itemUid === undefined || current === null) return;
+    const current = latest();
+    if (itemUid === undefined) return;
     const card = current.items.find((it) => it.uid === itemUid);
     keep(trashItem(current, itemUid, now()));
     setNotice({
@@ -190,8 +189,7 @@ export function BoardPage({
   // The add-card box speaks the editor's language; here its cards go to the pool.
   const dispatch = (action: EditorAction) => {
     if (action.type !== "addItem") return;
-    const current = repository.get(uid);
-    if (current === null) return;
+    const current = latest();
     const key = action.key;
     const taken = key !== undefined && current.items.some((it) => it.uid === key);
     const uidFor = key !== undefined && !taken ? () => key : nextUid;

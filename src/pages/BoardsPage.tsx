@@ -5,7 +5,6 @@ import { usePageTitle } from "../app/pageTitle";
 import {
   arrangeBoards,
   isNarrowed,
-  newBoard,
   poolCount,
   rankedCount,
   restoreBoard,
@@ -220,11 +219,10 @@ export function BoardsPage({ repository = site, now = Date.now }: BoardsPageProp
   const shown = [...arranged.favourites, ...arranged.rest];
   const publicCount = live.filter((board) => board.publishedId !== null).length;
 
+  // The board page makes the board and keeps it once it is touched; an
+  // untouched one is never kept, so there is nothing to throw away.
   const create = () => {
-    const at = now();
-    const board = newBoard(nextUid(), strings.boards.untitled, at, nextUid);
-    repository.save(board);
-    void navigate(`/b/${encodeURIComponent(board.uid)}?new=${at}`);
+    void navigate(`/b/${encodeURIComponent(nextUid())}?new=${now()}`);
   };
 
   const star = (board: Board) => {

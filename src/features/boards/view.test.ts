@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { agoOf } from "./ago";
 import { addToPool, arrangeItems, liveItems, newBoard } from "./model";
-import { boardView, isUntouched, uidRows } from "./view";
+import { boardView, uidRows } from "./view";
 
 const uids = () => {
   let n = 0;
@@ -26,17 +26,6 @@ describe("boardView", () => {
     expect(view.rows).toEqual([[0, 1], [2], [], [], []]);
     expect(view.uids).toEqual([ic, ia, ib, liveItems(b0)[3]?.uid]);
     expect(uidRows(view, [[1], [0, 9], [], [], []])).toEqual([[ia], [ic], [], [], []]);
-  });
-
-  it("tells an untouched new board from one that was named, starred or given a card", () => {
-    const b = newBoard("b", "Untitled list", 5, uids());
-    expect(isUntouched(b, 5, "Untitled list")).toBe(true);
-    expect(isUntouched(b, 4, "Untitled list")).toBe(false);
-    expect(isUntouched({ ...b, title: "Films" }, 5, "Untitled list")).toBe(false);
-    expect(isUntouched({ ...b, favouritedAt: 6 }, 5, "Untitled list")).toBe(false);
-    expect(
-      isUntouched(addToPool(b, [{ title: "a", imageUrl: null }], 5, uids()), 5, "Untitled list"),
-    ).toBe(false);
   });
 });
 

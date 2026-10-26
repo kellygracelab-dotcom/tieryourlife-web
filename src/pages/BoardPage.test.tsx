@@ -152,23 +152,25 @@ describe("BoardPage", () => {
     expect(router.state.location.state).toEqual({ trashed: ["films"] });
   });
 
-  it("throws a brand-new board away when it is left untouched, and keeps one that was named", async () => {
+  it("makes a new board with the phone's five tiers, and keeps it only once it is touched", async () => {
     const repository = boardsRepository(memoryStore());
-    repository.save(newBoard("fresh", "Untitled list", 777, uids()));
     const router = open(repository, "/b/fresh?new=777");
     // The name is up for editing from the start.
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveFocus();
+    expect(screen.getByRole("list", { name: "S" })).toBeInTheDocument();
     await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Untitled list");
     await userEvent.click(screen.getByRole("link", { name: "Your boards" }));
     expect(router.state.location.pathname).toBe("/boards");
     expect(repository.get("fresh")).toBeNull();
 
-    repository.save(newBoard("named", "Untitled list", 778, uids()));
     open(repository, "/b/named?new=778");
     // The name is selected whole, so typing replaces it.
     await userEvent.keyboard("Ramen{Enter}");
-    await userEvent.click(screen.getByRole("link", { name: "Your boards" }));
-    expect(repository.get("named")?.title).toBe("Ramen");
+    const kept = repository.get("named");
+    expect(kept?.title).toBe("Ramen");
+    expect(kept?.editedAt).toBeGreaterThan(778);
+    expect(rankedTiers(kept!).map((t) => t.label)).toEqual(["S", "A", "B", "C", "D"]);
   });
 
   it("says so when there is no such board", () => {

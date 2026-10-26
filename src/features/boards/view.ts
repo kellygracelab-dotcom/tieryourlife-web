@@ -68,14 +68,3 @@ export const uidRows = (view: BoardView, rows: readonly (readonly number[])[]): 
   rows.map((row) =>
     row.flatMap((index) => (view.uids[index] === undefined ? [] : [view.uids[index]])),
   );
-
-/**
- * A brand-new board nobody has touched: no cards, the name it was given, and
- * no edit since it was made. Leaving one behind would strand an Untitled
- * list, so the page throws it away, the way the phone's cross does.
- */
-export const isUntouched = (board: Board, openedAt: number, untitled: string): boolean =>
-  board.items.length === 0 &&
-  board.editedAt === openedAt &&
-  board.favouritedAt === null &&
-  (board.title === untitled || board.title.trim().length === 0);

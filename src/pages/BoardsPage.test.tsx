@@ -59,11 +59,9 @@ describe("BoardsPage", () => {
     expect(screen.getByText("Rank anything")).toBeInTheDocument();
 
     await userEvent.click(screen.getAllByRole("button", { name: "New board" })[0]!);
-    const made = repository.all();
-    expect(made).toHaveLength(1);
-    expect(made[0]?.title).toBe("Untitled list");
-    expect(made[0]?.tiers.map((tier) => tier.label)).toEqual(["S", "A", "B", "C", "D", ""]);
-    expect(router.state.location.pathname).toBe(`/b/${made[0]?.uid}`);
+    // Nothing is kept until the board is touched; the page it opens on does that.
+    expect(repository.all()).toEqual([]);
+    expect(router.state.location.pathname).toMatch(/^\/b\/[0-9a-f-]{36}$/);
     expect(router.state.location.search).toBe("?new=5000");
   });
 
