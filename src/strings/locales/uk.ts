@@ -643,6 +643,11 @@ const uk: Translation = {
     categoryNone: "Ще не вибрана",
     rankedEmpty: "Ще нічого не оцінено",
     rankedNote: "Щоб переміщувати картки між рівнями, перемкніться на рядки, що переносяться.",
+    moveMenu: "Перемістити {name}",
+    moveTo: "Перемістити до рівня",
+    currentTier: "Зараз тут",
+    backToPool: "Повернути в пул",
+    removeFromList: "Видалити зі списку",
   },
   sync: {
     dataTitle: "Ваші дані",

@@ -599,6 +599,11 @@ const de: Translation = {
     categoryNone: "Noch nicht gewählt",
     rankedEmpty: "Noch nichts eingestuft",
     rankedNote: "Wechsle zu umbrochenen Zeilen, um Karten zwischen Stufen zu verschieben.",
+    moveMenu: "{name} verschieben",
+    moveTo: "In eine Stufe verschieben",
+    currentTier: "Aktuell hier",
+    backToPool: "Zurück in den Pool",
+    removeFromList: "Aus der Liste entfernen",
   },
   sync: {
     dataTitle: "Deine Daten",

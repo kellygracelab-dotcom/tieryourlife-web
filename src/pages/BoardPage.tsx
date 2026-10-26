@@ -475,7 +475,14 @@ export function BoardPage({
                 rows: view.rows,
                 save: () => Promise.resolve(),
                 cancel: () => undefined,
-                owner: { live: true, canSave: false, onChange: onRows, remove, tools },
+                owner: {
+                  live: true,
+                  moveMenu: true,
+                  canSave: false,
+                  onChange: onRows,
+                  remove,
+                  tools,
+                },
               }}
             />
           </section>

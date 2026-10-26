@@ -581,6 +581,11 @@ const ja: Translation = {
     categoryNone: "未選択",
     rankedEmpty: "まだ何もランク付けされていません",
     rankedNote: "ティア間でカードを動かすには折り返し行に切り替えてください。",
+    moveMenu: "{name} を移動",
+    moveTo: "ティアに移動",
+    currentTier: "現在ここにあります",
+    backToPool: "プールに戻す",
+    removeFromList: "リストから削除",
   },
   sync: {
     dataTitle: "データ",

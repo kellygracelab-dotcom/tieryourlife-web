@@ -591,6 +591,11 @@ const ptBR: Translation = {
     categoryNone: "Ainda não escolhida",
     rankedEmpty: "Nada classificado ainda",
     rankedNote: "Mude para linhas com quebra para mover cartas entre níveis.",
+    moveMenu: "Mover {name}",
+    moveTo: "Mover para um nível",
+    currentTier: "Está aqui agora",
+    backToPool: "Voltar para o grupo",
+    removeFromList: "Remover da lista",
   },
   sync: {
     dataTitle: "Seus dados",

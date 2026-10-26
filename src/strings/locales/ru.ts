@@ -647,6 +647,11 @@ const ru: Translation = {
     categoryNone: "Пока не выбрана",
     rankedEmpty: "Пока ничего не оценено",
     rankedNote: "Чтобы перемещать карточки между уровнями, переключитесь на строки с переносом.",
+    moveMenu: "Переместить {name}",
+    moveTo: "Переместить на уровень",
+    currentTier: "Сейчас здесь",
+    backToPool: "Вернуть в пул",
+    removeFromList: "Удалить из списка",
   },
   sync: {
     dataTitle: "Ваши данные",

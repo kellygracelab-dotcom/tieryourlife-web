@@ -740,6 +740,11 @@ const ar: Translation = {
     categoryNone: "لم تُختر بعد",
     rankedEmpty: "لم يتم تصنيف أي شيء بعد",
     rankedNote: "بدّل إلى الصفوف الملتفّة لنقل البطاقات بين المستويات.",
+    moveMenu: "نقل {name}",
+    moveTo: "النقل إلى مستوى",
+    currentTier: "هنا حاليًا",
+    backToPool: "الإعادة إلى المجمّع",
+    removeFromList: "إزالة من القائمة",
   },
   sync: {
     dataTitle: "بياناتك",

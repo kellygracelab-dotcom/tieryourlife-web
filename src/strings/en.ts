@@ -560,6 +560,11 @@ export const en = {
     categoryNone: "Not chosen yet",
     rankedEmpty: "Nothing ranked yet",
     rankedNote: "Switch to wrapped rows to move cards between tiers.",
+    moveMenu: "Move {name}",
+    moveTo: "Move to a tier",
+    currentTier: "Currently here",
+    backToPool: "Back to the pool",
+    removeFromList: "Remove from list",
   },
   sync: {
     dataTitle: "Your data",

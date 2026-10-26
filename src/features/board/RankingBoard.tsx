@@ -13,7 +13,7 @@ import {
 import { createPortal } from "react-dom";
 import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
-import type { PublishedList } from "../../api/types";
+import type { PublishedList, PublishedTier } from "../../api/types";
 import { useSession } from "../../app/session";
 import { keepRanking, noteTake } from "../../lib/api";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
@@ -25,6 +25,7 @@ import { errorOf } from "../../api/errors";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
+import { Menu } from "../../ui/Menu";
 import { DragGhost } from "./DragGhost";
 import { flyIn } from "./flight";
 import type { DragState } from "./drag";
@@ -72,6 +73,8 @@ export interface EditMode {
     status?: ReactNode;
     /** Every move is kept the moment it is made: no Save and no Discard, the board on screen is the board. */
     live?: boolean;
+    /** A menu on every card for moving it without a drag: a finger without a keyboard, or a tenth tier. */
+    moveMenu?: boolean;
   };
 }
 
@@ -105,6 +108,8 @@ interface TileProps {
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
   /** The owner may take a card off the list; a button beside the tile, never inside it. */
   onRemove?: () => void;
+  /** A menu beside the tile for moving without a drag: every tier, the pool, off the list. */
+  move?: { tiers: readonly PublishedTier[]; current: number | null };
   /** Where a card dragged over this row would land, next to this one. */
   insert?: "before" | "after";
 }
@@ -118,6 +123,7 @@ function Tile({
   dispatch,
   onPointerDown,
   onRemove,
+  move,
   insert,
 }: TileProps) {
   const card = list.items[item];
@@ -129,7 +135,7 @@ function Tile({
     <li
       className={
         [
-          onRemove !== undefined && "tile-holder--removable",
+          (onRemove !== undefined || move !== undefined) && "tile-holder--removable",
           insert !== undefined && `tile-holder--insert-${insert}`,
         ]
           .filter(Boolean)
@@ -167,6 +173,65 @@ function Tile({
         >
           <Icon name="close" />
         </button>
+      )}
+      {move !== undefined && !locked && (
+        <Menu
+          label={fill(strings.boards.moveMenu, { name: card.title })}
+          buttonClassName="tile__more"
+          button={<Icon name="more_vert" />}
+        >
+          <>
+            <li className="menu__who">{strings.boards.moveTo}</li>
+            {move.tiers.map((tier, index) => (
+              <li key={`${index}-${tier.label}`}>
+                <button
+                  type="button"
+                  className="menu__action tile__menu-tier"
+                  disabled={index === move.current}
+                  onClick={() => dispatch({ type: "place", item, tier: index })}
+                >
+                  <span
+                    className="tile__menu-swatch band"
+                    style={
+                      {
+                        "--band-light": tier.colorLight,
+                        "--band-dark": tier.colorDark,
+                      } as CSSProperties
+                    }
+                    aria-hidden="true"
+                  />
+                  <span>{tier.label}</span>
+                  {index === move.current && (
+                    <span className="tile__menu-note">{strings.boards.currentTier}</span>
+                  )}
+                </button>
+              </li>
+            ))}
+            <li className="menu__divider" role="separator" />
+            {move.current !== null && (
+              <li>
+                <button
+                  type="button"
+                  className="menu__action"
+                  onClick={() => dispatch({ type: "unplace", item })}
+                >
+                  {strings.boards.backToPool}
+                </button>
+              </li>
+            )}
+            {onRemove !== undefined && (
+              <li>
+                <button
+                  type="button"
+                  className="menu__action menu__action--danger"
+                  onClick={onRemove}
+                >
+                  {strings.boards.removeFromList}
+                </button>
+              </li>
+            )}
+          </>
+        </Menu>
       )}
     </li>
   );
@@ -512,6 +577,8 @@ export function RankingBoard({
               lifted={lifted}
               locked={locked}
               onPlace={placeSelected}
+              onRemove={edit?.owner?.moveMenu ? edit.owner.remove : undefined}
+              moveMenu={edit?.owner?.moveMenu}
             />
           ))}
           <div className="board__end" ref={boardEnd} aria-hidden="true" />
@@ -623,6 +690,9 @@ export function RankingBoard({
                           onRemove={
                             edit?.owner === undefined ? undefined : () => edit.owner?.remove(item)
                           }
+                          move={
+                            edit?.owner?.moveMenu ? { tiers: list.tiers, current: null } : undefined
+                          }
                         />
                       ))}
                     </ul>
@@ -668,6 +738,9 @@ interface TierRowProps {
   locked: boolean;
   /** Places the picked card here; the board plans the tile's flight first. */
   onPlace: (tier: number) => void;
+  /** The owner's: a card off the list, and the menu for moving one without a drag. */
+  onRemove?: (item: number) => void;
+  moveMenu?: boolean;
 }
 
 function TierRow({
@@ -681,6 +754,8 @@ function TierRow({
   lifted,
   locked,
   onPlace,
+  onRemove,
+  moveMenu = false,
 }: TierRowProps) {
   const meta = list.tiers[tier];
   const row = state.rows[tier] ?? [];
@@ -744,6 +819,8 @@ function TierRow({
             dispatch={dispatch}
             onPointerDown={pointerDownFor(item)}
             insert={insertOf(item)}
+            onRemove={onRemove === undefined ? undefined : () => onRemove(item)}
+            move={moveMenu ? { tiers: list.tiers, current: tier } : undefined}
           />
         ))}
       </ul>

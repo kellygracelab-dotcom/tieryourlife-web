@@ -580,6 +580,11 @@ const tr: Translation = {
     categoryNone: "Henüz seçilmedi",
     rankedEmpty: "Henüz sıralanan yok",
     rankedNote: "Kartları seviyeler arasında taşımak için kaydırılan satırlara geç.",
+    moveMenu: "{name} öğesini taşı",
+    moveTo: "Bir seviyeye taşı",
+    currentTier: "Şu anda burada",
+    backToPool: "Havuza geri gönder",
+    removeFromList: "Listeden kaldır",
   },
   sync: {
     dataTitle: "Verilerin",

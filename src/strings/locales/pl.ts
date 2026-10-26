@@ -642,6 +642,11 @@ const pl: Translation = {
     categoryNone: "Jeszcze nie wybrana",
     rankedEmpty: "Jeszcze nic nieocenione",
     rankedNote: "Przełącz na zawijane wiersze, aby przenosić karty między poziomami.",
+    moveMenu: "Przenieś {name}",
+    moveTo: "Przenieś do poziomu",
+    currentTier: "Obecnie tutaj",
+    backToPool: "Wróć do puli",
+    removeFromList: "Usuń z listy",
   },
   sync: {
     dataTitle: "Twoje dane",

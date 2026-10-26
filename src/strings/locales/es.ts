@@ -593,6 +593,11 @@ const es: Translation = {
     categoryNone: "Aún sin elegir",
     rankedEmpty: "Nada clasificado todavía",
     rankedNote: "Cambia a filas que se ajustan para mover cartas entre niveles.",
+    moveMenu: "Mover {name}",
+    moveTo: "Mover a un nivel",
+    currentTier: "Actualmente aquí",
+    backToPool: "Volver al montón",
+    removeFromList: "Quitar de la lista",
   },
   sync: {
     dataTitle: "Tus datos",

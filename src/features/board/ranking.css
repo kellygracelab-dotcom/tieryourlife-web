@@ -1264,3 +1264,73 @@
     animation: none;
   }
 }
+
+/* The menu for moving a card without a drag: the other top corner of the tile. */
+.tile__more {
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+  list-style: none;
+}
+
+.tile__more::-webkit-details-marker {
+  display: none;
+}
+
+.tile__more .ms {
+  font-size: 16px;
+}
+
+.tile-holder--removable:hover .tile__more,
+.tile-holder--removable:focus-within .tile__more,
+.menu[open] > .tile__more {
+  display: inline-flex;
+}
+
+@media (hover: none) {
+  .tile__more {
+    display: inline-flex;
+  }
+}
+
+.tile-holder--removable > .menu {
+  position: static;
+}
+
+.tile__menu-tier {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tile__menu-tier:disabled {
+  color: var(--ink-dim);
+  cursor: default;
+}
+
+.tile__menu-swatch {
+  display: inline-block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--band);
+}
+
+.tile__menu-note {
+  margin-inline-start: auto;
+  padding-inline-start: 12px;
+  font: var(--text-caption);
+  color: var(--ink-faint);
+}

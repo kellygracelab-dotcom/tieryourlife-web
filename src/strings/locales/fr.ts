@@ -609,6 +609,11 @@ const fr: Translation = {
     categoryNone: "Pas encore choisie",
     rankedEmpty: "Rien de classé pour l'instant",
     rankedNote: "Passez aux lignes avec retour pour déplacer des cartes entre les rangs.",
+    moveMenu: "Déplacer {name}",
+    moveTo: "Déplacer vers un rang",
+    currentTier: "Actuellement ici",
+    backToPool: "Remettre dans le réservoir",
+    removeFromList: "Retirer de la liste",
   },
   sync: {
     dataTitle: "Vos données",
