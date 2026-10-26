@@ -594,6 +594,40 @@ const es: Translation = {
     rankedEmpty: "Nada clasificado todavía",
     rankedNote: "Cambia a filas que se ajustan para mover cartas entre niveles.",
   },
+  sync: {
+    dataTitle: "Tus datos",
+    backUp: "Guardar copia de mis tableros",
+    backUpSub: "Niveles, cartas y leyendas",
+    backUpNote:
+      "Tus propias imágenes van a tu cuenta, donde solo tú las ves. Publicar copia las imágenes al feed, donde las ve cualquiera.",
+    offTitle: "¿Dejar de guardar copia?",
+    offBody:
+      "Tus tableros siguen en este navegador. La copia de tu cuenta se elimina, y un dispositivo nuevo empezará vacío.",
+    offConfirm: "Detener y eliminar",
+    offCancel: "Cancelar",
+    stuck: "Sin copia desde {when}. Revisa tu conexión.",
+    now: "Guardar copia ahora",
+    backingUp: "Guardando copia…",
+    guestNote:
+      "Cambia de navegador o borra este y desaparecen. Una cuenta los conserva y los lleva al teléfono.",
+    localOnly: "{count}, solo en este dispositivo",
+    mergeTitle: "Ya has usado esta cuenta",
+    mergeBody: "Ya tiene {account}. Este dispositivo tiene {local} que hiciste sin cuenta.",
+    mergeKeep: "Conservar todo",
+    mergeKeepSub:
+      "Los {total}. Si dos tienen el mismo nombre, al local se le añade “(de este dispositivo)”.",
+    mergeAccount: "Usar solo los tableros de la cuenta",
+    mergeAccountSub:
+      "{local} de este dispositivo van a la papelera. Puedes restaurarlos desde ahí.",
+    mergeFootnote: "No se elimina nada en ningún caso.",
+    mergeRecommended: "Recomendado",
+    mergeContinue: "Continuar",
+    fromThisDevice: "(de este dispositivo)",
+    arrivedFrom: "de {device}",
+    arrivedFromUnknown: "de otro dispositivo",
+    trashRow: "Papelera",
+    trashEmpty: "Vacía",
+  },
   trash: {
     title: "Papelera",
     subtitle: "Las listas y elementos eliminados permanecen aquí hasta que los quites.",

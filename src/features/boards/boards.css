@@ -180,3 +180,92 @@
   font: var(--text-small);
   color: var(--ink-dim);
 }
+
+/* The question on signing into an account that already has boards. */
+.merge {
+  width: min(440px, 100%);
+}
+
+.merge__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.merge__option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.merge__option:has(input:checked) {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.merge__option input {
+  margin: 3px 0 0;
+  accent-color: var(--link);
+}
+
+.merge__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.merge__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font: var(--text-label);
+  font-size: 14px;
+}
+
+.merge__recommended {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+  font: var(--text-caption);
+  color: var(--ink-dim);
+}
+
+.merge__sub {
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.merge__option:has(input:checked) .merge__sub,
+.merge__option:has(input:checked) .merge__recommended {
+  color: inherit;
+}
+
+.merge__footnote {
+  margin: 12px 0 0;
+  font: var(--text-small);
+  color: var(--ink-faint);
+}
+
+/* Where a copy came from, on the board's card. */
+.board-card__from {
+  display: inline-block;
+  margin-inline-start: 8px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+  font: var(--text-caption);
+  color: var(--ink-dim);
+  vertical-align: middle;
+}
+
+.boards__local-only {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-faint);
+}

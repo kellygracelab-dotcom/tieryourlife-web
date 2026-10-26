@@ -17,7 +17,9 @@ import {
   type PublishedFilter,
 } from "../features/boards/model";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { useBoardSync } from "../features/boards/boardSync";
 import { nextUid, useBoards } from "../features/boards/useBoards";
+import "../features/boards/boards.css";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
@@ -119,7 +121,14 @@ function BoardCard({
           to={`/b/${encodeURIComponent(board.uid)}`}
           aria-label={fill(strings.boards.open, { name: title })}
         >
-          <span className="board-card__title">{title}</span>
+          <span className="board-card__title">
+            {title}
+            {board.arrivedFrom !== null && (
+              <span className="board-card__from">
+                {fill(strings.sync.arrivedFrom, { device: board.arrivedFrom })}
+              </span>
+            )}
+          </span>
           <span className="board-card__meta">{meta}</span>
           <SharesBar board={board} />
           {ranked === 0 && inPool > 0 && (
@@ -178,6 +187,7 @@ function Group({
 export function BoardsPage({ repository = site, now = Date.now }: BoardsPageProps) {
   usePageTitle(strings.boards.title);
   const all = useBoards(repository);
+  const { signedIn } = useBoardSync();
   const navigate = useNavigate();
   const location = useLocation();
   const [sort, setSort] = useState<BoardSort>("newest");
@@ -437,6 +447,11 @@ export function BoardsPage({ repository = site, now = Date.now }: BoardsPageProp
             />
           )}
         </>
+      )}
+      {!signedIn && live.length > 0 && (
+        <p className="boards__local-only">
+          {fill(strings.sync.localOnly, { count: plural(strings.boards.count, live.length) })}
+        </p>
       )}
       <Snackbar notice={notice} onDone={forget} />
     </section>

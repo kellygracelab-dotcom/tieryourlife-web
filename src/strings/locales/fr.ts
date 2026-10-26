@@ -610,6 +610,40 @@ const fr: Translation = {
     rankedEmpty: "Rien de classé pour l'instant",
     rankedNote: "Passez aux lignes avec retour pour déplacer des cartes entre les rangs.",
   },
+  sync: {
+    dataTitle: "Vos données",
+    backUp: "Sauvegarder mes tableaux",
+    backUpSub: "Niveaux, cartes et légendes",
+    backUpNote:
+      "Vos propres images vont dans votre compte, où vous seul les voyez. Publier copie les images dans le fil, où tout le monde les voit.",
+    offTitle: "Arrêter la sauvegarde ?",
+    offBody:
+      "Vos tableaux restent dans ce navigateur. La copie dans votre compte est supprimée, et un nouvel appareil démarrera vide.",
+    offConfirm: "Arrêter et supprimer",
+    offCancel: "Annuler",
+    stuck: "Pas de sauvegarde depuis {when}. Vérifiez votre connexion.",
+    now: "Sauvegarder maintenant",
+    backingUp: "Sauvegarde en cours…",
+    guestNote:
+      "Changez de navigateur ou videz celui-ci et ils disparaissent. Un compte les garde et les apporte sur le téléphone.",
+    localOnly: "{count}, uniquement sur cet appareil",
+    mergeTitle: "Vous avez déjà utilisé ce compte",
+    mergeBody: "Il contient déjà {account}. Cet appareil a {local} créés sans compte.",
+    mergeKeep: "Tout garder",
+    mergeKeepSub:
+      "Les {total}. Si deux portent le même nom, le tableau local reçoit « (de cet appareil) ».",
+    mergeAccount: "Utiliser seulement les tableaux du compte",
+    mergeAccountSub:
+      "{local} de cet appareil vont à la corbeille. Vous pouvez les restaurer depuis là.",
+    mergeFootnote: "Rien n’est supprimé dans les deux cas.",
+    mergeRecommended: "Recommandé",
+    mergeContinue: "Continuer",
+    fromThisDevice: "(de cet appareil)",
+    arrivedFrom: "de {device}",
+    arrivedFromUnknown: "d’un autre appareil",
+    trashRow: "Corbeille",
+    trashEmpty: "Vide",
+  },
   trash: {
     title: "Corbeille",
     subtitle: "Les listes et éléments supprimés restent ici jusqu'à ce que vous les retiriez.",

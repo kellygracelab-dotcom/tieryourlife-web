@@ -388,3 +388,23 @@
 .settings__helper--lead {
   color: var(--ink);
 }
+
+/* The backup switch: the words, and the switch at the row's end. */
+.settings__switch {
+  gap: 12px;
+  cursor: pointer;
+}
+
+.settings__switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings__switch input {
+  flex: none;
+  width: 40px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--link);
+}

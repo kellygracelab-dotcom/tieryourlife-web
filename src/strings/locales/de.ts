@@ -600,6 +600,41 @@ const de: Translation = {
     rankedEmpty: "Noch nichts eingestuft",
     rankedNote: "Wechsle zu umbrochenen Zeilen, um Karten zwischen Stufen zu verschieben.",
   },
+  sync: {
+    dataTitle: "Deine Daten",
+    backUp: "Meine Boards sichern",
+    backUpSub: "Stufen, Karten und Beschriftungen",
+    backUpNote:
+      "Deine eigenen Bilder liegen in deinem Konto, wo nur du sie siehst. Beim Veröffentlichen werden die Bilder in den Feed kopiert, wo alle sie sehen.",
+    offTitle: "Sicherung beenden?",
+    offBody:
+      "Deine Boards bleiben in diesem Browser. Die Kopie in deinem Konto wird gelöscht, und ein neues Gerät fängt leer an.",
+    offConfirm: "Beenden und löschen",
+    offCancel: "Abbrechen",
+    stuck: "Seit {when} nicht gesichert. Prüfe deine Verbindung.",
+    now: "Jetzt sichern",
+    backingUp: "Wird gesichert…",
+    guestNote:
+      "Browserwechsel oder Leeren, und sie sind weg. Ein Konto bewahrt sie auf und bringt sie aufs Telefon.",
+    localOnly: "{count}, nur auf diesem Gerät",
+    mergeTitle: "Du hast dieses Konto schon einmal benutzt",
+    mergeBody:
+      "Es hat bereits {account}. Auf diesem Gerät sind {local}, die du ohne Konto gemacht hast.",
+    mergeKeep: "Alles behalten",
+    mergeKeepSub:
+      "Alle {total}. Haben zwei denselben Namen, bekommt das lokale „(von diesem Gerät)“ dazu.",
+    mergeAccount: "Nur die Boards des Kontos",
+    mergeAccountSub:
+      "{local} von diesem Gerät wandern in den Papierkorb. Von dort kannst du sie zurückholen.",
+    mergeFootnote: "In keinem Fall wird etwas gelöscht.",
+    mergeRecommended: "Empfohlen",
+    mergeContinue: "Weiter",
+    fromThisDevice: "(von diesem Gerät)",
+    arrivedFrom: "von {device}",
+    arrivedFromUnknown: "von einem anderen Gerät",
+    trashRow: "Papierkorb",
+    trashEmpty: "Leer",
+  },
   trash: {
     title: "Papierkorb",
     subtitle: "Gelöschte Listen und Elemente bleiben hier, bis du sie entfernst.",

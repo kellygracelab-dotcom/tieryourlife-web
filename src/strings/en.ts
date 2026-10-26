@@ -561,6 +561,40 @@ export const en = {
     rankedEmpty: "Nothing ranked yet",
     rankedNote: "Switch to wrapped rows to move cards between tiers.",
   },
+  sync: {
+    dataTitle: "Your data",
+    backUp: "Back up my boards",
+    backUpSub: "Tiers, cards and captions",
+    backUpNote:
+      "Your own pictures go to your account, where only you can see them. Publishing a list copies its pictures into the feed, where anyone can.",
+    offTitle: "Stop backing up?",
+    offBody:
+      "Your boards stay in this browser. The copy in your account is deleted, and a new device will start empty.",
+    offConfirm: "Stop and delete",
+    offCancel: "Cancel",
+    stuck: "Not backed up since {when}. Check your connection.",
+    now: "Back up now",
+    backingUp: "Backing up…",
+    guestNote:
+      "Change browsers or clear this one and they are gone. An account keeps them, and brings them to the phone.",
+    localOnly: "{count}, on this device only",
+    mergeTitle: "You’ve used this account before",
+    mergeBody: "It already has {account}. This device has {local} you made without an account.",
+    mergeKeep: "Keep everything",
+    mergeKeepSub:
+      "All {total}. If two have the same name, the local one gets “(from this device)” added.",
+    mergeAccount: "Use only the account’s boards",
+    mergeAccountSub:
+      "The {local} from this device go to the trash. You can restore them from there.",
+    mergeFootnote: "Nothing is deleted either way.",
+    mergeRecommended: "Recommended",
+    mergeContinue: "Continue",
+    fromThisDevice: "(from this device)",
+    arrivedFrom: "from {device}",
+    arrivedFromUnknown: "from another device",
+    trashRow: "Trash",
+    trashEmpty: "Empty",
+  },
   trash: {
     title: "Trash",
     subtitle: "Deleted lists and items stay here until you remove them.",

@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { ListSummary } from "../api/types";
 import { LanguageCard } from "../features/account/LanguageCard";
 import { faceChoicesOf } from "../features/account/faces";
 import { AccountTabs } from "../app/AccountTabs";
+import { useBoardSync } from "../features/boards/boardSync";
+import { trashEntriesOf } from "../features/boards/model";
+import { useBoards } from "../features/boards/useBoards";
 import { useHidden } from "../features/community/useHidden";
 import { useSession } from "../app/session";
 import { ThemeSwitch } from "../app/ThemeSwitch";
 import { useResource } from "../lib/useResource";
 import { eraseMyAccount, loadMyLists, refreshPublishedAuthor } from "../lib/api";
 import { NAME_MAX, renameAccount, setFace, tidyName } from "../lib/profile";
-import { fill, strings } from "../strings";
+import { currentLocale, fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { InAppNote } from "../ui/InAppNote";
@@ -324,6 +327,96 @@ function HiddenCard() {
   );
 }
 
+/** The day and time the reader's language writes them. */
+const whenOf = (at: number): string =>
+  new Intl.DateTimeFormat(currentLocale(), { dateStyle: "medium", timeStyle: "short" }).format(
+    new Date(at),
+  );
+
+/**
+ * The phone's "Your data": whether the boards are kept in the account, the
+ * trash with its count. Switching the backup off deletes the account's copy,
+ * so it asks first.
+ */
+function DataCard() {
+  const sync = useBoardSync();
+  const boards = useBoards();
+  const trashed = trashEntriesOf(boards).length;
+  const [asking, setAsking] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const close = useCallback(() => setAsking(false), []);
+  const turn = (on: boolean) => {
+    setAsking(false);
+    setSwitching(true);
+    void sync.setBackUp(on).finally(() => setSwitching(false));
+  };
+  return (
+    <section className="settings__card" aria-labelledby="data-title">
+      <h2 id="data-title" className="settings__title">
+        {strings.sync.dataTitle}
+      </h2>
+      {sync.signedIn ? (
+        <>
+          <div className="settings__row settings__switch">
+            <label className="settings__switch-text" htmlFor="backup-switch">
+              <span>{strings.sync.backUp}</span>
+              <span className="settings__note">{strings.sync.backUpSub}</span>
+            </label>
+            <input
+              id="backup-switch"
+              type="checkbox"
+              role="switch"
+              checked={sync.backUp}
+              disabled={switching}
+              onChange={(event) => (event.target.checked ? turn(true) : setAsking(true))}
+            />
+          </div>
+          {sync.backUp && (
+            <>
+              <p className="settings__helper">{strings.sync.backUpNote}</p>
+              {sync.status === "stuck" && (
+                <p className="settings__bar" role="alert">
+                  {fill(strings.sync.stuck, {
+                    when: sync.lastSyncedAt === null ? "—" : whenOf(sync.lastSyncedAt),
+                  })}
+                </p>
+              )}
+              <div className="settings__actions">
+                <Button
+                  icon="cloud_upload"
+                  onClick={() => void sync.syncNow()}
+                  disabled={sync.status === "syncing"}
+                >
+                  {sync.status === "syncing" ? strings.sync.backingUp : strings.sync.now}
+                </Button>
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <p className="settings__helper">{strings.sync.guestNote}</p>
+      )}
+      <Link className="settings__row" to="/trash">
+        <span>{strings.sync.trashRow}</span>
+        <span className="settings__note">
+          {trashed === 0 ? strings.sync.trashEmpty : plural(strings.trash.entries, trashed)}
+        </span>
+      </Link>
+      {asking && (
+        <ConfirmDialog
+          narrow
+          title={strings.sync.offTitle}
+          body={strings.sync.offBody}
+          confirmLabel={strings.sync.offConfirm}
+          cancelLabel={strings.sync.offCancel}
+          onConfirm={() => turn(false)}
+          onCancel={close}
+        />
+      )}
+    </section>
+  );
+}
+
 function PrivacyCard() {
   return (
     <section className="settings__card" aria-labelledby="privacy-title">
@@ -495,6 +588,7 @@ export function SettingsPage({
 
       <ThemeCard note={account?.kind === "guest" ? strings.settings.themeGuestNote : null} />
       <LanguageCard />
+      <DataCard />
       <HiddenCard />
       <PrivacyCard />
 
