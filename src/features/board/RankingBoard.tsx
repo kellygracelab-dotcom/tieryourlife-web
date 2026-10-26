@@ -29,7 +29,7 @@ import { Menu } from "../../ui/Menu";
 import { DragGhost } from "./DragGhost";
 import { flyIn } from "./flight";
 import type { DragState } from "./drag";
-import { loadDraft, saveDraft, type DraftScope } from "./draft";
+import { loadDraft, saveDraft, scopeOf } from "./draft";
 import {
   canUndo,
   init,
@@ -247,13 +247,7 @@ const saveLabel = (edit: EditMode, busy: boolean): string =>
       ? strings.new.publishing
       : strings.new.publishChanges;
 
-const scopeOf = (list: PublishedList): DraftScope => ({
-  id: list.id,
-  updatedAt: list.updatedAt,
-  itemCount: list.items.length,
-  tierCount: list.tiers.length,
-});
-
+/** Where the board keeps a list's rows on this device; the list page reads the same place. */
 function useBoard(
   list: PublishedList,
   store: KeyValueStore,

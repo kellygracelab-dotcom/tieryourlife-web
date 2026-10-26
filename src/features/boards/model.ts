@@ -54,6 +54,8 @@ export interface Board {
   favouritedAt: number | null;
   /** This device's: the device a copy came from after a conflict, or null. Never sent. */
   arrivedFrom: string | null;
+  /** This device's: the edit time the published copy was sent at, so "behind" can be told. Never sent. */
+  publishedEditedAt: number | null;
 }
 
 /** What a card is made from: enough for a tile. */
@@ -126,6 +128,7 @@ export function newBoard(uid: string, title: string, now: number, nextUid: NextU
     editedAt: now,
     favouritedAt: null,
     arrivedFrom: null,
+    publishedEditedAt: null,
   };
 }
 
@@ -229,15 +232,25 @@ export function setCover(board: Board, pictures: readonly string[], now: number)
   );
 }
 
+/** Published, updated or taken down: the published copy now reflects the board as it stands. */
 export const setPublished = (
   board: Board,
   publishedId: string | null,
   authorName: string | null,
   now: number,
-): Board =>
-  publishedId === board.publishedId && authorName === board.authorName
-    ? board
-    : touched({ ...board, publishedId, authorName }, now);
+): Board => ({
+  ...board,
+  publishedId,
+  authorName,
+  editedAt: now,
+  publishedEditedAt: publishedId === null ? null : now,
+});
+
+/** Whether the board moved on since its published copy was sent. */
+export const isBehind = (board: Board): boolean =>
+  board.publishedId !== null &&
+  board.publishedEditedAt !== null &&
+  board.editedAt > board.publishedEditedAt;
 
 /** Cards into the pool, after the ones already there, in the order given. */
 export function addToPool(

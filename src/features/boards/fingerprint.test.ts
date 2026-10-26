@@ -57,6 +57,7 @@ const board = (over: Partial<Board> = {}): Board => ({
   editedAt: 5,
   favouritedAt: null,
   arrivedFrom: null,
+  publishedEditedAt: null,
   ...over,
 });
 

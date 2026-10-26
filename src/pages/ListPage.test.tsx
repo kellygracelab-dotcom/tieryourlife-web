@@ -8,6 +8,8 @@ import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
+import { itemsIn, poolTier, rankedTiers } from "../features/boards/model";
+import { boards } from "../features/boards/repository";
 import { memoryStore } from "../lib/storage";
 
 const mocks = vi.hoisted(() => ({
@@ -85,6 +87,35 @@ beforeEach(() => {
   mocks.unpublish.mockReset();
   hiddenStore = memoryStore();
   useHiddenStoreForTests(hiddenStore);
+  localStorage.clear();
+});
+
+describe("ListPage save to my lists", () => {
+  it("makes a board of somebody's list, asking whose ranking to keep, and opens it", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    openAs(member);
+    await userEvent.click(await screen.findByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Save to my lists" }));
+    // The author placed Ex Machina, so there is a choice to make.
+    const dialog = screen.getByRole("dialog", { name: "Which ranking to save?" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "The author's" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByText("Saved to your lists.")).toBeInTheDocument();
+
+    const [saved] = boards.all();
+    expect(saved?.title).toBe("Every A24 film, ranked");
+    expect(saved?.category).toBe("film_tv");
+    expect(saved?.publishedId).toBeNull();
+    const [s] = rankedTiers(saved!);
+    expect(itemsIn(saved!, s!.uid).map((item) => item.title)).toEqual(["Ex Machina"]);
+    expect(itemsIn(saved!, poolTier(saved!)!.uid).map((item) => item.title)).toEqual(["The Witch"]);
+
+    // Open leads to the new board, which has the list's name and its arrangement.
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    // The board page is a separate chunk; its first load in a test takes a moment.
+    expect(await screen.findByText(/1 ranked · 1 in pool/, {}, { timeout: 4000 })).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Every A24 film, ranked");
+  });
 });
 
 describe("ListPage report and hide", () => {

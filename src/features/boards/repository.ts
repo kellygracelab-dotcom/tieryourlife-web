@@ -100,6 +100,7 @@ export function parseBoard(raw: unknown): Board | null {
     editedAt: time(source.editedAt) ?? 0,
     favouritedAt: time(source.favouritedAt),
     arrivedFrom: text(source.arrivedFrom),
+    publishedEditedAt: time(source.publishedEditedAt),
   };
 }
 

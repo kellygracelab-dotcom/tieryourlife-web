@@ -1,14 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { CATEGORIES, isCategory } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
 import { RankingBoard } from "../features/board/RankingBoard";
 import { BoardFrameContext } from "../features/board/boardFrame";
@@ -28,9 +19,15 @@ import {
   trashBoard,
   trashItem,
   type Board,
-  type DisplayMode,
 } from "../features/boards/model";
+import { BoardSettings, type PublishingDeps } from "../features/boards/BoardSettings";
 import { RankedList } from "../features/boards/RankedList";
+import { downloadShare, type Share } from "../features/ranking/share";
+import {
+  publish as publishList,
+  republish as republishList,
+  unpublish as unpublishList,
+} from "../lib/api";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
 import { applyTierAction, editorTiersOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
@@ -57,6 +54,8 @@ interface BoardPageProps {
   now?: () => number;
   lookup?: Lookup;
   upload?: Upload;
+  publishing?: PublishingDeps;
+  share?: Share;
 }
 
 type Panel = "none" | "tiers" | "settings";
@@ -124,76 +123,6 @@ function TitleEditor({
   );
 }
 
-/**
- * The phone's list settings, the two that mean something here: the category,
- * and how the board is shown. Each change is kept the moment it is made.
- */
-function SettingsPanel({
-  board,
-  onCategory,
-  onMode,
-  onDone,
-}: {
-  board: Board;
-  onCategory: (category: Board["category"]) => void;
-  onMode: (mode: DisplayMode) => void;
-  onDone: () => void;
-}) {
-  const id = useId();
-  const modes: { mode: DisplayMode; title: string; sub: string }[] = [
-    { mode: "WRAP", title: strings.boards.modeWrapped, sub: strings.boards.modeWrappedSub },
-    { mode: "RANKED", title: strings.boards.modeRanked, sub: strings.boards.modeRankedSub },
-  ];
-  return (
-    <section className="board-panel" aria-labelledby={`${id}-title`}>
-      <div className="board-panel__head">
-        <h2 id={`${id}-title`}>{strings.boards.settings}</h2>
-        <Button onClick={onDone}>{strings.boards.done}</Button>
-      </div>
-      <div className="board-settings__section">
-        <label className="board-settings__label" htmlFor={`${id}-category`}>
-          {strings.boards.category}
-        </label>
-        <select
-          id={`${id}-category`}
-          className="board-settings__select"
-          value={board.category ?? ""}
-          onChange={(event) =>
-            onCategory(isCategory(event.target.value) ? event.target.value : null)
-          }
-        >
-          <option value="">{strings.boards.categoryNone}</option>
-          {CATEGORIES.map((category) => (
-            <option key={category} value={category}>
-              {strings.category[category]}
-            </option>
-          ))}
-        </select>
-      </div>
-      <fieldset className="board-settings__section">
-        <legend className="board-settings__label">{strings.boards.display}</legend>
-        <p className="board-settings__note">{strings.boards.displayNote}</p>
-        {modes.map(({ mode, title, sub }) => (
-          <div key={mode} className="board-settings__mode">
-            <input
-              id={`${id}-${mode}`}
-              type="radio"
-              name={`${id}-mode`}
-              value={mode}
-              checked={board.displayMode === mode}
-              onChange={() => onMode(mode)}
-            />
-            <label className="board-settings__mode-text" htmlFor={`${id}-${mode}`}>
-              <span className="board-settings__mode-title">{title}</span>
-              <span className="board-settings__mode-sub">{sub}</span>
-            </label>
-          </div>
-        ))}
-      </fieldset>
-    </section>
-  );
-}
-
 function NotFound() {
   return (
     <section className="list-page list-page--trouble">
@@ -211,11 +140,19 @@ function NotFound() {
  * pool, and every move kept the moment it is made. Nothing here is sent
  * anywhere until the board is kept in an account or published.
  */
+const sitePublishing: PublishingDeps = {
+  publish: publishList,
+  republish: republishList,
+  unpublish: unpublishList,
+};
+
 export function BoardPage({
   repository = site,
   now = Date.now,
   lookup,
   upload = (file) => uploadPicture(file),
+  publishing = sitePublishing,
+  share = downloadShare,
 }: BoardPageProps) {
   const { uid = "" } = useParams();
   const [params] = useSearchParams();
@@ -354,6 +291,17 @@ export function BoardPage({
     void navigate("/boards", { state: { trashed: [uid] } satisfies BoardsPageState });
   };
 
+  // The picture of the board, drawn the way a ranking's is; the address under
+  // it is the published list's when there is one, the site's otherwise.
+  const shareBoard = () =>
+    share(
+      view.list,
+      view.rows,
+      board.publishedId === null
+        ? window.location.origin
+        : `${window.location.origin}/l/${encodeURIComponent(board.publishedId)}`,
+    ).catch(() => setNotice({ text: strings.rank.downloadFailed }));
+
   const ranked = rankedCount(board);
   const inPool = poolCount(board);
   const tools = (
@@ -416,6 +364,11 @@ export function BoardPage({
                 </button>
               </li>
               <li>
+                <button type="button" className="menu__action" onClick={() => void shareBoard()}>
+                  {strings.boards.shareImage}
+                </button>
+              </li>
+              <li>
                 <Link to="/trash">{strings.boards.trash}</Link>
               </li>
               <li className="menu__divider" role="separator" />
@@ -444,11 +397,25 @@ export function BoardPage({
         </section>
       )}
       {panel === "settings" && (
-        <SettingsPanel
+        <BoardSettings
           board={board}
+          latest={latest}
+          keep={keep}
           onCategory={(category) => keep(setCategory(latest(), category, now()))}
           onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
+          onPublished={(what) =>
+            setNotice({
+              text:
+                what === "unpublished"
+                  ? strings.boards.unpublished
+                  : what === "updated"
+                    ? strings.owner.saved
+                    : strings.boards.publishedNote,
+            })
+          }
+          publishing={publishing}
           onDone={closePanel}
+          now={now}
         />
       )}
 

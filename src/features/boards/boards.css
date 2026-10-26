@@ -269,3 +269,104 @@
   font: var(--text-small);
   color: var(--ink-faint);
 }
+
+/* The list settings' rows: words at the start, the control at the end. */
+.board-settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.board-settings__switch {
+  flex: none;
+  width: 40px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--link);
+}
+
+.board-settings__problem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: var(--text-small);
+  color: var(--error);
+}
+
+.board-settings__published {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.board-settings__open {
+  align-self: flex-start;
+}
+
+/* The cover: the board's own pictures, pressed into the collage in order. */
+.board-settings__covers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board-settings__cover {
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 74px;
+  padding: 0;
+  overflow: hidden;
+  border: none;
+  border-radius: 8px;
+  background: var(--tile-placeholder);
+  cursor: pointer;
+}
+
+.board-settings__cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.board-settings__cover--on {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--link);
+}
+
+.board-settings__cover:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.board-settings__cover-n {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--link);
+  font: var(--text-caption);
+  font-weight: 500;
+  color: var(--on-link);
+}
+
+/* "Which ranking to save?": the choices stacked, each the full width. */
+.save-mine__choices {
+  flex-direction: column;
+  align-items: stretch;
+}

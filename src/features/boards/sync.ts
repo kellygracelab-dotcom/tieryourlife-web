@@ -221,7 +221,9 @@ async function send(
 /** A kept board as one of ours: the account's fields, and this device's own set afresh. */
 function boardOf(incoming: KeptBoard, now: number): Board | null {
   const parsed = parseBoard({ ...incoming, editedAt: incoming.updatedAt || now });
-  return parsed === null ? null : { ...parsed, favouritedAt: null, arrivedFrom: null };
+  return parsed === null
+    ? null
+    : { ...parsed, favouritedAt: null, arrivedFrom: null, publishedEditedAt: null };
 }
 
 /** The account's copy replaces what is here, uid and all; the star stays, it is this device's. */

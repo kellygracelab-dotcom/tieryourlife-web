@@ -12,6 +12,9 @@ import {
   rankedTiers,
 } from "../features/boards/model";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
+import type { PublishingDeps } from "../features/boards/BoardSettings";
+import type { Share } from "../features/ranking/share";
+import { SessionContext, type Session } from "../app/session";
 import { memoryStore } from "../lib/storage";
 import { BoardPage } from "./BoardPage";
 
@@ -39,7 +42,22 @@ const filmBoard = () => {
 };
 
 let clock = 1000;
-const open = (repository: BoardsRepository, path: string) => {
+const noPublishing: PublishingDeps = {
+  publish: () => Promise.reject(new Error("no publishing here")),
+  republish: () => Promise.reject(new Error("no publishing here")),
+  unpublish: () => Promise.reject(new Error("no publishing here")),
+};
+const member: Session["account"] = {
+  kind: "signedIn",
+  uid: "me",
+  displayName: "Danylo",
+  photoUrl: null,
+};
+const open = (
+  repository: BoardsRepository,
+  path: string,
+  extra: { share?: Share; publishing?: PublishingDeps; account?: Session["account"] } = {},
+) => {
   const router = createMemoryRouter(
     [
       {
@@ -50,6 +68,8 @@ const open = (repository: BoardsRepository, path: string) => {
             now={() => ++clock}
             lookup={() => Promise.resolve([])}
             upload={() => Promise.reject(new Error("no uploads here"))}
+            publishing={extra.publishing ?? noPublishing}
+            share={extra.share ?? (() => Promise.resolve())}
           />
         ),
       },
@@ -58,7 +78,23 @@ const open = (repository: BoardsRepository, path: string) => {
     ],
     { initialEntries: [path] },
   );
-  render(<RouterProvider router={router} />);
+  const page = <RouterProvider router={router} />;
+  render(
+    extra.account === undefined ? (
+      page
+    ) : (
+      <SessionContext.Provider
+        value={{
+          account: extra.account,
+          signIn: () => Promise.resolve({ kind: "cancelled" }),
+          signOut: () => Promise.resolve(),
+          refresh: () => undefined,
+        }}
+      >
+        {page}
+      </SessionContext.Provider>
+    ),
+  );
   return router;
 };
 
@@ -274,5 +310,49 @@ describe("BoardPage: tiers and settings", () => {
     expect(screen.getByRole("list", { name: "S" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("combobox", { name: "Category" })).toBeNull();
+  });
+});
+
+describe("BoardPage: share and publish", () => {
+  it("draws the board as a picture from the menu, with the site's address under it", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    const share = vi.fn<Share>(() => Promise.resolve());
+    open(repository, "/b/films", { share });
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    await userEvent.click(screen.getByRole("button", { name: "Share as image" }));
+    expect(share).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Films" }),
+      [[0], [], [], [], []],
+      window.location.origin,
+    );
+  });
+
+  it("publishes from the settings and says so, then shares the published address", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const share = vi.fn<Share>(() => Promise.resolve());
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      publish: vi.fn(() => Promise.resolve({ id: "L1" })),
+    };
+    open(repository, "/b/films", { share, publishing, account: member });
+    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Public" }));
+    expect(await screen.findByText("Published. Anyone with the link can rank it.")).toBeVisible();
+    expect(publishing.publish).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Films", category: "film_tv" }),
+    );
+    expect(repository.get("films")).toMatchObject({ publishedId: "L1", authorName: "Danylo" });
+    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/L1");
+
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    await userEvent.click(screen.getByRole("button", { name: "Share as image" }));
+    expect(share).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      `${window.location.origin}/l/L1`,
+    );
   });
 });

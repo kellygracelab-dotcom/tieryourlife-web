@@ -1,3 +1,4 @@
+import type { PublishedList } from "../../api/types";
 import type { KeyValueStore } from "../../lib/storage";
 import type { Rows } from "./model";
 
@@ -15,6 +16,14 @@ interface Draft {
   itemCount: number;
   rows: number[][];
 }
+
+/** The scope of a list's draft: the parts a republish changes. */
+export const scopeOf = (list: PublishedList): DraftScope => ({
+  id: list.id,
+  updatedAt: list.updatedAt,
+  itemCount: list.items.length,
+  tierCount: list.tiers.length,
+});
 
 export const draftKey = (listId: string): string => `tyl:draft:${listId}`;
 

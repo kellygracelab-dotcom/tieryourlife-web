@@ -10,6 +10,9 @@ import { RankingBoard } from "../features/board/RankingBoard";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
 import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
+import type { BoardsRepository } from "../features/boards/repository";
+import { SaveToMineDialog } from "../features/boards/SaveToMineDialog";
+import { useSaveToMine } from "../features/boards/useSaveToMine";
 import { useHidden } from "../features/community/useHidden";
 import { useResource } from "../lib/useResource";
 import { errorOf } from "../api/errors";
@@ -149,15 +152,18 @@ function VisitorMenu({
   list,
   report,
   notify,
+  repository,
 }: {
   list: PublishedList;
   report: Report;
   notify: Notify;
+  repository?: BoardsRepository;
 }) {
   const { account, signIn } = useSession();
   const { hideList, showList, hideAuthor, showAuthor } = useHidden();
   const [reporting, setReporting] = useState<ReportState>("closed");
   const { canShare } = useListLink(list);
+  const saving = useSaveToMine(list, notify, { repository });
 
   const hideNow = () => {
     hideList({ id: list.id, title: list.title });
@@ -204,6 +210,11 @@ function VisitorMenu({
             role="separator"
           />
           <li>
+            <button type="button" className="menu__action" onClick={saving.start}>
+              {strings.list.saveToMine}
+            </button>
+          </li>
+          <li>
             <button
               type="button"
               className="menu__action"
@@ -239,6 +250,7 @@ function VisitorMenu({
         }}
         onClose={closeReport}
       />
+      <SaveToMineDialog saving={saving} />
     </>
   );
 }
@@ -368,9 +380,15 @@ function HiddenView({ list }: { list: PublishedList }) {
 interface ListPageProps {
   report?: Report;
   unpublish?: Unpublish;
+  /** Where "Save to my lists" puts the copy; the browser's own boards unless told otherwise. */
+  repository?: BoardsRepository;
 }
 
-export function ListPage({ report = sendReport, unpublish = unpublishList }: ListPageProps) {
+export function ListPage({
+  report = sendReport,
+  unpublish = unpublishList,
+  repository,
+}: ListPageProps) {
   const { id = "" } = useParams();
   const { state, retry } = useResource(id, loadList);
   const { account } = useSession();
@@ -478,7 +496,7 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
           {own ? (
             <AuthorMenu list={list} unpublish={unpublish} notify={setNotice} copyInMenu={editing} />
           ) : (
-            <VisitorMenu list={list} report={report} notify={setNotice} />
+            <VisitorMenu list={list} report={report} notify={setNotice} repository={repository} />
           )}
         </span>
         <span className="list-head__bar" ref={setHeadSlot} />

@@ -27,6 +27,8 @@ export interface PublishRequest {
   category: Category;
   coverImageUrl: string | null;
   coverPictureId: string | null;
+  /** The pictures chosen for the cover collage, in their order; left out or empty when the cards' art decides. */
+  coverImageUrls?: string[];
   tiers: PublishedTier[];
   items: {
     title: string;
