@@ -1265,7 +1265,7 @@
   }
 }
 
-/* The menu for moving a card without a drag: the other top corner of the tile. */
+/* The button for moving a card without a drag: the other top corner of the tile. */
 .tile__more {
   position: absolute;
   top: 2px;
@@ -1281,11 +1281,6 @@
   background: var(--ink);
   color: var(--paper);
   cursor: pointer;
-  list-style: none;
-}
-
-.tile__more::-webkit-details-marker {
-  display: none;
 }
 
 .tile__more .ms {
@@ -1294,7 +1289,7 @@
 
 .tile-holder--removable:hover .tile__more,
 .tile-holder--removable:focus-within .tile__more,
-.menu[open] > .tile__more {
+.tile__more[aria-expanded="true"] {
   display: inline-flex;
 }
 
@@ -1304,22 +1299,50 @@
   }
 }
 
-.tile-holder--removable > .menu {
-  position: static;
+/* The move sheet: the tiers as rows with their colour, then the two ways out. */
+.move-sheet__who {
+  margin: 0 0 4px;
+  font: var(--text-small);
+  color: var(--ink-dim);
 }
 
-.tile__menu-tier {
+.move-sheet__tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: min(48vh, 360px);
+  margin: 0 0 12px;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.move-sheet__tier {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
 }
 
-.tile__menu-tier:disabled {
+.move-sheet__tier:hover,
+.move-sheet__tier:focus-visible {
+  background: var(--paper);
+}
+
+.move-sheet__tier:disabled {
   color: var(--ink-dim);
   cursor: default;
 }
 
-.tile__menu-swatch {
+.move-sheet__swatch {
   display: inline-block;
   flex: none;
   width: 20px;
@@ -1328,9 +1351,31 @@
   background: var(--band);
 }
 
-.tile__menu-note {
+.move-sheet__label {
+  font-weight: 500;
+}
+
+.move-sheet__caption {
+  overflow: hidden;
+  font: var(--text-small);
+  color: var(--ink-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.move-sheet__note {
+  flex: none;
   margin-inline-start: auto;
   padding-inline-start: 12px;
   font: var(--text-caption);
   color: var(--ink-faint);
+}
+
+.move-sheet__actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.move-sheet__danger {
+  color: var(--error);
 }

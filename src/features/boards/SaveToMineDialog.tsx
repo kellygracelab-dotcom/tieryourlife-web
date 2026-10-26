@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import type { SaveToMine } from "./useSaveToMine";
@@ -29,7 +30,7 @@ export function SaveToMineDialog({ saving }: { saving: SaveToMine }) {
   }, [open, cancel]);
 
   if (asking === null) return null;
-  return (
+  return createPortal(
     <div className="scrim" onClick={cancel}>
       <div
         ref={dialog}
@@ -55,6 +56,7 @@ export function SaveToMineDialog({ saving }: { saving: SaveToMine }) {
           <Button onClick={cancel}>{strings.rank.cancel}</Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

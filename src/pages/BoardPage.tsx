@@ -167,7 +167,9 @@ export function BoardPage({
     [uid, madeAt],
   );
   const board = stored ?? fresh;
-  const [editingTitle, setEditingTitle] = useState(madeAt > 0);
+  // The name is asked for once, on arrival at a board not yet kept: a reload
+  // keeps the query, not the question.
+  const [editingTitle, setEditingTitle] = useState(madeAt > 0 && stored === null);
   const [panel, setPanel] = useState<Panel>("none");
   // What is being typed into a tier's fields, as typed: the board keeps the
   // trimmed words, and a label emptied for a moment is not kept at all.

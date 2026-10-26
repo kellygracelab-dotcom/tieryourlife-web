@@ -107,11 +107,10 @@ describe("RankingBoard's move menu on an own board", () => {
         />
       </MemoryRouter>,
     );
-    // Every card has its menu in the page; the open one is read on its own.
+    // The sheet opens from the card's button and is named after the card.
     const menuOf = async (name: string) => {
-      const button = screen.getByLabelText(`Move ${name}`);
-      await userEvent.click(button);
-      return within(button.closest("details")!);
+      await userEvent.click(screen.getByLabelText(`Move ${name}`));
+      return within(screen.getByRole("dialog", { name }));
     };
     // Climax waits in the pool: its menu names both tiers, no "back to the pool".
     let menu = await menuOf("Climax");
@@ -131,5 +130,12 @@ describe("RankingBoard's move menu on an own board", () => {
     menu = await menuOf("The Witch");
     await userEvent.click(menu.getByRole("button", { name: "Remove from list" }));
     expect(remove).toHaveBeenCalledWith(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // Escape is a change of mind, and the focus comes back to the button.
+    menu = await menuOf("Climax");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByLabelText("Move Climax")).toHaveFocus();
   });
 });

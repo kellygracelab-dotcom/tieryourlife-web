@@ -25,7 +25,7 @@ import { errorOf } from "../../api/errors";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
-import { Menu } from "../../ui/Menu";
+import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
 import { flyIn } from "./flight";
 import type { DragState } from "./drag";
@@ -126,6 +126,8 @@ function Tile({
   move,
   insert,
 }: TileProps) {
+  const [moving, setMoving] = useState(false);
+  const closeMove = useCallback(() => setMoving(false), []);
   const card = list.items[item];
   if (card === undefined) return null;
   const classes = ["tile", selected && "tile--selected", lifted && "tile--lifted"]
@@ -175,63 +177,45 @@ function Tile({
         </button>
       )}
       {move !== undefined && !locked && (
-        <Menu
-          label={fill(strings.boards.moveMenu, { name: card.title })}
-          buttonClassName="tile__more"
-          button={<Icon name="more_vert" />}
-        >
-          <>
-            <li className="menu__who">{strings.boards.moveTo}</li>
-            {move.tiers.map((tier, index) => (
-              <li key={`${index}-${tier.label}`}>
-                <button
-                  type="button"
-                  className="menu__action tile__menu-tier"
-                  disabled={index === move.current}
-                  onClick={() => dispatch({ type: "place", item, tier: index })}
-                >
-                  <span
-                    className="tile__menu-swatch band"
-                    style={
-                      {
-                        "--band-light": tier.colorLight,
-                        "--band-dark": tier.colorDark,
-                      } as CSSProperties
+        <>
+          <button
+            type="button"
+            className="tile__more"
+            aria-label={fill(strings.boards.moveMenu, { name: card.title })}
+            aria-haspopup="dialog"
+            aria-expanded={moving}
+            onClick={(event) => {
+              event.stopPropagation();
+              setMoving(true);
+            }}
+          >
+            <Icon name="more_vert" />
+          </button>
+          {moving && (
+            <MoveSheet
+              name={card.title}
+              tiers={move.tiers}
+              current={move.current}
+              onPlace={(tier) => {
+                setMoving(false);
+                dispatch({ type: "place", item, tier });
+              }}
+              onUnplace={() => {
+                setMoving(false);
+                dispatch({ type: "unplace", item });
+              }}
+              onRemove={
+                onRemove === undefined
+                  ? undefined
+                  : () => {
+                      setMoving(false);
+                      onRemove();
                     }
-                    aria-hidden="true"
-                  />
-                  <span>{tier.label}</span>
-                  {index === move.current && (
-                    <span className="tile__menu-note">{strings.boards.currentTier}</span>
-                  )}
-                </button>
-              </li>
-            ))}
-            <li className="menu__divider" role="separator" />
-            {move.current !== null && (
-              <li>
-                <button
-                  type="button"
-                  className="menu__action"
-                  onClick={() => dispatch({ type: "unplace", item })}
-                >
-                  {strings.boards.backToPool}
-                </button>
-              </li>
-            )}
-            {onRemove !== undefined && (
-              <li>
-                <button
-                  type="button"
-                  className="menu__action menu__action--danger"
-                  onClick={onRemove}
-                >
-                  {strings.boards.removeFromList}
-                </button>
-              </li>
-            )}
-          </>
-        </Menu>
+              }
+              onClose={closeMove}
+            />
+          )}
+        </>
       )}
     </li>
   );

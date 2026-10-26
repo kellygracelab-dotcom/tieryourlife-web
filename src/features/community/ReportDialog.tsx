@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { REPORT_NOTE_MAX, REPORT_REASONS, type ReportReason } from "../../api/community";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -64,19 +65,21 @@ export function ReportDialog({
 
   if (!open) return null;
 
-  const scrim = (children: ReactNode, labelledBy: string, className = "dialog") => (
-    <div className="scrim" onClick={busy ? undefined : onClose}>
-      <div
-        className={className}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={labelledBy}
-        onClick={(event) => event.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>
-  );
+  const scrim = (children: ReactNode, labelledBy: string, className = "dialog") =>
+    createPortal(
+      <div className="scrim" onClick={busy ? undefined : onClose}>
+        <div
+          className={className}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={labelledBy}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {children}
+        </div>
+      </div>,
+      document.body,
+    );
 
   if (state === "signIn" || state === "signingIn") {
     return scrim(
@@ -118,7 +121,7 @@ export function ReportDialog({
     );
   }
 
-  return (
+  return createPortal(
     <div className="scrim" onClick={busy ? undefined : onClose}>
       <form
         className="dialog report"
@@ -203,6 +206,7 @@ export function ReportDialog({
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }
