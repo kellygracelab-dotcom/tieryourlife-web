@@ -621,6 +621,11 @@ const fr: Translation = {
     tiers: "Rangs",
     done: "Terminé",
     tierRemoved: "Rang {name} supprimé ; ses cartes sont dans le réservoir",
+    editTier: "Modifier le rang",
+    editTierOf: "Modifier le rang {name}",
+    tierName: "Nom",
+    tierCaption: "Sous-titre",
+    save: "Enregistrer",
     settings: "Paramètres de la liste",
     display: "Affichage",
     displayNote:

@@ -42,6 +42,7 @@ import {
   type BoardState,
 } from "./model";
 import { useTileDrag, type HitTest } from "./useTileDrag";
+import { useTierMove, type TierEditing } from "./useTierMove";
 import { BoardFrameContext } from "./boardFrame";
 import { DockToggle } from "./DockToggle";
 import { useDock } from "./useDock";
@@ -75,6 +76,8 @@ export interface EditMode {
     live?: boolean;
     /** A menu on every card for moving it without a drag: a finger without a keyboard, or a tenth tier. */
     moveMenu?: boolean;
+    /** The tiers themselves, changed on the board: carried by their band, opened by a double tap. */
+    tiers?: TierEditing;
   };
 }
 
@@ -283,6 +286,9 @@ export function RankingBoard({
   const section = useRef<HTMLElement>(null);
   const poolBox = useRef<HTMLDivElement>(null);
   const boardEnd = useRef<HTMLDivElement>(null);
+  const boardBox = useRef<HTMLDivElement>(null);
+  const tierEditing = edit?.owner?.tiers;
+  const tierMove = useTierMove(boardBox, tierEditing);
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
@@ -464,6 +470,22 @@ export function RankingBoard({
     dragNow: drag.current,
     nudge: drag.nudge,
   });
+  // A phone's tray lies over the page's foot and grows when the owner's
+  // tools open in it: its height goes to the root as --tray-h, so the page
+  // keeps that much room under the board and the last row scrolls clear.
+  useEffect(() => {
+    const box = poolBox.current;
+    if (box === null || wide || restEmpty || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() =>
+      root.style.setProperty("--tray-h", `${Math.ceil(box.getBoundingClientRect().height)}px`),
+    );
+    observer.observe(box);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--tray-h");
+    };
+  }, [wide, restEmpty]);
   const poolClasses = [
     "pool",
     drag.state.phase === "dragging" && drag.state.target?.kind === "pool" && "pool--target",
@@ -557,7 +579,7 @@ export function RankingBoard({
 
         {!inHead && edit?.owner?.status}
 
-        <div className="board">
+        <div className="board" ref={boardBox}>
           {list.tiers.map((tier, index) => (
             <TierRow
               key={`${index}-${tier.label}`}
@@ -573,8 +595,24 @@ export function RankingBoard({
               onPlace={placeSelected}
               onRemove={edit?.owner?.moveMenu ? edit.owner.remove : undefined}
               moveMenu={edit?.owner?.moveMenu}
+              band={
+                tierEditing === undefined || locked
+                  ? undefined
+                  : {
+                      onPointerDown: tierMove.onPointerDown(index),
+                      offset: tierMove.offsetOf(index),
+                      lifted: tierMove.lifted === index,
+                      carrying: tierMove.lifted !== null,
+                      open: () => tierEditing.open(index),
+                    }
+              }
             />
           ))}
+          {tierEditing?.add !== undefined && (
+            <Button className="board__add-tier" icon="add" onClick={tierEditing.add}>
+              {strings.new.addTier}
+            </Button>
+          )}
           <div className="board__end" ref={boardEnd} aria-hidden="true" />
         </div>
       </div>
@@ -743,6 +781,15 @@ interface TierRowProps {
   /** The owner's: a card off the list, and the menu for moving one without a drag. */
   onRemove?: (item: number) => void;
   moveMenu?: boolean;
+  /** The owner's hold on the tier itself, by its band. */
+  band?: {
+    onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+    /** Where the row stands from its place while a tier is carried. */
+    offset: number;
+    lifted: boolean;
+    carrying: boolean;
+    open: () => void;
+  };
 }
 
 function TierRow({
@@ -758,6 +805,7 @@ function TierRow({
   onPlace,
   onRemove,
   moveMenu = false,
+  band,
 }: TierRowProps) {
   const meta = list.tiers[tier];
   const row = state.rows[tier] ?? [];
@@ -777,17 +825,35 @@ function TierRow({
     return landing === others.length && place === others.length - 1 ? "after" : undefined;
   };
   const place = () => onPlace(tier);
-  const classes = ["tier", "band", armed && "tier--armed", targeted && "tier--target"]
+  // A card being placed has the band for its button; the tier is held only otherwise.
+  const held = armed ? undefined : band;
+  const classes = [
+    "tier",
+    "band",
+    armed && "tier--armed",
+    targeted && "tier--target",
+    held?.lifted === true && "tier--lifted",
+    held?.carrying === true && !held.lifted && "tier--shifting",
+  ]
     .filter(Boolean)
     .join(" ");
   return (
     <div
       className={classes}
-      style={{ "--band-light": meta.colorLight, "--band-dark": meta.colorDark } as CSSProperties}
+      style={
+        {
+          "--band-light": meta.colorLight,
+          "--band-dark": meta.colorDark,
+          transform: held?.offset ? `translateY(${held.offset}px)` : undefined,
+        } as CSSProperties
+      }
       onClick={armed ? place : undefined}
       data-drop={`tier:${tier}`}
     >
-      <div className="tier__band">
+      <div
+        className={held === undefined ? "tier__band" : "tier__band tier__band--held"}
+        onPointerDown={held?.onPointerDown}
+      >
         <span className="tier__label">{meta.label}</span>
         {meta.caption !== null && <span className="tier__caption">{meta.caption}</span>}
         {tier < 9 && (
@@ -806,6 +872,16 @@ function TierRow({
             }}
           >
             {fill(strings.rank.placeIn, { name: selectedTitle, tier: meta.label })}
+          </button>
+        )}
+        {held !== undefined && (
+          <button
+            type="button"
+            className="tier__edit"
+            aria-label={fill(strings.boards.editTierOf, { name: meta.label })}
+            onClick={held.open}
+          >
+            <Icon name="edit" />
           </button>
         )}
       </div>

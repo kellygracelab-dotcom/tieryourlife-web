@@ -18,6 +18,7 @@ import {
   setDisplayMode,
   trashBoard,
   trashItem,
+  BOARD_LIMITS,
   type Board,
 } from "../features/boards/model";
 import { BoardSettings, type PublishingDeps } from "../features/boards/BoardSettings";
@@ -34,6 +35,7 @@ import { nextUid, useBoard } from "../features/boards/useBoards";
 import { boardView, uidRows } from "../features/boards/view";
 import { AddCardBox, type Upload } from "../features/editor/AddCardBox";
 import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
+import { TierDialog } from "../features/editor/TierDialog";
 import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { uploadPicture } from "../lib/pictures";
@@ -178,6 +180,8 @@ export function BoardPage({
   );
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const forget = useCallback(() => setNotice(null), []);
+  // The tier opened from the board, by its uid.
+  const [openTier, setOpenTier] = useState<string | null>(null);
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
@@ -287,6 +291,16 @@ export function BoardPage({
     setPanel("none");
     setTyping({});
   };
+  // The tiers changed on the board itself, as on the phone; the same actions as the panel's.
+  const tierEditing = {
+    move: (from: number, to: number) => {
+      const key = editorTiers[from]?.key;
+      if (key !== undefined) onTier({ type: "placeTier", key, index: to });
+    },
+    open: (index: number) => setOpenTier(editorTiers[index]?.key ?? null),
+    add: editorTiers.length < BOARD_LIMITS.tiers ? () => onTier({ type: "addTier" }) : undefined,
+  };
+  const opened = editorTiers.find((tier) => tier.key === openTier);
 
   const toTrash = () => {
     keep(trashBoard(board, now()));
@@ -451,11 +465,21 @@ export function BoardPage({
                   onChange: onRows,
                   remove,
                   tools,
+                  tiers: tierEditing,
                 },
               }}
             />
           </section>
         </BoardFrameContext.Provider>
+      )}
+      {opened !== undefined && (
+        <TierDialog
+          key={opened.key}
+          tier={opened}
+          canRemove={editorTiers.length > 1}
+          dispatch={onTier}
+          onClose={() => setOpenTier(null)}
+        />
       )}
       <Snackbar notice={notice} onDone={forget} />
     </article>

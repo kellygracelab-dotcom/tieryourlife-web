@@ -609,6 +609,11 @@ const de: Translation = {
     tiers: "Stufen",
     done: "Fertig",
     tierRemoved: "Stufe {name} entfernt; ihre Karten sind im Pool",
+    editTier: "Stufe bearbeiten",
+    editTierOf: "Stufe {name} bearbeiten",
+    tierName: "Name",
+    tierCaption: "Untertitel",
+    save: "Speichern",
     settings: "Listeneinstellungen",
     display: "Anzeige",
     displayNote:
