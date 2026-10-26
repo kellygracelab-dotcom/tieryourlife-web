@@ -28,6 +28,8 @@ const ja: Translation = {
     reports: "報告",
   },
   mod: {
+    putBack: "戻す",
+    putBackDone: "フィードに戻しました。報告で非表示になることはもうありません。",
     title: "報告",
     notAvailable: "このページは利用できません。",
     listCount: { other: "{n}件のリスト" },
@@ -74,6 +76,12 @@ const ja: Translation = {
     emptyBody: "コミュニティのリストへの報告はここに届きます。",
   },
   settings: {
+    faceGallery: "ギャラリーの写真",
+    faceGalleryCaption: "写真",
+    facePhotoCaption: "あなたの写真",
+    faceNote:
+      "カードの画像はウェブ上の元の場所に残ります。ギャラリーの写真は確認のうえ、アカウントに保存されます。",
+    faceNotMade: "この画像は顔に使えません。別の画像を選んでください。",
     title: "設定",
     guestTitle: "設定を変えるにはログインしてください。",
     guestBody:
@@ -93,7 +101,7 @@ const ja: Translation = {
     nameFailed: "保存できませんでした。サーバーが応答しません。名前は変わっていません。",
     tryAgain: "もう一度試す",
     faceTitle: "アイコン",
-    faceBody: "公開したリストの画像から選べます。アップロードはしません。",
+    faceBody: "公開したリストのカードか、端末の写真を選んでください。",
     faceNone: "リストを公開すると、その画像がここに並びます。",
     faceChoices: "アイコン",
     faceChoice: "「{list}」のカード",
@@ -137,6 +145,10 @@ const ja: Translation = {
     deleteAccount: "アカウントを削除する",
   },
   home: {
+    manageFollowing: "管理",
+    youFollow: {
+      other: "{n}人をフォロー中",
+    },
     hero: "なんでもランク付け。ほかの人のリストを自分流に並べることも。",
     searchPlaceholder: "リストを検索 — アニメ、ゲーム、映画…",
     categories: "カテゴリ",

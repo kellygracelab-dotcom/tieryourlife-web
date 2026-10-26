@@ -1,8 +1,9 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import type { SuggestedAuthor } from "../../api/community";
+import type { FollowedAuthor, SuggestedAuthor } from "../../api/community";
 import { useSession } from "../../app/session";
-import { followAuthor, suggestedAuthors, unfollowAuthor } from "../../lib/api";
+import { followAuthor, loadFollowing, suggestedAuthors, unfollowAuthor } from "../../lib/api";
 import { isEditorialAuthor } from "../../lib/editorial";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -50,6 +51,23 @@ export type Follow = (authorUid: string) => Promise<unknown>;
 
 const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
+/** A person's picture, or their initial in a circle when they have none. */
+function Face({
+  author,
+  className = "suggestion__face",
+}: {
+  author: { name: string; photoUrl: string | null };
+  className?: string;
+}) {
+  return author.photoUrl !== null ? (
+    <img className={className} src={author.photoUrl} alt="" loading="lazy" />
+  ) : (
+    <span className={`${className} suggestion__face--initial`} aria-hidden="true">
+      {initialOf(author.name)}
+    </span>
+  );
+}
+
 function SuggestionCard({
   author,
   follow,
@@ -76,13 +94,7 @@ function SuggestionCard({
         to={`/u/${encodeURIComponent(author.uid)}`}
         state={{ author: { name: author.name, photoUrl: author.photoUrl } }}
       >
-        {author.photoUrl !== null ? (
-          <img className="suggestion__face" src={author.photoUrl} alt="" loading="lazy" />
-        ) : (
-          <span className="suggestion__face suggestion__face--initial" aria-hidden="true">
-            {initialOf(author.name)}
-          </span>
-        )}
+        <Face author={author} />
         <span className="suggestion__name">{author.name.trim() || strings.profile.someone}</span>
         <span className="suggestion__meta">{plural(strings.card.rankings, author.takeCount)}</span>
       </Link>
@@ -131,6 +143,160 @@ export function Suggestions({
   );
 }
 
+export type LoadFollowing = () => Promise<{ authors: FollowedAuthor[] }>;
+
+/** How many faces the strip shows; the list behind Manage has everyone. */
+export const FACES_SHOWN = 8;
+
+/**
+ * The people somebody follows, with Unfollow beside each. Unfollowing takes
+ * the row away at once and brings it back, with a word, if it did not take.
+ */
+function ManageFollowing({
+  authors,
+  unfollow,
+  onClose,
+}: {
+  authors: readonly FollowedAuthor[];
+  unfollow: Follow;
+  onClose: (changed: boolean) => void;
+}) {
+  const [people, setPeople] = useState<readonly FollowedAuthor[]>(authors);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [changed, setChanged] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => onClose(changed), [onClose, changed]);
+
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    box.current?.querySelector<HTMLElement>("button")?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+  }, [close]);
+
+  const drop = (person: FollowedAuthor) => {
+    setFailed(null);
+    setPeople((current) => current.filter((one) => one.uid !== person.uid));
+    unfollow(person.uid).then(
+      () => setChanged(true),
+      () => {
+        setPeople((current) =>
+          authors.filter((one) => one.uid === person.uid || current.includes(one)),
+        );
+        setFailed(person.uid);
+      },
+    );
+  };
+
+  return createPortal(
+    <div className="scrim" onClick={close}>
+      <div
+        ref={box}
+        className="dialog manage-following"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manage-following-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="manage-following-title" className="dialog__title">
+          {strings.home.following}
+        </h2>
+        {people.length === 0 ? (
+          <p className="dialog__body">{strings.home.followingNobody}</p>
+        ) : (
+          <ul className="manage-following__list">
+            {people.map((person) => (
+              <li key={person.uid} className="manage-following__row">
+                <Link
+                  className="manage-following__who"
+                  to={`/u/${encodeURIComponent(person.uid)}`}
+                  state={{ author: { name: person.name, photoUrl: person.photoUrl } }}
+                >
+                  <Face author={person} className="manage-following__face" />
+                  <span className="manage-following__name">
+                    {person.name.trim() || strings.profile.someone}
+                  </span>
+                </Link>
+                <Button variant="tonal" onClick={() => drop(person)}>
+                  {strings.follow.unfollow}
+                </Button>
+                {failed === person.uid && (
+                  <p className="follow__failed manage-following__failed" role="alert">
+                    <Icon name="cloud_off" />
+                    {strings.follow.failed}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="dialog__actions">
+          <Button onClick={close}>{strings.boards.done}</Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/**
+ * Who the following feed is made of, above it: a row of faces and the way to
+ * the list that unfollows. The faces are a reminder, not buttons; the list is
+ * where a person is acted on. Shown only once the people are known.
+ */
+export function FollowedStrip({
+  uid,
+  load = loadFollowing,
+  unfollow = unfollowAuthor,
+  onChanged,
+}: {
+  uid: string;
+  load?: LoadFollowing;
+  unfollow?: Follow;
+  /** Somebody was unfollowed: the feed behind the strip is stale. */
+  onChanged: () => void;
+}) {
+  const loadFor = useCallback(() => load(), [load]);
+  const { state, retry } = useResource(uid, loadFor);
+  const [managing, setManaging] = useState(false);
+  if (state.status !== "ready" || state.value.authors.length === 0) return null;
+  const authors = state.value.authors;
+  return (
+    <div className="followed">
+      <div className="followed__line">
+        <p className="followed__count">{plural(strings.home.youFollow, authors.length)}</p>
+        <Button onClick={() => setManaging(true)}>{strings.home.manageFollowing}</Button>
+      </div>
+      <ul className="followed__faces" aria-hidden="true">
+        {authors.slice(0, FACES_SHOWN).map((person) => (
+          <li key={person.uid}>
+            <Face author={person} className="followed__face" />
+          </li>
+        ))}
+      </ul>
+      {managing && (
+        <ManageFollowing
+          authors={authors}
+          unfollow={unfollow}
+          onClose={(changed) => {
+            setManaging(false);
+            if (changed) {
+              retry();
+              onChanged();
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 /** The Following feed with its own empty states; the grid itself is the usual one. */
 export function FollowingFeed({
   state,
@@ -138,6 +304,7 @@ export function FollowingFeed({
   more,
   onSeeEveryone,
   loadSuggestions,
+  loadFollowing: loadPeople,
   follow,
   unfollow,
 }: {
@@ -146,11 +313,16 @@ export function FollowingFeed({
   more: () => void;
   onSeeEveryone: () => void;
   loadSuggestions?: LoadSuggestions;
+  loadFollowing?: LoadFollowing;
   follow?: Follow;
   unfollow?: Follow;
 }) {
   const { account } = useSession();
   const uid = account?.kind === "signedIn" ? account.uid : "";
+  // The people behind the feed, once the feed itself says there are some.
+  const strip = state.status === "ready" && !state.followingNobody && (
+    <FollowedStrip uid={uid} load={loadPeople} unfollow={unfollow} onChanged={retry} />
+  );
   if (state.status === "error") {
     return (
       <div className="feed__trouble" role="alert">
@@ -175,11 +347,19 @@ export function FollowingFeed({
   }
   if (state.status === "ready" && state.lists.length === 0) {
     return (
-      <div className="following-empty">
-        <p className="following-empty__body">{strings.home.followingNothing}</p>
-        <Button onClick={onSeeEveryone}>{fill(strings.home.seeEveryone, {})}</Button>
-      </div>
+      <>
+        {strip}
+        <div className="following-empty">
+          <p className="following-empty__body">{strings.home.followingNothing}</p>
+          <Button onClick={onSeeEveryone}>{fill(strings.home.seeEveryone, {})}</Button>
+        </div>
+      </>
     );
   }
-  return <FeedGrid state={state} label={strings.home.followingHeading} retry={retry} more={more} />;
+  return (
+    <>
+      {strip}
+      <FeedGrid state={state} label={strings.home.followingHeading} retry={retry} more={more} />
+    </>
+  );
 }

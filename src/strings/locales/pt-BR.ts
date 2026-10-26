@@ -28,6 +28,8 @@ const ptBR: Translation = {
     reports: "Denúncias",
   },
   mod: {
+    putBack: "Restaurar",
+    putBackDone: "De volta ao feed. As denúncias não o escondem mais.",
     title: "Denúncias",
     notAvailable: "Esta página não está disponível.",
     listCount: { one: "{n} lista", other: "{n} listas" },
@@ -74,6 +76,12 @@ const ptBR: Translation = {
     emptyBody: "As denúncias sobre listas da comunidade chegam aqui.",
   },
   settings: {
+    faceGallery: "Uma foto da galeria",
+    faceGalleryCaption: "Foto",
+    facePhotoCaption: "Sua foto",
+    faceNote:
+      "As imagens das cartas ficam onde estão na web. Uma foto da galeria é verificada e guardada com sua conta.",
+    faceNotMade: "Essa imagem não pode ser seu rosto. Escolha outra.",
     title: "Configurações",
     guestTitle: "Entre para mudar suas configurações.",
     guestBody:
@@ -94,7 +102,7 @@ const ptBR: Translation = {
     nameFailed: "Não foi possível salvar: o servidor não respondeu. Seu nome continua o mesmo.",
     tryAgain: "Tentar novamente",
     faceTitle: "Sua imagem",
-    faceBody: "Escolha uma imagem de uma lista que você publicou. Nada é enviado.",
+    faceBody: "Escolha uma carta de uma lista que você publicou, ou uma foto do seu aparelho.",
     faceNone: "Publique uma lista e as imagens dela aparecem aqui.",
     faceChoices: "Sua imagem",
     faceChoice: "Card de {list}",
@@ -137,6 +145,11 @@ const ptBR: Translation = {
     deleteAccount: "Excluir sua conta",
   },
   home: {
+    manageFollowing: "Gerenciar",
+    youFollow: {
+      one: "Você segue {n} pessoa",
+      other: "Você segue {n} pessoas",
+    },
     hero: "Classifique o que quiser, ou pegue a lista de outra pessoa e organize do seu jeito.",
     searchPlaceholder: "Pesquise listas: anime, jogos, filmes…",
     categories: "Categorias",

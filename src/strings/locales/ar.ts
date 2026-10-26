@@ -28,6 +28,8 @@ const ar: Translation = {
     reports: "البلاغات",
   },
   mod: {
+    putBack: "إعادة",
+    putBackDone: "أُعيدت إلى المجتمع. لم تعد البلاغات تخفيها.",
     title: "البلاغات",
     notAvailable: "هذه الصفحة غير متاحة.",
     listCount: {
@@ -102,6 +104,11 @@ const ar: Translation = {
     emptyBody: "تصل هنا الشكاوى بشأن قوائم المجتمع.",
   },
   settings: {
+    faceGallery: "صورة من المعرض",
+    faceGalleryCaption: "صورة",
+    facePhotoCaption: "صورتك",
+    faceNote: "تبقى صور البطاقات حيث هي على الويب. أما الصورة من المعرض فتُفحص وتُحفظ مع حسابك.",
+    faceNotMade: "لا يمكن أن تكون هذه الصورة وجهك. اختر صورة أخرى.",
     title: "الإعدادات",
     guestTitle: "سجّل الدخول لتغيير إعداداتك.",
     guestBody: "اسمك وصورتك والمظهر تخص حسابًا. ترتيب قائمة لا يحتاج إلى حساب.",
@@ -119,7 +126,7 @@ const ar: Translation = {
     nameFailed: "تعذّر الحفظ: لم يستجب الخادم. اسمك لم يتغير.",
     tryAgain: "المحاولة مرة أخرى",
     faceTitle: "صورتك",
-    faceBody: "اختر صورة من قائمة نشرتها. لا يتم رفع أي شيء.",
+    faceBody: "اختر بطاقة من قائمة نشرتها، أو صورة من جهازك.",
     faceNone: "انشر قائمة وستظهر صورها هنا.",
     faceChoices: "صورتك",
     faceChoice: "بطاقة من {list}",
@@ -159,6 +166,15 @@ const ar: Translation = {
     deleteAccount: "حذف حسابك",
   },
   home: {
+    manageFollowing: "إدارة",
+    youFollow: {
+      zero: "لا تتابع أحدًا",
+      one: "تتابع شخصًا واحدًا",
+      two: "تتابع شخصين",
+      few: "تتابع {n} أشخاص",
+      many: "تتابع {n} شخصًا",
+      other: "تتابع {n} شخص",
+    },
     hero: "رتّب أي شيء، أو خذ قائمة شخص آخر ورتّبها بطريقتك.",
     searchPlaceholder: "ابحث عن قوائم: أنمي، ألعاب، أفلام…",
     categories: "الفئات",

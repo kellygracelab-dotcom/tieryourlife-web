@@ -28,6 +28,8 @@ const pl: Translation = {
     reports: "Zgłoszenia",
   },
   mod: {
+    putBack: "Przywróć",
+    putBackDone: "Z powrotem w kanale. Zgłoszenia już jej nie ukrywają.",
     title: "Zgłoszenia",
     notAvailable: "Ta strona jest niedostępna.",
     listCount: { one: "{n} lista", few: "{n} listy", many: "{n} list", other: "{n} listy" },
@@ -89,6 +91,12 @@ const pl: Translation = {
     emptyBody: "Zgłoszenia dotyczące list ze społeczności trafiają tutaj.",
   },
   settings: {
+    faceGallery: "Zdjęcie z galerii",
+    faceGalleryCaption: "Zdjęcie",
+    facePhotoCaption: "Twoje zdjęcie",
+    faceNote:
+      "Obrazy kart zostają tam, gdzie są w sieci. Zdjęcie z galerii jest sprawdzane i przechowywane przy Twoim koncie.",
+    faceNotMade: "Ten obraz nie może być Twoją twarzą. Wybierz inny.",
     title: "Ustawienia",
     guestTitle: "Zaloguj się, aby zmieniać ustawienia.",
     guestBody:
@@ -109,7 +117,7 @@ const pl: Translation = {
     nameFailed: "Nie udało się zapisać – serwer nie odpowiedział. Twoja nazwa się nie zmieniła.",
     tryAgain: "Spróbuj ponownie",
     faceTitle: "Twoje zdjęcie",
-    faceBody: "Wybierz obraz z listy, którą masz opublikowaną. Nic nie jest przesyłane.",
+    faceBody: "Wybierz kartę z opublikowanej listy albo zdjęcie z urządzenia.",
     faceNone: "Opublikuj listę, a jej obrazy pojawią się tutaj.",
     faceChoices: "Twoje zdjęcie",
     faceChoice: "Karta z listy {list}",
@@ -151,6 +159,13 @@ const pl: Translation = {
     deleteAccount: "Usuń swoje konto",
   },
   home: {
+    manageFollowing: "Zarządzaj",
+    youFollow: {
+      one: "Obserwujesz {n} osobę",
+      few: "Obserwujesz {n} osoby",
+      many: "Obserwujesz {n} osób",
+      other: "Obserwujesz {n} osoby",
+    },
     hero: "Oceniaj cokolwiek albo weź cudzą listę i ułóż ją po swojemu.",
     searchPlaceholder: "Szukaj list – anime, gry, filmy…",
     categories: "Kategorie",

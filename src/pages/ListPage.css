@@ -311,7 +311,8 @@
   }
 
   .list-head__own,
-  .list-head__copy {
+  .list-head__copy,
+  .list-head__save {
     display: none;
   }
 

@@ -30,6 +30,8 @@ const tr: Translation = {
     reports: "Bildirimler",
   },
   mod: {
+    putBack: "Geri al",
+    putBackDone: "Akışa geri alındı. Şikâyetler artık gizlemiyor.",
     title: "Bildirimler",
     notAvailable: "Bu sayfa kullanılamıyor.",
     listCount: { other: "{n} liste" },
@@ -76,6 +78,12 @@ const tr: Translation = {
     emptyBody: "Topluluk listeleriyle ilgili bildirimler buraya gelir.",
   },
   settings: {
+    faceGallery: "Galeriden bir fotoğraf",
+    faceGalleryCaption: "Fotoğraf",
+    facePhotoCaption: "Fotoğrafın",
+    faceNote:
+      "Kart görselleri web'de oldukları yerde kalır. Galeriden bir fotoğraf denetlenir ve hesabınla saklanır.",
+    faceNotMade: "Bu resim yüzün olamaz. Başka birini seç.",
     title: "Ayarlar",
     guestTitle: "Ayarlarınızı değiştirmek için oturum açın.",
     guestBody:
@@ -95,7 +103,7 @@ const tr: Translation = {
     nameFailed: "Kaydedilemedi: sunucu yanıt vermedi. Adınız değişmedi.",
     tryAgain: "Tekrar deneyin",
     faceTitle: "Profil resminiz",
-    faceBody: "Yayımladığınız bir listeden bir görsel seçin. Hiçbir şey yüklenmez.",
+    faceBody: "Yayımladığın bir listeden bir kart ya da cihazından bir fotoğraf seç.",
     faceNone: "Bir liste yayımlayın, görselleri burada görünsün.",
     faceChoices: "Profil resminiz",
     faceChoice: "{list} listesinden kart",
@@ -138,6 +146,11 @@ const tr: Translation = {
     deleteAccount: "Hesabınızı silin",
   },
   home: {
+    manageFollowing: "Yönet",
+    youFollow: {
+      one: "{n} kişiyi takip ediyorsun",
+      other: "{n} kişiyi takip ediyorsun",
+    },
     hero: "Her şeyi sıralayın ya da başkasının listesini alıp kendinizce sıralayın.",
     searchPlaceholder: "Liste arayın: anime, oyun, film…",
     categories: "Kategoriler",

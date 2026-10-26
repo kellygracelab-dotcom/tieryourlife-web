@@ -30,6 +30,8 @@ const fr: Translation = {
     reports: "Signalements",
   },
   mod: {
+    putBack: "Restaurer",
+    putBackDone: "De retour dans le fil. Les signalements ne la masquent plus.",
     title: "Signalements",
     notAvailable: "Cette page n’est pas disponible.",
     listCount: { one: "{n} liste", other: "{n} listes" },
@@ -76,6 +78,12 @@ const fr: Translation = {
     emptyBody: "Les signalements de listes de la communauté arrivent ici.",
   },
   settings: {
+    faceGallery: "Une photo de la galerie",
+    faceGalleryCaption: "Photo",
+    facePhotoCaption: "Votre photo",
+    faceNote:
+      "Les images des cartes restent là où elles vivent sur le web. Une photo de la galerie est vérifiée et conservée avec votre compte.",
+    faceNotMade: "Cette image ne peut pas être votre visage. Choisissez-en une autre.",
     title: "Paramètres",
     guestTitle: "Connectez-vous pour modifier vos paramètres.",
     guestBody:
@@ -96,7 +104,7 @@ const fr: Translation = {
     nameFailed: "Impossible d’enregistrer : le serveur n’a pas répondu. Votre nom n’a pas changé.",
     tryAgain: "Réessayer",
     faceTitle: "Votre image",
-    faceBody: "Choisissez une image d’une liste que vous avez publiée. Rien n’est envoyé.",
+    faceBody: "Choisissez une carte d’une liste publiée, ou une photo de votre appareil.",
     faceNone: "Publiez une liste et ses images apparaîtront ici.",
     faceChoices: "Votre image",
     faceChoice: "Carte de {list}",
@@ -140,6 +148,11 @@ const fr: Translation = {
     deleteAccount: "Supprimer votre compte",
   },
   home: {
+    manageFollowing: "Gérer",
+    youFollow: {
+      one: "Vous suivez {n} personne",
+      other: "Vous suivez {n} personnes",
+    },
     hero: "Classez n’importe quoi, ou prenez la liste de quelqu’un d’autre et classez-la à votre façon.",
     searchPlaceholder: "Chercher des listes : animé, jeux, films…",
     categories: "Catégories",

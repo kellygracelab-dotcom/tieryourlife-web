@@ -94,8 +94,9 @@ describe("ListPage save to my lists", () => {
   it("makes a board of somebody's list, asking whose ranking to keep, and opens it", async () => {
     mocks.loadList.mockResolvedValue(list);
     openAs(member);
-    await userEvent.click(await screen.findByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Save to my lists" }));
+    // The head's button and the menu's row are the same flow; the head's is pressed here.
+    await screen.findByLabelText("More about this list");
+    await userEvent.click(screen.getAllByRole("button", { name: "Save to my lists" })[0]!);
     // The author placed Ex Machina, so there is a choice to make.
     const dialog = screen.getByRole("dialog", { name: "Which ranking to save?" });
     await userEvent.click(within(dialog).getByRole("button", { name: "The author's" }));

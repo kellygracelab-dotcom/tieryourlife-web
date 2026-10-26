@@ -28,6 +28,8 @@ const de: Translation = {
     reports: "Meldungen",
   },
   mod: {
+    putBack: "Zurückholen",
+    putBackDone: "Wieder im Feed. Meldungen verbergen sie nicht mehr.",
     title: "Meldungen",
     notAvailable: "Diese Seite ist nicht verfügbar.",
     listCount: { one: "{n} Liste", other: "{n} Listen" },
@@ -74,6 +76,12 @@ const de: Translation = {
     emptyBody: "Beschwerden über Community-Listen landen hier.",
   },
   settings: {
+    faceGallery: "Ein Foto aus der Galerie",
+    faceGalleryCaption: "Foto",
+    facePhotoCaption: "Dein Foto",
+    faceNote:
+      "Kartenbilder bleiben, wo sie im Netz liegen. Ein Foto aus der Galerie wird geprüft und bei deinem Konto aufbewahrt.",
+    faceNotMade: "Dieses Bild kann nicht dein Gesicht sein. Wähle ein anderes.",
     title: "Einstellungen",
     guestTitle: "Melde dich an, um deine Einstellungen zu ändern.",
     guestBody:
@@ -95,8 +103,7 @@ const de: Translation = {
       "Konnte nicht speichern – der Server hat nicht geantwortet. Dein Name ist unverändert.",
     tryAgain: "Erneut versuchen",
     faceTitle: "Dein Bild",
-    faceBody:
-      "Wähle ein Bild aus einer Liste, die du veröffentlicht hast. Nichts wird hochgeladen.",
+    faceBody: "Wähle eine Karte aus einer veröffentlichten Liste oder ein Foto von deinem Gerät.",
     faceNone: "Veröffentliche eine Liste, und ihre Bilder erscheinen hier.",
     faceChoices: "Dein Bild",
     faceChoice: "Karte aus {list}",
@@ -141,6 +148,11 @@ const de: Translation = {
     deleteAccount: "Dein Konto löschen",
   },
   home: {
+    manageFollowing: "Verwalten",
+    youFollow: {
+      one: "Du folgst {n} Person",
+      other: "Du folgst {n} Personen",
+    },
     hero: "Ordne alles ein, oder nimm die Liste von jemand anderem und ordne sie auf deine Art.",
     searchPlaceholder: "Listen suchen – Anime, Spiele, Filme…",
     categories: "Kategorien",

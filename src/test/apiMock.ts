@@ -38,6 +38,8 @@ export function apiStubs() {
     followAuthor: pending(),
     unfollowAuthor: pending(),
     suggestedAuthors: pending(),
+    loadFollowing: pending(),
+    makeFace: pending(),
     takeDownList: pending(),
     leaveListUp: pending(),
     eraseMyAccount: pending(),

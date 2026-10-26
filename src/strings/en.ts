@@ -21,6 +21,8 @@ export const en = {
     reports: "Reports",
   },
   mod: {
+    putBack: "Put back",
+    putBackDone: "Put back in the feed. Reports no longer hide it.",
     title: "Reports",
     notAvailable: "This page isn’t available.",
     listCount: { one: "{n} list", other: "{n} lists" },
@@ -67,6 +69,12 @@ export const en = {
     emptyBody: "Complaints about community lists arrive here.",
   },
   settings: {
+    faceGallery: "A photo from the gallery",
+    faceGalleryCaption: "Photo",
+    facePhotoCaption: "Your photo",
+    faceNote:
+      "Card art stays where it lives on the web. A photo from the gallery is checked and kept with your account.",
+    faceNotMade: "That picture cannot be your face. Pick another.",
     title: "Settings",
     guestTitle: "Sign in to change your settings.",
     guestBody:
@@ -87,7 +95,7 @@ export const en = {
     nameFailed: "Couldn’t save — the server didn’t answer. Your name is unchanged.",
     tryAgain: "Try again",
     faceTitle: "Your face",
-    faceBody: "Pick a picture from a list you published. Nothing is uploaded.",
+    faceBody: "Pick a card from a list you published, or a photo from your device.",
     faceNone: "Publish a list and its pictures show up here.",
     faceChoices: "Your face",
     faceChoice: "Card from {list}",
@@ -134,6 +142,11 @@ export const en = {
     deleteAccount: "Delete your account",
   },
   home: {
+    manageFollowing: "Manage",
+    youFollow: {
+      one: "You follow {n} person",
+      other: "You follow {n} people",
+    },
     hero: "Rank anything, or take someone else's list and rank it your way.",
     searchPlaceholder: "Search lists — anime, games, films…",
     categories: "Categories",

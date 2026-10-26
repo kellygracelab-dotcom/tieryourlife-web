@@ -113,14 +113,26 @@ describe("ModerationPage", () => {
     expect(cards[1]).toHaveTextContent("Kept once already, so reports no longer hide it");
   });
 
-  it("leaves a list up, and the card goes with a word in the snackbar", async () => {
+  it("puts a hidden list back, and the card goes with a word in the snackbar", async () => {
     load.mockResolvedValue({ reports: [queued("l1")] });
+    leaveUp.mockResolvedValue(undefined);
+    open();
+    // Hidden while it waited: dismissing the reports is putting it back.
+    await userEvent.click(await screen.findByRole("button", { name: "Put back" }));
+    expect(leaveUp).toHaveBeenCalledWith("l1");
+    expect(await screen.findByText("Nothing to review")).toBeInTheDocument();
+    expect(
+      screen.getByText("Put back in the feed. Reports no longer hide it."),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves a list that was never hidden up, in those words", async () => {
+    load.mockResolvedValue({ reports: [queued("l1", { hidden: false })] });
     leaveUp.mockResolvedValue(undefined);
     open();
     await userEvent.click(await screen.findByRole("button", { name: "Leave it up" }));
     expect(leaveUp).toHaveBeenCalledWith("l1");
-    expect(await screen.findByText("Nothing to review")).toBeInTheDocument();
-    expect(screen.getByText("Left up. Reports no longer hide it.")).toBeInTheDocument();
+    expect(await screen.findByText("Left up. Reports no longer hide it.")).toBeInTheDocument();
   });
 
   it("takes a list down with a ban chosen inline, and asks once more for forever", async () => {
@@ -159,7 +171,7 @@ describe("ModerationPage", () => {
     load.mockResolvedValue({ reports: [queued("l1")] });
     leaveUp.mockRejectedValue(new ApiFailure({ kind: "unavailable" }));
     open();
-    await userEvent.click(await screen.findByRole("button", { name: "Leave it up" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Put back" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("nothing changed");
     expect(screen.getByText("List l1")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));

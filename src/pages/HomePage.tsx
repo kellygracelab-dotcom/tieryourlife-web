@@ -10,6 +10,7 @@ import {
   FollowingFeed,
   type Follow,
   type LoadSuggestions,
+  type LoadFollowing,
 } from "../features/feed/Following";
 import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
@@ -23,6 +24,7 @@ export const DELETED_NOTE_MS = 8000;
 interface HomePageProps {
   load?: LoadFeed;
   loadSuggestions?: LoadSuggestions;
+  loadFollowing?: LoadFollowing;
   follow?: Follow;
   unfollow?: Follow;
 }
@@ -31,12 +33,14 @@ function SignedInFeed({
   uid,
   load,
   loadSuggestions,
+  loadFollowing,
   follow,
   unfollow,
 }: {
   uid: string;
   load: LoadFeed | undefined;
   loadSuggestions: LoadSuggestions | undefined;
+  loadFollowing: LoadFollowing | undefined;
   follow: Follow | undefined;
   unfollow: Follow | undefined;
 }) {
@@ -73,6 +77,7 @@ function SignedInFeed({
             more={following.more}
             onSeeEveryone={() => choose("everyone")}
             loadSuggestions={loadSuggestions}
+            loadFollowing={loadFollowing}
             follow={follow}
             unfollow={unfollow}
           />
@@ -113,7 +118,13 @@ function GuestFeed({ load }: { load: LoadFeed | undefined }) {
   );
 }
 
-export function HomePage({ load, loadSuggestions, follow, unfollow }: HomePageProps) {
+export function HomePage({
+  load,
+  loadSuggestions,
+  loadFollowing,
+  follow,
+  unfollow,
+}: HomePageProps) {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
@@ -150,6 +161,7 @@ export function HomePage({ load, loadSuggestions, follow, unfollow }: HomePagePr
           uid={account.uid}
           load={load}
           loadSuggestions={loadSuggestions}
+          loadFollowing={loadFollowing}
           follow={follow}
           unfollow={unfollow}
         />
