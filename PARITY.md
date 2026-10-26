@@ -183,9 +183,10 @@ Kept short, newest first. Each entry names the commit range and what closed.
   fixed: a card moved on one's own board was drawn as another card (the view
   renumbered the cards under the ranking board), the phone's tray covered
   the board's last rows, Their ranking was wider than Mine, uploads are
-  640 px and go up four at a time (see section 5). Still open: item 1, the
-  drop highlight (the variants are with Danylo; the phone tints the row to
-  24% and dashes it in the tier's colour, 2.11).
+  640 px and go up four at a time (see section 5). The row a card would
+  land in is drawn as the phone draws it (2.11): dashed in the tier's colour,
+  its tint up from 12% to 24%; it was a frame in the text's colour, white in
+  the dark theme (item 1).
 - **Signed-in checks, accessibility, lint** (`905d11d`, `237f7e6`, `c8ce875`, `7c8d5f5`, `0bdf2ad`)
   — the signed-in flows now run in a real browser against mocks on this
   machine (`e2e/signedIn.ts`, `e2e/account.spec.ts`, desktop and phone):
