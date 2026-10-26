@@ -1,14 +1,19 @@
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseAuth, getFirebaseStorage } from "./firebase";
 
-/** The phone's numbers: the long side, the JPEG quality, and the bucket's ceiling. */
-export const MAX_SIDE = 1000;
-export const JPEG_QUALITY = 0.85;
+/**
+ * A card's picture is a poster: a tile shows it at 64 px, the share image at
+ * 96, a list's cover at about 400. A long side of 640 serves all of them at
+ * twice the size, and keeps a photograph to some 50 KB, so a dozen go up in
+ * seconds. (The phone keeps 1000; the bucket's ceiling is the same.)
+ */
+export const MAX_SIDE = 640;
+export const JPEG_QUALITY = 0.8;
 export const MAX_BYTES = 4 * 1024 * 1024;
 
 export type Shrink = (file: Blob) => Promise<Blob>;
 
-/** Anything the canvas can draw, drawn no larger than the phone keeps it, as a JPEG. */
+/** Anything the canvas can draw, drawn no larger than a card needs it, as a JPEG. */
 export const shrinkOnCanvas: Shrink = async (file) => {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
@@ -19,6 +24,8 @@ export const shrinkOnCanvas: Shrink = async (file) => {
   canvas.height = height;
   const context = canvas.getContext("2d");
   if (context === null) throw new Error("no 2d context");
+  // A photograph shrinks five times or more; the default smoothing leaves it grainy.
+  context.imageSmoothingQuality = "high";
   context.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
   return new Promise((resolve, reject) => {

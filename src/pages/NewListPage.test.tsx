@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -481,6 +481,36 @@ describe("NewListPage", () => {
     );
     expect(await screen.findByText("Published list page")).toBeInTheDocument();
     expect(discard).toHaveBeenCalledWith(["pic-1", "pic-2"]);
+  });
+
+  it("sends the pictures after the first all at once, and keeps the cards in the order chosen", async () => {
+    const answers: ((url: string) => void)[] = [];
+    upload.mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          answers.push((url) => resolve({ pictureId: url, previewUrl: `https://dl/${url}` })),
+        ),
+    );
+    open();
+    await userEvent.upload(screen.getByLabelText("Upload images"), [
+      picture("a.png"),
+      picture("b.png"),
+      picture("c.png"),
+    ]);
+    // The first alone: it may have to sign a guest in.
+    expect(upload).toHaveBeenCalledTimes(1);
+    await act(async () => answers[0]!("a"));
+    // Then the other two together; the last one back still lands last.
+    expect(upload).toHaveBeenCalledTimes(3);
+    await act(async () => answers[2]!("c"));
+    await act(async () => answers[1]!("b"));
+    const grid = screen.getByRole("list", { name: "Cards" });
+    expect(
+      within(grid)
+        .getAllByRole("img")
+        .map((img) => img.getAttribute("src")),
+    ).toEqual(["https://dl/a", "https://dl/b", "https://dl/c"]);
+    expect(screen.getByRole("button", { name: "Upload images" })).toBeEnabled();
   });
 
   it("names the picture that was refused and keeps the rest", async () => {
