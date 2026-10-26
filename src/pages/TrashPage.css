@@ -1,0 +1,159 @@
+.trash {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.trash__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  font: var(--text-label);
+  color: var(--ink-dim);
+}
+
+.trash__back .ms {
+  font-size: 18px;
+}
+
+[dir="rtl"] .trash__back .ms {
+  transform: scaleX(-1);
+}
+
+.trash__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.trash__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.trash__title {
+  margin: 0;
+  font: var(--text-headline);
+}
+
+.trash__subtitle {
+  margin-top: 4px;
+  font: var(--text-lead);
+  color: var(--ink-dim);
+}
+
+.trash__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One entry: what it is, where it came from, and the two things that can be done with it. */
+.trash-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 10px 12px 10px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.trash-row__picture {
+  display: block;
+  flex: none;
+  width: 40px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--tile-placeholder);
+}
+
+.trash-row__picture--blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tile-label);
+}
+
+.trash-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.trash-row__title {
+  overflow: hidden;
+  font: 500 15px/20px var(--font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trash-row__meta {
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.trash-row__actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.trash-row__actions .btn {
+  min-height: 40px;
+  color: var(--link);
+}
+
+.trash-row__actions .trash-row__remove {
+  color: var(--error);
+}
+
+.trash__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 16px;
+  text-align: center;
+}
+
+.trash__empty-icon {
+  font-size: 38px;
+  color: var(--ink-faint);
+}
+
+.trash__empty-title {
+  margin: 0;
+  font: 400 20px/26px var(--font);
+  color: var(--ink);
+}
+
+.trash__empty-body {
+  max-width: 460px;
+  margin: 0;
+  font: 400 14px/21px var(--font);
+  color: var(--ink-dim);
+}
+
+@media (max-width: 599px) {
+  .trash-row {
+    flex-wrap: wrap;
+    gap: 10px 12px;
+  }
+
+  .trash-row__actions {
+    flex-basis: 100%;
+  }
+}

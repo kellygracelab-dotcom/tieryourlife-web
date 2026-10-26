@@ -107,6 +107,22 @@
   color: var(--ink);
 }
 
+/* The way to the person's own boards: an icon, since the words are in the account menu. */
+.top__boards {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  color: var(--ink-dim);
+}
+
+.top__boards:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
 @media (min-width: 600px) {
   .top__search {
     display: flex;

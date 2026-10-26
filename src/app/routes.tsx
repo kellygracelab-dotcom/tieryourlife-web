@@ -11,10 +11,11 @@ import { RouteError } from "./RouteError";
 import { Shell } from "./Shell";
 
 /**
- * The pages most visitors never open — making a list, the account, the
- * moderator's queue, the credits — come as chunks of their own when asked
- * for, so opening a list does not download the editor. A chunk that fails to
- * come is a thrown route, and the error element says so in the person's words.
+ * The pages most visitors never open — making a list, the boards and the
+ * trash, the account, the moderator's queue, the credits — come as chunks of
+ * their own when asked for, so opening a list does not download the editor.
+ * A chunk that fails to come is a thrown route, and the error element says so
+ * in the person's words.
  */
 const later = (load: () => Promise<{ Component: ComponentType }>) => ({ lazy: load });
 
@@ -35,6 +36,24 @@ export const routes: RouteObject[] = [
             path: "new",
             ...later(async () => ({
               Component: (await import("../pages/NewListPage")).NewListPage,
+            })),
+          },
+          {
+            path: "boards",
+            ...later(async () => ({
+              Component: (await import("../pages/BoardsPage")).BoardsPage,
+            })),
+          },
+          {
+            path: "b/:uid",
+            ...later(async () => ({
+              Component: (await import("../pages/BoardPage")).BoardPage,
+            })),
+          },
+          {
+            path: "trash",
+            ...later(async () => ({
+              Component: (await import("../pages/TrashPage")).TrashPage,
             })),
           },
           { path: "c/:category", element: <CategoryPage /> },
