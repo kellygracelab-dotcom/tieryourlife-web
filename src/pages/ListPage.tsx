@@ -426,8 +426,19 @@ export function ListPage({
   // The shape the board took on a wide screen, so the header lays itself out
   // to match, and a place in the header for the bar while the pool is under.
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
+  // The last of those shapes, so the author's ranking keeps the visitor's width.
+  const [lastDock, setLastDock] = useState<Dock>("beside");
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
-  const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
+  const frame = useMemo(
+    () => ({
+      headSlot,
+      report: (dock: Dock | null) => {
+        setBoardDock(dock);
+        if (dock !== null) setLastDock(dock);
+      },
+    }),
+    [headSlot],
+  );
   // The owner's republish: the page fetches the list again and says so for a while.
   const [savedAt, setSavedAt] = useState<number | null>(null);
   // While the owner's board has changes, the head holds the editing row: Edit
@@ -563,7 +574,7 @@ export function ListPage({
             <RankingBoard key={list.id} list={list} />
           </BoardFrameContext.Provider>
         ) : (
-          published
+          <div className={`list-page__theirs list-page__theirs--${lastDock}`}>{published}</div>
         ))}
       <Snackbar notice={notice} onDone={clearNotice} />
     </article>

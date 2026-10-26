@@ -264,6 +264,20 @@
   .list-head__title {
     font: 500 20px/26px var(--font);
   }
+
+  /*
+   * The author's ranking is as wide as the visitor's board was: capped the
+   * same, and beside, with the pool's column still kept free, so switching
+   * views leaves the tiers where they were.
+   */
+  .list-page__theirs > .board {
+    max-width: var(--board-cap);
+    margin-inline: auto;
+  }
+
+  .list-page__theirs--beside {
+    padding-inline-end: var(--side);
+  }
 }
 
 .list-page__saved {
