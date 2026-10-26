@@ -29,7 +29,19 @@ async function makeBoard(page: Page, touch: boolean) {
     await page.getByRole("button", { name: "Ex Machina", exact: true }).hover();
     await move.click();
   }
-  await press(page.getByRole("dialog").getByRole("button", { name: "S", exact: true }), touch);
+  const sheet = page.getByRole("dialog", { name: "Ex Machina" });
+  if (touch) {
+    // On a touch screen the sheet is where a card leaves the list; the cross steps aside.
+    await expect(sheet.getByRole("button", { name: "Remove from list" })).toBeVisible();
+    await expect(page.getByLabel("Remove Ex Machina", { exact: true })).toBeHidden();
+  } else {
+    // The keyboard stays in the sheet, round and round.
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press("Tab");
+      expect(await sheet.evaluate((box) => box.contains(document.activeElement))).toBe(true);
+    }
+  }
+  await press(sheet.getByRole("button", { name: "S", exact: true }), touch);
   await expect(page.getByText(/1 ranked · 2 in pool/)).toBeVisible();
 }
 
