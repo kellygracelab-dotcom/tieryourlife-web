@@ -1264,3 +1264,177 @@
     animation: none;
   }
 }
+
+/* The button for moving a card without a drag: the other top corner of the tile. */
+.tile__more {
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.tile__more .ms {
+  font-size: 16px;
+}
+
+.tile-holder--removable:hover .tile__more,
+.tile-holder--removable:focus-within .tile__more,
+.tile__more[aria-expanded="true"] {
+  display: inline-flex;
+}
+
+@media (hover: none) {
+  .tile__more {
+    display: inline-flex;
+  }
+}
+
+/* The move sheet: the tiers as rows with their colour, then the two ways out. */
+.move-sheet__who {
+  margin: 0 0 4px;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.move-sheet__tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: min(48vh, 360px);
+  margin: 0 0 12px;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.move-sheet__tier {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.move-sheet__tier:hover,
+.move-sheet__tier:focus-visible {
+  background: var(--paper);
+}
+
+.move-sheet__tier:disabled {
+  color: var(--ink-dim);
+  cursor: default;
+}
+
+.move-sheet__swatch {
+  display: inline-block;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--band);
+}
+
+.move-sheet__label {
+  font-weight: 500;
+}
+
+.move-sheet__caption {
+  overflow: hidden;
+  font: var(--text-small);
+  color: var(--ink-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.move-sheet__note {
+  flex: none;
+  margin-inline-start: auto;
+  padding-inline-start: 12px;
+  font: var(--text-caption);
+  /* Information, not decoration: the dim ink, 6.2:1 on the sheet, not the faint one. */
+  color: var(--ink-dim);
+}
+
+.move-sheet__actions {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.move-sheet__danger {
+  color: var(--error);
+}
+
+/* A number key on the band means nothing to a finger: the move sheet and a tap do the placing. */
+@media (hover: none) and (pointer: coarse) {
+  .tier__key {
+    display: none;
+  }
+}
+
+/* On a narrow window the box that brings cards in waits behind Add, inside the pool. */
+.pool__add {
+  flex: none;
+  min-height: 32px;
+  padding: 4px 12px;
+}
+
+.pool__tools--sheet {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  order: 10;
+  gap: 10px 16px;
+  max-height: 44vh;
+  padding: 4px 0 6px;
+  overflow-y: auto;
+}
+
+/* The head keeps to one row on a phone, except when the tools are out under it. */
+.pool__head:has(.pool__tools--sheet) {
+  flex-wrap: wrap;
+}
+
+.pool__tools--sheet .cards__add {
+  flex: 1 1 240px;
+}
+
+/*
+ * The buttons on a card are at least 24 px square (WCAG 2.2, target size).
+ * On a touch screen the move sheet carries "Remove from list", as the phone's
+ * does, so the cross steps aside and the sheet's button grows: two 24 px
+ * buttons do not fit side by side on a 44 px card without touching.
+ */
+.tile__more,
+.tile-holder--removable .tile__remove {
+  width: 24px;
+  height: 24px;
+}
+
+@media (hover: none) {
+  .tile-holder--removable:has(.tile__more) .tile__remove {
+    display: none;
+  }
+
+  .tile__more {
+    width: 28px;
+    height: 28px;
+  }
+}

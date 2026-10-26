@@ -90,7 +90,9 @@ function QueueCard({
     );
   };
 
-  const keep = () => settle(leaveUp(item.listId), strings.mod.leftUp);
+  // Dismissing clears the complaints; a list hidden while it waited comes back.
+  const keep = () =>
+    settle(leaveUp(item.listId), item.hidden ? strings.mod.putBackDone : strings.mod.leftUp);
 
   const remove = (ban: BanLength | null) =>
     settle(
@@ -199,7 +201,7 @@ function QueueCard({
           ) : (
             <div className="queue__actions">
               <Button variant="tonal" icon="check" onClick={keep} disabled={acting}>
-                {strings.mod.leaveUp}
+                {item.hidden ? strings.mod.putBack : strings.mod.leaveUp}
               </Button>
               <button
                 type="button"

@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +9,7 @@ import { memoryStore } from "../../lib/storage";
 import { HomePage } from "../../pages/HomePage";
 import { useHiddenStoreForTests } from "../community/useHidden";
 import { keepFeedSource, readFeedSource } from "./feedSource";
-import type { Follow, LoadSuggestions } from "./Following";
+import type { Follow, LoadFollowing, LoadSuggestions } from "./Following";
 
 vi.mock("../../lib/api", () => ({
   loadReports: vi.fn(() => new Promise(() => undefined)),
@@ -47,6 +47,7 @@ const load = vi.fn<(query: FeedQuery) => Promise<FeedPage>>();
 const loadSuggestions = vi.fn<LoadSuggestions>();
 const follow = vi.fn<Follow>();
 const unfollow = vi.fn<Follow>();
+const loadFollowing = vi.fn<LoadFollowing>();
 
 const open = (account: Session["account"] = member) => {
   const routes: RouteObject[] = [
@@ -56,6 +57,7 @@ const open = (account: Session["account"] = member) => {
         <HomePage
           load={load}
           loadSuggestions={loadSuggestions}
+          loadFollowing={loadFollowing}
           follow={follow}
           unfollow={unfollow}
         />
@@ -92,6 +94,8 @@ beforeEach(() => {
       { uid: "u3", name: "other", photoUrl: "https://img/f.jpg", takeCount: 3 },
     ],
   });
+  loadFollowing.mockReset();
+  loadFollowing.mockResolvedValue({ authors: [] });
   follow.mockReset();
   follow.mockResolvedValue(undefined);
   unfollow.mockReset();
@@ -195,6 +199,101 @@ describe("HomePage for a signed-in person", () => {
     localStorage.setItem("tyl:feed-source:u9", "following");
     open({ ...member, uid: "u9" });
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load your feed.");
+  });
+
+  it("shows the people followed above their lists, and unfollows from Manage", async () => {
+    load.mockImplementation(async (query) =>
+      query.following ? { lists: [list("f1")], nextCursor: null } : { lists: [], nextCursor: null },
+    );
+    loadFollowing.mockResolvedValue({
+      authors: [
+        { uid: "u2", name: "someone", photoUrl: null },
+        { uid: "u3", name: "", photoUrl: "https://img/f.jpg" },
+      ],
+    });
+    unfollow.mockResolvedValue(undefined);
+    open();
+    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
+    expect(await screen.findByText("You follow 2 people")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /List f1/ })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Manage" }));
+    const dialog = screen.getByRole("dialog", { name: "Following" });
+    expect(within(dialog).getByRole("link", { name: "someone" })).toHaveAttribute("href", "/u/u2");
+    // A person whose lists are all gone keeps the follow, under "Someone".
+    expect(within(dialog).getByRole("link", { name: "Someone" })).toHaveAttribute("href", "/u/u3");
+    const reads = load.mock.calls.length;
+    const peopleReads = loadFollowing.mock.calls.length;
+    const [first] = within(dialog).getAllByRole("listitem");
+    await userEvent.click(within(first!).getByRole("button", { name: "Unfollow" }));
+    expect(unfollow).toHaveBeenCalledWith("u2");
+    expect(within(dialog).queryByRole("link", { name: "someone" })).toBeNull();
+
+    // Done: the strip has dropped whoever the account confirmed, without
+    // reading the people again; the feed behind it was read again.
+    await userEvent.click(within(dialog).getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await screen.findByText("You follow 1 person")).toBeInTheDocument();
+    expect(load.mock.calls.length).toBeGreaterThan(reads);
+    expect(loadFollowing.mock.calls.length).toBe(peopleReads);
+    // Manage stayed on the page through the feed's reload, and has the focus back.
+    expect(screen.getByRole("button", { name: "Manage" })).toHaveFocus();
+  });
+
+  it("brings the row back with a word when unfollowing did not take", async () => {
+    load.mockImplementation(async (query) =>
+      query.following ? { lists: [list("f1")], nextCursor: null } : { lists: [], nextCursor: null },
+    );
+    loadFollowing.mockResolvedValue({ authors: [{ uid: "u2", name: "someone", photoUrl: null }] });
+    unfollow.mockRejectedValue(new ApiFailure({ kind: "offline" }));
+    open();
+    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Manage" }));
+    const dialog = screen.getByRole("dialog", { name: "Following" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Unfollow" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Couldn’t follow — try again.",
+    );
+    expect(within(dialog).getByRole("link", { name: "someone" })).toBeInTheDocument();
+    // Escape closes it; nothing changed, so the feed is left alone.
+    const reads = load.mock.calls.length;
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(load.mock.calls.length).toBe(reads);
+  });
+
+  it("counts an unfollow whose answer arrives after the dialog was closed", async () => {
+    load.mockImplementation(async (query) =>
+      query.following ? { lists: [list("f1")], nextCursor: null } : { lists: [], nextCursor: null },
+    );
+    loadFollowing.mockResolvedValue({
+      authors: [
+        { uid: "u2", name: "someone", photoUrl: null },
+        { uid: "u3", name: "other", photoUrl: null },
+      ],
+    });
+    let answer: () => void = () => undefined;
+    unfollow.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    open();
+    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Manage" }));
+    const dialog = screen.getByRole("dialog", { name: "Following" });
+    const [first] = within(dialog).getAllByRole("listitem");
+    await userEvent.click(within(first!).getByRole("button", { name: "Unfollow" }));
+    // Closed before the account answered: nothing is counted yet.
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByText("You follow 2 people")).toBeInTheDocument();
+    const reads = load.mock.calls.length;
+
+    await act(async () => answer());
+    expect(await screen.findByText("You follow 1 person")).toBeInTheDocument();
+    expect(load.mock.calls.length).toBeGreaterThan(reads);
   });
 
   it("shows a guest Everyone only, without the switch", async () => {

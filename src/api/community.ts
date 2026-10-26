@@ -56,3 +56,24 @@ export interface SuggestedAuthor {
 export function suggestedAuthors(client: ApiClient): Promise<{ authors: SuggestedAuthor[] }> {
   return client.request<{ authors: SuggestedAuthor[] }>("GET", "/lists/follow");
 }
+
+/** Somebody this person follows, with the name and face their newest list carries. */
+export interface FollowedAuthor {
+  uid: string;
+  name: string;
+  photoUrl: string | null;
+}
+
+/** Whom this person follows; the backend answers `topics` too, which the site leaves alone. */
+export function loadFollowing(client: ApiClient): Promise<{ authors: FollowedAuthor[] }> {
+  return client.request<{ authors: FollowedAuthor[] }>("GET", "/lists/following");
+}
+
+/**
+ * One of the person's own uploaded pictures becomes their face: the backend
+ * checks it and keeps a copy where everybody may see it. 422 PICTURE_REFUSED
+ * when the picture cannot be a face.
+ */
+export function makeFace(client: ApiClient, pictureId: string): Promise<{ url: string }> {
+  return client.request<{ url: string }>("POST", `/lists/face/${encodeURIComponent(pictureId)}`);
+}

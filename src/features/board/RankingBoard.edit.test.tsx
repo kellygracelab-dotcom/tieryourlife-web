@@ -88,3 +88,54 @@ describe("RankingBoard as an editor", () => {
     expect(screen.getByRole("button", { name: "The Witch" })).toBeEnabled();
   });
 });
+
+describe("RankingBoard's move menu on an own board", () => {
+  it("moves a card to any tier, back to the pool, or off the list, by a press", async () => {
+    const onChange = vi.fn();
+    const remove = vi.fn();
+    render(
+      <MemoryRouter>
+        <RankingBoard
+          list={list}
+          store={memoryStore()}
+          edit={{
+            rows: [[1], [0]],
+            save: vi.fn(async () => undefined),
+            cancel: vi.fn(),
+            owner: { live: true, moveMenu: true, canSave: false, onChange, remove },
+          }}
+        />
+      </MemoryRouter>,
+    );
+    // The sheet opens from the card's button and is named after the card.
+    const menuOf = async (name: string) => {
+      await userEvent.click(screen.getByLabelText(`Move ${name}`));
+      return within(screen.getByRole("dialog", { name }));
+    };
+    // Climax waits in the pool: its menu names both tiers, no "back to the pool".
+    let menu = await menuOf("Climax");
+    expect(menu.queryByRole("button", { name: "Back to the pool" })).toBeNull();
+    await userEvent.click(menu.getByRole("button", { name: "A" }));
+    expect(within(tier("A")).getByRole("button", { name: "Climax" })).toBeInTheDocument();
+    expect(onChange).toHaveBeenLastCalledWith([[1], [0, 2]]);
+
+    // In a tier, that tier is named as where it is, and the pool is offered.
+    menu = await menuOf("Climax");
+    expect(menu.getByRole("button", { name: /^A/ })).toHaveTextContent("Currently here");
+    expect(menu.getByRole("button", { name: /^A/ })).toBeDisabled();
+    await userEvent.click(menu.getByRole("button", { name: "Back to the pool" }));
+    expect(within(tier("A")).queryByRole("button", { name: "Climax" })).toBeNull();
+    expect(onChange).toHaveBeenLastCalledWith([[1], [0]]);
+
+    menu = await menuOf("The Witch");
+    await userEvent.click(menu.getByRole("button", { name: "Remove from list" }));
+    expect(remove).toHaveBeenCalledWith(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // Escape is a change of mind, and the focus comes back to the button.
+    menu = await menuOf("Climax");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByLabelText("Move Climax")).toHaveFocus();
+  });
+});

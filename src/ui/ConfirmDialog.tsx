@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface ConfirmDialogProps {
   title: string;
@@ -70,7 +71,7 @@ export function ConfirmDialog({
     }
   };
 
-  return (
+  return createPortal(
     <div className="scrim" onClick={busy ? undefined : onCancel}>
       <div
         ref={box}
@@ -101,6 +102,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

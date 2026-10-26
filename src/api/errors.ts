@@ -7,7 +7,8 @@ export type ApiError =
   | { kind: "notFound" }
   | { kind: "tooManyLists" }
   | { kind: "cursorGone" }
-  | { kind: "conflict" }
+  /** A refused write may hand back what is stored, for the caller to keep beside its own. */
+  | { kind: "conflict"; board?: unknown }
   | { kind: "tooLarge"; detail: string | null }
   | { kind: "invalid"; detail: string | null }
   | { kind: "pictureRefused"; because: string | null }
@@ -30,6 +31,7 @@ interface ErrorBody {
   code?: unknown;
   until?: unknown;
   because?: unknown;
+  board?: unknown;
 }
 
 function bodyOf(text: string): ErrorBody {
@@ -68,7 +70,9 @@ export function parseApiError(status: number, text: string): ApiError {
     case 409:
       if (code === "TOO_MANY_LISTS") return { kind: "tooManyLists" };
       if (code === "CURSOR_GONE") return { kind: "cursorGone" };
-      return { kind: "conflict" };
+      return body.board === undefined
+        ? { kind: "conflict" }
+        : { kind: "conflict", board: body.board };
     case 413:
       return { kind: "tooLarge", detail: stringOrNull(body.error) };
     case 422:

@@ -1,13 +1,17 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { routes } from "./app/routes";
 import { SessionProvider } from "./app/SessionProvider";
+import { BoardSyncProvider } from "./features/boards/BoardSync";
 
 const router = createBrowserRouter(routes);
 
 export function App() {
   return (
     <SessionProvider>
-      <RouterProvider router={router} />
+      {/* The boards follow the account from here, whatever page is open. */}
+      <BoardSyncProvider>
+        <RouterProvider router={router} />
+      </BoardSyncProvider>
     </SessionProvider>
   );
 }

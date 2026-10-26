@@ -20,6 +20,13 @@
     "eslint/no-underscore-dangle": "off",
     "typescript/no-non-null-assertion": "warn",
     "eqeqeq": ["error", "smart"],
+    "eslint/no-restricted-globals": [
+      "error",
+      { "name": "close", "message": "window.close: a component's own close callback was meant." },
+      { "name": "open", "message": "window.open: a component's own open state was meant." },
+      { "name": "stop", "message": "window.stop: a local function was meant." },
+      { "name": "print", "message": "window.print: a local function was meant." }
+    ],
     "jsx-a11y/alt-text": "warn",
     "jsx-a11y/anchor-is-valid": "warn",
     "jsx-a11y/aria-props": "warn",

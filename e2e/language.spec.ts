@@ -26,10 +26,14 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
   ).toBeChecked();
   expect(await page.evaluate(() => localStorage.getItem("tyl:locale"))).toBe("uk");
 
-  // A text copied at import time: it is Ukrainian only if the dictionary came first.
+  // The editor, built from the dictionary too: its tiers start as letters
+  // alone, so the caption's placeholder is the word to look for.
   await page.goto("/new");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Створити список");
-  await expect(page.getByLabel("Підпис: S")).toHaveValue("Найкраще");
+  await expect(page.getByLabel("Підпис: S")).toHaveAttribute(
+    "placeholder",
+    "Підпис, необовʼязково",
+  );
 
   await page.goto("/settings");
   await expect(page.getByText("Увійдіть, щоб змінювати налаштування.")).toBeVisible();

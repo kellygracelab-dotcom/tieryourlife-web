@@ -1,9 +1,11 @@
 import * as account from "../api/account";
+import * as boards from "../api/boards";
+import type { KeepBoardRequest, KeptBoard, KeptBoardIndex } from "../api/boards";
 import type { AdoptedGuest } from "../api/account";
 import { searchEverywhere } from "../api/catalogue";
 import { createApiClient } from "../api/client";
 import * as community from "../api/community";
-import type { FollowState, ReportRequest, SuggestedAuthor } from "../api/community";
+import type { FollowedAuthor, FollowState, ReportRequest, SuggestedAuthor } from "../api/community";
 import * as lists from "../api/lists";
 import type { PublishRequest } from "../api/lists";
 import * as moderation from "../api/moderation";
@@ -87,6 +89,12 @@ export const followAuthor = (authorUid: string): Promise<{ following: true }> =>
 export const unfollowAuthor = (authorUid: string): Promise<{ following: false }> =>
   community.unfollowAuthor(api, authorUid);
 
+export const loadFollowing = (): Promise<{ authors: FollowedAuthor[] }> =>
+  community.loadFollowing(api);
+
+export const makeFace = (pictureId: string): Promise<{ url: string }> =>
+  community.makeFace(api, pictureId);
+
 export const suggestedAuthors = (): Promise<{ authors: SuggestedAuthor[] }> =>
   community.suggestedAuthors(api);
 
@@ -96,6 +104,18 @@ export const takeDownList = (id: string, ban: BanLength | null): Promise<void> =
 export const leaveListUp = (id: string): Promise<void> => moderation.leaveListUp(api, id);
 
 export const eraseMyAccount = (): Promise<void> => account.eraseMyAccount(api);
+
+export const loadBoardIndex = (after: string | null = null): Promise<KeptBoardIndex> =>
+  boards.loadBoardIndex(api, after);
+
+export const loadKeptBoard = (uid: string): Promise<KeptBoard> => boards.loadKeptBoard(api, uid);
+
+export const keepBoard = (
+  uid: string,
+  request: KeepBoardRequest,
+): Promise<{ uid: string; revision: number }> => boards.keepBoard(api, uid, request);
+
+export const forgetBoard = (uid: string): Promise<void> => boards.forgetBoard(api, uid);
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.

@@ -10,6 +10,9 @@ import { RankingBoard } from "../features/board/RankingBoard";
 import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
 import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
+import type { BoardsRepository } from "../features/boards/repository";
+import { SaveToMineDialog } from "../features/boards/SaveToMineDialog";
+import { useSaveToMine, type SaveToMine } from "../features/boards/useSaveToMine";
 import { useHidden } from "../features/community/useHidden";
 import { useResource } from "../lib/useResource";
 import { errorOf } from "../api/errors";
@@ -149,10 +152,12 @@ function VisitorMenu({
   list,
   report,
   notify,
+  saving,
 }: {
   list: PublishedList;
   report: Report;
   notify: Notify;
+  saving: SaveToMine;
 }) {
   const { account, signIn } = useSession();
   const { hideList, showList, hideAuthor, showAuthor } = useHidden();
@@ -203,6 +208,12 @@ function VisitorMenu({
             className={canShare ? "menu__divider" : "menu__divider list-menu__copy"}
             role="separator"
           />
+          {/* The head's own Save button, where a phone's head has no room for it. */}
+          <li className="list-menu__copy">
+            <button type="button" className="menu__action" onClick={saving.start}>
+              {strings.list.saveToMine}
+            </button>
+          </li>
           <li>
             <button
               type="button"
@@ -239,6 +250,35 @@ function VisitorMenu({
         }}
         onClose={closeReport}
       />
+    </>
+  );
+}
+
+/**
+ * A visitor's head: the phone's "Save to my lists" as a button beside Copy
+ * link, the menu with the rest. One saving flow serves the button and the
+ * menu's copy of it.
+ */
+function VisitorTools({
+  list,
+  report,
+  notify,
+  repository,
+}: {
+  list: PublishedList;
+  report: Report;
+  notify: Notify;
+  repository?: BoardsRepository;
+}) {
+  const saving = useSaveToMine(list, notify, { repository });
+  return (
+    <>
+      <Button variant="tonal" icon="bookmark" className="list-head__save" onClick={saving.start}>
+        {strings.list.saveToMine}
+      </Button>
+      <CopyLinkButton list={list} />
+      <VisitorMenu list={list} report={report} notify={notify} saving={saving} />
+      <SaveToMineDialog saving={saving} />
     </>
   );
 }
@@ -368,9 +408,15 @@ function HiddenView({ list }: { list: PublishedList }) {
 interface ListPageProps {
   report?: Report;
   unpublish?: Unpublish;
+  /** Where "Save to my lists" puts the copy; the browser's own boards unless told otherwise. */
+  repository?: BoardsRepository;
 }
 
-export function ListPage({ report = sendReport, unpublish = unpublishList }: ListPageProps) {
+export function ListPage({
+  report = sendReport,
+  unpublish = unpublishList,
+  repository,
+}: ListPageProps) {
   const { id = "" } = useParams();
   const { state, retry } = useResource(id, loadList);
   const { account } = useSession();
@@ -474,11 +520,18 @@ export function ListPage({ report = sendReport, unpublish = unpublishList }: Lis
               <span>{strings.list.edit}</span>
             </Link>
           )}
-          {!(own && editing) && <CopyLinkButton list={list} />}
           {own ? (
-            <AuthorMenu list={list} unpublish={unpublish} notify={setNotice} copyInMenu={editing} />
+            <>
+              {!editing && <CopyLinkButton list={list} />}
+              <AuthorMenu
+                list={list}
+                unpublish={unpublish}
+                notify={setNotice}
+                copyInMenu={editing}
+              />
+            </>
           ) : (
-            <VisitorMenu list={list} report={report} notify={setNotice} />
+            <VisitorTools list={list} report={report} notify={setNotice} repository={repository} />
           )}
         </span>
         <span className="list-head__bar" ref={setHeadSlot} />

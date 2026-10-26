@@ -42,6 +42,9 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
       <>
         <li className="menu__who">{account.displayName ?? strings.nav.you}</li>
         <li>
+          <Link to="/boards">{strings.nav.boards}</Link>
+        </li>
+        <li>
           <Link to="/me">{strings.nav.myLists}</Link>
         </li>
         <li>
@@ -138,6 +141,9 @@ export function Shell() {
               <Icon name="search" />
             </Link>
           )}
+          <Link className="top__boards" to="/boards" aria-label={strings.nav.boards}>
+            <Icon name="dashboard" />
+          </Link>
           <Link className="btn btn--tonal top__make" to="/new" aria-label={strings.nav.makeList}>
             <Icon name="add" className="btn__icon top__make-icon" />
             <span className="top__make-text">{strings.nav.makeList}</span>

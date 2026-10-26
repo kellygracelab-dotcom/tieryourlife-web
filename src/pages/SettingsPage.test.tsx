@@ -1,10 +1,13 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ListSummary } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
+import { ApiFailure } from "../api/errors";
 import { faceChoicesOf } from "../features/account/faces";
+import { BoardSyncContext, NOBODY, type BoardSyncControls } from "../features/boards/boardSync";
+import { PictureRefused } from "../lib/pictures";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { memoryStore } from "../lib/storage";
@@ -16,6 +19,8 @@ import {
   type LoadLists,
   type RefreshAuthor,
   type Rename,
+  type MakeFace,
+  type UploadFace,
 } from "./SettingsPage";
 
 vi.mock("../lib/api", () => ({
@@ -62,12 +67,14 @@ const rename = vi.fn<Rename>();
 const face = vi.fn<Face>();
 const refreshAuthor = vi.fn<RefreshAuthor>();
 const erase = vi.fn<Erase>();
+const upload = vi.fn<UploadFace>();
+const makeFace = vi.fn<MakeFace>();
 
 function FrontPage() {
   return <h1>Front page</h1>;
 }
 
-const open = (account: Session["account"] = member) => {
+const open = (account: Session["account"] = member, sync?: BoardSyncControls) => {
   const session: Session = {
     account,
     signIn: vi.fn(async () => ({ kind: "signedIn" as const, switched: false })),
@@ -82,6 +89,8 @@ const open = (account: Session["account"] = member) => {
           load={load}
           rename={rename}
           face={face}
+          upload={upload}
+          makeFace={makeFace}
           refreshAuthor={refreshAuthor}
           erase={erase}
         />
@@ -90,9 +99,14 @@ const open = (account: Session["account"] = member) => {
     { path: "/", element: <FrontPage /> },
   ];
   const router = createMemoryRouter(routes, { initialEntries: ["/settings"] });
+  const page = <RouterProvider router={router} />;
   const view = render(
     <SessionContext.Provider value={session}>
-      <RouterProvider router={router} />
+      {sync === undefined ? (
+        page
+      ) : (
+        <BoardSyncContext.Provider value={sync}>{page}</BoardSyncContext.Provider>
+      )}
     </SessionContext.Provider>,
   );
   return { session, router, ...view };
@@ -105,6 +119,8 @@ beforeEach(() => {
   load.mockResolvedValue({ lists: [] });
   rename.mockReset();
   face.mockReset();
+  upload.mockReset();
+  makeFace.mockReset();
   refreshAuthor.mockReset();
   refreshAuthor.mockResolvedValue({ updated: 0 });
   erase.mockReset();
@@ -230,6 +246,35 @@ describe("SettingsPage", () => {
     expect(face).toHaveBeenLastCalledWith(null);
   });
 
+  it("takes a photo from the device as the face, and names a photo that was refused", async () => {
+    load.mockResolvedValue({ lists: [] });
+    upload.mockResolvedValue({ pictureId: "p1", previewUrl: "blob:p1" });
+    makeFace.mockResolvedValue({ url: "https://faces/p1.jpg" });
+    face.mockResolvedValue(undefined);
+    refreshAuthor.mockResolvedValue(undefined);
+    open();
+    const picker = await screen.findByLabelText("A photo from the gallery");
+    const file = new File(["x"], "me.jpg", { type: "image/jpeg" });
+    await userEvent.upload(picker, file);
+    await waitFor(() => expect(face).toHaveBeenCalledWith("https://faces/p1.jpg"));
+    expect(upload).toHaveBeenCalledWith(file);
+    expect(makeFace).toHaveBeenCalledWith("p1");
+    expect(await screen.findByRole("status")).toHaveTextContent(/Saved/);
+
+    // The backend would not have it as a face.
+    makeFace.mockRejectedValue(new ApiFailure({ kind: "pictureRefused", because: null }));
+    await userEvent.upload(picker, file);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "That picture cannot be your face. Pick another.",
+    );
+
+    // Too big to go up at all: the editor's words, with the file's name.
+    upload.mockRejectedValue(new PictureRefused("tooBig"));
+    await userEvent.upload(picker, file);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/me\.jpg/));
+    expect(face).toHaveBeenCalledTimes(1);
+  });
+
   it("says when there is nothing to pick from, and names a face that was refused", async () => {
     load.mockResolvedValue({ lists: [published("A24 films", ["https://img/1.jpg"])] });
     face.mockRejectedValue(new Error("no"));
@@ -244,6 +289,31 @@ describe("SettingsPage", () => {
     load.mockResolvedValue({ lists: [] });
     open({ ...member, uid: "u2" });
     expect(await screen.findByText(/Publish a list and its pictures/)).toBeInTheDocument();
+  });
+
+  it("keeps the back-up on, and says so, when the account would not delete the copy", async () => {
+    load.mockResolvedValue({ lists: [] });
+    const setBackUp = vi.fn<BoardSyncControls["setBackUp"]>(() => Promise.reject(new Error("no")));
+    open(member, {
+      ...NOBODY,
+      signedIn: true,
+      backUp: true,
+      setBackUp,
+      syncNow: () => Promise.resolve(),
+    });
+    await userEvent.click(screen.getByLabelText(/Back up my boards/));
+    await userEvent.click(screen.getByRole("button", { name: "Stop and delete" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The copy could not be deleted, so backup stays on. Try again.",
+    );
+    expect(setBackUp).toHaveBeenCalledWith(false);
+    // The dialog stays for another go, and the switch never moved.
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Back up my boards/)).toBeChecked();
+
+    setBackUp.mockResolvedValueOnce(undefined);
+    await userEvent.click(screen.getByRole("button", { name: "Stop and delete" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("deletes the account only after Delete for good, then leaves as a guest", async () => {

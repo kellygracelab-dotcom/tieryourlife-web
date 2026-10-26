@@ -1,16 +1,27 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router";
 import type { ListSummary } from "../api/types";
 import { LanguageCard } from "../features/account/LanguageCard";
 import { faceChoicesOf } from "../features/account/faces";
 import { AccountTabs } from "../app/AccountTabs";
+import { useBoardSync } from "../features/boards/boardSync";
+import { saveExport } from "../features/boards/saveExport";
+import { trashEntriesOf } from "../features/boards/model";
+import { useBoards } from "../features/boards/useBoards";
 import { useHidden } from "../features/community/useHidden";
 import { useSession } from "../app/session";
 import { ThemeSwitch } from "../app/ThemeSwitch";
 import { useResource } from "../lib/useResource";
-import { eraseMyAccount, loadMyLists, refreshPublishedAuthor } from "../lib/api";
+import {
+  eraseMyAccount,
+  loadMyLists,
+  makeFace as makeFaceOf,
+  refreshPublishedAuthor,
+} from "../lib/api";
+import { errorOf } from "../api/errors";
+import { PictureRefused, uploadPicture, type UploadedPicture } from "../lib/pictures";
 import { NAME_MAX, renameAccount, setFace, tidyName } from "../lib/profile";
-import { fill, strings } from "../strings";
+import { currentLocale, fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { InAppNote } from "../ui/InAppNote";
@@ -21,6 +32,10 @@ import "./SettingsPage.css";
 export type LoadLists = () => Promise<{ lists: ListSummary[] }>;
 export type Rename = (name: string) => Promise<string>;
 export type Face = (photoUrl: string | null) => Promise<void>;
+/** A photo from the device into the person's own folder. */
+export type UploadFace = (file: File) => Promise<UploadedPicture>;
+/** The backend's copy of that photo, where everybody may see it. */
+export type MakeFace = (pictureId: string) => Promise<{ url: string }>;
 export type RefreshAuthor = () => Promise<unknown>;
 export type Erase = () => Promise<void>;
 
@@ -28,6 +43,8 @@ interface SettingsPageProps {
   load?: LoadLists;
   rename?: Rename;
   face?: Face;
+  upload?: UploadFace;
+  makeFace?: MakeFace;
   refreshAuthor?: RefreshAuthor;
   erase?: Erase;
 }
@@ -43,7 +60,7 @@ type Saving =
   | { status: "idle" }
   | { status: "busy" }
   | { status: "saved"; publishing: boolean }
-  | { status: "failed" };
+  | { status: "failed"; text?: string };
 
 /**
  * A line for a moment after a change, then nothing, so the section rests.
@@ -177,12 +194,33 @@ function NameSection({
   );
 }
 
+/** Why a photo could not become the face, in the words the editor uses for its pictures. */
+function faceFailureText(name: string, reason: unknown): string {
+  if (reason instanceof PictureRefused) {
+    switch (reason.reason) {
+      case "signIn":
+        return strings.new.pictureSignIn;
+      case "notAnImage":
+        return fill(strings.new.pictureNotImage, { name });
+      case "tooBig":
+        return fill(strings.new.pictureTooBig, { name });
+      default:
+        return fill(strings.new.pictureFailed, { name });
+    }
+  }
+  return errorOf(reason).kind === "pictureRefused"
+    ? strings.settings.faceNotMade
+    : strings.settings.faceFailed;
+}
+
 function FaceSection({
   uid,
   current,
   name,
   load,
   face,
+  upload,
+  makeFace,
   publish,
 }: {
   uid: string;
@@ -190,6 +228,8 @@ function FaceSection({
   name: string | null;
   load: LoadLists;
   face: Face;
+  upload: UploadFace;
+  makeFace: MakeFace;
   publish: Publish;
 }) {
   const loadFor = useCallback(() => load(), [load]);
@@ -197,21 +237,39 @@ function FaceSection({
   const [saving, setSaving] = useSaving();
   const choices = state.status === "ready" ? faceChoicesOf(state.value.lists) : [];
   const busy = saving.status === "busy";
+  const picker = useRef<HTMLInputElement>(null);
+
+  const saved = async () => {
+    setSaving({ status: "saved", publishing: true });
+    await publish();
+    setSaving({ status: "saved", publishing: false });
+  };
 
   // The choice on show comes from the account, never from the click, so a
   // refused change snaps back by itself.
   const choose = (url: string | null) => {
     if (url === current || busy) return;
     setSaving({ status: "busy" });
-    face(url).then(
-      async () => {
-        setSaving({ status: "saved", publishing: true });
-        await publish();
-        setSaving({ status: "saved", publishing: false });
-      },
-      () => setSaving({ status: "failed" }),
-    );
+    face(url).then(saved, () => setSaving({ status: "failed" }));
   };
+
+  // The phone's "A photo from the gallery": up to the person's own folder,
+  // checked and copied by the backend, then on the account like any face.
+  const fromPhoto = async (file: File) => {
+    if (busy) return;
+    setSaving({ status: "busy" });
+    try {
+      const { pictureId } = await upload(file);
+      const { url } = await makeFace(pictureId);
+      await face(url);
+      await saved();
+    } catch (reason: unknown) {
+      setSaving({ status: "failed", text: faceFailureText(file.name, reason) });
+    }
+  };
+
+  // A photo already chosen is none of the cards: it shows as its own choice.
+  const photo = current !== null && !choices.some((choice) => choice.url === current);
 
   return (
     <section className="settings__card" aria-labelledby="face-title">
@@ -233,6 +291,47 @@ function FaceSection({
           </button>
           <span className="settings__face-from">{strings.settings.faceLetterCaption}</span>
         </li>
+        <li className="settings__face">
+          <input
+            ref={picker}
+            type="file"
+            accept="image/*"
+            className="settings__picker"
+            aria-label={strings.settings.faceGallery}
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file !== undefined) void fromPhoto(file);
+            }}
+          />
+          <button
+            type="button"
+            className="settings__choice settings__choice--photo"
+            title={strings.settings.faceGallery}
+            aria-hidden="true"
+            tabIndex={-1}
+            disabled={busy}
+            onClick={() => picker.current?.click()}
+          >
+            <Icon name="upload" />
+          </button>
+          <span className="settings__face-from">{strings.settings.faceGalleryCaption}</span>
+        </li>
+        {photo && (
+          <li className="settings__face">
+            <button
+              type="button"
+              className="settings__choice"
+              aria-label={strings.settings.facePhotoCaption}
+              aria-pressed="true"
+            >
+              <img src={current} alt="" loading="lazy" />
+              <Icon name="check" className="settings__choice-check" />
+            </button>
+            <span className="settings__face-from">{strings.settings.facePhotoCaption}</span>
+          </li>
+        )}
         {choices.map((choice) => (
           <li key={choice.url} className="settings__face">
             <button
@@ -260,10 +359,11 @@ function FaceSection({
       {state.status === "ready" && choices.length === 0 && (
         <p className="settings__helper">{strings.settings.faceNone}</p>
       )}
+      <p className="settings__helper">{strings.settings.faceNote}</p>
       {saving.status === "failed" && (
         <p className="settings__error" role="alert">
           <Icon name="cloud_off" className="settings__error-icon" />
-          {strings.settings.faceFailed}
+          {saving.text ?? strings.settings.faceFailed}
         </p>
       )}
       <SavedLine state={saving} />
@@ -319,6 +419,137 @@ function HiddenCard() {
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  );
+}
+
+/** The day and time the reader's language writes them. */
+const whenOf = (at: number): string =>
+  new Intl.DateTimeFormat(currentLocale(), { dateStyle: "medium", timeStyle: "short" }).format(
+    new Date(at),
+  );
+
+/**
+ * The phone's "Your data": whether the boards are kept in the account, the
+ * trash with its count. Switching the backup off deletes the account's copy,
+ * so it asks first.
+ */
+function DataCard() {
+  const sync = useBoardSync();
+  const boards = useBoards();
+  const trashed = trashEntriesOf(boards).length;
+  const [asking, setAsking] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  // Switching off did not go through: the copies may still be there, and the switch stays on.
+  const [offFailed, setOffFailed] = useState(false);
+  const [exported, setExported] = useState<number | "failed" | null>(null);
+  const close = useCallback(() => {
+    setAsking(false);
+    setOffFailed(false);
+  }, []);
+  const onExport = () => {
+    try {
+      setExported(saveExport(boards));
+    } catch {
+      setExported("failed");
+    }
+  };
+  const turn = (on: boolean) => {
+    setSwitching(true);
+    setOffFailed(false);
+    sync
+      .setBackUp(on)
+      .then(
+        () => setAsking(false),
+        () => setOffFailed(true),
+      )
+      .finally(() => setSwitching(false));
+  };
+  return (
+    <section className="settings__card" aria-labelledby="data-title">
+      <h2 id="data-title" className="settings__title">
+        {strings.sync.dataTitle}
+      </h2>
+      {sync.signedIn ? (
+        <>
+          <div className="settings__row settings__switch">
+            <label className="settings__switch-text" htmlFor="backup-switch">
+              <span>{strings.sync.backUp}</span>
+              <span className="settings__note">{strings.sync.backUpSub}</span>
+            </label>
+            <input
+              id="backup-switch"
+              type="checkbox"
+              role="switch"
+              checked={sync.backUp}
+              disabled={switching}
+              onChange={(event) => (event.target.checked ? turn(true) : setAsking(true))}
+            />
+          </div>
+          {sync.backUp && (
+            <>
+              <p className="settings__helper">{strings.sync.backUpNote}</p>
+              {sync.status === "stuck" && (
+                <p className="settings__bar" role="alert">
+                  {fill(strings.sync.stuck, {
+                    when: sync.lastSyncedAt === null ? "—" : whenOf(sync.lastSyncedAt),
+                  })}
+                </p>
+              )}
+              <div className="settings__actions">
+                <Button
+                  icon="cloud_upload"
+                  onClick={() => void sync.syncNow()}
+                  disabled={sync.status === "syncing"}
+                >
+                  {sync.status === "syncing" ? strings.sync.backingUp : strings.sync.now}
+                </Button>
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <p className="settings__helper">{strings.sync.guestNote}</p>
+      )}
+      <Link className="settings__row" to="/trash">
+        <span>{strings.sync.trashRow}</span>
+        <span className="settings__note">
+          {trashed === 0 ? strings.sync.trashEmpty : plural(strings.trash.entries, trashed)}
+        </span>
+      </Link>
+      <button type="button" className="settings__row settings__row--button" onClick={onExport}>
+        <span className="settings__switch-text">
+          <span>{strings.export.title}</span>
+          <span className="settings__note">{strings.export.sub}</span>
+        </span>
+        <Icon name="download" className="settings__row-icon" />
+      </button>
+      {exported !== null && (
+        <p className="settings__note" role="status">
+          {exported === "failed" ? strings.export.failed : plural(strings.export.done, exported)}
+        </p>
+      )}
+      {asking && (
+        <ConfirmDialog
+          narrow
+          title={strings.sync.offTitle}
+          body={strings.sync.offBody}
+          confirmLabel={strings.sync.offConfirm}
+          busyLabel={strings.sync.offBusy}
+          cancelLabel={strings.sync.offCancel}
+          busy={switching}
+          trouble={
+            offFailed && (
+              <p className="dialog__bar" role="alert">
+                <Icon name="cloud_off" className="dialog__bar-icon" />
+                {strings.sync.offFailed}
+              </p>
+            )
+          }
+          onConfirm={() => turn(false)}
+          onCancel={close}
+        />
       )}
     </section>
   );
@@ -422,6 +653,8 @@ export function SettingsPage({
   load = loadMyLists,
   rename = renameAccount,
   face = setFace,
+  upload = (file) => uploadPicture(file),
+  makeFace = makeFaceOf,
   refreshAuthor = refreshPublishedAuthor,
   erase = eraseMyAccount,
 }: SettingsPageProps) {
@@ -488,6 +721,8 @@ export function SettingsPage({
             name={account.displayName}
             load={load}
             face={face}
+            upload={upload}
+            makeFace={makeFace}
             publish={publish}
           />
         </>
@@ -495,6 +730,7 @@ export function SettingsPage({
 
       <ThemeCard note={account?.kind === "guest" ? strings.settings.themeGuestNote : null} />
       <LanguageCard />
+      <DataCard />
       <HiddenCard />
       <PrivacyCard />
 

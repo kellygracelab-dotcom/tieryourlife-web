@@ -388,3 +388,59 @@
 .settings__helper--lead {
   color: var(--ink);
 }
+
+/* The backup switch: the words, and the switch at the row's end. */
+.settings__switch {
+  gap: 12px;
+  cursor: pointer;
+}
+
+.settings__switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings__switch input {
+  flex: none;
+  width: 40px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--link);
+}
+
+.settings__row--button {
+  width: calc(100% + 16px);
+  border: none;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+}
+
+/* The photo picker: the input is the control screen readers reach; the tile is its face. */
+.settings__picker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.settings__face {
+  position: relative;
+}
+
+.settings__picker:focus-visible + .settings__choice--photo {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+.settings__choice--photo {
+  background: var(--paper);
+  color: var(--ink-dim);
+}
+
+.settings__choice--photo .ms {
+  font-size: 26px;
+}

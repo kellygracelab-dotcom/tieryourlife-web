@@ -13,7 +13,7 @@ import {
 import { createPortal } from "react-dom";
 import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
-import type { PublishedList } from "../../api/types";
+import type { PublishedList, PublishedTier } from "../../api/types";
 import { useSession } from "../../app/session";
 import { keepRanking, noteTake } from "../../lib/api";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
@@ -25,10 +25,11 @@ import { errorOf } from "../../api/errors";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
+import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
 import { flyIn } from "./flight";
 import type { DragState } from "./drag";
-import { loadDraft, saveDraft, type DraftScope } from "./draft";
+import { loadDraft, saveDraft, scopeOf } from "./draft";
 import {
   canUndo,
   init,
@@ -70,6 +71,10 @@ export interface EditMode {
     tools?: ReactNode;
     /** What the owner has to know about the changes; it stands in the header when the bar does. */
     status?: ReactNode;
+    /** Every move is kept the moment it is made: no Save and no Discard, the board on screen is the board. */
+    live?: boolean;
+    /** A menu on every card for moving it without a drag: a finger without a keyboard, or a tenth tier. */
+    moveMenu?: boolean;
   };
 }
 
@@ -103,6 +108,8 @@ interface TileProps {
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
   /** The owner may take a card off the list; a button beside the tile, never inside it. */
   onRemove?: () => void;
+  /** A menu beside the tile for moving without a drag: every tier, the pool, off the list. */
+  move?: { tiers: readonly PublishedTier[]; current: number | null };
   /** Where a card dragged over this row would land, next to this one. */
   insert?: "before" | "after";
 }
@@ -116,8 +123,11 @@ function Tile({
   dispatch,
   onPointerDown,
   onRemove,
+  move,
   insert,
 }: TileProps) {
+  const [moving, setMoving] = useState(false);
+  const closeMove = useCallback(() => setMoving(false), []);
   const card = list.items[item];
   if (card === undefined) return null;
   const classes = ["tile", selected && "tile--selected", lifted && "tile--lifted"]
@@ -127,7 +137,7 @@ function Tile({
     <li
       className={
         [
-          onRemove !== undefined && "tile-holder--removable",
+          (onRemove !== undefined || move !== undefined) && "tile-holder--removable",
           insert !== undefined && `tile-holder--insert-${insert}`,
         ]
           .filter(Boolean)
@@ -166,6 +176,47 @@ function Tile({
           <Icon name="close" />
         </button>
       )}
+      {move !== undefined && !locked && (
+        <>
+          <button
+            type="button"
+            className="tile__more"
+            aria-label={fill(strings.boards.moveMenu, { name: card.title })}
+            aria-haspopup="dialog"
+            aria-expanded={moving}
+            onClick={(event) => {
+              event.stopPropagation();
+              setMoving(true);
+            }}
+          >
+            <Icon name="more_vert" />
+          </button>
+          {moving && (
+            <MoveSheet
+              name={card.title}
+              tiers={move.tiers}
+              current={move.current}
+              onPlace={(tier) => {
+                setMoving(false);
+                dispatch({ type: "place", item, tier });
+              }}
+              onUnplace={() => {
+                setMoving(false);
+                dispatch({ type: "unplace", item });
+              }}
+              onRemove={
+                onRemove === undefined
+                  ? undefined
+                  : () => {
+                      setMoving(false);
+                      onRemove();
+                    }
+              }
+              onClose={closeMove}
+            />
+          )}
+        </>
+      )}
     </li>
   );
 }
@@ -180,13 +231,7 @@ const saveLabel = (edit: EditMode, busy: boolean): string =>
       ? strings.new.publishing
       : strings.new.publishChanges;
 
-const scopeOf = (list: PublishedList): DraftScope => ({
-  id: list.id,
-  updatedAt: list.updatedAt,
-  itemCount: list.items.length,
-  tierCount: list.tiers.length,
-});
-
+/** Where the board keeps a list's rows on this device; the list page reads the same place. */
 function useBoard(
   list: PublishedList,
   store: KeyValueStore,
@@ -242,6 +287,24 @@ export function RankingBoard({
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
   const { dock, rows, wide, choose, startResize } = useDock(store);
+  // On a narrow window the box that brings cards in waits behind Add, in the
+  // pool, whichever head the pool shows; on a wide one it stands in the pool.
+  const [adding, setAdding] = useState(false);
+  const tools = edit?.owner?.tools;
+  const addButton = tools !== undefined && !wide && (
+    <button
+      type="button"
+      className="btn btn--tonal pool__add"
+      aria-expanded={adding}
+      onClick={() => setAdding((open) => !open)}
+    >
+      <Icon name="add" className="btn__icon" />
+      <span>{strings.new.add}</span>
+    </button>
+  );
+  const toolsPanel = tools !== undefined && (wide || adding) && (
+    <div className={wide ? "pool__tools" : "pool__tools pool__tools--sheet"}>{tools}</div>
+  );
   const docked = wide && dock === "under";
   const frame = useContext(BoardFrameContext);
   // On a wide screen the count and the actions stand in the page's header,
@@ -377,7 +440,6 @@ export function RankingBoard({
   }, [dispatch, list.tiers.length, placeSelected, locked, selected, state]);
 
   const left = pool(state);
-  const tools = edit?.owner?.tools;
   const needle = query.trim().toLowerCase();
   const shown =
     needle === ""
@@ -435,12 +497,12 @@ export function RankingBoard({
         >
           {strings.rank.undo}
         </Button>
-        {edit !== undefined && (
+        {edit !== undefined && !edit.owner?.live && (
           <Button onClick={edit.cancel} disabled={locked}>
             {edit.owner === undefined ? strings.rank.cancel : strings.new.discardChanges}
           </Button>
         )}
-        {edit !== undefined && (
+        {edit !== undefined && !edit.owner?.live && (
           <Button
             variant="filled"
             icon="check"
@@ -494,7 +556,6 @@ export function RankingBoard({
         )}
 
         {!inHead && edit?.owner?.status}
-        {tools !== undefined && !wide && <div className="ranking__tools">{tools}</div>}
 
         <div className="board">
           {list.tiers.map((tier, index) => (
@@ -510,6 +571,8 @@ export function RankingBoard({
               lifted={lifted}
               locked={locked}
               onPlace={placeSelected}
+              onRemove={edit?.owner?.moveMenu ? edit.owner.remove : undefined}
+              moveMenu={edit?.owner?.moveMenu}
             />
           ))}
           <div className="board__end" ref={boardEnd} aria-hidden="true" />
@@ -537,16 +600,24 @@ export function RankingBoard({
                   {plural(strings.rank.allPlaced, list.items.length)}
                 </p>
                 <p className="pool__done-note">
-                  {edit === undefined ? strings.rank.allPlacedNote : strings.rank.allPlacedNoteEdit}
+                  {edit === undefined
+                    ? strings.rank.allPlacedNote
+                    : edit.owner?.live
+                      ? strings.rank.allPlacedNoteLive
+                      : strings.rank.allPlacedNoteEdit}
                 </p>
-                <Button
-                  variant="filled"
-                  icon="check"
-                  onClick={edit === undefined ? onFinish : onSave}
-                  disabled={locked || (edit?.owner !== undefined && !edit.owner.canSave)}
-                >
-                  {edit === undefined ? strings.rank.finish : saveLabel(edit, false)}
-                </Button>
+                {!edit?.owner?.live && (
+                  <Button
+                    variant="filled"
+                    icon="check"
+                    onClick={edit === undefined ? onFinish : onSave}
+                    disabled={locked || (edit?.owner !== undefined && !edit.owner.canSave)}
+                  >
+                    {edit === undefined ? strings.rank.finish : saveLabel(edit, false)}
+                  </Button>
+                )}
+                {addButton}
+                {toolsPanel}
               </div>
             ) : (
               <>
@@ -558,11 +629,17 @@ export function RankingBoard({
                         {plural(strings.rank.allPlaced, list.items.length)}
                       </p>
                     ) : (
-                      <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
+                      <h2 className="pool__title">
+                        {plural(
+                          edit?.owner?.live ? strings.boards.pool : strings.rank.left,
+                          left.length,
+                        )}
+                      </h2>
                     )}
+                    {addButton}
                     <DockToggle dock={dock} onChoose={choose} />
                   </div>
-                  {tools !== undefined && wide && <div className="pool__tools">{tools}</div>}
+                  {toolsPanel}
                   {!allPlaced && left.length > POOL_SEARCH_FROM && tools === undefined && (
                     <input
                       className="pool__search"
@@ -615,6 +692,9 @@ export function RankingBoard({
                           onRemove={
                             edit?.owner === undefined ? undefined : () => edit.owner?.remove(item)
                           }
+                          move={
+                            edit?.owner?.moveMenu ? { tiers: list.tiers, current: null } : undefined
+                          }
                         />
                       ))}
                     </ul>
@@ -660,6 +740,9 @@ interface TierRowProps {
   locked: boolean;
   /** Places the picked card here; the board plans the tile's flight first. */
   onPlace: (tier: number) => void;
+  /** The owner's: a card off the list, and the menu for moving one without a drag. */
+  onRemove?: (item: number) => void;
+  moveMenu?: boolean;
 }
 
 function TierRow({
@@ -673,6 +756,8 @@ function TierRow({
   lifted,
   locked,
   onPlace,
+  onRemove,
+  moveMenu = false,
 }: TierRowProps) {
   const meta = list.tiers[tier];
   const row = state.rows[tier] ?? [];
@@ -736,6 +821,8 @@ function TierRow({
             dispatch={dispatch}
             onPointerDown={pointerDownFor(item)}
             insert={insertOf(item)}
+            onRemove={onRemove === undefined ? undefined : () => onRemove(item)}
+            move={moveMenu ? { tiers: list.tiers, current: tier } : undefined}
           />
         ))}
       </ul>

@@ -10,6 +10,7 @@ import type { Upload } from "../features/editor/CardsEditor";
 import type { CopyBack } from "../features/editor/republish";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { PictureRefused } from "../lib/pictures";
+import { contrastRatio, ON_BAND } from "../features/editor/colour";
 import { memoryStore } from "../lib/storage";
 import {
   NewListPage,
@@ -186,7 +187,8 @@ describe("NewListPage", () => {
       within(screen.getByRole("list", { name: "Tiers" })).getAllByRole("listitem"),
     ).toHaveLength(5);
     expect(screen.getByLabelText("Label of tier 1")).toHaveValue("S");
-    expect(screen.getByLabelText("Caption of S")).toHaveValue("Best");
+    // Letters alone, as a new board in the app: the caption is the person's to write.
+    expect(screen.getByLabelText("Caption of S")).toHaveValue("");
     expect(screen.getByText("0 added")).toBeInTheDocument();
   });
 
@@ -261,7 +263,7 @@ describe("NewListPage", () => {
       category: "film_tv",
       coverImageUrl: null,
       coverPictureId: null,
-      tiers: expect.arrayContaining([expect.objectContaining({ label: "S", caption: "Best" })]),
+      tiers: expect.arrayContaining([expect.objectContaining({ label: "S", caption: null })]),
       items: [
         { title: "Ex Machina", imageUrl: "https://img/ex.jpg", pictureId: null, tierIndex: null },
       ],
@@ -346,7 +348,7 @@ describe("NewListPage", () => {
     const label = screen.getByLabelText("Label of tier 1");
     await userEvent.clear(label);
     await userEvent.type(label, "Top");
-    expect(screen.getByLabelText("Caption of Top")).toHaveValue("Best");
+    expect(screen.getByLabelText("Caption of Top")).toHaveValue("");
 
     await userEvent.click(screen.getByRole("button", { name: "Colour of Top" }));
     const palette = screen.getByRole("group", { name: "Colours" });
@@ -365,6 +367,45 @@ describe("NewListPage", () => {
 
     await userEvent.clear(screen.getByLabelText("Label of tier 1"));
     expect(screen.getByText("Every tier needs a label.")).toBeInTheDocument();
+  });
+
+  it("takes a colour of one's own by hex, light and dark apart, with the contrast beside it", async () => {
+    open();
+    await fillIn();
+    await userEvent.click(screen.getByRole("button", { name: "Colour of S" }));
+    const palette = screen.getByRole("group", { name: "Colours" });
+    await userEvent.click(within(palette).getByRole("button", { name: "Custom" }));
+    const light = within(palette).getByLabelText("Light hex");
+    await userEvent.clear(light);
+    await userEvent.type(light, "336699{Enter}");
+    expect(within(palette).getByLabelText("Light colour")).toHaveValue("#336699");
+    const row = screen.getByLabelText("Label of tier 1").closest("li")!;
+    expect(row.getAttribute("style")).toContain("--band-light: #336699");
+    expect(
+      within(palette).getByText(`Contrast ${contrastRatio(ON_BAND, "#336699").toFixed(1)}:1`),
+    ).toBeInTheDocument();
+    expect(within(palette).getByRole("button", { name: "Custom" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // Six digits or nothing: anything else snaps back. The dark colour is its own.
+    await userEvent.clear(light);
+    await userEvent.type(light, "nope");
+    await userEvent.tab();
+    // The same field, still there after the commit: nothing was remounted under the cursor.
+    expect(light).toHaveValue("#336699");
+    expect(light.isConnected).toBe(true);
+    const dark = within(palette).getByLabelText("Dark hex");
+    await userEvent.clear(dark);
+    await userEvent.type(dark, "#99ccff");
+    await userEvent.tab();
+    expect(row.getAttribute("style")).toContain("--band-dark: #99CCFF");
+    expect(row.getAttribute("style")).toContain("--band-light: #336699");
+
+    // A preset puts the panel away.
+    await userEvent.click(within(palette).getByRole("button", { name: "#6B4E9E" }));
+    expect(screen.queryByRole("group", { name: "Colours" })).toBeNull();
   });
 
   it("keeps the draft between visits and forgets it on Start over", async () => {

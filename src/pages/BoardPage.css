@@ -1,0 +1,68 @@
+.board-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  font: var(--text-label);
+  color: var(--ink-dim);
+}
+
+.board-page__back .ms {
+  font-size: 18px;
+}
+
+[dir="rtl"] .board-page__back .ms {
+  transform: scaleX(-1);
+}
+
+.board-page__title-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.board-page__title-row .list-head__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The pencil beside the name: quiet until the pointer is near. */
+.board-page__edit {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 18px;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.board-page__edit:hover,
+.board-page__edit:focus-visible {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.board-page__title-field {
+  width: 100%;
+  max-width: 560px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--focus);
+  font: var(--text-headline);
+  color: var(--ink);
+  outline: none;
+}
+
+@media (min-width: 840px) {
+  .board-page__title-field {
+    font: 500 20px/26px var(--font);
+  }
+}
