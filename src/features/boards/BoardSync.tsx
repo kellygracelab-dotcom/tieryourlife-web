@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { getDownloadURL, ref } from "firebase/storage";
 import { useSession } from "../../app/session";
 import { forgetBoard, keepBoard, loadBoardIndex, loadKeptBoard, loadMyLists } from "../../lib/api";
-import { getFirebaseStorage } from "../../lib/firebase";
-import { picturePath } from "../../lib/pictures";
+import { ownPictureUrl } from "../../lib/pictures";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -45,8 +43,7 @@ const siteApi: BoardsApi = {
 };
 
 /** Where one of the person's own pictures can be seen from: the file in their folder. */
-const resolveOwnPicture = (uid: string) => (pictureId: string) =>
-  getDownloadURL(ref(getFirebaseStorage(), picturePath(uid, pictureId))).catch(() => null);
+const resolveOwnPicture = (uid: string) => (pictureId: string) => ownPictureUrl(uid, pictureId);
 
 interface BoardSyncProviderProps {
   children: ReactNode;

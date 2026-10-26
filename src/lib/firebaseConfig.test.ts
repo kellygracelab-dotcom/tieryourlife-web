@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firebaseConfig } from "./firebase-config";
+import { firebaseConfig } from "./firebaseConfig";
 
 describe("firebaseConfig", () => {
   it("points at the tieryourlife project the proxy and the app share", () => {

@@ -4,8 +4,8 @@ import { Button } from "../ui/Button";
 import { Skeleton } from "../ui/Skeleton";
 import "./ListPage.css";
 
-/** The shape of a board page while it opens: a title, a byline, a few empty rows. */
-export function BoardPageLoading({ note, rows }: { note: string; rows: number }) {
+/** A list's page, or a ranking of it, while it opens: a title, a byline, a few empty rows. */
+export function ListPageLoading({ note, rows }: { note: string; rows: number }) {
   return (
     <div className="list-page" aria-busy="true">
       <Skeleton height="28px" width="60%" />
@@ -30,7 +30,7 @@ export interface TroubleWords {
  * Only the last two offer Try again: asking again does not bring back what
  * is gone or make an install trusted.
  */
-export function BoardPageTrouble({
+export function ListPageTrouble({
   error,
   retry,
   words,

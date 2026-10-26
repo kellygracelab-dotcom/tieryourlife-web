@@ -6,13 +6,13 @@ import type { ListSummary } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
 import { ApiFailure } from "../api/errors";
 import { faceChoicesOf } from "../features/account/faces";
+import { SAVED_NOTE_MS } from "../features/account/useSaving";
 import { BoardSyncContext, NOBODY, type BoardSyncControls } from "../features/boards/boardSync";
 import { PictureRefused } from "../lib/pictures";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { memoryStore } from "../lib/storage";
 import {
-  SAVED_NOTE_MS,
   SettingsPage,
   type Erase,
   type Face,

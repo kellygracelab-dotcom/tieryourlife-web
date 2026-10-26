@@ -17,7 +17,7 @@ import {
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 import type { TokenProviders } from "../api/client";
 import { readEnv, type Env } from "./env";
-import { firebaseConfig } from "./firebase-config";
+import { firebaseConfig } from "./firebaseConfig";
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
