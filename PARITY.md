@@ -157,6 +157,23 @@ published or ranked. This is the largest gap and the first stage of work.
 
 Kept short, newest first. Each entry names the commit range and what closed.
 
+- **Sync, after the review of `d27830c`** (`fda6e7f`) — the engine gathers
+  everything that waits (the fingerprints, the copy's pictures) before the
+  checks and the writes, with no wait between them: `remember` takes the
+  plan's fingerprint, `takeOver` judges the board as it was read last and
+  keeps the star read at the moment of writing, `adopt` computes the
+  fingerprint before the save. The published check reads each board again
+  after the account answered and drops the id only while it is still the one
+  asked about, every other field kept. In the provider, switching the back-up
+  off and deciding the merge are bound to the mount and the epoch: once
+  another account signs in under them nothing more is asked of the account
+  and the device's switch stays on (`AccountChanged`, shown as the delete
+  failing); the record of a forget whose answer arrives after the switch is
+  still written, so a marker never meets a stale record. Tests: an edit
+  during the fingerprint wait, a stop during an adopted board's fingerprint,
+  an edit and a republish during the published check, a second account
+  signing in during a run, during the deletion (it stops after the answer in
+  flight) and during the merge question.
 - **Stage 7** (`2d67e04`, `909861c`) — the look against the phone's screenshots at a
   Pixel 7's and 1280 px: the pool of an own board on a phone is the phone's
   sheet ("Pool · N unranked", Add, the card box under it), the number key on
