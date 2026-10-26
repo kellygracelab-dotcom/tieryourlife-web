@@ -41,6 +41,10 @@ export function apiStubs() {
     takeDownList: pending(),
     leaveListUp: pending(),
     eraseMyAccount: pending(),
+    loadBoardIndex: pending(),
+    loadKeptBoard: pending(),
+    keepBoard: pending(),
+    forgetBoard: pending(),
     noteTake: vi.fn(async () => undefined),
   };
 }
