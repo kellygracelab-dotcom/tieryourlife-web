@@ -27,6 +27,32 @@ describe("boardView", () => {
     expect(view.uids).toEqual([ic, ia, ib, liveItems(b0)[3]?.uid]);
     expect(uidRows(view, [[1], [0, 9], [], [], []])).toEqual([[ia], [ic], [], [], []]);
   });
+
+  it("keeps the cards' indexes from the view drawn before, while the cards are the same", () => {
+    const next = uids();
+    const b0 = addToPool(
+      newBoard("b", "", 1, next),
+      ["a", "b", "c"].map((title) => ({ title, imageUrl: null })),
+      1,
+      next,
+    );
+    const [ia, ib, ic] = liveItems(b0).map((item) => item.uid);
+    const before = boardView(arrangeItems(b0, [[ia!, ib!, ic!], [], [], [], []], 2), "");
+    // c moved to the front of its row: the rows change, the indexes do not.
+    const moved = arrangeItems(b0, [[ic!, ia!, ib!], [], [], [], []], 3);
+    const after = boardView(moved, "", before.uids);
+    expect(after.uids).toEqual(before.uids);
+    expect(after.rows[0]).toEqual([2, 0, 1]);
+    expect(after.list.items.map((item) => item.title)).toEqual(["a", "b", "c"]);
+    // A card more, and the order starts afresh: the ranking board starts over anyway.
+    const more = addToPool(moved, [{ title: "d", imageUrl: null }], 4, next);
+    expect(boardView(more, "", before.uids).list.items.map((item) => item.title)).toEqual([
+      "c",
+      "a",
+      "b",
+      "d",
+    ]);
+  });
 });
 
 describe("agoOf", () => {

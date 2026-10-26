@@ -148,6 +148,36 @@ describe("BoardPage", () => {
     expect(itemsIn(repository.get("films")!, a!.uid)).toEqual([]);
   });
 
+  it("draws the same cards after a move along a row, and keeps them in that order", async () => {
+    const repository = boardsRepository(memoryStore());
+    const next = uids();
+    const b = addToPool(
+      newBoard("films", "Films", 100, next),
+      ["Ex Machina", "The Witch", "Climax"].map((title) => ({ title, imageUrl: null })),
+      100,
+      next,
+    );
+    repository.save(arrangeItems(b, [liveItems(b).map((item) => item.uid), [], [], [], []], 100));
+    open(repository, "/b/films");
+    const order = () =>
+      within(tier("S"))
+        .getAllByRole("button")
+        .flatMap((tile) =>
+          tile.dataset.item === undefined ? [] : [tile.getAttribute("aria-label")],
+        );
+    expect(order()).toEqual(["Ex Machina", "The Witch", "Climax"]);
+    // Climax picked and moved twice to the left by its keys.
+    await userEvent.click(within(tier("S")).getByRole("button", { name: "Climax" }));
+    await userEvent.keyboard("{ArrowLeft}{ArrowLeft}");
+    expect(order()).toEqual(["Climax", "Ex Machina", "The Witch"]);
+    const kept = repository.get("films")!;
+    expect(itemsIn(kept, rankedTiers(kept)[0]!.uid).map((item) => item.title)).toEqual([
+      "Climax",
+      "Ex Machina",
+      "The Witch",
+    ]);
+  });
+
   it("renames the board where it stands", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());

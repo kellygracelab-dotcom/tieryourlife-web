@@ -32,7 +32,7 @@ import {
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
 import { applyTierAction, editorTiersOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
-import { boardView, uidRows } from "../features/boards/view";
+import { boardView, sameOrder, uidRows } from "../features/boards/view";
 import { AddCardBox, type Upload } from "../features/editor/AddCardBox";
 import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
 import { TierDialog } from "../features/editor/TierDialog";
@@ -190,10 +190,14 @@ export function BoardPage({
 
   usePageTitle(board === null ? null : board.title || strings.boards.untitled);
 
+  // The cards keep their indexes while the page is open (see boardView): the
+  // order drawn is kept, and taken afresh only when the cards change.
+  const [drawn, setDrawn] = useState<readonly string[]>();
   const view = useMemo(
-    () => (board === null ? null : boardView(board, strings.boards.untitled)),
-    [board],
+    () => (board === null ? null : boardView(board, strings.boards.untitled, drawn)),
+    [board, drawn],
   );
+  if (view !== null && !sameOrder(view.uids, drawn)) setDrawn(view.uids);
 
   if (board === null || view === null) return <NotFound />;
 
