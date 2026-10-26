@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { CATEGORIES, isCategory } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
 import { RankingBoard } from "../features/board/RankingBoard";
 import { BoardFrameContext } from "../features/board/boardFrame";
@@ -10,27 +19,37 @@ import {
   newBoard,
   poolCount,
   rankedCount,
+  rankedTiers,
   rename,
   restoreItem,
+  restoreTier,
+  setCategory,
+  setDisplayMode,
   trashBoard,
   trashItem,
   type Board,
+  type DisplayMode,
 } from "../features/boards/model";
+import { RankedList } from "../features/boards/RankedList";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { applyTierAction, editorTiersOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
 import { boardView, uidRows } from "../features/boards/view";
 import { AddCardBox, type Upload } from "../features/editor/AddCardBox";
-import type { EditorAction, EditorItem } from "../features/editor/model";
+import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
+import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { uploadPicture } from "../lib/pictures";
 import { memoryStore } from "../lib/storage";
 import { fill, plural, strings } from "../strings";
+import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import type { BoardsPageState } from "./BoardsPage";
 import "./ListPage.css";
 import "../features/editor/owner.css";
+import "../features/editor/editor.css";
 import "./BoardPage.css";
 
 interface BoardPageProps {
@@ -39,6 +58,8 @@ interface BoardPageProps {
   lookup?: Lookup;
   upload?: Upload;
 }
+
+type Panel = "none" | "tiers" | "settings";
 
 /** The board's name, edited where it stands: a press on the pencil, Enter or leaving the field keeps it. */
 function TitleEditor({
@@ -103,6 +124,76 @@ function TitleEditor({
   );
 }
 
+/**
+ * The phone's list settings, the two that mean something here: the category,
+ * and how the board is shown. Each change is kept the moment it is made.
+ */
+function SettingsPanel({
+  board,
+  onCategory,
+  onMode,
+  onDone,
+}: {
+  board: Board;
+  onCategory: (category: Board["category"]) => void;
+  onMode: (mode: DisplayMode) => void;
+  onDone: () => void;
+}) {
+  const id = useId();
+  const modes: { mode: DisplayMode; title: string; sub: string }[] = [
+    { mode: "WRAP", title: strings.boards.modeWrapped, sub: strings.boards.modeWrappedSub },
+    { mode: "RANKED", title: strings.boards.modeRanked, sub: strings.boards.modeRankedSub },
+  ];
+  return (
+    <section className="board-panel" aria-labelledby={`${id}-title`}>
+      <div className="board-panel__head">
+        <h2 id={`${id}-title`}>{strings.boards.settings}</h2>
+        <Button onClick={onDone}>{strings.boards.done}</Button>
+      </div>
+      <div className="board-settings__section">
+        <label className="board-settings__label" htmlFor={`${id}-category`}>
+          {strings.boards.category}
+        </label>
+        <select
+          id={`${id}-category`}
+          className="board-settings__select"
+          value={board.category ?? ""}
+          onChange={(event) =>
+            onCategory(isCategory(event.target.value) ? event.target.value : null)
+          }
+        >
+          <option value="">{strings.boards.categoryNone}</option>
+          {CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {strings.category[category]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <fieldset className="board-settings__section">
+        <legend className="board-settings__label">{strings.boards.display}</legend>
+        <p className="board-settings__note">{strings.boards.displayNote}</p>
+        {modes.map(({ mode, title, sub }) => (
+          <div key={mode} className="board-settings__mode">
+            <input
+              id={`${id}-${mode}`}
+              type="radio"
+              name={`${id}-mode`}
+              value={mode}
+              checked={board.displayMode === mode}
+              onChange={() => onMode(mode)}
+            />
+            <label className="board-settings__mode-text" htmlFor={`${id}-${mode}`}>
+              <span className="board-settings__mode-title">{title}</span>
+              <span className="board-settings__mode-sub">{sub}</span>
+            </label>
+          </div>
+        ))}
+      </fieldset>
+    </section>
+  );
+}
+
 function NotFound() {
   return (
     <section className="list-page list-page--trouble">
@@ -140,6 +231,12 @@ export function BoardPage({
   );
   const board = stored ?? fresh;
   const [editingTitle, setEditingTitle] = useState(madeAt > 0);
+  const [panel, setPanel] = useState<Panel>("none");
+  // What is being typed into a tier's fields, as typed: the board keeps the
+  // trimmed words, and a label emptied for a moment is not kept at all.
+  const [typing, setTyping] = useState<Record<string, { label: string; caption: string | null }>>(
+    {},
+  );
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const forget = useCallback(() => setNotice(null), []);
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
@@ -216,6 +313,42 @@ export function BoardPage({
     pictureId: null,
   }));
 
+  // The tier editor's actions, each a change to the board; a tier taken away
+  // can come back with its cards from the snackbar.
+  const onTier = (action: EditorAction) => {
+    if (action.type === "renameTier") {
+      setTyping((held) => ({
+        ...held,
+        [action.key]: { label: action.label, caption: action.caption },
+      }));
+    }
+    const change = applyTierAction(latest(), action, now(), nextUid);
+    keep(change.board);
+    const removed = change.removed;
+    if (removed !== undefined) {
+      setNotice({
+        text: fill(strings.boards.tierRemoved, { name: removed.tier.label }),
+        action: {
+          text: strings.boards.undo,
+          onClick: () => {
+            const again = repository.get(uid);
+            if (again !== null) {
+              repository.save(restoreTier(again, removed.tier, removed.itemUids, now()));
+            }
+          },
+        },
+      });
+    }
+  };
+  const editorTiers: EditorTier[] = editorTiersOf(board).map((tier) => {
+    const typed = typing[tier.key];
+    return typed === undefined ? tier : { ...tier, ...typed };
+  });
+  const closePanel = () => {
+    setPanel("none");
+    setTyping({});
+  };
+
   const toTrash = () => {
     keep(trashBoard(board, now()));
     void navigate("/boards", { state: { trashed: [uid] } satisfies BoardsPageState });
@@ -223,6 +356,15 @@ export function BoardPage({
 
   const ranked = rankedCount(board);
   const inPool = poolCount(board);
+  const tools = (
+    <AddCardBox
+      items={editorItems}
+      category={board.category}
+      dispatch={dispatch}
+      lookup={lookup}
+      upload={upload}
+    />
+  );
 
   return (
     <article
@@ -254,8 +396,25 @@ export function BoardPage({
           </p>
         </div>
         <span className="list-head__tools">
+          <Button
+            variant="tonal"
+            icon="swap_vert"
+            onClick={() => (panel === "tiers" ? closePanel() : setPanel("tiers"))}
+          >
+            {strings.boards.tiers}
+          </Button>
           <Menu label={strings.boards.more} button={<Icon name="more_vert" />}>
             <>
+              <li>
+                <button type="button" className="menu__action" onClick={() => setPanel("settings")}>
+                  {strings.boards.settings}
+                </button>
+              </li>
+              <li>
+                <button type="button" className="menu__action" onClick={() => setPanel("tiers")}>
+                  {strings.boards.tiers}
+                </button>
+              </li>
               <li>
                 <Link to="/trash">{strings.boards.trash}</Link>
               </li>
@@ -274,35 +433,54 @@ export function BoardPage({
         </span>
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
-      <BoardFrameContext.Provider value={frame}>
-        <section className="owner" aria-label={strings.owner.title}>
-          <RankingBoard
-            key={board.uid}
-            list={view.list}
-            store={scratch}
-            edit={{
-              rows: view.rows,
-              save: () => Promise.resolve(),
-              cancel: () => undefined,
-              owner: {
-                live: true,
-                canSave: false,
-                onChange: onRows,
-                remove,
-                tools: (
-                  <AddCardBox
-                    items={editorItems}
-                    category={board.category}
-                    dispatch={dispatch}
-                    lookup={lookup}
-                    upload={upload}
-                  />
-                ),
-              },
-            }}
-          />
+
+      {panel === "tiers" && (
+        <section className="board-panel" aria-label={strings.boards.tiers}>
+          <div className="board-panel__head">
+            <h2>{strings.boards.tiers}</h2>
+            <Button onClick={closePanel}>{strings.boards.done}</Button>
+          </div>
+          <TiersEditor tiers={editorTiers} dispatch={onTier} />
         </section>
-      </BoardFrameContext.Provider>
+      )}
+      {panel === "settings" && (
+        <SettingsPanel
+          board={board}
+          onCategory={(category) => keep(setCategory(latest(), category, now()))}
+          onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
+          onDone={closePanel}
+        />
+      )}
+
+      {board.displayMode === "RANKED" ? (
+        <section className="owner" aria-label={strings.owner.title}>
+          <div className="ranking__tools">{tools}</div>
+          <RankedList board={board} />
+          <p className="board-page__ranked-note">
+            {plural(strings.boards.pool, inPool)} · {strings.boards.rankedNote}
+          </p>
+        </section>
+      ) : (
+        <BoardFrameContext.Provider value={frame}>
+          <section className="owner" aria-label={strings.owner.title}>
+            <RankingBoard
+              // The rows are held by index: a tier added, taken away or moved
+              // means a fresh board over the same cards.
+              key={`${board.uid}:${rankedTiers(board)
+                .map((tier) => tier.uid)
+                .join(",")}`}
+              list={view.list}
+              store={scratch}
+              edit={{
+                rows: view.rows,
+                save: () => Promise.resolve(),
+                cancel: () => undefined,
+                owner: { live: true, canSave: false, onChange: onRows, remove, tools },
+              }}
+            />
+          </section>
+        </BoardFrameContext.Provider>
+      )}
       <Snackbar notice={notice} onDone={forget} />
     </article>
   );

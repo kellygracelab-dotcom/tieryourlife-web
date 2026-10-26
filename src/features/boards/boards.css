@@ -1,0 +1,182 @@
+/* The ranked list: one 64px row per card, the way the phone's third display mode draws it. */
+.ranked {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ranked__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 8px 12px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.ranked__number {
+  flex: none;
+  width: 28px;
+  font: 500 15px/20px var(--font);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+  text-align: end;
+}
+
+.ranked__poster {
+  display: block;
+  flex: none;
+  width: 32px;
+  height: 48px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--tile-placeholder);
+}
+
+.ranked__poster--blank {
+  display: block;
+}
+
+.ranked__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font: var(--text-body);
+  color: var(--ink);
+}
+
+.ranked__badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--band);
+  font: var(--text-label);
+  color: var(--on-band);
+}
+
+.ranked__empty {
+  margin: 0;
+  padding: 24px 0;
+  font: var(--text-lead);
+  color: var(--ink-dim);
+}
+
+/* The tier editor and the list settings on a board of one's own. */
+.board-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.board-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.board-panel__head h2 {
+  margin: 0;
+  font: var(--text-title);
+}
+
+.board-panel .tiers {
+  gap: 10px;
+}
+
+.board-panel .editor__heading h2 {
+  display: none;
+}
+
+.board-panel .editor__hint {
+  display: none;
+}
+
+.board-settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.board-settings__label {
+  font: var(--text-label);
+  color: var(--ink);
+}
+
+.board-settings__note {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.board-settings__select {
+  min-height: 40px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--chip);
+  font: var(--text-body);
+  color: var(--ink);
+}
+
+/* Two ways to show the board, as radio rows: the chosen one is tinted. */
+.board-settings__mode {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.board-settings__mode:has(input:checked) {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.board-settings__mode input {
+  margin: 3px 0 0;
+  accent-color: var(--link);
+}
+
+.board-settings__mode-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.board-settings__mode-title {
+  font: var(--text-label);
+  font-size: 14px;
+}
+
+.board-settings__mode-sub {
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.board-settings__mode:has(input:checked) .board-settings__mode-sub {
+  color: inherit;
+}
+
+.board-page__ranked-note {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}

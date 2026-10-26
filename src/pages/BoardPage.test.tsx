@@ -179,3 +179,100 @@ describe("BoardPage", () => {
     expect(screen.getByRole("link", { name: "Your boards" })).toHaveAttribute("href", "/boards");
   });
 });
+
+describe("BoardPage: tiers and settings", () => {
+  it("edits the tiers where the board stands: add, rename, reorder, and take one away with Undo", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    // The button in the head; the menu has the same words.
+    await userEvent.click(screen.getAllByRole("button", { name: "Tiers" })[0]!);
+    // The panel wraps the editor, which is a region named the same; the panel comes first.
+    const panel = screen.getAllByRole("region", { name: "Tiers" })[0]!;
+
+    await userEvent.click(within(panel).getByRole("button", { name: "Add tier" }));
+    expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual([
+      "S",
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+    ]);
+    expect(screen.getByRole("list", { name: "E" })).toBeInTheDocument();
+
+    // Retyping a label: the field may be empty for a moment, the board never is.
+    const label = within(panel).getByRole("textbox", { name: "Label of tier 1" });
+    await userEvent.clear(label);
+    expect(label).toHaveValue("");
+    expect(rankedTiers(repository.get("films")!)[0]?.label).toBe("S");
+    await userEvent.type(label, "Top");
+    expect(rankedTiers(repository.get("films")!)[0]?.label).toBe("Top");
+    expect(screen.getByRole("list", { name: "Top" })).toBeInTheDocument();
+    await userEvent.type(
+      within(panel).getByRole("textbox", { name: "Caption of Top" }),
+      "the best",
+    );
+    expect(rankedTiers(repository.get("films")!)[0]?.caption).toBe("the best");
+
+    await userEvent.click(within(panel).getByRole("button", { name: "Move Top down" }));
+    expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual([
+      "A",
+      "Top",
+      "B",
+      "C",
+      "D",
+      "E",
+    ]);
+    // Its card went with it.
+    expect(
+      within(screen.getByRole("list", { name: "Top" })).getByRole("button", { name: "Ex Machina" }),
+    ).toBeInTheDocument();
+
+    await userEvent.click(within(panel).getByRole("button", { name: "Remove Top" }));
+    expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual([
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+    ]);
+    const notice = screen.getByRole("status");
+    expect(notice).toHaveTextContent("Tier Top removed; its cards are in the pool");
+    await userEvent.click(within(notice).getByRole("button", { name: "Undo" }));
+    const back = repository.get("films")!;
+    expect(rankedTiers(back).map((t) => t.label)).toEqual(["A", "Top", "B", "C", "D", "E"]);
+    expect(itemsIn(back, rankedTiers(back)[1]!.uid).map((i) => i.title)).toEqual(["Ex Machina"]);
+
+    await userEvent.click(within(panel).getByRole("button", { name: "Done" }));
+    expect(screen.queryAllByRole("region", { name: "Tiers" })).toEqual([]);
+  });
+
+  it("keeps the category and the display mode from the settings, and shows the ranked list", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Category" }), "film_tv");
+    expect(repository.get("films")?.category).toBe("film_tv");
+    expect(screen.getByText("1 ranked · 2 in pool · Film & TV")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Ranked list/ }));
+    expect(repository.get("films")?.displayMode).toBe("RANKED");
+    const column = screen.getByRole("list", { name: "Ranked list" });
+    expect(
+      within(column)
+        .getAllByRole("listitem")
+        .map((row) => row.textContent),
+    ).toEqual(["1Ex MachinaS"]);
+    expect(screen.queryByRole("list", { name: "S" })).toBeNull();
+    // Cards can still come in.
+    expect(screen.getByRole("textbox", { name: "Add a card" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Wrapped rows/ }));
+    expect(screen.getByRole("list", { name: "S" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("combobox", { name: "Category" })).toBeNull();
+  });
+});
