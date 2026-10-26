@@ -24,6 +24,7 @@ const uids = () => {
 };
 
 const signedIn: Account = { kind: "signedIn", uid: "me", displayName: "D", photoUrl: null };
+const other: Account = { kind: "signedIn", uid: "other", displayName: "O", photoUrl: null };
 
 /** A promise settled by hand: what a request looks like while the network thinks. */
 function deferred<T>() {
@@ -38,34 +39,57 @@ function deferred<T>() {
 
 function fakeApi(
   theirs: KeptBoard[] = [],
-  options: { pageSize?: number; holdKeeps?: boolean; refuseForget?: boolean } = {},
+  options: {
+    pageSize?: number;
+    holdKeeps?: boolean;
+    holdForgets?: boolean;
+    /** Index reads answered at once before the rest are held back. */
+    holdIndexAfter?: number;
+    refuseForget?: boolean;
+  } = {},
 ) {
-  const { pageSize = 50, holdKeeps = false, refuseForget = false } = options;
+  const {
+    pageSize = 50,
+    holdKeeps = false,
+    holdForgets = false,
+    holdIndexAfter = Infinity,
+    refuseForget = false,
+  } = options;
   const kept = new Map(theirs.map((board) => [board.uid, board]));
   const keeps: { uid: string; request: KeepBoardRequest }[] = [];
   const forgotten: string[] = [];
   const indexReads: (string | null)[] = [];
-  // Keeps held back until the test lets them go, in the order they were sent.
-  const held: (() => void)[] = [];
+  // Answers held back until the test lets them go, in the order they were asked.
+  const held = {
+    keeps: [] as (() => void)[],
+    forgets: [] as (() => void)[],
+    index: [] as (() => void)[],
+  };
+  const page = (after: string | null) => {
+    const all = [...kept.values()];
+    const start = after === null ? 0 : Number(after);
+    const slice = all.slice(start, start + pageSize);
+    return {
+      boards: slice.map((board) => ({
+        uid: board.uid,
+        revision: board.revision,
+        updatedAt: board.updatedAt,
+        deviceName: board.deviceName,
+        deleted: board.deleted,
+        fingerprint: board.fingerprint,
+        title: board.title,
+        itemCount: board.items.length,
+      })),
+      next: start + pageSize < all.length ? String(start + pageSize) : null,
+    };
+  };
   const api: BoardsApi = {
     index: (after) => {
       indexReads.push(after);
-      const all = [...kept.values()];
-      const start = after === null ? 0 : Number(after);
-      const page = all.slice(start, start + pageSize);
-      return Promise.resolve({
-        boards: page.map((board) => ({
-          uid: board.uid,
-          revision: board.revision,
-          updatedAt: board.updatedAt,
-          deviceName: board.deviceName,
-          deleted: board.deleted,
-          fingerprint: board.fingerprint,
-          title: board.title,
-          itemCount: board.items.length,
-        })),
-        next: start + pageSize < all.length ? String(start + pageSize) : null,
-      });
+      if (indexReads.length <= holdIndexAfter) return Promise.resolve(page(after));
+      const gate = deferred<ReturnType<typeof page>>();
+      held.index.push(() => gate.resolve(page(after)));
+      return gate.promise;
     },
     board: (uid) => Promise.resolve(kept.get(uid)!),
     keep: (uid, request) => {
@@ -77,22 +101,39 @@ function fakeApi(
       };
       if (!holdKeeps) return Promise.resolve(answer());
       const gate = deferred<{ uid: string; revision: number }>();
-      held.push(() => gate.resolve(answer()));
+      held.keeps.push(() => gate.resolve(answer()));
       return gate.promise;
     },
     forget: (uid) => {
       if (refuseForget) return Promise.reject(new Error("the account would not"));
-      forgotten.push(uid);
-      const was = kept.get(uid);
-      if (was !== undefined) kept.set(uid, { ...was, deleted: true, revision: was.revision + 1 });
-      return Promise.resolve();
+      const answer = () => {
+        forgotten.push(uid);
+        const was = kept.get(uid);
+        if (was !== undefined) kept.set(uid, { ...was, deleted: true, revision: was.revision + 1 });
+      };
+      if (!holdForgets) {
+        answer();
+        return Promise.resolve();
+      }
+      const gate = deferred<void>();
+      held.forgets.push(() => gate.resolve(answer()));
+      return gate.promise;
     },
     published: () => Promise.resolve([]),
   };
-  const releaseKeeps = () => {
-    for (const release of held.splice(0)) release();
+  const release = (which: keyof typeof held) => () => {
+    for (const go of held[which].splice(0)) go();
   };
-  return { api, keeps, kept, forgotten, indexReads, releaseKeeps };
+  return {
+    api,
+    keeps,
+    kept,
+    forgotten,
+    indexReads,
+    releaseKeeps: release("keeps"),
+    releaseForgets: release("forgets"),
+    releaseIndex: release("index"),
+  };
 }
 
 const theirBoard = (uid: string, title: string): KeptBoard => ({
@@ -266,6 +307,71 @@ describe("BoardSyncProvider", () => {
     expect(syncRecords(store, "me").all()).toEqual([]);
     expect(syncRecords(store, "me").lastSyncedAt()).toBeNull();
     expect(keeps).toHaveLength(1);
+  });
+
+  it("a run in flight when another account signs in writes nothing of the first, and the second runs on its own", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    repository.save(newBoard("a", "A", 1, uids()));
+    const { api, keeps, releaseKeeps } = fakeApi([], { holdKeeps: true });
+    const view = show(signedIn, { children: null, repository, store, api });
+    await waitFor(() => expect(keeps).toHaveLength(1));
+
+    view.rerender(tree(other, { children: null, repository, store, api }));
+    // The second account starts its own run over the same boards; both answers come back.
+    await waitFor(() => expect(keeps).toHaveLength(2));
+    act(releaseKeeps);
+    await waitFor(() => expect(syncRecords(store, "other").all()).toHaveLength(1));
+    expect(syncRecords(store, "me").all()).toEqual([]);
+    expect(syncRecords(store, "me").lastSyncedAt()).toBeNull();
+    expect(screen.getByTestId("probe")).toHaveTextContent("in idle - on");
+  });
+
+  it("switching off stops after the answer in flight when another account signs in meanwhile", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    const { api, forgotten, releaseForgets } = fakeApi(
+      [theirBoard("a", "A"), theirBoard("b", "B"), theirBoard("c", "C")],
+      { holdForgets: true },
+    );
+    syncRecords(store, "me").markMerged();
+    const view = show(signedIn, { children: null, repository, store, api });
+    await waitFor(() => expect(repository.all()).toHaveLength(3));
+
+    await userEvent.click(screen.getByRole("button", { name: "stop" }));
+    await settle();
+    view.rerender(tree(other, { children: null, repository, store, api }));
+    act(releaseForgets);
+    await settle();
+    // The first forget had gone out as the first account; its answer is written down for
+    // that account, and nothing more is asked. The device's switch stays on.
+    expect(forgotten).toEqual(["a"]);
+    expect(
+      syncRecords(store, "me")
+        .all()
+        .map((record) => record.uid),
+    ).toEqual(["b", "c"]);
+    expect(readBackUp(store)).toBe(true);
+    expect(repository.all()).toHaveLength(3);
+  });
+
+  it("a merge decided after another account signed in renames nothing and marks nothing", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    repository.save(newBoard("mine", "Films", 1, uids()));
+    const { api, keeps, releaseIndex } = fakeApi([theirBoard("theirs", "Films")], {
+      holdIndexAfter: 1,
+    });
+    const view = show(signedIn, { children: null, repository, store, api });
+    await screen.findByRole("dialog");
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await settle();
+    view.rerender(tree(other, { children: null, repository, store, api }));
+    act(releaseIndex);
+    await settle();
+    expect(repository.get("mine")?.title).toBe("Films");
+    expect(syncRecords(store, "me").merged()).toBe(false);
+    expect(keeps).toEqual([]);
   });
 
   it("switching off waits for the run in flight, and that run writes nothing once the switch moved", async () => {

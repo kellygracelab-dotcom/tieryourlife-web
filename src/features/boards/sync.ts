@@ -222,12 +222,11 @@ async function carry(
     case "remember": {
       const board = repository.get(step.uid);
       if (board === null) return "carried";
+      // The fingerprint the plan agreed on, kept from the start of the run;
+      // computed once more only if it was not. No wait between the check and the write.
+      const fingerprint = planned.get(step.uid) ?? (await fingerprintOf(board));
       check(deps);
-      records.remember({
-        uid: step.uid,
-        revision: step.revision,
-        fingerprint: await fingerprintOf(board),
-      });
+      records.remember({ uid: step.uid, revision: step.revision, fingerprint });
       return "carried";
     }
   }
@@ -300,26 +299,36 @@ async function takeOver(
   }
   const fresh = boardOf(incoming, deps.now());
   if (fresh === null) throw new Error(`The account's copy of ${incoming.uid} could not be read`);
-  const board = await withPictures(
-    { ...fresh, favouritedAt: existing.favouritedAt, arrivedFrom: existing.arrivedFrom },
-    deps,
-  );
-  check(deps);
+  const board = await withPictures(fresh, deps);
+  // Everything that waits is gathered first: the copy's own fingerprint, and
+  // the fingerprint of the board here as it is now. Then the checks, and the
+  // writes, with no wait between them: the board read last is the one judged.
+  const fingerprint = await fingerprintOf(board);
   const current = deps.repository.get(incoming.uid);
+  if (current === null) return "deferred";
+  const currentFingerprint = await fingerprintOf(current);
+  check(deps);
+  const latest = deps.repository.get(incoming.uid);
   if (
-    current === null ||
-    (plannedFingerprint !== undefined && (await fingerprintOf(current)) !== plannedFingerprint)
+    latest === null ||
+    !sameBoard(latest, current) ||
+    (plannedFingerprint !== undefined && currentFingerprint !== plannedFingerprint)
   ) {
     return "deferred";
   }
-  deps.repository.save(board);
-  deps.records.remember({
-    uid: board.uid,
-    revision: incoming.revision,
-    fingerprint: await fingerprintOf(board),
+  // The star and the origin are this device's, and read at the moment of writing.
+  deps.repository.save({
+    ...board,
+    favouritedAt: latest.favouritedAt,
+    arrivedFrom: latest.arrivedFrom,
   });
+  deps.records.remember({ uid: board.uid, revision: incoming.revision, fingerprint });
   return "carried";
 }
+
+/** The same board, field for field: the store hands out a fresh object every time. */
+const sameBoard = (left: Board, right: Board): boolean =>
+  JSON.stringify(left) === JSON.stringify(right);
 
 /**
  * As itself when it is news from another device; as a copy with a new uid
@@ -338,14 +347,12 @@ async function adopt(
     asCopy ? renamed(fresh, incoming.deviceName, deps.nextUid) : fresh,
     deps,
   );
+  // The fingerprint before the writes, so nothing waits between the check and them.
+  const fingerprint = asCopy ? null : await fingerprintOf(board);
   check(deps);
   deps.repository.save(board);
-  if (asCopy) return;
-  deps.records.remember({
-    uid: board.uid,
-    revision: incoming.revision,
-    fingerprint: await fingerprintOf(board),
-  });
+  if (fingerprint === null) return;
+  deps.records.remember({ uid: board.uid, revision: incoming.revision, fingerprint });
 }
 
 /** Every uid new, so the copy and the original never meet; where it came from written on it; not the published list. */
@@ -396,9 +403,18 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
   if (claimed.length === 0) return;
   const theirs = await deps.api.published();
   if (theirs === null) return;
-  const gone = claimed.filter((board) => !theirs.includes(board.publishedId ?? ""));
+  check(deps);
+  // Read again after the wait: a board may have moved here meanwhile, and
+  // only the id is this step's to change, and only while it is still the one
+  // that was asked about. Everything else is kept as it is now.
+  const gone = claimed.flatMap((asked) => {
+    const board = deps.repository.get(asked.uid);
+    const id = board?.publishedId ?? null;
+    return board !== null && id !== null && id === asked.publishedId && !theirs.includes(id)
+      ? [board]
+      : [];
+  });
   if (gone.length > 0) {
-    check(deps);
     deps.repository.saveAll(
       gone.map((board) => setPublished(board, null, board.authorName, deps.now())),
     );

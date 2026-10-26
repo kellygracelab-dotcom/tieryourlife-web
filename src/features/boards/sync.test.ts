@@ -370,4 +370,64 @@ describe("syncBoards", () => {
     expect(records.all()).toEqual([]);
     expect(records.lastSyncedAt()).toBeNull();
   });
+
+  it("defers a restore when the board here is edited while the fingerprints are computed", async () => {
+    const { repository, records, account, run } = setUp();
+    const mine = films();
+    repository.save(mine);
+    const fingerprint = await fingerprintOf(mine);
+    records.remember({ uid: "films", revision: 1, fingerprint });
+    account.holds({ ...mine, title: "Theirs" }, 2);
+    // The copy's own fingerprint is the first wait inside the step: the edit lands there.
+    const hooked = async (board: Board) => {
+      if (board.title === "Theirs") {
+        repository.save({ ...repository.get("films")!, title: "Mine, edited", editedAt: 2000 });
+      }
+      return fingerprintOf(board);
+    };
+    expect(await run({ fingerprintOf: hooked })).toEqual({
+      carried: 0,
+      refused: 0,
+      deferred: 1,
+      cancelled: false,
+    });
+    expect(repository.get("films")?.title).toBe("Mine, edited");
+    expect(records.all()).toEqual([{ uid: "films", revision: 1, fingerprint }]);
+  });
+
+  it("writes nothing of an adopted board when the run stops while its fingerprint is computed", async () => {
+    const { repository, records, account, run } = setUp();
+    account.holds(films("theirs", "Theirs"), 1);
+    let wanted = true;
+    const hooked = async (board: Board) => {
+      if (board.uid === "theirs") wanted = false;
+      return fingerprintOf(board);
+    };
+    expect(await run({ fingerprintOf: hooked, stillWanted: () => wanted })).toEqual({
+      carried: 0,
+      refused: 0,
+      deferred: 0,
+      cancelled: true,
+    });
+    expect(repository.all()).toEqual([]);
+    expect(records.all()).toEqual([]);
+  });
+
+  it("drops a published id gone from the account without writing over an edit made meanwhile", async () => {
+    const { repository, account, run } = setUp([]);
+    repository.saveAll([
+      { ...films("a", "A"), publishedId: "p-gone" },
+      { ...films("b", "B"), publishedId: "p-old" },
+    ]);
+    account.api.published = () => {
+      // While the account is asked, the person renames one board and republishes the other.
+      repository.save({ ...repository.get("a")!, title: "A, edited", editedAt: 2000 });
+      repository.save({ ...repository.get("b")!, publishedId: "p-new", editedAt: 2000 });
+      return Promise.resolve([]);
+    };
+    await run();
+    expect(repository.get("a")).toMatchObject({ title: "A, edited", publishedId: null });
+    // Republished meanwhile: not the id that was asked about, so it is left for the next run.
+    expect(repository.get("b")?.publishedId).toBe("p-new");
+  });
 });

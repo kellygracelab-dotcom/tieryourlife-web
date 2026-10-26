@@ -9,6 +9,7 @@ import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import {
+  AccountChanged,
   BoardSyncContext,
   NOBODY,
   type BoardSyncControls,
@@ -120,6 +121,11 @@ function ForAccount({
   const mounted = useRef(true);
   const epoch = useRef(0);
   const stopping = useRef(false);
+  /** Whether what started now is still this mount's and this epoch's, asked again after every wait. */
+  const bound = useCallback(() => {
+    const started = epoch.current;
+    return () => mounted.current && epoch.current === started;
+  }, []);
   useEffect(() => {
     const life = mounted;
     const era = epoch;
@@ -230,6 +236,7 @@ function ForAccount({
   const decideMerge = useCallback(
     async (choice: "keep" | "account") => {
       if (records === null) return;
+      const mine = bound();
       const at = now();
       const live = repository.all().filter((board) => board.deletedAt === null);
       if (choice === "account") {
@@ -241,6 +248,8 @@ function ForAccount({
           ({ titles }) => titles,
           () => new Set<string>(),
         );
+        // The account changed while its titles were read: the question was another mount's.
+        if (!mine()) return;
         const clashing = live.filter((board) => theirs.has(board.title));
         if (clashing.length > 0) {
           repository.saveAll(
@@ -254,7 +263,7 @@ function ForAccount({
       setMerge(null);
       await run();
     },
-    [records, repository, api, now, run],
+    [records, repository, api, now, run, bound],
   );
 
   const setBackUp = useCallback(
@@ -270,18 +279,29 @@ function ForAccount({
       // and on screen alike. A failure leaves it on, and the caller says so.
       stopping.current = true;
       epoch.current++;
+      // Bound to this mount from here: should the account change under it,
+      // nothing more is asked of the account (its calls go out as whoever is
+      // signed in now) and the device's switch stays where it was.
+      const mine = bound();
       const inFlight = running.current;
       if (inFlight !== null) {
         // The run ends at its next check and reports nothing, so the status is set here.
         await inFlight.catch(() => undefined);
-        if (mounted.current) setStatus("idle");
+        if (mine()) setStatus("idle");
       }
       try {
+        if (!mine()) throw new AccountChanged();
         if (records !== null) {
-          for (const entry of await liveEntries(api)) {
+          const live = await liveEntries(api);
+          for (const entry of live) {
+            if (!mine()) throw new AccountChanged();
             await api.forget(entry.uid);
+            // Written even if the account moved on meanwhile: the marker now
+            // exists, and a record left behind would discard the board on
+            // this account's next sign-in. The records are this account's own.
             records.forget(entry.uid);
           }
+          if (!mine()) throw new AccountChanged();
           records.clear();
           setLastSyncedAt(null);
         }
@@ -291,7 +311,7 @@ function ForAccount({
         stopping.current = false;
       }
     },
-    [store, records, api],
+    [store, records, api, bound],
   );
 
   const value = useMemo<BoardSyncControls>(

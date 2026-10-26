@@ -35,3 +35,11 @@ export const NOBODY: BoardSyncControls = {
 export const BoardSyncContext = createContext<BoardSyncControls>(NOBODY);
 
 export const useBoardSync = (): BoardSyncControls => useContext(BoardSyncContext);
+
+/** Thrown out of switching the back-up off when the account changed under it. */
+export class AccountChanged extends Error {
+  constructor() {
+    super("the account changed");
+    this.name = "AccountChanged";
+  }
+}
