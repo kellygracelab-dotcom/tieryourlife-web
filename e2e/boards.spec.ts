@@ -146,6 +146,56 @@ test("changes the tiers on the board: a double tap opens one, its band carries i
   ).toBeVisible();
 });
 
+test("moves a card along its row: the others make room at once, and nothing is picked by the drag", async ({
+  page,
+  hasTouch,
+}) => {
+  test.skip(hasTouch, "a mouse drag; a finger has the move sheet and the keys");
+  await mockBackend(page);
+  await page.goto("/boards");
+  await page.getByRole("button", { name: "New board" }).first().click();
+  const title = page.getByRole("textbox", { name: "Title" });
+  await title.fill("Films");
+  await title.press("Enter");
+  for (const name of ["Ex Machina", "The Witch", "Climax"]) {
+    const add = page.getByRole("textbox", { name: "Add a card" });
+    await add.fill(name);
+    await add.press("Enter");
+  }
+  const s = page.getByRole("list", { name: "S", exact: true });
+  const order = () =>
+    s
+      .locator("[data-item]")
+      .evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute("aria-label")));
+  const carry = async (name: string, to: { x: number; y: number }) => {
+    const box = (await page.getByRole("button", { name, exact: true }).boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 8 });
+  };
+  const row = (await s.boundingBox())!;
+  for (const name of ["Ex Machina", "The Witch", "Climax"]) {
+    await carry(name, { x: row.x + row.width - 20, y: row.y + row.height / 2 });
+    // From the pool, an empty place of the card's size waits in the row.
+    await expect(s.locator(".tile--slot")).toHaveCount(1);
+    await page.mouse.up();
+  }
+  expect(await order()).toEqual(["Ex Machina", "The Witch", "Climax"]);
+
+  // Climax carried to the front: it stands there before it is let go, with no bar.
+  const first = (await s.locator("[data-item]").first().boundingBox())!;
+  await carry("Climax", { x: first.x + 5, y: first.y + first.height / 2 });
+  expect(await order()).toEqual(["Climax", "Ex Machina", "The Witch"]);
+  await page.mouse.up();
+  expect(await order()).toEqual(["Climax", "Ex Machina", "The Witch"]);
+  await expect(page.locator(".tile--selected")).toHaveCount(0);
+
+  // The board keeps it so.
+  await page.reload();
+  await expect(s.locator("[data-item]")).toHaveCount(3);
+  expect(await order()).toEqual(["Climax", "Ex Machina", "The Witch"]);
+});
+
 test("saves somebody's list to my boards, asking whose ranking to keep", async ({ page }) => {
   await mockBackend(page);
   await page.goto(`/l/${list.id}`);

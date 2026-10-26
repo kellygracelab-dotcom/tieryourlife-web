@@ -64,6 +64,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // What a test left for later runs now, as the next task would: the guard on the click after a drag.
+  vi.runOnlyPendingTimers();
   vi.useRealTimers();
 });
 
@@ -121,7 +123,7 @@ describe("dragging a card", () => {
     expect(document.querySelector(".ghost")).toBeNull();
   });
 
-  it("moves a card along its own row, marking where it will land", () => {
+  it("moves a card along its own row, the other making room for it as it goes", () => {
     render(
       <MemoryRouter>
         <RankingBoard list={list} hitTest={hitTest} />
@@ -147,15 +149,20 @@ describe("dragging a card", () => {
     lay("Anora", 0);
     lay("Conclave", 74);
 
-    // Anora picked up and carried past Conclave's middle.
+    // Anora picked up and carried past Conclave's middle: it stands there at
+    // once, faded, before it is let go; no bar marks the place.
     pointer("pointerdown", within(tierRow("S")).getByRole("button", { name: "Anora" }), 10, 10);
     under = tierRow("S");
     pointer("pointermove", window, 120, 40);
-    const conclave = within(tierRow("S")).getByRole("button", { name: "Conclave" }).parentElement;
-    expect(conclave).toHaveClass("tile-holder--insert-after");
+    expect(order()).toEqual(["Conclave", "Anora"]);
+    expect(within(tierRow("S")).getByRole("button", { name: "Anora" })).toHaveClass("tile--lifted");
     pointer("pointerup", window, 120, 40);
     expect(order()).toEqual(["Conclave", "Anora"]);
-    expect(document.querySelector("[class*=tile-holder--insert]")).toBeNull();
+    const anora = within(tierRow("S")).getByRole("button", { name: "Anora" });
+    expect(anora).not.toHaveClass("tile--lifted");
+    // The release was over Anora itself, and the browser's click after it picks nothing.
+    fireEvent.click(anora);
+    expect(anora).toHaveAttribute("aria-pressed", "false");
 
     // And back to the start, before Conclave.
     lay("Conclave", 0);
@@ -163,11 +170,35 @@ describe("dragging a card", () => {
     pointer("pointerdown", within(tierRow("S")).getByRole("button", { name: "Anora" }), 80, 10);
     under = tierRow("S");
     pointer("pointermove", window, 5, 40);
-    expect(
-      within(tierRow("S")).getByRole("button", { name: "Conclave" }).parentElement,
-    ).toHaveClass("tile-holder--insert-before");
+    expect(order()).toEqual(["Anora", "Conclave"]);
     pointer("pointerup", window, 5, 40);
     expect(order()).toEqual(["Anora", "Conclave"]);
+  });
+
+  it("opens an empty place of a card's size where a card from elsewhere would land", () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} hitTest={hitTest} />
+      </MemoryRouter>,
+    );
+    pointer("pointerdown", card("Anora"), 10, 10, { button: 0 });
+    under = tierRow("A");
+    pointer("pointermove", window, 300, 40);
+    const slots = () => tierRow("A").querySelectorAll(".tile--slot");
+    expect(slots()).toHaveLength(1);
+    // Hidden from a screen reader: the row still holds no card.
+    expect(within(screen.getByRole("list", { name: "A" })).queryAllByRole("button")).toEqual([]);
+    // Off the row, the place closes.
+    under = poolBox();
+    pointer("pointermove", window, 300, 400);
+    expect(slots()).toHaveLength(0);
+    under = tierRow("A");
+    pointer("pointermove", window, 300, 40);
+    pointer("pointerup", window, 300, 40);
+    expect(slots()).toHaveLength(0);
+    expect(
+      within(screen.getByRole("list", { name: "A" })).getByRole("button", { name: "Anora" }),
+    ).toBeInTheDocument();
   });
 
   it("does nothing when let go outside every target, or on a right button", () => {

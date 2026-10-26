@@ -113,8 +113,6 @@ interface TileProps {
   onRemove?: () => void;
   /** A menu beside the tile for moving without a drag: every tier, the pool, off the list. */
   move?: { tiers: readonly PublishedTier[]; current: number | null };
-  /** Where a card dragged over this row would land, next to this one. */
-  insert?: "before" | "after";
 }
 
 function Tile({
@@ -127,7 +125,6 @@ function Tile({
   onPointerDown,
   onRemove,
   move,
-  insert,
 }: TileProps) {
   const [moving, setMoving] = useState(false);
   const closeMove = useCallback(() => setMoving(false), []);
@@ -139,12 +136,7 @@ function Tile({
   return (
     <li
       className={
-        [
-          (onRemove !== undefined || move !== undefined) && "tile-holder--removable",
-          insert !== undefined && `tile-holder--insert-${insert}`,
-        ]
-          .filter(Boolean)
-          .join(" ") || undefined
+        onRemove !== undefined || move !== undefined ? "tile-holder--removable" : undefined
       }
     >
       <button
@@ -814,16 +806,20 @@ function TierRow({
   const armed = !locked && selected !== null && !row.includes(selected);
   const target = dragState.phase === "dragging" ? dragState.target : null;
   const targeted = target?.kind === "tier" && target.tier === tier;
-  // The mark between two cards: before the card at the landing place, or
-  // after the last one. The held card itself does not count.
+  // A card carried over the row takes its place there at once, the others
+  // making room: the card itself when it is this row's, an empty slot of its
+  // size when it comes from elsewhere (null below). Where it lands is read
+  // from the others' middles, so the room it takes does not move the place.
   const others = row.filter((item) => item !== lifted);
   const landing = targeted ? Math.min(target.index, others.length) : null;
-  const insertOf = (item: number): "before" | "after" | undefined => {
-    if (landing === null || item === lifted) return undefined;
-    const place = others.indexOf(item);
-    if (place === landing) return "before";
-    return landing === others.length && place === others.length - 1 ? "after" : undefined;
-  };
+  const shown: readonly (number | null)[] =
+    landing === null
+      ? row
+      : [
+          ...others.slice(0, landing),
+          lifted !== null && row.includes(lifted) ? lifted : null,
+          ...others.slice(landing),
+        ];
   const place = () => onPlace(tier);
   // A card being placed has the band for its button; the tier is held only otherwise.
   const held = armed ? undefined : band;
@@ -886,21 +882,26 @@ function TierRow({
         )}
       </div>
       <ul className="tier__items" aria-label={meta.label}>
-        {row.map((item) => (
-          <Tile
-            key={item}
-            list={list}
-            item={item}
-            selected={selected === item}
-            lifted={lifted === item}
-            locked={locked}
-            dispatch={dispatch}
-            onPointerDown={pointerDownFor(item)}
-            insert={insertOf(item)}
-            onRemove={onRemove === undefined ? undefined : () => onRemove(item)}
-            move={moveMenu ? { tiers: list.tiers, current: tier } : undefined}
-          />
-        ))}
+        {shown.map((item) =>
+          item === null ? (
+            <li key="slot" className="tile-slot" aria-hidden="true">
+              <span className="tile tile--slot" />
+            </li>
+          ) : (
+            <Tile
+              key={item}
+              list={list}
+              item={item}
+              selected={selected === item}
+              lifted={lifted === item}
+              locked={locked}
+              dispatch={dispatch}
+              onPointerDown={pointerDownFor(item)}
+              onRemove={onRemove === undefined ? undefined : () => onRemove(item)}
+              move={moveMenu ? { tiers: list.tiers, current: tier } : undefined}
+            />
+          ),
+        )}
       </ul>
     </div>
   );
