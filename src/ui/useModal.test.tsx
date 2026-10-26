@@ -13,6 +13,7 @@ function Dialog({ onClose, initial }: { onClose: () => void; initial?: string })
       <button type="button" disabled>
         Off
       </button>
+      <a href="/middle">Middle</a>
       <button type="button" className="last">
         Last
       </button>
@@ -51,6 +52,9 @@ describe("useModal", () => {
     await userEvent.click(opener);
     expect(screen.getByRole("button", { name: "First" })).toHaveFocus();
 
+    // Every stop is taken in order, the disabled one skipped, and round again.
+    await userEvent.tab();
+    expect(screen.getByRole("link", { name: "Middle" })).toHaveFocus();
     await userEvent.tab();
     expect(screen.getByRole("button", { name: "Last" })).toHaveFocus();
     await userEvent.tab();

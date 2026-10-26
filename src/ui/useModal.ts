@@ -33,19 +33,18 @@ export function useModal(
         return;
       }
       if (event.key !== "Tab" || box.current === null) return;
+      // Every Tab is taken here, not only the one at either end: Safari's
+      // default skips buttons and links, and its own next stop could be a
+      // field behind the dialog.
       const items = inside();
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (first === undefined || last === undefined) return;
+      if (items.length === 0) return;
       const active = document.activeElement;
-      const away = !(active instanceof Node) || !box.current.contains(active);
-      if (event.shiftKey && (away || active === first)) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (away || active === last)) {
-        event.preventDefault();
-        first.focus();
-      }
+      const at = active instanceof HTMLElement ? items.indexOf(active) : -1;
+      const next = event.shiftKey
+        ? items[at <= 0 ? items.length - 1 : at - 1]
+        : items[at === -1 || at === items.length - 1 ? 0 : at + 1];
+      event.preventDefault();
+      next?.focus();
     };
     window.addEventListener("keydown", onKey);
     return () => {

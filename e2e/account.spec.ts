@@ -201,16 +201,12 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
   await page.goto("/settings");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Settings");
 
-  // The photo, chosen the way the device chooses: a finger taps the tile, a keyboard
-  // reaches the file field itself.
+  // The photo, chosen from the tile the way the device presses it. The file
+  // field behind it is the control a keyboard and a screen reader reach.
+  await expect(page.getByLabel("A photo from the gallery")).toBeEnabled();
   const choosePhoto = async () => {
     const chooser = page.waitForEvent("filechooser");
-    if (hasTouch) {
-      await page.locator(".settings__choice--photo").tap();
-    } else {
-      await page.getByLabel("A photo from the gallery").focus();
-      await page.keyboard.press("Enter");
-    }
+    await press(page.locator(".settings__choice--photo"), hasTouch);
     await (await chooser).setFiles({ name: "me.png", mimeType: "image/png", buffer: PIXEL });
   };
 
