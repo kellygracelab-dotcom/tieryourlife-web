@@ -262,6 +262,11 @@ describe("BoardSyncProvider", () => {
     syncRecords(store, "me").markMerged();
     show(signedIn, { children: null, repository, store, api });
     await waitFor(() => expect(repository.all()).toHaveLength(3));
+    // The boards coming down are changes too, and ask for one more run after
+    // the debounce; it finds both sides agreeing. Only then are reads counted.
+    await waitFor(() => expect(syncRecords(store, "me").all()).toHaveLength(3));
+    await settle();
+    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("in idle"));
     indexReads.length = 0;
 
     await userEvent.click(screen.getByRole("button", { name: "stop" }));

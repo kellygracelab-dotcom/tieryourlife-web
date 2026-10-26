@@ -160,6 +160,40 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
   }
 }
 
+/** Every live board the account keeps, page after page: the index is paged, and nothing may stop at the first. */
+export async function liveEntriesOf(api: BoardsApi): Promise<KeptBoardEntry[]> {
+  const live: KeptBoardEntry[] = [];
+  let after: string | null = null;
+  do {
+    const page: { boards: KeptBoardEntry[]; next: string | null } = await api.index(after);
+    live.push(...page.boards.filter((entry) => !entry.deleted));
+    after = page.next;
+  } while (after !== null);
+  return live;
+}
+
+/**
+ * Switching the back-up off: every live board the account keeps becomes a
+ * marker, page after page, and this device forgets its agreement about it.
+ * Stops with `SyncCancelled` once no longer wanted. A forget the account
+ * already answered is still written down: the marker exists, and a record
+ * left behind would discard the board on the next sign-in.
+ */
+export async function forgetAccountCopies(
+  api: BoardsApi,
+  records: SyncRecords,
+  stillWanted: () => boolean,
+): Promise<void> {
+  const live = await liveEntriesOf(api);
+  for (const entry of live) {
+    if (!stillWanted()) throw new SyncCancelled();
+    await api.forget(entry.uid);
+    records.forget(entry.uid);
+  }
+  if (!stillWanted()) throw new SyncCancelled();
+  records.clear();
+}
+
 async function readIndex(api: BoardsApi): Promise<Map<string, RemoteBoard>> {
   const found = new Map<string, RemoteBoard>();
   let after: string | null = null;

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getDownloadURL, ref } from "firebase/storage";
-import type { KeptBoardEntry } from "../../api/boards";
 import { useSession } from "../../app/session";
 import { forgetBoard, keepBoard, loadBoardIndex, loadKeptBoard, loadMyLists } from "../../lib/api";
 import { getFirebaseStorage } from "../../lib/firebase";
@@ -19,7 +18,13 @@ import {
 import { deviceNameOf } from "./deviceName";
 import { rename, trashBoard, type Board } from "./model";
 import { boards as site, type BoardsRepository } from "./repository";
-import { syncBoards, type BoardsApi } from "./sync";
+import {
+  forgetAccountCopies,
+  liveEntriesOf,
+  syncBoards,
+  SyncCancelled,
+  type BoardsApi,
+} from "./sync";
 import { keepBackUp, readBackUp, syncRecords, type SyncRecords } from "./syncRecords";
 import { nextUid } from "./useBoards";
 import "./boards.css";
@@ -54,21 +59,50 @@ interface BoardSyncProviderProps {
   syncAfterMs?: number;
 }
 
-/** Every live board on the account, page after page: the index is paged, and nothing here may stop at the first. */
-async function liveEntries(api: BoardsApi): Promise<KeptBoardEntry[]> {
-  const live: KeptBoardEntry[] = [];
-  let after: string | null = null;
-  do {
-    const page: Awaited<ReturnType<BoardsApi["index"]>> = await api.index(after);
-    live.push(...page.boards.filter((entry) => !entry.deleted));
-    after = page.next;
-  } while (after !== null);
-  return live;
+/** A deletion stopped because the account changed under it, as the caller is told it. */
+const asAccountChanged = (reason: unknown): never => {
+  throw reason instanceof SyncCancelled ? new AccountChanged() : reason;
+};
+
+/**
+ * Switching the back-up off. Off has to mean the copy is gone, or the switch
+ * is a lie: the run in flight ends first, every page of the account's copies
+ * goes, and only then is the switch off, in the store and on screen alike.
+ * Bound to the mount it started in: should the account change under it,
+ * nothing more is asked of the account (its calls go out as whoever is
+ * signed in now), the switch stays on, and the caller hears `AccountChanged`.
+ */
+async function stopBackingUp({
+  store,
+  records,
+  api,
+  stillMine,
+  inFlight,
+  onRunEnded,
+  onOff,
+}: {
+  store: KeyValueStore;
+  records: SyncRecords | null;
+  api: BoardsApi;
+  stillMine: () => boolean;
+  inFlight: Promise<void> | null;
+  /** The run in flight ended without reporting, as a cancelled run does. */
+  onRunEnded: () => void;
+  onOff: () => void;
+}): Promise<void> {
+  if (inFlight !== null) {
+    await inFlight.catch(() => undefined);
+    if (stillMine()) onRunEnded();
+  }
+  if (!stillMine()) throw new AccountChanged();
+  if (records !== null) await forgetAccountCopies(api, records, stillMine).catch(asAccountChanged);
+  keepBackUp(store, false);
+  onOff();
 }
 
 /** Every live board on the account, by title: what a sign-in has to be told apart from. */
 async function accountTitles(api: BoardsApi): Promise<{ count: number; titles: Set<string> }> {
-  const live = await liveEntries(api);
+  const live = await liveEntriesOf(api);
   return { count: live.length, titles: new Set(live.map((entry) => entry.title)) };
 }
 
@@ -266,53 +300,33 @@ function ForAccount({
     [records, repository, api, now, run, bound],
   );
 
-  const setBackUp = useCallback(
-    async (on: boolean) => {
-      if (on) {
-        keepBackUp(store, true);
-        setBackUpState(true);
-        return;
-      }
-      // Off has to mean the copy is gone, or the switch is a lie. So: nothing
-      // more goes up from here, a run in flight ends first, every page of the
-      // account's copies goes, and only then is the switch off, in the store
-      // and on screen alike. A failure leaves it on, and the caller says so.
-      stopping.current = true;
-      epoch.current++;
-      // Bound to this mount from here: should the account change under it,
-      // nothing more is asked of the account (its calls go out as whoever is
-      // signed in now) and the device's switch stays where it was.
-      const mine = bound();
-      const inFlight = running.current;
-      if (inFlight !== null) {
-        // The run ends at its next check and reports nothing, so the status is set here.
-        await inFlight.catch(() => undefined);
-        if (mine()) setStatus("idle");
-      }
-      try {
-        if (!mine()) throw new AccountChanged();
-        if (records !== null) {
-          const live = await liveEntries(api);
-          for (const entry of live) {
-            if (!mine()) throw new AccountChanged();
-            await api.forget(entry.uid);
-            // Written even if the account moved on meanwhile: the marker now
-            // exists, and a record left behind would discard the board on
-            // this account's next sign-in. The records are this account's own.
-            records.forget(entry.uid);
-          }
-          if (!mine()) throw new AccountChanged();
-          records.clear();
-          setLastSyncedAt(null);
-        }
-        keepBackUp(store, false);
+  const turnOn = useCallback(() => {
+    keepBackUp(store, true);
+    setBackUpState(true);
+    return Promise.resolve();
+  }, [store]);
+
+  const turnOff = useCallback(() => {
+    // Nothing more goes up from here, and a run in flight stops at its next check.
+    stopping.current = true;
+    epoch.current++;
+    return stopBackingUp({
+      store,
+      records,
+      api,
+      stillMine: bound(),
+      inFlight: running.current,
+      onRunEnded: () => setStatus("idle"),
+      onOff: () => {
+        setLastSyncedAt(null);
         setBackUpState(false);
-      } finally {
-        stopping.current = false;
-      }
-    },
-    [store, records, api, bound],
-  );
+      },
+    }).finally(() => {
+      stopping.current = false;
+    });
+  }, [store, records, api, bound]);
+
+  const setBackUp = useCallback((on: boolean) => (on ? turnOn() : turnOff()), [turnOn, turnOff]);
 
   const value = useMemo<BoardSyncControls>(
     () => ({
