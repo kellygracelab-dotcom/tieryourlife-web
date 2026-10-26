@@ -30,6 +30,28 @@ export interface TileDrag {
   nudge(): void;
 }
 
+/**
+ * A card dragged along its row stands under the pointer when it is let go,
+ * so the release lands on the card itself and the browser calls the press a
+ * click; a drag selects nothing. The click comes in the same task as the
+ * release, so the guard is gone by the next one.
+ */
+function swallowClick(): void {
+  const swallow = (event: MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
+    stop();
+  };
+  // A new press, or the next task: no click of this release is coming any more.
+  const stop = () => {
+    window.removeEventListener("click", swallow, { capture: true });
+    window.removeEventListener("pointerdown", stop, { capture: true });
+  };
+  window.addEventListener("click", swallow, { capture: true });
+  window.addEventListener("pointerdown", stop, { capture: true });
+  setTimeout(stop, 0);
+}
+
 // Pointer events give mouse, finger and pen one code path; the HTML5 drag API
 // has no touch support and a ghost nobody can style.
 export function useTileDrag(
@@ -94,6 +116,7 @@ export function useTileDrag(
       clearHold();
       const current = latest.current;
       if (current.phase === "idle") return;
+      if (drop && current.phase === "dragging") swallowClick();
       if (drop && current.phase === "dragging" && current.target !== null) {
         if (current.target.kind === "pool") dispatch({ type: "unplace", item: current.item });
         else {

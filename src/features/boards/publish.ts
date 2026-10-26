@@ -1,5 +1,6 @@
 import type { PublishRequest } from "../../api/lists";
-import type { PublishedList } from "../../api/types";
+import type { Category, PublishedList } from "../../api/types";
+import type { Draft } from "../editor/model";
 import {
   BOARD_LIMITS,
   itemsIn,
@@ -8,7 +9,9 @@ import {
   poolTier,
   rankedTiers,
   type Board,
+  type CardDraft,
   type NextUid,
+  type TierDraft,
 } from "./model";
 
 /** What stands between a board and the feed, in the order the settings show things. */
@@ -59,22 +62,22 @@ export function publishRequestOf(board: Board): PublishRequest | null {
   };
 }
 
-/**
- * Somebody else's published list as a board of one's own, the phone's
- * "Save to my lists": their cards and tiers, and whichever arrangement was
- * asked for (theirs, the one on screen, or none). The author's name stays on
- * it; the published id does not, since this is a copy and not the list.
- */
-export function boardFromList(
-  list: PublishedList,
-  rows: readonly (readonly number[])[] | null,
-  now: number,
-  nextUid: NextUid,
-): Board {
-  const base = newBoard(nextUid(), list.title, now, nextUid);
+/** What a board is made from when it comes from elsewhere: a list, or the old editor's draft. */
+interface Makings {
+  title: string;
+  category: Category | null;
+  authorName: string | null;
+  tiers: readonly TierDraft[];
+  cards: readonly CardDraft[];
+  /** Card indexes per tier, in order; every card not in them waits in the pool. */
+  rows: readonly (readonly number[])[] | null;
+}
+
+function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
+  const base = newBoard(nextUid(), makings.title, now, nextUid);
   const pool = poolTier(base);
   if (pool === null) return base;
-  const tiers = list.tiers.map((tier, position) => ({
+  const tiers = makings.tiers.map((tier, position) => ({
     uid: nextUid(),
     position,
     label: tier.label,
@@ -84,7 +87,7 @@ export function boardFromList(
     isPool: false,
   }));
   const placed = new Map<number, { tierUid: string; position: number }>();
-  (rows ?? []).forEach((row, tierIndex) => {
+  (makings.rows ?? []).forEach((row, tierIndex) => {
     const tier = tiers[tierIndex];
     if (tier === undefined) return;
     row.forEach((cardIndex, position) => {
@@ -92,11 +95,11 @@ export function boardFromList(
     });
   });
   let inPool = 0;
-  const items = list.items.map((card, index) => {
+  const items = makings.cards.map((card, index) => {
     const place = placed.get(index) ?? { tierUid: pool.uid, position: inPool++ };
     return {
       uid: nextUid(),
-      pictureId: null,
+      pictureId: card.pictureId ?? null,
       tierUid: place.tierUid,
       position: place.position,
       title: card.title,
@@ -107,9 +110,53 @@ export function boardFromList(
   });
   return {
     ...base,
-    category: list.category,
-    authorName: list.authorName,
+    category: makings.category,
+    authorName: makings.authorName,
     tiers: [...tiers, { ...pool, position: tiers.length }],
     items,
   };
 }
+
+/**
+ * Somebody else's published list as a board of one's own, the phone's
+ * "Save to my lists": their cards and tiers, and whichever arrangement was
+ * asked for (theirs, the one on screen, or none). The author's name stays on
+ * it; the published id does not, since this is a copy and not the list.
+ */
+export const boardFromList = (
+  list: PublishedList,
+  rows: readonly (readonly number[])[] | null,
+  now: number,
+  nextUid: NextUid,
+): Board =>
+  boardOf(
+    {
+      title: list.title,
+      category: list.category,
+      authorName: list.authorName,
+      tiers: list.tiers,
+      cards: list.items.map((item) => ({ title: item.title, imageUrl: item.imageUrl })),
+      rows,
+    },
+    now,
+    nextUid,
+  );
+
+/**
+ * What the old editor kept on this device, as a board: a list begun and not
+ * published, a ranking being made into a list, or changes to a published
+ * list not sent yet. Its own pictures keep their ids.
+ */
+export const boardFromDraft = (draft: Draft, now: number, nextUid: NextUid): Board =>
+  boardOf(
+    {
+      title: draft.title,
+      category: draft.category,
+      authorName: null,
+      tiers: draft.tiers,
+      cards: draft.items,
+      rows: draft.rows,
+    },
+    now,
+    nextUid,
+  );

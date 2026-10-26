@@ -294,6 +294,8 @@ const de: Translation = {
     editTitle: "Liste bearbeiten",
     editSignIn: "Melde dich an, um deine veröffentlichten Listen zu bearbeiten.",
     openingList: "Liste wird geöffnet…",
+    picturesFailed:
+      "Die Bilder deiner Liste konnten nicht auf ihr Board übernommen werden. Nichts ist verloren. Versuch es noch einmal.",
     listGone: "Diese Liste ist nicht mehr veröffentlicht.",
     listFailed: "Die Liste ließ sich nicht öffnen. Versuch es noch einmal.",
     tryAgain: "Erneut versuchen",
@@ -609,6 +611,11 @@ const de: Translation = {
     tiers: "Stufen",
     done: "Fertig",
     tierRemoved: "Stufe {name} entfernt; ihre Karten sind im Pool",
+    editTier: "Stufe bearbeiten",
+    editTierOf: "Stufe {name} bearbeiten",
+    tierName: "Name",
+    tierCaption: "Untertitel",
+    save: "Speichern",
     settings: "Listeneinstellungen",
     display: "Anzeige",
     displayNote:

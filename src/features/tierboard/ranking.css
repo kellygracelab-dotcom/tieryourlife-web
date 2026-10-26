@@ -154,43 +154,33 @@
   opacity: 0.35;
 }
 
+/*
+ * The row a card would land in, as the phone draws it: dashed round in the
+ * tier's own colour, and its tint brought up from 12% to 24% (32% and 20% in
+ * the dark). A frame in the text's colour was a white box in the dark theme.
+ */
 .tier--target {
-  box-shadow: inset 0 0 0 3px var(--ink);
+  outline: 2px dashed var(--band);
+  outline-offset: -2px;
+  background: color-mix(in oklab, var(--band-base) var(--band-tint-hover), var(--paper));
 }
 
 /*
- * Where a dragged card lands among a row's cards: a bar in the gap before the
- * card it would push along, or after the last one. Logical sides, so the bar
- * sits on the correct side in Arabic too; drawn outside the flow, so the
- * cards do not move under the pointer while it is read.
+ * Where a card from another row or the pool would land: an empty place of a
+ * card's size, the row's own colour round it. A card of the row itself moves
+ * there, faded.
  */
-.tile-holder--insert-before,
-.tile-holder--insert-after {
-  position: relative;
+.tile--slot {
+  background: none;
+  outline: 2px dashed var(--band);
+  outline-offset: -2px;
 }
 
-.tile-holder--insert-before::before,
-.tile-holder--insert-after::after {
-  content: "";
-  position: absolute;
-  inset-block: -2px;
-  width: 4px;
-  border-radius: 2px;
-  background: var(--ink);
-  pointer-events: none;
-}
-
-.tile-holder--insert-before::before {
-  inset-inline-start: -7px;
-}
-
-.tile-holder--insert-after::after {
-  inset-inline-end: -7px;
-}
-
+/* The pool has no colour of its own: dashed in the line's. */
 .pool--target {
   border-radius: var(--radius-card);
-  box-shadow: inset 0 0 0 3px var(--ink);
+  outline: 2px dashed var(--line-strong);
+  outline-offset: -2px;
 }
 
 .ghost {
@@ -254,6 +244,84 @@
 .tier__place:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: -3px;
+}
+
+/*
+ * The owner holds a tier by its band, as on the phone: a press and a move
+ * with a mouse, a long press with a finger, and a double tap opens it. The
+ * band's text is not for selecting, and a long press is not the phone's menu.
+ */
+.tier__band--held {
+  position: relative;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.tier--lifted {
+  position: relative;
+  z-index: 3;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.tier--lifted .tier__band--held {
+  cursor: grabbing;
+}
+
+/* The others stand aside for the carried tier, and back. */
+.tier--shifting {
+  transition: transform 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier--shifting {
+    transition: none;
+  }
+}
+
+/* The way to the same editor for a keyboard, and for a mouse that does not know the double click. */
+.tier__edit {
+  position: absolute;
+  bottom: 4px;
+  inset-inline-end: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--on-band) 18%, transparent);
+  color: var(--on-band);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.tier__edit .ms {
+  font-size: 18px;
+}
+
+.tier__band--held:hover .tier__edit,
+.tier__edit:focus-visible {
+  opacity: 1;
+}
+
+.tier__edit:focus-visible {
+  outline: 2px solid var(--on-band);
+  outline-offset: 1px;
+}
+
+/* A finger has the double tap; the hidden button must not take a tap meant for a hold. */
+@media (hover: none) {
+  .tier__edit {
+    pointer-events: none;
+  }
+}
+
+.board__add-tier {
+  align-self: flex-start;
 }
 
 .pool__head {
@@ -579,9 +647,13 @@
     min-height: 44px;
   }
 
-  /* Room under the board for the tray; the footer waits until the board is read. */
+  /*
+   * Room under the board for the tray, as tall as the tray is (--tray-h, from
+   * the board) once the owner's tools open in it; the footer waits until the
+   * board is read.
+   */
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .shell__main {
-    padding-bottom: calc(168px + env(safe-area-inset-bottom));
+    padding-bottom: max(calc(168px + env(safe-area-inset-bottom)), calc(var(--tray-h, 0px) + 16px));
   }
 
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .foot {
@@ -589,11 +661,11 @@
   }
 
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .snackbar {
-    bottom: calc(160px + env(safe-area-inset-bottom));
+    bottom: max(calc(160px + env(safe-area-inset-bottom)), calc(var(--tray-h, 0px) + 8px));
   }
 
   html:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) {
-    scroll-padding-bottom: 168px;
+    scroll-padding-bottom: max(168px, calc(var(--tray-h, 0px) + 16px));
   }
 }
 
@@ -662,7 +734,7 @@
   }
 
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .shell__main {
-    padding-bottom: calc(180px + env(safe-area-inset-bottom));
+    padding-bottom: max(calc(180px + env(safe-area-inset-bottom)), calc(var(--tray-h, 0px) + 16px));
   }
 
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .foot {
@@ -670,11 +742,11 @@
   }
 
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .snackbar {
-    bottom: calc(172px + env(safe-area-inset-bottom));
+    bottom: max(calc(172px + env(safe-area-inset-bottom)), calc(var(--tray-h, 0px) + 8px));
   }
 
   html:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) {
-    scroll-padding-bottom: 180px;
+    scroll-padding-bottom: max(180px, calc(var(--tray-h, 0px) + 16px));
   }
 }
 
@@ -718,11 +790,13 @@
   }
 
   .pool--target {
-    box-shadow: none;
+    outline: none;
   }
 
   .pool--target .pool__items {
-    box-shadow: inset 0 0 0 3px var(--ink);
+    border-radius: var(--radius-card);
+    outline: 2px dashed var(--line-strong);
+    outline-offset: -2px;
   }
 
   .pool__search {

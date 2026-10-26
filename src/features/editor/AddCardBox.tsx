@@ -13,7 +13,32 @@ import { sizedFor } from "../../lib/pictureSize";
 /** More than this and the list under the box stops being a list and becomes a page. */
 const RESULTS_SHOWN = 8;
 
+/** Pictures going up at once: enough to keep the line busy, few enough not to starve each other. */
+const UPLOADS_AT_ONCE = 4;
+
 export type Upload = (file: File) => Promise<UploadedPicture>;
+
+/** `work` on every item, at most `limit` running at once; each item comes back with its promise. */
+function limited<T, R>(items: readonly T[], limit: number, work: (item: T) => Promise<R>) {
+  let free = limit;
+  const waiting: (() => void)[] = [];
+  const slot = () =>
+    free > 0 ? (free--, Promise.resolve()) : new Promise<void>((go) => waiting.push(go));
+  const release = () => {
+    const next = waiting.shift();
+    if (next === undefined) free++;
+    else next();
+  };
+  const run = async (item: T) => {
+    await slot();
+    try {
+      return await work(item);
+    } finally {
+      release();
+    }
+  };
+  return items.map((item) => ({ item, result: run(item) }));
+}
 
 interface AddCardBoxProps {
   items: readonly EditorItem[];
@@ -151,29 +176,37 @@ export function AddCardBox({ items, category = null, dispatch, lookup, upload }:
   const name = typed.trim();
 
   // One card per file, in the order chosen; a file that fails names itself
-  // and the rest still go in.
+  // and the rest still go in. The first goes up alone, since it may ask a
+  // guest to sign in; the rest then go up together, and each card comes in as
+  // soon as it and the ones before it are up.
   const onFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = [...(event.target.files ?? [])];
+    const [first, ...rest] = [...(event.target.files ?? [])];
     event.target.value = "";
-    if (files.length === 0) return;
+    if (first === undefined) return;
     setPictureNote(null);
-    setUploading(files.length);
-    for (const file of files) {
+    setUploading(rest.length + 1);
+    /** Whether to go on: a guest who would not sign in has said no to all of them. */
+    const take = async (file: File, picture: Promise<UploadedPicture>) => {
       try {
-        const picture = await upload(file);
-        dispatch({
-          type: "addItem",
-          title: "",
-          imageUrl: picture.previewUrl,
-          pictureId: picture.pictureId,
-        });
+        const { previewUrl, pictureId } = await picture;
+        dispatch({ type: "addItem", title: "", imageUrl: previewUrl, pictureId });
+        return true;
       } catch (failure) {
         setPictureNote(pictureFailureText(file.name, failure));
-        if (failure instanceof PictureRefused && failure.reason === "signIn") break;
+        return !(failure instanceof PictureRefused && failure.reason === "signIn");
       } finally {
         setUploading((n) => n - 1);
       }
+    };
+    if (await take(first, upload(first))) {
+      const pending = limited(rest, UPLOADS_AT_ONCE, upload);
+      // Those left behind by a stop below still settle; nobody needs to hear how.
+      for (const { result } of pending) result.catch(() => undefined);
+      for (const { item, result } of pending) {
+        if (!(await take(item, result))) break;
+      }
     }
+    setUploading(0);
   };
 
   const addName = () => {

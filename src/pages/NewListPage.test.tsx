@@ -1,678 +1,317 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CatalogueItem } from "../api/types";
+import { createMemoryRouter, RouterProvider, useLocation } from "react-router";
+import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
+import type { Ranking } from "../api/rank";
 import type { PublishedList } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
-import type { Upload } from "../features/editor/CardsEditor";
-import type { CopyBack } from "../features/editor/republish";
-import type { Lookup } from "../features/editor/useCatalogue";
-import { PictureRefused } from "../lib/pictures";
-import { contrastRatio, ON_BAND } from "../features/editor/colour";
-import { memoryStore } from "../lib/storage";
+import { itemsIn, liveItems, newBoard, poolTier, rankedTiers } from "../features/boards/model";
+import type { CopyBack } from "../features/boards/ownList";
+import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import {
-  NewListPage,
-  type LoadKept,
-  type LoadList,
-  type Publish,
-  type Republish,
-} from "./NewListPage";
+  DEFAULT_TIERS,
+  editDraftKey,
+  forkDraftKey,
+  NEW_DRAFT_KEY,
+  saveEditorDraft,
+  type Draft,
+} from "../features/editor/model";
+import { memoryStore, type KeyValueStore } from "../lib/storage";
+import { NewListPage } from "./NewListPage";
 
-vi.mock("../lib/api", () => ({
-  followState: vi.fn(() => new Promise(() => undefined)),
-  followAuthor: vi.fn(),
-  unfollowAuthor: vi.fn(),
-  suggestedAuthors: vi.fn(() => new Promise(() => undefined)),
-  loadReports: vi.fn(() => new Promise(() => undefined)),
-  report: vi.fn(),
-  publish: vi.fn(),
-  republish: vi.fn(),
-  loadList: vi.fn(),
-  findInCatalogue: vi.fn(),
-}));
-vi.mock("../lib/pictures", async (original) => ({
-  ...(await original<typeof import("../lib/pictures")>()),
-  uploadPicture: vi.fn(),
-  discardPictures: vi.fn(),
-}));
+vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
 
-const member: Session["account"] = {
+const me: Session["account"] = {
   kind: "signedIn",
   uid: "u1",
   displayName: "Danylo",
   photoUrl: null,
 };
 
-const found: CatalogueItem[] = [
-  { id: "tmdb:1", title: "Ex Machina", subtitle: "2014", imageUrl: "https://img/ex.jpg" },
-  { id: "tmdb:2", title: "Ex Drummer", subtitle: "2007", imageUrl: null },
-];
+/** The feed's own copy of a picture of list `listId`. */
+const feedCopy = (listId: string, pictureId: string) =>
+  `https://firebasestorage.googleapis.com/v0/b/bucket/o/${encodeURIComponent(`published/${listId}/${pictureId}`)}?alt=media`;
+const POSTER = "https://image.tmdb.org/t/p/w500/witch.jpg";
 
-const lookup = vi.fn<Lookup>(async () => found);
-const publish = vi.fn<Publish>();
-const upload = vi.fn<Upload>();
-const discard = vi.fn(async () => {});
-const load = vi.fn<LoadList>();
-const loadKept = vi.fn<LoadKept>();
-const republish = vi.fn<Republish>();
-const copyBack = vi.fn<CopyBack>(async (url) => ({
-  pictureId: `copy-${url.split("%2F").at(-1)?.split("?")[0]}`,
-  previewUrl: url,
-}));
-
-const published = (listId: string, pictureId: string) =>
-  `https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2F${listId}%2F${pictureId}?alt=media`;
-
-const theirs = (): PublishedList => ({
-  id: "l1",
-  title: "Ghibli, ranked",
+const list: PublishedList = {
+  id: "abc",
+  title: "Every A24 film, ranked",
   authorUid: "u1",
-  authorName: "Danylo",
+  authorName: "danylo",
   authorPhotoUrl: null,
-  category: "anime",
-  itemCount: 2,
-  coverImageUrl: published("l1", "cover1"),
+  category: "film_tv",
+  itemCount: 3,
+  coverImageUrl: null,
   previewImages: [],
   tierColors: [],
   updatedAt: 0,
-  takeCount: 3,
+  takeCount: 0,
   tiers: [
-    { label: "Top", caption: "Best", colorLight: "#B03A32", colorDark: "#F1948C" },
-    { label: "Rest", caption: null, colorLight: "#3C6E99", colorDark: "#8FC3E8" },
+    { label: "S", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" },
+    { label: "A", caption: null, colorLight: "#c06a25", colorDark: "#e9a867" },
   ],
   items: [
-    { title: "Totoro", imageUrl: "https://image.tmdb.org/t/p/w500/t.jpg" },
-    { title: "", imageUrl: published("l1", "pic1") },
+    { title: "Ex Machina", imageUrl: feedCopy("abc", "p1"), tierIndex: 0 },
+    { title: "The Witch", imageUrl: POSTER, tierIndex: 1 },
+    { title: "Climax", imageUrl: null, tierIndex: null },
   ],
+};
+
+const draft = (title: string, items: string[], rows: number[][]): Draft => ({
+  title,
+  category: "film_tv",
+  tiers: DEFAULT_TIERS.map((tier, index) => ({ ...tier, key: `t${index}` })),
+  items: items.map((name, index) => ({
+    key: `p${index}`,
+    title: name,
+    imageUrl: null,
+    pictureId: null,
+  })),
+  rows,
+  serial: DEFAULT_TIERS.length + items.length,
 });
 
-const open = (
-  account: Session["account"] = member,
+/** Where the page went, so a test can see the board it opened. */
+function Arrived() {
+  const location = useLocation();
+  return <p data-testid="arrived">{`${location.pathname}${location.search}`}</p>;
+}
+
+interface Setup {
+  path: string;
+  account?: Session["account"];
+  repository?: BoardsRepository;
+  store?: KeyValueStore;
+  load?: (id: string) => Promise<PublishedList>;
+  loadKept?: (code: string) => Promise<Ranking>;
+  copyBack?: CopyBack;
+  signIn?: Session["signIn"];
+}
+
+const open = ({
+  path,
+  account = me,
+  repository = boardsRepository(memoryStore()),
   store = memoryStore(),
-  signIn: Session["signIn"] = async () => ({ kind: "cancelled" }),
-  path = "/new",
-) => {
-  const routes: RouteObject[] = [
-    {
-      path: "/new",
-      element: (
-        <NewListPage
-          store={store}
-          lookup={lookup}
-          publish={publish}
-          republish={republish}
-          load={load}
-          loadKept={loadKept}
-          upload={upload}
-          copyBack={copyBack}
-          discard={discard}
-        />
-      ),
-    },
-    { path: "/l/:id", element: <h1>Published list page</h1> },
-  ];
-  const router = createMemoryRouter(routes, { initialEntries: [path] });
-  const { unmount } = render(
+  load = () => Promise.resolve(list),
+  loadKept = () => Promise.reject(new Error("no rankings here")),
+  copyBack = () => Promise.reject(new Error("no copies here")),
+  signIn = () => Promise.resolve({ kind: "cancelled" }),
+}: Setup) => {
+  const router = createMemoryRouter(
+    [
+      {
+        path: "/new",
+        element: (
+          <NewListPage
+            repository={repository}
+            store={store}
+            load={load}
+            loadKept={loadKept}
+            copyBack={copyBack}
+            now={() => 5000}
+          />
+        ),
+      },
+      { path: "/b/:uid", element: <Arrived /> },
+      { path: "/l/:id", element: <Arrived /> },
+    ],
+    { initialEntries: [path] },
+  );
+  render(
     <SessionContext.Provider
-      value={{ account, signIn, signOut: async () => {}, refresh: () => undefined }}
+      value={{ account, signIn, signOut: () => Promise.resolve(), refresh: () => undefined }}
     >
       <RouterProvider router={router} />
     </SessionContext.Provider>,
   );
-  return { router, store, unmount };
+  return { repository, store };
 };
 
-const fillIn = async () => {
-  await userEvent.type(screen.getByLabelText("Title"), "T");
-  await userEvent.click(screen.getByRole("button", { name: "Anime" }));
-  await userEvent.type(screen.getByLabelText("Add a card"), "One{Enter}");
+const arrivedAt = async () => (await screen.findByTestId("arrived")).textContent ?? "";
+const boardAt = (repository: BoardsRepository, path: string) => {
+  const uid = decodeURIComponent(/^\/b\/([^?]+)/.exec(path)?.[1] ?? "");
+  return repository.get(uid);
+};
+const titlesIn = (board: ReturnType<BoardsRepository["get"]>) => {
+  const kept = board!;
+  return [...rankedTiers(kept), poolTier(kept)!].map((tier) =>
+    itemsIn(kept, tier.uid).map((item) => item.title),
+  );
 };
 
-const suggestions = () => within(screen.getByRole("group", { name: "Suggestions" }));
+describe("NewListPage: making a list is making a board", () => {
+  it("opens a new board, named after a search that brought a name along", async () => {
+    open({ path: "/new?title=%20Cheeses%20" });
+    expect(await arrivedAt()).toMatch(/^\/b\/[^?]+\?new=5000&title=Cheeses$/);
+  });
 
-const publishButton = () => screen.getByRole("button", { name: /Publish/ });
+  it("opens a new board with nothing brought along", async () => {
+    open({ path: "/new" });
+    expect(await arrivedAt()).toMatch(/^\/b\/[^?]+\?new=5000$/);
+  });
 
-const picture = (name: string) => new File(["x"], name, { type: "image/png" });
+  it("puts a list begun in the old editor on a board, and lets the draft go", async () => {
+    const store = memoryStore();
+    saveEditorDraft(store, draft("Films", ["Ex Machina", "The Witch"], [[1], [], [], [], []]));
+    const { repository } = open({ path: "/new", store });
+    const board = boardAt(repository, await arrivedAt());
+    expect(board?.title).toBe("Films");
+    expect(titlesIn(board)).toEqual([["The Witch"], [], [], [], [], ["Ex Machina"]]);
+    expect(store.read(NEW_DRAFT_KEY)).toBeNull();
+  });
 
-beforeEach(() => {
-  lookup.mockClear();
-  publish.mockReset();
-  upload.mockReset();
-  discard.mockClear();
-  load.mockReset();
-  loadKept.mockReset();
-  republish.mockReset();
-  copyBack.mockClear();
+  it("leaves an empty draft behind and opens a new board instead", async () => {
+    const store = memoryStore();
+    saveEditorDraft(store, draft("  ", [], [[], [], [], [], []]));
+    open({ path: "/new", store });
+    expect(await arrivedAt()).toMatch(/\?new=5000$/);
+  });
 });
 
-describe("NewListPage", () => {
-  it("lets a guest draft the whole list and signs them in only at Publish", async () => {
-    publish.mockResolvedValue({ id: "newlist" });
-    const signIn = vi.fn(async () => ({ kind: "signedIn" as const, switched: false }));
-    const { router } = open({ kind: "guest", uid: "g1" }, memoryStore(), signIn);
-    expect(screen.getByText(/Sign in when you publish/)).toBeInTheDocument();
-    await fillIn();
-    await userEvent.click(publishButton());
-    expect(signIn).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText("Published list page")).toBeInTheDocument();
-    expect(publish).toHaveBeenCalledTimes(1);
-    expect(router.state.location.pathname).toBe("/l/newlist");
-  });
-
-  it("keeps the draft when a guest changes their mind about signing in, and says so when it fails", async () => {
-    const signIn = vi
-      .fn<Session["signIn"]>()
-      .mockResolvedValueOnce({ kind: "cancelled" })
-      .mockResolvedValueOnce({ kind: "failed", code: "auth/network-request-failed" });
-    open({ kind: "guest", uid: "g1" }, memoryStore(), signIn);
-    await fillIn();
-    await userEvent.click(publishButton());
-    expect(publish).not.toHaveBeenCalled();
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(publishButton()).toBeEnabled();
-
-    await userEvent.click(publishButton());
-    expect(await screen.findByRole("alert")).toHaveTextContent("Publishing needs an account");
-    expect(screen.getByLabelText("Title")).toHaveValue("T");
-  });
-
-  it("starts with the app's five tiers, no cards, and Publish held back", () => {
-    open();
-    expect(publishButton()).toBeEnabled();
-    expect(publishButton()).toHaveAccessibleDescription("Give the list a title.");
-    expect(screen.getByText("Give the list a title.")).toBeInTheDocument();
-    expect(
-      within(screen.getByRole("list", { name: "Tiers" })).getAllByRole("listitem"),
-    ).toHaveLength(5);
-    expect(screen.getByLabelText("Label of tier 1")).toHaveValue("S");
-    // Letters alone, as a new board in the app: the caption is the person's to write.
-    expect(screen.getByLabelText("Caption of S")).toHaveValue("");
-    expect(screen.getByText("0 added")).toBeInTheDocument();
-  });
-
-  it("points at what is missing when Publish is pressed too soon, and the next change calms it", async () => {
-    open();
-    const line = () => document.querySelector(".editor__status")!;
-    expect(line()).toHaveClass("editor__status--todo");
-
-    await userEvent.click(publishButton());
-    expect(publish).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Title")).toHaveFocus();
-    expect(line()).toHaveClass("editor__status--nudged");
-    expect(line()).toHaveTextContent("Give the list a title.");
-
-    await userEvent.keyboard("T");
-    expect(line()).toHaveClass("editor__status--todo");
-    expect(line()).toHaveTextContent("Pick a category.");
-
-    await userEvent.click(publishButton());
-    expect(screen.getByRole("button", { name: "Anime" })).toHaveFocus();
-    await userEvent.click(screen.getByRole("button", { name: "Anime" }));
-    await userEvent.click(publishButton());
-    expect(screen.getByLabelText("Add a card")).toHaveFocus();
-    expect(line()).toHaveClass("editor__status--nudged");
-    expect(line()).toHaveTextContent("Add at least one card.");
-
-    await userEvent.type(screen.getByLabelText("Add a card"), "One{Enter}");
-    expect(line()).toHaveClass("editor__status--ready");
-    expect(line()).toHaveTextContent("Ready to publish.");
-    expect(publishButton()).toHaveAccessibleDescription("Ready to publish.");
-  });
-
-  it("adds cards from the catalogue and by name, removes one, and publishes", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    publish.mockResolvedValue({ id: "newlist" });
-    const { router, store } = open();
-
-    await userEvent.type(screen.getByLabelText("Title"), "Every A24 film, ranked");
-    await userEvent.click(screen.getByRole("button", { name: "Film & TV" }));
-    expect(screen.getByText("Add at least one card.")).toBeInTheDocument();
-
-    const box = screen.getByLabelText("Add a card");
-    await userEvent.type(box, "ex");
-    expect(await suggestions().findByRole("button", { name: /Ex Machina/ })).toBeInTheDocument();
-    expect(lookup).toHaveBeenCalledWith("ex");
-    // What the catalogue found says whose it is, right where it is shown.
-    expect(suggestions().getByText("From TMDB and Wikidata")).toBeInTheDocument();
-    await userEvent.click(suggestions().getByRole("button", { name: /Ex Machina/ }));
-    expect(box).toHaveValue("");
-    expect(screen.getByText("1 added")).toBeInTheDocument();
-
-    await userEvent.type(box, "The Witch{Enter}");
-    expect(screen.getByText("2 added")).toBeInTheDocument();
-    const cards = within(screen.getByRole("list", { name: "Cards" }));
-    expect(cards.getByRole("img", { name: "Ex Machina" })).toHaveAttribute(
-      "src",
-      "https://img/ex.jpg",
-    );
-    expect(cards.getByText("The Witch")).toBeInTheDocument();
-
-    await userEvent.type(box, "ex");
-    expect(await suggestions().findByRole("button", { name: /Ex Machina/ })).toBeDisabled();
-    await userEvent.clear(box);
-
-    await userEvent.click(screen.getByRole("button", { name: "Remove The Witch" }));
-    expect(screen.getByText("1 added")).toBeInTheDocument();
-    expect(screen.getByText("Ready to publish.")).toBeInTheDocument();
-
-    await userEvent.click(publishButton());
-    expect(publish).toHaveBeenCalledWith({
-      title: "Every A24 film, ranked",
+describe("NewListPage: a kept ranking as a board", () => {
+  const ranking: Ranking = {
+    code: "aaaaaaaa",
+    listId: "abc",
+    listAvailable: true,
+    createdAt: 0,
+    snapshot: {
+      title: list.title,
+      authorName: "someone",
+      authorPhotoUrl: null,
       category: "film_tv",
-      coverImageUrl: null,
-      coverPictureId: null,
-      tiers: expect.arrayContaining([expect.objectContaining({ label: "S", caption: null })]),
-      items: [
-        { title: "Ex Machina", imageUrl: "https://img/ex.jpg", pictureId: null, tierIndex: null },
-      ],
+      tiers: list.tiers,
+      items: list.items,
+    },
+    rows: [[2], [0]],
+  };
+
+  it("arranges the cards as the ranking had them, without the author's own pictures", async () => {
+    const { repository } = open({
+      path: "/new?ranking=aaaaaaaa",
+      loadKept: () => Promise.resolve(ranking),
     });
-    expect(await screen.findByText("Published list page")).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/l/newlist");
-    expect(store.read("tyl:new")).toBeNull();
+    const board = boardAt(repository, await arrivedAt());
+    expect(titlesIn(board)).toEqual([["Climax"], ["Ex Machina"], ["The Witch"]]);
+    const pictures = Object.fromEntries(
+      liveItems(board!).map((item) => [item.title, item.imageUrl]),
+    );
+    // The author's upload goes when they do; the catalogue's poster stays.
+    expect(pictures).toEqual({ "Ex Machina": null, "The Witch": POSTER, Climax: null });
   });
 
-  it("takes many names pasted at once, each with its picture when the catalogue has one", async () => {
-    open();
-    await userEvent.click(screen.getByRole("button", { name: "Paste a list" }));
-    const box = screen.getByLabelText("Names, one to a line");
-    const add = () => screen.getByRole("button", { name: /^Add \d+ cards?$/ });
-    expect(screen.getByRole("button", { name: "Add 0 cards" })).toBeDisabled();
-
-    await userEvent.type(
-      box,
-      "1. Ex Machina (2014){Enter}2. Ex Drummer{Enter}- Nobody knows this one",
+  it("takes what the old editor kept for that ranking instead, and lets it go", async () => {
+    const store = memoryStore();
+    saveEditorDraft(
+      store,
+      draft("Mine now", ["Climax"], [[0], [], [], [], []]),
+      forkDraftKey("aaaaaaaa"),
     );
-    expect(add()).toHaveTextContent("Add 3 cards");
-    await userEvent.click(add());
-
-    expect(await screen.findByText("3 added")).toBeInTheDocument();
-    const tiles = within(screen.getByRole("list", { name: "Cards" })).getAllByRole("listitem");
-    expect(tiles.map((tile) => tile.getAttribute("title"))).toEqual([
-      "Ex Machina",
-      "Ex Drummer",
-      "Nobody knows this one",
-    ]);
-    // The catalogue's picture where it has one of exactly that name and year.
-    expect(within(tiles[0]!).getByRole("img", { name: "Ex Machina" })).toHaveAttribute(
-      "src",
-      "https://img/ex.jpg",
-    );
-    expect(within(tiles[2]!).queryByRole("img")).toBeNull();
-    expect(lookup).toHaveBeenCalledWith("Ex Machina");
-    // The box closes when it is done; the button is there for the next list.
-    expect(screen.getByRole("button", { name: "Paste a list" })).toBeInTheDocument();
+    const { repository } = open({
+      path: "/new?ranking=aaaaaaaa",
+      store,
+      loadKept: () => Promise.resolve(ranking),
+    });
+    expect(boardAt(repository, await arrivedAt())?.title).toBe("Mine now");
+    expect(store.read(forkDraftKey("aaaaaaaa"))).toBeNull();
   });
 
-  it("takes a pasted name's picture from the catalogue that knows what the list is about", async () => {
-    const both: CatalogueItem[] = [
-      { id: "tmdb:9", title: "Pizza", subtitle: "2012", imageUrl: "https://img/film.jpg" },
-      { id: "wikidata:Q177", title: "pizza", subtitle: "dish", imageUrl: "https://img/dish.jpg" },
-    ];
-    // Once for each time the name is pasted.
-    lookup.mockResolvedValueOnce(both).mockResolvedValueOnce(both);
-    open();
-    const paste = async (names: string) => {
-      await userEvent.click(screen.getByRole("button", { name: "Paste a list" }));
-      await userEvent.type(screen.getByLabelText("Names, one to a line"), names);
-      await userEvent.click(screen.getByRole("button", { name: /^Add \d+ cards?$/ }));
+  it("says so when the ranking cannot be opened", async () => {
+    open({
+      path: "/new?ranking=aaaaaaaa",
+      loadKept: () => Promise.reject(new ApiFailure({ kind: "notFound" })),
+    });
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
+      "This ranking isn’t available",
+    );
+  });
+});
+
+describe("NewListPage: one's own published list is changed on its board", () => {
+  it("opens the board that published it, without asking for the list", async () => {
+    const repository = boardsRepository(memoryStore());
+    const linked = {
+      ...newBoard("films", "Films", 1, () => `x${Math.random()}`),
+      publishedId: "abc",
     };
-    const pictures = () =>
-      within(screen.getByRole("list", { name: "Cards" }))
-        .getAllByRole("img")
-        .map((image) => image.getAttribute("src"));
-
-    await userEvent.click(screen.getByRole("button", { name: "Food" }));
-    await paste("Pizza");
-    expect(await screen.findByText("1 added")).toBeInTheDocument();
-    expect(pictures()).toEqual(["https://img/dish.jpg"]);
-
-    await userEvent.click(screen.getByRole("button", { name: "Film & TV" }));
-    await paste("Pizza");
-    expect(await screen.findByText("2 added")).toBeInTheDocument();
-    expect(pictures()).toEqual(["https://img/dish.jpg", "https://img/film.jpg"]);
-  });
-
-  it("invites the whole catalogue whatever the list is about", async () => {
-    open();
-    const box = screen.getByLabelText("Add a card");
-    expect(box).toHaveAttribute("placeholder", "Search the catalogue, or type a name");
-    await userEvent.click(screen.getByRole("button", { name: "Film & TV" }));
-    expect(box).toHaveAttribute("placeholder", "Search the catalogue, or type a name");
-  });
-
-  it("edits the tiers: rename, caption, colour, order, add and remove", async () => {
-    open();
-    await fillIn();
-    const label = screen.getByLabelText("Label of tier 1");
-    await userEvent.clear(label);
-    await userEvent.type(label, "Top");
-    expect(screen.getByLabelText("Caption of Top")).toHaveValue("");
-
-    await userEvent.click(screen.getByRole("button", { name: "Colour of Top" }));
-    const palette = screen.getByRole("group", { name: "Colours" });
-    await userEvent.click(within(palette).getByRole("button", { name: "#6B4E9E" }));
-    expect(screen.queryByRole("group", { name: "Colours" })).toBeNull();
-
-    await userEvent.click(screen.getByRole("button", { name: "Move Top down" }));
-    expect(screen.getByLabelText("Label of tier 2")).toHaveValue("Top");
-    expect(screen.getByLabelText("Label of tier 1")).toHaveValue("A");
-
-    await userEvent.click(screen.getByRole("button", { name: "Add tier" }));
-    // S is free again since the first tier became Top.
-    expect(screen.getByLabelText("Label of tier 6")).toHaveValue("S");
-    await userEvent.click(screen.getByRole("button", { name: "Remove S" }));
-    expect(screen.queryByLabelText("Label of tier 6")).toBeNull();
-
-    await userEvent.clear(screen.getByLabelText("Label of tier 1"));
-    expect(screen.getByText("Every tier needs a label.")).toBeInTheDocument();
-  });
-
-  it("takes a colour of one's own by hex, light and dark apart, with the contrast beside it", async () => {
-    open();
-    await fillIn();
-    await userEvent.click(screen.getByRole("button", { name: "Colour of S" }));
-    const palette = screen.getByRole("group", { name: "Colours" });
-    await userEvent.click(within(palette).getByRole("button", { name: "Custom" }));
-    const light = within(palette).getByLabelText("Light hex");
-    await userEvent.clear(light);
-    await userEvent.type(light, "336699{Enter}");
-    expect(within(palette).getByLabelText("Light colour")).toHaveValue("#336699");
-    const row = screen.getByLabelText("Label of tier 1").closest("li")!;
-    expect(row.getAttribute("style")).toContain("--band-light: #336699");
-    expect(
-      within(palette).getByText(`Contrast ${contrastRatio(ON_BAND, "#336699").toFixed(1)}:1`),
-    ).toBeInTheDocument();
-    expect(within(palette).getByRole("button", { name: "Custom" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-
-    // Six digits or nothing: anything else snaps back. The dark colour is its own.
-    await userEvent.clear(light);
-    await userEvent.type(light, "nope");
-    await userEvent.tab();
-    // The same field, still there after the commit: nothing was remounted under the cursor.
-    expect(light).toHaveValue("#336699");
-    expect(light.isConnected).toBe(true);
-    const dark = within(palette).getByLabelText("Dark hex");
-    await userEvent.clear(dark);
-    await userEvent.type(dark, "#99ccff");
-    await userEvent.tab();
-    expect(row.getAttribute("style")).toContain("--band-dark: #99CCFF");
-    expect(row.getAttribute("style")).toContain("--band-light: #336699");
-
-    // A preset puts the panel away.
-    await userEvent.click(within(palette).getByRole("button", { name: "#6B4E9E" }));
-    expect(screen.queryByRole("group", { name: "Colours" })).toBeNull();
-  });
-
-  it("keeps the draft between visits and forgets it on Start over", async () => {
-    const store = memoryStore();
-    const first = open(member, store);
-    await userEvent.type(screen.getByLabelText("Title"), "Kept");
-    expect(store.read("tyl:new")).toContain("Kept");
-    first.unmount();
-
-    open(member, store);
-    expect(screen.getByLabelText("Title")).toHaveValue("Kept");
-    await userEvent.click(screen.getByLabelText("More"));
-    await userEvent.click(screen.getByRole("button", { name: "Start over" }));
-    expect(screen.getByLabelText("Title")).toHaveValue("");
-    expect(store.read("tyl:new")).toContain('"title":""');
-  });
-
-  it("takes a title from the address into an empty editor, but never over a draft", async () => {
-    const suggested = open(member, memoryStore(), undefined, "/new?title=Every%20A24%20film");
-    expect(screen.getByLabelText("Title")).toHaveValue("Every A24 film");
-    suggested.unmount();
-
-    const store = memoryStore();
-    const first = open(member, store);
-    await userEvent.type(screen.getByLabelText("Title"), "Mine");
-    first.unmount();
-    open(member, store, undefined, "/new?title=Theirs");
-    expect(screen.getByLabelText("Title")).toHaveValue("Mine");
-  });
-
-  it("shows the preview with every card unranked, and comes back", async () => {
-    open();
-    await userEvent.type(screen.getByLabelText("Add a card"), "Anora{Enter}");
-    await userEvent.click(screen.getByRole("button", { name: "Preview" }));
-    expect(screen.getByRole("heading", { name: "Untitled list" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Preview" })).toHaveTextContent("Anora");
-    expect(screen.getByRole("heading", { level: 2, name: /unranked/ })).toHaveTextContent(
-      "1 unranked",
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Back to editing" }));
-    expect(screen.getByLabelText("Title")).toBeInTheDocument();
-  });
-
-  it("uploads own pictures as cards, publishes them by id and discards the originals", async () => {
-    publish.mockResolvedValue({ id: "newlist" });
-    upload
-      .mockResolvedValueOnce({ pictureId: "pic-1", previewUrl: "https://dl/pic-1" })
-      .mockResolvedValueOnce({ pictureId: "pic-2", previewUrl: "https://dl/pic-2" });
-    open();
-    await fillIn();
-    await userEvent.upload(screen.getByLabelText("Upload images"), [
-      picture("a.png"),
-      picture("b.png"),
-    ]);
-    expect(upload).toHaveBeenCalledTimes(2);
-    expect(screen.getByText("3 added")).toBeInTheDocument();
-    const grid = screen.getByRole("list", { name: "Cards" });
-    expect(
-      within(grid)
-        .getAllByRole("img")
-        .map((img) => img.getAttribute("src")),
-    ).toEqual(["https://dl/pic-1", "https://dl/pic-2"]);
-
-    await userEvent.click(publishButton());
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({
-        items: [
-          { title: "One", imageUrl: null, pictureId: null, tierIndex: null },
-          { title: "", imageUrl: null, pictureId: "pic-1", tierIndex: null },
-          { title: "", imageUrl: null, pictureId: "pic-2", tierIndex: null },
-        ],
-      }),
-    );
-    expect(await screen.findByText("Published list page")).toBeInTheDocument();
-    expect(discard).toHaveBeenCalledWith(["pic-1", "pic-2"]);
-  });
-
-  it("names the picture that was refused and keeps the rest", async () => {
-    upload
-      .mockRejectedValueOnce(new PictureRefused("tooBig"))
-      .mockResolvedValueOnce({ pictureId: "pic-2", previewUrl: "https://dl/pic-2" });
-    open();
-    await userEvent.upload(screen.getByLabelText("Upload images"), [
-      picture("huge.png"),
-      picture("fine.png"),
-    ]);
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "huge.png is too big even after shrinking.",
-    );
-    expect(screen.getByText("1 added")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Upload images" })).toBeEnabled();
-  });
-
-  it("signs a guest in before the first picture, and stops when they change their mind", async () => {
-    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
-    open({ kind: "guest", uid: "g1" }, memoryStore(), signIn);
-    await userEvent.upload(screen.getByLabelText("Upload images"), [
-      picture("a.png"),
-      picture("b.png"),
-    ]);
-    expect(signIn).toHaveBeenCalledTimes(1);
-    expect(upload).not.toHaveBeenCalled();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Sign in to add your own pictures");
-    expect(screen.getByText(/No cards yet/)).toBeInTheDocument();
-  });
-
-  it("lets go of the originals on Start over", async () => {
-    upload.mockResolvedValueOnce({ pictureId: "pic-1", previewUrl: "https://dl/pic-1" });
-    open();
-    await userEvent.upload(screen.getByLabelText("Upload images"), picture("a.png"));
-    expect(await screen.findByText("1 added")).toBeInTheDocument();
-    await userEvent.click(screen.getByLabelText("More"));
-    await userEvent.click(screen.getByRole("button", { name: "Start over" }));
-    expect(discard).toHaveBeenCalledWith(["pic-1"]);
-  });
-
-  it("opens a kept ranking as a new list of one's own, arranged as it was ranked", async () => {
-    loadKept.mockResolvedValue({
-      code: "abcdefgh",
-      listId: "l9",
-      listAvailable: true,
-      createdAt: 0,
-      yours: true,
-      rows: [[1], [0]],
-      snapshot: {
-        title: "Ghibli, ranked",
-        authorName: "somebody",
-        authorPhotoUrl: null,
-        category: "anime",
-        tiers: [
-          { label: "Top", caption: "Best", colorLight: "#B03A32", colorDark: "#F1948C" },
-          { label: "Rest", caption: null, colorLight: "#3C6E99", colorDark: "#8FC3E8" },
-        ],
-        items: [
-          { title: "Totoro", imageUrl: "https://image.tmdb.org/t/p/w500/t.jpg", tierIndex: 0 },
-          { title: "Home video", imageUrl: published("l9", "pic1"), tierIndex: null },
-        ],
-      },
-    });
-    publish.mockResolvedValue({ id: "new1" });
-    const { router, store } = open(member, memoryStore(), undefined, "/new?ranking=abcdefgh");
-    expect(await screen.findByLabelText("Title")).toHaveValue("Ghibli, ranked");
-    expect(loadKept).toHaveBeenCalledWith("abcdefgh");
-    // A new list, not an edit of somebody's: it is published under a link of its own.
-    expect(screen.getByRole("heading", { level: 1, name: "Make a list" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Anime" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("2 added")).toBeInTheDocument();
-
-    await userEvent.click(publishButton());
-    expect(republish).not.toHaveBeenCalled();
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: "Ghibli, ranked",
-        category: "anime",
-        items: [
-          // The ranking's order: what was placed goes tier by tier, as it was ranked.
-          { title: "Home video", imageUrl: null, pictureId: null, tierIndex: 0 },
-          {
-            title: "Totoro",
-            imageUrl: "https://image.tmdb.org/t/p/w500/t.jpg",
-            pictureId: null,
-            tierIndex: 1,
-          },
-        ],
-      }),
-    );
-    expect(await screen.findByText("Published list page")).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/l/new1");
-    expect(store.read("tyl:fork:abcdefgh")).toBeNull();
-  });
-
-  it("opens a published list of the account for editing and publishes the changes in place", async () => {
-    load.mockResolvedValue(theirs());
-    republish.mockResolvedValue({ id: "l1" });
-    const { router, store } = open(member, memoryStore(), undefined, "/new?list=l1");
-    expect(await screen.findByLabelText("Title")).toHaveValue("Ghibli, ranked");
-    expect(screen.getByRole("heading", { level: 1, name: "Edit list" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Anime" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("2 added")).toBeInTheDocument();
-    expect(screen.getByLabelText("Label of tier 1")).toHaveValue("Top");
-    expect(screen.queryByText(/Sign in when you publish/)).toBeNull();
-
-    await userEvent.type(screen.getByLabelText("Title"), " and more");
-    await userEvent.click(screen.getByRole("button", { name: "Publish changes" }));
-    expect(republish).toHaveBeenCalledWith("l1", {
-      title: "Ghibli, ranked and more",
-      category: "anime",
-      coverImageUrl: null,
-      coverPictureId: "copy-cover1",
-      tiers: [
-        { label: "Top", caption: "Best", colorLight: "#B03A32", colorDark: "#F1948C" },
-        { label: "Rest", caption: null, colorLight: "#3C6E99", colorDark: "#8FC3E8" },
-      ],
-      items: [
-        {
-          title: "Totoro",
-          imageUrl: "https://image.tmdb.org/t/p/w500/t.jpg",
-          pictureId: null,
-          tierIndex: null,
-        },
-        { title: "", imageUrl: null, pictureId: "copy-pic1", tierIndex: null },
-      ],
-    });
-    expect(await screen.findByText("Published list page")).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/l/l1");
-    expect(discard).toHaveBeenCalledWith(["copy-pic1", "copy-cover1"]);
-    expect(store.read("tyl:edit:l1")).toBeNull();
-    expect(store.read("tyl:new")).toBeNull();
-  });
-
-  it("keeps the edits on this device, apart from a new list, and lets them go on Discard changes", async () => {
-    load.mockResolvedValue(theirs());
-    const store = memoryStore();
-    const first = open(member, store, undefined, "/new?list=l1");
-    await userEvent.type(await screen.findByLabelText("Title"), "!");
-    expect(store.read("tyl:edit:l1")).toContain("Ghibli, ranked!");
-    expect(store.read("tyl:new")).toBeNull();
-    first.unmount();
-
-    open(member, store, undefined, "/new?list=l1");
-    expect(await screen.findByLabelText("Title")).toHaveValue("Ghibli, ranked!");
-    await userEvent.click(screen.getByLabelText("More"));
-    await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
-    expect(screen.getByLabelText("Title")).toHaveValue("Ghibli, ranked");
-  });
-
-  it("turns away a guest, somebody else's list, and one that is gone", async () => {
-    open({ kind: "guest", uid: "g1" }, memoryStore(), undefined, "/new?list=l1");
-    expect(screen.getByText("Sign in to edit the lists you published.")).toBeInTheDocument();
+    repository.save(linked);
+    const load = vi.fn(() => Promise.resolve(list));
+    open({ path: "/new?list=abc", repository, load });
+    expect(await arrivedAt()).toBe("/b/films");
     expect(load).not.toHaveBeenCalled();
+  });
 
-    load.mockResolvedValueOnce({ ...theirs(), authorUid: "u2" });
-    const other = open(member, memoryStore(), undefined, "/new?list=l1");
+  it("makes the board of a list published before boards, its own pictures brought over first", async () => {
+    const copyBack = vi.fn<CopyBack>(async () => ({
+      pictureId: "own-1",
+      previewUrl: "https://dl/users/u1/pictures/own-1",
+    }));
+    const { repository } = open({ path: "/new?list=abc", copyBack });
+    const board = boardAt(repository, await arrivedAt())!;
+    expect(copyBack).toHaveBeenCalledExactlyOnceWith(feedCopy("abc", "p1"));
+    expect(board.publishedId).toBe("abc");
+    expect(titlesIn(board)).toEqual([["Ex Machina"], ["The Witch"], ["Climax"]]);
+    expect(liveItems(board).map((item) => [item.title, item.pictureId, item.imageUrl])).toEqual([
+      ["Ex Machina", "own-1", "https://dl/users/u1/pictures/own-1"],
+      ["The Witch", null, POSTER],
+      ["Climax", null, null],
+    ]);
+    // In step with the list: nothing to send yet.
+    expect(board.publishedEditedAt).toBe(board.editedAt);
+  });
+
+  it("carries changes the old editor had not sent, and the board knows it is behind", async () => {
+    const store = memoryStore();
+    saveEditorDraft(
+      store,
+      draft("Renamed", ["Climax"], [[0], [], [], [], []]),
+      editDraftKey("abc"),
+    );
+    const { repository } = open({ path: "/new?list=abc", store });
+    const board = boardAt(repository, await arrivedAt())!;
+    expect(board.title).toBe("Renamed");
+    expect(board.publishedEditedAt).toBeLessThan(board.editedAt);
+    expect(store.read(editDraftKey("abc"))).toBeNull();
+  });
+
+  it("says so when the pictures could not come over, and tries again", async () => {
+    const copyBack = vi
+      .fn<CopyBack>()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({ pictureId: "own-1", previewUrl: "https://dl/own-1" });
+    const { repository } = open({ path: "/new?list=abc", copyBack });
+    expect(
+      await screen.findByText(
+        "Your list’s pictures could not be brought to its board. Nothing was lost. Try again.",
+      ),
+    ).toBeInTheDocument();
+    expect(repository.all()).toEqual([]);
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(boardAt(repository, await arrivedAt())?.publishedId).toBe("abc");
+  });
+
+  it("asks a guest to sign in first", async () => {
+    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
+    open({ path: "/new?list=abc", account: { kind: "guest", uid: "g1" }, signIn });
+    expect(screen.getByText("Sign in to edit the lists you published.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(signIn).toHaveBeenCalledTimes(1);
+  });
+
+  it("tells somebody else's list apart, and a list that is gone", async () => {
+    open({ path: "/new?list=abc", account: { ...me, uid: "someone" } as Session["account"] });
     expect(await screen.findByText("This list was published by someone else.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/l1");
-    other.unmount();
-
-    load.mockRejectedValueOnce(new ApiFailure({ kind: "notFound" }));
-    open(member, memoryStore(), undefined, "/new?list=l1");
-    expect(await screen.findByRole("alert")).toHaveTextContent("isn’t published anymore");
-    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/abc");
   });
 
-  it("names a republish of a list that is no longer there, and keeps the edits", async () => {
-    load.mockResolvedValue(theirs());
-    republish.mockRejectedValue(new ApiFailure({ kind: "notFound" }));
-    open(member, memoryStore(), undefined, "/new?list=l1");
-    await userEvent.click(await screen.findByRole("button", { name: "Publish changes" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("nothing to change");
-    expect(screen.getByLabelText("Title")).toHaveValue("Ghibli, ranked");
-    expect(discard).toHaveBeenCalledWith(["copy-pic1", "copy-cover1"]);
-  });
-
-  it.each([
-    [{ kind: "offline" as const }, "No connection"],
-    [{ kind: "tooManyLists" as const }, "as many lists as it can"],
-    [{ kind: "banned" as const, until: null }, "cannot publish at the moment"],
-    [{ kind: "tooLarge" as const, detail: "Too many items" }, "too big to publish. Too many items"],
-    [{ kind: "invalid" as const, detail: "A list needs a title" }, "refused. A list needs a title"],
-    [{ kind: "unavailable" as const }, "Could not publish"],
-  ])("names a refusal %o and keeps the draft", async (error, text) => {
-    publish.mockRejectedValue(new ApiFailure(error));
-    open();
-    await fillIn();
-    await userEvent.click(publishButton());
-    expect(await screen.findByRole("alert")).toHaveTextContent(text);
-    expect(screen.getByLabelText("Title")).toHaveValue("T");
-    expect(publishButton()).toBeEnabled();
+  it("names a list that is not published any more", async () => {
+    open({
+      path: "/new?list=abc",
+      load: () => Promise.reject(new ApiFailure({ kind: "notFound" })),
+    });
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
+      "This list isn’t available",
+    );
   });
 });

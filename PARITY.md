@@ -97,6 +97,10 @@ published or ranked. This is the largest gap and the first stage of work.
   Enterprise and can be opened by anyone with a link; ranking a published list
   needs no account, and a ranking has a link of its own (`/r/:code`). The app
   has no visitor rankings. Kept.
+- **A card's own picture is kept at 640 px.** The phone keeps 1000 px at
+  JPEG 0.85; the site shrinks to 640 px at 0.8, about 50 KB a photograph,
+  since a card is a poster (64 px on a tile, 96 in the share image, about 400
+  on a cover) and a dozen should go up in seconds. Asked for by Danylo.
 - **The pool is a tray, not a sheet.** On a wide window the cards sit beside
   the board or under it, resizable; on a phone-wide window they sit under the
   board. A finger-pulled sheet is a touch idiom; a tray that follows the mouse
@@ -161,6 +165,28 @@ published or ranked. This is the largest gap and the first stage of work.
 
 Kept short, newest first. Each entry names the commit range and what closed.
 
+- **Danylo's walk through the site, items 2–9** (PR #99) — tiers change on
+  the board itself, as on the phone (2.5, 2.6 on the board): the band is
+  carried by a press and a move, or a long press with a finger, a double tap
+  opens the tier's own editor (name, caption, colour; Save; Remove with
+  Undo), Add tier stands under the last tier. A card carried along its row
+  takes its place at once, the others making room, and a card from
+  elsewhere opens a dashed place of its size; the click after a drop no
+  longer picks the card. Making a list is making a board: `/new` opens a new
+  board (named from a search), a kept ranking or the board behind one's own
+  published list; a list published before boards gets its board, its
+  pictures brought into the person's own folder first, since a republish
+  keeps only pictures named by id. The old editor and the list page's
+  owner board are gone; what the old editor kept on the device (a list
+  begun, a ranking being made into a list, changes not sent) comes onto a
+  board. The author's list page is the list as published, with Edit. Also
+  fixed: a card moved on one's own board was drawn as another card (the view
+  renumbered the cards under the ranking board), the phone's tray covered
+  the board's last rows, Their ranking was wider than Mine, uploads are
+  640 px and go up four at a time (see section 5). The row a card would
+  land in is drawn as the phone draws it (2.11): dashed in the tier's colour,
+  its tint up from 12% to 24%; it was a frame in the text's colour, white in
+  the dark theme (item 1).
 - **Signed-in checks, accessibility, lint** (`905d11d`, `237f7e6`, `c8ce875`, `7c8d5f5`, `0bdf2ad`)
   — the signed-in flows now run in a real browser against mocks on this
   machine (`e2e/signedIn.ts`, `e2e/account.spec.ts`, desktop and phone):

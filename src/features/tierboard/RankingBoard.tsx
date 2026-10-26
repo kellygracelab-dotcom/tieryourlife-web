@@ -42,6 +42,7 @@ import {
   type BoardState,
 } from "./model";
 import { useTileDrag, type HitTest } from "./useTileDrag";
+import { useTierMove, type TierEditing } from "./useTierMove";
 import { BoardFrameContext } from "./boardFrame";
 import { DockToggle } from "./DockToggle";
 import { useDock } from "./useDock";
@@ -75,6 +76,8 @@ export interface EditMode {
     live?: boolean;
     /** A menu on every card for moving it without a drag: a finger without a keyboard, or a tenth tier. */
     moveMenu?: boolean;
+    /** The tiers themselves, changed on the board: carried by their band, opened by a double tap. */
+    tiers?: TierEditing;
   };
 }
 
@@ -110,8 +113,6 @@ interface TileProps {
   onRemove?: () => void;
   /** A menu beside the tile for moving without a drag: every tier, the pool, off the list. */
   move?: { tiers: readonly PublishedTier[]; current: number | null };
-  /** Where a card dragged over this row would land, next to this one. */
-  insert?: "before" | "after";
 }
 
 function Tile({
@@ -124,7 +125,6 @@ function Tile({
   onPointerDown,
   onRemove,
   move,
-  insert,
 }: TileProps) {
   const [moving, setMoving] = useState(false);
   const closeMove = useCallback(() => setMoving(false), []);
@@ -136,12 +136,7 @@ function Tile({
   return (
     <li
       className={
-        [
-          (onRemove !== undefined || move !== undefined) && "tile-holder--removable",
-          insert !== undefined && `tile-holder--insert-${insert}`,
-        ]
-          .filter(Boolean)
-          .join(" ") || undefined
+        onRemove !== undefined || move !== undefined ? "tile-holder--removable" : undefined
       }
     >
       <button
@@ -283,6 +278,9 @@ export function RankingBoard({
   const section = useRef<HTMLElement>(null);
   const poolBox = useRef<HTMLDivElement>(null);
   const boardEnd = useRef<HTMLDivElement>(null);
+  const boardBox = useRef<HTMLDivElement>(null);
+  const tierEditing = edit?.owner?.tiers;
+  const tierMove = useTierMove(boardBox, tierEditing);
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
@@ -464,6 +462,22 @@ export function RankingBoard({
     dragNow: drag.current,
     nudge: drag.nudge,
   });
+  // A phone's tray lies over the page's foot and grows when the owner's
+  // tools open in it: its height goes to the root as --tray-h, so the page
+  // keeps that much room under the board and the last row scrolls clear.
+  useEffect(() => {
+    const box = poolBox.current;
+    if (box === null || wide || restEmpty || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(() =>
+      root.style.setProperty("--tray-h", `${Math.ceil(box.getBoundingClientRect().height)}px`),
+    );
+    observer.observe(box);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--tray-h");
+    };
+  }, [wide, restEmpty]);
   const poolClasses = [
     "pool",
     drag.state.phase === "dragging" && drag.state.target?.kind === "pool" && "pool--target",
@@ -557,7 +571,7 @@ export function RankingBoard({
 
         {!inHead && edit?.owner?.status}
 
-        <div className="board">
+        <div className="board" ref={boardBox}>
           {list.tiers.map((tier, index) => (
             <TierRow
               key={`${index}-${tier.label}`}
@@ -573,8 +587,24 @@ export function RankingBoard({
               onPlace={placeSelected}
               onRemove={edit?.owner?.moveMenu ? edit.owner.remove : undefined}
               moveMenu={edit?.owner?.moveMenu}
+              band={
+                tierEditing === undefined || locked
+                  ? undefined
+                  : {
+                      onPointerDown: tierMove.onPointerDown(index),
+                      offset: tierMove.offsetOf(index),
+                      lifted: tierMove.lifted === index,
+                      carrying: tierMove.lifted !== null,
+                      open: () => tierEditing.open(index),
+                    }
+              }
             />
           ))}
+          {tierEditing?.add !== undefined && (
+            <Button className="board__add-tier" icon="add" onClick={tierEditing.add}>
+              {strings.new.addTier}
+            </Button>
+          )}
           <div className="board__end" ref={boardEnd} aria-hidden="true" />
         </div>
       </div>
@@ -743,6 +773,15 @@ interface TierRowProps {
   /** The owner's: a card off the list, and the menu for moving one without a drag. */
   onRemove?: (item: number) => void;
   moveMenu?: boolean;
+  /** The owner's hold on the tier itself, by its band. */
+  band?: {
+    onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+    /** Where the row stands from its place while a tier is carried. */
+    offset: number;
+    lifted: boolean;
+    carrying: boolean;
+    open: () => void;
+  };
 }
 
 function TierRow({
@@ -758,6 +797,7 @@ function TierRow({
   onPlace,
   onRemove,
   moveMenu = false,
+  band,
 }: TierRowProps) {
   const meta = list.tiers[tier];
   const row = state.rows[tier] ?? [];
@@ -766,28 +806,50 @@ function TierRow({
   const armed = !locked && selected !== null && !row.includes(selected);
   const target = dragState.phase === "dragging" ? dragState.target : null;
   const targeted = target?.kind === "tier" && target.tier === tier;
-  // The mark between two cards: before the card at the landing place, or
-  // after the last one. The held card itself does not count.
+  // A card carried over the row takes its place there at once, the others
+  // making room: the card itself when it is this row's, an empty slot of its
+  // size when it comes from elsewhere (null below). Where it lands is read
+  // from the others' middles, so the room it takes does not move the place.
   const others = row.filter((item) => item !== lifted);
   const landing = targeted ? Math.min(target.index, others.length) : null;
-  const insertOf = (item: number): "before" | "after" | undefined => {
-    if (landing === null || item === lifted) return undefined;
-    const place = others.indexOf(item);
-    if (place === landing) return "before";
-    return landing === others.length && place === others.length - 1 ? "after" : undefined;
-  };
+  const shown: readonly (number | null)[] =
+    landing === null
+      ? row
+      : [
+          ...others.slice(0, landing),
+          lifted !== null && row.includes(lifted) ? lifted : null,
+          ...others.slice(landing),
+        ];
   const place = () => onPlace(tier);
-  const classes = ["tier", "band", armed && "tier--armed", targeted && "tier--target"]
+  // A card being placed has the band for its button; the tier is held only otherwise.
+  const held = armed ? undefined : band;
+  const classes = [
+    "tier",
+    "band",
+    armed && "tier--armed",
+    targeted && "tier--target",
+    held?.lifted === true && "tier--lifted",
+    held?.carrying === true && !held.lifted && "tier--shifting",
+  ]
     .filter(Boolean)
     .join(" ");
   return (
     <div
       className={classes}
-      style={{ "--band-light": meta.colorLight, "--band-dark": meta.colorDark } as CSSProperties}
+      style={
+        {
+          "--band-light": meta.colorLight,
+          "--band-dark": meta.colorDark,
+          transform: held?.offset ? `translateY(${held.offset}px)` : undefined,
+        } as CSSProperties
+      }
       onClick={armed ? place : undefined}
       data-drop={`tier:${tier}`}
     >
-      <div className="tier__band">
+      <div
+        className={held === undefined ? "tier__band" : "tier__band tier__band--held"}
+        onPointerDown={held?.onPointerDown}
+      >
         <span className="tier__label">{meta.label}</span>
         {meta.caption !== null && <span className="tier__caption">{meta.caption}</span>}
         {tier < 9 && (
@@ -808,23 +870,38 @@ function TierRow({
             {fill(strings.rank.placeIn, { name: selectedTitle, tier: meta.label })}
           </button>
         )}
+        {held !== undefined && (
+          <button
+            type="button"
+            className="tier__edit"
+            aria-label={fill(strings.boards.editTierOf, { name: meta.label })}
+            onClick={held.open}
+          >
+            <Icon name="edit" />
+          </button>
+        )}
       </div>
       <ul className="tier__items" aria-label={meta.label}>
-        {row.map((item) => (
-          <Tile
-            key={item}
-            list={list}
-            item={item}
-            selected={selected === item}
-            lifted={lifted === item}
-            locked={locked}
-            dispatch={dispatch}
-            onPointerDown={pointerDownFor(item)}
-            insert={insertOf(item)}
-            onRemove={onRemove === undefined ? undefined : () => onRemove(item)}
-            move={moveMenu ? { tiers: list.tiers, current: tier } : undefined}
-          />
-        ))}
+        {shown.map((item) =>
+          item === null ? (
+            <li key="slot" className="tile-slot" aria-hidden="true">
+              <span className="tile tile--slot" />
+            </li>
+          ) : (
+            <Tile
+              key={item}
+              list={list}
+              item={item}
+              selected={selected === item}
+              lifted={lifted === item}
+              locked={locked}
+              dispatch={dispatch}
+              onPointerDown={pointerDownFor(item)}
+              onRemove={onRemove === undefined ? undefined : () => onRemove(item)}
+              move={moveMenu ? { tiers: list.tiers, current: tier } : undefined}
+            />
+          ),
+        )}
       </ul>
     </div>
   );

@@ -22,7 +22,6 @@ import { fill, plural, strings } from "../strings";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
-import { OwnerBoard } from "../features/editor/OwnerBoard";
 import type { Dock } from "../features/tierboard/dock";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
@@ -38,9 +37,6 @@ export type Report = typeof sendReport;
 export type Unpublish = typeof unpublishList;
 
 type Notify = (notice: SnackbarNotice) => void;
-
-/** How long "Saved" stays on the page after a republish. */
-export const SAVED_NOTE_MS = 6000;
 
 /** The list's address, and the two ways to hand it to someone. */
 function useListLink(list: PublishedList) {
@@ -100,24 +96,12 @@ function PrivacyItem() {
   );
 }
 
-/**
- * What the button does on a wide screen, the menu does on a phone, where the
- * head has no room — and on any screen while the owner is editing, when the
- * head holds the editing row instead.
- */
-function LinkItems({
-  list,
-  notify,
-  shown = false,
-}: {
-  list: PublishedList;
-  notify: Notify;
-  shown?: boolean;
-}) {
+/** What the button does on a wide screen, the menu does on a phone, where the head has no room. */
+function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
   const { copy, canShare, share } = useListLink(list);
   return (
     <>
-      <li className={shown ? "list-menu__copy list-menu__copy--shown" : "list-menu__copy"}>
+      <li className="list-menu__copy">
         <button
           type="button"
           className="menu__action"
@@ -298,13 +282,10 @@ function AuthorMenu({
   list,
   unpublish,
   notify,
-  copyInMenu = false,
 }: {
   list: PublishedList;
   unpublish: Unpublish;
   notify: Notify;
-  /** While the owner is editing, the head has no Copy link and the menu carries it. */
-  copyInMenu?: boolean;
 }) {
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState<Deleting>({ status: "closed" });
@@ -327,9 +308,9 @@ function AuthorMenu({
     <>
       <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
         <>
-          <LinkItems list={list} notify={notify} shown={copyInMenu} />
+          <LinkItems list={list} notify={notify} />
           <li
-            className={canShare || copyInMenu ? "menu__divider" : "menu__divider list-menu__copy"}
+            className={canShare ? "menu__divider" : "menu__divider list-menu__copy"}
             role="separator"
           />
           <li>
@@ -426,18 +407,19 @@ export function ListPage({
   // The shape the board took on a wide screen, so the header lays itself out
   // to match, and a place in the header for the bar while the pool is under.
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
+  // The last of those shapes, so the author's ranking keeps the visitor's width.
+  const [lastDock, setLastDock] = useState<Dock>("beside");
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
-  const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
-  // The owner's republish: the page fetches the list again and says so for a while.
-  const [savedAt, setSavedAt] = useState<number | null>(null);
-  // While the owner's board has changes, the head holds the editing row: Edit
-  // steps aside and Copy link goes into the overflow.
-  const [editing, setEditing] = useState(false);
-  useEffect(() => {
-    if (savedAt === null) return;
-    const timer = setTimeout(() => setSavedAt(null), SAVED_NOTE_MS);
-    return () => clearTimeout(timer);
-  }, [savedAt]);
+  const frame = useMemo(
+    () => ({
+      headSlot,
+      report: (dock: Dock | null) => {
+        setBoardDock(dock);
+        if (dock !== null) setLastDock(dock);
+      },
+    }),
+    [headSlot],
+  );
   const { hidden } = useHidden();
 
   if (state.status === "loading") {
@@ -455,7 +437,7 @@ export function ListPage({
   const outOfSight = !own && isOutOfSight(hidden, list);
   const published = (
     <ReadOnlyBoard
-      label={strings.list.viewTheirs}
+      label={own ? strings.owner.title : strings.list.viewTheirs}
       tiers={list.tiers}
       items={list.items}
       {...arrange(list)}
@@ -514,7 +496,7 @@ export function ListPage({
           </div>
         )}
         <span className="list-head__tools">
-          {own && !editing && (
+          {own && (
             <Link className="btn btn--tonal" to={`/new?list=${encodeURIComponent(list.id)}`}>
               <Icon name="edit" className="btn__icon" />
               <span>{strings.list.edit}</span>
@@ -522,13 +504,8 @@ export function ListPage({
           )}
           {own ? (
             <>
-              {!editing && <CopyLinkButton list={list} />}
-              <AuthorMenu
-                list={list}
-                unpublish={unpublish}
-                notify={setNotice}
-                copyInMenu={editing}
-              />
+              <CopyLinkButton list={list} />
+              <AuthorMenu list={list} unpublish={unpublish} notify={setNotice} />
             </>
           ) : (
             <VisitorTools list={list} report={report} notify={setNotice} repository={repository} />
@@ -537,25 +514,8 @@ export function ListPage({
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
       {outOfSight && <HiddenView list={list} />}
-      {savedAt !== null && (
-        <p className="list-page__saved" role="status">
-          <Icon name="check_circle" />
-          {strings.owner.saved}
-        </p>
-      )}
-      {!outOfSight && own && (
-        <BoardFrameContext.Provider value={frame}>
-          <OwnerBoard
-            key={`${list.id}:${list.updatedAt}`}
-            list={list}
-            onChanges={setEditing}
-            onPublished={() => {
-              setSavedAt(Date.now());
-              retry();
-            }}
-          />
-        </BoardFrameContext.Provider>
-      )}
+      {/* The author sees the list as it was published; it is changed on its board, behind Edit. */}
+      {!outOfSight && own && published}
       {!outOfSight &&
         !own &&
         (view === "mine" ? (
@@ -563,7 +523,7 @@ export function ListPage({
             <RankingBoard key={list.id} list={list} />
           </BoardFrameContext.Provider>
         ) : (
-          published
+          <div className={`list-page__theirs list-page__theirs--${lastDock}`}>{published}</div>
         ))}
       <Snackbar notice={notice} onDone={clearNotice} />
     </article>

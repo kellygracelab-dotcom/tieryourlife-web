@@ -27,15 +27,24 @@ const publishedTier = (tier: BoardTier) => ({
   colorDark: tier.colorDark,
 });
 
-export function boardView(board: Board, untitled: string): BoardView {
+/**
+ * The cards in tier order, then the pool's. Given the order of the view the
+ * page drew before, and the same cards, that order stays: the ranking board
+ * holds its rows by index, and a move that renumbered the cards had a card
+ * moved along its row draw another card in its place.
+ */
+export function boardView(board: Board, untitled: string, before?: readonly string[]): BoardView {
   const tiers = rankedTiers(board);
   const pool = poolTier(board);
   const inRows: BoardItem[][] = tiers.map((tier) => itemsIn(board, tier.uid));
   const inPool = pool === null ? [] : itemsIn(board, pool.uid);
-  const ordered = [...inRows.flat(), ...inPool];
+  const fresh = [...inRows.flat(), ...inPool];
+  const byUid = new Map(fresh.map((item) => [item.uid, item]));
+  const kept = before?.flatMap((uid) => byUid.get(uid) ?? []);
+  const ordered = kept !== undefined && kept.length === fresh.length ? kept : fresh;
   const uids = ordered.map((item) => item.uid);
-  let index = 0;
-  const rows = inRows.map((row) => row.map(() => index++));
+  const indexOf = new Map(uids.map((uid, index) => [uid, index]));
+  const rows = inRows.map((row) => row.flatMap((item) => indexOf.get(item.uid) ?? []));
   const title = board.title.trim().length > 0 ? board.title : untitled;
   return {
     list: {
@@ -62,6 +71,10 @@ export function boardView(board: Board, untitled: string): BoardView {
     rows,
   };
 }
+
+/** Whether two orders of cards are one and the same. */
+export const sameOrder = (a: readonly string[], b: readonly string[] | undefined): boolean =>
+  b !== undefined && a.length === b.length && a.every((uid, index) => uid === b[index]);
 
 /** Rows of indexes, as the board reports them, back to rows of uids. */
 export const uidRows = (view: BoardView, rows: readonly (readonly number[])[]): string[][] =>

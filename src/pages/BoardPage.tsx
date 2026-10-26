@@ -18,6 +18,7 @@ import {
   setDisplayMode,
   trashBoard,
   trashItem,
+  BOARD_LIMITS,
   type Board,
 } from "../features/boards/model";
 import { BoardSettings, type PublishingDeps } from "../features/boards/BoardSettings";
@@ -31,12 +32,14 @@ import {
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
 import { applyTierAction, editorTiersOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
-import { boardView, uidRows } from "../features/boards/view";
+import { boardView, sameOrder, uidRows } from "../features/boards/view";
 import { AddCardBox, type Upload } from "../features/editor/AddCardBox";
 import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
+import { TierDialog } from "../features/editor/TierDialog";
 import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
-import { uploadPicture } from "../lib/pictures";
+import { PictureRefused, uploadPicture } from "../lib/pictures";
+import { useSession } from "../app/session";
 import { memoryStore } from "../lib/storage";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
@@ -158,13 +161,19 @@ export function BoardPage({
   const [params] = useSearchParams();
   const stored = useBoard(uid, repository);
   const navigate = useNavigate();
+  const { account, signIn } = useSession();
   // A new board is made here and kept only once it is touched: a name, a
   // card, a star. Left as it came, it was never kept, which is what the
   // phone's cross does with an untouched board.
   const madeAt = Number(params.get("new"));
+  // A name brought along, as from a search that found nothing: the board starts with it.
+  const named = params.get("title")?.trim() ?? "";
   const fresh = useMemo(
-    () => (madeAt > 0 ? newBoard(uid, strings.boards.untitled, madeAt, nextUid) : null),
-    [uid, madeAt],
+    () =>
+      madeAt > 0
+        ? newBoard(uid, named === "" ? strings.boards.untitled : named, madeAt, nextUid)
+        : null,
+    [uid, madeAt, named],
   );
   const board = stored ?? fresh;
   // The name is asked for once, on arrival at a board not yet kept: a reload
@@ -178,6 +187,8 @@ export function BoardPage({
   );
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const forget = useCallback(() => setNotice(null), []);
+  // The tier opened from the board, by its uid.
+  const [openTier, setOpenTier] = useState<string | null>(null);
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
@@ -186,10 +197,14 @@ export function BoardPage({
 
   usePageTitle(board === null ? null : board.title || strings.boards.untitled);
 
+  // The cards keep their indexes while the page is open (see boardView): the
+  // order drawn is kept, and taken afresh only when the cards change.
+  const [drawn, setDrawn] = useState<readonly string[]>();
   const view = useMemo(
-    () => (board === null ? null : boardView(board, strings.boards.untitled)),
-    [board],
+    () => (board === null ? null : boardView(board, strings.boards.untitled, drawn)),
+    [board, drawn],
   );
+  if (view !== null && !sameOrder(view.uids, drawn)) setDrawn(view.uids);
 
   if (board === null || view === null) return <NotFound />;
 
@@ -287,6 +302,16 @@ export function BoardPage({
     setPanel("none");
     setTyping({});
   };
+  // The tiers changed on the board itself, as on the phone; the same actions as the panel's.
+  const tierEditing = {
+    move: (from: number, to: number) => {
+      const key = editorTiers[from]?.key;
+      if (key !== undefined) onTier({ type: "placeTier", key, index: to });
+    },
+    open: (index: number) => setOpenTier(editorTiers[index]?.key ?? null),
+    add: editorTiers.length < BOARD_LIMITS.tiers ? () => onTier({ type: "addTier" }) : undefined,
+  };
+  const opened = editorTiers.find((tier) => tier.key === openTier);
 
   const toTrash = () => {
     keep(trashBoard(board, now()));
@@ -304,6 +329,16 @@ export function BoardPage({
         : `${window.location.origin}/l/${encodeURIComponent(board.publishedId)}`,
     ).catch(() => setNotice({ text: strings.rank.downloadFailed }));
 
+  // A picture belongs to an account: a guest is asked to sign in at the first
+  // one, and the add box sends the rest only once that one is in.
+  const uploadAsAccount: Upload = async (file) => {
+    if (account?.kind !== "signedIn") {
+      const outcome = await signIn();
+      if (outcome.kind !== "signedIn") throw new PictureRefused("signIn");
+    }
+    return upload(file);
+  };
+
   const ranked = rankedCount(board);
   const inPool = poolCount(board);
   const tools = (
@@ -312,7 +347,7 @@ export function BoardPage({
       category={board.category}
       dispatch={dispatch}
       lookup={lookup}
-      upload={upload}
+      upload={uploadAsAccount}
     />
   );
 
@@ -451,11 +486,21 @@ export function BoardPage({
                   onChange: onRows,
                   remove,
                   tools,
+                  tiers: tierEditing,
                 },
               }}
             />
           </section>
         </BoardFrameContext.Provider>
+      )}
+      {opened !== undefined && (
+        <TierDialog
+          key={opened.key}
+          tier={opened}
+          canRemove={editorTiers.length > 1}
+          dispatch={onTier}
+          onClose={() => setOpenTier(null)}
+        />
       )}
       <Snackbar notice={notice} onDone={forget} />
     </article>

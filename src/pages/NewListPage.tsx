@@ -1,603 +1,252 @@
-import { useEffect, useReducer, useState, type ReactNode } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
-import type { ApiError } from "../api/errors";
+import { useEffect, useRef, useState } from "react";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import type { Ranking } from "../api/rank";
-import { CATEGORIES, type PublishedList } from "../api/types";
-import { useSession, type Session } from "../app/session";
-import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
-import { CardsEditor, type Upload } from "../features/editor/CardsEditor";
-import { focusProblem } from "../features/editor/focusProblem";
+import type { PublishedList } from "../api/types";
+import { useSession } from "../app/session";
+import { boardForOwnList, boardOfList, type CopyBack } from "../features/boards/ownList";
+import { boardFromDraft } from "../features/boards/publish";
+import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { nextUid } from "../features/boards/useBoards";
 import {
-  clearEditorDraft,
-  draftOf,
   draftOfRanking,
   editDraftKey,
-  emptyDraft,
   forkDraftKey,
-  isBlankDraft,
-  LIMITS,
   loadEditorDraft,
   NEW_DRAFT_KEY,
-  ownPicturesOf,
-  placementsOf,
-  problemsOf,
-  publishBodyOf,
-  reduce,
-  saveEditorDraft,
   type Draft,
-  type Problem,
-  type PublishBody,
 } from "../features/editor/model";
-import { bodyForRepublish, type CopyBack } from "../features/editor/republish";
-import { TiersEditor } from "../features/editor/TiersEditor";
-import type { Lookup } from "../features/editor/useCatalogue";
-import { failureText } from "../features/editor/failureText";
-import { errorOf } from "../api/errors";
-import { useResource } from "../lib/useResource";
-import {
-  loadList,
-  loadRanking,
-  publish as publishList,
-  republish as republishList,
-} from "../lib/api";
-import { copyPublishedBack, discardPictures, PictureRefused, uploadPicture } from "../lib/pictures";
-import type { SignInOutcome } from "../lib/signIn";
+import { loadList, loadRanking } from "../lib/api";
+import { copyPublishedBack } from "../lib/pictures";
 import { type KeyValueStore, localStorageStore } from "../lib/storage";
+import { useResource } from "../lib/useResource";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
-import { Chip } from "../ui/Chip";
-import { Icon } from "../ui/Icon";
-import type { IconName } from "../ui/icons";
-import { Menu } from "../ui/Menu";
-import { Skeleton } from "../ui/Skeleton";
-import "../features/editor/editor.css";
-
-export type Publish = typeof publishList;
-export type Republish = typeof republishList;
-export type LoadList = (id: string) => Promise<PublishedList>;
-export type LoadKept = (code: string) => Promise<Ranking>;
-type Discard = (pictureIds: readonly string[]) => Promise<void>;
+import type { Board } from "../features/boards/model";
+import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
+import "./ListPage.css";
 
 interface NewListPageProps {
+  repository?: BoardsRepository;
   store?: KeyValueStore;
-  lookup?: Lookup;
-  publish?: Publish;
-  republish?: Republish;
-  load?: LoadList;
-  loadKept?: LoadKept;
-  upload?: Upload;
+  load?: (id: string) => Promise<PublishedList>;
+  loadKept?: (code: string) => Promise<Ranking>;
   copyBack?: CopyBack;
-  discard?: Discard;
+  now?: () => number;
 }
 
-type Mode = "new" | "edit";
+const boardPath = (board: Board) => `/b/${encodeURIComponent(board.uid)}`;
 
-type PublishState = { status: "idle" } | { status: "busy" } | { status: "failed"; error: ApiError };
-
-const PROBLEM_TEXT: Record<Problem, string> = {
-  title: strings.new.needTitle,
-  category: strings.new.needCategory,
-  noItems: strings.new.needCards,
-  noTiers: strings.new.needTier,
-  tierLabel: strings.new.needTierLabel,
-  tooManyTiers: strings.new.tooManyTiers,
-  tooManyItems: strings.new.tooManyCards,
-};
-
-interface EditorProps {
-  mode: Mode;
-  store: KeyValueStore;
-  /** Where this editor keeps its draft: the new list and every edit have their own. */
-  draftKey: string;
-  /** What the editor holds when nothing is kept under that key. */
-  opening: () => Draft;
-  /** A title brought from elsewhere, such as a search that found nothing. */
-  suggestedTitle: string | null;
-  lookup: Lookup | undefined;
-  submit: (draft: Draft, body: PublishBody) => Promise<{ id: string }>;
-  upload: Upload;
-  discard: Discard;
-  guest: boolean;
-  signIn: () => Promise<SignInOutcome>;
-}
-
-// A suggested title fills an empty editor; a draft with anything in it is
-// somebody's work and stays as it is.
-const openingDraft = (
-  store: KeyValueStore,
-  draftKey: string,
-  opening: () => Draft,
-  suggestedTitle: string | null,
-): Draft => {
-  const draft = loadEditorDraft(store, draftKey) ?? opening();
-  return suggestedTitle !== null && isBlankDraft(draft)
-    ? reduce(draft, { type: "title", title: suggestedTitle })
-    : draft;
-};
-
-function Editor({
-  mode,
-  store,
-  draftKey,
-  opening,
-  suggestedTitle,
-  lookup,
-  submit,
-  upload,
-  discard,
-  guest,
-  signIn,
-}: EditorProps) {
-  const [draft, dispatch] = useReducer(reduce, undefined, () =>
-    openingDraft(store, draftKey, opening, suggestedTitle),
-  );
-  const [preview, setPreview] = useState(false);
-  const [publishing, setPublishing] = useState<PublishState>({ status: "idle" });
-  const [nudged, setNudged] = useState<Draft | null>(null);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    saveEditorDraft(store, draft, draftKey);
-  }, [store, draftKey, draft]);
-
-  const problems = problemsOf(draft);
-  const busy = publishing.status === "busy";
-  // A press on Publish while something is missing turns the status line red
-  // and puts the cursor in the field; the next change to the draft calms it.
-  const nudging = nudged === draft && problems.length > 0;
-
-  // No account wall on the way in: the draft stays on this device, and the
-  // sign-in comes exactly when a name has to go on the list.
-  const onPublish = async () => {
-    const first = problems[0];
-    if (first !== undefined) {
-      setNudged(draft);
-      focusProblem(first);
-      return;
-    }
-    const body = publishBodyOf(draft);
-    if (body === null) return;
-    setPublishing({ status: "busy" });
-    if (guest) {
-      const outcome = await signIn();
-      if (outcome.kind !== "signedIn") {
-        setPublishing(
-          outcome.kind === "failed"
-            ? { status: "failed", error: { kind: "notSignedIn" } }
-            : { status: "idle" },
-        );
-        return;
-      }
-    }
-    submit(draft, body).then(
-      ({ id }) => {
-        clearEditorDraft(store, draftKey);
-        // The feed has its copies now; the originals in the private folder are litter.
-        void discard(ownPicturesOf(draft));
-        void navigate(`/l/${encodeURIComponent(id)}`);
-      },
-      (reason: unknown) => setPublishing({ status: "failed", error: errorOf(reason) }),
-    );
-  };
-
-  const startOver = () => {
-    clearEditorDraft(store, draftKey);
-    void discard(ownPicturesOf(draft));
-    dispatch({ type: "replace", draft: mode === "new" ? emptyDraft() : opening() });
-    setPublishing({ status: "idle" });
-  };
-
-  // A picture belongs to an account, so a guest is signed in before the first one goes up.
-  const uploadAsAccount: Upload = async (file) => {
-    if (guest) {
-      const outcome = await signIn();
-      if (outcome.kind !== "signedIn") throw new PictureRefused("signIn");
-    }
-    return upload(file);
-  };
-
-  const editing = mode === "edit";
-
-  const problem = problems[0];
-  const status: { tone: string; icon: IconName; text: string } = busy
-    ? { tone: "busy", icon: "cloud_upload", text: strings.new.publishing }
-    : problem !== undefined
-      ? {
-          tone: nudging ? "nudged" : "todo",
-          icon: nudging ? "error" : "edit",
-          text: PROBLEM_TEXT[problem],
-        }
-      : { tone: "ready", icon: "check_circle", text: strings.new.ready };
-
-  return (
-    <div className="editor">
-      <header className="editor__top">
-        <h1 className="editor__title">{editing ? strings.new.editTitle : strings.new.title}</h1>
-        <p
-          id="editor-status"
-          className={`editor__status editor__status--${status.tone}`}
-          aria-live="polite"
-        >
-          <span key={`${status.tone}:${status.text}`} className="editor__status-body">
-            <Icon name={status.icon} />
-            <span className="editor__status-text">{status.text}</span>
-          </span>
-        </p>
-        <div className="editor__actions">
-          <Button
-            variant="tonal"
-            icon={preview ? "edit" : "visibility"}
-            onClick={() => setPreview((now) => !now)}
-            disabled={busy}
-          >
-            {preview ? strings.new.back : strings.new.preview}
-          </Button>
-          <Button
-            variant="filled"
-            icon="publish"
-            className={problems.length > 0 ? "editor__publish--held" : undefined}
-            onClick={() => void onPublish()}
-            disabled={busy}
-            aria-describedby="editor-status"
-          >
-            {editing ? strings.new.publishChanges : strings.new.publish}
-          </Button>
-          <Menu label={strings.new.more} button={<Icon name="more_vert" />}>
-            <li>
-              <button type="button" className="menu__action" onClick={startOver} disabled={busy}>
-                {editing ? strings.new.discardChanges : strings.new.startOver}
-              </button>
-            </li>
-          </Menu>
-        </div>
-      </header>
-
-      {guest && !editing && <p className="editor__hint">{strings.new.guestNote}</p>}
-
-      {publishing.status === "failed" && (
-        <p className="editor__failed" role="alert">
-          {failureText(publishing.error, mode)}
-        </p>
-      )}
-
-      {preview ? (
-        <section className="editor__preview" aria-labelledby="preview-title">
-          <h2 id="preview-title" className="editor__preview-title">
-            {draft.title.trim().length > 0 ? draft.title : strings.new.untitled}
-          </h2>
-          <p className="editor__hint">{strings.new.previewNote}</p>
-          <ReadOnlyBoard
-            label={strings.new.preview}
-            tiers={draft.tiers}
-            items={draft.items.map((item) => ({
-              title: item.title,
-              imageUrl: item.imageUrl,
-              tierIndex: null,
-            }))}
-            rows={draft.rows}
-            pool={placementsOf(draft)
-              .filter(({ tier }) => tier === null)
-              .map(({ position }) => position)}
-          />
-        </section>
-      ) : (
-        <div className="editor__columns">
-          <div className="editor__column">
-            <section className="editor__section" aria-labelledby="about-title">
-              <h2 id="about-title" className="editor__section-title">
-                {strings.new.about}
-              </h2>
-              <label className="editor__label" htmlFor="list-title">
-                {strings.new.nameLabel}
-              </label>
-              <div className="editor__field">
-                <input
-                  id="list-title"
-                  type="text"
-                  value={draft.title}
-                  placeholder={strings.new.namePlaceholder}
-                  maxLength={LIMITS.title}
-                  onChange={(event) => dispatch({ type: "title", title: event.target.value })}
-                />
-              </div>
-              <p className="editor__label" id="category-label">
-                {strings.new.categoryLabel}
-              </p>
-              <div className="editor__chips" role="group" aria-labelledby="category-label">
-                {CATEGORIES.map((id) => (
-                  <Chip
-                    key={id}
-                    selected={draft.category === id}
-                    onClick={() => dispatch({ type: "category", category: id })}
-                  >
-                    {strings.category[id]}
-                  </Chip>
-                ))}
-              </div>
-            </section>
-            <CardsEditor
-              items={draft.items}
-              category={draft.category}
-              dispatch={dispatch}
-              lookup={lookup}
-              upload={uploadAsAccount}
-            />
-          </div>
-          <div className="editor__column">
-            <TiersEditor tiers={draft.tiers} dispatch={dispatch} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface EditListProps {
-  id: string;
-  account: Session["account"];
-  signIn: Session["signIn"];
-  store: KeyValueStore;
-  lookup: Lookup | undefined;
-  load: LoadList;
-  republish: Republish;
-  upload: Upload;
-  copyBack: CopyBack;
-  discard: Discard;
-}
-
-function EditNotice({
-  title = strings.new.editTitle,
-  children,
-}: {
-  title?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="editor">
-      <header className="editor__top">
-        <h1 className="editor__title">{title}</h1>
-      </header>
-      {children}
-    </div>
-  );
-}
-
-/** What the editor shows while a list it opens from is on its way, or when it could not come. */
-function Opening({
-  title,
-  state,
-  retry,
-}: {
-  title?: string;
-  state: { status: "loading" } | { status: "error"; error: ApiError };
-  retry: () => void;
-}) {
-  if (state.status === "loading") {
-    return (
-      <EditNotice title={title}>
-        <div aria-busy="true">
-          <Skeleton height="20px" width="40%" />
-        </div>
-        <p className="editor__hint">{strings.new.openingList}</p>
-      </EditNotice>
-    );
-  }
-  const { error } = state;
-  return (
-    <EditNotice title={title}>
-      <p className="editor__failed" role="alert">
-        {error.kind === "notFound"
-          ? strings.new.listGone
-          : error.kind === "offline"
-            ? strings.new.failedOffline
-            : strings.new.listFailed}
-      </p>
-      {error.kind !== "notFound" && (
-        <div>
-          <Button variant="filled" icon="refresh" onClick={retry}>
-            {strings.new.tryAgain}
-          </Button>
-        </div>
-      )}
-    </EditNotice>
-  );
-}
-
-function EditLoaded({
-  id,
-  uid,
-  store,
-  lookup,
-  load,
-  republish,
-  upload,
-  copyBack,
-  discard,
-  signIn,
-}: Omit<EditListProps, "account"> & { uid: string }) {
-  const { state, retry } = useResource(id, load);
-
-  if (state.status !== "ready") return <Opening state={state} retry={retry} />;
-
-  const list = state.value;
-  if (list.authorUid !== uid) {
-    return (
-      <EditNotice>
-        <p className="editor__hint">{strings.new.notYours}</p>
-        <p>
-          <Link to={`/l/${encodeURIComponent(id)}`}>{strings.new.openList}</Link>
-        </p>
-      </EditNotice>
-    );
-  }
-
-  // The private copies made for the republish are litter either way once the
-  // backend has answered: it copied them, or it refused the whole thing.
-  const submit = async (_draft: Draft, body: PublishBody) => {
-    const ready = await bodyForRepublish(id, body, list.coverImageUrl, copyBack);
-    try {
-      return await republish(id, ready.body);
-    } finally {
-      void discard(ready.copied);
-    }
-  };
-
-  return (
-    <Editor
-      mode="edit"
-      store={store}
-      draftKey={editDraftKey(id)}
-      opening={() => draftOf(list)}
-      suggestedTitle={null}
-      lookup={lookup}
-      submit={submit}
-      upload={upload}
-      discard={discard}
-      guest={false}
-      signIn={signIn}
-    />
-  );
-}
-
-function EditList({ account, signIn, ...rest }: EditListProps) {
-  if (account === null) {
-    return (
-      <EditNotice>
-        <div aria-busy="true">
-          <Skeleton height="20px" width="40%" />
-        </div>
-      </EditNotice>
-    );
-  }
-  if (account.kind === "guest") {
-    return (
-      <EditNotice>
-        <p className="editor__hint">{strings.new.editSignIn}</p>
-        <div>
-          <Button variant="filled" onClick={() => void signIn()}>
-            {strings.nav.signIn}
-          </Button>
-        </div>
-      </EditNotice>
-    );
-  }
-  return <EditLoaded {...rest} uid={account.uid} signIn={signIn} />;
-}
-
-interface FromRankingProps {
-  code: string;
-  store: KeyValueStore;
-  lookup: Lookup | undefined;
-  loadKept: LoadKept;
-  publish: Publish;
-  upload: Upload;
-  discard: Discard;
-  guest: boolean;
-  signIn: () => Promise<SignInOutcome>;
-}
+/** A draft of the old editor worth a board: it has a name or a card. */
+const begun = (draft: Draft | null): draft is Draft =>
+  draft !== null && (draft.title.trim().length > 0 || draft.items.length > 0);
 
 /**
- * A kept ranking opened as a new list: the cards, the tiers and the
- * arrangement are filled in, and publishing makes a list of the person's own
- * under a link of its own. Nothing changes on the list it was ranked from.
+ * A list is made where it is changed: on a board, as on the phone, and the
+ * board's settings publish it. This page only opens the board — a new one, one
+ * made of a ranking kept, or the one behind a list one published — and brings
+ * along what the old editor kept on this device, so nothing begun there is lost.
  */
-function FromRanking({
-  code,
-  store,
-  lookup,
-  loadKept,
-  publish,
-  upload,
-  discard,
-  guest,
-  signIn,
-}: FromRankingProps) {
-  const { state, retry } = useResource(code, loadKept);
-
-  if (state.status !== "ready") {
-    return <Opening title={strings.new.title} state={state} retry={retry} />;
-  }
-
-  const ranking = state.value;
-  return (
-    <Editor
-      mode="new"
-      store={store}
-      draftKey={forkDraftKey(code)}
-      opening={() => draftOfRanking(ranking)}
-      suggestedTitle={null}
-      lookup={lookup}
-      submit={(_, body) => publish(body)}
-      upload={upload}
-      discard={discard}
-      guest={guest}
-      signIn={signIn}
-    />
-  );
-}
-
 export function NewListPage({
+  repository = site,
   store = localStorageStore,
-  lookup,
-  publish = publishList,
-  republish = republishList,
   load = loadList,
   loadKept = (code) => loadRanking(code, true),
-  upload = (file) => uploadPicture(file),
   copyBack = copyPublishedBack,
-  discard = discardPictures,
+  now = Date.now,
 }: NewListPageProps) {
-  const { account, signIn } = useSession();
   const [params] = useSearchParams();
   const listId = params.get("list");
   if (listId !== null && listId !== "") {
     return (
-      <EditList
+      <OwnList
         id={listId}
-        account={account}
-        signIn={signIn}
+        repository={repository}
         store={store}
-        lookup={lookup}
         load={load}
-        republish={republish}
-        upload={upload}
         copyBack={copyBack}
-        discard={discard}
+        now={now}
       />
     );
   }
-  const rankingCode = params.get("ranking");
-  if (rankingCode !== null && rankingCode !== "") {
+  const code = params.get("ranking");
+  if (code !== null && code !== "") {
     return (
-      <FromRanking
-        code={rankingCode}
-        store={store}
-        lookup={lookup}
-        loadKept={loadKept}
-        publish={publish}
-        upload={upload}
-        discard={discard}
-        guest={account?.kind !== "signedIn"}
-        signIn={signIn}
-      />
+      <FromRanking code={code} repository={repository} store={store} load={loadKept} now={now} />
     );
   }
-  const suggestedTitle = params.get("title");
-  return (
-    <Editor
-      mode="new"
-      store={store}
-      draftKey={NEW_DRAFT_KEY}
-      opening={emptyDraft}
-      suggestedTitle={
-        suggestedTitle !== null && suggestedTitle.trim() !== "" ? suggestedTitle : null
-      }
-      lookup={lookup}
-      submit={(_, body) => publish(body)}
-      upload={upload}
-      discard={discard}
-      guest={account?.kind !== "signedIn"}
-      signIn={signIn}
-    />
-  );
+  return <NewBoard title={params.get("title")} repository={repository} store={store} now={now} />;
+}
+
+/** Once per page, also under StrictMode's second run: the board is made and kept one time. */
+function useOnce(ready: boolean, act: () => void) {
+  const done = useRef(false);
+  useEffect(() => {
+    if (!ready || done.current) return;
+    done.current = true;
+    act();
+  });
+}
+
+function NewBoard({
+  title,
+  repository,
+  store,
+  now,
+}: {
+  title: string | null;
+  repository: BoardsRepository;
+  store: KeyValueStore;
+  now: () => number;
+}) {
+  const navigate = useNavigate();
+  useOnce(true, () => {
+    const kept = loadEditorDraft(store, NEW_DRAFT_KEY);
+    if (begun(kept)) {
+      const board = boardFromDraft(kept, now(), nextUid);
+      repository.save(board);
+      store.remove(NEW_DRAFT_KEY);
+      void navigate(boardPath(board), { replace: true });
+      return;
+    }
+    const named = title?.trim() ?? "";
+    const suggested = named === "" ? "" : `&title=${encodeURIComponent(named)}`;
+    void navigate(`/b/${encodeURIComponent(nextUid())}?new=${now()}${suggested}`, {
+      replace: true,
+    });
+  });
+  return null;
+}
+
+function FromRanking({
+  code,
+  repository,
+  store,
+  load,
+  now,
+}: {
+  code: string;
+  repository: BoardsRepository;
+  store: KeyValueStore;
+  load: (code: string) => Promise<Ranking>;
+  now: () => number;
+}) {
+  const { state, retry } = useResource(code, load);
+  const navigate = useNavigate();
+  useOnce(state.status === "ready", () => {
+    if (state.status !== "ready") return;
+    const key = forkDraftKey(code);
+    const kept = loadEditorDraft(store, key);
+    const board = boardFromDraft(kept ?? draftOfRanking(state.value), now(), nextUid);
+    repository.save(board);
+    store.remove(key);
+    void navigate(boardPath(board), { replace: true });
+  });
+  if (state.status === "error") {
+    return <ListPageTrouble error={state.error} retry={retry} words={strings.ranking} />;
+  }
+  return <ListPageLoading note={strings.ranking.opening} rows={2} />;
+}
+
+function OwnList({
+  id,
+  ...rest
+}: {
+  id: string;
+  repository: BoardsRepository;
+  store: KeyValueStore;
+  load: (id: string) => Promise<PublishedList>;
+  copyBack: CopyBack;
+  now: () => number;
+}) {
+  const { account, signIn } = useSession();
+  if (account === null) return <ListPageLoading note={strings.new.openingList} rows={2} />;
+  if (account.kind !== "signedIn") {
+    return (
+      <section className="list-page list-page--trouble">
+        <h1>{strings.new.editTitle}</h1>
+        <p>{strings.new.editSignIn}</p>
+        <Button variant="filled" onClick={() => void signIn()}>
+          {strings.nav.signIn}
+        </Button>
+      </section>
+    );
+  }
+  const linked = boardOfList(rest.repository, id);
+  if (linked !== null) return <Navigate to={boardPath(linked)} replace />;
+  return <BoardOfOwnList id={id} uid={account.uid} {...rest} />;
+}
+
+/** A list published before it had a board: the board is made of it, its pictures brought over first. */
+function BoardOfOwnList({
+  id,
+  uid,
+  repository,
+  store,
+  load,
+  copyBack,
+  now,
+}: {
+  id: string;
+  uid: string;
+  repository: BoardsRepository;
+  store: KeyValueStore;
+  load: (id: string) => Promise<PublishedList>;
+  copyBack: CopyBack;
+  now: () => number;
+}) {
+  const { state, retry } = useResource(id, load);
+  const navigate = useNavigate();
+  // Try again clears it, and the effect brings the pictures over again.
+  const [failed, setFailed] = useState(false);
+  const mine = state.status === "ready" && state.value.authorUid === uid;
+
+  useEffect(() => {
+    if (!mine || state.status !== "ready" || failed) return;
+    let live = true;
+    const key = editDraftKey(id);
+    boardForOwnList(state.value, loadEditorDraft(store, key), copyBack, now(), nextUid).then(
+      (board) => {
+        if (!live) return;
+        // Made while the pictures came over: another tab may have made it first.
+        const already = boardOfList(repository, id);
+        if (already === null) repository.save(board);
+        store.remove(key);
+        void navigate(boardPath(already ?? board), { replace: true });
+      },
+      () => {
+        if (live) setFailed(true);
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [mine, state, failed, id, store, copyBack, now, repository, navigate]);
+
+  if (state.status === "error") {
+    return <ListPageTrouble error={state.error} retry={retry} words={strings.list} />;
+  }
+  if (state.status === "ready" && !mine) {
+    return (
+      <section className="list-page list-page--trouble">
+        <h1>{strings.new.editTitle}</h1>
+        <p>{strings.new.notYours}</p>
+        <Button variant="filled" href={`/l/${encodeURIComponent(id)}`}>
+          {strings.new.openList}
+        </Button>
+      </section>
+    );
+  }
+  if (failed) {
+    return (
+      <section className="list-page list-page--trouble">
+        <h1>{strings.new.editTitle}</h1>
+        <p>{strings.new.picturesFailed}</p>
+        <Button variant="filled" icon="refresh" onClick={() => setFailed(false)}>
+          {strings.new.tryAgain}
+        </Button>
+        <Link to={`/l/${encodeURIComponent(id)}`}>{strings.new.openList}</Link>
+      </section>
+    );
+  }
+  return <ListPageLoading note={strings.new.openingList} rows={2} />;
 }

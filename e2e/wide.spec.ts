@@ -48,6 +48,28 @@ test.describe("a wide screen", () => {
     await expect(side.getByRole("button", { name: "Ex Machina" })).toBeInViewport();
   });
 
+  test("shows the author's ranking as wide as the visitor's board, beside or under", async ({
+    page,
+  }) => {
+    await mockBackend(page);
+    await page.goto(`/l/${LIST_ID}`);
+    const tier = page.locator(".tier").first();
+    for (const size of [
+      { width: 1280, height: 720 }, // beside
+      { width: 1600, height: 900 }, // under
+    ]) {
+      await page.setViewportSize(size);
+      await page.getByRole("button", { name: "Mine", exact: true }).click();
+      await expect(page.locator(".ranking")).toBeVisible();
+      const mine = (await tier.boundingBox())!;
+      await page.getByRole("button", { name: "Their ranking" }).click();
+      await expect(page.getByRole("region", { name: "Their ranking" })).toBeVisible();
+      const theirs = (await tier.boundingBox())!;
+      expect(Math.round(theirs.x)).toBe(Math.round(mine.x));
+      expect(Math.round(theirs.width)).toBe(Math.round(mine.width));
+    }
+  });
+
   // A wide, tall window docks the pool under the board; the choice to put it beside is kept.
   test("docks the pool under the board on a wide window and remembers a choice", async ({
     page,
