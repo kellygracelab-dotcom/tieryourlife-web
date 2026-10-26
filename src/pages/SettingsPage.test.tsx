@@ -6,6 +6,7 @@ import type { ListSummary } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
 import { ApiFailure } from "../api/errors";
 import { faceChoicesOf } from "../features/account/faces";
+import { BoardSyncContext, NOBODY, type BoardSyncControls } from "../features/boards/boardSync";
 import { PictureRefused } from "../lib/pictures";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
@@ -73,7 +74,7 @@ function FrontPage() {
   return <h1>Front page</h1>;
 }
 
-const open = (account: Session["account"] = member) => {
+const open = (account: Session["account"] = member, sync?: BoardSyncControls) => {
   const session: Session = {
     account,
     signIn: vi.fn(async () => ({ kind: "signedIn" as const, switched: false })),
@@ -98,9 +99,14 @@ const open = (account: Session["account"] = member) => {
     { path: "/", element: <FrontPage /> },
   ];
   const router = createMemoryRouter(routes, { initialEntries: ["/settings"] });
+  const page = <RouterProvider router={router} />;
   const view = render(
     <SessionContext.Provider value={session}>
-      <RouterProvider router={router} />
+      {sync === undefined ? (
+        page
+      ) : (
+        <BoardSyncContext.Provider value={sync}>{page}</BoardSyncContext.Provider>
+      )}
     </SessionContext.Provider>,
   );
   return { session, router, ...view };
@@ -283,6 +289,31 @@ describe("SettingsPage", () => {
     load.mockResolvedValue({ lists: [] });
     open({ ...member, uid: "u2" });
     expect(await screen.findByText(/Publish a list and its pictures/)).toBeInTheDocument();
+  });
+
+  it("keeps the back-up on, and says so, when the account would not delete the copy", async () => {
+    load.mockResolvedValue({ lists: [] });
+    const setBackUp = vi.fn<BoardSyncControls["setBackUp"]>(() => Promise.reject(new Error("no")));
+    open(member, {
+      ...NOBODY,
+      signedIn: true,
+      backUp: true,
+      setBackUp,
+      syncNow: () => Promise.resolve(),
+    });
+    await userEvent.click(screen.getByLabelText(/Back up my boards/));
+    await userEvent.click(screen.getByRole("button", { name: "Stop and delete" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The copy could not be deleted, so backup stays on. Try again.",
+    );
+    expect(setBackUp).toHaveBeenCalledWith(false);
+    // The dialog stays for another go, and the switch never moved.
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Back up my boards/)).toBeChecked();
+
+    setBackUp.mockResolvedValueOnce(undefined);
+    await userEvent.click(screen.getByRole("button", { name: "Stop and delete" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("deletes the account only after Delete for good, then leaves as a guest", async () => {

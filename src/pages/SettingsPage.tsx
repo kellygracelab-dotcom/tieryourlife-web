@@ -476,8 +476,13 @@ function DataCard() {
   const trashed = trashEntriesOf(boards).length;
   const [asking, setAsking] = useState(false);
   const [switching, setSwitching] = useState(false);
+  // Switching off did not go through: the copies may still be there, and the switch stays on.
+  const [offFailed, setOffFailed] = useState(false);
   const [exported, setExported] = useState<number | "failed" | null>(null);
-  const close = useCallback(() => setAsking(false), []);
+  const close = useCallback(() => {
+    setAsking(false);
+    setOffFailed(false);
+  }, []);
   const onExport = () => {
     try {
       setExported(saveExport(boards));
@@ -486,9 +491,15 @@ function DataCard() {
     }
   };
   const turn = (on: boolean) => {
-    setAsking(false);
     setSwitching(true);
-    void sync.setBackUp(on).finally(() => setSwitching(false));
+    setOffFailed(false);
+    sync
+      .setBackUp(on)
+      .then(
+        () => setAsking(false),
+        () => setOffFailed(true),
+      )
+      .finally(() => setSwitching(false));
   };
   return (
     <section className="settings__card" aria-labelledby="data-title">
@@ -560,7 +571,17 @@ function DataCard() {
           title={strings.sync.offTitle}
           body={strings.sync.offBody}
           confirmLabel={strings.sync.offConfirm}
+          busyLabel={strings.sync.offBusy}
           cancelLabel={strings.sync.offCancel}
+          busy={switching}
+          trouble={
+            offFailed && (
+              <p className="dialog__bar" role="alert">
+                <Icon name="cloud_off" className="dialog__bar-icon" />
+                {strings.sync.offFailed}
+              </p>
+            )
+          }
           onConfirm={() => turn(false)}
           onCancel={close}
         />

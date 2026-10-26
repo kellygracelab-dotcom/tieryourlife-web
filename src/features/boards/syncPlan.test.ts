@@ -53,6 +53,11 @@ describe("planSync", () => {
     ],
     ["a board already gone from both sides is left alone", [], [[], remote(3, true), synced()]],
     [
+      "a marker in the account with no agreement here brings the board back over it",
+      [{ kind: "revive", uid: board, basedOn: 3 }],
+      [local(), remote(3, true), []],
+    ],
+    [
       "a store back from a backup does not duplicate anything",
       [{ kind: "remember", uid: board, revision: 2 }],
       [local("aaa"), remote(2, false, "aaa"), []],

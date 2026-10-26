@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { KeepBoardRequest, KeptBoard } from "../../api/boards";
@@ -6,6 +7,7 @@ import { GUEST, SessionContext, type Session } from "../../app/session";
 import type { Account } from "../../lib/account";
 import type { SignInOutcome } from "../../lib/signIn";
 import { memoryStore } from "../../lib/storage";
+import { readBackUp } from "./syncRecords";
 import { BoardSyncProvider } from "./BoardSync";
 import { useBoardSync } from "./boardSync";
 import { newBoard } from "./model";
@@ -23,13 +25,36 @@ const uids = () => {
 
 const signedIn: Account = { kind: "signedIn", uid: "me", displayName: "D", photoUrl: null };
 
-function fakeApi(theirs: KeptBoard[] = []) {
+/** A promise settled by hand: what a request looks like while the network thinks. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+  return { promise, resolve, reject };
+}
+
+function fakeApi(
+  theirs: KeptBoard[] = [],
+  options: { pageSize?: number; holdKeeps?: boolean; refuseForget?: boolean } = {},
+) {
+  const { pageSize = 50, holdKeeps = false, refuseForget = false } = options;
   const kept = new Map(theirs.map((board) => [board.uid, board]));
   const keeps: { uid: string; request: KeepBoardRequest }[] = [];
+  const forgotten: string[] = [];
+  const indexReads: (string | null)[] = [];
+  // Keeps held back until the test lets them go, in the order they were sent.
+  const held: (() => void)[] = [];
   const api: BoardsApi = {
-    index: () =>
-      Promise.resolve({
-        boards: [...kept.values()].map((board) => ({
+    index: (after) => {
+      indexReads.push(after);
+      const all = [...kept.values()];
+      const start = after === null ? 0 : Number(after);
+      const page = all.slice(start, start + pageSize);
+      return Promise.resolve({
+        boards: page.map((board) => ({
           uid: board.uid,
           revision: board.revision,
           updatedAt: board.updatedAt,
@@ -39,19 +64,35 @@ function fakeApi(theirs: KeptBoard[] = []) {
           title: board.title,
           itemCount: board.items.length,
         })),
-        next: null,
-      }),
+        next: start + pageSize < all.length ? String(start + pageSize) : null,
+      });
+    },
     board: (uid) => Promise.resolve(kept.get(uid)!),
     keep: (uid, request) => {
       keeps.push({ uid, request });
-      const revision = (kept.get(uid)?.revision ?? 0) + 1;
-      kept.set(uid, { ...request, uid, revision, updatedAt: 1, deleted: false });
-      return Promise.resolve({ uid, revision });
+      const answer = () => {
+        const revision = (kept.get(uid)?.revision ?? 0) + 1;
+        kept.set(uid, { ...request, uid, revision, updatedAt: 1, deleted: false });
+        return { uid, revision };
+      };
+      if (!holdKeeps) return Promise.resolve(answer());
+      const gate = deferred<{ uid: string; revision: number }>();
+      held.push(() => gate.resolve(answer()));
+      return gate.promise;
     },
-    forget: () => Promise.resolve(),
+    forget: (uid) => {
+      if (refuseForget) return Promise.reject(new Error("the account would not"));
+      forgotten.push(uid);
+      const was = kept.get(uid);
+      if (was !== undefined) kept.set(uid, { ...was, deleted: true, revision: was.revision + 1 });
+      return Promise.resolve();
+    },
     published: () => Promise.resolve([]),
   };
-  return { api, keeps, kept };
+  const releaseKeeps = () => {
+    for (const release of held.splice(0)) release();
+  };
+  return { api, keeps, kept, forgotten, indexReads, releaseKeeps };
 }
 
 const theirBoard = (uid: string, title: string): KeptBoard => ({
@@ -65,32 +106,50 @@ const theirBoard = (uid: string, title: string): KeptBoard => ({
 
 function Probe() {
   const sync = useBoardSync();
+  const [failed, setFailed] = useState(false);
   return (
-    <p data-testid="probe">
-      {sync.signedIn ? "in" : "out"} {sync.status} {sync.merge === null ? "-" : "asking"}
-    </p>
+    <>
+      <p data-testid="probe">
+        {sync.signedIn ? "in" : "out"} {sync.status} {sync.merge === null ? "-" : "asking"}{" "}
+        {sync.backUp ? "on" : "off"}
+        {failed && " failed"}
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          setFailed(false);
+          sync.setBackUp(false).catch(() => setFailed(true));
+        }}
+      >
+        stop
+      </button>
+    </>
   );
 }
 
-const show = (account: Account, deps: Parameters<typeof BoardSyncProvider>[0]) => {
-  const session: Session = {
-    account,
-    signIn: () => new Promise<SignInOutcome>(() => undefined),
-    signOut: () => Promise.resolve(),
-    refresh: () => undefined,
-  };
-  return render(
-    <SessionContext.Provider value={session}>
-      <BoardSyncProvider
-        {...deps}
-        syncAfterMs={10}
-        resolvePicture={() => () => Promise.resolve(null)}
-      >
-        <Probe />
-      </BoardSyncProvider>
-    </SessionContext.Provider>,
-  );
-};
+const sessionOf = (account: Account): Session => ({
+  account,
+  signIn: () => new Promise<SignInOutcome>(() => undefined),
+  signOut: () => Promise.resolve(),
+  refresh: () => undefined,
+});
+
+const tree = (account: Account, deps: Parameters<typeof BoardSyncProvider>[0]) => (
+  <SessionContext.Provider value={sessionOf(account)}>
+    <BoardSyncProvider
+      {...deps}
+      syncAfterMs={10}
+      resolvePicture={() => () => Promise.resolve(null)}
+    >
+      <Probe />
+    </BoardSyncProvider>
+  </SessionContext.Provider>
+);
+
+const show = (account: Account, deps: Parameters<typeof BoardSyncProvider>[0]) =>
+  render(tree(account, deps));
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 30));
 
 describe("BoardSyncProvider", () => {
   it("does nothing for a guest", async () => {
@@ -150,5 +209,88 @@ describe("BoardSyncProvider", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() => expect(repository.get("mine")?.deletedAt).toBe(77));
     await waitFor(() => expect(repository.get("theirs")).not.toBeNull());
+  });
+
+  it("switching the back-up off forgets every page of the account's copies, then turns off", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    const { api, forgotten, indexReads } = fakeApi(
+      [theirBoard("a", "A"), theirBoard("b", "B"), theirBoard("c", "C")],
+      { pageSize: 2 },
+    );
+    syncRecords(store, "me").markMerged();
+    show(signedIn, { children: null, repository, store, api });
+    await waitFor(() => expect(repository.all()).toHaveLength(3));
+    indexReads.length = 0;
+
+    await userEvent.click(screen.getByRole("button", { name: "stop" }));
+    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("off"));
+    expect(forgotten.sort()).toEqual(["a", "b", "c"]);
+    expect(indexReads).toEqual([null, "2"]);
+    expect(readBackUp(store)).toBe(false);
+    expect(syncRecords(store, "me").all()).toEqual([]);
+    // The boards themselves stay: off means the copy is gone, not the boards.
+    expect(repository.all()).toHaveLength(3);
+  });
+
+  it("a failed delete leaves the switch on, in the store and on screen, with the error to retry", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    const { api } = fakeApi([theirBoard("a", "A")], { refuseForget: true });
+    syncRecords(store, "me").markMerged();
+    show(signedIn, { children: null, repository, store, api });
+    await waitFor(() => expect(repository.all()).toHaveLength(1));
+
+    await userEvent.click(screen.getByRole("button", { name: "stop" }));
+    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("failed"));
+    expect(screen.getByTestId("probe")).toHaveTextContent("in idle - on");
+    expect(readBackUp(store)).toBe(true);
+    expect(syncRecords(store, "me").all()).toHaveLength(1);
+  });
+
+  it("a run in flight when the account signs out writes nothing more once its answer comes", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    repository.save(newBoard("a", "A", 1, uids()));
+    const { api, keeps, releaseKeeps } = fakeApi([], { holdKeeps: true });
+    const view = show(signedIn, { children: null, repository, store, api });
+    await waitFor(() => expect(keeps).toHaveLength(1));
+    expect(screen.getByTestId("probe")).toHaveTextContent("in syncing");
+
+    // The account is gone before the account answers.
+    view.rerender(tree(GUEST, { children: null, repository, store, api }));
+    expect(screen.getByTestId("probe")).toHaveTextContent("out idle");
+    act(releaseKeeps);
+    await settle();
+    // Nothing of that answer was written down, and nothing else went up.
+    expect(syncRecords(store, "me").all()).toEqual([]);
+    expect(syncRecords(store, "me").lastSyncedAt()).toBeNull();
+    expect(keeps).toHaveLength(1);
+  });
+
+  it("switching off waits for the run in flight, and that run writes nothing once the switch moved", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    repository.save(newBoard("a", "A", 1, uids()));
+    const { api, keeps, forgotten, releaseKeeps } = fakeApi([], { holdKeeps: true });
+    show(signedIn, { children: null, repository, store, api });
+    await waitFor(() => expect(keeps).toHaveLength(1));
+
+    await userEvent.click(screen.getByRole("button", { name: "stop" }));
+    await settle();
+    // Nothing is forgotten while the keep is still in the air: the answer could land after.
+    expect(forgotten).toEqual([]);
+    expect(screen.getByTestId("probe")).toHaveTextContent("on");
+
+    act(releaseKeeps);
+    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("off"));
+    // The copy that keep made is gone with the rest, and the agreement was never written.
+    expect(forgotten).toEqual(["a"]);
+    expect(syncRecords(store, "me").all()).toEqual([]);
+    expect(readBackUp(store)).toBe(false);
+    // A change now goes nowhere: the switch is off.
+    act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 9 }));
+    await settle();
+    expect(keeps).toHaveLength(1);
   });
 });

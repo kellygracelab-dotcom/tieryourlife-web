@@ -33,11 +33,34 @@ export interface SyncDeps {
   fingerprintOf?: (board: Board) => Promise<string>;
   /** Where a picture of the person's own can be seen from, by its id; null when it cannot be found. */
   resolvePicture?: (pictureId: string) => Promise<string | null>;
+  /**
+   * Whether the run is still wanted: asked before every write to the account,
+   * the store or the records. False once the account changed under the run or
+   * the back-up was switched off, and the run stops there, cancelled.
+   */
+  stillWanted?: () => boolean;
 }
 
 export interface SyncReport {
   carried: number;
   refused: number;
+  /** Steps left for the next run: the board moved here while the account's copy was on its way. */
+  deferred: number;
+  /** Stopped before the end because it was no longer wanted; nothing after the stop was written. */
+  cancelled: boolean;
+}
+
+/** Thrown inside a run the moment it is no longer wanted. */
+export class SyncCancelled extends Error {
+  constructor() {
+    super("sync cancelled");
+    this.name = "SyncCancelled";
+  }
+}
+
+/** The lifecycle boundary: every side effect of a run stands behind this. */
+function check(deps: SyncDeps): void {
+  if (deps.stillWanted !== undefined && !deps.stillWanted()) throw new SyncCancelled();
 }
 
 const request = (
@@ -92,38 +115,49 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
   const { repository, api, records, now } = deps;
   const fingerprintOf = deps.fingerprintOf ?? digest;
 
-  const local = repository.all();
-  const fingerprints = new Map<string, string>();
-  for (const board of local) fingerprints.set(board.uid, await fingerprintOf(board));
-
-  const remote = await readIndex(api);
-  const steps = planSync(
-    local.map((board) => ({ uid: board.uid, fingerprint: fingerprints.get(board.uid) ?? "" })),
-    [...remote.values()],
-    records.all(),
-  );
-
   let carried = 0;
   let refused = 0;
-  for (const step of steps) {
-    try {
-      await carry(step, deps, fingerprintOf);
-      carried++;
-    } catch {
-      refused++;
-    }
-  }
-
+  let deferred = 0;
   try {
-    await forgetWhatIsNoLongerPublished(deps);
-  } catch {
-    // The published ids are a convenience; the boards themselves went through.
-  }
+    const local = repository.all();
+    const fingerprints = new Map<string, string>();
+    for (const board of local) fingerprints.set(board.uid, await fingerprintOf(board));
 
-  // Only after a complete run: a partial one leaves the account behind,
-  // which is what this time is there to report.
-  if (refused === 0) records.markSynced(now());
-  return { carried, refused };
+    check(deps);
+    const remote = await readIndex(api);
+    const steps = planSync(
+      local.map((board) => ({ uid: board.uid, fingerprint: fingerprints.get(board.uid) ?? "" })),
+      [...remote.values()],
+      records.all(),
+    );
+
+    for (const step of steps) {
+      check(deps);
+      try {
+        if ((await carry(step, deps, fingerprintOf, fingerprints)) === "deferred") deferred++;
+        else carried++;
+      } catch (reason: unknown) {
+        if (reason instanceof SyncCancelled) throw reason;
+        refused++;
+      }
+    }
+
+    try {
+      await forgetWhatIsNoLongerPublished(deps);
+    } catch (reason: unknown) {
+      if (reason instanceof SyncCancelled) throw reason;
+      // The published ids are a convenience; the boards themselves went through.
+    }
+
+    // Only after a complete run: a partial one leaves the account behind,
+    // which is what this time is there to report.
+    check(deps);
+    if (refused === 0) records.markSynced(now());
+    return { carried, refused, deferred, cancelled: false };
+  } catch (reason: unknown) {
+    if (reason instanceof SyncCancelled) return { carried, refused, deferred, cancelled: true };
+    throw reason;
+  }
 }
 
 async function readIndex(api: BoardsApi): Promise<Map<string, RemoteBoard>> {
@@ -144,42 +178,57 @@ async function readIndex(api: BoardsApi): Promise<Map<string, RemoteBoard>> {
   return found;
 }
 
+/**
+ * One step. `planned` holds the fingerprints the plan was made from: a step
+ * that would write over a board which moved here since is deferred to the
+ * next run, which the move itself has already asked for.
+ */
 async function carry(
   step: SyncStep,
   deps: SyncDeps,
   fingerprintOf: (board: Board) => Promise<string>,
-): Promise<void> {
+  planned: ReadonlyMap<string, string>,
+): Promise<"carried" | "deferred"> {
   const { repository, api, records } = deps;
   switch (step.kind) {
     case "create":
-      return send(step.uid, null, deps, fingerprintOf);
+      await send(step.uid, null, deps, fingerprintOf);
+      return "carried";
     case "update":
-      return send(step.uid, step.basedOn, deps, fingerprintOf);
+    case "revive":
+      await send(step.uid, step.basedOn, deps, fingerprintOf);
+      return "carried";
     case "keepBoth":
       // Theirs comes down first, so it is safe here even if the write below never happens.
       await adopt(await api.board(step.uid), true, deps, fingerprintOf);
-      return send(step.uid, step.basedOn, deps, fingerprintOf);
+      await send(step.uid, step.basedOn, deps, fingerprintOf);
+      return "carried";
     case "restore":
-      return takeOver(await api.board(step.uid), deps, fingerprintOf);
+      return takeOver(await api.board(step.uid), planned.get(step.uid), deps, fingerprintOf);
     case "adopt":
-      return adopt(await api.board(step.uid), false, deps, fingerprintOf);
+      await adopt(await api.board(step.uid), false, deps, fingerprintOf);
+      return "carried";
     case "discardLocal":
+      check(deps);
       repository.remove(step.uid);
       records.forget(step.uid);
-      return;
+      return "carried";
     case "forget":
+      check(deps);
       await api.forget(step.uid);
+      check(deps);
       records.forget(step.uid);
-      return;
+      return "carried";
     case "remember": {
       const board = repository.get(step.uid);
-      if (board === null) return;
+      if (board === null) return "carried";
+      check(deps);
       records.remember({
         uid: step.uid,
         revision: step.revision,
         fingerprint: await fingerprintOf(board),
       });
-      return;
+      return "carried";
     }
   }
 }
@@ -198,13 +247,17 @@ async function send(
   const board = repository.get(uid);
   if (board === null) return;
   const fingerprint = await fingerprintOf(board);
+  check(deps);
   try {
     const answer = await api.keep(uid, request(board, fingerprint, basedOn, deviceName));
+    check(deps);
     records.remember({ uid, revision: answer.revision, fingerprint });
     return;
   } catch (reason: unknown) {
+    if (reason instanceof SyncCancelled) throw reason;
     const theirs = conflictBoard(reason);
     if (theirs === null) throw reason;
+    check(deps);
     // Our own board coming back: the last write's answer never arrived. Same
     // content, so take the missed number and stop; otherwise a copy of your
     // own board appears every time.
@@ -213,7 +266,9 @@ async function send(
       return;
     }
     await adopt(theirs, true, deps, fingerprintOf);
+    check(deps);
     const second = await api.keep(uid, request(board, fingerprint, theirs.revision, deviceName));
+    check(deps);
     records.remember({ uid, revision: second.revision, fingerprint });
   }
 }
@@ -226,26 +281,44 @@ function boardOf(incoming: KeptBoard, now: number): Board | null {
     : { ...parsed, favouritedAt: null, arrivedFrom: null, publishedEditedAt: null };
 }
 
-/** The account's copy replaces what is here, uid and all; the star stays, it is this device's. */
+/**
+ * The account's copy replaces what is here, uid and all; the star stays, it
+ * is this device's. Not when the board here moved while the copy was on its
+ * way: writing then would put the account's older version over an edit made
+ * a moment ago. The step waits for the next run, where both changes meet.
+ */
 async function takeOver(
   incoming: KeptBoard,
+  plannedFingerprint: string | undefined,
   deps: SyncDeps,
   fingerprintOf: (board: Board) => Promise<string>,
-): Promise<void> {
+): Promise<"carried" | "deferred"> {
   const existing = deps.repository.get(incoming.uid);
-  if (existing === null) return adopt(incoming, false, deps, fingerprintOf);
+  if (existing === null) {
+    await adopt(incoming, false, deps, fingerprintOf);
+    return "carried";
+  }
   const fresh = boardOf(incoming, deps.now());
   if (fresh === null) throw new Error(`The account's copy of ${incoming.uid} could not be read`);
   const board = await withPictures(
     { ...fresh, favouritedAt: existing.favouritedAt, arrivedFrom: existing.arrivedFrom },
     deps,
   );
+  check(deps);
+  const current = deps.repository.get(incoming.uid);
+  if (
+    current === null ||
+    (plannedFingerprint !== undefined && (await fingerprintOf(current)) !== plannedFingerprint)
+  ) {
+    return "deferred";
+  }
   deps.repository.save(board);
   deps.records.remember({
     uid: board.uid,
     revision: incoming.revision,
     fingerprint: await fingerprintOf(board),
   });
+  return "carried";
 }
 
 /**
@@ -265,6 +338,7 @@ async function adopt(
     asCopy ? renamed(fresh, incoming.deviceName, deps.nextUid) : fresh,
     deps,
   );
+  check(deps);
   deps.repository.save(board);
   if (asCopy) return;
   deps.records.remember({
@@ -324,6 +398,7 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
   if (theirs === null) return;
   const gone = claimed.filter((board) => !theirs.includes(board.publishedId ?? ""));
   if (gone.length > 0) {
+    check(deps);
     deps.repository.saveAll(
       gone.map((board) => setPublished(board, null, board.authorName, deps.now())),
     );

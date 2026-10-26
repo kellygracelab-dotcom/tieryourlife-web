@@ -4,6 +4,7 @@ import { ApiFailure } from "../../api/errors";
 import { memoryStore } from "../../lib/storage";
 import { addToPool, liveItems, newBoard, rename, setFavourite, type Board } from "./model";
 import { boardsRepository } from "./repository";
+import { fingerprintOf } from "./fingerprint";
 import { syncBoards, type BoardsApi } from "./sync";
 import { syncRecords } from "./syncRecords";
 
@@ -117,7 +118,7 @@ describe("syncBoards", () => {
   it("sends a board the account has never seen, and writes down the agreement", async () => {
     const { repository, records, account, run } = setUp();
     repository.save(films());
-    expect(await run()).toEqual({ carried: 1, refused: 0 });
+    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
     expect(account.keeps).toHaveLength(1);
     const { uid, request } = account.keeps[0]!;
     expect(uid).toBe("films");
@@ -136,7 +137,7 @@ describe("syncBoards", () => {
 
     // A second run with nothing changed sends nothing: the one step is writing
     // down that both sides still agree.
-    expect(await run()).toEqual({ carried: 1, refused: 0 });
+    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
     expect(account.keeps).toHaveLength(1);
   });
 
@@ -145,7 +146,7 @@ describe("syncBoards", () => {
     repository.save(films());
     await run();
     repository.save(rename(repository.get("films")!, "Films I like", 200));
-    expect(await run()).toEqual({ carried: 1, refused: 0 });
+    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
     expect(account.keeps[1]).toMatchObject({
       uid: "films",
       request: { basedOn: 1, title: "Films I like" },
@@ -165,7 +166,7 @@ describe("syncBoards", () => {
       title: "Their name",
       fingerprint: "other",
     });
-    expect(await run()).toEqual({ carried: 1, refused: 0 });
+    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
     const board = repository.get("films")!;
     expect(board.title).toBe("Their name");
     expect(board.favouritedAt).toBe(7);
@@ -183,7 +184,12 @@ describe("syncBoards", () => {
       ),
     });
     const resolvePicture = vi.fn((id: string) => Promise.resolve(`https://pictures/${id}`));
-    expect(await run({ resolvePicture })).toEqual({ carried: 1, refused: 0 });
+    expect(await run({ resolvePicture })).toEqual({
+      carried: 1,
+      refused: 0,
+      deferred: 0,
+      cancelled: false,
+    });
     const board = repository.get("theirs")!;
     expect(board.title).toBe("From the phone");
     expect(board.arrivedFrom).toBeNull();
@@ -192,7 +198,7 @@ describe("syncBoards", () => {
     );
     expect(resolvePicture).toHaveBeenCalledWith("pic-1");
     // Known now: the next run leaves it alone.
-    expect(await run()).toEqual({ carried: 0, refused: 0 });
+    expect(await run()).toEqual({ carried: 0, refused: 0, deferred: 0, cancelled: false });
   });
 
   it("keeps both when both sides changed: theirs as a copy named after their device, ours sent over theirs", async () => {
@@ -209,7 +215,7 @@ describe("syncBoards", () => {
       publishedId: "p1",
     };
     account.kept.set("films", theirs);
-    expect(await run()).toEqual({ carried: 1, refused: 0 });
+    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
     const all = repository.all();
     expect(all).toHaveLength(2);
     const copy = all.find((board) => board.uid !== "films")!;
@@ -241,7 +247,7 @@ describe("syncBoards", () => {
       fingerprint: "elsewhere",
     };
     account.refuseNextWith(theirs);
-    expect(await run()).toEqual({ carried: 1, refused: 0 });
+    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
     expect(
       repository
         .all()
@@ -261,7 +267,7 @@ describe("syncBoards", () => {
     account.kept.set("films", same);
     records.remember({ uid: "films", revision: 1, fingerprint: "stale" });
     account.refuseNextWith(same);
-    expect(await run()).toEqual({ carried: 1, refused: 0 });
+    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
     expect(repository.all()).toHaveLength(1);
     expect(records.all()[0]).toEqual({ uid: "films", revision: 5, fingerprint });
   });
@@ -273,7 +279,7 @@ describe("syncBoards", () => {
     repository.remove("a");
     const b = account.kept.get("b")!;
     account.kept.set("b", { ...b, deleted: true, revision: 2 });
-    expect(await run()).toEqual({ carried: 2, refused: 0 });
+    expect(await run()).toEqual({ carried: 2, refused: 0, deferred: 0, cancelled: false });
     expect(account.forgotten).toEqual(["a"]);
     expect(repository.get("b")).toBeNull();
     expect(records.all()).toEqual([]);
@@ -283,7 +289,7 @@ describe("syncBoards", () => {
     const { repository, records, account, run } = setUp();
     repository.save(films());
     account.api.keep = () => Promise.reject(new ApiFailure({ kind: "unavailable" }));
-    expect(await run()).toEqual({ carried: 0, refused: 1 });
+    expect(await run()).toEqual({ carried: 0, refused: 1, deferred: 0, cancelled: false });
     expect(records.lastSyncedAt()).toBeNull();
   });
 
@@ -301,5 +307,67 @@ describe("syncBoards", () => {
     unsure.repository.save({ ...films("c", "C"), publishedId: "p-unknown" });
     await unsure.run();
     expect(unsure.repository.get("c")?.publishedId).toBe("p-unknown");
+  });
+
+  it("brings a board back over the account's marker when nothing here agreed about it", async () => {
+    const { repository, records, account, run } = setUp();
+    repository.save(films());
+    account.holds(films(), 2);
+    account.kept.set("films", { ...account.kept.get("films")!, deleted: true });
+    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(account.keeps[0]).toMatchObject({ uid: "films", request: { basedOn: 2 } });
+    expect(account.kept.get("films")?.deleted).toBe(false);
+    expect(records.all()).toHaveLength(1);
+    expect(repository.get("films")).not.toBeNull();
+  });
+
+  it("leaves a restore for the next run when the board here moved while the copy was on its way", async () => {
+    const { repository, records, account, run } = setUp();
+    const mine = films();
+    repository.save(mine);
+    // Agreed at revision 1 with this very content; the account has since moved on.
+    const fingerprint = await fingerprintOf(mine);
+    records.remember({ uid: "films", revision: 1, fingerprint });
+    account.holds({ ...mine, title: "Theirs" }, 2);
+    // While the copy is on its way, the person renames the board here.
+    const fetch = account.api.board;
+    account.api.board = (uid) => {
+      repository.save({ ...repository.get("films")!, title: "Mine, edited", editedAt: 2000 });
+      return fetch(uid);
+    };
+    expect(await run()).toEqual({ carried: 0, refused: 0, deferred: 1, cancelled: false });
+    expect(repository.get("films")?.title).toBe("Mine, edited");
+    expect(records.all()).toEqual([{ uid: "films", revision: 1, fingerprint }]);
+
+    // The next run sees a change on both sides and keeps both.
+    account.api.board = fetch;
+    expect(await run()).toMatchObject({ carried: 1, refused: 0, deferred: 0 });
+    expect(
+      repository
+        .all()
+        .map((board) => board.title)
+        .sort(),
+    ).toEqual(["Mine, edited", "Theirs"]);
+  });
+
+  it("stops at the boundary once no longer wanted, and writes nothing past it", async () => {
+    const { repository, records, account, run } = setUp();
+    repository.saveAll([films("a", "A"), films("b", "B")]);
+    let wanted = true;
+    const keep = account.api.keep;
+    account.api.keep = async (uid, request) => {
+      const answer = await keep(uid, request);
+      wanted = false;
+      return answer;
+    };
+    expect(await run({ stillWanted: () => wanted })).toEqual({
+      carried: 0,
+      refused: 0,
+      deferred: 0,
+      cancelled: true,
+    });
+    expect(account.keeps).toHaveLength(1);
+    expect(records.all()).toEqual([]);
+    expect(records.lastSyncedAt()).toBeNull();
   });
 });

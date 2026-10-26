@@ -39,8 +39,17 @@ export type SyncStep =
   | { kind: "adopt"; uid: string }
   /** Changed in both places. The order is the content, so nothing merges: the account's copy arrives as a second board. */
   | { kind: "keepBoth"; uid: string; basedOn: number }
-  /** Thrown away somewhere else. Let it go here too. */
+  /** Thrown away somewhere else after this device agreed about it. Let it go here too. */
   | { kind: "discardLocal"; uid: string }
+  /**
+   * A marker in the account and no agreement here: this device sent the board
+   * once and withdrew it (the back-up was switched off, which forgets every
+   * agreement), or never agreed at all. The board here is the only one, so it
+   * goes up again over the marker. The phone's plan discards in this case; the
+   * site keeps the board, because the only record it has of the agreement is
+   * one it clears on purpose.
+   */
+  | { kind: "revive"; uid: string; basedOn: number }
   /** Thrown away here. Tell the account, so the other device lets go as well. */
   | { kind: "forget"; uid: string }
   /** Already the same on both sides. Still a step: the device must write down that they agree, or every run asks again. */
@@ -53,9 +62,12 @@ function stepFor(
 ): SyncStep | null {
   if (remote === undefined) return { kind: "create", uid: local.uid };
   if (remote.deleted) {
-    // Thrown away on another device. Keeping it here would make emptying the
-    // trash something that only holds on the device you did it on.
-    return { kind: "discardLocal", uid: local.uid };
+    // Thrown away on another device after both agreed. Keeping it here would
+    // make emptying the trash something that only holds on the device you
+    // did it on. Without an agreement the marker is this device's own doing.
+    return synced === undefined
+      ? { kind: "revive", uid: local.uid, basedOn: remote.revision }
+      : { kind: "discardLocal", uid: local.uid };
   }
   // Asked first: a store restored from a backup has every board twice with
   // no record of agreeing, and the safe reading would duplicate the lot.

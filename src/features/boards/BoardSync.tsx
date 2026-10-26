@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getDownloadURL, ref } from "firebase/storage";
+import type { KeptBoardEntry } from "../../api/boards";
 import { useSession } from "../../app/session";
 import { forgetBoard, keepBoard, loadBoardIndex, loadKeptBoard, loadMyLists } from "../../lib/api";
 import { getFirebaseStorage } from "../../lib/firebase";
@@ -52,21 +53,22 @@ interface BoardSyncProviderProps {
   syncAfterMs?: number;
 }
 
-/** Every live board on the account, by title: what a sign-in has to be told apart from. */
-async function accountTitles(api: BoardsApi): Promise<{ count: number; titles: Set<string> }> {
-  const titles = new Set<string>();
-  let count = 0;
+/** Every live board on the account, page after page: the index is paged, and nothing here may stop at the first. */
+async function liveEntries(api: BoardsApi): Promise<KeptBoardEntry[]> {
+  const live: KeptBoardEntry[] = [];
   let after: string | null = null;
   do {
     const page: Awaited<ReturnType<BoardsApi["index"]>> = await api.index(after);
-    for (const entry of page.boards) {
-      if (entry.deleted) continue;
-      count++;
-      titles.add(entry.title);
-    }
+    live.push(...page.boards.filter((entry) => !entry.deleted));
     after = page.next;
   } while (after !== null);
-  return { count, titles };
+  return live;
+}
+
+/** Every live board on the account, by title: what a sign-in has to be told apart from. */
+async function accountTitles(api: BoardsApi): Promise<{ count: number; titles: Set<string> }> {
+  const live = await liveEntries(api);
+  return { count: live.length, titles: new Set(live.map((entry) => entry.title)) };
 }
 
 /**
@@ -111,15 +113,33 @@ function ForAccount({
   const running = useRef<Promise<void> | null>(null);
   const again = useRef(false);
   const runAgain = useRef<() => Promise<void>>(() => Promise.resolve());
+  // The lifecycle boundary. A run belongs to one mount of this account and one
+  // epoch; the mount ends when the account changes (the key above), the epoch
+  // moves on when the back-up is switched off. A run past either writes
+  // nothing more and reports nothing: the engine asks before every write.
+  const mounted = useRef(true);
+  const epoch = useRef(0);
+  const stopping = useRef(false);
+  useEffect(() => {
+    const life = mounted;
+    const era = epoch;
+    life.current = true;
+    return () => {
+      life.current = false;
+      era.current++;
+    };
+  }, []);
 
   const run = useCallback((): Promise<void> => {
-    if (uid === null || records === null || !backUp || !records.merged()) {
+    if (uid === null || records === null || !backUp || !records.merged() || stopping.current) {
       return Promise.resolve();
     }
     if (running.current !== null) {
       again.current = true;
       return running.current;
     }
+    const started = epoch.current;
+    const stillWanted = () => mounted.current && epoch.current === started;
     setStatus("syncing");
     const promise = syncBoards({
       repository,
@@ -129,14 +149,23 @@ function ForAccount({
       now,
       nextUid,
       resolvePicture: resolvePicture(uid),
+      stillWanted,
     })
       .then(
-        (report) => setStatus(report.refused > 0 ? "stuck" : "idle"),
-        () => setStatus("stuck"),
+        (report) => {
+          if (stillWanted()) setStatus(report.refused > 0 ? "stuck" : "idle");
+        },
+        () => {
+          if (stillWanted()) setStatus("stuck");
+        },
       )
       .finally(() => {
-        setLastSyncedAt(records.lastSyncedAt());
         running.current = null;
+        if (!stillWanted()) {
+          again.current = false;
+          return;
+        }
+        setLastSyncedAt(records.lastSyncedAt());
         if (again.current) {
           again.current = false;
           void runAgain.current();
@@ -230,20 +259,37 @@ function ForAccount({
 
   const setBackUp = useCallback(
     async (on: boolean) => {
-      keepBackUp(store, on);
-      if (!on && records !== null) {
-        // Off has to mean the copy is gone, or the switch is a lie.
-        try {
-          const { boards } = await api.index(null);
-          for (const entry of boards) {
-            if (!entry.deleted) await api.forget(entry.uid);
+      if (on) {
+        keepBackUp(store, true);
+        setBackUpState(true);
+        return;
+      }
+      // Off has to mean the copy is gone, or the switch is a lie. So: nothing
+      // more goes up from here, a run in flight ends first, every page of the
+      // account's copies goes, and only then is the switch off, in the store
+      // and on screen alike. A failure leaves it on, and the caller says so.
+      stopping.current = true;
+      epoch.current++;
+      const inFlight = running.current;
+      if (inFlight !== null) {
+        // The run ends at its next check and reports nothing, so the status is set here.
+        await inFlight.catch(() => undefined);
+        if (mounted.current) setStatus("idle");
+      }
+      try {
+        if (records !== null) {
+          for (const entry of await liveEntries(api)) {
+            await api.forget(entry.uid);
+            records.forget(entry.uid);
           }
-        } finally {
           records.clear();
           setLastSyncedAt(null);
         }
+        keepBackUp(store, false);
+        setBackUpState(false);
+      } finally {
+        stopping.current = false;
       }
-      setBackUpState(on);
     },
     [store, records, api],
   );
