@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -222,15 +222,15 @@ describe("HomePage for a signed-in person", () => {
     expect(within(dialog).getByRole("link", { name: "someone" })).toHaveAttribute("href", "/u/u2");
     // A person whose lists are all gone keeps the follow, under "Someone".
     expect(within(dialog).getByRole("link", { name: "Someone" })).toHaveAttribute("href", "/u/u3");
+    const reads = load.mock.calls.length;
+    const peopleReads = loadFollowing.mock.calls.length;
     const [first] = within(dialog).getAllByRole("listitem");
     await userEvent.click(within(first!).getByRole("button", { name: "Unfollow" }));
     expect(unfollow).toHaveBeenCalledWith("u2");
     expect(within(dialog).queryByRole("link", { name: "someone" })).toBeNull();
 
-    // Done: the strip drops whoever the account confirmed at once, without
-    // reading the people again; the feed behind it is read again.
-    const reads = load.mock.calls.length;
-    const peopleReads = loadFollowing.mock.calls.length;
+    // Done: the strip has dropped whoever the account confirmed, without
+    // reading the people again; the feed behind it was read again.
     await userEvent.click(within(dialog).getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(await screen.findByText("You follow 1 person")).toBeInTheDocument();
@@ -260,6 +260,40 @@ describe("HomePage for a signed-in person", () => {
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(load.mock.calls.length).toBe(reads);
+  });
+
+  it("counts an unfollow whose answer arrives after the dialog was closed", async () => {
+    load.mockImplementation(async (query) =>
+      query.following ? { lists: [list("f1")], nextCursor: null } : { lists: [], nextCursor: null },
+    );
+    loadFollowing.mockResolvedValue({
+      authors: [
+        { uid: "u2", name: "someone", photoUrl: null },
+        { uid: "u3", name: "other", photoUrl: null },
+      ],
+    });
+    let answer: () => void = () => undefined;
+    unfollow.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    open();
+    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Manage" }));
+    const dialog = screen.getByRole("dialog", { name: "Following" });
+    const [first] = within(dialog).getAllByRole("listitem");
+    await userEvent.click(within(first!).getByRole("button", { name: "Unfollow" }));
+    // Closed before the account answered: nothing is counted yet.
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByText("You follow 2 people")).toBeInTheDocument();
+    const reads = load.mock.calls.length;
+
+    await act(async () => answer());
+    expect(await screen.findByText("You follow 1 person")).toBeInTheDocument();
+    expect(load.mock.calls.length).toBeGreaterThan(reads);
   });
 
   it("shows a guest Everyone only, without the switch", async () => {

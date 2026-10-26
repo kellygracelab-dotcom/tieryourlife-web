@@ -159,23 +159,21 @@ function ManageFollowing({
   onClose,
 }: {
   authors: readonly FollowedAuthor[];
+  /** Asks the account; the strip that owns this list writes down the answer, open or closed. */
   unfollow: Follow;
-  /** The uids the account confirmed as unfollowed while the list was open. */
-  onClose: (unfollowed: readonly string[]) => void;
+  onClose: () => void;
 }) {
   const [people, setPeople] = useState<readonly FollowedAuthor[]>(authors);
   const [failed, setFailed] = useState<string | null>(null);
-  const [unfollowed, setUnfollowed] = useState<readonly string[]>([]);
   const box = useRef<HTMLDivElement>(null);
-  const close = useCallback(() => onClose(unfollowed), [onClose, unfollowed]);
 
-  useModal(box, close, "button");
+  useModal(box, onClose, "button");
 
   const drop = (person: FollowedAuthor) => {
     setFailed(null);
     setPeople((current) => current.filter((one) => one.uid !== person.uid));
     unfollow(person.uid).then(
-      () => setUnfollowed((done) => [...done, person.uid]),
+      () => undefined,
       () => {
         setPeople((current) =>
           authors.filter((one) => one.uid === person.uid || current.includes(one)),
@@ -186,7 +184,7 @@ function ManageFollowing({
   };
 
   return createPortal(
-    <div className="scrim" onClick={close}>
+    <div className="scrim" onClick={onClose}>
       <div
         ref={box}
         className="dialog manage-following"
@@ -228,7 +226,7 @@ function ManageFollowing({
           </ul>
         )}
         <div className="dialog__actions">
-          <Button onClick={close}>{strings.boards.done}</Button>
+          <Button onClick={onClose}>{strings.boards.done}</Button>
         </div>
       </div>
     </div>,
@@ -256,10 +254,22 @@ export function FollowedStrip({
   const loadFor = useCallback(() => load(), [load]);
   const { state } = useResource(uid, loadFor);
   const [managing, setManaging] = useState(false);
-  // Whoever the account confirmed as unfollowed leaves the strip at once. The
-  // list is not read again for it: a reload would take the strip, and with it
-  // the Manage button the focus goes back to, off the page for a moment.
+  // Whoever the account confirmed as unfollowed leaves the strip, and the
+  // feed is read again, when the answer comes: the dialog may be closed by
+  // then, which is why the strip, not the dialog, keeps the count. The list is
+  // not read again for it: a reload would take the strip, and with it the
+  // Manage button the focus goes back to, off the page for a moment.
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
+  const unfollowAndNote = useCallback(
+    (authorUid: string) =>
+      unfollow(authorUid).then((answer) => {
+        setGone((before) => new Set([...before, authorUid]));
+        onChanged();
+        return answer;
+      }),
+    [unfollow, onChanged],
+  );
+  const closeManage = useCallback(() => setManaging(false), []);
   if (state.status !== "ready") return null;
   const authors = state.value.authors.filter((person) => !gone.has(person.uid));
   if (authors.length === 0) return null;
@@ -277,17 +287,7 @@ export function FollowedStrip({
         ))}
       </ul>
       {managing && (
-        <ManageFollowing
-          authors={authors}
-          unfollow={unfollow}
-          onClose={(unfollowed) => {
-            setManaging(false);
-            if (unfollowed.length > 0) {
-              setGone((before) => new Set([...before, ...unfollowed]));
-              onChanged();
-            }
-          }}
-        />
+        <ManageFollowing authors={authors} unfollow={unfollowAndNote} onClose={closeManage} />
       )}
     </div>
   );
