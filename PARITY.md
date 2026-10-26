@@ -161,7 +161,7 @@ published or ranked. This is the largest gap and the first stage of work.
 
 Kept short, newest first. Each entry names the commit range and what closed.
 
-- **Signed-in checks, accessibility, lint** (`905d11d`, `237f7e6`, `c8ce875`)
+- **Signed-in checks, accessibility, lint** (`905d11d`, `237f7e6`, `c8ce875`, `7c8d5f5`, `0bdf2ad`)
   — the signed-in flows now run in a real browser against mocks on this
   machine (`e2e/signedIn.ts`, `e2e/account.spec.ts`, desktop and phone):
   publish with a refused first try, Update when behind, take-down;
@@ -174,9 +174,14 @@ Kept short, newest first. Each entry names the commit range and what closed.
   faint note at 2.85:1, and the focus lost after an unfollow. Lint is clean:
   `saveExport` moved to `features/boards/saveExport.ts`, switching the
   back-up off became the plain `stopBackingUp` over `forgetAccountCopies`.
-  Not done here: WebKit (its browser cannot be downloaded in this
-  environment) and a comparison with the Claude Design project (it could not
-  be opened from this session).
+  CI then marked the phone's Following smoke flaky; the cause was a race in
+  the code (an unfollow answered after Manage closed was not counted), fixed
+  in `0bdf2ad` with a unit test, and a lint rule now refuses a stray global
+  `close`/`open`/`stop`/`print`. WebKit runs in CI (`safari`, `iphone`
+  projects: WebKit desktop and an emulated iPhone 14, not a real device); it
+  cannot be downloaded in this cloud environment. Not done: a comparison
+  with the Claude Design project, which could not be opened from this
+  session.
 - **Sync, after the review of `d27830c`** (`fda6e7f`) — the engine gathers
   everything that waits (the fingerprints, the copy's pictures) before the
   checks and the writes, with no wait between them: `remember` takes the
