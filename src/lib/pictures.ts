@@ -51,6 +51,10 @@ export class PictureRefused extends Error {
 export const picturePath = (uid: string, pictureId: string): string =>
   `users/${uid}/pictures/${pictureId}`;
 
+/** Where one of the person's own pictures can be seen from, or null when it cannot be found. */
+export const ownPictureUrl = (uid: string, pictureId: string): Promise<string | null> =>
+  getDownloadURL(ref(getFirebaseStorage(), picturePath(uid, pictureId))).catch(() => null);
+
 /** Pictures belong to an account: a guest's folder would not follow a collision sign-in. */
 function ownerUid(): string | null {
   const user = getFirebaseAuth().currentUser;
