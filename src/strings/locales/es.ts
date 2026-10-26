@@ -206,6 +206,13 @@ const es: Translation = {
     makeThis: "Crear esta lista",
   },
   new: {
+    customColour: "Personalizado",
+    customColourNote: "Personalizado · el color claro y el oscuro se eligen por separado",
+    lightColour: "Claro",
+    darkColour: "Oscuro",
+    colourField: "Color {theme}",
+    hexField: "Hex {theme}",
+    contrast: "Contraste {ratio}:1",
     title: "Crear una lista",
     guestNote:
       "Inicia sesión al publicar. Hasta entonces el borrador se queda en este dispositivo.",
@@ -244,11 +251,6 @@ const es: Translation = {
     remove: "Quitar {name}",
     noCardsYet: "Todavía no hay tarjetas. Busca en el catálogo o escribe un nombre y pulsa Intro.",
     tiers: "Niveles",
-    tierBest: "Lo mejor",
-    tierGreat: "Genial",
-    tierGood: "Bueno",
-    tierOkay: "Pasable",
-    tierWorst: "Lo peor",
     addTier: "Añadir nivel",
     tierUnnamed: "este nivel",
     colourOf: "Color de {name}",
@@ -646,6 +648,9 @@ const es: Translation = {
     coverPick: "Poner {name} en la portada",
   },
   sync: {
+    offBusy: "Eliminando…",
+    offFailed:
+      "No se pudo eliminar la copia, así que la copia de seguridad sigue activa. Inténtalo de nuevo.",
     dataTitle: "Tus datos",
     backUp: "Guardar copia de mis tableros",
     backUpSub: "Niveles, cartas y leyendas",

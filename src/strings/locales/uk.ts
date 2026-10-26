@@ -237,6 +237,13 @@ const uk: Translation = {
     makeThis: "Створити такий список",
   },
   new: {
+    customColour: "Свій колір",
+    customColourNote: "Свій колір · світлий і темний задаються окремо",
+    lightColour: "Світлий",
+    darkColour: "Темний",
+    colourField: "{theme} колір",
+    hexField: "{theme} hex",
+    contrast: "Контраст {ratio}:1",
     title: "Створити список",
     guestNote:
       "Увійти знадобиться під час публікації. До того чернетка зберігається на цьому пристрої.",
@@ -275,11 +282,6 @@ const uk: Translation = {
     remove: "Прибрати {name}",
     noCardsYet: "Карток поки немає. Пошукайте в каталозі або введіть назву й натисніть Enter.",
     tiers: "Тири",
-    tierBest: "Найкраще",
-    tierGreat: "Чудово",
-    tierGood: "Добре",
-    tierOkay: "Нормально",
-    tierWorst: "Найгірше",
     addTier: "Додати тир",
     tierUnnamed: "цей тир",
     colourOf: "Колір: {name}",
@@ -698,6 +700,9 @@ const uk: Translation = {
     coverPick: "Поставити {name} на обкладинку",
   },
   sync: {
+    offBusy: "Видаляємо…",
+    offFailed:
+      "Не вдалося видалити копію, тому резервне копіювання лишається увімкненим. Спробуйте ще раз.",
     dataTitle: "Ваші дані",
     backUp: "Зберігати копію дошок",
     backUpSub: "Тіри, картки та підписи",

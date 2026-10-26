@@ -1,30 +1,44 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { list, mockBackend } from "./fixtures";
 
+/** A press the way the project's device makes it: a finger taps, a mouse clicks. */
+const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
+
 /** A board of one's own with three cards, one of them ranked, made the way a person makes it. */
-async function makeBoard(page: Page) {
+async function makeBoard(page: Page, touch: boolean) {
   await page.goto("/boards");
   await page.getByRole("button", { name: "New board" }).first().click();
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films I make people watch");
   await title.press("Enter");
+  // On a narrow window the box that brings cards in waits behind Add, in the pool.
+  const addButton = page.getByRole("button", { name: "Add", exact: true });
+  if (await addButton.isVisible()) await press(addButton, touch);
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     const add = page.getByRole("textbox", { name: "Add a card" });
     await add.fill(name);
     await add.press("Enter");
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
-  // The move menu on the card: any tier by a press, no keyboard needed. With a
-  // mouse the menu's button shows once the pointer is on the card.
-  await page.getByRole("button", { name: "Ex Machina", exact: true }).hover();
-  await page.getByLabel("Move Ex Machina", { exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "S", exact: true }).click();
+  // The move sheet from the card: any tier by a press, no keyboard needed. A
+  // finger finds the button on the card; a mouse sees it once the pointer is there.
+  const move = page.getByLabel("Move Ex Machina", { exact: true });
+  if (touch) {
+    await move.tap();
+  } else {
+    await page.getByRole("button", { name: "Ex Machina", exact: true }).hover();
+    await move.click();
+  }
+  await press(page.getByRole("dialog").getByRole("button", { name: "S", exact: true }), touch);
   await expect(page.getByText(/1 ranked · 2 in pool/)).toBeVisible();
 }
 
-test("keeps a new board, and its settings say why a guest cannot publish it", async ({ page }) => {
+test("keeps a new board, and its settings say why a guest cannot publish it", async ({
+  page,
+  hasTouch,
+}) => {
   await mockBackend(page);
-  await makeBoard(page);
+  await makeBoard(page, hasTouch);
   // The board is kept as it stands: a reload shows the same board.
   await page.reload();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Films I make people watch");

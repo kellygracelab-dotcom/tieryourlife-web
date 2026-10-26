@@ -1379,3 +1379,38 @@
 .move-sheet__danger {
   color: var(--error);
 }
+
+/* A number key on the band means nothing to a finger: the move sheet and a tap do the placing. */
+@media (hover: none) and (pointer: coarse) {
+  .tier__key {
+    display: none;
+  }
+}
+
+/* On a narrow window the box that brings cards in waits behind Add, inside the pool. */
+.pool__add {
+  flex: none;
+  min-height: 32px;
+  padding: 4px 12px;
+}
+
+.pool__tools--sheet {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  order: 10;
+  gap: 10px 16px;
+  max-height: 44vh;
+  padding: 4px 0 6px;
+  overflow-y: auto;
+}
+
+/* The head keeps to one row on a phone, except when the tools are out under it. */
+.pool__head:has(.pool__tools--sheet) {
+  flex-wrap: wrap;
+}
+
+.pool__tools--sheet .cards__add {
+  flex: 1 1 240px;
+}

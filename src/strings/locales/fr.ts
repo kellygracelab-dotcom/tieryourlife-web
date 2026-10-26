@@ -210,6 +210,13 @@ const fr: Translation = {
     makeThis: "Créer cette liste",
   },
   new: {
+    customColour: "Personnalisée",
+    customColourNote: "Personnalisée · la couleur claire et la sombre se règlent séparément",
+    lightColour: "Clair",
+    darkColour: "Sombre",
+    colourField: "Couleur {theme}",
+    hexField: "Hex {theme}",
+    contrast: "Contraste {ratio}:1",
     title: "Créer une liste",
     guestNote:
       "Connectez-vous au moment de publier. D’ici là, le brouillon reste sur cet appareil.",
@@ -250,11 +257,6 @@ const fr: Translation = {
     noCardsYet:
       "Aucune carte pour l’instant. Cherchez dans le catalogue ou tapez un nom et appuyez sur Entrée.",
     tiers: "Rangs",
-    tierBest: "Le meilleur",
-    tierGreat: "Excellent",
-    tierGood: "Bien",
-    tierOkay: "Correct",
-    tierWorst: "Le pire",
     addTier: "Ajouter un rang",
     tierUnnamed: "ce rang",
     colourOf: "Couleur de {name}",
@@ -663,6 +665,8 @@ const fr: Translation = {
     coverPick: "Mettre {name} en couverture",
   },
   sync: {
+    offBusy: "Suppression…",
+    offFailed: "La copie n’a pas pu être supprimée, la sauvegarde reste activée. Réessayez.",
     dataTitle: "Vos données",
     backUp: "Sauvegarder mes tableaux",
     backUpSub: "Niveaux, cartes et légendes",

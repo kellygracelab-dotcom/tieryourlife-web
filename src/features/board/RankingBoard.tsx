@@ -287,6 +287,24 @@ export function RankingBoard({
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
   const { dock, rows, wide, choose, startResize } = useDock(store);
+  // On a narrow window the box that brings cards in waits behind Add, in the
+  // pool, whichever head the pool shows; on a wide one it stands in the pool.
+  const [adding, setAdding] = useState(false);
+  const tools = edit?.owner?.tools;
+  const addButton = tools !== undefined && !wide && (
+    <button
+      type="button"
+      className="btn btn--tonal pool__add"
+      aria-expanded={adding}
+      onClick={() => setAdding((open) => !open)}
+    >
+      <Icon name="add" className="btn__icon" />
+      <span>{strings.new.add}</span>
+    </button>
+  );
+  const toolsPanel = tools !== undefined && (wide || adding) && (
+    <div className={wide ? "pool__tools" : "pool__tools pool__tools--sheet"}>{tools}</div>
+  );
   const docked = wide && dock === "under";
   const frame = useContext(BoardFrameContext);
   // On a wide screen the count and the actions stand in the page's header,
@@ -422,7 +440,6 @@ export function RankingBoard({
   }, [dispatch, list.tiers.length, placeSelected, locked, selected, state]);
 
   const left = pool(state);
-  const tools = edit?.owner?.tools;
   const needle = query.trim().toLowerCase();
   const shown =
     needle === ""
@@ -539,7 +556,6 @@ export function RankingBoard({
         )}
 
         {!inHead && edit?.owner?.status}
-        {tools !== undefined && !wide && <div className="ranking__tools">{tools}</div>}
 
         <div className="board">
           {list.tiers.map((tier, index) => (
@@ -600,6 +616,8 @@ export function RankingBoard({
                     {edit === undefined ? strings.rank.finish : saveLabel(edit, false)}
                   </Button>
                 )}
+                {addButton}
+                {toolsPanel}
               </div>
             ) : (
               <>
@@ -611,11 +629,17 @@ export function RankingBoard({
                         {plural(strings.rank.allPlaced, list.items.length)}
                       </p>
                     ) : (
-                      <h2 className="pool__title">{plural(strings.rank.left, left.length)}</h2>
+                      <h2 className="pool__title">
+                        {plural(
+                          edit?.owner?.live ? strings.boards.pool : strings.rank.left,
+                          left.length,
+                        )}
+                      </h2>
                     )}
+                    {addButton}
                     <DockToggle dock={dock} onChoose={choose} />
                   </div>
-                  {tools !== undefined && wide && <div className="pool__tools">{tools}</div>}
+                  {toolsPanel}
                   {!allPlaced && left.length > POOL_SEARCH_FROM && tools === undefined && (
                     <input
                       className="pool__search"

@@ -559,6 +559,65 @@
     0 0 0 4px var(--ink);
 }
 
+/* The ninth swatch: a colour of one's own, and the panel that sets it. */
+.tiers__preset--custom {
+  background: conic-gradient(#b03a32, #c06a25, #a98b1f, #3f7f55, #3c6e99, #6b4e9e, #b03a32);
+}
+
+.tiers__custom {
+  display: flex;
+  flex-basis: 100%;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.tiers__custom-note {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.tiers__custom-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.tiers__custom-theme {
+  min-width: 52px;
+  font: var(--text-small);
+  font-weight: 500;
+}
+
+.tiers__custom-swatch {
+  width: 36px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.tiers__hex {
+  width: 96px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font: var(--text-small);
+  font-family: var(--font-mono);
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.tiers__contrast {
+  font: var(--text-caption);
+  color: var(--ink-dim);
+}
+
 /* Many names at once: a button until it is wanted, then a box as wide as the editor. */
 .cards__paste--open {
   display: flex;

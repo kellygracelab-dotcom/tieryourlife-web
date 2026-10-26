@@ -207,6 +207,13 @@ const ja: Translation = {
     makeThis: "このリストを作る",
   },
   new: {
+    customColour: "カスタム",
+    customColourNote: "カスタム · ライトとダークの色を別々に設定",
+    lightColour: "ライト",
+    darkColour: "ダーク",
+    colourField: "{theme}の色",
+    hexField: "{theme}のHEX",
+    contrast: "コントラスト {ratio}:1",
     title: "リストを作る",
     guestNote: "公開するときにログインします。それまで下書きはこの端末に残ります。",
     preview: "プレビュー",
@@ -245,11 +252,6 @@ const ja: Translation = {
     noCardsYet:
       "カードはまだありません。カタログを検索するか、名前を入力して Enter を押してください。",
     tiers: "ティア",
-    tierBest: "最高",
-    tierGreat: "とても良い",
-    tierGood: "良い",
-    tierOkay: "まあまあ",
-    tierWorst: "最低",
     addTier: "ティアを追加",
     tierUnnamed: "このティア",
     colourOf: "{name} の色",
@@ -633,6 +635,9 @@ const ja: Translation = {
     coverPick: "{name} をカバーに使う",
   },
   sync: {
+    offBusy: "削除中…",
+    offFailed:
+      "コピーを削除できなかったため、バックアップはオンのままです。もう一度お試しください。",
     dataTitle: "データ",
     backUp: "ボードをバックアップ",
     backUpSub: "ティア、カード、説明",

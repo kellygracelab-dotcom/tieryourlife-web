@@ -3,7 +3,6 @@ import type { Category, PublishedList, PublishedTier } from "../../api/types";
 import { publishedPictureOf } from "../../lib/pictures";
 import type { KeyValueStore } from "../../lib/storage";
 import { arrange } from "../board/arrange";
-import { strings } from "../../strings";
 
 interface TierPreset {
   light: string;
@@ -23,16 +22,17 @@ export const TIER_PRESETS: readonly [TierPreset, ...TierPreset[]] = [
 ];
 
 /**
- * What a new list starts with, the same as in the app. The names fit anything
- * a person might rank: "Watchable" under a list of dishes was a leftover from
- * the days when every list was films.
+ * What a new list starts with, the same as a new board in the app since
+ * 25.10: five letters and no captions. A caption is the person's to write;
+ * "Watchable" under a list of dishes was a leftover from the days when every
+ * list was films, and "Best … Worst" said nothing a letter does not.
  */
 export const DEFAULT_TIERS: readonly PublishedTier[] = [
-  { label: "S", caption: strings.new.tierBest, colorLight: "#B03A32", colorDark: "#F1948C" },
-  { label: "A", caption: strings.new.tierGreat, colorLight: "#C06A25", colorDark: "#E9A867" },
-  { label: "B", caption: strings.new.tierGood, colorLight: "#A98B1F", colorDark: "#D8C05A" },
-  { label: "C", caption: strings.new.tierOkay, colorLight: "#3F7F55", colorDark: "#7FC393" },
-  { label: "D", caption: strings.new.tierWorst, colorLight: "#3C6E99", colorDark: "#86B8DE" },
+  { label: "S", caption: null, colorLight: "#B03A32", colorDark: "#F1948C" },
+  { label: "A", caption: null, colorLight: "#C06A25", colorDark: "#E9A867" },
+  { label: "B", caption: null, colorLight: "#A98B1F", colorDark: "#D8C05A" },
+  { label: "C", caption: null, colorLight: "#3F7F55", colorDark: "#7FC393" },
+  { label: "D", caption: null, colorLight: "#3C6E99", colorDark: "#86B8DE" },
 ];
 
 /** The backend's ceilings, so the form can say no before the network does. */
@@ -417,32 +417,32 @@ export function loadEditorDraft(store: KeyValueStore, key = NEW_DRAFT_KEY): Draf
   }
 }
 
-/** The five captions the editor gave before they were localised, by the tier's letter. */
-const OLD_CAPTIONS: Record<string, string> = {
-  S: "Masterpiece",
-  A: "Great",
-  B: "Good",
-  C: "Watchable",
-  D: "No",
+/** The captions the editor used to give a new list, by the tier's letter: the oldest words first. */
+const OLD_CAPTIONS: Record<string, readonly string[]> = {
+  S: ["Masterpiece", "Best"],
+  A: ["Great", "Great"],
+  B: ["Good", "Good"],
+  C: ["Watchable", "Okay"],
+  D: ["No", "Worst"],
 };
 
 /**
- * A new list's draft kept before the captions changed still says Masterpiece … No.
- * When its five tiers are exactly those, untouched, they take the words the
- * editor gives today; a caption anybody changed stays as it is.
+ * A new list's draft kept before the captions changed still says Masterpiece
+ * … No, or Best … Worst. When its five tiers are exactly one of those sets,
+ * untouched, they take what the editor gives today, which is no caption; a
+ * caption anybody changed stays as it is.
  */
 function refreshedCaptions(tiers: EditorTier[]): EditorTier[] {
   const untouched =
     tiers.length === DEFAULT_TIERS.length &&
-    tiers.every((tier, index) => {
-      const label = DEFAULT_TIERS[index]?.label;
-      return tier.label === label && tier.caption === OLD_CAPTIONS[label ?? ""];
-    });
+    [0, 1].some((age) =>
+      tiers.every((tier, index) => {
+        const label = DEFAULT_TIERS[index]?.label;
+        return tier.label === label && tier.caption === OLD_CAPTIONS[label ?? ""]?.[age];
+      }),
+    );
   return untouched
-    ? tiers.map((tier, index) => ({
-        ...tier,
-        caption: DEFAULT_TIERS[index]?.caption ?? tier.caption,
-      }))
+    ? tiers.map((tier, index) => ({ ...tier, caption: DEFAULT_TIERS[index]?.caption ?? null }))
     : tiers;
 }
 

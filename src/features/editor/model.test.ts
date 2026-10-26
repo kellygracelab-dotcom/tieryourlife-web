@@ -305,12 +305,27 @@ describe("the draft between visits", () => {
     };
     store.write("tyl:new", JSON.stringify(kept));
     expect(loadEditorDraft(store)?.tiers.map((tier) => tier.caption)).toEqual([
-      "Best",
-      "Great",
-      "Good",
-      "Okay",
-      "Worst",
+      null,
+      null,
+      null,
+      null,
+      null,
     ]);
+    // The set after that one, Best … Worst, is untouched defaults too.
+    store.write(
+      "tyl:new",
+      JSON.stringify({
+        ...kept,
+        tiers: [
+          old("Best", "S"),
+          old("Great", "A"),
+          old("Good", "B"),
+          old("Okay", "C"),
+          old("Worst", "D"),
+        ],
+      }),
+    );
+    expect(loadEditorDraft(store)?.tiers.every((tier) => tier.caption === null)).toBe(true);
     store.write(
       "tyl:new",
       JSON.stringify({ ...kept, tiers: [old("Mine", "S"), ...kept.tiers.slice(1)] }),
