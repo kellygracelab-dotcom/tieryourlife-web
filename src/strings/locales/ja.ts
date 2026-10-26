@@ -620,6 +620,16 @@ const ja: Translation = {
     trashRow: "ゴミ箱",
     trashEmpty: "空です",
   },
+  export: {
+    title: "データをエクスポート",
+    sub: "各リストの読みやすいコピーを保存",
+    exportedOn: "{date} にエクスポート",
+    tierEmpty: "（空）",
+    unranked: "未評価",
+    done: { other: "{n}件のリストをエクスポートしました" },
+    failed: "ファイルを保存できませんでした",
+    fileName: "TierYourLife {date}.txt",
+  },
   trash: {
     title: "ゴミ箱",
     subtitle: "削除されたリストとアイテムは、削除するまでここに残ります。",

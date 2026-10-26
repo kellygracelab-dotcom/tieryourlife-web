@@ -633,6 +633,20 @@ const es: Translation = {
     trashRow: "Papelera",
     trashEmpty: "Vacía",
   },
+  export: {
+    title: "Exportar datos",
+    sub: "Guardar una copia legible de cada lista",
+    exportedOn: "Exportado el {date}",
+    tierEmpty: "(vacío)",
+    unranked: "Sin clasificar",
+    done: {
+      one: "Se exportó {n} lista",
+      many: "Se exportaron {n} listas",
+      other: "Se exportaron {n} listas",
+    },
+    failed: "No se pudo guardar el archivo",
+    fileName: "TierYourLife {date}.txt",
+  },
   trash: {
     title: "Papelera",
     subtitle: "Las listas y elementos eliminados permanecen aquí hasta que los quites.",

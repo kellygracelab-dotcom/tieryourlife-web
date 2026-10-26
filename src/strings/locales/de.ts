@@ -640,6 +640,16 @@ const de: Translation = {
     trashRow: "Papierkorb",
     trashEmpty: "Leer",
   },
+  export: {
+    title: "Daten exportieren",
+    sub: "Eine lesbare Kopie jeder Liste speichern",
+    exportedOn: "Exportiert am {date}",
+    tierEmpty: "(leer)",
+    unranked: "Nicht eingestuft",
+    done: { one: "{n} Liste exportiert", other: "{n} Listen exportiert" },
+    failed: "Datei konnte nicht gespeichert werden",
+    fileName: "TierYourLife {date}.txt",
+  },
   trash: {
     title: "Papierkorb",
     subtitle: "Gelöschte Listen und Elemente bleiben hier, bis du sie entfernst.",

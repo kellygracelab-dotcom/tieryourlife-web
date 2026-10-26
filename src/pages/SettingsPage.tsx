@@ -5,6 +5,7 @@ import { LanguageCard } from "../features/account/LanguageCard";
 import { faceChoicesOf } from "../features/account/faces";
 import { AccountTabs } from "../app/AccountTabs";
 import { useBoardSync } from "../features/boards/boardSync";
+import { exportText } from "../features/boards/exportText";
 import { trashEntriesOf } from "../features/boards/model";
 import { useBoards } from "../features/boards/useBoards";
 import { useHidden } from "../features/community/useHidden";
@@ -338,13 +339,56 @@ const whenOf = (at: number): string =>
  * trash with its count. Switching the backup off deletes the account's copy,
  * so it asks first.
  */
+/** The listing as a file the browser saves; the words are the page's language. */
+export function saveExport(
+  boards: Parameters<typeof exportText>[0],
+  save: (name: string, text: string) => void = downloadText,
+): number {
+  const live = boards.filter((board) => board.deletedAt === null);
+  const today = new Date();
+  const text = exportText(live, {
+    header: strings.brand,
+    exportedOn: fill(strings.export.exportedOn, {
+      date: new Intl.DateTimeFormat(currentLocale(), { dateStyle: "long" }).format(today),
+    }),
+    listCount: (n) => plural(strings.boards.count, n),
+    rankedCount: (n) => plural(strings.boards.ranked, n),
+    unrankedCount: (n) => plural(strings.boards.inPool, n),
+    tierWithCaption: (label, caption) => `${label} — ${caption}`,
+    tierPlain: (label) => label,
+    tierEmpty: strings.export.tierEmpty,
+    unrankedHeading: strings.export.unranked,
+  });
+  save(fill(strings.export.fileName, { date: today.toISOString().slice(0, 10) }), text);
+  return live.length;
+}
+
+function downloadText(name: string, text: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function DataCard() {
   const sync = useBoardSync();
   const boards = useBoards();
   const trashed = trashEntriesOf(boards).length;
   const [asking, setAsking] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [exported, setExported] = useState<number | "failed" | null>(null);
   const close = useCallback(() => setAsking(false), []);
+  const onExport = () => {
+    try {
+      setExported(saveExport(boards));
+    } catch {
+      setExported("failed");
+    }
+  };
   const turn = (on: boolean) => {
     setAsking(false);
     setSwitching(true);
@@ -402,6 +446,18 @@ function DataCard() {
           {trashed === 0 ? strings.sync.trashEmpty : plural(strings.trash.entries, trashed)}
         </span>
       </Link>
+      <button type="button" className="settings__row settings__row--button" onClick={onExport}>
+        <span className="settings__switch-text">
+          <span>{strings.export.title}</span>
+          <span className="settings__note">{strings.export.sub}</span>
+        </span>
+        <Icon name="download" className="settings__row-icon" />
+      </button>
+      {exported !== null && (
+        <p className="settings__note" role="status">
+          {exported === "failed" ? strings.export.failed : plural(strings.export.done, exported)}
+        </p>
+      )}
       {asking && (
         <ConfirmDialog
           narrow

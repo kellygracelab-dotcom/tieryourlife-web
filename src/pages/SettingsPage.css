@@ -408,3 +408,11 @@
   margin: 0;
   accent-color: var(--link);
 }
+
+.settings__row--button {
+  width: calc(100% + 16px);
+  border: none;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+}

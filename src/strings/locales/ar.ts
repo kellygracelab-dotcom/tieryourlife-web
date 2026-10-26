@@ -776,6 +776,23 @@ const ar: Translation = {
     trashRow: "سلة المهملات",
     trashEmpty: "فارغة",
   },
+  export: {
+    title: "تصدير البيانات",
+    sub: "حفظ نسخة قابلة للقراءة من كل قائمة",
+    exportedOn: "تم التصدير في {date}",
+    tierEmpty: "(فارغ)",
+    unranked: "غير مصنَّف",
+    done: {
+      zero: "لم يتم تصدير أي قائمة",
+      one: "تم تصدير قائمة واحدة",
+      two: "تم تصدير قائمتين",
+      few: "تم تصدير {n} قوائم",
+      many: "تم تصدير {n} قائمة",
+      other: "تم تصدير {n} قائمة",
+    },
+    failed: "تعذّر حفظ الملف",
+    fileName: "TierYourLife {date}.txt",
+  },
   trash: {
     title: "سلة المهملات",
     subtitle: "تبقى القوائم والعناصر المحذوفة هنا حتى تزيلها.",

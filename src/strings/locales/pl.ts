@@ -681,6 +681,21 @@ const pl: Translation = {
     trashRow: "Kosz",
     trashEmpty: "Pusto",
   },
+  export: {
+    title: "Eksportuj dane",
+    sub: "Zapisz czytelną kopię każdej listy",
+    exportedOn: "Wyeksportowano {date}",
+    tierEmpty: "(puste)",
+    unranked: "Nieocenione",
+    done: {
+      one: "Wyeksportowano {n} listę",
+      few: "Wyeksportowano {n} listy",
+      many: "Wyeksportowano {n} list",
+      other: "Wyeksportowano {n} listy",
+    },
+    failed: "Nie udało się zapisać pliku",
+    fileName: "TierYourLife {date}.txt",
+  },
   trash: {
     title: "Kosz",
     subtitle: "Usunięte listy i elementy pozostają tutaj, dopóki ich nie usuniesz.",

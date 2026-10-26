@@ -630,6 +630,20 @@ const ptBR: Translation = {
     trashRow: "Lixeira",
     trashEmpty: "Vazia",
   },
+  export: {
+    title: "Exportar dados",
+    sub: "Salvar uma cópia legível de cada lista",
+    exportedOn: "Exportado em {date}",
+    tierEmpty: "(vazio)",
+    unranked: "Sem classificação",
+    done: {
+      one: "{n} lista exportada",
+      many: "{n} listas exportadas",
+      other: "{n} listas exportadas",
+    },
+    failed: "Não foi possível salvar o arquivo",
+    fileName: "TierYourLife {date}.txt",
+  },
   trash: {
     title: "Lixeira",
     subtitle: "Listas e itens excluídos permanecem aqui até que você os remova.",

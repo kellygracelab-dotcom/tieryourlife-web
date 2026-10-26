@@ -600,6 +600,16 @@ export const en = {
     trashRow: "Trash",
     trashEmpty: "Empty",
   },
+  export: {
+    title: "Export data",
+    sub: "Save a readable copy of every list",
+    exportedOn: "Exported {date}",
+    tierEmpty: "(empty)",
+    unranked: "Unranked",
+    done: { one: "Exported {n} list", other: "Exported {n} lists" },
+    failed: "Couldn’t save the file",
+    fileName: "TierYourLife {date}.txt",
+  },
   trash: {
     title: "Trash",
     subtitle: "Deleted lists and items stay here until you remove them.",

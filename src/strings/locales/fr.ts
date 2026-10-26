@@ -649,6 +649,20 @@ const fr: Translation = {
     trashRow: "Corbeille",
     trashEmpty: "Vide",
   },
+  export: {
+    title: "Exporter les données",
+    sub: "Enregistrer une copie lisible de chaque liste",
+    exportedOn: "Exporté le {date}",
+    tierEmpty: "(vide)",
+    unranked: "Non classé",
+    done: {
+      one: "{n} liste exportée",
+      many: "{n} listes exportées",
+      other: "{n} listes exportées",
+    },
+    failed: "Impossible d'enregistrer le fichier",
+    fileName: "TierYourLife {date}.txt",
+  },
   trash: {
     title: "Corbeille",
     subtitle: "Les listes et éléments supprimés restent ici jusqu'à ce que vous les retiriez.",

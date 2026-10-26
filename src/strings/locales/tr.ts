@@ -618,6 +618,16 @@ const tr: Translation = {
     trashRow: "Çöp kutusu",
     trashEmpty: "Boş",
   },
+  export: {
+    title: "Verileri dışa aktar",
+    sub: "Her listenin okunabilir bir kopyasını kaydet",
+    exportedOn: "{date} tarihinde dışa aktarıldı",
+    tierEmpty: "(boş)",
+    unranked: "Sıralanmadı",
+    done: { one: "{n} liste dışa aktarıldı", other: "{n} liste dışa aktarıldı" },
+    failed: "Dosya kaydedilemedi",
+    fileName: "TierYourLife {date}.txt",
+  },
   trash: {
     title: "Çöp kutusu",
     subtitle: "Silinen listeler ve öğeler, sen kaldırana kadar burada kalır.",
