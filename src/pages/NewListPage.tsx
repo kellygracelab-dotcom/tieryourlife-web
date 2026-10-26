@@ -4,7 +4,7 @@ import type { ApiError } from "../api/errors";
 import type { Ranking } from "../api/rank";
 import { CATEGORIES, type PublishedList } from "../api/types";
 import { useSession, type Session } from "../app/session";
-import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
+import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
 import { CardsEditor, type Upload } from "../features/editor/CardsEditor";
 import { focusProblem } from "../features/editor/focusProblem";
 import {

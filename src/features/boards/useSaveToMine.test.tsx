@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PublishedList } from "../../api/types";
 import { memoryStore, type KeyValueStore } from "../../lib/storage";
 import type { SnackbarNotice } from "../../ui/Snackbar";
-import { saveDraft, scopeOf } from "../board/draft";
+import { saveDraft, scopeOf } from "../tierboard/draft";
 import { itemsIn, poolTier, rankedTiers } from "./model";
 import { boardsRepository, type BoardsRepository } from "./repository";
 import { SaveToMineDialog } from "./SaveToMineDialog";

@@ -6,7 +6,7 @@ import { republish as republishList } from "../../lib/api";
 import { type KeyValueStore, localStorageStore, memoryStore } from "../../lib/storage";
 import { strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
-import { RankingBoard } from "../board/RankingBoard";
+import { RankingBoard } from "../tierboard/RankingBoard";
 import { errorOf } from "../../api/errors";
 import { AddCardBox, type Upload } from "./AddCardBox";
 import { failureText } from "./failureText";

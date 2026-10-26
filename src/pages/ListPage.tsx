@@ -5,9 +5,9 @@ import type { ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
-import { arrange } from "../features/board/arrange";
-import { RankingBoard } from "../features/board/RankingBoard";
-import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
+import { arrange } from "../features/tierboard/arrange";
+import { RankingBoard } from "../features/tierboard/RankingBoard";
+import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
 import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
 import type { BoardsRepository } from "../features/boards/repository";
@@ -21,15 +21,15 @@ import { isEditorial } from "../lib/editorial";
 import { fill, plural, strings } from "../strings";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
-import { BoardFrameContext } from "../features/board/boardFrame";
+import { BoardFrameContext } from "../features/tierboard/boardFrame";
 import { OwnerBoard } from "../features/editor/OwnerBoard";
-import type { Dock } from "../features/board/dock";
+import type { Dock } from "../features/tierboard/dock";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import "../features/community/report.css";
-import { BoardPageLoading, BoardPageTrouble } from "./BoardPageStates";
+import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
 type View = "mine" | "theirs";
@@ -441,10 +441,10 @@ export function ListPage({
   const { hidden } = useHidden();
 
   if (state.status === "loading") {
-    return <BoardPageLoading note={strings.list.opening} rows={3} />;
+    return <ListPageLoading note={strings.list.opening} rows={3} />;
   }
   if (state.status === "error") {
-    return <BoardPageTrouble error={state.error} retry={retry} words={strings.list} />;
+    return <ListPageTrouble error={state.error} retry={retry} words={strings.list} />;
   }
 
   const { value: list } = state;

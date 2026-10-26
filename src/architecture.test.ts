@@ -19,6 +19,11 @@ const FILES = Object.entries(SOURCES).map(([path, text]) => ({
   text,
 }));
 
+// Every file's path, tests and stylesheets included; none of them is loaded.
+const PATHS = Object.keys(import.meta.glob("./**/*.{ts,tsx,css}")).map((path) =>
+  path.replace(/^\.\//, ""),
+);
+
 /** "a/b/../c" as "a/c". */
 function normalize(path: string): string {
   const parts: string[] = [];
@@ -57,6 +62,7 @@ describe("the architecture", () => {
     expect(FILES.length).toBeGreaterThan(100);
     expect(FILES.some((file) => file.path === "pages/BoardPage.tsx")).toBe(true);
     expect(FILES.some((file) => file.path.endsWith(".test.ts"))).toBe(false);
+    expect(PATHS).toEqual(expect.arrayContaining(["ui/Button.css", "pages/BoardPage.test.tsx"]));
   });
 
   it("imports only in the direction of the layers", () => {
@@ -87,9 +93,9 @@ describe("the architecture", () => {
   it("keeps a feature out of the pages and out of features it does not name", () => {
     // Which feature may lean on which: everything else stays apart.
     const allowed: Record<string, readonly string[]> = {
-      board: ["ranking"],
-      boards: ["board", "editor", "ranking"],
-      editor: ["board"],
+      tierboard: ["ranking"],
+      boards: ["editor", "ranking", "tierboard"],
+      editor: ["tierboard"],
       feed: ["community"],
     };
     const wrong: string[] = [];
@@ -103,6 +109,29 @@ describe("the architecture", () => {
         }
       }
     }
+    expect(wrong).toEqual([]);
+  });
+
+  it("names folders and files one way", () => {
+    const base = (path: string) => path.split("/").pop()!;
+    const wrong = PATHS.filter((path) => {
+      const name = base(path);
+      const folders = path.split("/").slice(0, -1);
+      // A folder is one lowercase word; a file is camelCase or PascalCase, with
+      // a locale's tag and Vite's own declaration file the only dashes.
+      if (!folders.every((folder) => /^[a-z]+$/.test(folder))) return true;
+      if (path === "vite-env.d.ts") return false;
+      if (path.startsWith("strings/locales/")) return !/^[a-z]{2}(-[A-Z]{2})?\.ts$/.test(name);
+      if (!/^[A-Za-z][A-Za-z0-9]*(\.[a-z]+)*\.(ts|tsx|css)$/.test(name)) return true;
+      // Everything in pages carries the name of the page it serves.
+      if (path.startsWith("pages/")) return !/^[A-Z][A-Za-z]*Page[A-Za-z]*\./.test(name);
+      // A part's stylesheet is named after the part; a feature's after its subject.
+      if (name.endsWith(".css") && /^(app|ui)\//.test(path) && path !== "ui/tokens.css") {
+        return !PATHS.includes(path.replace(/\.css$/, ".tsx"));
+      }
+      if (name.endsWith(".css") && path.startsWith("features/")) return !/^[a-z]+\.css$/.test(name);
+      return false;
+    });
     expect(wrong).toEqual([]);
   });
 });

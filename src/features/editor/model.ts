@@ -2,7 +2,7 @@ import type { Ranking } from "../../api/rank";
 import type { Category, PublishedList, PublishedTier } from "../../api/types";
 import { publishedPictureOf } from "../../lib/pictures";
 import type { KeyValueStore } from "../../lib/storage";
-import { arrange } from "../board/arrange";
+import { arrange } from "../tierboard/arrange";
 
 interface TierPreset {
   light: string;

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { usePageTitle } from "../app/pageTitle";
-import { RankingBoard } from "../features/board/RankingBoard";
-import { BoardFrameContext } from "../features/board/boardFrame";
-import type { Dock } from "../features/board/dock";
+import { RankingBoard } from "../features/tierboard/RankingBoard";
+import { BoardFrameContext } from "../features/tierboard/boardFrame";
+import type { Dock } from "../features/tierboard/dock";
 import {
   addToPool,
   arrangeItems,

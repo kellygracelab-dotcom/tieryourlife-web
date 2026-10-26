@@ -11,9 +11,9 @@ const PHYSICAL =
 // Where a physical side is the point, each with its reason.
 const ALLOWED = new Set([
   // Screen coordinates for the drag ghost's transform, not a side of the text.
-  "src/features/board/ranking.css|left: 0;",
+  "src/features/tierboard/ranking.css|left: 0;",
   // The docked tray spans the screen: both sides, symmetric.
-  "src/features/board/ranking.css|right: 0;",
+  "src/features/tierboard/ranking.css|right: 0;",
 ]);
 
 function stylesheets(dir: string): string[] {

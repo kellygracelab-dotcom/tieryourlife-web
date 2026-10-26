@@ -4,11 +4,11 @@ import type { Ranking } from "../api/rank";
 import type { PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
-import { arrange, poolOf } from "../features/board/arrange";
-import { BoardFrameContext, type BoardFrame } from "../features/board/boardFrame";
-import type { Dock } from "../features/board/dock";
-import { RankingBoard, type EditMode } from "../features/board/RankingBoard";
-import { ReadOnlyBoard } from "../features/board/ReadOnlyBoard";
+import { arrange, poolOf } from "../features/tierboard/arrange";
+import { BoardFrameContext, type BoardFrame } from "../features/tierboard/boardFrame";
+import type { Dock } from "../features/tierboard/dock";
+import { RankingBoard, type EditMode } from "../features/tierboard/RankingBoard";
+import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
 import { readKept } from "../features/ranking/kept";
 import { downloadShare, type Share } from "../features/ranking/share";
 import { loadRanking, rearrangeRanking } from "../lib/api";
@@ -18,7 +18,7 @@ import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
-import { BoardPageLoading, BoardPageTrouble } from "./BoardPageStates";
+import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
 export type Rearrange = (code: string, rows: readonly (readonly number[])[]) => Promise<unknown>;
@@ -335,9 +335,9 @@ export function RankingPage({
   );
 
   if (state.status === "error") {
-    return <BoardPageTrouble error={state.error} retry={retry} words={strings.ranking} />;
+    return <ListPageTrouble error={state.error} retry={retry} words={strings.ranking} />;
   }
-  if (ranking === null) return <BoardPageLoading note={strings.ranking.opening} rows={2} />;
+  if (ranking === null) return <ListPageLoading note={strings.ranking.opening} rows={2} />;
 
   const shown = rows === null ? ranking : { ...ranking, rows };
   const mine = readKept(store, ranking.listId)?.code === ranking.code;

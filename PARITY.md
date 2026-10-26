@@ -235,10 +235,10 @@ Kept short, newest first. Each entry names the commit range and what closed.
   menu with the published link under it; "Save to my lists" in a list's menu
   (`useSaveToMine` + `SaveToMineDialog`: the author's / mine / unranked, Open
   in the receipt). `scopeOf` moved from `RankingBoard` to
-  `features/board/draft.ts`, where the scope it builds lives. Found in the
+  `features/tierboard/draft.ts`, where the scope it builds lives. Found in the
   browser and fixed on the way: the card's move menu was a dropdown clipped
   by the pool tray (desktop) and pushed off-screen by the pool sheet (phone),
-  so it is now the phone's move sheet (`features/board/MoveSheet.tsx`, on the
+  so it is now the phone's move sheet (`features/tierboard/MoveSheet.tsx`, on the
   body layer); the report, confirm and save-to-mine dialogs were sitting in
   the list page's sticky header on a wide window (its `backdrop-filter` made
   it their containing block) and now lie on the body too; a reload of a new

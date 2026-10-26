@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import { strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
-import "./search-box.css";
+import "./search.css";
 
 interface SearchBoxProps {
   value: string;
