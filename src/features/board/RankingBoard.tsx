@@ -70,6 +70,8 @@ export interface EditMode {
     tools?: ReactNode;
     /** What the owner has to know about the changes; it stands in the header when the bar does. */
     status?: ReactNode;
+    /** Every move is kept the moment it is made: no Save and no Discard, the board on screen is the board. */
+    live?: boolean;
   };
 }
 
@@ -435,12 +437,12 @@ export function RankingBoard({
         >
           {strings.rank.undo}
         </Button>
-        {edit !== undefined && (
+        {edit !== undefined && !edit.owner?.live && (
           <Button onClick={edit.cancel} disabled={locked}>
             {edit.owner === undefined ? strings.rank.cancel : strings.new.discardChanges}
           </Button>
         )}
-        {edit !== undefined && (
+        {edit !== undefined && !edit.owner?.live && (
           <Button
             variant="filled"
             icon="check"
@@ -537,16 +539,22 @@ export function RankingBoard({
                   {plural(strings.rank.allPlaced, list.items.length)}
                 </p>
                 <p className="pool__done-note">
-                  {edit === undefined ? strings.rank.allPlacedNote : strings.rank.allPlacedNoteEdit}
+                  {edit === undefined
+                    ? strings.rank.allPlacedNote
+                    : edit.owner?.live
+                      ? strings.rank.allPlacedNoteLive
+                      : strings.rank.allPlacedNoteEdit}
                 </p>
-                <Button
-                  variant="filled"
-                  icon="check"
-                  onClick={edit === undefined ? onFinish : onSave}
-                  disabled={locked || (edit?.owner !== undefined && !edit.owner.canSave)}
-                >
-                  {edit === undefined ? strings.rank.finish : saveLabel(edit, false)}
-                </Button>
+                {!edit?.owner?.live && (
+                  <Button
+                    variant="filled"
+                    icon="check"
+                    onClick={edit === undefined ? onFinish : onSave}
+                    disabled={locked || (edit?.owner !== undefined && !edit.owner.canSave)}
+                  >
+                    {edit === undefined ? strings.rank.finish : saveLabel(edit, false)}
+                  </Button>
+                )}
               </div>
             ) : (
               <>
