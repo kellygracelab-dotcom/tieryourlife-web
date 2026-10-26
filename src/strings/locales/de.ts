@@ -294,6 +294,8 @@ const de: Translation = {
     editTitle: "Liste bearbeiten",
     editSignIn: "Melde dich an, um deine veröffentlichten Listen zu bearbeiten.",
     openingList: "Liste wird geöffnet…",
+    picturesFailed:
+      "Die Bilder deiner Liste konnten nicht auf ihr Board übernommen werden. Nichts ist verloren. Versuch es noch einmal.",
     listGone: "Diese Liste ist nicht mehr veröffentlicht.",
     listFailed: "Die Liste ließ sich nicht öffnen. Versuch es noch einmal.",
     tryAgain: "Erneut versuchen",

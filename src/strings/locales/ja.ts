@@ -289,6 +289,8 @@ const ja: Translation = {
     editTitle: "リストを編集",
     editSignIn: "公開したリストを編集するにはログインしてください。",
     openingList: "リストを開いています…",
+    picturesFailed:
+      "リストの画像をボードに移せませんでした。失われたものはありません。もう一度お試しください。",
     listGone: "このリストはもう公開されていません。",
     listFailed: "リストを開けませんでした。もう一度お試しください。",
     tryAgain: "もう一度試す",

@@ -288,6 +288,8 @@ const es: Translation = {
     editTitle: "Editar lista",
     editSignIn: "Inicia sesión para editar las listas que publicaste.",
     openingList: "Abriendo la lista…",
+    picturesFailed:
+      "No se pudieron llevar las imágenes de tu lista a su tablero. No se perdió nada. Inténtalo de nuevo.",
     listGone: "Esta lista ya no está publicada.",
     listFailed: "No se pudo abrir la lista. Inténtalo de nuevo.",
     tryAgain: "Intentar de nuevo",

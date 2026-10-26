@@ -45,6 +45,19 @@ async function makeBoard(page: Page, touch: boolean) {
   await expect(page.getByText(/1 ranked · 2 in pool/)).toBeVisible();
 }
 
+test("Make a list opens a new board, where the list is made", async ({ page, hasTouch }) => {
+  await mockBackend(page);
+  await page.goto("/");
+  await press(page.getByRole("link", { name: "Make a list" }), hasTouch);
+  await expect(page).toHaveURL(/\/b\/[^?]+\?new=/);
+  const title = page.getByRole("textbox", { name: "Title" });
+  await expect(title).toBeFocused();
+  await title.fill("Cheeses");
+  await title.press("Enter");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cheeses");
+  await expect(page.getByRole("button", { name: "Add tier" })).toBeVisible();
+});
+
 test("keeps a new board, and its settings say why a guest cannot publish it", async ({
   page,
   hasTouch,

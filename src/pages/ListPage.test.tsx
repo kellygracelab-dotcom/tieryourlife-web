@@ -349,7 +349,7 @@ describe("ListPage for its author", () => {
     photoUrl: null,
   };
 
-  it("shows the list as it was published, with Edit, and no switch to compare with oneself", async () => {
+  it("shows the list as it was published, with Edit for its board, and no switch to compare with oneself", async () => {
     mocks.loadList.mockResolvedValue(list);
     openAs(author);
     await screen.findByRole("heading", { level: 1 });
@@ -357,52 +357,23 @@ describe("ListPage for its author", () => {
       "by danylo · your list · 2,140 rankings",
     );
     expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
-    // The owner's list is the board itself, editable where it stands, as on the phone.
-    const own = screen.getByRole("region", { name: "Your list" });
-    expect(within(own).getByRole("region", { name: "Your ranking" })).toHaveTextContent(
-      "Ex Machina",
-    );
-    expect(within(own).getByLabelText("Add a card")).toBeInTheDocument();
-    // The actions stand in the page's header.
-    expect(
-      within(document.querySelector<HTMLElement>(".list-head")!).getByRole("button", {
-        name: "Publish changes",
-      }),
-    ).toBeDisabled();
-    expect(screen.getAllByRole("link", { name: "Edit" })[0]).toHaveAttribute(
-      "href",
+    // The list as the feed has it; it is changed on its board, as on the phone.
+    expect(screen.getByRole("region", { name: "Your list" })).toHaveTextContent("Ex Machina");
+    expect(screen.queryByLabelText("Add a card")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Publish changes" })).toBeNull();
+    const edits = screen.getAllByRole("link", { name: "Edit" });
+    expect(edits.map((link) => link.getAttribute("href"))).toEqual([
       "/new?list=abc",
-    );
+      "/new?list=abc",
+    ]);
+    // The head keeps its Copy link; the menu's stays for a narrow screen.
+    expect(
+      screen.getAllByRole("button", { name: "Copy link" }).filter((b) => b.closest("li") === null),
+    ).toHaveLength(1);
 
     await userEvent.click(screen.getByLabelText("More about this list"));
     expect(screen.queryByRole("button", { name: "Report this list" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Hide this list" })).toBeNull();
-  });
-
-  it("takes Edit and Copy link out of the head while the board has changes", async () => {
-    mocks.loadList.mockResolvedValue(list);
-    openAs(author);
-    await screen.findByRole("heading", { level: 1 });
-    const headEdit = () =>
-      screen.queryAllByRole("link", { name: "Edit" }).filter((a) => a.classList.contains("btn"));
-    // The menu's own Copy link is in the tree at any width; the head's has its class.
-    const headCopy = () =>
-      screen
-        .queryAllByRole("button", { name: "Copy link" })
-        .filter((b) => b.closest("li") === null);
-    const menuCopy = () =>
-      screen.getAllByRole("button", { name: "Copy link" }).find((b) => b.closest("li") !== null)!;
-    expect(headEdit()).toHaveLength(1);
-    expect(headCopy()).toHaveLength(1);
-    expect(menuCopy().closest("li")).not.toHaveClass("list-menu__copy--shown");
-
-    await userEvent.type(screen.getByLabelText("Add a card"), "Climax{Enter}");
-    expect(headEdit()).toHaveLength(0);
-    expect(headCopy()).toHaveLength(0);
-    expect(menuCopy().closest("li")).toHaveClass("list-menu__copy--shown");
-
-    await userEvent.click(screen.getByRole("button", { name: "Discard changes" }));
-    expect(headEdit()).toHaveLength(1);
   });
 
   it("deletes the list after asking, names a failure, and leaves for My lists when it is gone", async () => {

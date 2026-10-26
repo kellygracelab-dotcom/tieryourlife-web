@@ -289,6 +289,8 @@ const ptBR: Translation = {
     editTitle: "Editar lista",
     editSignIn: "Entre para editar as listas que você publicou.",
     openingList: "Abrindo a lista…",
+    picturesFailed:
+      "Não foi possível levar as imagens da sua lista para o quadro dela. Nada foi perdido. Tente de novo.",
     listGone: "Esta lista não está mais publicada.",
     listFailed: "Não foi possível abrir a lista. Tente de novo.",
     tryAgain: "Tentar novamente",

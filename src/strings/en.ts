@@ -287,6 +287,8 @@ export const en = {
     editTitle: "Edit list",
     editSignIn: "Sign in to edit the lists you published.",
     openingList: "Opening the list…",
+    picturesFailed:
+      "Your list’s pictures could not be brought to its board. Nothing was lost. Try again.",
     listGone: "This list isn’t published anymore.",
     listFailed: "Could not open the list. Try again.",
     tryAgain: "Try again",

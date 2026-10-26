@@ -145,14 +145,16 @@ export async function copyPublishedBack(
     throw new PictureRefused("upload");
   }
   const pictureId = newId();
+  const target = ref(getFirebaseStorage(), picturePath(uid, pictureId));
   try {
-    await uploadBytes(ref(getFirebaseStorage(), picturePath(uid, pictureId)), bytes, {
+    await uploadBytes(target, bytes, {
       contentType: bytes.type.startsWith("image/") ? bytes.type : "image/jpeg",
     });
+    // Shown from the copy: the feed's goes once the list is sent again.
+    return { pictureId, previewUrl: await getDownloadURL(target) };
   } catch {
     throw new PictureRefused("upload");
   }
-  return { pictureId, previewUrl: url };
 }
 
 /**

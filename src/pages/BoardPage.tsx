@@ -38,7 +38,8 @@ import type { EditorAction, EditorItem, EditorTier } from "../features/editor/mo
 import { TierDialog } from "../features/editor/TierDialog";
 import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
-import { uploadPicture } from "../lib/pictures";
+import { PictureRefused, uploadPicture } from "../lib/pictures";
+import { useSession } from "../app/session";
 import { memoryStore } from "../lib/storage";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
@@ -160,13 +161,19 @@ export function BoardPage({
   const [params] = useSearchParams();
   const stored = useBoard(uid, repository);
   const navigate = useNavigate();
+  const { account, signIn } = useSession();
   // A new board is made here and kept only once it is touched: a name, a
   // card, a star. Left as it came, it was never kept, which is what the
   // phone's cross does with an untouched board.
   const madeAt = Number(params.get("new"));
+  // A name brought along, as from a search that found nothing: the board starts with it.
+  const named = params.get("title")?.trim() ?? "";
   const fresh = useMemo(
-    () => (madeAt > 0 ? newBoard(uid, strings.boards.untitled, madeAt, nextUid) : null),
-    [uid, madeAt],
+    () =>
+      madeAt > 0
+        ? newBoard(uid, named === "" ? strings.boards.untitled : named, madeAt, nextUid)
+        : null,
+    [uid, madeAt, named],
   );
   const board = stored ?? fresh;
   // The name is asked for once, on arrival at a board not yet kept: a reload
@@ -322,6 +329,16 @@ export function BoardPage({
         : `${window.location.origin}/l/${encodeURIComponent(board.publishedId)}`,
     ).catch(() => setNotice({ text: strings.rank.downloadFailed }));
 
+  // A picture belongs to an account: a guest is asked to sign in at the first
+  // one, and the add box sends the rest only once that one is in.
+  const uploadAsAccount: Upload = async (file) => {
+    if (account?.kind !== "signedIn") {
+      const outcome = await signIn();
+      if (outcome.kind !== "signedIn") throw new PictureRefused("signIn");
+    }
+    return upload(file);
+  };
+
   const ranked = rankedCount(board);
   const inPool = poolCount(board);
   const tools = (
@@ -330,7 +347,7 @@ export function BoardPage({
       category={board.category}
       dispatch={dispatch}
       lookup={lookup}
-      upload={upload}
+      upload={uploadAsAccount}
     />
   );
 

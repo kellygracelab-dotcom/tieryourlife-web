@@ -17,6 +17,7 @@ import type { Share } from "../features/ranking/share";
 import { TIER_PRESETS } from "../features/editor/model";
 import { TIER_HOLD_MS } from "../features/tierboard/useTierMove";
 import { SessionContext, type Session } from "../app/session";
+import type { Upload } from "../features/editor/AddCardBox";
 import { memoryStore } from "../lib/storage";
 import { BoardPage } from "./BoardPage";
 
@@ -58,7 +59,13 @@ const member: Session["account"] = {
 const open = (
   repository: BoardsRepository,
   path: string,
-  extra: { share?: Share; publishing?: PublishingDeps; account?: Session["account"] } = {},
+  extra: {
+    share?: Share;
+    publishing?: PublishingDeps;
+    account?: Session["account"];
+    upload?: Upload;
+    signIn?: Session["signIn"];
+  } = {},
 ) => {
   const router = createMemoryRouter(
     [
@@ -69,7 +76,7 @@ const open = (
             repository={repository}
             now={() => ++clock}
             lookup={() => Promise.resolve([])}
-            upload={() => Promise.reject(new Error("no uploads here"))}
+            upload={extra.upload ?? (() => Promise.reject(new Error("no uploads here")))}
             publishing={extra.publishing ?? noPublishing}
             share={extra.share ?? (() => Promise.resolve())}
           />
@@ -88,7 +95,7 @@ const open = (
       <SessionContext.Provider
         value={{
           account: extra.account,
-          signIn: () => Promise.resolve({ kind: "cancelled" }),
+          signIn: extra.signIn ?? (() => Promise.resolve({ kind: "cancelled" })),
           signOut: () => Promise.resolve(),
           refresh: () => undefined,
         }}
@@ -176,6 +183,27 @@ describe("BoardPage", () => {
       "Ex Machina",
       "The Witch",
     ]);
+  });
+
+  it("starts a new board with the name a search brought along", async () => {
+    const repository = boardsRepository(memoryStore());
+    open(repository, "/b/fresh?new=100&title=Cheeses");
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Cheeses");
+  });
+
+  it("asks a guest to sign in at the first picture, and sends none when they do not", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    const upload = vi.fn<Upload>();
+    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
+    open(repository, "/b/films", { account: { kind: "guest", uid: "g1" }, upload, signIn });
+    await userEvent.upload(screen.getByLabelText("Upload images"), [
+      new File(["a"], "a.png", { type: "image/png" }),
+      new File(["b"], "b.png", { type: "image/png" }),
+    ]);
+    expect(signIn).toHaveBeenCalledTimes(1);
+    expect(upload).not.toHaveBeenCalled();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sign in to add your own pictures");
   });
 
   it("renames the board where it stands", async () => {

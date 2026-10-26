@@ -319,6 +319,8 @@ const pl: Translation = {
     editTitle: "Edytuj listę",
     editSignIn: "Zaloguj się, aby edytować swoje opublikowane listy.",
     openingList: "Otwieranie listy…",
+    picturesFailed:
+      "Nie udało się przenieść obrazów listy na jej tablicę. Nic nie zginęło. Spróbuj ponownie.",
     listGone: "Ta lista nie jest już opublikowana.",
     listFailed: "Nie udało się otworzyć listy. Spróbuj ponownie.",
     tryAgain: "Spróbuj ponownie",

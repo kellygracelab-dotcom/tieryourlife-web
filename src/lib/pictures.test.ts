@@ -117,15 +117,16 @@ describe("publishedPictureOf", () => {
 const answer = (blob: Blob) => ({ ok: true, status: 200, blob: async () => blob });
 
 describe("copyPublishedBack", () => {
-  it("fetches the feed's copy and puts it in the private folder under a new id", async () => {
+  it("fetches the feed's copy and puts it in the private folder under a new id, shown from there", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => answer(new Blob([new Uint8Array(3)], { type: "image/png" }))),
     );
     const url = published("l1", "pic1");
+    // The feed's copy goes once the list is sent again; the board shows its own.
     await expect(copyPublishedBack(url, () => "new-1")).resolves.toEqual({
       pictureId: "new-1",
-      previewUrl: url,
+      previewUrl: "https://dl/users/u1/pictures/new-1",
     });
     expect(mocks.uploadBytes).toHaveBeenCalledWith(
       { path: "users/u1/pictures/new-1" },

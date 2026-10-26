@@ -295,6 +295,8 @@ const fr: Translation = {
     editTitle: "Modifier la liste",
     editSignIn: "Connectez-vous pour modifier les listes que vous avez publiées.",
     openingList: "Ouverture de la liste…",
+    picturesFailed:
+      "Les images de ta liste n’ont pas pu être portées sur son tableau. Rien n’est perdu. Réessaie.",
     listGone: "Cette liste n’est plus publiée.",
     listFailed: "Impossible d’ouvrir la liste. Réessayez.",
     tryAgain: "Réessayer",

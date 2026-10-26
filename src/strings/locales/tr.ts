@@ -289,6 +289,8 @@ const tr: Translation = {
     editTitle: "Listeyi düzenle",
     editSignIn: "Yayımladığınız listeleri düzenlemek için oturum açın.",
     openingList: "Liste açılıyor…",
+    picturesFailed:
+      "Listenin görselleri panosuna taşınamadı. Hiçbir şey kaybolmadı. Tekrar deneyin.",
     listGone: "Bu liste artık yayında değil.",
     listFailed: "Liste açılamadı. Tekrar deneyin.",
     tryAgain: "Tekrar deneyin",
