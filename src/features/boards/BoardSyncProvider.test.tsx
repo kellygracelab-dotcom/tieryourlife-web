@@ -8,7 +8,7 @@ import type { Account } from "../../lib/account";
 import type { SignInOutcome } from "../../lib/signIn";
 import { memoryStore } from "../../lib/storage";
 import { readBackUp } from "./syncRecords";
-import { BoardSyncProvider } from "./BoardSync";
+import { BoardSyncProvider } from "./BoardSyncProvider";
 import { useBoardSync } from "./boardSync";
 import { newBoard } from "./model";
 import { boardsRepository } from "./repository";

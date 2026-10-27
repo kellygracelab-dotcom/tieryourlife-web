@@ -1,7 +1,7 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { routes } from "./app/routes";
 import { SessionProvider } from "./app/SessionProvider";
-import { BoardSyncProvider } from "./features/boards/BoardSync";
+import { BoardSyncProvider } from "./features/boards/BoardSyncProvider";
 
 const router = createBrowserRouter(routes);
 
