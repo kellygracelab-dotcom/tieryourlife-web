@@ -18,12 +18,7 @@ const PUBLISHED = "publishedLists";
 const RANKINGS = "rankings";
 
 /** The sites this function may be asked to render; anything else is a stranger. */
-const HOSTS = new Set([
-  "tieryourlife.web.app",
-  "tieryourlife.firebaseapp.com",
-  "tieryourlife-web.web.app",
-  "tieryourlife-web.firebaseapp.com",
-]);
+const HOSTS = new Set(["tieryourlife.web.app", "tieryourlife.firebaseapp.com"]);
 const DEFAULT_HOST = "tieryourlife.web.app";
 
 /**

@@ -134,12 +134,9 @@
     gap: 8px;
   }
 
+  /* A card and its padding: the first card lands without the row moving. */
   .tier {
-    min-height: 64px;
-  }
-
-  .tier:has(.tier__items > li) {
-    min-height: 100px;
+    min-height: 102px;
   }
 
   .tier__band {
@@ -158,30 +155,12 @@
 }
 
 /*
- * Desktop rows, as the wide spec has them: an empty row is a target the eye
- * skips over at 72, a row with cards shows them in full at 114, and rows are
- * 10 apart. A row grows the moment its first card lands; when its last card
- * leaves it waits 300 ms before shrinking, so it does not collapse under the
- * pointer in the middle of a drag.
+ * Desktop rows are 10 apart. An empty row is as tall as a row of one line of
+ * cards, as on the phone: the first card lands without the board moving, and
+ * only a second line makes a row grow.
  */
 @media (min-width: 840px) {
   .board {
     gap: 10px;
-  }
-
-  .tier {
-    min-height: 72px;
-    transition: min-height 180ms ease-out 300ms;
-  }
-
-  .tier:has(.tier__items > li) {
-    min-height: 114px;
-    transition-delay: 0ms;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tier {
-    transition: none;
   }
 }

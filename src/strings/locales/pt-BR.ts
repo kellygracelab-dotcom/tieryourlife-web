@@ -19,7 +19,6 @@ const ptBR: Translation = {
     makeList: "Criar uma lista",
     search: "Pesquisar listas",
     signInFailed: "Não foi possível entrar. Tente de novo.",
-    keepOnPhone: "Leve suas listas no celular",
     theme: "Tema",
     themeSystem: "Sistema",
     themeLight: "Claro",
@@ -447,9 +446,6 @@ const ptBR: Translation = {
     downloading: "Criando a imagem…",
     downloadFailed: "Não foi possível criar a imagem. Tente de novo.",
     save: "Salvar na minha conta",
-    invite: "Leve suas listas no celular",
-    inviteNote:
-      "Offline, com histórico de classificações, imagens de cards por IA e a tela externa do Flip.",
     open: "Abrir",
     change: "Mudar a classificação",
     tryAgain: "Tentar novamente",
@@ -543,6 +539,24 @@ const ptBR: Translation = {
     rankings: { one: "{n} classificação", other: "{n} classificações" },
     noArt: "Sem imagem",
   },
+  android: {
+    title: "TierYourLife para Android",
+    body: "Seus quadros offline, o histórico de cada mudança, imagens com IA para os cards e a tela externa dos Flip.",
+    get: "Disponível no Google Play",
+    soon: "Em breve no Google Play",
+    hide: "Ocultar",
+    footer: "App para Android",
+    footerSoon: "App para Android · em breve",
+    resultLine: "Guarde este ranking com seus quadros:",
+    resultLink: "baixe o app para Android",
+    menu: "Baixar o app para Android",
+    aboutBody:
+      "Tudo o que o site faz, mais quadros offline, histórico, imagens com IA e a tela externa dos Flip. Seus quadros são sincronizados pela sua conta Google.",
+    aboutTesting:
+      "Estamos testando o app com um grupo pequeno. Em breve ele estará aberto para todos no Google Play.",
+    aboutComputer:
+      "Está no computador? Abra a página do Play e instale o app no seu celular por lá.",
+  },
   boards: {
     title: "Seus quadros",
     intro:
@@ -585,6 +599,9 @@ const ptBR: Translation = {
     selected: { one: "{n} selecionado", many: "{n} selecionados", other: "{n} selecionados" },
     exitSelection: "Sair da seleção",
     deleteSelected: "Excluir",
+    view: "Visualização",
+    viewGrid: "Grade",
+    viewRows: "Lista",
     open: "Abrir {name}",
     back: "Seus quadros",
     editTitle: "Editar o nome da lista",
@@ -602,7 +619,6 @@ const ptBR: Translation = {
     delete: "Excluir quadro",
     trash: "Lixeira",
     cards: { one: "{n} carta", many: "{n} cartas", other: "{n} cartas" },
-    tiers: "Níveis",
     done: "Pronto",
     tierRemoved: "Nível {name} removido; suas cartas estão no grupo",
     editTier: "Editar nível",

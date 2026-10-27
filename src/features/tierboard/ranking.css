@@ -460,12 +460,8 @@
     gap: 7px;
   }
 
+  /* Empty or holding a card, the same height: the first card does not move the board. */
   .tier {
-    min-height: 56px;
-    transition: min-height 180ms ease-out;
-  }
-
-  .tier:has(.tier__items > li) {
     min-height: 86px;
   }
 
@@ -482,11 +478,6 @@
   .tier__caption {
     font: 400 9px/12px var(--font);
     opacity: 0.85;
-  }
-
-  /* An empty row is too low for a name under the letter. */
-  .tier:not(:has(.tier__items > li)) .tier__caption {
-    display: none;
   }
 
   .tier__key {
@@ -681,11 +672,7 @@
   }
 
   .tier {
-    min-height: 64px;
-  }
-
-  .tier:has(.tier__items > li) {
-    min-height: 100px;
+    min-height: 102px;
   }
 
   .tier__band {
@@ -702,10 +689,6 @@
     font: var(--text-caption);
     font-weight: 500;
     opacity: 1;
-  }
-
-  .tier:not(:has(.tier__items > li)) .tier__caption {
-    display: block;
   }
 
   .tier__items {
@@ -925,7 +908,8 @@
     display: none;
   }
 
-  /* Upload images is its arrow in an outlined circle; the tooltip and the label say the words. */
+  /* Upload images is its arrow in a filled blue circle, the one coloured control in the
+     pool's head; the tooltip and the label say the words. */
   .pool__tools .cards__upload .btn {
     justify-content: center;
     width: 36px;
@@ -933,8 +917,14 @@
     min-height: 36px;
     padding: 0;
     border-radius: 18px;
-    background: none;
-    box-shadow: inset 0 0 0 1px var(--line-strong);
+    background: var(--link);
+    box-shadow: none;
+    color: var(--on-link);
+  }
+
+  .pool__tools .cards__upload .btn:hover:not(:disabled) {
+    background: var(--link-hover);
+    color: var(--on-link);
   }
 
   .pool__tools .cards__upload .btn .btn__icon {

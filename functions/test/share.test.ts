@@ -163,8 +163,8 @@ describe("shareCardOf", () => {
 describe("addresses", () => {
   it("points a chat at a versioned picture and keeps one copy per version", () => {
     assert.equal(
-      shareImageUrl("tieryourlife-web.web.app", "l", "abc def", 17),
-      "https://tieryourlife-web.web.app/og/l/abc%20def.png?v=17.3",
+      shareImageUrl("tieryourlife.web.app", "l", "abc def", 17),
+      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.3",
     );
     assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.3.png");
     // The folder ends in a slash, or tidying `abc` would reach into `abcd`.

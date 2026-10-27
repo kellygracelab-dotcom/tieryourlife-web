@@ -90,7 +90,7 @@ describe("renderPage", () => {
     title: `Every "A24" film, ranked`,
     description: "34 items ranked by danylo · Film & TV",
     image: "https://img/cover.jpg",
-    url: "https://tieryourlife-web.web.app/l/abc",
+    url: "https://tieryourlife.web.app/l/abc",
   };
 
   it("sets the title, the description, the OpenGraph tags and the preload", () => {
@@ -108,7 +108,7 @@ describe("renderPage", () => {
     assert.ok(html.includes(`<meta name="twitter:card" content="summary_large_image" />`));
     assert.ok(html.includes(`<meta property="og:site_name" content="TierYourLife" />`));
     assert.ok(
-      html.includes(`<meta property="og:url" content="https://tieryourlife-web.web.app/l/abc" />`),
+      html.includes(`<meta property="og:url" content="https://tieryourlife.web.app/l/abc" />`),
     );
     assert.ok(
       html.includes(

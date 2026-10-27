@@ -95,18 +95,6 @@
   font: var(--text-title);
 }
 
-.board-panel .tiers {
-  gap: 10px;
-}
-
-.board-panel .editor__heading h2 {
-  display: none;
-}
-
-.board-panel .editor__hint {
-  display: none;
-}
-
 .board-settings__section {
   display: flex;
   flex-direction: column;
@@ -369,4 +357,157 @@
 .save-mine__choices {
   flex-direction: column;
   align-items: stretch;
+}
+
+/* The boards as the phone's grid: tiles at least 150px wide, their picture on top. */
+.boards__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board-tile {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.board-tile--selected {
+  box-shadow: inset 0 0 0 2px var(--link);
+}
+
+.board-tile__main {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.board-tile__main:hover {
+  color: var(--ink);
+}
+
+.board-tile__main:hover .art {
+  filter: brightness(1.06);
+}
+
+.board-tile .art {
+  aspect-ratio: 1.35;
+}
+
+.board-tile--selected .art {
+  opacity: 0.85;
+}
+
+.board-tile__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  padding: 10px 12px 0;
+  font: 500 16px/22px var(--font);
+}
+
+.board-tile__meta {
+  padding: 2px 12px 12px;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+/* The star sits on a dark disc over the picture, readable on any of them. */
+.board-tile__star,
+.board-tile__pick {
+  position: absolute;
+  top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.38);
+  color: #ffffff;
+}
+
+.board-tile__star {
+  inset-inline-end: 8px;
+  cursor: pointer;
+}
+
+.board-tile__star .ms,
+.board-tile__pick .ms {
+  font-size: 20px;
+}
+
+.board-tile__star:hover {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.board-tile__star--on {
+  color: #ffc94d;
+}
+
+.board-tile__pick {
+  inset-inline-start: 8px;
+}
+
+.board-tile--selected .board-tile__pick {
+  background: var(--link);
+  color: var(--surface);
+}
+
+/* Grid or rows, the phone's switch beside the order. */
+.boards__view {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.boards__view-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  border: none;
+  border-radius: 16px;
+  background: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.boards__view-option .ms {
+  font-size: 20px;
+}
+
+.boards__view-option[aria-pressed="true"] {
+  background: var(--primary-container);
+  color: var(--ink);
+}
+
+/* Below 840 the board's head is its name and the menu: they share one line. */
+@media (max-width: 839px) {
+  .board-page .list-head {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+
+  .board-page .list-head__text {
+    flex: 1 1 0;
+  }
 }

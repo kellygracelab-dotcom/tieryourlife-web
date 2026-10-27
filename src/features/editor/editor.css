@@ -122,8 +122,7 @@
 }
 
 .editor__section,
-.cards,
-.tiers {
+.cards {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -133,23 +132,9 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-.editor__section-title,
-.editor__heading h2 {
+.editor__section-title {
   margin: 0;
   font: var(--text-title);
-}
-
-.editor__heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.editor__heading p {
-  margin: 0;
-  font: var(--text-small);
-  color: var(--ink-dim);
 }
 
 .editor__label {
@@ -192,7 +177,6 @@
   gap: var(--space-2);
 }
 
-.editor__hint,
 .editor__empty {
   margin: 0;
   font: var(--text-small);
@@ -410,132 +394,7 @@
   }
 }
 
-/* Tiers */
-
-.tiers__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.tiers__row {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: 8px;
-  border-radius: var(--radius-card);
-  background: color-mix(in oklab, var(--band-base) var(--band-tint), var(--surface));
-}
-
-.tiers__row--lifted {
-  position: relative;
-  z-index: 1;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-}
-
-.tiers__main {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.tiers__handle {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  color: var(--ink-faint);
-  cursor: grab;
-  /* The finger drags the row; the page must not scroll under it. */
-  touch-action: none;
-  user-select: none;
-}
-
-.tiers__row--lifted .tiers__handle {
-  cursor: grabbing;
-}
-
-.tiers__swatch {
-  flex: none;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: var(--radius-tile);
-  background: var(--band);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
-  cursor: pointer;
-}
-
-.tiers__label,
-.tiers__caption {
-  min-width: 0;
-  padding: 6px 10px;
-  border: none;
-  border-radius: var(--radius-tile);
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--line);
-  font: var(--text-body);
-  color: var(--ink);
-  outline: none;
-}
-
-.tiers__label {
-  flex: 0 0 64px;
-  font-weight: 500;
-}
-
-.tiers__caption {
-  flex: 1;
-}
-
-.tiers__label:focus,
-.tiers__caption:focus {
-  box-shadow: inset 0 0 0 2px var(--focus);
-}
-
-.tiers__tools {
-  display: flex;
-  flex: none;
-  gap: 2px;
-}
-
-.tiers__tool {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink-dim);
-  cursor: pointer;
-}
-
-.tiers__tool:hover:not(:disabled) {
-  background: var(--hover);
-  color: var(--ink);
-}
-
-.tiers__tool:disabled {
-  color: var(--ink-faint);
-  cursor: default;
-}
-
-/* With a mouse the handle reorders; the arrows appear for the keyboard. */
-@media (hover: hover) {
-  .tiers__tool--arrow {
-    opacity: 0;
-    transition: opacity 120ms ease;
-  }
-
-  .tiers__row:focus-within .tiers__tool--arrow,
-  .tiers__row:hover .tiers__tool--arrow {
-    opacity: 1;
-  }
-}
+/* Tier colours */
 
 .tiers__palette {
   display: flex;

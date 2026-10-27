@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
-import { PLAY_URL } from "../lib/links";
 import { routes } from "./routes";
 
 vi.mock("../lib/api", async () => ({
@@ -61,11 +60,14 @@ describe("routes", () => {
 });
 
 describe("Shell", () => {
-  it("offers the phone app in the footer, never as a modal", () => {
+  it("names the phone app in the footer, without a link while Google Play shows it to testers only", () => {
     open("/");
-    const phoneLink = screen.getByRole("link", { name: "Keep your lists on your phone" });
-    expect(phoneLink).toHaveAttribute("href", PLAY_URL);
-    expect(phoneLink).toHaveAttribute("target", "_blank");
+    expect(screen.getByText("Android app · coming soon")).toBeInTheDocument();
+    expect(
+      screen
+        .queryAllByRole("link")
+        .filter((link) => link.getAttribute("href")?.includes("play.google")),
+    ).toEqual([]);
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
     expect(screen.getByRole("link", { name: "Privacy policy" })).toHaveAttribute(
       "href",

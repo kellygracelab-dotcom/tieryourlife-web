@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { ICONS } from "../../src/ui/icons";
@@ -18,6 +19,15 @@ describe("the icon font", () => {
     expect(size).toBeLessThan(60_000);
     const html = readFileSync("index.html", "utf8");
     expect(html).not.toContain("fonts.googleapis.com");
-    expect(html).toContain('href="/fonts/material-symbols-outlined.woff2"');
+  });
+
+  // Fonts are kept for a week; a font kept from before an icon was added drew
+  // that icon as its name, "DASHBOARD" in the header. A new font is a new address.
+  it("is asked for by an address that changes with the font", () => {
+    const font = readFileSync("public/fonts/material-symbols-outlined.woff2");
+    const version = createHash("sha256").update(font).digest("hex").slice(0, 10);
+    const address = `/fonts/material-symbols-outlined.woff2?v=${version}`;
+    expect(readFileSync("index.html", "utf8")).toContain(`href="${address}"`);
+    expect(readFileSync("src/index.css", "utf8")).toContain(`url("${address}")`);
   });
 });

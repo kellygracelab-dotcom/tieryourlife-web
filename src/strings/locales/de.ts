@@ -19,7 +19,6 @@ const de: Translation = {
     makeList: "Liste erstellen",
     search: "Listen suchen",
     signInFailed: "Anmeldung fehlgeschlagen. Versuch es noch einmal.",
-    keepOnPhone: "Deine Listen aufs Telefon",
     theme: "Design",
     themeSystem: "System",
     themeLight: "Hell",
@@ -457,9 +456,6 @@ const de: Translation = {
     downloading: "Bild wird erstellt…",
     downloadFailed: "Das Bild konnte nicht erstellt werden. Versuch es noch einmal.",
     save: "In meinem Konto speichern",
-    invite: "Deine Listen aufs Telefon",
-    inviteNote:
-      "Offline, mit Verlauf der Ranglisten, KI-Bildern für Karten und dem Flip-Außendisplay.",
     open: "Öffnen",
     change: "Rangliste ändern",
     tryAgain: "Erneut versuchen",
@@ -557,6 +553,24 @@ const de: Translation = {
     rankings: { one: "{n} Rangliste", other: "{n} Ranglisten" },
     noArt: "Kein Bild",
   },
+  android: {
+    title: "TierYourLife für Android",
+    body: "Deine Boards offline, der Verlauf jeder Änderung, KI-Bilder für Karten und das Coverdisplay auf Flip-Handys.",
+    get: "Bei Google Play herunterladen",
+    soon: "Bald bei Google Play",
+    hide: "Ausblenden",
+    footer: "Android-App",
+    footerSoon: "Android-App · bald verfügbar",
+    resultLine: "Behalte dieses Ranking bei deinen Boards:",
+    resultLink: "hol dir die Android-App",
+    menu: "Android-App holen",
+    aboutBody:
+      "Alles, was die Website kann, dazu Boards offline, Verlauf, KI-Bilder und das Flip-Coverdisplay. Deine Boards werden über dein Google-Konto synchronisiert.",
+    aboutTesting:
+      "Wir testen die App gerade mit einer kleinen Gruppe. Bald ist sie für alle bei Google Play verfügbar.",
+    aboutComputer:
+      "Am Computer? Öffne die Play-Seite und installiere die App von dort auf dein Handy.",
+  },
   boards: {
     title: "Deine Boards",
     intro:
@@ -595,6 +609,9 @@ const de: Translation = {
     selected: { one: "{n} ausgewählt", other: "{n} ausgewählt" },
     exitSelection: "Auswahl beenden",
     deleteSelected: "Löschen",
+    view: "Ansicht",
+    viewGrid: "Raster",
+    viewRows: "Liste",
     open: "{name} öffnen",
     back: "Deine Boards",
     editTitle: "Listennamen bearbeiten",
@@ -608,7 +625,6 @@ const de: Translation = {
     delete: "Board löschen",
     trash: "Papierkorb",
     cards: { one: "{n} Karte", other: "{n} Karten" },
-    tiers: "Stufen",
     done: "Fertig",
     tierRemoved: "Stufe {name} entfernt; ihre Karten sind im Pool",
     editTier: "Stufe bearbeiten",

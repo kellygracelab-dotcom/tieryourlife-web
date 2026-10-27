@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useSession } from "../app/session";
 import { coversOf } from "../features/feed/categories";
 import { CategoryTiles } from "../features/feed/CategoryTiles";
+import { AppCard } from "../features/android/AppCard";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { keepFeedSource, readFeedSource, type FeedSource } from "../features/feed/feedSource";
 import {
@@ -168,6 +169,7 @@ export function HomePage({
       ) : (
         <GuestFeed load={load} />
       )}
+      <AppCard slot="home" />
     </div>
   );
 }

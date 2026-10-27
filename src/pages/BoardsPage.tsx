@@ -18,8 +18,10 @@ import {
 } from "../features/boards/model";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
 import { useBoardSync } from "../features/boards/boardSync";
+import { BoardTile } from "../features/boards/BoardTile";
 import { nextUid, useBoards } from "../features/boards/useBoards";
 import "../features/boards/boards.css";
+import { localStorageStore, type KeyValueStore } from "../lib/storage";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
@@ -30,7 +32,15 @@ import "./BoardsPage.css";
 interface BoardsPageProps {
   repository?: BoardsRepository;
   now?: () => number;
+  /** Where the chosen view is remembered on this device. */
+  store?: KeyValueStore;
 }
+
+/** Pictures in a grid, as the phone shows them first, or one board to a row with its tier bar. */
+type BoardsView = "grid" | "rows";
+export const VIEW_KEY = "boards.view";
+const viewIn = (store: KeyValueStore): BoardsView =>
+  store.read(VIEW_KEY) === "rows" ? "rows" : "grid";
 
 /** What a board page leaves in the history when it sends a board to the trash. */
 export interface BoardsPageState {
@@ -147,6 +157,7 @@ function BoardCard({
 function Group({
   heading,
   boards,
+  view,
   selecting,
   selected,
   onSelect,
@@ -154,6 +165,7 @@ function Group({
 }: {
   heading: string | null;
   boards: Board[];
+  view: BoardsView;
   selecting: boolean;
   selected: ReadonlySet<string>;
   onSelect: (uid: string) => void;
@@ -163,17 +175,29 @@ function Group({
   return (
     <section className="boards__group" aria-label={heading ?? strings.boards.title}>
       {heading !== null && <h2 className="boards__heading">{heading}</h2>}
-      <ul className="boards__list">
-        {boards.map((board) => (
-          <BoardCard
-            key={board.uid}
-            board={board}
-            selecting={selecting}
-            selected={selected.has(board.uid)}
-            onSelect={() => onSelect(board.uid)}
-            onStar={() => onStar(board)}
-          />
-        ))}
+      <ul className={view === "grid" ? "boards__grid" : "boards__list"}>
+        {boards.map((board) =>
+          view === "grid" ? (
+            <BoardTile
+              key={board.uid}
+              board={board}
+              title={titleOf(board)}
+              selecting={selecting}
+              selected={selected.has(board.uid)}
+              onSelect={() => onSelect(board.uid)}
+              onStar={() => onStar(board)}
+            />
+          ) : (
+            <BoardCard
+              key={board.uid}
+              board={board}
+              selecting={selecting}
+              selected={selected.has(board.uid)}
+              onSelect={() => onSelect(board.uid)}
+              onStar={() => onStar(board)}
+            />
+          ),
+        )}
       </ul>
     </section>
   );
@@ -184,13 +208,22 @@ function Group({
  * ones first, the rest newest first, narrowed by a word, a category or
  * whether they are public. Nothing here needs an account.
  */
-export function BoardsPage({ repository = site, now = Date.now }: BoardsPageProps) {
+export function BoardsPage({
+  repository = site,
+  now = Date.now,
+  store = localStorageStore,
+}: BoardsPageProps) {
   usePageTitle(strings.boards.title);
   const all = useBoards(repository);
   const { signedIn } = useBoardSync();
   const navigate = useNavigate();
   const location = useLocation();
   const [sort, setSort] = useState<BoardSort>("newest");
+  const [view, setView] = useState<BoardsView>(() => viewIn(store));
+  const show = (next: BoardsView) => {
+    setView(next);
+    store.write(VIEW_KEY, next);
+  };
   const [category, setCategory] = useState<Category | null>(null);
   const [published, setPublished] = useState<PublishedFilter | null>(null);
   const [query, setQuery] = useState("");
@@ -326,6 +359,28 @@ export function BoardsPage({ repository = site, now = Date.now }: BoardsPageProp
               />
             </label>
             <div className="boards__filters">
+              <div className="boards__view" role="group" aria-label={strings.boards.view}>
+                <button
+                  type="button"
+                  className="boards__view-option"
+                  aria-pressed={view === "grid"}
+                  aria-label={strings.boards.viewGrid}
+                  title={strings.boards.viewGrid}
+                  onClick={() => show("grid")}
+                >
+                  <Icon name="grid_view" />
+                </button>
+                <button
+                  type="button"
+                  className="boards__view-option"
+                  aria-pressed={view === "rows"}
+                  aria-label={strings.boards.viewRows}
+                  title={strings.boards.viewRows}
+                  onClick={() => show("rows")}
+                >
+                  <Icon name="view_agenda" />
+                </button>
+              </div>
               <div className="boards__chips" role="group" aria-label={strings.boards.sort}>
                 <Chip selected={sort === "newest"} onClick={() => setSort("newest")}>
                   {strings.boards.sortNewest}
@@ -422,6 +477,7 @@ export function BoardsPage({ repository = site, now = Date.now }: BoardsPageProp
               <Group
                 heading={strings.boards.favourites}
                 boards={arranged.favourites}
+                view={view}
                 selecting={selecting}
                 selected={selected}
                 onSelect={toggle}
@@ -430,6 +486,7 @@ export function BoardsPage({ repository = site, now = Date.now }: BoardsPageProp
               <Group
                 heading={strings.boards.allBoards}
                 boards={arranged.rest}
+                view={view}
                 selecting={selecting}
                 selected={selected}
                 onSelect={toggle}
@@ -440,6 +497,7 @@ export function BoardsPage({ repository = site, now = Date.now }: BoardsPageProp
             <Group
               heading={null}
               boards={shown}
+              view={view}
               selecting={selecting}
               selected={selected}
               onSelect={toggle}

@@ -15,6 +15,11 @@ export type CatalogueState =
   | { status: "ready"; query: string; items: CatalogueItem[] }
   | { status: "failed"; query: string };
 
+// A card is mostly its picture: as on the phone, a result without one is left
+// out, and a card of that name can still be added by its words.
+const pictured = (item: CatalogueItem): boolean =>
+  item.imageUrl !== null && item.imageUrl.trim() !== "";
+
 /** What the catalogue says about the words in the box, a little after they stop changing. */
 export function useCatalogue(query: string, lookup: Lookup = findInCatalogue): CatalogueState {
   const [answer, setAnswer] = useState<CatalogueState>({ status: "idle" });
@@ -26,7 +31,8 @@ export function useCatalogue(query: string, lookup: Lookup = findInCatalogue): C
     let current = true;
     const timer = setTimeout(() => {
       lookup(wanted).then(
-        (items) => current && setAnswer({ status: "ready", query: wanted, items }),
+        (items) =>
+          current && setAnswer({ status: "ready", query: wanted, items: items.filter(pictured) }),
         () => current && setAnswer({ status: "failed", query: wanted }),
       );
     }, LOOKUP_DEBOUNCE_MS);

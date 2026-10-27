@@ -393,6 +393,16 @@
   color: var(--ink-dim);
 }
 
+.foot__app {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.foot__app .ms {
+  font-size: 16px;
+}
+
 @media (max-width: 599px) {
   .top,
   .shell__main,

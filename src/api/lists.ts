@@ -12,13 +12,33 @@ export function loadList(client: ApiClient, id: string): Promise<PublishedList> 
   return client.request<PublishedList>("GET", `/lists/${encodeURIComponent(id)}`);
 }
 
-export function loadFeed(client: ApiClient, query: FeedQuery = {}): Promise<FeedPage> {
-  return client.request<FeedPage>("GET", "/lists", { query });
+/**
+ * A list as the site draws it. The backend can send an empty slot among a
+ * list's pictures; drawn as it came, it was an <img src="null">, a broken
+ * picture on the front page.
+ */
+export const summaryOf = (list: ListSummary): ListSummary => {
+  const previews = (list.previewImages ?? []).filter(
+    (url): url is string => typeof url === "string" && url.trim() !== "",
+  );
+  const cover =
+    typeof list.coverImageUrl === "string" && list.coverImageUrl.trim() !== ""
+      ? list.coverImageUrl
+      : null;
+  return previews.length === list.previewImages?.length && cover === list.coverImageUrl
+    ? list
+    : { ...list, previewImages: previews, coverImageUrl: cover };
+};
+
+export async function loadFeed(client: ApiClient, query: FeedQuery = {}): Promise<FeedPage> {
+  const page = await client.request<FeedPage>("GET", "/lists", { query });
+  return { ...page, lists: (page.lists ?? []).map(summaryOf) };
 }
 
 /** The lists this account published from the app, newest first; the backend orders them. */
-export function loadMyLists(client: ApiClient): Promise<{ lists: ListSummary[] }> {
-  return client.request<{ lists: ListSummary[] }>("GET", "/lists/mine");
+export async function loadMyLists(client: ApiClient): Promise<{ lists: ListSummary[] }> {
+  const mine = await client.request<{ lists: ListSummary[] }>("GET", "/lists/mine");
+  return { ...mine, lists: (mine.lists ?? []).map(summaryOf) };
 }
 
 /** What the backend takes to publish a list; the site sends no pictures of its own yet. */

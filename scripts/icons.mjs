@@ -3,6 +3,7 @@
 //   node scripts/icons.mjs
 // Google draws the subset; the file is kept in public/fonts, the list it
 // was made from beside this script, and a config test fails while they disagree.
+import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const source = readFileSync("src/ui/icons.ts", "utf8");
@@ -28,4 +29,12 @@ if (url === undefined) throw new Error(`No woff2 in Google's answer:\n${css}`);
 const font = Buffer.from(await (await fetch(url)).arrayBuffer());
 writeFileSync("public/fonts/material-symbols-outlined.woff2", font);
 writeFileSync("scripts/material-symbols-outlined.icons.txt", `${names.join("\n")}\n`);
+// The address carries the font's fingerprint: browsers keep fonts for a week,
+// and one kept from before an icon was added drew that icon as its name.
+const version = createHash("sha256").update(font).digest("hex").slice(0, 10);
+for (const file of ["index.html", "src/index.css"]) {
+  const text = readFileSync(file, "utf8");
+  const versioned = `material-symbols-outlined.woff2?v=${version}`;
+  writeFileSync(file, text.replace(/material-symbols-outlined\.woff2(\?v=[0-9a-f]+)?/g, versioned));
+}
 console.log(`${names.length} icons, ${font.length} bytes`);

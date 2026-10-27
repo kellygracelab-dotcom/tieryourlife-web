@@ -9,7 +9,7 @@ import {
 } from "react-router";
 import { useModerator } from "../features/moderation/useModerator";
 import type { Account } from "../lib/account";
-import { PLAY_URL } from "../lib/links";
+import { appIsLive, onApple, playUrl } from "../lib/links";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
@@ -20,6 +20,19 @@ import { useSession } from "./session";
 import "./Shell.css";
 
 const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
+
+/** The app in the footer: a link once anyone can get it, plain words until then, nothing on an iPhone. */
+function AppFooterLink() {
+  if (onApple()) return null;
+  return appIsLive() ? (
+    <a className="foot__app" href={playUrl("footer")} target="_blank" rel="noopener">
+      <Icon name="install_mobile" />
+      {strings.android.footer}
+    </a>
+  ) : (
+    <span className="foot__app">{strings.android.footerSoon}</span>
+  );
+}
 
 /** Where a signed-in person's own things are. Signing out is a setting, and lives with the settings. */
 function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn" }> }) {
@@ -47,6 +60,13 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
         <li>
           <Link to="/me">{strings.nav.myLists}</Link>
         </li>
+        {appIsLive() && !onApple() && (
+          <li>
+            <a href={playUrl("menu")} target="_blank" rel="noopener">
+              {strings.android.menu}
+            </a>
+          </li>
+        )}
         <li>
           <Link to="/settings">{strings.nav.settings}</Link>
         </li>
@@ -176,9 +196,7 @@ export function Shell() {
       </main>
       <footer className="foot">
         <a href="/privacy.html">{strings.footer.privacy}</a>
-        <a href={PLAY_URL} target="_blank" rel="noopener">
-          {strings.nav.keepOnPhone}
-        </a>
+        <AppFooterLink />
         <Link to="/about">{strings.footer.about}</Link>
         {/* The theme is a setting a guest has too, and a guest has no account menu to find it in. */}
         <Link to="/settings">{strings.nav.settings}</Link>
