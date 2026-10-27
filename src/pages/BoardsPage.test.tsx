@@ -4,8 +4,8 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { addToPool, arrangeItems, liveItems, newBoard, type Board } from "../features/boards/model";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
-import { memoryStore } from "../lib/storage";
-import { BoardsPage } from "./BoardsPage";
+import { memoryStore, type KeyValueStore } from "../lib/storage";
+import { BoardsPage, VIEW_KEY } from "./BoardsPage";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
 vi.mock("../lib/pictures", () => ({ uploadPicture: vi.fn() }));
@@ -38,10 +38,25 @@ const ranked = (uid: string, title: string, editedAt: number): Board => {
   return arrangeItems(b, [[ia!], [ib!], [], [], []], editedAt);
 };
 
-const open = (repository: BoardsRepository, path = "/boards", state?: unknown) => {
+/** A device that chose one board to a row. */
+const rowsStore = (): KeyValueStore => {
+  const store = memoryStore();
+  store.write(VIEW_KEY, "rows");
+  return store;
+};
+
+const open = (
+  repository: BoardsRepository,
+  path = "/boards",
+  state?: unknown,
+  store: KeyValueStore = memoryStore(),
+) => {
   const router = createMemoryRouter(
     [
-      { path: "/boards", element: <BoardsPage repository={repository} now={() => 5000} /> },
+      {
+        path: "/boards",
+        element: <BoardsPage repository={repository} now={() => 5000} store={store} />,
+      },
       { path: "/b/:uid", element: <h1>board page</h1> },
       { path: "/trash", element: <h1>trash page</h1> },
     ],
@@ -65,14 +80,55 @@ describe("BoardsPage", () => {
     expect(router.state.location.search).toBe("?new=5000");
   });
 
-  it("lists the boards newest first with how far along each is, and leads to one", async () => {
+  it("shows the boards as the phone's grid: a picture, the name, how many are ranked", () => {
+    const repository = boardsRepository(memoryStore());
+    const next = uids();
+    const pictured = addToPool(
+      newBoard("pics", "Studio Ghibli", 2, next),
+      ["a", "b", "c", "a"].map((name) => ({ title: name, imageUrl: `https://img/${name}.jpg` })),
+      2,
+      next,
+    );
+    repository.saveAll([ranked("plain", "Films I make people watch", 1), pictured]);
+    open(repository);
+    const tiles = screen.getAllByRole("link", { name: /^Open / });
+    expect(tiles.map((tile) => tile.closest("li")?.className)).toEqual([
+      "board-tile",
+      "board-tile",
+    ]);
+    // Pictures from the cards, each once.
+    expect(
+      [...tiles[0]!.querySelectorAll(".art--mosaic img")].map((img) => img.getAttribute("src")),
+    ).toEqual(["https://img/a.jpg", "https://img/b.jpg", "https://img/c.jpg"]);
+    expect(within(tiles[0]!).getByText("0 ranked")).toBeInTheDocument();
+    // No pictures: the tier colours, as stripes.
+    expect(tiles[1]!.querySelectorAll(".art--stripes span")).toHaveLength(5);
+    expect(within(tiles[1]!).getByText("2 ranked")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Studio Ghibli to favourites" })).toBeVisible();
+  });
+
+  it("switches between the grid and rows, and remembers the choice on this device", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([board("a", "Albums", 1)]);
+    const store = memoryStore();
+    open(repository, "/boards", undefined, store);
+    expect(screen.getByRole("button", { name: "Grid" })).toHaveAttribute("aria-pressed", "true");
+    expect(document.querySelector(".boards__grid")).not.toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Rows" }));
+    expect(screen.getByRole("button", { name: "Rows" })).toHaveAttribute("aria-pressed", "true");
+    expect(document.querySelector(".boards__list .board-card")).not.toBeNull();
+    expect(store.read(VIEW_KEY)).toBe("rows");
+  });
+
+  it("in rows, lists the boards newest first with how far along each is, and leads to one", async () => {
     const repository = boardsRepository(memoryStore());
     repository.saveAll([
       board("old", "Ramen in Kyiv", 1),
       ranked("new", "Films I make people watch", 2),
       board("gone", "Thrown away", 3, { deletedAt: 4 }),
     ]);
-    const router = open(repository);
+    const router = open(repository, "/boards", undefined, rowsStore());
     expect(screen.getByText("2 boards · private")).toBeInTheDocument();
     const links = screen.getAllByRole("link", { name: /^Open / });
     expect(links.map((link) => link.textContent)).toEqual([
@@ -143,34 +199,40 @@ describe("BoardsPage", () => {
     ]);
   });
 
-  it("deletes a selection to the trash, with Undo, and leaves the mode with the last deselection", async () => {
-    const repository = boardsRepository(memoryStore());
-    repository.saveAll([board("a", "Albums", 1), board("b", "Books", 2)]);
-    open(repository);
+  it.each([
+    ["grid", memoryStore, "button"],
+    ["rows", rowsStore, "checkbox"],
+  ] as const)(
+    "in the %s, deletes a selection to the trash, with Undo, and leaves the mode with the last deselection",
+    async (_view, store, role) => {
+      const repository = boardsRepository(memoryStore());
+      repository.saveAll([board("a", "Albums", 1), board("b", "Books", 2)]);
+      open(repository, "/boards", undefined, store());
 
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-    expect(screen.getByRole("toolbar")).toHaveTextContent("0 selected");
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select Albums" }));
-    expect(screen.getByRole("toolbar")).toHaveTextContent("1 selected");
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select Albums" }));
-    expect(screen.queryByRole("toolbar")).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+      expect(screen.getByRole("toolbar")).toHaveTextContent("0 selected");
+      await userEvent.click(screen.getByRole(role, { name: "Select Albums" }));
+      expect(screen.getByRole("toolbar")).toHaveTextContent("1 selected");
+      await userEvent.click(screen.getByRole(role, { name: "Select Albums" }));
+      expect(screen.queryByRole("toolbar")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select Albums" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select Books" }));
-    await userEvent.click(
-      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
-    );
-    expect(repository.get("a")?.deletedAt).toBe(5000);
-    expect(repository.get("b")?.deletedAt).toBe(5000);
-    expect(screen.getByRole("status")).toHaveTextContent("2 lists deleted");
-    expect(screen.getByText("Rank anything")).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+      await userEvent.click(screen.getByRole(role, { name: "Select Albums" }));
+      await userEvent.click(screen.getByRole(role, { name: "Select Books" }));
+      await userEvent.click(
+        within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+      );
+      expect(repository.get("a")?.deletedAt).toBe(5000);
+      expect(repository.get("b")?.deletedAt).toBe(5000);
+      expect(screen.getByRole("status")).toHaveTextContent("2 lists deleted");
+      expect(screen.getByText("Rank anything")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
-    expect(repository.get("a")?.deletedAt).toBeNull();
-    expect(repository.get("b")?.deletedAt).toBeNull();
-    expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(2);
-  });
+      await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+      expect(repository.get("a")?.deletedAt).toBeNull();
+      expect(repository.get("b")?.deletedAt).toBeNull();
+      expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(2);
+    },
+  );
 
   it("says so when a board page sent its board to the trash, once", async () => {
     const repository = boardsRepository(memoryStore());

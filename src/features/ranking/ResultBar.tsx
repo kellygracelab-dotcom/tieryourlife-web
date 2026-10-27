@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import type { ApiError } from "../../api/errors";
-import { PLAY_URL } from "../../lib/links";
+import { appIsLive, onApple, playUrl } from "../../lib/links";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -141,12 +141,13 @@ export function ResultBar({
           {strings.rank.downloadFailed}
         </p>
       )}
-      {acted && (
+      {/* Only once anyone can get the app: at a moment of success, nothing nobody can have. */}
+      {acted && appIsLive() && !onApple() && (
         <p className="result__invite">
-          <a href={PLAY_URL} target="_blank" rel="noopener">
-            {strings.rank.invite}
-          </a>{" "}
-          {strings.rank.inviteNote}
+          {strings.android.resultLine}{" "}
+          <a href={playUrl("result")} target="_blank" rel="noopener">
+            {strings.android.resultLink}
+          </a>
         </p>
       )}
     </div>

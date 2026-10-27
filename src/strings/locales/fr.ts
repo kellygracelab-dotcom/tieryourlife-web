@@ -21,7 +21,6 @@ const fr: Translation = {
     makeList: "Créer une liste",
     search: "Chercher des listes",
     signInFailed: "Connexion impossible. Réessayez.",
-    keepOnPhone: "Gardez vos listes sur votre téléphone",
     theme: "Thème",
     themeSystem: "Système",
     themeLight: "Clair",
@@ -458,9 +457,6 @@ const fr: Translation = {
     downloading: "Création de l’image…",
     downloadFailed: "Impossible de créer l’image. Réessayez.",
     save: "Enregistrer dans mon compte",
-    invite: "Gardez vos listes sur votre téléphone",
-    inviteNote:
-      "Hors ligne, avec l’historique des classements, des images de cartes par IA et l’écran externe du Flip.",
     open: "Ouvrir",
     change: "Modifier le classement",
     tryAgain: "Réessayer",
@@ -557,6 +553,24 @@ const fr: Translation = {
     rankings: { one: "{n} classement", other: "{n} classements" },
     noArt: "Sans image",
   },
+  android: {
+    title: "TierYourLife pour Android",
+    body: "Vos tableaux hors ligne, l’historique de chaque modification, des images IA pour les cartes et l’écran externe des Flip.",
+    get: "Disponible sur Google Play",
+    soon: "Bientôt sur Google Play",
+    hide: "Masquer",
+    footer: "Application Android",
+    footerSoon: "Application Android · bientôt",
+    resultLine: "Gardez ce classement avec vos tableaux :",
+    resultLink: "installez l’application Android",
+    menu: "Installer l’application Android",
+    aboutBody:
+      "Tout ce que fait le site, plus les tableaux hors ligne, l’historique, les images IA et l’écran externe des Flip. Vos tableaux se synchronisent avec votre compte Google.",
+    aboutTesting:
+      "Nous testons l’application avec un petit groupe. Elle sera bientôt ouverte à tous sur Google Play.",
+    aboutComputer:
+      "Sur un ordinateur ? Ouvrez la page Play et installez l’application sur votre téléphone depuis là.",
+  },
   boards: {
     title: "Vos tableaux",
     intro:
@@ -603,6 +617,9 @@ const fr: Translation = {
     selected: { one: "{n} sélectionné", many: "{n} sélectionnés", other: "{n} sélectionnés" },
     exitSelection: "Quitter la sélection",
     deleteSelected: "Supprimer",
+    view: "Affichage",
+    viewGrid: "Grille",
+    viewRows: "Liste",
     open: "Ouvrir {name}",
     back: "Vos tableaux",
     editTitle: "Modifier le nom de la liste",
@@ -620,7 +637,6 @@ const fr: Translation = {
     delete: "Supprimer le tableau",
     trash: "Corbeille",
     cards: { one: "{n} carte", many: "{n} cartes", other: "{n} cartes" },
-    tiers: "Rangs",
     done: "Terminé",
     tierRemoved: "Rang {name} supprimé ; ses cartes sont dans le réservoir",
     editTier: "Modifier le rang",

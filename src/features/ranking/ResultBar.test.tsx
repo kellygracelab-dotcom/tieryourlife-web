@@ -1,9 +1,17 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it, vi } from "vitest";
-import { PLAY_URL } from "../../lib/links";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { playUrl } from "../../lib/links";
 import { ResultBar, type FinishState } from "./ResultBar";
+
+// The app's switch, flipped per test: live once Google Play opens the app to everyone.
+const app = vi.hoisted(() => ({ live: true }));
+vi.mock("../../lib/links", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/links")>()),
+  appIsLive: () => app.live,
+  onApple: () => false,
+}));
 
 const show = (
   finish: FinishState,
@@ -100,22 +108,31 @@ describe("ResultBar", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not make the image");
   });
 
+  it("says nothing of the app while it is in its closed test", async () => {
+    app.live = false;
+    onTestFinished(() => {
+      app.live = true;
+    });
+    show({ status: "done", code: "abcdefgh" });
+    await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(screen.queryByRole("link", { name: "get the Android app" })).toBeNull();
+    expect(screen.queryByText(/Keep this ranking/)).toBeNull();
+  });
+
   it("mentions the app only once the link is copied or the image is made", async () => {
-    const invite = () => screen.queryAllByRole("link", { name: "Keep your lists on your phone" });
+    const invite = () => screen.queryAllByRole("link", { name: "get the Android app" });
     show({ status: "done", code: "abcdefgh" });
     expect(invite()).toHaveLength(0);
     await userEvent.click(screen.getByRole("button", { name: "Copy link" }));
     expect(invite()).toHaveLength(1);
-    expect(invite()[0]).toHaveAttribute("href", PLAY_URL);
+    expect(invite()[0]).toHaveAttribute("href", playUrl("result"));
     expect(invite()[0]).toHaveAttribute("target", "_blank");
-    expect(screen.getByText(/Flip cover/)).toBeInTheDocument();
+    expect(screen.getByText(/Keep this ranking with your boards/)).toBeInTheDocument();
 
     show({ status: "done", code: "zzzzzzzz" });
     expect(invite()).toHaveLength(1);
     await userEvent.click(screen.getAllByRole("button", { name: "Download image" })[1]!);
-    expect(
-      await screen.findAllByRole("link", { name: "Keep your lists on your phone" }),
-    ).toHaveLength(2);
+    expect(await screen.findAllByRole("link", { name: "get the Android app" })).toHaveLength(2);
 
     const failing = vi.fn(async () => {
       throw new Error("no clipboard");

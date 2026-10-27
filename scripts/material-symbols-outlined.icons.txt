@@ -1,7 +1,5 @@
 add
 arrow_back
-arrow_downward
-arrow_upward
 bookmark
 bookmarks
 category
@@ -23,9 +21,11 @@ error
 expand_more
 filter_list
 format_quote
+grid_view
 group
 headphones
 history
+install_mobile
 link
 lock
 logout
@@ -38,15 +38,16 @@ publish
 refresh
 restaurant
 restore_from_trash
+schedule
 search
 settings
 shield
 sports_esports
 sports_soccer
 star
-swap_vert
 theaters
 undo
 upload
+view_agenda
 visibility
 visibility_off

@@ -18,7 +18,6 @@ const es: Translation = {
     makeList: "Crear una lista",
     search: "Buscar listas",
     signInFailed: "No se pudo iniciar sesión. Inténtalo de nuevo.",
-    keepOnPhone: "Lleva tus listas en el teléfono",
     theme: "Tema",
     themeSystem: "Sistema",
     themeLight: "Claro",
@@ -446,9 +445,6 @@ const es: Translation = {
     downloading: "Creando la imagen…",
     downloadFailed: "No se pudo crear la imagen. Inténtalo de nuevo.",
     save: "Guardar en mi cuenta",
-    invite: "Lleva tus listas en el teléfono",
-    inviteNote:
-      "Sin conexión, con historial de clasificaciones, imágenes de tarjetas con IA y la pantalla exterior del Flip.",
     open: "Abrir",
     change: "Cambiar la clasificación",
     tryAgain: "Intentar de nuevo",
@@ -545,6 +541,24 @@ const es: Translation = {
     rankings: { one: "{n} clasificación", other: "{n} clasificaciones" },
     noArt: "Sin imagen",
   },
+  android: {
+    title: "TierYourLife para Android",
+    body: "Tus tableros sin conexión, el historial de cada cambio, imágenes con IA para las tarjetas y la pantalla exterior de los Flip.",
+    get: "Disponible en Google Play",
+    soon: "Próximamente en Google Play",
+    hide: "Ocultar",
+    footer: "App para Android",
+    footerSoon: "App para Android · próximamente",
+    resultLine: "Guarda este ranking con tus tableros:",
+    resultLink: "descarga la app para Android",
+    menu: "Descargar la app para Android",
+    aboutBody:
+      "Todo lo que hace el sitio, más tableros sin conexión, historial, imágenes con IA y la pantalla exterior de los Flip. Tus tableros se sincronizan con tu cuenta de Google.",
+    aboutTesting:
+      "Estamos probando la app con un grupo pequeño. Pronto estará disponible para todos en Google Play.",
+    aboutComputer:
+      "¿Estás en un ordenador? Abre la página de Play e instálala en tu teléfono desde allí.",
+  },
   boards: {
     title: "Tus tableros",
     intro:
@@ -587,6 +601,9 @@ const es: Translation = {
     selected: { one: "{n} seleccionado", many: "{n} seleccionados", other: "{n} seleccionados" },
     exitSelection: "Salir de la selección",
     deleteSelected: "Eliminar",
+    view: "Vista",
+    viewGrid: "Cuadrícula",
+    viewRows: "Lista",
     open: "Abrir {name}",
     back: "Tus tableros",
     editTitle: "Editar el nombre de la lista",
@@ -604,7 +621,6 @@ const es: Translation = {
     delete: "Eliminar tablero",
     trash: "Papelera",
     cards: { one: "{n} carta", many: "{n} cartas", other: "{n} cartas" },
-    tiers: "Niveles",
     done: "Listo",
     tierRemoved: "Nivel {name} eliminado; sus cartas están en el montón",
     editTier: "Editar nivel",

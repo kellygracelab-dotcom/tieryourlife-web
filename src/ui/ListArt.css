@@ -30,6 +30,31 @@
   grid-template-columns: repeat(2, 1fr);
 }
 
+/* Five as the app lays them: three over two, the two as wide as they can be. */
+.art--mosaic[data-count="5"] {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.art--mosaic[data-count="5"] img {
+  grid-column: span 2;
+}
+
+.art--mosaic[data-count="5"] img:nth-child(n + 4) {
+  grid-column: span 3;
+}
+
+/* No picture and no title to carry: the tier colours as stripes, as on the phone. */
+.art--stripes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--tile-placeholder);
+}
+
+.art--stripes span {
+  flex: 1;
+}
+
 .art--titled {
   position: relative;
   display: flex;

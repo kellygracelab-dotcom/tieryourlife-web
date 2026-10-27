@@ -1,5 +1,5 @@
 import tmdbLogo from "../assets/tmdb.svg";
-import { PLAY_URL } from "../lib/links";
+import { appIsLive, onApple, playUrl } from "../lib/links";
 import { strings } from "../strings";
 import { Icon } from "../ui/Icon";
 import "./AboutPage.css";
@@ -22,10 +22,28 @@ export function AboutPage() {
           {strings.brand}
         </h2>
         <p className="about__text">{strings.about.what}</p>
-        <a className="about__row" href={PLAY_URL} target="_blank" rel="noopener">
-          <span>{strings.nav.keepOnPhone}</span>
-          <Icon name="open_in_new" className="about__row-icon" />
-        </a>
+      </section>
+
+      <section className="about__card" aria-labelledby="about-app">
+        <h2 id="about-app" className="about__title">
+          {strings.android.footer}
+        </h2>
+        <p className="about__text">{strings.android.aboutBody}</p>
+        {!appIsLive() ? (
+          <p className="about__text about__text--quiet">{strings.android.aboutTesting}</p>
+        ) : (
+          !onApple() && (
+            <>
+              <a className="about__row" href={playUrl("about")} target="_blank" rel="noopener">
+                <span>{strings.android.get}</span>
+                <Icon name="open_in_new" className="about__row-icon" />
+              </a>
+              <p className="about__text about__text--quiet about__computer">
+                {strings.android.aboutComputer}
+              </p>
+            </>
+          )
+        )}
       </section>
 
       <section className="about__card" aria-labelledby="about-credits">

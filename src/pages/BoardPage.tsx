@@ -36,13 +36,11 @@ import { boardView, sameOrder, uidRows } from "../features/boards/view";
 import { AddCardBox, type Upload } from "../features/editor/AddCardBox";
 import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
 import { TierDialog } from "../features/editor/TierDialog";
-import { TiersEditor } from "../features/editor/TiersEditor";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { PictureRefused, uploadPicture } from "../lib/pictures";
 import { useSession } from "../app/session";
 import { memoryStore } from "../lib/storage";
 import { fill, plural, strings } from "../strings";
-import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
@@ -61,7 +59,7 @@ interface BoardPageProps {
   share?: Share;
 }
 
-type Panel = "none" | "tiers" | "settings";
+type Panel = "none" | "settings";
 
 /** The board's name, edited where it stands: a press on the pencil, Enter or leaving the field keeps it. */
 function TitleEditor({
@@ -180,11 +178,6 @@ export function BoardPage({
   // keeps the query, not the question.
   const [editingTitle, setEditingTitle] = useState(madeAt > 0 && stored === null);
   const [panel, setPanel] = useState<Panel>("none");
-  // What is being typed into a tier's fields, as typed: the board keeps the
-  // trimmed words, and a label emptied for a moment is not kept at all.
-  const [typing, setTyping] = useState<Record<string, { label: string; caption: string | null }>>(
-    {},
-  );
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const forget = useCallback(() => setNotice(null), []);
   // The tier opened from the board, by its uid.
@@ -267,15 +260,9 @@ export function BoardPage({
     pictureId: null,
   }));
 
-  // The tier editor's actions, each a change to the board; a tier taken away
-  // can come back with its cards from the snackbar.
+  // The tier actions, each a change to the board; a tier taken away can come
+  // back with its cards from the snackbar.
   const onTier = (action: EditorAction) => {
-    if (action.type === "renameTier") {
-      setTyping((held) => ({
-        ...held,
-        [action.key]: { label: action.label, caption: action.caption },
-      }));
-    }
     const change = applyTierAction(latest(), action, now(), nextUid);
     keep(change.board);
     const removed = change.removed;
@@ -294,15 +281,9 @@ export function BoardPage({
       });
     }
   };
-  const editorTiers: EditorTier[] = editorTiersOf(board).map((tier) => {
-    const typed = typing[tier.key];
-    return typed === undefined ? tier : { ...tier, ...typed };
-  });
-  const closePanel = () => {
-    setPanel("none");
-    setTyping({});
-  };
-  // The tiers changed on the board itself, as on the phone; the same actions as the panel's.
+  const editorTiers: EditorTier[] = editorTiersOf(board);
+  const closePanel = () => setPanel("none");
+  // The tiers are changed on the board itself, as on the phone.
   const tierEditing = {
     move: (from: number, to: number) => {
       const key = editorTiers[from]?.key;
@@ -381,23 +362,11 @@ export function BoardPage({
           </p>
         </div>
         <span className="list-head__tools">
-          <Button
-            variant="tonal"
-            icon="swap_vert"
-            onClick={() => (panel === "tiers" ? closePanel() : setPanel("tiers"))}
-          >
-            {strings.boards.tiers}
-          </Button>
           <Menu label={strings.boards.more} button={<Icon name="more_vert" />}>
             <>
               <li>
                 <button type="button" className="menu__action" onClick={() => setPanel("settings")}>
                   {strings.boards.settings}
-                </button>
-              </li>
-              <li>
-                <button type="button" className="menu__action" onClick={() => setPanel("tiers")}>
-                  {strings.boards.tiers}
                 </button>
               </li>
               <li>
@@ -424,15 +393,6 @@ export function BoardPage({
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
 
-      {panel === "tiers" && (
-        <section className="board-panel" aria-label={strings.boards.tiers}>
-          <div className="board-panel__head">
-            <h2>{strings.boards.tiers}</h2>
-            <Button onClick={closePanel}>{strings.boards.done}</Button>
-          </div>
-          <TiersEditor tiers={editorTiers} dispatch={onTier} />
-        </section>
-      )}
       {panel === "settings" && (
         <BoardSettings
           board={board}

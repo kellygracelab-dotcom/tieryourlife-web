@@ -121,9 +121,9 @@ describe("HomePage for a signed-in person", () => {
     await userEvent.click(within(source).getByRole("radio", { name: "Following" }));
     expect(load).toHaveBeenCalledWith({ following: true, sort: "recent" });
     expect(await screen.findByText("You aren’t following anyone")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      "New from people you follow",
-    );
+    expect(
+      screen.getByRole("heading", { level: 2, name: "New from people you follow" }),
+    ).toBeInTheDocument();
     expect(localStorage.getItem("tyl:feed-source:u1")).toBe("following");
 
     const people = await screen.findByRole("list", { name: undefined });

@@ -7,7 +7,12 @@ const requestWith = (forwarded?: string) =>
 
 describe("hostOf", () => {
   it("takes a known forwarded host and falls back for strangers", () => {
-    assert.equal(hostOf(requestWith("tieryourlife-web.web.app")), "tieryourlife-web.web.app");
+    assert.equal(
+      hostOf(requestWith("tieryourlife.firebaseapp.com")),
+      "tieryourlife.firebaseapp.com",
+    );
+    // The first address is gone: a page asked for under it is drawn for the one address.
+    assert.equal(hostOf(requestWith("tieryourlife-web.web.app")), "tieryourlife.web.app");
     assert.equal(hostOf(requestWith("tieryourlife.web.app, other")), "tieryourlife.web.app");
     assert.equal(hostOf(requestWith("evil.example")), "tieryourlife.web.app");
     assert.equal(hostOf(requestWith(undefined)), "tieryourlife.web.app");
@@ -30,13 +35,10 @@ describe("loadShell", () => {
 
   it("fetches the site's own index.html and keeps it for a minute", async () => {
     const { fetchImpl, calls } = fetching("<html>one</html>");
-    assert.equal(await loadShell("tieryourlife-web.web.app", 1000, fetchImpl), "<html>one</html>");
-    assert.equal(
-      await loadShell("tieryourlife-web.web.app", 30_000, fetchImpl),
-      "<html>one</html>",
-    );
-    assert.deepEqual(calls, ["https://tieryourlife-web.web.app/index.html"]);
-    await loadShell("tieryourlife-web.web.app", 70_000, fetchImpl);
+    assert.equal(await loadShell("tieryourlife.web.app", 1000, fetchImpl), "<html>one</html>");
+    assert.equal(await loadShell("tieryourlife.web.app", 30_000, fetchImpl), "<html>one</html>");
+    assert.deepEqual(calls, ["https://tieryourlife.web.app/index.html"]);
+    await loadShell("tieryourlife.web.app", 70_000, fetchImpl);
     assert.equal(calls.length, 2);
   });
 
@@ -49,14 +51,14 @@ describe("loadShell", () => {
 
   it("does not hand one site's shell to another", async () => {
     const { fetchImpl, calls } = fetching("<html/>");
-    await loadShell("tieryourlife-web.web.app", 0, fetchImpl);
+    await loadShell("tieryourlife.firebaseapp.com", 0, fetchImpl);
     await loadShell("tieryourlife.web.app", 1, fetchImpl);
     assert.equal(calls.length, 2);
   });
 
   it("throws when the shell cannot be fetched", async () => {
     const { fetchImpl } = fetching("", false);
-    await assert.rejects(loadShell("tieryourlife-web.web.app", 0, fetchImpl), /503/);
+    await assert.rejects(loadShell("tieryourlife.web.app", 0, fetchImpl), /503/);
   });
 });
 

@@ -31,6 +31,17 @@ export function ListArt({ cover, previews, tierColors, title }: ListArtProps) {
       </div>
     );
   }
+  // Untitled, the tile is the tier colours themselves, the way the phone draws
+  // a board with no pictures; its name stands under it.
+  if (title === undefined && tierColors.length > 0) {
+    return (
+      <div className="art art--stripes" role="img" aria-label={strings.card.noArt}>
+        {tierColors.slice(0, BARS_MAX).map((color, index) => (
+          <span key={`${index}-${color}`} style={{ backgroundColor: color }} />
+        ))}
+      </div>
+    );
+  }
   // Without a picture the tile carries the title, with the author's palette
   // as a strip along the bottom: a titled tile, never an empty rectangle.
   return (

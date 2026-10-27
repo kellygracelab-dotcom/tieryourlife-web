@@ -5,11 +5,14 @@ import { LOOKUP_DEBOUNCE_MS, useCatalogue, type Lookup } from "./useCatalogue";
 
 vi.mock("../../lib/api", () => ({ findInCatalogue: vi.fn() }));
 
-const item = (title: string): CatalogueItem => ({
+const item = (
+  title: string,
+  imageUrl: string | null = `https://img/${title}.jpg`,
+): CatalogueItem => ({
   id: `tmdb:${title}`,
   title,
   subtitle: null,
-  imageUrl: null,
+  imageUrl,
 });
 
 function Probe({ query, lookup }: { query: string; lookup: Lookup }) {
@@ -76,5 +79,20 @@ describe("useCatalogue", () => {
     });
     await act(async () => resolveFirst([item("late")]));
     expect(shown()).toHaveTextContent("failed:second");
+  });
+
+  it("leaves out what has no picture, as the phone does", async () => {
+    vi.useFakeTimers();
+    const lookup = vi.fn<Lookup>(async () => [
+      item("Spirited Away"),
+      item("A meme", null),
+      item("Blank", " "),
+      item("Totoro"),
+    ]);
+    render(<Probe query="ghibli" lookup={lookup} />);
+    await act(async () => {
+      vi.advanceTimersByTime(LOOKUP_DEBOUNCE_MS + 10);
+    });
+    expect(shown()).toHaveTextContent("ready:Spirited Away,Totoro");
   });
 });

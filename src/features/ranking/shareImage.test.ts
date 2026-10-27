@@ -63,7 +63,7 @@ const data: ShareData = {
   tiers,
   items: [item(0), item(1, null), item(2)],
   rows: [[0, 1], [], [2]],
-  address: "tieryourlife-web.web.app/r/abcdefgh",
+  address: "tieryourlife.web.app/r/abcdefgh",
 };
 
 describe("planShare", () => {
@@ -124,7 +124,7 @@ describe("drawShare", () => {
         "Film 1 @332,276",
         "Film 2 @226,608",
         "TierYourLife @48,1278",
-        "tieryourlife-web.web.app/r/abcdefgh @1032,1278",
+        "tieryourlife.web.app/r/abcdefgh @1032,1278",
       ]),
     );
     expect(texts().some((text) => text.startsWith("+"))).toBe(false);

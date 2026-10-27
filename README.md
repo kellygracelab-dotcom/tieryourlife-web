@@ -40,11 +40,9 @@ npm run deploy
 ```
 
 That runs the full check first and then `firebase deploy --only hosting:web,functions:web`. The `web`
-target is `tieryourlife.web.app`, the address the phone app shares and the one to give out. A Hosting
-target may name one site only, so the last step copies the release that just went live to
-`tieryourlife-web.web.app`, where the site first lived and where links already sent still point. Never
-run a bare `firebase deploy` here: it would reach for everything in the project. Rolling back is the
-release history in the Firebase console, Hosting section, once per site.
+target is `tieryourlife.web.app`, the site's one address, the one the phone app shares. Never run a
+bare `firebase deploy` here: it would reach for everything in the project. Rolling back is the release
+history in the Firebase console, Hosting section.
 
 `/lists` and `/3/search` are rewritten to the backend's Cloud Functions, so the browser talks to its own
 origin and never runs into CORS. In development, `vite` proxies the same two paths to the backend's

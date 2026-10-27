@@ -89,3 +89,14 @@
     padding: 16px 16px 18px;
   }
 }
+
+.about__text--quiet {
+  font: var(--text-small);
+}
+
+/* "On a computer?" only on one: a phone is where the app goes. */
+@media (hover: none) and (pointer: coarse) {
+  .about__computer {
+    display: none;
+  }
+}

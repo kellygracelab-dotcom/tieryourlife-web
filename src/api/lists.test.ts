@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "./client";
-import { loadFeed, loadList, recordTake, republish, unpublish, type PublishRequest } from "./lists";
+import {
+  loadFeed,
+  loadList,
+  loadMyLists,
+  recordTake,
+  republish,
+  unpublish,
+  type PublishRequest,
+} from "./lists";
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -33,6 +41,27 @@ describe("lists", () => {
     await loadFeed(client);
 
     expect(request).toHaveBeenCalledWith("GET", "/lists", { query: {} });
+  });
+
+  it("leaves out the empty slots among a list's pictures, in the feed and in one's own lists", async () => {
+    const list = {
+      id: "l1",
+      title: "Oscar films 2025",
+      coverImageUrl: "",
+      previewImages: ["https://img/a.jpg", null, "", "https://img/b.jpg"],
+    };
+    const { client } = recordingClient({ lists: [list], nextCursor: null });
+    const page = await loadFeed(client);
+    expect(page.lists[0]).toMatchObject({
+      coverImageUrl: null,
+      previewImages: ["https://img/a.jpg", "https://img/b.jpg"],
+    });
+    const mine = await loadMyLists(recordingClient({ lists: [list] }).client);
+    expect(mine.lists[0]?.previewImages).toEqual(["https://img/a.jpg", "https://img/b.jpg"]);
+    // A clean list is passed on as it came.
+    const clean = { ...list, coverImageUrl: null, previewImages: ["https://img/a.jpg"] };
+    const again = await loadFeed(recordingClient({ lists: [clean], nextCursor: null }).client);
+    expect(again.lists[0]).toBe(clean);
   });
 
   it("republishes one list in place, escaping the id", async () => {

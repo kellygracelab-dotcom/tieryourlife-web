@@ -95,15 +95,14 @@ describe("where a deploy goes", () => {
     expect(rc.targets.tieryourlife?.hosting.web).toEqual(["tieryourlife"]);
   });
 
-  // Links sent before the move point at the first address, and its storage
-  // holds a guest's drafts: a deploy that skipped it would leave both behind.
-  it("then copies the same release to the first address", () => {
+  // The site has one address: the first one, tieryourlife-web, was given up
+  // before the launch, so nothing is copied there any more.
+  it("deploys the site and its function, and nothing else", () => {
     const scripts = (
       JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> }
     ).scripts;
-    expect(scripts.deploy).toMatch(
-      /firebase deploy --only hosting:web,functions:web && firebase hosting:clone tieryourlife:live tieryourlife-web:live$/,
-    );
+    expect(scripts.deploy).toMatch(/&& firebase deploy --only hosting:web,functions:web$/);
+    expect(scripts.deploy).not.toContain("tieryourlife-web");
   });
 });
 

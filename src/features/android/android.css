@@ -1,0 +1,136 @@
+/* The app card, as Claude Design drew it on 27.10.2026. */
+.app-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 24px;
+  padding-inline-end: 64px;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.app-card__icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.app-card__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-card__title {
+  margin: 0;
+  font: 500 16px/24px var(--font);
+  color: var(--ink);
+}
+
+.app-card__body {
+  margin: 4px 0 0;
+  font: 400 14px/20px var(--font);
+  color: var(--ink-dim);
+}
+
+.app-card__action {
+  flex: none;
+}
+
+.app-card__soon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 16px;
+  background: var(--chip);
+  font: 400 13px/18px var(--font);
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.app-card__soon .ms {
+  font-size: 16px;
+}
+
+.app-card__close {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 20px;
+  background: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.app-card__close:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.app-card__close .ms {
+  font-size: 20px;
+}
+
+/* A phone: the card stacked, the icon beside the title, the action full width. */
+@media (max-width: 599px) {
+  .app-card {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 12px;
+    padding: 16px;
+    padding-inline-end: 48px;
+  }
+
+  .app-card__icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .app-card__title {
+    align-self: center;
+    font: 500 15px/20px var(--font);
+  }
+
+  .app-card__text {
+    display: contents;
+  }
+
+  .app-card__body {
+    display: -webkit-box;
+    grid-column: 1 / -1;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    margin: 0;
+    font: 400 13px/18px var(--font);
+  }
+
+  .app-card__action,
+  .app-card__soon {
+    grid-column: 1 / -1;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .app-card__close {
+    top: 8px;
+    inset-inline-end: 4px;
+    transform: none;
+  }
+}
