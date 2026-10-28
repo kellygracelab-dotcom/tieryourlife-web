@@ -384,24 +384,24 @@ describe("ListPage for its author", () => {
     await screen.findByRole("heading", { level: 1 });
 
     await userEvent.click(screen.getByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Unpublish" }));
-    const dialog = screen.getByRole("dialog", { name: "Unpublish this list?" });
-    expect(dialog).toHaveTextContent("A board on your phone stays on your phone.");
+    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
+    const dialog = screen.getByRole("dialog", { name: "Take this list down?" });
+    expect(dialog).toHaveTextContent("The list on your phone stays on your phone.");
     await userEvent.click(within(dialog).getByRole("button", { name: "Keep it" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(mocks.unpublish).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Unpublish" }));
+    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
     await userEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", { name: "Unpublish" }),
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Take it down" }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not unpublish it");
 
     await userEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", { name: "Unpublish" }),
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Take it down" }),
     );
-    expect(await screen.findByRole("heading", { level: 1, name: "My lists" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Your public lists" })).toBeInTheDocument();
     expect(mocks.unpublish).toHaveBeenCalledTimes(2);
     expect(mocks.unpublish).toHaveBeenLastCalledWith("abc");
   });

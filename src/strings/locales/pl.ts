@@ -14,8 +14,8 @@ const pl: Translation = {
     signOut: "Wyloguj się",
     account: "Twoje konto",
     you: "Ty",
-    myLists: "Moje listy",
-    boards: "Twoje tablice",
+    myLists: "Twoje publiczne listy",
+    boards: "Twoje listy",
     makeList: "Utwórz listę",
     search: "Szukaj list",
     signInFailed: "Nie udało się zalogować. Spróbuj ponownie.",
@@ -385,7 +385,7 @@ const pl: Translation = {
     hideAuthorNow: "Ukryj wszystko od {name}",
     hiddenAuthorNotice: "Wszystko od {name} jest u ciebie ukryte",
     edit: "Edytuj",
-    delete: "Cofnij publikację",
+    delete: "Usuń",
     deleteTitle: "Cofnąć publikację tej listy?",
     deleteBody:
       "„{title}” zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Tablica w telefonie zostaje w telefonie.",
@@ -531,9 +531,9 @@ const pl: Translation = {
     edit: "Edytuj",
     browse: "Przeglądaj listy",
     tabs: "Twoje konto",
-    lists: "Moje listy",
-    listsFailed: "Nie udało się wczytać twoich list.",
-    remove: "Cofnij publikację",
+    lists: "Twoje publiczne listy",
+    listsFailed: "Nie udało się wczytać twoich publicznych list",
+    remove: "Usuń",
     removeAsk:
       "Cofnąć publikację „{title}”? Zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Tablica w telefonie zostaje w telefonie.",
     keepIt: "Zostaw",
@@ -600,10 +600,10 @@ const pl: Translation = {
       "Jesteś przy komputerze? Otwórz stronę w Google Play i zainstaluj aplikację na telefonie stamtąd.",
   },
   boards: {
-    title: "Twoje tablice",
+    title: "Twoje listy",
     intro:
       "Tablice są na tym urządzeniu, dopóki się nie zalogujesz; potem idą za tobą do telefonu.",
-    count: { one: "{n} tablica", few: "{n} tablice", many: "{n} tablic", other: "{n} tablicy" },
+    count: { one: "{n} lista", few: "{n} listy", many: "{n} list", other: "{n} listy" },
     published: {
       one: "{n} publiczna",
       few: "{n} publiczne",
@@ -611,7 +611,7 @@ const pl: Translation = {
       other: "{n} publicznej",
     },
     private: "prywatne",
-    newBoard: "Nowa tablica",
+    newBoard: "Nowa lista",
     untitled: "Lista bez tytułu",
     ranked: {
       one: "{n} oceniona",
@@ -645,7 +645,7 @@ const pl: Translation = {
     undo: "Cofnij",
     emptyTitle: "Oceniaj cokolwiek",
     emptyBody: "Filmy, gry, restauracje, albumy — cokolwiek.",
-    search: "Szukaj w swoich tablicach",
+    search: "Szukaj w swoich listach",
     noMatch: "Brak list pasujących do „{q}”",
     noMatchBody: "Spróbuj krótszego słowa lub sprawdź pisownię.",
     select: "Zaznacz {name}",
@@ -656,7 +656,7 @@ const pl: Translation = {
     viewGrid: "Siatka",
     viewRows: "Lista",
     open: "Otwórz {name}",
-    back: "Twoje tablice",
+    back: "Twoje listy",
     editTitle: "Edytuj nazwę listy",
     titleField: "Tytuł",
     pool: {
@@ -815,7 +815,7 @@ const pl: Translation = {
       "Listy i elementy, które usuwasz, pojawiają się tutaj. Pozostają, dopóki ich nie usuniesz.",
     cancel: "Anuluj",
     more: "Więcej opcji",
-    back: "Twoje tablice",
+    back: "Twoje listy",
   },
 };
 

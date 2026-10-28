@@ -39,11 +39,15 @@ export const routes: RouteObject[] = [
             })),
           },
           {
-            path: "boards",
+            // Not "boards": Hosting hands /boards to the backend's boards API,
+            // so that address opened directly or reloaded showed its JSON.
+            path: "b",
             ...later(async () => ({
               Component: (await import("../pages/BoardsPage")).BoardsPage,
             })),
           },
+          // Links followed inside the site before the move still arrive.
+          { path: "boards", element: <Navigate to="/b" replace /> },
           {
             path: "b/:uid",
             ...later(async () => ({

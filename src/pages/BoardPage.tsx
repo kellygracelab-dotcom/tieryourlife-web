@@ -129,7 +129,7 @@ function NotFound() {
     <section className="list-page list-page--trouble">
       <h1>{strings.boards.notFound}</h1>
       <p>{strings.boards.notFoundBody}</p>
-      <Link className="btn btn--filled" to="/boards">
+      <Link className="btn btn--filled" to="/b">
         <span>{strings.boards.back}</span>
       </Link>
     </section>
@@ -296,7 +296,7 @@ export function BoardPage({
 
   const toTrash = () => {
     keep(trashBoard(board, now()));
-    void navigate("/boards", { state: { trashed: [uid] } satisfies BoardsPageState });
+    void navigate("/b", { state: { trashed: [uid] } satisfies BoardsPageState });
   };
 
   // The picture of the board, drawn the way a ranking's is; the address under
@@ -338,7 +338,7 @@ export function BoardPage({
         boardDock === null ? "list-page board-page" : `list-page board-page list-page--${boardDock}`
       }
     >
-      <Link className="board-page__back" to="/boards">
+      <Link className="board-page__back" to="/b">
         <Icon name="arrow_back" />
         <span>{strings.boards.back}</span>
       </Link>

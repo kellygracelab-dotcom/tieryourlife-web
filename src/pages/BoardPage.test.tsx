@@ -82,7 +82,7 @@ const open = (
           />
         ),
       },
-      { path: "/boards", element: <h1>boards page</h1> },
+      { path: "/b", element: <h1>boards page</h1> },
       { path: "/trash", element: <h1>trash page</h1> },
     ],
     { initialEntries: [path] },
@@ -263,7 +263,7 @@ describe("BoardPage", () => {
     await userEvent.click(screen.getByLabelText("More about this board"));
     await userEvent.click(screen.getByRole("button", { name: "Delete board" }));
     expect(repository.get("films")?.deletedAt).toBe(clock);
-    expect(router.state.location.pathname).toBe("/boards");
+    expect(router.state.location.pathname).toBe("/b");
     expect(router.state.location.state).toEqual({ trashed: ["films"] });
   });
 
@@ -275,8 +275,8 @@ describe("BoardPage", () => {
     expect(screen.getByRole("list", { name: "S" })).toBeInTheDocument();
     await userEvent.keyboard("{Enter}");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Untitled list");
-    await userEvent.click(screen.getByRole("link", { name: "Your boards" }));
-    expect(router.state.location.pathname).toBe("/boards");
+    await userEvent.click(screen.getByRole("link", { name: "Your lists" }));
+    expect(router.state.location.pathname).toBe("/b");
     expect(repository.get("fresh")).toBeNull();
 
     open(repository, "/b/named?new=778");
@@ -291,7 +291,7 @@ describe("BoardPage", () => {
   it("says so when there is no such board", () => {
     open(boardsRepository(memoryStore()), "/b/nowhere");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("List not found.");
-    expect(screen.getByRole("link", { name: "Your boards" })).toHaveAttribute("href", "/boards");
+    expect(screen.getByRole("link", { name: "Your lists" })).toHaveAttribute("href", "/b");
   });
 });
 

@@ -6,8 +6,8 @@ const press = (target: Locator, touch: boolean) => (touch ? target.tap() : targe
 
 /** A board of one's own with three cards, one of them ranked, made the way a person makes it. */
 async function makeBoard(page: Page, touch: boolean) {
-  await page.goto("/boards");
-  await page.getByRole("button", { name: "New board" }).first().click();
+  await page.goto("/b");
+  await page.getByRole("button", { name: "New list" }).first().click();
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films I make people watch");
   await title.press("Enter");
@@ -165,8 +165,8 @@ test("moves a card along its row: the others make room at once, and nothing is p
 }) => {
   test.skip(hasTouch, "a mouse drag; a finger has the move sheet and the keys");
   await mockBackend(page);
-  await page.goto("/boards");
-  await page.getByRole("button", { name: "New board" }).first().click();
+  await page.goto("/b");
+  await page.getByRole("button", { name: "New list" }).first().click();
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films");
   await title.press("Enter");
@@ -231,6 +231,6 @@ test("saves somebody's list to my boards, asking whose ranking to keep", async (
   ).toBeVisible();
 
   // And it is on the shelf with the others.
-  await page.getByRole("link", { name: "Your boards" }).first().click();
+  await page.getByRole("link", { name: "Your lists" }).first().click();
   await expect(page.getByRole("link", { name: `Open ${list.title}` })).toBeVisible();
 });

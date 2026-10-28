@@ -11,8 +11,8 @@ import { FACE_URL, PIXEL, shot, signIn } from "./signedIn";
 const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
 
 async function newBoard(page: Page, touch: boolean, title: string) {
-  await page.goto("/boards");
-  await page.getByRole("button", { name: "New board" }).first().click();
+  await page.goto("/b");
+  await page.getByRole("button", { name: "New list" }).first().click();
   const field = page.getByRole("textbox", { name: "Title" });
   await field.fill(title);
   await field.press("Enter");

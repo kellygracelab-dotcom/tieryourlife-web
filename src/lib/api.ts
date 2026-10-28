@@ -30,7 +30,9 @@ type Rows = readonly (readonly number[])[];
 // therefore no App Check and no guest sign-in until Finish.
 export const loadList = (id: string): Promise<PublishedList> => {
   const preloaded = preloadedList(id);
-  return preloaded === null ? lists.loadList(api, id) : Promise.resolve(preloaded);
+  return preloaded === null
+    ? lists.loadList(api, id)
+    : Promise.resolve(lists.publishedListOf(preloaded));
 };
 
 export const loadFeed = (query: FeedQuery): Promise<FeedPage> => lists.loadFeed(api, query);

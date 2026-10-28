@@ -96,7 +96,7 @@ export function TrashPage({ repository = site, now = Date.now }: TrashPageProps)
 
   return (
     <section className="trash">
-      <Link className="trash__back" to="/boards">
+      <Link className="trash__back" to="/b">
         <Icon name="arrow_back" />
         <span>{strings.trash.back}</span>
       </Link>

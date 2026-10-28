@@ -8,23 +8,33 @@ import type {
   PublishedTier,
 } from "./types";
 
-export function loadList(client: ApiClient, id: string): Promise<PublishedList> {
-  return client.request<PublishedList>("GET", `/lists/${encodeURIComponent(id)}`);
+export async function loadList(client: ApiClient, id: string): Promise<PublishedList> {
+  return publishedListOf(
+    await client.request<PublishedList>("GET", `/lists/${encodeURIComponent(id)}`),
+  );
 }
 
-/**
- * A list as the site draws it. The backend can send an empty slot among a
- * list's pictures; drawn as it came, it was an <img src="null">, a broken
- * picture on the front page.
- */
-export const summaryOf = (list: ListSummary): ListSummary => {
-  const previews = (list.previewImages ?? []).filter(
-    (url): url is string => typeof url === "string" && url.trim() !== "",
+/** One list as the site draws it, however it arrived: asked for, or already in the page. */
+export const publishedListOf = (list: PublishedList): PublishedList => {
+  const items = (list.items ?? []).map((item) =>
+    item.imageUrl === null || pictureOf(item.imageUrl) !== null ? item : { ...item, imageUrl: null },
   );
-  const cover =
-    typeof list.coverImageUrl === "string" && list.coverImageUrl.trim() !== ""
-      ? list.coverImageUrl
-      : null;
+  return { ...summaryOf(list), tiers: list.tiers ?? [], items };
+};
+
+/**
+ * A picture's address, or null when the slot holds none. Only https:// counts,
+ * as in the app: five editorial lists keep the word "null" as their cover, and
+ * drawn as it came it was an <img src="null">, a broken picture in the feed and
+ * a black section tile.
+ */
+export const pictureOf = (value: unknown): string | null =>
+  typeof value === "string" && value.startsWith("https://") ? value : null;
+
+/** A list as the site draws it: its cover and previews only real pictures. */
+export const summaryOf = <T extends ListSummary>(list: T): T => {
+  const previews = (list.previewImages ?? []).filter((url) => pictureOf(url) !== null);
+  const cover = pictureOf(list.coverImageUrl);
   return previews.length === list.previewImages?.length && cover === list.coverImageUrl
     ? list
     : { ...list, previewImages: previews, coverImageUrl: cover };

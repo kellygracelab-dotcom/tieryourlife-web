@@ -16,8 +16,8 @@ const fr: Translation = {
     signOut: "Se déconnecter",
     account: "Votre compte",
     you: "Vous",
-    myLists: "Mes listes",
-    boards: "Vos tableaux",
+    myLists: "Vos listes publiques",
+    boards: "Vos listes",
     makeList: "Créer une liste",
     search: "Chercher des listes",
     signInFailed: "Connexion impossible. Réessayez.",
@@ -360,7 +360,7 @@ const fr: Translation = {
     hideAuthorNow: "Masquer tout de {name}",
     hiddenAuthorNotice: "Tout de {name} est masqué pour vous",
     edit: "Modifier",
-    delete: "Dépublier",
+    delete: "Retirer",
     deleteTitle: "Dépublier cette liste ?",
     deleteBody:
       "« {title} » quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Un tableau sur votre téléphone reste sur votre téléphone.",
@@ -508,9 +508,9 @@ const fr: Translation = {
     edit: "Modifier",
     browse: "Parcourir les listes",
     tabs: "Votre compte",
-    lists: "Mes listes",
-    listsFailed: "Impossible de charger vos listes.",
-    remove: "Dépublier",
+    lists: "Vos listes publiques",
+    listsFailed: "Impossible de charger vos listes publiques",
+    remove: "Retirer",
     removeAsk:
       "Dépublier « {title} » ? Elle quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Un tableau sur votre téléphone reste sur votre téléphone.",
     keepIt: "La garder",
@@ -572,13 +572,13 @@ const fr: Translation = {
       "Sur un ordinateur ? Ouvrez la page Play et installez l’application sur votre téléphone depuis là.",
   },
   boards: {
-    title: "Vos tableaux",
+    title: "Vos listes",
     intro:
       "Les tableaux restent sur cet appareil jusqu'à votre connexion ; ensuite ils vous suivent sur le téléphone.",
-    count: { one: "{n} tableau", many: "{n} tableaux", other: "{n} tableaux" },
+    count: { one: "{n} liste", many: "{n} listes", other: "{n} listes" },
     published: { one: "{n} public", many: "{n} publics", other: "{n} publics" },
     private: "privé",
-    newBoard: "Nouveau tableau",
+    newBoard: "Nouvelle liste",
     untitled: "Liste sans titre",
     ranked: { one: "{n} classé", many: "{n} classés", other: "{n} classés" },
     inPool: {
@@ -610,7 +610,7 @@ const fr: Translation = {
     undo: "Annuler",
     emptyTitle: "Classez n'importe quoi",
     emptyBody: "Films, jeux, restaurants, albums — tout ce que vous voulez.",
-    search: "Chercher dans vos tableaux",
+    search: "Rechercher dans vos listes",
     noMatch: "Aucune liste ne correspond à « {q} »",
     noMatchBody: "Essayez un mot plus court ou vérifiez l'orthographe.",
     select: "Sélectionner {name}",
@@ -621,7 +621,7 @@ const fr: Translation = {
     viewGrid: "Grille",
     viewRows: "Liste",
     open: "Ouvrir {name}",
-    back: "Vos tableaux",
+    back: "Vos listes",
     editTitle: "Modifier le nom de la liste",
     titleField: "Titre",
     pool: {
@@ -764,7 +764,7 @@ const fr: Translation = {
       "Les listes et éléments que vous supprimez apparaissent ici. Ils restent jusqu'à ce que vous les retiriez.",
     cancel: "Annuler",
     more: "Plus d'options",
-    back: "Vos tableaux",
+    back: "Vos listes",
   },
 };
 

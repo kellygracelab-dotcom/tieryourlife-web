@@ -115,7 +115,7 @@ describe("Shell header", () => {
     expect(button).toHaveFocus();
 
     await userEvent.click(button);
-    await userEvent.click(screen.getByRole("link", { name: "My lists" }));
+    await userEvent.click(screen.getByRole("link", { name: "Your public lists" }));
     expect(menu.open).toBe(false);
   });
 });
@@ -162,7 +162,7 @@ describe("Shell account", () => {
     expect(screen.getByText("D")).toHaveClass("face--initial");
     expect(screen.getByText("Danylo")).toBeInTheDocument();
     // One place for everything that is theirs: the lists and the rankings together.
-    expect(screen.getByRole("link", { name: "My lists" })).toHaveAttribute("href", "/me");
+    expect(screen.getByRole("link", { name: "Your public lists" })).toHaveAttribute("href", "/me");
     expect(screen.queryByRole("link", { name: "Your rankings" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });

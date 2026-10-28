@@ -47,14 +47,14 @@ const rowsStore = (): KeyValueStore => {
 
 const open = (
   repository: BoardsRepository,
-  path = "/boards",
+  path = "/b",
   state?: unknown,
   store: KeyValueStore = memoryStore(),
 ) => {
   const router = createMemoryRouter(
     [
       {
-        path: "/boards",
+        path: "/b",
         element: <BoardsPage repository={repository} now={() => 5000} store={store} />,
       },
       { path: "/b/:uid", element: <h1>board page</h1> },
@@ -70,10 +70,10 @@ describe("BoardsPage", () => {
   it("starts empty, and New board makes one and opens it", async () => {
     const repository = boardsRepository(memoryStore());
     const router = open(repository);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Your boards");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Your lists");
     expect(screen.getByText("Rank anything")).toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByRole("button", { name: "New board" })[0]!);
+    await userEvent.click(screen.getAllByRole("button", { name: "New list" })[0]!);
     // Nothing is kept until the board is touched; the page it opens on does that.
     expect(repository.all()).toEqual([]);
     expect(router.state.location.pathname).toMatch(/^\/b\/[0-9a-f-]{36}$/);
@@ -111,7 +111,7 @@ describe("BoardsPage", () => {
     const repository = boardsRepository(memoryStore());
     repository.saveAll([board("a", "Albums", 1)]);
     const store = memoryStore();
-    open(repository, "/boards", undefined, store);
+    open(repository, "/b", undefined, store);
     expect(screen.getByRole("button", { name: "Grid" })).toHaveAttribute("aria-pressed", "true");
     expect(document.querySelector(".boards__grid")).not.toBeNull();
 
@@ -128,8 +128,8 @@ describe("BoardsPage", () => {
       ranked("new", "Films I make people watch", 2),
       board("gone", "Thrown away", 3, { deletedAt: 4 }),
     ]);
-    const router = open(repository, "/boards", undefined, rowsStore());
-    expect(screen.getByText("2 boards · private")).toBeInTheDocument();
+    const router = open(repository, "/b", undefined, rowsStore());
+    expect(screen.getByText("2 lists · private")).toBeInTheDocument();
     const links = screen.getAllByRole("link", { name: /^Open / });
     expect(links.map((link) => link.textContent)).toEqual([
       expect.stringContaining("Films I make people watch"),
@@ -170,10 +170,10 @@ describe("BoardsPage", () => {
       board("c", "Books", 3),
     ]);
     open(repository);
-    expect(screen.getByText("3 boards · 1 public")).toBeInTheDocument();
+    expect(screen.getByText("3 lists · 1 public")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Favourites" })).toBeInTheDocument();
 
-    await userEvent.type(screen.getByRole("searchbox", { name: "Search your boards" }), "piz");
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search your lists" }), "piz");
     expect(screen.getAllByRole("link", { name: /^Open / })).toHaveLength(1);
     expect(screen.queryByRole("heading", { name: "Favourites" })).toBeNull();
     await userEvent.type(screen.getByRole("searchbox"), "zz");
@@ -207,7 +207,7 @@ describe("BoardsPage", () => {
     async (_view, store, role) => {
       const repository = boardsRepository(memoryStore());
       repository.saveAll([board("a", "Albums", 1), board("b", "Books", 2)]);
-      open(repository, "/boards", undefined, store());
+      open(repository, "/b", undefined, store());
 
       await userEvent.click(screen.getByRole("button", { name: "Delete" }));
       expect(screen.getByRole("toolbar")).toHaveTextContent("0 selected");
@@ -237,7 +237,7 @@ describe("BoardsPage", () => {
   it("says so when a board page sent its board to the trash, once", async () => {
     const repository = boardsRepository(memoryStore());
     repository.saveAll([board("a", "Albums", 1, { deletedAt: 3 }), board("b", "Books", 2)]);
-    const router = open(repository, "/boards", { trashed: ["a"] });
+    const router = open(repository, "/b", { trashed: ["a"] });
     expect(screen.getByRole("status")).toHaveTextContent("1 list deleted");
     expect(router.state.location.state).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
