@@ -102,7 +102,8 @@ export interface Topic {
   listCount: number;
   followerCount: number;
   following: boolean;
-  createdBy: string;
+  /** Sent only to staff and to the topic's own creator. */
+  createdBy?: string;
   mergedInto: string | null;
 }
 

@@ -57,8 +57,16 @@ export function useRankings(listId: string, deps: RankingsDeps = defaultDeps): R
       setState((now) =>
         after === null ? { ...now, status: "loading", more: "idle" } : { ...now, more: "loading" },
       );
-      deps.load(listId, after).then(
-        (page) =>
+      // A page can come back empty with more behind it: the backend skips
+      // visitors' rankings after paging. Nobody is made to press for it.
+      const from = (cursor: string | null): Promise<RankingsPage> =>
+        deps
+          .load(listId, cursor)
+          .then((page) =>
+            page.rankings.length === 0 && page.nextCursor !== null ? from(page.nextCursor) : page,
+          );
+      from(after).then(
+        (page) => {
           setState((now) => {
             const known = new Set(now.rankings.map((ranking) => ranking.uid));
             const fresh = readersOf(page.rankings).filter((ranking) => !known.has(ranking.uid));
@@ -69,7 +77,8 @@ export function useRankings(listId: string, deps: RankingsDeps = defaultDeps): R
               next: page.nextCursor,
               more: "idle",
             };
-          }),
+          });
+        },
         () =>
           setState((now) =>
             after === null ? { ...now, status: "failed" } : { ...now, more: "failed" },
