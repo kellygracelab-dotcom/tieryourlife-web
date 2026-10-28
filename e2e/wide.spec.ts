@@ -188,8 +188,13 @@ test.describe("a wide screen", () => {
 
     const pool = page.locator(".pool");
     await expect(pool).toHaveCSS("position", "fixed");
-    const tile = (await page.getByRole("button", { name: "Ex Machina" }).boundingBox())!;
-    expect([Math.round(tile.width), Math.round(tile.height)]).toEqual([52, 76]);
+    // Switching to Mine moves the cards for 200 ms; measured once they land.
+    await expect
+      .poll(async () => {
+        const tile = (await page.getByRole("button", { name: "Ex Machina" }).boundingBox())!;
+        return [Math.round(tile.width), Math.round(tile.height)];
+      })
+      .toEqual([52, 76]);
     const band = (await page.locator(".tier__band").first().boundingBox())!;
     expect(Math.round(band.width)).toBe(80);
     await expect(page.getByRole("button", { name: "Copy link" })).toBeHidden();

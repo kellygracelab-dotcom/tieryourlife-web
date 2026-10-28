@@ -109,47 +109,37 @@ test("shows the people followed, unfollows from Manage, and brings a row back wh
     ],
   });
   await page.goto("/");
-  await press(page.getByRole("radio", { name: "Following" }), hasTouch);
-  await expect(page.getByText("You follow 2 people")).toBeVisible();
-  await expect(
-    page.getByRole("region", { name: "New from people you follow" }).getByText(list.title).first(),
-  ).toBeVisible();
+  await press(page.getByRole("link", { name: "Following", exact: true }), hasTouch);
+  await expect(page).toHaveURL("/following");
+  const strip = page.getByRole("navigation", { name: "Following" });
+  await expect(strip.getByRole("link", { name: "Olena M." })).toBeVisible();
+  await expect(strip.getByRole("link", { name: "Mira" })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(list.title) }).first()).toBeVisible();
 
-  // With a keyboard on a desk, with a finger on a phone.
-  const manage = page.getByRole("button", { name: "Manage" });
-  if (hasTouch) {
-    await manage.tap();
-  } else {
-    await manage.focus();
-    await page.keyboard.press("Enter");
-  }
-  const dialog = page.getByRole("dialog", { name: "Following" });
-  await expect(dialog).toBeVisible();
-  const olena = dialog.getByRole("listitem").filter({ hasText: "Olena M." });
+  await press(strip.getByRole("link", { name: "Manage" }), hasTouch);
+  await expect(page).toHaveURL("/following/manage");
+  await expect(page.getByRole("heading", { name: "People · 2" })).toBeVisible();
   await shot(page, `following-${hasTouch ? "phone" : "desktop"}`);
-  if (!hasTouch) {
-    // A modal keeps the keyboard inside: round the links, the buttons and Done, and back.
-    for (let i = 0; i < 6; i++) {
-      await page.keyboard.press("Tab");
-      expect(await dialog.evaluate((box) => box.contains(document.activeElement))).toBe(true);
-    }
-  }
+  const olena = page.getByRole("listitem").filter({ hasText: "Olena M." });
 
+  // A refusal puts the row back as it was and says so; the row never leaves the page.
   account.failNext.set("DELETE /lists/follow/u2", 503);
-  await press(olena.getByRole("button", { name: "Unfollow" }), hasTouch);
-  await expect(dialog.getByRole("alert")).toContainText("Couldn’t follow — try again.");
-  await expect(dialog.getByRole("link", { name: "Olena M." })).toBeVisible();
+  // Under a pointer, Following reads Unfollow: the pressed state is what says it.
+  await press(olena.getByRole("button", { pressed: true }), hasTouch);
+  await expect(page.getByRole("status")).toContainText("Couldn't follow. Try again.");
+  await expect(olena.getByRole("button", { pressed: true })).toBeVisible();
   expect(account.followed.map((person) => person.uid)).toEqual(["u2", "u3"]);
 
-  await press(olena.getByRole("button", { name: "Unfollow" }), hasTouch);
-  await expect(dialog.getByRole("link", { name: "Olena M." })).toHaveCount(0);
+  await press(olena.getByRole("button", { pressed: true }), hasTouch);
+  await expect(olena.getByRole("button", { name: "Follow", pressed: false })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Unfollowed Olena M.");
   expect(account.followed.map((person) => person.uid)).toEqual(["u3"]);
 
-  // Escape closes it, the focus goes back where it was, and the people are read again.
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  if (!hasTouch) await expect(manage).toBeFocused();
-  await expect(page.getByText("You follow 1 person")).toBeVisible();
+  // Back on the tab, the strip is read again.
+  await press(page.getByRole("link", { name: "Navigate back" }), hasTouch);
+  await expect(page).toHaveURL("/following");
+  await expect(strip.getByRole("link", { name: "Mira" })).toBeVisible();
+  await expect(strip.getByRole("link", { name: "Olena M." })).toHaveCount(0);
 });
 
 test("takes a photo as the face, names a refused one, and switches the back-up off only once the copy is gone", async ({
@@ -228,7 +218,8 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
     "aria-pressed",
     "true",
   );
-  expect(account.photoUrl).toBe(FACE_URL);
+  // The header shows the face at once; the account's copy follows a moment later.
+  await expect.poll(() => account.photoUrl).toBe(FACE_URL);
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(page.locator("header img.face")).toHaveAttribute("src", FACE_URL);
 

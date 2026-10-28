@@ -80,10 +80,8 @@ test("an author's page from a card, with a follow that asks a guest to sign in",
   );
 
   await page.goto("/");
-  await page
-    .getByRole("link", { name: /by danylo/ })
-    .first()
-    .click();
+  // The card names the author alone, as the app's does.
+  await page.getByRole("link", { name: "danylo", exact: true }).first().click();
   await expect(page).toHaveURL(`/u/${list.authorUid}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("danylo");
   await expect(page.getByText("3 followers · 1 public list")).toBeVisible();
