@@ -203,9 +203,9 @@ describe("BoardSettings: the sheet", () => {
     expect(republish).toHaveBeenCalledWith("L1", expect.objectContaining({ anonymous: true }));
   });
 
-  it("offers no anonymity on a copy of somebody else's list", () => {
+  it("offers anonymity on a copy of somebody else's list too: it goes out as a list of one's own", () => {
     show({ ...filmBoard(), authorName: "kenji" }, signedIn);
-    expect(screen.queryByRole("switch", { name: "Publish anonymously" })).toBeNull();
+    expect(screen.getByRole("switch", { name: "Publish anonymously" })).toBeInTheDocument();
   });
 
   it("goes with Done and with Escape", async () => {
