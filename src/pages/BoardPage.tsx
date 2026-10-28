@@ -9,6 +9,8 @@ import type { Dock } from "../features/tierboard/dock";
 import {
   addToPool,
   arrangeItems,
+  itemsIn,
+  liveItems,
   newBoard,
   poolCount,
   rankedCount,
@@ -57,6 +59,10 @@ import { fill, plural, strings } from "../strings";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { PlayButton } from "../features/play/PlayButton";
+import { usePlay } from "../features/play/usePlay";
+import type { PlayCard, PlayTier } from "../features/play/board";
+import { localStorageStore } from "../lib/storage";
 import type { BoardsPageState } from "./BoardsPage";
 import "./ListPage.css";
 import "../features/editor/owner.css";
@@ -228,6 +234,50 @@ export function BoardPage({
     [board, drawn],
   );
   if (view !== null && !sameOrder(view.uids, drawn)) setDrawn(view.uids);
+
+  // Play's cards and tiers: the board's own, by uid, best tier first.
+  const playCards = useMemo<PlayCard[]>(
+    () =>
+      board === null
+        ? []
+        : liveItems(board).map((item) => ({
+            id: item.uid,
+            name: item.title,
+            imageUrl: item.imageUrl,
+          })),
+    [board],
+  );
+  const playTiers = useMemo<PlayTier[]>(
+    () =>
+      board === null
+        ? []
+        : rankedTiers(board).map((tier) => ({
+            id: tier.uid,
+            label: tier.label,
+            caption: tier.caption,
+            colorLight: tier.colorLight,
+            colorDark: tier.colorDark,
+            cardIds: itemsIn(board, tier.uid).map((item) => item.uid),
+          })),
+    [board],
+  );
+  const play = usePlay(uid, playCards, playTiers, localStorageStore, {
+    title: board?.title || strings.boards.untitled,
+    notify: setNotice,
+    // The result replaces the arrangement; Undo puts the one before it back.
+    onApply: (rows) => {
+      const before = repository.get(uid) ?? board;
+      if (before === null) return;
+      const was = rankedTiers(before).map((tier) =>
+        itemsIn(before, tier.uid).map((item) => item.uid),
+      );
+      repository.save(arrangeItems(before, rows, now()));
+      return () => {
+        const current = repository.get(uid);
+        if (current !== null) repository.save(arrangeItems(current, was, now()));
+      };
+    },
+  });
 
   if (board === null || view === null) return <NotFound />;
 
@@ -414,6 +464,7 @@ export function BoardPage({
           </p>
         </div>
         <span className="list-head__tools">
+          <PlayButton {...play.button} />
           <Menu label={strings.boards.more} button={<Icon name="more_vert" />}>
             <>
               <li>
@@ -541,6 +592,7 @@ export function BoardPage({
           onClose={() => setOpenTier(null)}
         />
       )}
+      {play.view}
       <Snackbar notice={notice} onDone={forget} />
     </article>
   );

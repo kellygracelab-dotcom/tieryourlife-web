@@ -15,7 +15,7 @@ import { readKept } from "../features/ranking/kept";
 import { arrange } from "../features/tierboard/arrange";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
 import type { Dock } from "../features/tierboard/dock";
-import { loadPlacedDraft, scopeOf } from "../features/tierboard/draft";
+import { loadDraft, loadPlacedDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
 import { flyIn } from "../features/tierboard/flight";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
 import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
@@ -28,6 +28,9 @@ import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { PlayButton } from "../features/play/PlayButton";
+import { usePlay } from "../features/play/usePlay";
+import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
@@ -262,6 +265,44 @@ function OpenList({
     rankings.withdraw();
   };
 
+  // Play over somebody else's list: the cards by their place in it, starting
+  // from this device's own ranking or else the author's, and the result goes
+  // into Mine. The board below is drawn afresh from the draft it writes.
+  const [mineRound, setMineRound] = useState(0);
+  const [mineRows, setMineRows] = useState(() => loadDraft(localStorageStore, scopeOf(list)));
+  const playCards = useMemo<PlayCard[]>(
+    () =>
+      list.items.map((item, index) => ({
+        id: String(index),
+        name: item.title,
+        imageUrl: item.imageUrl,
+      })),
+    [list],
+  );
+  const playTiers = useMemo<PlayTier[]>(() => {
+    const rows = mineRows ?? author.rows;
+    return list.tiers.map((tier, index) => ({
+      id: String(index),
+      label: tier.label,
+      caption: tier.caption,
+      colorLight: tier.colorLight,
+      colorDark: tier.colorDark,
+      cardIds: (rows[index] ?? []).map(String),
+    }));
+  }, [list, author, mineRows]);
+  const play = usePlay(`list:${list.id}`, playCards, playTiers, localStorageStore, {
+    title: list.title,
+    theirs: true,
+    notify: setNotice,
+    onApply: (rows) => {
+      const placed = rows.map((row) => row.map(Number));
+      saveDraft(localStorageStore, scopeOf(list), placed);
+      setMineRows(placed);
+      setMineRound((round) => round + 1);
+      show("mine");
+    },
+  });
+
   const theirs = chosen === null ? { tiers: list.tiers, ...author } : placedBy(list, chosen);
   const theirsBoard = (
     <ReadOnlyBoard
@@ -316,7 +357,15 @@ function OpenList({
           {own ? (
             <AuthorTools list={list} unpublish={unpublish} notify={setNotice} />
           ) : (
-            <VisitorTools list={list} report={report} notify={setNotice} repository={repository} />
+            <>
+              <PlayButton {...play.button} />
+              <VisitorTools
+                list={list}
+                report={report}
+                notify={setNotice}
+                repository={repository}
+              />
+            </>
           )}
         </span>
         <span className="list-head__bar" ref={setHeadSlot} />
@@ -325,7 +374,7 @@ function OpenList({
       {!outOfSight &&
         (shown === "mine" ? (
           <BoardFrameContext.Provider value={frame}>
-            <RankingBoard key={list.id} list={list} />
+            <RankingBoard key={`${list.id}:${mineRound}`} list={list} />
           </BoardFrameContext.Provider>
         ) : own ? (
           // The author sees the list as it was published; it is changed on its board, behind Edit.
@@ -333,6 +382,7 @@ function OpenList({
         ) : (
           <div className={`list-page__theirs list-page__theirs--${lastDock}`}>{theirsBoard}</div>
         ))}
+      {!own && play.view}
       {sheet && (
         <RankingsSheet
           list={list}

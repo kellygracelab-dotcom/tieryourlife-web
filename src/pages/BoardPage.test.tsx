@@ -691,3 +691,54 @@ describe("BoardPage: share and publish", () => {
     );
   });
 });
+
+describe("BoardPage: Play", () => {
+  it("plays the board's cards in duels, applies the result, and undoes it from the snackbar", async () => {
+    localStorage.clear();
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    await userEvent.click(screen.getByRole("button", { name: /^Play/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+
+    // Two duels for three cards; the left card wins each, once the pair has landed.
+    for (const duel of ["Duel 1 of 2", "Duel 2 of 2"]) {
+      await screen.findByText(duel, { selector: "[aria-live] *, [aria-live]" });
+      const [left] = await screen.findAllByRole("button", { name: /^Pick / });
+      await userEvent.click(left!);
+    }
+    expect(
+      await screen.findByRole("heading", { name: "Your result" }, { timeout: 3000 }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+
+    const played = repository.get("films")!;
+    expect(poolTier(played) === null ? 0 : itemsIn(played, poolTier(played)!.uid).length).toBe(0);
+    const receipt = (await screen.findByText("Board arranged from 2 duels")).closest(".snackbar")!;
+    await userEvent.click(within(receipt as HTMLElement).getByRole("button", { name: "Undo" }));
+    const back = repository.get("films")!;
+    const [first] = rankedTiers(back);
+    expect(itemsIn(back, first!.uid).map((item) => item.title)).toEqual(["Ex Machina"]);
+    expect(itemsIn(back, poolTier(back)!.uid)).toHaveLength(2);
+  });
+
+  it("keeps Play off a board of fewer than three cards", () => {
+    const repository = boardsRepository(memoryStore());
+    const next = uids();
+    repository.save(
+      addToPool(
+        newBoard("two", "Two", 100, next),
+        [
+          { title: "A", imageUrl: null },
+          { title: "B", imageUrl: null },
+        ],
+        100,
+        next,
+      ),
+    );
+    open(repository, "/b/two");
+    // Unavailable but still focusable, so its reason can be read.
+    expect(screen.getByRole("button", { name: /^Play/ })).toHaveAttribute("aria-disabled", "true");
+  });
+});
