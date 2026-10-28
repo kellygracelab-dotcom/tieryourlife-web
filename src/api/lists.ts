@@ -61,6 +61,8 @@ export interface PublishRequest {
   coverPictureId: string | null;
   /** The pictures chosen for the cover collage, in their order; left out or empty when the cards' art decides. */
   coverImageUrls?: string[];
+  /** An approved topic of the list's section, which files the list under it; null for none. */
+  topicId?: string | null;
   tiers: PublishedTier[];
   items: {
     title: string;

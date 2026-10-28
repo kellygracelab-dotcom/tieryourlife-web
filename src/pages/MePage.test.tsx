@@ -177,7 +177,7 @@ describe("MePage", () => {
     const kept = await menuOf("Ghibli, ranked");
     expect(kept.getByRole("link", { name: "Publish as my list" })).toHaveAttribute(
       "href",
-      "/new?ranking=aaaaaaaa",
+      "/b/new?ranking=aaaaaaaa",
     );
     expect(kept.getByRole("button", { name: "Delete ranking" })).toBeInTheDocument();
     await userEvent.click(kept.getByRole("button", { name: "Copy link" }));

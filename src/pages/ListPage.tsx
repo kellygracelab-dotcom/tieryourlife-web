@@ -314,7 +314,7 @@ function AuthorMenu({
             role="separator"
           />
           <li>
-            <Link to={`/new?list=${encodeURIComponent(list.id)}`}>{strings.list.edit}</Link>
+            <Link to={`/b/new?list=${encodeURIComponent(list.id)}`}>{strings.list.edit}</Link>
           </li>
           <li>
             <button
@@ -497,7 +497,7 @@ export function ListPage({
         )}
         <span className="list-head__tools">
           {own && (
-            <Link className="btn btn--tonal" to={`/new?list=${encodeURIComponent(list.id)}`}>
+            <Link className="btn btn--tonal" to={`/b/new?list=${encodeURIComponent(list.id)}`}>
               <Icon name="edit" className="btn__icon" />
               <span>{strings.list.edit}</span>
             </Link>

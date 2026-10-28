@@ -159,7 +159,14 @@ export function SearchPage() {
             <p className="search__empty-body">{fillNodes(strings.search.browseHint, { where })}</p>
           </div>
           <p className="search__make">
-            <Link className="btn btn--tonal" to={`/new?title=${encodeURIComponent(filters.q)}`}>
+            {/* The words become the list's name, and the section searched in its section. */}
+            <Link
+              className="btn btn--tonal"
+              to={`/b/new?${new URLSearchParams({
+                title: filters.q,
+                ...(filters.category !== undefined ? { category: filters.category } : {}),
+              }).toString()}`}
+            >
               <Icon name="add" className="btn__icon" />
               <span>{strings.search.makeThis}</span>
             </Link>

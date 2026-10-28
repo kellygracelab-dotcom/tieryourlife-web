@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
+import { CardName } from "./CardName";
+import { useBoardSize } from "./useBoardSize";
+import type { BoardSize } from "./nameFit";
 import "./board.css";
 import { sizedFor } from "../../lib/pictureSize";
 
@@ -12,22 +15,25 @@ interface ReadOnlyBoardProps {
   pool: readonly number[];
 }
 
-function Tile({ item }: { item: PublishedItem }) {
+function Tile({ item, board }: { item: PublishedItem; board: BoardSize }) {
   return (
     <li className="tile" title={item.title}>
       {item.imageUrl !== null ? (
         <img {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
       ) : (
-        <span className="tile__name">{item.title}</span>
+        <CardName title={item.title} board={board} />
       )}
     </li>
   );
 }
 
 export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoardProps) {
+  const board = useBoardSize();
   const tileOf = (position: number) => {
     const item = items[position];
-    return item === undefined ? null : <Tile key={`${position}-${item.title}`} item={item} />;
+    return item === undefined ? null : (
+      <Tile key={`${position}-${item.title}`} item={item} board={board} />
+    );
   };
   return (
     <section className="board" aria-label={label}>

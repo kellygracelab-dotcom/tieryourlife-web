@@ -1,15 +1,35 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { errorOf, type ApiError } from "../../api/errors";
 import type { PublishRequest } from "../../api/lists";
-import { CATEGORIES, isCategory } from "../../api/types";
+import type { Topic } from "../../api/sections";
+import type { Category } from "../../api/types";
 import { useSession } from "../../app/session";
-import { fill, strings } from "../../strings";
+import { loadTopics } from "../../lib/api";
+import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
+import { useModal } from "../../ui/useModal";
 import { failureText } from "../editor/failureText";
-import { isBehind, liveItems, setCover, setPublished, type Board, type DisplayMode } from "./model";
+import {
+  BOARD_LIMITS,
+  DISPLAY_MODES,
+  isBehind,
+  liveItems,
+  previewsOf,
+  rankedTiers,
+  setCover,
+  setPublished,
+  setTopic,
+  type Board,
+  type BoardTopic,
+  type DisplayMode,
+} from "./model";
+import { titleOf } from "./boardText";
 import { publishProblemsOf, publishRequestOf } from "./publish";
+import { sectionChoices } from "./sectionChoices";
+import "./boards.css";
 
 export type PublishBoard = (request: PublishRequest) => Promise<{ id: string }>;
 export type RepublishBoard = (id: string, request: PublishRequest) => Promise<{ id: string }>;
@@ -21,29 +41,115 @@ export interface PublishingDeps {
   unpublish: UnpublishBoard;
 }
 
+/** The approved topics of a section, the biggest first. */
+export type LoadTopics = (section: Category) => Promise<{ topics: Topic[] }>;
+
 interface BoardSettingsProps {
   board: Board;
   /** The board as it is right now, for a change made after a wait on the network. */
   latest: () => Board;
   keep: (board: Board) => void;
-  onCategory: (category: Board["category"]) => void;
+  onCategory: (category: Category) => void;
   onMode: (mode: DisplayMode) => void;
+  /** New tier: the page adds one and opens it in the tier editor. */
+  onNewTier: () => void;
   /** The board went public, was sent again, or came down; the page says so. */
   onPublished: (what: "published" | "updated" | "unpublished", id: string | null) => void;
   publishing: PublishingDeps;
+  topics?: LoadTopics;
   onDone: () => void;
   now?: () => number;
 }
 
 type Busy = "idle" | "publishing" | "updating" | "unpublishing";
+type Open = "none" | "category" | "topic" | "cover";
+/** What came back for a section's topics. */
+type Topics =
+  { section: Category; status: "ready"; topics: Topic[] } | { section: Category; status: "failed" };
 
 const MAX_COVER = 6;
 
+const MODES: Record<DisplayMode, { title: string; sub: string }> = {
+  WRAP: { title: strings.boards.modeRows, sub: strings.boards.modeWrappedSub },
+  HORIZONTAL_SCROLL: { title: strings.boards.modeStrip, sub: strings.boards.modeStripSub },
+  FLAT_RANKED: { title: strings.boards.modeRanking, sub: strings.boards.modeRankedSub },
+};
+
+/** One row of the sheet: a 40 px slot for its icon, its words, and whatever ends it. */
+function Row({
+  icon,
+  title,
+  sub,
+  end,
+  children,
+}: {
+  icon: ReactNode;
+  title: ReactNode;
+  sub?: ReactNode;
+  end?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <>
+      <span className="sheet-row__icon">{icon}</span>
+      <span className="sheet-row__text">
+        <span className="sheet-row__title">{title}</span>
+        {sub !== undefined && <span className="sheet-row__sub">{sub}</span>}
+        {children}
+      </span>
+      {end}
+    </>
+  );
+}
+
+/** A row that opens a picker under it, or does its one thing. */
+function RowButton({
+  icon,
+  title,
+  sub,
+  open,
+  disabled = false,
+  onClick,
+}: {
+  icon: ReactNode;
+  title: string;
+  sub: string;
+  /** Whether the picker under the row is open; undefined for a row with nothing under it. */
+  open?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="sheet-row sheet-row--button"
+      aria-expanded={open}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <Row
+        icon={icon}
+        title={title}
+        sub={sub}
+        end={
+          open !== undefined && (
+            <Icon
+              name="expand_more"
+              className={open ? "sheet-row__more sheet-row__more--open" : "sheet-row__more"}
+            />
+          )
+        }
+      />
+    </button>
+  );
+}
+
 /**
- * The phone's list settings: the category, how the board is shown, the
- * cover, and whether the board is public. Each change is kept the moment it
- * is made; publishing is the one that waits on the network and says why
- * when it cannot.
+ * The phone's list settings as a side sheet: a new tier, whether the list
+ * is public, its section and topic, its cover, how the board is shown, and,
+ * once public, the way to take it down. Each change is kept the moment it is
+ * made; publishing is the one that waits on the network and says why when it
+ * cannot.
  */
 export function BoardSettings({
   board,
@@ -51,24 +157,27 @@ export function BoardSettings({
   keep,
   onCategory,
   onMode,
+  onNewTier,
   onPublished,
   publishing,
+  topics: load = loadTopics,
   onDone,
   now = Date.now,
 }: BoardSettingsProps) {
   const id = useId();
-  const { account } = useSession();
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onDone);
+  const { account, signIn } = useSession();
   const signedIn = account?.kind === "signedIn";
   const [busy, setBusy] = useState<Busy>("idle");
   const [failure, setFailure] = useState<ApiError | null>(null);
-  const modes: { mode: DisplayMode; title: string; sub: string }[] = [
-    { mode: "WRAP", title: strings.boards.modeWrapped, sub: strings.boards.modeWrappedSub },
-    { mode: "RANKED", title: strings.boards.modeRanked, sub: strings.boards.modeRankedSub },
-  ];
+  const [open, setOpen] = useState<Open>("none");
+  const [asking, setAsking] = useState(false);
   const problems = publishProblemsOf(board);
   const isPublic = board.publishedId !== null;
   const behind = isBehind(board);
   const published = isPublic ? `/l/${encodeURIComponent(board.publishedId ?? "")}` : null;
+  const toggle = (which: Open) => setOpen(open === which ? "none" : which);
 
   const send = async (what: "published" | "updated") => {
     const current = latest();
@@ -92,6 +201,12 @@ export function BoardSettings({
     }
   };
 
+  // Down, the board is one's own again: the name publishing put on it goes, or
+  // Your lists would take it for a copy of somebody else's.
+  const down = () => {
+    keep(setPublished(latest(), null, null, now()));
+    onPublished("unpublished", null);
+  };
   const takeDown = async () => {
     const current = latest();
     if (current.publishedId === null) return;
@@ -99,20 +214,35 @@ export function BoardSettings({
     setFailure(null);
     try {
       await publishing.unpublish(current.publishedId);
-      keep(setPublished(latest(), null, latest().authorName, now()));
-      onPublished("unpublished", null);
+      down();
+      setAsking(false);
     } catch (reason: unknown) {
       // Already gone is what was asked for.
       const error = errorOf(reason);
       if (error.kind === "notFound") {
-        keep(setPublished(latest(), null, latest().authorName, now()));
-        onPublished("unpublished", null);
+        down();
+        setAsking(false);
       } else {
         setFailure(error);
       }
     } finally {
       setBusy("idle");
     }
+  };
+
+  // The question at the end of the sheet takes the eye and the cursor.
+  const ask = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!asking) return;
+    ask.current?.scrollIntoView?.({ block: "nearest" });
+    ask.current?.querySelector<HTMLButtonElement>("button")?.focus();
+  }, [asking]);
+
+  // A guest's switch asks them to sign in; the board stays as it is.
+  const onSwitch = () => {
+    if (isPublic) setAsking(true);
+    else if (!signedIn) void signIn();
+    else void send("published");
   };
 
   // Why the switch cannot be turned on, the first reason in the phone's order.
@@ -135,160 +265,353 @@ export function BoardSettings({
     if (next.length > MAX_COVER) return;
     keep(setCover(latest(), next, now()));
   };
+  const thumbnail = chosen[0] ?? previewsOf(board, 1)[0] ?? null;
 
-  return (
-    <section className="board-panel" aria-labelledby={`${id}-title`}>
-      <div className="board-panel__head">
-        <h2 id={`${id}-title`}>{strings.boards.settings}</h2>
-        <Button onClick={onDone}>{strings.boards.done}</Button>
-      </div>
+  const [find, setFind] = useState("");
+  const sections = sectionChoices().filter(({ name }) =>
+    name.toLowerCase().includes(find.trim().toLowerCase()),
+  );
 
-      <div className="board-settings__section">
-        <div className="board-settings__row">
-          <label className="board-settings__label" htmlFor={`${id}-public`}>
-            {strings.boards.publicTitle}
-          </label>
-          <input
-            id={`${id}-public`}
-            type="checkbox"
-            role="switch"
-            className="board-settings__switch"
-            checked={isPublic}
-            disabled={busy !== "idle" || (!isPublic && blocker !== null)}
-            onChange={(event) => void (event.target.checked ? send("published") : takeDown())}
-          />
+  // The section's topics are asked for each time the picker opens; until the
+  // answer for this section is in, they are loading.
+  const [answer, setAnswer] = useState<Topics | null>(null);
+  const category = board.category;
+  const topics: Topics | { status: "loading" } =
+    answer !== null && answer.section === category ? answer : { status: "loading" };
+  useEffect(() => {
+    if (open !== "topic" || category === null) return;
+    let live = true;
+    load(category).then(
+      (found) => {
+        if (live) setAnswer({ section: category, status: "ready", topics: found.topics });
+      },
+      () => {
+        if (live) setAnswer({ section: category, status: "failed" });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [open, category, load]);
+  const pickTopic = (topic: BoardTopic | null) => {
+    keep(setTopic(latest(), topic, now()));
+    setOpen("none");
+  };
+
+  const tierCount = rankedTiers(board).length;
+  const title = titleOf(board);
+
+  return createPortal(
+    <div className="sheet-scrim" onClick={onDone}>
+      <div
+        ref={box}
+        className="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-title`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sheet__head">
+          <h2 id={`${id}-title`} className="sheet__title">
+            {strings.boards.settings}
+          </h2>
+          <Button onClick={onDone}>{strings.boards.done}</Button>
         </div>
-        <p className="board-settings__note">{strings.boards.publicBody}</p>
-        {!isPublic && blocker !== null && <p className="board-settings__note">{blocker}</p>}
-        {busy === "publishing" && (
-          <p className="board-settings__note" role="status">
-            {strings.boards.publishing}
-          </p>
-        )}
-        {failure !== null && (
-          <p className="board-settings__problem" role="alert">
-            <Icon name="error" />
-            {failureText(failure, isPublic ? "edit" : "new")}
-          </p>
-        )}
-        {isPublic && published !== null && (
-          <div className="board-settings__published">
-            <div className="board-settings__row">
-              <span className="board-settings__label">{strings.boards.publishedVersion}</span>
-              <Button
-                variant="tonal"
-                icon="publish"
-                onClick={() => void send("updated")}
-                disabled={busy !== "idle" || problems.length > 0}
+
+        <ul className="sheet__rows">
+          <li>
+            <RowButton
+              icon={<Icon name="add" />}
+              title={strings.boards.newTier}
+              sub={plural(strings.boards.tierCount, tierCount)}
+              disabled={tierCount >= BOARD_LIMITS.tiers}
+              onClick={onNewTier}
+            />
+          </li>
+
+          <li className="sheet-row">
+            <Row
+              icon={<Icon name="public" />}
+              title={
+                <label htmlFor={`${id}-public`} className="sheet-row__label">
+                  {strings.boards.publicTitle}
+                </label>
+              }
+              sub={strings.boards.publicBody}
+              end={
+                <input
+                  id={`${id}-public`}
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={isPublic}
+                  disabled={busy !== "idle" || (!isPublic && signedIn && blocker !== null)}
+                  onChange={onSwitch}
+                />
+              }
+            >
+              {!isPublic && blocker !== null && <span className="sheet-row__note">{blocker}</span>}
+              {busy === "publishing" && (
+                <span className="sheet-row__note" role="status">
+                  {strings.boards.publishing}
+                </span>
+              )}
+              {failure !== null && (
+                <span className="sheet-row__problem" role="alert">
+                  <Icon name="error" />
+                  {failureText(failure, isPublic ? "edit" : "new")}
+                </span>
+              )}
+            </Row>
+          </li>
+
+          {isPublic && published !== null && (
+            <li className="sheet-row">
+              <Row
+                icon={<Icon name="publish" />}
+                title={strings.boards.publishedVersion}
+                sub={behind ? strings.boards.behind : strings.boards.publishedVersionBody}
+                end={
+                  <Button
+                    variant="tonal"
+                    onClick={() => void send("updated")}
+                    disabled={busy !== "idle" || problems.length > 0}
+                  >
+                    {busy === "updating" ? strings.boards.updating : strings.boards.update}
+                  </Button>
+                }
               >
-                {busy === "updating" ? strings.boards.updating : strings.boards.update}
-              </Button>
-            </div>
-            <p className="board-settings__note">
-              {behind ? strings.boards.behind : strings.boards.publishedVersionBody}
-            </p>
-            <Link className="btn btn--text board-settings__open" to={published}>
-              <Icon name="open_in_new" className="btn__icon" />
-              <span>{strings.new.openList}</span>
-            </Link>
-          </div>
-        )}
-      </div>
+                <Link className="sheet-row__link" to={published}>
+                  <Icon name="open_in_new" />
+                  <span>{strings.new.openList}</span>
+                </Link>
+              </Row>
+            </li>
+          )}
 
-      <div className="board-settings__section">
-        <label className="board-settings__label" htmlFor={`${id}-category`}>
-          {strings.boards.category}
-        </label>
-        <select
-          id={`${id}-category`}
-          className="board-settings__select"
-          value={board.category ?? ""}
-          onChange={(event) =>
-            onCategory(isCategory(event.target.value) ? event.target.value : null)
-          }
-        >
-          <option value="">{strings.boards.categoryNone}</option>
-          {CATEGORIES.map((category) => (
-            <option key={category} value={category}>
-              {strings.category[category]}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <fieldset className="board-settings__section">
-        <legend className="board-settings__label">{strings.boards.cover}</legend>
-        <p className="board-settings__note">
-          {chosen.length === 0
-            ? strings.boards.coverAutomatic
-            : chosen.length === 1
-              ? strings.boards.coverOne
-              : fill(strings.boards.coverCollage, { n: chosen.length })}
-        </p>
-        {pictures.length === 0 ? (
-          <p className="board-settings__note">{strings.boards.coverNoCards}</p>
-        ) : (
-          <>
-            <p className="board-settings__note">
-              {fill(strings.boards.coverCards, { n: pictures.length })}
-            </p>
-            <ul className="board-settings__covers" aria-label={strings.boards.cover}>
-              {pictures.map((url) => {
-                const card = liveItems(board).find((item) => item.imageUrl === url);
-                const on = chosen.includes(url);
-                const place = chosen.indexOf(url);
-                return (
-                  <li key={url}>
+          <li>
+            <RowButton
+              icon={<Icon name="category" />}
+              title={strings.boards.category}
+              sub={category === null ? strings.boards.categoryNone : strings.category[category]}
+              open={open === "category"}
+              onClick={() => toggle("category")}
+            />
+            {open === "category" && (
+              <div className="sheet-pick">
+                <input
+                  type="search"
+                  className="sheet-pick__find"
+                  value={find}
+                  placeholder={strings.boards.findSection}
+                  aria-label={strings.boards.findSection}
+                  autoComplete="off"
+                  onChange={(event) => setFind(event.target.value)}
+                />
+                <div role="radiogroup" aria-label={strings.boards.category}>
+                  {sections.map((section) => (
                     <button
+                      key={section.id}
                       type="button"
-                      className={
-                        on
-                          ? "board-settings__cover board-settings__cover--on"
-                          : "board-settings__cover"
-                      }
-                      aria-pressed={on}
-                      aria-label={fill(strings.boards.coverPick, { name: card?.title ?? "" })}
-                      disabled={!on && chosen.length >= MAX_COVER}
-                      onClick={() => toggleCover(url)}
+                      role="radio"
+                      aria-checked={category === section.id}
+                      className="sheet-pick__option"
+                      onClick={() => {
+                        onCategory(section.id);
+                        setOpen("none");
+                        setFind("");
+                      }}
                     >
-                      <img src={url} alt="" loading="lazy" />
-                      {on && <span className="board-settings__cover-n">{place + 1}</span>}
+                      {section.name}
+                      {category === section.id && <Icon name="check" />}
                     </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {chosen.length > 0 && (
-              <div>
-                <Button icon="undo" onClick={() => keep(setCover(latest(), [], now()))}>
-                  {strings.boards.coverReset}
-                </Button>
+                  ))}
+                </div>
               </div>
             )}
-          </>
-        )}
-      </fieldset>
+          </li>
 
-      <fieldset className="board-settings__section">
-        <legend className="board-settings__label">{strings.boards.display}</legend>
-        <p className="board-settings__note">{strings.boards.displayNote}</p>
-        {modes.map(({ mode, title, sub }) => (
-          <div key={mode} className="board-settings__mode">
-            <input
-              id={`${id}-${mode}`}
-              type="radio"
-              name={`${id}-mode`}
-              value={mode}
-              checked={board.displayMode === mode}
-              onChange={() => onMode(mode)}
+          <li>
+            <RowButton
+              icon={<Icon name="label" />}
+              title={strings.boards.topic}
+              sub={board.topic?.name ?? strings.boards.topicNone}
+              open={open === "topic"}
+              disabled={category === null}
+              onClick={() => toggle("topic")}
             />
-            <label className="board-settings__mode-text" htmlFor={`${id}-${mode}`}>
-              <span className="board-settings__mode-title">{title}</span>
-              <span className="board-settings__mode-sub">{sub}</span>
-            </label>
-          </div>
-        ))}
-      </fieldset>
-    </section>
+            {open === "topic" && (
+              <div className="sheet-pick" role="radiogroup" aria-label={strings.boards.topic}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={board.topic === null}
+                  className="sheet-pick__option"
+                  onClick={() => pickTopic(null)}
+                >
+                  {strings.boards.topicNone}
+                  {board.topic === null && <Icon name="check" />}
+                </button>
+                {topics.status === "ready" &&
+                  topics.topics.map((topic) => (
+                    <button
+                      key={topic.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={board.topic?.id === topic.id}
+                      className="sheet-pick__option"
+                      onClick={() => pickTopic({ id: topic.id, name: topic.name })}
+                    >
+                      {topic.name}
+                      {board.topic?.id === topic.id && <Icon name="check" />}
+                    </button>
+                  ))}
+                {topics.status === "loading" && (
+                  <p className="sheet-pick__note" role="status">
+                    {strings.boards.topicsLoading}
+                  </p>
+                )}
+                {topics.status === "failed" && (
+                  <p className="sheet-pick__note" role="alert">
+                    {strings.boards.topicsFailed}
+                  </p>
+                )}
+              </div>
+            )}
+          </li>
+
+          <li>
+            <RowButton
+              icon={
+                thumbnail === null ? (
+                  <span className="sheet-row__thumb sheet-row__thumb--none" />
+                ) : (
+                  <img className="sheet-row__thumb" src={thumbnail} alt="" loading="lazy" />
+                )
+              }
+              title={strings.boards.cover}
+              sub={chosen.length === 0 ? strings.boards.coverNone : strings.boards.coverChosen}
+              open={open === "cover"}
+              onClick={() => toggle("cover")}
+            />
+            {open === "cover" && (
+              <div className="sheet-pick sheet-pick--cover">
+                <p className="sheet-pick__note">
+                  {chosen.length === 0
+                    ? strings.boards.coverAutomatic
+                    : chosen.length === 1
+                      ? strings.boards.coverOne
+                      : fill(strings.boards.coverCollage, { n: chosen.length })}
+                </p>
+                {pictures.length === 0 ? (
+                  <p className="sheet-pick__note">{strings.boards.coverNoCards}</p>
+                ) : (
+                  <>
+                    <p className="sheet-pick__note">
+                      {fill(strings.boards.coverCards, { n: pictures.length })}
+                    </p>
+                    <ul className="board-settings__covers" aria-label={strings.boards.cover}>
+                      {pictures.map((url) => {
+                        const card = liveItems(board).find((item) => item.imageUrl === url);
+                        const on = chosen.includes(url);
+                        const place = chosen.indexOf(url);
+                        return (
+                          <li key={url}>
+                            <button
+                              type="button"
+                              className={
+                                on
+                                  ? "board-settings__cover board-settings__cover--on"
+                                  : "board-settings__cover"
+                              }
+                              aria-pressed={on}
+                              aria-label={fill(strings.boards.coverPick, {
+                                name: card?.title ?? "",
+                              })}
+                              disabled={!on && chosen.length >= MAX_COVER}
+                              onClick={() => toggleCover(url)}
+                            >
+                              <img src={url} alt="" loading="lazy" />
+                              {on && <span className="board-settings__cover-n">{place + 1}</span>}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {chosen.length > 0 && (
+                      <div>
+                        <Button icon="undo" onClick={() => keep(setCover(latest(), [], now()))}>
+                          {strings.boards.coverReset}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </li>
+
+          <li className="sheet-row sheet-row--stacked">
+            <Row
+              icon={<Icon name="view_agenda" />}
+              title={strings.boards.display}
+              sub={MODES[board.displayMode].sub}
+            >
+              <div className="segmented" role="radiogroup" aria-label={strings.boards.display}>
+                {DISPLAY_MODES.map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={board.displayMode === mode}
+                    className="segmented__option"
+                    onClick={() => onMode(mode)}
+                  >
+                    {board.displayMode === mode && (
+                      <Icon name="check" className="segmented__check" />
+                    )}
+                    {MODES[mode].title}
+                  </button>
+                ))}
+              </div>
+            </Row>
+          </li>
+
+          {isPublic && (
+            <li>
+              {asking ? (
+                <div ref={ask} className="sheet-ask" role="group" aria-labelledby={`${id}-ask`}>
+                  <p id={`${id}-ask`} className="sheet-ask__title">
+                    {fill(strings.boards.takeDownTitle, { title })}
+                  </p>
+                  <p className="sheet-ask__body">{strings.boards.takeDownBody}</p>
+                  <div className="sheet-ask__actions">
+                    <Button onClick={() => setAsking(false)} disabled={busy !== "idle"}>
+                      {strings.rank.cancel}
+                    </Button>
+                    <Button
+                      className="dialog__danger"
+                      onClick={() => void takeDown()}
+                      disabled={busy !== "idle"}
+                    >
+                      {strings.boards.takeDown}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="sheet-row sheet-row--button sheet-row--danger"
+                  onClick={() => setAsking(true)}
+                >
+                  <Row icon={<Icon name="visibility_off" />} title={strings.boards.takeDown} />
+                </button>
+              )}
+            </li>
+          )}
+        </ul>
+      </div>
+    </div>,
+    document.body,
   );
 }

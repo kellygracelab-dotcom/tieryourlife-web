@@ -1,31 +1,34 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { CATEGORIES, isCategory, type Category } from "../api/types";
+import type { Category } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
 import {
   arrangeBoards,
+  BOARD_SHOWS,
+  BOARD_SORTS,
   isNarrowed,
-  poolCount,
   rankedCount,
   restoreBoard,
   setFavourite,
   shouldGroup,
-  tierShares,
   trashBoard,
   type Board,
+  type BoardShow,
   type BoardSort,
-  type PublishedFilter,
 } from "../features/boards/model";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
 import { useBoardSync } from "../features/boards/boardSync";
+import { BoardRow } from "../features/boards/BoardRow";
 import { BoardTile } from "../features/boards/BoardTile";
-import { nextUid, useBoards } from "../features/boards/useBoards";
+import { titleOf } from "../features/boards/boardText";
+import { useBoards } from "../features/boards/useBoards";
 import "../features/boards/boards.css";
 import { localStorageStore, type KeyValueStore } from "../lib/storage";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
+import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./BoardsPage.css";
 
@@ -36,7 +39,7 @@ interface BoardsPageProps {
   store?: KeyValueStore;
 }
 
-/** Pictures in a grid, as the phone shows them first, or one board to a row with its tier bar. */
+/** Pictures in a grid, as the phone shows them first, or one board to a row with its tier ribbon. */
 type BoardsView = "grid" | "rows";
 export const VIEW_KEY = "boards.view";
 const viewIn = (store: KeyValueStore): BoardsView =>
@@ -47,112 +50,28 @@ export interface BoardsPageState {
   trashed?: string[];
 }
 
-const titleOf = (board: Board): string =>
-  board.title.trim().length > 0 ? board.title : strings.boards.untitled;
+const SHOW_TEXT: Record<BoardShow, string> = {
+  all: strings.boards.showAll,
+  inProgress: strings.boards.showInProgress,
+  public: strings.boards.filterPublic,
+  saved: strings.boards.showSaved,
+};
 
-/** The coloured bar under a board's name: each tier's share of the ranked cards. */
-function SharesBar({ board }: { board: Board }) {
-  const shares = tierShares(board);
-  const ranked = shares.reduce((sum, share) => sum + share.count, 0);
-  return (
-    <span className="board-card__bar" aria-hidden="true">
-      {ranked > 0 &&
-        shares
-          .filter((share) => share.count > 0)
-          .map((share, index) => (
-            <span
-              key={index}
-              className="band"
-              style={
-                {
-                  flex: share.count,
-                  "--band-light": share.color,
-                  "--band-dark": share.colorDark,
-                } as CSSProperties
-              }
-            />
-          ))}
-    </span>
-  );
-}
+const SORT_TEXT: Record<BoardSort, string> = {
+  recent: strings.boards.sortRecent,
+  name: strings.boards.sortName,
+  ranked: strings.boards.sortRanked,
+  pool: strings.boards.sortPool,
+};
 
-function BoardCard({
-  board,
-  selecting,
-  selected,
-  onSelect,
-  onStar,
-}: {
-  board: Board;
-  selecting: boolean;
-  selected: boolean;
-  onSelect: () => void;
-  onStar: () => void;
-}) {
-  const title = titleOf(board);
-  const ranked = rankedCount(board);
-  const inPool = poolCount(board);
-  const meta =
-    ranked === 0
-      ? `${plural(strings.boards.inPool, inPool)} · ${strings.boards.nothingRanked}`
-      : `${plural(strings.boards.ranked, ranked)} · ${plural(strings.boards.inPool, inPool)}`;
-  const starred = board.favouritedAt !== null;
-  return (
-    <li className={selected ? "board-card board-card--selected" : "board-card"}>
-      {selecting ? (
-        <label className="board-card__pick">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={onSelect}
-            aria-label={fill(strings.boards.select, { name: title })}
-          />
-        </label>
-      ) : (
-        <button
-          type="button"
-          className={starred ? "board-card__star board-card__star--on" : "board-card__star"}
-          aria-label={fill(starred ? strings.boards.unstar : strings.boards.star, { name: title })}
-          aria-pressed={starred}
-          onClick={onStar}
-        >
-          <Icon name="star" />
-        </button>
-      )}
-      {selecting ? (
-        <button type="button" className="board-card__main" onClick={onSelect}>
-          <span className="board-card__title">{title}</span>
-          <span className="board-card__meta">{meta}</span>
-          <SharesBar board={board} />
-        </button>
-      ) : (
-        <Link
-          className="board-card__main"
-          to={`/b/${encodeURIComponent(board.uid)}`}
-          aria-label={fill(strings.boards.open, { name: title })}
-        >
-          <span className="board-card__title">
-            {title}
-            {board.arrivedFrom !== null && (
-              <span className="board-card__from">
-                {fill(strings.sync.arrivedFrom, { device: board.arrivedFrom })}
-              </span>
-            )}
-          </span>
-          <span className="board-card__meta">{meta}</span>
-          <SharesBar board={board} />
-          {ranked === 0 && inPool > 0 && (
-            <span className="board-card__hint">
-              <Icon name="drag_indicator" />
-              {strings.boards.startDragging}
-            </span>
-          )}
-        </Link>
-      )}
-      {!selecting && <Icon name="expand_more" className="board-card__chevron" />}
-    </li>
-  );
-}
+/** Where an empty page starts: the phone's five suggestions, each a new list in its section. */
+const STARTS: { text: string; category: Category }[] = [
+  { text: strings.boards.suggestFilms, category: "film_tv" },
+  { text: strings.boards.suggestGames, category: "games" },
+  { text: strings.boards.suggestRestaurants, category: "food" },
+  { text: strings.boards.suggestAlbums, category: "music" },
+  { text: strings.boards.suggestBooks, category: "books" },
+];
 
 function Group({
   heading,
@@ -188,7 +107,7 @@ function Group({
               onStar={() => onStar(board)}
             />
           ) : (
-            <BoardCard
+            <BoardRow
               key={board.uid}
               board={board}
               selecting={selecting}
@@ -203,10 +122,34 @@ function Group({
   );
 }
 
+/** No lists yet: the phone's suggestions to start from, and New list for anything else. */
+function Empty() {
+  return (
+    <div className="boards__empty">
+      <Icon name="view_list" className="boards__empty-icon" />
+      <p className="boards__empty-title">{strings.boards.emptyTitle}</p>
+      <p className="boards__start-with">{strings.boards.startWith}</p>
+      <ul className="boards__starts">
+        {STARTS.map(({ text, category }) => (
+          <li key={category}>
+            <Link className="boards__start" to={`/b/new?category=${category}`}>
+              <Icon name="add" />
+              {text}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <Link className="btn btn--text" to="/b/new">
+        <span>{strings.boards.newBoard}</span>
+      </Link>
+    </div>
+  );
+}
+
 /**
  * The boards this device keeps, the way the phone's home shows them: starred
- * ones first, the rest newest first, narrowed by a word, a category or
- * whether they are public. Nothing here needs an account.
+ * ones first, the rest in the order chosen, narrowed by a word or by which
+ * of them to show. Nothing here needs an account.
  */
 export function BoardsPage({
   repository = site,
@@ -218,14 +161,13 @@ export function BoardsPage({
   const { signedIn } = useBoardSync();
   const navigate = useNavigate();
   const location = useLocation();
-  const [sort, setSort] = useState<BoardSort>("newest");
+  const [sort, setSort] = useState<BoardSort>("recent");
   const [view, setView] = useState<BoardsView>(() => viewIn(store));
-  const show = (next: BoardsView) => {
+  const showAs = (next: BoardsView) => {
     setView(next);
     store.write(VIEW_KEY, next);
   };
-  const [category, setCategory] = useState<Category | null>(null);
-  const [published, setPublished] = useState<PublishedFilter | null>(null);
+  const [show, setShow] = useState<BoardShow>("all");
   const [query, setQuery] = useState("");
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -255,18 +197,13 @@ export function BoardsPage({
   }, [arrivedWith.length, location.pathname, navigate]);
 
   const live = all.filter((board) => board.deletedAt === null);
-  const filters = { category, published, query };
+  const filters = { show, query };
   const arranged = arrangeBoards(all, sort, filters);
   const narrowed = isNarrowed(filters);
   const grouped = shouldGroup(arranged, narrowed);
   const shown = [...arranged.favourites, ...arranged.rest];
   const publicCount = live.filter((board) => board.publishedId !== null).length;
-
-  // The board page makes the board and keeps it once it is touched; an
-  // untouched one is never kept, so there is nothing to throw away.
-  const create = () => {
-    void navigate(`/b/${encodeURIComponent(nextUid())}?new=${now()}`);
-  };
+  const rankings = live.reduce((sum, board) => sum + rankedCount(board), 0);
 
   const star = (board: Board) => {
     repository.save(setFavourite(board, board.favouritedAt === null ? now() : null));
@@ -300,28 +237,19 @@ export function BoardsPage({
     setNotice(trashedNotice(uids));
   };
 
-  const clearFilters = () => {
-    setCategory(null);
-    setPublished(null);
-    setQuery("");
-  };
-
   return (
     <section className="boards">
       <header className="boards__head">
         <div className="boards__text">
           <h1 className="boards__title">{strings.boards.title}</h1>
-          {live.length > 0 ? (
+          {live.length > 0 && (
             <p className="boards__count">
               {[
                 plural(strings.boards.count, live.length),
-                publicCount > 0
-                  ? plural(strings.boards.published, publicCount)
-                  : strings.boards.private,
+                plural(strings.boards.rankings, rankings),
+                ...(publicCount > 0 ? [plural(strings.boards.published, publicCount)] : []),
               ].join(" · ")}
             </p>
-          ) : (
-            <p className="boards__count">{strings.boards.intro}</p>
           )}
         </div>
         <div className="boards__actions">
@@ -329,21 +257,17 @@ export function BoardsPage({
             <Icon name="delete" className="btn__icon" />
             <span>{strings.boards.trash}</span>
           </Link>
-          <Button variant="filled" icon="add" onClick={create}>
-            {strings.boards.newBoard}
-          </Button>
+          {live.length > 0 && (
+            <Link className="btn btn--filled" to="/b/new">
+              <Icon name="add" className="btn__icon" />
+              <span>{strings.boards.newBoard}</span>
+            </Link>
+          )}
         </div>
       </header>
 
       {live.length === 0 ? (
-        <div className="boards__empty">
-          <Icon name="dashboard" className="boards__empty-icon" />
-          <p className="boards__empty-title">{strings.boards.emptyTitle}</p>
-          <p className="boards__empty-body">{strings.boards.emptyBody}</p>
-          <Button variant="filled" icon="add" onClick={create}>
-            {strings.boards.newBoard}
-          </Button>
-        </div>
+        <Empty />
       ) : (
         <>
           <div className="boards__tools">
@@ -359,81 +283,66 @@ export function BoardsPage({
               />
             </label>
             <div className="boards__filters">
-              <div className="boards__view" role="group" aria-label={strings.boards.view}>
-                <button
-                  type="button"
-                  className="boards__view-option"
-                  aria-pressed={view === "grid"}
-                  aria-label={strings.boards.viewGrid}
-                  title={strings.boards.viewGrid}
-                  onClick={() => show("grid")}
-                >
-                  <Icon name="grid_view" />
-                </button>
-                <button
-                  type="button"
-                  className="boards__view-option"
-                  aria-pressed={view === "rows"}
-                  aria-label={strings.boards.viewRows}
-                  title={strings.boards.viewRows}
-                  onClick={() => show("rows")}
-                >
-                  <Icon name="view_agenda" />
-                </button>
+              <div className="boards__chips" role="group" aria-label={strings.boards.show}>
+                {BOARD_SHOWS.map((option) => (
+                  <Chip key={option} selected={show === option} onClick={() => setShow(option)}>
+                    {SHOW_TEXT[option]}
+                  </Chip>
+                ))}
               </div>
-              <div className="boards__chips" role="group" aria-label={strings.boards.sort}>
-                <Chip selected={sort === "newest"} onClick={() => setSort("newest")}>
-                  {strings.boards.sortNewest}
-                </Chip>
-                <Chip selected={sort === "oldest"} onClick={() => setSort("oldest")}>
-                  {strings.boards.sortOldest}
-                </Chip>
-              </div>
-              <div
-                className="boards__chips"
-                role="group"
-                aria-label={strings.boards.filterVisibility}
-              >
-                <Chip
-                  selected={published === "public"}
-                  onClick={() => setPublished(published === "public" ? null : "public")}
-                >
-                  {strings.boards.filterPublic}
-                </Chip>
-                <Chip
-                  selected={published === "private"}
-                  onClick={() => setPublished(published === "private" ? null : "private")}
-                >
-                  {strings.boards.filterPrivate}
-                </Chip>
-              </div>
-              <label className="boards__category">
-                <span className="boards__category-label">{strings.boards.filterCategory}</span>
-                <select
-                  value={category ?? ""}
-                  aria-label={strings.boards.filterCategory}
-                  onChange={(event) =>
-                    setCategory(isCategory(event.target.value) ? event.target.value : null)
+              <div className="boards__end">
+                <Menu
+                  label={fill(strings.boards.sortLabel, { sort: SORT_TEXT[sort] })}
+                  buttonClassName="chip boards__sort"
+                  button={
+                    <>
+                      <span>{SORT_TEXT[sort]}</span>
+                      <Icon name="expand_more" className="chip__icon" />
+                    </>
                   }
                 >
-                  <option value="">{strings.boards.filterAny}</option>
-                  {CATEGORIES.map((id) => (
-                    <option key={id} value={id}>
-                      {strings.category[id]}
-                    </option>
+                  {BOARD_SORTS.map((option) => (
+                    <li key={option}>
+                      <button
+                        type="button"
+                        className="menu__action boards__sort-option"
+                        aria-current={sort === option}
+                        onClick={() => setSort(option)}
+                      >
+                        {SORT_TEXT[option]}
+                        {sort === option && <Icon name="check" />}
+                      </button>
+                    </li>
                   ))}
-                </select>
-              </label>
-              {narrowed && (
-                <Button icon="close" onClick={clearFilters}>
-                  {strings.boards.filterClear}
-                </Button>
-              )}
-              {!selecting && (
-                <Chip icon="check" onClick={() => setSelecting(true)}>
-                  {strings.boards.deleteSelected}
-                </Chip>
-              )}
+                </Menu>
+                <div className="boards__view" role="group" aria-label={strings.boards.view}>
+                  <button
+                    type="button"
+                    className="boards__view-option"
+                    aria-pressed={view === "grid"}
+                    aria-label={strings.boards.viewGrid}
+                    title={strings.boards.viewGrid}
+                    onClick={() => showAs("grid")}
+                  >
+                    <Icon name="grid_view" />
+                  </button>
+                  <button
+                    type="button"
+                    className="boards__view-option"
+                    aria-pressed={view === "rows"}
+                    aria-label={strings.boards.viewRows}
+                    title={strings.boards.viewRows}
+                    onClick={() => showAs("rows")}
+                  >
+                    <Icon name="view_agenda" />
+                  </button>
+                </div>
+                {!selecting && (
+                  <Chip icon="check" onClick={() => setSelecting(true)}>
+                    {strings.boards.deleteSelected}
+                  </Chip>
+                )}
+              </div>
             </div>
           </div>
 
@@ -468,9 +377,13 @@ export function BoardsPage({
           {shown.length === 0 ? (
             <div className="boards__empty boards__empty--search" role="status">
               <p className="boards__empty-title">
-                {fill(strings.boards.noMatch, { q: query.trim() })}
+                {query.trim() === ""
+                  ? strings.boards.emptyTitle
+                  : fill(strings.boards.noMatch, { q: query.trim() })}
               </p>
-              <p className="boards__empty-body">{strings.boards.noMatchBody}</p>
+              {query.trim() !== "" && (
+                <p className="boards__empty-body">{strings.boards.noMatchBody}</p>
+              )}
             </div>
           ) : grouped ? (
             <>

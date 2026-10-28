@@ -363,8 +363,8 @@ describe("ListPage for its author", () => {
     expect(screen.queryByRole("button", { name: "Publish changes" })).toBeNull();
     const edits = screen.getAllByRole("link", { name: "Edit" });
     expect(edits.map((link) => link.getAttribute("href"))).toEqual([
-      "/new?list=abc",
-      "/new?list=abc",
+      "/b/new?list=abc",
+      "/b/new?list=abc",
     ]);
     // The head keeps its Copy link; the menu's stays for a narrow screen.
     expect(

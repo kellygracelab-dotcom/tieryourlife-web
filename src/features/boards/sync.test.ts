@@ -130,6 +130,7 @@ describe("syncBoards", () => {
     // Nothing of this device's travels.
     expect(request).not.toHaveProperty("editedAt");
     expect(request).not.toHaveProperty("favouritedAt");
+    expect(request).not.toHaveProperty("topic");
     expect(records.all()).toEqual([
       { uid: "films", revision: 1, fingerprint: request.fingerprint },
     ]);
@@ -153,11 +154,12 @@ describe("syncBoards", () => {
     });
   });
 
-  it("takes the account's version when only the account moved on, and keeps the star", async () => {
+  it("takes the account's version when only the account moved on, and keeps the star and the topic", async () => {
     const { repository, records, account, run } = setUp();
     repository.save(films());
     await run();
-    repository.save(setFavourite(repository.get("films")!, 7));
+    const topic = { id: "t1", name: "Sci-fi" };
+    repository.save({ ...setFavourite(repository.get("films")!, 7), topic });
     // Another device renamed it: revision 2 on the account.
     const theirs = account.kept.get("films")!;
     account.kept.set("films", {
@@ -170,6 +172,7 @@ describe("syncBoards", () => {
     const board = repository.get("films")!;
     expect(board.title).toBe("Their name");
     expect(board.favouritedAt).toBe(7);
+    expect(board.topic).toEqual(topic);
     expect(records.all()[0]?.revision).toBe(2);
   });
 

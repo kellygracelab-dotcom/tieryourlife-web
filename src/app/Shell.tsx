@@ -164,9 +164,9 @@ export function Shell() {
           <Link className="top__boards" to="/b" aria-label={strings.nav.boards}>
             <Icon name="dashboard" />
           </Link>
-          <Link className="btn btn--tonal top__make" to="/new" aria-label={strings.nav.makeList}>
+          <Link className="btn btn--tonal top__make" to="/b/new" aria-label={strings.nav.newList}>
             <Icon name="add" className="btn__icon top__make-icon" />
-            <span className="top__make-text">{strings.nav.makeList}</span>
+            <span className="top__make-text">{strings.nav.newList}</span>
           </Link>
           {account?.kind === "signedIn" ? (
             <AccountMenu account={account} />

@@ -18,7 +18,7 @@ describe("parseBoard", () => {
     const kept = {
       uid: "b1",
       title: "Films",
-      displayMode: "RANKED",
+      displayMode: "HORIZONTAL_SCROLL",
       category: "film_tv",
       coverImageUrl: null,
       coverImageUrls: ["https://x/1.jpg"],
@@ -71,7 +71,7 @@ describe("parseBoard", () => {
     const board = parseBoard(kept);
     expect(board).toMatchObject({
       uid: "b1",
-      displayMode: "RANKED",
+      displayMode: "HORIZONTAL_SCROLL",
       category: "film_tv",
       publishedId: "p1",
       editedAt: 0,
@@ -100,6 +100,27 @@ describe("parseBoard", () => {
       parseBoard({ uid: "b", title: "x", tiers: [{ uid: "t", colorLight: "red" }] })?.tiers[0]
         ?.colorLight,
     ).toBe("#DAD7E0");
+  });
+
+  it("reads the display mode by the phone's names, and this site's old name for the ranked column", () => {
+    const modeOf = (displayMode: unknown) =>
+      parseBoard({ uid: "b", displayMode, tiers: [{ uid: "t", label: "S" }] })?.displayMode;
+    expect(modeOf("WRAP")).toBe("WRAP");
+    expect(modeOf("HORIZONTAL_SCROLL")).toBe("HORIZONTAL_SCROLL");
+    expect(modeOf("FLAT_RANKED")).toBe("FLAT_RANKED");
+    expect(modeOf("RANKED")).toBe("FLAT_RANKED");
+    expect(modeOf("SIDEWAYS")).toBe("WRAP");
+    expect(modeOf(undefined)).toBe("WRAP");
+  });
+
+  it("keeps this device's topic, and drops one it cannot read", () => {
+    const topicOf = (topic: unknown) =>
+      parseBoard({ uid: "b", topic, tiers: [{ uid: "t", label: "S" }] })?.topic;
+    expect(topicOf({ id: "t1", name: "Pokémon" })).toEqual({ id: "t1", name: "Pokémon" });
+    expect(topicOf({ id: "", name: "Pokémon" })).toBeNull();
+    expect(topicOf({ id: "t1" })).toBeNull();
+    expect(topicOf("t1")).toBeNull();
+    expect(topicOf(undefined)).toBeNull();
   });
 });
 

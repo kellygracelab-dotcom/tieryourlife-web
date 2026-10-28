@@ -1,8 +1,21 @@
+/*
+ * The board's three sizes, by the window's width: a desktop from 1200, a
+ * laptop or a tablet from 600, a phone under that. An empty row keeps its
+ * own height; a row with a card is as tall as the card and its padding. The
+ * tile's size is a property, so the pool's grid and the dock's rows follow it.
+ */
+.board,
+.pool {
+  --tile-w: 64px;
+  --tile-h: 90px;
+  --tile-gap: 10px;
+}
+
 .board {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 /* A point at the board's end, for the dock to know whether a row is under it. */
@@ -17,8 +30,8 @@
 
 .tier {
   display: flex;
-  min-height: 114px;
-  border-radius: var(--radius-card);
+  min-height: 72px;
+  border-radius: 14px;
   background: color-mix(in oklab, var(--band-base) var(--band-tint), var(--paper));
   overflow: hidden;
 }
@@ -38,7 +51,7 @@
 }
 
 .tier__label {
-  font: var(--text-band-letter);
+  font: 500 32px/36px var(--font);
   overflow-wrap: anywhere;
 }
 
@@ -51,7 +64,7 @@
 .pool__items {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--tile-gap);
   margin: 0;
   padding: 12px;
   list-style: none;
@@ -62,12 +75,24 @@
   align-content: flex-start;
 }
 
+/* The single strip: every tier one line of cards that scrolls sideways, as on the phone. */
+.board--strip .tier__items {
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.board--strip .tier__items > li {
+  flex: none;
+}
+
 .tile {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 90px;
+  width: var(--tile-w);
+  height: var(--tile-h);
   overflow: hidden;
   border-radius: 8px;
   background: var(--tile-placeholder);
@@ -81,16 +106,21 @@
   object-fit: cover;
 }
 
+/*
+ * A card without a picture: its name, as large as its longest word allows
+ * (CardName works the size out), broken between words and never inside one
+ * without a hyphen.
+ */
 .tile__name {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
   padding: 4px;
-  font: var(--text-caption);
-  font-weight: 500;
+  font: 500 11px/1.2 var(--font);
   text-align: center;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 /* The pool is a surface of its own: a band under the board, not loose cards on the page. */
@@ -108,59 +138,71 @@
   color: var(--ink);
 }
 
-.pool .tile {
-  width: 52px;
-  height: 74px;
-}
-
-@media (max-width: 599px) {
-  .tier__band {
-    width: 72px;
+@media (max-width: 1199px) {
+  .board,
+  .pool {
+    --tile-w: 52px;
+    --tile-h: 76px;
+    --tile-gap: 8px;
   }
 
-  .tier__label {
-    font-size: 24px;
-  }
-
-  .tile {
-    width: 52px;
-    height: 74px;
-  }
-}
-
-/* A tablet held upright, or a narrow window: rows a size between the phone's and the desktop's. */
-@media (min-width: 600px) and (max-width: 839px) {
   .board {
     gap: 8px;
   }
 
-  /* A card and its padding: the first card lands without the row moving. */
   .tier {
-    min-height: 102px;
+    border-radius: 12px;
   }
 
   .tier__band {
     width: 80px;
   }
 
-  .tier__items,
-  .pool__items {
-    gap: 8px;
+  .tier__label {
+    font: 500 26px/30px var(--font);
   }
 
-  .tile {
-    width: 56px;
-    height: 78px;
+  .tier__items {
+    padding: 10px;
   }
 }
 
-/*
- * Desktop rows are 10 apart. An empty row is as tall as a row of one line of
- * cards, as on the phone: the first card lands without the board moving, and
- * only a second line makes a row grow.
- */
-@media (min-width: 840px) {
+/* A phone: an empty row stays 56 high, so five tiers and the tray share the screen. */
+@media (max-width: 599px) {
   .board {
-    gap: 10px;
+    --tile-w: 44px;
+    --tile-h: 64px;
+    --tile-gap: 7px;
+
+    gap: 7px;
+  }
+
+  /* The tray's cards a size up: a thumb picks them. */
+  .pool {
+    --tile-w: 52px;
+    --tile-h: 74px;
+  }
+
+  .tier {
+    min-height: 56px;
+  }
+
+  .tier__band {
+    gap: 2px;
+    width: 64px;
+    padding: 4px;
+  }
+
+  .tier__label {
+    font: 500 22px/26px var(--font);
+  }
+
+  .tier__caption {
+    font: 400 9px/12px var(--font);
+    opacity: 0.85;
+  }
+
+  .tier__items {
+    padding: 11px;
   }
 }

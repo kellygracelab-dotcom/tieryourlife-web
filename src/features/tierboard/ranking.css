@@ -339,6 +339,42 @@
   color: var(--ink-dim);
 }
 
+/* The owner's empty pool: its count, and the way to the catalogue beside it. */
+.pool__head--empty .pool__title {
+  font: 500 14px/20px var(--font);
+  white-space: nowrap;
+}
+
+.pool__add-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding-inline: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--ink-quiet);
+  font: var(--text-label);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.pool__add-chip:hover {
+  background: var(--hover);
+}
+
+.pool__add-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.pool__add-chip .ms {
+  font-size: 16px;
+  color: var(--link);
+}
+
 .pool__hint--touch {
   display: none;
 }
@@ -456,30 +492,6 @@
     white-space: nowrap;
   }
 
-  .board {
-    gap: 7px;
-  }
-
-  /* Empty or holding a card, the same height: the first card does not move the board. */
-  .tier {
-    min-height: 86px;
-  }
-
-  .tier__band {
-    gap: 2px;
-    width: 64px;
-    padding: 4px;
-  }
-
-  .tier__label {
-    font: 500 22px/26px var(--font);
-  }
-
-  .tier__caption {
-    font: 400 9px/12px var(--font);
-    opacity: 0.85;
-  }
-
   .tier__key {
     top: 5px;
     inset-inline-end: 5px;
@@ -490,16 +502,6 @@
     font: 500 10px/14px var(--font-mono);
     text-align: center;
     opacity: 1;
-  }
-
-  .tier__items {
-    gap: 7px;
-    padding: 8px;
-  }
-
-  .tier__items .tile {
-    width: 44px;
-    height: 62px;
   }
 
   /* While a card is picked every row is a target, and says which key it is. */
@@ -662,44 +664,13 @@
 
 /*
  * A tablet held upright is tall: the docked tray costs little, so it stays,
- * one size up — tiles 56×78, the rows the desktop's a size down — and the
- * bar reaches the page's wider gutters.
+ * its cards the rows' own size (board.css), and the bar reaches the page's
+ * wider gutters.
  */
 @media (min-width: 600px) and (max-width: 839px) and (hover: none) and (pointer: coarse) {
   .ranking__bar {
     margin: 0 calc(-1 * var(--space-8));
     padding: 4px var(--space-8);
-  }
-
-  .tier {
-    min-height: 102px;
-  }
-
-  .tier__band {
-    gap: 4px;
-    width: 80px;
-    padding: 8px;
-  }
-
-  .tier__label {
-    font: var(--text-band-letter);
-  }
-
-  .tier__caption {
-    font: var(--text-caption);
-    font-weight: 500;
-    opacity: 1;
-  }
-
-  .tier__items {
-    gap: 8px;
-    padding: 12px;
-  }
-
-  .tier__items .tile,
-  .pool .tile {
-    width: 56px;
-    height: 78px;
   }
 
   .ranking:not(.ranking--read) .pool:not(.pool--rest) {
@@ -767,11 +738,6 @@
     padding: 0;
   }
 
-  .ranking .pool .tile {
-    width: 64px;
-    height: 90px;
-  }
-
   .pool--target {
     outline: none;
   }
@@ -801,7 +767,7 @@
 
   .pool__items {
     display: grid;
-    grid-template-columns: repeat(auto-fill, 64px);
+    grid-template-columns: repeat(auto-fill, var(--tile-w));
     align-content: start;
     justify-content: start;
     min-height: 0;
@@ -970,8 +936,9 @@
     flex-wrap: nowrap;
   }
 
-  /* With every card placed the dock is its head alone: one row, and nothing to resize. */
-  .ranking--under .pool:has(.pool__head--done) {
+  /* With every card placed, or none to place, the dock is its head alone: one row, 61 high. */
+  .ranking--under .pool:has(.pool__head--done),
+  .ranking--under .pool:has(.pool__head--empty) {
     padding-block: 12px;
   }
 
@@ -980,6 +947,21 @@
   }
 
   .ranking--under .pool__head--done:not(:has(.pool__hint)) .dock {
+    margin-inline-start: auto;
+  }
+
+  /* The empty pool's head: the count, + Add beside it (under it in a narrow column), the toggle at the end. */
+  .pool__head--empty .pool__lead {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    row-gap: 8px;
+  }
+
+  .ranking--under .pool__add-chip {
+    order: 1;
+  }
+
+  .pool__head--empty .dock {
     margin-inline-start: auto;
   }
 
@@ -1130,7 +1112,7 @@
     flex: 0 1 auto;
     min-height: 0;
     overflow-y: auto;
-    gap: 10px;
+    gap: var(--tile-gap);
     padding: 0;
   }
 
@@ -1287,8 +1269,10 @@
   }
 
   .ranking--under .pool__items {
-    gap: 10px;
-    max-height: calc(var(--dock-rows, 2) * 90px + (var(--dock-rows, 2) - 1) * 10px + 6px);
+    gap: var(--tile-gap);
+    max-height: calc(
+      var(--dock-rows, 2) * var(--tile-h) + (var(--dock-rows, 2) - 1) * var(--tile-gap) + 6px
+    );
   }
 
   .ranking--under .pool__none {

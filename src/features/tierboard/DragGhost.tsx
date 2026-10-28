@@ -1,16 +1,19 @@
 import type { CSSProperties } from "react";
 import type { PublishedItem } from "../../api/types";
 import type { DragState } from "./drag";
+import { CardName } from "./CardName";
+import type { BoardSize } from "./nameFit";
 import { sizedFor } from "../../lib/pictureSize";
 
 interface DragGhostProps {
   state: DragState;
   items: PublishedItem[];
+  board: BoardSize;
 }
 
 const TILT = "rotate(-4deg) scale(1.06)";
 
-export function DragGhost({ state, items }: DragGhostProps) {
+export function DragGhost({ state, items, board }: DragGhostProps) {
   if (state.phase !== "dragging") return null;
   const card = items[state.item];
   if (card === undefined) return null;
@@ -28,7 +31,7 @@ export function DragGhost({ state, items }: DragGhostProps) {
       {card.imageUrl !== null ? (
         <img {...sizedFor(card.imageUrl, 64)} alt="" />
       ) : (
-        <span className="tile__name">{card.title}</span>
+        <CardName title={card.title} board={board} />
       )}
     </div>
   );

@@ -83,6 +83,14 @@ describe("routes", () => {
     await vi.waitFor(() => expect(router.state.location.pathname).toBe("/b"));
   });
 
+  it("makes a list at /b/new, and leads the old /new there with what it asked for", async () => {
+    const router = open("/new?title=Cheeses&category=food");
+    // /new → /b/new → a board of its own, not kept until it is touched.
+    await vi.waitFor(() => expect(router.state.location.pathname).toMatch(/^\/b\/[0-9a-f-]{36}$/));
+    expect(router.state.location.search).toMatch(/^\?new=\d+&title=Cheeses&category=food$/);
+    expect(await screen.findByRole("textbox", { name: "Title" })).toHaveValue("Cheeses");
+  });
+
   it("says so when there is nothing at an address, and leads home", async () => {
     open("/nothing/here");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
