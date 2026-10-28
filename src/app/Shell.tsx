@@ -85,6 +85,29 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
   );
 }
 
+/** Where each of the app's two tabs is "here": your own lists, or everybody's. */
+const OWN_PAGES = /^\/(b|trash)(\/|$)/;
+const COMMUNITY_PAGES = /^\/(following|s|search|l|u|r)?(\/|$)/;
+
+/**
+ * The app's two places, Your lists and Community, as tabs: in the bar from
+ * 600, and on a phone in a row under it on the pages they lead to.
+ */
+function SiteTabs({ className, pathname }: { className: string; pathname: string }) {
+  const own = OWN_PAGES.test(pathname);
+  const community = !own && COMMUNITY_PAGES.test(pathname);
+  return (
+    <nav className={`site-tabs ${className}`} aria-label={strings.nav.site}>
+      <Link className="site-tabs__tab" to="/b" aria-current={own ? "page" : undefined}>
+        {strings.nav.boards}
+      </Link>
+      <Link className="site-tabs__tab" to="/" aria-current={community ? "page" : undefined}>
+        {strings.sections.community}
+      </Link>
+    </nav>
+  );
+}
+
 /** The bar's field: starts with the words the page was asked for, and takes new ones to the search page. */
 function BarSearch({ asked }: { asked: string }) {
   const navigate = useNavigate();
@@ -154,6 +177,7 @@ export function Shell() {
             {pageTitle}
           </span>
         )}
+        <SiteTabs className="top__tabs" pathname={location.pathname} />
         {!home && <BarSearch key={asked} asked={asked} />}
         <nav className="top__actions" aria-label={strings.nav.site}>
           {!home && (
@@ -161,9 +185,6 @@ export function Shell() {
               <Icon name="search" />
             </Link>
           )}
-          <Link className="top__boards" to="/b" aria-label={strings.nav.boards}>
-            <Icon name="dashboard" />
-          </Link>
           <Link className="btn btn--tonal top__make" to="/b/new" aria-label={strings.nav.newList}>
             <Icon name="add" className="btn__icon top__make-icon" />
             <span className="top__make-text">{strings.nav.newList}</span>
@@ -184,6 +205,9 @@ export function Shell() {
           )}
         </nav>
       </header>
+      {/^\/(following|b)?$/.test(location.pathname) && (
+        <SiteTabs className="site-tabs--row" pathname={location.pathname} />
+      )}
       {signing === "inApp" && (
         <p className="top__banner" role="alert">
           {strings.keep.inApp}

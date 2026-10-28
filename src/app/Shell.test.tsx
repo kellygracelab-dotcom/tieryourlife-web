@@ -87,6 +87,14 @@ describe("Shell moderator", () => {
 });
 
 describe("Shell header", () => {
+  it("has the app's two tabs, Your lists and Community, marking the one the page belongs to", async () => {
+    open({}, "/");
+    const tabs = within(screen.getAllByRole("navigation", { name: "Site" })[0]!);
+    expect(tabs.getByRole("link", { name: "Community" })).toHaveAttribute("aria-current", "page");
+    expect(tabs.getByRole("link", { name: "Your lists" })).toHaveAttribute("href", "/b");
+    expect(tabs.getByRole("link", { name: "Your lists" })).not.toHaveAttribute("aria-current");
+  });
+
   // The theme and signing out are settings, and the header used to repeat both
   // behind three dots of its own.
   it("has no second menu: the theme is a setting, and a guest reaches settings from the foot", () => {
