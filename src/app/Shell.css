@@ -322,6 +322,11 @@
   background: var(--hover);
 }
 
+/* The line that cannot be taken back, or that accuses: Report, Take it down. */
+.menu__action--danger {
+  color: var(--error);
+}
+
 .top__make {
   margin-inline-end: var(--space-2);
 }

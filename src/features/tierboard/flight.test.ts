@@ -34,6 +34,12 @@ describe("flyIn", () => {
     expect(options).toEqual({ duration: FLIGHT_MS, easing: "cubic-bezier(.2,.7,.3,1)" });
   });
 
+  it("takes as long as it is told: the list page's switch moves its cards in 200 ms", () => {
+    const { tile, animate } = tileAt(rect(100, 500, 44, 62));
+    flyIn(tile, rect(20, 700, 44, 62), false, 200);
+    expect(animate.mock.calls[0]![1]).toMatchObject({ duration: 200 });
+  });
+
   it("fades in instead for someone who asked for less motion", () => {
     const { tile, animate } = tileAt(rect(100, 500, 44, 62));
     flyIn(tile, rect(20, 700, 52, 74), true);

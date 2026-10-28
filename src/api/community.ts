@@ -57,6 +57,45 @@ export function unfollowAuthor(
   );
 }
 
+/**
+ * One reader's placing of a list's cards: for each card, in the list's
+ * order, the tier they gave it, or null for one they left unranked.
+ */
+export interface ReaderRanking {
+  uid: string;
+  authorName: string;
+  authorPhotoUrl: string | null;
+  arrangement: (number | null)[];
+  /** The words they gave the tiers; a tier without one keeps the author's. */
+  tierLabels: string[];
+  updatedAtMs: number;
+  /** The caller's own, which leads the first page. */
+  mine: boolean;
+}
+
+export interface RankingsPage {
+  rankings: ReaderRanking[];
+  nextCursor: string | null;
+}
+
+/** Newest first, thirty at a time; the caller's own leads the first page. */
+export function loadListRankings(
+  client: ApiClient,
+  listId: string,
+  after: string | null = null,
+): Promise<RankingsPage> {
+  return client.request<RankingsPage>(
+    "GET",
+    `/lists/${encodeURIComponent(listId)}/rankings`,
+    after === null ? {} : { query: { after } },
+  );
+}
+
+/** Takes the caller's own placing of a list down; the backend answers 204 either way. */
+export function withdrawListRanking(client: ApiClient, listId: string): Promise<void> {
+  return client.request<void>("DELETE", `/lists/${encodeURIComponent(listId)}/rankings/mine`);
+}
+
 export interface SuggestedAuthor {
   uid: string;
   name: string;

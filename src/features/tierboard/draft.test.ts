@@ -4,6 +4,7 @@ import {
   clearDraft,
   draftKey,
   loadDraft,
+  loadPlacedDraft,
   parseDraft,
   saveDraft,
   serializeDraft,
@@ -57,6 +58,15 @@ describe("draft", () => {
     expect(loadDraft(store, scope)).toEqual([[0], [1, 2]]);
     clearDraft(store, "abc");
     expect(loadDraft(store, scope)).toBeNull();
+  });
+
+  it("counts a draft as begun only once a card in it is placed", () => {
+    const store = memoryStore();
+    expect(loadPlacedDraft(store, scope)).toBeNull();
+    saveDraft(store, scope, [[], []]);
+    expect(loadPlacedDraft(store, scope)).toBeNull();
+    saveDraft(store, scope, [[], [3]]);
+    expect(loadPlacedDraft(store, scope)).toEqual([[], [3]]);
   });
 });
 

@@ -142,6 +142,123 @@
   color: var(--ink-dim);
 }
 
+/*
+ * Under the title: the author with Follow, the rankings chip; the list it was
+ * made from under them. Title, 2 and a 28 chip fill the 72 row's 56 inside.
+ */
+.list-head__lines {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  min-width: 0;
+  margin-top: 2px;
+}
+
+.list-head__based-on {
+  margin-top: 2px;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+.list-head__based-on a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+}
+
+.list-head__based-on a:hover {
+  color: var(--ink);
+}
+
+/*
+ * Theirs | Mine: one pill, two equal halves, the chosen one filled and
+ * ticked. Equal grid columns are each as wide as the widest half needs.
+ */
+.whose {
+  display: grid;
+  flex: none;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  height: 40px;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  overflow: hidden;
+}
+
+.whose__half {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  color: var(--ink-dim);
+}
+
+.whose__half + .whose__half {
+  border-inline-start: 1px solid var(--line-strong);
+}
+
+.whose__half:hover:not(.whose__half--on) {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.whose__half--on {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.whose__segment {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: var(--text-label);
+  cursor: pointer;
+}
+
+.whose__check {
+  font-size: 16px;
+}
+
+/* A reader's name can be long; the half keeps to the width of a word or two. */
+.whose__label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.whose__back {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-inline-end: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.whose__back .ms {
+  font-size: 18px;
+}
+
+.whose__back:hover {
+  background: var(--hover);
+}
+
 .list-head__copy {
   display: inline-flex;
   align-items: center;
@@ -209,8 +326,8 @@
   color: var(--ok);
 }
 
-/* On a wide screen the button beside the menu copies the link; the menu need not repeat it. */
-.list-menu__copy {
+/* On a wide screen the head has its own Save button; the menu need not repeat it. */
+.list-menu__narrow {
   display: none;
 }
 
@@ -319,7 +436,6 @@
     font: 400 11px/15px var(--font);
   }
 
-  .list-head__own,
   .list-head__copy,
   .list-head__save {
     display: none;
@@ -331,7 +447,7 @@
     }
   }
 
-  .list-menu__copy {
+  .list-menu__narrow {
     display: block;
   }
 
@@ -339,6 +455,30 @@
     min-height: 32px;
     padding: 4px 14px;
     font-size: 13px;
+  }
+}
+
+/*
+ * On a phone the menu stays beside the title, and the switch is a row of its
+ * own under them, 32 high and the full width.
+ */
+@media (max-width: 599px) {
+  .list-head__text {
+    flex: 1 1 0;
+  }
+
+  .list-head__tools {
+    order: 1;
+  }
+
+  .whose {
+    flex-basis: 100%;
+    order: 2;
+    height: 32px;
+  }
+
+  .list-head__bar {
+    order: 3;
   }
 }
 

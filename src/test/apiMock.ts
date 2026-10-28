@@ -37,6 +37,8 @@ export function apiStubs() {
     followState: pending(),
     followAuthor: pending(),
     unfollowAuthor: pending(),
+    loadListRankings: pending(),
+    withdrawListRanking: pending(),
     suggestedAuthors: pending(),
     loadFollowing: pending(),
     makeFace: pending(),

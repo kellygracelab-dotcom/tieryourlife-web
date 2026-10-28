@@ -29,13 +29,28 @@ export interface FollowControls {
   followNow: () => void;
 }
 
+export interface FollowOptions {
+  /**
+   * Whether the page shows how many follow. Without the count a guest's
+   * answer is known without asking, and asking would sign a mere visitor in
+   * as a guest.
+   */
+  counted?: boolean;
+}
+
 /**
  * Following one author, the optimistic way: the button and the count change
  * on press and come back if the backend says no. A guest is told to sign in.
  */
-export function useFollow(authorUid: string, deps: FollowDeps = defaultDeps): FollowControls {
+export function useFollow(
+  authorUid: string,
+  deps: FollowDeps = defaultDeps,
+  { counted = true }: FollowOptions = {},
+): FollowControls {
   const { account } = useSession();
   const signedIn = account?.kind === "signedIn";
+  // A guest follows nobody; without a count to show, there is nothing to ask.
+  const unasked = account !== null && !signedIn && !counted;
   const [following, setFollowing] = useState<boolean | null>(null);
   const [followers, setFollowers] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
@@ -49,7 +64,7 @@ export function useFollow(authorUid: string, deps: FollowDeps = defaultDeps): Fo
   });
 
   useEffect(() => {
-    if (account === null) return;
+    if (account === null || unasked) return;
     let current = true;
     deps.state(authorUid).then(
       (state) => {
@@ -65,7 +80,7 @@ export function useFollow(authorUid: string, deps: FollowDeps = defaultDeps): Fo
     return () => {
       current = false;
     };
-  }, [authorUid, account, signedIn, deps]);
+  }, [authorUid, account, signedIn, unasked, deps]);
 
   useEffect(
     () => () => {
@@ -99,5 +114,5 @@ export function useFollow(authorUid: string, deps: FollowDeps = defaultDeps): Fo
 
   const followNow = useCallback(() => change(true), [change]);
 
-  return { following, followers, failed, toggle, followNow };
+  return { following: unasked ? false : following, followers, failed, toggle, followNow };
 }

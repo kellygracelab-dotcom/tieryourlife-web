@@ -5,7 +5,7 @@ import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { arrange } from "../tierboard/arrange";
-import { loadDraft, scopeOf } from "../tierboard/draft";
+import { loadPlacedDraft, scopeOf } from "../tierboard/draft";
 import type { Rows } from "../tierboard/model";
 import { boardFromList } from "./publish";
 import { boards as site, type BoardsRepository } from "./repository";
@@ -72,10 +72,9 @@ export function useSaveToMine(
 
   const start = useCallback(() => {
     const theirs = arrange(list);
-    const mine = loadDraft(store, scopeOf(list));
     const choices: SaveChoices = {
       theirs: theirs.known ? theirs.rows : null,
-      mine: mine !== null && mine.some((row) => row.length > 0) ? mine : null,
+      mine: loadPlacedDraft(store, scopeOf(list)),
     };
     if (choices.theirs === null && choices.mine === null) save("none", choices);
     else setAsking(choices);

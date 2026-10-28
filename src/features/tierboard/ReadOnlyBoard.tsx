@@ -12,9 +12,10 @@ interface ReadOnlyBoardProps {
   pool: readonly number[];
 }
 
-function Tile({ item }: { item: PublishedItem }) {
+// The card's place in the list, as the ranking board's tiles carry it: a switch between the two moves the same cards.
+function Tile({ item, position }: { item: PublishedItem; position: number }) {
   return (
-    <li className="tile" title={item.title}>
+    <li className="tile" title={item.title} data-item={position}>
       {item.imageUrl !== null ? (
         <img {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
       ) : (
@@ -27,7 +28,9 @@ function Tile({ item }: { item: PublishedItem }) {
 export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoardProps) {
   const tileOf = (position: number) => {
     const item = items[position];
-    return item === undefined ? null : <Tile key={`${position}-${item.title}`} item={item} />;
+    return item === undefined ? null : (
+      <Tile key={`${position}-${item.title}`} item={item} position={position} />
+    );
   };
   return (
     <section className="board" aria-label={label}>

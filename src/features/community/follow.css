@@ -23,6 +23,22 @@
   font-size: 13px;
 }
 
+/* In a line of text, beside the author's name: h28. */
+.follow--chip {
+  flex: none;
+  gap: 4px;
+  min-width: 0;
+  min-height: 28px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 14px;
+  font: 500 12px/16px var(--font);
+}
+
+.follow--chip .btn__icon {
+  font-size: 16px;
+}
+
 .follow--on,
 .follow--on:hover:not(:disabled) {
   background: transparent;
@@ -66,4 +82,28 @@
 
 .follow__failed .ms {
   font-size: 16px;
+}
+
+/* A list's author in its head: "by danylo", and Follow beside the name. */
+.byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+  margin: 0;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+.byline__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+}
+
+a.byline__name:hover {
+  color: var(--ink);
+  text-decoration: underline;
 }

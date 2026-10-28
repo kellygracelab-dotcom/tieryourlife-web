@@ -17,6 +17,20 @@ export const isCategory = (value: string): value is Category =>
 
 export type FeedSort = "recent" | "popular";
 
+/** The list another one was made from, credited the way the backend keeps it. */
+export interface BasedOn {
+  id: string;
+  title: string;
+  /** Null, or empty, when the original stands without an author. */
+  authorName: string | null;
+  /**
+   * The original's author, for a link to their page and to know an editorial
+   * original by. The backend does not send it yet; without it the name is
+   * only words.
+   */
+  authorUid?: string | null;
+}
+
 export interface ListSummary {
   id: string;
   title: string;
@@ -35,6 +49,8 @@ export interface ListSummary {
   /** The topic the list was published under, when it has one. */
   topicId?: string | null;
   topicName?: string | null;
+  /** Absent on lists made from nobody's, and on snapshots older than the credit. */
+  basedOn?: BasedOn | null;
 }
 
 export interface PublishedTier {

@@ -20,6 +20,8 @@ interface ReportDialogProps {
   /** A guest chose to sign in, or to hide the list instead. */
   onSignIn: () => void;
   onHideInstead: () => void;
+  /** The receipt's offer, as in the app's: everything from the author, when the box was left unticked. */
+  onHideAuthor?: () => void;
   onClose: () => void;
 }
 
@@ -34,6 +36,7 @@ export function ReportDialog({
   send,
   onSignIn,
   onHideInstead,
+  onHideAuthor,
   onClose,
 }: ReportDialogProps) {
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -105,6 +108,11 @@ export function ReportDialog({
         </h2>
         <p className="dialog__body">{strings.report.sentBody}</p>
         <div className="dialog__actions">
+          {authorName !== null && !hideAuthor && onHideAuthor !== undefined && (
+            <Button onClick={onHideAuthor}>
+              {fill(strings.report.hideAuthor, { name: authorName })}
+            </Button>
+          )}
           <Button variant="filled" onClick={onClose}>
             {strings.report.done}
           </Button>
