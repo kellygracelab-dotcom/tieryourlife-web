@@ -1,0 +1,268 @@
+/* The list's rankings: a chip in its head, and the sheet the chip opens. */
+.rankings-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px 0 8px;
+  padding-inline: 8px 12px;
+  border: none;
+  border-radius: 14px;
+  background: var(--chip);
+  color: var(--ink);
+  font: 500 12px/16px var(--font);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rankings-chip:hover {
+  box-shadow: inset 0 0 0 100px var(--hover);
+}
+
+.rankings-chip__icon {
+  font-size: 16px;
+  color: var(--ink-dim);
+}
+
+/* A bottom sheet below 840, at most 88 % of the screen; from 840 a side sheet 400 wide at the end. */
+.rankings-scrim {
+  align-items: flex-end;
+  padding: 0;
+}
+
+.rankings {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 88vh;
+  max-height: 88dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom);
+  border-start-start-radius: 28px;
+  border-start-end-radius: 28px;
+  background: var(--surface);
+  box-shadow: 0 -6px 30px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 840px) {
+  .rankings-scrim {
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+
+  .rankings {
+    width: 400px;
+    max-height: none;
+    border-radius: 0;
+    border-start-start-radius: 16px;
+    border-end-start-radius: 16px;
+  }
+}
+
+.rankings__head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 12px 4px 24px;
+  padding-inline: 24px 12px;
+  background: var(--surface);
+}
+
+.rankings__title {
+  flex: 1;
+  margin: 0;
+  font: 400 22px/28px var(--font);
+  color: var(--ink);
+}
+
+.rankings__close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.rankings__close:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.rankings__body {
+  margin: 0 24px 8px;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+.rankings__rows {
+  margin: 0;
+  padding: 0 0 8px;
+  list-style: none;
+}
+
+.rankings__item {
+  display: flex;
+  align-items: center;
+}
+
+/* Rows 56: a face, the name with its pill, the day under it. */
+.rankings__row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 56px;
+  padding: 8px 12px 8px 24px;
+  padding-inline: 24px 12px;
+  border: none;
+  background: none;
+  text-align: start;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.rankings__row:hover {
+  background: var(--hover);
+}
+
+.rankings__face {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.rankings__face--initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--link);
+  color: var(--on-link);
+  font: var(--text-label);
+}
+
+.rankings__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rankings__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font: 400 14px/20px var(--font);
+  color: var(--ink);
+}
+
+.rankings__name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rankings__pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font: 500 11px/16px var(--font);
+}
+
+.rankings__when {
+  font: 400 12px/16px var(--font);
+  color: var(--ink-faint);
+}
+
+.rankings__check {
+  flex: none;
+  font-size: 22px;
+  color: var(--link);
+}
+
+.rankings__withdraw {
+  flex: none;
+  margin-inline-end: 12px;
+  background: transparent;
+  color: var(--error);
+}
+
+.rankings__withdraw:hover {
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  color: var(--error);
+}
+
+/* The question before a withdrawal, in the sheet where the button was. */
+.rankings__ask {
+  margin: 4px 16px 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--error) 8%, var(--surface));
+}
+
+.rankings__ask-title {
+  font: 500 16px/24px var(--font);
+  color: var(--ink);
+}
+
+.rankings__ask-body {
+  margin-top: 4px;
+  font: 400 14px/20px var(--font);
+  color: var(--ink-dim);
+}
+
+.rankings__ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rankings__waiting {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 24px 16px;
+}
+
+.rankings__skeleton {
+  border-radius: 20px;
+}
+
+.rankings__foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 24px 24px;
+}
+
+.rankings__trouble {
+  margin: 0 24px 8px;
+  font: var(--text-small);
+  color: var(--error);
+}
+
+.rankings__foot .rankings__trouble {
+  margin: 0;
+}

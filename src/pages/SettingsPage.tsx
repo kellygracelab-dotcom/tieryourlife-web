@@ -13,7 +13,7 @@ import type { Publish } from "../features/account/useSaving";
 import { DataCard } from "../features/boards/DataCard";
 import { AccountTabs } from "../app/AccountTabs";
 import { useHidden } from "../features/community/useHidden";
-import { useSession } from "../app/session";
+import { useSession, useShowFace } from "../app/session";
 import { ThemeSwitch } from "../app/ThemeSwitch";
 import {
   eraseMyAccount,
@@ -21,7 +21,7 @@ import {
   makeFace as makeFaceOf,
   refreshPublishedAuthor,
 } from "../lib/api";
-import { uploadPicture } from "../lib/pictures";
+import { type CutFace, cutFaceOnCanvas, uploadPicture } from "../lib/pictures";
 import { renameAccount, setFace } from "../lib/profile";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
@@ -42,6 +42,7 @@ interface SettingsPageProps {
   face?: Face;
   upload?: UploadFace;
   makeFace?: MakeFace;
+  cut?: CutFace;
   refreshAuthor?: RefreshAuthor;
   erase?: Erase;
 }
@@ -197,12 +198,15 @@ export function SettingsPage({
   load = loadMyLists,
   rename = renameAccount,
   face = setFace,
-  upload = (file) => uploadPicture(file),
+  // A face is cut to its square already: it goes up as it is.
+  upload = (square) => uploadPicture(square, async (bytes) => bytes),
   makeFace = makeFaceOf,
+  cut = cutFaceOnCanvas,
   refreshAuthor = refreshPublishedAuthor,
   erase = eraseMyAccount,
 }: SettingsPageProps) {
   const { account, signIn, signOut, refresh } = useSession();
+  const showFace = useShowFace();
   const navigate = useNavigate();
 
   // The lists the person already published carry the name and face they were
@@ -267,6 +271,8 @@ export function SettingsPage({
             face={face}
             upload={upload}
             makeFace={makeFace}
+            cut={cut}
+            show={showFace}
             publish={publish}
           />
         </>

@@ -1,51 +1,22 @@
-import { useCallback, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
-import type { FollowedAuthor, SuggestedAuthor } from "../../api/community";
-import { useSession } from "../../app/session";
+import type { Following, SuggestedAuthor } from "../../api/community";
+import type { FeedQuery, ListSummary } from "../../api/types";
 import { followAuthor, loadFollowing, suggestedAuthors, unfollowAuthor } from "../../lib/api";
 import { isEditorialAuthor } from "../../lib/editorial";
-import { fill, plural, strings } from "../../strings";
-import { Button } from "../../ui/Button";
-import { useModal } from "../../ui/useModal";
-import { Icon } from "../../ui/Icon";
 import { useResource } from "../../lib/useResource";
+import { plural, strings } from "../../strings";
+import { Button } from "../../ui/Button";
+import { Icon } from "../../ui/Icon";
 import { FollowButton } from "../community/FollowButton";
+import { FollowingStrip } from "../sections/FollowingStrip";
+import { FollowSections } from "../sections/FollowSections";
+import { followedOf, NOTHING_FOLLOWED, reasonFor } from "../sections/following";
+import { OTHER, builtInSection, type Section } from "../sections/model";
+import { useSections, type SectionsStore, sectionsStore } from "../sections/useSections";
 import { FeedGrid } from "./FeedGrid";
-import type { FeedState } from "./useFeed";
-import { type FeedSource } from "./feedSource";
+import { useFeed, type LoadFeed } from "./useFeed";
 import "./following.css";
-
-/** Everyone or Following: two radios that look like one pill. */
-export function FeedSourceSwitch({
-  source,
-  onChange,
-}: {
-  source: FeedSource;
-  onChange: (source: FeedSource) => void;
-}) {
-  const options: { id: FeedSource; text: string }[] = [
-    { id: "everyone", text: strings.home.everyone },
-    { id: "following", text: strings.home.following },
-  ];
-  return (
-    <div className="theme feed-source" role="radiogroup" aria-label={strings.home.source}>
-      {options.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          role="radio"
-          aria-checked={source === option.id}
-          className="theme__option"
-          onClick={() => onChange(option.id)}
-        >
-          {source === option.id && <Icon name="check" className="theme__check" />}
-          {option.text}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export type LoadSuggestions = () => Promise<{ authors: SuggestedAuthor[] }>;
 export type Follow = (authorUid: string) => Promise<unknown>;
@@ -144,212 +115,111 @@ export function Suggestions({
   );
 }
 
-export type LoadFollowing = () => Promise<{ authors: FollowedAuthor[] }>;
+export type LoadFollowing = () => Promise<Following>;
 
-/** How many faces the strip shows; the list behind Manage has everyone. */
-export const FACES_SHOWN = 8;
+const FOLLOWING_FEED: FeedQuery = { following: true, sort: "recent" };
 
-/**
- * The people somebody follows, with Unfollow beside each. Unfollowing takes
- * the row away at once and brings it back, with a word, if it did not take.
- */
-function ManageFollowing({
-  authors,
-  unfollow,
-  onClose,
-}: {
-  authors: readonly FollowedAuthor[];
-  /** Asks the account; the strip that owns this list writes down the answer, open or closed. */
-  unfollow: Follow;
-  onClose: () => void;
-}) {
-  const [people, setPeople] = useState<readonly FollowedAuthor[]>(authors);
-  const [failed, setFailed] = useState<string | null>(null);
-  const box = useRef<HTMLDivElement>(null);
-
-  useModal(box, onClose, "button");
-
-  const drop = (person: FollowedAuthor) => {
-    setFailed(null);
-    setPeople((current) => current.filter((one) => one.uid !== person.uid));
-    unfollow(person.uid).then(
-      () => undefined,
-      () => {
-        setPeople((current) =>
-          authors.filter((one) => one.uid === person.uid || current.includes(one)),
-        );
-        setFailed(person.uid);
-      },
-    );
-  };
-
-  return createPortal(
-    <div className="scrim" onClick={onClose}>
-      <div
-        ref={box}
-        className="dialog manage-following"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="manage-following-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <h2 id="manage-following-title" className="dialog__title">
-          {strings.home.following}
-        </h2>
-        {people.length === 0 ? (
-          <p className="dialog__body">{strings.home.followingNobody}</p>
-        ) : (
-          <ul className="manage-following__list">
-            {people.map((person) => (
-              <li key={person.uid} className="manage-following__row">
-                <Link
-                  className="manage-following__who"
-                  to={`/u/${encodeURIComponent(person.uid)}`}
-                  state={{ author: { name: person.name, photoUrl: person.photoUrl } }}
-                >
-                  <Face author={person} className="manage-following__face" />
-                  <span className="manage-following__name">
-                    {person.name.trim() || strings.profile.someone}
-                  </span>
-                </Link>
-                <Button variant="tonal" onClick={() => drop(person)}>
-                  {strings.follow.unfollow}
-                </Button>
-                {failed === person.uid && (
-                  <p className="follow__failed manage-following__failed" role="alert">
-                    <Icon name="cloud_off" />
-                    {strings.follow.failed}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="dialog__actions">
-          <Button onClick={onClose}>{strings.boards.done}</Button>
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
-}
-
-/**
- * Who the following feed is made of, above it: a row of faces and the way to
- * the list that unfollows. The faces are a reminder, not buttons; the list is
- * where a person is acted on. Shown only once the people are known.
- */
-export function FollowedStrip({
-  uid,
-  load = loadFollowing,
-  unfollow = unfollowAuthor,
-  onChanged,
-}: {
+interface FollowingTabProps {
   uid: string;
-  load?: LoadFollowing;
-  unfollow?: Follow;
-  /** Somebody was unfollowed: the feed behind the strip is stale. */
-  onChanged: () => void;
-}) {
-  const loadFor = useCallback(() => load(), [load]);
-  const { state } = useResource(uid, loadFor);
-  const [managing, setManaging] = useState(false);
-  // Whoever the account confirmed as unfollowed leaves the strip, and the
-  // feed is read again, when the answer comes: the dialog may be closed by
-  // then, which is why the strip, not the dialog, keeps the count. The list is
-  // not read again for it: a reload would take the strip, and with it the
-  // Manage button the focus goes back to, off the page for a moment.
-  const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
-  const unfollowAndNote = useCallback(
-    (authorUid: string) =>
-      unfollow(authorUid).then((answer) => {
-        setGone((before) => new Set([...before, authorUid]));
-        onChanged();
-        return answer;
-      }),
-    [unfollow, onChanged],
-  );
-  const closeManage = useCallback(() => setManaging(false), []);
-  if (state.status !== "ready") return null;
-  const authors = state.value.authors.filter((person) => !gone.has(person.uid));
-  if (authors.length === 0) return null;
-  return (
-    <div className="followed">
-      <div className="followed__line">
-        <p className="followed__count">{plural(strings.home.youFollow, authors.length)}</p>
-        <Button onClick={() => setManaging(true)}>{strings.home.manageFollowing}</Button>
-      </div>
-      <ul className="followed__faces" aria-hidden="true">
-        {authors.slice(0, FACES_SHOWN).map((person) => (
-          <li key={person.uid}>
-            <Face author={person} className="followed__face" />
-          </li>
-        ))}
-      </ul>
-      {managing && (
-        <ManageFollowing authors={authors} unfollow={unfollowAndNote} onClose={closeManage} />
-      )}
-    </div>
-  );
-}
-
-/** The Following feed with its own empty states; the grid itself is the usual one. */
-export function FollowingFeed({
-  state,
-  retry,
-  more,
-  onSeeEveryone,
-  loadSuggestions,
-  loadFollowing: loadPeople,
-  follow,
-  unfollow,
-}: {
-  state: FeedState;
-  retry: () => void;
-  more: () => void;
-  onSeeEveryone: () => void;
-  loadSuggestions?: LoadSuggestions;
+  load?: LoadFeed;
   loadFollowing?: LoadFollowing;
+  loadSuggestions?: LoadSuggestions;
   follow?: Follow;
   unfollow?: Follow;
-}) {
-  const { account } = useSession();
-  const uid = account?.kind === "signedIn" ? account.uid : "";
-  // The people behind the feed. It stays while the feed is read again after
-  // an unfollow, so the strip, and the focus on its Manage button, do not
-  // blink away; it goes only when the feed says nobody is followed.
-  const strip = !(state.status === "ready" && state.followingNobody) && (
-    <FollowedStrip uid={uid} load={loadPeople} unfollow={unfollow} onChanged={retry} />
+  store?: SectionsStore;
+}
+
+/**
+ * The Following tab, as the app has it: what the person follows in a strip,
+ * then the lists those bring, newest first, each saying why it is there. With
+ * nothing followed yet, the sections to follow, and people worth following.
+ */
+export function FollowingTab({
+  uid,
+  load,
+  loadFollowing: loadFollowed = loadFollowing,
+  loadSuggestions,
+  follow,
+  unfollow,
+  store = sectionsStore,
+}: FollowingTabProps) {
+  const feed = useFeed(FOLLOWING_FEED, load);
+  const { sections } = useSections(store);
+  // What is followed is read again whenever the feed is: a follow made from
+  // the empty state's tiles changes both.
+  const [round, setRound] = useState(0);
+  const loadFor = useCallback(() => loadFollowed(), [loadFollowed]);
+  const followed = useResource(`${uid}:${round}`, loadFor);
+  const following = followed.state.status === "ready" ? followed.state.value : null;
+
+  const byId = useMemo(() => new Map(sections.map((one) => [one.id, one])), [sections]);
+  const sectionOf = useCallback(
+    (id: string | null): Section => byId.get(id ?? OTHER) ?? builtInSection(OTHER),
+    [byId],
   );
-  if (state.status === "error") {
+  const sets = useMemo(() => {
+    const known = following === null ? NOTHING_FOLLOWED : followedOf(following);
+    // The sections the site knows to be followed are the freshest word.
+    const followedSections = new Set(sections.filter((one) => one.following).map((one) => one.id));
+    return { ...known, sections: followedSections };
+  }, [following, sections]);
+  const reasonOf = useCallback(
+    (list: ListSummary) => reasonFor(list, sets, (id) => sectionOf(id).name),
+    [sets, sectionOf],
+  );
+
+  const toggleSection = (section: Section) => {
+    void store.setFollowing(section.id, !section.following).then(() => {
+      setRound((n) => n + 1);
+      feed.retry();
+    });
+  };
+
+  if (feed.state.status === "error") {
     return (
       <div className="feed__trouble" role="alert">
         <p>{strings.home.followingFailed}</p>
-        <Button variant="tonal" icon="refresh" onClick={retry}>
+        <Button variant="tonal" icon="refresh" onClick={feed.retry}>
           {strings.feed.tryAgain}
         </Button>
       </div>
     );
   }
-  if (state.status === "ready" && state.followingNobody) {
+
+  const nobody =
+    feed.state.status === "ready" && feed.state.followingNobody && sets.sections.size === 0;
+  if (nobody) {
     return (
       <>
         <div className="following-empty">
-          <Icon name="group" className="following-empty__icon" />
-          <p className="following-empty__title">{strings.home.followingNobody}</p>
-          <p className="following-empty__body">{strings.home.followingNobodyBody}</p>
+          <p className="following-empty__title">{strings.sections.emptyTitle}</p>
+          <p className="following-empty__body">{strings.sections.emptyBody}</p>
         </div>
+        <FollowSections sections={sections} onToggle={toggleSection} />
+        <p className="following-empty__helper">{strings.sections.emptyHelper}</p>
         <Suggestions uid={uid} load={loadSuggestions} follow={follow} unfollow={unfollow} />
       </>
     );
   }
-  if (state.status === "ready" && state.lists.length === 0) {
+
+  const strip = following !== null && (
+    <FollowingStrip
+      // What one follows, and one's own sections still waiting for a moderator.
+      sections={sections.filter((one) => one.following || one.status === "pending")}
+      topics={following.topics}
+      people={following.authors.filter((person) => !isEditorialAuthor(person.uid))}
+      sectionOf={sectionOf}
+    />
+  );
+  if (feed.state.status === "ready" && feed.state.lists.length === 0) {
     return (
       <>
         {strip}
         <div className="following-empty">
-          <p className="following-empty__body">{strings.home.followingNothing}</p>
-          <Button onClick={onSeeEveryone}>{fill(strings.home.seeEveryone, {})}</Button>
+          <p className="following-empty__body">{strings.sections.nothingPublished}</p>
+          <Link className="btn btn--tonal" to="/">
+            <span>{strings.sections.goExplore}</span>
+          </Link>
         </div>
       </>
     );
@@ -357,7 +227,13 @@ export function FollowingFeed({
   return (
     <>
       {strip}
-      <FeedGrid state={state} label={strings.home.followingHeading} retry={retry} more={more} />
+      <FeedGrid
+        state={feed.state}
+        label={strings.sections.tabFollowing}
+        retry={feed.retry}
+        more={feed.more}
+        reasonOf={reasonOf}
+      />
     </>
   );
 }

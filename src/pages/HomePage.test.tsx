@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 describe("HomePage", () => {
-  it("leads to the nine categories and shows what is popular", async () => {
+  it("leads to the sections and shows what is popular this week", async () => {
     mocks.loadFeed.mockResolvedValue({
       lists: [summary("a1", "Every A24 film, ranked"), summary("b2", "Ghibli, ranked")],
       nextCursor: "c1",
@@ -54,25 +54,32 @@ describe("HomePage", () => {
     const tiles = within(screen.getByRole("navigation", { name: "Categories" })).getAllByRole(
       "link",
     );
+    // The nine, in the app's order, until the backend says otherwise.
     expect(tiles.map((tile) => tile.getAttribute("href"))).toEqual(
-      CATEGORIES.map((id) => `/c/${id}`),
+      CATEGORIES.map((id) => `/s/${id}`),
     );
     expect(screen.getByRole("link", { name: "Film & TV" })).toBeInTheDocument();
 
-    expect(screen.getByRole("heading", { name: "Popular" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Popular this week" })).toBeInTheDocument();
     expect(mocks.loadFeed).toHaveBeenCalledWith({ sort: "popular" });
     expect(await screen.findByRole("link", { name: /Every A24 film, ranked/ })).toBeInTheDocument();
     expect(screen.getAllByText("34 cards · 2,140 rankings")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
   });
 
-  it("opens a category from its tile", async () => {
+  it("opens a section from its tile", async () => {
     mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
     open();
     await userEvent.click(screen.getByRole("link", { name: "Games" }));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Games");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Games");
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({ category: "games", sort: "popular" });
     expect(await screen.findByText("Nothing published yet")).toBeInTheDocument();
+  });
+
+  it("leads a section's old address to its new one", async () => {
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    open("/c/books");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Books");
   });
 
   it("keeps the front page useful when the feed fails", async () => {

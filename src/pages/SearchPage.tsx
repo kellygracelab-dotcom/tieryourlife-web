@@ -1,3 +1,4 @@
+import { sectionPath } from "../features/sections/model";
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { CATEGORIES, isCategory, type Category, type FeedSort } from "../api/types";
@@ -107,7 +108,7 @@ export function SearchPage() {
     filters.category === undefined ? (
       <Link to="/">{strings.search.browseHome}</Link>
     ) : (
-      <Link to={`/c/${filters.category}`}>{strings.category[filters.category]}</Link>
+      <Link to={sectionPath(filters.category)}>{strings.category[filters.category]}</Link>
     );
   const nothing = searching && feed.state.status === "ready" && feed.state.lists.length === 0;
 
@@ -126,14 +127,18 @@ export function SearchPage() {
           </p>
         )}
       </div>
-      <div className="search__chips" role="group" aria-label={strings.search.sortBy}>
-        <Chip selected={filters.sort === "popular"} onClick={() => set({ sort: "popular" })}>
-          {strings.search.mostRanked}
-        </Chip>
-        <Chip selected={filters.sort === "recent"} onClick={() => set({ sort: "recent" })}>
-          {strings.search.newest}
-        </Chip>
-      </div>
+      {/* Words are matched against titles, and the backend orders those by
+          title whatever is asked: an order chip would change nothing. */}
+      {!searching && (
+        <div className="search__chips" role="group" aria-label={strings.search.sortBy}>
+          <Chip selected={filters.sort === "popular"} onClick={() => set({ sort: "popular" })}>
+            {strings.search.mostRanked}
+          </Chip>
+          <Chip selected={filters.sort === "recent"} onClick={() => set({ sort: "recent" })}>
+            {strings.search.newest}
+          </Chip>
+        </div>
+      )}
       <div className="search__chips" role="group" aria-label={strings.search.categories}>
         <Chip
           selected={filters.category === undefined}
@@ -154,7 +159,14 @@ export function SearchPage() {
             <p className="search__empty-body">{fillNodes(strings.search.browseHint, { where })}</p>
           </div>
           <p className="search__make">
-            <Link className="btn btn--tonal" to={`/new?title=${encodeURIComponent(filters.q)}`}>
+            {/* The words become the list's name, and the section searched in its section. */}
+            <Link
+              className="btn btn--tonal"
+              to={`/b/new?${new URLSearchParams({
+                title: filters.q,
+                ...(filters.category !== undefined ? { category: filters.category } : {}),
+              }).toString()}`}
+            >
               <Icon name="add" className="btn__icon" />
               <span>{strings.search.makeThis}</span>
             </Link>

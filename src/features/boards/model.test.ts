@@ -7,6 +7,7 @@ import {
   BOARD_LIMITS,
   dropItem,
   editTier,
+  isNarrowed,
   itemsIn,
   liveItems,
   moveItem,
@@ -23,8 +24,10 @@ import {
   restoreBoard,
   restoreItem,
   restoreTier,
+  setCategory,
   setCover,
   setFavourite,
+  setTopic,
   shouldGroup,
   tierShares,
   trashBoard,
@@ -344,28 +347,84 @@ describe("the list of boards", () => {
       at("star2", 0, { favouritedAt: 20 }),
       at("gone", 5, { deletedAt: 6 }),
     ];
-    const arranged = arrangeBoards(boards, "newest");
+    const arranged = arrangeBoards(boards, "recent");
     expect(arranged.favourites.map((b) => b.uid)).toEqual(["star2", "star1"]);
     expect(arranged.rest.map((b) => b.uid)).toEqual(["new", "old"]);
-    expect(arrangeBoards(boards, "oldest").rest.map((b) => b.uid)).toEqual(["old", "new"]);
     expect(shouldGroup(arranged, false)).toBe(true);
     expect(shouldGroup(arranged, true)).toBe(false);
-    expect(shouldGroup(arrangeBoards([at("x", 1)], "newest"), false)).toBe(false);
+    expect(shouldGroup(arrangeBoards([at("x", 1)], "recent"), false)).toBe(false);
   });
 
-  it("narrows by category, by whether it is public, and by words in the name", () => {
+  it("orders the rest by name, by most ranked and by most in the pool, the last touch breaking ties", () => {
+    /** A board with `ranked` cards in S and `waiting` in the pool. */
+    const filled = (uid: string, editedAt: number, ranked: number, waiting: number) => {
+      const next = uids();
+      const b = addToPool(
+        newBoard(uid, uid, editedAt, next),
+        Array.from({ length: ranked + waiting }, (_, i) => ({ title: `c${i}`, imageUrl: null })),
+        editedAt,
+        next,
+      );
+      const s = liveItems(b)
+        .slice(0, ranked)
+        .map((item) => item.uid);
+      return { ...arrangeItems(b, [s, [], [], [], []], editedAt), editedAt };
+    };
     const boards = [
-      at("films", 1, { category: "film_tv", publishedId: "p1" }),
-      at("games", 2, { category: "games" }),
+      filled("banana", 1, 1, 5),
+      filled("Apple", 2, 4, 0),
+      filled("cherry", 3, 0, 2),
+      filled("apple", 4, 1, 1),
+    ];
+    const order = (sort: Parameters<typeof arrangeBoards>[1]) =>
+      arrangeBoards(boards, sort).rest.map((b) => b.uid);
+    expect(order("recent")).toEqual(["apple", "cherry", "Apple", "banana"]);
+    expect(order("name")).toEqual(["apple", "Apple", "banana", "cherry"]);
+    expect(order("ranked")).toEqual(["Apple", "apple", "banana", "cherry"]);
+    expect(order("pool")).toEqual(["banana", "cherry", "apple", "Apple"]);
+  });
+
+  it("shows the ones in progress, the public ones and the copies of somebody else's, and narrows by words", () => {
+    const next = uids();
+    const waiting = addToPool(
+      newBoard("waiting", "waiting", 4, next),
+      [{ title: "a", imageUrl: null }],
+      4,
+      next,
+    );
+    const [card] = liveItems(waiting).map((item) => item.uid);
+    const done = { ...arrangeItems(waiting, [[card!], [], [], [], []], 5), uid: "done" };
+    const boards = [
+      at("films", 1, { publishedId: "p1", authorName: "danylo" }),
+      at("saved", 2, { authorName: "someone" }),
       at("Pizza in Lisbon", 3),
+      waiting,
+      done,
     ];
     const ids = (filters: Parameters<typeof arrangeBoards>[2]) =>
-      arrangeBoards(boards, "newest", filters).rest.map((b) => b.uid);
-    expect(ids({ category: "games" })).toEqual(["games"]);
-    expect(ids({ published: "public" })).toEqual(["films"]);
-    expect(ids({ published: "private" })).toEqual(["Pizza in Lisbon", "games"]);
+      arrangeBoards(boards, "recent", filters).rest.map((b) => b.uid);
+    expect(ids({ show: "all" })).toHaveLength(5);
+    // Nothing ranked yet, or something still in the pool; every card placed is done.
+    expect(ids({ show: "inProgress" })).toEqual(["waiting", "Pizza in Lisbon", "saved", "films"]);
+    expect(ids({ show: "public" })).toEqual(["films"]);
+    // A list one published carries one's own name: it is not somebody else's.
+    expect(ids({ show: "saved" })).toEqual(["saved"]);
     expect(ids({ query: "PIZ" })).toEqual(["Pizza in Lisbon"]);
-    expect(ids({ query: "  " })).toHaveLength(3);
+    expect(ids({ query: "  " })).toHaveLength(5);
+    expect(isNarrowed({ show: "all", query: " " })).toBe(false);
+    expect(isNarrowed({ show: "saved" })).toBe(true);
+    expect(isNarrowed({ query: "x" })).toBe(true);
+  });
+
+  it("forgets the topic with the section it belongs to, and leaves the copy behind on a new one", () => {
+    const b = { ...at("x", 1), category: "games" as const };
+    const topic = { id: "t1", name: "Pokémon" };
+    const withTopic = setTopic(b, topic, 2);
+    expect(withTopic).toMatchObject({ topic, editedAt: 2 });
+    expect(setTopic(withTopic, { ...topic }, 3)).toBe(withTopic);
+    expect(setCategory(withTopic, "games", 4)).toBe(withTopic);
+    expect(setCategory(withTopic, "anime", 4)).toMatchObject({ category: "anime", topic: null });
+    expect(setTopic(withTopic, null, 5).topic).toBeNull();
   });
 
   it("stars and unstars without touching the edit time", () => {

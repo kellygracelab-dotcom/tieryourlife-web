@@ -12,7 +12,7 @@ import {
   type SignInOutcome,
 } from "../lib/signIn";
 import { localStorageStore } from "../lib/storage";
-import { SessionContext } from "./session";
+import { SessionContext, ShowFaceContext } from "./session";
 
 interface SessionProviderProps {
   children: ReactNode;
@@ -44,6 +44,8 @@ export function SessionProvider({
   current = currentAccount,
 }: SessionProviderProps) {
   const [account, setAccount] = useState<Account | null>(null);
+  // A face chosen a moment ago and still on its way to Firebase.
+  const [shownFace, showFace] = useState<string | null | undefined>(undefined);
 
   useEffect(() => subscribe(setAccount), [subscribe]);
 
@@ -53,8 +55,20 @@ export function SessionProvider({
   }, [complete]);
 
   const session = useMemo(
-    () => ({ account, signIn, signOut, refresh: () => setAccount(current()) }),
-    [account, signIn, signOut, current],
+    () => ({
+      account:
+        account?.kind === "signedIn" && shownFace !== undefined
+          ? { ...account, photoUrl: shownFace }
+          : account,
+      signIn,
+      signOut,
+      refresh: () => setAccount(current()),
+    }),
+    [account, shownFace, signIn, signOut, current],
   );
-  return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={session}>
+      <ShowFaceContext.Provider value={showFace}>{children}</ShowFaceContext.Provider>
+    </SessionContext.Provider>
+  );
 }

@@ -14,7 +14,12 @@ export const prefersReducedMotion = (): boolean =>
  * twice and the row's height never moves. Any animation the stylesheet
  * started on the tile (its landing) gives way.
  */
-export function flyIn(tile: HTMLElement, from: DOMRect, reduced = prefersReducedMotion()): void {
+export function flyIn(
+  tile: HTMLElement,
+  from: DOMRect,
+  reduced = prefersReducedMotion(),
+  duration = FLIGHT_MS,
+): void {
   if (typeof tile.animate !== "function") return;
   for (const running of tile.getAnimations?.() ?? []) running.cancel();
   if (reduced) {
@@ -31,6 +36,6 @@ export function flyIn(tile: HTMLElement, from: DOMRect, reduced = prefersReduced
       { transformOrigin: "top left", transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
       { transformOrigin: "top left", transform: "none" },
     ],
-    { duration: FLIGHT_MS, easing: FLIGHT_EASING },
+    { duration, easing: FLIGHT_EASING },
   );
 }

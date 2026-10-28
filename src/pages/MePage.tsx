@@ -181,7 +181,7 @@ function Row({ entry, remove, copy, notify, onGone }: RowProps) {
                 </li>
                 {entry.kind === "ranking" && (
                   <li>
-                    <Link to={`/new?ranking=${encodeURIComponent(entry.ranking.code)}`}>
+                    <Link to={`/b/new?ranking=${encodeURIComponent(entry.ranking.code)}`}>
                       {strings.me.publishAsMine}
                     </Link>
                   </li>

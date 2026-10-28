@@ -1,7 +1,19 @@
 import type { ApiClient } from "./client";
+import type { Topic } from "./sections";
+import type { Category } from "./types";
 
-/** The proxy's five reasons, in the order the app shows them. */
-export const REPORT_REASONS = ["sexual", "hate", "violence", "spam", "other"] as const;
+/**
+ * The proxy's reasons, in the order the app's report sheet shows them. The
+ * last one never hides a list: a list in the wrong place is moved, not hidden.
+ */
+export const REPORT_REASONS = [
+  "sexual",
+  "violence",
+  "hate",
+  "spam",
+  "other",
+  "wrong_category",
+] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
 /** A note longer than this is cut by the backend anyway. */
@@ -45,6 +57,45 @@ export function unfollowAuthor(
   );
 }
 
+/**
+ * One reader's placing of a list's cards: for each card, in the list's
+ * order, the tier they gave it, or null for one they left unranked.
+ */
+export interface ReaderRanking {
+  uid: string;
+  authorName: string;
+  authorPhotoUrl: string | null;
+  arrangement: (number | null)[];
+  /** The words they gave the tiers; a tier without one keeps the author's. */
+  tierLabels: string[];
+  updatedAtMs: number;
+  /** The caller's own, which leads the first page. */
+  mine: boolean;
+}
+
+export interface RankingsPage {
+  rankings: ReaderRanking[];
+  nextCursor: string | null;
+}
+
+/** Newest first, thirty at a time; the caller's own leads the first page. */
+export function loadListRankings(
+  client: ApiClient,
+  listId: string,
+  after: string | null = null,
+): Promise<RankingsPage> {
+  return client.request<RankingsPage>(
+    "GET",
+    `/lists/${encodeURIComponent(listId)}/rankings`,
+    after === null ? {} : { query: { after } },
+  );
+}
+
+/** Takes the caller's own placing of a list down; the backend answers 204 either way. */
+export function withdrawListRanking(client: ApiClient, listId: string): Promise<void> {
+  return client.request<void>("DELETE", `/lists/${encodeURIComponent(listId)}/rankings/mine`);
+}
+
 export interface SuggestedAuthor {
   uid: string;
   name: string;
@@ -64,9 +115,26 @@ export interface FollowedAuthor {
   photoUrl: string | null;
 }
 
-/** Whom this person follows; the backend answers `topics` too, which the site leaves alone. */
-export function loadFollowing(client: ApiClient): Promise<{ authors: FollowedAuthor[] }> {
-  return client.request<{ authors: FollowedAuthor[] }>("GET", "/lists/following");
+/** A section this person follows, with how many others do. */
+export interface FollowedSection {
+  id: Category;
+  followerCount: number;
+}
+
+/** Everyone and everything this person follows: people, topics and sections. */
+export interface Following {
+  authors: FollowedAuthor[];
+  topics: Topic[];
+  sections: FollowedSection[];
+}
+
+export async function loadFollowing(client: ApiClient): Promise<Following> {
+  const answer = await client.request<Partial<Following>>("GET", "/lists/following");
+  return {
+    authors: answer.authors ?? [],
+    topics: answer.topics ?? [],
+    sections: answer.sections ?? [],
+  };
 }
 
 /**

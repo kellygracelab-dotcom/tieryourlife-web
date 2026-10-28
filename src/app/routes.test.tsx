@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
+import firebaseJson from "../../firebase.json?raw";
 import { routes } from "./routes";
 
 vi.mock("../lib/api", async () => ({
@@ -18,8 +19,18 @@ vi.mock("../lib/api", async () => ({
   noteTake: vi.fn(),
 }));
 
-const open = (path: string) =>
-  render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: [path] })} />);
+const open = (path: string) => {
+  const router = createMemoryRouter(routes, { initialEntries: [path] });
+  render(<RouterProvider router={router} />);
+  return router;
+};
+
+/** The first word of every page's address, e.g. "b" for b/:uid. */
+const pageWords = (list: typeof routes): string[] =>
+  list.flatMap((route) => [
+    ...(route.path ? [route.path.split("/")[0] ?? ""] : []),
+    ...pageWords(route.children ?? []),
+  ]);
 
 describe("routes", () => {
   it("shows the hero and a search box on the front page", () => {
@@ -41,12 +52,43 @@ describe("routes", () => {
   it("has one place for a person's own lists and rankings, and the old address leads to it", async () => {
     open("/me");
     // A page of its own chunk: it arrives a moment after the address.
-    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("My lists");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Your public lists");
   });
 
   it("leads the lists' old address to the same place", async () => {
     open("/me/lists");
-    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("My lists");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Your public lists");
+  });
+
+  it("keeps every page off the addresses Hosting hands to a function", () => {
+    // Such a page works when reached by a click, and shows the function's JSON
+    // when its address is typed, reloaded or shared: /boards did exactly that.
+    const { hosting } = JSON.parse(firebaseJson) as {
+      hosting: { rewrites: { source: string; function?: { functionId: string } }[] }[];
+    };
+    // "web" is the site's own: it answers /l/ and /r/ with the page itself.
+    const toFunctions = hosting
+      .flatMap((site) => site.rewrites)
+      .filter((rewrite) => rewrite.function !== undefined && rewrite.function.functionId !== "web")
+      .map((rewrite) => (rewrite.source.split("/")[1] ?? "").replace(/\{.*$/, ""));
+    const clashes = pageWords(routes).filter(
+      (word) => toFunctions.includes(word) && word !== "boards",
+    );
+    expect(toFunctions).toContain("boards");
+    expect(clashes).toEqual([]);
+  });
+
+  it("leads the old /boards address of the lists to /b, inside the site", async () => {
+    const router = open("/boards");
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe("/b"));
+  });
+
+  it("makes a list at /b/new, and leads the old /new there with what it asked for", async () => {
+    const router = open("/new?title=Cheeses&category=food");
+    // /new → /b/new → a board of its own, not kept until it is touched.
+    await vi.waitFor(() => expect(router.state.location.pathname).toMatch(/^\/b\/[0-9a-f-]{36}$/));
+    expect(router.state.location.search).toMatch(/^\?new=\d+&title=Cheeses&category=food$/);
+    expect(await screen.findByRole("textbox", { name: "Title" })).toHaveValue("Cheeses");
   });
 
   it("says so when there is nothing at an address, and leads home", async () => {

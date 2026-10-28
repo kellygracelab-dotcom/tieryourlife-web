@@ -19,11 +19,31 @@ interface FeedGridProps {
   paged?: boolean;
   /** Say how many hidden lists were left out, as search results do. */
   hiddenNote?: boolean;
+  /** Why a list is there, for a Following feed. */
+  reasonOf?: (list: ListSummary) => string | null;
 }
 
 type Slot = { kind: "card"; list: ListSummary } | { kind: "hidden"; list: ListSummary };
 
-const PLACEHOLDERS = [0, 1, 2, 3, 4, 5, 6, 7];
+const PLACEHOLDERS = [0, 1, 2, 3, 4, 5];
+
+/** A card still on its way: the same boxes, flat, breathing with the rest. */
+function CardPlaceholder() {
+  return (
+    <div className="list-card list-card--placeholder">
+      <Skeleton height="var(--card-cover)" className="list-card__cover-placeholder" />
+      <span className="list-card__body">
+        <Skeleton width="85%" height="13px" />
+        <Skeleton width="50%" height="13px" />
+        <span className="list-card__author">
+          <Skeleton width="20px" height="20px" className="list-card__face" />
+          <Skeleton width="56px" height="10px" />
+        </span>
+        <Skeleton width="110px" height="10px" />
+      </span>
+    </div>
+  );
+}
 
 export function FeedGrid({
   state,
@@ -32,13 +52,14 @@ export function FeedGrid({
   more,
   paged = true,
   hiddenNote = false,
+  reasonOf,
 }: FeedGridProps) {
   const { hidden, hiddenThisVisit, showList } = useHidden();
   if (state.status === "loading") {
     return (
       <div className="feed feed--loading" aria-busy="true" aria-label={label}>
         {PLACEHOLDERS.map((n) => (
-          <Skeleton key={n} height="200px" className="feed__placeholder" />
+          <CardPlaceholder key={n} />
         ))}
       </div>
     );
@@ -86,7 +107,7 @@ export function FeedGrid({
         {slots.map(({ kind, list }) => (
           <li key={list.id}>
             {kind === "card" ? (
-              <ListCard list={list} />
+              <ListCard list={list} reason={reasonOf?.(list) ?? null} />
             ) : (
               <div className="feed__hidden" role="status">
                 <Icon name="visibility_off" />

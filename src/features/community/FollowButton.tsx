@@ -5,8 +5,8 @@ import "./follow.css";
 interface FollowButtonProps {
   following: boolean | null;
   onClick: () => void;
-  /** A card's button is shorter and fills its width. */
-  size?: "profile" | "card";
+  /** A card's button is shorter and fills its width; a chip sits in a line of text. */
+  size?: "profile" | "card" | "chip";
 }
 
 /**
@@ -16,7 +16,7 @@ interface FollowButtonProps {
  */
 export function FollowButton({ following, onClick, size = "profile" }: FollowButtonProps) {
   const on = following === true;
-  const classes = ["btn", "follow", on && "follow--on", size === "card" && "follow--card"]
+  const classes = ["btn", "follow", on && "follow--on", size !== "profile" && `follow--${size}`]
     .filter(Boolean)
     .join(" ");
   return (

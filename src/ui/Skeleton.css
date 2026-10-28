@@ -1,9 +1,12 @@
+/*
+ * The app's placeholder: flat blocks that breathe together, 1 → .55 over
+ * 1.4 s. No shimmer and no spinner anywhere (docs/design-spec-parity.md, F).
+ */
 .skeleton {
   display: block;
   border-radius: var(--radius-tile);
-  background: linear-gradient(90deg, var(--hover) 25%, var(--line) 37%, var(--hover) 63%);
-  background-size: 400% 100%;
-  animation: skeleton-shine 1.4s ease infinite;
+  background: var(--surface-container-highest);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -12,11 +15,12 @@
   }
 }
 
-@keyframes skeleton-shine {
-  0% {
-    background-position: 100% 50%;
-  }
+@keyframes skeleton-pulse {
+  0%,
   100% {
-    background-position: 0% 50%;
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
   }
 }

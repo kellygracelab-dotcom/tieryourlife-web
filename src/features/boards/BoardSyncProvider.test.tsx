@@ -227,7 +227,7 @@ describe("BoardSyncProvider", () => {
     const { api, keeps } = fakeApi([theirBoard("theirs", "Films")]);
     show(signedIn, { children: null, repository, store, api, now: () => 77 });
     const dialog = await screen.findByRole("dialog", { name: "You’ve used this account before" });
-    expect(dialog).toHaveTextContent("It already has 1 board. This device has 1 board");
+    expect(dialog).toHaveTextContent("It already has 1 list. This device has 1 list");
     expect(keeps).toEqual([]);
 
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));

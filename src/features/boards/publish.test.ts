@@ -49,6 +49,9 @@ describe("publishing a board", () => {
     ]);
     expect(request.coverImageUrls).toEqual([]);
     expect(request.coverImageUrl).toBeNull();
+    // No topic is said out loud: a republish without one takes the list out of its old one.
+    expect(request.topicId).toBeNull();
+    expect(publishRequestOf({ ...b, topic: { id: "t1", name: "A24" } })?.topicId).toBe("t1");
   });
 
   it("sends one chosen picture as the cover and several as the collage", () => {

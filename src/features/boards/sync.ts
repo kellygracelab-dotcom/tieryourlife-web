@@ -311,7 +311,7 @@ function boardOf(incoming: KeptBoard, now: number): Board | null {
   const parsed = parseBoard({ ...incoming, editedAt: incoming.updatedAt || now });
   return parsed === null
     ? null
-    : { ...parsed, favouritedAt: null, arrivedFrom: null, publishedEditedAt: null };
+    : { ...parsed, favouritedAt: null, arrivedFrom: null, publishedEditedAt: null, topic: null };
 }
 
 /**
@@ -350,11 +350,12 @@ async function takeOver(
   ) {
     return "deferred";
   }
-  // The star and the origin are this device's, and read at the moment of writing.
+  // The star, the origin and the topic are this device's, and read at the moment of writing.
   deps.repository.save({
     ...board,
     favouritedAt: latest.favouritedAt,
     arrivedFrom: latest.arrivedFrom,
+    topic: latest.topic,
   });
   deps.records.remember({ uid: board.uid, revision: incoming.revision, fingerprint });
   return "carried";

@@ -58,6 +58,7 @@ const board = (over: Partial<Board> = {}): Board => ({
   favouritedAt: null,
   arrivedFrom: null,
   publishedEditedAt: null,
+  topic: null,
   ...over,
 });
 
@@ -71,7 +72,7 @@ describe("the fingerprint", () => {
     const other = board({
       uid: "b",
       title: "Фильмы",
-      displayMode: "RANKED",
+      displayMode: "FLAT_RANKED",
       category: "film_tv",
       coverImageUrl: "https://x/c.jpg",
       coverImageUrls: ["https://x/1.jpg", "https://x/2.jpg"],
@@ -122,13 +123,17 @@ describe("the fingerprint", () => {
       ],
     });
     expect(await fingerprintOf(other)).toBe(
-      "04b1ffcf0c9415177df7b1b8626794afb354a979a5ab722bc9c02cdbd6915746",
+      "24bcee869dde251d21764fb7e73870c7912a17c80982fc8bf03269178fb2e2f2",
     );
   });
 
   it("ignores what is this device's own, and the published id", () => {
     const a = fingerprintText(board());
-    expect(fingerprintText(board({ editedAt: 99, favouritedAt: 1, arrivedFrom: "x" }))).toBe(a);
+    expect(
+      fingerprintText(
+        board({ editedAt: 99, favouritedAt: 1, arrivedFrom: "x", topic: { id: "t", name: "T" } }),
+      ),
+    ).toBe(a);
     expect(fingerprintText(board({ publishedId: "p1" }))).toBe(a);
   });
 

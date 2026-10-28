@@ -21,7 +21,10 @@ vi.mock("./firebase", () => ({
 
 import {
   copyPublishedBack,
+  cutFaceOnCanvas,
   discardPictures,
+  FACE_EDGE,
+  JPEG_QUALITY,
   MAX_BYTES,
   PictureRefused,
   publishedPictureOf,
@@ -175,5 +178,48 @@ describe("discardPictures", () => {
     mocks.auth.currentUser = null;
     await discardPictures(["a"]);
     expect(mocks.deleteObject).not.toHaveBeenCalled();
+  });
+});
+
+describe("cutFaceOnCanvas", () => {
+  /** jsdom has no canvas: one that records what is drawn and hands back what it is told to. */
+  function fakeCanvas(blob: Blob | null, context: object | null = {}) {
+    const drawImage = vi.fn();
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => (context === null ? null : Object.assign(context, { drawImage }))),
+      toDataURL: vi.fn(() => "data:image/jpeg;base64,RkFDRQ=="),
+      toBlob: vi.fn((done: BlobCallback) => done(blob)),
+    };
+    vi.spyOn(document, "createElement").mockReturnValueOnce(canvas as unknown as HTMLCanvasElement);
+    return { canvas, drawImage };
+  }
+
+  it("draws the chosen square at 256 px as a JPEG, to show at once and to send", async () => {
+    const blob = new Blob(["jpeg"], { type: "image/jpeg" });
+    const context = { imageSmoothingQuality: "low" };
+    const { canvas, drawImage } = fakeCanvas(blob, context);
+    const picture = {} as CanvasImageSource;
+
+    const face = cutFaceOnCanvas(picture, { left: 10, top: 20, side: 300 });
+    expect(FACE_EDGE).toBe(256);
+    expect([canvas.width, canvas.height]).toEqual([256, 256]);
+    expect(drawImage).toHaveBeenCalledWith(picture, 10, 20, 300, 300, 0, 0, 256, 256);
+    expect(context.imageSmoothingQuality).toBe("high");
+    expect(face.shown).toBe("data:image/jpeg;base64,RkFDRQ==");
+    expect(canvas.toDataURL).toHaveBeenCalledWith("image/jpeg", JPEG_QUALITY);
+    await expect(face.bytes).resolves.toBe(blob);
+    expect(canvas.toBlob).toHaveBeenCalledWith(expect.any(Function), "image/jpeg", JPEG_QUALITY);
+  });
+
+  it("throws without a canvas to draw on, and fails the bytes a canvas would not give", async () => {
+    fakeCanvas(null, null);
+    expect(() => cutFaceOnCanvas({} as CanvasImageSource, { left: 0, top: 0, side: 1 })).toThrow(
+      "no 2d context",
+    );
+    fakeCanvas(null);
+    const face = cutFaceOnCanvas({} as CanvasImageSource, { left: 0, top: 0, side: 1 });
+    await expect(face.bytes).rejects.toThrow("no image");
   });
 });

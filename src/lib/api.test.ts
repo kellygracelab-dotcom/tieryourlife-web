@@ -28,6 +28,7 @@ import {
   leaveListUp,
   loadFeed,
   loadList,
+  loadListRankings,
   loadMyLists,
   loadMyRankings,
   loadRanking,
@@ -44,6 +45,7 @@ import {
   takeDownList,
   unfollowAuthor,
   unpublish,
+  withdrawListRanking,
 } from "./api";
 
 describe("api", () => {
@@ -52,13 +54,16 @@ describe("api", () => {
   });
 
   it("loads a list through that client", async () => {
-    await expect(loadList("abc")).resolves.toEqual({ id: "abc" });
+    await expect(loadList("abc")).resolves.toMatchObject({ id: "abc" });
     expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/abc");
   });
 
   it("takes what the page already carries without asking the network", async () => {
     mocks.request.mockClear();
-    await expect(loadList("embedded")).resolves.toEqual({ id: "embedded", title: "From HTML" });
+    await expect(loadList("embedded")).resolves.toMatchObject({
+      id: "embedded",
+      title: "From HTML",
+    });
     await expect(loadRanking("embedded")).resolves.toEqual({ code: "embedded" });
     expect(mocks.request).not.toHaveBeenCalled();
   });
@@ -150,6 +155,8 @@ describe("api", () => {
     ["followAuthor", () => followAuthor("u1"), "POST", "/lists/follow/u1"],
     ["unfollowAuthor", () => unfollowAuthor("u1"), "DELETE", "/lists/follow/u1"],
     ["suggestedAuthors", () => suggestedAuthors(), "GET", "/lists/follow"],
+    ["loadListRankings", () => loadListRankings("abc"), "GET", "/lists/abc/rankings"],
+    ["withdrawListRanking", () => withdrawListRanking("abc"), "DELETE", "/lists/abc/rankings/mine"],
     ["takeDownList", () => takeDownList("abc", "week"), "POST", "/lists/abc/takedown"],
     ["leaveListUp", () => leaveListUp("abc"), "POST", "/lists/abc/dismiss"],
     ["eraseMyAccount", () => eraseMyAccount(), "DELETE", "/boards/account"],

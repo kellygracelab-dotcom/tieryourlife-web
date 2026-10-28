@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { isCategory } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
@@ -21,7 +22,11 @@ import {
   BOARD_LIMITS,
   type Board,
 } from "../features/boards/model";
-import { BoardSettings, type PublishingDeps } from "../features/boards/BoardSettings";
+import {
+  BoardSettings,
+  type LoadTopics,
+  type PublishingDeps,
+} from "../features/boards/BoardSettings";
 import { RankedList } from "../features/boards/RankedList";
 import { downloadShare, type Share } from "../features/ranking/share";
 import {
@@ -56,6 +61,7 @@ interface BoardPageProps {
   lookup?: Lookup;
   upload?: Upload;
   publishing?: PublishingDeps;
+  topics?: LoadTopics;
   share?: Share;
 }
 
@@ -129,7 +135,7 @@ function NotFound() {
     <section className="list-page list-page--trouble">
       <h1>{strings.boards.notFound}</h1>
       <p>{strings.boards.notFoundBody}</p>
-      <Link className="btn btn--filled" to="/boards">
+      <Link className="btn btn--filled" to="/b">
         <span>{strings.boards.back}</span>
       </Link>
     </section>
@@ -153,6 +159,7 @@ export function BoardPage({
   lookup,
   upload = (file) => uploadPicture(file),
   publishing = sitePublishing,
+  topics,
   share = downloadShare,
 }: BoardPageProps) {
   const { uid = "" } = useParams();
@@ -164,14 +171,19 @@ export function BoardPage({
   // card, a star. Left as it came, it was never kept, which is what the
   // phone's cross does with an untouched board.
   const madeAt = Number(params.get("new"));
-  // A name brought along, as from a search that found nothing: the board starts with it.
+  // A name or a section brought along, as from a search that found nothing:
+  // the board starts with them.
   const named = params.get("title")?.trim() ?? "";
+  const filed = params.get("category") ?? "";
   const fresh = useMemo(
     () =>
       madeAt > 0
-        ? newBoard(uid, named === "" ? strings.boards.untitled : named, madeAt, nextUid)
+        ? {
+            ...newBoard(uid, named === "" ? strings.boards.untitled : named, madeAt, nextUid),
+            category: isCategory(filed) ? filed : null,
+          }
         : null,
-    [uid, madeAt, named],
+    [uid, madeAt, named, filed],
   );
   const board = stored ?? fresh;
   // The name is asked for once, on arrival at a board not yet kept: a reload
@@ -293,10 +305,19 @@ export function BoardPage({
     add: editorTiers.length < BOARD_LIMITS.tiers ? () => onTier({ type: "addTier" }) : undefined,
   };
   const opened = editorTiers.find((tier) => tier.key === openTier);
+  // New tier, from the settings: the sheet gives way to the tier editor, open on a tier added for it.
+  const newTier = () => {
+    const before = latest();
+    const change = applyTierAction(before, { type: "addTier" }, now(), nextUid);
+    if (change.board === before) return;
+    keep(change.board);
+    closePanel();
+    setOpenTier(rankedTiers(change.board).at(-1)?.uid ?? null);
+  };
 
   const toTrash = () => {
     keep(trashBoard(board, now()));
-    void navigate("/boards", { state: { trashed: [uid] } satisfies BoardsPageState });
+    void navigate("/b", { state: { trashed: [uid] } satisfies BoardsPageState });
   };
 
   // The picture of the board, drawn the way a ranking's is; the address under
@@ -338,7 +359,7 @@ export function BoardPage({
         boardDock === null ? "list-page board-page" : `list-page board-page list-page--${boardDock}`
       }
     >
-      <Link className="board-page__back" to="/boards">
+      <Link className="board-page__back" to="/b">
         <Icon name="arrow_back" />
         <span>{strings.boards.back}</span>
       </Link>
@@ -400,6 +421,7 @@ export function BoardPage({
           keep={keep}
           onCategory={(category) => keep(setCategory(latest(), category, now()))}
           onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
+          onNewTier={newTier}
           onPublished={(what) =>
             setNotice({
               text:
@@ -411,12 +433,13 @@ export function BoardPage({
             })
           }
           publishing={publishing}
+          topics={topics}
           onDone={closePanel}
           now={now}
         />
       )}
 
-      {board.displayMode === "RANKED" ? (
+      {board.displayMode === "FLAT_RANKED" ? (
         <section className="owner" aria-label={strings.owner.title}>
           <div className="ranking__tools">{tools}</div>
           <RankedList board={board} />
@@ -435,6 +458,7 @@ export function BoardPage({
                 .join(",")}`}
               list={view.list}
               store={scratch}
+              strip={board.displayMode === "HORIZONTAL_SCROLL"}
               edit={{
                 rows: view.rows,
                 save: () => Promise.resolve(),

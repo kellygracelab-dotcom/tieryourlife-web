@@ -82,7 +82,7 @@ const open = (
           />
         ),
       },
-      { path: "/boards", element: <h1>boards page</h1> },
+      { path: "/b", element: <h1>boards page</h1> },
       { path: "/trash", element: <h1>trash page</h1> },
     ],
     { initialEntries: [path] },
@@ -263,7 +263,7 @@ describe("BoardPage", () => {
     await userEvent.click(screen.getByLabelText("More about this board"));
     await userEvent.click(screen.getByRole("button", { name: "Delete board" }));
     expect(repository.get("films")?.deletedAt).toBe(clock);
-    expect(router.state.location.pathname).toBe("/boards");
+    expect(router.state.location.pathname).toBe("/b");
     expect(router.state.location.state).toEqual({ trashed: ["films"] });
   });
 
@@ -275,8 +275,8 @@ describe("BoardPage", () => {
     expect(screen.getByRole("list", { name: "S" })).toBeInTheDocument();
     await userEvent.keyboard("{Enter}");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Untitled list");
-    await userEvent.click(screen.getByRole("link", { name: "Your boards" }));
-    expect(router.state.location.pathname).toBe("/boards");
+    await userEvent.click(screen.getByRole("link", { name: "Your lists" }));
+    expect(router.state.location.pathname).toBe("/b");
     expect(repository.get("fresh")).toBeNull();
 
     open(repository, "/b/named?new=778");
@@ -291,7 +291,7 @@ describe("BoardPage", () => {
   it("says so when there is no such board", () => {
     open(boardsRepository(memoryStore()), "/b/nowhere");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("List not found.");
-    expect(screen.getByRole("link", { name: "Your boards" })).toHaveAttribute("href", "/boards");
+    expect(screen.getByRole("link", { name: "Your lists" })).toHaveAttribute("href", "/b");
   });
 });
 
@@ -421,12 +421,14 @@ describe("BoardPage: tiers and settings", () => {
     open(repository, "/b/films");
     await userEvent.click(screen.getByLabelText("More about this board"));
     await userEvent.click(screen.getByRole("button", { name: "List settings" }));
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Category" }), "film_tv");
+    const settings = within(screen.getByRole("dialog", { name: "List settings" }));
+    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
+    await userEvent.click(settings.getByRole("radio", { name: "Film & TV" }));
     expect(repository.get("films")?.category).toBe("film_tv");
     expect(screen.getByText("1 ranked · 2 in pool · Film & TV")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("radio", { name: /Ranked list/ }));
-    expect(repository.get("films")?.displayMode).toBe("RANKED");
+    await userEvent.click(settings.getByRole("radio", { name: "Ranking" }));
+    expect(repository.get("films")?.displayMode).toBe("FLAT_RANKED");
     const column = screen.getByRole("list", { name: "Ranked list" });
     expect(
       within(column)
@@ -437,10 +439,95 @@ describe("BoardPage: tiers and settings", () => {
     // Cards can still come in.
     expect(screen.getByRole("textbox", { name: "Add a card" })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("radio", { name: /Wrapped rows/ }));
-    expect(screen.getByRole("list", { name: "S" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
-    expect(screen.queryByRole("combobox", { name: "Category" })).toBeNull();
+    // The single strip: the rows, each one line of cards that scrolls sideways.
+    await userEvent.click(settings.getByRole("radio", { name: "Single strip" }));
+    expect(repository.get("films")?.displayMode).toBe("HORIZONTAL_SCROLL");
+    expect(screen.getByRole("list", { name: "S" }).closest(".board")).toHaveClass("board--strip");
+
+    await userEvent.click(settings.getByRole("radio", { name: "Rows" }));
+    expect(screen.getByRole("list", { name: "S" }).closest(".board")).not.toHaveClass(
+      "board--strip",
+    );
+    await userEvent.click(settings.getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+  });
+
+  it("adds a tier from the settings and opens it in the tier editor, the sheet out of the way", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
+    await userEvent.click(screen.getByRole("button", { name: /New tier/ }));
+    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+    expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual([
+      "S",
+      "A",
+      "B",
+      "C",
+      "D",
+      "E",
+    ]);
+    const dialog = screen.getByRole("dialog", { name: "Edit tier" });
+    expect(within(dialog).getByRole("textbox", { name: "Name" })).toHaveValue("E");
+    await userEvent.clear(within(dialog).getByRole("textbox", { name: "Name" }));
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Name" }), "Meh");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(rankedTiers(repository.get("films")!).at(-1)?.label).toBe("Meh");
+  });
+});
+
+describe("BoardPage: a new board", () => {
+  it("files a new board under the section it was asked for", async () => {
+    const repository = boardsRepository(memoryStore());
+    open(repository, "/b/fresh?new=100&category=games&title=Co-op");
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Co-op");
+    await userEvent.keyboard("Co-op nights{Enter}");
+    expect(repository.get("fresh")).toMatchObject({ title: "Co-op nights", category: "games" });
+
+    open(repository, "/b/odd?new=100&category=nonsense");
+    await userEvent.keyboard("Odd{Enter}");
+    expect(repository.get("odd")?.category).toBeNull();
+  });
+
+  it("says the empty pool is empty, and + Add opens the catalogue with the cursor in it", async () => {
+    const repository = boardsRepository(memoryStore());
+    open(repository, "/b/fresh?new=100");
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("heading", { name: "Pool · 0 unranked" })).toBeInTheDocument();
+    expect(screen.queryByText(/All \d+ placed/)).toBeNull();
+    // jsdom's window is wide: there the catalogue waits behind the chip while the pool is empty.
+    expect(screen.queryByRole("textbox", { name: "Add a card" })).toBeNull();
+    const add = screen.getByRole("button", { name: "Add" });
+    expect(add).toHaveClass("pool__add-chip");
+    expect(add).toHaveAttribute("aria-expanded", "false");
+
+    await userEvent.click(add);
+    const field = screen.getByRole("textbox", { name: "Add a card" });
+    expect(field).toHaveFocus();
+    await userEvent.type(field, "Heat{Enter}");
+    expect(screen.getByRole("heading", { name: "Pool · 1 unranked" })).toBeInTheDocument();
+    // With a card waiting the catalogue stays where it is.
+    expect(screen.getByRole("textbox", { name: "Add a card" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
+  });
+
+  it("on a phone, puts the same + Add in the tray's head and opens the catalogue from it", async () => {
+    const width = window.innerWidth;
+    onTestFinished(() => {
+      window.innerWidth = width;
+    });
+    window.innerWidth = 390;
+    const repository = boardsRepository(memoryStore());
+    open(repository, "/b/fresh?new=100");
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("heading", { name: "Pool · 0 unranked" })).toBeInTheDocument();
+    expect(screen.queryByText(/All \d+ placed/)).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveFocus();
+    // The names drawn without pictures are the phone's size.
+    await userEvent.type(screen.getByRole("textbox", { name: "Add a card" }), "Heat{Enter}");
+    expect(screen.getByText("Heat", { selector: ".tile__name" })).toHaveStyle({ fontSize: "9px" });
   });
 });
 

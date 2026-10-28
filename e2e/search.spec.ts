@@ -16,7 +16,7 @@ const summary = {
   takeCount: list.takeCount,
 };
 
-test("search from the front page, then narrow the order", async ({ page }) => {
+test("search from the front page, with no order to choose while searching", async ({ page }) => {
   const asked: string[] = [];
   await page.route("**/lists?**", (route) => {
     const url = new URL(route.request().url());
@@ -40,13 +40,27 @@ test("search from the front page, then narrow the order", async ({ page }) => {
   );
   await expect(page.getByText("1 list")).toBeVisible();
 
-  await page.getByRole("button", { name: "Newest" }).click();
-  await expect(page).toHaveURL(/sort=recent/);
-  await expect.poll(() => asked.at(-1), { timeout: 15_000 }).toContain("sort=recent");
+  // A search is ordered by title on the backend, so it offers no order to choose.
+  await expect(page.getByRole("button", { name: "Newest" })).toHaveCount(0);
 
   // On a laptop the box is the bar's now, which searches on Enter; a phone's page box follows the typing.
   await box.fill("nothing here");
   await box.press("Enter");
   await expect(page.getByText("No lists match “nothing here”")).toBeVisible();
   await expect(page.getByRole("link", { name: "the front page" })).toHaveAttribute("href", "/");
+});
+
+test("a search narrowed to a section asks the backend for that section", async ({ page }) => {
+  const asked: string[] = [];
+  await page.route("**/lists?**", (route) => {
+    asked.push(new URL(route.request().url()).search);
+    return route.fulfill({ json: { lists: [summary], nextCursor: null } });
+  });
+  await page.goto("/search?q=a24");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("“a24”");
+  await page.getByRole("button", { name: "Film & TV" }).click();
+  await expect(page).toHaveURL(/category=film_tv/);
+  await expect
+    .poll(() => asked.some((search) => search.includes("category=film_tv")), { timeout: 15_000 })
+    .toBe(true);
 });

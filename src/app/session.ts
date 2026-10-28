@@ -3,7 +3,10 @@ import type { Account } from "../lib/account";
 import type { SignInOutcome } from "../lib/signIn";
 
 export interface Session {
-  /** null until Firebase has said who is here. */
+  /**
+   * null until Firebase has said who is here. While a new face goes up, the
+   * account wears it already: its photoUrl is that face, as cut on this device.
+   */
   account: Account | null;
   signIn: () => Promise<SignInOutcome>;
   signOut: () => Promise<void>;
@@ -22,3 +25,14 @@ export const SessionContext = createContext<Session>({
 });
 
 export const useSession = (): Session => useContext(SessionContext);
+
+/**
+ * Puts a face on the account the moment it is chosen, before Firebase has it,
+ * so the header shows it in the same frame; undefined puts the account's own
+ * face back. Pages without a provider show nothing new.
+ */
+export type ShowFace = (photoUrl: string | null | undefined) => void;
+
+export const ShowFaceContext = createContext<ShowFace>(() => undefined);
+
+export const useShowFace = (): ShowFace => useContext(ShowFaceContext);

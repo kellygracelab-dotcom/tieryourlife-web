@@ -20,7 +20,7 @@ describe("lists", () => {
   it("reads one list by id, escaping the id", async () => {
     const { client, request } = recordingClient({ id: "a b" });
 
-    await expect(loadList(client, "a b")).resolves.toEqual({ id: "a b" });
+    await expect(loadList(client, "a b")).resolves.toMatchObject({ id: "a b" });
 
     expect(request).toHaveBeenCalledWith("GET", "/lists/a%20b");
   });
@@ -62,6 +62,38 @@ describe("lists", () => {
     const clean = { ...list, coverImageUrl: null, previewImages: ["https://img/a.jpg"] };
     const again = await loadFeed(recordingClient({ lists: [clean], nextCursor: null }).client);
     expect(again.lists[0]).toBe(clean);
+  });
+
+  it('takes only https:// addresses for pictures: the word "null" kept as a cover is none', async () => {
+    const list = {
+      id: "l2",
+      title: "Comfort rewatches",
+      coverImageUrl: "null",
+      previewImages: ["https://img/a.jpg", "null", "assets/null"],
+    };
+    const page = await loadFeed(recordingClient({ lists: [list], nextCursor: null }).client);
+    expect(page.lists[0]).toMatchObject({
+      coverImageUrl: null,
+      previewImages: ["https://img/a.jpg"],
+    });
+  });
+
+  it("opens one list with the same care for its cover and its cards' pictures", async () => {
+    const list = {
+      id: "l3",
+      title: "Sequels",
+      coverImageUrl: "null",
+      previewImages: [],
+      tiers: [],
+      items: [
+        { title: "A", imageUrl: "null" },
+        { title: "B", imageUrl: "https://img/b.jpg" },
+        { title: "C", imageUrl: null },
+      ],
+    };
+    const opened = await loadList(recordingClient(list).client, "l3");
+    expect(opened.coverImageUrl).toBeNull();
+    expect(opened.items.map((item) => item.imageUrl)).toEqual([null, "https://img/b.jpg", null]);
   });
 
   it("republishes one list in place, escaping the id", async () => {

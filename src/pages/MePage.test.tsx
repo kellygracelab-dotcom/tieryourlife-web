@@ -96,7 +96,9 @@ const open = (
 
 // The rows themselves: a row's menu has list items of its own.
 const rows = () => [
-  ...screen.getByRole("list", { name: "My lists" }).querySelectorAll<HTMLElement>(":scope > li"),
+  ...screen
+    .getByRole("list", { name: "Your public lists" })
+    .querySelectorAll<HTMLElement>(":scope > li"),
 ];
 const rowOf = (title: RegExp) =>
   screen.getByRole("link", { name: title }).closest<HTMLElement>("li.mine")!;
@@ -117,7 +119,7 @@ beforeEach(() => {
 describe("MePage", () => {
   it("asks a guest to sign in, and asks nothing of the network", async () => {
     const signIn = open({ kind: "guest", uid: "g1" });
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("My lists");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Your public lists");
     expect(screen.getByText(/Sign in to see the rankings you keep/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(signIn).toHaveBeenCalledOnce();
@@ -175,7 +177,7 @@ describe("MePage", () => {
     const kept = await menuOf("Ghibli, ranked");
     expect(kept.getByRole("link", { name: "Publish as my list" })).toHaveAttribute(
       "href",
-      "/new?ranking=aaaaaaaa",
+      "/b/new?ranking=aaaaaaaa",
     );
     expect(kept.getByRole("button", { name: "Delete ranking" })).toBeInTheDocument();
     await userEvent.click(kept.getByRole("button", { name: "Copy link" }));
@@ -184,7 +186,7 @@ describe("MePage", () => {
 
     const list = await menuOf("Oscar films 2025");
     expect(list.queryByRole("link", { name: "Publish as my list" })).toBeNull();
-    expect(list.getByRole("button", { name: "Unpublish" })).toBeInTheDocument();
+    expect(list.getByRole("button", { name: "Take it down" })).toBeInTheDocument();
   });
 
   it("deletes a ranking after asking in its row, and says so", async () => {
@@ -231,22 +233,22 @@ describe("MePage", () => {
     open();
     await screen.findByText("2 published");
 
-    await userEvent.click((await menuOf("One")).getByRole("button", { name: "Unpublish" }));
-    const ask = screen.getByRole("group", { name: "Unpublish" });
-    expect(ask).toHaveTextContent("Unpublish “One”?");
-    await userEvent.click(within(ask).getByRole("button", { name: "Unpublish" }));
+    await userEvent.click((await menuOf("One")).getByRole("button", { name: "Take it down" }));
+    const ask = screen.getByRole("group", { name: "Take it down" });
+    expect(ask).toHaveTextContent("Take “One” down?");
+    await userEvent.click(within(ask).getByRole("button", { name: "Take it down" }));
     expect(unpublish).toHaveBeenCalledWith("l1");
     expect(await screen.findByRole("alert")).toHaveTextContent("No connection");
     await userEvent.click(within(ask).getByRole("button", { name: "Keep it" }));
     expect(screen.getByRole("link", { name: /One/ })).toBeInTheDocument();
 
-    await userEvent.click((await menuOf("Two")).getByRole("button", { name: "Unpublish" }));
+    await userEvent.click((await menuOf("Two")).getByRole("button", { name: "Take it down" }));
     await userEvent.click(
-      within(screen.getByRole("group", { name: "Unpublish" })).getByRole("button", {
-        name: "Unpublish",
+      within(screen.getByRole("group", { name: "Take it down" })).getByRole("button", {
+        name: "Take it down",
       }),
     );
-    expect(await screen.findByRole("status")).toHaveTextContent("Unpublished");
+    expect(await screen.findByRole("status")).toHaveTextContent("Taken down");
     await waitFor(() => expect(screen.queryByRole("link", { name: /Two/ })).toBeNull());
     expect(screen.getByText("1 published")).toBeInTheDocument();
   });
@@ -288,7 +290,7 @@ describe("MePage", () => {
     loadLists.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     loadLists.mockResolvedValueOnce({ lists: [] });
     open();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load your lists.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not load your public lists");
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("1 ranked")).toBeInTheDocument();
   });
@@ -299,9 +301,12 @@ describe("MePage", () => {
     open();
     const tabs = within(screen.getByRole("navigation", { name: "Your account" }));
     expect(tabs.getAllByRole("link")).toHaveLength(2);
-    expect(tabs.getByRole("link", { name: "My lists" })).toHaveAttribute("aria-current", "page");
+    expect(tabs.getByRole("link", { name: "Your public lists" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(tabs.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
-    expect(screen.getByLabelText("My lists", { selector: "div" })).toHaveAttribute(
+    expect(screen.getByLabelText("Your public lists", { selector: "div" })).toHaveAttribute(
       "aria-busy",
       "true",
     );

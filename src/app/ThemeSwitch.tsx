@@ -4,12 +4,12 @@ import { Icon } from "../ui/Icon";
 import { useTheme } from "./useTheme";
 
 const THEME_TEXT: Record<Theme, string> = {
-  system: strings.nav.themeSystem,
   light: strings.nav.themeLight,
   dark: strings.nav.themeDark,
+  system: strings.nav.themeSystem,
 };
 
-/** System, Light or Dark: three radios that look like one pill. */
+/** Light, Dark or System, in the app's order: three radios that look like one pill. */
 export function ThemeSwitch() {
   const { theme, choose } = useTheme();
   return (

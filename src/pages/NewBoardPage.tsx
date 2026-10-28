@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import type { Ranking } from "../api/rank";
-import type { PublishedList } from "../api/types";
+import { isCategory, type Category, type PublishedList } from "../api/types";
 import { useSession } from "../app/session";
 import { boardForOwnList, boardOfList, type CopyBack } from "../features/boards/ownList";
 import { boardFromDraft } from "../features/boards/publish";
@@ -25,7 +25,7 @@ import type { Board } from "../features/boards/model";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
-interface NewListPageProps {
+interface NewBoardPageProps {
   repository?: BoardsRepository;
   store?: KeyValueStore;
   load?: (id: string) => Promise<PublishedList>;
@@ -41,19 +41,22 @@ const begun = (draft: Draft | null): draft is Draft =>
   draft !== null && (draft.title.trim().length > 0 || draft.items.length > 0);
 
 /**
- * A list is made where it is changed: on a board, as on the phone, and the
- * board's settings publish it. This page only opens the board — a new one, one
- * made of a ranking kept, or the one behind a list one published — and brings
- * along what the old editor kept on this device, so nothing begun there is lost.
+ * New list, the one way a list is made: /b/new. A list is made where it is
+ * changed, on a board, as on the phone, and kept private until the Public
+ * switch in its settings says otherwise. This page only opens the board — a
+ * new one, named or filed as the link asks (`title`, `category`), one made of
+ * a ranking kept (`ranking`), or the one behind a list one published
+ * (`list`) — and brings along what the old editor kept on this device, so
+ * nothing begun there is lost.
  */
-export function NewListPage({
+export function NewBoardPage({
   repository = site,
   store = localStorageStore,
   load = loadList,
   loadKept = (code) => loadRanking(code, true),
   copyBack = copyPublishedBack,
   now = Date.now,
-}: NewListPageProps) {
+}: NewBoardPageProps) {
   const [params] = useSearchParams();
   const listId = params.get("list");
   if (listId !== null && listId !== "") {
@@ -74,7 +77,16 @@ export function NewListPage({
       <FromRanking code={code} repository={repository} store={store} load={loadKept} now={now} />
     );
   }
-  return <NewBoard title={params.get("title")} repository={repository} store={store} now={now} />;
+  const category = params.get("category") ?? "";
+  return (
+    <NewBoard
+      title={params.get("title")?.trim() ?? ""}
+      category={isCategory(category) ? category : null}
+      repository={repository}
+      store={store}
+      now={now}
+    />
+  );
 }
 
 /** Once per page, also under StrictMode's second run: the board is made and kept one time. */
@@ -87,13 +99,20 @@ function useOnce(ready: boolean, act: () => void) {
   });
 }
 
+/**
+ * The board page makes the board and keeps it once it is touched; an
+ * untouched one is never kept. A list begun in the old editor comes first,
+ * unless the link asked for something of its own.
+ */
 function NewBoard({
   title,
+  category,
   repository,
   store,
   now,
 }: {
-  title: string | null;
+  title: string;
+  category: Category | null;
   repository: BoardsRepository;
   store: KeyValueStore;
   now: () => number;
@@ -101,18 +120,17 @@ function NewBoard({
   const navigate = useNavigate();
   useOnce(true, () => {
     const kept = loadEditorDraft(store, NEW_DRAFT_KEY);
-    if (begun(kept)) {
+    if (title === "" && category === null && begun(kept)) {
       const board = boardFromDraft(kept, now(), nextUid);
       repository.save(board);
       store.remove(NEW_DRAFT_KEY);
       void navigate(boardPath(board), { replace: true });
       return;
     }
-    const named = title?.trim() ?? "";
-    const suggested = named === "" ? "" : `&title=${encodeURIComponent(named)}`;
-    void navigate(`/b/${encodeURIComponent(nextUid())}?new=${now()}${suggested}`, {
-      replace: true,
-    });
+    const asked = new URLSearchParams({ new: String(now()) });
+    if (title !== "") asked.set("title", title);
+    if (category !== null) asked.set("category", category);
+    void navigate(`/b/${encodeURIComponent(nextUid())}?${asked.toString()}`, { replace: true });
   });
   return null;
 }

@@ -10,7 +10,19 @@ import type { Category } from "../../api/types";
  */
 
 export type ItemSource = "MANUAL" | "TMDB" | "GENERATED";
-export type DisplayMode = "WRAP" | "RANKED";
+/**
+ * How the board is drawn, by the phone's names for it (its
+ * `TierListDisplayMode`): rows that wrap, one strip per tier that scrolls
+ * sideways, or one ranked column. The account keeps the name as it is.
+ */
+export type DisplayMode = "WRAP" | "HORIZONTAL_SCROLL" | "FLAT_RANKED";
+export const DISPLAY_MODES: readonly DisplayMode[] = ["WRAP", "HORIZONTAL_SCROLL", "FLAT_RANKED"];
+
+/** A word inside the list's section, as the feed knows it. */
+export interface BoardTopic {
+  id: string;
+  name: string;
+}
 
 export interface BoardTier {
   uid: string;
@@ -56,6 +68,8 @@ export interface Board {
   arrivedFrom: string | null;
   /** This device's: the edit time the published copy was sent at, so "behind" can be told. Never sent. */
   publishedEditedAt: number | null;
+  /** This device's, as on the phone: the topic the list goes out under, sent with every publish. Never kept in the account. */
+  topic: BoardTopic | null;
 }
 
 /** What a card is made from: enough for a tile. */
@@ -129,6 +143,7 @@ export function newBoard(uid: string, title: string, now: number, nextUid: NextU
     favouritedAt: null,
     arrivedFrom: null,
     publishedEditedAt: null,
+    topic: null,
   };
 }
 
@@ -208,8 +223,13 @@ export function rename(board: Board, title: string, now: number): Board {
   return next === board.title ? board : touched({ ...board, title: next }, now);
 }
 
+/** A topic lives inside one section: another section leaves the list without one. */
 export const setCategory = (board: Board, category: Category | null, now: number): Board =>
-  category === board.category ? board : touched({ ...board, category }, now);
+  category === board.category ? board : touched({ ...board, category, topic: null }, now);
+
+/** The topic goes out with the next publish, so a new one leaves the published copy behind. */
+export const setTopic = (board: Board, topic: BoardTopic | null, now: number): Board =>
+  topic?.id === board.topic?.id ? board : touched({ ...board, topic }, now);
 
 export const setDisplayMode = (board: Board, displayMode: DisplayMode, now: number): Board =>
   displayMode === board.displayMode ? board : touched({ ...board, displayMode }, now);
@@ -508,12 +528,16 @@ export function reorderTiers(board: Board, orderedUids: readonly string[], now: 
 
 // ---- The list of boards -----------------------------------------------------
 
-export type BoardSort = "newest" | "oldest";
-export type PublishedFilter = "public" | "private";
+/** Your lists in order of the last touch, by name, by most ranked, or by most still in the pool. */
+export type BoardSort = "recent" | "name" | "ranked" | "pool";
+export const BOARD_SORTS: readonly BoardSort[] = ["recent", "name", "ranked", "pool"];
+
+/** All of them, the ones still being ranked, the public ones, or copies of somebody else's list. */
+export type BoardShow = "all" | "inProgress" | "public" | "saved";
+export const BOARD_SHOWS: readonly BoardShow[] = ["all", "inProgress", "public", "saved"];
 
 export interface BoardFilters {
-  category?: Category | null;
-  published?: PublishedFilter | null;
+  show?: BoardShow;
   /** Words from the search field: case-insensitive, anywhere in the name. */
   query?: string;
 }
@@ -523,20 +547,46 @@ export interface BoardArrangement {
   rest: Board[];
 }
 
+/**
+ * In progress: something waits in the pool, or nothing is ranked yet. Saved
+ * from others: a copy that still carries somebody's name, which publishing
+ * makes one's own.
+ */
+const shows = (board: Board, show: BoardShow): boolean => {
+  switch (show) {
+    case "inProgress":
+      return poolCount(board) > 0 || rankedCount(board) === 0;
+    case "public":
+      return board.publishedId !== null;
+    case "saved":
+      return board.authorName !== null && board.publishedId === null;
+    default:
+      return true;
+  }
+};
+
 const keeps = (board: Board, filters: BoardFilters): boolean => {
-  if (board.deletedAt !== null) return false;
-  if (filters.category != null && board.category !== filters.category) return false;
-  if (filters.published === "public" && board.publishedId === null) return false;
-  if (filters.published === "private" && board.publishedId !== null) return false;
+  if (board.deletedAt !== null || !shows(board, filters.show ?? "all")) return false;
   const needle = filters.query?.trim().toLowerCase() ?? "";
   return needle === "" || board.title.toLowerCase().includes(needle);
 };
 
 /** By last touch, then by uid: two boards made in the same millisecond still have to sit somewhere. */
-const comparator = (sort: BoardSort) => (a: Board, b: Board) =>
-  sort === "newest"
-    ? b.editedAt - a.editedAt || b.uid.localeCompare(a.uid)
-    : a.editedAt - b.editedAt || a.uid.localeCompare(b.uid);
+const byRecent = (a: Board, b: Board): number =>
+  b.editedAt - a.editedAt || b.uid.localeCompare(a.uid);
+
+const comparator = (sort: BoardSort) => (a: Board, b: Board) => {
+  switch (sort) {
+    case "name":
+      return a.title.localeCompare(b.title, undefined, { sensitivity: "base" }) || byRecent(a, b);
+    case "ranked":
+      return rankedCount(b) - rankedCount(a) || byRecent(a, b);
+    case "pool":
+      return poolCount(b) - poolCount(a) || byRecent(a, b);
+    default:
+      return byRecent(a, b);
+  }
+};
 
 /**
  * Starred first, newest star on top, then the rest in the chosen order. The
@@ -564,7 +614,7 @@ export const shouldGroup = (arrangement: BoardArrangement, narrowed: boolean): b
   !narrowed && arrangement.favourites.length > 0 && arrangement.rest.length > 0;
 
 export const isNarrowed = (filters: BoardFilters): boolean =>
-  filters.category != null || filters.published != null || (filters.query?.trim() ?? "") !== "";
+  (filters.show ?? "all") !== "all" || (filters.query?.trim() ?? "") !== "";
 
 // ---- The trash --------------------------------------------------------------
 

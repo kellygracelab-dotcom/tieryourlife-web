@@ -19,10 +19,10 @@ const list: ListSummary = {
   takeCount: 2140,
 };
 
-const renderCard = (overrides: Partial<ListSummary> = {}) =>
+const renderCard = (overrides: Partial<ListSummary> = {}, reason: string | null = null) =>
   render(
     <MemoryRouter>
-      <ListCard list={{ ...list, ...overrides }} />
+      <ListCard list={{ ...list, ...overrides }} reason={reason} />
     </MemoryRouter>,
   );
 
@@ -31,9 +31,10 @@ describe("ListCard", () => {
     renderCard();
     const link = screen.getByRole("link", { name: /Every A24 film, ranked/ });
     expect(link).toHaveAttribute("href", "/l/abc%20def");
-    const author = screen.getByRole("link", { name: /by danylo/ });
+    // The app's card names the author alone, with no "by".
+    const author = screen.getByRole("link", { name: "danylo" });
     expect(author).toHaveAttribute("href", "/u/u1");
-    expect(author).toHaveTextContent("D");
+    expect(screen.queryByText(/by danylo/)).toBeNull();
     expect(screen.getByText("34 cards · 2,140 rankings")).toBeInTheDocument();
   });
 
@@ -56,6 +57,25 @@ describe("ListCard", () => {
 
   it("uses a question mark when the author has no name", () => {
     renderCard({ authorName: "  " });
-    expect(screen.getByRole("link", { name: /by/ })).toHaveTextContent("?");
+    expect(screen.getAllByRole("link")[1]).toHaveTextContent("?");
+  });
+
+  it("draws the tier colours as bands when the list has no picture, never its title", () => {
+    const { container } = renderCard({ tierColors: ["#b03a32", "#c06a25"] });
+    expect(container.querySelectorAll(".art--stripes > span")).toHaveLength(2);
+    expect(container.querySelector(".art__title")).toBeNull();
+  });
+
+  it("names nobody on an anonymous list, and links to nobody", () => {
+    renderCard({ anonymous: true, authorUid: "", authorName: "", authorPhotoUrl: null });
+    expect(screen.getByText("Anonymous")).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+  });
+
+  it("says why a list is in a Following feed, above its title", () => {
+    renderCard({}, "In Anime");
+    expect(screen.getByRole("link", { name: /Every A24 film/ })).toHaveTextContent(
+      "In AnimeEvery A24 film, ranked",
+    );
   });
 });

@@ -5,6 +5,10 @@ const openList = async (page: Page) => {
   const backend = await mockBackend(page);
   await page.goto(`/l/${LIST_ID}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+  // The list opens on the author's ranking; one's own board is the switch's other half.
+  await page.getByRole("button", { name: "Mine", exact: true }).click();
+  // The switch moves the cards for 200 ms; a drag measured mid-flight starts in the wrong place.
+  await page.waitForFunction(() => document.getAnimations().length === 0);
   return backend;
 };
 

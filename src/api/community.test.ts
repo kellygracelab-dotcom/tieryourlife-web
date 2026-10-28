@@ -3,10 +3,12 @@ import type { ApiClient } from "./client";
 import {
   followAuthor,
   followState,
+  loadListRankings,
   suggestedAuthors,
   REPORT_REASONS,
   report,
   unfollowAuthor,
+  withdrawListRanking,
 } from "./community";
 
 function recordingClient(result: unknown) {
@@ -24,7 +26,14 @@ describe("community", () => {
     expect(request).toHaveBeenCalledWith("POST", "/lists/a%20b/report", {
       body: { reason: "spam", note: "Sells things" },
     });
-    expect(REPORT_REASONS).toEqual(["sexual", "hate", "violence", "spam", "other"]);
+    expect(REPORT_REASONS).toEqual([
+      "sexual",
+      "violence",
+      "hate",
+      "spam",
+      "other",
+      "wrong_category",
+    ]);
   });
 
   it("reads, starts and ends following an author, escaping the uid", async () => {
@@ -35,6 +44,21 @@ describe("community", () => {
     expect(request).toHaveBeenLastCalledWith("POST", "/lists/follow/u1");
     await unfollowAuthor(client, "u1");
     expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/follow/u1");
+  });
+
+  it("reads a list's rankings a page at a time and withdraws one's own", async () => {
+    const { client, request } = recordingClient({ rankings: [], nextCursor: null });
+    await expect(loadListRankings(client, "a b")).resolves.toEqual({
+      rankings: [],
+      nextCursor: null,
+    });
+    expect(request).toHaveBeenCalledWith("GET", "/lists/a%20b/rankings", {});
+    await loadListRankings(client, "abc", "abc_u7");
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/abc/rankings", {
+      query: { after: "abc_u7" },
+    });
+    await withdrawListRanking(client, "abc");
+    expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/abc/rankings/mine");
   });
 
   it("asks for authors worth following", async () => {

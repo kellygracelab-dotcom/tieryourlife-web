@@ -39,7 +39,19 @@ describe("ReportDialog", () => {
   it("takes a reason, a note and the author, and sends only once a reason is picked", async () => {
     const { send } = open("open");
     const dialog = screen.getByRole("dialog", { name: "Report this list" });
-    expect(within(dialog).getAllByRole("radio")).toHaveLength(5);
+    // The app's six, in its order.
+    expect(
+      within(dialog)
+        .getAllByRole("radio")
+        .map((radio) => radio.getAttribute("aria-label") ?? radio.closest("label")?.textContent),
+    ).toEqual([
+      "Sexual content",
+      "Violence or shocking content",
+      "Hate or harassment",
+      "Spam or advertising",
+      "Something else",
+      "Wrong section or topic",
+    ]);
     expect(within(dialog).getByRole("radio", { name: "Sexual content" })).toHaveFocus();
     const report = within(dialog).getByRole("button", { name: "Report" });
     expect(report).toBeDisabled();

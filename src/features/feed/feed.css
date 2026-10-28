@@ -1,11 +1,27 @@
+/* The app's grid: two across on a phone, three on a tablet, four from 840. */
 .feed {
+  --card-cover: 132px;
   display: grid;
-  /* Four across on the home page's 1160, three in a tablet's window, two below that. */
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+@media (min-width: 600px) {
+  .feed {
+    --card-cover: 128px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (min-width: 840px) {
+  .feed {
+    --card-cover: 140px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .feed li {
@@ -17,8 +33,12 @@
   min-width: 0;
 }
 
-.feed__placeholder {
-  border-radius: var(--radius-card);
+.list-card--placeholder {
+  pointer-events: none;
+}
+
+.list-card__cover-placeholder {
+  border-radius: 0;
 }
 
 .feed__trouble,

@@ -48,6 +48,9 @@ import { DockToggle } from "./DockToggle";
 import { useDock } from "./useDock";
 import { useFixedDock } from "./useFixedDock";
 import { TRAY_DOTS, useTray } from "./useTray";
+import { CardName } from "./CardName";
+import { useBoardSize } from "./useBoardSize";
+import type { BoardSize } from "./nameFit";
 import "./board.css";
 import "./ranking.css";
 import { sizedFor } from "../../lib/pictureSize";
@@ -89,6 +92,8 @@ interface RankingBoardProps {
   take?: (listId: string) => Promise<void>;
   share?: Share;
   edit?: EditMode;
+  /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
+  strip?: boolean;
 }
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
@@ -104,6 +109,7 @@ export const POOL_SEARCH_FROM = 24;
 interface TileProps {
   list: PublishedList;
   item: number;
+  board: BoardSize;
   selected: boolean;
   lifted: boolean;
   locked: boolean;
@@ -118,6 +124,7 @@ interface TileProps {
 function Tile({
   list,
   item,
+  board,
   selected,
   lifted,
   locked,
@@ -157,7 +164,7 @@ function Tile({
         {card.imageUrl !== null ? (
           <img {...sizedFor(card.imageUrl, TILE_WIDTH)} alt="" loading="lazy" draggable={false} />
         ) : (
-          <span className="tile__name">{card.title}</span>
+          <CardName title={card.title} board={board} />
         )}
       </button>
       {onRemove !== undefined && (
@@ -263,8 +270,10 @@ export function RankingBoard({
   take = noteTake,
   share = downloadShare,
   edit,
+  strip = false,
 }: RankingBoardProps) {
   const [state, dispatch] = useBoard(list, store, edit?.rows ?? null);
+  const boardSize = useBoardSize();
   const [finish, setFinish] = useState<FinishState>({ status: "idle" });
   const [save, setSave] = useState<SaveState>({ status: "idle" });
   const locked = finish.status === "saving" || finish.status === "done" || save.status === "saving";
@@ -286,21 +295,40 @@ export function RankingBoard({
   // slot in its header for the bar while the pool is docked under the board.
   const { dock, rows, wide, choose, startResize } = useDock(store);
   // On a narrow window the box that brings cards in waits behind Add, in the
-  // pool, whichever head the pool shows; on a wide one it stands in the pool.
+  // pool, whichever head the pool shows; on a wide one it stands in the pool,
+  // unless the owner's pool is empty: then it waits behind the + Add chip.
+  // Opened, the catalogue's field takes the cursor.
   const [adding, setAdding] = useState(false);
   const tools = edit?.owner?.tools;
+  const emptyPool = edit?.owner?.live === true && pool(state).length === 0;
+  const openTools = useRef(false);
+  const toggleAdding = () => {
+    openTools.current = !adding;
+    setAdding(!adding);
+  };
+  useEffect(() => {
+    if (!adding || !openTools.current) return;
+    openTools.current = false;
+    poolBox.current?.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
+  }, [adding]);
   const addButton = tools !== undefined && !wide && (
     <button
       type="button"
       className="btn btn--tonal pool__add"
       aria-expanded={adding}
-      onClick={() => setAdding((open) => !open)}
+      onClick={toggleAdding}
     >
       <Icon name="add" className="btn__icon" />
       <span>{strings.new.add}</span>
     </button>
   );
-  const toolsPanel = tools !== undefined && (wide || adding) && (
+  const addChip = tools !== undefined && (
+    <button type="button" className="pool__add-chip" aria-expanded={adding} onClick={toggleAdding}>
+      <Icon name="add" />
+      <span>{strings.new.add}</span>
+    </button>
+  );
+  const toolsPanel = tools !== undefined && (adding || (wide && !emptyPool)) && (
     <div className={wide ? "pool__tools" : "pool__tools pool__tools--sheet"}>{tools}</div>
   );
   const docked = wide && dock === "under";
@@ -571,13 +599,14 @@ export function RankingBoard({
 
         {!inHead && edit?.owner?.status}
 
-        <div className="board" ref={boardBox}>
+        <div className={strip ? "board board--strip" : "board"} ref={boardBox}>
           {list.tiers.map((tier, index) => (
             <TierRow
               key={`${index}-${tier.label}`}
               list={list}
               state={state}
               tier={index}
+              board={boardSize}
               selectedTitle={selectedTitle}
               dispatch={dispatch}
               dragState={drag.state}
@@ -623,7 +652,7 @@ export function RankingBoard({
             {docked && !allPlaced && (
               <div className="pool__grip" onPointerDown={startResize} aria-hidden="true" />
             )}
-            {allPlaced && !wide ? (
+            {allPlaced && !wide && !emptyPool ? (
               <div className="pool__done">
                 <p className="pool__done-title">
                   <Icon name="check_circle" className="pool__done-icon" />
@@ -651,9 +680,17 @@ export function RankingBoard({
               </div>
             ) : (
               <>
-                <div className={allPlaced ? "pool__head pool__head--done" : "pool__head"}>
+                <div
+                  className={
+                    emptyPool
+                      ? "pool__head pool__head--empty"
+                      : allPlaced
+                        ? "pool__head pool__head--done"
+                        : "pool__head"
+                  }
+                >
                   <div className="pool__lead">
-                    {allPlaced ? (
+                    {allPlaced && !emptyPool ? (
                       <p className="pool__done-title">
                         <Icon name="check_circle" className="pool__done-icon" />
                         {plural(strings.rank.allPlaced, list.items.length)}
@@ -666,7 +703,7 @@ export function RankingBoard({
                         )}
                       </h2>
                     )}
-                    {addButton}
+                    {emptyPool ? addChip : addButton}
                     <DockToggle dock={dock} onChoose={choose} />
                   </div>
                   {toolsPanel}
@@ -714,6 +751,7 @@ export function RankingBoard({
                           key={item}
                           list={list}
                           item={item}
+                          board={boardSize}
                           selected={selected === item}
                           lifted={lifted === item}
                           locked={locked}
@@ -753,7 +791,7 @@ export function RankingBoard({
       {edit === undefined && (
         <KeepDialog state={offer} onGoogle={onGoogle} onLinkOnly={onLinkOnly} />
       )}
-      <DragGhost state={drag.state} items={list.items} />
+      <DragGhost state={drag.state} items={list.items} board={boardSize} />
     </section>
   );
 }
@@ -762,6 +800,7 @@ interface TierRowProps {
   list: PublishedList;
   state: BoardState;
   tier: number;
+  board: BoardSize;
   selectedTitle: string | null;
   dispatch: (action: BoardAction) => void;
   dragState: DragState;
@@ -788,6 +827,7 @@ function TierRow({
   list,
   state,
   tier,
+  board,
   selectedTitle,
   dispatch,
   dragState,
@@ -892,6 +932,7 @@ function TierRow({
               key={item}
               list={list}
               item={item}
+              board={board}
               selected={selected === item}
               lifted={lifted === item}
               locked={locked}

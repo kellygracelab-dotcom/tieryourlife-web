@@ -26,8 +26,8 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
   ).toBeChecked();
   expect(await page.evaluate(() => localStorage.getItem("tyl:locale"))).toBe("uk");
 
-  // Making a list opens a board, built from the dictionary too.
-  await page.goto("/new");
+  // New list opens a board, built from the dictionary too.
+  await page.goto("/b/new");
   await expect(page).toHaveURL(/\/b\//);
   await expect(page.getByRole("button", { name: "Додати тир" })).toBeVisible();
 
@@ -50,6 +50,8 @@ const SPOKEN: {
   browser: string;
   lang: string;
   dir?: "rtl";
+  /** The switch's half for one's own board, in the app's word. */
+  mine: string;
   left: string | RegExp;
   placed: string | RegExp;
   about: string;
@@ -57,6 +59,7 @@ const SPOKEN: {
   {
     browser: "ru-RU",
     lang: "ru",
+    mine: "Моя",
     left: "Осталось 3 карточки",
     placed: "Разложено 0 из 3",
     about: "О сайте",
@@ -64,6 +67,7 @@ const SPOKEN: {
   {
     browser: "pt-PT",
     lang: "pt-BR",
+    mine: "Meu",
     left: "Faltam 3 cards",
     placed: "0 de 3 colocados",
     about: "Sobre",
@@ -71,6 +75,7 @@ const SPOKEN: {
   {
     browser: "es-MX",
     lang: "es",
+    mine: "Mío",
     left: "Quedan 3 tarjetas",
     placed: "0 de 3 colocadas",
     about: "Acerca de",
@@ -78,6 +83,7 @@ const SPOKEN: {
   {
     browser: "de-AT",
     lang: "de",
+    mine: "Meine",
     left: "Noch 3 Karten",
     placed: "0 von 3 platziert",
     about: "Über",
@@ -85,6 +91,7 @@ const SPOKEN: {
   {
     browser: "fr-CA",
     lang: "fr",
+    mine: "Le mien",
     left: "3 cartes restantes",
     placed: "0 sur 3 placées",
     about: "À propos",
@@ -92,6 +99,7 @@ const SPOKEN: {
   {
     browser: "pl-PL",
     lang: "pl",
+    mine: "Mój",
     left: "Zostały 3 karty",
     placed: "Umieszczono 0 z 3",
     about: "O stronie",
@@ -99,6 +107,7 @@ const SPOKEN: {
   {
     browser: "tr-TR",
     lang: "tr",
+    mine: "Benimki",
     left: "3 kart kaldı",
     placed: "0 / 3 yerleştirildi",
     about: "Hakkında",
@@ -106,6 +115,7 @@ const SPOKEN: {
   {
     browser: "ja-JP",
     lang: "ja",
+    mine: "自分",
     left: "残り 3 枚",
     placed: "3 枚中 0 枚を配置",
     about: "このサイトについて",
@@ -115,13 +125,14 @@ const SPOKEN: {
     browser: "ar-EG",
     lang: "ar",
     dir: "rtl",
+    mine: "ترتيبي",
     left: /بقيت [3٣] بطاقات/,
     placed: /وُضع [0٠] من [3٣]/,
     about: "حول الموقع",
   },
 ];
 
-for (const { browser, lang, dir, left, placed, about } of SPOKEN) {
+for (const { browser, lang, dir, mine, left, placed, about } of SPOKEN) {
   test.describe(`a browser set to ${browser}`, () => {
     test.use({ locale: browser });
 
@@ -131,6 +142,8 @@ for (const { browser, lang, dir, left, placed, about } of SPOKEN) {
       await expect(page.locator("html")).toHaveAttribute("lang", lang);
       await expect(page.locator("html")).toHaveAttribute("dir", dir ?? "ltr");
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+      // The list opens on the author's ranking; one's own board is a press away.
+      await page.getByRole("button", { name: mine, exact: true }).click();
       await expect(page.getByRole("heading", { level: 2 })).toHaveText(left);
       await expect(page.getByText(placed)).toBeVisible();
       // The foot waits while the tray is up on a phone; the settings page has it at every width.

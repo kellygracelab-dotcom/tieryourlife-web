@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { REPORT_NOTE_MAX, REPORT_REASONS, type ReportReason } from "../../api/community";
+import { REASON_TEXT } from "./reasons";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { InAppNote } from "../../ui/InAppNote";
@@ -19,16 +20,10 @@ interface ReportDialogProps {
   /** A guest chose to sign in, or to hide the list instead. */
   onSignIn: () => void;
   onHideInstead: () => void;
+  /** The receipt's offer, as in the app's: everything from the author, when the box was left unticked. */
+  onHideAuthor?: () => void;
   onClose: () => void;
 }
-
-const REASON_TEXT: Record<ReportReason, string> = {
-  sexual: strings.report.reasonSexual,
-  hate: strings.report.reasonHate,
-  violence: strings.report.reasonViolence,
-  spam: strings.report.reasonSpam,
-  other: strings.report.reasonOther,
-};
 
 /**
  * The app's report sheet as a dialog: a reason, an optional note, and the
@@ -41,6 +36,7 @@ export function ReportDialog({
   send,
   onSignIn,
   onHideInstead,
+  onHideAuthor,
   onClose,
 }: ReportDialogProps) {
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -112,6 +108,11 @@ export function ReportDialog({
         </h2>
         <p className="dialog__body">{strings.report.sentBody}</p>
         <div className="dialog__actions">
+          {authorName !== null && !hideAuthor && onHideAuthor !== undefined && (
+            <Button onClick={onHideAuthor}>
+              {fill(strings.report.hideAuthor, { name: authorName })}
+            </Button>
+          )}
           <Button variant="filled" onClick={onClose}>
             {strings.report.done}
           </Button>

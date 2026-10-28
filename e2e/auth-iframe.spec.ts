@@ -13,6 +13,7 @@ test("opening a list asks nothing of apis.google.com", async ({ page }) => {
   await mockBackend(page);
   await page.goto("/l/abc");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+  await page.getByRole("button", { name: "Mine", exact: true }).click();
   await page.getByRole("button", { name: "Ex Machina", exact: true }).click();
   await page.waitForLoadState("networkidle");
   expect(google).toEqual([]);

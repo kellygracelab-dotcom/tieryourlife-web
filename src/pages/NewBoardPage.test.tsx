@@ -18,7 +18,7 @@ import {
   type Draft,
 } from "../features/editor/model";
 import { memoryStore, type KeyValueStore } from "../lib/storage";
-import { NewListPage } from "./NewListPage";
+import { NewBoardPage } from "./NewBoardPage";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
 
@@ -102,9 +102,9 @@ const open = ({
   const router = createMemoryRouter(
     [
       {
-        path: "/new",
+        path: "/b/new",
         element: (
-          <NewListPage
+          <NewBoardPage
             repository={repository}
             store={store}
             load={load}
@@ -141,21 +141,35 @@ const titlesIn = (board: ReturnType<BoardsRepository["get"]>) => {
   );
 };
 
-describe("NewListPage: making a list is making a board", () => {
+describe("NewBoardPage: making a list is making a board", () => {
   it("opens a new board, named after a search that brought a name along", async () => {
-    open({ path: "/new?title=%20Cheeses%20" });
+    open({ path: "/b/new?title=%20Cheeses%20" });
     expect(await arrivedAt()).toMatch(/^\/b\/[^?]+\?new=5000&title=Cheeses$/);
   });
 
   it("opens a new board with nothing brought along", async () => {
-    open({ path: "/new" });
+    open({ path: "/b/new" });
+    expect(await arrivedAt()).toMatch(/^\/b\/[^?]+\?new=5000$/);
+  });
+
+  it("files a new board under the section it was asked for, and ignores one that is not a section", async () => {
+    const { repository } = open({ path: "/b/new?category=film_tv&title=Ex%20Machina%20%26%20co" });
+    expect(await arrivedAt()).toMatch(
+      /^\/b\/[^?]+\?new=5000&title=Ex\+Machina\+%26\+co&category=film_tv$/,
+    );
+    // Nothing is kept here: the board page keeps it once it is touched.
+    expect(repository.all()).toEqual([]);
+  });
+
+  it("leaves out a section the site does not have", async () => {
+    open({ path: "/b/new?category=nonsense" });
     expect(await arrivedAt()).toMatch(/^\/b\/[^?]+\?new=5000$/);
   });
 
   it("puts a list begun in the old editor on a board, and lets the draft go", async () => {
     const store = memoryStore();
     saveEditorDraft(store, draft("Films", ["Ex Machina", "The Witch"], [[1], [], [], [], []]));
-    const { repository } = open({ path: "/new", store });
+    const { repository } = open({ path: "/b/new", store });
     const board = boardAt(repository, await arrivedAt());
     expect(board?.title).toBe("Films");
     expect(titlesIn(board)).toEqual([["The Witch"], [], [], [], [], ["Ex Machina"]]);
@@ -165,12 +179,20 @@ describe("NewListPage: making a list is making a board", () => {
   it("leaves an empty draft behind and opens a new board instead", async () => {
     const store = memoryStore();
     saveEditorDraft(store, draft("  ", [], [[], [], [], [], []]));
-    open({ path: "/new", store });
+    open({ path: "/b/new", store });
     expect(await arrivedAt()).toMatch(/\?new=5000$/);
+  });
+
+  it("makes what the link asked for even with a draft waiting, and keeps the draft for later", async () => {
+    const store = memoryStore();
+    saveEditorDraft(store, draft("Films", ["Ex Machina"], [[], [], [], [], []]));
+    open({ path: "/b/new?category=games", store });
+    expect(await arrivedAt()).toMatch(/\?new=5000&category=games$/);
+    expect(store.read(NEW_DRAFT_KEY)).not.toBeNull();
   });
 });
 
-describe("NewListPage: a kept ranking as a board", () => {
+describe("NewBoardPage: a kept ranking as a board", () => {
   const ranking: Ranking = {
     code: "aaaaaaaa",
     listId: "abc",
@@ -189,7 +211,7 @@ describe("NewListPage: a kept ranking as a board", () => {
 
   it("arranges the cards as the ranking had them, without the author's own pictures", async () => {
     const { repository } = open({
-      path: "/new?ranking=aaaaaaaa",
+      path: "/b/new?ranking=aaaaaaaa",
       loadKept: () => Promise.resolve(ranking),
     });
     const board = boardAt(repository, await arrivedAt());
@@ -209,7 +231,7 @@ describe("NewListPage: a kept ranking as a board", () => {
       forkDraftKey("aaaaaaaa"),
     );
     const { repository } = open({
-      path: "/new?ranking=aaaaaaaa",
+      path: "/b/new?ranking=aaaaaaaa",
       store,
       loadKept: () => Promise.resolve(ranking),
     });
@@ -219,7 +241,7 @@ describe("NewListPage: a kept ranking as a board", () => {
 
   it("says so when the ranking cannot be opened", async () => {
     open({
-      path: "/new?ranking=aaaaaaaa",
+      path: "/b/new?ranking=aaaaaaaa",
       loadKept: () => Promise.reject(new ApiFailure({ kind: "notFound" })),
     });
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
@@ -228,7 +250,7 @@ describe("NewListPage: a kept ranking as a board", () => {
   });
 });
 
-describe("NewListPage: one's own published list is changed on its board", () => {
+describe("NewBoardPage: one's own published list is changed on its board", () => {
   it("opens the board that published it, without asking for the list", async () => {
     const repository = boardsRepository(memoryStore());
     const linked = {
@@ -237,7 +259,7 @@ describe("NewListPage: one's own published list is changed on its board", () => 
     };
     repository.save(linked);
     const load = vi.fn(() => Promise.resolve(list));
-    open({ path: "/new?list=abc", repository, load });
+    open({ path: "/b/new?list=abc", repository, load });
     expect(await arrivedAt()).toBe("/b/films");
     expect(load).not.toHaveBeenCalled();
   });
@@ -247,7 +269,7 @@ describe("NewListPage: one's own published list is changed on its board", () => 
       pictureId: "own-1",
       previewUrl: "https://dl/users/u1/pictures/own-1",
     }));
-    const { repository } = open({ path: "/new?list=abc", copyBack });
+    const { repository } = open({ path: "/b/new?list=abc", copyBack });
     const board = boardAt(repository, await arrivedAt())!;
     expect(copyBack).toHaveBeenCalledExactlyOnceWith(feedCopy("abc", "p1"));
     expect(board.publishedId).toBe("abc");
@@ -268,7 +290,7 @@ describe("NewListPage: one's own published list is changed on its board", () => 
       draft("Renamed", ["Climax"], [[0], [], [], [], []]),
       editDraftKey("abc"),
     );
-    const { repository } = open({ path: "/new?list=abc", store });
+    const { repository } = open({ path: "/b/new?list=abc", store });
     const board = boardAt(repository, await arrivedAt())!;
     expect(board.title).toBe("Renamed");
     expect(board.publishedEditedAt).toBeLessThan(board.editedAt);
@@ -280,7 +302,7 @@ describe("NewListPage: one's own published list is changed on its board", () => 
       .fn<CopyBack>()
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValueOnce({ pictureId: "own-1", previewUrl: "https://dl/own-1" });
-    const { repository } = open({ path: "/new?list=abc", copyBack });
+    const { repository } = open({ path: "/b/new?list=abc", copyBack });
     expect(
       await screen.findByText(
         "Your list’s pictures could not be brought to its board. Nothing was lost. Try again.",
@@ -293,21 +315,21 @@ describe("NewListPage: one's own published list is changed on its board", () => 
 
   it("asks a guest to sign in first", async () => {
     const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
-    open({ path: "/new?list=abc", account: { kind: "guest", uid: "g1" }, signIn });
+    open({ path: "/b/new?list=abc", account: { kind: "guest", uid: "g1" }, signIn });
     expect(screen.getByText("Sign in to edit the lists you published.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(signIn).toHaveBeenCalledTimes(1);
   });
 
   it("tells somebody else's list apart, and a list that is gone", async () => {
-    open({ path: "/new?list=abc", account: { ...me, uid: "someone" } as Session["account"] });
+    open({ path: "/b/new?list=abc", account: { ...me, uid: "someone" } as Session["account"] });
     expect(await screen.findByText("This list was published by someone else.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/abc");
   });
 
   it("names a list that is not published any more", async () => {
     open({
-      path: "/new?list=abc",
+      path: "/b/new?list=abc",
       load: () => Promise.reject(new ApiFailure({ kind: "notFound" })),
     });
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(

@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
-import { Navigate, type RouteObject } from "react-router";
-import { CategoryPage } from "../pages/CategoryPage";
+import { Navigate, redirect, type RouteObject } from "react-router";
+import { SectionPage, SectionRedirect } from "../pages/SectionPage";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -8,10 +8,11 @@ import { ProfilePage } from "../pages/ProfilePage";
 import { RankingPage } from "../pages/RankingPage";
 import { SearchPage } from "../pages/SearchPage";
 import { RouteError } from "./RouteError";
+
 import { Shell } from "./Shell";
 
 /**
- * The pages most visitors never open — making a list, the boards and the
+ * The pages most visitors never open — a new list, the boards and the
  * trash, the account, the moderator's queue, the credits — come as chunks of
  * their own when asked for, so opening a list does not download the editor.
  * A chunk that fails to come is a thrown route, and the error element says so
@@ -31,19 +32,45 @@ export const routes: RouteObject[] = [
         errorElement: <RouteError />,
         children: [
           { index: true, element: <HomePage /> },
-          { path: "search", element: <SearchPage /> },
+          { path: "following", element: <HomePage tab="following" /> },
           {
-            path: "new",
+            path: "following/manage",
             ...later(async () => ({
-              Component: (await import("../pages/NewListPage")).NewListPage,
+              Component: (await import("../pages/FollowingManagePage")).FollowingManagePage,
             })),
           },
           {
-            path: "boards",
+            path: "s",
+            ...later(async () => ({
+              Component: (await import("../pages/SectionsPage")).SectionsPage,
+            })),
+          },
+          { path: "s/:id", element: <SectionPage /> },
+          { path: "s/:id/t/:topic", element: <SectionPage /> },
+          { path: "search", element: <SearchPage /> },
+          {
+            // Not a board's uid: a new board, the one way a list is made.
+            path: "b/new",
+            ...later(async () => ({
+              Component: (await import("../pages/NewBoardPage")).NewBoardPage,
+            })),
+          },
+          // Making a list had a page of its own; its links, and what they asked
+          // for (a title, a section, a ranking or a list to open), still arrive.
+          {
+            path: "new",
+            loader: ({ request }) => redirect(`/b/new${new URL(request.url).search}`),
+          },
+          {
+            // Not "boards": Hosting hands /boards to the backend's boards API,
+            // so that address opened directly or reloaded showed its JSON.
+            path: "b",
             ...later(async () => ({
               Component: (await import("../pages/BoardsPage")).BoardsPage,
             })),
           },
+          // Links followed inside the site before the move still arrive.
+          { path: "boards", element: <Navigate to="/b" replace /> },
           {
             path: "b/:uid",
             ...later(async () => ({
@@ -56,7 +83,8 @@ export const routes: RouteObject[] = [
               Component: (await import("../pages/TrashPage")).TrashPage,
             })),
           },
-          { path: "c/:category", element: <CategoryPage /> },
+          // A section's address was /c/ once; the app's links use /s/.
+          { path: "c/:category", element: <SectionRedirect /> },
           { path: "l/:id", element: <ListPage /> },
           { path: "r/:code", element: <RankingPage /> },
           {
