@@ -15,9 +15,9 @@ import { PlaySheet } from "./PlaySheet";
  * them, so the nearest it has stand in: refresh, the trophy, the podium.
  */
 const GAMES: readonly { kind: GameKind; icon: IconName; line: () => string }[] = [
-  { kind: "swiss", icon: "refresh", line: () => strings.play.swissLine },
-  { kind: "hill", icon: "emoji_events", line: () => strings.play.hillLine },
-  { kind: "bracket", icon: "leaderboard", line: () => strings.play.bracketLine },
+  { kind: "swiss", icon: "autorenew", line: () => strings.play.swissLine },
+  { kind: "hill", icon: "crown", line: () => strings.play.hillLine },
+  { kind: "bracket", icon: "account_tree", line: () => strings.play.bracketLine },
 ];
 
 interface GamePickerProps {

@@ -4,6 +4,7 @@
  * type error rather than a word printed where an icon should be.
  */
 export const ICONS = [
+  "account_tree",
   "add",
   "add_photo_alternate",
   "admin_panel_settings",
@@ -11,6 +12,7 @@ export const ICONS = [
   "arrow_back",
   "arrow_downward",
   "arrow_upward",
+  "autorenew",
   "bookmark",
   "bookmarks",
   "category",
@@ -24,6 +26,7 @@ export const ICONS = [
   "cloud_upload",
   "computer",
   "content_paste",
+  "crown",
   "dashboard",
   "delete",
   "delete_forever",
@@ -46,6 +49,7 @@ export const ICONS = [
   "headphones",
   "history",
   "inbox",
+  "info",
   "install_mobile",
   "label",
   "leaderboard",

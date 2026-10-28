@@ -52,7 +52,7 @@ export function ResultView({
       <p className="result-view__from">{plural(strings.play.fromDuels, answered(game))}</p>
       {thin && (
         <p className="result-view__thin">
-          <Icon name="error" className="result-view__thin-icon" />
+          <Icon name="info" className="result-view__thin-icon" />
           <span>{thinText(dashed.size, refine)}</span>
         </p>
       )}
