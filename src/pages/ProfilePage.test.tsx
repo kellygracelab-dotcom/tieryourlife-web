@@ -201,6 +201,30 @@ describe("ProfilePage", () => {
     );
   });
 
+  it("hides everything from the author from the page's menu, with an Undo, as the app does", async () => {
+    open();
+    await screen.findByRole("link", { name: /List a/ });
+    await userEvent.click(screen.getByLabelText("More options"));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Hide everything from Someone Nice" }),
+    );
+    expect(screen.getByText("You hid everything from this person.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /List a/ })).toBeNull();
+    // Already hidden: the menu has nothing more to offer.
+    expect(screen.queryByLabelText("More options")).toBeNull();
+    const notice = screen.getByText(
+      "Everything from Someone Nice is hidden for you",
+    ).parentElement!;
+    await userEvent.click(within(notice).getByRole("button", { name: "Undo" }));
+    expect(await screen.findByRole("link", { name: /List a/ })).toBeInTheDocument();
+  });
+
+  it("offers no way to hide oneself", async () => {
+    open({ ...member, uid: "u2" });
+    await screen.findByRole("link", { name: "Edit in Settings" });
+    expect(screen.queryByLabelText("More options")).toBeNull();
+  });
+
   it("shows a hidden author's page without their lists, with a way back", async () => {
     const store = memoryStore();
     store.write(

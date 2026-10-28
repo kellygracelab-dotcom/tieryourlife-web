@@ -96,7 +96,9 @@ const open = (
 
 // The rows themselves: a row's menu has list items of its own.
 const rows = () => [
-  ...screen.getByRole("list", { name: "Your public lists" }).querySelectorAll<HTMLElement>(":scope > li"),
+  ...screen
+    .getByRole("list", { name: "Your public lists" })
+    .querySelectorAll<HTMLElement>(":scope > li"),
 ];
 const rowOf = (title: RegExp) =>
   screen.getByRole("link", { name: title }).closest<HTMLElement>("li.mine")!;
@@ -299,7 +301,10 @@ describe("MePage", () => {
     open();
     const tabs = within(screen.getByRole("navigation", { name: "Your account" }));
     expect(tabs.getAllByRole("link")).toHaveLength(2);
-    expect(tabs.getByRole("link", { name: "Your public lists" })).toHaveAttribute("aria-current", "page");
+    expect(tabs.getByRole("link", { name: "Your public lists" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(tabs.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
     expect(screen.getByLabelText("Your public lists", { selector: "div" })).toHaveAttribute(
       "aria-busy",

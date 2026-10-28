@@ -5,7 +5,13 @@ import type { AdoptedGuest } from "../api/account";
 import { searchEverywhere } from "../api/catalogue";
 import { createApiClient } from "../api/client";
 import * as community from "../api/community";
-import type { FollowedAuthor, FollowState, ReportRequest, SuggestedAuthor } from "../api/community";
+import type {
+  FollowedAuthor,
+  FollowState,
+  RankingsPage,
+  ReportRequest,
+  SuggestedAuthor,
+} from "../api/community";
 import * as lists from "../api/lists";
 import type { PublishRequest } from "../api/lists";
 import * as moderation from "../api/moderation";
@@ -90,6 +96,14 @@ export const followAuthor = (authorUid: string): Promise<{ following: true }> =>
 
 export const unfollowAuthor = (authorUid: string): Promise<{ following: false }> =>
   community.unfollowAuthor(api, authorUid);
+
+export const loadListRankings = (
+  listId: string,
+  after: string | null = null,
+): Promise<RankingsPage> => community.loadListRankings(api, listId, after);
+
+export const withdrawListRanking = (listId: string): Promise<void> =>
+  community.withdrawListRanking(api, listId);
 
 export const loadFollowing = (): Promise<{ authors: FollowedAuthor[] }> =>
   community.loadFollowing(api);

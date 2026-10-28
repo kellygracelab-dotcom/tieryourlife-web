@@ -12,6 +12,7 @@ import { isEditorialAuthor } from "../lib/editorial";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
+import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { NotFoundPage } from "./NotFoundPage";
 import "./ProfilePage.css";
@@ -44,7 +45,7 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
   const { account, signIn } = useSession();
   const feed = useFeed({ author: uid, sort: "recent" }, load);
   const following = useFollow(uid, follow);
-  const { hidden, showAuthor } = useHidden();
+  const { hidden, hideAuthor, showAuthor } = useHidden();
   const [asking, setAsking] = useState<Asking>("closed");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
@@ -80,6 +81,14 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
   };
 
   const closeAsk = useCallback(() => setAsking("closed"), []);
+
+  const hideAuthorNow = () => {
+    hideAuthor({ uid, name });
+    setNotice({
+      text: fill(strings.profile.hiddenAuthorNotice, { name }),
+      action: { text: strings.list.undo, onClick: () => showAuthor(uid) },
+    });
+  };
 
   const countLine = () => {
     const parts: string[] = [];
@@ -124,6 +133,16 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
           </Link>
         ) : (
           <FollowButton following={following.following} onClick={onFollow} />
+        )}
+        {/* What a reader can do about a person rather than a list, as on the app's author page. */}
+        {!own && !hiddenAuthor && (
+          <Menu label={strings.profile.more} button={<Icon name="more_vert" />}>
+            <li>
+              <button type="button" className="menu__action" onClick={hideAuthorNow}>
+                {fill(strings.profile.hideAuthor, { name })}
+              </button>
+            </li>
+          </Menu>
         )}
       </header>
 

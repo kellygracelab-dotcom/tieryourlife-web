@@ -1,358 +1,70 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
-import type { ReportReason } from "../api/community";
-import type { ApiError } from "../api/errors";
-import type { PublishedList } from "../api/types";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { Link, useParams } from "react-router";
+import type { ReaderRanking } from "../api/community";
+import type { BasedOn, PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
-import { arrange } from "../features/tierboard/arrange";
-import { RankingBoard } from "../features/tierboard/RankingBoard";
-import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
-import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
-import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
 import type { BoardsRepository } from "../features/boards/repository";
-import { SaveToMineDialog } from "../features/boards/SaveToMineDialog";
-import { useSaveToMine, type SaveToMine } from "../features/boards/useSaveToMine";
+import { AuthorLine } from "../features/community/AuthorLine";
+import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
+import { placedBy } from "../features/community/rankings";
+import { RankingsChip, RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
-import { useResource } from "../lib/useResource";
-import { errorOf } from "../api/errors";
-import { loadList, report as sendReport, unpublish as unpublishList } from "../lib/api";
-import { isEditorial } from "../lib/editorial";
-import { fill, plural, strings } from "../strings";
-import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { useRankings } from "../features/community/useRankings";
+import { readKept } from "../features/ranking/kept";
+import { arrange } from "../features/tierboard/arrange";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
 import type { Dock } from "../features/tierboard/dock";
+import { loadPlacedDraft, scopeOf } from "../features/tierboard/draft";
+import { flyIn } from "../features/tierboard/flight";
+import { RankingBoard } from "../features/tierboard/RankingBoard";
+import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
+import { loadList, report as sendReport, unpublish as unpublishList } from "../lib/api";
+import { isEditorial, isEditorialAuthor } from "../lib/editorial";
+import { type KeyValueStore, localStorageStore } from "../lib/storage";
+import { useResource } from "../lib/useResource";
+import { fill, strings } from "../strings";
+import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
-import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
-import { Menu } from "../ui/Menu";
-import "../features/community/report.css";
+import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
-type View = "mine" | "theirs";
+/** Whose arrangement is on screen, in the app's words: the author's (or a reader's), or this person's own. */
+type View = "theirs" | "mine";
 
-export type Report = typeof sendReport;
-export type Unpublish = typeof unpublishList;
+/** The spec's 200 ms for the cards to move when the switch changes boards. */
+const SWITCH_MS = 200;
 
-type Notify = (notice: SnackbarNotice) => void;
-
-/** The list's address, and the two ways to hand it to someone. */
-function useListLink(list: PublishedList) {
-  const link = `${window.location.origin}/l/${encodeURIComponent(list.id)}`;
-  const copy = (): Promise<void> =>
-    navigator.clipboard?.writeText(link) ?? Promise.reject(new Error("no clipboard"));
-  // The phone's own share sheet, where there is one; closing it is not a failure.
-  const canShare = typeof navigator.share === "function";
-  const share = () => {
-    void navigator.share({ title: list.title, url: link }).catch(() => undefined);
-  };
-  return { copy, canShare, share };
-}
+/** This device began ranking the list, or finished: then it opens on Mine. */
+const begunHere = (store: KeyValueStore, list: PublishedList): boolean =>
+  loadPlacedDraft(store, scopeOf(list)) !== null || readKept(store, list.id) !== null;
 
 /**
- * One press and the link is on the clipboard. The address itself used to be
- * spelled out here, forty characters nobody reads and everybody had to select.
+ * Switching boards moves the same cards rather than swapping one picture for
+ * another: each tile flies from where it sat on the board that was shown to
+ * where it sits on the new one. `remember` is called just before the switch;
+ * the render after it moves them.
  */
-function CopyLinkButton({ list }: { list: PublishedList }) {
-  const { copy } = useListLink(list);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), 2000);
-    return () => clearTimeout(timer);
-  }, [copied]);
-
-  return (
-    <button
-      type="button"
-      className="list-head__copy"
-      onClick={() => {
-        copy().then(
-          () => setCopied(true),
-          () => undefined,
-        );
-      }}
-    >
-      <Icon name={copied ? "check" : "link"} />
-      <span aria-live="polite">{copied ? strings.list.linkCopied : strings.list.copyLink}</span>
-    </button>
-  );
-}
-
-/** The footer waits while the pool is docked, so the privacy policy ends the list's menu instead. */
-function PrivacyItem() {
-  return (
-    <>
-      <li className="menu__divider" role="separator" />
-      <li>
-        <a className="menu__action" href="/privacy.html">
-          {strings.footer.privacy}
-        </a>
-      </li>
-    </>
-  );
-}
-
-/** What the button does on a wide screen, the menu does on a phone, where the head has no room. */
-function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
-  const { copy, canShare, share } = useListLink(list);
-  return (
-    <>
-      <li className="list-menu__copy">
-        <button
-          type="button"
-          className="menu__action"
-          onClick={() => {
-            copy().then(
-              () => notify({ text: strings.list.linkCopied }),
-              () => undefined,
-            );
-          }}
-        >
-          {strings.list.copyLink}
-        </button>
-      </li>
-      {canShare && (
-        <li>
-          <button type="button" className="menu__action" onClick={share}>
-            {strings.list.share}
-          </button>
-        </li>
-      )}
-    </>
-  );
-}
-
-/**
- * What a visitor can do about a list besides ranking it: pass it on, complain,
- * or keep it, or everything from its author, out of sight. Reporting needs an
- * account, so a guest is asked to sign in first; hiding is this device's
- * business alone.
- */
-function VisitorMenu({
-  list,
-  report,
-  notify,
-  saving,
-}: {
-  list: PublishedList;
-  report: Report;
-  notify: Notify;
-  saving: SaveToMine;
-}) {
-  const { account, signIn } = useSession();
-  const { hideList, showList, hideAuthor, showAuthor } = useHidden();
-  const [reporting, setReporting] = useState<ReportState>("closed");
-  const { canShare } = useListLink(list);
-
-  const hideNow = () => {
-    hideList({ id: list.id, title: list.title });
-    notify({
-      text: strings.list.hiddenNotice,
-      action: { text: strings.list.undo, onClick: () => showList(list.id) },
-    });
-  };
-
-  const hideAuthorNow = () => {
-    hideAuthor({ uid: list.authorUid, name: list.authorName });
-    notify({
-      text: fill(strings.list.hiddenAuthorNotice, { name: list.authorName }),
-      action: { text: strings.list.undo, onClick: () => showAuthor(list.authorUid) },
-    });
-  };
-
-  const onSignIn = () => {
-    setReporting("signingIn");
-    signIn().then((outcome) => setReporting(outcome.kind === "signedIn" ? "open" : "signIn"));
-  };
-
-  const send = (reason: ReportReason, note: string | null, alsoAuthor: boolean) => {
-    setReporting("sending");
-    report(list.id, { reason, note }).then(
-      () => {
-        hideList({ id: list.id, title: list.title });
-        if (alsoAuthor) hideAuthor({ uid: list.authorUid, name: list.authorName });
-        setReporting("sent");
-      },
-      () => setReporting("failed"),
+function useCardsMove(box: RefObject<HTMLElement | null>): () => void {
+  const before = useRef<Map<string, DOMRect> | null>(null);
+  useLayoutEffect(() => {
+    const from = before.current;
+    before.current = null;
+    if (from === null) return;
+    for (const tile of box.current?.querySelectorAll<HTMLElement>(".tile[data-item]") ?? []) {
+      const rect = from.get(tile.dataset.item ?? "");
+      if (rect !== undefined) flyIn(tile, rect, undefined, SWITCH_MS);
+    }
+  });
+  return () => {
+    const tiles = box.current?.querySelectorAll<HTMLElement>(".tile[data-item]") ?? [];
+    before.current = new Map(
+      [...tiles].map((tile) => [tile.dataset.item ?? "", tile.getBoundingClientRect()]),
     );
   };
-
-  const closeReport = useCallback(() => setReporting("closed"), []);
-
-  return (
-    <>
-      <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
-        <>
-          <LinkItems list={list} notify={notify} />
-          <li
-            className={canShare ? "menu__divider" : "menu__divider list-menu__copy"}
-            role="separator"
-          />
-          {/* The head's own Save button, where a phone's head has no room for it. */}
-          <li className="list-menu__copy">
-            <button type="button" className="menu__action" onClick={saving.start}>
-              {strings.list.saveToMine}
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              className="menu__action"
-              onClick={() => setReporting(account?.kind === "signedIn" ? "open" : "signIn")}
-            >
-              {strings.list.report}
-            </button>
-          </li>
-          <li>
-            <button type="button" className="menu__action" onClick={hideNow}>
-              {strings.list.hide}
-            </button>
-          </li>
-          {/* Hiding the author of an editorial list would hide every one of them. */}
-          {!isEditorial(list) && (
-            <li>
-              <button type="button" className="menu__action" onClick={hideAuthorNow}>
-                {fill(strings.list.hideAuthorNow, { name: list.authorName })}
-              </button>
-            </li>
-          )}
-          <PrivacyItem />
-        </>
-      </Menu>
-      <ReportDialog
-        state={reporting}
-        authorName={isEditorial(list) ? null : list.authorName}
-        send={send}
-        onSignIn={onSignIn}
-        onHideInstead={() => {
-          setReporting("closed");
-          hideNow();
-        }}
-        onClose={closeReport}
-      />
-    </>
-  );
-}
-
-/**
- * A visitor's head: the phone's "Save to my lists" as a button beside Copy
- * link, the menu with the rest. One saving flow serves the button and the
- * menu's copy of it.
- */
-function VisitorTools({
-  list,
-  report,
-  notify,
-  repository,
-}: {
-  list: PublishedList;
-  report: Report;
-  notify: Notify;
-  repository?: BoardsRepository;
-}) {
-  const saving = useSaveToMine(list, notify, { repository });
-  return (
-    <>
-      <Button variant="tonal" icon="bookmark" className="list-head__save" onClick={saving.start}>
-        {strings.list.saveToMine}
-      </Button>
-      <CopyLinkButton list={list} />
-      <VisitorMenu list={list} report={report} notify={notify} saving={saving} />
-      <SaveToMineDialog saving={saving} />
-    </>
-  );
-}
-
-type Deleting =
-  | { status: "closed" }
-  | { status: "asking" }
-  | { status: "busy" }
-  | { status: "failed"; error: ApiError };
-
-/**
- * The author's own menu. A list made on the site has no other copy, so taking
- * it down is deleting it, and the word says so; a board on the phone is the
- * phone's and stays.
- */
-function AuthorMenu({
-  list,
-  unpublish,
-  notify,
-}: {
-  list: PublishedList;
-  unpublish: Unpublish;
-  notify: Notify;
-}) {
-  const navigate = useNavigate();
-  const [deleting, setDeleting] = useState<Deleting>({ status: "closed" });
-  const { canShare } = useListLink(list);
-  const busy = deleting.status === "busy";
-
-  const gone = () => void navigate("/me");
-  const confirm = () => {
-    setDeleting({ status: "busy" });
-    unpublish(list.id).then(gone, (reason: unknown) => {
-      const error = errorOf(reason);
-      // Already gone is what was asked for.
-      if (error.kind === "notFound") gone();
-      else setDeleting({ status: "failed", error });
-    });
-  };
-  const close = useCallback(() => setDeleting({ status: "closed" }), []);
-
-  return (
-    <>
-      <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
-        <>
-          <LinkItems list={list} notify={notify} />
-          <li
-            className={canShare ? "menu__divider" : "menu__divider list-menu__copy"}
-            role="separator"
-          />
-          <li>
-            <Link to={`/new?list=${encodeURIComponent(list.id)}`}>{strings.list.edit}</Link>
-          </li>
-          <li>
-            <button
-              type="button"
-              className="menu__action"
-              onClick={() => setDeleting({ status: "asking" })}
-            >
-              {strings.list.delete}
-            </button>
-          </li>
-          <PrivacyItem />
-        </>
-      </Menu>
-      {deleting.status !== "closed" && (
-        <ConfirmDialog
-          narrow
-          title={strings.list.deleteTitle}
-          body={fill(strings.list.deleteBody, { title: list.title })}
-          confirmLabel={strings.list.delete}
-          busyLabel={strings.list.deleting}
-          cancelLabel={strings.list.keepIt}
-          busy={busy}
-          trouble={
-            deleting.status === "failed" && (
-              <p className="dialog__bar" role="alert">
-                <Icon name="cloud_off" className="dialog__bar-icon" />
-                {deleting.error.kind === "offline"
-                  ? strings.list.deleteOffline
-                  : strings.list.deleteFailed}
-              </p>
-            )
-          }
-          onConfirm={confirm}
-          onCancel={close}
-        />
-      )}
-    </>
-  );
 }
 
 /** The page of a list this person hid: no board, a way back, a way home. */
@@ -386,6 +98,83 @@ function HiddenView({ list }: { list: PublishedList }) {
   );
 }
 
+/**
+ * The list this one was made from: its title leads there and its author's
+ * name to their page, two links in one sentence. An original that stands
+ * without an author, or an editorial one, credits nobody.
+ */
+function BasedOnLine({ basedOn }: { basedOn: BasedOn }) {
+  const title = <Link to={`/l/${encodeURIComponent(basedOn.id)}`}>{basedOn.title}</Link>;
+  const name = basedOn.authorName?.trim() ?? "";
+  const uid = basedOn.authorUid ?? "";
+  if (name === "" || isEditorialAuthor(uid)) {
+    return (
+      <p className="list-head__based-on">{fillNodes(strings.list.basedOnUnnamed, { title })}</p>
+    );
+  }
+  const author =
+    uid === "" ? (
+      name
+    ) : (
+      <Link to={`/u/${encodeURIComponent(uid)}`} state={{ author: { name, photoUrl: null } }}>
+        {name}
+      </Link>
+    );
+  return (
+    <p className="list-head__based-on">
+      {fillNodes(strings.list.basedOn, { title, name: author })}
+    </p>
+  );
+}
+
+interface WhoseSwitchProps {
+  view: View;
+  /** The reader whose placing the left half shows; null for the author's. */
+  chosen: ReaderRanking | null;
+  /** The author's own page has no Mine: the left half alone, for a reader's placing. */
+  mine: boolean;
+  onView: (view: View) => void;
+  onBack: () => void;
+}
+
+/**
+ * Theirs | Mine, the app's switch: one pill, the chosen half filled and
+ * ticked. The left half is whoever's placing is on screen: the author's, or
+ * a reader's by name with a cross back to the author's.
+ */
+function WhoseSwitch({ view, chosen, mine, onView, onBack }: WhoseSwitchProps) {
+  const half = (which: View, label: string, back?: boolean) => (
+    <span className={view === which ? "whose__half whose__half--on" : "whose__half"}>
+      <button
+        type="button"
+        className="whose__segment"
+        aria-pressed={view === which}
+        onClick={() => onView(which)}
+      >
+        {view === which && <Icon name="check" className="whose__check" />}
+        <span className="whose__label">{label}</span>
+      </button>
+      {back === true && (
+        <button
+          type="button"
+          className="whose__back"
+          aria-label={strings.list.backToAuthor}
+          title={strings.list.backToAuthor}
+          onClick={onBack}
+        >
+          <Icon name="close" />
+        </button>
+      )}
+    </span>
+  );
+  return (
+    <div className="whose" role="group" aria-label={strings.list.views}>
+      {half("theirs", chosen?.authorName ?? strings.list.viewTheirs, chosen !== null)}
+      {mine && half("mine", strings.list.viewMine)}
+    </div>
+  );
+}
+
 interface ListPageProps {
   report?: Report;
   unpublish?: Unpublish;
@@ -393,15 +182,43 @@ interface ListPageProps {
   repository?: BoardsRepository;
 }
 
-export function ListPage({
+export function ListPage(props: ListPageProps) {
+  const { id = "" } = useParams();
+  const { state, retry } = useResource(id, loadList);
+
+  if (state.status === "loading") {
+    return <ListPageLoading note={strings.list.opening} rows={3} />;
+  }
+  if (state.status === "error") {
+    return <ListPageTrouble error={state.error} retry={retry} words={strings.list} />;
+  }
+  // A list of its own: what was chosen on another one does not carry over.
+  return <OpenList key={state.value.id} list={state.value} {...props} />;
+}
+
+function OpenList({
+  list,
   report = sendReport,
   unpublish = unpublishList,
   repository,
-}: ListPageProps) {
-  const { id = "" } = useParams();
-  const { state, retry } = useResource(id, loadList);
+}: ListPageProps & { list: PublishedList }) {
   const { account } = useSession();
-  const [view, setView] = useState<View>("mine");
+  const { hidden } = useHidden();
+  // The author has nobody's arrangement to compare with but their own: they
+  // see the list as they published it, and the way to change it.
+  const own = account?.kind === "signedIn" && account.uid === list.authorUid;
+  const editorial = isEditorial(list);
+  const outOfSight = !own && isOutOfSight(hidden, list);
+  const author = useMemo(() => arrange(list), [list]);
+  // What somebody came for, as in the app: the author's ranking, unless this
+  // device has begun its own. An author who placed nothing has no half to show.
+  const [view, setView] = useState<View>(() =>
+    author.known && !begunHere(localStorageStore, list) ? "theirs" : "mine",
+  );
+  // A reader's placing chosen in the rankings sheet, shown in the left half.
+  const [chosen, setChosen] = useState<ReaderRanking | null>(null);
+  const [sheet, setSheet] = useState(false);
+  const rankings = useRankings(list.id);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
   // The shape the board took on a wide screen, so the header lays itself out
@@ -420,93 +237,84 @@ export function ListPage({
     }),
     [headSlot],
   );
-  const { hidden } = useHidden();
 
-  if (state.status === "loading") {
-    return <ListPageLoading note={strings.list.opening} rows={3} />;
-  }
-  if (state.status === "error") {
-    return <ListPageTrouble error={state.error} retry={retry} words={strings.list} />;
-  }
+  const theirsKnown = author.known || chosen !== null;
+  const shown: View = own || (theirsKnown && view === "theirs") ? "theirs" : "mine";
+  const page = useRef<HTMLElement>(null);
+  const remember = useCardsMove(page);
 
-  const { value: list } = state;
-  // The author has nobody's arrangement to compare with but their own: they
-  // see the list as they published it, and the way to change it.
-  const own = account?.kind === "signedIn" && account.uid === list.authorUid;
-  const editorial = isEditorial(list);
-  const outOfSight = !own && isOutOfSight(hidden, list);
-  const published = (
+  const show = (next: View) => {
+    remember();
+    setView(next);
+  };
+  const choose = (ranking: ReaderRanking | null) => {
+    remember();
+    setChosen(ranking);
+    setView("theirs");
+    setSheet(false);
+  };
+  // One's own placing on the board as it is withdrawn gives way to the author's.
+  const withdraw = () => {
+    if (chosen?.mine === true) {
+      remember();
+      setChosen(null);
+    }
+    rankings.withdraw();
+  };
+
+  const theirs = chosen === null ? { tiers: list.tiers, ...author } : placedBy(list, chosen);
+  const theirsBoard = (
     <ReadOnlyBoard
-      label={own ? strings.owner.title : strings.list.viewTheirs}
-      tiers={list.tiers}
+      label={chosen?.authorName ?? (own ? strings.owner.title : strings.list.theirRanking)}
+      tiers={theirs.tiers}
       items={list.items}
-      {...arrange(list)}
+      rows={theirs.rows}
+      // Theirs is to look at: nothing waits to be placed. The author's own list keeps its pool.
+      pool={own && chosen === null ? author.pool : []}
     />
   );
+  // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
+  const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
+  const chipShown = list.takeCount > 0 && !outOfSight;
+
   return (
-    <article className={boardDock === null ? "list-page" : `list-page list-page--${boardDock}`}>
+    <article
+      ref={page}
+      className={boardDock === null ? "list-page" : `list-page list-page--${boardDock}`}
+    >
       <header className="list-head">
         <PageTitle title={list.title} />
         <div className="list-head__text">
           <h1 className="list-head__title">{list.title}</h1>
-          {editorial ? (
-            // No author, the way a template stands. The dot goes with the words
-            // before it, which a narrow head leaves out.
-            <p className="list-head__meta">
-              <span className="list-head__own">
-                {own ? strings.list.yourList : strings.rank.ownCopy}
-                {list.takeCount > 0 && " · "}
-              </span>
-              {list.takeCount > 0 && plural(strings.card.rankings, list.takeCount)}
-            </p>
-          ) : (
-            <p className="list-head__meta">
-              {list.authorUid === "" ? (
-                // A snapshot without the uid has no author's page to lead to.
-                fill(strings.list.by, { name: list.authorName })
-              ) : (
-                <Link
-                  to={`/u/${encodeURIComponent(list.authorUid)}`}
-                  state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
-                >
-                  {fill(strings.list.by, { name: list.authorName })}
-                </Link>
+          {/* A list that stands without an author has no line naming one. */}
+          {(!editorial || chipShown) && (
+            <div className="list-head__lines">
+              {!editorial && (
+                <AuthorLine
+                  uid={list.authorUid}
+                  name={list.authorName}
+                  photoUrl={list.authorPhotoUrl}
+                  own={own}
+                  notify={setNotice}
+                />
               )}
-              <span className="list-head__own">
-                {" · "}
-                {own ? strings.list.yourList : strings.rank.ownCopy}
-              </span>
-              {list.takeCount > 0 && (
-                <>
-                  {" · "}
-                  {plural(strings.card.rankings, list.takeCount)}
-                </>
-              )}
-            </p>
+              {chipShown && <RankingsChip count={list.takeCount} onClick={() => setSheet(true)} />}
+            </div>
           )}
+          {list.basedOn != null && <BasedOnLine basedOn={list.basedOn} />}
         </div>
-        {!outOfSight && !own && (
-          <div className="list-page__views" role="group" aria-label={strings.list.views}>
-            <Chip selected={view === "mine"} onClick={() => setView("mine")}>
-              {strings.list.viewMine}
-            </Chip>
-            <Chip selected={view === "theirs"} onClick={() => setView("theirs")}>
-              {strings.list.viewTheirs}
-            </Chip>
-          </div>
+        {switchShown && (
+          <WhoseSwitch
+            view={shown}
+            chosen={chosen}
+            mine={!own}
+            onView={show}
+            onBack={() => choose(null)}
+          />
         )}
         <span className="list-head__tools">
-          {own && (
-            <Link className="btn btn--tonal" to={`/new?list=${encodeURIComponent(list.id)}`}>
-              <Icon name="edit" className="btn__icon" />
-              <span>{strings.list.edit}</span>
-            </Link>
-          )}
           {own ? (
-            <>
-              <CopyLinkButton list={list} />
-              <AuthorMenu list={list} unpublish={unpublish} notify={setNotice} />
-            </>
+            <AuthorTools list={list} unpublish={unpublish} notify={setNotice} />
           ) : (
             <VisitorTools list={list} report={report} notify={setNotice} repository={repository} />
           )}
@@ -514,17 +322,27 @@ export function ListPage({
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
       {outOfSight && <HiddenView list={list} />}
-      {/* The author sees the list as it was published; it is changed on its board, behind Edit. */}
-      {!outOfSight && own && published}
       {!outOfSight &&
-        !own &&
-        (view === "mine" ? (
+        (shown === "mine" ? (
           <BoardFrameContext.Provider value={frame}>
             <RankingBoard key={list.id} list={list} />
           </BoardFrameContext.Provider>
+        ) : own ? (
+          // The author sees the list as it was published; it is changed on its board, behind Edit.
+          theirsBoard
         ) : (
-          <div className={`list-page__theirs list-page__theirs--${lastDock}`}>{published}</div>
+          <div className={`list-page__theirs list-page__theirs--${lastDock}`}>{theirsBoard}</div>
         ))}
+      {sheet && (
+        <RankingsSheet
+          list={list}
+          rankings={rankings}
+          chosen={chosen?.uid ?? null}
+          onChoose={choose}
+          onWithdraw={withdraw}
+          onClose={() => setSheet(false)}
+        />
+      )}
       <Snackbar notice={notice} onDone={clearNotice} />
     </article>
   );

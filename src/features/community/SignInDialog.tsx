@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { InAppNote } from "../../ui/InAppNote";
@@ -12,7 +13,10 @@ interface SignInDialogProps {
   onCancel: () => void;
 }
 
-/** The small dialog before something that needs an account: one reason, one button. */
+/**
+ * The small dialog before something that needs an account: one reason, one
+ * button. It lies on the body, so a sticky header that asks it cannot hold it.
+ */
 export function SignInDialog({ open, busy, title, body, onSignIn, onCancel }: SignInDialogProps) {
   const primary = useRef<HTMLButtonElement>(null);
 
@@ -27,7 +31,7 @@ export function SignInDialog({ open, busy, title, body, onSignIn, onCancel }: Si
   }, [open, busy, onCancel]);
 
   if (!open) return null;
-  return (
+  return createPortal(
     <div className="scrim" onClick={busy ? undefined : onCancel}>
       <div
         className="dialog dialog--narrow"
@@ -56,6 +60,7 @@ export function SignInDialog({ open, busy, title, body, onSignIn, onCancel }: Si
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

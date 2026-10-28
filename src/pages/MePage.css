@@ -181,10 +181,6 @@
   color: var(--on-error-container);
 }
 
-.menu__action--danger {
-  color: var(--error);
-}
-
 .me__empty {
   display: flex;
   flex-direction: column;

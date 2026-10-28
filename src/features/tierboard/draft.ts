@@ -78,6 +78,12 @@ export function loadDraft(store: KeyValueStore, scope: DraftScope): Rows | null 
   return parseDraft(store.read(draftKey(scope.id)), scope);
 }
 
+/** The draft once anything in it is placed: a board only opened keeps empty rows, and that is nobody's ranking. */
+export function loadPlacedDraft(store: KeyValueStore, scope: DraftScope): Rows | null {
+  const rows = loadDraft(store, scope);
+  return rows !== null && rows.some((row) => row.length > 0) ? rows : null;
+}
+
 export function saveDraft(store: KeyValueStore, scope: DraftScope, rows: Rows): void {
   store.write(draftKey(scope.id), serializeDraft(scope, rows));
 }
