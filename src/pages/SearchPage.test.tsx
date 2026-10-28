@@ -117,7 +117,7 @@ describe("SearchPage", () => {
     expect(screen.getByRole("link", { name: "Anime" })).toHaveAttribute("href", "/s/anime");
     expect(screen.getByRole("link", { name: "Make this list" })).toHaveAttribute(
       "href",
-      "/new?title=zzzz",
+      "/b/new?title=zzzz&category=anime",
     );
     // The heading first: it is there only once the second request has been
     // answered. Asked about before that, the request is an effect that may not

@@ -606,7 +606,7 @@ describe("ListPage for its author", () => {
     expect(screen.queryByRole("button", { name: "Publish changes" })).toBeNull();
     expect(
       screen.getAllByRole("link", { name: "Edit" }).map((link) => link.getAttribute("href")),
-    ).toEqual(["/new?list=abc"]);
+    ).toEqual(["/b/new?list=abc"]);
 
     // The owner's menu: the link and taking it down; nothing to report or hide, nothing to publish as theirs.
     await userEvent.click(screen.getByLabelText("More about this list"));

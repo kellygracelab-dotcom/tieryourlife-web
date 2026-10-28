@@ -26,8 +26,8 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
   ).toBeChecked();
   expect(await page.evaluate(() => localStorage.getItem("tyl:locale"))).toBe("uk");
 
-  // Making a list opens a board, built from the dictionary too.
-  await page.goto("/new");
+  // New list opens a board, built from the dictionary too.
+  await page.goto("/b/new");
   await expect(page).toHaveURL(/\/b\//);
   await expect(page.getByRole("button", { name: "Додати тир" })).toBeVisible();
 

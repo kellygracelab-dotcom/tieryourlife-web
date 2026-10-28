@@ -1,8 +1,9 @@
 import { Link } from "react-router";
-import { fill, plural, strings } from "../../strings";
+import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
-import { previewsOf, rankedCount, rankedTiers, type Board } from "./model";
+import { metaOf } from "./boardText";
+import { previewsOf, rankedTiers, type Board } from "./model";
 
 interface BoardTileProps {
   board: Board;
@@ -14,9 +15,10 @@ interface BoardTileProps {
 }
 
 /**
- * One board as the phone's grid shows it: its picture, its name and how many
- * cards are ranked, with the star over the picture's corner. The picture is
- * the chosen cover, else a collage of the first cards, else the tier colours.
+ * One board as the phone's grid shows it: its picture, its name, how far
+ * along it is and, once out, that it is public, with the star over the
+ * picture's corner. The picture is the chosen cover, else a collage of the
+ * first cards, else the tier colours.
  */
 export function BoardTile({ board, title, selecting, selected, onSelect, onStar }: BoardTileProps) {
   const starred = board.favouritedAt !== null;
@@ -28,10 +30,16 @@ export function BoardTile({ board, title, selecting, selected, onSelect, onStar 
     />
   );
   const words = (
-    <>
+    <span className="board-tile__words">
       <span className="board-tile__title">{title}</span>
-      <span className="board-tile__meta">{plural(strings.boards.ranked, rankedCount(board))}</span>
-    </>
+      <span className="board-tile__meta">{metaOf(board)}</span>
+      {board.publishedId !== null && (
+        <span className="board-tile__public">
+          <Icon name="public" />
+          {strings.boards.filterPublic}
+        </span>
+      )}
+    </span>
   );
   return (
     <li className={selected ? "board-tile board-tile--selected" : "board-tile"}>

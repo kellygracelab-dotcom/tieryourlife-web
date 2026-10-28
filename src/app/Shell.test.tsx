@@ -95,7 +95,7 @@ describe("Shell header", () => {
     expect(screen.queryByRole("radiogroup", { name: "Theme" })).toBeNull();
     const foot = within(screen.getByRole("contentinfo"));
     expect(foot.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
-    expect(screen.getByRole("link", { name: "Make a list" })).toHaveAttribute("href", "/new");
+    expect(screen.getByRole("link", { name: "New list" })).toHaveAttribute("href", "/b/new");
   });
 
   it("closes the account menu on a press anywhere else, on Escape, and after a choice", async () => {

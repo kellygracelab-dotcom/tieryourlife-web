@@ -177,7 +177,7 @@ test.describe("a wide screen", () => {
     await expect(box).toHaveValue("anime");
   });
 
-  // A tablet held upright: the docked tray one size up, rows one size down.
+  // A tablet held upright: the docked tray, cards 52 × 76 as in the rows, the band 80.
   test("docks a taller tray on a tablet held upright", async ({ browser }) => {
     const tablet = await browser.newContext({ ...devices["iPad (gen 7)"] });
     const page = await tablet.newPage();
@@ -189,7 +189,7 @@ test.describe("a wide screen", () => {
     const pool = page.locator(".pool");
     await expect(pool).toHaveCSS("position", "fixed");
     const tile = (await page.getByRole("button", { name: "Ex Machina" }).boundingBox())!;
-    expect([Math.round(tile.width), Math.round(tile.height)]).toEqual([56, 78]);
+    expect([Math.round(tile.width), Math.round(tile.height)]).toEqual([52, 76]);
     const band = (await page.locator(".tier__band").first().boundingBox())!;
     expect(Math.round(band.width)).toBe(80);
     await expect(page.getByRole("button", { name: "Copy link" })).toBeHidden();

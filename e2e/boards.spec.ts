@@ -7,13 +7,12 @@ const press = (target: Locator, touch: boolean) => (touch ? target.tap() : targe
 /** A board of one's own with three cards, one of them ranked, made the way a person makes it. */
 async function makeBoard(page: Page, touch: boolean) {
   await page.goto("/b");
-  await page.getByRole("button", { name: "New list" }).first().click();
+  await page.getByRole("link", { name: "New list" }).first().click();
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films I make people watch");
   await title.press("Enter");
-  // On a narrow window the box that brings cards in waits behind Add, in the pool.
-  const addButton = page.getByRole("button", { name: "Add", exact: true });
-  if (await addButton.isVisible()) await press(addButton, touch);
+  // An empty pool keeps the box that brings cards in behind + Add, on any window.
+  await press(page.getByRole("button", { name: "Add", exact: true }), touch);
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     const add = page.getByRole("textbox", { name: "Add a card" });
     await add.fill(name);
@@ -45,10 +44,10 @@ async function makeBoard(page: Page, touch: boolean) {
   await expect(page.getByText(/1 ranked · 2 in pool/)).toBeVisible();
 }
 
-test("Make a list opens a new board, where the list is made", async ({ page, hasTouch }) => {
+test("New list opens a new board, where the list is made", async ({ page, hasTouch }) => {
   await mockBackend(page);
   await page.goto("/");
-  await press(page.getByRole("link", { name: "Make a list" }), hasTouch);
+  await press(page.getByRole("link", { name: "New list" }), hasTouch);
   await expect(page).toHaveURL(/\/b\/[^?]+\?new=/);
   const title = page.getByRole("textbox", { name: "Title" });
   await expect(title).toBeFocused();
@@ -56,6 +55,30 @@ test("Make a list opens a new board, where the list is made", async ({ page, has
   await title.press("Enter");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cheeses");
   await expect(page.getByRole("button", { name: "Add tier" })).toBeVisible();
+  // Nothing in the pool yet: it says so, and + Add opens the catalogue.
+  await expect(page.getByRole("heading", { name: "Pool · 0 unranked" })).toBeVisible();
+  await press(page.getByRole("button", { name: "Add", exact: true }), hasTouch);
+  await expect(page.getByRole("textbox", { name: "Add a card" })).toBeFocused();
+});
+
+test("the old /new and a suggestion of the empty page make a list in its section", async ({
+  page,
+  hasTouch,
+}) => {
+  await mockBackend(page);
+  await page.goto("/new?title=Ramen");
+  await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&title=Ramen$/);
+  await expect(page.getByRole("textbox", { name: "Title" })).toHaveValue("Ramen");
+
+  await page.goto("/b");
+  await expect(page.getByText("No lists yet")).toBeVisible();
+  await press(page.getByRole("link", { name: "Restaurants" }), hasTouch);
+  await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&category=food$/);
+  const title = page.getByRole("textbox", { name: "Title" });
+  await expect(title).toBeFocused();
+  await title.fill("Ramen in Kyiv");
+  await title.press("Enter");
+  await expect(page.getByText(/Food/)).toBeVisible();
 });
 
 test("keeps a new board, and its settings say why a guest cannot publish it", async ({
@@ -71,12 +94,15 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
 
   await page.getByLabel("More about this board").click();
   await page.getByRole("button", { name: "List settings" }).click();
+  // A guest's switch asks them to sign in; the words under it say why.
   const publicSwitch = page.getByRole("switch", { name: "Public" });
   await expect(publicSwitch).toBeVisible();
-  await expect(publicSwitch).toBeDisabled();
+  await expect(publicSwitch).toBeEnabled();
   await expect(page.getByText(/Sign in with Google to publish/)).toBeVisible();
+  await page.getByRole("button", { name: /Cover/ }).click();
   await expect(page.getByText("None of this list's cards have a picture yet.")).toBeVisible();
   await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("dialog", { name: "List settings" })).toBeHidden();
 
   // Share as image is in the board's menu, and draws a file.
   await page.getByLabel("More about this board").click();
@@ -166,10 +192,12 @@ test("moves a card along its row: the others make room at once, and nothing is p
   test.skip(hasTouch, "a mouse drag; a finger has the move sheet and the keys");
   await mockBackend(page);
   await page.goto("/b");
-  await page.getByRole("button", { name: "New list" }).first().click();
+  await page.getByRole("link", { name: "New list" }).first().click();
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films");
   await title.press("Enter");
+  // The empty pool keeps the catalogue behind + Add.
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     const add = page.getByRole("textbox", { name: "Add a card" });
     await add.fill(name);

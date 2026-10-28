@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
+import { CardName } from "./CardName";
+import { useBoardSize } from "./useBoardSize";
+import type { BoardSize } from "./nameFit";
 import "./board.css";
 import { sizedFor } from "../../lib/pictureSize";
 
@@ -13,23 +16,32 @@ interface ReadOnlyBoardProps {
 }
 
 // The card's place in the list, as the ranking board's tiles carry it: a switch between the two moves the same cards.
-function Tile({ item, position }: { item: PublishedItem; position: number }) {
+function Tile({
+  item,
+  position,
+  board,
+}: {
+  item: PublishedItem;
+  position: number;
+  board: BoardSize;
+}) {
   return (
     <li className="tile" title={item.title} data-item={position}>
       {item.imageUrl !== null ? (
         <img {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
       ) : (
-        <span className="tile__name">{item.title}</span>
+        <CardName title={item.title} board={board} />
       )}
     </li>
   );
 }
 
 export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoardProps) {
+  const board = useBoardSize();
   const tileOf = (position: number) => {
     const item = items[position];
     return item === undefined ? null : (
-      <Tile key={`${position}-${item.title}`} item={item} position={position} />
+      <Tile key={`${position}-${item.title}`} item={item} position={position} board={board} />
     );
   };
   return (

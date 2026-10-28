@@ -1,6 +1,14 @@
 import { isCategory } from "../../api/types";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
-import { POOL_COLOURS, type Board, type BoardItem, type BoardTier } from "./model";
+import {
+  DISPLAY_MODES,
+  POOL_COLOURS,
+  type Board,
+  type BoardItem,
+  type BoardTier,
+  type BoardTopic,
+  type DisplayMode,
+} from "./model";
 
 /**
  * Where this device keeps its boards: one key per board, so a board is read
@@ -31,6 +39,24 @@ function tierOf(raw: unknown, position: number): BoardTier | null {
     colorDark: hex(tier.colorDark, POOL_COLOURS.colorDark),
     isPool: tier.isPool === true,
   };
+}
+
+/**
+ * The phone's name for the mode, or the default. "RANKED" is what this site
+ * wrote for the ranked column before it used the phone's names, which the
+ * phone read as rows.
+ */
+function displayModeOf(raw: unknown): DisplayMode {
+  if (raw === "RANKED") return "FLAT_RANKED";
+  return DISPLAY_MODES.find((mode) => mode === raw) ?? "WRAP";
+}
+
+function topicOf(raw: unknown): BoardTopic | null {
+  if (raw === null || typeof raw !== "object") return null;
+  const topic = raw as Record<string, unknown>;
+  const id = text(topic.id);
+  const name = text(topic.name);
+  return id === null || id.length === 0 || name === null ? null : { id, name };
 }
 
 function itemOf(raw: unknown, tierUids: Set<string>, position: number): BoardItem | null {
@@ -86,7 +112,7 @@ export function parseBoard(raw: unknown): Board | null {
   return {
     uid,
     title: text(source.title) ?? "",
-    displayMode: source.displayMode === "RANKED" ? "RANKED" : "WRAP",
+    displayMode: displayModeOf(source.displayMode),
     category: category !== null && isCategory(category) ? category : null,
     coverImageUrl: text(source.coverImageUrl),
     coverImageUrls: Array.isArray(source.coverImageUrls)
@@ -101,6 +127,7 @@ export function parseBoard(raw: unknown): Board | null {
     favouritedAt: time(source.favouritedAt),
     arrivedFrom: text(source.arrivedFrom),
     publishedEditedAt: time(source.publishedEditedAt),
+    topic: topicOf(source.topic),
   };
 }
 

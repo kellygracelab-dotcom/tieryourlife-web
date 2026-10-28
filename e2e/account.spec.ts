@@ -12,13 +12,12 @@ const press = (target: Locator, touch: boolean) => (touch ? target.tap() : targe
 
 async function newBoard(page: Page, touch: boolean, title: string) {
   await page.goto("/b");
-  await page.getByRole("button", { name: "New list" }).first().click();
+  await page.getByRole("link", { name: "New list" }).first().click();
   const field = page.getByRole("textbox", { name: "Title" });
   await field.fill(title);
   await field.press("Enter");
-  // On a narrow window the box that brings cards in waits behind Add, in the pool.
-  const add = page.getByRole("button", { name: "Add", exact: true });
-  if (await add.isVisible()) await press(add, touch);
+  // An empty pool keeps the box that brings cards in behind + Add, on any window.
+  await press(page.getByRole("button", { name: "Add", exact: true }), touch);
   for (const name of ["Ex Machina", "The Witch"]) {
     const box = page.getByRole("textbox", { name: "Add a card" });
     await box.fill(name);
@@ -35,7 +34,8 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   await newBoard(page, hasTouch, "Films I make people watch");
   await press(page.getByLabel("More about this board"), hasTouch);
   await press(page.getByRole("button", { name: "List settings" }), hasTouch);
-  await page.getByLabel("Category").selectOption("film_tv");
+  await press(page.getByRole("button", { name: /Category/ }), hasTouch);
+  await press(page.getByRole("radio", { name: "Film & TV" }), hasTouch);
   const publicSwitch = page.getByRole("switch", { name: "Public" });
   await expect(publicSwitch).toBeEnabled();
 
@@ -61,7 +61,7 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   await shot(page, `publish-${hasTouch ? "phone" : "desktop"}`);
 
   // A change on the board puts the published copy behind; Update sends it again.
-  await page.getByRole("radio", { name: /Ranked list/ }).check();
+  await press(page.getByRole("radio", { name: "Ranking" }), hasTouch);
   await expect(page.getByText("The published copy is behind this board.")).toBeVisible();
   await press(page.getByRole("button", { name: "Update" }), hasTouch);
   await expect(page.getByText("Send this board again, over the same link.")).toBeVisible();
@@ -72,8 +72,10 @@ test("publishes a board, sends it again and takes it down, and says when a try f
     .poll(() => [...account.boards.values()].find((b) => b.title === "Films I make people watch"))
     .toMatchObject({ body: { publishedId: "L1" } });
 
-  // Taken down from the same switch.
+  // Taken down from the same switch, once the sheet has asked.
   await press(publicSwitch, hasTouch);
+  const ask = page.getByRole("group", { name: "Take Films I make people watch down?" });
+  await press(ask.getByRole("button", { name: "Take it down" }), hasTouch);
   await expect(page.getByText("Unpublished. The link no longer works.")).toBeVisible();
   await expect(publicSwitch).not.toBeChecked();
   expect(account.calls).toContain("DELETE /lists/L1");

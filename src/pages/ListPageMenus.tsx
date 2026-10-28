@@ -338,7 +338,7 @@ export function AuthorTools({
 }) {
   return (
     <>
-      <Link className="btn btn--tonal" to={`/new?list=${encodeURIComponent(list.id)}`}>
+      <Link className="btn btn--tonal" to={`/b/new?list=${encodeURIComponent(list.id)}`}>
         <Icon name="edit" className="btn__icon" />
         <span>{strings.list.edit}</span>
       </Link>
