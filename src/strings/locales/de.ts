@@ -132,6 +132,13 @@ const de: Translation = {
       "Listen und Menschen, die du in der Community ausblendest, warten hier, falls du es dir anders überlegst.",
     hiddenAuthor: "Alles von {name}",
     showAgain: "Wieder anzeigen",
+    placeTitle: "Bild ausrichten",
+    placeFrame: "Das Bild, das in den Kreis kommt",
+    placeUse: "Verwenden",
+    placeFailed:
+      "Das Bild kann hier nicht angezeigt werden. Es lässt sich trotzdem so verwenden, wie es ist.",
+    placeHelp: "Zieh zum Verschieben; zoome mit zwei Fingern oder durch Scrollen.",
+    placeAsItIs: "Dieses Bild lässt sich nur so verwenden, wie es ist.",
   },
   footer: {
     privacy: "Datenschutzerklärung",

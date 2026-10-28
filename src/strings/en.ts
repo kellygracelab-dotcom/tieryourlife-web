@@ -82,7 +82,7 @@ export const en = {
     nameTitle: "Your name",
     nameBody: "The name shown as the author on every list you publish. Your email is never shown.",
     nameField: "Name",
-    nameCounter: "{n} / {max}",
+    nameCounter: "{n}/{max}",
     nameNeeded: "A name is needed — it’s what people see.",
     nameNote:
       "Lists you already published keep the old name until we update them — that happens right after you save.",
@@ -122,6 +122,12 @@ export const en = {
       "Lists and people you hide in the community wait here, in case you change your mind.",
     hiddenAuthor: "Everything from {name}",
     showAgain: "Show again",
+    placeTitle: "Place your face",
+    placeFrame: "The picture to place in the circle",
+    placeUse: "Use this",
+    placeFailed: "The picture could not be shown here. It can still be used as it is.",
+    placeHelp: "Drag to move, pinch or scroll to zoom.",
+    placeAsItIs: "This picture can only be used as it is.",
   },
   footer: {
     privacy: "Privacy policy",

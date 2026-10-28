@@ -1,0 +1,93 @@
+/* Place your face: the picture behind the circle people will see, dragged and zoomed into place. */
+.placing {
+  align-items: center;
+  gap: 16px;
+}
+
+.placing .dialog__title {
+  align-self: stretch;
+  font-size: 22px;
+  line-height: 28px;
+}
+
+.placing__frame {
+  position: relative;
+  flex: none;
+  width: 240px;
+  height: 240px;
+  overflow: hidden;
+  background: var(--tile-placeholder);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.placing__frame:active {
+  cursor: grabbing;
+}
+
+.placing__frame--still,
+.placing__frame--still:active {
+  cursor: default;
+}
+
+.placing__frame:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+/* Where it sits is the dialog's to say, in the style attribute: screen geometry, not a side of the text. */
+.placing__picture {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+
+.placing__picture--waiting {
+  visibility: hidden;
+}
+
+/* The same dim outside the circle in both themes, and a white ring on its edge. */
+.placing__ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 240px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.placing__help {
+  margin: 0;
+  font: 400 12px/17px var(--font);
+  color: var(--ink-dim);
+  text-align: center;
+}
+
+.placing .dialog__actions {
+  align-self: stretch;
+  margin-top: 0;
+}
+
+.placing__use {
+  min-height: 40px;
+}
+
+/* A phone gives the whole screen to it, and a smaller circle. */
+@media (max-width: 599px) {
+  .placing__scrim {
+    padding: 0;
+  }
+
+  .placing {
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    border-radius: 0;
+  }
+
+  .placing__frame {
+    width: 180px;
+    height: 180px;
+  }
+}

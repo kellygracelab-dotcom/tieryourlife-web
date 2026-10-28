@@ -128,6 +128,12 @@ const es: Translation = {
       "Las listas y personas que ocultes en la comunidad esperan aquí, por si cambias de idea.",
     hiddenAuthor: "Todo de {name}",
     showAgain: "Mostrar de nuevo",
+    placeTitle: "Coloca tu foto",
+    placeFrame: "La imagen que va en el círculo",
+    placeUse: "Usar esta",
+    placeFailed: "La imagen no se puede mostrar aquí. Aun así se puede usar tal cual.",
+    placeHelp: "Arrastra para mover; pellizca o desplaza para hacer zoom.",
+    placeAsItIs: "Esta imagen solo se puede usar tal cual.",
   },
   footer: {
     privacy: "Política de privacidad",

@@ -129,6 +129,12 @@ const ptBR: Translation = {
       "As listas e pessoas que você ocultar na comunidade esperam aqui, caso mude de ideia.",
     hiddenAuthor: "Tudo de {name}",
     showAgain: "Mostrar de novo",
+    placeTitle: "Posicione sua foto",
+    placeFrame: "A imagem que vai no círculo",
+    placeUse: "Usar esta",
+    placeFailed: "Não foi possível mostrar a imagem aqui. Ela ainda pode ser usada como está.",
+    placeHelp: "Arraste para mover; use dois dedos ou role para ampliar.",
+    placeAsItIs: "Esta imagem só pode ser usada como está.",
   },
   footer: {
     privacy: "Política de privacidade",

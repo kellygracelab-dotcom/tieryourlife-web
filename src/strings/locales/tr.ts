@@ -130,6 +130,12 @@ const tr: Translation = {
       "Toplulukta gizlediğiniz listeler ve kişiler, fikrinizi değiştirirsiniz diye burada bekler.",
     hiddenAuthor: "{name} kullanıcısından gelen her şey",
     showAgain: "Yeniden göster",
+    placeTitle: "Fotoğrafı yerleştir",
+    placeFrame: "Daireye yerleştirilecek resim",
+    placeUse: "Bunu kullan",
+    placeFailed: "Resim burada gösterilemedi. Yine de olduğu gibi kullanılabilir.",
+    placeHelp: "Taşımak için sürükleyin; yakınlaştırmak için iki parmakla açın veya kaydırın.",
+    placeAsItIs: "Bu resim yalnızca olduğu gibi kullanılabilir.",
   },
   footer: {
     privacy: "Gizlilik politikası",

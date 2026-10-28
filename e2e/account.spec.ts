@@ -208,6 +208,10 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
     const chooser = page.waitForEvent("filechooser");
     await press(page.locator(".settings__choice--photo"), hasTouch);
     await (await chooser).setFiles({ name: "me.png", mimeType: "image/png", buffer: PIXEL });
+    // Placed in the circle first, then cut on the device; the middle square will do.
+    const placing = page.getByRole("dialog", { name: "Place your face" });
+    await press(placing.getByRole("button", { name: "Use this" }), hasTouch);
+    await expect(placing).toBeHidden();
   };
 
   account.failNext.set("POST /lists/face/*", 422);
