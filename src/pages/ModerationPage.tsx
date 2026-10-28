@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
-import type { ReportReason } from "../api/community";
 import { BAN_LENGTHS, type BanLength, type QueuedList } from "../api/moderation";
 import { useSession } from "../app/session";
+import { REASON_TEXT } from "../features/community/ReportDialog";
 import { noteReports } from "../features/moderation/useModerator";
 import { useResource } from "../lib/useResource";
 import { leaveListUp, loadReports, takeDownList } from "../lib/api";
@@ -29,13 +29,6 @@ interface ModerationPageProps {
 export const NOTES_SHOWN = 3;
 const BLUR_KEY = "tyl:blur";
 
-const REASON_TEXT: Record<ReportReason, string> = {
-  sexual: strings.report.reasonSexual,
-  hate: strings.report.reasonHate,
-  violence: strings.report.reasonViolence,
-  spam: strings.report.reasonSpam,
-  other: strings.report.reasonOther,
-};
 
 const BAN_TEXT: Record<BanLength, string> = {
   week: strings.mod.banWeek,

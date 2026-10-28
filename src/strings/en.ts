@@ -401,6 +401,7 @@ export const en = {
     signInBody:
       "Reports go to a person, so they need an account. Hiding a list doesn’t — that stays on this device.",
     hideInstead: "Hide instead",
+    reasonWrongPlace: "Wrong section or topic",
   },
   board: {
     unranked: { one: "{n} unranked", other: "{n} unranked" },

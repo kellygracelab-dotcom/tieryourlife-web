@@ -28,7 +28,7 @@ const open = (path: string) => {
 /** The first word of every page's address, e.g. "b" for b/:uid. */
 const pageWords = (list: typeof routes): string[] =>
   list.flatMap((route) => [
-    ...(route.path ? [route.path.split("/")[0]] : []),
+    ...(route.path ? [route.path.split("/")[0] ?? ""] : []),
     ...pageWords(route.children ?? []),
   ]);
 

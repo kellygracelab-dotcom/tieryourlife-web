@@ -412,6 +412,7 @@ const de: Translation = {
     signInBody:
       "Meldungen gehen an einen Menschen, deshalb brauchen sie ein Konto. Eine Liste ausblenden geht ohne – das bleibt auf diesem Gerät.",
     hideInstead: "Lieber ausblenden",
+    reasonWrongPlace: "Falsche Rubrik oder falsches Thema",
   },
   board: {
     unranked: { one: "{n} nicht eingestuft", other: "{n} nicht eingestuft" },

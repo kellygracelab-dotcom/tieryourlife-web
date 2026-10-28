@@ -61,25 +61,33 @@ describe("SearchPage", () => {
     expect(await screen.findByRole("link", { name: /Ghibli, ranked/ })).toBeInTheDocument();
     expect(screen.getByText("2 lists, and more")).toBeInTheDocument();
     expect(within(screen.getByRole("main")).getByRole("searchbox")).toHaveValue("anime");
-    expect(screen.getByRole("button", { name: "Popular" })).toHaveAttribute("aria-pressed", "true");
+    // The backend orders a search by title, so there is no order to choose.
+    expect(screen.queryByRole("group", { name: "Order" })).toBeNull();
   });
 
-  it("changes the order and the category through the chips, keeping the words", async () => {
-    const router = open("/search?q=anime");
+  it("changes the order and the category through the chips while browsing", async () => {
+    const router = open("/search");
     await userEvent.click(screen.getByRole("button", { name: "Newest" }));
-    expect(router.state.location.search).toBe("?q=anime&sort=recent");
-    expect(mocks.loadFeed).toHaveBeenLastCalledWith({ q: "anime", sort: "recent" });
+    expect(router.state.location.search).toBe("?sort=recent");
+    expect(mocks.loadFeed).toHaveBeenLastCalledWith({ sort: "recent" });
 
     await userEvent.click(screen.getByRole("button", { name: "Games" }));
-    expect(router.state.location.search).toBe("?q=anime&sort=recent&category=games");
-    expect(mocks.loadFeed).toHaveBeenLastCalledWith({
-      q: "anime",
-      sort: "recent",
-      category: "games",
-    });
+    expect(router.state.location.search).toBe("?sort=recent&category=games");
+    expect(mocks.loadFeed).toHaveBeenLastCalledWith({ sort: "recent", category: "games" });
 
     await userEvent.click(screen.getByRole("button", { name: "All" }));
-    expect(router.state.location.search).toBe("?q=anime&sort=recent");
+    expect(router.state.location.search).toBe("?sort=recent");
+  });
+
+  it("keeps the words when a category is chosen", async () => {
+    const router = open("/search?q=anime");
+    await userEvent.click(screen.getByRole("button", { name: "Games" }));
+    expect(router.state.location.search).toBe("?q=anime&category=games");
+    expect(mocks.loadFeed).toHaveBeenLastCalledWith({
+      q: "anime",
+      sort: "popular",
+      category: "games",
+    });
   });
 
   it("browses when there is nothing to search for, and counts what it found", async () => {
@@ -149,12 +157,16 @@ describe("SearchPage", () => {
     const box = within(screen.getByRole("main")).getByRole("searchbox");
     await userEvent.clear(box);
     await userEvent.type(box, "ghibli");
-    await userEvent.click(screen.getByRole("button", { name: "Newest" }));
+    await userEvent.click(screen.getByRole("button", { name: "Games" }));
     act(() => {
       vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS + 50);
     });
-    expect(router.state.location.search).toBe("?q=ghibli&sort=recent");
-    expect(mocks.loadFeed).toHaveBeenLastCalledWith({ q: "ghibli", sort: "recent" });
+    expect(router.state.location.search).toBe("?q=ghibli&category=games");
+    expect(mocks.loadFeed).toHaveBeenLastCalledWith({
+      q: "ghibli",
+      sort: "popular",
+      category: "games",
+    });
   });
 });
 

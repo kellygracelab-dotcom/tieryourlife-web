@@ -401,6 +401,7 @@ const tr: Translation = {
     signInBody:
       "Bildirimler bir kişiye gider, bu yüzden hesap gerektirir. Bir listeyi gizlemek gerektirmez: o bu cihazda kalır.",
     hideInstead: "Gizlemek yeter",
+    reasonWrongPlace: "Yanlış bölüm veya konu",
   },
   board: {
     unranked: { other: "{n} sıralanmadı" },

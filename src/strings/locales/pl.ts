@@ -437,6 +437,7 @@ const pl: Translation = {
     signInBody:
       "Zgłoszenia trafiają do człowieka, więc wymagają konta. Ukrycie listy nie – to zostaje na tym urządzeniu.",
     hideInstead: "Wolę ukryć",
+    reasonWrongPlace: "Zły dział lub temat",
   },
   board: {
     unranked: { other: "{n} nieocenione" },

@@ -403,6 +403,7 @@ const es: Translation = {
     signInBody:
       "Las denuncias llegan a una persona, así que necesitan una cuenta. Ocultar una lista no: eso se queda en este dispositivo.",
     hideInstead: "Mejor ocultarla",
+    reasonWrongPlace: "Sección o tema equivocados",
   },
   board: {
     unranked: { one: "{n} sin clasificar", other: "{n} sin clasificar" },

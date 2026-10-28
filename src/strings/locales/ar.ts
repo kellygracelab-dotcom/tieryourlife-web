@@ -477,6 +477,7 @@ const ar: Translation = {
     signInBody:
       "تذهب البلاغات إلى شخص، لذا تحتاج إلى حساب. إخفاء قائمة لا يحتاج: يبقى ذلك على هذا الجهاز.",
     hideInstead: "الإخفاء بدلًا من ذلك",
+    reasonWrongPlace: "قسم أو موضوع خاطئ",
   },
   board: {
     unranked: {

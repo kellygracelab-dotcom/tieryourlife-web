@@ -126,14 +126,18 @@ export function SearchPage() {
           </p>
         )}
       </div>
-      <div className="search__chips" role="group" aria-label={strings.search.sortBy}>
-        <Chip selected={filters.sort === "popular"} onClick={() => set({ sort: "popular" })}>
-          {strings.search.mostRanked}
-        </Chip>
-        <Chip selected={filters.sort === "recent"} onClick={() => set({ sort: "recent" })}>
-          {strings.search.newest}
-        </Chip>
-      </div>
+      {/* Words are matched against titles, and the backend orders those by
+          title whatever is asked: an order chip would change nothing. */}
+      {!searching && (
+        <div className="search__chips" role="group" aria-label={strings.search.sortBy}>
+          <Chip selected={filters.sort === "popular"} onClick={() => set({ sort: "popular" })}>
+            {strings.search.mostRanked}
+          </Chip>
+          <Chip selected={filters.sort === "recent"} onClick={() => set({ sort: "recent" })}>
+            {strings.search.newest}
+          </Chip>
+        </div>
+      )}
       <div className="search__chips" role="group" aria-label={strings.search.categories}>
         <Chip
           selected={filters.category === undefined}

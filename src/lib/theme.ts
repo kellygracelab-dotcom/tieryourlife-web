@@ -1,7 +1,8 @@
 import type { KeyValueStore } from "./storage";
 export type Theme = "system" | "light" | "dark";
 
-export const THEMES: readonly Theme[] = ["system", "light", "dark"];
+/** In the app's order: Light | Dark | System. */
+export const THEMES: readonly Theme[] = ["light", "dark", "system"];
 export const THEME_KEY = "tyl:theme";
 
 export const isTheme = (value: unknown): value is Theme =>

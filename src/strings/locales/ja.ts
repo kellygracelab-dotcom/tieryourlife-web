@@ -401,6 +401,7 @@ const ja: Translation = {
     signInBody:
       "報告は人に届くため、アカウントが必要です。非表示にするだけならアカウントは要らず、この端末だけに保存されます。",
     hideInstead: "非表示だけにする",
+    reasonWrongPlace: "セクションまたはトピックが違う",
   },
   board: {
     unranked: { other: "{n}件未評価" },

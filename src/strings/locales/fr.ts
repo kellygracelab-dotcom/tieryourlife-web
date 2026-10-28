@@ -413,6 +413,7 @@ const fr: Translation = {
     signInBody:
       "Les signalements vont à une personne, ils demandent donc un compte. Masquer une liste, non : cela reste sur cet appareil.",
     hideInstead: "Plutôt masquer",
+    reasonWrongPlace: "Mauvaise rubrique ou mauvais thème",
   },
   board: {
     unranked: { one: "{n} non classée", other: "{n} non classées" },

@@ -22,12 +22,14 @@ interface ReportDialogProps {
   onClose: () => void;
 }
 
-const REASON_TEXT: Record<ReportReason, string> = {
+/** Each reason in words, the same in the report sheet and in the moderators' queue. */
+export const REASON_TEXT: Record<ReportReason, string> = {
   sexual: strings.report.reasonSexual,
-  hate: strings.report.reasonHate,
   violence: strings.report.reasonViolence,
+  hate: strings.report.reasonHate,
   spam: strings.report.reasonSpam,
   other: strings.report.reasonOther,
+  wrong_category: strings.report.reasonWrongPlace,
 };
 
 /**

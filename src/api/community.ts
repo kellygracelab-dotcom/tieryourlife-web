@@ -1,7 +1,17 @@
 import type { ApiClient } from "./client";
 
-/** The proxy's five reasons, in the order the app shows them. */
-export const REPORT_REASONS = ["sexual", "hate", "violence", "spam", "other"] as const;
+/**
+ * The proxy's reasons, in the order the app's report sheet shows them. The
+ * last one never hides a list: a list in the wrong place is moved, not hidden.
+ */
+export const REPORT_REASONS = [
+  "sexual",
+  "violence",
+  "hate",
+  "spam",
+  "other",
+  "wrong_category",
+] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
 /** A note longer than this is cut by the backend anyway. */

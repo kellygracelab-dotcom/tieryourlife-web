@@ -24,7 +24,14 @@ describe("community", () => {
     expect(request).toHaveBeenCalledWith("POST", "/lists/a%20b/report", {
       body: { reason: "spam", note: "Sells things" },
     });
-    expect(REPORT_REASONS).toEqual(["sexual", "hate", "violence", "spam", "other"]);
+    expect(REPORT_REASONS).toEqual([
+      "sexual",
+      "violence",
+      "hate",
+      "spam",
+      "other",
+      "wrong_category",
+    ]);
   });
 
   it("reads, starts and ends following an author, escaping the uid", async () => {

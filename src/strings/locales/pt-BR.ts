@@ -404,6 +404,7 @@ const ptBR: Translation = {
     signInBody:
       "As denúncias vão para uma pessoa, por isso precisam de uma conta. Ocultar uma lista não precisa: isso fica neste aparelho.",
     hideInstead: "Só ocultar",
+    reasonWrongPlace: "Seção ou tema errados",
   },
   board: {
     unranked: { one: "{n} sem classificação", other: "{n} sem classificação" },
