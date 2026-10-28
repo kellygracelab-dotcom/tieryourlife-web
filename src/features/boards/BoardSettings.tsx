@@ -373,28 +373,35 @@ export function BoardSettings({
             </Row>
           </li>
 
-          <li className="sheet-row">
-            <Row
-              icon={<Icon name="visibility_off" />}
-              title={
-                <label htmlFor={`${id}-anonymous`} className="sheet-row__label">
-                  {strings.boards.anonymousTitle}
-                </label>
-              }
-              sub={strings.boards.anonymousBody}
-              end={
-                <input
-                  id={`${id}-anonymous`}
-                  type="checkbox"
-                  role="switch"
-                  className="switch"
-                  checked={board.anonymous}
-                  disabled={busy !== "idle"}
-                  onChange={(event) => keep(setAnonymous(latest(), event.target.checked, now()))}
-                />
-              }
-            />
-          </li>
+          {/* Not for a copy of somebody else's list: its name is theirs to keep or not. */}
+          {!(board.authorName !== null && board.publishedId === null) && (
+            <li className="sheet-row">
+              <Row
+                icon={<Icon name="visibility_off" />}
+                title={
+                  <label htmlFor={`${id}-anonymous`} className="sheet-row__label">
+                    {strings.boards.anonymousTitle}
+                  </label>
+                }
+                sub={strings.boards.anonymousBody}
+                end={
+                  <input
+                    id={`${id}-anonymous`}
+                    type="checkbox"
+                    role="switch"
+                    className="switch"
+                    checked={board.anonymous}
+                    disabled={busy !== "idle"}
+                    onChange={(event) => {
+                      keep(setAnonymous(latest(), event.target.checked, now()));
+                      // A list already out changes at once, as on the phone.
+                      if (isPublic) void send("updated");
+                    }}
+                  />
+                }
+              />
+            </li>
+          )}
 
           {isPublic && published !== null && (
             <li className="sheet-row">

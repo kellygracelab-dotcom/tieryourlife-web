@@ -196,6 +196,18 @@ describe("BoardSettings: the sheet", () => {
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ anonymous: true }));
   });
 
+  it("sends a public list again at once when its anonymity changes, as the phone does", async () => {
+    const republish = vi.fn(async () => ({ id: "L1" }));
+    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 1 }, signedIn, { republish });
+    await userEvent.click(screen.getByRole("switch", { name: "Publish anonymously" }));
+    expect(republish).toHaveBeenCalledWith("L1", expect.objectContaining({ anonymous: true }));
+  });
+
+  it("offers no anonymity on a copy of somebody else's list", () => {
+    show({ ...filmBoard(), authorName: "kenji" }, signedIn);
+    expect(screen.queryByRole("switch", { name: "Publish anonymously" })).toBeNull();
+  });
+
   it("goes with Done and with Escape", async () => {
     show(filmBoard(), signedIn);
     await userEvent.click(screen.getByRole("button", { name: "Done" }));
