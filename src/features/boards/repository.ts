@@ -1,3 +1,4 @@
+import type { SyncedPlay } from "../../api/boards";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
   DISPLAY_MODES,
@@ -48,6 +49,58 @@ function tierOf(raw: unknown, position: number): BoardTier | null {
 function displayModeOf(raw: unknown): DisplayMode {
   if (raw === "RANKED") return "FLAT_RANKED";
   return DISPLAY_MODES.find((mode) => mode === raw) ?? "WRAP";
+}
+
+const KINDS: readonly string[] = ["swiss", "hill", "bracket"];
+const isInt = (value: unknown): value is number => Number.isInteger(value);
+
+/**
+ * A saved game from the account or this device, or null for anything that
+ * is not one: a game that does not hold together is dropped, and the board
+ * kept, as the backend does.
+ */
+export function playOf(raw: unknown): SyncedPlay | null {
+  if (raw === null || typeof raw !== "object") return null;
+  const play = raw as Record<string, unknown>;
+  const { kind, count, seed, refine, ids, history, round, startedAt, scope, keepTier } = play;
+  if (typeof kind !== "string" || !KINDS.includes(kind)) return null;
+  if (!isInt(count) || !isInt(seed) || typeof refine !== "boolean") return null;
+  if (!isInt(round) || typeof startedAt !== "number") return null;
+  if (!Array.isArray(ids) || ids.length !== count || !ids.every((id) => typeof id === "string")) {
+    return null;
+  }
+  const inGame = (n: unknown): n is number => isInt(n) && n >= 0 && n < count;
+  if (
+    !Array.isArray(history) ||
+    !history.every(
+      (answer) =>
+        Array.isArray(answer) &&
+        answer.length === 3 &&
+        inGame(answer[0]) &&
+        inGame(answer[1]) &&
+        (answer[2] === null || inGame(answer[2])),
+    )
+  ) {
+    return null;
+  }
+  const tiers =
+    Array.isArray(scope) && scope.length > 0 && scope.every((uid) => typeof uid === "string")
+      ? (scope as string[])
+      : null;
+  return {
+    kind: kind as SyncedPlay["kind"],
+    count,
+    seed,
+    refine,
+    ids: ids as string[],
+    history: history as SyncedPlay["history"],
+    round,
+    startedAt,
+    ...(tiers === null ? {} : { scope: tiers }),
+    ...(tiers !== null && tiers.length === 1 && keepTier === true
+      ? { keepTier: true as const }
+      : {}),
+  };
 }
 
 function topicOf(raw: unknown): BoardTopic | null {
@@ -130,6 +183,7 @@ export function parseBoard(raw: unknown): Board | null {
     publishedEditedAt: time(source.publishedEditedAt),
     topic: topicOf(source.topic),
     anonymous: source.anonymous === true,
+    play: playOf(source.play),
   };
 }
 

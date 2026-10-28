@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fingerprintOf, fingerprintText } from "./fingerprint";
+import { canonicalPlay, fingerprintOf, fingerprintText } from "./fingerprint";
+import { playOf } from "./repository";
 import type { Board } from "./model";
 
 const board = (over: Partial<Board> = {}): Board => ({
@@ -60,6 +61,7 @@ const board = (over: Partial<Board> = {}): Board => ({
   publishedEditedAt: null,
   topic: null,
   anonymous: false,
+  play: null,
   ...over,
 });
 
@@ -183,5 +185,46 @@ describe("the fingerprint", () => {
         }),
       ),
     ).toBe("1:u|1:T|4:WRAP|~|~|~|~|~|9:anonymous|");
+  });
+
+  it("carries a game in progress last, as the canonical JSON the app writes (the proxy's shared example)", () => {
+    const example =
+      '{"kind":"swiss","count":4,"seed":7,"refine":false,"ids":["a","b","c","d"],' +
+      '"history":[[0,1,0],[2,3,null]],"round":1,"startedAt":1793146000000,"scope":["t-s"],"keepTier":true}';
+    const play = playOf(JSON.parse(example));
+    expect(play).not.toBeNull();
+    expect(canonicalPlay(play!)).toBe(example);
+    expect(
+      fingerprintText(
+        board({
+          uid: "u",
+          title: "T",
+          displayMode: "WRAP",
+          tiers: [],
+          items: [],
+          anonymous: true,
+          play,
+        }),
+      ),
+    ).toBe(`1:u|1:T|4:WRAP|~|~|~|~|~|9:anonymous|${example.length}:${example}|`);
+  });
+
+  it("writes a game in its normal form: no empty scope, keepTier only when true with one tier", () => {
+    const base = {
+      kind: "hill",
+      count: 2,
+      seed: 1,
+      refine: false,
+      ids: ["a", "b"],
+      history: [],
+      round: 0,
+      startedAt: 5,
+    };
+    expect(canonicalPlay(playOf({ ...base, scope: [], keepTier: false })!)).toBe(
+      '{"kind":"hill","count":2,"seed":1,"refine":false,"ids":["a","b"],"history":[],"round":0,"startedAt":5}',
+    );
+    expect(playOf({ ...base, scope: ["s", "a"], keepTier: true })?.keepTier).toBeUndefined();
+    expect(playOf({ ...base, ids: ["a"] })).toBeNull();
+    expect(playOf({ ...base, history: [[0, 2, 0]] })).toBeNull();
   });
 });

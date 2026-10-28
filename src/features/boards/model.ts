@@ -1,3 +1,5 @@
+import type { SyncedPlay } from "../../api/boards";
+
 /**
  * A board of the person's own, the way the phone keeps one: tiers with a
  * pool among them, cards that sit in a tier at a position, a trash that is a
@@ -71,6 +73,8 @@ export interface Board {
   topic: BoardTopic | null;
   /** Published with no name or face: sent with every publish, and kept in the account when true. */
   anonymous: boolean;
+  /** A game of Play in progress, kept in the account as the app keeps it; null when none is. */
+  play: SyncedPlay | null;
 }
 
 /** What a card is made from: enough for a tile. */
@@ -146,6 +150,7 @@ export function newBoard(uid: string, title: string, now: number, nextUid: NextU
     publishedEditedAt: null,
     topic: null,
     anonymous: false,
+    play: null,
   };
 }
 

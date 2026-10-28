@@ -1,3 +1,4 @@
+import type { SyncedPlay } from "../../api/boards";
 import type { Board } from "./model";
 
 /**
@@ -62,7 +63,29 @@ export function fingerprintText(board: Board): string {
   // Said only when true, last, so every board that is not anonymous keeps the
   // fingerprint it had: the app appends the same field the same way.
   if (board.anonymous) text += encode(["anonymous"]);
+  // A game in progress last of all, as its canonical JSON (canonicalPlay).
+  if (board.play !== null) text += encode([canonicalPlay(board.play)]);
   return text;
+}
+
+/**
+ * A saved game as one line of JSON, the same on the phone: no spaces, the
+ * keys in this order, scope only when there is one and keepTier only when
+ * true, a skip's winner as null.
+ */
+export function canonicalPlay(play: SyncedPlay): string {
+  return JSON.stringify({
+    kind: play.kind,
+    count: play.count,
+    seed: play.seed,
+    refine: play.refine,
+    ids: play.ids,
+    history: play.history,
+    round: play.round,
+    startedAt: play.startedAt,
+    ...(play.scope === undefined || play.scope.length === 0 ? {} : { scope: play.scope }),
+    ...(play.keepTier === true ? { keepTier: true } : {}),
+  });
 }
 
 const hex = (bytes: ArrayBuffer): string =>

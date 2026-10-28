@@ -41,6 +41,9 @@ export default defineConfig(({ command, mode }) => {
       environment: "jsdom",
       setupFiles: ["src/test/setup.ts"],
       include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.ts"],
+      // Tests that type a whole name key by key take a second alone and five
+      // with every worker busy; the default five seconds failed them at random.
+      testTimeout: 15_000,
       coverage: {
         provider: "v8",
         include: ["src/**/*.{ts,tsx}"],

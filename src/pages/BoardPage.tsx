@@ -13,6 +13,7 @@ import {
   liveItems,
   newBoard,
   poolCount,
+  poolTier,
   rankedCount,
   rankedTiers,
   rename,
@@ -60,6 +61,7 @@ import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { PlayButton } from "../features/play/PlayButton";
+import { boardGames } from "../features/play/syncedGames";
 import { usePlay } from "../features/play/usePlay";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { localStorageStore } from "../lib/storage";
@@ -261,8 +263,24 @@ export function BoardPage({
           })),
     [board],
   );
+  // One's own board keeps its game in the board itself, so the account
+  // carries it to the phone; without changing when the board was last edited.
+  const poolId = board === null ? null : (poolTier(board)?.uid ?? null);
+  const games = useMemo(
+    () =>
+      boardGames(
+        () => repository.get(uid)?.play ?? null,
+        (game) => {
+          const current = repository.get(uid);
+          if (current !== null) repository.save({ ...current, play: game });
+        },
+        poolId,
+      ),
+    [repository, uid, poolId],
+  );
   const play = usePlay(uid, playCards, playTiers, localStorageStore, {
     title: board?.title || strings.boards.untitled,
+    games,
     notify: setNotice,
     // The result replaces the arrangement; Undo puts the one before it back.
     onApply: (rows) => {
