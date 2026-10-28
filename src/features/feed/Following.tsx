@@ -204,7 +204,8 @@ export function FollowingTab({
 
   const strip = following !== null && (
     <FollowingStrip
-      sections={sections.filter((one) => one.following)}
+      // What one follows, and one's own sections still waiting for a moderator.
+      sections={sections.filter((one) => one.following || one.status === "pending")}
       topics={following.topics}
       people={following.authors.filter((person) => !isEditorialAuthor(person.uid))}
       sectionOf={sectionOf}

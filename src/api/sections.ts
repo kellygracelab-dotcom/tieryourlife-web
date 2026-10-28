@@ -40,6 +40,8 @@ export interface SectionStats {
   approvedAt?: number;
   lists30d?: number;
   fileUnder?: string | null;
+  /** Sent with a waiting section only to its proposer and to moderators. */
+  proposerUid?: string;
 }
 
 export function loadSections(client: ApiClient): Promise<{ sections: SectionStats[] }> {

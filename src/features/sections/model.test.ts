@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SectionStats } from "../../api/sections";
 import {
+  approvedOnly,
   builtInSection,
   homeSlots,
   orderSections,
@@ -83,14 +84,19 @@ describe("sections", () => {
     expect(odd).toMatchObject({ icon: "category", picture: null, tint: { light: "#55566A" } });
   });
 
-  it("leaves out what nobody should see a tile of: hidden and merged sections", () => {
+  it("leaves out what nobody should see a tile of, and waiting sections but one's own", () => {
     const answer = [
       stats("anime"),
       stats("gone", { name: "Gone", status: "merged" }),
       stats("quiet", { name: "Quiet", hidden: true }),
+      stats("no", { name: "No", status: "declined", proposerUid: "u1" }),
+      stats("mine", { name: "Mine", status: "pending", proposerUid: "u1" }),
+      stats("theirs", { name: "Theirs", status: "pending", proposerUid: "u2" }),
       stats("other"),
     ];
-    expect(ids(sectionsFrom(answer))).toEqual(["anime", "other"]);
+    expect(ids(sectionsFrom(answer, "u1"))).toEqual(["anime", "mine", "other"]);
+    expect(ids(sectionsFrom(answer, "guest"))).toEqual(["anime", "other"]);
+    expect(ids(approvedOnly(sectionsFrom(answer, "u1")))).toEqual(["anime", "other"]);
   });
 
   it("orders followed first, then pinned, then the busiest month, then the earlier approved; Other last", () => {

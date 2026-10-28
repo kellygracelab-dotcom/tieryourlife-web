@@ -137,16 +137,30 @@ export function sectionOf(stats: SectionStats, locale: string = currentLocale())
 }
 
 /**
- * Every section worth a tile: what the backend sent, or the nine when it has
- * not answered. A hidden section, or one somebody else proposed, is left out;
- * the backend sends a proposal only to its proposer, who sees it waiting.
+ * Every section worth showing to this person: what the backend sent, or the
+ * nine when it has not answered. Hidden, merged and declined ones are left
+ * out, and so is a waiting one somebody else proposed: a moderator is sent
+ * them all, but sees them in the admin page, not among the tiles.
  */
-export function sectionsFrom(answer: readonly SectionStats[] | null): Section[] {
+export function sectionsFrom(
+  answer: readonly SectionStats[] | null,
+  who: string | null = null,
+): Section[] {
   if (answer === null) return CATEGORIES.map(builtInSection);
   return answer
-    .filter((stats) => stats.hidden !== true && stats.status !== "merged")
+    .filter(
+      (stats) =>
+        stats.hidden !== true &&
+        stats.status !== "merged" &&
+        stats.status !== "declined" &&
+        (stats.status !== "pending" || (who !== null && stats.proposerUid === who)),
+    )
     .map((stats) => sectionOf(stats));
 }
+
+/** The sections everybody sees: approved ones, without anybody's waiting proposal. */
+export const approvedOnly = (sections: readonly Section[]): Section[] =>
+  sections.filter((section) => section.status === "approved");
 
 /**
  * The order the app draws sections in, so a follow made here moves its tile

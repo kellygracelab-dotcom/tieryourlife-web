@@ -35,11 +35,13 @@ export function FollowingStrip({ sections, topics, people, sectionOf }: Followin
           <li key={`s-${section.id}`}>
             <Link className="following-strip__item" to={sectionPath(section.id)}>
               <span
-                className={
-                  section.picture === null
-                    ? "following-strip__visual following-strip__section"
-                    : "following-strip__visual following-strip__section following-strip__section--pictured"
-                }
+                className={[
+                  "following-strip__visual following-strip__section",
+                  section.picture === null ? "" : "following-strip__section--pictured",
+                  section.status === "pending" ? "following-strip__visual--waiting" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
                 style={sectionStyle(section)}
                 aria-hidden="true"
               >
