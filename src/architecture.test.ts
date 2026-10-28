@@ -97,6 +97,7 @@ describe("the architecture", () => {
       boards: ["editor", "ranking", "tierboard"],
       editor: ["tierboard"],
       feed: ["community", "sections"],
+      admin: ["sections", "moderation"],
     };
     const wrong: string[] = [];
     for (const file of FILES.filter((f) => f.path.startsWith("features/"))) {

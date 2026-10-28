@@ -67,19 +67,21 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
             </a>
           </li>
         )}
-        <li>
-          <Link to="/settings">{strings.nav.settings}</Link>
-        </li>
+        {/* Only the owner and moderators: the backend answers the queue to nobody else. */}
         {moderator.status === "yes" && (
           <li>
-            <Link to="/mod" className="menu__row">
-              <span>{strings.nav.reports}</span>
+            <Link to="/admin" className="menu__row">
+              <Icon name="admin_panel_settings" />
+              <span>{strings.admin.menu}</span>
               {moderator.reports.length > 0 && (
                 <span className="menu__pill">{moderator.reports.length}</span>
               )}
             </Link>
           </li>
         )}
+        <li>
+          <Link to="/settings">{strings.nav.settings}</Link>
+        </li>
       </>
     </Menu>
   );

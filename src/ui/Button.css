@@ -52,3 +52,22 @@
   background: var(--hover);
   color: var(--ink);
 }
+
+.btn--outlined {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--link);
+}
+
+.btn--outlined:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.btn--danger {
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--on-error-container) 8%, var(--error-container));
+}

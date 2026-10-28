@@ -100,11 +100,15 @@ export const routes: RouteObject[] = [
             })),
           },
           {
-            path: "mod",
-            ...later(async () => ({
-              Component: (await import("../pages/ModerationPage")).ModerationPage,
-            })),
+            path: "admin",
+            ...later(async () => ({ Component: (await import("../pages/AdminPage")).AdminPage })),
           },
+          {
+            path: "admin/:pane",
+            ...later(async () => ({ Component: (await import("../pages/AdminPage")).AdminPage })),
+          },
+          // The reports had a page of their own before the admin page took them in.
+          { path: "mod", element: <Navigate to="/admin/reports" replace /> },
           { path: "u/:uid", element: <ProfilePage /> },
           {
             path: "about",

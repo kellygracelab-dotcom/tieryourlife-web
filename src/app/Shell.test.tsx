@@ -55,7 +55,7 @@ describe("Shell search", () => {
 });
 
 describe("Shell moderator", () => {
-  it("shows Reports with a count only to the person the backend answers", async () => {
+  it("shows Admin with a count only to the person the backend answers", async () => {
     const { resetModeratorForTests } = await import("../features/moderation/useModerator");
     resetModeratorForTests();
     const api = await import("../lib/api");
@@ -79,9 +79,9 @@ describe("Shell moderator", () => {
     });
     open({ account: { kind: "signedIn", uid: "mod1", displayName: "Danylo", photoUrl: null } });
     await userEvent.click(screen.getByLabelText("Your account"));
-    const reports = await screen.findByRole("link", { name: /Reports/ });
-    expect(reports).toHaveAttribute("href", "/mod");
-    expect(reports).toHaveTextContent("1");
+    const admin = await screen.findByRole("link", { name: /Admin/ });
+    expect(admin).toHaveAttribute("href", "/admin");
+    expect(admin).toHaveTextContent("1");
     resetModeratorForTests();
   });
 });

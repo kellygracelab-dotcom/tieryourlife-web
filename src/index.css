@@ -172,3 +172,13 @@ p {
   font: var(--text-lead);
   color: var(--ink-dim);
 }
+
+/* Said to a screen reader, not shown: live announcements and labels the layout already makes plain. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
