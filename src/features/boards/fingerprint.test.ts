@@ -168,4 +168,20 @@ describe("the fingerprint", () => {
     expect(anonymous.startsWith(plain)).toBe(true);
     expect(anonymous).not.toBe(plain);
   });
+
+  it("writes the anonymous field in the phone's bytes, after everything else", () => {
+    // The vector agreed with the app: a board with no tiers, its other fields absent or empty.
+    expect(
+      fingerprintText(
+        board({
+          uid: "u",
+          title: "T",
+          displayMode: "WRAP",
+          tiers: [],
+          items: [],
+          anonymous: true,
+        }),
+      ),
+    ).toBe("1:u|1:T|4:WRAP|~|~|~|~|~|9:anonymous|");
+  });
 });
