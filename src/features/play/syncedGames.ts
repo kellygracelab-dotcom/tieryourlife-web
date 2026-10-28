@@ -2,11 +2,12 @@ import type { SyncedPlay } from "../../api/boards";
 import type { Chosen } from "./chosen";
 import { isOver, refinePairs, swissRound, swissRounds, type Outcome } from "./engine";
 import type { Game } from "./game";
-import type { SavedGames } from "./savedGames";
+import { EXPIRES_AFTER, type SavedGames } from "./savedGames";
 
 /**
- * A game of one's own board kept in the board itself, so the account carries
- * it to the phone and back: the app's field names (SyncedPlay), in the normal
+ * A game of one's own board kept in the board itself, and only there, so the
+ * account carries it to the phone and back and a game finished on one device
+ * is gone on the other (no copy of this device's can bring it back): the app's field names (SyncedPlay), in the normal
  * form the backend keeps, so a round trip leaves the board's fingerprint as it
  * was.
  *
@@ -109,7 +110,14 @@ export function boardGames(
   return {
     load: () => {
       const play = read();
-      return play === null ? null : fromSynced(play, poolId);
+      if (play === null) return null;
+      // Thirty days from its start, as the phone counts; the backend counts
+      // from the last write, so a late copy there is gone soon after.
+      if (now() - play.startedAt > EXPIRES_AFTER) {
+        write(null);
+        return null;
+      }
+      return fromSynced(play, poolId);
     },
     save: (_key, game) => write(toSynced(game, poolId, now())),
     discard: () => write(null),

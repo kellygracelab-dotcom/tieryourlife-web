@@ -114,4 +114,22 @@ describe("a game kept in the board", () => {
     games.discard("b");
     expect(kept).toBeNull();
   });
+
+  it("lets a game go thirty days after its start, as the phone does", () => {
+    let kept: SyncedPlay | null = toSynced(
+      newGame("hill", ["x", "y", "z"], { kind: "all" }, 3, 0),
+      null,
+      0,
+    );
+    const games = boardGames(
+      () => kept,
+      (play) => {
+        kept = play;
+      },
+      null,
+      () => 31 * 24 * 60 * 60 * 1000,
+    );
+    expect(games.load("b")).toBeNull();
+    expect(kept).toBeNull();
+  });
 });
