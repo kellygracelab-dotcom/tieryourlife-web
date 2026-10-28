@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router";
-import type { Topic } from "../api/sections";
+import type { SectionStats, Topic } from "../api/sections";
 import { isCategory, type FeedSort } from "../api/types";
 import { useSession } from "../app/session";
 import { FollowButton } from "../features/community/FollowButton";
@@ -9,6 +9,7 @@ import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
 import {
   builtInSection,
+  sectionOf,
   sectionPath,
   sectionStyle,
   topicPath,
@@ -19,11 +20,13 @@ import { sectionsStore, useSections, type SectionsStore } from "../features/sect
 import {
   followTopic as followTopicNow,
   loadMyTopics as loadMine,
+  loadSection,
   loadTopics as loadSectionTopics,
   unfollowTopic as unfollowTopicNow,
 } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import { fill, plural, strings } from "../strings";
+import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
@@ -51,6 +54,8 @@ interface SectionPageProps {
   load?: LoadFeed;
   store?: SectionsStore;
   topics?: TopicDeps;
+  /** One section by its id, for one the sections do not hold. */
+  loadOne?: (id: string) => Promise<SectionStats>;
 }
 
 type Asking = "closed" | "open" | "busy";
@@ -89,7 +94,7 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
   const signedIn = account?.kind === "signedIn";
   const feed = useFeed(
     {
-      category: isCategory(section.id) ? section.id : undefined,
+      category: section.id,
       ...(topicId === undefined ? {} : { topic: topicId }),
       sort,
     },
@@ -318,22 +323,67 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
  * as chips, and its lists by popularity or newest first. /s/:id/t/:topic
  * narrows to one topic.
  */
-export function SectionPage({ load, store = sectionsStore, topics = topicDeps }: SectionPageProps) {
+export function SectionPage({
+  load,
+  store = sectionsStore,
+  topics = topicDeps,
+  loadOne = loadSection,
+}: SectionPageProps) {
   const { id = "" } = useParams();
-  const { sections, loaded } = useSections(store);
+  const { sections, loaded, failed } = useSections(store);
   const known = sections.find((one) => one.id === id);
   const section = known ?? (isCategory(id) ? builtInSection(id) : null);
-  if (section === null) {
-    return loaded ? (
-      <NotFoundPage />
-    ) : (
-      <section className="section-page" aria-busy="true">
-        <Skeleton height="200px" />
-      </section>
+  if (section !== null) {
+    return (
+      <SectionView key={section.id} section={section} load={load} store={store} topics={topics} />
     );
   }
+  // Not among the sections, which may not have answered yet: asked about on
+  // its own only once they have.
+  if (!loaded && !failed) return <SectionLoading />;
   return (
-    <SectionView key={section.id} section={section} load={load} store={store} topics={topics} />
+    <UnlistedSection key={id} id={id} loadOne={loadOne} load={load} store={store} topics={topics} />
+  );
+}
+
+function SectionLoading() {
+  return (
+    <section className="section-page" aria-busy="true">
+      <Skeleton height="200px" />
+    </section>
+  );
+}
+
+/**
+ * A section no tile shows, asked about by its id once: hidden, approved since
+ * the sections were read, or merged into another, whose address it leads to
+ * now. Nothing by that id is Not found.
+ */
+function UnlistedSection({
+  id,
+  loadOne,
+  ...view
+}: Omit<SectionViewProps, "section"> & {
+  id: string;
+  loadOne: (id: string) => Promise<SectionStats>;
+}) {
+  const { state, retry } = useResource(id, loadOne);
+  if (state.status === "loading") return <SectionLoading />;
+  if (state.status === "ready") return <SectionView section={sectionOf(state.value)} {...view} />;
+  const { error } = state;
+  if (error.kind === "merged" && error.into !== null) {
+    return <Navigate to={sectionPath(error.into)} replace />;
+  }
+  if (error.kind === "notFound" || error.kind === "merged") return <NotFoundPage />;
+  return (
+    <section className="section-page">
+      <div className="feed__trouble" role="alert">
+        <p>{error.kind === "offline" ? strings.feed.offline : strings.feed.failed}</p>
+        <Button variant="filled" icon="refresh" onClick={retry}>
+          {strings.feed.tryAgain}
+        </Button>
+      </div>
+    </section>
   );
 }
 

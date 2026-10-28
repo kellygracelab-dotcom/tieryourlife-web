@@ -161,8 +161,13 @@ describe("NewBoardPage: making a list is making a board", () => {
     expect(repository.all()).toEqual([]);
   });
 
-  it("leaves out a section the site does not have", async () => {
-    open({ path: "/b/new?category=nonsense" });
+  it("brings along a section of somebody's own, which the site has no words for", async () => {
+    open({ path: "/b/new?category=street-food" });
+    expect(await arrivedAt()).toMatch(/^\/b\/[^?]+\?new=5000&category=street-food$/);
+  });
+
+  it("leaves out what is no section's id", async () => {
+    open({ path: "/b/new?category=Street%20food!" });
     expect(await arrivedAt()).toMatch(/^\/b\/[^?]+\?new=5000$/);
   });
 

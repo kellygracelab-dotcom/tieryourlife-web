@@ -1,5 +1,5 @@
 import type { Ranking } from "../../api/rank";
-import type { Category, PublishedList, PublishedTier } from "../../api/types";
+import type { PublishedList, PublishedTier } from "../../api/types";
 import { publishedPictureOf } from "../../lib/pictures";
 import type { KeyValueStore } from "../../lib/storage";
 import { arrange } from "../tierboard/arrange";
@@ -60,7 +60,7 @@ export interface EditorTier extends PublishedTier {
 
 export interface Draft {
   title: string;
-  category: Category | null;
+  category: string | null;
   tiers: EditorTier[];
   items: EditorItem[];
   /** The author's own arrangement: item positions per tier, in order; every other card is unplaced. */
@@ -71,7 +71,7 @@ export interface Draft {
 
 export type EditorAction =
   | { type: "title"; title: string }
-  | { type: "category"; category: Category }
+  | { type: "category"; category: string }
   | { type: "addItem"; title: string; imageUrl: string | null; key?: string; pictureId?: string }
   | { type: "removeItem"; key: string }
   | { type: "addTier" }
@@ -308,7 +308,7 @@ export function problemsOf(draft: Draft): Problem[] {
 
 export interface PublishBody {
   title: string;
-  category: Category;
+  category: string;
   coverImageUrl: string | null;
   coverPictureId: string | null;
   tiers: PublishedTier[];
@@ -402,7 +402,7 @@ export function loadEditorDraft(store: KeyValueStore, key = NEW_DRAFT_KEY): Draf
     }));
     return {
       title: draft.title,
-      category: typeof draft.category === "string" ? (draft.category as Category) : null,
+      category: typeof draft.category === "string" ? draft.category : null,
       // Only a list that never existed takes today's captions: a published
       // list's own draft keeps the words its tiers were published with.
       tiers: key === NEW_DRAFT_KEY ? refreshedCaptions(draft.tiers) : draft.tiers,

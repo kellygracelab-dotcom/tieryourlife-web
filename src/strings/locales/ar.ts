@@ -891,6 +891,7 @@ const ar: Translation = {
     nothingPublished: "لم ينشر أحد ممن تتابعهم شيئًا بعد.",
     goExplore: "الانتقال إلى الاستكشاف",
     back: "رجوع",
+    movesTo: "سينتقل إلى {name} بعد الموافقة عليه",
   },
   propose: {
     title: "اقترح قسمًا",
@@ -1161,6 +1162,7 @@ const ar: Translation = {
     takeDownBody: "ستخرج من المجتمع ويتوقف رابطها عن العمل. تبقى لوحتك في «قوائمك».",
     anonymousTitle: "النشر دون اسم",
     anonymousBody: "بلا اسم أو صورة على القائمة. أنت وحدك تستطيع تغييرها أو إزالتها.",
+    categoryWaiting: "بانتظار مشرف",
   },
   sync: {
     offBusy: "جارٍ الحذف…",

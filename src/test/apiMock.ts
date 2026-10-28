@@ -43,6 +43,7 @@ export function apiStubs() {
     loadFollowing: pending(),
     makeFace: pending(),
     loadSections: pending(),
+    loadSection: pending(),
     followSection: pending(),
     unfollowSection: pending(),
     proposeSection: pending(),

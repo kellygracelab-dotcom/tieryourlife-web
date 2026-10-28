@@ -742,6 +742,7 @@ const es: Translation = {
     nothingPublished: "Nadie a quien sigues ha publicado nada todavía.",
     goExplore: "Ir a Explorar",
     back: "Volver",
+    movesTo: "Pasará a {name} cuando se apruebe",
   },
   propose: {
     title: "Proponer una sección",
@@ -956,6 +957,7 @@ const es: Translation = {
       "Sale de Comunidad y su enlace deja de funcionar. Tu tablero sigue en Tus listas.",
     anonymousTitle: "Publicar de forma anónima",
     anonymousBody: "Sin nombre ni foto en la lista. Solo tú puedes cambiarla o retirarla.",
+    categoryWaiting: "Esperando a un moderador",
   },
   sync: {
     offBusy: "Eliminando…",

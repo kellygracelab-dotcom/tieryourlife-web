@@ -1,4 +1,4 @@
-import type { CatalogueItem, Category } from "../../api/types";
+import type { CatalogueItem } from "../../api/types";
 
 /** A name somebody pasted, and what they put in brackets after it, if anything. */
 export interface Wanted {
@@ -46,9 +46,10 @@ export type Preferred = "tmdb" | "wikidata" | null;
 /**
  * Films, series and the people in them are TMDB's, the rest is Wikidata's: a
  * list of food with "Pizza" in it wants the dish, not the poster of a film by
- * that name.
+ * that name. A section of somebody's own says nothing of what it holds, so it
+ * is Wikidata's, as Other is.
  */
-export const preferredFor = (category: Category | null): Preferred => {
+export const preferredFor = (category: string | null): Preferred => {
   if (category === null) return null;
   return category === "film_tv" || category === "anime" || category === "people"
     ? "tmdb"

@@ -736,6 +736,7 @@ const ptBR: Translation = {
     nothingPublished: "Ninguém que você segue publicou nada ainda.",
     goExplore: "Ir para Explorar",
     back: "Voltar",
+    movesTo: "Vai para {name} quando for aprovada",
   },
   propose: {
     title: "Propor uma seção",
@@ -946,6 +947,7 @@ const ptBR: Translation = {
       "Ela sai de Comunidade e o link deixa de funcionar. Seu quadro continua em Suas listas.",
     anonymousTitle: "Publicar anonimamente",
     anonymousBody: "Sem nome nem foto na lista. Só você pode alterá-la ou removê-la.",
+    categoryWaiting: "Aguardando um moderador",
   },
   sync: {
     offBusy: "Apagando…",

@@ -9,6 +9,8 @@ import { Skeleton } from "../../ui/Skeleton";
 import { liveItems, setAnonymous, type Board } from "../boards/model";
 import { boards as site, type BoardsRepository } from "../boards/repository";
 import { useBoards } from "../boards/useBoards";
+import { sectionName } from "../sections/model";
+import { useSections } from "../sections/useSections";
 
 type Page = { lists: AnonymousList[]; nextCursor: string | null };
 
@@ -37,6 +39,7 @@ export function AnonymousPane({ deps = anonymousDeps }: { deps?: AnonymousDeps }
   const [more, setMore] = useState<Page | null>(null);
   const [picking, setPicking] = useState(false);
   const own = useBoards(deps.repository).filter((board) => board.deletedAt === null);
+  const { sections } = useSections();
 
   const first = state.status === "ready" ? state.value : null;
   const lists = [...(first?.lists ?? []), ...(more?.lists ?? [])];
@@ -103,7 +106,7 @@ export function AnonymousPane({ deps = anonymousDeps }: { deps?: AnonymousDeps }
                 <span className="admin-topics__name">{list.title}</span>
                 <span className="admin-topics__meta">
                   {[
-                    strings.category[list.category],
+                    sectionName(list.category, sections),
                     plural(strings.card.rankings, list.takeCount),
                     fill(strings.admin.publishedBy, { name: list.publishedBy.name }),
                   ].join(" · ")}

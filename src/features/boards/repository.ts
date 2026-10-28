@@ -1,4 +1,3 @@
-import { isCategory } from "../../api/types";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
   DISPLAY_MODES,
@@ -113,7 +112,9 @@ export function parseBoard(raw: unknown): Board | null {
     uid,
     title: text(source.title) ?? "",
     displayMode: displayModeOf(source.displayMode),
-    category: category !== null && isCategory(category) ? category : null,
+    // Any section's id stays, one the site does not know yet too: read as
+    // none, it would go back to the account as none and unfile the list there.
+    category: category === null || category === "" ? null : category,
     coverImageUrl: text(source.coverImageUrl),
     coverImageUrls: Array.isArray(source.coverImageUrls)
       ? source.coverImageUrls.filter((url): url is string => typeof url === "string")

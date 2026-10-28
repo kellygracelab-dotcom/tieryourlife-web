@@ -29,7 +29,8 @@ The features:
 | `moderation` | the moderator's queue                                                                                                                                                                            |
 
 Features that lean on one another, and nothing else: `tierboard → ranking`,
-`boards → editor, ranking, tierboard`, `editor → tierboard`, `feed → community`.
+`boards → editor, ranking, sections, tierboard`, `editor → tierboard`,
+`feed → community, sections`, `admin → sections, moderation, boards`.
 
 Data calls are wired once, in `lib/api`, and reach components as injectable
 dependencies with that default (`publishing`, `report`, `load`…), so every

@@ -750,6 +750,7 @@ const de: Translation = {
     nothingPublished: "Wem du folgst, hat noch nichts veröffentlicht.",
     goExplore: "Zu Entdecken",
     back: "Zurück",
+    movesTo: "Zieht nach {name}, sobald er angenommen ist",
   },
   propose: {
     title: "Rubrik vorschlagen",
@@ -951,6 +952,7 @@ const de: Translation = {
       "Sie verschwindet aus der Community und ihr Link funktioniert nicht mehr. Dein Board bleibt in „Deine Listen“.",
     anonymousTitle: "Anonym veröffentlichen",
     anonymousBody: "Kein Name und kein Bild an der Liste. Nur du kannst sie ändern oder entfernen.",
+    categoryWaiting: "Wartet auf einen Moderator",
   },
   sync: {
     offBusy: "Wird gelöscht…",

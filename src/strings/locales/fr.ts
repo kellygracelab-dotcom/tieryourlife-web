@@ -756,6 +756,7 @@ const fr: Translation = {
     nothingPublished: "Personne parmi vos abonnements n’a encore rien publié.",
     goExplore: "Aller à Explorer",
     back: "Retour",
+    movesTo: "Passera dans {name} une fois approuvée",
   },
   propose: {
     title: "Proposer une rubrique",
@@ -970,6 +971,7 @@ const fr: Translation = {
       "Elle quitte Communauté et son lien ne fonctionne plus. Votre tableau reste dans Vos listes.",
     anonymousTitle: "Publier anonymement",
     anonymousBody: "Ni nom ni photo sur la liste. Vous seul pouvez la modifier ou la retirer.",
+    categoryWaiting: "En attente d’un modérateur",
   },
   sync: {
     offBusy: "Suppression…",

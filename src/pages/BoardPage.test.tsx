@@ -17,7 +17,9 @@ import type { Share } from "../features/ranking/share";
 import { TIER_PRESETS } from "../features/editor/model";
 import { TIER_HOLD_MS } from "../features/tierboard/useTierMove";
 import { SessionContext, type Session } from "../app/session";
+import type { SectionStats } from "../api/sections";
 import type { Upload } from "../features/editor/AddCardBox";
+import { createSectionsStore, type SectionsStore } from "../features/sections/useSections";
 import { memoryStore } from "../lib/storage";
 import { BoardPage } from "./BoardPage";
 
@@ -65,6 +67,7 @@ const open = (
     account?: Session["account"];
     upload?: Upload;
     signIn?: Session["signIn"];
+    store?: SectionsStore;
   } = {},
 ) => {
   const router = createMemoryRouter(
@@ -79,6 +82,7 @@ const open = (
             upload={extra.upload ?? (() => Promise.reject(new Error("no uploads here")))}
             publishing={extra.publishing ?? noPublishing}
             share={extra.share ?? (() => Promise.resolve())}
+            store={extra.store}
           />
         ),
       },
@@ -477,6 +481,114 @@ describe("BoardPage: tiers and settings", () => {
   });
 });
 
+describe("BoardPage: sections of one's own", () => {
+  const stats = (id: string, more: Partial<SectionStats> = {}): SectionStats => ({
+    id,
+    listCount: 0,
+    followerCount: 0,
+    newThisWeek: 0,
+    collage: [],
+    following: false,
+    ...more,
+  });
+  const waiting = (id: string, name: string) =>
+    stats(id, { name, status: "pending", proposerUid: "me", fileUnder: "food" });
+  const storeOf = (sections: SectionStats[]) =>
+    createSectionsStore({
+      load: async () => ({ sections }),
+      follow: vi.fn(),
+      unfollow: vi.fn(),
+      now: () => 0,
+    });
+  const openSettings = async () => {
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
+    return within(screen.getByRole("dialog", { name: "List settings" }));
+  };
+
+  it("says where a board in one's own waiting section goes, and names a section it does not know as Other", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "night-markets" });
+    const store = storeOf([
+      stats("food"),
+      waiting("night-markets", "Night markets"),
+      stats("other"),
+    ]);
+    open(repository, "/b/films", { account: member, store });
+    expect(
+      await screen.findByText("1 ranked · 2 in pool · Moves to Night markets once it’s approved"),
+    ).toBeInTheDocument();
+
+    repository.save({ ...filmBoard(), category: "k-dramas" });
+    expect(await screen.findByText("1 ranked · 2 in pool · Other")).toBeInTheDocument();
+  });
+
+  it("opens Propose a section in the sheet's place, filing under the board's section, and gives the sheet back", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "food" });
+    const store = storeOf([stats("food"), stats("games"), stats("other")]);
+    open(repository, "/b/films", { account: member, store });
+    let settings = await openSettings();
+    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
+    await userEvent.click(settings.getByRole("button", { name: "Propose a section" }));
+
+    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+    const form = within(screen.getByRole("dialog", { name: "Propose a section" }));
+    expect(form.getByRole("combobox", { name: "File my lists under" })).toHaveValue("food");
+    await userEvent.click(form.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog", { name: "Propose a section" })).toBeNull();
+    settings = within(screen.getByRole("dialog", { name: "List settings" }));
+    expect(settings.getByRole("button", { name: /Category/ })).toHaveTextContent("Food");
+  });
+
+  it("shows the three already waiting instead of the form, and gives the sheet back after", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "food" });
+    const store = storeOf([
+      stats("food"),
+      waiting("a-1", "Stalls"),
+      waiting("b-2", "Kiosks"),
+      waiting("c-3", "Food trucks"),
+      stats("other"),
+    ]);
+    open(repository, "/b/films", { account: member, store });
+    const settings = await openSettings();
+    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
+    expect(await settings.findByRole("radio", { name: /Food trucks/ })).toBeInTheDocument();
+    await userEvent.click(settings.getByRole("button", { name: "Propose a section" }));
+    const tooMany = within(screen.getByRole("dialog", { name: "3 proposals are waiting" }));
+    expect(tooMany.getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Stalls",
+      "Kiosks",
+      "Food trucks",
+    ]);
+    await userEvent.click(tooMany.getByRole("button", { name: "OK" }));
+    expect(screen.getByRole("dialog", { name: "List settings" })).toBeInTheDocument();
+  });
+
+  it("asks a guest to sign in before the form, and opens it once they have", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "food" });
+    const signIn = vi
+      .fn<Session["signIn"]>()
+      .mockResolvedValueOnce({ kind: "cancelled" })
+      .mockResolvedValueOnce({ kind: "signedIn", switched: false });
+    const store = storeOf([stats("food"), stats("other")]);
+    open(repository, "/b/films", { account: { kind: "guest", uid: null }, signIn, store });
+    const settings = await openSettings();
+    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
+    await userEvent.click(settings.getByRole("button", { name: "Propose a section" }));
+    expect(signIn).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog", { name: "Propose a section" })).toBeNull();
+
+    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
+    await userEvent.click(settings.getByRole("button", { name: "Propose a section" }));
+    expect(await screen.findByRole("dialog", { name: "Propose a section" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+  });
+});
+
 describe("BoardPage: a new board", () => {
   it("files a new board under the section it was asked for", async () => {
     const repository = boardsRepository(memoryStore());
@@ -485,7 +597,12 @@ describe("BoardPage: a new board", () => {
     await userEvent.keyboard("Co-op nights{Enter}");
     expect(repository.get("fresh")).toMatchObject({ title: "Co-op nights", category: "games" });
 
-    open(repository, "/b/odd?new=100&category=nonsense");
+    // Any section's id, also one the site has no words for: a section's page leads here too.
+    open(repository, "/b/stalls?new=100&category=street-food");
+    await userEvent.keyboard("Stalls{Enter}");
+    expect(repository.get("stalls")?.category).toBe("street-food");
+
+    open(repository, "/b/odd?new=100&category=Not%20a%20section!");
     await userEvent.keyboard("Odd{Enter}");
     expect(repository.get("odd")?.category).toBeNull();
   });

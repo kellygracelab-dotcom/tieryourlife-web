@@ -5,6 +5,8 @@ export type ApiError =
   | { kind: "banned"; until: number | null }
   | { kind: "notYours" }
   | { kind: "notFound" }
+  /** A section that went into another one (410 MERGED); its lists, follows and address are that one's now. */
+  | { kind: "merged"; into: string | null }
   | { kind: "tooManyLists" }
   | { kind: "cursorGone" }
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
@@ -41,6 +43,7 @@ interface ErrorBody {
   until?: unknown;
   because?: unknown;
   board?: unknown;
+  mergedInto?: unknown;
 }
 
 function bodyOf(text: string): ErrorBody {
@@ -91,6 +94,10 @@ export function parseApiError(status: number, text: string): ApiError {
       return body.board === undefined
         ? { kind: "conflict" }
         : { kind: "conflict", board: body.board };
+    case 410:
+      return code === "MERGED"
+        ? { kind: "merged", into: stringOrNull(body.mergedInto) }
+        : { kind: "unknown", status };
     case 413:
       return { kind: "tooLarge", detail: stringOrNull(body.error) };
     case 422:

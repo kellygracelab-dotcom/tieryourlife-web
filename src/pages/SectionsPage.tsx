@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import type { SectionProposal, SectionStats } from "../api/sections";
 import { useSession } from "../app/session";
 import { SignInDialog } from "../features/community/SignInDialog";
-import { OTHER, type Section } from "../features/sections/model";
+import { OTHER, sectionName, type Section } from "../features/sections/model";
 import { myWaiting, PENDING_MAX } from "../features/sections/proposal";
 import type { EditorDeps } from "../features/sections/editorDeps";
 import { SectionEditor } from "../features/sections/SectionEditor";
@@ -78,8 +78,7 @@ export function SectionsPage({
     );
   const waiting = myWaiting(sections, uid);
   const opened = waiting.find((one) => one.id === params.get("waiting")) ?? null;
-  const nameOf = (id: string | null) =>
-    sections.find((one) => one.id === id)?.name ?? strings.category.other;
+  const nameOf = (id: string | null) => sectionName(id ?? OTHER, sections);
 
   // What was proposed or taken back shows at once: the sections are asked for again.
   const reload = () => {

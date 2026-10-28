@@ -1,5 +1,4 @@
 import type { ApiClient } from "./client";
-import type { Category } from "./types";
 
 /** A colour for each theme. */
 export interface ThemePair {
@@ -46,6 +45,15 @@ export interface SectionStats {
 
 export function loadSections(client: ApiClient): Promise<{ sections: SectionStats[] }> {
   return client.request<{ sections: SectionStats[] }>("GET", "/lists/sections");
+}
+
+/**
+ * One section by its id, also one no tile shows: hidden, or not among the
+ * sections yet. 404 when there is none; 410 MERGED {mergedInto} when it went
+ * into another, to everybody once it had been approved.
+ */
+export function loadSection(client: ApiClient, id: string): Promise<SectionStats> {
+  return client.request<SectionStats>("GET", `/lists/sections/${encodeURIComponent(id)}`);
 }
 
 export function followSection(client: ApiClient, id: string): Promise<{ following: true }> {
@@ -97,7 +105,7 @@ export type TopicStatus = "pending" | "approved" | "rejected" | "merged";
 export interface Topic {
   id: string;
   name: string;
-  section: Category | null;
+  section: string | null;
   status: TopicStatus;
   listCount: number;
   followerCount: number;

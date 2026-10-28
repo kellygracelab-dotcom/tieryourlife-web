@@ -10,10 +10,19 @@ export const CATEGORIES = [
   "other",
 ] as const;
 
+/**
+ * The nine sections the site draws from its own art and words. A list, a
+ * board or the feed names its section by any id a moderator approved since
+ * (docs/sections-api.md, 1), so those carry a string: this is only for the
+ * nine's own looks and names.
+ */
 export type Category = (typeof CATEGORIES)[number];
 
 export const isCategory = (value: string): value is Category =>
   (CATEGORIES as readonly string[]).includes(value);
+
+/** The backend's shape of a section id, the nine's underscore included: what a link's `category` is read by. */
+export const isSectionId = (value: string): boolean => /^[a-z0-9][a-z0-9_-]{1,39}$/.test(value);
 
 export type FeedSort = "recent" | "popular";
 
@@ -39,7 +48,8 @@ export interface ListSummary {
   authorUid: string;
   authorName: string;
   authorPhotoUrl: string | null;
-  category: Category;
+  /** The section's id: one of the nine, or any approved since. */
+  category: string;
   itemCount: number;
   coverImageUrl: string | null;
   previewImages: string[];
@@ -74,7 +84,8 @@ export interface PublishedList extends ListSummary {
 
 // A type rather than an interface so it can travel as a query object.
 export type FeedQuery = {
-  category?: Category;
+  /** A section's id: the feed narrows to any. */
+  category?: string;
   /** One topic inside the category. */
   topic?: string;
   author?: string;

@@ -1,5 +1,3 @@
-import type { Category } from "../../api/types";
-
 /**
  * A board of the person's own, the way the phone keeps one: tiers with a
  * pool among them, cards that sit in a tier at a position, a trash that is a
@@ -51,7 +49,8 @@ export interface Board {
   uid: string;
   title: string;
   displayMode: DisplayMode;
-  category: Category | null;
+  /** The section's id, any the backend knows, or one of the person's own still waiting; null before one is chosen. */
+  category: string | null;
   coverImageUrl: string | null;
   coverImageUrls: string[];
   authorName: string | null;
@@ -227,7 +226,7 @@ export function rename(board: Board, title: string, now: number): Board {
 }
 
 /** A topic lives inside one section: another section leaves the list without one. */
-export const setCategory = (board: Board, category: Category | null, now: number): Board =>
+export const setCategory = (board: Board, category: string | null, now: number): Board =>
   category === board.category ? board : touched({ ...board, category, topic: null }, now);
 
 /** Anonymity goes out with the next publish too: changing it leaves the published copy behind. */

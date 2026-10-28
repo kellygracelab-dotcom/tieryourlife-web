@@ -1,5 +1,5 @@
 import type { PublishRequest } from "../../api/lists";
-import type { Category, PublishedList } from "../../api/types";
+import type { PublishedList } from "../../api/types";
 import type { Draft } from "../editor/model";
 import {
   BOARD_LIMITS,
@@ -69,7 +69,7 @@ export function publishRequestOf(board: Board): PublishRequest | null {
 /** What a board is made from when it comes from elsewhere: a list, or the old editor's draft. */
 interface Makings {
   title: string;
-  category: Category | null;
+  category: string | null;
   authorName: string | null;
   tiers: readonly TierDraft[];
   cards: readonly CardDraft[];

@@ -1,10 +1,11 @@
-import { sectionPath } from "../features/sections/model";
+import { approvedOnly, sectionName, sectionPath } from "../features/sections/model";
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
-import { CATEGORIES, isCategory, type Category, type FeedSort } from "../api/types";
+import { isSectionId, type FeedSort } from "../api/types";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed } from "../features/feed/useFeed";
+import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import { fill, plural, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
 import { Chip } from "../ui/Chip";
@@ -21,7 +22,8 @@ export const MIN_QUERY = 2;
 interface Filters {
   q: string;
   sort: FeedSort;
-  category: Category | undefined;
+  /** A section's id: any, also one no chip shows. */
+  category: string | undefined;
 }
 
 const read = (params: URLSearchParams): Filters => {
@@ -29,7 +31,7 @@ const read = (params: URLSearchParams): Filters => {
   return {
     q: (params.get("q") ?? "").trim(),
     sort: params.get("sort") === "recent" ? "recent" : "popular",
-    category: isCategory(category) ? category : undefined,
+    category: isSectionId(category) ? category : undefined,
   };
 };
 
@@ -43,13 +45,13 @@ const write = (filters: Filters): Record<string, string> => ({
 const SUGGESTIONS = 3;
 
 /** Something to open when the words led nowhere: what people rank most, in the category if one is set. */
-function Suggestions({ category }: { category: Category | undefined }) {
+function Suggestions({ category, name }: { category: string | undefined; name: string }) {
   const popular = useFeed({ category, sort: "popular" });
   if (popular.state.status !== "ready" || popular.state.lists.length === 0) return null;
   const heading =
     category === undefined
       ? strings.home.popular
-      : fill(strings.search.popularIn, { category: strings.category[category] });
+      : fill(strings.search.popularIn, { category: name });
   return (
     <section className="search__suggestions" aria-labelledby="search-popular">
       <h2 id="search-popular" className="search__subtitle">
@@ -66,9 +68,11 @@ function Suggestions({ category }: { category: Category | undefined }) {
   );
 }
 
-export function SearchPage() {
+export function SearchPage({ store = sectionsStore }: { store?: SectionsStore }) {
   const [params, setParams] = useSearchParams();
   const filters = read(params);
+  const { sections } = useSections(store);
+  const name = filters.category === undefined ? "" : sectionName(filters.category, sections);
   const [typed, setTyped] = useState(filters.q);
   // Words that arrive by the address — from the bar's field, or a link — go
   // into the box; the box's own words, written to the address after the pause,
@@ -108,7 +112,7 @@ export function SearchPage() {
     filters.category === undefined ? (
       <Link to="/">{strings.search.browseHome}</Link>
     ) : (
-      <Link to={sectionPath(filters.category)}>{strings.category[filters.category]}</Link>
+      <Link to={sectionPath(filters.category)}>{name}</Link>
     );
   const nothing = searching && feed.state.status === "ready" && feed.state.lists.length === 0;
 
@@ -146,9 +150,14 @@ export function SearchPage() {
         >
           {strings.search.all}
         </Chip>
-        {CATEGORIES.map((id) => (
-          <Chip key={id} selected={filters.category === id} onClick={() => set({ category: id })}>
-            {strings.category[id]}
+        {/* Every section anybody may open, in the order the site draws them: Other last. */}
+        {approvedOnly(sections).map((section) => (
+          <Chip
+            key={section.id}
+            selected={filters.category === section.id}
+            onClick={() => set({ category: section.id })}
+          >
+            {section.name}
           </Chip>
         ))}
       </div>
@@ -171,7 +180,7 @@ export function SearchPage() {
               <span>{strings.search.makeThis}</span>
             </Link>
           </p>
-          <Suggestions category={filters.category} />
+          <Suggestions category={filters.category} name={name} />
         </>
       ) : (
         <FeedGrid

@@ -794,6 +794,7 @@ const pl: Translation = {
     nothingPublished: "Obserwowani nie opublikowali jeszcze niczego.",
     goExplore: "Przejdź do Odkrywaj",
     back: "Wstecz",
+    movesTo: "Trafi do działu {name}, gdy zostanie zatwierdzony",
   },
   propose: {
     title: "Zaproponuj dział",
@@ -1026,6 +1027,7 @@ const pl: Translation = {
       "Zniknie ze Społeczności, a jej link przestanie działać. Twoja tablica zostanie w „Twoich listach”.",
     anonymousTitle: "Publikuj anonimowo",
     anonymousBody: "Bez nazwy i zdjęcia na liście. Tylko ty możesz ją zmienić lub usunąć.",
+    categoryWaiting: "Czeka na moderatora",
   },
   sync: {
     offBusy: "Usuwanie…",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { isCategory } from "../api/types";
+import type { SectionProposal, SectionStats } from "../api/sections";
+import { isSectionId } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
@@ -28,8 +29,15 @@ import {
   type PublishingDeps,
 } from "../features/boards/BoardSettings";
 import { RankedList } from "../features/boards/RankedList";
+import { filedUnder } from "../features/boards/sectionChoices";
 import { downloadShare, type Share } from "../features/ranking/share";
+import type { EditorDeps } from "../features/sections/editorDeps";
+import { myWaiting, PENDING_MAX } from "../features/sections/proposal";
+import { SectionEditor } from "../features/sections/SectionEditor";
+import { TooManyDialog } from "../features/sections/TooManyDialog";
+import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import {
+  proposeSection,
   publish as publishList,
   republish as republishList,
   unpublish as unpublishList,
@@ -63,9 +71,13 @@ interface BoardPageProps {
   publishing?: PublishingDeps;
   topics?: LoadTopics;
   share?: Share;
+  store?: SectionsStore;
+  propose?: (proposal: SectionProposal) => Promise<SectionStats>;
+  proposeDeps?: EditorDeps;
 }
 
-type Panel = "none" | "settings";
+/** The settings sheet, or what its Propose a section opened in its place: the form, or the three already waiting. */
+type Panel = "none" | "settings" | "propose" | "tooMany";
 
 /** The board's name, edited where it stands: a press on the pencil, Enter or leaving the field keeps it. */
 function TitleEditor({
@@ -161,12 +173,17 @@ export function BoardPage({
   publishing = sitePublishing,
   topics,
   share = downloadShare,
+  store = sectionsStore,
+  propose = proposeSection,
+  proposeDeps,
 }: BoardPageProps) {
   const { uid = "" } = useParams();
   const [params] = useSearchParams();
   const stored = useBoard(uid, repository);
   const navigate = useNavigate();
   const { account, signIn } = useSession();
+  const { sections } = useSections(store);
+  const me = account?.kind === "signedIn" ? account.uid : null;
   // A new board is made here and kept only once it is touched: a name, a
   // card, a star. Left as it came, it was never kept, which is what the
   // phone's cross does with an untouched board.
@@ -180,7 +197,7 @@ export function BoardPage({
       madeAt > 0
         ? {
             ...newBoard(uid, named === "" ? strings.boards.untitled : named, madeAt, nextUid),
-            category: isCategory(filed) ? filed : null,
+            category: isSectionId(filed) ? filed : null,
           }
         : null,
     [uid, madeAt, named, filed],
@@ -315,6 +332,19 @@ export function BoardPage({
     closePanel();
     setOpenTier(rankedTiers(change.board).at(-1)?.uid ?? null);
   };
+  // Propose a section, from the end of the section picker: the form takes the
+  // sheet's place, as a screen of its own does on the phone, and gives it back
+  // when it closes. A guest signs in first, as the Public switch asks them to.
+  const waiting = myWaiting(sections, me);
+  const openProposal = () => {
+    if (account?.kind === "signedIn") {
+      setPanel(waiting.length >= PENDING_MAX ? "tooMany" : "propose");
+      return;
+    }
+    void signIn().then((outcome) => {
+      if (outcome.kind === "signedIn") setPanel("propose");
+    });
+  };
 
   const toTrash = () => {
     keep(trashBoard(board, now()));
@@ -379,7 +409,7 @@ export function BoardPage({
             {[
               ranked === 0 ? strings.boards.nothingRanked : plural(strings.boards.ranked, ranked),
               plural(strings.boards.inPool, inPool),
-              ...(board.category === null ? [] : [strings.category[board.category]]),
+              ...(board.category === null ? [] : [filedUnder(board.category, sections, me)]),
             ].join(" · ")}
           </p>
         </div>
@@ -420,7 +450,9 @@ export function BoardPage({
           board={board}
           latest={latest}
           keep={keep}
+          sections={sections}
           onCategory={(category) => keep(setCategory(latest(), category, now()))}
+          onPropose={openProposal}
           onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
           onNewTier={newTier}
           onPublished={(what) =>
@@ -438,6 +470,28 @@ export function BoardPage({
           onDone={closePanel}
           now={now}
         />
+      )}
+      {panel === "propose" && (
+        <SectionEditor
+          mode="propose"
+          sections={sections}
+          fileUnder={board.category ?? undefined}
+          waiting={waiting.length}
+          send={propose}
+          deps={proposeDeps}
+          onTooMany={() => setPanel("tooMany")}
+          onClose={() => setPanel("settings")}
+          onDone={() => {
+            setPanel("settings");
+            setNotice({ text: strings.propose.proposed });
+            // The new proposal is offered in the picker at once: the sections are asked for again.
+            store.invalidate();
+            store.refresh(me ?? "guest");
+          }}
+        />
+      )}
+      {panel === "tooMany" && (
+        <TooManyDialog waiting={waiting} onClose={() => setPanel("settings")} />
       )}
 
       {board.displayMode === "FLAT_RANKED" ? (

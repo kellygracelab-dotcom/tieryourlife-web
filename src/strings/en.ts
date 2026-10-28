@@ -709,6 +709,7 @@ export const en = {
     nothingPublished: "Nobody you follow has published anything yet.",
     goExplore: "Go to Explore",
     back: "Navigate back",
+    movesTo: "Moves to {name} once it’s approved",
   },
   // Propose a section (docs/design-spec-admin.md, 2), and its waiting tile's sheet.
   propose: {
@@ -906,6 +907,7 @@ export const en = {
     takeDownBody: "It leaves Community and its link stops working. Your board stays in Your lists.",
     anonymousTitle: "Publish anonymously",
     anonymousBody: "No name or face on the list. Only you can change it or take it down.",
+    categoryWaiting: "Waiting for a moderator",
   },
   sync: {
     offBusy: "Deleting…",

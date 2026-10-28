@@ -1,12 +1,5 @@
 import type { ApiClient } from "./client";
-import type {
-  Category,
-  FeedPage,
-  FeedQuery,
-  ListSummary,
-  PublishedList,
-  PublishedTier,
-} from "./types";
+import type { FeedPage, FeedQuery, ListSummary, PublishedList, PublishedTier } from "./types";
 
 export async function loadList(client: ApiClient, id: string): Promise<PublishedList> {
   return publishedListOf(
@@ -47,16 +40,30 @@ export async function loadFeed(client: ApiClient, query: FeedQuery = {}): Promis
   return { ...page, lists: (page.lists ?? []).map(summaryOf) };
 }
 
+/**
+ * One of this account's own published lists. Published into a section of
+ * one's own still waiting for a moderator, it sits in the section the
+ * proposal files under, and says which one it moves to.
+ */
+export interface MyList extends ListSummary {
+  proposedSection?: string | null;
+  proposedSectionName?: string | null;
+}
+
 /** The lists this account published from the app, newest first; the backend orders them. */
-export async function loadMyLists(client: ApiClient): Promise<{ lists: ListSummary[] }> {
-  const mine = await client.request<{ lists: ListSummary[] }>("GET", "/lists/mine");
+export async function loadMyLists(client: ApiClient): Promise<{ lists: MyList[] }> {
+  const mine = await client.request<{ lists: MyList[] }>("GET", "/lists/mine");
   return { ...mine, lists: (mine.lists ?? []).map(summaryOf) };
 }
 
 /** What the backend takes to publish a list; the site sends no pictures of its own yet. */
 export interface PublishRequest {
   title: string;
-  category: Category;
+  /**
+   * Any approved section, or one of the person's own still waiting: the list
+   * waits in the section it files under and moves once it is approved.
+   */
+  category: string;
   coverImageUrl: string | null;
   coverPictureId: string | null;
   /** The pictures chosen for the cover collage, in their order; left out or empty when the cards' art decides. */

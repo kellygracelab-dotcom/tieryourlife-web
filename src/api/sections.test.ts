@@ -5,6 +5,7 @@ import {
   followSection,
   followTopic,
   loadMyTopics,
+  loadSection,
   loadSections,
   loadTopics,
   proposeSection,
@@ -34,6 +35,15 @@ describe("sections", () => {
     const { client, request } = recordingClient({ sections });
     await expect(loadSections(client)).resolves.toEqual({ sections });
     expect(request).toHaveBeenCalledWith("GET", "/lists/sections");
+  });
+
+  it("reads one section by its id, escaped", async () => {
+    const section = { id: "street-food", listCount: 0, followerCount: 0, newThisWeek: 0 };
+    const { client, request } = recordingClient(section);
+    await expect(loadSection(client, "street-food")).resolves.toEqual(section);
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/sections/street-food");
+    await loadSection(client, "a/b");
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/sections/a%2Fb");
   });
 
   it("follows and unfollows a section, escaping its id", async () => {

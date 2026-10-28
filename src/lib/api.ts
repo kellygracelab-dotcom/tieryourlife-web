@@ -26,14 +26,14 @@ import type {
   SuggestedAuthor,
 } from "../api/community";
 import * as lists from "../api/lists";
-import type { PublishRequest } from "../api/lists";
+import type { MyList, PublishRequest } from "../api/lists";
 import * as moderation from "../api/moderation";
 import type { BanLength, QueuedList } from "../api/moderation";
 import * as rank from "../api/rank";
 import * as sections from "../api/sections";
 import type { SectionProposal, SectionStats, Topic } from "../api/sections";
 import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
-import type { CatalogueItem, FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
+import type { CatalogueItem, FeedPage, FeedQuery, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
@@ -81,7 +81,7 @@ export const loadMyRankings = (): Promise<MyRankings> => rank.loadMyRankings(api
 
 export const removeRanking = (code: string): Promise<void> => rank.removeRanking(api, code);
 
-export const loadMyLists = (): Promise<{ lists: ListSummary[] }> => lists.loadMyLists(api);
+export const loadMyLists = (): Promise<{ lists: MyList[] }> => lists.loadMyLists(api);
 
 // The catalogue answers in the language the page is in.
 export const findInCatalogue = (query: string): Promise<CatalogueItem[]> =>
@@ -129,6 +129,8 @@ export const suggestedAuthors = (): Promise<{ authors: SuggestedAuthor[] }> =>
   community.suggestedAuthors(api);
 
 export const loadSections = (): Promise<{ sections: SectionStats[] }> => sections.loadSections(api);
+
+export const loadSection = (id: string): Promise<SectionStats> => sections.loadSection(api, id);
 
 export const followSection = (id: string): Promise<{ following: true }> =>
   sections.followSection(api, id);

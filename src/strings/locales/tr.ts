@@ -731,6 +731,7 @@ const tr: Translation = {
     nothingPublished: "Takip ettikleriniz henüz bir şey yayımlamadı.",
     goExplore: "Keşfet’e git",
     back: "Geri git",
+    movesTo: "Onaylanınca {name} bölümüne taşınacak",
   },
   propose: {
     title: "Bölüm öner",
@@ -929,6 +930,7 @@ const tr: Translation = {
     anonymousTitle: "Anonim yayınla",
     anonymousBody:
       "Listede ad ve fotoğraf olmaz. Yalnızca sen değiştirebilir veya kaldırabilirsin.",
+    categoryWaiting: "Moderatör bekleniyor",
   },
   sync: {
     offBusy: "Siliniyor…",

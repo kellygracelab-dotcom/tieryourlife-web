@@ -110,6 +110,16 @@ describe("parseBoard", () => {
     ).toBe("#DAD7E0");
   });
 
+  it("keeps a section's id it does not know, rather than unfiling the list", () => {
+    const categoryOf = (category: unknown) =>
+      parseBoard({ uid: "b", category, tiers: [{ uid: "t", label: "S" }] })?.category;
+    expect(categoryOf("street-food")).toBe("street-food");
+    expect(categoryOf("s-k3j9x2ab")).toBe("s-k3j9x2ab");
+    expect(categoryOf("film_tv")).toBe("film_tv");
+    expect(categoryOf("")).toBeNull();
+    expect(categoryOf(7)).toBeNull();
+  });
+
   it("reads the display mode by the phone's names, and this site's old name for the ranked column", () => {
     const modeOf = (displayMode: unknown) =>
       parseBoard({ uid: "b", displayMode, tiers: [{ uid: "t", label: "S" }] })?.displayMode;

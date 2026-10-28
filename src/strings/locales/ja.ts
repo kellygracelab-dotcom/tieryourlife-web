@@ -726,6 +726,7 @@ const ja: Translation = {
     nothingPublished: "フォロー中の人はまだ何も公開していません。",
     goExplore: "見つけるへ",
     back: "戻る",
+    movesTo: "承認されると「{name}」に移ります",
   },
   propose: {
     title: "セクションを提案",
@@ -923,6 +924,7 @@ const ja: Translation = {
       "コミュニティから外れ、リンクは使えなくなります。ボードは「あなたのリスト」に残ります。",
     anonymousTitle: "匿名で公開",
     anonymousBody: "リストに名前と写真を出しません。変更や取り下げはあなただけができます。",
+    categoryWaiting: "モデレーターの確認待ち",
   },
   sync: {
     offBusy: "削除中…",

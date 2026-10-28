@@ -4,9 +4,10 @@ import { useState } from "react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
-import type { Topic } from "../../api/sections";
+import type { SectionStats, Topic } from "../../api/sections";
 import { GUEST, SessionContext, type Session } from "../../app/session";
 import type { Account } from "../../lib/account";
+import { orderSections, sectionsFrom, type Section } from "../sections/model";
 import { BoardSettings, type LoadTopics, type PublishingDeps } from "./BoardSettings";
 import { addTier, addToPool, newBoard, setCategory, type Board } from "./model";
 
@@ -55,21 +56,54 @@ const topic = (id: string, name: string): Topic => ({
   mergedInto: null,
 });
 
+const stats = (id: string, more: Partial<SectionStats> = {}): SectionStats => ({
+  id,
+  listCount: 0,
+  followerCount: 0,
+  newThisWeek: 0,
+  collage: [],
+  following: false,
+  ...more,
+});
+
+/**
+ * Sections as the store holds them for "me": one followed, one the owner
+ * pinned, one of the nine, Other, and a proposal of one's own and of somebody
+ * else's still waiting.
+ */
+const someSections = (): Section[] =>
+  orderSections(
+    sectionsFrom(
+      [
+        stats("film_tv"),
+        stats("street-food", { name: "Street food", rank: 1, approvedAt: 5 }),
+        stats("games", { following: true }),
+        stats("night-markets", { name: "Night markets", status: "pending", proposerUid: "me" }),
+        stats("food-trucks", { name: "Food trucks", status: "pending", proposerUid: "else" }),
+        stats("other"),
+      ],
+      "me",
+    ),
+  );
+
 // The board as the page would hold it: the settings read the latest through
 // `latest`, and every change lands here.
 let held: Board;
 const published = vi.fn<(what: string, id: string | null) => void>();
 const newTier = vi.fn();
 const done = vi.fn();
+const propose = vi.fn();
 
 function Host({
   initial,
   publishing,
   topics,
+  sections,
 }: {
   initial: Board;
   publishing: PublishingDeps;
   topics: LoadTopics;
+  sections: readonly Section[];
 }) {
   const [board, setBoard] = useState(initial);
   const keep = (next: Board) => {
@@ -81,7 +115,9 @@ function Host({
       board={board}
       latest={() => held}
       keep={keep}
+      sections={sections}
       onCategory={(category) => keep(setCategory(held, category, 500))}
+      onPropose={propose}
       onMode={(displayMode) => keep({ ...held, displayMode })}
       onNewTier={newTier}
       onPublished={published}
@@ -97,12 +133,13 @@ const show = (
   board: Board,
   account: Account,
   publishing: Partial<PublishingDeps> = {},
-  extra: { topics?: LoadTopics; signIn?: Session["signIn"] } = {},
+  extra: { topics?: LoadTopics; signIn?: Session["signIn"]; sections?: readonly Section[] } = {},
 ) => {
   held = board;
   published.mockReset();
   newTier.mockReset();
   done.mockReset();
+  propose.mockReset();
   const session: Session = {
     account,
     signIn: extra.signIn ?? (() => Promise.resolve({ kind: "cancelled" })),
@@ -116,6 +153,8 @@ const show = (
           initial={board}
           publishing={{ ...idle, ...publishing }}
           topics={extra.topics ?? (() => Promise.resolve({ topics: [] }))}
+          // The nine, as the site draws them before the backend answers.
+          sections={extra.sections ?? sectionsFrom(null)}
         />
       </MemoryRouter>
     </SessionContext.Provider>,
@@ -339,6 +378,56 @@ describe("BoardSettings: category and topic", () => {
     expect(held).toMatchObject({ category: "games", topic: null });
     expect(screen.queryByRole("radiogroup", { name: "Category" })).toBeNull();
     expect(screen.getByRole("button", { name: /Category/ })).toHaveTextContent("Games");
+  });
+
+  it("offers the approved sections in the site's order, then one's own waiting ones, then Propose a section", async () => {
+    show({ ...filmBoard(), category: null }, signedIn, {}, { sections: someSections() });
+    await userEvent.click(screen.getByRole("button", { name: /Category/ }));
+    const picker = screen.getByRole("radiogroup", { name: "Category" });
+    expect(
+      within(picker)
+        .getAllByRole("radio")
+        .map((radio) => radio.textContent),
+    ).toEqual([
+      "Games",
+      "Street food",
+      "Film & TV",
+      "Other",
+      "Night marketsWaiting for a moderator",
+    ]);
+
+    // The word narrows the waiting ones too; somebody else's proposal is never offered.
+    await userEvent.type(screen.getByRole("searchbox", { name: "Find a section" }), "ma");
+    expect(
+      within(picker)
+        .getAllByRole("radio")
+        .map((radio) => radio.textContent),
+    ).toEqual(["Night marketsWaiting for a moderator"]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Propose a section" }));
+    expect(propose).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("radiogroup", { name: "Category" })).toBeNull();
+  });
+
+  it("files the list under a waiting section of one's own, says where it goes, and publishes into it", async () => {
+    const publish = vi.fn(() => Promise.resolve({ id: "L1" }));
+    show(filmBoard(), signedIn, { publish }, { sections: someSections() });
+    await userEvent.click(screen.getByRole("button", { name: /Category/ }));
+    await userEvent.click(screen.getByRole("radio", { name: /Night markets/ }));
+    expect(held.category).toBe("night-markets");
+    expect(screen.getByRole("button", { name: /Category/ })).toHaveTextContent(
+      "Moves to Night markets once it’s approved",
+    );
+
+    await userEvent.click(publicSwitch());
+    await waitFor(() => expect(publicSwitch()).toBeChecked());
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ category: "night-markets" }));
+  });
+
+  it("keeps a section it has no name for, and calls it Other", () => {
+    show({ ...filmBoard(), category: "k-dramas" }, signedIn, {}, { sections: someSections() });
+    expect(screen.getByRole("button", { name: /Category/ })).toHaveTextContent("Other");
+    expect(publicSwitch()).toBeEnabled();
   });
 
   it("offers the section's topics and None, and sends the one chosen with the list", async () => {

@@ -61,6 +61,13 @@ describe("parseApiError", () => {
     [409, json({ error: "That page is gone", code: "CURSOR_GONE" }), { kind: "cursorGone" }],
     [409, json({ error: "Moved on", code: "CONFLICT" }), { kind: "conflict" }],
     [
+      410,
+      json({ error: "Merged", code: "MERGED", detail: "food", mergedInto: "food" }),
+      { kind: "merged", into: "food" },
+    ],
+    [410, json({ error: "Merged", code: "MERGED" }), { kind: "merged", into: null }],
+    [410, json({ error: "Gone" }), { kind: "unknown", status: 410 }],
+    [
       413,
       json({ error: "Too many items", code: "TOO_LARGE" }),
       { kind: "tooLarge", detail: "Too many items" },

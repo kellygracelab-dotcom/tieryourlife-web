@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import type { Ranking } from "../api/rank";
-import { isCategory, type Category, type PublishedList } from "../api/types";
+import { isSectionId, type PublishedList } from "../api/types";
 import { useSession } from "../app/session";
 import { boardForOwnList, boardOfList, type CopyBack } from "../features/boards/ownList";
 import { boardFromDraft } from "../features/boards/publish";
@@ -81,7 +81,7 @@ export function NewBoardPage({
   return (
     <NewBoard
       title={params.get("title")?.trim() ?? ""}
-      category={isCategory(category) ? category : null}
+      category={isSectionId(category) ? category : null}
       repository={repository}
       store={store}
       now={now}
@@ -112,7 +112,7 @@ function NewBoard({
   now,
 }: {
   title: string;
-  category: Category | null;
+  category: string | null;
   repository: BoardsRepository;
   store: KeyValueStore;
   now: () => number;

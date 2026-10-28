@@ -203,6 +203,18 @@ export const approvedOnly = (sections: readonly Section[]): Section[] =>
   sections.filter((section) => section.status === "approved");
 
 /**
+ * The name of whatever section a list or a board is filed under: the one the
+ * backend sent, in this language; one of the nine by the site's own words;
+ * and an id nobody here knows yet (hidden, or approved since the sections
+ * were read) as Other, the way the app draws it (docs/sections-api.md, 6).
+ */
+export function sectionName(id: string, sections: readonly Section[]): string {
+  const known = sections.find((section) => section.id === id);
+  if (known !== undefined) return known.name;
+  return isCategory(id) ? strings.category[id] : sectionName(OTHER, sections);
+}
+
+/**
  * The order the app draws sections in, so a follow made here moves its tile
  * at once: followed first, then the ones pinned by a moderator, then the
  * busiest of the last thirty days, then the earlier approved, the nine
