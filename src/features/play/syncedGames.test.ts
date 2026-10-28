@@ -36,11 +36,14 @@ const example: SyncedPlay = playOf({
 })!;
 
 describe("a game kept in the board", () => {
-  it("reads the app's shared example and writes it back byte for byte", () => {
+  it("reads the app's shared example and writes it back the same, its round worked out afresh", () => {
     const game = fromSynced(example, "pool");
     expect(game.chosen).toEqual({ kind: "rows", tiers: ["t-s"], pool: false, keepTier: true });
     expect(game.history).toEqual(example.history);
-    expect(canonicalPlay(toSynced(game, "pool", 1793146000001))).toBe(canonicalPlay(example));
+    // The example's round is a placeholder; a writer counts it from the answers.
+    expect(canonicalPlay(toSynced(game, "pool", 1793146000001))).toBe(
+      canonicalPlay({ ...example, round: 2 }),
+    );
   });
 
   it("names the pool by its uid in the scope, and the whole board by no scope", () => {
@@ -71,9 +74,10 @@ describe("a game kept in the board", () => {
     expect(back.spec.refine).toBe(true);
   });
 
-  it("counts the Swiss rounds answered whole, and 0 for the other games", () => {
+  it("says the Swiss round being asked, as the app does, and 0 for the other games and once over", () => {
     const swiss = newGame("swiss", ["a", "b", "c", "d"], { kind: "all" }, 7, 1);
-    expect(toSynced(swiss, null, 2).round).toBe(0);
+    expect(toSynced(swiss, null, 2).round).toBe(1);
+    expect(toSynced(played(swiss), null, 2).round).toBe(0);
     expect(
       toSynced(
         {
@@ -86,7 +90,7 @@ describe("a game kept in the board", () => {
         null,
         2,
       ).round,
-    ).toBe(1);
+    ).toBe(2);
     expect(toSynced(newGame("hill", ["a", "b", "c"], { kind: "all" }, 1, 1), null, 2).round).toBe(
       0,
     );

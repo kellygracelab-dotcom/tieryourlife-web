@@ -81,18 +81,22 @@ function mainLength(
   return history.length;
 }
 
-/** The Swiss rounds answered whole, as the app counts "the round reached"; 0 for the other games. */
+/**
+ * The Swiss round being asked, counted from 1, as the app's GameProgress.round:
+ * 0 for the other games and once the main game is over. Only the Resume row
+ * reads it; the game itself is always replayed from its answers.
+ */
 function roundOf(game: Game): number {
-  if (game.spec.kind !== "swiss") return 0;
+  if (game.spec.kind !== "swiss" || game.refineFixed !== undefined) return 0;
   const rounds = swissRounds(game.spec.count);
-  const answers = game.history.slice(0, game.refineFixed?.from ?? game.history.length);
   let used = 0;
   for (let round = 0; round < rounds; round++) {
-    const pairs = swissRound(game.spec.count, answers.slice(0, used));
-    if (pairs.length === 0 || answers.length - used < pairs.length) return round;
+    const pairs = swissRound(game.spec.count, game.history.slice(0, used));
+    if (pairs.length === 0) return 0;
+    if (game.history.length - used < pairs.length) return round + 1;
     used += pairs.length;
   }
-  return rounds;
+  return 0;
 }
 
 /** A board's own game, read from and written to the board: the page hands `usePlay` this. */
