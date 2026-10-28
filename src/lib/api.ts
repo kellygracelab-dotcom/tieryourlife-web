@@ -5,14 +5,23 @@ import type { AdoptedGuest } from "../api/account";
 import { searchEverywhere } from "../api/catalogue";
 import { createApiClient } from "../api/client";
 import * as community from "../api/community";
-import type { FollowedAuthor, FollowState, ReportRequest, SuggestedAuthor } from "../api/community";
+import type { Following, FollowState, ReportRequest, SuggestedAuthor } from "../api/community";
 import * as lists from "../api/lists";
 import type { PublishRequest } from "../api/lists";
 import * as moderation from "../api/moderation";
 import type { BanLength, QueuedList } from "../api/moderation";
 import * as rank from "../api/rank";
+import * as sections from "../api/sections";
+import type { SectionStats, Topic } from "../api/sections";
 import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
-import type { CatalogueItem, FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
+import type {
+  CatalogueItem,
+  Category,
+  FeedPage,
+  FeedQuery,
+  ListSummary,
+  PublishedList,
+} from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
@@ -91,14 +100,32 @@ export const followAuthor = (authorUid: string): Promise<{ following: true }> =>
 export const unfollowAuthor = (authorUid: string): Promise<{ following: false }> =>
   community.unfollowAuthor(api, authorUid);
 
-export const loadFollowing = (): Promise<{ authors: FollowedAuthor[] }> =>
-  community.loadFollowing(api);
+export const loadFollowing = (): Promise<Following> => community.loadFollowing(api);
 
 export const makeFace = (pictureId: string): Promise<{ url: string }> =>
   community.makeFace(api, pictureId);
 
 export const suggestedAuthors = (): Promise<{ authors: SuggestedAuthor[] }> =>
   community.suggestedAuthors(api);
+
+export const loadSections = (): Promise<{ sections: SectionStats[] }> => sections.loadSections(api);
+
+export const followSection = (id: string): Promise<{ following: true }> =>
+  sections.followSection(api, id);
+
+export const unfollowSection = (id: string): Promise<{ following: false }> =>
+  sections.unfollowSection(api, id);
+
+export const loadTopics = (section: Category, limit?: number): Promise<{ topics: Topic[] }> =>
+  sections.loadTopics(api, section, limit);
+
+export const loadMyTopics = (): Promise<{ topics: Topic[] }> => sections.loadMyTopics(api);
+
+export const followTopic = (id: string): Promise<{ following: true }> =>
+  sections.followTopic(api, id);
+
+export const unfollowTopic = (id: string): Promise<{ following: false }> =>
+  sections.unfollowTopic(api, id);
 
 export const takeDownList = (id: string, ban: BanLength | null): Promise<void> =>
   moderation.takeDownList(api, id, ban);

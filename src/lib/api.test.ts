@@ -58,7 +58,10 @@ describe("api", () => {
 
   it("takes what the page already carries without asking the network", async () => {
     mocks.request.mockClear();
-    await expect(loadList("embedded")).resolves.toMatchObject({ id: "embedded", title: "From HTML" });
+    await expect(loadList("embedded")).resolves.toMatchObject({
+      id: "embedded",
+      title: "From HTML",
+    });
     await expect(loadRanking("embedded")).resolves.toEqual({ code: "embedded" });
     expect(mocks.request).not.toHaveBeenCalled();
   });

@@ -1,4 +1,6 @@
 import type { ApiClient } from "./client";
+import type { Topic } from "./sections";
+import type { Category } from "./types";
 
 /**
  * The proxy's reasons, in the order the app's report sheet shows them. The
@@ -74,9 +76,26 @@ export interface FollowedAuthor {
   photoUrl: string | null;
 }
 
-/** Whom this person follows; the backend answers `topics` too, which the site leaves alone. */
-export function loadFollowing(client: ApiClient): Promise<{ authors: FollowedAuthor[] }> {
-  return client.request<{ authors: FollowedAuthor[] }>("GET", "/lists/following");
+/** A section this person follows, with how many others do. */
+export interface FollowedSection {
+  id: Category;
+  followerCount: number;
+}
+
+/** Everyone and everything this person follows: people, topics and sections. */
+export interface Following {
+  authors: FollowedAuthor[];
+  topics: Topic[];
+  sections: FollowedSection[];
+}
+
+export async function loadFollowing(client: ApiClient): Promise<Following> {
+  const answer = await client.request<Partial<Following>>("GET", "/lists/following");
+  return {
+    authors: answer.authors ?? [],
+    topics: answer.topics ?? [],
+    sections: answer.sections ?? [],
+  };
 }
 
 /**

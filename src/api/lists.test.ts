@@ -64,7 +64,7 @@ describe("lists", () => {
     expect(again.lists[0]).toBe(clean);
   });
 
-  it("takes only https:// addresses for pictures: the word \"null\" kept as a cover is none", async () => {
+  it('takes only https:// addresses for pictures: the word "null" kept as a cover is none', async () => {
     const list = {
       id: "l2",
       title: "Comfort rewatches",
@@ -72,7 +72,10 @@ describe("lists", () => {
       previewImages: ["https://img/a.jpg", "null", "assets/null"],
     };
     const page = await loadFeed(recordingClient({ lists: [list], nextCursor: null }).client);
-    expect(page.lists[0]).toMatchObject({ coverImageUrl: null, previewImages: ["https://img/a.jpg"] });
+    expect(page.lists[0]).toMatchObject({
+      coverImageUrl: null,
+      previewImages: ["https://img/a.jpg"],
+    });
   });
 
   it("opens one list with the same care for its cover and its cards' pictures", async () => {
