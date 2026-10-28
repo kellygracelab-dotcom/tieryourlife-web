@@ -51,7 +51,7 @@ function summaryOf(saved: readonly OrderRow[], edited: readonly OrderRow[]): str
 }
 
 interface SectionsPaneProps {
-  role: AdminRole;
+  adminRole: AdminRole;
   deps?: SectionsPaneDeps;
 }
 
@@ -60,7 +60,7 @@ interface SectionsPaneProps {
  * kept by one Save: the order is one decision, so it is written whole, and a
  * Save made over somebody else's is refused rather than lost.
  */
-export function SectionsPane({ role, deps = paneDeps }: SectionsPaneProps) {
+export function SectionsPane({ adminRole: role, deps = paneDeps }: SectionsPaneProps) {
   const [round, setRound] = useState(0);
   const load = useCallback(() => deps.load(), [deps]);
   const { state } = useResource(String(round), load);

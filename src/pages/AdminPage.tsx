@@ -47,16 +47,16 @@ function PaneList({ panes, current }: { panes: readonly Pane[]; current: Pane | 
   );
 }
 
-function PaneBody({ pane, role }: { pane: Pane; role: AdminRole }) {
+function PaneBody({ pane, adminRole: role }: { pane: Pane; adminRole: AdminRole }) {
   switch (pane) {
     case "reports":
       return <ModerationPage />;
     case "proposals":
-      return <ProposalsPane role={role} />;
+      return <ProposalsPane adminRole={role} />;
     case "sections":
-      return <SectionsPane role={role} />;
+      return <SectionsPane adminRole={role} />;
     case "topics":
-      return <TopicsPane role={role} />;
+      return <TopicsPane adminRole={role} />;
     case "moderators":
       return <ModeratorsPane />;
     case "anonymous":
@@ -118,7 +118,7 @@ export function AdminPage() {
         </Link>
       )}
       <div className="admin__pane">
-        {current !== null && <PaneBody pane={current} role={role.role} />}
+        {current !== null && <PaneBody pane={current} adminRole={role.role} />}
       </div>
     </section>
   );

@@ -340,10 +340,10 @@ function TopicProposal({
  * look like and the one decision it waits for.
  */
 export function ProposalsPane({
-  role,
+  adminRole: role,
   deps = proposalsDeps,
 }: {
-  role: AdminRole;
+  adminRole: AdminRole;
   deps?: ProposalsDeps;
 }) {
   const loadSections = useCallback(() => orNothing(deps.sections, { sections: [] })(), [deps]);

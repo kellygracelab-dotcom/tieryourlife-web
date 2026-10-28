@@ -18,7 +18,12 @@ export function useAdminRole(load: () => Promise<AdminSections> = loadAdminSecti
   const { account } = useSession();
   const uid = account?.kind === "signedIn" ? account.uid : null;
   const moderator = useModerator();
-  const loadFor = useCallback(() => load(), [load]);
+  // A guest is nobody here, and is not asked about.
+  const loadFor = useCallback(
+    (key: string) =>
+      key === "" ? Promise.resolve<AdminSections>({ sections: [], role: null }) : load(),
+    [load],
+  );
   const { state } = useResource(uid ?? "", loadFor);
 
   if (account === null) return { status: "unknown" };

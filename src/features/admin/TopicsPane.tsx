@@ -34,7 +34,13 @@ type Editing = { id: string | null; name: string } | null;
  * one without waiting for anybody to propose it. Renaming keeps every list
  * under it; only an empty topic can be deleted, and only by the owner.
  */
-export function TopicsPane({ role, deps = topicsDeps }: { role: AdminRole; deps?: TopicsDeps }) {
+export function TopicsPane({
+  adminRole: role,
+  deps = topicsDeps,
+}: {
+  adminRole: AdminRole;
+  deps?: TopicsDeps;
+}) {
   const { sections } = useSections();
   const approved = sections.filter((one) => one.status === "approved");
   const [section, setSection] = useState(approved[0]?.id ?? "anime");
@@ -98,8 +104,8 @@ export function TopicsPane({ role, deps = topicsDeps }: { role: AdminRole; deps?
           value={editing.name}
           onChange={(event) => setEditing({ ...editing, name: event.target.value })}
         />
-        <span className="field__counter">{`${editing.name.length}/${TOPIC_NAME_MAX}`}</span>
       </label>
+      <span className="field__counter">{`${editing.name.length}/${TOPIC_NAME_MAX}`}</span>
       <div className="proposal__actions">
         <Button onClick={() => setEditing(null)}>{strings.admin.cancel}</Button>
         <Button variant="filled" type="submit" disabled={busy || editing.name.trim() === ""}>
