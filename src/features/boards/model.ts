@@ -70,7 +70,7 @@ export interface Board {
   publishedEditedAt: number | null;
   /** This device's, as on the phone: the topic the list goes out under, sent with every publish. Never kept in the account. */
   topic: BoardTopic | null;
-  /** Published with no name or face; this device's, like the topic, and sent with every publish. */
+  /** Published with no name or face: sent with every publish, and kept in the account when true. */
   anonymous: boolean;
 }
 

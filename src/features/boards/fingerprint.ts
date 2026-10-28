@@ -59,6 +59,9 @@ export function fingerprintText(board: Board): string {
       ]);
     }
   }
+  // Said only when true, last, so every board that is not anonymous keeps the
+  // fingerprint it had: the app appends the same field the same way.
+  if (board.anonymous) text += encode(["anonymous"]);
   return text;
 }
 

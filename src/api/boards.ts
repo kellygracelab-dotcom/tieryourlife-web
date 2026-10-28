@@ -54,6 +54,8 @@ export interface KeptBoard {
   authorName: string | null;
   publishedId: string | null;
   deletedAt: number | null;
+  /** Kept only when true: published with no name or face. */
+  anonymous?: boolean;
   tiers: KeptTier[];
   items: KeptItem[];
 }
@@ -71,6 +73,7 @@ export interface KeepBoardRequest {
   authorName: string | null;
   publishedId: string | null;
   deletedAt: number | null;
+  anonymous?: boolean;
   tiers: KeptTier[];
   items: KeptItem[];
 }

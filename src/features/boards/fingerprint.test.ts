@@ -160,4 +160,12 @@ describe("the fingerprint", () => {
     const shuffled = board({ tiers: [...a.tiers].reverse(), items: [...a.items].reverse() });
     expect(fingerprintText(shuffled)).toBe(fingerprintText(a));
   });
+
+  it("is unchanged for a board that is not anonymous, and says anonymous last when it is", () => {
+    const plain = fingerprintText(board());
+    expect(fingerprintText(board({ anonymous: false }))).toBe(plain);
+    const anonymous = fingerprintText(board({ anonymous: true }));
+    expect(anonymous.startsWith(plain)).toBe(true);
+    expect(anonymous).not.toBe(plain);
+  });
 });

@@ -9,6 +9,14 @@ const uids = () => {
 };
 
 describe("parseBoard", () => {
+  it("reads an anonymous board from the account, and takes anything but true for no", () => {
+    const board = newBoard("b1", "Films", 1, () => "t");
+    expect(parseBoard({ ...board, anonymous: true })?.anonymous).toBe(true);
+    expect(parseBoard({ ...board, anonymous: "yes" })?.anonymous).toBe(false);
+    const { anonymous: _left, ...without } = board;
+    expect(parseBoard(without)?.anonymous).toBe(false);
+  });
+
   it("reads back what was written, whole", () => {
     const board = newBoard("b1", "Films", 5, uids());
     expect(parseBoard(JSON.parse(JSON.stringify(board)))).toEqual(board);
