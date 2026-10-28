@@ -27,6 +27,7 @@ The features:
 | `community`  | following, reporting, hiding, the sign-in prompt                                                                                                                                                 |
 | `account`    | one's name, face and language                                                                                                                                                                    |
 | `moderation` | the moderator's queue                                                                                                                                                                            |
+| `play`       | Play mode: the duel engine ported from the app, the picker, the choice of cards, the duel layer and the result; `usePlay` is what a board page mounts                                            |
 
 Features that lean on one another, and nothing else: `tierboard → ranking`,
 `boards → editor, ranking, sections, tierboard`, `editor → tierboard`,
