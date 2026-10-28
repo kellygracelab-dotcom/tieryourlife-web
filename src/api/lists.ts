@@ -17,7 +17,9 @@ export async function loadList(client: ApiClient, id: string): Promise<Published
 /** One list as the site draws it, however it arrived: asked for, or already in the page. */
 export const publishedListOf = (list: PublishedList): PublishedList => {
   const items = (list.items ?? []).map((item) =>
-    item.imageUrl === null || pictureOf(item.imageUrl) !== null ? item : { ...item, imageUrl: null },
+    item.imageUrl === null || pictureOf(item.imageUrl) !== null
+      ? item
+      : { ...item, imageUrl: null },
   );
   return { ...summaryOf(list), tiers: list.tiers ?? [], items };
 };

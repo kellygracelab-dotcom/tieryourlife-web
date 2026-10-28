@@ -29,7 +29,6 @@ interface ModerationPageProps {
 export const NOTES_SHOWN = 3;
 const BLUR_KEY = "tyl:blur";
 
-
 const BAN_TEXT: Record<BanLength, string> = {
   week: strings.mod.banWeek,
   month: strings.mod.banMonth,
