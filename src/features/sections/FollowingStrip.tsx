@@ -13,6 +13,7 @@ import {
 } from "./model";
 import "./following.css";
 
+/** A name's first letter; somebody known only by anonymous lists has none, and is drawn as a person. */
 const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
 interface FollowingStripProps {
@@ -94,7 +95,7 @@ export function FollowingStrip({ sections, topics, people, sectionOf }: Followin
                   className="following-strip__visual following-strip__face following-strip__face--initial"
                   aria-hidden="true"
                 >
-                  {initialOf(person.name)}
+                  {person.name.trim() === "" ? <Icon name="person" /> : initialOf(person.name)}
                 </span>
               )}
               <span className="following-strip__name">
