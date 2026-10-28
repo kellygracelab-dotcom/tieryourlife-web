@@ -208,7 +208,8 @@ describe("TopicsPane", () => {
     await userEvent.type(field, "Indie games");
     await userEvent.click(within(row).getByRole("button", { name: "Save" }));
     expect(deps.rename).toHaveBeenCalledWith("t1", "Indie games");
-    const empty = screen.getByText("Pokémon").closest("li")!;
+    // A rename reads the topics again: the rows are back only once they have come.
+    const empty = (await screen.findByText("Pokémon")).closest("li")!;
     await userEvent.click(within(empty).getByRole("button", { name: "Delete" }));
     expect(deps.remove).toHaveBeenCalledWith("t2");
   });
