@@ -14,14 +14,7 @@ import * as rank from "../api/rank";
 import * as sections from "../api/sections";
 import type { SectionStats, Topic } from "../api/sections";
 import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
-import type {
-  CatalogueItem,
-  Category,
-  FeedPage,
-  FeedQuery,
-  ListSummary,
-  PublishedList,
-} from "../api/types";
+import type { CatalogueItem, FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
@@ -116,7 +109,7 @@ export const followSection = (id: string): Promise<{ following: true }> =>
 export const unfollowSection = (id: string): Promise<{ following: false }> =>
   sections.unfollowSection(api, id);
 
-export const loadTopics = (section: Category, limit?: number): Promise<{ topics: Topic[] }> =>
+export const loadTopics = (section: string, limit?: number): Promise<{ topics: Topic[] }> =>
   sections.loadTopics(api, section, limit);
 
 export const loadMyTopics = (): Promise<{ topics: Topic[] }> => sections.loadMyTopics(api);

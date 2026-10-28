@@ -611,6 +611,13 @@ const de: Translation = {
     waiting: "Wartet",
     sections: "Rubriken",
     group: "{name} · {n}",
+    followSection: "{name} folgen",
+    unfollowSection: "{name} entfolgen",
+    emptyHelper:
+      "Tippe auf +, um einem Bereich zu folgen. Themen stehen in den Bereichen, Personen in ihrem Profil.",
+    nothingPublished: "Wem du folgst, hat noch nichts veröffentlicht.",
+    goExplore: "Zu Entdecken",
+    back: "Zurück",
   },
   boards: {
     title: "Deine Listen",

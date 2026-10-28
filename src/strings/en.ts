@@ -573,6 +573,13 @@ export const en = {
     waiting: "Waiting",
     sections: "Sections",
     group: "{name} · {n}",
+    followSection: "Follow {name}",
+    unfollowSection: "Unfollow {name}",
+    emptyHelper:
+      "Tap + to follow a section. Topics are inside each section; people, on their profile.",
+    nothingPublished: "Nobody you follow has published anything yet.",
+    goExplore: "Go to Explore",
+    back: "Navigate back",
   },
   boards: {
     title: "Your lists",

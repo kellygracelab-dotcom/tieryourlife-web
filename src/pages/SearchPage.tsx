@@ -1,3 +1,4 @@
+import { sectionPath } from "../features/sections/model";
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { CATEGORIES, isCategory, type Category, type FeedSort } from "../api/types";
@@ -107,7 +108,7 @@ export function SearchPage() {
     filters.category === undefined ? (
       <Link to="/">{strings.search.browseHome}</Link>
     ) : (
-      <Link to={`/c/${filters.category}`}>{strings.category[filters.category]}</Link>
+      <Link to={sectionPath(filters.category)}>{strings.category[filters.category]}</Link>
     );
   const nothing = searching && feed.state.status === "ready" && feed.state.lists.length === 0;
 

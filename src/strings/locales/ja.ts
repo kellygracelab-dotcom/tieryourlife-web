@@ -595,6 +595,13 @@ const ja: Translation = {
     waiting: "承認待ち",
     sections: "セクション",
     group: "{name} · {n}",
+    followSection: "{name}をフォロー",
+    unfollowSection: "{name}のフォローを解除",
+    emptyHelper:
+      "+をタップしてセクションをフォロー。トピックは各セクションの中に、人はプロフィールにあります。",
+    nothingPublished: "フォロー中の人はまだ何も公開していません。",
+    goExplore: "見つけるへ",
+    back: "戻る",
   },
   boards: {
     title: "あなたのリスト",

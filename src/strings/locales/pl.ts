@@ -648,6 +648,13 @@ const pl: Translation = {
     waiting: "Czeka",
     sections: "Działy",
     group: "{name} · {n}",
+    followSection: "Obserwuj: {name}",
+    unfollowSection: "Przestań obserwować: {name}",
+    emptyHelper:
+      "Dotknij +, aby obserwować dział. Tematy są w działach, a osoby w swoich profilach.",
+    nothingPublished: "Obserwowani nie opublikowali jeszcze niczego.",
+    goExplore: "Przejdź do Odkrywaj",
+    back: "Wstecz",
   },
   boards: {
     title: "Twoje listy",

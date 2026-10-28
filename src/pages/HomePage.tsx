@@ -1,115 +1,79 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { useSession } from "../app/session";
-import { coversOf } from "../features/feed/categories";
-import { CategoryTiles } from "../features/feed/CategoryTiles";
 import { AppCard } from "../features/android/AppCard";
 import { FeedGrid } from "../features/feed/FeedGrid";
-import { keepFeedSource, readFeedSource, type FeedSource } from "../features/feed/feedSource";
 import {
-  FeedSourceSwitch,
-  FollowingFeed,
+  FollowingTab,
   type Follow,
-  type LoadSuggestions,
   type LoadFollowing,
+  type LoadSuggestions,
 } from "../features/feed/Following";
 import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
-import { localStorageStore } from "../lib/storage";
+import { FOLLOWING_PATH } from "../features/sections/model";
+import { SectionGrid } from "../features/sections/SectionGrid";
+import { useSections, type SectionsStore } from "../features/sections/useSections";
 import { strings } from "../strings";
 import "./HomePage.css";
 
 /** The one line after an account is deleted stays this long. */
 export const DELETED_NOTE_MS = 8000;
 
+export type HomeTab = "explore" | "following";
+
 interface HomePageProps {
+  tab?: HomeTab;
   load?: LoadFeed;
   loadSuggestions?: LoadSuggestions;
   loadFollowing?: LoadFollowing;
   follow?: Follow;
   unfollow?: Follow;
+  store?: SectionsStore;
 }
 
-function SignedInFeed({
-  uid,
+/** Explore and Following, the app's two tabs, each at an address of its own. */
+function HomeTabs({ tab }: { tab: HomeTab }) {
+  const tabs: { id: HomeTab; to: string; text: string }[] = [
+    { id: "explore", to: "/", text: strings.sections.tabExplore },
+    { id: "following", to: FOLLOWING_PATH, text: strings.sections.tabFollowing },
+  ];
+  return (
+    <nav className="home-tabs" aria-label={strings.sections.community}>
+      {tabs.map((one) => (
+        <Link
+          key={one.id}
+          className="home-tabs__tab"
+          to={one.to}
+          aria-current={tab === one.id ? "page" : undefined}
+        >
+          {one.text}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+function Explore({
   load,
-  loadSuggestions,
-  loadFollowing,
-  follow,
-  unfollow,
+  store,
 }: {
-  uid: string;
   load: LoadFeed | undefined;
-  loadSuggestions: LoadSuggestions | undefined;
-  loadFollowing: LoadFollowing | undefined;
-  follow: Follow | undefined;
-  unfollow: Follow | undefined;
+  store: SectionsStore | undefined;
 }) {
-  const [source, setSource] = useState<FeedSource>(() =>
-    readFeedSource(uid, (key) => localStorageStore.read(key)),
-  );
   const popular = useFeed({ sort: "popular" }, load);
-  const following = useFeed(
-    source === "following" ? { following: true, sort: "recent" } : { sort: "popular" },
-    load,
-  );
-
-  const choose = (next: FeedSource) => {
-    setSource(next);
-    keepFeedSource(uid, next, (key, value) => localStorageStore.write(key, value));
-  };
-
-  const covers = popular.state.status === "ready" ? coversOf(popular.state.lists) : {};
+  const { sections } = useSections(store);
   return (
     <>
-      <FeedSourceSwitch source={source} onChange={choose} />
-      <CategoryTiles covers={covers} />
+      <SectionGrid sections={sections} />
       <section className="home__popular" aria-labelledby="popular">
         <div className="home__heading">
-          <h2 id="popular">
-            {source === "following" ? strings.home.followingHeading : strings.home.popular}
-          </h2>
-          <p>{source === "following" ? strings.home.newestFirst : strings.home.popularNote}</p>
-        </div>
-        {source === "following" ? (
-          <FollowingFeed
-            state={following.state}
-            retry={following.retry}
-            more={following.more}
-            onSeeEveryone={() => choose("everyone")}
-            loadSuggestions={loadSuggestions}
-            loadFollowing={loadFollowing}
-            follow={follow}
-            unfollow={unfollow}
-          />
-        ) : (
-          <FeedGrid
-            state={popular.state}
-            label={strings.home.popular}
-            retry={popular.retry}
-            more={popular.more}
-            paged={false}
-          />
-        )}
-      </section>
-    </>
-  );
-}
-
-function GuestFeed({ load }: { load: LoadFeed | undefined }) {
-  const popular = useFeed({ sort: "popular" }, load);
-  const covers = popular.state.status === "ready" ? coversOf(popular.state.lists) : {};
-  return (
-    <>
-      <CategoryTiles covers={covers} />
-      <section className="home__popular" aria-labelledby="popular">
-        <div className="home__heading">
-          <h2 id="popular">{strings.home.popular}</h2>
+          <h2 id="popular">{strings.sections.popularThisWeek}</h2>
           <p>{strings.home.popularNote}</p>
         </div>
         <FeedGrid
           state={popular.state}
-          label={strings.home.popular}
+          label={strings.sections.popularThisWeek}
           retry={popular.retry}
           more={popular.more}
           paged={false}
@@ -120,11 +84,13 @@ function GuestFeed({ load }: { load: LoadFeed | undefined }) {
 }
 
 export function HomePage({
+  tab = "explore",
   load,
   loadSuggestions,
   loadFollowing,
   follow,
   unfollow,
+  store,
 }: HomePageProps) {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
@@ -139,6 +105,10 @@ export function HomePage({
     const timer = setTimeout(() => setDeletedNote(false), DELETED_NOTE_MS);
     return () => clearTimeout(timer);
   }, [deletedNote]);
+
+  const signedIn = account?.kind === "signedIn";
+  // Following is somebody's own: a guest has nothing to follow with yet.
+  if (tab === "following" && account !== null && !signedIn) return <Navigate to="/" replace />;
 
   return (
     <div className="home">
@@ -156,18 +126,20 @@ export function HomePage({
         />
       </section>
 
-      {account?.kind === "signedIn" ? (
-        <SignedInFeed
+      {signedIn && <HomeTabs tab={tab} />}
+      {tab === "following" && signedIn ? (
+        <FollowingTab
           key={account.uid}
           uid={account.uid}
           load={load}
-          loadSuggestions={loadSuggestions}
           loadFollowing={loadFollowing}
+          loadSuggestions={loadSuggestions}
           follow={follow}
           unfollow={unfollow}
+          store={store}
         />
       ) : (
-        <GuestFeed load={load} />
+        <Explore load={load} store={store} />
       )}
       <AppCard slot="home" />
     </div>

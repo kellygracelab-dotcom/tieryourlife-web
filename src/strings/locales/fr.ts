@@ -615,6 +615,13 @@ const fr: Translation = {
     waiting: "En attente",
     sections: "Rubriques",
     group: "{name} · {n}",
+    followSection: "Suivre {name}",
+    unfollowSection: "Ne plus suivre {name}",
+    emptyHelper:
+      "Touchez + pour suivre une section. Les thèmes sont dans chaque section, les personnes sur leur profil.",
+    nothingPublished: "Personne parmi vos abonnements n’a encore rien publié.",
+    goExplore: "Aller à Explorer",
+    back: "Retour",
   },
   boards: {
     title: "Vos listes",

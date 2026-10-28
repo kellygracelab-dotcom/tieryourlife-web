@@ -600,6 +600,13 @@ const ptBR: Translation = {
     waiting: "Aguardando",
     sections: "Seções",
     group: "{name} · {n}",
+    followSection: "Seguir {name}",
+    unfollowSection: "Deixar de seguir {name}",
+    emptyHelper:
+      "Toque em + para seguir uma seção. Os temas ficam em cada seção; as pessoas, no perfil delas.",
+    nothingPublished: "Ninguém que você segue publicou nada ainda.",
+    goExplore: "Ir para Explorar",
+    back: "Voltar",
   },
   boards: {
     title: "Suas listas",

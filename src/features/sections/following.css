@@ -1,0 +1,246 @@
+/*
+ * What a person follows, the app's way (docs/design-spec-parity.md, E): a
+ * strip of sections, topics and people above the Following feed, and small
+ * section tiles to follow from while the feed is empty.
+ */
+.following-strip__items {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: 0 0 4px;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+.following-strip__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 64px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.following-strip__item:hover {
+  color: var(--link);
+}
+
+.following-strip__visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  overflow: hidden;
+}
+
+.following-strip__visual .ms {
+  font-size: 24px;
+}
+
+.following-strip__section {
+  --tint: var(--tint-light);
+  position: relative;
+  isolation: isolate;
+  border-radius: 14px;
+  background-color: var(--tint);
+  color: #ffffff;
+}
+
+.following-strip__section--pictured {
+  background-image: var(--section-picture);
+  background-size: cover;
+  background-position: center;
+}
+
+.following-strip__section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.following-strip__topic {
+  --topic-bg: var(--topic-bg-light);
+  --topic-icon: var(--topic-icon-light);
+  border-radius: 14px;
+  background: var(--topic-bg, var(--surface-container-high));
+  color: var(--topic-icon, var(--ink-dim));
+}
+
+.following-strip__visual--waiting {
+  outline: 1.5px dashed var(--ink-quiet);
+  outline-offset: -1.5px;
+}
+
+.following-strip__face {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.following-strip__face--initial {
+  background: var(--surface-container-highest);
+  color: var(--tile-label);
+  font: 500 20px/1 var(--font);
+}
+
+.following-strip__manage {
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--link);
+}
+
+.following-strip__name {
+  width: 100%;
+  overflow: hidden;
+  font: 400 11px/15px var(--font);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Small section tiles with a badge to follow each. */
+.mini-sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 84px;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mini-section {
+  position: relative;
+}
+
+.mini-section__tile {
+  --tint: var(--tint-light);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 100%;
+  padding: 0 10px 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: var(--tint);
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.07) 0 4px,
+    transparent 4px 10px
+  );
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.mini-section__tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.62));
+}
+
+.mini-section__tile:hover {
+  color: #ffffff;
+}
+
+.mini-section__icon {
+  flex: none;
+  font-size: 16px;
+}
+
+.mini-section__name {
+  min-width: 0;
+  overflow: hidden;
+  font: 500 13px/18px var(--font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-section__tile--all {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0;
+  background: var(--surface-container-high);
+  color: var(--ink);
+}
+
+.mini-section__tile--all::before {
+  display: none;
+}
+
+.mini-section__tile--all:hover {
+  color: var(--ink);
+}
+
+.mini-section__count {
+  font: 400 11px/15px var(--font);
+  color: var(--ink-dim);
+}
+
+.mini-section__badge {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--link);
+  cursor: pointer;
+}
+
+.mini-section__badge .ms {
+  font-size: 18px;
+}
+
+.mini-section__badge--on {
+  color: var(--followed);
+}
+
+.mini-section__badge:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (min-width: 840px) {
+  .mini-sections {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-auto-rows: 72px;
+    max-width: 720px;
+  }
+}
+
+/* The dark theme's tints, once for the system's choice and once for the person's. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) :is(.following-strip__section, .mini-section__tile) {
+    --tint: var(--tint-dark);
+  }
+
+  :root:not([data-theme="light"]) .following-strip__topic {
+    --topic-bg: var(--topic-bg-dark);
+    --topic-icon: var(--topic-icon-dark);
+  }
+}
+
+:root[data-theme="dark"] :is(.following-strip__section, .mini-section__tile) {
+  --tint: var(--tint-dark);
+}
+
+:root[data-theme="dark"] .following-strip__topic {
+  --topic-bg: var(--topic-bg-dark);
+  --topic-icon: var(--topic-icon-dark);
+}

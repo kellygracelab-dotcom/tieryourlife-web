@@ -1,40 +1,51 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Following } from "../../api/community";
 import { ApiFailure } from "../../api/errors";
+import type { SectionStats } from "../../api/sections";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
 import { SessionContext, type Session } from "../../app/session";
 import { memoryStore } from "../../lib/storage";
-import { HomePage } from "../../pages/HomePage";
+import { HomePage, type HomeTab } from "../../pages/HomePage";
 import { useHiddenStoreForTests } from "../community/useHidden";
-import { keepFeedSource, readFeedSource } from "./feedSource";
+import { createSectionsStore, type SectionsDeps } from "../sections/useSections";
 import type { Follow, LoadFollowing, LoadSuggestions } from "./Following";
 
-vi.mock("../../lib/api", () => ({
+vi.mock("../../lib/api", async () => ({
+  ...(await import("../../test/apiMock")).apiStubs(),
   loadReports: vi.fn(() => new Promise(() => undefined)),
   followState: vi.fn(() => new Promise(() => undefined)),
-  unfollowAuthor: vi.fn(),
-  loadFeed: vi.fn(),
-  followAuthor: vi.fn(),
-  suggestedAuthors: vi.fn(),
-  report: vi.fn(),
 }));
 
-const list = (id: string): ListSummary => ({
+const list = (id: string, more: Partial<ListSummary> = {}): ListSummary => ({
   id,
   title: `List ${id}`,
   authorUid: "u2",
   authorName: "someone",
   authorPhotoUrl: null,
-  category: "anime",
+  category: "games",
   itemCount: 3,
   coverImageUrl: null,
   previewImages: [],
   tierColors: [],
   updatedAt: 0,
   takeCount: 5,
+  ...more,
 });
+
+const stats = (id: string, more: Partial<SectionStats> = {}): SectionStats => ({
+  id,
+  listCount: 4,
+  followerCount: 2,
+  newThisWeek: 0,
+  collage: [],
+  following: false,
+  ...more,
+});
+
+const NINE = ["anime", "film_tv", "games", "music", "books", "food", "sport", "people", "other"];
 
 const member: Session["account"] = {
   kind: "signedIn",
@@ -48,23 +59,38 @@ const loadSuggestions = vi.fn<LoadSuggestions>();
 const follow = vi.fn<Follow>();
 const unfollow = vi.fn<Follow>();
 const loadFollowing = vi.fn<LoadFollowing>();
+const sectionsDeps = {
+  load: vi.fn<SectionsDeps["load"]>(),
+  follow: vi.fn<SectionsDeps["follow"]>(),
+  unfollow: vi.fn<SectionsDeps["unfollow"]>(),
+};
 
-const open = (account: Session["account"] = member) => {
+const nobody: Following = { authors: [], topics: [], sections: [] };
+
+const open = (account: Session["account"] = member, tab: HomeTab = "following") => {
+  const store = createSectionsStore({ ...sectionsDeps, now: () => 0 });
+  const page = (which: HomeTab) => (
+    <HomePage
+      tab={which}
+      load={load}
+      loadSuggestions={loadSuggestions}
+      loadFollowing={loadFollowing}
+      follow={follow}
+      unfollow={unfollow}
+      store={store}
+    />
+  );
   const routes: RouteObject[] = [
-    {
-      path: "/",
-      element: (
-        <HomePage
-          load={load}
-          loadSuggestions={loadSuggestions}
-          loadFollowing={loadFollowing}
-          follow={follow}
-          unfollow={unfollow}
-        />
-      ),
-    },
+    { path: "/", element: page("explore") },
+    { path: "/following", element: page("following") },
+    { path: "/following/manage", element: <h1>Manage page</h1> },
     { path: "/u/:uid", element: <h1>Profile page</h1> },
+    { path: "/s/:id", element: <h1>Section page</h1> },
+    { path: "/s/:id/t/:topic", element: <h1>Topic page</h1> },
   ];
+  const router = createMemoryRouter(routes, {
+    initialEntries: [tab === "following" ? "/following" : "/"],
+  });
   render(
     <SessionContext.Provider
       value={{
@@ -74,9 +100,10 @@ const open = (account: Session["account"] = member) => {
         refresh: () => undefined,
       }}
     >
-      <RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/"] })} />
+      <RouterProvider router={router} />
     </SessionContext.Provider>,
   );
+  return { router, store };
 };
 
 beforeEach(() => {
@@ -91,214 +118,127 @@ beforeEach(() => {
   loadSuggestions.mockResolvedValue({
     authors: [
       { uid: "u2", name: "someone", photoUrl: null, takeCount: 12 },
-      { uid: "u3", name: "other", photoUrl: "https://img/f.jpg", takeCount: 3 },
+      { uid: "85RRieyLyUPCEqHjdYCdxVlWxHx2", name: "TierYourLife", photoUrl: null, takeCount: 99 },
     ],
   });
   loadFollowing.mockReset();
-  loadFollowing.mockResolvedValue({ authors: [] });
+  loadFollowing.mockResolvedValue(nobody);
   follow.mockReset();
   follow.mockResolvedValue(undefined);
   unfollow.mockReset();
   unfollow.mockResolvedValue(undefined);
+  sectionsDeps.load.mockReset();
+  sectionsDeps.load.mockResolvedValue({ sections: NINE.map((id) => stats(id)) });
+  sectionsDeps.follow.mockReset();
+  sectionsDeps.follow.mockResolvedValue({ following: true });
+  sectionsDeps.unfollow.mockReset();
   useHiddenStoreForTests(memoryStore());
 });
 
-describe("feed source", () => {
-  it("is Everyone until chosen, and is kept per account on the device", () => {
-    const store = memoryStore();
-    expect(readFeedSource("u1", store.read)).toBe("everyone");
-    keepFeedSource("u1", "following", store.write);
-    expect(readFeedSource("u1", store.read)).toBe("following");
-    expect(readFeedSource("u2", store.read)).toBe("everyone");
+describe("the Following tab", () => {
+  it("is a tab of its own address beside Explore, for a signed-in person", async () => {
+    const { router } = open(member, "explore");
+    const tabs = within(screen.getByRole("navigation", { name: "Community" }));
+    expect(tabs.getByRole("link", { name: "Explore" })).toHaveAttribute("aria-current", "page");
+    await userEvent.click(tabs.getByRole("link", { name: "Following" }));
+    expect(router.state.location.pathname).toBe("/following");
+    expect(load).toHaveBeenLastCalledWith({ following: true, sort: "recent" });
   });
-});
 
-describe("HomePage for a signed-in person", () => {
-  it("offers Everyone and Following, and following nobody brings people worth following", async () => {
+  it("offers the sections to follow and people worth following while nothing is followed", async () => {
     open();
-    expect(await screen.findByRole("link", { name: /List p1/ })).toBeInTheDocument();
-    const source = screen.getByRole("radiogroup", { name: "Whose lists to show" });
-    await userEvent.click(within(source).getByRole("radio", { name: "Following" }));
-    expect(load).toHaveBeenCalledWith({ following: true, sort: "recent" });
-    expect(await screen.findByText("You aren’t following anyone")).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 2, name: "New from people you follow" }),
-    ).toBeInTheDocument();
-    expect(localStorage.getItem("tyl:feed-source:u1")).toBe("following");
+    expect(await screen.findByText("You aren't following anything yet")).toBeInTheDocument();
+    const followGames = await screen.findByRole("button", { name: "Follow Games" });
+    expect(followGames).toHaveAttribute("aria-pressed", "false");
+    // An editorial account is nobody to follow: its lists stand without an author.
+    expect(await screen.findByText("someone")).toBeInTheDocument();
+    expect(screen.queryByText("TierYourLife")).toBeNull();
 
-    const people = await screen.findByRole("list", { name: undefined });
-    const cards = within(
-      screen.getByRole("heading", { name: "People worth following" }).parentElement!,
-    ).getAllByRole("listitem");
-    expect(cards).toHaveLength(2);
-    void people;
-    await userEvent.click(within(cards[0]!).getByRole("button", { name: "Follow" }));
-    expect(follow).toHaveBeenCalledWith("u2");
-    expect(within(cards[0]!).getByRole("button", { name: /Following/ })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(within(cards[0]!).getByRole("link", { name: /someone/ })).toHaveAttribute(
-      "href",
-      "/u/u2",
-    );
-
-    await userEvent.click(within(cards[0]!).getByRole("button", { name: /Following/ }));
-    expect(unfollow).toHaveBeenCalledWith("u2");
-    expect(within(cards[0]!).getByRole("button", { name: "Follow" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    await userEvent.click(followGames);
+    expect(sectionsDeps.follow).toHaveBeenCalledWith("games");
+    // Following something turns the tab into its feed, with the section in the strip.
+    const strip = within(await screen.findByRole("navigation", { name: "Following" }));
+    expect(strip.getByRole("link", { name: /Games/ })).toHaveAttribute("href", "/s/games");
+    expect(load).toHaveBeenLastCalledWith({ following: true, sort: "recent" });
   });
 
-  it("leaves an editorial account out of the people worth following", async () => {
-    load.mockResolvedValue({ lists: [], nextCursor: null, followingNobody: true });
-    loadSuggestions.mockResolvedValue({
-      authors: [
-        {
-          uid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
-          name: "Danylo Petrov",
-          photoUrl: null,
-          takeCount: 900,
-        },
-        { uid: "u3", name: "other", photoUrl: null, takeCount: 3 },
-      ],
+  it("shows what is followed in a strip, and why each list is in the feed", async () => {
+    sectionsDeps.load.mockResolvedValue({
+      sections: NINE.map((id) => stats(id, { following: id === "anime" })),
     });
-    open();
-    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
-    expect(await screen.findByRole("link", { name: /other/ })).toBeInTheDocument();
-    expect(screen.queryByText(/Danylo Petrov/)).toBeNull();
-  });
-
-  it("says when the people followed have published nothing, and leads back to Everyone", async () => {
+    loadFollowing.mockResolvedValue({
+      authors: [{ uid: "u7", name: "kenji", photoUrl: null }],
+      topics: [
+        {
+          id: "t1",
+          name: "Pokémon",
+          section: "games",
+          status: "approved",
+          listCount: 3,
+          followerCount: 9,
+          following: true,
+          createdBy: "u9",
+          mergedInto: null,
+        },
+      ],
+      sections: [{ id: "anime", followerCount: 3 }],
+    });
     load.mockImplementation(async (query) =>
-      query.following ? { lists: [], nextCursor: null } : { lists: [list("p1")], nextCursor: null },
+      query.following
+        ? {
+            lists: [
+              list("a", { category: "anime", title: "Ghibli, ranked" }),
+              list("b", { topicId: "t1", title: "Starters" }),
+              list("c", { authorUid: "u7", category: "anime", title: "Kenji's own" }),
+            ],
+            nextCursor: null,
+          }
+        : { lists: [], nextCursor: null },
     );
     open();
-    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
+
+    const strip = within(await screen.findByRole("navigation", { name: "Following" }));
+    expect(await strip.findByRole("link", { name: /Anime/ })).toHaveAttribute("href", "/s/anime");
+    expect(strip.getByRole("link", { name: /Pokémon/ })).toHaveAttribute("href", "/s/games/t/t1");
+    expect(strip.getByRole("link", { name: /kenji/ })).toHaveAttribute("href", "/u/u7");
+    expect(strip.getByRole("link", { name: /Manage/ })).toHaveAttribute(
+      "href",
+      "/following/manage",
+    );
+
+    expect(await screen.findByRole("link", { name: /Ghibli, ranked/ })).toHaveTextContent(
+      "In Anime",
+    );
+    expect(screen.getByRole("link", { name: /Starters/ })).toHaveTextContent("Pokémon");
+    // A person followed needs no line: their face is on the card.
+    expect(screen.getByRole("link", { name: /Kenji's own/ })).not.toHaveTextContent("In Anime");
+  });
+
+  it("says when what is followed has published nothing, and leads back to Explore", async () => {
+    loadFollowing.mockResolvedValue({
+      ...nobody,
+      authors: [{ uid: "u7", name: "kenji", photoUrl: null }],
+    });
+    load.mockImplementation(async () => ({ lists: [], nextCursor: null }));
+    open();
     expect(
       await screen.findByText("Nobody you follow has published anything yet."),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "See all lists" }));
-    expect(await screen.findByRole("link", { name: /List p1/ })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("link", { name: "Go to Explore" })).toHaveAttribute("href", "/");
   });
 
-  it("shows the lists of the people followed, and names a feed that would not load", async () => {
-    load.mockImplementation(async (query) =>
-      query.following ? { lists: [list("f1")], nextCursor: null } : { lists: [], nextCursor: null },
-    );
+  it("names a feed that would not load, and tries again", async () => {
+    load.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     open();
-    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
-    expect(await screen.findByRole("link", { name: /List f1/ })).toBeInTheDocument();
-
-    load.mockImplementation(async (query) => {
-      if (query.following) throw new ApiFailure({ kind: "unavailable" });
-      return { lists: [], nextCursor: null };
-    });
-    localStorage.setItem("tyl:feed-source:u9", "following");
-    open({ ...member, uid: "u9" });
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load your feed.");
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("You aren't following anything yet")).toBeInTheDocument();
   });
 
-  it("shows the people followed above their lists, and unfollows from Manage", async () => {
-    load.mockImplementation(async (query) =>
-      query.following ? { lists: [list("f1")], nextCursor: null } : { lists: [], nextCursor: null },
-    );
-    loadFollowing.mockResolvedValue({
-      authors: [
-        { uid: "u2", name: "someone", photoUrl: null },
-        { uid: "u3", name: "", photoUrl: "https://img/f.jpg" },
-      ],
-    });
-    unfollow.mockResolvedValue(undefined);
-    open();
-    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
-    expect(await screen.findByText("You follow 2 people")).toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: /List f1/ })).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Manage" }));
-    const dialog = screen.getByRole("dialog", { name: "Following" });
-    expect(within(dialog).getByRole("link", { name: "someone" })).toHaveAttribute("href", "/u/u2");
-    // A person whose lists are all gone keeps the follow, under "Someone".
-    expect(within(dialog).getByRole("link", { name: "Someone" })).toHaveAttribute("href", "/u/u3");
-    const reads = load.mock.calls.length;
-    const peopleReads = loadFollowing.mock.calls.length;
-    const [first] = within(dialog).getAllByRole("listitem");
-    await userEvent.click(within(first!).getByRole("button", { name: "Unfollow" }));
-    expect(unfollow).toHaveBeenCalledWith("u2");
-    expect(within(dialog).queryByRole("link", { name: "someone" })).toBeNull();
-
-    // Done: the strip has dropped whoever the account confirmed, without
-    // reading the people again; the feed behind it was read again.
-    await userEvent.click(within(dialog).getByRole("button", { name: "Done" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(await screen.findByText("You follow 1 person")).toBeInTheDocument();
-    expect(load.mock.calls.length).toBeGreaterThan(reads);
-    expect(loadFollowing.mock.calls.length).toBe(peopleReads);
-    // Manage stayed on the page through the feed's reload, and has the focus back.
-    expect(screen.getByRole("button", { name: "Manage" })).toHaveFocus();
-  });
-
-  it("brings the row back with a word when unfollowing did not take", async () => {
-    load.mockImplementation(async (query) =>
-      query.following ? { lists: [list("f1")], nextCursor: null } : { lists: [], nextCursor: null },
-    );
-    loadFollowing.mockResolvedValue({ authors: [{ uid: "u2", name: "someone", photoUrl: null }] });
-    unfollow.mockRejectedValue(new ApiFailure({ kind: "offline" }));
-    open();
-    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
-    await userEvent.click(await screen.findByRole("button", { name: "Manage" }));
-    const dialog = screen.getByRole("dialog", { name: "Following" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "Unfollow" }));
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-      "Couldn’t follow — try again.",
-    );
-    expect(within(dialog).getByRole("link", { name: "someone" })).toBeInTheDocument();
-    // Escape closes it; nothing changed, so the feed is left alone.
-    const reads = load.mock.calls.length;
-    await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(load.mock.calls.length).toBe(reads);
-  });
-
-  it("counts an unfollow whose answer arrives after the dialog was closed", async () => {
-    load.mockImplementation(async (query) =>
-      query.following ? { lists: [list("f1")], nextCursor: null } : { lists: [], nextCursor: null },
-    );
-    loadFollowing.mockResolvedValue({
-      authors: [
-        { uid: "u2", name: "someone", photoUrl: null },
-        { uid: "u3", name: "other", photoUrl: null },
-      ],
-    });
-    let answer: () => void = () => undefined;
-    unfollow.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          answer = resolve;
-        }),
-    );
-    open();
-    await userEvent.click(await screen.findByRole("radio", { name: "Following" }));
-    await userEvent.click(await screen.findByRole("button", { name: "Manage" }));
-    const dialog = screen.getByRole("dialog", { name: "Following" });
-    const [first] = within(dialog).getAllByRole("listitem");
-    await userEvent.click(within(first!).getByRole("button", { name: "Unfollow" }));
-    // Closed before the account answered: nothing is counted yet.
-    await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByText("You follow 2 people")).toBeInTheDocument();
-    const reads = load.mock.calls.length;
-
-    await act(async () => answer());
-    expect(await screen.findByText("You follow 1 person")).toBeInTheDocument();
-    expect(load.mock.calls.length).toBeGreaterThan(reads);
-  });
-
-  it("shows a guest Everyone only, without the switch", async () => {
-    open({ kind: "guest", uid: "g1" });
-    expect(await screen.findByRole("link", { name: /List p1/ })).toBeInTheDocument();
-    expect(screen.queryByRole("radiogroup", { name: "Whose lists to show" })).toBeNull();
+  it("is not a guest's: no tabs, and its address leads to Explore", async () => {
+    const { router } = open({ kind: "guest", uid: null });
+    expect(router.state.location.pathname).toBe("/");
+    expect(screen.queryByRole("navigation", { name: "Community" })).toBeNull();
+    expect(await screen.findByRole("heading", { name: "Popular this week" })).toBeInTheDocument();
   });
 });

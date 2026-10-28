@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { Navigate, type RouteObject } from "react-router";
-import { CategoryPage } from "../pages/CategoryPage";
+import { SectionPage, SectionRedirect } from "../pages/SectionPage";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -8,6 +8,7 @@ import { ProfilePage } from "../pages/ProfilePage";
 import { RankingPage } from "../pages/RankingPage";
 import { SearchPage } from "../pages/SearchPage";
 import { RouteError } from "./RouteError";
+
 import { Shell } from "./Shell";
 
 /**
@@ -31,6 +32,21 @@ export const routes: RouteObject[] = [
         errorElement: <RouteError />,
         children: [
           { index: true, element: <HomePage /> },
+          { path: "following", element: <HomePage tab="following" /> },
+          {
+            path: "following/manage",
+            ...later(async () => ({
+              Component: (await import("../pages/FollowingManagePage")).FollowingManagePage,
+            })),
+          },
+          {
+            path: "s",
+            ...later(async () => ({
+              Component: (await import("../pages/SectionsPage")).SectionsPage,
+            })),
+          },
+          { path: "s/:id", element: <SectionPage /> },
+          { path: "s/:id/t/:topic", element: <SectionPage /> },
           { path: "search", element: <SearchPage /> },
           {
             path: "new",
@@ -60,7 +76,8 @@ export const routes: RouteObject[] = [
               Component: (await import("../pages/TrashPage")).TrashPage,
             })),
           },
-          { path: "c/:category", element: <CategoryPage /> },
+          // A section's address was /c/ once; the app's links use /s/.
+          { path: "c/:category", element: <SectionRedirect /> },
           { path: "l/:id", element: <ListPage /> },
           { path: "r/:code", element: <RankingPage /> },
           {

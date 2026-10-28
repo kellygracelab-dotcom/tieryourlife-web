@@ -78,7 +78,7 @@ export interface Topic {
 /** The approved topics of a section, the biggest first. */
 export function loadTopics(
   client: ApiClient,
-  section: Category,
+  section: string,
   limit?: number,
 ): Promise<{ topics: Topic[] }> {
   return client.request<{ topics: Topic[] }>("GET", "/lists/topics", {

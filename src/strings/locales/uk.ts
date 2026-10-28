@@ -655,6 +655,13 @@ const uk: Translation = {
     waiting: "Чекає",
     sections: "Розділи",
     group: "{name} · {n}",
+    followSection: "Підписатися на «{name}»",
+    unfollowSection: "Відписатися від «{name}»",
+    emptyHelper:
+      "Натисніть +, щоб підписатися на розділ. Теми — всередині розділів, люди — у їхніх профілях.",
+    nothingPublished: "Ті, на кого ви підписані, ще нічого не опублікували.",
+    goExplore: "Перейти до огляду",
+    back: "Назад",
   },
   boards: {
     title: "Ваші списки",

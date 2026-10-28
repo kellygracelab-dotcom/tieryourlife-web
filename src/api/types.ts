@@ -32,6 +32,9 @@ export interface ListSummary {
   tierColors: string[];
   updatedAt: number;
   takeCount: number;
+  /** The topic the list was published under, when it has one. */
+  topicId?: string | null;
+  topicName?: string | null;
 }
 
 export interface PublishedTier {
@@ -56,6 +59,8 @@ export interface PublishedList extends ListSummary {
 // A type rather than an interface so it can travel as a query object.
 export type FeedQuery = {
   category?: Category;
+  /** One topic inside the category. */
+  topic?: string;
   author?: string;
   q?: string;
   after?: string;

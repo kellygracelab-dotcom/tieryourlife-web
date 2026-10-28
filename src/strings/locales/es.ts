@@ -603,6 +603,13 @@ const es: Translation = {
     waiting: "En espera",
     sections: "Secciones",
     group: "{name} · {n}",
+    followSection: "Seguir {name}",
+    unfollowSection: "Dejar de seguir {name}",
+    emptyHelper:
+      "Toca + para seguir una sección. Los temas están dentro de cada sección; las personas, en su perfil.",
+    nothingPublished: "Nadie a quien sigues ha publicado nada todavía.",
+    goExplore: "Ir a Explorar",
+    back: "Volver",
   },
   boards: {
     title: "Tus listas",

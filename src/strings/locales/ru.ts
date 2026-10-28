@@ -654,6 +654,13 @@ const ru: Translation = {
     waiting: "Ждёт",
     sections: "Разделы",
     group: "{name} · {n}",
+    followSection: "Подписаться на «{name}»",
+    unfollowSection: "Отписаться от «{name}»",
+    emptyHelper:
+      "Нажмите +, чтобы подписаться на раздел. Темы — внутри разделов, люди — в их профилях.",
+    nothingPublished: "Те, на кого вы подписаны, пока ничего не опубликовали.",
+    goExplore: "Перейти в обзор",
+    back: "Назад",
   },
   boards: {
     title: "Ваши списки",

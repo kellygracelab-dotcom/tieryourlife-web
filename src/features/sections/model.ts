@@ -221,3 +221,19 @@ export function sectionStyle(section: Section): CSSProperties {
       : { "--section-picture": `url("${section.picture.replace(/"/g, "%22")}")` }),
   } as CSSProperties;
 }
+
+/** A topic wears its section's topic colours. */
+export function topicStyle(section: Section | undefined): CSSProperties | undefined {
+  return section === undefined
+    ? undefined
+    : ({
+        "--topic-bg-light": section.topicBg.light,
+        "--topic-bg-dark": section.topicBg.dark,
+        "--topic-icon-light": section.topicIcon.light,
+        "--topic-icon-dark": section.topicIcon.dark,
+      } as CSSProperties);
+}
+
+export const FOLLOWING_PATH = "/following";
+
+export const MANAGE_PATH = "/following/manage";

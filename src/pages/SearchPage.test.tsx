@@ -114,7 +114,7 @@ describe("SearchPage", () => {
     );
     open("/search?q=zzzz&category=anime");
     expect(await screen.findByText(/No lists match/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Anime" })).toHaveAttribute("href", "/c/anime");
+    expect(screen.getByRole("link", { name: "Anime" })).toHaveAttribute("href", "/s/anime");
     expect(screen.getByRole("link", { name: "Make this list" })).toHaveAttribute(
       "href",
       "/new?title=zzzz",

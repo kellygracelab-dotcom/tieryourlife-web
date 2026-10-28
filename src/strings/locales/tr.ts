@@ -594,6 +594,13 @@ const tr: Translation = {
     waiting: "Bekliyor",
     sections: "Bölümler",
     group: "{name} · {n}",
+    followSection: "{name} bölümünü takip et",
+    unfollowSection: "{name} takibini bırak",
+    emptyHelper:
+      "Bir bölümü takip etmek için + simgesine dokunun. Konular bölümlerin içinde, kişiler profillerinde.",
+    nothingPublished: "Takip ettikleriniz henüz bir şey yayımlamadı.",
+    goExplore: "Keşfet’e git",
+    back: "Geri git",
   },
   boards: {
     title: "Listelerin",

@@ -727,6 +727,12 @@ const ar: Translation = {
     waiting: "قيد الانتظار",
     sections: "الأقسام",
     group: "{name} · {n}",
+    followSection: "متابعة {name}",
+    unfollowSection: "إلغاء متابعة {name}",
+    emptyHelper: "اضغط + لمتابعة قسم. المواضيع داخل كل قسم، والأشخاص في ملفاتهم.",
+    nothingPublished: "لم ينشر أحد ممن تتابعهم شيئًا بعد.",
+    goExplore: "الانتقال إلى الاستكشاف",
+    back: "رجوع",
   },
   boards: {
     title: "قوائمك",
