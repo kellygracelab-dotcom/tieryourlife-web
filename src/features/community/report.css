@@ -167,10 +167,10 @@
   gap: 6px;
   min-height: 200px;
   height: 100%;
-  border-radius: var(--radius-card);
-  background: var(--pool);
+  border-radius: 16px;
+  background: var(--surface-container);
   color: var(--ink-dim);
-  font: var(--text-lead);
+  font: 400 13px/18px var(--font);
 }
 
 .feed__hidden .ms {

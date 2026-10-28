@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { REPORT_NOTE_MAX, REPORT_REASONS, type ReportReason } from "../../api/community";
+import { REASON_TEXT } from "./reasons";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { InAppNote } from "../../ui/InAppNote";
@@ -21,16 +22,6 @@ interface ReportDialogProps {
   onHideInstead: () => void;
   onClose: () => void;
 }
-
-/** Each reason in words, the same in the report sheet and in the moderators' queue. */
-export const REASON_TEXT: Record<ReportReason, string> = {
-  sexual: strings.report.reasonSexual,
-  violence: strings.report.reasonViolence,
-  hate: strings.report.reasonHate,
-  spam: strings.report.reasonSpam,
-  other: strings.report.reasonOther,
-  wrong_category: strings.report.reasonWrongPlace,
-};
 
 /**
  * The app's report sheet as a dialog: a reason, an optional note, and the

@@ -1,18 +1,45 @@
 import type { ApiClient } from "./client";
 import type { Category } from "./types";
 
+/** A colour for each theme. */
+export interface ThemePair {
+  light: string;
+  dark: string;
+}
+
+export type SectionStatus = "approved" | "pending" | "declined" | "merged";
+
 /**
  * A section as the backend counts it: how many lists it holds, how many came
  * this week, who follows it, and the pictures its header collage may wear
  * (four or none; the backend leaves it empty rather than half a collage).
+ *
+ * The rest is optional because sections are becoming data rather than nine
+ * fixed ones (docs/sections-api.md in the app's repository): until the
+ * backend sends a section's name, colours and icon, the site draws the nine
+ * it knows from its own table.
  */
 export interface SectionStats {
-  id: Category;
+  id: string;
   listCount: number;
   followerCount: number;
   newThisWeek: number;
   collage: string[];
   following: boolean;
+  name?: string;
+  names?: Partial<Record<string, string>>;
+  icon?: string;
+  pictureUrl?: string | null;
+  tint?: ThemePair;
+  topicBg?: ThemePair;
+  topicIcon?: ThemePair;
+  status?: SectionStatus;
+  builtIn?: boolean;
+  hidden?: boolean;
+  rank?: number | null;
+  approvedAt?: number;
+  lists30d?: number;
+  fileUnder?: string | null;
 }
 
 export function loadSections(client: ApiClient): Promise<{ sections: SectionStats[] }> {

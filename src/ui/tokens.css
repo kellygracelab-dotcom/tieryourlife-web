@@ -43,6 +43,15 @@
   --tile-placeholder: #dad7e0;
   --tile-label: #5d5c66;
 
+  /* The app's surface steps, for what the web draws the app's way: feed
+     cards, section pages, sheets (docs/design-spec-parity.md). */
+  --surface-container-low: #f3f0f9;
+  --surface-container: #efedf4;
+  --surface-container-high: #e7e4ed;
+  --surface-container-highest: #e4e1e9;
+  --ink-quiet: rgba(0, 0, 0, 0.46);
+  --followed: #3f7f55;
+
   --radius-card: 12px;
   --radius-tile: 6px;
   --radius-pill: 100px;
@@ -111,6 +120,13 @@
     --band-tint-hover: 32%;
     --tile-placeholder: #26262c;
     --tile-label: #c7c5d0;
+
+    --surface-container-low: #1f1f25;
+    --surface-container: #2a2a31;
+    --surface-container-high: #35353c;
+    --surface-container-highest: #3a3a42;
+    --ink-quiet: #8f8d98;
+    --followed: #8fd3a3;
   }
 }
 
@@ -153,6 +169,13 @@
   --band-tint-hover: 32%;
   --tile-placeholder: #26262c;
   --tile-label: #c7c5d0;
+
+  --surface-container-low: #1f1f25;
+  --surface-container: #2a2a31;
+  --surface-container-high: #35353c;
+  --surface-container-highest: #3a3a42;
+  --ink-quiet: #8f8d98;
+  --followed: #8fd3a3;
 }
 
 /*

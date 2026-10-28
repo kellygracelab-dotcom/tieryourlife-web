@@ -401,7 +401,9 @@ describe("ListPage for its author", () => {
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Take it down" }),
     );
-    expect(await screen.findByRole("heading", { level: 1, name: "Your public lists" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Your public lists" }),
+    ).toBeInTheDocument();
     expect(mocks.unpublish).toHaveBeenCalledTimes(2);
     expect(mocks.unpublish).toHaveBeenLastCalledWith("abc");
   });

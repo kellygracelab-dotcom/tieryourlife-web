@@ -1,0 +1,196 @@
+/*
+ * Section tiles as the app draws them (docs/design-spec-parity.md, C): a tint,
+ * a hatch or somebody's picture, a scrim, and white words at the bottom. The
+ * tint differs by theme; the words are white in both.
+ */
+.sections-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 96px;
+  gap: 10px;
+}
+
+.section-tile {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 10px 10px 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  color: #ffffff;
+  text-decoration: none;
+  --tint: var(--tint-light);
+  background-color: var(--tint);
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.07) 0 4px,
+    transparent 4px 10px
+  );
+}
+
+.section-tile--pictured {
+  background-image: var(--section-picture);
+  background-size: cover;
+  background-position: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .section-tile {
+    --tint: var(--tint-dark);
+  }
+}
+
+:root[data-theme="dark"] .section-tile {
+  --tint: var(--tint-dark);
+}
+
+/* The scrim, and a darker one that fades in on hover. */
+.section-tile::before,
+.section-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.62));
+}
+
+.section-tile::after {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.7));
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.section-tile:hover,
+.section-tile:focus-visible {
+  color: #ffffff;
+}
+
+.section-tile:hover::after {
+  opacity: 1;
+}
+
+.section-tile:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--paper),
+    0 0 0 5px var(--link);
+}
+
+.section-tile__label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.section-tile__icon {
+  flex: none;
+  font-size: 18px;
+}
+
+.section-tile__name {
+  min-width: 0;
+  overflow: hidden;
+  font: 500 15px/20px var(--font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-tile__new {
+  font: 400 11px/15px var(--font);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* The phone's full-width row under the grid. */
+.section-tile--row {
+  grid-column: 1 / -1;
+  height: 56px;
+  justify-content: center;
+  padding-block: 0;
+}
+
+/* A section only its proposer sees, until a moderator says yes: a dashed
+   ring, and its picture faded into the tint. */
+.section-tile--waiting {
+  outline: 1.5px dashed rgba(255, 255, 255, 0.6);
+  outline-offset: -5px;
+}
+
+.section-tile--waiting.section-tile--pictured::before {
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.62)),
+    linear-gradient(color-mix(in srgb, var(--tint) 40%, transparent) 0 0);
+}
+
+.section-tile__pill {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  background: var(--surface-container-high);
+  color: var(--ink-dim);
+  font: 500 11px/16px var(--font);
+}
+
+.section-tile__pill .ms {
+  font-size: 14px;
+}
+
+/* All sections: no art, the page's own surface. */
+.section-tile--all {
+  background: var(--surface-container-high);
+  color: var(--ink);
+}
+
+.section-tile--all::before,
+.section-tile--all::after {
+  display: none;
+}
+
+.section-tile--all:hover,
+.section-tile--all:focus-visible {
+  color: var(--ink);
+  background: var(--surface-container-highest);
+}
+
+.section-tile--all .section-tile__icon,
+.section-tile__count {
+  color: var(--ink-dim);
+}
+
+.section-tile__count {
+  font: 400 11px/15px var(--font);
+}
+
+.section-tile--row .section-tile__count {
+  margin-inline-start: auto;
+}
+
+.section-tile__chevron {
+  font-size: 20px;
+  color: var(--ink-dim);
+}
+
+@media (min-width: 600px) {
+  .sections-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 120px;
+    gap: 12px;
+  }
+}
+
+@media (min-width: 840px) {
+  .sections-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-auto-rows: 112px;
+  }
+}
