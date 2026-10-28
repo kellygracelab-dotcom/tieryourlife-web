@@ -396,7 +396,7 @@ describe("ListPage for its author", () => {
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Take it down" }),
     );
-    expect(await screen.findByRole("alert")).toHaveTextContent("Could not unpublish it");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not take it down");
 
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Take it down" }),
