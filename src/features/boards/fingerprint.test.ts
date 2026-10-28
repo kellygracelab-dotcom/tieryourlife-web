@@ -227,4 +227,20 @@ describe("the fingerprint", () => {
     expect(playOf({ ...base, ids: ["a"] })).toBeNull();
     expect(playOf({ ...base, history: [[0, 2, 0]] })).toBeNull();
   });
+
+  it("hashes the three shared boards to the app's own SHA-256", async () => {
+    const example =
+      '{"kind":"swiss","count":4,"seed":7,"refine":false,"ids":["a","b","c","d"],' +
+      '"history":[[0,1,0],[2,3,null]],"round":1,"startedAt":1793146000000,"scope":["t-s"],"keepTier":true}';
+    const shared = { uid: "u", title: "T", displayMode: "WRAP" as const, tiers: [], items: [] };
+    expect(await fingerprintOf(board(shared))).toBe(
+      "8e5ded7251916b6817519d19b768e298cb2e38b195ef08173f4e22c50189b27f",
+    );
+    expect(await fingerprintOf(board({ ...shared, anonymous: true }))).toBe(
+      "b7c68568ab4c48be25a724e26ef8f14ac5f940178b556a1cb4afb7183c717394",
+    );
+    expect(
+      await fingerprintOf(board({ ...shared, anonymous: true, play: playOf(JSON.parse(example)) })),
+    ).toBe("b97bfcf2595276d8399cacd16b85ec5341c62ae5ea9916330b394bf61c9cea89");
+  });
 });
