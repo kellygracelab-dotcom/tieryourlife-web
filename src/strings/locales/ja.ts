@@ -128,6 +128,12 @@ const ja: Translation = {
       "コミュニティで非表示にしたリストと人は、気が変わったときのためにここに残ります。",
     hiddenAuthor: "{name} の投稿すべて",
     showAgain: "再表示",
+    placeTitle: "顔の位置を決める",
+    placeFrame: "円に収める画像",
+    placeUse: "これを使う",
+    placeFailed: "ここでは画像を表示できません。このままでも使えます。",
+    placeHelp: "ドラッグで移動、ピンチまたはスクロールで拡大・縮小します。",
+    placeAsItIs: "この画像はこのままでしか使えません。",
   },
   footer: {
     privacy: "プライバシーポリシー",

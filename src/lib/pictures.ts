@@ -37,6 +37,49 @@ export const shrinkOnCanvas: Shrink = async (file) => {
   });
 };
 
+/** A face is cut to this square on the device, as the phone cuts it, before it goes up. */
+export const FACE_EDGE = 256;
+
+/** A square of a picture, in the picture's own pixels. */
+export interface PixelSquare {
+  left: number;
+  top: number;
+  side: number;
+}
+
+/** A face cut on this device: an address to show it from at once, and the bytes to send up. */
+export interface FaceCut {
+  shown: string;
+  bytes: Promise<Blob>;
+}
+
+export type CutFace = (picture: CanvasImageSource, square: PixelSquare) => FaceCut;
+
+/**
+ * The square drawn at FACE_EDGE as a JPEG. The drawing is done at once, so
+ * the face can be shown in the same frame it was chosen in; it throws for a
+ * picture whose host does not let the page read it.
+ */
+export const cutFaceOnCanvas: CutFace = (picture, square) => {
+  const canvas = document.createElement("canvas");
+  canvas.width = FACE_EDGE;
+  canvas.height = FACE_EDGE;
+  const context = canvas.getContext("2d");
+  if (context === null) throw new Error("no 2d context");
+  context.imageSmoothingQuality = "high";
+  const { left, top, side } = square;
+  context.drawImage(picture, left, top, side, side, 0, 0, FACE_EDGE, FACE_EDGE);
+  const shown = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+  const bytes = new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob === null ? reject(new Error("no image")) : resolve(blob)),
+      "image/jpeg",
+      JPEG_QUALITY,
+    );
+  });
+  return { shown, bytes };
+};
+
 export interface UploadedPicture {
   pictureId: string;
   /** Where the editor can show it from; the owner alone may read the folder. */

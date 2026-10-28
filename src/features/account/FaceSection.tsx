@@ -1,19 +1,25 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { errorOf } from "../../api/errors";
 import type { ListSummary } from "../../api/types";
-import { PictureRefused, type UploadedPicture } from "../../lib/pictures";
+import {
+  type CutFace,
+  type FaceCut,
+  PictureRefused,
+  type UploadedPicture,
+} from "../../lib/pictures";
 import { useResource } from "../../lib/useResource";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
 import { faceChoicesOf } from "./faces";
+import { type FaceSource, PlaceFaceDialog, type Placed } from "./PlaceFaceDialog";
 import { SavedLine } from "./SavedLine";
 import { type Publish, useSaving } from "./useSaving";
 
 export type LoadLists = () => Promise<{ lists: ListSummary[] }>;
 export type Face = (photoUrl: string | null) => Promise<void>;
-/** A photo from the device into the person's own folder. */
-export type UploadFace = (file: File) => Promise<UploadedPicture>;
+/** A face cut on this device, up to the person's own folder. */
+export type UploadFace = (face: Blob) => Promise<UploadedPicture>;
 /** The backend's copy of that photo, where everybody may see it. */
 export type MakeFace = (pictureId: string) => Promise<{ url: string }>;
 
@@ -22,19 +28,14 @@ const CAPTION_MAX = 12;
 
 const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
 
-/** Why a photo could not become the face, in the words the editor uses for its pictures. */
-function faceFailureText(name: string, reason: unknown): string {
+/**
+ * Why a cut face did not become the face. A photo is named by its file; a
+ * card's square has no name of its own.
+ */
+function faceFailureText(name: string | null, reason: unknown): string {
   if (reason instanceof PictureRefused) {
-    switch (reason.reason) {
-      case "signIn":
-        return strings.new.pictureSignIn;
-      case "notAnImage":
-        return fill(strings.new.pictureNotImage, { name });
-      case "tooBig":
-        return fill(strings.new.pictureTooBig, { name });
-      default:
-        return fill(strings.new.pictureFailed, { name });
-    }
+    if (reason.reason === "signIn") return strings.new.pictureSignIn;
+    return name === null ? strings.settings.faceFailed : fill(strings.new.pictureFailed, { name });
   }
   return errorOf(reason).kind === "pictureRefused"
     ? strings.settings.faceNotMade
@@ -49,6 +50,8 @@ export function FaceSection({
   face,
   upload,
   makeFace,
+  cut,
+  show,
   publish,
 }: {
   uid: string;
@@ -58,42 +61,102 @@ export function FaceSection({
   face: Face;
   upload: UploadFace;
   makeFace: MakeFace;
+  cut: CutFace;
+  /** Puts a face on the account before Firebase has it; undefined puts the account's own back. */
+  show: (photoUrl: string | null | undefined) => void;
   publish: Publish;
 }) {
   const loadFor = useCallback(() => load(), [load]);
   const { state } = useResource(uid, loadFor);
   const [saving, setSaving] = useSaving();
+  const [placing, setPlacing] = useState<FaceSource | null>(null);
   const choices = state.status === "ready" ? faceChoicesOf(state.value.lists) : [];
   const busy = saving.status === "busy";
   const picker = useRef<HTMLInputElement>(null);
 
+  // A photo is shown from an address of its own while it is placed, and only then.
+  useEffect(() => {
+    if (placing?.kind !== "photo") return;
+    return () => URL.revokeObjectURL(placing.url);
+  }, [placing]);
+
   const saved = async () => {
     setSaving({ status: "saved", publishing: true });
     await publish();
+    show(undefined);
     setSaving({ status: "saved", publishing: false });
   };
 
-  // The choice on show comes from the account, never from the click, so a
-  // refused change snaps back by itself.
-  const choose = (url: string | null) => {
-    if (url === current || busy) return;
-    setSaving({ status: "busy" });
-    face(url).then(saved, () => setSaving({ status: "failed" }));
+  // The face on show changes the moment it is chosen; a change that fails
+  // puts the account's own back and says why.
+  const failed = (text?: string) => {
+    show(undefined);
+    setSaving({ status: "failed", text });
   };
 
-  // The phone's "A photo from the gallery": up to the person's own folder,
-  // checked and copied by the backend, then on the account like any face.
-  const fromPhoto = async (file: File) => {
-    if (busy) return;
+  // An address someone else already hosts, or just the letter: no copy needed.
+  const wearAtOnce = (url: string | null) => {
+    show(url);
+    setSaving({ status: "busy" });
+    face(url).then(saved, () => failed());
+  };
+
+  // The phone's way with anything placed by hand or from the device: cut on
+  // this device, up to the person's own folder, checked and copied by the
+  // backend, then on the account like any face. Shown from the cut at once.
+  const cutAndSend = async (placed: Placed, from: string | null) => {
+    let cutFace: FaceCut;
+    try {
+      cutFace = cut(placed.picture, placed.square);
+    } catch {
+      failed(strings.settings.faceNotMade);
+      return;
+    }
+    show(cutFace.shown);
     setSaving({ status: "busy" });
     try {
-      const { pictureId } = await upload(file);
+      const { pictureId } = await upload(await cutFace.bytes);
       const { url } = await makeFace(pictureId);
       await face(url);
       await saved();
     } catch (reason: unknown) {
-      setSaving({ status: "failed", text: faceFailureText(file.name, reason) });
+      failed(faceFailureText(from, reason));
     }
+  };
+
+  const place = (source: FaceSource) => {
+    if (!busy) setPlacing(source);
+  };
+
+  const fromDevice = (file: File) => {
+    if (busy) return;
+    if (!file.type.startsWith("image/")) {
+      setSaving({ status: "failed", text: fill(strings.new.pictureNotImage, { name: file.name }) });
+      return;
+    }
+    place({ kind: "photo", url: URL.createObjectURL(file), name: file.name });
+  };
+
+  // A card left in the middle is worn where it lives; a photo, or a card
+  // moved or zoomed, is cut first. The cut is drawn before the dialog goes.
+  const use = (placed: Placed | null) => {
+    if (placing === null) return;
+    if (placed !== null && (placing.kind === "photo" || placed.moved)) {
+      void cutAndSend(placed, placing.kind === "photo" ? placing.name : null);
+    } else if (placing.kind === "card") {
+      wearAtOnce(placing.url);
+    }
+    setPlacing(null);
+  };
+
+  const unreadable = () => {
+    if (placing?.kind === "photo") {
+      setSaving({
+        status: "failed",
+        text: fill(strings.new.pictureNotImage, { name: placing.name }),
+      });
+    }
+    setPlacing(null);
   };
 
   // A photo already chosen is none of the cards: it shows as its own choice.
@@ -112,7 +175,9 @@ export function FaceSection({
             className="settings__choice settings__choice--letter"
             aria-label={strings.settings.faceLetter}
             aria-pressed={current === null}
-            onClick={() => choose(null)}
+            onClick={() => {
+              if (current !== null && !busy) wearAtOnce(null);
+            }}
           >
             {initialOf(name)}
             {current === null && <Icon name="check" className="settings__choice-check" />}
@@ -130,7 +195,7 @@ export function FaceSection({
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
-              if (file !== undefined) void fromPhoto(file);
+              if (file !== undefined) fromDevice(file);
             }}
           />
           <button
@@ -168,7 +233,7 @@ export function FaceSection({
               aria-label={fill(strings.settings.faceChoice, { list: choice.from })}
               title={choice.from}
               aria-pressed={choice.url === current}
-              onClick={() => choose(choice.url)}
+              onClick={() => place({ kind: "card", url: choice.url })}
             >
               <img src={choice.url} alt="" loading="lazy" />
               {choice.url === current && <Icon name="check" className="settings__choice-check" />}
@@ -195,6 +260,14 @@ export function FaceSection({
         </p>
       )}
       <SavedLine state={saving} />
+      {placing !== null && (
+        <PlaceFaceDialog
+          source={placing}
+          onCancel={() => setPlacing(null)}
+          onUse={use}
+          onUnreadable={unreadable}
+        />
+      )}
     </section>
   );
 }

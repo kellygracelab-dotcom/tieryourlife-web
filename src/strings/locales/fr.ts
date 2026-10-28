@@ -132,6 +132,13 @@ const fr: Translation = {
       "Les listes et les personnes que vous masquez dans la communauté attendent ici, au cas où vous changeriez d’avis.",
     hiddenAuthor: "Tout de {name}",
     showAgain: "Réafficher",
+    placeTitle: "Placez votre photo",
+    placeFrame: "L’image à placer dans le cercle",
+    placeUse: "Utiliser",
+    placeFailed:
+      "L’image ne peut pas s’afficher ici. Elle peut quand même être utilisée telle quelle.",
+    placeHelp: "Faites glisser pour déplacer. Pincez ou faites défiler pour zoomer.",
+    placeAsItIs: "Cette image ne peut être utilisée que telle quelle.",
   },
   footer: {
     privacy: "Politique de confidentialité",

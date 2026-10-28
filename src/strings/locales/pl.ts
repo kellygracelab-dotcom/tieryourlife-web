@@ -143,6 +143,12 @@ const pl: Translation = {
     hiddenEmptyBody: "Listy i osoby ukryte w społeczności czekają tutaj, gdybyś zmienił zdanie.",
     hiddenAuthor: "Wszystko od {name}",
     showAgain: "Pokaż ponownie",
+    placeTitle: "Ustaw zdjęcie",
+    placeFrame: "Obraz do umieszczenia w okręgu",
+    placeUse: "Użyj",
+    placeFailed: "Nie da się tu pokazać obrazu. Nadal można go użyć bez zmian.",
+    placeHelp: "Przeciągnij, aby przesunąć. Przybliż dwoma palcami lub przewijaniem.",
+    placeAsItIs: "Tego obrazu można użyć tylko bez zmian.",
   },
   footer: {
     privacy: "Polityka prywatności",

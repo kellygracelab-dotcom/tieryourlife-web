@@ -17,7 +17,9 @@ export function NameSection({
   rename: Rename;
   publish: Publish;
 }) {
-  const [typed, setTyped] = useState(current ?? "");
+  // A Google name longer than the app allows starts cut to it, as on the phone.
+  const kept = (current ?? "").slice(0, NAME_MAX);
+  const [typed, setTyped] = useState(kept);
   const [saving, setSaving] = useSaving();
   const tidy = tidyName(typed);
   const empty = tidy.length === 0;
@@ -77,10 +79,10 @@ export function NameSection({
           <Button variant="filled" type="submit" disabled={empty || !changed || busy}>
             {busy ? strings.settings.saving : strings.settings.save}
           </Button>
-          {typed !== (current ?? "") && !busy && (
+          {typed !== kept && !busy && (
             <Button
               onClick={() => {
-                setTyped(current ?? "");
+                setTyped(kept);
                 setSaving({ status: "idle" });
               }}
             >

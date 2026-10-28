@@ -1,14 +1,14 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ListSummary } from "../api/types";
-import { SessionContext, type Session } from "../app/session";
+import { SessionContext, ShowFaceContext, type Session } from "../app/session";
 import { ApiFailure } from "../api/errors";
 import { faceChoicesOf } from "../features/account/faces";
 import { SAVED_NOTE_MS } from "../features/account/useSaving";
 import { BoardSyncContext, NOBODY, type BoardSyncControls } from "../features/boards/boardSync";
-import { PictureRefused } from "../lib/pictures";
+import { type CutFace, PictureRefused, type UploadedPicture } from "../lib/pictures";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { memoryStore } from "../lib/storage";
@@ -69,6 +69,10 @@ const refreshAuthor = vi.fn<RefreshAuthor>();
 const erase = vi.fn<Erase>();
 const upload = vi.fn<UploadFace>();
 const makeFace = vi.fn<MakeFace>();
+const cut = vi.fn<CutFace>();
+const showFace = vi.fn<(photoUrl: string | null | undefined) => void>();
+const CUT = new Blob(["face"], { type: "image/jpeg" });
+const SHOWN = "data:image/jpeg;base64,RkFDRQ==";
 
 function FrontPage() {
   return <h1>Front page</h1>;
@@ -91,6 +95,7 @@ const open = (account: Session["account"] = member, sync?: BoardSyncControls) =>
           face={face}
           upload={upload}
           makeFace={makeFace}
+          cut={cut}
           refreshAuthor={refreshAuthor}
           erase={erase}
         />
@@ -102,17 +107,31 @@ const open = (account: Session["account"] = member, sync?: BoardSyncControls) =>
   const page = <RouterProvider router={router} />;
   const view = render(
     <SessionContext.Provider value={session}>
-      {sync === undefined ? (
-        page
-      ) : (
-        <BoardSyncContext.Provider value={sync}>{page}</BoardSyncContext.Provider>
-      )}
+      <ShowFaceContext.Provider value={showFace}>
+        {sync === undefined ? (
+          page
+        ) : (
+          <BoardSyncContext.Provider value={sync}>{page}</BoardSyncContext.Provider>
+        )}
+      </ShowFaceContext.Provider>
     </SessionContext.Provider>,
   );
   return { session, router, ...view };
 };
 
 const faces = () => screen.getByRole("list", { name: "Your face" });
+const placing = () => screen.getByRole("dialog", { name: "Place your face" });
+const pressUseThis = () =>
+  userEvent.click(within(placing()).getByRole("button", { name: "Use this" }));
+
+/** The picture in Place your face arrives at the size given: jsdom draws none. */
+function placeLoaded(width = 400, height = 400): HTMLImageElement {
+  const img = within(placing()).getByRole("application").querySelector("img")!;
+  Object.defineProperty(img, "naturalWidth", { configurable: true, value: width });
+  Object.defineProperty(img, "naturalHeight", { configurable: true, value: height });
+  fireEvent.load(img);
+  return img;
+}
 
 beforeEach(() => {
   load.mockReset();
@@ -121,6 +140,9 @@ beforeEach(() => {
   face.mockReset();
   upload.mockReset();
   makeFace.mockReset();
+  cut.mockReset();
+  cut.mockImplementation(() => ({ shown: SHOWN, bytes: Promise.resolve(CUT) }));
+  showFace.mockReset();
   refreshAuthor.mockReset();
   refreshAuthor.mockResolvedValue({ updated: 0 });
   erase.mockReset();
@@ -182,7 +204,7 @@ describe("SettingsPage", () => {
     ).toHaveAttribute("aria-current", "page");
     const field = screen.getByLabelText("Name");
     expect(field).toHaveValue("Danylo");
-    expect(screen.getByText("6 / 24")).toBeInTheDocument();
+    expect(screen.getByText("6/24")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
 
@@ -222,10 +244,29 @@ describe("SettingsPage", () => {
     expect(field).toHaveValue("Danylo");
   });
 
-  it("offers the letter and the cards of the person's lists as a face, saved on the spot", async () => {
+  it("counts the name to 24, where the counter turns red and typing stops; a longer Google name starts cut", async () => {
+    open({ ...member, displayName: "Danylo Petrov of the Very Long Name" });
+    const field = screen.getByLabelText("Name");
+    expect(field).toHaveValue("Danylo Petrov of the Ver");
+    expect(screen.getByText("24/24")).toHaveClass("settings__counter--full");
+    // The cut name is a change of its own, as on the phone, and nothing to cancel.
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
+
+    await userEvent.type(field, "y");
+    expect(field).toHaveValue("Danylo Petrov of the Ver");
+    await userEvent.type(field, "{Backspace}");
+    expect(screen.getByText("23/24")).not.toHaveClass("settings__counter--full");
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(field).toHaveValue("Danylo Petrov of the Ver");
+  });
+
+  it("offers the letter and the cards of the person's lists; a card left in the middle is worn where it lives", async () => {
     load.mockResolvedValue({
       lists: [published("A24 films", ["https://img/1.jpg", "https://img/2.jpg"])],
     });
+    let saveFace = () => undefined as void;
+    face.mockImplementationOnce(() => new Promise((resolve) => (saveFace = resolve)));
     face.mockResolvedValue(undefined);
     const { session } = open({ ...member, photoUrl: "https://img/2.jpg" });
     expect(
@@ -236,43 +277,169 @@ describe("SettingsPage", () => {
     expect(buttons[0]).toHaveAccessibleName("Just the letter");
     expect(buttons[0]).toHaveTextContent("D");
 
+    // A card is placed first, then worn as it is, on the account and in the header at once.
     await userEvent.click(buttons[1]!);
+    expect(face).not.toHaveBeenCalled();
+    expect(within(placing()).getByRole("application").querySelector("img")).toHaveAttribute(
+      "src",
+      "https://img/1.jpg",
+    );
+    placeLoaded();
+    await pressUseThis();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(showFace).toHaveBeenCalledWith("https://img/1.jpg");
     expect(face).toHaveBeenCalledWith("https://img/1.jpg");
+    expect(cut).not.toHaveBeenCalled();
+
+    // While it is saved, nothing else is taken.
+    await userEvent.click(buttons[2]!);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await userEvent.click(buttons[0]!);
+    expect(face).toHaveBeenCalledTimes(1);
+
+    act(() => saveFace());
     expect(await screen.findByRole("status")).toHaveTextContent("Saved.");
     expect(session.refresh).toHaveBeenCalled();
     expect(refreshAuthor).toHaveBeenCalled();
+    expect(showFace).toHaveBeenLastCalledWith(undefined);
 
     await userEvent.click(buttons[0]!);
+    expect(showFace).toHaveBeenCalledWith(null);
     expect(face).toHaveBeenLastCalledWith(null);
   });
 
-  it("takes a photo from the device as the face, and names a photo that was refused", async () => {
-    load.mockResolvedValue({ lists: [] });
-    upload.mockResolvedValue({ pictureId: "p1", previewUrl: "blob:p1" });
+  it("cuts a card that was zoomed or moved on this device, and sends the square up", async () => {
+    const layout = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({ left: 0, top: 0, width: 240, height: 240 } as DOMRect);
+    load.mockResolvedValue({ lists: [published("A24 films", ["https://img/1.jpg"])] });
+    upload.mockResolvedValue({ pictureId: "p2", previewUrl: "blob:p2" });
+    makeFace.mockResolvedValue({ url: "https://faces/p2.jpg" });
+    face.mockResolvedValue(undefined);
+    open();
+    const card = await within(faces()).findByRole("button", { name: /Card from/ });
+
+    await userEvent.click(card);
+    const img = placeLoaded(400, 400);
+    await userEvent.keyboard("+");
+    await pressUseThis();
+    expect(cut).toHaveBeenCalledWith(img, { left: 18, top: 18, side: 364 });
+    expect(showFace).toHaveBeenCalledWith(SHOWN);
+    await waitFor(() => expect(face).toHaveBeenCalledWith("https://faces/p2.jpg"));
+    expect(upload).toHaveBeenCalledWith(CUT);
+    expect(makeFace).toHaveBeenCalledWith("p2");
+
+    // Lost on the way up: a card's square has no file name to give.
+    upload.mockRejectedValue(new PictureRefused("upload"));
+    await screen.findByText("Saved.");
+    await userEvent.click(card);
+    placeLoaded(400, 400);
+    await userEvent.keyboard("+");
+    await pressUseThis();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Couldn’t save — the server didn’t answer.",
+    );
+    expect(showFace).toHaveBeenLastCalledWith(undefined);
+    layout.mockRestore();
+  });
+
+  it("takes a photo from the device: placed, cut here, and shown at once while it goes up", async () => {
+    let sent = (_picture: UploadedPicture) => undefined as void;
+    upload.mockImplementationOnce(() => new Promise((resolve) => (sent = resolve)));
     makeFace.mockResolvedValue({ url: "https://faces/p1.jpg" });
     face.mockResolvedValue(undefined);
     refreshAuthor.mockResolvedValue(undefined);
+    const created = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:me");
+    const revoked = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     open();
     const picker = await screen.findByLabelText("A photo from the gallery");
     const file = new File(["x"], "me.jpg", { type: "image/jpeg" });
+    const choose = async () => {
+      await userEvent.upload(picker, file);
+      placeLoaded(1000, 500);
+      await pressUseThis();
+    };
+
     await userEvent.upload(picker, file);
+    expect(created).toHaveBeenCalledWith(file);
+    const img = placeLoaded(1000, 500);
+    expect(img).toHaveAttribute("src", "blob:me");
+    await pressUseThis();
+    // The middle square, cut on the device, on show before anything went up.
+    expect(cut).toHaveBeenCalledWith(img, { left: 250, top: 0, side: 500 });
+    expect(showFace).toHaveBeenCalledWith(SHOWN);
+    expect(revoked).toHaveBeenCalledWith("blob:me");
+    await waitFor(() => expect(upload).toHaveBeenCalledWith(CUT));
+    expect(face).not.toHaveBeenCalled();
+    expect(picker).toBeDisabled();
+
+    act(() => sent({ pictureId: "p1", previewUrl: "blob:p1" }));
     await waitFor(() => expect(face).toHaveBeenCalledWith("https://faces/p1.jpg"));
-    expect(upload).toHaveBeenCalledWith(file);
     expect(makeFace).toHaveBeenCalledWith("p1");
     expect(await screen.findByRole("status")).toHaveTextContent(/Saved/);
+    await waitFor(() => expect(showFace).toHaveBeenLastCalledWith(undefined));
 
-    // The backend would not have it as a face.
+    // The backend would not have it as a face: the old one comes back.
+    upload.mockResolvedValue({ pictureId: "p2", previewUrl: "blob:p2" });
     makeFace.mockRejectedValue(new ApiFailure({ kind: "pictureRefused", because: null }));
-    await userEvent.upload(picker, file);
+    await choose();
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "That picture cannot be your face. Pick another.",
     );
+    expect(showFace).toHaveBeenLastCalledWith(undefined);
 
-    // Too big to go up at all: the editor's words, with the file's name.
-    upload.mockRejectedValue(new PictureRefused("tooBig"));
-    await userEvent.upload(picker, file);
+    // Lost on the way up: the editor's words, with the file's name.
+    upload.mockRejectedValue(new PictureRefused("upload"));
+    await choose();
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/me\.jpg/));
+
+    upload.mockRejectedValue(new PictureRefused("signIn"));
+    await choose();
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/Sign in/));
     expect(face).toHaveBeenCalledTimes(1);
+    created.mockRestore();
+    revoked.mockRestore();
+  });
+
+  it("turns away what is not a picture, and a photo the browser cannot draw, before anything goes up", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    open();
+    const picker = await screen.findByLabelText("A photo from the gallery");
+    await user.upload(picker, new File(["x"], "notes.txt", { type: "text/plain" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("notes.txt is not a picture.");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    await user.upload(picker, new File(["x"], "me.heic", { type: "image/heic" }));
+    fireEvent.error(within(placing()).getByRole("application").querySelector("img")!);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("alert")).toHaveTextContent("me.heic is not a picture.");
+    expect(upload).not.toHaveBeenCalled();
+    expect(showFace).not.toHaveBeenCalled();
+  });
+
+  it("keeps the face when the placing is cancelled, or the square cannot be cut", async () => {
+    load.mockResolvedValue({ lists: [published("A24 films", ["https://img/1.jpg"])] });
+    open();
+    await userEvent.click(await within(faces()).findByRole("button", { name: /Card from/ }));
+    await userEvent.click(within(placing()).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(face).not.toHaveBeenCalled();
+
+    cut.mockImplementation(() => {
+      throw new DOMException("The canvas has been tainted", "SecurityError");
+    });
+    await userEvent.upload(
+      screen.getByLabelText("A photo from the gallery"),
+      new File(["x"], "me.jpg", { type: "image/jpeg" }),
+    );
+    placeLoaded();
+    await pressUseThis();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "That picture cannot be your face. Pick another.",
+    );
+    expect(upload).not.toHaveBeenCalled();
+    expect(face).not.toHaveBeenCalled();
+    expect(showFace).not.toHaveBeenCalledWith(SHOWN);
   });
 
   it("says when there is nothing to pick from, and names a face that was refused", async () => {
@@ -280,7 +447,10 @@ describe("SettingsPage", () => {
     face.mockRejectedValue(new Error("no"));
     open();
     await userEvent.click(await within(faces()).findByRole("button", { name: /Card from/ }));
+    placeLoaded();
+    await pressUseThis();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t save");
+    expect(showFace).toHaveBeenLastCalledWith(undefined);
     expect(within(faces()).getByRole("button", { name: "Just the letter" })).toHaveAttribute(
       "aria-pressed",
       "true",
