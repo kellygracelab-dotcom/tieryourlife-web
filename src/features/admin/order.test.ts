@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { changesOf, isChanged, moveRow, saveOf, setShown, type OrderRow } from "./order";
+import { carried, changesOf, isChanged, moveRow, saveOf, setShown, type OrderRow } from "./order";
 
 const rows = (...ids: string[]): OrderRow[] => ids.map((id) => ({ id, shown: true }));
 const ids = (list: readonly OrderRow[]) => list.map((row) => row.id);
@@ -29,5 +29,17 @@ describe("the section order", () => {
     expect(
       isChanged(changesOf(saved, setShown(setShown(saved, "food", false), "food", true))),
     ).toBe(false);
+  });
+
+  it("carries edits not yet saved over a fresh answer: a new section before Other, a gone one out", () => {
+    const saved = rows("anime", "games", "food", "other");
+    const fresh = [...rows("anime", "games", "street-food", "other")];
+    // Nothing edited: the fresh answer as it is.
+    expect(carried(fresh, saved, saved)).toEqual(fresh);
+    const edited = setShown(moveRow(saved, 1, 0), "anime", false);
+    const over = carried(fresh, saved, edited);
+    expect(ids(over)).toEqual(["games", "anime", "street-food", "other"]);
+    expect(over[1]?.shown).toBe(false);
+    expect(isChanged(changesOf(fresh, over))).toBe(true);
   });
 });

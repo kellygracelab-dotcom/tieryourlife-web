@@ -105,6 +105,15 @@
   color: rgba(255, 255, 255, 0.88);
 }
 
+/* A tile that opens something in place: a button dressed as the tile. */
+.section-tile--button {
+  width: 100%;
+  border: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
 /* The phone's full-width row under the grid. */
 .section-tile--row {
   grid-column: 1 / -1;

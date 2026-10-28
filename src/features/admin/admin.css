@@ -333,6 +333,30 @@
   accent-color: var(--link);
 }
 
+.admin-order__edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.admin-order__edit:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.admin-order__edit .ms {
+  font-size: 20px;
+}
+
 .admin-save {
   position: sticky;
   bottom: 0;

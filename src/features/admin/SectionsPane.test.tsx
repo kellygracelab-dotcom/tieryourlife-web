@@ -5,6 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AdminSections } from "../../api/admin";
 import { ApiFailure } from "../../api/errors";
 import type { SectionStats } from "../../api/sections";
+import { memoryStore } from "../../lib/storage";
+import type { EditorDeps } from "../sections/editorDeps";
+import type { SectionWrites } from "./sectionWrites";
 import { SectionsPane, type SectionsPaneDeps } from "./SectionsPane";
 
 vi.mock("../../lib/api", async () => (await import("../../test/apiMock")).apiStubs());
@@ -37,10 +40,26 @@ const deps = {
   save: vi.fn<SectionsPaneDeps["save"]>(),
 };
 
+const writes = {
+  create: vi.fn<SectionWrites["create"]>(),
+  edit: vi.fn<SectionWrites["edit"]>(),
+};
+
+/** The section form without the network, canvas or storage. */
+const editor: EditorDeps = {
+  check: async () => ({ free: true }),
+  upload: async () => ({ pictureId: "p", previewUrl: "https://p" }),
+  crop: async () => new Blob(["webp"], { type: "image/webp" }),
+  keep: memoryStore(),
+};
+
 function open(role: "owner" | "moderator" = "owner") {
   const router = createMemoryRouter(
     [
-      { path: "/admin/sections", element: <SectionsPane adminRole={role} deps={deps} /> },
+      {
+        path: "/admin/sections",
+        element: <SectionsPane adminRole={role} deps={deps} writes={writes} editor={editor} />,
+      },
       { path: "/elsewhere", element: <h1>Elsewhere</h1> },
     ],
     { initialEntries: ["/admin/sections"] },
@@ -59,6 +78,12 @@ beforeEach(() => {
   deps.load.mockResolvedValue(answer);
   deps.save.mockReset();
   deps.save.mockResolvedValue({ version: 8 });
+  writes.create.mockReset();
+  writes.create.mockImplementation(async (draft) =>
+    stats("street-food", { name: draft.name, icon: draft.icon }),
+  );
+  writes.edit.mockReset();
+  writes.edit.mockImplementation(async (id, changes) => stats(id, { name: changes.name }));
 });
 
 describe("SectionsPane", () => {
@@ -139,5 +164,85 @@ describe("SectionsPane", () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Move/ })).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.queryByRole("button", { name: "New section" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Edit/ })).toBeNull();
+  });
+
+  describe("New section and Edit", () => {
+    const withStreetFood: AdminSections = {
+      ...answer,
+      sections: [
+        ...answer.sections.filter((one) => one.id !== "other"),
+        stats("street-food", { name: "Street food", status: "approved" }),
+        stats("other"),
+      ],
+      version: 8,
+    };
+
+    it("makes a new section with the proposal's form, and reads the order back with it before Other", async () => {
+      open();
+      await screen.findByText("4 sections · 1 hidden");
+      deps.load.mockResolvedValue(withStreetFood);
+      await userEvent.click(screen.getByRole("button", { name: "New section" }));
+      const form = screen.getByRole("dialog", { name: "New section" });
+      expect(within(form).queryByRole("combobox")).toBeNull();
+      expect(within(form).getByRole("group", { name: "Translations" })).toBeInTheDocument();
+      await userEvent.type(within(form).getByRole("textbox", { name: "Name" }), "Street food");
+      await userEvent.click(within(form).getByRole("button", { name: "Create" }));
+      expect(writes.create).toHaveBeenCalledWith({ name: "Street food", icon: "category" });
+      expect(await screen.findByText("Street food created")).toBeInTheDocument();
+      expect(rowNames()).toEqual(["Anime", "Games", "Food", "Street food", "Other"]);
+      expect(deps.load).toHaveBeenCalledTimes(2);
+      // No Save is needed for it.
+      expect(screen.queryByRole("region", { name: "Unsaved changes" })).toBeNull();
+    });
+
+    it("keeps an order not yet saved over the reload a new section brings", async () => {
+      open();
+      await screen.findByText("4 sections · 1 hidden");
+      screen.getByRole("button", { name: "Move Games" }).focus();
+      await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+      deps.load.mockResolvedValue(withStreetFood);
+      await userEvent.click(screen.getByRole("button", { name: "New section" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "Street food");
+      await userEvent.click(screen.getByRole("button", { name: "Create" }));
+      await screen.findByText("Street food created");
+      expect(rowNames()).toEqual(["Games", "Anime", "Food", "Street food", "Other"]);
+      expect(screen.getByRole("region", { name: "Unsaved changes" })).toHaveTextContent("order");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(deps.save).toHaveBeenLastCalledWith(
+        ["games", "anime", "food", "street-food", "other"],
+        ["food"],
+        8,
+      );
+    });
+
+    it("edits a row in a side sheet, sends only what changed, and shows it at once", async () => {
+      open();
+      await screen.findByText("4 sections · 1 hidden");
+      await userEvent.click(screen.getByRole("button", { name: "Edit Games" }));
+      const sheet = screen.getByRole("dialog", { name: "Edit section" });
+      // A built-in keeps its art: no picture to change.
+      expect(within(sheet).queryByRole("button", { name: "Replace" })).toBeNull();
+      const name = within(sheet).getByRole("textbox", { name: "Name" });
+      await userEvent.clear(name);
+      await userEvent.type(name, "Video games");
+      await userEvent.click(within(sheet).getByRole("button", { name: "Save" }));
+      expect(writes.edit).toHaveBeenCalledWith("games", { name: "Video games" });
+      expect(await screen.findByText("Video games saved")).toBeInTheDocument();
+      expect(rowNames()).toEqual(["Anime", "Video games", "Food", "Other"]);
+      expect(deps.load).toHaveBeenCalledTimes(1);
+    });
+
+    it("closes the sheet with nothing changed", async () => {
+      open();
+      await screen.findByText("4 sections · 1 hidden");
+      await userEvent.click(screen.getByRole("button", { name: "Edit Other" }));
+      await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("dialog")).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "New section" }));
+      await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
   });
 });

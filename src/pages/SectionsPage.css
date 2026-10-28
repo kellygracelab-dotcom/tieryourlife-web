@@ -45,6 +45,16 @@
   font: var(--text-body);
 }
 
+.all-sections__propose {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0 var(--space-8);
+}
+
+.all-sections__propose .btn {
+  min-height: 40px;
+}
+
 .all-sections__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

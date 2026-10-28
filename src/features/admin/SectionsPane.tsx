@@ -9,6 +9,7 @@ import {
 import { useBlocker } from "react-router";
 import type { AdminRole, AdminSections } from "../../api/admin";
 import { errorOf } from "../../api/errors";
+import type { SectionStats } from "../../api/sections";
 import { loadAdminSections, saveSectionOrder } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
@@ -17,8 +18,20 @@ import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { sectionOf, sectionStyle, type Section } from "../sections/model";
+import type { EditorDeps } from "../sections/editorDeps";
+import { SectionEditor } from "../sections/SectionEditor";
 import { sectionsStore } from "../sections/useSections";
-import { changesOf, isChanged, LOCKED, moveRow, saveOf, setShown, type OrderRow } from "./order";
+import {
+  carried,
+  changesOf,
+  isChanged,
+  LOCKED,
+  moveRow,
+  saveOf,
+  setShown,
+  type OrderRow,
+} from "./order";
+import { sectionWrites, type SectionWrites } from "./sectionWrites";
 
 export interface SectionsPaneDeps {
   load: () => Promise<AdminSections>;
@@ -53,14 +66,24 @@ function summaryOf(saved: readonly OrderRow[], edited: readonly OrderRow[]): str
 interface SectionsPaneProps {
   adminRole: AdminRole;
   deps?: SectionsPaneDeps;
+  /** The owner's New section and Edit, and what their form leans on. */
+  writes?: SectionWrites;
+  editor?: EditorDeps;
 }
+
+type Editing = { kind: "create" } | { kind: "edit"; id: string } | null;
 
 /**
  * The order of the sections and which are shown, for the site and the app,
  * kept by one Save: the order is one decision, so it is written whole, and a
  * Save made over somebody else's is refused rather than lost.
  */
-export function SectionsPane({ adminRole: role, deps = paneDeps }: SectionsPaneProps) {
+export function SectionsPane({
+  adminRole: role,
+  deps = paneDeps,
+  writes = sectionWrites,
+  editor,
+}: SectionsPaneProps) {
   const [round, setRound] = useState(0);
   const load = useCallback(() => deps.load(), [deps]);
   const { state } = useResource(String(round), load);
@@ -76,6 +99,11 @@ export function SectionsPane({ adminRole: role, deps = paneDeps }: SectionsPaneP
   const [announce, setAnnounce] = useState("");
   const clearNotice = useCallback(() => setNotice(null), []);
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
+  const [editing, setEditing] = useState<Editing>(null);
+  // What an edit made of a section, shown at once without asking for the whole order again.
+  const [edits, setEdits] = useState<ReadonlyMap<string, SectionStats>>(new Map());
+  // A section created by hand is read back with the order; edits not yet saved stay on top.
+  const [carrying, setCarrying] = useState(false);
 
   // A fresh answer becomes what is saved and what is being edited.
   const [seen, setSeen] = useState<AdminSections | null>(null);
@@ -83,8 +111,10 @@ export function SectionsPane({ adminRole: role, deps = paneDeps }: SectionsPaneP
     setSeen(answer);
     const rows = rowsOf(answer);
     setSaved(rows);
-    setEdited(rows);
-    setVersion(answer.version);
+    setEdited(carrying && saved !== null && edited !== null ? carried(rows, saved, edited) : rows);
+    setCarrying(false);
+    setEdits(new Map());
+    setVersion(answer.version ?? undefined);
     setConflict(false);
   }
 
@@ -114,8 +144,11 @@ export function SectionsPane({ adminRole: role, deps = paneDeps }: SectionsPaneP
     );
   }
 
-  const byId = new Map(answer.sections.map((one) => [one.id, sectionOf(one)]));
+  const statsOf = (id: string): SectionStats | undefined =>
+    edits.get(id) ?? answer.sections.find((one) => one.id === id);
+  const byId = new Map(answer.sections.map((one) => [one.id, sectionOf(edits.get(one.id) ?? one)]));
   const section = (id: string): Section | undefined => byId.get(id);
+  const editingStats = editing?.kind === "edit" ? statsOf(editing.id) : undefined;
   const nameOf = (id: string) => section(id)?.name ?? id;
 
   const move = (from: number, to: number) => {
@@ -201,6 +234,11 @@ export function SectionsPane({ adminRole: role, deps = paneDeps }: SectionsPaneP
             ...(hiddenCount > 0 ? [plural(strings.admin.hiddenCount, hiddenCount)] : []),
           ].join(" · ")}
         </p>
+        {owner && (
+          <Button variant="tonal" icon="add" onClick={() => setEditing({ kind: "create" })}>
+            {strings.admin.newSection}
+          </Button>
+        )}
       </header>
       {!owner && <p className="admin-pane__note">{strings.admin.viewOnly}</p>}
       <ol className="admin-order">
@@ -270,6 +308,17 @@ export function SectionsPane({ adminRole: role, deps = paneDeps }: SectionsPaneP
                   />
                 </label>
               )}
+              {owner && (
+                <button
+                  type="button"
+                  className="admin-order__edit"
+                  aria-label={fill(strings.admin.editOf, { name: nameOf(row.id) })}
+                  title={strings.admin.edit}
+                  onClick={() => setEditing({ kind: "edit", id: row.id })}
+                >
+                  <Icon name="edit" />
+                </button>
+              )}
             </li>
           );
         })}
@@ -315,6 +364,38 @@ export function SectionsPane({ adminRole: role, deps = paneDeps }: SectionsPaneP
             </Button>
           </div>
         </div>
+      )}
+
+      {editing?.kind === "create" && (
+        <SectionEditor
+          mode="create"
+          send={writes.create}
+          deps={editor}
+          onClose={() => setEditing(null)}
+          onDone={(made) => {
+            setEditing(null);
+            setNotice({ text: fill(strings.admin.sectionCreated, { name: sectionOf(made).name }) });
+            // Read back with the order, at its end before Other; nothing to Save for it.
+            setCarrying(true);
+            setRound((n) => n + 1);
+            sectionsStore.invalidate();
+          }}
+        />
+      )}
+      {editingStats !== undefined && (
+        <SectionEditor
+          mode="edit"
+          section={editingStats}
+          send={(changes) => writes.edit(editingStats.id, changes)}
+          deps={editor}
+          onClose={() => setEditing(null)}
+          onDone={(stored) => {
+            setEditing(null);
+            setEdits(new Map(edits).set(stored.id, stored));
+            setNotice({ text: fill(strings.admin.sectionSaved, { name: sectionOf(stored).name }) });
+            sectionsStore.invalidate();
+          }}
+        />
       )}
       <Snackbar notice={notice} onDone={clearNotice} />
     </section>

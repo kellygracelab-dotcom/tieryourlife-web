@@ -5,9 +5,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Moderator, PendingTopic, ProposedSection } from "../../api/admin";
 import { ApiFailure } from "../../api/errors";
 import type { Topic } from "../../api/sections";
+import { memoryStore } from "../../lib/storage";
+import type { EditorDeps } from "../sections/editorDeps";
 import { ModeratorsPane, type ModeratorsDeps } from "./ModeratorsPane";
 import { ProposalsPane, type ProposalsDeps } from "./ProposalsPane";
+import type { SectionWrites } from "./sectionWrites";
 import { TopicsPane, type TopicsDeps } from "./TopicsPane";
+
+/** The section form without the network, canvas or storage. */
+const editorFakes = (): EditorDeps => ({
+  check: vi.fn(async () => ({ free: true })),
+  upload: vi.fn(async () => ({ pictureId: "p", previewUrl: "https://p" })),
+  crop: vi.fn(async () => new Blob(["webp"], { type: "image/webp" })),
+  keep: memoryStore(),
+});
 
 vi.mock("../../lib/api", async () => (await import("../../test/apiMock")).apiStubs());
 
@@ -95,6 +106,60 @@ describe("ProposalsPane", () => {
     expect(screen.queryByRole("button", { name: "Merge into…" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Merge into Speedrunning" }));
     expect(deps.decideTopic).toHaveBeenCalledWith("t9", { action: "merge", into: "t1" });
+  });
+
+  it("lets the owner edit a proposal in a side sheet, and keeps its card in the queue", async () => {
+    const writes = {
+      create: vi.fn<SectionWrites["create"]>(),
+      edit: vi.fn<SectionWrites["edit"]>(async (id, changes) => ({
+        ...proposed,
+        id,
+        name: changes.name ?? proposed.name,
+      })),
+    };
+    wrap(<ProposalsPane adminRole="owner" deps={deps} writes={writes} editor={editorFakes()} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Edit" }));
+    const sheet = screen.getByRole("dialog", { name: "Edit section" });
+    expect(sheet).toHaveClass("section-editor--side");
+    const name = within(sheet).getByRole("textbox", { name: "Name" });
+    expect(name).toHaveValue("Street food");
+    await userEvent.clear(name);
+    await userEvent.type(name, "Street eats");
+    await userEvent.click(within(sheet).getByRole("button", { name: "Save" }));
+    expect(writes.edit).toHaveBeenCalledWith("street-food", { name: "Street eats" });
+    expect(await screen.findByText("Street eats saved")).toBeInTheDocument();
+    const edited = screen.getByRole("heading", { name: "Street eats" }).closest("li")!;
+    expect(within(edited).getByText("6 lists filed under Food until approval")).toBeInTheDocument();
+    expect(within(edited).getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("keeps Edit from a moderator", async () => {
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    expect(within(card).queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+
+  it("says when somebody else decided first, and reads the queue again", async () => {
+    deps.approveSection = vi.fn(async () => {
+      throw new ApiFailure({ kind: "conflict" });
+    });
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    expect(await screen.findByText("Someone else already decided this one.")).toBeInTheDocument();
+    expect(deps.sections).toHaveBeenCalledTimes(2);
+  });
+
+  it("says a decision that did not go through on the card itself", async () => {
+    deps.approveSection = vi.fn(async () => {
+      throw new ApiFailure({ kind: "offline" });
+    });
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent("That didn’t go through.");
   });
 
   it("finds nothing waiting on a backend without section proposals yet", async () => {

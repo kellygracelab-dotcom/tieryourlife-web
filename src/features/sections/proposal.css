@@ -1,0 +1,745 @@
+/*
+ * Propose a section, and the owner's New section and Edit made of the same
+ * parts (docs/design-spec-admin.md, 2 and 3.4–3.5): a dialog from 600 px, the
+ * whole screen below it, a side sheet for the edit; the title and the actions
+ * stay put while the fields scroll between them.
+ */
+.section-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.34);
+}
+
+.section-editor--dialog {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 48px);
+  border-radius: 28px;
+}
+
+.section-editor__scrim--side {
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.section-editor--side {
+  width: min(440px, 100%);
+  height: 100%;
+  border-start-start-radius: 16px;
+  border-end-start-radius: 16px;
+}
+
+.section-editor--full {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.section-editor__head {
+  padding: 24px 24px 0;
+}
+
+.section-editor__intro {
+  margin: 8px 0 0;
+  font: 400 14px/20px var(--font);
+  color: var(--ink-dim);
+}
+
+.section-editor--full .section-editor__intro {
+  margin: 0;
+}
+
+/* The phone's top bar: close, the title, and the action at the end. */
+.section-editor__bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 56px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.section-editor__bar-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font: 400 20px/26px var(--font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-editor__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.section-editor__close:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.section-editor__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 0;
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.section-editor--full .section-editor__body {
+  padding: 16px;
+}
+
+.section-editor__foot {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 24px 24px;
+}
+
+.section-editor--full .section-editor__foot {
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.section-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.section-editor__actions .btn--filled {
+  min-height: 40px;
+}
+
+.section-editor__ask-text {
+  flex: 1;
+  margin: 0;
+  font: 400 14px/20px var(--font);
+}
+
+.section-editor__failed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--error-container);
+  color: var(--on-error-container);
+  font: 400 13px/18px var(--font);
+}
+
+.section-editor__failed p {
+  flex: 1;
+  margin: 0;
+}
+
+.section-editor__failed .btn {
+  color: var(--on-error-container);
+}
+
+/* Sending: a small ring in the button's own ink. */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-inline-end: 8px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  vertical-align: -3px;
+  animation: spinner-turn 800ms linear infinite;
+}
+
+@keyframes spinner-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2400ms;
+  }
+}
+
+/* The fields. */
+.section-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.section-editor__label,
+.section-editor__help {
+  margin: 0;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+.section-editor__label {
+  margin-bottom: 4px;
+}
+
+.section-editor__waiting {
+  margin: -4px 0 0;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-quiet);
+}
+
+/* An outlined field, its label sitting on the outline. */
+.outlined {
+  position: relative;
+  display: block;
+  height: 56px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+}
+
+.outlined:focus-within {
+  border: 2px solid var(--link);
+}
+
+.outlined--error,
+.outlined--error:focus-within {
+  border: 2px solid var(--error);
+}
+
+.outlined__label {
+  position: absolute;
+  top: -9px;
+  inset-inline-start: 12px;
+  padding: 0 4px;
+  background: var(--surface);
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+.outlined:focus-within .outlined__label {
+  color: var(--link);
+}
+
+.outlined--error .outlined__label,
+.outlined--error:focus-within .outlined__label {
+  color: var(--error);
+}
+
+.outlined__input {
+  width: 100%;
+  height: 100%;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font: 400 16px/24px var(--font);
+  outline: none;
+  appearance: none;
+}
+
+.outlined__input::placeholder {
+  color: var(--ink-quiet);
+}
+
+.outlined--select .outlined__input {
+  padding-inline-end: 44px;
+  cursor: pointer;
+}
+
+.outlined--select .outlined__input option {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.outlined__chevron {
+  position: absolute;
+  top: 15px;
+  inset-inline-end: 12px;
+  color: var(--ink-dim);
+  pointer-events: none;
+}
+
+.section-editor__under {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 0 16px;
+}
+
+.section-editor__error {
+  margin: 0;
+  font: 400 12px/16px var(--font);
+  color: var(--error);
+}
+
+.section-editor__error a {
+  color: var(--link);
+  font-weight: 500;
+}
+
+.section-editor__counter {
+  flex: none;
+  margin-inline-start: auto;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-quiet);
+}
+
+.section-editor__counter--full {
+  color: var(--error);
+}
+
+/* Translations: one field per language, two to a row. */
+.translations {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.translations legend {
+  padding: 0;
+}
+
+.translations__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.translations__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.translations__language {
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+.translations__field input {
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--text-body);
+}
+
+/* The icons: six to a row, the chosen one ringed. */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 56px);
+  gap: 8px;
+}
+
+.icon-grid__tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--surface-container);
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.icon-grid__tile .ms {
+  font-size: 24px;
+}
+
+.icon-grid__tile:hover {
+  background: var(--surface-container-high);
+}
+
+.icon-grid__tile--chosen,
+.icon-grid__tile--chosen:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  box-shadow: inset 0 0 0 2px var(--link);
+}
+
+.icon-grid__tile:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The picture: a drop zone, then the crop in its place. */
+.picture-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  padding: 16px;
+  border: 1.5px dashed var(--ink-quiet);
+  border-radius: 16px;
+  background: var(--surface-container);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.drop-zone:hover,
+.drop-zone--over {
+  border-color: var(--link);
+  background: var(--surface-container-high);
+}
+
+.drop-zone:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.drop-zone__icon {
+  font-size: 32px;
+  color: var(--ink-quiet);
+}
+
+.drop-zone__title {
+  font: 500 14px/20px var(--font);
+}
+
+.drop-zone__hint {
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+.picture-field__picker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.picture-field__trouble {
+  margin: 0;
+  font: 400 12px/16px var(--font);
+  color: var(--error);
+}
+
+.crop {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--surface-container-high);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.crop:active {
+  cursor: grabbing;
+}
+
+.crop--still,
+.crop--still:active {
+  cursor: default;
+}
+
+/* A picture still on its way is fetched out of sight. */
+.crop--loading {
+  display: none;
+}
+
+.crop:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+/* Where it sits is the field's to say, in the style attribute: screen geometry, not a side of the text. */
+.crop__picture {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+
+.crop__picture--waiting {
+  visibility: hidden;
+}
+
+.crop__picture--cover {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The tile's own scrim, the same in both themes. */
+.crop__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.62));
+  pointer-events: none;
+}
+
+/* Where the label lands on a small tile: keep what matters out of it. */
+.crop__safe {
+  position: absolute;
+  bottom: 0;
+  inset-inline-start: 0;
+  width: 40%;
+  height: 40%;
+  border: 1px dashed rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+.crop__label {
+  position: absolute;
+  bottom: 10px;
+  inset-inline: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #ffffff;
+  pointer-events: none;
+}
+
+.crop__name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.crop__icon {
+  flex: none;
+  font-size: 18px;
+}
+
+.crop__text {
+  min-width: 0;
+  overflow: hidden;
+  font: 500 15px/20px var(--font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crop__text--empty {
+  opacity: 0.6;
+}
+
+.crop__sample {
+  font: 400 11px/15px var(--font);
+  color: rgba(255, 255, 255, 0.88);
+  opacity: 0.6;
+}
+
+.crop-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.segmented {
+  display: inline-flex;
+  height: 32px;
+  margin-inline-start: auto;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+}
+
+.segmented__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-dim);
+  font: 500 13px/18px var(--font);
+  cursor: pointer;
+}
+
+.segmented__option + .segmented__option {
+  border-inline-start: 1px solid var(--line-strong);
+}
+
+.segmented__option[aria-pressed="true"] {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.segmented__check {
+  font-size: 16px;
+}
+
+/*
+ * The tile at the home page's two sizes, on the paper it will sit on. The
+ * paper is the one the Light | Dark switch says, whatever the site's theme,
+ * so its colours are the two themes' own, written out.
+ */
+.crop-thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.crop-thumbs--light {
+  background: #e9e7e2;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+.crop-thumbs--dark {
+  background: #131318;
+  color: #c7c5d0;
+}
+
+.crop-thumbs__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crop-thumbs__caption {
+  font: 400 12px/16px var(--font);
+}
+
+/* Other's tint shows only while a picture loads. */
+.crop-thumb {
+  position: relative;
+  isolation: isolate;
+  flex: none;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #55566a;
+}
+
+.crop-thumbs--dark .crop-thumb {
+  background: #454656;
+}
+
+.crop-thumb--phone {
+  width: 173px;
+  height: 96px;
+}
+
+.crop-thumb--desktop {
+  width: 206px;
+  height: 112px;
+}
+
+/* The 16:10 crop, covering a tile a little wider than it. */
+.crop-thumb__frame {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 0;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  transform: translateY(-50%);
+}
+
+@media (max-width: 599px) {
+  .icon-grid {
+    grid-template-columns: repeat(6, 48px);
+  }
+
+  .icon-grid__tile {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* A waiting section as its proposer opens it. */
+.waiting-sheet__pill {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  margin-bottom: 12px;
+  padding: 0 8px;
+  border-radius: 11px;
+  background: var(--surface-container-high);
+  color: var(--ink-dim);
+  font: 500 11px/16px var(--font);
+}
+
+.waiting-sheet__pill .ms {
+  font-size: 14px;
+}
+
+.waiting-sheet__ask-text {
+  flex-basis: 100%;
+  margin: 0;
+  font: 400 14px/20px var(--font);
+  color: var(--ink);
+}
+
+.waiting-sheet__withdraw,
+.waiting-sheet__withdraw:hover:not(:disabled) {
+  color: var(--error);
+}
+
+@media (max-width: 599px) {
+  .waiting-sheet__scrim {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .waiting-sheet {
+    width: 100%;
+    border-radius: 28px 28px 0 0;
+  }
+}
+
+/* Three already waiting: the three, each a way to its tile. */
+.too-many__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  font: 400 12px/16px var(--font);
+}

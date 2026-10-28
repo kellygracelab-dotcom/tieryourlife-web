@@ -6,6 +6,8 @@ import type {
   Moderator,
   PendingTopic,
   ProposedSection,
+  NameCheck,
+  SectionChanges,
   SectionDraft,
   TopicDecision,
 } from "../api/admin";
@@ -28,7 +30,7 @@ import * as moderation from "../api/moderation";
 import type { BanLength, QueuedList } from "../api/moderation";
 import * as rank from "../api/rank";
 import * as sections from "../api/sections";
-import type { SectionStats, Topic } from "../api/sections";
+import type { SectionProposal, SectionStats, Topic } from "../api/sections";
 import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
 import type { CatalogueItem, FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
@@ -133,6 +135,12 @@ export const followSection = (id: string): Promise<{ following: true }> =>
 export const unfollowSection = (id: string): Promise<{ following: false }> =>
   sections.unfollowSection(api, id);
 
+export const proposeSection = (proposal: SectionProposal): Promise<SectionStats> =>
+  sections.proposeSection(api, proposal);
+
+export const withdrawSectionProposal = (id: string): Promise<void> =>
+  sections.withdrawSectionProposal(api, id);
+
 export const loadTopics = (section: string, limit?: number): Promise<{ topics: Topic[] }> =>
   sections.loadTopics(api, section, limit);
 
@@ -182,7 +190,7 @@ export const saveSectionOrder = (
 export const createSection = (draft: SectionDraft): Promise<SectionStats> =>
   admin.createSection(api, draft);
 
-export const editSection = (id: string, draft: Partial<SectionDraft>): Promise<SectionStats> =>
+export const editSection = (id: string, draft: SectionChanges): Promise<SectionStats> =>
   admin.editSection(api, id, draft);
 
 export const deleteSection = (id: string): Promise<void> => admin.deleteSection(api, id);
@@ -201,7 +209,7 @@ export const declineSection = (id: string, note: string | null): Promise<void> =
 export const mergeSection = (id: string, into: string): Promise<void> =>
   admin.mergeSection(api, id, into);
 
-export const checkSectionName = (name: string): Promise<{ free: boolean; id?: string }> =>
+export const checkSectionName = (name: string): Promise<NameCheck> =>
   admin.checkSectionName(api, name);
 
 export const loadTopicQueue = (): Promise<{ topics: PendingTopic[] }> => admin.loadTopicQueue(api);

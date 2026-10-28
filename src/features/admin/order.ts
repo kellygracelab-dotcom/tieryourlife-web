@@ -46,6 +46,25 @@ export function changesOf(saved: readonly OrderRow[], edited: readonly OrderRow[
 
 export const isChanged = (changes: OrderChanges): boolean => changes.moved || changes.toggled > 0;
 
+/**
+ * Edits not yet saved, laid over a fresh answer from the backend: the rows
+ * still there keep their edited order and shown state, a row that is new
+ * (a section just created) goes before Other, and one that went is dropped.
+ */
+export function carried(
+  fresh: readonly OrderRow[],
+  saved: readonly OrderRow[],
+  edited: readonly OrderRow[],
+): OrderRow[] {
+  if (!isChanged(changesOf(saved, edited))) return [...fresh];
+  const there = new Set(fresh.map((row) => row.id));
+  const known = new Set(edited.map((row) => row.id));
+  const kept = edited.filter((row) => there.has(row.id) && row.id !== LOCKED);
+  const added = fresh.filter((row) => !known.has(row.id) && row.id !== LOCKED);
+  const locked = fresh.filter((row) => row.id === LOCKED);
+  return [...kept, ...added, ...locked];
+}
+
 /** The one write a Save sends: every id in order, and the hidden ones. */
 export function saveOf(rows: readonly OrderRow[]): { ids: string[]; hidden: string[] } {
   return {

@@ -10,8 +10,15 @@ export type ApiError =
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
   | { kind: "conflict"; board?: unknown }
   | { kind: "tooLarge"; detail: string | null }
-  | { kind: "invalid"; detail: string | null }
+  /**
+   * A refused request, with the proxy's code for what was wrong (NAME_TAKEN,
+   * BAD_PICTURE…) and, where it says, the section a name clashes with or why
+   * a picture was refused: a form puts each under the field it is about.
+   */
+  | { kind: "invalid"; detail: string | null; code: string | null; id?: string; why?: string }
   | { kind: "pictureRefused"; because: string | null }
+  /** Too much of something in too short a time: TOO_MANY_PROPOSALS, ten sections a day. */
+  | { kind: "tooManyRequests"; code: string | null }
   | { kind: "unavailable" }
   | { kind: "offline" }
   | { kind: "unknown"; status: number };
@@ -29,6 +36,8 @@ export class ApiFailure extends Error {
 interface ErrorBody {
   error?: unknown;
   code?: unknown;
+  id?: unknown;
+  why?: unknown;
   until?: unknown;
   because?: unknown;
   board?: unknown;
@@ -54,8 +63,17 @@ export function parseApiError(status: number, text: string): ApiError {
   const code = stringOrNull(body.code);
 
   switch (status) {
-    case 400:
-      return { kind: "invalid", detail: stringOrNull(body.error) };
+    case 400: {
+      const id = stringOrNull(body.id);
+      const why = stringOrNull(body.why);
+      return {
+        kind: "invalid",
+        detail: stringOrNull(body.error),
+        code,
+        ...(id === null ? {} : { id }),
+        ...(why === null ? {} : { why }),
+      };
+    }
     // An unreadable 401 is about the person's sign-in, never about the
     // installation: that verdict only ever arrives with its own code.
     case 401:
@@ -77,6 +95,8 @@ export function parseApiError(status: number, text: string): ApiError {
       return { kind: "tooLarge", detail: stringOrNull(body.error) };
     case 422:
       return { kind: "pictureRefused", because: stringOrNull(body.because) };
+    case 429:
+      return { kind: "tooManyRequests", code };
     case 503:
       return { kind: "unavailable" };
     default:

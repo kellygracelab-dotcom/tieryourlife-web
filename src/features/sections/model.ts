@@ -50,6 +50,42 @@ function look(
   return { icon, tint: pair(tint), topicBg: pair(topicBg), topicIcon: pair(topicIcon) };
 }
 
+/**
+ * The icons a section may wear, in the order the picker shows them (Claude
+ * Design, 2.3): the nine's own first. The backend takes no other.
+ */
+export const SECTION_ICONS = [
+  "category",
+  "movie",
+  "animation",
+  "sports_esports",
+  "music_note",
+  "menu_book",
+  "restaurant",
+  "sports_soccer",
+  "person",
+  "pets",
+  "flight",
+  "directions_car",
+  "palette",
+  "checkroom",
+  "science",
+  "computer",
+  "local_cafe",
+  "park",
+  "theater_comedy",
+  "mic",
+  "photo_camera",
+  "sports_basketball",
+  "celebration",
+  "star",
+] as const satisfies readonly IconName[];
+
+export type SectionIcon = (typeof SECTION_ICONS)[number];
+
+export const isSectionIcon = (value: unknown): value is SectionIcon =>
+  typeof value === "string" && (SECTION_ICONS as readonly string[]).includes(value);
+
 /** The section every list falls back to, and the one that always comes last. */
 export const OTHER = "other";
 
@@ -71,6 +107,8 @@ export interface Section extends SectionLook {
   collage: string[];
   /** Where a waiting section's lists sit until it is approved. */
   fileUnder: string | null;
+  /** Who proposed a waiting one, when the backend says. */
+  proposerUid: string | null;
 }
 
 const isIcon = (value: unknown): value is IconName =>
@@ -94,6 +132,7 @@ export function builtInSection(id: Category): Section {
     following: false,
     collage: [],
     fileUnder: null,
+    proposerUid: null,
   };
 }
 
@@ -133,6 +172,7 @@ export function sectionOf(stats: SectionStats, locale: string = currentLocale())
     following: stats.following,
     collage: stats.collage.filter((url) => url.startsWith("https://")),
     fileUnder: stats.fileUnder ?? null,
+    proposerUid: stats.proposerUid ?? null,
   };
 }
 
@@ -224,6 +264,10 @@ export const topicPath = (section: string, topic: string): string =>
   `${sectionPath(section)}/t/${encodeURIComponent(topic)}`;
 
 export const ALL_SECTIONS_PATH = "/s";
+
+/** All sections with one's own waiting proposal opened, as its tile opens it. */
+export const waitingPath = (id: string): string =>
+  `${ALL_SECTIONS_PATH}?waiting=${encodeURIComponent(id)}`;
 
 /** The tile's own colours, light and dark, and its picture when it has one. */
 export function sectionStyle(section: Section): CSSProperties {

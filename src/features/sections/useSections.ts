@@ -89,7 +89,7 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
           loadedAt = deps.now();
           loadedFor = who;
           set({
-            sections: orderSections(sectionsFrom(sections ?? [])),
+            sections: orderSections(sectionsFrom(sections ?? [], who)),
             loaded: true,
             failed: false,
           });

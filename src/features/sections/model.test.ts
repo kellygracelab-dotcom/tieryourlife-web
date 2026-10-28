@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { SectionStats } from "../../api/sections";
+import { CATEGORIES } from "../../api/types";
 import {
   approvedOnly,
   builtInSection,
   homeSlots,
+  isSectionIcon,
   orderSections,
+  SECTION_ICONS,
   sectionOf,
   sectionPath,
   sectionsFrom,
@@ -97,6 +100,14 @@ describe("sections", () => {
     expect(ids(sectionsFrom(answer, "u1"))).toEqual(["anime", "mine", "other"]);
     expect(ids(sectionsFrom(answer, "guest"))).toEqual(["anime", "other"]);
     expect(ids(approvedOnly(sectionsFrom(answer, "u1")))).toEqual(["anime", "other"]);
+  });
+
+  it("offers the 24 icons in Claude Design's order, the nine's own among them", () => {
+    expect(SECTION_ICONS).toHaveLength(24);
+    expect(SECTION_ICONS.slice(0, 3)).toEqual(["category", "movie", "animation"]);
+    expect(SECTION_ICONS.at(-1)).toBe("star");
+    for (const id of CATEGORIES) expect(isSectionIcon(builtInSection(id).icon)).toBe(true);
+    expect(isSectionIcon("ramen_dining")).toBe(false);
   });
 
   it("orders followed first, then pinned, then the busiest month, then the earlier approved; Other last", () => {

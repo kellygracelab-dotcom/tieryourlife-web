@@ -16,8 +16,11 @@ import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { sectionOf, sectionStyle, topicStyle, type Section } from "../sections/model";
+import type { EditorDeps } from "../sections/editorDeps";
+import { SectionEditor } from "../sections/SectionEditor";
 import { useSections } from "../sections/useSections";
 import { agoText } from "../moderation/queue";
+import { sectionWrites, type SectionWrites } from "./sectionWrites";
 
 export interface ProposalsDeps {
   sections: () => Promise<{ sections: ProposedSection[] }>;
@@ -56,12 +59,18 @@ function SectionProposal({
   role,
   deps,
   onDone,
+  onSettled,
+  onEdit,
 }: {
   proposal: ProposedSection;
   sections: readonly Section[];
   role: AdminRole;
   deps: ProposalsDeps;
   onDone: (text: string) => void;
+  /** Somebody else decided it first: the queue is read again. */
+  onSettled: () => void;
+  /** The owner's Edit sheet; the card stays in the queue after it. */
+  onEdit: () => void;
 }) {
   const look = sectionOf(proposal);
   const [now] = useState(() => Date.now());
@@ -76,9 +85,11 @@ function SectionProposal({
     setFailed(false);
     work.then(
       () => onDone(text),
-      () => {
+      (reason: unknown) => {
         setBusy(false);
-        setFailed(true);
+        // 409 SETTLED: somebody else approved, declined or merged it first.
+        if (errorOf(reason).kind === "conflict") onSettled();
+        else setFailed(true);
       },
     );
   };
@@ -216,6 +227,11 @@ function SectionProposal({
                 {strings.admin.mergeInto}
               </Button>
             )}
+            {role === "owner" && (
+              <Button disabled={busy} onClick={onEdit}>
+                {strings.admin.edit}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -342,9 +358,14 @@ function TopicProposal({
 export function ProposalsPane({
   adminRole: role,
   deps = proposalsDeps,
+  writes = sectionWrites,
+  editor,
 }: {
   adminRole: AdminRole;
   deps?: ProposalsDeps;
+  /** The owner's Edit of a proposal, and what its form leans on. */
+  writes?: SectionWrites;
+  editor?: EditorDeps;
 }) {
   const loadSections = useCallback(() => orNothing(deps.sections, { sections: [] })(), [deps]);
   const loadTopics = useCallback(() => orNothing(deps.topics, { topics: [] })(), [deps]);
@@ -355,6 +376,9 @@ export function ProposalsPane({
   const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
+  const [editing, setEditing] = useState<string | null>(null);
+  // A proposal as the owner's edit left it, until the queue is read again.
+  const [edited, setEdited] = useState<ReadonlyMap<string, ProposedSection>>(new Map());
 
   if (sectionQueue.state.status === "loading" || topicQueue.state.status === "loading") {
     return <Skeleton height="240px" />;
@@ -377,9 +401,10 @@ export function ProposalsPane({
     );
   }
 
-  const proposedSections = sectionQueue.state.value.sections.filter(
-    (one) => !gone.has(`s:${one.id}`),
-  );
+  const proposedSections = sectionQueue.state.value.sections
+    .filter((one) => !gone.has(`s:${one.id}`))
+    .map((one) => edited.get(one.id) ?? one);
+  const editingProposal = proposedSections.find((one) => one.id === editing);
   const proposedTopics = topicQueue.state.value.topics.filter((one) => !gone.has(`t:${one.id}`));
   const approved = sections.filter((one) => one.status === "approved");
   const done = (key: string) => (text: string) => {
@@ -444,6 +469,11 @@ export function ProposalsPane({
                 role={role}
                 deps={deps}
                 onDone={done(`s:${proposal.id}`)}
+                onSettled={() => {
+                  setNotice({ text: strings.admin.settled });
+                  sectionQueue.retry();
+                }}
+                onEdit={() => setEditing(proposal.id)}
               />
             ))}
           {filter !== "sections" &&
@@ -457,6 +487,21 @@ export function ProposalsPane({
               />
             ))}
         </ul>
+      )}
+      {editingProposal !== undefined && (
+        <SectionEditor
+          mode="edit"
+          section={editingProposal}
+          send={(changes) => writes.edit(editingProposal.id, changes)}
+          deps={editor}
+          onClose={() => setEditing(null)}
+          onDone={(saved) => {
+            setEditing(null);
+            // Who proposed it and what waits for it stay as the queue said.
+            setEdited(new Map(edited).set(saved.id, { ...editingProposal, ...saved }));
+            setNotice({ text: fill(strings.admin.sectionSaved, { name: sectionOf(saved).name }) });
+          }}
+        />
       )}
       <Snackbar notice={notice} onDone={clearNotice} />
     </section>

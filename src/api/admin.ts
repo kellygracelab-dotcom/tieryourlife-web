@@ -13,8 +13,8 @@ export type AdminRole = "owner" | "moderator";
 export interface AdminSections {
   sections: SectionStats[];
   role?: AdminRole | null;
-  /** The order's version: a Save made against an older one is refused. */
-  version?: number;
+  /** The order's version: a Save made against an older one is refused. Null for anybody not staff. */
+  version?: number | null;
 }
 
 export function loadAdminSections(client: ApiClient): Promise<AdminSections> {
@@ -43,16 +43,22 @@ export interface SectionDraft {
   pictureId?: string | null;
   /** A colour picked from the picture, expanded by the backend into all five. */
   tint?: string;
+  /** A pinned place in the order; left out, the backend's order places it. */
+  rank?: number | null;
 }
+
+/** What an edit may change: any of a draft's fields, and whether the section is hidden. */
+export type SectionChanges = Partial<SectionDraft> & { hidden?: boolean };
 
 export function createSection(client: ApiClient, draft: SectionDraft): Promise<SectionStats> {
   return client.request<SectionStats>("POST", "/lists/sections", { body: draft });
 }
 
+/** Only what is named changes; a built-in refuses a picture with 409 BUILT_IN. */
 export function editSection(
   client: ApiClient,
   id: string,
-  draft: Partial<SectionDraft>,
+  draft: SectionChanges,
 ): Promise<SectionStats> {
   return client.request<SectionStats>("PATCH", `/lists/sections/${encodeURIComponent(id)}`, {
     body: draft,
@@ -66,7 +72,7 @@ export function deleteSection(client: ApiClient, id: string): Promise<void> {
 
 /** A section somebody proposed, as the queue shows it. */
 export interface ProposedSection extends SectionStats {
-  proposerUid?: string;
+  proposerUid?: string | null;
   proposerName?: string;
   createdAt?: number;
   /** How many of the proposer's lists wait in fileUnder for it. */
@@ -102,12 +108,19 @@ export function mergeSection(client: ApiClient, id: string, into: string): Promi
   });
 }
 
+/**
+ * Whether a name is free: the section it clashes with when it is not, or
+ * BAD_NAME for one no section could have.
+ */
+export interface NameCheck {
+  free: boolean;
+  id?: string;
+  code?: string;
+}
+
 /** Whether a name is free, asked while it is typed: the same rule as the backend's uniqueness. */
-export function checkSectionName(
-  client: ApiClient,
-  name: string,
-): Promise<{ free: boolean; id?: string }> {
-  return client.request<{ free: boolean; id?: string }>("GET", "/lists/sections/name-check", {
+export function checkSectionName(client: ApiClient, name: string): Promise<NameCheck> {
+  return client.request<NameCheck>("GET", "/lists/sections/name-check", {
     query: { name },
   });
 }

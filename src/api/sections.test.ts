@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { checkSectionName, createSection, editSection } from "./admin";
 import type { ApiClient } from "./client";
 import {
   followSection,
@@ -6,8 +7,10 @@ import {
   loadMyTopics,
   loadSections,
   loadTopics,
+  proposeSection,
   unfollowSection,
   unfollowTopic,
+  withdrawSectionProposal,
 } from "./sections";
 
 function recordingClient(result: unknown) {
@@ -57,5 +60,39 @@ describe("sections", () => {
     expect(request).toHaveBeenLastCalledWith("POST", "/lists/topics/t%2F1/follow");
     await unfollowTopic(client, "t/1");
     expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/topics/t%2F1/follow");
+  });
+});
+
+describe("proposals", () => {
+  it("proposes a section with its uploaded picture, and withdraws one by its id", async () => {
+    const { client, request } = recordingClient({ id: "street-food", status: "pending" });
+    const proposal = {
+      name: "Street food",
+      icon: "restaurant",
+      pictureId: "p1",
+      fileUnder: "food",
+    };
+    await expect(proposeSection(client, proposal)).resolves.toMatchObject({ status: "pending" });
+    expect(request).toHaveBeenLastCalledWith("POST", "/lists/sections/proposals", {
+      body: proposal,
+    });
+    await withdrawSectionProposal(client, "street food");
+    expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/sections/proposals/street%20food");
+  });
+
+  it("creates and edits a section as the owner, and asks whether a name is free", async () => {
+    const { client, request } = recordingClient({ free: true });
+    await createSection(client, { name: "Street food", icon: "restaurant", names: { uk: "Їжа" } });
+    expect(request).toHaveBeenLastCalledWith("POST", "/lists/sections", {
+      body: { name: "Street food", icon: "restaurant", names: { uk: "Їжа" } },
+    });
+    await editSection(client, "street-food", { icon: "pets", hidden: false });
+    expect(request).toHaveBeenLastCalledWith("PATCH", "/lists/sections/street-food", {
+      body: { icon: "pets", hidden: false },
+    });
+    await expect(checkSectionName(client, "Food")).resolves.toEqual({ free: true });
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/sections/name-check", {
+      query: { name: "Food" },
+    });
   });
 });
