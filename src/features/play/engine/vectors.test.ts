@@ -12,6 +12,7 @@ import {
   type GameSpec,
   type Outcome,
 } from "./index";
+import { refinePairs } from "./games";
 import vectorsText from "./play-vectors.json?raw";
 
 /*
@@ -38,6 +39,7 @@ interface Vectors {
     };
   }[];
   games: GameCase[];
+  refine: { name: string; count: number; history: Outcome[]; expect: { pairs: number[][] } }[];
 }
 
 interface GameCase {
@@ -87,6 +89,7 @@ describe("the shared vectors", () => {
       "shuffle",
       "standings",
       "games",
+      "refine",
     ]);
   });
 
@@ -118,5 +121,9 @@ describe("the shared vectors", () => {
       tiers: result(specOf(game), history, game.tierCount),
       thin: isThin(standing(game.count, duels(history))),
     }).toEqual(game.expect);
+  });
+
+  it.each(vectors.refine)("refine: $name", ({ count, history, expect: wanted }) => {
+    expect(refinePairs(count, history)).toEqual(wanted.pairs);
   });
 });
