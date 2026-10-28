@@ -19,6 +19,7 @@ import {
   liveItems,
   previewsOf,
   rankedTiers,
+  setAnonymous,
   setCover,
   setPublished,
   setTopic,
@@ -363,6 +364,29 @@ export function BoardSettings({
                 </span>
               )}
             </Row>
+          </li>
+
+          <li className="sheet-row">
+            <Row
+              icon={<Icon name="visibility_off" />}
+              title={
+                <label htmlFor={`${id}-anonymous`} className="sheet-row__label">
+                  {strings.boards.anonymousTitle}
+                </label>
+              }
+              sub={strings.boards.anonymousBody}
+              end={
+                <input
+                  id={`${id}-anonymous`}
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={board.anonymous}
+                  disabled={busy !== "idle"}
+                  onChange={(event) => keep(setAnonymous(latest(), event.target.checked, now()))}
+                />
+              }
+            />
           </li>
 
           {isPublic && published !== null && (

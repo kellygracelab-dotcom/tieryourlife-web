@@ -49,6 +49,8 @@ export function publishRequestOf(board: Board): PublishRequest | null {
     coverImageUrls: board.coverImageUrls,
     // Sent every time: a republish without it takes the list out of its topic.
     topicId: board.topic?.id ?? null,
+    // Sent every time too: a republish without it would put the name back.
+    anonymous: board.anonymous,
     tiers: tiers.map((tier) => ({
       label: tier.label,
       caption: tier.caption,

@@ -591,7 +591,6 @@ const tr: Translation = {
     sections: "Bölümler",
     topics: "Konular",
     anonymous: "Anonim listeler",
-    anonymousSoon: "Yazarsız liste yayınlama bir sonraki arka uç güncellemesiyle gelecek.",
     moderators: "Moderatörler",
     failed: "Yüklenemedi. Tekrar deneyin.",
     actionFailed: "Olmadı. Hiçbir şey değişmedi, tekrar deneyin.",
@@ -678,6 +677,15 @@ const tr: Translation = {
     sectionSaved: "{name} kaydedildi",
     discardChanges: "Değişikliklerden vazgeçilsin mi?",
     settled: "Bunu başka biri zaten karara bağladı.",
+    anonymousBody: "Yazarsız yayınlandı. Toplulukta herkes görür.",
+    publishAList: "Liste yayınla",
+    pickBoard: "Hangi listen?",
+    anonymousLine: "Yazar “Anonim” görünür. Senden geldiğini yalnızca yöneticiler görür.",
+    anonymousNone: "Henüz anonim yayınlanan bir şey yok.",
+    publishedBy: "{name} tarafından",
+    open: "Aç",
+    more: "Daha fazla göster",
+    noBoards: "Henüz listen yok. Önce Listelerin bölümünde bir tane oluştur.",
   },
   sections: {
     newThisWeek: { one: "bu hafta {n} yeni", other: "bu hafta {n} yeni" },
@@ -918,6 +926,9 @@ const tr: Translation = {
     modeRanking: "Sıralama",
     takeDownTitle: "“{title}” kaldırılsın mı?",
     takeDownBody: "Topluluktan çıkar ve bağlantısı artık çalışmaz. Panon Listelerin'de kalır.",
+    anonymousTitle: "Anonim yayınla",
+    anonymousBody:
+      "Listede ad ve fotoğraf olmaz. Yalnızca sen değiştirebilir veya kaldırabilirsin.",
   },
   sync: {
     offBusy: "Siliniyor…",

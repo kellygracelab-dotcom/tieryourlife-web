@@ -129,13 +129,32 @@ describe("BoardSettings: the sheet", () => {
   it("lists New tier, Public, Category, Topic, Cover and Display, in the spec's order", () => {
     show(filmBoard(), signedIn);
     const titles = [...sheet().querySelectorAll(".sheet-row__title")].map((row) => row.textContent);
-    expect(titles).toEqual(["New tier", "Public", "Category", "Topic", "Cover", "Display"]);
+    expect(titles).toEqual([
+      "New tier",
+      "Public",
+      "Publish anonymously",
+      "Category",
+      "Topic",
+      "Cover",
+      "Display",
+    ]);
     expect(within(sheet()).getByText("5 tiers")).toBeInTheDocument();
     expect(
       within(sheet()).getByText("Anyone with the link can rank it. It shows in Community."),
     ).toBeInTheDocument();
     // Nothing to take down while the list is private.
     expect(screen.queryByRole("button", { name: "Take it down" })).toBeNull();
+  });
+
+  it("publishes anonymously on request: the switch marks the board, and the next publish says so", async () => {
+    const publish = vi.fn(async () => ({ id: "L1" }));
+    show(filmBoard(), signedIn, { publish });
+    const anonymous = screen.getByRole("switch", { name: "Publish anonymously" });
+    expect(anonymous).not.toBeChecked();
+    await userEvent.click(anonymous);
+    expect(held.anonymous).toBe(true);
+    await userEvent.click(publicSwitch());
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ anonymous: true }));
   });
 
   it("goes with Done and with Escape", async () => {

@@ -70,6 +70,8 @@ export interface Board {
   publishedEditedAt: number | null;
   /** This device's, as on the phone: the topic the list goes out under, sent with every publish. Never kept in the account. */
   topic: BoardTopic | null;
+  /** Published with no name or face; this device's, like the topic, and sent with every publish. */
+  anonymous: boolean;
 }
 
 /** What a card is made from: enough for a tile. */
@@ -144,6 +146,7 @@ export function newBoard(uid: string, title: string, now: number, nextUid: NextU
     arrivedFrom: null,
     publishedEditedAt: null,
     topic: null,
+    anonymous: false,
   };
 }
 
@@ -226,6 +229,10 @@ export function rename(board: Board, title: string, now: number): Board {
 /** A topic lives inside one section: another section leaves the list without one. */
 export const setCategory = (board: Board, category: Category | null, now: number): Board =>
   category === board.category ? board : touched({ ...board, category, topic: null }, now);
+
+/** Anonymity goes out with the next publish too: changing it leaves the published copy behind. */
+export const setAnonymous = (board: Board, anonymous: boolean, now: number): Board =>
+  anonymous === board.anonymous ? board : touched({ ...board, anonymous }, now);
 
 /** The topic goes out with the next publish, so a new one leaves the published copy behind. */
 export const setTopic = (board: Board, topic: BoardTopic | null, now: number): Board =>

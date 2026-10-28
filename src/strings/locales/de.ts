@@ -608,7 +608,6 @@ const de: Translation = {
     sections: "Rubriken",
     topics: "Themen",
     anonymous: "Anonyme Listen",
-    anonymousSoon: "Listen ohne Autor zu veröffentlichen kommt mit dem nächsten Backend-Update.",
     moderators: "Moderatoren",
     failed: "Konnte nicht geladen werden. Versuch es noch einmal.",
     actionFailed: "Das hat nicht geklappt. Nichts wurde geändert – versuch es noch einmal.",
@@ -696,6 +695,15 @@ const de: Translation = {
     sectionSaved: "{name} gespeichert",
     discardChanges: "Änderungen verwerfen?",
     settled: "Darüber hat schon jemand anderes entschieden.",
+    anonymousBody: "Ohne Autor veröffentlicht. Alle sehen sie in der Community.",
+    publishAList: "Liste veröffentlichen",
+    pickBoard: "Welche deiner Listen?",
+    anonymousLine: "Als Autor steht „Anonym“. Nur Admins sehen, dass sie von dir ist.",
+    anonymousNone: "Noch nichts anonym veröffentlicht.",
+    publishedBy: "von {name}",
+    open: "Öffnen",
+    more: "Mehr anzeigen",
+    noBoards: "Du hast noch keine Listen. Leg zuerst eine unter „Deine Listen“ an.",
   },
   sections: {
     newThisWeek: { one: "{n} neu diese Woche", other: "{n} neu diese Woche" },
@@ -941,6 +949,8 @@ const de: Translation = {
     takeDownTitle: "„{title}“ entfernen?",
     takeDownBody:
       "Sie verschwindet aus der Community und ihr Link funktioniert nicht mehr. Dein Board bleibt in „Deine Listen“.",
+    anonymousTitle: "Anonym veröffentlichen",
+    anonymousBody: "Kein Name und kein Bild an der Liste. Nur du kannst sie ändern oder entfernen.",
   },
   sync: {
     offBusy: "Wird gelöscht…",

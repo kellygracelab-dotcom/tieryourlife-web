@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router";
 import type { AdminRole } from "../api/admin";
+import { AnonymousPane } from "../features/admin/AnonymousPane";
 import { ModeratorsPane } from "../features/admin/ModeratorsPane";
 import { ProposalsPane } from "../features/admin/ProposalsPane";
 import { SectionsPane } from "../features/admin/SectionsPane";
@@ -60,12 +61,7 @@ function PaneBody({ pane, adminRole: role }: { pane: Pane; adminRole: AdminRole 
     case "moderators":
       return <ModeratorsPane />;
     case "anonymous":
-      return (
-        <section className="admin-pane">
-          <h2 className="admin-pane__title">{strings.admin.anonymous}</h2>
-          <p className="admin-pane__note">{strings.admin.anonymousSoon}</p>
-        </section>
-      );
+      return <AnonymousPane />;
   }
 }
 

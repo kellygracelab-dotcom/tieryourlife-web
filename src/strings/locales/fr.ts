@@ -608,8 +608,6 @@ const fr: Translation = {
     sections: "Rubriques",
     topics: "Thèmes",
     anonymous: "Listes anonymes",
-    anonymousSoon:
-      "La publication de listes sans auteur arrive avec la prochaine mise à jour du serveur.",
     moderators: "Modérateurs",
     failed: "Impossible de charger. Réessayez.",
     actionFailed: "Ça n’a pas abouti. Rien n’a changé — réessayez.",
@@ -698,6 +696,16 @@ const fr: Translation = {
     sectionSaved: "Rubrique {name} enregistrée",
     discardChanges: "Abandonner vos modifications ?",
     settled: "Quelqu’un d’autre a déjà tranché.",
+    anonymousBody: "Publiées sans auteur. Tout le monde les voit dans la communauté.",
+    publishAList: "Publier une liste",
+    pickBoard: "Laquelle de vos listes ?",
+    anonymousLine:
+      "L’auteur apparaît comme « Anonyme ». Seuls les admins voient qu’elle vient de vous.",
+    anonymousNone: "Rien n’a encore été publié anonymement.",
+    publishedBy: "par {name}",
+    open: "Ouvrir",
+    more: "Afficher plus",
+    noBoards: "Vous n’avez pas encore de liste. Créez-en une dans Vos listes.",
   },
   sections: {
     newThisWeek: {
@@ -960,6 +968,8 @@ const fr: Translation = {
     takeDownTitle: "Retirer « {title} » ?",
     takeDownBody:
       "Elle quitte Communauté et son lien ne fonctionne plus. Votre tableau reste dans Vos listes.",
+    anonymousTitle: "Publier anonymement",
+    anonymousBody: "Ni nom ni photo sur la liste. Vous seul pouvez la modifier ou la retirer.",
   },
   sync: {
     offBusy: "Suppression…",

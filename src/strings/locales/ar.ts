@@ -696,7 +696,6 @@ const ar: Translation = {
     sections: "الأقسام",
     topics: "المواضيع",
     anonymous: "القوائم المجهولة",
-    anonymousSoon: "يصل نشر القوائم دون مؤلف مع التحديث القادم للخادم.",
     moderators: "المشرفون",
     failed: "تعذّر التحميل. أعد المحاولة.",
     actionFailed: "لم يكتمل ذلك. لم يتغيّر شيء، أعد المحاولة.",
@@ -811,6 +810,15 @@ const ar: Translation = {
     sectionSaved: "حُفظ «{name}»",
     discardChanges: "تجاهل تغييراتك؟",
     settled: "سبق أن قرّر شخص آخر بشأن هذا.",
+    anonymousBody: "منشورة دون مؤلف. يراها الجميع في المجتمع.",
+    publishAList: "نشر قائمة",
+    pickBoard: "أي قائمة من قوائمك؟",
+    anonymousLine: "يظهر المؤلف «مجهول». المشرفون وحدهم يرون أنها منك.",
+    anonymousNone: "لم يُنشر شيء دون اسم بعد.",
+    publishedBy: "بواسطة {name}",
+    open: "فتح",
+    more: "عرض المزيد",
+    noBoards: "ليست لديك قوائم بعد. أنشئ قائمة في «قوائمك» أولًا.",
   },
   sections: {
     newThisWeek: {
@@ -1151,6 +1159,8 @@ const ar: Translation = {
     modeRanking: "ترتيب",
     takeDownTitle: "إزالة «{title}»؟",
     takeDownBody: "ستخرج من المجتمع ويتوقف رابطها عن العمل. تبقى لوحتك في «قوائمك».",
+    anonymousTitle: "النشر دون اسم",
+    anonymousBody: "بلا اسم أو صورة على القائمة. أنت وحدك تستطيع تغييرها أو إزالتها.",
   },
   sync: {
     offBusy: "جارٍ الحذف…",

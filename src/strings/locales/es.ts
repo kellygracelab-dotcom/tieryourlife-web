@@ -595,7 +595,6 @@ const es: Translation = {
     sections: "Secciones",
     topics: "Temas",
     anonymous: "Listas anónimas",
-    anonymousSoon: "Publicar listas sin autor llega con la próxima actualización del backend.",
     moderators: "Moderadores",
     failed: "No se pudo cargar. Inténtalo de nuevo.",
     actionFailed: "No se completó. No cambió nada; inténtalo de nuevo.",
@@ -684,6 +683,15 @@ const es: Translation = {
     sectionSaved: "Se guardó {name}",
     discardChanges: "¿Descartar los cambios?",
     settled: "Otra persona ya decidió sobre esta.",
+    anonymousBody: "Publicadas sin autor. Todos las ven en la comunidad.",
+    publishAList: "Publicar una lista",
+    pickBoard: "¿Cuál de tus listas?",
+    anonymousLine: "El autor aparece como «Anónimo». Solo los administradores ven que es tuya.",
+    anonymousNone: "Aún no hay nada publicado de forma anónima.",
+    publishedBy: "de {name}",
+    open: "Abrir",
+    more: "Mostrar más",
+    noBoards: "Aún no tienes listas. Crea una primero en Tus listas.",
   },
   sections: {
     newThisWeek: {
@@ -946,6 +954,8 @@ const es: Translation = {
     takeDownTitle: "¿Retirar «{title}»?",
     takeDownBody:
       "Sale de Comunidad y su enlace deja de funcionar. Tu tablero sigue en Tus listas.",
+    anonymousTitle: "Publicar de forma anónima",
+    anonymousBody: "Sin nombre ni foto en la lista. Solo tú puedes cambiarla o retirarla.",
   },
   sync: {
     offBusy: "Eliminando…",

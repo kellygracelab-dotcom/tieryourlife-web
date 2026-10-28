@@ -592,7 +592,6 @@ const ja: Translation = {
     sections: "セクション",
     topics: "トピック",
     anonymous: "匿名リスト",
-    anonymousSoon: "作者なしでリストを公開する機能は、次のバックエンド更新で追加されます。",
     moderators: "モデレーター",
     failed: "読み込めませんでした。もう一度お試しください。",
     actionFailed: "完了できませんでした。何も変わっていません。もう一度お試しください。",
@@ -673,6 +672,15 @@ const ja: Translation = {
     sectionSaved: "{name}を保存しました",
     discardChanges: "変更を破棄しますか？",
     settled: "すでに他の人が判断しました。",
+    anonymousBody: "作者なしで公開されたリスト。コミュニティで誰でも見られます。",
+    publishAList: "リストを公開",
+    pickBoard: "どのリストにしますか？",
+    anonymousLine: "作者は「匿名」と表示されます。あなたのリストだと分かるのは管理者だけです。",
+    anonymousNone: "匿名で公開したリストはまだありません。",
+    publishedBy: "{name}さん",
+    open: "開く",
+    more: "さらに表示",
+    noBoards: "まだリストがありません。先に「あなたのリスト」で作ってください。",
   },
   sections: {
     newThisWeek: { other: "今週の新着{n}件" },
@@ -913,6 +921,8 @@ const ja: Translation = {
     takeDownTitle: "「{title}」を取り下げますか？",
     takeDownBody:
       "コミュニティから外れ、リンクは使えなくなります。ボードは「あなたのリスト」に残ります。",
+    anonymousTitle: "匿名で公開",
+    anonymousBody: "リストに名前と写真を出しません。変更や取り下げはあなただけができます。",
   },
   sync: {
     offBusy: "削除中…",

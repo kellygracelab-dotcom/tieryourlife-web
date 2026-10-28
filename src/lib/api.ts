@@ -2,6 +2,7 @@ import * as account from "../api/account";
 import * as admin from "../api/admin";
 import type {
   AdminSections,
+  AnonymousList,
   Candidate,
   Moderator,
   PendingTopic,
@@ -245,3 +246,8 @@ export const findCandidates = (q: string): Promise<{ people: Candidate[] }> =>
 
 export const loadAdminCounts = (): Promise<{ reports: number; proposals: number }> =>
   admin.loadAdminCounts(api);
+
+export const loadAnonymousLists = (
+  after: string | null = null,
+): Promise<{ lists: AnonymousList[]; nextCursor: string | null }> =>
+  admin.loadAnonymousLists(api, after);

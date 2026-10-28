@@ -78,6 +78,7 @@ export function apiStubs() {
     removeModerator: pending(),
     findCandidates: pending(),
     loadAdminCounts: pending(),
+    loadAnonymousLists: pending(),
     noteTake: vi.fn(async () => undefined),
   };
 }

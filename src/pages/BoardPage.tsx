@@ -189,7 +189,8 @@ export function BoardPage({
   // The name is asked for once, on arrival at a board not yet kept: a reload
   // keeps the query, not the question.
   const [editingTitle, setEditingTitle] = useState(madeAt > 0 && stored === null);
-  const [panel, setPanel] = useState<Panel>("none");
+  // ?settings=1 opens the sheet at once: the admin's anonymous publish leads here.
+  const [panel, setPanel] = useState<Panel>(params.get("settings") === "1" ? "settings" : "none");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const forget = useCallback(() => setNotice(null), []);
   // The tier opened from the board, by its uid.

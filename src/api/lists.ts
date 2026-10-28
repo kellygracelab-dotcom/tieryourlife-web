@@ -63,6 +63,8 @@ export interface PublishRequest {
   coverImageUrls?: string[];
   /** An approved topic of the list's section, which files the list under it; null for none. */
   topicId?: string | null;
+  /** No name or face on the list anywhere public; the owner still has it. */
+  anonymous?: boolean;
   tiers: PublishedTier[];
   items: {
     title: string;

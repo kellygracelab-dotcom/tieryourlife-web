@@ -1,5 +1,6 @@
 import type { ApiClient } from "./client";
 import type { SectionStats, ThemePair, Topic } from "./sections";
+import type { ListSummary } from "./types";
 
 /**
  * What the admin page asks of the backend. Every call is checked there: the
@@ -213,4 +214,21 @@ export function loadAdminCounts(
   client: ApiClient,
 ): Promise<{ reports: number; proposals: number }> {
   return client.request<{ reports: number; proposals: number }>("GET", "/lists/admin/counts");
+}
+
+/** A list published with no author, as the owner sees it: who it came from, kept from everybody else. */
+export interface AnonymousList extends ListSummary {
+  publishedBy: { uid: string; name: string };
+}
+
+/** The anonymous lists, newest first, twenty a page; 409 CURSOR_GONE when the cursor's list went. */
+export function loadAnonymousLists(
+  client: ApiClient,
+  after: string | null = null,
+): Promise<{ lists: AnonymousList[]; nextCursor: string | null }> {
+  return client.request<{ lists: AnonymousList[]; nextCursor: string | null }>(
+    "GET",
+    "/lists/anonymous",
+    { query: { after: after ?? undefined } },
+  );
 }

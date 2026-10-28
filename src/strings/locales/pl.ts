@@ -635,7 +635,6 @@ const pl: Translation = {
     sections: "Działy",
     topics: "Tematy",
     anonymous: "Listy anonimowe",
-    anonymousSoon: "Publikowanie list bez autora pojawi się w następnej aktualizacji backendu.",
     moderators: "Moderatorzy",
     failed: "Nie udało się wczytać. Spróbuj ponownie.",
     actionFailed: "Nie udało się. Nic się nie zmieniło — spróbuj ponownie.",
@@ -731,6 +730,15 @@ const pl: Translation = {
     sectionSaved: "Zapisano {name}",
     discardChanges: "Odrzucić zmiany?",
     settled: "Ktoś inny już o tym zdecydował.",
+    anonymousBody: "Opublikowane bez autora. Wszyscy widzą je w społeczności.",
+    publishAList: "Opublikuj listę",
+    pickBoard: "Którą z twoich list?",
+    anonymousLine: "Autorem będzie „Anonim”. Tylko administratorzy widzą, że lista jest twoja.",
+    anonymousNone: "Nic jeszcze nie opublikowano anonimowo.",
+    publishedBy: "autor: {name}",
+    open: "Otwórz",
+    more: "Pokaż więcej",
+    noBoards: "Nie masz jeszcze list. Najpierw utwórz listę w „Twoich listach”.",
   },
   sections: {
     newThisWeek: {
@@ -1016,6 +1024,8 @@ const pl: Translation = {
     takeDownTitle: "Usunąć „{title}”?",
     takeDownBody:
       "Zniknie ze Społeczności, a jej link przestanie działać. Twoja tablica zostanie w „Twoich listach”.",
+    anonymousTitle: "Publikuj anonimowo",
+    anonymousBody: "Bez nazwy i zdjęcia na liście. Tylko ty możesz ją zmienić lub usunąć.",
   },
   sync: {
     offBusy: "Usuwanie…",

@@ -59,6 +59,7 @@ const board = (over: Partial<Board> = {}): Board => ({
   arrivedFrom: null,
   publishedEditedAt: null,
   topic: null,
+  anonymous: false,
   ...over,
 });
 

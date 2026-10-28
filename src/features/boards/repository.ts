@@ -128,6 +128,7 @@ export function parseBoard(raw: unknown): Board | null {
     arrivedFrom: text(source.arrivedFrom),
     publishedEditedAt: time(source.publishedEditedAt),
     topic: topicOf(source.topic),
+    anonymous: source.anonymous === true,
   };
 }
 
