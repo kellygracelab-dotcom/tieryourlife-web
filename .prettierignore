@@ -10,3 +10,5 @@ functions/lib-test
 docs
 public/privacy.html
 public/delete-account.html
+# A byte-for-byte copy of the app's docs/play-vectors.json
+src/features/play/engine/play-vectors.json
