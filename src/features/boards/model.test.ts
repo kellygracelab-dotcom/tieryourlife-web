@@ -65,6 +65,8 @@ describe("a new board", () => {
     const pool = poolTier(b);
     expect(pool?.isPool).toBe(true);
     expect(pool?.position).toBe(5);
+    // The phone's name: the account refuses a tier with none.
+    expect(pool?.label).toBe("Unranked");
     expect(b.items).toEqual([]);
     expect(b.editedAt).toBe(1000);
     expect(b.deletedAt).toBeNull();

@@ -88,6 +88,8 @@ describe("parseBoard", () => {
     });
     // A card naming a tier that is not there is dropped, not guessed at.
     expect(board?.items.map((item) => item.uid)).toEqual(["i1"]);
+    // A pool this site kept with no name gets the phone's, or the account refuses the board.
+    expect(board?.tiers.map((tier) => tier.label)).toEqual(["S", "Unranked"]);
     expect(board?.items[0]?.pictureId).toBe("pic");
   });
 
@@ -97,7 +99,7 @@ describe("parseBoard", () => {
       title: "x",
       tiers: [{ uid: "t1", label: "S", colorLight: "#000000", colorDark: "#ffffff" }],
     });
-    expect(poolTier(board!)?.isPool).toBe(true);
+    expect(poolTier(board!)).toMatchObject({ isPool: true, label: "Unranked" });
     expect(board?.tiers[0]?.position).toBe(0);
     expect(board?.category).toBeNull();
     expect(parseBoard(null)).toBeNull();
