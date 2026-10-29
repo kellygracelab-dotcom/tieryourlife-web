@@ -90,6 +90,41 @@ export function loadListRankings(
   );
 }
 
+/**
+ * Rows of card positions as a reader's placing: for each card, in the list's
+ * order, the index of the row it is in, or null when it is in none.
+ */
+export function arrangementOf(
+  rows: readonly (readonly number[])[],
+  itemCount: number,
+): (number | null)[] {
+  const arrangement: (number | null)[] = Array.from({ length: itemCount }, () => null);
+  rows.forEach((row, tier) =>
+    row.forEach((item) => {
+      if (item >= 0 && item < itemCount) arrangement[item] = tier;
+    }),
+  );
+  return arrangement;
+}
+
+/**
+ * Puts the caller's placing among the list's rankings, as the app does, or
+ * replaces the one there. Not for a guest, and not on one's own list.
+ */
+export function keepListRanking(
+  client: ApiClient,
+  listId: string,
+  placing: { arrangement: (number | null)[]; tierLabels: string[] },
+): Promise<ReaderRanking> {
+  return client.request<ReaderRanking>(
+    "PUT",
+    `/lists/${encodeURIComponent(listId)}/rankings/mine`,
+    {
+      body: placing,
+    },
+  );
+}
+
 /** Takes the caller's own placing of a list down; the backend answers 204 either way. */
 export function withdrawListRanking(client: ApiClient, listId: string): Promise<void> {
   return client.request<void>("DELETE", `/lists/${encodeURIComponent(listId)}/rankings/mine`);

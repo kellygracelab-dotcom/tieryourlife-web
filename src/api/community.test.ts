@@ -9,6 +9,8 @@ import {
   report,
   unfollowAuthor,
   withdrawListRanking,
+  arrangementOf,
+  keepListRanking,
 } from "./community";
 
 function recordingClient(result: unknown) {
@@ -59,6 +61,17 @@ describe("community", () => {
     });
     await withdrawListRanking(client, "abc");
     expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/abc/rankings/mine");
+  });
+
+  it("puts one's own placing among a list's rankings in the app's shape", async () => {
+    // Rows of positions become, card by card in the list's order, the row's index.
+    expect(arrangementOf([[2, 0], [], [1]], 4)).toEqual([0, 2, 0, null]);
+    expect(arrangementOf([[7]], 2)).toEqual([null, null]);
+    const { client, request } = recordingClient({ uid: "u1" });
+    await keepListRanking(client, "a b", { arrangement: [0, null], tierLabels: ["S", "A"] });
+    expect(request).toHaveBeenCalledWith("PUT", "/lists/a%20b/rankings/mine", {
+      body: { arrangement: [0, null], tierLabels: ["S", "A"] },
+    });
   });
 
   it("asks for authors worth following", async () => {

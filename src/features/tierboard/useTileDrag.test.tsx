@@ -5,7 +5,11 @@ import { TOUCH_HOLD_MS } from "./drag";
 import { MemoryRouter } from "react-router";
 import { RankingBoard } from "./RankingBoard";
 
-vi.mock("../../lib/api", () => ({ keepRanking: vi.fn(), noteTake: vi.fn() }));
+vi.mock("../../lib/api", () => ({
+  keepRanking: vi.fn(),
+  noteTake: vi.fn(),
+  keepListRanking: vi.fn(async () => undefined),
+}));
 import type { HitTest } from "./useTileDrag";
 
 const list: PublishedList = {
