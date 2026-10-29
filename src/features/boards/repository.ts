@@ -3,6 +3,7 @@ import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
   DISPLAY_MODES,
   POOL_COLOURS,
+  POOL_LABEL,
   type Board,
   type BoardItem,
   type BoardTier,
@@ -30,14 +31,17 @@ function tierOf(raw: unknown, position: number): BoardTier | null {
   const tier = raw as Record<string, unknown>;
   const uid = text(tier.uid);
   if (uid === null || uid.length === 0) return null;
+  const isPool = tier.isPool === true;
+  const label = text(tier.label) ?? "";
   return {
     uid,
     position: typeof tier.position === "number" ? tier.position : position,
-    label: text(tier.label) ?? "",
+    // This site once kept its pools nameless, and the account refused them.
+    label: isPool && label.trim().length === 0 ? POOL_LABEL : label,
     caption: text(tier.caption),
     colorLight: hex(tier.colorLight, POOL_COLOURS.colorLight),
     colorDark: hex(tier.colorDark, POOL_COLOURS.colorDark),
-    isPool: tier.isPool === true,
+    isPool,
   };
 }
 
@@ -150,7 +154,7 @@ export function parseBoard(raw: unknown): Board | null {
     tiers.push({
       uid: `${uid}:pool`,
       position: tiers.length,
-      label: "",
+      label: POOL_LABEL,
       caption: null,
       ...POOL_COLOURS,
       isPool: true,

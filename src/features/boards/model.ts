@@ -106,6 +106,13 @@ export const DEFAULT_TIER_DRAFTS: readonly TierDraft[] = [
 
 export const POOL_COLOURS = { colorLight: "#DAD7E0", colorDark: "#46464F" } as const;
 
+/**
+ * The name the phone keeps on its pool. The site never shows it, but the
+ * account refuses a tier with no name, so a board with a nameless pool
+ * would never leave this device.
+ */
+export const POOL_LABEL = "Unranked";
+
 export type NextUid = () => string;
 
 const clip = (text: string, max: number): string => text.replace(/\s+/g, " ").slice(0, max);
@@ -127,7 +134,7 @@ export function newBoard(uid: string, title: string, now: number, nextUid: NextU
   tiers.push({
     uid: nextUid(),
     position: tiers.length,
-    label: "",
+    label: POOL_LABEL,
     caption: null,
     ...POOL_COLOURS,
     isPool: true,

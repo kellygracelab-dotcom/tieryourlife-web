@@ -177,7 +177,7 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
               {
                 uid: "tp",
                 position: 1,
-                label: "",
+                label: "Unranked",
                 caption: null,
                 colorLight: "#000000",
                 colorDark: "#FFFFFF",
