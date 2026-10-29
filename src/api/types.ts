@@ -28,8 +28,7 @@ export const isSectionId = (value: string): boolean => /^[a-z0-9][a-z0-9_-]{1,39
 export const isOwnList = (
   list: Pick<ListSummary, "mine" | "authorUid">,
   uid: string | null,
-): boolean =>
-  list.mine === true || (uid !== null && list.authorUid === uid);
+): boolean => list.mine === true || (uid !== null && list.authorUid === uid);
 
 export type FeedSort = "recent" | "popular";
 
