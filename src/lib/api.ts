@@ -1,4 +1,17 @@
 import * as account from "../api/account";
+import * as admin from "../api/admin";
+import type {
+  AdminSections,
+  AnonymousList,
+  Candidate,
+  Moderator,
+  PendingTopic,
+  ProposedSection,
+  NameCheck,
+  SectionChanges,
+  SectionDraft,
+  TopicDecision,
+} from "../api/admin";
 import * as boards from "../api/boards";
 import type { KeepBoardRequest, KeptBoard, KeptBoardIndex } from "../api/boards";
 import type { AdoptedGuest } from "../api/account";
@@ -13,14 +26,14 @@ import type {
   SuggestedAuthor,
 } from "../api/community";
 import * as lists from "../api/lists";
-import type { PublishRequest } from "../api/lists";
+import type { MyList, PublishRequest } from "../api/lists";
 import * as moderation from "../api/moderation";
 import type { BanLength, QueuedList } from "../api/moderation";
 import * as rank from "../api/rank";
 import * as sections from "../api/sections";
-import type { SectionStats, Topic } from "../api/sections";
+import type { SectionProposal, SectionStats, Topic } from "../api/sections";
 import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
-import type { CatalogueItem, FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
+import type { CatalogueItem, FeedPage, FeedQuery, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
@@ -68,7 +81,7 @@ export const loadMyRankings = (): Promise<MyRankings> => rank.loadMyRankings(api
 
 export const removeRanking = (code: string): Promise<void> => rank.removeRanking(api, code);
 
-export const loadMyLists = (): Promise<{ lists: ListSummary[] }> => lists.loadMyLists(api);
+export const loadMyLists = (): Promise<{ lists: MyList[] }> => lists.loadMyLists(api);
 
 // The catalogue answers in the language the page is in.
 export const findInCatalogue = (query: string): Promise<CatalogueItem[]> =>
@@ -117,11 +130,19 @@ export const suggestedAuthors = (): Promise<{ authors: SuggestedAuthor[] }> =>
 
 export const loadSections = (): Promise<{ sections: SectionStats[] }> => sections.loadSections(api);
 
+export const loadSection = (id: string): Promise<SectionStats> => sections.loadSection(api, id);
+
 export const followSection = (id: string): Promise<{ following: true }> =>
   sections.followSection(api, id);
 
 export const unfollowSection = (id: string): Promise<{ following: false }> =>
   sections.unfollowSection(api, id);
+
+export const proposeSection = (proposal: SectionProposal): Promise<SectionStats> =>
+  sections.proposeSection(api, proposal);
+
+export const withdrawSectionProposal = (id: string): Promise<void> =>
+  sections.withdrawSectionProposal(api, id);
 
 export const loadTopics = (section: string, limit?: number): Promise<{ topics: Topic[] }> =>
   sections.loadTopics(api, section, limit);
@@ -160,3 +181,75 @@ export const noteTake = (listId: string): Promise<void> =>
     () => undefined,
     () => undefined,
   );
+
+export const loadAdminSections = (): Promise<AdminSections> => admin.loadAdminSections(api);
+
+export const saveSectionOrder = (
+  ids: string[],
+  hidden: string[],
+  version: number | undefined,
+): Promise<{ version: number }> => admin.saveSectionOrder(api, ids, hidden, version);
+
+export const createSection = (draft: SectionDraft): Promise<SectionStats> =>
+  admin.createSection(api, draft);
+
+export const editSection = (id: string, draft: SectionChanges): Promise<SectionStats> =>
+  admin.editSection(api, id, draft);
+
+export const deleteSection = (id: string): Promise<void> => admin.deleteSection(api, id);
+
+export const loadSectionQueue = (): Promise<{ sections: ProposedSection[] }> =>
+  admin.loadSectionQueue(api);
+
+export const approveSection = (
+  id: string,
+  changes?: Partial<SectionDraft>,
+): Promise<SectionStats> => admin.approveSection(api, id, changes);
+
+export const declineSection = (id: string, note: string | null): Promise<void> =>
+  admin.declineSection(api, id, note);
+
+export const mergeSection = (id: string, into: string): Promise<void> =>
+  admin.mergeSection(api, id, into);
+
+export const checkSectionName = (name: string): Promise<NameCheck> =>
+  admin.checkSectionName(api, name);
+
+export const loadTopicQueue = (): Promise<{ topics: PendingTopic[] }> => admin.loadTopicQueue(api);
+
+export const decideTopic = (id: string, decision: TopicDecision): Promise<void> =>
+  admin.decideTopic(api, id, decision);
+
+export const createTopic = (draft: {
+  name: string;
+  section: string;
+  names?: Record<string, string>;
+}): Promise<Topic> => admin.createTopic(api, draft);
+
+export const editTopic = (
+  id: string,
+  draft: { name?: string; names?: Record<string, string> },
+): Promise<Topic> => admin.editTopic(api, id, draft);
+
+export const deleteTopic = (id: string): Promise<void> => admin.deleteTopic(api, id);
+
+export const loadModerators = (): Promise<{ moderators: Moderator[] }> => admin.loadModerators(api);
+
+export const appointModerator = (who: {
+  uid: string;
+  name: string;
+  photoUrl: string | null;
+}): Promise<void> => admin.appointModerator(api, who);
+
+export const removeModerator = (uid: string): Promise<void> => admin.removeModerator(api, uid);
+
+export const findCandidates = (q: string): Promise<{ people: Candidate[] }> =>
+  admin.findCandidates(api, q);
+
+export const loadAdminCounts = (): Promise<{ reports: number; proposals: number }> =>
+  admin.loadAdminCounts(api);
+
+export const loadAnonymousLists = (
+  after: string | null = null,
+): Promise<{ lists: AnonymousList[]; nextCursor: string | null }> =>
+  admin.loadAnonymousLists(api, after);

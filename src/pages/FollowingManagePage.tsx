@@ -92,6 +92,7 @@ function Group({ title, count, children }: { title: string; count: number; child
   );
 }
 
+/** A name's first letter; somebody known only by anonymous lists has none, and is drawn as a person. */
 const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
 /**
@@ -263,7 +264,11 @@ export function FollowingManagePage({
                         className="manage-row__face manage-row__face--initial"
                         aria-hidden="true"
                       >
-                        {initialOf(person.name)}
+                        {person.name.trim() === "" ? (
+                          <Icon name="person" />
+                        ) : (
+                          initialOf(person.name)
+                        )}
                       </span>
                     )
                   }

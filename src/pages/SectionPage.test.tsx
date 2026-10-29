@@ -1,7 +1,8 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiFailure } from "../api/errors";
 import type { SectionStats, Topic } from "../api/sections";
 import type { FeedPage, FeedQuery } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
@@ -60,16 +61,16 @@ const topics: TopicDeps = {
   unfollow: vi.fn(async () => ({ following: false })),
 };
 
+const loadOne = vi.fn<(id: string) => Promise<SectionStats>>();
+
 function open(path: string, account: Session["account"] = member) {
   const store = createSectionsStore({ ...sectionsDeps, now: () => 0 });
+  const page = <SectionPage load={load} store={store} topics={topics} loadOne={loadOne} />;
   const router = createMemoryRouter(
     [
       { path: "/s", element: <SectionsPage store={store} /> },
-      { path: "/s/:id", element: <SectionPage load={load} store={store} topics={topics} /> },
-      {
-        path: "/s/:id/t/:topic",
-        element: <SectionPage load={load} store={store} topics={topics} />,
-      },
+      { path: "/s/:id", element: page },
+      { path: "/s/:id/t/:topic", element: page },
       { path: "/", element: <h1>Home</h1> },
     ],
     { initialEntries: [path] },
@@ -104,6 +105,8 @@ beforeEach(() => {
   sectionsDeps.follow.mockResolvedValue({ following: true });
   sectionsDeps.unfollow.mockReset();
   sectionsDeps.unfollow.mockResolvedValue({ following: false });
+  loadOne.mockReset();
+  loadOne.mockRejectedValue(new ApiFailure({ kind: "notFound" }));
   useHiddenStoreForTests(memoryStore());
 });
 
@@ -168,6 +171,48 @@ describe("SectionPage", () => {
   it("says there is no such section once the backend has answered", async () => {
     open("/s/nowhere");
     expect(await screen.findByText("There is nothing at this address.")).toBeInTheDocument();
+    expect(loadOne).toHaveBeenCalledExactlyOnceWith("nowhere");
+  });
+
+  it("lists a section of somebody's own by its id, as it lists one of the nine", async () => {
+    sectionsDeps.load.mockResolvedValue({
+      sections: [stats("street-food", { name: "Street food" }), stats("other")],
+    });
+    open("/s/street-food");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Street food");
+    await waitFor(() =>
+      expect(load).toHaveBeenCalledWith({ category: "street-food", sort: "popular" }),
+    );
+    expect(loadOne).not.toHaveBeenCalled();
+  });
+
+  it("asks once for a section the sections do not hold, and lists only its lists", async () => {
+    loadOne.mockResolvedValue(stats("s-k3j9x2ab", { name: "Ramen", hidden: true, listCount: 4 }));
+    open("/s/s-k3j9x2ab");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Ramen");
+    await waitFor(() =>
+      expect(load).toHaveBeenCalledWith({ category: "s-k3j9x2ab", sort: "popular" }),
+    );
+    expect(loadOne).toHaveBeenCalledExactlyOnceWith("s-k3j9x2ab");
+    // Never the whole feed under the section's name.
+    expect(load).not.toHaveBeenCalledWith({ sort: "popular" });
+  });
+
+  it("goes on to the section one was merged into", async () => {
+    loadOne.mockRejectedValue(new ApiFailure({ kind: "merged", into: "games" }));
+    const router = open("/s/videogames");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Games");
+    expect(router.state.location.pathname).toBe("/s/games");
+    await waitFor(() => expect(load).toHaveBeenCalledWith({ category: "games", sort: "popular" }));
+  });
+
+  it("offers another try when the section could not be asked about", async () => {
+    loadOne.mockRejectedValueOnce(new ApiFailure({ kind: "offline" }));
+    loadOne.mockResolvedValueOnce(stats("s-k3j9x2ab", { name: "Ramen" }));
+    open("/s/s-k3j9x2ab");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No connection");
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Ramen");
   });
 });
 

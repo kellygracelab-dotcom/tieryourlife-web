@@ -12,7 +12,7 @@ import { FollowButton } from "../community/FollowButton";
 import { FollowingStrip } from "../sections/FollowingStrip";
 import { FollowSections } from "../sections/FollowSections";
 import { followedOf, NOTHING_FOLLOWED, reasonFor } from "../sections/following";
-import { OTHER, builtInSection, type Section } from "../sections/model";
+import { OTHER, builtInSection, sectionName, type Section } from "../sections/model";
 import { useSections, type SectionsStore, sectionsStore } from "../sections/useSections";
 import { FeedGrid } from "./FeedGrid";
 import { useFeed, type LoadFeed } from "./useFeed";
@@ -164,8 +164,8 @@ export function FollowingTab({
     return { ...known, sections: followedSections };
   }, [following, sections]);
   const reasonOf = useCallback(
-    (list: ListSummary) => reasonFor(list, sets, (id) => sectionOf(id).name),
-    [sets, sectionOf],
+    (list: ListSummary) => reasonFor(list, sets, (id) => sectionName(id, sections)),
+    [sets, sections],
   );
 
   const toggleSection = (section: Section) => {

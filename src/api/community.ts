@@ -1,6 +1,5 @@
 import type { ApiClient } from "./client";
 import type { Topic } from "./sections";
-import type { Category } from "./types";
 
 /**
  * The proxy's reasons, in the order the app's report sheet shows them. The
@@ -117,7 +116,7 @@ export interface FollowedAuthor {
 
 /** A section this person follows, with how many others do. */
 export interface FollowedSection {
-  id: Category;
+  id: string;
   followerCount: number;
 }
 

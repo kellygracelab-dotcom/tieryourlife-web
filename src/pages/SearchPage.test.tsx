@@ -1,10 +1,12 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { SectionStats } from "../api/sections";
 import type { FeedPage, FeedQuery, ListSummary } from "../api/types";
 import { routes } from "../app/routes";
-import { SEARCH_DEBOUNCE_MS } from "./SearchPage";
+import { createSectionsStore } from "../features/sections/useSections";
+import { SEARCH_DEBOUNCE_MS, SearchPage } from "./SearchPage";
 
 const mocks = vi.hoisted(() => ({ loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>() }));
 vi.mock("../lib/api", async () => ({
@@ -36,6 +38,16 @@ const summary = (id: string, title: string): ListSummary => ({
   tierColors: [],
   updatedAt: 0,
   takeCount: 3,
+});
+
+const stats = (id: string, more: Partial<SectionStats> = {}): SectionStats => ({
+  id,
+  listCount: 0,
+  followerCount: 0,
+  newThisWeek: 0,
+  collage: [],
+  following: false,
+  ...more,
 });
 
 const open = (path: string) => {
@@ -77,6 +89,57 @@ describe("SearchPage", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "All" }));
     expect(router.state.location.search).toBe("?sort=recent");
+  });
+
+  it("takes its section chips from the sections, approved ones in their order and Other last", async () => {
+    const sections: SectionStats[] = [
+      stats("games", { following: true }),
+      stats("street-food", { name: "Street food", rank: 1 }),
+      stats("night-markets", { name: "Night markets", status: "pending", proposerUid: "g1" }),
+      stats("other"),
+      stats("anime"),
+    ];
+    const store = createSectionsStore({
+      load: async () => ({ sections }),
+      follow: vi.fn(),
+      unfollow: vi.fn(),
+      now: () => 0,
+    });
+    const router = createMemoryRouter(
+      [{ path: "/search", element: <SearchPage store={store} /> }],
+      {
+        initialEntries: ["/search?q=zzzz&category=street-food"],
+      },
+    );
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    render(<RouterProvider router={router} />);
+    const chips = within(screen.getByRole("group", { name: "Category" }));
+    await waitFor(() =>
+      expect(chips.getAllByRole("button").map((chip) => chip.textContent)).toEqual([
+        "All",
+        "Games",
+        "Street food",
+        "Anime",
+        "Other",
+      ]),
+    );
+    expect(chips.getByRole("button", { name: "Street food" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(mocks.loadFeed).toHaveBeenCalledWith({
+      q: "zzzz",
+      sort: "popular",
+      category: "street-food",
+    });
+    // Nothing found: the way back is to the section by its name.
+    expect(await screen.findByRole("link", { name: "Street food" })).toHaveAttribute(
+      "href",
+      "/s/street-food",
+    );
+
+    await userEvent.click(chips.getByRole("button", { name: "Games" }));
+    expect(router.state.location.search).toBe("?q=zzzz&category=games");
   });
 
   it("keeps the words when a category is chosen", async () => {

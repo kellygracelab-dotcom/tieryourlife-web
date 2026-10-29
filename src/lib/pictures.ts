@@ -1,5 +1,6 @@
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { getFirebaseAuth, getFirebaseStorage } from "./firebase";
+import type { PixelRect, Size } from "./framing";
 
 /**
  * A card's picture is a poster: a tile shows it at 64 px, the share image at
@@ -80,6 +81,75 @@ export const cutFaceOnCanvas: CutFace = (picture, square) => {
   return { shown, bytes };
 };
 
+/**
+ * A section's picture as it goes up (docs/design-spec-admin.md, 2.3): 16:10,
+ * 1440 × 900 at most, and never below 960 × 600, the backend's floor. A crop
+ * with fewer pixels than the most goes up at its own width rather than
+ * blown up; one below the floor is drawn up to it.
+ */
+export const SECTION_PICTURE_MAX: Size = { width: 1440, height: 900 };
+export const SECTION_PICTURE_MIN: Size = { width: 960, height: 600 };
+export const WEBP_QUALITY = 0.82;
+
+/** The size a crop of this many pixels across goes up at: a multiple of 8, so 16:10 is exact. */
+export function sectionPictureSize(cropWidth: number): Size {
+  const width = Math.min(
+    SECTION_PICTURE_MAX.width,
+    Math.max(SECTION_PICTURE_MIN.width, Math.floor(cropWidth / 8) * 8),
+  );
+  return { width, height: (width / 16) * 10 };
+}
+
+/** The part of a picture inside a frame, drawn at the size it goes up at, as its bytes. */
+export type CropPicture = (picture: CanvasImageSource, crop: PixelRect) => Promise<Blob>;
+
+const blobOf = (canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob> =>
+  new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob === null ? reject(new Error("no image")) : resolve(blob)),
+      type,
+      quality,
+    );
+  });
+
+/**
+ * A section's crop as a WebP. A browser that cannot write WebP hands back a
+ * PNG instead, several times the size; a JPEG of the same quality goes up
+ * then. The bytes carry their own type, and the upload names it.
+ */
+export const cropSectionOnCanvas: CropPicture = async (picture, crop) => {
+  const size = sectionPictureSize(crop.width);
+  const canvas = document.createElement("canvas");
+  canvas.width = size.width;
+  canvas.height = size.height;
+  const context = canvas.getContext("2d");
+  if (context === null) throw new Error("no 2d context");
+  context.imageSmoothingQuality = "high";
+  context.drawImage(
+    picture,
+    crop.left,
+    crop.top,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    size.width,
+    size.height,
+  );
+  const webp = await blobOf(canvas, "image/webp", WEBP_QUALITY);
+  return webp.type === "image/webp" ? webp : blobOf(canvas, "image/jpeg", WEBP_QUALITY);
+};
+
+/** A picture as text, for keeping in the tab's storage: a data: address. */
+export const dataUrlOf = (blob: Blob): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("unread"));
+    reader.onerror = () => reject(reader.error ?? new Error("unread"));
+    reader.readAsDataURL(blob);
+  });
+
 export interface UploadedPicture {
   pictureId: string;
   /** Where the editor can show it from; the owner alone may read the folder. */
@@ -114,7 +184,9 @@ function ownerUid(): string | null {
 /**
  * One picture into the person's own folder, the one place a client may write.
  * Shrunk first, the way the phone does it, so a holiday photograph fits the
- * bucket's four megabytes and the feed's copy stays small.
+ * bucket's four megabytes and the feed's copy stays small. A caller with its
+ * bytes already made (a face's square, a section's WebP crop) hands in a
+ * shrink that returns them; they go up as the type they say they are.
  */
 export async function uploadPicture(
   file: Blob,
@@ -134,7 +206,9 @@ export async function uploadPicture(
   const pictureId = newId();
   const target = ref(getFirebaseStorage(), picturePath(uid, pictureId));
   try {
-    await uploadBytes(target, bytes, { contentType: "image/jpeg" });
+    await uploadBytes(target, bytes, {
+      contentType: bytes.type.startsWith("image/") ? bytes.type : "image/jpeg",
+    });
     return { pictureId, previewUrl: await getDownloadURL(target) };
   } catch {
     throw new PictureRefused("upload");

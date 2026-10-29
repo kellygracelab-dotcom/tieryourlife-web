@@ -52,6 +52,21 @@ describe("publishing a board", () => {
     // No topic is said out loud: a republish without one takes the list out of its old one.
     expect(request.topicId).toBeNull();
     expect(publishRequestOf({ ...b, topic: { id: "t1", name: "A24" } })?.topicId).toBe("t1");
+    // Anonymity is said every time too, or a republish would put the name back.
+    expect(request.anonymous).toBe(false);
+    expect(publishRequestOf({ ...b, anonymous: true })?.anonymous).toBe(true);
+  });
+
+  it("sends any section's id: a new one, or one of the person's own still waiting", () => {
+    const next = uids();
+    const b = addToPool(
+      newBoard("b", "Stalls", 1, next),
+      [{ title: "a", imageUrl: null }],
+      2,
+      next,
+    );
+    expect(publishRequestOf({ ...b, category: "street-food" })?.category).toBe("street-food");
+    expect(publishRequestOf({ ...b, category: "s-k3j9x2ab" })?.category).toBe("s-k3j9x2ab");
   });
 
   it("sends one chosen picture as the cover and several as the collage", () => {
@@ -96,6 +111,10 @@ describe("a published list as a board of one's own", () => {
     const board = boardFromList(list, [[2], [0]], 5, uids());
     expect(board.title).toBe(list.title);
     expect(board.category).toBe("film_tv");
+    // A section the site has no words of its own for comes along all the same.
+    expect(boardFromList({ ...list, category: "street-food" }, null, 5, uids()).category).toBe(
+      "street-food",
+    );
     expect(board.authorName).toBe("danylo");
     expect(board.publishedId).toBeNull();
     expect(rankedTiers(board).map((tier) => tier.label)).toEqual(["S", "A"]);

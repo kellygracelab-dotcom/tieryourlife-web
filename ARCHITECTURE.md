@@ -27,9 +27,11 @@ The features:
 | `community`  | following, reporting, hiding, the sign-in prompt                                                                                                                                                 |
 | `account`    | one's name, face and language                                                                                                                                                                    |
 | `moderation` | the moderator's queue                                                                                                                                                                            |
+| `play`       | Play mode: the duel engine ported from the app, the picker, the choice of cards, the duel layer and the result; `usePlay` is what a board page mounts                                            |
 
 Features that lean on one another, and nothing else: `tierboard → ranking`,
-`boards → editor, ranking, tierboard`, `editor → tierboard`, `feed → community`.
+`boards → editor, ranking, sections, tierboard`, `editor → tierboard`,
+`feed → community, sections`, `admin → sections, moderation, boards`.
 
 Data calls are wired once, in `lib/api`, and reach components as injectable
 dependencies with that default (`publishing`, `report`, `load`…), so every

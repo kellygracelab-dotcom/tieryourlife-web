@@ -4,7 +4,6 @@ import { Link } from "react-router";
 import { errorOf, type ApiError } from "../../api/errors";
 import type { PublishRequest } from "../../api/lists";
 import type { Topic } from "../../api/sections";
-import type { Category } from "../../api/types";
 import { useSession } from "../../app/session";
 import { loadTopics } from "../../lib/api";
 import { fill, plural, strings } from "../../strings";
@@ -12,6 +11,7 @@ import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import { failureText } from "../editor/failureText";
+import type { Section } from "../sections/model";
 import {
   BOARD_LIMITS,
   DISPLAY_MODES,
@@ -19,6 +19,7 @@ import {
   liveItems,
   previewsOf,
   rankedTiers,
+  setAnonymous,
   setCover,
   setPublished,
   setTopic,
@@ -28,7 +29,7 @@ import {
 } from "./model";
 import { titleOf } from "./boardText";
 import { publishProblemsOf, publishRequestOf } from "./publish";
-import { sectionChoices } from "./sectionChoices";
+import { filedUnder, sectionChoices } from "./sectionChoices";
 import "./boards.css";
 
 export type PublishBoard = (request: PublishRequest) => Promise<{ id: string }>;
@@ -42,14 +43,18 @@ export interface PublishingDeps {
 }
 
 /** The approved topics of a section, the biggest first. */
-export type LoadTopics = (section: Category) => Promise<{ topics: Topic[] }>;
+export type LoadTopics = (section: string) => Promise<{ topics: Topic[] }>;
 
 interface BoardSettingsProps {
   board: Board;
   /** The board as it is right now, for a change made after a wait on the network. */
   latest: () => Board;
   keep: (board: Board) => void;
-  onCategory: (category: Category) => void;
+  /** The sections as the site holds them, the person's own waiting ones among them. */
+  sections: readonly Section[];
+  onCategory: (category: string) => void;
+  /** Propose a section, from the end of the picker: the page gives the sheet's place to the form. */
+  onPropose: () => void;
   onMode: (mode: DisplayMode) => void;
   /** New tier: the page adds one and opens it in the tier editor. */
   onNewTier: () => void;
@@ -65,7 +70,7 @@ type Busy = "idle" | "publishing" | "updating" | "unpublishing";
 type Open = "none" | "category" | "topic" | "cover";
 /** What came back for a section's topics. */
 type Topics =
-  { section: Category; status: "ready"; topics: Topic[] } | { section: Category; status: "failed" };
+  { section: string; status: "ready"; topics: Topic[] } | { section: string; status: "failed" };
 
 const MAX_COVER = 6;
 
@@ -155,7 +160,9 @@ export function BoardSettings({
   board,
   latest,
   keep,
+  sections,
   onCategory,
+  onPropose,
   onMode,
   onNewTier,
   onPublished,
@@ -268,7 +275,8 @@ export function BoardSettings({
   const thumbnail = chosen[0] ?? previewsOf(board, 1)[0] ?? null;
 
   const [find, setFind] = useState("");
-  const sections = sectionChoices().filter(({ name }) =>
+  const uid = account?.kind === "signedIn" ? account.uid : null;
+  const choices = sectionChoices(sections, uid).filter(({ name }) =>
     name.toLowerCase().includes(find.trim().toLowerCase()),
   );
 
@@ -365,6 +373,33 @@ export function BoardSettings({
             </Row>
           </li>
 
+          <li className="sheet-row">
+            <Row
+              icon={<Icon name="visibility_off" />}
+              title={
+                <label htmlFor={`${id}-anonymous`} className="sheet-row__label">
+                  {strings.boards.anonymousTitle}
+                </label>
+              }
+              sub={strings.boards.anonymousBody}
+              end={
+                <input
+                  id={`${id}-anonymous`}
+                  type="checkbox"
+                  role="switch"
+                  className="switch"
+                  checked={board.anonymous}
+                  disabled={busy !== "idle"}
+                  onChange={(event) => {
+                    keep(setAnonymous(latest(), event.target.checked, now()));
+                    // A list already out changes at once, as on the phone.
+                    if (isPublic) void send("updated");
+                  }}
+                />
+              }
+            />
+          </li>
+
           {isPublic && published !== null && (
             <li className="sheet-row">
               <Row
@@ -393,7 +428,11 @@ export function BoardSettings({
             <RowButton
               icon={<Icon name="category" />}
               title={strings.boards.category}
-              sub={category === null ? strings.boards.categoryNone : strings.category[category]}
+              sub={
+                category === null
+                  ? strings.boards.categoryNone
+                  : filedUnder(category, sections, uid)
+              }
               open={open === "category"}
               onClick={() => toggle("category")}
             />
@@ -409,7 +448,7 @@ export function BoardSettings({
                   onChange={(event) => setFind(event.target.value)}
                 />
                 <div role="radiogroup" aria-label={strings.boards.category}>
-                  {sections.map((section) => (
+                  {choices.map((section) => (
                     <button
                       key={section.id}
                       type="button"
@@ -422,10 +461,27 @@ export function BoardSettings({
                         setFind("");
                       }}
                     >
-                      {section.name}
+                      <span className="sheet-pick__name">
+                        {section.name}
+                        {section.waiting && (
+                          <span className="sheet-pick__sub">{strings.boards.categoryWaiting}</span>
+                        )}
+                      </span>
                       {category === section.id && <Icon name="check" />}
                     </button>
                   ))}
+                </div>
+                <div>
+                  <Button
+                    icon="add"
+                    onClick={() => {
+                      setOpen("none");
+                      setFind("");
+                      onPropose();
+                    }}
+                  >
+                    {strings.sections.propose}
+                  </Button>
                 </div>
               </div>
             )}

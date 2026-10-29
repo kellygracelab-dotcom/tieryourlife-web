@@ -1,4 +1,4 @@
-import type { Category } from "../../api/types";
+import type { SyncedPlay } from "../../api/boards";
 
 /**
  * A board of the person's own, the way the phone keeps one: tiers with a
@@ -51,7 +51,8 @@ export interface Board {
   uid: string;
   title: string;
   displayMode: DisplayMode;
-  category: Category | null;
+  /** The section's id, any the backend knows, or one of the person's own still waiting; null before one is chosen. */
+  category: string | null;
   coverImageUrl: string | null;
   coverImageUrls: string[];
   authorName: string | null;
@@ -70,6 +71,10 @@ export interface Board {
   publishedEditedAt: number | null;
   /** This device's, as on the phone: the topic the list goes out under, sent with every publish. Never kept in the account. */
   topic: BoardTopic | null;
+  /** Published with no name or face: sent with every publish, and kept in the account when true. */
+  anonymous: boolean;
+  /** A game of Play in progress, kept in the account as the app keeps it; null when none is. */
+  play: SyncedPlay | null;
 }
 
 /** What a card is made from: enough for a tile. */
@@ -144,6 +149,8 @@ export function newBoard(uid: string, title: string, now: number, nextUid: NextU
     arrivedFrom: null,
     publishedEditedAt: null,
     topic: null,
+    anonymous: false,
+    play: null,
   };
 }
 
@@ -224,8 +231,12 @@ export function rename(board: Board, title: string, now: number): Board {
 }
 
 /** A topic lives inside one section: another section leaves the list without one. */
-export const setCategory = (board: Board, category: Category | null, now: number): Board =>
+export const setCategory = (board: Board, category: string | null, now: number): Board =>
   category === board.category ? board : touched({ ...board, category, topic: null }, now);
+
+/** Anonymity goes out with the next publish too: changing it leaves the published copy behind. */
+export const setAnonymous = (board: Board, anonymous: boolean, now: number): Board =>
+  anonymous === board.anonymous ? board : touched({ ...board, anonymous }, now);
 
 /** The topic goes out with the next publish, so a new one leaves the published copy behind. */
 export const setTopic = (board: Board, topic: BoardTopic | null, now: number): Board =>

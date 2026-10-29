@@ -7,6 +7,8 @@ interface SectionTileProps {
   section: Section;
   /** The phone's full-width row: one line, no count of new lists. */
   row?: boolean;
+  /** A tile that opens something in place, the proposer's waiting one, instead of a page. */
+  onOpen?: () => void;
 }
 
 /**
@@ -14,22 +16,19 @@ interface SectionTileProps {
  * the scrim, and its icon and name at the bottom. A waiting one, which only
  * its proposer sees, says so.
  */
-export function SectionTile({ section, row = false }: SectionTileProps) {
+export function SectionTile({ section, row = false, onOpen }: SectionTileProps) {
   const waiting = section.status === "pending";
   const fresh = !row && section.newThisWeek > 0 && section.id !== OTHER;
-  return (
-    <Link
-      className={[
-        "section-tile",
-        row ? "section-tile--row" : "",
-        section.picture === null ? "" : "section-tile--pictured",
-        waiting ? "section-tile--waiting" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-      to={sectionPath(section.id)}
-      style={sectionStyle(section)}
-    >
+  const className = [
+    "section-tile",
+    row ? "section-tile--row" : "",
+    section.picture === null ? "" : "section-tile--pictured",
+    waiting ? "section-tile--waiting" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const inside = (
+    <>
       {waiting && (
         <span className="section-tile__pill">
           <Icon name="schedule" />
@@ -45,7 +44,21 @@ export function SectionTile({ section, row = false }: SectionTileProps) {
           {plural(strings.sections.newThisWeek, section.newThisWeek)}
         </span>
       )}
+    </>
+  );
+  return onOpen === undefined ? (
+    <Link className={className} to={sectionPath(section.id)} style={sectionStyle(section)}>
+      {inside}
     </Link>
+  ) : (
+    <button
+      type="button"
+      className={`${className} section-tile--button`}
+      style={sectionStyle(section)}
+      onClick={onOpen}
+    >
+      {inside}
+    </button>
   );
 }
 

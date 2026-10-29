@@ -94,9 +94,11 @@ describe("the architecture", () => {
     // Which feature may lean on which: everything else stays apart.
     const allowed: Record<string, readonly string[]> = {
       tierboard: ["ranking"],
-      boards: ["editor", "ranking", "tierboard"],
+      // A list's section is one of the sections: the picker offers theirs, and the board names them.
+      boards: ["editor", "ranking", "sections", "tierboard"],
       editor: ["tierboard"],
       feed: ["community", "sections"],
+      admin: ["sections", "moderation", "boards"],
     };
     const wrong: string[] = [];
     for (const file of FILES.filter((f) => f.path.startsWith("features/"))) {

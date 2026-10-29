@@ -3,7 +3,8 @@ import { Icon } from "./Icon";
 import type { IconName } from "./icons";
 import "./Button.css";
 
-type Variant = "filled" | "tonal" | "text";
+/** M3's buttons: the outlined one for a second choice beside a filled one, danger for what removes. */
+type Variant = "filled" | "tonal" | "text" | "outlined" | "danger";
 
 interface CommonProps {
   variant?: Variant;

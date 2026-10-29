@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { SectionStats } from "../../api/sections";
+import { CATEGORIES } from "../../api/types";
 import {
   approvedOnly,
   builtInSection,
   homeSlots,
+  isSectionIcon,
   orderSections,
+  SECTION_ICONS,
+  sectionName,
   sectionOf,
   sectionPath,
   sectionsFrom,
@@ -97,6 +101,31 @@ describe("sections", () => {
     expect(ids(sectionsFrom(answer, "u1"))).toEqual(["anime", "mine", "other"]);
     expect(ids(sectionsFrom(answer, "guest"))).toEqual(["anime", "other"]);
     expect(ids(approvedOnly(sectionsFrom(answer, "u1")))).toEqual(["anime", "other"]);
+  });
+
+  it("names any section: the backend's in this language, the nine by the site's words, the rest as Other", () => {
+    const sections = [
+      sectionOf(stats("street-food", { name: "Street food", names: { uk: "Вулична їжа" } }), "uk"),
+      sectionOf(stats("s-k3j9x2ab", { name: "Ramen" }), "uk"),
+      sectionOf(stats("music", { name: "Music", names: { uk: "Музика" } }), "uk"),
+      sectionOf(stats("other", { name: "Other", names: { uk: "Інше" } }), "uk"),
+    ];
+    expect(sectionName("street-food", sections)).toBe("Вулична їжа");
+    expect(sectionName("s-k3j9x2ab", sections)).toBe("Ramen");
+    expect(sectionName("music", sections)).toBe("Музика");
+    // One of the nine the backend did not send, hidden say: the site's own word for it.
+    expect(sectionName("food", sections)).toBe("Food");
+    // An id nobody here knows yet reads as Other, by the name Other has here.
+    expect(sectionName("k-dramas", sections)).toBe("Інше");
+    expect(sectionName("k-dramas", [])).toBe("Other");
+  });
+
+  it("offers the 24 icons in Claude Design's order, the nine's own among them", () => {
+    expect(SECTION_ICONS).toHaveLength(24);
+    expect(SECTION_ICONS.slice(0, 3)).toEqual(["category", "movie", "animation"]);
+    expect(SECTION_ICONS.at(-1)).toBe("star");
+    for (const id of CATEGORIES) expect(isSectionIcon(builtInSection(id).icon)).toBe(true);
+    expect(isSectionIcon("ramen_dining")).toBe(false);
   });
 
   it("orders followed first, then pinned, then the busiest month, then the earlier approved; Other last", () => {

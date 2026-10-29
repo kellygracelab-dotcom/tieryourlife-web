@@ -7,6 +7,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router";
+import { useAdminCounts } from "../features/admin/useAdminCounts";
 import { useModerator } from "../features/moderation/useModerator";
 import type { Account } from "../lib/account";
 import { appIsLive, onApple, playUrl } from "../lib/links";
@@ -37,6 +38,10 @@ function AppFooterLink() {
 /** Where a signed-in person's own things are. Signing out is a setting, and lives with the settings. */
 function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn" }> }) {
   const moderator = useModerator();
+  const waiting = useAdminCounts(
+    moderator.status === "yes" ? account.uid : null,
+    moderator.status === "yes" ? moderator.reports.length : 0,
+  );
   return (
     <Menu
       label={strings.nav.account}
@@ -67,19 +72,19 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
             </a>
           </li>
         )}
-        <li>
-          <Link to="/settings">{strings.nav.settings}</Link>
-        </li>
+        {/* Only the owner and moderators: the backend answers the queue to nobody else. */}
         {moderator.status === "yes" && (
           <li>
-            <Link to="/mod" className="menu__row">
-              <span>{strings.nav.reports}</span>
-              {moderator.reports.length > 0 && (
-                <span className="menu__pill">{moderator.reports.length}</span>
-              )}
+            <Link to="/admin" className="menu__row">
+              <Icon name="admin_panel_settings" />
+              <span>{strings.admin.menu}</span>
+              {waiting > 0 && <span className="menu__pill">{waiting}</span>}
             </Link>
           </li>
         )}
+        <li>
+          <Link to="/settings">{strings.nav.settings}</Link>
+        </li>
       </>
     </Menu>
   );

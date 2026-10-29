@@ -32,6 +32,8 @@ export interface SectionsStore {
   refresh: (who: string | null) => void;
   /** Follows or unfollows at once; the tile moves now and comes back if the backend says no. */
   setFollowing: (id: string, following: boolean) => Promise<boolean>;
+  /** Forgets the answer, so the next page that shows sections asks again: after an admin's Save. */
+  invalidate: () => void;
 }
 
 /**
@@ -87,7 +89,7 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
           loadedAt = deps.now();
           loadedFor = who;
           set({
-            sections: orderSections(sectionsFrom(sections ?? [])),
+            sections: orderSections(sectionsFrom(sections ?? [], who)),
             loaded: true,
             failed: false,
           });
@@ -98,6 +100,9 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
           again();
         },
       );
+    },
+    invalidate() {
+      loadedAt = null;
     },
     async setFollowing(id, following) {
       const before = snapshot.sections;

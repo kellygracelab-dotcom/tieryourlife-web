@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
+import type { MyList } from "../api/lists";
 import type { MyRankings, RankingSummary } from "../api/rank";
-import type { ListSummary } from "../api/types";
+import type { SectionStats } from "../api/sections";
 import { SessionContext, type Session } from "../app/session";
+import { createSectionsStore, type SectionsDeps } from "../features/sections/useSections";
 import { MePage } from "./MePage";
 
 vi.mock("../lib/api", () => ({
@@ -13,10 +15,13 @@ vi.mock("../lib/api", () => ({
   loadMyRankings: vi.fn(),
   removeRanking: vi.fn(),
   unpublish: vi.fn(),
+  loadSections: vi.fn(),
+  followSection: vi.fn(),
+  unfollowSection: vi.fn(),
 }));
 
 const load = vi.fn<() => Promise<MyRankings>>();
-const loadLists = vi.fn<() => Promise<{ lists: ListSummary[] }>>();
+const loadLists = vi.fn<() => Promise<{ lists: MyList[] }>>();
 const unpublish = vi.fn<(id: string) => Promise<void>>();
 const deleteRanking = vi.fn<(code: string) => Promise<void>>();
 const copy = vi.fn<(text: string) => Promise<void>>();
@@ -39,7 +44,7 @@ const ranking = (
   ...extra,
 });
 
-const published = (id: string, title: string, extra: Partial<ListSummary> = {}): ListSummary => ({
+const published = (id: string, title: string, extra: Partial<MyList> = {}): MyList => ({
   id,
   title,
   authorUid: "u1",
@@ -62,10 +67,26 @@ const member: Session["account"] = {
   photoUrl: null,
 };
 
+const loadSections = vi.fn<SectionsDeps["load"]>();
+const stats = (id: string): SectionStats => ({
+  id,
+  listCount: 0,
+  followerCount: 0,
+  newThisWeek: 0,
+  collage: [],
+  following: false,
+});
+
 const open = (
   account: Session["account"] = member,
   signIn = vi.fn(async () => ({ kind: "cancelled" as const })),
 ) => {
+  const store = createSectionsStore({
+    load: loadSections,
+    follow: vi.fn(),
+    unfollow: vi.fn(),
+    now: () => 0,
+  });
   const router = createMemoryRouter(
     [
       {
@@ -77,6 +98,7 @@ const open = (
             unpublish={unpublish}
             deleteRanking={deleteRanking}
             copy={copy}
+            store={store}
           />
         ),
       },
@@ -114,6 +136,8 @@ beforeEach(() => {
   deleteRanking.mockReset();
   copy.mockReset();
   copy.mockResolvedValue(undefined);
+  loadSections.mockReset();
+  loadSections.mockResolvedValue({ sections: [] });
 });
 
 describe("MePage", () => {
@@ -166,6 +190,41 @@ describe("MePage", () => {
     expect(within(list).getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/l/l1");
     // Few enough to see at once: no chips to choose between the kinds.
     expect(screen.queryByRole("group", { name: "Which to show" })).toBeNull();
+  });
+
+  it("says where a list published into one's own waiting section goes once it is approved", async () => {
+    load.mockResolvedValue({ rankings: [], more: false });
+    loadLists.mockResolvedValue({
+      lists: [
+        published("l1", "Stalls of Kyiv", {
+          category: "food",
+          proposedSection: "street-food",
+          proposedSectionName: "Street food",
+        }),
+        // No name sent: the section's own, as the site knows it.
+        published("l2", "Night markets", {
+          category: "food",
+          proposedSection: "night-markets",
+          updatedAt: Date.UTC(2026, 7, 1, 12),
+        }),
+        published("l3", "Oscar films 2025", { updatedAt: Date.UTC(2026, 6, 1, 12) }),
+      ],
+    });
+    loadSections.mockResolvedValue({
+      sections: [
+        { ...stats("night-markets"), name: "Night markets", status: "pending", proposerUid: "u1" },
+        stats("food"),
+        stats("other"),
+      ],
+    });
+    open();
+
+    expect(await screen.findByText("Moves to Street food once it’s approved")).toBeInTheDocument();
+    expect(rowOf(/Stalls of Kyiv/)).toHaveTextContent("Moves to Street food once it’s approved");
+    await waitFor(() =>
+      expect(rowOf(/Night markets/)).toHaveTextContent("Moves to Night markets once it’s approved"),
+    );
+    expect(rowOf(/Oscar films 2025/)).not.toHaveTextContent("Moves to");
   });
 
   it("offers a ranking to be published as a list of one's own, and a list only to be unpublished", async () => {

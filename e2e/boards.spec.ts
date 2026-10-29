@@ -221,14 +221,15 @@ test("moves a card along its row: the others make room at once, and nothing is p
     await expect(s.locator(".tile--slot")).toHaveCount(1);
     await page.mouse.up();
   }
-  expect(await order()).toEqual(["Ex Machina", "The Witch", "Climax"]);
+  await expect.poll(order).toEqual(["Ex Machina", "The Witch", "Climax"]);
 
   // Climax carried to the front: it stands there before it is let go, with no bar.
   const first = (await s.locator("[data-item]").first().boundingBox())!;
   await carry("Climax", { x: first.x + 5, y: first.y + first.height / 2 });
-  expect(await order()).toEqual(["Climax", "Ex Machina", "The Witch"]);
+  // The row redraws a frame after the last move; read it once it has.
+  await expect.poll(order).toEqual(["Climax", "Ex Machina", "The Witch"]);
   await page.mouse.up();
-  expect(await order()).toEqual(["Climax", "Ex Machina", "The Witch"]);
+  await expect.poll(order).toEqual(["Climax", "Ex Machina", "The Witch"]);
   await expect(page.locator(".tile--selected")).toHaveCount(0);
 
   // The board keeps it so.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fingerprintOf, fingerprintText } from "./fingerprint";
+import { canonicalPlay, fingerprintOf, fingerprintText } from "./fingerprint";
+import { playOf } from "./repository";
 import type { Board } from "./model";
 
 const board = (over: Partial<Board> = {}): Board => ({
@@ -59,6 +60,8 @@ const board = (over: Partial<Board> = {}): Board => ({
   arrivedFrom: null,
   publishedEditedAt: null,
   topic: null,
+  anonymous: false,
+  play: null,
   ...over,
 });
 
@@ -158,5 +161,86 @@ describe("the fingerprint", () => {
     const a = board();
     const shuffled = board({ tiers: [...a.tiers].reverse(), items: [...a.items].reverse() });
     expect(fingerprintText(shuffled)).toBe(fingerprintText(a));
+  });
+
+  it("is unchanged for a board that is not anonymous, and says anonymous last when it is", () => {
+    const plain = fingerprintText(board());
+    expect(fingerprintText(board({ anonymous: false }))).toBe(plain);
+    const anonymous = fingerprintText(board({ anonymous: true }));
+    expect(anonymous.startsWith(plain)).toBe(true);
+    expect(anonymous).not.toBe(plain);
+  });
+
+  it("writes the anonymous field in the phone's bytes, after everything else", () => {
+    // The vector agreed with the app: a board with no tiers, its other fields absent or empty.
+    expect(
+      fingerprintText(
+        board({
+          uid: "u",
+          title: "T",
+          displayMode: "WRAP",
+          tiers: [],
+          items: [],
+          anonymous: true,
+        }),
+      ),
+    ).toBe("1:u|1:T|4:WRAP|~|~|~|~|~|9:anonymous|");
+  });
+
+  it("carries a game in progress last, as the canonical JSON the app writes (the proxy's shared example)", () => {
+    const example =
+      '{"kind":"swiss","count":4,"seed":7,"refine":false,"ids":["a","b","c","d"],' +
+      '"history":[[0,1,0],[2,3,null]],"round":1,"startedAt":1793146000000,"scope":["t-s"],"keepTier":true}';
+    const play = playOf(JSON.parse(example));
+    expect(play).not.toBeNull();
+    expect(canonicalPlay(play!)).toBe(example);
+    expect(
+      fingerprintText(
+        board({
+          uid: "u",
+          title: "T",
+          displayMode: "WRAP",
+          tiers: [],
+          items: [],
+          anonymous: true,
+          play,
+        }),
+      ),
+    ).toBe(`1:u|1:T|4:WRAP|~|~|~|~|~|9:anonymous|${example.length}:${example}|`);
+  });
+
+  it("writes a game in its normal form: no empty scope, keepTier only when true with one tier", () => {
+    const base = {
+      kind: "hill",
+      count: 2,
+      seed: 1,
+      refine: false,
+      ids: ["a", "b"],
+      history: [],
+      round: 0,
+      startedAt: 5,
+    };
+    expect(canonicalPlay(playOf({ ...base, scope: [], keepTier: false })!)).toBe(
+      '{"kind":"hill","count":2,"seed":1,"refine":false,"ids":["a","b"],"history":[],"round":0,"startedAt":5}',
+    );
+    expect(playOf({ ...base, scope: ["s", "a"], keepTier: true })?.keepTier).toBeUndefined();
+    expect(playOf({ ...base, ids: ["a"] })).toBeNull();
+    expect(playOf({ ...base, history: [[0, 2, 0]] })).toBeNull();
+  });
+
+  it("hashes the three shared boards to the app's own SHA-256", async () => {
+    const example =
+      '{"kind":"swiss","count":4,"seed":7,"refine":false,"ids":["a","b","c","d"],' +
+      '"history":[[0,1,0],[2,3,null]],"round":1,"startedAt":1793146000000,"scope":["t-s"],"keepTier":true}';
+    const shared = { uid: "u", title: "T", displayMode: "WRAP" as const, tiers: [], items: [] };
+    expect(await fingerprintOf(board(shared))).toBe(
+      "8e5ded7251916b6817519d19b768e298cb2e38b195ef08173f4e22c50189b27f",
+    );
+    expect(await fingerprintOf(board({ ...shared, anonymous: true }))).toBe(
+      "b7c68568ab4c48be25a724e26ef8f14ac5f940178b556a1cb4afb7183c717394",
+    );
+    expect(
+      await fingerprintOf(board({ ...shared, anonymous: true, play: playOf(JSON.parse(example)) })),
+    ).toBe("b97bfcf2595276d8399cacd16b85ec5341c62ae5ea9916330b394bf61c9cea89");
   });
 });

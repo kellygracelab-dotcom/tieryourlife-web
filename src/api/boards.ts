@@ -39,6 +39,28 @@ export interface KeptBoardEntry {
   itemCount: number;
 }
 
+/**
+ * A game of Play in progress, as the board document carries it between the
+ * app and the site (agreed with the app's SavedGame): the engine's spec and
+ * answers by card index, and which tiers the cards came from.
+ */
+export interface SyncedPlay {
+  kind: "swiss" | "hill" | "bracket";
+  count: number;
+  seed: number;
+  refine: boolean;
+  /** The cards' uids in game order: engine index i is ids[i]. */
+  ids: string[];
+  history: [number, number, number | null][];
+  /** The Swiss round reached; 0 for the other games. */
+  round: number;
+  startedAt: number;
+  /** The tiers the cards came from, the pool's uid among them; absent for the whole board. */
+  scope?: string[];
+  /** Present, and true, only with exactly one tier in scope: the game only orders that tier. */
+  keepTier?: true;
+}
+
 export interface KeptBoard {
   uid: string;
   revision: number;
@@ -54,6 +76,9 @@ export interface KeptBoard {
   authorName: string | null;
   publishedId: string | null;
   deletedAt: number | null;
+  /** Kept only when true: published with no name or face. */
+  anonymous?: boolean;
+  play?: SyncedPlay | null;
   tiers: KeptTier[];
   items: KeptItem[];
 }
@@ -71,6 +96,8 @@ export interface KeepBoardRequest {
   authorName: string | null;
   publishedId: string | null;
   deletedAt: number | null;
+  anonymous?: boolean;
+  play?: SyncedPlay | null;
   tiers: KeptTier[];
   items: KeptItem[];
 }

@@ -1,5 +1,5 @@
 import type { ApiClient } from "./client";
-import type { Category, PublishedItem, PublishedTier } from "./types";
+import type { PublishedItem, PublishedTier } from "./types";
 
 export interface RankingSnapshot {
   title: string;
@@ -7,7 +7,7 @@ export interface RankingSnapshot {
   editorial?: boolean;
   authorName: string;
   authorPhotoUrl: string | null;
-  category: Category;
+  category: string;
   tiers: PublishedTier[];
   items: PublishedItem[];
 }
@@ -78,7 +78,7 @@ export interface RankingSummary {
   title: string;
   authorName: string;
   authorPhotoUrl: string | null;
-  category: Category;
+  category: string;
   placed: number;
   itemCount: number;
   imageUrl: string | null;

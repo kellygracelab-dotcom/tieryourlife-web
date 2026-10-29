@@ -1,11 +1,13 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router";
 import type { ApiError } from "../api/errors";
+import type { MyList } from "../api/lists";
 import type { MyRankings, RankingSummary } from "../api/rank";
-import type { ListSummary } from "../api/types";
 import { AccountTabs } from "../app/AccountTabs";
 import { useSession } from "../app/session";
 import { errorOf } from "../api/errors";
+import { sectionName } from "../features/sections/model";
+import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import { useResource } from "../lib/useResource";
 import { loadMyLists, loadMyRankings, removeRanking, unpublish as unpublishList } from "../lib/api";
 import { currentLocale, fill, plural, strings } from "../strings";
@@ -18,7 +20,7 @@ import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./MePage.css";
 
 export type LoadMine = () => Promise<MyRankings>;
-export type LoadLists = () => Promise<{ lists: ListSummary[] }>;
+export type LoadLists = () => Promise<{ lists: MyList[] }>;
 export type Unpublish = (id: string) => Promise<void>;
 export type DeleteRanking = (code: string) => Promise<void>;
 export type Copy = (text: string) => Promise<void>;
@@ -29,7 +31,7 @@ export type Copy = (text: string) => Promise<void>;
  * nothing of whose list it was made from.
  */
 type Entry =
-  | { kind: "list"; key: string; when: number; list: ListSummary }
+  | { kind: "list"; key: string; when: number; list: MyList; movesTo: string | null }
   | { kind: "ranking"; key: string; when: number; ranking: RankingSummary };
 
 type Filter = "all" | "published" | "rankings";
@@ -167,6 +169,9 @@ function Row({ entry, remove, copy, notify, onGone }: RowProps) {
           <Link className="mine__text" to={to}>
             <span className="mine__title">{title}</span>
             <span className="mine__meta">{metaOf(entry)}</span>
+            {entry.kind === "list" && entry.movesTo !== null && (
+              <span className="mine__meta">{entry.movesTo}</span>
+            )}
           </Link>
           <div className="mine__actions">
             <Link className="btn btn--text" to={isList ? to : `${to}?edit`}>
@@ -222,9 +227,21 @@ interface MineProps {
   unpublish: Unpublish;
   deleteRanking: DeleteRanking;
   copy: Copy;
+  store: SectionsStore;
 }
 
-function Mine({ uid, load, loadLists, unpublish, deleteRanking, copy }: MineProps) {
+function Mine({ uid, load, loadLists, unpublish, deleteRanking, copy, store }: MineProps) {
+  const { sections } = useSections(store);
+  // Published into a section of one's own still waiting, a list sits in the
+  // one the proposal files under, and says where it goes once it is approved.
+  const movesTo = (list: MyList): string | null => {
+    const proposed = list.proposedSection ?? null;
+    return proposed === null
+      ? null
+      : fill(strings.sections.movesTo, {
+          name: list.proposedSectionName ?? sectionName(proposed, sections),
+        });
+  };
   const loadAll = useCallback(async () => {
     const [kept, published] = await Promise.all([load(), loadLists()]);
     return { rankings: kept.rankings, more: kept.more, lists: published.lists };
@@ -253,6 +270,7 @@ function Mine({ uid, load, loadLists, unpublish, deleteRanking, copy }: MineProp
       key: `l:${list.id}`,
       when: list.updatedAt,
       list,
+      movesTo: movesTo(list),
     })),
     ...state.value.rankings.map((ranking): Entry => ({
       kind: "ranking",
@@ -337,6 +355,7 @@ interface MePageProps {
   unpublish?: Unpublish;
   deleteRanking?: DeleteRanking;
   copy?: Copy;
+  store?: SectionsStore;
 }
 
 export function MePage({
@@ -345,6 +364,7 @@ export function MePage({
   unpublish = unpublishList,
   deleteRanking = removeRanking,
   copy = (text) => navigator.clipboard.writeText(text),
+  store = sectionsStore,
 }: MePageProps) {
   const { account, signIn } = useSession();
   return (
@@ -370,6 +390,7 @@ export function MePage({
           unpublish={unpublish}
           deleteRanking={deleteRanking}
           copy={copy}
+          store={store}
         />
       )}
     </section>

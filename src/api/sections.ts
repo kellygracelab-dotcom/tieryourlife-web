@@ -1,5 +1,4 @@
 import type { ApiClient } from "./client";
-import type { Category } from "./types";
 
 /** A colour for each theme. */
 export interface ThemePair {
@@ -40,12 +39,21 @@ export interface SectionStats {
   approvedAt?: number;
   lists30d?: number;
   fileUnder?: string | null;
-  /** Sent with a waiting section only to its proposer and to moderators. */
-  proposerUid?: string;
+  /** Who proposed it: sent only to the proposer and to moderators. */
+  proposerUid?: string | null;
 }
 
 export function loadSections(client: ApiClient): Promise<{ sections: SectionStats[] }> {
   return client.request<{ sections: SectionStats[] }>("GET", "/lists/sections");
+}
+
+/**
+ * One section by its id, also one no tile shows: hidden, or not among the
+ * sections yet. 404 when there is none; 410 MERGED {mergedInto} when it went
+ * into another, to everybody once it had been approved.
+ */
+export function loadSection(client: ApiClient, id: string): Promise<SectionStats> {
+  return client.request<SectionStats>("GET", `/lists/sections/${encodeURIComponent(id)}`);
 }
 
 export function followSection(client: ApiClient, id: string): Promise<{ following: true }> {
@@ -62,18 +70,48 @@ export function unfollowSection(client: ApiClient, id: string): Promise<{ follow
   );
 }
 
+/**
+ * A section somebody asks for. The picture is a 16:10 crop at least 960 wide,
+ * uploaded first to the proposer's own folder; their lists wait in
+ * `fileUnder` until a moderator decides.
+ */
+export interface SectionProposal {
+  name: string;
+  icon: string;
+  pictureId: string;
+  fileUnder: string;
+}
+
+/**
+ * 201 with the waiting section. Refused with 400 BAD_NAME, NAME_TAKEN {id},
+ * BAD_ICON, BAD_FILE_UNDER, BAD_PICTURE {why} or TOO_MANY_PENDING, and with
+ * 403 for a guest or a banned account.
+ */
+export function proposeSection(
+  client: ApiClient,
+  proposal: SectionProposal,
+): Promise<SectionStats> {
+  return client.request<SectionStats>("POST", "/lists/sections/proposals", { body: proposal });
+}
+
+/** The proposer takes a waiting proposal back; its lists stay where they were filed. */
+export function withdrawSectionProposal(client: ApiClient, id: string): Promise<void> {
+  return client.request<void>("DELETE", `/lists/sections/proposals/${encodeURIComponent(id)}`);
+}
+
 export type TopicStatus = "pending" | "approved" | "rejected" | "merged";
 
 /** A word of somebody's own inside a section; a new one waits for a moderator. */
 export interface Topic {
   id: string;
   name: string;
-  section: Category | null;
+  section: string | null;
   status: TopicStatus;
   listCount: number;
   followerCount: number;
   following: boolean;
-  createdBy: string;
+  /** Sent only to staff and to the topic's own creator. */
+  createdBy?: string;
   mergedInto: string | null;
 }
 

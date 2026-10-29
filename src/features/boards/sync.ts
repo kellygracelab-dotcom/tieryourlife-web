@@ -80,6 +80,9 @@ const request = (
   authorName: board.authorName,
   publishedId: board.publishedId,
   deletedAt: board.deletedAt,
+  // The account keeps it only when true, as the app writes it.
+  ...(board.anonymous ? { anonymous: true } : {}),
+  ...(board.play === null ? {} : { play: board.play }),
   tiers: board.tiers.map((tier) => ({
     uid: tier.uid,
     position: tier.position,

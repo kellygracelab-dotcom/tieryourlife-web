@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import type { CatalogueItem, Category } from "../../api/types";
+import type { CatalogueItem } from "../../api/types";
 import { findInCatalogue } from "../../lib/api";
 import { PictureRefused, type UploadedPicture } from "../../lib/pictures";
 import { fill, plural, strings } from "../../strings";
@@ -43,7 +43,7 @@ function limited<T, R>(items: readonly T[], limit: number, work: (item: T) => Pr
 interface AddCardBoxProps {
   items: readonly EditorItem[];
   /** What the list is about: it says whose picture a pasted name takes. */
-  category?: Category | null;
+  category?: string | null;
   dispatch: (action: EditorAction) => void;
   lookup?: Lookup;
   upload: Upload;
@@ -84,7 +84,7 @@ function PasteBox({
   lookup,
 }: {
   room: number;
-  category: Category | null;
+  category: string | null;
   dispatch: (action: EditorAction) => void;
   lookup: Lookup;
 }) {

@@ -8,9 +8,29 @@ describe("parseApiError", () => {
     [
       400,
       json({ error: "A list needs a title", code: "INVALID" }),
-      { kind: "invalid", detail: "A list needs a title" },
+      { kind: "invalid", detail: "A list needs a title", code: "INVALID" },
     ],
-    [400, "", { kind: "invalid", detail: null }],
+    [400, "", { kind: "invalid", detail: null, code: null }],
+    [
+      400,
+      json({ error: "Taken", code: "NAME_TAKEN", detail: "food", id: "food" }),
+      { kind: "invalid", detail: "Taken", code: "NAME_TAKEN", id: "food" },
+    ],
+    [
+      400,
+      json({
+        error: "Not a section's",
+        code: "BAD_PICTURE",
+        detail: "too_small",
+        why: "too_small",
+      }),
+      { kind: "invalid", detail: "Not a section's", code: "BAD_PICTURE", why: "too_small" },
+    ],
+    [
+      400,
+      json({ error: "Three waiting", code: "TOO_MANY_PENDING", id: 7 }),
+      { kind: "invalid", detail: "Three waiting", code: "TOO_MANY_PENDING" },
+    ],
     [
       401,
       json({ error: "Missing App Check token", code: "APP_UNVERIFIED" }),
@@ -41,6 +61,13 @@ describe("parseApiError", () => {
     [409, json({ error: "That page is gone", code: "CURSOR_GONE" }), { kind: "cursorGone" }],
     [409, json({ error: "Moved on", code: "CONFLICT" }), { kind: "conflict" }],
     [
+      410,
+      json({ error: "Merged", code: "MERGED", detail: "food", mergedInto: "food" }),
+      { kind: "merged", into: "food" },
+    ],
+    [410, json({ error: "Merged", code: "MERGED" }), { kind: "merged", into: null }],
+    [410, json({ error: "Gone" }), { kind: "unknown", status: 410 }],
+    [
       413,
       json({ error: "Too many items", code: "TOO_LARGE" }),
       { kind: "tooLarge", detail: "Too many items" },
@@ -51,6 +78,12 @@ describe("parseApiError", () => {
       { kind: "pictureRefused", because: "adult" },
     ],
     [422, json({ error: "Refused" }), { kind: "pictureRefused", because: null }],
+    [
+      429,
+      json({ error: "Ten today", code: "TOO_MANY_PROPOSALS" }),
+      { kind: "tooManyRequests", code: "TOO_MANY_PROPOSALS" },
+    ],
+    [429, "", { kind: "tooManyRequests", code: null }],
     [503, json({ error: "Unavailable", code: "UNAVAILABLE" }), { kind: "unavailable" }],
     [405, json({ error: "Use GET" }), { kind: "unknown", status: 405 }],
     [500, "[]", { kind: "unknown", status: 500 }],
