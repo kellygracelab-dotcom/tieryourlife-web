@@ -15,7 +15,7 @@ import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
 import type { PublishedList, PublishedTier } from "../../api/types";
 import { useSession } from "../../app/session";
-import { keepRanking, noteTake } from "../../lib/api";
+import { keepListRanking, keepRanking, noteTake } from "../../lib/api";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
 import { writeKept } from "../ranking/kept";
@@ -90,6 +90,8 @@ interface RankingBoardProps {
   store?: KeyValueStore;
   keep?: Keep;
   take?: (listId: string) => Promise<void>;
+  /** Puts a signed-in reader's finished placing among the list's rankings. */
+  tell?: (list: PublishedList, rows: readonly (readonly number[])[]) => Promise<unknown>;
   share?: Share;
   edit?: EditMode;
   /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
@@ -268,6 +270,7 @@ export function RankingBoard({
   store = localStorageStore,
   keep = keepRanking,
   take = noteTake,
+  tell = keepListRanking,
   share = downloadShare,
   edit,
   strip = false,
@@ -388,6 +391,10 @@ export function RankingBoard({
         setFinish({ status: "done", code: kept.code });
         if (guest) setOffer("open");
         void take(list.id);
+        // The /r/ link is the site's own; the rankings the app shows are the
+        // account's, so a reader with one is counted there too. A miss there
+        // costs nothing the link has not kept.
+        if (!guest && edit === undefined) tell(list, state.rows).catch(() => undefined);
       },
       (reason: unknown) => setFinish({ status: "failed", error: errorOf(reason) }),
     );

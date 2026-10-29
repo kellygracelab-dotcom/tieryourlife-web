@@ -8,7 +8,11 @@ import type { SignInOutcome } from "../../lib/signIn";
 import type { KeyValueStore } from "../../lib/storage";
 import { RankingBoard } from "./RankingBoard";
 
-vi.mock("../../lib/api", () => ({ keepRanking: vi.fn(), noteTake: vi.fn() }));
+vi.mock("../../lib/api", () => ({
+  keepRanking: vi.fn(),
+  noteTake: vi.fn(),
+  keepListRanking: vi.fn(async () => undefined),
+}));
 
 const list: PublishedList = {
   id: "abc",

@@ -7,7 +7,11 @@ import type { PublishedList } from "../../api/types";
 import { memoryStore } from "../../lib/storage";
 import { RankingBoard, type EditMode } from "./RankingBoard";
 
-vi.mock("../../lib/api", () => ({ keepRanking: vi.fn(), noteTake: vi.fn() }));
+vi.mock("../../lib/api", () => ({
+  keepRanking: vi.fn(),
+  noteTake: vi.fn(),
+  keepListRanking: vi.fn(async () => undefined),
+}));
 
 const list: PublishedList = {
   id: "abc",

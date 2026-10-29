@@ -22,6 +22,7 @@ import type {
   Following,
   FollowState,
   RankingsPage,
+  ReaderRanking,
   ReportRequest,
   SuggestedAuthor,
 } from "../api/community";
@@ -119,6 +120,16 @@ export const loadListRankings = (
 
 export const withdrawListRanking = (listId: string): Promise<void> =>
   community.withdrawListRanking(api, listId);
+
+/** A reader's finished placing, among the list's rankings where the app shows them. */
+export const keepListRanking = (
+  list: Pick<PublishedList, "id" | "items" | "tiers">,
+  rows: readonly (readonly number[])[],
+): Promise<ReaderRanking> =>
+  community.keepListRanking(api, list.id, {
+    arrangement: community.arrangementOf(rows, list.items.length),
+    tierLabels: list.tiers.map((tier) => tier.label),
+  });
 
 export const loadFollowing = (): Promise<Following> => community.loadFollowing(api);
 

@@ -4,10 +4,15 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import { MemoryRouter } from "react-router";
 import type { PublishedList } from "../../api/types";
+import { SessionContext, type Session } from "../../app/session";
 import type { KeyValueStore } from "../../lib/storage";
 import { RankingBoard } from "./RankingBoard";
 
-vi.mock("../../lib/api", () => ({ keepRanking: vi.fn(), noteTake: vi.fn() }));
+vi.mock("../../lib/api", () => ({
+  keepRanking: vi.fn(),
+  noteTake: vi.fn(),
+  keepListRanking: vi.fn(async () => undefined),
+}));
 
 const list: PublishedList = {
   id: "abc",
@@ -493,6 +498,44 @@ describe("RankingBoard", () => {
     await userEvent.click(screen.getByRole("button", { name: "Change ranking" }));
     expect(screen.getByRole("button", { name: "Finish" })).toBeEnabled();
     expect(card("The Witch")).toBeEnabled();
+  });
+
+  it("counts a signed-in reader's Finish among the list's rankings, as the app shows them, and a guest's not", async () => {
+    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
+    const tell = vi.fn(async () => undefined);
+    const finish = async (account: Session["account"]) => {
+      const session: Session = {
+        account,
+        signIn: async () => ({ kind: "cancelled" }),
+        signOut: async () => undefined,
+        refresh: () => undefined,
+      };
+      const view = render(
+        <SessionContext.Provider value={session}>
+          <MemoryRouter>
+            <RankingBoard
+              list={list}
+              store={memoryStore()}
+              keep={keep}
+              take={async () => undefined}
+              tell={tell}
+            />
+          </MemoryRouter>
+        </SessionContext.Provider>,
+      );
+      await userEvent.click(card("Ex Machina"));
+      await userEvent.keyboard("1");
+      await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+      await screen.findByRole("status");
+      view.unmount();
+    };
+
+    await finish({ kind: "signedIn", uid: "u9", displayName: "Reader", photoUrl: null });
+    expect(tell).toHaveBeenCalledWith(list, [[0], []]);
+
+    tell.mockClear();
+    await finish({ kind: "guest", uid: null });
+    expect(tell).not.toHaveBeenCalled();
   });
 
   it("keeps the board editable when saving fails, and tries again", async () => {
