@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import type { Ranking } from "../api/rank";
-import { isSectionId, type PublishedList } from "../api/types";
+import { isOwnList, isSectionId, type PublishedList } from "../api/types";
 import { useSession } from "../app/session";
 import { boardForOwnList, boardOfList, type CopyBack } from "../features/boards/ownList";
 import { boardFromDraft } from "../features/boards/publish";
@@ -216,7 +216,7 @@ function BoardOfOwnList({
   const navigate = useNavigate();
   // Try again clears it, and the effect brings the pictures over again.
   const [failed, setFailed] = useState(false);
-  const mine = state.status === "ready" && state.value.authorUid === uid;
+  const mine = state.status === "ready" && isOwnList(state.value, uid);
 
   useEffect(() => {
     if (!mine || state.status !== "ready" || failed) return;

@@ -24,6 +24,12 @@ export const isCategory = (value: string): value is Category =>
 /** The backend's shape of a section id, the nine's underscore included: what a link's `category` is read by. */
 export const isSectionId = (value: string): boolean => /^[a-z0-9][a-z0-9_-]{1,39}$/.test(value);
 
+/** Whether the person signed in published the list, named or not. */
+export const isOwnList = (
+  list: Pick<ListSummary, "mine" | "authorUid">,
+  uid: string | null,
+): boolean => list.mine === true || (uid !== null && list.authorUid === uid);
+
 export type FeedSort = "recent" | "popular";
 
 /** The list another one was made from, credited the way the backend keeps it. */
@@ -48,6 +54,8 @@ export interface ListSummary {
   authorUid: string;
   authorName: string;
   authorPhotoUrl: string | null;
+  /** Sent only to the one who published it: an anonymous list names nobody to compare with. */
+  mine?: boolean;
   /** The section's id: one of the nine, or any approved since. */
   category: string;
   itemCount: number;
