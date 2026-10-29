@@ -617,6 +617,23 @@ describe("ListPage for its author", () => {
     expect(screen.queryByRole("link", { name: "Publish as my list" })).toBeNull();
   });
 
+  it("knows its author's own anonymous list by the backend's word, there being no name to compare", async () => {
+    mocks.loadList.mockResolvedValue({
+      ...list,
+      anonymous: true,
+      authorUid: "",
+      authorName: "",
+      authorPhotoUrl: null,
+      mine: true,
+    });
+    openAs(author);
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
+    expect(
+      screen.getAllByRole("link", { name: "Edit" }).map((link) => link.getAttribute("href")),
+    ).toEqual(["/b/new?list=abc"]);
+  });
+
   it("deletes the list after asking, names a failure, and leaves for My lists when it is gone", async () => {
     mocks.loadList.mockResolvedValue(list);
     mocks.unpublish.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));

@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Link, useParams } from "react-router";
 import type { ReaderRanking } from "../api/community";
-import type { BasedOn, PublishedList } from "../api/types";
+import { isOwnList, type BasedOn, type PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
 import type { BoardsRepository } from "../features/boards/repository";
@@ -209,7 +209,7 @@ function OpenList({
   const { hidden } = useHidden();
   // The author has nobody's arrangement to compare with but their own: they
   // see the list as they published it, and the way to change it.
-  const own = account?.kind === "signedIn" && account.uid === list.authorUid;
+  const own = account?.kind === "signedIn" && isOwnList(list, account.uid);
   const editorial = isEditorial(list);
   const outOfSight = !own && isOutOfSight(hidden, list);
   const author = useMemo(() => arrange(list), [list]);
