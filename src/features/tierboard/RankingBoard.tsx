@@ -25,6 +25,7 @@ import { errorOf } from "../../api/errors";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
+import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
 import { flyIn } from "./flight";
@@ -147,12 +148,24 @@ interface TileProps {
 }
 
 /**
+ * Whether the device is a phone's, with a finger for its pointer: there a
+ * card's menu is the phone's sheet, from the bottom; with a mouse it opens
+ * where the pointer is.
+ */
+const fingerFirst = () =>
+  typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+
+/** A card's menu, open: the phone's sheet, or a menu at a point on the screen. */
+type CardMenuAt = { sheet: true } | { sheet: false; at: ScreenPoint };
+
+/**
  * A card on a board one can change. A tap picks it, for a tier's tap or a
  * number key to place; a double tap or a double click opens its menu, as on
  * the phone: every tier, back to the pool, and off the list for the owner.
  * Nothing sits on the card itself, so a press meant for the card cannot take
- * it off the list. The keyboard opens the menu with the context-menu key or
- * Shift+F10.
+ * it off the list. With a mouse the menu opens at the pointer, by a double
+ * click or a right click; a finger gets the phone's sheet. The keyboard opens
+ * it with the context-menu key or Shift+F10, at the card.
  */
 function Tile({
   list,
@@ -168,32 +181,47 @@ function Tile({
   onRemove,
   onMenu,
 }: TileProps) {
-  const [moving, setMoving] = useState(false);
-  const closeMove = useCallback(() => setMoving(false), []);
+  const [moving, setMoving] = useState<CardMenuAt | null>(null);
+  const closeMove = useCallback(() => setMoving(null), []);
+  // What made the last press, so a double tap of a finger gets the sheet and a mouse's the menu.
+  const pressedBy = useRef("mouse");
   // When the last click came; two within DOUBLE_TAP_MS are a double click.
   // Clicks are timed rather than read from dblclick, which a double tap does
   // not send on every phone, and a drag between them sends no click at all.
   const lastClick = useRef(0);
+  const opener = useRef<HTMLButtonElement>(null);
   const card = list.items[item];
   if (card === undefined) return null;
   const classes = ["tile", selected && "tile--selected", lifted && "tile--lifted"]
     .filter(Boolean)
     .join(" ");
-  const openMenu = () => {
+  const openMenu = (how: CardMenuAt) => {
     // Nothing picked while the menu is open: a number key does nothing, and a
     // move from the menu does not pass the pick on to the next card.
     dispatch({ type: "select", item: null });
-    setMoving(true);
+    setMoving(how);
     onMenu();
+  };
+  // From the keyboard the menu opens at the card's lower start corner.
+  const atCard = (button: HTMLElement): CardMenuAt => {
+    if (fingerFirst()) return { sheet: true };
+    const box = button.getBoundingClientRect();
+    const rtl = getComputedStyle(button).direction === "rtl";
+    return { sheet: false, at: { x: rtl ? box.right : box.left, y: box.bottom } };
+  };
+  const close = (then: () => void) => () => {
+    setMoving(null);
+    then();
   };
   return (
     <li>
       <button
+        ref={opener}
         type="button"
         className={classes}
         aria-pressed={selected}
         aria-label={card.title}
-        aria-haspopup="dialog"
+        aria-haspopup={fingerFirst() ? "dialog" : "menu"}
         aria-keyshortcuts="Shift+F10"
         title={card.title}
         disabled={locked}
@@ -205,7 +233,11 @@ function Tile({
           const at = event.detail > 0 ? Date.now() : 0;
           if (at > 0 && at - lastClick.current < DOUBLE_TAP_MS) {
             lastClick.current = 0;
-            openMenu();
+            openMenu(
+              pressedBy.current === "touch"
+                ? { sheet: true }
+                : { sheet: false, at: { x: event.clientX, y: event.clientY } },
+            );
             return;
           }
           lastClick.current = at;
@@ -216,15 +248,18 @@ function Tile({
           const touch = (event.nativeEvent as PointerEvent).pointerType === "touch";
           if (touch || dragNow().phase !== "idle") return;
           event.preventDefault();
-          openMenu();
+          openMenu({ sheet: false, at: { x: event.clientX, y: event.clientY } });
         }}
         onKeyDown={(event) => {
           // Where the browser turns neither key into a context menu, Safari among them.
           if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
           event.preventDefault();
-          openMenu();
+          openMenu(atCard(event.currentTarget));
         }}
-        onPointerDown={locked ? undefined : onPointerDown}
+        onPointerDown={(event) => {
+          pressedBy.current = event.pointerType;
+          if (!locked) onPointerDown(event);
+        }}
       >
         {card.imageUrl !== null ? (
           <img {...sizedFor(card.imageUrl, TILE_WIDTH)} alt="" loading="lazy" draggable={false} />
@@ -232,27 +267,27 @@ function Tile({
           <CardName title={card.title} board={board} />
         )}
       </button>
-      {moving && !locked && (
+      {moving !== null && !locked && moving.sheet && (
         <MoveSheet
           name={card.title}
           tiers={list.tiers}
           current={current}
-          onPlace={(tier) => {
-            setMoving(false);
-            dispatch({ type: "place", item, tier });
-          }}
-          onUnplace={() => {
-            setMoving(false);
-            dispatch({ type: "unplace", item });
-          }}
-          onRemove={
-            onRemove === undefined
-              ? undefined
-              : () => {
-                  setMoving(false);
-                  onRemove();
-                }
-          }
+          onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
+          onUnplace={close(() => dispatch({ type: "unplace", item }))}
+          onRemove={onRemove === undefined ? undefined : close(onRemove)}
+          onClose={closeMove}
+        />
+      )}
+      {moving !== null && !locked && !moving.sheet && (
+        <CardMenu
+          name={card.title}
+          tiers={list.tiers}
+          current={current}
+          at={moving.at}
+          opener={opener}
+          onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
+          onUnplace={close(() => dispatch({ type: "unplace", item }))}
+          onRemove={onRemove === undefined ? undefined : close(onRemove)}
           onClose={closeMove}
         />
       )}

@@ -1465,6 +1465,105 @@
   color: var(--error);
 }
 
+/*
+ * The same menu with a mouse, where the pointer is: three items, the tiers in
+ * a menu of their own beside the first. Above every dialog, as a menu opened
+ * by a right click is; placed by the script in screen pixels.
+ */
+.card-menu {
+  position: fixed;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  padding: 8px 0;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: var(--surface-container);
+  box-shadow: var(--shadow-lift);
+  outline: none;
+}
+
+.card-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding-inline: 16px 12px;
+  border: none;
+  background: transparent;
+  font: 400 14px/20px var(--font);
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.card-menu__item:focus {
+  outline: none;
+  background: var(--hover);
+}
+
+.card-menu__item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.card-menu__item[aria-expanded="true"] {
+  background: var(--hover);
+}
+
+.card-menu__item[aria-disabled="true"] {
+  color: var(--ink-dim);
+  cursor: default;
+}
+
+.card-menu__item--danger {
+  color: var(--error);
+}
+
+.card-menu__text {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.card-menu__more {
+  flex: none;
+  margin-inline-start: 12px;
+  font-size: 20px;
+  color: var(--ink-dim);
+}
+
+.card-menu__swatch {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--band);
+}
+
+.card-menu__label {
+  font-weight: 500;
+}
+
+.card-menu__caption {
+  overflow: hidden;
+  font: var(--text-small);
+  color: var(--ink-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-menu__note {
+  flex: none;
+  font: var(--text-caption);
+  color: var(--ink-dim);
+}
+
 /* A number key on the band means nothing to a finger: the row's pill is a plus there. */
 @media (hover: none) and (pointer: coarse) {
   .tier__key,

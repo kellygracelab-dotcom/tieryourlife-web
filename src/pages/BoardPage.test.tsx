@@ -248,8 +248,8 @@ describe("BoardPage", () => {
 
     // Off the list from the card's menu, a double click away: nothing on the card itself.
     await userEvent.dblClick(screen.getByRole("button", { name: "Climax" }));
-    const menu = within(screen.getByRole("dialog", { name: "Climax" }));
-    await userEvent.click(menu.getByRole("button", { name: "Remove from list" }));
+    const menu = within(screen.getByRole("menu", { name: "Climax" }));
+    await userEvent.click(menu.getByRole("menuitem", { name: "Remove from list" }));
     expect(screen.queryByRole("button", { name: "Climax" })).toBeNull();
     expect(
       repository.get("films")?.items.find((item) => item.title === "Climax")?.deletedAt,
@@ -357,9 +357,9 @@ describe("BoardPage: tiers and settings", () => {
     repository.save(filmBoard());
     open(repository, "/b/films");
     await userEvent.dblClick(within(tier("S")).getByRole("button", { name: "Ex Machina" }));
-    const menu = within(screen.getByRole("dialog", { name: "Ex Machina" }));
+    const menu = within(screen.getByRole("menu", { name: "Ex Machina" }));
     expect(screen.queryByRole("dialog", { name: "Edit tier" })).toBeNull();
-    await userEvent.click(menu.getByRole("button", { name: "Back to the pool" }));
+    await userEvent.click(menu.getByRole("menuitem", { name: "Back to the pool" }));
     expect(within(tier("S")).queryByRole("button", { name: "Ex Machina" })).toBeNull();
     const kept = repository.get("films")!;
     expect(itemsIn(kept, poolTier(kept)!.uid).map((item) => item.title)).toContain("Ex Machina");

@@ -39,18 +39,42 @@ async function makeBoard(page: Page, touch: boolean) {
   const card = page.getByRole("button", { name: "Ex Machina", exact: true });
   if (!touch) await card.hover();
   await expect(page.getByLabel(/^(Remove|Move) Ex Machina$/)).toHaveCount(0);
-  await doubleTap(page, card, touch);
-  const sheet = page.getByRole("dialog", { name: "Ex Machina" });
-  // The sheet is where a card leaves the list.
-  await expect(sheet.getByRole("button", { name: "Remove from list" })).toBeVisible();
-  if (!touch) {
-    // The keyboard stays in the sheet, round and round.
-    for (let i = 0; i < 9; i++) {
-      await page.keyboard.press("Tab");
-      expect(await sheet.evaluate((box) => box.contains(document.activeElement))).toBe(true);
-    }
+  if (touch) {
+    await doubleTap(page, card, touch);
+    const sheet = page.getByRole("dialog", { name: "Ex Machina" });
+    // The sheet is where a card leaves the list.
+    await expect(sheet.getByRole("button", { name: "Remove from list" })).toBeVisible();
+    await press(sheet.getByRole("button", { name: "S", exact: true }), touch);
+  } else {
+    // A mouse gets a menu where the pointer is, the tiers beside its first item.
+    await card.dblclick();
+    const menu = page.getByRole("menu", { name: "Ex Machina" });
+    await expect(menu.getByRole("menuitem", { name: "Remove from list" })).toBeVisible();
+    const at = (await card.boundingBox())!;
+    const box = (await menu.boundingBox())!;
+    expect(Math.abs(box.x - (at.x + at.width / 2))).toBeLessThan(2);
+    expect(Math.abs(box.y - (at.y + at.height / 2))).toBeLessThan(2);
+    await expect(menu.getByRole("menuitem", { name: "Move to a tier" })).toBeFocused();
+    // Escape is a change of mind; the context-menu key opens it again at the card.
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(card).toBeFocused();
+    await page.keyboard.press("Shift+F10");
+    await expect(menu).toBeVisible();
+    await page.keyboard.press("Escape");
+    // The pointer on Move to a tier brings out the tiers, beside it.
+    await card.click({ button: "right" });
+    const item = menu.getByRole("menuitem", { name: "Move to a tier" });
+    await item.hover();
+    const tiers = page.getByRole("menu", { name: "Move to a tier" });
+    await expect(tiers).toBeVisible();
+    // After it, or before it where the window ends: the pool stands at the window's end.
+    const side = (await item.boundingBox())!;
+    const beside = (await tiers.boundingBox())!;
+    expect(beside.x >= side.x + side.width - 1 || beside.x + beside.width <= side.x + 1).toBe(true);
+    await tiers.getByRole("menuitem", { name: "S", exact: true }).click();
+    await expect(menu).toBeHidden();
   }
-  await press(sheet.getByRole("button", { name: "S", exact: true }), touch);
   await expect(page.getByText(/1 ranked · 2 in pool/)).toBeVisible();
 }
 

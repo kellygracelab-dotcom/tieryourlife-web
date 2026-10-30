@@ -558,9 +558,14 @@ describe("ListPage, starting Mine from Theirs", () => {
     // The card's menu moves it too.
     const theirs = screen.getByRole("region", { name: "Their ranking" });
     await userEvent.dblClick(within(theirs).getByRole("button", { name: "Climax" }));
-    const menu = within(screen.getByRole("dialog", { name: "Climax" }));
-    expect(menu.queryByRole("button", { name: "Remove from list" })).toBeNull();
-    await userEvent.click(menu.getByRole("button", { name: "A" }));
+    const menu = within(screen.getByRole("menu", { name: "Climax" }));
+    expect(menu.queryByRole("menuitem", { name: "Remove from list" })).toBeNull();
+    await userEvent.click(menu.getByRole("menuitem", { name: "Move to a tier" }));
+    await userEvent.click(
+      within(screen.getByRole("menu", { name: "Move to a tier" })).getByRole("menuitem", {
+        name: "A",
+      }),
+    );
     expect(theirsPressed()).toBe("false");
     expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0], [1, 2]]);
 
