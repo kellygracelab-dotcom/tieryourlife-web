@@ -1159,6 +1159,8 @@ const fr: Translation = {
     cancel: "Annuler",
     more: "Plus d'options",
     back: "Vos listes",
+    stillPublic:
+      "Conservée, pas supprimée : sa copie publique n’a pas pu être retirée. Réessayez une fois en ligne.",
   },
 };
 

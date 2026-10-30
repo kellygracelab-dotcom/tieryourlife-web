@@ -1285,6 +1285,8 @@ const pl: Translation = {
     cancel: "Anuluj",
     more: "Więcej opcji",
     back: "Twoje listy",
+    stillPublic:
+      "Zachowana, nie usunięta: nie udało się wycofać jej publicznej kopii. Spróbuj ponownie, gdy będziesz online.",
   },
 };
 

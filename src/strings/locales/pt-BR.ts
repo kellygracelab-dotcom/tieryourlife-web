@@ -1135,6 +1135,8 @@ const ptBR: Translation = {
     cancel: "Cancelar",
     more: "Mais opções",
     back: "Suas listas",
+    stillPublic:
+      "Mantida, não excluída: não foi possível retirar a cópia pública. Tente de novo quando estiver online.",
   },
 };
 

@@ -1085,6 +1085,9 @@ export const en = {
     cancel: "Cancel",
     more: "More options",
     back: "Your lists",
+    // The app's words: a board whose public copy could not be taken down stays in the trash.
+    stillPublic:
+      "Kept, not deleted: its public copy could not be taken down. Try again when you are online.",
   },
   // Shown by plain DOM when the site itself could not load; see src/boot.ts.
   boot: {

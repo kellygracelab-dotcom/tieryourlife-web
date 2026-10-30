@@ -1099,6 +1099,8 @@ const tr: Translation = {
     cancel: "Vazgeç",
     more: "Diğer seçenekler",
     back: "Listelerin",
+    stillPublic:
+      "Silinmedi, korundu: herkese açık kopyası kaldırılamadı. Çevrimiçi olduğunuzda yeniden deneyin.",
   },
 };
 

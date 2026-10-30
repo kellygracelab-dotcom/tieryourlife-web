@@ -1141,6 +1141,8 @@ const de: Translation = {
     cancel: "Abbrechen",
     more: "Weitere Optionen",
     back: "Deine Listen",
+    stillPublic:
+      "Behalten statt gelöscht: Die öffentliche Kopie ließ sich nicht entfernen. Versuche es erneut, sobald du online bist.",
   },
 };
 

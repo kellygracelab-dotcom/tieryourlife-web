@@ -1148,6 +1148,8 @@ const es: Translation = {
     cancel: "Cancelar",
     more: "Más opciones",
     back: "Tus listas",
+    stillPublic:
+      "Se conservó en vez de borrarse: no se pudo retirar su copia pública. Inténtalo de nuevo cuando estés en línea.",
   },
 };
 
