@@ -389,6 +389,12 @@ const ptBR: Translation = {
     viewAuthor: "Ver {name}",
     theirRanking: "A ordem dele",
     backToAuthor: "Voltar à ordem do autor",
+    startedFrom: "Sua versão começa pela classificação de {name}",
+    startedFromUnnamed: "Sua versão começa por esta classificação",
+    replacedYours: "Sua versão foi substituída pela classificação de {name}",
+    replacedYoursUnnamed: "Sua versão foi substituída por esta classificação",
+    seedHint: "Ao colocá-lo, sua versão começa pela classificação de {name}.",
+    seedHintUnnamed: "Ao colocá-lo, sua versão começa por esta classificação.",
   },
   rankings: {
     title: "Rankings",

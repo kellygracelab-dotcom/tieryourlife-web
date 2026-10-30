@@ -421,6 +421,12 @@ const pl: Translation = {
     viewAuthor: "Zobacz {name}",
     theirRanking: "Jego układ",
     backToAuthor: "Wróć do układu autora",
+    startedFrom: "Twoja wersja zaczyna się od rankingu: {name}",
+    startedFromUnnamed: "Twoja wersja zaczyna się od tego rankingu",
+    replacedYours: "Zastąpiono twoją wersję rankingiem: {name}",
+    replacedYoursUnnamed: "Zastąpiono twoją wersję tym rankingiem",
+    seedHint: "Umieszczenie jej rozpocznie twoją wersję od rankingu: {name}.",
+    seedHintUnnamed: "Umieszczenie jej rozpocznie twoją wersję od tego rankingu.",
   },
   rankings: {
     title: "Rankingi",

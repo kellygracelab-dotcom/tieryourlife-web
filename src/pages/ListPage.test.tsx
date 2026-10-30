@@ -12,7 +12,7 @@ import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { itemsIn, poolTier, rankedTiers } from "../features/boards/model";
 import { boards } from "../features/boards/repository";
 import { writeKept } from "../features/ranking/kept";
-import { saveDraft, scopeOf } from "../features/tierboard/draft";
+import { draftKey, loadDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
 import { localStorageStore, memoryStore } from "../lib/storage";
 
 const mocks = vi.hoisted(() => ({
@@ -352,7 +352,7 @@ describe("ListPage", () => {
     expect(screen.getByText("Opening the list…")).toBeInTheDocument();
   });
 
-  it("opens on the author's ranking, to look at, with the author and the rankings in the head", async () => {
+  it("opens on the author's ranking, with the author and the rankings in the head", async () => {
     mocks.loadList.mockResolvedValue(list);
     open();
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
@@ -364,7 +364,7 @@ describe("ListPage", () => {
     // The address is not spelled out any more: one press copies it.
     expect(screen.queryByText(`${window.location.host}/l/abc`)).toBeNull();
 
-    // Theirs is to look at: no pool, no tray, nothing to place, no Finish.
+    // Theirs has no pool, no tray and no Finish: the author's cards only, where they put them.
     expect(within(whose()).getByRole("button", { name: "Theirs" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -489,6 +489,105 @@ describe("ListPage", () => {
     await userEvent.click(button);
     expect(writeText).toHaveBeenCalledWith("http://localhost:3000/l/abc");
     expect(button).toHaveTextContent("Link copied");
+  });
+});
+
+/** Two tiers, two cards in S and one in A: room to move a card on Theirs. */
+const twoTiers: PublishedList = {
+  ...list,
+  itemCount: 3,
+  tiers: [
+    { label: "S", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" },
+    { label: "A", caption: null, colorLight: "#c06a25", colorDark: "#e9a867" },
+  ],
+  items: [
+    { title: "Ex Machina", imageUrl: null, tierIndex: 0 },
+    { title: "The Witch", imageUrl: null, tierIndex: 1 },
+    { title: "Climax", imageUrl: null, tierIndex: 0 },
+  ],
+};
+
+const theirsPressed = () =>
+  within(whose()).getByRole("button", { name: "Theirs" }).getAttribute("aria-pressed");
+/** The snackbar holding these words, for its Undo: the board's bar has an Undo of its own. */
+const snackbar = (words: string) => within(screen.getByText(words).closest(".snackbar")!);
+
+describe("ListPage, starting Mine from Theirs", () => {
+  it("copies the author's ranking into Mine on the first move, says so, and Undo goes back", async () => {
+    mocks.loadList.mockResolvedValue(twoTiers);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    // Looking is not ranking: nothing is kept for opening Theirs or picking a card on it.
+    const theirs = screen.getByRole("region", { name: "Their ranking" });
+    await userEvent.click(within(theirs).getByRole("button", { name: "Ex Machina" }));
+    expect(within(theirs).getByRole("button", { name: "Ex Machina" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(theirsPressed()).toBe("true");
+    expect(localStorage.getItem(draftKey("abc"))).toBeNull();
+    expect(screen.getByText("Placing it starts your version from danylo’s.")).toBeInTheDocument();
+
+    await userEvent.keyboard("2");
+    expect(theirsPressed()).toBe("false");
+    const yours = screen.getByRole("region", { name: "Your ranking" });
+    expect(within(yours).getByRole("list", { name: "A" })).toHaveTextContent("The WitchEx Machina");
+    expect(within(yours).getByRole("list", { name: "S" })).toHaveTextContent("Climax");
+    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[2], [1, 0]]);
+
+    const said = snackbar("Your version starts from danylo’s ranking");
+    await userEvent.click(said.getByRole("button", { name: "Undo" }));
+    expect(localStorage.getItem(draftKey("abc"))).toBeNull();
+    expect(theirsPressed()).toBe("true");
+    expect(
+      within(screen.getByRole("region", { name: "Their ranking" })).getByRole("list", {
+        name: "S",
+      }),
+    ).toHaveTextContent("Ex MachinaClimax");
+  });
+
+  it("replaces a Mine already begun, says so, and Undo puts the old one back as it was", async () => {
+    saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
+    const before = localStorage.getItem(draftKey("abc"));
+    mocks.loadList.mockResolvedValue(twoTiers);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    // Begun here, so the page opens on Mine; Theirs is a press away.
+    await userEvent.click(within(whose()).getByRole("button", { name: "Theirs" }));
+
+    // The card's menu moves it too.
+    const theirs = screen.getByRole("region", { name: "Their ranking" });
+    await userEvent.dblClick(within(theirs).getByRole("button", { name: "Climax" }));
+    const menu = within(screen.getByRole("dialog", { name: "Climax" }));
+    expect(menu.queryByRole("button", { name: "Remove from list" })).toBeNull();
+    await userEvent.click(menu.getByRole("button", { name: "A" }));
+    expect(theirsPressed()).toBe("false");
+    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0], [1, 2]]);
+
+    const said = snackbar("Replaced your version with danylo’s ranking");
+    await userEvent.click(said.getByRole("button", { name: "Undo" }));
+    expect(localStorage.getItem(draftKey("abc"))).toBe(before);
+    expect(theirsPressed()).toBe("true");
+    await userEvent.click(within(whose()).getByRole("button", { name: "Mine" }));
+    expect(
+      within(screen.getByRole("region", { name: "Your ranking" })).getByRole("list", {
+        name: "S",
+      }),
+    ).toHaveTextContent("The Witch");
+  });
+
+  it("starts from an arrow key too, and names nobody where the list has no author's name", async () => {
+    mocks.loadList.mockResolvedValue({ ...twoTiers, authorName: " " });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Ex Machina" }));
+    expect(
+      screen.getByText("Placing it starts your version from this ranking."),
+    ).toBeInTheDocument();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(theirsPressed()).toBe("false");
+    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[2, 0], [1]]);
+    expect(screen.getByText("Your version starts from this ranking")).toBeInTheDocument();
   });
 });
 

@@ -386,6 +386,12 @@ const tr: Translation = {
     viewAuthor: "{name} profilini aç",
     theirRanking: "Onun sıralaması",
     backToAuthor: "Yazarın sıralamasına dön",
+    startedFrom: "Sürümün {name} sıralamasından başlıyor",
+    startedFromUnnamed: "Sürümün bu sıralamadan başlıyor",
+    replacedYours: "Sürümün {name} sıralamasıyla değiştirildi",
+    replacedYoursUnnamed: "Sürümün bu sıralamayla değiştirildi",
+    seedHint: "Yerleştirince sürümün {name} sıralamasından başlar.",
+    seedHintUnnamed: "Yerleştirince sürümün bu sıralamadan başlar.",
   },
   rankings: {
     title: "Sıralamalar",

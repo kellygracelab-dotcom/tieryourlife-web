@@ -40,6 +40,7 @@ import {
   tierOf,
   type BoardAction,
   type BoardState,
+  type Rows,
 } from "./model";
 import { useTileDrag, type HitTest } from "./useTileDrag";
 import { useTierMove, type TierEditing } from "./useTierMove";
@@ -82,6 +83,21 @@ export interface EditMode {
   };
 }
 
+/**
+ * Somebody else's arrangement on show (Theirs), to look at and to start
+ * from, as on the phone: the board draws these rows and keeps nothing on the
+ * device, has no pool, bar or number badges, and its first move hands the
+ * rows, that move made, to `onStart`.
+ */
+export interface Seed {
+  rows: Rows;
+  /** The board's name: whose arrangement it is. */
+  label: string;
+  /** What placing a picked card will do, said under the board while one is picked. */
+  hint: string;
+  onStart: (rows: Rows) => void;
+}
+
 interface RankingBoardProps {
   list: PublishedList;
   hitTest?: HitTest;
@@ -94,6 +110,7 @@ interface RankingBoardProps {
   edit?: EditMode;
   /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
   strip?: boolean;
+  seed?: Seed;
 }
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
@@ -253,15 +270,21 @@ const saveLabel = (edit: EditMode, busy: boolean): string =>
       ? strings.new.publishing
       : strings.new.publishChanges;
 
-/** Where the board keeps a list's rows on this device; the list page reads the same place. */
+/**
+ * Where the board keeps a list's rows on this device; the list page reads the
+ * same place. Somebody else's arrangement on show (`seeded`) is not this
+ * device's: it is neither read from there nor written.
+ */
 function useBoard(
   list: PublishedList,
   store: KeyValueStore,
   initialRows: readonly (readonly number[])[] | null = null,
+  seeded = false,
 ) {
   const scope = scopeOf(list);
+  const kept = () => (seeded ? null : loadDraft(store, scope));
   const [state, dispatch] = useReducer(reduce, list, (l) =>
-    init(l.tiers.length, l.items.length, loadDraft(store, scope) ?? initialRows),
+    init(l.tiers.length, l.items.length, kept() ?? initialRows),
   );
   // The list changed shape under the board — the owner added or took away a
   // card — and the rows come from the page again. A state that follows a prop
@@ -271,14 +294,15 @@ function useBoard(
       type: "reset",
       tierCount: list.tiers.length,
       itemCount: list.items.length,
-      rows: loadDraft(store, scope) ?? initialRows,
+      rows: kept() ?? initialRows,
     });
   }
   useEffect(() => {
+    if (seeded) return;
     saveDraft(store, scope, state.rows);
     // Only the rows are worth keeping; scope fields are derived from the list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.rows, store, list.id, list.updatedAt, list.items.length, list.tiers.length]);
+  }, [state.rows, store, seeded, list.id, list.updatedAt, list.items.length, list.tiers.length]);
   return [state, dispatch] as const;
 }
 
@@ -292,8 +316,10 @@ export function RankingBoard({
   share = downloadShare,
   edit,
   strip = false,
+  seed,
 }: RankingBoardProps) {
-  const [state, dispatch] = useBoard(list, store, edit?.rows ?? null);
+  const seeded = seed !== undefined;
+  const [state, dispatch] = useBoard(list, store, seed?.rows ?? edit?.rows ?? null, seeded);
   const boardSize = useBoardSize();
   const [finish, setFinish] = useState<FinishState>({ status: "idle" });
   const [save, setSave] = useState<SaveState>({ status: "idle" });
@@ -358,9 +384,11 @@ export function RankingBoard({
   // wherever the pool is: moving the pool does not move the buttons.
   const inHead = wide && frame.headSlot !== null;
   useEffect(() => {
+    // Theirs on show has no pool to place: the page keeps its own layout for it.
+    if (seeded) return;
     frame.report(wide ? dock : null);
     return () => frame.report(null);
-  }, [frame, wide, dock]);
+  }, [frame, wide, dock, seeded]);
 
   // Where the picked card was in the tray when it was placed. Once the tile
   // is in its row it flies from there, or fades in for someone who asked for
@@ -449,6 +477,19 @@ export function RankingBoard({
     report.current?.(state.rows);
   }, [state.rows]);
 
+  // Theirs on show: the first move, by a drag, a tap, a key or the card's
+  // menu, starts the visitor's own board from it. Picking a card is not a move.
+  const start = useRef(seed?.onStart);
+  useEffect(() => {
+    start.current = seed?.onStart;
+  });
+  const started = useRef(false);
+  useEffect(() => {
+    if (state.history.length === 0 || started.current || start.current === undefined) return;
+    started.current = true;
+    start.current(state.rows);
+  }, [state.rows, state.history.length]);
+
   const onSave = () => {
     if (edit === undefined) return;
     setSave({ status: "saving" });
@@ -520,7 +561,7 @@ export function RankingBoard({
   const { over } = useFixedDock({
     poolBox,
     boardEnd,
-    fixed: docked && !restEmpty,
+    fixed: docked && !restEmpty && !seeded,
     dragging: drag.state.phase === "dragging",
     dragNow: drag.current,
     nudge: drag.nudge,
@@ -608,7 +649,7 @@ export function RankingBoard({
   return (
     <section
       className={docked ? "ranking ranking--under" : "ranking"}
-      aria-label={strings.rank.yours}
+      aria-label={seed?.label ?? strings.rank.yours}
       ref={section}
     >
       <div className="ranking__main">
@@ -618,7 +659,7 @@ export function RankingBoard({
           </p>
         )}
 
-        {edit === undefined && (
+        {edit === undefined && !seeded && (
           <ResultBar
             finish={finish}
             onRetry={onFinish}
@@ -649,6 +690,7 @@ export function RankingBoard({
               lifted={lifted}
               locked={locked}
               onPlace={placeSelected}
+              keys={!seeded}
               dragNow={drag.current}
               onMenu={onMenu}
               onRemove={edit?.owner?.remove}
@@ -672,12 +714,22 @@ export function RankingBoard({
           )}
           <div className="board__end" ref={boardEnd} aria-hidden="true" />
         </div>
+        {seed !== undefined && selected !== null && (
+          <p className="ranking__seed-hint" role="status">
+            {seed.hint}
+          </p>
+        )}
       </div>
 
+      {/* Theirs keeps the column empty, so its tiers stand where Mine's do. */}
       <div className="ranking__side">
-        {inHead && frame.headSlot !== null ? createPortal(bar, frame.headSlot) : bar}
+        {seeded
+          ? null
+          : inHead && frame.headSlot !== null
+            ? createPortal(bar, frame.headSlot)
+            : bar}
 
-        {!restEmpty && (
+        {!seeded && !restEmpty && (
           <div
             key={dock}
             ref={poolBox}
@@ -834,7 +886,7 @@ export function RankingBoard({
         )}
       </div>
 
-      {edit === undefined && (
+      {edit === undefined && !seeded && (
         <KeepDialog state={offer} onGoogle={onGoogle} onLinkOnly={onLinkOnly} />
       )}
       <DragGhost state={drag.state} items={list.items} board={boardSize} />
@@ -855,6 +907,8 @@ interface TierRowProps {
   locked: boolean;
   /** Places the picked card here; the board plans the tile's flight first. */
   onPlace: (tier: number) => void;
+  /** The tier's number key on its band; Theirs on show has none. */
+  keys: boolean;
   dragNow: () => DragState;
   onMenu: () => void;
   /** The owner's: a card off the list, from the card's menu. */
@@ -882,6 +936,7 @@ function TierRow({
   lifted,
   locked,
   onPlace,
+  keys,
   dragNow,
   onMenu,
   onRemove,
@@ -940,7 +995,7 @@ function TierRow({
       >
         <span className="tier__label">{meta.label}</span>
         {meta.caption !== null && <span className="tier__caption">{meta.caption}</span>}
-        {tier < 9 && (
+        {keys && tier < 9 && (
           <span className="tier__key" aria-hidden="true">
             {tier + 1}
           </span>

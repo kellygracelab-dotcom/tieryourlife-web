@@ -56,6 +56,39 @@ test.describe("ranking a list", () => {
   });
 });
 
+test.describe("starting from the author's ranking", () => {
+  test.skip(({ hasTouch }) => hasTouch, "the mouse path");
+
+  test("a card dragged on Theirs starts Mine from the author's ranking, and Undo goes back", async ({
+    page,
+  }) => {
+    await mockBackend(page);
+    await page.goto(`/l/${LIST_ID}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+    const theirs = page.getByRole("region", { name: "Their ranking" });
+    const from = await theirs.getByRole("button", { name: "Ex Machina" }).boundingBox();
+    const to = await theirs.getByRole("list", { name: "A" }).boundingBox();
+    if (from === null || to === null) throw new Error("board not laid out");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await page.mouse.up();
+
+    // Mine now: the author's arrangement with that one card moved, and Climax still to place.
+    const yours = page.getByRole("region", { name: "Your ranking" });
+    await expect(yours.getByRole("list", { name: "A" }).getByRole("button")).toHaveText([
+      "The Witch",
+      "Ex Machina",
+    ]);
+    await expect(page.getByText("2 of 3 placed")).toBeVisible();
+    await expect(page.locator(".ghost")).toHaveCount(0);
+    const said = page.locator(".snackbar");
+    await expect(said).toContainText("Your version starts from danylo’s ranking");
+    await said.getByRole("button", { name: "Undo" }).click();
+    await expect(theirs.getByRole("list", { name: "S" })).toContainText("Ex Machina");
+  });
+});
+
 // On every screen: the mouse on a desktop and in Safari, a held finger on the
 // phones. The pointer is driven on the real layout, so the place a card lands
 // is read from where the tiles actually are.

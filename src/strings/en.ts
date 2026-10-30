@@ -385,6 +385,13 @@ export const en = {
     viewAuthor: "View {name}",
     theirRanking: "Their ranking",
     backToAuthor: "Back to the author’s ranking",
+    // The phone app's words for a first move on Theirs, which starts Mine from it.
+    startedFrom: "Your version starts from {name}’s ranking",
+    startedFromUnnamed: "Your version starts from this ranking",
+    replacedYours: "Replaced your version with {name}’s ranking",
+    replacedYoursUnnamed: "Replaced your version with this ranking",
+    seedHint: "Placing it starts your version from {name}’s.",
+    seedHintUnnamed: "Placing it starts your version from this ranking.",
   },
   // The readers' placings of a list. The title has no count, so it cannot
   // disagree with the chip's, which is the takes (Danylo, 28.10).

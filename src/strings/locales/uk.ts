@@ -421,6 +421,12 @@ const uk: Translation = {
     viewAuthor: "Профіль {name}",
     theirRanking: "Його розташування",
     backToAuthor: "Повернутися до розташування автора",
+    startedFrom: "Вашу версію почато з рейтингу: {name}",
+    startedFromUnnamed: "Вашу версію почато з цього рейтингу",
+    replacedYours: "Вашу версію замінено рейтингом: {name}",
+    replacedYoursUnnamed: "Вашу версію замінено цим рейтингом",
+    seedHint: "Якщо поставити її, ваша версія почнеться з рейтингу: {name}.",
+    seedHintUnnamed: "Якщо поставити її, ваша версія почнеться з цього рейтингу.",
   },
   rankings: {
     title: "Ранжування",

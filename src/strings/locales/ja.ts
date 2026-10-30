@@ -385,6 +385,12 @@ const ja: Translation = {
     viewAuthor: "{name} のプロフィール",
     theirRanking: "作者の並べ方",
     backToAuthor: "作者の並べ方に戻る",
+    startedFrom: "{name}のランキングから自分のバージョンを始めました",
+    startedFromUnnamed: "このランキングから自分のバージョンを始めました",
+    replacedYours: "自分のバージョンを{name}のランキングに置き換えました",
+    replacedYoursUnnamed: "自分のバージョンをこのランキングに置き換えました",
+    seedHint: "置くと、{name}のランキングから自分のバージョンが始まります。",
+    seedHintUnnamed: "置くと、このランキングから自分のバージョンが始まります。",
   },
   rankings: {
     title: "ランキング",

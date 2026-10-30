@@ -398,6 +398,12 @@ const fr: Translation = {
     viewAuthor: "Voir {name}",
     theirRanking: "Son classement",
     backToAuthor: "Revenir au classement de l’auteur",
+    startedFrom: "Votre version part du classement de {name}",
+    startedFromUnnamed: "Votre version part de ce classement",
+    replacedYours: "Votre version remplacée par le classement de {name}",
+    replacedYoursUnnamed: "Votre version remplacée par ce classement",
+    seedHint: "La placer fait partir votre version du classement de {name}.",
+    seedHintUnnamed: "La placer fait partir votre version de ce classement.",
   },
   rankings: {
     title: "Classements",

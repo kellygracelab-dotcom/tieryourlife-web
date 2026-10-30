@@ -422,6 +422,12 @@ const ru: Translation = {
     viewAuthor: "Профиль {name}",
     theirRanking: "Его расстановка",
     backToAuthor: "Вернуться к расстановке автора",
+    startedFrom: "Ваша версия начата с рейтинга: {name}",
+    startedFromUnnamed: "Ваша версия начата с этого рейтинга",
+    replacedYours: "Ваша версия заменена рейтингом: {name}",
+    replacedYoursUnnamed: "Ваша версия заменена этим рейтингом",
+    seedHint: "Если поставить её, ваша версия начнётся с рейтинга: {name}.",
+    seedHintUnnamed: "Если поставить её, ваша версия начнётся с этого рейтинга.",
   },
   rankings: {
     title: "Ранжирования",

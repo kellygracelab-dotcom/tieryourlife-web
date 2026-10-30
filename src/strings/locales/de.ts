@@ -397,6 +397,12 @@ const de: Translation = {
     viewAuthor: "{name} ansehen",
     theirRanking: "Ihre Reihung",
     backToAuthor: "Zurück zur Reihung des Autors",
+    startedFrom: "Deine Version beginnt mit dem Ranking von {name}",
+    startedFromUnnamed: "Deine Version beginnt mit diesem Ranking",
+    replacedYours: "Deine Version durch das Ranking von {name} ersetzt",
+    replacedYoursUnnamed: "Deine Version durch dieses Ranking ersetzt",
+    seedHint: "Wenn du sie platzierst, beginnt deine Version mit dem Ranking von {name}.",
+    seedHintUnnamed: "Wenn du sie platzierst, beginnt deine Version mit diesem Ranking.",
   },
   rankings: {
     title: "Reihungen",

@@ -388,6 +388,12 @@ const es: Translation = {
     viewAuthor: "Ver a {name}",
     theirRanking: "Su orden",
     backToAuthor: "Volver al orden del autor",
+    startedFrom: "Tu versión parte de la clasificación de {name}",
+    startedFromUnnamed: "Tu versión parte de esta clasificación",
+    replacedYours: "Tu versión se reemplazó por la clasificación de {name}",
+    replacedYoursUnnamed: "Tu versión se reemplazó por esta clasificación",
+    seedHint: "Al colocarla, tu versión parte de la clasificación de {name}.",
+    seedHintUnnamed: "Al colocarla, tu versión parte de esta clasificación.",
   },
   rankings: {
     title: "Rankings",

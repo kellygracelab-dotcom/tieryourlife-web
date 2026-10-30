@@ -462,6 +462,12 @@ const ar: Translation = {
     viewAuthor: "عرض {name}",
     theirRanking: "ترتيبه",
     backToAuthor: "العودة إلى ترتيب صاحب القائمة",
+    startedFrom: "نسختك تبدأ من ترتيب {name}",
+    startedFromUnnamed: "نسختك تبدأ من هذا الترتيب",
+    replacedYours: "استُبدلت نسختك بترتيب {name}",
+    replacedYoursUnnamed: "استُبدلت نسختك بهذا الترتيب",
+    seedHint: "وضعها يبدأ نسختك من ترتيب {name}.",
+    seedHintUnnamed: "وضعها يبدأ نسختك من هذا الترتيب.",
   },
   rankings: {
     title: "الترتيبات",
