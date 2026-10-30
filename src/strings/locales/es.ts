@@ -711,6 +711,9 @@ const es: Translation = {
       other: "{n} listas en espera se mueven con ella.",
     },
     mergeIntoIt: "Fusionar con ella",
+    mergedIntoTopic: "«{name}» se unió a «{topic}» en «{section}»",
+    topicMergeRefused:
+      "«{topic}» no puede recibirla ahora: no está abierto o su sección está oculta.",
     approvedAsTopic: "«{name}» aprobado como tema en {section}",
     listsMoved: { one: "{n} lista movida", other: "{n} listas movidas" },
     lists: "Listas",

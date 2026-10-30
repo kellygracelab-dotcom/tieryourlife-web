@@ -760,6 +760,9 @@ const pl: Translation = {
       other: "{n} czekającej listy przeniesie się razem z nim.",
     },
     mergeIntoIt: "Połącz z nim",
+    mergedIntoTopic: "„{name}” połączono z „{topic}” w „{section}”",
+    topicMergeRefused:
+      "„{topic}” nie może go teraz przyjąć: temat nie jest otwarty albo jego sekcja jest ukryta.",
     approvedAsTopic: "„{name}” zatwierdzono jako temat w dziale {section}",
     listsMoved: {
       one: "przeniesiono {n} listę",

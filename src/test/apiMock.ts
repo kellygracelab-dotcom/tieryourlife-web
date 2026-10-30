@@ -70,6 +70,7 @@ export function apiStubs() {
     declineSection: pending(),
     mergeSection: pending(),
     approveSectionAsTopic: pending(),
+    mergeSectionIntoTopic: pending(),
     checkSectionName: pending(),
     loadTopicQueue: pending(),
     decideTopic: pending(),

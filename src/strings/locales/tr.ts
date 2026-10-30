@@ -705,6 +705,8 @@ const tr: Translation = {
       other: "Bekleyen {n} liste de taşınır.",
     },
     mergeIntoIt: "Onunla birleştir",
+    mergedIntoTopic: "“{name}”, “{section}” içindeki “{topic}” ile birleştirildi",
+    topicMergeRefused: "“{topic}” şu an bunu alamaz: açık değil ya da bölümü gizli.",
     approvedAsTopic: "“{name}”, {section} bölümünde konu olarak onaylandı",
     listsMoved: { one: "{n} liste taşındı", other: "{n} liste taşındı" },
     lists: "Listeler",
