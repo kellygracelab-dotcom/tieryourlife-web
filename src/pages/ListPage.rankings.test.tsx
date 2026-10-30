@@ -48,7 +48,9 @@ const reader = (uid: string, name: string, extra: Partial<ReaderRanking> = {}): 
   authorName: name,
   authorPhotoUrl: null,
   // The Witch where the author left a gap, under a word of the reader's own.
+  // Kept before the order inside a tier was: no rows, the arrangement is read.
   arrangement: [null, 0],
+  rows: [],
   tierLabels: ["Best"],
   updatedAtMs: Date.now(),
   mine: false,
@@ -156,6 +158,23 @@ describe("ListPage rankings", () => {
       "true",
     );
     expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Ex Machina");
+  });
+
+  it("shows a reader's cards in the order they left them inside a tier", async () => {
+    mocks.loadListRankings.mockResolvedValue({
+      rankings: [reader("u5", "olena", { arrangement: [0, 0], rows: [[1, 0]] })],
+      nextCursor: null,
+    });
+    openAs();
+    await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
+    const best = within(screen.getByRole("region", { name: "olena" })).getByRole("list", {
+      name: "Best",
+    });
+    expect(
+      within(best)
+        .getAllByRole("button")
+        .map((card) => card.getAttribute("aria-label") ?? card.textContent),
+    ).toEqual(["The Witch", "Ex Machina"]);
   });
 
   it("starts Mine from a reader's placing when a card is moved on it", async () => {

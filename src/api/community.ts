@@ -65,6 +65,12 @@ export interface ReaderRanking {
   authorName: string;
   authorPhotoUrl: string | null;
   arrangement: (number | null)[];
+  /**
+   * The cards in each tier, left to right, by their place in the list. Empty
+   * for a ranking kept before the backend kept the order inside a tier: the
+   * arrangement is then all there is of it.
+   */
+  rows: number[][];
   /** The words they gave the tiers; a tier without one keeps the author's. */
   tierLabels: string[];
   updatedAtMs: number;
@@ -91,30 +97,34 @@ export function loadListRankings(
 }
 
 /**
- * Rows of card positions as a reader's placing: for each card, in the list's
- * order, the index of the row it is in, or null when it is in none.
+ * Rows of card positions as the backend takes them: one row per tier, every
+ * position inside the list, each card once. A board's rows can name a card
+ * the list no longer has, or miss a tier, and the backend refuses either.
  */
-export function arrangementOf(
+export function rowsOf(
   rows: readonly (readonly number[])[],
+  tierCount: number,
   itemCount: number,
-): (number | null)[] {
-  const arrangement: (number | null)[] = Array.from({ length: itemCount }, () => null);
-  rows.forEach((row, tier) =>
-    row.forEach((item) => {
-      if (item >= 0 && item < itemCount) arrangement[item] = tier;
+): number[][] {
+  const seen = new Set<number>();
+  return Array.from({ length: tierCount }, (_, tier) =>
+    (rows[tier] ?? []).filter((item) => {
+      const fits = Number.isInteger(item) && item >= 0 && item < itemCount && !seen.has(item);
+      if (fits) seen.add(item);
+      return fits;
     }),
   );
-  return arrangement;
 }
 
 /**
  * Puts the caller's placing among the list's rankings, as the app does, or
- * replaces the one there. Not for a guest, and not on one's own list.
+ * replaces the one there, with the order inside each tier. Not for a guest,
+ * and not on one's own list.
  */
 export function keepListRanking(
   client: ApiClient,
   listId: string,
-  placing: { arrangement: (number | null)[]; tierLabels: string[] },
+  placing: { tierLabels: string[]; rows: number[][] },
 ): Promise<ReaderRanking> {
   return client.request<ReaderRanking>(
     "PUT",

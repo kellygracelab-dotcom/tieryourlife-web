@@ -24,6 +24,7 @@ import {
   eraseMyAccount,
   followAuthor,
   followState,
+  keepListRanking,
   keepRanking,
   leaveListUp,
   loadFeed,
@@ -96,6 +97,25 @@ describe("api", () => {
     await keepRanking("abc", [[1], []]);
     expect(mocks.request).toHaveBeenCalledWith("POST", "/api/rank", {
       body: { listId: "abc", rows: [[1], []] },
+    });
+  });
+
+  it("puts a reader's finished placing among the list's rankings as rows, one per tier", async () => {
+    const tier = { caption: null, colorLight: "#b03a32", colorDark: "#f1948c" };
+    const list = {
+      id: "abc",
+      tiers: [
+        { label: "S", ...tier },
+        { label: "A", ...tier },
+      ],
+      items: [
+        { title: "Ex Machina", imageUrl: null, tierIndex: null },
+        { title: "The Witch", imageUrl: null, tierIndex: null },
+      ],
+    };
+    await keepListRanking(list, [[1, 0, 5]]);
+    expect(mocks.request).toHaveBeenCalledWith("PUT", "/lists/abc/rankings/mine", {
+      body: { tierLabels: ["S", "A"], rows: [[1, 0], []] },
     });
   });
 

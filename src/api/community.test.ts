@@ -9,7 +9,7 @@ import {
   report,
   unfollowAuthor,
   withdrawListRanking,
-  arrangementOf,
+  rowsOf,
   keepListRanking,
 } from "./community";
 
@@ -63,14 +63,27 @@ describe("community", () => {
     expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/abc/rankings/mine");
   });
 
-  it("puts one's own placing among a list's rankings in the app's shape", async () => {
-    // Rows of positions become, card by card in the list's order, the row's index.
-    expect(arrangementOf([[2, 0], [], [1]], 4)).toEqual([0, 2, 0, null]);
-    expect(arrangementOf([[7]], 2)).toEqual([null, null]);
+  it("puts one's own placing among a list's rankings with the order inside each tier", async () => {
+    // The order inside a row is kept; one row per tier, a missing one empty.
+    expect(rowsOf([[2, 0], [], [1]], 3, 4)).toEqual([[2, 0], [], [1]]);
+    expect(rowsOf([[1]], 3, 2)).toEqual([[1], [], []]);
+    // A row past the list's tiers goes, and with it its cards, to the pool.
+    expect(rowsOf([[0], [1]], 1, 2)).toEqual([[0]]);
+    // A card the list no longer has, a stray number, or one already placed is left out.
+    expect(
+      rowsOf(
+        [
+          [7, -1, 0.5, 1],
+          [1, 0],
+        ],
+        2,
+        2,
+      ),
+    ).toEqual([[1], [0]]);
     const { client, request } = recordingClient({ uid: "u1" });
-    await keepListRanking(client, "a b", { arrangement: [0, null], tierLabels: ["S", "A"] });
+    await keepListRanking(client, "a b", { tierLabels: ["S", "A"], rows: [[1, 0], []] });
     expect(request).toHaveBeenCalledWith("PUT", "/lists/a%20b/rankings/mine", {
-      body: { arrangement: [0, null], tierLabels: ["S", "A"] },
+      body: { tierLabels: ["S", "A"], rows: [[1, 0], []] },
     });
   });
 

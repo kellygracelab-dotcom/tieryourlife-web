@@ -529,6 +529,9 @@ describe("RankingBoard", () => {
           </MemoryRouter>
         </SessionContext.Provider>,
       );
+      // The Witch first, then Ex Machina beside it: the order inside S travels.
+      await userEvent.click(card("The Witch"));
+      await userEvent.keyboard("1");
       await userEvent.click(card("Ex Machina"));
       await userEvent.keyboard("1");
       await userEvent.click(screen.getByRole("button", { name: "Finish" }));
@@ -537,7 +540,7 @@ describe("RankingBoard", () => {
     };
 
     await finish({ kind: "signedIn", uid: "u9", displayName: "Reader", photoUrl: null });
-    expect(tell).toHaveBeenCalledWith(list, [[0], []]);
+    expect(tell).toHaveBeenCalledWith(list, [[1, 0], []]);
 
     tell.mockClear();
     await finish({ kind: "guest", uid: null });

@@ -127,8 +127,8 @@ export const keepListRanking = (
   rows: readonly (readonly number[])[],
 ): Promise<ReaderRanking> =>
   community.keepListRanking(api, list.id, {
-    arrangement: community.arrangementOf(rows, list.items.length),
     tierLabels: list.tiers.map((tier) => tier.label),
+    rows: community.rowsOf(rows, list.tiers.length, list.items.length),
   });
 
 export const loadFollowing = (): Promise<Following> => community.loadFollowing(api);
