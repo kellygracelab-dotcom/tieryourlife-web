@@ -89,4 +89,12 @@ describe("HomePage", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Rank anything");
     expect(screen.getByRole("link", { name: "Anime" })).toBeInTheDocument();
   });
+
+  it("shows the Android app card first, above the hero", () => {
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    open();
+    const card = screen.getByRole("complementary", { name: "TierYourLife for Android" });
+    const hero = screen.getByRole("heading", { level: 1 });
+    expect(card.compareDocumentPosition(hero) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });

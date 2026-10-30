@@ -117,6 +117,8 @@ export function HomePage({
           {strings.settings.deleted}
         </p>
       )}
+      {/* The app card comes first, above the hero, so everyone sees it at once. */}
+      <AppCard slot="home" />
       <section className="home__intro">
         <h1 className="home__hero">{strings.home.hero}</h1>
         <SearchBox
@@ -141,7 +143,6 @@ export function HomePage({
       ) : (
         <Explore load={load} store={store} />
       )}
-      <AppCard slot="home" />
     </div>
   );
 }
