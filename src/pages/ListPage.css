@@ -415,6 +415,43 @@
   .list-head__title {
     font: 500 20px/26px var(--font);
   }
+
+  /*
+   * Play stands between the count and Undo, the design's "count · Play ·
+   * Undo · ⋮". The count and Undo are the board's bar, lent to this header
+   * (boardFrame), and Play is the page's: the boxes holding them step aside
+   * and the items take their places by order, without either side handing
+   * its markup to the other.
+   */
+  .list-head {
+    column-gap: 8px;
+  }
+
+  .list-head__text {
+    margin-inline-end: 10px;
+  }
+
+  .list-head > .list-head__tools,
+  .list-head > .list-head__bar,
+  .list-head > .list-head__bar > .ranking__bar--head {
+    display: contents;
+  }
+
+  .list-head__bar > .ranking__bar--head > * {
+    order: 1;
+  }
+
+  .list-head > .list-head__tools > .play-button {
+    order: 2;
+  }
+
+  .list-head__bar > .ranking__bar--head > .ranking__actions {
+    order: 3;
+  }
+
+  .list-head > .list-head__tools > :not(.play-button) {
+    order: 4;
+  }
 }
 
 .list-page__saved {

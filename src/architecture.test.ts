@@ -99,6 +99,8 @@ describe("the architecture", () => {
       editor: ["tierboard"],
       feed: ["community", "sections"],
       admin: ["sections", "moderation", "boards"],
+      // Play's result and its picking draw cards and rows the way the board does, at its sizes.
+      play: ["tierboard"],
     };
     const wrong: string[] = [];
     for (const file of FILES.filter((f) => f.path.startsWith("features/"))) {

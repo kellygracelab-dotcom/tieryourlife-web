@@ -1,25 +1,32 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { sizedFor } from "../../lib/pictureSize";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import { cardOf, type PlayBoard, type PlayCard } from "./board";
+import type { Pair } from "./engine";
 import { canUndo, currentPair, gameProgress, pick, skip, undo, type Game } from "./game";
-import { duelText, gameName, roundText } from "./labels";
+import { duelText, gameName, secondLine } from "./labels";
+import { lessMotion, SIDEWAYS, useMedia } from "./media";
 import { useFitText } from "./useFitText";
 import "./play.css";
 
-/** How long a picked card shows its ring before the next pair comes: the design's 160 ms, 90 with less motion. */
-export const SETTLE_MS = 160;
-export const SETTLE_REDUCED_MS = 90;
+/**
+ * The design's timing of a pick: the chosen card grows and wears its ring
+ * and check for 160 ms, both cards fade from 220 ms over 120, then the next
+ * pair rises. A skip drops both cards in 150 ms. With less motion every step
+ * is one 90 ms cross-fade.
+ */
+export const PICK_FADE_AT_MS = 220;
+export const PICK_DONE_MS = 340;
+export const SKIP_DONE_MS = 150;
+export const REDUCED_MS = 90;
+/** The bar fills to its end before the result comes. */
+export const RESULT_AFTER_MS = 300;
 
 /** The skip line is for the first few duels, until the idea has landed. */
 const SKIP_HELP_DUELS = 3;
-
-const lessMotion = (): boolean =>
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 type Action = "first" | "second" | "skip" | "undo";
 
@@ -34,6 +41,18 @@ function actionOf(event: KeyboardEvent): Action | null {
   return null;
 }
 
+/** An answer on its way: what the cards are doing until the game takes it. */
+type Motion =
+  | {
+      kind: "pick";
+      winner: number;
+      /** Past the ring: the cards that go are fading. */
+      fading: boolean;
+      /** Each side whose card stays for the next duel (the hill's champion): it does not fade. */
+      stays: readonly [boolean, boolean];
+    }
+  | { kind: "skip" };
+
 interface DuelLayerProps {
   game: Game;
   board: PlayBoard;
@@ -41,51 +60,80 @@ interface DuelLayerProps {
   onChange: (game: Game) => void;
   /** Quit, Escape: the page keeps the game and says so. */
   onQuit: () => void;
-  /** Shown in place of the stage once the game is over: the result. */
+  /** Shown in place of the duels once the game is over: the result, with its own header. */
   children?: ReactNode;
 }
 
 /**
  * The duel screen: a layer over the whole site, header and all, with two
- * cards to choose between. The keyboard belongs to the layer while it is open:
- * the board underneath hears nothing, and the focus stays inside. Cards stay
- * on the left-to-right order the engine gives them in every language, so ←
- * is always the first.
+ * cards to choose between on a stage of their own. The keyboard belongs to
+ * the layer while it is open: the board underneath hears nothing, and the
+ * focus stays inside. Cards stay on the left-to-right order the engine gives
+ * them in every language, so ← is always the first. Held sideways, the
+ * header gives its height to the cards, as on the app: Quit and Undo stand
+ * in a strip at the start, the count and Skip between the cards.
  */
 export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayerProps) {
-  const id = useId();
   const box = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   useModal(box, onQuit, ".duel__title");
+  const sideways = useMedia(SIDEWAYS);
 
   const pair = useMemo(() => currentPair(game), [game]);
   const progress = useMemo(() => gameProgress(game), [game]);
   const over = pair === null;
-  // The card picked, while it shows its ring and before the game moves on.
-  const [chosen, setChosen] = useState<number | null>(null);
-  const settling = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(settling.current), []);
+  const nameOf = (card: number) => cardOf(board, game.ids[card] ?? "").name;
+
+  const [motion, setMotion] = useState<Motion | null>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const later = (ms: number, then: () => void) => {
+    timers.current.push(setTimeout(then, ms));
+  };
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  // The result waits for the bar to fill when the last answer is given here;
+  // a layer that opens on a finished game shows it at once.
+  const [revealed, setRevealed] = useState(over);
+  if (!over && revealed) setRevealed(false);
+  useEffect(() => {
+    if (!over || revealed) return;
+    const timer = setTimeout(() => setRevealed(true), lessMotion() ? 0 : RESULT_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [over, revealed]);
+  const showResult = over && revealed;
+
+  const answer = (next: Game) => {
+    setMotion(null);
+    onChange(next);
+  };
 
   const act = (action: Action) => {
-    if (chosen !== null) return;
+    if (motion !== null || over) return;
     if (action === "undo") {
       if (canUndo(game)) onChange(undo(game));
       return;
     }
     if (pair === null) return;
+    const reduced = lessMotion();
     if (action === "skip") {
-      onChange(skip(game));
+      setMotion({ kind: "skip" });
+      later(reduced ? REDUCED_MS : SKIP_DONE_MS, () => answer(skip(game)));
       return;
     }
     const winner = action === "first" ? pair[0] : pair[1];
-    setChosen(winner);
-    settling.current = setTimeout(
-      () => {
-        setChosen(null);
-        onChange(pick(game, winner));
-      },
-      lessMotion() ? SETTLE_REDUCED_MS : SETTLE_MS,
+    const next = pick(game, winner);
+    const coming = currentPair(next);
+    const stays: [boolean, boolean] = [coming?.[0] === pair[0], coming?.[1] === pair[1]];
+    if (reduced) {
+      setMotion({ kind: "pick", winner, fading: true, stays });
+      later(REDUCED_MS, () => answer(next));
+      return;
+    }
+    setMotion({ kind: "pick", winner, fading: false, stays });
+    later(PICK_FADE_AT_MS, () =>
+      setMotion((now) => (now?.kind === "pick" ? { ...now, fading: true } : now)),
     );
+    later(PICK_DONE_MS, () => answer(next));
   };
   // The key listener is added once; it reaches the latest game through here.
   const latest = useRef(act);
@@ -115,79 +163,116 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
   }, [pair]);
 
   const done = over ? 1 : progress.total === 0 ? 0 : progress.asked / progress.total;
-  const round = over ? null : roundText(progress);
-  const stateOf = (card: number) =>
-    chosen === null ? "idle" : chosen === card ? "chosen" : "other";
+  const count = over ? "" : duelText(progress);
+  const line = secondLine(game, nameOf);
+
+  const quit = (
+    <button type="button" className="duel__icon" aria-label={strings.play.quit} onClick={onQuit}>
+      <Icon name="close" />
+    </button>
+  );
+  const undoButton = (
+    <button
+      type="button"
+      className="duel__icon"
+      aria-label={strings.play.undoPick}
+      onClick={() => act("undo")}
+      disabled={!canUndo(game) || over}
+    >
+      <Icon name="undo" />
+    </button>
+  );
+  const heading = (
+    <>
+      <h2 className="duel__title" tabIndex={-1}>
+        {count}
+      </h2>
+      <p className="duel__line">{line}</p>
+    </>
+  );
+  const skipper = (
+    <>
+      <button type="button" className="btn duel__skip" onClick={() => act("skip")}>
+        <span>{strings.play.skip}</span>
+        <kbd className="duel__key duel__key--inline" aria-hidden="true">
+          ↓
+        </kbd>
+      </button>
+      <SkipHelp spent={game.history.length >= SKIP_HELP_DUELS} />
+    </>
+  );
+  const slots =
+    pair === null
+      ? null
+      : ([0, 1] as const).map((side) => (
+          <Slot
+            // Keyed by the card: one that stays (the hill's champion) keeps its place, only a new one rises.
+            key={`${side}:${pair[side]}`}
+            card={cardOf(board, game.ids[pair[side]] ?? "")}
+            keycap={side === 0 ? "←" : "→"}
+            state={stateOf(motion, pair, side)}
+            leaving={leavingOf(motion, side)}
+            onPick={() => act(side === 0 ? "first" : "second")}
+          />
+        ));
 
   return createPortal(
-    <div ref={box} className="duel" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
-      <header className="duel__head">
-        <button
-          type="button"
-          className="duel__icon"
-          aria-label={strings.play.quit}
-          onClick={onQuit}
-        >
-          <Icon name="close" />
-        </button>
-        <div className="duel__heading">
-          <h2 id={`${id}-title`} className="duel__title" tabIndex={-1}>
-            {gameName(game.spec.kind)}
-          </h2>
-          {!over && <p className="duel__count">{duelText(progress)}</p>}
-        </div>
-        {round !== null && <p className="duel__round">{round}</p>}
-        <button
-          type="button"
-          className="duel__icon"
-          aria-label={strings.play.undoPick}
-          onClick={() => act("undo")}
-          disabled={!canUndo(game)}
-        >
-          <Icon name="undo" />
-        </button>
-      </header>
-      <div className="duel__bar">
-        <span className="duel__done" style={{ inlineSize: `${Math.round(done * 1000) / 10}%` }} />
-      </div>
-      <p className="play-hidden" aria-live="polite">
-        {over ? "" : duelText(progress)}
-      </p>
-
-      {pair === null ? (
+    <div
+      ref={box}
+      className={sideways ? "duel duel--side" : "duel"}
+      role="dialog"
+      aria-modal="true"
+      aria-label={gameName(game.spec.kind)}
+    >
+      {showResult ? (
         <div className="duel__result">{children}</div>
       ) : (
         <>
-          <div ref={stage} className="duel__stage" tabIndex={-1}>
-            <Slot
-              key={`first:${pair[0]}`}
-              card={cardOf(board, game.ids[pair[0]] ?? "")}
-              keycap="←"
-              state={stateOf(pair[0])}
-              onPick={() => act("first")}
-            />
-            <span className="duel__or" aria-hidden="true">
-              {strings.play.or}
-            </span>
-            <Slot
-              key={`second:${pair[1]}`}
-              card={cardOf(board, game.ids[pair[1]] ?? "")}
-              keycap="→"
-              state={stateOf(pair[1])}
-              onPick={() => act("second")}
+          {!sideways && (
+            <header className="duel__head">
+              {quit}
+              <div className="duel__heading">{heading}</div>
+              {undoButton}
+            </header>
+          )}
+          <div className={over ? "duel__bar duel__bar--full" : "duel__bar"}>
+            <span
+              className="duel__done"
+              style={{ inlineSize: `${Math.round(done * 1000) / 10}%` }}
             />
           </div>
-          <footer className="duel__foot">
-            <button type="button" className="btn duel__skip" onClick={() => act("skip")}>
-              <span>{strings.play.skip}</span>
-              <kbd className="duel__key duel__key--inline" aria-hidden="true">
-                ↓
-              </kbd>
-            </button>
-            {game.history.length < SKIP_HELP_DUELS && (
-              <p className="duel__help">{strings.play.skipHelp}</p>
-            )}
-          </footer>
+          <p className="play-hidden" aria-live="polite">
+            {count}
+          </p>
+          {sideways ? (
+            <div className="duel__side">
+              <div className="duel__strip">
+                {quit}
+                {undoButton}
+              </div>
+              <div ref={stage} className="duel__stage" tabIndex={-1}>
+                {slots?.[0]}
+                <div className="duel__centre">
+                  {heading}
+                  {pair !== null && skipper}
+                </div>
+                {slots?.[1]}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div ref={stage} className="duel__stage" tabIndex={-1}>
+                {slots?.[0]}
+                {pair !== null && (
+                  <span className="duel__or" aria-hidden="true">
+                    {strings.play.or}
+                  </span>
+                )}
+                {slots?.[1]}
+              </div>
+              {pair !== null && <footer className="duel__foot">{skipper}</footer>}
+            </>
+          )}
         </>
       )}
     </div>,
@@ -195,23 +280,45 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
   );
 }
 
+type SlotState = "idle" | "chosen" | "other";
+
+function stateOf(motion: Motion | null, pair: Pair, side: 0 | 1): SlotState {
+  if (motion?.kind !== "pick") return "idle";
+  return motion.winner === pair[side] ? "chosen" : "other";
+}
+
+/** How a side leaves: fading after a pick (unless its card stays), dropping on a skip. */
+function leavingOf(motion: Motion | null, side: 0 | 1): "fade" | "drop" | null {
+  if (motion === null) return null;
+  if (motion.kind === "skip") return "drop";
+  return motion.fading && !motion.stays[side] ? "fade" : null;
+}
+
+/** Said for the first duels; after them it keeps its line, unseen, so the cards above do not move. */
+function SkipHelp({ spent }: { spent: boolean }) {
+  return (
+    <p className={spent ? "duel__help duel__help--spent" : "duel__help"} aria-hidden={spent}>
+      {strings.play.skipHelp}
+    </p>
+  );
+}
+
 interface SlotProps {
   card: PlayCard;
   keycap: string;
-  state: "idle" | "chosen" | "other";
+  state: SlotState;
+  leaving: "fade" | "drop" | null;
   onPick: () => void;
 }
 
-/**
- * One side of the duel. Keyed by the card, so a card that stays (the hill's
- * champion) keeps its place and only a new one slides in.
- */
-function Slot({ card, keycap, state, onPick }: SlotProps) {
+/** One side of the duel. */
+function Slot({ card, keycap, state, leaving, onPick }: SlotProps) {
+  const pictured = card.imageUrl !== null;
   return (
-    <div className="duel__slot">
+    <div className={leaving === null ? "duel__slot" : `duel__slot duel__slot--${leaving}`}>
       <button
         type="button"
-        className={`duel-card duel-card--${state}`}
+        className={`duel-card duel-card--${state}${pictured ? "" : " duel-card--text"}`}
         aria-label={fill(strings.play.pick, { name: card.name })}
         onClick={onPick}
       >
@@ -220,8 +327,13 @@ function Slot({ card, keycap, state, onPick }: SlotProps) {
         ) : (
           <FittedName name={card.name} />
         )}
+        {state === "chosen" && (
+          <span className="duel-card__check" aria-hidden="true">
+            <Icon name="check" />
+          </span>
+        )}
       </button>
-      {card.imageUrl !== null && (
+      {pictured && (
         <p className="duel-card__name" aria-hidden="true">
           {card.name}
         </p>

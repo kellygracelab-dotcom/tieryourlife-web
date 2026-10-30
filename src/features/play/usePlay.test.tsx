@@ -103,10 +103,11 @@ describe("Play on a page", () => {
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     expect(screen.getByRole("dialog", { name: "King of the hill" })).toBeInTheDocument();
     expect(screen.getByText("playing")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "King of the hill" })).toHaveFocus();
+    expect(screen.getByRole("heading", { name: "Duel 1 of 2" })).toHaveFocus();
+    expect(screen.getByText("King of the hill")).toBeInTheDocument();
 
     await pickLeft(2);
-    expect(screen.getByRole("heading", { name: "Your result" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Your result" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     const [rows, played] = onApply.mock.lastCall!;
@@ -132,7 +133,7 @@ describe("Play on a page", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Bracket/ }));
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     await pickLeft(2);
-    await userEvent.click(screen.getByRole("button", { name: "Put in Mine" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Put in Mine" }));
     expect(notify).not.toHaveBeenCalled();
   });
 
@@ -166,7 +167,7 @@ describe("Play on a page", () => {
     expect(saved.action!.text).toBe("Discard");
     act(() => saved.action!.onClick());
     expect(store.read(playKey("b1"))).toBeNull();
-    expect(playButton()).not.toHaveAccessibleDescription();
+    expect(playButton()).not.toHaveAttribute("aria-describedby");
   });
 
   it("discards a saved game when another starts, with a way back to it", async () => {
@@ -192,8 +193,10 @@ describe("Play on a page", () => {
     render(<Page store={memoryStore()} cards={cardsOf(70)} />);
     await userEvent.click(playButton());
     expect(screen.getByRole("dialog", { name: "Choose cards" })).toBeInTheDocument();
+    // No way back to a picker it never showed.
+    expect(screen.queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("goes from the picker to the choice of cards and back with the choice", async () => {
@@ -207,9 +210,51 @@ describe("Play on a page", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByText("3 cards from Films")).toBeInTheDocument();
     // Cancel there goes back to the picker, not out.
+    // The arrow goes back to the picker; Cancel there closes the whole sheet, as on the app.
+    await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("dialog", { name: "Play" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.getByRole("dialog", { name: "Play" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("resumes losers stay when cards joined the board, saying how many", async () => {
+    const store = memoryStore();
+    const old = { ...newGame("swiss", ["c0", "c1", "c2"], EVERYTHING, 4, NOW), history: [] };
+    localGames(store, () => NOW).save("b1", old);
+    render(<Page store={store} cards={cardsOf(4)} />);
+    await userEvent.click(playButton());
+    expect(screen.getByText("1 new card joins from the next round")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Resume" }));
+    expect(screen.getByRole("dialog", { name: "Losers stay" })).toBeInTheDocument();
+  });
+
+  it("starts a hill again when a card left the board under it", async () => {
+    const store = memoryStore();
+    const old = {
+      ...newGame("hill", ["c0", "c1", "c2", "c3"], EVERYTHING, 4, NOW),
+      history: [[0, 1, 0] as const],
+    };
+    localGames(store, () => NOW).save("b1", old);
+    render(<Page store={store} />);
+    await userEvent.click(playButton());
+    expect(screen.getByText("The board changed, so this game can’t go on")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resume" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Start again" }));
+    expect(screen.getByRole("dialog", { name: "King of the hill" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Duel 1 of 2" })).toBeInTheDocument();
+  });
+
+  it("keeps a finished game when its result is quit", async () => {
+    const store = memoryStore();
+    render(<Page store={store} />);
+    await startGame(/King of the hill/);
+    await pickLeft(2);
+    await screen.findByRole("heading", { name: "Your result" });
+    await userEvent.click(screen.getByRole("button", { name: "Quit" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(store.read(playKey("b1"))).not.toBeNull();
   });
 
   it("remembers the last game on this device", async () => {
@@ -229,7 +274,7 @@ describe("Play on a page", () => {
     render(<Page store={store} notify={notify} />);
     await startGame(/King of the hill/);
     await pickLeft(2);
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     const receipt = notify.mock.lastCall![0] as SnackbarNotice;
     expect(receipt.text).toBe("Result discarded");
@@ -247,7 +292,7 @@ describe("Play on a page", () => {
     render(<Page store={memoryStore()} cards={cardsOf(6)} />);
     await startGame(/King of the hill/);
     await pickLeft(5);
-    await userEvent.click(screen.getByRole("button", { name: "Refine" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Refine" }));
     expect(screen.getAllByText(/^Refine · 1 of \d+$/)).not.toHaveLength(0);
   });
 });

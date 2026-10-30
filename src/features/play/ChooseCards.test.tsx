@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { boardOf, type PlayCard, type PlayTier } from "./board";
@@ -47,8 +47,8 @@ describe("choosing cards", () => {
     expect(screen.getByRole("checkbox", { name: /S Masterpieces/ })).toHaveAccessibleName(
       expect.stringContaining("142 cards"),
     );
-    expect(screen.getByRole("checkbox", { name: /^A/ })).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox", { name: /^B/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /^Tier A/ })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /^Tier B/ })).not.toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "Everything · 194 cards" })).toBeDisabled();
     // Nothing chosen yet on a board too big for one game.
     expect(screen.getByText("0 of 64 selected")).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe("choosing cards", () => {
   it("counts what is ticked, and goes on with those rows", async () => {
     const { onDone } = show();
     await userEvent.click(screen.getByRole("checkbox", { name: "The pool · 22 cards" }));
-    await userEvent.click(screen.getByRole("checkbox", { name: /^A/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /^Tier A/ }));
     expect(screen.getByText("52 of 64 selected")).toBeInTheDocument();
     // Two rows: no keeping them in a tier.
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("choosing cards", () => {
 
   it("keeps one tier's cards in it unless told otherwise", async () => {
     const { onDone } = show();
-    await userEvent.click(screen.getByRole("checkbox", { name: /^A/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /^Tier A/ }));
     const keep = screen.getByRole("switch", { name: "Keep them in A, just order them" });
     expect(keep).toBeChecked();
     await userEvent.click(continueButton());
@@ -161,9 +161,51 @@ describe("choosing cards", () => {
     expect(onDone).toHaveBeenCalledWith({ kind: "all" });
   });
 
-  it("cancels", async () => {
+  it("cancels, once the sheet has gone out", async () => {
     const { onCancel } = show();
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onCancel).toHaveBeenCalled();
+    await waitFor(() => expect(onCancel).toHaveBeenCalled());
+  });
+
+  it("cancels the whole sheet from the picking too, not just the picking", async () => {
+    const { onCancel } = show();
+    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(onCancel).toHaveBeenCalled());
+  });
+
+  it("has a back arrow only when the picker opened it", async () => {
+    show();
+    expect(screen.queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
+    const onBack = vi.fn();
+    render(
+      <ChooseCards
+        board={board}
+        chosen={EVERYTHING}
+        onDone={vi.fn()}
+        onBack={onBack}
+        onCancel={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalled();
+  });
+
+  it("names a tier by its caption, or as Tier and its letter, beside its band", () => {
+    show();
+    const named = screen.getByRole("checkbox", { name: /Masterpieces/ }).closest("li")!;
+    expect(named.querySelector(".play-row__swatch")).toHaveTextContent("S");
+    expect(screen.getByRole("checkbox", { name: /^Tier A/ })).toHaveAccessibleName(
+      expect.stringContaining("30 cards"),
+    );
+  });
+
+  it("marks a picked card with a check", async () => {
+    show();
+    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    const box = screen.getByRole("checkbox", { name: "s 0" });
+    await userEvent.click(box);
+    expect(box).toBeChecked();
+    expect(box.closest(".play-pick__card")!.querySelector(".play-pick__check")).not.toBeNull();
   });
 });

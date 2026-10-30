@@ -1,7 +1,34 @@
 /*
- * Play mode (docs/design-spec-play.md): the button, the picker and the
- * choice of cards in one sheet, the duel layer over the site, the result.
+ * Play mode (docs/design-spec-play.md, its visual pass in design-spec-walk-3.md
+ * section D): the button, the picker and the choice of cards in one sheet,
+ * the duel layer over the site, the result. On the site's M3 tokens; the
+ * character is the stage, the cards lifted off it, and the motion.
  */
+
+/*
+ * The few values the design gives that the palette has no token for: the
+ * colour on the primary (a check, a switch's handle), and the cards' lift,
+ * deeper in the dark where a shadow has less to show against.
+ */
+:root {
+  --play-on-primary: #ffffff;
+  --duel-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.12);
+  --duel-shadow-up: 0 4px 10px rgba(0, 0, 0, 0.16), 0 14px 32px rgba(0, 0, 0, 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --play-on-primary: #1b2678;
+    --duel-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --duel-shadow-up: 0 4px 10px rgba(0, 0, 0, 0.5), 0 14px 32px rgba(0, 0, 0, 0.45);
+  }
+}
+
+:root[data-theme="dark"] {
+  --play-on-primary: #1b2678;
+  --duel-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --duel-shadow-up: 0 4px 10px rgba(0, 0, 0, 0.5), 0 14px 32px rgba(0, 0, 0, 0.45);
+}
 
 /* Read out, not shown. */
 .play-hidden {
@@ -15,6 +42,7 @@
 
 /* ---- The button on the board's bar ---- */
 
+/* From 840: outlined, 40 high, play_arrow 18 before the word. */
 .play-button {
   position: relative;
   min-height: 40px;
@@ -32,22 +60,40 @@
   opacity: 0.45;
 }
 
-.play-button--icon {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  justify-content: center;
-}
-
-/* A game is saved: a 6 px dot on the top end corner. */
+/* A game is saved: M3's small badge, a 6 px dot in the primary, inset 6 from the top end. */
 .play-button__dot {
   position: absolute;
-  inset-block-start: 4px;
-  inset-inline-end: 4px;
+  inset-block-start: 6px;
+  inset-inline-end: 6px;
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--link);
+}
+
+/* Narrower, the icon alone: 40 round, in the primary, the word its tooltip. */
+@media (max-width: 839px) {
+  .btn.play-button {
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    box-shadow: none;
+    color: var(--link);
+  }
+
+  .play-button .play-button__icon {
+    font-size: 24px;
+  }
+
+  .play-button__word {
+    display: none;
+  }
+
+  .play-button__dot {
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+  }
 }
 
 /* The design's filled tonal: the primary container's colours. */
@@ -100,6 +146,11 @@
   overflow: hidden;
 }
 
+/* Only a sheet from the bottom has a handle. */
+.play-sheet__handle {
+  display: none;
+}
+
 .play-sheet__scroll {
   display: flex;
   flex-direction: column;
@@ -107,6 +158,40 @@
   min-height: 0;
   padding: 24px 24px 8px;
   overflow-y: auto;
+}
+
+.play-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The arrow's 40 round layer reaches into the margin, so its glyph lines up with the text below. */
+.play-sheet__head--back {
+  margin-inline-start: -8px;
+}
+
+.play-sheet__back {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.play-sheet__back:hover {
+  background: var(--hover);
+}
+
+.play-sheet__back .ms {
+  font-size: 24px;
 }
 
 .play-sheet__subtitle {
@@ -120,36 +205,139 @@
   padding: 16px 24px 24px;
 }
 
-/* Below 600 the sheet is the whole screen. */
+/* In the middle of a window: the scrim fades in, the dialog grows from .96 as it does. */
+.play-scrim--arriving {
+  animation: play-scrim-in 200ms linear both;
+}
+
+.play-scrim--arriving .play-sheet {
+  animation: play-dialog-in 200ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+}
+
+.play-scrim--leaving {
+  animation: play-scrim-out 200ms linear both;
+}
+
+.play-scrim--leaving .play-sheet {
+  animation: play-dialog-out 200ms cubic-bezier(0.3, 0, 0.8, 0.15) both;
+}
+
+/* Below 600 it is the app's sheet from the bottom: r28 on top, a handle, as tall as it needs up to 92 %. */
 @media (max-width: 599px) {
   .scrim.play-scrim {
+    align-items: flex-end;
     padding: 0;
   }
 
   .dialog.play-sheet {
     width: 100%;
-    height: 100%;
-    max-height: none;
-    border-radius: 0;
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: 28px 28px 0 0;
+  }
+
+  .play-sheet__handle {
+    display: block;
+    flex: none;
+    width: 32px;
+    height: 4px;
+    margin: 22px auto 0;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--ink-dim) 40%, transparent);
   }
 
   .play-sheet__scroll {
-    flex: 1;
+    padding-top: 16px;
+  }
+
+  .play-sheet__actions {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .play-scrim--arriving .play-sheet {
+    animation: play-sheet-up 300ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  }
+
+  .play-scrim--leaving .play-sheet {
+    animation: play-sheet-down 200ms cubic-bezier(0.3, 0, 0.8, 0.15) both;
   }
 }
 
-/* The saved game, above the choice. */
+@keyframes play-scrim-in {
+  from {
+    background-color: transparent;
+  }
+}
+
+@keyframes play-scrim-out {
+  to {
+    background-color: transparent;
+  }
+}
+
+@keyframes play-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes play-dialog-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes play-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes play-sheet-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes play-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes play-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* The saved game, then "Or start a new game" over the choice. */
+.play-choice {
+  display: flex;
+  flex-direction: column;
+}
+
+.play-choice__label {
+  padding: 12px 0 4px;
+  font: 500 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
 .play-saved {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  min-height: 64px;
+  padding: 0 12px 0 16px;
   border-radius: 16px;
   background: var(--surface-container);
 }
 
 .play-saved__icon {
   flex: none;
+  font-size: 20px;
   color: var(--ink-dim);
 }
 
@@ -159,6 +347,7 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  padding-block: 8px;
 }
 
 .play-saved__line {
@@ -171,12 +360,16 @@
   color: var(--ink-dim);
 }
 
-.play-saved__action {
+.btn.play-saved__action {
   flex: none;
   min-height: 36px;
 }
 
-/* The three games as radio cards. */
+/*
+ * The three games as the app's radio cards: a visible radio, the game's icon
+ * in a 40 circle, the name, its line and the estimate under it. Chosen, the
+ * card takes the primary container and the radio fills; nothing else moves.
+ */
 .play-games {
   display: flex;
   flex-direction: column;
@@ -186,10 +379,10 @@
 .play-game {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   min-height: 72px;
-  padding: 14px 16px;
+  padding: 12px 16px 12px 12px;
   border-radius: 16px;
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--ink);
@@ -207,23 +400,53 @@
   outline-offset: 2px;
 }
 
-/* The radio is the control a keyboard and a screen reader reach; the card is its face. */
+/* The radio is the control a keyboard and a screen reader reach; the card and its dot are its face. */
 .play-game__input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
 
-.play-game__icon {
+/* M3's radio, 20 round, centred on the icon's circle. */
+.play-radio {
   flex: none;
-  font-size: 24px;
+  width: 20px;
+  height: 20px;
+  margin-block: 10px;
+  border: 2px solid var(--ink-dim);
+  border-radius: 50%;
+}
+
+.play-game:has(input:checked) .play-radio {
+  border-color: var(--link);
+  background: radial-gradient(circle, var(--link) 0 4.5px, transparent 5px);
+}
+
+.play-game__icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-container-high);
+  color: var(--link);
+}
+
+.play-game__icon .ms {
+  font-size: 22px;
+}
+
+/* The design's paper: the sheet's own surface, white in the light, so the circle stands off the fill. */
+.play-game:has(input:checked) .play-game__icon {
+  background: var(--surface);
 }
 
 .play-game__text {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
   min-width: 0;
 }
 
@@ -236,28 +459,16 @@
   color: var(--ink-dim);
 }
 
+/* On its own line under the description, at every width. */
+.play-game__estimate {
+  margin-top: 2px;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-quiet);
+}
+
 .play-game:has(input:checked) .play-game__line,
 .play-game:has(input:checked) .play-game__estimate {
   color: inherit;
-}
-
-.play-game__estimate {
-  flex: none;
-  font: 400 12px/16px var(--font);
-  color: var(--ink-quiet);
-  text-align: end;
-}
-
-@media (max-width: 599px) {
-  .play-game {
-    flex-wrap: wrap;
-  }
-
-  .play-game__estimate {
-    flex-basis: 100%;
-    padding-inline-start: 36px;
-    text-align: start;
-  }
 }
 
 .play-footnote {
@@ -265,7 +476,8 @@
   color: var(--ink-dim);
 }
 
-/* The rows to choose from. */
+/* ---- The rows to choose from ---- */
+
 .play-rows {
   display: flex;
   flex-direction: column;
@@ -277,34 +489,110 @@
 .play-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   min-height: 56px;
-  padding-block: 6px;
+  padding-block: 4px;
 }
 
-.play-row__check {
+/*
+ * M3's checkbox drawn in CSS: an 18 box, r2, a 2 px border in the quiet ink;
+ * ticked, the primary fills it under a 16 check. The 40 round state layer
+ * reaches into the margin so the box lines up with the text above it.
+ */
+.play-check {
+  position: relative;
+  display: flex;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-inline-start: -11px;
+  border-radius: 50%;
+}
+
+.play-check:hover:not(:has(:disabled)) {
+  background: var(--hover);
+}
+
+.play-check:has(:focus-visible) {
+  background: color-mix(in srgb, var(--link) 12%, transparent);
+}
+
+.play-check__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.play-check__input:disabled {
+  cursor: default;
+}
+
+.play-check__box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 18px;
   height: 18px;
-  margin: 0;
-  accent-color: var(--link);
+  border: 2px solid var(--ink-quiet);
+  border-radius: 2px;
+  color: var(--play-on-primary);
+  pointer-events: none;
 }
 
-.play-row__swatch {
-  flex: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: var(--band);
+.play-check__box .ms {
+  font-size: 16px;
+  visibility: hidden;
+}
+
+.play-check__input:checked + .play-check__box {
+  border-color: var(--link);
+  background: var(--link);
+}
+
+.play-check__input:checked + .play-check__box .ms {
+  visibility: visible;
+}
+
+.play-check__input:disabled + .play-check__box {
+  opacity: 0.38;
 }
 
 .play-row__text {
   display: flex;
   flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+/* The tier's band in small, its letter on it, then its caption: "S" and "Masterpiece". */
+.play-row__swatch {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--band);
+  color: var(--on-band);
+  font: 500 12px/1 var(--font);
+}
+
+.play-row__words {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  cursor: pointer;
 }
 
 .play-row__title {
@@ -314,7 +602,7 @@
 }
 
 /* "Everything" above 64: there, but not to be ticked. */
-.play-row:has(.play-row__check:disabled) .play-row__title {
+.play-row:has(.play-check__input:disabled) .play-row__title {
   color: var(--ink-quiet);
 }
 
@@ -339,12 +627,63 @@
   cursor: pointer;
 }
 
-.play-switch__input {
+/*
+ * M3's switch, 52 × 32: off, an outlined track with a 16 handle at the
+ * start; on, the primary track with a 24 handle at the end.
+ */
+.play-switch__track {
+  position: relative;
   flex: none;
-  width: 40px;
-  height: 22px;
+  width: 52px;
+  height: 32px;
+  border-radius: 16px;
+  background: var(--surface-container-highest);
+  box-shadow: inset 0 0 0 2px var(--ink-quiet);
+  transition: background-color 150ms ease;
+}
+
+.play-switch__input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   margin: 0;
-  accent-color: var(--link);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.play-switch__handle {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink-quiet);
+  pointer-events: none;
+  transition:
+    inset-inline-start 150ms ease,
+    top 150ms ease,
+    width 150ms ease,
+    height 150ms ease;
+}
+
+.play-switch__track:has(:checked) {
+  background: var(--link);
+  box-shadow: none;
+}
+
+.play-switch__track:has(:checked) .play-switch__handle {
+  top: 4px;
+  inset-inline-start: 24px;
+  width: 24px;
+  height: 24px;
+  background: var(--play-on-primary);
+}
+
+.play-switch__track:has(:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 /* "36 of 64 selected", pinned under what scrolls. */
@@ -370,66 +709,97 @@
   color: var(--ink);
 }
 
+/* The cards of a row too big for a game, at the board's own tile sizes (board.css). */
 .play-pick {
+  --tile-w: 64px;
+  --tile-h: 90px;
+
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, var(--tile-w));
+  gap: 10px;
   margin: 0;
-  padding: 0;
+  padding: 3px;
   list-style: none;
+}
+
+@media (max-width: 1199px) {
+  .play-pick {
+    --tile-w: 52px;
+    --tile-h: 76px;
+
+    gap: 8px;
+  }
+}
+
+@media (max-width: 599px) {
+  .play-pick {
+    --tile-w: 44px;
+    --tile-h: 64px;
+
+    gap: 7px;
+  }
 }
 
 .play-pick__card {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  aspect-ratio: 0.711;
-  overflow: hidden;
-  border-radius: 8px;
-  background: var(--tile-placeholder);
-  color: var(--tile-label);
   cursor: pointer;
 }
 
-.play-pick__card:has(input:checked) {
+.play-pick__card:has(:checked) {
   box-shadow: 0 0 0 3px var(--link);
 }
 
-.play-pick__card:has(input:disabled) {
-  cursor: default;
-  opacity: 0.5;
+.play-pick__card:has(:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
 }
 
-.play-pick__card img {
+/* Sixty-four ticked: the others wait, faded. */
+.play-pick__card:has(:disabled) {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.play-pick__input {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
 }
 
 .play-pick__check {
   position: absolute;
   inset-block-start: 4px;
   inset-inline-end: 4px;
-  margin: 0;
-  accent-color: var(--link);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--link);
+  color: var(--play-on-primary);
+  pointer-events: none;
 }
 
-.play-pick__name {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
-  overflow: hidden;
-  padding: 4px;
-  font: var(--text-caption);
-  font-weight: 500;
-  text-align: center;
-  overflow-wrap: anywhere;
+.play-pick__check .ms {
+  font-size: 14px;
+}
+
+.play-pick__card:has(:checked) .play-pick__check {
+  display: flex;
 }
 
 /* ---- The duel layer ---- */
 
-/* Over the site's header (60) and its menus (70), under the snackbar (90) and dialogs (100). */
+/*
+ * Over the site's header (60) and its menus (70), under the snackbar (90)
+ * and dialogs (100). The stage is the low surface, edge to edge: no
+ * gradient, no vignette; the cards are lifted off it.
+ */
 .duel {
   position: fixed;
   inset: 0;
@@ -438,7 +808,7 @@
   flex-direction: column;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--paper);
+  background: var(--surface-container-low);
   color: var(--ink);
 }
 
@@ -479,42 +849,51 @@
   font-size: 24px;
 }
 
+/* The count over the game's own line, in the middle. */
 .duel__heading {
   display: flex;
   flex: 1;
   flex-direction: column;
+  align-items: center;
   min-width: 0;
   padding-inline: 4px;
+  text-align: center;
 }
 
 .duel__title {
+  min-height: 24px;
   font: 500 16px/24px var(--font);
   outline: none;
 }
 
-.duel__count {
-  font: 400 13px/18px var(--font);
-  color: var(--ink-dim);
-}
-
-.duel__round {
-  flex: none;
-  padding-inline: 8px;
+.duel__line {
+  max-width: 100%;
+  overflow: hidden;
   font: 400 12px/16px var(--font);
   color: var(--ink-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .duel__bar {
   flex: none;
   height: 4px;
-  background: var(--surface-container-highest);
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--surface-container-high);
 }
 
 .duel__done {
   display: block;
   height: 100%;
+  border-radius: 2px;
   background: var(--link);
   transition: inline-size 200ms ease;
+}
+
+/* The last answer: the bar runs to its end before the result comes. */
+.duel__bar--full .duel__done {
+  transition-duration: 300ms;
 }
 
 /*
@@ -534,15 +913,32 @@
   outline: none;
 }
 
+/* A new pair rises 24 px into place and fades in, slowing as it lands; never from the side. */
 .duel__slot {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 300px;
-  animation: duel-in 200ms ease-out both;
+  animation: duel-in 200ms cubic-bezier(0.05, 0.7, 0.1, 1) backwards;
+}
+
+/* Picked: past the ring, the pair that goes fades over 120 ms. */
+.duel__slot--fade {
+  opacity: 0;
+  transition: opacity 120ms linear;
+}
+
+/* Skipped: both drop 12 px and fade, 150 ms. */
+.duel__slot--drop {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 150ms linear,
+    transform 150ms cubic-bezier(0.3, 0, 0.8, 0.15);
 }
 
 .duel-card {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -552,7 +948,8 @@
   overflow: hidden;
   border: none;
   border-radius: 16px;
-  background: var(--surface-container-highest);
+  background: var(--tile-placeholder);
+  box-shadow: var(--duel-shadow);
   color: var(--ink);
   cursor: pointer;
   transition:
@@ -561,17 +958,56 @@
     opacity 160ms ease;
 }
 
-.duel-card:hover {
-  box-shadow: 0 0 0 1px var(--line-strong);
+/* No picture: the name on the high surface, a hairline round it; no tint from the tier. */
+.duel-card--text {
+  border: 1px solid var(--line);
+  background: var(--surface-container-high);
+}
+
+.duel-card:focus-visible {
+  outline: 3px solid var(--link);
+  outline-offset: 4px;
+}
+
+/* A mouse over a card lifts it, a little higher, its shadow deeper. */
+@media (hover: hover) and (pointer: fine) {
+  .duel-card--idle:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--duel-shadow-up);
+    transition-duration: 150ms;
+  }
 }
 
 .duel-card--chosen {
   transform: scale(1.04);
-  box-shadow: 0 0 0 3px var(--link);
+  box-shadow:
+    0 0 0 3px var(--link),
+    var(--duel-shadow-up);
 }
 
 .duel-card--other {
   opacity: 0.4;
+  transform: scale(0.96);
+}
+
+/* The pick's mark: a check in the primary at the card's top end. */
+.duel-card__check {
+  position: absolute;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--link);
+  color: var(--play-on-primary);
+  animation: duel-check 160ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
+}
+
+.duel-card__check .ms {
+  font-size: 18px;
 }
 
 .duel-card__picture {
@@ -590,6 +1026,7 @@
   max-width: 100%;
   padding: 16px;
   font: 500 22px/28px var(--font);
+  color: var(--ink);
   text-align: center;
   overflow-wrap: anywhere;
 }
@@ -634,6 +1071,13 @@
   }
 }
 
+/* Skip's ↓ wherever there is a fine pointer, and so likely a keyboard. */
+@media (pointer: fine) {
+  .duel__key--inline {
+    display: inline-block;
+  }
+}
+
 .duel__foot {
   display: flex;
   flex: none;
@@ -656,9 +1100,15 @@
 }
 
 .duel__help {
+  min-height: 16px;
   font: 400 12px/16px var(--font);
   color: var(--ink-quiet);
   text-align: center;
+}
+
+/* Past the first duels the line keeps its height, unseen, so nothing above it moves. */
+.duel__help--spent {
+  visibility: hidden;
 }
 
 @keyframes duel-in {
@@ -668,28 +1118,10 @@
   }
 }
 
-@keyframes duel-fade {
+@keyframes duel-check {
   from {
     opacity: 0;
-  }
-}
-
-/* Less motion: a 90 ms cross-fade, no growing and no sliding. */
-@media (prefers-reduced-motion: reduce) {
-  .duel__slot {
-    animation: duel-fade 90ms linear both;
-  }
-
-  .duel-card {
-    transition: opacity 90ms linear;
-  }
-
-  .duel-card--chosen {
-    transform: none;
-  }
-
-  .duel__done {
-    transition: none;
+    transform: scale(0.6);
   }
 }
 
@@ -725,6 +1157,11 @@
     aspect-ratio: 0.711;
   }
 
+  .duel-card__check {
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+  }
+
   .duel-card__name {
     -webkit-line-clamp: 3;
     margin-top: 8px;
@@ -732,54 +1169,158 @@
   }
 }
 
-/* A phone on its side: the cards take the height there is. */
-@media (orientation: landscape) and (max-height: 479px) {
-  .duel__stage {
-    gap: 24px;
-    padding-block: 8px;
-  }
+/*
+ * A phone on its side (DuelLayer's SIDEWAYS), as the app's SideDuel: no
+ * header, a 64 strip at the start with Quit over Undo, and a 196 column
+ * between the cards with the count, the game's line and Skip. The cards
+ * take the height there is.
+ */
+.duel--side {
+  padding-inline-start: env(safe-area-inset-left);
+  padding-inline-end: env(safe-area-inset-right);
+}
 
-  .duel__slot {
-    width: calc((100vh - 150px) * 0.711);
-  }
+.duel__side {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
 
-  .duel-card__name {
-    -webkit-line-clamp: 2;
-    margin-top: 6px;
-    font: 500 14px/20px var(--font);
-  }
+.duel__strip {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 64px;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+}
+
+.duel--side .duel__stage {
+  flex: 1;
+  align-items: center;
+  gap: 16px;
+  margin-block: 0;
+  padding: 16px 16px calc(12px + env(safe-area-inset-bottom)) 0;
+}
+
+.duel--side .duel__slot {
+  width: min(calc((100vh - 84px) * 0.711), calc((100vw - 308px) / 2));
+  width: min(calc((100dvh - 84px) * 0.711), calc((100vw - 308px) / 2));
+}
+
+.duel--side .duel-card {
+  aspect-ratio: 0.711;
+}
+
+.duel--side .duel-card__name {
+  -webkit-line-clamp: 2;
+  margin-top: 6px;
+  font: 500 14px/20px var(--font);
+}
+
+.duel__centre {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  width: 196px;
+  text-align: center;
+}
+
+.duel__centre .duel__line {
+  margin-top: 2px;
+  white-space: normal;
+}
+
+.duel__centre .duel__skip {
+  margin-top: 20px;
+}
+
+.duel__centre .duel__help {
+  margin-top: 8px;
 }
 
 /* ---- The result, in the same layer ---- */
 
+/* It comes once the bar is full: a fade, the rows filling in from the top. */
 .duel__result {
+  display: flex;
   flex: 1;
-  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  flex-direction: column;
+  min-height: 0;
+  background: var(--paper);
+  animation: play-fade-in 200ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
 }
 
 .result-view {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 12px;
-  max-width: 720px;
-  margin: 0 auto;
+  min-height: 0;
+}
+
+/* The app's result bar: Quit, "Your result", "From 136 duels", a hairline under them. */
+.result-view__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 64px;
+  padding-inline: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.result-view__heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  padding-inline-start: 4px;
 }
 
 .result-view__title {
+  flex: none;
   font: 400 22px/28px var(--font);
   outline: none;
 }
 
 .result-view__from {
-  margin-top: -8px;
+  overflow: hidden;
   font: 400 13px/18px var(--font);
   color: var(--ink-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-view__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 16px 24px;
+}
+
+.result-view__notes,
+.result-view__tiers,
+.result-view__nothing {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.result-view__notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-view__notes:not(:empty) {
+  margin-bottom: 12px;
 }
 
 .result-view__thin {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   padding: 12px 14px;
   border-radius: 12px;
   background: var(--surface-container);
@@ -794,86 +1335,40 @@
 }
 
 .result-view__legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font: 400 12px/16px var(--font);
   color: var(--ink-dim);
 }
 
-.result-view__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.result-view__apply {
-  min-height: 44px;
-}
-
-.result-view__refine {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.result-view__more {
-  font: 400 12px/16px var(--font);
-  color: var(--ink-quiet);
-}
-
-/* A phone: the actions stacked, full width, Apply first. */
-@media (max-width: 599px) {
-  .result-view__actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .result-view__actions .btn {
-    justify-content: center;
-  }
-
-  .result-view__refine {
-    align-items: stretch;
-    text-align: center;
-  }
-}
-
-/*
- * The preview: the board at compact metrics, band 64, rows of 72, tiles of
- * 40 × 58. A tier nobody landed in is as tall as one with a card, as on the
- * boards themselves.
- */
-.result-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.result-tier {
-  display: flex;
-  min-height: 72px;
-  overflow: hidden;
-  border-radius: var(--radius-card);
-  background: color-mix(in oklab, var(--band-base) var(--band-tint), var(--paper));
-}
-
-.result-tier__band {
-  display: flex;
+/* A dashed card in small: 14 × 20, hatched, the tiles' own dashed outline. */
+.result-view__swatch {
   flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  padding: 4px;
-  background: var(--band);
-  color: var(--on-band);
+  width: 14px;
+  height: 20px;
+  margin: 2px;
+  border-radius: 3px;
+  outline: 1.5px dashed var(--ink-quiet);
+  outline-offset: 2px;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ink-quiet) 45%, transparent) 0 2px,
+    transparent 2px 5px
+  );
 }
 
-.result-tier__label {
-  font: 500 20px/1 var(--font);
-  text-align: center;
-  overflow-wrap: anywhere;
+/* The preview is the board's own rows (board.css); here they only come in, one after another. */
+.result-tier {
+  animation: result-row 120ms ease-out backwards;
+  animation-delay: min(calc(var(--row, 0) * 30ms), 180ms);
+}
+
+@keyframes result-row {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 .result-tier__empty {
@@ -883,50 +1378,225 @@
   color: var(--ink-dim);
 }
 
-.result-tier__cards {
-  display: flex;
-  flex: 1;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 6px;
-  margin: 0;
-  padding: 7px 8px;
-  list-style: none;
-}
-
-.result-tile {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 58px;
-  overflow: hidden;
-  border-radius: 6px;
-  background: var(--tile-placeholder);
-  color: var(--tile-label);
-}
-
-.result-tile img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 /* Played fewer than two duels: its place is a guess. */
 .result-tile--dashed {
   outline: 1.5px dashed var(--ink-quiet);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
-.result-tile__name {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
-  padding: 2px;
-  font: 500 9px/11px var(--font);
+/* Every duel skipped: nothing to preview, and nothing to apply. */
+.result-view__nothing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 16px;
   text-align: center;
-  overflow-wrap: anywhere;
+}
+
+.result-view__nothing-icon {
+  font-size: 32px;
+  color: var(--ink-quiet);
+}
+
+.result-view__nothing-text {
+  max-width: 340px;
+  font: 400 14px/20px var(--font);
+  color: var(--ink);
+}
+
+.result-view__nothing-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/*
+ * The buttons, pinned at the foot on the paper with a hairline over them.
+ * Wide: Cancel at the start; Play again, Refine and Apply at the end.
+ */
+.result-view__bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.result-view__gap {
+  flex: 1;
+}
+
+.result-view__more {
+  font: 400 12px/16px var(--font);
+  color: var(--ink-quiet);
+}
+
+.result-view__apply {
+  min-height: 44px;
+}
+
+.result-view__pair,
+.result-view__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* A phone: Apply across, Refine across under it, then Play again and Cancel side by side. */
+@media (max-width: 599px) {
+  .result-view__bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .result-view__bar .btn {
+    justify-content: center;
+  }
+
+  .result-view__bar .result-view__apply {
+    min-height: 48px;
+  }
+
+  .result-view__pair {
+    justify-content: center;
+  }
+}
+
+/*
+ * Sideways, as the app's: a 320 column with the header, the notes and the
+ * buttons, and the tiers scrolling beside it.
+ */
+.result-view--side {
+  display: grid;
+  grid-template-areas:
+    "head tiers"
+    "notes tiers"
+    "bar tiers";
+  grid-template-columns: 320px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.result-view--side .result-view__head {
+  grid-area: head;
+  height: auto;
+  padding: 8px 16px 0 4px;
+  border-bottom: none;
+}
+
+.result-view--side .result-view__heading {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.result-view--side .result-view__title {
+  font: 400 20px/26px var(--font);
+}
+
+.result-view--side .result-view__body {
+  display: contents;
+}
+
+.result-view--side .result-view__notes {
+  grid-area: notes;
+  max-width: none;
+  margin: 0;
+  overflow-y: auto;
+  padding: 12px 16px 0;
+}
+
+.result-view--side .result-view__tiers {
+  grid-area: tiers;
+  max-width: none;
+  margin: 0;
+  overflow-y: auto;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  border-inline-start: 1px solid var(--line);
+}
+
+.result-view--side .result-view__nothing {
+  grid-column: 1 / -1;
+  grid-row: 2 / 4;
+}
+
+.result-view--side .result-view__bar {
+  grid-area: bar;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: none;
+}
+
+.result-view--side .result-view__bar .result-view__apply {
+  justify-content: center;
+}
+
+/*
+ * The snackbar over Play: during a duel 96 up, clear of Skip; on the result
+ * just above its bar (ResultView writes the bar's height). The board's tray
+ * rule (ranking.css) still matches under the layer, hence the weight.
+ */
+body:has(.duel) .snackbar {
+  bottom: calc(96px + env(safe-area-inset-bottom)) !important;
+}
+
+body:has(.result-view__bar) .snackbar {
+  bottom: calc(var(--play-bar-h, 72px) + 8px) !important;
+}
+
+/* Less motion: every step a 90 ms cross-fade; nothing grows, slides or drops. */
+@media (prefers-reduced-motion: reduce) {
+  .play-scrim--arriving,
+  .play-scrim--arriving .play-sheet {
+    animation: play-fade-in 90ms linear both;
+  }
+
+  .play-scrim--leaving,
+  .play-scrim--leaving .play-sheet {
+    animation: play-fade-out 90ms linear both;
+  }
+
+  .duel__slot {
+    animation: play-fade-in 90ms linear backwards;
+  }
+
+  .duel__slot--fade,
+  .duel__slot--drop {
+    transform: none;
+    transition: opacity 90ms linear;
+  }
+
+  .duel-card {
+    transition: opacity 90ms linear;
+  }
+
+  .duel-card--chosen,
+  .duel-card--other,
+  .duel-card--idle:hover {
+    transform: none;
+  }
+
+  .duel-card__check {
+    animation: play-fade-in 90ms linear both;
+  }
+
+  .duel__done {
+    transition: none;
+  }
+
+  .duel__result {
+    animation: play-fade-in 90ms linear both;
+  }
+
+  .result-tier {
+    animation: none;
+  }
+
+  .play-switch__track,
+  .play-switch__handle {
+    transition: none;
+  }
 }

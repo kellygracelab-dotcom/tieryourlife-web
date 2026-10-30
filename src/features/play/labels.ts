@@ -1,6 +1,13 @@
 import { fill, plural, strings } from "../../strings";
 import type { GameKind } from "./engine";
-import { estimate, type GameProgress } from "./game";
+import {
+  bracketRound,
+  estimate,
+  gameProgress,
+  hillStreak,
+  type Game,
+  type GameProgress,
+} from "./game";
 
 /** A game's name, as the picker, the header and the saved line say it. */
 export const gameName = (kind: GameKind): string => strings.play[kind];
@@ -26,6 +33,43 @@ export const roundText = (progress: GameProgress): string | null =>
   progress.round === null
     ? null
     : fill(strings.play.roundOf, { n: progress.round.n, total: progress.round.of });
+
+/**
+ * A bracket's round by the cards in it, as a tournament names it: the final,
+ * the semi-finals, the quarter-finals, then "Round of 16" and up. A round
+ * with byes takes the name of the full one it fits in: 5 cards are the
+ * quarter-finals.
+ */
+export function bracketRoundText(cards: number): string {
+  let n = 2;
+  while (n < cards) n *= 2;
+  if (n === 2) return strings.play.final;
+  if (n === 4) return strings.play.semiFinals;
+  if (n === 8) return strings.play.quarterFinals;
+  return fill(strings.play.roundOfLast, { n });
+}
+
+/** A hill's run worth saying: two wins and more. */
+const STREAK_FROM = 2;
+
+/**
+ * The header's second line, the game's own character: losers stay's round,
+ * a bracket's round by name, the card that holds the hill and its run. The
+ * game's name where there is nothing more to say.
+ */
+export function secondLine(game: Game, nameOf: (card: number) => string): string {
+  const name = gameName(game.spec.kind);
+  const progress = gameProgress(game);
+  const round = roundText(progress);
+  if (round !== null) return `${name} · ${round}`;
+  const cards = bracketRound(game);
+  if (cards !== null) return bracketRoundText(cards);
+  const streak = hillStreak(game);
+  if (streak !== null && streak.wins >= STREAK_FROM) {
+    return fill(plural(strings.play.streak, streak.wins), { name: nameOf(streak.champion) });
+  }
+  return name;
+}
 
 const DAY = 24 * 60 * 60 * 1000;
 

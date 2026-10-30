@@ -1,18 +1,36 @@
-import { useId, useState, type CSSProperties } from "react";
+import { useContext, useId, useState, type CSSProperties } from "react";
 import { sizedFor } from "../../lib/pictureSize";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
-import type { PlayBoard } from "./board";
+import { Icon } from "../../ui/Icon";
+import { CardName } from "../tierboard/CardName";
+import { useBoardSize } from "../tierboard/useBoardSize";
+import type { PlayBoard, PlayTier } from "./board";
 import { chosenIds, MAX_CARDS, playable, type Chosen } from "./chosen";
-import { PlaySheet } from "./PlaySheet";
+import { PlaySheet, SheetCancel } from "./PlaySheet";
+import { SheetArrival } from "./sheet";
+import "../tierboard/board.css";
 
 interface ChooseCardsProps {
   board: PlayBoard;
   /** What was chosen before, to start from. */
   chosen: Chosen;
   onDone: (chosen: Chosen) => void;
+  /** Reached from the picker: the arrow in the title row goes back to it. Absent when it opened by itself. */
+  onBack?: () => void;
+  /** Cancel, Escape, the scrim: the whole sheet goes. */
   onCancel: () => void;
 }
+
+const captioned = (tier: PlayTier): tier is PlayTier & { caption: string } =>
+  tier.caption !== null && tier.caption.trim() !== "";
+
+/** A tier as the rows name it: its caption, as the band shows it, or "Tier S" without one. */
+const tierTitle = (tier: PlayTier): string =>
+  captioned(tier) ? tier.caption : fill(strings.play.tierNamed, { tier: tier.label });
+
+const bandOf = (tier: PlayTier) =>
+  ({ "--band-light": tier.colorLight, "--band-dark": tier.colorDark }) as CSSProperties;
 
 /** A row of the board to choose from: a tier by its id, or the pool as null. */
 type Row = string | null;
@@ -89,30 +107,39 @@ function chosenOf(board: PlayBoard, ticked: Ticked): Chosen {
  * big for a game is searched and its cards picked one by one. Opens by
  * itself on a board of more than 64 cards.
  */
-export function ChooseCards({ board, chosen, onDone, onCancel }: ChooseCardsProps) {
+export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseCardsProps) {
   const id = useId();
   const [ticked, setTicked] = useState(() => tickedOf(board, chosen));
   // The row whose cards are being picked one by one, if any.
-  const [picking, setPicking] = useState<{ row: Row } | null>(null);
+  const [picking, setPickingNow] = useState<{ row: Row } | null>(null);
+  // Once a page has turned, the sheet is open: the next page comes without the sheet's entrance.
+  const arriving = useContext(SheetArrival);
+  const [turned, setTurned] = useState(false);
+  const setPicking = (next: { row: Row } | null) => {
+    setTurned(true);
+    setPickingNow(next);
+  };
 
   if (picking !== null) {
     return (
-      <PickCards
-        board={board}
-        row={picking.row}
-        initial={ticked.picked?.row === picking.row ? ticked.picked.ids : new Set()}
-        onBack={() => setPicking(null)}
-        onDone={(ids) => {
-          setTicked({
-            ...ticked,
-            tiers: new Set(),
-            pool: false,
-            picked: ids.size === 0 ? null : { row: picking.row, ids },
-          });
-          setPicking(null);
-        }}
-        onCancel={onCancel}
-      />
+      <SheetArrival.Provider value={false}>
+        <PickCards
+          board={board}
+          row={picking.row}
+          initial={ticked.picked?.row === picking.row ? ticked.picked.ids : new Set()}
+          onBack={() => setPicking(null)}
+          onDone={(ids) => {
+            setTicked({
+              ...ticked,
+              tiers: new Set(),
+              pool: false,
+              picked: ids.size === 0 ? null : { row: picking.row, ids },
+            });
+            setPicking(null);
+          }}
+          onCancel={onCancel}
+        />
+      </SheetArrival.Provider>
     );
   }
 
@@ -145,79 +172,116 @@ export function ChooseCards({ board, chosen, onDone, onCancel }: ChooseCardsProp
     ticked.picked !== null && ticked.picked.row === row ? ticked.picked.ids.size : null;
 
   return (
-    <PlaySheet
-      title={strings.play.chooseCards}
-      onClose={onCancel}
-      footer={<Counter count={count} />}
-      actions={
-        <>
-          <Button onClick={onCancel}>{strings.play.cancel}</Button>
-          <Button
-            variant="tonal"
-            className="play-tonal"
-            onClick={() => onDone(chosenOf(board, ticked))}
-            disabled={!playable(count)}
-          >
-            {strings.play.continue}
-          </Button>
-        </>
-      }
-    >
-      <ul className="play-rows">
-        {board.pool.length > 0 && (
-          <RowItem
-            id={`${id}-pool`}
-            title={plural(strings.play.thePool, board.pool.length)}
-            size={board.pool.length}
-            checked={isTicked(null)}
-            picked={pickedHere(null)}
-            onToggle={(on) => toggle(null, on)}
-            onPick={() => setPicking({ row: null })}
-          />
-        )}
-        {rows.map((tier) => (
-          <RowItem
-            key={tier.id}
-            id={`${id}-${tier.id}`}
-            title={[tier.label, tier.caption].filter(Boolean).join(" ")}
-            sub={plural(strings.boards.cards, tier.cardIds.length)}
-            swatch={
-              { "--band-light": tier.colorLight, "--band-dark": tier.colorDark } as CSSProperties
-            }
-            size={tier.cardIds.length}
-            checked={isTicked(tier.id)}
-            picked={pickedHere(tier.id)}
-            onToggle={(on) => toggle(tier.id, on)}
-            onPick={() => setPicking({ row: tier.id })}
-          />
-        ))}
-        <li className="play-row">
-          <input
-            id={`${id}-everything`}
-            type="checkbox"
-            className="play-row__check"
-            checked={everything}
-            disabled={total > MAX_CARDS}
-            onChange={(event) => toggleEverything(event.target.checked)}
-          />
-          <label htmlFor={`${id}-everything`} className="play-row__text">
-            <span className="play-row__title">{plural(strings.play.everything, total)}</span>
+    <SheetArrival.Provider value={arriving && !turned}>
+      <PlaySheet
+        title={strings.play.chooseCards}
+        onBack={onBack}
+        onClose={onCancel}
+        footer={<Counter count={count} />}
+        actions={
+          <>
+            <SheetCancel />
+            <Button
+              variant="tonal"
+              className="play-tonal"
+              onClick={() => onDone(chosenOf(board, ticked))}
+              disabled={!playable(count)}
+            >
+              {strings.play.continue}
+            </Button>
+          </>
+        }
+      >
+        <ul className="play-rows">
+          {board.pool.length > 0 && (
+            <RowItem
+              id={`${id}-pool`}
+              title={plural(strings.play.thePool, board.pool.length)}
+              size={board.pool.length}
+              checked={isTicked(null)}
+              picked={pickedHere(null)}
+              onToggle={(on) => toggle(null, on)}
+              onPick={() => setPicking({ row: null })}
+            />
+          )}
+          {rows.map((tier) => (
+            <RowItem
+              key={tier.id}
+              id={`${id}-${tier.id}`}
+              title={tierTitle(tier)}
+              sub={plural(strings.boards.cards, tier.cardIds.length)}
+              band={tier}
+              size={tier.cardIds.length}
+              checked={isTicked(tier.id)}
+              picked={pickedHere(tier.id)}
+              onToggle={(on) => toggle(tier.id, on)}
+              onPick={() => setPicking({ row: tier.id })}
+            />
+          ))}
+          <li className="play-row">
+            <Check
+              id={`${id}-everything`}
+              checked={everything}
+              disabled={total > MAX_CARDS}
+              onChange={toggleEverything}
+            />
+            <label htmlFor={`${id}-everything`} className="play-row__text">
+              <span className="play-row__title">{plural(strings.play.everything, total)}</span>
+            </label>
+          </li>
+        </ul>
+        {kept !== null && (
+          <label className="play-switch">
+            <span>{fill(strings.play.keepIn, { tier: keptLabel })}</span>
+            {/* A checkbox under an M3 switch's face: the role says what it is. */}
+            <span className="play-switch__track">
+              <input
+                type="checkbox"
+                role="switch"
+                className="play-switch__input"
+                checked={ticked.keepTier}
+                onChange={(event) => setTicked({ ...ticked, keepTier: event.target.checked })}
+              />
+              <span className="play-switch__handle" aria-hidden="true" />
+            </span>
           </label>
-        </li>
-      </ul>
-      {kept !== null && (
-        <label className="play-switch">
-          <span>{fill(strings.play.keepIn, { tier: keptLabel })}</span>
-          <input
-            type="checkbox"
-            role="switch"
-            className="play-switch__input"
-            checked={ticked.keepTier}
-            onChange={(event) => setTicked({ ...ticked, keepTier: event.target.checked })}
-          />
-        </label>
-      )}
-    </PlaySheet>
+        )}
+      </PlaySheet>
+    </SheetArrival.Provider>
+  );
+}
+
+/**
+ * M3's checkbox drawn in CSS: an 18 box with a 2 px border, filled in the
+ * primary colour with a check when ticked, in a 40 round state layer. The
+ * input stays, transparent over the layer, so the keyboard, a screen reader
+ * and the label reach it as they would a native one.
+ */
+function Check({
+  id,
+  checked,
+  disabled = false,
+  onChange,
+}: {
+  id: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (on: boolean) => void;
+}) {
+  return (
+    <span className="play-check">
+      <input
+        id={id}
+        type="checkbox"
+        className="play-check__input"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="play-check__box" aria-hidden="true">
+        <Icon name="check" />
+      </span>
+    </span>
   );
 }
 
@@ -235,7 +299,8 @@ interface RowItemProps {
   id: string;
   title: string;
   sub?: string;
-  swatch?: CSSProperties;
+  /** A tier: its band colour as a swatch, its letter on it. */
+  band?: PlayTier;
   size: number;
   checked: boolean;
   /** Cards picked one by one in this row, or null when none are. */
@@ -244,35 +309,31 @@ interface RowItemProps {
   onPick: () => void;
 }
 
-function RowItem({
-  id,
-  title,
-  sub,
-  swatch,
-  size,
-  checked,
-  picked,
-  onToggle,
-  onPick,
-}: RowItemProps) {
+function RowItem({ id, title, sub, band, size, checked, picked, onToggle, onPick }: RowItemProps) {
   const tooBig = size > MAX_CARDS;
   return (
     <li className="play-row">
-      <input
-        id={id}
-        type="checkbox"
-        className="play-row__check"
-        checked={checked || picked !== null}
-        onChange={(event) => onToggle(event.target.checked)}
-      />
-      {swatch !== undefined && <span className="play-row__swatch band" style={swatch} />}
+      <Check id={id} checked={checked || picked !== null} onChange={onToggle} />
       <label htmlFor={id} className="play-row__text">
-        <span className="play-row__title">{title}</span>
-        {sub !== undefined && <span className="play-row__sub">{sub}</span>}
-        {picked !== null && (
-          <span className="play-row__sub">{plural(strings.play.picked, picked)}</span>
+        {band !== undefined && (
+          // Inside the label, the letter is read with the caption; "Tier S" says it already.
+          <span
+            className="play-row__swatch band"
+            style={bandOf(band)}
+            aria-hidden={!captioned(band) || undefined}
+          >
+            {band.label}
+          </span>
         )}
-        {tooBig && <span className="play-row__sub">{strings.play.tooBig}</span>}
+        {/* Read as "S Masterpieces", not "SMasterpieces"; the row's flex drops it from sight. */}{" "}
+        <span className="play-row__words">
+          <span className="play-row__title">{title}</span>
+          {sub !== undefined && <span className="play-row__sub">{sub}</span>}
+          {picked !== null && (
+            <span className="play-row__sub">{plural(strings.play.picked, picked)}</span>
+          )}
+          {tooBig && <span className="play-row__sub">{strings.play.tooBig}</span>}
+        </span>
       </label>
       {tooBig && (
         <button type="button" className="play-link play-row__pick" onClick={onPick}>
@@ -292,9 +353,15 @@ interface PickCardsProps {
   onCancel: () => void;
 }
 
-/** One row's cards with a search over them, ticked one by one up to 64. */
+/**
+ * One row's cards with a search over them, ticked one by one up to 64. The
+ * tiles are the board's own size, so a card looks here as it does there; a
+ * ticked one wears a ring and a check, and once 64 are ticked the others
+ * fade.
+ */
 function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsProps) {
   const id = useId();
+  const size = useBoardSize();
   const [query, setQuery] = useState("");
   const [ids, setIds] = useState<ReadonlySet<string>>(initial);
   const cards = cardsOf(board, row).flatMap((card) => board.cards.get(card) ?? []);
@@ -306,7 +373,7 @@ function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsP
   const where =
     tier === undefined
       ? plural(strings.play.thePool, cards.length)
-      : `${[tier.label, tier.caption].filter(Boolean).join(" ")} · ${plural(strings.boards.cards, cards.length)}`;
+      : `${tierTitle(tier)} · ${plural(strings.boards.cards, cards.length)}`;
 
   const flip = (card: string, on: boolean) => {
     const next = new Set(ids);
@@ -318,12 +385,13 @@ function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsP
   return (
     <PlaySheet
       title={strings.play.pickCards}
+      onBack={onBack}
       subtitle={where}
       onClose={onCancel}
       footer={<Counter count={ids.size} />}
       actions={
         <>
-          <Button onClick={onBack}>{strings.play.back}</Button>
+          <SheetCancel />
           <Button
             variant="tonal"
             className="play-tonal"
@@ -352,20 +420,23 @@ function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsP
             const on = ids.has(card.id);
             return (
               <li key={card.id}>
-                <label className="play-pick__card" htmlFor={`${id}-${card.id}`}>
+                <label className="tile play-pick__card" htmlFor={`${id}-${card.id}`}>
                   <input
                     id={`${id}-${card.id}`}
                     type="checkbox"
-                    className="play-pick__check"
+                    className="play-pick__input"
                     checked={on}
                     disabled={!on && full}
                     onChange={(event) => flip(card.id, event.target.checked)}
                   />
                   {card.imageUrl !== null ? (
-                    <img {...sizedFor(card.imageUrl, 56)} alt={card.name} loading="lazy" />
+                    <img {...sizedFor(card.imageUrl, 64)} alt={card.name} loading="lazy" />
                   ) : (
-                    <span className="play-pick__name">{card.name}</span>
+                    <CardName title={card.name} board={size} />
                   )}
+                  <span className="play-pick__check" aria-hidden="true">
+                    <Icon name="check" />
+                  </span>
                 </label>
               </li>
             );

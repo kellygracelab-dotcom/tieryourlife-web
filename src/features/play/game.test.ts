@@ -5,11 +5,13 @@ import { refinePairs, swissRounds, type GameKind } from "./engine";
 import {
   answered,
   applied,
+  bracketRound,
   canUndo,
   currentPair,
   dashedIds,
   estimate,
   gameProgress,
+  hillStreak,
   isOver,
   isThinResult,
   newGame,
@@ -157,6 +159,31 @@ describe("its progress", () => {
       round: null,
       overall: { asked: over.history.length, total: over.history.length + pairs.length },
     });
+  });
+
+  it("tells a bracket's round by the cards still in it, byes counted", () => {
+    // Five cards: two duels and a bye leave three, one duel and a bye leave two.
+    let game = start("bracket", ["a", "b", "c", "d", "e"]);
+    const rounds: (number | null)[] = [];
+    while (currentPair(game) !== null) {
+      rounds.push(bracketRound(game));
+      game = skip(game);
+    }
+    expect(rounds).toEqual([5, 5, 3, 2]);
+    expect(bracketRound(game)).toBeNull();
+    expect(bracketRound(start("hill", ["a", "b", "c"]))).toBeNull();
+  });
+
+  it("counts the hill's run of wins, a skip breaking it", () => {
+    let game = start("hill", ["a", "b", "c", "d", "e"]);
+    expect(hillStreak(game)).toEqual({ champion: currentPair(game)![0], wins: 0 });
+    game = pick(game, currentPair(game)![0]);
+    game = pick(game, currentPair(game)![0]);
+    expect(hillStreak(game)).toEqual({ champion: currentPair(game)![0], wins: 2 });
+    game = skip(game);
+    expect(hillStreak(game)!.wins).toBe(0);
+    expect(hillStreak(start("swiss", ["a", "b", "c"]))).toBeNull();
+    expect(hillStreak(playOut(start("hill", ["a", "b", "c"]), lowerWins))).toBeNull();
   });
 });
 
