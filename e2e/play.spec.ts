@@ -9,8 +9,20 @@ const openMine = async (page: Page) => {
   await settled(page);
 };
 
-/** Sheets slide and cards fade: a box measured mid-flight is in the wrong place. */
-const settled = (page: Page) => page.waitForFunction(() => document.getAnimations().length === 0);
+/**
+ * Sheets slide and cards fade: a box measured mid-flight is in the wrong place.
+ * A looping animation elsewhere on the page never ends, so only the finite ones are waited for.
+ */
+const settled = (page: Page) =>
+  page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (motion) =>
+          motion.playState !== "running" ||
+          motion.effect?.getComputedTiming().iterations === Infinity,
+      ),
+  );
 
 const boxOf = async (target: Locator) => {
   const box = await target.boundingBox();
@@ -105,7 +117,8 @@ test.describe("Play on a phone", () => {
     await settled(page);
     const bar = await boxOf(page.locator(".result-view__bar"));
     expect(Math.abs(bar.y + bar.height - viewport.height)).toBeLessThan(2);
-    const apply = await boxOf(page.getByRole("button", { name: "Apply", exact: true }));
+    // On somebody else's list Apply is named for where the result goes.
+    const apply = await boxOf(page.locator(".result-view__apply"));
     // Apply stretches across the bar, first.
     expect(apply.width).toBeGreaterThan(viewport.width / 2);
   });
