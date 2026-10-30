@@ -179,7 +179,13 @@ function WhoseSwitch({ view, chosen, mine, onView, onBack }: WhoseSwitchProps) {
     </span>
   );
   return (
-    <div className="whose" role="group" aria-label={strings.list.views}>
+    <div
+      className={["whose", !mine && "whose--one", view === "mine" && "whose--mine"]
+        .filter(Boolean)
+        .join(" ")}
+      role="group"
+      aria-label={strings.list.views}
+    >
       {half("theirs", chosen?.authorName ?? strings.list.viewTheirs, chosen !== null)}
       {mine && half("mine", strings.list.viewMine)}
     </div>
@@ -428,6 +434,7 @@ function OpenList({
                 theirsName === null
                   ? strings.list.seedHintUnnamed
                   : fill(strings.list.seedHint, { name: theirsName }),
+              dropHint: strings.list.dropToStart,
               onStart: startFromTheirs,
             }}
           />

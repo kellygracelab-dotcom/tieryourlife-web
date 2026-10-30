@@ -391,6 +391,7 @@ const ja: Translation = {
     replacedYoursUnnamed: "自分のバージョンをこのランキングに置き換えました",
     seedHint: "置くと、{name}のランキングから自分のバージョンが始まります。",
     seedHintUnnamed: "置くと、このランキングから自分のバージョンが始まります。",
+    dropToStart: "ドロップすると自分のバージョンが始まります。",
   },
   rankings: {
     title: "ランキング",

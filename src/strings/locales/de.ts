@@ -403,6 +403,7 @@ const de: Translation = {
     replacedYoursUnnamed: "Deine Version durch dieses Ranking ersetzt",
     seedHint: "Wenn du sie platzierst, beginnt deine Version mit dem Ranking von {name}.",
     seedHintUnnamed: "Wenn du sie platzierst, beginnt deine Version mit diesem Ranking.",
+    dropToStart: "Lass sie los, um deine Version zu beginnen.",
   },
   rankings: {
     title: "Reihungen",

@@ -427,6 +427,7 @@ const pl: Translation = {
     replacedYoursUnnamed: "Zastąpiono twoją wersję tym rankingiem",
     seedHint: "Umieszczenie jej rozpocznie twoją wersję od rankingu: {name}.",
     seedHintUnnamed: "Umieszczenie jej rozpocznie twoją wersję od tego rankingu.",
+    dropToStart: "Upuść ją, aby zacząć swoją wersję.",
   },
   rankings: {
     title: "Rankingi",

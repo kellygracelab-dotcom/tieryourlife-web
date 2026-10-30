@@ -392,6 +392,7 @@ const tr: Translation = {
     replacedYoursUnnamed: "Sürümün bu sıralamayla değiştirildi",
     seedHint: "Yerleştirince sürümün {name} sıralamasından başlar.",
     seedHintUnnamed: "Yerleştirince sürümün bu sıralamadan başlar.",
+    dropToStart: "Kendi sürümünü başlatmak için bırak.",
   },
   rankings: {
     title: "Sıralamalar",

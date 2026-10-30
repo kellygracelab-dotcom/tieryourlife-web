@@ -96,6 +96,8 @@ export interface Seed {
   label: string;
   /** What placing a picked card will do, said under the board while one is picked. */
   hint: string;
+  /** The same, in the line's place, while a card is carried. */
+  dropHint: string;
   onStart: (rows: Rows) => void;
 }
 
@@ -764,9 +766,9 @@ export function RankingBoard({
           )}
           <div className="board__end" ref={boardEnd} aria-hidden="true" />
         </div>
-        {seed !== undefined && selected !== null && (
+        {seed !== undefined && (selected !== null || lifted !== null) && (
           <p className="ranking__seed-hint" role="status">
-            {seed.hint}
+            {lifted !== null ? seed.dropHint : seed.hint}
           </p>
         )}
       </div>

@@ -468,6 +468,7 @@ const ar: Translation = {
     replacedYoursUnnamed: "استُبدلت نسختك بهذا الترتيب",
     seedHint: "وضعها يبدأ نسختك من ترتيب {name}.",
     seedHintUnnamed: "وضعها يبدأ نسختك من هذا الترتيب.",
+    dropToStart: "أفلتها لتبدأ نسختك.",
   },
   rankings: {
     title: "الترتيبات",

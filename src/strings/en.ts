@@ -392,6 +392,7 @@ export const en = {
     replacedYoursUnnamed: "Replaced your version with this ranking",
     seedHint: "Placing it starts your version from {name}’s.",
     seedHintUnnamed: "Placing it starts your version from this ranking.",
+    dropToStart: "Drop it to start your version.",
   },
   // The readers' placings of a list. The title has no count, so it cannot
   // disagree with the chip's, which is the takes (Danylo, 28.10).

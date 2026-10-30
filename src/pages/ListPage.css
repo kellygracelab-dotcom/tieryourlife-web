@@ -181,6 +181,8 @@
  * ticked. Equal grid columns are each as wide as the widest half needs.
  */
 .whose {
+  position: relative;
+  isolation: isolate;
   display: grid;
   flex: none;
   grid-auto-columns: 1fr;
@@ -191,11 +193,45 @@
   overflow: hidden;
 }
 
+/*
+ * The fill under the chosen half is one piece that slides between the two,
+ * so a first move on Theirs is seen to carry the page over to Mine.
+ */
+.whose::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: -1;
+  width: 50%;
+  background: var(--primary-container);
+  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.whose--one::before {
+  width: 100%;
+}
+
+.whose--mine::before {
+  transform: translateX(100%);
+}
+
+[dir="rtl"] .whose--mine::before {
+  transform: translateX(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whose::before {
+    transition: none;
+  }
+}
+
 .whose__half {
   display: flex;
   align-items: center;
   min-width: 0;
   color: var(--ink-dim);
+  transition: color 250ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .whose__half + .whose__half {
@@ -208,7 +244,6 @@
 }
 
 .whose__half--on {
-  background: var(--primary-container);
   color: var(--on-primary-container);
 }
 

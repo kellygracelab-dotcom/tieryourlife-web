@@ -72,7 +72,16 @@ test.describe("starting from the author's ranking", () => {
     await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
     await page.mouse.down();
     await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    // While it is carried, a line under the board says what letting go does,
+    // and the rows stay where they were.
+    await expect(page.getByText("Drop it to start your version.")).toBeVisible();
+    expect((await theirs.getByRole("list", { name: "A" }).boundingBox())?.y).toBe(to.y);
     await page.mouse.up();
+    // The switch went over to Mine with the page.
+    await expect(page.getByRole("button", { name: "Mine" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     // Mine now: the author's arrangement with that one card moved, and Climax still to place.
     const yours = page.getByRole("region", { name: "Your ranking" });

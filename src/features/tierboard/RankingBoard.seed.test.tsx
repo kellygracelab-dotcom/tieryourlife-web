@@ -62,6 +62,7 @@ describe("RankingBoard showing somebody else's arrangement", () => {
             rows: theirs,
             label: "Their ranking",
             hint: "Placing it starts yours",
+            dropHint: "Drop it to start yours",
             onStart: vi.fn(),
           }}
         />
@@ -85,7 +86,13 @@ describe("RankingBoard showing somebody else's arrangement", () => {
         <RankingBoard
           list={list}
           store={memoryStore()}
-          seed={{ rows: theirs, label: "Their ranking", hint: "Placing it starts yours", onStart }}
+          seed={{
+            rows: theirs,
+            label: "Their ranking",
+            hint: "Placing it starts yours",
+            dropHint: "Drop it to start yours",
+            onStart,
+          }}
         />
       </MemoryRouter>,
     );
@@ -127,6 +134,7 @@ describe("RankingBoard showing somebody else's arrangement", () => {
               rows: theirs,
               label: "Their ranking",
               hint: "Placing it starts yours",
+              dropHint: "Drop it to start yours",
               onStart: vi.fn(),
             }}
           />
@@ -138,6 +146,8 @@ describe("RankingBoard showing somebody else's arrangement", () => {
     under = tier("A").parentElement;
     pointer("pointermove", window, 40, 40);
     expect(document.querySelector(".ghost")).not.toBeNull();
+    // While it is carried, the line under the board says what letting go does.
+    expect(screen.getByRole("status")).toHaveTextContent("Drop it to start yours");
 
     // The switch to Mine while the card is still held.
     rerender(page(true));

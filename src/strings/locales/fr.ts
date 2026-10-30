@@ -404,6 +404,7 @@ const fr: Translation = {
     replacedYoursUnnamed: "Votre version remplacée par ce classement",
     seedHint: "La placer fait partir votre version du classement de {name}.",
     seedHintUnnamed: "La placer fait partir votre version de ce classement.",
+    dropToStart: "Lâchez-la pour commencer votre version.",
   },
   rankings: {
     title: "Classements",

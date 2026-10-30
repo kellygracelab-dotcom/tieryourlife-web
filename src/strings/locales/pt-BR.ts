@@ -395,6 +395,7 @@ const ptBR: Translation = {
     replacedYoursUnnamed: "Sua versão foi substituída por esta classificação",
     seedHint: "Ao colocá-lo, sua versão começa pela classificação de {name}.",
     seedHintUnnamed: "Ao colocá-lo, sua versão começa por esta classificação.",
+    dropToStart: "Solte para começar sua versão.",
   },
   rankings: {
     title: "Rankings",

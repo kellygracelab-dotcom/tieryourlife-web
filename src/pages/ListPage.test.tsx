@@ -528,8 +528,11 @@ describe("ListPage, starting Mine from Theirs", () => {
     expect(localStorage.getItem(draftKey("abc"))).toBeNull();
     expect(screen.getByText("Placing it starts your version from danylo’s.")).toBeInTheDocument();
 
+    // The switch's fill slides across to Mine as the page goes there.
+    expect(whose()).not.toHaveClass("whose--mine");
     await userEvent.keyboard("2");
     expect(theirsPressed()).toBe("false");
+    expect(whose()).toHaveClass("whose--mine");
     const yours = screen.getByRole("region", { name: "Your ranking" });
     expect(within(yours).getByRole("list", { name: "A" })).toHaveTextContent("The WitchEx Machina");
     expect(within(yours).getByRole("list", { name: "S" })).toHaveTextContent("Climax");

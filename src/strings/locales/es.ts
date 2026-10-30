@@ -394,6 +394,7 @@ const es: Translation = {
     replacedYoursUnnamed: "Tu versión se reemplazó por esta clasificación",
     seedHint: "Al colocarla, tu versión parte de la clasificación de {name}.",
     seedHintUnnamed: "Al colocarla, tu versión parte de esta clasificación.",
+    dropToStart: "Suéltala para empezar tu versión.",
   },
   rankings: {
     title: "Rankings",
