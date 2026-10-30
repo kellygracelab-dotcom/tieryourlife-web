@@ -281,7 +281,15 @@ export function SectionsPane({
               )}
               <span className="admin-order__number">{index + 1}</span>
               {one !== undefined && (
-                <span className="admin-order__thumb" style={sectionStyle(one)} aria-hidden="true">
+                <span
+                  className={
+                    one.picture === null
+                      ? "admin-order__thumb"
+                      : "admin-order__thumb admin-order__thumb--pictured"
+                  }
+                  style={sectionStyle(one)}
+                  aria-hidden="true"
+                >
                   <Icon name={one.icon} />
                 </span>
               )}

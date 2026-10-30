@@ -289,14 +289,35 @@
   color: #ffffff;
 }
 
+/* A true 16:10 of the tile (docs/design-spec-walk-3.md, E1): its picture under the tile's scrim, the icon bottom-left. */
 .admin-order__thumb {
+  position: relative;
+  isolation: isolate;
+  align-items: flex-end;
+  justify-content: flex-start;
   width: 72px;
-  height: 40px;
+  height: 45px;
+  padding: 0 0 5px 6px;
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.admin-order__thumb--pictured {
+  background-image: var(--section-picture);
+  background-size: cover;
+  background-position: center;
+}
+
+.admin-order__thumb::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.62));
 }
 
 .admin-order__thumb .ms {
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .admin-order__text,
@@ -455,6 +476,7 @@
   width: 48px;
   height: 48px;
   border-radius: 12px;
+  overflow: hidden;
   background: var(--topic-bg-light);
   color: var(--topic-icon-light);
 }
@@ -511,6 +533,72 @@
   max-width: 280px;
 }
 
+/* Approve's panel: as a section, or as a topic in a section picked beside the choice. */
+.proposal__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.proposal__choice,
+.proposal__choice-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  font: 400 14px/20px var(--font);
+}
+
+.proposal__choice input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--link);
+}
+
+.proposal__choice select {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--text-body);
+}
+
+.proposal__approve .field {
+  max-width: 360px;
+}
+
+.proposal__under {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 360px;
+}
+
+.proposal__error {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  font: 400 12px/16px var(--font);
+  color: var(--error);
+}
+
+.proposal__under .field__counter {
+  margin-inline-start: auto;
+}
+
+.proposal__consequence {
+  margin: 0;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
 /* Topics and people: rows with a square or a face. */
 .admin-topics,
 .admin-people {
@@ -533,7 +621,8 @@
 .admin-topics__square {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 8px;
+  overflow: hidden;
   background: var(--topic-bg-light, var(--tint));
   color: var(--topic-icon-light, #ffffff);
 }
@@ -543,12 +632,10 @@
   font: 500 14px/20px var(--font);
 }
 
-.topic-form {
-  display: flex;
-  flex-basis: 100%;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px 0 12px;
+/* Under the topic's drop zone, quieter than the picture's own buttons. */
+.topic-editor__remove {
+  align-self: flex-start;
+  color: var(--ink-dim);
 }
 
 .admin-people__face {
@@ -597,6 +684,249 @@
   font: 400 14px/20px var(--font);
 }
 
+/* Lists (docs/design-spec-walk-3.md, E2): sections with sticky heads, topics under them, rows of lists. */
+.admin-lists__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--ink-dim);
+}
+
+.admin-lists__search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font: var(--text-body);
+  outline: none;
+}
+
+.admin-lists__search:focus-within {
+  border-color: var(--link);
+}
+
+.admin-lists__search .ms {
+  font-size: 20px;
+}
+
+.admin-lists__sections {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-lists__head {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 2;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.admin-lists__toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.admin-lists__toggle:hover {
+  background: var(--hover);
+}
+
+.admin-lists__swatch {
+  --tint: var(--tint-light);
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 4px;
+  background: var(--tint);
+}
+
+.admin-lists__name {
+  font: 500 16px/24px var(--font);
+}
+
+.admin-lists__count {
+  flex: 1;
+  font: 400 13px/18px var(--font);
+  color: var(--ink-dim);
+}
+
+.admin-lists__chevron {
+  color: var(--ink-dim);
+  transition: transform 160ms ease;
+}
+
+.admin-lists__chevron--open {
+  transform: rotate(180deg);
+}
+
+.admin-lists__group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.admin-lists__topic {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  margin: 0;
+  font: 500 13px/18px var(--font);
+  color: var(--ink-dim);
+}
+
+.admin-lists__rows {
+  align-self: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-list {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 4px 0;
+  border-top: 1px solid var(--line);
+}
+
+.admin-list--leaving {
+  animation: admin-list-out 180ms ease-in forwards;
+}
+
+@keyframes admin-list-out {
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-list--leaving {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.admin-list__cover {
+  display: flex;
+  width: 40px;
+  height: 56px;
+  flex: none;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--tile-placeholder);
+}
+
+.admin-list__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-list__cover span {
+  flex: 1;
+}
+
+.admin-list__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-list__title {
+  overflow: hidden;
+  font: 500 14px/20px var(--font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-list__meta {
+  overflow: hidden;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-list__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  flex: none;
+  padding: 0 10px 0 8px;
+  border-radius: 12px;
+  background: var(--surface-container-high);
+  color: var(--ink-dim);
+  font: 500 12px/16px var(--font);
+  white-space: nowrap;
+}
+
+.admin-list__pill .ms {
+  font-size: 14px;
+}
+
+.admin-list__actions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+/* Move: a dialog 400 wide, a sheet from the bottom below 840. */
+.move-dialog {
+  width: min(400px, 100%);
+}
+
+.move-dialog__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.move-dialog__waits {
+  margin: 16px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface-container);
+  font: 400 13px/18px var(--font);
+  color: var(--ink-dim);
+}
+
+.move-dialog__fields + .admin__bar,
+.move-dialog__waits + .admin__bar {
+  margin-top: 16px;
+}
+
+.move-dialog__scrim--sheet {
+  align-items: flex-end;
+  padding: 0;
+}
+
+.move-dialog--sheet {
+  width: 100%;
+  border-radius: 28px 28px 0 0;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
 @media (max-width: 839px) {
   .admin__pane {
     padding: 16px 0 48px;
@@ -604,6 +934,10 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .admin-lists__swatch {
+    --tint: var(--tint-dark);
+  }
+
   :root:not([data-theme="light"]) :is(.admin-order__thumb, .admin-topics__square) {
     --tint: var(--tint-dark);
   }
@@ -614,7 +948,7 @@
   }
 }
 
-:root[data-theme="dark"] :is(.admin-order__thumb, .admin-topics__square) {
+:root[data-theme="dark"] :is(.admin-order__thumb, .admin-topics__square, .admin-lists__swatch) {
   --tint: var(--tint-dark);
 }
 

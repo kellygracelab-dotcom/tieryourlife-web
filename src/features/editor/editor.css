@@ -394,87 +394,157 @@
   }
 }
 
-/* Tier colours */
+/* Tier colours: eight presets and one of one's own, 36 across, the chosen one ringed and ticked. */
 
 .tiers__palette {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tiers__swatches {
+  display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  padding: 4px 0 4px 44px;
+  gap: 12px;
 }
 
 .tiers__preset {
-  width: 28px;
-  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: none;
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+  color: var(--on-band);
   cursor: pointer;
 }
 
-.tiers__preset[aria-pressed="true"] {
-  box-shadow:
-    0 0 0 2px var(--surface),
-    0 0 0 4px var(--ink);
+.tiers__preset .ms {
+  font-size: 18px;
 }
 
-/* The ninth swatch: a colour of one's own, and the panel that sets it. */
+.tiers__preset[aria-pressed="true"] {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tiers__preset:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The ninth: a colour of one's own, and the panel that sets it. */
 .tiers__preset--custom {
-  background: conic-gradient(#b03a32, #c06a25, #a98b1f, #3f7f55, #3c6e99, #6b4e9e, #b03a32);
+  background: var(--surface-container-high);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink);
 }
 
 .tiers__custom {
   display: flex;
-  flex-basis: 100%;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 4px;
-}
-
-.tiers__custom-note {
-  margin: 0;
-  font: var(--text-small);
-  color: var(--ink-dim);
+  gap: 12px;
 }
 
 .tiers__custom-field {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 10px;
+  gap: 8px 12px;
 }
 
 .tiers__custom-theme {
-  min-width: 52px;
-  font: var(--text-small);
-  font-weight: 500;
+  flex-basis: 100%;
+  font: 400 11px/14px var(--font);
+  color: var(--ink-quiet);
 }
 
-.tiers__custom-swatch {
-  width: 36px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
+/* Hues across, tones down: light at the top, deep at the foot. */
+.tiers__tones {
+  position: relative;
+  flex-basis: 100%;
+  height: 120px;
+  border-radius: 12px;
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.7), transparent 50%, rgba(0, 0, 0, 0.6)),
+    linear-gradient(
+      to right,
+      hsl(0 70% 50%),
+      hsl(60 70% 50%),
+      hsl(120 70% 50%),
+      hsl(180 70% 50%),
+      hsl(240 70% 50%),
+      hsl(300 70% 50%),
+      hsl(360 70% 50%)
+    );
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* The hues run with the text: red at the start in Arabic too. */
+[dir="rtl"] .tiers__tones {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.7), transparent 50%, rgba(0, 0, 0, 0.6)),
+    linear-gradient(
+      to left,
+      hsl(0 70% 50%),
+      hsl(60 70% 50%),
+      hsl(120 70% 50%),
+      hsl(180 70% 50%),
+      hsl(240 70% 50%),
+      hsl(300 70% 50%),
+      hsl(360 70% 50%)
+    );
+}
+
+.tiers__tones:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.tiers__tones-mark {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin-block-start: -9px;
+  margin-inline-start: -9px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
 
 .tiers__hex {
-  width: 96px;
-  padding: 4px 8px;
-  border: 1px solid var(--line);
+  width: 120px;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
   border-radius: 8px;
   background: var(--surface);
-  font: var(--text-small);
-  font-family: var(--font-mono);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  font: 400 14px/20px var(--font-mono);
   color: var(--ink);
   text-transform: uppercase;
 }
 
-.tiers__contrast {
-  font: var(--text-caption);
-  color: var(--ink-dim);
+.tiers__hex:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus);
+}
+
+.tiers__dark-apart {
+  align-self: flex-start;
+  margin-inline-start: -12px;
+  color: var(--link);
+}
+
+.tiers__warning {
+  margin: 0;
+  font: 400 12px/16px var(--font);
+  color: var(--error);
 }
 
 /* Many names at once: a button until it is wanted, then a box as wide as the editor. */
@@ -509,59 +579,128 @@
   gap: var(--space-2);
 }
 
-/* One tier's own editor, opened from the board: a wider dialog that scrolls when the custom colours open. */
+/*
+ * One tier's own editor, opened from the board: a dialog 480 wide, and a
+ * sheet from the bottom on a phone. It scrolls when the custom colour opens.
+ */
 .tier-dialog {
   gap: 16px;
-  width: min(440px, 100%);
+  width: min(480px, 100%);
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
 }
 
+.tier-dialog__handle {
+  display: none;
+}
+
 .tier-dialog .dialog__actions {
+  align-items: center;
   margin-top: 8px;
+}
+
+/* Light and dark side by side, each the band on its row's tint in that theme. */
+.tier-dialog__previews {
+  display: flex;
+  gap: 12px;
+}
+
+.tier-dialog__theme {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.tier-dialog__theme-name {
+  font: 400 11px/14px var(--font);
+  color: var(--ink-quiet);
+}
+
+/*
+ * Each theme's own paper and letter, whichever theme the page is in: the
+ * light and dark --paper of tokens.css, the white letter on the light band
+ * and the app's near-black one on the dark.
+ */
+.tier-dialog__theme--light {
+  --preview-paper: #e9e7e2;
+  --preview-letter: #ffffff;
+  --preview-tint: 12%;
+}
+
+.tier-dialog__theme--dark {
+  --preview-paper: #131318;
+  --preview-letter: #121318;
+  --preview-tint: 20%;
 }
 
 .tier-dialog__preview {
   display: flex;
+  width: 96px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--preview-band) var(--preview-tint), var(--preview-paper));
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.tier-dialog__band {
+  display: flex;
+  flex: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  min-height: 88px;
-  padding: 8px;
-  border-radius: var(--radius-card);
-  background: var(--band);
-  color: var(--on-band);
+  gap: 2px;
+  width: 56px;
+  padding: 4px;
+  background: var(--preview-band);
+  color: var(--preview-letter);
   text-align: center;
 }
 
 .tier-dialog__letter {
-  font: var(--text-band-letter);
+  font: 500 22px/26px var(--font);
   overflow-wrap: anywhere;
 }
 
 .tier-dialog__caption {
-  font: var(--text-caption);
-  font-weight: 500;
+  max-width: 100%;
+  overflow: hidden;
+  font: 500 9px/12px var(--font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Label 88 wide, three letters at most; the caption takes the rest. */
+.tier-dialog__fields {
+  display: flex;
+  gap: 12px;
 }
 
 .tier-dialog__field {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 6px;
-  font: 500 14px/20px var(--font);
+  min-width: 0;
+  font: 500 12px/16px var(--font);
   color: var(--ink-dim);
+}
+
+.tier-dialog__field--label {
+  flex: none;
+  width: 88px;
 }
 
 .tier-dialog__input {
   width: 100%;
-  height: 48px;
+  height: 56px;
   padding: 0 14px;
   border: none;
-  border-radius: 10px;
-  background: var(--paper);
+  border-radius: 4px;
+  background: transparent;
   box-shadow: inset 0 0 0 1px var(--line-strong);
-  font: 400 16px/22px var(--font);
+  font: 400 16px/24px var(--font);
   color: var(--ink);
   outline: none;
 }
@@ -570,10 +709,73 @@
   box-shadow: inset 0 0 0 2px var(--focus);
 }
 
-.tier-dialog .tiers__palette {
-  padding: 0;
+/* Remove tier and the two moves at the start, Cancel and Save at the end. */
+.tier-dialog__remove {
+  color: var(--error);
 }
 
-.tier-dialog__remove {
-  margin-inline-end: auto;
+.tier-dialog__moves {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.tier-dialog__move {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.tier-dialog__move:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.tier-dialog__move:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.tier-dialog__move:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.tier-dialog__end {
+  display: inline-flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+/* A phone: a sheet from the bottom, rounded at the top, with its handle. */
+@media (max-width: 599px) {
+  .tier-dialog__scrim {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .tier-dialog {
+    width: 100%;
+    max-height: 92vh;
+    padding: 8px 24px calc(24px + env(safe-area-inset-bottom));
+    border-radius: 28px 28px 0 0;
+  }
+
+  .tier-dialog__handle {
+    display: block;
+    flex: none;
+    align-self: center;
+    width: 32px;
+    height: 4px;
+    margin-bottom: 8px;
+    border-radius: 2px;
+    background: var(--ink-quiet);
+    opacity: 0.4;
+  }
 }

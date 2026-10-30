@@ -16,6 +16,7 @@ import {
   topicStyle,
   type Section,
 } from "../features/sections/model";
+import { TopicArt } from "../features/sections/TopicArt";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import {
   followTopic as followTopicNow,
@@ -253,17 +254,17 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
       {chosen !== null && (
         <div className="section-topic" style={topicStyle(section)}>
           <span className="section-topic__square" style={sectionStyle(section)} aria-hidden="true">
-            <Icon name={section.icon} />
+            <TopicArt topic={chosen} icon={section.icon} />
           </span>
-          <span className="section-topic__text">
-            <span className="section-topic__name">{chosen.name}</span>
+          <div className="section-topic__text">
+            <h2 className="section-topic__name">{chosen.name}</h2>
             <span className="section-topic__counts">
               {[
                 plural(strings.sections.followers, chosen.followerCount),
                 plural(strings.sections.lists, chosen.listCount),
               ].join(" · ")}
             </span>
-          </span>
+          </div>
           {chosen.status === "approved" && (
             <FollowButton
               following={topicFollowing(chosen)}
@@ -371,8 +372,14 @@ function UnlistedSection({
   if (state.status === "loading") return <SectionLoading />;
   if (state.status === "ready") return <SectionView section={sectionOf(state.value)} {...view} />;
   const { error } = state;
+  // A proposal approved as a topic leads to that topic, inside the section it went into.
   if (error.kind === "merged" && error.into !== null) {
-    return <Navigate to={sectionPath(error.into)} replace />;
+    return (
+      <Navigate
+        to={error.topic === null ? sectionPath(error.into) : topicPath(error.into, error.topic)}
+        replace
+      />
+    );
   }
   if (error.kind === "notFound" || error.kind === "merged") return <NotFoundPage />;
   return (

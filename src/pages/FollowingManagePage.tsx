@@ -14,6 +14,7 @@ import {
   topicStyle,
   type Section,
 } from "../features/sections/model";
+import { TopicArt } from "../features/sections/TopicArt";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import {
   followAuthor,
@@ -220,7 +221,11 @@ export function FollowingManagePage({
                       style={topicStyle(section)}
                       aria-hidden="true"
                     >
-                      <Icon name={waiting ? "schedule" : section.icon} />
+                      {waiting ? (
+                        <Icon name="schedule" />
+                      ) : (
+                        <TopicArt topic={topic} icon={section.icon} />
+                      )}
                     </span>
                   }
                   headline={topic.name}

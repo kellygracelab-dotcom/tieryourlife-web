@@ -122,6 +122,8 @@ interface PictureFieldProps {
   image: RefObject<HTMLImageElement | null>;
   /** The owner's edit: Recrop and Replace rather than Change picture. */
   editing?: boolean;
+  /** The home page's two tile sizes under the crop: a section's, and no topic's. */
+  thumbs?: boolean;
 }
 
 /**
@@ -141,6 +143,7 @@ export function PictureField({
   icon,
   image,
   editing = false,
+  thumbs = true,
 }: PictureFieldProps) {
   const id = useId();
   const frame = useRef<HTMLDivElement>(null);
@@ -430,25 +433,27 @@ export function PictureField({
               ))}
             </div>
           </div>
-          <figure className={`crop-thumbs crop-thumbs--${paper}`}>
-            <div className="crop-thumbs__row">
-              {(["phone", "desktop"] as const).map((at) => (
-                <span
-                  key={at}
-                  className={`crop-thumb crop-thumb--${at}`}
-                  role="img"
-                  aria-label={at === "phone" ? strings.propose.phone : strings.propose.desktop}
-                >
-                  <span className="crop-thumb__frame">
-                    <Drawn value={value} />
+          {thumbs && (
+            <figure className={`crop-thumbs crop-thumbs--${paper}`}>
+              <div className="crop-thumbs__row">
+                {(["phone", "desktop"] as const).map((at) => (
+                  <span
+                    key={at}
+                    className={`crop-thumb crop-thumb--${at}`}
+                    role="img"
+                    aria-label={at === "phone" ? strings.propose.phone : strings.propose.desktop}
+                  >
+                    <span className="crop-thumb__frame">
+                      <Drawn value={value} />
+                    </span>
+                    <span className="crop__scrim" />
+                    <TileLabel name={shownName} icon={icon} sample={false} />
                   </span>
-                  <span className="crop__scrim" />
-                  <TileLabel name={shownName} icon={icon} sample={false} />
-                </span>
-              ))}
-            </div>
-            <figcaption className="crop-thumbs__caption">{strings.propose.thumbs}</figcaption>
-          </figure>
+                ))}
+              </div>
+              <figcaption className="crop-thumbs__caption">{strings.propose.thumbs}</figcaption>
+            </figure>
+          )}
         </>
       )}
 

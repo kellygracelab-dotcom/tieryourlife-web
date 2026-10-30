@@ -13,6 +13,7 @@ import {
   sectionPath,
   sectionsFrom,
   topicPath,
+  topicPicture,
   type Section,
 } from "./model";
 
@@ -178,5 +179,14 @@ describe("sections", () => {
   it("addresses a section and a topic the way the app's links do", () => {
     expect(sectionPath("film_tv")).toBe("/s/film_tv");
     expect(topicPath("games", "abc 1")).toBe("/s/games/t/abc%201");
+  });
+
+  it("draws a topic's own picture only from an https address", () => {
+    expect(topicPicture({ pictureUrl: "https://pictures.test/t.webp" })).toBe(
+      "https://pictures.test/t.webp",
+    );
+    expect(topicPicture({ pictureUrl: "http://pictures.test/t.webp" })).toBeNull();
+    expect(topicPicture({ pictureUrl: null })).toBeNull();
+    expect(topicPicture({})).toBeNull();
   });
 });

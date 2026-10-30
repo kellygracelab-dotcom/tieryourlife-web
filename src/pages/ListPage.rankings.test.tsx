@@ -48,7 +48,9 @@ const reader = (uid: string, name: string, extra: Partial<ReaderRanking> = {}): 
   authorName: name,
   authorPhotoUrl: null,
   // The Witch where the author left a gap, under a word of the reader's own.
+  // Kept before the order inside a tier was: no rows, the arrangement is read.
   arrangement: [null, 0],
+  rows: [],
   tierLabels: ["Best"],
   updatedAtMs: Date.now(),
   mine: false,
@@ -156,6 +158,50 @@ describe("ListPage rankings", () => {
       "true",
     );
     expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Ex Machina");
+  });
+
+  it("shows a reader's cards in the order they left them inside a tier", async () => {
+    mocks.loadListRankings.mockResolvedValue({
+      rankings: [reader("u5", "olena", { arrangement: [0, 0], rows: [[1, 0]] })],
+      nextCursor: null,
+    });
+    openAs();
+    await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
+    const best = within(screen.getByRole("region", { name: "olena" })).getByRole("list", {
+      name: "Best",
+    });
+    expect(
+      within(best)
+        .getAllByRole("button")
+        .map((card) => card.getAttribute("aria-label") ?? card.textContent),
+    ).toEqual(["The Witch", "Ex Machina"]);
+  });
+
+  it("starts Mine from a reader's placing when a card is moved on it", async () => {
+    localStorage.clear();
+    mocks.loadList.mockResolvedValue({
+      ...list,
+      tiers: [
+        ...list.tiers,
+        { label: "A", caption: null, colorLight: "#c06a25", colorDark: "#e9a867" },
+      ],
+    });
+    mocks.loadListRankings.mockResolvedValue({
+      rankings: [reader("u5", "olena", { tierLabels: ["Best", "Fine"] })],
+      nextCursor: null,
+    });
+    openAs();
+    await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
+    const board = screen.getByRole("region", { name: "olena" });
+    await userEvent.click(within(board).getByRole("button", { name: "The Witch" }));
+    // Her words for the tiers on her board.
+    await userEvent.click(screen.getByRole("button", { name: "Place The Witch in Fine" }));
+    // Her placing, The Witch moved, in Mine: Ex Machina, which she left out, waits in the pool.
+    const yours = screen.getByRole("region", { name: "Your ranking" });
+    expect(within(yours).getByRole("list", { name: "A" })).toHaveTextContent("The Witch");
+    expect(within(yours).getByRole("list", { name: "S" })).not.toHaveTextContent("Ex Machina");
+    expect(screen.getByText("Your version starts from olena’s ranking")).toBeInTheDocument();
+    localStorage.clear();
   });
 
   it("goes back to the author's from the sheet's first row, and Mine stays a press away", async () => {

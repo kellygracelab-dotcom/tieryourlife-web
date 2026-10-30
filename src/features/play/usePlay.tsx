@@ -19,6 +19,7 @@ import {
 } from "./game";
 import { GamePicker } from "./GamePicker";
 import type { PlayButtonProps } from "./PlayButton";
+import { SheetArrival } from "./sheet";
 import { ResultView } from "./ResultView";
 import { lastGame, localGames, rememberGame, type SavedGames } from "./savedGames";
 
@@ -101,7 +102,16 @@ export function usePlay(
   const games = useMemo(() => options.games ?? localGames(store, now), [options.games, store, now]);
   const board = useMemo(() => boardOf(cards, tiers), [cards, tiers]);
 
-  const [screen, setScreen] = useState<Screen>("none");
+  // Where Play is, and where it came from: a sheet that opens from nothing or
+  // from the layer comes in; one page of it after another does not.
+  const [at, setAt] = useState<{ screen: Screen; from: Screen }>({ screen: "none", from: "none" });
+  const screen = at.screen;
+  const setScreen = (next: Screen | ((current: Screen) => Screen)) =>
+    setAt((current) => {
+      const to = typeof next === "function" ? next(current.screen) : next;
+      return to === current.screen ? current : { screen: to, from: current.screen };
+    });
+  const arriving = at.from === "none" || at.from === "layer";
   // The game on the layer; the saved one is what the store holds for this board.
   const [game, setGame] = useState<Game | null>(null);
   const [chosen, setChosen] = useState<Chosen>(EVERYTHING);
@@ -223,7 +233,7 @@ export function usePlay(
   };
 
   const view = (
-    <>
+    <SheetArrival.Provider value={arriving}>
       {screen === "picker" && (
         <GamePicker
           title={title}
@@ -235,7 +245,7 @@ export function usePlay(
           now={now()}
           onChooseCards={() => setScreen("cards")}
           onResume={resume}
-          onStartOver={() => savedGame !== null && begin(savedGame.spec.kind, savedGame.chosen)}
+          onStartAgain={() => savedGame !== null && begin(savedGame.spec.kind, savedGame.chosen)}
           onStart={() => begin(kind, chosen)}
           onCancel={close}
         />
@@ -248,7 +258,9 @@ export function usePlay(
             setChosen(next);
             setScreen("picker");
           }}
-          onCancel={() => setScreen(screen === "cardsFirst" ? "none" : "picker")}
+          // Reached from the picker, the arrow goes back to it; Cancel closes the sheet, as on the app.
+          onBack={screen === "cards" ? () => setScreen("picker") : undefined}
+          onCancel={close}
         />
       )}
       {screen === "layer" && game !== null && (
@@ -261,10 +273,11 @@ export function usePlay(
             onRefine={() => change(startRefine(game))}
             onPlayAgain={() => playAgain(game)}
             onCancel={() => cancel(game)}
+            onQuit={quit}
           />
         </DuelLayer>
       )}
-    </>
+    </SheetArrival.Provider>
   );
 
   return {

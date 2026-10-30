@@ -40,43 +40,6 @@
   display: none;
 }
 
-/* The owner may take a card off the list: a small cross on the tile, under the pointer or always to a finger. */
-.tile-holder--removable {
-  position: relative;
-}
-
-.tile__remove {
-  position: absolute;
-  top: 2px;
-  inset-inline-end: 2px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--paper);
-  cursor: pointer;
-}
-
-.tile__remove .ms {
-  font-size: 16px;
-}
-
-.tile-holder--removable:hover .tile__remove,
-.tile-holder--removable:focus-within .tile__remove {
-  display: inline-flex;
-}
-
-@media (hover: none) {
-  .tile__remove {
-    display: inline-flex;
-  }
-}
-
 /* Only a wide screen has two places for the cards; the toggle waits for it. */
 .dock {
   display: none;
@@ -139,6 +102,18 @@
   gap: 4px;
 }
 
+/*
+ * On Theirs, while a card is picked or carried: placing it starts the
+ * visitor's own version. Under the board, so the rows do not move down under
+ * a card on its way to them.
+ */
+.ranking__seed-hint {
+  order: 4;
+  margin: 0;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
 .tile {
   position: relative;
   padding: 0;
@@ -148,6 +123,8 @@
   touch-action: pan-y;
   user-select: none;
   -webkit-user-drag: none;
+  /* A finger held on a card lifts it; iOS's own menu for the picture is not offered. */
+  -webkit-touch-callout: none;
 }
 
 .tile--lifted {
@@ -158,11 +135,25 @@
  * The row a card would land in, as the phone draws it: dashed round in the
  * tier's own colour, and its tint brought up from 12% to 24% (32% and 20% in
  * the dark). A frame in the text's colour was a white box in the dark theme.
+ * A picked card aims the same way: the row under the pointer, the one whose
+ * button has the keyboard, the one a finger is pressing. Pressing a card in
+ * that row picks the card, so the row does not light up for it.
  */
-.tier--target {
+.tier--target,
+.tier--armed:has(.tier__place:focus-visible),
+.tier--armed:active:not(:has(.tile:active)) {
   outline: 2px dashed var(--band);
   outline-offset: -2px;
   background: color-mix(in oklab, var(--band-base) var(--band-tint-hover), var(--paper));
+}
+
+/* A finger's hover stays where it tapped: only a pointer that hovers aims by it. */
+@media (hover: hover) {
+  .tier--armed:hover:not(:has(.tile:hover)) {
+    outline: 2px dashed var(--band);
+    outline-offset: -2px;
+    background: color-mix(in oklab, var(--band-base) var(--band-tint-hover), var(--paper));
+  }
 }
 
 /*
@@ -210,13 +201,38 @@
   outline-offset: 2px;
 }
 
+/* The picked card: ringed in the primary colour and lifted off the page. */
 .tile--selected {
-  box-shadow: 0 0 0 3px var(--ink);
+  box-shadow:
+    0 0 0 3px var(--link),
+    var(--shadow-lift);
 }
 
+/*
+ * Every row the picked card can go to keeps its tint and wears no ring: a
+ * board where every row glowed read as a board on fire, and picking is how
+ * the board looks most of the time someone ranks. The row's pill says it is
+ * a target; the row aimed at says it more (above).
+ */
 .tier--armed {
   cursor: pointer;
-  box-shadow: inset 0 0 0 3px var(--band);
+  transition: background-color 100ms ease-out;
+}
+
+/* The other cards step back while one is picked; one value on every screen. */
+.pool .tile {
+  transition: opacity 120ms ease-out;
+}
+
+/*
+ * The first tap of a double tap picks the card, and the second opens its
+ * menu. The board shows a card is picked only once no second tap has come
+ * (DOUBLE_TAP_MS, 300 ms), so a double tap does not flash every row and
+ * card; it lets go at once.
+ */
+.pool--picked .tile:not(.tile--selected) {
+  opacity: 0.6;
+  transition-delay: 300ms;
 }
 
 .tier__band {
@@ -234,16 +250,57 @@
 
 .tier__place {
   position: absolute;
-  inset: 0;
+  top: 6px;
+  inset-inline-end: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
   border: none;
-  background: transparent;
-  color: transparent;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  font: 500 12px/1 var(--font);
+  color: var(--ink);
   cursor: pointer;
+  animation: pill-in 120ms ease-out 300ms both;
 }
 
 .tier__place:focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: -3px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The plus is a finger's, and a tenth tier's, which has no key. */
+.tier__place-add {
+  display: none;
+  font-size: 14px;
+}
+
+.tier__place-add--only {
+  display: inline;
+}
+
+/* After a double tap's window, as the dimming waits (above). */
+@keyframes pill-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes pill-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tier__place {
+    animation-name: pill-fade;
+  }
 }
 
 /*
@@ -320,8 +377,16 @@
   }
 }
 
+/* Under the last row, at the band's start edge, 12 below it: the board's gap and the rest. */
 .board__add-tier {
   align-self: flex-start;
+  min-height: 40px;
+  margin-top: 4px;
+  padding-inline: 16px 24px;
+}
+
+.board__add-tier .btn__icon {
+  font-size: 18px;
 }
 
 .pool__head {
@@ -337,6 +402,18 @@
   font: var(--text-caption);
   font-size: 12px;
   color: var(--ink-dim);
+}
+
+/* The owner's empty pool says what to do, on a line of its own under its head. */
+.pool__empty {
+  flex-basis: 100%;
+  margin: 0;
+  font: 400 13px/18px var(--font);
+  color: var(--ink-dim);
+}
+
+.pool__head:has(.pool__empty) {
+  flex-wrap: wrap;
 }
 
 /* The owner's empty pool: its count, and the way to the catalogue beside it. */
@@ -377,6 +454,19 @@
 
 .pool__hint--touch {
   display: none;
+}
+
+/* How to reach a card's menu, at the pool's foot: a mouse's way, so a finger never sees it. */
+.pool__hint--menu {
+  padding: 8px 8px 0;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-quiet);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .pool__hint--menu {
+    display: none;
+  }
 }
 
 /* Every card has a tier: the pool turns into the way out. */
@@ -492,35 +582,6 @@
     white-space: nowrap;
   }
 
-  .tier__key {
-    top: 5px;
-    inset-inline-end: 5px;
-    min-width: 14px;
-    height: 14px;
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--on-band) 22%, transparent);
-    font: 500 10px/14px var(--font-mono);
-    text-align: center;
-    opacity: 1;
-  }
-
-  /* While a card is picked every row is a target, and says which key it is. */
-  .tier--armed {
-    box-shadow: inset 0 0 0 2px var(--link);
-  }
-
-  /* Small enough to stay clear of the letter in a row 56 px high. */
-  .tier--armed .tier__key {
-    top: 3px;
-    inset-inline-end: 3px;
-    min-width: 18px;
-    height: 18px;
-    border-radius: 9px;
-    background: var(--primary-container);
-    color: var(--on-primary-container);
-    font: 500 11px/18px var(--font);
-  }
-
   /* Only the board one ranks on docks its tray; a read-only board's unranked cards stay in the page. */
   .ranking:not(.ranking--read) .pool:not(.pool--rest) {
     position: fixed;
@@ -594,12 +655,7 @@
   }
 
   .pool .tile--selected {
-    box-shadow: 0 0 0 3px var(--link);
     transform: scale(1.04);
-  }
-
-  .pool--picked .tile:not(.tile--selected) {
-    opacity: 0.55;
   }
 
   .pool__done {
@@ -718,13 +774,22 @@
 
 /*
  * A laptop or a tablet on its side. Two shapes, the person's to choose: the
- * pool in a column beside the board, or docked under it. Both follow the
- * window — the column stands at its edge, the dock spans it — and only the
- * board's own block is capped, at 1760, where rows get too long to read.
+ * pool in a column beside the board, or docked under it. Under, the board
+ * takes the window, capped at 1760, where rows get too long to read. Beside,
+ * the board is capped at 1120, thirteen cards a row, and the pool grows in
+ * whole columns of cards as the window does: a wide board of nearly empty
+ * rows beside a narrow pool that scrolled was the wrong way round. Past both
+ * caps the two stand together in the middle of the window.
  */
 @media (min-width: 840px) {
   .ranking {
     --board-cap: 1760px;
+    --board-max: 1120px;
+    --pool-cols: 4;
+    /* The card's padding either side, and the cards with their gaps. */
+    --pool-w: calc(
+      2 * 16px + var(--pool-cols) * var(--tile-w) + (var(--pool-cols) - 1) * var(--tile-gap)
+    );
   }
 
   .pool__lead {
@@ -778,6 +843,12 @@
   .pool__hint--keys {
     font: 400 12px/16px var(--font);
     color: var(--ink-faint);
+  }
+
+  /* The empty pool says what to do, under the box that brings cards in. */
+  .ranking:not(.ranking--under) .pool__empty {
+    order: 4;
+    padding: 0;
   }
 
   /* Switching shapes is a cross-fade, with nothing else moving. */
@@ -961,6 +1032,13 @@
     order: 1;
   }
 
+  /* In the dock's one row: after the box, before the toggle. */
+  .ranking--under .pool__empty {
+    flex-basis: auto;
+    order: 3;
+    margin-inline-start: auto;
+  }
+
   .pool__head--empty .dock {
     margin-inline-start: auto;
   }
@@ -973,13 +1051,17 @@
     bottom: calc(100% + 4px);
   }
 
-  /* Beside: a grid edge to edge, the column flush with the window's edge. */
+  /*
+   * Beside: the board up to its cap and the pool's column 24 apart. The
+   * board's track takes the room the column leaves until it reaches the cap;
+   * what is left over then goes to both sides alike, never to one.
+   */
   .ranking:not(.ranking--under) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--side);
+    grid-template-columns: minmax(0, var(--board-max)) var(--pool-w);
+    justify-content: center;
     align-items: start;
-    gap: 0;
-    margin-inline: calc(-1 * var(--space-8));
+    gap: 0 24px;
   }
 
   .ranking:not(.ranking--under) .ranking__main {
@@ -987,13 +1069,7 @@
     flex-direction: column;
     gap: 12px;
     min-width: 0;
-    padding: 16px var(--space-8) 24px;
-  }
-
-  .ranking:not(.ranking--under) .ranking__main > * {
-    width: 100%;
-    max-width: var(--board-cap);
-    margin-inline: auto;
+    padding-block: 16px 24px;
   }
 
   /*
@@ -1006,7 +1082,6 @@
     flex-direction: column;
     gap: 14px;
     padding-block: 16px 24px;
-    padding-inline: 0 var(--space-8);
   }
 
   .ranking:not(.ranking--under) .ranking__bar {
@@ -1313,41 +1388,7 @@
   }
 }
 
-/* The button for moving a card without a drag: the other top corner of the tile. */
-.tile__more {
-  position: absolute;
-  top: 2px;
-  inset-inline-start: 2px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--paper);
-  cursor: pointer;
-}
-
-.tile__more .ms {
-  font-size: 16px;
-}
-
-.tile-holder--removable:hover .tile__more,
-.tile-holder--removable:focus-within .tile__more,
-.tile__more[aria-expanded="true"] {
-  display: inline-flex;
-}
-
-@media (hover: none) {
-  .tile__more {
-    display: inline-flex;
-  }
-}
-
-/* The move sheet: the tiers as rows with their colour, then the two ways out. */
+/* A card's menu, by a double tap: the tiers as rows with their colour, then the ways out. */
 .move-sheet__who {
   margin: 0 0 4px;
   font: var(--text-small);
@@ -1429,10 +1470,114 @@
   color: var(--error);
 }
 
-/* A number key on the band means nothing to a finger: the move sheet and a tap do the placing. */
+/*
+ * The same menu with a mouse, where the pointer is: three items, the tiers in
+ * a menu of their own beside the first. Above every dialog, as a menu opened
+ * by a right click is; placed by the script in screen pixels.
+ */
+.card-menu {
+  position: fixed;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: min(320px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px);
+  padding: 8px 0;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: var(--surface-container);
+  box-shadow: var(--shadow-lift);
+  outline: none;
+}
+
+.card-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding-inline: 16px 12px;
+  border: none;
+  background: transparent;
+  font: 400 14px/20px var(--font);
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.card-menu__item:focus {
+  outline: none;
+  background: var(--hover);
+}
+
+.card-menu__item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.card-menu__item[aria-expanded="true"] {
+  background: var(--hover);
+}
+
+.card-menu__item[aria-disabled="true"] {
+  color: var(--ink-dim);
+  cursor: default;
+}
+
+.card-menu__item--danger {
+  color: var(--error);
+}
+
+.card-menu__text {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.card-menu__more {
+  flex: none;
+  margin-inline-start: 12px;
+  font-size: 20px;
+  color: var(--ink-dim);
+}
+
+.card-menu__swatch {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--band);
+}
+
+.card-menu__label {
+  font-weight: 500;
+}
+
+.card-menu__caption {
+  overflow: hidden;
+  font: var(--text-small);
+  color: var(--ink-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-menu__note {
+  flex: none;
+  font: var(--text-caption);
+  color: var(--ink-dim);
+}
+
+/* A number key on the band means nothing to a finger: the row's pill is a plus there. */
 @media (hover: none) and (pointer: coarse) {
-  .tier__key {
+  .tier__key,
+  .tier__place-key {
     display: none;
+  }
+
+  .tier__place-add {
+    display: inline;
   }
 }
 
@@ -1464,25 +1609,27 @@
   flex: 1 1 240px;
 }
 
-/*
- * The buttons on a card are at least 24 px square (WCAG 2.2, target size).
- * On a touch screen the move sheet carries "Remove from list", as the phone's
- * does, so the cross steps aside and the sheet's button grows: two 24 px
- * buttons do not fit side by side on a 44 px card without touching.
- */
-.tile__more,
-.tile-holder--removable .tile__remove {
-  width: 24px;
-  height: 24px;
+/* Wider windows, a column of cards more each step, up to eight. */
+@media (min-width: 1400px) {
+  .ranking {
+    --pool-cols: 5;
+  }
 }
 
-@media (hover: none) {
-  .tile-holder--removable:has(.tile__more) .tile__remove {
-    display: none;
+@media (min-width: 1600px) {
+  .ranking {
+    --pool-cols: 6;
   }
+}
 
-  .tile__more {
-    width: 28px;
-    height: 28px;
+@media (min-width: 1800px) {
+  .ranking {
+    --pool-cols: 7;
+  }
+}
+
+@media (min-width: 2000px) {
+  .ranking {
+    --pool-cols: 8;
   }
 }

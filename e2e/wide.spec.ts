@@ -68,6 +68,9 @@ test.describe("a wide screen", () => {
       const theirs = (await tier.boundingBox())!;
       expect(Math.round(theirs.x)).toBe(Math.round(mine.x));
       expect(Math.round(theirs.width)).toBe(Math.round(mine.width));
+      // Mine's first tier is empty and Theirs' holds a card: one height, 90 + 2 × 12.
+      expect(Math.round(mine.height)).toBe(114);
+      expect(Math.round(theirs.height)).toBe(114);
     }
   });
 
@@ -123,6 +126,47 @@ test.describe("a wide screen", () => {
     await expect(page.locator(".ranking")).toHaveClass(/ranking--under/);
   });
 
+  // Beside, the board stops at 1120 and the pool grows by whole columns of cards:
+  // five at 1568, the two together in the middle, nothing left over at one side.
+  test("widens the pool by whole columns of cards and centres the two on a wide window", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1568, height: 900 });
+    await page.addInitScript(() =>
+      localStorage.setItem("tyl:pool-dock", JSON.stringify({ wide: { dock: "beside" } })),
+    );
+    await mockBackend(page);
+    const items = Array.from({ length: 12 }, (_, i) => ({
+      title: `Film ${i + 1}`,
+      imageUrl: null,
+      // The author placed one, so the page offers Mine; Mine starts with all twelve to place.
+      tierIndex: i === 0 ? 0 : null,
+    }));
+    await page.route(`**/lists/${LIST_ID}`, (route) =>
+      route.fulfill({ json: { ...list, itemCount: items.length, items } }),
+    );
+    await page.goto(`/l/${LIST_ID}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+    await page.getByRole("button", { name: "Mine", exact: true }).click();
+    await expect(page.locator(".ranking")).not.toHaveClass(/ranking--under/);
+    await page.waitForFunction(() => document.getAnimations().length === 0);
+
+    const columns = await page
+      .locator(".pool__items > li")
+      .evaluateAll((cards) => new Set(cards.map((card) => card.getBoundingClientRect().x)).size);
+    expect(columns).toBe(5);
+    const board = (await page.locator(".board").boundingBox())!;
+    const pool = (await page.locator(".pool").boundingBox())!;
+    // 2 × 16 + 5 × 64 + 4 × 10, and 24 between it and the board.
+    expect(Math.round(pool.width)).toBe(392);
+    expect(Math.round(pool.x - (board.x + board.width))).toBe(24);
+    // No dead strip at either side: the board takes what the column leaves, the margins equal.
+    expect(Math.round(board.width)).toBe(1088);
+    const left = board.x;
+    const right = 1568 - (pool.x + pool.width);
+    expect(Math.abs(left - right)).toBeLessThanOrEqual(1);
+  });
+
   // The /r/ page: the panel with the chips, the invitation, the link and the picture beside the board.
   test("stands the ranking's handout beside its board", async ({ page }) => {
     await mockBackend(page);
@@ -151,6 +195,8 @@ test.describe("a wide screen", () => {
     const boardBox = (await page.locator(".board").first().boundingBox())!;
     const sideBox = (await side.boundingBox())!;
     expect(sideBox.x).toBeGreaterThanOrEqual(boardBox.x + boardBox.width - 1);
+    // The handout's column holds no cards: 320 at any width.
+    expect(Math.round(sideBox.width)).toBe(320);
     await expect(side.getByRole("link", { name: "Rank this list" })).toHaveAttribute(
       "href",
       `/l/${LIST_ID}`,
@@ -197,6 +243,9 @@ test.describe("a wide screen", () => {
       .toEqual([52, 76]);
     const band = (await page.locator(".tier__band").first().boundingBox())!;
     expect(Math.round(band.width)).toBe(80);
+    // An empty tier is as tall as one holding a card: 76 + 2 × 12.
+    const empty = (await page.locator(".board > .tier").first().boundingBox())!;
+    expect(Math.round(empty.height)).toBe(100);
     await expect(page.getByRole("button", { name: "Copy link" })).toBeHidden();
     await tablet.close();
   });

@@ -9,7 +9,7 @@ import {
   rankedTiers,
   restoreTier,
 } from "./model";
-import { applyTierAction, editorTiersOf } from "./tierEditing";
+import { applyTierAction, editorTiersOf, newTierOf } from "./tierEditing";
 
 const uids = () => {
   let n = 0;
@@ -39,6 +39,22 @@ describe("tier editing on a board", () => {
     expect(labels(b3)).toEqual(["A", "B", "C", "E", "D", "S"]);
     expect(applyTierAction(b3, { type: "placeTier", key: d!, index: 9 }, 5, next).board).toBe(b3);
     expect(applyTierAction(b3, { type: "moveTier", key: "ghost", by: 1 }, 5, next).board).toBe(b3);
+  });
+
+  it("offers the tier to be before it exists, and makes the one the editor hands back", () => {
+    const next = uids();
+    const b0 = newBoard("b", "x", 1, next);
+    expect(newTierOf(b0)).toEqual({
+      key: "",
+      label: "E",
+      caption: null,
+      colorLight: "#6B4E9E",
+      colorDark: rankedTiers(applyTierAction(b0, { type: "addTier" }, 2, next).board)[5]?.colorDark,
+    });
+    const made = { label: "Meh", caption: "so-so", colorLight: "#112233", colorDark: "#445566" };
+    const b1 = applyTierAction(b0, { type: "addTier", tier: made }, 2, next).board;
+    expect(rankedTiers(b1).at(-1)).toMatchObject(made);
+    expect(labels(b1)).toEqual(["S", "A", "B", "C", "D", "Meh"]);
   });
 
   it("renames and recolours, but an emptied label is held by the editor, not kept", () => {

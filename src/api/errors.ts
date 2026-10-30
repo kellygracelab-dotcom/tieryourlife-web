@@ -5,8 +5,11 @@ export type ApiError =
   | { kind: "banned"; until: number | null }
   | { kind: "notYours" }
   | { kind: "notFound" }
-  /** A section that went into another one (410 MERGED); its lists, follows and address are that one's now. */
-  | { kind: "merged"; into: string | null }
+  /**
+   * A section that went into another one (410 MERGED); its lists, follows and
+   * address are that one's now, under the topic it became when there is one.
+   */
+  | { kind: "merged"; into: string | null; topic: string | null }
   | { kind: "tooManyLists" }
   | { kind: "cursorGone" }
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
@@ -44,6 +47,7 @@ interface ErrorBody {
   because?: unknown;
   board?: unknown;
   mergedInto?: unknown;
+  mergedTopicId?: unknown;
 }
 
 function bodyOf(text: string): ErrorBody {
@@ -88,15 +92,30 @@ export function parseApiError(status: number, text: string): ApiError {
       return code === "NOT_YOURS" ? { kind: "notYours" } : { kind: "notSignedIn" };
     case 404:
       return { kind: "notFound" };
-    case 409:
+    case 409: {
       if (code === "TOO_MANY_LISTS") return { kind: "tooManyLists" };
       if (code === "CURSOR_GONE") return { kind: "cursorGone" };
+      // A topic's name clashes with 409 where a section's does with 400: one refusal to the form.
+      if (code === "NAME_TAKEN") {
+        const id = stringOrNull(body.id);
+        return {
+          kind: "invalid",
+          detail: stringOrNull(body.error),
+          code,
+          ...(id === null ? {} : { id }),
+        };
+      }
       return body.board === undefined
         ? { kind: "conflict" }
         : { kind: "conflict", board: body.board };
+    }
     case 410:
       return code === "MERGED"
-        ? { kind: "merged", into: stringOrNull(body.mergedInto) }
+        ? {
+            kind: "merged",
+            into: stringOrNull(body.mergedInto),
+            topic: stringOrNull(body.mergedTopicId),
+          }
         : { kind: "unknown", status };
     case 413:
       return { kind: "tooLarge", detail: stringOrNull(body.error) };

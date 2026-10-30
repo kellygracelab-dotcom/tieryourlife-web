@@ -7,13 +7,9 @@ import { playable } from "./chosen";
 import type { GameKind } from "./engine";
 import { gameProgress, type Resume } from "./game";
 import { estimateText, gameName, startedText } from "./labels";
-import { PlaySheet } from "./PlaySheet";
+import { PlaySheet, SheetCancel } from "./PlaySheet";
 
-/**
- * The three games in the picker's order, losers stay first. The design asks
- * for autorenew, crown and account_tree; the site's icon font carries none of
- * them, so the nearest it has stand in: refresh, the trophy, the podium.
- */
+/** The three games in the picker's order, losers stay first, with the app's icons. */
 const GAMES: readonly { kind: GameKind; icon: IconName; line: () => string }[] = [
   { kind: "swiss", icon: "autorenew", line: () => strings.play.swissLine },
   { kind: "hill", icon: "crown", line: () => strings.play.hillLine },
@@ -34,7 +30,7 @@ interface GamePickerProps {
   now: number;
   onChooseCards: () => void;
   onResume: () => void;
-  onStartOver: () => void;
+  onStartAgain: () => void;
   onStart: () => void;
   onCancel: () => void;
 }
@@ -50,7 +46,7 @@ export function GamePicker({
   now,
   onChooseCards,
   onResume,
-  onStartOver,
+  onStartAgain,
   onStart,
   onCancel,
 }: GamePickerProps) {
@@ -70,7 +66,7 @@ export function GamePicker({
       onClose={onCancel}
       actions={
         <>
-          <Button onClick={onCancel}>{strings.play.cancel}</Button>
+          <SheetCancel />
           <Button
             variant="tonal"
             className="play-tonal"
@@ -82,44 +78,56 @@ export function GamePicker({
         </>
       }
     >
-      {saved !== null && (
-        <SavedRow saved={saved} now={now} onResume={onResume} onStartOver={onStartOver} />
-      )}
-      <div className="play-games" role="radiogroup" aria-label={strings.play.game}>
-        {GAMES.map((game) => (
-          <label key={game.kind} className="play-game">
-            <input
-              type="radio"
-              name={`${id}-game`}
-              className="play-game__input"
-              checked={kind === game.kind}
-              onChange={() => onKind(game.kind)}
-            />
-            <Icon name={game.icon} className="play-game__icon" />
-            <span className="play-game__text">
-              <span className="play-game__name">{gameName(game.kind)}</span>
-              <span className="play-game__line">{game.line()}</span>
-            </span>
-            <span className="play-game__estimate">{estimateText(game.kind, count)}</span>
-          </label>
-        ))}
+      <div className="play-choice">
+        {saved !== null && (
+          <>
+            <SavedRow saved={saved} now={now} onResume={onResume} onStartAgain={onStartAgain} />
+            <p className="play-choice__label">{strings.play.newGame}</p>
+          </>
+        )}
+        <div className="play-games" role="radiogroup" aria-label={strings.play.game}>
+          {GAMES.map((game) => (
+            <label key={game.kind} className="play-game">
+              <input
+                type="radio"
+                name={`${id}-game`}
+                className="play-game__input"
+                checked={kind === game.kind}
+                onChange={() => onKind(game.kind)}
+              />
+              <span className="play-radio" aria-hidden="true" />
+              <span className="play-game__icon" aria-hidden="true">
+                <Icon name={game.icon} />
+              </span>
+              <span className="play-game__text">
+                <span className="play-game__name">{gameName(game.kind)}</span>
+                <span className="play-game__line">{game.line()}</span>
+                <span className="play-game__estimate">{estimateText(game.kind, count)}</span>
+              </span>
+            </label>
+          ))}
+        </div>
       </div>
       {theirs && <p className="play-footnote">{strings.play.intoMine}</p>}
     </PlaySheet>
   );
 }
 
-/** The saved game, above the choice: resumed as it is, or started over when the board moved under it. */
+/**
+ * The saved game, above the choice. Losers stay takes new cards in from its
+ * next round and goes on; a hill or a bracket drew its order from the cards
+ * it began with, so once they changed it starts again.
+ */
 function SavedRow({
   saved,
   now,
   onResume,
-  onStartOver,
+  onStartAgain,
 }: {
   saved: Resume;
   now: number;
   onResume: () => void;
-  onStartOver: () => void;
+  onStartAgain: () => void;
 }) {
   const { game } = saved;
   const { overall } = gameProgress(game);
@@ -128,28 +136,27 @@ function SavedRow({
     asked: overall.asked,
     total: overall.total,
   });
-  const notes =
+  const note =
     saved.kind === "changed"
-      ? [strings.play.changed]
-      : [
-          startedText(game.startedAt, now),
-          ...(saved.joined > 0 ? [plural(strings.play.joining, saved.joined)] : []),
-        ];
+      ? strings.play.changed
+      : saved.joined > 0
+        ? plural(strings.play.joining, saved.joined)
+        : startedText(game.startedAt, now);
   return (
     <div className="play-saved">
       <Icon name="history" className="play-saved__icon" />
       <span className="play-saved__text">
         <span className="play-saved__line">{line}</span>
-        {notes.map((note) => (
-          <span key={note} className="play-saved__note">
-            {note}
-          </span>
-        ))}
+        <span className="play-saved__note">{note}</span>
       </span>
       {saved.kind === "changed" ? (
-        <Button variant="tonal" className="play-tonal play-saved__action" onClick={onStartOver}>
-          {strings.play.startOver}
-        </Button>
+        <button
+          type="button"
+          className="btn play-outlined play-saved__action"
+          onClick={onStartAgain}
+        >
+          <span>{strings.play.startAgain}</span>
+        </button>
       ) : (
         <Button variant="tonal" className="play-tonal play-saved__action" onClick={onResume}>
           {strings.play.resume}

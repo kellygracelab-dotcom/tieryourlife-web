@@ -4,6 +4,21 @@ import { list, mockBackend } from "./fixtures";
 /** A press the way the project's device makes it: a finger taps, a mouse clicks. */
 const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
 
+/**
+ * A double tap on a card, as on the phone; a mouse double-clicks. The second
+ * tap lands where the first did, as a finger's would, without waiting for the
+ * picked card to settle.
+ */
+async function doubleTap(page: Page, target: Locator, touch: boolean) {
+  if (!touch) return target.dblclick();
+  await target.scrollIntoViewIfNeeded();
+  const box = await target.boundingBox();
+  if (box === null) throw new Error("the card is not laid out");
+  const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.touchscreen.tap(at.x, at.y);
+  await page.touchscreen.tap(at.x, at.y);
+}
+
 /** A board of one's own with three cards, one of them ranked, made the way a person makes it. */
 async function makeBoard(page: Page, touch: boolean) {
   await page.goto("/b");
@@ -11,36 +26,55 @@ async function makeBoard(page: Page, touch: boolean) {
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films I make people watch");
   await title.press("Enter");
-  // An empty pool keeps the box that brings cards in behind + Add, on any window.
-  await press(page.getByRole("button", { name: "Add", exact: true }), touch);
+  // An empty pool has the box that brings cards in open on a wide window, behind + Add on a phone.
+  if (touch) await press(page.getByRole("button", { name: "Add", exact: true }), touch);
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     const add = page.getByRole("textbox", { name: "Add a card" });
     await add.fill(name);
     await add.press("Enter");
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
-  // The move sheet from the card: any tier by a press, no keyboard needed. A
-  // finger finds the button on the card; a mouse sees it once the pointer is there.
-  const move = page.getByLabel("Move Ex Machina", { exact: true });
+  // The card's menu by a double tap, as on the phone: any tier by a press, no
+  // keyboard needed. Nothing sits on the card itself to be hit by mistake.
+  const card = page.getByRole("button", { name: "Ex Machina", exact: true });
+  if (!touch) await card.hover();
+  await expect(page.getByLabel(/^(Remove|Move) Ex Machina$/)).toHaveCount(0);
   if (touch) {
-    await move.tap();
-  } else {
-    await page.getByRole("button", { name: "Ex Machina", exact: true }).hover();
-    await move.click();
-  }
-  const sheet = page.getByRole("dialog", { name: "Ex Machina" });
-  if (touch) {
-    // On a touch screen the sheet is where a card leaves the list; the cross steps aside.
+    await doubleTap(page, card, touch);
+    const sheet = page.getByRole("dialog", { name: "Ex Machina" });
+    // The sheet is where a card leaves the list.
     await expect(sheet.getByRole("button", { name: "Remove from list" })).toBeVisible();
-    await expect(page.getByLabel("Remove Ex Machina", { exact: true })).toBeHidden();
+    await press(sheet.getByRole("button", { name: "S", exact: true }), touch);
   } else {
-    // The keyboard stays in the sheet, round and round.
-    for (let i = 0; i < 9; i++) {
-      await page.keyboard.press("Tab");
-      expect(await sheet.evaluate((box) => box.contains(document.activeElement))).toBe(true);
-    }
+    // A mouse gets a menu where the pointer is, the tiers beside its first item.
+    await card.dblclick();
+    const menu = page.getByRole("menu", { name: "Ex Machina" });
+    await expect(menu.getByRole("menuitem", { name: "Remove from list" })).toBeVisible();
+    const at = (await card.boundingBox())!;
+    const box = (await menu.boundingBox())!;
+    expect(Math.abs(box.x - (at.x + at.width / 2))).toBeLessThan(2);
+    expect(Math.abs(box.y - (at.y + at.height / 2))).toBeLessThan(2);
+    await expect(menu.getByRole("menuitem", { name: "Move to a tier" })).toBeFocused();
+    // Escape is a change of mind; the context-menu key opens it again at the card.
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(card).toBeFocused();
+    await page.keyboard.press("Shift+F10");
+    await expect(menu).toBeVisible();
+    await page.keyboard.press("Escape");
+    // The pointer on Move to a tier brings out the tiers, beside it.
+    await card.click({ button: "right" });
+    const item = menu.getByRole("menuitem", { name: "Move to a tier" });
+    await item.hover();
+    const tiers = page.getByRole("menu", { name: "Move to a tier" });
+    await expect(tiers).toBeVisible();
+    // After it, or before it where the window ends: the pool stands at the window's end.
+    const side = (await item.boundingBox())!;
+    const beside = (await tiers.boundingBox())!;
+    expect(beside.x >= side.x + side.width - 1 || beside.x + beside.width <= side.x + 1).toBe(true);
+    await tiers.getByRole("menuitem", { name: "S", exact: true }).click();
+    await expect(menu).toBeHidden();
   }
-  await press(sheet.getByRole("button", { name: "S", exact: true }), touch);
   await expect(page.getByText(/1 ranked · 2 in pool/)).toBeVisible();
 }
 
@@ -55,9 +89,11 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
   await title.press("Enter");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cheeses");
   await expect(page.getByRole("button", { name: "Add tier" })).toBeVisible();
-  // Nothing in the pool yet: it says so, and + Add opens the catalogue.
-  await expect(page.getByRole("heading", { name: "Pool · 0 unranked" })).toBeVisible();
-  await press(page.getByRole("button", { name: "Add", exact: true }), hasTouch);
+  // Nothing in the pool yet: it says so, and the catalogue's box takes the cursor,
+  // at once on a wide window, from + Add on a phone.
+  await expect(page.getByRole("heading", { name: "Pool · 0" })).toBeVisible();
+  await expect(page.getByText("Add cards by name, or search the catalogue.")).toBeVisible();
+  if (hasTouch) await press(page.getByRole("button", { name: "Add", exact: true }), hasTouch);
   await expect(page.getByRole("textbox", { name: "Add a card" })).toBeFocused();
 });
 
@@ -111,7 +147,7 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
   expect((await download).suggestedFilename()).toMatch(/\.png$/);
 });
 
-test("changes the tiers on the board: a double tap opens one, its band carries it, one more goes under", async ({
+test("changes the tiers on the board: a tap opens one, its band carries it, one more goes under", async ({
   page,
   hasTouch,
   browserName,
@@ -122,16 +158,12 @@ test("changes the tiers on the board: a double tap opens one, its band carries i
   const labels = () => page.locator(".board > .tier .tier__label").allTextContents();
   expect(await labels()).toEqual(["S", "A", "B", "C", "D"]);
 
-  // Two taps on the band, as on the phone; a mouse double-clicks.
+  // One tap on the band with a finger; a mouse double-clicks.
   const firstBand = rows.first().locator(".tier__band");
-  if (hasTouch) {
-    await firstBand.tap();
-    await firstBand.tap();
-  } else {
-    await firstBand.dblclick();
-  }
+  if (hasTouch) await firstBand.tap();
+  else await firstBand.dblclick();
   const dialog = page.getByRole("dialog", { name: "Edit tier" });
-  await dialog.getByRole("textbox", { name: "Name" }).fill("Top");
+  await dialog.getByRole("textbox", { name: "Label" }).fill("Top");
   await press(dialog.getByRole("button", { name: "Save" }), hasTouch);
   await expect(dialog).toBeHidden();
   expect(await labels()).toEqual(["Top", "A", "B", "C", "D"]);
@@ -140,6 +172,10 @@ test("changes the tiers on the board: a double tap opens one, its band carries i
   const addTier = page.getByRole("button", { name: "Add tier" });
   await addTier.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await press(addTier, hasTouch);
+  // Its editor opens on the tier to be, made by its own Add tier.
+  const making = page.getByRole("dialog", { name: "New tier" });
+  await press(making.getByRole("button", { name: "Add tier" }), hasTouch);
+  await expect(making).toBeHidden();
   // The first letter of the phone's row not in use: S, since it is called Top now.
   await expect.poll(labels).toEqual(["Top", "A", "B", "C", "D", "S"]);
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -196,8 +232,7 @@ test("moves a card along its row: the others make room at once, and nothing is p
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films");
   await title.press("Enter");
-  // The empty pool keeps the catalogue behind + Add.
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  // The empty pool's box is open on a wide window, the cursor in it.
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     const add = page.getByRole("textbox", { name: "Add a card" });
     await add.fill(name);

@@ -161,6 +161,42 @@ function swissRoundNow(count: number, history: readonly Outcome[]): number | nul
   return null;
 }
 
+/**
+ * A bracket's round as it is being asked: how many cards are still in it,
+ * byes included; null for the other games, during Refine, and once over. A
+ * round of n cards asks ⌊n/2⌋ duels and sends ⌈n/2⌉ on, whatever the shuffle,
+ * so the count alone says where the bracket stands.
+ */
+export function bracketRound(game: Game): number | null {
+  if (game.spec.kind !== "bracket" || game.refineFixed !== undefined) return null;
+  let left = game.history.length;
+  let cards = game.spec.count;
+  while (cards > 1) {
+    const asked = Math.floor(cards / 2);
+    if (left < asked) return cards;
+    left -= asked;
+    cards = Math.ceil(cards / 2);
+  }
+  return null;
+}
+
+/**
+ * King of the hill: the card holding the hill and how many duels in a row it
+ * has won, counted back from the last answer; a skip ends a run, since
+ * nobody won it. Null for the other games, during Refine, and once over.
+ */
+export function hillStreak(game: Game): { champion: number; wins: number } | null {
+  if (game.spec.kind !== "hill" || game.refineFixed !== undefined) return null;
+  const pair = currentPair(game);
+  if (pair === null) return null;
+  const [champion] = pair;
+  let wins = 0;
+  for (let at = game.history.length - 1; at >= 0 && game.history[at]?.[2] === champion; at--) {
+    wins++;
+  }
+  return { champion, wins };
+}
+
 /** Duels actually answered: skips asked nothing of anybody. */
 export const answered = (game: Game): number => duels(game.history).length;
 

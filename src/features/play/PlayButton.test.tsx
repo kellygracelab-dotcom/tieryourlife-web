@@ -9,7 +9,9 @@ describe("the Play button", () => {
     render(<PlayButton onClick={onClick} disabled={false} saved={false} />);
     const button = screen.getByRole("button", { name: "Play" });
     expect(button).not.toHaveAttribute("aria-disabled");
-    expect(button).not.toHaveAccessibleDescription();
+    // Nothing to say beyond its name. (The test library reads the tooltip as a description
+    // even when it is the name; a browser does not, so ask for the reference itself.)
+    expect(button).not.toHaveAttribute("aria-describedby");
     expect(button.querySelector(".play-button__dot")).toBeNull();
     await userEvent.click(button);
     expect(onClick).toHaveBeenCalledTimes(1);
@@ -30,17 +32,19 @@ describe("the Play button", () => {
     expect(button).toHaveFocus();
   });
 
-  it("wears a dot while a game is saved, and says so", () => {
+  it("wears the badge while a game is saved, and says so", () => {
     render(<PlayButton onClick={vi.fn()} disabled={false} saved />);
     const button = screen.getByRole("button", { name: "Play" });
     expect(button.querySelector(".play-button__dot")).not.toBeNull();
     expect(button).toHaveAccessibleDescription("A game is saved.");
   });
 
-  it("is named Play as an icon alone", () => {
-    render(<PlayButton onClick={vi.fn()} disabled={false} saved={false} iconOnly />);
+  it("is named Play and says it as a tooltip, whether its word shows or only the icon", () => {
+    render(<PlayButton onClick={vi.fn()} disabled={false} saved={false} />);
     const button = screen.getByRole("button", { name: "Play" });
-    expect(button).toHaveClass("play-button--icon");
+    expect(button).toHaveAttribute("title", "Play");
     expect(button).toHaveTextContent("play_arrow");
+    // The word is the one below 840 hides: the name stays on the button itself.
+    expect(button.querySelector(".play-button__word")).toHaveAttribute("aria-hidden", "true");
   });
 });

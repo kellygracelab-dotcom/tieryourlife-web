@@ -127,6 +127,9 @@ describe("tiers", () => {
       colorLight: TIER_PRESETS[5]!.light,
       colorDark: TIER_PRESETS[5]!.dark,
     });
+    const made = { label: "X", caption: "odd", colorLight: "#112233", colorDark: "#445566" };
+    draft = reduce(draft, { type: "addTier", tier: made });
+    expect(draft.tiers.at(-1)).toMatchObject(made);
     for (let i = 0; i < 30; i++) draft = reduce(draft, { type: "addTier" });
     expect(draft.tiers).toHaveLength(LIMITS.tiers);
     expect(new Set(draft.tiers.map((tier) => tier.key)).size).toBe(LIMITS.tiers);

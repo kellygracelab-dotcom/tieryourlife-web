@@ -9,12 +9,14 @@ function Tray({
   selected,
   count,
   dir = "ltr",
+  settle = 0,
 }: {
   selected: number | null;
   count: number;
   dir?: string;
+  settle?: number;
 }) {
-  const { tray, page, pages, readPage } = useTray(selected, count);
+  const { tray, page, pages, readPage } = useTray(selected, count, settle);
   return (
     <div dir={dir}>
       <ul ref={tray} onScroll={readPage} style={{ direction: dir as "ltr" | "rtl" }}>
@@ -70,6 +72,33 @@ describe("useTray", () => {
       left: -(4 * (TILE + TRAY_GAP)) + TRAY_INSET,
       behavior: "smooth",
     });
+  });
+
+  it("waits out a double tap before it scrolls, and a pick undone meanwhile stays put", () => {
+    vi.useFakeTimers();
+    try {
+      const { container, rerender } = render(<Tray selected={null} count={12} settle={300} />);
+      const row = container.querySelector("ul") as HTMLUListElement;
+      layOut(row);
+      // The first tap picks, the second, 120 ms on, opens the card's menu and picks nothing.
+      rerender(<Tray selected={4} count={12} settle={300} />);
+      act(() => vi.advanceTimersByTime(120));
+      rerender(<Tray selected={null} count={12} settle={300} />);
+      act(() => vi.advanceTimersByTime(1000));
+      expect(row.scrollBy).not.toHaveBeenCalled();
+
+      // A single tap: once the wait is over, the card comes to the start.
+      rerender(<Tray selected={4} count={12} settle={300} />);
+      act(() => vi.advanceTimersByTime(299));
+      expect(row.scrollBy).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(1));
+      expect(row.scrollBy).toHaveBeenCalledWith({
+        left: 4 * (TILE + TRAY_GAP) - TRAY_INSET,
+        behavior: "smooth",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("counts pages of five, and reads the page from how far the row is scrolled", () => {

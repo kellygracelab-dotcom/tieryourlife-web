@@ -15,8 +15,16 @@ import { readKept } from "../features/ranking/kept";
 import { arrange } from "../features/tierboard/arrange";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
 import type { Dock } from "../features/tierboard/dock";
-import { loadDraft, loadPlacedDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
+import {
+  clearDraft,
+  draftKey,
+  loadDraft,
+  loadPlacedDraft,
+  saveDraft,
+  scopeOf,
+} from "../features/tierboard/draft";
 import { flyIn } from "../features/tierboard/flight";
+import type { Rows } from "../features/tierboard/model";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
 import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
 import { loadList, report as sendReport, unpublish as unpublishList } from "../lib/api";
@@ -171,7 +179,13 @@ function WhoseSwitch({ view, chosen, mine, onView, onBack }: WhoseSwitchProps) {
     </span>
   );
   return (
-    <div className="whose" role="group" aria-label={strings.list.views}>
+    <div
+      className={["whose", !mine && "whose--one", view === "mine" && "whose--mine"]
+        .filter(Boolean)
+        .join(" ")}
+      role="group"
+      aria-label={strings.list.views}
+    >
       {half("theirs", chosen?.authorName ?? strings.list.viewTheirs, chosen !== null)}
       {mine && half("mine", strings.list.viewMine)}
     </div>
@@ -227,19 +241,8 @@ function OpenList({
   // The shape the board took on a wide screen, so the header lays itself out
   // to match, and a place in the header for the bar while the pool is under.
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
-  // The last of those shapes, so the author's ranking keeps the visitor's width.
-  const [lastDock, setLastDock] = useState<Dock>("beside");
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
-  const frame = useMemo(
-    () => ({
-      headSlot,
-      report: (dock: Dock | null) => {
-        setBoardDock(dock);
-        if (dock !== null) setLastDock(dock);
-      },
-    }),
-    [headSlot],
-  );
+  const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
 
   const theirsKnown = author.known || chosen !== null;
   const shown: View = own || (theirsKnown && view === "theirs") ? "theirs" : "mine";
@@ -270,6 +273,15 @@ function OpenList({
   // into Mine. The board below is drawn afresh from the draft it writes.
   const [mineRound, setMineRound] = useState(0);
   const [mineRows, setMineRows] = useState(() => loadDraft(localStorageStore, scopeOf(list)));
+  // Rows into Mine, which is drawn afresh from the draft: Play's result, or
+  // Theirs with a first move made on it.
+  const putInMine = (rows: Rows) => {
+    const placed = rows.map((row) => [...row]);
+    saveDraft(localStorageStore, scopeOf(list), placed);
+    setMineRows(placed);
+    setMineRound((round) => round + 1);
+    show("mine");
+  };
   const playCards = useMemo<PlayCard[]>(
     () =>
       list.items.map((item, index) => ({
@@ -294,26 +306,50 @@ function OpenList({
     title: list.title,
     theirs: true,
     notify: setNotice,
-    onApply: (rows) => {
-      const placed = rows.map((row) => row.map(Number));
-      saveDraft(localStorageStore, scopeOf(list), placed);
-      setMineRows(placed);
-      setMineRound((round) => round + 1);
-      show("mine");
-    },
+    onApply: (rows) => putInMine(rows.map((row) => row.map(Number))),
   });
 
-  const theirs = chosen === null ? { tiers: list.tiers, ...author } : placedBy(list, chosen);
-  const theirsBoard = (
-    <ReadOnlyBoard
-      label={chosen?.authorName ?? (own ? strings.owner.title : strings.list.theirRanking)}
-      tiers={theirs.tiers}
-      items={list.items}
-      rows={theirs.rows}
-      // Theirs is to look at: nothing waits to be placed. The author's own list keeps its pool.
-      pool={own && chosen === null ? author.pool : []}
-    />
+  const theirs = useMemo(
+    () => (chosen === null ? { tiers: list.tiers, ...author } : placedBy(list, chosen)),
+    [list, author, chosen],
   );
+  const theirsLabel = chosen?.authorName ?? (own ? strings.owner.title : strings.list.theirRanking);
+  // Whose ranking Mine starts from, by name, as the app says it: the reader
+  // chosen, or the author unless the list stands without one.
+  const theirsName =
+    chosen?.authorName ?? (editorial || list.authorName.trim() === "" ? null : list.authorName);
+
+  // A first move on Theirs starts Mine from it, as on the phone, and says so.
+  // What Mine held before is kept for Undo, which puts it back byte for byte
+  // and shows Theirs again.
+  const startFromTheirs = (rows: Rows) => {
+    const scope = scopeOf(list);
+    const before = localStorageStore.read(draftKey(list.id));
+    const replaced = loadPlacedDraft(localStorageStore, scope) !== null;
+    putInMine(rows);
+    const said = replaced
+      ? theirsName === null
+        ? strings.list.replacedYoursUnnamed
+        : fill(strings.list.replacedYours, { name: theirsName })
+      : theirsName === null
+        ? strings.list.startedFromUnnamed
+        : fill(strings.list.startedFrom, { name: theirsName });
+    setNotice({
+      text: said,
+      action: {
+        text: strings.list.undo,
+        onClick: () => {
+          if (before === null) clearDraft(localStorageStore, list.id);
+          else localStorageStore.write(draftKey(list.id), before);
+          setMineRows(loadDraft(localStorageStore, scope));
+          setMineRound((round) => round + 1);
+          show("theirs");
+        },
+      },
+    });
+  };
+  // Somebody else's tier words over the same cards: the board draws Theirs under them.
+  const theirsList = useMemo(() => ({ ...list, tiers: theirs.tiers }), [list, theirs]);
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
   const chipShown = list.takeCount > 0 && !outOfSight;
@@ -378,9 +414,30 @@ function OpenList({
           </BoardFrameContext.Provider>
         ) : own ? (
           // The author sees the list as it was published; it is changed on its board, behind Edit.
-          theirsBoard
+          <ReadOnlyBoard
+            label={theirsLabel}
+            tiers={theirs.tiers}
+            items={list.items}
+            rows={theirs.rows}
+            pool={chosen === null ? author.pool : []}
+          />
         ) : (
-          <div className={`list-page__theirs list-page__theirs--${lastDock}`}>{theirsBoard}</div>
+          // A visitor may start from what is on show: a card moved here moves in Mine.
+          // Outside the frame, so the header keeps the layout it has for Theirs.
+          <RankingBoard
+            key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}`}
+            list={theirsList}
+            seed={{
+              rows: theirs.rows,
+              label: theirsLabel,
+              hint:
+                theirsName === null
+                  ? strings.list.seedHintUnnamed
+                  : fill(strings.list.seedHint, { name: theirsName }),
+              dropHint: strings.list.dropToStart,
+              onStart: startFromTheirs,
+            }}
+          />
         ))}
       {!own && play.view}
       {sheet && (

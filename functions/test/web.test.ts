@@ -66,6 +66,28 @@ function memoryFirestore(clock = () => 1_000) {
         }),
       }),
     }),
+    // All or nothing, as Firestore's: a create that finds its document taken
+    // fails the whole commit before anything is written.
+    batch: () => {
+      const writes: { ref: Ref; data: Data; create: boolean; options?: { merge?: boolean } }[] = [];
+      return {
+        create: (ref: Ref, data: Data) => void writes.push({ ref, data, create: true }),
+        set: (ref: Ref, data: Data, options?: { merge?: boolean }) =>
+          void writes.push({ ref, data, create: false, options }),
+        commit: async () => {
+          for (const write of writes) {
+            if (write.create && (await write.ref.get()).exists) {
+              throw Object.assign(new Error("exists"), { code: 6 });
+            }
+          }
+          for (const write of writes) {
+            await (write.create
+              ? write.ref.create(write.data)
+              : write.ref.set(write.data, write.options));
+          }
+        },
+      };
+    },
     runTransaction: async <T>(work: (transaction: unknown) => Promise<T>): Promise<T> =>
       work({
         get: (ref: Ref) => ref.get(),

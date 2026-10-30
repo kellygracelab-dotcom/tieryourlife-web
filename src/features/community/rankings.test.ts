@@ -24,6 +24,7 @@ const ranking = (extra: Partial<ReaderRanking>): ReaderRanking => ({
   authorName: "olena",
   authorPhotoUrl: null,
   arrangement: [],
+  rows: [],
   tierLabels: [],
   updatedAtMs: 0,
   mine: false,
@@ -33,6 +34,29 @@ const ranking = (extra: Partial<ReaderRanking>): ReaderRanking => ({
 afterEach(() => setStrings("en", null));
 
 describe("placedBy", () => {
+  it("keeps the order the reader gave the cards inside each tier", () => {
+    const placing = ranking({ arrangement: [1, 0, null, 0], rows: [[3, 1], [0]] });
+    expect(placedBy(list, placing)).toEqual({
+      tiers: list.tiers,
+      rows: [[3, 1], [0]],
+      pool: [2],
+    });
+  });
+
+  it("reads the rows over the arrangement, and leaves out what the list lacks", () => {
+    // A row past the list's tiers, a card it no longer has, or one placed twice.
+    const placing = ranking({ arrangement: [0, 0, 0, 0], rows: [[9, 2, 2], [1], [0]] });
+    expect(placedBy(list, placing)).toEqual({ tiers: list.tiers, rows: [[2], [1]], pool: [0, 3] });
+  });
+
+  it("falls back to the arrangement for a ranking kept without rows, or a reply without them", () => {
+    const old = {
+      ...ranking({ arrangement: [1, 0] }),
+      rows: undefined,
+    } as unknown as ReaderRanking;
+    expect(placedBy(list, old).rows).toEqual([[1], [0]]);
+  });
+
   it("puts the list's cards where the reader put them, the rest in the pool", () => {
     expect(placedBy(list, ranking({ arrangement: [1, 0, null, 0] }))).toEqual({
       tiers: list.tiers,

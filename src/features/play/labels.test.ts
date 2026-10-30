@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { duelText, estimateText, gameName, roundText, startedText, thinText } from "./labels";
+import { EVERYTHING } from "./chosen";
+import { currentPair, newGame, pick, skip } from "./game";
+import {
+  bracketRoundText,
+  duelText,
+  estimateText,
+  gameName,
+  roundText,
+  secondLine,
+  startedText,
+  thinText,
+} from "./labels";
 import { fittedSize } from "./useFitText";
 
 const main = { phase: "main" as const, round: null, overall: { asked: 0, total: 0 } };
@@ -32,6 +43,45 @@ describe("the words of a game", () => {
     expect(startedText(new Date(2026, 9, 28, 0, 30).getTime(), now)).toBe("Started today");
     expect(startedText(new Date(2026, 9, 27, 23, 0).getTime(), now)).toBe("Started yesterday");
     expect(startedText(new Date(2026, 9, 24, 12, 0).getTime(), now)).toBe("Started 4 days ago");
+  });
+
+  it("names a bracket's round by the cards in it, a bye rounding up", () => {
+    expect(bracketRoundText(2)).toBe("Final");
+    expect(bracketRoundText(3)).toBe("Semi-finals");
+    expect(bracketRoundText(4)).toBe("Semi-finals");
+    expect(bracketRoundText(7)).toBe("Quarter-finals");
+    expect(bracketRoundText(16)).toBe("Round of 16");
+    expect(bracketRoundText(34)).toBe("Round of 64");
+  });
+});
+
+describe("the line under the count", () => {
+  const ids = ["a", "b", "c", "d"];
+  const nameOf = (card: number) => ids[card]!.toUpperCase();
+
+  it("says losers stay with its round", () => {
+    expect(secondLine(newGame("swiss", ids, EVERYTHING, 1, 0), nameOf)).toBe(
+      "Losers stay · Round 1 of 4",
+    );
+  });
+
+  it("says the bracket's round", () => {
+    expect(secondLine(newGame("bracket", ids, EVERYTHING, 1, 0), nameOf)).toBe("Semi-finals");
+  });
+
+  it("says the hill's name until a card has won twice in a row, then who holds it", () => {
+    let game = newGame("hill", ids, EVERYTHING, 1, 0);
+    expect(secondLine(game, nameOf)).toBe("King of the hill");
+    game = pick(game, currentPair(game)![0]);
+    expect(secondLine(game, nameOf)).toBe("King of the hill");
+    game = pick(game, currentPair(game)![0]);
+    expect(secondLine(game, nameOf)).toBe(`${nameOf(currentPair(game)![0])} has won 2 in a row`);
+  });
+
+  it("says the game's name while refining", () => {
+    let game = newGame("bracket", ids, EVERYTHING, 1, 0);
+    while (currentPair(game) !== null) game = skip(game);
+    expect(secondLine({ ...game, refineFixed: { from: 3, pairs: [] } }, nameOf)).toBe("Bracket");
   });
 });
 

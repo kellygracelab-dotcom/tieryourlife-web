@@ -6,13 +6,13 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
-import { MOUSE_SLOP, TOUCH_SLOP } from "./drag";
+import { DOUBLE_TAP_MS, MOUSE_SLOP, TOUCH_SLOP } from "./drag";
 import { indexAt, middlesOf } from "./tierDrag";
 
 /** The owner's hold on the tiers themselves, from the board. */
 export interface TierEditing {
-  /** The tier at `from` now belongs at `to`. */
-  move: (from: number, to: number) => void;
+  /** The tier at `from` now belongs at `to`; by the keyboard, which goes with it. */
+  move: (from: number, to: number, keyboard?: boolean) => void;
   /** Change this tier: its name, its caption, its colour. */
   open: (tier: number) => void;
   /** One more tier under the last; absent at the ceiling. */
@@ -21,9 +21,6 @@ export interface TierEditing {
 
 /** A finger holds a tier this long before it lifts, the phone's long press; sooner it is a scroll or a tap. */
 export const TIER_HOLD_MS = 350;
-
-/** Two taps on one tier this close together are a double tap. */
-export const DOUBLE_TAP_MS = 300;
 
 interface Press {
   tier: number;
@@ -54,15 +51,22 @@ export interface TierMove {
 
 /**
  * The phone's gestures on a tier's band: lift it and carry it up or down (a
- * press and a move with a mouse, a long press with a finger), or tap it twice
- * to change it. Nothing moves in the board's order until the tier is let go;
- * meanwhile the rows only stand aside, so a board keyed by its tiers is not
- * rebuilt under the pointer.
+ * press and a move with a mouse, a long press with a finger), or open it to
+ * change it: a double click with a mouse, a tap with a finger when no card is
+ * picked (`tapOpens`; with one picked, a tap on a row places the card).
+ * Nothing moves in the board's order until the tier is let go; meanwhile the
+ * rows only stand aside, so a board keyed by its tiers is not rebuilt under
+ * the pointer.
  */
 export function useTierMove(
   board: RefObject<HTMLElement | null>,
   editing: TierEditing | undefined,
+  tapOpens = true,
 ): TierMove {
+  const opensOnTap = useRef(tapOpens);
+  useEffect(() => {
+    opensOnTap.current = tapOpens;
+  });
   const [lift, setLift] = useState<Lift | null>(null);
   const press = useRef<Press | null>(null);
   const carried = useRef<Lift | null>(null);
@@ -158,6 +162,10 @@ export function useTierMove(
         const now = carried.current;
         show(null);
         if (now !== null && now.target !== now.tier) editing.move(now.tier, now.target);
+        return;
+      }
+      if (held.touch) {
+        if (opensOnTap.current) editing.open(held.tier);
         return;
       }
       const at = Date.now();

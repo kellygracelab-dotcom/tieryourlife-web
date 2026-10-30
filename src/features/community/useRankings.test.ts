@@ -10,6 +10,7 @@ const reader = (uid: string): ReaderRanking => ({
   authorName: uid,
   authorPhotoUrl: null,
   arrangement: [0],
+  rows: [[0]],
   tierLabels: [],
   updatedAtMs: 0,
   mine: false,

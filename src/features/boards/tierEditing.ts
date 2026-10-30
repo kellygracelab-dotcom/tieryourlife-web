@@ -27,6 +27,22 @@ export const editorTiersOf = (board: Board): EditorTier[] =>
     colorDark: tier.colorDark,
   }));
 
+/**
+ * The tier the editor opens on for Add tier, before it exists: the next free
+ * letter in the next preset, as the phone's sheet starts it. It has no key
+ * until the board makes it.
+ */
+export function newTierOf(board: Board): EditorTier {
+  const preset = TIER_PRESETS[rankedTiers(board).length % TIER_PRESETS.length] ?? TIER_PRESETS[0];
+  return {
+    key: "",
+    label: nextTierLabel(board),
+    caption: null,
+    colorLight: preset.light,
+    colorDark: preset.dark,
+  };
+}
+
 /** What a removed tier leaves behind, so Undo can put it back with its cards. */
 export interface RemovedTier {
   tier: BoardTier;
@@ -52,21 +68,8 @@ export function applyTierAction(
 ): TierChange {
   switch (action.type) {
     case "addTier": {
-      const preset =
-        TIER_PRESETS[rankedTiers(board).length % TIER_PRESETS.length] ?? TIER_PRESETS[0];
-      return {
-        board: addTier(
-          board,
-          {
-            label: nextTierLabel(board),
-            caption: null,
-            colorLight: preset.light,
-            colorDark: preset.dark,
-          },
-          now,
-          nextUid,
-        ),
-      };
+      const { key: _, ...made } = newTierOf(board);
+      return { board: addTier(board, action.tier ?? made, now, nextUid) };
     }
     case "removeTier": {
       const tier = board.tiers.find((t) => t.uid === action.key);

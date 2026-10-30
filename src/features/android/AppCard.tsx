@@ -18,8 +18,8 @@ interface AppCardProps {
 }
 
 /**
- * The Android app, at the end of a page where people browse: what it adds and
- * the way to Google Play, or "coming soon" while the app is in its closed test.
+ * The Android app, at the top of the home page where everyone sees it at once:
+ * what it adds and the way to Google Play, or "coming soon" while the app is in its closed test.
  * Never on an iPhone, and gone for 90 days once closed.
  */
 export function AppCard({

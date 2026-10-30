@@ -37,12 +37,16 @@ export function useAdminRole(load: () => Promise<AdminSections> = loadAdminSecti
   return { status: "unknown" };
 }
 
-/** Which panes a role opens, as Claude Design's table has it. */
+/**
+ * Which panes a role opens, as Claude Design's table has it, with Lists
+ * (docs/design-spec-walk-3.md, E2), which a moderator opens too.
+ */
 export const PANES = [
   "reports",
   "proposals",
   "sections",
   "topics",
+  "lists",
   "anonymous",
   "moderators",
 ] as const;

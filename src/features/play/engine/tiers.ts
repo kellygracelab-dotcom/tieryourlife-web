@@ -1,9 +1,6 @@
 import { at, zeros } from "./arrays";
 import { duelsPerCard, type Standing } from "./strength";
 
-/** Groups are accepted once they explain this much of the spread. */
-export const ENOUGH_FIT = 0.9;
-
 /** Below this many answered duels per card the evidence is thin: at most THIN_GROUPS groups, and a card shows dashed. */
 export const SOLID_DUELS = 2;
 
@@ -34,10 +31,11 @@ export function groupLimit(standing: Standing, fits: number): number {
 
 /**
  * Cards cut into `tierCount` tiers, best first, each tier left to right from
- * best. As few groups as explain the spread (Jenks's goodness of variance fit),
- * and each group goes to the tier its strength points at, so a real gap leaves
- * the tiers in between empty and the weakest still land low. Only the first
- * tier is sure to be filled.
+ * best. On solid evidence there are as many groups as tiers, or as distinct
+ * strengths when there are fewer; on thin evidence at most THIN_GROUPS.
+ * Equal strengths never split. With fewer groups than tiers each group goes
+ * to the tier its strength points at, so a real gap leaves the tiers between
+ * empty and the weakest still land low.
  */
 export function tiers(standing: Standing, tierCount: number): number[][] {
   if (tierCount < 1) throw new RangeError("A board has at least one tier");
@@ -51,7 +49,8 @@ export function tiers(standing: Standing, tierCount: number): number[][] {
     return result;
   }
   const scaled = values.map((value) => (value - bottom) / (top - bottom));
-  const groups = groupsOf(scaled, groupLimit(standing, Math.min(tierCount, scaled.length)));
+  // No more groups than distinct strengths, so cards of equal strength stay together.
+  const groups = groupsOf(scaled, groupLimit(standing, Math.min(tierCount, new Set(scaled).size)));
   let previous = -1;
   const placed = groups.map((group, index) => {
     let sum = 0;
@@ -80,11 +79,11 @@ export interface Group {
 }
 
 /**
- * The fewest groups of consecutive values whose fit reaches ENOUGH_FIT, at
- * most `maxGroups`, or `maxGroups` when none does. Fisher's exact method;
- * among equal splits the earliest wins, so both platforms pick the same one.
+ * Exactly `count` groups of consecutive values with the least spread within
+ * them, by Fisher's exact method; among equal splits the earliest wins, so
+ * both platforms pick the same one.
  */
-export function groupsOf(values: readonly number[], maxGroups: number): Group[] {
+export function groupsOf(values: readonly number[], count: number): Group[] {
   const n = values.length;
   const sums = [0];
   const squares = [0];
@@ -97,11 +96,10 @@ export function groupsOf(values: readonly number[], maxGroups: number): Group[] 
     const sum = at(sums, to + 1) - at(sums, from);
     return Math.max(0, at(squares, to + 1) - at(squares, from) - (sum * sum) / size);
   };
-  const total = spread(0, n - 1);
-  const cost = Array.from({ length: maxGroups + 1 }, () => zeros(n));
-  const start = Array.from({ length: maxGroups + 1 }, () => zeros(n));
+  const cost = Array.from({ length: count + 1 }, () => zeros(n));
+  const start = Array.from({ length: count + 1 }, () => zeros(n));
   for (let i = 0; i < n; i++) at(cost, 1)[i] = spread(0, i);
-  for (let groups = 2; groups <= maxGroups; groups++) {
+  for (let groups = 2; groups <= count; groups++) {
     const fewer = at(cost, groups - 1);
     for (let i = groups - 1; i < n; i++) {
       let best = Number.MAX_VALUE;
@@ -117,16 +115,9 @@ export function groupsOf(values: readonly number[], maxGroups: number): Group[] 
       at(start, groups)[i] = bestStart;
     }
   }
-  let chosen = maxGroups;
-  for (let groups = 1; groups <= maxGroups; groups++) {
-    if (total === 0 || 1 - at(at(cost, groups), n - 1) / total >= ENOUGH_FIT) {
-      chosen = groups;
-      break;
-    }
-  }
   const ranges: Group[] = [];
   let end = n - 1;
-  for (let groups = chosen; groups >= 1; groups--) {
+  for (let groups = count; groups >= 1; groups--) {
     const from = groups === 1 ? 0 : at(at(start, groups), end);
     ranges.unshift({ from, to: end });
     end = from - 1;

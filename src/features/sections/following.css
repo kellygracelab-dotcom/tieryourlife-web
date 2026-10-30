@@ -67,7 +67,7 @@
 .following-strip__topic {
   --topic-bg: var(--topic-bg-light);
   --topic-icon: var(--topic-icon-light);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--topic-bg, var(--surface-container-high));
   color: var(--topic-icon, var(--ink-dim));
 }

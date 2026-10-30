@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { EVERYTHING } from "./chosen";
@@ -13,7 +13,7 @@ function show(props: Partial<Parameters<typeof GamePicker>[0]> = {}) {
     onKind: vi.fn(),
     onChooseCards: vi.fn(),
     onResume: vi.fn(),
-    onStartOver: vi.fn(),
+    onStartAgain: vi.fn(),
     onStart: vi.fn(),
     onCancel: vi.fn(),
   };
@@ -66,7 +66,19 @@ describe("the game picker", () => {
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     expect(onStart).toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onCancel).toHaveBeenCalled();
+    // Once the sheet has gone out.
+    expect(onCancel).not.toHaveBeenCalled();
+    await waitFor(() => expect(onCancel).toHaveBeenCalled());
+  });
+
+  it("shows each game's radio, icon and estimate on a line of its own", () => {
+    show({ kind: "bracket" });
+    const card = screen.getByRole("radio", { name: /Bracket/ }).closest("label")!;
+    expect(card.querySelector(".play-radio")).not.toBeNull();
+    expect(card.querySelector(".play-game__icon")).toHaveTextContent("account_tree");
+    expect(card.querySelector(".play-game__text > .play-game__estimate")).toHaveTextContent(
+      "33 duels · about 1 min",
+    );
   });
 
   it("does not start over more than 64 cards", () => {
@@ -75,22 +87,38 @@ describe("the game picker", () => {
   });
 
   it("puts a saved game first, with how far it got and when it started", async () => {
-    const saved: Resume = { kind: "ready", game: savedGame("swiss"), joined: 3 };
+    const saved: Resume = { kind: "ready", game: savedGame("swiss"), joined: 0 };
     const { onResume } = show({ saved });
     expect(screen.getByText(/^Losers stay · 1 of \d+$/)).toBeInTheDocument();
     expect(screen.getByText("Started yesterday")).toBeInTheDocument();
-    expect(screen.getByText("3 new cards join from the next round")).toBeInTheDocument();
+    // The games under it are the other way to go.
+    expect(screen.getByText("Or start a new game")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Resume" }));
     expect(onResume).toHaveBeenCalled();
   });
 
-  it("offers to start over a game whose board changed under it", async () => {
+  it("says when losers stay takes new cards in, and still resumes", () => {
+    const saved: Resume = { kind: "ready", game: savedGame("swiss"), joined: 3 };
+    show({ saved });
+    expect(screen.getByText("3 new cards join from the next round")).toBeInTheDocument();
+    expect(screen.queryByText("Started yesterday")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+  });
+
+  it("starts again a hill or a bracket whose board changed under it", async () => {
     const saved: Resume = { kind: "changed", game: savedGame("hill") };
-    const { onStartOver } = show({ saved });
-    expect(screen.getByText("The board has changed since this game started.")).toBeInTheDocument();
+    const { onStartAgain } = show({ saved });
+    expect(screen.getByText("The board changed, so this game can’t go on")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Resume" })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Start over" }));
-    expect(onStartOver).toHaveBeenCalled();
+    const again = screen.getByRole("button", { name: "Start again" });
+    expect(again).toHaveClass("play-outlined");
+    await userEvent.click(again);
+    expect(onStartAgain).toHaveBeenCalled();
+  });
+
+  it("has no new-game line without a saved game", () => {
+    show();
+    expect(screen.queryByText("Or start a new game")).not.toBeInTheDocument();
   });
 
   it("says where the result goes on somebody else's list", () => {
@@ -100,9 +128,16 @@ describe("the game picker", () => {
     ).toBeInTheDocument();
   });
 
-  it("closes on Escape", async () => {
+  it("closes on Escape, once, after its exit", async () => {
     const { onCancel } = show();
     await userEvent.keyboard("{Escape}");
-    expect(onCancel).toHaveBeenCalled();
+    expect(document.querySelector(".play-scrim--leaving")).not.toBeNull();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+  });
+
+  it("comes in as it opens", () => {
+    show();
+    expect(document.querySelector(".play-scrim--arriving")).not.toBeNull();
   });
 });

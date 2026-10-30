@@ -50,7 +50,8 @@ export function loadSections(client: ApiClient): Promise<{ sections: SectionStat
 /**
  * One section by its id, also one no tile shows: hidden, or not among the
  * sections yet. 404 when there is none; 410 MERGED {mergedInto} when it went
- * into another, to everybody once it had been approved.
+ * into another, to everybody once it had been approved, with {mergedTopicId}
+ * when it became a topic there.
  */
 export function loadSection(client: ApiClient, id: string): Promise<SectionStats> {
   return client.request<SectionStats>("GET", `/lists/sections/${encodeURIComponent(id)}`);
@@ -113,6 +114,10 @@ export interface Topic {
   /** Sent only to staff and to the topic's own creator. */
   createdBy?: string;
   mergedInto: string | null;
+  /** Translations by locale; a language left out shows the name as typed. */
+  names?: Partial<Record<string, string>>;
+  /** Its 16:10 picture, public; null or absent when it has none and wears its section's colours. */
+  pictureUrl?: string | null;
 }
 
 /** The approved topics of a section, the biggest first. */

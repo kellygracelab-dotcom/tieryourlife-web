@@ -1,6 +1,8 @@
 import * as account from "../api/account";
 import * as admin from "../api/admin";
 import type {
+  AdminList,
+  AdminListsQuery,
   AdminSections,
   AnonymousList,
   Candidate,
@@ -9,8 +11,12 @@ import type {
   ProposedSection,
   NameCheck,
   SectionChanges,
+  ListMove,
   SectionDraft,
+  TopicApproval,
+  TopicChanges,
   TopicDecision,
+  TopicDraft,
 } from "../api/admin";
 import * as boards from "../api/boards";
 import type { KeepBoardRequest, KeptBoard, KeptBoardIndex } from "../api/boards";
@@ -127,8 +133,8 @@ export const keepListRanking = (
   rows: readonly (readonly number[])[],
 ): Promise<ReaderRanking> =>
   community.keepListRanking(api, list.id, {
-    arrangement: community.arrangementOf(rows, list.items.length),
     tierLabels: list.tiers.map((tier) => tier.label),
+    rows: community.rowsOf(rows, list.tiers.length, list.items.length),
   });
 
 export const loadFollowing = (): Promise<Following> => community.loadFollowing(api);
@@ -223,6 +229,12 @@ export const declineSection = (id: string, note: string | null): Promise<void> =
 export const mergeSection = (id: string, into: string): Promise<void> =>
   admin.mergeSection(api, id, into);
 
+export const approveSectionAsTopic = (
+  id: string,
+  approval: TopicApproval,
+): Promise<{ topic: Topic | null; proposal: SectionStats | null }> =>
+  admin.approveSectionAsTopic(api, id, approval);
+
 export const checkSectionName = (name: string): Promise<NameCheck> =>
   admin.checkSectionName(api, name);
 
@@ -231,16 +243,10 @@ export const loadTopicQueue = (): Promise<{ topics: PendingTopic[] }> => admin.l
 export const decideTopic = (id: string, decision: TopicDecision): Promise<void> =>
   admin.decideTopic(api, id, decision);
 
-export const createTopic = (draft: {
-  name: string;
-  section: string;
-  names?: Record<string, string>;
-}): Promise<Topic> => admin.createTopic(api, draft);
+export const createTopic = (draft: TopicDraft): Promise<Topic> => admin.createTopic(api, draft);
 
-export const editTopic = (
-  id: string,
-  draft: { name?: string; names?: Record<string, string> },
-): Promise<Topic> => admin.editTopic(api, id, draft);
+export const editTopic = (id: string, draft: TopicChanges): Promise<Topic> =>
+  admin.editTopic(api, id, draft);
 
 export const deleteTopic = (id: string): Promise<void> => admin.deleteTopic(api, id);
 
@@ -264,3 +270,9 @@ export const loadAnonymousLists = (
   after: string | null = null,
 ): Promise<{ lists: AnonymousList[]; nextCursor: string | null }> =>
   admin.loadAnonymousLists(api, after);
+
+export const loadAdminLists = (
+  query: AdminListsQuery,
+): Promise<{ lists: AdminList[]; nextCursor: string | null }> => admin.loadAdminLists(api, query);
+
+export const moveList = (id: string, to: ListMove): Promise<void> => admin.moveList(api, id, to);

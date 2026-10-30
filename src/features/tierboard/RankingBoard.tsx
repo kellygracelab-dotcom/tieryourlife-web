@@ -13,7 +13,7 @@ import {
 import { createPortal } from "react-dom";
 import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
-import type { PublishedList, PublishedTier } from "../../api/types";
+import type { PublishedList } from "../../api/types";
 import { useSession } from "../../app/session";
 import { keepListRanking, keepRanking, noteTake } from "../../lib/api";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
@@ -25,10 +25,11 @@ import { errorOf } from "../../api/errors";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
+import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
 import { flyIn } from "./flight";
-import type { DragState } from "./drag";
+import { DOUBLE_TAP_MS, type DragState } from "./drag";
 import { loadDraft, saveDraft, scopeOf } from "./draft";
 import {
   canUndo,
@@ -40,6 +41,7 @@ import {
   tierOf,
   type BoardAction,
   type BoardState,
+  type Rows,
 } from "./model";
 import { useTileDrag, type HitTest } from "./useTileDrag";
 import { useTierMove, type TierEditing } from "./useTierMove";
@@ -77,11 +79,26 @@ export interface EditMode {
     status?: ReactNode;
     /** Every move is kept the moment it is made: no Save and no Discard, the board on screen is the board. */
     live?: boolean;
-    /** A menu on every card for moving it without a drag: a finger without a keyboard, or a tenth tier. */
-    moveMenu?: boolean;
     /** The tiers themselves, changed on the board: carried by their band, opened by a double tap. */
     tiers?: TierEditing;
   };
+}
+
+/**
+ * Somebody else's arrangement on show (Theirs), to look at and to start
+ * from, as on the phone: the board draws these rows and keeps nothing on the
+ * device, has no pool, bar or number badges, and its first move hands the
+ * rows, that move made, to `onStart`.
+ */
+export interface Seed {
+  rows: Rows;
+  /** The board's name: whose arrangement it is. */
+  label: string;
+  /** What placing a picked card will do, said under the board while one is picked. */
+  hint: string;
+  /** The same, in the line's place, while a card is carried. */
+  dropHint: string;
+  onStart: (rows: Rows) => void;
 }
 
 interface RankingBoardProps {
@@ -96,6 +113,7 @@ interface RankingBoardProps {
   edit?: EditMode;
   /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
   strip?: boolean;
+  seed?: Seed;
 }
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
@@ -108,6 +126,10 @@ const TILE_WIDTH = 64;
 /** A pool longer than this gets a search box in the side column. */
 export const POOL_SEARCH_FROM = 24;
 
+/** How often a card's menu has been opened on this device; the hint goes after MENU_HINT_UNTIL. */
+export const MENU_COUNT_KEY = "tyl.cardMenu.opened";
+export const MENU_HINT_UNTIL = 3;
+
 interface TileProps {
   list: PublishedList;
   item: number;
@@ -117,12 +139,36 @@ interface TileProps {
   locked: boolean;
   dispatch: (action: BoardAction) => void;
   onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
-  /** The owner may take a card off the list; a button beside the tile, never inside it. */
+  /** The drag as it is right now: a press that lifted a card opens no menu. */
+  dragNow: () => DragState;
+  /** Where the card is, for its menu: a tier, or null in the pool. */
+  current: number | null;
+  /** The owner may take a card off the list, from its menu. */
   onRemove?: () => void;
-  /** A menu beside the tile for moving without a drag: every tier, the pool, off the list. */
-  move?: { tiers: readonly PublishedTier[]; current: number | null };
+  /** The card's menu opened: the board counts it, for its hint. */
+  onMenu: () => void;
 }
 
+/**
+ * Whether the device is a phone's, with a finger for its pointer: there a
+ * card's menu is the phone's sheet, from the bottom; with a mouse it opens
+ * where the pointer is.
+ */
+const fingerFirst = () =>
+  typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+
+/** A card's menu, open: the phone's sheet, or a menu at a point on the screen. */
+type CardMenuAt = { sheet: true } | { sheet: false; at: ScreenPoint };
+
+/**
+ * A card on a board one can change. A tap picks it, for a tier's tap or a
+ * number key to place; a double tap or a double click opens its menu, as on
+ * the phone: every tier, back to the pool, and off the list for the owner.
+ * Nothing sits on the card itself, so a press meant for the card cannot take
+ * it off the list. With a mouse the menu opens at the pointer, by a double
+ * click or a right click; a finger gets the phone's sheet. The keyboard opens
+ * it with the context-menu key or Shift+F10, at the card.
+ */
 function Tile({
   list,
   item,
@@ -132,36 +178,90 @@ function Tile({
   locked,
   dispatch,
   onPointerDown,
+  dragNow,
+  current,
   onRemove,
-  move,
+  onMenu,
 }: TileProps) {
-  const [moving, setMoving] = useState(false);
-  const closeMove = useCallback(() => setMoving(false), []);
+  const [moving, setMoving] = useState<CardMenuAt | null>(null);
+  const closeMove = useCallback(() => setMoving(null), []);
+  // What made the last press, so a double tap of a finger gets the sheet and a mouse's the menu.
+  const pressedBy = useRef("mouse");
+  // When the last click came; two within DOUBLE_TAP_MS are a double click.
+  // Clicks are timed rather than read from dblclick, which a double tap does
+  // not send on every phone, and a drag between them sends no click at all.
+  const lastClick = useRef(0);
+  const opener = useRef<HTMLButtonElement>(null);
   const card = list.items[item];
   if (card === undefined) return null;
   const classes = ["tile", selected && "tile--selected", lifted && "tile--lifted"]
     .filter(Boolean)
     .join(" ");
+  const openMenu = (how: CardMenuAt) => {
+    // Nothing picked while the menu is open: a number key does nothing, and a
+    // move from the menu does not pass the pick on to the next card.
+    dispatch({ type: "select", item: null });
+    setMoving(how);
+    onMenu();
+  };
+  // From the keyboard the menu opens at the card's lower start corner.
+  const atCard = (button: HTMLElement): CardMenuAt => {
+    if (fingerFirst()) return { sheet: true };
+    const box = button.getBoundingClientRect();
+    const rtl = getComputedStyle(button).direction === "rtl";
+    return { sheet: false, at: { x: rtl ? box.right : box.left, y: box.bottom } };
+  };
+  const close = (then: () => void) => () => {
+    setMoving(null);
+    then();
+  };
   return (
-    <li
-      className={
-        onRemove !== undefined || move !== undefined ? "tile-holder--removable" : undefined
-      }
-    >
+    <li>
       <button
+        ref={opener}
         type="button"
         className={classes}
         aria-pressed={selected}
         aria-label={card.title}
+        aria-haspopup={fingerFirst() ? "dialog" : "menu"}
+        aria-keyshortcuts="Shift+F10"
         title={card.title}
         disabled={locked}
         data-item={item}
         onClick={(event) => {
           // The armed row underneath would take the same tap as "place here".
           event.stopPropagation();
+          // Enter and Space click too (detail 0): they pick, and twice is not a double click.
+          const at = event.detail > 0 ? Date.now() : 0;
+          if (at > 0 && at - lastClick.current < DOUBLE_TAP_MS) {
+            lastClick.current = 0;
+            openMenu(
+              pressedBy.current === "touch"
+                ? { sheet: true }
+                : { sheet: false, at: { x: event.clientX, y: event.clientY } },
+            );
+            return;
+          }
+          lastClick.current = at;
           dispatch({ type: "select", item });
         }}
-        onPointerDown={locked ? undefined : onPointerDown}
+        onContextMenu={(event) => {
+          // A finger held on a card lifts it, as on the phone; its long press is not a menu.
+          const touch = (event.nativeEvent as PointerEvent).pointerType === "touch";
+          if (touch || dragNow().phase !== "idle") return;
+          event.preventDefault();
+          openMenu({ sheet: false, at: { x: event.clientX, y: event.clientY } });
+        }}
+        onKeyDown={(event) => {
+          // Where the browser turns neither key into a context menu, Safari among them.
+          if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
+          event.preventDefault();
+          openMenu(atCard(event.currentTarget));
+        }}
+        onPointerDown={(event) => {
+          pressedBy.current = event.pointerType;
+          if (!locked) onPointerDown(event);
+        }}
       >
         {card.imageUrl !== null ? (
           <img {...sizedFor(card.imageUrl, TILE_WIDTH)} alt="" loading="lazy" draggable={false} />
@@ -169,57 +269,29 @@ function Tile({
           <CardName title={card.title} board={board} />
         )}
       </button>
-      {onRemove !== undefined && (
-        <button
-          type="button"
-          className="tile__remove"
-          aria-label={fill(strings.new.remove, { name: card.title })}
-          disabled={locked}
-          onClick={onRemove}
-        >
-          <Icon name="close" />
-        </button>
+      {moving !== null && !locked && moving.sheet && (
+        <MoveSheet
+          name={card.title}
+          tiers={list.tiers}
+          current={current}
+          onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
+          onUnplace={close(() => dispatch({ type: "unplace", item }))}
+          onRemove={onRemove === undefined ? undefined : close(onRemove)}
+          onClose={closeMove}
+        />
       )}
-      {move !== undefined && !locked && (
-        <>
-          <button
-            type="button"
-            className="tile__more"
-            aria-label={fill(strings.boards.moveMenu, { name: card.title })}
-            aria-haspopup="dialog"
-            aria-expanded={moving}
-            onClick={(event) => {
-              event.stopPropagation();
-              setMoving(true);
-            }}
-          >
-            <Icon name="more_vert" />
-          </button>
-          {moving && (
-            <MoveSheet
-              name={card.title}
-              tiers={move.tiers}
-              current={move.current}
-              onPlace={(tier) => {
-                setMoving(false);
-                dispatch({ type: "place", item, tier });
-              }}
-              onUnplace={() => {
-                setMoving(false);
-                dispatch({ type: "unplace", item });
-              }}
-              onRemove={
-                onRemove === undefined
-                  ? undefined
-                  : () => {
-                      setMoving(false);
-                      onRemove();
-                    }
-              }
-              onClose={closeMove}
-            />
-          )}
-        </>
+      {moving !== null && !locked && !moving.sheet && (
+        <CardMenu
+          name={card.title}
+          tiers={list.tiers}
+          current={current}
+          at={moving.at}
+          opener={opener}
+          onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
+          onUnplace={close(() => dispatch({ type: "unplace", item }))}
+          onRemove={onRemove === undefined ? undefined : close(onRemove)}
+          onClose={closeMove}
+        />
       )}
     </li>
   );
@@ -235,15 +307,21 @@ const saveLabel = (edit: EditMode, busy: boolean): string =>
       ? strings.new.publishing
       : strings.new.publishChanges;
 
-/** Where the board keeps a list's rows on this device; the list page reads the same place. */
+/**
+ * Where the board keeps a list's rows on this device; the list page reads the
+ * same place. Somebody else's arrangement on show (`seeded`) is not this
+ * device's: it is neither read from there nor written.
+ */
 function useBoard(
   list: PublishedList,
   store: KeyValueStore,
   initialRows: readonly (readonly number[])[] | null = null,
+  seeded = false,
 ) {
   const scope = scopeOf(list);
+  const kept = () => (seeded ? null : loadDraft(store, scope));
   const [state, dispatch] = useReducer(reduce, list, (l) =>
-    init(l.tiers.length, l.items.length, loadDraft(store, scope) ?? initialRows),
+    init(l.tiers.length, l.items.length, kept() ?? initialRows),
   );
   // The list changed shape under the board — the owner added or took away a
   // card — and the rows come from the page again. A state that follows a prop
@@ -253,14 +331,15 @@ function useBoard(
       type: "reset",
       tierCount: list.tiers.length,
       itemCount: list.items.length,
-      rows: loadDraft(store, scope) ?? initialRows,
+      rows: kept() ?? initialRows,
     });
   }
   useEffect(() => {
+    if (seeded) return;
     saveDraft(store, scope, state.rows);
     // Only the rows are worth keeping; scope fields are derived from the list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.rows, store, list.id, list.updatedAt, list.items.length, list.tiers.length]);
+  }, [state.rows, store, seeded, list.id, list.updatedAt, list.items.length, list.tiers.length]);
   return [state, dispatch] as const;
 }
 
@@ -274,8 +353,10 @@ export function RankingBoard({
   share = downloadShare,
   edit,
   strip = false,
+  seed,
 }: RankingBoardProps) {
-  const [state, dispatch] = useBoard(list, store, edit?.rows ?? null);
+  const seeded = seed !== undefined;
+  const [state, dispatch] = useBoard(list, store, seed?.rows ?? edit?.rows ?? null, seeded);
   const boardSize = useBoardSize();
   const [finish, setFinish] = useState<FinishState>({ status: "idle" });
   const [save, setSave] = useState<SaveState>({ status: "idle" });
@@ -292,15 +373,15 @@ export function RankingBoard({
   const boardEnd = useRef<HTMLDivElement>(null);
   const boardBox = useRef<HTMLDivElement>(null);
   const tierEditing = edit?.owner?.tiers;
-  const tierMove = useTierMove(boardBox, tierEditing);
+  const tierMove = useTierMove(boardBox, tierEditing, state.selected === null);
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
   const { dock, rows, wide, choose, startResize } = useDock(store);
   // On a narrow window the box that brings cards in waits behind Add, in the
   // pool, whichever head the pool shows; on a wide one it stands in the pool,
-  // unless the owner's pool is empty: then it waits behind the + Add chip.
-  // Opened, the catalogue's field takes the cursor.
+  // and an empty pool gives it the cursor. Opened, the catalogue's field
+  // takes the cursor.
   const [adding, setAdding] = useState(false);
   const tools = edit?.owner?.tools;
   const emptyPool = edit?.owner?.live === true && pool(state).length === 0;
@@ -331,18 +412,29 @@ export function RankingBoard({
       <span>{strings.new.add}</span>
     </button>
   );
-  const toolsPanel = tools !== undefined && (adding || (wide && !emptyPool)) && (
+  const toolsPanel = tools !== undefined && (adding || wide) && (
     <div className={wide ? "pool__tools" : "pool__tools pool__tools--sheet"}>{tools}</div>
   );
+  // Nothing to place yet and nobody typing elsewhere (the new board's name is
+  // asked for first): the cursor waits in the field that brings cards in.
+  const askForCards = wide && emptyPool && tools !== undefined;
+  useEffect(() => {
+    if (!askForCards) return;
+    const now = document.activeElement;
+    if (now !== null && now !== document.body) return;
+    poolBox.current?.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
+  }, [askForCards]);
   const docked = wide && dock === "under";
   const frame = useContext(BoardFrameContext);
   // On a wide screen the count and the actions stand in the page's header,
   // wherever the pool is: moving the pool does not move the buttons.
   const inHead = wide && frame.headSlot !== null;
   useEffect(() => {
+    // Theirs on show has no pool to place: the page keeps its own layout for it.
+    if (seeded) return;
     frame.report(wide ? dock : null);
     return () => frame.report(null);
-  }, [frame, wide, dock]);
+  }, [frame, wide, dock, seeded]);
 
   // Where the picked card was in the tray when it was placed. Once the tile
   // is in its row it flies from there, or fades in for someone who asked for
@@ -372,6 +464,15 @@ export function RankingBoard({
   // The side column's search, for a pool too long to scan: it narrows what
   // the tray shows, and `/` puts the cursor in it.
   const [query, setQuery] = useState("");
+
+  // The owner's pool says how to reach a card's menu until it has been
+  // opened a few times; the count is kept on the device.
+  const [menusOpened, setMenusOpened] = useState(() => Number(store.read(MENU_COUNT_KEY)) || 0);
+  const onMenu = useCallback(() => {
+    const next = (Number(store.read(MENU_COUNT_KEY)) || 0) + 1;
+    store.write(MENU_COUNT_KEY, String(next));
+    setMenusOpened(next);
+  }, [store]);
 
   // The result opens above the board, and the person may be far below it.
   const finished = finish.status !== "idle";
@@ -421,6 +522,19 @@ export function RankingBoard({
   useEffect(() => {
     report.current?.(state.rows);
   }, [state.rows]);
+
+  // Theirs on show: the first move, by a drag, a tap, a key or the card's
+  // menu, starts the visitor's own board from it. Picking a card is not a move.
+  const start = useRef(seed?.onStart);
+  useEffect(() => {
+    start.current = seed?.onStart;
+  });
+  const started = useRef(false);
+  useEffect(() => {
+    if (state.history.length === 0 || started.current || start.current === undefined) return;
+    started.current = true;
+    start.current(state.rows);
+  }, [state.rows, state.history.length]);
 
   const onSave = () => {
     if (edit === undefined) return;
@@ -480,7 +594,8 @@ export function RankingBoard({
       : left.filter((item) => list.items[item]?.title.toLowerCase().includes(needle) ?? false);
   const keyboardTiers = Math.min(list.tiers.length, 9);
   // On a phone the pool is one scrolling row with dots under it.
-  const { tray, page, pages, readPage } = useTray(selected, shown.length);
+  // The tray waits out a double tap before it scrolls, or the second tap lands on another card.
+  const { tray, page, pages, readPage } = useTray(selected, shown.length, DOUBLE_TAP_MS);
   const picked = selected !== null && left.includes(selected);
   const allPlaced = left.length === 0 && finish.status !== "done";
   // Finished with every card placed: the tray has nothing to say and goes.
@@ -492,7 +607,7 @@ export function RankingBoard({
   const { over } = useFixedDock({
     poolBox,
     boardEnd,
-    fixed: docked && !restEmpty,
+    fixed: docked && !restEmpty && !seeded,
     dragging: drag.state.phase === "dragging",
     dragNow: drag.current,
     nudge: drag.nudge,
@@ -580,7 +695,7 @@ export function RankingBoard({
   return (
     <section
       className={docked ? "ranking ranking--under" : "ranking"}
-      aria-label={strings.rank.yours}
+      aria-label={seed?.label ?? strings.rank.yours}
       ref={section}
     >
       <div className="ranking__main">
@@ -590,7 +705,7 @@ export function RankingBoard({
           </p>
         )}
 
-        {edit === undefined && (
+        {edit === undefined && !seeded && (
           <ResultBar
             finish={finish}
             onRetry={onFinish}
@@ -621,8 +736,10 @@ export function RankingBoard({
               lifted={lifted}
               locked={locked}
               onPlace={placeSelected}
-              onRemove={edit?.owner?.moveMenu ? edit.owner.remove : undefined}
-              moveMenu={edit?.owner?.moveMenu}
+              keys={!seeded}
+              dragNow={drag.current}
+              onMenu={onMenu}
+              onRemove={edit?.owner?.remove}
               band={
                 tierEditing === undefined || locked
                   ? undefined
@@ -632,23 +749,39 @@ export function RankingBoard({
                       lifted: tierMove.lifted === index,
                       carrying: tierMove.lifted !== null,
                       open: () => tierEditing.open(index),
+                      step: (by: -1 | 1) => tierEditing.move(index, index + by, true),
                     }
               }
             />
           ))}
           {tierEditing?.add !== undefined && (
-            <Button className="board__add-tier" icon="add" onClick={tierEditing.add}>
+            <Button
+              variant="outlined"
+              className="board__add-tier"
+              icon="add"
+              onClick={tierEditing.add}
+            >
               {strings.new.addTier}
             </Button>
           )}
           <div className="board__end" ref={boardEnd} aria-hidden="true" />
         </div>
+        {seed !== undefined && (selected !== null || lifted !== null) && (
+          <p className="ranking__seed-hint" role="status">
+            {lifted !== null ? seed.dropHint : seed.hint}
+          </p>
+        )}
       </div>
 
+      {/* Theirs keeps the column empty, so its tiers stand where Mine's do. */}
       <div className="ranking__side">
-        {inHead && frame.headSlot !== null ? createPortal(bar, frame.headSlot) : bar}
+        {seeded
+          ? null
+          : inHead && frame.headSlot !== null
+            ? createPortal(bar, frame.headSlot)
+            : bar}
 
-        {!restEmpty && (
+        {!seeded && !restEmpty && (
           <div
             key={dock}
             ref={poolBox}
@@ -704,16 +837,19 @@ export function RankingBoard({
                       </p>
                     ) : (
                       <h2 className="pool__title">
-                        {plural(
-                          edit?.owner?.live ? strings.boards.pool : strings.rank.left,
-                          left.length,
-                        )}
+                        {emptyPool
+                          ? fill(strings.boards.poolCount, { n: 0 })
+                          : plural(
+                              edit?.owner?.live ? strings.boards.pool : strings.rank.left,
+                              left.length,
+                            )}
                       </h2>
                     )}
-                    {emptyPool ? addChip : addButton}
+                    {emptyPool ? !wide && addChip : addButton}
                     <DockToggle dock={dock} onChoose={choose} />
                   </div>
                   {toolsPanel}
+                  {emptyPool && <p className="pool__empty">{strings.boards.poolEmpty}</p>}
                   {!allPlaced && left.length > POOL_SEARCH_FROM && tools === undefined && (
                     <input
                       className="pool__search"
@@ -745,7 +881,7 @@ export function RankingBoard({
                       <p className="pool__hint pool__hint--touch">
                         {selectedTitle === null
                           ? strings.rank.hintPickTouch
-                          : strings.rank.hintPlaceTouch}
+                          : fill(strings.rank.hintPlaceTouch, { name: selectedTitle })}
                       </p>
                     </>
                   )}
@@ -764,16 +900,26 @@ export function RankingBoard({
                           locked={locked}
                           dispatch={dispatch}
                           onPointerDown={drag.onPointerDown(item)}
+                          dragNow={drag.current}
+                          onMenu={onMenu}
+                          current={null}
                           onRemove={
                             edit?.owner === undefined ? undefined : () => edit.owner?.remove(item)
-                          }
-                          move={
-                            edit?.owner?.moveMenu ? { tiers: list.tiers, current: null } : undefined
                           }
                         />
                       ))}
                     </ul>
                     {shown.length === 0 && <p className="pool__none">{strings.rank.searchNone}</p>}
+                    {edit?.owner !== undefined && menusOpened < MENU_HINT_UNTIL && (
+                      // Hidden, not gone, while a card is picked: the cards above
+                      // must not move between the two clicks of a double click.
+                      <p
+                        className="pool__hint pool__hint--menu"
+                        style={selected === null ? undefined : { visibility: "hidden" }}
+                      >
+                        {strings.boards.menuHint}
+                      </p>
+                    )}
                     {pages > 1 && (
                       <div className="pool__dots" aria-hidden="true">
                         {Array.from({ length: Math.min(pages, TRAY_DOTS) }, (_, i) => (
@@ -795,7 +941,7 @@ export function RankingBoard({
         )}
       </div>
 
-      {edit === undefined && (
+      {edit === undefined && !seeded && (
         <KeepDialog state={offer} onGoogle={onGoogle} onLinkOnly={onLinkOnly} />
       )}
       <DragGhost state={drag.state} items={list.items} board={boardSize} />
@@ -816,9 +962,12 @@ interface TierRowProps {
   locked: boolean;
   /** Places the picked card here; the board plans the tile's flight first. */
   onPlace: (tier: number) => void;
-  /** The owner's: a card off the list, and the menu for moving one without a drag. */
+  /** The tier's number key on its band; Theirs on show has none. */
+  keys: boolean;
+  dragNow: () => DragState;
+  onMenu: () => void;
+  /** The owner's: a card off the list, from the card's menu. */
   onRemove?: (item: number) => void;
-  moveMenu?: boolean;
   /** The owner's hold on the tier itself, by its band. */
   band?: {
     onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
@@ -827,6 +976,8 @@ interface TierRowProps {
     lifted: boolean;
     carrying: boolean;
     open: () => void;
+    /** One place up or down, from the keyboard. */
+    step: (by: -1 | 1) => void;
   };
 }
 
@@ -842,8 +993,10 @@ function TierRow({
   lifted,
   locked,
   onPlace,
+  keys,
+  dragNow,
+  onMenu,
   onRemove,
-  moveMenu = false,
   band,
 }: TierRowProps) {
   const meta = list.tiers[tier];
@@ -868,6 +1021,9 @@ function TierRow({
           ...others.slice(landing),
         ];
   const place = () => onPlace(tier);
+  // The tier as the row's button says it: its letter, and its caption when it has one.
+  const where =
+    meta.caption === null || meta.caption === "" ? meta.label : `${meta.label} · ${meta.caption}`;
   // A card being placed has the band for its button; the tier is held only otherwise.
   const held = armed ? undefined : band;
   const classes = [
@@ -896,32 +1052,56 @@ function TierRow({
       <div
         className={held === undefined ? "tier__band" : "tier__band tier__band--held"}
         onPointerDown={held?.onPointerDown}
+        onKeyDown={
+          held === undefined
+            ? undefined
+            : (event) => {
+                // Alt and an arrow on the band, its pencil focused: the tier one place up or down.
+                if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+                event.preventDefault();
+                held.step(event.key === "ArrowUp" ? -1 : 1);
+              }
+        }
       >
         <span className="tier__label">{meta.label}</span>
         {meta.caption !== null && <span className="tier__caption">{meta.caption}</span>}
-        {tier < 9 && (
-          <span className="tier__key" aria-hidden="true">
-            {tier + 1}
-          </span>
-        )}
-        {armed && selectedTitle !== null && (
+        {/*
+         * While a card is picked the corner's number becomes the row's own
+         * button, a pill: the number for a keyboard, a plus for a finger and
+         * past the ninth tier. It is in the tab order only while there is
+         * something to place; the rest of the row takes a tap as well.
+         */}
+        {armed && selectedTitle !== null ? (
           <button
             type="button"
             className="tier__place"
+            aria-label={fill(strings.rank.placeIn, { name: selectedTitle, tier: where })}
             onClick={(event) => {
               // The row would place it a second time and drop the pick of the next card.
               event.stopPropagation();
               place();
             }}
           >
-            {fill(strings.rank.placeIn, { name: selectedTitle, tier: meta.label })}
+            {tier < 9 && <span className="tier__place-key">{tier + 1}</span>}
+            <Icon
+              name="add"
+              className={tier < 9 ? "tier__place-add" : "tier__place-add tier__place-add--only"}
+            />
           </button>
+        ) : (
+          keys &&
+          tier < 9 && (
+            <span className="tier__key" aria-hidden="true">
+              {tier + 1}
+            </span>
+          )
         )}
         {held !== undefined && (
           <button
             type="button"
             className="tier__edit"
             aria-label={fill(strings.boards.editTierOf, { name: meta.label })}
+            aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
             onClick={held.open}
           >
             <Icon name="edit" />
@@ -945,8 +1125,10 @@ function TierRow({
               locked={locked}
               dispatch={dispatch}
               onPointerDown={pointerDownFor(item)}
+              dragNow={dragNow}
+              onMenu={onMenu}
+              current={tier}
               onRemove={onRemove === undefined ? undefined : () => onRemove(item)}
-              move={moveMenu ? { tiers: list.tiers, current: tier } : undefined}
             />
           ),
         )}

@@ -1,7 +1,10 @@
 import type { CSSProperties } from "react";
 import { sizedFor } from "../../lib/pictureSize";
 import { strings } from "../../strings";
+import { CardName } from "../tierboard/CardName";
+import { useBoardSize } from "../tierboard/useBoardSize";
 import { cardOf, type PlayBoard } from "./board";
+import "../tierboard/board.css";
 import "./play.css";
 
 interface ResultPreviewProps {
@@ -14,56 +17,52 @@ interface ResultPreviewProps {
   only: number | null;
 }
 
-/** The width tiles are drawn at here: pictures are asked for at this size. */
-const TILE_WIDTH = 40;
-
 /**
- * The result as a board at compact size, read only: a band of 64, tiles of
- * 40 × 58, a tier nobody landed in as a short row that says so. The ranking
- * board's own read-only rendering has no dashed card and no empty row, and is
- * drawn at full size, hence a board of its own.
+ * The result as the board itself will look once applied, read only: the
+ * board's own rows, bands with their captions and tiles at its three sizes,
+ * so what is previewed is what is applied. A tier nobody landed in is as
+ * tall as one holding a card and says so; a card that played too few duels
+ * is dashed. The rows come in from the top, one after another.
  */
 export function ResultPreview({ board, rows, dashed, only }: ResultPreviewProps) {
+  const size = useBoardSize();
+  const shown = board.tiers.flatMap((tier, index) =>
+    only !== null && index !== only ? [] : [{ tier, ids: rows[index] ?? [] }],
+  );
   return (
-    <div className="result-preview">
-      {board.tiers.map((tier, index) => {
-        if (only !== null && index !== only) return null;
-        const ids = rows[index] ?? [];
-        const colours = {
+    <div className="board result-preview">
+      {shown.map(({ tier, ids }, order) => {
+        const style = {
           "--band-light": tier.colorLight,
           "--band-dark": tier.colorDark,
+          "--row": order,
         } as CSSProperties;
         return (
-          <div
-            key={tier.id}
-            className={
-              ids.length === 0 ? "result-tier result-tier--empty band" : "result-tier band"
-            }
-            style={colours}
-          >
-            <div className="result-tier__band">
-              <span className="result-tier__label">{tier.label}</span>
+          <div key={tier.id} className="tier band result-tier" style={style}>
+            <div className="tier__band">
+              <span className="tier__label">{tier.label}</span>
+              {tier.caption !== null && tier.caption.trim() !== "" && (
+                <span className="tier__caption">{tier.caption}</span>
+              )}
             </div>
             {ids.length === 0 ? (
               <p className="result-tier__empty">{strings.play.empty}</p>
             ) : (
-              <ul className="result-tier__cards" aria-label={tier.label}>
+              <ul className="tier__items" aria-label={tier.label}>
                 {ids.map((id) => {
                   const card = cardOf(board, id);
                   return (
                     <li
                       key={id}
-                      className={dashed.has(id) ? "result-tile result-tile--dashed" : "result-tile"}
+                      className={
+                        dashed.has(id) ? "tile result-tile result-tile--dashed" : "tile result-tile"
+                      }
                       title={card.name}
                     >
                       {card.imageUrl !== null ? (
-                        <img
-                          {...sizedFor(card.imageUrl, TILE_WIDTH)}
-                          alt={card.name}
-                          loading="lazy"
-                        />
+                        <img {...sizedFor(card.imageUrl, 64)} alt={card.name} loading="lazy" />
                       ) : (
-                        <span className="result-tile__name">{card.name}</span>
+                        <CardName title={card.name} board={size} />
                       )}
                     </li>
                   );

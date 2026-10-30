@@ -32,6 +32,7 @@ const following: Following = {
       following: true,
       createdBy: "u9",
       mergedInto: null,
+      pictureUrl: "https://pictures.test/pokemon.webp",
     },
     {
       id: "t2",
@@ -110,6 +111,12 @@ describe("FollowingManagePage", () => {
       "In Games · 210 followers",
     );
     expect(screen.getByRole("link", { name: /Speedruns/ })).toHaveTextContent("In Games · Waiting");
+    // A topic with a picture of its own wears it; a waiting one shows it waits.
+    expect(screen.getByRole("link", { name: /Pokémon/ }).querySelector("img")).toHaveAttribute(
+      "src",
+      "https://pictures.test/pokemon.webp",
+    );
+    expect(screen.getByRole("link", { name: /Speedruns/ }).querySelector("img")).toBeNull();
     // A waiting topic has nothing to unfollow yet.
     expect(screen.getAllByRole("button", { name: /Following/ })).toHaveLength(3);
   });

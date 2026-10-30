@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 
 describe("AdminPage", () => {
-  it("opens all six panes to the owner, with Reports first", async () => {
+  it("opens all seven panes to the owner, with Reports first", async () => {
     mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
     open();
     expect(await screen.findByRole("heading", { name: "Admin" })).toBeInTheDocument();
@@ -70,6 +70,7 @@ describe("AdminPage", () => {
       "/admin/proposals",
       "/admin/sections",
       "/admin/topics",
+      "/admin/lists",
       "/admin/anonymous",
       "/admin/moderators",
     ]);
@@ -85,8 +86,16 @@ describe("AdminPage", () => {
       "/admin/proposals",
       "/admin/sections",
       "/admin/topics",
+      "/admin/lists",
     ]);
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("opens Lists to a moderator", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "moderator", version: 1 });
+    open("/admin/lists");
+    expect(await screen.findByRole("heading", { name: "Lists" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Lists" })).toHaveAttribute("aria-current", "page");
   });
 
   it("is not available to anybody else: a guest, or an account the backend names nobody", async () => {

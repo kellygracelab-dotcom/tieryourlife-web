@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Moderator, PendingTopic, ProposedSection } from "../../api/admin";
 import { ApiFailure } from "../../api/errors";
@@ -67,6 +67,10 @@ describe("ProposalsPane", () => {
       sections: vi.fn(async () => ({ sections: [proposed] })),
       topics: vi.fn(async () => ({ topics: [pendingTopic] })),
       approveSection: vi.fn(async () => undefined),
+      approveAsTopic: vi.fn(async (_id: string, approval: { section: string; name?: string }) => ({
+        topic: topic("t7", approval.name ?? "Street food", { section: approval.section }),
+        proposal: null,
+      })),
       declineSection: vi.fn(async () => undefined),
       mergeSection: vi.fn(async () => undefined),
       decideTopic: vi.fn(async () => undefined),
@@ -148,6 +152,7 @@ describe("ProposalsPane", () => {
     wrap(<ProposalsPane adminRole="owner" deps={deps} />);
     const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
     await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a section" }));
     expect(await screen.findByText("Someone else already decided this one.")).toBeInTheDocument();
     expect(deps.sections).toHaveBeenCalledTimes(2);
   });
@@ -159,7 +164,120 @@ describe("ProposalsPane", () => {
     wrap(<ProposalsPane adminRole="owner" deps={deps} />);
     const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
     await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a section" }));
     expect(await within(card).findByRole("alert")).toHaveTextContent("That didn’t go through.");
+  });
+
+  it("opens Approve as a panel, and approves as a section, renamed if asked", async () => {
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    expect(within(card).getByRole("radio", { name: "Approve as a section" })).toBeChecked();
+    expect(within(card).getByText("6 waiting lists move with it.")).toBeInTheDocument();
+    const name = within(card).getByRole("textbox", { name: "Name" });
+    expect(name).toHaveValue("Street food");
+    expect(within(card).getByText("11/24")).toBeInTheDocument();
+    await userEvent.click(within(card).getByRole("button", { name: "Cancel" }));
+    expect(deps.approveSection).not.toHaveBeenCalled();
+
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    await userEvent.clear(within(card).getByRole("textbox", { name: "Name" }));
+    await userEvent.type(within(card).getByRole("textbox", { name: "Name" }), "Street eats");
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a section" }));
+    expect(deps.approveSection).toHaveBeenCalledWith("street-food", { name: "Street eats" });
+    expect(await screen.findByText("Street eats approved")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Street food" })).toBeNull();
+  });
+
+  it("approves as a topic in the section the lists were filed under, and opens it", async () => {
+    render(
+      <MemoryRouter initialEntries={["/admin/proposals"]}>
+        <Routes>
+          <Route
+            path="/admin/proposals"
+            element={<ProposalsPane adminRole="moderator" deps={deps} />}
+          />
+          <Route path="/s/:id/t/:topic" element={<h1>The topic</h1>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    const where = within(card).getByRole("combobox", { name: "Section" });
+    expect(where).toHaveValue("food");
+    await userEvent.selectOptions(where, "games");
+    expect(within(card).getByRole("radio", { name: "Approve as a topic in" })).toBeChecked();
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a topic" }));
+    expect(deps.approveAsTopic).toHaveBeenCalledWith("street-food", { section: "games" });
+    expect(
+      await screen.findByText("Street food approved as a topic in Games · 6 lists moved"),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(screen.getByRole("heading", { name: "The topic" })).toBeInTheDocument();
+  });
+
+  it("says a topic's name is taken under the name, and lets the owner merge into it", async () => {
+    deps.approveAsTopic = vi.fn(async () => {
+      throw new ApiFailure({ kind: "invalid", detail: null, code: "NAME_TAKEN", id: "t1" });
+    });
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    await userEvent.click(within(card).getByRole("radio", { name: "Approve as a topic in" }));
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a topic" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent(
+      "Street food already exists in Food",
+    );
+    expect(within(card).getByRole("textbox", { name: "Name" })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    // Not somebody else's decision: the queue is not read again.
+    expect(deps.sections).toHaveBeenCalledTimes(1);
+    await userEvent.click(within(card).getByRole("button", { name: "Merge into it" }));
+    expect(deps.mergeSection).toHaveBeenCalledWith("street-food", "food");
+    expect(await screen.findByText("Street food merged into Food")).toBeInTheDocument();
+  });
+
+  it("says a section's name is taken, and keeps Merge into it from a moderator", async () => {
+    deps.approveSection = vi.fn(async () => {
+      throw new ApiFailure({ kind: "invalid", detail: null, code: "NAME_TAKEN", id: "food" });
+    });
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a section" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent(
+      "A section called Street food already exists",
+    );
+    expect(within(card).queryByRole("button", { name: "Merge into it" })).toBeNull();
+    // Another name is another try: the clash is no longer said.
+    await userEvent.type(within(card).getByRole("textbox", { name: "Name" }), "s");
+    expect(within(card).queryByRole("alert")).toBeNull();
+  });
+
+  it("merges into the section a name clashes with, for the owner", async () => {
+    deps.approveSection = vi.fn(async () => {
+      throw new ApiFailure({ kind: "invalid", detail: null, code: "NAME_TAKEN", id: "food" });
+    });
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a section" }));
+    await userEvent.click(await within(card).findByRole("button", { name: "Merge into it" }));
+    expect(deps.mergeSection).toHaveBeenCalledWith("street-food", "food");
+  });
+
+  it("shows a proposed topic's own picture in its square", async () => {
+    deps.topics = vi.fn(async () => ({
+      topics: [{ ...pendingTopic, pictureUrl: "https://pictures.test/speedruns.webp" }],
+    }));
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Speedruns" })).closest("li")!;
+    expect(card.querySelector(".proposal__square img")).toHaveAttribute(
+      "src",
+      "https://pictures.test/speedruns.webp",
+    );
   });
 
   it("finds nothing waiting on a backend without section proposals yet", async () => {
@@ -176,38 +294,58 @@ describe("TopicsPane", () => {
     deps = {
       load: vi.fn(async () => ({
         topics: [
-          topic("t1", "Indies", { followerCount: 2 }),
+          topic("t1", "Indies", {
+            followerCount: 2,
+            pictureUrl: "https://pictures.test/indies.webp",
+          }),
           topic("t2", "Pokémon", { listCount: 0 }),
         ],
       })),
       create: vi.fn(async (draft) => topic("t3", draft.name)),
-      rename: vi.fn(async () => undefined),
+      edit: vi.fn(async (id, changes) => topic(id, changes.name ?? "Indies")),
       remove: vi.fn(async () => undefined),
     };
   });
 
   it("lists a section's topics, most followed first, and creates one directly", async () => {
-    wrap(<TopicsPane adminRole="owner" deps={deps} />);
+    wrap(<TopicsPane adminRole="owner" deps={deps} editor={editorFakes()} />);
     expect(await screen.findByText("Pokémon")).toBeInTheDocument();
     const names = [...document.querySelectorAll(".admin-topics__name")].map((el) => el.textContent);
     expect(names).toEqual(["Pokémon", "Indies"]);
     await userEvent.click(screen.getByRole("button", { name: "New topic" }));
-    await userEvent.type(screen.getByLabelText("Name"), "Soulslikes");
-    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    const dialog = screen.getByRole("dialog", { name: "New topic" });
+    expect(within(dialog).getByRole("button", { name: /Add a picture/ })).toBeInTheDocument();
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Name" }), "Soulslikes");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Create" }));
     expect(deps.create).toHaveBeenCalledWith({ name: "Soulslikes", section: "anime" });
     expect(await screen.findByText("Soulslikes created")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("renames, and lets the owner alone delete an empty topic", async () => {
+  it("draws a topic's own picture in its square, and its section's icon without one", async () => {
     wrap(<TopicsPane adminRole="owner" deps={deps} />);
+    const pictured = (await screen.findByText("Indies")).closest("li")!;
+    expect(pictured.querySelector(".admin-topics__square img")).toHaveAttribute(
+      "src",
+      "https://pictures.test/indies.webp",
+    );
+    const plain = screen.getByText("Pokémon").closest("li")!;
+    expect(plain.querySelector(".admin-topics__square img")).toBeNull();
+    expect(plain.querySelector(".admin-topics__square .ms")).not.toBeNull();
+  });
+
+  it("renames in its dialog, and lets the owner alone delete an empty topic", async () => {
+    wrap(<TopicsPane adminRole="owner" deps={deps} editor={editorFakes()} />);
     const row = (await screen.findByText("Indies")).closest("li")!;
     expect(within(row).queryByRole("button", { name: "Delete" })).toBeNull();
-    await userEvent.click(within(row).getByRole("button", { name: "Rename" }));
-    const field = within(row).getByLabelText("Name");
+    await userEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit topic" });
+    const field = within(dialog).getByRole("textbox", { name: "Name" });
     await userEvent.clear(field);
     await userEvent.type(field, "Indie games");
-    await userEvent.click(within(row).getByRole("button", { name: "Save" }));
-    expect(deps.rename).toHaveBeenCalledWith("t1", "Indie games");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(deps.edit).toHaveBeenCalledWith("t1", { name: "Indie games" });
+    expect(await screen.findByText("Indie games saved")).toBeInTheDocument();
     // A rename reads the topics again: the rows are back only once they have come.
     const empty = (await screen.findByText("Pokémon")).closest("li")!;
     await userEvent.click(within(empty).getByRole("button", { name: "Delete" }));
@@ -218,6 +356,35 @@ describe("TopicsPane", () => {
     wrap(<TopicsPane adminRole="moderator" deps={deps} />);
     await screen.findByText("Pokémon");
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
+  it("reads another section's topics, and closes the dialog on Cancel", async () => {
+    wrap(<TopicsPane adminRole="owner" deps={deps} editor={editorFakes()} />);
+    await screen.findByText("Pokémon");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Section" }), "games");
+    expect(deps.load).toHaveBeenLastCalledWith("games");
+    await userEvent.click(await screen.findByRole("button", { name: "New topic" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("says a delete that did not go through, and topics that did not come", async () => {
+    deps.remove = vi.fn(async () => {
+      throw new ApiFailure({ kind: "offline" });
+    });
+    deps.load = vi
+      .fn<TopicsDeps["load"]>()
+      .mockResolvedValueOnce({ topics: [topic("t2", "Pokémon", { listCount: 0 })] })
+      .mockRejectedValueOnce(new ApiFailure({ kind: "offline" }))
+      .mockResolvedValue({ topics: [] });
+    wrap(<TopicsPane adminRole="owner" deps={deps} />);
+    const row = (await screen.findByText("Pokémon")).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: "Delete" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("That didn’t go through.");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Section" }), "games");
+    expect(await screen.findByText("Couldn’t load this. Try again.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("No topics in this section yet.")).toBeInTheDocument();
   });
 });
 

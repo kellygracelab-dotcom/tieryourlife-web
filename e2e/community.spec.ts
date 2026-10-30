@@ -138,3 +138,19 @@ test("a menu closes on a press anywhere else, and a new page opens at its top", 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("danylo");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
+
+test("shows the Android app card at the top of the home page, the search still in sight", async ({
+  page,
+}, testInfo) => {
+  await mockBackend(page);
+  await page.goto("/");
+  const card = page.getByRole("heading", { name: "TierYourLife for Android" });
+  // Never on an iPhone or iPad: the app is Android's only.
+  if (testInfo.project.name === "iphone") {
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(card).toHaveCount(0);
+    return;
+  }
+  await expect(card).toBeInViewport();
+  await expect(page.getByRole("searchbox")).toBeInViewport();
+});

@@ -1,4 +1,4 @@
-import type { ReaderRanking } from "../../api/community";
+import { rowsOf, type ReaderRanking } from "../../api/community";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { currentLocale, strings } from "../../strings";
 
@@ -23,19 +23,35 @@ export interface Placing {
   pool: number[];
 }
 
+/**
+ * The cards in each tier, left to right, as the reader left them. A ranking
+ * kept before the backend kept that order has no rows (and a reply from
+ * before the field has none at all): its cards stand in the list's order.
+ */
+function rowsFrom(
+  ranking: Pick<ReaderRanking, "arrangement" | "rows">,
+  tierCount: number,
+  itemCount: number,
+): number[][] {
+  if (Array.isArray(ranking.rows) && ranking.rows.length > 0) {
+    return rowsOf(ranking.rows, tierCount, itemCount);
+  }
+  const rows: number[][] = Array.from({ length: tierCount }, () => []);
+  for (let position = 0; position < itemCount; position++) {
+    const tier = ranking.arrangement[position] ?? null;
+    if (tier !== null) rows[tier]?.push(position);
+  }
+  return rows;
+}
+
 /** The author's cards where a reader put them, under the words the reader gave the tiers. */
 export function placedBy(
   list: { tiers: readonly PublishedTier[]; items: readonly PublishedItem[] },
-  ranking: Pick<ReaderRanking, "arrangement" | "tierLabels">,
+  ranking: Pick<ReaderRanking, "arrangement" | "rows" | "tierLabels">,
 ): Placing {
-  const rows: number[][] = list.tiers.map(() => []);
-  const pool: number[] = [];
-  list.items.forEach((_, position) => {
-    const tier = ranking.arrangement[position] ?? null;
-    const row = tier === null ? undefined : rows[tier];
-    if (row === undefined) pool.push(position);
-    else row.push(position);
-  });
+  const rows = rowsFrom(ranking, list.tiers.length, list.items.length);
+  const placed = new Set(rows.flat());
+  const pool = list.items.map((_, position) => position).filter((at) => !placed.has(at));
   const tiers = list.tiers.map((tier, index) => {
     const label = ranking.tierLabels[index];
     return typeof label === "string" && label.trim() !== "" ? { ...tier, label } : tier;

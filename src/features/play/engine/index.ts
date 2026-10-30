@@ -25,4 +25,4 @@ export {
 } from "./games";
 export { Mulberry32, shuffled } from "./mulberry32";
 export { duelsPerCard, standing, STRENGTH_ROUNDS, type Duel, type Standing } from "./strength";
-export { ENOUGH_FIT, isDashed, isThin, SOLID_DUELS, THIN_GROUPS, tiers } from "./tiers";
+export { isDashed, isThin, SOLID_DUELS, THIN_GROUPS, tiers } from "./tiers";

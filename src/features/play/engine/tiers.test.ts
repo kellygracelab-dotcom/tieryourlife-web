@@ -19,6 +19,25 @@ describe("tiers", () => {
     expect(placed.slice(1, 4).every((tier) => tier.length === 0)).toBe(true);
   });
 
+  it("fills every tier on solid evidence, one group to a tier", () => {
+    // Everyone met everyone, the earlier card winning: five distinct strengths.
+    const roundRobin = standing(
+      5,
+      [0, 1, 2, 3].flatMap((top) =>
+        [1, 2, 3, 4].filter((low) => low > top).map((low) => duel(top, low)),
+      ),
+    );
+    expect(duelsPerCard(roundRobin)).toBeGreaterThanOrEqual(SOLID_DUELS);
+    expect(tiers(roundRobin, 5)).toEqual([[0], [1], [2], [3], [4]]);
+    expect(tiers(roundRobin, 3).every((tier) => tier.length > 0)).toBe(true);
+  });
+
+  it("never splits equal strengths, however many tiers there are", () => {
+    // Two clear groups are two distinct strengths: two groups, not five.
+    const placed = tiers(standing(6, twoGroups), 5);
+    expect(placed.filter((tier) => tier.length > 0)).toHaveLength(2);
+  });
+
   it("allows at most three groups on thin evidence", () => {
     // Six cards, five duels: under two per card, so a chain cannot fill six tiers.
     const chain = standing(
@@ -45,15 +64,21 @@ describe("groupLimit", () => {
 });
 
 describe("groupsOf", () => {
-  it("takes the fewest groups that explain nine tenths of the spread", () => {
-    expect(groupsOf([1, 0.95, 0.05, 0], 4)).toEqual([
+  it("makes exactly as many groups as asked, with the least spread inside them", () => {
+    expect(groupsOf([1, 0.95, 0.05, 0], 2)).toEqual([
       { from: 0, to: 1 },
       { from: 2, to: 3 },
     ]);
+    // Two groups would explain nearly all of it; four are asked for, four it is.
+    expect(groupsOf([1, 0.95, 0.05, 0], 4)).toHaveLength(4);
   });
 
-  it("takes as many as allowed when none explains enough", () => {
-    expect(groupsOf([1, 0.75, 0.5, 0.25, 0], 2)).toHaveLength(2);
+  it("takes the earliest start among equal splits", () => {
+    // Splitting after the first or before the last costs the same.
+    expect(groupsOf([1, 0.5, 0], 2)).toEqual([
+      { from: 0, to: 0 },
+      { from: 1, to: 2 },
+    ]);
   });
 });
 

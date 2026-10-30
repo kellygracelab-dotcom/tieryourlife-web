@@ -18,9 +18,9 @@ test("in an app's browser the site says to open the page in a real one", async (
   await page.goto("/l/abc");
   await page.getByRole("button", { name: "Mine", exact: true }).click();
   await page.getByRole("button", { name: "Ex Machina", exact: true }).click();
-  await page.getByRole("button", { name: "Place Ex Machina in S" }).click();
-  await page.getByRole("button", { name: "Place The Witch in A" }).click();
-  await page.getByRole("button", { name: "Place Climax in A" }).click();
+  await page.getByRole("button", { name: "Place Ex Machina in S · Masterpiece" }).click();
+  await page.getByRole("button", { name: "Place The Witch in A · Great" }).click();
+  await page.getByRole("button", { name: "Place Climax in A · Great" }).click();
   await page.getByRole("button", { name: "Finish" }).first().click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("note")).toContainText("Open this page in Chrome or Safari");

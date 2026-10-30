@@ -60,12 +60,24 @@ describe("parseApiError", () => {
     [409, json({ error: "Too many", code: "TOO_MANY_LISTS" }), { kind: "tooManyLists" }],
     [409, json({ error: "That page is gone", code: "CURSOR_GONE" }), { kind: "cursorGone" }],
     [409, json({ error: "Moved on", code: "CONFLICT" }), { kind: "conflict" }],
+    [409, json({ error: "Decided", code: "SETTLED" }), { kind: "conflict" }],
+    [
+      409,
+      json({ error: "Taken", code: "NAME_TAKEN", detail: "t1", id: "t1" }),
+      { kind: "invalid", detail: "Taken", code: "NAME_TAKEN", id: "t1" },
+    ],
+    [409, json({ code: "NAME_TAKEN" }), { kind: "invalid", detail: null, code: "NAME_TAKEN" }],
     [
       410,
       json({ error: "Merged", code: "MERGED", detail: "food", mergedInto: "food" }),
-      { kind: "merged", into: "food" },
+      { kind: "merged", into: "food", topic: null },
     ],
-    [410, json({ error: "Merged", code: "MERGED" }), { kind: "merged", into: null }],
+    [
+      410,
+      json({ error: "Merged", code: "MERGED", mergedInto: "games", mergedTopicId: "t7" }),
+      { kind: "merged", into: "games", topic: "t7" },
+    ],
+    [410, json({ error: "Merged", code: "MERGED" }), { kind: "merged", into: null, topic: null }],
     [410, json({ error: "Gone" }), { kind: "unknown", status: 410 }],
     [
       413,
