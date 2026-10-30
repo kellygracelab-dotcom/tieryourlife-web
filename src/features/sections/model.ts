@@ -292,6 +292,15 @@ export function sectionStyle(section: Section): CSSProperties {
   } as CSSProperties;
 }
 
+/**
+ * A topic's own picture, when it has one the page may draw: an https address,
+ * as a section's picture must be. Without one it wears its section's colours.
+ */
+export const topicPicture = (topic: { pictureUrl?: string | null }): string | null =>
+  typeof topic.pictureUrl === "string" && topic.pictureUrl.startsWith("https://")
+    ? topic.pictureUrl
+    : null;
+
 /** A topic wears its section's topic colours. */
 export function topicStyle(section: Section | undefined): CSSProperties | undefined {
   return section === undefined

@@ -1,8 +1,18 @@
-import { useCallback, useState } from "react";
-import type { AdminRole, PendingTopic, ProposedSection, TopicDecision } from "../../api/admin";
+import { useCallback, useId, useState } from "react";
+import { useNavigate } from "react-router";
+import type {
+  AdminRole,
+  PendingTopic,
+  ProposedSection,
+  SectionDraft,
+  TopicApproval,
+  TopicDecision,
+} from "../../api/admin";
 import { errorOf } from "../../api/errors";
+import type { SectionStats, Topic } from "../../api/sections";
 import {
   approveSection,
+  approveSectionAsTopic,
   declineSection,
   decideTopic,
   loadSectionQueue,
@@ -15,9 +25,11 @@ import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
-import { sectionOf, sectionStyle, topicStyle, type Section } from "../sections/model";
+import { sectionOf, sectionStyle, topicPath, topicStyle, type Section } from "../sections/model";
 import type { EditorDeps } from "../sections/editorDeps";
+import { SECTION_NAME_MAX, tidySectionName } from "../sections/proposal";
 import { SectionEditor } from "../sections/SectionEditor";
+import { TopicArt } from "../sections/TopicArt";
 import { useSections } from "../sections/useSections";
 import { agoText } from "../moderation/queue";
 import { sectionWrites, type SectionWrites } from "./sectionWrites";
@@ -25,7 +37,12 @@ import { sectionWrites, type SectionWrites } from "./sectionWrites";
 export interface ProposalsDeps {
   sections: () => Promise<{ sections: ProposedSection[] }>;
   topics: () => Promise<{ topics: PendingTopic[] }>;
-  approveSection: (id: string) => Promise<unknown>;
+  approveSection: (id: string, changes?: Partial<SectionDraft>) => Promise<unknown>;
+  /** The proposal becomes a topic of an open section, and its waiting lists go under it. */
+  approveAsTopic: (
+    id: string,
+    approval: TopicApproval,
+  ) => Promise<{ topic: Topic | null; proposal: SectionStats | null }>;
   declineSection: (id: string, note: string | null) => Promise<void>;
   mergeSection: (id: string, into: string) => Promise<void>;
   decideTopic: (id: string, decision: TopicDecision) => Promise<void>;
@@ -35,6 +52,7 @@ const proposalsDeps: ProposalsDeps = {
   sections: loadSectionQueue,
   topics: loadTopicQueue,
   approveSection,
+  approveAsTopic: approveSectionAsTopic,
   declineSection,
   mergeSection,
   decideTopic,
@@ -51,7 +69,22 @@ const orNothing =
 
 type Filter = "all" | "sections" | "topics";
 
-type Opened = { kind: "decline"; note: string } | { kind: "merge"; into: string } | null;
+/** What a name clashed with, as which, so the field says it and Merge into it knows where. */
+type Taken = { name: string; as: "section" | "topic"; id: string | null };
+
+/** Approve's own panel (docs/design-spec-walk-3.md, E3): as a section, or as a topic of one. */
+type Approving = {
+  kind: "approve";
+  as: "section" | "topic";
+  section: string;
+  name: string;
+  taken: Taken | null;
+};
+
+type Opened =
+  { kind: "decline"; note: string } | { kind: "merge"; into: string } | Approving | null;
+
+type Done = (notice: string | SnackbarNotice) => void;
 
 function SectionProposal({
   proposal,
@@ -66,33 +99,103 @@ function SectionProposal({
   sections: readonly Section[];
   role: AdminRole;
   deps: ProposalsDeps;
-  onDone: (text: string) => void;
+  onDone: Done;
   /** Somebody else decided it first: the queue is read again. */
   onSettled: () => void;
   /** The owner's Edit sheet; the card stays in the queue after it. */
   onEdit: () => void;
 }) {
   const look = sectionOf(proposal);
+  const id = useId();
+  const navigate = useNavigate();
   const [now] = useState(() => Date.now());
   const [opened, setOpened] = useState<Opened>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const filedIn = sections.find((one) => one.id === proposal.fileUnder)?.name ?? "";
   const proposer = proposal.proposerName ?? "";
+  const waitingLists = proposal.waitingLists ?? 0;
+  const nameOf = (section: string) => sections.find((one) => one.id === section)?.name ?? section;
 
-  const act = (work: Promise<unknown>, text: string) => {
+  const act = <T,>(
+    work: Promise<T>,
+    notice: string | ((done: T) => SnackbarNotice),
+    clash?: Omit<Taken, "id">,
+  ) => {
     setBusy(true);
     setFailed(false);
     work.then(
-      () => onDone(text),
+      (done) => onDone(typeof notice === "string" ? notice : notice(done)),
       (reason: unknown) => {
         setBusy(false);
+        const error = errorOf(reason);
+        // A name already there is said under the name, with the way to merge into it.
+        if (clash !== undefined && error.kind === "invalid" && error.code === "NAME_TAKEN") {
+          setOpened((before) =>
+            before?.kind === "approve"
+              ? { ...before, taken: { ...clash, id: error.id ?? null } }
+              : before,
+          );
+          return;
+        }
         // 409 SETTLED: somebody else approved, declined or merged it first.
-        if (errorOf(reason).kind === "conflict") onSettled();
+        if (error.kind === "conflict") onSettled();
         else setFailed(true);
       },
     );
   };
+
+  const approve = (panel: Approving) => {
+    const name = tidySectionName(panel.name);
+    const renamed = name !== tidySectionName(look.name);
+    if (panel.as === "section") {
+      act(
+        deps.approveSection(proposal.id, renamed ? { name } : {}),
+        fill(strings.admin.approved, { name }),
+        { name, as: "section" },
+      );
+      return;
+    }
+    const section = panel.section;
+    act(
+      deps.approveAsTopic(proposal.id, { section, ...(renamed ? { name } : {}) }),
+      ({ topic }) => ({
+        text: [
+          fill(strings.admin.approvedAsTopic, {
+            name: topic?.name ?? name,
+            section: nameOf(section),
+          }),
+          ...(waitingLists > 0 ? [plural(strings.admin.listsMoved, waitingLists)] : []),
+        ].join(" · "),
+        ...(topic === null
+          ? {}
+          : {
+              action: {
+                text: strings.admin.open,
+                onClick: () => void navigate(topicPath(section, topic.id)),
+              },
+            }),
+      }),
+      { name, as: "topic" },
+    );
+  };
+
+  /** Merge into what the name clashed with: the section, or the section the topic was to go into. */
+  const mergeInto = (panel: Approving, taken: Taken) => {
+    const into = taken.as === "section" ? taken.id : panel.section;
+    if (into === null) return;
+    act(
+      deps.mergeSection(proposal.id, into),
+      fill(strings.admin.merged, { name: look.name, into: nameOf(into) }),
+    );
+  };
+
+  const approving = opened?.kind === "approve" ? opened : null;
+  const approvingName = approving === null ? "" : tidySectionName(approving.name);
+  // A clash is said while the name and the choice are still the ones it was about.
+  const taken = approving?.taken ?? null;
+  const shownTaken =
+    taken !== null && taken.name === approvingName && taken.as === approving?.as ? taken : null;
 
   return (
     <li className="proposal">
@@ -197,16 +300,109 @@ function SectionProposal({
               </Button>
             </div>
           </div>
+        ) : approving !== null ? (
+          <div className="proposal__open proposal__approve">
+            <div className="proposal__choices" role="radiogroup" aria-label={strings.admin.approve}>
+              <label className="proposal__choice">
+                <input
+                  type="radio"
+                  name={`${id}-as`}
+                  checked={approving.as === "section"}
+                  onChange={() => setOpened({ ...approving, as: "section" })}
+                />
+                <span>{strings.admin.approveAsSection}</span>
+              </label>
+              <span className="proposal__choice">
+                <label className="proposal__choice-label">
+                  <input
+                    type="radio"
+                    name={`${id}-as`}
+                    checked={approving.as === "topic"}
+                    onChange={() => setOpened({ ...approving, as: "topic" })}
+                  />
+                  <span>{strings.admin.approveAsTopicIn}</span>
+                </label>
+                <select
+                  aria-label={strings.admin.inSection}
+                  value={approving.section}
+                  onChange={(event) =>
+                    setOpened({ ...approving, as: "topic", section: event.target.value })
+                  }
+                >
+                  {sections.map((one) => (
+                    <option key={one.id} value={one.id}>
+                      {one.name}
+                    </option>
+                  ))}
+                </select>
+              </span>
+            </div>
+            <label className="field">
+              <span className="field__label">{strings.admin.topicName}</span>
+              <input
+                maxLength={SECTION_NAME_MAX}
+                value={approving.name}
+                aria-invalid={shownTaken !== null}
+                aria-describedby={shownTaken === null ? undefined : `${id}-taken`}
+                onChange={(event) => setOpened({ ...approving, name: event.target.value })}
+              />
+            </label>
+            <div className="proposal__under">
+              {shownTaken !== null && (
+                <p id={`${id}-taken`} className="proposal__error" role="alert">
+                  {shownTaken.as === "section"
+                    ? fill(strings.admin.sectionTaken, { name: shownTaken.name })
+                    : fill(strings.admin.topicTaken, {
+                        name: shownTaken.name,
+                        section: nameOf(approving.section),
+                      })}
+                  {role === "owner" && (shownTaken.as === "topic" || shownTaken.id !== null) && (
+                    <Button disabled={busy} onClick={() => mergeInto(approving, shownTaken)}>
+                      {strings.admin.mergeIntoIt}
+                    </Button>
+                  )}
+                </p>
+              )}
+              <span className="field__counter" aria-hidden="true">
+                {fill(strings.settings.nameCounter, {
+                  n: approving.name.length,
+                  max: SECTION_NAME_MAX,
+                })}
+              </span>
+            </div>
+            {waitingLists > 0 && (
+              <p className="proposal__consequence">
+                {plural(strings.admin.listsMoveWith, waitingLists)}
+              </p>
+            )}
+            <div className="proposal__actions">
+              <Button onClick={() => setOpened(null)}>{strings.admin.cancel}</Button>
+              <Button
+                variant="filled"
+                disabled={busy || approvingName === ""}
+                onClick={() => approve(approving)}
+              >
+                {approving.as === "section"
+                  ? strings.admin.approveAsSection
+                  : strings.admin.approveAsTopic}
+              </Button>
+            </div>
+          </div>
         ) : (
           <div className="proposal__actions">
             <Button
               variant="filled"
               disabled={busy}
               onClick={() =>
-                act(
-                  deps.approveSection(proposal.id),
-                  fill(strings.admin.approved, { name: look.name }),
-                )
+                setOpened({
+                  kind: "approve",
+                  as: "section",
+                  section: sections.some((one) => one.id === proposal.fileUnder)
+                    ? (proposal.fileUnder ?? "")
+                    : (sections[0]?.id ?? "other"),
+                  name: look.name,
+                  taken: null,
+                })
               }
             >
               {strings.admin.approve}
@@ -248,7 +444,7 @@ function TopicProposal({
   topic: PendingTopic;
   sections: readonly Section[];
   deps: ProposalsDeps;
-  onDone: (text: string) => void;
+  onDone: Done;
 }) {
   const wanted = topic.requestedSection ?? topic.section ?? "other";
   const [section, setSection] = useState(wanted);
@@ -275,7 +471,7 @@ function TopicProposal({
           className="proposal__square"
           style={look === undefined ? undefined : { ...sectionStyle(look), ...topicStyle(look) }}
         >
-          <Icon name={look?.icon ?? "label"} />
+          <TopicArt topic={topic} icon={look?.icon ?? "label"} />
         </span>
       </div>
       <div className="proposal__text">
@@ -407,10 +603,12 @@ export function ProposalsPane({
   const editingProposal = proposedSections.find((one) => one.id === editing);
   const proposedTopics = topicQueue.state.value.topics.filter((one) => !gone.has(`t:${one.id}`));
   const approved = sections.filter((one) => one.status === "approved");
-  const done = (key: string) => (text: string) => {
-    setGone((before) => new Set([...before, key]));
-    setNotice({ text });
-  };
+  const done =
+    (key: string): Done =>
+    (said) => {
+      setGone((before) => new Set([...before, key]));
+      setNotice(typeof said === "string" ? { text: said } : said);
+    };
   const waiting = proposedSections.length + proposedTopics.length;
 
   return (

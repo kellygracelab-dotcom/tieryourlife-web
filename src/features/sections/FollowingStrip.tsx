@@ -11,6 +11,7 @@ import {
   topicStyle,
   type Section,
 } from "./model";
+import { TopicArt } from "./TopicArt";
 import "./following.css";
 
 /** A name's first letter; somebody known only by anonymous lists has none, and is drawn as a person. */
@@ -69,7 +70,7 @@ export function FollowingStrip({ sections, topics, people, sectionOf }: Followin
                   style={topicStyle(section)}
                   aria-hidden="true"
                 >
-                  <Icon name={section?.icon ?? "label"} />
+                  <TopicArt topic={topic} icon={section?.icon ?? "label"} />
                 </span>
                 <span className="following-strip__name">{topic.name}</span>
               </Link>

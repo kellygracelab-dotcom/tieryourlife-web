@@ -69,6 +69,7 @@ export function apiStubs() {
     approveSection: pending(),
     declineSection: pending(),
     mergeSection: pending(),
+    approveSectionAsTopic: pending(),
     checkSectionName: pending(),
     loadTopicQueue: pending(),
     decideTopic: pending(),
@@ -81,6 +82,8 @@ export function apiStubs() {
     findCandidates: pending(),
     loadAdminCounts: pending(),
     loadAnonymousLists: pending(),
+    loadAdminLists: pending(),
+    moveList: pending(),
     noteTake: vi.fn(async () => undefined),
   };
 }

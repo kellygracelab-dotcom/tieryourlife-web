@@ -96,6 +96,27 @@ describe("SectionsPane", () => {
     expect(screen.queryByRole("switch", { name: "Show Other" })).toBeNull();
   });
 
+  it("draws a section's own picture in its thumbnail, under the tile's scrim", async () => {
+    deps.load.mockResolvedValue({
+      ...answer,
+      sections: [
+        stats("ramen", { name: "Ramen", pictureUrl: "https://pictures.test/ramen.webp" }),
+        stats("other"),
+      ],
+    });
+    open();
+    const row = (await screen.findByText("Ramen")).closest("li")!;
+    const thumb = row.querySelector(".admin-order__thumb")!;
+    expect(thumb).toHaveClass("admin-order__thumb--pictured");
+    expect((thumb as HTMLElement).style.getPropertyValue("--section-picture")).toContain(
+      "https://pictures.test/ramen.webp",
+    );
+    const other = screen.getByText("Other").closest("li")!;
+    expect(other.querySelector(".admin-order__thumb")).not.toHaveClass(
+      "admin-order__thumb--pictured",
+    );
+  });
+
   it("moves a row with Alt and the arrows, and saves the whole order with its version", async () => {
     open();
     await screen.findByText("4 sections · 1 hidden");

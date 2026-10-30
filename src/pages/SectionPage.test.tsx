@@ -199,11 +199,41 @@ describe("SectionPage", () => {
   });
 
   it("goes on to the section one was merged into", async () => {
-    loadOne.mockRejectedValue(new ApiFailure({ kind: "merged", into: "games" }));
+    loadOne.mockRejectedValue(new ApiFailure({ kind: "merged", into: "games", topic: null }));
     const router = open("/s/videogames");
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Games");
     expect(router.state.location.pathname).toBe("/s/games");
     await waitFor(() => expect(load).toHaveBeenCalledWith({ category: "games", sort: "popular" }));
+  });
+
+  it("goes on to the topic a proposal became, inside the section it went into", async () => {
+    loadOne.mockRejectedValue(new ApiFailure({ kind: "merged", into: "games", topic: "t2" }));
+    const router = open("/s/s-pokemon");
+    expect(await screen.findByText("210 followers · 64 lists")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/s/games/t/t2");
+    await waitFor(() =>
+      expect(load).toHaveBeenLastCalledWith({ category: "games", topic: "t2", sort: "popular" }),
+    );
+  });
+
+  it("draws a topic's own picture in its header, and its section's icon without one", async () => {
+    vi.mocked(topics.load).mockResolvedValueOnce({
+      topics: [
+        topic("t1", "Indies", { pictureUrl: "https://pictures.test/indies.webp" }),
+        topic("t2", "Pokémon", { pictureUrl: "http://plain.test/p.webp" }),
+      ],
+    });
+    open("/s/games/t/t1");
+    const header = (await screen.findByRole("heading", { level: 2, name: "Indies" })).closest(
+      ".section-topic",
+    )!;
+    expect(header.querySelector("img")).toHaveAttribute("src", "https://pictures.test/indies.webp");
+    await userEvent.click(screen.getByRole("link", { name: "Pokémon" }));
+    const plain = (await screen.findByRole("heading", { level: 2, name: "Pokémon" })).closest(
+      ".section-topic",
+    )!;
+    expect(plain.querySelector("img")).toBeNull();
+    expect(plain.querySelector(".ms")).not.toBeNull();
   });
 
   it("offers another try when the section could not be asked about", async () => {

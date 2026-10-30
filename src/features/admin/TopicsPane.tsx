@@ -1,45 +1,53 @@
 import { useCallback, useState } from "react";
-import type { AdminRole } from "../../api/admin";
+import type { AdminRole, TopicChanges, TopicDraft } from "../../api/admin";
 import type { Topic } from "../../api/sections";
-import { createTopic, decideTopic, deleteTopic, loadTopics } from "../../lib/api";
+import { createTopic, deleteTopic, editTopic, loadTopics } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
-import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
-import { sectionStyle, topicStyle } from "../sections/model";
+import type { EditorDeps } from "../sections/editorDeps";
+import { builtInSection, sectionStyle, topicStyle } from "../sections/model";
+import { TopicArt } from "../sections/TopicArt";
 import { useSections } from "../sections/useSections";
+import { TopicEditor } from "./TopicEditor";
 
-export const TOPIC_NAME_MAX = 24;
+export { TOPIC_NAME_MAX } from "./TopicEditor";
 
 export interface TopicsDeps {
   load: (section: string) => Promise<{ topics: Topic[] }>;
-  create: (draft: { name: string; section: string }) => Promise<Topic>;
-  rename: (id: string, name: string) => Promise<void>;
+  create: (draft: TopicDraft) => Promise<Topic>;
+  /** Its name, its picture, or both: PATCH, the one call that takes a picture. */
+  edit: (id: string, changes: TopicChanges) => Promise<Topic>;
   remove: (id: string) => Promise<void>;
 }
 
 const topicsDeps: TopicsDeps = {
   load: (section) => loadTopics(section, 50),
   create: createTopic,
-  rename: (id, name) => decideTopic(id, { action: "rename", name }),
+  edit: editTopic,
   remove: deleteTopic,
 };
 
-type Editing = { id: string | null; name: string } | null;
+/** The dialog: a new topic, or one of them. */
+type Editing = { kind: "create" } | { kind: "edit"; topic: Topic } | null;
 
 /**
  * The topics inside one section, most followed first, and the way to make
- * one without waiting for anybody to propose it. Renaming keeps every list
- * under it; only an empty topic can be deleted, and only by the owner.
+ * one without waiting for anybody to propose it, picture and all. Renaming
+ * keeps every list under it; only an empty topic can be deleted, and only by
+ * the owner.
  */
 export function TopicsPane({
   adminRole: role,
   deps = topicsDeps,
+  editor,
 }: {
   adminRole: AdminRole;
   deps?: TopicsDeps;
+  /** What the picture leans on: the crop and the upload. */
+  editor?: EditorDeps;
 }) {
   const { sections } = useSections();
   const approved = sections.filter((one) => one.status === "approved");
@@ -52,32 +60,26 @@ export function TopicsPane({
   const [failed, setFailed] = useState(false);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
-  const look = approved.find((one) => one.id === section);
+  const look = approved.find((one) => one.id === section) ?? builtInSection("other");
 
-  const settle = (work: Promise<unknown>, text: string) => {
+  const saved = (text: string) => {
+    setEditing(null);
+    setNotice({ text });
+    setRound((n) => n + 1);
+  };
+
+  const remove = (topic: Topic) => {
     setBusy(true);
     setFailed(false);
-    work.then(
+    deps.remove(topic.id).then(
       () => {
         setBusy(false);
-        setEditing(null);
-        setNotice({ text });
-        setRound((n) => n + 1);
+        saved(fill(strings.admin.topicDeleted, { name: topic.name }));
       },
       () => {
         setBusy(false);
         setFailed(true);
       },
-    );
-  };
-
-  const save = () => {
-    if (editing === null) return;
-    const name = editing.name.trim();
-    if (name === "") return;
-    settle(
-      editing.id === null ? deps.create({ name, section }) : deps.rename(editing.id, name),
-      fill(editing.id === null ? strings.admin.topicCreated : strings.admin.topicRenamed, { name }),
     );
   };
 
@@ -87,33 +89,6 @@ export function TopicsPane({
           .filter((one) => one.status === "approved")
           .sort((a, b) => b.followerCount - a.followerCount)
       : [];
-
-  const form = editing !== null && (
-    <form
-      className="topic-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        save();
-      }}
-    >
-      <label className="field">
-        <span className="field__label">{strings.admin.topicName}</span>
-        <input
-          autoFocus
-          maxLength={TOPIC_NAME_MAX}
-          value={editing.name}
-          onChange={(event) => setEditing({ ...editing, name: event.target.value })}
-        />
-      </label>
-      <span className="field__counter">{`${editing.name.length}/${TOPIC_NAME_MAX}`}</span>
-      <div className="proposal__actions">
-        <Button onClick={() => setEditing(null)}>{strings.admin.cancel}</Button>
-        <Button variant="filled" type="submit" disabled={busy || editing.name.trim() === ""}>
-          {editing.id === null ? strings.admin.create : strings.admin.save}
-        </Button>
-      </div>
-    </form>
-  );
 
   return (
     <section className="admin-pane" aria-labelledby="admin-topics">
@@ -137,7 +112,7 @@ export function TopicsPane({
             ))}
           </select>
         </label>
-        <Button variant="tonal" icon="add" onClick={() => setEditing({ id: null, name: "" })}>
+        <Button variant="tonal" icon="add" onClick={() => setEditing({ kind: "create" })}>
           {strings.admin.newTopic}
         </Button>
       </header>
@@ -146,7 +121,6 @@ export function TopicsPane({
           {strings.admin.actionFailed}
         </p>
       )}
-      {editing?.id === null && form}
       {state.status === "loading" ? (
         <Skeleton height="168px" />
       ) : state.status === "error" ? (
@@ -164,12 +138,10 @@ export function TopicsPane({
             <li key={topic.id} className="admin-topics__row">
               <span
                 className="admin-topics__square"
-                style={
-                  look === undefined ? undefined : { ...sectionStyle(look), ...topicStyle(look) }
-                }
+                style={{ ...sectionStyle(look), ...topicStyle(look) }}
                 aria-hidden="true"
               >
-                <Icon name={look?.icon ?? "label"} />
+                <TopicArt topic={topic} icon={look.icon} />
               </span>
               <span className="admin-topics__text">
                 <span className="admin-topics__name">{topic.name}</span>
@@ -180,27 +152,38 @@ export function TopicsPane({
                   ].join(" · ")}
                 </span>
               </span>
-              <Button icon="edit" onClick={() => setEditing({ id: topic.id, name: topic.name })}>
-                {strings.admin.rename}
+              <Button icon="edit" onClick={() => setEditing({ kind: "edit", topic })}>
+                {strings.admin.edit}
               </Button>
               {role === "owner" && topic.listCount === 0 && (
-                <Button
-                  variant="danger"
-                  disabled={busy}
-                  onClick={() =>
-                    settle(
-                      deps.remove(topic.id),
-                      fill(strings.admin.topicDeleted, { name: topic.name }),
-                    )
-                  }
-                >
+                <Button variant="danger" disabled={busy} onClick={() => remove(topic)}>
                   {strings.admin.delete}
                 </Button>
               )}
-              {editing?.id === topic.id && form}
             </li>
           ))}
         </ul>
+      )}
+      {editing?.kind === "create" && (
+        <TopicEditor
+          mode="create"
+          section={look}
+          send={deps.create}
+          deps={editor}
+          onClose={() => setEditing(null)}
+          onDone={(made) => saved(fill(strings.admin.topicCreated, { name: made.name }))}
+        />
+      )}
+      {editing?.kind === "edit" && (
+        <TopicEditor
+          mode="edit"
+          topic={editing.topic}
+          section={look}
+          send={(changes) => deps.edit(editing.topic.id, changes)}
+          deps={editor}
+          onClose={() => setEditing(null)}
+          onDone={(made) => saved(fill(strings.admin.topicSaved, { name: made.name }))}
+        />
       )}
       <Snackbar notice={notice} onDone={clearNotice} />
     </section>
