@@ -336,7 +336,7 @@ export function RankingBoard({
   const boardEnd = useRef<HTMLDivElement>(null);
   const boardBox = useRef<HTMLDivElement>(null);
   const tierEditing = edit?.owner?.tiers;
-  const tierMove = useTierMove(boardBox, tierEditing);
+  const tierMove = useTierMove(boardBox, tierEditing, state.selected === null);
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
@@ -712,12 +712,18 @@ export function RankingBoard({
                       lifted: tierMove.lifted === index,
                       carrying: tierMove.lifted !== null,
                       open: () => tierEditing.open(index),
+                      step: (by: -1 | 1) => tierEditing.move(index, index + by, true),
                     }
               }
             />
           ))}
           {tierEditing?.add !== undefined && (
-            <Button className="board__add-tier" icon="add" onClick={tierEditing.add}>
+            <Button
+              variant="outlined"
+              className="board__add-tier"
+              icon="add"
+              onClick={tierEditing.add}
+            >
               {strings.new.addTier}
             </Button>
           )}
@@ -933,6 +939,8 @@ interface TierRowProps {
     lifted: boolean;
     carrying: boolean;
     open: () => void;
+    /** One place up or down, from the keyboard. */
+    step: (by: -1 | 1) => void;
   };
 }
 
@@ -1007,6 +1015,16 @@ function TierRow({
       <div
         className={held === undefined ? "tier__band" : "tier__band tier__band--held"}
         onPointerDown={held?.onPointerDown}
+        onKeyDown={
+          held === undefined
+            ? undefined
+            : (event) => {
+                // Alt and an arrow on the band, its pencil focused: the tier one place up or down.
+                if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+                event.preventDefault();
+                held.step(event.key === "ArrowUp" ? -1 : 1);
+              }
+        }
       >
         <span className="tier__label">{meta.label}</span>
         {meta.caption !== null && <span className="tier__caption">{meta.caption}</span>}
@@ -1046,6 +1064,7 @@ function TierRow({
             type="button"
             className="tier__edit"
             aria-label={fill(strings.boards.editTierOf, { name: meta.label })}
+            aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
             onClick={held.open}
           >
             <Icon name="edit" />

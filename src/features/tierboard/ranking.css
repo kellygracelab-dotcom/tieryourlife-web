@@ -372,8 +372,16 @@
   }
 }
 
+/* Under the last row, at the band's start edge, 12 below it: the board's gap and the rest. */
 .board__add-tier {
   align-self: flex-start;
+  min-height: 40px;
+  margin-top: 4px;
+  padding-inline: 16px 24px;
+}
+
+.board__add-tier .btn__icon {
+  font-size: 18px;
 }
 
 .pool__head {

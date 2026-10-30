@@ -46,7 +46,7 @@ import {
   unpublish as unpublishList,
 } from "../lib/api";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
-import { applyTierAction, editorTiersOf } from "../features/boards/tierEditing";
+import { applyTierAction, editorTiersOf, newTierOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
 import { boardView, sameOrder, uidRows } from "../features/boards/view";
 import { AddCardBox, type Upload } from "../features/editor/AddCardBox";
@@ -226,8 +226,18 @@ export function BoardPage({
   const [panel, setPanel] = useState<Panel>(params.get("settings") === "1" ? "settings" : "none");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const forget = useCallback(() => setNotice(null), []);
-  // The tier opened from the board, by its uid.
+  // The tier opened from the board, by its uid; or a tier still to be made, by Add tier.
   const [openTier, setOpenTier] = useState<string | null>(null);
+  const [makingTier, setMakingTier] = useState(false);
+  // A tier moved from the keyboard (Alt+arrow on its band) keeps the keyboard:
+  // the board is drawn afresh for the new order, so its pencil is found again.
+  const tierFocus = useRef<number | null>(null);
+  useEffect(() => {
+    const at = tierFocus.current;
+    if (at === null) return;
+    tierFocus.current = null;
+    document.querySelectorAll<HTMLElement>(".owner .board > .tier .tier__edit")[at]?.focus();
+  });
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
@@ -373,8 +383,12 @@ export function BoardPage({
     keep(change.board);
     const removed = change.removed;
     if (removed !== undefined) {
+      const cards = removed.itemUids.length;
       setNotice({
-        text: fill(strings.boards.tierRemoved, { name: removed.tier.label }),
+        text:
+          cards === 0
+            ? fill(strings.boards.tierRemoved, { name: removed.tier.label })
+            : fill(plural(strings.boards.tierRemovedCards, cards), { name: removed.tier.label }),
         action: {
           text: strings.boards.undo,
           onClick: () => {
@@ -390,23 +404,25 @@ export function BoardPage({
   const editorTiers: EditorTier[] = editorTiersOf(board);
   const closePanel = () => setPanel("none");
   // The tiers are changed on the board itself, as on the phone.
+  const roomForTier = editorTiers.length < BOARD_LIMITS.tiers;
   const tierEditing = {
-    move: (from: number, to: number) => {
+    move: (from: number, to: number, keyboard = false) => {
       const key = editorTiers[from]?.key;
-      if (key !== undefined) onTier({ type: "placeTier", key, index: to });
+      if (key === undefined || to < 0 || to >= editorTiers.length) return;
+      if (keyboard) tierFocus.current = to;
+      onTier({ type: "placeTier", key, index: to });
     },
     open: (index: number) => setOpenTier(editorTiers[index]?.key ?? null),
-    add: editorTiers.length < BOARD_LIMITS.tiers ? () => onTier({ type: "addTier" }) : undefined,
+    // The editor opens on the tier to be; it is made only by its Add tier.
+    add: roomForTier ? () => setMakingTier(true) : undefined,
   };
-  const opened = editorTiers.find((tier) => tier.key === openTier);
-  // New tier, from the settings: the sheet gives way to the tier editor, open on a tier added for it.
+  const openedAt = editorTiers.findIndex((tier) => tier.key === openTier);
+  const opened = editorTiers[openedAt];
+  // New tier, from the settings: the sheet gives way to the tier editor, as Add tier opens it.
   const newTier = () => {
-    const before = latest();
-    const change = applyTierAction(before, { type: "addTier" }, now(), nextUid);
-    if (change.board === before) return;
-    keep(change.board);
+    if (!roomForTier) return;
     closePanel();
-    setOpenTier(rankedTiers(change.board).at(-1)?.uid ?? null);
+    setMakingTier(true);
   };
   // Propose a section, from the end of the section picker: the form takes the
   // sheet's place, as a screen of its own does on the phone, and gives it back
@@ -611,10 +627,21 @@ export function BoardPage({
       {opened !== undefined && (
         <TierDialog
           key={opened.key}
+          mode="edit"
           tier={opened}
           canRemove={editorTiers.length > 1}
+          place={{ index: openedAt, count: editorTiers.length }}
           dispatch={onTier}
           onClose={() => setOpenTier(null)}
+        />
+      )}
+      {makingTier && (
+        <TierDialog
+          mode="new"
+          tier={newTierOf(board)}
+          canRemove={false}
+          dispatch={onTier}
+          onClose={() => setMakingTier(false)}
         />
       )}
       {play.view}

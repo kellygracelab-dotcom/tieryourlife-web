@@ -123,7 +123,7 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
   expect((await download).suggestedFilename()).toMatch(/\.png$/);
 });
 
-test("changes the tiers on the board: a double tap opens one, its band carries it, one more goes under", async ({
+test("changes the tiers on the board: a tap opens one, its band carries it, one more goes under", async ({
   page,
   hasTouch,
   browserName,
@@ -134,16 +134,12 @@ test("changes the tiers on the board: a double tap opens one, its band carries i
   const labels = () => page.locator(".board > .tier .tier__label").allTextContents();
   expect(await labels()).toEqual(["S", "A", "B", "C", "D"]);
 
-  // Two taps on the band, as on the phone; a mouse double-clicks.
+  // One tap on the band with a finger; a mouse double-clicks.
   const firstBand = rows.first().locator(".tier__band");
-  if (hasTouch) {
-    await firstBand.tap();
-    await firstBand.tap();
-  } else {
-    await firstBand.dblclick();
-  }
+  if (hasTouch) await firstBand.tap();
+  else await firstBand.dblclick();
   const dialog = page.getByRole("dialog", { name: "Edit tier" });
-  await dialog.getByRole("textbox", { name: "Name" }).fill("Top");
+  await dialog.getByRole("textbox", { name: "Label" }).fill("Top");
   await press(dialog.getByRole("button", { name: "Save" }), hasTouch);
   await expect(dialog).toBeHidden();
   expect(await labels()).toEqual(["Top", "A", "B", "C", "D"]);
@@ -152,6 +148,10 @@ test("changes the tiers on the board: a double tap opens one, its band carries i
   const addTier = page.getByRole("button", { name: "Add tier" });
   await addTier.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await press(addTier, hasTouch);
+  // Its editor opens on the tier to be, made by its own Add tier.
+  const making = page.getByRole("dialog", { name: "New tier" });
+  await press(making.getByRole("button", { name: "Add tier" }), hasTouch);
+  await expect(making).toBeHidden();
   // The first letter of the phone's row not in use: S, since it is called Top now.
   await expect.poll(labels).toEqual(["Top", "A", "B", "C", "D", "S"]);
   await page.evaluate(() => window.scrollTo(0, 0));

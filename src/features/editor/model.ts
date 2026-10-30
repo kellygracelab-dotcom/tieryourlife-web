@@ -74,7 +74,8 @@ export type EditorAction =
   | { type: "category"; category: string }
   | { type: "addItem"; title: string; imageUrl: string | null; key?: string; pictureId?: string }
   | { type: "removeItem"; key: string }
-  | { type: "addTier" }
+  /** With `tier`, the one the tier editor made; without, the next letter in the next preset. */
+  | { type: "addTier"; tier?: PublishedTier }
   | { type: "removeTier"; key: string }
   | { type: "renameTier"; key: string; label: string; caption: string }
   | { type: "recolourTier"; key: string; colorLight: string; colorDark: string }
@@ -213,10 +214,12 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
           ...draft.tiers,
           {
             key: `t${draft.serial}`,
-            label: nextLabel(draft.tiers),
-            caption: null,
-            colorLight: preset.light,
-            colorDark: preset.dark,
+            ...(action.tier ?? {
+              label: nextLabel(draft.tiers),
+              caption: null,
+              colorLight: preset.light,
+              colorDark: preset.dark,
+            }),
           },
         ],
         rows: [...draft.rows, []],

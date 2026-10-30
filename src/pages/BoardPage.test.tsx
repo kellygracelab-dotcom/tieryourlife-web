@@ -303,20 +303,20 @@ describe("BoardPage", () => {
 });
 
 describe("BoardPage: tiers and settings", () => {
-  it("changes a tier on the board itself: a double tap or the pencil opens it, Save keeps it", async () => {
+  it("changes a tier on the board itself: a double click or the pencil opens it, Save keeps it", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
     open(repository, "/b/films");
     const kept = () => rankedTiers(repository.get("films")!)[0]!;
 
-    // Two quick taps on the band, the phone's gesture.
+    // Two quick clicks on the band with a mouse.
     const band = bandOf("S");
     for (let i = 0; i < 2; i++) {
       pointer("pointerdown", band, 50);
       pointer("pointerup", window, 50);
     }
     const dialog = screen.getByRole("dialog", { name: "Edit tier" });
-    const name = within(dialog).getByRole("textbox", { name: "Name" });
+    const name = within(dialog).getByRole("textbox", { name: "Label" });
     await userEvent.clear(name);
     // A tier needs a name; the board keeps the old one meanwhile.
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
@@ -337,14 +337,17 @@ describe("BoardPage: tiers and settings", () => {
 
     // The pencil, for a keyboard; Cancel leaves the tier as it was.
     await userEvent.click(screen.getByRole("button", { name: "Edit tier Top" }));
-    await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "!!");
+    await userEvent.type(screen.getByRole("textbox", { name: "Label" }), "!!");
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(kept().label).toBe("Top");
 
     // And a tier taken away from its own editor comes back with Undo, cards and all.
     await userEvent.click(screen.getByRole("button", { name: "Edit tier Top" }));
-    await userEvent.click(screen.getByRole("button", { name: "Remove Top" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove tier" }));
     expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual(["A", "B", "C", "D"]);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Tier Top removed · 1 card back in the pool",
+    );
     await userEvent.click(within(screen.getByRole("status")).getByRole("button", { name: "Undo" }));
     expect(kept().label).toBe("Top");
   });
@@ -362,19 +365,74 @@ describe("BoardPage: tiers and settings", () => {
     expect(itemsIn(kept, poolTier(kept)!.uid).map((item) => item.title)).toContain("Ex Machina");
   });
 
-  it("adds a tier under the last one, from the board", async () => {
+  it("opens a tier with one tap of a finger, but not while a card waits to be placed", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
     open(repository, "/b/films");
+    await userEvent.click(screen.getByRole("button", { name: "Climax" }));
+    pointer("pointerdown", bandOf("A"), 150, "touch");
+    pointer("pointerup", window, 150, "touch");
+    expect(screen.queryByRole("dialog", { name: "Edit tier" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+
+    pointer("pointerdown", bandOf("A"), 150, "touch");
+    pointer("pointerup", window, 150, "touch");
+    const dialog = screen.getByRole("dialog", { name: "Edit tier" });
+    expect(within(dialog).getByRole("textbox", { name: "Label" })).toHaveValue("A");
+  });
+
+  it("moves a tier from its own editor, and by Alt and an arrow on its band, the keyboard staying with it", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    const labels = () => rankedTiers(repository.get("films")!).map((t) => t.label);
+    await userEvent.click(screen.getByRole("button", { name: "Edit tier S" }));
+    const editor = () => within(screen.getByRole("dialog", { name: "Edit tier" }));
+    expect(editor().getByRole("button", { name: "Move S up" })).toBeDisabled();
+    await userEvent.click(editor().getByRole("button", { name: "Move S down" }));
+    expect(labels()).toEqual(["A", "S", "B", "C", "D"]);
+    // The editor stays open on the same tier, now second.
+    await userEvent.click(editor().getByRole("button", { name: "Move S up" }));
+    expect(labels()).toEqual(["S", "A", "B", "C", "D"]);
+    await userEvent.click(editor().getByRole("button", { name: "Cancel" }));
+
+    screen.getByRole("button", { name: "Edit tier B" }).focus();
+    await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+    expect(labels()).toEqual(["S", "B", "A", "C", "D"]);
+    expect(screen.getByRole("button", { name: "Edit tier B" })).toHaveFocus();
+    await userEvent.keyboard("{Alt>}{ArrowDown}{ArrowDown}{/Alt}");
+    expect(labels()).toEqual(["S", "A", "C", "B", "D"]);
+    expect(screen.getByRole("button", { name: "Edit tier B" })).toHaveFocus();
+    // An arrow alone, or a move off the end, changes nothing.
+    await userEvent.keyboard("{ArrowDown}");
+    screen.getByRole("button", { name: "Edit tier S" }).focus();
+    await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+    expect(labels()).toEqual(["S", "A", "C", "B", "D"]);
+  });
+
+  it("adds a tier under the last one, from the board, only once its editor says Add tier", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    const labels = () => rankedTiers(repository.get("films")!).map((t) => t.label);
     await userEvent.click(screen.getByRole("button", { name: "Add tier" }));
-    expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual([
-      "S",
-      "A",
-      "B",
-      "C",
-      "D",
-      "E",
-    ]);
+    let dialog = within(screen.getByRole("dialog", { name: "New tier" }));
+    // The next letter offered; Cancel makes nothing.
+    expect(dialog.getByRole("textbox", { name: "Label" })).toHaveValue("E");
+    expect(dialog.queryByRole("button", { name: "Remove tier" })).toBeNull();
+    await userEvent.click(dialog.getByRole("button", { name: "Cancel" }));
+    expect(labels()).toEqual(["S", "A", "B", "C", "D"]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Add tier" }));
+    dialog = within(screen.getByRole("dialog", { name: "New tier" }));
+    await userEvent.type(dialog.getByRole("textbox", { name: "Caption" }), "meh");
+    await userEvent.click(dialog.getByRole("button", { name: "Add tier" }));
+    expect(screen.queryByRole("dialog", { name: "New tier" })).toBeNull();
+    expect(rankedTiers(repository.get("films")!).at(-1)).toMatchObject({
+      label: "E",
+      caption: "meh",
+    });
+    expect(labels()).toEqual(["S", "A", "B", "C", "D", "E"]);
     expect(screen.getByRole("list", { name: "E" })).toBeInTheDocument();
   });
 
@@ -472,7 +530,7 @@ describe("BoardPage: tiers and settings", () => {
     expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
   });
 
-  it("adds a tier from the settings and opens it in the tier editor, the sheet out of the way", async () => {
+  it("opens the tier editor on a new tier from the settings, the sheet out of the way", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
     open(repository, "/b/films");
@@ -480,20 +538,21 @@ describe("BoardPage: tiers and settings", () => {
     await userEvent.click(screen.getByRole("button", { name: "List settings" }));
     await userEvent.click(screen.getByRole("button", { name: /New tier/ }));
     expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+    const dialog = screen.getByRole("dialog", { name: "New tier" });
+    expect(within(dialog).getByRole("textbox", { name: "Label" })).toHaveValue("E");
+    // Nothing is made until its Add tier.
+    expect(rankedTiers(repository.get("films")!)).toHaveLength(5);
+    await userEvent.clear(within(dialog).getByRole("textbox", { name: "Label" }));
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Label" }), "Meh");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add tier" }));
     expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual([
       "S",
       "A",
       "B",
       "C",
       "D",
-      "E",
+      "Meh",
     ]);
-    const dialog = screen.getByRole("dialog", { name: "Edit tier" });
-    expect(within(dialog).getByRole("textbox", { name: "Name" })).toHaveValue("E");
-    await userEvent.clear(within(dialog).getByRole("textbox", { name: "Name" }));
-    await userEvent.type(within(dialog).getByRole("textbox", { name: "Name" }), "Meh");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-    expect(rankedTiers(repository.get("films")!).at(-1)?.label).toBe("Meh");
   });
 });
 
