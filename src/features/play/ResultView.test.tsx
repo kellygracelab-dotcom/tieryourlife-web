@@ -181,6 +181,15 @@ describe("the result", () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
+  it("has something to apply once a single duel was answered, the rest skipped", () => {
+    const fresh = newGame("hill", ids, EVERYTHING, 9, 0);
+    let next = pick(fresh, currentPair(fresh)![0]);
+    while (currentPair(next) !== null) next = skip(next);
+    show(next);
+    expect(screen.queryByText(/nothing to apply/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeInTheDocument();
+  });
+
   it("shows the tiers' captions in their bands, as the board does", () => {
     const captioned = boardOf(cards, [{ ...tier("s"), caption: "Masterpiece" }, tier("a")]);
     render(
