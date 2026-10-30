@@ -16,8 +16,8 @@ async function newBoard(page: Page, touch: boolean, title: string) {
   const field = page.getByRole("textbox", { name: "Title" });
   await field.fill(title);
   await field.press("Enter");
-  // An empty pool keeps the box that brings cards in behind + Add, on any window.
-  await press(page.getByRole("button", { name: "Add", exact: true }), touch);
+  // An empty pool has the box that brings cards in open on a wide window, behind + Add on a phone.
+  if (touch) await press(page.getByRole("button", { name: "Add", exact: true }), touch);
   for (const name of ["Ex Machina", "The Witch"]) {
     const box = page.getByRole("textbox", { name: "Add a card" });
     await box.fill(name);
