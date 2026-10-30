@@ -5,7 +5,13 @@ const openMine = async (page: Page) => {
   await mockBackend(page);
   await page.goto(`/l/${LIST_ID}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
-  await page.getByRole("button", { name: "Mine", exact: true }).click();
+  // A press that lands before the page has woken up is lost, so it is
+  // repeated until Mine reads as pressed.
+  const mine = page.getByRole("button", { name: "Mine", exact: true });
+  await expect(async () => {
+    await mine.click();
+    await expect(mine).toHaveAttribute("aria-pressed", "true", { timeout: 1_000 });
+  }).toPass();
   await settled(page);
 };
 
