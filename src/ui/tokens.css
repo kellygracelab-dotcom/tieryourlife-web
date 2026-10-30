@@ -28,6 +28,8 @@
   --on-error-container: #410002;
   --ok: #3f7f55;
   --shadow-up: 0 -6px 20px rgba(0, 0, 0, 0.1);
+  /* A card picked up to be placed: it stands off the page. */
+  --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.24);
   --focus: #4a5baa;
 
   --tier-s: #b03a32;
@@ -106,6 +108,7 @@
     --on-error-container: #ffdad6;
     --ok: #7bd394;
     --shadow-up: 0 -6px 20px rgba(0, 0, 0, 0.34);
+    --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.5);
     --focus: #bac3ff;
 
     --tier-s: #f1948c;
@@ -155,6 +158,7 @@
   --on-error-container: #ffdad6;
   --ok: #7bd394;
   --shadow-up: 0 -6px 20px rgba(0, 0, 0, 0.34);
+  --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.5);
   --focus: #bac3ff;
 
   --tier-s: #f1948c;

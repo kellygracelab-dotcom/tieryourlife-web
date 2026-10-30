@@ -75,17 +75,19 @@ describe("RankingBoard", () => {
     await userEvent.click(card("Ex Machina"));
     expect(card("Ex Machina")).toHaveAttribute("aria-pressed", "true");
     expect(
-      screen.getByText("Tap a tier to place Ex Machina, or press its number"),
+      screen.getByText("Click a tier to place Ex Machina, or press its number."),
     ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Place Ex Machina in S" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Place Ex Machina in S · Masterpiece" }),
+    );
 
     expect(within(tierList("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
     expect(progress()).toHaveTextContent("1 of 3 placed");
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("2 cards left");
     // The next card is picked already; with nothing picked the hint asks for one.
     expect(
-      screen.getByText("Tap a tier to place The Witch, or press its number"),
+      screen.getByText("Click a tier to place The Witch, or press its number."),
     ).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     expect(screen.getByText("Pick a card, then tap a tier or press 1–2")).toBeInTheDocument();
@@ -215,10 +217,12 @@ describe("RankingBoard", () => {
     );
     expect(screen.getByText("Tap a card, then a tier")).toBeInTheDocument();
     await userEvent.click(card("Ex Machina"));
-    expect(screen.getByText("Tap a tier to place it")).toBeInTheDocument();
+    expect(screen.getByText("Tap a tier to place Ex Machina.")).toBeInTheDocument();
 
     // The band's own button, the way a finger or a screen reader gets there.
-    await userEvent.click(screen.getByRole("button", { name: "Place Ex Machina in S" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Place Ex Machina in S · Masterpiece" }),
+    );
     expect(card("The Witch")).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(screen.getByRole("button", { name: "Place The Witch in A" }));
     expect(card("Climax")).toHaveAttribute("aria-pressed", "true");
@@ -245,7 +249,9 @@ describe("RankingBoard", () => {
         </MemoryRouter>,
       );
       await userEvent.click(card("Ex Machina"));
-      await userEvent.click(screen.getByRole("button", { name: "Place Ex Machina in S" }));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Place Ex Machina in S · Masterpiece" }),
+      );
       expect(animate).toHaveBeenCalledOnce();
       expect(animate.mock.calls[0]?.[1]).toMatchObject({ duration: 220 });
       // The tile in its row is what flies, not the one that left the tray.
@@ -566,5 +572,51 @@ describe("RankingBoard", () => {
     );
     const s = tierList("S").parentElement!;
     expect(s.querySelector(".tier__key")).toHaveTextContent("1");
+  });
+
+  it("turns the band's number into the row's own button while a card is picked, and no other", async () => {
+    const tiers = Array.from({ length: 10 }, (_, i) => ({
+      label: `T${i + 1}`,
+      caption: i === 0 ? "Best" : null,
+      colorLight: "#b03a32",
+      colorDark: "#f1948c",
+    }));
+    render(
+      <MemoryRouter>
+        <RankingBoard list={{ ...list, tiers }} />
+      </MemoryRouter>,
+    );
+    const row = (label: string) => tierList(label).parentElement!;
+    // Nothing picked: no row is a button, and the band shows its key.
+    expect(screen.queryByRole("button", { name: /^Place / })).toBeNull();
+    expect(row("T1").querySelector(".tier__key")).toHaveTextContent("1");
+
+    await userEvent.click(card("Climax"));
+    const first = screen.getByRole("button", { name: "Place Climax in T1 · Best" });
+    expect(first).toHaveClass("tier__place");
+    expect(first).toHaveTextContent("1");
+    // The key became the pill; the pool's other cards step back.
+    expect(row("T1").querySelector(".tier__key")).toBeNull();
+    expect(row("T1")).toHaveClass("tier--armed");
+    expect(screen.getByRole("heading", { level: 2 }).closest(".pool")).toHaveClass("pool--picked");
+    // The tenth tier has no key: its pill is a plus alone.
+    const tenth = screen.getByRole("button", { name: "Place Climax in T10" });
+    expect(tenth.querySelector(".tier__place-key")).toBeNull();
+    expect(tenth.querySelector(".tier__place-add--only")).toHaveTextContent("add");
+
+    // In the tab order only while there is something to place.
+    await userEvent.click(first);
+    expect(within(tierList("T1")).getByRole("button", { name: "Climax" })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("button", { name: /^Place / })).toBeNull();
+
+    // A placed card picked again: its own row is no target, every other is.
+    await userEvent.click(within(tierList("T1")).getByRole("button", { name: "Climax" }));
+    expect(row("T1")).not.toHaveClass("tier--armed");
+    expect(screen.queryByRole("button", { name: /^Place Climax in T1( ·.*)?$/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Place Climax in T2" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2 }).closest(".pool")).not.toHaveClass(
+      "pool--picked",
+    );
   });
 });

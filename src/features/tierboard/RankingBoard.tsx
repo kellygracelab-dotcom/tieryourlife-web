@@ -826,7 +826,7 @@ export function RankingBoard({
                       <p className="pool__hint pool__hint--touch">
                         {selectedTitle === null
                           ? strings.rank.hintPickTouch
-                          : strings.rank.hintPlaceTouch}
+                          : fill(strings.rank.hintPlaceTouch, { name: selectedTitle })}
                       </p>
                     </>
                   )}
@@ -964,6 +964,9 @@ function TierRow({
           ...others.slice(landing),
         ];
   const place = () => onPlace(tier);
+  // The tier as the row's button says it: its letter, and its caption when it has one.
+  const where =
+    meta.caption === null || meta.caption === "" ? meta.label : `${meta.label} · ${meta.caption}`;
   // A card being placed has the band for its button; the tier is held only otherwise.
   const held = armed ? undefined : band;
   const classes = [
@@ -995,23 +998,36 @@ function TierRow({
       >
         <span className="tier__label">{meta.label}</span>
         {meta.caption !== null && <span className="tier__caption">{meta.caption}</span>}
-        {keys && tier < 9 && (
-          <span className="tier__key" aria-hidden="true">
-            {tier + 1}
-          </span>
-        )}
-        {armed && selectedTitle !== null && (
+        {/*
+         * While a card is picked the corner's number becomes the row's own
+         * button, a pill: the number for a keyboard, a plus for a finger and
+         * past the ninth tier. It is in the tab order only while there is
+         * something to place; the rest of the row takes a tap as well.
+         */}
+        {armed && selectedTitle !== null ? (
           <button
             type="button"
             className="tier__place"
+            aria-label={fill(strings.rank.placeIn, { name: selectedTitle, tier: where })}
             onClick={(event) => {
               // The row would place it a second time and drop the pick of the next card.
               event.stopPropagation();
               place();
             }}
           >
-            {fill(strings.rank.placeIn, { name: selectedTitle, tier: meta.label })}
+            {tier < 9 && <span className="tier__place-key">{tier + 1}</span>}
+            <Icon
+              name="add"
+              className={tier < 9 ? "tier__place-add" : "tier__place-add tier__place-add--only"}
+            />
           </button>
+        ) : (
+          keys &&
+          tier < 9 && (
+            <span className="tier__key" aria-hidden="true">
+              {tier + 1}
+            </span>
+          )
         )}
         {held !== undefined && (
           <button

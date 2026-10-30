@@ -154,7 +154,7 @@ test.describe("moving a card along its tier", () => {
     const backend = await openList(page);
     await card(page, "Ex Machina").click();
     for (const title of ["Ex Machina", "The Witch", "Climax"]) {
-      await page.getByRole("button", { name: `Place ${title} in S` }).click();
+      await page.getByRole("button", { name: `Place ${title} in S · Masterpiece` }).click();
     }
     await expect.poll(() => order(page)).toEqual(["Ex Machina", "The Witch", "Climax"]);
     await settled(page);
@@ -206,8 +206,8 @@ test.describe("ranking a list on a phone", () => {
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
 
     await card(page, "Ex Machina").tap();
-    await expect(page.getByText("Tap a tier to place it")).toBeVisible();
-    await page.getByRole("button", { name: "Place Ex Machina in S" }).tap();
+    await expect(page.getByText("Tap a tier to place Ex Machina.")).toBeVisible();
+    await page.getByRole("button", { name: "Place Ex Machina in S · Masterpiece" }).tap();
     // S holds a card and A is empty: one height, 64 + 2 × 11.
     const rows = page.locator(".board > .tier");
     await expect
@@ -218,8 +218,8 @@ test.describe("ranking a list on a phone", () => {
         return heights;
       })
       .toEqual([86, 86]);
-    await page.getByRole("button", { name: "Place The Witch in A" }).tap();
-    await page.getByRole("button", { name: "Place Climax in A" }).tap();
+    await page.getByRole("button", { name: "Place The Witch in A · Great" }).tap();
+    await page.getByRole("button", { name: "Place Climax in A · Great" }).tap();
     await expect(page.getByText("All 3 placed")).toBeVisible();
     await expect(page.getByText("3 of 3 placed")).toBeVisible();
 
