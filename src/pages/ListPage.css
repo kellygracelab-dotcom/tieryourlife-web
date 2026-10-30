@@ -59,6 +59,11 @@
 }
 
 @media (min-width: 840px) {
+  /* The handout's column holds a link and two buttons, not cards: it stays 320 at any width. */
+  .ranking.ranking--read {
+    --pool-w: 320px;
+  }
+
   .ranking--read .ranking__side {
     gap: 16px;
   }
@@ -334,7 +339,6 @@
 /* Beside a side column the head holds the list's identity in one 72 px row. */
 @media (min-width: 840px) {
   .list-page {
-    --side: 280px;
     --board-cap: 1760px;
   }
 
@@ -465,17 +469,5 @@
 
   .list-head__bar {
     order: 3;
-  }
-}
-
-@media (min-width: 1024px) {
-  .list-page {
-    --side: 320px;
-  }
-}
-
-@media (min-width: 1400px) {
-  .list-page {
-    --side: 392px;
   }
 }

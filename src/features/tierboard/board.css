@@ -3,8 +3,10 @@
  * laptop or a tablet from 600, a phone under that. A row is as tall as a card
  * and its padding, an empty row too, as on the app: a row half as tall as its
  * neighbour reads as broken. The tile's size and the row's padding are
- * properties, so the rows, the pool's grid and the dock's rows follow them.
+ * properties, so the rows, the pool's grid and the dock's rows follow them,
+ * and the section too: the pool's column beside the board is so many cards wide.
  */
+.ranking,
 .board,
 .pool {
   --tile-w: 64px;
@@ -144,6 +146,7 @@
 }
 
 @media (max-width: 1199px) {
+  .ranking,
   .board,
   .pool {
     --tile-w: 52px;

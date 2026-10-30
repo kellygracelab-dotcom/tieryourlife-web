@@ -905,6 +905,8 @@ export const en = {
     editTitle: "Edit list name",
     titleField: "Title",
     pool: { one: "Pool · {n} unranked", other: "Pool · {n} unranked" },
+    poolCount: "Pool · {n}",
+    poolEmpty: "Add cards by name, or search the catalogue.",
     cardTrashed: "Removed {name}",
     boardTrashed: "“{name}” moved to the trash",
     notFound: "List not found.",

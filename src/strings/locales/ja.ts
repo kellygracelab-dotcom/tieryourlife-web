@@ -915,6 +915,8 @@ const ja: Translation = {
     editTitle: "リスト名を編集",
     titleField: "タイトル",
     pool: { other: "プール · 未評価{n}件" },
+    poolCount: "プール · {n}",
+    poolEmpty: "名前でカードを追加するか、カタログを検索します。",
     cardTrashed: "{name}を削除しました",
     boardTrashed: "「{name}」をゴミ箱に移動しました",
     notFound: "リストが見つかりません。",

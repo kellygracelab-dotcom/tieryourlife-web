@@ -1218,6 +1218,8 @@ const ar: Translation = {
       many: "المجمّع · {n} غير مصنَّف",
       other: "المجمّع · {n} غير مصنَّف",
     },
+    poolCount: "المجمّع · {n}",
+    poolEmpty: "أضف بطاقات بأسمائها، أو ابحث في الفهرس.",
     cardTrashed: "تمت إزالة {name}",
     boardTrashed: "تم نقل «{name}» إلى سلة المهملات",
     notFound: "تعذّر العثور على القائمة.",

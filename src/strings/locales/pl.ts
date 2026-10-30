@@ -1062,6 +1062,8 @@ const pl: Translation = {
       many: "Pula · {n} nieocenionych",
       other: "Pula · {n} nieocenionego",
     },
+    poolCount: "Pula · {n}",
+    poolEmpty: "Dodaj karty po nazwie albo poszukaj w katalogu.",
     cardTrashed: "Usunięto: {name}",
     boardTrashed: "„{name}” przeniesiono do kosza",
     notFound: "Nie znaleziono listy.",

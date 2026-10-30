@@ -921,6 +921,8 @@ const tr: Translation = {
     editTitle: "Liste adını düzenle",
     titleField: "Başlık",
     pool: { one: "Havuz · {n} sıralanmadı", other: "Havuz · {n} sıralanmadı" },
+    poolCount: "Havuz · {n}",
+    poolEmpty: "Adıyla kart ekleyin ya da katalogda arayın.",
     cardTrashed: "{name} kaldırıldı",
     boardTrashed: "“{name}” çöp kutusuna taşındı",
     notFound: "Liste bulunamadı.",

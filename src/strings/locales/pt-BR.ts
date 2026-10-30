@@ -947,6 +947,8 @@ const ptBR: Translation = {
       many: "Grupo · {n} sem classificação",
       other: "Grupo · {n} sem classificação",
     },
+    poolCount: "Grupo · {n}",
+    poolEmpty: "Adicione cards pelo nome ou pesquise no catálogo.",
     cardTrashed: "Removido: {name}",
     boardTrashed: '"{name}" foi movido para a lixeira',
     notFound: "Lista não encontrada.",

@@ -26,8 +26,8 @@ async function makeBoard(page: Page, touch: boolean) {
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films I make people watch");
   await title.press("Enter");
-  // An empty pool keeps the box that brings cards in behind + Add, on any window.
-  await press(page.getByRole("button", { name: "Add", exact: true }), touch);
+  // An empty pool has the box that brings cards in open on a wide window, behind + Add on a phone.
+  if (touch) await press(page.getByRole("button", { name: "Add", exact: true }), touch);
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     const add = page.getByRole("textbox", { name: "Add a card" });
     await add.fill(name);
@@ -65,9 +65,11 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
   await title.press("Enter");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cheeses");
   await expect(page.getByRole("button", { name: "Add tier" })).toBeVisible();
-  // Nothing in the pool yet: it says so, and + Add opens the catalogue.
-  await expect(page.getByRole("heading", { name: "Pool · 0 unranked" })).toBeVisible();
-  await press(page.getByRole("button", { name: "Add", exact: true }), hasTouch);
+  // Nothing in the pool yet: it says so, and the catalogue's box takes the cursor,
+  // at once on a wide window, from + Add on a phone.
+  await expect(page.getByRole("heading", { name: "Pool · 0" })).toBeVisible();
+  await expect(page.getByText("Add cards by name, or search the catalogue.")).toBeVisible();
+  if (hasTouch) await press(page.getByRole("button", { name: "Add", exact: true }), hasTouch);
   await expect(page.getByRole("textbox", { name: "Add a card" })).toBeFocused();
 });
 
@@ -206,8 +208,7 @@ test("moves a card along its row: the others make room at once, and nothing is p
   const title = page.getByRole("textbox", { name: "Title" });
   await title.fill("Films");
   await title.press("Enter");
-  // The empty pool keeps the catalogue behind + Add.
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  // The empty pool's box is open on a wide window, the cursor in it.
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     const add = page.getByRole("textbox", { name: "Add a card" });
     await add.fill(name);

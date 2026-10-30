@@ -343,8 +343,8 @@ export function RankingBoard({
   const { dock, rows, wide, choose, startResize } = useDock(store);
   // On a narrow window the box that brings cards in waits behind Add, in the
   // pool, whichever head the pool shows; on a wide one it stands in the pool,
-  // unless the owner's pool is empty: then it waits behind the + Add chip.
-  // Opened, the catalogue's field takes the cursor.
+  // and an empty pool gives it the cursor. Opened, the catalogue's field
+  // takes the cursor.
   const [adding, setAdding] = useState(false);
   const tools = edit?.owner?.tools;
   const emptyPool = edit?.owner?.live === true && pool(state).length === 0;
@@ -375,9 +375,18 @@ export function RankingBoard({
       <span>{strings.new.add}</span>
     </button>
   );
-  const toolsPanel = tools !== undefined && (adding || (wide && !emptyPool)) && (
+  const toolsPanel = tools !== undefined && (adding || wide) && (
     <div className={wide ? "pool__tools" : "pool__tools pool__tools--sheet"}>{tools}</div>
   );
+  // Nothing to place yet and nobody typing elsewhere (the new board's name is
+  // asked for first): the cursor waits in the field that brings cards in.
+  const askForCards = wide && emptyPool && tools !== undefined;
+  useEffect(() => {
+    if (!askForCards) return;
+    const now = document.activeElement;
+    if (now !== null && now !== document.body) return;
+    poolBox.current?.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
+  }, [askForCards]);
   const docked = wide && dock === "under";
   const frame = useContext(BoardFrameContext);
   // On a wide screen the count and the actions stand in the page's header,
@@ -785,16 +794,19 @@ export function RankingBoard({
                       </p>
                     ) : (
                       <h2 className="pool__title">
-                        {plural(
-                          edit?.owner?.live ? strings.boards.pool : strings.rank.left,
-                          left.length,
-                        )}
+                        {emptyPool
+                          ? fill(strings.boards.poolCount, { n: 0 })
+                          : plural(
+                              edit?.owner?.live ? strings.boards.pool : strings.rank.left,
+                              left.length,
+                            )}
                       </h2>
                     )}
-                    {emptyPool ? addChip : addButton}
+                    {emptyPool ? !wide && addChip : addButton}
                     <DockToggle dock={dock} onChoose={choose} />
                   </div>
                   {toolsPanel}
+                  {emptyPool && <p className="pool__empty">{strings.boards.poolEmpty}</p>}
                   {!allPlaced && left.length > POOL_SEARCH_FROM && tools === undefined && (
                     <input
                       className="pool__search"

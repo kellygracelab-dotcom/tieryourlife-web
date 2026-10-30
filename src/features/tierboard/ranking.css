@@ -391,6 +391,18 @@
   color: var(--ink-dim);
 }
 
+/* The owner's empty pool says what to do, on a line of its own under its head. */
+.pool__empty {
+  flex-basis: 100%;
+  margin: 0;
+  font: 400 13px/18px var(--font);
+  color: var(--ink-dim);
+}
+
+.pool__head:has(.pool__empty) {
+  flex-wrap: wrap;
+}
+
 /* The owner's empty pool: its count, and the way to the catalogue beside it. */
 .pool__head--empty .pool__title {
   font: 500 14px/20px var(--font);
@@ -749,13 +761,22 @@
 
 /*
  * A laptop or a tablet on its side. Two shapes, the person's to choose: the
- * pool in a column beside the board, or docked under it. Both follow the
- * window — the column stands at its edge, the dock spans it — and only the
- * board's own block is capped, at 1760, where rows get too long to read.
+ * pool in a column beside the board, or docked under it. Under, the board
+ * takes the window, capped at 1760, where rows get too long to read. Beside,
+ * the board is capped at 1120, thirteen cards a row, and the pool grows in
+ * whole columns of cards as the window does: a wide board of nearly empty
+ * rows beside a narrow pool that scrolled was the wrong way round. Past both
+ * caps the two stand together in the middle of the window.
  */
 @media (min-width: 840px) {
   .ranking {
     --board-cap: 1760px;
+    --board-max: 1120px;
+    --pool-cols: 4;
+    /* The card's padding either side, and the cards with their gaps. */
+    --pool-w: calc(
+      2 * 16px + var(--pool-cols) * var(--tile-w) + (var(--pool-cols) - 1) * var(--tile-gap)
+    );
   }
 
   .pool__lead {
@@ -809,6 +830,12 @@
   .pool__hint--keys {
     font: 400 12px/16px var(--font);
     color: var(--ink-faint);
+  }
+
+  /* The empty pool says what to do, under the box that brings cards in. */
+  .ranking:not(.ranking--under) .pool__empty {
+    order: 4;
+    padding: 0;
   }
 
   /* Switching shapes is a cross-fade, with nothing else moving. */
@@ -992,6 +1019,13 @@
     order: 1;
   }
 
+  /* In the dock's one row: after the box, before the toggle. */
+  .ranking--under .pool__empty {
+    flex-basis: auto;
+    order: 3;
+    margin-inline-start: auto;
+  }
+
   .pool__head--empty .dock {
     margin-inline-start: auto;
   }
@@ -1004,13 +1038,17 @@
     bottom: calc(100% + 4px);
   }
 
-  /* Beside: a grid edge to edge, the column flush with the window's edge. */
+  /*
+   * Beside: the board up to its cap and the pool's column 24 apart. The
+   * board's track takes the room the column leaves until it reaches the cap;
+   * what is left over then goes to both sides alike, never to one.
+   */
   .ranking:not(.ranking--under) {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) var(--side);
+    grid-template-columns: minmax(0, var(--board-max)) var(--pool-w);
+    justify-content: center;
     align-items: start;
-    gap: 0;
-    margin-inline: calc(-1 * var(--space-8));
+    gap: 0 24px;
   }
 
   .ranking:not(.ranking--under) .ranking__main {
@@ -1018,13 +1056,7 @@
     flex-direction: column;
     gap: 12px;
     min-width: 0;
-    padding: 16px var(--space-8) 24px;
-  }
-
-  .ranking:not(.ranking--under) .ranking__main > * {
-    width: 100%;
-    max-width: var(--board-cap);
-    margin-inline: auto;
+    padding-block: 16px 24px;
   }
 
   /*
@@ -1037,7 +1069,6 @@
     flex-direction: column;
     gap: 14px;
     padding-block: 16px 24px;
-    padding-inline: 0 var(--space-8);
   }
 
   .ranking:not(.ranking--under) .ranking__bar {
@@ -1464,4 +1495,29 @@
 
 .pool__tools--sheet .cards__add {
   flex: 1 1 240px;
+}
+
+/* Wider windows, a column of cards more each step, up to eight. */
+@media (min-width: 1400px) {
+  .ranking {
+    --pool-cols: 5;
+  }
+}
+
+@media (min-width: 1600px) {
+  .ranking {
+    --pool-cols: 6;
+  }
+}
+
+@media (min-width: 1800px) {
+  .ranking {
+    --pool-cols: 7;
+  }
+}
+
+@media (min-width: 2000px) {
+  .ranking {
+    --pool-cols: 8;
+  }
 }

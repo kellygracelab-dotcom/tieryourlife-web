@@ -1056,6 +1056,8 @@ const ru: Translation = {
       many: "Пул · {n} без оценки",
       other: "Пул · {n} без оценки",
     },
+    poolCount: "Пул · {n}",
+    poolEmpty: "Добавьте карточки по названию или поищите в каталоге.",
     cardTrashed: "Удалено: {name}",
     boardTrashed: "«{name}» перемещён в корзину",
     notFound: "Список не найден.",

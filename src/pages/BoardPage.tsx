@@ -214,6 +214,14 @@ export function BoardPage({
   // The name is asked for once, on arrival at a board not yet kept: a reload
   // keeps the query, not the question.
   const [editingTitle, setEditingTitle] = useState(madeAt > 0 && stored === null);
+  // Once that name is in, an empty board's cursor goes on to the cards.
+  const askedName = useRef(editingTitle);
+  const empty = board === null || liveItems(board).length === 0;
+  useEffect(() => {
+    if (editingTitle || !askedName.current) return;
+    askedName.current = false;
+    if (empty) document.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
+  }, [editingTitle, empty]);
   // ?settings=1 opens the sheet at once: the admin's anonymous publish leads here.
   const [panel, setPanel] = useState<Panel>(params.get("settings") === "1" ? "settings" : "none");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);

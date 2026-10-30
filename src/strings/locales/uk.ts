@@ -1059,6 +1059,8 @@ const uk: Translation = {
       many: "Пул · {n} без оцінки",
       other: "Пул · {n} без оцінки",
     },
+    poolCount: "Пул · {n}",
+    poolEmpty: "Додайте картки за назвою або пошукайте в каталозі.",
     cardTrashed: "Прибрано: {name}",
     boardTrashed: "«{name}» переміщено в кошик",
     notFound: "Список не знайдено.",

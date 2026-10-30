@@ -623,26 +623,30 @@ describe("BoardPage: a new board", () => {
     expect(repository.get("odd")?.category).toBeNull();
   });
 
-  it("says the empty pool is empty, and + Add opens the catalogue with the cursor in it", async () => {
+  it("says the empty pool is empty, with the catalogue's box open and the cursor in it", async () => {
     const repository = boardsRepository(memoryStore());
     open(repository, "/b/fresh?new=100");
+    // The name first; the box waits for it.
+    expect(screen.getByRole("textbox", { name: "Title" })).toHaveFocus();
     await userEvent.keyboard("{Enter}");
-    expect(screen.getByRole("heading", { name: "Pool · 0 unranked" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pool · 0" })).toBeInTheDocument();
+    expect(screen.getByText("Add cards by name, or search the catalogue.")).toBeInTheDocument();
     expect(screen.queryByText(/All \d+ placed/)).toBeNull();
-    // jsdom's window is wide: there the catalogue waits behind the chip while the pool is empty.
-    expect(screen.queryByRole("textbox", { name: "Add a card" })).toBeNull();
-    const add = screen.getByRole("button", { name: "Add" });
-    expect(add).toHaveClass("pool__add-chip");
-    expect(add).toHaveAttribute("aria-expanded", "false");
-
-    await userEvent.click(add);
+    // jsdom's window is wide: there the box stands in the pool, with nothing behind a chip.
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
     const field = screen.getByRole("textbox", { name: "Add a card" });
     expect(field).toHaveFocus();
     await userEvent.type(field, "Heat{Enter}");
     expect(screen.getByRole("heading", { name: "Pool · 1 unranked" })).toBeInTheDocument();
-    // With a card waiting the catalogue stays where it is.
+    expect(screen.queryByText("Add cards by name, or search the catalogue.")).toBeNull();
     expect(screen.getByRole("textbox", { name: "Add a card" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
+  });
+
+  it("puts the cursor in the box of a kept board with no cards, the name not asked", () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(newBoard("bare", "Bare", 100, uids()));
+    open(repository, "/b/bare");
+    expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveFocus();
   });
 
   it("on a phone, puts the same + Add in the tray's head and opens the catalogue from it", async () => {
@@ -654,8 +658,11 @@ describe("BoardPage: a new board", () => {
     const repository = boardsRepository(memoryStore());
     open(repository, "/b/fresh?new=100");
     await userEvent.keyboard("{Enter}");
-    expect(screen.getByRole("heading", { name: "Pool · 0 unranked" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Pool · 0" })).toBeInTheDocument();
+    expect(screen.getByText("Add cards by name, or search the catalogue.")).toBeInTheDocument();
     expect(screen.queryByText(/All \d+ placed/)).toBeNull();
+    // A phone's tray keeps the box behind + Add, and asks nothing of the keyboard.
+    expect(screen.queryByRole("textbox", { name: "Add a card" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveFocus();
     // The names drawn without pictures are the phone's size.

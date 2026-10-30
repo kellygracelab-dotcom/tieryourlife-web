@@ -951,6 +951,8 @@ const de: Translation = {
     editTitle: "Listennamen bearbeiten",
     titleField: "Titel",
     pool: { one: "Pool · {n} nicht eingestuft", other: "Pool · {n} nicht eingestuft" },
+    poolCount: "Pool · {n}",
+    poolEmpty: "Füg Karten per Name hinzu oder such im Katalog.",
     cardTrashed: "{name} entfernt",
     boardTrashed: "„{name}“ wurde in den Papierkorb verschoben",
     notFound: "Liste wurde nicht gefunden.",

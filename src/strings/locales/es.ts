@@ -951,6 +951,8 @@ const es: Translation = {
       many: "Montón · {n} sin clasificar",
       other: "Montón · {n} sin clasificar",
     },
+    poolCount: "Montón · {n}",
+    poolEmpty: "Añade tarjetas por su nombre o busca en el catálogo.",
     cardTrashed: "Se quitó {name}",
     boardTrashed: "«{name}» se movió a la papelera",
     notFound: "No se encontró la lista.",

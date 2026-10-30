@@ -969,6 +969,8 @@ const fr: Translation = {
       many: "Réservoir · {n} non classés",
       other: "Réservoir · {n} non classés",
     },
+    poolCount: "Réservoir · {n}",
+    poolEmpty: "Ajoutez des cartes par leur nom, ou cherchez dans le catalogue.",
     cardTrashed: "Retiré : {name}",
     boardTrashed: "« {name} » a été déplacé vers la corbeille",
     notFound: "Liste introuvable.",
