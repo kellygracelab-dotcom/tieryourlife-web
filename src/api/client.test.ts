@@ -88,6 +88,35 @@ describe("createApiClient", () => {
     expect(headersOf(calls[0]!).Authorization).toBeUndefined();
   });
 
+  it("asks for both tokens at once, not one after the other", async () => {
+    const { fetch, calls } = stubFetch([ok({})]);
+    const asked: string[] = [];
+    let giveAppCheck: (token: string) => void = () => undefined;
+    let giveId: (token: string) => void = () => undefined;
+    const client = createApiClient({
+      fetch,
+      appCheckToken: () => {
+        asked.push("appCheck");
+        return new Promise((resolve) => (giveAppCheck = resolve));
+      },
+      idToken: () => {
+        asked.push("id");
+        return new Promise((resolve) => (giveId = resolve));
+      },
+    });
+
+    const request = client.request("POST", "/api/rank", { body: {} });
+    await Promise.resolve();
+    // App Check first, so it is set up before a guest's sign-in.
+    expect(asked).toEqual(["appCheck", "id"]);
+    giveId("id-token");
+    giveAppCheck("app-check-token");
+    await request;
+
+    expect(headersOf(calls[0]!)["X-Firebase-AppCheck"]).toBe("app-check-token");
+    expect(headersOf(calls[0]!).Authorization).toBe("Bearer id-token");
+  });
+
   it("returns undefined for 204", async () => {
     const { client } = clientWith([new Response(null, { status: 204 })]);
 

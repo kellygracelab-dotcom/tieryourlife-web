@@ -55,13 +55,17 @@ export function createApiClient({
   ): Promise<Record<string, string>> {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (options.body !== undefined) headers["Content-Type"] = "application/json";
+    // Both tokens at once: on a first request each can cost a round trip or
+    // more (reCAPTCHA and the App Check exchange; a guest's sign-in), and
+    // one after the other they kept "Saving your ranking…" up for both. App
+    // Check is asked first, so it is set up before a guest's sign-in goes out.
     // A missing token still lets the request go: the server names the refusal.
-    const appCheck = await appCheckToken();
+    const [appCheck, token] = await Promise.all([
+      appCheckToken(),
+      options.auth === "appCheckOnly" ? null : idToken({ forceRefresh }),
+    ]);
     if (appCheck) headers["X-Firebase-AppCheck"] = appCheck;
-    if (options.auth !== "appCheckOnly") {
-      const token = await idToken({ forceRefresh });
-      if (token) headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) headers.Authorization = `Bearer ${token}`;
     return headers;
   }
 
