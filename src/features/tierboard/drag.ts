@@ -25,6 +25,8 @@ export const MOUSE_SLOP = 6;
 export const TOUCH_SLOP = 8;
 // The phone's own long-press, so a finger that only wanted to scroll gets to.
 export const TOUCH_HOLD_MS = 150;
+/** Two taps on one card, or on one tier's band, this close together are a double tap. */
+export const DOUBLE_TAP_MS = 300;
 
 export const idle: DragState = { phase: "idle" };
 

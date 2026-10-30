@@ -6,7 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
-import { MOUSE_SLOP, TOUCH_SLOP } from "./drag";
+import { DOUBLE_TAP_MS, MOUSE_SLOP, TOUCH_SLOP } from "./drag";
 import { indexAt, middlesOf } from "./tierDrag";
 
 /** The owner's hold on the tiers themselves, from the board. */
@@ -21,9 +21,6 @@ export interface TierEditing {
 
 /** A finger holds a tier this long before it lifts, the phone's long press; sooner it is a scroll or a tap. */
 export const TIER_HOLD_MS = 350;
-
-/** Two taps on one tier this close together are a double tap. */
-export const DOUBLE_TAP_MS = 300;
 
 interface Press {
   tier: number;

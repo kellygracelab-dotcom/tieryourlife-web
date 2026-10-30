@@ -246,13 +246,16 @@ describe("BoardPage", () => {
       "Heat",
     ]);
 
-    await userEvent.click(screen.getByRole("button", { name: "Remove Climax" }));
+    // Off the list from the card's menu, a double click away: nothing on the card itself.
+    await userEvent.dblClick(screen.getByRole("button", { name: "Climax" }));
+    const menu = within(screen.getByRole("dialog", { name: "Climax" }));
+    await userEvent.click(menu.getByRole("button", { name: "Remove from list" }));
     expect(screen.queryByRole("button", { name: "Climax" })).toBeNull();
     expect(
       repository.get("films")?.items.find((item) => item.title === "Climax")?.deletedAt,
     ).toBeGreaterThan(100);
     const notice = screen.getByRole("status");
-    expect(notice).toHaveTextContent("“Climax” moved to the trash");
+    expect(notice).toHaveTextContent("Removed Climax");
     await userEvent.click(within(notice).getByRole("button", { name: "Undo" }));
     expect(screen.getByRole("button", { name: "Climax" })).toBeInTheDocument();
     expect(
@@ -344,6 +347,19 @@ describe("BoardPage: tiers and settings", () => {
     expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual(["A", "B", "C", "D"]);
     await userEvent.click(within(screen.getByRole("status")).getByRole("button", { name: "Undo" }));
     expect(kept().label).toBe("Top");
+  });
+
+  it("opens a card's menu on a double click on the card, not its tier's", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    await userEvent.dblClick(within(tier("S")).getByRole("button", { name: "Ex Machina" }));
+    const menu = within(screen.getByRole("dialog", { name: "Ex Machina" }));
+    expect(screen.queryByRole("dialog", { name: "Edit tier" })).toBeNull();
+    await userEvent.click(menu.getByRole("button", { name: "Back to the pool" }));
+    expect(within(tier("S")).queryByRole("button", { name: "Ex Machina" })).toBeNull();
+    const kept = repository.get("films")!;
+    expect(itemsIn(kept, poolTier(kept)!.uid).map((item) => item.title)).toContain("Ex Machina");
   });
 
   it("adds a tier under the last one, from the board", async () => {

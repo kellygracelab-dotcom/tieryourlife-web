@@ -262,7 +262,6 @@ const fr: Translation = {
     add: "Ajouter",
     added: "Ajoutée",
     unnamed: "Carte sans titre",
-    remove: "Retirer {name}",
     noCardsYet:
       "Aucune carte pour l’instant. Cherchez dans le catalogue ou tapez un nom et appuyez sur Entrée.",
     tiers: "Rangs",
@@ -964,7 +963,7 @@ const fr: Translation = {
       many: "Réservoir · {n} non classés",
       other: "Réservoir · {n} non classés",
     },
-    cardTrashed: "« {name} » a été déplacé vers la corbeille",
+    cardTrashed: "Retiré : {name}",
     boardTrashed: "« {name} » a été déplacé vers la corbeille",
     notFound: "Liste introuvable.",
     notFoundBody: "Elle a peut-être été supprimée, ou elle se trouve sur un autre appareil.",
@@ -988,7 +987,6 @@ const fr: Translation = {
     categoryNone: "Pas encore choisie",
     rankedEmpty: "Rien de classé pour l'instant",
     rankedNote: "Passez à « Lignes » ou « Bande unique » pour déplacer des cartes entre les rangs.",
-    moveMenu: "Déplacer {name}",
     moveTo: "Déplacer vers un rang",
     currentTier: "Actuellement ici",
     backToPool: "Remettre dans le réservoir",
@@ -1053,6 +1051,8 @@ const fr: Translation = {
     anonymousTitle: "Publier anonymement",
     anonymousBody: "Ni nom ni photo sur la liste. Vous seul pouvez la modifier ou la retirer.",
     categoryWaiting: "En attente d’un modérateur",
+    menuHint:
+      "Double-cliquez ou faites un clic droit sur une carte pour la déplacer ou la retirer.",
   },
   sync: {
     offBusy: "Suppression…",

@@ -256,7 +256,6 @@ const ja: Translation = {
     add: "追加",
     added: "追加済み",
     unnamed: "無題のカード",
-    remove: "{name} を削除",
     noCardsYet:
       "カードはまだありません。カタログを検索するか、名前を入力して Enter を押してください。",
     tiers: "ティア",
@@ -910,7 +909,7 @@ const ja: Translation = {
     editTitle: "リスト名を編集",
     titleField: "タイトル",
     pool: { other: "プール · 未評価{n}件" },
-    cardTrashed: "「{name}」をゴミ箱に移動しました",
+    cardTrashed: "{name}を削除しました",
     boardTrashed: "「{name}」をゴミ箱に移動しました",
     notFound: "リストが見つかりません。",
     notFoundBody: "削除されたか、別の端末にあるのかもしれません。",
@@ -934,7 +933,6 @@ const ja: Translation = {
     categoryNone: "未選択",
     rankedEmpty: "まだ何もランク付けされていません",
     rankedNote: "ティア間でカードを動かすには「行」か「一本のストリップ」に切り替えてください。",
-    moveMenu: "{name} を移動",
     moveTo: "ティアに移動",
     currentTier: "現在ここにあります",
     backToPool: "プールに戻す",
@@ -999,6 +997,7 @@ const ja: Translation = {
     anonymousTitle: "匿名で公開",
     anonymousBody: "リストに名前と写真を出しません。変更や取り下げはあなただけができます。",
     categoryWaiting: "モデレーターの確認待ち",
+    menuHint: "カードをダブルクリックまたは右クリックすると、移動や削除ができます。",
   },
   sync: {
     offBusy: "削除中…",

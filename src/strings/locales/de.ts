@@ -261,7 +261,6 @@ const de: Translation = {
     add: "Hinzufügen",
     added: "Hinzugefügt",
     unnamed: "Unbenannte Karte",
-    remove: "{name} entfernen",
     noCardsYet: "Noch keine Karten. Such im Katalog oder tipp einen Namen und drück Enter.",
     tiers: "Stufen",
     addTier: "Stufe hinzufügen",
@@ -946,7 +945,7 @@ const de: Translation = {
     editTitle: "Listennamen bearbeiten",
     titleField: "Titel",
     pool: { one: "Pool · {n} nicht eingestuft", other: "Pool · {n} nicht eingestuft" },
-    cardTrashed: "„{name}“ wurde in den Papierkorb verschoben",
+    cardTrashed: "{name} entfernt",
     boardTrashed: "„{name}“ wurde in den Papierkorb verschoben",
     notFound: "Liste wurde nicht gefunden.",
     notFoundBody: "Sie wurde vielleicht gelöscht oder liegt auf einem anderen Gerät.",
@@ -971,7 +970,6 @@ const de: Translation = {
     rankedEmpty: "Noch nichts eingestuft",
     rankedNote:
       "Wechsle zu „Zeilen“ oder „Einzelner Streifen“, um Karten zwischen Stufen zu verschieben.",
-    moveMenu: "{name} verschieben",
     moveTo: "In eine Stufe verschieben",
     currentTier: "Aktuell hier",
     backToPool: "Zurück in den Pool",
@@ -1036,6 +1034,8 @@ const de: Translation = {
     anonymousTitle: "Anonym veröffentlichen",
     anonymousBody: "Kein Name und kein Bild an der Liste. Nur du kannst sie ändern oder entfernen.",
     categoryWaiting: "Wartet auf einen Moderator",
+    menuHint:
+      "Doppelklick oder Rechtsklick auf eine Karte, um sie zu verschieben oder zu entfernen.",
   },
   sync: {
     offBusy: "Wird gelöscht…",

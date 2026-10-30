@@ -589,7 +589,6 @@ export function BoardPage({
                 cancel: () => undefined,
                 owner: {
                   live: true,
-                  moveMenu: true,
                   canSave: false,
                   onChange: onRows,
                   remove,

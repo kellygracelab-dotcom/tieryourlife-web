@@ -40,43 +40,6 @@
   display: none;
 }
 
-/* The owner may take a card off the list: a small cross on the tile, under the pointer or always to a finger. */
-.tile-holder--removable {
-  position: relative;
-}
-
-.tile__remove {
-  position: absolute;
-  top: 2px;
-  inset-inline-end: 2px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--paper);
-  cursor: pointer;
-}
-
-.tile__remove .ms {
-  font-size: 16px;
-}
-
-.tile-holder--removable:hover .tile__remove,
-.tile-holder--removable:focus-within .tile__remove {
-  display: inline-flex;
-}
-
-@media (hover: none) {
-  .tile__remove {
-    display: inline-flex;
-  }
-}
-
 /* Only a wide screen has two places for the cards; the toggle waits for it. */
 .dock {
   display: none;
@@ -148,6 +111,8 @@
   touch-action: pan-y;
   user-select: none;
   -webkit-user-drag: none;
+  /* A finger held on a card lifts it; iOS's own menu for the picture is not offered. */
+  -webkit-touch-callout: none;
 }
 
 .tile--lifted {
@@ -214,9 +179,16 @@
   box-shadow: 0 0 0 3px var(--ink);
 }
 
+/*
+ * The first tap of a double tap picks the card, and the second opens its
+ * menu. The rows say they are targets only once no second tap has come
+ * (DOUBLE_TAP_MS, 300 ms), so a double tap does not flash a ring round every
+ * row; they let go at once.
+ */
 .tier--armed {
   cursor: pointer;
   box-shadow: inset 0 0 0 3px var(--band);
+  transition: box-shadow 0s 300ms;
 }
 
 .tier__band {
@@ -377,6 +349,19 @@
 
 .pool__hint--touch {
   display: none;
+}
+
+/* How to reach a card's menu, at the pool's foot: a mouse's way, so a finger never sees it. */
+.pool__hint--menu {
+  padding: 8px 8px 0;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-quiet);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .pool__hint--menu {
+    display: none;
+  }
 }
 
 /* Every card has a tier: the pool turns into the way out. */
@@ -598,8 +583,10 @@
     transform: scale(1.04);
   }
 
+  /* After a double tap's window, as the rows' rings are. */
   .pool--picked .tile:not(.tile--selected) {
     opacity: 0.55;
+    transition-delay: 300ms;
   }
 
   .pool__done {
@@ -1313,41 +1300,7 @@
   }
 }
 
-/* The button for moving a card without a drag: the other top corner of the tile. */
-.tile__more {
-  position: absolute;
-  top: 2px;
-  inset-inline-start: 2px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--paper);
-  cursor: pointer;
-}
-
-.tile__more .ms {
-  font-size: 16px;
-}
-
-.tile-holder--removable:hover .tile__more,
-.tile-holder--removable:focus-within .tile__more,
-.tile__more[aria-expanded="true"] {
-  display: inline-flex;
-}
-
-@media (hover: none) {
-  .tile__more {
-    display: inline-flex;
-  }
-}
-
-/* The move sheet: the tiers as rows with their colour, then the two ways out. */
+/* A card's menu, by a double tap: the tiers as rows with their colour, then the ways out. */
 .move-sheet__who {
   margin: 0 0 4px;
   font: var(--text-small);
@@ -1462,27 +1415,4 @@
 
 .pool__tools--sheet .cards__add {
   flex: 1 1 240px;
-}
-
-/*
- * The buttons on a card are at least 24 px square (WCAG 2.2, target size).
- * On a touch screen the move sheet carries "Remove from list", as the phone's
- * does, so the cross steps aside and the sheet's button grows: two 24 px
- * buttons do not fit side by side on a 44 px card without touching.
- */
-.tile__more,
-.tile-holder--removable .tile__remove {
-  width: 24px;
-  height: 24px;
-}
-
-@media (hover: none) {
-  .tile-holder--removable:has(.tile__more) .tile__remove {
-    display: none;
-  }
-
-  .tile__more {
-    width: 28px;
-    height: 28px;
-  }
 }

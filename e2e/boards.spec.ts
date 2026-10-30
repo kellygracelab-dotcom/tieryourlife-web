@@ -4,6 +4,21 @@ import { list, mockBackend } from "./fixtures";
 /** A press the way the project's device makes it: a finger taps, a mouse clicks. */
 const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
 
+/**
+ * A double tap on a card, as on the phone; a mouse double-clicks. The second
+ * tap lands where the first did, as a finger's would, without waiting for the
+ * picked card to settle.
+ */
+async function doubleTap(page: Page, target: Locator, touch: boolean) {
+  if (!touch) return target.dblclick();
+  await target.scrollIntoViewIfNeeded();
+  const box = await target.boundingBox();
+  if (box === null) throw new Error("the card is not laid out");
+  const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.touchscreen.tap(at.x, at.y);
+  await page.touchscreen.tap(at.x, at.y);
+}
+
 /** A board of one's own with three cards, one of them ranked, made the way a person makes it. */
 async function makeBoard(page: Page, touch: boolean) {
   await page.goto("/b");
@@ -19,21 +34,16 @@ async function makeBoard(page: Page, touch: boolean) {
     await add.press("Enter");
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
-  // The move sheet from the card: any tier by a press, no keyboard needed. A
-  // finger finds the button on the card; a mouse sees it once the pointer is there.
-  const move = page.getByLabel("Move Ex Machina", { exact: true });
-  if (touch) {
-    await move.tap();
-  } else {
-    await page.getByRole("button", { name: "Ex Machina", exact: true }).hover();
-    await move.click();
-  }
+  // The card's menu by a double tap, as on the phone: any tier by a press, no
+  // keyboard needed. Nothing sits on the card itself to be hit by mistake.
+  const card = page.getByRole("button", { name: "Ex Machina", exact: true });
+  if (!touch) await card.hover();
+  await expect(page.getByLabel(/^(Remove|Move) Ex Machina$/)).toHaveCount(0);
+  await doubleTap(page, card, touch);
   const sheet = page.getByRole("dialog", { name: "Ex Machina" });
-  if (touch) {
-    // On a touch screen the sheet is where a card leaves the list; the cross steps aside.
-    await expect(sheet.getByRole("button", { name: "Remove from list" })).toBeVisible();
-    await expect(page.getByLabel("Remove Ex Machina", { exact: true })).toBeHidden();
-  } else {
+  // The sheet is where a card leaves the list.
+  await expect(sheet.getByRole("button", { name: "Remove from list" })).toBeVisible();
+  if (!touch) {
     // The keyboard stays in the sheet, round and round.
     for (let i = 0; i < 9; i++) {
       await page.keyboard.press("Tab");

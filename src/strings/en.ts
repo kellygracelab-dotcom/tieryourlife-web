@@ -254,7 +254,6 @@ export const en = {
     add: "Add",
     added: "Added",
     unnamed: "Untitled card",
-    remove: "Remove {name}",
     noCardsYet: "No cards yet. Search the catalogue or type a name and press Enter.",
     tiers: "Tiers",
     // The phone app's names for the five tiers a new list starts with.
@@ -899,7 +898,7 @@ export const en = {
     editTitle: "Edit list name",
     titleField: "Title",
     pool: { one: "Pool · {n} unranked", other: "Pool · {n} unranked" },
-    cardTrashed: "“{name}” moved to the trash",
+    cardTrashed: "Removed {name}",
     boardTrashed: "“{name}” moved to the trash",
     notFound: "List not found.",
     notFoundBody: "It may have been deleted, or it lives on another device.",
@@ -923,7 +922,6 @@ export const en = {
     categoryNone: "Not chosen yet",
     rankedEmpty: "Nothing ranked yet",
     rankedNote: "Switch to Rows or Single strip to move cards between tiers.",
-    moveMenu: "Move {name}",
     moveTo: "Move to a tier",
     currentTier: "Currently here",
     backToPool: "Back to the pool",
@@ -987,6 +985,7 @@ export const en = {
     anonymousTitle: "Publish anonymously",
     anonymousBody: "No name or face on the list. Only you can change it or take it down.",
     categoryWaiting: "Waiting for a moderator",
+    menuHint: "Double-click or right-click a card to move or remove it.",
   },
   sync: {
     offBusy: "Deleting…",

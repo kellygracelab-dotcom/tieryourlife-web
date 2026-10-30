@@ -257,7 +257,6 @@ const tr: Translation = {
     add: "Ekle",
     added: "Eklendi",
     unnamed: "Başlıksız kart",
-    remove: "{name} kartını kaldır",
     noCardsYet: "Henüz kart yok. Katalogda arayın ya da bir ad yazıp Enter'a basın.",
     tiers: "Seviyeler",
     addTier: "Seviye ekle",
@@ -916,7 +915,7 @@ const tr: Translation = {
     editTitle: "Liste adını düzenle",
     titleField: "Başlık",
     pool: { one: "Havuz · {n} sıralanmadı", other: "Havuz · {n} sıralanmadı" },
-    cardTrashed: "“{name}” çöp kutusuna taşındı",
+    cardTrashed: "{name} kaldırıldı",
     boardTrashed: "“{name}” çöp kutusuna taşındı",
     notFound: "Liste bulunamadı.",
     notFoundBody: "Silinmiş olabilir ya da başka bir cihazda duruyor.",
@@ -941,7 +940,6 @@ const tr: Translation = {
     rankedEmpty: "Henüz sıralanan yok",
     rankedNote:
       "Kartları seviyeler arasında taşımak için “Satırlar” ya da “Tek şerit” görünümüne geç.",
-    moveMenu: "{name} öğesini taşı",
     moveTo: "Bir seviyeye taşı",
     currentTier: "Şu anda burada",
     backToPool: "Havuza geri gönder",
@@ -1006,6 +1004,7 @@ const tr: Translation = {
     anonymousBody:
       "Listede ad ve fotoğraf olmaz. Yalnızca sen değiştirebilir veya kaldırabilirsin.",
     categoryWaiting: "Moderatör bekleniyor",
+    menuHint: "Taşımak veya kaldırmak için bir karta çift tıklayın ya da sağ tıklayın.",
   },
   sync: {
     offBusy: "Siliniyor…",
