@@ -840,7 +840,11 @@
   }
 }
 
-/* The preview: the board at compact metrics, band 64, rows of 72, tiles of 40 × 58. */
+/*
+ * The preview: the board at compact metrics, band 64, rows of 72, tiles of
+ * 40 × 58. A tier nobody landed in is as tall as one with a card, as on the
+ * boards themselves.
+ */
 .result-preview {
   display: flex;
   flex-direction: column;
@@ -853,10 +857,6 @@
   overflow: hidden;
   border-radius: var(--radius-card);
   background: color-mix(in oklab, var(--band-base) var(--band-tint), var(--paper));
-}
-
-.result-tier--empty {
-  min-height: 40px;
 }
 
 .result-tier__band {
@@ -880,7 +880,7 @@
   align-self: center;
   padding-inline: 12px;
   font: 400 12px/16px var(--font);
-  color: var(--ink-quiet);
+  color: var(--ink-dim);
 }
 
 .result-tier__cards {

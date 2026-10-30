@@ -509,7 +509,7 @@
     box-shadow: inset 0 0 0 2px var(--link);
   }
 
-  /* Small enough to stay clear of the letter in a row 56 px high. */
+  /* Small, in the band's corner, clear of the letter even in a row 86 px high. */
   .tier--armed .tier__key {
     top: 3px;
     inset-inline-end: 3px;

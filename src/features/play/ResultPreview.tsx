@@ -19,7 +19,7 @@ const TILE_WIDTH = 40;
 
 /**
  * The result as a board at compact size, read only: a band of 64, tiles of
- * 40 × 58, a tier nobody landed in as a short row that says so. The ranking
+ * 40 × 58, a tier nobody landed in as a row that says so. The ranking
  * board's own read-only rendering has no dashed card and no empty row, and is
  * drawn at full size, hence a board of its own.
  */
@@ -34,13 +34,7 @@ export function ResultPreview({ board, rows, dashed, only }: ResultPreviewProps)
           "--band-dark": tier.colorDark,
         } as CSSProperties;
         return (
-          <div
-            key={tier.id}
-            className={
-              ids.length === 0 ? "result-tier result-tier--empty band" : "result-tier band"
-            }
-            style={colours}
-          >
+          <div key={tier.id} className="result-tier band" style={colours}>
             <div className="result-tier__band">
               <span className="result-tier__label">{tier.label}</span>
             </div>

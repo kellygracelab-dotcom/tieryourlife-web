@@ -68,6 +68,9 @@ test.describe("a wide screen", () => {
       const theirs = (await tier.boundingBox())!;
       expect(Math.round(theirs.x)).toBe(Math.round(mine.x));
       expect(Math.round(theirs.width)).toBe(Math.round(mine.width));
+      // Mine's first tier is empty and Theirs' holds a card: one height, 90 + 2 × 12.
+      expect(Math.round(mine.height)).toBe(114);
+      expect(Math.round(theirs.height)).toBe(114);
     }
   });
 
@@ -197,6 +200,9 @@ test.describe("a wide screen", () => {
       .toEqual([52, 76]);
     const band = (await page.locator(".tier__band").first().boundingBox())!;
     expect(Math.round(band.width)).toBe(80);
+    // An empty tier is as tall as one holding a card: 76 + 2 × 12.
+    const empty = (await page.locator(".board > .tier").first().boundingBox())!;
+    expect(Math.round(empty.height)).toBe(100);
     await expect(page.getByRole("button", { name: "Copy link" })).toBeHidden();
     await tablet.close();
   });

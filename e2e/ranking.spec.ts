@@ -175,6 +175,16 @@ test.describe("ranking a list on a phone", () => {
     await card(page, "Ex Machina").tap();
     await expect(page.getByText("Tap a tier to place it")).toBeVisible();
     await page.getByRole("button", { name: "Place Ex Machina in S" }).tap();
+    // S holds a card and A is empty: one height, 64 + 2 × 11.
+    const rows = page.locator(".board > .tier");
+    await expect
+      .poll(async () => {
+        const heights = [];
+        for (const row of await rows.all())
+          heights.push(Math.round((await row.boundingBox())!.height));
+        return heights;
+      })
+      .toEqual([86, 86]);
     await page.getByRole("button", { name: "Place The Witch in A" }).tap();
     await page.getByRole("button", { name: "Place Climax in A" }).tap();
     await expect(page.getByText("All 3 placed")).toBeVisible();
