@@ -71,6 +71,15 @@ export function deleteSection(client: ApiClient, id: string): Promise<void> {
   return client.request<void>("DELETE", `/lists/sections/${encodeURIComponent(id)}`);
 }
 
+/**
+ * What a waiting proposal's name is already taken by, as staff see it: an
+ * approved topic (with the section it is in), or a section. A topic wins
+ * when both are; translations are not compared.
+ */
+export type NameClash =
+  | { kind: "topic"; id: string; name: string; section: string | null; sectionName: string | null }
+  | { kind: "section"; id: string; name: string };
+
 /** A section somebody proposed, as the queue shows it. */
 export interface ProposedSection extends SectionStats {
   proposerUid?: string | null;
@@ -81,6 +90,8 @@ export interface ProposedSection extends SectionStats {
   /** The picture's five strongest colours, to pick another tint from. */
   palette?: string[];
   tint?: ThemePair;
+  /** Null when the name is free; left out by a backend from before it said. */
+  nameClash?: NameClash | null;
 }
 
 export function loadSectionQueue(client: ApiClient): Promise<{ sections: ProposedSection[] }> {
@@ -120,7 +131,7 @@ export interface TopicApproval {
  * A proposed section approved as a topic of an open one instead: the topic
  * takes its picture, the proposal is merged into the section, and the lists
  * waiting for it move under the topic. Refused with 409 NAME_TAKEN {id} when
- * a topic has that name, and 409 SETTLED when it was decided already.
+ * a topic has that name (merge into it instead), and 409 SETTLED when it was decided already.
  */
 export function approveSectionAsTopic(
   client: ApiClient,
@@ -131,6 +142,24 @@ export function approveSectionAsTopic(
     "POST",
     `/lists/sections/${encodeURIComponent(id)}/approve-as-topic`,
     { body: approval },
+  );
+}
+
+/**
+ * A proposal merged into an approved topic that has its name: the lists
+ * waiting for it move under the topic, which keeps its own picture. Refused
+ * with 400 INVALID when the topic cannot take it (not approved, or its
+ * section hidden) and 409 SETTLED when it was decided already.
+ */
+export function mergeSectionIntoTopic(
+  client: ApiClient,
+  id: string,
+  topic: string,
+): Promise<{ topic: Topic | null; proposal: SectionStats | null }> {
+  return client.request<{ topic: Topic | null; proposal: SectionStats | null }>(
+    "POST",
+    `/lists/sections/${encodeURIComponent(id)}/merge-into-topic`,
+    { body: { topic } },
   );
 }
 

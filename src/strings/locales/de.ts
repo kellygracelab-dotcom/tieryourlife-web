@@ -723,6 +723,9 @@ const de: Translation = {
       other: "{n} wartende Listen ziehen mit um.",
     },
     mergeIntoIt: "Damit zusammenführen",
+    mergedIntoTopic: "„{name}“ mit „{topic}“ in „{section}“ zusammengeführt",
+    topicMergeRefused:
+      "„{topic}“ kann es gerade nicht aufnehmen: Es ist nicht freigegeben, oder sein Bereich ist ausgeblendet.",
     approvedAsTopic: "„{name}“ als Thema in {section} freigegeben",
     listsMoved: { one: "{n} Liste verschoben", other: "{n} Listen verschoben" },
     lists: "Listen",

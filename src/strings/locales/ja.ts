@@ -697,6 +697,9 @@ const ja: Translation = {
     approveAsTopic: "トピックとして承認",
     listsMoveWith: { other: "待っているリスト{n}件も一緒に移ります。" },
     mergeIntoIt: "そちらに統合",
+    mergedIntoTopic: "「{name}」を「{section}」の「{topic}」に統合しました",
+    topicMergeRefused:
+      "「{topic}」は今は受け入れられません。公開されていないか、セクションが非表示です。",
     approvedAsTopic: "「{name}」を{section}のトピックとして承認しました",
     listsMoved: { other: "{n}件のリストを移動" },
     lists: "リスト",

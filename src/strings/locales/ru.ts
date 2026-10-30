@@ -761,6 +761,9 @@ const ru: Translation = {
       other: "{n} ожидающего списка переместятся вместе с ней.",
     },
     mergeIntoIt: "Объединить с ним",
+    mergedIntoTopic: "«{name}» объединено с «{topic}» в «{section}»",
+    topicMergeRefused:
+      "«{topic}» сейчас не может его принять: топик не открыт или его раздел скрыт.",
     approvedAsTopic: "«{name}» одобрено как тема в «{section}»",
     listsMoved: {
       one: "перемещён {n} список",

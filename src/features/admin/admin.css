@@ -501,6 +501,22 @@
   color: var(--ink-dim);
 }
 
+/* The backend's word that the name is taken already, before anybody decides. */
+.proposal__clash {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  font: 400 13px/18px var(--font);
+  color: var(--ink);
+}
+
+.proposal__clash .ms {
+  flex: none;
+  color: var(--ink-dim);
+}
+
 .proposal__swatches {
   display: flex;
   gap: 6px;
