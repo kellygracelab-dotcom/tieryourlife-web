@@ -89,6 +89,10 @@ export const web = onRequest(
     timeoutSeconds: 30,
     // Drawing a share card holds the fonts, the layout engine and a few posters at once.
     memory: "512MiB",
+    // One kept warm: a cold start made the first Finish after a quiet hour
+    // wait seconds, or fail with "no available instance". Danylo chose the
+    // few dollars a month over that (30.10.2026).
+    minInstances: 1,
     maxInstances: 10,
   },
   (request, response) => route(request, response),
@@ -216,10 +220,13 @@ async function saveRanking(
     return void response.status(413).json({ error: "Too large", code: "TOO_LARGE" });
   }
   const listId = (body as { listId?: unknown } | null)?.listId;
-  const list =
+  const quota = db.collection(QUOTA).doc(identity.uid);
+  // The list and the caller's last write are read together: one round trip
+  // to the database instead of two before the answer can start.
+  const [list, lastQuota] =
     typeof listId === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(listId)
-      ? await db.collection(PUBLISHED).doc(listId).get()
-      : null;
+      ? await Promise.all([db.collection(PUBLISHED).doc(listId).get(), quota.get()])
+      : [null, null];
   if (list === null || !list.exists || list.get("underReview") === true) {
     return notFound(response, "No such list");
   }
@@ -232,8 +239,7 @@ async function saveRanking(
   }
 
   const now = Date.now();
-  const quota = db.collection(QUOTA).doc(identity.uid);
-  const lastWrite = (await quota.get()).get("lastWriteAt") as number | undefined;
+  const lastWrite = lastQuota?.get("lastWriteAt") as number | undefined;
   if (tooSoon(lastWrite ?? null, now)) {
     response.setHeader("Retry-After", "2");
     return void response.status(429).json({ error: "One at a time", code: "BUSY" });
@@ -267,11 +273,15 @@ async function saveRanking(
   for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
     const code = makeCode(random);
     try {
-      await db
-        .collection(RANKINGS)
-        .doc(code)
-        .create({ ...document, createdAt: FieldValue.serverTimestamp() });
-      await quota.set({ lastWriteAt: now }, { merge: true });
+      // The ranking and the caller's last write go in one commit: one round
+      // trip, and never a ranking without its quota mark.
+      const batch = db.batch();
+      batch.create(db.collection(RANKINGS).doc(code), {
+        ...document,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+      batch.set(quota, { lastWriteAt: now }, { merge: true });
+      await batch.commit();
       return void response.status(201).json({ code, claimToken });
     } catch (error) {
       if ((error as { code?: number }).code !== 6 /* ALREADY_EXISTS */) throw error;
