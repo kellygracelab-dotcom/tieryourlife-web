@@ -750,6 +750,7 @@ const ru: Translation = {
     removePicture: "Убрать изображение",
     topicSaved: "Тема «{name}» сохранена",
     topicTaken: "«{name}» уже есть в «{section}»",
+    topicExists: "Топик «{name}» уже есть",
     sectionTaken: "Раздел «{name}» уже существует",
     approveAsSection: "Одобрить как раздел",
     approveAsTopicIn: "Одобрить как тему в",

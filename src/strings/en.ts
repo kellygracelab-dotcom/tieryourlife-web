@@ -675,6 +675,7 @@ export const en = {
     removePicture: "Remove picture",
     topicSaved: "{name} saved",
     topicTaken: "{name} already exists in {section}",
+    topicExists: "A topic called {name} already exists",
     sectionTaken: "A section called {name} already exists",
     approveAsSection: "Approve as a section",
     approveAsTopicIn: "Approve as a topic in",

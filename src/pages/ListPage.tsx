@@ -27,7 +27,12 @@ import { flyIn } from "../features/tierboard/flight";
 import type { Rows } from "../features/tierboard/model";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
 import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
-import { loadList, report as sendReport, unpublish as unpublishList } from "../lib/api";
+import {
+  loadList,
+  preloadHidesAuthor,
+  report as sendReport,
+  unpublish as unpublishList,
+} from "../lib/api";
 import { isEditorial, isEditorialAuthor } from "../lib/editorial";
 import { type KeyValueStore, localStorageStore } from "../lib/storage";
 import { useResource } from "../lib/useResource";
@@ -201,7 +206,12 @@ interface ListPageProps {
 
 export function ListPage(props: ListPageProps) {
   const { id = "" } = useParams();
-  const { state, retry } = useResource(id, loadList);
+  const { account } = useSession();
+  // Only a list whose page copy names nobody is read again once an account is
+  // known; any other keeps its key, and so its board, when the account arrives.
+  const asAccount = account?.kind === "signedIn" && preloadHidesAuthor(id);
+  const load = useCallback(() => loadList(id, asAccount), [id, asAccount]);
+  const { state, retry } = useResource(asAccount ? `${id}#account` : id, load);
 
   if (state.status === "loading") {
     return <ListPageLoading note={strings.list.opening} rows={3} />;

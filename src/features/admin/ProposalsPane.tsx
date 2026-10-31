@@ -76,8 +76,12 @@ const orNothing =
 
 type Filter = "all" | "sections" | "topics";
 
-/** What a name clashed with, as which, so the field says it and Merge into it knows where. */
-type Taken = { name: string; as: "section" | "topic"; id: string | null };
+/**
+ * What a name clashed with, as which, so the field says it and Merge into it
+ * knows where. A topic's name is taken in every section, so the section is
+ * the one the backend names, when it does.
+ */
+type Taken = { name: string; as: "section" | "topic"; id: string | null; section: string | null };
 
 /** Approve's own panel (docs/design-spec-walk-3.md, E3): as a section, or as a topic of one. */
 type Approving = {
@@ -129,7 +133,7 @@ function SectionProposal({
   const act = <T,>(
     work: Promise<T>,
     notice: string | ((done: T) => SnackbarNotice),
-    clash?: Omit<Taken, "id">,
+    clash?: Omit<Taken, "id" | "section">,
     invalid?: string,
   ) => {
     setBusy(true);
@@ -144,7 +148,10 @@ function SectionProposal({
         if (clash !== undefined && error.kind === "invalid" && error.code === "NAME_TAKEN") {
           setOpened((before) =>
             before?.kind === "approve"
-              ? { ...before, taken: { ...clash, id: error.id ?? null } }
+              ? {
+                  ...before,
+                  taken: { ...clash, id: error.id ?? null, section: error.section ?? null },
+                }
               : before,
           );
           return;
@@ -169,26 +176,30 @@ function SectionProposal({
       );
       return;
     }
-    const section = panel.section;
     act(
-      deps.approveAsTopic(proposal.id, { section, ...(renamed ? { name } : {}) }),
-      ({ topic }) => ({
-        text: [
-          fill(strings.admin.approvedAsTopic, {
-            name: topic?.name ?? name,
-            section: nameOf(section),
-          }),
-          ...lineOfLists,
-        ].join(" · "),
-        ...(topic === null
-          ? {}
-          : {
-              action: {
-                text: strings.admin.open,
-                onClick: () => void navigate(topicPath(section, topic.id)),
-              },
+      deps.approveAsTopic(proposal.id, { section: panel.section, ...(renamed ? { name } : {}) }),
+      ({ topic }) => {
+        // Where the backend put it: a request repeated after somebody else's
+        // half-done approval answers with theirs.
+        const section = topic?.section ?? panel.section;
+        return {
+          text: [
+            fill(strings.admin.approvedAsTopic, {
+              name: topic?.name ?? name,
+              section: nameOf(section),
             }),
-      }),
+            ...lineOfLists,
+          ].join(" · "),
+          ...(topic === null
+            ? {}
+            : {
+                action: {
+                  text: strings.admin.open,
+                  onClick: () => void navigate(topicPath(section, topic.id)),
+                },
+              }),
+        };
+      },
       { name, as: "topic" },
     );
   };
@@ -236,7 +247,7 @@ function SectionProposal({
    */
   const mergeInto = (panel: Approving, taken: Taken) => {
     if (taken.as === "topic" && taken.id !== null) {
-      mergeIntoTopic(taken.id, taken.name, panel.section);
+      mergeIntoTopic(taken.id, taken.name, taken.section ?? panel.section);
       return;
     }
     const into = taken.as === "section" ? taken.id : panel.section;
@@ -437,10 +448,12 @@ function SectionProposal({
                 <p id={`${id}-taken`} className="proposal__error" role="alert">
                   {shownTaken.as === "section"
                     ? fill(strings.admin.sectionTaken, { name: shownTaken.name })
-                    : fill(strings.admin.topicTaken, {
-                        name: shownTaken.name,
-                        section: nameOf(approving.section),
-                      })}
+                    : shownTaken.section === null
+                      ? fill(strings.admin.topicExists, { name: shownTaken.name })
+                      : fill(strings.admin.topicTaken, {
+                          name: shownTaken.name,
+                          section: nameOf(shownTaken.section),
+                        })}
                   {mayMerge(shownTaken) && (
                     <Button disabled={busy} onClick={() => mergeInto(approving, shownTaken)}>
                       {strings.admin.mergeIntoIt}

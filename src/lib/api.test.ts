@@ -13,7 +13,11 @@ vi.mock("../api/client", () => ({ createApiClient: mocks.createApiClient }));
 vi.mock("./firebase", () => ({ tokenProviders: mocks.tokenProviders }));
 vi.mock("./preload", () => ({
   preloadedList: (id: string) =>
-    id === "embedded" ? { id: "embedded", title: "From HTML" } : null,
+    id === "embedded"
+      ? { id: "embedded", title: "From HTML" }
+      : id === "nameless"
+        ? { id: "nameless", title: "From HTML", anonymous: true }
+        : null,
   preloadedRanking: (code: string) => (code === "embedded" ? { code: "embedded" } : null),
 }));
 
@@ -30,6 +34,7 @@ import {
   loadFeed,
   loadList,
   loadListRankings,
+  preloadHidesAuthor,
   loadMyLists,
   loadMyRankings,
   loadRanking,
@@ -67,6 +72,17 @@ describe("api", () => {
     });
     await expect(loadRanking("embedded")).resolves.toEqual({ code: "embedded" });
     expect(mocks.request).not.toHaveBeenCalled();
+  });
+
+  it("asks the network for a list without its author's name only when an account may own it", async () => {
+    mocks.request.mockClear();
+    expect(preloadHidesAuthor("nameless")).toBe(true);
+    expect(preloadHidesAuthor("embedded")).toBe(false);
+    await expect(loadList("nameless")).resolves.toMatchObject({ title: "From HTML" });
+    await loadList("embedded", true);
+    expect(mocks.request).not.toHaveBeenCalled();
+    await loadList("nameless", true);
+    expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/nameless");
   });
 
   it("loads a page of the feed for a query", async () => {

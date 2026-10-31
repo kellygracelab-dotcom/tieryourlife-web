@@ -755,6 +755,7 @@ const uk: Translation = {
     removePicture: "Прибрати зображення",
     topicSaved: "Тему «{name}» збережено",
     topicTaken: "«{name}» уже є в «{section}»",
+    topicExists: "Тема «{name}» вже є",
     sectionTaken: "Розділ «{name}» уже існує",
     approveAsSection: "Схвалити як розділ",
     approveAsTopicIn: "Схвалити як тему в",

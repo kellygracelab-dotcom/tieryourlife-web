@@ -76,6 +76,22 @@ describe("listPayload", () => {
     assert.equal(payload.authorName, "danylo");
   });
 
+  it("names nobody for a list published without its author's name", () => {
+    const payload = listPayload("abc12345", {
+      title: "Films",
+      authorUid: "u1",
+      authorName: "danylo",
+      authorPhotoUrl: "https://faces.test/u1.webp",
+      anonymous: true,
+    });
+    assert.equal(payload.authorUid, "");
+    assert.equal(payload.authorName, "");
+    assert.equal(payload.authorPhotoUrl, null);
+    assert.equal(payload.anonymous, true);
+    assert.equal(JSON.stringify(payload).includes("u1"), false);
+    assert.equal(JSON.stringify(payload).includes("danylo"), false);
+  });
+
   it("survives a document without one", () => {
     assert.equal(listPayload("abc12345", {}).authorUid, "");
     assert.equal(listPayload("abc12345", { authorUid: 5 as never }).authorUid, "");

@@ -66,6 +66,11 @@ describe("parseApiError", () => {
       json({ error: "Taken", code: "NAME_TAKEN", detail: "t1", id: "t1" }),
       { kind: "invalid", detail: "Taken", code: "NAME_TAKEN", id: "t1" },
     ],
+    [
+      409,
+      json({ error: "Taken", code: "NAME_TAKEN", detail: "t1", id: "t1", section: "food" }),
+      { kind: "invalid", detail: "Taken", code: "NAME_TAKEN", id: "t1", section: "food" },
+    ],
     [409, json({ code: "NAME_TAKEN" }), { kind: "invalid", detail: null, code: "NAME_TAKEN" }],
     [
       410,

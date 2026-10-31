@@ -186,7 +186,9 @@ describe("TopicEditor", () => {
     create(send);
     await userEvent.type(nameField(), "Pokémon");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Pokémon already exists in Games");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "A topic called Pokémon already exists",
+    );
     expect(nameField()).toHaveAttribute("aria-invalid", "true");
   });
 

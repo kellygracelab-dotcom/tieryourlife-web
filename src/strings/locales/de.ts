@@ -714,6 +714,7 @@ const de: Translation = {
     removePicture: "Bild entfernen",
     topicSaved: "„{name}“ gespeichert",
     topicTaken: "„{name}“ gibt es in {section} schon",
+    topicExists: "Ein Thema namens „{name}“ gibt es schon",
     sectionTaken: "Eine Rubrik „{name}“ gibt es schon",
     approveAsSection: "Als Rubrik freigeben",
     approveAsTopicIn: "Als Thema freigeben in",

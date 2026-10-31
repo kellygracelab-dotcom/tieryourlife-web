@@ -96,14 +96,20 @@ interface StoredList {
  * as it is here, and the page needs it: it is the address of the author's
  * page, and how an author is told from a visitor. An empty one broke both on
  * every list opened by its link.
+ *
+ * A list published without its author's name is drawn for everybody, so it
+ * says nobody, as the proxy's answer to anybody but the author does: the page
+ * asks the proxy itself when someone signed in may be that author.
  */
 export function listPayload(id: string, data: StoredList) {
+  const anonymous = data.anonymous === true;
   return {
     id,
     title: data.title ?? "",
-    authorUid: typeof data.authorUid === "string" ? data.authorUid : "",
-    authorName: data.authorName ?? "",
-    authorPhotoUrl: data.authorPhotoUrl ?? null,
+    authorUid: !anonymous && typeof data.authorUid === "string" ? data.authorUid : "",
+    authorName: anonymous ? "" : (data.authorName ?? ""),
+    authorPhotoUrl: anonymous ? null : (data.authorPhotoUrl ?? null),
+    anonymous,
     category: data.category ?? "other",
     itemCount: data.itemCount ?? data.items?.length ?? 0,
     coverImageUrl: data.coverImageUrl ?? null,

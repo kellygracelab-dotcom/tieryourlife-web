@@ -749,6 +749,7 @@ const pl: Translation = {
     removePicture: "Usuń obraz",
     topicSaved: "Zapisano: {name}",
     topicTaken: "„{name}” już jest w dziale {section}",
+    topicExists: "Temat „{name}” już istnieje",
     sectionTaken: "Dział „{name}” już istnieje",
     approveAsSection: "Zatwierdź jako dział",
     approveAsTopicIn: "Zatwierdź jako temat w",

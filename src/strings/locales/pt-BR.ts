@@ -697,6 +697,7 @@ const ptBR: Translation = {
     removePicture: "Remover imagem",
     topicSaved: "“{name}” salvo",
     topicTaken: "“{name}” já existe em {section}",
+    topicExists: "Já existe um tópico chamado “{name}”",
     sectionTaken: "Já existe uma seção chamada “{name}”",
     approveAsSection: "Aprovar como seção",
     approveAsTopicIn: "Aprovar como tema em",
