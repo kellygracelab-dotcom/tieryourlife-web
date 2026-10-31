@@ -110,15 +110,18 @@ describe("ProfilePage", () => {
     expect(follow.state).not.toHaveBeenCalled();
   });
 
-  it("shows the author from the link, their counts and their lists newest first", async () => {
+  it("shows the author from the link and their lists newest first, with no counts", async () => {
     open();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Someone Nice");
-    expect(await screen.findByText("1,203 followers · 2 public lists")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /List a/ })).toBeInTheDocument();
     expect(load).toHaveBeenCalledWith({ author: "u2", sort: "recent" });
-    expect(screen.getByRole("link", { name: /List a/ })).toBeInTheDocument();
+    await screen.findByRole("button", { name: "Follow" });
+    // A small count makes the place look empty, a big one is noise: neither is said.
+    expect(screen.queryByText(/followers?|public lists?/)).toBeNull();
+    expect(screen.queryByText(/1,203/)).toBeNull();
   });
 
-  it("follows on press, the count moves at once, and comes back if the backend says no", async () => {
+  it("follows on press at once, and comes back if the backend says no", async () => {
     vi.mocked(follow.follow).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     open();
     const button = await screen.findByRole("button", { name: "Follow" });
@@ -126,18 +129,15 @@ describe("ProfilePage", () => {
     expect(follow.follow).toHaveBeenCalledWith("u2");
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t follow");
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("1,203 followers · 2 public lists")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Follow" }));
     expect(screen.getByRole("button", { name: /Following/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText("1,204 followers · 2 public lists")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Following/ }));
     expect(follow.unfollow).toHaveBeenCalledWith("u2");
-    expect(screen.getByText("1,203 followers · 2 public lists")).toBeInTheDocument();
   });
 
   it("unfollows on press and keeps an Undo in a snackbar, which follows again", async () => {
@@ -146,7 +146,6 @@ describe("ProfilePage", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Following/ }));
     expect(follow.unfollow).toHaveBeenCalledWith("u2");
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("1,203 followers · 2 public lists")).toBeInTheDocument();
     const notice = screen.getByText("Unfollowed Someone Nice").parentElement!;
     expect(notice).toHaveAttribute("role", "status");
 
@@ -157,7 +156,6 @@ describe("ProfilePage", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText("1,204 followers · 2 public lists")).toBeInTheDocument();
 
     // An Undo the backend refuses comes back to the unfollowed state it was
     // pressed in, not to the state the snackbar was made in.
@@ -167,7 +165,6 @@ describe("ProfilePage", () => {
     await userEvent.click(within(again).getByRole("button", { name: "Undo" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t follow");
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("1,203 followers · 2 public lists")).toBeInTheDocument();
   });
 
   it("asks a guest to sign in and follows by itself once they have", async () => {

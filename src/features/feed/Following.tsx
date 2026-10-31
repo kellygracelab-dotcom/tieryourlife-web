@@ -5,7 +5,7 @@ import type { FeedQuery, ListSummary } from "../../api/types";
 import { followAuthor, loadFollowing, suggestedAuthors, unfollowAuthor } from "../../lib/api";
 import { isEditorialAuthor } from "../../lib/editorial";
 import { useResource } from "../../lib/useResource";
-import { plural, strings } from "../../strings";
+import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { FollowButton } from "../community/FollowButton";
@@ -68,7 +68,6 @@ function SuggestionCard({
       >
         <Face author={author} />
         <span className="suggestion__name">{author.name.trim() || strings.profile.someone}</span>
-        <span className="suggestion__meta">{plural(strings.card.rankings, author.takeCount)}</span>
       </Link>
       <FollowButton following={state === "following"} onClick={toggle} size="card" />
       {state === "failed" && (

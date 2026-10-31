@@ -110,16 +110,27 @@ beforeEach(() => {
   useHiddenStoreForTests(memoryStore());
 });
 
+/** The section and its topics have answered: the chips stand once they have. */
+const sectionRead = async () => {
+  await waitFor(() => expect(sectionsDeps.load).toHaveBeenCalled());
+  await within(screen.getByRole("navigation", { name: "Topics" })).findByRole("link", {
+    name: "Pokémon",
+  });
+};
+
 describe("SectionPage", () => {
-  it("heads the section with its counts and Follow, its topics as chips, and its lists by popularity", async () => {
+  it("heads the section with Follow and no counts, its topics as chips, and its lists by popularity", async () => {
     open("/s/games");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Games");
-    expect(await screen.findByText("3,410 followers · 812 lists")).toBeInTheDocument();
+    await waitFor(() => expect(sectionsDeps.load).toHaveBeenCalled());
     expect(load).toHaveBeenCalledWith({ category: "games", sort: "popular" });
 
     const chips = within(screen.getByRole("navigation", { name: "Topics" }));
     // All, then by followers, then this person's waiting ones, then the way to suggest one.
     expect(await chips.findByRole("link", { name: "Pokémon" })).toBeInTheDocument();
+    // A small count makes the place look empty, a big one is noise: neither is said.
+    expect(screen.getByRole("button", { name: "Follow" })).toBeInTheDocument();
+    expect(screen.queryByText(/followers?|3,410|812/)).toBeNull();
     expect(chips.getAllByRole("link").map((chip) => chip.textContent)).toEqual([
       "All",
       "Pokémon",
@@ -132,10 +143,14 @@ describe("SectionPage", () => {
 
   it("follows at once, and unfollows with a way back", async () => {
     open("/s/games");
-    await screen.findByText("3,410 followers · 812 lists");
+    await sectionRead();
     await userEvent.click(screen.getByRole("button", { name: "Follow" }));
     expect(sectionsDeps.follow).toHaveBeenCalledWith("games");
-    expect(screen.getByText("3,411 followers · 812 lists")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Following/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.queryByText(/followers?|3,411/)).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: /Following/ }));
     expect(sectionsDeps.unfollow).toHaveBeenCalledWith("games");
@@ -146,15 +161,16 @@ describe("SectionPage", () => {
 
   it("asks a guest to sign in before following", async () => {
     open("/s/games", { kind: "guest", uid: null });
-    await screen.findByText("3,410 followers · 812 lists");
+    await sectionRead();
     await userEvent.click(screen.getByRole("button", { name: "Follow" }));
     expect(screen.getByRole("heading", { name: "Sign in to follow" })).toBeInTheDocument();
     expect(sectionsDeps.follow).not.toHaveBeenCalled();
   });
 
-  it("narrows to one topic, with its own counts and Follow", async () => {
+  it("narrows to one topic, with its own name and Follow and no counts", async () => {
     open("/s/games/t/t2");
-    expect(await screen.findByText("210 followers · 64 lists")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Pokémon" })).toBeInTheDocument();
+    expect(screen.queryByText(/followers?|210|64 lists/)).toBeNull();
     expect(load).toHaveBeenLastCalledWith({ category: "games", topic: "t2", sort: "popular" });
     const buttons = screen.getAllByRole("button", { name: "Follow" });
     await userEvent.click(buttons[buttons.length - 1]!);
@@ -209,7 +225,7 @@ describe("SectionPage", () => {
   it("goes on to the topic a proposal became, inside the section it went into", async () => {
     loadOne.mockRejectedValue(new ApiFailure({ kind: "merged", into: "games", topic: "t2" }));
     const router = open("/s/s-pokemon");
-    expect(await screen.findByText("210 followers · 64 lists")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 2, name: "Pokémon" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/s/games/t/t2");
     await waitFor(() =>
       expect(load).toHaveBeenLastCalledWith({ category: "games", topic: "t2", sort: "popular" }),

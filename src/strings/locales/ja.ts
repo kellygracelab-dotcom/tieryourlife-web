@@ -173,9 +173,6 @@ const ja: Translation = {
   },
   profile: {
     someone: "だれか",
-    followers: { other: "フォロワー {n} 人" },
-    publicLists: { other: "公開リスト {n} 件" },
-    publicListsMore: { other: "公開リスト {n} 件以上" },
     editInSettings: "設定で編集",
     lists: "リスト",
     newestFirst: "新しい順",
@@ -730,7 +727,6 @@ const ja: Translation = {
     moveAnyway: "それでも移動",
   },
   sections: {
-    newThisWeek: { other: "今週の新着{n}件" },
     followers: { other: "フォロワー{n}人" },
     lists: { other: "{n}件のリスト" },
     follow: "フォロー",
@@ -785,7 +781,6 @@ const ja: Translation = {
     frame: "タイル内で動かしたり拡大したりできる画像",
     frameHelp:
       "ドラッグで移動、ピンチまたはスクロールで拡大・縮小します。矢印キーで移動、+ と − で拡大・縮小します。",
-    sample: "サンプルです。リストが届くと実際の数が表示されます。",
     changePicture: "画像を変更",
     paper: "プレビューの背景",
     phone: "スマートフォン",

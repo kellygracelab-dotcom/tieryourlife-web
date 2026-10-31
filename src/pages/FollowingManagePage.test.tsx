@@ -101,15 +101,18 @@ beforeEach(() => {
 });
 
 describe("FollowingManagePage", () => {
-  it("groups sections, topics and people, each with what it is", async () => {
+  it("groups sections, topics and people, each with what it is and no follower counts", async () => {
     open();
     expect(await screen.findByRole("heading", { name: "Sections · 1" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Topics · 2" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "People · 1" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Food/ })).toHaveTextContent("4,120 followers");
-    expect(screen.getByRole("link", { name: /Pokémon/ })).toHaveTextContent(
-      "In Games · 210 followers",
-    );
+    // A small count makes the place look empty, a big one is noise: neither is said.
+    expect(screen.getByRole("link", { name: /Food/ })).toHaveTextContent(/Food$/);
+    expect(
+      screen.getByRole("link", { name: /Food/ }).querySelector(".manage-row__supporting"),
+    ).toBeNull();
+    expect(screen.getByRole("link", { name: /Pokémon/ })).toHaveTextContent(/In Games$/);
+    expect(screen.queryByText(/followers?|4,120|210/)).toBeNull();
     expect(screen.getByRole("link", { name: /Speedruns/ })).toHaveTextContent("In Games · Waiting");
     // A topic with a picture of its own wears it; a waiting one shows it waits.
     expect(screen.getByRole("link", { name: /Pokémon/ }).querySelector("img")).toHaveAttribute(

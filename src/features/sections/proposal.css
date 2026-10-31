@@ -563,12 +563,6 @@
   opacity: 0.6;
 }
 
-.crop__sample {
-  font: 400 11px/15px var(--font);
-  color: rgba(255, 255, 255, 0.88);
-  opacity: 0.6;
-}
-
 .crop-row {
   display: flex;
   flex-wrap: wrap;

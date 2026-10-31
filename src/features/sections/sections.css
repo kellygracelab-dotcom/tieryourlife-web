@@ -100,11 +100,6 @@
   white-space: nowrap;
 }
 
-.section-tile__new {
-  font: 400 11px/15px var(--font);
-  color: rgba(255, 255, 255, 0.88);
-}
-
 /* A tile that opens something in place: a button dressed as the tile. */
 .section-tile--button {
   width: 100%;

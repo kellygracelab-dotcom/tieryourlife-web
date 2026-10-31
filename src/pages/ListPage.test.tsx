@@ -309,7 +309,9 @@ describe("ListPage menu", () => {
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
     // Save to my lists is the head's button on a wide screen and only a phone's line here.
+    // Who else ranked it comes first, the one place the number is said.
     expect(menuLines()).toEqual([
+      "Rankings · 2,140",
       "View danylo",
       "Copy link",
       "Save to my lists",
@@ -336,7 +338,7 @@ describe("ListPage menu", () => {
     open();
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(menuLines()[0]).toBe("Copy link");
+    expect(menuLines().slice(0, 2)).toEqual(["Rankings · 2,140", "Copy link"]);
   });
 });
 
@@ -374,7 +376,7 @@ describe("ListPage", () => {
     expect(screen.getByText("Opening the list…")).toBeInTheDocument();
   });
 
-  it("opens on the author's ranking, with the author and the rankings in the head", async () => {
+  it("opens on the author's ranking, with the author in the head and the rankings in its menu", async () => {
     mocks.loadList.mockResolvedValue(list);
     open();
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
@@ -382,7 +384,9 @@ describe("ListPage", () => {
     );
     const author = screen.getByRole("link", { name: "by danylo" });
     expect(author).toHaveAttribute("href", "/u/u1");
-    expect(screen.getByRole("button", { name: "2,140 rankings" })).toBeInTheDocument();
+    // How many ranked it is not said in the head: it is a line of the ⋮ menu.
+    expect(screen.queryByRole("button", { name: /rankings$/ })).toBeNull();
+    expect(document.querySelector(".list-head__lines")).not.toHaveTextContent(/2,140|rankings/);
     // The address is not spelled out any more: one press copies it.
     expect(screen.queryByText(`${window.location.host}/l/abc`)).toBeNull();
 
@@ -474,10 +478,10 @@ describe("ListPage", () => {
     expect(screen.queryByText(/Danylo Petrov/)).toBeNull();
     expect(screen.queryByRole("link", { name: /^by / })).toBeNull();
     expect(screen.queryByRole("button", { name: "Follow" })).toBeNull();
-    expect(screen.getByRole("button", { name: "2,140 rankings" })).toBeInTheDocument();
 
     // Hiding its author would hide every editorial list; one list can still be hidden or reported.
     await userEvent.click(screen.getByLabelText("More about this list"));
+    expect(screen.getByRole("button", { name: "Rankings · 2,140" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hide this list" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Report this list" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^View / })).toBeNull();
@@ -493,11 +497,13 @@ describe("ListPage", () => {
     expect(screen.queryByRole("button", { name: "Follow" })).toBeNull();
   });
 
-  it("has no rankings chip for a list nobody has ranked", async () => {
+  it("has no rankings line in the menu for a list nobody has ranked", async () => {
     mocks.loadList.mockResolvedValue({ ...list, takeCount: 0 });
     open();
     await screen.findByRole("heading", { level: 1 });
-    expect(screen.queryByRole("button", { name: /rankings?$/ })).toBeNull();
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    expect(menuLines()[0]).toBe("View danylo");
+    expect(screen.queryByRole("button", { name: /^Rankings/ })).toBeNull();
   });
 
   it("copies the link with one press of the button in the head, and says so there", async () => {
@@ -739,7 +745,7 @@ describe("ListPage for its author", () => {
 
     // The owner's menu: the link and taking it down; nothing to report or hide, nothing to publish as theirs.
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(menuLines()).toEqual(["Copy link", "Take it down"]);
+    expect(menuLines()).toEqual(["Rankings · 2,140", "Copy link", "Take it down"]);
     expect(screen.getByRole("button", { name: "Take it down" })).toHaveClass(
       "menu__action--danger",
     );

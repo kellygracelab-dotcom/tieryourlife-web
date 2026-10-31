@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { plural, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
-import { ALL_SECTIONS_PATH, OTHER, sectionPath, sectionStyle, type Section } from "./model";
+import { ALL_SECTIONS_PATH, sectionPath, sectionStyle, type Section } from "./model";
 
 interface SectionTileProps {
   section: Section;
@@ -18,7 +18,6 @@ interface SectionTileProps {
  */
 export function SectionTile({ section, row = false, onOpen }: SectionTileProps) {
   const waiting = section.status === "pending";
-  const fresh = !row && section.newThisWeek > 0 && section.id !== OTHER;
   const className = [
     "section-tile",
     row ? "section-tile--row" : "",
@@ -39,11 +38,6 @@ export function SectionTile({ section, row = false, onOpen }: SectionTileProps) 
         <Icon name={section.icon} className="section-tile__icon" />
         <span className="section-tile__name">{section.name}</span>
       </span>
-      {fresh && (
-        <span className="section-tile__new">
-          {plural(strings.sections.newThisWeek, section.newThisWeek)}
-        </span>
-      )}
     </>
   );
   return onOpen === undefined ? (

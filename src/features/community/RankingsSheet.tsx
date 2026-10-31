@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { ReaderRanking } from "../../api/community";
 import type { PublishedList } from "../../api/types";
 import { isEditorial } from "../../lib/editorial";
-import { plural, strings } from "../../strings";
+import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
@@ -20,16 +20,6 @@ interface RankingsSheetProps {
   onChoose: (ranking: ReaderRanking | null) => void;
   onWithdraw: () => void;
   onClose: () => void;
-}
-
-/** How many people ranked the list, the number every feed card shows, a press away from who they are. */
-export function RankingsChip({ count, onClick }: { count: number; onClick: () => void }) {
-  return (
-    <button type="button" className="rankings-chip" aria-haspopup="dialog" onClick={onClick}>
-      <Icon name="leaderboard" className="rankings-chip__icon" />
-      <span>{plural(strings.card.rankings, count)}</span>
-    </button>
-  );
 }
 
 const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();

@@ -27,7 +27,7 @@ const renderCard = (overrides: Partial<ListSummary> = {}, reason: string | null 
   );
 
 describe("ListCard", () => {
-  it("links to the list, and the author to their page, and says how many ranked it", () => {
+  it("links to the list, and the author to their page, and says how many cards but not how many ranked it", () => {
     renderCard();
     const link = screen.getByRole("link", { name: /Every A24 film, ranked/ });
     expect(link).toHaveAttribute("href", "/l/abc%20def");
@@ -35,7 +35,9 @@ describe("ListCard", () => {
     const author = screen.getByRole("link", { name: "danylo" });
     expect(author).toHaveAttribute("href", "/u/u1");
     expect(screen.queryByText(/by danylo/)).toBeNull();
-    expect(screen.getByText("34 cards · 2,140 rankings")).toBeInTheDocument();
+    // A small count makes the place look empty, a big one is noise: only the cards are counted.
+    expect(screen.getByText("34 cards")).toBeInTheDocument();
+    expect(screen.queryByText(/rankings|2,140/)).toBeNull();
   });
 
   it("stands without an author when the list is editorial", () => {
@@ -43,7 +45,7 @@ describe("ListCard", () => {
     expect(screen.getByRole("link", { name: /Every A24 film, ranked/ })).toBeInTheDocument();
     expect(screen.queryByText(/Danylo Petrov/)).toBeNull();
     expect(screen.getAllByRole("link")).toHaveLength(1);
-    expect(screen.getByText("34 cards · 2,140 rankings")).toBeInTheDocument();
+    expect(screen.getByText("34 cards")).toBeInTheDocument();
   });
 
   it("shows the author's face when there is one", () => {

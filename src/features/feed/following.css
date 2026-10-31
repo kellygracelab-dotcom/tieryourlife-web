@@ -93,11 +93,6 @@
   font-size: 14px;
 }
 
-.suggestion__meta {
-  font: var(--text-caption);
-  color: var(--ink-faint);
-}
-
 @media (max-width: 599px) {
   .suggestions__grid {
     grid-template-columns: repeat(2, 1fr);

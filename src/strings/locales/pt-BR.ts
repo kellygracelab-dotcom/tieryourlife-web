@@ -174,9 +174,6 @@ const ptBR: Translation = {
   },
   profile: {
     someone: "Alguém",
-    followers: { one: "{n} seguidor", other: "{n} seguidores" },
-    publicLists: { one: "{n} lista pública", other: "{n} listas públicas" },
-    publicListsMore: { one: "{n}+ lista pública", other: "{n}+ listas públicas" },
     editInSettings: "Editar em Configurações",
     lists: "Listas",
     newestFirst: "as mais recentes primeiro",
@@ -739,11 +736,6 @@ const ptBR: Translation = {
     moveAnyway: "Mover mesmo assim",
   },
   sections: {
-    newThisWeek: {
-      one: "{n} nova nesta semana",
-      many: "{n} novas nesta semana",
-      other: "{n} novas nesta semana",
-    },
     followers: { one: "{n} seguidor", many: "{n} seguidores", other: "{n} seguidores" },
     lists: { one: "{n} lista", many: "{n} listas", other: "{n} listas" },
     follow: "Seguir",
@@ -798,7 +790,6 @@ const ptBR: Translation = {
     frame: "A imagem, para mover e ampliar dentro do bloco",
     frameHelp:
       "Arraste para mover; use dois dedos ou role para ampliar. As setas movem; + e − ampliam.",
-    sample: "Um exemplo: o número real aparece quando chegarem listas.",
     changePicture: "Trocar imagem",
     paper: "Fundo da prévia",
     phone: "No celular",

@@ -84,8 +84,9 @@ test("an author's page from a card, with a follow that asks a guest to sign in",
   await page.getByRole("link", { name: "danylo", exact: true }).first().click();
   await expect(page).toHaveURL(`/u/${list.authorUid}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("danylo");
-  await expect(page.getByText("3 followers · 1 public list")).toBeVisible();
   await expect(page.getByRole("link", { name: /Every A24 film, ranked/ })).toBeVisible();
+  // A small count makes the place look empty, a big one is noise: the page says neither.
+  await expect(page.getByText(/followers?|public lists?/)).toHaveCount(0);
 
   await page.getByRole("button", { name: "Follow" }).click();
   await expect(page.getByRole("dialog", { name: "Sign in to follow" })).toBeVisible();

@@ -11,7 +11,7 @@ import { ReportDialog, type ReportState } from "../features/community/ReportDial
 import { useHidden } from "../features/community/useHidden";
 import { report as sendReport, unpublish as unpublishList } from "../lib/api";
 import { isEditorial } from "../lib/editorial";
-import { fill, strings } from "../strings";
+import { fill, formatCount, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
@@ -104,6 +104,26 @@ function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
 }
 
 /**
+ * Who else ranked the list, as the app's menu has it: "Rankings · N", the one
+ * place the number is said (Danylo, 01.11.2026), opening the sheet of them.
+ */
+export interface RankingsEntry {
+  count: number;
+  open: () => void;
+}
+
+function RankingsItem({ rankings }: { rankings: RankingsEntry | null }) {
+  if (rankings === null) return null;
+  return (
+    <li>
+      <button type="button" className="menu__action" aria-haspopup="dialog" onClick={rankings.open}>
+        {`${strings.rankings.title} · ${formatCount(rankings.count)}`}
+      </button>
+    </li>
+  );
+}
+
+/**
  * What a visitor can do about a list besides ranking it, in the app's order:
  * see who made it, pass it on, keep it out of sight, complain. Reporting
  * needs an account, so a guest is asked to sign in first; hiding is this
@@ -115,11 +135,13 @@ function VisitorMenu({
   report,
   notify,
   saving,
+  rankings,
 }: {
   list: PublishedList;
   report: Report;
   notify: Notify;
   saving: SaveToMine;
+  rankings: RankingsEntry | null;
 }) {
   const { account, signIn } = useSession();
   const { hideList, showList, hideAuthor } = useHidden();
@@ -158,6 +180,7 @@ function VisitorMenu({
     <>
       <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
         <>
+          <RankingsItem rankings={rankings} />
           {author !== null && (
             <li>
               <Link
@@ -227,11 +250,13 @@ export function VisitorTools({
   report,
   notify,
   repository,
+  rankings = null,
 }: {
   list: PublishedList;
   report: Report;
   notify: Notify;
   repository?: BoardsRepository;
+  rankings?: RankingsEntry | null;
 }) {
   const saving = useSaveToMine(list, notify, { repository });
   return (
@@ -240,7 +265,13 @@ export function VisitorTools({
         {strings.list.saveToMine}
       </Button>
       <CopyLinkButton list={list} />
-      <VisitorMenu list={list} report={report} notify={notify} saving={saving} />
+      <VisitorMenu
+        list={list}
+        report={report}
+        notify={notify}
+        saving={saving}
+        rankings={rankings}
+      />
       <SaveToMineDialog saving={saving} />
     </>
   );
@@ -262,10 +293,12 @@ function AuthorMenu({
   list,
   unpublish,
   notify,
+  rankings,
 }: {
   list: PublishedList;
   unpublish: Unpublish;
   notify: Notify;
+  rankings: RankingsEntry | null;
 }) {
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState<Deleting>({ status: "closed" });
@@ -287,6 +320,7 @@ function AuthorMenu({
     <>
       <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
         <>
+          <RankingsItem rankings={rankings} />
           <LinkItems list={list} notify={notify} />
           <li>
             <button
@@ -331,10 +365,12 @@ export function AuthorTools({
   list,
   unpublish,
   notify,
+  rankings = null,
 }: {
   list: PublishedList;
   unpublish: Unpublish;
   notify: Notify;
+  rankings?: RankingsEntry | null;
 }) {
   return (
     <>
@@ -343,7 +379,7 @@ export function AuthorTools({
         <span>{strings.list.edit}</span>
       </Link>
       <CopyLinkButton list={list} />
-      <AuthorMenu list={list} unpublish={unpublish} notify={notify} />
+      <AuthorMenu list={list} unpublish={unpublish} notify={notify} rankings={rankings} />
     </>
   );
 }

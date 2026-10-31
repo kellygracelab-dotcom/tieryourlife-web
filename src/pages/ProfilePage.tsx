@@ -9,7 +9,7 @@ import { useHidden } from "../features/community/useHidden";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
 import { isEditorialAuthor } from "../lib/editorial";
-import { fill, plural, strings } from "../strings";
+import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
@@ -90,21 +90,6 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
     });
   };
 
-  const countLine = () => {
-    const parts: string[] = [];
-    if (following.followers !== null) {
-      parts.push(plural(strings.profile.followers, following.followers));
-    }
-    if (feed.state.status === "ready") {
-      parts.push(
-        feed.state.next === null
-          ? plural(strings.profile.publicLists, lists.length)
-          : plural(strings.profile.publicListsMore, lists.length),
-      );
-    }
-    return parts.join(" · ");
-  };
-
   const hiddenAuthor = isAuthorHidden(hidden, uid);
 
   return (
@@ -119,7 +104,6 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
         )}
         <div className="profile__text">
           <h1 className="profile__name">{name}</h1>
-          <p className="profile__meta">{countLine()}</p>
           {following.failed && (
             <p className="follow__failed" role="alert">
               <Icon name="cloud_off" />

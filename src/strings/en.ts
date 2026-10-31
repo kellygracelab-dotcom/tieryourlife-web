@@ -172,9 +172,6 @@ export const en = {
   },
   profile: {
     someone: "Someone",
-    followers: { one: "{n} follower", other: "{n} followers" },
-    publicLists: { one: "{n} public list", other: "{n} public lists" },
-    publicListsMore: { one: "{n}+ public list", other: "{n}+ public lists" },
     editInSettings: "Edit in Settings",
     lists: "Lists",
     newestFirst: "newest first",
@@ -716,7 +713,6 @@ export const en = {
     moveAnyway: "Move anyway",
   },
   sections: {
-    newThisWeek: { one: "{n} new this week", other: "{n} new this week" },
     followers: { one: "{n} follower", other: "{n} followers" },
     lists: { one: "{n} list", other: "{n} lists" },
     follow: "Follow",
@@ -771,7 +767,6 @@ export const en = {
     choosePicture: "Choose a picture",
     frame: "The picture, to move and zoom inside the tile",
     frameHelp: "Drag to move, pinch or scroll to zoom. The arrow keys move it, + and − zoom.",
-    sample: "A sample: the real count shows once lists arrive.",
     changePicture: "Change picture",
     paper: "Preview background",
     phone: "On a phone",

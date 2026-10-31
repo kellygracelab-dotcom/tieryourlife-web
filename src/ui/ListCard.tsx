@@ -19,11 +19,9 @@ const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase(
  * lines, the author's face and name, and how many cards and rankings.
  */
 export function ListCard({ list, reason = null }: ListCardProps) {
-  // A count of nobody says nothing: the app shows the rankings only once there are some.
-  const meta = [
-    plural(strings.card.items, list.itemCount),
-    ...(list.takeCount > 0 ? [plural(strings.card.rankings, list.takeCount)] : []),
-  ];
+  // How many people ranked it is not said: a small count makes the place look
+  // empty, a big one is noise (Danylo, 01.11.2026). The cards are the list's own.
+  const meta = [plural(strings.card.items, list.itemCount)];
   return (
     <article className="list-card">
       <Link className="list-card__main" to={`/l/${encodeURIComponent(list.id)}`}>

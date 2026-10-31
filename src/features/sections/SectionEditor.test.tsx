@@ -185,15 +185,14 @@ describe("Propose a section", () => {
     expect(frameImage()).toHaveAttribute("src", "blob:street");
   });
 
-  it("shows the live label over the crop, a sample count, and the tile at the home page's two sizes", async () => {
+  it("shows the live label over the crop, with no sample count, and the tile at the home page's two sizes", async () => {
     propose();
     pick();
     await userEvent.type(nameField(), "Street food");
     expect(within(frame()).getByText("Street food")).toBeInTheDocument();
-    expect(within(frame()).getByText("12 new this week")).toHaveAttribute(
-      "title",
-      "A sample: the real count shows once lists arrive.",
-    );
+    // A tile says no count, so the preview has none to sample.
+    expect(within(frame()).queryByText(/new this week/)).toBeNull();
+    expect(frame().querySelector(".crop__sample")).toBeNull();
     for (const size of ["On a phone", "On a computer"]) {
       expect(
         within(screen.getByRole("img", { name: size })).getByText("Street food"),

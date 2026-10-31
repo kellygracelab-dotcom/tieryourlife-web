@@ -98,7 +98,7 @@ describe("the sections store", () => {
 });
 
 describe("SectionGrid", () => {
-  it("draws every one of the nine on a wide screen, each a link to its page, with its new lists", () => {
+  it("draws every one of the nine on a wide screen, each a link to its page, with no count of new lists", () => {
     const sections = sectionsFrom([
       stats("anime", { newThisWeek: 2 }),
       ...["film_tv", "games", "music", "books", "food", "sport", "people", "other"].map((id) =>
@@ -113,9 +113,10 @@ describe("SectionGrid", () => {
     const links = screen.getAllByRole("link");
     expect(links).toHaveLength(9);
     expect(screen.getByRole("link", { name: /Anime/ })).toHaveAttribute("href", "/s/anime");
-    expect(screen.getByRole("link", { name: /Anime/ })).toHaveTextContent("2 new this week");
-    // Other never counts what is new.
-    expect(screen.getByRole("link", { name: /Other/ })).not.toHaveTextContent("new this week");
+    // A small count makes the place look empty, a big one is noise: no tile says one.
+    expect(screen.getByRole("link", { name: /Anime/ })).toHaveTextContent(/Anime$/);
+    expect(screen.queryByText(/new this week/)).toBeNull();
+    expect(document.querySelector(".section-tile__new")).toBeNull();
   });
 
   it("leads to all the sections from the last slot when they do not fit", () => {

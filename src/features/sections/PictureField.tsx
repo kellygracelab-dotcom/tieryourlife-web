@@ -27,7 +27,7 @@ import {
   type Size,
 } from "../../lib/framing";
 import { SECTION_PICTURE_MIN } from "../../lib/pictures";
-import { fill, plural, strings } from "../../strings";
+import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
@@ -49,9 +49,6 @@ export type PictureValue =
       /** Somebody else's host: asked for so the page may draw it, and it may say no. */
       remote: boolean;
     };
-
-/** The sample count under the name in the preview, as a busy section's tile says it. */
-const SAMPLE_NEW = 12;
 
 const ARROWS: Record<string, Point> = {
   ArrowLeft: { x: -1, y: 0 },
@@ -91,7 +88,7 @@ function Drawn({ value }: { value: PictureValue }) {
 }
 
 /** The label a tile wears: the icon and the name, white on the scrim, bottom-start. */
-function TileLabel({ name, icon, sample }: { name: string; icon: IconName; sample: boolean }) {
+function TileLabel({ name, icon }: { name: string; icon: IconName }) {
   return (
     <span className="crop__label">
       <span className="crop__name">
@@ -100,11 +97,6 @@ function TileLabel({ name, icon, sample }: { name: string; icon: IconName; sampl
           {name === "" ? strings.propose.namePlaceholder : name}
         </span>
       </span>
-      {sample && (
-        <span className="crop__sample" title={strings.propose.sample}>
-          {plural(strings.sections.newThisWeek, SAMPLE_NEW)}
-        </span>
-      )}
     </span>
   );
 }
@@ -384,7 +376,7 @@ export function PictureField({
           <span className="crop__scrim" aria-hidden="true" />
           <span className="crop__safe" aria-hidden="true" />
           <span aria-hidden="true">
-            <TileLabel name={shownName} icon={icon} sample />
+            <TileLabel name={shownName} icon={icon} />
           </span>
         </div>
       )}
@@ -447,7 +439,7 @@ export function PictureField({
                       <Drawn value={value} />
                     </span>
                     <span className="crop__scrim" />
-                    <TileLabel name={shownName} icon={icon} sample={false} />
+                    <TileLabel name={shownName} icon={icon} />
                   </span>
                 ))}
               </div>

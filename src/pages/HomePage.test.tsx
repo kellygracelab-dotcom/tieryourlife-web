@@ -63,7 +63,8 @@ describe("HomePage", () => {
     expect(screen.getByRole("heading", { name: "Popular this week" })).toBeInTheDocument();
     expect(mocks.loadFeed).toHaveBeenCalledWith({ sort: "popular" });
     expect(await screen.findByRole("link", { name: /Every A24 film, ranked/ })).toBeInTheDocument();
-    expect(screen.getAllByText("34 cards · 2,140 rankings")).toHaveLength(2);
+    expect(screen.getAllByText("34 cards")).toHaveLength(2);
+    expect(screen.queryByText(/2,140/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
   });
 

@@ -173,9 +173,6 @@ const es: Translation = {
   },
   profile: {
     someone: "Alguien",
-    followers: { one: "{n} seguidor", other: "{n} seguidores" },
-    publicLists: { one: "{n} lista pública", other: "{n} listas públicas" },
-    publicListsMore: { one: "{n}+ lista pública", other: "{n}+ listas públicas" },
     editInSettings: "Editar en Ajustes",
     lists: "Listas",
     newestFirst: "primero lo más reciente",
@@ -744,11 +741,6 @@ const es: Translation = {
     moveAnyway: "Mover de todos modos",
   },
   sections: {
-    newThisWeek: {
-      one: "{n} nueva esta semana",
-      many: "{n} nuevas esta semana",
-      other: "{n} nuevas esta semana",
-    },
     followers: { one: "{n} seguidor", many: "{n} seguidores", other: "{n} seguidores" },
     lists: { one: "{n} lista", many: "{n} listas", other: "{n} listas" },
     follow: "Seguir",
@@ -804,7 +796,6 @@ const es: Translation = {
     frame: "La imagen, para mover y ampliar dentro del mosaico",
     frameHelp:
       "Arrastra para mover; pellizca o desplaza para hacer zoom. Las flechas la mueven; + y − hacen zoom.",
-    sample: "Un ejemplo: la cifra real aparece cuando lleguen listas.",
     changePicture: "Cambiar imagen",
     paper: "Fondo de la vista previa",
     phone: "En un teléfono",
