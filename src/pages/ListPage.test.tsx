@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   followState: vi.fn<(uid: string) => Promise<FollowState>>(),
   followAuthor: vi.fn<(uid: string) => Promise<unknown>>(),
   unfollowAuthor: vi.fn<(uid: string) => Promise<unknown>>(),
+  preloadHidesAuthor: vi.fn<(id: string) => boolean>(() => false),
 }));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
@@ -36,6 +37,7 @@ vi.mock("../lib/api", async () => ({
   removeRanking: vi.fn(),
   rearrangeRanking: vi.fn(),
   loadList: mocks.loadList,
+  preloadHidesAuthor: mocks.preloadHidesAuthor,
   keepRanking: vi.fn(),
   noteTake: vi.fn(),
   loadRanking: vi.fn(),
@@ -115,6 +117,26 @@ beforeEach(() => {
   hiddenStore = memoryStore();
   useHiddenStoreForTests(hiddenStore);
   localStorage.clear();
+});
+
+describe("ListPage and a list without its author's name", () => {
+  it("asks the network as the account, when the page's copy names nobody", async () => {
+    mocks.preloadHidesAuthor.mockReturnValue(true);
+    mocks.loadList.mockResolvedValue({ ...list, authorUid: "", authorName: "", anonymous: true });
+    openAs(member);
+    await screen.findByRole("heading", { level: 1 });
+    expect(mocks.loadList).toHaveBeenCalledWith("abc", true);
+    mocks.preloadHidesAuthor.mockReturnValue(false);
+  });
+
+  it("keeps the page's copy for a visitor", async () => {
+    mocks.preloadHidesAuthor.mockReturnValue(true);
+    mocks.loadList.mockResolvedValue({ ...list, authorUid: "", authorName: "", anonymous: true });
+    openAs(null);
+    await screen.findByRole("heading", { level: 1 });
+    expect(mocks.loadList).toHaveBeenCalledWith("abc", false);
+    mocks.preloadHidesAuthor.mockReturnValue(false);
+  });
 });
 
 describe("ListPage save to my lists", () => {
@@ -374,7 +396,7 @@ describe("ListPage", () => {
     expect(theirs).not.toHaveTextContent("The Witch");
     expect(screen.queryByRole("heading", { name: /unranked/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
-    expect(mocks.loadList).toHaveBeenCalledWith("abc");
+    expect(mocks.loadList).toHaveBeenCalledWith("abc", false);
   });
 
   it("switches to an empty board of one's own and back, in the phone app's words", async () => {

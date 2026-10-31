@@ -18,6 +18,7 @@ export function apiStubs() {
   return {
     api: { request: pending() },
     loadList: pending(),
+    preloadHidesAuthor: vi.fn(() => false),
     loadFeed: pending(),
     loadRanking: pending(),
     rearrangeRanking: pending(),

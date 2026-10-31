@@ -54,11 +54,18 @@ export const api = createApiClient(tokenProviders);
 
 type Rows = readonly (readonly number[])[];
 
+/**
+ * Whether the page's own copy of a list leaves out who wrote it: then only
+ * the proxy can tell someone signed in that the list is theirs.
+ */
+export const preloadHidesAuthor = (id: string): boolean => preloadedList(id)?.anonymous === true;
+
 // What the page function already put into the HTML needs no request, and
-// therefore no App Check and no guest sign-in until Finish.
-export const loadList = (id: string): Promise<PublishedList> => {
+// therefore no App Check and no guest sign-in until Finish. An account asks
+// the network for a list without its author's name, which may be its own.
+export const loadList = (id: string, asAccount = false): Promise<PublishedList> => {
   const preloaded = preloadedList(id);
-  return preloaded === null
+  return preloaded === null || (asAccount && preloaded.anonymous === true)
     ? lists.loadList(api, id)
     : Promise.resolve(lists.publishedListOf(preloaded));
 };
