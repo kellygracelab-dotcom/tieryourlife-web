@@ -252,7 +252,8 @@ export function TopicEditor(props: TopicEditorProps) {
             <div className="section-editor__under">
               {nameTrouble && (
                 <p id={`${id}-name-trouble`} className="section-editor__error" role="alert">
-                  {fill(strings.admin.topicTaken, { name: tidy, section: section.name })}
+                  {/* A topic's name is taken in every section, not only this one. */}
+                  {fill(strings.admin.topicExists, { name: tidy })}
                 </p>
               )}
               <span

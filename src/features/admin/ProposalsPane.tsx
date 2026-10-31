@@ -448,10 +448,12 @@ function SectionProposal({
                 <p id={`${id}-taken`} className="proposal__error" role="alert">
                   {shownTaken.as === "section"
                     ? fill(strings.admin.sectionTaken, { name: shownTaken.name })
-                    : fill(strings.admin.topicTaken, {
-                        name: shownTaken.name,
-                        section: nameOf(shownTaken.section ?? approving.section),
-                      })}
+                    : shownTaken.section === null
+                      ? fill(strings.admin.topicExists, { name: shownTaken.name })
+                      : fill(strings.admin.topicTaken, {
+                          name: shownTaken.name,
+                          section: nameOf(shownTaken.section),
+                        })}
                   {mayMerge(shownTaken) && (
                     <Button disabled={busy} onClick={() => mergeInto(approving, shownTaken)}>
                       {strings.admin.mergeIntoIt}

@@ -702,6 +702,7 @@ const es: Translation = {
     removePicture: "Quitar imagen",
     topicSaved: "«{name}» guardado",
     topicTaken: "«{name}» ya existe en {section}",
+    topicExists: "Ya existe un tema llamado «{name}»",
     sectionTaken: "Ya existe una sección llamada «{name}»",
     approveAsSection: "Aprobar como sección",
     approveAsTopicIn: "Aprobar como tema en",

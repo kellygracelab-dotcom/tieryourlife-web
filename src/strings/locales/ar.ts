@@ -829,6 +829,7 @@ const ar: Translation = {
     removePicture: "إزالة الصورة",
     topicSaved: "تم حفظ «{name}»",
     topicTaken: "«{name}» موجود بالفعل في «{section}»",
+    topicExists: "يوجد موضوع باسم «{name}» بالفعل",
     sectionTaken: "يوجد قسم باسم «{name}» بالفعل",
     approveAsSection: "الموافقة كقسم",
     approveAsTopicIn: "الموافقة كموضوع في",

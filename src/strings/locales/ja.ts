@@ -691,6 +691,7 @@ const ja: Translation = {
     removePicture: "画像を外す",
     topicSaved: "「{name}」を保存しました",
     topicTaken: "「{name}」は{section}にすでにあります",
+    topicExists: "「{name}」というトピックはすでにあります",
     sectionTaken: "「{name}」というセクションはすでにあります",
     approveAsSection: "セクションとして承認",
     approveAsTopicIn: "トピックとして承認：",

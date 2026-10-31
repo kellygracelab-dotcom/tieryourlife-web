@@ -716,6 +716,7 @@ const fr: Translation = {
     removePicture: "Retirer l’image",
     topicSaved: "« {name} » enregistré",
     topicTaken: "« {name} » existe déjà dans {section}",
+    topicExists: "Un sujet nommé « {name} » existe déjà",
     sectionTaken: "Une rubrique « {name} » existe déjà",
     approveAsSection: "Approuver comme rubrique",
     approveAsTopicIn: "Approuver comme thème dans",

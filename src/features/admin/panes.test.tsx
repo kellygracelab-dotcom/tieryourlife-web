@@ -230,7 +230,7 @@ describe("ProposalsPane", () => {
     await userEvent.click(within(card).getByRole("radio", { name: "Approve as a topic in" }));
     await userEvent.click(within(card).getByRole("button", { name: "Approve as a topic" }));
     expect(await within(card).findByRole("alert")).toHaveTextContent(
-      "Street food already exists in Food",
+      "A topic called Street food already exists",
     );
     expect(within(card).getByRole("textbox", { name: "Name" })).toHaveAttribute(
       "aria-invalid",

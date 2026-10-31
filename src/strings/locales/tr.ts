@@ -696,6 +696,7 @@ const tr: Translation = {
     removePicture: "Görseli kaldır",
     topicSaved: "“{name}” kaydedildi",
     topicTaken: "“{name}” {section} bölümünde zaten var",
+    topicExists: "“{name}” adında bir konu zaten var",
     sectionTaken: "“{name}” adlı bir bölüm zaten var",
     approveAsSection: "Bölüm olarak onayla",
     approveAsTopicIn: "Konu olarak onayla:",
