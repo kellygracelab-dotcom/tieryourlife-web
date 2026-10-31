@@ -13,6 +13,7 @@ import type {
   SectionChanges,
   ListMove,
   SectionDraft,
+  FinishCall,
   TopicApproval,
   TopicChanges,
   TopicDecision,
@@ -241,6 +242,9 @@ export const approveSectionAsTopic = (
   approval: TopicApproval,
 ): Promise<{ topic: Topic | null; proposal: SectionStats | null }> =>
   admin.approveSectionAsTopic(api, id, approval);
+
+export const finishDecision = (id: string, finish: FinishCall): Promise<unknown> =>
+  admin.finishDecision(api, id, finish);
 
 export const mergeSectionIntoTopic = (
   id: string,

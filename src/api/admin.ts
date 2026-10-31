@@ -92,6 +92,42 @@ export interface ProposedSection extends SectionStats {
   tint?: ThemePair;
   /** Null when the name is free; left out by a backend from before it said. */
   nameClash?: NameClash | null;
+  /**
+   * A decision made but cut short, its lists not all moved: it comes after
+   * the waiting ones, with the call that finishes it.
+   */
+  unfinished?: boolean;
+  finish?: FinishCall;
+}
+
+/** The decisions a stuck one can be finished by, each the call it was made with. */
+export const FINISH_ACTIONS = [
+  "approve",
+  "decline",
+  "merge",
+  "approve-as-topic",
+  "merge-into-topic",
+] as const;
+
+export interface FinishCall {
+  action: (typeof FINISH_ACTIONS)[number];
+  body: Record<string, unknown>;
+}
+
+/** The same call again, with the same body, which the backend resumes from where it stopped. */
+export function finishDecision(
+  client: ApiClient,
+  id: string,
+  finish: FinishCall,
+): Promise<unknown> {
+  if (!FINISH_ACTIONS.includes(finish.action)) {
+    return Promise.reject(new Error(`Not a decision: ${String(finish.action)}`));
+  }
+  return client.request<unknown>(
+    "POST",
+    `/lists/sections/${encodeURIComponent(id)}/${finish.action}`,
+    { body: finish.body },
+  );
 }
 
 export function loadSectionQueue(client: ApiClient): Promise<{ sections: ProposedSection[] }> {
@@ -309,12 +345,16 @@ export function loadAnonymousLists(
  */
 export interface AdminList extends ListSummary {
   underReview: boolean;
-  publishedBy: { uid: string; name: string };
+  /** Null on a list without its author's name, for anybody but the owner. */
+  publishedBy: { uid: string; name: string } | null;
   proposedSection?: string | null;
   proposedSectionName?: string | null;
 }
 
-/** Which lists of a section: those of one topic, those without one (`none`), or all of them. */
+/**
+ * Which lists of a section: those of one topic, those without one (`none`),
+ * those whose topic is not an approved one of this section (`other`), or all.
+ */
 export interface AdminListsQuery {
   section: string;
   topic?: string;

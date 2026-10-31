@@ -73,6 +73,10 @@ const PAGES: Record<string, { lists: AdminList[]; nextCursor: string | null }> =
     nextCursor: null,
   },
   "games/none/": { lists: [list("d", "Delta")], nextCursor: null },
+  "games/other/": {
+    lists: [list("g", "Golf", { topicId: "t9", topicName: "Speedruns" })],
+    nextCursor: null,
+  },
   "food/none/": {
     lists: [
       list("e", "Echo", {
@@ -348,6 +352,61 @@ describe("ListsPane", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load this.");
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("button", { name: /^Games/ })).toBeInTheDocument();
+  });
+
+  it("shows the lists whose topic is no approved one of the section, and moves one out", async () => {
+    render(<ListsPane adminRole="moderator" deps={deps} />);
+    await openGames();
+    const other = within(await screen.findByRole("region", { name: "Lists in other topics" }));
+    const golf = (await other.findByText("Golf")).closest("li")!;
+    expect(deps.lists).toHaveBeenCalledWith(
+      expect.objectContaining({ section: "games", topic: "other" }),
+    );
+    await userEvent.click(within(golf).getByRole("button", { name: "Move" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Move “Golf”" }));
+    await userEvent.selectOptions(
+      await dialog.findByRole("combobox", { name: "Topic" }),
+      await dialog.findByRole("option", { name: "Pokémon" }),
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Move" }));
+    expect(deps.move).toHaveBeenCalledWith("g", { topicId: "t1" });
+    await waitFor(() => expect(other.queryByText("Golf")).toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(deps.move).toHaveBeenLastCalledWith("g", { topicId: "t9" });
+    expect(await other.findByText("Golf")).toBeInTheDocument();
+  });
+
+  it("shows no such group when there are none, or the backend cannot say", async () => {
+    const lists = deps.lists;
+    deps.lists = vi.fn(async (query: AdminListsQuery) => {
+      if (query.topic === "other")
+        throw new ApiFailure({ kind: "invalid", detail: null, code: "INVALID" });
+      return lists(query);
+    });
+    render(<ListsPane adminRole="owner" deps={deps} />);
+    await openGames();
+    await screen.findByText("Delta");
+    await userEvent.click(screen.getByRole("button", { name: /^Food/ }));
+    await screen.findByText("Echo");
+    expect(screen.queryByRole("region", { name: "Lists in other topics" })).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("names nobody for an anonymous list when the backend keeps its author from a moderator", async () => {
+    deps.lists = vi.fn(async (query: AdminListsQuery) =>
+      query.topic === "none" && query.section === "games"
+        ? {
+            lists: [list("d", "Delta", { anonymous: true, authorName: "", publishedBy: null })],
+            nextCursor: null,
+          }
+        : { lists: [], nextCursor: null },
+    );
+    render(<ListsPane adminRole="moderator" deps={deps} />);
+    await userEvent.click(await screen.findByRole("button", { name: /^Games/ }));
+    const delta = (await screen.findByText("Delta")).closest("li")!;
+    expect(delta).toHaveTextContent("Anonymous");
+    await userEvent.type(screen.getByRole("searchbox"), "del");
+    expect(screen.getByText("Delta")).toBeInTheDocument();
   });
 
   it("says a section's topics that did not come, and an empty group", async () => {

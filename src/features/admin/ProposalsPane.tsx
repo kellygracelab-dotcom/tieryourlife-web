@@ -2,6 +2,7 @@ import { useCallback, useId, useState } from "react";
 import { useNavigate } from "react-router";
 import type {
   AdminRole,
+  FinishCall,
   PendingTopic,
   ProposedSection,
   SectionDraft,
@@ -15,6 +16,7 @@ import {
   approveSectionAsTopic,
   declineSection,
   decideTopic,
+  finishDecision,
   loadSectionQueue,
   loadTopicQueue,
   mergeSection,
@@ -52,6 +54,8 @@ export interface ProposalsDeps {
     topic: string,
   ) => Promise<{ topic: Topic | null; proposal: SectionStats | null }>;
   decideTopic: (id: string, decision: TopicDecision) => Promise<void>;
+  /** A decision cut short, made again with the call the backend hands back. */
+  finish: (id: string, finish: FinishCall) => Promise<unknown>;
 }
 
 const proposalsDeps: ProposalsDeps = {
@@ -63,6 +67,7 @@ const proposalsDeps: ProposalsDeps = {
   mergeSection,
   mergeIntoTopic: mergeSectionIntoTopic,
   decideTopic,
+  finish: finishDecision,
 };
 
 /** A backend from before section proposals has no queue for them: nothing waits. */
@@ -533,6 +538,79 @@ function SectionProposal({
   );
 }
 
+/**
+ * A decision made but cut short: its lists did not all move. It says so, and
+ * Finish makes the same call again, which the backend carries on from where
+ * it stopped. A merge into a section stays the owner's.
+ */
+function UnfinishedDecision({
+  proposal,
+  role,
+  deps,
+  onDone,
+  onSettled,
+}: {
+  proposal: ProposedSection;
+  role: AdminRole;
+  deps: ProposalsDeps;
+  onDone: Done;
+  onSettled: () => void;
+}) {
+  const look = sectionOf(proposal);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const finish = proposal.finish;
+  const allowed = finish !== undefined && (finish.action !== "merge" || role === "owner");
+
+  return (
+    <li className="proposal">
+      <div className="proposal__looks" aria-hidden="true">
+        <span className="proposal__tile" style={sectionStyle(look)}>
+          <span className="proposal__label">
+            <Icon name={look.icon} />
+            {look.name}
+          </span>
+        </span>
+      </div>
+      <div className="proposal__text">
+        <h3 className="proposal__name">{look.name}</h3>
+        <p className="proposal__clash">
+          <Icon name="info" />
+          <span>{strings.admin.unfinishedNote}</span>
+        </p>
+        {failed && (
+          <p className="admin__bar" role="alert">
+            {strings.admin.actionFailed}
+          </p>
+        )}
+        {allowed && (
+          <div className="proposal__actions">
+            <Button
+              variant="filled"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                setFailed(false);
+                deps.finish(proposal.id, finish).then(
+                  () => onDone(fill(strings.admin.finished, { name: look.name })),
+                  (reason: unknown) => {
+                    setBusy(false);
+                    // 409 SETTLED: somebody else finished it first.
+                    if (errorOf(reason).kind === "conflict") onSettled();
+                    else setFailed(true);
+                  },
+                );
+              }}
+            >
+              {strings.admin.finish}
+            </Button>
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
 function TopicProposal({
   topic,
   sections,
@@ -695,8 +773,11 @@ export function ProposalsPane({
     );
   }
 
-  const proposedSections = sectionQueue.state.value.sections
-    .filter((one) => !gone.has(`s:${one.id}`))
+  const queued = sectionQueue.state.value.sections.filter((one) => !gone.has(`s:${one.id}`));
+  // Decisions cut short come after the waiting ones, and are no proposals to decide.
+  const unfinished = queued.filter((one) => one.unfinished === true);
+  const proposedSections = queued
+    .filter((one) => one.unfinished !== true)
     .map((one) => edited.get(one.id) ?? one);
   const editingProposal = proposedSections.find((one) => one.id === editing);
   const proposedTopics = topicQueue.state.value.topics.filter((one) => !gone.has(`t:${one.id}`));
@@ -707,7 +788,7 @@ export function ProposalsPane({
       setGone((before) => new Set([...before, key]));
       setNotice(typeof said === "string" ? { text: said } : said);
     };
-  const waiting = proposedSections.length + proposedTopics.length;
+  const waiting = proposedSections.length + unfinished.length + proposedTopics.length;
 
   return (
     <section className="admin-pane" aria-labelledby="admin-proposals">
@@ -725,7 +806,7 @@ export function ProposalsPane({
               "sections",
               fill(strings.sections.group, {
                 name: strings.sections.sections,
-                n: proposedSections.length,
+                n: proposedSections.length + unfinished.length,
               }),
             ],
             [
@@ -770,6 +851,20 @@ export function ProposalsPane({
                   sectionQueue.retry();
                 }}
                 onEdit={() => setEditing(proposal.id)}
+              />
+            ))}
+          {filter !== "topics" &&
+            unfinished.map((proposal) => (
+              <UnfinishedDecision
+                key={`s:${proposal.id}`}
+                proposal={proposal}
+                role={role}
+                deps={deps}
+                onDone={done(`s:${proposal.id}`)}
+                onSettled={() => {
+                  setNotice({ text: strings.admin.settled });
+                  sectionQueue.retry();
+                }}
               />
             ))}
           {filter !== "sections" &&

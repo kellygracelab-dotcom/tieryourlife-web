@@ -68,6 +68,9 @@ const placeOf = (list: AdminList): Place => ({
 
 const groupKey = (section: string, topic: string | null) => `${section}/${topic ?? "none"}`;
 
+/** The group of a section's lists whose topic is not one of its approved ones. */
+const OTHER = "other";
+
 const moveTo = (place: Place): ListMove =>
   place.topic === null ? { category: place.section, topicId: null } : { topicId: place.topic.id };
 
@@ -85,7 +88,8 @@ function waitsOf(list: AdminList, proposals: readonly ProposedSection[]): Waits 
   }
   if (list.proposedSection !== undefined || (list.topicId ?? null) !== null) return null;
   const filed = proposals.filter(
-    (one) => one.fileUnder === list.category && (one.waitingLists ?? 0) > 0,
+    (one) =>
+      one.unfinished !== true && one.fileUnder === list.category && (one.waitingLists ?? 0) > 0,
   );
   return filed.length === 0
     ? null
@@ -129,9 +133,9 @@ function ListRow({
   const author =
     list.anonymous === true
       ? role === "owner"
-        ? fill(strings.admin.anonymousOf, { name: list.publishedBy.name })
+        ? fill(strings.admin.anonymousOf, { name: list.publishedBy?.name ?? "" })
         : strings.admin.anonymousAuthor
-      : list.publishedBy.name || list.authorName;
+      : list.publishedBy?.name || list.authorName;
   const waiting =
     typeof list.proposedSection === "string" && list.proposedSection !== ""
       ? (list.proposedSectionName ?? list.proposedSection)
@@ -190,6 +194,12 @@ function ListRow({
 interface GroupProps {
   section: Section;
   topic: Topic | null;
+  /**
+   * The lists whose topic is not an approved one of this section: waiting,
+   * declined, or another section's. Shown only when there are some, and not
+   * at all by a backend that cannot say.
+   */
+  other?: boolean;
   count: number;
   role: AdminRole;
   narrow: boolean;
@@ -199,7 +209,8 @@ interface GroupProps {
   round: number;
   gone: ReadonlySet<string>;
   leaving: ReadonlySet<string>;
-  onMove: (list: AdminList) => void;
+  /** The list to move, and the group it is moved out of. */
+  onMove: (list: AdminList, group: string) => void;
 }
 
 /** Whether a list answers the search: by its title, or by an author this person may know. */
@@ -207,8 +218,8 @@ const matches = (list: AdminList, query: string, role: AdminRole) => {
   if (query === "") return true;
   const asked = query.toLocaleLowerCase();
   const hidden = list.anonymous === true && role !== "owner";
-  return [list.title, ...(hidden ? [] : [list.publishedBy.name, list.authorName])].some((text) =>
-    text.toLocaleLowerCase().includes(asked),
+  return [list.title, ...(hidden ? [] : [list.publishedBy?.name ?? "", list.authorName])].some(
+    (text) => text.toLocaleLowerCase().includes(asked),
   );
 };
 
@@ -216,6 +227,7 @@ const matches = (list: AdminList, query: string, role: AdminRole) => {
 function ListGroup({
   section,
   topic,
+  other = false,
   count,
   role,
   narrow,
@@ -226,11 +238,16 @@ function ListGroup({
   leaving,
   onMove,
 }: GroupProps) {
-  const key = groupKey(section.id, topic?.id ?? null);
+  const key = groupKey(section.id, other ? OTHER : (topic?.id ?? null));
   const ask = useCallback(
     (after: string | null) =>
-      deps.lists({ section: section.id, topic: topic?.id ?? "none", sort: "recent", after }),
-    [deps, section.id, topic],
+      deps.lists({
+        section: section.id,
+        topic: other ? OTHER : (topic?.id ?? "none"),
+        sort: "recent",
+        after,
+      }),
+    [deps, section.id, topic, other],
   );
   const first = useCallback(() => ask(null), [ask]);
   const { state, retry } = useResource(`${key}:${round}`, first);
@@ -244,12 +261,18 @@ function ListGroup({
     (list) => !gone.has(`${key}|${list.id}`) && matches(list, query, role),
   );
   const next = extra !== null ? extra.nextCursor : (page?.nextCursor ?? null);
-  const title = fill(strings.sections.group, {
-    name: topic?.name ?? strings.admin.noTopic,
-    n: count,
-  });
+  const title = other
+    ? strings.admin.otherTopics
+    : fill(strings.sections.group, {
+        name: topic?.name ?? strings.admin.noTopic,
+        n: count,
+      });
 
   if (query !== "" && rows.length === 0) return null;
+  // Nothing elsewhere, or a backend from before it could say: no group at all.
+  if (other && (state.status === "error" || (state.status === "ready" && loaded.length === 0))) {
+    return null;
+  }
 
   const showMore = (cursor: string) => {
     setFailed(false);
@@ -297,7 +320,7 @@ function ListGroup({
               role={role}
               narrow={narrow}
               leaving={leaving.has(`${key}|${list.id}`)}
-              onMove={() => onMove(list)}
+              onMove={() => onMove(list, key)}
             />
           ))}
         </ul>
@@ -423,6 +446,15 @@ function Topics({
         topic={null}
         count={Math.max(0, total - withTopic)}
         round={rounds.get(groupKey(section.id, null)) ?? 0}
+        deps={deps}
+        {...group}
+      />
+      <ListGroup
+        section={section}
+        topic={null}
+        other
+        count={0}
+        round={rounds.get(groupKey(section.id, OTHER)) ?? 0}
         deps={deps}
         {...group}
       />
@@ -563,6 +595,8 @@ interface Moved {
   list: AdminList;
   from: Place;
   to: Place;
+  /** The group it left, which shows it again on Undo. */
+  group: string;
 }
 
 /**
@@ -593,7 +627,7 @@ export function ListsPane({
   const [leaving, setLeaving] = useState<ReadonlySet<string>>(new Set());
   const [rounds, setRounds] = useState<ReadonlyMap<string, number>>(new Map());
   const [delta, setDelta] = useState<ReadonlyMap<string, number>>(new Map());
-  const [moving, setMoving] = useState<AdminList | null>(null);
+  const [moving, setMoving] = useState<{ list: AdminList; group: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
@@ -637,10 +671,10 @@ export function ListsPane({
       return next;
     });
 
-  const undo = ({ list, from, to }: Moved) => {
+  const undo = ({ list, from, to, group }: Moved) => {
     deps.move(list.id, moveTo(from)).then(
       () => {
-        const fromKey = `${groupKey(from.section, from.topic?.id ?? null)}|${list.id}`;
+        const fromKey = `${group}|${list.id}`;
         setGone((before) => new Set([...before].filter((key) => key !== fromKey)));
         shift(to, from);
         bump(groupKey(to.section, to.topic?.id ?? null));
@@ -650,7 +684,7 @@ export function ListsPane({
     );
   };
 
-  const move = (list: AdminList, to: Place) => {
+  const move = (list: AdminList, to: Place, group: string) => {
     const from = placeOf(list);
     setBusy(true);
     setFailed(false);
@@ -658,7 +692,7 @@ export function ListsPane({
       () => {
         setBusy(false);
         setMoving(null);
-        const key = `${groupKey(from.section, from.topic?.id ?? null)}|${list.id}`;
+        const key = `${group}|${list.id}`;
         setLeaving((before) => new Set([...before, key]));
         timers.current.push(
           window.setTimeout(() => {
@@ -670,7 +704,10 @@ export function ListsPane({
         bump(groupKey(to.section, to.topic?.id ?? null));
         setNotice({
           text: fill(strings.admin.listMoved, { where: whereOf(to) }),
-          action: { text: strings.sections.undo, onClick: () => undo({ list, from, to }) },
+          action: {
+            text: strings.sections.undo,
+            onClick: () => undo({ list, from, to, group }),
+          },
         });
       },
       () => {
@@ -723,23 +760,23 @@ export function ListsPane({
             deps={deps}
             gone={gone}
             leaving={leaving}
-            onMove={(list) => {
+            onMove={(list, group) => {
               setFailed(false);
-              setMoving(list);
+              setMoving({ list, group });
             }}
           />
         ))}
       </div>
       {moving !== null && (
         <MoveDialog
-          list={moving}
+          list={moving.list}
           sections={sections}
-          waits={waitsOf(moving, proposals)}
+          waits={waitsOf(moving.list, proposals)}
           narrow={narrow}
           busy={busy}
           failed={failed}
           deps={deps}
-          onMove={(to) => move(moving, to)}
+          onMove={(to) => move(moving.list, to, moving.group)}
           onClose={() => setMoving(null)}
         />
       )}

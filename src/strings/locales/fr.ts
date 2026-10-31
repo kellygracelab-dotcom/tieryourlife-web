@@ -717,6 +717,11 @@ const fr: Translation = {
     topicSaved: "« {name} » enregistré",
     topicTaken: "« {name} » existe déjà dans {section}",
     topicExists: "Un sujet nommé « {name} » existe déjà",
+    otherTopics: "Listes dans d’autres sujets",
+    finish: "Terminer",
+    unfinishedNote:
+      "Décidé, mais pas terminé : certaines de ses listes n’ont pas encore été déplacées.",
+    finished: "« {name} » terminé",
     sectionTaken: "Une rubrique « {name} » existe déjà",
     approveAsSection: "Approuver comme rubrique",
     approveAsTopicIn: "Approuver comme thème dans",

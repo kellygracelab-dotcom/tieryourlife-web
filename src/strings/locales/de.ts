@@ -715,6 +715,11 @@ const de: Translation = {
     topicSaved: "„{name}“ gespeichert",
     topicTaken: "„{name}“ gibt es in {section} schon",
     topicExists: "Ein Thema namens „{name}“ gibt es schon",
+    otherTopics: "Listen in anderen Themen",
+    finish: "Abschließen",
+    unfinishedNote:
+      "Entschieden, aber nicht abgeschlossen: Einige Listen wurden noch nicht verschoben.",
+    finished: "„{name}“ abgeschlossen",
     sectionTaken: "Eine Rubrik „{name}“ gibt es schon",
     approveAsSection: "Als Rubrik freigeben",
     approveAsTopicIn: "Als Thema freigeben in",
