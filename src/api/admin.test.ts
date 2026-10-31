@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { approveSectionAsTopic, createTopic, editTopic, loadAdminLists, moveList } from "./admin";
+import {
+  approveSectionAsTopic,
+  createTopic,
+  editTopic,
+  loadAdminLists,
+  mergeSectionIntoTopic,
+  moveList,
+} from "./admin";
 import type { ApiClient } from "./client";
 
 function recordingClient(result: unknown) {
@@ -58,6 +65,15 @@ describe("admin", () => {
     ).resolves.toEqual(answer);
     expect(request).toHaveBeenCalledWith("POST", "/lists/sections/street-food/approve-as-topic", {
       body: { section: "food", name: "Street eats" },
+    });
+  });
+
+  it("merges a proposed section into the topic that has its name", async () => {
+    const answer = { topic: { id: "t1" }, proposal: { id: "street-food", status: "merged" } };
+    const { client, request } = recordingClient(answer);
+    await expect(mergeSectionIntoTopic(client, "street food", "t1")).resolves.toEqual(answer);
+    expect(request).toHaveBeenCalledWith("POST", "/lists/sections/street%20food/merge-into-topic", {
+      body: { topic: "t1" },
     });
   });
 });

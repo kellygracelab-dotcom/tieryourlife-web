@@ -684,6 +684,8 @@ export const en = {
       other: "{n} waiting lists move with it.",
     },
     mergeIntoIt: "Merge into it",
+    mergedIntoTopic: "{name} merged into {topic} in {section}",
+    topicMergeRefused: "{topic} can’t take it now: it isn’t open, or its section is hidden.",
     approvedAsTopic: "{name} approved as a topic in {section}",
     listsMoved: { one: "{n} list moved", other: "{n} lists moved" },
     lists: "Lists",

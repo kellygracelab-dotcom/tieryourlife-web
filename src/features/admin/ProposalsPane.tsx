@@ -18,6 +18,7 @@ import {
   loadSectionQueue,
   loadTopicQueue,
   mergeSection,
+  mergeSectionIntoTopic,
 } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
@@ -45,6 +46,11 @@ export interface ProposalsDeps {
   ) => Promise<{ topic: Topic | null; proposal: SectionStats | null }>;
   declineSection: (id: string, note: string | null) => Promise<void>;
   mergeSection: (id: string, into: string) => Promise<void>;
+  /** The proposal goes into the approved topic that has its name, waiting lists and all. */
+  mergeIntoTopic: (
+    id: string,
+    topic: string,
+  ) => Promise<{ topic: Topic | null; proposal: SectionStats | null }>;
   decideTopic: (id: string, decision: TopicDecision) => Promise<void>;
 }
 
@@ -55,6 +61,7 @@ const proposalsDeps: ProposalsDeps = {
   approveAsTopic: approveSectionAsTopic,
   declineSection,
   mergeSection,
+  mergeIntoTopic: mergeSectionIntoTopic,
   decideTopic,
 };
 
@@ -112,6 +119,8 @@ function SectionProposal({
   const [opened, setOpened] = useState<Opened>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  /** What the backend refused, said in its place of the plain failure. */
+  const [refused, setRefused] = useState<string | null>(null);
   const filedIn = sections.find((one) => one.id === proposal.fileUnder)?.name ?? "";
   const proposer = proposal.proposerName ?? "";
   const waitingLists = proposal.waitingLists ?? 0;
@@ -121,9 +130,11 @@ function SectionProposal({
     work: Promise<T>,
     notice: string | ((done: T) => SnackbarNotice),
     clash?: Omit<Taken, "id">,
+    invalid?: string,
   ) => {
     setBusy(true);
     setFailed(false);
+    setRefused(null);
     work.then(
       (done) => onDone(typeof notice === "string" ? notice : notice(done)),
       (reason: unknown) => {
@@ -138,8 +149,10 @@ function SectionProposal({
           );
           return;
         }
+        // 400 INVALID: the backend says why, and it is said instead.
+        if (invalid !== undefined && error.kind === "invalid") setRefused(invalid);
         // 409 SETTLED: somebody else approved, declined or merged it first.
-        if (error.kind === "conflict") onSettled();
+        else if (error.kind === "conflict") onSettled();
         else setFailed(true);
       },
     );
@@ -165,7 +178,7 @@ function SectionProposal({
             name: topic?.name ?? name,
             section: nameOf(section),
           }),
-          ...(waitingLists > 0 ? [plural(strings.admin.listsMoved, waitingLists)] : []),
+          ...lineOfLists,
         ].join(" · "),
         ...(topic === null
           ? {}
@@ -180,15 +193,61 @@ function SectionProposal({
     );
   };
 
-  /** Merge into what the name clashed with: the section, or the section the topic was to go into. */
-  const mergeInto = (panel: Approving, taken: Taken) => {
-    const into = taken.as === "section" ? taken.id : panel.section;
-    if (into === null) return;
+  const lineOfLists = waitingLists > 0 ? [plural(strings.admin.listsMoved, waitingLists)] : [];
+
+  /** Into an approved topic that has the name: its lists go under it, and it can be opened. */
+  const mergeIntoTopic = (topicId: string, topicName: string, section: string | null) =>
+    act(
+      deps.mergeIntoTopic(proposal.id, topicId),
+      ({ topic }) => {
+        const where = topic?.section ?? section;
+        return {
+          text: [
+            fill(strings.admin.mergedIntoTopic, {
+              name: look.name,
+              topic: topic?.name ?? topicName,
+              section: where === null ? "" : nameOf(where),
+            }),
+            ...lineOfLists,
+          ].join(" · "),
+          ...(where === null
+            ? {}
+            : {
+                action: {
+                  text: strings.admin.open,
+                  onClick: () => void navigate(topicPath(where, topic?.id ?? topicId)),
+                },
+              }),
+        };
+      },
+      undefined,
+      fill(strings.admin.topicMergeRefused, { topic: topicName }),
+    );
+
+  const mergeIntoSection = (into: string) =>
     act(
       deps.mergeSection(proposal.id, into),
       fill(strings.admin.merged, { name: look.name, into: nameOf(into) }),
     );
+
+  /**
+   * Merge into what the name clashed with: the topic when the backend named
+   * it, or else the section, or the section the topic was to go into.
+   */
+  const mergeInto = (panel: Approving, taken: Taken) => {
+    if (taken.as === "topic" && taken.id !== null) {
+      mergeIntoTopic(taken.id, taken.name, panel.section);
+      return;
+    }
+    const into = taken.as === "section" ? taken.id : panel.section;
+    if (into !== null) mergeIntoSection(into);
   };
+  /** A topic is merged into by any staff; a section, by the owner alone. */
+  const mayMerge = (taken: Taken) =>
+    taken.as === "topic"
+      ? taken.id !== null || role === "owner"
+      : role === "owner" && taken.id !== null;
+  const clash = proposal.nameClash ?? null;
 
   const approving = opened?.kind === "approve" ? opened : null;
   const approvingName = approving === null ? "" : tidySectionName(approving.name);
@@ -235,9 +294,35 @@ function SectionProposal({
             <li key={at} style={{ background: colour }} title={colour} />
           ))}
         </ul>
-        {failed && (
+        {clash !== null && (
+          <p className="proposal__clash">
+            <Icon name="info" />
+            <span>
+              {clash.kind === "topic"
+                ? fill(strings.admin.topicTaken, {
+                    name: clash.name,
+                    section:
+                      clash.sectionName ?? (clash.section === null ? "" : nameOf(clash.section)),
+                  })
+                : fill(strings.admin.sectionTaken, { name: clash.name })}
+            </span>
+            {(clash.kind === "topic" || role === "owner") && (
+              <Button
+                disabled={busy}
+                onClick={() =>
+                  clash.kind === "topic"
+                    ? mergeIntoTopic(clash.id, clash.name, clash.section)
+                    : mergeIntoSection(clash.id)
+                }
+              >
+                {strings.admin.mergeIntoIt}
+              </Button>
+            )}
+          </p>
+        )}
+        {(failed || refused !== null) && (
           <p className="admin__bar" role="alert">
-            {strings.admin.actionFailed}
+            {refused ?? strings.admin.actionFailed}
           </p>
         )}
         {opened?.kind === "decline" ? (
@@ -356,7 +441,7 @@ function SectionProposal({
                         name: shownTaken.name,
                         section: nameOf(approving.section),
                       })}
-                  {role === "owner" && (shownTaken.as === "topic" || shownTaken.id !== null) && (
+                  {mayMerge(shownTaken) && (
                     <Button disabled={busy} onClick={() => mergeInto(approving, shownTaken)}>
                       {strings.admin.mergeIntoIt}
                     </Button>

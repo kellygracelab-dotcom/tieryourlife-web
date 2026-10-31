@@ -725,6 +725,9 @@ const fr: Translation = {
       other: "{n} listes en attente suivent le mouvement.",
     },
     mergeIntoIt: "Fusionner avec",
+    mergedIntoTopic: "« {name} » fusionné dans « {topic} » de « {section} »",
+    topicMergeRefused:
+      "« {topic} » ne peut pas l’accueillir pour l’instant : il n’est pas ouvert, ou sa section est masquée.",
     approvedAsTopic: "« {name} » approuvé comme thème dans {section}",
     listsMoved: { one: "{n} liste déplacée", other: "{n} listes déplacées" },
     lists: "Listes",

@@ -235,6 +235,12 @@ export const approveSectionAsTopic = (
 ): Promise<{ topic: Topic | null; proposal: SectionStats | null }> =>
   admin.approveSectionAsTopic(api, id, approval);
 
+export const mergeSectionIntoTopic = (
+  id: string,
+  topic: string,
+): Promise<{ topic: Topic | null; proposal: SectionStats | null }> =>
+  admin.mergeSectionIntoTopic(api, id, topic);
+
 export const checkSectionName = (name: string): Promise<NameCheck> =>
   admin.checkSectionName(api, name);
 

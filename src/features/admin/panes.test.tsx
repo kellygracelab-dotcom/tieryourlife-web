@@ -73,6 +73,10 @@ describe("ProposalsPane", () => {
       })),
       declineSection: vi.fn(async () => undefined),
       mergeSection: vi.fn(async () => undefined),
+      mergeIntoTopic: vi.fn(async (_id: string, into: string) => ({
+        topic: topic(into, "Street food", { section: "food" }),
+        proposal: null,
+      })),
       decideTopic: vi.fn(async () => undefined),
     };
   });
@@ -216,11 +220,11 @@ describe("ProposalsPane", () => {
     expect(screen.getByRole("heading", { name: "The topic" })).toBeInTheDocument();
   });
 
-  it("says a topic's name is taken under the name, and lets the owner merge into it", async () => {
+  it("says a topic's name is taken under the name, and merges into that topic", async () => {
     deps.approveAsTopic = vi.fn(async () => {
       throw new ApiFailure({ kind: "invalid", detail: null, code: "NAME_TAKEN", id: "t1" });
     });
-    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
     const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
     await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
     await userEvent.click(within(card).getByRole("radio", { name: "Approve as a topic in" }));
@@ -235,8 +239,107 @@ describe("ProposalsPane", () => {
     // Not somebody else's decision: the queue is not read again.
     expect(deps.sections).toHaveBeenCalledTimes(1);
     await userEvent.click(within(card).getByRole("button", { name: "Merge into it" }));
+    expect(deps.mergeIntoTopic).toHaveBeenCalledWith("street-food", "t1");
+    expect(deps.mergeSection).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText("Street food merged into Street food in Food · 6 lists moved"),
+    ).toBeInTheDocument();
+  });
+
+  it("merges into the section when an older backend names no topic, for the owner", async () => {
+    deps.approveAsTopic = vi.fn(async () => {
+      throw new ApiFailure({ kind: "invalid", detail: null, code: "NAME_TAKEN" });
+    });
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    await userEvent.click(within(card).getByRole("radio", { name: "Approve as a topic in" }));
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a topic" }));
+    await userEvent.click(await within(card).findByRole("button", { name: "Merge into it" }));
     expect(deps.mergeSection).toHaveBeenCalledWith("street-food", "food");
     expect(await screen.findByText("Street food merged into Food")).toBeInTheDocument();
+  });
+
+  it("says before anybody decides that a topic has the name, and merges into it", async () => {
+    deps.sections = vi.fn(async () => ({
+      sections: [
+        {
+          ...proposed,
+          nameClash: {
+            kind: "topic" as const,
+            id: "t5",
+            name: "Street food",
+            section: "food",
+            sectionName: "Food",
+          },
+        },
+      ],
+    }));
+    render(
+      <MemoryRouter initialEntries={["/admin/proposals"]}>
+        <Routes>
+          <Route
+            path="/admin/proposals"
+            element={<ProposalsPane adminRole="moderator" deps={deps} />}
+          />
+          <Route path="/s/:id/t/:topic" element={<h1>The topic</h1>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    expect(within(card).getByText("Street food already exists in Food")).toBeInTheDocument();
+    await userEvent.click(within(card).getByRole("button", { name: "Merge into it" }));
+    expect(deps.mergeIntoTopic).toHaveBeenCalledWith("street-food", "t5");
+    await screen.findByText("Street food merged into Street food in Food · 6 lists moved");
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(screen.getByRole("heading", { name: "The topic" })).toBeInTheDocument();
+  });
+
+  it("says why a topic refused the merge, and keeps the card", async () => {
+    deps.sections = vi.fn(async () => ({
+      sections: [
+        {
+          ...proposed,
+          nameClash: {
+            kind: "topic" as const,
+            id: "t5",
+            name: "Street food",
+            section: "food",
+            sectionName: null,
+          },
+        },
+      ],
+    }));
+    deps.mergeIntoTopic = vi.fn(async () => {
+      throw new ApiFailure({ kind: "invalid", detail: "topic", code: "INVALID" });
+    });
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Merge into it" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent(
+      "Street food can’t take it now: it isn’t open, or its section is hidden.",
+    );
+    expect(screen.getByRole("heading", { name: "Street food" })).toBeInTheDocument();
+  });
+
+  it("names a section with the same name, and leaves its merge to the owner", async () => {
+    deps.sections = vi.fn(async () => ({
+      sections: [
+        { ...proposed, nameClash: { kind: "section" as const, id: "food", name: "Street food" } },
+      ],
+    }));
+    const { unmount } = wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    let card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    expect(
+      within(card).getByText("A section called Street food already exists"),
+    ).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Merge into it" })).toBeNull();
+    unmount();
+
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Merge into it" }));
+    expect(deps.mergeSection).toHaveBeenCalledWith("street-food", "food");
   });
 
   it("says a section's name is taken, and keeps Merge into it from a moderator", async () => {

@@ -766,6 +766,9 @@ const uk: Translation = {
       other: "{n} списку, що чекають, перемістяться разом із нею.",
     },
     mergeIntoIt: "Об’єднати з ним",
+    mergedIntoTopic: "«{name}» об’єднано з «{topic}» у «{section}»",
+    topicMergeRefused:
+      "«{topic}» зараз не може його прийняти: тема не відкрита або її розділ прихований.",
     approvedAsTopic: "«{name}» схвалено як тему в «{section}»",
     listsMoved: {
       one: "переміщено {n} список",

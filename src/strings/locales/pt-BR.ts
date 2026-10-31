@@ -706,6 +706,9 @@ const ptBR: Translation = {
       other: "{n} listas em espera vão junto.",
     },
     mergeIntoIt: "Mesclar com ela",
+    mergedIntoTopic: "“{name}” unida a “{topic}” em “{section}”",
+    topicMergeRefused:
+      "“{topic}” não pode recebê-la agora: não está aberto ou a seção dele está oculta.",
     approvedAsTopic: "“{name}” aprovado como tema em {section}",
     listsMoved: { one: "{n} lista movida", other: "{n} listas movidas" },
     lists: "Listas",

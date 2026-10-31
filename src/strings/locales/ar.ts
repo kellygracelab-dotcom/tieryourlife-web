@@ -842,6 +842,8 @@ const ar: Translation = {
       other: "ستنتقل معه {n} قائمة تنتظر.",
     },
     mergeIntoIt: "دمجه فيه",
+    mergedIntoTopic: "دُمج «{name}» في «{topic}» ضمن «{section}»",
+    topicMergeRefused: "لا يمكن لـ«{topic}» استقباله الآن: إنه غير مفتوح، أو قسمه مخفي.",
     approvedAsTopic: "تمت الموافقة على «{name}» كموضوع في «{section}»",
     listsMoved: {
       zero: "لم تُنقل أي قائمة",
