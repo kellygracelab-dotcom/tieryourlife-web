@@ -246,6 +246,46 @@ describe("ProposalsPane", () => {
     ).toBeInTheDocument();
   });
 
+  it("names the section the taken topic is in, and merges into it there", async () => {
+    deps.approveAsTopic = vi.fn(async () => {
+      throw new ApiFailure({
+        kind: "invalid",
+        detail: null,
+        code: "NAME_TAKEN",
+        id: "t1",
+        section: "games",
+      });
+    });
+    deps.mergeIntoTopic = vi.fn(async () => ({ topic: null, proposal: null }));
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    await userEvent.click(within(card).getByRole("radio", { name: "Approve as a topic in" }));
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a topic" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent(
+      "Street food already exists in Games",
+    );
+    await userEvent.click(within(card).getByRole("button", { name: "Merge into it" }));
+    expect(
+      await screen.findByText("Street food merged into Street food in Games · 6 lists moved"),
+    ).toBeInTheDocument();
+  });
+
+  it("says where the backend put the topic when it answers with an earlier approval", async () => {
+    deps.approveAsTopic = vi.fn(async () => ({
+      topic: topic("t7", "Street food", { section: "food" }),
+      proposal: null,
+    }));
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    await userEvent.selectOptions(within(card).getByRole("combobox", { name: "Section" }), "games");
+    await userEvent.click(within(card).getByRole("button", { name: "Approve as a topic" }));
+    expect(
+      await screen.findByText("Street food approved as a topic in Food · 6 lists moved"),
+    ).toBeInTheDocument();
+  });
+
   it("merges into the section when an older backend names no topic, for the owner", async () => {
     deps.approveAsTopic = vi.fn(async () => {
       throw new ApiFailure({ kind: "invalid", detail: null, code: "NAME_TAKEN" });

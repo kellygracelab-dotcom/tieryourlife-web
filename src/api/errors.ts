@@ -20,7 +20,15 @@ export type ApiError =
    * BAD_PICTURE…) and, where it says, the section a name clashes with or why
    * a picture was refused: a form puts each under the field it is about.
    */
-  | { kind: "invalid"; detail: string | null; code: string | null; id?: string; why?: string }
+  | {
+      kind: "invalid";
+      detail: string | null;
+      code: string | null;
+      id?: string;
+      why?: string;
+      /** The section of the topic a name is taken by, when the backend says. */
+      section?: string;
+    }
   | { kind: "pictureRefused"; because: string | null }
   /** Too much of something in too short a time: TOO_MANY_PROPOSALS, ten sections a day. */
   | { kind: "tooManyRequests"; code: string | null }
@@ -43,6 +51,7 @@ interface ErrorBody {
   code?: unknown;
   id?: unknown;
   why?: unknown;
+  section?: unknown;
   until?: unknown;
   because?: unknown;
   board?: unknown;
@@ -98,11 +107,13 @@ export function parseApiError(status: number, text: string): ApiError {
       // A topic's name clashes with 409 where a section's does with 400: one refusal to the form.
       if (code === "NAME_TAKEN") {
         const id = stringOrNull(body.id);
+        const section = stringOrNull(body.section);
         return {
           kind: "invalid",
           detail: stringOrNull(body.error),
           code,
           ...(id === null ? {} : { id }),
+          ...(section === null ? {} : { section }),
         };
       }
       return body.board === undefined
