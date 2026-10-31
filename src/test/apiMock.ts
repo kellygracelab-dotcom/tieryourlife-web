@@ -72,6 +72,7 @@ export function apiStubs() {
     mergeSection: pending(),
     approveSectionAsTopic: pending(),
     mergeSectionIntoTopic: pending(),
+    finishDecision: pending(),
     checkSectionName: pending(),
     loadTopicQueue: pending(),
     decideTopic: pending(),

@@ -3,6 +3,7 @@ import {
   approveSectionAsTopic,
   createTopic,
   editTopic,
+  finishDecision,
   loadAdminLists,
   mergeSectionIntoTopic,
   moveList,
@@ -75,5 +76,22 @@ describe("admin", () => {
     expect(request).toHaveBeenCalledWith("POST", "/lists/sections/street%20food/merge-into-topic", {
       body: { topic: "t1" },
     });
+  });
+
+  it("finishes a decision with the call the backend handed back, and no other", async () => {
+    const { client, request } = recordingClient({});
+    await finishDecision(client, "night markets", {
+      action: "merge-into-topic",
+      body: { topic: "t1" },
+    });
+    expect(request).toHaveBeenCalledWith(
+      "POST",
+      "/lists/sections/night%20markets/merge-into-topic",
+      { body: { topic: "t1" } },
+    );
+    await expect(
+      finishDecision(client, "p", { action: "../delete" as never, body: {} }),
+    ).rejects.toThrow("Not a decision");
+    expect(request).toHaveBeenCalledTimes(1);
   });
 });

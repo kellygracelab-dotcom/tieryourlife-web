@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -78,6 +78,7 @@ describe("ProposalsPane", () => {
         proposal: null,
       })),
       decideTopic: vi.fn(async () => undefined),
+      finish: vi.fn(async () => undefined),
     };
   });
 
@@ -421,6 +422,55 @@ describe("ProposalsPane", () => {
       "src",
       "https://pictures.test/speedruns.webp",
     );
+  });
+
+  it("offers to finish a decision cut short, with the call the backend hands back", async () => {
+    const stuck: ProposedSection = {
+      ...proposed,
+      id: "night-markets",
+      name: "Night markets",
+      status: "merged",
+      unfinished: true,
+      finish: { action: "approve-as-topic", body: { section: "food" } },
+    };
+    deps.sections = vi.fn(async () => ({ sections: [proposed, stuck] }));
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Night markets" })).closest("li")!;
+    expect(screen.getByText("3 waiting")).toBeInTheDocument();
+    expect(card).toHaveTextContent("Decided, but not finished");
+    // Not a proposal to decide: it has no Approve or Decline.
+    expect(within(card).queryByRole("button", { name: "Approve" })).toBeNull();
+    await userEvent.click(within(card).getByRole("button", { name: "Finish" }));
+    expect(deps.finish).toHaveBeenCalledWith("night-markets", {
+      action: "approve-as-topic",
+      body: { section: "food" },
+    });
+    expect(await screen.findByText("Night markets finished")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Night markets" })).toBeNull();
+  });
+
+  it("leaves finishing a merge into a section to the owner, and reloads one finished elsewhere", async () => {
+    const stuck: ProposedSection = {
+      ...proposed,
+      id: "night-markets",
+      name: "Night markets",
+      status: "merged",
+      unfinished: true,
+      finish: { action: "merge", body: { into: "food" } },
+    };
+    deps.sections = vi.fn(async () => ({ sections: [stuck] }));
+    const { unmount } = wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    let card = (await screen.findByRole("heading", { name: "Night markets" })).closest("li")!;
+    expect(within(card).queryByRole("button", { name: "Finish" })).toBeNull();
+    unmount();
+
+    deps.finish = vi.fn(async () => {
+      throw new ApiFailure({ kind: "conflict" });
+    });
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    card = (await screen.findByRole("heading", { name: "Night markets" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Finish" }));
+    await waitFor(() => expect(deps.sections).toHaveBeenCalledTimes(3));
   });
 
   it("finds nothing waiting on a backend without section proposals yet", async () => {
