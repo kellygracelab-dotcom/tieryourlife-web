@@ -121,8 +121,9 @@ describe("useSaveToMine", () => {
     expect(titlesIn(repository)).toEqual({ s: [], a: [], pool: ["A", "B", "C"] });
   });
 
-  it("keeps my own at once on a template: no author named and nothing placed", async () => {
+  it("keeps my own at once on a template, a list with nothing placed, whoever made it", async () => {
     for (const template of [
+      list(false),
       { ...list(false), anonymous: true },
       { ...list(false), authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2" },
     ]) {
@@ -135,19 +136,12 @@ describe("useSaveToMine", () => {
     }
   });
 
-  it("still asks on a named author's unranked list, and on a ranked template", async () => {
-    const store = memoryStore();
-    saveDraft(store, scopeOf(list(false)), [[2], []]);
-    show(list(false), store);
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(screen.getByRole("dialog", { name: "Which ranking to save?" })).toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
-
+  it("still asks on a ranked list without an author", async () => {
     const ranked = { ...list(true), anonymous: true };
-    const drafts = memoryStore();
-    saveDraft(drafts, scopeOf(ranked), [[2], []]);
-    show(ranked, drafts);
-    await userEvent.click(screen.getAllByRole("button", { name: "Save" }).at(-1)!);
+    const store = memoryStore();
+    saveDraft(store, scopeOf(ranked), [[2], []]);
+    show(ranked, store);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(screen.getByRole("dialog", { name: "Which ranking to save?" })).toHaveTextContent(
       "The author's",
     );

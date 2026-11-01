@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import type { PublishedList } from "../../api/types";
-import { isEditorial } from "../../lib/editorial";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
@@ -39,9 +38,8 @@ export interface SaveToMine {
  * The phone's "Save to my lists": somebody else's list becomes a board of
  * one's own, with the author's arrangement, the one on screen, or none. The
  * question is asked only when there is a choice to make; the receipt offers
- * to open the new board. A template, a list with no author named (anonymous
- * or the house's) and nothing placed, has no Theirs to weigh: one's own is
- * saved as it stands, as on the phone.
+ * to open the new board. A list with nothing placed, a template, has no
+ * Theirs to weigh: one's own is saved as it stands, as on the phone.
  */
 export function useSaveToMine(
   list: PublishedList,
@@ -79,8 +77,7 @@ export function useSaveToMine(
       theirs: theirs.known ? theirs.rows : null,
       mine: loadPlacedDraft(store, scopeOf(list)),
     };
-    if (choices.theirs === null && choices.mine === null) save("none", choices);
-    else if (choices.theirs === null && isEditorial(list)) save("mine", choices);
+    if (choices.theirs === null) save(choices.mine === null ? "none" : "mine", choices);
     else setAsking(choices);
   }, [list, store, save]);
 
