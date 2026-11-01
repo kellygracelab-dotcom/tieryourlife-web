@@ -704,6 +704,11 @@ const fr: Translation = {
     anonymousLine:
       "L’auteur apparaît comme « Anonyme ». Seuls les admins voient qu’elle vient de vous.",
     anonymousNone: "Rien n’a encore été publié anonymement.",
+    searches: "Recherches sans résultat",
+    searchesBody:
+      "Ce que les gens ont cherché sans rien trouver : aucune section, aucun sujet, aucune liste. Les plus fréquentes d’abord.",
+    searchesNone: "Aucune recherche vide pour l’instant.",
+    searchedTimes: { one: "cherché {n} fois", other: "cherché {n} fois" },
     publishedBy: "par {name}",
     open: "Ouvrir",
     more: "Afficher plus",

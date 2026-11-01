@@ -702,6 +702,11 @@ const de: Translation = {
     pickBoard: "Welche deiner Listen?",
     anonymousLine: "Als Autor steht „Anonym“. Nur Admins sehen, dass sie von dir ist.",
     anonymousNone: "Noch nichts anonym veröffentlicht.",
+    searches: "Suchen ohne Ergebnis",
+    searchesBody:
+      "Wonach gesucht und nichts gefunden wurde: kein Bereich, kein Thema, keine Liste. Die häufigsten zuerst.",
+    searchesNone: "Noch keine leeren Suchen.",
+    searchedTimes: { one: "{n}-mal gesucht", other: "{n}-mal gesucht" },
     publishedBy: "von {name}",
     open: "Öffnen",
     more: "Mehr anzeigen",

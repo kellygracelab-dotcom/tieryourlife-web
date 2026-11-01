@@ -5,6 +5,7 @@ import { HousePane } from "../features/admin/HousePane";
 import { ListsPane } from "../features/admin/ListsPane";
 import { ModeratorsPane } from "../features/admin/ModeratorsPane";
 import { ProposalsPane } from "../features/admin/ProposalsPane";
+import { SearchesPane } from "../features/admin/SearchesPane";
 import { SectionsPane } from "../features/admin/SectionsPane";
 import { TopicsPane } from "../features/admin/TopicsPane";
 import { isPane, panesFor, useAdminRole, type Pane } from "../features/admin/useAdminRole";
@@ -26,6 +27,7 @@ const PANE_LOOK: Record<Pane, { icon: IconName; label: string }> = {
   lists: { icon: "view_list", label: strings.admin.lists },
   anonymous: { icon: "visibility_off", label: strings.admin.anonymous },
   house: { icon: "public", label: strings.admin.house },
+  searches: { icon: "search", label: strings.admin.searches },
   moderators: { icon: "shield", label: strings.admin.moderators },
 };
 
@@ -70,6 +72,8 @@ function PaneBody({ pane, adminRole: role }: { pane: Pane; adminRole: AdminRole 
       return <AnonymousPane />;
     case "house":
       return <HousePane />;
+    case "searches":
+      return <SearchesPane />;
   }
 }
 

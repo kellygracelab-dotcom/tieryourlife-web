@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { SectionStats, SectionStatus, ThemePair } from "../../api/sections";
 import { CATEGORIES, isCategory, type Category } from "../../api/types";
+import { BUILT_IN_NAMES } from "./builtInNames";
 import type { WidthClass } from "../../lib/useWidthClass";
 import { currentLocale, strings } from "../../strings";
 import { ICONS, type IconName } from "../../ui/icons";
@@ -109,6 +110,8 @@ export interface Section extends SectionLook {
   fileUnder: string | null;
   /** Who proposed a waiting one, when the backend says. */
   proposerUid: string | null;
+  /** Every name it goes by, in every language: what a search matches. Its own name when left out. */
+  names?: readonly string[];
 }
 
 const isIcon = (value: unknown): value is IconName =>
@@ -119,6 +122,7 @@ export function builtInSection(id: Category): Section {
   return {
     id,
     name: strings.category[id],
+    names: BUILT_IN_NAMES[id],
     ...BUILT_IN_LOOKS[id],
     picture: null,
     status: "approved",
@@ -147,6 +151,11 @@ export function sectionOf(stats: SectionStats, locale: string = currentLocale())
   return {
     ...base,
     id: stats.id,
+    names: [
+      ...(isCategory(stats.id) ? BUILT_IN_NAMES[stats.id] : []),
+      ...(stats.name === undefined ? [] : [stats.name]),
+      ...Object.values(stats.names ?? {}).filter((one): one is string => one !== undefined),
+    ],
     name:
       named !== undefined && named.trim() !== ""
         ? named
@@ -333,3 +342,28 @@ export function topicStyle(section: Section | undefined): CSSProperties | undefi
 export const FOLLOWING_PATH = "/following";
 
 export const MANAGE_PATH = "/following/manage";
+
+/** Between words: anything that is not a letter or a digit. */
+const BETWEEN_WORDS = /[^\p{L}\p{N}]+/u;
+
+/**
+ * Text as a search compares it, the way the backend folds it (proxy #56):
+ * lower case, no accents, ё as е.
+ */
+export const fold = (text: string): string =>
+  text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+const wordsOf = (text: string): string[] => fold(text).split(BETWEEN_WORDS).filter(Boolean);
+
+/** Whether every word typed starts a word of the name, in any order: "wars" finds Star Wars. */
+export function namedLike(query: string, name: string): boolean {
+  const asked = wordsOf(query);
+  const words = wordsOf(name);
+  return asked.length > 0 && asked.every((one) => words.some((word) => word.startsWith(one)));
+}
+
+/** The approved sections a search names, by any of their names in any language. */
+export const sectionsNamed = (sections: readonly Section[], query: string): Section[] =>
+  approvedOnly(sections).filter((section) =>
+    (section.names ?? [section.name]).concat(section.name).some((name) => namedLike(query, name)),
+  );

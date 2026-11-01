@@ -11,6 +11,7 @@ import { SEARCH_DEBOUNCE_MS, SearchPage } from "./SearchPage";
 const mocks = vi.hoisted(() => ({
   loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>(),
   findTopics: vi.fn<(q: string, section?: string) => Promise<{ topics: Topic[] }>>(),
+  noteSearchMiss: vi.fn<(q: string) => Promise<void>>(),
 }));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
@@ -30,6 +31,7 @@ vi.mock("../lib/api", async () => ({
   report: vi.fn(),
   loadFeed: mocks.loadFeed,
   findTopics: mocks.findTopics,
+  noteSearchMiss: mocks.noteSearchMiss,
   loadList: vi.fn(),
   loadRanking: vi.fn(),
   keepRanking: vi.fn(),
@@ -88,6 +90,8 @@ beforeEach(() => {
   mocks.loadFeed.mockResolvedValue({ lists: [summary("d1", "Something")], nextCursor: null });
   mocks.findTopics.mockReset();
   mocks.findTopics.mockResolvedValue({ topics: [] });
+  mocks.noteSearchMiss.mockReset();
+  mocks.noteSearchMiss.mockResolvedValue(undefined);
 });
 
 describe("SearchPage", () => {
@@ -151,6 +155,42 @@ describe("SearchPage", () => {
     open("/search?q=zelda");
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Zelda" })).not.toHaveLength(0);
+  });
+
+  it("finds sections by their name in any language, above the topics and the lists", async () => {
+    mocks.findTopics.mockResolvedValue({ topics: [topic("t1", "Anime openings")] });
+    open("/search?q=аниме");
+    const tiles = within(await screen.findByRole("navigation", { name: "Sections" }));
+    expect(tiles.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/s/anime",
+    ]);
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent),
+    ).toEqual(["Sections", "Topics", "Lists"]);
+    expect(await screen.findByRole("link", { name: /Something/ })).toBeInTheDocument();
+    expect(mocks.noteSearchMiss).not.toHaveBeenCalled();
+  });
+
+  it("looks for no sections inside one: the words are for its lists", async () => {
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    open("/search?q=anime&category=anime");
+    expect(await screen.findByText(/No lists match/)).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Sections" })).toBeNull();
+  });
+
+  it("tells staff once what a search found nothing for, and not what it found", async () => {
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    open("/search?q=qwzx");
+    expect(await screen.findByText(/No lists match/)).toBeInTheDocument();
+    await waitFor(() => expect(mocks.noteSearchMiss).toHaveBeenCalledWith("qwzx"));
+    expect(mocks.noteSearchMiss).toHaveBeenCalledTimes(1);
+
+    mocks.noteSearchMiss.mockClear();
+    mocks.noteSearchMiss.mockRejectedValue(new Error("down"));
+    mocks.findTopics.mockResolvedValue({ topics: [topic("t1", "Zelda")] });
+    open("/search?q=zel");
+    expect(await screen.findByRole("link", { name: "Zelda" })).toBeInTheDocument();
+    expect(mocks.noteSearchMiss).not.toHaveBeenCalled();
   });
 
   it("searches the lists alone when the topics could not be read", async () => {

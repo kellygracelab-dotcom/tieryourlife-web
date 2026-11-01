@@ -684,6 +684,11 @@ const tr: Translation = {
     pickBoard: "Hangi listen?",
     anonymousLine: "Yazar “Anonim” görünür. Senden geldiğini yalnızca yöneticiler görür.",
     anonymousNone: "Henüz anonim yayınlanan bir şey yok.",
+    searches: "Sonuçsuz aramalar",
+    searchesBody:
+      "İnsanların aradığı ama bölüm, konu ya da liste bulamadığı şeyler. En çok arananlar üstte.",
+    searchesNone: "Henüz sonuçsuz arama yok.",
+    searchedTimes: { one: "{n} kez arandı", other: "{n} kez arandı" },
     publishedBy: "{name} tarafından",
     open: "Aç",
     more: "Daha fazla göster",

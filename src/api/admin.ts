@@ -441,3 +441,16 @@ export async function loadHouseLists(
   );
   return { lists: (page.lists ?? []).map(summaryOf), nextCursor: page.nextCursor ?? null };
 }
+
+/** A search that found nothing anywhere, as staff read it: the words, how often, and when last. */
+export interface SearchMiss {
+  q: string;
+  count: number;
+  lastAt: number;
+}
+
+/** The searches nothing answered, the most asked first (the backend's top hundred); staff only. */
+export async function loadSearchMisses(client: ApiClient): Promise<SearchMiss[]> {
+  const answer = await client.request<{ misses?: SearchMiss[] }>("GET", "/lists/search-misses");
+  return answer.misses ?? [];
+}

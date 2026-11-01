@@ -1,4 +1,4 @@
-import { approvedOnly, sectionName, sectionPath } from "../features/sections/model";
+import { approvedOnly, sectionName, sectionPath, sectionsNamed } from "../features/sections/model";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import type { Topic } from "../api/sections";
@@ -6,9 +6,10 @@ import { isSectionId, type FeedSort } from "../api/types";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed, type FeedState } from "../features/feed/useFeed";
+import { SectionTile } from "../features/sections/SectionTile";
 import { FoundTopicTiles } from "../features/sections/TopicTiles";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
-import { findTopics } from "../lib/api";
+import { findTopics, noteSearchMiss } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import { fill, plural, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
@@ -16,6 +17,7 @@ import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
 import { ListCard } from "../ui/ListCard";
 import "../ui/Button.css";
+import "../features/sections/sections.css";
 import "./SearchPage.css";
 
 /** Typing pauses this long before the address, and the feed, follow. */
@@ -101,9 +103,12 @@ function useFoundTopics(
 export function SearchPage({
   store = sectionsStore,
   find = findTopics,
+  noteMiss = noteSearchMiss,
 }: {
   store?: SectionsStore;
   find?: FindTopics;
+  /** Says a search found nothing anywhere, so staff see what people look for. */
+  noteMiss?: (q: string) => Promise<void>;
 }) {
   const [params, setParams] = useSearchParams();
   const filters = read(params);
@@ -155,7 +160,20 @@ export function SearchPage({
     );
   const noLists = results.status === "ready" && results.lists.length === 0;
   const topics = found ?? [];
-  const nothing = searching && noLists && topics.length === 0;
+  // Sections by any of their names, in any language: "аниме" finds Anime on
+  // an English page. Not inside one section, where the words look for its lists.
+  const named =
+    searching && known && filters.category === undefined ? sectionsNamed(sections, filters.q) : [];
+  const nothing = searching && noLists && topics.length === 0 && named.length === 0;
+
+  // Once per search that found nothing anywhere: the address follows the
+  // typing only after its pause, so this is not every keystroke.
+  const noted = useRef<string | null>(null);
+  useEffect(() => {
+    if (!nothing || noted.current === filters.q) return;
+    noted.current = filters.q;
+    noteMiss(filters.q).catch(() => undefined);
+  }, [nothing, filters.q, noteMiss]);
 
   return (
     <section className="search">
@@ -226,6 +244,18 @@ export function SearchPage({
         </>
       ) : (
         <>
+          {named.length > 0 && (
+            <section className="search__topics" aria-labelledby="search-sections">
+              <h2 id="search-sections" className="search__subtitle">
+                {strings.sections.sections}
+              </h2>
+              <nav className="sections-grid" aria-label={strings.sections.sections}>
+                {named.map((section) => (
+                  <SectionTile key={section.id} section={section} />
+                ))}
+              </nav>
+            </section>
+          )}
           {topics.length > 0 && (
             <section className="search__topics" aria-labelledby="search-topics">
               <h2 id="search-topics" className="search__subtitle">
@@ -234,8 +264,11 @@ export function SearchPage({
               <FoundTopicTiles topics={topics} sections={sections} />
             </section>
           )}
-          {/* Topics alone are an answer: no line saying nothing was published. */}
-          {!(noLists && topics.length > 0) && (
+          {/* Sections or topics alone are an answer: no line saying nothing was published. */}
+          {(named.length > 0 || topics.length > 0) && !noLists && results.status === "ready" && (
+            <h2 className="search__subtitle">{strings.profile.lists}</h2>
+          )}
+          {!(noLists && (named.length > 0 || topics.length > 0)) && (
             <FeedGrid
               state={results}
               label={strings.search.results}

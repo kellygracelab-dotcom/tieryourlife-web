@@ -6,6 +6,7 @@ import {
   finishDecision,
   loadAdminLists,
   loadHouseLists,
+  loadSearchMisses,
   mergeSectionIntoTopic,
   moveList,
   publishAsHouse,
@@ -146,5 +147,13 @@ describe("admin", () => {
     // An answer without its fields reads as an empty last page.
     const empty = recordingClient({});
     await expect(loadHouseLists(empty.client)).resolves.toEqual({ lists: [], nextCursor: null });
+  });
+
+  it("reads the searches that found nothing, none when the answer has no field", async () => {
+    const miss = { q: "sumo", count: 2, lastAt: 1 };
+    const { client, request } = recordingClient({ misses: [miss] });
+    await expect(loadSearchMisses(client)).resolves.toEqual([miss]);
+    expect(request).toHaveBeenCalledWith("GET", "/lists/search-misses");
+    await expect(loadSearchMisses(recordingClient({}).client)).resolves.toEqual([]);
   });
 });

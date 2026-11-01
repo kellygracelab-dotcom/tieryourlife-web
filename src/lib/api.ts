@@ -15,6 +15,7 @@ import type {
   SectionDraft,
   FinishCall,
   HouseAnswer,
+  SearchMiss,
   TopicApproval,
   TopicChanges,
   TopicDecision,
@@ -311,3 +312,7 @@ export const replaceHouseList = (id: string, request: PublishRequest): Promise<H
   admin.replaceHouseList(api, id, request);
 
 export const takeDownHouseList = (id: string): Promise<void> => admin.takeDownHouseList(api, id);
+
+export const loadSearchMisses = (): Promise<SearchMiss[]> => admin.loadSearchMisses(api);
+
+export const noteSearchMiss = (q: string): Promise<void> => community.noteSearchMiss(api, q);
