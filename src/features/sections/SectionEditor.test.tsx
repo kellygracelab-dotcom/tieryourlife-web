@@ -658,18 +658,16 @@ describe("the owner's Edit", () => {
     return { send, onDone, deps };
   }
 
-  it("keeps a built-in's art and sends only what changed", async () => {
+  it("gives a built-in a picture or leaves it the app's art, and sends only what changed", async () => {
     const { send, deps } = edit(
       stats("anime", { name: "Anime", names: { uk: "Аніме" }, icon: "animation", builtIn: true }),
     );
     expect(screen.getByRole("dialog", { name: "Edit section" })).toHaveClass(
       "section-editor--side",
     );
-    expect(screen.queryByText("Picture")).toBeNull();
+    expect(screen.getByText("Picture")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "A built-in section keeps the app’s own art: only its name, translations and icon change.",
-      ),
+      screen.getByText("Without a picture, a built-in section shows the app’s own art."),
     ).toBeInTheDocument();
     expect(nameField()).toHaveValue("Anime");
     expect(screen.getByRole("textbox", { name: "Українська" })).toHaveValue("Аніме");
@@ -680,6 +678,18 @@ describe("the owner's Edit", () => {
     await waitFor(() => expect(send).toHaveBeenCalledWith({ icon: "pets" }));
     // Its own name is never asked about.
     expect(deps.check).not.toHaveBeenCalled();
+  });
+
+  it("shows a built-in's own picture once it has one, ready to replace", () => {
+    edit(
+      stats("anime", {
+        name: "Anime",
+        icon: "animation",
+        builtIn: true,
+        pictureUrl: "https://firebasestorage.googleapis.com/anime.webp",
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Replace" })).toBeInTheDocument();
   });
 
   it("does not take a clash with itself for a clash", async () => {

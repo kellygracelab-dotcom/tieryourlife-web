@@ -653,8 +653,7 @@ export const en = {
     recrop: "Recrop",
     replace: "Replace",
     recropFailed: "This picture can’t be recropped here. Replace it instead.",
-    builtInArt:
-      "A built-in section keeps the app’s own art: only its name, translations and icon change.",
+    builtInArt: "Without a picture, a built-in section shows the app’s own art.",
     sectionCreated: "{name} created",
     sectionSaved: "{name} saved",
     discardChanges: "Discard your changes?",

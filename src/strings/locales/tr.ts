@@ -674,8 +674,7 @@ const tr: Translation = {
     recrop: "Yeniden kırp",
     replace: "Değiştir",
     recropFailed: "Bu görsel burada yeniden kırpılamıyor. Bunun yerine değiştirin.",
-    builtInArt:
-      "Yerleşik bir bölüm uygulamanın kendi görselini korur: yalnızca adı, çevirileri ve simgesi değişir.",
+    builtInArt: "Resim yoksa yerleşik bölüm uygulamanın kendi görselini gösterir.",
     sectionCreated: "{name} oluşturuldu",
     sectionSaved: "{name} kaydedildi",
     discardChanges: "Değişikliklerden vazgeçilsin mi?",

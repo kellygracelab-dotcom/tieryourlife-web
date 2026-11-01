@@ -692,8 +692,7 @@ const de: Translation = {
     recrop: "Neu zuschneiden",
     replace: "Ersetzen",
     recropFailed: "Dieses Bild lässt sich hier nicht neu zuschneiden. Ersetze es stattdessen.",
-    builtInArt:
-      "Eine eingebaute Rubrik behält die Gestaltung der App: Nur Name, Übersetzungen und Symbol ändern sich.",
+    builtInArt: "Ohne Bild zeigt ein integrierter Bereich die eigene Grafik der App.",
     sectionCreated: "{name} erstellt",
     sectionSaved: "{name} gespeichert",
     discardChanges: "Änderungen verwerfen?",

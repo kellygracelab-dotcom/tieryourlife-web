@@ -83,7 +83,7 @@ function startOf(props: SectionEditorProps, keep: KeyValueStore): Start {
     return {
       ...wordsOf(props.section, look),
       fileUnder: OTHER,
-      picture: look.builtIn || look.picture === null ? null : { kind: "kept", url: look.picture },
+      picture: look.picture === null ? null : { kind: "kept", url: look.picture },
     };
   }
   const fileUnder = props.mode === "propose" ? (props.fileUnder ?? OTHER) : OTHER;
@@ -481,14 +481,11 @@ export function SectionEditor(props: SectionEditorProps) {
         {nameField}
         {translationsField}
         {iconField}
-        {builtIn ? (
-          <p className="section-editor__help">{strings.admin.builtInArt}</p>
-        ) : (
-          <div className="section-editor__field">
-            <p className="section-editor__label">{strings.admin.picture}</p>
-            {pictureField}
-          </div>
-        )}
+        <div className="section-editor__field">
+          <p className="section-editor__label">{strings.admin.picture}</p>
+          {pictureField}
+          {builtIn && <p className="section-editor__help">{strings.admin.builtInArt}</p>}
+        </div>
       </>
     );
   }

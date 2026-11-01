@@ -669,8 +669,7 @@ const ja: Translation = {
     recrop: "切り抜き直す",
     replace: "差し替える",
     recropFailed: "この画像はここでは切り抜き直せません。差し替えてください。",
-    builtInArt:
-      "組み込みのセクションはアプリ独自のデザインのままです。変更できるのは名前、翻訳、アイコンだけです。",
+    builtInArt: "画像がない場合、組み込みのセクションはアプリ独自のアートを表示します。",
     sectionCreated: "{name}を作成しました",
     sectionSaved: "{name}を保存しました",
     discardChanges: "変更を破棄しますか？",

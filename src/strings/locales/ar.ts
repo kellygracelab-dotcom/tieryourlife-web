@@ -787,7 +787,7 @@ const ar: Translation = {
     recrop: "إعادة القص",
     replace: "استبدال",
     recropFailed: "لا يمكن إعادة قص هذه الصورة هنا. استبدلها بدلًا من ذلك.",
-    builtInArt: "يحتفظ القسم المدمج بتصميم التطبيق: يتغيّر فقط اسمه وترجماته وأيقونته.",
+    builtInArt: "من دون صورة، يعرض القسم المدمج رسومات التطبيق الخاصة.",
     sectionCreated: "أُنشئ «{name}»",
     sectionSaved: "حُفظ «{name}»",
     discardChanges: "تجاهل تغييراتك؟",

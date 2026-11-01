@@ -680,8 +680,7 @@ const es: Translation = {
     recrop: "Recortar de nuevo",
     replace: "Reemplazar",
     recropFailed: "Esta imagen no se puede recortar aquí. Reemplázala.",
-    builtInArt:
-      "Una sección integrada conserva el diseño propio de la app: solo cambian su nombre, sus traducciones y su icono.",
+    builtInArt: "Sin imagen, una sección integrada muestra el arte propio de la app.",
     sectionCreated: "Se creó {name}",
     sectionSaved: "Se guardó {name}",
     discardChanges: "¿Descartar los cambios?",

@@ -676,7 +676,7 @@ const ptBR: Translation = {
     recrop: "Recortar de novo",
     replace: "Substituir",
     recropFailed: "Esta imagem não pode ser recortada aqui. Substitua-a.",
-    builtInArt: "Uma seção nativa mantém a arte do app: só mudam o nome, as traduções e o ícone.",
+    builtInArt: "Sem imagem, uma seção integrada mostra a arte do próprio app.",
     sectionCreated: "Seção {name} criada",
     sectionSaved: "Seção {name} salva",
     discardChanges: "Descartar as alterações?",

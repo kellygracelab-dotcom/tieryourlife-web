@@ -712,8 +712,7 @@ const pl: Translation = {
     recrop: "Przytnij ponownie",
     replace: "Zastąp",
     recropFailed: "Tego obrazu nie da się tu ponownie przyciąć. Zastąp go.",
-    builtInArt:
-      "Wbudowany dział zachowuje grafikę aplikacji: zmienia się tylko nazwa, tłumaczenia i ikona.",
+    builtInArt: "Bez obrazu wbudowana sekcja pokazuje własną grafikę aplikacji.",
     sectionCreated: "Utworzono {name}",
     sectionSaved: "Zapisano {name}",
     discardChanges: "Odrzucić zmiany?",

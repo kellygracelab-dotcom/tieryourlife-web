@@ -693,8 +693,7 @@ const fr: Translation = {
     recrop: "Recadrer",
     replace: "Remplacer",
     recropFailed: "Cette image ne peut pas être recadrée ici. Remplacez-la plutôt.",
-    builtInArt:
-      "Une rubrique intégrée garde le visuel de l’app : seuls son nom, ses traductions et son icône changent.",
+    builtInArt: "Sans image, une section intégrée affiche l’illustration de l’app.",
     sectionCreated: "Rubrique {name} créée",
     sectionSaved: "Rubrique {name} enregistrée",
     discardChanges: "Abandonner vos modifications ?",
