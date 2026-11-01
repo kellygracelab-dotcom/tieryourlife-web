@@ -81,8 +81,10 @@ const openAs = (account: Session["account"] = member) =>
     </SessionContext.Provider>,
   );
 
+/** Who ranked the list is a line of the ⋮ menu, the one place the number is said. */
 const openSheet = async () => {
-  await userEvent.click(await screen.findByRole("button", { name: "12 rankings" }));
+  await userEvent.click(await screen.findByLabelText("More about this list"));
+  await userEvent.click(screen.getByRole("button", { name: "Rankings · 12" }));
   return screen.getByRole("dialog", { name: "Rankings" });
 };
 
@@ -112,7 +114,7 @@ describe("ListPage rankings", () => {
   it("lists the author with a pill, then you with Withdraw, then everyone else, under a title without a number", async () => {
     openAs();
     const sheet = await openSheet();
-    // The title cannot disagree with the chip: it has no number of its own.
+    // The title cannot disagree with the menu's line: it has no number of its own.
     expect(within(sheet).getByRole("heading", { level: 2 })).toHaveTextContent(/^Rankings$/);
     expect(await within(sheet).findByRole("button", { name: /^olena/ })).toBeInTheDocument();
     expect(mocks.loadListRankings).toHaveBeenCalledWith("abc", null);

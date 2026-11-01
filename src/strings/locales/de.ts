@@ -178,9 +178,6 @@ const de: Translation = {
   },
   profile: {
     someone: "Jemand",
-    followers: { one: "{n} Abonnent", other: "{n} Abonnenten" },
-    publicLists: { one: "{n} öffentliche Liste", other: "{n} öffentliche Listen" },
-    publicListsMore: { one: "{n}+ öffentliche Liste", other: "{n}+ öffentliche Listen" },
     editInSettings: "In den Einstellungen ändern",
     lists: "Listen",
     newestFirst: "neueste zuerst",
@@ -695,8 +692,7 @@ const de: Translation = {
     recrop: "Neu zuschneiden",
     replace: "Ersetzen",
     recropFailed: "Dieses Bild lässt sich hier nicht neu zuschneiden. Ersetze es stattdessen.",
-    builtInArt:
-      "Eine eingebaute Rubrik behält die Gestaltung der App: Nur Name, Übersetzungen und Symbol ändern sich.",
+    builtInArt: "Ohne Bild zeigt ein integrierter Bereich die eigene Grafik der App.",
     sectionCreated: "{name} erstellt",
     sectionSaved: "{name} gespeichert",
     discardChanges: "Änderungen verwerfen?",
@@ -757,7 +753,6 @@ const de: Translation = {
     moveAnyway: "Trotzdem verschieben",
   },
   sections: {
-    newThisWeek: { one: "{n} neu diese Woche", other: "{n} neu diese Woche" },
     followers: { one: "{n} Follower", other: "{n} Follower" },
     lists: { one: "{n} Liste", other: "{n} Listen" },
     follow: "Folgen",
@@ -813,7 +808,6 @@ const de: Translation = {
     frame: "Das Bild, in der Kachel zu verschieben und zu zoomen",
     frameHelp:
       "Zieh zum Verschieben; zoome mit zwei Fingern oder durch Scrollen. Die Pfeiltasten verschieben, + und − zoomen.",
-    sample: "Ein Beispiel: Die echte Zahl erscheint, sobald Listen da sind.",
     changePicture: "Bild ändern",
     paper: "Hintergrund der Vorschau",
     phone: "Auf dem Handy",

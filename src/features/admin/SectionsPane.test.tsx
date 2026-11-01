@@ -243,8 +243,9 @@ describe("SectionsPane", () => {
       await screen.findByText("4 sections · 1 hidden");
       await userEvent.click(screen.getByRole("button", { name: "Edit Games" }));
       const sheet = screen.getByRole("dialog", { name: "Edit section" });
-      // A built-in keeps its art: no picture to change.
+      // A built-in without a picture of its own has none to replace yet.
       expect(within(sheet).queryByRole("button", { name: "Replace" })).toBeNull();
+      expect(within(sheet).getByText("Picture")).toBeInTheDocument();
       const name = within(sheet).getByRole("textbox", { name: "Name" });
       await userEvent.clear(name);
       await userEvent.type(name, "Video games");

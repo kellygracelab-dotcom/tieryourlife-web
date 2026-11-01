@@ -101,12 +101,6 @@
   font-size: 24px;
 }
 
-.section-head__counts {
-  margin: 0 0 8px;
-  font: 400 13px/18px var(--font);
-  color: rgba(255, 255, 255, 0.92);
-}
-
 .section-head .follow {
   min-width: 120px;
   height: 40px;
@@ -208,11 +202,6 @@
   white-space: nowrap;
 }
 
-.section-topic__counts {
-  font: 400 13px/18px var(--font);
-  color: var(--ink-dim);
-}
-
 .section-topic .follow {
   width: auto;
   min-width: 104px;
@@ -221,13 +210,8 @@
 .section-sort {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   min-height: 44px;
-}
-
-.section-sort__count {
-  font: 400 13px/18px var(--font);
-  color: var(--ink-dim);
 }
 
 .section-sort__order {

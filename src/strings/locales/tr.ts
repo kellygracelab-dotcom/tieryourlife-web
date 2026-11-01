@@ -175,9 +175,6 @@ const tr: Translation = {
   },
   profile: {
     someone: "Biri",
-    followers: { other: "{n} takipçi" },
-    publicLists: { other: "{n} herkese açık liste" },
-    publicListsMore: { other: "{n}+ herkese açık liste" },
     editInSettings: "Ayarlar'da düzenle",
     lists: "Listeler",
     newestFirst: "en yeniler önce",
@@ -677,8 +674,7 @@ const tr: Translation = {
     recrop: "Yeniden kırp",
     replace: "Değiştir",
     recropFailed: "Bu görsel burada yeniden kırpılamıyor. Bunun yerine değiştirin.",
-    builtInArt:
-      "Yerleşik bir bölüm uygulamanın kendi görselini korur: yalnızca adı, çevirileri ve simgesi değişir.",
+    builtInArt: "Resim yoksa yerleşik bölüm uygulamanın kendi görselini gösterir.",
     sectionCreated: "{name} oluşturuldu",
     sectionSaved: "{name} kaydedildi",
     discardChanges: "Değişikliklerden vazgeçilsin mi?",
@@ -736,7 +732,6 @@ const tr: Translation = {
     moveAnyway: "Yine de taşı",
   },
   sections: {
-    newThisWeek: { one: "bu hafta {n} yeni", other: "bu hafta {n} yeni" },
     followers: { one: "{n} takipçi", other: "{n} takipçi" },
     lists: { one: "{n} liste", other: "{n} liste" },
     follow: "Takip et",
@@ -791,7 +786,6 @@ const tr: Translation = {
     frame: "Kutucuk içinde taşınıp yakınlaştırılacak görsel",
     frameHelp:
       "Taşımak için sürükleyin; yakınlaştırmak için iki parmakla açın veya kaydırın. Ok tuşları taşır, + ve − yakınlaştırır.",
-    sample: "Örnek: Listeler geldikçe gerçek sayı görünür.",
     changePicture: "Görseli değiştir",
     paper: "Önizleme arka planı",
     phone: "Telefonda",

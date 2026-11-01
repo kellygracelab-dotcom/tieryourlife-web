@@ -70,9 +70,8 @@ const metaOf = (entry: Entry): string =>
   entry.kind === "list"
     ? [
         strings.me.isPublished,
+        // Who ranked it is said on the list itself, in its menu, as on the feed's cards.
         plural(strings.card.items, entry.list.itemCount),
-        // A count of nobody says nothing, here as on the feed's cards.
-        ...(entry.list.takeCount > 0 ? [plural(strings.card.rankings, entry.list.takeCount)] : []),
       ].join(" · ")
     : [
         fill(strings.me.placedOf, {

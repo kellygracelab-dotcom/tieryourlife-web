@@ -190,24 +190,6 @@ const pl: Translation = {
   },
   profile: {
     someone: "Ktoś",
-    followers: {
-      one: "{n} obserwujący",
-      few: "{n} obserwujących",
-      many: "{n} obserwujących",
-      other: "{n} obserwujących",
-    },
-    publicLists: {
-      one: "{n} lista publiczna",
-      few: "{n} listy publiczne",
-      many: "{n} list publicznych",
-      other: "{n} listy publicznej",
-    },
-    publicListsMore: {
-      one: "{n}+ lista publiczna",
-      few: "{n}+ listy publiczne",
-      many: "{n}+ list publicznych",
-      other: "{n}+ listy publicznej",
-    },
     editInSettings: "Zmień w Ustawieniach",
     lists: "Listy",
     newestFirst: "najnowsze na górze",
@@ -730,8 +712,7 @@ const pl: Translation = {
     recrop: "Przytnij ponownie",
     replace: "Zastąp",
     recropFailed: "Tego obrazu nie da się tu ponownie przyciąć. Zastąp go.",
-    builtInArt:
-      "Wbudowany dział zachowuje grafikę aplikacji: zmienia się tylko nazwa, tłumaczenia i ikona.",
+    builtInArt: "Bez obrazu wbudowana sekcja pokazuje własną grafikę aplikacji.",
     sectionCreated: "Utworzono {name}",
     sectionSaved: "Zapisano {name}",
     discardChanges: "Odrzucić zmiany?",
@@ -798,12 +779,6 @@ const pl: Translation = {
     moveAnyway: "Przenieś mimo to",
   },
   sections: {
-    newThisWeek: {
-      one: "{n} nowa w tym tygodniu",
-      few: "{n} nowe w tym tygodniu",
-      many: "{n} nowych w tym tygodniu",
-      other: "{n} nowej w tym tygodniu",
-    },
     followers: {
       one: "{n} obserwujący",
       few: "{n} obserwujących",
@@ -863,7 +838,6 @@ const pl: Translation = {
     frame: "Obraz do przesuwania i powiększania w kafelku",
     frameHelp:
       "Przeciągnij, aby przesunąć. Przybliż dwoma palcami lub przewijaniem. Strzałki przesuwają, + i − przybliżają.",
-    sample: "Przykład: prawdziwa liczba pojawi się, gdy przybędą listy.",
     changePicture: "Zmień obraz",
     paper: "Tło podglądu",
     phone: "Na telefonie",

@@ -178,9 +178,6 @@ const fr: Translation = {
   },
   profile: {
     someone: "Quelqu’un",
-    followers: { one: "{n} abonné", other: "{n} abonnés" },
-    publicLists: { one: "{n} liste publique", other: "{n} listes publiques" },
-    publicListsMore: { one: "{n}+ liste publique", other: "{n}+ listes publiques" },
     editInSettings: "Modifier dans les paramètres",
     lists: "Listes",
     newestFirst: "les plus récentes d’abord",
@@ -696,8 +693,7 @@ const fr: Translation = {
     recrop: "Recadrer",
     replace: "Remplacer",
     recropFailed: "Cette image ne peut pas être recadrée ici. Remplacez-la plutôt.",
-    builtInArt:
-      "Une rubrique intégrée garde le visuel de l’app : seuls son nom, ses traductions et son icône changent.",
+    builtInArt: "Sans image, une section intégrée affiche l’illustration de l’app.",
     sectionCreated: "Rubrique {name} créée",
     sectionSaved: "Rubrique {name} enregistrée",
     discardChanges: "Abandonner vos modifications ?",
@@ -759,11 +755,6 @@ const fr: Translation = {
     moveAnyway: "Déplacer quand même",
   },
   sections: {
-    newThisWeek: {
-      one: "{n} nouvelle cette semaine",
-      many: "{n} nouvelles cette semaine",
-      other: "{n} nouvelles cette semaine",
-    },
     followers: { one: "{n} abonné", many: "{n} abonnés", other: "{n} abonnés" },
     lists: { one: "{n} liste", many: "{n} listes", other: "{n} listes" },
     follow: "Suivre",
@@ -819,7 +810,6 @@ const fr: Translation = {
     frame: "L’image, à déplacer et zoomer dans la vignette",
     frameHelp:
       "Faites glisser pour déplacer. Pincez ou faites défiler pour zoomer. Les flèches la déplacent, + et − zooment.",
-    sample: "Un exemple : le vrai nombre s’affiche quand des listes arrivent.",
     changePicture: "Changer d’image",
     paper: "Fond de l’aperçu",
     phone: "Sur un téléphone",

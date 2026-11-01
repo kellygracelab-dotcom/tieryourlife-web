@@ -26,7 +26,7 @@ import {
   unfollowTopic as unfollowTopicNow,
 } from "../lib/api";
 import { useResource } from "../lib/useResource";
-import { fill, plural, strings } from "../strings";
+import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
@@ -185,14 +185,6 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
       }
     />
   );
-  const counts = [
-    plural(strings.sections.followers, section.followerCount),
-    plural(strings.sections.lists, section.listCount),
-  ].join(" · ");
-  const listCount =
-    feed.state.status === "ready"
-      ? plural(strings.sections.lists, chosen?.listCount ?? feed.state.lists.length)
-      : null;
 
   return (
     <section className="section-page">
@@ -206,7 +198,6 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
             <Icon name={section.icon} className="section-head__icon" />
             {section.name}
           </h1>
-          <p className="section-head__counts">{counts}</p>
           {sectionButton(false)}
         </div>
       </header>
@@ -258,12 +249,6 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
           </span>
           <div className="section-topic__text">
             <h2 className="section-topic__name">{chosen.name}</h2>
-            <span className="section-topic__counts">
-              {[
-                plural(strings.sections.followers, chosen.followerCount),
-                plural(strings.sections.lists, chosen.listCount),
-              ].join(" · ")}
-            </span>
           </div>
           {chosen.status === "approved" && (
             <FollowButton
@@ -280,7 +265,6 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
       )}
 
       <div className="section-sort">
-        <span className="section-sort__count">{listCount}</span>
         <label className="section-sort__order">
           <select
             aria-label={strings.search.sortBy}

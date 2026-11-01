@@ -83,13 +83,13 @@ export const cutFaceOnCanvas: CutFace = (picture, square) => {
 
 /**
  * A section's picture as it goes up (docs/design-spec-admin.md, 2.3): 16:10,
- * 1440 × 900 at most, and never below 960 × 600, the backend's floor. A crop
- * with fewer pixels than the most goes up at its own width rather than
- * blown up; one below the floor is drawn up to it.
+ * 1600 × 1000 at most, as the app sends, and never below 960 × 600, the
+ * backend's floor. A crop with fewer pixels than the most goes up at its own
+ * width rather than blown up; one below the floor is drawn up to it.
  */
-export const SECTION_PICTURE_MAX: Size = { width: 1440, height: 900 };
+export const SECTION_PICTURE_MAX: Size = { width: 1600, height: 1000 };
 export const SECTION_PICTURE_MIN: Size = { width: 960, height: 600 };
-export const WEBP_QUALITY = 0.82;
+export const WEBP_QUALITY = 0.85;
 
 /** The size a crop of this many pixels across goes up at: a multiple of 8, so 16:10 is exact. */
 export function sectionPictureSize(cropWidth: number): Size {

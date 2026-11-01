@@ -47,12 +47,6 @@
   font: 400 24px/31px var(--font);
 }
 
-.profile__meta {
-  margin: 0;
-  font: var(--text-lead);
-  color: var(--ink-dim);
-}
-
 .profile__edit {
   flex: none;
   font: var(--text-label);

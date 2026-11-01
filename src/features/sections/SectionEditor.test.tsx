@@ -185,15 +185,14 @@ describe("Propose a section", () => {
     expect(frameImage()).toHaveAttribute("src", "blob:street");
   });
 
-  it("shows the live label over the crop, a sample count, and the tile at the home page's two sizes", async () => {
+  it("shows the live label over the crop, with no sample count, and the tile at the home page's two sizes", async () => {
     propose();
     pick();
     await userEvent.type(nameField(), "Street food");
     expect(within(frame()).getByText("Street food")).toBeInTheDocument();
-    expect(within(frame()).getByText("12 new this week")).toHaveAttribute(
-      "title",
-      "A sample: the real count shows once lists arrive.",
-    );
+    // A tile says no count, so the preview has none to sample.
+    expect(within(frame()).queryByText(/new this week/)).toBeNull();
+    expect(frame().querySelector(".crop__sample")).toBeNull();
     for (const size of ["On a phone", "On a computer"]) {
       expect(
         within(screen.getByRole("img", { name: size })).getByText("Street food"),
@@ -659,18 +658,16 @@ describe("the owner's Edit", () => {
     return { send, onDone, deps };
   }
 
-  it("keeps a built-in's art and sends only what changed", async () => {
+  it("gives a built-in a picture or leaves it the app's art, and sends only what changed", async () => {
     const { send, deps } = edit(
       stats("anime", { name: "Anime", names: { uk: "Аніме" }, icon: "animation", builtIn: true }),
     );
     expect(screen.getByRole("dialog", { name: "Edit section" })).toHaveClass(
       "section-editor--side",
     );
-    expect(screen.queryByText("Picture")).toBeNull();
+    expect(screen.getByText("Picture")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "A built-in section keeps the app’s own art: only its name, translations and icon change.",
-      ),
+      screen.getByText("Without a picture, a built-in section shows the app’s own art."),
     ).toBeInTheDocument();
     expect(nameField()).toHaveValue("Anime");
     expect(screen.getByRole("textbox", { name: "Українська" })).toHaveValue("Аніме");
@@ -681,6 +678,18 @@ describe("the owner's Edit", () => {
     await waitFor(() => expect(send).toHaveBeenCalledWith({ icon: "pets" }));
     // Its own name is never asked about.
     expect(deps.check).not.toHaveBeenCalled();
+  });
+
+  it("shows a built-in's own picture once it has one, ready to replace", () => {
+    edit(
+      stats("anime", {
+        name: "Anime",
+        icon: "animation",
+        builtIn: true,
+        pictureUrl: "https://firebasestorage.googleapis.com/anime.webp",
+      }),
+    );
+    expect(screen.getByRole("button", { name: "Replace" })).toBeInTheDocument();
   });
 
   it("does not take a clash with itself for a clash", async () => {

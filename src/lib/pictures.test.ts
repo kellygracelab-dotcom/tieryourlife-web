@@ -251,9 +251,9 @@ describe("cutFaceOnCanvas", () => {
 });
 
 describe("a section's picture", () => {
-  it("goes up at 1440 × 900 at most, at a smaller crop's own width, and never below 960 × 600", () => {
-    expect(sectionPictureSize(3000)).toEqual({ width: 1440, height: 900 });
-    expect(sectionPictureSize(1440)).toEqual({ width: 1440, height: 900 });
+  it("goes up at 1600 × 1000 at most, at a smaller crop's own width, and never below 960 × 600", () => {
+    expect(sectionPictureSize(3000)).toEqual({ width: 1600, height: 1000 });
+    expect(sectionPictureSize(1600)).toEqual({ width: 1600, height: 1000 });
     // A multiple of 8 across, so 16:10 comes out to the pixel.
     expect(sectionPictureSize(1203)).toEqual({ width: 1200, height: 750 });
     expect(sectionPictureSize(960)).toEqual({ width: 960, height: 600 });
@@ -279,13 +279,13 @@ describe("a section's picture", () => {
     const { canvas, drawImage } = fakeCanvas([webp], context);
     const picture = {} as CanvasImageSource;
     await expect(
-      cropSectionOnCanvas(picture, { left: 200, top: 0, width: 1600, height: 1000 }),
+      cropSectionOnCanvas(picture, { left: 200, top: 0, width: 2000, height: 1250 }),
     ).resolves.toBe(webp);
-    expect([canvas.width, canvas.height]).toEqual([1440, 900]);
-    expect(drawImage).toHaveBeenCalledWith(picture, 200, 0, 1600, 1000, 0, 0, 1440, 900);
+    expect([canvas.width, canvas.height]).toEqual([1600, 1000]);
+    expect(drawImage).toHaveBeenCalledWith(picture, 200, 0, 2000, 1250, 0, 0, 1600, 1000);
     expect(context.imageSmoothingQuality).toBe("high");
-    expect(canvas.toBlob).toHaveBeenCalledWith(expect.any(Function), "image/webp", 0.82);
-    expect(WEBP_QUALITY).toBe(0.82);
+    expect(canvas.toBlob).toHaveBeenCalledWith(expect.any(Function), "image/webp", 0.85);
+    expect(WEBP_QUALITY).toBe(0.85);
   });
 
   it("falls back to a JPEG where the browser writes a PNG for WebP, and fails without a canvas", async () => {
@@ -295,7 +295,7 @@ describe("a section's picture", () => {
     await expect(
       cropSectionOnCanvas({} as CanvasImageSource, { left: 0, top: 0, width: 960, height: 600 }),
     ).resolves.toBe(jpeg);
-    expect(canvas.toBlob).toHaveBeenLastCalledWith(expect.any(Function), "image/jpeg", 0.82);
+    expect(canvas.toBlob).toHaveBeenLastCalledWith(expect.any(Function), "image/jpeg", 0.85);
 
     fakeCanvas([], null);
     await expect(

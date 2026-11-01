@@ -8,7 +8,7 @@ import type { BoardsRepository } from "../features/boards/repository";
 import { AuthorLine } from "../features/community/AuthorLine";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
 import { placedBy } from "../features/community/rankings";
-import { RankingsChip, RankingsSheet } from "../features/community/RankingsSheet";
+import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
 import { readKept } from "../features/ranking/kept";
@@ -362,7 +362,11 @@ function OpenList({
   const theirsList = useMemo(() => ({ ...list, tiers: theirs.tiers }), [list, theirs]);
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
-  const chipShown = list.takeCount > 0 && !outOfSight;
+  // Who else ranked it is a line of the menu, the one place the number is said.
+  const rankingsEntry =
+    list.takeCount > 0 && !outOfSight
+      ? { count: list.takeCount, open: () => setSheet(true) }
+      : null;
 
   return (
     <article
@@ -374,18 +378,15 @@ function OpenList({
         <div className="list-head__text">
           <h1 className="list-head__title">{list.title}</h1>
           {/* A list that stands without an author has no line naming one. */}
-          {(!editorial || chipShown) && (
+          {!editorial && (
             <div className="list-head__lines">
-              {!editorial && (
-                <AuthorLine
-                  uid={list.authorUid}
-                  name={list.authorName}
-                  photoUrl={list.authorPhotoUrl}
-                  own={own}
-                  notify={setNotice}
-                />
-              )}
-              {chipShown && <RankingsChip count={list.takeCount} onClick={() => setSheet(true)} />}
+              <AuthorLine
+                uid={list.authorUid}
+                name={list.authorName}
+                photoUrl={list.authorPhotoUrl}
+                own={own}
+                notify={setNotice}
+              />
             </div>
           )}
           {list.basedOn != null && <BasedOnLine basedOn={list.basedOn} />}
@@ -401,7 +402,12 @@ function OpenList({
         )}
         <span className="list-head__tools">
           {own ? (
-            <AuthorTools list={list} unpublish={unpublish} notify={setNotice} />
+            <AuthorTools
+              list={list}
+              unpublish={unpublish}
+              notify={setNotice}
+              rankings={rankingsEntry}
+            />
           ) : (
             <>
               <PlayButton {...play.button} />
@@ -410,6 +416,7 @@ function OpenList({
                 report={report}
                 notify={setNotice}
                 repository={repository}
+                rankings={rankingsEntry}
               />
             </>
           )}

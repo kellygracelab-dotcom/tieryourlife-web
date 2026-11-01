@@ -25,7 +25,7 @@ import {
 } from "../lib/api";
 import { isEditorialAuthor } from "../lib/editorial";
 import { useResource } from "../lib/useResource";
-import { fill, plural, strings } from "../strings";
+import { fill, strings } from "../strings";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
@@ -63,7 +63,7 @@ function Row({
   to: string;
   leading: ReactNode;
   headline: string;
-  supporting: string;
+  supporting?: string;
   following: boolean | null;
   onToggle: (() => void) | null;
 }) {
@@ -73,7 +73,7 @@ function Row({
         {leading}
         <span className="manage-row__text">
           <span className="manage-row__headline">{headline}</span>
-          <span className="manage-row__supporting">{supporting}</span>
+          {supporting !== undefined && <span className="manage-row__supporting">{supporting}</span>}
         </span>
       </Link>
       {onToggle !== null && <FollowButton following={following} size="card" onClick={onToggle} />}
@@ -191,7 +191,6 @@ export function FollowingManagePage({
                   </span>
                 }
                 headline={section.name}
-                supporting={plural(strings.sections.followers, section.followerCount)}
                 following={section.following}
                 onToggle={() => {
                   setKeptSections((before) => new Set([...before, section.id]));
@@ -231,9 +230,7 @@ export function FollowingManagePage({
                   headline={topic.name}
                   supporting={[
                     fill(strings.sections.reasonSection, { name: section.name }),
-                    waiting
-                      ? strings.sections.waiting
-                      : plural(strings.sections.followers, topic.followerCount),
+                    ...(waiting ? [strings.sections.waiting] : []),
                   ].join(" · ")}
                   following={on}
                   onToggle={
