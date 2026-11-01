@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import type { Ranking } from "../api/rank";
 import { isOwnList, isSectionId, type PublishedList } from "../api/types";
 import { useSession } from "../app/session";
+import { HOUSE_PARAM } from "../features/boards/houseList";
 import { boardForOwnList, boardOfList, type CopyBack } from "../features/boards/ownList";
 import { boardFromDraft } from "../features/boards/publish";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
@@ -82,6 +83,7 @@ export function NewBoardPage({
     <NewBoard
       title={params.get("title")?.trim() ?? ""}
       category={isSectionId(category) ? category : null}
+      house={params.get(HOUSE_PARAM)}
       repository={repository}
       store={store}
       now={now}
@@ -102,17 +104,20 @@ function useOnce(ready: boolean, act: () => void) {
 /**
  * The board page makes the board and keeps it once it is touched; an
  * untouched one is never kept. A list begun in the old editor comes first,
- * unless the link asked for something of its own.
+ * unless the link asked for something of its own: a name, a section, or a
+ * board for the house (`house`), which the board page is told in turn.
  */
 function NewBoard({
   title,
   category,
+  house,
   repository,
   store,
   now,
 }: {
   title: string;
   category: string | null;
+  house: string | null;
   repository: BoardsRepository;
   store: KeyValueStore;
   now: () => number;
@@ -120,7 +125,7 @@ function NewBoard({
   const navigate = useNavigate();
   useOnce(true, () => {
     const kept = loadEditorDraft(store, NEW_DRAFT_KEY);
-    if (title === "" && category === null && begun(kept)) {
+    if (title === "" && category === null && house === null && begun(kept)) {
       const board = boardFromDraft(kept, now(), nextUid);
       repository.save(board);
       store.remove(NEW_DRAFT_KEY);
@@ -130,6 +135,7 @@ function NewBoard({
     const asked = new URLSearchParams({ new: String(now()) });
     if (title !== "") asked.set("title", title);
     if (category !== null) asked.set("category", category);
+    if (house !== null && house !== "") asked.set(HOUSE_PARAM, house);
     void navigate(`/b/${encodeURIComponent(nextUid())}?${asked.toString()}`, { replace: true });
   });
   return null;

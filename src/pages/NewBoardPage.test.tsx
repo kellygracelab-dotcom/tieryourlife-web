@@ -195,6 +195,15 @@ describe("NewBoardPage: making a list is making a board", () => {
     expect(await arrivedAt()).toMatch(/\?new=5000&category=games$/);
     expect(store.read(NEW_DRAFT_KEY)).not.toBeNull();
   });
+
+  it("opens a fresh board for the house, leaving a draft of one's own where it was", async () => {
+    const store = memoryStore();
+    saveEditorDraft(store, draft("Films", ["Ex Machina"], [[], [], [], [], []]));
+    const { repository } = open({ path: "/b/new?house=new", store });
+    expect(await arrivedAt()).toMatch(/^\/b\/[^?]+\?new=5000&house=new$/);
+    expect(repository.all()).toEqual([]);
+    expect(store.read(NEW_DRAFT_KEY)).not.toBeNull();
+  });
 });
 
 describe("NewBoardPage: a kept ranking as a board", () => {

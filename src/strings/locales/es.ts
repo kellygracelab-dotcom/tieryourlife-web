@@ -742,7 +742,7 @@ const es: Translation = {
     houseBody:
       "Publicadas por nadie: sin nombre, sin cara, sin cuenta. Los visitantes ven una lista anónima.",
     houseHowTo:
-      "Para cambiar una: ábrela, elige Guardar en mis listas, edita esa lista y luego usa aquí Reemplazar con una de mis listas.",
+      "Editar abre una copia de la lista de la casa en una lista tuya; allí, Actualizar lista de la casa la cambia en su sitio, con el mismo enlace.",
     publishBoard: "Publicar una de mis listas",
     replaceFromBoard: "Reemplazar con una de mis listas",
     houseNone: "Aún no hay listas de la casa.",
@@ -760,6 +760,16 @@ const es: Translation = {
       "Se rechazó una de las imágenes de tu lista. Cámbiala e inténtalo de nuevo.",
     houseStaffOnly: "Solo el propietario y los moderadores pueden publicar en nombre de la casa.",
     houseNotHouse: "Esa lista no es de la casa, así que no se puede cambiar aquí.",
+    newHouseList: "Nueva lista de la casa",
+    houseBoard: "Lista de la casa",
+    houseBoardNew:
+      "Sale a nombre del sitio: sin nombre, sin cara, sin cuenta. Nada es público hasta que la publiques.",
+    houseBoardLinked:
+      "Sale a nombre del sitio. Tus cambios llegan a la lista solo cuando la actualizas.",
+    publishToHouse: "Publicar en Listas de la casa",
+    updateHouse: "Actualizar lista de la casa",
+    houseUpdated: "Lista de la casa actualizada",
+    houseOpenFailed: "No se pudo abrir esa lista. Inténtalo de nuevo.",
     takeDown: "Retirar",
     takeDownAsk: "¿Retirar «{title}»?",
     takeDownBody: "Sale del sitio y su enlace deja de funcionar. Tus listas se quedan como están.",

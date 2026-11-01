@@ -734,7 +734,7 @@ const tr: Translation = {
     houseBody:
       "Kimse tarafından yayınlanmaz: ad yok, yüz yok, hesap yok. Ziyaretçiler anonim bir liste görür.",
     houseHowTo:
-      "Birini değiştirmek için listeyi aç, Listelerime kaydet'i seç, o listeyi düzenle, sonra burada Kendi listemle değiştir'i kullan.",
+      "Düzenle, editör listesinin bir kopyasını kendi listen olarak açar; orada Editör listesini güncelle onu aynı bağlantıyla yerinde değiştirir.",
     publishBoard: "Kendi listemi yayınla",
     replaceFromBoard: "Kendi listemle değiştir",
     houseNone: "Henüz editör listesi yok.",
@@ -751,6 +751,16 @@ const tr: Translation = {
     housePictureRefused: "Listendeki resimlerden biri reddedildi. Onu değiştirip tekrar dene.",
     houseStaffOnly: "Editör adına yalnızca sahip ve moderatörler yayınlayabilir.",
     houseNotHouse: "Bu bir editör listesi değil, bu yüzden burada değiştirilemez.",
+    newHouseList: "Yeni editör listesi",
+    houseBoard: "Editör listesi",
+    houseBoardNew:
+      "Sitenin adıyla yayınlanır: ad yok, yüz yok, hesap yok. Sen yayınlayana kadar hiçbir şey herkese açık olmaz.",
+    houseBoardLinked:
+      "Sitenin adıyla yayınlanır. Değişikliklerin listeye ancak onu güncellediğinde ulaşır.",
+    publishToHouse: "Editör listelerinde yayınla",
+    updateHouse: "Editör listesini güncelle",
+    houseUpdated: "Editör listesi güncellendi",
+    houseOpenFailed: "O liste açılamadı. Tekrar dene.",
     takeDown: "Yayından kaldır",
     takeDownAsk: "“{title}” yayından kaldırılsın mı?",
     takeDownBody: "Siteden kalkar ve bağlantısı artık çalışmaz. Listelerin olduğu gibi kalır.",

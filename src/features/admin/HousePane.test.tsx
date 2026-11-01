@@ -3,9 +3,17 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
-import type { ListSummary } from "../../api/types";
-import { memoryStore } from "../../lib/storage";
-import { addToPool, newBoard, setCategory, type Board } from "../boards/model";
+import type { ListSummary, PublishedList } from "../../api/types";
+import { memoryStore, type KeyValueStore } from "../../lib/storage";
+import { houseLinkOf } from "../boards/houseList";
+import {
+  addToPool,
+  itemsIn,
+  newBoard,
+  rankedTiers,
+  setCategory,
+  type Board,
+} from "../boards/model";
 import { publishRequestOf } from "../boards/publish";
 import { boardsRepository, type BoardsRepository } from "../boards/repository";
 import { HousePane, type HouseDeps } from "./HousePane";
@@ -38,7 +46,22 @@ function readyBoard(id: string, title: string, editedAt = 1): Board {
   return { ...addToPool(board, [{ title: "Dune", imageUrl: null }], 1, uid), editedAt };
 }
 
+/** The feed's own copy of a picture of list `listId`. */
+const feedCopy = (listId: string, pictureId: string) =>
+  `https://firebasestorage.googleapis.com/v0/b/bucket/o/${encodeURIComponent(`published/${listId}/${pictureId}`)}?alt=media`;
+
+/** "Best ramen" in full, as Edit reads it. */
+const ramenInFull: PublishedList = {
+  ...house("l1", "Best ramen", { topicId: "t1", topicName: "Ramen" }),
+  tiers: [{ label: "S", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" }],
+  items: [
+    { title: "Tonkotsu", imageUrl: feedCopy("l1", "p1"), tierIndex: 0 },
+    { title: "Miso", imageUrl: null, tierIndex: null },
+  ],
+};
+
 let repository: BoardsRepository;
+let links: KeyValueStore;
 let deps: HouseDeps;
 
 function open() {
@@ -46,6 +69,7 @@ function open() {
     [
       { path: "/admin/house", element: <HousePane deps={deps} /> },
       { path: "/l/:id", element: <h1>List page</h1> },
+      { path: "/b/:uid", element: <h1>Board page</h1> },
     ],
     { initialEntries: ["/admin/house"] },
   );
@@ -56,12 +80,16 @@ function open() {
 beforeEach(() => {
   window.innerWidth = 1280;
   repository = boardsRepository(memoryStore());
+  links = memoryStore();
   deps = {
     load: vi.fn(async () => ({ lists: [house("l1", "Best ramen")], nextCursor: null })),
     publish: vi.fn(async () => ({ id: "new1", topicId: null })),
     replace: vi.fn(async (id: string) => ({ id, topicId: null })),
     takeDown: vi.fn(async () => undefined),
     repository,
+    loadList: vi.fn(async () => ramenInFull),
+    links,
+    now: () => 500,
   };
 });
 
@@ -85,7 +113,7 @@ describe("HousePane", () => {
         "Published by nobody: no name, no face, no account. Visitors see an anonymous list.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText(/choose Save to my lists, edit that board/)).toBeInTheDocument();
+    expect(screen.getByText(/Edit opens a copy of a house list/)).toBeInTheDocument();
     const ramen = await row("Best ramen");
     expect(within(ramen).getByText(/^Food · Ramen · /)).toBeInTheDocument();
     expect(within(ramen).getByRole("link", { name: "Open" })).toHaveAttribute("href", "/l/l1");
@@ -277,5 +305,87 @@ describe("HousePane", () => {
     await userEvent.click(within(ramen).getByLabelText("More for Best ramen"));
     await userEvent.click(within(ramen).getByRole("button", { name: "Take down" }));
     expect(screen.getByRole("dialog", { name: "Take down “Best ramen”?" })).toBeInTheDocument();
+  });
+});
+
+describe("HousePane: made and changed on a board", () => {
+  it("opens a new board for the house from New house list", async () => {
+    const router = open();
+    await row("Best ramen");
+    await userEvent.click(screen.getByRole("button", { name: "New house list" }));
+    expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
+      "/b/new?house=new",
+    );
+  });
+
+  it("edits a house list on a copy tied to it: its cards in their tiers, its topic, nobody's name", async () => {
+    const router = open();
+    await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(deps.loadList).toHaveBeenCalledWith("l1");
+    const [board] = repository.all();
+    expect(board).toMatchObject({
+      title: "Best ramen",
+      category: "food",
+      topic: { id: "t1", name: "Ramen" },
+      authorName: null,
+      publishedId: null,
+      editedAt: 500,
+    });
+    const [top] = rankedTiers(board!);
+    expect(itemsIn(board!, top!.uid).map((item) => item.title)).toEqual(["Tonkotsu"]);
+    expect(houseLinkOf(board!.uid, links)).toEqual({ listId: "l1" });
+    expect(router.state.location.pathname).toBe(`/b/${board!.uid}`);
+    expect(router.state.location.search).toBe("?house=l1");
+  });
+
+  it("says so when the list did not come, and drops a list that is gone", async () => {
+    deps.loadList = vi
+      .fn<HouseDeps["loadList"]>()
+      .mockRejectedValueOnce(new ApiFailure({ kind: "offline" }))
+      .mockRejectedValueOnce(new ApiFailure({ kind: "notFound" }));
+    open();
+    const edit = () =>
+      userEvent.click(within(screen.getByText("Best ramen").closest("li")!).getByText("Edit"));
+    await row("Best ramen");
+    await edit();
+    expect(await screen.findByText("Couldn’t open that list. Try again.")).toBeInTheDocument();
+    expect(screen.getByText("Best ramen")).toBeInTheDocument();
+    await edit();
+    expect(await screen.findByText("No house lists yet.")).toBeInTheDocument();
+    expect(repository.all()).toEqual([]);
+  });
+
+  it("keeps the list's own pictures by id when a board replaces it", async () => {
+    const board = readyBoard("b1", "Ramen, ranked");
+    const withCopy = addToPool(
+      board,
+      [{ title: "Tonkotsu", imageUrl: feedCopy("l1", "p1") }],
+      1,
+      uid,
+    );
+    repository.save(withCopy);
+    open();
+    await userEvent.click(
+      within(await row("Best ramen")).getByRole("button", { name: "Replace from a board" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Ramen, ranked/ }));
+    const [, sent] = vi.mocked(deps.replace).mock.calls[0]!;
+    expect(sent.items.find((item) => item.title === "Tonkotsu")).toEqual({
+      title: "Tonkotsu",
+      imageUrl: null,
+      pictureId: "p1",
+      tierIndex: null,
+    });
+  });
+
+  it("offers Edit in a row's menu below 840", async () => {
+    window.innerWidth = 600;
+    const router = open();
+    const ramenRow = await row("Best ramen");
+    await userEvent.click(within(ramenRow).getByLabelText("More for Best ramen"));
+    await userEvent.click(within(ramenRow).getByRole("button", { name: "Edit" }));
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(router.state.location.search).toBe("?house=l1");
   });
 });

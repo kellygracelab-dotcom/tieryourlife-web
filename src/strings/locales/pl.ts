@@ -781,7 +781,7 @@ const pl: Translation = {
     houseBody:
       "Publikowane przez nikogo: bez imienia, bez twarzy, bez konta. Odwiedzający widzą anonimową listę.",
     houseHowTo:
-      "Aby zmienić listę, otwórz ją, wybierz „Zapisz u siebie”, edytuj tę kopię, a potem użyj tutaj „Zastąp swoją listą”.",
+      "„Edytuj” otwiera kopię listy redakcji jako twoją listę; tam „Zaktualizuj listę redakcji” zmienia ją w miejscu, pod tym samym linkiem.",
     publishBoard: "Opublikuj swoją listę",
     replaceFromBoard: "Zastąp swoją listą",
     houseNone: "Nie ma jeszcze list redakcji.",
@@ -797,6 +797,16 @@ const pl: Translation = {
     housePictureRefused: "Jeden z obrazków twojej listy odrzucono. Zmień go i spróbuj ponownie.",
     houseStaffOnly: "Tylko właściciel i moderatorzy mogą publikować jako redakcja.",
     houseNotHouse: "To nie jest lista redakcji, więc nie można jej tu zmienić.",
+    newHouseList: "Nowa lista redakcji",
+    houseBoard: "Lista redakcji",
+    houseBoardNew:
+      "Wychodzi w imieniu strony: bez imienia, bez twarzy, bez konta. Nic nie jest publiczne, dopóki jej nie opublikujesz.",
+    houseBoardLinked:
+      "Wychodzi w imieniu strony. Twoje zmiany trafiają na listę dopiero po jej zaktualizowaniu.",
+    publishToHouse: "Opublikuj w listach redakcji",
+    updateHouse: "Zaktualizuj listę redakcji",
+    houseUpdated: "Zaktualizowano listę redakcji",
+    houseOpenFailed: "Nie udało się otworzyć tej listy. Spróbuj ponownie.",
     takeDown: "Usuń z publikacji",
     takeDownAsk: "Usunąć „{title}” z publikacji?",
     takeDownBody:
