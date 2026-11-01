@@ -118,13 +118,13 @@ describe("the catalogue a pasted name is taken from", () => {
     card("wikidata:Q9", "Pizza", "album", null),
   ];
 
-  it("is TMDB for films, anime and people, and Wikidata for everything else", () => {
-    expect(preferredFor("film_tv")).toBe("tmdb");
-    expect(preferredFor("anime")).toBe("tmdb");
-    expect(preferredFor("people")).toBe("tmdb");
+  it("takes any card in a section with catalogues of its own, and Wikidata's everywhere else", () => {
+    for (const own of ["film_tv", "anime", "people", "games", "music", "books"]) {
+      expect(preferredFor(own)).toBeNull();
+    }
     expect(preferredFor("food")).toBe("wikidata");
-    expect(preferredFor("games")).toBe("wikidata");
     expect(preferredFor("other")).toBe("wikidata");
+    expect(preferredFor("knitting")).toBe("wikidata");
     expect(preferredFor(null)).toBeNull();
   });
 

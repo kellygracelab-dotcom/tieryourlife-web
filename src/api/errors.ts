@@ -131,7 +131,8 @@ export function parseApiError(status: number, text: string): ApiError {
     case 413:
       return { kind: "tooLarge", detail: stringOrNull(body.error) };
     case 422:
-      return { kind: "pictureRefused", because: stringOrNull(body.because) };
+      // A kept picture says why by its code: TOO_BIG, KEEP_LIMIT…
+      return { kind: "pictureRefused", because: stringOrNull(body.because) ?? code };
     case 429:
       return { kind: "tooManyRequests", code };
     case 503:

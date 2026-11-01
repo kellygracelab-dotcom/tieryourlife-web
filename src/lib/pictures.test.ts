@@ -19,6 +19,7 @@ vi.mock("./firebase", () => ({
   getFirebaseAuth: () => mocks.auth,
 }));
 
+import { ApiFailure } from "../api/errors";
 import {
   copyPublishedBack,
   cropSectionOnCanvas,
@@ -26,6 +27,7 @@ import {
   dataUrlOf,
   discardPictures,
   FACE_EDGE,
+  keepWebPicture,
   JPEG_QUALITY,
   MAX_BYTES,
   PictureRefused,
@@ -310,5 +312,53 @@ describe("a section's picture", () => {
   it("can be kept as text, a data: address", async () => {
     const url = await dataUrlOf(new Blob(["hi"], { type: "image/webp" }));
     expect(url).toBe("data:image/webp;base64,aGk=");
+  });
+});
+
+describe("keepWebPicture", () => {
+  it("has the backend copy a web picture into the person's folder, shown from there", async () => {
+    const keep = vi.fn(async () => "kept-1");
+    await expect(keepWebPicture("https://pictures.test/a.jpg", keep)).resolves.toEqual({
+      pictureId: "kept-1",
+      previewUrl: "https://dl/users/u1/pictures/kept-1",
+    });
+    expect(keep).toHaveBeenCalledWith("https://pictures.test/a.jpg");
+  });
+
+  it("shows the found picture while the copy's address cannot be had", async () => {
+    mocks.getDownloadURL.mockRejectedValueOnce(new Error("later"));
+    await expect(
+      keepWebPicture("https://pictures.test/a.jpg", async () => "kept-2"),
+    ).resolves.toEqual({ pictureId: "kept-2", previewUrl: "https://pictures.test/a.jpg" });
+  });
+
+  it("needs an account, and says why the backend would not copy it", async () => {
+    mocks.auth.currentUser = { uid: "g", isAnonymous: true };
+    const keep = vi.fn(async () => "never");
+    await expect(keepWebPicture("https://pictures.test/a.jpg", keep)).rejects.toMatchObject({
+      reason: "signIn",
+    });
+    expect(keep).not.toHaveBeenCalled();
+    mocks.auth.currentUser = { uid: "u1", isAnonymous: false };
+
+    const refused = (because: string | null) => async () => {
+      throw new ApiFailure({ kind: "pictureRefused", because });
+    };
+    for (const [because, reason] of [
+      ["KEEP_LIMIT", "dailyLimit"],
+      ["TOO_BIG", "tooBig"],
+      ["NOT_A_PICTURE", "notAnImage"],
+      ["UNREACHABLE", "upload"],
+      [null, "upload"],
+    ] as const) {
+      await expect(keepWebPicture("https://x.test/p", refused(because))).rejects.toMatchObject({
+        reason,
+      });
+    }
+    await expect(
+      keepWebPicture("https://x.test/p", async () => {
+        throw new Error("offline");
+      }),
+    ).rejects.toMatchObject({ reason: "upload" });
   });
 });

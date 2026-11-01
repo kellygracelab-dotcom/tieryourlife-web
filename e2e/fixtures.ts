@@ -96,10 +96,9 @@ export async function mockBackend(page: Page): Promise<Backend> {
     }),
   );
 
-  // The add-card search asks Wikidata from the page itself; here it knows nothing.
-  await page.route("**/www.wikidata.org/**", (route) => route.fulfill({ json: { search: [] } }));
-  await page.route("**/query.wikidata.org/**", (route) =>
-    route.fulfill({ json: { results: { bindings: [] } } }),
+  // The add-card search finds no pictures here.
+  await page.route("**/lists/pictures?*", (route) =>
+    route.fulfill({ json: { items: [], hasMore: false, notices: [] } }),
   );
 
   // Fonts are not what the smokes check.

@@ -95,6 +95,7 @@ describe("parseApiError", () => {
       { kind: "pictureRefused", because: "adult" },
     ],
     [422, json({ error: "Refused" }), { kind: "pictureRefused", because: null }],
+    [422, json({ code: "KEEP_LIMIT" }), { kind: "pictureRefused", because: "KEEP_LIMIT" }],
     [
       429,
       json({ error: "Ten today", code: "TOO_MANY_PROPOSALS" }),

@@ -1,4 +1,5 @@
 import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { errorOf } from "../api/errors";
 import { getFirebaseAuth, getFirebaseStorage } from "./firebase";
 import type { PixelRect, Size } from "./framing";
 
@@ -156,7 +157,8 @@ export interface UploadedPicture {
   previewUrl: string;
 }
 
-export type PictureFailure = "signIn" | "notAnImage" | "tooBig" | "upload";
+/** dailyLimit: the backend copies only so many web pictures a day for one person. */
+export type PictureFailure = "signIn" | "notAnImage" | "tooBig" | "upload" | "dailyLimit";
 
 export class PictureRefused extends Error {
   readonly reason: PictureFailure;
@@ -213,6 +215,36 @@ export async function uploadPicture(
   } catch {
     throw new PictureRefused("upload");
   }
+}
+
+const KEPT_REFUSALS: Partial<Record<string, PictureFailure>> = {
+  NOT_A_PICTURE: "notAnImage",
+  TOO_BIG: "tooBig",
+  KEEP_LIMIT: "dailyLimit",
+};
+
+/**
+ * A picture found on the web, made one of the person's own by the backend
+ * (a browser may not read another site's bytes): the card keeps it whatever
+ * that site does, as it keeps an upload. Shown from the copy, or from where it
+ * was found while the copy's address cannot be had.
+ */
+export async function keepWebPicture(
+  url: string,
+  keep: (url: string) => Promise<string>,
+): Promise<UploadedPicture> {
+  const uid = ownerUid();
+  if (uid === null) throw new PictureRefused("signIn");
+  let pictureId: string;
+  try {
+    pictureId = await keep(url);
+  } catch (failure) {
+    const why = errorOf(failure);
+    throw new PictureRefused(
+      why.kind === "pictureRefused" ? (KEPT_REFUSALS[why.because ?? ""] ?? "upload") : "upload",
+    );
+  }
+  return { pictureId, previewUrl: (await ownPictureUrl(uid, pictureId)) ?? url };
 }
 
 /** The id of a picture the backend copied for this list, when the address is one of those. */

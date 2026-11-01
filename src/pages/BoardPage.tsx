@@ -40,6 +40,7 @@ import { SectionEditor } from "../features/sections/SectionEditor";
 import { TooManyDialog } from "../features/sections/TooManyDialog";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import {
+  keepPicture,
   proposeSection,
   publish as publishList,
   republish as republishList,
@@ -49,11 +50,11 @@ import { boards as site, type BoardsRepository } from "../features/boards/reposi
 import { applyTierAction, editorTiersOf, newTierOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
 import { boardView, sameOrder, uidRows } from "../features/boards/view";
-import { AddCardBox, type Upload } from "../features/editor/AddCardBox";
+import { AddCardBox, type Keep, type Upload } from "../features/editor/AddCardBox";
 import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
 import { TierDialog } from "../features/editor/TierDialog";
-import type { Lookup } from "../features/editor/useCatalogue";
-import { PictureRefused, uploadPicture } from "../lib/pictures";
+import type { FindPictures } from "../features/editor/usePictures";
+import { keepWebPicture, PictureRefused, uploadPicture } from "../lib/pictures";
 import { useSession } from "../app/session";
 import { type KeyValueStore, memoryStore } from "../lib/storage";
 import { HOUSE_PANE_PATH, HouseBar, type HouseSending } from "../features/admin/HouseBar";
@@ -82,8 +83,9 @@ import "./BoardPage.css";
 interface BoardPageProps {
   repository?: BoardsRepository;
   now?: () => number;
-  lookup?: Lookup;
+  find?: FindPictures;
   upload?: Upload;
+  keepWeb?: Keep;
   publishing?: PublishingDeps;
   topics?: LoadTopics;
   share?: Share;
@@ -188,8 +190,9 @@ const sitePublishing: PublishingDeps = {
 export function BoardPage({
   repository = site,
   now = Date.now,
-  lookup,
+  find,
   upload = (file) => uploadPicture(file),
+  keepWeb = (url) => keepWebPicture(url, keepPicture),
   publishing = sitePublishing,
   topics,
   share = downloadShare,
@@ -503,6 +506,13 @@ export function BoardPage({
     }
     return upload(file);
   };
+  const keepAsAccount: Keep = async (url) => {
+    if (account?.kind !== "signedIn") {
+      const outcome = await signIn();
+      if (outcome.kind !== "signedIn") throw new PictureRefused("signIn");
+    }
+    return keepWeb(url);
+  };
 
   const ranked = rankedCount(board);
   const inPool = poolCount(board);
@@ -511,8 +521,9 @@ export function BoardPage({
       items={editorItems}
       category={board.category}
       dispatch={dispatch}
-      lookup={lookup}
+      find={find}
       upload={uploadAsAccount}
+      keep={keepAsAccount}
     />
   );
 
