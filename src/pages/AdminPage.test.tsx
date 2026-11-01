@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 
 describe("AdminPage", () => {
-  it("opens all eight panes to the owner, with Reports first", async () => {
+  it("opens all nine panes to the owner, with Reports first", async () => {
     mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
     open();
     expect(await screen.findByRole("heading", { name: "Admin" })).toBeInTheDocument();
@@ -73,6 +73,7 @@ describe("AdminPage", () => {
       "/admin/lists",
       "/admin/anonymous",
       "/admin/house",
+      "/admin/searches",
       "/admin/moderators",
     ]);
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
@@ -118,6 +119,7 @@ describe("AdminPage", () => {
       "/admin/topics",
       "/admin/lists",
       "/admin/house",
+      "/admin/searches",
     ]);
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
   });

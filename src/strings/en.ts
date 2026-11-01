@@ -663,6 +663,11 @@ export const en = {
     pickBoard: "Which of your lists?",
     anonymousLine: "It shows “Anonymous” as the author. Only admins can see it came from you.",
     anonymousNone: "Nothing published anonymously yet.",
+    searches: "Searches with no results",
+    searchesBody:
+      "What people searched for and found nothing: no section, topic or list. Most asked first.",
+    searchesNone: "No empty searches yet.",
+    searchedTimes: { one: "searched {n} time", other: "searched {n} times" },
     publishedBy: "by {name}",
     open: "Open",
     more: "Show more",

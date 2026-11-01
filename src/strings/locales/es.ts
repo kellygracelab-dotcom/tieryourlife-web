@@ -690,6 +690,11 @@ const es: Translation = {
     pickBoard: "¿Cuál de tus listas?",
     anonymousLine: "El autor aparece como «Anónimo». Solo los administradores ven que es tuya.",
     anonymousNone: "Aún no hay nada publicado de forma anónima.",
+    searches: "Búsquedas sin resultados",
+    searchesBody:
+      "Lo que la gente buscó sin encontrar nada: ninguna sección, tema ni lista. Lo más buscado primero.",
+    searchesNone: "Aún no hay búsquedas vacías.",
+    searchedTimes: { one: "buscado {n} vez", other: "buscado {n} veces" },
     publishedBy: "de {name}",
     open: "Abrir",
     more: "Mostrar más",

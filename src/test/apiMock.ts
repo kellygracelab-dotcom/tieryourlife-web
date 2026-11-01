@@ -93,6 +93,8 @@ export function apiStubs() {
     publishAsHouse: pending(),
     replaceHouseList: pending(),
     takeDownHouseList: pending(),
+    loadSearchMisses: pending(),
+    noteSearchMiss: vi.fn(async () => undefined),
     noteTake: vi.fn(async () => undefined),
   };
 }

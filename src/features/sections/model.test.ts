@@ -13,6 +13,8 @@ import {
   sectionPath,
   sectionsFrom,
   sectionStyle,
+  namedLike,
+  sectionsNamed,
   servedPicture,
   topicPath,
   topicPicture,
@@ -216,5 +218,28 @@ describe("sections", () => {
     expect(topicPicture({ pictureUrl: "http://pictures.test/t.webp" })).toBeNull();
     expect(topicPicture({ pictureUrl: null })).toBeNull();
     expect(topicPicture({})).toBeNull();
+  });
+
+  it("names a section by words that start its words, in any order, accents and case aside", () => {
+    expect(namedLike("film", "Film & TV")).toBe(true);
+    expect(namedLike("tv fil", "Film & TV")).toBe(true);
+    expect(namedLike("ilm", "Film & TV")).toBe(false);
+    expect(namedLike("film radio", "Film & TV")).toBe(false);
+    expect(namedLike("anime", "Animé")).toBe(true);
+    expect(namedLike("ЁЛКИ", "ёлки")).toBe(true);
+    expect(namedLike("  ", "Film & TV")).toBe(false);
+  });
+
+  it("finds an approved section by any of its names, built in or given by the backend", () => {
+    const sections = sectionsFrom([
+      stats("anime"),
+      stats("cooking", { name: "Cooking", names: { ru: "Кулинария" }, status: "approved" }),
+      stats("knitting", { name: "Knitting", status: "pending" }),
+    ]);
+    const ids = (q: string) => sectionsNamed(sections, q).map((section) => section.id);
+    expect(ids("аниме")).toEqual(["anime"]);
+    expect(ids("アニメ")).toEqual(["anime"]);
+    expect(ids("кулин")).toEqual(["cooking"]);
+    expect(ids("knit")).toEqual([]);
   });
 });

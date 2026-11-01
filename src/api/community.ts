@@ -189,3 +189,11 @@ export async function loadFollowing(client: ApiClient): Promise<Following> {
 export function makeFace(client: ApiClient, pictureId: string): Promise<{ url: string }> {
   return client.request<{ url: string }>("POST", `/lists/face/${encodeURIComponent(pictureId)}`);
 }
+
+/**
+ * Says a search found nothing in sections, topics or lists. The backend keeps
+ * only the words and a count, never who typed them.
+ */
+export function noteSearchMiss(client: ApiClient, q: string): Promise<void> {
+  return client.request<void>("POST", "/lists/search-misses", { body: { q } });
+}

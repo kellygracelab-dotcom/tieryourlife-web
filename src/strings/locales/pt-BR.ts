@@ -686,6 +686,11 @@ const ptBR: Translation = {
     pickBoard: "Qual das suas listas?",
     anonymousLine: "O autor aparece como “Anônimo”. Só os administradores veem que é sua.",
     anonymousNone: "Nada publicado anonimamente ainda.",
+    searches: "Buscas sem resultado",
+    searchesBody:
+      "O que as pessoas buscaram sem encontrar nada: nenhuma seção, tema ou lista. As mais frequentes primeiro.",
+    searchesNone: "Nenhuma busca vazia ainda.",
+    searchedTimes: { one: "buscado {n} vez", other: "buscado {n} vezes" },
     publishedBy: "de {name}",
     open: "Abrir",
     more: "Mostrar mais",

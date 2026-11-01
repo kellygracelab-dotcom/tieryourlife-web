@@ -50,6 +50,7 @@ export const PANES = [
   "lists",
   "anonymous",
   "house",
+  "searches",
   "moderators",
 ] as const;
 export type Pane = (typeof PANES)[number];

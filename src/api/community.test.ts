@@ -11,6 +11,7 @@ import {
   withdrawListRanking,
   rowsOf,
   keepListRanking,
+  noteSearchMiss,
 } from "./community";
 
 function recordingClient(result: unknown) {
@@ -20,6 +21,12 @@ function recordingClient(result: unknown) {
 }
 
 describe("community", () => {
+  it("tells the backend what a search found nothing for", async () => {
+    const { client, request } = recordingClient(undefined);
+    await expect(noteSearchMiss(client, "sumo")).resolves.toBeUndefined();
+    expect(request).toHaveBeenCalledWith("POST", "/lists/search-misses", { body: { q: "sumo" } });
+  });
+
   it("files a complaint about a list with its reason and note", async () => {
     const { client, request } = recordingClient(undefined);
     await expect(

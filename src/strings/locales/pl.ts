@@ -722,6 +722,16 @@ const pl: Translation = {
     pickBoard: "Którą z twoich list?",
     anonymousLine: "Autorem będzie „Anonim”. Tylko administratorzy widzą, że lista jest twoja.",
     anonymousNone: "Nic jeszcze nie opublikowano anonimowo.",
+    searches: "Wyszukiwania bez wyników",
+    searchesBody:
+      "Czego szukano i nie znaleziono: żadnej sekcji, tematu ani listy. Najczęstsze na górze.",
+    searchesNone: "Nie ma jeszcze pustych wyszukiwań.",
+    searchedTimes: {
+      one: "szukano {n} raz",
+      few: "szukano {n} razy",
+      many: "szukano {n} razy",
+      other: "szukano {n} razy",
+    },
     publishedBy: "autor: {name}",
     open: "Otwórz",
     more: "Pokaż więcej",
