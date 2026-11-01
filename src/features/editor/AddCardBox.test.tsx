@@ -83,6 +83,7 @@ describe("AddCardBox", () => {
       "Music",
       "Books",
       "People",
+      "Animals",
     ]);
     expect(chips.getByRole("button", { name: "Anime" })).toHaveAttribute("aria-pressed", "true");
     expect(find).toHaveBeenCalledWith({ q: "naruto", scope: "anime", web: false, page: 1 });
@@ -106,19 +107,46 @@ describe("AddCardBox", () => {
     expect(find).toHaveBeenCalledWith({ q: "borscht", scope: "all", web: false, page: 1 });
   });
 
-  it("adds a catalogue's picture at its address, and marks it added", async () => {
+  it("adds a catalogue's picture at its address, and stays open for the next", async () => {
     const find = vi.fn<FindPictures>(async () =>
-      page([picture("anilist:20", { title: "Naruto" })]),
+      page([
+        picture("anilist:20", { title: "Naruto" }),
+        picture("anilist:21", { title: "Naruto Shippuden" }),
+      ]),
     );
     const { dispatch } = setup({ find });
     await typeAndWait("naruto");
-    await userEvent.click(screen.getByRole("button", { name: /Naruto/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Naruto(?! Shippuden)/ }));
     expect(dispatch).toHaveBeenCalledWith({
       type: "addItem",
       title: "Naruto",
       imageUrl: "https://img.test/anilist:20.jpg",
       key: "anilist:20",
     });
+    expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveValue("naruto");
+    await userEvent.click(screen.getByRole("button", { name: /Shippuden/ }));
+    expect(dispatch).toHaveBeenLastCalledWith(
+      expect.objectContaining({ title: "Naruto Shippuden", key: "anilist:21" }),
+    );
+  });
+
+  it("looks among animals on a board about them, and leaves out a picture that will not load", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page([
+        picture("inaturalist:1", { title: "Red fox", source: "inaturalist", kind: "animal" }),
+        picture("inaturalist:2", { title: "Lost", source: "inaturalist", kind: "animal" }),
+        picture("x:3", { title: "Fennec", source: "other", kind: "thing" }),
+      ]),
+    );
+    setup({ find, category: "animals" });
+    await typeAndWait("fox");
+    const chips = within(screen.getByRole("group", { name: "Where to look" }));
+    expect(chips.getAllByRole("button")[0]).toHaveTextContent("Animals");
+    expect(find).toHaveBeenCalledWith({ q: "fox", scope: "animals", web: false, page: 1 });
+    expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent("Animal");
+    expect(screen.getByText("From iNaturalist")).toBeInTheDocument();
+    fireEvent.error(screen.getByRole("button", { name: /Lost/ }).querySelector("img")!);
+    expect(screen.queryByRole("button", { name: /Lost/ })).toBeNull();
   });
 
   it("shows a picture already on the board as added", async () => {

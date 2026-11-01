@@ -75,7 +75,11 @@ function pictureFailureText(name: string, failure: unknown): string {
 }
 
 const scopeName = (scope: PictureScope): string =>
-  scope === "all" ? strings.search.all : strings.category[scope];
+  scope === "all"
+    ? strings.search.all
+    : scope === "animals"
+      ? strings.new.animals
+      : strings.category[scope];
 
 /** The board's own section first, then All, then the rest, as on the phone. */
 const scopesFrom = (own: PictureScope): PictureScope[] =>
@@ -87,21 +91,23 @@ const scopesFrom = (own: PictureScope): PictureScope[] =>
 const kindName = (kind: PictureKind): string | null =>
   kind === "thing" || kind === "web" ? null : strings.new.kinds[kind];
 
-const SOURCE_NAMES: Record<Exclude<PictureSource, "web">, string> = {
+const SOURCE_NAMES: Record<Exclude<PictureSource, "web" | "other">, string> = {
   tmdb: "TMDB",
   anilist: "AniList",
   steam: "Steam",
+  igdb: "IGDB",
   deezer: "Deezer",
   openlibrary: "Open Library",
   wikidata: "Wikidata",
+  inaturalist: "iNaturalist",
 };
 
-/** Whose pictures these are, in the order they first come. */
-function sourcesOf(items: readonly FoundPicture[]): string {
-  const names = [...new Set(items.map((item) => item.source))].map((source) =>
-    source === "web" ? strings.new.webSource : SOURCE_NAMES[source],
-  );
-  return fill(strings.new.fromSources, { sources: names.join(", ") });
+/** Whose pictures these are, in the order they first come; one not known yet goes unnamed. */
+function sourcesOf(items: readonly FoundPicture[]): string | null {
+  const names = [...new Set(items.map((item) => item.source))]
+    .filter((source) => source !== "other")
+    .map((source) => (source === "web" ? strings.new.webSource : SOURCE_NAMES[source]));
+  return names.length === 0 ? null : fill(strings.new.fromSources, { sources: names.join(", ") });
 }
 
 function PictureTile({
@@ -115,7 +121,10 @@ function PictureTile({
   busy: boolean;
   onPick: () => void;
 }) {
+  const [broken, setBroken] = useState(false);
   const line = [kindName(found.kind), found.subtitle].filter(Boolean).join(" · ");
+  // A picture that will not load leaves no empty tile behind.
+  if (broken) return null;
   return (
     <button
       type="button"
@@ -126,7 +135,12 @@ function PictureTile({
       aria-busy={busy || undefined}
     >
       <span className="cards__pick-picture">
-        <img {...sizedFor(found.thumbUrl ?? found.imageUrl, 120)} alt="" loading="lazy" />
+        <img
+          {...sizedFor(found.thumbUrl ?? found.imageUrl, 120)}
+          alt=""
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
         {added && <Icon name="check" className="cards__pick-tick" />}
       </span>
       <span className="cards__pick-title">{found.title}</span>
@@ -290,7 +304,8 @@ export function AddCardBox({
     setTyped("");
   };
   // A catalogue's picture stays at its address, as the phone keeps it; one
-  // from the web is copied into the person's own pictures first.
+  // from the web is copied into the person's own pictures first. The search
+  // stays open, its tile ticked, so several can be chosen in a row.
   const addFound = (picture: FoundPicture) => {
     if (picture.source !== "web") {
       dispatch({
@@ -299,7 +314,6 @@ export function AddCardBox({
         imageUrl: picture.imageUrl,
         key: picture.id,
       });
-      setTyped("");
       return;
     }
     setPictureNote(null);
@@ -314,7 +328,6 @@ export function AddCardBox({
             pictureId,
             key: picture.id,
           });
-          setTyped("");
         },
         (failure: unknown) => setPictureNote(pictureFailureText(picture.title, failure)),
       )
@@ -336,6 +349,7 @@ export function AddCardBox({
   };
 
   const added = new Set(items.map((item) => item.key));
+  const sources = found.status === "ready" ? sourcesOf(found.items) : null;
   // Pasted names are looked for where the board is about, in the catalogues
   // alone: a web picture is copied one at a time, by somebody choosing it.
   const pasteLookup = (query: string): Promise<CatalogueItem[]> =>
@@ -424,7 +438,7 @@ export function AddCardBox({
             )}
             {found.status === "ready" && found.items.length > 0 && (
               <>
-                <p className="cards__source">{sourcesOf(found.items)}</p>
+                {sources !== null && <p className="cards__source">{sources}</p>}
                 <div className="cards__picks">
                   {found.items.map((picture) => (
                     <PictureTile

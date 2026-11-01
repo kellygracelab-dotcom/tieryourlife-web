@@ -24,6 +24,7 @@ describe("pictures", () => {
     expect(scopeFor("anime")).toBe("anime");
     expect(scopeFor("film_tv")).toBe("film_tv");
     expect(scopeFor("people")).toBe("people");
+    expect(scopeFor("animals")).toBe("animals");
     expect(scopeFor("food")).toBe("all");
     expect(scopeFor("knitting")).toBe("all");
     expect(scopeFor(null)).toBe("all");
@@ -79,6 +80,7 @@ describe("pictures", () => {
         raw({ id: "" }),
         null,
         raw({ id: "d", thumbUrl: "http://small", subtitle: "", source: "mystery", kind: "?" }),
+        raw({ id: "e", thumbUrl: null, source: "inaturalist", kind: "animal" }),
       ],
       notices: ["webDailyLimit", "somethingNew", 4],
     });
@@ -89,13 +91,15 @@ describe("pictures", () => {
       web: false,
       lang: "en",
     });
-    expect(page.items.map((item) => item.id)).toEqual(["a", "d"]);
+    expect(page.items.map((item) => item.id)).toEqual(["a", "d", "e"]);
+    // A catalogue not known yet is still a catalogue, never the web.
     expect(page.items[1]).toMatchObject({
       thumbUrl: null,
       subtitle: null,
-      source: "web",
+      source: "other",
       kind: "thing",
     });
+    expect(page.items[2]).toMatchObject({ thumbUrl: null, source: "inaturalist", kind: "animal" });
     expect(page.notices).toEqual(["webDailyLimit"]);
     expect(page.hasMore).toBe(false);
 

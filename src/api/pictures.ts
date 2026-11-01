@@ -3,9 +3,10 @@ import type { CatalogueItem } from "./types";
 
 /**
  * Where a card's picture is looked for, the backend choosing the catalogues
- * (proxy #57): TMDB for film, TV and people, AniList for anime, Steam for
- * games, Deezer for music, Open Library for books, Wikidata everywhere, and
- * in All the web too when the catalogues have little.
+ * (proxy #57–#61): TMDB for film, TV and people, AniList for anime, Steam
+ * and IGDB for games, Deezer for music, Open Library for books, iNaturalist
+ * for animals, Wikidata everywhere, and in All the web too when the
+ * catalogues have little.
  */
 export const PICTURE_SCOPES = [
   "all",
@@ -15,6 +16,7 @@ export const PICTURE_SCOPES = [
   "music",
   "books",
   "people",
+  "animals",
 ] as const;
 export type PictureScope = (typeof PICTURE_SCOPES)[number];
 
@@ -29,10 +31,14 @@ export const PICTURE_SOURCES = [
   "tmdb",
   "anilist",
   "steam",
+  "igdb",
   "deezer",
   "openlibrary",
   "wikidata",
+  "inaturalist",
   "web",
+  /** A catalogue this site does not know yet: kept at its address all the same. */
+  "other",
 ] as const;
 export type PictureSource = (typeof PICTURE_SOURCES)[number];
 
@@ -48,6 +54,7 @@ export const PICTURE_KINDS = [
   "artist",
   "album",
   "book",
+  "animal",
   "thing",
   "web",
 ] as const;
@@ -105,7 +112,7 @@ export function pictureOf(raw: unknown): FoundPicture | null {
     subtitle: typeof item.subtitle === "string" && item.subtitle !== "" ? item.subtitle : null,
     imageUrl: item.imageUrl,
     thumbUrl: https(item.thumbUrl) ? item.thumbUrl : null,
-    source: oneOf(PICTURE_SOURCES, item.source) ? item.source : "web",
+    source: oneOf(PICTURE_SOURCES, item.source) ? item.source : "other",
     kind: oneOf(PICTURE_KINDS, item.kind) ? item.kind : "thing",
   };
 }
