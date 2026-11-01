@@ -251,3 +251,8 @@
 :root[data-theme="dark"] .section-head__art--own {
   --tint: var(--tint-dark);
 }
+
+/* The app's SectionLoading: the ring a little way under the sort. */
+.section-page__loading {
+  padding-top: 96px;
+}

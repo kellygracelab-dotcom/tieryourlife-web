@@ -1,0 +1,30 @@
+.spinner {
+  display: flex;
+  justify-content: center;
+}
+
+.spinner__ring {
+  width: 48px;
+  height: 48px;
+  animation: spinner-turn 1.4s linear infinite;
+}
+
+.spinner__ring circle {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 80 126;
+}
+
+@keyframes spinner-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner__ring {
+    animation-duration: 4s;
+  }
+}

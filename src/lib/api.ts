@@ -173,6 +173,9 @@ export const withdrawSectionProposal = (id: string): Promise<void> =>
 export const loadTopics = (section: string, limit?: number): Promise<{ topics: Topic[] }> =>
   sections.loadTopics(api, section, limit);
 
+export const findTopics = (q: string, section?: string): Promise<{ topics: Topic[] }> =>
+  sections.findTopics(api, q, section);
+
 export const loadMyTopics = (): Promise<{ topics: Topic[] }> => sections.loadMyTopics(api);
 
 export const loadTopic = (id: string): Promise<Topic> => sections.loadTopic(api, id);

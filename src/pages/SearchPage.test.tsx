@@ -2,19 +2,23 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SectionStats } from "../api/sections";
+import type { SectionStats, Topic } from "../api/sections";
 import type { FeedPage, FeedQuery, ListSummary } from "../api/types";
 import { routes } from "../app/routes";
 import { createSectionsStore } from "../features/sections/useSections";
 import { SEARCH_DEBOUNCE_MS, SearchPage } from "./SearchPage";
 
-const mocks = vi.hoisted(() => ({ loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>() }));
+const mocks = vi.hoisted(() => ({
+  loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>(),
+  findTopics: vi.fn<(q: string, section?: string) => Promise<{ topics: Topic[] }>>(),
+}));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
   followAuthor: vi.fn(),
   unfollowAuthor: vi.fn(),
   report: vi.fn(),
   loadFeed: mocks.loadFeed,
+  findTopics: mocks.findTopics,
   loadList: vi.fn(),
   loadRanking: vi.fn(),
   keepRanking: vi.fn(),
@@ -50,6 +54,18 @@ const stats = (id: string, more: Partial<SectionStats> = {}): SectionStats => ({
   ...more,
 });
 
+const topic = (id: string, name: string, more: Partial<Topic> = {}): Topic => ({
+  id,
+  name,
+  section: "games",
+  status: "approved",
+  listCount: 0,
+  followerCount: 0,
+  following: false,
+  mergedInto: null,
+  ...more,
+});
+
 const open = (path: string) => {
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(<RouterProvider router={router} />);
@@ -59,6 +75,8 @@ const open = (path: string) => {
 beforeEach(() => {
   mocks.loadFeed.mockReset();
   mocks.loadFeed.mockResolvedValue({ lists: [summary("d1", "Something")], nextCursor: null });
+  mocks.findTopics.mockReset();
+  mocks.findTopics.mockResolvedValue({ topics: [] });
 });
 
 describe("SearchPage", () => {
@@ -75,6 +93,60 @@ describe("SearchPage", () => {
     expect(within(screen.getByRole("main")).getByRole("searchbox")).toHaveValue("anime");
     // The backend orders a search by title, so there is no order to choose.
     expect(screen.queryByRole("group", { name: "Order" })).toBeNull();
+  });
+
+  it("finds topics by name next to the lists, approved ones only, each over its own section", async () => {
+    mocks.findTopics.mockResolvedValue({
+      topics: [
+        topic("t1", "Zelda"),
+        topic("t2", "Zeldas, pending", { status: "pending" }),
+        topic("t3", "Zelda films", { section: "movies" }),
+        topic("t4", "Zelda anything", { section: null }),
+      ],
+    });
+    open("/search?q=zel");
+    const tiles = within(await screen.findByRole("navigation", { name: "Topics" }));
+    expect(mocks.findTopics).toHaveBeenCalledWith("zel", undefined);
+    expect(tiles.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/s/games/t/t1",
+      "/s/movies/t/t3",
+      "/s/other/t/t4",
+    ]);
+    expect(screen.getByRole("heading", { level: 2, name: "Topics" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Something/ })).toBeInTheDocument();
+  });
+
+  it("asks for topics in the section chosen, and waits for them before it shows anything", async () => {
+    let answer: (value: { topics: Topic[] }) => void = () => undefined;
+    mocks.findTopics.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    open("/search?q=zel&category=games");
+    await waitFor(() => expect(mocks.findTopics).toHaveBeenCalledWith("zel", "games"));
+    await waitFor(() => expect(mocks.loadFeed).toHaveBeenCalled());
+    expect(screen.queryByRole("link", { name: /Something/ })).toBeNull();
+    answer({ topics: [topic("t1", "Zelda")] });
+    expect(await screen.findByRole("link", { name: /Something/ })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Topics" })).toBeInTheDocument();
+  });
+
+  it("counts topics alone as an answer, and shows them when the lists could not be read", async () => {
+    mocks.findTopics.mockResolvedValue({ topics: [topic("t1", "Zelda")] });
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    open("/search?q=zel");
+    expect(await screen.findByRole("link", { name: "Zelda" })).toBeInTheDocument();
+    expect(screen.queryByText(/No lists match/)).toBeNull();
+    expect(screen.queryByText("Nothing published yet")).toBeNull();
+
+    mocks.loadFeed.mockRejectedValue(new Error("down"));
+    open("/search?q=zelda");
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Zelda" })).not.toHaveLength(0);
+  });
+
+  it("searches the lists alone when the topics could not be read", async () => {
+    mocks.findTopics.mockRejectedValue(new Error("down"));
+    open("/search?q=zel");
+    expect(await screen.findByRole("link", { name: /Something/ })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Topics" })).toBeNull();
   });
 
   it("changes the order and the category through the chips while browsing", async () => {

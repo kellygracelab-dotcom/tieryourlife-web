@@ -131,6 +131,17 @@ export function loadTopics(
   });
 }
 
+/** Approved topics whose name starts with what was typed, in one section if given. */
+export function findTopics(
+  client: ApiClient,
+  q: string,
+  section?: string,
+): Promise<{ topics: Topic[] }> {
+  return client.request<{ topics: Topic[] }>("GET", "/lists/topics", {
+    query: { q, section },
+  });
+}
+
 /** Everything this person proposed, whatever became of it: the waiting ones first. */
 export function loadMyTopics(client: ApiClient): Promise<{ topics: Topic[] }> {
   return client.request<{ topics: Topic[] }>("GET", "/lists/topics/mine");

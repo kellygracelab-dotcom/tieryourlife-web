@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { checkSectionName, createSection, editSection } from "./admin";
 import type { ApiClient } from "./client";
 import {
+  findTopics,
   followSection,
   followTopic,
   loadMyTopics,
@@ -64,6 +65,14 @@ describe("sections", () => {
     await loadTopics(client, "games", 50);
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics", {
       query: { section: "games", limit: 50 },
+    });
+    await findTopics(client, "zel");
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics", {
+      query: { q: "zel", section: undefined },
+    });
+    await findTopics(client, "zel", "games");
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics", {
+      query: { q: "zel", section: "games" },
     });
     await loadMyTopics(client);
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics/mine");
