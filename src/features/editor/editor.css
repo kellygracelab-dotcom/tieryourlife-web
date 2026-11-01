@@ -287,6 +287,8 @@
 
 /* Where to look: the board's own section first, a row that scrolls sideways. */
 .cards__scopes {
+  /* A row that scrolls sideways would otherwise give up its height in the pool's short dropdown. */
+  flex: none;
   display: flex;
   gap: var(--space-2);
   padding: 10px 12px 4px;

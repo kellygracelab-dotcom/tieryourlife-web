@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { list, mockBackend } from "./fixtures";
+import { PIXEL } from "./signedIn";
 
 /** A press the way the project's device makes it: a finger taps, a mouse clicks. */
 const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
@@ -28,9 +29,30 @@ async function makeBoard(page: Page, touch: boolean) {
   await title.press("Enter");
   // An empty pool has the box that brings cards in open on a wide window, behind + Add on a phone.
   if (touch) await press(page.getByRole("button", { name: "Add", exact: true }), touch);
+  // A full page of pictures for every name, more than the box has room for.
+  await page.route("**/lists/pictures?*", (route) => {
+    const q = new URL(route.request().url()).searchParams.get("q") ?? "";
+    const items = Array.from({ length: 12 }, (_, at) => ({
+      id: `tmdb:${q}${at}`,
+      title: `${q} ${at}`,
+      imageUrl: `https://img.test/${at}.png`,
+      thumbUrl: null,
+      source: "tmdb",
+      kind: "movie",
+    }));
+    return route.fulfill({ json: { items, hasMore: true, notices: [] } });
+  });
+  await page.route("https://img.test/**", (route) =>
+    route.fulfill({ contentType: "image/png", body: PIXEL }),
+  );
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     const add = page.getByRole("textbox", { name: "Add a card" });
     await add.fill(name);
+    // The places to look stand whole, even in the pool's short dropdown.
+    const places = page.getByRole("group", { name: "Where to look" });
+    await expect(page.getByRole("button", { name: `${name} 11` })).toBeAttached();
+    const chip = (await places.getByRole("button", { name: "All" }).boundingBox())!;
+    expect((await places.boundingBox())!.height).toBeGreaterThanOrEqual(chip.height);
     await add.press("Enter");
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
