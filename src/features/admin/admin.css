@@ -926,6 +926,18 @@
   gap: 4px;
 }
 
+/* House lists: its two ways in at the end of the head, side by side. */
+.admin-pane__head .house-pane__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+.admin-pane__head .house-pane__actions .btn {
+  margin-inline-start: 0;
+}
+
 /* House lists: the list's art at 16:10, and the boards to send out as the house. */
 .house-list__art {
   width: 64px;

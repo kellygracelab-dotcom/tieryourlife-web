@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
+import { remembered } from "../../lib/remembered";
+import { memoryStore } from "../../lib/storage";
 import type { SectionStats } from "../../api/sections";
 import { sectionsFrom } from "./model";
 import { SectionGrid } from "./SectionGrid";
@@ -63,6 +65,22 @@ describe("the sections store", () => {
     expect(given.load).toHaveBeenCalledTimes(2);
   });
 
+  it("opens with the answer last read on this device, and keeps the new one", async () => {
+    const memory = remembered<{ sections: SectionStats[]; who: string }>(memoryStore(), "s", 1);
+    const before = createSectionsStore(
+      deps([stats("games", { rank: 1 }), stats("other")], { memory }).deps,
+    );
+    // Nothing read yet: the nine only stand in to be counted.
+    expect(before.get()).toMatchObject({ known: false, loaded: false });
+    before.refresh("guest");
+    await settle();
+    expect(before.get().known).toBe(true);
+
+    const after = createSectionsStore(deps([stats("anime")], { memory }).deps);
+    expect(after.get()).toMatchObject({ known: true, loaded: false });
+    expect(after.get().sections.map((section) => section.id)).toEqual(["games", "other"]);
+  });
+
   it("keeps the nine and says so when the backend fails", async () => {
     const { deps: given } = deps([], {
       load: vi.fn(async () => Promise.reject(new Error("down"))),
@@ -98,6 +116,18 @@ describe("the sections store", () => {
 });
 
 describe("SectionGrid", () => {
+  it("draws only the places of the sections until they are known", () => {
+    render(
+      <MemoryRouter>
+        <SectionGrid sections={sectionsFrom(null)} width="expanded" known={false} />
+      </MemoryRouter>,
+    );
+    const grid = screen.getByRole("navigation", { name: "Categories" });
+    expect(grid).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryAllByRole("link")).toEqual([]);
+    expect(grid.querySelectorAll(".section-tile--blank")).toHaveLength(9);
+  });
+
   it("draws every one of the nine on a wide screen, each a link to its page, with no count of new lists", () => {
     const sections = sectionsFrom([
       stats("anime", { newThisWeek: 2 }),

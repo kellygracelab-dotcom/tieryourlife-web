@@ -60,7 +60,11 @@ interface BoardSettingsProps {
   onNewTier: () => void;
   /** The board went public, was sent again, or came down; the page says so. */
   onPublished: (what: "published" | "updated" | "unpublished", id: string | null) => void;
-  publishing: PublishingDeps;
+  /**
+   * How the board goes public under the person's name; null for a board that
+   * goes out some other way (a house list), whose sheet then offers none of it.
+   */
+  publishing: PublishingDeps | null;
   topics?: LoadTopics;
   onDone: () => void;
   now?: () => number;
@@ -181,7 +185,8 @@ export function BoardSettings({
   const [open, setOpen] = useState<Open>("none");
   const [asking, setAsking] = useState(false);
   const problems = publishProblemsOf(board);
-  const isPublic = board.publishedId !== null;
+  const ownPublish = publishing !== null;
+  const isPublic = ownPublish && board.publishedId !== null;
   const behind = isBehind(board);
   const published = isPublic ? `/l/${encodeURIComponent(board.publishedId ?? "")}` : null;
   const toggle = (which: Open) => setOpen(open === which ? "none" : which);
@@ -189,7 +194,7 @@ export function BoardSettings({
   const send = async (what: "published" | "updated") => {
     const current = latest();
     const request = publishRequestOf(current);
-    if (request === null) return;
+    if (request === null || publishing === null) return;
     setBusy(what === "published" ? "publishing" : "updating");
     setFailure(null);
     try {
@@ -216,7 +221,7 @@ export function BoardSettings({
   };
   const takeDown = async () => {
     const current = latest();
-    if (current.publishedId === null) return;
+    if (current.publishedId === null || publishing === null) return;
     setBusy("unpublishing");
     setFailure(null);
     try {
@@ -337,68 +342,74 @@ export function BoardSettings({
             />
           </li>
 
-          <li className="sheet-row">
-            <Row
-              icon={<Icon name="public" />}
-              title={
-                <label htmlFor={`${id}-public`} className="sheet-row__label">
-                  {strings.boards.publicTitle}
-                </label>
-              }
-              sub={strings.boards.publicBody}
-              end={
-                <input
-                  id={`${id}-public`}
-                  type="checkbox"
-                  role="switch"
-                  className="switch"
-                  checked={isPublic}
-                  disabled={busy !== "idle" || (!isPublic && signedIn && blocker !== null)}
-                  onChange={onSwitch}
-                />
-              }
-            >
-              {!isPublic && blocker !== null && <span className="sheet-row__note">{blocker}</span>}
-              {busy === "publishing" && (
-                <span className="sheet-row__note" role="status">
-                  {strings.boards.publishing}
-                </span>
-              )}
-              {failure !== null && (
-                <span className="sheet-row__problem" role="alert">
-                  <Icon name="error" />
-                  {failureText(failure, isPublic ? "edit" : "new")}
-                </span>
-              )}
-            </Row>
-          </li>
+          {ownPublish && (
+            <li className="sheet-row">
+              <Row
+                icon={<Icon name="public" />}
+                title={
+                  <label htmlFor={`${id}-public`} className="sheet-row__label">
+                    {strings.boards.publicTitle}
+                  </label>
+                }
+                sub={strings.boards.publicBody}
+                end={
+                  <input
+                    id={`${id}-public`}
+                    type="checkbox"
+                    role="switch"
+                    className="switch"
+                    checked={isPublic}
+                    disabled={busy !== "idle" || (!isPublic && signedIn && blocker !== null)}
+                    onChange={onSwitch}
+                  />
+                }
+              >
+                {!isPublic && blocker !== null && (
+                  <span className="sheet-row__note">{blocker}</span>
+                )}
+                {busy === "publishing" && (
+                  <span className="sheet-row__note" role="status">
+                    {strings.boards.publishing}
+                  </span>
+                )}
+                {failure !== null && (
+                  <span className="sheet-row__problem" role="alert">
+                    <Icon name="error" />
+                    {failureText(failure, isPublic ? "edit" : "new")}
+                  </span>
+                )}
+              </Row>
+            </li>
+          )}
 
-          <li className="sheet-row">
-            <Row
-              icon={<Icon name="visibility_off" />}
-              title={
-                <label htmlFor={`${id}-anonymous`} className="sheet-row__label">
-                  {strings.boards.anonymousTitle}
-                </label>
-              }
-              sub={strings.boards.anonymousBody}
-              end={
-                <input
-                  id={`${id}-anonymous`}
-                  type="checkbox"
-                  role="switch"
-                  className="switch"
-                  checked={board.anonymous}
-                  disabled={busy !== "idle"}
-                  onChange={(event) => {
-                    keep(setAnonymous(latest(), event.target.checked, now()));
-                    // A list already out changes at once, as on the phone.
-                    if (isPublic) void send("updated");
-                  }}
-                />
-              }
-            />
-          </li>
+          {ownPublish && (
+            <li className="sheet-row">
+              <Row
+                icon={<Icon name="visibility_off" />}
+                title={
+                  <label htmlFor={`${id}-anonymous`} className="sheet-row__label">
+                    {strings.boards.anonymousTitle}
+                  </label>
+                }
+                sub={strings.boards.anonymousBody}
+                end={
+                  <input
+                    id={`${id}-anonymous`}
+                    type="checkbox"
+                    role="switch"
+                    className="switch"
+                    checked={board.anonymous}
+                    disabled={busy !== "idle"}
+                    onChange={(event) => {
+                      keep(setAnonymous(latest(), event.target.checked, now()));
+                      // A list already out changes at once, as on the phone.
+                      if (isPublic) void send("updated");
+                    }}
+                  />
+                }
+              />
+            </li>
+          )}
 
           {isPublic && published !== null && (
             <li className="sheet-row">

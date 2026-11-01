@@ -56,7 +56,7 @@ export function SectionsPage({
   store?: SectionsStore;
   proposing?: ProposingDeps;
 }) {
-  const { sections } = useSections(store);
+  const { sections, known } = useSections(store);
   const { account, signIn } = useSession();
   const uid = account?.kind === "signedIn" ? account.uid : null;
   const [params, setParams] = useSearchParams();
@@ -107,7 +107,10 @@ export function SectionsPage({
       <div className="all-sections__head">
         <div>
           <h1 className="all-sections__title">{strings.sections.all}</h1>
-          <p className="all-sections__count">{plural(strings.sections.count, sections.length)}</p>
+          {/* Kept in place while the sections come, so the line under it stays put. */}
+          <p className="all-sections__count" style={known ? undefined : { visibility: "hidden" }}>
+            {plural(strings.sections.count, sections.length)}
+          </p>
         </div>
         <select
           className="all-sections__order"
@@ -129,18 +132,29 @@ export function SectionsPage({
           onChange={(event) => setQuery(event.target.value)}
         />
       )}
-      <nav className="all-sections__grid" aria-label={strings.sections.all}>
-        {shown.map((section) => (
-          <SectionTile
-            key={section.id}
-            section={section}
-            onOpen={
-              waiting.some((one) => one.id === section.id)
-                ? () => openWaiting(section.id)
-                : undefined
-            }
-          />
-        ))}
+      <nav
+        className="all-sections__grid"
+        aria-label={strings.sections.all}
+        aria-busy={known ? undefined : true}
+      >
+        {/* Their places only, until the backend's sections are known: the nine's
+            art in their order flashed and reordered when the answer came. */}
+        {!known &&
+          shown.map((section) => (
+            <span key={section.id} className="section-tile section-tile--blank" />
+          ))}
+        {known &&
+          shown.map((section) => (
+            <SectionTile
+              key={section.id}
+              section={section}
+              onOpen={
+                waiting.some((one) => one.id === section.id)
+                  ? () => openWaiting(section.id)
+                  : undefined
+              }
+            />
+          ))}
       </nav>
       <div className="all-sections__propose">
         <Button variant="outlined" icon="add" onClick={propose}>

@@ -757,7 +757,7 @@ const fr: Translation = {
     houseBody:
       "Publiées par personne : ni nom, ni visage, ni compte. Les visiteurs voient une liste anonyme.",
     houseHowTo:
-      "Pour en modifier une : ouvrez-la, choisissez Enregistrer dans mes listes, modifiez cette liste, puis utilisez ici Remplacer par une de mes listes.",
+      "Modifier ouvre une copie de la liste de la maison dans une de vos listes ; là, Mettre à jour la liste de la maison la change sur place, avec le même lien.",
     publishBoard: "Publier une de mes listes",
     replaceFromBoard: "Remplacer par une de mes listes",
     houseNone: "Aucune liste de la maison pour l’instant.",
@@ -775,6 +775,16 @@ const fr: Translation = {
     houseStaffOnly: "Seuls le propriétaire et les modérateurs peuvent publier au nom de la maison.",
     houseNotHouse:
       "Cette liste n’est pas une liste de la maison : elle ne peut pas être modifiée ici.",
+    newHouseList: "Nouvelle liste de la maison",
+    houseBoard: "Liste de la maison",
+    houseBoardNew:
+      "Publiée au nom du site : ni nom, ni visage, ni compte. Rien n’est public tant que vous ne la publiez pas.",
+    houseBoardLinked:
+      "Publiée au nom du site. Vos modifications n’atteignent la liste que lorsque vous la mettez à jour.",
+    publishToHouse: "Publier dans Listes de la maison",
+    updateHouse: "Mettre à jour la liste de la maison",
+    houseUpdated: "Liste de la maison mise à jour",
+    houseOpenFailed: "Impossible d’ouvrir cette liste. Réessayez.",
     takeDown: "Retirer",
     takeDownAsk: "Retirer « {title} » ?",
     takeDownBody:

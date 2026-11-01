@@ -755,7 +755,7 @@ const de: Translation = {
     houseBody:
       "Von niemandem veröffentlicht: kein Name, kein Gesicht, kein Konto. Besucher sehen eine anonyme Liste.",
     houseHowTo:
-      "Zum Ändern: die Liste öffnen, „In meine Listen speichern“ wählen, diese Liste bearbeiten und hier „Aus eigener Liste ersetzen“ nutzen.",
+      "„Bearbeiten“ öffnet eine Kopie der Redaktionsliste als eigene Liste; dort ändert „Redaktionsliste aktualisieren“ sie an Ort und Stelle, unter demselben Link.",
     publishBoard: "Eigene Liste veröffentlichen",
     replaceFromBoard: "Aus eigener Liste ersetzen",
     houseNone: "Noch keine Redaktionslisten.",
@@ -772,6 +772,16 @@ const de: Translation = {
       "Ein Bild deiner Liste wurde abgelehnt. Ändere es und versuch es noch einmal.",
     houseStaffOnly: "Nur der Inhaber und Moderatoren können als Redaktion veröffentlichen.",
     houseNotHouse: "Das ist keine Redaktionsliste, deshalb lässt sie sich hier nicht ändern.",
+    newHouseList: "Neue Redaktionsliste",
+    houseBoard: "Redaktionsliste",
+    houseBoardNew:
+      "Erscheint im Namen der Seite: kein Name, kein Gesicht, kein Konto. Öffentlich wird sie erst, wenn du sie veröffentlichst.",
+    houseBoardLinked:
+      "Erscheint im Namen der Seite. Deine Änderungen erreichen die Liste erst, wenn du sie aktualisierst.",
+    publishToHouse: "In Redaktionslisten veröffentlichen",
+    updateHouse: "Redaktionsliste aktualisieren",
+    houseUpdated: "Redaktionsliste aktualisiert",
+    houseOpenFailed: "Die Liste ließ sich nicht öffnen. Versuch es noch einmal.",
     takeDown: "Entfernen",
     takeDownAsk: "„{title}“ entfernen?",
     takeDownBody:

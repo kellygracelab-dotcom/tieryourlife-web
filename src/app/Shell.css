@@ -357,6 +357,9 @@
 
 .shell__main {
   flex: 1;
+  /* The foot starts below the fold: content arriving late grows the page
+     under it, out of sight, instead of pushing a foot already on screen. */
+  min-height: calc(100vh - var(--header-height));
   width: 100%;
   max-width: var(--width-board);
   margin: 0 auto;

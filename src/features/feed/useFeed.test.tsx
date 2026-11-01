@@ -56,6 +56,27 @@ const shown = () => screen.getByRole("status");
 const popular: FeedQuery = { sort: "popular" };
 
 describe("useFeed", () => {
+  it("opens a feed read before with its last first page, and swaps in the fresh one", async () => {
+    const { unmount } = render(<Probe query={popular} load={async () => page(["a", "b"], "c")} />);
+    expect(await screen.findByText("a,b|c|idle")).toBeInTheDocument();
+    unmount();
+
+    const fresh = deferred<FeedPage>();
+    render(<Probe query={popular} load={() => fresh.promise} />);
+    expect(shown()).toHaveTextContent("a,b|c|idle");
+    await act(async () => fresh.resolve(page(["z"])));
+    expect(shown()).toHaveTextContent("z|-|idle");
+  });
+
+  it("never keeps somebody's Following feed", async () => {
+    const following: FeedQuery = { following: true };
+    const { unmount } = render(<Probe query={following} load={async () => page(["a"])} />);
+    expect(await screen.findByText("a|-|idle")).toBeInTheDocument();
+    unmount();
+    render(<Probe query={following} load={() => new Promise<never>(() => undefined)} />);
+    expect(shown()).toHaveTextContent("loading");
+  });
+
   it("loads the first page, then appends the next on request until there is none", async () => {
     const load = vi
       .fn<LoadFeed>()

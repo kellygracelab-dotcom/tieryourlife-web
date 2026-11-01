@@ -89,8 +89,16 @@ function FollowChip({
     });
   };
 
-  // Nothing until the backend has said: a chip before then would offer to undo what nobody did.
-  if (following.following === null) return null;
+  // Nothing to press until the backend has said: a chip before then would
+  // offer to undo what nobody did. Its place is kept, unseen, or the line
+  // grew under the title when it came.
+  if (following.following === null) {
+    return (
+      <span className="byline__waiting" aria-hidden="true">
+        <FollowButton following={false} onClick={() => undefined} size="chip" />
+      </span>
+    );
+  }
   return (
     <>
       <FollowButton following={following.following} onClick={onFollow} size="chip" />

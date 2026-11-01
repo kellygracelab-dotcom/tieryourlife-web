@@ -148,6 +148,16 @@
   width: 64px;
 }
 
+/* The line saying there is nothing to pick, in the row's own height. */
+.settings__face--none {
+  flex: 1;
+  width: auto;
+  min-width: 160px;
+  height: 64px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
 .settings__face-from {
   max-width: 64px;
   overflow: hidden;

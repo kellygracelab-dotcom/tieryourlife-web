@@ -96,6 +96,24 @@ describe("SectionsPane", () => {
     expect(screen.queryByRole("switch", { name: "Show Other" })).toBeNull();
   });
 
+  // The backend puts the sections the reader follows first: a followed one
+  // came back to the top after every Save.
+  it("lists the order saved, by place, whatever the reader follows", async () => {
+    deps.load.mockResolvedValue({
+      ...answer,
+      sections: [
+        stats("games", { following: true, rank: 3 }),
+        stats("anime", { rank: 1 }),
+        stats("food", { rank: 2 }),
+        stats("street-food", { name: "Street food" }),
+        stats("other", { rank: 9 }),
+      ],
+    });
+    open();
+    expect(await screen.findByText("5 sections")).toBeInTheDocument();
+    expect(rowNames()).toEqual(["Anime", "Food", "Games", "Street food", "Other"]);
+  });
+
   it("stays empty while the sections are on the way, with no grey block", () => {
     deps.load.mockReturnValue(new Promise(() => {}));
     open();

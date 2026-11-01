@@ -77,10 +77,6 @@
   list-style: none;
 }
 
-.queue__placeholder {
-  border-radius: 16px;
-}
-
 .queue__trouble {
   display: flex;
   flex-direction: column;

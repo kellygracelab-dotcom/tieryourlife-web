@@ -248,10 +248,13 @@ export function FaceSection({
             <Skeleton height="64px" width="64px" className="settings__choice-placeholder" />
           </li>
         )}
+        {/* In the row, where the wait was: under it, the card grew when it came. */}
+        {state.status === "ready" && choices.length === 0 && (
+          <li className="settings__face settings__face--none">
+            <p className="settings__helper">{strings.settings.faceNone}</p>
+          </li>
+        )}
       </ul>
-      {state.status === "ready" && choices.length === 0 && (
-        <p className="settings__helper">{strings.settings.faceNone}</p>
-      )}
       <p className="settings__helper">{strings.settings.faceNote}</p>
       {saving.status === "failed" && (
         <p className="settings__error" role="alert">

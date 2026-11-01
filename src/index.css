@@ -67,6 +67,11 @@ p {
   letter-spacing: normal;
   text-transform: none;
   display: inline-block;
+  /* A square from the first paint: until the font comes, the name inside is
+     as wide as its letters, and lines with an icon reflowed when it came. */
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
   white-space: nowrap;
   direction: ltr;
   font-feature-settings: "liga";

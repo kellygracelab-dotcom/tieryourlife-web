@@ -162,6 +162,16 @@
   display: none;
 }
 
+/* A place kept while the sections are on their way: the size of a tile, nothing in it. */
+.section-tile--blank {
+  background: var(--surface-container);
+}
+
+.section-tile--blank::before,
+.section-tile--blank::after {
+  display: none;
+}
+
 .section-tile--all:hover,
 .section-tile--all:focus-visible {
   color: var(--ink);

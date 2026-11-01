@@ -3,6 +3,8 @@ import type { ApiError } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
 import { loadFeed } from "../../lib/api";
 import { errorOf } from "../../api/errors";
+import { remembered, type Remembered } from "../../lib/remembered";
+import { localStorageStore } from "../../lib/storage";
 
 export type FeedState =
   | { status: "loading" }
@@ -22,41 +24,76 @@ const LOADING: FeedState = { status: "loading" };
 
 export type LoadFeed = (query: FeedQuery) => Promise<FeedPage>;
 
+/** A first page as it was last read, to open with while the fresh one is on its way. */
+export interface RememberedPage {
+  lists: ListSummary[];
+  next: string | null;
+}
+
+/** The last few feeds' first pages, on this device. */
+export const feedMemory: Remembered<RememberedPage> = remembered(localStorageStore, "tyl:feed", 12);
+
+const readyFrom = (page: RememberedPage): FeedState => ({
+  status: "ready",
+  lists: page.lists,
+  next: page.next,
+  more: "idle",
+  followingNobody: false,
+});
+
 interface Loaded {
   key: string;
   attempt: number;
   state: FeedState;
 }
 
-/** One feed query: its first page on mount and when the query changes, further pages on demand. */
-export function useFeed(query: FeedQuery, load: LoadFeed = loadFeed) {
+/**
+ * One feed query: its first page on mount and when the query changes, further
+ * pages on demand. The first page last read opens the feed at once, and the
+ * fresh one takes its place; a Following feed is somebody's own and is never
+ * kept.
+ */
+export function useFeed(
+  query: FeedQuery,
+  load: LoadFeed = loadFeed,
+  memory: Remembered<RememberedPage> | null = feedMemory,
+) {
   // The query travels as a string so a fresh object literal on each render does not refetch.
   const key = JSON.stringify(query);
   const stable = useMemo(() => JSON.parse(key) as FeedQuery, [key]);
+  const kept = query.following === true ? null : memory;
+  const recalled = useMemo(() => kept?.recall(key) ?? null, [kept, key]);
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
-  // Whatever was loaded for another query or an earlier attempt reads as loading.
+  // Whatever was loaded for another query or an earlier attempt reads as
+  // loading, unless this query was read before: then that, until the fresh one.
   const state: FeedState =
-    loaded !== null && loaded.key === key && loaded.attempt === attempt ? loaded.state : LOADING;
+    loaded !== null && loaded.key === key && loaded.attempt === attempt
+      ? loaded.state
+      : attempt === 0 && recalled !== null
+        ? readyFrom(recalled)
+        : LOADING;
 
   useEffect(() => {
     let current = true;
     const settle = (next: FeedState) => current && setLoaded({ key, attempt, state: next });
     load(stable).then(
-      (page) =>
+      (page) => {
+        kept?.keep(key, { lists: page.lists, next: page.nextCursor });
         settle({
           status: "ready",
           lists: page.lists,
           next: page.nextCursor,
           more: "idle",
           followingNobody: page.followingNobody === true,
-        }),
+        });
+      },
       (reason: unknown) => settle({ status: "error", error: errorOf(reason) }),
     );
     return () => {
       current = false;
     };
-  }, [stable, key, load, attempt]);
+  }, [stable, key, load, attempt, kept]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
