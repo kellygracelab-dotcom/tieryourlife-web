@@ -55,7 +55,15 @@ import { TierDialog } from "../features/editor/TierDialog";
 import type { Lookup } from "../features/editor/useCatalogue";
 import { PictureRefused, uploadPicture } from "../lib/pictures";
 import { useSession } from "../app/session";
-import { memoryStore } from "../lib/storage";
+import { type KeyValueStore, memoryStore } from "../lib/storage";
+import { HOUSE_PANE_PATH, HouseBar, type HouseSending } from "../features/admin/HouseBar";
+import {
+  HOUSE_PARAM,
+  houseBoardPath,
+  houseLinkOf,
+  houseLinkOfParam,
+  linkToHouse,
+} from "../features/boards/houseList";
 import { fill, plural, strings } from "../strings";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
@@ -82,6 +90,10 @@ interface BoardPageProps {
   store?: SectionsStore;
   propose?: (proposal: SectionProposal) => Promise<SectionStats>;
   proposeDeps?: EditorDeps;
+  /** How a board edited for the house goes out. */
+  house?: HouseSending;
+  /** Where this device remembers which of its boards are the house's. */
+  houseStore?: KeyValueStore;
 }
 
 /** The settings sheet, or what its Propose a section opened in its place: the form, or the three already waiting. */
@@ -184,11 +196,18 @@ export function BoardPage({
   store = sectionsStore,
   propose = proposeSection,
   proposeDeps,
+  house: houseSend,
+  houseStore = localStorageStore,
 }: BoardPageProps) {
   const { uid = "" } = useParams();
   const [params] = useSearchParams();
   const stored = useBoard(uid, repository);
   const navigate = useNavigate();
+  // A board edited for the house: the address says so on arrival, and this
+  // device remembers it once the board is kept, so it stays the house's
+  // wherever it is opened from. It then goes out only as the house.
+  const remembered = houseLinkOf(uid, houseStore);
+  const house = remembered ?? houseLinkOfParam(params.get(HOUSE_PARAM));
   const { account, signIn } = useSession();
   const { sections } = useSections(store);
   const me = account?.kind === "signedIn" ? account.uid : null;
@@ -211,6 +230,12 @@ export function BoardPage({
     [uid, madeAt, named, filed],
   );
   const board = stored ?? fresh;
+  // Once a board for the house is kept, this device remembers it as the house's.
+  const houseListId = house?.listId ?? null;
+  const toRemember = house !== null && remembered === null && stored !== null;
+  useEffect(() => {
+    if (toRemember) linkToHouse(uid, houseListId, houseStore);
+  }, [toRemember, uid, houseListId, houseStore]);
   // The name is asked for once, on arrival at a board not yet kept: a reload
   // keeps the query, not the question.
   const [editingTitle, setEditingTitle] = useState(madeAt > 0 && stored === null);
@@ -321,6 +346,21 @@ export function BoardPage({
   const latest = (): Board => repository.get(uid) ?? board;
   const keep = (next: Board) => {
     if (next !== board) repository.save(next);
+  };
+
+  // Out as the house: the board is tied to the list from now on, and the address says which.
+  const sentToHouse = (what: "published" | "updated", id: string) => {
+    linkToHouse(uid, id, houseStore);
+    void navigate(houseBoardPath(uid, id), { replace: true });
+    setNotice({
+      text: what === "published" ? strings.admin.housePublished : strings.admin.houseUpdated,
+      action: { text: strings.admin.house, onClick: () => void navigate(HOUSE_PANE_PATH) },
+    });
+  };
+  // The list it updated is gone: the board can still go out as a new one.
+  const houseGone = () => {
+    linkToHouse(uid, null, houseStore);
+    void navigate(houseBoardPath(uid, null), { replace: true });
   };
 
   const onRows = (rows: readonly (readonly number[])[]) => {
@@ -482,9 +522,9 @@ export function BoardPage({
         boardDock === null ? "list-page board-page" : `list-page board-page list-page--${boardDock}`
       }
     >
-      <Link className="board-page__back" to="/b">
+      <Link className="board-page__back" to={house === null ? "/b" : HOUSE_PANE_PATH}>
         <Icon name="arrow_back" />
-        <span>{strings.boards.back}</span>
+        <span>{house === null ? strings.boards.back : strings.admin.house}</span>
       </Link>
       <header className="list-head">
         <div className="list-head__text">
@@ -537,6 +577,16 @@ export function BoardPage({
         </span>
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
+      {house !== null && (
+        <HouseBar
+          board={board}
+          latest={latest}
+          listId={house.listId}
+          send={houseSend}
+          onSent={sentToHouse}
+          onGone={houseGone}
+        />
+      )}
 
       {panel === "settings" && (
         <BoardSettings
@@ -558,7 +608,8 @@ export function BoardPage({
                     : strings.boards.publishedNote,
             })
           }
-          publishing={publishing}
+          // A house list never goes out under the person's name: its sheet offers no Public switch.
+          publishing={house === null ? publishing : null}
           topics={topics}
           onDone={closePanel}
           now={now}

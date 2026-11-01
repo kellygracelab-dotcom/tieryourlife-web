@@ -2,10 +2,17 @@ import { useCallback, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import type { HouseAnswer } from "../../api/admin";
-import { errorOf, type ApiError } from "../../api/errors";
+import { errorOf } from "../../api/errors";
 import type { PublishRequest } from "../../api/lists";
-import { isCategory, type ListSummary } from "../../api/types";
-import { loadHouseLists, publishAsHouse, replaceHouseList, takeDownHouseList } from "../../lib/api";
+import { isCategory, type ListSummary, type PublishedList } from "../../api/types";
+import {
+  loadHouseLists,
+  loadList,
+  publishAsHouse,
+  replaceHouseList,
+  takeDownHouseList,
+} from "../../lib/api";
+import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { useResource } from "../../lib/useResource";
 import { useWidthClass } from "../../lib/useWidthClass";
 import { currentLocale, fill, plural, strings } from "../../strings";
@@ -16,12 +23,20 @@ import { ListArt } from "../../ui/ListArt";
 import { Menu } from "../../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { useModal } from "../../ui/useModal";
+import {
+  boardFromHouseList,
+  houseBoardPath,
+  houseRequestOf,
+  linkToHouse,
+  NEW_HOUSE_PATH,
+} from "../boards/houseList";
 import { liveItems, type Board } from "../boards/model";
-import { publishProblemsOf, publishRequestOf, type PublishProblem } from "../boards/publish";
+import { publishProblemsOf } from "../boards/publish";
 import { boards as site, type BoardsRepository } from "../boards/repository";
-import { useBoards } from "../boards/useBoards";
+import { nextUid, useBoards } from "../boards/useBoards";
 import { sectionName, type Section } from "../sections/model";
 import { useSections } from "../sections/useSections";
+import { failureText, problemText } from "./houseWords";
 import { PaneLoading } from "./PaneLoading";
 
 type Page = { lists: ListSummary[]; nextCursor: string | null };
@@ -33,6 +48,11 @@ export interface HouseDeps {
   takeDown: (id: string) => Promise<void>;
   /** The boards of whoever is here, owner or moderator, read the way Your lists reads them. */
   repository: BoardsRepository;
+  /** A house list in full, for Edit to make a board of. */
+  loadList: (id: string) => Promise<PublishedList>;
+  /** Where this device remembers which of its boards are the house's. */
+  links: KeyValueStore;
+  now: () => number;
 }
 
 const houseDeps: HouseDeps = {
@@ -41,6 +61,9 @@ const houseDeps: HouseDeps = {
   replace: replaceHouseList,
   takeDown: takeDownHouseList,
   repository: site,
+  loadList,
+  links: localStorageStore,
+  now: Date.now,
 };
 
 /** What the picker was opened for: a new house list, or a new snapshot of one. */
@@ -50,42 +73,6 @@ const hrefOf = (id: string) => `/l/${encodeURIComponent(id)}`;
 
 const dayOf = (millis: number) =>
   new Intl.DateTimeFormat(currentLocale(), { day: "numeric", month: "short" }).format(millis);
-
-/** Why a board cannot go out, in the words its own settings use. */
-function problemText(problem: PublishProblem): string {
-  switch (problem) {
-    case "category":
-      return strings.new.needCategory;
-    case "noItems":
-      return strings.boards.needsItems;
-    case "tooManyTiers":
-      return strings.new.tooManyTiers;
-    case "tooManyItems":
-      return strings.new.tooManyCards;
-  }
-}
-
-/**
- * What a refused publish or replace says. The backend refuses these as it
- * refuses any publish; a 403 means the one asking is not staff, or, for a
- * replace, that the list is not the house's.
- */
-function failureText(error: ApiError, kind: Picking["kind"]): string {
-  switch (error.kind) {
-    case "invalid":
-      return fill(strings.new.failedInvalid, { detail: error.detail ?? "" }).trim();
-    case "tooLarge":
-      return fill(strings.new.failedTooLarge, { detail: error.detail ?? "" }).trim();
-    case "pictureRefused":
-      return strings.admin.housePictureRefused;
-    case "notYours":
-      return kind === "publish" ? strings.admin.houseStaffOnly : strings.admin.houseNotHouse;
-    case "notFound":
-      if (kind === "replace") return strings.new.listGone;
-      break;
-  }
-  return kind === "publish" ? strings.admin.houseFailed : strings.admin.houseReplaceFailed;
-}
 
 /** Where a list is filed, as far as this page knows: its section, and its topic when it has one. */
 function placeOf(list: ListSummary, sections: readonly Section[]): string[] {
@@ -100,12 +87,17 @@ function HouseRow({
   list,
   sections,
   narrow,
+  opening,
+  onEdit,
   onReplace,
   onTakeDown,
 }: {
   list: ListSummary;
   sections: readonly Section[];
   narrow: boolean;
+  /** Edit is under way, for this list or another: it waits for the list to come. */
+  opening: boolean;
+  onEdit: () => void;
   onReplace: () => void;
   onTakeDown: () => void;
 }) {
@@ -136,6 +128,11 @@ function HouseRow({
             </a>
           </li>
           <li>
+            <button type="button" className="menu__action" disabled={opening} onClick={onEdit}>
+              {strings.admin.edit}
+            </button>
+          </li>
+          <li>
             <button type="button" className="menu__action" onClick={onReplace}>
               {strings.admin.replaceFromBoard}
             </button>
@@ -150,6 +147,9 @@ function HouseRow({
         <span className="admin-list__actions">
           <Button href={href} external>
             {strings.admin.open}
+          </Button>
+          <Button onClick={onEdit} disabled={opening}>
+            {strings.admin.edit}
           </Button>
           <Button onClick={onReplace}>{strings.admin.replaceFromBoard}</Button>
           <Button onClick={onTakeDown}>{strings.admin.takeDown}</Button>
@@ -265,9 +265,9 @@ function BoardPicker({
  * an ordinary anonymous list to everybody who opens one. The owner or a
  * moderator sends one of their own boards out as the house, or sends one
  * again over a house list, and the board itself stays a private board:
- * nothing about its own published state changes. A house list is changed
- * through a copy, as the note under the head says, since no board of
- * anybody's is tied to it.
+ * nothing about its own published state changes. New house list and Edit
+ * open the board editor for the house instead: a fresh board, or a copy of
+ * the list tied to it, which goes out from there as the house and only so.
  */
 export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
   const navigate = useNavigate();
@@ -285,6 +285,7 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
   const [asking, setAsking] = useState<ListSummary | null>(null);
   const [takingDown, setTakingDown] = useState(false);
   const [takeDownFailed, setTakeDownFailed] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
   const { sections } = useSections();
@@ -332,9 +333,10 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
   // The request is the board's own publish, sent to the house's address; the
   // board is only read, never saved, so it stays private and unpublished.
   const pick = (board: Board) => {
-    const request = publishRequestOf(board);
-    if (picking === null || request === null) return;
+    if (picking === null) return;
     const what = picking;
+    const request = houseRequestOf(board, what.kind === "replace" ? what.list.id : null);
+    if (request === null) return;
     setSending(true);
     setFailure(null);
     const sent =
@@ -365,6 +367,28 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
     );
   };
 
+  // Edit: the list as it stands now becomes a board of one's own, tied to it,
+  // and the editor opens on it for the house.
+  const edit = (list: ListSummary) => {
+    setOpening(true);
+    deps.loadList(list.id).then(
+      (full) => {
+        const board = boardFromHouseList(full, deps.now(), nextUid);
+        deps.repository.save(board);
+        linkToHouse(board.uid, list.id, deps.links);
+        void navigate(houseBoardPath(board.uid, list.id));
+      },
+      (reason: unknown) => {
+        setOpening(false);
+        // A list taken down elsewhere leaves this page too.
+        if (errorOf(reason).kind === "notFound") {
+          setGone((before) => new Set([...before, list.id]));
+        }
+        setNotice({ text: strings.admin.houseOpenFailed });
+      },
+    );
+  };
+
   const takeDown = (list: ListSummary) => {
     setTakingDown(true);
     setTakeDownFailed(false);
@@ -389,9 +413,14 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
           {strings.admin.house}
         </h2>
         <p className="admin-pane__count">{strings.admin.houseBody}</p>
-        <Button variant="tonal" icon="publish" onClick={() => open({ kind: "publish" })}>
-          {strings.admin.publishBoard}
-        </Button>
+        <span className="house-pane__actions">
+          <Button variant="tonal" icon="publish" onClick={() => open({ kind: "publish" })}>
+            {strings.admin.publishBoard}
+          </Button>
+          <Button variant="filled" icon="add" onClick={() => void navigate(NEW_HOUSE_PATH)}>
+            {strings.admin.newHouseList}
+          </Button>
+        </span>
       </header>
       <p className="admin-pane__note">{strings.admin.houseHowTo}</p>
 
@@ -417,6 +446,8 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
               list={list}
               sections={sections}
               narrow={narrow}
+              opening={opening}
+              onEdit={() => edit(list)}
               onReplace={() => open({ kind: "replace", list })}
               onTakeDown={() => {
                 setTakeDownFailed(false);

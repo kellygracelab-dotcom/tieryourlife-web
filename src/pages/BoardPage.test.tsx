@@ -20,7 +20,11 @@ import { SessionContext, type Session } from "../app/session";
 import type { SectionStats } from "../api/sections";
 import type { Upload } from "../features/editor/AddCardBox";
 import { createSectionsStore, type SectionsStore } from "../features/sections/useSections";
-import { memoryStore } from "../lib/storage";
+import { memoryStore, type KeyValueStore } from "../lib/storage";
+import { ApiFailure } from "../api/errors";
+import type { HouseSending } from "../features/admin/HouseBar";
+import { houseLinkOf, linkToHouse } from "../features/boards/houseList";
+import { publishRequestOf } from "../features/boards/publish";
 import { BoardPage } from "./BoardPage";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
@@ -68,6 +72,8 @@ const open = (
     upload?: Upload;
     signIn?: Session["signIn"];
     store?: SectionsStore;
+    house?: HouseSending;
+    houseStore?: KeyValueStore;
   } = {},
 ) => {
   const router = createMemoryRouter(
@@ -83,10 +89,13 @@ const open = (
             publishing={extra.publishing ?? noPublishing}
             share={extra.share ?? (() => Promise.resolve())}
             store={extra.store}
+            house={extra.house}
+            houseStore={extra.houseStore ?? memoryStore()}
           />
         ),
       },
       { path: "/b", element: <h1>boards page</h1> },
+      { path: "/admin/house", element: <h1>house lists pane</h1> },
       { path: "/trash", element: <h1>trash page</h1> },
     ],
     { initialEntries: [path] },
@@ -822,5 +831,103 @@ describe("BoardPage: Play", () => {
     open(repository, "/b/two");
     // Unavailable but still focusable, so its reason can be read.
     expect(screen.getByRole("button", { name: /^Play/ })).toHaveAttribute("aria-disabled", "true");
+  });
+});
+
+describe("BoardPage: a house list", () => {
+  const sending = (): HouseSending => ({
+    publish: vi.fn(() => Promise.resolve({ id: "H1", topicId: null })),
+    replace: vi.fn((id: string) => Promise.resolve({ id, topicId: null })),
+  });
+
+  it("says a new board is the house's, leads back to House lists, and offers no Public switch", async () => {
+    const repository = boardsRepository(memoryStore());
+    const houseStore = memoryStore();
+    const router = open(repository, "/b/fresh?new=100&house=new", {
+      house: sending(),
+      houseStore,
+      account: member,
+    });
+    const bar = screen.getByRole("region", { name: "House list" });
+    expect(bar).toHaveTextContent("Goes out as the site: no name, no face, no account.");
+    expect(bar).toHaveTextContent(
+      "Pick a category. Add at least one card before you publish this list.",
+    );
+    expect(within(bar).getByRole("button", { name: "Publish to House lists" })).toBeDisabled();
+    // Remembered as the house's once it is kept, not before.
+    expect(houseLinkOf("fresh", houseStore)).toBeNull();
+    await userEvent.keyboard("Ramen{Enter}");
+    expect(repository.get("fresh")?.title).toBe("Ramen");
+    expect(houseLinkOf("fresh", houseStore)).toEqual({ listId: null });
+
+    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
+    const settings = screen.getByRole("dialog", { name: "List settings" });
+    expect(within(settings).queryByRole("switch")).toBeNull();
+    await userEvent.click(within(settings).getByRole("button", { name: "Done" }));
+
+    await userEvent.click(screen.getByRole("link", { name: "House lists" }));
+    expect(router.state.location.pathname).toBe("/admin/house");
+  });
+
+  it("publishes as the house and only so, then updates the same list", async () => {
+    const repository = boardsRepository(memoryStore());
+    const board = { ...filmBoard(), category: "film_tv" };
+    repository.save(board);
+    const houseStore = memoryStore();
+    linkToHouse("films", null, houseStore);
+    const house = sending();
+    const publishing: PublishingDeps = { ...noPublishing, publish: vi.fn() };
+    // Opened from Your lists: this device remembers it is the house's.
+    const router = open(repository, "/b/films", { house, houseStore, publishing, account: member });
+    await userEvent.click(screen.getByRole("button", { name: "Publish to House lists" }));
+    expect(await screen.findByText("Published")).toBeInTheDocument();
+    expect(house.publish).toHaveBeenCalledWith(publishRequestOf(board));
+    expect(publishing.publish).not.toHaveBeenCalled();
+    expect(repository.get("films")?.publishedId).toBeNull();
+    expect(houseLinkOf("films", houseStore)).toEqual({ listId: "H1" });
+    expect(router.state.location.search).toBe("?house=H1");
+    expect(await screen.findByRole("link", { name: "Open" })).toHaveAttribute("href", "/l/H1");
+    expect(screen.getByRole("region", { name: "House list" })).toHaveTextContent(
+      "Your changes reach the list only when you update it.",
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "Update house list" }));
+    expect(await screen.findByText("House list updated")).toBeInTheDocument();
+    expect(house.replace).toHaveBeenCalledWith("H1", publishRequestOf(board));
+    await userEvent.click(screen.getByRole("button", { name: "House lists" }));
+    expect(router.state.location.pathname).toBe("/admin/house");
+  });
+
+  it("takes the list from the address when this device does not know it yet", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const houseStore = memoryStore();
+    const house = sending();
+    open(repository, "/b/films?house=H2", { house, houseStore });
+    expect(houseLinkOf("films", houseStore)).toEqual({ listId: "H2" });
+    await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
+    expect(house.replace).toHaveBeenCalledWith("H2", expect.objectContaining({ title: "Films" }));
+  });
+
+  it("says why it did not go out, and goes out as a new list when the old one is gone", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const houseStore = memoryStore();
+    linkToHouse("films", "H1", houseStore);
+    const house: HouseSending = {
+      publish: vi.fn(() => Promise.reject(new ApiFailure({ kind: "notYours" }))),
+      replace: vi.fn(() => Promise.reject(new ApiFailure({ kind: "notFound" }))),
+    };
+    const router = open(repository, "/b/films?house=H1", { house, houseStore });
+    await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This list isn’t published anymore.",
+    );
+    expect(houseLinkOf("films", houseStore)).toEqual({ listId: null });
+    expect(router.state.location.search).toBe("?house=new");
+    await userEvent.click(await screen.findByRole("button", { name: "Publish to House lists" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Only the owner and moderators can publish as the house.",
+    );
   });
 });
