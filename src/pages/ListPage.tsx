@@ -360,6 +360,12 @@ function OpenList({
   };
   // Somebody else's tier words over the same cards: the board draws Theirs under them.
   const theirsList = useMemo(() => ({ ...list, tiers: theirs.tiers }), [list, theirs]);
+  // A reader's ranking on show is what Save offers as Theirs, as on the phone.
+  const shownPlacing = useMemo(
+    () =>
+      chosen === null ? null : { name: chosen.authorName, tiers: theirs.tiers, rows: theirs.rows },
+    [chosen, theirs],
+  );
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
   // Who else ranked it is a line of the menu, the one place the number is said.
@@ -417,6 +423,7 @@ function OpenList({
                 notify={setNotice}
                 repository={repository}
                 rankings={rankingsEntry}
+                shown={shownPlacing}
               />
             </>
           )}

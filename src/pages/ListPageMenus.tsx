@@ -6,7 +6,11 @@ import type { PublishedList } from "../api/types";
 import { useSession } from "../app/session";
 import type { BoardsRepository } from "../features/boards/repository";
 import { SaveToMineDialog } from "../features/boards/SaveToMineDialog";
-import { useSaveToMine, type SaveToMine } from "../features/boards/useSaveToMine";
+import {
+  useSaveToMine,
+  type SaveToMine,
+  type ShownPlacing,
+} from "../features/boards/useSaveToMine";
 import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
 import { useHidden } from "../features/community/useHidden";
 import { report as sendReport, unpublish as unpublishList } from "../lib/api";
@@ -251,14 +255,17 @@ export function VisitorTools({
   notify,
   repository,
   rankings = null,
+  shown = null,
 }: {
   list: PublishedList;
   report: Report;
   notify: Notify;
   repository?: BoardsRepository;
   rankings?: RankingsEntry | null;
+  /** A reader's ranking on show in the left half, which Save then offers to keep. */
+  shown?: ShownPlacing | null;
 }) {
-  const saving = useSaveToMine(list, notify, { repository });
+  const saving = useSaveToMine(list, notify, { repository, shown });
   return (
     <>
       <Button variant="tonal" icon="bookmark" className="list-head__save" onClick={saving.start}>

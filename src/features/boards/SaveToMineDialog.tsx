@@ -47,7 +47,7 @@ function Question({
         <div className="dialog__actions save-mine__choices">
           {asking.theirs !== null && (
             <Button variant="tonal" onClick={() => save("theirs")}>
-              {strings.list.saveTheirs}
+              {asking.theirs.name ?? strings.list.saveTheirs}
             </Button>
           )}
           <Button variant="tonal" onClick={() => save(asking.mine === null ? "none" : "mine")}>
