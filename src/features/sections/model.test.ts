@@ -159,21 +159,23 @@ describe("sections", () => {
     expect(slots.allTile).toBe(false);
   });
 
-  it("leaves the phone's row out when the tiles pair up, and leads to all of them when they don't fit", () => {
+  it("leaves the phone's row out when the tiles pair up, and leads to all of them past twenty", () => {
     expect(homeSlots(many(8), "compact")).toMatchObject({ row: null, allTile: false });
-    const crowded = homeSlots(many(12), "compact");
-    expect(crowded.tiles).toHaveLength(8);
+    expect(homeSlots(many(20), "compact")).toMatchObject({ row: null, allTile: false });
+    expect(homeSlots(many(19), "compact").row).toMatchObject({ id: "s-18" });
+    const crowded = homeSlots(many(21), "compact");
+    expect(crowded.tiles).toHaveLength(20);
     expect(crowded.row).toBe("all");
   });
 
-  it("fills nine slots on a tablet and ten on a wide screen, the last leading to all when needed", () => {
-    expect(homeSlots(many(9), "medium")).toMatchObject({ allTile: false });
-    expect(homeSlots(many(9), "medium").tiles).toHaveLength(9);
-    expect(homeSlots(many(10), "medium").tiles).toHaveLength(8);
-    expect(homeSlots(many(10), "medium").allTile).toBe(true);
-    expect(homeSlots(many(10), "expanded")).toMatchObject({ allTile: false });
-    expect(homeSlots(many(11), "expanded").tiles).toHaveLength(9);
-    expect(homeSlots(many(11), "expanded").allTile).toBe(true);
+  it("shows the first twenty on a tablet and a wide screen, then a tile leading to all of them", () => {
+    for (const width of ["medium", "expanded"] as const) {
+      expect(homeSlots(many(12), width)).toMatchObject({ allTile: false });
+      expect(homeSlots(many(12), width).tiles).toHaveLength(12);
+      expect(homeSlots(many(20), width)).toMatchObject({ allTile: false });
+      expect(homeSlots(many(21), width).tiles).toHaveLength(20);
+      expect(homeSlots(many(21), width).allTile).toBe(true);
+    }
   });
 
   it("addresses a section and a topic the way the app's links do", () => {

@@ -53,7 +53,9 @@
 .section-tile::after {
   content: "";
   position: absolute;
-  inset: 0;
+  /* A pixel past every edge: a tile a fraction of a pixel wide drew its
+   * picture to the edge but the scrims a pixel short, right and below. */
+  inset: -1px;
   z-index: -1;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.62));
 }

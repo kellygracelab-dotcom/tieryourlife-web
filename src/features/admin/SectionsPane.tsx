@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type KeyboardEvent,
@@ -15,7 +16,7 @@ import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
-import { Skeleton } from "../../ui/Skeleton";
+import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { sectionOf, sectionStyle, type Section } from "../sections/model";
 import type { EditorDeps } from "../sections/editorDeps";
@@ -43,6 +44,10 @@ export interface SectionsPaneDeps {
 }
 
 const paneDeps: SectionsPaneDeps = { load: loadAdminSections, save: saveSectionOrder };
+
+/** How near the window's edge a dragged row scrolls the page, and by how much a move. */
+const SCROLL_EDGE = 64;
+const SCROLL_STEP = 16;
 
 /** Rows from what the backend sent, waiting and merged sections left to the queue. */
 function rowsOf(answer: AdminSections): OrderRow[] {
@@ -99,11 +104,31 @@ export function SectionsPane({
   const [announce, setAnnounce] = useState("");
   const clearNotice = useCallback(() => setNotice(null), []);
   const rowRefs = useRef(new Map<string, HTMLLIElement>());
+  const listRef = useRef<HTMLOListElement>(null);
+  // The row a pointer holds: where in it the pointer took it, and where the pointer is now.
+  const drag = useRef<{ id: string; grab: number; y: number } | null>(null);
+
+  // The held row sits under the pointer, inside the list, while the others keep
+  // their places; the answer is its middle, measured from the list's top.
+  const place = useCallback((): number | null => {
+    const held = drag.current;
+    const list = listRef.current;
+    const node = held === null ? undefined : rowRefs.current.get(held.id);
+    if (held === null || list === null || node === undefined) return null;
+    const room = list.clientHeight - node.offsetHeight;
+    const top = Math.min(Math.max(held.y - held.grab - list.getBoundingClientRect().top, 0), room);
+    node.style.transform = `translateY(${top - node.offsetTop}px)`;
+    return top + node.offsetHeight / 2;
+  }, []);
   const [editing, setEditing] = useState<Editing>(null);
   // What an edit made of a section, shown at once without asking for the whole order again.
   const [edits, setEdits] = useState<ReadonlyMap<string, SectionStats>>(new Map());
   // A section created by hand is read back with the order; edits not yet saved stay on top.
   const [carrying, setCarrying] = useState(false);
+  // A row that changed places under the pointer moves back under it before the frame is drawn.
+  useLayoutEffect(() => {
+    place();
+  }, [edited, place]);
 
   // A fresh answer becomes what is saved and what is being edited.
   const [seen, setSeen] = useState<AdminSections | null>(null);
@@ -131,7 +156,7 @@ export function SectionsPane({
   }, [changed]);
 
   if (state.status === "loading" || edited === null || saved === null || answer === null) {
-    return <Skeleton height="320px" />;
+    return <PaneLoading />;
   }
   if (state.status === "error") {
     return (
@@ -181,23 +206,45 @@ export function SectionsPane({
     }
   };
 
-  // A drag by the handle: the row follows the pointer over the others' middles.
-  const onPointerDown = (event: PointerEvent, index: number, id: string) => {
+  // A drag: a mouse takes a row anywhere but its controls, a finger by the
+  // handle, so the page still scrolls under a thumb. The row follows the
+  // pointer and takes the place of whichever row its middle passes.
+  const onPointerDown = (event: PointerEvent<HTMLLIElement>, index: number, id: string) => {
     if (event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
+    const target = event.target as Element;
+    const byHandle = target.closest(".admin-order__handle") !== null;
+    const byRow =
+      event.pointerType === "mouse" && target.closest("button, input, label, a") === null;
+    if (!byHandle && !byRow) return;
+    if (byRow) event.preventDefault();
+    const node = event.currentTarget;
+    node.setPointerCapture(event.pointerId);
+    drag.current = { id, grab: event.clientY - node.getBoundingClientRect().top, y: event.clientY };
     setLifted({ id, from: index });
   };
-  const onPointerMove = (event: PointerEvent) => {
-    if (lifted === null || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
-    const from = edited.findIndex((row) => row.id === lifted.id);
-    const to = edited.findIndex((row) => {
-      const box = rowRefs.current.get(row.id)?.getBoundingClientRect();
-      return box !== undefined && event.clientY < box.top + box.height / 2;
-    });
-    const target = to === -1 ? edited.length - 1 : to > from ? to - 1 : to;
-    if (target !== from) move(from, target);
+  const onPointerMove = (event: PointerEvent<HTMLLIElement>) => {
+    const held = drag.current;
+    if (held === null || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    held.y = event.clientY;
+    // Near the window's edge the page scrolls along, for a list longer than the window.
+    if (event.clientY < SCROLL_EDGE) window.scrollBy(0, -SCROLL_STEP);
+    else if (event.clientY > window.innerHeight - SCROLL_EDGE) window.scrollBy(0, SCROLL_STEP);
+    const middle = place();
+    if (middle === null) return;
+    const from = edited.findIndex((row) => row.id === held.id);
+    const to = edited.filter((row) => {
+      const node = row.id === held.id ? undefined : rowRefs.current.get(row.id);
+      return node !== undefined && node.offsetTop + node.offsetHeight / 2 < middle;
+    }).length;
+    if (to !== from) move(from, to);
   };
-  const onPointerUp = () => setLifted(null);
+  const onPointerUp = () => {
+    const held = drag.current;
+    if (held === null) return;
+    drag.current = null;
+    rowRefs.current.get(held.id)?.style.removeProperty("transform");
+    setLifted(null);
+  };
 
   const save = () => {
     setSaving(true);
@@ -241,7 +288,7 @@ export function SectionsPane({
         )}
       </header>
       {!owner && <p className="admin-pane__note">{strings.admin.viewOnly}</p>}
-      <ol className="admin-order">
+      <ol ref={listRef} className={owner ? "admin-order admin-order--owner" : "admin-order"}>
         {edited.map((row, index) => {
           const one = section(row.id);
           const locked = row.id === LOCKED;
@@ -259,6 +306,15 @@ export function SectionsPane({
               ]
                 .filter(Boolean)
                 .join(" ")}
+              {...(owner && !locked
+                ? {
+                    onPointerDown: (event: PointerEvent<HTMLLIElement>) =>
+                      onPointerDown(event, index, row.id),
+                    onPointerMove,
+                    onPointerUp,
+                    onPointerCancel: onPointerUp,
+                  }
+                : {})}
             >
               {owner && !locked ? (
                 <button
@@ -267,10 +323,6 @@ export function SectionsPane({
                   aria-label={fill(strings.admin.move, { name: nameOf(row.id) })}
                   aria-pressed={lifted?.id === row.id}
                   onKeyDown={(event) => onHandleKey(event, index, row.id)}
-                  onPointerDown={(event) => onPointerDown(event, index, row.id)}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                  onPointerCancel={onPointerUp}
                 >
                   <Icon name="drag_indicator" />
                 </button>

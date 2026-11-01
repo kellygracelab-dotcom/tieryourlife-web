@@ -96,6 +96,13 @@ describe("SectionsPane", () => {
     expect(screen.queryByRole("switch", { name: "Show Other" })).toBeNull();
   });
 
+  it("stays empty while the sections are on the way, with no grey block", () => {
+    deps.load.mockReturnValue(new Promise(() => {}));
+    open();
+    expect(document.querySelector(".skeleton")).toBeNull();
+    expect(document.querySelector("[aria-busy='true']")).toBeEmptyDOMElement();
+  });
+
   it("draws a section's own picture in its thumbnail, under the tile's scrim", async () => {
     deps.load.mockResolvedValue({
       ...answer,

@@ -237,7 +237,8 @@ function compareSections(a: Section, b: Section): number {
 }
 
 /** How many sections the front page has room for at each width (Claude Design). */
-export const HOME_SLOTS: Record<WidthClass, number> = { compact: 9, medium: 9, expanded: 10 };
+/** How many sections the front page shows before the way to all of them, as the app does. */
+export const HOME_TOP = 20;
 
 export interface HomeSlots {
   /** The tiles of the grid, in order. */
@@ -249,25 +250,25 @@ export interface HomeSlots {
 }
 
 /**
- * What the front page shows of the sections. When they all fit, all of them;
- * otherwise the last slot leads to the page with every section. A phone lays
- * tiles two by two, so an odd one out takes the full-width row.
+ * What the front page shows of the sections: the first twenty, and past them
+ * the way to the page with every section. A phone lays tiles two by two, so an
+ * odd one out takes the full-width row, and so does the way to all of them.
  */
 export function homeSlots(ordered: readonly Section[], width: WidthClass): HomeSlots {
-  const slots = HOME_SLOTS[width];
-  const fits = ordered.length <= slots;
-  if (width === "compact") {
-    if (!fits) return { tiles: ordered.slice(0, slots - 1), row: "all", allTile: false };
-    const odd = ordered.length % 2 === 1;
+  if (ordered.length > HOME_TOP) {
+    const tiles = ordered.slice(0, HOME_TOP);
+    return width === "compact"
+      ? { tiles, row: "all", allTile: false }
+      : { tiles, row: null, allTile: true };
+  }
+  if (width === "compact" && ordered.length % 2 === 1) {
     return {
-      tiles: odd ? ordered.slice(0, -1) : [...ordered],
-      row: odd ? (ordered[ordered.length - 1] ?? null) : null,
+      tiles: ordered.slice(0, -1),
+      row: ordered[ordered.length - 1] ?? null,
       allTile: false,
     };
   }
-  return fits
-    ? { tiles: [...ordered], row: null, allTile: false }
-    : { tiles: ordered.slice(0, slots - 1), row: null, allTile: true };
+  return { tiles: [...ordered], row: null, allTile: false };
 }
 
 export const sectionPath = (id: string): string => `/s/${encodeURIComponent(id)}`;

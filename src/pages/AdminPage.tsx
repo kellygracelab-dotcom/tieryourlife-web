@@ -11,7 +11,7 @@ import { useWidthClass } from "../lib/useWidthClass";
 import { strings } from "../strings";
 import { Icon } from "../ui/Icon";
 import type { IconName } from "../ui/icons";
-import { Skeleton } from "../ui/Skeleton";
+import { PaneLoading } from "../features/admin/PaneLoading";
 import { ModerationPage } from "./ModerationPage";
 import "../features/admin/admin.css";
 
@@ -82,7 +82,7 @@ export function AdminPage() {
   if (role.status === "unknown") {
     return (
       <section className="admin" aria-busy="true">
-        <Skeleton height="320px" />
+        <PaneLoading />
       </section>
     );
   }

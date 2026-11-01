@@ -5,7 +5,7 @@ import { appointModerator, findCandidates, loadModerators, removeModerator } fro
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
-import { Skeleton } from "../../ui/Skeleton";
+import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 
 export interface ModeratorsDeps {
@@ -166,7 +166,7 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
         </p>
       )}
       {state.status === "loading" ? (
-        <Skeleton height="128px" />
+        <PaneLoading />
       ) : state.status === "error" ? (
         <div className="admin__trouble" role="alert">
           <p>{strings.admin.failed}</p>

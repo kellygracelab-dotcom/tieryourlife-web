@@ -211,6 +211,7 @@
 
 /* Sections: the order and what is shown, with one Save. */
 .admin-order {
+  position: relative;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -242,6 +243,25 @@
   z-index: 1;
   background: var(--paper);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+/* The owner drags a row by any part of it but its controls. */
+.admin-order--owner .admin-order__row {
+  cursor: grab;
+  user-select: none;
+}
+
+.admin-order--owner .admin-order__row--lifted {
+  cursor: grabbing;
+  transition: none;
+}
+
+.admin-order--owner .admin-order__row :is(button, label, input) {
+  cursor: pointer;
+}
+
+.admin-order--owner .admin-order__row .admin-order__handle {
+  cursor: inherit;
 }
 
 .admin-order__handle {

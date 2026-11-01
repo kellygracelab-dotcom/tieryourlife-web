@@ -23,7 +23,7 @@ import { currentLocale, fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { Menu } from "../../ui/Menu";
-import { Skeleton } from "../../ui/Skeleton";
+import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { useModal } from "../../ui/useModal";
 import { sectionOf, sectionStyle, type Section } from "../sections/model";
@@ -301,7 +301,7 @@ function ListGroup({
     <section className="admin-lists__group" aria-label={title}>
       <h4 className="admin-lists__topic">{title}</h4>
       {state.status === "loading" ? (
-        <Skeleton height="64px" />
+        <PaneLoading />
       ) : state.status === "error" ? (
         <div className="admin__trouble" role="alert">
           <p>{strings.admin.failed}</p>
@@ -413,7 +413,7 @@ function Topics({
   const topics =
     state.status === "ready" ? state.value.topics.filter((one) => one.status === "approved") : [];
 
-  if (state.status === "loading") return <Skeleton height="104px" />;
+  if (state.status === "loading") return <PaneLoading />;
   if (state.status === "error") {
     return (
       <div className="admin__trouble" role="alert">
@@ -638,7 +638,7 @@ export function ListsPane({
     return () => pending.forEach((timer) => window.clearTimeout(timer));
   }, []);
 
-  if (sectionsRead.state.status === "loading") return <Skeleton height="240px" />;
+  if (sectionsRead.state.status === "loading") return <PaneLoading />;
   if (sectionsRead.state.status === "error") {
     return (
       <div className="admin__trouble" role="alert">
