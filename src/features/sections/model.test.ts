@@ -12,6 +12,8 @@ import {
   sectionOf,
   sectionPath,
   sectionsFrom,
+  sectionStyle,
+  servedPicture,
   topicPath,
   topicPicture,
   type Section,
@@ -176,6 +178,30 @@ describe("sections", () => {
       expect(homeSlots(many(21), width).tiles).toHaveLength(20);
       expect(homeSlots(many(21), width).allTile).toBe(true);
     }
+  });
+
+  it("draws a stored section or topic picture through the site's address at the width drawn", () => {
+    const stored = (path: string) =>
+      `https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/${path}?alt=media&token=t`;
+    expect(servedPicture(stored("sections%2Ffilm_tv%2F579c-14"))).toBe(
+      "/img/480/sections/film_tv/579c-14",
+    );
+    expect(servedPicture(stored("topics%2FpFy4%2Fp_1"), 1600)).toBe("/img/1600/topics/pFy4/p_1");
+    // A proposal's private copy, somebody's upload or another host is drawn as it is.
+    for (const other of [
+      stored("proposals%2Fx%2Fp"),
+      stored("sections%2F..%2Fp"),
+      "https://image.tmdb.org/t/p/w342/a.jpg",
+    ]) {
+      expect(servedPicture(other)).toBe(other);
+    }
+    const look = sectionOf(stats("film_tv", { pictureUrl: stored("sections%2Ffilm_tv%2Fp1") }));
+    expect(sectionStyle(look)).toMatchObject({
+      "--section-picture": 'url("/img/480/sections/film_tv/p1")',
+    });
+    expect(sectionStyle(look, 1600)).toMatchObject({
+      "--section-picture": 'url("/img/1600/sections/film_tv/p1")',
+    });
   });
 
   it("addresses a section and a topic the way the app's links do", () => {

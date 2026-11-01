@@ -7,6 +7,7 @@ import { requireAppCheck } from "./appCheck";
 import { optionalAccount, requireAccount, requireUser, type Identity } from "./auth";
 import { getStorage } from "firebase-admin/storage";
 import { listPage, listShareImage, rankingPage, rankingShareImage } from "./pages";
+import { sendPicture, storagePictures, type PictureDeps } from "./pictures";
 import { discardOlderCopies } from "./shareImage";
 import {
   claimHashOf,
@@ -71,7 +72,11 @@ export interface WebDeps {
   random: (max: number) => number;
   /** Takes a ranking's share pictures off the shelf once the ranking is gone. */
   forgetPictures: (code: string) => Promise<unknown>;
+  /** Section and topic pictures from the bucket, shrunk; the bucket's own when left out. */
+  pictures?: PictureDeps;
 }
+
+const bucketPictures = storagePictures(() => getStorage().bucket());
 
 const production: WebDeps = {
   db: () => getFirestore(),
@@ -81,6 +86,7 @@ const production: WebDeps = {
   viewer: optionalAccount,
   random: (max) => randomInt(max),
   forgetPictures: (code) => discardOlderCopies(getStorage().bucket(), "r", code, ""),
+  pictures: bucketPictures,
 };
 
 export const web = onRequest(
@@ -117,6 +123,10 @@ export async function route(
       if (segments[1] === "l") return await listShareImage(response, id);
       if (segments[1] === "r") return await rankingShareImage(response, id);
       return notFound(response, "No such address");
+    }
+    // A section's or topic's picture at a page's width: /img/{width}/{kind}/{id}/{picture}.
+    if (reading && segments[0] === "img") {
+      return await sendPicture(response, segments.slice(1), deps.pictures ?? bucketPictures);
     }
     // Pages: /l/{id} and /r/{code} are the site's own shell with the words a
     // chat needs and the data the board needs.
