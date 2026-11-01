@@ -175,6 +175,8 @@ export const loadTopics = (section: string, limit?: number): Promise<{ topics: T
 
 export const loadMyTopics = (): Promise<{ topics: Topic[] }> => sections.loadMyTopics(api);
 
+export const loadTopic = (id: string): Promise<Topic> => sections.loadTopic(api, id);
+
 export const followTopic = (id: string): Promise<{ following: true }> =>
   sections.followTopic(api, id);
 

@@ -140,6 +140,74 @@ test("a menu closes on a press anywhere else, and a new page opens at its top", 
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 });
 
+/** A section's topics as the backend sends them: one with a picture of its own, the rest without. */
+const topics = ["Pokémon", "Indies", "Speedruns", "Retro", "Roguelikes"].map((name, index) => ({
+  id: `t${index + 1}`,
+  name,
+  section: "games",
+  status: "approved",
+  listCount: 10,
+  followerCount: 100 - index,
+  following: false,
+  mergedInto: null,
+  pictureUrl: index === 0 ? "https://pictures.test/pokemon.svg" : null,
+}));
+
+const PICTURE =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="100"><rect width="160" height="100" fill="#e0b84a"/><circle cx="80" cy="50" r="30" fill="#c0392b"/></svg>';
+
+test("a section's topics are tiles, two to a phone's row, and a tile opens the topic's page", async ({
+  page,
+}, testInfo) => {
+  await mockBackend(page);
+  await page.route("**/lists/sections", (route) =>
+    route.fulfill({
+      json: {
+        sections: [
+          {
+            id: "games",
+            listCount: 9,
+            followerCount: 1,
+            newThisWeek: 0,
+            collage: [],
+            following: false,
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/lists/topics?**", (route) => route.fulfill({ json: { topics } }));
+  await page.route("**/lists?**", (route) =>
+    route.fulfill({ json: { lists: [summary], nextCursor: null } }),
+  );
+  await page.route("https://pictures.test/**", (route) =>
+    route.fulfill({ contentType: "image/svg+xml", body: PICTURE }),
+  );
+  await page.goto("/s/games");
+
+  const grid = page.getByRole("navigation", { name: "Topics" });
+  await expect(grid.getByRole("link")).toHaveCount(topics.length);
+  // Tiles at least 170 px wide besides the gaps, and never fewer than two in a row:
+  // two on a phone, five across the desktop's page, as the app counts.
+  const { columns, width } = await grid.evaluate((element) => ({
+    columns: getComputedStyle(element).gridTemplateColumns.split(" ").length,
+    width: element.clientWidth,
+  }));
+  expect(columns).toBe(Math.max(2, Math.floor((width + 12) / 182)));
+  const phone = testInfo.project.name === "phone" || testInfo.project.name === "iphone";
+  expect(columns).toBe(phone ? 2 : Math.floor(width / 170));
+  const tile = await grid.getByRole("link").first().boundingBox();
+  if (tile === null) throw new Error("no tile");
+  expect(tile.width / tile.height).toBeCloseTo(2, 1);
+
+  await grid.getByRole("link", { name: "Pokémon" }).click();
+  await expect(page).toHaveURL("/s/games/t/t1");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Pokémon");
+  await expect(page.getByRole("link", { name: /Every A24 film, ranked/ })).toBeVisible();
+  await page.getByRole("link", { name: "Navigate back" }).click();
+  await expect(page).toHaveURL("/s/games");
+});
+
 test("shows the Android app card at the top of the home page, the search still in sight", async ({
   page,
 }, testInfo) => {

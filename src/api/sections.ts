@@ -136,6 +136,14 @@ export function loadMyTopics(client: ApiClient): Promise<{ topics: Topic[] }> {
   return client.request<{ topics: Topic[] }>("GET", "/lists/topics/mine");
 }
 
+/**
+ * One topic by its id, whatever became of it: 404 when there is none. A
+ * merged one names the topic it went into.
+ */
+export function loadTopic(client: ApiClient, id: string): Promise<Topic> {
+  return client.request<Topic>("GET", `/lists/topics/${encodeURIComponent(id)}`);
+}
+
 export function followTopic(client: ApiClient, id: string): Promise<{ following: true }> {
   return client.request<{ following: true }>(
     "POST",
