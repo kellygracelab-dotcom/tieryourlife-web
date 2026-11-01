@@ -13,22 +13,28 @@ import "./proposal.css";
  * A waiting section as its proposer opens it (docs/design-spec-parity.md,
  * "Waiting section"): what happens next, where the lists are meanwhile, and
  * the way to take it back, asked once more in place since it cannot be undone.
+ * A waiting topic opens the same sheet without that way: its proposer has
+ * none yet, in the app or on the backend.
  */
 export function WaitingSheet({
   section,
   filedIn,
+  note,
   withdraw = withdrawSectionProposal,
   onWithdrawn,
   onSettled,
   onClose,
 }: {
-  section: Section;
+  section: Pick<Section, "id" | "name">;
   /** The name of the section its lists wait in. */
   filedIn: string;
+  /** A line under the rest, quieter. */
+  note?: string;
   withdraw?: (id: string) => Promise<void>;
-  onWithdrawn: () => void;
+  /** Without it the sheet offers no way to take the proposal back. */
+  onWithdrawn?: () => void;
   /** A moderator decided it while it was open: 409 SETTLED. */
-  onSettled: () => void;
+  onSettled?: () => void;
   onClose: () => void;
 }) {
   const id = useId();
@@ -45,7 +51,7 @@ export function WaitingSheet({
     setFailed(false);
     withdraw(section.id).then(onWithdrawn, (reason: unknown) => {
       setBusy(false);
-      if (errorOf(reason).kind === "conflict") onSettled();
+      if (errorOf(reason).kind === "conflict") onSettled?.();
       else setFailed(true);
     });
   };
@@ -68,6 +74,7 @@ export function WaitingSheet({
           {section.name}
         </h2>
         <p className="dialog__body">{fill(strings.sections.waitingBody, { section: filedIn })}</p>
+        {note !== undefined && <p className="waiting-sheet__note">{note}</p>}
         {failed && (
           <p className="dialog__bar" role="alert">
             {strings.propose.withdrawFailed}
@@ -87,9 +94,11 @@ export function WaitingSheet({
           </div>
         ) : (
           <div className="dialog__actions">
-            <Button className="waiting-sheet__withdraw" onClick={() => setAsking(true)}>
-              {strings.propose.withdraw}
-            </Button>
+            {onWithdrawn !== undefined && (
+              <Button className="waiting-sheet__withdraw" onClick={() => setAsking(true)}>
+                {strings.propose.withdraw}
+              </Button>
+            )}
             <Button variant="filled" onClick={onClose}>
               {strings.propose.ok}
             </Button>

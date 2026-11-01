@@ -7,6 +7,7 @@ import {
   loadMyTopics,
   loadSection,
   loadSections,
+  loadTopic,
   loadTopics,
   proposeSection,
   unfollowSection,
@@ -54,7 +55,7 @@ describe("sections", () => {
     expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/sections/film%20tv/follow");
   });
 
-  it("reads a section's topics, mine, and follows one", async () => {
+  it("reads a section's topics, mine, one by its id, and follows one", async () => {
     const { client, request } = recordingClient({ topics: [] });
     await loadTopics(client, "games");
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics", {
@@ -66,6 +67,8 @@ describe("sections", () => {
     });
     await loadMyTopics(client);
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics/mine");
+    await loadTopic(client, "t/1");
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/topics/t%2F1");
     await followTopic(client, "t/1");
     expect(request).toHaveBeenLastCalledWith("POST", "/lists/topics/t%2F1/follow");
     await unfollowTopic(client, "t/1");

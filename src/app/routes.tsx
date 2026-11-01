@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { Navigate, redirect, type RouteObject } from "react-router";
 import { SectionPage, SectionRedirect } from "../pages/SectionPage";
+import { TopicPage } from "../pages/TopicPage";
 import { HomePage } from "../pages/HomePage";
 import { ListPage } from "../pages/ListPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
@@ -46,7 +47,7 @@ export const routes: RouteObject[] = [
             })),
           },
           { path: "s/:id", element: <SectionPage /> },
-          { path: "s/:id/t/:topic", element: <SectionPage /> },
+          { path: "s/:id/t/:topic", element: <TopicPage /> },
           { path: "search", element: <SearchPage /> },
           {
             // Not a board's uid: a new board, the one way a list is made.

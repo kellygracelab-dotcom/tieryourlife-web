@@ -52,6 +52,7 @@ export function apiStubs() {
     withdrawSectionProposal: pending(),
     loadTopics: pending(),
     loadMyTopics: pending(),
+    loadTopic: pending(),
     followTopic: pending(),
     unfollowTopic: pending(),
     takeDownList: pending(),
