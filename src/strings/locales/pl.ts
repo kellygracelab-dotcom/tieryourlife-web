@@ -777,6 +777,32 @@ const pl: Translation = {
     mayWait:
       "Listy tutaj mogą czekać na proponowany dział ({names}). Po przeniesieniu lista przestanie na niego czekać.",
     moveAnyway: "Przenieś mimo to",
+    house: "Listy redakcji",
+    houseBody:
+      "Publikowane przez nikogo: bez imienia, bez twarzy, bez konta. Odwiedzający widzą anonimową listę.",
+    houseHowTo:
+      "Aby zmienić listę, otwórz ją, wybierz „Zapisz u siebie”, edytuj tę kopię, a potem użyj tutaj „Zastąp swoją listą”.",
+    publishBoard: "Opublikuj swoją listę",
+    replaceFromBoard: "Zastąp swoją listą",
+    houseNone: "Nie ma jeszcze list redakcji.",
+    housePick: "Która z twoich list wyjdzie od redakcji?",
+    houseReplacePick: "Którą z twoich list zastąpić „{title}”?",
+    housePickNote: "Redakcja dostaje kopię. Twoja lista zostaje prywatna i bez zmian.",
+    houseReplaceNote: "Lista zachowuje swój link; tytuł, poziomy i karty przejmuje z twojej listy.",
+    houseReplacing: "Zastępowanie…",
+    housePublished: "Opublikowano",
+    houseReplaced: "Zastąpiono",
+    houseFailed: "Nie udało się opublikować. Spróbuj ponownie.",
+    houseReplaceFailed: "Nie udało się zastąpić. Spróbuj ponownie.",
+    housePictureRefused: "Jeden z obrazków twojej listy odrzucono. Zmień go i spróbuj ponownie.",
+    houseStaffOnly: "Tylko właściciel i moderatorzy mogą publikować jako redakcja.",
+    houseNotHouse: "To nie jest lista redakcji, więc nie można jej tu zmienić.",
+    takeDown: "Usuń z publikacji",
+    takeDownAsk: "Usunąć „{title}” z publikacji?",
+    takeDownBody:
+      "Zniknie ze strony, a jej link przestanie działać. Twoje listy zostaną bez zmian.",
+    takingDown: "Usuwanie…",
+    takenDown: "Usunięto „{title}”",
   },
   sections: {
     followers: {

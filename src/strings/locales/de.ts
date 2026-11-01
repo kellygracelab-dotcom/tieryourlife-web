@@ -751,6 +751,33 @@ const de: Translation = {
     mayWait:
       "Listen hier warten vielleicht auf eine vorgeschlagene Rubrik ({names}). Verschoben wartet eine Liste nicht mehr darauf.",
     moveAnyway: "Trotzdem verschieben",
+    house: "Redaktionslisten",
+    houseBody:
+      "Von niemandem veröffentlicht: kein Name, kein Gesicht, kein Konto. Besucher sehen eine anonyme Liste.",
+    houseHowTo:
+      "Zum Ändern: die Liste öffnen, „In meine Listen speichern“ wählen, diese Liste bearbeiten und hier „Aus eigener Liste ersetzen“ nutzen.",
+    publishBoard: "Eigene Liste veröffentlichen",
+    replaceFromBoard: "Aus eigener Liste ersetzen",
+    houseNone: "Noch keine Redaktionslisten.",
+    housePick: "Welche deiner Listen geht als Redaktion raus?",
+    houseReplacePick: "„{title}“ durch welche deiner Listen ersetzen?",
+    housePickNote: "Die Redaktion bekommt eine Kopie. Deine Liste bleibt privat und unverändert.",
+    houseReplaceNote: "Der Link bleibt; Titel, Stufen und Karten kommen aus deiner Liste.",
+    houseReplacing: "Wird ersetzt…",
+    housePublished: "Veröffentlicht",
+    houseReplaced: "Ersetzt",
+    houseFailed: "Veröffentlichen hat nicht geklappt. Versuch es noch einmal.",
+    houseReplaceFailed: "Ersetzen hat nicht geklappt. Versuch es noch einmal.",
+    housePictureRefused:
+      "Ein Bild deiner Liste wurde abgelehnt. Ändere es und versuch es noch einmal.",
+    houseStaffOnly: "Nur der Inhaber und Moderatoren können als Redaktion veröffentlichen.",
+    houseNotHouse: "Das ist keine Redaktionsliste, deshalb lässt sie sich hier nicht ändern.",
+    takeDown: "Entfernen",
+    takeDownAsk: "„{title}“ entfernen?",
+    takeDownBody:
+      "Sie verschwindet von der Seite, und ihr Link funktioniert nicht mehr. Deine Listen bleiben, wie sie sind.",
+    takingDown: "Wird entfernt…",
+    takenDown: "„{title}“ entfernt",
   },
   sections: {
     followers: { one: "{n} Follower", other: "{n} Follower" },

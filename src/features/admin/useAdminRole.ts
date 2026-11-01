@@ -39,7 +39,8 @@ export function useAdminRole(load: () => Promise<AdminSections> = loadAdminSecti
 
 /**
  * Which panes a role opens, as Claude Design's table has it, with Lists
- * (docs/design-spec-walk-3.md, E2), which a moderator opens too.
+ * (docs/design-spec-walk-3.md, E2) and House lists, which a moderator opens
+ * too: the backend publishes as the house for the owner and moderators.
  */
 export const PANES = [
   "reports",
@@ -48,6 +49,7 @@ export const PANES = [
   "topics",
   "lists",
   "anonymous",
+  "house",
   "moderators",
 ] as const;
 export type Pane = (typeof PANES)[number];

@@ -1,4 +1,5 @@
 import type { ApiClient } from "./client";
+import { summaryOf, type PublishRequest } from "./lists";
 import type { SectionStats, ThemePair, Topic } from "./sections";
 import type { FeedSort, ListSummary } from "./types";
 
@@ -390,4 +391,53 @@ export type ListMove = { topicId: string } | { category: string; topicId: null }
 
 export function moveList(client: ApiClient, id: string, to: ListMove): Promise<void> {
   return client.request<void>("POST", `/lists/${encodeURIComponent(id)}/move`, { body: to });
+}
+
+/** Where a house list went out, or what replaced it. */
+export interface HouseAnswer {
+  id: string;
+  topicId: string | null;
+}
+
+/**
+ * A board published as the house: no name, no face, no account behind it,
+ * an ordinary anonymous list to everybody, staff too. The owner and the
+ * moderators may; anybody else gets 403 NOT_YOURS. The body is a publish's, whose
+ * `anonymous` is ignored here, and it is refused the way a publish is.
+ */
+export function publishAsHouse(client: ApiClient, request: PublishRequest): Promise<HouseAnswer> {
+  return client.request<HouseAnswer>("POST", "/lists/editorial", { body: request });
+}
+
+/** A house list replaced in place, same id and link; 403 NOT_YOURS when it is not the house's. */
+export function replaceHouseList(
+  client: ApiClient,
+  id: string,
+  request: PublishRequest,
+): Promise<HouseAnswer> {
+  return client.request<HouseAnswer>("PUT", `/lists/editorial/${encodeURIComponent(id)}`, {
+    body: request,
+  });
+}
+
+/** Takes a house list down; 204 when it was gone already, too. */
+export function takeDownHouseList(client: ApiClient, id: string): Promise<void> {
+  return client.request<void>("DELETE", `/lists/editorial/${encodeURIComponent(id)}`);
+}
+
+/**
+ * The house's lists, the latest changed first, a page at a time; 409
+ * CURSOR_GONE when the cursor's list went. Their covers are tidied the way
+ * the feed's are, since they come from the same snapshots.
+ */
+export async function loadHouseLists(
+  client: ApiClient,
+  after: string | null = null,
+): Promise<{ lists: ListSummary[]; nextCursor: string | null }> {
+  const page = await client.request<{ lists?: ListSummary[]; nextCursor?: string | null }>(
+    "GET",
+    "/lists/editorial",
+    { query: { after: after ?? undefined } },
+  );
+  return { lists: (page.lists ?? []).map(summaryOf), nextCursor: page.nextCursor ?? null };
 }

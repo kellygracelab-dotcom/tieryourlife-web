@@ -926,6 +926,80 @@
   gap: 4px;
 }
 
+/* House lists: the list's art at 16:10, and the boards to send out as the house. */
+.house-list__art {
+  width: 64px;
+  flex: none;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.house-dialog {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 48px);
+}
+
+.house-dialog__note {
+  margin: 12px 0 0;
+  font: 400 13px/18px var(--font);
+  color: var(--ink-dim);
+}
+
+.house-dialog__trouble {
+  margin-top: 12px;
+}
+
+/* The boards scroll inside the dialog; its title and Cancel stay in view. */
+.house-pick {
+  min-height: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.house-pick__board {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.house-pick__board:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.house-pick__board:disabled {
+  cursor: default;
+}
+
+.house-pick__name {
+  font: 500 14px/20px var(--font);
+}
+
+.house-pick__board:disabled .house-pick__name {
+  color: var(--ink-dim);
+}
+
+.house-pick__meta,
+.house-pick__problem {
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+.house-pick__problem {
+  color: var(--error);
+}
+
 /* Move: a dialog 400 wide, a sheet from the bottom below 840. */
 .move-dialog {
   width: min(400px, 100%);
