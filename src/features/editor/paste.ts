@@ -1,3 +1,4 @@
+import { scopeFor } from "../../api/pictures";
 import type { CatalogueItem } from "../../api/types";
 
 /** A name somebody pasted, and what they put in brackets after it, if anything. */
@@ -44,16 +45,15 @@ export function wantedOf(text: string, limit: number): Wanted[] {
 export type Preferred = "tmdb" | "wikidata" | null;
 
 /**
- * Films, series and the people in them are TMDB's, the rest is Wikidata's: a
- * list of food with "Pizza" in it wants the dish, not the poster of a film by
- * that name. A section of somebody's own says nothing of what it holds, so it
- * is Wikidata's, as Other is.
+ * A section with catalogues of its own is searched in those alone, so any
+ * card of the name will do. Everywhere else every catalogue answers, and
+ * Wikidata's is the one to take: a list of food with "Pizza" in it wants the
+ * dish, not the poster of a film by that name. A section of somebody's own
+ * says nothing of what it holds, so it is Wikidata's, as Other is.
  */
 export const preferredFor = (category: string | null): Preferred => {
-  if (category === null) return null;
-  return category === "film_tv" || category === "anime" || category === "people"
-    ? "tmdb"
-    : "wikidata";
+  if (category === null || scopeFor(category) !== "all") return null;
+  return "wikidata";
 };
 
 const from =

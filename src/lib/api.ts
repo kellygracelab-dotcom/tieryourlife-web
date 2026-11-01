@@ -24,7 +24,6 @@ import type {
 import * as boards from "../api/boards";
 import type { KeepBoardRequest, KeptBoard, KeptBoardIndex } from "../api/boards";
 import type { AdoptedGuest } from "../api/account";
-import { searchEverywhere } from "../api/catalogue";
 import { createApiClient } from "../api/client";
 import * as community from "../api/community";
 import type {
@@ -38,12 +37,14 @@ import type {
 import * as lists from "../api/lists";
 import type { MyList, PublishRequest } from "../api/lists";
 import * as moderation from "../api/moderation";
+import * as pictures from "../api/pictures";
+import type { PictureAsk, PicturePage } from "../api/pictures";
 import type { BanLength, QueuedList } from "../api/moderation";
 import * as rank from "../api/rank";
 import * as sections from "../api/sections";
 import type { SectionProposal, SectionStats, Topic } from "../api/sections";
 import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
-import type { CatalogueItem, FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
+import type { FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
@@ -100,9 +101,11 @@ export const removeRanking = (code: string): Promise<void> => rank.removeRanking
 
 export const loadMyLists = (): Promise<{ lists: MyList[] }> => lists.loadMyLists(api);
 
-// The catalogue answers in the language the page is in.
-export const findInCatalogue = (query: string): Promise<CatalogueItem[]> =>
-  searchEverywhere(api, query, currentLocale());
+// The catalogues answer in the language the page is in.
+export const findPictures = (ask: PictureAsk): Promise<PicturePage> =>
+  pictures.searchPictures(api, { ...ask, lang: currentLocale() });
+
+export const keepPicture = (url: string): Promise<string> => pictures.keepPicture(api, url);
 
 export const publish = (request: PublishRequest): Promise<{ id: string }> =>
   lists.publish(api, request);

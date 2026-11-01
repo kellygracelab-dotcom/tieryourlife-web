@@ -33,7 +33,7 @@ vi.mock("../lib/api", async () => ({
   report: mocks.report,
   unpublish: mocks.unpublish,
   republish: mocks.republish,
-  findInCatalogue: vi.fn(async () => []),
+  findPictures: vi.fn(async () => ({ items: [], hasMore: false, notices: [] })),
   removeRanking: vi.fn(),
   rearrangeRanking: vi.fn(),
   loadList: mocks.loadList,

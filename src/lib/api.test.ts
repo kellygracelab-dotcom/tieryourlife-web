@@ -40,7 +40,8 @@ import {
   loadRanking,
   loadReports,
   noteTake,
-  findInCatalogue,
+  findPictures,
+  keepPicture,
   publish,
   rearrangeRanking,
   refreshPublishedAuthor,
@@ -153,12 +154,18 @@ describe("api", () => {
     expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/mine");
   });
 
-  it("searches the catalogue and publishes a list through the same client", async () => {
-    mocks.request.mockResolvedValueOnce({ results: [] } as unknown as { id: string });
-    await expect(findInCatalogue("ghibli")).resolves.toEqual([]);
-    expect(mocks.request).toHaveBeenCalledWith("GET", "/3/search/multi", {
-      query: { query: "ghibli", include_adult: false, language: "en-US", page: 1 },
-      auth: "appCheckOnly",
+  it("searches pictures in the page's language, keeps one, and publishes through the same client", async () => {
+    mocks.request.mockResolvedValueOnce({ items: [] } as unknown as { id: string });
+    await expect(
+      findPictures({ q: "ghibli", scope: "anime", page: 1, web: false }),
+    ).resolves.toEqual({ items: [], hasMore: false, notices: [] });
+    expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/pictures", {
+      query: { q: "ghibli", scope: "anime", lang: "en", page: 1 },
+    });
+    mocks.request.mockResolvedValueOnce({ pictureId: "p1" } as unknown as { id: string });
+    await expect(keepPicture("https://pictures.test/a.jpg")).resolves.toBe("p1");
+    expect(mocks.request).toHaveBeenLastCalledWith("POST", "/lists/pictures/keep", {
+      body: { url: "https://pictures.test/a.jpg" },
     });
     const request = {
       title: "T",

@@ -1,22 +1,30 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  PICTURE_SCOPES,
+  scopeFor,
+  type FoundPicture,
+  type PictureKind,
+  type PictureScope,
+  type PictureSource,
+} from "../../api/pictures";
 import type { CatalogueItem } from "../../api/types";
-import { findInCatalogue } from "../../lib/api";
-import { PictureRefused, type UploadedPicture } from "../../lib/pictures";
+import { findPictures, keepPicture } from "../../lib/api";
+import { keepWebPicture, PictureRefused, type UploadedPicture } from "../../lib/pictures";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { Chip } from "../../ui/Chip";
 import { Icon } from "../../ui/Icon";
 import { LIMITS, type EditorAction, type EditorItem } from "./model";
 import { cardsFor, preferredFor, wantedOf } from "./paste";
-import { useCatalogue, type Lookup } from "./useCatalogue";
+import { usePictures, type FindPictures } from "./usePictures";
 import { sizedFor } from "../../lib/pictureSize";
-
-/** More than this and the list under the box stops being a list and becomes a page. */
-const RESULTS_SHOWN = 8;
 
 /** Pictures going up at once: enough to keep the line busy, few enough not to starve each other. */
 const UPLOADS_AT_ONCE = 4;
 
 export type Upload = (file: File) => Promise<UploadedPicture>;
+/** A picture found on the web, made the person's own. */
+export type Keep = (url: string) => Promise<UploadedPicture>;
 
 /** `work` on every item, at most `limit` running at once; each item comes back with its promise. */
 function limited<T, R>(items: readonly T[], limit: number, work: (item: T) => Promise<R>) {
@@ -45,8 +53,9 @@ interface AddCardBoxProps {
   /** What the list is about: it says whose picture a pasted name takes. */
   category?: string | null;
   dispatch: (action: EditorAction) => void;
-  lookup?: Lookup;
+  find?: FindPictures;
   upload: Upload;
+  keep?: Keep;
 }
 
 function pictureFailureText(name: string, failure: unknown): string {
@@ -58,18 +67,71 @@ function pictureFailureText(name: string, failure: unknown): string {
       return fill(strings.new.pictureNotImage, { name });
     case "tooBig":
       return fill(strings.new.pictureTooBig, { name });
+    case "dailyLimit":
+      return strings.new.pictureDailyLimit;
     default:
       return fill(strings.new.pictureFailed, { name });
   }
 }
 
-function Thumb({ imageUrl, title }: { imageUrl: string | null; title: string }) {
-  return imageUrl !== null ? (
-    <img className="cards__thumb" {...sizedFor(imageUrl, 40)} alt="" loading="lazy" />
-  ) : (
-    <span className="cards__thumb cards__thumb--blank" aria-hidden="true">
-      {title.trim()[0]?.toUpperCase() ?? ""}
-    </span>
+const scopeName = (scope: PictureScope): string =>
+  scope === "all" ? strings.search.all : strings.category[scope];
+
+/** The board's own section first, then All, then the rest, as on the phone. */
+const scopesFrom = (own: PictureScope): PictureScope[] =>
+  own === "all"
+    ? [...PICTURE_SCOPES]
+    : [own, "all", ...PICTURE_SCOPES.filter((one) => one !== own && one !== "all")];
+
+/** Wikidata's things and the web's pages have nothing worth a label. */
+const kindName = (kind: PictureKind): string | null =>
+  kind === "thing" || kind === "web" ? null : strings.new.kinds[kind];
+
+const SOURCE_NAMES: Record<Exclude<PictureSource, "web">, string> = {
+  tmdb: "TMDB",
+  anilist: "AniList",
+  steam: "Steam",
+  deezer: "Deezer",
+  openlibrary: "Open Library",
+  wikidata: "Wikidata",
+};
+
+/** Whose pictures these are, in the order they first come. */
+function sourcesOf(items: readonly FoundPicture[]): string {
+  const names = [...new Set(items.map((item) => item.source))].map((source) =>
+    source === "web" ? strings.new.webSource : SOURCE_NAMES[source],
+  );
+  return fill(strings.new.fromSources, { sources: names.join(", ") });
+}
+
+function PictureTile({
+  found,
+  added,
+  busy,
+  onPick,
+}: {
+  found: FoundPicture;
+  added: boolean;
+  busy: boolean;
+  onPick: () => void;
+}) {
+  const line = [kindName(found.kind), found.subtitle].filter(Boolean).join(" · ");
+  return (
+    <button
+      type="button"
+      className="cards__pick"
+      onClick={onPick}
+      disabled={added || busy}
+      aria-pressed={added}
+      aria-busy={busy || undefined}
+    >
+      <span className="cards__pick-picture">
+        <img {...sizedFor(found.thumbUrl ?? found.imageUrl, 120)} alt="" loading="lazy" />
+        {added && <Icon name="check" className="cards__pick-tick" />}
+      </span>
+      <span className="cards__pick-title">{found.title}</span>
+      {line !== "" && <span className="cards__pick-sub">{line}</span>}
+    </button>
   );
 }
 
@@ -86,7 +148,7 @@ function PasteBox({
   room: number;
   category: string | null;
   dispatch: (action: EditorAction) => void;
-  lookup: Lookup;
+  lookup: (query: string) => Promise<CatalogueItem[]>;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -163,17 +225,30 @@ function PasteBox({
 }
 
 /**
- * The way cards come in: pictures from the device, a name that the catalogue
- * may recognise, or many names at once. Shared by the editor and the owner's
- * own board.
+ * The way cards come in: pictures from the device, pictures the catalogues
+ * and the web find for a name, the name alone, or many names at once. Shared
+ * by the editor and the owner's own board.
  */
-export function AddCardBox({ items, category = null, dispatch, lookup, upload }: AddCardBoxProps) {
+export function AddCardBox({
+  items,
+  category = null,
+  dispatch,
+  find = findPictures,
+  upload,
+  keep = (url) => keepWebPicture(url, keepPicture),
+}: AddCardBoxProps) {
   const [typed, setTyped] = useState("");
   const [uploading, setUploading] = useState(0);
   const [pictureNote, setPictureNote] = useState<string | null>(null);
+  const own = scopeFor(category);
+  const [scope, setScope] = useState<PictureScope>(own);
+  // "Search everywhere" holds for the words it was pressed for, and no others.
+  const [everywhere, setEverywhere] = useState<string | null>(null);
+  const [keeping, setKeeping] = useState<ReadonlySet<string>>(new Set());
   const picker = useRef<HTMLInputElement>(null);
-  const catalogue = useCatalogue(typed, lookup);
   const name = typed.trim();
+  const web = everywhere !== null && everywhere === name;
+  const { state: found, more } = usePictures(typed, scope, web, find);
 
   // One card per file, in the order chosen; a file that fails names itself
   // and the rest still go in. The first goes up alone, since it may ask a
@@ -214,16 +289,59 @@ export function AddCardBox({ items, category = null, dispatch, lookup, upload }:
     dispatch({ type: "addItem", title: name, imageUrl: null });
     setTyped("");
   };
-  const addFound = (found: CatalogueItem) => {
-    dispatch({ type: "addItem", title: found.title, imageUrl: found.imageUrl, key: found.id });
-    setTyped("");
+  // A catalogue's picture stays at its address, as the phone keeps it; one
+  // from the web is copied into the person's own pictures first.
+  const addFound = (picture: FoundPicture) => {
+    if (picture.source !== "web") {
+      dispatch({
+        type: "addItem",
+        title: picture.title,
+        imageUrl: picture.imageUrl,
+        key: picture.id,
+      });
+      setTyped("");
+      return;
+    }
+    setPictureNote(null);
+    setKeeping((now) => new Set(now).add(picture.id));
+    keep(picture.imageUrl)
+      .then(
+        ({ previewUrl, pictureId }) => {
+          dispatch({
+            type: "addItem",
+            title: picture.title,
+            imageUrl: previewUrl,
+            pictureId,
+            key: picture.id,
+          });
+          setTyped("");
+        },
+        (failure: unknown) => setPictureNote(pictureFailureText(picture.title, failure)),
+      )
+      .finally(() =>
+        setKeeping((now) => {
+          const next = new Set(now);
+          next.delete(picture.id);
+          return next;
+        }),
+      );
   };
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
     addName();
   };
+  const lookEverywhere = () => {
+    setScope("all");
+    setEverywhere(name);
+  };
 
   const added = new Set(items.map((item) => item.key));
+  // Pasted names are looked for where the board is about, in the catalogues
+  // alone: a web picture is copied one at a time, by somebody choosing it.
+  const pasteLookup = (query: string): Promise<CatalogueItem[]> =>
+    find({ q: query, scope: own, page: 1, web: false }).then((page) =>
+      page.items.filter((item) => item.source !== "web"),
+    );
 
   return (
     <>
@@ -262,7 +380,6 @@ export function AddCardBox({ items, category = null, dispatch, lookup, upload }:
             id="card-input"
             type="text"
             value={typed}
-            // The catalogue knows films and an apple alike, whatever the list is about.
             placeholder={strings.new.addPlaceholder}
             autoComplete="off"
             maxLength={80}
@@ -271,39 +388,63 @@ export function AddCardBox({ items, category = null, dispatch, lookup, upload }:
         </div>
         {name.length > 0 && (
           <div className="cards__found" role="group" aria-label={strings.new.suggestions}>
-            {catalogue.status === "searching" && (
-              <p className="cards__note">{strings.new.searching}</p>
-            )}
-            {catalogue.status === "failed" && (
+            <div className="cards__scopes" role="group" aria-label={strings.new.whereToLook}>
+              {scopesFrom(own).map((one) => (
+                <Chip key={one} selected={scope === one} onClick={() => setScope(one)}>
+                  {scopeName(one)}
+                </Chip>
+              ))}
+            </div>
+            {found.status === "searching" && <p className="cards__note">{strings.new.searching}</p>}
+            {found.status === "failed" && (
               <p className="cards__note">{strings.new.catalogueDown}</p>
             )}
-            {catalogue.status === "ready" && catalogue.items.length === 0 && (
-              <p className="cards__note">{strings.new.nothingFound}</p>
-            )}
-            {catalogue.status === "ready" && catalogue.items.length > 0 && (
-              <p className="cards__source">{strings.new.sources}</p>
-            )}
-            {catalogue.status === "ready" &&
-              catalogue.items.slice(0, RESULTS_SHOWN).map((found) => (
-                <button
-                  key={found.id}
-                  type="button"
-                  className="cards__result"
-                  onClick={() => addFound(found)}
-                  disabled={added.has(found.id)}
-                >
-                  <Thumb imageUrl={found.imageUrl} title={found.title} />
-                  <span className="cards__result-text">
-                    <span className="cards__result-title">{found.title}</span>
-                    {found.subtitle !== null && (
-                      <span className="cards__result-sub">{found.subtitle}</span>
-                    )}
+            {found.status === "ready" &&
+              found.notices.map((notice) => (
+                <p key={notice} className="cards__notice">
+                  <Icon name="info" />
+                  <span>
+                    {notice === "webOff" ? strings.new.webOff : strings.new.webDailyLimit}
                   </span>
-                  <span className="cards__result-add">
-                    {added.has(found.id) ? strings.new.added : strings.new.add}
-                  </span>
-                </button>
+                </p>
               ))}
+            {found.status === "ready" && found.items.length === 0 && (
+              <div className="cards__empty">
+                <p className="cards__note">
+                  {scope === "all"
+                    ? strings.new.nothingFound
+                    : fill(strings.new.nothingIn, { scope: scopeName(scope) })}
+                </p>
+                {!(scope === "all" && web) && (
+                  <Button variant="outlined" onClick={lookEverywhere}>
+                    {strings.new.lookEverywhere}
+                  </Button>
+                )}
+              </div>
+            )}
+            {found.status === "ready" && found.items.length > 0 && (
+              <>
+                <p className="cards__source">{sourcesOf(found.items)}</p>
+                <div className="cards__picks">
+                  {found.items.map((picture) => (
+                    <PictureTile
+                      key={picture.id}
+                      found={picture}
+                      added={added.has(picture.id)}
+                      busy={keeping.has(picture.id)}
+                      onPick={() => addFound(picture)}
+                    />
+                  ))}
+                </div>
+                {found.next !== null && (
+                  <div className="cards__more">
+                    <Button onClick={more} disabled={found.more}>
+                      {strings.feed.more}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
             <button type="submit" className="cards__result cards__result--name">
               <Icon name="add" />
               <span className="cards__result-text">{fill(strings.new.addAsName, { name })}</span>
@@ -316,7 +457,7 @@ export function AddCardBox({ items, category = null, dispatch, lookup, upload }:
         room={LIMITS.items - items.length}
         category={category}
         dispatch={dispatch}
-        lookup={lookup ?? findInCatalogue}
+        lookup={pasteLookup}
       />
     </>
   );
