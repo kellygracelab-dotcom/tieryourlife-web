@@ -5,7 +5,7 @@ import { loadAnonymousLists } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
-import { Skeleton } from "../../ui/Skeleton";
+import { PaneLoading } from "./PaneLoading";
 import { liveItems, setAnonymous, type Board } from "../boards/model";
 import { boards as site, type BoardsRepository } from "../boards/repository";
 import { useBoards } from "../boards/useBoards";
@@ -88,7 +88,7 @@ export function AnonymousPane({ deps = anonymousDeps }: { deps?: AnonymousDeps }
       )}
 
       {state.status === "loading" ? (
-        <Skeleton height="128px" />
+        <PaneLoading />
       ) : state.status === "error" ? (
         <div className="admin__trouble" role="alert">
           <p>{strings.admin.failed}</p>

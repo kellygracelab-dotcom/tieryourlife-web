@@ -15,7 +15,7 @@ import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
-import { Skeleton } from "../../ui/Skeleton";
+import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { sectionOf, sectionStyle, type Section } from "../sections/model";
 import type { EditorDeps } from "../sections/editorDeps";
@@ -131,7 +131,7 @@ export function SectionsPane({
   }, [changed]);
 
   if (state.status === "loading" || edited === null || saved === null || answer === null) {
-    return <Skeleton height="320px" />;
+    return <PaneLoading />;
   }
   if (state.status === "error") {
     return (

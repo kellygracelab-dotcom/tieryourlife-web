@@ -5,7 +5,7 @@ import { createTopic, deleteTopic, editTopic, loadTopics } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
-import { Skeleton } from "../../ui/Skeleton";
+import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import type { EditorDeps } from "../sections/editorDeps";
 import { builtInSection, sectionStyle, topicStyle } from "../sections/model";
@@ -122,7 +122,7 @@ export function TopicsPane({
         </p>
       )}
       {state.status === "loading" ? (
-        <Skeleton height="168px" />
+        <PaneLoading />
       ) : state.status === "error" ? (
         <div className="admin__trouble" role="alert">
           <p>{strings.admin.failed}</p>

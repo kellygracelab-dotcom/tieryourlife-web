@@ -26,7 +26,7 @@ import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
-import { Skeleton } from "../../ui/Skeleton";
+import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { sectionOf, sectionStyle, topicPath, topicStyle, type Section } from "../sections/model";
 import type { EditorDeps } from "../sections/editorDeps";
@@ -753,7 +753,7 @@ export function ProposalsPane({
   const [edited, setEdited] = useState<ReadonlyMap<string, ProposedSection>>(new Map());
 
   if (sectionQueue.state.status === "loading" || topicQueue.state.status === "loading") {
-    return <Skeleton height="240px" />;
+    return <PaneLoading />;
   }
   if (sectionQueue.state.status === "error" || topicQueue.state.status === "error") {
     return (
