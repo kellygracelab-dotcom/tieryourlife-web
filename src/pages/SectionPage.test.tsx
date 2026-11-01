@@ -246,12 +246,33 @@ describe("SectionPage", () => {
     topics.mine.mockResolvedValue({ topics: [] });
     open("/s/games");
     await waitFor(() => expect(topics.mine).toHaveBeenCalled());
-    expect(screen.getByRole("link", { name: /Suggest a topic/ })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: /Suggest a topic/ })).toHaveAttribute(
       "href",
       "/b/new?category=games",
     );
     expect(screen.queryByRole("heading", { level: 2, name: "Topics" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Topics" })).toBeNull();
+  });
+
+  it("keeps the order on top, and one ring until the topics and the first page are both in", async () => {
+    let answer: (value: { topics: Topic[] }) => void = () => undefined;
+    topics.load.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    open("/s/games");
+    const order = screen.getByRole("combobox", { name: "Order" });
+    expect(await screen.findByRole("progressbar", { name: "Games" })).toBeInTheDocument();
+    await waitFor(() => expect(load).toHaveBeenCalled());
+    // The lists are in, the topics not yet: still the ring, and no grey cards.
+    expect(screen.queryByText("Nothing published yet")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Topics" })).toBeNull();
+    expect(document.querySelector(".feed--loading")).toBeNull();
+
+    answer({ topics: [topic("t2", "Pokémon")] });
+    const nav = (await tiles()).getByRole("link", { name: "Pokémon" }).closest("nav")!;
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    // Under the order, which has not moved, and then the section's lists, none yet.
+    expect(order.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole("combobox", { name: "Order" })).toBe(order);
+    expect(screen.getByText("Nothing published yet")).toBeInTheDocument();
   });
 
   it("orders by newest on request, in the address", async () => {

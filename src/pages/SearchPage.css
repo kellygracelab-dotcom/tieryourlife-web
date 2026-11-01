@@ -65,7 +65,8 @@
   margin: 0 0 var(--space-3);
 }
 
-.search__suggestions {
+.search__suggestions,
+.search__topics {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);

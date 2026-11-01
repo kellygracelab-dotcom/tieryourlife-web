@@ -2,7 +2,15 @@ import { Link } from "react-router";
 import type { Topic } from "../../api/sections";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
-import { sectionStyle, servedPicture, topicPath, topicPicture, type Section } from "./model";
+import {
+  builtInSection,
+  OTHER,
+  sectionStyle,
+  servedPicture,
+  topicPath,
+  topicPicture,
+  type Section,
+} from "./model";
 import "./topics.css";
 
 interface TopicTilesProps {
@@ -33,6 +41,31 @@ export function TopicTiles({ section, approved, waiting, onOpenWaiting }: TopicT
           topic={topic}
           onOpen={() => onOpenWaiting(topic)}
         />
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * Topics a search found, from any section (the app's FoundTopicTiles): each
+ * over its own section's art, the way a section's page draws its own.
+ */
+export function FoundTopicTiles({
+  topics,
+  sections,
+}: {
+  topics: readonly Topic[];
+  sections: readonly Section[];
+}) {
+  const sectionOf = (topic: Topic): Section => {
+    const id = topic.section ?? OTHER;
+    // One the sections do not hold yet still leads to its own page, in Other's colours.
+    return sections.find((one) => one.id === id) ?? { ...builtInSection(OTHER), id };
+  };
+  return (
+    <nav className="topic-tiles" aria-label={strings.sections.topics}>
+      {topics.map((topic) => (
+        <TopicTile key={topic.id} section={sectionOf(topic)} topic={topic} />
       ))}
     </nav>
   );

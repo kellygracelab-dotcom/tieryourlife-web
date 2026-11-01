@@ -1,11 +1,15 @@
 import { approvedOnly, sectionName, sectionPath } from "../features/sections/model";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import type { Topic } from "../api/sections";
 import { isSectionId, type FeedSort } from "../api/types";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { SearchBox } from "../features/feed/SearchBox";
-import { useFeed } from "../features/feed/useFeed";
+import { useFeed, type FeedState } from "../features/feed/useFeed";
+import { FoundTopicTiles } from "../features/sections/TopicTiles";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
+import { findTopics } from "../lib/api";
+import { useResource } from "../lib/useResource";
 import { fill, plural, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
 import { Chip } from "../ui/Chip";
@@ -68,7 +72,39 @@ function Suggestions({ category, name }: { category: string | undefined; name: s
   );
 }
 
-export function SearchPage({ store = sectionsStore }: { store?: SectionsStore }) {
+export type FindTopics = (q: string, section?: string) => Promise<{ topics: Topic[] }>;
+
+const NONE = { topics: [] };
+const WAITING: FeedState = { status: "loading" };
+
+/**
+ * The approved topics named like the words, next to the lists: null until the
+ * answer is in, and none when it could not be read, the lists being the
+ * search's own answer.
+ */
+function useFoundTopics(
+  q: string | undefined,
+  category: string | undefined,
+  find: FindTopics,
+): Topic[] | null {
+  const ask = useCallback(
+    () => (q === undefined ? Promise.resolve(NONE) : find(q, category)),
+    [q, category, find],
+  );
+  const { state } = useResource(`${q ?? ""}|${category ?? ""}`, ask);
+  if (state.status === "loading") return null;
+  return state.status === "ready"
+    ? state.value.topics.filter((topic) => topic.status === "approved")
+    : [];
+}
+
+export function SearchPage({
+  store = sectionsStore,
+  find = findTopics,
+}: {
+  store?: SectionsStore;
+  find?: FindTopics;
+}) {
   const [params, setParams] = useSearchParams();
   const filters = read(params);
   const { sections } = useSections(store);
@@ -107,6 +143,9 @@ export function SearchPage({ store = sectionsStore }: { store?: SectionsStore })
     sort: filters.sort,
     category: filters.category,
   });
+  const found = useFoundTopics(searching ? filters.q : undefined, filters.category, find);
+  // The results wait for the topics too, so that nothing moves when they come.
+  const results = found === null ? WAITING : feed.state;
 
   const where =
     filters.category === undefined ? (
@@ -114,7 +153,9 @@ export function SearchPage({ store = sectionsStore }: { store?: SectionsStore })
     ) : (
       <Link to={sectionPath(filters.category)}>{name}</Link>
     );
-  const nothing = searching && feed.state.status === "ready" && feed.state.lists.length === 0;
+  const noLists = results.status === "ready" && results.lists.length === 0;
+  const topics = found ?? [];
+  const nothing = searching && noLists && topics.length === 0;
 
   return (
     <section className="search">
@@ -123,11 +164,11 @@ export function SearchPage({ store = sectionsStore }: { store?: SectionsStore })
         <h1 className="search__title">
           {searching ? fill(strings.search.title, { q: filters.q }) : strings.search.browse}
         </h1>
-        {feed.state.status === "ready" && (
+        {results.status === "ready" && (
           <p className="search__count">
-            {feed.state.next === null
-              ? plural(strings.search.count, feed.state.lists.length)
-              : plural(strings.search.countMore, feed.state.lists.length)}
+            {results.next === null
+              ? plural(strings.search.count, results.lists.length)
+              : plural(strings.search.countMore, results.lists.length)}
           </p>
         )}
       </div>
@@ -183,13 +224,26 @@ export function SearchPage({ store = sectionsStore }: { store?: SectionsStore })
           <Suggestions category={filters.category} name={name} />
         </>
       ) : (
-        <FeedGrid
-          state={feed.state}
-          label={strings.search.results}
-          retry={feed.retry}
-          more={feed.more}
-          hiddenNote
-        />
+        <>
+          {topics.length > 0 && (
+            <section className="search__topics" aria-labelledby="search-topics">
+              <h2 id="search-topics" className="search__subtitle">
+                {strings.sections.topics}
+              </h2>
+              <FoundTopicTiles topics={topics} sections={sections} />
+            </section>
+          )}
+          {/* Topics alone are an answer: no line saying nothing was published. */}
+          {!(noLists && topics.length > 0) && (
+            <FeedGrid
+              state={results}
+              label={strings.search.results}
+              retry={feed.retry}
+              more={feed.more}
+              hiddenNote
+            />
+          )}
+        </>
       )}
     </section>
   );
