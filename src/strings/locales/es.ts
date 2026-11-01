@@ -738,6 +738,33 @@ const es: Translation = {
     mayWait:
       "Las listas de aquí pueden esperar una sección propuesta ({names}). Si mueves una, deja de esperar esa propuesta.",
     moveAnyway: "Mover de todos modos",
+    house: "Listas de la casa",
+    houseBody:
+      "Publicadas por nadie: sin nombre, sin cara, sin cuenta. Los visitantes ven una lista anónima.",
+    houseHowTo:
+      "Para cambiar una: ábrela, elige Guardar en mis listas, edita esa lista y luego usa aquí Reemplazar con una de mis listas.",
+    publishBoard: "Publicar una de mis listas",
+    replaceFromBoard: "Reemplazar con una de mis listas",
+    houseNone: "Aún no hay listas de la casa.",
+    housePick: "¿Cuál de tus listas sale en nombre de la casa?",
+    houseReplacePick: "¿Con cuál de tus listas reemplazar «{title}»?",
+    housePickNote: "La casa recibe una copia. Tu lista sigue privada, tal como está.",
+    houseReplaceNote:
+      "La lista conserva su enlace; su título, niveles y cartas pasan a ser los de tu lista.",
+    houseReplacing: "Reemplazando…",
+    housePublished: "Publicada",
+    houseReplaced: "Reemplazada",
+    houseFailed: "No se pudo publicar. Inténtalo de nuevo.",
+    houseReplaceFailed: "No se pudo reemplazar. Inténtalo de nuevo.",
+    housePictureRefused:
+      "Se rechazó una de las imágenes de tu lista. Cámbiala e inténtalo de nuevo.",
+    houseStaffOnly: "Solo el propietario y los moderadores pueden publicar en nombre de la casa.",
+    houseNotHouse: "Esa lista no es de la casa, así que no se puede cambiar aquí.",
+    takeDown: "Retirar",
+    takeDownAsk: "¿Retirar «{title}»?",
+    takeDownBody: "Sale del sitio y su enlace deja de funcionar. Tus listas se quedan como están.",
+    takingDown: "Retirando…",
+    takenDown: "«{title}» retirada",
   },
   sections: {
     followers: { one: "{n} seguidor", many: "{n} seguidores", other: "{n} seguidores" },

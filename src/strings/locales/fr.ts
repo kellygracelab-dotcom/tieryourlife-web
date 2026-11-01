@@ -753,6 +753,34 @@ const fr: Translation = {
     mayWait:
       "Des listes ici attendent peut-être une rubrique proposée ({names}). Déplacée, une liste ne l’attend plus.",
     moveAnyway: "Déplacer quand même",
+    house: "Listes de la maison",
+    houseBody:
+      "Publiées par personne : ni nom, ni visage, ni compte. Les visiteurs voient une liste anonyme.",
+    houseHowTo:
+      "Pour en modifier une : ouvrez-la, choisissez Enregistrer dans mes listes, modifiez cette liste, puis utilisez ici Remplacer par une de mes listes.",
+    publishBoard: "Publier une de mes listes",
+    replaceFromBoard: "Remplacer par une de mes listes",
+    houseNone: "Aucune liste de la maison pour l’instant.",
+    housePick: "Laquelle de vos listes publier au nom de la maison ?",
+    houseReplacePick: "Remplacer « {title} » par laquelle de vos listes ?",
+    housePickNote: "La maison en reçoit une copie. Votre liste reste privée, telle quelle.",
+    houseReplaceNote:
+      "La liste garde son lien ; son titre, ses rangs et ses cartes deviennent ceux de votre liste.",
+    houseReplacing: "Remplacement…",
+    housePublished: "Publiée",
+    houseReplaced: "Remplacée",
+    houseFailed: "Impossible de publier. Réessayez.",
+    houseReplaceFailed: "Impossible de remplacer. Réessayez.",
+    housePictureRefused: "Une image de votre liste a été refusée. Changez-la et réessayez.",
+    houseStaffOnly: "Seuls le propriétaire et les modérateurs peuvent publier au nom de la maison.",
+    houseNotHouse:
+      "Cette liste n’est pas une liste de la maison : elle ne peut pas être modifiée ici.",
+    takeDown: "Retirer",
+    takeDownAsk: "Retirer « {title} » ?",
+    takeDownBody:
+      "Elle quitte le site et son lien ne fonctionne plus. Vos listes restent telles qu’elles sont.",
+    takingDown: "Retrait…",
+    takenDown: "« {title} » retirée",
   },
   sections: {
     followers: { one: "{n} abonné", many: "{n} abonnés", other: "{n} abonnés" },

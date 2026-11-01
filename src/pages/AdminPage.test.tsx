@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 
 describe("AdminPage", () => {
-  it("opens all seven panes to the owner, with Reports first", async () => {
+  it("opens all eight panes to the owner, with Reports first", async () => {
     mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
     open();
     expect(await screen.findByRole("heading", { name: "Admin" })).toBeInTheDocument();
@@ -72,9 +72,39 @@ describe("AdminPage", () => {
       "/admin/topics",
       "/admin/lists",
       "/admin/anonymous",
+      "/admin/house",
       "/admin/moderators",
     ]);
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("opens House lists to the owner", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    open("/admin/house");
+    expect(await screen.findByRole("heading", { name: "House lists" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "House lists" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("opens House lists to a moderator too", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "moderator", version: 1 });
+    open("/admin/house");
+    expect(await screen.findByRole("heading", { name: "House lists" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "House lists" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("does not open House lists to a signed-in person the backend gives no role", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: null, version: 1 });
+    mocks.loadReports.mockRejectedValue(new ApiFailure({ kind: "notYours" }));
+    open("/admin/house");
+    expect(await screen.findByText("This page isn’t available.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "House lists" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "House lists" })).toBeNull();
   });
 
   it("leaves a moderator without the owner's panes, even at their address", async () => {
@@ -87,6 +117,7 @@ describe("AdminPage", () => {
       "/admin/sections",
       "/admin/topics",
       "/admin/lists",
+      "/admin/house",
     ]);
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
   });

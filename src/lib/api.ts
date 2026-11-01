@@ -14,6 +14,7 @@ import type {
   ListMove,
   SectionDraft,
   FinishCall,
+  HouseAnswer,
   TopicApproval,
   TopicChanges,
   TopicDecision,
@@ -41,7 +42,7 @@ import * as rank from "../api/rank";
 import * as sections from "../api/sections";
 import type { SectionProposal, SectionStats, Topic } from "../api/sections";
 import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
-import type { CatalogueItem, FeedPage, FeedQuery, PublishedList } from "../api/types";
+import type { CatalogueItem, FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
@@ -293,3 +294,15 @@ export const loadAdminLists = (
 ): Promise<{ lists: AdminList[]; nextCursor: string | null }> => admin.loadAdminLists(api, query);
 
 export const moveList = (id: string, to: ListMove): Promise<void> => admin.moveList(api, id, to);
+
+export const loadHouseLists = (
+  after: string | null = null,
+): Promise<{ lists: ListSummary[]; nextCursor: string | null }> => admin.loadHouseLists(api, after);
+
+export const publishAsHouse = (request: PublishRequest): Promise<HouseAnswer> =>
+  admin.publishAsHouse(api, request);
+
+export const replaceHouseList = (id: string, request: PublishRequest): Promise<HouseAnswer> =>
+  admin.replaceHouseList(api, id, request);
+
+export const takeDownHouseList = (id: string): Promise<void> => admin.takeDownHouseList(api, id);

@@ -724,6 +724,33 @@ const ja: Translation = {
     mayWait:
       "ここのリストは提案中のセクション（{names}）を待っているかもしれません。移動すると、その提案を待たなくなります。",
     moveAnyway: "それでも移動",
+    house: "編集部のリスト",
+    houseBody:
+      "誰の名前でも公開されません。名前も顔もアカウントもなし。訪問者には匿名のリストとして表示されます。",
+    houseHowTo:
+      "変更するには、リストを開いて「自分のリストに保存」を選び、そのリストを編集してから、ここで「自分のリストで差し替える」を使います。",
+    publishBoard: "自分のリストを公開",
+    replaceFromBoard: "自分のリストで差し替える",
+    houseNone: "編集部のリストはまだありません。",
+    housePick: "どのリストを編集部として公開しますか？",
+    houseReplacePick: "「{title}」をどのリストで差し替えますか？",
+    housePickNote: "編集部にはコピーが渡ります。あなたのリストは非公開のまま変わりません。",
+    houseReplaceNote:
+      "リンクはそのままです。タイトル、ティア、カードはあなたのリストのものになります。",
+    houseReplacing: "差し替え中…",
+    housePublished: "公開しました",
+    houseReplaced: "差し替えました",
+    houseFailed: "公開できませんでした。もう一度お試しください。",
+    houseReplaceFailed: "差し替えられませんでした。もう一度お試しください。",
+    housePictureRefused:
+      "リストの画像のひとつが受け付けられませんでした。変更してもう一度お試しください。",
+    houseStaffOnly: "編集部として公開できるのはオーナーとモデレーターだけです。",
+    houseNotHouse: "これは編集部のリストではないため、ここでは変更できません。",
+    takeDown: "取り下げる",
+    takeDownAsk: "「{title}」を取り下げますか？",
+    takeDownBody: "サイトから消え、リンクも使えなくなります。あなたのリストはそのまま残ります。",
+    takingDown: "取り下げ中…",
+    takenDown: "「{title}」を取り下げました",
   },
   sections: {
     followers: { other: "フォロワー{n}人" },

@@ -730,6 +730,32 @@ const tr: Translation = {
     mayWait:
       "Buradaki listeler önerilen bir bölümü ({names}) bekliyor olabilir. Taşınan liste artık bu öneriyi beklemez.",
     moveAnyway: "Yine de taşı",
+    house: "Editör listeleri",
+    houseBody:
+      "Kimse tarafından yayınlanmaz: ad yok, yüz yok, hesap yok. Ziyaretçiler anonim bir liste görür.",
+    houseHowTo:
+      "Birini değiştirmek için listeyi aç, Listelerime kaydet'i seç, o listeyi düzenle, sonra burada Kendi listemle değiştir'i kullan.",
+    publishBoard: "Kendi listemi yayınla",
+    replaceFromBoard: "Kendi listemle değiştir",
+    houseNone: "Henüz editör listesi yok.",
+    housePick: "Hangi listen editör adına yayınlansın?",
+    houseReplacePick: "“{title}” hangi listenle değiştirilsin?",
+    housePickNote: "Editör bir kopyasını alır. Senin listen olduğu gibi gizli kalır.",
+    houseReplaceNote:
+      "Listenin bağlantısı aynı kalır; başlığı, seviyeleri ve kartları senin listeninkiler olur.",
+    houseReplacing: "Değiştiriliyor…",
+    housePublished: "Yayınlandı",
+    houseReplaced: "Değiştirildi",
+    houseFailed: "Yayınlanamadı. Tekrar dene.",
+    houseReplaceFailed: "Değiştirilemedi. Tekrar dene.",
+    housePictureRefused: "Listendeki resimlerden biri reddedildi. Onu değiştirip tekrar dene.",
+    houseStaffOnly: "Editör adına yalnızca sahip ve moderatörler yayınlayabilir.",
+    houseNotHouse: "Bu bir editör listesi değil, bu yüzden burada değiştirilemez.",
+    takeDown: "Yayından kaldır",
+    takeDownAsk: "“{title}” yayından kaldırılsın mı?",
+    takeDownBody: "Siteden kalkar ve bağlantısı artık çalışmaz. Listelerin olduğu gibi kalır.",
+    takingDown: "Kaldırılıyor…",
+    takenDown: "“{title}” yayından kaldırıldı",
   },
   sections: {
     followers: { one: "{n} takipçi", other: "{n} takipçi" },

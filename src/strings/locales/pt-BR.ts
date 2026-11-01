@@ -734,6 +734,32 @@ const ptBR: Translation = {
     mayWait:
       "As listas aqui podem aguardar uma seção proposta ({names}). Se você mover uma, ela deixa de aguardar essa proposta.",
     moveAnyway: "Mover mesmo assim",
+    house: "Listas da casa",
+    houseBody:
+      "Publicadas por ninguém: sem nome, sem rosto, sem conta. Os visitantes veem uma lista anônima.",
+    houseHowTo:
+      "Para mudar uma: abra, escolha Salvar nas minhas listas, edite essa lista e depois use aqui Substituir por uma das minhas listas.",
+    publishBoard: "Publicar uma das minhas listas",
+    replaceFromBoard: "Substituir por uma das minhas listas",
+    houseNone: "Nenhuma lista da casa ainda.",
+    housePick: "Qual das suas listas sai em nome da casa?",
+    houseReplacePick: "Substituir “{title}” por qual das suas listas?",
+    housePickNote: "A casa recebe uma cópia. Sua lista continua privada, do jeito que está.",
+    houseReplaceNote:
+      "A lista mantém o link; o título, os níveis e as cartas passam a ser os da sua lista.",
+    houseReplacing: "Substituindo…",
+    housePublished: "Publicada",
+    houseReplaced: "Substituída",
+    houseFailed: "Não foi possível publicar. Tente de novo.",
+    houseReplaceFailed: "Não foi possível substituir. Tente de novo.",
+    housePictureRefused: "Uma das imagens da sua lista foi recusada. Troque-a e tente de novo.",
+    houseStaffOnly: "Só o dono e os moderadores podem publicar em nome da casa.",
+    houseNotHouse: "Essa lista não é da casa, então não dá para mudá-la aqui.",
+    takeDown: "Remover",
+    takeDownAsk: "Remover “{title}”?",
+    takeDownBody: "Ela sai do site e o link para de funcionar. Suas listas ficam como estão.",
+    takingDown: "Removendo…",
+    takenDown: "“{title}” removida",
   },
   sections: {
     followers: { one: "{n} seguidor", many: "{n} seguidores", other: "{n} seguidores" },

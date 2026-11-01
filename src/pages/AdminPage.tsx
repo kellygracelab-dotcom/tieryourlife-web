@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router";
 import type { AdminRole } from "../api/admin";
 import { AnonymousPane } from "../features/admin/AnonymousPane";
+import { HousePane } from "../features/admin/HousePane";
 import { ListsPane } from "../features/admin/ListsPane";
 import { ModeratorsPane } from "../features/admin/ModeratorsPane";
 import { ProposalsPane } from "../features/admin/ProposalsPane";
@@ -24,6 +25,7 @@ const PANE_LOOK: Record<Pane, { icon: IconName; label: string }> = {
   topics: { icon: "label", label: strings.admin.topics },
   lists: { icon: "view_list", label: strings.admin.lists },
   anonymous: { icon: "visibility_off", label: strings.admin.anonymous },
+  house: { icon: "public", label: strings.admin.house },
   moderators: { icon: "shield", label: strings.admin.moderators },
 };
 
@@ -66,6 +68,8 @@ function PaneBody({ pane, adminRole: role }: { pane: Pane; adminRole: AdminRole 
       return <ModeratorsPane />;
     case "anonymous":
       return <AnonymousPane />;
+    case "house":
+      return <HousePane />;
   }
 }
 

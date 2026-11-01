@@ -87,6 +87,10 @@ export function apiStubs() {
     loadAnonymousLists: pending(),
     loadAdminLists: pending(),
     moveList: pending(),
+    loadHouseLists: pending(),
+    publishAsHouse: pending(),
+    replaceHouseList: pending(),
+    takeDownHouseList: pending(),
     noteTake: vi.fn(async () => undefined),
   };
 }

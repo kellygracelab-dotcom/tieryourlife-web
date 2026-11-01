@@ -5,10 +5,15 @@ import {
   editTopic,
   finishDecision,
   loadAdminLists,
+  loadHouseLists,
   mergeSectionIntoTopic,
   moveList,
+  publishAsHouse,
+  replaceHouseList,
+  takeDownHouseList,
 } from "./admin";
 import type { ApiClient } from "./client";
+import type { PublishRequest } from "./lists";
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -93,5 +98,53 @@ describe("admin", () => {
       finishDecision(client, "p", { action: "../delete" as never, body: {} }),
     ).rejects.toThrow("Not a decision");
     expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it("publishes, replaces and takes down a house list at the editorial address", async () => {
+    const body: PublishRequest = {
+      title: "Best ramen",
+      category: "food",
+      coverImageUrl: null,
+      coverPictureId: null,
+      tiers: [],
+      items: [],
+    };
+    const { client, request } = recordingClient({ id: "l1", topicId: null });
+    await expect(publishAsHouse(client, body)).resolves.toEqual({ id: "l1", topicId: null });
+    expect(request).toHaveBeenCalledWith("POST", "/lists/editorial", { body });
+    await replaceHouseList(client, "l 1", body);
+    expect(request).toHaveBeenLastCalledWith("PUT", "/lists/editorial/l%201", { body });
+    await takeDownHouseList(client, "l1");
+    expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/editorial/l1");
+  });
+
+  it("reads the house's lists a page after another, their covers only real pictures", async () => {
+    const list = {
+      id: "l1",
+      title: "Best ramen",
+      anonymous: true,
+      authorUid: "",
+      authorName: "",
+      authorPhotoUrl: null,
+      category: "food",
+      itemCount: 3,
+      coverImageUrl: "null",
+      previewImages: [],
+      tierColors: [],
+      updatedAt: 0,
+      takeCount: 0,
+    };
+    const { client, request } = recordingClient({ lists: [list], nextCursor: "c1" });
+    const page = await loadHouseLists(client);
+    expect(page.nextCursor).toBe("c1");
+    expect(page.lists[0]?.coverImageUrl).toBeNull();
+    expect(request).toHaveBeenCalledWith("GET", "/lists/editorial", {
+      query: { after: undefined },
+    });
+    await loadHouseLists(client, "c1");
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/editorial", { query: { after: "c1" } });
+    // An answer without its fields reads as an empty last page.
+    const empty = recordingClient({});
+    await expect(loadHouseLists(empty.client)).resolves.toEqual({ lists: [], nextCursor: null });
   });
 });
