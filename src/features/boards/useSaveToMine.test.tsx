@@ -9,7 +9,7 @@ import { saveDraft, scopeOf } from "../tierboard/draft";
 import { itemsIn, poolTier, rankedTiers } from "./model";
 import { boardsRepository, type BoardsRepository } from "./repository";
 import { SaveToMineDialog } from "./SaveToMineDialog";
-import { useSaveToMine } from "./useSaveToMine";
+import { useSaveToMine, type ShownPlacing } from "./useSaveToMine";
 
 const list = (placed: boolean): PublishedList => ({
   id: "L1",
@@ -40,13 +40,15 @@ function Harness({
   repository,
   store,
   notify,
+  shown,
 }: {
   of: PublishedList;
   repository: BoardsRepository;
   store: KeyValueStore;
   notify: (notice: SnackbarNotice) => void;
+  shown: ShownPlacing | null;
 }) {
-  const saving = useSaveToMine(of, notify, { repository, store, now: () => 7 });
+  const saving = useSaveToMine(of, notify, { repository, store, now: () => 7, shown });
   return (
     <>
       <button type="button" onClick={saving.start}>
@@ -57,7 +59,11 @@ function Harness({
   );
 }
 
-const show = (of: PublishedList, store: KeyValueStore = memoryStore()) => {
+const show = (
+  of: PublishedList,
+  store: KeyValueStore = memoryStore(),
+  shown: ShownPlacing | null = null,
+) => {
   const repository = boardsRepository(memoryStore());
   const notify = vi.fn<(notice: SnackbarNotice) => void>();
   render(
@@ -65,7 +71,9 @@ const show = (of: PublishedList, store: KeyValueStore = memoryStore()) => {
       <Routes>
         <Route
           path="/"
-          element={<Harness of={of} repository={repository} store={store} notify={notify} />}
+          element={
+            <Harness of={of} repository={repository} store={store} notify={notify} shown={shown} />
+          }
         />
         <Route path="/b/:uid" element={<h1>the board</h1>} />
       </Routes>
@@ -119,5 +127,47 @@ describe("useSaveToMine", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await userEvent.click(screen.getByRole("button", { name: "Unranked, I'll do it" }));
     expect(titlesIn(repository)).toEqual({ s: [], a: [], pool: ["A", "B", "C"] });
+  });
+
+  it("keeps my own at once on a template, a list with nothing placed, whoever made it", async () => {
+    for (const template of [
+      list(false),
+      { ...list(false), anonymous: true },
+      { ...list(false), authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2" },
+    ]) {
+      const store = memoryStore();
+      saveDraft(store, scopeOf(template), [[2], []]);
+      const { repository } = show(template, store);
+      await userEvent.click(screen.getAllByRole("button", { name: "Save" }).at(-1)!);
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(titlesIn(repository)).toEqual({ s: ["C"], a: [], pool: ["A", "B"] });
+    }
+  });
+
+  it("offers a reader's ranking on show as Theirs, by name, with its own tier words", async () => {
+    const template = list(false);
+    const olena: ShownPlacing = {
+      name: "Olena",
+      tiers: [{ ...template.tiers[0]!, label: "Top" }, template.tiers[1]!],
+      rows: [[1], [0]],
+    };
+    const { repository } = show(template, memoryStore(), olena);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    const dialog = screen.getByRole("dialog", { name: "Which ranking to save?" });
+    expect(dialog).not.toHaveTextContent("The author's");
+    await userEvent.click(screen.getByRole("button", { name: "Olena" }));
+    expect(titlesIn(repository)).toEqual({ s: ["B"], a: ["A"], pool: ["C"] });
+    expect(rankedTiers(repository.all()[0]!).map((tier) => tier.label)).toEqual(["Top", "A"]);
+  });
+
+  it("still asks on a ranked list without an author", async () => {
+    const ranked = { ...list(true), anonymous: true };
+    const store = memoryStore();
+    saveDraft(store, scopeOf(ranked), [[2], []]);
+    show(ranked, store);
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("dialog", { name: "Which ranking to save?" })).toHaveTextContent(
+      "The author's",
+    );
   });
 });

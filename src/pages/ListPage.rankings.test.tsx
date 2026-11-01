@@ -324,11 +324,21 @@ describe("ListPage rankings", () => {
       "aria-pressed",
       "true",
     );
+    // Two halves, so Save asks, and offers the reader's placing by name.
+    await userEvent.click(screen.getAllByRole("button", { name: "Save to my lists" })[0]!);
+    const asking = screen.getByRole("dialog", { name: "Which ranking to save?" });
+    expect(within(asking).getByRole("button", { name: "olena" })).toBeInTheDocument();
+    await userEvent.click(within(asking).getByRole("button", { name: "Cancel" }));
+
     await userEvent.click(
       within(whose()).getByRole("button", { name: "Back to the author’s ranking" }),
     );
     expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
+    // One half again: a template is saved as one's own without a question.
+    await userEvent.click(screen.getAllByRole("button", { name: "Save to my lists" })[0]!);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await screen.findByText("Saved to your lists.")).toBeInTheDocument();
   });
 
   it("names nobody in the first row of an editorial list", async () => {
