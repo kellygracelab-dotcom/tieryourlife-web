@@ -129,6 +129,21 @@ describe("Shell header", () => {
 });
 
 describe("Shell account", () => {
+  it("draws the face last seen until Firebase says who is here, and Sign in only for nobody", () => {
+    window.localStorage.setItem(
+      "tyl:signedIn",
+      JSON.stringify({ displayName: "Danylo", photoUrl: "https://p/me.jpg" }),
+    );
+    open({ account: null });
+    expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
+    expect(document.querySelector("header img.face")).toHaveAttribute("src", "https://p/me.jpg");
+  });
+
+  it("offers Sign in while Firebase is asked on a device nobody signed in on", () => {
+    open({ account: null });
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  });
+
   it("lets a guest sign in, and says so when that fails", async () => {
     const signIn = vi.fn(async () => ({
       kind: "failed" as const,

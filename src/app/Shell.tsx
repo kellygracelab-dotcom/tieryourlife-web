@@ -12,6 +12,7 @@ import { useModerator } from "../features/moderation/useModerator";
 import type { Account } from "../lib/account";
 import { appIsLive, onApple, playUrl } from "../lib/links";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
+import { lastSeen } from "../lib/signedInHint";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
@@ -35,6 +36,15 @@ function AppFooterLink() {
   );
 }
 
+/** A signed-in person's face in the header, or the first letter of their name. */
+function FaceOf({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
+  return photoUrl !== null ? (
+    <img className="face" src={photoUrl} alt="" referrerPolicy="no-referrer" />
+  ) : (
+    <span className="face face--initial">{initialOf(name)}</span>
+  );
+}
+
 /** Where a signed-in person's own things are. Signing out is a setting, and lives with the settings. */
 function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn" }> }) {
   const moderator = useModerator();
@@ -48,11 +58,7 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
       buttonClassName="menu__button menu__button--face"
       button={
         <>
-          {account.photoUrl !== null ? (
-            <img className="face" src={account.photoUrl} alt="" referrerPolicy="no-referrer" />
-          ) : (
-            <span className="face face--initial">{initialOf(account.displayName)}</span>
-          )}
+          <FaceOf name={account.displayName} photoUrl={account.photoUrl} />
           <Icon name="expand_more" className="menu__chevron" />
         </>
       }
@@ -139,6 +145,7 @@ function BarSearch({ asked }: { asked: string }) {
 
 export function Shell() {
   const { account, signIn } = useSession();
+  const [seen] = useState(() => lastSeen());
   const [signing, setSigning] = useState<"idle" | "busy" | "failed" | "inApp">("idle");
 
   // On a phone the list's heading scrolls away under the tray's work; once it
@@ -196,6 +203,12 @@ export function Shell() {
           </Link>
           {account?.kind === "signedIn" ? (
             <AccountMenu account={account} />
+          ) : account === null && seen !== null ? (
+            // Who was here last time, until Firebase says: Sign in flashed first.
+            <span className="menu__button menu__button--face" aria-hidden="true">
+              <FaceOf name={seen.displayName} photoUrl={seen.photoUrl} />
+              <Icon name="expand_more" className="menu__chevron" />
+            </span>
           ) : (
             <>
               {signing === "failed" && (

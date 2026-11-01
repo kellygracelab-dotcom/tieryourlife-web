@@ -1519,6 +1519,13 @@
   background: var(--hover);
 }
 
+/* Moving on to another item lights that one only: the tiers stay a moment
+   for a pointer on its way to them, but Move to a tier no longer looks chosen. */
+.card-menu:has(.card-menu__item:focus:not([aria-expanded="true"]))
+  .card-menu__item[aria-expanded="true"] {
+  background: none;
+}
+
 .card-menu__item[aria-disabled="true"] {
   color: var(--ink-dim);
   cursor: default;
