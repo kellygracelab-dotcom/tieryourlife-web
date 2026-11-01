@@ -107,7 +107,7 @@ export function SearchPage({
 }) {
   const [params, setParams] = useSearchParams();
   const filters = read(params);
-  const { sections } = useSections(store);
+  const { sections, known } = useSections(store);
   const name = filters.category === undefined ? "" : sectionName(filters.category, sections);
   const [typed, setTyped] = useState(filters.q);
   // Words that arrive by the address — from the bar's field, or a link — go
@@ -191,8 +191,9 @@ export function SearchPage({
         >
           {strings.search.all}
         </Chip>
-        {/* Every section anybody may open, in the order the site draws them: Other last. */}
-        {approvedOnly(sections).map((section) => (
+        {/* Every section anybody may open, in the order the site draws them: Other
+            last. Only once known: the nine first, in their own order, reshuffled. */}
+        {(known ? approvedOnly(sections) : []).map((section) => (
           <Chip
             key={section.id}
             selected={filters.category === section.id}

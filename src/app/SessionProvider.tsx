@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { claimKeptRankings } from "../features/ranking/claim";
 import { currentAccount, subscribeToAccount, type Account } from "../lib/account";
+import { noteSignedIn } from "../lib/signedInHint";
 import { carryGuest } from "../lib/api";
 import { signOutToGuest } from "../lib/firebase";
 import { isInAppBrowser } from "../lib/inAppBrowser";
@@ -47,7 +48,14 @@ export function SessionProvider({
   // A face chosen a moment ago and still on its way to Firebase.
   const [shownFace, showFace] = useState<string | null | undefined>(undefined);
 
-  useEffect(() => subscribe(setAccount), [subscribe]);
+  useEffect(
+    () =>
+      subscribe((next) => {
+        noteSignedIn(next);
+        setAccount(next);
+      }),
+    [subscribe],
+  );
 
   // A sign-in that left through a redirect lands back here.
   useEffect(() => {

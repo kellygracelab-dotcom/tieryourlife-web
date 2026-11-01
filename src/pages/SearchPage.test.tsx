@@ -14,6 +14,17 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
+  // The sections answer at once: until they do, a page draws their places only.
+  loadSections: vi.fn(async () => ({
+    sections: (await import("../api/types")).CATEGORIES.map((id) => ({
+      id,
+      listCount: 0,
+      followerCount: 0,
+      newThisWeek: 0,
+      collage: [],
+      following: false,
+    })),
+  })),
   followAuthor: vi.fn(),
   unfollowAuthor: vi.fn(),
   report: vi.fn(),
@@ -155,7 +166,7 @@ describe("SearchPage", () => {
     expect(router.state.location.search).toBe("?sort=recent");
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({ sort: "recent" });
 
-    await userEvent.click(screen.getByRole("button", { name: "Games" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Games" }));
     expect(router.state.location.search).toBe("?sort=recent&category=games");
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({ sort: "recent", category: "games" });
 
@@ -216,7 +227,7 @@ describe("SearchPage", () => {
 
   it("keeps the words when a category is chosen", async () => {
     const router = open("/search?q=anime");
-    await userEvent.click(screen.getByRole("button", { name: "Games" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Games" }));
     expect(router.state.location.search).toBe("?q=anime&category=games");
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({
       q: "anime",
@@ -292,7 +303,7 @@ describe("SearchPage", () => {
     const box = within(screen.getByRole("main")).getByRole("searchbox");
     await userEvent.clear(box);
     await userEvent.type(box, "ghibli");
-    await userEvent.click(screen.getByRole("button", { name: "Games" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Games" }));
     act(() => {
       vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS + 50);
     });

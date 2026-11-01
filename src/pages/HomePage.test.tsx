@@ -5,10 +5,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
 import { CATEGORIES, type FeedPage, type FeedQuery, type ListSummary } from "../api/types";
 import { routes } from "../app/routes";
+import { SessionContext } from "../app/session";
 
 const mocks = vi.hoisted(() => ({ loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>() }));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
+  // The sections answer at once: until they do, a page draws their places only.
+  loadSections: vi.fn(async () => ({
+    sections: (await import("../api/types")).CATEGORIES.map((id) => ({
+      id,
+      listCount: 0,
+      followerCount: 0,
+      newThisWeek: 0,
+      collage: [],
+      following: false,
+    })),
+  })),
   followAuthor: vi.fn(),
   unfollowAuthor: vi.fn(),
   report: vi.fn(),
@@ -53,9 +65,9 @@ describe("HomePage", () => {
     });
     open();
 
-    const tiles = within(screen.getByRole("navigation", { name: "Categories" })).getAllByRole(
-      "link",
-    );
+    const tiles = await within(
+      screen.getByRole("navigation", { name: "Categories" }),
+    ).findAllByRole("link");
     // The nine, in the app's order, until the backend says otherwise.
     expect(tiles.map((tile) => tile.getAttribute("href"))).toEqual(
       CATEGORIES.map((id) => `/s/${id}`),
@@ -70,10 +82,31 @@ describe("HomePage", () => {
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
   });
 
+  it("draws Explore and Following from the start on a device last seen signed in", () => {
+    window.localStorage.setItem("tyl:signedIn", "1");
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    // Firebase has not said who is here yet.
+    render(
+      <SessionContext.Provider
+        value={{
+          account: null,
+          signIn: async () => ({ kind: "cancelled" }),
+          signOut: async () => undefined,
+          refresh: () => undefined,
+        }}
+      >
+        <RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/following"] })} />
+      </SessionContext.Provider>,
+    );
+    expect(screen.getByRole("link", { name: "Following" })).toHaveAttribute("aria-current", "page");
+    // Whose Following it is, Firebase has not said yet: a ring, not Explore.
+    expect(screen.getByRole("progressbar", { name: "Following" })).toBeInTheDocument();
+  });
+
   it("opens a section from its tile", async () => {
     mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
     open();
-    await userEvent.click(screen.getByRole("link", { name: "Games" }));
+    await userEvent.click(await screen.findByRole("link", { name: "Games" }));
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Games");
     expect(mocks.loadFeed).toHaveBeenLastCalledWith({ category: "games", sort: "popular" });
     expect(await screen.findByText("Nothing published yet")).toBeInTheDocument();
@@ -90,7 +123,7 @@ describe("HomePage", () => {
     open();
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not load the lists.");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Rank anything");
-    expect(screen.getByRole("link", { name: "Anime" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Anime" })).toBeInTheDocument();
   });
 
   it("shows the Android app card first, above the hero", () => {

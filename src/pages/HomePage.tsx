@@ -14,7 +14,9 @@ import { useFeed, type LoadFeed } from "../features/feed/useFeed";
 import { FOLLOWING_PATH } from "../features/sections/model";
 import { SectionGrid } from "../features/sections/SectionGrid";
 import { useSections, type SectionsStore } from "../features/sections/useSections";
+import { wasSignedIn } from "../lib/signedInHint";
 import { strings } from "../strings";
+import { Spinner } from "../ui/Spinner";
 import "./HomePage.css";
 
 /** The one line after an account is deleted stays this long. */
@@ -62,10 +64,10 @@ function Explore({
   store: SectionsStore | undefined;
 }) {
   const popular = useFeed({ sort: "popular" }, load);
-  const { sections } = useSections(store);
+  const { sections, known } = useSections(store);
   return (
     <>
-      <SectionGrid sections={sections} />
+      <SectionGrid sections={sections} known={known} />
       <section className="home__popular" aria-labelledby="popular">
         <div className="home__heading">
           <h2 id="popular">{strings.sections.popularThisWeek}</h2>
@@ -109,6 +111,8 @@ export function HomePage({
   const signedIn = account?.kind === "signedIn";
   // Following is somebody's own: a guest has nothing to follow with yet.
   if (tab === "following" && account !== null && !signedIn) return <Navigate to="/" replace />;
+  // Until Firebase says who is here, the tabs stand on this device's last word.
+  const tabs = signedIn || (account === null && wasSignedIn());
 
   return (
     <div className="home">
@@ -128,8 +132,10 @@ export function HomePage({
         />
       </section>
 
-      {signedIn && <HomeTabs tab={tab} />}
-      {tab === "following" && signedIn ? (
+      {tabs && <HomeTabs tab={tab} />}
+      {tab === "following" && account === null ? (
+        <Spinner className="home__waiting" label={strings.sections.tabFollowing} />
+      ) : tab === "following" && signedIn ? (
         <FollowingTab
           key={account.uid}
           uid={account.uid}

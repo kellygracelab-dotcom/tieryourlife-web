@@ -96,6 +96,13 @@
   color: var(--ink-dim);
 }
 
+/* The Follow chip's place while the backend is asked: there, unseen, untouchable. */
+.byline__waiting {
+  display: inline-flex;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .byline__name {
   overflow: hidden;
   text-overflow: ellipsis;

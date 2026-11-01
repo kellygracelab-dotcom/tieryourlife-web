@@ -11,7 +11,6 @@ import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
-import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./ModerationPage.css";
 
@@ -289,11 +288,9 @@ function Queue({
 
   if (state.status === "loading") {
     return (
-      <div className="queue queue--loading" aria-busy="true" aria-label={strings.mod.title}>
-        <Skeleton height="200px" className="queue__placeholder" />
-        <Skeleton height="200px" className="queue__placeholder" />
-        <Skeleton height="200px" className="queue__placeholder" />
-      </div>
+      // Nothing in its place, as the other panes do: grey blocks the size of a
+      // guess flashed and then jumped to the reports.
+      <div className="queue queue--loading" aria-busy="true" aria-label={strings.mod.title} />
     );
   }
   if (state.status === "error") {
@@ -376,7 +373,6 @@ export function ModerationPage({
   return (
     <section className="mod">
       <h1 className="mod__title">{strings.mod.title}</h1>
-      {account === null && <Skeleton height="20px" width="40%" />}
       {account?.kind === "guest" && <NotAvailable />}
       {account?.kind === "signedIn" && (
         <Queue uid={account.uid} load={load} takeDown={takeDown} leaveUp={leaveUp} />

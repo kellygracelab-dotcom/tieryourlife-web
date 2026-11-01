@@ -54,7 +54,18 @@ function rowsOf(answer: AdminSections): OrderRow[] {
   const listed = answer.sections.filter(
     (one) => one.status === undefined || one.status === "approved",
   );
-  const rows = listed.map((one) => ({ id: one.id, shown: one.hidden !== true }));
+  // The order saved here, by place: the backend's own order puts the sections
+  // the reader follows first, and a followed one came back to the top after
+  // every Save. Places tie only for sections never placed, kept as sent.
+  const placed = listed
+    .map((one, at) => ({ one, at }))
+    .sort(
+      (a, b) =>
+        (a.one.rank ?? Number.MAX_SAFE_INTEGER) - (b.one.rank ?? Number.MAX_SAFE_INTEGER) ||
+        a.at - b.at,
+    )
+    .map(({ one }) => one);
+  const rows = placed.map((one) => ({ id: one.id, shown: one.hidden !== true }));
   // Other closes the list whatever the backend's order says.
   return [...rows.filter((row) => row.id !== LOCKED), ...rows.filter((row) => row.id === LOCKED)];
 }

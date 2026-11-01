@@ -2,6 +2,8 @@ import { useEffect, useSyncExternalStore } from "react";
 import type { SectionStats } from "../../api/sections";
 import { useSession } from "../../app/session";
 import { followSection, loadSections, unfollowSection } from "../../lib/api";
+import { remembered, type Remembered } from "../../lib/remembered";
+import { localStorageStore } from "../../lib/storage";
 import { orderSections, sectionsFrom, type Section } from "./model";
 
 /** Counts change slowly; the backend itself keeps them ten minutes. */
@@ -12,6 +14,14 @@ export interface SectionsDeps {
   follow: (id: string) => Promise<unknown>;
   unfollow: (id: string) => Promise<unknown>;
   now: () => number;
+  /** The last answer on this device, to open with: left out, nothing is kept. */
+  memory?: Remembered<KeptSections>;
+}
+
+/** The backend's last answer, and for whom: what one follows is part of it. */
+export interface KeptSections {
+  sections: SectionStats[];
+  who: string;
 }
 
 export interface SectionsSnapshot {
@@ -19,6 +29,12 @@ export interface SectionsSnapshot {
   sections: Section[];
   /** Whether what is shown came from the backend. */
   loaded: boolean;
+  /**
+   * Whether what is shown is the backend's, now or as last read on this
+   * device. Until then the nine stand in only to be counted: a page draws
+   * their places, not their art, or it would flash and reorder.
+   */
+  known: boolean;
   failed: boolean;
 }
 
@@ -42,7 +58,16 @@ export interface SectionsStore {
  * shows on the others without asking the backend again.
  */
 export function createSectionsStore(deps: SectionsDeps): SectionsStore {
-  let snapshot: SectionsSnapshot = { sections: sectionsFrom(null), loaded: false, failed: false };
+  const kept = deps.memory?.recall("sections") ?? null;
+  let snapshot: SectionsSnapshot =
+    kept === null
+      ? { sections: sectionsFrom(null), loaded: false, known: false, failed: false }
+      : {
+          sections: orderSections(sectionsFrom(kept.sections, kept.who)),
+          loaded: false,
+          known: true,
+          failed: false,
+        };
   let loadedAt: number | null = null;
   let loadedFor: string | null = null;
   let wanted: string | null = null;
@@ -88,15 +113,18 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
         ({ sections }) => {
           loadedAt = deps.now();
           loadedFor = who;
+          if (who !== null) deps.memory?.keep("sections", { sections: sections ?? [], who });
           set({
             sections: orderSections(sectionsFrom(sections ?? [], who)),
             loaded: true,
+            known: true,
             failed: false,
           });
           again();
         },
         () => {
-          set({ ...snapshot, failed: true });
+          // The nine, then, drawn as they are: nothing better is coming.
+          set({ ...snapshot, known: true, failed: true });
           again();
         },
       );
@@ -124,6 +152,7 @@ export const sectionsStore = createSectionsStore({
   follow: followSection,
   unfollow: unfollowSection,
   now: Date.now,
+  memory: remembered(localStorageStore, "tyl:sections", 1),
 });
 
 /** The sections in the app's order, asked for once the page that shows them opens. */
