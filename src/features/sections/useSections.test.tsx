@@ -119,9 +119,9 @@ describe("SectionGrid", () => {
     expect(document.querySelector(".section-tile__new")).toBeNull();
   });
 
-  it("leads to all the sections from the last slot when they do not fit", () => {
+  it("shows the first twenty and leads to all the sections past them", () => {
     const sections = sectionsFrom(
-      Array.from({ length: 12 }, (_, at) => stats(`s-${at}`, { name: `Section ${at}` })),
+      Array.from({ length: 22 }, (_, at) => stats(`s-${at}`, { name: `Section ${at}` })),
     );
     render(
       <MemoryRouter>
@@ -130,7 +130,7 @@ describe("SectionGrid", () => {
     );
     const all = screen.getByRole("link", { name: /All sections/ });
     expect(all).toHaveAttribute("href", "/s");
-    expect(all).toHaveTextContent("12 sections");
-    expect(screen.getAllByRole("link")).toHaveLength(9);
+    expect(all).toHaveTextContent("22 sections");
+    expect(screen.getAllByRole("link")).toHaveLength(21);
   });
 });
