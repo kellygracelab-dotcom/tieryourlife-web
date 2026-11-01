@@ -122,6 +122,10 @@ function call(
       answer.body = value;
       return response;
     },
+    send(value: unknown) {
+      answer.body = value;
+      return response;
+    },
     setHeader(name: string, value: string) {
       answer.headers[name] = value;
       return response;
@@ -434,6 +438,27 @@ describe("the router", () => {
     assert.equal((await call(deps, "GET", "/api/rank/a/b/c")).status, 404);
     assert.equal((await call(deps, "POST", "/api/me/rankings")).status, 405);
     assert.equal((await call(deps, "DELETE", "/api/rank")).status, 405);
+  });
+
+  it("sends /img/… to the pictures, with HEAD as well as GET, and nothing else there", async () => {
+    const { deps } = setup(PERSON);
+    const asked: string[] = [];
+    const withPictures: WebDeps = {
+      ...deps,
+      pictures: {
+        read: async (path) => {
+          asked.push(path);
+          return Buffer.from("picture");
+        },
+        shrink: async (bytes) => bytes,
+      },
+    };
+    const get = await call(withPictures, "GET", "/img/480/sections/anime/p-1");
+    assert.equal(get.status, 200);
+    assert.equal(get.headers["Content-Type"], "image/webp");
+    assert.equal((await call(withPictures, "HEAD", "/img/1600/topics/t1/p-2")).status, 200);
+    assert.deepEqual(asked, ["sections/anime/p-1", "topics/t1/p-2"]);
+    assert.equal((await call(withPictures, "POST", "/img/480/sections/anime/p-1")).status, 404);
   });
 
   it("deletes the ranking even when its pictures cannot be taken off the shelf", async () => {

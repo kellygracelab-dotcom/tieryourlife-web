@@ -70,7 +70,7 @@ function SectionHeader({ section }: { section: Section }) {
           ? "section-head__art"
           : `section-head__art section-head__art--own${section.picture === null ? "" : " section-head__art--pictured"}`
       }
-      style={sectionStyle(section)}
+      style={sectionStyle(section, 1600)}
       aria-hidden="true"
     >
       {section.collage.map((url) => (

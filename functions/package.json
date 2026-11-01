@@ -15,7 +15,8 @@
     "@resvg/resvg-wasm": "^2.6.2",
     "firebase-admin": "^14.5.0",
     "firebase-functions": "^7.4.0",
-    "satori": "^0.62.0"
+    "satori": "^0.62.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "typescript": "^7.0.2"

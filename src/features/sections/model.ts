@@ -282,14 +282,30 @@ export const ALL_SECTIONS_PATH = "/s";
 export const waitingPath = (id: string): string =>
   `${ALL_SECTIONS_PATH}?waiting=${encodeURIComponent(id)}`;
 
-/** The tile's own colours, light and dark, and its picture when it has one. */
-export function sectionStyle(section: Section): CSSProperties {
+/** The widths the site's own address makes a picture at: a tile, and a section's header. */
+export type PictureWidth = 480 | 1600;
+
+const STORED_PICTURE =
+  /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/[^/]+\/o\/(sections|topics)%2F([A-Za-z0-9_-]{1,64})%2F([A-Za-z0-9_-]{1,64})(?:\?|$)/;
+
+/**
+ * A section's or topic's stored picture through the site's own address, which
+ * Hosting's CDN keeps near the visitor at the width the page draws it
+ * (functions/src/pictures.ts): Storage itself took up to a second for each and
+ * was never kept. Any other address is drawn as it is.
+ */
+export function servedPicture(url: string, width: PictureWidth = 480): string {
+  const stored = STORED_PICTURE.exec(url);
+  return stored === null ? url : `/img/${width}/${stored[1]}/${stored[2]}/${stored[3]}`;
+}
+
+/** The tile's own colours, light and dark, and its picture when it has one, at the width drawn. */
+export function sectionStyle(section: Section, width: PictureWidth = 480): CSSProperties {
+  const picture = section.picture === null ? null : servedPicture(section.picture, width);
   return {
     "--tint-light": section.tint.light,
     "--tint-dark": section.tint.dark,
-    ...(section.picture === null
-      ? {}
-      : { "--section-picture": `url("${section.picture.replace(/"/g, "%22")}")` }),
+    ...(picture === null ? {} : { "--section-picture": `url("${picture.replace(/"/g, "%22")}")` }),
   } as CSSProperties;
 }
 

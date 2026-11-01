@@ -10,7 +10,7 @@ import {
 } from "./config/debug-token.ts";
 import { preloadApp } from "./config/preload-app.ts";
 
-// The same two paths are Hosting rewrites in production, so the client never
+// The same paths are Hosting rewrites in production, so the client never
 // needs a different base URL. In development they go to the backend's Firebase
 // emulator, or to the live functions with `vite --mode live`.
 const EMULATOR = "http://127.0.0.1:5001/tieryourlife/europe-west1";
@@ -21,7 +21,7 @@ const proxyFor = (functionsBase: string) => {
     changeOrigin: true,
     rewrite: (path: string) => `/${name}${path}`,
   });
-  return { "/lists": to("lists"), "/3/search": to("tmdb"), "/api": to("web") };
+  return { "/lists": to("lists"), "/3/search": to("tmdb"), "/api": to("web"), "/img": to("web") };
 };
 
 export default defineConfig(({ command, mode }) => {

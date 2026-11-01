@@ -1,6 +1,6 @@
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
-import { topicPicture } from "./model";
+import { servedPicture, topicPicture } from "./model";
 import "./topics.css";
 
 /**
@@ -19,6 +19,12 @@ export function TopicArt({
   return picture === null ? (
     <Icon name={icon} />
   ) : (
-    <img className="topic-art" src={picture} alt="" loading="lazy" decoding="async" />
+    <img
+      className="topic-art"
+      src={servedPicture(picture)}
+      alt=""
+      loading="lazy"
+      decoding="async"
+    />
   );
 }
