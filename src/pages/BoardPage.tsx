@@ -261,6 +261,8 @@ export function BoardPage({
   // A tier moved from the keyboard (Alt+arrow on its band) keeps the keyboard:
   // the board is drawn afresh for the new order, so its pencil is found again.
   const tierFocus = useRef<number | null>(null);
+  // A Delete already taking the public copy down.
+  const trashing = useRef(false);
   useEffect(() => {
     const at = tierFocus.current;
     if (at === null) return;
@@ -489,7 +491,6 @@ export function BoardPage({
 
   // The public copy comes down first, as on the phone; while it cannot, the
   // board stays and says why.
-  const trashing = useRef(false);
   const toTrash = async () => {
     if (trashing.current) return;
     trashing.current = true;
