@@ -36,6 +36,7 @@ import {
   withoutTrash,
   type Board,
 } from "./model";
+import { parseBoard } from "./repository";
 
 /** Uids a test can read: t0…t5 for the tiers, then i0, i1… for the cards. */
 const uids = () => {
@@ -305,6 +306,24 @@ describe("tiers", () => {
     expect(rankedTiers(one)).toHaveLength(1);
     expect(removeTier(one, rankedTiers(one)[0]!.uid, 6)).toBe(one);
     expect(removeTier(one, pool.uid, 6)).toBe(one);
+  });
+
+  it("take their trashed cards to the pool when they go, so the trash keeps them", () => {
+    const { board: b0, next } = board();
+    const b1 = addToPool(b0, [{ title: "a", imageUrl: null }], 1, next);
+    const [s] = rankedTiers(b1);
+    const pool = poolTier(b1)!;
+    const [ia] = itemsIn(b1, pool.uid).map((item) => item.uid);
+    const b2 = trashItem(arrangeItems(b1, [[ia!], [], [], [], []], 2), ia!, 3);
+    const b3 = removeTier(b2, s!.uid, 4);
+    const trashed = b3.items.find((item) => item.uid === ia);
+    expect(trashed).toMatchObject({ tierUid: pool.uid });
+    expect(trashed?.deletedAt).toBe(3);
+    // Read back as the account and this browser read it: the card is still there, in the trash.
+    const again = parseBoard(JSON.parse(JSON.stringify(b3)));
+    expect(again?.items.find((item) => item.uid === ia)?.deletedAt).toBe(3);
+    // Restored, it comes back to the pool.
+    expect(titlesIn(restoreItem(again!, ia!, 5), pool.uid)).toEqual(["a"]);
   });
 
   it("are reordered, with a tier not named keeping to the end", () => {

@@ -997,8 +997,23 @@
     flex-wrap: nowrap;
   }
 
+  /*
+   * Beside the board the column is narrow: the answers hang from the whole
+   * row of tools and reach left over the board, wide enough for three
+   * pictures a person can tell apart, and covering the pool's own words.
+   */
+  .ranking:not(.ranking--under) .pool__tools {
+    position: relative;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .cards__add {
+    position: static;
+  }
+
   .ranking:not(.ranking--under) .pool__tools .cards__found {
     top: calc(100% + 4px);
+    inset-inline: auto 0;
+    width: min(440px, calc(100vw - 32px));
   }
 
   .ranking--under .pool__tools {

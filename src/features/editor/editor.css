@@ -285,7 +285,7 @@
   min-width: 0;
 }
 
-/* Where to look: the board's own section first, a row that scrolls sideways. */
+/* Where to look: the board's own section first, a row that scrolls sideways under a finger. */
 .cards__scopes {
   /* A row that scrolls sideways would otherwise give up its height in the pool's short dropdown. */
   flex: none;
@@ -294,6 +294,14 @@
   padding: 10px 12px 4px;
   overflow-x: auto;
   scrollbar-width: none;
+}
+
+/* A mouse has no sideways swipe, and a wheel scrolls the answers: the places wrap instead. */
+@media (hover: hover) and (pointer: fine) {
+  .cards__scopes {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
 }
 
 .cards__notice {
@@ -363,7 +371,7 @@
   object-fit: cover;
 }
 
-.cards__pick:hover:not(:disabled) .cards__pick-picture img {
+.cards__pick:hover:not([aria-disabled="true"]) .cards__pick-picture img {
   opacity: 0.85;
 }
 
@@ -384,7 +392,7 @@
   opacity: 0.5;
 }
 
-.cards__pick:disabled {
+.cards__pick[aria-disabled="true"] {
   cursor: default;
 }
 

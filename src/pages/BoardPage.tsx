@@ -47,6 +47,7 @@ import {
   unpublish as unpublishList,
 } from "../lib/api";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { takenDown, unpublished } from "../features/boards/takeDown";
 import { applyTierAction, editorTiersOf, newTierOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
 import { boardView, sameOrder, uidRows } from "../features/boards/view";
@@ -260,6 +261,8 @@ export function BoardPage({
   // A tier moved from the keyboard (Alt+arrow on its band) keeps the keyboard:
   // the board is drawn afresh for the new order, so its pencil is found again.
   const tierFocus = useRef<number | null>(null);
+  // A Delete already taking the public copy down.
+  const trashing = useRef(false);
   useEffect(() => {
     const at = tierFocus.current;
     if (at === null) return;
@@ -324,6 +327,9 @@ export function BoardPage({
       ),
     [repository, uid, poolId],
   );
+  // The board on screen holds its rows itself: an arrangement made elsewhere
+  // (Play's result, its Undo) draws a fresh one over the cards.
+  const [arranged, setArranged] = useState(0);
   const play = usePlay(uid, playCards, playTiers, localStorageStore, {
     title: board?.title || strings.boards.untitled,
     games,
@@ -336,9 +342,11 @@ export function BoardPage({
         itemsIn(before, tier.uid).map((item) => item.uid),
       );
       repository.save(arrangeItems(before, rows, now()));
+      setArranged((round) => round + 1);
       return () => {
         const current = repository.get(uid);
         if (current !== null) repository.save(arrangeItems(current, was, now()));
+        setArranged((round) => round + 1);
       };
     },
   });
@@ -481,8 +489,18 @@ export function BoardPage({
     });
   };
 
-  const toTrash = () => {
-    keep(trashBoard(board, now()));
+  // The public copy comes down first, as on the phone; while it cannot, the
+  // board stays and says why.
+  const toTrash = async () => {
+    if (trashing.current) return;
+    trashing.current = true;
+    const down = await takenDown(latest(), publishing.unpublish);
+    trashing.current = false;
+    if (!down) {
+      setNotice({ text: strings.trash.stillPublic });
+      return;
+    }
+    keep(trashBoard(unpublished(latest(), now()), now()));
     void navigate("/b", { state: { trashed: [uid] } satisfies BoardsPageState });
   };
 
@@ -578,7 +596,7 @@ export function BoardPage({
                 <button
                   type="button"
                   className="menu__action menu__action--danger"
-                  onClick={toTrash}
+                  onClick={() => void toTrash()}
                 >
                   {strings.boards.delete}
                 </button>
@@ -662,8 +680,8 @@ export function BoardPage({
           <section className="owner" aria-label={strings.owner.title}>
             <RankingBoard
               // The rows are held by index: a tier added, taken away or moved
-              // means a fresh board over the same cards.
-              key={`${board.uid}:${rankedTiers(board)
+              // means a fresh board over the same cards, as does Play's result.
+              key={`${board.uid}:${arranged}:${rankedTiers(board)
                 .map((tier) => tier.uid)
                 .join(",")}`}
               list={view.list}

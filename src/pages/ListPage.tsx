@@ -434,7 +434,15 @@ function OpenList({
       {!outOfSight &&
         (shown === "mine" ? (
           <BoardFrameContext.Provider value={frame}>
-            <RankingBoard key={`${list.id}:${mineRound}`} list={list} />
+            {/* Play starts from Mine as it stands, hand moves made since included. */}
+            <RankingBoard
+              key={`${list.id}:${mineRound}`}
+              list={list}
+              onRows={(rows) =>
+                // Nothing placed in Mine: Play starts from the author's, as before.
+                setMineRows(rows.some((row) => row.length > 0) ? rows.map((row) => [...row]) : null)
+              }
+            />
           </BoardFrameContext.Provider>
         ) : own ? (
           // The author sees the list as it was published; it is changed on its board, behind Edit.

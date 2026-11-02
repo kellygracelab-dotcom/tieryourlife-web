@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { boot, drawFailure } from "./boot";
+import { reloadOnce } from "./lib/freshChunk";
 import { applyLocale, pickLocale, readLocale } from "./lib/locale";
 import { localStorageStore, sessionStorageStore } from "./lib/storage";
 import { availableLocales, currentLocale, loadStrings, strings } from "./strings";
@@ -12,6 +13,10 @@ import "./index.css";
 const root = document.getElementById("root");
 if (root === null) throw new Error("index.html has no #root");
 const reload = () => window.location.reload();
+// A file a page's piece leans on, gone with a deploy: the same one quiet reload.
+window.addEventListener("vite:preloadError", (event) => {
+  if (reloadOnce()) event.preventDefault();
+});
 
 void boot({
   // The language first, the app after it. Several modules copy their texts when

@@ -78,6 +78,24 @@ describe("routes", () => {
     expect(clashes).toEqual([]);
   });
 
+  it("never lets a browser keep the page of the site for any of its addresses", () => {
+    const { hosting } = JSON.parse(firebaseJson) as {
+      hosting: { headers: { source: string; headers: { key: string; value: string }[] }[] }[];
+    };
+    // The one rule that names the pages by their first word, read as its words.
+    const fresh = hosting
+      .flatMap((site) => site.headers)
+      .filter((rule) =>
+        rule.headers.some((one) => one.key === "Cache-Control" && one.value === "no-cache"),
+      )
+      .flatMap((rule) => /^\/@\(([^)]*)\)/.exec(rule.source)?.[1]?.split("|") ?? []);
+    // /l and /r are drawn by the site's own function, which says how long to keep them.
+    const pages = [...new Set(pageWords(routes))].filter(
+      (word) => word !== "" && word !== "*" && word !== "l" && word !== "r",
+    );
+    expect(pages.filter((word) => !fresh.includes(word))).toEqual([]);
+  });
+
   it("leads the old /boards address of the lists to /b, inside the site", async () => {
     const router = open("/boards");
     await vi.waitFor(() => expect(router.state.location.pathname).toBe("/b"));

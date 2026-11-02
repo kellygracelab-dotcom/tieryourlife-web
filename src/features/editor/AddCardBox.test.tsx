@@ -124,10 +124,47 @@ describe("AddCardBox", () => {
       key: "anilist:20",
     });
     expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveValue("naruto");
+    // The picked tile keeps the keyboard's place, so the next is a Tab away.
+    expect(screen.getByRole("button", { name: /^Naruto(?! Shippuden)/ })).toHaveFocus();
     await userEvent.click(screen.getByRole("button", { name: /Shippuden/ }));
     expect(dispatch).toHaveBeenLastCalledWith(
       expect.objectContaining({ title: "Naruto Shippuden", key: "anilist:21" }),
     );
+  });
+
+  it("puts the answers away on Escape or a press elsewhere, keeps the words, and the cross empties the field", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page([picture("anilist:20", { title: "Naruto" })]),
+    );
+    render(
+      <>
+        <p>elsewhere</p>
+        <AddCardBox items={[]} category="anime" dispatch={vi.fn()} find={find} upload={vi.fn()} />
+      </>,
+    );
+    await typeAndWait("naruto");
+    const field = screen.getByRole("textbox", { name: "Add a card" });
+    const answers = () => screen.queryByRole("group", { name: "Where to look" });
+    expect(answers()).not.toBeNull();
+
+    // Escape from a tile: the answers go, the cursor goes back to the words.
+    screen.getByRole("button", { name: /Naruto/ }).focus();
+    await userEvent.keyboard("{Escape}");
+    expect(answers()).toBeNull();
+    expect(field).toHaveFocus();
+    expect(field).toHaveValue("naruto");
+
+    await userEvent.click(field);
+    expect(answers()).not.toBeNull();
+    await userEvent.click(screen.getByText("elsewhere"));
+    expect(answers()).toBeNull();
+    await userEvent.type(field, "{ArrowDown}");
+    expect(answers()).not.toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(field).toHaveValue("");
+    expect(field).toHaveFocus();
+    expect(screen.queryByRole("button", { name: "Clear" })).toBeNull();
   });
 
   it("looks among animals on a board about them, and leaves out a picture that will not load", async () => {
@@ -153,7 +190,7 @@ describe("AddCardBox", () => {
     const find = vi.fn<FindPictures>(async () =>
       page([picture("anilist:20", { title: "Naruto" })]),
     );
-    setup({
+    const { dispatch } = setup({
       find,
       items: [
         { key: "anilist:20", title: "Naruto", imageUrl: "https://img.test/x.jpg", pictureId: null },
@@ -161,8 +198,11 @@ describe("AddCardBox", () => {
     });
     await typeAndWait("naruto");
     const tile = screen.getByRole("button", { name: /Naruto/ });
-    expect(tile).toBeDisabled();
+    expect(tile).toHaveAttribute("aria-disabled", "true");
     expect(tile).toHaveAttribute("aria-pressed", "true");
+    // Pressing it again adds nothing twice.
+    await userEvent.click(tile);
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it("copies a web picture into the person's own before it goes on a card", async () => {
@@ -246,6 +286,14 @@ describe("AddCardBox", () => {
     fail = true;
     await typeAndWait("qwzxy");
     expect(screen.getByText(/catalogue is not answering/)).toBeInTheDocument();
+    // The same words again, once it answers.
+    fail = false;
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, LOOKUP_DEBOUNCE_MS + 20));
+    });
+    expect(screen.queryByText(/catalogue is not answering/)).toBeNull();
+    expect(find).toHaveBeenLastCalledWith({ q: "qwzxy", scope: "all", web: false, page: 1 });
   });
 
   it("brings the next page on Show more", async () => {

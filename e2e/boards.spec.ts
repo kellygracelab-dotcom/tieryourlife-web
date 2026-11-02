@@ -295,6 +295,30 @@ test("moves a card along its row: the others make room at once, and nothing is p
   expect(await order()).toEqual(["Climax", "Ex Machina", "The Witch"]);
 });
 
+test("the key that places the last card is not typed into the box that brings cards in", async ({
+  page,
+  hasTouch,
+}) => {
+  test.skip(hasTouch, "a keyboard's digit");
+  await mockBackend(page);
+  await page.goto("/b");
+  await page.getByRole("link", { name: "New list" }).first().click();
+  const title = page.getByRole("textbox", { name: "Title" });
+  await title.fill("One card");
+  await title.press("Enter");
+  const add = page.getByRole("textbox", { name: "Add a card" });
+  await add.fill("Ex Machina");
+  await add.press("Enter");
+  await page.getByRole("button", { name: "Ex Machina", exact: true }).click();
+  await page.keyboard.press("2");
+  await expect(
+    page.getByRole("list", { name: "A", exact: true }).getByRole("button", { name: "Ex Machina" }),
+  ).toBeVisible();
+  // The empty pool hands the cursor to the box, after the key, not into it.
+  await expect(add).toBeFocused();
+  await expect(add).toHaveValue("");
+});
+
 test("saves somebody's list to my boards, asking whose ranking to keep", async ({ page }) => {
   await mockBackend(page);
   await page.goto(`/l/${list.id}`);

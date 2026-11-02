@@ -114,6 +114,8 @@ interface RankingBoardProps {
   /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
   strip?: boolean;
   seed?: Seed;
+  /** Every arrangement as it is made, for a page that starts something else from it (Play). */
+  onRows?: (rows: Rows) => void;
 }
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
@@ -354,6 +356,7 @@ export function RankingBoard({
   edit,
   strip = false,
   seed,
+  onRows,
 }: RankingBoardProps) {
   const seeded = seed !== undefined;
   const [state, dispatch] = useBoard(list, store, seed?.rows ?? edit?.rows ?? null, seeded);
@@ -418,11 +421,16 @@ export function RankingBoard({
   // Nothing to place yet and nobody typing elsewhere (the new board's name is
   // asked for first): the cursor waits in the field that brings cards in.
   const askForCards = wide && emptyPool && tools !== undefined;
+  // A frame later: when a key placed the last card, the field must not take
+  // the cursor while that key is still going, or its digit is typed in it.
   useEffect(() => {
     if (!askForCards) return;
-    const now = document.activeElement;
-    if (now !== null && now !== document.body) return;
-    poolBox.current?.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
+    const frame = requestAnimationFrame(() => {
+      const now = document.activeElement;
+      if (now !== null && now !== document.body) return;
+      poolBox.current?.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
   }, [askForCards]);
   const docked = wide && dock === "under";
   const frame = useContext(BoardFrameContext);
@@ -516,11 +524,14 @@ export function RankingBoard({
 
   // The owner's page keeps the draft: every placement goes out as it happens.
   const report = useRef(edit?.owner?.onChange);
+  const follow = useRef(onRows);
   useEffect(() => {
     report.current = edit?.owner?.onChange;
+    follow.current = onRows;
   });
   useEffect(() => {
     report.current?.(state.rows);
+    follow.current?.(state.rows);
   }, [state.rows]);
 
   // Theirs on show: the first move, by a drag, a tap, a key or the card's

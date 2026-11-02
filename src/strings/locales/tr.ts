@@ -196,6 +196,7 @@ const tr: Translation = {
     signInBody: "Takip etmek, sevdiğiniz kişilerin yeni listelerini akışınızın en üstünde tutar.",
   },
   search: {
+    clear: "Temizle",
     title: "“{q}”",
     browse: "Listelere göz atın",
     results: "Arama sonuçları",

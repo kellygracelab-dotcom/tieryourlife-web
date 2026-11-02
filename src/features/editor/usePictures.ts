@@ -41,15 +41,17 @@ const same = (a: Asked, b: Asked): boolean =>
 
 /**
  * What the catalogues say about the words in the box, in the scope chosen, a
- * little after the words stop changing; `more` asks for the next page.
+ * little after the words stop changing; `more` asks for the next page, and
+ * `retry` asks again for the same words after a failure.
  */
 export function usePictures(
   query: string,
   scope: PictureScope,
   web: boolean,
   find: FindPictures = findPictures,
-): { state: PicturesState; more: () => void } {
+): { state: PicturesState; more: () => void; retry: () => void } {
   const [answer, setAnswer] = useState<PicturesState>({ status: "idle" });
+  const [attempt, setAttempt] = useState(0);
   const wanted = query.trim();
   const asking = wanted.length >= MIN_LOOKUP;
 
@@ -76,7 +78,12 @@ export function usePictures(
       current = false;
       clearTimeout(timer);
     };
-  }, [wanted, scope, web, asking, find]);
+  }, [wanted, scope, web, asking, find, attempt]);
+
+  const retry = useCallback(() => {
+    setAnswer({ status: "searching" });
+    setAttempt((n) => n + 1);
+  }, []);
 
   const more = useCallback(() => {
     if (answer.status !== "ready" || answer.next === null || answer.more) return;
@@ -103,7 +110,7 @@ export function usePictures(
     );
   }, [answer, find]);
 
-  if (!asking) return { state: { status: "idle" }, more };
+  if (!asking) return { state: { status: "idle" }, more, retry };
   // An old answer stays on screen while the next one is on its way, unless the
   // words changed enough that it would mislead, or it was asked somewhere else.
   if (
@@ -112,7 +119,7 @@ export function usePictures(
     answer.web === web &&
     (wanted.startsWith(answer.query) || answer.query.startsWith(wanted))
   ) {
-    return { state: answer, more };
+    return { state: answer, more, retry };
   }
-  return { state: { status: "searching" }, more };
+  return { state: { status: "searching" }, more, retry };
 }

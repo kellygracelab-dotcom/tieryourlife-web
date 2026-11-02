@@ -21,8 +21,11 @@ import { useBoardSync } from "../features/boards/boardSync";
 import { BoardRow } from "../features/boards/BoardRow";
 import { BoardTile } from "../features/boards/BoardTile";
 import { titleOf } from "../features/boards/boardText";
+import { takenDown, unpublished } from "../features/boards/takeDown";
 import { useBoards } from "../features/boards/useBoards";
+import type { UnpublishBoard } from "../features/boards/BoardSettings";
 import "../features/boards/boards.css";
+import { unpublish as unpublishList } from "../lib/api";
 import { localStorageStore, type KeyValueStore } from "../lib/storage";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
@@ -37,6 +40,7 @@ interface BoardsPageProps {
   now?: () => number;
   /** Where the chosen view is remembered on this device. */
   store?: KeyValueStore;
+  unpublish?: UnpublishBoard;
 }
 
 /** Pictures in a grid, as the phone shows them first, or one board to a row with its tier ribbon. */
@@ -155,6 +159,7 @@ export function BoardsPage({
   repository = site,
   now = Date.now,
   store = localStorageStore,
+  unpublish = unpublishList,
 }: BoardsPageProps) {
   usePageTitle(strings.boards.title);
   const all = useBoards(repository);
@@ -224,17 +229,23 @@ export function BoardsPage({
     setSelected(new Set());
   };
 
-  const deleteSelected = () => {
-    const uids = [...selected];
+  // Public copies come down first, as on the phone: a board whose copy could
+  // not be taken down stays, and the notice says so.
+  const deleteSelected = async () => {
+    const chosen = [...selected].flatMap((uid) => repository.get(uid) ?? []);
+    leaveSelection();
+    const down = await Promise.all(chosen.map((board) => takenDown(board, unpublish)));
     const at = now();
+    const trashed = chosen.filter((_, index) => down[index]).map((board) => board.uid);
     repository.saveAll(
-      uids.flatMap((uid) => {
+      trashed.flatMap((uid) => {
         const board = repository.get(uid);
-        return board === null ? [] : [trashBoard(board, at)];
+        return board === null ? [] : [trashBoard(unpublished(board, at), at)];
       }),
     );
-    leaveSelection();
-    setNotice(trashedNotice(uids));
+    setNotice(
+      trashed.length < chosen.length ? { text: strings.trash.stillPublic } : trashedNotice(trashed),
+    );
   };
 
   return (
@@ -358,7 +369,7 @@ export function BoardsPage({
               <Button
                 variant="tonal"
                 icon="delete"
-                onClick={deleteSelected}
+                onClick={() => void deleteSelected()}
                 disabled={selected.size === 0}
               >
                 {strings.boards.deleteSelected}

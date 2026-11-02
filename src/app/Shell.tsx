@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Link,
   Outlet,
   ScrollRestoration,
+  type Location,
   useLocation,
   useNavigate,
   useSearchParams,
@@ -15,6 +16,7 @@ import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { lastSeen } from "../lib/signedInHint";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
+import { ClearButton } from "../ui/ClearButton";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import { PageTitleContext, TITLE_AFTER_PX } from "./pageTitle";
@@ -123,6 +125,7 @@ function SiteTabs({ className, pathname }: { className: string; pathname: string
 function BarSearch({ asked }: { asked: string }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState(asked);
+  const field = useRef<HTMLInputElement>(null);
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
     const q = query.trim();
@@ -132,6 +135,7 @@ function BarSearch({ asked }: { asked: string }) {
     <form className="top__search" role="search" onSubmit={onSearch}>
       <Icon name="search" />
       <input
+        ref={field}
         type="search"
         value={query}
         placeholder={strings.nav.search}
@@ -139,9 +143,26 @@ function BarSearch({ asked }: { asked: string }) {
         autoComplete="off"
         onChange={(event) => setQuery(event.target.value)}
       />
+      {query !== "" && (
+        <ClearButton
+          onClear={() => {
+            setQuery("");
+            field.current?.focus();
+          }}
+        />
+      )}
     </form>
   );
 }
+
+/**
+ * Where a page's scroll is kept. Every full load of the site starts at an
+ * entry named "default", whatever the address, so a place kept under that
+ * name would carry one page's scroll into the next page opened by its link.
+ * A first entry is kept by its address instead.
+ */
+export const scrollKey = (location: Location): string =>
+  location.key === "default" ? location.pathname : location.key;
 
 export function Shell() {
   const { account, signIn } = useSession();
@@ -244,7 +265,7 @@ export function Shell() {
         <Link to="/settings">{strings.nav.settings}</Link>
       </footer>
       {/* A new page opens at its top, and Back returns to where the person was. */}
-      <ScrollRestoration />
+      <ScrollRestoration getKey={scrollKey} />
     </div>
   );
 }

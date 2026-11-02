@@ -93,6 +93,18 @@ describe("RankingBoard", () => {
     expect(screen.getByText("Pick a card, then tap a tier or press 1–2")).toBeInTheDocument();
   });
 
+  it("tells the page every arrangement as it is made", async () => {
+    const onRows = vi.fn();
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} onRows={onRows} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("The Witch"));
+    await userEvent.keyboard("2");
+    expect(onRows).toHaveBeenLastCalledWith([[], [1]]);
+  });
+
   it("places the selected card with a number key and clears with Escape", async () => {
     render(
       <MemoryRouter>

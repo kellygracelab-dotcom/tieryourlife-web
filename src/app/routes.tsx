@@ -8,6 +8,7 @@ import { NotFoundPage } from "../pages/NotFoundPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { RankingPage } from "../pages/RankingPage";
 import { SearchPage } from "../pages/SearchPage";
+import { freshChunk } from "../lib/freshChunk";
 import { RouteError } from "./RouteError";
 
 import { Shell } from "./Shell";
@@ -16,10 +17,13 @@ import { Shell } from "./Shell";
  * The pages most visitors never open — a new list, the boards and the
  * trash, the account, the moderator's queue, the credits — come as chunks of
  * their own when asked for, so opening a list does not download the editor.
- * A chunk that fails to come is a thrown route, and the error element says so
+ * A chunk a deploy took away reloads the tab once for the new files; one
+ * that still fails to come is a thrown route, and the error element says so
  * in the person's words.
  */
-const later = (load: () => Promise<{ Component: ComponentType }>) => ({ lazy: load });
+const later = (load: () => Promise<{ Component: ComponentType }>) => ({
+  lazy: freshChunk(load),
+});
 
 export const routes: RouteObject[] = [
   {

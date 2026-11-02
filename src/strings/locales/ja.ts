@@ -194,6 +194,7 @@ const ja: Translation = {
     signInBody: "フォローすると、その人の新しいリストがフィードの先頭に届きます。",
   },
   search: {
+    clear: "クリア",
     title: "「{q}」",
     browse: "リストを探す",
     results: "検索結果",

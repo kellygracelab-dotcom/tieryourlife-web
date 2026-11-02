@@ -124,7 +124,7 @@
           ]
         },
         {
-          "source": "/@(new|search|me|c|settings|mod|u|about){,/**}",
+          "source": "/@(new|search|me|c|settings|mod|u|about|b|boards|s|trash|following|admin){,/**}",
           "headers": [
             {
               "key": "Cache-Control",
