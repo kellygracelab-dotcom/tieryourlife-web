@@ -3,9 +3,7 @@ import { Link } from "react-router";
 import { usePageTitle } from "../app/pageTitle";
 import { agoOf, type Ago } from "../features/boards/ago";
 import {
-  dropItem,
   restoreBoard,
-  restoreItem,
   trashEntriesOf,
   withoutTrash,
   type Board,
@@ -47,20 +45,13 @@ const agoText = (ago: Ago): string => {
 const boardTitle = (board: Board): string =>
   board.title.trim().length > 0 ? board.title : strings.boards.untitled;
 
-const titleOf = (entry: TrashEntry): string =>
-  entry.kind === "board" ? boardTitle(entry.board) : entry.item.title;
-
-const keyOf = (entry: TrashEntry): string =>
-  entry.kind === "board" ? `b:${entry.board.uid}` : `i:${entry.board.uid}:${entry.item.uid}`;
-
 type Asking = { what: "nothing" } | { what: "entry"; entry: TrashEntry } | { what: "all" };
 
 /**
- * Deleted boards and cards, until somebody removes them: nothing expires. A
- * row names the board a card came from, because a card out of its board is
- * otherwise unidentifiable. Restore needs no confirmation; the row leaving is
- * the confirmation. Removing for good, and emptying, are two of the few
- * dialogs on the site.
+ * Deleted lists, until somebody removes them: nothing expires. Cards never
+ * come here; a removed card has its Undo on the board. Restore needs no
+ * confirmation; the row leaving is the confirmation. Removing for good, and
+ * emptying, are two of the few dialogs on the site.
  */
 export function TrashPage({
   repository = site,
@@ -83,20 +74,11 @@ export function TrashPage({
   const restore = (entry: TrashEntry) => {
     const board = repository.get(entry.board.uid);
     if (board === null) return;
-    repository.save(
-      entry.kind === "board"
-        ? restoreBoard(board, now())
-        : restoreItem(board, entry.item.uid, now()),
-    );
+    repository.save(restoreBoard(board, now()));
   };
 
   const remove = async (entry: TrashEntry) => {
     close();
-    if (entry.kind === "item") {
-      const board = repository.get(entry.board.uid);
-      if (board !== null) repository.save(dropItem(board, entry.item.uid));
-      return;
-    }
     setBusy(true);
     const down = await takenDown(entry.board, unpublish);
     setBusy(false);
@@ -160,25 +142,16 @@ export function TrashPage({
       ) : (
         <ul className="trash__rows" aria-label={strings.trash.title}>
           {entries.map((entry) => {
-            const title = titleOf(entry);
-            const when = agoText(agoOf(entry.deletedAt, at));
-            const meta =
-              entry.kind === "board"
-                ? fill(strings.trash.listMeta, {
-                    count: plural(strings.boards.cards, entry.itemCount),
-                    when,
-                  })
-                : fill(strings.trash.itemMeta, { list: boardTitle(entry.board), when });
-            const picture = entry.kind === "item" ? entry.item.imageUrl : null;
+            const title = boardTitle(entry.board);
+            const meta = fill(strings.trash.listMeta, {
+              count: plural(strings.boards.cards, entry.itemCount),
+              when: agoText(agoOf(entry.deletedAt, at)),
+            });
             return (
-              <li key={keyOf(entry)} className="trash-row">
-                {picture !== null ? (
-                  <img className="trash-row__picture" src={picture} alt="" loading="lazy" />
-                ) : (
-                  <span className="trash-row__picture trash-row__picture--blank" aria-hidden="true">
-                    <Icon name={entry.kind === "board" ? "dashboard" : "category"} />
-                  </span>
-                )}
+              <li key={entry.board.uid} className="trash-row">
+                <span className="trash-row__picture trash-row__picture--blank" aria-hidden="true">
+                  <Icon name="dashboard" />
+                </span>
                 <span className="trash-row__text">
                   <span className="trash-row__title">{title}</span>
                   <span className="trash-row__meta">{meta}</span>
@@ -215,14 +188,10 @@ export function TrashPage({
         <ConfirmDialog
           narrow
           title={strings.trash.removeTitle}
-          body={
-            asking.entry.kind === "board"
-              ? fill(strings.trash.removeBodyList, {
-                  title: titleOf(asking.entry),
-                  count: plural(strings.boards.cards, asking.entry.itemCount),
-                })
-              : fill(strings.trash.removeBodyItem, { title: titleOf(asking.entry) })
-          }
+          body={fill(strings.trash.removeBodyList, {
+            title: boardTitle(asking.entry.board),
+            count: plural(strings.boards.cards, asking.entry.itemCount),
+          })}
           confirmLabel={strings.trash.remove}
           cancelLabel={strings.trash.cancel}
           onConfirm={() => void remove(asking.entry)}

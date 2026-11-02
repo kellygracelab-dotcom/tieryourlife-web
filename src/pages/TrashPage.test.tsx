@@ -3,14 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
-import {
-  addToPool,
-  liveItems,
-  newBoard,
-  trashBoard,
-  trashItem,
-  type Board,
-} from "../features/boards/model";
+import { addToPool, liveItems, newBoard, trashBoard, type Board } from "../features/boards/model";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import { memoryStore } from "../lib/storage";
 import { TrashPage } from "./TrashPage";
@@ -34,6 +27,12 @@ const films = (): Board => {
     next,
   );
 };
+
+/** A card in the trash as a device from before, or the phone, may still send one. */
+const trashedElsewhere = (board: Board, itemUid: string, at: number): Board => ({
+  ...board,
+  items: board.items.map((item) => (item.uid === itemUid ? { ...item, deletedAt: at } : item)),
+});
 
 const open = (
   repository: BoardsRepository,
@@ -74,41 +73,40 @@ describe("TrashPage", () => {
     expect(screen.queryByLabelText("More options")).toBeNull();
   });
 
-  it("lists deleted boards and cards newest first, each naming where it came from and when", () => {
+  it("lists deleted boards only, newest first, each saying when", () => {
     const repository = boardsRepository(memoryStore());
     const b = films();
     const [witch] = liveItems(b).filter((item) => item.title === "The Witch");
     repository.saveAll([
-      trashItem(b, witch!.uid, NOW - 3 * HOUR),
+      trashedElsewhere(b, witch!.uid, NOW - 3 * HOUR),
       trashBoard(newBoard("old", "Albums", 1, uids()), NOW - 2 * 24 * HOUR),
       trashBoard(newBoard("new", "Books", 1, uids()), NOW - 30_000),
     ]);
     open(repository);
+    expect(screen.getByText("Deleted lists stay here until you remove them.")).toBeInTheDocument();
     const rows = within(screen.getByRole("list", { name: "Trash" })).getAllByRole("listitem");
+    // Cards never come here, not even one trashed by a device from before.
     expect(rows.map((row) => row.textContent)).toEqual([
       expect.stringContaining("Books"),
-      expect.stringContaining("The Witch"),
       expect.stringContaining("Albums"),
     ]);
     expect(rows[0]).toHaveTextContent("List · 0 cards · deleted just now");
-    expect(rows[1]).toHaveTextContent("Item · from Films · deleted 3 h ago");
-    expect(rows[2]).toHaveTextContent("List · 0 cards · deleted 2 days ago");
+    expect(rows[1]).toHaveTextContent("List · 0 cards · deleted 2 days ago");
   });
 
   it("restores without asking, removes for good after asking, and empties after asking", async () => {
     const repository = boardsRepository(memoryStore());
     const b = films();
-    const [witch] = liveItems(b).filter((item) => item.title === "The Witch");
     repository.saveAll([
-      trashItem(b, witch!.uid, NOW - HOUR),
+      trashBoard(b, NOW - HOUR),
       trashBoard(newBoard("albums", "Albums", 1, uids()), NOW - HOUR),
       trashBoard(newBoard("books", "Books", 1, uids()), NOW - HOUR),
     ]);
     open(repository);
 
-    await userEvent.click(screen.getByRole("button", { name: "Restore The Witch" }));
-    expect(repository.get("films")?.items.every((item) => item.deletedAt === null)).toBe(true);
-    expect(screen.queryByText("The Witch")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Restore Films" }));
+    expect(repository.get("films")?.deletedAt).toBeNull();
+    expect(screen.queryByText("Films")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Remove Albums permanently" }));
     const dialog = screen.getByRole("dialog");
@@ -182,7 +180,7 @@ describe("TrashPage", () => {
     const b = films();
     const [witch] = liveItems(b).filter((item) => item.title === "The Witch");
     repository.saveAll([
-      trashItem(b, witch!.uid, NOW - HOUR),
+      trashedElsewhere(b, witch!.uid, NOW - HOUR),
       trashBoard(newBoard("albums", "Albums", 1, uids()), NOW - HOUR),
       published("books", "Books", "pub-b"),
       published("games", "Games", "pub-g"),

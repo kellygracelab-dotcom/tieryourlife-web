@@ -1223,9 +1223,8 @@ const es: Translation = {
   },
   trash: {
     title: "Papelera",
-    subtitle: "Las listas y elementos eliminados permanecen aquí hasta que los quites.",
+    subtitle: "Las listas eliminadas permanecen aquí hasta que las quites.",
     listMeta: "Lista · {count} · eliminada {when}",
-    itemMeta: "Elemento · de {list} · eliminado {when}",
     justNow: "ahora mismo",
     minutesAgo: { one: "hace {n} min", many: "hace {n} min", other: "hace {n} min" },
     hoursAgo: { one: "hace {n} h", many: "hace {n} h", other: "hace {n} h" },
@@ -1238,14 +1237,12 @@ const es: Translation = {
     removeTitle: "¿Eliminar definitivamente?",
     removeBodyList:
       "{title} y sus {count} se eliminarán de este dispositivo. Esto no se puede deshacer.",
-    removeBodyItem: "{title} se eliminará de este dispositivo. Esto no se puede deshacer.",
     emptyMenu: "Vaciar la papelera",
     emptyTitle: "¿Vaciar la papelera?",
     emptyBody: "{count} se eliminarán de este dispositivo. Esto no se puede deshacer.",
     entries: { one: "{n} entrada", many: "{n} entradas", other: "{n} entradas" },
     nothingTitle: "La papelera está vacía",
-    nothingBody:
-      "Las listas y elementos que elimines aparecerán aquí. Permanecen hasta que los quites.",
+    nothingBody: "Las listas que eliminas aparecen aquí. Permanecen hasta que las quites.",
     cancel: "Cancelar",
     more: "Más opciones",
     back: "Tus listas",

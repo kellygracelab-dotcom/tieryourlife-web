@@ -385,14 +385,27 @@ export function arrangeItems(
   return changed ? touched({ ...board, items }, now) : board;
 }
 
-/** To the trash: the card keeps its tier and place, so Restore puts it back where it was. */
-export function trashItem(board: Board, itemUid: string, now: number): Board {
-  if (!board.items.some((item) => item.uid === itemUid && item.deletedAt === null)) return board;
-  const items = board.items.map((item) =>
-    item.uid === itemUid ? { ...item, deletedAt: now } : item,
+/**
+ * Off the board for good: only lists go to the trash, a card does not. Undo
+ * hands the card to putBack, which puts it where it was.
+ */
+export function removeItem(board: Board, itemUid: string, now: number): Board {
+  if (!board.items.some((item) => item.uid === itemUid)) return board;
+  return touched(
+    tidy({ ...board, items: board.items.filter((item) => item.uid !== itemUid) }),
+    now,
   );
-  return touched(tidy({ ...board, items }), now);
 }
+
+/** A removed card back, for Undo: where it was, as restoreItem places it. */
+export const putBack = (board: Board, card: BoardItem, now: number): Board =>
+  board.items.some((item) => item.uid === card.uid)
+    ? board
+    : restoreItem(
+        { ...board, items: [...board.items, { ...card, deletedAt: now }] },
+        card.uid,
+        now,
+      );
 
 /** Back where it was, or at the end of its tier if the place has since been taken; to the pool if the tier is gone. */
 export function restoreItem(board: Board, itemUid: string, now: number): Board {
@@ -409,12 +422,6 @@ export function restoreItem(board: Board, itemUid: string, now: number): Board {
   );
   return touched(tidy({ ...board, items: [...others, ...renumbered(row)] }), now);
 }
-
-/** Gone for good. */
-export const dropItem = (board: Board, itemUid: string): Board =>
-  board.items.some((item) => item.uid === itemUid)
-    ? { ...board, items: board.items.filter((item) => item.uid !== itemUid) }
-    : board;
 
 export const trashBoard = (board: Board, now: number): Board =>
   board.deletedAt === null ? touched({ ...board, deletedAt: now }, now) : board;
@@ -644,36 +651,25 @@ export const isNarrowed = (filters: BoardFilters): boolean =>
 
 // ---- The trash --------------------------------------------------------------
 
-export type TrashEntry =
-  | { kind: "board"; board: Board; deletedAt: number; itemCount: number }
-  | { kind: "item"; board: Board; item: BoardItem; deletedAt: number; wasInPool: boolean };
+export interface TrashEntry {
+  board: Board;
+  deletedAt: number;
+  itemCount: number;
+}
 
-/** Deleted boards and the deleted cards of boards still in use, newest first. */
+/**
+ * Deleted boards, newest first. Only lists go to the trash: a card trashed on
+ * a device from before stays hidden, and goes when the trash is emptied.
+ */
 export function trashEntriesOf(boards: readonly Board[]): TrashEntry[] {
-  const entries: TrashEntry[] = [];
-  for (const board of boards) {
-    if (board.deletedAt !== null) {
-      entries.push({
-        kind: "board",
-        board,
-        deletedAt: board.deletedAt,
-        itemCount: liveItems(board).length,
-      });
-      continue;
-    }
-    const pool = poolTier(board)?.uid;
-    for (const item of board.items) {
-      if (item.deletedAt === null) continue;
-      entries.push({
-        kind: "item",
-        board,
-        item,
-        deletedAt: item.deletedAt,
-        wasInPool: item.tierUid === pool,
-      });
-    }
-  }
-  return entries.sort((a, b) => b.deletedAt - a.deletedAt);
+  return boards
+    .filter((board) => board.deletedAt !== null)
+    .map((board) => ({
+      board,
+      deletedAt: board.deletedAt ?? 0,
+      itemCount: liveItems(board).length,
+    }))
+    .sort((a, b) => b.deletedAt - a.deletedAt);
 }
 
 /** Every board without its trash, and every trashed board gone: what emptying the trash leaves. */

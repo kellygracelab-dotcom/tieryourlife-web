@@ -1496,9 +1496,8 @@ const ar: Translation = {
   },
   trash: {
     title: "سلة المهملات",
-    subtitle: "تبقى القوائم والعناصر المحذوفة هنا حتى تزيلها.",
+    subtitle: "تبقى القوائم المحذوفة هنا حتى تزيلها.",
     listMeta: "قائمة · {count} · حُذفت {when}",
-    itemMeta: "عنصر · من {list} · حُذف {when}",
     justNow: "الآن",
     minutesAgo: {
       zero: "قبل أقل من دقيقة",
@@ -1531,7 +1530,6 @@ const ar: Translation = {
     removeOf: "إزالة {name} نهائيًا",
     removeTitle: "الإزالة نهائيًا؟",
     removeBodyList: "سيتم حذف {title} و{count} من هذا الجهاز. لا يمكن التراجع عن هذا.",
-    removeBodyItem: "سيتم حذف {title} من هذا الجهاز. لا يمكن التراجع عن هذا.",
     emptyMenu: "إفراغ سلة المهملات",
     emptyTitle: "إفراغ سلة المهملات؟",
     emptyBody: "سيتم حذف {count} من هذا الجهاز. لا يمكن التراجع عن هذا.",
@@ -1544,7 +1542,7 @@ const ar: Translation = {
       other: "{n} سجل",
     },
     nothingTitle: "سلة المهملات فارغة",
-    nothingBody: "تظهر هنا القوائم والعناصر التي تحذفها. تبقى حتى تزيلها.",
+    nothingBody: "تظهر هنا القوائم التي تحذفها. تبقى حتى تزيلها.",
     cancel: "إلغاء",
     more: "خيارات أخرى",
     back: "قوائمك",

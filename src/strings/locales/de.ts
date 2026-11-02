@@ -1219,9 +1219,8 @@ const de: Translation = {
   },
   trash: {
     title: "Papierkorb",
-    subtitle: "Gelöschte Listen und Elemente bleiben hier, bis du sie entfernst.",
+    subtitle: "Gelöschte Listen bleiben hier, bis du sie entfernst.",
     listMeta: "Liste · {count} · gelöscht {when}",
-    itemMeta: "Element · aus {list} · gelöscht {when}",
     justNow: "gerade eben",
     minutesAgo: { one: "vor {n} Min.", other: "vor {n} Min." },
     hoursAgo: { one: "vor {n} Std.", other: "vor {n} Std." },
@@ -1234,16 +1233,13 @@ const de: Translation = {
     removeTitle: "Endgültig entfernen?",
     removeBodyList:
       "{title} und die {count} werden von diesem Gerät gelöscht. Das kann nicht rückgängig gemacht werden.",
-    removeBodyItem:
-      "{title} wird von diesem Gerät gelöscht. Das kann nicht rückgängig gemacht werden.",
     emptyMenu: "Papierkorb leeren",
     emptyTitle: "Papierkorb leeren?",
     emptyBody:
       "{count} werden von diesem Gerät gelöscht. Das kann nicht rückgängig gemacht werden.",
     entries: { one: "{n} Eintrag", other: "{n} Einträge" },
     nothingTitle: "Papierkorb ist leer",
-    nothingBody:
-      "Gelöschte Listen und Elemente erscheinen hier. Sie bleiben, bis du sie entfernst.",
+    nothingBody: "Listen, die du löschst, erscheinen hier. Sie bleiben, bis du sie entfernst.",
     cancel: "Abbrechen",
     more: "Weitere Optionen",
     back: "Deine Listen",
