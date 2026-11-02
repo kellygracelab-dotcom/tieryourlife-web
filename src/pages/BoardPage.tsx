@@ -17,12 +17,12 @@ import {
   rankedCount,
   rankedTiers,
   rename,
-  restoreItem,
+  putBack,
+  removeItem,
   restoreTier,
   setCategory,
   setDisplayMode,
   trashBoard,
-  trashItem,
   BOARD_LIMITS,
   type Board,
 } from "../features/boards/model";
@@ -384,14 +384,15 @@ export function BoardPage({
     const current = latest();
     if (itemUid === undefined) return;
     const card = current.items.find((it) => it.uid === itemUid);
-    keep(trashItem(current, itemUid, now()));
+    if (card === undefined) return;
+    keep(removeItem(current, itemUid, now()));
     setNotice({
-      text: fill(strings.boards.cardTrashed, { name: card?.title ?? "" }),
+      text: fill(strings.boards.cardTrashed, { name: card.title }),
       action: {
         text: strings.boards.undo,
         onClick: () => {
           const again = repository.get(uid);
-          if (again !== null) repository.save(restoreItem(again, itemUid, now()));
+          if (again !== null) repository.save(putBack(again, card, now()));
         },
       },
     });

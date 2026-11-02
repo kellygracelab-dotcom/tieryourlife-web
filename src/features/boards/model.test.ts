@@ -5,7 +5,6 @@ import {
   arrangeBoards,
   arrangeItems,
   BOARD_LIMITS,
-  dropItem,
   editTier,
   isNarrowed,
   itemsIn,
@@ -32,7 +31,8 @@ import {
   tierShares,
   trashBoard,
   trashEntriesOf,
-  trashItem,
+  putBack,
+  removeItem,
   withoutTrash,
   type Board,
 } from "./model";
@@ -168,7 +168,7 @@ describe("cards", () => {
     expect(titlesIn(b4, s!.uid)).toEqual(["b"]);
   });
 
-  it("go to the trash keeping their place, and come back to it", () => {
+  it("are removed for good, not to the trash, and Undo puts them back where they were", () => {
     const { board: b0, next } = board();
     const b1 = addToPool(
       b0,
@@ -180,33 +180,39 @@ describe("cards", () => {
     const pool = poolTier(b1)!;
     const [ia, ib, ic] = itemsIn(b1, pool.uid).map((item) => item.uid);
     const b2 = arrangeItems(b1, [[ia!, ib!, ic!], [], [], [], []], 2);
-    const b3 = trashItem(b2, ib!, 3);
+    const card = b2.items.find((item) => item.uid === ib)!;
+    const b3 = removeItem(b2, ib!, 3);
     expect(titlesIn(b3, s.uid)).toEqual(["a", "c"]);
     expect(itemsIn(b3, s.uid).map((item) => item.position)).toEqual([0, 1]);
-    expect(b3.items.find((item) => item.uid === ib)?.deletedAt).toBe(3);
-    expect(trashEntriesOf([b3])).toMatchObject([{ kind: "item", wasInPool: false }]);
-    // Restored between a and c, where it was.
-    const b4 = restoreItem(b3, ib!, 4);
+    expect(b3.items.some((item) => item.uid === ib)).toBe(false);
+    expect(b3.editedAt).toBe(3);
+    expect(trashEntriesOf([b3])).toEqual([]);
+    // Undo: back between a and c, where it was.
+    const b4 = putBack(b3, card, 4);
     expect(titlesIn(b4, s.uid)).toEqual(["a", "b", "c"]);
-    expect(trashEntriesOf([b4])).toEqual([]);
-    // Trashing twice is once; restoring what is not in the trash is nothing.
-    expect(trashItem(b3, ib!, 5)).toBe(b3);
-    expect(restoreItem(b4, ib!, 5)).toBe(b4);
-    // Dropped for good.
-    const b5 = dropItem(trashItem(b4, ia!, 6), ia!);
-    expect(b5.items.map((item) => item.title).sort()).toEqual(["b", "c"]);
+    expect(b4.items.find((item) => item.uid === ib)?.deletedAt).toBeNull();
+    // Removing what is not there, or putting back what is, is nothing.
+    expect(removeItem(b3, ib!, 5)).toBe(b3);
+    expect(putBack(b4, card, 5)).toBe(b4);
   });
 
-  it("come back to the pool when their tier has gone meanwhile", () => {
+  it("come back to the pool on Undo when their tier has gone meanwhile", () => {
     const { board: b0, next } = board();
     const b1 = addToPool(b0, [{ title: "a", imageUrl: null }], 1, next);
     const s = rankedTiers(b1)[0]!;
     const ia = liveItems(b1)[0]!.uid;
-    const b2 = trashItem(moveItem(b1, ia, s.uid, 0, 2), ia, 3);
-    const b3 = removeTier(b2, s.uid, 4);
-    const b4 = restoreItem(b3, ia, 5);
+    const b2 = moveItem(b1, ia, s.uid, 0, 2);
+    const card = b2.items.find((item) => item.uid === ia)!;
+    const b3 = removeTier(removeItem(b2, ia, 3), s.uid, 4);
+    const b4 = putBack(b3, card, 5);
     expect(titlesIn(b4, poolTier(b4)!.uid)).toEqual(["a"]);
   });
+});
+
+/** A card in the trash as a device from before, or the phone, may still send one. */
+const trashedElsewhere = (board: Board, itemUid: string, at: number): Board => ({
+  ...board,
+  items: board.items.map((item) => (item.uid === itemUid ? { ...item, deletedAt: at } : item)),
 });
 
 describe("tiers", () => {
@@ -314,7 +320,7 @@ describe("tiers", () => {
     const [s] = rankedTiers(b1);
     const pool = poolTier(b1)!;
     const [ia] = itemsIn(b1, pool.uid).map((item) => item.uid);
-    const b2 = trashItem(arrangeItems(b1, [[ia!], [], [], [], []], 2), ia!, 3);
+    const b2 = trashedElsewhere(arrangeItems(b1, [[ia!], [], [], [], []], 2), ia!, 3);
     const b3 = removeTier(b2, s!.uid, 4);
     const trashed = b3.items.find((item) => item.uid === ia);
     expect(trashed).toMatchObject({ tierUid: pool.uid });
@@ -473,7 +479,7 @@ describe("the list of boards", () => {
 });
 
 describe("the trash", () => {
-  it("lists deleted boards and the deleted cards of live boards, newest first, and empties", () => {
+  it("lists deleted boards only, newest first, and empties", () => {
     const { board: b0, next } = board();
     const b1 = addToPool(
       b0,
@@ -482,12 +488,13 @@ describe("the trash", () => {
       next,
     );
     const [ia] = liveItems(b1).map((item) => item.uid);
-    const live = trashItem(b1, ia!, 5);
+    // A card trashed by a device from before: hidden, not listed.
+    const live = trashedElsewhere(b1, ia!, 5);
     const gone = trashBoard(newBoard("other", "Other", 1, uids()), 7);
-    const entries = trashEntriesOf([live, gone]);
-    expect(entries.map((entry) => entry.kind)).toEqual(["board", "item"]);
-    expect(entries[0]).toMatchObject({ kind: "board", deletedAt: 7, itemCount: 0 });
-    expect(entries[1]).toMatchObject({ kind: "item", deletedAt: 5, wasInPool: true });
+    const older = trashBoard(newBoard("older", "Older", 1, uids()), 6);
+    const entries = trashEntriesOf([live, older, gone]);
+    expect(entries.map((entry) => entry.board.uid)).toEqual(["other", "older"]);
+    expect(entries[0]).toMatchObject({ deletedAt: 7, itemCount: 0 });
     expect(restoreBoard(gone, 8).deletedAt).toBeNull();
     expect(restoreBoard(live, 8)).toBe(live);
     expect(trashBoard(gone, 9)).toBe(gone);

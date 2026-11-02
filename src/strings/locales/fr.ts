@@ -1236,9 +1236,8 @@ const fr: Translation = {
   },
   trash: {
     title: "Corbeille",
-    subtitle: "Les listes et éléments supprimés restent ici jusqu'à ce que vous les retiriez.",
+    subtitle: "Les listes supprimées restent ici jusqu'à ce que vous les retiriez.",
     listMeta: "Liste · {count} · supprimée {when}",
-    itemMeta: "Élément · de {list} · supprimé {when}",
     justNow: "à l'instant",
     minutesAgo: { one: "il y a {n} min", many: "il y a {n} min", other: "il y a {n} min" },
     hoursAgo: { one: "il y a {n} h", many: "il y a {n} h", other: "il y a {n} h" },
@@ -1251,14 +1250,13 @@ const fr: Translation = {
     removeTitle: "Supprimer définitivement ?",
     removeBodyList:
       "{title} et ses {count} seront supprimés de cet appareil. Cette action est irréversible.",
-    removeBodyItem: "{title} sera supprimé de cet appareil. Cette action est irréversible.",
     emptyMenu: "Vider la corbeille",
     emptyTitle: "Vider la corbeille ?",
     emptyBody: "{count} seront supprimés de cet appareil. Cette action est irréversible.",
     entries: { one: "{n} entrée", many: "{n} entrées", other: "{n} entrées" },
     nothingTitle: "La corbeille est vide",
     nothingBody:
-      "Les listes et éléments que vous supprimez apparaissent ici. Ils restent jusqu'à ce que vous les retiriez.",
+      "Les listes que vous supprimez apparaissent ici. Elles restent jusqu'à ce que vous les retiriez.",
     cancel: "Annuler",
     more: "Plus d'options",
     back: "Vos listes",

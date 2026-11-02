@@ -242,7 +242,7 @@ describe("BoardPage", () => {
     expect(repository.get("films")?.title).toBe("Untitled list");
   });
 
-  it("adds a card by name into the pool, and sends one to the trash with Undo", async () => {
+  it("adds a card by name into the pool, and removes one for good, with Undo", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
     open(repository, "/b/films");
@@ -260,9 +260,8 @@ describe("BoardPage", () => {
     const menu = within(screen.getByRole("menu", { name: "Climax" }));
     await userEvent.click(menu.getByRole("menuitem", { name: "Remove from list" }));
     expect(screen.queryByRole("button", { name: "Climax" })).toBeNull();
-    expect(
-      repository.get("films")?.items.find((item) => item.title === "Climax")?.deletedAt,
-    ).toBeGreaterThan(100);
+    // Gone from the board, not to the trash: only lists go there.
+    expect(repository.get("films")?.items.some((item) => item.title === "Climax")).toBe(false);
     const notice = screen.getByRole("status");
     expect(notice).toHaveTextContent("Removed Climax");
     await userEvent.click(within(notice).getByRole("button", { name: "Undo" }));

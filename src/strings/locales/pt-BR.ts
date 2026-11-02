@@ -1210,9 +1210,8 @@ const ptBR: Translation = {
   },
   trash: {
     title: "Lixeira",
-    subtitle: "Listas e itens excluídos permanecem aqui até que você os remova.",
+    subtitle: "Listas excluídas permanecem aqui até que você as remova.",
     listMeta: "Lista · {count} · excluída {when}",
-    itemMeta: "Item · de {list} · excluído {when}",
     justNow: "agora mesmo",
     minutesAgo: { one: "há {n} min", many: "há {n} min", other: "há {n} min" },
     hoursAgo: { one: "há {n} h", many: "há {n} h", other: "há {n} h" },
@@ -1225,14 +1224,12 @@ const ptBR: Translation = {
     removeTitle: "Remover permanentemente?",
     removeBodyList:
       "{title} e seus {count} serão excluídos deste dispositivo. Isso não pode ser desfeito.",
-    removeBodyItem: "{title} será excluído deste dispositivo. Isso não pode ser desfeito.",
     emptyMenu: "Esvaziar lixeira",
     emptyTitle: "Esvaziar a lixeira?",
     emptyBody: "{count} serão excluídos deste dispositivo. Isso não pode ser desfeito.",
     entries: { one: "{n} registro", many: "{n} registros", other: "{n} registros" },
     nothingTitle: "A lixeira está vazia",
-    nothingBody:
-      "Listas e itens que você excluir aparecem aqui. Eles permanecem até que você os remova.",
+    nothingBody: "As listas que você exclui aparecem aqui. Elas ficam até que você as remova.",
     cancel: "Cancelar",
     more: "Mais opções",
     back: "Suas listas",

@@ -1340,9 +1340,8 @@ const pl: Translation = {
   },
   trash: {
     title: "Kosz",
-    subtitle: "Usunięte listy i elementy pozostają tutaj, dopóki ich nie usuniesz.",
+    subtitle: "Usunięte listy pozostają tutaj, dopóki ich nie usuniesz.",
     listMeta: "Lista · {count} · usunięto {when}",
-    itemMeta: "Element · z {list} · usunięto {when}",
     justNow: "przed chwilą",
     minutesAgo: {
       one: "{n} min temu",
@@ -1370,14 +1369,12 @@ const pl: Translation = {
     removeTitle: "Usunąć na stałe?",
     removeBodyList:
       "{title} i jego {count} zostaną usunięte z tego urządzenia. Tego nie można cofnąć.",
-    removeBodyItem: "{title} zostanie usunięte z tego urządzenia. Tego nie można cofnąć.",
     emptyMenu: "Opróżnij kosz",
     emptyTitle: "Opróżnić kosz?",
     emptyBody: "{count} zostanie usunięte z tego urządzenia. Tego nie można cofnąć.",
     entries: { one: "{n} wpis", few: "{n} wpisy", many: "{n} wpisów", other: "{n} wpisu" },
     nothingTitle: "Kosz jest pusty",
-    nothingBody:
-      "Listy i elementy, które usuwasz, pojawiają się tutaj. Pozostają, dopóki ich nie usuniesz.",
+    nothingBody: "Usunięte listy pojawiają się tutaj. Pozostają, dopóki ich nie usuniesz.",
     cancel: "Anuluj",
     more: "Więcej opcji",
     back: "Twoje listy",
