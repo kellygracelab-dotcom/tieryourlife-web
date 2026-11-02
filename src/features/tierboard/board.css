@@ -94,6 +94,11 @@
   flex: none;
 }
 
+/* A finger swiping a strip sideways moves the strip; a held finger still lifts the card. */
+.board--strip .tile {
+  touch-action: pan-x pan-y;
+}
+
 .tile {
   display: flex;
   align-items: center;
@@ -111,6 +116,8 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  /* A finger held on a card is the card's, not the picture's: Android offers no image menu over the drag. */
+  pointer-events: none;
 }
 
 /*

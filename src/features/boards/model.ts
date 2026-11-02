@@ -478,7 +478,12 @@ export function editTier(board: Board, tierUid: string, draft: TierDraft, now: n
   return touched({ ...board, tiers: board.tiers.map((t) => (t.uid === tierUid ? next : t)) }, now);
 }
 
-/** The tier goes; its cards go to the pool after the ones there. Cards in the trash stay in the trash, still naming the tier. */
+/**
+ * The tier goes; its cards go to the pool after the ones there. Its cards in
+ * the trash go there too, still in the trash, as on the phone: a card naming
+ * a tier the board no longer has is dropped when the board is read, and the
+ * account refuses such a board.
+ */
 export function removeTier(board: Board, tierUid: string, now: number): Board {
   const tier = board.tiers.find((t) => t.uid === tierUid);
   const pool = poolTier(board);
@@ -486,10 +491,13 @@ export function removeTier(board: Board, tierUid: string, now: number): Board {
     return board;
   }
   let position = itemsIn(board, pool.uid).length;
-  const items = board.items.map((item) =>
+  const live = board.items.map((item) =>
     item.tierUid === tierUid && item.deletedAt === null
       ? { ...item, tierUid: pool.uid, position: position++ }
       : item,
+  );
+  const items = live.map((item) =>
+    item.tierUid === tierUid ? { ...item, tierUid: pool.uid, position: position++ } : item,
   );
   const tiers = board.tiers
     .filter((t) => t.uid !== tierUid)

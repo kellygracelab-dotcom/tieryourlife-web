@@ -125,7 +125,10 @@ export function SearchPage({
   }
   const searching = filters.q.length >= MIN_QUERY;
 
+  // A search sent is a step Back returns from; a chip only narrows it, in place.
   const set = (next: Partial<Filters>) => setParams(write({ ...filters, ...next }));
+  const narrow = (next: Partial<Filters>) =>
+    setParams(write({ ...filters, ...next }), { replace: true });
 
   // The wait reads the filters as they are when it ends, not as they were when
   // the typing started: a chip pressed during the pause must not be undone.
@@ -194,10 +197,10 @@ export function SearchPage({
           title whatever is asked: an order chip would change nothing. */}
       {!searching && (
         <div className="search__chips" role="group" aria-label={strings.search.sortBy}>
-          <Chip selected={filters.sort === "popular"} onClick={() => set({ sort: "popular" })}>
+          <Chip selected={filters.sort === "popular"} onClick={() => narrow({ sort: "popular" })}>
             {strings.search.mostRanked}
           </Chip>
-          <Chip selected={filters.sort === "recent"} onClick={() => set({ sort: "recent" })}>
+          <Chip selected={filters.sort === "recent"} onClick={() => narrow({ sort: "recent" })}>
             {strings.search.newest}
           </Chip>
         </div>
@@ -205,7 +208,7 @@ export function SearchPage({
       <div className="search__chips" role="group" aria-label={strings.search.categories}>
         <Chip
           selected={filters.category === undefined}
-          onClick={() => set({ category: undefined })}
+          onClick={() => narrow({ category: undefined })}
         >
           {strings.search.all}
         </Chip>
@@ -215,7 +218,7 @@ export function SearchPage({
           <Chip
             key={section.id}
             selected={filters.category === section.id}
-            onClick={() => set({ category: section.id })}
+            onClick={() => narrow({ category: section.id })}
           >
             {section.name}
           </Chip>

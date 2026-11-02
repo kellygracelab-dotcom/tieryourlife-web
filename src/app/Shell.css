@@ -92,6 +92,17 @@
   color: var(--ink-faint);
 }
 
+/* The site draws its own cross, the same on every browser. */
+.top__search input::-webkit-search-cancel-button {
+  appearance: none;
+  display: none;
+}
+
+.top__search .field-clear {
+  width: 28px;
+  height: 28px;
+}
+
 .top__search-link {
   display: none;
   align-items: center;

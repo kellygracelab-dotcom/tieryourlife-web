@@ -194,6 +194,7 @@ const es: Translation = {
     signInBody: "Al seguir a alguien, sus nuevas listas te aparecen las primeras.",
   },
   search: {
+    clear: "Borrar",
     title: "«{q}»",
     browse: "Explorar listas",
     results: "Resultados de la búsqueda",

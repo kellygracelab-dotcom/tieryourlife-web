@@ -23,6 +23,8 @@
   outline: none;
 }
 
+/* The site draws its own cross, the same on every browser. */
 .search-box input::-webkit-search-cancel-button {
-  cursor: pointer;
+  appearance: none;
+  display: none;
 }

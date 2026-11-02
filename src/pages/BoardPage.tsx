@@ -324,6 +324,9 @@ export function BoardPage({
       ),
     [repository, uid, poolId],
   );
+  // The board on screen holds its rows itself: an arrangement made elsewhere
+  // (Play's result, its Undo) draws a fresh one over the cards.
+  const [arranged, setArranged] = useState(0);
   const play = usePlay(uid, playCards, playTiers, localStorageStore, {
     title: board?.title || strings.boards.untitled,
     games,
@@ -336,9 +339,11 @@ export function BoardPage({
         itemsIn(before, tier.uid).map((item) => item.uid),
       );
       repository.save(arrangeItems(before, rows, now()));
+      setArranged((round) => round + 1);
       return () => {
         const current = repository.get(uid);
         if (current !== null) repository.save(arrangeItems(current, was, now()));
+        setArranged((round) => round + 1);
       };
     },
   });
@@ -662,8 +667,8 @@ export function BoardPage({
           <section className="owner" aria-label={strings.owner.title}>
             <RankingBoard
               // The rows are held by index: a tier added, taken away or moved
-              // means a fresh board over the same cards.
-              key={`${board.uid}:${rankedTiers(board)
+              // means a fresh board over the same cards, as does Play's result.
+              key={`${board.uid}:${arranged}:${rankedTiers(board)
                 .map((tier) => tier.uid)
                 .join(",")}`}
               list={view.list}

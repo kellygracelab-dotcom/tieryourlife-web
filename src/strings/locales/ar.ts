@@ -220,6 +220,7 @@ const ar: Translation = {
     signInBody: "المتابعة تُبقي القوائم الجديدة ممن تحبهم في أعلى صفحتك.",
   },
   search: {
+    clear: "مسح",
     title: "«{q}»",
     browse: "تصفّح القوائم",
     results: "نتائج البحث",

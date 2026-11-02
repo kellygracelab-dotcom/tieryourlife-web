@@ -1,5 +1,6 @@
-import type { FormEvent } from "react";
+import { useRef, type FormEvent } from "react";
 import { strings } from "../../strings";
+import { ClearButton } from "../../ui/ClearButton";
 import { Icon } from "../../ui/Icon";
 import "./search.css";
 
@@ -11,6 +12,7 @@ interface SearchBoxProps {
 }
 
 export function SearchBox({ value, onChange, onSubmit, autoFocus = false }: SearchBoxProps) {
+  const field = useRef<HTMLInputElement>(null);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSubmit(value.trim());
@@ -19,6 +21,7 @@ export function SearchBox({ value, onChange, onSubmit, autoFocus = false }: Sear
     <form className="search-box" role="search" onSubmit={submit}>
       <Icon name="search" />
       <input
+        ref={field}
         type="search"
         value={value}
         placeholder={strings.home.searchPlaceholder}
@@ -27,6 +30,14 @@ export function SearchBox({ value, onChange, onSubmit, autoFocus = false }: Sear
         autoFocus={autoFocus}
         onChange={(event) => onChange(event.target.value)}
       />
+      {value !== "" && (
+        <ClearButton
+          onClear={() => {
+            onChange("");
+            field.current?.focus();
+          }}
+        />
+      )}
     </form>
   );
 }

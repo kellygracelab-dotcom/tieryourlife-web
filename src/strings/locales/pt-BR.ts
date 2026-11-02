@@ -195,6 +195,7 @@ const ptBR: Translation = {
     signInBody: "Seguir alguém deixa as novas listas dessa pessoa no topo do seu feed.",
   },
   search: {
+    clear: "Limpar",
     title: "“{q}”",
     browse: "Explorar listas",
     results: "Resultados da pesquisa",

@@ -193,6 +193,7 @@ export const en = {
     signInBody: "Following keeps new lists from people you like at the top of your feed.",
   },
   search: {
+    clear: "Clear",
     title: "“{q}”",
     browse: "Browse lists",
     results: "Search results",

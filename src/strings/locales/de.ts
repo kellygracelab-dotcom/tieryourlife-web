@@ -199,6 +199,7 @@ const de: Translation = {
     signInBody: "Wem du folgst, dessen neue Listen stehen ganz oben in deinem Feed.",
   },
   search: {
+    clear: "Leeren",
     title: "„{q}“",
     browse: "Listen durchstöbern",
     results: "Suchergebnisse",

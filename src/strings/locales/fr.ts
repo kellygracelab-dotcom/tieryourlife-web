@@ -199,6 +199,7 @@ const fr: Translation = {
     signInBody: "Suivre quelqu’un garde ses nouvelles listes en haut de votre fil.",
   },
   search: {
+    clear: "Effacer",
     title: "« {q} »",
     browse: "Parcourir les listes",
     results: "Résultats de la recherche",

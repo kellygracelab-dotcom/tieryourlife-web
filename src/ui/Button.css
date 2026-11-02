@@ -71,3 +71,34 @@
 .btn--danger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--on-error-container) 8%, var(--error-container));
 }
+
+/* The cross at the end of a search field, a finger's width though it looks small. */
+.field-clear {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: -6px -6px -6px 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.field-clear:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.field-clear:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.field-clear .ms {
+  font-size: 20px;
+}

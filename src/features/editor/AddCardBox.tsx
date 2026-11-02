@@ -13,6 +13,7 @@ import { keepWebPicture, PictureRefused, type UploadedPicture } from "../../lib/
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Chip } from "../../ui/Chip";
+import { ClearButton } from "../../ui/ClearButton";
 import { Icon } from "../../ui/Icon";
 import { LIMITS, type EditorAction, type EditorItem } from "./model";
 import { cardsFor, preferredFor, wantedOf } from "./paste";
@@ -126,11 +127,15 @@ function PictureTile({
   // A picture that will not load leaves no empty tile behind.
   if (broken) return null;
   return (
+    // Not disabled when added: a disabled button drops the keyboard's focus to
+    // the page, and the person picking several would have to find the grid again.
     <button
       type="button"
       className="cards__pick"
-      onClick={onPick}
-      disabled={added || busy}
+      onClick={() => {
+        if (!added && !busy) onPick();
+      }}
+      aria-disabled={added || busy}
       aria-pressed={added}
       aria-busy={busy || undefined}
     >
@@ -256,13 +261,33 @@ export function AddCardBox({
   const [pictureNote, setPictureNote] = useState<string | null>(null);
   const own = scopeFor(category);
   const [scope, setScope] = useState<PictureScope>(own);
+  // The board moved to another section: the search starts there.
+  const [ownBefore, setOwnBefore] = useState(own);
+  if (own !== ownBefore) {
+    setOwnBefore(own);
+    setScope(own);
+  }
   // "Search everywhere" holds for the words it was pressed for, and no others.
   const [everywhere, setEverywhere] = useState<string | null>(null);
   const [keeping, setKeeping] = useState<ReadonlySet<string>>(new Set());
+  // The answers show while the box is in use; Escape or a press elsewhere puts
+  // them away, the words and the cards picked staying. The field brings them back.
+  const [open, setOpen] = useState(true);
   const picker = useRef<HTMLInputElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+  const form = useRef<HTMLFormElement>(null);
   const name = typed.trim();
   const web = everywhere !== null && everywhere === name;
-  const { state: found, more } = usePictures(typed, scope, web, find);
+  const { state: found, more, retry } = usePictures(typed, scope, web, find);
+  const showing = open && name.length > 0;
+  useEffect(() => {
+    if (!showing) return;
+    const away = (event: PointerEvent) => {
+      if (!(event.target instanceof Node) || !form.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [showing]);
 
   // One card per file, in the order chosen; a file that fails names itself
   // and the rest still go in. The first goes up alone, since it may ask a
@@ -384,23 +409,53 @@ export function AddCardBox({
         )}
       </div>
 
-      <form className="cards__add" onSubmit={onSubmit}>
+      <form
+        ref={form}
+        className="cards__add"
+        onSubmit={onSubmit}
+        onKeyDown={(event) => {
+          // From the field or a tile: the answers go away, the cursor back to the words.
+          if (event.key === "Escape" && showing) {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+            field.current?.focus();
+          }
+        }}
+      >
         <label className="editor__label" htmlFor="card-input">
           {strings.new.addLabel}
         </label>
         <div className="editor__field">
           <Icon name="search" />
           <input
+            ref={field}
             id="card-input"
             type="text"
             value={typed}
             placeholder={strings.new.addPlaceholder}
             autoComplete="off"
             maxLength={80}
-            onChange={(event) => setTyped(event.target.value)}
+            aria-expanded={showing}
+            onClick={() => setOpen(true)}
+            onChange={(event) => {
+              setTyped(event.target.value);
+              setOpen(true);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown") setOpen(true);
+            }}
           />
+          {typed !== "" && (
+            <ClearButton
+              onClear={() => {
+                setTyped("");
+                field.current?.focus();
+              }}
+            />
+          )}
         </div>
-        {name.length > 0 && (
+        {showing && (
           <div className="cards__found" role="group" aria-label={strings.new.suggestions}>
             <div className="cards__scopes" role="group" aria-label={strings.new.whereToLook}>
               {scopesFrom(own).map((one) => (
@@ -411,7 +466,12 @@ export function AddCardBox({
             </div>
             {found.status === "searching" && <p className="cards__note">{strings.new.searching}</p>}
             {found.status === "failed" && (
-              <p className="cards__note">{strings.new.catalogueDown}</p>
+              <div className="cards__empty">
+                <p className="cards__note">{strings.new.catalogueDown}</p>
+                <Button variant="outlined" onClick={retry}>
+                  {strings.new.tryAgain}
+                </Button>
+              </div>
             )}
             {found.status === "ready" &&
               found.notices.map((notice) => (

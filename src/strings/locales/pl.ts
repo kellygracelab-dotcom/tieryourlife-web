@@ -211,6 +211,7 @@ const pl: Translation = {
     signInBody: "Nowe listy obserwowanych osób trafiają na górę twojej strony głównej.",
   },
   search: {
+    clear: "Wyczyść",
     title: "„{q}”",
     browse: "Przeglądaj listy",
     results: "Wyniki wyszukiwania",

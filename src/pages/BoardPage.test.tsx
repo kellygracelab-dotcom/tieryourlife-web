@@ -710,11 +710,13 @@ describe("BoardPage: a new board", () => {
     expect(screen.getByRole("textbox", { name: "Add a card" })).toBeInTheDocument();
   });
 
-  it("puts the cursor in the box of a kept board with no cards, the name not asked", () => {
+  it("puts the cursor in the box of a kept board with no cards, the name not asked", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(newBoard("bare", "Bare", 100, uids()));
     open(repository, "/b/bare");
-    expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveFocus();
+    await vi.waitFor(() =>
+      expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveFocus(),
+    );
   });
 
   it("on a phone, puts the same + Add in the tray's head and opens the catalogue from it", async () => {
@@ -806,12 +808,15 @@ describe("BoardPage: Play", () => {
 
     const played = repository.get("films")!;
     expect(poolTier(played) === null ? 0 : itemsIn(played, poolTier(played)!.uid).length).toBe(0);
+    // The board on screen is the result, not the arrangement it had before.
+    expect(await screen.findByText("3 of 3 placed")).toBeInTheDocument();
     const receipt = (await screen.findByText("Board arranged from 2 duels")).closest(".snackbar")!;
     await userEvent.click(within(receipt as HTMLElement).getByRole("button", { name: "Undo" }));
     const back = repository.get("films")!;
     const [first] = rankedTiers(back);
     expect(itemsIn(back, first!.uid).map((item) => item.title)).toEqual(["Ex Machina"]);
     expect(itemsIn(back, poolTier(back)!.uid)).toHaveLength(2);
+    expect(await screen.findByText("1 of 3 placed")).toBeInTheDocument();
   });
 
   it("keeps Play off a board of fewer than three cards", () => {
