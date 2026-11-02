@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router";
-import { errorOf } from "../api/errors";
 import { usePageTitle } from "../app/pageTitle";
 import { agoOf, type Ago } from "../features/boards/ago";
 import {
@@ -13,6 +12,7 @@ import {
   type TrashEntry,
 } from "../features/boards/model";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { takenDown } from "../features/boards/takeDown";
 import { useBoards } from "../features/boards/useBoards";
 import type { UnpublishBoard } from "../features/boards/BoardSettings";
 import { unpublish as unpublishList } from "../lib/api";
@@ -27,22 +27,6 @@ interface TrashPageProps {
   repository?: BoardsRepository;
   now?: () => number;
   unpublish?: UnpublishBoard;
-}
-
-/**
- * A trashed board's public copy taken down before the board goes for good:
- * once it is gone from here, nothing would be left to take the copy down
- * with, and the list would stay in the feed. Already gone is what was asked
- * for; any other refusal keeps the board.
- */
-async function takenDown(board: Board, unpublish: UnpublishBoard): Promise<boolean> {
-  if (board.publishedId === null) return true;
-  try {
-    await unpublish(board.publishedId);
-    return true;
-  } catch (reason: unknown) {
-    return errorOf(reason).kind === "notFound";
-  }
 }
 
 const agoText = (ago: Ago): string => {

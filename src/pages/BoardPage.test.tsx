@@ -283,6 +283,36 @@ describe("BoardPage", () => {
     expect(router.state.location.state).toEqual({ trashed: ["films"] });
   });
 
+  it("takes a published board's copy down before the trash, and keeps the board while it cannot", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), publishedId: "out", authorName: "Danylo" });
+    const unpublish = vi
+      .fn<(id: string) => Promise<void>>()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(undefined);
+    const router = open(repository, "/b/films", {
+      publishing: { ...noPublishing, unpublish },
+    });
+    const del = async () => {
+      await userEvent.click(screen.getByLabelText("More about this board"));
+      await userEvent.click(screen.getByRole("button", { name: "Delete board" }));
+    };
+
+    await del();
+    expect(unpublish).toHaveBeenCalledWith("out");
+    expect(await screen.findByRole("status")).toHaveTextContent("Kept, not deleted");
+    expect(repository.get("films")?.deletedAt).toBeNull();
+    expect(router.state.location.pathname).toBe("/b/films");
+
+    await del();
+    await vi.waitFor(() => expect(router.state.location.pathname).toBe("/b"));
+    expect(repository.get("films")).toMatchObject({
+      deletedAt: clock,
+      publishedId: null,
+      authorName: null,
+    });
+  });
+
   it("makes a new board with the phone's five tiers, and keeps it only once it is touched", async () => {
     const repository = boardsRepository(memoryStore());
     const router = open(repository, "/b/fresh?new=777");

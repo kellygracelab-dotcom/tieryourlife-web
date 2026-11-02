@@ -61,12 +61,20 @@ const open = (
   path = "/b",
   state?: unknown,
   store: KeyValueStore = memoryStore(),
+  unpublish: (id: string) => Promise<void> = async () => undefined,
 ) => {
   const router = createMemoryRouter(
     [
       {
         path: "/b",
-        element: <BoardsPage repository={repository} now={() => 5000} store={store} />,
+        element: (
+          <BoardsPage
+            repository={repository}
+            now={() => 5000}
+            store={store}
+            unpublish={unpublish}
+          />
+        ),
       },
       { path: "/b/new", element: <h1>new board</h1> },
       { path: "/b/:uid", element: <h1>board page</h1> },
@@ -315,6 +323,32 @@ describe("BoardsPage", () => {
       expect(opened()).toHaveLength(2);
     },
   );
+
+  it("takes the public copies down before the trash, and keeps a board whose copy stays up", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([
+      board("a", "Albums", 1, { publishedId: "up", authorName: "Danylo" }),
+      board("b", "Books", 2, { publishedId: "stuck", authorName: "Danylo" }),
+      board("c", "Cheeses", 3),
+    ]);
+    const unpublish = vi.fn(async (id: string) => {
+      if (id === "stuck") throw new Error("offline");
+    });
+    open(repository, "/b", undefined, memoryStore(), unpublish);
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    for (const name of ["Albums", "Books", "Cheeses"]) {
+      await userEvent.click(screen.getByRole("button", { name: `Select ${name}` }));
+    }
+    await userEvent.click(
+      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Kept, not deleted");
+    expect(unpublish.mock.calls.map(([id]) => id).sort()).toEqual(["stuck", "up"]);
+    expect(repository.get("a")).toMatchObject({ deletedAt: 5000, publishedId: null });
+    expect(repository.get("b")).toMatchObject({ deletedAt: null, publishedId: "stuck" });
+    expect(repository.get("c")?.deletedAt).toBe(5000);
+  });
 
   it("says so when a board page sent its board to the trash, once", async () => {
     const repository = boardsRepository(memoryStore());

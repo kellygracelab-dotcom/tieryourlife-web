@@ -47,6 +47,7 @@ import {
   unpublish as unpublishList,
 } from "../lib/api";
 import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { takenDown, unpublished } from "../features/boards/takeDown";
 import { applyTierAction, editorTiersOf, newTierOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
 import { boardView, sameOrder, uidRows } from "../features/boards/view";
@@ -486,8 +487,19 @@ export function BoardPage({
     });
   };
 
-  const toTrash = () => {
-    keep(trashBoard(board, now()));
+  // The public copy comes down first, as on the phone; while it cannot, the
+  // board stays and says why.
+  const trashing = useRef(false);
+  const toTrash = async () => {
+    if (trashing.current) return;
+    trashing.current = true;
+    const down = await takenDown(latest(), publishing.unpublish);
+    trashing.current = false;
+    if (!down) {
+      setNotice({ text: strings.trash.stillPublic });
+      return;
+    }
+    keep(trashBoard(unpublished(latest(), now()), now()));
     void navigate("/b", { state: { trashed: [uid] } satisfies BoardsPageState });
   };
 
@@ -583,7 +595,7 @@ export function BoardPage({
                 <button
                   type="button"
                   className="menu__action menu__action--danger"
-                  onClick={toTrash}
+                  onClick={() => void toTrash()}
                 >
                   {strings.boards.delete}
                 </button>
