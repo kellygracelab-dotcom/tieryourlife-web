@@ -264,6 +264,7 @@ const ru: Translation = {
     pasting: "Ищу картинки: {done} из {total}",
     suggestions: "Подсказки",
     searching: "Ищем в каталоге…",
+    lookingFurther: "Ищем в других местах…",
     nothingFound: "В каталоге такого нет. Всё равно добавьте карточкой.",
     catalogueDown: "Каталог не отвечает. Карточки по названию всё равно работают.",
     whereToLook: "Где искать",

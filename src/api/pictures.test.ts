@@ -58,6 +58,7 @@ describe("pictures", () => {
       ],
       hasMore: true,
       notices: [],
+      rest: false,
     });
 
     await searchPictures(client, {
@@ -120,7 +121,7 @@ describe("pictures", () => {
     const empty = recordingClient({});
     await expect(
       searchPictures(empty.client, { q: "na", scope: "all", page: 1, web: false, lang: "en" }),
-    ).resolves.toEqual({ items: [], hasMore: false, notices: [] });
+    ).resolves.toEqual({ items: [], hasMore: false, notices: [], rest: false });
     expect(pictureOf("text")).toBeNull();
   });
 

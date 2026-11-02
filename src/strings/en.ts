@@ -245,6 +245,7 @@ export const en = {
     pasting: "Finding pictures: {done} of {total}",
     suggestions: "Suggestions",
     searching: "Looking in the catalogue…",
+    lookingFurther: "Looking in more places…",
     nothingFound: "Nothing in the catalogue by that name. Add it as a card anyway.",
     catalogueDown: "The catalogue is not answering. Cards by name still work.",
     whereToLook: "Where to look",

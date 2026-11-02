@@ -247,6 +247,7 @@ const ptBR: Translation = {
     pasting: "Procurando imagens: {done} de {total}",
     suggestions: "Sugestões",
     searching: "Procurando no catálogo…",
+    lookingFurther: "Procurando em mais lugares…",
     nothingFound: "Nada com esse nome no catálogo. Adicione como card mesmo assim.",
     catalogueDown: "O catálogo não está respondendo. Cards por nome continuam funcionando.",
     whereToLook: "Onde procurar",

@@ -82,11 +82,11 @@ const scopeName = (scope: PictureScope): string =>
       ? strings.new.animals
       : strings.category[scope];
 
-/** The board's own section first, then All, then the rest, as on the phone. */
+/** All first, then the board's own section, then the rest, as on the phone. */
 const scopesFrom = (own: PictureScope): PictureScope[] =>
   own === "all"
     ? [...PICTURE_SCOPES]
-    : [own, "all", ...PICTURE_SCOPES.filter((one) => one !== own && one !== "all")];
+    : ["all", own, ...PICTURE_SCOPES.filter((one) => one !== own && one !== "all")];
 
 /** Wikidata's things and the web's pages have nothing worth a label. */
 const kindName = (kind: PictureKind): string | null =>
@@ -488,7 +488,7 @@ export function AddCardBox({
                   </span>
                 </p>
               ))}
-            {found.status === "ready" && found.items.length === 0 && (
+            {found.status === "ready" && found.items.length === 0 && !found.filling && (
               <div className="cards__empty">
                 <p className="cards__note">
                   {scope === "all"
@@ -524,6 +524,11 @@ export function AddCardBox({
                   </div>
                 )}
               </>
+            )}
+            {found.status === "ready" && found.filling && (
+              <p className="cards__note" role="status">
+                {strings.new.lookingFurther}
+              </p>
             )}
             <button type="submit" className="cards__result cards__result--name">
               <Icon name="add" />

@@ -79,6 +79,8 @@ export interface PicturePage {
   /** More from the catalogues; the web answers on the first page only. */
   hasMore: boolean;
   notices: PictureNotice[];
+  /** A quick answer only: the whole search, slow catalogues and the web, can still add hits. */
+  rest: boolean;
 }
 
 export interface PictureAsk {
@@ -88,6 +90,8 @@ export interface PictureAsk {
   page: number;
   /** "Search everywhere": the web is asked even when the catalogues found plenty. */
   web: boolean;
+  /** Only the catalogues that answer in a second or two, never the web; `rest` says whether the whole search is worth asking. */
+  quick?: boolean;
 }
 
 /** The backend refuses fewer letters than this. */
@@ -125,19 +129,21 @@ export async function searchPictures(
   client: ApiClient,
   ask: PictureAsk & { lang: string },
 ): Promise<PicturePage> {
-  const answer = await client.request<{ items?: unknown; hasMore?: unknown; notices?: unknown }>(
-    "GET",
-    "/lists/pictures",
-    {
-      query: {
-        q: ask.q.trim().slice(0, MAX_PICTURE_QUERY),
-        scope: ask.scope,
-        lang: ask.lang,
-        page: ask.page,
-        ...(ask.web ? { web: 1 } : {}),
-      },
+  const answer = await client.request<{
+    items?: unknown;
+    hasMore?: unknown;
+    notices?: unknown;
+    rest?: unknown;
+  }>("GET", "/lists/pictures", {
+    query: {
+      q: ask.q.trim().slice(0, MAX_PICTURE_QUERY),
+      scope: ask.scope,
+      lang: ask.lang,
+      page: ask.page,
+      ...(ask.web ? { web: 1 } : {}),
+      ...(ask.quick === true ? { part: "quick" } : {}),
     },
-  );
+  });
   const items = Array.isArray(answer.items) ? answer.items : [];
   const notices = Array.isArray(answer.notices) ? answer.notices : [];
   return {
@@ -145,6 +151,8 @@ export async function searchPictures(
     hasMore: answer.hasMore === true,
     // Codes this page does not know yet are left unsaid.
     notices: notices.filter((one): one is PictureNotice => NOTICES.includes(one as string)),
+    // A backend from before quick answers sends the whole one, and no rest.
+    rest: answer.rest === true,
   };
 }
 

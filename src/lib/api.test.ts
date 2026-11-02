@@ -158,7 +158,7 @@ describe("api", () => {
     mocks.request.mockResolvedValueOnce({ items: [] } as unknown as { id: string });
     await expect(
       findPictures({ q: "ghibli", scope: "anime", page: 1, web: false }),
-    ).resolves.toEqual({ items: [], hasMore: false, notices: [] });
+    ).resolves.toEqual({ items: [], hasMore: false, notices: [], rest: false });
     expect(mocks.request).toHaveBeenCalledWith("GET", "/lists/pictures", {
       query: { q: "ghibli", scope: "anime", lang: "en", page: 1 },
     });

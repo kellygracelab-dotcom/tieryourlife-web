@@ -247,6 +247,7 @@ const ja: Translation = {
     pasting: "画像を検索中: {done} / {total}",
     suggestions: "候補",
     searching: "カタログを検索中…",
+    lookingFurther: "ほかの場所も検索中…",
     nothingFound: "カタログにその名前はありません。そのままカードとして追加できます。",
     catalogueDown: "カタログが応答しません。名前だけのカードは追加できます。",
     whereToLook: "探す場所",
