@@ -10,15 +10,44 @@ interface ListCardProps {
   list: ListSummary;
   /** Why the list is in a Following feed: "In Anime", or the topic followed. */
   reason?: string | null;
+  /** The one signed in, when the list is theirs, named or not. */
+  yours?: Yours | null;
+}
+
+/** One's own face, the one this device knows, which a new face reaches first. */
+export interface Yours {
+  uid: string;
+  name: string | null;
+  photoUrl: string | null;
 }
 
 const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
+function Face({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
+  if (photoUrl !== null)
+    return <img className="list-card__face" src={photoUrl} alt="" loading="lazy" />;
+  if (name === null || name.trim() === "")
+    return (
+      <span className="list-card__face list-card__face--initial" aria-hidden="true">
+        <Icon name="person" />
+      </span>
+    );
+  return (
+    <span className="list-card__face list-card__face--initial" aria-hidden="true">
+      {initialOf(name)}
+    </span>
+  );
+}
+
 /**
  * The feed's card, as the app draws it: the art, the title on up to two
  * lines, the author's face and name, and how many cards and rankings.
+ *
+ * Whose it is shows at a glance (Danylo, 02.11.2026): one's own lists wear
+ * one's own face and say so, anonymous or not; somebody else's anonymous list
+ * names nobody and shows no empty face; a named one names its author.
  */
-export function ListCard({ list, reason = null }: ListCardProps) {
+export function ListCard({ list, reason = null, yours = null }: ListCardProps) {
   // How many people ranked it is not said: a small count makes the place look
   // empty, a big one is noise (Danylo, 01.11.2026). The cards are the list's own.
   const meta = [plural(strings.card.items, list.itemCount)];
@@ -36,15 +65,26 @@ export function ListCard({ list, reason = null }: ListCardProps) {
         </span>
       </Link>
       <span className="list-card__body">
-        {list.anonymous === true ? (
-          <span className="list-card__author list-card__author--anonymous">
-            <span className="list-card__face list-card__face--anonymous" aria-hidden="true">
-              <Icon name="person" />
+        {yours !== null ? (
+          list.anonymous === true ? (
+            <span className="list-card__author list-card__author--own">
+              <Face name={yours.name} photoUrl={yours.photoUrl} />
+              <span className="list-card__name">{strings.card.yoursAnonymous}</span>
             </span>
-            <span>{strings.card.anonymous}</span>
-          </span>
+          ) : (
+            <Link
+              className="list-card__author list-card__author--own"
+              to={`/u/${encodeURIComponent(yours.uid)}`}
+              state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
+            >
+              <Face name={yours.name} photoUrl={yours.photoUrl} />
+              <span className="list-card__name">{strings.card.yours}</span>
+            </Link>
+          )
         ) : (
-          // An editorial list stands without an author, the way a template does.
+          // Somebody else's anonymous list, or an editorial one, stands without
+          // an author, the way a template does: no name, no empty face.
+          list.anonymous !== true &&
           !isEditorialAuthor(list.authorUid) && (
             <Link
               className="list-card__author"

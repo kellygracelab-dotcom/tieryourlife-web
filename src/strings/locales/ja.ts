@@ -590,7 +590,8 @@ const ja: Translation = {
     items: { other: "カード {n} 枚" },
     rankings: { other: "{n}件のランキング" },
     noArt: "画像なし",
-    anonymous: "匿名",
+    yours: "あなたのリスト",
+    yoursAnonymous: "あなたのリスト・匿名",
   },
   android: {
     title: "TierYourLife Android版",

@@ -606,7 +606,8 @@ const fr: Translation = {
     items: { one: "{n} carte", other: "{n} cartes" },
     rankings: { one: "{n} classement", other: "{n} classements" },
     noArt: "Sans image",
-    anonymous: "Anonyme",
+    yours: "Votre liste",
+    yoursAnonymous: "Votre liste · anonyme",
   },
   android: {
     title: "TierYourLife pour Android",

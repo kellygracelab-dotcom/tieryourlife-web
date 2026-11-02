@@ -624,7 +624,8 @@ const ru: Translation = {
       other: "{n} рейтинга",
     },
     noArt: "Без картинки",
-    anonymous: "Аноним",
+    yours: "Ваш список",
+    yoursAnonymous: "Ваш список · анонимно",
   },
   android: {
     title: "TierYourLife для Android",

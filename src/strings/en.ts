@@ -1207,6 +1207,7 @@ export const en = {
     items: { one: "{n} card", other: "{n} cards" },
     rankings: { one: "{n} ranking", other: "{n} rankings" },
     noArt: "No picture",
-    anonymous: "Anonymous",
+    yours: "Your list",
+    yoursAnonymous: "Your list · anonymous",
   },
 } as const;

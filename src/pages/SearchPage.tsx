@@ -6,6 +6,7 @@ import { isSectionId, type FeedSort } from "../api/types";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed, type FeedState } from "../features/feed/useFeed";
+import { useYours } from "../features/feed/yours";
 import { SectionTile } from "../features/sections/SectionTile";
 import { FoundTopicTiles } from "../features/sections/TopicTiles";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
@@ -53,6 +54,7 @@ const SUGGESTIONS = 3;
 /** Something to open when the words led nowhere: what people rank most, in the category if one is set. */
 function Suggestions({ category, name }: { category: string | undefined; name: string }) {
   const popular = useFeed({ category, sort: "popular" });
+  const yours = useYours();
   if (popular.state.status !== "ready" || popular.state.lists.length === 0) return null;
   const heading =
     category === undefined
@@ -66,7 +68,7 @@ function Suggestions({ category, name }: { category: string | undefined; name: s
       <ul className="feed" aria-label={heading}>
         {popular.state.lists.slice(0, SUGGESTIONS).map((list) => (
           <li key={list.id}>
-            <ListCard list={list} />
+            <ListCard list={list} yours={yours(list)} />
           </li>
         ))}
       </ul>

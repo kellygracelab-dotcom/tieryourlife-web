@@ -93,8 +93,9 @@
   white-space: nowrap;
 }
 
-.list-card__author--anonymous {
-  color: var(--ink-quiet);
+.list-card__author--own {
+  color: var(--ink);
+  font-weight: 500;
 }
 
 .list-card__face {
@@ -105,8 +106,7 @@
   flex: none;
 }
 
-.list-card__face--initial,
-.list-card__face--anonymous {
+.list-card__face--initial {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -115,7 +115,7 @@
   font: 500 11px/1 var(--font);
 }
 
-.list-card__face--anonymous .ms {
+.list-card__face--initial .ms {
   font-size: 12px;
 }
 

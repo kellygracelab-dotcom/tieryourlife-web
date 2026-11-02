@@ -618,7 +618,8 @@ const pl: Translation = {
       other: "{n} rankingu",
     },
     noArt: "Bez obrazu",
-    anonymous: "Anonim",
+    yours: "Twoja lista",
+    yoursAnonymous: "Twoja lista · anonimowa",
   },
   android: {
     title: "TierYourLife na Androida",
