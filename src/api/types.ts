@@ -81,6 +81,8 @@ export interface PublishedTier {
 export interface PublishedItem {
   title: string;
   imageUrl: string | null;
+  /** The photographer the picture's license asks to name; absent for none. */
+  credit?: string | null;
   // Absent on snapshots published before the author's arrangement travelled.
   tierIndex?: number | null;
 }
@@ -116,4 +118,6 @@ export interface CatalogueItem {
   /** The year, or for a person what they are known for: names alone are a guess. */
   subtitle: string | null;
   imageUrl: string | null;
+  /** The photographer the picture's license asks to name, where the picture search knows one. */
+  credit?: string | null;
 }

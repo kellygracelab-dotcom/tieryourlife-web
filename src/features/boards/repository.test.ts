@@ -17,6 +17,30 @@ describe("parseBoard", () => {
     expect(parseBoard(without)?.anonymous).toBe(false);
   });
 
+  it("reads a picture's credit as the backend keeps it, and none where there is none", () => {
+    const board = newBoard("b1", "Films", 1, uids());
+    const pool = poolTier(board)!;
+    const card = (uid: string, credit: unknown) => ({
+      uid,
+      pictureId: null,
+      tierUid: pool.uid,
+      position: 0,
+      title: uid,
+      imageUrl: null,
+      ...(credit === undefined ? {} : { credit }),
+      source: "MANUAL",
+      deletedAt: null,
+    });
+    const read = parseBoard({
+      ...board,
+      items: [card("a", "  (c)  Jane	 Doe "), card("b", "   "), card("c", 4), card("d", undefined)],
+    });
+    expect(read?.items.map((item) => item.credit)).toEqual(["(c) Jane Doe", null, null, null]);
+    expect(
+      parseBoard({ ...board, items: [card("e", "x".repeat(300))] })?.items[0]?.credit,
+    ).toHaveLength(200);
+  });
+
   it("reads back what was written, whole", () => {
     const board = newBoard("b1", "Films", 5, uids());
     expect(parseBoard(JSON.parse(JSON.stringify(board)))).toEqual(board);

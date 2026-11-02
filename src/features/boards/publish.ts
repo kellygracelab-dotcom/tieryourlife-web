@@ -3,6 +3,7 @@ import type { PublishedList } from "../../api/types";
 import type { Draft } from "../editor/model";
 import {
   BOARD_LIMITS,
+  creditOf,
   itemsIn,
   liveItems,
   newBoard,
@@ -61,6 +62,7 @@ export function publishRequestOf(board: Board): PublishRequest | null {
       title: item.title,
       imageUrl: item.pictureId === null ? item.imageUrl : null,
       pictureId: item.pictureId,
+      ...(item.credit === null ? {} : { credit: item.credit }),
       tierIndex,
     })),
   };
@@ -108,6 +110,7 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
       position: place.position,
       title: card.title,
       imageUrl: card.imageUrl,
+      credit: card.credit ?? null,
       source: "MANUAL" as const,
       deletedAt: null,
     };
@@ -139,7 +142,11 @@ export const boardFromList = (
       category: list.category,
       authorName: list.authorName,
       tiers: list.tiers,
-      cards: list.items.map((item) => ({ title: item.title, imageUrl: item.imageUrl })),
+      cards: list.items.map((item) => ({
+        title: item.title,
+        imageUrl: item.imageUrl,
+        credit: creditOf(item.credit),
+      })),
       rows,
     },
     now,

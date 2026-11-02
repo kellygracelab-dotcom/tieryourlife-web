@@ -23,6 +23,8 @@ export interface KeptItem {
   position: number;
   title: string;
   imageUrl: string | null;
+  /** Left out when the picture names nobody; the backend keeps it out of the fingerprint. */
+  credit?: string | null;
   source: string;
   deletedAt: number | null;
 }

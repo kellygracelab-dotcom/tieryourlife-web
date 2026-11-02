@@ -344,6 +344,7 @@ export function AddCardBox({
         title: picture.title,
         imageUrl: picture.imageUrl,
         key: picture.id,
+        ...(picture.credit === null ? {} : { credit: picture.credit }),
       });
       return;
     }

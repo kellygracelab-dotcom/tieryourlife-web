@@ -410,6 +410,7 @@ const ar: Translation = {
     moreFailed: "تعذّر تحميل المزيد.",
   },
   list: {
+    pictureCredits: "حقوق الصور",
     opening: "جارٍ فتح القائمة…",
     by: "من {name}",
     home: "إلى الصفحة الرئيسية",
@@ -1373,6 +1374,7 @@ const ar: Translation = {
     currentTier: "هنا حاليًا",
     backToPool: "الإعادة إلى المجمّع",
     removeFromList: "إزالة من القائمة",
+    photoBy: "الصورة: {credit}",
     publicTitle: "عامة",
     publicBody: "يمكن لأي شخص لديه الرابط ترتيبها. تظهر في المجتمع.",
     needsAccount: "سجّل الدخول بحساب Google للنشر. القراءة والحفظ لا تحتاجان إلى حساب.",

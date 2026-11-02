@@ -358,6 +358,7 @@ const ptBR: Translation = {
     moreFailed: "Não foi possível carregar mais.",
   },
   list: {
+    pictureCredits: "Créditos das imagens",
     opening: "Abrindo a lista…",
     by: "de {name}",
     home: "Ir para a página inicial",
@@ -1099,6 +1100,7 @@ const ptBR: Translation = {
     currentTier: "Está aqui agora",
     backToPool: "Voltar para o grupo",
     removeFromList: "Remover da lista",
+    photoBy: "Foto: {credit}",
     publicTitle: "Pública",
     publicBody: "Qualquer pessoa com o link pode organizá-la. Ela aparece em Comunidade.",
     needsAccount:

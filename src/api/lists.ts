@@ -77,6 +77,8 @@ export interface PublishRequest {
     title: string;
     imageUrl: string | null;
     pictureId: string | null;
+    /** Left out when the picture names nobody. */
+    credit?: string;
     tierIndex: number | null;
   }[];
 }

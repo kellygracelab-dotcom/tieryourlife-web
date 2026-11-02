@@ -316,6 +316,38 @@ describe("RankingBoard's card menu", () => {
     }
   });
 
+  it("names the photographer a card's picture asks for, at the menu's foot and under the sheet's title", async () => {
+    const credited: PublishedList = {
+      ...list,
+      items: list.items.map((item) =>
+        item.title === "Climax" ? { ...item, credit: "(c) Jane Doe (CC BY)" } : item,
+      ),
+    };
+    render(
+      <MemoryRouter>
+        <RankingBoard list={credited} store={memoryStore()} />
+      </MemoryRouter>,
+    );
+    await userEvent.dblClick(card("Climax"));
+    const menu = screen.getByRole("menu", { name: "Climax" });
+    expect(menu).toHaveAccessibleDescription("Photo: (c) Jane Doe (CC BY)");
+    // Words, not one more thing to choose.
+    expect(within(menu).queryByRole("menuitem", { name: /Photo/ })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.dblClick(card("The Witch"));
+    expect(screen.getByRole("menu", { name: "The Witch" })).not.toHaveTextContent("Photo");
+    await userEvent.keyboard("{Escape}");
+
+    for (let i = 0; i < 2; i++) {
+      pointer("pointerdown", card("Climax"), "touch");
+      pointer("pointerup", card("Climax"), "touch");
+      pointer("click", card("Climax"), "touch");
+    }
+    expect(screen.getByRole("dialog", { name: "Climax" })).toHaveAccessibleDescription(
+      "Photo: (c) Jane Doe (CC BY)",
+    );
+  });
+
   it("gives a finger's double tap the phone's sheet instead", async () => {
     const { onChange } = owned();
     for (let i = 0; i < 2; i++) {

@@ -364,6 +364,7 @@ const de: Translation = {
     moreFailed: "Mehr konnte nicht geladen werden.",
   },
   list: {
+    pictureCredits: "Bildnachweise",
     opening: "Liste wird geöffnet…",
     by: "von {name}",
     home: "Zur Startseite",
@@ -1108,6 +1109,7 @@ const de: Translation = {
     currentTier: "Aktuell hier",
     backToPool: "Zurück in den Pool",
     removeFromList: "Aus der Liste entfernen",
+    photoBy: "Foto: {credit}",
     publicTitle: "Öffentlich",
     publicBody: "Alle mit dem Link können sie einordnen. Sie erscheint in der Community.",
     needsAccount:

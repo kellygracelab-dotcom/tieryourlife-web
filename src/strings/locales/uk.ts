@@ -375,6 +375,7 @@ const uk: Translation = {
     moreFailed: "Не вдалося завантажити ще.",
   },
   list: {
+    pictureCredits: "Автори фото",
     opening: "Відкриваємо список…",
     by: "від {name}",
     home: "На головну",
@@ -1215,6 +1216,7 @@ const uk: Translation = {
     currentTier: "Зараз тут",
     backToPool: "Повернути в пул",
     removeFromList: "Видалити зі списку",
+    photoBy: "Фото: {credit}",
     publicTitle: "Публічний",
     publicBody: "Будь-хто з посиланням зможе його розкласти. Список з’явиться в Спільноті.",
     needsAccount:

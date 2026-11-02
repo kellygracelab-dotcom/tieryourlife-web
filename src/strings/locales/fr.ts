@@ -365,6 +365,7 @@ const fr: Translation = {
     moreFailed: "Impossible d’en charger plus.",
   },
   list: {
+    pictureCredits: "Crédits photo",
     opening: "Ouverture de la liste…",
     by: "de {name}",
     home: "Aller à la page d’accueil",
@@ -1123,6 +1124,7 @@ const fr: Translation = {
     currentTier: "Actuellement ici",
     backToPool: "Remettre dans le réservoir",
     removeFromList: "Retirer de la liste",
+    photoBy: "Photo : {credit}",
     publicTitle: "Publique",
     publicBody: "Toute personne ayant le lien peut la classer. Elle apparaît dans Communauté.",
     needsAccount:

@@ -403,6 +403,26 @@ describe("ListPage", () => {
     expect(mocks.loadList).toHaveBeenCalledWith("abc", false);
   });
 
+  it("names the photographers the pictures ask for at the list's foot, and has no such part without one", async () => {
+    mocks.loadList.mockResolvedValue({
+      ...list,
+      items: [{ ...list.items[0]!, credit: "(c) Jane Doe (CC BY)" }, list.items[1]!],
+    });
+    const { unmount } = open();
+    const credits = await screen.findByRole("region", { name: "Picture credits" });
+    expect(
+      within(credits)
+        .getAllByRole("listitem")
+        .map((line) => line.textContent),
+    ).toEqual(["Ex Machina — (c) Jane Doe (CC BY)"]);
+    unmount();
+
+    mocks.loadList.mockResolvedValue(list);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByRole("region", { name: "Picture credits" })).toBeNull();
+  });
+
   it("switches to an empty board of one's own and back, in the phone app's words", async () => {
     const animate = vi.fn();
     HTMLElement.prototype.animate = animate as unknown as HTMLElement["animate"];

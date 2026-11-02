@@ -375,6 +375,7 @@ const pl: Translation = {
     moreFailed: "Nie udało się wczytać więcej.",
   },
   list: {
+    pictureCredits: "Autorzy zdjęć",
     opening: "Otwieranie listy…",
     by: "od {name}",
     home: "Przejdź na stronę główną",
@@ -1217,6 +1218,7 @@ const pl: Translation = {
     currentTier: "Obecnie tutaj",
     backToPool: "Wróć do puli",
     removeFromList: "Usuń z listy",
+    photoBy: "Zdjęcie: {credit}",
     publicTitle: "Publiczna",
     publicBody: "Każdy, kto ma link, może ją ułożyć. Pojawi się w Społeczności.",
     needsAccount:

@@ -1,13 +1,15 @@
 import { useId, useRef, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { PublishedTier } from "../../api/types";
-import { strings } from "../../strings";
+import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { useModal } from "../../ui/useModal";
 
 interface MoveSheetProps {
   /** The card's name, which is the sheet's title. */
   name: string;
+  /** The photographer the card's picture asks to be named by. */
+  credit?: string | null;
   tiers: readonly PublishedTier[];
   /** Where the card is now, or null in the pool. */
   current: number | null;
@@ -25,6 +27,7 @@ interface MoveSheetProps {
  */
 export function MoveSheet({
   name,
+  credit = null,
   tiers,
   current,
   onPlace,
@@ -45,11 +48,17 @@ export function MoveSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
+        aria-describedby={credit === null ? undefined : `${id}-credit`}
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id={`${id}-title`} className="dialog__title">
           {name}
         </h2>
+        {credit !== null && (
+          <p id={`${id}-credit`} className="move-sheet__credit">
+            {fill(strings.boards.photoBy, { credit })}
+          </p>
+        )}
         <p className="move-sheet__who">{strings.boards.moveTo}</p>
         <ul className="move-sheet__tiers">
           {tiers.map((tier, index) => (

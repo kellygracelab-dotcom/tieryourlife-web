@@ -1,6 +1,7 @@
 import type { SyncedPlay } from "../../api/boards";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
+  creditOf,
   DISPLAY_MODES,
   POOL_COLOURS,
   POOL_LABEL,
@@ -131,6 +132,7 @@ function itemOf(raw: unknown, tierUids: Set<string>, position: number): BoardIte
     position: typeof item.position === "number" ? item.position : position,
     title,
     imageUrl: text(item.imageUrl),
+    credit: creditOf(item.credit),
     source: source === "TMDB" || source === "GENERATED" ? source : "MANUAL",
     deletedAt: time(item.deletedAt),
   };

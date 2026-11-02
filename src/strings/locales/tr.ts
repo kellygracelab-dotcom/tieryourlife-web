@@ -355,6 +355,7 @@ const tr: Translation = {
     moreFailed: "Daha fazlası yüklenemedi.",
   },
   list: {
+    pictureCredits: "Görsel kaynakları",
     opening: "Liste açılıyor…",
     by: "{name} tarafından",
     home: "Ana sayfaya git",
@@ -1071,6 +1072,7 @@ const tr: Translation = {
     currentTier: "Şu anda burada",
     backToPool: "Havuza geri gönder",
     removeFromList: "Listeden kaldır",
+    photoBy: "Fotoğraf: {credit}",
     publicTitle: "Herkese açık",
     publicBody: "Bağlantıya sahip herkes sıralayabilir. Toplulukta görünür.",
     needsAccount:
