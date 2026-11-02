@@ -275,6 +275,25 @@ describe("syncBoards", () => {
     expect(records.all()[0]).toEqual({ uid: "films", revision: 5, fingerprint });
   });
 
+  it("sends over a refusal that hands back the board as agreed, written again elsewhere, without a copy", async () => {
+    const { repository, records, account, run } = setUp();
+    repository.save(films());
+    await run();
+    const agreed = records.all()[0]!.fingerprint;
+    repository.save(rename(repository.get("films")!, "Mine", 200));
+    // The phone saved what it was sent: revision 2, the contents agreed on.
+    const echo: KeptBoard = {
+      ...account.kept.get("films")!,
+      revision: 2,
+      deviceName: "Pixel 7",
+      fingerprint: agreed,
+    };
+    account.refuseNextWith(echo);
+    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(repository.all().map((board) => board.title)).toEqual(["Mine"]);
+    expect(account.keeps.slice(-2).map((keep) => keep.request.basedOn)).toEqual([1, 2]);
+  });
+
   it("tells the account about a board removed for good here, and lets go of one removed elsewhere", async () => {
     const { repository, records, account, run } = setUp();
     repository.saveAll([films("a", "A"), films("b", "B")]);

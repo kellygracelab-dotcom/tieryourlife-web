@@ -67,6 +67,13 @@ export function houseLinkOf(
   return uid in links ? { listId: links[uid] ?? null } : null;
 }
 
+/** The boards this device edits for a house list, by uid. */
+export function houseBoardsOf(listId: string, store: KeyValueStore = localStorageStore): string[] {
+  return Object.entries(linksIn(store))
+    .filter(([, linked]) => linked === listId)
+    .map(([uid]) => uid);
+}
+
 /** Remembers a board as the house's, tied to the list it updates or to none yet. */
 export function linkToHouse(
   uid: string,

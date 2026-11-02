@@ -301,7 +301,12 @@ async function send(
       records.remember({ uid, revision: theirs.revision, fingerprint });
       return;
     }
-    await adopt(theirs, true, deps, fingerprintOf);
+    // The board as last agreed, written again by another device: nothing in
+    // it is new, so ours goes over it without a copy.
+    const agreed = records.all().find((record) => record.uid === uid)?.fingerprint;
+    if (theirs.fingerprint === null || theirs.fingerprint !== agreed) {
+      await adopt(theirs, true, deps, fingerprintOf);
+    }
     check(deps);
     const second = await api.keep(uid, request(board, fingerprint, theirs.revision, deviceName));
     check(deps);

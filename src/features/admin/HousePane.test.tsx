@@ -5,13 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { ListSummary, PublishedList } from "../../api/types";
 import { memoryStore, type KeyValueStore } from "../../lib/storage";
-import { houseLinkOf } from "../boards/houseList";
+import { houseLinkOf, linkToHouse } from "../boards/houseList";
 import {
   addToPool,
   itemsIn,
   newBoard,
   rankedTiers,
   setCategory,
+  trashBoard,
   type Board,
 } from "../boards/model";
 import { publishRequestOf } from "../boards/publish";
@@ -337,6 +338,22 @@ describe("HousePane: made and changed on a board", () => {
     expect(houseLinkOf(board!.uid, links)).toEqual({ listId: "l1" });
     expect(router.state.location.pathname).toBe(`/b/${board!.uid}`);
     expect(router.state.location.search).toBe("?house=l1");
+  });
+
+  it("opens the board this device already edits for a list, rather than a second copy", async () => {
+    repository.save(readyBoard("mine", "Ramen, my edit"));
+    linkToHouse("mine", "l1", links);
+    // One thrown away earlier does not count.
+    repository.save(trashBoard(readyBoard("old", "Ramen, before"), 2));
+    linkToHouse("old", "l1", links);
+    const router = open();
+    await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(deps.loadList).not.toHaveBeenCalled();
+    expect(repository.all()).toHaveLength(2);
+    expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
+      "/b/mine?house=l1",
+    );
   });
 
   it("says so when the list did not come, and drops a list that is gone", async () => {

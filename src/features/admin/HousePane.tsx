@@ -27,6 +27,7 @@ import {
   boardFromHouseList,
   houseBoardPath,
   houseRequestOf,
+  houseBoardsOf,
   linkToHouse,
   NEW_HOUSE_PATH,
 } from "../boards/houseList";
@@ -368,8 +369,17 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
   };
 
   // Edit: the list as it stands now becomes a board of one's own, tied to it,
-  // and the editor opens on it for the house.
+  // and the editor opens on it for the house. A board this device already
+  // edits for the list opens instead: a second one would be a stale copy that
+  // the next edits went to.
   const edit = (list: ListSummary) => {
+    const editing = houseBoardsOf(list.id, deps.links)
+      .map((uid) => deps.repository.get(uid))
+      .find((board) => board !== null && board.deletedAt === null);
+    if (editing !== undefined && editing !== null) {
+      void navigate(houseBoardPath(editing.uid, list.id));
+      return;
+    }
     setOpening(true);
     deps.loadList(list.id).then(
       (full) => {
