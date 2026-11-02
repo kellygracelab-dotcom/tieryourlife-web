@@ -17,6 +17,7 @@ const picture = (id: string, more: Partial<FoundPicture> = {}): FoundPicture => 
   thumbUrl: null,
   source: "anilist",
   kind: "anime",
+  credit: null,
   ...more,
 });
 
@@ -170,7 +171,12 @@ describe("AddCardBox", () => {
   it("looks among animals on a board about them, and leaves out a picture that will not load", async () => {
     const find = vi.fn<FindPictures>(async () =>
       page([
-        picture("inaturalist:1", { title: "Red fox", source: "inaturalist", kind: "animal" }),
+        picture("inaturalist:1", {
+          title: "Red fox",
+          source: "inaturalist",
+          kind: "animal",
+          credit: "(c) Jane Doe, some rights reserved (CC BY)",
+        }),
         picture("inaturalist:2", { title: "Lost", source: "inaturalist", kind: "animal" }),
         picture("x:3", { title: "Fennec", source: "other", kind: "thing" }),
       ]),
@@ -181,6 +187,11 @@ describe("AddCardBox", () => {
     expect(chips.getAllByRole("button")[0]).toHaveTextContent("Animals");
     expect(find).toHaveBeenCalledWith({ q: "fox", scope: "animals", web: false, page: 1 });
     expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent("Animal");
+    // The photographer its license asks to name, beside the picture; none where none is asked.
+    expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent(
+      "(c) Jane Doe, some rights reserved (CC BY)",
+    );
+    expect(screen.getByRole("button", { name: /Fennec/ })).not.toHaveTextContent("(c)");
     expect(screen.getByText("From iNaturalist")).toBeInTheDocument();
     fireEvent.error(screen.getByRole("button", { name: /Lost/ }).querySelector("img")!);
     expect(screen.queryByRole("button", { name: /Lost/ })).toBeNull();

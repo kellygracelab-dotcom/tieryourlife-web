@@ -13,6 +13,7 @@ const picture = (id: string): FoundPicture => ({
   thumbUrl: null,
   source: "tmdb",
   kind: "movie",
+  credit: null,
 });
 
 function Probe({

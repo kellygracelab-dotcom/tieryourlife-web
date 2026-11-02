@@ -150,6 +150,12 @@ function PictureTile({
       </span>
       <span className="cards__pick-title">{found.title}</span>
       {line !== "" && <span className="cards__pick-sub">{line}</span>}
+      {/* The license asks for the name beside the picture. */}
+      {found.credit !== null && (
+        <span className="cards__pick-credit" title={found.credit}>
+          {found.credit}
+        </span>
+      )}
     </button>
   );
 }
