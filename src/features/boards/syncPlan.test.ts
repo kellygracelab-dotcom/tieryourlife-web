@@ -73,6 +73,11 @@ describe("planSync", () => {
       [local("aaa"), remote(9, false, "aaa"), synced(3)],
     ],
     [
+      "a board another device wrote again as agreed is sent over, not kept twice",
+      [{ kind: "update", uid: board, basedOn: 4 }],
+      [local("bbb"), remote(4, false, "aaa"), synced(3, "aaa")],
+    ],
+    [
       "a board the account kept before fingerprints existed is left alone",
       [],
       [local("aaa"), remote(3, false, null), synced(3)],

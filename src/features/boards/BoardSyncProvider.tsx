@@ -25,6 +25,7 @@ import {
 } from "./sync";
 import { keepBackUp, readBackUp, syncRecords, type SyncRecords } from "./syncRecords";
 import { nextUid } from "./useBoards";
+import { oneTabAtATime } from "./oneTab";
 import "./boards.css";
 
 /** How long after the last change the boards go up: a drag is many changes, one write. */
@@ -178,16 +179,18 @@ function ForAccount({
     const started = epoch.current;
     const stillWanted = () => mounted.current && epoch.current === started;
     setStatus("syncing");
-    const promise = syncBoards({
-      repository,
-      api,
-      records,
-      deviceName,
-      now,
-      nextUid,
-      resolvePicture: resolvePicture(uid),
-      stillWanted,
-    })
+    const promise = oneTabAtATime(() =>
+      syncBoards({
+        repository,
+        api,
+        records,
+        deviceName,
+        now,
+        nextUid,
+        resolvePicture: resolvePicture(uid),
+        stillWanted,
+      }),
+    )
       .then(
         (report) => {
           if (stillWanted()) setStatus(report.refused > 0 ? "stuck" : "idle");

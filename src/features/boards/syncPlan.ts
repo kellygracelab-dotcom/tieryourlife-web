@@ -77,7 +77,11 @@ function stepFor(
   if (synced === undefined) return { kind: "keepBoth", uid: local.uid, basedOn: remote.revision };
 
   const changedHere = local.fingerprint !== synced.fingerprint;
-  const changedThere = remote.revision !== synced.revision;
+  // A newer revision with the very contents agreed on is the same board
+  // written again (another device saving what it was sent): no news, and no
+  // reason to keep a second copy of it.
+  const echoed = remote.revision !== synced.revision && remote.fingerprint === synced.fingerprint;
+  const changedThere = remote.revision !== synced.revision && !echoed;
   if (changedHere && changedThere) {
     return { kind: "keepBoth", uid: local.uid, basedOn: remote.revision };
   }
