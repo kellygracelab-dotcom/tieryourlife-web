@@ -300,6 +300,7 @@ const ar: Translation = {
     pasting: "جارٍ البحث عن الصور: {done} من {total}",
     suggestions: "اقتراحات",
     searching: "جارٍ البحث في الفهرس…",
+    lookingFurther: "جارٍ البحث في أماكن أخرى…",
     nothingFound: "لا شيء بهذا الاسم في الفهرس. أضفه كبطاقة على أي حال.",
     catalogueDown: "الفهرس لا يستجيب. البطاقات بالاسم ما زالت تعمل.",
     whereToLook: "أين تبحث",

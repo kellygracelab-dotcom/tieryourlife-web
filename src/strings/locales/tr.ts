@@ -248,6 +248,7 @@ const tr: Translation = {
     pasting: "Görseller aranıyor: {done} / {total}",
     suggestions: "Öneriler",
     searching: "Katalogda aranıyor…",
+    lookingFurther: "Başka yerlerde de aranıyor…",
     nothingFound: "Katalogda bu adla bir şey yok. Yine de kart olarak ekleyin.",
     catalogueDown: "Katalog yanıt vermiyor. Adla eklenen kartlar yine çalışır.",
     whereToLook: "Nerede aranacak",

@@ -17,6 +17,7 @@ const picture = (id: string, more: Partial<FoundPicture> = {}): FoundPicture => 
   thumbUrl: null,
   source: "anilist",
   kind: "anime",
+  credit: null,
   ...more,
 });
 
@@ -24,6 +25,7 @@ const page = (items: FoundPicture[], more: Partial<PicturePage> = {}): PicturePa
   items,
   hasMore: false,
   notices: [],
+  rest: false,
   ...more,
 });
 
@@ -68,7 +70,7 @@ afterEach(() => {
 });
 
 describe("AddCardBox", () => {
-  it("looks in the board's own section first, then All, then the rest", async () => {
+  it("puts All first and still looks in the board's own section, then the rest", async () => {
     const find = vi.fn<FindPictures>(async () =>
       page([picture("anilist:20", { title: "Naruto", subtitle: "2002" })]),
     );
@@ -76,8 +78,8 @@ describe("AddCardBox", () => {
     await typeAndWait("naruto");
     const chips = within(screen.getByRole("group", { name: "Where to look" }));
     expect(chips.getAllByRole("button").map((chip) => chip.textContent)).toEqual([
-      "Anime",
       "All",
+      "Anime",
       "Film & TV",
       "Games",
       "Music",
@@ -86,7 +88,13 @@ describe("AddCardBox", () => {
       "Animals",
     ]);
     expect(chips.getByRole("button", { name: "Anime" })).toHaveAttribute("aria-pressed", "true");
-    expect(find).toHaveBeenCalledWith({ q: "naruto", scope: "anime", web: false, page: 1 });
+    expect(find).toHaveBeenCalledWith({
+      q: "naruto",
+      scope: "anime",
+      web: false,
+      page: 1,
+      quick: true,
+    });
     const tile = screen.getByRole("button", { name: /Naruto/ });
     expect(tile).toHaveTextContent("Anime · 2002");
     expect(screen.getByText("From AniList")).toBeInTheDocument();
@@ -95,7 +103,13 @@ describe("AddCardBox", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, LOOKUP_DEBOUNCE_MS + 20));
     });
-    expect(find).toHaveBeenLastCalledWith({ q: "naruto", scope: "games", web: false, page: 1 });
+    expect(find).toHaveBeenLastCalledWith({
+      q: "naruto",
+      scope: "games",
+      web: false,
+      page: 1,
+      quick: true,
+    });
   });
 
   it("starts in All where the section has no catalogues of its own", async () => {
@@ -104,7 +118,13 @@ describe("AddCardBox", () => {
     await typeAndWait("borscht");
     const chips = within(screen.getByRole("group", { name: "Where to look" }));
     expect(chips.getAllByRole("button")[0]).toHaveTextContent("All");
-    expect(find).toHaveBeenCalledWith({ q: "borscht", scope: "all", web: false, page: 1 });
+    expect(find).toHaveBeenCalledWith({
+      q: "borscht",
+      scope: "all",
+      web: false,
+      page: 1,
+      quick: true,
+    });
   });
 
   it("adds a catalogue's picture at its address, and stays open for the next", async () => {
@@ -170,7 +190,12 @@ describe("AddCardBox", () => {
   it("looks among animals on a board about them, and leaves out a picture that will not load", async () => {
     const find = vi.fn<FindPictures>(async () =>
       page([
-        picture("inaturalist:1", { title: "Red fox", source: "inaturalist", kind: "animal" }),
+        picture("inaturalist:1", {
+          title: "Red fox",
+          source: "inaturalist",
+          kind: "animal",
+          credit: "(c) Jane Doe, some rights reserved (CC BY)",
+        }),
         picture("inaturalist:2", { title: "Lost", source: "inaturalist", kind: "animal" }),
         picture("x:3", { title: "Fennec", source: "other", kind: "thing" }),
       ]),
@@ -178,9 +203,20 @@ describe("AddCardBox", () => {
     setup({ find, category: "animals" });
     await typeAndWait("fox");
     const chips = within(screen.getByRole("group", { name: "Where to look" }));
-    expect(chips.getAllByRole("button")[0]).toHaveTextContent("Animals");
-    expect(find).toHaveBeenCalledWith({ q: "fox", scope: "animals", web: false, page: 1 });
+    expect(chips.getAllByRole("button")[1]).toHaveTextContent("Animals");
+    expect(find).toHaveBeenCalledWith({
+      q: "fox",
+      scope: "animals",
+      web: false,
+      page: 1,
+      quick: true,
+    });
     expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent("Animal");
+    // The photographer its license asks to name, beside the picture; none where none is asked.
+    expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent(
+      "(c) Jane Doe, some rights reserved (CC BY)",
+    );
+    expect(screen.getByRole("button", { name: /Fennec/ })).not.toHaveTextContent("(c)");
     expect(screen.getByText("From iNaturalist")).toBeInTheDocument();
     fireEvent.error(screen.getByRole("button", { name: /Lost/ }).querySelector("img")!);
     expect(screen.queryByRole("button", { name: /Lost/ })).toBeNull();
@@ -262,10 +298,39 @@ describe("AddCardBox", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, LOOKUP_DEBOUNCE_MS + 20));
     });
-    expect(find).toHaveBeenLastCalledWith({ q: "borscht", scope: "all", web: true, page: 1 });
+    expect(find).toHaveBeenLastCalledWith({
+      q: "borscht",
+      scope: "all",
+      web: true,
+      page: 1,
+      quick: true,
+    });
     expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/Web search is used up for today/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Borscht/ })).toHaveTextContent("Film");
+  });
+
+  it("says it is looking further while the slow catalogues answer, and only then finds nothing", async () => {
+    let whole: (value: PicturePage) => void = () => undefined;
+    const find = vi.fn<FindPictures>(({ quick }) =>
+      quick === true
+        ? Promise.resolve(page([], { rest: true }))
+        : new Promise((resolve) => {
+            whole = resolve;
+          }),
+    );
+    setup({ find, category: "books" });
+    await typeAndWait("dune");
+    expect(screen.getByText("Looking in more places…")).toBeInTheDocument();
+    expect(screen.queryByText(/nothing by that name/)).toBeNull();
+
+    await act(async () => {
+      whole(
+        page([picture("openlibrary:1", { title: "Dune", source: "openlibrary", kind: "book" })]),
+      );
+    });
+    expect(screen.getByRole("button", { name: /Dune/ })).toBeInTheDocument();
+    expect(screen.queryByText("Looking in more places…")).toBeNull();
   });
 
   it("finds nothing anywhere without another button to press, and names a catalogue that is down", async () => {
@@ -293,7 +358,13 @@ describe("AddCardBox", () => {
       await new Promise((resolve) => setTimeout(resolve, LOOKUP_DEBOUNCE_MS + 20));
     });
     expect(screen.queryByText(/catalogue is not answering/)).toBeNull();
-    expect(find).toHaveBeenLastCalledWith({ q: "qwzxy", scope: "all", web: false, page: 1 });
+    expect(find).toHaveBeenLastCalledWith({
+      q: "qwzxy",
+      scope: "all",
+      web: false,
+      page: 1,
+      quick: true,
+    });
   });
 
   it("brings the next page on Show more", async () => {

@@ -33,6 +33,8 @@ export type PicturesState =
       next: number | null;
       /** A next page is on its way. */
       more: boolean;
+      /** Shown from the quick answer; the whole search is still adding to it. */
+      filling: boolean;
     })
   | (Asked & { status: "failed" });
 
@@ -59,19 +61,50 @@ export function usePictures(
     if (!asking) return;
     let current = true;
     const asked: Asked = { query: wanted, scope, web };
+    const ask = { q: wanted, scope, web, page: 1 };
+    const failed = () => current && setAnswer({ ...asked, status: "failed" });
+    const shown = (page: PicturePage, filling: boolean) =>
+      current &&
+      setAnswer({
+        ...asked,
+        status: "ready",
+        items: page.items,
+        notices: page.notices,
+        // The next page is the whole search's, once it has answered.
+        next: page.hasMore && !filling ? 2 : null,
+        more: false,
+        filling,
+      });
+    // The whole search's hits the quick answer did not have go below it; its
+    // pages and notices are the ones that count from then on.
+    const filled = (whole: PicturePage) =>
+      current &&
+      setAnswer((now) => {
+        if (now.status !== "ready" || !same(now, asked)) return now;
+        const seen = new Set(now.items.map((item) => item.id));
+        return {
+          ...now,
+          items: [...now.items, ...whole.items.filter((item) => !seen.has(item.id))],
+          notices: whole.notices,
+          next: whole.hasMore ? 2 : null,
+          filling: false,
+        };
+      });
+    const unfilled = () =>
+      current &&
+      setAnswer((now) =>
+        now.status === "ready" && same(now, asked) ? { ...now, filling: false } : now,
+      );
+    // The fast catalogues first, the slow ones and the web after: the grid
+    // fills in a second, and books and the web's pictures join it when they come.
     const timer = setTimeout(() => {
-      find({ q: wanted, scope, web, page: 1 }).then(
-        (page) =>
-          current &&
-          setAnswer({
-            ...asked,
-            status: "ready",
-            items: page.items,
-            notices: page.notices,
-            next: page.hasMore ? 2 : null,
-            more: false,
-          }),
-        () => current && setAnswer({ ...asked, status: "failed" }),
+      find({ ...ask, quick: true }).then(
+        (quick) => {
+          shown(quick, quick.rest);
+          if (current && quick.rest) find(ask).then(filled, unfilled);
+        },
+        // A quick answer that would not come: the whole search, as before.
+        () => current && find(ask).then((page) => shown(page, false), failed),
       );
     }, LOOKUP_DEBOUNCE_MS);
     return () => {

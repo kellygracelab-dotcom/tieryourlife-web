@@ -53,10 +53,12 @@ describe("pictures", () => {
           thumbUrl: "https://img.test/naruto-small.jpg",
           source: "anilist",
           kind: "anime",
+          credit: null,
         },
       ],
       hasMore: true,
       notices: [],
+      rest: false,
     });
 
     await searchPictures(client, {
@@ -80,7 +82,13 @@ describe("pictures", () => {
         raw({ id: "" }),
         null,
         raw({ id: "d", thumbUrl: "http://small", subtitle: "", source: "mystery", kind: "?" }),
-        raw({ id: "e", thumbUrl: null, source: "inaturalist", kind: "animal" }),
+        raw({
+          id: "e",
+          thumbUrl: null,
+          source: "inaturalist",
+          kind: "animal",
+          credit: " (c) Jane Doe, some rights reserved (CC BY) ",
+        }),
       ],
       notices: ["webDailyLimit", "somethingNew", 4],
     });
@@ -98,8 +106,14 @@ describe("pictures", () => {
       subtitle: null,
       source: "other",
       kind: "thing",
+      credit: null,
     });
-    expect(page.items[2]).toMatchObject({ thumbUrl: null, source: "inaturalist", kind: "animal" });
+    expect(page.items[2]).toMatchObject({
+      thumbUrl: null,
+      source: "inaturalist",
+      kind: "animal",
+      credit: "(c) Jane Doe, some rights reserved (CC BY)",
+    });
     expect(page.notices).toEqual(["webDailyLimit"]);
     expect(page.hasMore).toBe(false);
 
@@ -107,7 +121,7 @@ describe("pictures", () => {
     const empty = recordingClient({});
     await expect(
       searchPictures(empty.client, { q: "na", scope: "all", page: 1, web: false, lang: "en" }),
-    ).resolves.toEqual({ items: [], hasMore: false, notices: [] });
+    ).resolves.toEqual({ items: [], hasMore: false, notices: [], rest: false });
     expect(pictureOf("text")).toBeNull();
   });
 

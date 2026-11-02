@@ -84,7 +84,7 @@ const open = (
           <BoardPage
             repository={repository}
             now={() => ++clock}
-            find={() => Promise.resolve({ items: [], hasMore: false, notices: [] })}
+            find={() => Promise.resolve({ items: [], hasMore: false, notices: [], rest: false })}
             upload={extra.upload ?? (() => Promise.reject(new Error("no uploads here")))}
             publishing={extra.publishing ?? noPublishing}
             share={extra.share ?? (() => Promise.resolve())}

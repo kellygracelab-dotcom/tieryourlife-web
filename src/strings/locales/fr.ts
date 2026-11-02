@@ -253,6 +253,7 @@ const fr: Translation = {
     pasting: "Recherche des images : {done} sur {total}",
     suggestions: "Suggestions",
     searching: "Recherche dans le catalogue…",
+    lookingFurther: "Recherche ailleurs aussi…",
     nothingFound: "Rien de ce nom dans le catalogue. Ajoutez-le quand même comme carte.",
     catalogueDown: "Le catalogue ne répond pas. Les cartes par nom fonctionnent toujours.",
     whereToLook: "Où chercher",

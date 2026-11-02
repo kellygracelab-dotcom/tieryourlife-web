@@ -247,6 +247,7 @@ const es: Translation = {
     pasting: "Buscando imágenes: {done} de {total}",
     suggestions: "Sugerencias",
     searching: "Buscando en el catálogo…",
+    lookingFurther: "Buscando en más sitios…",
     nothingFound: "No hay nada con ese nombre en el catálogo. Añádelo como tarjeta de todos modos.",
     catalogueDown: "El catálogo no responde. Las tarjetas por nombre siguen funcionando.",
     whereToLook: "Dónde buscar",

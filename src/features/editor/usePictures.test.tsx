@@ -13,6 +13,7 @@ const picture = (id: string): FoundPicture => ({
   thumbUrl: null,
   source: "tmdb",
   kind: "movie",
+  credit: null,
 });
 
 function Probe({
@@ -31,7 +32,7 @@ function Probe({
     <>
       <output>
         {state.status === "ready"
-          ? `ready:${state.items.map((item) => item.id).join(",")}|next:${state.next ?? "-"}|${state.notices.join(",")}${state.more ? "|more" : ""}`
+          ? `ready:${state.items.map((item) => item.id).join(",")}|next:${state.next ?? "-"}|${state.notices.join(",")}${state.more ? "|more" : ""}${state.filling ? "|filling" : ""}`
           : state.status}
       </output>
       <button type="button" onClick={more}>
@@ -60,6 +61,7 @@ describe("usePictures", () => {
       items: [picture(q)],
       hasMore: false,
       notices: ["webDailyLimit"],
+      rest: false,
     }));
     const { rerender } = render(<Probe query="a" find={find} />);
     expect(shown()).toHaveTextContent("idle");
@@ -67,7 +69,13 @@ describe("usePictures", () => {
     rerender(<Probe query="an" scope="anime" find={find} />);
     expect(shown()).toHaveTextContent("searching");
     await settle();
-    expect(find).toHaveBeenCalledWith({ q: "an", scope: "anime", web: false, page: 1 });
+    expect(find).toHaveBeenCalledWith({
+      q: "an",
+      scope: "anime",
+      web: false,
+      page: 1,
+      quick: true,
+    });
     expect(shown()).toHaveTextContent("ready:an|next:-|webDailyLimit");
 
     // A few more letters keep the answer on screen; another scope does not.
@@ -81,7 +89,13 @@ describe("usePictures", () => {
     rerender(<Probe query="ani" scope="games" web find={find} />);
     expect(shown()).toHaveTextContent("searching");
     await settle();
-    expect(find).toHaveBeenLastCalledWith({ q: "ani", scope: "games", web: true, page: 1 });
+    expect(find).toHaveBeenLastCalledWith({
+      q: "ani",
+      scope: "games",
+      web: true,
+      page: 1,
+      quick: true,
+    });
 
     rerender(<Probe query="zebra" scope="games" web find={find} />);
     expect(shown()).toHaveTextContent("searching");
@@ -106,6 +120,7 @@ describe("usePictures", () => {
       items: (pages[page]?.ids ?? []).map(picture),
       hasMore: pages[page]?.hasMore ?? false,
       notices: [],
+      rest: false,
     }));
     render(<Probe query="naruto" find={find} />);
     await settle();
@@ -132,7 +147,7 @@ describe("usePictures", () => {
   it("keeps the pages it has when the next will not come, and drops one meant for other words", async () => {
     let second: (value: Awaited<ReturnType<FindPictures>>) => void = () => undefined;
     const find = vi.fn<FindPictures>(async ({ q, page }) => {
-      if (page === 1) return { items: [picture(`${q}1`)], hasMore: true, notices: [] };
+      if (page === 1) return { items: [picture(`${q}1`)], hasMore: true, notices: [], rest: false };
       if (q === "naruto") throw new Error("down");
       return new Promise((resolve) => {
         second = resolve;
@@ -154,9 +169,91 @@ describe("usePictures", () => {
     rerender(<Probe query="bleach" scope="anime" find={find} />);
     await settle();
     await act(async () => {
-      second({ items: [picture("late")], hasMore: false, notices: [] });
+      second({ items: [picture("late")], hasMore: false, notices: [], rest: false });
     });
     expect(shown()).toHaveTextContent("ready:bleach1|next:2");
     expect(shown()).not.toHaveTextContent("late");
+  });
+
+  it("shows the quick answer first, then adds what the whole search found below it", async () => {
+    let whole: (value: Awaited<ReturnType<FindPictures>>) => void = () => undefined;
+    const find = vi.fn<FindPictures>(({ quick }) =>
+      quick === true
+        ? Promise.resolve({
+            items: [picture("a"), picture("b")],
+            hasMore: false,
+            notices: [],
+            rest: true,
+          })
+        : new Promise((resolve) => {
+            whole = resolve;
+          }),
+    );
+    render(<Probe query="dune" find={find} />);
+    await settle();
+    expect(find).toHaveBeenNthCalledWith(1, {
+      q: "dune",
+      scope: "all",
+      web: false,
+      page: 1,
+      quick: true,
+    });
+    expect(find).toHaveBeenNthCalledWith(2, { q: "dune", scope: "all", web: false, page: 1 });
+    // No next page until the whole search says there is one.
+    expect(shown()).toHaveTextContent("ready:a,b|next:-||filling");
+
+    await act(async () => {
+      whole({
+        items: [picture("b"), picture("book"), picture("a"), picture("web")],
+        hasMore: true,
+        notices: ["webDailyLimit"],
+        rest: false,
+      });
+    });
+    expect(shown()).toHaveTextContent("ready:a,b,book,web|next:2|webDailyLimit");
+    expect(shown()).not.toHaveTextContent("filling");
+  });
+
+  it("asks once when the quick answer is all there is, and keeps it when the whole search fails", async () => {
+    const once = vi.fn<FindPictures>(async () => ({
+      items: [picture("a")],
+      hasMore: true,
+      notices: [],
+      rest: false,
+    }));
+    const { unmount } = render(<Probe query="dune" find={once} />);
+    await settle();
+    expect(once).toHaveBeenCalledTimes(1);
+    expect(shown()).toHaveTextContent("ready:a|next:2");
+    unmount();
+
+    const failing = vi.fn<FindPictures>(async ({ quick }) => {
+      if (quick === true) return { items: [picture("a")], hasMore: false, notices: [], rest: true };
+      throw new Error("slow catalogue down");
+    });
+    render(<Probe query="dune" find={failing} />);
+    await settle();
+    expect(failing).toHaveBeenCalledTimes(2);
+    expect(shown()).toHaveTextContent("ready:a|next:-|");
+    expect(shown()).not.toHaveTextContent("filling");
+  });
+
+  it("asks for the whole search when the quick answer will not come", async () => {
+    const find = vi.fn<FindPictures>(async ({ quick }) => {
+      if (quick === true) throw new Error("timeout");
+      return { items: [picture("a"), picture("web")], hasMore: false, notices: [], rest: false };
+    });
+    render(<Probe query="dune" find={find} />);
+    await settle();
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(shown()).toHaveTextContent("ready:a,web|next:-|");
+    expect(shown()).not.toHaveTextContent("filling");
+
+    const down = vi.fn<FindPictures>(async () => {
+      throw new Error("down");
+    });
+    render(<Probe query="dune" find={down} />);
+    await settle();
+    expect(screen.getAllByRole("status")[1]).toHaveTextContent("failed");
   });
 });

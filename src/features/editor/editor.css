@@ -426,6 +426,20 @@
   white-space: nowrap;
 }
 
+/* The photographer's name, as the license asks: smaller still, two lines at most. */
+.cards__pick-credit {
+  display: -webkit-box;
+  overflow: hidden;
+  font: var(--text-caption);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  color: var(--ink-dim);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
 .cards__more {
   display: flex;
   justify-content: center;

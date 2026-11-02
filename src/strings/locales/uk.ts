@@ -263,6 +263,7 @@ const uk: Translation = {
     pasting: "Шукаю зображення: {done} з {total}",
     suggestions: "Підказки",
     searching: "Шукаємо в каталозі…",
+    lookingFurther: "Шукаємо в інших місцях…",
     nothingFound: "У каталозі такого немає. Усе одно додайте карткою.",
     catalogueDown: "Каталог не відповідає. Картки за назвою все одно працюють.",
     whereToLook: "Де шукати",
