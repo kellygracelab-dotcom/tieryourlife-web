@@ -64,6 +64,7 @@ export function boardView(board: Board, untitled: string, before?: readonly stri
       items: ordered.map((item, position) => ({
         title: item.title,
         imageUrl: item.imageUrl,
+        credit: item.credit,
         tierIndex: rows.findIndex((row) => row.includes(position)) === -1 ? null : undefined,
       })),
     },

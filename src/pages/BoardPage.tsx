@@ -9,6 +9,7 @@ import type { Dock } from "../features/tierboard/dock";
 import {
   addToPool,
   arrangeItems,
+  creditOf,
   itemsIn,
   liveItems,
   newBoard,
@@ -413,6 +414,7 @@ export function BoardPage({
             title: action.title.length > 0 ? action.title : strings.new.unnamed,
             imageUrl: action.imageUrl,
             pictureId: action.pictureId ?? null,
+            credit: creditOf(action.credit),
             source: action.key?.startsWith("tmdb:") ? "TMDB" : "MANUAL",
           },
         ],

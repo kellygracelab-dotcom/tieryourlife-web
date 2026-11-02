@@ -376,6 +376,7 @@ const ru: Translation = {
     moreFailed: "Не удалось загрузить ещё.",
   },
   list: {
+    pictureCredits: "Авторы фото",
     opening: "Открываем список…",
     by: "от {name}",
     home: "На главную",
@@ -1218,6 +1219,7 @@ const ru: Translation = {
     currentTier: "Сейчас здесь",
     backToPool: "Вернуть в пул",
     removeFromList: "Удалить из списка",
+    photoBy: "Фото: {credit}",
     publicTitle: "Публичный",
     publicBody: "Любой, у кого есть ссылка, сможет его разложить. Список появится в Сообществе.",
     needsAccount:

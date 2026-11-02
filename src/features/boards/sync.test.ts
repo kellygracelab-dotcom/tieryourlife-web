@@ -142,6 +142,35 @@ describe("syncBoards", () => {
     expect(account.keeps).toHaveLength(1);
   });
 
+  it("sends a picture's credit up and brings it down, and leaves it out where there is none", async () => {
+    const { repository, account, run } = setUp();
+    const board = films();
+    repository.save({
+      ...board,
+      items: board.items.map((item) =>
+        item.title === "Dune" ? { ...item, credit: "(c) Jane Doe (CC BY)" } : item,
+      ),
+    });
+    await run();
+    const [dune, heat] = account.keeps[0]!.request.items;
+    expect(dune).toMatchObject({ title: "Dune", credit: "(c) Jane Doe (CC BY)" });
+    expect(heat).not.toHaveProperty("credit");
+
+    const there = setUp();
+    const theirs = films("theirs");
+    there.account.holds({
+      ...theirs,
+      items: theirs.items.map((item) =>
+        item.title === "Dune" ? { ...item, credit: "(c) Jane Doe (CC BY)" } : item,
+      ),
+    });
+    await there.run();
+    expect(there.repository.get("theirs")!.items.map((item) => item.credit)).toEqual([
+      "(c) Jane Doe (CC BY)",
+      null,
+    ]);
+  });
+
   it("sends a board changed here over the revision it was working from", async () => {
     const { repository, account, run } = setUp();
     repository.save(films());

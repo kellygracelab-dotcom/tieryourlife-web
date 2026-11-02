@@ -72,7 +72,14 @@ export interface Draft {
 export type EditorAction =
   | { type: "title"; title: string }
   | { type: "category"; category: string }
-  | { type: "addItem"; title: string; imageUrl: string | null; key?: string; pictureId?: string }
+  | {
+      type: "addItem";
+      title: string;
+      imageUrl: string | null;
+      key?: string;
+      pictureId?: string;
+      credit?: string | null;
+    }
   | { type: "removeItem"; key: string }
   /** With `tier`, the one the tier editor made; without, the next letter in the next preset. */
   | { type: "addTier"; tier?: PublishedTier }

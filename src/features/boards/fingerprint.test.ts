@@ -41,6 +41,7 @@ const board = (over: Partial<Board> = {}): Board => ({
       position: 0,
       title: "Arrival",
       imageUrl: null,
+      credit: null,
       source: "MANUAL",
       deletedAt: null,
     },
@@ -51,6 +52,7 @@ const board = (over: Partial<Board> = {}): Board => ({
       position: 1,
       title: "Dune",
       imageUrl: null,
+      credit: null,
       source: "MANUAL",
       deletedAt: null,
     },
@@ -110,6 +112,7 @@ describe("the fingerprint", () => {
           position: 1,
           title: "Heat",
           imageUrl: "https://x/h.jpg",
+          credit: null,
           source: "MANUAL",
           deletedAt: 1700000000001,
         },
@@ -120,6 +123,7 @@ describe("the fingerprint", () => {
           position: 0,
           title: "Dune",
           imageUrl: "blob:local",
+          credit: null,
           source: "TMDB",
           deletedAt: null,
         },
@@ -138,6 +142,12 @@ describe("the fingerprint", () => {
       ),
     ).toBe(a);
     expect(fingerprintText(board({ publishedId: "p1" }))).toBe(a);
+  });
+
+  it("leaves a picture's credit out, as the phone and the backend do", () => {
+    const plain = board();
+    const credited = { ...plain, items: plain.items.map((item) => ({ ...item, credit: "Jane" })) };
+    expect(fingerprintText(credited)).toBe(fingerprintText(plain));
   });
 
   it("changes with what matters: a name, a move, a colour, a card in the trash, a collage", () => {

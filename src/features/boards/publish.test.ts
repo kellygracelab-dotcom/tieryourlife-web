@@ -82,6 +82,26 @@ describe("publishing a board", () => {
   });
 });
 
+describe("a picture's credit", () => {
+  it("goes out with the card it belongs to, and nowhere else", () => {
+    const next = uids();
+    let b: Board = { ...newBoard("b", "Foxes", 1, next), category: "animals" };
+    b = addToPool(
+      b,
+      [
+        { title: "Red fox", imageUrl: "https://x/f.jpg", credit: "(c) Jane Doe (CC BY)" },
+        { title: "Fennec", imageUrl: "https://x/n.jpg" },
+      ],
+      2,
+      next,
+    );
+    expect(liveItems(b).map((item) => item.credit)).toEqual(["(c) Jane Doe (CC BY)", null]);
+    const [fox, fennec] = publishRequestOf(b)!.items;
+    expect(fox).toMatchObject({ title: "Red fox", credit: "(c) Jane Doe (CC BY)" });
+    expect(fennec).not.toHaveProperty("credit");
+  });
+});
+
 describe("a published list as a board of one's own", () => {
   const list: PublishedList = {
     id: "abc",
@@ -127,6 +147,15 @@ describe("a published list as a board of one's own", () => {
       "https://x/e.jpg",
     );
     expect(poolTier(board)?.position).toBe(2);
+  });
+
+  it("keeps the photographers the pictures ask to be named by", () => {
+    const credited: PublishedList = {
+      ...list,
+      items: [{ ...list.items[0]!, credit: " (c)  Jane Doe " }, list.items[1]!, list.items[2]!],
+    };
+    const board = boardFromList(credited, null, 5, uids());
+    expect(liveItems(board).map((item) => item.credit)).toEqual(["(c) Jane Doe", null, null]);
   });
 
   it("leaves every card in the pool when no arrangement is wanted", () => {

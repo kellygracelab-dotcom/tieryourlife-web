@@ -200,7 +200,7 @@ describe("AddCardBox", () => {
         picture("x:3", { title: "Fennec", source: "other", kind: "thing" }),
       ]),
     );
-    setup({ find, category: "animals" });
+    const { dispatch } = setup({ find, category: "animals" });
     await typeAndWait("fox");
     const chips = within(screen.getByRole("group", { name: "Where to look" }));
     expect(chips.getAllByRole("button")[1]).toHaveTextContent("Animals");
@@ -220,6 +220,17 @@ describe("AddCardBox", () => {
     expect(screen.getByText("From iNaturalist")).toBeInTheDocument();
     fireEvent.error(screen.getByRole("button", { name: /Lost/ }).querySelector("img")!);
     expect(screen.queryByRole("button", { name: /Lost/ })).toBeNull();
+    // The card keeps the credit; one with none carries no empty one.
+    await userEvent.click(screen.getByRole("button", { name: /Red fox/ }));
+    expect(dispatch).toHaveBeenLastCalledWith({
+      type: "addItem",
+      title: "Red fox",
+      imageUrl: "https://img.test/inaturalist:1.jpg",
+      key: "inaturalist:1",
+      credit: "(c) Jane Doe, some rights reserved (CC BY)",
+    });
+    await userEvent.click(screen.getByRole("button", { name: /Fennec/ }));
+    expect(dispatch.mock.lastCall?.[0]).not.toHaveProperty("credit");
   });
 
   it("shows a picture already on the board as added", async () => {

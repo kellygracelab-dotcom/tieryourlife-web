@@ -123,6 +123,7 @@ export interface PastedCard {
   title: string;
   imageUrl: string | null;
   key?: string;
+  credit?: string | null;
 }
 
 /**
@@ -169,7 +170,12 @@ export async function cardsFor(
       onCard(
         card === null
           ? { title: one.title, imageUrl: null }
-          : { title: one.title, imageUrl: card.imageUrl, key: card.id },
+          : {
+              title: one.title,
+              imageUrl: card.imageUrl,
+              key: card.id,
+              ...(typeof card.credit === "string" ? { credit: card.credit } : {}),
+            },
         start + index + 1,
       );
     });

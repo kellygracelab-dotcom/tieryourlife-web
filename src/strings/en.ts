@@ -353,6 +353,7 @@ export const en = {
     moreFailed: "Could not load more.",
   },
   list: {
+    pictureCredits: "Picture credits",
     opening: "Opening the list…",
     by: "by {name}",
     home: "Go to the front page",
@@ -1052,6 +1053,7 @@ export const en = {
     currentTier: "Currently here",
     backToPool: "Back to the pool",
     removeFromList: "Remove from list",
+    photoBy: "Photo: {credit}",
     publicTitle: "Public",
     publicBody: "Anyone with the link can rank it. It shows in Community.",
     needsAccount:

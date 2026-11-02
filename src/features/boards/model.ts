@@ -42,6 +42,8 @@ export interface BoardItem {
   position: number;
   title: string;
   imageUrl: string | null;
+  /** The photographer the picture's license asks to name; null for none. Not part of the fingerprint. */
+  credit: string | null;
   source: ItemSource;
   /** When it went to the trash; null while it is on the board. */
   deletedAt: number | null;
@@ -82,6 +84,8 @@ export interface CardDraft {
   title: string;
   imageUrl: string | null;
   pictureId?: string | null;
+  /** The photographer the picture's license asks to name. */
+  credit?: string | null;
   source?: ItemSource;
 }
 
@@ -93,7 +97,20 @@ export interface TierDraft {
 }
 
 /** The backend's ceilings, the same as for a published list. */
-export const BOARD_LIMITS = { title: 80, caption: 60, tiers: 20, items: 2000 } as const;
+export const BOARD_LIMITS = {
+  title: 80,
+  caption: 60,
+  tiers: 20,
+  items: 2000,
+  credit: 200,
+} as const;
+
+/** A picture's credit as the backend keeps it: trimmed, one space between words, none when empty. */
+export function creditOf(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const credit = raw.trim().replace(/\s+/g, " ").slice(0, BOARD_LIMITS.credit).trim();
+  return credit.length === 0 ? null : credit;
+}
 
 /** The phone's five tiers and its pool, light and dark (its `DefaultTierColors`). */
 export const DEFAULT_TIER_DRAFTS: readonly TierDraft[] = [
@@ -314,6 +331,7 @@ export function addToPool(
         position: position++,
         title,
         imageUrl: draft.imageUrl,
+        credit: draft.credit ?? null,
         source: draft.source ?? "MANUAL",
         deletedAt: null,
       },

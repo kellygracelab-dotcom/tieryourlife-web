@@ -10,7 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import type { PublishedTier } from "../../api/types";
-import { strings } from "../../strings";
+import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 
 /** A point on the screen, in the viewport's own pixels. */
@@ -22,6 +22,8 @@ export interface ScreenPoint {
 interface CardMenuProps {
   /** The card's name, which names the menu. */
   name: string;
+  /** The photographer the card's picture asks to be named by: said at the menu's foot. */
+  credit?: string | null;
   tiers: readonly PublishedTier[];
   /** Where the card is now, or null in the pool. */
   current: number | null;
@@ -77,6 +79,7 @@ function focusFirstTier(box: HTMLElement) {
  */
 export function CardMenu({
   name,
+  credit = null,
   tiers,
   current,
   at,
@@ -244,6 +247,7 @@ export function CardMenu({
         role="menu"
         tabIndex={-1}
         aria-label={name}
+        aria-describedby={credit === null ? undefined : `${id}-credit`}
         style={hidden(where)}
         onKeyDown={onMenuKey}
         onContextMenu={(event) => event.preventDefault()}
@@ -296,6 +300,11 @@ export function CardMenu({
           >
             <span className="card-menu__text">{strings.boards.removeFromList}</span>
           </button>
+        )}
+        {credit !== null && (
+          <p id={`${id}-credit`} className="card-menu__credit" role="none">
+            {fill(strings.boards.photoBy, { credit })}
+          </p>
         )}
       </div>
       {tiersOpen && (

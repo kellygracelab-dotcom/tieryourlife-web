@@ -99,6 +99,7 @@ const request = (
     position: item.position,
     title: item.title,
     imageUrl: item.imageUrl,
+    ...(item.credit === null ? {} : { credit: item.credit }),
     source: item.source,
     deletedAt: item.deletedAt,
   })),

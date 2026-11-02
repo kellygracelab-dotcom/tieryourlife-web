@@ -355,6 +355,7 @@ const ja: Translation = {
     moreFailed: "続きを読み込めませんでした。",
   },
   list: {
+    pictureCredits: "画像のクレジット",
     opening: "リストを開いています…",
     by: "{name} さん",
     home: "トップページへ",
@@ -1059,6 +1060,7 @@ const ja: Translation = {
     currentTier: "現在ここにあります",
     backToPool: "プールに戻す",
     removeFromList: "リストから削除",
+    photoBy: "写真: {credit}",
     publicTitle: "公開",
     publicBody: "リンクを知っている人なら誰でも並べられます。コミュニティに表示されます。",
     needsAccount:

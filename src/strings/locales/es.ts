@@ -357,6 +357,7 @@ const es: Translation = {
     moreFailed: "No se pudo cargar más.",
   },
   list: {
+    pictureCredits: "Créditos de las imágenes",
     opening: "Abriendo la lista…",
     by: "de {name}",
     home: "Ir a la página principal",
@@ -1106,6 +1107,7 @@ const es: Translation = {
     currentTier: "Actualmente aquí",
     backToPool: "Volver al montón",
     removeFromList: "Quitar de la lista",
+    photoBy: "Foto: {credit}",
     publicTitle: "Pública",
     publicBody: "Cualquiera con el enlace puede ordenarla. Aparece en Comunidad.",
     needsAccount:

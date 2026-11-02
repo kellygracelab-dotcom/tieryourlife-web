@@ -274,6 +274,7 @@ function Tile({
       {moving !== null && !locked && moving.sheet && (
         <MoveSheet
           name={card.title}
+          credit={card.credit ?? null}
           tiers={list.tiers}
           current={current}
           onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
@@ -285,6 +286,7 @@ function Tile({
       {moving !== null && !locked && !moving.sheet && (
         <CardMenu
           name={card.title}
+          credit={card.credit ?? null}
           tiers={list.tiers}
           current={current}
           at={moving.at}
