@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
 import type { ListSummary } from "../api/types";
-import { ListCard } from "./ListCard";
+import { ListCard, type Yours } from "./ListCard";
 
 const list: ListSummary = {
   id: "abc def",
@@ -19,12 +19,18 @@ const list: ListSummary = {
   takeCount: 2140,
 };
 
-const renderCard = (overrides: Partial<ListSummary> = {}, reason: string | null = null) =>
+const renderCard = (
+  overrides: Partial<ListSummary> = {},
+  reason: string | null = null,
+  yours: Yours | null = null,
+) =>
   render(
     <MemoryRouter>
-      <ListCard list={{ ...list, ...overrides }} reason={reason} />
+      <ListCard list={{ ...list, ...overrides }} reason={reason} yours={yours} />
     </MemoryRouter>,
   );
+
+const me: Yours = { uid: "u1", name: "Danylo", photoUrl: "https://lh3/me.jpg" };
 
 describe("ListCard", () => {
   it("links to the list, and the author to their page, and says how many cards but not how many ranked it", () => {
@@ -68,9 +74,38 @@ describe("ListCard", () => {
     expect(container.querySelector(".art__title")).toBeNull();
   });
 
-  it("names nobody on an anonymous list, and links to nobody", () => {
-    renderCard({ anonymous: true, authorUid: "", authorName: "", authorPhotoUrl: null });
-    expect(screen.getByText("Anonymous")).toBeInTheDocument();
+  it("shows no author at all on somebody else's anonymous list: no name, no empty face", () => {
+    const { container } = renderCard({
+      anonymous: true,
+      authorUid: "",
+      authorName: "",
+      authorPhotoUrl: null,
+    });
+    expect(screen.queryByText(/Anonymous/)).toBeNull();
+    expect(container.querySelector(".list-card__author, .list-card__face")).toBeNull();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.getByText("34 cards")).toBeInTheDocument();
+  });
+
+  it("wears one's own face on one's own lists, and says when one went out anonymously", () => {
+    const { container, unmount } = renderCard({ authorPhotoUrl: "https://lh3/old.jpg" }, null, me);
+    const yours = screen.getByRole("link", { name: "Your list" });
+    expect(yours).toHaveAttribute("href", "/u/u1");
+    expect(container.querySelector(".list-card__face")).toHaveAttribute(
+      "src",
+      "https://lh3/me.jpg",
+    );
+    expect(screen.queryByText("danylo")).toBeNull();
+    unmount();
+
+    // The backend names nobody on an anonymous list, but tells its author it is theirs.
+    const anonymous = renderCard(
+      { anonymous: true, mine: true, authorUid: "", authorName: "", authorPhotoUrl: null },
+      null,
+      { ...me, photoUrl: null },
+    );
+    expect(screen.getByText("Your list · anonymous")).toBeInTheDocument();
+    expect(anonymous.container.querySelector(".list-card__face--initial")).toHaveTextContent("D");
     expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 

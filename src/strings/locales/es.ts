@@ -592,7 +592,8 @@ const es: Translation = {
     items: { one: "{n} tarjeta", other: "{n} tarjetas" },
     rankings: { one: "{n} clasificación", other: "{n} clasificaciones" },
     noArt: "Sin imagen",
-    anonymous: "Anónimo",
+    yours: "Tu lista",
+    yoursAnonymous: "Tu lista · anónima",
   },
   android: {
     title: "TierYourLife para Android",

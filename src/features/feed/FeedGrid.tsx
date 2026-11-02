@@ -7,6 +7,7 @@ import { Skeleton } from "../../ui/Skeleton";
 import { isOutOfSight } from "../community/hidden";
 import { useHidden } from "../community/useHidden";
 import type { FeedState } from "./useFeed";
+import { useYours } from "./yours";
 import "../community/report.css";
 import "./feed.css";
 
@@ -55,6 +56,7 @@ export function FeedGrid({
   reasonOf,
 }: FeedGridProps) {
   const { hidden, hiddenThisVisit, showList } = useHidden();
+  const yours = useYours();
   if (state.status === "loading") {
     return (
       <div className="feed feed--loading" aria-busy="true" aria-label={label}>
@@ -107,7 +109,7 @@ export function FeedGrid({
         {slots.map(({ kind, list }) => (
           <li key={list.id}>
             {kind === "card" ? (
-              <ListCard list={list} reason={reasonOf?.(list) ?? null} />
+              <ListCard list={list} reason={reasonOf?.(list) ?? null} yours={yours(list)} />
             ) : (
               <div className="feed__hidden" role="status">
                 <Icon name="visibility_off" />

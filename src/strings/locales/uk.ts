@@ -623,7 +623,8 @@ const uk: Translation = {
       other: "{n} рейтингу",
     },
     noArt: "Без картинки",
-    anonymous: "Анонім",
+    yours: "Ваш список",
+    yoursAnonymous: "Ваш список · анонімно",
   },
   android: {
     title: "TierYourLife для Android",

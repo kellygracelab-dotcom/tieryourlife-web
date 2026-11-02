@@ -673,7 +673,8 @@ const ar: Translation = {
       other: "{n} تصنيف",
     },
     noArt: "بدون صورة",
-    anonymous: "مجهول",
+    yours: "قائمتك",
+    yoursAnonymous: "قائمتك · مجهولة",
   },
   android: {
     title: "TierYourLife لنظام Android",

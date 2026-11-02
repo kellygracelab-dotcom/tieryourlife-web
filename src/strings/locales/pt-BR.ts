@@ -590,7 +590,8 @@ const ptBR: Translation = {
     items: { one: "{n} card", other: "{n} cards" },
     rankings: { one: "{n} classificação", other: "{n} classificações" },
     noArt: "Sem imagem",
-    anonymous: "Anônimo",
+    yours: "Sua lista",
+    yoursAnonymous: "Sua lista · anônima",
   },
   android: {
     title: "TierYourLife para Android",
