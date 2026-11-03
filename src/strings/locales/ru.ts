@@ -845,6 +845,16 @@ const ru: Translation = {
     updateHouse: "Обновить список от редакции",
     houseUpdated: "Список от редакции обновлён",
     houseOpenFailed: "Не удалось открыть этот список. Попробуйте ещё раз.",
+    houseWords: "Переводы",
+    houseWordsTitle: "Переводы «{title}»",
+    houseWordsNote:
+      "Каждый текст как написан, а рядом его перевод. Пустое поле — текст покажется как написан.",
+    language: "Язык",
+    houseWordsLoading: "Загружаем список…",
+    houseWordsSave: "Сохранить",
+    houseWordsSaving: "Сохраняем…",
+    houseWordsSaved: "Переводы сохранены",
+    houseWordsFailed: "Не удалось сохранить переводы. Попробуйте ещё раз.",
     takeDown: "Снять",
     takeDownAsk: "Снять «{title}»?",
     takeDownBody:

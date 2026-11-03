@@ -42,3 +42,28 @@
   gap: 8px;
   margin-inline-start: auto;
 }
+
+/* A house list's words in one language at a time: the text as written above its translation. */
+.house-words {
+  width: min(560px, 100%);
+}
+
+.house-words__languages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.house-words__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  margin-top: 16px;
+  overflow-y: auto;
+}
+
+.house-words__row .translations__language {
+  overflow-wrap: anywhere;
+}

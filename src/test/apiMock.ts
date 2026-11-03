@@ -18,6 +18,7 @@ export function apiStubs() {
   return {
     api: { request: pending() },
     loadList: pending(),
+    loadListAsWritten: pending(),
     preloadHidesAuthor: vi.fn(() => false),
     loadFeed: pending(),
     loadRanking: pending(),
@@ -94,6 +95,7 @@ export function apiStubs() {
     publishAsHouse: pending(),
     replaceHouseList: pending(),
     takeDownHouseList: pending(),
+    saveHouseTranslations: pending(),
     loadSearchMisses: pending(),
     noteSearchMiss: vi.fn(async () => undefined),
     noteTake: vi.fn(async () => undefined),

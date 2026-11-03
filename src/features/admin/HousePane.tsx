@@ -7,9 +7,10 @@ import type { PublishRequest } from "../../api/lists";
 import { isCategory, type ListSummary, type PublishedList } from "../../api/types";
 import {
   loadHouseLists,
-  loadList,
+  loadListAsWritten,
   publishAsHouse,
   replaceHouseList,
+  saveHouseTranslations,
   takeDownHouseList,
 } from "../../lib/api";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
@@ -37,7 +38,9 @@ import { boards as site, houseBoards, type BoardsRepository } from "../boards/re
 import { nextUid, useBoards } from "../boards/useBoards";
 import { sectionName, type Section } from "../sections/model";
 import { useSections } from "../sections/useSections";
+import { HouseTranslations } from "./HouseTranslations";
 import { failureText, problemText } from "./houseWords";
+import type { Translations } from "../../lib/translated";
 import { PaneLoading } from "./PaneLoading";
 
 type Page = { lists: ListSummary[]; nextCursor: string | null };
@@ -47,6 +50,8 @@ export interface HouseDeps {
   publish: (request: PublishRequest) => Promise<HouseAnswer>;
   replace: (id: string, request: PublishRequest) => Promise<HouseAnswer>;
   takeDown: (id: string) => Promise<void>;
+  /** A house list's words in the app's other languages, all at once. */
+  saveTranslations: (id: string, translations: Translations) => Promise<void>;
   /** The boards of whoever is here, owner or moderator, read the way Your lists reads them. */
   repository: BoardsRepository;
   /** The boards this device edits for the house: apart from one's own, never synced. */
@@ -63,9 +68,11 @@ const houseDeps: HouseDeps = {
   publish: publishAsHouse,
   replace: replaceHouseList,
   takeDown: takeDownHouseList,
+  saveTranslations: saveHouseTranslations,
   repository: site,
   houseRepository: houseBoards,
-  loadList,
+  // The words as written: Edit is where they are changed, in no reader's language.
+  loadList: loadListAsWritten,
   links: localStorageStore,
   now: Date.now,
 };
@@ -94,6 +101,7 @@ function HouseRow({
   opening,
   onEdit,
   onReplace,
+  onTranslate,
   onTakeDown,
 }: {
   list: ListSummary;
@@ -103,6 +111,7 @@ function HouseRow({
   opening: boolean;
   onEdit: () => void;
   onReplace: () => void;
+  onTranslate: () => void;
   onTakeDown: () => void;
 }) {
   const href = hrefOf(list.id);
@@ -142,6 +151,11 @@ function HouseRow({
             </button>
           </li>
           <li>
+            <button type="button" className="menu__action" onClick={onTranslate}>
+              {strings.admin.houseWords}
+            </button>
+          </li>
+          <li>
             <button type="button" className="menu__action" onClick={onTakeDown}>
               {strings.admin.takeDown}
             </button>
@@ -156,6 +170,7 @@ function HouseRow({
             {strings.admin.edit}
           </Button>
           <Button onClick={onReplace}>{strings.admin.replaceFromBoard}</Button>
+          <Button onClick={onTranslate}>{strings.admin.houseWords}</Button>
           <Button onClick={onTakeDown}>{strings.admin.takeDown}</Button>
         </span>
       )}
@@ -287,6 +302,7 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
   const [sending, setSending] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [asking, setAsking] = useState<ListSummary | null>(null);
+  const [translating, setTranslating] = useState<ListSummary | null>(null);
   const [takingDown, setTakingDown] = useState(false);
   const [takeDownFailed, setTakeDownFailed] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -463,6 +479,7 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
               opening={opening}
               onEdit={() => edit(list)}
               onReplace={() => open({ kind: "replace", list })}
+              onTranslate={() => setTranslating(list)}
               onTakeDown={() => {
                 setTakeDownFailed(false);
                 setAsking(list);
@@ -509,6 +526,19 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
           }
           onConfirm={() => takeDown(asking)}
           onCancel={() => setAsking(null)}
+        />
+      )}
+      {translating !== null && (
+        <HouseTranslations
+          list={translating}
+          narrow={narrow}
+          load={deps.loadList}
+          save={deps.saveTranslations}
+          onSaved={() => {
+            setTranslating(null);
+            setNotice({ text: strings.admin.houseWordsSaved });
+          }}
+          onClose={() => setTranslating(null)}
         />
       )}
       <Snackbar notice={notice} onDone={clearNotice} />

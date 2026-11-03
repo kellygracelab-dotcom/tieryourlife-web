@@ -813,6 +813,16 @@ const de: Translation = {
     updateHouse: "Redaktionsliste aktualisieren",
     houseUpdated: "Redaktionsliste aktualisiert",
     houseOpenFailed: "Die Liste ließ sich nicht öffnen. Versuch es noch einmal.",
+    houseWords: "Übersetzungen",
+    houseWordsTitle: "Übersetzungen von „{title}“",
+    houseWordsNote:
+      "Jeder Text, wie er geschrieben ist, daneben seine Übersetzung. Leer bleibt er, wie geschrieben.",
+    language: "Sprache",
+    houseWordsLoading: "Liste wird geladen…",
+    houseWordsSave: "Speichern",
+    houseWordsSaving: "Wird gespeichert…",
+    houseWordsSaved: "Übersetzungen gespeichert",
+    houseWordsFailed: "Die Übersetzungen ließen sich nicht speichern. Versuch es noch einmal.",
     takeDown: "Entfernen",
     takeDownAsk: "„{title}“ entfernen?",
     takeDownBody:

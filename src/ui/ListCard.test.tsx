@@ -120,4 +120,9 @@ describe("ListCard", () => {
       "In AnimeEvery A24 film, ranked",
     );
   });
+
+  it("names a house list in the reader's language when it has one", () => {
+    renderCard({ names: { en: "Ramen, everywhere", ru: "Рамен" } });
+    expect(screen.getByText("Ramen, everywhere")).toBeInTheDocument();
+  });
 });

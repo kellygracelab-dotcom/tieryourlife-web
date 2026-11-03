@@ -48,6 +48,7 @@ import type { FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/typ
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { preloadedList, preloadedRanking } from "./preload";
+import { listIn } from "./translated";
 
 /**
  * Every call the pages make, bound to the client that carries this browser's
@@ -67,12 +68,17 @@ export const preloadHidesAuthor = (id: string): boolean => preloadedList(id)?.an
 // What the page function already put into the HTML needs no request, and
 // therefore no App Check and no guest sign-in until Finish. An account asks
 // the network for a list without its author's name, which may be its own.
-export const loadList = (id: string, asAccount = false): Promise<PublishedList> => {
+// A house list comes in the reader's language; loadListAsWritten keeps the
+// words as written, for the admin who edits them.
+export const loadListAsWritten = (id: string, asAccount = false): Promise<PublishedList> => {
   const preloaded = preloadedList(id);
   return preloaded === null || (asAccount && preloaded.anonymous === true)
     ? lists.loadList(api, id)
     : Promise.resolve(lists.publishedListOf(preloaded));
 };
+
+export const loadList = async (id: string, asAccount = false): Promise<PublishedList> =>
+  listIn(await loadListAsWritten(id, asAccount), currentLocale());
 
 export const loadFeed = (query: FeedQuery): Promise<FeedPage> => lists.loadFeed(api, query);
 
@@ -315,6 +321,11 @@ export const replaceHouseList = (id: string, request: PublishRequest): Promise<H
   admin.replaceHouseList(api, id, request);
 
 export const takeDownHouseList = (id: string): Promise<void> => admin.takeDownHouseList(api, id);
+
+export const saveHouseTranslations = (
+  id: string,
+  translations: Partial<Record<string, Partial<Record<string, string>>>>,
+): Promise<void> => admin.saveHouseTranslations(api, id, translations);
 
 export const loadSearchMisses = (): Promise<SearchMiss[]> => admin.loadSearchMisses(api);
 
