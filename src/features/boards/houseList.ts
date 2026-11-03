@@ -10,7 +10,8 @@ import { boardFromList, publishRequestOf } from "./publish";
  * The boards this device edits for the house, by uid: the house list each
  * one updates, or null while it has not gone out yet. Kept beside the
  * boards and never on them, since the account refuses a board of a shape
- * it does not know; the board itself stays an ordinary private board.
+ * it does not know. The boards themselves are the house repository's
+ * (repository.ts): on this device only, never in the account's sync.
  */
 export const HOUSE_BOARDS_KEY = "tyl:houseBoards";
 
@@ -81,6 +82,12 @@ export function linkToHouse(
   store: KeyValueStore = localStorageStore,
 ): void {
   store.write(HOUSE_BOARDS_KEY, JSON.stringify({ ...linksIn(store), [uid]: listId }));
+}
+
+/** Forgets a board edited for the house, once it is gone. */
+export function unlinkFromHouse(uid: string, store: KeyValueStore = localStorageStore): void {
+  const { [uid]: _gone, ...rest } = linksIn(store);
+  store.write(HOUSE_BOARDS_KEY, JSON.stringify(rest));
 }
 
 /**

@@ -21,6 +21,13 @@ export const BOARD_PREFIX = "tyl:board:";
 
 export const boardKey = (uid: string): string => `${BOARD_PREFIX}${uid}`;
 
+/**
+ * Boards edited for the house, kept apart from one's own: on this device
+ * only, never synced to the account, never in Your lists. A house list
+ * belongs to the admin panel, not to whoever edits it (Danylo, 03.11.2026).
+ */
+export const HOUSE_BOARD_PREFIX = "tyl:houseBoard:";
+
 const text = (value: unknown): string | null => (typeof value === "string" ? value : null);
 const time = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
@@ -204,12 +211,16 @@ export interface BoardsRepository {
   subscribe(listener: () => void): () => void;
 }
 
-export function boardsRepository(store: KeyValueStore): BoardsRepository {
+export function boardsRepository(
+  store: KeyValueStore,
+  prefix: string = BOARD_PREFIX,
+): BoardsRepository {
+  const keyOf = (uid: string): string => `${prefix}${uid}`;
   const listeners = new Set<() => void>();
   let snapshot: readonly Board[] | null = null;
 
   const read = (): readonly Board[] => {
-    const keys = (store.keys?.() ?? []).filter((key) => key.startsWith(BOARD_PREFIX));
+    const keys = (store.keys?.() ?? []).filter((key) => key.startsWith(prefix));
     const boards: Board[] = [];
     for (const key of keys) {
       const raw = store.read(key);
@@ -231,7 +242,7 @@ export function boardsRepository(store: KeyValueStore): BoardsRepository {
 
   // Another tab of the site may have written a board; the browser says so.
   const onStorage = (event: StorageEvent) => {
-    if (event.key === null || event.key.startsWith(BOARD_PREFIX)) changed();
+    if (event.key === null || event.key.startsWith(prefix)) changed();
   };
 
   return {
@@ -243,15 +254,15 @@ export function boardsRepository(store: KeyValueStore): BoardsRepository {
       return this.all().find((board) => board.uid === uid) ?? null;
     },
     save(board) {
-      store.write(boardKey(board.uid), JSON.stringify(board));
+      store.write(keyOf(board.uid), JSON.stringify(board));
       changed();
     },
     saveAll(boards) {
-      for (const board of boards) store.write(boardKey(board.uid), JSON.stringify(board));
+      for (const board of boards) store.write(keyOf(board.uid), JSON.stringify(board));
       changed();
     },
     remove(uid) {
-      store.remove(boardKey(uid));
+      store.remove(keyOf(uid));
       changed();
     },
     subscribe(listener) {
@@ -271,3 +282,9 @@ export function boardsRepository(store: KeyValueStore): BoardsRepository {
 
 /** The site's own: this browser's boards. */
 export const boards: BoardsRepository = boardsRepository(localStorageStore);
+
+/** The boards this browser edits for the house; nothing syncs them. */
+export const houseBoards: BoardsRepository = boardsRepository(
+  localStorageStore,
+  HOUSE_BOARD_PREFIX,
+);

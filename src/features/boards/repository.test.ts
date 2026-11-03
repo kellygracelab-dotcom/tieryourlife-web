@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { memoryStore } from "../../lib/storage";
 import { newBoard, poolTier } from "./model";
-import { boardKey, boardsRepository, parseBoard } from "./repository";
+import { boardKey, boardsRepository, HOUSE_BOARD_PREFIX, parseBoard } from "./repository";
 
 const uids = () => {
   let n = 0;
@@ -169,6 +169,21 @@ describe("parseBoard", () => {
 });
 
 describe("the repository", () => {
+  it("keeps the house's boards apart from one's own on the same device", () => {
+    const store = memoryStore();
+    const own = boardsRepository(store);
+    const house = boardsRepository(store, HOUSE_BOARD_PREFIX);
+    house.save(newBoard("h1", "Best ramen", 1, uids()));
+    own.save(newBoard("b1", "Films", 1, uids()));
+    expect(own.all().map((board) => board.uid)).toEqual(["b1"]);
+    expect(house.all().map((board) => board.uid)).toEqual(["h1"]);
+    expect(store.read("tyl:houseBoard:h1")).not.toBeNull();
+    expect(store.read(boardKey("h1"))).toBeNull();
+    house.remove("h1");
+    expect(house.all()).toEqual([]);
+    expect(own.get("b1")).not.toBeNull();
+  });
+
   it("keeps one key per board, hands back the same array until something changes, and tells its listeners", () => {
     const store = memoryStore();
     const repo = boardsRepository(store);
