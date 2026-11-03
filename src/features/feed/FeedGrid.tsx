@@ -33,14 +33,16 @@ function CardPlaceholder() {
   return (
     <div className="list-card list-card--placeholder">
       <Skeleton height="var(--card-cover)" className="list-card__cover-placeholder" />
-      <span className="list-card__body">
+      <span className="list-card__text list-card__text--placeholder">
         <Skeleton width="85%" height="13px" />
-        <Skeleton width="50%" height="13px" />
+        <Skeleton width="55%" height="13px" />
+      </span>
+      <span className="list-card__body">
         <span className="list-card__author">
           <Skeleton width="20px" height="20px" className="list-card__face" />
           <Skeleton width="56px" height="10px" />
         </span>
-        <Skeleton width="110px" height="10px" />
+        <Skeleton width="44px" height="10px" className="list-card__count" />
       </span>
     </div>
   );

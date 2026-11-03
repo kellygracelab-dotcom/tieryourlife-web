@@ -620,7 +620,7 @@ const pl: Translation = {
     },
     noArt: "Bez obrazu",
     yours: "Twoja lista",
-    yoursAnonymous: "Twoja lista · anonimowa",
+    yoursAnonymous: "Twoja lista, opublikowana anonimowo",
   },
   android: {
     title: "TierYourLife na Androida",

@@ -592,7 +592,7 @@ const tr: Translation = {
     rankings: { other: "{n} sıralama" },
     noArt: "Görsel yok",
     yours: "Listeniz",
-    yoursAnonymous: "Listeniz · anonim",
+    yoursAnonymous: "Listeniz, anonim olarak yayımlandı",
   },
   android: {
     title: "Android için TierYourLife",

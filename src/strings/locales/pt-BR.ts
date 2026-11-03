@@ -593,7 +593,7 @@ const ptBR: Translation = {
     rankings: { one: "{n} classificação", other: "{n} classificações" },
     noArt: "Sem imagem",
     yours: "Sua lista",
-    yoursAnonymous: "Sua lista · anônima",
+    yoursAnonymous: "Sua lista, publicada anonimamente",
   },
   android: {
     title: "TierYourLife para Android",

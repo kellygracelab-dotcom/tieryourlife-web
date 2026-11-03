@@ -676,7 +676,7 @@ const ar: Translation = {
     },
     noArt: "بدون صورة",
     yours: "قائمتك",
-    yoursAnonymous: "قائمتك · مجهولة",
+    yoursAnonymous: "قائمتك، منشورة دون اسم",
   },
   android: {
     title: "TierYourLife لنظام Android",
