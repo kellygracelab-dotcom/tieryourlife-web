@@ -62,6 +62,7 @@ const ramenInFull: PublishedList = {
 };
 
 let repository: BoardsRepository;
+let houseRepository: BoardsRepository;
 let links: KeyValueStore;
 let deps: HouseDeps;
 
@@ -81,6 +82,7 @@ function open() {
 beforeEach(() => {
   window.innerWidth = 1280;
   repository = boardsRepository(memoryStore());
+  houseRepository = boardsRepository(memoryStore());
   links = memoryStore();
   deps = {
     load: vi.fn(async () => ({ lists: [house("l1", "Best ramen")], nextCursor: null })),
@@ -88,6 +90,7 @@ beforeEach(() => {
     replace: vi.fn(async (id: string) => ({ id, topicId: null })),
     takeDown: vi.fn(async () => undefined),
     repository,
+    houseRepository,
     loadList: vi.fn(async () => ramenInFull),
     links,
     now: () => 500,
@@ -324,7 +327,9 @@ describe("HousePane: made and changed on a board", () => {
     await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
     expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
     expect(deps.loadList).toHaveBeenCalledWith("l1");
-    const [board] = repository.all();
+    // Kept for the house on this device: nobody's own board, never in the account's sync.
+    expect(repository.all()).toEqual([]);
+    const [board] = houseRepository.all();
     expect(board).toMatchObject({
       title: "Best ramen",
       category: "food",
@@ -341,16 +346,19 @@ describe("HousePane: made and changed on a board", () => {
   });
 
   it("opens the board this device already edits for a list, rather than a second copy", async () => {
-    repository.save(readyBoard("mine", "Ramen, my edit"));
+    houseRepository.save(readyBoard("mine", "Ramen, my edit"));
     linkToHouse("mine", "l1", links);
     // One thrown away earlier does not count.
-    repository.save(trashBoard(readyBoard("old", "Ramen, before"), 2));
+    houseRepository.save(trashBoard(readyBoard("old", "Ramen, before"), 2));
     linkToHouse("old", "l1", links);
+    // Nor does a board of one's own linked before house boards were kept apart.
+    repository.save(readyBoard("own", "Ramen, in Your lists"));
+    linkToHouse("own", "l1", links);
     const router = open();
     await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
     expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
     expect(deps.loadList).not.toHaveBeenCalled();
-    expect(repository.all()).toHaveLength(2);
+    expect(houseRepository.all()).toHaveLength(2);
     expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
       "/b/mine?house=l1",
     );

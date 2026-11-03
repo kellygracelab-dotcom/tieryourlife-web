@@ -33,7 +33,7 @@ import {
 } from "../boards/houseList";
 import { liveItems, type Board } from "../boards/model";
 import { publishProblemsOf } from "../boards/publish";
-import { boards as site, type BoardsRepository } from "../boards/repository";
+import { boards as site, houseBoards, type BoardsRepository } from "../boards/repository";
 import { nextUid, useBoards } from "../boards/useBoards";
 import { sectionName, type Section } from "../sections/model";
 import { useSections } from "../sections/useSections";
@@ -49,6 +49,8 @@ export interface HouseDeps {
   takeDown: (id: string) => Promise<void>;
   /** The boards of whoever is here, owner or moderator, read the way Your lists reads them. */
   repository: BoardsRepository;
+  /** The boards this device edits for the house: apart from one's own, never synced. */
+  houseRepository: BoardsRepository;
   /** A house list in full, for Edit to make a board of. */
   loadList: (id: string) => Promise<PublishedList>;
   /** Where this device remembers which of its boards are the house's. */
@@ -62,6 +64,7 @@ const houseDeps: HouseDeps = {
   replace: replaceHouseList,
   takeDown: takeDownHouseList,
   repository: site,
+  houseRepository: houseBoards,
   loadList,
   links: localStorageStore,
   now: Date.now,
@@ -368,13 +371,14 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
     );
   };
 
-  // Edit: the list as it stands now becomes a board of one's own, tied to it,
-  // and the editor opens on it for the house. A board this device already
-  // edits for the list opens instead: a second one would be a stale copy that
-  // the next edits went to.
+  // Edit: the list as it stands now becomes a board kept for the house on this
+  // device, tied to it, and the editor opens on it. It is nobody's own and
+  // never reaches the account. A board this device already edits for the
+  // list opens instead: a second one would be a stale copy that the next
+  // edits went to.
   const edit = (list: ListSummary) => {
     const editing = houseBoardsOf(list.id, deps.links)
-      .map((uid) => deps.repository.get(uid))
+      .map((uid) => deps.houseRepository.get(uid))
       .find((board) => board !== null && board.deletedAt === null);
     if (editing !== undefined && editing !== null) {
       void navigate(houseBoardPath(editing.uid, list.id));
@@ -384,7 +388,7 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
     deps.loadList(list.id).then(
       (full) => {
         const board = boardFromHouseList(full, deps.now(), nextUid);
-        deps.repository.save(board);
+        deps.houseRepository.save(board);
         linkToHouse(board.uid, list.id, deps.links);
         void navigate(houseBoardPath(board.uid, list.id));
       },

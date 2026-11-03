@@ -47,7 +47,7 @@ import {
   republish as republishList,
   unpublish as unpublishList,
 } from "../lib/api";
-import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { boards as site, houseBoards, type BoardsRepository } from "../features/boards/repository";
 import { takenDown, unpublished } from "../features/boards/takeDown";
 import { applyTierAction, editorTiersOf, newTierOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
@@ -66,6 +66,7 @@ import {
   houseLinkOf,
   houseLinkOfParam,
   linkToHouse,
+  unlinkFromHouse,
 } from "../features/boards/houseList";
 import { fill, plural, strings } from "../strings";
 import { Icon } from "../ui/Icon";
@@ -98,6 +99,8 @@ interface BoardPageProps {
   house?: HouseSending;
   /** Where this device remembers which of its boards are the house's. */
   houseStore?: KeyValueStore;
+  /** The boards this device edits for the house, apart from one's own and never synced. */
+  houseRepository?: BoardsRepository;
 }
 
 /** The settings sheet, or what its Propose a section opened in its place: the form, or the three already waiting. */
@@ -190,7 +193,7 @@ const sitePublishing: PublishingDeps = {
 };
 
 export function BoardPage({
-  repository = site,
+  repository: ownBoards = site,
   now = Date.now,
   find,
   upload = (file) => uploadPicture(file),
@@ -203,16 +206,24 @@ export function BoardPage({
   proposeDeps,
   house: houseSend,
   houseStore = localStorageStore,
+  houseRepository = houseBoards,
 }: BoardPageProps) {
   const { uid = "" } = useParams();
   const [params] = useSearchParams();
-  const stored = useBoard(uid, repository);
+  const own = useBoard(uid, ownBoards);
+  const forHouse = useBoard(uid, houseRepository);
   const navigate = useNavigate();
   // A board edited for the house: the address says so on arrival, and this
   // device remembers it once the board is kept, so it stays the house's
-  // wherever it is opened from. It then goes out only as the house.
-  const remembered = houseLinkOf(uid, houseStore);
-  const house = remembered ?? houseLinkOfParam(params.get(HOUSE_PARAM));
+  // wherever it is opened from. It then goes out only as the house. It is
+  // kept apart from one's own boards, on this device only: a house list is
+  // nobody's, and the account's sync never carries it. A board of one's own
+  // stays one's own, whatever an older link says.
+  const remembered = forHouse === null ? null : houseLinkOf(uid, houseStore);
+  const asked = own === null ? houseLinkOfParam(params.get(HOUSE_PARAM)) : null;
+  const house = remembered ?? asked ?? (forHouse === null ? null : { listId: null });
+  const repository = house === null ? ownBoards : houseRepository;
+  const stored = house === null ? own : forHouse;
   const { account, signIn } = useSession();
   const { sections } = useSections(store);
   const me = account?.kind === "signedIn" ? account.uid : null;
@@ -496,6 +507,14 @@ export function BoardPage({
   // board stays and says why.
   const toTrash = async () => {
     if (trashing.current) return;
+    // A board kept for the house is only this device's way of editing the
+    // list: it goes, and the list stays out until the House pane takes it down.
+    if (house !== null) {
+      repository.remove(uid);
+      unlinkFromHouse(uid, houseStore);
+      void navigate(HOUSE_PANE_PATH);
+      return;
+    }
     trashing.current = true;
     const down = await takenDown(latest(), publishing.unpublish);
     trashing.current = false;

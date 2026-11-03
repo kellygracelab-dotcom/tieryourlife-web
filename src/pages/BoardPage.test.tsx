@@ -74,6 +74,7 @@ const open = (
     store?: SectionsStore;
     house?: HouseSending;
     houseStore?: KeyValueStore;
+    houseRepository?: BoardsRepository;
   } = {},
 ) => {
   const router = createMemoryRouter(
@@ -91,6 +92,7 @@ const open = (
             store={extra.store}
             house={extra.house}
             houseStore={extra.houseStore ?? memoryStore()}
+            houseRepository={extra.houseRepository ?? boardsRepository(memoryStore())}
           />
         ),
       },
@@ -876,10 +878,12 @@ describe("BoardPage: a house list", () => {
 
   it("says a new board is the house's, leads back to House lists, and offers no Public switch", async () => {
     const repository = boardsRepository(memoryStore());
+    const houseRepository = boardsRepository(memoryStore());
     const houseStore = memoryStore();
     const router = open(repository, "/b/fresh?new=100&house=new", {
       house: sending(),
       houseStore,
+      houseRepository,
       account: member,
     });
     const bar = screen.getByRole("region", { name: "House list" });
@@ -891,7 +895,9 @@ describe("BoardPage: a house list", () => {
     // Remembered as the house's once it is kept, not before.
     expect(houseLinkOf("fresh", houseStore)).toBeNull();
     await userEvent.keyboard("Ramen{Enter}");
-    expect(repository.get("fresh")?.title).toBe("Ramen");
+    // Kept for the house on this device, never among one's own boards that the account syncs.
+    expect(houseRepository.get("fresh")?.title).toBe("Ramen");
+    expect(repository.all()).toEqual([]);
     expect(houseLinkOf("fresh", houseStore)).toEqual({ listId: null });
 
     await userEvent.click(screen.getByRole("button", { name: "List settings" }));
@@ -905,19 +911,26 @@ describe("BoardPage: a house list", () => {
 
   it("publishes as the house and only so, then updates the same list", async () => {
     const repository = boardsRepository(memoryStore());
+    const houseRepository = boardsRepository(memoryStore());
     const board = { ...filmBoard(), category: "film_tv" };
-    repository.save(board);
+    houseRepository.save(board);
     const houseStore = memoryStore();
     linkToHouse("films", null, houseStore);
     const house = sending();
     const publishing: PublishingDeps = { ...noPublishing, publish: vi.fn() };
-    // Opened from Your lists: this device remembers it is the house's.
-    const router = open(repository, "/b/films", { house, houseStore, publishing, account: member });
+    // Opened without the address saying so: this device remembers it is the house's.
+    const router = open(repository, "/b/films", {
+      house,
+      houseStore,
+      houseRepository,
+      publishing,
+      account: member,
+    });
     await userEvent.click(screen.getByRole("button", { name: "Publish to House lists" }));
     expect(await screen.findByText("Published")).toBeInTheDocument();
     expect(house.publish).toHaveBeenCalledWith(publishRequestOf(board));
     expect(publishing.publish).not.toHaveBeenCalled();
-    expect(repository.get("films")?.publishedId).toBeNull();
+    expect(houseRepository.get("films")?.publishedId).toBeNull();
     expect(houseLinkOf("films", houseStore)).toEqual({ listId: "H1" });
     expect(router.state.location.search).toBe("?house=H1");
     expect(await screen.findByRole("link", { name: "Open" })).toHaveAttribute("href", "/l/H1");
@@ -933,26 +946,34 @@ describe("BoardPage: a house list", () => {
   });
 
   it("takes the list from the address when this device does not know it yet", async () => {
-    const repository = boardsRepository(memoryStore());
-    repository.save({ ...filmBoard(), category: "film_tv" });
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save({ ...filmBoard(), category: "film_tv" });
     const houseStore = memoryStore();
     const house = sending();
-    open(repository, "/b/films?house=H2", { house, houseStore });
+    open(boardsRepository(memoryStore()), "/b/films?house=H2", {
+      house,
+      houseStore,
+      houseRepository,
+    });
     expect(houseLinkOf("films", houseStore)).toEqual({ listId: "H2" });
     await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
     expect(house.replace).toHaveBeenCalledWith("H2", expect.objectContaining({ title: "Films" }));
   });
 
   it("says why it did not go out, and goes out as a new list when the old one is gone", async () => {
-    const repository = boardsRepository(memoryStore());
-    repository.save({ ...filmBoard(), category: "film_tv" });
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save({ ...filmBoard(), category: "film_tv" });
     const houseStore = memoryStore();
     linkToHouse("films", "H1", houseStore);
     const house: HouseSending = {
       publish: vi.fn(() => Promise.reject(new ApiFailure({ kind: "notYours" }))),
       replace: vi.fn(() => Promise.reject(new ApiFailure({ kind: "notFound" }))),
     };
-    const router = open(repository, "/b/films?house=H1", { house, houseStore });
+    const router = open(boardsRepository(memoryStore()), "/b/films?house=H1", {
+      house,
+      houseStore,
+      houseRepository,
+    });
     await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "This list isn’t published anymore.",
@@ -963,5 +984,36 @@ describe("BoardPage: a house list", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Only the owner and moderators can publish as the house.",
     );
+  });
+
+  it("lets a board of one's own stay one's own, whatever an older house link says", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const houseStore = memoryStore();
+    // Before house boards were kept apart, they were ordinary boards linked here.
+    linkToHouse("films", "H1", houseStore);
+    open(repository, "/b/films?house=H1", { house: sending(), houseStore, account: member });
+    expect(screen.queryByRole("region", { name: "House list" })).toBeNull();
+  });
+
+  it("drops a house board from this device on Delete, and leaves the list to the House pane", async () => {
+    const repository = boardsRepository(memoryStore());
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save({ ...filmBoard(), category: "film_tv" });
+    const houseStore = memoryStore();
+    linkToHouse("films", "H1", houseStore);
+    const unpublish = vi.fn<(id: string) => Promise<void>>();
+    const router = open(repository, "/b/films", {
+      house: sending(),
+      houseStore,
+      houseRepository,
+      publishing: { ...noPublishing, unpublish },
+    });
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    await userEvent.click(screen.getByRole("button", { name: "Delete board" }));
+    expect(houseRepository.all()).toEqual([]);
+    expect(houseLinkOf("films", houseStore)).toBeNull();
+    expect(unpublish).not.toHaveBeenCalled();
+    expect(router.state.location.pathname).toBe("/admin/house");
   });
 });
