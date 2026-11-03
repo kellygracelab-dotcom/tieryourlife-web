@@ -1,9 +1,10 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
+import { withPageTransitions } from "./app/pageTransitions";
 import { routes } from "./app/routes";
 import { SessionProvider } from "./app/SessionProvider";
 import { BoardSyncProvider } from "./features/boards/BoardSyncProvider";
 
-const router = createBrowserRouter(routes);
+const router = withPageTransitions(createBrowserRouter(routes));
 
 export function App() {
   return (
