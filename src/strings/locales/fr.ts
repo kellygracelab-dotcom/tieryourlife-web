@@ -816,6 +816,16 @@ const fr: Translation = {
     updateHouse: "Mettre à jour la liste de la maison",
     houseUpdated: "Liste de la maison mise à jour",
     houseOpenFailed: "Impossible d’ouvrir cette liste. Réessayez.",
+    houseWords: "Traductions",
+    houseWordsTitle: "Traductions de « {title} »",
+    houseWordsNote:
+      "Chaque texte tel qu’il est écrit, avec sa traduction à côté. Laissé vide, il s’affiche tel quel.",
+    language: "Langue",
+    houseWordsLoading: "Chargement de la liste…",
+    houseWordsSave: "Enregistrer",
+    houseWordsSaving: "Enregistrement…",
+    houseWordsSaved: "Traductions enregistrées",
+    houseWordsFailed: "Impossible d’enregistrer les traductions. Réessayez.",
     takeDown: "Retirer",
     takeDownAsk: "Retirer « {title} » ?",
     takeDownBody:

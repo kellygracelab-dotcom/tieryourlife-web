@@ -64,6 +64,8 @@ export interface ListSummary {
   tierColors: string[];
   updatedAt: number;
   takeCount: number;
+  /** A house list's title in the app's other languages, by locale. */
+  names?: Partial<Record<string, string>>;
   /** The topic the list was published under, when it has one. */
   topicId?: string | null;
   topicName?: string | null;
@@ -90,6 +92,8 @@ export interface PublishedItem {
 export interface PublishedList extends ListSummary {
   tiers: PublishedTier[];
   items: PublishedItem[];
+  /** A house list's words by locale, from the text as written to the text in that language. */
+  translations?: Partial<Record<string, Partial<Record<string, string>>>>;
 }
 
 // A type rather than an interface so it can travel as a query object.

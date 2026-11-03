@@ -850,6 +850,16 @@ const uk: Translation = {
     updateHouse: "Оновити список від редакції",
     houseUpdated: "Список від редакції оновлено",
     houseOpenFailed: "Не вдалося відкрити цей список. Спробуйте ще раз.",
+    houseWords: "Переклади",
+    houseWordsTitle: "Переклади «{title}»",
+    houseWordsNote:
+      "Кожен текст як написаний, а поруч його переклад. Порожнє поле — текст покажеться як написаний.",
+    language: "Мова",
+    houseWordsLoading: "Завантажуємо список…",
+    houseWordsSave: "Зберегти",
+    houseWordsSaving: "Зберігаємо…",
+    houseWordsSaved: "Переклади збережено",
+    houseWordsFailed: "Не вдалося зберегти переклади. Спробуйте ще раз.",
     takeDown: "Зняти",
     takeDownAsk: "Зняти «{title}»?",
     takeDownBody:

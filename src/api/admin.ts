@@ -420,6 +420,21 @@ export function replaceHouseList(
   });
 }
 
+/**
+ * A house list's words in the app's other languages, all of them at once:
+ * by locale, from the text as written to its translation. 404 when the list
+ * is not the house's, 403 NOT_YOURS for anybody but staff.
+ */
+export function saveHouseTranslations(
+  client: ApiClient,
+  id: string,
+  translations: Partial<Record<string, Partial<Record<string, string>>>>,
+): Promise<void> {
+  return client.request<void>("PUT", `/lists/editorial/${encodeURIComponent(id)}/translations`, {
+    body: { translations },
+  });
+}
+
 /** Takes a house list down; 204 when it was gone already, too. */
 export function takeDownHouseList(client: ApiClient, id: string): Promise<void> {
   return client.request<void>("DELETE", `/lists/editorial/${encodeURIComponent(id)}`);

@@ -1,7 +1,8 @@
 import { Link } from "react-router";
 import type { ListSummary } from "../api/types";
 import { isEditorialAuthor } from "../lib/editorial";
-import { plural, strings } from "../strings";
+import { titleIn } from "../lib/translated";
+import { currentLocale, plural, strings } from "../strings";
 import { Icon } from "./Icon";
 import { ListArt } from "./ListArt";
 import "./ListCard.css";
@@ -63,7 +64,7 @@ export function ListCard({ list, reason = null, yours = null }: ListCardProps) {
         />
         <span className="list-card__text">
           {reason !== null && <span className="list-card__reason">{reason}</span>}
-          <span className="list-card__title">{list.title}</span>
+          <span className="list-card__title">{titleIn(list, currentLocale())}</span>
         </span>
       </Link>
       <span className="list-card__body">

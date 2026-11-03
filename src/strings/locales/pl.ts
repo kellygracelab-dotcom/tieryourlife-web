@@ -843,6 +843,16 @@ const pl: Translation = {
     updateHouse: "Zaktualizuj listę redakcji",
     houseUpdated: "Zaktualizowano listę redakcji",
     houseOpenFailed: "Nie udało się otworzyć tej listy. Spróbuj ponownie.",
+    houseWords: "Tłumaczenia",
+    houseWordsTitle: "Tłumaczenia „{title}”",
+    houseWordsNote:
+      "Każdy tekst tak, jak go napisano, a obok jego tłumaczenie. Puste pole — tekst pokaże się tak, jak napisano.",
+    language: "Język",
+    houseWordsLoading: "Wczytywanie listy…",
+    houseWordsSave: "Zapisz",
+    houseWordsSaving: "Zapisywanie…",
+    houseWordsSaved: "Tłumaczenia zapisane",
+    houseWordsFailed: "Nie udało się zapisać tłumaczeń. Spróbuj ponownie.",
     takeDown: "Usuń z publikacji",
     takeDownAsk: "Usunąć „{title}” z publikacji?",
     takeDownBody:

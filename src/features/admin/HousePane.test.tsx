@@ -89,6 +89,7 @@ beforeEach(() => {
     publish: vi.fn(async () => ({ id: "new1", topicId: null })),
     replace: vi.fn(async (id: string) => ({ id, topicId: null })),
     takeDown: vi.fn(async () => undefined),
+    saveTranslations: vi.fn(async () => undefined),
     repository,
     houseRepository,
     loadList: vi.fn(async () => ramenInFull),
@@ -412,5 +413,46 @@ describe("HousePane: made and changed on a board", () => {
     await userEvent.click(within(ramenRow).getByRole("button", { name: "Edit" }));
     expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
     expect(router.state.location.search).toBe("?house=l1");
+  });
+
+  it("keeps a house list's words in another language, one language at a time", async () => {
+    deps.loadList = vi.fn(async () => ({
+      ...ramenInFull,
+      translations: { de: { Miso: "Miso" }, ru: { "Best ramen": "Лучший рамен" } },
+    }));
+    open();
+    await userEvent.click(
+      within(await row("Best ramen")).getByRole("button", { name: "Translations" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Translations of “Best ramen”" });
+    // Every text the page shows, once: the title, the tier, the cards.
+    const ru = await within(dialog).findByLabelText("Best ramen");
+    expect(ru).toHaveValue("Лучший рамен");
+    expect(within(dialog).getByLabelText("S")).toHaveValue("");
+    await userEvent.type(within(dialog).getByLabelText("Tonkotsu"), "Тонкоцу");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Deutsch" }));
+    expect(within(dialog).getByLabelText("Miso")).toHaveValue("Miso");
+    expect(within(dialog).getByLabelText("Miso")).toHaveAttribute("lang", "de");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(deps.saveTranslations).toHaveBeenCalledWith("l1", {
+      de: { Miso: "Miso" },
+      ru: { "Best ramen": "Лучший рамен", Tonkotsu: "Тонкоцу" },
+    });
+    expect(await screen.findByText("Translations saved")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("stays open and says so when the words could not be saved", async () => {
+    deps.saveTranslations = vi.fn(() => Promise.reject(new Error("offline")));
+    open();
+    await userEvent.click(
+      within(await row("Best ramen")).getByRole("button", { name: "Translations" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(await within(dialog).findByLabelText("Miso"), "Мисо");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Couldn’t save the translations. Try again.",
+    );
   });
 });
