@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { ListSummary, PublishedList } from "../../api/types";
 import { memoryStore, type KeyValueStore } from "../../lib/storage";
-import { houseLinkOf, linkToHouse } from "../boards/houseList";
+import { houseBoardsOf, houseLinkOf, linkToHouse } from "../boards/houseList";
 import {
   addToPool,
   itemsIn,
@@ -347,7 +347,8 @@ describe("HousePane: made and changed on a board", () => {
   });
 
   it("opens the board this device already edits for a list, rather than a second copy", async () => {
-    houseRepository.save(readyBoard("mine", "Ramen, my edit"));
+    // Edited here after the list last changed.
+    houseRepository.save(readyBoard("mine", "Ramen, my edit", Date.UTC(2026, 9, 31)));
     linkToHouse("mine", "l1", links);
     // One thrown away earlier does not count.
     houseRepository.save(trashBoard(readyBoard("old", "Ramen, before"), 2));
@@ -363,6 +364,21 @@ describe("HousePane: made and changed on a board", () => {
     expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
       "/b/mine?house=l1",
     );
+  });
+
+  it("lets a board go stale once the list changed elsewhere, and opens the list as it stands", async () => {
+    // Edited here before the list was filled out somewhere else.
+    houseRepository.save(readyBoard("mine", "Ramen, my old edit", Date.UTC(2026, 9, 29)));
+    linkToHouse("mine", "l1", links);
+    const router = open();
+    await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(deps.loadList).toHaveBeenCalledWith("l1");
+    expect(houseRepository.get("mine")).toBeNull();
+    expect(houseBoardsOf("l1", links)).not.toContain("mine");
+    const [fresh] = houseRepository.all();
+    expect(fresh?.title).toBe("Best ramen");
+    expect(router.state.location.pathname).toBe(`/b/${fresh?.uid}`);
   });
 
   it("says so when the list did not come, and drops a list that is gone", async () => {

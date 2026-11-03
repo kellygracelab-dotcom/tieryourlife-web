@@ -31,6 +31,7 @@ import {
   houseBoardsOf,
   linkToHouse,
   NEW_HOUSE_PATH,
+  unlinkFromHouse,
 } from "../boards/houseList";
 import { liveItems, type Board } from "../boards/model";
 import { publishProblemsOf } from "../boards/publish";
@@ -391,14 +392,21 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
   // device, tied to it, and the editor opens on it. It is nobody's own and
   // never reaches the account. A board this device already edits for the
   // list opens instead: a second one would be a stale copy that the next
-  // edits went to.
+  // edits went to. Unless the list changed after this device last touched
+  // that board (another admin, or a script that filled it out): then the
+  // board is the stale one, and Update would put the old list back over the
+  // new, so it goes and the list as it stands comes in its place.
   const edit = (list: ListSummary) => {
     const editing = houseBoardsOf(list.id, deps.links)
       .map((uid) => deps.houseRepository.get(uid))
       .find((board) => board !== null && board.deletedAt === null);
     if (editing !== undefined && editing !== null) {
-      void navigate(houseBoardPath(editing.uid, list.id));
-      return;
+      if (list.updatedAt <= editing.editedAt) {
+        void navigate(houseBoardPath(editing.uid, list.id));
+        return;
+      }
+      deps.houseRepository.remove(editing.uid);
+      unlinkFromHouse(editing.uid, deps.links);
     }
     setOpening(true);
     deps.loadList(list.id).then(
