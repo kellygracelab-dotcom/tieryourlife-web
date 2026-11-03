@@ -40,8 +40,10 @@ function Face({ name, photoUrl }: { name: string | null; photoUrl: string | null
 }
 
 /**
- * The feed's card, as the app draws it: the art, the title on up to two
- * lines, the author's face and name, and how many cards and rankings.
+ * The feed's card, as the app draws it: the art, the title in a block two
+ * lines tall, and a footer row with the author's face and name at the start
+ * and how many cards at the end. Every card keeps its rows at the same heights,
+ * so a row of cards reads as one line (Claude Design, 03.11.2026).
  *
  * Whose it is shows at a glance (Danylo, 02.11.2026): one's own lists wear
  * one's own face and say so, anonymous or not; somebody else's anonymous list
@@ -67,9 +69,14 @@ export function ListCard({ list, reason = null, yours = null }: ListCardProps) {
       <span className="list-card__body">
         {yours !== null ? (
           list.anonymous === true ? (
+            // Said with a closed eye, not in words: the row stays one short line.
             <span className="list-card__author list-card__author--own">
               <Face name={yours.name} photoUrl={yours.photoUrl} />
-              <span className="list-card__name">{strings.card.yoursAnonymous}</span>
+              <span className="list-card__name" aria-hidden="true">
+                {strings.card.yours}
+              </span>
+              <Icon name="visibility_off" className="list-card__hidden" />
+              <span className="visually-hidden">{strings.card.yoursAnonymous}</span>
             </span>
           ) : (
             <Link
@@ -102,7 +109,7 @@ export function ListCard({ list, reason = null, yours = null }: ListCardProps) {
             </Link>
           )
         )}
-        <span className="list-card__meta">{meta.join(" · ")}</span>
+        <span className="list-card__count">{meta.join(" · ")}</span>
       </span>
     </article>
   );

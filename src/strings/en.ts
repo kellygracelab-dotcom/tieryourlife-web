@@ -1210,6 +1210,6 @@ export const en = {
     rankings: { one: "{n} ranking", other: "{n} rankings" },
     noArt: "No picture",
     yours: "Your list",
-    yoursAnonymous: "Your list · anonymous",
+    yoursAnonymous: "Your list, published anonymously",
   },
 } as const;

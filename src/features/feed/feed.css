@@ -1,8 +1,13 @@
 /* The app's grid: two across on a phone, three on a tablet, four from 840. */
 .feed {
-  --card-cover: 132px;
+  --card-cover: 112px;
+  --card-pad-top: 8px;
+  --card-pad-side: 10px;
+  --card-pad-bottom: 10px;
+  --card-gap: 6px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 12px;
   margin: 0;
   padding: 0;
@@ -11,7 +16,11 @@
 
 @media (min-width: 600px) {
   .feed {
-    --card-cover: 128px;
+    --card-cover: 132px;
+    --card-pad-top: 10px;
+    --card-pad-side: 12px;
+    --card-pad-bottom: 12px;
+    --card-gap: 8px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
   }
@@ -19,7 +28,6 @@
 
 @media (min-width: 840px) {
   .feed {
-    --card-cover: 140px;
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
@@ -35,6 +43,12 @@
 
 .list-card--placeholder {
   pointer-events: none;
+}
+
+/* Two bars where the title's two lines go, in the same 36px block. */
+.list-card__text--placeholder {
+  justify-content: space-around;
+  min-height: calc(36px + var(--card-pad-top, 10px));
 }
 
 .list-card__cover-placeholder {

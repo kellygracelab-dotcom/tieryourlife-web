@@ -104,7 +104,12 @@ describe("ListCard", () => {
       null,
       { ...me, photoUrl: null },
     );
-    expect(screen.getByText("Your list · anonymous")).toBeInTheDocument();
+    // A closed eye says it on the card; a screen reader hears it in words.
+    expect(screen.getByText("Your list, published anonymously")).toHaveClass("visually-hidden");
+    expect(anonymous.container.querySelector(".list-card__hidden")).toHaveTextContent(
+      "visibility_off",
+    );
+    expect(screen.queryByText(/·/)).toBeNull();
     expect(anonymous.container.querySelector(".list-card__face--initial")).toHaveTextContent("D");
     expect(screen.getAllByRole("link")).toHaveLength(1);
   });
