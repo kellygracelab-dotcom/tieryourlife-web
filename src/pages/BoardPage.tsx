@@ -52,7 +52,7 @@ import { boards as site } from "../features/boards/owners";
 import { takenDown, unpublished } from "../features/boards/takeDown";
 import { applyTierAction, editorTiersOf, newTierOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
-import { boardView, sameOrder, uidRows } from "../features/boards/view";
+import { arrangementOf, boardView, sameOrder, uidRows } from "../features/boards/view";
 import { AddCardBox, type Keep, type Upload } from "../features/editor/AddCardBox";
 import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
 import { TierDialog } from "../features/editor/TierDialog";
@@ -343,6 +343,19 @@ export function BoardPage({
   // The board on screen holds its rows itself: an arrangement made elsewhere
   // (Play's result, its Undo) draws a fresh one over the cards.
   const [arranged, setArranged] = useState(0);
+  // An arrangement written elsewhere (another tab, the account's copy coming
+  // down) is drawn too: rows held from before would write the old one back
+  // over it at the next move. The board's own moves are told apart by the
+  // arrangement they wrote.
+  const arrangement = board === null ? null : arrangementOf(board);
+  const [shownArrangement, setShownArrangement] = useState(arrangement);
+  const [ownArrangement, setOwnArrangement] = useState<string | null>(null);
+  if (arrangement !== shownArrangement) {
+    setShownArrangement(arrangement);
+    if (arrangement !== ownArrangement && shownArrangement !== null) {
+      setArranged((round) => round + 1);
+    }
+  }
   const play = usePlay(uid, playCards, playTiers, localStorageStore, {
     title: board?.title || strings.boards.untitled,
     games,
@@ -369,7 +382,9 @@ export function BoardPage({
   // What the board is right now: what is kept, or the fresh one until it is.
   const latest = (): Board => repository.get(uid) ?? board;
   const keep = (next: Board) => {
-    if (next !== board) repository.save(next);
+    if (next === board) return;
+    setOwnArrangement(arrangementOf(next));
+    repository.save(next);
   };
 
   // Out as the house: the board is tied to the list from now on, and the address says which.
@@ -388,8 +403,7 @@ export function BoardPage({
   };
 
   const onRows = (rows: readonly (readonly number[])[]) => {
-    const current = latest();
-    keep(arrangeItems(current, uidRows(view, rows), now()));
+    keep(arrangeItems(latest(), uidRows(view, rows), now()));
   };
 
   const remove = (item: number) => {

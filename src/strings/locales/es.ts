@@ -484,6 +484,8 @@ const es: Translation = {
     allPlacedNoteLive: "Si cambias de idea, arrastra una carta. Todo se guarda sobre la marcha.",
     allPlacedHint: "Arrastra una tarjeta si cambias de idea",
     placeIn: "Colocar {name} en {tier}",
+    cardIn: "«{name}» en {tier}",
+    cardInPool: "«{name}» de vuelta al pool",
     undo: "Deshacer",
     finish: "Terminar",
     cancel: "Cancelar",

@@ -66,3 +66,11 @@ describe("agoOf", () => {
     expect(agoOf(now + 100, now)).toEqual({ kind: "justNow" });
   });
 });
+
+describe("boardView of an anonymous list", () => {
+  it("names nobody, so a share picture cannot print the author beside the anonymous link", () => {
+    const board = { ...newBoard("b", "Films", 1, uids()), authorName: "Danylo" };
+    expect(boardView(board, "Untitled list").list.authorName).toBe("Danylo");
+    expect(boardView({ ...board, anonymous: true }, "Untitled list").list.authorName).toBe("");
+  });
+});

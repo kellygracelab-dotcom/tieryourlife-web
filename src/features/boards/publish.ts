@@ -27,6 +27,36 @@ export function publishProblemsOf(board: Board): PublishProblem[] {
   return problems;
 }
 
+/** An address in somebody's own folder: it names their account, and no reader may be handed it. */
+const isPrivatePicture = (url: string): boolean => /\/o\/users%2F/i.test(url);
+
+/**
+ * The cover as the phone sends it. One of the person's own photos goes by
+ * id, so the backend checks it and makes the feed's copy, as it does for a
+ * card; its private address never travels, not as the cover and not in a
+ * collage. A picture whose card has left the board is no longer on offer.
+ */
+export function coverOf(
+  board: Board,
+): Pick<PublishRequest, "coverImageUrl" | "coverPictureId" | "coverImageUrls"> {
+  const ownCard = (url: string) =>
+    liveItems(board).find((item) => item.pictureId !== null && item.imageUrl === url) ?? null;
+  const [only] = board.coverImageUrls;
+  if (board.coverImageUrls.length === 1 && only !== undefined) {
+    const own = ownCard(only);
+    if (own !== null)
+      return { coverImageUrl: null, coverPictureId: own.pictureId, coverImageUrls: [] };
+  }
+  const urls = board.coverImageUrls.filter(
+    (url) => url.startsWith("https://") && ownCard(url) === null && !isPrivatePicture(url),
+  );
+  return {
+    coverImageUrl: board.coverImageUrls.length === 1 ? (urls[0] ?? null) : null,
+    coverPictureId: null,
+    coverImageUrls: urls,
+  };
+}
+
 /**
  * The request the backend takes to publish a board: the snapshot the phone
  * sends. Cards go out ranked ones first, tier by tier, then the pool; a
@@ -45,9 +75,7 @@ export function publishRequestOf(board: Board): PublishRequest | null {
   return {
     title: board.title.trim(),
     category: board.category,
-    coverImageUrl: board.coverImageUrls.length === 1 ? (board.coverImageUrls[0] ?? null) : null,
-    coverPictureId: null,
-    coverImageUrls: board.coverImageUrls,
+    ...coverOf(board),
     // Sent every time: a republish without it takes the list out of its topic.
     topicId: board.topic?.id ?? null,
     // Sent every time too: a republish without it would put the name back.

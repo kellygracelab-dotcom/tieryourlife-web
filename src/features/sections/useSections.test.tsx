@@ -6,7 +6,12 @@ import { memoryStore } from "../../lib/storage";
 import type { SectionStats } from "../../api/sections";
 import { sectionsFrom } from "./model";
 import { SectionGrid } from "./SectionGrid";
-import { createSectionsStore, SECTIONS_FRESH_MS, type SectionsDeps } from "./useSections";
+import {
+  createSectionsStore,
+  readKeptSections,
+  SECTIONS_FRESH_MS,
+  type SectionsDeps,
+} from "./useSections";
 
 const stats = (id: string, more: Partial<SectionStats> = {}): SectionStats => ({
   id,
@@ -66,7 +71,7 @@ describe("the sections store", () => {
   });
 
   it("opens with the answer last read on this device, and keeps the new one", async () => {
-    const memory = remembered<{ sections: SectionStats[]; who: string }>(memoryStore(), "s", 1);
+    const memory = remembered(memoryStore(), "s", 1, readKeptSections);
     const before = createSectionsStore(
       deps([stats("games", { rank: 1 }), stats("other")], { memory }).deps,
     );
@@ -79,6 +84,29 @@ describe("the sections store", () => {
     const after = createSectionsStore(deps([stats("anime")], { memory }).deps);
     expect(after.get()).toMatchObject({ known: true, loaded: false });
     expect(after.get().sections.map((section) => section.id)).toEqual(["games", "other"]);
+  });
+
+  it("drops a kept answer it cannot draw, and asks the backend as if nothing was kept", async () => {
+    const store = memoryStore();
+    const memory = remembered(store, "s", 1, readKeptSections);
+    for (const bad of [{ sections: [{}] }, {}, [], { sections: [{ id: "x" }] }, "x"]) {
+      store.write("s:sections", JSON.stringify(bad));
+      const given = deps([stats("anime")], { memory }).deps;
+      const sections = createSectionsStore(given);
+      expect(sections.get()).toMatchObject({ known: false });
+      sections.refresh("guest");
+      await settle();
+      expect(sections.get()).toMatchObject({ loaded: true, failed: false });
+    }
+  });
+
+  it("draws an answer whose section has no collage, and keeps nothing it cannot draw", async () => {
+    const memory = remembered(memoryStore(), "s", 1, readKeptSections);
+    const odd = { ...stats("anime"), collage: undefined } as unknown as SectionStats;
+    const sections = createSectionsStore(deps([odd], { memory }).deps);
+    sections.refresh("guest");
+    await settle();
+    expect(sections.get().sections.map((section) => section.collage)).toEqual([[]]);
   });
 
   it("keeps the nine and says so when the backend fails", async () => {

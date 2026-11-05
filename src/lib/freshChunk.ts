@@ -22,6 +22,19 @@ const tried = (store: KeyValueStore): boolean | null => {
   }
 };
 
+/**
+ * A reload asked for and not yet begun. Vite's own handler for a file that will
+ * not come lets the import go on as if nothing happened once the reload is
+ * asked for, and what follows (a module that resolved, or one that is empty)
+ * must neither forget the try nor ask again: that is a tab reloading forever.
+ */
+let reloading = false;
+
+/** Tests play several page loads in one module. */
+export function resetFreshChunkForTests(): void {
+  reloading = false;
+}
+
 const forget = (store: KeyValueStore) => {
   try {
     store.remove(CHUNK_RETRY_KEY);
@@ -41,6 +54,7 @@ export function reloadOnce({
   } catch {
     return false;
   }
+  reloading = true;
   reload();
   return true;
 }
@@ -50,11 +64,11 @@ export function freshChunk<T>(load: () => Promise<T>, deps: FreshDeps = {}): () 
   return async () => {
     try {
       const chunk = await load();
-      forget(store);
+      if (!reloading) forget(store);
       return chunk;
     } catch (failure) {
       // The page is going away; nothing should draw an error in the meantime.
-      if (reloadOnce({ ...deps, store })) return new Promise<T>(() => undefined);
+      if (reloading || reloadOnce({ ...deps, store })) return new Promise<T>(() => undefined);
       forget(store);
       throw failure;
     }

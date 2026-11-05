@@ -485,6 +485,8 @@ const ptBR: Translation = {
     allPlacedNoteLive: "Mudou de ideia? Arraste uma carta. Tudo é guardado conforme você faz.",
     allPlacedHint: "Arraste um cartão se mudar de ideia",
     placeIn: "Colocar {name} em {tier}",
+    cardIn: "“{name}” em {tier}",
+    cardInPool: "“{name}” de volta ao pool",
     undo: "Desfazer",
     finish: "Terminar",
     cancel: "Cancelar",

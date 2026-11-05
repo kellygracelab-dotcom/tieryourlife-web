@@ -5,7 +5,7 @@ import { memoryStore } from "./storage";
 describe("remembered", () => {
   it("gives back what it kept, and only the newest few", () => {
     const store = memoryStore();
-    const kept = remembered<{ n: number }>(store, "t", 2);
+    const kept = remembered<{ n: number }>(store, "t", 2, (v) => v as { n: number });
     expect(kept.recall("a")).toBeNull();
     kept.keep("a", { n: 1 });
     kept.keep("b", { n: 2 });
@@ -22,12 +22,27 @@ describe("remembered", () => {
     const store = memoryStore();
     store.write("t:a", "{not json");
     store.write("t:keys", "also not json");
-    const kept = remembered<number>(store, "t", 2);
+    const kept = remembered<number>(store, "t", 2, (v) => (typeof v === "number" ? v : null));
     expect(kept.recall("a")).toBeNull();
     kept.keep("b", 1);
     expect(kept.recall("b")).toBe(1);
     store.write("t:keys", JSON.stringify({ not: "a list" }));
     kept.keep("c", 2);
     expect(JSON.parse(store.read("t:keys") ?? "")).toEqual(["c"]);
+  });
+
+  it("drops a copy it cannot use, whether the reader says so or throws", () => {
+    const store = memoryStore();
+    const kept = remembered<number>(store, "t", 2, (v) => {
+      if (v === "boom") throw new TypeError("Cannot read properties of undefined");
+      return typeof v === "number" ? v : null;
+    });
+    store.write("t:a", JSON.stringify({ sections: [{}] }));
+    store.write("t:b", JSON.stringify("boom"));
+    expect(kept.recall("a")).toBeNull();
+    expect(kept.recall("b")).toBeNull();
+    // Gone for good: the next visit starts from nothing rather than failing again.
+    expect(store.read("t:a")).toBeNull();
+    expect(store.read("t:b")).toBeNull();
   });
 });

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
-import { useFeed, type LoadFeed } from "./useFeed";
+import { readRememberedPage, useFeed, type LoadFeed } from "./useFeed";
 
 const summary = (id: string): ListSummary => ({
   id,
@@ -152,5 +152,29 @@ describe("useFeed", () => {
     await screen.findByText("z|-|idle");
     await act(async () => next.resolve(page(["b"])));
     expect(shown()).toHaveTextContent("z|-|idle");
+  });
+});
+
+describe("readRememberedPage", () => {
+  it("gives back a page a card can be drawn from", () => {
+    const kept = { lists: [summary("a")], next: "c1" };
+    expect(readRememberedPage(JSON.parse(JSON.stringify(kept)))).toEqual(kept);
+  });
+
+  it("takes anything else for nothing, so a bad copy cannot break Home on every visit", () => {
+    for (const bad of [
+      {},
+      [],
+      "x",
+      1,
+      true,
+      null,
+      { lists: [null] },
+      { lists: [{}] },
+      { lists: [{ ...summary("a"), authorName: null }], next: null },
+      { lists: [summary("a")], next: 5 },
+    ]) {
+      expect(readRememberedPage(bad)).toBeNull();
+    }
   });
 });

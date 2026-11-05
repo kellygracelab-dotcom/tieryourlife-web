@@ -408,9 +408,26 @@ export function arrangeItems(
  * hands the card to putBack, which puts it where it was.
  */
 export function removeItem(board: Board, itemUid: string, now: number): Board {
-  if (!board.items.some((item) => item.uid === itemUid)) return board;
+  const gone = board.items.find((item) => item.uid === itemUid);
+  if (gone === undefined) return board;
+  const items = board.items.filter((item) => item.uid !== itemUid);
+  // Its picture leaves the cover with it, unless another card still shows it:
+  // a card taken off the list must not stay its public face.
+  const coverImageUrls =
+    gone.imageUrl === null || items.some((item) => item.imageUrl === gone.imageUrl)
+      ? board.coverImageUrls
+      : board.coverImageUrls.filter((url) => url !== gone.imageUrl);
   return touched(
-    tidy({ ...board, items: board.items.filter((item) => item.uid !== itemUid) }),
+    tidy({
+      ...board,
+      items,
+      ...(coverImageUrls === board.coverImageUrls
+        ? {}
+        : {
+            coverImageUrls,
+            coverImageUrl: coverImageUrls.length === 1 ? (coverImageUrls[0] ?? null) : null,
+          }),
+    }),
     now,
   );
 }

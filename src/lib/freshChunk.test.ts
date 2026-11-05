@@ -1,8 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-import { CHUNK_RETRY_KEY, freshChunk, reloadOnce } from "./freshChunk";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CHUNK_RETRY_KEY, freshChunk, reloadOnce, resetFreshChunkForTests } from "./freshChunk";
 import { memoryStore, type KeyValueStore } from "./storage";
 
 describe("freshChunk", () => {
+  beforeEach(resetFreshChunkForTests);
+
   it("hands the chunk over and forgets an earlier try", async () => {
     const store = memoryStore();
     store.write(CHUNK_RETRY_KEY, "1");
@@ -29,6 +31,7 @@ describe("freshChunk", () => {
     expect(settled).toBe(false);
 
     // After the reload the same tab still cannot get it: a real failure.
+    resetFreshChunkForTests();
     await expect(gone()).rejects.toThrow(/dynamically imported/);
     expect(reload).toHaveBeenCalledTimes(1);
     expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
@@ -47,5 +50,34 @@ describe("freshChunk", () => {
     const reload = vi.fn();
     expect(reloadOnce({ store: refusing, reload })).toBe(false);
     expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("reloads only once when Vite's handler already asked for the reload and the import comes back empty", async () => {
+    const store = memoryStore();
+    const reload = vi.fn();
+    // main.tsx: the preload error, one reload asked for, the import let go on.
+    expect(reloadOnce({ store, reload })).toBe(true);
+    const empty = freshChunk(
+      async () => {
+        throw new TypeError("Cannot read properties of undefined (reading 'AboutPage')");
+      },
+      { store, reload },
+    );
+    let settled = false;
+    void empty().finally(() => (settled = true));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    expect(reload).toHaveBeenCalledTimes(1);
+    // The reload that follows still knows the try was made.
+    expect(store.read(CHUNK_RETRY_KEY)).toBe("1");
+  });
+
+  it("keeps the try when a stylesheet failed but the module came, so the reload does not loop", async () => {
+    const store = memoryStore();
+    const reload = vi.fn();
+    expect(reloadOnce({ store, reload })).toBe(true);
+    await expect(freshChunk(async () => "page", { store, reload })()).resolves.toBe("page");
+    expect(store.read(CHUNK_RETRY_KEY)).toBe("1");
   });
 });

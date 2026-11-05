@@ -509,7 +509,10 @@ export function SectionEditor(props: SectionEditorProps) {
     );
 
   const ask = (
-    <div className="section-editor__actions section-editor__ask">
+    // Keyed apart from the row it replaces: React would otherwise hand
+    // Keep editing's button over to the send button mid-click, and the
+    // browser would send the form the person just said was not done.
+    <div key="ask" className="section-editor__actions section-editor__ask">
       <p className="section-editor__ask-text">
         {mode === "propose" ? strings.propose.discardAsk : strings.admin.discardChanges}
       </p>
@@ -567,7 +570,7 @@ export function SectionEditor(props: SectionEditorProps) {
             {asking ? (
               ask
             ) : compact ? null : (
-              <div className="section-editor__actions">
+              <div key="actions" className="section-editor__actions">
                 <Button onClick={close} disabled={sending}>
                   {strings.admin.cancel}
                 </Button>

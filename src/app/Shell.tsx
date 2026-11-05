@@ -21,6 +21,7 @@ import { ClearButton } from "../ui/ClearButton";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import { PageTitleContext, TITLE_AFTER_PX } from "./pageTitle";
+import { useScrollCatchUp } from "./scrollCatchUp";
 import { useSession } from "./session";
 import "./Shell.css";
 
@@ -165,6 +166,11 @@ function BarSearch({ asked }: { asked: string }) {
 export const scrollKey = (location: Location): string =>
   location.key === "default" ? location.pathname : location.key;
 
+function ScrollCatchUp() {
+  useScrollCatchUp(scrollKey(useLocation()));
+  return null;
+}
+
 export function Shell() {
   const { account, signIn } = useSession();
   const [seen] = useState(() => lastSeen());
@@ -279,6 +285,7 @@ export function Shell() {
       </footer>
       {/* A new page opens at its top, and Back returns to where the person was. */}
       <ScrollRestoration getKey={scrollKey} />
+      <ScrollCatchUp />
     </div>
   );
 }

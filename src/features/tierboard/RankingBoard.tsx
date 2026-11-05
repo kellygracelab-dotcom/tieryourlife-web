@@ -7,15 +7,17 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type FocusEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
 import type { PublishedList } from "../../api/types";
 import { useSession } from "../../app/session";
-import { keepListRanking, keepRanking, noteTake } from "../../lib/api";
+import { keepRanking, noteTake } from "../../lib/api";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
 import { writeKept } from "../ranking/kept";
@@ -107,8 +109,6 @@ interface RankingBoardProps {
   store?: KeyValueStore;
   keep?: Keep;
   take?: (listId: string) => Promise<void>;
-  /** Puts a signed-in reader's finished placing among the list's rankings. */
-  tell?: (list: PublishedList, rows: readonly (readonly number[])[]) => Promise<unknown>;
   share?: Share;
   edit?: EditMode;
   /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
@@ -353,7 +353,6 @@ export function RankingBoard({
   store = localStorageStore,
   keep = keepRanking,
   take = noteTake,
-  tell = keepListRanking,
   share = downloadShare,
   edit,
   strip = false,
@@ -423,6 +422,14 @@ export function RankingBoard({
   // Nothing to place yet and nobody typing elsewhere (the new board's name is
   // asked for first): the cursor waits in the field that brings cards in.
   const askForCards = wide && emptyPool && tools !== undefined;
+  // Unless the field that brings cards in takes the cursor: then the board lets it.
+  const { announcer, onFocus: followFocus } = useMoveFollowing(
+    section,
+    list,
+    state.rows,
+    state.selected,
+    askForCards,
+  );
   // A frame later: when a key placed the last card, the field must not take
   // the cursor while that key is still going, or its digit is typed in it.
   useEffect(() => {
@@ -501,11 +508,9 @@ export function RankingBoard({
         writeKept(store, list.id, kept);
         setFinish({ status: "done", code: kept.code });
         if (guest) setOffer("open");
+        // Kept by its /r/ link only: the list's public Rankings name the
+        // reader, so a placing joins them only when asked, as in the app.
         void take(list.id);
-        // The /r/ link is the site's own; the rankings the app shows are the
-        // account's, so a reader with one is counted there too. A miss there
-        // costs nothing the link has not kept.
-        if (!guest && edit === undefined) tell(list, state.rows).catch(() => undefined);
       },
       (reason: unknown) => setFinish({ status: "failed", error: errorOf(reason) }),
     );
@@ -710,7 +715,9 @@ export function RankingBoard({
       className={docked ? "ranking ranking--under" : "ranking"}
       aria-label={seed?.label ?? strings.rank.yours}
       ref={section}
+      onFocus={followFocus}
     >
+      <p className="visually-hidden" aria-live="polite" ref={announcer} />
       <div className="ranking__main">
         {save.status === "failed" && (
           <p className="ranking__error" role="alert">
@@ -1148,4 +1155,50 @@ function TierRow({
       </ul>
     </div>
   );
+}
+
+/**
+ * A card that moves is drawn anew in its new row, and the button that had
+ * focus goes with the old one. Focus follows it there, or to the card picked
+ * next from the pool, so a keyboard keeps its place; and every move is said
+ * aloud, a move between tiers too, which changes no count.
+ */
+function useMoveFollowing(
+  section: RefObject<HTMLElement | null>,
+  list: PublishedList,
+  rows: Rows,
+  selected: number | null,
+  askForCards: boolean,
+) {
+  const focused = useRef<number | null>(null);
+  const announcer = useRef<HTMLParagraphElement>(null);
+  const before = useRef(rows);
+  useLayoutEffect(() => {
+    const was = before.current;
+    before.current = rows;
+    if (was === rows) return;
+    const rowOf = (of: Rows, item: number) => of.findIndex((row) => row.includes(item));
+    const moved =
+      was.length === rows.length
+        ? list.items.findIndex((_, item) => rowOf(was, item) !== rowOf(rows, item))
+        : -1;
+    const card = list.items[moved];
+    if (card !== undefined && announcer.current !== null) {
+      const tier = list.tiers[rowOf(rows, moved)];
+      announcer.current.textContent =
+        tier === undefined
+          ? fill(strings.rank.cardInPool, { name: card.title })
+          : fill(strings.rank.cardIn, { name: card.title, tier: tier.label });
+    }
+    const active = document.activeElement;
+    if (focused.current === null || (active !== null && active !== document.body)) return;
+    if (selected === null && askForCards) return;
+    const target = selected ?? focused.current;
+    section.current?.querySelector<HTMLElement>(`button[data-item="${target}"]`)?.focus();
+  }, [rows, selected, list, section, askForCards]);
+  const onFocus = useCallback((event: FocusEvent<HTMLElement>) => {
+    const item = event.target instanceof HTMLButtonElement ? event.target.dataset.item : undefined;
+    if (item !== undefined) focused.current = Number(item);
+  }, []);
+  return { announcer, onFocus };
 }

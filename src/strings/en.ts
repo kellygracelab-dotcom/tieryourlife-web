@@ -485,6 +485,8 @@ export const en = {
     allPlacedNoteLive: "Change your mind by dragging a card. Everything is kept as you go.",
     allPlacedHint: "Drag a card to change your mind",
     placeIn: "Place {name} in {tier}",
+    cardIn: "{name} in {tier}",
+    cardInPool: "{name} back in the pool",
     undo: "Undo",
     finish: "Finish",
     cancel: "Cancel",

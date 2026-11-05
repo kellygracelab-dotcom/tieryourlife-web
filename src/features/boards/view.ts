@@ -51,7 +51,8 @@ export function boardView(board: Board, untitled: string, before?: readonly stri
       id: board.uid,
       title,
       authorUid: "",
-      authorName: board.authorName ?? "",
+      // An anonymous list names nobody, on its page or on any picture of it.
+      authorName: board.anonymous ? "" : (board.authorName ?? ""),
       authorPhotoUrl: null,
       category: board.category ?? "other",
       itemCount: ordered.length,
@@ -82,3 +83,14 @@ export const uidRows = (view: BoardView, rows: readonly (readonly number[])[]): 
   rows.map((row) =>
     row.flatMap((index) => (view.uids[index] === undefined ? [] : [view.uids[index]])),
   );
+
+/**
+ * Where every card stands, as one string: the board on screen holds its rows
+ * itself, so a change of it written elsewhere (another tab, the account's
+ * copy coming down) has to be told from the board's own.
+ */
+export function arrangementOf(board: Board): string {
+  const pool = poolTier(board);
+  const rows = [...rankedTiers(board), ...(pool === null ? [] : [pool])];
+  return JSON.stringify(rows.map((tier) => itemsIn(board, tier.uid).map((item) => item.uid)));
+}

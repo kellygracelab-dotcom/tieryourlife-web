@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
-import { hostOf, listPayload, loadShell, resetShellForTests, SHELL_TIMEOUT_MS } from "../src/pages";
+import {
+  hostOf,
+  listPayload,
+  loadShell,
+  rankingVersion,
+  resetShellForTests,
+  SHELL_TIMEOUT_MS,
+} from "../src/pages";
+import type { StoredRanking } from "../src/ranking";
 
 const requestWith = (forwarded?: string) =>
   ({ header: (name: string) => (name === "x-forwarded-host" ? forwarded : undefined) }) as never;
@@ -112,5 +120,23 @@ describe("listPayload", () => {
   it("survives a document without one", () => {
     assert.equal(listPayload("abc12345", {}).authorUid, "");
     assert.equal(listPayload("abc12345", { authorUid: 5 as never }).authorUid, "");
+  });
+});
+
+describe("rankingVersion", () => {
+  const at = (ms: number) => ({ toMillis: () => ms });
+  const ranking = (fields: Partial<StoredRanking>) =>
+    ({ listId: "L1", snapshot: {}, rows: [], ...fields }) as StoredRanking;
+
+  it("moves on when the list changes, so a card kept with the author's name is never sent again", () => {
+    const stored = ranking({ createdAt: at(5000) });
+    assert.equal(rankingVersion(stored, 1000), 5000);
+    // The author made the list anonymous afterwards.
+    assert.equal(rankingVersion(stored, 9000), 9000);
+  });
+
+  it("follows the ranking's own edit, and stands at nothing for a list gone", () => {
+    assert.equal(rankingVersion(ranking({ createdAt: at(5000), updatedAt: at(7000) }), 0), 7000);
+    assert.equal(rankingVersion(ranking({}), 0), 0);
   });
 });

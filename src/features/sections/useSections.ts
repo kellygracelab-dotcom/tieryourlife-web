@@ -24,6 +24,20 @@ export interface KeptSections {
   who: string;
 }
 
+/**
+ * A kept answer this site can draw, or nothing: one kept by another version
+ * of the site, or changed by hand, is dropped rather than failing every page.
+ */
+export function readKeptSections(kept: unknown): KeptSections | null {
+  if (typeof kept !== "object" || kept === null) return null;
+  const { sections, who } = kept as Partial<Record<keyof KeptSections, unknown>>;
+  if (!Array.isArray(sections) || typeof who !== "string") return null;
+  if (!sections.every((one) => typeof one === "object" && one !== null && "id" in one)) return null;
+  const answer = sections as SectionStats[];
+  sectionsFrom(answer, who); // throws for anything it cannot draw
+  return { sections: answer, who };
+}
+
 export interface SectionsSnapshot {
   /** Never empty: the nine stand in until the backend has answered. */
   sections: Section[];
@@ -111,15 +125,19 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
       };
       deps.load().then(
         ({ sections }) => {
+          let shown: Section[];
+          try {
+            shown = orderSections(sectionsFrom(sections ?? [], who));
+          } catch {
+            // An answer this site cannot read is as good as none, and is not kept.
+            set({ ...snapshot, known: true, failed: true });
+            again();
+            return;
+          }
           loadedAt = deps.now();
           loadedFor = who;
           if (who !== null) deps.memory?.keep("sections", { sections: sections ?? [], who });
-          set({
-            sections: orderSections(sectionsFrom(sections ?? [], who)),
-            loaded: true,
-            known: true,
-            failed: false,
-          });
+          set({ sections: shown, loaded: true, known: true, failed: false });
           again();
         },
         () => {
@@ -152,7 +170,7 @@ export const sectionsStore = createSectionsStore({
   follow: followSection,
   unfollow: unfollowSection,
   now: Date.now,
-  memory: remembered(localStorageStore, "tyl:sections", 1),
+  memory: remembered(localStorageStore, "tyl:sections", 1, readKeptSections),
 });
 
 /** The sections in the app's order, asked for once the page that shows them opens. */

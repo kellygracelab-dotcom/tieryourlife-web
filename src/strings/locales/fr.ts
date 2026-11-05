@@ -496,6 +496,8 @@ const fr: Translation = {
       "Vous changez d'avis ? Glissez une carte. Tout est enregistré au fur et à mesure.",
     allPlacedHint: "Faites glisser une carte si vous changez d’avis",
     placeIn: "Placer {name} dans {tier}",
+    cardIn: "« {name} » dans {tier}",
+    cardInPool: "« {name} » de retour dans le pool",
     undo: "Annuler",
     finish: "Terminer",
     // Not «Annuler»: that is what the undo button next to it says.

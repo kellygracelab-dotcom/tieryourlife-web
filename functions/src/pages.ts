@@ -214,21 +214,27 @@ const standingOf = (
 ): { authorUid?: unknown; anonymous?: unknown } | null =>
   list.exists ? { authorUid: list.get("authorUid"), anonymous: list.get("anonymous") } : null;
 
-/** A ranking changes only when its owner edits it. */
-const rankingVersion = (stored: StoredRanking): number =>
-  stored.updatedAt?.toMillis() ?? stored.createdAt?.toMillis() ?? 0;
+/**
+ * A ranking's card changes when its owner edits it, and when its list does:
+ * a list made anonymous takes its author's name off every ranking of it, so
+ * the card kept with the name must not be the one a chat is sent again.
+ */
+export const rankingVersion = (stored: StoredRanking, listChangedAt: number): number =>
+  Math.max(stored.updatedAt?.toMillis() ?? stored.createdAt?.toMillis() ?? 0, listChangedAt);
+
+/** When a list last changed, or nothing when it is gone. */
+const changedAt = (list: FirebaseFirestore.DocumentSnapshot): number =>
+  list.exists ? ((list.get("updatedAt") as StoredList["updatedAt"])?.toMillis() ?? 0) : 0;
 
 export async function rankingShareImage(response: Response, code: string): Promise<void> {
   const doc = isCode(code) ? await getFirestore().collection(RANKINGS).doc(code).get() : null;
   if (doc === null || !doc.exists) return sendShareImage(response, null);
   const stored = doc.data() as StoredRanking;
+  const list = await getFirestore().collection(PUBLISHED).doc(stored.listId).get();
   const snapshot =
     stored.snapshot.editorial === true
       ? stored.snapshot
-      : shownSnapshot(
-          stored.snapshot,
-          standingOf(await getFirestore().collection(PUBLISHED).doc(stored.listId).get()),
-        );
+      : shownSnapshot(stored.snapshot, standingOf(list));
   const card: ShareCard = {
     kind: "ranking",
     title: stored.snapshot.title,
@@ -241,7 +247,7 @@ export async function rankingShareImage(response: Response, code: string): Promi
   };
   sendShareImage(
     response,
-    await shareImageFor("r", code, rankingVersion(stored), async () => card),
+    await shareImageFor("r", code, rankingVersion(stored, changedAt(list)), async () => card),
   );
 }
 
@@ -277,7 +283,7 @@ export async function rankingPage(
       category: stored.snapshot.category,
       editorial: snapshot.editorial === true,
     }),
-    image: shareImageUrl(host, "r", code, rankingVersion(stored)),
+    image: shareImageUrl(host, "r", code, rankingVersion(stored, changedAt(list))),
     imageSize: SHARE_SIZE,
     url: `https://${host}/r/${code}`,
   };

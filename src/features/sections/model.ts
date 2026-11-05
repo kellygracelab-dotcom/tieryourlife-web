@@ -179,7 +179,10 @@ export function sectionOf(stats: SectionStats, locale: string = currentLocale())
     newThisWeek: stats.newThisWeek,
     followerCount: stats.followerCount,
     following: stats.following,
-    collage: stats.collage.filter((url) => url.startsWith("https://")),
+    // Left out by an older or newer backend: no pictures, rather than no site.
+    collage: (Array.isArray(stats.collage) ? stats.collage : []).filter(
+      (url) => typeof url === "string" && url.startsWith("https://"),
+    ),
     fileUnder: stats.fileUnder ?? null,
     proposerUid: stats.proposerUid ?? null,
   };

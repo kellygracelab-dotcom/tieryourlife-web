@@ -196,6 +196,31 @@ describe("cards", () => {
     expect(putBack(b4, card, 5)).toBe(b4);
   });
 
+  it("take their picture off the cover, unless another card still shows it", () => {
+    const { board: b0, next } = board();
+    const b1 = addToPool(
+      b0,
+      [
+        { title: "holiday", imageUrl: "https://x/h.jpg" },
+        { title: "poster", imageUrl: "https://x/p.jpg" },
+        { title: "poster again", imageUrl: "https://x/p.jpg" },
+      ],
+      1,
+      next,
+    );
+    const [holiday, poster] = liveItems(b1).map((item) => item.uid);
+    const covered = setCover(b1, ["https://x/h.jpg"], 2);
+    const gone = removeItem(covered, holiday!, 3);
+    expect(gone.coverImageUrls).toEqual([]);
+    expect(gone.coverImageUrl).toBeNull();
+    const collage = setCover(b1, ["https://x/h.jpg", "https://x/p.jpg"], 2);
+    expect(removeItem(collage, holiday!, 3)).toMatchObject({
+      coverImageUrls: ["https://x/p.jpg"],
+      coverImageUrl: "https://x/p.jpg",
+    });
+    expect(removeItem(collage, poster!, 3).coverImageUrls).toEqual(collage.coverImageUrls);
+  });
+
   it("come back to the pool on Undo when their tier has gone meanwhile", () => {
     const { board: b0, next } = board();
     const b1 = addToPool(b0, [{ title: "a", imageUrl: null }], 1, next);
