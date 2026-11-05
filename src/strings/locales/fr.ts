@@ -896,7 +896,7 @@ const fr: Translation = {
     backToSection: "Retour à {section}",
     suggestTopic: "Proposer un thème",
     suggestTopicBody:
-      "Les thèmes se nomment ou se choisissent quand vous publiez une liste, sous « Thème » dans ses Paramètres de la liste. Le site y propose les thèmes existants ; un nouveau se nomme dans l’application.",
+      "Les thèmes se nomment ou se choisissent sous « Thème » dans les Paramètres de la liste. Un nouveau part avec la liste à sa publication et attend un modérateur.",
     suggestTopicMake: "Créer une liste dans {section}",
     sortPopular: "Populaires",
     sortNewest: "Récentes",
@@ -1261,6 +1261,16 @@ const fr: Translation = {
     nothingInPool: "rien dans le réservoir",
     topicsLoading: "Chargement des thèmes…",
     topicsFailed: "Impossible de charger les thèmes.",
+    topicWaiting: "{name} · en attente de validation",
+    topicWaitingShort: "En attente de validation",
+    topicNew: "Nommer un nouveau thème",
+    topicPropose: "Proposer",
+    topicNewNote:
+      "Un nouveau thème attend un modérateur. D’ici là, la liste reste dans Autre avec cette étiquette.",
+    topicTooMany:
+      "Trois de vos thèmes attendent un modérateur. Publiez sans nouveau thème, ou attendez qu’un d’eux soit tranché.",
+    topicUnavailable:
+      "Ce thème a été refusé, la liste n’en a donc plus. Choisissez-en un autre, ou publiez sans thème.",
     findSection: "Trouver une section",
     modeRows: "Lignes",
     modeRanking: "Classement",

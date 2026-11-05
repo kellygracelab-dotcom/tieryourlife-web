@@ -837,6 +837,50 @@ describe("RankingBoard", () => {
     expect(rearrange).toHaveBeenCalledWith("abcdefgh", [[1], [0]]);
   });
 
+  it("changes a guest's finished ranking behind the same link too, without offering to keep it again", async () => {
+    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
+    const rearrange = vi.fn(async () => ({ code: "abcdefgh" }));
+    const store = memoryStore();
+    const session: Session = {
+      account: { kind: "guest", uid: "g1" },
+      signIn: async () => ({ kind: "cancelled" }),
+      signOut: async () => undefined,
+      refresh: () => undefined,
+    };
+    render(
+      <SessionContext.Provider value={session}>
+        <MemoryRouter>
+          <RankingBoard
+            list={list}
+            store={store}
+            keep={keep}
+            rearrange={rearrange}
+            take={async () => undefined}
+          />
+        </MemoryRouter>
+      </SessionContext.Provider>,
+    );
+    await userEvent.click(card("The Witch"));
+    await userEvent.keyboard("1");
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Keep the link only" }));
+    await userEvent.click(screen.getByRole("button", { name: "Change ranking" }));
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("2");
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("abcdefgh");
+    expect(keep).toHaveBeenCalledTimes(1);
+    expect(rearrange).toHaveBeenCalledWith("abcdefgh", [[1], [0]]);
+    expect(screen.queryByRole("dialog", { name: "Keep this ranking" })).toBeNull();
+    // Still the guest's to claim with the token it came with.
+    expect(JSON.parse(store.read("tyl:ranking:abc") ?? "{}")).toMatchObject({
+      code: "abcdefgh",
+      claimToken: "secret",
+      rows: [[1], [0]],
+    });
+  });
+
   it("makes a new ranking when the one kept is gone, or was made for another version of the list", async () => {
     const keep = vi.fn(async () => ({ code: "zzzzzzzz", claimToken: "t" }));
     const rearrange = vi.fn(async () => Promise.reject(new ApiFailure({ kind: "notFound" })));

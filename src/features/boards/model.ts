@@ -20,11 +20,32 @@ export type ItemSource = "MANUAL" | "TMDB" | "GENERATED";
 export type DisplayMode = "WRAP" | "HORIZONTAL_SCROLL" | "FLAT_RANKED";
 export const DISPLAY_MODES: readonly DisplayMode[] = ["WRAP", "HORIZONTAL_SCROLL", "FLAT_RANKED"];
 
-/** A word inside the list's section, as the feed knows it. */
+/**
+ * A word inside the list's section, as the feed knows it; or a new one this
+ * person named, which has no id until a publish sends it and waits for a
+ * moderator after that, as on the phone.
+ */
 export interface BoardTopic {
-  id: string;
+  /** Null for a name the backend has not seen yet: the next publish proposes it. */
+  id: string | null;
   name: string;
+  /** Proposed and not yet decided by a moderator. */
+  waiting?: boolean;
 }
+
+/** The phone's and the backend's bounds on a topic's name. */
+export const TOPIC_NAME = { min: 2, max: 40 } as const;
+
+/** A name fit to propose: spaces tidied, two to forty characters, a letter or a digit in it. Null otherwise. */
+export function cleanTopicName(raw: string): string | null {
+  const name = raw.replace(/\s+/g, " ").trim();
+  if (name.length < TOPIC_NAME.min || name.length > TOPIC_NAME.max) return null;
+  return /[\p{L}\p{N}]/u.test(name) ? name : null;
+}
+
+/** Whether a topic is a name proposed here and not sent yet, or sent and still waiting. */
+export const isWaitingTopic = (topic: BoardTopic | null): boolean =>
+  topic !== null && (topic.id === null || topic.waiting === true);
 
 export interface BoardTier {
   uid: string;
@@ -281,9 +302,24 @@ export const setCategory = (board: Board, category: string | null, now: number):
 export const setAnonymous = (board: Board, anonymous: boolean, now: number): Board =>
   anonymous === board.anonymous ? board : touched({ ...board, anonymous }, now);
 
+const sameTopic = (a: BoardTopic | null, b: BoardTopic | null): boolean =>
+  a === null || b === null
+    ? a === b
+    : a.id === b.id &&
+      (a.id !== null || a.name === b.name) &&
+      (a.waiting ?? false) === (b.waiting ?? false);
+
 /** The topic goes out with the next publish, so a new one leaves the published copy behind. */
 export const setTopic = (board: Board, topic: BoardTopic | null, now: number): Board =>
-  topic?.id === board.topic?.id ? board : touched({ ...board, topic }, now);
+  sameTopic(topic, board.topic) ? board : touched({ ...board, topic }, now);
+
+/**
+ * What the backend made of the board's topic: a proposed name has an id once
+ * it is sent, and a waiting one may since have been decided. The published
+ * copy has it already, so the board is not behind it.
+ */
+export const settleTopic = (board: Board, topic: BoardTopic | null): Board =>
+  sameTopic(topic, board.topic) ? board : { ...board, topic };
 
 export const setDisplayMode = (board: Board, displayMode: DisplayMode, now: number): Board =>
   displayMode === board.displayMode ? board : touched({ ...board, displayMode }, now);

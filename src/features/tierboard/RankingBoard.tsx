@@ -620,14 +620,14 @@ export function RankingBoard({
     const placed = state.rows.map((row) => [...row]);
     const uid = account?.kind === "signedIn" ? account.uid : null;
     const before = readKept(store, list.id);
-    // Changed after Finish, a ranking the account keeps for this version of
-    // the list is changed behind its link, as the /r/ page's Edit does. A
-    // guest's cannot be (the server lets accounts only), nor one gone since.
+    // Changed after Finish, a ranking finished here for this version of the
+    // list is changed behind its link, as the /r/ page's Edit does: the
+    // account's, or a guest's own while nobody has claimed it. One gone
+    // since, or not the caller's any more, is made anew.
     const inPlace =
       before !== null &&
-      uid !== null &&
-      before.claimedBy === uid &&
-      before.version === list.updatedAt;
+      before.version === list.updatedAt &&
+      (before.claimedBy === undefined ? uid === null : before.claimedBy === uid);
     // A reader's tier words go with the rows; a version in the list's own words sends none.
     const keepIt = () =>
       tierLabels === undefined
@@ -640,7 +640,7 @@ export function RankingBoard({
         ).then(
           () => before,
           (reason: unknown) =>
-            errorOf(reason).kind === "notFound" || errorOf(reason).kind === "notYours"
+            ["notFound", "notYours", "notSignedIn"].includes(errorOf(reason).kind)
               ? keepIt()
               : Promise.reject(reason),
         )
@@ -651,7 +651,8 @@ export function RankingBoard({
         const owner = uid === null ? {} : { claimedBy: uid };
         writeKept(store, list.id, { ...kept, ...owner, rows: placed, version: list.updatedAt });
         setFinish({ status: "done", code: kept.code });
-        if (guest) setOffer("open");
+        // The same link as before was offered already; only a new one is.
+        if (guest && kept !== before) setOffer("open");
         // Kept by its /r/ link only: the list's public Rankings name the
         // reader, so a placing joins them only when asked, as in the app.
         void take(list.id);

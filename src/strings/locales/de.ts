@@ -889,7 +889,7 @@ const de: Translation = {
     backToSection: "Zurück zu {section}",
     suggestTopic: "Thema vorschlagen",
     suggestTopicBody:
-      "Themen werden beim Veröffentlichen einer Liste benannt oder gewählt, unter „Thema“ in ihren Listeneinstellungen. Die Website bietet dort die vorhandenen Themen an; ein neues wird in der App benannt.",
+      "Themen werden unter „Thema“ in den Listeneinstellungen benannt oder gewählt. Ein neues geht beim Veröffentlichen mit der Liste hinaus und wartet auf einen Moderator.",
     suggestTopicMake: "Liste in {section} anlegen",
     sortPopular: "Beliebt",
     sortNewest: "Neueste",
@@ -1241,6 +1241,16 @@ const de: Translation = {
     nothingInPool: "nichts im Pool",
     topicsLoading: "Themen werden geladen…",
     topicsFailed: "Die Themen konnten nicht geladen werden.",
+    topicWaiting: "{name} · wartet auf Freigabe",
+    topicWaitingShort: "Wartet auf Freigabe",
+    topicNew: "Neues Thema benennen",
+    topicPropose: "Vorschlagen",
+    topicNewNote:
+      "Ein neues Thema wartet auf einen Moderator. Bis dahin steht die Liste unter Sonstiges mit diesem Etikett.",
+    topicTooMany:
+      "Drei deiner Themen warten auf einen Moderator. Veröffentliche ohne neues Thema oder warte, bis über eines entschieden ist.",
+    topicUnavailable:
+      "Dieses Thema wurde abgelehnt, die Liste hat jetzt keins. Wähle ein anderes oder veröffentliche ohne.",
     findSection: "Bereich suchen",
     modeRows: "Zeilen",
     modeRanking: "Rangliste",

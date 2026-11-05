@@ -866,7 +866,7 @@ const tr: Translation = {
     backToSection: "{section} bölümüne dön",
     suggestTopic: "Konu öner",
     suggestTopicBody:
-      "Konular bir liste yayımlanırken adlandırılır ya da seçilir: Liste ayarlarında “Konu” altında. Site orada var olan konuları sunar; yenisi uygulamada adlandırılır.",
+      "Konular Liste ayarlarında “Konu” altında adlandırılır ya da seçilir. Yeni bir konu, liste yayımlanırken onunla gider ve bir moderatörü bekler.",
     suggestTopicMake: "{section} bölümünde liste oluştur",
     sortPopular: "Popüler",
     sortNewest: "En yeni",
@@ -1201,6 +1201,16 @@ const tr: Translation = {
     nothingInPool: "havuzda bir şey yok",
     topicsLoading: "Konular yükleniyor…",
     topicsFailed: "Konular yüklenemedi.",
+    topicWaiting: "{name} · onay bekliyor",
+    topicWaitingShort: "Onay bekliyor",
+    topicNew: "Yeni bir konu adlandır",
+    topicPropose: "Öner",
+    topicNewNote:
+      "Yeni bir konu bir moderatörü bekler. O zamana kadar liste bu etiketle Diğer altında durur.",
+    topicTooMany:
+      "Üç konun bir moderatörü bekliyor. Yeni konu olmadan yayımla ya da birinin karara bağlanmasını bekle.",
+    topicUnavailable:
+      "Bu konu reddedildi, liste artık konusuz. Başka birini seç ya da konusuz yayımla.",
     findSection: "Bölüm bul",
     modeRows: "Satırlar",
     modeRanking: "Sıralama",

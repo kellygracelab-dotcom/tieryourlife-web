@@ -298,8 +298,10 @@ describe("SectionPage", () => {
     await tiles();
     await userEvent.click(screen.getByRole("button", { name: /Suggest a topic/ }));
     const ask = screen.getByRole("dialog", { name: "Suggest a topic" });
-    expect(ask).toHaveTextContent(/when you publish a list/);
     expect(ask).toHaveTextContent(/List settings/);
+    // A new one is named there now, not only in the app.
+    expect(ask).toHaveTextContent(/A new one goes out with the list/);
+    expect(ask).not.toHaveTextContent(/in the app/);
     // Nothing is made by the press alone.
     expect(router.state.location.pathname).toBe("/s/games");
     await userEvent.click(within(ask).getByRole("button", { name: "Cancel" }));

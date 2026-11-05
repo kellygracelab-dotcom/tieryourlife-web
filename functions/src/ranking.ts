@@ -31,8 +31,9 @@ export interface Snapshot {
   title: string;
   /**
    * The list stood without an author when it was ranked, and the snapshot
-   * keeps no name either. The author's uid is never kept: a ranking outlives
-   * its list and its author's account.
+   * keeps no name either. The author's uid is never in the snapshot: a
+   * ranking outlives its list and its author's account. The document keeps
+   * it beside the snapshot (listAuthorUid) only until that account goes.
    */
   editorial?: boolean;
   authorName: string;
@@ -138,6 +139,20 @@ export function decideOwner(owner: StoredOwner, uid: string): { ok: true } | Ref
     : refuse(403, "NOT_YOURS", "This ranking is kept by someone else");
 }
 
+/**
+ * Who may re-arrange a ranking: the account that keeps it, or the guest who
+ * made it while nobody has claimed it, so a Finish again on the list page
+ * changes the one behind the link. Claiming and deleting stay an account's.
+ */
+export function decideEditor(
+  owner: StoredOwner,
+  identity: { uid: string; isAnonymous: boolean },
+): { ok: true } | Refusal {
+  return owner.ownerUid === identity.uid && owner.ownerAnonymous === identity.isAnonymous
+    ? { ok: true }
+    : refuse(403, "NOT_YOURS", "This ranking is kept by someone else");
+}
+
 export const isKeptBy = (owner: StoredOwner, uid: string | null): boolean =>
   uid !== null && owner.ownerUid === uid && !owner.ownerAnonymous;
 
@@ -179,6 +194,15 @@ export function fromStoredRows(stored: unknown): number[][] {
 }
 
 /** The snapshot a ranking keeps: enough to draw the board after the list is gone. */
+/**
+ * The author a ranking's snapshot names, kept beside it so their name can be
+ * taken out once their account is erased; none when the snapshot names nobody.
+ */
+export function listAuthorOf(list: Record<string, unknown>): string | null {
+  if (isEditorialList(list)) return null;
+  return typeof list.authorUid === "string" && list.authorUid !== "" ? list.authorUid : null;
+}
+
 export function snapshotOf(list: Record<string, unknown>): Snapshot {
   const text = (value: unknown): string => (typeof value === "string" ? value : "");
   const url = (value: unknown): string | null =>

@@ -116,6 +116,12 @@ export interface PublishRequest {
   /** True takes the list out of its topic; a null topicId alone keeps the old one. */
   noTopic?: boolean;
   /**
+   * A topic of the person's own to propose, two to forty characters: it
+   * waits for a moderator, the list under Other until then. Never beside
+   * topicId or noTopic, which the backend refuses.
+   */
+  newTopic?: string;
+  /**
    * The board a first publish comes from: the same board publishing again
    * gets the list it already made, not a second one.
    */
@@ -145,6 +151,8 @@ export interface PublishRequest {
 export interface Published {
   id: string;
   ranking?: boolean;
+  /** The topic the list went under, a proposed one included; absent or null for none. */
+  topicId?: string | null;
 }
 
 export function publish(client: ApiClient, request: PublishRequest): Promise<Published> {
