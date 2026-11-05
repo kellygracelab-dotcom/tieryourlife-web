@@ -164,6 +164,24 @@ describe("shareCardOf", () => {
     assert.equal(count(tree, "img"), 0);
   });
 
+  it("names a newer section by the name it was read under, and none rather than 'Other'", () => {
+    const named = textOf(shareCardOf({ ...list, category: "cars", section: "Cars" }, new Map()));
+    assert.match(named.join(""), /30 cards · Cars/);
+    const unread = textOf(shareCardOf({ ...list, category: "cars", section: null }, new Map()));
+    assert.ok(!unread.join("").includes("Other"));
+  });
+
+  it("draws a house list's card in its reader's language", () => {
+    const ru = { ...list, editorial: true, locale: "ru", section: "Кино и сериалы", title: "" };
+    const text = textOf(shareCardOf(ru, new Map())).join(" | ");
+    assert.match(text, /30 карточек · Кино и сериалы/);
+    assert.match(text, /Список без названия/);
+
+    const ranked = textOf(shareCardOf({ ...ranking, editorial: true, locale: "ru" }, new Map()));
+    assert.match(ranked.join(""), /разложил посетитель · Разложено 20 из 30/);
+    assert.match(ranked.join(" | "), /и ещё 2 уровня/);
+  });
+
   it("keeps to the tier and tile ceilings", () => {
     assert.equal(SHARE_TIERS, 5);
     assert.equal(ROW_TILES, 9);
@@ -174,11 +192,16 @@ describe("addresses", () => {
   it("points a chat at a versioned picture and keeps one copy per version", () => {
     assert.equal(
       shareImageUrl("tieryourlife.web.app", "l", "abc def", 17),
-      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.5",
+      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.6",
     );
-    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.5.png");
+    // A house list's picture in its reader's language is asked for in that language.
+    assert.equal(
+      shareImageUrl("tieryourlife.web.app", "l", "abc", "17", "pt-BR"),
+      "https://tieryourlife.web.app/og/l/abc.png?v=17.6&hl=pt-BR",
+    );
+    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.6.png");
     // A ranking whose list is gone is kept and fetched apart from the one with the name.
-    assert.equal(shareImagePath("r", "xfruzbap", "0-gone"), "share/r/xfruzbap/0-gone.5.png");
+    assert.equal(shareImagePath("r", "xfruzbap", "0-gone"), "share/r/xfruzbap/0-gone.6.png");
     // The folder ends in a slash, or tidying `abc` would reach into `abcd`.
     assert.equal(shareImageFolder("r", "xfruzbap"), "share/r/xfruzbap/");
     assert.ok(shareImagePath("l", "abc", 5).startsWith(shareImageFolder("l", "abc")));

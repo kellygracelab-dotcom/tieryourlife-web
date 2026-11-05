@@ -3,6 +3,8 @@
  * fetches the page shell and the documents, this decides the words.
  */
 
+import { AS_WRITTEN, say, wordsFor } from "./previewWords";
+
 export const SITE_NAME = "TierYourLife";
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -24,35 +26,73 @@ export interface PageMeta {
   /** Set when the image is the site's own card, so a chat lays it out before fetching it. */
   imageSize?: { width: number; height: number };
   url: string;
+  /** The language the words are in, as OpenGraph names it (`ru_RU`). */
+  locale?: string;
 }
 
 /**
- * A section's name, or null for one approved after these nine: the function
- * knows no other names, and calling a section "Other" when it is not is
- * worse than not naming it.
+ * One of the first nine sections' English names, or null for one approved
+ * after them: calling a section "Other" when it is not is worse than not
+ * naming it. A section's own document names it better (sectionLabelOf).
  */
 export const categoryLabel = (category: unknown): string | null =>
   (typeof category === "string" && CATEGORY_LABELS[category]) || null;
 
-/** " · Film & TV" after a line, or nothing for a section without a name here. */
-const inSection = (category: unknown): string => {
-  const label = categoryLabel(category);
-  return label === null ? "" : ` · ${label}`;
-};
+/** What a section's document says of its name: as the proxy keeps it in `sections/{id}`. */
+export interface SectionNames {
+  name?: unknown;
+  names?: unknown;
+}
+
+const nameOf = (value: unknown): string | null =>
+  typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+
+/**
+ * A section's name in [locale], from its document when it could be read:
+ * its translation, else its own name; else one of the first nine's; else
+ * none, rather than a wrong one.
+ */
+export function sectionLabelOf(
+  category: unknown,
+  section: SectionNames | null,
+  locale = "en",
+): string | null {
+  const names = section?.names;
+  const translated =
+    locale !== "en" && names !== null && typeof names === "object"
+      ? nameOf((names as Record<string, unknown>)[locale])
+      : null;
+  return translated ?? nameOf(section?.name) ?? categoryLabel(category);
+}
+
+/** " · Film & TV" after a line, or nothing for a section without a name. */
+const inSection = (label: string | null): string => (label === null ? "" : ` · ${label}`);
 
 const plural = (n: number, one: string, other: string): string => `${n} ${n === 1 ? one : other}`;
 
-/** An editorial list stands without an author: it is a list to rank, and says how long it is. */
+/**
+ * An editorial list stands without an author: it is a list to rank, and says
+ * how long it is, in [locale] (a house list's reader's). `section` is the
+ * section's name as read; left out, the first nine's are known.
+ */
 export function describeList(list: {
   itemCount: number;
   authorName: string;
   category: unknown;
   editorial?: boolean;
+  section?: string | null;
+  locale?: string;
 }): string {
+  const section = inSection(
+    list.section === undefined ? categoryLabel(list.category) : list.section,
+  );
+  if (list.editorial === true) {
+    const locale = list.locale ?? AS_WRITTEN;
+    return `${say(locale, wordsFor(locale).toRank, list.itemCount)}${section}`;
+  }
   const items = plural(list.itemCount, "item", "items");
-  if (list.editorial === true) return `${items} to rank${inSection(list.category)}`;
   const author = list.authorName.trim() || "someone";
-  return `${items} ranked by ${author}${inSection(list.category)}`;
+  return `${items} ranked by ${author}${section}`;
 }
 
 export function describeRanking(ranking: {
@@ -61,11 +101,22 @@ export function describeRanking(ranking: {
   authorName: string;
   category: unknown;
   editorial?: boolean;
+  section?: string | null;
+  locale?: string;
 }): string {
+  const section = inSection(
+    ranking.section === undefined ? categoryLabel(ranking.category) : ranking.section,
+  );
+  if (ranking.editorial === true) {
+    const locale = ranking.locale ?? AS_WRITTEN;
+    const ranked = say(locale, wordsFor(locale).visitorRanked, ranking.itemCount, {
+      placed: ranking.placed,
+    });
+    return `${ranked}${section}`;
+  }
   const ranked = `A visitor ranked ${ranking.placed} of ${plural(ranking.itemCount, "item", "items")}`;
-  if (ranking.editorial === true) return `${ranked}${inSection(ranking.category)}`;
   const author = ranking.authorName.trim() || "someone";
-  return `${ranked} on ${author}’s list${inSection(ranking.category)}`;
+  return `${ranked} on ${author}’s list${section}`;
 }
 
 export function escapeHtml(text: string): string {
@@ -102,7 +153,10 @@ export function renderPage(shell: string, page: PageMeta, preload: unknown): str
     meta("property", "og:type", "article"),
     meta("property", "og:site_name", SITE_NAME),
     meta("property", "og:url", page.url),
+    page.locale === undefined ? "" : meta("property", "og:locale", page.locale),
     page.image === null ? "" : meta("property", "og:image", page.image),
+    // The card shows the list's title; a reader who cannot see it is told that much.
+    page.image === null ? "" : meta("property", "og:image:alt", page.title),
     page.image === null || page.imageSize === undefined
       ? ""
       : meta("property", "og:image:width", String(page.imageSize.width)),

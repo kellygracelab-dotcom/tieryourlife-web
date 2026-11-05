@@ -5,7 +5,9 @@
  * neighbour reads as broken. The tile's size and the row's padding are
  * properties, so the rows, the pool's grid and the dock's rows follow them,
  * and the section too: the pool's column beside the board is so many cards wide.
+ * A page holding a board (.board-frame) knows them too, to line its head up.
  */
+.board-frame,
 .ranking,
 .board,
 .pool {
@@ -157,6 +159,7 @@
 }
 
 @media (max-width: 1199px) {
+  .board-frame,
   .ranking,
   .board,
   .pool {

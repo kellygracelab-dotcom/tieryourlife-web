@@ -1,12 +1,13 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure, type ApiError } from "../api/errors";
 import type { Ranking } from "../api/rank";
 import { writeKept } from "../features/ranking/kept";
 import type { Share } from "../features/ranking/shareImage";
 import { localStorageStore } from "../lib/storage";
+import { setStrings } from "../strings";
 import { RankingPage } from "./RankingPage";
 
 const ranking: Ranking = {
@@ -52,6 +53,65 @@ beforeEach(() => {
   share.mockResolvedValue(undefined);
   copy.mockReset();
   copy.mockResolvedValue(undefined);
+});
+
+describe("RankingPage, a house list's words and its pictures' credits", () => {
+  // The language in use is module state; a test that changes it puts English back.
+  afterEach(() => setStrings("en", null));
+
+  const house: Ranking = {
+    ...ranking,
+    snapshot: {
+      ...ranking.snapshot,
+      editorial: true,
+      authorName: "",
+      items: ranking.snapshot.items.map((item, index) =>
+        index === 0 ? { ...item, credit: "Jane Doe, CC BY 2.0" } : item,
+      ),
+      translations: {
+        ru: {
+          "Every A24 film, ranked": "Все фильмы A24",
+          Masterpiece: "Шедевр",
+          "The Witch": "Ведьма",
+          "Ex Machina": "Из машины",
+        },
+      },
+    },
+  };
+
+  it("shows a ranking of a house list in the reader's language, as its list page does", async () => {
+    setStrings("ru", {});
+    load.mockResolvedValue(house);
+    open();
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Все фильмы A24");
+    const board = document.querySelector<HTMLElement>(".ranking--read")!;
+    expect(board).toHaveTextContent("Шедевр");
+    expect(board).toHaveTextContent("Ведьма");
+    expect(board).not.toHaveTextContent("The Witch");
+    // A word the house has not translated stands as written.
+    expect(board).toHaveTextContent("Climax");
+  });
+
+  it("stands as kept for a ranking kept before it carried the words", async () => {
+    setStrings("ru", {});
+    load.mockResolvedValue(ranking);
+    open();
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
+      "Every A24 film, ranked",
+    );
+  });
+
+  it("names the photographers its pictures ask for, as the list page does", async () => {
+    load.mockResolvedValue(house);
+    open();
+    const credits = await screen.findByRole("region", { name: "Picture credits" });
+    expect(credits).toHaveTextContent("Ex Machina — Jane Doe, CC BY 2.0");
+    cleanup();
+    load.mockResolvedValue(ranking);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByRole("region", { name: "Picture credits" })).toBeNull();
+  });
 });
 
 describe("RankingPage", () => {

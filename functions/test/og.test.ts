@@ -9,6 +9,7 @@ import {
   escapeHtml,
   renderPage,
   scriptJson,
+  sectionLabelOf,
 } from "../src/og";
 
 const shell = `<!doctype html>
@@ -40,6 +41,46 @@ describe("words for a link", () => {
     assert.equal(
       describeRanking({ placed: 1, itemCount: 3, authorName: "x", category: "cars" }),
       "A visitor ranked 1 of 3 items on x’s list",
+    );
+  });
+
+  it("name a newer section as its document does, in the preview's language", () => {
+    const cars = { name: "Cars", names: { ru: "Машины" } };
+    assert.equal(sectionLabelOf("cars", cars), "Cars");
+    assert.equal(sectionLabelOf("cars", cars, "ru"), "Машины");
+    assert.equal(sectionLabelOf("cars", cars, "de"), "Cars");
+    // Unread, one of the first nine is still known, and a newer one goes unnamed.
+    assert.equal(sectionLabelOf("film_tv", null), "Film & TV");
+    assert.equal(sectionLabelOf("cars", null), null);
+    assert.equal(
+      describeList({ itemCount: 4, authorName: "x", category: "cars", section: "Cars" }),
+      "4 items ranked by x · Cars",
+    );
+    assert.equal(
+      describeRanking({
+        placed: 1,
+        itemCount: 3,
+        authorName: "x",
+        category: "cars",
+        section: "Cars",
+      }),
+      "A visitor ranked 1 of 3 items on x’s list · Cars",
+    );
+  });
+
+  it("describe a house list in its reader's language", () => {
+    const house = { authorName: "", category: "film_tv", editorial: true, locale: "ru" };
+    assert.equal(
+      describeList({ ...house, itemCount: 34, section: "Кино и сериалы" }),
+      "34 карточки, чтобы разложить · Кино и сериалы",
+    );
+    assert.equal(
+      describeRanking({ ...house, placed: 8, itemCount: 25, section: null }),
+      "Посетитель разложил 8 из 25 карточек",
+    );
+    assert.equal(
+      describeList({ ...house, itemCount: 1, locale: "de", section: "Film & TV" }),
+      "1 Karte zum Einstufen · Film & TV",
     );
   });
 
@@ -127,6 +168,16 @@ describe("renderPage", () => {
     );
     assert.ok(html.includes(`<script type="module" src="/assets/index-abc.js"></script>`));
     assert.equal(html.split("</head>").length, 2);
+  });
+
+  it("says the language of its words and what the picture shows", () => {
+    const html = renderPage(shell, { ...page, locale: "ru_RU" }, null);
+    assert.ok(html.includes(`<meta property="og:locale" content="ru_RU" />`));
+    assert.ok(
+      html.includes(
+        `<meta property="og:image:alt" content="Every &quot;A24&quot; film, ranked" />`,
+      ),
+    );
   });
 
   it("falls back to a plain summary card without a picture", () => {

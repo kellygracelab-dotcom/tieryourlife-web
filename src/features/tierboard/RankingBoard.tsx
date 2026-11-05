@@ -36,7 +36,7 @@ import { DragGhost } from "./DragGhost";
 import { flyIn } from "./flight";
 import { arrange } from "./arrange";
 import { DOUBLE_TAP_MS, type DragState } from "./drag";
-import { draftKey, loadDraft, saveDraft, scopeOf } from "./draft";
+import { draftKey, loadDraft, saveDraft, scopeOf, type TierLabels } from "./draft";
 import {
   canUndo,
   init,
@@ -68,6 +68,7 @@ export type Keep = (
   listId: string,
   rows: readonly (readonly number[])[],
   version?: number,
+  tierLabels?: TierLabels,
 ) => Promise<SavedRanking>;
 
 /** The board as the owner's editor: it starts from what is saved, and Save writes it back. */
@@ -125,7 +126,7 @@ interface RankingBoardProps {
   device?: KeyValueStore;
   keep?: Keep;
   /** Changes a ranking already kept, behind the same link. */
-  rearrange?: (code: string, rows: Rows) => Promise<unknown>;
+  rearrange?: (code: string, rows: Rows, tierLabels?: TierLabels) => Promise<unknown>;
   take?: (listId: string) => Promise<void>;
   share?: Share;
   edit?: EditMode;
@@ -141,6 +142,12 @@ interface RankingBoardProps {
    * on Theirs, Play's result): the bar's Undo and Ctrl+Z go back to it.
    */
   undoTo?: Rows | null;
+  /**
+   * The words a reader gave the tiers, when this version started from their
+   * placing: the list comes under them already, and Finish keeps them with
+   * the ranking.
+   */
+  tierLabels?: TierLabels;
 }
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
@@ -414,6 +421,7 @@ export function RankingBoard({
   onRows,
   onListChanged,
   undoTo = null,
+  tierLabels,
 }: RankingBoardProps) {
   const seeded = seed !== undefined;
   const [state, dispatchBoard] = useBoard(
@@ -598,15 +606,23 @@ export function RankingBoard({
       uid !== null &&
       before.claimedBy === uid &&
       before.version === list.updatedAt;
+    // A reader's tier words go with the rows; a version in the list's own words sends none.
+    const keepIt = () =>
+      tierLabels === undefined
+        ? keep(list.id, placed, list.updatedAt)
+        : keep(list.id, placed, list.updatedAt, tierLabels);
     const saved: Promise<KeptRanking> = inPlace
-      ? rearrange(before.code, placed).then(
+      ? (tierLabels === undefined
+          ? rearrange(before.code, placed)
+          : rearrange(before.code, placed, tierLabels)
+        ).then(
           () => before,
           (reason: unknown) =>
             errorOf(reason).kind === "notFound" || errorOf(reason).kind === "notYours"
-              ? keep(list.id, placed, list.updatedAt)
+              ? keepIt()
               : Promise.reject(reason),
         )
-      : keep(list.id, placed, list.updatedAt);
+      : keepIt();
     saved.then(
       (kept) => {
         // Made by an account, the ranking already sits in it: nothing to claim later.

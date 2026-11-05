@@ -39,7 +39,16 @@ export interface Snapshot {
   authorPhotoUrl: string | null;
   category: string;
   tiers: { label: string; caption: string | null; colorLight: string; colorDark: string }[];
-  items: { title: string; imageUrl: string | null; tierIndex: number | null }[];
+  /** `credit` is the photographer a picture's license asks to name; absent for none. */
+  items: { title: string; imageUrl: string | null; tierIndex: number | null; credit?: string }[];
+  /**
+   * A house list's words in other languages, from the text as written to the
+   * text in that language, only those the snapshot uses. Absent on rankings
+   * kept before they were, and on lists nobody translates.
+   */
+  translations?: Record<string, Record<string, string>>;
+  /** A house list's title by language, when the list has one. */
+  names?: Record<string, string>;
 }
 
 export interface Refusal {
@@ -177,7 +186,7 @@ export function snapshotOf(list: Record<string, unknown>): Snapshot {
   const tiers = Array.isArray(list.tiers) ? list.tiers : [];
   const items = Array.isArray(list.items) ? list.items : [];
   const editorial = isEditorialList(list);
-  return {
+  const snapshot: Snapshot = {
     title: text(list.title),
     ...(editorial ? { editorial: true } : {}),
     authorName: editorial ? "" : text(list.authorName),
@@ -189,11 +198,100 @@ export function snapshotOf(list: Record<string, unknown>): Snapshot {
       colorLight: text(tier.colorLight),
       colorDark: text(tier.colorDark),
     })),
+    // The credit goes with the picture: the ranking's page shows the same photographs.
     items: items.map((item: Record<string, unknown>) => ({
       title: text(item.title),
       imageUrl: url(item.imageUrl),
       tierIndex: typeof item.tierIndex === "number" ? item.tierIndex : null,
+      ...(typeof item.credit === "string" && item.credit.trim() !== ""
+        ? { credit: item.credit.trim() }
+        : {}),
     })),
+  };
+  const translations = usedTranslations(list.translations, snapshot);
+  const names = wordsOf(list.names);
+  return {
+    ...snapshot,
+    ...(translations === null ? {} : { translations }),
+    ...(names === null ? {} : { names }),
+  };
+}
+
+/** A map of words to words, only the strings; null when nothing is left. */
+function wordsOf(value: unknown, wanted?: ReadonlySet<string>): Record<string, string> | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  const words = Object.entries(value).filter(
+    (entry): entry is [string, string] =>
+      typeof entry[1] === "string" &&
+      entry[1].trim() !== "" &&
+      (wanted === undefined || wanted.has(entry[0])),
+  );
+  return words.length === 0 ? null : Object.fromEntries(words);
+}
+
+/**
+ * A house list's translations, cut to the words the snapshot has: the house
+ * keeps every language's words for the whole list, and the ranking keeps
+ * only what it can show, so it reads in the language its list page did.
+ */
+function usedTranslations(
+  value: unknown,
+  snapshot: Snapshot,
+): Record<string, Record<string, string>> | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  const used = new Set([
+    snapshot.title,
+    ...snapshot.tiers.flatMap((tier) =>
+      tier.caption === null ? [tier.label] : [tier.label, tier.caption],
+    ),
+    ...snapshot.items.map((item) => item.title),
+  ]);
+  const languages = Object.entries(value).flatMap(([locale, words]) => {
+    const kept = wordsOf(words, used);
+    return kept === null ? [] : [[locale, kept] as const];
+  });
+  return languages.length === 0 ? null : Object.fromEntries(languages);
+}
+
+/** Longer than any tier word the app or the site lets anybody type. */
+export const MAX_TIER_LABEL_LENGTH = 40;
+
+export type TierLabelsDecision = { ok: true; labels: (string | null)[] | null } | Refusal;
+
+/**
+ * The words a visitor's version wears on its tiers, when it started from
+ * another reader's placing, as the app's Mine takes that reader's tiers:
+ * one per tier, null or blank where a tier keeps the list's own. Left out,
+ * every tier keeps the list's own words.
+ */
+export function decideTierLabels(body: unknown, tierCount: number): TierLabelsDecision {
+  const labels = (body as { tierLabels?: unknown } | null)?.tierLabels;
+  if (labels === undefined || labels === null) return { ok: true, labels: null };
+  if (!Array.isArray(labels) || labels.length !== tierCount) {
+    return refuse(400, "INVALID", "Tier words do not match the list's tiers");
+  }
+  const clean: (string | null)[] = [];
+  for (const label of labels) {
+    if (label !== null && typeof label !== "string") {
+      return refuse(400, "INVALID", "A tier's word must be text");
+    }
+    const word = label?.trim() ?? "";
+    if (word.length > MAX_TIER_LABEL_LENGTH)
+      return refuse(400, "INVALID", "A tier's word is too long");
+    clean.push(word === "" ? null : word);
+  }
+  return { ok: true, labels: clean };
+}
+
+/** The snapshot under a visitor's own tier words; a tier without one keeps what it has. */
+export function withTierLabels(snapshot: Snapshot, labels: (string | null)[] | null): Snapshot {
+  if (labels === null || labels.every((label) => label === null)) return snapshot;
+  return {
+    ...snapshot,
+    tiers: snapshot.tiers.map((tier, index) => {
+      const label = labels[index] ?? null;
+      return label === null ? tier : { ...tier, label };
+    }),
   };
 }
 

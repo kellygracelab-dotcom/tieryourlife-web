@@ -1,6 +1,6 @@
 import type { ApiClient } from "./client";
 import { itemsOf, tiersOf } from "./lists";
-import type { PublishedItem, PublishedTier } from "./types";
+import type { PublishedItem, PublishedList, PublishedTier } from "./types";
 
 export interface RankingSnapshot {
   title: string;
@@ -11,7 +11,16 @@ export interface RankingSnapshot {
   category: string;
   tiers: PublishedTier[];
   items: PublishedItem[];
+  /** A house list's words in other languages, kept with the ranking; absent on older ones. */
+  translations?: PublishedList["translations"];
+  names?: PublishedList["names"];
 }
+
+/**
+ * The words a reader gave the tiers, one per tier, null where a tier keeps
+ * the list's own: a version started from another reader's placing keeps them.
+ */
+export type TierWords = readonly (string | null)[];
 
 export interface Ranking {
   code: string;
@@ -38,12 +47,14 @@ export function keepRanking(
   listId: string,
   rows: readonly (readonly number[])[],
   version?: number,
+  tierLabels?: TierWords,
 ): Promise<SavedRanking> {
   return client.request<SavedRanking>("POST", "/api/rank", {
     body: {
       listId,
       rows: rows.map((row) => [...row]),
       ...(version === undefined ? {} : { version }),
+      ...(tierLabels === undefined ? {} : { tierLabels: [...tierLabels] }),
     },
   });
 }
@@ -92,9 +103,13 @@ export function rearrangeRanking(
   client: ApiClient,
   code: string,
   rows: readonly (readonly number[])[],
+  tierLabels?: TierWords,
 ): Promise<{ code: string }> {
   return client.request<{ code: string }>("PUT", `/api/rank/${encodeURIComponent(code)}`, {
-    body: { rows: rows.map((row) => [...row]) },
+    body: {
+      rows: rows.map((row) => [...row]),
+      ...(tierLabels === undefined ? {} : { tierLabels: [...tierLabels] }),
+    },
   });
 }
 
