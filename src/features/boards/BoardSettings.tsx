@@ -208,7 +208,7 @@ export function BoardSettings({
       const answer =
         what === "updated" && current.publishedId !== null
           ? await publishing.republish(current.publishedId, request)
-          : await publishing.publish(request);
+          : await publishing.publish({ ...request, boardUid: current.uid });
       const name = account?.kind === "signedIn" ? account.displayName : null;
       const after = latest();
       const sent = setPublished(after, answer.id, name ?? after.authorName, now());

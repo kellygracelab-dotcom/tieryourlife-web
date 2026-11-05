@@ -113,6 +113,13 @@ export interface PublishRequest {
   coverImageUrls?: string[];
   /** An approved topic of the list's section, which files the list under it; null for none. */
   topicId?: string | null;
+  /** True takes the list out of its topic; a null topicId alone keeps the old one. */
+  noTopic?: boolean;
+  /**
+   * The board a first publish comes from: the same board publishing again
+   * gets the list it already made, not a second one.
+   */
+  boardUid?: string;
   /** No name or face on the list anywhere public; the owner still has it. */
   anonymous?: boolean;
   tiers: PublishedTier[];

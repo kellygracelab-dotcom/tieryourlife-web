@@ -76,8 +76,10 @@ export function publishRequestOf(board: Board): PublishRequest | null {
     title: board.title.trim(),
     category: board.category,
     ...coverOf(board),
-    // Sent every time: a republish without it takes the list out of its topic.
+    // Sent every time. A null alone keeps the old topic for stale phones, so
+    // no topic is also said out loud.
     topicId: board.topic?.id ?? null,
+    ...(board.topic === null ? { noTopic: true } : {}),
     // Sent every time too: a republish without it would put the name back.
     anonymous: board.anonymous,
     tiers: tiers.map((tier) => ({

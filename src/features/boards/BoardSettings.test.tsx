@@ -326,6 +326,9 @@ describe("BoardSettings: public", () => {
     expect(publish).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Films", category: "film_tv", topicId: null }),
     );
+    // The board's uid goes with a first publish, so publishing again after a
+    // reload gets the same list back rather than a second one.
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ boardUid: filmBoard().uid }));
     expect(held).toMatchObject({
       publishedId: "L1",
       authorName: "Danylo",
@@ -342,6 +345,10 @@ describe("BoardSettings: public", () => {
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(published).toHaveBeenCalledWith("updated", "L1"));
     expect(republish).toHaveBeenCalledWith("L1", expect.objectContaining({ title: "Films" }));
+    expect(republish).not.toHaveBeenCalledWith(
+      "L1",
+      expect.objectContaining({ boardUid: expect.anything() }),
+    );
   });
 
   it("asks before taking it down, in the sheet, from the switch or from Take it down", async () => {
