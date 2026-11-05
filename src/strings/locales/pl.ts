@@ -125,6 +125,7 @@ const pl: Translation = {
     faceLetter: "Tylko litera",
     faceLetterCaption: "Litera",
     faceFailed: "Nie udało się zapisać – serwer nie odpowiedział.",
+    faceListsFailed: "Nie udało się wczytać twoich opublikowanych list.",
     privacyTitle: "Prywatność",
     signOutNote:
       "Twoje listy zostają na koncie i w tej przeglądarce, ukryte do ponownego zalogowania. Po wylogowaniu widać tylko listy zrobione bez konta.",
@@ -863,6 +864,12 @@ const pl: Translation = {
       "Zniknie ze strony, a jej link przestanie działać. Twoje listy zostaną bez zmian.",
     takingDown: "Usuwanie…",
     takenDown: "Usunięto „{title}”",
+    mergeFind: "Scal z innym tematem",
+    houseStaleTitle: "„{title}” zmieniła się, odkąd edytowano ją tutaj",
+    houseStaleBody:
+      "Jeśli otworzysz ją w obecnej postaci, niewysłane zmiany przepadną. Twój szkic wciąż je ma, ale aktualizacja z niego przywróci starszą listę.",
+    houseStaleDraft: "Otwórz mój szkic",
+    houseStaleFresh: "Otwórz w obecnej postaci",
   },
   sections: {
     followers: {

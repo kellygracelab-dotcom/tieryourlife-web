@@ -109,6 +109,7 @@ const ja: Translation = {
     faceLetter: "頭文字だけ",
     faceLetterCaption: "頭文字",
     faceFailed: "保存できませんでした。サーバーが応答しません。",
+    faceListsFailed: "公開したリストを読み込めませんでした。",
     privacyTitle: "プライバシー",
     signOutNote:
       "リストはアカウントとこのブラウザに残り、もう一度ログインするまで非表示になります。ログアウト中は、アカウントなしで作ったリストだけが表示されます。",
@@ -804,6 +805,12 @@ const ja: Translation = {
     takeDownBody: "サイトから消え、リンクも使えなくなります。あなたのリストはそのまま残ります。",
     takingDown: "取り下げ中…",
     takenDown: "「{title}」を取り下げました",
+    mergeFind: "ほかのトピックに統合",
+    houseStaleTitle: "「{title}」はここで編集したあとに変更されました",
+    houseStaleBody:
+      "今の状態で開くと、送信していない変更は失われます。下書きには残っていますが、下書きから更新すると古いリストに戻ります。",
+    houseStaleDraft: "下書きを開く",
+    houseStaleFresh: "今の状態で開く",
   },
   sections: {
     followers: { other: "フォロワー{n}人" },

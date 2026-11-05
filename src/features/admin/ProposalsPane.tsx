@@ -1,4 +1,4 @@
-import { useCallback, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import type {
   AdminRole,
@@ -16,6 +16,7 @@ import {
   approveSectionAsTopic,
   declineSection,
   decideTopic,
+  findTopics,
   finishDecision,
   loadSectionQueue,
   loadTopicQueue,
@@ -54,6 +55,8 @@ export interface ProposalsDeps {
     topic: string,
   ) => Promise<{ topic: Topic | null; proposal: SectionStats | null }>;
   decideTopic: (id: string, decision: TopicDecision) => Promise<void>;
+  /** Approved topics whose name starts with what was typed: where a duplicate may go. */
+  findTopics: (q: string) => Promise<{ topics: Topic[] }>;
   /** A decision cut short, made again with the call the backend hands back. */
   finish: (id: string, finish: FinishCall) => Promise<unknown>;
 }
@@ -67,8 +70,12 @@ const proposalsDeps: ProposalsDeps = {
   mergeSection,
   mergeIntoTopic: mergeSectionIntoTopic,
   decideTopic,
+  findTopics: (q) => findTopics(q),
   finish: finishDecision,
 };
+
+/** How long the merge search waits after the last key before it asks. */
+export const FIND_TOPIC_AFTER_MS = 300;
 
 /** A backend from before section proposals has no queue for them: nothing waits. */
 const orNothing =
@@ -626,7 +633,35 @@ function TopicProposal({
   const [section, setSection] = useState(wanted);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // A misspelt name is put right before it is approved, as the app's queue does.
+  const [name, setName] = useState(topic.name);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [renamed, setRenamed] = useState(false);
+  // A duplicate goes into any approved topic, not only the ones the backend thought alike.
+  const [query, setQuery] = useState("");
+  const [found, setFound] = useState<readonly Topic[]>([]);
   const look = sections.find((one) => one.id === section);
+
+  useEffect(() => {
+    const words = query.trim();
+    if (words.length < 2) return;
+    let current = true;
+    const timer = setTimeout(() => {
+      deps.findTopics(words).then(
+        (answer) => {
+          if (!current) return;
+          setFound(answer.topics.filter((one) => one.status === "approved" && one.id !== topic.id));
+        },
+        () => {
+          if (current) setFound([]);
+        },
+      );
+    }, FIND_TOPIC_AFTER_MS);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [query, deps, topic.id]);
 
   const act = (decision: TopicDecision, text: string) => {
     setBusy(true);
@@ -640,6 +675,33 @@ function TopicProposal({
     );
   };
 
+  const rename = (event: FormEvent) => {
+    event.preventDefault();
+    const typed = tidySectionName(renaming ?? "");
+    if (typed === "" || typed === name) {
+      setRenaming(null);
+      return;
+    }
+    setBusy(true);
+    setFailed(false);
+    deps.decideTopic(topic.id, { action: "rename", name: typed }).then(
+      () => {
+        setBusy(false);
+        setName(typed);
+        setRenaming(null);
+        setRenamed(true);
+      },
+      () => {
+        setBusy(false);
+        setFailed(true);
+      },
+    );
+  };
+
+  const twins = [...(topic.similar ?? []), ...found].filter(
+    (one, at, all) => all.findIndex((other) => other.id === one.id) === at,
+  );
+
   return (
     <li className="proposal">
       <div className="proposal__looks" aria-hidden="true">
@@ -651,7 +713,12 @@ function TopicProposal({
         </span>
       </div>
       <div className="proposal__text">
-        <h3 className="proposal__name">{topic.name}</h3>
+        <h3 className="proposal__name">{name}</h3>
+        {renamed && (
+          <p className="proposal__line" role="status">
+            {fill(strings.admin.topicRenamed, { name })}
+          </p>
+        )}
         <p className="proposal__meta">
           {fill(strings.admin.topicMeta, {
             section: sections.find((one) => one.id === wanted)?.name ?? wanted,
@@ -675,49 +742,78 @@ function TopicProposal({
             ))}
           </select>
         </label>
+        <label className="field proposal__section">
+          <span className="field__label">{strings.admin.mergeFind}</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              if (event.target.value.trim().length < 2) setFound([]);
+            }}
+          />
+        </label>
         {failed && (
           <p className="admin__bar" role="alert">
             {strings.admin.actionFailed}
           </p>
         )}
-        <div className="proposal__actions">
-          <Button
-            variant="filled"
-            disabled={busy}
-            onClick={() =>
-              act(
-                { action: "approve", section },
-                fill(strings.admin.approved, { name: topic.name }),
-              )
-            }
-          >
-            {strings.admin.approve}
-          </Button>
-          <Button
-            variant="outlined"
-            disabled={busy}
-            onClick={() =>
-              act({ action: "reject" }, fill(strings.admin.declined, { name: topic.name }))
-            }
-          >
-            {strings.admin.decline}
-          </Button>
-          {(topic.similar ?? []).map((twin) => (
+        {renaming !== null ? (
+          <form className="proposal__actions" onSubmit={rename}>
+            <label className="field proposal__section">
+              <span className="field__label">{strings.admin.topicName}</span>
+              <input
+                value={renaming}
+                maxLength={SECTION_NAME_MAX}
+                autoComplete="off"
+                onChange={(event) => setRenaming(event.target.value)}
+              />
+            </label>
+            <Button variant="filled" type="submit" disabled={busy}>
+              {strings.admin.save}
+            </Button>
+            <Button onClick={() => setRenaming(null)} disabled={busy}>
+              {strings.admin.cancel}
+            </Button>
+          </form>
+        ) : (
+          <div className="proposal__actions">
             <Button
-              key={twin.id}
-              variant="outlined"
+              variant="filled"
               disabled={busy}
               onClick={() =>
-                act(
-                  { action: "merge", into: twin.id },
-                  fill(strings.admin.merged, { name: topic.name, into: twin.name }),
-                )
+                act({ action: "approve", section }, fill(strings.admin.approved, { name }))
               }
             >
-              {fill(strings.admin.mergeIntoName, { name: twin.name })}
+              {strings.admin.approve}
             </Button>
-          ))}
-        </div>
+            <Button
+              variant="outlined"
+              disabled={busy}
+              onClick={() => act({ action: "reject" }, fill(strings.admin.declined, { name }))}
+            >
+              {strings.admin.decline}
+            </Button>
+            <Button variant="outlined" disabled={busy} onClick={() => setRenaming(name)}>
+              {strings.admin.rename}
+            </Button>
+            {twins.map((twin) => (
+              <Button
+                key={twin.id}
+                variant="outlined"
+                disabled={busy}
+                onClick={() =>
+                  act(
+                    { action: "merge", into: twin.id },
+                    fill(strings.admin.merged, { name, into: twin.name }),
+                  )
+                }
+              >
+                {fill(strings.admin.mergeIntoName, { name: twin.name })}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
     </li>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BAN_LENGTHS, type BanLength, type QueuedList } from "../api/moderation";
 import { useSession } from "../app/session";
 import { REASON_TEXT } from "../features/community/reasons";
@@ -70,7 +70,23 @@ function QueueCard({
   const [revealed, setRevealed] = useState(false);
   const [allNotes, setAllNotes] = useState(false);
   const acting = deciding.status === "acting";
+  const choosing = deciding.status === "choosingBan" || deciding.status === "confirmForever";
   const counts = reasonCounts(item.reasons);
+  const title = useRef<HTMLHeadingElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const takeDownButton = useRef<HTMLButtonElement>(null);
+  // The panel takes the place of the button that opened it, so the focus goes
+  // with it: into the ban in force on the way in, back to Take it down on the
+  // way out, and to the card's title while the decision is under way.
+  const wasChoosing = useRef(false);
+  useEffect(() => {
+    if (choosing && !wasChoosing.current) {
+      panel.current?.querySelector<HTMLElement>("[aria-pressed='true']")?.focus();
+    } else if (!choosing && wasChoosing.current) {
+      (deciding.status === "idle" ? takeDownButton.current : title.current)?.focus();
+    }
+    wasChoosing.current = choosing;
+  }, [choosing, deciding.status]);
   const notes = allNotes ? item.notes : item.notes.slice(0, NOTES_SHOWN);
 
   const settle = (work: Promise<void>, notice: string) => {
@@ -132,7 +148,9 @@ function QueueCard({
           {blur && !revealed && <Icon name="visibility_off" className="queue__cover-icon" />}
         </button>
         <div className="queue__text">
-          <h2 className="queue__title">{item.listTitle}</h2>
+          <h2 ref={title} className="queue__title" tabIndex={-1}>
+            {item.listTitle}
+          </h2>
           <p className="queue__byline">{fill(strings.card.by, { name: item.authorName })}</p>
           <div className="queue__pills">
             <span className="queue__pill queue__pill--count">
@@ -165,7 +183,18 @@ function QueueCard({
           <p className="queue__consequence">{strings.mod.consequence}</p>
 
           {deciding.status === "choosingBan" || deciding.status === "confirmForever" ? (
-            <div className="queue__panel" role="group" aria-label={strings.mod.banQuestion}>
+            <div
+              ref={panel}
+              className="queue__panel"
+              role="group"
+              aria-label={strings.mod.banQuestion}
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && deciding.status === "choosingBan") {
+                  event.preventDefault();
+                  setDeciding({ status: "idle" });
+                }
+              }}
+            >
               <p className="queue__panel-line">{strings.mod.banQuestion}</p>
               <div className="queue__chips">
                 {[null, ...BAN_LENGTHS].map((ban) => (
@@ -195,6 +224,7 @@ function QueueCard({
                 {item.hidden ? strings.mod.putBack : strings.mod.leaveUp}
               </Button>
               <button
+                ref={takeDownButton}
                 type="button"
                 className="btn dialog__danger"
                 onClick={() => choose(null)}
@@ -274,6 +304,19 @@ function Queue({
   const [now] = useState(() => Date.now());
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
+  const queue = useRef<HTMLUListElement>(null);
+  const count = useRef<HTMLParagraphElement>(null);
+  // Where a decided card stood: the focus it held goes to the card now in its place.
+  const left = useRef<number | null>(null);
+  useEffect(() => {
+    const at = left.current;
+    left.current = null;
+    if (at === null) return;
+    const active = document.activeElement;
+    if (active !== null && active !== document.body && active.isConnected) return;
+    const titles = queue.current?.querySelectorAll<HTMLElement>(".queue__title") ?? [];
+    (titles[Math.min(at, titles.length - 1)] ?? count.current)?.focus();
+  }, [gone]);
 
   const toggleBlur = () => {
     const next = !blur;
@@ -311,16 +354,17 @@ function Queue({
   const reports = items.reduce((sum, item) => sum + item.reportCount, 0);
 
   const onDone = (id: string, text: string) => {
-    const left = items.filter((item) => item.listId !== id);
+    const rest = items.filter((item) => item.listId !== id);
+    left.current = items.findIndex((item) => item.listId === id);
     setGone((ids) => [...ids, id]);
-    noteReports(uid, left);
+    noteReports(uid, rest);
     setNotice({ text });
   };
 
   return (
     <>
       <div className="mod__head">
-        <p className="mod__count">
+        <p ref={count} className="mod__count" tabIndex={-1}>
           {items.length === 0
             ? strings.mod.nothingPending
             : `${plural(strings.mod.listCount, items.length)} · ${plural(strings.mod.reportCount, reports)}`}
@@ -337,7 +381,7 @@ function Queue({
           <p className="mod__empty-body">{strings.mod.emptyBody}</p>
         </div>
       ) : (
-        <ul className="queue" aria-label={strings.mod.title}>
+        <ul ref={queue} className="queue" aria-label={strings.mod.title}>
           {items.map((item) => (
             <QueueCard
               key={item.listId}

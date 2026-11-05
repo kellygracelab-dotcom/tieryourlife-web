@@ -103,6 +103,7 @@ export const en = {
     faceLetter: "Just the letter",
     faceLetterCaption: "Letter",
     faceFailed: "Couldn’t save — the server didn’t answer.",
+    faceListsFailed: "Couldn’t load your published lists.",
     privacyTitle: "Privacy",
     signOutNote:
       "Your lists stay in your account and in this browser, hidden until you sign in again. Signed out, you’ll see only lists made without an account.",
@@ -787,6 +788,12 @@ export const en = {
     takeDownBody: "It leaves the site and its link stops working. Your boards stay as they are.",
     takingDown: "Taking down…",
     takenDown: "“{title}” taken down",
+    mergeFind: "Merge into another topic",
+    houseStaleTitle: "“{title}” changed since you edited it here",
+    houseStaleBody:
+      "Opening it as it stands drops the changes you haven’t sent. Your draft still has them, but updating from it puts the older list back.",
+    houseStaleDraft: "Open my draft",
+    houseStaleFresh: "Open it as it stands",
   },
   sections: {
     followers: { one: "{n} follower", other: "{n} followers" },

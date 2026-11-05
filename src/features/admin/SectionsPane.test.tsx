@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -200,6 +200,97 @@ describe("SectionsPane", () => {
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Stay" }));
     expect(router.state.location.pathname).toBe("/admin/sections");
+  });
+
+  it("says when the sections could not be read, and reads them again on Try again", async () => {
+    deps.load.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    open();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load this.");
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("4 sections · 1 hidden")).toBeInTheDocument();
+    expect(deps.load).toHaveBeenCalledTimes(2);
+  });
+
+  it("takes the keyboard into the question before leaving, and Escape stays", async () => {
+    const router = open();
+    await screen.findByText("4 sections · 1 hidden");
+    screen.getByRole("button", { name: "Move Games" }).focus();
+    await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+    void router.navigate("/elsewhere");
+    const ask = await screen.findByRole("alertdialog", { name: "Leave without saving?" });
+    expect(ask).toHaveAttribute("aria-modal", "true");
+    expect(within(ask).getByRole("button", { name: "Stay" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(router.state.location.pathname).toBe("/admin/sections");
+  });
+
+  // A browser lets go of a pointer when the node holding it is taken out of
+  // the page, as React does with a row that moves down.
+  it("drags a row down past several others", async () => {
+    // At most one node holds the pointer.
+    const holding = new Set<Element>();
+    const holder = () => [...holding][0] ?? null;
+    const watch = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const gone of record.removedNodes) {
+          const held = holder();
+          if (held !== null && gone.contains(held)) holding.clear();
+        }
+      }
+    });
+    watch.observe(document.body, { childList: true, subtree: true });
+    const row = 40;
+    const at = (node: HTMLElement) => [...(node.parentElement?.children ?? [])].indexOf(node);
+    // jsdom holds no pointers: these hold one the way a browser does.
+    Object.defineProperty(Element.prototype, "setPointerCapture", {
+      configurable: true,
+      value: function (this: Element) {
+        holding.clear();
+        holding.add(this);
+      },
+    });
+    Object.defineProperty(Element.prototype, "hasPointerCapture", {
+      configurable: true,
+      value: function (this: Element) {
+        return holding.has(this);
+      },
+    });
+    const layout = [
+      vi.spyOn(HTMLElement.prototype, "offsetTop", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.tagName === "LI" ? at(this) * row : 0;
+      }),
+      vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(row),
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.children.length * row;
+      }),
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return { top: this.tagName === "LI" ? at(this) * row : 0 } as DOMRect;
+      }),
+    ];
+    open();
+    await screen.findByText("4 sections · 1 hidden");
+    const handle = screen.getByRole("button", { name: "Move Anime" });
+    const pointer = (type: string, target: Element, y: number) =>
+      fireEvent(target, new MouseEvent(type, { bubbles: true, cancelable: true, clientY: y }));
+    pointer("pointerdown", handle, 20);
+    for (const y of [70, 110]) {
+      pointer("pointermove", holder() ?? handle.closest("li")!, y);
+      // The browser's word that the node went comes after the frame.
+      await act(async () => undefined);
+    }
+    pointer("pointerup", holder() ?? handle.closest("li")!, 110);
+    expect(rowNames()).toEqual(["Games", "Food", "Anime", "Other"]);
+    watch.disconnect();
+    layout.forEach((spy) => spy.mockRestore());
+    delete (Element.prototype as Partial<Element>).setPointerCapture;
+    delete (Element.prototype as Partial<Element>).hasPointerCapture;
   });
 
   it("shows a moderator the order without the means to change it", async () => {

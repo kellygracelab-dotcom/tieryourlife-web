@@ -67,6 +67,7 @@ import {
   houseLinkOf,
   houseLinkOfParam,
   linkToHouse,
+  markHouseSent,
   unlinkFromHouse,
 } from "../features/boards/houseList";
 import { fill, plural, strings } from "../strings";
@@ -390,6 +391,7 @@ export function BoardPage({
   // Out as the house: the board is tied to the list from now on, and the address says which.
   const sentToHouse = (what: "published" | "updated", id: string) => {
     linkToHouse(uid, id, houseStore);
+    markHouseSent(uid, latest().editedAt, houseStore);
     void navigate(houseBoardPath(uid, id), { replace: true });
     setNotice({
       text: what === "published" ? strings.admin.housePublished : strings.admin.houseUpdated,

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import type { SectionChanges, SectionDraft } from "../../api/admin";
 import { errorOf } from "../../api/errors";
 import type { SectionProposal, SectionStats } from "../../api/sections";
@@ -134,6 +134,9 @@ export function SectionEditor(props: SectionEditorProps) {
   // The bar above the actions: a failure worth another try, or a refusal that is not.
   const [bar, setBar] = useState<"failed" | "banned" | "tooManyToday" | null>(null);
   const [asking, setAsking] = useState(false);
+  // Open it on a name already taken leaves the form, so it asks as closing does.
+  const [leaveTo, setLeaveTo] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const tidy = tidySectionName(name);
   // An edit's own name, and its own id in a clash, are no clash.
@@ -188,15 +191,21 @@ export function SectionEditor(props: SectionEditorProps) {
 
   const close = () => {
     if (sending) return;
-    if (asking) setAsking(false);
+    if (asking) keepEditing();
     else if (edited) setAsking(true);
     else onClose();
+  };
+
+  const keepEditing = () => {
+    setAsking(false);
+    setLeaveTo(null);
   };
   useModal(box, close);
 
   const discard = () => {
     if (mode === "propose") forgetProposal(deps.keep);
     onClose();
+    if (leaveTo !== null) void navigate(leaveTo);
   };
 
   /** A proposal that did not go waits in the tab: its words now, its picture once it is text. */
@@ -378,7 +387,17 @@ export function SectionEditor(props: SectionEditorProps) {
             {nameTrouble.kind === "taken" && nameTrouble.id !== null && (
               <>
                 {" "}
-                <Link to={sectionPath(nameTrouble.id)}>{strings.propose.openIt}</Link>
+                <Link
+                  to={sectionPath(nameTrouble.id)}
+                  onClick={(event) => {
+                    if (!edited) return;
+                    event.preventDefault();
+                    setLeaveTo(sectionPath(nameTrouble.id ?? ""));
+                    setAsking(true);
+                  }}
+                >
+                  {strings.propose.openIt}
+                </Link>
               </>
             )}
           </p>
@@ -516,7 +535,7 @@ export function SectionEditor(props: SectionEditorProps) {
       <p className="section-editor__ask-text">
         {mode === "propose" ? strings.propose.discardAsk : strings.admin.discardChanges}
       </p>
-      <Button onClick={() => setAsking(false)}>{strings.propose.keepEditing}</Button>
+      <Button onClick={keepEditing}>{strings.propose.keepEditing}</Button>
       <Button variant="danger" onClick={discard}>
         {strings.propose.discard}
       </Button>

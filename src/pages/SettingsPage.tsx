@@ -15,6 +15,7 @@ import { owners } from "../features/boards/owners";
 import { AccountTabs } from "../app/AccountTabs";
 import { useHidden } from "../features/community/useHidden";
 import { useSession, useShowFace } from "../app/session";
+import { SignInButton } from "../app/SignInButton";
 import { ThemeSwitch } from "../app/ThemeSwitch";
 import {
   eraseMyAccount,
@@ -27,7 +28,6 @@ import { renameAccount, setFace } from "../lib/profile";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
-import { InAppNote } from "../ui/InAppNote";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import "./SettingsPage.css";
@@ -206,7 +206,7 @@ export function SettingsPage({
   refreshAuthor = refreshPublishedAuthor,
   erase = eraseMyAccount,
 }: SettingsPageProps) {
-  const { account, signIn, signOut, refresh } = useSession();
+  const { account, signOut, refresh } = useSession();
   const showFace = useShowFace();
   const navigate = useNavigate();
 
@@ -249,12 +249,7 @@ export function SettingsPage({
           <Icon name="settings" className="settings__guest-icon" />
           <p className="settings__guest-title">{strings.settings.guestTitle}</p>
           <p className="settings__helper">{strings.settings.guestBody}</p>
-          <InAppNote />
-          <div>
-            <Button variant="filled" onClick={() => void signIn()}>
-              {strings.keep.google}
-            </Button>
-          </div>
+          <SignInButton label={strings.keep.google} />
         </section>
       )}
 

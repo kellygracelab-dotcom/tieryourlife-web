@@ -29,7 +29,9 @@ import {
   houseBoardPath,
   houseRequestOf,
   houseBoardsOf,
+  hasUnsentEdits,
   linkToHouse,
+  markHouseSent,
   NEW_HOUSE_PATH,
   unlinkFromHouse,
 } from "../boards/houseList";
@@ -282,6 +284,54 @@ function BoardPicker({
 }
 
 /**
+ * Edit on a list that changed elsewhere while this device holds edits it has
+ * not sent: the list as it stands drops them, so the admin chooses. Escape
+ * and a click outside choose nothing.
+ */
+function StaleDialog({
+  title,
+  onFresh,
+  onDraft,
+  onCancel,
+}: {
+  title: string;
+  onFresh: () => void;
+  onDraft: () => void;
+  onCancel: () => void;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onCancel);
+  return createPortal(
+    <div className="scrim" onClick={onCancel}>
+      <div
+        ref={box}
+        className="dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="house-stale-title"
+        aria-describedby="house-stale-body"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="house-stale-title" className="dialog__title">
+          {fill(strings.admin.houseStaleTitle, { title })}
+        </h2>
+        <p id="house-stale-body" className="dialog__body">
+          {strings.admin.houseStaleBody}
+        </p>
+        <div className="dialog__actions">
+          <Button onClick={onCancel}>{strings.admin.cancel}</Button>
+          <Button onClick={onDraft}>{strings.admin.houseStaleDraft}</Button>
+          <Button variant="danger" onClick={onFresh}>
+            {strings.admin.houseStaleFresh}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/**
  * Lists the house publishes: no name, no face and no account behind them,
  * an ordinary anonymous list to everybody who opens one. The owner or a
  * moderator sends one of their own boards out as the house, or sends one
@@ -308,6 +358,7 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
   const [takingDown, setTakingDown] = useState(false);
   const [takeDownFailed, setTakeDownFailed] = useState(false);
   const [opening, setOpening] = useState(false);
+  const [stale, setStale] = useState<{ list: ListSummary; board: Board } | null>(null);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
   const { sections } = useSections();
@@ -396,7 +447,8 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
   // edits went to. Unless the list changed after this device last touched
   // that board (another admin, or a script that filled it out): then the
   // board is the stale one, and Update would put the old list back over the
-  // new, so it goes and the list as it stands comes in its place.
+  // new, so it goes and the list as it stands comes in its place. Edits this
+  // device has not sent yet are not dropped unasked.
   const edit = (list: ListSummary) => {
     const editing = houseBoardsOf(list.id, deps.links)
       .map((uid) => deps.houseRepository.get(uid))
@@ -406,8 +458,18 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
         void navigate(houseBoardPath(editing.uid, list.id));
         return;
       }
-      deps.houseRepository.remove(editing.uid);
-      unlinkFromHouse(editing.uid, deps.links);
+      if (hasUnsentEdits(editing, deps.links)) {
+        setStale({ list, board: editing });
+        return;
+      }
+    }
+    openAsItStands(list, editing ?? null);
+  };
+
+  const openAsItStands = (list: ListSummary, old: Board | null) => {
+    if (old !== null) {
+      deps.houseRepository.remove(old.uid);
+      unlinkFromHouse(old.uid, deps.links);
     }
     setOpening(true);
     deps.loadList(list.id).then(
@@ -415,6 +477,7 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
         const board = boardFromHouseList(full, deps.now(), nextUid);
         deps.houseRepository.save(board);
         linkToHouse(board.uid, list.id, deps.links);
+        markHouseSent(board.uid, board.editedAt, deps.links);
         void navigate(houseBoardPath(board.uid, list.id));
       },
       (reason: unknown) => {
@@ -535,6 +598,17 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
           }
           onConfirm={() => takeDown(asking)}
           onCancel={() => setAsking(null)}
+        />
+      )}
+      {stale !== null && (
+        <StaleDialog
+          title={stale.list.title}
+          onCancel={() => setStale(null)}
+          onDraft={() => void navigate(houseBoardPath(stale.board.uid, stale.list.id))}
+          onFresh={() => {
+            setStale(null);
+            openAsItStands(stale.list, stale.board);
+          }}
         />
       )}
       {translating !== null && (

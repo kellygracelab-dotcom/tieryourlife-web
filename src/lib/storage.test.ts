@@ -1,9 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { localStorageStore, memoryStore, sessionStorageStore } from "./storage";
+import {
+  localStorageStore,
+  memoryStore,
+  resetStorageTroubleForTests,
+  sessionStorageStore,
+  storageRefused,
+} from "./storage";
 
 afterEach(() => {
   vi.restoreAllMocks();
   window.sessionStorage.clear();
+  resetStorageTroubleForTests();
 });
 
 describe("the browser's stores", () => {
@@ -28,9 +35,22 @@ describe("the browser's stores", () => {
     vi.spyOn(Storage.prototype, "removeItem").mockImplementation(boom);
     for (const store of [localStorageStore, sessionStorageStore]) {
       expect(() => store.write("k", "v")).not.toThrow();
-      expect(store.read("k")).toBeNull();
       expect(() => store.remove("k")).not.toThrow();
+      expect(store.read("k")).toBeNull();
     }
+  });
+
+  // storage.ts promises the site works anyway and only forgets on reload.
+  it("keeps what a blocked browser refused for the rest of the visit, and says it was refused", () => {
+    vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+      throw new DOMException("denied", "SecurityError");
+    });
+    expect(localStorageStore.write("tyl:board:b1", "v")).toBe(false);
+    expect(storageRefused()).toBe(true);
+    expect(localStorageStore.read("tyl:board:b1")).toBe("v");
+    expect(localStorageStore.keys?.()).toEqual(["tyl:board:b1"]);
+    localStorageStore.remove("tyl:board:b1");
+    expect(localStorageStore.read("tyl:board:b1")).toBeNull();
   });
 
   it("lists nothing when even the storage object cannot be reached", () => {

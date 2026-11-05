@@ -6,7 +6,7 @@ import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { PageTitle } from "./pageTitle";
 import { routes } from "./routes";
 import { Shell } from "./Shell";
-import { SessionContext, type Session } from "./session";
+import { RedirectFailedContext, SessionContext, type Session } from "./session";
 
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
@@ -21,7 +21,7 @@ vi.mock("../lib/api", async () => ({
   noteTake: vi.fn(),
 }));
 
-const open = (session: Partial<Session>, at = "/") => {
+const open = (session: Partial<Session>, at = "/", redirectFailed = false) => {
   const value: Session = {
     account: { kind: "guest", uid: null },
     signIn: vi.fn(async () => ({ kind: "signedIn" as const, switched: false })),
@@ -31,7 +31,9 @@ const open = (session: Partial<Session>, at = "/") => {
   };
   render(
     <SessionContext.Provider value={value}>
-      <RouterProvider router={createMemoryRouter(routes, { initialEntries: [at] })} />
+      <RedirectFailedContext.Provider value={redirectFailed}>
+        <RouterProvider router={createMemoryRouter(routes, { initialEntries: [at] })} />
+      </RedirectFailedContext.Provider>
     </SessionContext.Provider>,
   );
   return value;
@@ -162,6 +164,15 @@ describe("Shell account", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Open this page in Chrome or Safari",
     );
+  });
+
+  it("says a sign-in that came back from its redirect failed, and lets Sign in be pressed again", async () => {
+    const signIn = vi.fn(async () => ({ kind: "cancelled" as const }));
+    open({ signIn }, "/", true);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign in");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(signIn).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("stays quiet when the person changes their mind", async () => {

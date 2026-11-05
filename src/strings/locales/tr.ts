@@ -111,6 +111,7 @@ const tr: Translation = {
     faceLetter: "Sadece harf",
     faceLetterCaption: "Harf",
     faceFailed: "Kaydedilemedi: sunucu yanıt vermedi.",
+    faceListsFailed: "Yayımladığınız listeler yüklenemedi.",
     privacyTitle: "Gizlilik",
     signOutNote:
       "Listelerin hesabında ve bu tarayıcıda kalır, yeniden giriş yapana kadar gizli olur. Oturum kapalıyken yalnızca hesapsız yapılan listeleri görürsün.",
@@ -811,6 +812,12 @@ const tr: Translation = {
     takeDownBody: "Siteden kalkar ve bağlantısı artık çalışmaz. Listelerin olduğu gibi kalır.",
     takingDown: "Kaldırılıyor…",
     takenDown: "“{title}” yayından kaldırıldı",
+    mergeFind: "Başka bir konuyla birleştir",
+    houseStaleTitle: "“{title}” burada düzenlediğinizden beri değişti",
+    houseStaleBody:
+      "Olduğu gibi açarsanız göndermediğiniz değişiklikler kaybolur. Taslağınızda hâlâ duruyorlar, ama ondan güncellemek eski listeyi geri getirir.",
+    houseStaleDraft: "Taslağımı aç",
+    houseStaleFresh: "Olduğu gibi aç",
   },
   sections: {
     followers: { one: "{n} takipçi", other: "{n} takipçi" },

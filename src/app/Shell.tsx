@@ -22,7 +22,7 @@ import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import { PageTitleContext, TITLE_AFTER_PX } from "./pageTitle";
 import { useScrollCatchUp } from "./scrollCatchUp";
-import { useSession } from "./session";
+import { useRedirectFailed, useSession } from "./session";
 import "./Shell.css";
 
 const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
@@ -174,7 +174,10 @@ function ScrollCatchUp() {
 export function Shell() {
   const { account, signIn } = useSession();
   const [seen] = useState(() => lastSeen());
-  const [signing, setSigning] = useState<"idle" | "busy" | "failed" | "inApp">("idle");
+  // Nothing pressed here yet: a sign-in that came back from its redirect failed speaks instead.
+  const [pressed, setSigning] = useState<"idle" | "busy" | "failed" | "inApp" | null>(null);
+  const redirectFailed = useRedirectFailed();
+  const signing = pressed ?? (redirectFailed ? "failed" : "idle");
 
   // On a phone the list's heading scrolls away under the tray's work; once it
   // has, the app bar says what the page is instead of the brand.

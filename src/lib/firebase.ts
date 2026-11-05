@@ -39,8 +39,17 @@ export function getFirebaseAuth(): Auth {
   return auth;
 }
 
+/**
+ * How long an upload keeps retrying before it fails. The SDK's own is ten
+ * minutes, all of them with the new face already in the header and nothing
+ * said; a minute is long enough for a picture over a slow line.
+ */
+export const UPLOAD_RETRY_MS = 60_000;
+
 export function getFirebaseStorage(): FirebaseStorage {
-  return getStorage(getFirebaseApp());
+  const storage = getStorage(getFirebaseApp());
+  storage.maxUploadRetryTime = UPLOAD_RETRY_MS;
+  return storage;
 }
 
 function appCheckFor(env: Env): AppCheck | null {

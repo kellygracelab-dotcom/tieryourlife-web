@@ -5,7 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { ListSummary, PublishedList } from "../../api/types";
 import { memoryStore, type KeyValueStore } from "../../lib/storage";
-import { houseBoardsOf, houseLinkOf, linkToHouse } from "../boards/houseList";
+import {
+  hasUnsentEdits,
+  houseBoardsOf,
+  houseLinkOf,
+  linkToHouse,
+  markHouseSent,
+} from "../boards/houseList";
 import {
   addToPool,
   itemsIn,
@@ -367,9 +373,10 @@ describe("HousePane: made and changed on a board", () => {
   });
 
   it("lets a board go stale once the list changed elsewhere, and opens the list as it stands", async () => {
-    // Edited here before the list was filled out somewhere else.
+    // Edited here before the list was filled out somewhere else, and sent then.
     houseRepository.save(readyBoard("mine", "Ramen, my old edit", Date.UTC(2026, 9, 29)));
     linkToHouse("mine", "l1", links);
+    markHouseSent("mine", Date.UTC(2026, 9, 29), links);
     const router = open();
     await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
     expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
@@ -379,6 +386,44 @@ describe("HousePane: made and changed on a board", () => {
     const [fresh] = houseRepository.all();
     expect(fresh?.title).toBe("Best ramen");
     expect(router.state.location.pathname).toBe(`/b/${fresh?.uid}`);
+  });
+
+  it("asks before a list changed elsewhere drops edits this device has not sent", async () => {
+    houseRepository.save(readyBoard("mine", "Ramen, my old edit", Date.UTC(2026, 9, 29)));
+    linkToHouse("mine", "l1", links);
+    markHouseSent("mine", Date.UTC(2026, 9, 28), links);
+    const router = open();
+    const edit = async () =>
+      userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
+    await edit();
+    const ask = screen.getByRole("alertdialog", {
+      name: "“Best ramen” changed since you edited it here",
+    });
+    expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(houseRepository.get("mine")).not.toBeNull();
+    expect(deps.loadList).not.toHaveBeenCalled();
+
+    await edit();
+    await userEvent.click(screen.getByRole("button", { name: "Open my draft" }));
+    expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
+      "/b/mine?house=l1",
+    );
+    expect(houseRepository.get("mine")?.title).toBe("Ramen, my old edit");
+  });
+
+  it("opens the list as it stands over unsent edits only when asked to", async () => {
+    houseRepository.save(readyBoard("mine", "Ramen, my old edit", Date.UTC(2026, 9, 29)));
+    linkToHouse("mine", "l1", links);
+    open();
+    await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "Open it as it stands" }));
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(houseRepository.get("mine")).toBeNull();
+    const [fresh] = houseRepository.all();
+    expect(fresh?.title).toBe("Best ramen");
+    // Made from the list just now: nothing of it is unsent.
+    expect(hasUnsentEdits(fresh!, links)).toBe(false);
   });
 
   it("says so when the list did not come, and drops a list that is gone", async () => {
@@ -456,6 +501,23 @@ describe("HousePane: made and changed on a board", () => {
     });
     expect(await screen.findByText("Translations saved")).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("asks before Escape or a click outside throws translations away", async () => {
+    open();
+    await userEvent.click(
+      within(await row("Best ramen")).getByRole("button", { name: "Translations" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(await within(dialog).findByLabelText("Miso"), "Мисо");
+    await userEvent.keyboard("{Escape}");
+    expect(within(dialog).getByText("Discard your changes?")).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Keep editing" }));
+    expect(within(dialog).getByLabelText("Miso")).toHaveValue("Мисо");
+    await userEvent.click(dialog.parentElement!);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Discard" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(deps.saveTranslations).not.toHaveBeenCalled();
   });
 
   it("stays open and says so when the words could not be saved", async () => {

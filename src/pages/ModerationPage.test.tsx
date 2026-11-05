@@ -167,6 +167,42 @@ describe("ModerationPage", () => {
     expect(await screen.findByText("Taken down. someone banned for a month.")).toBeInTheDocument();
   });
 
+  it("takes the keyboard into the ban panel and back out of it", async () => {
+    load.mockResolvedValue({ reports: [queued("l1")] });
+    open();
+    const takeIt = await screen.findByRole("button", { name: "Take it down" });
+    takeIt.focus();
+    await userEvent.keyboard("{Enter}");
+    const panel = screen.getByRole("group", { name: "Take it down. Ban the author?" });
+    expect(within(panel).getByRole("button", { name: "No ban" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("group", { name: "Take it down. Ban the author?" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Take it down" })).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    within(screen.getByRole("group", { name: "Take it down. Ban the author?" }))
+      .getByRole("button", { name: "Cancel" })
+      .focus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Take it down" })).toHaveFocus();
+  });
+
+  it("hands the focus of a decided card to the one that takes its place", async () => {
+    load.mockResolvedValue({
+      reports: [queued("l1", { hidden: false }), queued("l2", { hidden: false })],
+    });
+    leaveUp.mockResolvedValue(undefined);
+    open();
+    const [first] = await screen.findAllByRole("button", { name: "Leave it up" });
+    first!.focus();
+    await userEvent.keyboard("{Enter}");
+    await screen.findByText("Left up. Reports no longer hide it.");
+    expect(screen.getByRole("heading", { name: "List l2" })).toHaveFocus();
+    screen.getByRole("button", { name: "Leave it up" }).focus();
+    await userEvent.keyboard("{Enter}");
+    await screen.findByText("Nothing to review");
+    expect(screen.getByText("Nothing waiting")).toHaveFocus();
+  });
+
   it("names a decision that could not be saved and keeps the card", async () => {
     load.mockResolvedValue({ reports: [queued("l1")] });
     leaveUp.mockRejectedValue(new ApiFailure({ kind: "unavailable" }));

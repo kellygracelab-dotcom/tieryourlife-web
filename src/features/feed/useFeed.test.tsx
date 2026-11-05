@@ -68,6 +68,18 @@ describe("useFeed", () => {
     expect(shown()).toHaveTextContent("z|-|idle");
   });
 
+  it("does not keep which lists were the reader's own", async () => {
+    const memory = { recall: vi.fn(() => null), keep: vi.fn() };
+    const own = { ...summary("a"), mine: true };
+    function Kept() {
+      useFeed(popular, async () => ({ lists: [own], nextCursor: null }), memory);
+      return null;
+    }
+    render(<Kept />);
+    await vi.waitFor(() => expect(memory.keep).toHaveBeenCalled());
+    expect(memory.keep.mock.calls[0]?.[1].lists[0]).not.toHaveProperty("mine");
+  });
+
   it("never keeps somebody's Following feed", async () => {
     const following: FeedQuery = { following: true };
     const { unmount } = render(<Probe query={following} load={async () => page(["a"])} />);
@@ -159,6 +171,12 @@ describe("readRememberedPage", () => {
   it("gives back a page a card can be drawn from", () => {
     const kept = { lists: [summary("a")], next: "c1" };
     expect(readRememberedPage(JSON.parse(JSON.stringify(kept)))).toEqual(kept);
+  });
+
+  // On a shared browser the next person would see somebody else's anonymous list as theirs.
+  it("keeps nobody's own lists: the flag was said to whoever was signed in then", () => {
+    const own = { ...summary("a"), anonymous: true, mine: true };
+    expect(readRememberedPage({ lists: [own], next: null })?.lists[0]).not.toHaveProperty("mine");
   });
 
   it("takes anything else for nothing, so a bad copy cannot break Home on every visit", () => {

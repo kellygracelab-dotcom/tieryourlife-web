@@ -88,6 +88,44 @@ export function linkToHouse(
 export function unlinkFromHouse(uid: string, store: KeyValueStore = localStorageStore): void {
   const { [uid]: _gone, ...rest } = linksIn(store);
   store.write(HOUSE_BOARDS_KEY, JSON.stringify(rest));
+  const { [uid]: _sent, ...others } = sentIn(store);
+  store.write(HOUSE_SENT_KEY, JSON.stringify(others));
+}
+
+/**
+ * Each house board's own edit time when it last matched its list: made from
+ * it, or sent over it. Both are this device's clock, so a later edit is one
+ * not sent yet whatever the server's clock says.
+ */
+export const HOUSE_SENT_KEY = "tyl:houseSent";
+
+function sentIn(store: KeyValueStore): Record<string, number> {
+  try {
+    const parsed: unknown = JSON.parse(store.read(HOUSE_SENT_KEY) ?? "{}");
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        (entry): entry is [string, number] => typeof entry[1] === "number",
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+/** The board matches its list as it stands at this edit time: made from it, or sent over it. */
+export function markHouseSent(
+  uid: string,
+  editedAt: number,
+  store: KeyValueStore = localStorageStore,
+): void {
+  store.write(HOUSE_SENT_KEY, JSON.stringify({ ...sentIn(store), [uid]: editedAt }));
+}
+
+/** Whether the board holds edits its list has not had; one never marked is taken to. */
+export function hasUnsentEdits(board: Board, store: KeyValueStore = localStorageStore): boolean {
+  const sent = sentIn(store)[board.uid];
+  return sent === undefined || board.editedAt > sent;
 }
 
 /**

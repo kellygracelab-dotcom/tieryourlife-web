@@ -110,6 +110,7 @@ const ptBR: Translation = {
     faceLetter: "Apenas a letra",
     faceLetterCaption: "Letra",
     faceFailed: "Não foi possível salvar: o servidor não respondeu.",
+    faceListsFailed: "Não foi possível carregar suas listas publicadas.",
     privacyTitle: "Privacidade",
     signOutNote:
       "Suas listas ficam na sua conta e neste navegador, ocultas até você entrar de novo. Fora da conta, você vê só as listas feitas sem conta.",
@@ -815,6 +816,12 @@ const ptBR: Translation = {
     takeDownBody: "Ela sai do site e o link para de funcionar. Suas listas ficam como estão.",
     takingDown: "Removendo…",
     takenDown: "“{title}” removida",
+    mergeFind: "Mesclar com outro tema",
+    houseStaleTitle: "“{title}” mudou desde que você a editou aqui",
+    houseStaleBody:
+      "Abrir como está descarta as alterações que você não enviou. Seu rascunho ainda as tem, mas atualizar a partir dele traz de volta a lista mais antiga.",
+    houseStaleDraft: "Abrir meu rascunho",
+    houseStaleFresh: "Abrir como está",
   },
   sections: {
     followers: { one: "{n} seguidor", many: "{n} seguidores", other: "{n} seguidores" },

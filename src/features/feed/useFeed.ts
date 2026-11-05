@@ -51,11 +51,18 @@ const isCardable = (list: unknown): list is ListSummary =>
   isStrings(list.previewImages) &&
   isStrings(list.tierColors);
 
+/**
+ * A list as anybody may keep it: `mine` was said to whoever was signed in
+ * then, and on a shared browser the next person would wear somebody else's
+ * anonymous list as their own until the fresh page came.
+ */
+const nobodys = ({ mine: _mine, ...list }: ListSummary): ListSummary => list;
+
 /** A kept first page as this site can draw it, or nothing. */
 export function readRememberedPage(kept: unknown): RememberedPage | null {
   if (!isRecord(kept) || !Array.isArray(kept.lists) || !kept.lists.every(isCardable)) return null;
   if (kept.next !== null && typeof kept.next !== "string") return null;
-  return { lists: kept.lists, next: kept.next };
+  return { lists: kept.lists.map(nobodys), next: kept.next };
 }
 
 /** The last few feeds' first pages, on this device. */
@@ -112,7 +119,7 @@ export function useFeed(
     const settle = (next: FeedState) => current && setLoaded({ key, attempt, state: next });
     load(stable).then(
       (page) => {
-        kept?.keep(key, { lists: page.lists, next: page.nextCursor });
+        kept?.keep(key, { lists: page.lists.map(nobodys), next: page.nextCursor });
         settle({
           status: "ready",
           lists: page.lists,
