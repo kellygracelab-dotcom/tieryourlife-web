@@ -585,7 +585,7 @@
 .tiers__custom-theme {
   flex-basis: 100%;
   font: 400 11px/14px var(--font);
-  color: var(--ink-quiet);
+  color: var(--ink-faint);
 }
 
 /* Hues across, tones down: light at the top, deep at the foot. */
@@ -740,7 +740,7 @@
 
 .tier-dialog__theme-name {
   font: 400 11px/14px var(--font);
-  color: var(--ink-quiet);
+  color: var(--ink-faint);
 }
 
 /*

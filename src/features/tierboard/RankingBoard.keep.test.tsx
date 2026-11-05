@@ -79,6 +79,9 @@ describe("Keep this ranking", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Keep the link only" }));
     expect(dialog()).toBeNull();
+    // Finish went once the ranking was kept: the keyboard carries on in the result.
+    expect(document.activeElement).not.toBe(document.body);
+    expect(document.activeElement?.closest(".result")).not.toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Save to my account" }));
     expect(dialog()).toBeInTheDocument();

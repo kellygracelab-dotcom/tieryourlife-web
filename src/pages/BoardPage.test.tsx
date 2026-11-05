@@ -256,11 +256,14 @@ describe("BoardPage", () => {
       "Films I make people watch",
     );
     expect(repository.get("films")?.title).toBe("Films I make people watch");
+    // The field goes, and the keyboard carries on from the pencil rather than the page's top.
+    expect(screen.getByRole("button", { name: "Edit list name" })).toHaveFocus();
 
     // Escape puts the old name back; an empty name is Untitled list.
     await userEvent.click(screen.getByRole("button", { name: "Edit list name" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Title" }), "x{Escape}");
     expect(repository.get("films")?.title).toBe("Films I make people watch");
+    expect(screen.getByRole("button", { name: "Edit list name" })).toHaveFocus();
     await userEvent.click(screen.getByRole("button", { name: "Edit list name" }));
     await userEvent.clear(screen.getByRole("textbox", { name: "Title" }));
     await userEvent.keyboard("{Enter}");
@@ -285,6 +288,8 @@ describe("BoardPage", () => {
     const menu = within(screen.getByRole("menu", { name: "Climax" }));
     await userEvent.click(menu.getByRole("menuitem", { name: "Remove from list" }));
     expect(screen.queryByRole("button", { name: "Climax" })).toBeNull();
+    // The focus went with the card's menu; it lands on the next card or on Undo, not the page.
+    expect(document.activeElement).not.toBe(document.body);
     // Gone from the board, not to the trash: only lists go there.
     expect(repository.get("films")?.items.some((item) => item.title === "Climax")).toBe(false);
     const notice = screen.getByRole("status");
@@ -427,6 +432,8 @@ describe("BoardPage: tiers and settings", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Tier Top removed · 1 card back in the pool",
     );
+    // The tier's pencil went with it: the keyboard is handed the way back.
+    expect(within(screen.getByRole("status")).getByRole("button", { name: "Undo" })).toHaveFocus();
     await userEvent.click(within(screen.getByRole("status")).getByRole("button", { name: "Undo" }));
     expect(kept().label).toBe("Top");
   });

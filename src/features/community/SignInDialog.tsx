@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { createPortal } from "react-dom";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { InAppNote } from "../../ui/InAppNote";
+import { useModal } from "../../ui/useModal";
 
 interface SignInDialogProps {
   open: boolean;
@@ -17,23 +18,25 @@ interface SignInDialogProps {
  * The small dialog before something that needs an account: one reason, one
  * button. It lies on the body, so a sticky header that asks it cannot hold it.
  */
-export function SignInDialog({ open, busy, title, body, onSignIn, onCancel }: SignInDialogProps) {
-  const primary = useRef<HTMLButtonElement>(null);
+export function SignInDialog({ open, ...props }: SignInDialogProps) {
+  return open ? createPortal(<Asking {...props} />, document.body) : null;
+}
 
-  useEffect(() => {
-    if (!open) return;
-    primary.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busy) onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, busy, onCancel]);
+/** The dialog itself, mounted while it is open, so the focus goes in with it and comes back after. */
+function Asking({ busy, title, body, onSignIn, onCancel }: Omit<SignInDialogProps, "open">) {
+  const box = useRef<HTMLDivElement>(null);
+  useModal(
+    box,
+    () => {
+      if (!busy) onCancel();
+    },
+    ".signin__google",
+  );
 
-  if (!open) return null;
-  return createPortal(
+  return (
     <div className="scrim" onClick={busy ? undefined : onCancel}>
       <div
+        ref={box}
         className="dialog dialog--narrow"
         role="dialog"
         aria-modal="true"
@@ -50,9 +53,8 @@ export function SignInDialog({ open, busy, title, body, onSignIn, onCancel }: Si
             {strings.follow.cancel}
           </Button>
           <button
-            ref={primary}
             type="button"
-            className="btn btn--filled"
+            className="btn btn--filled signin__google"
             onClick={onSignIn}
             disabled={busy}
           >
@@ -60,7 +62,6 @@ export function SignInDialog({ open, busy, title, body, onSignIn, onCancel }: Si
           </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }

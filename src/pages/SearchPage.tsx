@@ -1,4 +1,5 @@
 import { approvedOnly, sectionName, sectionPath, sectionsNamed } from "../features/sections/model";
+import { usePageTitle } from "../app/pageTitle";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import type { Topic } from "../api/sections";
@@ -126,6 +127,9 @@ export function SearchPage({
     if (filters.q !== typed.trim()) setTyped(filters.q);
   }
   const searching = filters.q.length >= MIN_QUERY;
+  usePageTitle(searching ? fill(strings.search.title, { q: filters.q }) : strings.search.browse, {
+    inBar: false,
+  });
 
   // A search sent is a step Back returns from; a chip only narrows it, in place.
   const set = (next: Partial<Filters>) => setParams(write({ ...filters, ...next }));
@@ -183,7 +187,8 @@ export function SearchPage({
   return (
     <section className="search">
       <SearchBox value={typed} onChange={setTyped} onSubmit={(q) => set({ q })} autoFocus />
-      <div className="search__head">
+      {/* Said aloud as it changes, what was asked and how much came: the focus stays in the box. */}
+      <div className="search__head" role="status">
         <h1 className="search__title">
           {searching ? fill(strings.search.title, { q: filters.q }) : strings.search.browse}
         </h1>

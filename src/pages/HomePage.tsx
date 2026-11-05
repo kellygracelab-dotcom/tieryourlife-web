@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePageTitle } from "../app/pageTitle";
 import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import { useSession } from "../app/session";
 import { AppCard } from "../features/android/AppCard";
@@ -94,6 +95,7 @@ export function HomePage({
   unfollow,
   store,
 }: HomePageProps) {
+  usePageTitle(tab === "following" ? strings.sections.tabFollowing : null, { inBar: false });
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();

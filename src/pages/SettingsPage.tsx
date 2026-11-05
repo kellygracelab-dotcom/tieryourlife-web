@@ -31,6 +31,7 @@ import { InAppNote } from "../ui/InAppNote";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import "./SettingsPage.css";
+import { usePageTitle } from "../app/pageTitle";
 
 export type { Face, LoadLists, MakeFace, UploadFace } from "../features/account/FaceSection";
 export type { Rename } from "../features/account/NameSection";
@@ -206,6 +207,7 @@ export function SettingsPage({
   refreshAuthor = refreshPublishedAuthor,
   erase = eraseMyAccount,
 }: SettingsPageProps) {
+  usePageTitle(strings.settings.title, { inBar: false });
   const { account, signIn, signOut, refresh } = useSession();
   const showFace = useShowFace();
   const navigate = useNavigate();

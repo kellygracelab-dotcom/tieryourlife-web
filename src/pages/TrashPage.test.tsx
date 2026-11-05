@@ -107,6 +107,8 @@ describe("TrashPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Restore Films" }));
     expect(repository.get("films")?.deletedAt).toBeNull();
     expect(screen.queryByText("Films")).toBeNull();
+    // The row went with the button pressed in it; the next row takes the focus.
+    expect(document.activeElement).toHaveAccessibleName(/^Restore (Albums|Books)$/);
 
     await userEvent.click(screen.getByRole("button", { name: "Remove Albums permanently" }));
     const dialog = screen.getByRole("dialog");
@@ -119,6 +121,7 @@ describe("TrashPage", () => {
       within(screen.getByRole("dialog")).getByRole("button", { name: "Remove" }),
     );
     expect(repository.get("albums")).toBeNull();
+    expect(screen.getByRole("button", { name: "Restore Books" })).toHaveFocus();
 
     await userEvent.click(screen.getByLabelText("More options"));
     await userEvent.click(screen.getByRole("button", { name: "Empty trash" }));
@@ -131,6 +134,7 @@ describe("TrashPage", () => {
     expect(repository.get("books")).toBeNull();
     expect(repository.get("films")).not.toBeNull();
     expect(screen.getByText("Nothing in the trash")).toBeInTheDocument();
+    expect(document.activeElement).toHaveClass("trash__back");
   });
 
   it("asks nothing of the backend for a board that was never published", async () => {
@@ -157,6 +161,7 @@ describe("TrashPage", () => {
     await removeForGood("Albums");
     expect(unpublish).toHaveBeenLastCalledWith("pub-a");
     expect(repository.get("albums")).toBeNull();
+    expect(screen.getByRole("button", { name: "Restore Books" })).toHaveFocus();
     await removeForGood("Books");
     expect(unpublish).toHaveBeenLastCalledWith("pub-b");
     expect(repository.get("books")).toBeNull();

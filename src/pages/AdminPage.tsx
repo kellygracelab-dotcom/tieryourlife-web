@@ -16,6 +16,7 @@ import type { IconName } from "../ui/icons";
 import { PaneLoading } from "../features/admin/PaneLoading";
 import { ModerationPage } from "./ModerationPage";
 import "../features/admin/admin.css";
+import { usePageTitle } from "../app/pageTitle";
 
 export const ADMIN_PATH = "/admin";
 
@@ -83,6 +84,7 @@ function PaneBody({ pane, adminRole: role }: { pane: Pane; adminRole: AdminRole 
  * backend checks every action again, so the address alone opens nothing.
  */
 export function AdminPage() {
+  usePageTitle(strings.admin.title, { inBar: false });
   const { pane: asked } = useParams();
   const role = useAdminRole();
   const width = useWidthClass();

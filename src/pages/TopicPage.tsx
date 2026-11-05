@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { PageTitle } from "../app/pageTitle";
 import { Link, Navigate, useParams } from "react-router";
 import type { Topic } from "../api/sections";
 import type { FeedSort } from "../api/types";
@@ -115,6 +116,7 @@ function TopicContent({ section, topic, feed, sort, onSort, topics }: TopicConte
             <Icon name={section.icon} />
             {section.name}
           </span>
+          <PageTitle title={topic.name} inBar={false} />
           <h1 className="section-head__name">{topic.name}</h1>
           {waiting ? (
             <span className="section-head__pill">

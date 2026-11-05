@@ -258,7 +258,9 @@ describe("ListPage report and hide", () => {
     await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
     await userEvent.click(screen.getByRole("button", { name: "Hide instead" }));
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
-    const snackbar = screen.getAllByRole("status").find((el) => el.className === "snackbar")!;
+    const snackbar = screen
+      .getAllByRole("status")
+      .find((el) => el.className === "snackbar-region")!;
     expect(snackbar).toHaveTextContent("Hidden for you");
     await userEvent.click(within(snackbar).getByRole("button", { name: "Undo" }));
     expect(screen.queryByRole("heading", { level: 2, name: /You hid/ })).toBeNull();

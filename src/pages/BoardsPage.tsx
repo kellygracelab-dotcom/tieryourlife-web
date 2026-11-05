@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import type { Category } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
@@ -262,6 +262,30 @@ export function BoardsPage({
     setSelected(new Set());
   };
 
+  // The control pressed to start or end choosing goes as it is pressed: the
+  // focus moves to the first list to choose, or back to the chip that starts
+  // it, rather than falling to the page.
+  const page = useRef<HTMLElement>(null);
+  const focusNext = useRef<"firstList" | "chip" | null>(null);
+  useEffect(() => {
+    const where = focusNext.current;
+    if (where === null) return;
+    focusNext.current = null;
+    const active = document.activeElement;
+    if (active !== null && active !== document.body) return;
+    page.current
+      ?.querySelector<HTMLElement>(where === "chip" ? ".boards__choose" : ".boards__group button")
+      ?.focus();
+  });
+  const startSelection = () => {
+    focusNext.current = "firstList";
+    setSelecting(true);
+  };
+  const exitSelection = () => {
+    focusNext.current = "chip";
+    leaveSelection();
+  };
+
   // Public copies come down first, as on the phone: a board whose copy could
   // not be taken down stays, and a notice after the others' Undo says so.
   const deleteSelected = async () => {
@@ -276,6 +300,8 @@ export function BoardsPage({
         return board === null ? [] : [trashBoard(unpublished(board, at), at)];
       }),
     );
+    // Undo takes the focus when there is one; without it, the chip does.
+    if (trashed.length === 0) focusNext.current = "chip";
     setNotices([
       ...(trashed.length > 0 ? [trashedNotice(trashed)] : []),
       ...(trashed.length < chosen.length ? [{ text: strings.trash.stillPublic }] : []),
@@ -283,7 +309,7 @@ export function BoardsPage({
   };
 
   return (
-    <section className="boards">
+    <section className="boards" ref={page}>
       <header className="boards__head">
         <div className="boards__text">
           <h1 className="boards__title">{strings.boards.title}</h1>
@@ -383,7 +409,7 @@ export function BoardsPage({
                   </button>
                 </div>
                 {!selecting && (
-                  <Chip icon="check" onClick={() => setSelecting(true)}>
+                  <Chip icon="check" className="boards__choose" onClick={startSelection}>
                     {strings.boards.deleteSelected}
                   </Chip>
                 )}
@@ -412,7 +438,7 @@ export function BoardsPage({
                 type="button"
                 className="boards__exit"
                 aria-label={strings.boards.exitSelection}
-                onClick={leaveSelection}
+                onClick={exitSelection}
               >
                 <Icon name="close" />
               </button>

@@ -337,7 +337,9 @@
 
 /* Below 840 the bar has no room for the words next to the search: the button is a plus. */
 @media (max-width: 839px) {
-  .top__make {
+  /* Above .btn's padding whatever order the build links the two sheets in:
+     with it, the round button left the plus 8px and showed a minus. */
+  .top__actions .top__make {
     justify-content: center;
     width: 40px;
     min-height: 40px;
@@ -381,6 +383,11 @@
 }
 
 /* A list page follows the window: the board grows with it (capped at 1760 in the page's own rules). */
+/* It takes the focus only so a new page starts the keyboard there; a ring round the whole page says nothing. */
+.shell__main:focus {
+  outline: none;
+}
+
 .shell__main:has(.list-page) {
   max-width: none;
 }

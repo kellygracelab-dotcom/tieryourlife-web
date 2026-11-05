@@ -21,6 +21,7 @@ import { Menu } from "../ui/Menu";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./MePage.css";
+import { usePageTitle } from "../app/pageTitle";
 
 export type LoadMine = () => Promise<MyRankings>;
 export type LoadLists = () => Promise<{ lists: MyList[] }>;
@@ -387,6 +388,7 @@ export function MePage({
   store = sectionsStore,
   repository = site,
 }: MePageProps) {
+  usePageTitle(strings.me.lists, { inBar: false });
   const { account, signIn } = useSession();
   return (
     <section className="me">
