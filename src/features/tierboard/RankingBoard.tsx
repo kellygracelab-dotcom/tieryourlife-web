@@ -26,6 +26,7 @@ import { downloadShare, type Share } from "../ranking/share";
 import { errorOf } from "../../api/errors";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { isCovered } from "../../ui/covered";
 import { Icon } from "../../ui/Icon";
 import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
@@ -569,6 +570,14 @@ export function RankingBoard({
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
+      // Keys pressed in a dialog or a menu are theirs, not the board's behind them.
+      if (isCovered(section.current)) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        return dispatch({ type: "undo" });
+      }
+      // Alt+1 or Ctrl+1 belongs to the browser or the system, not to the board.
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key === "/") {
         const box = section.current?.querySelector<HTMLInputElement>(".pool__search");
         // jsdom has no layout and no checkVisibility; there the box counts as shown.
@@ -592,10 +601,6 @@ export function RankingBoard({
         if (index < 0 || index >= row.length) return;
         event.preventDefault();
         return dispatch({ type: "place", item: selected, tier, index });
-      }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
-        event.preventDefault();
-        return dispatch({ type: "undo" });
       }
       const tier = tierForKey(event.key, list.tiers.length);
       if (tier !== null) placeSelected(tier);

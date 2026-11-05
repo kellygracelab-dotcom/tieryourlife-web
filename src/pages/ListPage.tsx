@@ -449,6 +449,7 @@ function OpenList({
               unpublish={unpublish}
               notify={setNotice}
               rankings={rankingsEntry}
+              repository={repository}
             />
           ) : (
             <>

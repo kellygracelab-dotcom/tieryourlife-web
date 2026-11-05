@@ -912,9 +912,10 @@
     min-width: 0;
   }
 
-  /* The field's label and the upload's word stay for screen readers only. */
+  /* The field's label and the upload's and paste's words stay for screen readers only. */
   .pool__tools .editor__label,
-  .pool__tools .cards__upload .btn > span:not(.btn__icon) {
+  .pool__tools .cards__upload .btn > span:not(.btn__icon),
+  .pool__tools .cards__paste:not(.cards__paste--open) .btn > span:not(.btn__icon) {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -940,9 +941,34 @@
     border-radius: 18px;
   }
 
-  /* The pool's head is one row; many names at once are pasted in the editor. */
+  /* The pool's head is one row: Paste a list is an icon after Upload, and its
+     box, once open, hangs from the row of tools as the answers do. */
   .pool__tools .cards__paste {
-    display: none;
+    flex: none;
+    order: 2;
+  }
+
+  .pool__tools .cards__paste--open {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 5;
+    padding: 12px;
+    border-radius: var(--radius-card);
+    background: var(--paper);
+    box-shadow: var(--shadow-up);
+  }
+
+  .pool__tools .cards__paste:not(.cards__paste--open) .btn {
+    justify-content: center;
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    border-radius: 18px;
+  }
+
+  .pool__tools .cards__paste .btn .btn__icon {
+    font-size: 18px;
   }
 
   /* Upload images is its arrow in a filled blue circle, the one coloured control in the
@@ -1010,10 +1036,20 @@
     position: static;
   }
 
-  .ranking:not(.ranking--under) .pool__tools .cards__found {
+  .ranking:not(.ranking--under) .pool__tools .cards__found,
+  .ranking:not(.ranking--under) .pool__tools .cards__paste--open {
     top: calc(100% + 4px);
     inset-inline: auto 0;
     width: min(440px, calc(100vw - 32px));
+  }
+
+  /* In the dock the box opens upward, over the board. */
+  .ranking--under .pool__tools {
+    position: relative;
+  }
+
+  .ranking--under .pool__tools .cards__paste--open {
+    bottom: calc(100% + 4px);
   }
 
   .ranking--under .pool__tools {

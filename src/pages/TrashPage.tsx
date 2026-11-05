@@ -75,7 +75,7 @@ export function TrashPage({
   const restore = (entry: TrashEntry) => {
     const board = repository.get(entry.board.uid);
     if (board === null) return;
-    repository.save(restoreBoard(board, now()));
+    repository.save(restoreBoard(board));
   };
 
   const remove = async (entry: TrashEntry) => {

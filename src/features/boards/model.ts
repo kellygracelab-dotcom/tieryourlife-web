@@ -458,11 +458,13 @@ export function restoreItem(board: Board, itemUid: string, now: number): Board {
   return touched(tidy({ ...board, items: [...others, ...renumbered(row)] }), now);
 }
 
+// The trash and back leave the last edit as it was, as the phone's do: a list
+// restored or undone goes back to its place in Recent, not to the top.
 export const trashBoard = (board: Board, now: number): Board =>
-  board.deletedAt === null ? touched({ ...board, deletedAt: now }, now) : board;
+  board.deletedAt === null ? { ...board, deletedAt: now } : board;
 
-export const restoreBoard = (board: Board, now: number): Board =>
-  board.deletedAt === null ? board : touched({ ...board, deletedAt: null }, now);
+export const restoreBoard = (board: Board): Board =>
+  board.deletedAt === null ? board : { ...board, deletedAt: null };
 
 /** S, A, B, C, D, then E, F, … past the letters, a number. */
 export function nextTierLabel(board: Board): string {

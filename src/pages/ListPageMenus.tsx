@@ -4,7 +4,9 @@ import type { ReportReason } from "../api/community";
 import { errorOf, type ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
 import { useSession } from "../app/session";
+import { boards as site } from "../features/boards/owners";
 import type { BoardsRepository } from "../features/boards/repository";
+import { forgetPublished } from "../features/boards/takeDown";
 import { SaveToMineDialog } from "../features/boards/SaveToMineDialog";
 import {
   useSaveToMine,
@@ -291,27 +293,32 @@ type Deleting =
   | { status: "failed"; error: ApiError };
 
 /**
- * The author's own menu: the link, and taking the list down. A list made on
- * the site has no other copy, so taking it down is deleting it, and the word
- * says so; a board on the phone is the phone's and stays. "Publish as my
- * list", the owner's other line elsewhere, has nothing to do on one's own list.
+ * The author's own menu: the link, and taking the list down. The board it was
+ * published from stays, here and on the phone, and is its own again. "Publish
+ * as my list", the owner's other line elsewhere, has nothing to do on one's
+ * own list.
  */
 function AuthorMenu({
   list,
   unpublish,
   notify,
   rankings,
+  repository,
 }: {
   list: PublishedList;
   unpublish: Unpublish;
   notify: Notify;
   rankings: RankingsEntry | null;
+  repository: BoardsRepository;
 }) {
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState<Deleting>({ status: "closed" });
   const busy = deleting.status === "busy";
 
-  const gone = () => void navigate("/me");
+  const gone = () => {
+    forgetPublished(list.id, repository, Date.now());
+    void navigate("/me");
+  };
   const confirm = () => {
     setDeleting({ status: "busy" });
     unpublish(list.id).then(gone, (reason: unknown) => {
@@ -373,11 +380,14 @@ export function AuthorTools({
   unpublish,
   notify,
   rankings = null,
+  repository = site,
 }: {
   list: PublishedList;
   unpublish: Unpublish;
   notify: Notify;
   rankings?: RankingsEntry | null;
+  /** The boards one of which may have published the list. */
+  repository?: BoardsRepository;
 }) {
   return (
     <>
@@ -386,7 +396,13 @@ export function AuthorTools({
         <span>{strings.list.edit}</span>
       </Link>
       <CopyLinkButton list={list} />
-      <AuthorMenu list={list} unpublish={unpublish} notify={notify} rankings={rankings} />
+      <AuthorMenu
+        list={list}
+        unpublish={unpublish}
+        notify={notify}
+        rankings={rankings}
+        repository={repository}
+      />
     </>
   );
 }

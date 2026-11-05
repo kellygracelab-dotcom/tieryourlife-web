@@ -6,6 +6,7 @@ import { ApiFailure } from "../api/errors";
 import type { Ranking } from "../api/rank";
 import type { PublishedList } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
+import { BoardSyncContext, NOBODY, type BoardSyncControls } from "../features/boards/boardSync";
 import { itemsIn, liveItems, newBoard, poolTier, rankedTiers } from "../features/boards/model";
 import type { CopyBack } from "../features/boards/ownList";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
@@ -276,6 +277,51 @@ describe("NewBoardPage: one's own published list is changed on its board", () =>
     open({ path: "/b/new?list=abc", repository, load });
     expect(await arrivedAt()).toBe("/b/films");
     expect(load).not.toHaveBeenCalled();
+  });
+
+  it("waits for a new browser's first sync, which may bring the list's board", async () => {
+    const repository = boardsRepository(memoryStore());
+    const load = vi.fn(() => Promise.resolve(list));
+    const syncing: BoardSyncControls = {
+      ...NOBODY,
+      signedIn: true,
+      status: "syncing",
+      lastSyncedAt: null,
+    };
+    const router = createMemoryRouter(
+      [
+        { path: "/b/new", element: <NewBoardPage repository={repository} load={load} /> },
+        { path: "/b/:uid", element: <Arrived /> },
+      ],
+      { initialEntries: ["/b/new?list=abc"] },
+    );
+    const page = (sync: BoardSyncControls) => (
+      <SessionContext.Provider
+        value={{
+          account: me,
+          signIn: () => Promise.resolve({ kind: "cancelled" }),
+          signOut: () => Promise.resolve(),
+          refresh: () => undefined,
+        }}
+      >
+        <BoardSyncContext.Provider value={sync}>
+          <RouterProvider router={router} />
+        </BoardSyncContext.Provider>
+      </SessionContext.Provider>
+    );
+    const { rerender } = render(page(syncing));
+    expect(screen.getByText("Opening the list…")).toBeInTheDocument();
+    expect(load).not.toHaveBeenCalled();
+
+    // The sync brings the account's board of that list.
+    repository.save({
+      ...newBoard("acct", "Films", 1, () => `x${Math.random()}`),
+      publishedId: "abc",
+    });
+    rerender(page({ ...syncing, status: "idle", lastSyncedAt: 9 }));
+    expect(await arrivedAt()).toBe("/b/acct");
+    expect(load).not.toHaveBeenCalled();
+    expect(repository.all()).toHaveLength(1);
   });
 
   it("makes the board of a list published before boards, its own pictures brought over first", async () => {

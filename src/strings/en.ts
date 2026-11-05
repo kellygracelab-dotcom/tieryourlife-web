@@ -381,7 +381,7 @@ export const en = {
     delete: "Take it down",
     deleteTitle: "Take this list down?",
     deleteBody:
-      "“{title}” leaves the feed and its link stops working. Rankings people already made from it stay. The list on your phone stays on your phone.",
+      "“{title}” leaves the feed and its link stops working. Rankings people already made from it stay. Your board stays in Your lists.",
     keepIt: "Keep it",
     deleting: "Taking it down…",
     deleteFailed: "Could not take it down. Try again in a minute.",
@@ -554,10 +554,10 @@ export const en = {
     tabs: "Your account",
     lists: "Your public lists",
     listsFailed: "Could not load your public lists",
-    // A list made on the site has no other copy: taking it down deletes it, and the word says so.
+    // Taken down, the list leaves the feed; the board it was published from stays.
     remove: "Take it down",
     removeAsk:
-      "Take “{title}” down? It leaves the feed and its link stops working. Rankings people already made from it stay. The list on your phone stays on your phone.",
+      "Take “{title}” down? It leaves the feed and its link stops working. Rankings people already made from it stay. Your board stays in Your lists.",
     keepIt: "Keep it",
     countPublished: { one: "{n} published", other: "{n} published" },
     countRanked: { one: "{n} ranked", other: "{n} ranked" },
@@ -1038,6 +1038,8 @@ export const en = {
     boardTrashed: "“{name}” moved to the trash",
     notFound: "List not found.",
     notFoundBody: "It may have been deleted, or it lives on another device.",
+    inTrash: "“{name}” is in the trash.",
+    inTrashBody: "Restore it to rank and edit it again.",
     more: "More about this board",
     delete: "Delete board",
     trash: "Trash",

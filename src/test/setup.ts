@@ -7,7 +7,10 @@ afterEach(cleanup);
 // jsdom cannot scroll, and says so loudly every time the router asks it to.
 window.scrollTo = () => undefined;
 
-afterEach(() => window.localStorage.clear());
+afterEach(() => {
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+});
 
 // The site shows no board until Firebase has said who is here; a page test
 // has no Firebase, and its boards are a guest's from the start.

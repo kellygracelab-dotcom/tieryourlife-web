@@ -6,6 +6,9 @@ import type { MyRankings, RankingSummary } from "../api/rank";
 import { AccountTabs } from "../app/AccountTabs";
 import { useSession } from "../app/session";
 import { errorOf } from "../api/errors";
+import { boards as site } from "../features/boards/owners";
+import type { BoardsRepository } from "../features/boards/repository";
+import { forgetPublished } from "../features/boards/takeDown";
 import { sectionName } from "../features/sections/model";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import { useResource } from "../lib/useResource";
@@ -86,6 +89,8 @@ interface RowProps {
   remove: (entry: Entry) => Promise<void>;
   copy: Copy;
   notify: (notice: SnackbarNotice) => void;
+  /** Taken away: a list's board is its own again at once. */
+  onRemoved: (entry: Entry) => void;
   onGone: (entry: Entry) => void;
 }
 
@@ -93,7 +98,7 @@ interface RowProps {
  * One row for a list or a ranking. Taking it away is asked about in the row
  * itself: it is one thing, and the answer is a press away either way.
  */
-function Row({ entry, remove, copy, notify, onGone }: RowProps) {
+function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
   const [state, setState] = useState<RowState>({ status: "idle" });
   const isList = entry.kind === "list";
   const title = isList ? entry.list.title : entry.ranking.title;
@@ -105,6 +110,7 @@ function Row({ entry, remove, copy, notify, onGone }: RowProps) {
     : entry.ranking.imageUrl;
 
   const gone = () => {
+    onRemoved(entry);
     setState({ status: "gone" });
     notify({ text: isList ? strings.me.unpublished : strings.me.deleted });
     setTimeout(() => onGone(entry), COLLAPSE_MS);
@@ -227,9 +233,19 @@ interface MineProps {
   deleteRanking: DeleteRanking;
   copy: Copy;
   store: SectionsStore;
+  repository: BoardsRepository;
 }
 
-function Mine({ uid, load, loadLists, unpublish, deleteRanking, copy, store }: MineProps) {
+function Mine({
+  uid,
+  load,
+  loadLists,
+  unpublish,
+  deleteRanking,
+  copy,
+  store,
+  repository,
+}: MineProps) {
   const { sections } = useSections(store);
   // Published into a section of one's own still waiting, a list sits in the
   // one the proposal files under, and says where it goes once it is approved.
@@ -336,6 +352,9 @@ function Mine({ uid, load, loadLists, unpublish, deleteRanking, copy, store }: M
             remove={remove}
             copy={copy}
             notify={setNotice}
+            onRemoved={(left) => {
+              if (left.kind === "list") forgetPublished(left.list.id, repository, Date.now());
+            }}
             onGone={(left) => setGone((keys) => [...keys, left.key])}
           />
         ))}
@@ -355,6 +374,8 @@ interface MePageProps {
   deleteRanking?: DeleteRanking;
   copy?: Copy;
   store?: SectionsStore;
+  /** The boards one of which may have published a list taken down here. */
+  repository?: BoardsRepository;
 }
 
 export function MePage({
@@ -364,6 +385,7 @@ export function MePage({
   deleteRanking = removeRanking,
   copy = (text) => navigator.clipboard.writeText(text),
   store = sectionsStore,
+  repository = site,
 }: MePageProps) {
   const { account, signIn } = useSession();
   return (
@@ -390,6 +412,7 @@ export function MePage({
           deleteRanking={deleteRanking}
           copy={copy}
           store={store}
+          repository={repository}
         />
       )}
     </section>

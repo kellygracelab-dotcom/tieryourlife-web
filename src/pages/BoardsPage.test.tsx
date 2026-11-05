@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { addToPool, arrangeItems, liveItems, newBoard, type Board } from "../features/boards/model";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
+import { ApiFailure } from "../api/errors";
 import { memoryStore, type KeyValueStore } from "../lib/storage";
 import { BoardsPage, VIEW_KEY } from "./BoardsPage";
 
@@ -62,6 +63,7 @@ const open = (
   state?: unknown,
   store: KeyValueStore = memoryStore(),
   unpublish: (id: string) => Promise<void> = async () => undefined,
+  shelfStore: KeyValueStore = memoryStore(),
 ) => {
   const router = createMemoryRouter(
     [
@@ -72,6 +74,7 @@ const open = (
             repository={repository}
             now={() => 5000}
             store={store}
+            shelfStore={shelfStore}
             unpublish={unpublish}
           />
         ),
@@ -343,11 +346,100 @@ describe("BoardsPage", () => {
     await userEvent.click(
       within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
     );
-    expect(await screen.findByRole("status")).toHaveTextContent("Kept, not deleted");
+    // The two that went are said first, with their Undo; then why the third stayed.
+    expect(await screen.findByRole("status")).toHaveTextContent("2 lists deleted");
     expect(unpublish.mock.calls.map(([id]) => id).sort()).toEqual(["stuck", "up"]);
     expect(repository.get("a")).toMatchObject({ deletedAt: 5000, publishedId: null });
     expect(repository.get("b")).toMatchObject({ deletedAt: null, publishedId: "stuck" });
     expect(repository.get("c")?.deletedAt).toBe(5000);
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(repository.get("c")?.deletedAt).toBeNull();
+    expect(screen.getByRole("status")).toHaveTextContent("Kept, not deleted");
+  });
+
+  it("tells a conflict's copy from its original in the grid, to the eye and to a screen reader", () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([
+      board("a", "Albums", 2),
+      board("b", "Albums", 1, { arrivedFrom: "Pixel 7" }),
+    ]);
+    open(repository);
+    expect(opened().map((link) => link.getAttribute("aria-label"))).toEqual([
+      "Open Albums",
+      "Open Albums, from Pixel 7",
+    ]);
+    expect(opened()[1]).toHaveTextContent("from Pixel 7");
+    expect(
+      screen.getByRole("button", { name: "Add Albums, from Pixel 7 to favourites" }),
+    ).toBeInTheDocument();
+  });
+
+  it("lets a list go whose public copy another account published, and leaves that copy alone", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([board("a", "Albums", 1, { publishedId: "theirs", authorName: "Danylo" })]);
+    const unpublish = vi.fn(async () => {
+      throw new ApiFailure({ kind: "notYours" });
+    });
+    open(repository, "/b", undefined, memoryStore(), unpublish);
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select Albums" }));
+    await userEvent.click(
+      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("1 list deleted");
+    expect(repository.get("a")).toMatchObject({ deletedAt: 5000, publishedId: null });
+  });
+
+  it("puts lists back where they were in Recent after Undo", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([
+      board("a", "Alpha", 3),
+      board("b", "Bravo", 2),
+      board("c", "Charlie", 1, { publishedId: "L1", authorName: "Danylo" }),
+    ]);
+    open(repository);
+    const titles = () => opened().map((link) => link.getAttribute("aria-label"));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    for (const name of ["Alpha", "Bravo", "Charlie"]) {
+      await userEvent.click(screen.getByRole("button", { name: `Select ${name}` }));
+    }
+    await userEvent.click(
+      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    expect(titles()).toEqual(["Open Alpha", "Open Bravo", "Open Charlie"]);
+  });
+
+  it("finds the search, the filter and the order again on the way back from a list", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([
+      waiting("a", "Pizza place", 1, 2),
+      ranked("b", "Pizza ranked", 2),
+      waiting("c", "Ramen place", 3, 1),
+    ]);
+    const shelf = memoryStore();
+    const router = open(repository, "/b", undefined, memoryStore(), undefined, shelf);
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search your lists" }), "pizza");
+    await userEvent.click(screen.getByRole("button", { name: "In progress" }));
+    await userEvent.click(screen.getByLabelText("Order: Recent"));
+    await userEvent.click(screen.getByRole("button", { name: "Name" }));
+    await userEvent.click(screen.getByRole("link", { name: "Open Pizza place" }));
+    expect(router.state.location.pathname).toBe("/b/a");
+
+    await router.navigate(-1);
+    expect(await screen.findByRole("searchbox", { name: "Search your lists" })).toHaveValue(
+      "pizza",
+    );
+    expect(screen.getByRole("button", { name: "In progress" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByLabelText("Order: Name")).toBeInTheDocument();
+    expect(opened().map((link) => link.getAttribute("aria-label"))).toEqual([
+      "Open Pizza place",
+      "Open Pizza ranked",
+    ]);
   });
 
   it("says so when a board page sent its board to the trash, once", async () => {

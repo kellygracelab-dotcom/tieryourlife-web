@@ -402,7 +402,7 @@ const pl: Translation = {
     delete: "Usuń",
     deleteTitle: "Cofnąć publikację tej listy?",
     deleteBody:
-      "„{title}” zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Tablica w telefonie zostaje w telefonie.",
+      "„{title}” zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Twoja tablica zostanie w „Twoich listach”.",
     keepIt: "Zostaw",
     deleting: "Cofanie publikacji…",
     deleteFailed: "Nie udało się cofnąć publikacji. Spróbuj ponownie za minutę.",
@@ -578,7 +578,7 @@ const pl: Translation = {
     listsFailed: "Nie udało się wczytać twoich publicznych list",
     remove: "Usuń",
     removeAsk:
-      "Cofnąć publikację „{title}”? Zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Tablica w telefonie zostaje w telefonie.",
+      "Cofnąć publikację „{title}”? Zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Twoja tablica zostanie w „Twoich listach”.",
     keepIt: "Zostaw",
     countPublished: { other: "Opublikowane: {n}" },
     countRanked: { other: "Rankingi: {n}" },
@@ -1201,6 +1201,8 @@ const pl: Translation = {
     boardTrashed: "„{name}” przeniesiono do kosza",
     notFound: "Nie znaleziono listy.",
     notFoundBody: "Może została usunięta albo jest na innym urządzeniu.",
+    inTrash: "„{name}” jest w koszu.",
+    inTrashBody: "Przywróć ją, aby znów ją układać i edytować.",
     more: "Więcej o tej tablicy",
     delete: "Usuń tablicę",
     trash: "Kosz",

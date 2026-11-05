@@ -385,7 +385,7 @@ const ptBR: Translation = {
     delete: "Remover",
     deleteTitle: "Despublicar esta lista?",
     deleteBody:
-      "“{title}” sai da comunidade e o link para de funcionar. As classificações que as pessoas já fizeram com ela ficam. Um quadro no seu celular fica no seu celular.",
+      "“{title}” sai da comunidade e o link para de funcionar. As classificações que as pessoas já fizeram com ela ficam. Seu quadro continua em Suas listas.",
     keepIt: "Manter",
     deleting: "Despublicando…",
     deleteFailed: "Não foi possível despublicar. Tente de novo em um minuto.",
@@ -556,7 +556,7 @@ const ptBR: Translation = {
     listsFailed: "Não foi possível carregar suas listas públicas",
     remove: "Remover",
     removeAsk:
-      "Despublicar “{title}”? Ela sai da comunidade e o link para de funcionar. As classificações que as pessoas já fizeram com ela ficam. Um quadro no seu celular fica no seu celular.",
+      "Despublicar “{title}”? Ela sai da comunidade e o link para de funcionar. As classificações que as pessoas já fizeram com ela ficam. Seu quadro continua em Suas listas.",
     keepIt: "Manter",
     countPublished: { other: "Publicadas: {n}" },
     countRanked: { other: "Classificações: {n}" },
@@ -1085,6 +1085,8 @@ const ptBR: Translation = {
     boardTrashed: '"{name}" foi movido para a lixeira',
     notFound: "Lista não encontrada.",
     notFoundBody: "Ela pode ter sido excluída ou estar em outro dispositivo.",
+    inTrash: "“{name}” está na lixeira.",
+    inTrashBody: "Restaure para classificar e editar de novo.",
     more: "Mais sobre este quadro",
     delete: "Excluir quadro",
     trash: "Lixeira",
