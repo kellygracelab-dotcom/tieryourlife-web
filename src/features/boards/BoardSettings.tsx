@@ -239,10 +239,13 @@ export function BoardSettings({
     setBusy(what === "published" ? "publishing" : "updating");
     setFailure(null);
     try {
+      // The board's uid goes with every send, as the phone's does: a first
+      // publish lost to a reload gets its list back, and a replace keeps it.
+      const outgoing = { ...request, boardUid: current.uid };
       const answer =
         what === "updated" && current.publishedId !== null
-          ? await publishing.republish(current.publishedId, request)
-          : await publishing.publish({ ...request, boardUid: current.uid });
+          ? await publishing.republish(current.publishedId, outgoing)
+          : await publishing.publish(outgoing);
       const name = account?.kind === "signedIn" ? account.displayName : null;
       const after = latest();
       // The cards as they came from the list they were saved from: the

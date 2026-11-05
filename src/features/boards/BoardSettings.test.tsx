@@ -358,9 +358,9 @@ describe("BoardSettings: public", () => {
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(published).toHaveBeenCalledWith("updated", "L1"));
     expect(republish).toHaveBeenCalledWith("L1", expect.objectContaining({ title: "Films" }));
-    expect(republish).not.toHaveBeenCalledWith(
+    expect(republish).toHaveBeenCalledWith(
       "L1",
-      expect.objectContaining({ boardUid: expect.anything() }),
+      expect.objectContaining({ boardUid: filmBoard().uid }),
     );
   });
 

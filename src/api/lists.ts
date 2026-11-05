@@ -124,8 +124,9 @@ export interface PublishRequest {
    */
   newTopic?: string;
   /**
-   * The board a first publish comes from: the same board publishing again
-   * gets the list it already made, not a second one.
+   * The board the list comes from, sent with every publish and replace: the
+   * same board publishing again gets the list it already made, not a second
+   * one, and the account's lists name their boards for a lost answer.
    */
   boardUid?: string;
   /** No name or face on the list anywhere public; the owner still has it. */
