@@ -129,12 +129,17 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
           initial={ticked.picked?.row === picking.row ? ticked.picked.ids : new Set()}
           onBack={() => setPicking(null)}
           onDone={(ids) => {
-            setTicked({
-              ...ticked,
-              tiers: new Set(),
-              pool: false,
-              picked: ids.size === 0 ? null : { row: picking.row, ids },
-            });
+            // Nothing picked leaves the rows ticked before as they were, as Back does.
+            if (ids.size > 0) {
+              setTicked({
+                ...ticked,
+                tiers: new Set(),
+                pool: false,
+                picked: { row: picking.row, ids },
+              });
+            } else if (ticked.picked?.row === picking.row) {
+              setTicked({ ...ticked, picked: null });
+            }
             setPicking(null);
           }}
           onCancel={onCancel}
@@ -388,6 +393,7 @@ function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsP
       onBack={onBack}
       subtitle={where}
       onClose={onCancel}
+      focus=".play-search"
       footer={<Counter count={ids.size} />}
       actions={
         <>
@@ -410,7 +416,6 @@ function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsP
         placeholder={strings.rank.search}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        autoFocus
       />
       {shown.length === 0 ? (
         <p className="play-sheet__subtitle">{strings.rank.searchNone}</p>

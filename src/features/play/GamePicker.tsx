@@ -3,7 +3,7 @@ import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
-import { playable } from "./chosen";
+import { MAX_CARDS, playable } from "./chosen";
 import type { GameKind } from "./engine";
 import { gameProgress, type Resume } from "./game";
 import { estimateText, gameName, startedText } from "./labels";
@@ -51,6 +51,7 @@ export function GamePicker({
   onCancel,
 }: GamePickerProps) {
   const id = useId();
+  const fits = playable(count);
   const subtitle = (
     <>
       <span>{fill(plural(strings.play.cardsFrom, count), { title })}</span>{" "}
@@ -71,7 +72,8 @@ export function GamePicker({
             variant="tonal"
             className="play-tonal"
             onClick={onStart}
-            disabled={!playable(count)}
+            disabled={!fits}
+            aria-describedby={count > MAX_CARDS ? `${id}-over` : undefined}
           >
             {strings.play.start}
           </Button>
@@ -102,11 +104,19 @@ export function GamePicker({
               <span className="play-game__text">
                 <span className="play-game__name">{gameName(game.kind)}</span>
                 <span className="play-game__line">{game.line()}</span>
-                <span className="play-game__estimate">{estimateText(game.kind, count)}</span>
+                {fits && (
+                  <span className="play-game__estimate">{estimateText(game.kind, count)}</span>
+                )}
               </span>
             </label>
           ))}
         </div>
+        {/* Reached with a saved game over a board too big for one: why Start is off. */}
+        {count > MAX_CARDS && (
+          <p className="play-over" id={`${id}-over`}>
+            {fill(strings.play.tooMany, { n: count, max: MAX_CARDS })}
+          </p>
+        )}
       </div>
       {theirs && <p className="play-footnote">{strings.play.intoMine}</p>}
     </PlaySheet>

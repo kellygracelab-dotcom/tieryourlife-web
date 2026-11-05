@@ -26,11 +26,21 @@ const shell = `<!doctype html>
 </html>`;
 
 describe("words for a link", () => {
-  it("name the category the way the app does, with a fallback", () => {
+  it("name the category the way the app does, and no other section by a wrong name", () => {
     assert.equal(categoryLabel("film_tv"), "Film & TV");
     assert.equal(categoryLabel("anime"), "Anime");
-    assert.equal(categoryLabel("nope"), "Other");
-    assert.equal(categoryLabel(undefined), "Other");
+    assert.equal(categoryLabel("other"), "Other");
+    assert.equal(categoryLabel("cars"), null);
+    assert.equal(categoryLabel(undefined), null);
+    // A section approved after the first nine is left unnamed, not called "Other".
+    assert.equal(
+      describeList({ itemCount: 4, authorName: "x", category: "cars" }),
+      "4 items ranked by x",
+    );
+    assert.equal(
+      describeRanking({ placed: 1, itemCount: 3, authorName: "x", category: "cars" }),
+      "A visitor ranked 1 of 3 items on x’s list",
+    );
   });
 
   it("describe a list in one line under a hundred characters", () => {

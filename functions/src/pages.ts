@@ -79,6 +79,50 @@ function send(response: Response, html: string): void {
   response.status(200).send(html);
 }
 
+/**
+ * The bare shell when Firestore would not answer: the site still loads and
+ * asks the proxy for the list itself. Kept nowhere, so the edge does not
+ * hand out an outage's page for two minutes after it.
+ */
+function sendBare(response: Response, html: string, error: unknown): void {
+  console.warn("Firestore not read; the bare shell goes out", error);
+  response.setHeader("Content-Type", "text/html; charset=utf-8");
+  response.setHeader("Cache-Control", "no-store");
+  response.status(200).send(html);
+}
+
+/** Any other address under /l/ or /r/: the site's own page, which says it is not found. */
+export async function shellPage(request: Request, response: Response): Promise<void> {
+  send(response, await loadShell(hostOf(request)));
+}
+
+/**
+ * What a person following a link gets when even the shell could not be had:
+ * a page with a way to try again, not the API's JSON.
+ */
+export function unavailablePage(response: Response): void {
+  response.setHeader("Content-Type", "text/html; charset=utf-8");
+  response.setHeader("Cache-Control", "no-store");
+  response.setHeader("Retry-After", "30");
+  response.status(503).send(UNAVAILABLE_HTML);
+}
+
+export const UNAVAILABLE_HTML = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>TierYourLife</title>
+  </head>
+  <body style="max-width: 32rem; margin: 15vh auto; padding: 0 16px; font: 16px/1.5 system-ui, sans-serif">
+    <h1 style="font-size: 1.4rem">TierYourLife is not answering right now</h1>
+    <p>Try again in a moment.</p>
+    <p><a href="">Try again</a> · <a href="/">Go to TierYourLife</a></p>
+  </body>
+</html>
+`;
+
 interface StoredList {
   title?: string;
   /** Set by the backend once it keeps lists without an author itself. */
@@ -156,8 +200,13 @@ export function listPayload(id: string, data: StoredList) {
 export async function listPage(request: Request, response: Response, id: string): Promise<void> {
   const host = hostOf(request);
   const html = await loadShell(host);
-  const doc = LIST_ID.test(id) ? await getFirestore().collection(PUBLISHED).doc(id).get() : null;
-  const data = doc?.exists ? (doc.data() as StoredList) : null;
+  let data: StoredList | null;
+  try {
+    const doc = LIST_ID.test(id) ? await getFirestore().collection(PUBLISHED).doc(id).get() : null;
+    data = doc?.exists ? (doc.data() as StoredList) : null;
+  } catch (error) {
+    return sendBare(response, html, error);
+  }
   // A hidden or missing list gets the bare shell: the page will say so itself,
   // and a chat gets nothing to unfurl.
   if (data === null || data.underReview === true) return send(response, html);
@@ -212,7 +261,6 @@ export async function listShareImage(response: Response, id: string): Promise<vo
     authorName: data.authorName ?? "",
     category: data.category ?? "other",
     itemCount: data.itemCount ?? data.items?.length ?? 0,
-    takeCount: data.takeCount ?? 0,
     tiers: shareTiersOf(data.tiers),
     items: shareItemsOf(data.items),
   };
@@ -280,12 +328,21 @@ export async function rankingPage(
 ): Promise<void> {
   const host = hostOf(request);
   const html = await loadShell(host);
-  const db = getFirestore();
-  const doc = isCode(code) ? await db.collection(RANKINGS).doc(code).get() : null;
-  if (doc === null || !doc.exists) return send(response, html);
+  let found: { stored: StoredRanking; list: FirebaseFirestore.DocumentSnapshot } | null;
+  try {
+    const db = getFirestore();
+    const doc = isCode(code) ? await db.collection(RANKINGS).doc(code).get() : null;
+    const stored = doc?.exists ? (doc.data() as StoredRanking) : null;
+    found =
+      stored === null
+        ? null
+        : { stored, list: await db.collection(PUBLISHED).doc(stored.listId).get() };
+  } catch (error) {
+    return sendBare(response, html, error);
+  }
+  if (found === null) return send(response, html);
 
-  const stored = doc.data() as StoredRanking;
-  const list = await db.collection(PUBLISHED).doc(stored.listId).get();
+  const { stored, list } = found;
   const rows = fromStoredRows(stored.rows);
   const snapshot = shownSnapshot(stored.snapshot, standingOf(list));
   const ranking = {

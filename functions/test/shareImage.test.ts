@@ -34,7 +34,6 @@ const list: ShareList = {
   authorName: "Danylo",
   category: "anime",
   itemCount: 2,
-  takeCount: 1,
   tiers: [{ label: "S", caption: "Masterpiece", colorLight: "#b03a32" }],
   items: [
     { title: "With picture", imageUrl: "https://image.tmdb.org/t/p/w500/a.jpg" },

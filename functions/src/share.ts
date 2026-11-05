@@ -45,7 +45,6 @@ export interface ShareList {
   authorName: string;
   category: string;
   itemCount: number;
-  takeCount: number;
   tiers: ShareTier[];
   items: ShareItem[];
 }
@@ -288,11 +287,11 @@ const frame = (children: (Node | string)[]): Node =>
 
 function listCard(card: ShareList, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
-  const rest = [
-    plural(card.itemCount, "card", "cards"),
-    plural(card.takeCount, "ranking", "rankings"),
-    categoryLabel(card.category),
-  ].join(" · ");
+  // No count of rankings: the card is kept until the list changes, and a
+  // count drawn on its first day said "0 rankings" for good.
+  const rest = [plural(card.itemCount, "card", "cards"), categoryLabel(card.category)]
+    .filter((part) => part !== null)
+    .join(" · ");
   const line: Byline =
     card.editorial === true
       ? { before: rest, name: null, after: "" }
@@ -379,9 +378,10 @@ export const shareCardOf = (card: ShareCard, pictures: Pictures): Node =>
  * The look of the card. A copy is kept for good per version of a list, and a
  * chat keeps a picture by its address, so a change in the drawing has to
  * change both or nobody ever sees it. 4: the footer inside the card, every
- * script's letters, the author's name apart.
+ * script's letters, the author's name apart. 5: no count of rankings, and no
+ * "Other" for a section approved after the first nine.
  */
-export const SHARE_LOOK = 4;
+export const SHARE_LOOK = 5;
 
 export const shareImageUrl = (
   host: string,

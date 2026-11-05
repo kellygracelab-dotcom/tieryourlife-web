@@ -26,8 +26,19 @@ export interface PageMeta {
   url: string;
 }
 
-export const categoryLabel = (category: unknown): string =>
-  (typeof category === "string" && CATEGORY_LABELS[category]) || "Other";
+/**
+ * A section's name, or null for one approved after these nine: the function
+ * knows no other names, and calling a section "Other" when it is not is
+ * worse than not naming it.
+ */
+export const categoryLabel = (category: unknown): string | null =>
+  (typeof category === "string" && CATEGORY_LABELS[category]) || null;
+
+/** " · Film & TV" after a line, or nothing for a section without a name here. */
+const inSection = (category: unknown): string => {
+  const label = categoryLabel(category);
+  return label === null ? "" : ` · ${label}`;
+};
 
 const plural = (n: number, one: string, other: string): string => `${n} ${n === 1 ? one : other}`;
 
@@ -39,9 +50,9 @@ export function describeList(list: {
   editorial?: boolean;
 }): string {
   const items = plural(list.itemCount, "item", "items");
-  if (list.editorial === true) return `${items} to rank · ${categoryLabel(list.category)}`;
+  if (list.editorial === true) return `${items} to rank${inSection(list.category)}`;
   const author = list.authorName.trim() || "someone";
-  return `${items} ranked by ${author} · ${categoryLabel(list.category)}`;
+  return `${items} ranked by ${author}${inSection(list.category)}`;
 }
 
 export function describeRanking(ranking: {
@@ -52,9 +63,9 @@ export function describeRanking(ranking: {
   editorial?: boolean;
 }): string {
   const ranked = `A visitor ranked ${ranking.placed} of ${plural(ranking.itemCount, "item", "items")}`;
-  if (ranking.editorial === true) return `${ranked} · ${categoryLabel(ranking.category)}`;
+  if (ranking.editorial === true) return `${ranked}${inSection(ranking.category)}`;
   const author = ranking.authorName.trim() || "someone";
-  return `${ranked} on ${author}’s list · ${categoryLabel(ranking.category)}`;
+  return `${ranked} on ${author}’s list${inSection(ranking.category)}`;
 }
 
 export function escapeHtml(text: string): string {

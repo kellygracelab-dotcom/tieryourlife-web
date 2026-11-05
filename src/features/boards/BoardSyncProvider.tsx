@@ -23,6 +23,7 @@ import {
 } from "./boardSync";
 import { deviceNameOf } from "./deviceName";
 import { owners as siteOwners, type BoardOwners, type GuestBoardsQuestion } from "./owners";
+import type { Board } from "./model";
 import type { BoardsRepository } from "./repository";
 import {
   forgetAccountCopies,
@@ -38,6 +39,20 @@ import "./boards.css";
 
 /** How long after the last change the boards go up: a drag is many changes, one write. */
 export const SYNC_AFTER_MS = 2500;
+
+/**
+ * A change to nothing but a game in progress waits longer, and the wait is
+ * not put off by the next answer: a game of 250 duels goes up about once a
+ * minute, not once an answer, each time with the whole board.
+ */
+export const PLAY_SYNC_AFTER_MS = 60_000;
+
+/** Each board as it would be without its game, to tell a change to the game alone. */
+const withoutPlay = (boards: readonly Board[]): Map<string, string> =>
+  new Map(boards.map((board) => [board.uid, JSON.stringify({ ...board, play: null })]));
+
+const sameBoards = (one: Map<string, string>, other: Map<string, string>): boolean =>
+  one.size === other.size && [...one].every(([uid, text]) => other.get(uid) === text);
 
 const siteApi: BoardsApi = {
   index: (after) => loadBoardIndex(after),
@@ -64,6 +79,7 @@ interface BoardSyncProviderProps {
   deviceName?: string | null;
   now?: () => number;
   syncAfterMs?: number;
+  playSyncAfterMs?: number;
 }
 
 /** A deletion stopped because the account changed under it, as the caller is told it. */
@@ -146,6 +162,7 @@ function ForAccount({
   deviceName = typeof navigator === "undefined" ? null : deviceNameOf(navigator.userAgent),
   now = Date.now,
   syncAfterMs = SYNC_AFTER_MS,
+  playSyncAfterMs = PLAY_SYNC_AFTER_MS,
 }: BoardSyncProviderProps & { uid: string | null }) {
   const [backUp, setBackUpState] = useState(() => uid === null || readBackUp(store, uid));
   const [status, setStatus] = useState<SyncStatus>("idle");
@@ -243,12 +260,21 @@ function ForAccount({
   useEffect(() => {
     if (uid === null || !backUp) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let seen = withoutPlay(repository.all());
     const soon = () => {
+      const boards = withoutPlay(repository.all());
+      const playOnly = sameBoards(seen, boards);
+      seen = boards;
+      // A run already on its way takes the game with it.
+      if (playOnly && timer !== null) return;
       if (timer !== null) clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = null;
-        void run();
-      }, syncAfterMs);
+      timer = setTimeout(
+        () => {
+          timer = null;
+          void run();
+        },
+        playOnly ? playSyncAfterMs : syncAfterMs,
+      );
     };
     const stop = repository.subscribe(soon);
     const onLine = () => void run();
@@ -258,7 +284,7 @@ function ForAccount({
       window.removeEventListener("online", onLine);
       if (timer !== null) clearTimeout(timer);
     };
-  }, [uid, backUp, repository, run, syncAfterMs]);
+  }, [uid, backUp, repository, run, syncAfterMs, playSyncAfterMs]);
 
   const moveIn = useCallback(async () => {
     if (question === null) return;

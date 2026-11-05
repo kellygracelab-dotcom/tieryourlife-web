@@ -478,7 +478,8 @@ function OpenList({
             />
           ) : (
             <>
-              <PlayButton {...play.button} />
+              {/* A list hidden here keeps its cards out of sight, Play's too. */}
+              {!outOfSight && <PlayButton {...play.button} />}
               <VisitorTools
                 list={list}
                 report={report}
@@ -539,7 +540,7 @@ function OpenList({
             <UnrankedPool items={list.items} pool={poolOf(theirs.rows, list.items.length)} />
           </>
         ))}
-      {!own && play.view}
+      {!own && !outOfSight && play.view}
       {!outOfSight && <PictureCredits items={list.items} />}
       {sheet && (
         <RankingsSheet

@@ -137,8 +137,10 @@
   margin-inline-start: auto;
 }
 
+/* A word longer than the column breaks inside it, rather than spilling over the tools beside it. */
 .list-head__title {
   font: var(--text-headline);
+  overflow-wrap: anywhere;
 }
 
 .list-head__meta {

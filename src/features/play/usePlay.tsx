@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { KeyValueStore } from "../../lib/storage";
 import { fill, plural, strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
@@ -120,17 +120,39 @@ export function usePlay(
   if (saved.key !== boardKey) setSaved({ key: boardKey, game: games.load(boardKey) });
   const savedGame = saved.key === boardKey ? saved.game : null;
 
-  const keep = useCallback(
-    (next: Game) => {
-      games.save(boardKey, next);
-      setSaved({ key: boardKey, game: next });
-    },
-    [games, boardKey],
-  );
+  // A game kept elsewhere is seen here too: another tab's, or one the
+  // account's copy of the board brought down, so it is read again whenever
+  // the board changes.
+  useEffect(() => {
+    const reread = () => {
+      const kept = games.load(boardKey);
+      setSaved((current) =>
+        current.key === boardKey && JSON.stringify(current.game) === JSON.stringify(kept)
+          ? current
+          : { key: boardKey, game: kept },
+      );
+    };
+    reread();
+    window.addEventListener("storage", reread);
+    return () => window.removeEventListener("storage", reread);
+  }, [games, boardKey, board]);
+
   const forget = useCallback(() => {
     games.discard(boardKey);
     setSaved({ key: boardKey, game: null });
   }, [games, boardKey]);
+  const keep = useCallback(
+    (next: Game) => {
+      // A game with nothing answered is not worth keeping, as on the app.
+      if (next.history.length === 0) {
+        forget();
+        return;
+      }
+      games.save(boardKey, next);
+      setSaved({ key: boardKey, game: next });
+    },
+    [games, boardKey, forget],
+  );
 
   const close = () => {
     setGame(null);
@@ -154,7 +176,8 @@ export function usePlay(
   const begin = (gameKind: GameKind, from: Chosen) => {
     const ids = chosenIds(board, from);
     if (!playable(ids.length)) return;
-    const before = savedGame;
+    // Read again: a game kept since in another tab goes with a way back too.
+    const before = games.load(boardKey);
     rememberGame(store, gameKind);
     show(newGame(gameKind, ids, from, seedOf(random), now()));
     if (before === null) return;
@@ -182,7 +205,8 @@ export function usePlay(
   };
 
   const quit = () => {
-    if (game !== null) {
+    // Nothing answered: nothing was kept, and nothing is said.
+    if (game !== null && game.history.length > 0) {
       keep(game);
       const { overall } = gameProgress(game);
       notify({
@@ -215,8 +239,9 @@ export function usePlay(
     }
   };
 
+  // The finished game stays put down until another starts: the picker offers
+  // it to resume, and Start says it went, with a way back.
   const playAgain = (finished: Game) => {
-    forget();
     setKind(finished.spec.kind);
     setChosen(finished.chosen);
     setGame(null);
@@ -280,11 +305,13 @@ export function usePlay(
     </SheetArrival.Provider>
   );
 
+  const disabled = board.order.length < MIN_CARDS || board.tiers.length === 0;
   return {
     button: {
       onClick: open,
-      disabled: board.order.length < MIN_CARDS || board.tiers.length === 0,
-      saved: savedGame !== null,
+      disabled,
+      // The game stays kept, but the dot is only on a Play that can open it, as on the app.
+      saved: savedGame !== null && !disabled,
     },
     view,
     playing: screen !== "none",

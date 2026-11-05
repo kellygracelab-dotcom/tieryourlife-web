@@ -287,6 +287,8 @@ describe("ListPage report and hide", () => {
     await userEvent.click(screen.getByRole("button", { name: "Hide this list" }));
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
     expect(screen.getByRole("link", { name: "Go to home" })).toHaveAttribute("href", "/");
+    // Its cards stay out of sight: no Play over them.
+    expect(screen.queryByRole("button", { name: "Play" })).not.toBeInTheDocument();
   });
 
   it("offers the device's own share sheet where there is one, and shrugs when it is closed", async () => {
