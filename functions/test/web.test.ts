@@ -387,6 +387,21 @@ describe("GET /api/rank/{code}", () => {
     assert.equal(body.createdAt, 500);
   });
 
+  it("tells a ranking kept before the author was stored whose list it is, once read", async () => {
+    const { deps, table } = setup(PERSON);
+    table("rankings").set("abcdefgh", ranking("person", false));
+    await call(deps, "GET", "/api/rank/abcdefgh");
+    assert.equal(table("rankings").get("abcdefgh")?.listAuthorUid, "author");
+
+    // An anonymous list names nobody, so nothing is stored for it.
+    table("rankings").set("anonymou", {
+      ...ranking("person", false),
+      snapshot: { ...ranking("person", false).snapshot, authorName: "" },
+    });
+    await call(deps, "GET", "/api/rank/anonymou");
+    assert.equal(table("rankings").get("anonymou")?.listAuthorUid, undefined);
+  });
+
   it("says the list is gone when it is under review, and is nobody's for a guest", async () => {
     const { deps, table } = setup(GUEST);
     table("rankings").set("abcdefgh", ranking("guest", true));

@@ -229,6 +229,19 @@ async function readRanking(
   const standing = list.exists
     ? { authorUid: list.get("authorUid") as unknown, anonymous: list.get("anonymous") as unknown }
     : null;
+  // A ranking kept before its list's author was stored beside it learns them
+  // on a read while the list stands, so that author's account deletion finds
+  // it too. A failed write only waits for the next read.
+  if (ranking.listAuthorUid === undefined && list.exists && ranking.snapshot.authorName !== "") {
+    const author = listAuthorOf(list.data() ?? {});
+    if (author !== null) {
+      await db
+        .collection(RANKINGS)
+        .doc(code)
+        .update({ listAuthorUid: author })
+        .catch(() => undefined);
+    }
+  }
 
   response.setHeader("Cache-Control", "no-store");
   response.status(200).json({
