@@ -1,5 +1,6 @@
 import type { NameCheck } from "../../api/admin";
-import { checkSectionName } from "../../lib/api";
+import type { ProposalRoom } from "../../api/sections";
+import { checkSectionName, loadProposalRoom } from "../../lib/api";
 import {
   cropSectionOnCanvas,
   uploadPicture,
@@ -16,6 +17,11 @@ export interface EditorDeps {
   crop: CropPicture;
   /** Where a proposal that could not go waits for the next try: the tab's own storage. */
   keep: KeyValueStore;
+  /**
+   * The room left to propose, asked before the picture goes up so a refusal
+   * costs no upload. Left out, a proposal goes straight to the upload.
+   */
+  room?: () => Promise<ProposalRoom>;
 }
 
 export const editorDeps: EditorDeps = {
@@ -23,4 +29,5 @@ export const editorDeps: EditorDeps = {
   upload: (bytes) => uploadPicture(bytes, async (made) => made),
   crop: cropSectionOnCanvas,
   keep: sessionStorageStore,
+  room: async () => loadProposalRoom(),
 };

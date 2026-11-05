@@ -200,6 +200,9 @@ export const unfollowSection = (id: string): Promise<{ following: false }> =>
 export const proposeSection = (proposal: SectionProposal): Promise<SectionStats> =>
   sections.proposeSection(api, proposal);
 
+export const loadProposalRoom = (): Promise<sections.ProposalRoom> =>
+  sections.loadProposalRoom(api);
+
 export const withdrawSectionProposal = (id: string): Promise<void> =>
   sections.withdrawSectionProposal(api, id);
 

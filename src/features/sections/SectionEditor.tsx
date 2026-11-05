@@ -415,6 +415,23 @@ export function SectionEditor(props: SectionEditorProps) {
           refocus.current = true;
           return;
         }
+        if (mode === "propose" && deps.room !== undefined) {
+          // Asked before the upload, so a refusal costs none. A failed ask
+          // is no answer: the backend still refuses on the send.
+          const refusal = await deps.room().then(
+            (room) => room.refusal,
+            () => null,
+          );
+          if (refusal !== null) {
+            setSending(false);
+            fail(
+              refusal === "TOO_MANY_PENDING" ? { kind: "tooMany" } : { kind: "tooManyToday" },
+              bytes,
+            );
+            refocus.current = true;
+            return;
+          }
+        }
         pictureId = (await deps.upload(bytes)).pictureId;
       }
       const saved = await sendNow(pictureId);
