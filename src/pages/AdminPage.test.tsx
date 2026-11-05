@@ -79,6 +79,28 @@ describe("AdminPage", () => {
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
   });
 
+  it("has one h1, Admin, with every pane's title under it, wide or narrow", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    open("/admin/reports");
+    expect(await screen.findByRole("heading", { level: 2, name: "Reports" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual([
+      "Admin",
+    ]);
+  });
+
+  it("names the page with an h1 on a narrow screen too, where a pane opens alone", async () => {
+    window.innerWidth = 400;
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    open("/admin/house");
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "House lists" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual([
+      "Admin",
+    ]);
+    expect(screen.queryByRole("navigation", { name: "Admin" })).toBeNull();
+  });
+
   it("opens House lists to the owner", async () => {
     mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
     open("/admin/house");

@@ -82,4 +82,30 @@ describe("ConfirmDialog", () => {
     await userEvent.click(scrim);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
+
+  it("gives the focus back to the pressed button when the action failed and the dialog stays", async () => {
+    const { rerender } = render(<Opener />);
+    await userEvent.click(screen.getByRole("button", { name: "Delete…" }));
+    await userEvent.tab();
+    const confirm = screen.getByRole("button", { name: "Delete" });
+    expect(confirm).toHaveFocus();
+    // A browser drops the focus of a button greyed out under it; jsdom keeps it.
+    confirm.blur();
+    rerender(<Opener busy />);
+    expect(document.body).toHaveFocus();
+    rerender(<Opener />);
+    expect(confirm).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Keep it" })).toHaveFocus();
+  });
+
+  it("leaves the focus where the person put it while the action was under way", async () => {
+    const { rerender } = render(<Opener />);
+    await userEvent.click(screen.getByRole("button", { name: "Delete…" }));
+    await userEvent.tab();
+    rerender(<Opener busy />);
+    screen.getByRole("button", { name: "Delete…" }).focus();
+    rerender(<Opener />);
+    expect(screen.getByRole("button", { name: "Delete…" })).toHaveFocus();
+  });
 });

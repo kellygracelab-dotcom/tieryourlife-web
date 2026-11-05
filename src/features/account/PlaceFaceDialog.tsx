@@ -237,7 +237,8 @@ export function PlaceFaceDialog({
           <Button
             variant="tonal"
             className="placing__use"
-            disabled={shown.status === "loading"}
+            // A picture that would not load at all is not worn: the header would show it broken.
+            disabled={shown.status !== "ready"}
             onClick={use}
           >
             {strings.settings.placeUse}

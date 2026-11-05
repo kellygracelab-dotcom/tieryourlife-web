@@ -16,12 +16,22 @@ const whenOf = (at: number): string =>
   );
 
 /**
+ * A run that did not go through says so once a day has gone by without one
+ * that did, as on the phone: a failure the next run mends is not worth an
+ * alarm. A board refused, a connection gone or a busy server all look alike
+ * from here, so the note names none of them.
+ */
+export const STUCK_AFTER_MS = 24 * 60 * 60 * 1000;
+
+/**
  * The phone's "Your data": whether the boards are kept in the account, the
  * trash with its count. Switching the backup off deletes the account's copy,
  * so it asks first.
  */
-export function DataCard() {
+export function DataCard({ now = Date.now }: { now?: () => number }) {
   const sync = useBoardSync();
+  // Back up now pressed: whatever it came to is said at once.
+  const [pressed, setPressed] = useState(false);
   const boards = useBoards();
   const trashed = trashEntriesOf(boards).length;
   const [asking, setAsking] = useState(false);
@@ -75,17 +85,23 @@ export function DataCard() {
           {sync.backUp && (
             <>
               <p className="settings__helper">{strings.sync.backUpNote}</p>
-              {sync.status === "stuck" && (
-                <p className="settings__bar" role="alert">
-                  {fill(strings.sync.stuck, {
-                    when: sync.lastSyncedAt === null ? "—" : whenOf(sync.lastSyncedAt),
-                  })}
-                </p>
-              )}
+              {sync.status === "stuck" &&
+                (pressed ||
+                  sync.lastSyncedAt === null ||
+                  now() - sync.lastSyncedAt >= STUCK_AFTER_MS) && (
+                  <p className="settings__bar" role="alert">
+                    {sync.lastSyncedAt === null
+                      ? strings.sync.stuckNever
+                      : fill(strings.sync.stuck, { when: whenOf(sync.lastSyncedAt) })}
+                  </p>
+                )}
               <div className="settings__actions">
                 <Button
                   icon="cloud_upload"
-                  onClick={() => void sync.syncNow()}
+                  onClick={() => {
+                    setPressed(true);
+                    void sync.syncNow();
+                  }}
                   disabled={sync.status === "syncing"}
                 >
                   {sync.status === "syncing" ? strings.sync.backingUp : strings.sync.now}

@@ -138,6 +138,9 @@ describe("Propose a section", () => {
   it("opens as Claude Design lays it out, and Propose waits for a cropped picture and a name", async () => {
     propose();
     expect(screen.getByRole("dialog", { name: "Propose a section" })).toBeInTheDocument();
+    // Its head and foot are the dialog's, not a second banner and contentinfo for the page.
+    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.queryByRole("contentinfo")).toBeNull();
     expect(
       screen.getByText(
         "A moderator looks at every proposal. Until then your lists stay in the section you pick below.",

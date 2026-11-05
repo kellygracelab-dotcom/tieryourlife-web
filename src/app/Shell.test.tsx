@@ -112,6 +112,21 @@ describe("Shell page changes", () => {
   });
 });
 
+describe("Shell skip link", () => {
+  it("is the first stop, and takes the keyboard past the bar to the page", async () => {
+    open({}, "/about");
+    await screen.findByRole("heading", { level: 1, name: "About" });
+    // One navigation by that name: the bar's buttons beside the tabs are not another.
+    expect(screen.getAllByRole("navigation", { name: "Site" })).toHaveLength(1);
+    await userEvent.tab();
+    const skip = screen.getByRole("link", { name: "Skip to content" });
+    expect(skip).toHaveFocus();
+    expect(skip).toHaveAttribute("href", "#main");
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("main")).toHaveFocus();
+  });
+});
+
 describe("Shell moderator", () => {
   it("shows Admin with a count only to the person the backend answers", async () => {
     const { resetModeratorForTests } = await import("../features/moderation/useModerator");
@@ -197,6 +212,19 @@ describe("Shell account", () => {
     expect(document.querySelector("header img.face")).toHaveAttribute("src", "https://p/me.jpg");
   });
 
+  it("opens the menu of the face last seen before Firebase has said who is here", async () => {
+    window.localStorage.setItem(
+      "tyl:signedIn",
+      JSON.stringify({ displayName: "Danylo", photoUrl: "https://p/me.jpg" }),
+    );
+    open({ account: null });
+    await userEvent.click(screen.getByLabelText("Your account"));
+    const menu = within(screen.getByLabelText("Your account").closest("details")!);
+    expect(menu.getByText("Danylo")).toBeInTheDocument();
+    expect(menu.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
+    window.localStorage.removeItem("tyl:signedIn");
+  });
+
   it("offers Sign in while Firebase is asked on a device nobody signed in on", () => {
     open({ account: null });
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
@@ -211,6 +239,33 @@ describe("Shell account", () => {
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(signIn).toHaveBeenCalledTimes(1);
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign in");
+  });
+
+  it("says the failure under the bar on that page only, and gives Sign in back", async () => {
+    const signIn = vi.fn(async () => ({
+      kind: "failed" as const,
+      code: "auth/network-request-failed",
+    }));
+    open({ signIn }, "/about");
+    await userEvent.click(await screen.findByRole("button", { name: "Sign in" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Could not sign in");
+    // Under the bar, the width of the page, not squeezed in beside the button.
+    expect(screen.getByRole("banner")).not.toContainElement(alert);
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+    await userEvent.click(
+      within(screen.getByRole("contentinfo")).getByRole("link", { name: "Settings" }),
+    );
+    await screen.findByRole("heading", { level: 1, name: "Settings" });
+    expect(screen.queryByText("Could not sign in. Try again.")).toBeNull();
+  });
+
+  it("gives Sign in back when signing in throws instead of answering", async () => {
+    const signIn = vi.fn(() => Promise.reject(new Error("auth/network-request-failed")));
+    open({ signIn });
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign in");
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
   });
 
   it("tells a person in another app's browser how to get out, instead of the plain failure", async () => {

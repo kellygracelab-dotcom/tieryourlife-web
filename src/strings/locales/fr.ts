@@ -12,6 +12,7 @@ const fr: Translation = {
   tagline: "Version web",
   nav: {
     site: "Site",
+    skipToContent: "Aller au contenu",
     signIn: "Se connecter",
     signOut: "Se déconnecter",
     account: "Votre compte",
@@ -88,8 +89,8 @@ const fr: Translation = {
     title: "Paramètres",
     guestTitle: "Connectez-vous pour modifier vos paramètres.",
     guestBody:
-      "Votre nom, votre image et le thème appartiennent à un compte. Classer une liste n’en demande aucun.",
-    themeGuestNote: "Enregistré sur cet appareil tant que vous n’êtes pas connecté.",
+      "Votre nom et votre image appartiennent à un compte. Classer une liste n’en demande aucun.",
+    themeGuestNote: "Enregistré sur cet appareil, que vous soyez connecté ou non.",
     nameTitle: "Votre nom",
     nameBody:
       "Le nom affiché comme auteur sur chaque liste que vous publiez. Votre e-mail n’est jamais affiché.",
@@ -139,7 +140,7 @@ const fr: Translation = {
     placeFrame: "L’image à placer dans le cercle",
     placeUse: "Utiliser",
     placeFailed:
-      "L’image ne peut pas s’afficher ici. Elle peut quand même être utilisée telle quelle.",
+      "Cette image ne se charge pas, elle ne peut donc pas être votre visage. Choisissez-en une autre.",
     placeHelp: "Faites glisser pour déplacer. Pincez ou faites défiler pour zoomer.",
     placeAsItIs: "Cette image ne peut être utilisée que telle quelle.",
   },
@@ -492,6 +493,7 @@ const fr: Translation = {
     dock: "Où sont les cartes",
     dockBeside: "Cartes à côté des rangs",
     dockUnder: "Cartes sous les rangs",
+    dockRows: "Rangées de cartes sous les rangs",
     allPlaced: { one: "La carte est placée", other: "Les {n} cartes sont placées" },
     allPlacedNote: "Changez d’avis en glissant une carte, ou terminez et prenez votre lien.",
     allPlacedNoteEdit: "Changez d’avis en glissant une carte, ou enregistrez ce que vous avez.",
@@ -607,6 +609,9 @@ const fr: Translation = {
   crash: {
     title: "Quelque chose s’est mal passé sur cette page",
     body: "Recharger règle généralement le problème. Sinon, le reste du site fonctionne toujours.",
+    offlineTitle: "Cette page ne peut pas s’ouvrir hors ligne",
+    offlineBody:
+      "Elle n’a pas encore été ouverte pendant cette visite, et la connexion est coupée. Rechargez une fois de retour en ligne ; les pages déjà ouvertes fonctionnent toujours.",
   },
   notFound: {
     title: "Il n’y a rien à cette adresse.",
@@ -1236,7 +1241,8 @@ const fr: Translation = {
       "Vos tableaux restent dans ce navigateur. La copie dans votre compte est supprimée, et un nouvel appareil démarrera vide.",
     offConfirm: "Arrêter et supprimer",
     offCancel: "Annuler",
-    stuck: "Pas de sauvegarde depuis {when}. Vérifiez votre connexion.",
+    stuck: "Pas de sauvegarde depuis {when}. « Sauvegarder maintenant » pour réessayer.",
+    stuckNever: "Pas encore de sauvegarde. « Sauvegarder maintenant » pour réessayer.",
     now: "Sauvegarder maintenant",
     backingUp: "Sauvegarde en cours…",
     guestNote:

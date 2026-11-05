@@ -303,17 +303,19 @@ describe("BoardsPage", () => {
       open(repository, "/b", undefined, store());
 
       await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-      expect(screen.getByRole("toolbar")).toHaveTextContent("0 selected");
+      expect(screen.getByRole("group", { name: "Exit selection" })).toHaveTextContent("0 selected");
       await userEvent.click(screen.getByRole(role, { name: "Select Albums" }));
-      expect(screen.getByRole("toolbar")).toHaveTextContent("1 selected");
+      expect(screen.getByRole("group", { name: "Exit selection" })).toHaveTextContent("1 selected");
       await userEvent.click(screen.getByRole(role, { name: "Select Albums" }));
-      expect(screen.queryByRole("toolbar")).toBeNull();
+      expect(screen.queryByRole("group", { name: "Exit selection" })).toBeNull();
 
       await userEvent.click(screen.getByRole("button", { name: "Delete" }));
       await userEvent.click(screen.getByRole(role, { name: "Select Albums" }));
       await userEvent.click(screen.getByRole(role, { name: "Select Books" }));
       await userEvent.click(
-        within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+        within(screen.getByRole("group", { name: "Exit selection" })).getByRole("button", {
+          name: "Delete",
+        }),
       );
       expect(repository.get("a")?.deletedAt).toBe(5000);
       expect(repository.get("b")?.deletedAt).toBe(5000);
@@ -345,7 +347,9 @@ describe("BoardsPage", () => {
     await userEvent.keyboard("{Enter}");
     await userEvent.keyboard("{Enter}");
     await userEvent.click(
-      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+      within(screen.getByRole("group", { name: "Exit selection" })).getByRole("button", {
+        name: "Delete",
+      }),
     );
     expect(await screen.findByRole("button", { name: "Undo" })).toHaveFocus();
   });
@@ -367,7 +371,9 @@ describe("BoardsPage", () => {
       await userEvent.click(screen.getByRole("button", { name: `Select ${name}` }));
     }
     await userEvent.click(
-      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+      within(screen.getByRole("group", { name: "Exit selection" })).getByRole("button", {
+        name: "Delete",
+      }),
     );
     // The two that went are said first, with their Undo; then why the third stayed.
     expect(await screen.findByRole("status")).toHaveTextContent("2 lists deleted");
@@ -408,7 +414,9 @@ describe("BoardsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     await userEvent.click(screen.getByRole("button", { name: "Select Albums" }));
     await userEvent.click(
-      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+      within(screen.getByRole("group", { name: "Exit selection" })).getByRole("button", {
+        name: "Delete",
+      }),
     );
     expect(await screen.findByRole("status")).toHaveTextContent("1 list deleted");
     expect(repository.get("a")).toMatchObject({ deletedAt: 5000, publishedId: null });
@@ -428,7 +436,9 @@ describe("BoardsPage", () => {
       await userEvent.click(screen.getByRole("button", { name: `Select ${name}` }));
     }
     await userEvent.click(
-      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+      within(screen.getByRole("group", { name: "Exit selection" })).getByRole("button", {
+        name: "Delete",
+      }),
     );
     await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
     expect(titles()).toEqual(["Open Alpha", "Open Bravo", "Open Charlie"]);

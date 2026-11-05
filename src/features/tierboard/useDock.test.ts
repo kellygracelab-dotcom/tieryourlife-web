@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import type { PointerEvent as ReactPointerEvent } from "react";
-import { beforeEach, describe, expect, it } from "vitest";
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { memoryStore } from "../../lib/storage";
 import { useDock, WIDE_BOARD_FROM } from "./useDock";
 
@@ -80,5 +80,27 @@ describe("useDock", () => {
     act(() => grip.moveTo(-9000));
     expect(result.current.rows).toBe(most);
     expect(most).toBeGreaterThan(1);
+  });
+
+  it("changes the dock's rows from the keyboard, within what the window has room for", () => {
+    windowOf(1600, 1000);
+    const { result } = renderHook(() => useDock(memoryStore()));
+    const press = (key: string) => {
+      const event = { key, preventDefault: vi.fn() };
+      act(() => result.current.resizeByKey(event as unknown as ReactKeyboardEvent<HTMLElement>));
+      return event.preventDefault;
+    };
+    const start = result.current.rows;
+    expect(press("ArrowUp")).toHaveBeenCalled();
+    expect(result.current.rows).toBe(Math.min(start + 1, result.current.maxRows));
+    press("End");
+    expect(result.current.rows).toBe(result.current.maxRows);
+    press("ArrowUp");
+    expect(result.current.rows).toBe(result.current.maxRows);
+    press("Home");
+    expect(result.current.rows).toBe(1);
+    press("ArrowDown");
+    expect(result.current.rows).toBe(1);
+    expect(press("a")).not.toHaveBeenCalled();
   });
 });

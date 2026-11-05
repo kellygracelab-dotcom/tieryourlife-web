@@ -132,5 +132,7 @@ describe("HomePage", () => {
     const card = screen.getByRole("complementary", { name: "TierYourLife for Android" });
     const hero = screen.getByRole("heading", { level: 1 });
     expect(card.compareDocumentPosition(hero) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The page's outline still starts at its h1: the card's title is no heading.
+    expect(screen.getAllByRole("heading")[0]).toBe(hero);
   });
 });

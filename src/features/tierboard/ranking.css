@@ -1357,7 +1357,8 @@
     transition: opacity 120ms ease;
   }
 
-  .ranking--under .pool__grip:hover::after {
+  .ranking--under .pool__grip:hover::after,
+  .ranking--under .pool__grip:focus-visible::after {
     opacity: 1;
   }
 

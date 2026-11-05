@@ -9,6 +9,7 @@ const es: Translation = {
   tagline: "Versión web",
   nav: {
     site: "Sitio",
+    skipToContent: "Saltar al contenido",
     signIn: "Iniciar sesión",
     signOut: "Cerrar sesión",
     account: "Tu cuenta",
@@ -85,8 +86,8 @@ const es: Translation = {
     title: "Ajustes",
     guestTitle: "Inicia sesión para cambiar tus ajustes.",
     guestBody:
-      "Tu nombre, tu imagen y el tema pertenecen a una cuenta. Para clasificar una lista no hace falta.",
-    themeGuestNote: "Se guarda en este dispositivo mientras no inicies sesión.",
+      "Tu nombre y tu imagen pertenecen a una cuenta. Para clasificar una lista no hace falta.",
+    themeGuestNote: "Se guarda en este dispositivo, con la sesión iniciada o sin ella.",
     nameTitle: "Tu nombre",
     nameBody:
       "El nombre que aparece como autor en cada lista que publicas. Tu correo nunca se muestra.",
@@ -134,7 +135,7 @@ const es: Translation = {
     placeTitle: "Coloca tu foto",
     placeFrame: "La imagen que va en el círculo",
     placeUse: "Usar esta",
-    placeFailed: "La imagen no se puede mostrar aquí. Aun así se puede usar tal cual.",
+    placeFailed: "Esta imagen no carga, así que no puede ser tu cara. Elige otra.",
     placeHelp: "Arrastra para mover; pellizca o desplaza para hacer zoom.",
     placeAsItIs: "Esta imagen solo se puede usar tal cual.",
   },
@@ -481,6 +482,7 @@ const es: Translation = {
     dock: "Dónde van las tarjetas",
     dockBeside: "Tarjetas junto a los niveles",
     dockUnder: "Tarjetas bajo los niveles",
+    dockRows: "Filas de tarjetas bajo los niveles",
     allPlaced: { one: "La tarjeta está colocada", other: "Las {n} tarjetas están colocadas" },
     allPlacedNote: "Cambia de idea arrastrando una tarjeta, o termina y llévate tu enlace.",
     allPlacedNoteEdit: "Cambia de idea arrastrando una tarjeta, o guarda lo que tienes.",
@@ -594,6 +596,9 @@ const es: Translation = {
   crash: {
     title: "Algo salió mal en esta página",
     body: "Recargar suele arreglarlo. Si no, el resto del sitio sigue funcionando.",
+    offlineTitle: "Esta página no se puede abrir sin conexión",
+    offlineBody:
+      "No se abrió antes en esta visita y no hay conexión. Recarga cuando vuelvas a estar en línea; las páginas ya abiertas siguen funcionando.",
   },
   notFound: {
     title: "No hay nada en esta dirección.",
@@ -1222,7 +1227,8 @@ const es: Translation = {
       "Tus tableros siguen en este navegador. La copia de tu cuenta se elimina, y un dispositivo nuevo empezará vacío.",
     offConfirm: "Detener y eliminar",
     offCancel: "Cancelar",
-    stuck: "Sin copia desde {when}. Revisa tu conexión.",
+    stuck: "Sin copia desde {when}. Pulsa «Guardar copia ahora» para volver a intentarlo.",
+    stuckNever: "Aún no hay copia. Pulsa «Guardar copia ahora» para volver a intentarlo.",
     now: "Guardar copia ahora",
     backingUp: "Guardando copia…",
     guestNote:

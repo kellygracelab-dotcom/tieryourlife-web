@@ -173,7 +173,9 @@ describe("SettingsPage", () => {
     open({ kind: "guest", uid: "g1" });
     expect(screen.getByText("Sign in to change your settings.")).toBeInTheDocument();
     expect(screen.getByRole("radiogroup", { name: "Theme" })).toBeInTheDocument();
-    expect(screen.getByText(/Saved on this device while/)).toBeInTheDocument();
+    // The theme is this device's, signed in or not: nothing says an account keeps it.
+    expect(screen.getByText("Kept on this device, signed in or not.")).toBeInTheDocument();
+    expect(screen.queryByText(/theme belong/)).toBeNull();
     expect(screen.getByRole("link", { name: /Privacy policy/ })).toHaveAttribute(
       "href",
       "/privacy.html",
@@ -273,6 +275,19 @@ describe("SettingsPage", () => {
     expect(screen.getByText("23/24")).not.toHaveClass("settings__counter--full");
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(field).toHaveValue("Danylo Petrov of the Ver");
+  });
+
+  it("leaves out a card whose picture no longer loads", async () => {
+    load.mockResolvedValue({
+      lists: [published("A24 films", ["https://img/gone.jpg", "https://img/2.jpg"])],
+    });
+    open();
+    const cards = await within(faces()).findAllByRole("button", { name: "Card from A24 films" });
+    expect(cards).toHaveLength(2);
+    fireEvent.error(cards[0]!.querySelector("img")!);
+    const left = within(faces()).getAllByRole("button", { name: "Card from A24 films" });
+    expect(left).toHaveLength(1);
+    expect(left[0]!.querySelector("img")).toHaveAttribute("src", "https://img/2.jpg");
   });
 
   it("offers the letter and the cards of the person's lists; a card left in the middle is worn where it lives", async () => {

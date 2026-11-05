@@ -859,11 +859,11 @@
   cursor: pointer;
 }
 
-.tier-dialog__move:hover:not(:disabled) {
+.tier-dialog__move:hover:not([aria-disabled="true"]) {
   background: var(--hover);
 }
 
-.tier-dialog__move:disabled {
+.tier-dialog__move[aria-disabled="true"] {
   opacity: 0.38;
   cursor: default;
 }

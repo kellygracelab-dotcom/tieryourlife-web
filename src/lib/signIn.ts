@@ -110,11 +110,27 @@ async function switchAccount(
 }
 
 /**
+ * Whatever throws on the way (a guest token that could not be refreshed, an
+ * account switch or a redirect that would not start) is a failure said like
+ * any other, never a rejection that leaves Sign in greyed out for good.
+ */
+const failing = async (attempt: () => Promise<SignInOutcome>): Promise<SignInOutcome> => {
+  try {
+    return await attempt();
+  } catch (error) {
+    return { kind: "failed", code: codeOf(error) };
+  }
+};
+
+/**
  * Google sign-in the way the phone app does it: the guest is linked so its uid
  * and everything under it stay; when the Google account already exists, the
  * person is signed into it and the guest is carried over.
  */
-export async function signInWithGoogle(deps: SignInDeps): Promise<SignInOutcome> {
+export const signInWithGoogle = (deps: SignInDeps): Promise<SignInOutcome> =>
+  failing(() => googleSignIn(deps));
+
+async function googleSignIn(deps: SignInDeps): Promise<SignInOutcome> {
   const auth = getFirebaseAuth();
   await auth.authStateReady();
   const user = auth.currentUser;
@@ -161,7 +177,7 @@ export async function completeSignIn(deps: SignInDeps): Promise<SignInOutcome | 
     return { kind: "signedIn", switched: false };
   } catch (error) {
     if (codeOf(error) === CODE.inUse && error instanceof FirebaseError) {
-      return switchAccount(auth, error, guestToken, deps);
+      return failing(() => switchAccount(auth, error, guestToken, deps));
     }
     return { kind: "failed", code: codeOf(error) };
   }

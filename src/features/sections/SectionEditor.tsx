@@ -640,8 +640,9 @@ export function SectionEditor(props: SectionEditorProps) {
         onClick={(event) => event.stopPropagation()}
         onSubmit={onSubmit}
       >
+        {/* Divs, not header and footer: in a dialog those would be a second banner and contentinfo. */}
         {compact ? (
-          <header className="section-editor__bar">
+          <div className="section-editor__bar">
             <button
               type="button"
               className="section-editor__close"
@@ -655,21 +656,21 @@ export function SectionEditor(props: SectionEditorProps) {
               {title}
             </h2>
             {sendButton}
-          </header>
+          </div>
         ) : (
-          <header className="section-editor__head">
+          <div className="section-editor__head">
             <h2 id={`${id}-title`} className="dialog__title">
               {title}
             </h2>
             {intro !== null && <p className="section-editor__intro">{intro}</p>}
-          </header>
+          </div>
         )}
         <div className="section-editor__body" inert={sending}>
           {compact && intro !== null && <p className="section-editor__intro">{intro}</p>}
           {fields}
         </div>
         {(!compact || asking || failure !== null) && (
-          <footer className="section-editor__foot">
+          <div className="section-editor__foot">
             {failure}
             {asking ? (
               askRow
@@ -681,7 +682,7 @@ export function SectionEditor(props: SectionEditorProps) {
                 {sendButton}
               </div>
             )}
-          </footer>
+          </div>
         )}
         <p className="visually-hidden" aria-live="polite">
           {sending ? strings.propose.sending : ""}

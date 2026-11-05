@@ -420,7 +420,8 @@ export function BoardsPage({
           {selecting && (
             <div
               className="boards__selection"
-              role="toolbar"
+              // A group, not a toolbar: a toolbar promises the arrow keys between its two buttons.
+              role="group"
               aria-label={strings.boards.exitSelection}
             >
               <span className="boards__selected">

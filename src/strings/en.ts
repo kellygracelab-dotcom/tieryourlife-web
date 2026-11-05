@@ -3,6 +3,7 @@ export const en = {
   tagline: "Web app",
   nav: {
     site: "Site",
+    skipToContent: "Skip to content",
     signIn: "Sign in",
     signOut: "Sign out",
     account: "Your account",
@@ -78,9 +79,8 @@ export const en = {
     faceNotMade: "That picture cannot be your face. Pick another.",
     title: "Settings",
     guestTitle: "Sign in to change your settings.",
-    guestBody:
-      "Your name, your picture and the theme belong to an account. Ranking a list doesn’t need one.",
-    themeGuestNote: "Saved on this device while you’re signed out.",
+    guestBody: "Your name and your picture belong to an account. Ranking a list doesn’t need one.",
+    themeGuestNote: "Kept on this device, signed in or not.",
     nameTitle: "Your name",
     nameBody: "The name shown as the author on every list you publish. Your email is never shown.",
     nameField: "Name",
@@ -128,7 +128,7 @@ export const en = {
     placeTitle: "Place your face",
     placeFrame: "The picture to place in the circle",
     placeUse: "Use this",
-    placeFailed: "The picture could not be shown here. It can still be used as it is.",
+    placeFailed: "This picture would not load, so it cannot be your face. Pick another.",
     placeHelp: "Drag to move, pinch or scroll to zoom.",
     placeAsItIs: "This picture can only be used as it is.",
   },
@@ -482,6 +482,7 @@ export const en = {
     dock: "Where the cards sit",
     dockBeside: "Cards beside the board",
     dockUnder: "Cards under the board",
+    dockRows: "Rows of cards under the board",
     allPlaced: { one: "The card is placed", other: "All {n} placed" },
     allPlacedNote: "Change your mind by dragging a card, or finish and get your link.",
     allPlacedNoteEdit: "Change your mind by dragging a card, or save what you have.",
@@ -1162,7 +1163,8 @@ export const en = {
       "Your boards stay in this browser. The copy in your account is deleted, and a new device will start empty.",
     offConfirm: "Stop and delete",
     offCancel: "Cancel",
-    stuck: "Not backed up since {when}. Check your connection.",
+    stuck: "Not backed up since {when}. Back up now to try again.",
+    stuckNever: "Not backed up yet. Back up now to try again.",
     now: "Back up now",
     backingUp: "Backing up…",
     guestNote:
@@ -1228,6 +1230,9 @@ export const en = {
   crash: {
     title: "Something went wrong on this page",
     body: "Reloading usually fixes it. If it does not, the rest of the site still works.",
+    offlineTitle: "This page cannot open offline",
+    offlineBody:
+      "It was not opened earlier in this visit, and the connection is down. Reload once you’re back online; the pages already open still work.",
   },
   notFound: {
     title: "There is nothing at this address.",

@@ -149,9 +149,9 @@ function QueueCard({
           {blur && !revealed && <Icon name="visibility_off" className="queue__cover-icon" />}
         </button>
         <div className="queue__text">
-          <h2 ref={title} className="queue__title" tabIndex={-1}>
+          <h3 ref={title} className="queue__title" tabIndex={-1}>
             {item.listTitle}
-          </h2>
+          </h3>
           <p className="queue__byline">{fill(strings.card.by, { name: item.authorName })}</p>
           <div className="queue__pills">
             <span className="queue__pill queue__pill--count">
@@ -418,7 +418,8 @@ export function ModerationPage({
   const { account } = useSession();
   return (
     <section className="mod">
-      <h1 className="mod__title">{strings.mod.title}</h1>
+      {/* A pane of Admin, whose h1 names the page: the pane's title is the next level down. */}
+      <h2 className="mod__title">{strings.mod.title}</h2>
       {account?.kind === "guest" && <NotAvailable />}
       {account?.kind === "signedIn" && (
         <Queue uid={account.uid} load={load} takeDown={takeDown} leaveUp={leaveUp} />

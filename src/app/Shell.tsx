@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type MouseEvent,
+} from "react";
 import {
   Link,
   Outlet,
@@ -10,7 +17,6 @@ import {
 } from "react-router";
 import { useAdminCounts } from "../features/admin/useAdminCounts";
 import { useModerator } from "../features/moderation/useModerator";
-import type { Account } from "../lib/account";
 import { appIsLive, onApple, playUrl } from "../lib/links";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { lastSeen } from "../lib/signedInHint";
@@ -49,11 +55,16 @@ function FaceOf({ name, photoUrl }: { name: string | null; photoUrl: string | nu
   );
 }
 
-/** Where a signed-in person's own things are. Signing out is a setting, and lives with the settings. */
-function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn" }> }) {
+/**
+ * Where a signed-in person's own things are. Signing out is a setting, and
+ * lives with the settings. Drawn from who was here last time until Firebase
+ * says, so a press before then opens it too; Admin waits for the account.
+ */
+function AccountMenu({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
+  const { account } = useSession();
   const moderator = useModerator();
   const waiting = useAdminCounts(
-    moderator.status === "yes" ? account.uid : null,
+    moderator.status === "yes" && account?.kind === "signedIn" ? account.uid : null,
     moderator.status === "yes" ? moderator.reports.length : 0,
   );
   return (
@@ -62,13 +73,13 @@ function AccountMenu({ account }: { account: Extract<Account, { kind: "signedIn"
       buttonClassName="menu__button menu__button--face"
       button={
         <>
-          <FaceOf name={account.displayName} photoUrl={account.photoUrl} />
+          <FaceOf name={name} photoUrl={photoUrl} />
           <Icon name="expand_more" className="menu__chevron" />
         </>
       }
     >
       <>
-        <li className="menu__who">{account.displayName ?? strings.nav.you}</li>
+        <li className="menu__who">{name ?? strings.nav.you}</li>
         <li>
           <Link to="/b">{strings.nav.boards}</Link>
         </li>
@@ -196,10 +207,17 @@ function focusForNow(element: HTMLElement | null) {
 export function Shell() {
   const { account, signIn } = useSession();
   const [seen] = useState(() => lastSeen());
-  // Nothing pressed here yet: a sign-in that came back from its redirect failed speaks instead.
-  const [pressed, setSigning] = useState<"idle" | "busy" | "failed" | "inApp" | null>(null);
+  const location = useLocation();
+  const [signing, setSigning] = useState(false);
+  // What the last press of Sign in came to, said under the bar on the page it
+  // was pressed on and gone from the next. Nothing pressed here yet: a sign-in
+  // that came back from its redirect failed speaks instead, on the page it
+  // came back to.
+  const [said, setSaid] = useState<{ note: "failed" | "inApp" | null; on: string } | null>(null);
+  const [landedOn] = useState(location.pathname);
   const redirectFailed = useRedirectFailed();
-  const signing = pressed ?? (redirectFailed ? "failed" : "idle");
+  const told = said ?? (redirectFailed ? { note: "failed" as const, on: landedOn } : null);
+  const note = told !== null && told.on === location.pathname ? told.note : null;
 
   // On a phone the list's heading scrolls away under the tray's work; once it
   // has, the app bar says what the page is instead of the brand.
@@ -215,10 +233,6 @@ export function Shell() {
   useEffect(() => {
     document.title = documentTitleOf(page, strings.brand);
   }, [page]);
-
-  // The bar's search box. The home page has its own, larger one, so the bar
-  // goes without there; on the search page the box shows the words asked.
-  const location = useLocation();
 
   // A new page takes the focus, so the keyboard starts on it rather than
   // wherever the old page's link was (often nowhere at all). A page that
@@ -236,6 +250,8 @@ export function Shell() {
         active.closest("[aria-modal='true'], [role='search']") !== null);
     if (!kept) focusForNow(main.current);
   }, [location.pathname]);
+  // The bar's search box. The home page has its own, larger one, so the bar
+  // goes without there; on the search page the box shows the words asked.
   const [params] = useSearchParams();
   const home = location.pathname === "/";
   const asked = location.pathname === "/search" ? (params.get("q") ?? "") : "";
@@ -248,16 +264,33 @@ export function Shell() {
   );
 
   const onSignIn = () => {
-    setSigning("busy");
-    signIn().then((outcome) =>
-      setSigning(
-        outcome.kind !== "failed" ? "idle" : outcome.code === IN_APP_BROWSER ? "inApp" : "failed",
-      ),
-    );
+    const on = location.pathname;
+    setSigning(true);
+    setSaid({ note: null, on });
+    signIn()
+      .then(
+        (outcome) =>
+          outcome.kind !== "failed" ? null : outcome.code === IN_APP_BROWSER ? "inApp" : "failed",
+        // Nothing that goes wrong may leave Sign in greyed out for good.
+        () => "failed" as const,
+      )
+      .then((next) => {
+        setSaid({ note: next, on });
+        setSigning(false);
+      });
+  };
+
+  // Past the bar to the page, for the keyboard: the bar is six stops long.
+  const skipToMain = (event: MouseEvent) => {
+    event.preventDefault();
+    focusForNow(main.current);
   };
 
   return (
     <div className="shell">
+      <a className="skip-link" href="#main" onClick={skipToMain}>
+        {strings.nav.skipToContent}
+      </a>
       <header className={titled ? "top top--titled" : "top"}>
         <Link className="brand" to="/">
           <img className="brand__mark" src="/favicon.svg" alt="" width="26" height="26" />
@@ -271,7 +304,8 @@ export function Shell() {
         )}
         <SiteTabs className="top__tabs" pathname={location.pathname} />
         {!home && <BarSearch asked={asked} />}
-        <nav className="top__actions" aria-label={strings.nav.site}>
+        {/* Not a second navigation: what is here acts rather than leads somewhere. */}
+        <div className="top__actions">
           {!home && (
             <Link className="top__search-link" to="/search" aria-label={strings.nav.search}>
               <Icon name="search" />
@@ -282,33 +316,23 @@ export function Shell() {
             <span className="top__make-text">{strings.nav.newList}</span>
           </Link>
           {account?.kind === "signedIn" ? (
-            <AccountMenu account={account} />
+            <AccountMenu name={account.displayName} photoUrl={account.photoUrl} />
           ) : account === null && seen !== null ? (
             // Who was here last time, until Firebase says: Sign in flashed first.
-            <span className="menu__button menu__button--face" aria-hidden="true">
-              <FaceOf name={seen.displayName} photoUrl={seen.photoUrl} />
-              <Icon name="expand_more" className="menu__chevron" />
-            </span>
+            <AccountMenu name={seen.displayName} photoUrl={seen.photoUrl} />
           ) : (
-            <>
-              {signing === "failed" && (
-                <span className="top__note" role="alert">
-                  {strings.nav.signInFailed}
-                </span>
-              )}
-              <Button onClick={onSignIn} disabled={signing === "busy"}>
-                {strings.nav.signIn}
-              </Button>
-            </>
+            <Button onClick={onSignIn} disabled={signing}>
+              {strings.nav.signIn}
+            </Button>
           )}
-        </nav>
+        </div>
       </header>
       {/^\/(following|b)?$/.test(location.pathname) && (
         <SiteTabs className="site-tabs--row" pathname={location.pathname} />
       )}
-      {signing === "inApp" && (
+      {note !== null && (
         <p className="top__banner" role="alert">
-          {strings.keep.inApp}
+          {note === "inApp" ? strings.keep.inApp : strings.nav.signInFailed}
         </p>
       )}
       {storageTrouble && (
@@ -316,7 +340,7 @@ export function Shell() {
           {strings.nav.storageRefused}
         </p>
       )}
-      <main className="shell__main" ref={main}>
+      <main id="main" className="shell__main" ref={main}>
         <PageTitleContext.Provider value={setPage}>
           <Outlet />
         </PageTitleContext.Provider>

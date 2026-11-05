@@ -24,6 +24,9 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  /* With wider letter and word spacing on a 320 px phone the name gives way
+     before the buttons are pushed off the edge. */
+  min-width: 0;
   color: var(--ink);
   font: var(--text-label);
   font-size: 15px;
@@ -31,6 +34,31 @@
 
 .brand:hover {
   color: var(--ink);
+}
+
+/* Shown only to the keyboard, over the bar, the first stop on every page. */
+.skip-link {
+  position: absolute;
+  inset-inline-start: 8px;
+  top: 8px;
+  z-index: 100;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: var(--ink);
+  font: var(--text-label);
+  transform: translateY(calc(-100% - 16px));
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.brand__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The phone app's icon; its corners are in the drawing. */
@@ -354,11 +382,6 @@
   .top__make-text {
     display: none;
   }
-}
-
-.top__note {
-  font: var(--text-small);
-  color: var(--error);
 }
 
 /* A sentence the header cannot hold: under it, full width. */
