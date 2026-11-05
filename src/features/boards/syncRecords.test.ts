@@ -22,9 +22,6 @@ describe("the sync records", () => {
     expect(mine.lastSyncedAt()).toBeNull();
     mine.markSynced(123);
     expect(mine.lastSyncedAt()).toBe(123);
-    expect(mine.merged()).toBe(false);
-    mine.markMerged();
-    expect(mine.merged()).toBe(true);
     mine.clear();
     expect(mine.all()).toEqual([]);
     expect(store.read(syncKey("me"))).toBeNull();
@@ -38,13 +35,15 @@ describe("the sync records", () => {
     expect(syncRecords(store, "me").all()).toEqual([]);
   });
 
-  it("back up unless switched off", () => {
+  it("back up unless this account switched it off", () => {
     const store = memoryStore();
-    expect(readBackUp(store)).toBe(true);
-    keepBackUp(store, false);
-    expect(readBackUp(store)).toBe(false);
-    keepBackUp(store, true);
-    expect(readBackUp(store)).toBe(true);
+    expect(readBackUp(store, "me")).toBe(true);
+    keepBackUp(store, "me", false);
+    expect(readBackUp(store, "me")).toBe(false);
+    // The next person on this browser is backed up as before.
+    expect(readBackUp(store, "other")).toBe(true);
+    keepBackUp(store, "me", true);
+    expect(readBackUp(store, "me")).toBe(true);
   });
 });
 

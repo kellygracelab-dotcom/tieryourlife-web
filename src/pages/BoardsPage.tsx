@@ -16,7 +16,8 @@ import {
   type BoardShow,
   type BoardSort,
 } from "../features/boards/model";
-import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { type BoardsRepository } from "../features/boards/repository";
+import { boards as site } from "../features/boards/owners";
 import { useBoardSync } from "../features/boards/boardSync";
 import { BoardRow } from "../features/boards/BoardRow";
 import { BoardTile } from "../features/boards/BoardTile";

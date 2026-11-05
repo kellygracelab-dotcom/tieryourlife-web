@@ -2,11 +2,11 @@ import type { User } from "firebase/auth";
 import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  onAuthStateChanged: vi.fn(),
+  onIdTokenChanged: vi.fn(),
   getFirebaseAuth: vi.fn(() => ({ name: "auth" })),
 }));
 
-vi.mock("firebase/auth", () => ({ onAuthStateChanged: mocks.onAuthStateChanged }));
+vi.mock("firebase/auth", () => ({ onIdTokenChanged: mocks.onIdTokenChanged }));
 vi.mock("./firebase", () => ({ getFirebaseAuth: mocks.getFirebaseAuth }));
 
 import { accountOf, subscribeToAccount } from "./account";
@@ -42,11 +42,15 @@ describe("accountOf", () => {
 });
 
 describe("subscribeToAccount", () => {
-  it("maps every auth change and returns the unsubscribe", () => {
+  it("maps every change of who is here, a link to Google too, and returns the unsubscribe", () => {
     const unsubscribe = vi.fn();
-    mocks.onAuthStateChanged.mockImplementation((_auth, next: (u: User | null) => void) => {
+    mocks.onIdTokenChanged.mockImplementation((_auth, next: (u: User | null) => void) => {
       next(null);
       next(user({ isAnonymous: true, uid: "g" }));
+      // The hourly refresh of the same guest's token says nothing new.
+      next(user({ isAnonymous: true, uid: "g" }));
+      // A guest linked to Google keeps its uid: the auth-state event never fires for it.
+      next(user({ uid: "g", displayName: "Danylo" }));
       return unsubscribe;
     });
     const seen: unknown[] = [];
@@ -56,8 +60,9 @@ describe("subscribeToAccount", () => {
     expect(seen).toEqual([
       { kind: "guest", uid: null },
       { kind: "guest", uid: "g" },
+      { kind: "signedIn", uid: "g", displayName: "Danylo", photoUrl: null },
     ]);
-    expect(mocks.onAuthStateChanged.mock.calls[0]?.[0]).toEqual({ name: "auth" });
+    expect(mocks.onIdTokenChanged.mock.calls[0]?.[0]).toEqual({ name: "auth" });
     expect(stop).toBe(unsubscribe);
   });
 });

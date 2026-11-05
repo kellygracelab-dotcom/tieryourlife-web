@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import {
   Link,
   Outlet,
@@ -14,6 +14,7 @@ import type { Account } from "../lib/account";
 import { appIsLive, onApple, playUrl } from "../lib/links";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { lastSeen } from "../lib/signedInHint";
+import { storageRefused, subscribeToStorageTrouble } from "../lib/storage";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ClearButton } from "../ui/ClearButton";
@@ -188,6 +189,13 @@ export function Shell() {
   const home = location.pathname === "/";
   const asked = location.pathname === "/search" ? (params.get("q") ?? "") : "";
 
+  // The browser would not keep something written: lists made now would be lost on the spot.
+  const storageTrouble = useSyncExternalStore(
+    subscribeToStorageTrouble,
+    storageRefused,
+    storageRefused,
+  );
+
   const onSignIn = () => {
     setSigning("busy");
     signIn().then((outcome) =>
@@ -250,6 +258,11 @@ export function Shell() {
       {signing === "inApp" && (
         <p className="top__banner" role="alert">
           {strings.keep.inApp}
+        </p>
+      )}
+      {storageTrouble && (
+        <p className="top__banner" role="alert">
+          {strings.nav.storageRefused}
         </p>
       )}
       <main className="shell__main">

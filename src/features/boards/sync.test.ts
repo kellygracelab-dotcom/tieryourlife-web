@@ -205,6 +205,35 @@ describe("syncBoards", () => {
     expect(records.all()[0]?.revision).toBe(2);
   });
 
+  it("never writes down, nor later takes out of the account, a board the browser would not keep", async () => {
+    const store = memoryStore();
+    // A browser whose storage is full: the big board does not fit, the small record still does.
+    const full = {
+      ...store,
+      write: (key: string, value: string) =>
+        key.endsWith(":big") ? false : store.write(key, value),
+    };
+    const repository = boardsRepository(full);
+    const records = syncRecords(store, "me");
+    const account = fakeAccount();
+    account.holds(films("big", "Everything I watched"));
+    account.holds(films("small", "Snacks"));
+    const run = () =>
+      syncBoards({
+        repository,
+        api: account.api,
+        records,
+        deviceName: "Chrome on Linux",
+        now: () => 1000,
+        nextUid: uids("new-"),
+      }).catch(() => null);
+    await run();
+    expect(records.all().map((record) => record.uid)).not.toContain("big");
+    await run();
+    expect(account.forgotten).toEqual([]);
+    expect(account.kept.get("big")?.deleted).toBe(false);
+  });
+
   it("brings down a board this device has never had, with its pictures found by id", async () => {
     const { repository, account, run } = setUp();
     const theirs = films("theirs", "From the phone");

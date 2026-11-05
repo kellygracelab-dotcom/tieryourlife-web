@@ -65,11 +65,35 @@ export async function boardForOwnList(
     now,
     nextUid,
   );
+  // A card's credit is its picture's, which the draft does not carry: found again on the list.
+  const credits = new Map(
+    list.items.map((item) => [
+      `${item.title}
+${item.imageUrl ?? ""}`,
+      item.credit ?? null,
+    ]),
+  );
   const cover = list.coverImageUrl;
   return {
     ...board,
+    items: board.items.map((item, index) => {
+      const card = draft.items[index];
+      const credit =
+        card === undefined
+          ? null
+          : credits.get(`${card.title}
+${card.imageUrl ?? ""}`);
+      return credit === undefined || credit === null ? item : { ...item, credit };
+    }),
     authorName: list.authorName,
     publishedId: list.id,
+    // As named or as nameless as the list went out, in the topic it went to:
+    // an Update with nothing changed must not put the author's name on it.
+    anonymous: list.anonymous === true,
+    topic:
+      typeof list.topicId === "string" && list.topicId !== ""
+        ? { id: list.topicId, name: list.topicName ?? "" }
+        : null,
     // A cover from elsewhere stays; one of the feed's own copies would be gone after the republish.
     coverImageUrls: cover !== null && publishedPictureOf(cover, list.id) === null ? [cover] : [],
     // In step with the list, unless it carries changes the old editor had not sent.

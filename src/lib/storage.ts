@@ -5,7 +5,8 @@
  */
 export interface KeyValueStore {
   read(key: string): string | null;
-  write(key: string, value: string): void;
+  /** False when the value could not be kept; a store that cannot fail returns nothing. */
+  write(key: string, value: string): boolean | void;
   remove(key: string): void;
   keys?(): string[];
 }
@@ -15,14 +16,42 @@ export function memoryStore(): KeyValueStore {
   const data = new Map<string, string>();
   return {
     read: (key) => data.get(key) ?? null,
-    write: (key, value) => void data.set(key, value),
+    write: (key, value) => {
+      data.set(key, value);
+      return true;
+    },
     remove: (key) => void data.delete(key),
     keys: () => [...data.keys()],
   };
 }
 
+/**
+ * Whether this browser refused to keep something the site wrote: its storage
+ * is full or blocked. Said once on screen, so nobody goes on making lists
+ * that are not being kept.
+ */
+let refused = false;
+const troubleListeners = new Set<() => void>();
+
+export const storageRefused = (): boolean => refused;
+
+export function subscribeToStorageTrouble(listener: () => void): () => void {
+  troubleListeners.add(listener);
+  return () => troubleListeners.delete(listener);
+}
+
+function noteRefusal(): void {
+  if (refused) return;
+  refused = true;
+  troubleListeners.forEach((listener) => listener());
+}
+
+export function resetStorageTroubleForTests(): void {
+  refused = false;
+}
+
 // Private mode, a full disk and a browser told to block storage all throw;
-// the site must work anyway, it just forgets on reload.
+// the site must work anyway, it just forgets on reload, and says so.
 function browserStore(storage: () => Storage): KeyValueStore {
   return {
     read(key) {
@@ -35,8 +64,10 @@ function browserStore(storage: () => Storage): KeyValueStore {
     write(key, value) {
       try {
         storage().setItem(key, value);
+        return true;
       } catch {
-        /* forgotten on reload */
+        noteRefusal();
+        return false;
       }
     },
     remove(key) {

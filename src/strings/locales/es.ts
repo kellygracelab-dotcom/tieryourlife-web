@@ -17,6 +17,8 @@ const es: Translation = {
     boards: "Tus listas",
     search: "Buscar listas",
     signInFailed: "No se pudo iniciar sesión. Inténtalo de nuevo.",
+    storageRefused:
+      "Este navegador no está guardando tus cambios: su almacenamiento está lleno o bloqueado para este sitio. Libera espacio o permite que el sitio guarde datos, o lo que hagas ahora se perderá.",
     theme: "Tema",
     themeSystem: "Sistema",
     themeLight: "Claro",
@@ -109,7 +111,7 @@ const es: Translation = {
     faceFailed: "No se pudo guardar: el servidor no respondió.",
     privacyTitle: "Privacidad",
     signOutNote:
-      "Tus listas y clasificaciones se quedan: inicia sesión con la misma cuenta de Google para recuperarlas.",
+      "Tus listas se quedan en tu cuenta y en este navegador, ocultas hasta que vuelvas a iniciar sesión. Sin sesión, solo verás las listas hechas sin cuenta.",
     deleteAction: "Eliminar la cuenta",
     deleteHelper:
       "Se va todo: tus listas, tu nombre y sus imágenes. Las clasificaciones conservan sus enlaces, sin tu nombre.",
@@ -1204,17 +1206,12 @@ const es: Translation = {
     guestNote:
       "Cambia de navegador o borra este y desaparecen. Una cuenta los conserva y los lleva al teléfono.",
     localOnly: "{count}, solo en este dispositivo",
-    mergeTitle: "Ya has usado esta cuenta",
-    mergeBody: "Ya tiene {account}. Este dispositivo tiene {local} que hiciste sin cuenta.",
-    mergeKeep: "Conservar todo",
-    mergeKeepSub:
-      "Los {total}. Si dos tienen el mismo nombre, al local se le añade “(de este dispositivo)”.",
-    mergeAccount: "Usar solo los tableros de la cuenta",
-    mergeAccountSub:
-      "{local} de este dispositivo van a la papelera. Puedes restaurarlos desde ahí.",
-    mergeFootnote: "No se elimina nada en ningún caso.",
-    mergeRecommended: "Recomendado",
-    mergeContinue: "Continuar",
+    mergeTitle: "Listas hechas sin cuenta",
+    mergeBody: "Este navegador tiene {local} hechas sin cuenta. ¿Pasarlas a tu cuenta?",
+    mergeFootnote:
+      "Si se quedan en el navegador, las verás cuando no hayas iniciado sesión. No se elimina nada en ningún caso.",
+    mergeMoveIn: "Pasarlas a mi cuenta",
+    mergeKeepHere: "Dejarlas solo en este navegador",
     fromThisDevice: "(de este dispositivo)",
     arrivedFrom: "de {device}",
     arrivedFromUnknown: "de otro dispositivo",

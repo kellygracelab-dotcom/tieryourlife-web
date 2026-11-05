@@ -11,6 +11,7 @@ import { LanguageCard } from "../features/account/LanguageCard";
 import { NameSection, type Rename } from "../features/account/NameSection";
 import type { Publish } from "../features/account/useSaving";
 import { DataCard } from "../features/boards/DataCard";
+import { owners } from "../features/boards/owners";
 import { AccountTabs } from "../app/AccountTabs";
 import { useHidden } from "../features/community/useHidden";
 import { useSession, useShowFace } from "../app/session";
@@ -220,6 +221,8 @@ export function SettingsPage({
   // The backend has removed the user already; this ends the session on this
   // device, brings a guest back and says so once on the front page.
   const onErased = async () => {
+    // The account is gone, and so are its boards here: nobody can sign into it again.
+    if (account?.kind === "signedIn") owners.forget(account.uid);
     await signOut().catch(() => undefined);
     await navigate("/", { state: { accountDeleted: true } });
   };

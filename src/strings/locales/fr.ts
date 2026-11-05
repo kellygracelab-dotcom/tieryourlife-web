@@ -20,6 +20,8 @@ const fr: Translation = {
     boards: "Vos listes",
     search: "Chercher des listes",
     signInFailed: "Connexion impossible. Réessayez.",
+    storageRefused:
+      "Ce navigateur ne garde pas vos changements : son stockage est plein ou bloqué pour ce site. Libérez de la place ou autorisez le site à stocker des données, sinon ce que vous faites maintenant sera perdu.",
     theme: "Thème",
     themeSystem: "Système",
     themeLight: "Clair",
@@ -112,7 +114,7 @@ const fr: Translation = {
     faceFailed: "Impossible d’enregistrer : le serveur n’a pas répondu.",
     privacyTitle: "Confidentialité",
     signOutNote:
-      "Vos listes et vos classements restent : reconnectez-vous avec le même compte Google pour les retrouver.",
+      "Vos listes restent dans votre compte et dans ce navigateur, masquées jusqu’à votre prochaine connexion. Déconnecté, vous ne voyez que les listes créées sans compte.",
     deleteAction: "Supprimer le compte",
     deleteHelper:
       "Tout disparaît : vos listes, votre nom et les images derrière. Les classements gardent leurs liens, sans votre nom.",
@@ -1217,17 +1219,12 @@ const fr: Translation = {
     guestNote:
       "Changez de navigateur ou videz celui-ci et ils disparaissent. Un compte les garde et les apporte sur le téléphone.",
     localOnly: "{count}, uniquement sur cet appareil",
-    mergeTitle: "Vous avez déjà utilisé ce compte",
-    mergeBody: "Il contient déjà {account}. Cet appareil a {local} créés sans compte.",
-    mergeKeep: "Tout garder",
-    mergeKeepSub:
-      "Les {total}. Si deux portent le même nom, le tableau local reçoit « (de cet appareil) ».",
-    mergeAccount: "Utiliser seulement les tableaux du compte",
-    mergeAccountSub:
-      "{local} de cet appareil vont à la corbeille. Vous pouvez les restaurer depuis là.",
-    mergeFootnote: "Rien n’est supprimé dans les deux cas.",
-    mergeRecommended: "Recommandé",
-    mergeContinue: "Continuer",
+    mergeTitle: "Listes créées sans compte",
+    mergeBody: "Ce navigateur a {local} créées sans compte. Les mettre dans votre compte ?",
+    mergeFootnote:
+      "Gardées dans le navigateur, elles s’affichent chaque fois que vous êtes déconnecté. Rien n’est supprimé dans les deux cas.",
+    mergeMoveIn: "Les mettre dans mon compte",
+    mergeKeepHere: "Les garder dans ce navigateur seulement",
     fromThisDevice: "(de cet appareil)",
     arrivedFrom: "de {device}",
     arrivedFromUnknown: "d’un autre appareil",

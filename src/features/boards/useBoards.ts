@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import type { Board } from "./model";
-import { boards as site, type BoardsRepository } from "./repository";
+import { type BoardsRepository } from "./repository";
+import { boards as site } from "./owners";
 
 /** Every board this device keeps, trash included; the page re-renders when one changes. */
 export function useBoards(repository: BoardsRepository = site): readonly Board[] {

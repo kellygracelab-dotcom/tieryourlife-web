@@ -35,7 +35,8 @@ import {
 } from "../boards/houseList";
 import { liveItems, type Board } from "../boards/model";
 import { publishProblemsOf } from "../boards/publish";
-import { boards as site, houseBoards, type BoardsRepository } from "../boards/repository";
+import { houseBoards, type BoardsRepository } from "../boards/repository";
+import { boards as site } from "../boards/owners";
 import { nextUid, useBoards } from "../boards/useBoards";
 import { sectionName, type Section } from "../sections/model";
 import { useSections } from "../sections/useSections";

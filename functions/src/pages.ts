@@ -89,6 +89,22 @@ interface StoredList {
   underReview?: boolean;
   tiers?: unknown[];
   items?: unknown[];
+  /** A house list's words in other languages, as the proxy keeps them. */
+  translations?: Record<string, Record<string, string>>;
+  basedOn?: unknown;
+}
+
+/** A copy's credit to the list it came from, as the proxy's shownCredit gives it out. */
+function creditOf(stored: unknown) {
+  if (typeof stored !== "object" || stored === null) return null;
+  const credit = stored as Record<string, unknown>;
+  if (typeof credit.id !== "string") return null;
+  return {
+    id: credit.id,
+    title: typeof credit.title === "string" ? credit.title : "",
+    authorUid: typeof credit.authorUid === "string" ? credit.authorUid : "",
+    authorName: typeof credit.authorName === "string" ? credit.authorName : "",
+  };
 }
 
 /**
@@ -119,6 +135,10 @@ export function listPayload(id: string, data: StoredList) {
     takeCount: data.takeCount ?? 0,
     tiers: data.tiers ?? [],
     items: data.items ?? [],
+    // Without them a reader in another language got a house list as written,
+    // and a copy lost its 'Based on' on every visit by its link.
+    translations: data.translations ?? {},
+    basedOn: creditOf(data.basedOn),
   };
 }
 

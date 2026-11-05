@@ -10,7 +10,7 @@ import { SessionContext, type Session } from "../app/session";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { itemsIn, poolTier, rankedTiers } from "../features/boards/model";
-import { boards } from "../features/boards/repository";
+import { boards } from "../features/boards/owners";
 import { writeKept } from "../features/ranking/kept";
 import { draftKey, loadDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
 import { localStorageStore, memoryStore } from "../lib/storage";

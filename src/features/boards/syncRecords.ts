@@ -7,7 +7,9 @@ import type { SyncedBoard } from "./syncPlan";
  * on the same browser must not inherit the first one's agreements.
  */
 export const SYNC_PREFIX = "tyl:boardsync:";
+/** Where the back-up switch was kept when it was the browser's, not the account's. */
 export const BACKUP_KEY = "tyl:backup";
+export const backUpKey = (accountUid: string): string => `${BACKUP_KEY}@${accountUid}`;
 
 export const syncKey = (accountUid: string): string => `${SYNC_PREFIX}${accountUid}`;
 
@@ -15,11 +17,9 @@ interface Kept {
   records: Record<string, { revision: number; fingerprint: string }>;
   /** When the last complete run ended; a partial run leaves it, which is what the stuck note reports. */
   lastSyncedAt: number | null;
-  /** True once the question about boards on both sides was answered, or never arose. */
-  merged: boolean;
 }
 
-const EMPTY: Kept = { records: {}, lastSyncedAt: null, merged: false };
+const EMPTY: Kept = { records: {}, lastSyncedAt: null };
 
 function read(store: KeyValueStore, accountUid: string): Kept {
   const text = store.read(syncKey(accountUid));
@@ -41,7 +41,6 @@ function read(store: KeyValueStore, accountUid: string): Kept {
     return {
       records,
       lastSyncedAt: typeof parsed.lastSyncedAt === "number" ? parsed.lastSyncedAt : null,
-      merged: parsed.merged === true,
     };
   } catch {
     return EMPTY;
@@ -54,8 +53,6 @@ export interface SyncRecords {
   forget(uid: string): void;
   lastSyncedAt(): number | null;
   markSynced(at: number): void;
-  merged(): boolean;
-  markMerged(): void;
   /** Everything about this account forgotten, as when backing up is switched off. */
   clear(): void;
 }
@@ -81,14 +78,15 @@ export function syncRecords(store: KeyValueStore, accountUid: string): SyncRecor
       }),
     lastSyncedAt: () => read(store, accountUid).lastSyncedAt,
     markSynced: (at) => change((kept) => ({ ...kept, lastSyncedAt: at })),
-    merged: () => read(store, accountUid).merged,
-    markMerged: () => change((kept) => ({ ...kept, merged: true })),
     clear: () => store.remove(syncKey(accountUid)),
   };
 }
 
-/** On unless switched off; consulted only once signed in. */
-export const readBackUp = (store: KeyValueStore): boolean => store.read(BACKUP_KEY) !== "off";
+/** On unless this account switched it off here; one person's switch never stops the next one's back-up. */
+export const readBackUp = (store: KeyValueStore, accountUid: string): boolean =>
+  store.read(backUpKey(accountUid)) !== "off";
 
-export const keepBackUp = (store: KeyValueStore, on: boolean): void =>
-  on ? store.remove(BACKUP_KEY) : store.write(BACKUP_KEY, "off");
+export function keepBackUp(store: KeyValueStore, accountUid: string, on: boolean): void {
+  if (on) store.remove(backUpKey(accountUid));
+  else store.write(backUpKey(accountUid), "off");
+}

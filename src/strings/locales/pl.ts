@@ -18,6 +18,8 @@ const pl: Translation = {
     boards: "Twoje listy",
     search: "Szukaj list",
     signInFailed: "Nie udało się zalogować. Spróbuj ponownie.",
+    storageRefused:
+      "Ta przeglądarka nie zapisuje twoich zmian: jej pamięć jest pełna albo zablokowana dla tej strony. Zwolnij miejsce lub pozwól stronie przechowywać dane, inaczej to, co teraz zrobisz, przepadnie.",
     theme: "Motyw",
     themeSystem: "Systemowy",
     themeLight: "Jasny",
@@ -125,7 +127,7 @@ const pl: Translation = {
     faceFailed: "Nie udało się zapisać – serwer nie odpowiedział.",
     privacyTitle: "Prywatność",
     signOutNote:
-      "Twoje listy i rankingi zostają – zaloguj się tym samym kontem Google, aby je odzyskać.",
+      "Twoje listy zostają na koncie i w tej przeglądarce, ukryte do ponownego zalogowania. Po wylogowaniu widać tylko listy zrobione bez konta.",
     deleteAction: "Usuń konto",
     deleteHelper:
       "Znika wszystko: twoje listy, nazwa i obrazy za nimi. Rankingi zachowują linki, bez twojej nazwy.",
@@ -1321,16 +1323,13 @@ const pl: Translation = {
     guestNote:
       "Zmień przeglądarkę albo wyczyść tę i znikną. Konto je zachowa i przyniesie do telefonu.",
     localOnly: "{count}, tylko na tym urządzeniu",
-    mergeTitle: "Już korzystałeś z tego konta",
-    mergeBody: "Ma już {account}. Na tym urządzeniu jest {local} zrobione bez konta.",
-    mergeKeep: "Zachowaj wszystko",
-    mergeKeepSub:
-      "Wszystkie {total}. Jeśli dwie mają tę samą nazwę, do lokalnej dojdzie „(z tego urządzenia)”.",
-    mergeAccount: "Tylko tablice z konta",
-    mergeAccountSub: "{local} z tego urządzenia trafią do kosza. Możesz je stamtąd przywrócić.",
-    mergeFootnote: "Nic nie zostaje usunięte w żadnym przypadku.",
-    mergeRecommended: "Zalecane",
-    mergeContinue: "Dalej",
+    mergeTitle: "Listy zrobione bez konta",
+    mergeBody:
+      "W tej przeglądarce są listy zrobione bez konta: {local}. Przenieść je na twoje konto?",
+    mergeFootnote:
+      "Zostawione w przeglądarce będą widoczne, gdy nie jesteś zalogowany. Nic nie zostaje usunięte w żadnym przypadku.",
+    mergeMoveIn: "Przenieś na moje konto",
+    mergeKeepHere: "Zostaw tylko w tej przeglądarce",
     fromThisDevice: "(z tego urządzenia)",
     arrivedFrom: "z {device}",
     arrivedFromUnknown: "z innego urządzenia",

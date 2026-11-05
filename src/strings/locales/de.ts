@@ -18,6 +18,8 @@ const de: Translation = {
     boards: "Deine Listen",
     search: "Listen suchen",
     signInFailed: "Anmeldung fehlgeschlagen. Versuch es noch einmal.",
+    storageRefused:
+      "Dieser Browser speichert deine Änderungen nicht: Sein Speicher ist voll oder für diese Seite gesperrt. Mach Platz frei oder erlaube der Seite, Daten zu speichern, sonst geht verloren, was du jetzt machst.",
     theme: "Design",
     themeSystem: "System",
     themeLight: "Hell",
@@ -111,7 +113,7 @@ const de: Translation = {
     faceFailed: "Konnte nicht speichern – der Server hat nicht geantwortet.",
     privacyTitle: "Datenschutz",
     signOutNote:
-      "Deine Listen und Ranglisten bleiben – melde dich mit demselben Google-Konto an, um sie zurückzubekommen.",
+      "Deine Listen bleiben in deinem Konto und in diesem Browser, versteckt, bis du dich wieder anmeldest. Abgemeldet siehst du nur Listen, die ohne Konto gemacht wurden.",
     deleteAction: "Konto löschen",
     deleteHelper:
       "Alles geht: deine Listen, dein Name und die Bilder dahinter. Ranglisten behalten ihre Links, ohne deinen Namen.",
@@ -1203,18 +1205,13 @@ const de: Translation = {
     guestNote:
       "Browserwechsel oder Leeren, und sie sind weg. Ein Konto bewahrt sie auf und bringt sie aufs Telefon.",
     localOnly: "{count}, nur auf diesem Gerät",
-    mergeTitle: "Du hast dieses Konto schon einmal benutzt",
+    mergeTitle: "Listen ohne Konto",
     mergeBody:
-      "Es hat bereits {account}. Auf diesem Gerät sind {local}, die du ohne Konto gemacht hast.",
-    mergeKeep: "Alles behalten",
-    mergeKeepSub:
-      "Alle {total}. Haben zwei denselben Namen, bekommt das lokale „(von diesem Gerät)“ dazu.",
-    mergeAccount: "Nur die Boards des Kontos",
-    mergeAccountSub:
-      "{local} von diesem Gerät wandern in den Papierkorb. Von dort kannst du sie zurückholen.",
-    mergeFootnote: "In keinem Fall wird etwas gelöscht.",
-    mergeRecommended: "Empfohlen",
-    mergeContinue: "Weiter",
+      "In diesem Browser sind {local}, die ohne Konto gemacht wurden. In dein Konto übernehmen?",
+    mergeFootnote:
+      "Bleiben sie im Browser, siehst du sie, wann immer du abgemeldet bist. In keinem Fall wird etwas gelöscht.",
+    mergeMoveIn: "In mein Konto übernehmen",
+    mergeKeepHere: "Nur in diesem Browser behalten",
     fromThisDevice: "(von diesem Gerät)",
     arrivedFrom: "von {device}",
     arrivedFromUnknown: "von einem anderen Gerät",

@@ -1,4 +1,4 @@
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onIdTokenChanged, type User } from "firebase/auth";
 import { getFirebaseAuth } from "./firebase";
 
 export type Account =
@@ -24,6 +24,18 @@ export function accountOf(user: User | null): Account {
 /** Who is here right now; a profile change fires no auth event, so pages ask. */
 export const currentAccount = (): Account => accountOf(getFirebaseAuth().currentUser);
 
+/**
+ * Every change of who is here. Firebase's auth-state event fires only for a
+ * new uid, and a guest linked to Google keeps its own: the token event fires
+ * for that too, and for every hourly refresh, which is told apart here.
+ */
 export function subscribeToAccount(listener: (account: Account) => void): () => void {
-  return onAuthStateChanged(getFirebaseAuth(), (user) => listener(accountOf(user)));
+  let last: string | null = null;
+  return onIdTokenChanged(getFirebaseAuth(), (user) => {
+    const account = accountOf(user);
+    const seen = JSON.stringify(account);
+    if (seen === last) return;
+    last = seen;
+    listener(account);
+  });
 }

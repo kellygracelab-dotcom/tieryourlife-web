@@ -18,6 +18,8 @@ const ptBR: Translation = {
     boards: "Suas listas",
     search: "Pesquisar listas",
     signInFailed: "Não foi possível entrar. Tente de novo.",
+    storageRefused:
+      "Este navegador não está guardando suas alterações: o armazenamento está cheio ou bloqueado para este site. Libere espaço ou permita que o site guarde dados, ou o que você fizer agora será perdido.",
     theme: "Tema",
     themeSystem: "Sistema",
     themeLight: "Claro",
@@ -110,7 +112,7 @@ const ptBR: Translation = {
     faceFailed: "Não foi possível salvar: o servidor não respondeu.",
     privacyTitle: "Privacidade",
     signOutNote:
-      "Suas listas e classificações ficam: entre com a mesma conta do Google para tê-las de volta.",
+      "Suas listas ficam na sua conta e neste navegador, ocultas até você entrar de novo. Fora da conta, você vê só as listas feitas sem conta.",
     deleteAction: "Excluir a conta",
     deleteHelper:
       "Tudo vai embora: suas listas, seu nome e as imagens ligadas a elas. As classificações mantêm os links, sem o seu nome.",
@@ -1192,16 +1194,12 @@ const ptBR: Translation = {
     guestNote:
       "Troque de navegador ou limpe este e eles somem. Uma conta os guarda e os leva ao celular.",
     localOnly: "{count}, só neste dispositivo",
-    mergeTitle: "Você já usou esta conta",
-    mergeBody: "Ela já tem {account}. Este dispositivo tem {local} que você fez sem conta.",
-    mergeKeep: "Manter tudo",
-    mergeKeepSub:
-      "Todos os {total}. Se dois tiverem o mesmo nome, o local ganha “(deste dispositivo)”.",
-    mergeAccount: "Usar só os quadros da conta",
-    mergeAccountSub: "{local} deste dispositivo vão para a lixeira. Você pode restaurá-los de lá.",
-    mergeFootnote: "Nada é apagado em nenhum dos casos.",
-    mergeRecommended: "Recomendado",
-    mergeContinue: "Continuar",
+    mergeTitle: "Listas feitas sem conta",
+    mergeBody: "Este navegador tem {local} feitas sem conta. Passar para a sua conta?",
+    mergeFootnote:
+      "Deixadas no navegador, elas aparecem sempre que você estiver fora da conta. Nada é apagado em nenhum dos casos.",
+    mergeMoveIn: "Passar para minha conta",
+    mergeKeepHere: "Deixar só neste navegador",
     fromThisDevice: "(deste dispositivo)",
     arrivedFrom: "de {device}",
     arrivedFromUnknown: "de outro dispositivo",

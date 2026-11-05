@@ -1,21 +1,29 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { useSession } from "../../app/session";
 import { forgetBoard, keepBoard, loadBoardIndex, loadKeptBoard, loadMyLists } from "../../lib/api";
 import { ownPictureUrl } from "../../lib/pictures";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { useModal } from "../../ui/useModal";
 import {
   AccountChanged,
   BoardSyncContext,
   NOBODY,
   type BoardSyncControls,
-  type MergeChoice,
   type SyncStatus,
 } from "./boardSync";
 import { deviceNameOf } from "./deviceName";
-import { rename, trashBoard, type Board } from "./model";
-import { boards as site, type BoardsRepository } from "./repository";
+import { owners as siteOwners, type BoardOwners, type GuestBoardsQuestion } from "./owners";
+import type { BoardsRepository } from "./repository";
 import {
   forgetAccountCopies,
   liveEntriesOf,
@@ -50,6 +58,7 @@ interface BoardSyncProviderProps {
   children: ReactNode;
   repository?: BoardsRepository;
   store?: KeyValueStore;
+  owners?: BoardOwners;
   api?: BoardsApi;
   resolvePicture?: (uid: string) => (pictureId: string) => Promise<string | null>;
   deviceName?: string | null;
@@ -72,6 +81,7 @@ const asAccountChanged = (reason: unknown): never => {
  */
 async function stopBackingUp({
   store,
+  uid,
   records,
   api,
   stillMine,
@@ -80,6 +90,7 @@ async function stopBackingUp({
   onOff,
 }: {
   store: KeyValueStore;
+  uid: string;
   records: SyncRecords | null;
   api: BoardsApi;
   stillMine: () => boolean;
@@ -94,21 +105,22 @@ async function stopBackingUp({
   }
   if (!stillMine()) throw new AccountChanged();
   if (records !== null) await forgetAccountCopies(api, records, stillMine).catch(asAccountChanged);
-  keepBackUp(store, false);
+  keepBackUp(store, uid, false);
   onOff();
 }
 
-/** Every live board on the account, by title: what a sign-in has to be told apart from. */
-async function accountTitles(api: BoardsApi): Promise<{ count: number; titles: Set<string> }> {
+/** Every live board on the account, by title: what boards moving in have to be told apart from. */
+async function accountTitles(api: BoardsApi): Promise<Set<string>> {
   const live = await liveEntriesOf(api);
-  return { count: live.length, titles: new Set(live.map((entry) => entry.title)) };
+  return new Set(live.map((entry) => entry.title));
 }
 
 /**
  * Keeps this browser's boards and the account's the same, the way the phone
  * does: a run on sign-in and on arrival, a run a moment after any change, a
- * run when the connection comes back. Asks once, when an account that
- * already has boards is signed into on a browser that has boards too.
+ * run when the connection comes back. Only the account's own boards take
+ * part: those made without an account stay out unless the person moves them
+ * in, which a guest turned account does unasked and anybody else is asked.
  */
 export function BoardSyncProvider(props: BoardSyncProviderProps) {
   const { account } = useSession();
@@ -124,7 +136,10 @@ export function BoardSyncProvider(props: BoardSyncProviderProps) {
 function ForAccount({
   uid,
   children,
-  repository = site,
+  owners = siteOwners,
+  // Bound to this account, not to whoever is here: a late write of a run
+  // that outlived a sign-out still lands with the account it belongs to.
+  repository = uid === null ? owners.boards : owners.of(uid),
   store = localStorageStore,
   api = siteApi,
   resolvePicture = resolveOwnPicture,
@@ -132,7 +147,7 @@ function ForAccount({
   now = Date.now,
   syncAfterMs = SYNC_AFTER_MS,
 }: BoardSyncProviderProps & { uid: string | null }) {
-  const [backUp, setBackUpState] = useState(() => readBackUp(store));
+  const [backUp, setBackUpState] = useState(() => uid === null || readBackUp(store, uid));
   const [status, setStatus] = useState<SyncStatus>("idle");
   const records = useMemo<SyncRecords | null>(
     () => (uid === null ? null : syncRecords(store, uid)),
@@ -141,7 +156,7 @@ function ForAccount({
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(
     () => records?.lastSyncedAt() ?? null,
   );
-  const [merge, setMerge] = useState<MergeChoice | null>(null);
+  const question = useSyncExternalStore(owners.subscribeQuestion, owners.question, owners.question);
   // One run at a time; a change during a run asks for one more after it.
   const running = useRef<Promise<void> | null>(null);
   const again = useRef(false);
@@ -169,7 +184,7 @@ function ForAccount({
   }, []);
 
   const run = useCallback((): Promise<void> => {
-    if (uid === null || records === null || !backUp || !records.merged() || stopping.current) {
+    if (uid === null || records === null || !backUp || stopping.current) {
       return Promise.resolve();
     }
     if (running.current !== null) {
@@ -218,33 +233,11 @@ function ForAccount({
     runAgain.current = run;
   }, [run]);
 
-  // On sign-in, or with a page that opens signed in: the question first if it
-  // arises, the run otherwise.
+  // On sign-in, or with a page that opens signed in.
   useEffect(() => {
-    if (uid === null || records === null || !backUp) return;
-    let current = true;
-    if (records.merged()) {
-      void run();
-      return;
-    }
-    const local = repository.all().filter((board) => board.deletedAt === null).length;
-    accountTitles(api).then(
-      ({ count }) => {
-        if (!current) return;
-        if (count > 0 && local > 0) {
-          setMerge({ accountBoards: count, localBoards: local });
-        } else {
-          records.markMerged();
-          void run();
-        }
-      },
-      // The account could not be read: unknown is not empty, and empty would merge without asking.
-      () => current && setStatus("stuck"),
-    );
-    return () => {
-      current = false;
-    };
-  }, [uid, records, backUp, repository, api, run]);
+    if (uid === null || !backUp) return;
+    void run();
+  }, [uid, backUp, run]);
 
   // A moment after the last change, and when the connection comes back.
   useEffect(() => {
@@ -267,51 +260,29 @@ function ForAccount({
     };
   }, [uid, backUp, repository, run, syncAfterMs]);
 
-  const decideMerge = useCallback(
-    async (choice: "keep" | "account") => {
-      if (records === null) return;
-      const mine = bound();
-      const at = now();
-      const live = repository.all().filter((board) => board.deletedAt === null);
-      if (choice === "account") {
-        // Both sets survive: this device's go to the trash, where Restore waits.
-        repository.saveAll(live.map((board) => trashBoard(board, at)));
-      } else {
-        // Both survive in use; only the two sets have to be tellable apart first.
-        const theirs = await accountTitles(api).then(
-          ({ titles }) => titles,
-          () => new Set<string>(),
-        );
-        // The account changed while its titles were read: the question was another mount's.
-        if (!mine()) return;
-        const clashing = live.filter((board) => theirs.has(board.title));
-        if (clashing.length > 0) {
-          repository.saveAll(
-            clashing.map((board: Board) =>
-              rename(board, `${board.title} ${strings.sync.fromThisDevice}`, at),
-            ),
-          );
-        }
-      }
-      records.markMerged();
-      setMerge(null);
-      await run();
-    },
-    [records, repository, api, now, run, bound],
-  );
+  const moveIn = useCallback(async () => {
+    if (question === null) return;
+    // Both sets survive in use; only the two have to be tellable apart first.
+    const theirs = await accountTitles(api).catch(() => new Set<string>());
+    owners.moveIn(question.owner, (title) =>
+      theirs.has(title) ? `${title} ${strings.sync.fromThisDevice}` : null,
+    );
+  }, [question, api, owners]);
 
   const turnOn = useCallback(() => {
-    keepBackUp(store, true);
+    if (uid !== null) keepBackUp(store, uid, true);
     setBackUpState(true);
     return Promise.resolve();
-  }, [store]);
+  }, [store, uid]);
 
   const turnOff = useCallback(() => {
+    if (uid === null) return Promise.resolve();
     // Nothing more goes up from here, and a run in flight stops at its next check.
     stopping.current = true;
     epoch.current++;
     return stopBackingUp({
       store,
+      uid,
       records,
       api,
       stillMine: bound(),
@@ -324,7 +295,7 @@ function ForAccount({
     }).finally(() => {
       stopping.current = false;
     });
-  }, [store, records, api, bound]);
+  }, [store, uid, records, api, bound]);
 
   const setBackUp = useCallback((on: boolean) => (on ? turnOn() : turnOff()), [turnOn, turnOff]);
 
@@ -336,93 +307,65 @@ function ForAccount({
       status,
       lastSyncedAt,
       syncNow: run,
-      merge,
-      decideMerge,
     }),
-    [uid, backUp, setBackUp, status, lastSyncedAt, run, merge, decideMerge],
+    [uid, backUp, setBackUp, status, lastSyncedAt, run],
   );
 
   return (
     <BoardSyncContext.Provider value={uid === null ? { ...NOBODY, backUp, setBackUp } : value}>
       {children}
-      {merge !== null && <MergeDialog choice={merge} decide={decideMerge} />}
+      {question !== null && question.owner === uid && (
+        <GuestBoardsDialog question={question} moveIn={moveIn} keepHere={owners.keepHere} />
+      )}
     </BoardSyncContext.Provider>
   );
 }
 
 /**
- * The phone's merge sheet: keep everything, or use the account's boards and
- * send this device's to the trash. Nothing is deleted either way.
+ * The phone's question after signing into an account used before: the
+ * boards made without an account move into it, or stay in this browser,
+ * shown whenever nobody is signed in. Nothing is deleted either way.
  */
-function MergeDialog({
-  choice,
-  decide,
+function GuestBoardsDialog({
+  question,
+  moveIn,
+  keepHere,
 }: {
-  choice: MergeChoice;
-  decide: (choice: "keep" | "account") => Promise<void>;
+  question: GuestBoardsQuestion;
+  moveIn: () => Promise<void>;
+  keepHere: () => void;
 }) {
-  const [picked, setPicked] = useState<"keep" | "account">("keep");
   const [busy, setBusy] = useState(false);
-  const total = choice.accountBoards + choice.localBoards;
-  const onContinue = () => {
+  const dialog = useRef<HTMLDivElement>(null);
+  // Escape and closing are the same answer as Keep: nothing moves, nothing is lost.
+  useModal(dialog, () => !busy && keepHere(), ".merge__move");
+  const onMove = () => {
     setBusy(true);
-    void decide(picked).finally(() => setBusy(false));
+    void moveIn().finally(() => setBusy(false));
   };
   return (
     <div className="scrim">
-      <div className="dialog merge" role="dialog" aria-modal="true" aria-labelledby="merge-title">
+      <div
+        ref={dialog}
+        className="dialog merge"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="merge-title"
+        aria-describedby="merge-body"
+      >
         <h2 id="merge-title" className="dialog__title">
           {strings.sync.mergeTitle}
         </h2>
-        <p className="dialog__body">
-          {fill(strings.sync.mergeBody, {
-            account: plural(strings.boards.count, choice.accountBoards),
-            local: plural(strings.boards.count, choice.localBoards),
-          })}
+        <p id="merge-body" className="dialog__body">
+          {fill(strings.sync.mergeBody, { local: plural(strings.boards.count, question.boards) })}
         </p>
-        <div className="merge__options" role="radiogroup" aria-label={strings.sync.mergeTitle}>
-          <div className="merge__option">
-            <input
-              id="merge-keep"
-              type="radio"
-              name="merge"
-              checked={picked === "keep"}
-              onChange={() => setPicked("keep")}
-              disabled={busy}
-            />
-            <label className="merge__text" htmlFor="merge-keep">
-              <span className="merge__title">
-                {strings.sync.mergeKeep}
-                <span className="merge__recommended">{strings.sync.mergeRecommended}</span>
-              </span>
-              <span className="merge__sub">
-                {fill(strings.sync.mergeKeepSub, { total: plural(strings.boards.count, total) })}
-              </span>
-            </label>
-          </div>
-          <div className="merge__option">
-            <input
-              id="merge-account"
-              type="radio"
-              name="merge"
-              checked={picked === "account"}
-              onChange={() => setPicked("account")}
-              disabled={busy}
-            />
-            <label className="merge__text" htmlFor="merge-account">
-              <span className="merge__title">{strings.sync.mergeAccount}</span>
-              <span className="merge__sub">
-                {fill(strings.sync.mergeAccountSub, {
-                  local: plural(strings.boards.count, choice.localBoards),
-                })}
-              </span>
-            </label>
-          </div>
-        </div>
         <p className="merge__footnote">{strings.sync.mergeFootnote}</p>
         <div className="dialog__actions">
-          <Button variant="filled" onClick={onContinue} disabled={busy}>
-            {strings.sync.mergeContinue}
+          <Button onClick={keepHere} disabled={busy}>
+            {strings.sync.mergeKeepHere}
+          </Button>
+          <Button className="merge__move" variant="filled" onClick={onMove} disabled={busy}>
+            {strings.sync.mergeMoveIn}
           </Button>
         </div>
       </div>

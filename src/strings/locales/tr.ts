@@ -20,6 +20,8 @@ const tr: Translation = {
     boards: "Listelerin",
     search: "Liste ara",
     signInFailed: "Oturum açılamadı. Tekrar deneyin.",
+    storageRefused:
+      "Bu tarayıcı değişikliklerini saklamıyor: depolama alanı dolu ya da bu site için engellenmiş. Yer aç ya da sitenin veri saklamasına izin ver; yoksa şimdi yaptıkların kaybolur.",
     theme: "Tema",
     themeSystem: "Sistem",
     themeLight: "Açık",
@@ -111,7 +113,7 @@ const tr: Translation = {
     faceFailed: "Kaydedilemedi: sunucu yanıt vermedi.",
     privacyTitle: "Gizlilik",
     signOutNote:
-      "Listeleriniz ve sıralamalarınız kalır: geri almak için aynı Google hesabıyla oturum açın.",
+      "Listelerin hesabında ve bu tarayıcıda kalır, yeniden giriş yapana kadar gizli olur. Oturum kapalıyken yalnızca hesapsız yapılan listeleri görürsün.",
     deleteAction: "Hesabı sil",
     deleteHelper:
       "Her şey gider: listeleriniz, adınız ve arkalarındaki görseller. Sıralamalar bağlantılarını korur, adınız olmadan.",
@@ -1164,15 +1166,12 @@ const tr: Translation = {
     guestNote:
       "Tarayıcı değiştir ya da bunu temizle, giderler. Bir hesap onları saklar ve telefona getirir.",
     localOnly: "{count}, yalnızca bu cihazda",
-    mergeTitle: "Bu hesabı daha önce kullandın",
-    mergeBody: "Zaten {account} var. Bu cihazda hesapsız yaptığın {local} var.",
-    mergeKeep: "Hepsini sakla",
-    mergeKeepSub: "Tüm {total}. İkisinin adı aynıysa yereldekine “(bu cihazdan)” eklenir.",
-    mergeAccount: "Yalnızca hesabın panoları",
-    mergeAccountSub: "Bu cihazdaki {local} çöp kutusuna gider. Oradan geri alabilirsin.",
-    mergeFootnote: "Hiçbir durumda bir şey silinmez.",
-    mergeRecommended: "Önerilen",
-    mergeContinue: "Devam",
+    mergeTitle: "Hesapsız yapılan listeler",
+    mergeBody: "Bu tarayıcıda hesapsız yapılmış {local} var. Hesabına taşınsın mı?",
+    mergeFootnote:
+      "Tarayıcıda kalırlarsa oturum kapalıyken görünürler. Hiçbir durumda bir şey silinmez.",
+    mergeMoveIn: "Hesabıma taşı",
+    mergeKeepHere: "Yalnızca bu tarayıcıda kalsın",
     fromThisDevice: "(bu cihazdan)",
     arrivedFrom: "{device} cihazından",
     arrivedFromUnknown: "başka bir cihazdan",
