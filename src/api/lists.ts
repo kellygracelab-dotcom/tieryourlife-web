@@ -91,6 +91,8 @@ export async function loadFeed(client: ApiClient, query: FeedQuery = {}): Promis
 export interface MyList extends ListSummary {
   proposedSection?: string | null;
   proposedSectionName?: string | null;
+  /** The uid of the board it was published from, on lists published since the server kept it. */
+  boardUid?: string | null;
 }
 
 /** The lists this account published from the app, newest first; the backend orders them. */
@@ -145,6 +147,11 @@ export interface PublishRequest {
 export interface Published {
   id: string;
   ranking?: boolean;
+  /**
+   * True when the board was out already: `id` is the list an earlier publish
+   * made, and nothing new was. The board takes the id either way.
+   */
+  existing?: boolean;
 }
 
 export function publish(client: ApiClient, request: PublishRequest): Promise<Published> {

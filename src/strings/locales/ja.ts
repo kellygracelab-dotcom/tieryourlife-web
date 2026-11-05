@@ -404,7 +404,6 @@ const ja: Translation = {
     share: "共有",
     linkCopied: "リンクをコピーしました",
     copyFailed: "リンクをコピーできませんでした：{link}",
-    hiddenNotice: "あなたには非表示",
     undo: "元に戻す",
     hiddenTitle: "このリストを非表示にしました",
     hiddenAuthorTitle: "{name} の投稿をすべて非表示にしました",
@@ -462,17 +461,12 @@ const ja: Translation = {
     hideAuthor: "{name} の投稿もすべて非表示にする",
     byHand: "報告は人が読みます。数が揃うと、判断までリストは非表示になります。",
     send: "報告する",
-    sending: "送信中…",
     cancel: "キャンセル",
     failed:
       "報告を送信できませんでした。何も送られていません。1分ほど待ってからもう一度お試しください。",
     sentTitle: "報告しました。あなたには非表示になります",
     sentBody: "報告は人が確認します。それまでは他の人には表示されたままのことがあります。",
     done: "完了",
-    signInTitle: "報告するにはログイン",
-    signInBody:
-      "報告は人に届くため、アカウントが必要です。非表示にするだけならアカウントは要らず、この端末だけに保存されます。",
-    hideInstead: "非表示だけにする",
     reasonWrongPlace: "セクションまたはトピックが違う",
   },
   board: {
@@ -858,6 +852,8 @@ const ja: Translation = {
     undo: "元に戻す",
     waitingOnlyYou: "それまでこのトピックはあなたにだけ表示されます。",
     topicMissing: "{section}にそのトピックはありません。",
+    notThisTopic: "このトピックではない",
+    notThisTopicSent: "記録しました。別の場所に属するなら、モデレーターが移動します。",
     backToSection: "{section}に戻る",
     suggestTopic: "トピックを提案",
     suggestTopicBody:
@@ -1144,6 +1140,7 @@ const ja: Translation = {
     needsItems: "リストを公開する前に、カードを1枚以上追加してください。",
     publishedVersion: "公開中の内容",
     publishedVersionBody: "このボードを同じリンクで再送信します。",
+    seeInCommunity: "コミュニティで見る",
     update: "更新",
     updating: "更新中…",
     behind: "公開中の内容はこのボードより古いです。",

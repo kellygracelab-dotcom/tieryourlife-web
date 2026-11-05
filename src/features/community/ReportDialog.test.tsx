@@ -5,20 +5,11 @@ import { ReportDialog, type ReportState } from "./ReportDialog";
 
 const open = (state: ReportState, authorName: string | null = "danylo") => {
   const send = vi.fn();
-  const onSignIn = vi.fn();
-  const onHideInstead = vi.fn();
   const onClose = vi.fn();
   const view = render(
-    <ReportDialog
-      state={state}
-      authorName={authorName}
-      send={send}
-      onSignIn={onSignIn}
-      onHideInstead={onHideInstead}
-      onClose={onClose}
-    />,
+    <ReportDialog state={state} authorName={authorName} send={send} onClose={onClose} />,
   );
-  return { send, onSignIn, onHideInstead, onClose, ...view };
+  return { send, onClose, ...view };
 };
 
 describe("ReportDialog", () => {
@@ -40,8 +31,6 @@ describe("ReportDialog", () => {
     const props = {
       authorName: "danylo",
       send: vi.fn(),
-      onSignIn: vi.fn(),
-      onHideInstead: vi.fn(),
       onClose: vi.fn(),
     };
     const { rerender } = render(<ReportDialog state="open" {...props} />);
@@ -99,18 +88,6 @@ describe("ReportDialog", () => {
     expect(send).toHaveBeenCalledWith("other", null, false);
   });
 
-  it("names a failure and keeps the form; while sending nothing dismisses it", async () => {
-    const { onClose } = open("failed");
-    expect(screen.getByRole("alert")).toHaveTextContent("nothing was sent");
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
-
-    const sending = open("sending");
-    expect(screen.getAllByRole("button", { name: "Sending…" })[0]).toBeDisabled();
-    await userEvent.keyboard("{Escape}");
-    expect(sending.onClose).not.toHaveBeenCalled();
-    void onClose;
-  });
-
   it("becomes the receipt once sent, and closes on Done", async () => {
     const { onClose } = open("sent");
     expect(screen.getByRole("dialog", { name: "Reported, and hidden for you" })).toHaveTextContent(
@@ -120,22 +97,19 @@ describe("ReportDialog", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("asks a guest to sign in first, or to hide instead", async () => {
-    const { onSignIn, onHideInstead } = open("signIn");
-    const dialog = screen.getByRole("dialog", { name: "Sign in to report" });
-    expect(dialog).toHaveTextContent("Reports go to a person");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Hide instead" }));
-    expect(onHideInstead).toHaveBeenCalledTimes(1);
-    await userEvent.click(within(dialog).getByRole("button", { name: "Continue with Google" }));
-    expect(onSignIn).toHaveBeenCalledTimes(1);
+  it("asks nobody to sign in: a guest's report goes as an account's does", async () => {
+    const { send } = open("open");
+    expect(screen.queryByRole("dialog", { name: /sign in/i })).toBeNull();
+    const dialog = screen.getByRole("dialog", { name: "Report this list" });
+    await userEvent.click(within(dialog).getByRole("radio", { name: "Hate or harassment" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Report" }));
+    expect(send).toHaveBeenCalledWith("hate", null, false);
   });
 
   it("holds the focus at every step, and gives it back to what opened it", async () => {
     const props = {
       authorName: "danylo",
       send: vi.fn(),
-      onSignIn: vi.fn(),
-      onHideInstead: vi.fn(),
       onClose: vi.fn(),
     };
     const at = (state: ReportState) => (
@@ -148,15 +122,6 @@ describe("ReportDialog", () => {
     const { rerender } = render(at("closed"));
     screen.getByRole("button", { name: "More about this list" }).focus();
 
-    // A guest is asked first; the question takes the focus, has a Cancel, and keeps Tab in.
-    rerender(at("signIn"));
-    const ask = screen.getByRole("dialog", { name: "Sign in to report" });
-    expect(within(ask).getByRole("button", { name: "Continue with Google" })).toHaveFocus();
-    await userEvent.tab();
-    expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
-    await userEvent.tab({ shift: true });
-    expect(within(ask).getByRole("button", { name: "Continue with Google" })).toHaveFocus();
-
     rerender(at("open"));
     const form = screen.getByRole("dialog", { name: "Report this list" });
     expect(within(form).getByRole("radio", { name: "Sexual content" })).toHaveFocus();
@@ -164,11 +129,8 @@ describe("ReportDialog", () => {
     await userEvent.tab();
     expect(form).toContainElement(document.activeElement as HTMLElement);
 
-    // A refused send gives the button back; the receipt takes the focus too.
+    // The receipt takes the focus too.
     await userEvent.click(within(form).getByRole("radio", { name: "Spam or advertising" }));
-    rerender(at("sending"));
-    rerender(at("failed"));
-    expect(screen.getByRole("button", { name: "Report" })).toHaveFocus();
     rerender(at("sent"));
     expect(screen.getByRole("button", { name: "Done" })).toHaveFocus();
 
@@ -176,7 +138,7 @@ describe("ReportDialog", () => {
     expect(screen.getByRole("button", { name: "More about this list" })).toHaveFocus();
   });
 
-  it("closes on Escape when nothing is under way", async () => {
+  it("closes on Escape", async () => {
     const { onClose } = open("open");
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledTimes(1);

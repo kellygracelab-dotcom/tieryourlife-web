@@ -5,7 +5,7 @@ import { sessionStorageStore, type KeyValueStore } from "../../lib/storage";
  * the page through a redirect: the page they come back to does it then, as
  * a popup's sign-in does it at once.
  */
-export type Intent = { kind: "follow"; uid: string } | { kind: "report"; listId: string };
+export type Intent = { kind: "follow"; uid: string };
 
 const KEY = "tyl:afterSignIn";
 // A sign-in that went away and came back is minutes, not hours: an intent
@@ -24,10 +24,7 @@ export function keepIntent(intent: Intent, now = Date.now()): void {
   store.write(KEY, JSON.stringify({ ...intent, at: now }));
 }
 
-const same = (a: Intent, b: Intent): boolean =>
-  a.kind === "follow" && b.kind === "follow"
-    ? a.uid === b.uid
-    : a.kind === "report" && b.kind === "report" && a.listId === b.listId;
+const same = (a: Intent, b: Intent): boolean => a.kind === b.kind && a.uid === b.uid;
 
 /** Whether this was asked for before the sign-in. */
 export function hasIntent(intent: Intent, now = Date.now()): boolean {

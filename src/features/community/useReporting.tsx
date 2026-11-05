@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import type { ReportReason, ReportRequest } from "../../api/community";
-import { useSession } from "../../app/session";
 import { isEditorial } from "../../lib/editorial";
-import { hasIntent, keepIntent, takeIntent } from "./afterSignIn";
+import { strings } from "../../strings";
+import type { SnackbarNotice } from "../../ui/Snackbar";
+import { isAuthorHidden } from "./hidden";
 import { ReportDialog, type ReportState } from "./ReportDialog";
 import { useHidden } from "./useHidden";
 
@@ -19,17 +20,15 @@ export interface Reportable {
 
 interface ReportingDeps {
   report: Report;
-  /** Hides the list instead of reporting it, and says so the way its place does. */
-  onHide: (list: Reportable) => void;
-  /** The lists on show, any of which a report asked for before a sign-in redirect may be about. */
-  resumable: readonly Reportable[];
+  /** Says that a report did not go through, where the place says things. */
+  notify: (notice: SnackbarNotice) => void;
+  /** The receipt was closed, or the author hidden from it: a list's own page leaves then, as the app's does. */
+  onDone?: () => void;
 }
 
 interface Current {
   list: Reportable;
   state: ReportState;
-  /** Opened again after a sign-in through a redirect, rather than by a press. */
-  resumed?: boolean;
 }
 
 export interface Reporting {
@@ -39,34 +38,18 @@ export interface Reporting {
 }
 
 /**
- * Reporting a list, the same from its page as from a card: an account is
- * needed, so a guest is asked to sign in first, and a sign-in that went
- * through a redirect opens the report again on the way back. A report sent
- * hides the list here, and the author too when that was ticked.
+ * Reporting a list, the same from its page as from a card, as the app's
+ * CommunityListViewModel.report does it. A guest reports too: the proxy takes
+ * the report from the guest's anonymous account, so nobody is asked to sign
+ * in. The list is hidden here the moment the report goes, and the author too
+ * when that was ticked; should the report not go through, both come back, so
+ * the list can be reported again, and the place says so.
  */
-export function useReporting({ report, onHide, resumable }: ReportingDeps): Reporting {
-  const { account, signIn } = useSession();
-  const { hideList, hideAuthor } = useHidden();
+export function useReporting({ report, notify, onDone }: ReportingDeps): Reporting {
+  const { hidden, hideList, showList, hideAuthor, showAuthor } = useHidden();
   const [current, setCurrent] = useState<Current | null>(null);
-  const signedIn = account?.kind === "signedIn";
 
-  // A report asked for before a sign-in that went through a redirect opens
-  // again once the account is back and its list is on show; then it is
-  // forgotten, so it opens once.
-  if (current === null && signedIn) {
-    const asked = resumable.find((list) => hasIntent({ kind: "report", listId: list.id }));
-    if (asked !== undefined) setCurrent({ list: asked, state: "open", resumed: true });
-  }
-  useEffect(() => {
-    if (current?.resumed === true) takeIntent({ kind: "report", listId: current.list.id });
-  }, [current]);
-
-  const start = useCallback(
-    (list: Reportable) => setCurrent({ list, state: signedIn ? "open" : "signIn" }),
-    [signedIn],
-  );
-  const set = (state: ReportState) =>
-    setCurrent((now) => (now === null ? null : { ...now, state }));
+  const start = useCallback((list: Reportable) => setCurrent({ list, state: "open" }), []);
   const close = useCallback(() => setCurrent(null), []);
 
   if (current === null) return { start, dialog: null };
@@ -74,24 +57,26 @@ export function useReporting({ report, onHide, resumable }: ReportingDeps): Repo
   // An editorial list has no author to hide, and a snapshot without the uid nobody to hide by.
   const authorName = isEditorial(list) || list.authorUid === "" ? null : list.authorName;
 
-  const onSignIn = () => {
-    set("signingIn");
-    signIn().then((outcome) => {
-      if (outcome.kind === "redirecting") keepIntent({ kind: "report", listId: list.id });
-      set(outcome.kind === "signedIn" ? "open" : "signIn");
+  const send = (reason: ReportReason, note: string | null, alsoAuthor: boolean) => {
+    const author = alsoAuthor && !isAuthorHidden(hidden, list.authorUid);
+    hideList({ id: list.id, title: list.title });
+    if (author) hideAuthor({ uid: list.authorUid, name: list.authorName });
+    setCurrent({ list, state: "sent" });
+    report(list.id, { reason, note }).catch(() => {
+      showList(list.id);
+      if (author) showAuthor(list.authorUid);
+      // The receipt would say the opposite of what happened.
+      setCurrent((now) => (now?.list.id === list.id && now.state === "sent" ? null : now));
+      notify({
+        text: strings.report.failed,
+        action: { text: strings.feed.tryAgain, onClick: () => start(list) },
+      });
     });
   };
 
-  const send = (reason: ReportReason, note: string | null, alsoAuthor: boolean) => {
-    set("sending");
-    report(list.id, { reason, note }).then(
-      () => {
-        hideList({ id: list.id, title: list.title });
-        if (alsoAuthor) hideAuthor({ uid: list.authorUid, name: list.authorName });
-        set("sent");
-      },
-      () => set("failed"),
-    );
+  const done = () => {
+    close();
+    onDone?.();
   };
 
   const dialog = (
@@ -99,16 +84,11 @@ export function useReporting({ report, onHide, resumable }: ReportingDeps): Repo
       state={current.state}
       authorName={authorName}
       send={send}
-      onSignIn={onSignIn}
-      onHideInstead={() => {
-        close();
-        onHide(list);
-      }}
       onHideAuthor={() => {
-        close();
         hideAuthor({ uid: list.authorUid, name: list.authorName });
+        done();
       }}
-      onClose={close}
+      onClose={current.state === "sent" ? done : close}
     />
   );
   return { start, dialog };

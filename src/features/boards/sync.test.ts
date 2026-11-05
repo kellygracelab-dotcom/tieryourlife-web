@@ -2,10 +2,18 @@ import { describe, expect, it, vi } from "vitest";
 import type { KeepBoardRequest, KeptBoard, KeptBoardEntry } from "../../api/boards";
 import { ApiFailure } from "../../api/errors";
 import { memoryStore } from "../../lib/storage";
-import { addToPool, liveItems, newBoard, rename, setFavourite, type Board } from "./model";
+import {
+  addToPool,
+  isBehind,
+  liveItems,
+  newBoard,
+  rename,
+  setFavourite,
+  type Board,
+} from "./model";
 import { boardsRepository } from "./repository";
 import { fingerprintOf } from "./fingerprint";
-import { syncBoards, type BoardsApi } from "./sync";
+import { syncBoards, type BoardsApi, type PublishedEntry } from "./sync";
 import { syncRecords } from "./syncRecords";
 
 const uids = (prefix = "u") => {
@@ -24,8 +32,12 @@ const films = (uid = "films", title = "Films"): Board => {
   );
 };
 
+/** A published list by its id alone names no board, as one published before the server kept it. */
+const entryOfList = (list: string | PublishedEntry): PublishedEntry =>
+  typeof list === "string" ? { id: list, boardUid: null, updatedAt: 0 } : list;
+
 /** The account, in memory: what it keeps, what it was asked, and a way to make it refuse. */
-function fakeAccount(published: string[] | null = []) {
+function fakeAccount(published: (string | PublishedEntry)[] | null = []) {
   const kept = new Map<string, KeptBoard>();
   const keeps: { uid: string; request: KeepBoardRequest }[] = [];
   const forgotten: string[] = [];
@@ -71,7 +83,7 @@ function fakeAccount(published: string[] | null = []) {
       if (was !== undefined) kept.set(uid, { ...was, deleted: true, revision: was.revision + 1 });
       return Promise.resolve();
     },
-    published: () => Promise.resolve(published),
+    published: () => Promise.resolve(published === null ? null : published.map(entryOfList)),
   };
   /** A board the account holds as if another device wrote it. */
   const holds = (board: Board, revision = 1, deviceName = "Pixel 7", fingerprint = "theirs") => {
@@ -96,7 +108,7 @@ function fakeAccount(published: string[] | null = []) {
   };
 }
 
-const setUp = (published: string[] | null = []) => {
+const setUp = (published: (string | PublishedEntry)[] | null = []) => {
   const store = memoryStore();
   const repository = boardsRepository(store);
   const records = syncRecords(store, "me");
@@ -519,5 +531,56 @@ describe("syncBoards", () => {
     expect(repository.get("a")).toMatchObject({ title: "A, edited", publishedId: null });
     // Republished meanwhile: not the id that was asked about, so it is left for the next run.
     expect(repository.get("b")?.publishedId).toBe("p-new");
+  });
+
+  it("gives a board back the list its publish made when the answer never came, found by the board's uid", async () => {
+    const { repository, run } = setUp([
+      { id: "p-lost", boardUid: "a", updatedAt: 800 },
+      { id: "p-edited", boardUid: "b", updatedAt: 800 },
+      // Two lists for one board: which one is its own cannot be told, so neither.
+      { id: "p-one", boardUid: "c", updatedAt: 800 },
+      { id: "p-two", boardUid: "c", updatedAt: 800 },
+      // Already another board's, and a list of a board in the trash.
+      { id: "p-claimed", boardUid: "d", updatedAt: 800 },
+      { id: "p-trash", boardUid: "e", updatedAt: 800 },
+    ]);
+    const inSection = (board: Board, editedAt = 700): Board => ({
+      ...board,
+      category: "film_tv",
+      editedAt,
+    });
+    repository.saveAll([
+      inSection(films("a", "A")),
+      inSection(films("b", "B"), 900),
+      inSection(films("c", "C")),
+      inSection(films("d", "D")),
+      { ...inSection(films("e", "E")), deletedAt: 750 },
+      { ...inSection(films("f", "F")), publishedId: "p-claimed" },
+    ]);
+    await run();
+    expect(repository.get("a")).toMatchObject({
+      publishedId: "p-lost",
+      editedAt: 700,
+      publishedEditedAt: 700,
+    });
+    // Changed after the list went out: Update still has that change to send.
+    expect(repository.get("b")).toMatchObject({ publishedId: "p-edited", publishedEditedAt: 800 });
+    expect(isBehind(repository.get("b")!)).toBe(true);
+    expect(repository.get("c")?.publishedId).toBeNull();
+    expect(repository.get("d")?.publishedId).toBeNull();
+    expect(repository.get("e")?.publishedId).toBeNull();
+    expect(repository.get("f")?.publishedId).toBe("p-claimed");
+  });
+
+  it("takes in a board whose cards have the uids of a board here: uids are the board's own", async () => {
+    const { repository, account, run } = setUp();
+    const here = films("here", "Here");
+    repository.save(here);
+    account.holds({ ...films("there", "There"), tiers: here.tiers, items: here.items });
+    expect(await run()).toMatchObject({ refused: 0 });
+    expect(repository.get("there")?.items.map((item) => item.uid)).toEqual(
+      here.items.map((item) => item.uid),
+    );
+    expect(repository.get("here")?.items).toEqual(here.items);
   });
 });

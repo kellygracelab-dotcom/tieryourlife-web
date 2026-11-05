@@ -366,14 +366,33 @@ describe("ProfilePage", () => {
     expect(screen.getByRole("link", { name: /List a/ })).toBeInTheDocument();
   });
 
-  it("asks a guest to sign in before a report from a card", async () => {
+  it("takes a guest's report from a card with no sign-in", async () => {
     vi.mocked(report).mockReset();
+    vi.mocked(report).mockResolvedValue(undefined);
     open({ kind: "guest", uid: "g1" });
     await screen.findByRole("link", { name: /List a/ });
     await userEvent.click(screen.getByLabelText("More about List a"));
     await userEvent.click(cardMenu("List a").getByRole("button", { name: "Report this list" }));
-    expect(screen.getByRole("dialog", { name: "Sign in to report" })).toBeInTheDocument();
-    expect(report).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog", { name: /Sign in/ })).toBeNull();
+    const form = screen.getByRole("dialog", { name: "Report this list" });
+    await userEvent.click(within(form).getByRole("radio", { name: "Something else" }));
+    await userEvent.click(within(form).getByRole("button", { name: "Report" }));
+    expect(report).toHaveBeenCalledExactlyOnceWith("a", { reason: "other", note: null });
+  });
+
+  it("brings a card back with a word when its report could not be sent", async () => {
+    vi.mocked(report).mockReset();
+    vi.mocked(report).mockRejectedValue(new Error("offline"));
+    open();
+    await screen.findByRole("link", { name: /List b/ });
+    await userEvent.click(screen.getByLabelText("More about List b"));
+    await userEvent.click(cardMenu("List b").getByRole("button", { name: "Report this list" }));
+    const form = screen.getByRole("dialog", { name: "Report this list" });
+    await userEvent.click(within(form).getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.click(within(form).getByRole("button", { name: "Report" }));
+    expect(await screen.findByText(/nothing was sent/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /List b/ })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("offers no way to hide oneself", async () => {

@@ -1019,7 +1019,10 @@ describe("BoardPage: share and publish", () => {
       expect.objectContaining({ title: "Films", category: "film_tv" }),
     );
     expect(repository.get("films")).toMatchObject({ publishedId: "L1", authorName: "Danylo" });
-    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/L1");
+    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+      "href",
+      "/l/L1",
+    );
 
     await userEvent.click(screen.getByRole("button", { name: "Done" }));
     await userEvent.click(screen.getByLabelText("More about this board"));

@@ -7,11 +7,11 @@ import { ApiFailure, type ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
 import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
-import { intentStoreForTests } from "../features/community/afterSignIn";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { itemsIn, newBoard, poolTier, rankedTiers } from "../features/boards/model";
 import { boards } from "../features/boards/owners";
+import { AS_COMMUNITY } from "../features/boards/ownList";
 import { EVERYTHING } from "../features/play/chosen";
 import { newGame } from "../features/play/game";
 import { localGames, playKey } from "../features/play/savedGames";
@@ -91,8 +91,9 @@ const member: Session["account"] = {
 const openAs = (
   account: Session["account"],
   signIn: Session["signIn"] = async () => ({ kind: "cancelled" }),
+  entry: string | { pathname: string; state: unknown } = "/l/abc",
 ) => {
-  const router = createMemoryRouter(routes, { initialEntries: ["/l/abc"] });
+  const router = createMemoryRouter(routes, { initialEntries: [entry] });
   render(
     <SessionContext.Provider
       value={{ account, signIn, signOut: async () => undefined, refresh: () => undefined }}
@@ -181,10 +182,10 @@ describe("ListPage save to my lists", () => {
 });
 
 describe("ListPage report and hide", () => {
-  it("reports a list from the menu, hides it for this person and shows the receipt", async () => {
+  it("reports a list from the menu, hides it at once with its author, and leaves on Done", async () => {
     mocks.loadList.mockResolvedValue(list);
     mocks.report.mockResolvedValue(undefined);
-    openAs(member);
+    const router = openAs(member);
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
     await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
@@ -195,26 +196,20 @@ describe("ListPage report and hide", () => {
     );
     await userEvent.click(within(dialog).getByRole("button", { name: "Report" }));
     expect(mocks.report).toHaveBeenCalledWith("abc", { reason: "hate", note: null });
-    const receipt = await screen.findByRole("dialog", { name: "Reported, and hidden for you" });
+    const receipt = screen.getByRole("dialog", { name: "Reported, and hidden for you" });
+    expect(hiddenStore.read(HIDDEN_KEY)).toContain('"abc"');
+    expect(hiddenStore.read(HIDDEN_KEY)).toContain('"u1"');
     // The box was ticked: the receipt does not offer it again.
     expect(within(receipt).queryByRole("button", { name: /hide everything/ })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Done" }));
-
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      "You hid everything from danylo",
-    );
-    expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
-    expect(hiddenStore.read(HIDDEN_KEY)).toContain('"u1"');
-
-    await userEvent.click(screen.getByRole("button", { name: "Unhide" }));
-    expect(whose()).toBeInTheDocument();
-    expect(hiddenStore.read(HIDDEN_KEY)).toBeNull();
+    // The page closes, as the app's screen does.
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
   });
 
-  it("offers to hide everything from the author on the receipt, as the app does", async () => {
+  it("offers to hide everything from the author on the receipt, and leaves after", async () => {
     mocks.loadList.mockResolvedValue(list);
     mocks.report.mockResolvedValue(undefined);
-    openAs(member);
+    const router = openAs(member);
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
     await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
@@ -224,78 +219,66 @@ describe("ListPage report and hide", () => {
     await userEvent.click(
       within(receipt).getByRole("button", { name: "Also hide everything from danylo" }),
     );
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
-      "You hid everything from danylo",
-    );
     expect(hiddenStore.read(HIDDEN_KEY)).toContain('"u1"');
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
   });
 
-  it("names a report that could not be sent and keeps the form", async () => {
+  it("shows a list again when its report could not be sent, so it can be reported again", async () => {
     mocks.loadList.mockResolvedValue(list);
-    mocks.report.mockRejectedValue(new ApiFailure({ kind: "unavailable" }));
+    let fail: (reason: unknown) => void = () => undefined;
+    mocks.report.mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          fail = reject;
+        }),
+    );
     openAs(member);
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
     await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
     await userEvent.click(screen.getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Also hide everything from danylo" }),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Report" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("nothing was sent");
-    expect(screen.getByRole("radio", { name: "Spam or advertising" })).toBeChecked();
-  });
+    // Out of sight while the report is on its way.
+    expect(screen.getByRole("heading", { level: 2, name: /You hid/ })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Reported, and hidden for you" })).toBeVisible();
 
-  it("asks a guest to sign in before reporting, and opens the form once they have", async () => {
-    mocks.loadList.mockResolvedValue(list);
-    const signIn = vi
-      .fn<Session["signIn"]>()
-      .mockResolvedValue({ kind: "signedIn", switched: false });
-    openAs({ kind: "guest", uid: "g1" }, signIn);
-    await screen.findByRole("heading", { level: 1 });
-    await userEvent.click(screen.getByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
-    const ask = screen.getByRole("dialog", { name: "Sign in to report" });
-    await userEvent.click(within(ask).getByRole("button", { name: "Continue with Google" }));
-    expect(signIn).toHaveBeenCalledTimes(1);
-    expect(await screen.findByRole("dialog", { name: "Report this list" })).toBeInTheDocument();
-  });
-
-  it("opens the report again after a sign-in that went through a redirect and came back", async () => {
-    intentStoreForTests(memoryStore());
-    mocks.loadList.mockResolvedValue(list);
-    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "redirecting" });
-    openAs({ kind: "guest", uid: "g1" }, signIn);
-    await screen.findByRole("heading", { level: 1 });
-    await userEvent.click(screen.getByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
-    const ask = screen.getByRole("dialog", { name: "Sign in to report" });
-    await userEvent.click(within(ask).getByRole("button", { name: "Continue with Google" }));
-    cleanup();
-
-    openAs(member);
-    expect(await screen.findByRole("dialog", { name: "Report this list" })).toBeInTheDocument();
-  });
-
-  it("lets a guest hide instead of signing in, with an undo in the snackbar", async () => {
-    mocks.loadList.mockResolvedValue(list);
-    openAs({ kind: "guest", uid: "g1" });
-    await screen.findByRole("heading", { level: 1 });
-    await userEvent.click(screen.getByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
-    await userEvent.click(screen.getByRole("button", { name: "Hide instead" }));
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
+    await act(async () => fail(new ApiFailure({ kind: "unavailable" })));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(whose()).toBeInTheDocument();
+    expect(hiddenStore.read(HIDDEN_KEY)).toBeNull();
     const snackbar = screen
       .getAllByRole("status")
       .find((el) => el.className === "snackbar-region")!;
-    expect(snackbar).toHaveTextContent("Hidden for you");
-    await userEvent.click(within(snackbar).getByRole("button", { name: "Undo" }));
-    expect(screen.queryByRole("heading", { level: 2, name: /You hid/ })).toBeNull();
+    expect(snackbar).toHaveTextContent("nothing was sent");
+    await userEvent.click(within(snackbar).getByRole("button", { name: "Try again" }));
+    expect(screen.getByRole("dialog", { name: "Report this list" })).toBeInTheDocument();
   });
 
-  it("hides from the menu and copies the link", async () => {
+  it("takes a guest's report with no sign-in, as the proxy takes it from the guest's own account", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    mocks.report.mockResolvedValue(undefined);
+    const signIn = vi.fn<Session["signIn"]>();
+    openAs({ kind: "guest", uid: "g1" }, signIn);
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
+    expect(screen.queryByRole("dialog", { name: /Sign in/ })).toBeNull();
+    const dialog = screen.getByRole("dialog", { name: "Report this list" });
+    await userEvent.click(within(dialog).getByRole("radio", { name: "Something else" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Report" }));
+    expect(mocks.report).toHaveBeenCalledWith("abc", { reason: "other", note: null });
+    expect(signIn).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Reported, and hidden for you" })).toBeVisible();
+  });
+
+  it("hides from the menu and leaves, and copies the link", async () => {
     mocks.loadList.mockResolvedValue(list);
     const writeText = vi.fn(async () => undefined);
     Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-    openAs(member);
+    const router = openAs(member);
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
     const menu = within(screen.getByLabelText("More about this list").closest("details")!);
@@ -305,7 +288,13 @@ describe("ListPage report and hide", () => {
 
     await userEvent.click(screen.getByLabelText("More about this list"));
     await userEvent.click(screen.getByRole("button", { name: "Hide this list" }));
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
+    // The page closes, as the app's screen does.
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+    expect(hiddenStore.read(HIDDEN_KEY)).toContain('"abc"');
+
+    // Opened again, it says it is hidden, with the way back and the way home.
+    await act(() => router.navigate("/l/abc"));
+    expect(await screen.findByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
     expect(screen.getByRole("link", { name: "Go to home" })).toHaveAttribute("href", "/");
     // Its cards stay out of sight: no Play over them.
     expect(screen.queryByRole("button", { name: "Play" })).not.toBeInTheDocument();
@@ -931,6 +920,38 @@ describe("ListPage for its author", () => {
     expect(mocks.unpublish).toHaveBeenLastCalledWith("abc");
   });
 
+  it("opens one's own list as one's own board when this browser has it, in place of the page", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    boards.save({ ...newBoard("b1", "Every A24 film", 1, () => "t"), publishedId: "abc" });
+    const router = openAs(author);
+    await waitFor(() => expect(router.state.location.pathname).toBe("/b/b1"));
+    // Back returns to where the list was tapped, not to its page.
+    expect(router.state.historyAction).toBe("REPLACE");
+  });
+
+  it("keeps the list's page for its author without a board here, or when the board asked to see it as others do", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    // In the trash, the board is not where the list is changed.
+    boards.save({ ...newBoard("b2", "Gone", 1, () => "t"), publishedId: "abc", deletedAt: 5 });
+    const router = openAs(author);
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(list.title);
+    expect(router.state.location.pathname).toBe("/l/abc");
+    cleanup();
+
+    boards.save({ ...newBoard("b1", "Every A24 film", 1, () => "t"), publishedId: "abc" });
+    const seen = openAs(author, undefined, { pathname: "/l/abc", state: AS_COMMUNITY });
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(list.title);
+    expect(seen.state.location.pathname).toBe("/l/abc");
+  });
+
+  it("waits to know who is here before it shows a list a board here published", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    boards.save({ ...newBoard("b1", "Every A24 film", 1, () => "t"), publishedId: "abc" });
+    openAs(null);
+    expect(await screen.findByText("Opening the list…")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1, name: list.title })).toBeNull();
+  });
+
   it("makes the board the list was published from its own again once it is down", async () => {
     mocks.loadList.mockResolvedValue(list);
     mocks.unpublish.mockResolvedValueOnce(undefined);
@@ -940,7 +961,8 @@ describe("ListPage for its author", () => {
       publishedEditedAt: 1,
       authorName: "danylo",
     });
-    const router = openAs(author);
+    // Reached from the board's settings: with the board here, nothing else opens this page.
+    const router = openAs(author, undefined, { pathname: "/l/abc", state: AS_COMMUNITY });
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
     await userEvent.click(screen.getByRole("button", { name: "Take it down" }));

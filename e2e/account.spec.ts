@@ -53,7 +53,10 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   await expect(page.getByText("Published. Anyone with the link can rank it.")).toBeVisible();
   await expect(publicSwitch).toBeChecked();
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/L1");
+  await expect(page.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+    "href",
+    "/l/L1",
+  );
   expect(account.publishes[0]).toMatchObject({
     title: "Films I make people watch",
     category: "film_tv",

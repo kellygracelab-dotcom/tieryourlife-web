@@ -2,12 +2,7 @@ import type { MouseEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { strings } from "../strings";
 import { Icon } from "./Icon";
-
-/** Whether this tab came here from another page of the site, which Back would return to. */
-const cameFromTheSite = (): boolean => {
-  const idx = (window.history.state as { idx?: unknown } | null)?.idx;
-  return typeof idx === "number" && idx > 0;
-};
+import { cameFromTheSite } from "./useLeave";
 
 /**
  * A header's back arrow. It goes back a step, the way the app's arrow pops

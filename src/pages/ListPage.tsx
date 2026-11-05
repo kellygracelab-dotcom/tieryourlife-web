@@ -1,9 +1,11 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
 import type { ReaderRanking } from "../api/community";
 import { isOwnList, type BasedOn, type PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
+import { boards as site } from "../features/boards/owners";
+import { boardOfList, seenAsCommunity } from "../features/boards/ownList";
 import type { BoardsRepository } from "../features/boards/repository";
 import { AuthorLine } from "../features/community/AuthorLine";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
@@ -238,7 +240,19 @@ export function ListPage(props: ListPageProps) {
     retry();
   }, [retry]);
 
-  if (state.status === "loading") {
+  // One's own list opens as one's own board when this browser has it, as on
+  // the phone (#226): the board is where it is changed. The boards here are
+  // the account's own, so one that published the list says whose it is
+  // without waiting for the list. Not when the board's settings asked to see
+  // it as the community does, and not while it is still unknown who is here.
+  const location = useLocation();
+  const board = seenAsCommunity(location.state) ? null : boardOfList(props.repository ?? site, id);
+  // In place of this page, so Back returns to where the list was tapped.
+  if (board !== null && account?.kind === "signedIn") {
+    return <Navigate to={`/b/${encodeURIComponent(board.uid)}`} replace />;
+  }
+
+  if (state.status === "loading" || (board !== null && account === null)) {
     return <ListPageLoading note={strings.list.opening} rows={3} />;
   }
   if (state.status === "error") {

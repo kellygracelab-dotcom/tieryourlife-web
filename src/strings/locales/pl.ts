@@ -424,7 +424,6 @@ const pl: Translation = {
     share: "Udostępnij",
     linkCopied: "Link skopiowany",
     copyFailed: "Nie udało się skopiować linku: {link}",
-    hiddenNotice: "Ukryte u ciebie",
     undo: "Cofnij",
     hiddenTitle: "Ta lista jest u ciebie ukryta",
     hiddenAuthorTitle: "Wszystko od {name} jest u ciebie ukryte",
@@ -482,17 +481,12 @@ const pl: Translation = {
     hideAuthor: "Ukryj też wszystko od {name}",
     byHand: "Zgłoszenia czyta człowiek. Gdy jest ich dość, lista znika do czasu decyzji.",
     send: "Zgłoś",
-    sending: "Wysyłanie…",
     cancel: "Anuluj",
     failed:
       "Nie udało się wysłać zgłoszenia – nic nie zostało wysłane. Spróbuj ponownie za minutę.",
     sentTitle: "Zgłoszono i ukryto u ciebie",
     sentBody: "Zgłoszenia rozpatruje człowiek. Do tego czasu inni mogą wciąż ją widzieć.",
     done: "Gotowe",
-    signInTitle: "Zaloguj się, aby zgłosić",
-    signInBody:
-      "Zgłoszenia trafiają do człowieka, więc wymagają konta. Ukrycie listy nie – to zostaje na tym urządzeniu.",
-    hideInstead: "Wolę ukryć",
     reasonWrongPlace: "Zły dział lub temat",
   },
   board: {
@@ -925,6 +919,8 @@ const pl: Translation = {
     undo: "Cofnij",
     waitingOnlyYou: "Do tego czasu ten temat widzisz tylko ty.",
     topicMissing: "W dziale {section} nie ma takiego tematu.",
+    notThisTopic: "To nie ten temat",
+    notThisTopicSent: "Zapisane. Moderator przeniesie listę, jeśli należy gdzie indziej.",
     backToSection: "Wróć do działu {section}",
     suggestTopic: "Zaproponuj temat",
     suggestTopicBody:
@@ -1305,6 +1301,7 @@ const pl: Translation = {
     needsItems: "Dodaj co najmniej jedną kartę, zanim opublikujesz listę.",
     publishedVersion: "Opublikowana wersja",
     publishedVersionBody: "Wyślij tę listę ponownie, pod tym samym linkiem.",
+    seeInCommunity: "Zobacz w Społeczności",
     update: "Aktualizuj",
     updating: "Aktualizowanie…",
     behind: "Opublikowana wersja jest starsza niż ta lista.",

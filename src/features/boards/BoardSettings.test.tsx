@@ -336,7 +336,10 @@ describe("BoardSettings: public", () => {
       publishedEditedAt: 500,
     });
     expect(published).toHaveBeenCalledWith("published", "L1");
-    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/L1");
+    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+      "href",
+      "/l/L1",
+    );
     expect(screen.getByText("Send this board again, over the same link.")).toBeInTheDocument();
     // Public now: the sheet ends with the way to take it down.
     const rows = [...sheet().querySelectorAll(".sheet__rows > li")];
@@ -371,7 +374,10 @@ describe("BoardSettings: public", () => {
       publishedEditedAt: 500,
     });
     expect(published).toHaveBeenCalledWith("ranking", "SRC");
-    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/SRC");
+    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+      "href",
+      "/l/SRC",
+    );
 
     // Down from the list it ranks, not by deleting somebody else's list.
     await userEvent.click(screen.getByRole("button", { name: "Take it down" }));

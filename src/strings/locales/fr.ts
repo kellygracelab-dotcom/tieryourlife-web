@@ -415,7 +415,6 @@ const fr: Translation = {
     share: "Partager",
     linkCopied: "Lien copié",
     copyFailed: "Impossible de copier le lien : {link}",
-    hiddenNotice: "Masqué pour vous",
     undo: "Annuler",
     hiddenTitle: "Vous avez masqué cette liste",
     hiddenAuthorTitle: "Vous avez masqué tout de {name}",
@@ -474,17 +473,12 @@ const fr: Translation = {
     hideAuthor: "Masquer aussi tout de {name}",
     byHand: "Une personne lit chaque signalement. S’il y en a assez, la liste disparaît jusque-là.",
     send: "Signaler",
-    sending: "Envoi…",
     cancel: "Annuler",
     failed: "Impossible d’envoyer le signalement : rien n’a été envoyé. Réessayez dans une minute.",
     sentTitle: "Signalée et masquée pour vous",
     sentBody:
       "Une personne examine les signalements. D’ici là, elle peut rester visible pour les autres.",
     done: "Terminé",
-    signInTitle: "Connectez-vous pour signaler",
-    signInBody:
-      "Les signalements vont à une personne, ils demandent donc un compte. Masquer une liste, non : cela reste sur cet appareil.",
-    hideInstead: "Plutôt masquer",
     reasonWrongPlace: "Mauvaise rubrique ou mauvais thème",
   },
   board: {
@@ -893,6 +887,8 @@ const fr: Translation = {
     undo: "Annuler",
     waitingOnlyYou: "D’ici là, vous seul voyez ce thème.",
     topicMissing: "Il n’y a pas de tel thème dans {section}.",
+    notThisTopic: "Pas ce thème",
+    notThisTopicSent: "Noté. Un modérateur la déplacera si elle va ailleurs.",
     backToSection: "Retour à {section}",
     suggestTopic: "Proposer un thème",
     suggestTopicBody:
@@ -1212,6 +1208,7 @@ const fr: Translation = {
     needsItems: "Ajoutez au moins une carte avant de publier la liste.",
     publishedVersion: "Version publiée",
     publishedVersionBody: "Renvoyer ce tableau, sous le même lien.",
+    seeInCommunity: "Voir dans la Communauté",
     update: "Mettre à jour",
     updating: "Mise à jour…",
     behind: "La version publiée est en retard sur ce tableau.",
