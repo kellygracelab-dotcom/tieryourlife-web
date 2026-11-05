@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
+import { resetStorageTroubleForTests } from "../lib/storage";
 
 afterEach(cleanup);
 
@@ -11,6 +12,9 @@ afterEach(() => {
   window.localStorage.clear();
   window.sessionStorage.clear();
 });
+
+// What a blocked browser refused is held for the visit, and a test is a visit.
+afterEach(() => resetStorageTroubleForTests());
 
 // The site shows no board until Firebase has said who is here; a page test
 // has no Firebase, and its boards are a guest's from the start.

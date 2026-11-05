@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure, type ApiError } from "../../api/errors";
 import type { SectionStats } from "../../api/sections";
@@ -292,6 +292,45 @@ describe("Propose a section", () => {
     await userEvent.type(nameField(), "F");
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(deps.check).not.toHaveBeenCalled();
+  });
+
+  it("asks before Open it leaves what was typed, and goes there on Discard", async () => {
+    const deps = makeDeps();
+    deps.check.mockResolvedValue({ free: false, id: "food" });
+    const send = vi.fn(async () => PROPOSED);
+    const onClose = vi.fn();
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/",
+          element: (
+            <SectionEditor
+              mode="propose"
+              sections={SECTIONS}
+              waiting={0}
+              send={send}
+              deps={deps}
+              onDone={vi.fn()}
+              onClose={onClose}
+              onTooMany={vi.fn()}
+            />
+          ),
+        },
+        { path: "/s/:id", element: <h1>Section</h1> },
+      ],
+      { initialEntries: ["/"] },
+    );
+    render(<RouterProvider router={router} />);
+    await userEvent.type(nameField(), "Food");
+    await userEvent.click(await screen.findByRole("link", { name: "Open it" }, { timeout: 2000 }));
+    expect(router.state.location.pathname).toBe("/");
+    expect(screen.getByText("Discard this proposal?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(nameField()).toHaveValue("Food");
+    await userEvent.click(screen.getByRole("link", { name: "Open it" }));
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(onClose).toHaveBeenCalled();
+    expect(router.state.location.pathname).toBe("/s/food");
   });
 
   it("counts the name to 24, turns the count red there, and trims it on leaving the field", async () => {

@@ -112,6 +112,7 @@ const fr: Translation = {
     faceLetter: "Juste la lettre",
     faceLetterCaption: "Lettre",
     faceFailed: "Impossible d’enregistrer : le serveur n’a pas répondu.",
+    faceListsFailed: "Impossible de charger vos listes publiées.",
     privacyTitle: "Confidentialité",
     signOutNote:
       "Vos listes restent dans votre compte et dans ce navigateur, masquées jusqu’à votre prochaine connexion. Déconnecté, vous ne voyez que les listes créées sans compte.",
@@ -840,6 +841,12 @@ const fr: Translation = {
       "Elle quitte le site et son lien ne fonctionne plus. Vos listes restent telles qu’elles sont.",
     takingDown: "Retrait…",
     takenDown: "« {title} » retirée",
+    mergeFind: "Fusionner avec un autre thème",
+    houseStaleTitle: "« {title} » a changé depuis que vous l’avez modifiée ici",
+    houseStaleBody:
+      "L’ouvrir telle qu’elle est fait perdre les modifications non envoyées. Votre brouillon les garde, mais une mise à jour depuis celui-ci remet l’ancienne liste.",
+    houseStaleDraft: "Ouvrir mon brouillon",
+    houseStaleFresh: "L’ouvrir telle qu’elle est",
   },
   sections: {
     followers: { one: "{n} abonné", many: "{n} abonnés", other: "{n} abonnés" },

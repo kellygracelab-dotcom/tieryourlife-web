@@ -109,6 +109,7 @@ const es: Translation = {
     faceLetter: "Solo la letra",
     faceLetterCaption: "Letra",
     faceFailed: "No se pudo guardar: el servidor no respondió.",
+    faceListsFailed: "No se pudieron cargar tus listas publicadas.",
     privacyTitle: "Privacidad",
     signOutNote:
       "Tus listas se quedan en tu cuenta y en este navegador, ocultas hasta que vuelvas a iniciar sesión. Sin sesión, solo verás las listas hechas sin cuenta.",
@@ -824,6 +825,12 @@ const es: Translation = {
     takeDownBody: "Sale del sitio y su enlace deja de funcionar. Tus listas se quedan como están.",
     takingDown: "Retirando…",
     takenDown: "«{title}» retirada",
+    mergeFind: "Fusionar con otro tema",
+    houseStaleTitle: "«{title}» cambió desde que la editaste aquí",
+    houseStaleBody:
+      "Si la abres tal como está, se pierden los cambios que no enviaste. Tu borrador aún los tiene, pero actualizar desde él devuelve la lista anterior.",
+    houseStaleDraft: "Abrir mi borrador",
+    houseStaleFresh: "Abrirla tal como está",
   },
   sections: {
     followers: { one: "{n} seguidor", many: "{n} seguidores", other: "{n} seguidores" },

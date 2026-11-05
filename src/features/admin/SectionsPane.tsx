@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { useBlocker } from "react-router";
 import type { AdminRole, AdminSections } from "../../api/admin";
 import { errorOf } from "../../api/errors";
@@ -16,9 +17,9 @@ import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
-import { useModal } from "../../ui/useModal";
 import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
+import { useModal } from "../../ui/useModal";
 import { sectionOf, sectionStyle, type Section } from "../sections/model";
 import type { EditorDeps } from "../sections/editorDeps";
 import { SectionEditor } from "../sections/SectionEditor";
@@ -80,6 +81,38 @@ function summaryOf(saved: readonly OrderRow[], edited: readonly OrderRow[]): str
   return fill(strings.admin.unsaved, { what: parts.join(strings.admin.and) });
 }
 
+/**
+ * Leaving with changes not saved: a question the keyboard is taken into,
+ * with Stay first, and Escape or a click outside it are Stay too.
+ */
+function LeaveDialog({ stay, leave }: { stay: () => void; leave: () => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, stay);
+  return createPortal(
+    <div className="scrim" onClick={stay}>
+      <div
+        ref={box}
+        className="dialog dialog--narrow"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="admin-leave-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="admin-leave-title" className="dialog__title">
+          {strings.admin.leaveTitle}
+        </h2>
+        <div className="dialog__actions">
+          <Button onClick={stay}>{strings.admin.stay}</Button>
+          <Button variant="filled" onClick={leave}>
+            {strings.admin.leave}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 interface SectionsPaneProps {
   adminRole: AdminRole;
   deps?: SectionsPaneDeps;
@@ -95,35 +128,6 @@ type Editing = { kind: "create" } | { kind: "edit"; id: string } | null;
  * kept by one Save: the order is one decision, so it is written whole, and a
  * Save made over somebody else's is refused rather than lost.
  */
-/**
- * "Leave without saving?", asked before a pane or a link takes the order
- * away. Stay takes the focus, and Escape stays too; either way the focus
- * goes back to what was pressed.
- */
-function LeaveAsk({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
-  const box = useRef<HTMLDivElement>(null);
-  useModal(box, onStay);
-  return (
-    <div
-      ref={box}
-      className="dialog admin-leave"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="admin-leave-title"
-    >
-      <h3 id="admin-leave-title" className="dialog__title">
-        {strings.admin.leaveTitle}
-      </h3>
-      <div className="dialog__actions">
-        <Button onClick={onStay}>{strings.admin.stay}</Button>
-        <Button variant="filled" onClick={onLeave}>
-          {strings.admin.leave}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function SectionsPane({
   adminRole: role,
   deps = paneDeps,
@@ -196,9 +200,7 @@ export function SectionsPane({
     return () => window.removeEventListener("beforeunload", warn);
   }, [changed]);
 
-  if (state.status === "loading" || edited === null || saved === null || answer === null) {
-    return <PaneLoading />;
-  }
+  // A failed answer leaves no rows behind it, so it is said before the wait is.
   if (state.status === "error") {
     return (
       <div className="admin__trouble" role="alert">
@@ -208,6 +210,9 @@ export function SectionsPane({
         </Button>
       </div>
     );
+  }
+  if (state.status === "loading" || edited === null || saved === null || answer === null) {
+    return <PaneLoading />;
   }
 
   const statsOf = (id: string): SectionStats | undefined =>
@@ -249,7 +254,9 @@ export function SectionsPane({
 
   // A drag: a mouse takes a row anywhere but its controls, a finger by the
   // handle, so the page still scrolls under a thumb. The row follows the
-  // pointer and takes the place of whichever row its middle passes.
+  // pointer and takes the place of whichever row its middle passes. The list
+  // holds the pointer, not the row: a row moving down is taken out and put
+  // back by React, and the browser lets go of a pointer its node held.
   const onPointerDown = (event: PointerEvent<HTMLLIElement>, index: number, id: string) => {
     if (event.button !== 0) return;
     const target = event.target as Element;
@@ -259,11 +266,11 @@ export function SectionsPane({
     if (!byHandle && !byRow) return;
     if (byRow) event.preventDefault();
     const node = event.currentTarget;
-    node.setPointerCapture(event.pointerId);
+    listRef.current?.setPointerCapture(event.pointerId);
     drag.current = { id, grab: event.clientY - node.getBoundingClientRect().top, y: event.clientY };
     setLifted({ id, from: index });
   };
-  const onPointerMove = (event: PointerEvent<HTMLLIElement>) => {
+  const onPointerMove = (event: PointerEvent<HTMLOListElement>) => {
     const held = drag.current;
     if (held === null || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
     held.y = event.clientY;
@@ -329,7 +336,11 @@ export function SectionsPane({
         )}
       </header>
       {!owner && <p className="admin-pane__note">{strings.admin.viewOnly}</p>}
-      <ol ref={listRef} className={owner ? "admin-order admin-order--owner" : "admin-order"}>
+      <ol
+        ref={listRef}
+        className={owner ? "admin-order admin-order--owner" : "admin-order"}
+        {...(owner ? { onPointerMove, onPointerUp, onPointerCancel: onPointerUp } : {})}
+      >
         {edited.map((row, index) => {
           const one = section(row.id);
           const locked = row.id === LOCKED;
@@ -351,9 +362,6 @@ export function SectionsPane({
                 ? {
                     onPointerDown: (event: PointerEvent<HTMLLIElement>) =>
                       onPointerDown(event, index, row.id),
-                    onPointerMove,
-                    onPointerUp,
-                    onPointerCancel: onPointerUp,
                   }
                 : {})}
             >
@@ -454,7 +462,7 @@ export function SectionsPane({
       )}
 
       {blocker.state === "blocked" && (
-        <LeaveAsk onStay={() => blocker.reset()} onLeave={() => blocker.proceed()} />
+        <LeaveDialog stay={() => blocker.reset()} leave={() => blocker.proceed()} />
       )}
 
       {editing?.kind === "create" && (

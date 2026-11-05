@@ -134,6 +134,7 @@ const ar: Translation = {
     faceLetter: "الحرف فقط",
     faceLetterCaption: "الحرف",
     faceFailed: "تعذّر الحفظ: لم يستجب الخادم.",
+    faceListsFailed: "تعذّر تحميل قوائمك المنشورة.",
     privacyTitle: "الخصوصية",
     signOutNote:
       "تبقى قوائمك في حسابك وفي هذا المتصفح، مخفية حتى تسجّل الدخول مجددًا. وأنت خارج الحساب لا ترى إلا القوائم التي أُنشئت بلا حساب.",
@@ -939,6 +940,12 @@ const ar: Translation = {
     takeDownBody: "ستختفي من الموقع ويتوقف رابطها عن العمل. تبقى قوائمك كما هي.",
     takingDown: "جارٍ الإزالة…",
     takenDown: "أُزيلت «{title}»",
+    mergeFind: "دمج مع موضوع آخر",
+    houseStaleTitle: "تغيّرت «{title}» منذ أن حرّرتها هنا",
+    houseStaleBody:
+      "فتحها كما هي يُسقط التعديلات التي لم ترسلها. مسودتك ما زالت تحتفظ بها، لكن التحديث منها يعيد القائمة الأقدم.",
+    houseStaleDraft: "فتح مسودتي",
+    houseStaleFresh: "فتحها كما هي",
   },
   sections: {
     followers: {

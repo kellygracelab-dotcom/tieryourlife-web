@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import type { Ranking } from "../api/rank";
 import { isOwnList, isSectionId, type PublishedList } from "../api/types";
 import { useSession } from "../app/session";
+import { SignInButton } from "../app/SignInButton";
 import { useBoardSync } from "../features/boards/boardSync";
 import { HOUSE_PARAM } from "../features/boards/houseList";
 import { boardForOwnList, boardOfList, type CopyBack } from "../features/boards/ownList";
@@ -184,7 +185,7 @@ function OwnList({
   copyBack: CopyBack;
   now: () => number;
 }) {
-  const { account, signIn } = useSession();
+  const { account } = useSession();
   const sync = useBoardSync();
   // A browser that has never had the account's boards may have this list's
   // on its way: Edit waits for the first sync, or a second board would be
@@ -200,9 +201,7 @@ function OwnList({
       <section className="list-page list-page--trouble">
         <h1>{strings.new.editTitle}</h1>
         <p>{strings.new.editSignIn}</p>
-        <Button variant="filled" onClick={() => void signIn()}>
-          {strings.nav.signIn}
-        </Button>
+        <SignInButton label={strings.nav.signIn} />
       </section>
     );
   }

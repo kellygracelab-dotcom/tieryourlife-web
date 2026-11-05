@@ -2,7 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Account } from "../lib/account";
-import { useSession, useShowFace } from "./session";
+import { useRedirectFailed, useSession, useShowFace } from "./session";
 import { SessionProvider } from "./SessionProvider";
 
 vi.mock("../lib/account", () => ({ subscribeToAccount: vi.fn(), currentAccount: vi.fn() }));
@@ -74,6 +74,21 @@ describe("SessionProvider", () => {
     act(() => listener?.({ kind: "guest", uid: "g1" }));
     await userEvent.click(screen.getByRole("button", { name: "sign in" }));
     expect(screen.getByRole("status")).toHaveTextContent("signedIn:g1");
+  });
+
+  it("tells the page when a sign-in came back from its redirect failed", async () => {
+    function Failed() {
+      return <p>{useRedirectFailed() ? "failed" : "quiet"}</p>;
+    }
+    render(
+      <SessionProvider
+        subscribe={() => () => undefined}
+        complete={async () => ({ kind: "failed", code: "auth/network-request-failed" })}
+      >
+        <Failed />
+      </SessionProvider>,
+    );
+    expect(await screen.findByText("failed")).toBeInTheDocument();
   });
 
   it("is a guest who cannot sign in when rendered without a provider", async () => {

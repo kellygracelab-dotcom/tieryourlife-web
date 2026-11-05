@@ -111,6 +111,7 @@ const de: Translation = {
     faceLetter: "Nur der Buchstabe",
     faceLetterCaption: "Buchstabe",
     faceFailed: "Konnte nicht speichern – der Server hat nicht geantwortet.",
+    faceListsFailed: "Deine veröffentlichten Listen ließen sich nicht laden.",
     privacyTitle: "Datenschutz",
     signOutNote:
       "Deine Listen bleiben in deinem Konto und in diesem Browser, versteckt, bis du dich wieder anmeldest. Abgemeldet siehst du nur Listen, die ohne Konto gemacht wurden.",
@@ -837,6 +838,12 @@ const de: Translation = {
       "Sie verschwindet von der Seite, und ihr Link funktioniert nicht mehr. Deine Listen bleiben, wie sie sind.",
     takingDown: "Wird entfernt…",
     takenDown: "„{title}“ entfernt",
+    mergeFind: "Mit einem anderen Thema zusammenführen",
+    houseStaleTitle: "„{title}“ hat sich geändert, seit du sie hier bearbeitet hast",
+    houseStaleBody:
+      "Öffnest du sie, wie sie jetzt ist, gehen deine nicht gesendeten Änderungen verloren. Dein Entwurf hat sie noch, aber eine Aktualisierung daraus bringt die ältere Liste zurück.",
+    houseStaleDraft: "Meinen Entwurf öffnen",
+    houseStaleFresh: "So öffnen, wie sie ist",
   },
   sections: {
     followers: { one: "{n} Follower", other: "{n} Follower" },

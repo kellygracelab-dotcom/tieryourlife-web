@@ -292,6 +292,7 @@
 }
 
 .admin-order__number {
+  flex: none;
   width: 24px;
   font: 400 13px/18px var(--font);
   color: var(--ink-faint);
@@ -353,6 +354,11 @@
   font: 500 15px/20px var(--font);
 }
 
+.admin-order__name,
+.admin-order__meta {
+  overflow-wrap: anywhere;
+}
+
 .admin-order__meta,
 .admin-topics__meta,
 .admin-people__meta {
@@ -372,6 +378,35 @@
   width: 40px;
   height: 22px;
   accent-color: var(--link);
+}
+
+.admin-order .admin-switch {
+  flex: none;
+}
+
+/* A phone keeps the name readable and the switch and Edit in reach: the
+   number and the word "Shown" go first, the thumbnail too on the narrowest. */
+@media (max-width: 599px) {
+  .admin-order__row {
+    gap: 8px;
+    padding-inline-end: 8px;
+  }
+
+  .admin-order__number,
+  .admin-order .admin-switch__label {
+    display: none;
+  }
+
+  .admin-order__thumb {
+    width: 48px;
+    height: 30px;
+  }
+}
+
+@media (max-width: 399px) {
+  .admin-order__thumb {
+    display: none;
+  }
 }
 
 .admin-order__edit {
@@ -415,13 +450,6 @@
   flex: 1;
   margin: 0;
   font: 400 13px/18px var(--font);
-}
-
-.admin-leave {
-  position: fixed;
-  inset: auto 50% 50% auto;
-  z-index: 50;
-  transform: translate(50%, 50%);
 }
 
 /* Proposals: each with what it would look like, and its decision. */

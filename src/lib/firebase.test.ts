@@ -88,8 +88,8 @@ describe("getFirebaseApp", () => {
     });
   });
 
-  it("hands out storage for that app", () => {
-    expect(getFirebaseStorage()).toEqual({ bucket: "b" });
+  it("hands out storage for that app, whose uploads give up within a minute", () => {
+    expect(getFirebaseStorage()).toEqual({ bucket: "b", maxUploadRetryTime: 60_000 });
     expect(mocks.getStorage).toHaveBeenCalledWith(app);
   });
 });

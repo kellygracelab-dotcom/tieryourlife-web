@@ -5,6 +5,7 @@ import type { MyList } from "../api/lists";
 import type { MyRankings, RankingSummary } from "../api/rank";
 import { AccountTabs } from "../app/AccountTabs";
 import { useSession } from "../app/session";
+import { SignInButton } from "../app/SignInButton";
 import { errorOf } from "../api/errors";
 import { boards as site } from "../features/boards/owners";
 import type { BoardsRepository } from "../features/boards/repository";
@@ -393,7 +394,7 @@ export function MePage({
   repository = site,
 }: MePageProps) {
   usePageTitle(strings.me.lists, { inBar: false });
-  const { account, signIn } = useSession();
+  const { account } = useSession();
   return (
     <section className="me">
       <h1 className="me__title">{strings.me.lists}</h1>
@@ -402,11 +403,7 @@ export function MePage({
       {account?.kind === "guest" && (
         <>
           <p className="me__text">{strings.me.signInFirst}</p>
-          <div>
-            <Button variant="filled" onClick={() => void signIn()}>
-              {strings.nav.signIn}
-            </Button>
-          </div>
+          <SignInButton label={strings.nav.signIn} />
         </>
       )}
       {account?.kind === "signedIn" && (

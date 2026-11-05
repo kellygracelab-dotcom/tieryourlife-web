@@ -78,8 +78,17 @@ export function HouseTranslations({
   const [drafts, setDrafts] = useState<Translations>({});
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [asking, setAsking] = useState(false);
+  // Typed translations are not thrown away unasked: Escape, a click outside and Cancel ask first.
+  const edited =
+    loaded.status === "ready" &&
+    JSON.stringify(translationsToSave(loaded.list, drafts)) !==
+      JSON.stringify(translationsToSave(loaded.list, loaded.list.translations ?? {}));
   const close = () => {
-    if (!saving) onClose();
+    if (saving) return;
+    if (asking) setAsking(false);
+    else if (edited) setAsking(true);
+    else onClose();
   };
   useModal(box, close);
 
@@ -179,20 +188,30 @@ export function HouseTranslations({
             {strings.admin.houseWordsFailed}
           </p>
         )}
-        <div className="dialog__actions">
-          <Button onClick={close} disabled={saving}>
-            {strings.admin.cancel}
-          </Button>
-          <Button
-            variant="filled"
-            disabled={loaded.status !== "ready" || saving}
-            onClick={() => {
-              if (loaded.status === "ready") submit(loaded.list);
-            }}
-          >
-            {saving ? strings.admin.houseWordsSaving : strings.admin.houseWordsSave}
-          </Button>
-        </div>
+        {asking ? (
+          <div key="ask" className="dialog__actions section-editor__ask">
+            <p className="section-editor__ask-text">{strings.admin.discardChanges}</p>
+            <Button onClick={() => setAsking(false)}>{strings.propose.keepEditing}</Button>
+            <Button variant="danger" onClick={onClose}>
+              {strings.propose.discard}
+            </Button>
+          </div>
+        ) : (
+          <div key="actions" className="dialog__actions">
+            <Button onClick={close} disabled={saving}>
+              {strings.admin.cancel}
+            </Button>
+            <Button
+              variant="filled"
+              disabled={loaded.status !== "ready" || saving}
+              onClick={() => {
+                if (loaded.status === "ready") submit(loaded.list);
+              }}
+            >
+              {saving ? strings.admin.houseWordsSaving : strings.admin.houseWordsSave}
+            </Button>
+          </div>
+        )}
       </div>
     </div>,
     document.body,

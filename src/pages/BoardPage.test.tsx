@@ -24,7 +24,7 @@ import { createSectionsStore, type SectionsStore } from "../features/sections/us
 import { memoryStore, type KeyValueStore } from "../lib/storage";
 import { ApiFailure } from "../api/errors";
 import type { HouseSending } from "../features/admin/HouseBar";
-import { houseLinkOf, linkToHouse } from "../features/boards/houseList";
+import { hasUnsentEdits, houseLinkOf, linkToHouse } from "../features/boards/houseList";
 import { publishRequestOf } from "../features/boards/publish";
 import { BoardPage } from "./BoardPage";
 
@@ -1008,6 +1008,8 @@ describe("BoardPage: a house list", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Update house list" }));
     expect(await screen.findByText("House list updated")).toBeInTheDocument();
     expect(house.replace).toHaveBeenCalledWith("H1", publishRequestOf(board));
+    // What went out is no edit the list lacks: a later Edit need not ask about it.
+    expect(hasUnsentEdits(houseRepository.get("films")!, houseStore)).toBe(false);
     await userEvent.click(screen.getByRole("button", { name: "House lists" }));
     expect(router.state.location.pathname).toBe("/admin/house");
   });

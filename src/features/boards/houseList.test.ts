@@ -3,13 +3,16 @@ import type { PublishedList } from "../../api/types";
 import { memoryStore } from "../../lib/storage";
 import {
   boardFromHouseList,
+  hasUnsentEdits,
   HOUSE_BOARDS_KEY,
   houseBoardPath,
   houseLinkOf,
   houseLinkOfParam,
   houseRequestOf,
   linkToHouse,
+  markHouseSent,
   NEW_HOUSE_PATH,
+  unlinkFromHouse,
 } from "./houseList";
 import { addToPool, itemsIn, newBoard, poolTier, rankedTiers, setCategory } from "./model";
 import { publishRequestOf } from "./publish";
@@ -62,6 +65,19 @@ describe("the boards this device edits for the house", () => {
     linkToHouse("b1", "h2", store);
     expect(houseLinkOf("b1", store)).toEqual({ listId: "h2" });
     expect(houseLinkOf("b3", store)).toBeNull();
+  });
+
+  it("knows which edits a house board has not sent, by this device's clock alone", () => {
+    const store = memoryStore();
+    const board = { ...newBoard("b1", "Ramen", 10, uids()), editedAt: 10 };
+    // Never marked: taken to hold edits, so nothing is dropped unasked.
+    expect(hasUnsentEdits(board, store)).toBe(true);
+    markHouseSent("b1", 10, store);
+    expect(hasUnsentEdits(board, store)).toBe(false);
+    expect(hasUnsentEdits({ ...board, editedAt: 11 }, store)).toBe(true);
+    linkToHouse("b1", "h1", store);
+    unlinkFromHouse("b1", store);
+    expect(hasUnsentEdits(board, store)).toBe(true);
   });
 
   it("reads nothing from a stored value that is not its own shape", () => {
