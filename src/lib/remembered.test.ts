@@ -18,6 +18,18 @@ describe("remembered", () => {
     expect(store.keys?.().sort()).toEqual(["t:a", "t:c", "t:keys"]);
   });
 
+  it("forgets the answers a test says are no longer so, and keeps the rest", () => {
+    const store = memoryStore();
+    const kept = remembered<{ n: number }>(store, "t", 3, (v) => v as { n: number });
+    kept.keep("a", { n: 1 });
+    kept.keep("b", { n: 2 });
+    kept.keep("c", { n: 3 });
+    kept.forget((value) => value.n !== 2);
+    expect(kept.recall("b")).toEqual({ n: 2 });
+    expect(store.keys?.().sort()).toEqual(["t:b", "t:keys"]);
+    expect(JSON.parse(store.read("t:keys") ?? "")).toEqual(["b"]);
+  });
+
   it("takes anything unreadable for nothing", () => {
     const store = memoryStore();
     store.write("t:a", "{not json");

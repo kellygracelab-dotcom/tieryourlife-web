@@ -11,6 +11,7 @@ import type { Translation } from "../index";
 const tr: Translation = {
   tagline: "Web sürümü",
   nav: {
+    opening: "Sayfa açılıyor…",
     site: "Site",
     skipToContent: "İçeriğe geç",
     signIn: "Oturum aç",
@@ -1189,6 +1190,13 @@ const tr: Translation = {
       "Listede ad ve fotoğraf olmaz. Yalnızca sen değiştirebilir veya kaldırabilirsin.",
     categoryWaiting: "Moderatör bekleniyor",
     menuHint: "Taşımak veya kaldırmak için bir karta çift tıklayın ya da sağ tıklayın.",
+    choose: "Seç",
+    pickToDelete: "Silinecek listeleri seç",
+    noneShown: "“{filter}” altında liste yok",
+    deletedTakenDown: {
+      one: "{n} liste silindi ve herkese açık kopyası kaldırıldı",
+      other: "{n} liste silindi ve herkese açık kopyaları kaldırıldı",
+    },
   },
   sync: {
     offBusy: "Siliniyor…",

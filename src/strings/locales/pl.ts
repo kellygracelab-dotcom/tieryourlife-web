@@ -9,6 +9,7 @@ import type { Translation } from "../index";
 const pl: Translation = {
   tagline: "Wersja webowa",
   nav: {
+    opening: "Otwieranie strony…",
     site: "Witryna",
     skipToContent: "Przejdź do treści",
     signIn: "Zaloguj się",
@@ -1352,6 +1353,15 @@ const pl: Translation = {
     anonymousBody: "Bez nazwy i zdjęcia na liście. Tylko ty możesz ją zmienić lub usunąć.",
     categoryWaiting: "Czeka na moderatora",
     menuHint: "Kliknij kartę dwukrotnie lub prawym przyciskiem, aby ją przenieść lub usunąć.",
+    choose: "Zaznacz",
+    pickToDelete: "Wybierz listy do usunięcia",
+    noneShown: "Brak list w „{filter}”",
+    deletedTakenDown: {
+      one: "{n} listę usunięto, a jej publiczną kopię wycofano",
+      few: "{n} listy usunięto, a ich publiczne kopie wycofano",
+      many: "{n} list usunięto, a ich publiczne kopie wycofano",
+      other: "{n} listy usunięto, a ich publiczne kopie wycofano",
+    },
   },
   sync: {
     offBusy: "Usuwanie…",

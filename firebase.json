@@ -109,6 +109,10 @@
           "source": "/index.html",
           "headers": [
             {
+              "key": "Content-Security-Policy",
+              "value": "frame-ancestors 'self'"
+            },
+            {
               "key": "Cache-Control",
               "value": "no-cache"
             }
@@ -117,6 +121,10 @@
         {
           "source": "/",
           "headers": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "frame-ancestors 'self'"
+            },
             {
               "key": "Cache-Control",
               "value": "no-cache"
@@ -127,8 +135,21 @@
           "source": "/@(new|search|me|c|settings|mod|u|about|b|boards|s|trash|following|admin){,/**}",
           "headers": [
             {
+              "key": "Content-Security-Policy",
+              "value": "frame-ancestors 'self'"
+            },
+            {
               "key": "Cache-Control",
               "value": "no-cache"
+            }
+          ]
+        },
+        {
+          "source": "/@(l|r)/**",
+          "headers": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "frame-ancestors 'self'"
             }
           ]
         },

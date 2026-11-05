@@ -8,6 +8,7 @@ import type { Translation } from "../index";
 const es: Translation = {
   tagline: "Versión web",
   nav: {
+    opening: "Abriendo la página…",
     site: "Sitio",
     skipToContent: "Saltar al contenido",
     signIn: "Iniciar sesión",
@@ -1228,6 +1229,14 @@ const es: Translation = {
     anonymousBody: "Sin nombre ni foto en la lista. Solo tú puedes cambiarla o retirarla.",
     categoryWaiting: "Esperando a un moderador",
     menuHint: "Haz doble clic o clic derecho en una tarjeta para moverla o quitarla.",
+    choose: "Seleccionar",
+    pickToDelete: "Elige las listas que quieres eliminar",
+    noneShown: "No hay listas en «{filter}»",
+    deletedTakenDown: {
+      one: "{n} lista eliminada y retirada su copia pública",
+      many: "{n} listas eliminadas y retiradas sus copias públicas",
+      other: "{n} listas eliminadas y retiradas sus copias públicas",
+    },
   },
   sync: {
     offBusy: "Eliminando…",

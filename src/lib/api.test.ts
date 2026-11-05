@@ -69,6 +69,8 @@ import {
   withdrawListRanking,
 } from "./api";
 import { setStrings } from "../strings";
+import { ApiFailure } from "../api/errors";
+import { onListChanged } from "./listChanges";
 
 describe("api", () => {
   it("is one client built on the Firebase token providers", () => {
@@ -86,7 +88,7 @@ describe("api", () => {
       id: "embedded",
       title: "From HTML",
     });
-    await expect(loadRanking("embedded")).resolves.toEqual({ code: "embedded" });
+    await expect(loadRanking("embedded")).resolves.toMatchObject({ code: "embedded" });
     expect(mocks.request).not.toHaveBeenCalled();
   });
 
@@ -210,6 +212,20 @@ describe("api", () => {
     expect(mocks.request).toHaveBeenCalledWith("POST", "/lists/abc/taken");
     mocks.request.mockRejectedValueOnce(new Error("down"));
     await expect(noteTake("abc")).resolves.toBeUndefined();
+  });
+
+  it("says a list changed once it is taken down or sent again, or found gone already", async () => {
+    const heard = vi.fn();
+    const stop = onListChanged(heard);
+    await unpublish("a");
+    await republish("b", { title: "T" } as never);
+    await takeDownList("c", null);
+    mocks.request.mockRejectedValueOnce(new ApiFailure({ kind: "notFound" }));
+    await expect(unpublish("d")).rejects.toThrow();
+    mocks.request.mockRejectedValueOnce(new ApiFailure({ kind: "offline" }));
+    await expect(unpublish("e")).rejects.toThrow();
+    stop();
+    expect(heard.mock.calls.map(([id]) => id)).toEqual(["a", "b", "c", "d"]);
   });
 
   // Each of these only binds the client; the request itself is tested in api/.

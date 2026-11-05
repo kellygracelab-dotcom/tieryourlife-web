@@ -3,6 +3,7 @@ import type { ApiError } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
 import { loadFeed } from "../../lib/api";
 import { errorOf } from "../../api/errors";
+import { onListChanged } from "../../lib/listChanges";
 import { remembered, type Remembered } from "../../lib/remembered";
 import { localStorageStore } from "../../lib/storage";
 
@@ -104,6 +105,15 @@ function withFurther(key: string, first: RememberedPage): RememberedPage {
   };
   return { lists: [...first.lists, ...further.lists].filter(once), next: further.next };
 }
+
+// A list taken down or sent again from here is no longer as any kept page
+// has it: those pages go, and the feed waits for the fresh one instead of
+// offering what is gone or showing one's own change undone.
+onListChanged((listId) => {
+  const holds = (page: RememberedPage) => page.lists.some((list) => list.id === listId);
+  feedMemory.forget(holds);
+  for (const [key, page] of furtherPages) if (holds(page)) furtherPages.delete(key);
+});
 
 const readyFrom = (page: RememberedPage, stale: boolean): FeedState => ({
   status: "ready",

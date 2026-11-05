@@ -20,6 +20,53 @@
   border-bottom: 1px solid var(--line);
 }
 
+/*
+ * A page on its way: a line along the bar's lower edge, drawn only once the
+ * wait is long enough to notice, so a quick page never flickers it.
+ */
+.top__pending {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 3px;
+  overflow: hidden;
+  opacity: 0;
+  animation: top-pending-in 0s linear 250ms forwards;
+}
+
+.top__pending::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: 30%;
+  background: var(--link);
+  animation: top-pending-run 1.2s ease-in-out infinite;
+}
+
+/* Without motion the line simply stands across the bar. */
+@media (prefers-reduced-motion: reduce) {
+  .top__pending::after {
+    inset-inline: 0;
+    width: auto;
+    animation: none;
+  }
+}
+
+@keyframes top-pending-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes top-pending-run {
+  from {
+    inset-inline-start: -30%;
+  }
+  to {
+    inset-inline-start: 100%;
+  }
+}
+
 .brand {
   display: inline-flex;
   align-items: center;

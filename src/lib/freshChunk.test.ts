@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CHUNK_RETRY_KEY, freshChunk, reloadOnce, resetFreshChunkForTests } from "./freshChunk";
+import {
+  CHUNK_RETRY_KEY,
+  freshChunk,
+  reloadInto,
+  reloadOnce,
+  resetFreshChunkForTests,
+} from "./freshChunk";
 import { memoryStore, type KeyValueStore } from "./storage";
 
 describe("freshChunk", () => {
@@ -51,6 +57,17 @@ describe("freshChunk", () => {
     // Nothing tried yet: back online, a deploy's missing file still gets its one reload.
     expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
     expect(reloadOnce({ store, reload, online: () => false })).toBe(false);
+  });
+
+  it("reloads into the page the tab was on its way to, and in place when it was going nowhere", () => {
+    const reload = vi.fn();
+    expect(reloadOnce({ store: memoryStore(), reload })).toBe(true);
+    expect(reload).toHaveBeenLastCalledWith(null);
+
+    resetFreshChunkForTests();
+    reloadInto(() => "/b?view=rows");
+    expect(reloadOnce({ store: memoryStore(), reload })).toBe(true);
+    expect(reload).toHaveBeenLastCalledWith("/b?view=rows");
   });
 
   it("does not reload where nothing can be remembered", () => {

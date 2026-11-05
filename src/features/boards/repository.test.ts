@@ -231,6 +231,17 @@ describe("the repository", () => {
     expect(listener).toHaveBeenCalledTimes(3);
   });
 
+  it("hands back the same board for one that did not change when another is saved", () => {
+    const repo = boardsRepository(memoryStore());
+    repo.saveAll([newBoard("a", "A", 1, uids()), newBoard("b", "B", 1, uids())]);
+    const a = repo.get("a");
+    const b = repo.get("b")!;
+    repo.save({ ...b, title: "B2" });
+    expect(repo.get("a")).toBe(a);
+    expect(repo.get("b")).not.toBe(b);
+    expect(repo.get("b")?.title).toBe("B2");
+  });
+
   it("leaves a key it cannot read alone, and other keys of the site untouched", () => {
     const store = memoryStore();
     store.write(boardKey("broken"), "{not json");

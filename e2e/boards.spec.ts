@@ -131,9 +131,10 @@ test("the old /new and a suggestion of the empty page make a list in its section
   await page.goto("/b");
   await expect(page.getByText("No lists yet")).toBeVisible();
   await press(page.getByRole("link", { name: "Restaurants" }), hasTouch);
-  await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&category=food$/);
+  await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&title=Restaurants&category=food$/);
   const title = page.getByRole("textbox", { name: "Title" });
   await expect(title).toBeFocused();
+  await expect(title).toHaveValue("Restaurants");
   await title.fill("Ramen in Kyiv");
   await title.press("Enter");
   await expect(page.getByText(/Food/)).toBeVisible();

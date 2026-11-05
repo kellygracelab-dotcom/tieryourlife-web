@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import firebaseJson from "../../firebase.json?raw";
 import { routes } from "./routes";
+import { Shell } from "./Shell";
 
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
@@ -116,6 +117,50 @@ describe("routes", () => {
     );
     await userEvent.click(screen.getByRole("link", { name: "Go to the front page" }));
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Rank anything");
+  });
+
+  it("draws the header and a stand-in at once for a page whose chunk is on its way", async () => {
+    open("/about");
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "" })).toHaveTextContent("Opening the page…");
+    expect(await screen.findByRole("heading", { level: 1 })).toBeInTheDocument();
+    expect(screen.queryByText("Opening the page…")).toBeNull();
+  });
+
+  it("says under the bar that a click was heard while the next page's chunk comes", async () => {
+    let arrive = () => undefined as void;
+    const slow = new Promise<void>((resolve) => {
+      arrive = resolve;
+    });
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/",
+          element: <Shell />,
+          children: [
+            { index: true, element: <p>here</p> },
+            {
+              path: "slow",
+              lazy: async () => {
+                await slow;
+                return { Component: () => <h1>Slow page</h1> };
+              },
+            },
+          ],
+        },
+      ],
+      { initialEntries: ["/"] },
+    );
+    render(<RouterProvider router={router} />);
+    const going = router.navigate("/slow");
+    expect(
+      await screen.findByRole("progressbar", { name: "Opening the page…" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("here")).toBeInTheDocument();
+    arrive();
+    await going;
+    expect(await screen.findByRole("heading", { name: "Slow page" })).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).toBeNull();
   });
 });
 

@@ -9,6 +9,7 @@ import type { Translation } from "../index";
 const ja: Translation = {
   tagline: "ウェブ版",
   nav: {
+    opening: "ページを開いています…",
     site: "サイト",
     skipToContent: "本文へスキップ",
     signIn: "ログイン",
@@ -1179,6 +1180,12 @@ const ja: Translation = {
     anonymousBody: "リストに名前と写真を出しません。変更や取り下げはあなただけができます。",
     categoryWaiting: "モデレーターの確認待ち",
     menuHint: "カードをダブルクリックまたは右クリックすると、移動や削除ができます。",
+    choose: "選択",
+    pickToDelete: "削除するリストを選んでください",
+    noneShown: "「{filter}」のリストはありません",
+    deletedTakenDown: {
+      other: "{n}件のリストを削除し、公開中のコピーも取り下げました",
+    },
   },
   sync: {
     offBusy: "削除中…",

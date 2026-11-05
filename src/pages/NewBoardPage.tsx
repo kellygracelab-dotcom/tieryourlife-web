@@ -6,7 +6,14 @@ import { useSession } from "../app/session";
 import { SignInButton } from "../app/SignInButton";
 import { useBoardSync } from "../features/boards/boardSync";
 import { HOUSE_PARAM } from "../features/boards/houseList";
-import { boardForOwnList, boardOfList, type CopyBack } from "../features/boards/ownList";
+import {
+  boardForOwnList,
+  boardOfList,
+  boardOfRanking,
+  keepOldDraft,
+  rankingBoardKey,
+  type CopyBack,
+} from "../features/boards/ownList";
 import { boardFromDraft } from "../features/boards/publish";
 import { type BoardsRepository } from "../features/boards/repository";
 import { boards as site } from "../features/boards/owners";
@@ -16,8 +23,6 @@ import {
   editDraftKey,
   forkDraftKey,
   loadEditorDraft,
-  NEW_DRAFT_KEY,
-  type Draft,
 } from "../features/editor/model";
 import { loadList, loadRanking } from "../lib/api";
 import { copyPublishedBack } from "../lib/pictures";
@@ -39,10 +44,6 @@ interface NewBoardPageProps {
 }
 
 const boardPath = (board: Board) => `/b/${encodeURIComponent(board.uid)}`;
-
-/** A draft of the old editor worth a board: it has a name or a card. */
-const begun = (draft: Draft | null): draft is Draft =>
-  draft !== null && (draft.title.trim().length > 0 || draft.items.length > 0);
 
 /**
  * New list, the one way a list is made: /b/new. A list is made where it is
@@ -127,12 +128,12 @@ function NewBoard({
 }) {
   const navigate = useNavigate();
   useOnce(true, () => {
-    const kept = loadEditorDraft(store, NEW_DRAFT_KEY);
-    if (title === "" && category === null && house === null && begun(kept)) {
-      const board = boardFromDraft(kept, now(), nextUid);
-      repository.save(board);
-      store.remove(NEW_DRAFT_KEY);
-      void navigate(boardPath(board), { replace: true });
+    const kept =
+      title === "" && category === null && house === null
+        ? keepOldDraft(store, repository, now(), nextUid)
+        : null;
+    if (kept !== null) {
+      void navigate(boardPath(kept), { replace: true });
       return;
     }
     const asked = new URLSearchParams({ new: String(now()) });
@@ -144,7 +145,21 @@ function NewBoard({
   return null;
 }
 
-function FromRanking({
+function FromRanking(props: {
+  code: string;
+  repository: BoardsRepository;
+  store: KeyValueStore;
+  load: (code: string) => Promise<Ranking>;
+  now: () => number;
+}) {
+  // A board already made of this ranking opens again: a second visit, from
+  // the menu on /me say, must not make a second copy.
+  const made = boardOfRanking(props.store, props.repository, props.code);
+  if (made !== null) return <Navigate to={boardPath(made)} replace />;
+  return <BoardOfRanking {...props} />;
+}
+
+function BoardOfRanking({
   code,
   repository,
   store,
@@ -166,6 +181,7 @@ function FromRanking({
     const board = boardFromDraft(kept ?? draftOfRanking(state.value), now(), nextUid);
     repository.save(board);
     store.remove(key);
+    store.write(rankingBoardKey(code), board.uid);
     void navigate(boardPath(board), { replace: true });
   });
   if (state.status === "error") {

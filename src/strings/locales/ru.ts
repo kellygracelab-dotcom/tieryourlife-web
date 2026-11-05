@@ -8,6 +8,7 @@ import type { Translation } from "../index";
 const ru: Translation = {
   tagline: "Веб-версия",
   nav: {
+    opening: "Открываем страницу…",
     site: "Сайт",
     skipToContent: "Перейти к содержимому",
     signIn: "Войти",
@@ -1347,6 +1348,15 @@ const ru: Translation = {
     categoryWaiting: "Ожидает модератора",
     menuHint:
       "Дважды щёлкните карточку или щёлкните по ней правой кнопкой, чтобы переместить или убрать её.",
+    choose: "Выбрать",
+    pickToDelete: "Выберите списки для удаления",
+    noneShown: "В «{filter}» списков нет",
+    deletedTakenDown: {
+      one: "{n} список удалён, его публичная копия снята",
+      few: "{n} списка удалено, их публичные копии сняты",
+      many: "{n} списков удалено, их публичные копии сняты",
+      other: "{n} списка удалено, их публичные копии сняты",
+    },
   },
   sync: {
     offBusy: "Удаляем…",

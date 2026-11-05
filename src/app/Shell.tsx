@@ -13,6 +13,7 @@ import {
   type Location,
   useLocation,
   useNavigate,
+  useNavigation,
   useSearchParams,
 } from "react-router";
 import { useAdminCounts } from "../features/admin/useAdminCounts";
@@ -239,6 +240,10 @@ export function Shell() {
     document.title = documentTitleOf(page, strings.brand);
   }, [page]);
 
+  // A page whose chunk is on its way keeps the old one up until it comes: a
+  // line under the bar says the click was heard.
+  const opening = useNavigation().state === "loading";
+
   // A new page takes the focus, so the keyboard starts on it rather than
   // wherever the old page's link was (often nowhere at all). A page that
   // took the focus itself keeps it, and so does the bar's search box.
@@ -332,6 +337,9 @@ export function Shell() {
             </Button>
           )}
         </div>
+        {opening && (
+          <span className="top__pending" role="progressbar" aria-label={strings.nav.opening} />
+        )}
       </header>
       {/^\/(following|b)?$/.test(location.pathname) && (
         <SiteTabs className="site-tabs--row" pathname={location.pathname} />

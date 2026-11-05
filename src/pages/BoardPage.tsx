@@ -82,6 +82,8 @@ import { usePlayBack } from "../features/play/usePlayBack";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { localStorageStore } from "../lib/storage";
 import type { BoardsPageState } from "./BoardsPage";
+import { useModerator, type LoadReports } from "../features/moderation/useModerator";
+import { ListPageLoading } from "./ListPageStates";
 import "./ListPage.css";
 import "../features/editor/owner.css";
 import "../features/editor/editor.css";
@@ -105,6 +107,8 @@ interface BoardPageProps {
   houseStore?: KeyValueStore;
   /** The boards this device edits for the house, apart from one's own and never synced. */
   houseRepository?: BoardsRepository;
+  /** Asks whether this account is staff: the owner and moderators may read the reports. */
+  loadReports?: LoadReports;
 }
 
 /** The settings sheet, or what its Propose a section opened in its place: the form, or the three already waiting. */
@@ -227,7 +231,31 @@ const sitePublishing: PublishingDeps = {
   unpublish: unpublishList,
 };
 
-export function BoardPage({
+/**
+ * A new board for the house is the staff's: the address alone makes one only
+ * for the owner and the moderators, whom the backend lets publish as the
+ * house. Anyone else following such a link gets a list of their own, kept
+ * among their other lists. Until the backend says who this is, such a link
+ * waits, since a board touched meanwhile would be kept in the wrong place.
+ */
+export function BoardPage(props: BoardPageProps) {
+  const { uid = "" } = useParams();
+  const [params] = useSearchParams();
+  const { account } = useSession();
+  const moderator = useModerator(props.loadReports);
+  const own = useBoard(uid, props.repository ?? site);
+  const forHouse = useBoard(uid, props.houseRepository ?? houseBoards);
+  const known = own !== null || forHouse !== null;
+  const staff = account?.kind === "signedIn" && moderator.status === "yes";
+  const unsure =
+    account === null || (account.kind === "signedIn" && moderator.status === "unknown");
+  if (!known && !staff && unsure && houseLinkOfParam(params.get(HOUSE_PARAM)) !== null) {
+    return <ListPageLoading note={strings.new.openingList} rows={2} />;
+  }
+  return <OpenBoard {...props} staff={staff} />;
+}
+
+function OpenBoard({
   repository: ownBoards = site,
   now = Date.now,
   find,
@@ -242,7 +270,8 @@ export function BoardPage({
   house: houseSend,
   houseStore = localStorageStore,
   houseRepository = houseBoards,
-}: BoardPageProps) {
+  staff,
+}: BoardPageProps & { staff: boolean }) {
   const { uid = "" } = useParams();
   const [params] = useSearchParams();
   const own = useBoard(uid, ownBoards);
@@ -255,7 +284,8 @@ export function BoardPage({
   // nobody's, and the account's sync never carries it. A board of one's own
   // stays one's own, whatever an older link says.
   const remembered = forHouse === null ? null : houseLinkOf(uid, houseStore);
-  const asked = own === null ? houseLinkOfParam(params.get(HOUSE_PARAM)) : null;
+  const asked =
+    own === null && (forHouse !== null || staff) ? houseLinkOfParam(params.get(HOUSE_PARAM)) : null;
   const house = remembered ?? asked ?? (forHouse === null ? null : { listId: null });
   const repository = house === null ? ownBoards : houseRepository;
   const stored = house === null ? own : forHouse;
