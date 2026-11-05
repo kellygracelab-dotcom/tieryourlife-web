@@ -739,7 +739,12 @@ export function BoardPage({
           waiting={waiting.length}
           send={propose}
           deps={proposeDeps}
-          onTooMany={() => setPanel("tooMany")}
+          onTooMany={() => {
+            setPanel("tooMany");
+            // Another tab or device proposed meanwhile: the dialog lists what the backend counted.
+            store.invalidate();
+            store.refresh(me ?? "guest");
+          }}
           onClose={() => setPanel("settings")}
           onDone={() => {
             setPanel("settings");

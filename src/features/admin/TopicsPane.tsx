@@ -5,6 +5,7 @@ import { createTopic, deleteTopic, editTopic, loadTopics } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import type { EditorDeps } from "../sections/editorDeps";
@@ -56,6 +57,8 @@ export function TopicsPane({
   const load = useCallback(() => deps.load(section), [deps, section]);
   const { state } = useResource(`${section}:${round}`, load);
   const [editing, setEditing] = useState<Editing>(null);
+  // A delete cannot be undone and takes the topic's followers with it: it is asked first.
+  const [deleting, setDeleting] = useState<Topic | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
@@ -74,6 +77,7 @@ export function TopicsPane({
     deps.remove(topic.id).then(
       () => {
         setBusy(false);
+        setDeleting(null);
         saved(fill(strings.admin.topicDeleted, { name: topic.name }));
       },
       () => {
@@ -116,11 +120,6 @@ export function TopicsPane({
           {strings.admin.newTopic}
         </Button>
       </header>
-      {failed && (
-        <p className="admin__bar" role="alert">
-          {strings.admin.actionFailed}
-        </p>
-      )}
       {state.status === "loading" ? (
         <PaneLoading />
       ) : state.status === "error" ? (
@@ -156,13 +155,39 @@ export function TopicsPane({
                 {strings.admin.edit}
               </Button>
               {role === "owner" && topic.listCount === 0 && (
-                <Button variant="danger" disabled={busy} onClick={() => remove(topic)}>
+                <Button
+                  variant="danger"
+                  disabled={busy}
+                  onClick={() => {
+                    setFailed(false);
+                    setDeleting(topic);
+                  }}
+                >
                   {strings.admin.delete}
                 </Button>
               )}
             </li>
           ))}
         </ul>
+      )}
+      {deleting !== null && (
+        <ConfirmDialog
+          narrow
+          title={fill(strings.admin.deleteTopicAsk, { name: deleting.name })}
+          body={strings.admin.deleteTopicBody}
+          confirmLabel={strings.admin.delete}
+          cancelLabel={strings.admin.cancel}
+          busy={busy}
+          trouble={
+            failed && (
+              <p className="dialog__bar" role="alert">
+                {strings.admin.actionFailed}
+              </p>
+            )
+          }
+          onConfirm={() => remove(deleting)}
+          onCancel={() => setDeleting(null)}
+        />
       )}
       {editing?.kind === "create" && (
         <TopicEditor

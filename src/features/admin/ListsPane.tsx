@@ -237,7 +237,8 @@ function ListGroup({
   gone,
   leaving,
   onMove,
-}: GroupProps) {
+  onSearched,
+}: GroupProps & { onSearched?: (key: string, missed: boolean) => void }) {
   const key = groupKey(section.id, other ? OTHER : (topic?.id ?? null));
   const ask = useCallback(
     (after: string | null) =>
@@ -267,6 +268,12 @@ function ListGroup({
         name: topic?.name ?? strings.admin.noTopic,
         n: count,
       });
+
+  // Whether the search found nothing here, for the section to say when it found nothing anywhere.
+  const missed =
+    query !== "" &&
+    (state.status === "ready" ? rows.length === 0 : other && state.status === "error");
+  useEffect(() => onSearched?.(key, missed), [onSearched, key, missed]);
 
   if (query !== "" && rows.length === 0) return null;
   // Nothing elsewhere, or a backend from before it could say: no group at all.
@@ -412,6 +419,19 @@ function Topics({
   const { state, retry } = useResource(`topics:${section.id}`, load);
   const topics =
     state.status === "ready" ? state.value.topics.filter((one) => one.status === "approved") : [];
+  // The groups the search found nothing in, each said by the group itself.
+  const [missed, setMissed] = useState<ReadonlySet<string>>(new Set());
+  const onSearched = useCallback(
+    (key: string, none: boolean) =>
+      setMissed((before) => {
+        if (before.has(key) === none) return before;
+        const next = new Set(before);
+        if (none) next.add(key);
+        else next.delete(key);
+        return next;
+      }),
+    [],
+  );
 
   if (state.status === "loading") return <PaneLoading />;
   if (state.status === "error") {
@@ -428,6 +448,12 @@ function Topics({
     Math.max(0, topic.listCount + (delta.get(`t:${topic.id}`) ?? 0));
   const shown = topics.filter((topic) => countOf(topic) > 0);
   const withTopic = shown.reduce((sum, topic) => sum + countOf(topic), 0);
+  const keys = [
+    ...shown.map((topic) => groupKey(section.id, topic.id)),
+    groupKey(section.id, null),
+    groupKey(section.id, OTHER),
+  ];
+  const nothing = group.query !== "" && keys.every((key) => missed.has(key));
   return (
     <>
       {shown.map((topic) => (
@@ -438,6 +464,7 @@ function Topics({
           count={countOf(topic)}
           round={rounds.get(groupKey(section.id, topic.id)) ?? 0}
           deps={deps}
+          onSearched={onSearched}
           {...group}
         />
       ))}
@@ -447,6 +474,7 @@ function Topics({
         count={Math.max(0, total - withTopic)}
         round={rounds.get(groupKey(section.id, null)) ?? 0}
         deps={deps}
+        onSearched={onSearched}
         {...group}
       />
       <ListGroup
@@ -456,8 +484,14 @@ function Topics({
         count={0}
         round={rounds.get(groupKey(section.id, OTHER)) ?? 0}
         deps={deps}
+        onSearched={onSearched}
         {...group}
       />
+      {nothing && (
+        <p className="admin-pane__note" role="status">
+          {fill(strings.boards.noMatch, { q: group.query })}
+        </p>
+      )}
     </>
   );
 }

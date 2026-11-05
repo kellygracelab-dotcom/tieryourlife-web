@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Candidate, Moderator } from "../../api/admin";
 import { errorOf } from "../../api/errors";
+import { useSession } from "../../app/session";
 import { appointModerator, findCandidates, loadModerators, removeModerator } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
-import { fill, plural, strings } from "../../strings";
+import { currentLocale, fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
@@ -48,11 +49,14 @@ type Asking = { kind: "appoint"; who: Candidate } | { kind: "remove"; who: Moder
 function AskDialog({
   asking,
   failed,
+  busy,
   onCancel,
   onConfirm,
 }: {
   asking: NonNullable<Asking>;
   failed: boolean;
+  /** The answer is on its way: a second press would ask twice. */
+  busy: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -80,7 +84,11 @@ function AskDialog({
         )}
         <div className="dialog__actions">
           <Button onClick={onCancel}>{strings.admin.cancel}</Button>
-          <Button variant={asking.kind === "appoint" ? "filled" : "danger"} onClick={onConfirm}>
+          <Button
+            variant={asking.kind === "appoint" ? "filled" : "danger"}
+            disabled={busy}
+            onClick={onConfirm}
+          >
             {asking.kind === "appoint" ? strings.admin.appoint : strings.admin.remove}
           </Button>
         </div>
@@ -99,9 +107,12 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
   const [round, setRound] = useState(0);
   const load = useCallback(() => deps.load(), [deps]);
   const { state } = useResource(String(round), load);
+  const { account } = useSession();
   const [query, setQuery] = useState("");
-  const [found, setFound] = useState<Candidate[]>([]);
+  // What the lookup answered, and for which words: an answer to older words is not shown.
+  const [found, setFound] = useState<{ words: string; people: Candidate[] | null } | null>(null);
   const [asking, setAsking] = useState<Asking>(null);
+  const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
@@ -112,10 +123,10 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
     let current = true;
     const timer = setTimeout(() => {
       deps.find(words).then(
-        (answer) => current && setFound(answer.people),
+        (answer) => current && setFound({ words, people: answer.people }),
         (reason: unknown) => {
-          // A backend without the lookup yet finds nobody.
-          if (current && errorOf(reason).kind === "notFound") setFound([]);
+          // A backend without the lookup yet finds nobody; any other failure is said.
+          if (current) setFound({ words, people: errorOf(reason).kind === "notFound" ? [] : null });
         },
       );
     }, FIND_AFTER_MS);
@@ -127,12 +138,14 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
 
   const settle = (work: Promise<void>, text: string, undo?: () => Promise<void>) => {
     setFailed(false);
+    setBusy(true);
     work.then(
       () => {
+        setBusy(false);
         // The person found is appointed: the search has done its work.
         if (asking?.kind === "appoint") {
           setQuery("");
-          setFound([]);
+          setFound(null);
         }
         setAsking(null);
         setRound((n) => n + 1);
@@ -143,16 +156,30 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
             : {
                 action: {
                   text: strings.sections.undo,
-                  onClick: () => void undo().then(() => setRound((n) => n + 1)),
+                  onClick: () =>
+                    void undo().then(
+                      () => setRound((n) => n + 1),
+                      () => setNotice({ text: strings.admin.actionFailed }),
+                    ),
                 },
               }),
         });
       },
-      () => setFailed(true),
+      () => {
+        setBusy(false);
+        setFailed(true);
+      },
     );
   };
 
   const moderators = state.status === "ready" ? state.value.moderators : [];
+  // The owner is no candidate, and a moderator already is one: neither is offered.
+  const me = account?.kind === "signedIn" ? account.uid : null;
+  const words = query.trim();
+  const answered = found !== null && found.words === words ? found.people : undefined;
+  const candidates = (answered ?? []).filter(
+    (person) => person.uid !== me && !moderators.some((one) => one.uid === person.uid),
+  );
   return (
     <section className="admin-pane" aria-labelledby="admin-moderators">
       <header className="admin-pane__head">
@@ -167,15 +194,22 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
           type="search"
           placeholder={strings.admin.findPerson}
           value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            if (event.target.value.trim().length < 2) setFound([]);
-          }}
+          onChange={(event) => setQuery(event.target.value)}
         />
       </label>
-      {found.length > 0 && (
+      {words.length >= 2 && answered === null && (
+        <p className="admin__bar" role="alert">
+          {strings.admin.failed}
+        </p>
+      )}
+      {words.length >= 2 && answered != null && candidates.length === 0 && (
+        <p className="admin-pane__note" role="status">
+          {fill(strings.admin.nobodyFound, { q: words })}
+        </p>
+      )}
+      {words.length >= 2 && candidates.length > 0 && (
         <ul className="admin-people admin-people--found">
-          {found.map((person) => (
+          {candidates.map((person) => (
             <li key={person.uid} className="admin-people__row">
               <Face photoUrl={person.photoUrl} name={person.name} />
               <span className="admin-people__text">
@@ -193,6 +227,7 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
         <AskDialog
           asking={asking}
           failed={failed}
+          busy={busy}
           onCancel={() => {
             setAsking(null);
             setFailed(false);
@@ -235,7 +270,7 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
                   {[
                     ...(person.email ? [person.email] : []),
                     fill(strings.admin.since, {
-                      date: new Date(person.appointedAt).toLocaleDateString(),
+                      date: new Intl.DateTimeFormat(currentLocale()).format(person.appointedAt),
                     }),
                   ].join(" · ")}
                 </span>

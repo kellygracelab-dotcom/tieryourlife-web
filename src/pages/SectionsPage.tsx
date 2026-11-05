@@ -181,7 +181,11 @@ export function SectionsPage({
           waiting={waiting.length}
           send={deps.propose}
           deps={deps.editor}
-          onTooMany={() => setProposing("tooMany")}
+          onTooMany={() => {
+            setProposing("tooMany");
+            // Another tab or device proposed meanwhile: the dialog lists what the backend counted.
+            reload();
+          }}
           onClose={() => setProposing("closed")}
           onDone={() => {
             setProposing("closed");

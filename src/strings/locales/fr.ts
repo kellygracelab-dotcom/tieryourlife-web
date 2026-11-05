@@ -707,6 +707,8 @@ const fr: Translation = {
     topicCreated: "« {name} » créé",
     topicRenamed: "Renommé en « {name} »",
     topicDeleted: "« {name} » supprimé",
+    deleteTopicAsk: "Supprimer « {name} » ?",
+    deleteTopicBody: "Ceux qui le suivent ne le suivront plus. Impossible d’annuler.",
     people: { one: "{n} personne", other: "{n} personnes" },
     findPerson: "Nom ou e-mail d’un compte déjà connecté",
     appoint: "Nommer",
@@ -719,6 +721,7 @@ const fr: Translation = {
     owner: "Propriétaire",
     you: "Vous",
     since: "Modérateur depuis le {date}",
+    nobodyFound: "Personne trouvé pour « {q} »",
     newSection: "Nouvelle rubrique",
     editSection: "Modifier la rubrique",
     edit: "Modifier",
@@ -758,6 +761,7 @@ const fr: Translation = {
     finish: "Terminer",
     unfinishedNote:
       "Décidé, mais pas terminé : certaines de ses listes n’ont pas encore été déplacées.",
+    unfinishedOwnerOnly: "Seul le propriétaire peut terminer une fusion.",
     finished: "« {name} » terminé",
     sectionTaken: "Une rubrique « {name} » existe déjà",
     approveAsSection: "Approuver comme rubrique",
@@ -866,6 +870,8 @@ const fr: Translation = {
     topicWaiting: "{name} · en attente",
     waitingBody:
       "Un modérateur va l’examiner. Vos listes apparaîtront ici une fois le thème approuvé ; d’ici là, elles sont dans {section}.",
+    topicWaitingBody:
+      "Un modérateur va l’examiner. D’ici là, ses listes restent dans {section} avec cette étiquette.",
     tabExplore: "Explorer",
     tabFollowing: "Abonnements",
     community: "Communauté",
@@ -930,6 +936,10 @@ const fr: Translation = {
     notImage: "Cette image ne peut pas être utilisée. Choisissez-en une autre.",
     notCropped: "L’image doit être recadrée en 16:10. Ajustez-la et réessayez.",
     banned: "Vous ne pouvez pas proposer de rubriques pour le moment.",
+    bannedUntil: "Vous ne pouvez pas proposer de rubriques jusqu’au {date}.",
+    badFileUnder:
+      "Les listes ne peuvent pas attendre dans cette rubrique. Choisissez-en une autre.",
+    badIcon: "Cette icône ne peut pas être utilisée. Choisissez-en une autre.",
     tooManyToday: "Vous avez déjà proposé {max} rubriques aujourd’hui. Réessayez demain.",
     discardAsk: "Abandonner cette proposition ?",
     keepEditing: "Continuer",

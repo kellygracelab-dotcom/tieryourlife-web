@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import type { AnonymousList } from "../../api/admin";
+import { errorOf } from "../../api/errors";
 import { loadAnonymousLists } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
@@ -38,6 +39,7 @@ export function AnonymousPane({ deps = anonymousDeps }: { deps?: AnonymousDeps }
   const load = useCallback(() => deps.load(null), [deps]);
   const { state, retry } = useResource("anonymous", load);
   const [more, setMore] = useState<Page | null>(null);
+  const [moreFailed, setMoreFailed] = useState(false);
   const [picking, setPicking] = useState(false);
   const own = useBoards(deps.repository).filter((board) => board.deletedAt === null);
   const { sections } = useSections();
@@ -120,16 +122,32 @@ export function AnonymousPane({ deps = anonymousDeps }: { deps?: AnonymousDeps }
           ))}
         </ul>
       )}
+      {moreFailed && (
+        <p className="admin__bar" role="alert">
+          {strings.admin.actionFailed}
+        </p>
+      )}
       {next !== null && (
         <Button
-          onClick={() =>
-            void deps.load(next).then((page) =>
-              setMore({
-                lists: [...(more?.lists ?? []), ...page.lists],
-                nextCursor: page.nextCursor,
-              }),
-            )
-          }
+          onClick={() => {
+            setMoreFailed(false);
+            deps.load(next).then(
+              (page) =>
+                setMore({
+                  lists: [...(more?.lists ?? []), ...page.lists],
+                  nextCursor: page.nextCursor,
+                }),
+              (reason: unknown) => {
+                // The list the page ended at went: the lists are read again from the top.
+                if (errorOf(reason).kind === "cursorGone") {
+                  setMore(null);
+                  retry();
+                } else {
+                  setMoreFailed(true);
+                }
+              },
+            );
+          }}
         >
           {strings.admin.more}
         </Button>

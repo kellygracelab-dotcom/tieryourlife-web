@@ -99,10 +99,17 @@ describe("a refusal, placed", () => {
     [invalid("BAD_PICTURE", { why: "not_image" }), { kind: "notImage" }],
     // A picture that went missing on the way goes again with the next try.
     [invalid("BAD_PICTURE", { why: "missing" }), { kind: "failed" }],
-    [invalid("BAD_ICON"), { kind: "failed" }],
-    [invalid("BAD_FILE_UNDER"), { kind: "failed" }],
+    [invalid("BAD_ICON"), { kind: "badIcon" }],
+    [invalid("BAD_FILE_UNDER"), { kind: "badFileUnder" }],
     [{ kind: "tooManyRequests", code: "TOO_MANY_PROPOSALS" }, { kind: "tooManyToday" }],
-    [{ kind: "banned", until: null }, { kind: "banned" }],
+    [
+      { kind: "banned", until: null },
+      { kind: "banned", until: null },
+    ],
+    [
+      { kind: "banned", until: 1798070400000 },
+      { kind: "banned", until: 1798070400000 },
+    ],
     [{ kind: "notSignedIn" }, { kind: "failed" }],
     [{ kind: "offline" }, { kind: "failed" }],
     [{ kind: "unknown", status: 500 }, { kind: "failed" }],
@@ -113,6 +120,7 @@ describe("a refusal, placed", () => {
 
 describe("a proposal kept for the next try", () => {
   const kept = {
+    owner: "u1",
     name: "Street food",
     icon: "restaurant",
     fileUnder: "food",
@@ -121,12 +129,20 @@ describe("a proposal kept for the next try", () => {
 
   it("comes back as it was kept, and goes when forgotten", () => {
     const store = memoryStore();
-    expect(readKeptProposal(store)).toBeNull();
+    expect(readKeptProposal(store, "u1")).toBeNull();
     keepProposal(store, kept);
-    expect(readKeptProposal(store)).toEqual(kept);
+    expect(readKeptProposal(store, "u1")).toEqual(kept);
     forgetProposal(store);
-    expect(readKeptProposal(store)).toBeNull();
+    expect(readKeptProposal(store, "u1")).toBeNull();
     expect(store.read(KEPT_PICTURE_KEY)).toBeNull();
+  });
+
+  it("comes back only to the account that kept it, not to the next one in the tab", () => {
+    const store = memoryStore();
+    keepProposal(store, kept);
+    expect(readKeptProposal(store, "u2")).toBeNull();
+    expect(readKeptProposal(store, null)).toBeNull();
+    expect(readKeptProposal(store, "u1")).toEqual(kept);
   });
 
   it("keeps its words when the picture will not fit, and reads nothing it does not trust", () => {
@@ -140,16 +156,20 @@ describe("a proposal kept for the next try", () => {
       remove: (key) => void data.delete(key),
     };
     keepProposal(full, kept);
-    expect(readKeptProposal(full)).toEqual({ ...kept, picture: null });
+    expect(readKeptProposal(full, "u1")).toEqual({ ...kept, picture: null });
 
     const store = memoryStore();
     store.write(KEPT_KEY, "{not json");
-    expect(readKeptProposal(store)).toBeNull();
+    expect(readKeptProposal(store, "u1")).toBeNull();
     store.write(KEPT_KEY, JSON.stringify({ name: 3 }));
-    expect(readKeptProposal(store)).toBeNull();
-    store.write(KEPT_KEY, JSON.stringify({ name: "X", icon: "ramen", fileUnder: "food" }));
+    expect(readKeptProposal(store, "u1")).toBeNull();
+    store.write(
+      KEPT_KEY,
+      JSON.stringify({ owner: "u1", name: "X", icon: "ramen", fileUnder: "food" }),
+    );
     store.write(KEPT_PICTURE_KEY, "javascript:alert(1)");
-    expect(readKeptProposal(store)).toEqual({
+    expect(readKeptProposal(store, "u1")).toEqual({
+      owner: "u1",
       name: "X",
       icon: "category",
       fileUnder: "food",

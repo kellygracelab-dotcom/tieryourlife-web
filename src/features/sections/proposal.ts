@@ -75,7 +75,11 @@ export type Trouble =
   | { kind: "notCropped" }
   | { kind: "tooMany" }
   | { kind: "tooManyToday" }
-  | { kind: "banned" }
+  | { kind: "banned"; until: number | null }
+  // The section to file under, or the icon, is one the backend no longer takes:
+  // another try fails the same way until it is changed, as the app says.
+  | { kind: "badFileUnder" }
+  | { kind: "badIcon" }
   | { kind: "failed" };
 
 /**
@@ -85,7 +89,7 @@ export type Trouble =
  * again.
  */
 export function troubleOf(error: ApiError): Trouble {
-  if (error.kind === "banned") return { kind: "banned" };
+  if (error.kind === "banned") return { kind: "banned", until: error.until };
   if (error.kind === "tooManyRequests") return { kind: "tooManyToday" };
   if (error.kind !== "invalid") return { kind: "failed" };
   switch (error.code) {
@@ -95,6 +99,10 @@ export function troubleOf(error: ApiError): Trouble {
       return { kind: "badName" };
     case "TOO_MANY_PENDING":
       return { kind: "tooMany" };
+    case "BAD_FILE_UNDER":
+      return { kind: "badFileUnder" };
+    case "BAD_ICON":
+      return { kind: "badIcon" };
     case "BAD_PICTURE":
       if (error.why === "too_small") return { kind: "tooSmall" };
       if (error.why === "not_16_10") return { kind: "notCropped" };
@@ -107,6 +115,8 @@ export function troubleOf(error: ApiError): Trouble {
 
 /** A proposal that could not go, kept for the next time the form opens in this tab. */
 export interface KeptProposal {
+  /** Whose it is: another account signed in to the same tab is not handed it. */
+  owner: string | null;
   name: string;
   icon: SectionIcon;
   fileUnder: string;
@@ -125,7 +135,8 @@ export function keepProposal(store: KeyValueStore, kept: KeptProposal): void {
   else store.write(KEPT_PICTURE_KEY, picture);
 }
 
-export function readKeptProposal(store: KeyValueStore): KeptProposal | null {
+/** The proposal kept in this tab by `owner`, or null: one kept by anybody else is not theirs to see. */
+export function readKeptProposal(store: KeyValueStore, owner: string | null): KeptProposal | null {
   const text = store.read(KEPT_KEY);
   if (text === null) return null;
   let words: unknown;
@@ -135,10 +146,12 @@ export function readKeptProposal(store: KeyValueStore): KeptProposal | null {
     return null;
   }
   if (typeof words !== "object" || words === null) return null;
-  const { name, icon, fileUnder } = words as Record<string, unknown>;
+  const { owner: keptBy, name, icon, fileUnder } = words as Record<string, unknown>;
   if (typeof name !== "string" || typeof fileUnder !== "string") return null;
+  if ((typeof keptBy === "string" ? keptBy : null) !== owner) return null;
   const picture = store.read(KEPT_PICTURE_KEY);
   return {
+    owner,
     name,
     icon: isSectionIcon(icon) ? icon : "category",
     fileUnder,

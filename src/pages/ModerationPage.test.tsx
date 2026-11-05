@@ -210,8 +210,27 @@ describe("ModerationPage", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Put back" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("nothing changed");
     expect(screen.getByText("List l1")).toBeInTheDocument();
+    leaveUp.mockResolvedValue(undefined);
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(screen.queryByRole("alert")).toBeNull();
+    expect(leaveUp).toHaveBeenCalledTimes(2);
+    expect(
+      await screen.findByText("Put back in the feed. Reports no longer hide it."),
+    ).toBeInTheDocument();
+  });
+
+  it("sends the same take-down, ban and all, on Try again", async () => {
+    load.mockResolvedValue({ reports: [queued("l1")] });
+    takeDown.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    takeDown.mockResolvedValue(undefined);
+    open();
+    await userEvent.click(await screen.findByRole("button", { name: "Take it down" }));
+    const panel = screen.getByRole("group", { name: "Take it down. Ban the author?" });
+    await userEvent.click(within(panel).getByRole("button", { name: "A month" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Take it down" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("nothing changed");
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(takeDown).toHaveBeenNthCalledWith(2, "l1", "month");
+    expect(await screen.findByText("Taken down. someone banned for a month.")).toBeInTheDocument();
   });
 
   it("blurs covers on request and reveals one on click, remembering the choice", async () => {
