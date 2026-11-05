@@ -222,10 +222,13 @@ describe("All sections: proposing", () => {
     Object.defineProperty(image, "naturalHeight", { value: 1000 });
     image.dispatchEvent(new Event("load"));
     await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "Pets");
+    const loads = sectionsDeps.load.mock.calls.length;
     await userEvent.click(screen.getByRole("button", { name: "Propose" }));
     expect(
       await screen.findByRole("dialog", { name: "3 proposals are waiting" }),
     ).toBeInTheDocument();
+    // Proposed from elsewhere meanwhile: the sections are read again, so the dialog lists them.
+    await waitFor(() => expect(sectionsDeps.load.mock.calls.length).toBeGreaterThan(loads));
     await userEvent.click(screen.getByRole("button", { name: "OK" }));
     expect(screen.queryByRole("dialog")).toBeNull();
   });

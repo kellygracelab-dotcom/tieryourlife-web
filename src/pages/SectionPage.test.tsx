@@ -258,7 +258,11 @@ describe("SectionPage", () => {
     const grid = await tiles();
     await userEvent.click(grid.getByRole("button", { name: "Speedruns · waiting" }));
     const sheet = screen.getByRole("dialog", { name: "Speedruns" });
-    expect(sheet).toHaveTextContent("until then they're in Games");
+    // A topic's words: its lists are on this page already, under its label.
+    expect(sheet).toHaveTextContent(
+      "A moderator will look at it. Until then its lists stay in Games with this label.",
+    );
+    expect(sheet).not.toHaveTextContent("show here");
     expect(sheet).toHaveTextContent("Only you see this topic until then.");
     expect(within(sheet).queryByRole("button", { name: "Withdraw" })).toBeNull();
     expect(router.state.location.pathname).toBe("/s/games");

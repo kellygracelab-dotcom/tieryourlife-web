@@ -410,16 +410,16 @@ export function PictureField({
                 {editing ? strings.admin.replace : strings.propose.changePicture}
               </Button>
             )}
-            <div className="segmented" role="group" aria-label={strings.propose.paper}>
+            <div className="paper-switch" role="group" aria-label={strings.propose.paper}>
               {(["light", "dark"] as const).map((one) => (
                 <button
                   key={one}
                   type="button"
-                  className="segmented__option"
+                  className="paper-switch__option"
                   aria-pressed={paper === one}
                   onClick={() => setPaper(one)}
                 >
-                  {paper === one && <Icon name="check" className="segmented__check" />}
+                  {paper === one && <Icon name="check" className="paper-switch__check" />}
                   {one === "light" ? strings.nav.themeLight : strings.nav.themeDark}
                 </button>
               ))}

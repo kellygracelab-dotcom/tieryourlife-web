@@ -191,7 +191,7 @@ export function TopicEditor(props: TopicEditorProps) {
         onSubmit={onSubmit}
       >
         {compact ? (
-          <header className="section-editor__bar">
+          <div className="section-editor__bar">
             <button
               type="button"
               className="section-editor__close"
@@ -205,13 +205,13 @@ export function TopicEditor(props: TopicEditorProps) {
               {title}
             </h2>
             {sendButton}
-          </header>
+          </div>
         ) : (
-          <header className="section-editor__head">
+          <div className="section-editor__head">
             <h2 id={`${id}-title`} className="dialog__title">
               {title}
             </h2>
-          </header>
+          </div>
         )}
         <div className="section-editor__body" inert={sending}>
           <div className="section-editor__field">
@@ -278,7 +278,7 @@ export function TopicEditor(props: TopicEditorProps) {
           </div>
         </div>
         {(!compact || failed || asking) && (
-          <footer className="section-editor__foot">
+          <div className="section-editor__foot">
             {failed && (
               <div className="section-editor__failed" role="alert">
                 <p>{strings.admin.saveFailed}</p>
@@ -302,7 +302,7 @@ export function TopicEditor(props: TopicEditorProps) {
                 {sendButton}
               </div>
             )}
-          </footer>
+          </div>
         )}
       </form>
     </div>,

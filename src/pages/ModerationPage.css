@@ -35,13 +35,6 @@
   cursor: pointer;
 }
 
-.mod__blur input {
-  width: 40px;
-  height: 22px;
-  margin: 0;
-  accent-color: var(--link);
-}
-
 .mod__empty {
   display: flex;
   flex-direction: column;

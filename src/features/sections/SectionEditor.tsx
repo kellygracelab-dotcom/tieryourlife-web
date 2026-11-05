@@ -11,13 +11,14 @@ import { createPortal } from "react-dom";
 import { Link, useBlocker, useNavigate, type Blocker } from "react-router";
 import type { SectionChanges, SectionDraft } from "../../api/admin";
 import { errorOf } from "../../api/errors";
+import { useSession } from "../../app/session";
 import type { SectionProposal, SectionStats } from "../../api/sections";
 import { CENTRED, cropOf } from "../../lib/framing";
 import { directionOf, LOCALE_NAMES, LOCALES } from "../../lib/locale";
 import { dataUrlOf, SECTION_PICTURE_MIN } from "../../lib/pictures";
 import type { KeyValueStore } from "../../lib/storage";
 import { useWidthClass } from "../../lib/useWidthClass";
-import { fill, strings } from "../../strings";
+import { currentLocale, fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
@@ -85,7 +86,7 @@ interface Start extends SectionWords {
 }
 
 /** Where the form starts: the section as it is, a proposal kept from a failed try, or nothing. */
-function startOf(props: SectionEditorProps, keep: KeyValueStore): Start {
+function startOf(props: SectionEditorProps, keep: KeyValueStore, owner: string | null): Start {
   if (props.mode === "edit") {
     const look = sectionOf(props.section);
     return {
@@ -95,7 +96,7 @@ function startOf(props: SectionEditorProps, keep: KeyValueStore): Start {
     };
   }
   const fileUnder = props.mode === "propose" ? (props.fileUnder ?? OTHER) : OTHER;
-  const kept = props.mode === "propose" ? readKeptProposal(keep) : null;
+  const kept = props.mode === "propose" ? readKeptProposal(keep, owner) : null;
   if (kept === null) return { name: "", names: {}, icon: "category", fileUnder, picture: null };
   return {
     name: kept.name,
@@ -114,6 +115,28 @@ function startOf(props: SectionEditorProps, keep: KeyValueStore): Start {
             remote: false,
           },
   };
+}
+
+/** What the bar above the actions says: what to change, or when a ban ends. */
+function barText(trouble: Trouble, mode: SectionEditorProps["mode"]): string {
+  switch (trouble.kind) {
+    case "banned":
+      return trouble.until === null
+        ? strings.propose.banned
+        : fill(strings.propose.bannedUntil, {
+            date: new Intl.DateTimeFormat(currentLocale(), { dateStyle: "long" }).format(
+              trouble.until,
+            ),
+          });
+    case "tooManyToday":
+      return fill(strings.propose.tooManyToday, { max: PROPOSALS_PER_DAY });
+    case "badFileUnder":
+      return strings.propose.badFileUnder;
+    case "badIcon":
+      return strings.propose.badIcon;
+    default:
+      return mode === "propose" ? strings.propose.failed : strings.admin.saveFailed;
+  }
 }
 
 /**
@@ -144,7 +167,10 @@ export function SectionEditor(props: SectionEditorProps) {
   const box = useRef<HTMLFormElement>(null);
   const image = useRef<HTMLImageElement>(null);
   const compact = useWidthClass() === "compact";
-  const [start] = useState(() => startOf(props, deps.keep));
+  const { account } = useSession();
+  // A proposal kept from a failed try is the account's that made it.
+  const owner = account?.kind === "signedIn" ? account.uid : null;
+  const [start] = useState(() => startOf(props, deps.keep, owner));
   const [name, setName] = useState(start.name);
   const [names, setNames] = useState(start.names);
   const [icon, setIcon] = useState<SectionIcon>(start.icon);
@@ -154,7 +180,10 @@ export function SectionEditor(props: SectionEditorProps) {
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [sending, setSending] = useState(false);
   // The bar above the actions: a failure worth another try, or a refusal that is not.
-  const [bar, setBar] = useState<"failed" | "banned" | "tooManyToday" | null>(null);
+  const [bar, setBar] = useState<Extract<
+    Trouble,
+    { kind: "failed" | "banned" | "tooManyToday" | "badFileUnder" | "badIcon" }
+  > | null>(null);
   const [asking, setAsking] = useState(false);
   // A way out of the page held back until the question is answered.
   const [leaving, setLeaving] = useState<Blocker | null>(null);
@@ -176,8 +205,13 @@ export function SectionEditor(props: SectionEditorProps) {
   const changes = mode === "edit" ? changesOf(start, words) : {};
   const newPicture = picture?.kind === "framed";
   const pictureReady = picture === null || picture.kind === "kept" || picture.size !== null;
+  const nameTrouble =
+    verdict !== null && verdict.name === tidy && verdict.kind !== "free" ? verdict : null;
+  // A name already refused, or one the backend's rule refuses, is not sent:
+  // it would only upload the picture to be refused again.
   const ready =
-    tidy !== "" &&
+    (isSectionName(tidy) || (tidy !== "" && tidy === ownName)) &&
+    nameTrouble === null &&
     pictureReady &&
     (mode === "propose"
       ? newPicture
@@ -189,12 +223,17 @@ export function SectionEditor(props: SectionEditorProps) {
       ? Object.keys(changes).length > 0 || newPicture
       : picture !== null || tidy !== "" || Object.keys(translationsOf(names)).length > 0;
 
-  // Once typing stops, whether the name is free; a section's own name is not asked about.
+  // Once typing stops, whether the name is free; a section's own name is not
+  // asked about, and one the backend's rule refuses is said without asking.
   useEffect(() => {
     const asked = tidySectionName(name);
-    if (!isSectionName(asked) || asked === ownName) return;
+    if (asked === "" || asked === ownName) return;
     let current = true;
     const timer = setTimeout(() => {
+      if (!isSectionName(asked)) {
+        setVerdict({ name: asked, kind: "bad" });
+        return;
+      }
       deps.check(asked).then(
         (answer) => {
           if (!current) return;
@@ -215,9 +254,6 @@ export function SectionEditor(props: SectionEditorProps) {
       clearTimeout(timer);
     };
   }, [name, deps, ownId, ownName]);
-
-  const nameTrouble =
-    verdict !== null && verdict.name === tidy && verdict.kind !== "free" ? verdict : null;
 
   const ask = () => {
     askedFrom.current =
@@ -283,7 +319,7 @@ export function SectionEditor(props: SectionEditorProps) {
   /** A proposal that did not go waits in the tab: its words now, its picture once it is text. */
   const keep = (bytes: Blob | null) => {
     if (mode !== "propose") return;
-    const kept = { name: tidy, icon, fileUnder };
+    const kept = { owner, name: tidy, icon, fileUnder };
     keepProposal(deps.keep, { ...kept, picture: null });
     if (bytes === null) return;
     dataUrlOf(bytes).then(
@@ -327,11 +363,13 @@ export function SectionEditor(props: SectionEditorProps) {
         return;
       case "banned":
       case "tooManyToday":
-        setBar(trouble.kind);
+      case "badFileUnder":
+      case "badIcon":
+        setBar(trouble);
         return;
       case "failed":
         keep(bytes);
-        setBar("failed");
+        setBar(trouble);
     }
   };
 
@@ -589,16 +627,8 @@ export function SectionEditor(props: SectionEditorProps) {
   const failure =
     bar === null ? null : (
       <div className="section-editor__failed" role="alert">
-        <p>
-          {bar === "banned"
-            ? strings.propose.banned
-            : bar === "tooManyToday"
-              ? fill(strings.propose.tooManyToday, { max: PROPOSALS_PER_DAY })
-              : mode === "propose"
-                ? strings.propose.failed
-                : strings.admin.saveFailed}
-        </p>
-        {bar === "failed" && (
+        <p>{barText(bar, mode)}</p>
+        {bar.kind === "failed" && (
           <Button onClick={() => void submit()}>{strings.sections.tryAgain}</Button>
         )}
       </div>
@@ -641,7 +671,7 @@ export function SectionEditor(props: SectionEditorProps) {
         onSubmit={onSubmit}
       >
         {compact ? (
-          <header className="section-editor__bar">
+          <div className="section-editor__bar">
             <button
               type="button"
               className="section-editor__close"
@@ -655,21 +685,21 @@ export function SectionEditor(props: SectionEditorProps) {
               {title}
             </h2>
             {sendButton}
-          </header>
+          </div>
         ) : (
-          <header className="section-editor__head">
+          <div className="section-editor__head">
             <h2 id={`${id}-title`} className="dialog__title">
               {title}
             </h2>
             {intro !== null && <p className="section-editor__intro">{intro}</p>}
-          </header>
+          </div>
         )}
         <div className="section-editor__body" inert={sending}>
           {compact && intro !== null && <p className="section-editor__intro">{intro}</p>}
           {fields}
         </div>
         {(!compact || asking || failure !== null) && (
-          <footer className="section-editor__foot">
+          <div className="section-editor__foot">
             {failure}
             {asking ? (
               askRow
@@ -681,7 +711,7 @@ export function SectionEditor(props: SectionEditorProps) {
                 {sendButton}
               </div>
             )}
-          </footer>
+          </div>
         )}
         <p className="visually-hidden" aria-live="polite">
           {sending ? strings.propose.sending : ""}

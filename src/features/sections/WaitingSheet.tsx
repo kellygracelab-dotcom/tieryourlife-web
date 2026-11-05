@@ -19,6 +19,7 @@ import "./proposal.css";
 export function WaitingSheet({
   section,
   filedIn,
+  topic = false,
   note,
   withdraw = withdrawSectionProposal,
   onWithdrawn,
@@ -28,6 +29,8 @@ export function WaitingSheet({
   section: Pick<Section, "id" | "name">;
   /** The name of the section its lists wait in. */
   filedIn: string;
+  /** A waiting topic: its lists are in its section already, under its label. */
+  topic?: boolean;
   /** A line under the rest, quieter. */
   note?: string;
   withdraw?: (id: string) => Promise<void>;
@@ -93,7 +96,11 @@ export function WaitingSheet({
         <h2 id={`${id}-title`} className="dialog__title">
           {section.name}
         </h2>
-        <p className="dialog__body">{fill(strings.sections.waitingBody, { section: filedIn })}</p>
+        <p className="dialog__body">
+          {fill(topic ? strings.sections.topicWaitingBody : strings.sections.waitingBody, {
+            section: filedIn,
+          })}
+        </p>
         {note !== undefined && <p className="waiting-sheet__note">{note}</p>}
         {failed && (
           <p className="dialog__bar" role="alert">

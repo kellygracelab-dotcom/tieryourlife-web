@@ -238,10 +238,11 @@ export function SectionsPane({
     }
     if (event.key === " ") {
       event.preventDefault();
-      setLifted(lifted === null ? { id, from: index } : null);
+      setLifted(lifted?.id === id ? null : { id, from: index });
       return;
     }
-    if (lifted === null) return;
+    // The arrows and Escape belong to the lifted row's own handle.
+    if (lifted?.id !== id) return;
     if (event.key === "ArrowUp" || event.key === "ArrowDown") {
       event.preventDefault();
       move(index, index + (event.key === "ArrowUp" ? -1 : 1));
@@ -372,6 +373,14 @@ export function SectionsPane({
                   aria-label={fill(strings.admin.move, { name: nameOf(row.id) })}
                   aria-pressed={lifted?.id === row.id}
                   onKeyDown={(event) => onHandleKey(event, index, row.id)}
+                  // Tabbing on puts the row down where it is. A row moved by
+                  // the arrows is taken out and put back, and its blur names
+                  // nothing to go to: that keeps it lifted.
+                  onBlur={(event) => {
+                    if (event.relatedTarget !== null && drag.current === null) {
+                      setLifted((before) => (before?.id === row.id ? null : before));
+                    }
+                  }}
                 >
                   <Icon name="drag_indicator" />
                 </button>
@@ -411,6 +420,7 @@ export function SectionsPane({
                   <input
                     type="checkbox"
                     role="switch"
+                    className="switch"
                     checked={row.shown}
                     aria-label={fill(strings.admin.shownOf, { name: nameOf(row.id) })}
                     onChange={(event) => setEdited(setShown(edited, row.id, event.target.checked))}
@@ -450,7 +460,14 @@ export function SectionsPane({
               <p className="admin-save__text">
                 {failed ? strings.admin.saveFailed : summaryOf(saved, edited)}
               </p>
-              <Button onClick={() => setEdited(saved)} disabled={saving}>
+              <Button
+                onClick={() => {
+                  setEdited(saved);
+                  // What failed to save is gone too: the next change is only unsaved.
+                  setFailed(false);
+                }}
+                disabled={saving}
+              >
                 {strings.admin.discard}
               </Button>
               <Button variant="filled" onClick={save} disabled={saving}>

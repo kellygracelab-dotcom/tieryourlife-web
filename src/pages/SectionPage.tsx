@@ -126,6 +126,7 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
         <WaitingSheet
           section={opened}
           filedIn={section.name}
+          topic
           note={strings.sections.waitingOnlyYou}
           onClose={() => setOpened(null)}
         />

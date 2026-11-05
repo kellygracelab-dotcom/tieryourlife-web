@@ -709,6 +709,9 @@ const de: Translation = {
     topicCreated: "„{name}“ erstellt",
     topicRenamed: "Umbenannt in „{name}“",
     topicDeleted: "„{name}“ gelöscht",
+    deleteTopicAsk: "„{name}“ löschen?",
+    deleteTopicBody:
+      "Wer dem Thema folgt, folgt ihm danach nicht mehr. Das lässt sich nicht rückgängig machen.",
     people: { one: "{n} Person", other: "{n} Personen" },
     findPerson: "Name oder E-Mail eines angemeldeten Kontos",
     appoint: "Ernennen",
@@ -720,6 +723,7 @@ const de: Translation = {
     owner: "Inhaber",
     you: "Du",
     since: "Moderator seit {date}",
+    nobodyFound: "Niemand gefunden für „{q}“",
     newSection: "Neue Rubrik",
     editSection: "Rubrik bearbeiten",
     edit: "Bearbeiten",
@@ -758,6 +762,7 @@ const de: Translation = {
     finish: "Abschließen",
     unfinishedNote:
       "Entschieden, aber nicht abgeschlossen: Einige Listen wurden noch nicht verschoben.",
+    unfinishedOwnerOnly: "Nur der Inhaber kann ein Zusammenführen abschließen.",
     finished: "„{name}“ abgeschlossen",
     sectionTaken: "Eine Rubrik „{name}“ gibt es schon",
     approveAsSection: "Als Rubrik freigeben",
@@ -870,6 +875,8 @@ const de: Translation = {
     topicWaiting: "{name} · wartet",
     waitingBody:
       "Ein Moderator sieht es sich an. Deine Listen erscheinen hier nach der Freigabe; bis dahin stehen sie in {section}.",
+    topicWaitingBody:
+      "Ein Moderator sieht es sich an. Bis dahin bleiben seine Listen in {section}, mit diesem Label.",
     tabExplore: "Entdecken",
     tabFollowing: "Gefolgt",
     community: "Community",
@@ -936,6 +943,9 @@ const de: Translation = {
     notCropped:
       "Das Bild muss auf 16:10 zugeschnitten sein. Pass es an und versuch es noch einmal.",
     banned: "Du kannst gerade keine Rubriken vorschlagen.",
+    bannedUntil: "Du kannst bis {date} keine Rubriken vorschlagen.",
+    badFileUnder: "In dieser Rubrik können Listen nicht warten. Wähl eine andere.",
+    badIcon: "Dieses Symbol geht nicht. Wähl ein anderes.",
     tooManyToday: "Du hast heute schon {max} Rubriken vorgeschlagen. Versuch es morgen wieder.",
     discardAsk: "Diesen Vorschlag verwerfen?",
     keepEditing: "Weiter bearbeiten",

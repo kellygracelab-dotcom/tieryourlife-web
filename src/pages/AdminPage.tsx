@@ -122,10 +122,14 @@ export function AdminPage() {
       {wide ? (
         <PaneList panes={panes} current={current} />
       ) : (
-        <Link className="admin__back" to={ADMIN_PATH}>
-          <Icon name="arrow_back" />
-          <span>{strings.admin.title}</span>
-        </Link>
+        <>
+          {/* The page keeps its one h1 while the list that holds it is away. */}
+          <h1 className="visually-hidden">{strings.admin.title}</h1>
+          <Link className="admin__back" to={ADMIN_PATH}>
+            <Icon name="arrow_back" />
+            <span>{strings.admin.title}</span>
+          </Link>
+        </>
       )}
       <div className="admin__pane">
         {current !== null && <PaneBody pane={current} adminRole={role.role} />}

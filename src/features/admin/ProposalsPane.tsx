@@ -34,9 +34,10 @@ import type { EditorDeps } from "../sections/editorDeps";
 import { SECTION_NAME_MAX, tidySectionName } from "../sections/proposal";
 import { SectionEditor } from "../sections/SectionEditor";
 import { TopicArt } from "../sections/TopicArt";
-import { useSections } from "../sections/useSections";
+import { heldSection, sectionsStore, useSections } from "../sections/useSections";
 import { agoText } from "../moderation/queue";
 import { sectionWrites, type SectionWrites } from "./sectionWrites";
+import { noteAdminDecision } from "./useAdminCounts";
 
 export interface ProposalsDeps {
   sections: () => Promise<{ sections: ProposedSection[] }>;
@@ -590,6 +591,9 @@ function UnfinishedDecision({
             {strings.admin.actionFailed}
           </p>
         )}
+        {!allowed && finish !== undefined && (
+          <p className="proposal__line">{strings.admin.unfinishedOwnerOnly}</p>
+        )}
         {allowed && (
           <div className="proposal__actions">
             <Button
@@ -621,16 +625,30 @@ function UnfinishedDecision({
 function TopicProposal({
   topic,
   sections,
+  role,
+  nameOf,
   deps,
   onDone,
 }: {
   topic: PendingTopic;
+  /** The open sections: the only ones the backend approves a topic into. */
   sections: readonly Section[];
+  role: AdminRole;
+  /** A section's name, hidden or waiting ones included, as far as the site knows it. */
+  nameOf: (id: string) => string;
   deps: ProposalsDeps;
   onDone: Done;
 }) {
   const wanted = topic.requestedSection ?? topic.section ?? "other";
-  const [section, setSection] = useState(wanted);
+  // A section hidden since it was asked for is no choice: the select starts on
+  // one it lists, so Approve sends what is shown.
+  const [section, setSection] = useState(() =>
+    sections.some((one) => one.id === wanted) ? wanted : (sections[0]?.id ?? wanted),
+  );
+  // Merging a topic is the owner's alone: the backend refuses anybody else.
+  const mayMerge = role === "owner";
+  // A hidden section is not among the sections read: asked about, it is named.
+  useEffect(() => sectionsStore.lookUp(wanted), [wanted]);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   // A misspelt name is put right before it is approved, as the app's queue does.
@@ -721,7 +739,7 @@ function TopicProposal({
         )}
         <p className="proposal__meta">
           {fill(strings.admin.topicMeta, {
-            section: sections.find((one) => one.id === wanted)?.name ?? wanted,
+            section: nameOf(wanted),
             name: topic.proposerName ?? "",
           })}
         </p>
@@ -742,17 +760,19 @@ function TopicProposal({
             ))}
           </select>
         </label>
-        <label className="field proposal__section">
-          <span className="field__label">{strings.admin.mergeFind}</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              if (event.target.value.trim().length < 2) setFound([]);
-            }}
-          />
-        </label>
+        {mayMerge && (
+          <label className="field proposal__section">
+            <span className="field__label">{strings.admin.mergeFind}</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                if (event.target.value.trim().length < 2) setFound([]);
+              }}
+            />
+          </label>
+        )}
         {failed && (
           <p className="admin__bar" role="alert">
             {strings.admin.actionFailed}
@@ -797,7 +817,7 @@ function TopicProposal({
             <Button variant="outlined" disabled={busy} onClick={() => setRenaming(name)}>
               {strings.admin.rename}
             </Button>
-            {twins.map((twin) => (
+            {(mayMerge ? twins : []).map((twin) => (
               <Button
                 key={twin.id}
                 variant="outlined"
@@ -839,7 +859,8 @@ export function ProposalsPane({
   const loadTopics = useCallback(() => orNothing(deps.topics, { topics: [] })(), [deps]);
   const sectionQueue = useResource("sections", loadSections);
   const topicQueue = useResource("topics", loadTopics);
-  const { sections } = useSections();
+  const held = useSections();
+  const { sections } = held;
   const [filter, setFilter] = useState<Filter>("all");
   const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
@@ -878,13 +899,20 @@ export function ProposalsPane({
   const editingProposal = proposedSections.find((one) => one.id === editing);
   const proposedTopics = topicQueue.state.value.topics.filter((one) => !gone.has(`t:${one.id}`));
   const approved = sections.filter((one) => one.status === "approved");
+  const nameOf = (id: string) => heldSection(held, id)?.name ?? id;
   const done =
     (key: string): Done =>
     (said) => {
       setGone((before) => new Set([...before, key]));
       setNotice(typeof said === "string" ? { text: said } : said);
+      // The menu's count of what waits is read again.
+      noteAdminDecision();
     };
   const waiting = proposedSections.length + unfinished.length + proposedTopics.length;
+  // A chip with nothing under it says so, as an empty queue does.
+  const shown =
+    (filter === "topics" ? 0 : proposedSections.length + unfinished.length) +
+    (filter === "sections" ? 0 : proposedTopics.length);
 
   return (
     <section className="admin-pane" aria-labelledby="admin-proposals">
@@ -925,7 +953,7 @@ export function ProposalsPane({
           </button>
         ))}
       </div>
-      {waiting === 0 ? (
+      {shown === 0 ? (
         <div className="admin__empty">
           <Icon name="inbox" className="admin__empty-icon" />
           <p className="admin__empty-title">{strings.admin.nothingTitle}</p>
@@ -969,6 +997,8 @@ export function ProposalsPane({
                 key={`t:${topic.id}`}
                 topic={topic}
                 sections={approved}
+                role={role}
+                nameOf={nameOf}
                 deps={deps}
                 onDone={done(`t:${topic.id}`)}
               />

@@ -172,6 +172,26 @@ describe("AdminPage", () => {
     ]);
   });
 
+  it("keeps its h1 on a phone with a pane open", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    window.innerWidth = 400;
+    open("/admin/moderators");
+    await screen.findByRole("heading", { name: "Moderators" });
+    expect(screen.getAllByRole("heading", { level: 1 }).map((one) => one.textContent)).toEqual([
+      "Admin",
+    ]);
+  });
+
+  it("names Reports below the page's h1 on a computer", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    open("/admin/reports");
+    await screen.findByRole("heading", { name: "Reports" });
+    expect(screen.getAllByRole("heading", { level: 1 }).map((one) => one.textContent)).toEqual([
+      "Admin",
+    ]);
+    expect(screen.getByRole("heading", { name: "Reports" }).tagName).toBe("H2");
+  });
+
   it("takes the one who may read the reports for the owner while the backend names no roles yet", async () => {
     mocks.loadAdminSections.mockResolvedValue({ sections: [] });
     open("/admin/moderators");
