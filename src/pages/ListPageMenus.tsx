@@ -13,6 +13,7 @@ import {
   type SaveToMine,
   type ShownPlacing,
 } from "../features/boards/useSaveToMine";
+import { hasIntent, keepIntent, takeIntent } from "../features/community/afterSignIn";
 import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
 import { useHidden } from "../features/community/useHidden";
 import { report as sendReport, unpublish as unpublishList } from "../lib/api";
@@ -36,20 +37,22 @@ function useListLink(list: PublishedList) {
   const link = `${window.location.origin}/l/${encodeURIComponent(list.id)}`;
   const copy = (): Promise<void> =>
     navigator.clipboard?.writeText(link) ?? Promise.reject(new Error("no clipboard"));
+  // The clipboard said no: the link is spelled out, to be copied by hand.
+  const refused = (): SnackbarNotice => ({ text: fill(strings.list.copyFailed, { link }) });
   // The phone's own share sheet, where there is one; closing it is not a failure.
   const canShare = typeof navigator.share === "function";
   const share = () => {
     void navigator.share({ title: list.title, url: link }).catch(() => undefined);
   };
-  return { copy, canShare, share };
+  return { copy, refused, canShare, share };
 }
 
 /**
  * One press and the link is on the clipboard. The address itself used to be
  * spelled out here, forty characters nobody reads and everybody had to select.
  */
-function CopyLinkButton({ list }: { list: PublishedList }) {
-  const { copy } = useListLink(list);
+function CopyLinkButton({ list, notify }: { list: PublishedList; notify: Notify }) {
+  const { copy, refused } = useListLink(list);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -65,7 +68,7 @@ function CopyLinkButton({ list }: { list: PublishedList }) {
       onClick={() => {
         copy().then(
           () => setCopied(true),
-          () => undefined,
+          () => notify(refused()),
         );
       }}
     >
@@ -81,7 +84,7 @@ function CopyLinkButton({ list }: { list: PublishedList }) {
  * menu has no need of.
  */
 function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
-  const { copy, canShare, share } = useListLink(list);
+  const { copy, refused, canShare, share } = useListLink(list);
   return (
     <>
       <li>
@@ -91,7 +94,7 @@ function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
           onClick={() => {
             copy().then(
               () => notify({ text: strings.list.linkCopied }),
-              () => undefined,
+              () => notify(refused()),
             );
           }}
         >
@@ -151,7 +154,17 @@ function VisitorMenu({
 }) {
   const { account, signIn } = useSession();
   const { hideList, showList, hideAuthor } = useHidden();
-  const [reporting, setReporting] = useState<ReportState>("closed");
+  // "resume": a report asked for before a sign-in that went through a
+  // redirect, which opens again once the account is back.
+  const [reporting, setReporting] = useState<ReportState | "resume">(() =>
+    hasIntent({ kind: "report", listId: list.id }) ? "resume" : "closed",
+  );
+  const signedIn = account?.kind === "signedIn";
+  const reportShown: ReportState =
+    reporting === "resume" ? (signedIn ? "open" : "closed") : reporting;
+  useEffect(() => {
+    if (reporting === "resume" && signedIn) takeIntent({ kind: "report", listId: list.id });
+  }, [reporting, signedIn, list.id]);
   // An editorial list has no author to show, and a snapshot without the uid no page to show them on.
   const author = isEditorial(list) || list.authorUid === "" ? null : list;
 
@@ -165,7 +178,10 @@ function VisitorMenu({
 
   const onSignIn = () => {
     setReporting("signingIn");
-    signIn().then((outcome) => setReporting(outcome.kind === "signedIn" ? "open" : "signIn"));
+    signIn().then((outcome) => {
+      if (outcome.kind === "redirecting") keepIntent({ kind: "report", listId: list.id });
+      setReporting(outcome.kind === "signedIn" ? "open" : "signIn");
+    });
   };
 
   const send = (reason: ReportReason, note: string | null, alsoAuthor: boolean) => {
@@ -228,7 +244,7 @@ function VisitorMenu({
         </>
       </Menu>
       <ReportDialog
-        state={reporting}
+        state={reportShown}
         authorName={author === null ? null : author.authorName}
         send={send}
         onSignIn={onSignIn}
@@ -273,7 +289,7 @@ export function VisitorTools({
       <Button variant="tonal" icon="bookmark" className="list-head__save" onClick={saving.start}>
         {saving.saved === null ? strings.list.saveToMine : strings.list.open}
       </Button>
-      <CopyLinkButton list={list} />
+      <CopyLinkButton list={list} notify={notify} />
       <VisitorMenu
         list={list}
         report={report}
@@ -315,9 +331,11 @@ function AuthorMenu({
   const [deleting, setDeleting] = useState<Deleting>({ status: "closed" });
   const busy = deleting.status === "busy";
 
+  // The list's page goes from the history with the list: Back from /me must
+  // not show its author the apology meant for a visitor sent a dead link.
   const gone = () => {
     forgetPublished(list.id, repository, Date.now());
-    void navigate("/me");
+    void navigate("/me", { replace: true });
   };
   const confirm = () => {
     setDeleting({ status: "busy" });
@@ -395,7 +413,7 @@ export function AuthorTools({
         <Icon name="edit" className="btn__icon" />
         <span>{strings.list.edit}</span>
       </Link>
-      <CopyLinkButton list={list} />
+      <CopyLinkButton list={list} notify={notify} />
       <AuthorMenu
         list={list}
         unpublish={unpublish}

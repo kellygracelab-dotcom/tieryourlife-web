@@ -177,6 +177,53 @@ describe("SectionsPane", () => {
     expect(rowNames()).toEqual(["Anime", "Games", "Food", "Other"]);
   });
 
+  it("moves only the lifted row, and puts it down when the keyboard leaves its handle", async () => {
+    open();
+    await screen.findByText("4 sections · 1 hidden");
+    const anime = screen.getByRole("button", { name: "Move Anime" });
+    anime.focus();
+    await userEvent.keyboard(" ");
+    expect(anime).toHaveAttribute("aria-pressed", "true");
+    await userEvent.tab();
+    expect(anime).toHaveAttribute("aria-pressed", "false");
+
+    await userEvent.keyboard(" ");
+    screen.getByRole("button", { name: "Move Games" }).focus();
+    await userEvent.keyboard("{ArrowDown}");
+    await userEvent.keyboard("{Escape}");
+    expect(rowNames()).toEqual(["Anime", "Games", "Food", "Other"]);
+  });
+
+  it("lifts the row whose handle has Space, never dropping another's lift instead", async () => {
+    open();
+    await screen.findByText("4 sections · 1 hidden");
+    screen.getByRole("button", { name: "Move Anime" }).focus();
+    await userEvent.keyboard(" ");
+    fireEvent.keyDown(screen.getByRole("button", { name: "Move Games" }), { key: " " });
+    expect(screen.getByRole("button", { name: "Move Games" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Move Anime" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("forgets a failed Save once its changes are discarded", async () => {
+    deps.save.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    open();
+    await screen.findByText("4 sections · 1 hidden");
+    await userEvent.click(screen.getByRole("switch", { name: "Show Food" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Couldn’t save. Nothing was lost — try again.")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Show Games" }));
+    expect(screen.getByRole("region", { name: "Unsaved changes" })).toHaveTextContent(
+      "Unsaved changes · 1 section shown or hidden",
+    );
+  });
+
   it("refuses to overwrite somebody else's Save, and offers to reload", async () => {
     deps.save.mockRejectedValueOnce(new ApiFailure({ kind: "conflict" }));
     open();

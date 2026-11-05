@@ -20,10 +20,6 @@
   font-size: 18px;
 }
 
-[dir="rtl"] .trash__back .ms {
-  transform: scaleX(-1);
-}
-
 .trash__head {
   display: flex;
   align-items: flex-start;

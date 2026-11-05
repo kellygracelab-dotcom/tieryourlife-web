@@ -1,7 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { LanguageCard } from "./LanguageCard";
+import { localeInAddress } from "../../lib/locale";
+import { type KeyValueStore, memoryStore } from "../../lib/storage";
+import { keepAndReload, LanguageCard } from "./LanguageCard";
 
 describe("LanguageCard", () => {
   it("is not there while the site speaks one language", () => {
@@ -29,5 +31,36 @@ describe("LanguageCard", () => {
     expect(choose).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("radio", { name: "Українська" }));
     expect(choose).toHaveBeenCalledExactlyOnceWith("uk");
+  });
+
+  it("is one Tab stop whose arrows move without reloading, and whose Enter takes the language", async () => {
+    const choose = vi.fn();
+    render(<LanguageCard locales={["en", "uk", "ar"]} current="uk" choose={choose} />);
+    // Radios straight in the group: no list items cut off from their list.
+    expect(screen.queryByRole("listitem")).toBeNull();
+    await userEvent.tab();
+    expect(screen.getByRole("radio", { name: /Українська/ })).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("radio", { name: "العربية" })).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("radio", { name: "English" })).toHaveFocus();
+    expect(choose).not.toHaveBeenCalled();
+    await userEvent.keyboard("{Enter}");
+    expect(choose).toHaveBeenCalledExactlyOnceWith("en");
+    await userEvent.tab();
+    expect(document.body).toHaveFocus();
+  });
+
+  it("reloads into a language kept on the device, and asks for it in the address when nothing is kept", () => {
+    const go = vi.fn();
+    keepAndReload("de", memoryStore(), go);
+    expect(go).toHaveBeenCalledExactlyOnceWith(null);
+
+    go.mockClear();
+    const blocked: KeyValueStore = { read: () => null, write: () => false, remove: () => {} };
+    keepAndReload("de", blocked, go);
+    const address = new URL(go.mock.calls[0]![0] as string);
+    expect(address.pathname).toBe(window.location.pathname);
+    expect(localeInAddress(address.search)).toBe("de");
   });
 });

@@ -6,7 +6,14 @@ import type { Response } from "express";
 import { requireAppCheck } from "./appCheck";
 import { optionalAccount, requireAccount, requireUser, type Identity } from "./auth";
 import { getStorage } from "firebase-admin/storage";
-import { listPage, listShareImage, rankingPage, rankingShareImage } from "./pages";
+import {
+  listPage,
+  listShareImage,
+  rankingPage,
+  rankingShareImage,
+  shellPage,
+  unavailablePage,
+} from "./pages";
 import { sendPicture, storagePictures, type PictureDeps } from "./pictures";
 import { discardOlderCopies } from "./shareImage";
 import {
@@ -117,6 +124,8 @@ export async function route(
 
   // Link checkers and some chats ask with HEAD before they ask with GET.
   const reading = request.method === "GET" || request.method === "HEAD";
+  // A page somebody follows a link to, not the API.
+  const page = segments[0] === "l" || segments[0] === "r";
   try {
     // The picture a chat shows for a page: /og/l/{id}.png and /og/r/{code}.png.
     if (reading && segments.length === 3 && segments[0] === "og") {
@@ -137,6 +146,9 @@ export async function route(
     if (reading && segments.length === 2 && segments[0] === "r") {
       return await rankingPage(request, response, segments[1] ?? "");
     }
+    // Hosting sends all of /l/** and /r/** here: any other address there is
+    // the site's to call not found, on its own page.
+    if (reading && page) return await shellPage(request, response);
 
     // The API: /api/rank, /api/rank/{code} (read, claim, edit, delete) and /api/me/rankings.
     const api = segments[0] === "api" ? segments.slice(1) : null;
@@ -185,6 +197,7 @@ export async function route(
     methodNotAllowed(response);
   } catch (error) {
     console.error(`Request failed: ${request.method} ${request.path}`, error);
+    if (reading && page) return unavailablePage(response);
     response.status(503).json({ error: "Unavailable", code: "UNAVAILABLE" });
   }
 }

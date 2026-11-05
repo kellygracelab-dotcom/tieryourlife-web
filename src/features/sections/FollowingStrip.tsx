@@ -14,11 +14,10 @@ import {
   type Section,
 } from "./model";
 import { TopicArt } from "./TopicArt";
+import { initialOf } from "../../lib/initial";
 import "./following.css";
 
 /** A name's first letter; somebody known only by anonymous lists has none, and is drawn as a person. */
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
-
 interface FollowingStripProps {
   sections: readonly Section[];
   topics: readonly Topic[];

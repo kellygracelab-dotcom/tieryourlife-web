@@ -126,7 +126,7 @@ test("shows the people followed, unfollows from Manage, and brings a row back wh
   account.failNext.set("DELETE /lists/follow/u2", 503);
   // Under a pointer, Following reads Unfollow: the pressed state is what says it.
   await press(olena.getByRole("button", { pressed: true }), hasTouch);
-  await expect(page.getByRole("status")).toContainText("Couldn't follow. Try again.");
+  await expect(page.getByRole("status")).toContainText("Couldn’t unfollow. Try again.");
   await expect(olena.getByRole("button", { pressed: true })).toBeVisible();
   expect(account.followed.map((person) => person.uid)).toEqual(["u2", "u3"]);
 

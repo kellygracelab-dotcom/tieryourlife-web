@@ -68,6 +68,8 @@ interface BodyProps {
   onEdit: () => void;
   edit: EditMode;
   store: KeyValueStore;
+  /** Where the dock and the menu's hint are kept, beyond this visit. */
+  device: KeyValueStore;
   savedNote: boolean;
   share: Share;
   copy: (text: string) => Promise<void>;
@@ -80,7 +82,15 @@ interface BodyProps {
  * select it. The words change for a moment and the chip keeps its width, so
  * the header does not jump.
  */
-function AddressChip({ code, copy }: { code: string; copy: (text: string) => Promise<void> }) {
+function AddressChip({
+  code,
+  copy,
+  onRefused,
+}: {
+  code: string;
+  copy: (text: string) => Promise<void>;
+  onRefused: () => void;
+}) {
   const [copied, setCopied] = useState(false);
   const chip = useRef<HTMLButtonElement>(null);
   const address = `${window.location.host}/r/${code}`;
@@ -96,7 +106,10 @@ function AddressChip({ code, copy }: { code: string; copy: (text: string) => Pro
     if (button !== null) button.style.minWidth = `${button.offsetWidth}px`;
     copy(`https://${address}`).then(
       () => setCopied(true),
-      () => setCopied(false),
+      () => {
+        setCopied(false);
+        onRefused();
+      },
     );
   };
   return (
@@ -155,6 +168,7 @@ function Body({
   onEdit,
   edit,
   store,
+  device,
   savedNote,
   share,
   copy,
@@ -162,6 +176,8 @@ function Body({
   setHeadSlot,
 }: BodyProps) {
   const [view, setView] = useState<View>("visitor");
+  // The clipboard said no: the link is spelled out, to be copied by hand.
+  const [copyRefused, setCopyRefused] = useState(false);
   const { snapshot } = ranking;
   const author = arrange(snapshot);
   const owned = ranking.yours === true;
@@ -178,8 +194,15 @@ function Body({
       <header className="list-head">
         <PageTitle title={snapshot.title} />
         <div className="list-head__text">
+          {/* The title leads to the list while it is up: for whoever made the ranking, the one way back to it. */}
           <h1 className="list-head__title">
-            <bdi>{snapshot.title}</bdi>
+            {ranking.listAvailable ? (
+              <Link to={`/l/${encodeURIComponent(ranking.listId)}`}>
+                <bdi>{snapshot.title}</bdi>
+              </Link>
+            ) : (
+              <bdi>{snapshot.title}</bdi>
+            )}
           </h1>
           <p className="list-head__meta">
             {!editorial && (
@@ -197,9 +220,16 @@ function Body({
             )}
           </p>
         </div>
-        <AddressChip code={ranking.code} copy={copy} />
+        <AddressChip code={ranking.code} copy={copy} onRefused={() => setCopyRefused(true)} />
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
+      {copyRefused && (
+        <p className="list-page__status" role="alert">
+          {fillNodes(strings.list.copyFailed, {
+            link: <span dir="ltr">{`https://${window.location.host}/r/${ranking.code}`}</span>,
+          })}
+        </p>
+      )}
       {savedNote && (
         <p className="list-page__saved" role="status">
           <Icon name="check_circle" />
@@ -212,6 +242,7 @@ function Body({
             key={`edit-${ranking.code}`}
             list={listOf(ranking)}
             store={store}
+            device={device}
             edit={edit}
           />
         </BoardFrameContext.Provider>
@@ -354,6 +385,7 @@ export function RankingPage({
         onEdit={() => setChosen(true)}
         edit={{ rows: shown.rows, save, cancel: leaveEditing }}
         store={scratch}
+        device={store}
         savedNote={savedAt !== null}
         share={share}
         copy={copy}

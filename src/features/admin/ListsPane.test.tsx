@@ -179,6 +179,18 @@ describe("ListsPane", () => {
     expect(screen.queryByText("Alpha")).toBeNull();
   });
 
+  it("says when a search finds nothing in an open section", async () => {
+    render(<ListsPane adminRole="owner" deps={deps} />);
+    const group = await openGames();
+    await group.findByText("Alpha");
+    await userEvent.type(screen.getByRole("searchbox"), "zzzz");
+    expect(await screen.findByText("No lists match “zzzz”")).toBeInTheDocument();
+    await userEvent.clear(screen.getByRole("searchbox"));
+    await userEvent.type(screen.getByRole("searchbox"), "Alpha");
+    expect(await screen.findByText("Alpha")).toBeInTheDocument();
+    expect(screen.queryByText(/No lists match/)).toBeNull();
+  });
+
   it("shows twenty more from where the page ended", async () => {
     render(<ListsPane adminRole="owner" deps={deps} />);
     const group = await openGames();

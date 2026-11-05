@@ -37,6 +37,9 @@ describe("ListCard", () => {
     renderCard();
     const link = screen.getByRole("link", { name: /Every A24 film, ranked/ });
     expect(link).toHaveAttribute("href", "/l/abc%20def");
+    // Named by its title alone: the tile without pictures says nothing of its own.
+    expect(link).toHaveAccessibleName("Every A24 film, ranked");
+    expect(screen.queryByRole("img", { name: "No picture" })).toBeNull();
     // The app's card names the author alone, with no "by".
     const author = screen.getByRole("link", { name: "danylo" });
     expect(author).toHaveAttribute("href", "/u/u1");

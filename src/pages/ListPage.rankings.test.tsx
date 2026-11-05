@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -373,5 +373,72 @@ describe("ListPage rankings", () => {
     );
     expect(screen.getByRole("region", { name: "Your list" })).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
+  });
+  it("says Someone for a reader with no name, and draws a letter or a figure where a photo cannot be", async () => {
+    mocks.loadListRankings.mockResolvedValue({
+      rankings: [
+        reader("u1x", "", { authorPhotoUrl: "" }),
+        reader("u2x", "   "),
+        reader("u3x", "Anonymous"),
+        reader("u4x", "😀 emoji"),
+        reader("u5x", "lost face", { authorPhotoUrl: "https://lh3.example/expired" }),
+      ],
+      nextCursor: null,
+    });
+    openAs();
+    const sheet = await openSheet();
+    await within(sheet).findByRole("button", { name: /^lost face/ });
+    expect(rowsOf(sheet).slice(1)).toEqual([
+      "Someone",
+      "Someone",
+      "Someone",
+      "😀 emoji",
+      "lost face",
+    ]);
+    // An empty address is no picture at all.
+    expect(sheet.querySelector('img[src=""]')).toBeNull();
+    const emoji = within(sheet).getByRole("button", { name: /emoji/ });
+    expect(emoji.querySelector(".rankings__face--initial")).toHaveTextContent(/^😀$/);
+    const lost = within(sheet).getByRole("button", { name: /^lost face/ });
+    fireEvent.error(lost.querySelector("img")!);
+    expect(lost.querySelector("img")).toBeNull();
+    expect(lost.querySelector(".rankings__face--initial")).toHaveTextContent("L");
+
+    await userEvent.click(within(sheet).getAllByRole("button", { name: /^Someone/ })[2]!);
+    expect(within(whose()).getByRole("button", { name: "Someone" })).toBeInTheDocument();
+  });
+
+  it("says a failed withdrawal next to the row that came back", async () => {
+    mocks.withdrawListRanking.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    openAs();
+    const sheet = await openSheet();
+    await userEvent.click(await within(sheet).findByRole("button", { name: "Withdraw" }));
+    await userEvent.click(
+      within(within(sheet).getByRole("group")).getByRole("button", { name: "Withdraw" }),
+    );
+    const said = await within(sheet).findByRole("alert");
+    const rows = within(sheet).getAllByRole("listitem");
+    // Right under You, before everyone else.
+    expect(rows[1]).toHaveTextContent(/You.*Withdraw/);
+    expect(rows[2]).toContainElement(said);
+  });
+
+  it("opens again at the reader chosen further down", async () => {
+    const scrolled: Element[] = [];
+    const scrollIntoView = vi.fn(function (this: Element) {
+      scrolled.push(this);
+    });
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      openAs();
+      await userEvent.click(
+        await within(await openSheet()).findByRole("button", { name: /^olena/ }),
+      );
+      scrolled.length = 0;
+      const again = await openSheet();
+      expect(scrolled).toEqual([within(again).getByRole("button", { name: /^olena/ })]);
+    } finally {
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
   });
 });

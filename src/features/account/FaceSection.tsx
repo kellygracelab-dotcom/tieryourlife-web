@@ -15,6 +15,7 @@ import { faceChoicesOf } from "./faces";
 import { type FaceSource, PlaceFaceDialog, type Placed } from "./PlaceFaceDialog";
 import { SavedLine } from "./SavedLine";
 import { type Publish, useSaving } from "./useSaving";
+import { initialOf } from "../../lib/initial";
 
 export type LoadLists = () => Promise<{ lists: ListSummary[] }>;
 export type Face = (photoUrl: string | null) => Promise<void>;
@@ -25,8 +26,6 @@ export type MakeFace = (pictureId: string) => Promise<{ url: string }>;
 
 /** A caption longer than this would be an ellipsis under a 64 px face; the name goes in the tooltip. */
 const CAPTION_MAX = 12;
-
-const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
 
 /**
  * Why a cut face did not become the face. A photo is named by its file; a
@@ -73,6 +72,10 @@ export function FaceSection({
   const choices = state.status === "ready" ? faceChoicesOf(state.value.lists) : [];
   const busy = saving.status === "busy";
   const picker = useRef<HTMLInputElement>(null);
+  // A card whose picture no longer loads is no choice: worn, it would be a
+  // broken picture in the header. The face worn already stays in sight.
+  const [dead, setDead] = useState<ReadonlySet<string>>(() => new Set());
+  const offered = choices.filter((choice) => !dead.has(choice.url) || choice.url === current);
 
   // A photo is shown from an address of its own while it is placed, and only then.
   useEffect(() => {
@@ -225,7 +228,7 @@ export function FaceSection({
             <span className="settings__face-from">{strings.settings.facePhotoCaption}</span>
           </li>
         )}
-        {choices.map((choice) => (
+        {offered.map((choice) => (
           <li key={choice.url} className="settings__face">
             <button
               type="button"
@@ -235,7 +238,12 @@ export function FaceSection({
               aria-pressed={choice.url === current}
               onClick={() => place({ kind: "card", url: choice.url })}
             >
-              <img src={choice.url} alt="" loading="lazy" />
+              <img
+                src={choice.url}
+                alt=""
+                loading="lazy"
+                onError={() => setDead((gone) => new Set(gone).add(choice.url))}
+              />
               {choice.url === current && <Icon name="check" className="settings__choice-check" />}
             </button>
             {choice.from.length <= CAPTION_MAX && (

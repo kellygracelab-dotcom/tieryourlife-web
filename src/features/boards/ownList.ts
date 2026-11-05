@@ -1,6 +1,7 @@
 import type { PublishedList } from "../../api/types";
 import { publishedPictureOf, type UploadedPicture } from "../../lib/pictures";
-import { draftOf, type Draft } from "../editor/model";
+import type { KeyValueStore } from "../../lib/storage";
+import { draftOf, loadEditorDraft, NEW_DRAFT_KEY, type Draft } from "../editor/model";
 import type { Board, NextUid } from "./model";
 import type { BoardsRepository } from "./repository";
 import { boardFromDraft } from "./publish";
@@ -14,6 +15,40 @@ const COPIES_AT_ONCE = 4;
 export const boardOfList = (repository: BoardsRepository, listId: string): Board | null =>
   repository.all().find((board) => board.publishedId === listId && board.deletedAt === null) ??
   null;
+
+/**
+ * A list begun in the old editor, kept as a board and its draft let go; null
+ * when nothing was begun there, a name or a card. Nothing writes that draft
+ * any more: this keeps what an earlier visit left from waiting, unseen,
+ * behind a bare New list.
+ */
+export function keepOldDraft(
+  store: KeyValueStore,
+  repository: BoardsRepository,
+  now: number,
+  nextUid: NextUid,
+): Board | null {
+  const kept = loadEditorDraft(store, NEW_DRAFT_KEY);
+  if (kept === null || (kept.title.trim().length === 0 && kept.items.length === 0)) return null;
+  const board = boardFromDraft(kept, now, nextUid);
+  repository.save(board);
+  store.remove(NEW_DRAFT_KEY);
+  return board;
+}
+
+/** Where this device remembers the board it made of a kept ranking, so a second visit opens it again. */
+export const rankingBoardKey = (code: string): string => `tyl:rankingBoard:${code}`;
+
+/** The board made of this ranking on this device, while it is kept and out of the trash. */
+export function boardOfRanking(
+  store: KeyValueStore,
+  repository: BoardsRepository,
+  code: string,
+): Board | null {
+  const uid = store.read(rankingBoardKey(code));
+  const board = uid === null ? null : repository.get(uid);
+  return board !== null && board.deletedAt === null ? board : null;
+}
 
 /**
  * One's own published list as the board it is changed on, as on the phone.

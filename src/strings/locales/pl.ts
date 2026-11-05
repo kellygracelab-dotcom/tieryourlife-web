@@ -9,7 +9,9 @@ import type { Translation } from "../index";
 const pl: Translation = {
   tagline: "Wersja webowa",
   nav: {
+    opening: "Otwieranie strony…",
     site: "Witryna",
+    skipToContent: "Przejdź do treści",
     signIn: "Zaloguj się",
     signOut: "Wyloguj się",
     account: "Twoje konto",
@@ -101,8 +103,8 @@ const pl: Translation = {
     title: "Ustawienia",
     guestTitle: "Zaloguj się, aby zmieniać ustawienia.",
     guestBody:
-      "Twoja nazwa, zdjęcie i motyw należą do konta. Do oceniania listy konto nie jest potrzebne.",
-    themeGuestNote: "Zapisywane na tym urządzeniu, dopóki się nie zalogujesz.",
+      "Twoja nazwa i zdjęcie należą do konta. Do oceniania listy konto nie jest potrzebne.",
+    themeGuestNote: "Zapisywane na tym urządzeniu, niezależnie od tego, czy się zalogujesz.",
     nameTitle: "Twoja nazwa",
     nameBody:
       "Nazwa pokazywana jako autor na każdej liście, którą publikujesz. Twój e-mail nigdy nie jest pokazywany.",
@@ -149,7 +151,7 @@ const pl: Translation = {
     placeTitle: "Ustaw zdjęcie",
     placeFrame: "Obraz do umieszczenia w okręgu",
     placeUse: "Użyj",
-    placeFailed: "Nie da się tu pokazać obrazu. Nadal można go użyć bez zmian.",
+    placeFailed: "Ten obraz się nie wczytuje, więc nie może być Twoją twarzą. Wybierz inny.",
     placeHelp: "Przeciągnij, aby przesunąć. Przybliż dwoma palcami lub przewijaniem.",
     placeAsItIs: "Tego obrazu można użyć tylko bez zmian.",
   },
@@ -209,6 +211,7 @@ const pl: Translation = {
     unfollowed: "Już nie obserwujesz {name}",
     undo: "Cofnij",
     failed: "Nie udało się zaobserwować – spróbuj ponownie.",
+    unfollowFailed: "Nie udało się przestać obserwować – spróbuj ponownie.",
     cancel: "Anuluj",
     signInTitle: "Zaloguj się, aby obserwować",
     signInBody: "Nowe listy obserwowanych osób trafiają na górę twojej strony głównej.",
@@ -324,13 +327,13 @@ const pl: Translation = {
     startOver: "Zacznij od nowa",
     more: "Więcej",
     failedOffline:
-      "Brak połączenia. Twój szkic jest bezpieczny na tym urządzeniu; spróbuj ponownie, gdy wrócisz do sieci.",
+      "Brak połączenia. Nic nie przepadło: lista jest bezpieczna na tym urządzeniu. Spróbuj ponownie, gdy wrócisz do sieci.",
     failedBanned: "Na razie nie możesz publikować.",
     failedTooMany:
-      "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w aplikacji.",
+      "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w Twoich publicznych listach.",
     failedSignedOut: "Do publikowania potrzebne jest konto. Zaloguj się i spróbuj ponownie.",
-    failedTooLarge: "Lista jest za duża, by ją opublikować. {detail}",
-    failedInvalid: "Lista została odrzucona. {detail}",
+    failedTooLarge: "Lista jest za duża, by ją opublikować.",
+    failedInvalid: "Lista została odrzucona.",
     failedOther: "Nie udało się opublikować. Nic nie przepadło. Spróbuj ponownie.",
     editTitle: "Edytuj listę",
     editSignIn: "Zaloguj się, aby edytować swoje opublikowane listy.",
@@ -412,6 +415,7 @@ const pl: Translation = {
     copyLink: "Kopiuj link",
     share: "Udostępnij",
     linkCopied: "Link skopiowany",
+    copyFailed: "Nie udało się skopiować linku: {link}",
     hiddenNotice: "Ukryte u ciebie",
     undo: "Cofnij",
     hiddenTitle: "Ta lista jest u ciebie ukryta",
@@ -505,6 +509,7 @@ const pl: Translation = {
     dock: "Gdzie leżą karty",
     dockBeside: "Karty obok poziomów",
     dockUnder: "Karty pod poziomami",
+    dockRows: "Rzędy kart pod poziomami",
     allPlaced: { one: "Karta jest umieszczona", other: "Umieszczono wszystkie: {n}" },
     allPlacedNote: "Zmień zdanie, przeciągając kartę, albo zakończ i odbierz swój link.",
     allPlacedNoteEdit: "Zmień zdanie, przeciągając kartę, albo zapisz to, co masz.",
@@ -523,6 +528,8 @@ const pl: Translation = {
     liveNote: "Każdy z tym linkiem widzi twoją wersję obok wersji autora. Zostaje bez konta.",
     liveNoteKept:
       "Każdy z tym linkiem widzi twoją wersję obok wersji autora. Jest zapisana w twoich rankingach.",
+    liveNoteAlone: "Każdy z tym linkiem widzi twoją wersję. Zostaje bez konta.",
+    liveNoteAloneKept: "Każdy z tym linkiem widzi twoją wersję. Jest zapisana w twoich rankingach.",
     copy: "Kopiuj link",
     copied: "Skopiowano",
     download: "Pobierz obraz",
@@ -614,6 +621,9 @@ const pl: Translation = {
   crash: {
     title: "Coś poszło nie tak na tej stronie",
     body: "Zwykle pomaga odświeżenie. Jeśli nie, reszta serwisu nadal działa.",
+    offlineTitle: "Tej strony nie da się otworzyć offline",
+    offlineBody:
+      "Nie była jeszcze otwierana podczas tej wizyty, a połączenie zostało przerwane. Odśwież, gdy wrócisz do sieci; strony już otwarte nadal działają.",
   },
   notFound: {
     title: "Pod tym adresem nic nie ma.",
@@ -622,6 +632,12 @@ const pl: Translation = {
   card: {
     by: "od {name}",
     items: { one: "{n} karta", few: "{n} karty", many: "{n} kart", other: "{n} karty" },
+    moreTiers: {
+      one: "i jeszcze {n} poziom",
+      few: "i jeszcze {n} poziomy",
+      many: "i jeszcze {n} poziomów",
+      other: "i jeszcze {n} poziomu",
+    },
     rankings: {
       one: "{n} ranking",
       few: "{n} rankingi",
@@ -727,6 +743,8 @@ const pl: Translation = {
     topicCreated: "Utworzono „{name}”",
     topicRenamed: "Zmieniono nazwę na „{name}”",
     topicDeleted: "Usunięto „{name}”",
+    deleteTopicAsk: "Usunąć „{name}”?",
+    deleteTopicBody: "Obserwujący przestaną go obserwować. Tego nie da się cofnąć.",
     people: { one: "{n} osoba", few: "{n} osoby", many: "{n} osób", other: "{n} osoby" },
     findPerson: "Nazwa lub e-mail zalogowanego konta",
     appoint: "Mianuj",
@@ -738,6 +756,7 @@ const pl: Translation = {
     owner: "Właściciel",
     you: "Ty",
     since: "Moderator od {date}",
+    nobodyFound: "Nikogo nie znaleziono dla „{q}”",
     newSection: "Nowy dział",
     editSection: "Edytuj dział",
     edit: "Edytuj",
@@ -780,6 +799,7 @@ const pl: Translation = {
     otherTopics: "Listy w innych tematach",
     finish: "Dokończ",
     unfinishedNote: "Zdecydowano, ale nie dokończono: część list jeszcze nie została przeniesiona.",
+    unfinishedOwnerOnly: "Tylko właściciel może dokończyć scalanie.",
     finished: "„{name}” dokończono",
     sectionTaken: "Dział „{name}” już istnieje",
     approveAsSection: "Zatwierdź jako dział",
@@ -888,6 +908,11 @@ const pl: Translation = {
     following: "Obserwujesz",
     unfollowed: "Nie obserwujesz już: {name}",
     followFailed: "Nie udało się zaobserwować. Spróbuj ponownie.",
+    unfollowFailed: "Nie udało się przestać obserwować. Spróbuj ponownie.",
+    followLimit:
+      "Obserwujesz już tyle działów i tematów, ile się da. Najpierw przestań obserwować kilka z nich.",
+    followSignInBody:
+      "Nowe listy z obserwowanych działów i tematów trafiają na górę twojej strony głównej.",
     undo: "Cofnij",
     waitingOnlyYou: "Do tego czasu ten temat widzisz tylko ty.",
     topicMissing: "W dziale {section} nie ma takiego tematu.",
@@ -898,6 +923,8 @@ const pl: Translation = {
     topicWaiting: "{name} · czeka",
     waitingBody:
       "Moderator go przejrzy. Twoje listy pojawią się tu po zatwierdzeniu, a do tego czasu są w dziale {section}.",
+    topicWaitingBody:
+      "Moderator go przejrzy. Do tego czasu jego listy zostają w dziale {section} z tą etykietą.",
     tabExplore: "Odkrywaj",
     tabFollowing: "Obserwowane",
     community: "Społeczność",
@@ -915,6 +942,7 @@ const pl: Translation = {
     sortMostLists: "Najwięcej list",
     sortName: "A–Z",
     find: "Znajdź dział",
+    findNone: "Brak działów pasujących do „{q}”",
     propose: "Zaproponuj dział",
     waiting: "Czeka",
     sections: "Działy",
@@ -961,6 +989,9 @@ const pl: Translation = {
     notImage: "Tego obrazu nie da się użyć. Wybierz inny.",
     notCropped: "Obraz musi być przycięty do 16:10. Popraw go i spróbuj ponownie.",
     banned: "W tej chwili nie możesz proponować działów.",
+    bannedUntil: "Nie możesz proponować działów do {date}.",
+    badFileUnder: "Listy nie mogą czekać w tym dziale. Wybierz inny.",
+    badIcon: "Tej ikony nie można użyć. Wybierz inną.",
     tooManyToday: "Dziś masz już {max} propozycji działów. Spróbuj jutro.",
     discardAsk: "Odrzucić tę propozycję?",
     keepEditing: "Edytuj dalej",
@@ -1325,6 +1356,15 @@ const pl: Translation = {
     anonymousBody: "Bez nazwy i zdjęcia na liście. Tylko ty możesz ją zmienić lub usunąć.",
     categoryWaiting: "Czeka na moderatora",
     menuHint: "Kliknij kartę dwukrotnie lub prawym przyciskiem, aby ją przenieść lub usunąć.",
+    choose: "Zaznacz",
+    pickToDelete: "Wybierz listy do usunięcia",
+    noneShown: "Brak list w „{filter}”",
+    deletedTakenDown: {
+      one: "{n} listę usunięto, a jej publiczną kopię wycofano",
+      few: "{n} listy usunięto, a ich publiczne kopie wycofano",
+      many: "{n} list usunięto, a ich publiczne kopie wycofano",
+      other: "{n} listy usunięto, a ich publiczne kopie wycofano",
+    },
   },
   sync: {
     offBusy: "Usuwanie…",
@@ -1340,7 +1380,8 @@ const pl: Translation = {
       "Tablice zostają w tej przeglądarce. Kopia na koncie zostanie usunięta, a nowe urządzenie zacznie od pustego.",
     offConfirm: "Usuń kopię",
     offCancel: "Anuluj",
-    stuck: "Brak kopii od {when}. Sprawdź połączenie.",
+    stuck: "Brak kopii od {when}. Spróbuj ponownie przyciskiem „Zapisz kopię teraz”.",
+    stuckNever: "Jeszcze nie ma kopii. Spróbuj ponownie przyciskiem „Zapisz kopię teraz”.",
     now: "Zapisz kopię teraz",
     backingUp: "Zapisywanie kopii…",
     guestNote:

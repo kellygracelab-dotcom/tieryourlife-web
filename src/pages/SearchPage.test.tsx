@@ -174,6 +174,24 @@ describe("SearchPage", () => {
     expect(mocks.noteSearchMiss).not.toHaveBeenCalled();
   });
 
+  it("says no count of lists when sections alone are the answer", async () => {
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    open("/search?q=аниме");
+    await screen.findByRole("navigation", { name: "Sections" });
+    expect(screen.queryByText("0 lists")).toBeNull();
+  });
+
+  it("adds no step to Back for Enter on the words the address already has", async () => {
+    const router = createMemoryRouter(routes, { initialEntries: ["/s/anime", "/search?q=star"] });
+    render(<RouterProvider router={router} />);
+    const box = within(screen.getAllByRole("search").at(-1)!).getByRole("searchbox");
+    await userEvent.type(box, "{Enter}");
+    expect(router.state.historyAction).toBe("REPLACE");
+    await userEvent.type(box, "s{Enter}");
+    expect(router.state.location.search).toBe("?q=stars");
+    expect(router.state.historyAction).toBe("PUSH");
+  });
+
   it("looks for no sections inside one: the words are for its lists", async () => {
     mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
     open("/search?q=anime&category=anime");

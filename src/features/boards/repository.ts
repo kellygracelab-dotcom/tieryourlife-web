@@ -221,20 +221,35 @@ export function boardsRepository(
   const keyOf = (uid: string): string => `${prefix}${uid}`;
   const listeners = new Set<() => void>();
   let snapshot: readonly Board[] | null = null;
+  // Each board as last parsed, by the text it was parsed from: a board that did
+  // not change is the same object after another one's save, so the shelf draws
+  // again only the tile that changed, and only that one is parsed again.
+  let parsed = new Map<string, { raw: string; board: Board }>();
 
   const read = (): readonly Board[] => {
     const keys = (store.keys?.() ?? []).filter((key) => key.startsWith(prefix));
     const boards: Board[] = [];
+    const next = new Map<string, { raw: string; board: Board }>();
     for (const key of keys) {
       const raw = store.read(key);
       if (raw === null) continue;
+      const known = parsed.get(key);
+      if (known !== undefined && known.raw === raw) {
+        next.set(key, known);
+        boards.push(known.board);
+        continue;
+      }
       try {
         const board = parseBoard(JSON.parse(raw));
-        if (board !== null) boards.push(board);
+        if (board !== null) {
+          next.set(key, { raw, board });
+          boards.push(board);
+        }
       } catch {
         // A key that no longer parses is somebody else's; it is left as it is.
       }
     }
+    parsed = next;
     return boards;
   };
 

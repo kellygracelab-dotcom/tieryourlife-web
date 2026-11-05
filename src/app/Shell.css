@@ -20,10 +20,60 @@
   border-bottom: 1px solid var(--line);
 }
 
+/*
+ * A page on its way: a line along the bar's lower edge, drawn only once the
+ * wait is long enough to notice, so a quick page never flickers it.
+ */
+.top__pending {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 3px;
+  overflow: hidden;
+  opacity: 0;
+  animation: top-pending-in 0s linear 250ms forwards;
+}
+
+.top__pending::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: 30%;
+  background: var(--link);
+  animation: top-pending-run 1.2s ease-in-out infinite;
+}
+
+/* Without motion the line simply stands across the bar. */
+@media (prefers-reduced-motion: reduce) {
+  .top__pending::after {
+    inset-inline: 0;
+    width: auto;
+    animation: none;
+  }
+}
+
+@keyframes top-pending-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes top-pending-run {
+  from {
+    inset-inline-start: -30%;
+  }
+  to {
+    inset-inline-start: 100%;
+  }
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  /* With wider letter and word spacing on a 320 px phone the name gives way
+     before the buttons are pushed off the edge. */
+  min-width: 0;
   color: var(--ink);
   font: var(--text-label);
   font-size: 15px;
@@ -31,6 +81,31 @@
 
 .brand:hover {
   color: var(--ink);
+}
+
+/* Shown only to the keyboard, over the bar, the first stop on every page. */
+.skip-link {
+  position: absolute;
+  inset-inline-start: 8px;
+  top: 8px;
+  z-index: 100;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: var(--ink);
+  font: var(--text-label);
+  transform: translateY(calc(-100% - 16px));
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.brand__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The phone app's icon; its corners are in the drawing. */
@@ -356,11 +431,6 @@
   }
 }
 
-.top__note {
-  font: var(--text-small);
-  color: var(--error);
-}
-
 /* A sentence the header cannot hold: under it, full width. */
 .top__banner {
   margin: 0;
@@ -369,6 +439,10 @@
   font: var(--text-small);
   color: var(--ink);
   background: var(--surface-soft);
+}
+
+.top__banner--error {
+  color: var(--error);
 }
 
 .shell__main {

@@ -6,7 +6,10 @@ import { FOCUSABLE } from "./focus";
  * (to `initial` when given, the first control otherwise), Tab and Shift+Tab
  * go round inside it, Escape closes it, and closing hands the focus back to
  * whatever opened it. `onClose` may change between renders without the focus
- * jumping: the latest one is called.
+ * jumping: the latest one is called. A control greyed out while it holds the
+ * focus (a button while its work is under way) drops the focus to the page;
+ * when it is usable again the focus goes back to it, unless it went
+ * somewhere else meanwhile.
  */
 export function useModal(
   box: RefObject<HTMLElement | null>,
@@ -18,8 +21,28 @@ export function useModal(
     close.current = onClose;
   });
 
+  const last = useRef<HTMLElement | null>(null);
+  const stranded = useRef<HTMLElement | null>(null);
+  // After every render: that is when a control is greyed out or given back.
+  useEffect(() => {
+    const held = stranded.current;
+    if (held === null) {
+      if (last.current?.matches(":disabled") === true) stranded.current = last.current;
+      return;
+    }
+    if (held.isConnected && held.matches(":disabled")) return;
+    stranded.current = null;
+    const active = document.activeElement;
+    if (held.isConnected && (active === null || active === document.body)) held.focus();
+  });
+
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = box.current;
+    const onFocusIn = (event: FocusEvent) => {
+      if (event.target instanceof HTMLElement) last.current = event.target;
+    };
+    dialog?.addEventListener("focusin", onFocusIn);
     const inside = () => [...(box.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
     const start =
       initial === undefined ? undefined : box.current?.querySelector<HTMLElement>(initial);
@@ -47,6 +70,7 @@ export function useModal(
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
+      dialog?.removeEventListener("focusin", onFocusIn);
       opener?.focus();
     };
   }, [box, initial]);

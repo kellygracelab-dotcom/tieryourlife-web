@@ -29,12 +29,12 @@ const ready = (
   items = lists,
 ): FeedState => ({ status: "ready", lists: items, next, more, followingNobody: false });
 
-const show = (state: FeedState, paged?: boolean) => {
+const show = (state: FeedState) => {
   const retry = vi.fn();
   const more = vi.fn();
   render(
     <MemoryRouter>
-      <FeedGrid state={state} label="Popular" retry={retry} more={more} paged={paged} />
+      <FeedGrid state={state} label="Popular" retry={retry} more={more} />
     </MemoryRouter>,
   );
   return { retry, more };
@@ -73,14 +73,11 @@ describe("FeedGrid", () => {
     expect(more).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the next page coming, names a failure, and stays quiet when not paged", () => {
+  it("shows the next page coming, and names a failure", () => {
     show(ready("c1", "loading"));
     expect(screen.getByRole("button", { name: "Loading…" })).toBeDisabled();
 
     show(ready("c1", "failed"));
     expect(screen.getByRole("alert")).toHaveTextContent("Could not load more.");
-
-    show(ready("c1"), false);
-    expect(screen.getAllByRole("button", { name: "Show more" })).toHaveLength(1);
   });
 });

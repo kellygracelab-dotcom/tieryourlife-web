@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { PageTitle } from "../app/pageTitle";
 import { Link, Navigate, useParams } from "react-router";
+import { errorOf } from "../api/errors";
 import type { Topic } from "../api/sections";
 import type { FeedSort } from "../api/types";
 import { FollowButton } from "../features/community/FollowButton";
@@ -11,6 +12,7 @@ import { sectionsStore } from "../features/sections/useSections";
 import { loadSection } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
+import { BackLink } from "../ui/BackLink";
 import { Icon } from "../ui/Icon";
 import {
   HeadArt,
@@ -86,9 +88,9 @@ function TopicContent({ section, topic, feed, sort, onSort, topics }: TopicConte
 
   const follow = (next: boolean) => {
     setFollowed(next);
-    (next ? topics.follow(topic.id) : topics.unfollow(topic.id)).catch(() => {
+    return (next ? topics.follow(topic.id) : topics.unfollow(topic.id)).catch((reason: unknown) => {
       setFollowed(!next);
-      failed();
+      failed(errorOf(reason), next);
     });
   };
   const button = (compact: boolean) =>
@@ -104,13 +106,7 @@ function TopicContent({ section, topic, feed, sort, onSort, topics }: TopicConte
     <section className="section-page">
       <header className="section-head">
         <HeadArt section={section} topic={topic} />
-        <Link
-          className="section-head__back"
-          to={sectionPath(section.id)}
-          aria-label={strings.sections.back}
-        >
-          <Icon name="arrow_back" />
-        </Link>
+        <BackLink className="section-head__back" to={sectionPath(section.id)} />
         <div className="section-head__text">
           <span className="section-head__over">
             <Icon name={section.icon} />

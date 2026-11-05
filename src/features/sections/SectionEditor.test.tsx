@@ -138,6 +138,9 @@ describe("Propose a section", () => {
   it("opens as Claude Design lays it out, and Propose waits for a cropped picture and a name", async () => {
     propose();
     expect(screen.getByRole("dialog", { name: "Propose a section" })).toBeInTheDocument();
+    // Its head and foot are the dialog's, not a second banner and contentinfo for the page.
+    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.queryByRole("contentinfo")).toBeNull();
     expect(
       screen.getByText(
         "A moderator looks at every proposal. Until then your lists stay in the section you pick below.",
@@ -153,6 +156,25 @@ describe("Propose a section", () => {
     expect(proposeButton()).toBeEnabled();
     await userEvent.clear(nameField());
     expect(proposeButton()).toBeDisabled();
+  });
+
+  it("adds no second banner or contentinfo to the page", () => {
+    propose();
+    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.queryByRole("contentinfo")).toBeNull();
+  });
+
+  it("does not hand a proposal kept by one account to the next one in the tab", () => {
+    const deps = makeDeps();
+    keepProposal(deps.keep, {
+      owner: "someone-else",
+      name: "Street eats",
+      icon: "pets",
+      fileUnder: "food",
+      picture: null,
+    });
+    propose({ deps });
+    expect(nameField()).toHaveValue("");
   });
 
   it("refuses a picture too small, or not a picture, on the device before anything goes up", () => {
@@ -411,7 +433,13 @@ describe("Propose a section", () => {
 
   it("asks in the row of actions on Cancel, Escape and the scrim", async () => {
     const { onClose, deps, send } = propose();
-    keepProposal(deps.keep, { name: "Old", icon: "pets", fileUnder: "food", picture: null });
+    keepProposal(deps.keep, {
+      owner: null,
+      name: "Old",
+      icon: "pets",
+      fileUnder: "food",
+      picture: null,
+    });
     pick();
     await userEvent.type(nameField(), "Street food");
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -432,7 +460,7 @@ describe("Propose a section", () => {
     await userEvent.click(screen.getByRole("button", { name: "Discard" }));
     expect(onClose).toHaveBeenCalledTimes(1);
     // A proposal kept from an earlier try goes with it.
-    expect(readKeptProposal(deps.keep)).toBeNull();
+    expect(readKeptProposal(deps.keep, null)).toBeNull();
   });
 
   it("asks before Back takes the proposal away, and stays on Keep editing", async () => {
@@ -569,7 +597,9 @@ describe("Propose a section", () => {
     it("TOO_MANY_PENDING: the small dialog instead of the form, the proposal kept", async () => {
       const { onTooMany, deps } = await sendWith(invalid("TOO_MANY_PENDING"));
       await waitFor(() => expect(onTooMany).toHaveBeenCalled());
-      await waitFor(() => expect(readKeptProposal(deps.keep)?.picture).toMatch(/^data:image\//));
+      await waitFor(() =>
+        expect(readKeptProposal(deps.keep, null)?.picture).toMatch(/^data:image\//),
+      );
     });
 
     it("TOO_MANY_PROPOSALS: a bar with no Try again, ten a day", async () => {
@@ -588,6 +618,21 @@ describe("Propose a section", () => {
       expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     });
 
+    it("BANNED with an end: says when it ends", async () => {
+      await sendWith(refuse({ kind: "banned", until: Date.UTC(2026, 11, 24, 12) }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "You can’t propose sections until December 24, 2026.",
+      );
+    });
+
+    it("BAD_FILE_UNDER: what to change, with no Try again", async () => {
+      await sendWith(invalid("BAD_FILE_UNDER"));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Lists can’t wait in that section. Pick another one.",
+      );
+      expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    });
+
     it("anything else: the failure bar above the actions, everything kept, and Try again", async () => {
       const { send, onDone, deps } = await sendWith(refuse({ kind: "offline" }));
       const alert = await screen.findByRole("alert");
@@ -595,7 +640,7 @@ describe("Propose a section", () => {
       expect(alert.closest(".section-editor__foot")).not.toBeNull();
       expect(nameField()).toHaveValue("Street food");
       await waitFor(() =>
-        expect(readKeptProposal(deps.keep)).toMatchObject({
+        expect(readKeptProposal(deps.keep, null)).toMatchObject({
           name: "Street food",
           icon: "category",
           fileUnder: "other",
@@ -605,7 +650,7 @@ describe("Propose a section", () => {
       await userEvent.click(within(alert).getByRole("button", { name: "Try again" }));
       await waitFor(() => expect(onDone).toHaveBeenCalledWith(PROPOSED));
       expect(send).toHaveBeenCalledTimes(2);
-      expect(readKeptProposal(deps.keep)).toBeNull();
+      expect(readKeptProposal(deps.keep, null)).toBeNull();
     });
 
     it("an upload that fails is the failure bar too", async () => {
@@ -633,9 +678,35 @@ describe("Propose a section", () => {
     });
   });
 
+  describe("keeps Propose off for a name the backend would refuse", () => {
+    it("one already taken, as the live check said", async () => {
+      const deps = makeDeps();
+      deps.check.mockResolvedValue({ free: false, id: "games" });
+      propose({ deps });
+      pick();
+      await userEvent.type(nameField(), "Games");
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "There’s already a section called “Games”.",
+      );
+      expect(proposeButton()).toBeDisabled();
+    });
+
+    it.each(["A", "!!!"])("%s: too short, or no letter, said once typing stops", async (typed) => {
+      const { deps } = propose();
+      pick();
+      await userEvent.type(nameField(), typed);
+      expect(proposeButton()).toBeDisabled();
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "A name needs 2 to 24 characters, with a letter or a number in it.",
+      );
+      expect(deps.check).not.toHaveBeenCalled();
+    });
+  });
+
   it("opens again with what a failed try kept, the crop included", () => {
     const deps = makeDeps();
     keepProposal(deps.keep, {
+      owner: null,
       name: "Street food",
       icon: "restaurant",
       fileUnder: "food",

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RankingsPage, ReaderRanking } from "../../api/community";
+import { errorOf } from "../../api/errors";
 import { loadListRankings, withdrawListRanking } from "../../lib/api";
 import { readersOf } from "./rankings";
+
+/** How many pages that bring nobody new are read on their own before Show more is offered again. */
+export const PAGES_READ_ON = 5;
 
 export interface RankingsDeps {
   load: (listId: string, after: string | null) => Promise<RankingsPage>;
@@ -57,33 +61,52 @@ export function useRankings(listId: string, deps: RankingsDeps = defaultDeps): R
       setState((now) =>
         after === null ? { ...now, status: "loading", more: "idle" } : { ...now, more: "loading" },
       );
-      // A page can come back empty with more behind it: the backend skips
-      // visitors' rankings after paging. Nobody is made to press for it.
-      const from = (cursor: string | null): Promise<RankingsPage> =>
-        deps
-          .load(listId, cursor)
-          .then((page) =>
-            page.rankings.length === 0 && page.nextCursor !== null ? from(page.nextCursor) : page,
-          );
-      from(after).then(
-        (page) => {
-          setState((now) => {
-            const known = new Set(now.rankings.map((ranking) => ranking.uid));
-            const fresh = readersOf(page.rankings).filter((ranking) => !known.has(ranking.uid));
-            return {
-              ...now,
-              status: "ready",
-              rankings: [...now.rankings, ...fresh],
-              next: page.nextCursor,
-              more: "idle",
-            };
-          });
-        },
-        () =>
-          setState((now) =>
-            after === null ? { ...now, status: "failed" } : { ...now, more: "failed" },
-          ),
-      );
+      const shown = new Set(current.current.rankings.map((ranking) => ranking.uid));
+      const isNew = (ranking: ReaderRanking) => !shown.has(ranking.uid);
+      // A page can bring nobody new with more behind it: the backend skips
+      // visitors' rankings after paging, and a page read again repeats rows.
+      // Nobody is made to press for it, but only a few pages are read on their
+      // own, and never the same cursor twice.
+      const from = (cursor: string | null, left: number): Promise<RankingsPage> =>
+        deps.load(listId, cursor).then((page) => {
+          // A reply without the field has nothing behind it.
+          const next = page.nextCursor ?? null;
+          const moved = next !== cursor ? next : null;
+          return !readersOf(page.rankings).some(isNew) && moved !== null && left > 0
+            ? from(moved, left - 1)
+            : { ...page, nextCursor: moved };
+        });
+      const settle = (page: RankingsPage) =>
+        setState((now) => {
+          const known = new Set(now.rankings.map((ranking) => ranking.uid));
+          // One row a reader, even when a page names somebody twice.
+          const fresh: ReaderRanking[] = [];
+          for (const ranking of readersOf(page.rankings)) {
+            if (known.has(ranking.uid)) continue;
+            known.add(ranking.uid);
+            fresh.push(ranking);
+          }
+          return {
+            ...now,
+            status: "ready",
+            rankings: [...now.rankings, ...fresh],
+            next: page.nextCursor,
+            more: "idle",
+          };
+        });
+      const failed = () =>
+        setState((now) =>
+          after === null ? { ...now, status: "failed" } : { ...now, more: "failed" },
+        );
+      from(after, PAGES_READ_ON).then(settle, (reason: unknown) => {
+        // The reader the page ended at took theirs back: read again from the
+        // top, keeping the rows here, as the admin's panes do.
+        if (after !== null && errorOf(reason).kind === "cursorGone") {
+          from(null, PAGES_READ_ON).then(settle, failed);
+        } else {
+          failed();
+        }
+      });
     },
     [listId, deps],
   );

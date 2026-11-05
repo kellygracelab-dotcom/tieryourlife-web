@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
@@ -256,6 +256,17 @@ describe("BoardSettings: the sheet", () => {
     await userEvent.click(display.getByRole("radio", { name: "Ranking" }));
     expect(held.displayMode).toBe("FLAT_RANKED");
   });
+
+  it("moves the display with the arrows, as radios do", async () => {
+    show(filmBoard(), signedIn);
+    const display = within(screen.getByRole("radiogroup", { name: "Display" }));
+    display.getByRole("radio", { name: /Rows/ }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(held.displayMode).toBe("HORIZONTAL_SCROLL");
+    expect(display.getByRole("radio", { name: /Single strip/ })).toHaveFocus();
+    await userEvent.keyboard("{ArrowLeft}{ArrowLeft}");
+    expect(held.displayMode).toBe("FLAT_RANKED");
+  });
 });
 
 describe("BoardSettings: public", () => {
@@ -272,10 +283,35 @@ describe("BoardSettings: public", () => {
     expect(held.publishedId).toBeNull();
   });
 
-  it("names the category as what stands in the way of a signed-in person", () => {
-    show({ ...filmBoard(), category: null }, signedIn);
+  it("gives the focus back to the switch once the publishing that greyed it out is over", async () => {
+    let answer: (value: { id: string }) => void = () => undefined;
+    const publish = vi.fn(() => new Promise<{ id: string }>((resolve) => (answer = resolve)));
+    show(filmBoard(), signedIn, { publish });
+    publicSwitch().focus();
+    await userEvent.keyboard(" ");
     expect(publicSwitch()).toBeDisabled();
-    expect(screen.getByText("Pick a category.")).toBeInTheDocument();
+    // A browser drops the focus of a switch greyed out under it to the page; jsdom keeps it.
+    const done = screen.getByRole("button", { name: "Done" });
+    act(() => {
+      done.focus();
+      done.blur();
+    });
+    expect(document.body).toHaveFocus();
+    await act(async () => answer({ id: "L1" }));
+    expect(publicSwitch()).toBeChecked();
+    expect(publicSwitch()).toHaveFocus();
+  });
+
+  it("names the category as what stands in the way of a signed-in person, on the switch itself", async () => {
+    const publish = vi.fn();
+    show({ ...filmBoard(), category: null }, signedIn, { publish });
+    // Still a Tab stop, so the keyboard reaches it and hears why.
+    expect(publicSwitch()).toBeEnabled();
+    expect(publicSwitch()).toHaveAttribute("aria-disabled", "true");
+    expect(publicSwitch()).toHaveAccessibleDescription("Pick a category.");
+    await userEvent.click(publicSwitch());
+    expect(publicSwitch()).not.toBeChecked();
+    expect(publish).not.toHaveBeenCalled();
   });
 
   it("publishes the board, keeps the id and the name, and sends it again on Update", async () => {
@@ -453,6 +489,25 @@ describe("BoardSettings: category and topic", () => {
     expect(screen.getByRole("button", { name: /Category/ })).toHaveTextContent("Games");
   });
 
+  it("moves through the sections with the arrows, one Tab stop, and takes one only on Enter", async () => {
+    show(filmBoard(), signedIn);
+    await userEvent.click(screen.getByRole("button", { name: /Category/ }));
+    const picker = within(screen.getByRole("radiogroup", { name: "Category" }));
+    const film = picker.getByRole("radio", { name: /Film & TV/ });
+    expect(picker.getAllByRole("radio").filter((radio) => radio.tabIndex === 0)).toEqual([film]);
+    film.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    const next = document.activeElement;
+    expect(next).not.toBe(film);
+    expect(next).toHaveAttribute("role", "radio");
+    // Moving chose nothing, and the picker is still open.
+    expect(held.category).toBe("film_tv");
+    expect(film).toHaveAttribute("aria-checked", "true");
+    await userEvent.keyboard("{Enter}");
+    expect(held.category).not.toBe("film_tv");
+    expect(screen.queryByRole("radiogroup", { name: "Category" })).toBeNull();
+  });
+
   it("offers the approved sections in the site's order, then one's own waiting ones, then Propose a section", async () => {
     show({ ...filmBoard(), category: null }, signedIn, {}, { sections: someSections() });
     await userEvent.click(screen.getByRole("button", { name: /Category/ }));
@@ -556,7 +611,7 @@ describe("BoardSettings: cover", () => {
     // The row's 40 px picture: the cards' first, while none is chosen.
     expect(row.querySelector("img")).toHaveAttribute("src", EX);
     await userEvent.click(row);
-    expect(screen.getByText("Nothing chosen: up to six of the list's own pictures")).toBeVisible();
+    expect(screen.getByText("Nothing chosen: up to six of the list’s own pictures")).toBeVisible();
     expect(screen.getByText("Your cards · 2")).toBeInTheDocument();
     const pick = (name: string) => screen.getByRole("button", { name: `Use ${name} on the cover` });
 
@@ -595,6 +650,6 @@ describe("BoardSettings: cover", () => {
       signedIn,
     );
     await userEvent.click(screen.getByRole("button", { name: /Cover/ }));
-    expect(screen.getByText("None of this list's cards have a picture yet.")).toBeInTheDocument();
+    expect(screen.getByText("None of this list’s cards have a picture yet.")).toBeInTheDocument();
   });
 });

@@ -58,6 +58,7 @@ describe("parseApiError", () => {
     [403, "", { kind: "notSignedIn" }],
     [404, json({ error: "No such list", code: "NOT_FOUND" }), { kind: "notFound" }],
     [409, json({ error: "Too many", code: "TOO_MANY_LISTS" }), { kind: "tooManyLists" }],
+    [409, json({ error: "Too many", code: "TOO_MANY_FOLLOWING" }), { kind: "tooManyFollowing" }],
     [409, json({ error: "That page is gone", code: "CURSOR_GONE" }), { kind: "cursorGone" }],
     [409, json({ error: "Moved on", code: "CONFLICT" }), { kind: "conflict" }],
     [409, json({ error: "Decided", code: "SETTLED" }), { kind: "conflict" }],

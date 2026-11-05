@@ -4,6 +4,7 @@ import { useSession } from "../../app/session";
 import { fill, strings } from "../../strings";
 import { fillNodes } from "../../strings/fillNodes";
 import type { SnackbarNotice } from "../../ui/Snackbar";
+import { keepIntent, takeIntent } from "./afterSignIn";
 import { FollowButton } from "./FollowButton";
 import { SignInDialog } from "./SignInDialog";
 import { useFollow, type FollowDeps } from "./useFollow";
@@ -59,15 +60,26 @@ function FollowChip({
   notify: Notify;
   deps?: FollowDeps;
 }) {
-  const { signIn } = useSession();
+  const { account, signIn } = useSession();
   // No count on this page, so a guest is not signed in only to be told they follow nobody.
   const following = useFollow(uid, deps, { counted: false });
   const [asking, setAsking] = useState<Asking>("closed");
   const closeAsk = useCallback(() => setAsking("closed"), []);
 
   useEffect(() => {
-    if (following.failed) notify({ text: strings.follow.failed });
+    if (following.failed !== null) {
+      notify({
+        text:
+          following.failed === "unfollow" ? strings.follow.unfollowFailed : strings.follow.failed,
+      });
+    }
   }, [following.failed, notify]);
+
+  // A follow asked for before a sign-in that went through a redirect.
+  const { followNow } = following;
+  useEffect(() => {
+    if (account?.kind === "signedIn" && takeIntent({ kind: "follow", uid })) followNow();
+  }, [account, uid, followNow]);
 
   // The profile's ways: an unfollow at once with the way back offered, a guest asked to sign in first.
   const onFollow = () => {
@@ -87,6 +99,7 @@ function FollowChip({
     signIn().then((outcome) => {
       setAsking("closed");
       if (outcome.kind === "signedIn") following.followNow();
+      else if (outcome.kind === "redirecting") keepIntent({ kind: "follow", uid });
     });
   };
 

@@ -162,10 +162,18 @@
   vertical-align: middle;
 }
 
+/* A guest's lists live in this browser only: said under them, with the sign-in that keeps them. */
 .boards__local-only {
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   font: var(--text-small);
   color: var(--ink-faint);
+}
+
+.boards__local-only p {
+  margin: 0;
 }
 
 /*
@@ -397,7 +405,8 @@
   outline-offset: 2px;
 }
 
-.switch:disabled {
+.switch:disabled,
+.switch[aria-disabled="true"] {
   cursor: default;
   opacity: 0.38;
 }
@@ -532,9 +541,9 @@
   flex: 1;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
-  padding: 0 8px;
+  padding: 0 4px;
   border: none;
   border-inline-start: 1px solid var(--line-strong);
   background: transparent;
@@ -565,6 +574,12 @@
 
 .segmented__check {
   font-size: 16px;
+}
+
+/* A name too long for its third of the pill is cut, not the check beside it. */
+.segmented__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* The cover: the board's own pictures, pressed into the collage in order. */
@@ -702,6 +717,8 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+  /* A name with no spaces, a link say, breaks inside the word rather than past the tile's edge. */
+  overflow-wrap: anywhere;
   font: 500 13px/18px var(--font);
 }
 

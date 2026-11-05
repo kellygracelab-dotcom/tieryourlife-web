@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CHUNK_RETRY_KEY, freshChunk, reloadOnce, resetFreshChunkForTests } from "./freshChunk";
+import {
+  CHUNK_RETRY_KEY,
+  freshChunk,
+  reloadInto,
+  reloadOnce,
+  resetFreshChunkForTests,
+} from "./freshChunk";
 import { memoryStore, type KeyValueStore } from "./storage";
 
 describe("freshChunk", () => {
@@ -35,6 +41,33 @@ describe("freshChunk", () => {
     await expect(gone()).rejects.toThrow(/dynamically imported/);
     expect(reload).toHaveBeenCalledTimes(1);
     expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
+  });
+
+  it("does not reload offline, where the reload would land on the browser's error page", async () => {
+    const store = memoryStore();
+    const reload = vi.fn();
+    const missing = freshChunk(
+      async () => {
+        throw new TypeError("Failed to fetch dynamically imported module");
+      },
+      { store, reload, online: () => false },
+    );
+    await expect(missing()).rejects.toThrow(/dynamically imported/);
+    expect(reload).not.toHaveBeenCalled();
+    // Nothing tried yet: back online, a deploy's missing file still gets its one reload.
+    expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
+    expect(reloadOnce({ store, reload, online: () => false })).toBe(false);
+  });
+
+  it("reloads into the page the tab was on its way to, and in place when it was going nowhere", () => {
+    const reload = vi.fn();
+    expect(reloadOnce({ store: memoryStore(), reload })).toBe(true);
+    expect(reload).toHaveBeenLastCalledWith(null);
+
+    resetFreshChunkForTests();
+    reloadInto(() => "/b?view=rows");
+    expect(reloadOnce({ store: memoryStore(), reload })).toBe(true);
+    expect(reload).toHaveBeenLastCalledWith("/b?view=rows");
   });
 
   it("does not reload where nothing can be remembered", () => {

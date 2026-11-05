@@ -101,11 +101,15 @@ export function useFixedDock({
 
   // A band above the dock's edge scrolls down, one under the header scrolls
   // up, faster toward the edge; what is under the pointer is read again after
-  // each step so the drop lands where the pointer is.
+  // each step so the drop lands where the pointer is. A pool that stays beside
+  // the board (sticky) leaves the window's foot as the lower edge.
   useEffect(() => {
     const el = poolBox.current;
     if (!dragging || el === null || nextFrame === undefined || cancelFrame === undefined) return;
-    if (getComputedStyle(el).position !== "fixed") return;
+    const position = getComputedStyle(el).position;
+    if (position !== "fixed" && position !== "sticky") return;
+    const footEdge = () =>
+      position === "fixed" ? el.getBoundingClientRect().top : window.innerHeight;
     const bar = document.querySelector<HTMLElement>(".top");
     const head = document.querySelector<HTMLElement>(".list-head");
     const topEdge = () =>
@@ -120,7 +124,7 @@ export function useFixedDock({
       const now = dragNow();
       if (now.phase === "dragging") {
         const y = now.at.y;
-        const bottom = el.getBoundingClientRect().top;
+        const bottom = footEdge();
         const top = topEdge();
         let speed = 0;
         if (y < bottom && y >= bottom - EDGE_ZONE) {

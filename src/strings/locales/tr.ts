@@ -11,7 +11,9 @@ import type { Translation } from "../index";
 const tr: Translation = {
   tagline: "Web sürümü",
   nav: {
+    opening: "Sayfa açılıyor…",
     site: "Site",
+    skipToContent: "İçeriğe geç",
     signIn: "Oturum aç",
     signOut: "Oturumu kapat",
     account: "Hesabınız",
@@ -83,13 +85,12 @@ const tr: Translation = {
     faceGalleryCaption: "Fotoğraf",
     facePhotoCaption: "Fotoğrafın",
     faceNote:
-      "Kart görselleri web'de oldukları yerde kalır. Galeriden bir fotoğraf denetlenir ve hesabınla saklanır.",
+      "Kart görselleri web’de oldukları yerde kalır. Galeriden bir fotoğraf denetlenir ve hesabınla saklanır.",
     faceNotMade: "Bu resim yüzün olamaz. Başka birini seç.",
     title: "Ayarlar",
     guestTitle: "Ayarlarınızı değiştirmek için oturum açın.",
-    guestBody:
-      "Adınız, resminiz ve tema bir hesaba aittir. Bir listeyi sıralamak için hesap gerekmez.",
-    themeGuestNote: "Oturum açmadığınız sürece bu cihazda saklanır.",
+    guestBody: "Adınız ve resminiz bir hesaba aittir. Bir listeyi sıralamak için hesap gerekmez.",
+    themeGuestNote: "Oturum açmış olsanız da olmasanız da bu cihazda saklanır.",
     nameTitle: "Adınız",
     nameBody: "Yayımladığınız her listede yazar olarak görünen ad. E-postanız asla gösterilmez.",
     nameField: "Ad",
@@ -136,7 +137,7 @@ const tr: Translation = {
     placeTitle: "Fotoğrafı yerleştir",
     placeFrame: "Daireye yerleştirilecek resim",
     placeUse: "Bunu kullan",
-    placeFailed: "Resim burada gösterilemedi. Yine de olduğu gibi kullanılabilir.",
+    placeFailed: "Bu resim yüklenmiyor, bu yüzden yüzün olamaz. Başka birini seç.",
     placeHelp: "Taşımak için sürükleyin; yakınlaştırmak için iki parmakla açın veya kaydırın.",
     placeAsItIs: "Bu resim yalnızca olduğu gibi kullanılabilir.",
   },
@@ -148,8 +149,8 @@ const tr: Translation = {
     title: "Hakkında",
     what: "Her şeyi seviyelere ayırarak sıralayın ya da başkasının listesini alıp kendinizce sıralayın. Bir listeyi sıralamak için hesap gerekmez.",
     creditsTitle: "Teşekkür",
-    catalogue: "Film, dizi ve kişilerin bilgileri ile görselleri TMDB'den gelir.",
-    wikidata: "Katalogdaki diğer her şey Wikidata'dan, görselleri ise Wikimedia Commons'tan gelir.",
+    catalogue: "Film, dizi ve kişilerin bilgileri ile görselleri TMDB’den gelir.",
+    wikidata: "Katalogdaki diğer her şey Wikidata’dan, görselleri ise Wikimedia Commons’tan gelir.",
     dataTitle: "Verileriniz",
     deleteAccount: "Hesabınızı silin",
   },
@@ -178,7 +179,7 @@ const tr: Translation = {
   },
   profile: {
     someone: "Biri",
-    editInSettings: "Ayarlar'da düzenle",
+    editInSettings: "Ayarlar’da düzenle",
     lists: "Listeler",
     newestFirst: "en yeniler önce",
     noLists: "Henüz herkese açık liste yok.",
@@ -194,6 +195,7 @@ const tr: Translation = {
     unfollowed: "{name} artık takip edilmiyor",
     undo: "Geri al",
     failed: "Takip edilemedi. Tekrar deneyin.",
+    unfollowFailed: "Takip bırakılamadı. Tekrar deneyin.",
     cancel: "İptal",
     signInTitle: "Takip etmek için oturum açın",
     signInBody: "Takip etmek, sevdiğiniz kişilerin yeni listelerini akışınızın en üstünde tutar.",
@@ -281,7 +283,7 @@ const tr: Translation = {
     addAsName: "“{name}” kart olarak ekle",
     add: "Ekle",
     unnamed: "Başlıksız kart",
-    noCardsYet: "Henüz kart yok. Katalogda arayın ya da bir ad yazıp Enter'a basın.",
+    noCardsYet: "Henüz kart yok. Katalogda arayın ya da bir ad yazıp Enter’a basın.",
     tiers: "Seviyeler",
     addTier: "Seviye ekle",
     tierUnnamed: "bu seviye",
@@ -309,13 +311,13 @@ const tr: Translation = {
     startOver: "Baştan başla",
     more: "Daha fazla",
     failedOffline:
-      "Bağlantı yok. Taslağınız bu cihazda güvende; çevrimiçi olduğunuzda tekrar deneyin.",
+      "Bağlantı yok. Hiçbir şey kaybolmadı: liste bu cihazda güvende. Çevrimiçi olduğunuzda tekrar deneyin.",
     failedBanned: "Şu anda yayımlayamazsınız.",
     failedTooMany:
-      "Bu hesap yayımlayabileceği kadar liste yayımladı. Önce uygulamada birini yayından kaldırın.",
+      "Bu hesap yayımlayabileceği kadar liste yayımladı. Önce Herkese açık listeleriniz bölümünde birini yayından kaldırın.",
     failedSignedOut: "Yayımlamak için hesap gerekir. Oturum açıp tekrar deneyin.",
-    failedTooLarge: "Liste yayımlanamayacak kadar büyük. {detail}",
-    failedInvalid: "Liste reddedildi. {detail}",
+    failedTooLarge: "Liste yayımlanamayacak kadar büyük.",
+    failedInvalid: "Liste reddedildi.",
     failedOther: "Yayımlanamadı. Hiçbir şey kaybolmadı. Tekrar deneyin.",
     editTitle: "Listeyi düzenle",
     editSignIn: "Yayımladığınız listeleri düzenlemek için oturum açın.",
@@ -330,7 +332,7 @@ const tr: Translation = {
     publishChanges: "Değişiklikleri yayımla",
     discardChanges: "Değişiklikleri at",
     failedGone:
-      "Bu liste artık yayında değil, dolayısıyla değiştirecek bir şey yok. Yeni liste'den yeniden oluşturun.",
+      "Bu liste artık yayında değil, dolayısıyla değiştirecek bir şey yok. Yeni liste’den yeniden oluşturun.",
   },
   category: {
     anime: "Anime",
@@ -346,7 +348,7 @@ const tr: Translation = {
   feed: {
     empty: "Henüz hiçbir şey yayımlanmadı",
     emptyBody: "İnsanların herkese açık yaptığı listeler burada görünür.",
-    allHidden: "Buradaki her şey sizin için gizli. Listesi Ayarlar'da.",
+    allHidden: "Buradaki her şey sizin için gizli. Listesi Ayarlar’da.",
     hiddenTile: "Sizin için gizlendi",
     undo: "Geri al",
     omitted: { other: "{n} gizli liste gösterilmiyor." },
@@ -384,7 +386,7 @@ const tr: Translation = {
     delete: "Kaldır",
     deleteTitle: "Bu liste yayından kaldırılsın mı?",
     deleteBody:
-      "“{title}” akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin'de kalır.",
+      "“{title}” akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin’de kalır.",
     keepIt: "Kalsın",
     deleting: "Yayından kaldırılıyor…",
     deleteFailed: "Yayından kaldırılamadı. Bir dakika sonra tekrar deneyin.",
@@ -392,6 +394,7 @@ const tr: Translation = {
     copyLink: "Bağlantıyı kopyala",
     share: "Paylaş",
     linkCopied: "Bağlantı kopyalandı",
+    copyFailed: "Bağlantı kopyalanamadı: {link}",
     hiddenNotice: "Sizin için gizlendi",
     undo: "Geri al",
     hiddenTitle: "Bu listeyi gizlediniz",
@@ -479,6 +482,7 @@ const tr: Translation = {
     dock: "Kartların yeri",
     dockBeside: "Kartlar seviyelerin yanında",
     dockUnder: "Kartlar seviyelerin altında",
+    dockRows: "Seviyelerin altındaki kart sıraları",
     allPlaced: { one: "Kart yerleştirildi", other: "{n} kartın hepsi yerleştirildi" },
     allPlacedNote:
       "Fikrinizi değiştirdiyseniz bir kartı sürükleyin ya da bitirip bağlantınızı alın.",
@@ -500,6 +504,9 @@ const tr: Translation = {
       "Bu bağlantıya sahip herkes sizin sürümünüzü yazarınkinin yanında görür. Hesap olmadan da kalır.",
     liveNoteKept:
       "Bu bağlantıya sahip herkes sizin sürümünüzü yazarınkinin yanında görür. Sıralamalarınızda saklanır.",
+    liveNoteAlone: "Bu bağlantıya sahip herkes sizin sürümünüzü görür. Hesap olmadan da kalır.",
+    liveNoteAloneKept:
+      "Bu bağlantıya sahip herkes sizin sürümünüzü görür. Sıralamalarınızda saklanır.",
     copy: "Bağlantıyı kopyala",
     copied: "Kopyalandı",
     download: "Görseli indir",
@@ -525,7 +532,7 @@ const tr: Translation = {
     linkOnly: "Yalnızca bağlantıyı sakla",
     failed: "Oturum açılamadı. Tekrar deneyin ya da bağlantıyı saklayın.",
     inApp:
-      "Google, başka bir uygulamanın tarayıcısı içinden oturum açmaz. Bu sayfayı Chrome veya Safari'de açın: köşedeki menüde “Tarayıcıda aç” var.",
+      "Google, başka bir uygulamanın tarayıcısı içinden oturum açmaz. Bu sayfayı Chrome veya Safari’de açın: köşedeki menüde “Tarayıcıda aç” var.",
   },
   owner: {
     title: "Listeniz",
@@ -561,7 +568,7 @@ const tr: Translation = {
     listsFailed: "Herkese açık listeleriniz yüklenemedi",
     remove: "Kaldır",
     removeAsk:
-      "“{title}” yayından kaldırılsın mı? Akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin'de kalır.",
+      "“{title}” yayından kaldırılsın mı? Akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin’de kalır.",
     keepIt: "Kalsın",
     countPublished: { other: "Yayımlanan: {n}" },
     countRanked: { other: "Sıralama: {n}" },
@@ -591,6 +598,9 @@ const tr: Translation = {
   crash: {
     title: "Bu sayfada bir şeyler ters gitti",
     body: "Yeniden yüklemek genellikle düzeltir. Düzeltmezse sitenin geri kalanı çalışmaya devam eder.",
+    offlineTitle: "Bu sayfa çevrimdışıyken açılamaz",
+    offlineBody:
+      "Bu ziyarette daha önce açılmadı ve bağlantı kesik. Tekrar çevrimiçi olunca yeniden yükleyin; zaten açılmış sayfalar çalışmaya devam eder.",
   },
   notFound: {
     title: "Bu adreste bir şey yok.",
@@ -599,6 +609,7 @@ const tr: Translation = {
   card: {
     by: "{name} tarafından",
     items: { other: "{n} kart" },
+    moreTiers: { one: "ve {n} seviye daha", other: "ve {n} seviye daha" },
     rankings: { other: "{n} sıralama" },
     noArt: "Görsel yok",
     yours: "Listeniz",
@@ -689,6 +700,8 @@ const tr: Translation = {
     topicCreated: "“{name}” oluşturuldu",
     topicRenamed: "“{name}” olarak yeniden adlandırıldı",
     topicDeleted: "“{name}” silindi",
+    deleteTopicAsk: "“{name}” silinsin mi?",
+    deleteTopicBody: "Onu takip eden herkesin takibi biter. Bu geri alınamaz.",
     people: { one: "{n} kişi", other: "{n} kişi" },
     findPerson: "Giriş yapmış bir hesabın adı veya e-postası",
     appoint: "Ata",
@@ -700,6 +713,7 @@ const tr: Translation = {
     owner: "Sahip",
     you: "Sen",
     since: "{date} tarihinden beri moderatör",
+    nobodyFound: "“{q}” için kimse bulunamadı",
     newSection: "Yeni bölüm",
     editSection: "Bölümü düzenle",
     edit: "Düzenle",
@@ -737,6 +751,7 @@ const tr: Translation = {
     otherTopics: "Diğer konulardaki listeler",
     finish: "Tamamla",
     unfinishedNote: "Karar verildi ama tamamlanmadı: listelerinin bir kısmı henüz taşınmadı.",
+    unfinishedOwnerOnly: "Birleştirmeyi yalnızca sahip tamamlayabilir.",
     finished: "“{name}” tamamlandı",
     sectionTaken: "“{name}” adlı bir bölüm zaten var",
     approveAsSection: "Bölüm olarak onayla",
@@ -831,6 +846,11 @@ const tr: Translation = {
     following: "Takip ediliyor",
     unfollowed: "{name} takibi bırakıldı",
     followFailed: "Takip edilemedi. Tekrar deneyin.",
+    unfollowFailed: "Takip bırakılamadı. Tekrar deneyin.",
+    followLimit:
+      "Takip edebileceğiniz bölüm ve konu sınırına ulaştınız. Önce bazılarını takipten çıkın.",
+    followSignInBody:
+      "Takip etmek, sevdiğiniz bölüm ve konuların yeni listelerini akışınızın en üstünde tutar.",
     undo: "Geri al",
     waitingOnlyYou: "O zamana kadar bu konuyu yalnızca sen görürsün.",
     topicMissing: "{section} bölümünde böyle bir konu yok.",
@@ -841,6 +861,8 @@ const tr: Translation = {
     topicWaiting: "{name} · bekliyor",
     waitingBody:
       "Bir moderatör inceleyecek. Onaylanınca listeleriniz burada görünür; o zamana kadar {section} bölümündeler.",
+    topicWaitingBody:
+      "Bir moderatör inceleyecek. O zamana kadar listeleri bu etiketle {section} bölümünde kalır.",
     tabExplore: "Keşfet",
     tabFollowing: "Takip",
     community: "Topluluk",
@@ -858,6 +880,7 @@ const tr: Translation = {
     sortMostLists: "En çok liste",
     sortName: "A–Z",
     find: "Bölüm bul",
+    findNone: "“{q}” ile eşleşen bölüm yok",
     propose: "Bölüm öner",
     waiting: "Bekliyor",
     sections: "Bölümler",
@@ -904,6 +927,9 @@ const tr: Translation = {
     notImage: "Bu görsel kullanılamıyor. Başka bir tane seçin.",
     notCropped: "Görsel 16:10 olarak kırpılmalı. Ayarlayıp tekrar deneyin.",
     banned: "Şu anda bölüm öneremezsiniz.",
+    bannedUntil: "{date} tarihine kadar bölüm öneremezsiniz.",
+    badFileUnder: "Listeler o bölümde bekleyemez. Başka birini seçin.",
+    badIcon: "Bu simge kullanılamaz. Başka birini seçin.",
     tooManyToday: "Bugün {max} bölüm önerdiniz. Yarın tekrar deneyin.",
     discardAsk: "Bu öneriden vazgeçilsin mi?",
     keepEditing: "Düzenlemeye devam et",
@@ -1162,12 +1188,19 @@ const tr: Translation = {
     modeRows: "Satırlar",
     modeRanking: "Sıralama",
     takeDownTitle: "“{title}” kaldırılsın mı?",
-    takeDownBody: "Topluluktan çıkar ve bağlantısı artık çalışmaz. Panon Listelerin'de kalır.",
+    takeDownBody: "Topluluktan çıkar ve bağlantısı artık çalışmaz. Panon Listelerin’de kalır.",
     anonymousTitle: "Anonim yayınla",
     anonymousBody:
       "Listede ad ve fotoğraf olmaz. Yalnızca sen değiştirebilir veya kaldırabilirsin.",
     categoryWaiting: "Moderatör bekleniyor",
     menuHint: "Taşımak veya kaldırmak için bir karta çift tıklayın ya da sağ tıklayın.",
+    choose: "Seç",
+    pickToDelete: "Silinecek listeleri seç",
+    noneShown: "“{filter}” altında liste yok",
+    deletedTakenDown: {
+      one: "{n} liste silindi ve herkese açık kopyası kaldırıldı",
+      other: "{n} liste silindi ve herkese açık kopyaları kaldırıldı",
+    },
   },
   sync: {
     offBusy: "Siliniyor…",
@@ -1182,7 +1215,8 @@ const tr: Translation = {
       "Panoların bu tarayıcıda kalır. Hesabındaki kopya silinir ve yeni bir cihaz boş başlar.",
     offConfirm: "Durdur ve sil",
     offCancel: "İptal",
-    stuck: "{when} tarihinden beri yedeklenmedi. Bağlantını kontrol et.",
+    stuck: "{when} tarihinden beri yedeklenmedi. Yeniden denemek için “Şimdi yedekle”ye bas.",
+    stuckNever: "Henüz yedeklenmedi. Yeniden denemek için “Şimdi yedekle”ye bas.",
     now: "Şimdi yedekle",
     backingUp: "Yedekleniyor…",
     guestNote:

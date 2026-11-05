@@ -72,15 +72,18 @@ function Modal({
       {onSubmit === undefined ? (
         <div {...dialog}>{children}</div>
       ) : (
-        <form
-          {...dialog}
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSubmit();
-          }}
-        >
-          {children}
-        </form>
+        // A form may not be the dialog itself; this one lays out as the box's own children.
+        <div {...dialog}>
+          <form
+            className="dialog__form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSubmit();
+            }}
+          >
+            {children}
+          </form>
+        </div>
       )}
     </div>,
     document.body,
@@ -92,7 +95,12 @@ function Modal({
  * choice to hide the author too. The dialog stays and becomes the receipt,
  * because reported means hidden for this person and both are said at once.
  */
-export function ReportDialog({
+export function ReportDialog(props: ReportDialogProps) {
+  // Mounted afresh each time it opens, so a cancelled report leaves nothing behind.
+  return props.state === "closed" ? null : <OpenReportDialog {...props} />;
+}
+
+function OpenReportDialog({
   state,
   authorName,
   send,
@@ -111,8 +119,6 @@ export function ReportDialog({
   useEffect(() => {
     if (state === "failed") sendButton.current?.focus();
   }, [state]);
-
-  if (state === "closed") return null;
 
   if (state === "signIn" || state === "signingIn") {
     return (

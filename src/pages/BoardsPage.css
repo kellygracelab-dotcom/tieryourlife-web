@@ -134,7 +134,11 @@
 }
 
 /* The bar that replaces the filters while boards are being picked for deletion. */
+/* It stays under the app bar while lists further down are picked, as the phone pins it. */
 .boards__selection {
+  position: sticky;
+  top: calc(var(--header-height) + 8px);
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -143,6 +147,13 @@
   border-radius: var(--radius-card);
   background: var(--primary-container);
   color: var(--on-primary-container);
+}
+
+/* On a phone the site's tabs sit under the bar as well: 40 high, 8 above and below, a hairline. */
+@media (max-width: 599px) {
+  .boards__selection {
+    top: calc(var(--header-height) + 57px + 8px);
+  }
 }
 
 .boards__selected {
@@ -256,6 +267,20 @@
   color: var(--ink-dim);
 }
 
+/* Public in rows as in the grid. */
+.board-card__public {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: 8px;
+  color: var(--link);
+  vertical-align: bottom;
+}
+
+.board-card__public .ms {
+  font-size: 13px;
+}
+
 /* Each tier's share of the cards in its colour, 1 px apart, the unranked last. */
 .board-card__ribbon {
   display: flex;
@@ -320,10 +345,6 @@
   margin-inline-end: 8px;
   font-size: 20px;
   color: var(--ink-faint);
-}
-
-[dir="rtl"] .board-card__chevron {
-  transform: scaleX(-1);
 }
 
 /* No lists yet: where to start, in the middle of the page. */

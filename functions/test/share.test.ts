@@ -33,7 +33,6 @@ const list: ShareList = {
   authorName: "Danylo",
   category: "film_tv",
   itemCount: 30,
-  takeCount: 2140,
   tiers,
   items,
 };
@@ -107,7 +106,9 @@ describe("shareCardOf", () => {
     const tree = shareCardOf(list, pictures);
     const text = textOf(tree).join(" | ");
     assert.match(text, /Every A24 film, ranked/);
-    assert.match(textOf(tree).join(""), /by Danylo · 30 cards · 2,140 rankings · Film & TV/);
+    assert.match(textOf(tree).join(""), /by Danylo · 30 cards · Film & TV/);
+    // No count of rankings: the card is kept until the list changes, and the count would freeze.
+    assert.ok(!text.includes("ranking"));
     // The name is laid out on its own, so a right-to-left one keeps its place.
     assert.match(text, /by  \| Danylo \|  · 30 cards/);
     assert.match(text, /Masterpiece/);
@@ -143,7 +144,7 @@ describe("shareCardOf", () => {
 
   it("names nobody on an editorial list's card, nor on a ranking made from it", () => {
     const ofList = textOf(shareCardOf({ ...list, editorial: true }, new Map())).join(" | ");
-    assert.match(ofList, /\| 30 cards · 2,140 rankings · Film & TV/);
+    assert.match(ofList, /\| 30 cards · Film & TV/);
     assert.ok(!ofList.includes("Danylo"));
     assert.ok(!ofList.includes("by "));
 
@@ -173,11 +174,11 @@ describe("addresses", () => {
   it("points a chat at a versioned picture and keeps one copy per version", () => {
     assert.equal(
       shareImageUrl("tieryourlife.web.app", "l", "abc def", 17),
-      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.4",
+      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.5",
     );
-    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.4.png");
+    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.5.png");
     // A ranking whose list is gone is kept and fetched apart from the one with the name.
-    assert.equal(shareImagePath("r", "xfruzbap", "0-gone"), "share/r/xfruzbap/0-gone.4.png");
+    assert.equal(shareImagePath("r", "xfruzbap", "0-gone"), "share/r/xfruzbap/0-gone.5.png");
     // The folder ends in a slash, or tidying `abc` would reach into `abcd`.
     assert.equal(shareImageFolder("r", "xfruzbap"), "share/r/xfruzbap/");
     assert.ok(shareImagePath("l", "abc", 5).startsWith(shareImageFolder("l", "abc")));

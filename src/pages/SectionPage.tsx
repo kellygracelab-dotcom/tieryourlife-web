@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { PageTitle } from "../app/pageTitle";
 import { Link, Navigate, useParams } from "react-router";
+import { useSession } from "../app/session";
 import type { Topic } from "../api/sections";
 import { FollowButton } from "../features/community/FollowButton";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
 import { sectionPath, waitingPath, type Section } from "../features/sections/model";
 import { TopicTiles } from "../features/sections/TopicTiles";
-import { sectionsStore, type SectionsStore } from "../features/sections/useSections";
+import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import { WaitingSheet } from "../features/sections/WaitingSheet";
 import { loadSection } from "../lib/api";
 import { strings } from "../strings";
+import { BackLink } from "../ui/BackLink";
 import { Icon } from "../ui/Icon";
 import { Spinner } from "../ui/Spinner";
 import { HeadArt, SectionRoute, SortRow, type SectionPageProps } from "./SectionPageParts";
@@ -38,14 +40,21 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
   const { toggle, failed, overlays } = useFollowFlow();
   const [opened, setOpened] = useState<Topic | null>(null);
 
-  const followSection = (following: boolean) => {
-    void store.setFollowing(section.id, following).then((done) => {
-      if (!done) failed();
+  const followSection = (following: boolean) =>
+    store.setFollowing(section.id, following).then((refused) => {
+      if (refused !== null) failed(refused, following);
     });
-  };
+  // Unknown until the backend has said whom this person follows: the nine
+  // standing in before then say nobody does.
+  const { account } = useSession();
+  const snapshot = useSections(store);
+  const known =
+    account?.kind === "guest" ||
+    snapshot.followsKnown ||
+    snapshot.extra.some((one) => one.id === section.id);
   const sectionButton = (compact: boolean) => (
     <FollowButton
-      following={section.following}
+      following={known ? section.following : null}
       size={compact ? "card" : "profile"}
       onClick={() => toggle(section.name, section.following, followSection)}
     />
@@ -68,9 +77,7 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
     <section className="section-page">
       <header className="section-head">
         <HeadArt section={section} />
-        <Link className="section-head__back" to="/" aria-label={strings.sections.back}>
-          <Icon name="arrow_back" />
-        </Link>
+        <BackLink className="section-head__back" to="/" />
         <div className="section-head__text">
           <PageTitle title={section.name} inBar={false} />
           <h1 className="section-head__name">
@@ -119,6 +126,7 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
         <WaitingSheet
           section={opened}
           filedIn={section.name}
+          topic
           note={strings.sections.waitingOnlyYou}
           onClose={() => setOpened(null)}
         />

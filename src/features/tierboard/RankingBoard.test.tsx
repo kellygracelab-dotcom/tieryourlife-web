@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
@@ -121,6 +121,23 @@ describe("RankingBoard", () => {
     expect(screen.getByText("Pick a card, then tap a tier or press 1–2")).toBeInTheDocument();
   });
 
+  it("leaves a number key pressed on a link outside the board to that link", async () => {
+    render(
+      <MemoryRouter>
+        <a href="/">Community</a>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("Ex Machina"));
+    screen.getByRole("link", { name: "Community" }).focus();
+    await userEvent.keyboard("1");
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+    // On the page itself, as after a click Safari does not focus, it is the board's.
+    screen.getByRole("link", { name: "Community" }).blur();
+    await userEvent.keyboard("1");
+    expect(progress()).toHaveTextContent("1 of 3 placed");
+  });
+
   it("tells the page every arrangement as it is made", async () => {
     const onRows = vi.fn();
     render(
@@ -168,6 +185,48 @@ describe("RankingBoard", () => {
     await userEvent.keyboard("{Control>}z{/Control}");
     expect(progress()).toHaveTextContent("0 of 3 placed");
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+  });
+
+  it("undoes with Ctrl+Z on a layout whose Z key types another letter", async () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("1");
+    expect(progress()).toHaveTextContent("1 of 3 placed");
+    // Russian: the key at Z's place says "я".
+    fireEvent.keyDown(window, { key: "я", code: "KeyZ", ctrlKey: true });
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+  });
+
+  it("draws the moves another tab makes on the same list, so neither writes over the other", async () => {
+    const store = memoryStore();
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={store} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("1");
+    // The other tab placed two cards; its draft is the device's now.
+    const theirs = JSON.stringify({ listId: "abc", updatedAt: 0, itemCount: 3, rows: [[2], [1]] });
+    store.write("tyl:draft:abc", theirs);
+    act(() => {
+      window.dispatchEvent(new StorageEvent("storage", { key: "tyl:draft:abc", newValue: theirs }));
+    });
+    expect(progress()).toHaveTextContent("2 of 3 placed");
+    expect(within(tierList("S")).getByRole("button", { name: "Climax" })).toBeInTheDocument();
+    expect(store.data.get("tyl:draft:abc")).toContain('"rows":[[2],[1]]');
+
+    // Another list's draft, or one for another version of this list, is that tab's business.
+    const other = JSON.stringify({ listId: "abc", updatedAt: 5, itemCount: 3, rows: [[0], []] });
+    store.write("tyl:draft:abc", other);
+    act(() => {
+      window.dispatchEvent(new StorageEvent("storage", { key: "tyl:draft:abc", newValue: other }));
+    });
+    expect(progress()).toHaveTextContent("2 of 3 placed");
   });
 
   it("moves a picked card along its row with the arrow keys", async () => {
@@ -256,6 +315,8 @@ describe("RankingBoard", () => {
     expect(progress()).toHaveTextContent("0 of 3 placed");
 
     if (menu !== null) menu.open = false;
+    // Back on the board, where its keys are its own.
+    card("Ex Machina").focus();
     await userEvent.keyboard("{Alt>}1{/Alt}{Control>}1{/Control}");
     expect(progress()).toHaveTextContent("0 of 3 placed");
     await userEvent.keyboard("1");
@@ -455,7 +516,14 @@ describe("RankingBoard", () => {
       );
       const board = () => document.querySelector(".ranking")!;
       expect(board()).toHaveClass("ranking--under");
-      expect(document.querySelector(".pool__grip")).not.toBeNull();
+      // The strip a drag resizes is a splitter the keyboard reaches too.
+      const grip = screen.getByRole("separator", { name: "Rows of cards under the board" });
+      expect(grip).toHaveAttribute("tabindex", "0");
+      grip.focus();
+      await userEvent.keyboard("{Home}");
+      expect(grip).toHaveAttribute("aria-valuenow", "1");
+      await userEvent.keyboard("{ArrowUp}");
+      expect(grip).toHaveAttribute("aria-valuenow", "2");
       expect(screen.getByRole("button", { name: "Cards under the board" })).toHaveAttribute(
         "aria-pressed",
         "true",
@@ -674,6 +742,9 @@ describe("RankingBoard", () => {
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
     expect(card("The Witch")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
+    // The card picked after the last placement is let go: nothing says how to place it.
+    expect(card("The Witch")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByText(/to place The Witch/)).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Download image" }));
     expect(share).toHaveBeenCalledWith(list, [[0], []], `${window.location.host}/r/abcdefgh`);
@@ -681,6 +752,23 @@ describe("RankingBoard", () => {
     await userEvent.click(screen.getByRole("button", { name: "Change ranking" }));
     expect(screen.getByRole("button", { name: "Finish" })).toBeEnabled();
     expect(card("The Witch")).toBeEnabled();
+  });
+
+  it("promises no author's version on a list the author placed nothing on", async () => {
+    const template = { ...list, items: list.items.map((item) => ({ ...item, tierIndex: null })) };
+    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
+    render(
+      <MemoryRouter>
+        <RankingBoard list={template} store={memoryStore()} keep={keep} take={async () => {}} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("1");
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+    expect(
+      await screen.findByText(/^Anyone with that link sees your version\./),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/next to the author’s/)).toBeNull();
   });
 
   it("never puts a signed-in reader's Finish among the list's public rankings unasked", async () => {

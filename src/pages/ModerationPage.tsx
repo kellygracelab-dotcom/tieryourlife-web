@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { BAN_LENGTHS, type BanLength, type QueuedList } from "../api/moderation";
 import { useSession } from "../app/session";
 import { REASON_TEXT } from "../features/community/reasons";
+import { noteAdminDecision } from "../features/admin/useAdminCounts";
 import { noteReports } from "../features/moderation/useModerator";
 import { useResource } from "../lib/useResource";
 import { leaveListUp, loadReports, takeDownList } from "../lib/api";
@@ -50,7 +51,10 @@ type Deciding =
   | { status: "choosingBan"; ban: BanLength | null }
   | { status: "confirmForever" }
   | { status: "acting" }
-  | { status: "failed" };
+  // What was decided is kept, so Try again sends it again, ban and all.
+  | { status: "failed"; decision: Decision };
+
+type Decision = { kind: "keep" } | { kind: "remove"; ban: BanLength | null };
 
 function QueueCard({
   item,
@@ -90,17 +94,19 @@ function QueueCard({
   }, [choosing, deciding.status]);
   const notes = allNotes ? item.notes : item.notes.slice(0, NOTES_SHOWN);
 
-  const settle = (work: Promise<void>, notice: string) => {
+  const settle = (work: Promise<void>, notice: string, decision: Decision) => {
     setDeciding({ status: "acting" });
     work.then(
       () => onDone(notice),
-      () => setDeciding({ status: "failed" }),
+      () => setDeciding({ status: "failed", decision }),
     );
   };
 
   // Dismissing clears the complaints; a list hidden while it waited comes back.
   const keep = () =>
-    settle(leaveUp(item.listId), item.hidden ? strings.mod.putBackDone : strings.mod.leftUp);
+    settle(leaveUp(item.listId), item.hidden ? strings.mod.putBackDone : strings.mod.leftUp, {
+      kind: "keep",
+    });
 
   const remove = (ban: BanLength | null) =>
     settle(
@@ -108,7 +114,15 @@ function QueueCard({
       ban === null
         ? strings.mod.takenDown
         : fill(strings.mod.takenDownBanned, { name: item.authorName, length: BANNED_FOR[ban] }),
+      { kind: "remove", ban },
     );
+
+  const again = (decision: Decision) => {
+    // The bar and its button go while it is sent again: the focus waits on the title.
+    title.current?.focus();
+    if (decision.kind === "keep") keep();
+    else remove(decision.ban);
+  };
 
   const choose = (ban: BanLength | null) => setDeciding({ status: "choosingBan", ban });
 
@@ -124,11 +138,7 @@ function QueueCard({
         <p className="queue__bar" role="alert">
           <Icon name="cloud_off" className="queue__bar-icon" />
           {strings.mod.failedDecision}
-          <button
-            type="button"
-            className="queue__retry"
-            onClick={() => setDeciding({ status: "idle" })}
-          >
+          <button type="button" className="queue__retry" onClick={() => again(deciding.decision)}>
             {strings.mod.tryAgain}
           </button>
         </p>
@@ -149,9 +159,9 @@ function QueueCard({
           {blur && !revealed && <Icon name="visibility_off" className="queue__cover-icon" />}
         </button>
         <div className="queue__text">
-          <h2 ref={title} className="queue__title" tabIndex={-1}>
+          <h3 ref={title} className="queue__title" tabIndex={-1}>
             {item.listTitle}
-          </h2>
+          </h3>
           <p className="queue__byline">{fill(strings.card.by, { name: item.authorName })}</p>
           <div className="queue__pills">
             <span className="queue__pill queue__pill--count">
@@ -359,6 +369,7 @@ function Queue({
     left.current = items.findIndex((item) => item.listId === id);
     setGone((ids) => [...ids, id]);
     noteReports(uid, rest);
+    noteAdminDecision();
     setNotice({ text });
   };
 
@@ -372,7 +383,13 @@ function Queue({
         </p>
         <label className="mod__blur">
           <span>{strings.mod.blurCovers}</span>
-          <input type="checkbox" role="switch" checked={blur} onChange={toggleBlur} />
+          <input
+            type="checkbox"
+            role="switch"
+            className="switch"
+            checked={blur}
+            onChange={toggleBlur}
+          />
         </label>
       </div>
       {items.length === 0 ? (
@@ -418,7 +435,8 @@ export function ModerationPage({
   const { account } = useSession();
   return (
     <section className="mod">
-      <h1 className="mod__title">{strings.mod.title}</h1>
+      {/* A pane of Admin, whose h1 names the page: the pane's title is the next level down. */}
+      <h2 className="mod__title">{strings.mod.title}</h2>
       {account?.kind === "guest" && <NotAvailable />}
       {account?.kind === "signedIn" && (
         <Queue uid={account.uid} load={load} takeDown={takeDown} leaveUp={leaveUp} />

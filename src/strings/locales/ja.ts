@@ -9,7 +9,9 @@ import type { Translation } from "../index";
 const ja: Translation = {
   tagline: "ウェブ版",
   nav: {
+    opening: "ページを開いています…",
     site: "サイト",
+    skipToContent: "本文へスキップ",
     signIn: "ログイン",
     signOut: "ログアウト",
     account: "アカウント",
@@ -86,8 +88,8 @@ const ja: Translation = {
     title: "設定",
     guestTitle: "設定を変えるにはログインしてください。",
     guestBody:
-      "表示名、アイコン、テーマはアカウントに紐づきます。リストのランク付けにアカウントは要りません。",
-    themeGuestNote: "ログアウト中はこの端末に保存されます。",
+      "表示名とアイコンはアカウントに紐づきます。リストのランク付けにアカウントは要りません。",
+    themeGuestNote: "ログインしていてもいなくても、この端末に保存されます。",
     nameTitle: "表示名",
     nameBody:
       "公開したすべてのリストに作者として表示される名前です。メールアドレスが表示されることはありません。",
@@ -135,7 +137,7 @@ const ja: Translation = {
     placeTitle: "顔の位置を決める",
     placeFrame: "円に収める画像",
     placeUse: "これを使う",
-    placeFailed: "ここでは画像を表示できません。このままでも使えます。",
+    placeFailed: "この画像は読み込めないため、顔に使えません。別の画像を選んでください。",
     placeHelp: "ドラッグで移動、ピンチまたはスクロールで拡大・縮小します。",
     placeAsItIs: "この画像はこのままでしか使えません。",
   },
@@ -193,6 +195,7 @@ const ja: Translation = {
     unfollowed: "{name}のフォローを解除しました",
     undo: "元に戻す",
     failed: "フォローできませんでした。もう一度お試しください。",
+    unfollowFailed: "フォローを解除できませんでした。もう一度お試しください。",
     cancel: "キャンセル",
     signInTitle: "フォローするにはログイン",
     signInBody: "フォローすると、その人の新しいリストがフィードの先頭に届きます。",
@@ -310,13 +313,13 @@ const ja: Translation = {
     startOver: "最初からやり直す",
     more: "その他",
     failedOffline:
-      "接続がありません。下書きはこの端末に残っています。オンラインに戻ってからもう一度お試しください。",
+      "接続がありません。リストはこの端末に残っています。オンラインに戻ってからもう一度お試しください。",
     failedBanned: "今は公開できません。",
     failedTooMany:
-      "このアカウントは公開できるリストの上限に達しています。先にアプリで1つ公開を取り消してください。",
+      "このアカウントは公開できるリストの上限に達しています。先に「公開中のリスト」で1つ取り下げてください。",
     failedSignedOut: "公開にはアカウントが必要です。ログインしてもう一度お試しください。",
-    failedTooLarge: "リストが大きすぎて公開できません。{detail}",
-    failedInvalid: "リストが受け付けられませんでした。{detail}",
+    failedTooLarge: "リストが大きすぎて公開できません。",
+    failedInvalid: "リストが受け付けられませんでした。",
     failedOther: "公開できませんでした。内容は失われていません。もう一度お試しください。",
     editTitle: "リストを編集",
     editSignIn: "公開したリストを編集するにはログインしてください。",
@@ -392,6 +395,7 @@ const ja: Translation = {
     copyLink: "リンクをコピー",
     share: "共有",
     linkCopied: "リンクをコピーしました",
+    copyFailed: "リンクをコピーできませんでした：{link}",
     hiddenNotice: "あなたには非表示",
     undo: "元に戻す",
     hiddenTitle: "このリストを非表示にしました",
@@ -480,6 +484,7 @@ const ja: Translation = {
     dock: "カードの位置",
     dockBeside: "ティアの横にカード",
     dockUnder: "ティアの下にカード",
+    dockRows: "ティアの下のカードの行数",
     allPlaced: { other: "{n} 枚すべて配置しました" },
     allPlacedNote: "カードをドラッグして並べ直すか、完了してリンクを受け取りましょう。",
     allPlacedNoteEdit: "カードをドラッグして並べ直すか、このまま保存しましょう。",
@@ -499,6 +504,10 @@ const ja: Translation = {
       "このリンクを知っている人は、作者の版と並べてあなたの版を見られます。アカウントなしでも残ります。",
     liveNoteKept:
       "このリンクを知っている人は、作者の版と並べてあなたの版を見られます。あなたのランキングに保存されています。",
+    liveNoteAlone:
+      "このリンクを知っている人は、あなたの版を見られます。アカウントなしでも残ります。",
+    liveNoteAloneKept:
+      "このリンクを知っている人は、あなたの版を見られます。あなたのランキングに保存されています。",
     copy: "リンクをコピー",
     copied: "コピーしました",
     download: "画像を保存",
@@ -592,6 +601,9 @@ const ja: Translation = {
   crash: {
     title: "このページで問題が発生しました",
     body: "再読み込みでたいてい直ります。直らない場合も、サイトのほかの部分は使えます。",
+    offlineTitle: "このページはオフラインでは開けません",
+    offlineBody:
+      "この訪問ではまだ開いておらず、接続も切れています。オンラインに戻ったら再読み込みしてください。すでに開いたページは使えます。",
   },
   notFound: {
     title: "このアドレスには何もありません。",
@@ -600,6 +612,7 @@ const ja: Translation = {
   card: {
     by: "{name} さん",
     items: { other: "カード {n} 枚" },
+    moreTiers: { other: "ほか{n}個のティア" },
     rankings: { other: "{n}件のランキング" },
     noArt: "画像なし",
     yours: "あなたのリスト",
@@ -685,6 +698,8 @@ const ja: Translation = {
     topicCreated: "「{name}」を作成しました",
     topicRenamed: "「{name}」に名前を変更しました",
     topicDeleted: "「{name}」を削除しました",
+    deleteTopicAsk: "「{name}」を削除しますか？",
+    deleteTopicBody: "フォローしている人はフォローが外れます。元に戻せません。",
     people: { other: "{n}人" },
     findPerson: "サインイン済みアカウントの名前またはメール",
     appoint: "任命",
@@ -696,6 +711,7 @@ const ja: Translation = {
     owner: "オーナー",
     you: "あなた",
     since: "{date}からモデレーター",
+    nobodyFound: "「{q}」に一致する人は見つかりません",
     newSection: "新しいセクション",
     editSection: "セクションを編集",
     edit: "編集",
@@ -732,6 +748,7 @@ const ja: Translation = {
     otherTopics: "ほかのトピックのリスト",
     finish: "完了する",
     unfinishedNote: "決定済みですが未完了です。一部のリストがまだ移動していません。",
+    unfinishedOwnerOnly: "統合を完了できるのはオーナーだけです。",
     finished: "「{name}」を完了しました",
     sectionTaken: "「{name}」というセクションはすでにあります",
     approveAsSection: "セクションとして承認",
@@ -824,6 +841,11 @@ const ja: Translation = {
     following: "フォロー中",
     unfollowed: "{name}のフォローを解除しました",
     followFailed: "フォローできませんでした。もう一度お試しください。",
+    unfollowFailed: "フォローを解除できませんでした。もう一度お試しください。",
+    followLimit:
+      "フォローできるセクションとトピックの上限に達しました。先にいくつかフォローを解除してください。",
+    followSignInBody:
+      "セクションやトピックをフォローすると、その新しいリストがフィードの先頭に届きます。",
     undo: "元に戻す",
     waitingOnlyYou: "それまでこのトピックはあなたにだけ表示されます。",
     topicMissing: "{section}にそのトピックはありません。",
@@ -834,6 +856,8 @@ const ja: Translation = {
     topicWaiting: "{name} · 審査待ち",
     waitingBody:
       "モデレーターが確認します。承認されるとリストがここに表示されます。それまでは{section}にあります。",
+    topicWaitingBody:
+      "モデレーターが確認します。それまでリストはこのラベルを付けたまま{section}にあります。",
     tabExplore: "見つける",
     tabFollowing: "フォロー中",
     community: "コミュニティ",
@@ -851,6 +875,7 @@ const ja: Translation = {
     sortMostLists: "リストが多い順",
     sortName: "名前順",
     find: "セクションを探す",
+    findNone: "「{q}」に一致するセクションはありません",
     propose: "セクションを提案",
     waiting: "承認待ち",
     sections: "セクション",
@@ -897,6 +922,9 @@ const ja: Translation = {
     notImage: "この画像は使えません。別の画像を選んでください。",
     notCropped: "画像は16:10に切り抜く必要があります。調整してもう一度お試しください。",
     banned: "現在、セクションを提案できません。",
+    bannedUntil: "{date}までセクションを提案できません。",
+    badFileUnder: "そのセクションではリストを待機させられません。別のセクションを選んでください。",
+    badIcon: "そのアイコンは使えません。別のアイコンを選んでください。",
     tooManyToday: "今日はすでに{max}件のセクションを提案しました。明日もう一度お試しください。",
     discardAsk: "この提案を破棄しますか？",
     keepEditing: "編集を続ける",
@@ -1157,6 +1185,12 @@ const ja: Translation = {
     anonymousBody: "リストに名前と写真を出しません。変更や取り下げはあなただけができます。",
     categoryWaiting: "モデレーターの確認待ち",
     menuHint: "カードをダブルクリックまたは右クリックすると、移動や削除ができます。",
+    choose: "選択",
+    pickToDelete: "削除するリストを選んでください",
+    noneShown: "「{filter}」のリストはありません",
+    deletedTakenDown: {
+      other: "{n}件のリストを削除し、公開中のコピーも取り下げました",
+    },
   },
   sync: {
     offBusy: "削除中…",
@@ -1172,7 +1206,8 @@ const ja: Translation = {
       "ボードはこのブラウザに残ります。アカウント内のコピーは削除され、新しい端末は空の状態から始まります。",
     offConfirm: "停止して削除",
     offCancel: "キャンセル",
-    stuck: "{when}からバックアップされていません。接続を確認してください。",
+    stuck: "{when}からバックアップされていません。「今すぐバックアップ」でもう一度試せます。",
+    stuckNever: "まだバックアップされていません。「今すぐバックアップ」でもう一度試せます。",
     now: "今すぐバックアップ",
     backingUp: "バックアップ中…",
     guestNote:

@@ -37,6 +37,7 @@ import {
   type Board,
 } from "./model";
 import { parseBoard } from "./repository";
+import { setStrings } from "../../strings";
 
 /** Uids a test can read: t0…t5 for the tiers, then i0, i1… for the cards. */
 const uids = () => {
@@ -79,6 +80,15 @@ describe("a new board", () => {
     expect(b.editedAt).toBe(2000);
     // The same name again is not an edit.
     expect(rename(b, b.title, 3000)).toBe(b);
+  });
+
+  it("trims a title, keeps the old one for an empty one, and never halves an emoji", () => {
+    const b = board().board;
+    expect(rename(b, "   Spaced   out   ", 2000).title).toBe("Spaced out");
+    expect(rename(b, "   ", 2000)).toBe(b);
+    const long = `${"a".repeat(BOARD_LIMITS.title - 1)}😀tail`;
+    expect(rename(b, long, 2000).title).toBe("a".repeat(BOARD_LIMITS.title - 1));
+    expect(newBoard("n", long, 1000, () => "t").title).toBe("a".repeat(BOARD_LIMITS.title - 1));
   });
 });
 
@@ -466,6 +476,30 @@ describe("the list of boards", () => {
     expect(isNarrowed({ show: "all", query: " " })).toBe(false);
     expect(isNarrowed({ show: "saved" })).toBe(true);
     expect(isNarrowed({ query: "x" })).toBe(true);
+  });
+
+  it("finds a title typed without its capital İ or its accents", () => {
+    const boards = [at("İstanbul Hatırası", 1), at("Pokémon cards", 2), at("Iğdır Ovası", 3)];
+    const ids = (query: string) =>
+      arrangeBoards(boards, "recent", { query }).rest.map((b) => b.uid);
+    expect(ids("istanbul")).toEqual(["İstanbul Hatırası"]);
+    expect(ids("pokemon")).toEqual(["Pokémon cards"]);
+    expect(ids("ığdır")).toEqual(["Iğdır Ovası"]);
+  });
+
+  it("orders by name in the site's language, not the browser's", () => {
+    const boards = ["Ćwiczenia", "Czytanie", "Śpiew", "Szachy"].map((title, i) => at(title, i));
+    try {
+      setStrings("pl", {});
+      expect(arrangeBoards(boards, "name").rest.map((b) => b.uid)).toEqual([
+        "Czytanie",
+        "Ćwiczenia",
+        "Szachy",
+        "Śpiew",
+      ]);
+    } finally {
+      setStrings("en", null);
+    }
   });
 
   it("forgets the topic with the section it belongs to, and leaves the copy behind on a new one", () => {

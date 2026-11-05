@@ -27,13 +27,12 @@ import {
   sectionsStore,
 } from "../sections/useSections";
 import { FeedGrid } from "./FeedGrid";
-import { useFeed, type LoadFeed } from "./useFeed";
+import { useFeed, type FeedState, type LoadFeed } from "./useFeed";
+import { initialOf } from "../../lib/initial";
 import "./following.css";
 
 export type LoadSuggestions = () => Promise<{ authors: SuggestedAuthor[] }>;
 export type Follow = (authorUid: string) => Promise<unknown>;
-
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
 /** A person's picture, or their initial in a circle when they have none. */
 function Face({
@@ -47,7 +46,7 @@ function Face({
     <img className={className} src={author.photoUrl} alt="" loading="lazy" />
   ) : (
     <span className={`${className} suggestion__face--initial`} aria-hidden="true">
-      {initialOf(author.name)}
+      {author.name.trim() === "" ? <Icon name="person" /> : initialOf(author.name)}
     </span>
   );
 }
@@ -56,10 +55,12 @@ function SuggestionCard({
   author,
   follow,
   unfollow,
+  onFollowed,
 }: {
   author: SuggestedAuthor;
   follow: Follow;
   unfollow: Follow;
+  onFollowed?: () => void;
 }) {
   const [state, setState] = useState<"idle" | "following" | "failed">("idle");
   const toggle = () => {
@@ -68,7 +69,7 @@ function SuggestionCard({
       unfollow(author.uid).catch(() => setState("following"));
     } else {
       setState("following");
-      follow(author.uid).catch(() => setState("failed"));
+      follow(author.uid).then(onFollowed, () => setState("failed"));
     }
   };
   return (
@@ -98,11 +99,14 @@ export function Suggestions({
   load = suggestedAuthors,
   follow = followAuthor,
   unfollow = unfollowAuthor,
+  onFollowed,
 }: {
   uid: string;
   load?: LoadSuggestions;
   follow?: Follow;
   unfollow?: Follow;
+  /** Somebody was followed: the tab becomes their feed, as after following a section. */
+  onFollowed?: () => void;
 }) {
   const loadFor = useCallback(() => load(), [load]);
   const { state } = useResource(uid, loadFor);
@@ -114,12 +118,18 @@ export function Suggestions({
   if (authors.length === 0) return null;
   return (
     <section className="suggestions" aria-labelledby="suggestions-title">
-      <h3 id="suggestions-title" className="suggestions__title">
+      <h2 id="suggestions-title" className="suggestions__title">
         {strings.home.worthFollowing}
-      </h3>
+      </h2>
       <ul className="suggestions__grid">
         {authors.map((author) => (
-          <SuggestionCard key={author.uid} author={author} follow={follow} unfollow={unfollow} />
+          <SuggestionCard
+            key={author.uid}
+            author={author}
+            follow={follow}
+            unfollow={unfollow}
+            onFollowed={onFollowed}
+          />
         ))}
       </ul>
     </section>
@@ -203,24 +213,27 @@ export function FollowingTab({
       return next;
     });
   };
+  const showFollowed = () => {
+    landing.current = true;
+    setRound((n) => n + 1);
+    feed.retry();
+  };
   const followPicked = () => {
     const chosen = [...picked];
     if (chosen.length === 0 || followingPicked) return;
     setFollowingPicked(true);
     setPickFailed(false);
     void Promise.all(
-      chosen.map((id) => store.setFollowing(id, true).then((done) => (done ? id : null))),
+      chosen.map((id) =>
+        store.setFollowing(id, true).then((refused) => (refused === null ? id : null)),
+      ),
     ).then((answers) => {
       const done = answers.filter((id): id is string => id !== null);
       // A refused one stays picked, and says so.
       setPicked(new Set(chosen.filter((id) => !done.includes(id))));
       setFollowingPicked(false);
       setPickFailed(done.length < chosen.length);
-      if (done.length > 0) {
-        landing.current = true;
-        setRound((n) => n + 1);
-        feed.retry();
-      }
+      if (done.length > 0) showFollowed();
     });
   };
   // The tiles go once something is followed: the focus goes to what is
@@ -272,7 +285,13 @@ export function FollowingTab({
               : strings.sections.pickNone}
           </Button>
         </div>
-        <Suggestions uid={uid} load={loadSuggestions} follow={follow} unfollow={unfollow} />
+        <Suggestions
+          uid={uid}
+          load={loadSuggestions}
+          follow={follow}
+          unfollow={unfollow}
+          onFollowed={showFollowed}
+        />
       </>
     );
   }
@@ -305,7 +324,9 @@ export function FollowingTab({
       )}
     </>
   );
-  if (feed.state.status === "ready" && feed.state.lists.length === 0) {
+  // The lists wait for the strip above them, so it never pushes them down when it comes late.
+  const lists: FeedState = followed.state.status === "loading" ? { status: "loading" } : feed.state;
+  if (lists.status === "ready" && lists.lists.length === 0) {
     return (
       <>
         {stripPart}
@@ -322,7 +343,7 @@ export function FollowingTab({
     <>
       {stripPart}
       <FeedGrid
-        state={feed.state}
+        state={lists}
         label={strings.sections.tabFollowing}
         retry={feed.retry}
         more={feed.more}

@@ -264,7 +264,7 @@ export function AddCardBox({
 }: AddCardBoxProps) {
   const [typed, setTyped] = useState("");
   const [uploading, setUploading] = useState(0);
-  const [pictureNote, setPictureNote] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const own = scopeFor(category);
   const [scope, setScope] = useState<PictureScope>(own);
   // The board moved to another section: the search starts there.
@@ -295,24 +295,38 @@ export function AddCardBox({
     return () => document.removeEventListener("pointerdown", away);
   }, [showing]);
 
+  // A full board says so, and nothing goes up or is copied for a card it would drop.
+  const room = LIMITS.items - items.length;
+  const full = () => {
+    if (room > 0) return false;
+    setNote(strings.new.tooManyCards);
+    return true;
+  };
+
   // One card per file, in the order chosen; a file that fails names itself
   // and the rest still go in. The first goes up alone, since it may ask a
   // guest to sign in; the rest then go up together, and each card comes in as
   // soon as it and the ones before it are up.
   const onFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const [first, ...rest] = [...(event.target.files ?? [])];
+    const files = [...(event.target.files ?? [])];
     event.target.value = "";
+    if (files.length === 0 || full()) return;
+    const [first, ...rest] = files.slice(0, room);
     if (first === undefined) return;
-    setPictureNote(null);
+    setNote(files.length > room ? strings.new.tooManyCards : null);
     setUploading(rest.length + 1);
+    // A single picture takes the name typed for it, as the phone's dialog lets
+    // one photo be named; several go in unnamed.
+    const named = rest.length === 0 ? name : "";
     /** Whether to go on: a guest who would not sign in has said no to all of them. */
     const take = async (file: File, picture: Promise<UploadedPicture>) => {
       try {
         const { previewUrl, pictureId } = await picture;
-        dispatch({ type: "addItem", title: "", imageUrl: previewUrl, pictureId });
+        dispatch({ type: "addItem", title: named, imageUrl: previewUrl, pictureId });
+        if (named !== "") setTyped("");
         return true;
       } catch (failure) {
-        setPictureNote(pictureFailureText(file.name, failure));
+        setNote(pictureFailureText(file.name, failure));
         return !(failure instanceof PictureRefused && failure.reason === "signIn");
       } finally {
         setUploading((n) => n - 1);
@@ -330,14 +344,16 @@ export function AddCardBox({
   };
 
   const addName = () => {
-    if (name.length === 0) return;
+    if (name.length === 0 || full()) return;
     dispatch({ type: "addItem", title: name, imageUrl: null });
     setTyped("");
+    setNote(null);
   };
   // A catalogue's picture stays at its address, as the phone keeps it; one
   // from the web is copied into the person's own pictures first. The search
   // stays open, its tile ticked, so several can be chosen in a row.
   const addFound = (picture: FoundPicture) => {
+    if (full()) return;
     if (picture.source !== "web") {
       dispatch({
         type: "addItem",
@@ -348,7 +364,7 @@ export function AddCardBox({
       });
       return;
     }
-    setPictureNote(null);
+    setNote(null);
     setKeeping((now) => new Set(now).add(picture.id));
     keep(picture.imageUrl)
       .then(
@@ -361,7 +377,7 @@ export function AddCardBox({
             key: picture.id,
           });
         },
-        (failure: unknown) => setPictureNote(pictureFailureText(picture.title, failure)),
+        (failure: unknown) => setNote(pictureFailureText(picture.title, failure)),
       )
       .finally(() =>
         setKeeping((now) => {
@@ -409,9 +425,9 @@ export function AddCardBox({
         >
           {uploading > 0 ? plural(strings.new.uploading, uploading) : strings.new.upload}
         </Button>
-        {pictureNote !== null && (
+        {note !== null && (
           <p className="cards__note cards__note--warn" role="alert">
-            {pictureNote}
+            {note}
           </p>
         )}
       </div>
@@ -539,12 +555,7 @@ export function AddCardBox({
         )}
       </form>
 
-      <PasteBox
-        room={LIMITS.items - items.length}
-        category={category}
-        dispatch={dispatch}
-        lookup={pasteLookup}
-      />
+      <PasteBox room={room} category={category} dispatch={dispatch} lookup={pasteLookup} />
     </>
   );
 }

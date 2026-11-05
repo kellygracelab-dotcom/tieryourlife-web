@@ -12,7 +12,8 @@
   isolation: isolate;
   display: flex;
   align-items: flex-end;
-  height: 200px;
+  /* At least the app's 200, taller when a long name takes three lines. */
+  min-height: 200px;
   overflow: hidden;
   border-radius: 16px;
   color: #ffffff;
@@ -86,12 +87,14 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
+/* Clear of the back arrow above it, however many lines the name takes. */
 .section-head__text {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  padding: 16px;
+  min-width: 0;
+  padding: 56px 16px 16px;
 }
 
 .section-head__name {
@@ -100,6 +103,7 @@
   gap: 8px;
   margin: 0;
   font: 400 28px/36px var(--font);
+  overflow-wrap: anywhere;
 }
 
 .section-head__icon {

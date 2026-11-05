@@ -200,9 +200,12 @@
     0 0 0 6px var(--surface);
 }
 
-.settings__choice-check {
+/* Over the whole circle: an icon's own 1em square (.ms) would hold it to a corner. */
+.settings__choice .settings__choice-check {
   position: absolute;
   inset: 0;
+  width: auto;
+  height: auto;
   display: flex;
   align-items: center;
   justify-content: center;

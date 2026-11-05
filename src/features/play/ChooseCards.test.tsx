@@ -148,6 +148,22 @@ describe("choosing cards", () => {
     expect(screen.getByText("0 of 64 selected")).toBeInTheDocument();
   });
 
+  it("keeps the rows ticked before when nothing is picked", async () => {
+    show();
+    await userEvent.click(screen.getByRole("checkbox", { name: /^Tier A/ }));
+    expect(screen.getByText("30 of 64 selected")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    await userEvent.click(continueButton());
+    expect(screen.getByText("30 of 64 selected")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /^Tier A/ })).toBeChecked();
+  });
+
+  it("puts the focus in the search when the picking opens", async () => {
+    show();
+    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    expect(screen.getByRole("searchbox", { name: "Find a card" })).toHaveFocus();
+  });
+
   it("starts from everything on a board that fits, and goes on with all of it", async () => {
     const small = boardOf(a.slice(0, 5), [tier("A", "A", null, a.slice(0, 2))]);
     const onDone = vi.fn();

@@ -15,7 +15,7 @@ import { useSession } from "../app/session";
 import type { BoardsRepository } from "../features/boards/repository";
 import { AuthorLine } from "../features/community/AuthorLine";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
-import { placedBy } from "../features/community/rankings";
+import { placedBy, readerName } from "../features/community/rankings";
 import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
@@ -311,7 +311,12 @@ function OpenList({
   };
   const choose = (ranking: ReaderRanking | null) => {
     remember();
-    setChosen(ranking);
+    // A reader without a name is "Someone" on the switch too, in this language.
+    setChosen(
+      ranking === null
+        ? null
+        : { ...ranking, authorName: readerName(ranking.authorName) ?? strings.profile.someone },
+    );
     setView("theirs");
     setSheet(false);
   };
@@ -329,10 +334,13 @@ function OpenList({
   // into Mine. The board below is drawn afresh from the draft it writes.
   const [mineRound, setMineRound] = useState(0);
   const [mineRows, setMineRows] = useState(() => loadDraft(localStorageStore, scopeOf(list)));
+  // What Mine held before rows were put in it: the board's own Undo goes back there.
+  const [mineBefore, setMineBefore] = useState<Rows | null>(null);
   // Rows into Mine, which is drawn afresh from the draft: Play's result, or
   // Theirs with a first move made on it.
   const putInMine = (rows: Rows) => {
     const placed = rows.map((row) => [...row]);
+    setMineBefore(loadPlacedDraft(localStorageStore, scopeOf(list)));
     saveDraft(localStorageStore, scopeOf(list), placed);
     setMineRows(placed);
     setMineRound((round) => round + 1);
@@ -343,6 +351,7 @@ function OpenList({
     if (before === null) clearDraft(localStorageStore, list.id);
     else localStorageStore.write(draftKey(list.id), before);
     setMineRows(loadDraft(localStorageStore, scopeOf(list)));
+    setMineBefore(null);
     setMineRound((round) => round + 1);
     show(back);
   };
@@ -412,9 +421,11 @@ function OpenList({
       : theirsName === null
         ? strings.list.startedFromUnnamed
         : fill(strings.list.startedFrom, { name: theirsName });
+    // As long as the app's long snackbar: a finished Mine may have just been replaced.
     setNotice({
       text: said,
       action: { text: strings.list.undo, onClick: () => restoreMine(before, "theirs") },
+      long: true,
     });
   };
   // Somebody else's tier words over the same cards: the board draws Theirs under them.
@@ -444,6 +455,15 @@ function OpenList({
           <h1 className="list-head__title">
             <bdi>{list.title}</bdi>
           </h1>
+          {/* One's own anonymous list says it is one's own, and that nobody else sees so. */}
+          {own && list.anonymous === true && (
+            <div className="list-head__lines">
+              <p className="byline byline--anonymous">
+                <Icon name="visibility_off" />
+                {strings.card.yoursAnonymous}
+              </p>
+            </div>
+          )}
           {/* A list that stands without an author has no line naming one. */}
           {!editorial && (
             <div className="list-head__lines">
@@ -478,7 +498,8 @@ function OpenList({
             />
           ) : (
             <>
-              <PlayButton {...play.button} />
+              {/* A list hidden here keeps its cards out of sight, Play's too. */}
+              {!outOfSight && <PlayButton {...play.button} />}
               <VisitorTools
                 list={list}
                 report={report}
@@ -501,6 +522,7 @@ function OpenList({
               key={`${list.id}:${mineRound}`}
               list={list}
               onListChanged={onListChanged}
+              undoTo={mineBefore}
               onRows={(rows) =>
                 // Nothing placed in Mine: Play starts from the author's, as before.
                 setMineRows(rows.some((row) => row.length > 0) ? rows.map((row) => [...row]) : null)
@@ -539,7 +561,7 @@ function OpenList({
             <UnrankedPool items={list.items} pool={poolOf(theirs.rows, list.items.length)} />
           </>
         ))}
-      {!own && play.view}
+      {!own && !outOfSight && play.view}
       {!outOfSight && <PictureCredits items={list.items} />}
       {sheet && (
         <RankingsSheet

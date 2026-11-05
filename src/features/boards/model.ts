@@ -1,4 +1,6 @@
 import type { SyncedPlay } from "../../api/boards";
+import { holds } from "../../lib/locale";
+import { currentLocale } from "../../strings";
 
 /**
  * A board of the person's own, the way the phone keeps one: tiers with a
@@ -132,7 +134,11 @@ export const POOL_LABEL = "Unranked";
 
 export type NextUid = () => string;
 
-const clip = (text: string, max: number): string => text.replace(/\s+/g, " ").slice(0, max);
+/** Spaces tidied and at most `max` UTF-16 units, cut between whole characters: an emoji is never halved. */
+const clip = (text: string, max: number): string => {
+  const cut = text.replace(/\s+/g, " ").trim().slice(0, max);
+  return (/[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut).trimEnd();
+};
 
 const captionOf = (caption: string | null): string | null => {
   if (caption === null) return null;
@@ -249,9 +255,10 @@ function tidy(board: Board): Board {
   return { ...board, items: [...items, ...trashed] };
 }
 
+/** A title emptied keeps the old one, as on the phone. */
 export function rename(board: Board, title: string, now: number): Board {
   const next = clip(title, BOARD_LIMITS.title);
-  return next === board.title ? board : touched({ ...board, title: next }, now);
+  return next === "" || next === board.title ? board : touched({ ...board, title: next }, now);
 }
 
 /** A topic lives inside one section: another section leaves the list without one. */
@@ -637,8 +644,8 @@ const shows = (board: Board, show: BoardShow): boolean => {
 
 const keeps = (board: Board, filters: BoardFilters): boolean => {
   if (board.deletedAt !== null || !shows(board, filters.show ?? "all")) return false;
-  const needle = filters.query?.trim().toLowerCase() ?? "";
-  return needle === "" || board.title.toLowerCase().includes(needle);
+  const needle = filters.query?.trim() ?? "";
+  return needle === "" || holds(board.title, needle);
 };
 
 /** By last touch, then by uid: two boards made in the same millisecond still have to sit somewhere. */
@@ -648,7 +655,10 @@ const byRecent = (a: Board, b: Board): number =>
 const comparator = (sort: BoardSort) => (a: Board, b: Board) => {
   switch (sort) {
     case "name":
-      return a.title.localeCompare(b.title, undefined, { sensitivity: "base" }) || byRecent(a, b);
+      // In the site's language, not the browser's: Polish puts Ć after C, English beside it.
+      return (
+        a.title.localeCompare(b.title, currentLocale(), { sensitivity: "base" }) || byRecent(a, b)
+      );
     case "ranked":
       return rankedCount(b) - rankedCount(a) || byRecent(a, b);
     case "pool":

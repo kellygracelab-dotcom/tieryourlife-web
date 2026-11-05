@@ -7,6 +7,7 @@ import { ApiFailure, type ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
 import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
+import { intentStoreForTests } from "../features/community/afterSignIn";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { itemsIn, newBoard, poolTier, rankedTiers } from "../features/boards/model";
@@ -90,13 +91,15 @@ const openAs = (
   account: Session["account"],
   signIn: Session["signIn"] = async () => ({ kind: "cancelled" }),
 ) => {
+  const router = createMemoryRouter(routes, { initialEntries: ["/l/abc"] });
   render(
     <SessionContext.Provider
       value={{ account, signIn, signOut: async () => undefined, refresh: () => undefined }}
     >
-      <RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/l/abc"] })} />
+      <RouterProvider router={router} />
     </SessionContext.Provider>,
   );
+  return router;
 };
 
 const whose = () => screen.getByRole("group", { name: "Whose arrangement to show" });
@@ -153,7 +156,7 @@ describe("ListPage save to my lists", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Save to my lists" })[0]!);
     // The author placed Ex Machina, so there is a choice to make.
     const dialog = screen.getByRole("dialog", { name: "Which ranking to save?" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "The author's" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "The author’s" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByText("Saved to your lists.")).toBeInTheDocument();
 
@@ -255,6 +258,22 @@ describe("ListPage report and hide", () => {
     expect(await screen.findByRole("dialog", { name: "Report this list" })).toBeInTheDocument();
   });
 
+  it("opens the report again after a sign-in that went through a redirect and came back", async () => {
+    intentStoreForTests(memoryStore());
+    mocks.loadList.mockResolvedValue(list);
+    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "redirecting" });
+    openAs({ kind: "guest", uid: "g1" }, signIn);
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
+    const ask = screen.getByRole("dialog", { name: "Sign in to report" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Continue with Google" }));
+    cleanup();
+
+    openAs(member);
+    expect(await screen.findByRole("dialog", { name: "Report this list" })).toBeInTheDocument();
+  });
+
   it("lets a guest hide instead of signing in, with an undo in the snackbar", async () => {
     mocks.loadList.mockResolvedValue(list);
     openAs({ kind: "guest", uid: "g1" });
@@ -287,6 +306,8 @@ describe("ListPage report and hide", () => {
     await userEvent.click(screen.getByRole("button", { name: "Hide this list" }));
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
     expect(screen.getByRole("link", { name: "Go to home" })).toHaveAttribute("href", "/");
+    // Its cards stay out of sight: no Play over them.
+    expect(screen.queryByRole("button", { name: "Play" })).not.toBeInTheDocument();
   });
 
   it("offers the device's own share sheet where there is one, and shrugs when it is closed", async () => {
@@ -688,6 +709,26 @@ describe("ListPage, starting Mine from Theirs", () => {
     ).toHaveTextContent("The Witch");
   });
 
+  it("gives a replaced Mine back from the board's own Undo and Ctrl+Z too", async () => {
+    saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
+    mocks.loadList.mockResolvedValue(twoTiers);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(within(whose()).getByRole("button", { name: "Theirs" }));
+    const theirs = screen.getByRole("region", { name: "Their ranking" });
+    await userEvent.click(within(theirs).getByRole("button", { name: "Climax" }));
+    await userEvent.keyboard("2");
+    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0], [1, 2]]);
+
+    // The bar's Undo, not the snackbar's.
+    const barUndo = () =>
+      screen.getAllByRole("button", { name: "Undo" }).find((b) => b.closest(".snackbar") === null);
+    expect(barUndo()).toBeEnabled();
+    await userEvent.keyboard("{Control>}z{/Control}");
+    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[1], []]);
+    expect(barUndo()).toBeDisabled();
+  });
+
   it("starts from an arrow key too, and names nobody where the list has no author's name", async () => {
     mocks.loadList.mockResolvedValue({ ...twoTiers, authorName: " " });
     open();
@@ -729,6 +770,16 @@ describe("ListPage author line", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Follow" }));
     expect(await screen.findByText("Couldn’t follow — try again.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("says a refused unfollow as one, in place of the snackbar that said it was done", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    mocks.followState.mockResolvedValue({ following: true, followers: 3 });
+    mocks.unfollowAuthor.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    openAs(member);
+    await userEvent.click(await screen.findByRole("button", { name: /Following/ }));
+    expect(await screen.findByText("Couldn’t unfollow — try again.")).toBeInTheDocument();
+    expect(screen.queryByText("Unfollowed danylo")).toBeNull();
   });
 
   it("asks nothing about a guest, and asks them to sign in when they follow", async () => {
@@ -843,6 +894,8 @@ describe("ListPage for its author", () => {
     expect(
       screen.getAllByRole("link", { name: "Edit" }).map((link) => link.getAttribute("href")),
     ).toEqual(["/b/new?list=abc"]);
+    // And says it is one's own, gone out without a name, as its card does.
+    expect(screen.getByText("Your list, published anonymously")).toBeInTheDocument();
   });
 
   it("deletes the list after asking, names a failure, and leaves for My lists when it is gone", async () => {
@@ -886,7 +939,7 @@ describe("ListPage for its author", () => {
       publishedEditedAt: 1,
       authorName: "danylo",
     });
-    openAs(author);
+    const router = openAs(author);
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
     await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
@@ -895,6 +948,8 @@ describe("ListPage for its author", () => {
     );
     await screen.findByRole("heading", { level: 1, name: "Your public lists" });
     expect(boards.get("b1")).toMatchObject({ publishedId: null, authorName: null });
+    // The gone list's page left the history: Back does not lead its author to it.
+    expect(router.state.historyAction).toBe("REPLACE");
   });
 
   it.each<ApiError>([{ kind: "notFound" }])(

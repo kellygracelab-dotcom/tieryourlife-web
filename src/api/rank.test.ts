@@ -39,15 +39,32 @@ describe("rank", () => {
   it("reads a ranking by code with App Check alone", async () => {
     const { client, request } = recordingClient({ code: "abcdefgh" });
 
-    await expect(loadRanking(client, "abcdefgh")).resolves.toEqual({ code: "abcdefgh" });
+    await expect(loadRanking(client, "abcdefgh")).resolves.toMatchObject({ code: "abcdefgh" });
 
     expect(request).toHaveBeenCalledWith("GET", "/api/rank/abcdefgh", { auth: "appCheckOnly" });
+  });
+
+  it("draws what it can of a ranking that came slightly wrong", async () => {
+    const { client } = recordingClient({
+      code: "abcdefgh",
+      rows: null,
+      snapshot: { title: "Films", authorName: null, tiers: [null], category: "film_tv" },
+    });
+    await expect(loadRanking(client, "abcdefgh")).resolves.toMatchObject({
+      rows: [],
+      snapshot: {
+        title: "Films",
+        authorName: "",
+        tiers: [{ label: "", caption: null }],
+        items: [],
+      },
+    });
   });
 
   it("reads a ranking as the account when asked, so the answer can call it yours", async () => {
     const { client, request } = recordingClient({ code: "abcdefgh", yours: true });
 
-    await expect(loadRanking(client, "abcdefgh", true)).resolves.toEqual({
+    await expect(loadRanking(client, "abcdefgh", true)).resolves.toMatchObject({
       code: "abcdefgh",
       yours: true,
     });

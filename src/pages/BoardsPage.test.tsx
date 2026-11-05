@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { addToPool, arrangeItems, liveItems, newBoard, type Board } from "../features/boards/model";
+import { DEFAULT_TIERS, NEW_DRAFT_KEY, saveEditorDraft } from "../features/editor/model";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import { ApiFailure } from "../api/errors";
 import { memoryStore, type KeyValueStore } from "../lib/storage";
@@ -102,11 +103,11 @@ describe("BoardsPage", () => {
       screen.getByRole("link", { name }).getAttribute("href"),
     );
     expect(starts).toEqual([
-      "/b/new?category=film_tv",
-      "/b/new?category=games",
-      "/b/new?category=food",
-      "/b/new?category=music",
-      "/b/new?category=books",
+      "/b/new?title=Films&category=film_tv",
+      "/b/new?title=Games&category=games",
+      "/b/new?title=Restaurants&category=food",
+      "/b/new?title=Albums&category=music",
+      "/b/new?title=Books&category=books",
     ]);
     // Nothing to filter, order or summarise yet.
     expect(screen.queryByRole("group", { name: "Which lists to show" })).toBeNull();
@@ -118,11 +119,27 @@ describe("BoardsPage", () => {
     expect(repository.all()).toEqual([]);
   });
 
-  it("makes a list in the section of a suggestion", async () => {
+  it("makes a list of a suggestion's name in its section", async () => {
     const router = open(boardsRepository(memoryStore()));
     await userEvent.click(screen.getByRole("link", { name: "Restaurants" }));
     expect(router.state.location.pathname).toBe("/b/new");
-    expect(router.state.location.search).toBe("?category=food");
+    expect(router.state.location.search).toBe("?title=Restaurants&category=food");
+  });
+
+  it("puts a list begun in the old editor on the shelf, with the others", () => {
+    const store = memoryStore();
+    saveEditorDraft(store, {
+      title: "My old draft",
+      category: null,
+      tiers: DEFAULT_TIERS.map((tier, index) => ({ ...tier, key: `t${index}` })),
+      items: [{ key: "p0", title: "Ex Machina", imageUrl: null, pictureId: null }],
+      rows: [[], [], [], [], []],
+      serial: DEFAULT_TIERS.length + 1,
+    });
+    const repository = boardsRepository(memoryStore());
+    open(repository, "/b", undefined, store);
+    expect(opened().map((link) => link.getAttribute("aria-label"))).toEqual(["Open My old draft"]);
+    expect(store.read(NEW_DRAFT_KEY)).toBeNull();
   });
 
   it("shows the boards as the phone's grid: a picture, the name, how far along, whether public", () => {
@@ -302,18 +319,20 @@ describe("BoardsPage", () => {
       repository.saveAll([board("a", "Albums", 1), board("b", "Books", 2)]);
       open(repository, "/b", undefined, store());
 
-      await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-      expect(screen.getByRole("toolbar")).toHaveTextContent("0 selected");
+      await userEvent.click(screen.getByRole("button", { name: "Select" }));
+      expect(screen.getByRole("group", { name: "Choose the lists to delete" })).toBeInTheDocument();
       await userEvent.click(screen.getByRole(role, { name: "Select Albums" }));
-      expect(screen.getByRole("toolbar")).toHaveTextContent("1 selected");
+      expect(screen.getByRole("group", { name: "1 selected" })).toBeInTheDocument();
       await userEvent.click(screen.getByRole(role, { name: "Select Albums" }));
-      expect(screen.queryByRole("toolbar")).toBeNull();
+      expect(screen.queryByRole("group", { name: "1 selected" })).toBeNull();
 
-      await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+      await userEvent.click(screen.getByRole("button", { name: "Select" }));
       await userEvent.click(screen.getByRole(role, { name: "Select Albums" }));
       await userEvent.click(screen.getByRole(role, { name: "Select Books" }));
       await userEvent.click(
-        within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+        within(screen.getByRole("group", { name: /selected$/ })).getByRole("button", {
+          name: "Delete",
+        }),
       );
       expect(repository.get("a")?.deletedAt).toBe(5000);
       expect(repository.get("b")?.deletedAt).toBe(5000);
@@ -333,19 +352,21 @@ describe("BoardsPage", () => {
     open(repository, "/b");
 
     // The chip goes as it is pressed: the first list to choose takes the focus.
-    screen.getByRole("button", { name: "Delete" }).focus();
+    screen.getByRole("button", { name: "Select" }).focus();
     await userEvent.keyboard("{Enter}");
     expect(screen.getByRole("button", { name: "Select Books" })).toHaveFocus();
 
     // Leaving gives the focus back to the chip that came back.
     await userEvent.click(screen.getByRole("button", { name: "Exit selection" }));
-    expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Select" })).toHaveFocus();
 
     // Deleting takes the bar away; its Undo is where the keyboard lands.
     await userEvent.keyboard("{Enter}");
     await userEvent.keyboard("{Enter}");
     await userEvent.click(
-      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+      within(screen.getByRole("group", { name: /selected$/ })).getByRole("button", {
+        name: "Delete",
+      }),
     );
     expect(await screen.findByRole("button", { name: "Undo" })).toHaveFocus();
   });
@@ -362,15 +383,19 @@ describe("BoardsPage", () => {
     });
     open(repository, "/b", undefined, memoryStore(), unpublish);
 
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select" }));
     for (const name of ["Albums", "Books", "Cheeses"]) {
       await userEvent.click(screen.getByRole("button", { name: `Select ${name}` }));
     }
     await userEvent.click(
-      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+      within(screen.getByRole("group", { name: /selected$/ })).getByRole("button", {
+        name: "Delete",
+      }),
     );
     // The two that went are said first, with their Undo; then why the third stayed.
-    expect(await screen.findByRole("status")).toHaveTextContent("2 lists deleted");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "2 lists deleted and their public copies taken down",
+    );
     expect(unpublish.mock.calls.map(([id]) => id).sort()).toEqual(["stuck", "up"]);
     expect(repository.get("a")).toMatchObject({ deletedAt: 5000, publishedId: null });
     expect(repository.get("b")).toMatchObject({ deletedAt: null, publishedId: "stuck" });
@@ -405,13 +430,112 @@ describe("BoardsPage", () => {
     });
     open(repository, "/b", undefined, memoryStore(), unpublish);
 
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select" }));
     await userEvent.click(screen.getByRole("button", { name: "Select Albums" }));
     await userEvent.click(
-      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+      within(screen.getByRole("group", { name: /selected$/ })).getByRole("button", {
+        name: "Delete",
+      }),
     );
-    expect(await screen.findByRole("status")).toHaveTextContent("1 list deleted");
+    // Nothing of this account's came down, so nothing is said about a copy.
+    expect(await screen.findByRole("status")).toHaveTextContent(/^1 list deletedUndo$/);
     expect(repository.get("a")).toMatchObject({ deletedAt: 5000, publishedId: null });
+  });
+
+  it("deletes only the chosen lists still on screen, and says so in the bar", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([
+      board("a", "Alpha", 3),
+      board("b", "Bravo", 2, { publishedId: "L1", authorName: "Danylo" }),
+    ]);
+    open(repository);
+    await userEvent.click(screen.getByRole("button", { name: "Select" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select Alpha" }));
+    await userEvent.click(screen.getByRole("button", { name: "Public" }));
+    expect(screen.getByRole("group", { name: "Choose the lists to delete" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Select Bravo" }));
+    expect(screen.getByRole("group", { name: "1 selected" })).toBeInTheDocument();
+    await userEvent.click(
+      within(screen.getByRole("group", { name: /selected$|^Choose the lists/ })).getByRole(
+        "button",
+        { name: "Delete" },
+      ),
+    );
+    await screen.findByRole("button", { name: "Undo" });
+    expect(repository.get("a")?.deletedAt).toBeNull();
+    expect(repository.get("b")?.deletedAt).toBe(5000);
+  });
+
+  it("leaves choosing on Escape", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([board("a", "Albums", 1)]);
+    open(repository);
+    const chip = screen.getByRole("button", { name: "Select" });
+    expect(chip).not.toHaveAttribute("aria-pressed");
+    await userEvent.click(chip);
+    expect(screen.getByRole("group", { name: /selected$|^Choose the lists/ })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("group", { name: /selected$|^Choose the lists/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Select" })).toHaveFocus();
+  });
+
+  it("takes a list off the shelf while its public copy comes down, so it cannot go twice", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([
+      board("a", "Albums", 1, { publishedId: "L1", authorName: "Danylo" }),
+      board("b", "Books", 2),
+    ]);
+    let done = () => undefined as void;
+    const unpublish = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          done = resolve;
+        }),
+    );
+    open(repository, "/b", undefined, memoryStore(), unpublish);
+    await userEvent.click(screen.getByRole("button", { name: "Select" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select Albums" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: /selected$|^Choose the lists/ })).getByRole(
+        "button",
+        { name: "Delete" },
+      ),
+    );
+    expect(screen.queryByRole("link", { name: "Open Albums" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Open Books" })).toBeInTheDocument();
+    done();
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "1 list deleted and its public copy taken down",
+    );
+    expect(unpublish).toHaveBeenCalledTimes(1);
+    expect(repository.get("a")?.deletedAt).toBe(5000);
+  });
+
+  it("names the filter that shows nothing, rather than saying there are no lists", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([board("a", "Albums", 1)]);
+    open(repository);
+    await userEvent.click(screen.getByRole("button", { name: "Public" }));
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent("No lists under “Public”");
+    expect(screen.queryByText("No lists yet")).toBeNull();
+  });
+
+  it("says in rows too that a list is public, and reads how far along it is after its name", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([{ ...ranked("a", "Albums", 1), publishedId: "L1" }]);
+    open(repository, "/b", undefined, rowsStore());
+    const link = screen.getByRole("link", { name: "Open Albums" });
+    expect(within(link).getByText("Public")).toHaveClass("board-card__public");
+    expect(link).toHaveAccessibleDescription("2 ranked · 1 in pool Public");
+  });
+
+  it("offers a guest the sign-in that keeps lists living only in this browser", () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([board("a", "Albums", 1)]);
+    open(repository);
+    expect(screen.getByText("1 list, on this device only")).toBeInTheDocument();
+    expect(screen.getByText(/An account keeps them/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
   });
 
   it("puts lists back where they were in Recent after Undo", async () => {
@@ -423,12 +547,14 @@ describe("BoardsPage", () => {
     ]);
     open(repository);
     const titles = () => opened().map((link) => link.getAttribute("aria-label"));
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: "Select" }));
     for (const name of ["Alpha", "Bravo", "Charlie"]) {
       await userEvent.click(screen.getByRole("button", { name: `Select ${name}` }));
     }
     await userEvent.click(
-      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+      within(screen.getByRole("group", { name: /selected$/ })).getByRole("button", {
+        name: "Delete",
+      }),
     );
     await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
     expect(titles()).toEqual(["Open Alpha", "Open Bravo", "Open Charlie"]);

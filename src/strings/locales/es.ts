@@ -8,7 +8,9 @@ import type { Translation } from "../index";
 const es: Translation = {
   tagline: "Versión web",
   nav: {
+    opening: "Abriendo la página…",
     site: "Sitio",
+    skipToContent: "Saltar al contenido",
     signIn: "Iniciar sesión",
     signOut: "Cerrar sesión",
     account: "Tu cuenta",
@@ -85,8 +87,8 @@ const es: Translation = {
     title: "Ajustes",
     guestTitle: "Inicia sesión para cambiar tus ajustes.",
     guestBody:
-      "Tu nombre, tu imagen y el tema pertenecen a una cuenta. Para clasificar una lista no hace falta.",
-    themeGuestNote: "Se guarda en este dispositivo mientras no inicies sesión.",
+      "Tu nombre y tu imagen pertenecen a una cuenta. Para clasificar una lista no hace falta.",
+    themeGuestNote: "Se guarda en este dispositivo, con la sesión iniciada o sin ella.",
     nameTitle: "Tu nombre",
     nameBody:
       "El nombre que aparece como autor en cada lista que publicas. Tu correo nunca se muestra.",
@@ -134,7 +136,7 @@ const es: Translation = {
     placeTitle: "Coloca tu foto",
     placeFrame: "La imagen que va en el círculo",
     placeUse: "Usar esta",
-    placeFailed: "La imagen no se puede mostrar aquí. Aun así se puede usar tal cual.",
+    placeFailed: "Esta imagen no carga, así que no puede ser tu cara. Elige otra.",
     placeHelp: "Arrastra para mover; pellizca o desplaza para hacer zoom.",
     placeAsItIs: "Esta imagen solo se puede usar tal cual.",
   },
@@ -192,6 +194,7 @@ const es: Translation = {
     unfollowed: "Dejaste de seguir a {name}",
     undo: "Deshacer",
     failed: "No se pudo seguir. Inténtalo de nuevo.",
+    unfollowFailed: "No se pudo dejar de seguir. Inténtalo de nuevo.",
     cancel: "Cancelar",
     signInTitle: "Inicia sesión para seguir",
     signInBody: "Al seguir a alguien, sus nuevas listas te aparecen las primeras.",
@@ -308,13 +311,13 @@ const es: Translation = {
     startOver: "Empezar de nuevo",
     more: "Más",
     failedOffline:
-      "Sin conexión. Tu borrador está a salvo en este dispositivo; inténtalo de nuevo cuando vuelvas a estar en línea.",
+      "Sin conexión. No se perdió nada: la lista está a salvo en este dispositivo. Inténtalo de nuevo cuando vuelvas a estar en línea.",
     failedBanned: "Ahora mismo no puedes publicar.",
     failedTooMany:
-      "Esta cuenta ya publicó todas las listas que puede. Retira una en la app primero.",
+      "Esta cuenta ya publicó todas las listas que puede. Retira una en Tus listas públicas primero.",
     failedSignedOut: "Para publicar hace falta una cuenta. Inicia sesión e inténtalo de nuevo.",
-    failedTooLarge: "La lista es demasiado grande para publicarse. {detail}",
-    failedInvalid: "La lista fue rechazada. {detail}",
+    failedTooLarge: "La lista es demasiado grande para publicarse.",
+    failedInvalid: "La lista fue rechazada.",
     failedOther: "No se pudo publicar. No se perdió nada. Inténtalo de nuevo.",
     editTitle: "Editar lista",
     editSignIn: "Inicia sesión para editar las listas que publicaste.",
@@ -394,6 +397,7 @@ const es: Translation = {
     copyLink: "Copiar enlace",
     share: "Compartir",
     linkCopied: "Enlace copiado",
+    copyFailed: "No se pudo copiar el enlace: {link}",
     hiddenNotice: "Oculto para ti",
     undo: "Deshacer",
     hiddenTitle: "Ocultaste esta lista",
@@ -481,6 +485,7 @@ const es: Translation = {
     dock: "Dónde van las tarjetas",
     dockBeside: "Tarjetas junto a los niveles",
     dockUnder: "Tarjetas bajo los niveles",
+    dockRows: "Filas de tarjetas bajo los niveles",
     allPlaced: { one: "La tarjeta está colocada", other: "Las {n} tarjetas están colocadas" },
     allPlacedNote: "Cambia de idea arrastrando una tarjeta, o termina y llévate tu enlace.",
     allPlacedNoteEdit: "Cambia de idea arrastrando una tarjeta, o guarda lo que tienes.",
@@ -500,6 +505,9 @@ const es: Translation = {
       "Cualquiera con ese enlace ve tu versión junto a la del autor. Se conserva sin cuenta.",
     liveNoteKept:
       "Cualquiera con ese enlace ve tu versión junto a la del autor. Está guardada en tus clasificaciones.",
+    liveNoteAlone: "Cualquiera con ese enlace ve tu versión. Se conserva sin cuenta.",
+    liveNoteAloneKept:
+      "Cualquiera con ese enlace ve tu versión. Está guardada en tus clasificaciones.",
     copy: "Copiar enlace",
     copied: "Copiado",
     download: "Descargar imagen",
@@ -594,6 +602,9 @@ const es: Translation = {
   crash: {
     title: "Algo salió mal en esta página",
     body: "Recargar suele arreglarlo. Si no, el resto del sitio sigue funcionando.",
+    offlineTitle: "Esta página no se puede abrir sin conexión",
+    offlineBody:
+      "No se abrió antes en esta visita y no hay conexión. Recarga cuando vuelvas a estar en línea; las páginas ya abiertas siguen funcionando.",
   },
   notFound: {
     title: "No hay nada en esta dirección.",
@@ -602,6 +613,7 @@ const es: Translation = {
   card: {
     by: "de {name}",
     items: { one: "{n} tarjeta", other: "{n} tarjetas" },
+    moreTiers: { one: "y {n} nivel más", many: "y {n} niveles más", other: "y {n} niveles más" },
     rankings: { one: "{n} clasificación", other: "{n} clasificaciones" },
     noArt: "Sin imagen",
     yours: "Tu lista",
@@ -694,6 +706,8 @@ const es: Translation = {
     topicCreated: "«{name}» creado",
     topicRenamed: "Renombrado a «{name}»",
     topicDeleted: "«{name}» eliminado",
+    deleteTopicAsk: "¿Eliminar «{name}»?",
+    deleteTopicBody: "Quien lo sigue dejará de seguirlo. No se puede deshacer.",
     people: { one: "{n} persona", other: "{n} personas" },
     findPerson: "Nombre o correo de una cuenta que ya inició sesión",
     appoint: "Nombrar",
@@ -705,6 +719,7 @@ const es: Translation = {
     owner: "Propietario",
     you: "Tú",
     since: "Moderador desde {date}",
+    nobodyFound: "No se encontró a nadie con «{q}»",
     newSection: "Nueva sección",
     editSection: "Editar sección",
     edit: "Editar",
@@ -743,6 +758,7 @@ const es: Translation = {
     otherTopics: "Listas en otros temas",
     finish: "Terminar",
     unfinishedNote: "Decidido, pero sin terminar: algunas de sus listas aún no se han movido.",
+    unfinishedOwnerOnly: "Solo el propietario puede terminar una fusión.",
     finished: "«{name}» terminado",
     sectionTaken: "Ya existe una sección llamada «{name}»",
     approveAsSection: "Aprobar como sección",
@@ -840,6 +856,10 @@ const es: Translation = {
     following: "Siguiendo",
     unfollowed: "Dejaste de seguir {name}",
     followFailed: "No se pudo seguir. Inténtalo de nuevo.",
+    unfollowFailed: "No se pudo dejar de seguir. Inténtalo de nuevo.",
+    followLimit:
+      "Ya sigues todas las secciones y temas que se pueden. Deja de seguir alguno primero.",
+    followSignInBody: "Al seguir secciones y temas, sus nuevas listas te aparecen las primeras.",
     undo: "Deshacer",
     waitingOnlyYou: "Hasta entonces, solo tú ves este tema.",
     topicMissing: "No hay ningún tema así en {section}.",
@@ -850,6 +870,8 @@ const es: Translation = {
     topicWaiting: "{name} · en espera",
     waitingBody:
       "Un moderador lo revisará. Tus listas aparecerán aquí cuando se apruebe; mientras tanto están en {section}.",
+    topicWaitingBody:
+      "Un moderador lo revisará. Mientras tanto, sus listas siguen en {section} con esta etiqueta.",
     tabExplore: "Explorar",
     tabFollowing: "Siguiendo",
     community: "Comunidad",
@@ -868,6 +890,7 @@ const es: Translation = {
     sortMostLists: "Más listas",
     sortName: "A–Z",
     find: "Buscar una sección",
+    findNone: "Ninguna sección coincide con «{q}»",
     propose: "Proponer una sección",
     waiting: "En espera",
     sections: "Secciones",
@@ -914,6 +937,9 @@ const es: Translation = {
     notImage: "Esa imagen no se puede usar. Elige otra.",
     notCropped: "La imagen tiene que estar recortada a 16:10. Ajústala e inténtalo de nuevo.",
     banned: "Ahora mismo no puedes proponer secciones.",
+    bannedUntil: "No puedes proponer secciones hasta el {date}.",
+    badFileUnder: "Las listas no pueden esperar en esa sección. Elige otra.",
+    badIcon: "Ese icono no se puede usar. Elige otro.",
     tooManyToday: "Hoy ya has propuesto {max} secciones. Inténtalo mañana.",
     discardAsk: "¿Descartar esta propuesta?",
     keepEditing: "Seguir editando",
@@ -1207,6 +1233,14 @@ const es: Translation = {
     anonymousBody: "Sin nombre ni foto en la lista. Solo tú puedes cambiarla o retirarla.",
     categoryWaiting: "Esperando a un moderador",
     menuHint: "Haz doble clic o clic derecho en una tarjeta para moverla o quitarla.",
+    choose: "Seleccionar",
+    pickToDelete: "Elige las listas que quieres eliminar",
+    noneShown: "No hay listas en «{filter}»",
+    deletedTakenDown: {
+      one: "{n} lista eliminada y retirada su copia pública",
+      many: "{n} listas eliminadas y retiradas sus copias públicas",
+      other: "{n} listas eliminadas y retiradas sus copias públicas",
+    },
   },
   sync: {
     offBusy: "Eliminando…",
@@ -1222,7 +1256,8 @@ const es: Translation = {
       "Tus tableros siguen en este navegador. La copia de tu cuenta se elimina, y un dispositivo nuevo empezará vacío.",
     offConfirm: "Detener y eliminar",
     offCancel: "Cancelar",
-    stuck: "Sin copia desde {when}. Revisa tu conexión.",
+    stuck: "Sin copia desde {when}. Pulsa «Guardar copia ahora» para volver a intentarlo.",
+    stuckNever: "Aún no hay copia. Pulsa «Guardar copia ahora» para volver a intentarlo.",
     now: "Guardar copia ahora",
     backingUp: "Guardando copia…",
     guestNote:

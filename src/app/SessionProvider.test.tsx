@@ -2,6 +2,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Account } from "../lib/account";
+import { SIGNED_IN_KEY } from "../lib/signedInHint";
 import { useRedirectFailed, useSession, useShowFace } from "./session";
 import { SessionProvider } from "./SessionProvider";
 
@@ -74,6 +75,40 @@ describe("SessionProvider", () => {
     act(() => listener?.({ kind: "guest", uid: "g1" }));
     await userEvent.click(screen.getByRole("button", { name: "sign in" }));
     expect(screen.getByRole("status")).toHaveTextContent("signedIn:g1");
+  });
+
+  it("notes a new name and face for the next visit's first moment, though Firebase fires nothing", async () => {
+    let listener: ((account: Account) => void) | null = null;
+    const subscribe = (next: (account: Account) => void) => {
+      listener = next;
+      return () => undefined;
+    };
+    let now: Account = { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: "old.jpg" };
+    function Refresh() {
+      const { refresh } = useSession();
+      return (
+        <button type="button" onClick={refresh}>
+          refresh
+        </button>
+      );
+    }
+    render(
+      <SessionProvider subscribe={subscribe} complete={async () => null} current={() => now}>
+        <Refresh />
+      </SessionProvider>,
+    );
+    act(() => listener?.(now));
+    expect(JSON.parse(window.localStorage.getItem(SIGNED_IN_KEY) ?? "null")).toEqual({
+      displayName: "Danylo",
+      photoUrl: "old.jpg",
+    });
+    now = { kind: "signedIn", uid: "u1", displayName: "Olek", photoUrl: "new.jpg" };
+    await userEvent.click(screen.getByRole("button", { name: "refresh" }));
+    expect(JSON.parse(window.localStorage.getItem(SIGNED_IN_KEY) ?? "null")).toEqual({
+      displayName: "Olek",
+      photoUrl: "new.jpg",
+    });
+    window.localStorage.removeItem(SIGNED_IN_KEY);
   });
 
   it("tells the page when a sign-in came back from its redirect failed", async () => {

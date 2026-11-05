@@ -127,9 +127,11 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
     });
   };
   const copyLink = () => {
-    copy(`${window.location.origin}${to}`).then(
+    const link = `${window.location.origin}${to}`;
+    copy(link).then(
       () => notify({ text: strings.list.linkCopied }),
-      () => undefined,
+      // The clipboard said no: the link is spelled out, to be copied by hand.
+      () => notify({ text: fill(strings.list.copyFailed, { link }) }),
     );
   };
 

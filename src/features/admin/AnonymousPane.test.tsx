@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import type { AnonymousList } from "../../api/admin";
+import { ApiFailure } from "../../api/errors";
 import { memoryStore } from "../../lib/storage";
 import { newBoard } from "../boards/model";
 import { boardsRepository } from "../boards/repository";
@@ -53,6 +54,27 @@ describe("AnonymousPane", () => {
     expect(await screen.findByText("Comfort rewatches")).toBeInTheDocument();
     expect(load).toHaveBeenLastCalledWith("c1");
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+  });
+
+  it("says a Show more that failed, and starts again from the top when its page is gone", async () => {
+    let next: "fail" | "gone" | "ok" = "fail";
+    const load = vi.fn(async (after: string | null) => {
+      if (after === null)
+        return { lists: [anonymous("l1", "Street food in Kyiv")], nextCursor: "c1" };
+      if (next === "fail") throw new ApiFailure({ kind: "unavailable" });
+      if (next === "gone") throw new ApiFailure({ kind: "cursorGone" });
+      return { lists: [anonymous("l2", "Comfort rewatches")], nextCursor: null };
+    });
+    open({ load, repository: boardsRepository(memoryStore()), now: () => 1 });
+    await screen.findByText("Street food in Kyiv");
+    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("That didn’t go through.");
+    next = "gone";
+    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    await waitFor(() =>
+      expect(load.mock.calls.filter(([after]) => after === null)).toHaveLength(2),
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("publishes one of the owner's lists by marking it anonymous and opening its settings", async () => {

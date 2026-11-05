@@ -1,7 +1,10 @@
 import type { ApiError } from "../../api/errors";
-import { fill, strings } from "../../strings";
+import { strings } from "../../strings";
 
-/** What a refused publish says, in the page's own words. */
+/**
+ * What a refused publish says, in the page's own words. The proxy's own
+ * reason is English, so it is not passed on.
+ */
 export function failureText(error: ApiError, mode: "new" | "edit"): string {
   switch (error.kind) {
     case "offline":
@@ -18,9 +21,9 @@ export function failureText(error: ApiError, mode: "new" | "edit"): string {
     case "notYours":
       return strings.new.notYours;
     case "tooLarge":
-      return fill(strings.new.failedTooLarge, { detail: error.detail ?? "" }).trim();
+      return strings.new.failedTooLarge;
     case "invalid":
-      return fill(strings.new.failedInvalid, { detail: error.detail ?? "" }).trim();
+      return strings.new.failedInvalid;
     default:
       return strings.new.failedOther;
   }

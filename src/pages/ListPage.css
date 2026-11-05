@@ -137,8 +137,20 @@
   margin-inline-start: auto;
 }
 
+/* A word longer than the column breaks inside it, rather than spilling over the tools beside it. */
 .list-head__title {
   font: var(--text-headline);
+  overflow-wrap: anywhere;
+}
+
+/* A ranking's title leads to its list: a heading still, a link on hover. */
+.list-head__title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.list-head__title a:hover {
+  text-decoration: underline;
 }
 
 .list-head__meta {

@@ -467,7 +467,7 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
   if (theirs === null) return;
   check(deps);
   // Read again after the wait: a board may have moved here meanwhile, and
-  // only the id is this step's to change, and only while it is still the one
+  // only the publication is this step's to change, and only while it is still the one
   // that was asked about. Everything else is kept as it is now.
   const gone = claimed.flatMap((asked) => {
     const board = deps.repository.get(asked.uid);
@@ -476,9 +476,9 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
       ? [board]
       : [];
   });
+  // Private again, the board is one's own: the name publishing put on it
+  // goes, or Your lists would take it for a copy of somebody else's.
   if (gone.length > 0) {
-    deps.repository.saveAll(
-      gone.map((board) => setPublished(board, null, board.authorName, deps.now())),
-    );
+    deps.repository.saveAll(gone.map((board) => setPublished(board, null, null, deps.now())));
   }
 }

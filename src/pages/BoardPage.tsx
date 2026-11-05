@@ -15,7 +15,6 @@ import {
   newBoard,
   poolCount,
   poolTier,
-  rankedCount,
   rankedTiers,
   rename,
   putBack,
@@ -34,6 +33,7 @@ import {
   type PublishingDeps,
 } from "../features/boards/BoardSettings";
 import { RankedList } from "../features/boards/RankedList";
+import { metaOf } from "../features/boards/boardText";
 import { filedUnder } from "../features/boards/sectionChoices";
 import { shareBoard as shareBoardPicture, type Share } from "../features/ranking/share";
 import type { EditorDeps } from "../features/sections/editorDeps";
@@ -82,6 +82,8 @@ import { usePlayBack } from "../features/play/usePlayBack";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { localStorageStore } from "../lib/storage";
 import type { BoardsPageState } from "./BoardsPage";
+import { useModerator, type LoadReports } from "../features/moderation/useModerator";
+import { ListPageLoading } from "./ListPageStates";
 import "./ListPage.css";
 import "../features/editor/owner.css";
 import "../features/editor/editor.css";
@@ -105,6 +107,8 @@ interface BoardPageProps {
   houseStore?: KeyValueStore;
   /** The boards this device edits for the house, apart from one's own and never synced. */
   houseRepository?: BoardsRepository;
+  /** Asks whether this account is staff: the owner and moderators may read the reports. */
+  loadReports?: LoadReports;
 }
 
 /** The settings sheet, or what its Propose a section opened in its place: the form, or the three already waiting. */
@@ -227,7 +231,31 @@ const sitePublishing: PublishingDeps = {
   unpublish: unpublishList,
 };
 
-export function BoardPage({
+/**
+ * A new board for the house is the staff's: the address alone makes one only
+ * for the owner and the moderators, whom the backend lets publish as the
+ * house. Anyone else following such a link gets a list of their own, kept
+ * among their other lists. Until the backend says who this is, such a link
+ * waits, since a board touched meanwhile would be kept in the wrong place.
+ */
+export function BoardPage(props: BoardPageProps) {
+  const { uid = "" } = useParams();
+  const [params] = useSearchParams();
+  const { account } = useSession();
+  const moderator = useModerator(props.loadReports);
+  const own = useBoard(uid, props.repository ?? site);
+  const forHouse = useBoard(uid, props.houseRepository ?? houseBoards);
+  const known = own !== null || forHouse !== null;
+  const staff = account?.kind === "signedIn" && moderator.status === "yes";
+  const unsure =
+    account === null || (account.kind === "signedIn" && moderator.status === "unknown");
+  if (!known && !staff && unsure && houseLinkOfParam(params.get(HOUSE_PARAM)) !== null) {
+    return <ListPageLoading note={strings.new.openingList} rows={2} />;
+  }
+  return <OpenBoard {...props} staff={staff} />;
+}
+
+function OpenBoard({
   repository: ownBoards = site,
   now = Date.now,
   find,
@@ -242,7 +270,8 @@ export function BoardPage({
   house: houseSend,
   houseStore = localStorageStore,
   houseRepository = houseBoards,
-}: BoardPageProps) {
+  staff,
+}: BoardPageProps & { staff: boolean }) {
   const { uid = "" } = useParams();
   const [params] = useSearchParams();
   const own = useBoard(uid, ownBoards);
@@ -255,7 +284,8 @@ export function BoardPage({
   // nobody's, and the account's sync never carries it. A board of one's own
   // stays one's own, whatever an older link says.
   const remembered = forHouse === null ? null : houseLinkOf(uid, houseStore);
-  const asked = own === null ? houseLinkOfParam(params.get(HOUSE_PARAM)) : null;
+  const asked =
+    own === null && (forHouse !== null || staff) ? houseLinkOfParam(params.get(HOUSE_PARAM)) : null;
   const house = remembered ?? asked ?? (forHouse === null ? null : { listId: null });
   const repository = house === null ? ownBoards : houseRepository;
   const stored = house === null ? own : forHouse;
@@ -319,7 +349,8 @@ export function BoardPage({
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
-  // The board's own scratch for the ranking board: nothing of it outlives the page.
+  // The board's own scratch for the ranking board: nothing of it outlives the
+  // page. Where the pool sits and the menu's hint are the device's, and stay.
   const [scratch] = useState(() => memoryStore());
 
   usePageTitle(board === null ? null : board.title || strings.boards.untitled);
@@ -592,14 +623,16 @@ export function BoardPage({
   };
 
   // The picture of the board as the phone draws it, every tier and the pool;
-  // the address under it is the published list's when there is one, the site's otherwise.
+  // the address under it is the published list's when there is one, the site's
+  // otherwise. A house board is tied to its list by the house's link, not by an id of its own.
+  const listId = board.publishedId ?? houseListId;
   const shareBoard = () =>
     share(
       view.list,
       view.rows,
-      board.publishedId === null
+      listId === null
         ? window.location.origin
-        : `${window.location.origin}/l/${encodeURIComponent(board.publishedId)}`,
+        : `${window.location.origin}/l/${encodeURIComponent(listId)}`,
     ).catch(() => setNotice({ text: strings.rank.downloadFailed }));
 
   // A picture belongs to an account: a guest is asked to sign in at the first
@@ -619,7 +652,6 @@ export function BoardPage({
     return keepWeb(url);
   };
 
-  const ranked = rankedCount(board);
   const inPool = poolCount(board);
   const tools = (
     <AddCardBox
@@ -650,13 +682,12 @@ export function BoardPage({
             onEdit={() => setEditingTitle(true)}
             onKeep={(title) => {
               setEditingTitle(false);
-              keep(rename(board, title.trim().length > 0 ? title : strings.boards.untitled, now()));
+              keep(rename(board, title, now()));
             }}
           />
           <p className="list-head__meta">
             {[
-              ranked === 0 ? strings.boards.nothingRanked : plural(strings.boards.ranked, ranked),
-              plural(strings.boards.inPool, inPool),
+              metaOf(board),
               ...(board.category === null ? [] : [filedUnder(board.category, sections, me)]),
             ].join(" · ")}
           </p>
@@ -739,7 +770,12 @@ export function BoardPage({
           waiting={waiting.length}
           send={propose}
           deps={proposeDeps}
-          onTooMany={() => setPanel("tooMany")}
+          onTooMany={() => {
+            setPanel("tooMany");
+            // Another tab or device proposed meanwhile: the dialog lists what the backend counted.
+            store.invalidate();
+            store.refresh(me ?? "guest");
+          }}
           onClose={() => setPanel("settings")}
           onDone={() => {
             setPanel("settings");
@@ -773,6 +809,7 @@ export function BoardPage({
                 .join(",")}`}
               list={view.list}
               store={scratch}
+              device={localStorageStore}
               strip={board.displayMode === "HORIZONTAL_SCROLL"}
               edit={{
                 rows: view.rows,

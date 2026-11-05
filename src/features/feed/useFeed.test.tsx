@@ -1,9 +1,10 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
-import { readRememberedPage, useFeed, type LoadFeed } from "./useFeed";
+import { noteListChanged } from "../../lib/listChanges";
+import { forgetFurtherPagesForTests, readRememberedPage, useFeed, type LoadFeed } from "./useFeed";
 
 const summary = (id: string): ListSummary => ({
   id,
@@ -55,6 +56,8 @@ function Probe({ query, load }: { query: FeedQuery; load: LoadFeed }) {
 const shown = () => screen.getByRole("status");
 const popular: FeedQuery = { sort: "popular" };
 
+beforeEach(() => forgetFurtherPagesForTests());
+
 describe("useFeed", () => {
   it("opens a feed read before with its last first page, and swaps in the fresh one", async () => {
     const { unmount } = render(<Probe query={popular} load={async () => page(["a", "b"], "c")} />);
@@ -68,8 +71,29 @@ describe("useFeed", () => {
     expect(shown()).toHaveTextContent("z|-|idle");
   });
 
+  it("lets a remembered page go once a list on it was taken down or changed here", async () => {
+    const anime: FeedQuery = { category: "anime" };
+    const books: FeedQuery = { category: "books" };
+    for (const [query, ids] of [
+      [anime, ["a", "gone"]],
+      [books, ["c"]],
+    ] as const) {
+      const { unmount } = render(<Probe query={query} load={async () => page([...ids])} />);
+      expect(await screen.findByText(`${ids.join(",")}|-|idle`)).toBeInTheDocument();
+      unmount();
+    }
+
+    noteListChanged("gone");
+    const never = () => new Promise<FeedPage>(() => undefined);
+    const { unmount } = render(<Probe query={anime} load={never} />);
+    expect(shown()).toHaveTextContent("loading");
+    unmount();
+    render(<Probe query={books} load={never} />);
+    expect(shown()).toHaveTextContent("c|-|idle");
+  });
+
   it("does not keep which lists were the reader's own", async () => {
-    const memory = { recall: vi.fn(() => null), keep: vi.fn() };
+    const memory = { recall: vi.fn(() => null), keep: vi.fn(), forget: vi.fn() };
     const own = { ...summary("a"), mine: true };
     function Kept() {
       useFeed(popular, async () => ({ lists: [own], nextCursor: null }), memory);
@@ -138,6 +162,63 @@ describe("useFeed", () => {
     await screen.findByText("a|c1|failed");
     await userEvent.click(screen.getByRole("button", { name: "more" }));
     await screen.findByText("a,b|-|idle");
+  });
+
+  it("draws the pages shown before under the fresh first page on the way back, and not after Try again", async () => {
+    const query: FeedQuery = { author: "u9", sort: "recent" };
+    const load = vi
+      .fn<LoadFeed>()
+      .mockResolvedValueOnce(page(["a"], "c1"))
+      .mockResolvedValueOnce(page(["b", "c"], "c2"));
+    const { unmount } = render(<Probe query={query} load={load} />);
+    await screen.findByText("a|c1|idle");
+    await userEvent.click(screen.getByRole("button", { name: "more" }));
+    await screen.findByText("a,b,c|c2|idle");
+    unmount();
+
+    // Back: the kept first page with the further ones at once, then the fresh first page over them.
+    const fresh = deferred<FeedPage>();
+    render(<Probe query={query} load={() => fresh.promise} />);
+    expect(shown()).toHaveTextContent("a,b,c|c2|idle");
+    await act(async () => fresh.resolve(page(["new", "a"], "c1")));
+    expect(shown()).toHaveTextContent("new,a,b,c|c2|idle");
+
+    // Asked afresh, the feed starts from its first page again.
+    await userEvent.click(screen.getByRole("button", { name: "retry" }));
+    expect(await screen.findByText("new,a|c1|idle")).toBeInTheDocument();
+  });
+
+  it("shows each list once when the next page repeats some, and reads past a page of nothing new", async () => {
+    const query: FeedQuery = { category: "anime", sort: "popular" };
+    const load = vi
+      .fn<LoadFeed>()
+      .mockResolvedValueOnce(page(["a", "b"], "c1"))
+      .mockResolvedValueOnce(page(["b", "c"], "c2"))
+      .mockResolvedValueOnce(page(["c"], "c3"))
+      .mockResolvedValueOnce(page(["d"]));
+    render(<Probe query={query} load={load} />);
+    await screen.findByText("a,b|c1|idle");
+    await userEvent.click(screen.getByRole("button", { name: "more" }));
+    await screen.findByText("a,b,c|c2|idle");
+    await userEvent.click(screen.getByRole("button", { name: "more" }));
+    await screen.findByText("a,b,c,d|-|idle");
+    expect(load.mock.calls.map((call) => call[0].after)).toEqual([undefined, "c1", "c2", "c3"]);
+  });
+
+  it("reads again from the top when the list a page ended at is gone", async () => {
+    const query: FeedQuery = { category: "games", sort: "popular" };
+    const load = vi
+      .fn<LoadFeed>()
+      .mockResolvedValueOnce(page(["a", "b"], "b"))
+      .mockRejectedValueOnce(new ApiFailure({ kind: "cursorGone" }))
+      // b was taken down: the top now ends at a, and the page after it brings c.
+      .mockResolvedValueOnce(page(["a"], "a"))
+      .mockResolvedValueOnce(page(["c"]));
+    render(<Probe query={query} load={load} />);
+    await screen.findByText("a,b|b|idle");
+    await userEvent.click(screen.getByRole("button", { name: "more" }));
+    await screen.findByText("a,b,c|-|idle");
+    expect(load.mock.calls.map((call) => call[0].after)).toEqual([undefined, "b", undefined, "a"]);
   });
 
   it("names a failed first page and loads it again on retry", async () => {

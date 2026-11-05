@@ -162,6 +162,7 @@ describe("Play on a page", () => {
     const notify = vi.fn();
     render(<Page store={store} notify={notify} />);
     await startGame(/Bracket/);
+    await pickLeft(1);
     await userEvent.keyboard("{Escape}");
     const saved = notify.mock.lastCall![0] as SnackbarNotice;
     expect(saved.action!.text).toBe("Discard");
@@ -172,7 +173,10 @@ describe("Play on a page", () => {
 
   it("discards a saved game when another starts, with a way back to it", async () => {
     const store = memoryStore();
-    const old = { ...newGame("swiss", ["c0", "c1", "c2"], EVERYTHING, 4, NOW), history: [] };
+    const old = {
+      ...newGame("swiss", ["c0", "c1", "c2"], EVERYTHING, 4, NOW),
+      history: [[0, 1, 0] as const],
+    };
     localGames(store, () => NOW).save("b1", old);
     const notify = vi.fn();
     render(<Page store={store} notify={notify} />);
@@ -181,7 +185,8 @@ describe("Play on a page", () => {
     await startGame(/Bracket/);
     const receipt = notify.mock.lastCall![0] as SnackbarNotice;
     expect(receipt.text).toBe("Saved game discarded");
-    expect(localGames(store).load("b1")?.spec.kind).toBe("bracket");
+    // The new game is kept from its first answer on.
+    expect(localGames(store).load("b1")).toBeNull();
 
     act(() => receipt.action!.onClick());
     expect(localGames(store).load("b1")).toEqual(old);
@@ -281,11 +286,60 @@ describe("Play on a page", () => {
     expect(store.read(playKey("b1"))).toBeNull();
 
     act(() => receipt.action!.onClick());
-    expect(screen.getByRole("heading", { name: "Your result" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Your result" })).toHaveFocus();
     await userEvent.click(screen.getByRole("button", { name: "Play again" }));
     expect(screen.getByRole("dialog", { name: "Play" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /King of the hill/ })).toBeChecked();
+    // The finished game stays put down until another starts, as on the app.
+    expect(store.read(playKey("b1"))).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(store.read(playKey("b1"))).not.toBeNull();
+    await userEvent.click(playButton());
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    expect((notify.mock.lastCall![0] as SnackbarNotice).text).toBe("Saved game discarded");
+  });
+
+  it("keeps nothing of a game quit before any answer, and says nothing", async () => {
+    const store = memoryStore();
+    const notify = vi.fn();
+    render(<Page store={store} notify={notify} />);
+    await startGame(/Bracket/);
+    await userEvent.click(screen.getByRole("button", { name: "Quit" }));
+    expect(notify).not.toHaveBeenCalled();
     expect(store.read(playKey("b1"))).toBeNull();
+    expect(playButton()).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("sees a game kept in another tab, and Start says it goes", async () => {
+    const store = memoryStore();
+    const notify = vi.fn();
+    render(<Page store={store} notify={notify} />);
+    expect(playButton()).not.toHaveAttribute("aria-describedby");
+    const elsewhere = {
+      ...newGame("swiss", ["c0", "c1", "c2"], EVERYTHING, 4, NOW),
+      history: [[0, 1, 0] as const],
+    };
+    localGames(store, () => NOW).save("b1", elsewhere);
+    act(() => window.dispatchEvent(new StorageEvent("storage", { key: "play:b1" })));
+    expect(playButton()).toHaveAccessibleDescription("A game is saved.");
+    await userEvent.click(playButton());
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    expect((notify.mock.lastCall![0] as SnackbarNotice).text).toBe("Saved game discarded");
+  });
+
+  it("shows no saved dot on a Play that cannot open", () => {
+    const store = memoryStore();
+    const old = {
+      ...newGame("swiss", ["c0", "c1", "c2"], EVERYTHING, 4, NOW),
+      history: [[0, 1, 0] as const],
+    };
+    localGames(store, () => NOW).save("b1", old);
+    render(<Page store={store} cards={cardsOf(2)} />);
+    expect(playButton()).toHaveAccessibleDescription("Play needs at least 3 cards.");
+    expect(document.querySelector(".play-button__dot")).toBeNull();
   });
 
   it("keeps its keys from the board behind the sheet", async () => {

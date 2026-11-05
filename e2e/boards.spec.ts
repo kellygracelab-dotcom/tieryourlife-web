@@ -131,9 +131,10 @@ test("the old /new and a suggestion of the empty page make a list in its section
   await page.goto("/b");
   await expect(page.getByText("No lists yet")).toBeVisible();
   await press(page.getByRole("link", { name: "Restaurants" }), hasTouch);
-  await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&category=food$/);
+  await expect(page).toHaveURL(/\/b\/[^?]+\?new=\d+&title=Restaurants&category=food$/);
   const title = page.getByRole("textbox", { name: "Title" });
   await expect(title).toBeFocused();
+  await expect(title).toHaveValue("Restaurants");
   await title.fill("Ramen in Kyiv");
   await title.press("Enter");
   await expect(page.getByText(/Food/)).toBeVisible();
@@ -158,7 +159,7 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
   await expect(publicSwitch).toBeEnabled();
   await expect(page.getByText(/Sign in with Google to publish/)).toBeVisible();
   await page.getByRole("button", { name: /Cover/ }).click();
-  await expect(page.getByText("None of this list's cards have a picture yet.")).toBeVisible();
+  await expect(page.getByText("None of this list’s cards have a picture yet.")).toBeVisible();
   await page.getByRole("button", { name: "Done" }).click();
   await expect(page.getByRole("dialog", { name: "List settings" })).toBeHidden();
 
@@ -328,7 +329,7 @@ test("saves somebody's list to my boards, asking whose ranking to keep", async (
   await page.getByRole("button", { name: "Save to my lists" }).click();
   const dialog = page.getByRole("dialog", { name: "Which ranking to save?" });
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "The author's" }).click();
+  await dialog.getByRole("button", { name: "The author’s" }).click();
   await expect(page.getByText("Saved to your lists.")).toBeVisible();
 
   // Open leads to the copy: the author's arrangement, the list's name, a board of mine.

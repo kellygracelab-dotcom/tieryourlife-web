@@ -41,8 +41,11 @@ function actionOf(event: KeyboardEvent): Action | null {
   return null;
 }
 
-/** An answer on its way: what the cards are doing until the game takes it. */
-type Motion =
+/**
+ * An answer the game has already taken, still playing out on the stage: the
+ * duel it answered stays in view until the motion ends.
+ */
+type Motion = { from: Game } & (
   | {
       kind: "pick";
       winner: number;
@@ -51,7 +54,8 @@ type Motion =
       /** Each side whose card stays for the next duel (the hill's champion): it does not fade. */
       stays: readonly [boolean, boolean];
     }
-  | { kind: "skip" };
+  | { kind: "skip" }
+);
 
 interface DuelLayerProps {
   game: Game;
@@ -76,15 +80,20 @@ interface DuelLayerProps {
 export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayerProps) {
   const box = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
-  useModal(box, onQuit, ".duel__title");
+  // A layer that opens on a finished game shows its result, whose heading takes the focus.
+  useModal(box, onQuit, ".duel__title, .result-view__title");
   const sideways = useMedia(SIDEWAYS);
 
-  const pair = useMemo(() => currentPair(game), [game]);
-  const progress = useMemo(() => gameProgress(game), [game]);
-  const over = pair === null;
-  const nameOf = (card: number) => cardOf(board, game.ids[card] ?? "").name;
-
   const [motion, setMotion] = useState<Motion | null>(null);
+  // The game is told of an answer at once, as the app records it, so a Quit,
+  // Escape or Back during the motion keeps it; the stage shows the duel it
+  // answered until the motion ends.
+  const shown = motion?.from ?? game;
+  const pair = useMemo(() => currentPair(shown), [shown]);
+  const progress = useMemo(() => gameProgress(shown), [shown]);
+  const over = pair === null;
+  const nameOf = (card: number) => cardOf(board, shown.ids[card] ?? "").name;
+
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const later = (ms: number, then: () => void) => {
     timers.current.push(setTimeout(then, ms));
@@ -102,10 +111,7 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
   }, [over, revealed]);
   const showResult = over && revealed;
 
-  const answer = (next: Game) => {
-    setMotion(null);
-    onChange(next);
-  };
+  const settle = (ms: number) => later(ms, () => setMotion(null));
 
   const act = (action: Action) => {
     if (motion !== null || over) return;
@@ -116,24 +122,26 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
     if (pair === null) return;
     const reduced = lessMotion();
     if (action === "skip") {
-      setMotion({ kind: "skip" });
-      later(reduced ? REDUCED_MS : SKIP_DONE_MS, () => answer(skip(game)));
+      setMotion({ kind: "skip", from: game });
+      onChange(skip(game));
+      settle(reduced ? REDUCED_MS : SKIP_DONE_MS);
       return;
     }
     const winner = action === "first" ? pair[0] : pair[1];
     const next = pick(game, winner);
     const coming = currentPair(next);
     const stays: [boolean, boolean] = [coming?.[0] === pair[0], coming?.[1] === pair[1]];
+    onChange(next);
     if (reduced) {
-      setMotion({ kind: "pick", winner, fading: true, stays });
-      later(REDUCED_MS, () => answer(next));
+      setMotion({ kind: "pick", winner, fading: true, stays, from: game });
+      settle(REDUCED_MS);
       return;
     }
-    setMotion({ kind: "pick", winner, fading: false, stays });
+    setMotion({ kind: "pick", winner, fading: false, stays, from: game });
     later(PICK_FADE_AT_MS, () =>
       setMotion((now) => (now?.kind === "pick" ? { ...now, fading: true } : now)),
     );
-    later(PICK_DONE_MS, () => answer(next));
+    settle(PICK_DONE_MS);
   };
   // The key listener is added once; it reaches the latest game through here.
   const latest = useRef(act);
@@ -168,7 +176,7 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
 
   const done = over ? 1 : progress.total === 0 ? 0 : progress.asked / progress.total;
   const count = over ? "" : duelText(progress);
-  const line = secondLine(game, nameOf);
+  const line = secondLine(shown, nameOf);
 
   const quit = (
     <button type="button" className="duel__icon" aria-label={strings.play.quit} onClick={onQuit}>
@@ -181,7 +189,7 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
       className="duel__icon"
       aria-label={strings.play.undoPick}
       onClick={() => act("undo")}
-      disabled={!canUndo(game) || over}
+      disabled={!canUndo(shown) || over}
     >
       <Icon name="undo" />
     </button>
@@ -202,7 +210,7 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
           ↓
         </kbd>
       </button>
-      <SkipHelp spent={game.history.length >= SKIP_HELP_DUELS} />
+      <SkipHelp spent={shown.history.length >= SKIP_HELP_DUELS} />
     </>
   );
   const slots =
@@ -212,7 +220,7 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
           <Slot
             // Keyed by the card: one that stays (the hill's champion) keeps its place, only a new one rises.
             key={`${side}:${pair[side]}`}
-            card={cardOf(board, game.ids[pair[side]] ?? "")}
+            card={cardOf(board, shown.ids[pair[side]] ?? "")}
             keycap={side === 0 ? "←" : "→"}
             state={stateOf(motion, pair, side)}
             leaving={leavingOf(motion, side)}

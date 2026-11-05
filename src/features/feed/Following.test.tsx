@@ -150,7 +150,7 @@ describe("the Following tab", () => {
 
   it("offers the sections to follow and people worth following while nothing is followed", async () => {
     open();
-    expect(await screen.findByText("You aren't following anything yet")).toBeInTheDocument();
+    expect(await screen.findByText("You aren’t following anything yet")).toBeInTheDocument();
     const followGames = await screen.findByRole("button", { name: "Follow Games" });
     expect(followGames).toHaveAttribute("aria-pressed", "false");
     // An editorial account is nobody to follow: its lists stand without an author.
@@ -181,12 +181,35 @@ describe("the Following tab", () => {
     expect(strip.getAllByRole("link")[0]).toHaveFocus();
   });
 
+  it("turns into the feed of a person followed from the suggestions", async () => {
+    let followed = false;
+    load.mockImplementation(async (query) =>
+      !query.following
+        ? { lists: [list("p1")], nextCursor: null }
+        : followed
+          ? { lists: [list("f1")], nextCursor: null }
+          : { lists: [], nextCursor: null, followingNobody: true },
+    );
+    follow.mockImplementation(async () => {
+      followed = true;
+    });
+    loadFollowing.mockImplementation(async () =>
+      followed ? { ...nobody, authors: [{ uid: "u2", name: "someone", photoUrl: null }] } : nobody,
+    );
+    open();
+    const card = (await screen.findByText("someone")).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Follow" }));
+    expect(await screen.findByRole("link", { name: /List f1/ })).toBeInTheDocument();
+    expect(screen.queryByText("You aren't following anything yet")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Following" })).toHaveTextContent("someone");
+  });
+
   it("keeps a refused pick picked, and says so", async () => {
     sectionsDeps.follow.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     open();
     await userEvent.click(await screen.findByRole("button", { name: "Follow Games" }));
     await userEvent.click(screen.getByRole("button", { name: "Follow · 1" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't follow. Try again.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t follow. Try again.");
     expect(screen.getByRole("button", { name: "Follow Games" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -218,6 +241,19 @@ describe("the Following tab", () => {
       "href",
       "/s?waiting=street-food",
     );
+  });
+
+  it("holds the lists back until the strip above them is in, so nothing is pushed down", async () => {
+    let answer!: (following: Following) => void;
+    loadFollowing.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    load.mockResolvedValue({ lists: [list("a", { category: "anime" })], nextCursor: null });
+    open();
+    await vi.waitFor(() => expect(load).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByRole("link", { name: /List a/ })).toBeNull();
+    answer({ ...nobody, sections: [{ id: "anime", followerCount: 1 }] });
+    expect(await screen.findByRole("link", { name: /List a/ })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Following" })).toBeInTheDocument();
   });
 
   it("lists a followed section the sections leave out, by its name, and why its lists are there", async () => {
@@ -343,7 +379,7 @@ describe("the Following tab", () => {
     open();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load your feed.");
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(await screen.findByText("You aren't following anything yet")).toBeInTheDocument();
+    expect(await screen.findByText("You aren’t following anything yet")).toBeInTheDocument();
   });
 
   it("is not a guest's: no tabs, and its address leads to Explore", async () => {

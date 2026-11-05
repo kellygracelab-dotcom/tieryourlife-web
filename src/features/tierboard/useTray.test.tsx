@@ -119,4 +119,23 @@ describe("useTray", () => {
       expect(getByText(`page ${page} of 3`)).toBeInTheDocument();
     }
   });
+
+  it("puts the last dot on at the row's end, where a wide row stops short of a page", () => {
+    const { container, getByText } = render(<Tray selected={null} count={12} />);
+    const row = container.querySelector("ul") as HTMLUListElement;
+    layOut(row);
+    // Twelve tiles in a row 600 wide: it scrolls only 120 in all.
+    Object.defineProperty(row, "scrollWidth", { configurable: true, value: 720 });
+    Object.defineProperty(row, "clientWidth", { configurable: true, value: 600 });
+    for (const [scrolled, page] of [
+      [0, 0],
+      [60, 0],
+      [120, 2],
+      [-120, 2],
+    ] as const) {
+      row.scrollLeft = scrolled;
+      act(() => row.dispatchEvent(new Event("scroll")));
+      expect(getByText(`page ${page} of 3`)).toBeInTheDocument();
+    }
+  });
 });

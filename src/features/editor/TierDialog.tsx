@@ -200,14 +200,17 @@ export function TierDialog({ tier, mode, canRemove, place, dispatch, onClose }: 
               {strings.boards.removeTier}
             </Button>
           )}
+          {/* Greyed out at either end but still focusable: a move to the top keeps the keyboard on it. */}
           {mode === "edit" && place !== undefined && (
             <span className="tier-dialog__moves">
               <button
                 type="button"
                 className="tier-dialog__move"
                 aria-label={fill(strings.new.moveUp, { name: tier.label })}
-                disabled={place.index === 0}
-                onClick={() => dispatch({ type: "moveTier", key: tier.key, by: -1 })}
+                aria-disabled={place.index === 0}
+                onClick={() => {
+                  if (place.index > 0) dispatch({ type: "moveTier", key: tier.key, by: -1 });
+                }}
               >
                 <Icon name="arrow_upward" />
               </button>
@@ -215,8 +218,12 @@ export function TierDialog({ tier, mode, canRemove, place, dispatch, onClose }: 
                 type="button"
                 className="tier-dialog__move"
                 aria-label={fill(strings.new.moveDown, { name: tier.label })}
-                disabled={place.index >= place.count - 1}
-                onClick={() => dispatch({ type: "moveTier", key: tier.key, by: 1 })}
+                aria-disabled={place.index >= place.count - 1}
+                onClick={() => {
+                  if (place.index < place.count - 1) {
+                    dispatch({ type: "moveTier", key: tier.key, by: 1 });
+                  }
+                }}
               >
                 <Icon name="arrow_downward" />
               </button>

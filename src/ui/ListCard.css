@@ -24,6 +24,16 @@
   color: var(--ink);
 }
 
+/* The card clips what it holds, the link's ring with it: the ring goes round the whole card. */
+.list-card__main:focus-visible {
+  outline: none;
+}
+
+.list-card:has(.list-card__main:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .list-card .art {
   aspect-ratio: auto;
   height: var(--card-cover, 132px);
@@ -139,4 +149,15 @@
   font: 400 12px/16px var(--font);
   color: var(--ink-faint);
   white-space: nowrap;
+}
+
+/*
+ * A 320 px phone in a long language has no room for a name beside
+ * "24 карточки": the count goes under it rather than the name to "d…".
+ */
+@media (max-width: 359px) {
+  .list-card__body {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
 }

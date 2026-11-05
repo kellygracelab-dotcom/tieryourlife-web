@@ -219,6 +219,51 @@ describe("BoardSyncProvider", () => {
     expect(keeps[1]).toMatchObject({ uid: "a", request: { basedOn: 1, title: "A2" } });
   });
 
+  it("lets a change to the game alone wait for the longer pause, an edit going up soon", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    repository.save(newBoard("a", "A", 1, uids()));
+    const { api, keeps } = fakeApi();
+    render(
+      <SessionContext.Provider value={sessionOf(signedIn)}>
+        <BoardSyncProvider
+          repository={repository}
+          store={store}
+          api={api}
+          syncAfterMs={10}
+          // Long enough that a loaded machine's few settles never reach it.
+          playSyncAfterMs={1000}
+          resolvePicture={() => () => Promise.resolve(null)}
+        >
+          <Probe />
+        </BoardSyncProvider>
+      </SessionContext.Provider>,
+    );
+    await waitFor(() => expect(keeps).toHaveLength(1));
+    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("in idle -"));
+
+    const play = {
+      kind: "hill" as const,
+      count: 3,
+      seed: 1,
+      refine: false,
+      ids: ["x", "y", "z"],
+      history: [[0, 1, 0] as [number, number, number | null]],
+      round: 0,
+      startedAt: 1,
+    };
+    act(() => repository.save({ ...repository.get("a")!, play }));
+    await settle();
+    act(() => repository.save({ ...repository.get("a")!, play: { ...play, history: [] } }));
+    await settle();
+    expect(keeps).toHaveLength(1);
+    await waitFor(() => expect(keeps).toHaveLength(2), { timeout: 3000 });
+
+    act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 5 }));
+    await settle();
+    expect(keeps).toHaveLength(3);
+  });
+
   it("asks after signing into an account used before, and moves the boards made without one in", async () => {
     const store = memoryStore();
     const owners = boardOwners(store);

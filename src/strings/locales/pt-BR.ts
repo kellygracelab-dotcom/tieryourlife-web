@@ -9,7 +9,9 @@ import type { Translation } from "../index";
 const ptBR: Translation = {
   tagline: "Versão web",
   nav: {
+    opening: "Abrindo a página…",
     site: "Site",
+    skipToContent: "Pular para o conteúdo",
     signIn: "Entrar",
     signOut: "Sair",
     account: "Sua conta",
@@ -86,8 +88,8 @@ const ptBR: Translation = {
     title: "Configurações",
     guestTitle: "Entre para mudar suas configurações.",
     guestBody:
-      "Seu nome, sua imagem e o tema pertencem a uma conta. Classificar uma lista não precisa de uma.",
-    themeGuestNote: "Fica salvo neste aparelho enquanto você não entra.",
+      "Seu nome e sua imagem pertencem a uma conta. Classificar uma lista não precisa de uma.",
+    themeGuestNote: "Fica salvo neste aparelho, tendo você entrado ou não.",
     nameTitle: "Seu nome",
     nameBody:
       "O nome que aparece como autor em cada lista que você publica. Seu e-mail nunca é mostrado.",
@@ -135,7 +137,7 @@ const ptBR: Translation = {
     placeTitle: "Posicione sua foto",
     placeFrame: "A imagem que vai no círculo",
     placeUse: "Usar esta",
-    placeFailed: "Não foi possível mostrar a imagem aqui. Ela ainda pode ser usada como está.",
+    placeFailed: "Essa imagem não carrega, então não pode ser seu rosto. Escolha outra.",
     placeHelp: "Arraste para mover; use dois dedos ou role para ampliar.",
     placeAsItIs: "Esta imagem só pode ser usada como está.",
   },
@@ -193,6 +195,7 @@ const ptBR: Translation = {
     unfollowed: "Você deixou de seguir {name}",
     undo: "Desfazer",
     failed: "Não foi possível seguir. Tente de novo.",
+    unfollowFailed: "Não foi possível deixar de seguir. Tente de novo.",
     cancel: "Cancelar",
     signInTitle: "Entre para seguir",
     signInBody: "Seguir alguém deixa as novas listas dessa pessoa no topo do seu feed.",
@@ -309,13 +312,13 @@ const ptBR: Translation = {
     startOver: "Começar de novo",
     more: "Mais",
     failedOffline:
-      "Sem conexão. Seu rascunho está a salvo neste aparelho; tente de novo quando voltar a ficar online.",
+      "Sem conexão. Nada foi perdido: a lista está a salvo neste aparelho. Tente de novo quando voltar a ficar online.",
     failedBanned: "Você não pode publicar no momento.",
     failedTooMany:
-      "Esta conta já publicou o máximo de listas que pode. Retire uma no app primeiro.",
+      "Esta conta já publicou o máximo de listas que pode. Retire uma em Suas listas públicas primeiro.",
     failedSignedOut: "Publicar precisa de uma conta. Entre e tente de novo.",
-    failedTooLarge: "A lista é grande demais para publicar. {detail}",
-    failedInvalid: "A lista foi recusada. {detail}",
+    failedTooLarge: "A lista é grande demais para publicar.",
+    failedInvalid: "A lista foi recusada.",
     failedOther: "Não foi possível publicar. Nada foi perdido. Tente de novo.",
     editTitle: "Editar lista",
     editSignIn: "Entre para editar as listas que você publicou.",
@@ -395,6 +398,7 @@ const ptBR: Translation = {
     copyLink: "Copiar link",
     share: "Compartilhar",
     linkCopied: "Link copiado",
+    copyFailed: "Não foi possível copiar o link: {link}",
     hiddenNotice: "Oculto para você",
     undo: "Desfazer",
     hiddenTitle: "Você ocultou esta lista",
@@ -482,6 +486,7 @@ const ptBR: Translation = {
     dock: "Onde ficam os cards",
     dockBeside: "Cards ao lado dos níveis",
     dockUnder: "Cards abaixo dos níveis",
+    dockRows: "Fileiras de cards abaixo dos níveis",
     allPlaced: { one: "O card está colocado", other: "Os {n} cards estão colocados" },
     allPlacedNote: "Mudou de ideia? Arraste um card, ou termine e pegue seu link.",
     allPlacedNoteEdit: "Mudou de ideia? Arraste um card, ou salve o que tem.",
@@ -501,6 +506,9 @@ const ptBR: Translation = {
       "Qualquer pessoa com esse link vê a sua versão ao lado da do autor. Ela fica sem precisar de conta.",
     liveNoteKept:
       "Qualquer pessoa com esse link vê a sua versão ao lado da do autor. Ela está guardada nas suas classificações.",
+    liveNoteAlone: "Qualquer pessoa com esse link vê a sua versão. Ela fica sem precisar de conta.",
+    liveNoteAloneKept:
+      "Qualquer pessoa com esse link vê a sua versão. Ela está guardada nas suas classificações.",
     copy: "Copiar link",
     copied: "Copiado",
     download: "Baixar imagem",
@@ -592,6 +600,9 @@ const ptBR: Translation = {
   crash: {
     title: "Algo deu errado nesta página",
     body: "Recarregar costuma resolver. Se não resolver, o resto do site continua funcionando.",
+    offlineTitle: "Esta página não abre sem conexão",
+    offlineBody:
+      "Ela ainda não tinha sido aberta nesta visita, e a conexão caiu. Recarregue quando voltar a ficar online; as páginas já abertas continuam funcionando.",
   },
   notFound: {
     title: "Não há nada neste endereço.",
@@ -600,6 +611,7 @@ const ptBR: Translation = {
   card: {
     by: "de {name}",
     items: { one: "{n} card", other: "{n} cards" },
+    moreTiers: { one: "e mais {n} nível", many: "e mais {n} níveis", other: "e mais {n} níveis" },
     rankings: { one: "{n} classificação", other: "{n} classificações" },
     noArt: "Sem imagem",
     yours: "Sua lista",
@@ -691,6 +703,8 @@ const ptBR: Translation = {
     topicCreated: "“{name}” criado",
     topicRenamed: "Renomeado para “{name}”",
     topicDeleted: "“{name}” excluído",
+    deleteTopicAsk: "Excluir “{name}”?",
+    deleteTopicBody: "Quem segue deixa de seguir. Não dá para desfazer.",
     people: { one: "{n} pessoa", other: "{n} pessoas" },
     findPerson: "Nome ou e-mail de uma conta que já entrou",
     appoint: "Nomear",
@@ -702,6 +716,7 @@ const ptBR: Translation = {
     owner: "Dono",
     you: "Você",
     since: "Moderador desde {date}",
+    nobodyFound: "Ninguém encontrado para “{q}”",
     newSection: "Nova seção",
     editSection: "Editar seção",
     edit: "Editar",
@@ -739,6 +754,7 @@ const ptBR: Translation = {
     otherTopics: "Listas em outros tópicos",
     finish: "Concluir",
     unfinishedNote: "Decidido, mas não concluído: algumas das listas ainda não foram movidas.",
+    unfinishedOwnerOnly: "Só o dono pode concluir uma mesclagem.",
     finished: "“{name}” concluído",
     sectionTaken: "Já existe uma seção chamada “{name}”",
     approveAsSection: "Aprovar como seção",
@@ -835,6 +851,10 @@ const ptBR: Translation = {
     following: "Seguindo",
     unfollowed: "Você deixou de seguir {name}",
     followFailed: "Não foi possível seguir. Tente de novo.",
+    unfollowFailed: "Não foi possível deixar de seguir. Tente de novo.",
+    followLimit:
+      "Você já segue o máximo de seções e temas possível. Deixe de seguir alguns primeiro.",
+    followSignInBody: "Seguir seções e temas deixa as novas listas deles no topo do seu feed.",
     undo: "Desfazer",
     waitingOnlyYou: "Até lá, só você vê este tema.",
     topicMissing: "Não há esse tema em {section}.",
@@ -845,6 +865,8 @@ const ptBR: Translation = {
     topicWaiting: "{name} · aguardando",
     waitingBody:
       "Um moderador vai analisar. Suas listas aparecem aqui depois da aprovação; até lá, ficam em {section}.",
+    topicWaitingBody:
+      "Um moderador vai analisar. Até lá, as listas dele ficam em {section} com esta etiqueta.",
     tabExplore: "Explorar",
     tabFollowing: "Seguindo",
     community: "Comunidade",
@@ -862,6 +884,7 @@ const ptBR: Translation = {
     sortMostLists: "Mais listas",
     sortName: "A–Z",
     find: "Encontrar uma seção",
+    findNone: "Nenhuma seção corresponde a “{q}”",
     propose: "Propor uma seção",
     waiting: "Aguardando",
     sections: "Seções",
@@ -908,6 +931,9 @@ const ptBR: Translation = {
     notImage: "Essa imagem não pode ser usada. Escolha outra.",
     notCropped: "A imagem precisa estar recortada em 16:10. Ajuste e tente de novo.",
     banned: "No momento você não pode propor seções.",
+    bannedUntil: "Você não pode propor seções até {date}.",
+    badFileUnder: "As listas não podem esperar nessa seção. Escolha outra.",
+    badIcon: "Esse ícone não pode ser usado. Escolha outro.",
     tooManyToday: "Você já propôs {max} seções hoje. Tente de novo amanhã.",
     discardAsk: "Descartar esta proposta?",
     keepEditing: "Continuar editando",
@@ -1196,6 +1222,14 @@ const ptBR: Translation = {
     anonymousBody: "Sem nome nem foto na lista. Só você pode alterá-la ou removê-la.",
     categoryWaiting: "Aguardando um moderador",
     menuHint: "Clique duas vezes ou com o botão direito em um card para movê-lo ou removê-lo.",
+    choose: "Selecionar",
+    pickToDelete: "Escolha as listas que quer excluir",
+    noneShown: 'Nenhuma lista em "{filter}"',
+    deletedTakenDown: {
+      one: "{n} lista excluída e a cópia pública retirada",
+      many: "{n} listas excluídas e as cópias públicas retiradas",
+      other: "{n} listas excluídas e as cópias públicas retiradas",
+    },
   },
   sync: {
     offBusy: "Apagando…",
@@ -1210,7 +1244,8 @@ const ptBR: Translation = {
       "Seus quadros ficam neste navegador. A cópia na sua conta é apagada, e um dispositivo novo começará vazio.",
     offConfirm: "Parar e apagar",
     offCancel: "Cancelar",
-    stuck: "Sem cópia desde {when}. Verifique sua conexão.",
+    stuck: "Sem cópia desde {when}. Toque em “Guardar cópia agora” para tentar de novo.",
+    stuckNever: "Ainda sem cópia. Toque em “Guardar cópia agora” para tentar de novo.",
     now: "Guardar cópia agora",
     backingUp: "Guardando cópia…",
     guestNote:

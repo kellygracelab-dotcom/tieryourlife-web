@@ -8,8 +8,9 @@ import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
 import { useModal } from "../../ui/useModal";
-import { placedOn } from "./rankings";
+import { placedOn, readerName } from "./rankings";
 import type { Rankings } from "./useRankings";
+import { initialOf } from "../../lib/initial";
 import "./rankings.css";
 
 interface RankingsSheetProps {
@@ -22,20 +23,27 @@ interface RankingsSheetProps {
   onClose: () => void;
 }
 
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
-
-function Face({ name, photoUrl }: { name: string; photoUrl: string | null }) {
-  return photoUrl !== null ? (
-    <img className="rankings__face" src={photoUrl} alt="" referrerPolicy="no-referrer" />
+/** A photo, or the name's letter when there is none or it does not load: Google's links expire. */
+function Face({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
+  const [broken, setBroken] = useState(false);
+  return photoUrl !== null && photoUrl.trim() !== "" && !broken ? (
+    <img
+      className="rankings__face"
+      src={photoUrl}
+      alt=""
+      referrerPolicy="no-referrer"
+      onError={() => setBroken(true)}
+    />
   ) : (
     <span className="rankings__face rankings__face--initial" aria-hidden="true">
-      {initialOf(name)}
+      {name === null ? <Icon name="person" /> : initialOf(name)}
     </span>
   );
 }
 
 interface RowProps {
-  name: string;
+  /** Null for a reader with no name, who is "Someone" in the reader's language. */
+  name: string | null;
   photoUrl: string | null;
   /** The day it was placed; nothing for a date the backend never wrote. */
   when: number;
@@ -58,7 +66,7 @@ function Row({ name, photoUrl, when, selected, onClick, pill, trailing }: RowPro
         <Face name={name} photoUrl={photoUrl} />
         <span className="rankings__text">
           <span className="rankings__name">
-            <bdi className="rankings__name-text">{name}</bdi>
+            <bdi className="rankings__name-text">{name ?? strings.profile.someone}</bdi>
             {pill !== undefined && <span className="rankings__pill">{pill}</span>}
           </span>
           {when > 0 && <span className="rankings__when">{placedOn(when)}</span>}
@@ -119,6 +127,12 @@ export function RankingsSheet({
   useModal(box, onClose);
   // Read when the sheet first opens; a list nobody opens the sheet of costs nothing.
   useEffect(() => open(), [open]);
+  // Opened again after choosing somebody further down, the sheet starts at them.
+  useEffect(() => {
+    box.current
+      ?.querySelector<HTMLElement>(".rankings__row[aria-current]")
+      ?.scrollIntoView?.({ block: "nearest" });
+  }, []);
 
   // Show more hands the focus to the first reader it brought, so the keyboard
   // reads on from there; after the last page the button is gone anyway.
@@ -189,6 +203,14 @@ export function RankingsSheet({
               }
             />
           )}
+          {/* Said beside the row that came back, not under a long list of readers. */}
+          {mine !== undefined && state.withdrawFailed && (
+            <li>
+              <p className="rankings__trouble" role="alert">
+                {strings.rankings.withdrawFailed}
+              </p>
+            </li>
+          )}
           {mine !== undefined && asking && (
             <WithdrawAsk
               onCancel={() => setAsking(false)}
@@ -201,7 +223,7 @@ export function RankingsSheet({
           {others.map((ranking) => (
             <Row
               key={ranking.uid}
-              name={ranking.authorName}
+              name={readerName(ranking.authorName)}
               photoUrl={ranking.authorPhotoUrl}
               when={ranking.updatedAtMs}
               selected={chosen === ranking.uid}
@@ -215,11 +237,6 @@ export function RankingsSheet({
               <Skeleton key={row} height="40px" className="rankings__skeleton" />
             ))}
           </div>
-        )}
-        {state.withdrawFailed && (
-          <p className="rankings__trouble" role="alert">
-            {strings.rankings.withdrawFailed}
-          </p>
         )}
         {state.status === "failed" && (
           <div className="rankings__foot">

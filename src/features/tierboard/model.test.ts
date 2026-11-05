@@ -246,4 +246,12 @@ describe("board model", () => {
     expect(tierForKey("a", 20)).toBeNull();
     expect(tierForKey("12", 20)).toBeNull();
   });
+
+  it("takes the digits an Arabic or a Persian keyboard types", () => {
+    expect(tierForKey("١", 5)).toBe(0); // ١
+    expect(tierForKey("٣", 5)).toBe(2); // ٣
+    expect(tierForKey("۲", 5)).toBe(1); // ۲
+    expect(tierForKey("٩", 5)).toBeNull(); // ٩, past the five tiers
+    expect(tierForKey("٠", 20)).toBeNull(); // ٠
+  });
 });

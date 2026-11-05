@@ -1,4 +1,5 @@
 import type { ApiClient } from "./client";
+import { itemsOf, tiersOf } from "./lists";
 import type { PublishedItem, PublishedTier } from "./types";
 
 export interface RankingSnapshot {
@@ -48,12 +49,43 @@ export function keepRanking(
 }
 
 /** Read as an account when there is one, so the answer can say whether it is yours. */
-export function loadRanking(client: ApiClient, code: string, asAccount = false): Promise<Ranking> {
-  return client.request<Ranking>(
-    "GET",
-    `/api/rank/${encodeURIComponent(code)}`,
-    asAccount ? {} : { auth: "appCheckOnly" },
+export async function loadRanking(
+  client: ApiClient,
+  code: string,
+  asAccount = false,
+): Promise<Ranking> {
+  return rankingOf(
+    await client.request<Ranking>(
+      "GET",
+      `/api/rank/${encodeURIComponent(code)}`,
+      asAccount ? {} : { auth: "appCheckOnly" },
+    ),
   );
+}
+
+/**
+ * A ranking as the site draws it, however it arrived: rows that are not rows
+ * are none, and the list's snapshot is read as a list is, so one field gone
+ * wrong leaves the rest drawn instead of the page.
+ */
+export function rankingOf(ranking: Ranking): Ranking {
+  const snapshot: Partial<RankingSnapshot> =
+    ranking.snapshot !== null && typeof ranking.snapshot === "object" ? ranking.snapshot : {};
+  return {
+    ...ranking,
+    rows: Array.isArray(ranking.rows)
+      ? ranking.rows.map((row: unknown) => (Array.isArray(row) ? (row as number[]) : []))
+      : [],
+    snapshot: {
+      ...snapshot,
+      title: typeof snapshot.title === "string" ? snapshot.title : "",
+      authorName: typeof snapshot.authorName === "string" ? snapshot.authorName : "",
+      authorPhotoUrl: typeof snapshot.authorPhotoUrl === "string" ? snapshot.authorPhotoUrl : null,
+      category: typeof snapshot.category === "string" ? snapshot.category : "",
+      tiers: tiersOf(snapshot.tiers),
+      items: itemsOf(snapshot.items),
+    },
+  };
 }
 
 export function rearrangeRanking(

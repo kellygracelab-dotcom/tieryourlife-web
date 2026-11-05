@@ -79,6 +79,28 @@ describe("AdminPage", () => {
     expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
   });
 
+  it("has one h1, Admin, with every pane's title under it, wide or narrow", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    open("/admin/reports");
+    expect(await screen.findByRole("heading", { level: 2, name: "Reports" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual([
+      "Admin",
+    ]);
+  });
+
+  it("names the page with an h1 on a narrow screen too, where a pane opens alone", async () => {
+    window.innerWidth = 400;
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    open("/admin/house");
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "House lists" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 }).map((h) => h.textContent)).toEqual([
+      "Admin",
+    ]);
+    expect(screen.queryByRole("navigation", { name: "Admin" })).toBeNull();
+  });
+
   it("opens House lists to the owner", async () => {
     mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
     open("/admin/house");
@@ -170,6 +192,26 @@ describe("AdminPage", () => {
       "/admin/house",
       "/admin/searches",
     ]);
+  });
+
+  it("keeps its h1 on a phone with a pane open", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    window.innerWidth = 400;
+    open("/admin/moderators");
+    await screen.findByRole("heading", { name: "Moderators" });
+    expect(screen.getAllByRole("heading", { level: 1 }).map((one) => one.textContent)).toEqual([
+      "Admin",
+    ]);
+  });
+
+  it("names Reports below the page's h1 on a computer", async () => {
+    mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
+    open("/admin/reports");
+    await screen.findByRole("heading", { name: "Reports" });
+    expect(screen.getAllByRole("heading", { level: 1 }).map((one) => one.textContent)).toEqual([
+      "Admin",
+    ]);
+    expect(screen.getByRole("heading", { name: "Reports" }).tagName).toBe("H2");
   });
 
   it("takes the one who may read the reports for the owner while the backend names no roles yet", async () => {

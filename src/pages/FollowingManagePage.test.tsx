@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMemoryRouter, RouterProvider } from "react-router";
+import { createMemoryRouter, RouterProvider, type InitialEntry } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Following } from "../api/community";
 import { ApiFailure } from "../api/errors";
@@ -71,14 +71,18 @@ const member: Session["account"] = {
   photoUrl: null,
 };
 
-function open(account: Session["account"] = member) {
+function open(
+  account: Session["account"] = member,
+  entries: InitialEntry[] = ["/following/manage"],
+) {
   const store = createSectionsStore({ ...sectionsDeps, now: () => 0 });
   const router = createMemoryRouter(
     [
       { path: "/following/manage", element: <FollowingManagePage deps={deps} store={store} /> },
+      { path: "/following", element: <h1>Following tab</h1> },
       { path: "/", element: <h1>Home</h1> },
     ],
-    { initialEntries: ["/following/manage"] },
+    { initialEntries: entries, initialIndex: entries.length - 1 },
   );
   render(
     <SessionContext.Provider
@@ -138,6 +142,15 @@ describe("FollowingManagePage", () => {
     expect(within(row).getByRole("button", { name: /Following/ })).toBeInTheDocument();
   });
 
+  it("says a refused unfollow is one, and keeps the row followed", async () => {
+    vi.mocked(deps.unfollowAuthor).mockRejectedValueOnce(new ApiFailure({ kind: "offline" }));
+    open();
+    const row = (await screen.findByRole("link", { name: /kenji/ })).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
+    expect(await screen.findByText("Couldn’t unfollow. Try again.")).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: /Following/ })).toBeInTheDocument();
+  });
+
   it("keeps an unfollowed section on the page until it is left", async () => {
     open();
     const row = (await screen.findByRole("link", { name: /Food/ })).closest("li")!;
@@ -151,7 +164,7 @@ describe("FollowingManagePage", () => {
     vi.mocked(deps.load).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     open();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load what you follow.");
-    expect(screen.queryByText("You aren't following anything yet")).toBeNull();
+    expect(screen.queryByText("You aren’t following anything yet")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("heading", { name: "People · 1" })).toBeInTheDocument();
   });
@@ -182,6 +195,44 @@ describe("FollowingManagePage", () => {
     open();
     expect(await screen.findByRole("heading", { name: "Sections · 1" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Food/ })).toHaveAttribute("href", "/s/food");
+  });
+
+  it("says a refused unfollow as one, and a refused Undo too", async () => {
+    vi.mocked(deps.unfollowAuthor).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    open();
+    const row = (await screen.findByRole("link", { name: /kenji/ })).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
+    expect(await screen.findByText("Couldn’t unfollow. Try again.")).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: /Following/ })).toBeInTheDocument();
+
+    vi.mocked(deps.followAuthor).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByText("Couldn’t follow. Try again.")).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Follow" })).toBeInTheDocument();
+  });
+
+  it("says when the ceiling of follows is reached, rather than to try again", async () => {
+    sectionsDeps.follow.mockRejectedValueOnce(new ApiFailure({ kind: "tooManyFollowing" }));
+    open();
+    const row = (await screen.findByRole("link", { name: /Food/ })).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
+    await userEvent.click(within(row).getByRole("button", { name: "Follow" }));
+    expect(
+      await screen.findByText(
+        "You follow as many sections and topics as you can. Unfollow some first.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  // Whether it steps back or links up is BackLink's (its own tests); here it
+  // lands on the tab either way, and points the reader's way.
+  it("takes its arrow back to the Following tab, pointing the reader's way", async () => {
+    const router = open(member, ["/following", "/following/manage"]);
+    const back = await screen.findByRole("link", { name: "Navigate back" });
+    expect(back.querySelector(".ms")).toHaveClass("ms--mirrored");
+    await userEvent.click(back);
+    expect(router.state.location.pathname).toBe("/following");
   });
 
   it("is a signed-in person's only", () => {

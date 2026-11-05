@@ -1,11 +1,13 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Moderator, PendingTopic, ProposedSection } from "../../api/admin";
 import { ApiFailure } from "../../api/errors";
 import type { Topic } from "../../api/sections";
+import { SessionContext } from "../../app/session";
 import { memoryStore } from "../../lib/storage";
+import { setStrings } from "../../strings";
 import type { EditorDeps } from "../sections/editorDeps";
 import { ModeratorsPane, type ModeratorsDeps } from "./ModeratorsPane";
 import { ProposalsPane, type ProposalsDeps } from "./ProposalsPane";
@@ -110,12 +112,41 @@ describe("ProposalsPane", () => {
     expect(await screen.findByText("Nothing to review")).toBeInTheDocument();
   });
 
-  it("merges a topic into its twin, and offers a section's merge to the owner alone", async () => {
-    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+  it("merges a topic into its twin for the owner", async () => {
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
     await screen.findByRole("heading", { name: "Street food" });
-    expect(screen.queryByRole("button", { name: "Merge into…" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Merge into Speedrunning" }));
     expect(deps.decideTopic).toHaveBeenCalledWith("t9", { action: "merge", into: "t1" });
+  });
+
+  it("offers a moderator no merge, of a section or a topic: the backend leaves both to the owner", async () => {
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Speedruns" })).closest("li")!;
+    expect(screen.queryByRole("button", { name: "Merge into…" })).toBeNull();
+    expect(within(card).queryByRole("button", { name: "Merge into Speedrunning" })).toBeNull();
+    expect(within(card).queryByRole("searchbox")).toBeNull();
+    expect(within(card).getByRole("button", { name: "Approve" })).toBeInTheDocument();
+  });
+
+  it("starts a topic's Section on one it lists when the one asked for is hidden, and sends it", async () => {
+    deps.topics = vi.fn(async () => ({
+      topics: [{ ...pendingTopic, requestedSection: "quiet" }],
+    }));
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Speedruns" })).closest("li")!;
+    const select = within(card).getByRole<HTMLSelectElement>("combobox", { name: "Section" });
+    const shown = select.selectedOptions[0]!.value;
+    expect(shown).not.toBe("quiet");
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    expect(deps.decideTopic).toHaveBeenCalledWith("t9", { action: "approve", section: shown });
+  });
+
+  it("says a chip with nothing under it is empty", async () => {
+    deps.sections = vi.fn(async () => ({ sections: [] }));
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    await screen.findByRole("heading", { name: "Speedruns" });
+    await userEvent.click(screen.getByRole("button", { name: "Sections · 0" }));
+    expect(screen.getByText("Nothing to review")).toBeInTheDocument();
   });
 
   it("renames a topic proposal before it is approved, as the app's queue does", async () => {
@@ -133,7 +164,7 @@ describe("ProposalsPane", () => {
   });
 
   it("merges a topic proposal into any approved topic found by name", async () => {
-    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
     const card = (await screen.findByRole("heading", { name: "Speedruns" })).closest("li")!;
     await userEvent.type(
       within(card).getByRole("searchbox", { name: "Merge into another topic" }),
@@ -492,6 +523,7 @@ describe("ProposalsPane", () => {
     const { unmount } = wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
     let card = (await screen.findByRole("heading", { name: "Night markets" })).closest("li")!;
     expect(within(card).queryByRole("button", { name: "Finish" })).toBeNull();
+    expect(card).toHaveTextContent("Only the owner can finish a merge.");
     unmount();
 
     deps.finish = vi.fn(async () => {
@@ -572,7 +604,12 @@ describe("TopicsPane", () => {
     // A rename reads the topics again: the rows are back only once they have come.
     const empty = (await screen.findByText("Pokémon")).closest("li")!;
     await userEvent.click(within(empty).getByRole("button", { name: "Delete" }));
+    // Asked first: the delete cannot be undone, and its followers stop following.
+    const ask = screen.getByRole("dialog", { name: "Delete Pokémon?" });
+    expect(deps.remove).not.toHaveBeenCalled();
+    await userEvent.click(within(ask).getByRole("button", { name: "Delete" }));
     expect(deps.remove).toHaveBeenCalledWith("t2");
+    expect(await screen.findByText("Pokémon deleted")).toBeInTheDocument();
   });
 
   it("leaves deleting to the owner", async () => {
@@ -603,7 +640,10 @@ describe("TopicsPane", () => {
     wrap(<TopicsPane adminRole="owner" deps={deps} />);
     const row = (await screen.findByText("Pokémon")).closest("li")!;
     await userEvent.click(within(row).getByRole("button", { name: "Delete" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("That didn’t go through.");
+    const ask = screen.getByRole("dialog", { name: "Delete Pokémon?" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Delete" }));
+    expect(await within(ask).findByRole("alert")).toHaveTextContent("That didn’t go through.");
+    await userEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Section" }), "games");
     expect(await screen.findByText("Couldn’t load this. Try again.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
@@ -638,7 +678,7 @@ describe("ModeratorsPane", () => {
     await userEvent.type(screen.getByRole("searchbox"), "mar");
     await userEvent.click(await screen.findByRole("button", { name: "Appoint" }));
     expect(
-      screen.getByText("Make mariia a moderator? They'll see reports and proposals."),
+      screen.getByText("Make mariia a moderator? They’ll see reports and proposals."),
     ).toBeInTheDocument();
     await userEvent.click(
       within(screen.getByRole("alertdialog")).getByRole("button", { name: "Appoint" }),
@@ -676,5 +716,83 @@ describe("ModeratorsPane", () => {
     expect(deps.remove).toHaveBeenCalledWith("u7");
     await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
     expect(deps.appoint).toHaveBeenCalledWith(kenji);
+  });
+
+  it("says an Undo that did not go through", async () => {
+    deps.appoint = vi.fn(async () => Promise.reject(new ApiFailure({ kind: "unavailable" })));
+    wrap(<ModeratorsPane deps={deps} />);
+    await screen.findByText("kenji");
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await userEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remove" }),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    expect(
+      await screen.findByText("That didn’t go through. Nothing changed — try again."),
+    ).toBeInTheDocument();
+  });
+
+  it("sends one Remove however often it is pressed", async () => {
+    let answer: () => void = () => undefined;
+    deps.remove = vi.fn(() => new Promise<void>((resolve) => (answer = resolve)));
+    wrap(<ModeratorsPane deps={deps} />);
+    await screen.findByText("kenji");
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
+    const confirm = within(screen.getByRole("alertdialog")).getByRole("button", {
+      name: "Remove",
+    });
+    await userEvent.dblClick(confirm);
+    expect(deps.remove).toHaveBeenCalledTimes(1);
+    act(() => answer());
+  });
+
+  it("offers neither the owner nor a moderator, and says when nobody is found", async () => {
+    deps.find = vi.fn(async () => ({
+      people: [
+        { uid: "owner1", name: "Danylo", email: "d@example.com", photoUrl: null },
+        { uid: "u7", name: "kenji", email: "kenji@example.com", photoUrl: null },
+      ],
+    }));
+    render(
+      <SessionContext.Provider
+        value={{
+          account: { kind: "signedIn", uid: "owner1", displayName: "Danylo", photoUrl: null },
+          signIn: async () => ({ kind: "cancelled" }),
+          signOut: async () => undefined,
+          refresh: () => undefined,
+        }}
+      >
+        <MemoryRouter>
+          <ModeratorsPane deps={deps} />
+        </MemoryRouter>
+      </SessionContext.Provider>,
+    );
+    await screen.findByText("kenji");
+    await userEvent.type(screen.getByRole("searchbox"), "Da");
+    expect(await screen.findByText("Nobody found for “Da”")).toHaveAttribute("role", "status");
+    expect(screen.queryByRole("button", { name: "Appoint" })).toBeNull();
+  });
+
+  it("says a lookup that failed, and keeps no names found for other words", async () => {
+    wrap(<ModeratorsPane deps={deps} />);
+    await screen.findByText("kenji");
+    await userEvent.type(screen.getByRole("searchbox"), "mar");
+    await screen.findByRole("button", { name: "Appoint" });
+    deps.find = vi.fn(async () => Promise.reject(new ApiFailure({ kind: "unavailable" })));
+    await userEvent.type(screen.getByRole("searchbox"), "z");
+    expect(screen.queryByRole("button", { name: "Appoint" })).toBeNull();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load this. Try again.");
+  });
+
+  it("dates 'Moderator since' in the site's language, not the browser's", async () => {
+    setStrings("uk", null);
+    try {
+      wrap(<ModeratorsPane deps={deps} />);
+      expect(await screen.findByText(/Moderator since/)).toHaveTextContent(
+        "Moderator since 12.08.2026",
+      );
+    } finally {
+      setStrings("en", null);
+    }
   });
 });

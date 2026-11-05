@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, Navigate } from "react-router";
+import { ApiFailure, errorOf } from "../api/errors";
 import type { Following } from "../api/community";
 import type { Topic } from "../api/sections";
 import { useSession } from "../app/session";
 import { FollowButton } from "../features/community/FollowButton";
-import { followedSectionIds, followedSectionOf } from "../features/sections/following";
+import {
+  followedSectionIds,
+  followedSectionOf,
+  followRefusal,
+} from "../features/sections/following";
 import {
   builtInSection,
   FOLLOWING_PATH,
@@ -28,9 +33,11 @@ import { isEditorialAuthor } from "../lib/editorial";
 import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
+import { BackLink } from "../ui/BackLink";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { initialOf } from "../lib/initial";
 import "../features/feed/feed.css";
 import "./FollowingManagePage.css";
 import { usePageTitle } from "../app/pageTitle";
@@ -98,8 +105,6 @@ function Group({ title, count, children }: { title: string; count: number; child
 }
 
 /** A name's first letter; somebody known only by anonymous lists has none, and is drawn as a person. */
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
-
 /**
  * Everything one follows, in three groups, each with its button: unfollowing
  * is one press with an Undo, and the row stays until the page is left, so a
@@ -152,9 +157,9 @@ export function FollowingManagePage({
   ) => {
     const next = !on;
     set(key, next);
-    apply(next).catch(() => {
+    apply(next).catch((reason: unknown) => {
       set(key, on);
-      setNotice({ text: strings.sections.followFailed });
+      setNotice({ text: followRefusal(errorOf(reason), next) });
     });
     if (!next) {
       setNotice({
@@ -163,7 +168,10 @@ export function FollowingManagePage({
           text: strings.sections.undo,
           onClick: () => {
             set(key, true);
-            apply(true).catch(() => set(key, false));
+            apply(true).catch((reason: unknown) => {
+              set(key, false);
+              setNotice({ text: followRefusal(errorOf(reason), true) });
+            });
           },
         },
       });
@@ -185,9 +193,7 @@ export function FollowingManagePage({
   return (
     <section className="manage">
       <header className="manage__head">
-        <Link className="manage__back" to={FOLLOWING_PATH} aria-label={strings.sections.back}>
-          <Icon name="arrow_back" />
-        </Link>
+        <BackLink className="manage__back" to={FOLLOWING_PATH} />
         <h1 className="manage__title">{strings.sections.tabFollowing}</h1>
       </header>
       {followed.state.status === "loading" ? (
@@ -230,7 +236,8 @@ export function FollowingManagePage({
                     section.name,
                     isOn(`s:${section.id}`, true),
                     async (on) => {
-                      if (!(await store.setFollowing(section.id, on))) throw new Error("refused");
+                      const refused = await store.setFollowing(section.id, on);
+                      if (refused !== null) throw new ApiFailure(refused);
                     },
                   );
                 }}

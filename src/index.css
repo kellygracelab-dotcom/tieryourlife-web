@@ -71,6 +71,8 @@ p {
      as wide as its letters, and lines with an icon reflowed when it came. */
   width: 1em;
   height: 1em;
+  /* Its square holds in a crowded flex row: an error line, a pill's check. */
+  flex-shrink: 0;
   overflow: hidden;
   white-space: nowrap;
   direction: ltr;
@@ -189,4 +191,40 @@ p {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/*
+ * Forced colours (Windows High Contrast) drop every box-shadow, and with them
+ * the rings that show the focus on tiles and fields, the picked card's ring
+ * and the edges of cards and fields. Outlines in the system's colours stand
+ * in for them; important, since the pages' own rules set outline: none.
+ */
+@media (forced-colors: active) {
+  :focus-visible,
+  input:focus,
+  textarea:focus {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+  }
+
+  .tile,
+  .section-tile,
+  .topic-tile,
+  .settings__choice,
+  .top__search,
+  .boards__search,
+  .editor__field,
+  .settings__input,
+  .board-page__title-field,
+  .tier-dialog__input,
+  .tiers__hex,
+  .cards__paste-text {
+    outline: 1px solid CanvasText;
+  }
+
+  .tile--selected,
+  .settings__choice[aria-pressed="true"] {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
 }

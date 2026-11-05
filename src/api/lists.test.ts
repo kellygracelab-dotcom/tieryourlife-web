@@ -25,6 +25,28 @@ describe("lists", () => {
     expect(request).toHaveBeenCalledWith("GET", "/lists/a%20b");
   });
 
+  it("draws what it can of a list that came slightly wrong, keeping every card in its place", async () => {
+    const { client } = recordingClient({
+      id: "abc",
+      title: "Films",
+      authorName: null,
+      tiers: [null, { label: "A", caption: null, colorLight: "#111", colorDark: "#222" }],
+      items: [
+        { title: null, imageUrl: "https://img/a.jpg", tierIndex: 1 },
+        null,
+        { title: "Climax", imageUrl: 42 },
+      ],
+    });
+    const list = await loadList(client, "abc");
+    expect(list.authorName).toBe("");
+    expect(list.tiers.map((tier) => tier.label)).toEqual(["", "A"]);
+    expect(list.items).toEqual([
+      { title: "", imageUrl: "https://img/a.jpg", tierIndex: 1 },
+      { title: "", imageUrl: null },
+      { title: "Climax", imageUrl: null },
+    ]);
+  });
+
   it("reads a feed page with the filters as query", async () => {
     const { client, request } = recordingClient({ lists: [], nextCursor: null });
 
