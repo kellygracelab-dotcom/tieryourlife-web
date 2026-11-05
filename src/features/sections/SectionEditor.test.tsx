@@ -543,6 +543,10 @@ describe("Propose a section", () => {
       opened.send.mockRejectedValueOnce(error);
       pick(width, height);
       await userEvent.type(nameField(), "Street food");
+      // The name is asked about once typing stops; its answer must not land
+      // after the refusal and clear it, as it could on a slow run.
+      await waitFor(() => expect(opened.deps.check).toHaveBeenCalled(), { timeout: 5000 });
+      await act(async () => undefined);
       await userEvent.click(proposeButton());
       await waitFor(() => expect(opened.send).toHaveBeenCalled());
       return opened;
