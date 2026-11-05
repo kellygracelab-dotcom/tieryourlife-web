@@ -92,6 +92,23 @@ describe("listPayload", () => {
     assert.equal(JSON.stringify(payload).includes("danylo"), false);
   });
 
+  it("carries a house list's translations and a copy's credit, as the proxy answers them", () => {
+    const payload = listPayload("abc12345", {
+      title: "Films",
+      translations: { ru: { Films: "Фильмы" } },
+      basedOn: { id: "src12345", title: "Movies", authorUid: "u2", authorName: "Olena", extra: 1 },
+    });
+    assert.deepEqual(payload.translations, { ru: { Films: "Фильмы" } });
+    assert.deepEqual(payload.basedOn, {
+      id: "src12345",
+      title: "Movies",
+      authorUid: "u2",
+      authorName: "Olena",
+    });
+    assert.deepEqual(listPayload("abc12345", {}).translations, {});
+    assert.equal(listPayload("abc12345", { basedOn: { title: "no id" } }).basedOn, null);
+  });
+
   it("survives a document without one", () => {
     assert.equal(listPayload("abc12345", {}).authorUid, "");
     assert.equal(listPayload("abc12345", { authorUid: 5 as never }).authorUid, "");

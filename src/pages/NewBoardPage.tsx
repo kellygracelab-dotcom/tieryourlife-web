@@ -6,7 +6,8 @@ import { useSession } from "../app/session";
 import { HOUSE_PARAM } from "../features/boards/houseList";
 import { boardForOwnList, boardOfList, type CopyBack } from "../features/boards/ownList";
 import { boardFromDraft } from "../features/boards/publish";
-import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { type BoardsRepository } from "../features/boards/repository";
+import { boards as site } from "../features/boards/owners";
 import { nextUid } from "../features/boards/useBoards";
 import {
   draftOfRanking,

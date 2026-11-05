@@ -18,6 +18,8 @@ const ja: Translation = {
     boards: "あなたのリスト",
     search: "リストを検索",
     signInFailed: "ログインできませんでした。もう一度お試しください。",
+    storageRefused:
+      "このブラウザは変更を保存していません。ストレージがいっぱいか、このサイトに対してブロックされています。空きを作るか、サイトにデータの保存を許可してください。そうしないと、今作ったものは失われます。",
     theme: "テーマ",
     themeSystem: "システム",
     themeLight: "ライト",
@@ -108,7 +110,8 @@ const ja: Translation = {
     faceLetterCaption: "頭文字",
     faceFailed: "保存できませんでした。サーバーが応答しません。",
     privacyTitle: "プライバシー",
-    signOutNote: "リストとランキングは残ります。同じ Google アカウントでログインすれば戻ります。",
+    signOutNote:
+      "リストはアカウントとこのブラウザに残り、もう一度ログインするまで非表示になります。ログアウト中は、アカウントなしで作ったリストだけが表示されます。",
     deleteAction: "アカウントを削除",
     deleteHelper:
       "リスト、表示名、それに使われた画像がすべて消えます。ランキングはリンクを保ちますが、名前は外れます。",
@@ -1152,16 +1155,12 @@ const ja: Translation = {
     guestNote:
       "ブラウザを変えたり消去したりすると消えます。アカウントがあれば残り、スマホにも届きます。",
     localOnly: "{count}、この端末だけにあります",
-    mergeTitle: "このアカウントは以前に使っています",
-    mergeBody: "すでに{account}があります。この端末にはアカウントなしで作った{local}があります。",
-    mergeKeep: "すべて残す",
-    mergeKeepSub:
-      "{total}すべて。同じ名前が二つあれば、この端末側に「（この端末から）」が付きます。",
-    mergeAccount: "アカウントのボードだけ使う",
-    mergeAccountSub: "この端末の{local}はゴミ箱に入ります。そこから復元できます。",
-    mergeFootnote: "どちらを選んでも何も削除されません。",
-    mergeRecommended: "推奨",
-    mergeContinue: "続ける",
+    mergeTitle: "アカウントなしで作ったリスト",
+    mergeBody: "このブラウザにはアカウントなしで作った{local}があります。アカウントに移しますか？",
+    mergeFootnote:
+      "ブラウザに残したリストは、ログアウト中にいつでも表示されます。どちらを選んでも何も削除されません。",
+    mergeMoveIn: "アカウントに移す",
+    mergeKeepHere: "このブラウザだけに残す",
     fromThisDevice: "（この端末から）",
     arrivedFrom: "{device}から",
     arrivedFromUnknown: "別の端末から",

@@ -6,6 +6,7 @@ import {
   preloadedRanking,
   readPreload,
   resetPreloadForTests,
+  spendPreload,
 } from "./preload";
 
 function plant(text: string) {
@@ -45,6 +46,14 @@ describe("preload", () => {
     expect(readPreload()).not.toBeNull();
     document.getElementById(PRELOAD_ID)?.remove();
     expect(readPreload()).not.toBeNull();
+  });
+
+  it("is spent once the tab has been elsewhere: the list may have changed or gone since", () => {
+    plant(JSON.stringify({ kind: "list", list: { id: "abc", title: "Films" } }));
+    expect(preloadedList("abc")).not.toBeNull();
+    spendPreload();
+    expect(preloadedList("abc")).toBeNull();
+    expect(readPreload()).toBeNull();
   });
 
   it.each(["{", "null", "[]", JSON.stringify({ kind: "list" }), JSON.stringify({ kind: "x" })])(

@@ -11,6 +11,8 @@ export const en = {
     boards: "Your lists",
     search: "Search lists",
     signInFailed: "Could not sign in. Try again.",
+    storageRefused:
+      "This browser is not keeping your changes: its storage is full or blocked for this site. Free some space or allow the site to store data, or what you make now is lost.",
     theme: "Theme",
     themeSystem: "System",
     themeLight: "Light",
@@ -103,7 +105,7 @@ export const en = {
     faceFailed: "Couldn’t save — the server didn’t answer.",
     privacyTitle: "Privacy",
     signOutNote:
-      "Your lists and rankings stay — sign in with the same Google account to get them back.",
+      "Your lists stay in your account and in this browser, hidden until you sign in again. Signed out, you’ll see only lists made without an account.",
     deleteAction: "Delete account",
     deleteHelper:
       "Everything goes: your lists, your name and the pictures behind them. Rankings keep their links, without your name.",
@@ -1144,17 +1146,12 @@ export const en = {
     guestNote:
       "Change browsers or clear this one and they are gone. An account keeps them, and brings them to the phone.",
     localOnly: "{count}, on this device only",
-    mergeTitle: "You’ve used this account before",
-    mergeBody: "It already has {account}. This device has {local} you made without an account.",
-    mergeKeep: "Keep everything",
-    mergeKeepSub:
-      "All {total}. If two have the same name, the local one gets “(from this device)” added.",
-    mergeAccount: "Use only the account’s boards",
-    mergeAccountSub:
-      "The {local} from this device go to the trash. You can restore them from there.",
-    mergeFootnote: "Nothing is deleted either way.",
-    mergeRecommended: "Recommended",
-    mergeContinue: "Continue",
+    mergeTitle: "Lists made without an account",
+    mergeBody: "This browser has {local} made without an account. Move them into your account?",
+    mergeFootnote:
+      "Kept in this browser, they show whenever you’re signed out. Nothing is deleted either way.",
+    mergeMoveIn: "Move them into your account",
+    mergeKeepHere: "Keep them in this browser only",
     fromThisDevice: "(from this device)",
     arrivedFrom: "from {device}",
     arrivedFromUnknown: "from another device",

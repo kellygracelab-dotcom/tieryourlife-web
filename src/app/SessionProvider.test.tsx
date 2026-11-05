@@ -45,6 +45,37 @@ describe("SessionProvider", () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
+  it("shows a guest linked to Google at once, though Firebase tells its listeners nothing", async () => {
+    let listener: ((account: Account) => void) | null = null;
+    const subscribe = vi.fn((next: (account: Account) => void) => {
+      listener = next;
+      return () => undefined;
+    });
+    const linked: Account = { kind: "signedIn", uid: "g1", displayName: "Danylo", photoUrl: null };
+    function SignIn() {
+      const { signIn } = useSession();
+      return (
+        <button type="button" onClick={() => void signIn()}>
+          sign in
+        </button>
+      );
+    }
+    render(
+      <SessionProvider
+        subscribe={subscribe}
+        complete={async () => null}
+        signIn={async () => ({ kind: "signedIn", switched: false })}
+        current={() => linked}
+      >
+        <Probe />
+        <SignIn />
+      </SessionProvider>,
+    );
+    act(() => listener?.({ kind: "guest", uid: "g1" }));
+    await userEvent.click(screen.getByRole("button", { name: "sign in" }));
+    expect(screen.getByRole("status")).toHaveTextContent("signedIn:g1");
+  });
+
   it("is a guest who cannot sign in when rendered without a provider", async () => {
     function Bare() {
       const { account, signIn } = useSession();

@@ -360,7 +360,7 @@ async function takeOver(
     return "deferred";
   }
   // The star, the origin and the topic are this device's, and read at the moment of writing.
-  deps.repository.save({
+  keep(deps, {
     ...board,
     favouritedAt: latest.favouritedAt,
     arrivedFrom: latest.arrivedFrom,
@@ -368,6 +368,24 @@ async function takeOver(
   });
   deps.records.remember({ uid: board.uid, revision: incoming.revision, fingerprint });
   return "carried";
+}
+
+/** Thrown when the browser would not keep a board the account sent. */
+export class StorageRefused extends Error {
+  constructor() {
+    super("this browser would not keep the board");
+    this.name = "StorageRefused";
+  }
+}
+
+/**
+ * Writes a board the account sent, or stops the run. A board that was never
+ * kept must not be written down as agreed on: the next run would read it as
+ * thrown away here and take it out of the account, and then out of every
+ * other device.
+ */
+function keep(deps: SyncDeps, board: Board): void {
+  if (!deps.repository.save(board)) throw new StorageRefused();
 }
 
 /** The same board, field for field: the store hands out a fresh object every time. */
@@ -394,7 +412,7 @@ async function adopt(
   // The fingerprint before the writes, so nothing waits between the check and them.
   const fingerprint = asCopy ? null : await fingerprintOf(board);
   check(deps);
-  deps.repository.save(board);
+  keep(deps, board);
   if (fingerprint === null) return;
   deps.records.remember({ uid: board.uid, revision: incoming.revision, fingerprint });
 }

@@ -72,7 +72,7 @@ export function lastGame(store: KeyValueStore): GameKind {
 }
 
 export const rememberGame = (store: KeyValueStore, kind: GameKind): void =>
-  store.write(LAST_GAME_KEY, kind);
+  void store.write(LAST_GAME_KEY, kind);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

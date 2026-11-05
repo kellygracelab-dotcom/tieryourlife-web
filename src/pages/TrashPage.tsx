@@ -9,7 +9,8 @@ import {
   type Board,
   type TrashEntry,
 } from "../features/boards/model";
-import { boards as site, type BoardsRepository } from "../features/boards/repository";
+import { type BoardsRepository } from "../features/boards/repository";
+import { boards as site } from "../features/boards/owners";
 import { takenDown } from "../features/boards/takeDown";
 import { useBoards } from "../features/boards/useBoards";
 import type { UnpublishBoard } from "../features/boards/BoardSettings";

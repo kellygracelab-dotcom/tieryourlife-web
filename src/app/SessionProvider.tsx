@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { owners } from "../features/boards/owners";
 import { claimKeptRankings } from "../features/ranking/claim";
 import { currentAccount, subscribeToAccount, type Account } from "../lib/account";
 import { noteSignedIn } from "../lib/signedInHint";
@@ -34,6 +35,8 @@ const signInDeps: SignInDeps = {
   inApp: () => isInAppBrowser(navigator.userAgent),
 };
 const defaultSignIn = () => signInWithGoogle(signInDeps);
+const isSignedIn = (outcome: unknown): boolean =>
+  typeof outcome === "object" && outcome !== null && (outcome as SignInOutcome).kind === "signedIn";
 const defaultComplete = () => completeSignIn(signInDeps);
 
 export function SessionProvider({
@@ -52,15 +55,38 @@ export function SessionProvider({
     () =>
       subscribe((next) => {
         noteSignedIn(next);
+        // Whose boards show changes with whoever is here, before anything renders them.
+        owners.arrived({
+          owner: next.kind === "signedIn" ? next.uid : null,
+          guestUid: next.kind === "guest" ? next.uid : null,
+        });
         setAccount(next);
       }),
     [subscribe],
   );
 
+  // A guest linked to Google keeps its uid, and Firebase tells its listeners
+  // only of a new uid: the page asks who is here once the sign-in is done.
+  const signInAndShow = useCallback(async () => {
+    const outcome = await signIn();
+    if (outcome.kind === "signedIn") {
+      const next = current();
+      owners.arrived({ owner: next.kind === "signedIn" ? next.uid : null, guestUid: null });
+      setAccount(next);
+    }
+    return outcome;
+  }, [signIn, current]);
+
   // A sign-in that left through a redirect lands back here.
   useEffect(() => {
-    void complete();
-  }, [complete]);
+    void complete().then((outcome) => {
+      if (isSignedIn(outcome)) {
+        const next = current();
+        owners.arrived({ owner: next.kind === "signedIn" ? next.uid : null, guestUid: null });
+        setAccount(next);
+      }
+    });
+  }, [complete, current]);
 
   const session = useMemo(
     () => ({
@@ -68,11 +94,11 @@ export function SessionProvider({
         account?.kind === "signedIn" && shownFace !== undefined
           ? { ...account, photoUrl: shownFace }
           : account,
-      signIn,
+      signIn: signInAndShow,
       signOut,
       refresh: () => setAccount(current()),
     }),
-    [account, shownFace, signIn, signOut, current],
+    [account, shownFace, signInAndShow, signOut, current],
   );
   return (
     <SessionContext.Provider value={session}>

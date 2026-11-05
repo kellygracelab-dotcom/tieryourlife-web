@@ -7,6 +7,7 @@ import { GUEST, SessionContext, type Session } from "../../app/session";
 import type { Account } from "../../lib/account";
 import type { SignInOutcome } from "../../lib/signIn";
 import { memoryStore } from "../../lib/storage";
+import { boardOwners } from "./owners";
 import { readBackUp } from "./syncRecords";
 import { BoardSyncProvider } from "./BoardSyncProvider";
 import { useBoardSync } from "./boardSync";
@@ -151,8 +152,7 @@ function Probe() {
   return (
     <>
       <p data-testid="probe">
-        {sync.signedIn ? "in" : "out"} {sync.status} {sync.merge === null ? "-" : "asking"}{" "}
-        {sync.backUp ? "on" : "off"}
+        {sync.signedIn ? "in" : "out"} {sync.status} - {sync.backUp ? "on" : "off"}
         {failed && " failed"}
       </p>
       <button
@@ -213,43 +213,49 @@ describe("BoardSyncProvider", () => {
     await waitFor(() => expect(keeps).toHaveLength(1));
     expect(keeps[0]).toMatchObject({ uid: "a", request: { deviceName: "Chrome on Linux" } });
     await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("in idle -"));
-    expect(syncRecords(store, "me").merged()).toBe(true);
 
     act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 5 }));
     await waitFor(() => expect(keeps).toHaveLength(2));
     expect(keeps[1]).toMatchObject({ uid: "a", request: { basedOn: 1, title: "A2" } });
   });
 
-  it("asks when both the account and this device hold boards, and keeps everything on request", async () => {
+  it("asks after signing into an account used before, and moves the boards made without one in", async () => {
     const store = memoryStore();
-    const repository = boardsRepository(store);
-    repository.save(newBoard("mine", "Films", 1, uids()));
+    const owners = boardOwners(store);
+    owners.arrived({ owner: null, guestUid: "guest" });
+    owners.boards.save(newBoard("mine", "Films", 1, uids()));
+    owners.arrived({ owner: "me", guestUid: null });
     const { api, keeps } = fakeApi([theirBoard("theirs", "Films")]);
-    show(signedIn, { children: null, repository, store, api, now: () => 77 });
-    const dialog = await screen.findByRole("dialog", { name: "You’ve used this account before" });
-    expect(dialog).toHaveTextContent("It already has 1 list. This device has 1 list");
+    show(signedIn, { children: null, owners, store, api });
+    const dialog = await screen.findByRole("dialog", { name: "Lists made without an account" });
+    expect(dialog).toHaveTextContent("This browser has 1 list made without an account");
+    // Only the account's own boards go up meanwhile: none of them is the guest's.
+    await waitFor(() => expect(owners.of("me").get("theirs")).not.toBeNull());
     expect(keeps).toEqual([]);
 
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await userEvent.click(screen.getByRole("button", { name: "Move them into your account" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    // The clash of names is told apart, both go on living, theirs comes down.
-    await waitFor(() => expect(repository.all()).toHaveLength(2));
-    expect(repository.get("mine")?.title).toBe("Films (from this device)");
-    expect(repository.get("theirs")?.title).toBe("Films");
+    // The clash of names is told apart, both go on living, and the moved one goes up.
+    expect(owners.of(null).all()).toEqual([]);
+    expect(owners.of("me").get("mine")?.title).toBe("Films (from this device)");
     await waitFor(() => expect(keeps.map((keep) => keep.uid)).toEqual(["mine"]));
   });
 
-  it("sends this device's boards to the trash when the account's are chosen", async () => {
+  it("keeps the boards made without an account in this browser on request", async () => {
     const store = memoryStore();
-    const repository = boardsRepository(store);
-    repository.save(newBoard("mine", "Films", 1, uids()));
-    const { api } = fakeApi([theirBoard("theirs", "Albums")]);
-    show(signedIn, { children: null, repository, store, api, now: () => 77 });
+    const owners = boardOwners(store);
+    owners.arrived({ owner: null, guestUid: "guest" });
+    owners.boards.save(newBoard("mine", "Films", 1, uids()));
+    owners.arrived({ owner: "me", guestUid: null });
+    const { api, keeps } = fakeApi();
+    show(signedIn, { children: null, owners, store, api });
     await screen.findByRole("dialog");
-    await userEvent.click(screen.getByRole("radio", { name: /Use only the account/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await waitFor(() => expect(repository.get("mine")?.deletedAt).toBe(77));
-    await waitFor(() => expect(repository.get("theirs")).not.toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: "Keep them in this browser only" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(owners.of(null).get("mine")).not.toBeNull();
+    expect(owners.of("me").all()).toEqual([]);
+    await settle();
+    expect(keeps).toEqual([]);
   });
 
   it("switching the back-up off forgets every page of the account's copies, then turns off", async () => {
@@ -259,7 +265,6 @@ describe("BoardSyncProvider", () => {
       [theirBoard("a", "A"), theirBoard("b", "B"), theirBoard("c", "C")],
       { pageSize: 2 },
     );
-    syncRecords(store, "me").markMerged();
     show(signedIn, { children: null, repository, store, api });
     await waitFor(() => expect(repository.all()).toHaveLength(3));
     // The boards coming down are changes too, and ask for one more run after
@@ -273,7 +278,7 @@ describe("BoardSyncProvider", () => {
     await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("off"));
     expect(forgotten.sort()).toEqual(["a", "b", "c"]);
     expect(indexReads).toEqual([null, "2"]);
-    expect(readBackUp(store)).toBe(false);
+    expect(readBackUp(store, "me")).toBe(false);
     expect(syncRecords(store, "me").all()).toEqual([]);
     // The boards themselves stay: off means the copy is gone, not the boards.
     expect(repository.all()).toHaveLength(3);
@@ -283,14 +288,13 @@ describe("BoardSyncProvider", () => {
     const store = memoryStore();
     const repository = boardsRepository(store);
     const { api } = fakeApi([theirBoard("a", "A")], { refuseForget: true });
-    syncRecords(store, "me").markMerged();
     show(signedIn, { children: null, repository, store, api });
     await waitFor(() => expect(repository.all()).toHaveLength(1));
 
     await userEvent.click(screen.getByRole("button", { name: "stop" }));
     await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("failed"));
     expect(screen.getByTestId("probe")).toHaveTextContent("in idle - on");
-    expect(readBackUp(store)).toBe(true);
+    expect(readBackUp(store, "me")).toBe(true);
     expect(syncRecords(store, "me").all()).toHaveLength(1);
   });
 
@@ -334,18 +338,19 @@ describe("BoardSyncProvider", () => {
 
   it("switching off stops after the answer in flight when another account signs in meanwhile", async () => {
     const store = memoryStore();
-    const repository = boardsRepository(store);
+    // Each account has its own boards here: the second one's run fills its own.
+    const owners = boardOwners(store);
+    const repository = owners.of("me");
     const { api, forgotten, releaseForgets } = fakeApi(
       [theirBoard("a", "A"), theirBoard("b", "B"), theirBoard("c", "C")],
       { holdForgets: true },
     );
-    syncRecords(store, "me").markMerged();
-    const view = show(signedIn, { children: null, repository, store, api });
+    const view = show(signedIn, { children: null, owners, store, api });
     await waitFor(() => expect(repository.all()).toHaveLength(3));
 
     await userEvent.click(screen.getByRole("button", { name: "stop" }));
     await settle();
-    view.rerender(tree(other, { children: null, repository, store, api }));
+    view.rerender(tree(other, { children: null, owners, store, api }));
     act(releaseForgets);
     await settle();
     // The first forget had gone out as the first account; its answer is written down for
@@ -356,27 +361,8 @@ describe("BoardSyncProvider", () => {
         .all()
         .map((record) => record.uid),
     ).toEqual(["b", "c"]);
-    expect(readBackUp(store)).toBe(true);
+    expect(readBackUp(store, "me")).toBe(true);
     expect(repository.all()).toHaveLength(3);
-  });
-
-  it("a merge decided after another account signed in renames nothing and marks nothing", async () => {
-    const store = memoryStore();
-    const repository = boardsRepository(store);
-    repository.save(newBoard("mine", "Films", 1, uids()));
-    const { api, keeps, releaseIndex } = fakeApi([theirBoard("theirs", "Films")], {
-      holdIndexAfter: 1,
-    });
-    const view = show(signedIn, { children: null, repository, store, api });
-    await screen.findByRole("dialog");
-    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    await settle();
-    view.rerender(tree(other, { children: null, repository, store, api }));
-    act(releaseIndex);
-    await settle();
-    expect(repository.get("mine")?.title).toBe("Films");
-    expect(syncRecords(store, "me").merged()).toBe(false);
-    expect(keeps).toEqual([]);
   });
 
   it("switching off waits for the run in flight, and that run writes nothing once the switch moved", async () => {
@@ -398,7 +384,7 @@ describe("BoardSyncProvider", () => {
     // The copy that keep made is gone with the rest, and the agreement was never written.
     expect(forgotten).toEqual(["a"]);
     expect(syncRecords(store, "me").all()).toEqual([]);
-    expect(readBackUp(store)).toBe(false);
+    expect(readBackUp(store, "me")).toBe(false);
     // A change now goes nowhere: the switch is off.
     act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 9 }));
     await settle();

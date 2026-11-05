@@ -47,7 +47,8 @@ import {
   republish as republishList,
   unpublish as unpublishList,
 } from "../lib/api";
-import { boards as site, houseBoards, type BoardsRepository } from "../features/boards/repository";
+import { houseBoards, type BoardsRepository } from "../features/boards/repository";
+import { boards as site } from "../features/boards/owners";
 import { takenDown, unpublished } from "../features/boards/takeDown";
 import { applyTierAction, editorTiersOf, newTierOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";

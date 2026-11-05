@@ -68,17 +68,24 @@ export const preloadHidesAuthor = (id: string): boolean => preloadedList(id)?.an
 // What the page function already put into the HTML needs no request, and
 // therefore no App Check and no guest sign-in until Finish. An account asks
 // the network for a list without its author's name, which may be its own.
-// A house list comes in the reader's language; loadListAsWritten keeps the
-// words as written, for the admin who edits them.
-export const loadListAsWritten = (id: string, asAccount = false): Promise<PublishedList> => {
+const pageOrNetwork = (id: string, asAccount: boolean): Promise<PublishedList> => {
   const preloaded = preloadedList(id);
   return preloaded === null || (asAccount && preloaded.anonymous === true)
     ? lists.loadList(api, id)
     : Promise.resolve(lists.publishedListOf(preloaded));
 };
 
+/**
+ * A list with its words as written, for the admin who edits them: always the
+ * proxy's copy, never the page's, which is as old as the tab and carries no
+ * word an admin could have saved since. Saving translations replaces them
+ * whole, so a sheet opened on anything less would wipe the rest.
+ */
+export const loadListAsWritten = (id: string): Promise<PublishedList> => lists.loadList(api, id);
+
+/** A list as its reader sees it: a house list comes in the reader's language. */
 export const loadList = async (id: string, asAccount = false): Promise<PublishedList> =>
-  listIn(await loadListAsWritten(id, asAccount), currentLocale());
+  listIn(await pageOrNetwork(id, asAccount), currentLocale());
 
 export const loadFeed = (query: FeedQuery): Promise<FeedPage> => lists.loadFeed(api, query);
 

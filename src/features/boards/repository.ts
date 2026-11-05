@@ -204,10 +204,13 @@ export interface BoardsRepository {
   /** Every board kept here, trash included, in no particular order. The same array until something changes. */
   all(): readonly Board[];
   get(uid: string): Board | null;
-  save(board: Board): void;
+  /** False when the browser would not keep it: its storage is full or blocked. */
+  save(board: Board): boolean;
   saveAll(boards: readonly Board[]): void;
   /** Gone for good; the trash is a time on the board, not this. */
   remove(uid: string): void;
+  /** Read again: its keys were written from outside it. */
+  reread(): void;
   subscribe(listener: () => void): () => void;
 }
 
@@ -254,8 +257,9 @@ export function boardsRepository(
       return this.all().find((board) => board.uid === uid) ?? null;
     },
     save(board) {
-      store.write(keyOf(board.uid), JSON.stringify(board));
+      const kept = store.write(keyOf(board.uid), JSON.stringify(board)) !== false;
       changed();
+      return kept;
     },
     saveAll(boards) {
       for (const board of boards) store.write(keyOf(board.uid), JSON.stringify(board));
@@ -265,23 +269,24 @@ export function boardsRepository(
       store.remove(keyOf(uid));
       changed();
     },
+    reread: changed,
     subscribe(listener) {
       listeners.add(listener);
-      if (listeners.size === 1 && typeof window !== "undefined") {
-        window.addEventListener("storage", onStorage);
+      if (listeners.size === 1) {
+        // Nobody listened for the other tabs meanwhile: what was read then may be old now.
+        snapshot = null;
+        if (typeof window !== "undefined") window.addEventListener("storage", onStorage);
       }
       return () => {
         listeners.delete(listener);
-        if (listeners.size === 0 && typeof window !== "undefined") {
-          window.removeEventListener("storage", onStorage);
+        if (listeners.size === 0) {
+          snapshot = null;
+          if (typeof window !== "undefined") window.removeEventListener("storage", onStorage);
         }
       };
     },
   };
 }
-
-/** The site's own: this browser's boards. */
-export const boards: BoardsRepository = boardsRepository(localStorageStore);
 
 /** The boards this browser edits for the house; nothing syncs them. */
 export const houseBoards: BoardsRepository = boardsRepository(

@@ -8,7 +8,8 @@ import { arrange } from "../tierboard/arrange";
 import { loadPlacedDraft, scopeOf } from "../tierboard/draft";
 import type { Rows } from "../tierboard/model";
 import { boardFromList } from "./publish";
-import { boards as site, type BoardsRepository } from "./repository";
+import { type BoardsRepository } from "./repository";
+import { boards as site } from "./owners";
 import { nextUid } from "./useBoards";
 
 export type Whose = "theirs" | "mine" | "none";
