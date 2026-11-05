@@ -74,7 +74,7 @@ describe("HomePage", () => {
     );
     expect(screen.getByRole("link", { name: "Film & TV" })).toBeInTheDocument();
 
-    expect(screen.getByRole("heading", { name: "Popular this week" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Popular" })).toBeInTheDocument();
     expect(mocks.loadFeed).toHaveBeenCalledWith({ sort: "popular" });
     expect(await screen.findByRole("link", { name: /Every A24 film, ranked/ })).toBeInTheDocument();
     expect(screen.getAllByText("34 cards")).toHaveLength(2);

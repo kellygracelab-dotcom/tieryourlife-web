@@ -2,9 +2,15 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import {
   hostOf,
+  listCard,
+  listLocale,
+  listMeta,
   listPayload,
   loadShell,
+  rankingCard,
   rankingCardVersion,
+  rankingLocale,
+  rankingMeta,
   rankingVersion,
   resetShellForTests,
   SHELL_TIMEOUT_MS,
@@ -176,5 +182,98 @@ describe("rankingVersion", () => {
     assert.equal(rankingCardVersion(stored, 1000), "5000");
     assert.equal(rankingCardVersion(stored, 9000), "9000");
     assert.equal(rankingCardVersion(stored, null), "5000-gone");
+  });
+});
+
+// A house list is read in its reader's language on the site; its link's
+// preview speaks it too, and a newer section is named as its document names it.
+describe("a link's preview", () => {
+  const HOUSE = "85RRieyLyUPCEqHjdYCdxVlWxHx2";
+  const house = {
+    title: "Best sci-fi films",
+    authorUid: HOUSE,
+    authorName: "Danylo Petrov",
+    category: "cars",
+    updatedAt: { toMillis: () => 17 } as never,
+    tiers: [{ label: "S", caption: "Masterpiece", colorLight: "#f00" }],
+    items: [{ title: "Arrival", imageUrl: null }],
+    translations: { ru: { "Best sci-fi films": "Лучшая фантастика", Arrival: "Прибытие" } },
+  };
+  const cars = { name: "Cars", names: { ru: "Машины" } };
+
+  it("speaks the reader's language for a house list that has it, and as written otherwise", () => {
+    assert.equal(listLocale(house, { acceptLanguage: "ru-RU,ru;q=0.9,en;q=0.8" }), "ru");
+    assert.equal(listLocale(house, { acceptLanguage: "de-DE,de;q=0.9" }), "en");
+    assert.equal(listLocale(house, {}), "en");
+    // The address asks first: the picture's own link carries it.
+    assert.equal(listLocale(house, { hl: "ru", acceptLanguage: "en" }), "ru");
+    // Anybody else's list stands in its author's words.
+    assert.equal(listLocale({ ...house, authorUid: "u1" }, { acceptLanguage: "ru" }), "en");
+  });
+
+  it("gives a house list's title, line, picture and language in Russian", () => {
+    const meta = listMeta("tieryourlife.web.app", "abc12345", house, "ru", cars);
+    assert.equal(meta.title, "Лучшая фантастика");
+    assert.equal(meta.description, "1 карточка, чтобы разложить · Машины");
+    assert.equal(meta.locale, "ru_RU");
+    assert.ok(meta.image?.endsWith("&hl=ru"));
+
+    const card = listCard(house, "ru", cars);
+    assert.equal(card.title, "Лучшая фантастика");
+    assert.deepEqual(
+      card.items.map((item) => item.title),
+      ["Прибытие"],
+    );
+    assert.equal(card.kind === "list" ? card.section : undefined, "Машины");
+  });
+
+  it("names a newer section in English as written, and never 'Other'", () => {
+    const meta = listMeta("tieryourlife.web.app", "abc12345", house, "en", cars);
+    assert.equal(meta.title, "Best sci-fi films");
+    assert.equal(meta.description, "1 item to rank · Cars");
+    assert.equal(meta.locale, "en_US");
+    const unread = listMeta("tieryourlife.web.app", "abc12345", house, "en", null);
+    assert.equal(unread.description, "1 item to rank");
+  });
+
+  it("gives a ranking of a house list in the language its list was read in", () => {
+    const stored = {
+      listId: "abc12345",
+      snapshot: {
+        title: "Best sci-fi films",
+        editorial: true,
+        authorName: "",
+        authorPhotoUrl: null,
+        category: "cars",
+        tiers: [{ label: "S", caption: null, colorLight: "#f00", colorDark: "#a00" }],
+        items: [{ title: "Arrival", imageUrl: null, tierIndex: null }],
+        translations: { ru: { "Best sci-fi films": "Лучшая фантастика", Arrival: "Прибытие" } },
+      },
+      rows: [{ items: [0] }],
+      createdAt: { toMillis: () => 5 },
+    } as StoredRanking;
+    assert.equal(rankingLocale(stored.snapshot, { acceptLanguage: "ru" }), "ru");
+    // A ranking kept before it kept the words reads as written.
+    assert.equal(
+      rankingLocale({ ...stored.snapshot, translations: undefined }, { acceptLanguage: "ru" }),
+      "en",
+    );
+    const meta = rankingMeta(
+      "tieryourlife.web.app",
+      "abcdefgh",
+      stored,
+      stored.snapshot,
+      1,
+      "ru",
+      cars,
+    );
+    assert.equal(meta.title, "Лучшая фантастика");
+    assert.equal(meta.description, "Посетитель разложил 1 из 1 карточки · Машины");
+    const card = rankingCard(stored, stored.snapshot, "ru");
+    assert.equal(card.title, "Лучшая фантастика");
+    assert.deepEqual(
+      card.items.map((item) => item.title),
+      ["Прибытие"],
+    );
   });
 });

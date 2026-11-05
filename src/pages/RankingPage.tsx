@@ -13,12 +13,14 @@ import { readKept } from "../features/ranking/kept";
 import { downloadShare, type Share } from "../features/ranking/share";
 import { loadRanking, rearrangeRanking } from "../lib/api";
 import { type KeyValueStore, localStorageStore, memoryStore } from "../lib/storage";
+import { listIn } from "../lib/translated";
 import { useResource } from "../lib/useResource";
-import { fill, strings } from "../strings";
+import { currentLocale, fill, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
+import { PictureCredits } from "./ListPageCredits";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
@@ -59,7 +61,21 @@ const listOf = (ranking: Ranking): PublishedList => ({
   takeCount: 0,
   tiers: ranking.snapshot.tiers,
   items: ranking.snapshot.items,
+  translations: ranking.snapshot.translations,
+  names: ranking.snapshot.names,
 });
+
+/**
+ * A ranking of a house list in the reader's language, as its list page read
+ * a moment before; any other, and one kept before its words were, as kept.
+ */
+const inReadersLanguage = (ranking: Ranking): Ranking => {
+  const list = listIn(listOf(ranking), currentLocale());
+  return {
+    ...ranking,
+    snapshot: { ...ranking.snapshot, title: list.title, tiers: list.tiers, items: list.items },
+  };
+};
 
 interface BodyProps {
   ranking: Ranking;
@@ -313,6 +329,7 @@ function Body({
           </div>
         </div>
       )}
+      <PictureCredits items={snapshot.items} />
     </>
   );
 }
@@ -374,10 +391,16 @@ export function RankingPage({
   }
   if (ranking === null) return <ListPageLoading note={strings.ranking.opening} rows={2} />;
 
-  const shown = rows === null ? ranking : { ...ranking, rows };
+  const shown = inReadersLanguage(rows === null ? ranking : { ...ranking, rows });
   const mine = readKept(store, ranking.listId)?.code === ranking.code;
   return (
-    <article className={boardDock === null ? "list-page" : `list-page list-page--${boardDock}`}>
+    <article
+      className={
+        boardDock === null
+          ? "list-page board-frame"
+          : `list-page board-frame list-page--${boardDock}`
+      }
+    >
       <Body
         ranking={shown}
         mine={mine}

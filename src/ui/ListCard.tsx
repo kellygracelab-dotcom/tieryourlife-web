@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { ListSummary } from "../api/types";
 import { isEditorialAuthor } from "../lib/editorial";
@@ -16,6 +17,8 @@ interface ListCardProps {
   yours?: Yours | null;
   /** Left out on the author's own page, where every card would name the page it is on. */
   showAuthor?: boolean;
+  /** What a reader can do about the list from its card, at the end of its footer. */
+  menu?: ReactNode;
 }
 
 /** One's own face, the one this device knows, which a new face reaches first. */
@@ -51,7 +54,13 @@ function Face({ name, photoUrl }: { name: string | null; photoUrl: string | null
  * one's own face and say so, anonymous or not; somebody else's anonymous list
  * names nobody and shows no empty face; a named one names its author.
  */
-export function ListCard({ list, reason = null, yours = null, showAuthor = true }: ListCardProps) {
+export function ListCard({
+  list,
+  reason = null,
+  yours = null,
+  showAuthor = true,
+  menu = null,
+}: ListCardProps) {
   // How many people ranked it is not said: a small count makes the place look
   // empty, a big one is noise (Danylo, 01.11.2026). The cards are the list's own.
   const meta = [plural(strings.card.items, list.itemCount)];
@@ -113,6 +122,7 @@ export function ListCard({ list, reason = null, yours = null, showAuthor = true 
           )
         )}
         <span className="list-card__count">{meta.join(" · ")}</span>
+        {menu}
       </span>
     </article>
   );

@@ -2,10 +2,10 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { errorOf, type ApiError } from "../../api/errors";
-import type { PublishRequest } from "../../api/lists";
+import type { Published, PublishRequest } from "../../api/lists";
 import type { Topic } from "../../api/sections";
 import { useSession } from "../../app/session";
-import { loadTopics } from "../../lib/api";
+import { loadTopics, withdrawListRanking } from "../../lib/api";
 import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import { holds } from "../../lib/locale";
 import { fill, plural, strings } from "../../strings";
@@ -19,12 +19,14 @@ import {
   BOARD_LIMITS,
   DISPLAY_MODES,
   isBehind,
+  isOut,
   liveItems,
   previewsOf,
   rankedTiers,
   setAnonymous,
   setCover,
   setPublished,
+  setRanking,
   setTopic,
   type Board,
   type BoardTopic,
@@ -35,14 +37,16 @@ import { publishProblemsOf, publishRequestOf } from "./publish";
 import { filedUnder, sectionChoices } from "./sectionChoices";
 import "./boards.css";
 
-export type PublishBoard = (request: PublishRequest) => Promise<{ id: string }>;
-export type RepublishBoard = (id: string, request: PublishRequest) => Promise<{ id: string }>;
+export type PublishBoard = (request: PublishRequest) => Promise<Published>;
+export type RepublishBoard = (id: string, request: PublishRequest) => Promise<Published>;
 export type UnpublishBoard = (id: string) => Promise<void>;
 
 export interface PublishingDeps {
   publish: PublishBoard;
   republish: RepublishBoard;
   unpublish: UnpublishBoard;
+  /** Takes one's ranking of a list down; the site's own unless told otherwise. */
+  withdraw?: (listId: string) => Promise<unknown>;
 }
 
 /** The approved topics of a section, the biggest first. */
@@ -61,8 +65,14 @@ interface BoardSettingsProps {
   onMode: (mode: DisplayMode) => void;
   /** New tier: the page adds one and opens it in the tier editor. */
   onNewTier: () => void;
-  /** The board went public, was sent again, or came down; the page says so. */
-  onPublished: (what: "published" | "updated" | "unpublished", id: string | null) => void;
+  /**
+   * The board went public, was sent again, or came down; or the backend kept
+   * it as one's ranking of the list it was saved from. The page says so.
+   */
+  onPublished: (
+    what: "published" | "updated" | "unpublished" | "ranking",
+    id: string | null,
+  ) => void;
   /**
    * How the board goes public under the person's name; null for a board that
    * goes out some other way (a house list), whose sheet then offers none of it.
@@ -193,9 +203,12 @@ export function BoardSettings({
   const [asking, setAsking] = useState(false);
   const problems = publishProblemsOf(board);
   const ownPublish = publishing !== null;
-  const isPublic = ownPublish && board.publishedId !== null;
+  const isPublic = ownPublish && isOut(board);
   const behind = isBehind(board);
-  const published = isPublic ? `/l/${encodeURIComponent(board.publishedId ?? "")}` : null;
+  // A ranking is out on the page of the list it ranks.
+  const published = isPublic
+    ? `/l/${encodeURIComponent(board.publishedId ?? board.rankingOf ?? "")}`
+    : null;
   const toggle = (which: Open) => setOpen(open === which ? "none" : which);
 
   const send = async (what: "published" | "updated") => {
@@ -208,10 +221,15 @@ export function BoardSettings({
       const answer =
         what === "updated" && current.publishedId !== null
           ? await publishing.republish(current.publishedId, request)
-          : await publishing.publish(request);
+          : await publishing.publish({ ...request, boardUid: current.uid });
       const name = account?.kind === "signedIn" ? account.displayName : null;
       const after = latest();
-      const sent = setPublished(after, answer.id, name ?? after.authorName, now());
+      // The cards as they came from the list they were saved from: the
+      // backend kept them as one's ranking of it, which has no id of its own.
+      const ranking = answer.ranking === true;
+      const sent = ranking
+        ? setRanking(after, answer.id, now())
+        : setPublished(after, answer.id, name ?? after.authorName, now());
       // A change made while the request was on its way was not in it: the
       // published copy is behind it, and Update still has it to send.
       keep(
@@ -219,7 +237,7 @@ export function BoardSettings({
           ? sent
           : { ...sent, publishedEditedAt: sent.editedAt - 1 },
       );
-      onPublished(what, answer.id);
+      onPublished(ranking ? "ranking" : what, answer.id);
     } catch (reason: unknown) {
       const error = errorOf(reason);
       // Taken down elsewhere (its page, /me, the phone): the board is no longer
@@ -234,18 +252,25 @@ export function BoardSettings({
   };
 
   // Down, the board is one's own again: the name publishing put on it goes, or
-  // Your lists would take it for a copy of somebody else's.
+  // Your lists would take it for a copy of somebody else's. A ranking down
+  // keeps the author's name: the cards are still theirs.
   const down = () => {
-    keep(setPublished(latest(), null, null, now()));
+    const at = now();
+    const was = latest();
+    keep(was.rankingOf !== null ? setRanking(was, null, at) : setPublished(was, null, null, at));
     onPublished("unpublished", null);
   };
   const takeDown = async () => {
     const current = latest();
-    if (current.publishedId === null || publishing === null) return;
+    if (!isOut(current) || publishing === null) return;
     setBusy("unpublishing");
     setFailure(null);
     try {
-      await publishing.unpublish(current.publishedId);
+      if (current.rankingOf !== null) {
+        await (publishing.withdraw ?? withdrawListRanking)(current.rankingOf);
+      } else if (current.publishedId !== null) {
+        await publishing.unpublish(current.publishedId);
+      }
       down();
       setAsking(false);
     } catch (reason: unknown) {

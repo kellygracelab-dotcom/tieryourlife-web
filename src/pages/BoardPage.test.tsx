@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   addToPool,
   arrangeItems,
@@ -11,6 +11,7 @@ import {
   newBoard,
   poolTier,
   rankedTiers,
+  setDisplayMode,
 } from "../features/boards/model";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import type { PublishingDeps } from "../features/boards/BoardSettings";
@@ -28,6 +29,7 @@ import type { HouseSending } from "../features/admin/HouseBar";
 import { hasUnsentEdits, houseLinkOf, linkToHouse } from "../features/boards/houseList";
 import { publishRequestOf } from "../features/boards/publish";
 import { resetModeratorForTests, type LoadReports } from "../features/moderation/useModerator";
+import { loadPlayScreens } from "../features/play/usePlay";
 import { BoardPage } from "./BoardPage";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
@@ -468,6 +470,33 @@ describe("BoardPage: tiers and settings", () => {
     expect(kept().label).toBe("Top");
   });
 
+  it("names a tier in words, as the phone does, and counts the characters near the limit", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    await userEvent.click(screen.getByRole("button", { name: "Edit tier S" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Edit tier" }));
+    const label = dialog.getByRole("textbox", { name: "Label" });
+    const caption = dialog.getByRole("textbox", { name: "Caption" });
+    // The backend's limits, not three letters and sixteen.
+    expect(label).toHaveAttribute("maxLength", "80");
+    expect(caption).toHaveAttribute("maxLength", "60");
+    await userEvent.clear(label);
+    await userEvent.type(label, "Good stuff");
+    await userEvent.type(caption, "A caption that is quite a bit longer");
+    // Far from either limit, no counter.
+    expect(dialog.queryByText(/\/80$|\/60$/)).toBeNull();
+    // Fifteen characters left: the counter says how many are used.
+    await userEvent.type(caption, " and more");
+    expect(dialog.getByText("45/60")).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    expect(rankedTiers(repository.get("films")!)[0]).toMatchObject({
+      label: "Good stuff",
+      caption: "A caption that is quite a bit longer and more",
+    });
+    expect(screen.getByRole("list", { name: "Good stuff" })).toBeInTheDocument();
+  });
+
   it("opens a card's menu on a double click on the card, not its tier's", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
@@ -675,6 +704,86 @@ describe("BoardPage: tiers and settings", () => {
     );
     await userEvent.click(settings.getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+  });
+
+  describe("the ranked list", () => {
+    const ranked = () => {
+      const repository = boardsRepository(memoryStore());
+      repository.save(setDisplayMode(filmBoard(), "FLAT_RANKED", 100));
+      open(repository, "/b/films");
+      return repository;
+    };
+    const titlesIn = (repository: BoardsRepository, where: number | "pool") => {
+      const board = repository.get("films")!;
+      const uid = where === "pool" ? poolTier(board)!.uid : rankedTiers(board)[where]!.uid;
+      return itemsIn(board, uid).map((item) => item.title);
+    };
+
+    it("opens the move sheet from a row, as the phone does, and moves the card", async () => {
+      const repository = ranked();
+      const row = screen.getByRole("button", { name: "1. Ex Machina in S" });
+      expect(row).toHaveAttribute("aria-haspopup", "dialog");
+      await userEvent.click(row);
+      const sheet = within(screen.getByRole("dialog", { name: "Ex Machina" }));
+      expect(sheet.getByRole("button", { name: /^S/ })).toBeDisabled();
+      await userEvent.click(sheet.getByRole("button", { name: "B" }));
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(titlesIn(repository, 2)).toEqual(["Ex Machina"]);
+      // The keyboard stays on the card, now in B.
+      expect(screen.getByRole("button", { name: "1. Ex Machina in B" })).toHaveFocus();
+
+      // Enter on a row opens it too; back to the pool, which opens on it.
+      await userEvent.keyboard("{Enter}");
+      const again = within(screen.getByRole("dialog", { name: "Ex Machina" }));
+      await userEvent.click(again.getByRole("button", { name: "Back to the pool" }));
+      expect(titlesIn(repository, "pool")).toEqual(["The Witch", "Climax", "Ex Machina"]);
+      expect(screen.getByText("Nothing ranked yet")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Pool · 3 unranked" })).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: "Ex Machina" })).toHaveFocus();
+    });
+
+    it("folds the pool to its count, and opens it to move or remove its cards", async () => {
+      const repository = ranked();
+      const head = screen.getByRole("button", { name: "Pool · 2 unranked" });
+      expect(head).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("button", { name: "The Witch" })).toBeNull();
+      await userEvent.click(head);
+      expect(head).toHaveAttribute("aria-expanded", "true");
+      const pool = within(screen.getByRole("region", { name: "Pool · 2 unranked" }));
+      expect(pool.getAllByRole("listitem").map((item) => item.textContent)).toEqual([
+        "The Witch",
+        "Climax",
+      ]);
+
+      await userEvent.click(pool.getByRole("button", { name: "The Witch" }));
+      let sheet = within(screen.getByRole("dialog", { name: "The Witch" }));
+      // Already in the pool: no way back to it.
+      expect(sheet.queryByRole("button", { name: "Back to the pool" })).toBeNull();
+      await userEvent.click(sheet.getByRole("button", { name: "A" }));
+      expect(titlesIn(repository, 1)).toEqual(["The Witch"]);
+      expect(screen.getByRole("button", { name: "2. The Witch in A" })).toHaveFocus();
+
+      await userEvent.click(screen.getByRole("button", { name: "Climax" }));
+      sheet = within(screen.getByRole("dialog", { name: "Climax" }));
+      await userEvent.click(sheet.getByRole("button", { name: "Remove from list" }));
+      expect(liveItems(repository.get("films")!).map((item) => item.title)).not.toContain("Climax");
+      expect(screen.getByRole("status")).toHaveTextContent("Removed Climax");
+      // The last card gone from the pool, so is the pool.
+      expect(screen.queryByRole("region", { name: /^Pool/ })).toBeNull();
+    });
+
+    it("shows a card just added, in the pool it opens", async () => {
+      ranked();
+      await userEvent.type(screen.getByRole("textbox", { name: "Add a card" }), "Brand new{Enter}");
+      expect(screen.getByRole("button", { name: "Pool · 3 unranked" })).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      expect(screen.getByRole("button", { name: "Brand new" })).toBeVisible();
+    });
   });
 
   it("opens the tier editor on a new tier from the settings, the sheet out of the way", async () => {
@@ -924,6 +1033,9 @@ describe("BoardPage: share and publish", () => {
 });
 
 describe("BoardPage: Play", () => {
+  // The screens come as a chunk of their own; fetched here, Play opens in the frame it is pressed.
+  beforeAll(() => loadPlayScreens());
+
   it("plays the board's cards in duels, applies the result, and undoes it from the snackbar", async () => {
     localStorage.clear();
     const repository = boardsRepository(memoryStore());

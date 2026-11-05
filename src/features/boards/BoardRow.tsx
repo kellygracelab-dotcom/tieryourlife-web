@@ -4,7 +4,15 @@ import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
 import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
-import { poolCount, previewsOf, rankedCount, rankedTiers, tierShares, type Board } from "./model";
+import {
+  isOut,
+  poolCount,
+  previewsOf,
+  rankedCount,
+  rankedTiers,
+  tierShares,
+  type Board,
+} from "./model";
 
 interface BoardRowProps {
   board: Board;
@@ -61,7 +69,7 @@ export const BoardRow = memo(function BoardRow({
   const starred = board.favouritedAt !== null;
   // As on a tile: how far along it is and that it is public are read after the name.
   const id = useId();
-  const facts = board.publishedId === null ? `${id}-meta` : `${id}-meta ${id}-public`;
+  const facts = !isOut(board) ? `${id}-meta` : `${id}-meta ${id}-public`;
   const words = (
     <>
       <span className="board-card__thumb">
@@ -78,7 +86,7 @@ export const BoardRow = memo(function BoardRow({
         </span>
         <span className="board-card__meta">
           <span id={`${id}-meta`}>{metaOf(board)}</span>
-          {board.publishedId !== null && (
+          {isOut(board) && (
             <span className="board-card__public" id={`${id}-public`}>
               <Icon name="public" />
               {strings.boards.filterPublic}

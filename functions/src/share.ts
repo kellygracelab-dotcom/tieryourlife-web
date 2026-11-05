@@ -5,6 +5,7 @@
  */
 
 import { categoryLabel, SITE_NAME } from "./og";
+import { AS_WRITTEN, say, wordsFor } from "./previewWords";
 
 export const SHARE_WIDTH = 1200;
 export const SHARE_HEIGHT = 630;
@@ -47,6 +48,10 @@ export interface ShareList {
   itemCount: number;
   tiers: ShareTier[];
   items: ShareItem[];
+  /** The section's name as read; left out, only the first nine's are known. */
+  section?: string | null;
+  /** The language of a house list's card, its words translated already; as written by default. */
+  locale?: string;
 }
 
 export interface ShareRanking {
@@ -59,6 +64,7 @@ export interface ShareRanking {
   items: ShareItem[];
   /** Item indexes per tier, in order. */
   rows: number[][];
+  locale?: string;
 }
 
 export type ShareCard = ShareList | ShareRanking;
@@ -82,9 +88,6 @@ const el = (
   children?: Node | string | (Node | string)[],
   extra: Record<string, string> = {},
 ): Node => ({ type, props: { style, ...extra, ...(children === undefined ? {} : { children }) } });
-
-const plural = (n: number, one: string, other: string): string =>
-  `${n.toLocaleString("en-US")} ${n === 1 ? one : other}`;
 
 /** The addresses a card will need, in drawing order, capped. */
 export function picturesWanted(card: ShareCard): string[] {
@@ -145,8 +148,60 @@ const tile = (item: ShareItem, pictures: Pictures, width: number, height: number
   );
 };
 
-const band = (tier: ShareTier, size: number): Node =>
-  el(
+/** Roboto's letters are some 0.6 of the size wide: with nothing here to measure, a guess that errs wide. */
+const widthOf = (text: string, size: number): number => Array.from(text).length * size * 0.6;
+
+const wordsOf = (text: string): string[] => text.split(/\s+/).filter((part) => part.length > 0);
+
+/** How many lines the text takes at a size, broken between words only. */
+function lineCount(text: string, room: number, size: number): number {
+  let lines = 0;
+  let line = "";
+  for (const word of wordsOf(text)) {
+    const longer = line.length === 0 ? word : `${line} ${word}`;
+    if (line.length > 0 && widthOf(longer, size) > room) {
+      lines++;
+      line = word;
+    } else {
+      line = longer;
+    }
+  }
+  return lines + (line.length > 0 ? 1 : 0);
+}
+
+/** The smallest a band's name goes; the name's line; a caption's type, at most two lines. */
+export const BAND_FLOOR = 9;
+const LABEL_LINE = 1.1;
+const CAPTION = { size: 9, line: 11, lines: 2, gap: 2 } as const;
+
+/**
+ * A tier's name on its square, as the site's board sets it: the largest
+ * size, from the letter's own down to the floor, at which every word fits
+ * the square whole and the lines fit above the caption; and how many lines
+ * the square holds at that size. Only a name too long even at the floor
+ * ends in an ellipsis.
+ */
+export function bandLabel(
+  label: string,
+  caption: string | null,
+  size: number,
+): { size: number; lines: number } {
+  const room = size - 8;
+  const captionLines =
+    caption === null ? 0 : Math.min(CAPTION.lines, lineCount(caption, room, CAPTION.size));
+  const height = room - (captionLines === 0 ? 0 : captionLines * CAPTION.line + CAPTION.gap);
+  const most = (at: number) => Math.max(1, Math.floor(height / (at * LABEL_LINE)));
+  for (let at = Math.round(size * 0.44); at > BAND_FLOOR; at--) {
+    if (wordsOf(label).some((word) => widthOf(word, at) > room)) continue;
+    if (lineCount(label, room, at) <= most(at)) return { size: at, lines: most(at) };
+  }
+  return { size: BAND_FLOOR, lines: most(BAND_FLOOR) };
+}
+
+const band = (tier: ShareTier, size: number): Node => {
+  const caption = tier.caption?.trim() ? tier.caption.trim() : null;
+  const fit = bandLabel(tier.label, caption, size);
+  return el(
     "div",
     {
       display: "flex",
@@ -155,28 +210,51 @@ const band = (tier: ShareTier, size: number): Node =>
       justifyContent: "center",
       width: size,
       height: size,
+      padding: 4,
       borderRadius: 10,
       background: tier.colorLight,
       color: SURFACE,
       flexShrink: 0,
+      overflow: "hidden",
     },
     [
       el(
         "div",
-        { fontSize: Math.round(size * 0.44), fontWeight: 500, lineHeight: 1 },
-        tier.label.slice(0, 3),
+        {
+          display: "block",
+          maxWidth: "100%",
+          fontSize: fit.size,
+          fontWeight: 500,
+          lineHeight: LABEL_LINE,
+          textAlign: "center",
+          // Only a word wider than the square even at the floor is broken.
+          wordBreak: "break-word",
+          lineClamp: fit.lines,
+        },
+        tier.label,
       ),
-      ...(tier.caption
+      ...(caption !== null
         ? [
             el(
               "div",
-              { fontSize: 11, lineHeight: 1, marginTop: 4, opacity: 0.85, overflow: "hidden" },
-              tier.caption.slice(0, 14),
+              {
+                display: "block",
+                maxWidth: "100%",
+                fontSize: CAPTION.size,
+                lineHeight: `${CAPTION.line}px`,
+                marginTop: CAPTION.gap,
+                opacity: 0.85,
+                textAlign: "center",
+                wordBreak: "break-word",
+                lineClamp: CAPTION.lines,
+              },
+              caption,
             ),
           ]
         : []),
     ],
   );
+};
 
 /**
  * The line under the title, with the author's name laid out on its own. In
@@ -194,7 +272,7 @@ const heading = (card: ShareCard, line: Byline): Node =>
     el(
       "div",
       { fontSize: 44, fontWeight: 500, lineHeight: 1.15, color: INK, lineClamp: 2 },
-      card.title.trim() || "Untitled list",
+      card.title.trim() || wordsFor(card.locale ?? AS_WRITTEN).untitled,
     ),
     line.name === null
       ? el("div", { fontSize: 22, color: INK_DIM, lineClamp: 1 }, line.before + line.after)
@@ -287,9 +365,11 @@ const frame = (children: (Node | string)[]): Node =>
 
 function listCard(card: ShareList, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
+  const locale = card.locale ?? AS_WRITTEN;
+  const section = card.section === undefined ? categoryLabel(card.category) : card.section;
   // No count of rankings: the card is kept until the list changes, and a
   // count drawn on its first day said "0 rankings" for good.
-  const rest = [plural(card.itemCount, "card", "cards"), categoryLabel(card.category)]
+  const rest = [say(locale, wordsFor(locale).cards, card.itemCount), section]
     .filter((part) => part !== null)
     .join(" · ");
   const line: Byline =
@@ -317,8 +397,10 @@ function listCard(card: ShareList, pictures: Pictures): Node {
 
 function rankingCard(card: ShareRanking, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
+  const locale = card.locale ?? AS_WRITTEN;
+  const words = wordsFor(locale);
   const placed = card.rows.reduce((sum, row) => sum + row.length, 0);
-  const head = `ranked by a visitor · ${placed} of ${plural(card.items.length, "card", "cards")} placed`;
+  const head = say(locale, words.rankedHead, card.items.length, { placed });
   const line: Byline =
     card.editorial === true
       ? { before: head, name: null, after: "" }
@@ -362,7 +444,7 @@ function rankingCard(card: ShareRanking, pictures: Pictures): Node {
       el(
         "div",
         { fontSize: 16, color: INK_FAINT },
-        hidden > 0 ? `and ${plural(hidden, "more tier", "more tiers")}` : "",
+        hidden > 0 ? say(locale, words.moreTiers, hidden) : "",
       ),
       brand(),
     ]),
@@ -379,16 +461,22 @@ export const shareCardOf = (card: ShareCard, pictures: Pictures): Node =>
  * chat keeps a picture by its address, so a change in the drawing has to
  * change both or nobody ever sees it. 4: the footer inside the card, every
  * script's letters, the author's name apart. 5: no count of rankings, and no
- * "Other" for a section approved after the first nine.
+ * "Other" for a section approved after the first nine. 6: a newer section by
+ * its own name, a house list's card in its reader's language, and a tier's
+ * whole name on its band, smaller and between words, not its first three
+ * letters.
  */
-export const SHARE_LOOK = 5;
+export const SHARE_LOOK = 6;
 
 export const shareImageUrl = (
   host: string,
   kind: "l" | "r",
   id: string,
   version: number | string,
-): string => `https://${host}/og/${kind}/${encodeURIComponent(id)}.png?v=${version}.${SHARE_LOOK}`;
+  locale: string = AS_WRITTEN,
+): string =>
+  `https://${host}/og/${kind}/${encodeURIComponent(id)}.png?v=${version}.${SHARE_LOOK}` +
+  (locale === AS_WRITTEN ? "" : `&hl=${encodeURIComponent(locale)}`);
 
 /** The one copy kept per version of a list or ranking, and per look of the card. */
 export const shareImagePath = (kind: "l" | "r", id: string, version: number | string): string =>

@@ -4,7 +4,7 @@ import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
 import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
-import { previewsOf, rankedTiers, type Board } from "./model";
+import { isOut, previewsOf, rankedTiers, type Board } from "./model";
 
 interface BoardTileProps {
   board: Board;
@@ -35,7 +35,7 @@ export const BoardTile = memo(function BoardTile({
   // The name replaces what the link holds, so how far along it is and that it
   // is public are read after it instead of lost.
   const id = useId();
-  const facts = board.publishedId === null ? `${id}-meta` : `${id}-meta ${id}-public`;
+  const facts = !isOut(board) ? `${id}-meta` : `${id}-meta ${id}-public`;
   const art = (
     <ListArt
       cover={board.coverImageUrl}
@@ -50,7 +50,7 @@ export const BoardTile = memo(function BoardTile({
       <span className="board-tile__meta" id={`${id}-meta`}>
         {metaOf(board)}
       </span>
-      {board.publishedId !== null && (
+      {isOut(board) && (
         <span className="board-tile__public" id={`${id}-public`}>
           <Icon name="public" />
           {strings.boards.filterPublic}

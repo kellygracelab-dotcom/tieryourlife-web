@@ -95,6 +95,21 @@ export interface SectionProposal {
  * BAD_ICON, BAD_FILE_UNDER, BAD_PICTURE {why} or TOO_MANY_PENDING, and with
  * 403 for a guest or a banned account.
  */
+/** How much room the signed-in person has left to propose sections, asked before a picture goes up. */
+export interface ProposalRoom {
+  pending: number;
+  maxPending: number;
+  proposalsToday: number;
+  maxPerDay: number;
+  /** Why a proposal sent now would be refused, or null when it would not. */
+  refusal: "TOO_MANY_PENDING" | "TOO_MANY_PROPOSALS" | null;
+}
+
+/** 403 NOT_SIGNED_IN for a guest. */
+export function loadProposalRoom(client: ApiClient): Promise<ProposalRoom> {
+  return client.request<ProposalRoom>("GET", "/lists/sections/proposals");
+}
+
 export function proposeSection(
   client: ApiClient,
   proposal: SectionProposal,

@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useSyncExternalStore, type CSSProperties } from "react";
 import type { PublishedItem } from "../../api/types";
 import type { DragState } from "./drag";
 import { CardName } from "./CardName";
@@ -6,14 +6,18 @@ import type { BoardSize } from "./nameFit";
 import { sizedFor } from "../../lib/pictureSize";
 
 interface DragGhostProps {
-  state: DragState;
+  /** The drag as it is right now, the pointer's place included. */
+  now: () => DragState;
+  /** Told of every change of the drag: the ghost follows each move without the board. */
+  subscribe: (onChange: () => void) => () => void;
   items: PublishedItem[];
   board: BoardSize;
 }
 
 const TILT = "rotate(-4deg) scale(1.06)";
 
-export function DragGhost({ state, items, board }: DragGhostProps) {
+export function DragGhost({ now, subscribe, items, board }: DragGhostProps) {
+  const state = useSyncExternalStore(subscribe, now, now);
   if (state.phase !== "dragging") return null;
   const card = items[state.item];
   if (card === undefined) return null;

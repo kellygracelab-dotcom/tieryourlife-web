@@ -1,5 +1,6 @@
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import { isEditorial } from "../../lib/editorial";
+import { drawnLines, fitText, type Measure } from "../../lib/textFit";
 import { plural, strings } from "../../strings";
 
 /**
@@ -209,6 +210,90 @@ function wrap(paint: Paint, text: string, maxWidth: number, maxLines: number): s
   return lines.map((part) => ellipsize(paint, part, maxWidth));
 }
 
+/** The band's type: the letter from its size down to the floor, the caption's, and the gap between. */
+const BAND_WORDS = {
+  floor: 16,
+  line: 1.15,
+  caption: 15,
+  captionLine: 20,
+  gap: 6,
+  inset: 8,
+} as const;
+
+/**
+ * A tier's words on its band, as the board sets them: the letter, or a
+ * name, as large as fits with every word whole, then the caption, both
+ * broken between words and centred in the row. Only a word wider than the
+ * band at the smallest size is broken, with a hyphen; only words past the
+ * row's height end in an ellipsis.
+ */
+function bandWords(
+  paint: Paint,
+  tier: PublishedTier,
+  start: number,
+  middle: number,
+  top: number,
+  height: number,
+) {
+  const { floor, line, caption: captionSize, captionLine, gap, inset } = BAND_WORDS;
+  const width = SHARE.band - inset * 2;
+  const room = height - inset * 2;
+  const measure: Measure = (text, size) => {
+    paint.font = `500 ${size}px ${FONT}`;
+    return paint.measureText(text).width;
+  };
+  const caption = tier.caption?.trim() ?? "";
+  // The caption takes no more than half the band, so the letter always shows.
+  const captionLines = clamped(
+    caption === "" ? [] : drawnLines(caption, width, captionSize, measure),
+    Math.max(1, Math.floor(room / 2 / captionLine)),
+    width,
+    captionSize,
+    measure,
+  );
+  const below = captionLines.length === 0 ? 0 : gap + captionLines.length * captionLine;
+  const fit = fitText(tier.label, { width, height: room - below }, { start, floor, line }, measure);
+  const labelStep = fit.size * line;
+  const labelLines = clamped(
+    drawnLines(tier.label, width, fit.size, measure),
+    Math.max(1, Math.floor((room - below) / labelStep)),
+    width,
+    fit.size,
+    measure,
+  );
+  const block = labelLines.length * labelStep + below;
+  let y = top + (height - block) / 2;
+  paint.textAlign = "center";
+  paint.textBaseline = "middle";
+  paint.font = `500 ${fit.size}px ${FONT}`;
+  for (const text of labelLines) {
+    paint.fillText(text, middle, y + labelStep / 2);
+    y += labelStep;
+  }
+  y += gap;
+  paint.font = `500 ${captionSize}px ${FONT}`;
+  for (const text of captionLines) {
+    paint.fillText(text, middle, y + captionLine / 2);
+    y += captionLine;
+  }
+}
+
+/** At most so many lines, the last ending in an ellipsis when there were more. */
+function clamped(
+  lines: string[],
+  most: number,
+  width: number,
+  size: number,
+  measure: Measure,
+): string[] {
+  if (lines.length <= most) return lines;
+  const kept = lines.slice(0, most);
+  let last = kept[most - 1] ?? "";
+  while (last.length > 1 && measure(`${last}…`, size) > width) last = last.slice(0, -1);
+  kept[most - 1] = `${last.trimEnd()}…`;
+  return kept;
+}
+
 function nameTile(paint: Paint, x: number, y: number, title: string) {
   const { width, height } = SHARE.tile;
   rounded(paint, x, y, width, height, SHARE.tileRadius, TILE);
@@ -279,15 +364,7 @@ export async function drawShare(
     );
     rounded(paint, pad, row.y, band, row.height, SHARE.radius, meta.colorLight);
     paint.fillStyle = isPool ? TILE_LABEL : "#ffffff";
-    paint.textAlign = "center";
-    paint.textBaseline = "middle";
-    paint.font = isPool ? `500 18px ${FONT}` : `500 40px ${FONT}`;
-    const labelY = meta.caption === null ? row.y + row.height / 2 : row.y + row.height / 2 - 12;
-    paint.fillText(ellipsize(paint, meta.label, band - 16), pad + band / 2, labelY);
-    if (meta.caption !== null) {
-      paint.font = `500 15px ${FONT}`;
-      paint.fillText(ellipsize(paint, meta.caption, band - 16), pad + band / 2, labelY + 34);
-    }
+    bandWords(paint, meta, isPool ? 18 : 40, pad + band / 2, row.y, row.height);
 
     const lineY = (index: number) => row.y + SHARE.rowGap + index * lineStep;
     for (const card of row.cards) {

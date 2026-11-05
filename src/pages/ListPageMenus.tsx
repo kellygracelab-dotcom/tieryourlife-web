@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import type { ReportReason } from "../api/community";
 import { errorOf, type ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
-import { useSession } from "../app/session";
 import { boards as site } from "../features/boards/owners";
 import type { BoardsRepository } from "../features/boards/repository";
 import { forgetPublished } from "../features/boards/takeDown";
@@ -13,9 +11,8 @@ import {
   type SaveToMine,
   type ShownPlacing,
 } from "../features/boards/useSaveToMine";
-import { hasIntent, keepIntent, takeIntent } from "../features/community/afterSignIn";
-import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
 import { useHidden } from "../features/community/useHidden";
+import { useReporting } from "../features/community/useReporting";
 import { report as sendReport, unpublish as unpublishList } from "../lib/api";
 import { isEditorial } from "../lib/editorial";
 import { fill, formatCount, strings } from "../strings";
@@ -152,19 +149,7 @@ function VisitorMenu({
   saving: SaveToMine;
   rankings: RankingsEntry | null;
 }) {
-  const { account, signIn } = useSession();
-  const { hideList, showList, hideAuthor } = useHidden();
-  // "resume": a report asked for before a sign-in that went through a
-  // redirect, which opens again once the account is back.
-  const [reporting, setReporting] = useState<ReportState | "resume">(() =>
-    hasIntent({ kind: "report", listId: list.id }) ? "resume" : "closed",
-  );
-  const signedIn = account?.kind === "signedIn";
-  const reportShown: ReportState =
-    reporting === "resume" ? (signedIn ? "open" : "closed") : reporting;
-  useEffect(() => {
-    if (reporting === "resume" && signedIn) takeIntent({ kind: "report", listId: list.id });
-  }, [reporting, signedIn, list.id]);
+  const { hideList, showList } = useHidden();
   // An editorial list has no author to show, and a snapshot without the uid no page to show them on.
   const author = isEditorial(list) || list.authorUid === "" ? null : list;
 
@@ -175,28 +160,7 @@ function VisitorMenu({
       action: { text: strings.list.undo, onClick: () => showList(list.id) },
     });
   };
-
-  const onSignIn = () => {
-    setReporting("signingIn");
-    signIn().then((outcome) => {
-      if (outcome.kind === "redirecting") keepIntent({ kind: "report", listId: list.id });
-      setReporting(outcome.kind === "signedIn" ? "open" : "signIn");
-    });
-  };
-
-  const send = (reason: ReportReason, note: string | null, alsoAuthor: boolean) => {
-    setReporting("sending");
-    report(list.id, { reason, note }).then(
-      () => {
-        hideList({ id: list.id, title: list.title });
-        if (alsoAuthor) hideAuthor({ uid: list.authorUid, name: list.authorName });
-        setReporting("sent");
-      },
-      () => setReporting("failed"),
-    );
-  };
-
-  const closeReport = useCallback(() => setReporting("closed"), []);
+  const reporting = useReporting({ report, onHide: hideNow, resumable: [list] });
 
   return (
     <>
@@ -230,7 +194,7 @@ function VisitorMenu({
             <button
               type="button"
               className="menu__action menu__action--danger"
-              onClick={() => setReporting(account?.kind === "signedIn" ? "open" : "signIn")}
+              onClick={() => reporting.start(list)}
             >
               {strings.list.report}
             </button>
@@ -243,21 +207,7 @@ function VisitorMenu({
           </li>
         </>
       </Menu>
-      <ReportDialog
-        state={reportShown}
-        authorName={author === null ? null : author.authorName}
-        send={send}
-        onSignIn={onSignIn}
-        onHideInstead={() => {
-          setReporting("closed");
-          hideNow();
-        }}
-        onHideAuthor={() => {
-          setReporting("closed");
-          hideAuthor({ uid: list.authorUid, name: list.authorName });
-        }}
-        onClose={closeReport}
-      />
+      {reporting.dialog}
     </>
   );
 }

@@ -1,4 +1,3 @@
-import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { errorOf } from "../api/errors";
 import { getFirebaseAuth, getFirebaseStorage } from "./firebase";
 import type { PixelRect, Size } from "./framing";
@@ -173,9 +172,21 @@ export class PictureRefused extends Error {
 export const picturePath = (uid: string, pictureId: string): string =>
   `users/${uid}/pictures/${pictureId}`;
 
+/** Storage's calls and the bucket, fetched with the first picture that needs them. */
+async function bucket() {
+  const [calls, storage] = await Promise.all([import("firebase/storage"), getFirebaseStorage()]);
+  return { ...calls, storage };
+}
+
 /** Where one of the person's own pictures can be seen from, or null when it cannot be found. */
-export const ownPictureUrl = (uid: string, pictureId: string): Promise<string | null> =>
-  getDownloadURL(ref(getFirebaseStorage(), picturePath(uid, pictureId))).catch(() => null);
+export async function ownPictureUrl(uid: string, pictureId: string): Promise<string | null> {
+  try {
+    const { getDownloadURL, ref, storage } = await bucket();
+    return await getDownloadURL(ref(storage, picturePath(uid, pictureId)));
+  } catch {
+    return null;
+  }
+}
 
 /** Pictures belong to an account: a guest's folder would not follow a collision sign-in. */
 function ownerUid(): string | null {
@@ -206,8 +217,9 @@ export async function uploadPicture(
   }
   if (bytes.size >= MAX_BYTES) throw new PictureRefused("tooBig");
   const pictureId = newId();
-  const target = ref(getFirebaseStorage(), picturePath(uid, pictureId));
   try {
+    const { getDownloadURL, ref, storage, uploadBytes } = await bucket();
+    const target = ref(storage, picturePath(uid, pictureId));
     await uploadBytes(target, bytes, {
       contentType: bytes.type.startsWith("image/") ? bytes.type : "image/jpeg",
     });
@@ -294,8 +306,9 @@ export async function copyPublishedBack(
     throw new PictureRefused("upload");
   }
   const pictureId = newId();
-  const target = ref(getFirebaseStorage(), picturePath(uid, pictureId));
   try {
+    const { getDownloadURL, ref, storage, uploadBytes } = await bucket();
+    const target = ref(storage, picturePath(uid, pictureId));
     await uploadBytes(target, bytes, {
       contentType: bytes.type.startsWith("image/") ? bytes.type : "image/jpeg",
     });
@@ -314,7 +327,9 @@ export async function copyPublishedBack(
 export async function discardPictures(pictureIds: readonly string[]): Promise<void> {
   const uid = ownerUid();
   if (uid === null || pictureIds.length === 0) return;
-  const storage = getFirebaseStorage();
+  const loaded = await bucket().catch(() => null);
+  if (loaded === null) return;
+  const { deleteObject, ref, storage } = loaded;
   await Promise.all(
     pictureIds.map((pictureId) =>
       deleteObject(ref(storage, picturePath(uid, pictureId))).catch(() => undefined),

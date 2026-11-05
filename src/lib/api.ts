@@ -44,7 +44,7 @@ import type { BanLength, QueuedList } from "../api/moderation";
 import * as rank from "../api/rank";
 import * as sections from "../api/sections";
 import type { SectionProposal, SectionStats, Topic } from "../api/sections";
-import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
+import type { MyRankings, Ranking, SavedRanking, TierWords } from "../api/rank";
 import type { FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
@@ -100,11 +100,18 @@ export const loadRanking = (code: string, asAccount = false): Promise<Ranking> =
     : Promise.resolve(rank.rankingOf(preloaded));
 };
 
-export const rearrangeRanking = (code: string, rows: Rows): Promise<{ code: string }> =>
-  rank.rearrangeRanking(api, code, rows);
+export const rearrangeRanking = (
+  code: string,
+  rows: Rows,
+  tierLabels?: TierWords,
+): Promise<{ code: string }> => rank.rearrangeRanking(api, code, rows, tierLabels);
 
-export const keepRanking = (listId: string, rows: Rows, version?: number): Promise<SavedRanking> =>
-  rank.keepRanking(api, listId, rows, version);
+export const keepRanking = (
+  listId: string,
+  rows: Rows,
+  version?: number,
+  tierLabels?: TierWords,
+): Promise<SavedRanking> => rank.keepRanking(api, listId, rows, version, tierLabels);
 
 export const carryGuest = (guestToken: string): Promise<AdoptedGuest> =>
   account.carryGuest(api, guestToken);
@@ -199,6 +206,9 @@ export const unfollowSection = (id: string): Promise<{ following: false }> =>
 
 export const proposeSection = (proposal: SectionProposal): Promise<SectionStats> =>
   sections.proposeSection(api, proposal);
+
+export const loadProposalRoom = (): Promise<sections.ProposalRoom> =>
+  sections.loadProposalRoom(api);
 
 export const withdrawSectionProposal = (id: string): Promise<void> =>
   sections.withdrawSectionProposal(api, id);

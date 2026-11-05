@@ -60,7 +60,8 @@
 
 @media (min-width: 840px) {
   /* The handout's column holds a link and two buttons, not cards: it stays 320 at any width. */
-  .ranking.ranking--read {
+  .ranking.ranking--read,
+  .board-frame:has(> .ranking--read) {
     --pool-w: 320px;
   }
 
@@ -389,8 +390,16 @@
     --board-cap: 1760px;
   }
 
+  /*
+   * The head's words and tools keep to the board's width (--board-w), centred
+   * as the board is: on a wide window a title at its edge over a board in its
+   * middle read as two pages.
+   */
   .list-head {
+    --head-inset: max(0px, calc((100% - var(--board-w, 100%)) / 2));
+
     min-height: 72px;
+    padding-inline: var(--head-inset);
   }
 
   /*
@@ -404,7 +413,7 @@
     z-index: 20;
     margin-inline: calc(-1 * var(--space-8));
     padding-block: 8px;
-    padding-inline: var(--space-8);
+    padding-inline: calc(var(--space-8) + var(--head-inset));
     border-bottom: 1px solid var(--line);
     background: color-mix(in srgb, var(--paper) 97%, transparent);
     backdrop-filter: blur(12px);

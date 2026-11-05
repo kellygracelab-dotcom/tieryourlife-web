@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlaceFaceDialog, type FaceSource, type Placed } from "./PlaceFaceDialog";
@@ -129,6 +129,36 @@ describe("PlaceFaceDialog", () => {
     await user.click(confirmButton());
     expect(onUse.mock.calls[0]?.[0]).toMatchObject({ moved: true });
     expect(onUse.mock.calls[0]?.[0]?.square.side).toBeLessThan(400);
+  });
+
+  it("moves and zooms by buttons too, for one pointer and no drag", async () => {
+    const { onUse } = open();
+    const controls = screen.getByRole("group", { name: "Move and zoom the picture" });
+    const button = (name: string) => within(controls).getByRole("button", { name });
+    // Nothing to move before the picture is there.
+    expect(button("Zoom in")).toBeDisabled();
+    load(400, 400);
+    const user = userEvent.setup();
+
+    await user.click(button("Zoom in"));
+    expect(box().width).toBeCloseTo(110);
+    for (let i = 0; i < 3; i++) await user.click(button("Zoom in"));
+    const zoomed = box();
+    // A press is the long step, 32 px, the way the screen says.
+    await user.click(button("Move right"));
+    expect(box().left - zoomed.left).toBeCloseTo((32 / 240) * 100);
+    await user.click(button("Move left"));
+    expect(box().left).toBeCloseTo(zoomed.left);
+    await user.click(button("Move down"));
+    expect(box().top - zoomed.top).toBeCloseTo((32 / 240) * 100);
+    await user.click(button("Move up"));
+    expect(box().top).toBeCloseTo(zoomed.top);
+    await user.click(button("Zoom out"));
+    expect(box().width).toBeCloseTo(100 * 1.1 ** 3);
+    expect(covers()).toBe(true);
+
+    await user.click(confirmButton());
+    expect(onUse.mock.calls[0]?.[0]).toMatchObject({ moved: true });
   });
 
   it("follows a drag, zooms on the wheel around the pointer, and spreads under two fingers", () => {

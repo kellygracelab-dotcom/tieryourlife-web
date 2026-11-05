@@ -1,4 +1,4 @@
-import type { PublishedList } from "../../api/types";
+import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import {
   itemsIn,
   poolTier,
@@ -45,6 +45,7 @@ export function boardView(board: Board, untitled: string, before?: readonly stri
   const uids = ordered.map((item) => item.uid);
   const indexOf = new Map(uids.map((uid, index) => [uid, index]));
   const rows = inRows.map((row) => row.flatMap((item) => indexOf.get(item.uid) ?? []));
+  const placed = new Set(rows.flat());
   const title = board.title.trim().length > 0 ? board.title : untitled;
   return {
     list: {
@@ -66,11 +67,51 @@ export function boardView(board: Board, untitled: string, before?: readonly stri
         title: item.title,
         imageUrl: item.imageUrl,
         credit: item.credit,
-        tierIndex: rows.findIndex((row) => row.includes(position)) === -1 ? null : undefined,
+        tierIndex: placed.has(position) ? undefined : null,
       })),
     },
     uids,
     rows,
+  };
+}
+
+const sameItem = (a: PublishedItem, b: PublishedItem): boolean =>
+  a.title === b.title &&
+  a.imageUrl === b.imageUrl &&
+  a.credit === b.credit &&
+  a.tierIndex === b.tierIndex;
+
+const sameTier = (a: PublishedTier, b: PublishedTier): boolean =>
+  a.label === b.label &&
+  a.caption === b.caption &&
+  a.colorLight === b.colorLight &&
+  a.colorDark === b.colorDark;
+
+/**
+ * The view, with the cards and tiers of the one drawn before wherever they
+ * read the same. Every move rewrites the board and so the view; the ranking
+ * board draws a card again only when the card it is handed is another, so
+ * a move on a board of 2,000 cards draws the card moved, not all of them.
+ */
+export function keepUnchanged(before: BoardView | null, next: BoardView): BoardView {
+  if (before === null) return next;
+  const old = before.list;
+  const items = next.list.items.map((item, index) => {
+    const was = old.items[index];
+    return was !== undefined && sameItem(was, item) ? was : item;
+  });
+  const sameItems =
+    items.length === old.items.length && items.every((item, i) => item === old.items[i]);
+  const sameTiers =
+    next.list.tiers.length === old.tiers.length &&
+    next.list.tiers.every((tier, i) => old.tiers[i] !== undefined && sameTier(old.tiers[i], tier));
+  return {
+    ...next,
+    list: {
+      ...next.list,
+      items: sameItems ? old.items : items,
+      tiers: sameTiers ? old.tiers : next.list.tiers,
+    },
   };
 }
 

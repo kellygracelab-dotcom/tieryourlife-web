@@ -25,6 +25,7 @@ import {
   decideEdit,
   decideOwner,
   decideRows,
+  decideTierLabels,
   decideVersion,
   fromStoredRows,
   isCode,
@@ -38,6 +39,7 @@ import {
   summaryOf,
   tooSoon,
   toStoredRows,
+  withTierLabels,
   type Snapshot,
   type StoredRow,
 } from "./ranking";
@@ -130,8 +132,10 @@ export async function route(
     // The picture a chat shows for a page: /og/l/{id}.png and /og/r/{code}.png.
     if (reading && segments.length === 3 && segments[0] === "og") {
       const id = (segments[2] ?? "").replace(/\.png$/, "");
-      if (segments[1] === "l") return await listShareImage(response, id);
-      if (segments[1] === "r") return await rankingShareImage(response, id);
+      // A house list's card in the language its page asked for (?hl=).
+      const hl = (request.query as Record<string, unknown> | undefined)?.hl;
+      if (segments[1] === "l") return await listShareImage(response, id, hl);
+      if (segments[1] === "r") return await rankingShareImage(response, id, hl);
       return notFound(response, "No such address");
     }
     // A section's or topic's picture at a page's width: /img/{width}/{kind}/{id}/{picture}.
@@ -268,6 +272,10 @@ async function saveRanking(
       .status(decision.status)
       .json({ error: decision.error, code: decision.code });
   }
+  const words = decideTierLabels(body, snapshot.tiers.length);
+  if (!words.ok) {
+    return void response.status(words.status).json({ error: words.error, code: words.code });
+  }
 
   const now = Date.now();
   const lastWrite = lastQuota?.get("lastWriteAt") as number | undefined;
@@ -294,7 +302,7 @@ async function saveRanking(
   const claimToken = randomBytes(24).toString("base64url");
   const document: RankingDocument = {
     listId: decision.listId,
-    snapshot,
+    snapshot: withTierLabels(snapshot, words.labels),
     rows: toStoredRows(decision.rows),
     ownerUid: identity.uid,
     ownerAnonymous: identity.isAnonymous,
@@ -381,8 +389,13 @@ async function editRanking(
     if (!owner.ok) return owner;
     const edit = decideEdit(body, ranking.snapshot.tiers.length, ranking.snapshot.items.length);
     if (!edit.ok) return edit;
+    // A Finish again from the list page may bring a reader's tier words; the /r/ page's Edit brings none.
+    const words = decideTierLabels(body, ranking.snapshot.tiers.length);
+    if (!words.ok) return words;
+    const snapshot = withTierLabels(ranking.snapshot, words.labels);
     transaction.update(ref, {
       rows: toStoredRows(edit.rows),
+      ...(snapshot === ranking.snapshot ? {} : { snapshot }),
       updatedAt: FieldValue.serverTimestamp(),
     });
     return edit;

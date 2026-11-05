@@ -69,6 +69,37 @@ describe("useDock", () => {
     expect(renderHook(() => useDock(store)).result.current.rows).toBe(Math.max(1, start - 1));
   });
 
+  it("takes a click on the grip as a row more, and past the most as one again: no drag needed", () => {
+    const store = memoryStore();
+    const { result } = renderHook(() => useDock(store));
+    act(() => result.current.choose("under"));
+    const click = (jitter = 0) => {
+      const grip = grab(500);
+      act(() => result.current.startResize(grip.event));
+      // A hand's tremble is still a click.
+      if (jitter !== 0) act(() => grip.moveTo(500 + jitter));
+      act(() => grip.release());
+    };
+    act(() => result.current.resize(1));
+    click();
+    expect(result.current.rows).toBe(2);
+    click(3);
+    expect(result.current.rows).toBe(3);
+    const most = result.current.maxRows;
+    act(() => result.current.resize(most));
+    click();
+    expect(result.current.rows).toBe(1);
+    expect(renderHook(() => useDock(store)).result.current.rows).toBe(1);
+
+    // A drag that comes back where it started is not a click.
+    const grip = grab(500);
+    act(() => result.current.startResize(grip.event));
+    act(() => grip.moveTo(400));
+    act(() => grip.moveTo(500));
+    act(() => grip.release());
+    expect(result.current.rows).toBe(1);
+  });
+
   it("never shows fewer than one row or more than the window has room for", () => {
     const { result } = renderHook(() => useDock(memoryStore()));
     const grip = grab(500);

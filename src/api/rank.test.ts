@@ -34,6 +34,17 @@ describe("rank", () => {
     expect(request).toHaveBeenLastCalledWith("POST", "/api/rank", {
       body: { listId: "wMRMFDxo8UejcAi2VVMW", rows: [[2, 0], []], version: 1_700 },
     });
+
+    // A version started from a reader's placing keeps that reader's tier words.
+    await keepRanking(client, "wMRMFDxo8UejcAi2VVMW", rows, 1_700, ["Top", null]);
+    expect(request).toHaveBeenLastCalledWith("POST", "/api/rank", {
+      body: {
+        listId: "wMRMFDxo8UejcAi2VVMW",
+        rows: [[2, 0], []],
+        version: 1_700,
+        tierLabels: ["Top", null],
+      },
+    });
   });
 
   it("reads a ranking by code with App Check alone", async () => {
@@ -80,6 +91,10 @@ describe("rank", () => {
 
     expect(request).toHaveBeenCalledWith("PUT", "/api/rank/abcdefgh", {
       body: { rows: [[1], [0, 2]] },
+    });
+    await rearrangeRanking(client, "abcdefgh", rows, [null, "Meh"]);
+    expect(request).toHaveBeenLastCalledWith("PUT", "/api/rank/abcdefgh", {
+      body: { rows: [[1], [0, 2]], tierLabels: [null, "Meh"] },
     });
   });
 

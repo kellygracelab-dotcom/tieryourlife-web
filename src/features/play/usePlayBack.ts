@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { NavigationType, useBlocker } from "react-router";
+import { useBackCloses } from "../../ui/useBackCloses";
 import type { Play } from "./usePlay";
 
 /**
@@ -9,12 +8,5 @@ import type { Play } from "./usePlay";
  * once, next to its `usePlay`; it needs the site's data router.
  */
 export function usePlayBack({ playing, quit }: Pick<Play, "playing" | "quit">): void {
-  const blocker = useBlocker(
-    ({ historyAction }) => playing && historyAction === NavigationType.Pop,
-  );
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    blocker.reset();
-    quit();
-  }, [blocker, quit]);
+  useBackCloses(playing, quit);
 }

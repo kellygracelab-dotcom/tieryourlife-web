@@ -602,6 +602,66 @@ describe("Propose a section", () => {
       );
     });
 
+    it("asks for room before the upload: a full queue costs no upload and keeps the proposal", async () => {
+      const deps = {
+        ...makeDeps(),
+        room: vi.fn<NonNullable<EditorDeps["room"]>>(async () => ({
+          pending: 3,
+          maxPending: 3,
+          proposalsToday: 3,
+          maxPerDay: 10,
+          refusal: "TOO_MANY_PENDING" as const,
+        })),
+      };
+      const opened = propose({ deps });
+      pick(2000, 1000);
+      await userEvent.type(nameField(), "Street food");
+      await userEvent.click(proposeButton());
+      await waitFor(() => expect(opened.onTooMany).toHaveBeenCalled());
+      expect(deps.room).toHaveBeenCalled();
+      expect(deps.upload).not.toHaveBeenCalled();
+      expect(opened.send).not.toHaveBeenCalled();
+      await waitFor(() =>
+        expect(readKeptProposal(deps.keep, null)?.picture).toMatch(/^data:image\//),
+      );
+    });
+
+    it("asks for room before the upload: ten today says so without uploading", async () => {
+      const deps = {
+        ...makeDeps(),
+        room: vi.fn<NonNullable<EditorDeps["room"]>>(async () => ({
+          pending: 0,
+          maxPending: 3,
+          proposalsToday: 10,
+          maxPerDay: 10,
+          refusal: "TOO_MANY_PROPOSALS" as const,
+        })),
+      };
+      propose({ deps });
+      pick(2000, 1000);
+      await userEvent.type(nameField(), "Street food");
+      await userEvent.click(proposeButton());
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "You’ve proposed 10 sections today. Try again tomorrow.",
+      );
+      expect(deps.upload).not.toHaveBeenCalled();
+    });
+
+    it("a failed ask for room is no answer: the proposal goes on", async () => {
+      const deps = {
+        ...makeDeps(),
+        room: vi.fn<NonNullable<EditorDeps["room"]>>(async () => {
+          throw new Error("offline");
+        }),
+      };
+      const opened = propose({ deps });
+      pick(2000, 1000);
+      await userEvent.type(nameField(), "Street food");
+      await userEvent.click(proposeButton());
+      await waitFor(() => expect(opened.send).toHaveBeenCalled());
+      expect(deps.upload).toHaveBeenCalled();
+    });
+
     it("TOO_MANY_PROPOSALS: a bar with no Try again, ten a day", async () => {
       await sendWith(refuse({ kind: "tooManyRequests", code: "TOO_MANY_PROPOSALS" }));
       expect(await screen.findByRole("alert")).toHaveTextContent(

@@ -22,6 +22,9 @@ import {
 /** From here the board has room for a column or a dock; below it the tray or the strip is the only shape. */
 export const WIDE_BOARD_FROM = 840;
 
+/** A press on the grip that moves less than this, in px, is a click rather than a drag. */
+const CLICK_SLOP = 4;
+
 export interface DockState {
   /** Where the pool sits on a wide screen: chosen on this device, or the default for the window. */
   dock: Dock;
@@ -33,7 +36,10 @@ export interface DockState {
   canDock: boolean;
   choose: (dock: Dock) => void;
   resize: (rows: DockRows) => void;
-  /** For the 6 px strip on the dock's top edge: drag it to show one to four rows of cards. */
+  /**
+   * For the strip on the dock's top edge: drag it to show one to four rows of
+   * cards, or click it for a row more, and past the most back to one.
+   */
   startResize: (event: ReactPointerEvent<HTMLElement>) => void;
   /** The same strip from the keyboard: up and down a row, Home and End to either end. */
   resizeByKey: (event: ReactKeyboardEvent<HTMLElement>) => void;
@@ -80,13 +86,16 @@ export function useDock(store: KeyValueStore = localStorageStore): DockState {
   );
 
   // A hundred pixels of drag is a row; never more rows than the window has room for.
+  // A press that hardly moves is a click: one pointer without a drag sets the rows too.
   const shown = Math.min(choice.rows, rowsThatFit(size.height)) as DockRows;
   const startResize = (event: ReactPointerEvent<HTMLElement>) => {
     const grip = event.currentTarget;
     const startY = event.clientY;
     let last = shown;
+    let dragged = false;
     grip.setPointerCapture(event.pointerId);
     const onMove = (move: PointerEvent) => {
+      if (Math.abs(startY - move.clientY) > CLICK_SLOP) dragged = true;
       const next = Math.min(
         rowsThatFit(window.innerHeight),
         Math.max(1, shown + Math.round((startY - move.clientY) / 100)),
@@ -97,11 +106,17 @@ export function useDock(store: KeyValueStore = localStorageStore): DockState {
     };
     const onEnd = () => {
       grip.removeEventListener("pointermove", onMove);
-      grip.removeEventListener("pointerup", onEnd);
+      grip.removeEventListener("pointerup", onUp);
       grip.removeEventListener("pointercancel", onEnd);
     };
+    const onUp = () => {
+      onEnd();
+      if (dragged) return;
+      const most = rowsThatFit(window.innerHeight);
+      resize((shown >= most ? 1 : shown + 1) as DockRows);
+    };
     grip.addEventListener("pointermove", onMove);
-    grip.addEventListener("pointerup", onEnd);
+    grip.addEventListener("pointerup", onUp);
     grip.addEventListener("pointercancel", onEnd);
   };
 

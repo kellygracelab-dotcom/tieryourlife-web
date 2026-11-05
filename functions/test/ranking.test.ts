@@ -12,6 +12,7 @@ import {
   decideListId,
   decideOwner,
   decideRows,
+  decideTierLabels,
   firstImageOf,
   fromStoredRows,
   isCode,
@@ -26,6 +27,7 @@ import {
   summaryOf,
   tooSoon,
   toStoredRows,
+  withTierLabels,
   type RankingSummary,
   type StoredOwner,
 } from "../src/ranking";
@@ -201,6 +203,42 @@ describe("snapshotOf", () => {
     });
   });
 
+  it("keeps the pictures' credits and a house list's words, only those it shows", () => {
+    const snapshot = snapshotOf({
+      title: "Best sci-fi films",
+      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      tiers: [{ label: "S", caption: "Masterpiece", colorLight: "#f00", colorDark: "#a00" }],
+      items: [
+        { title: "Arrival", imageUrl: "https://img/a.jpg", credit: " Jane Doe, CC BY 2.0 " },
+        { title: "Alien", imageUrl: null, credit: "  " },
+      ],
+      translations: {
+        ru: {
+          "Best sci-fi films": "Лучшая фантастика",
+          Masterpiece: "Шедевр",
+          Arrival: "Прибытие",
+          "A card taken off since": "Карточка, которой уже нет",
+          Alien: 5,
+        },
+        de: { Unused: "Unbenutzt" },
+        fr: "not words",
+      },
+    });
+    assert.deepEqual(
+      snapshot.items.map((item) => item.credit),
+      ["Jane Doe, CC BY 2.0", undefined],
+    );
+    assert.equal("credit" in (snapshot.items[1] ?? {}), false);
+    assert.deepEqual(snapshot.translations, {
+      ru: {
+        "Best sci-fi films": "Лучшая фантастика",
+        Masterpiece: "Шедевр",
+        Arrival: "Прибытие",
+      },
+    });
+    assert.equal("translations" in snapshotOf({ title: "x", translations: {} }), false);
+  });
+
   it("survives a document with fields missing", () => {
     const snapshot = snapshotOf({ title: 5, authorName: undefined });
     assert.deepEqual(snapshot, {
@@ -211,6 +249,43 @@ describe("snapshotOf", () => {
       tiers: [],
       items: [],
     });
+  });
+});
+
+describe("decideTierLabels and withTierLabels", () => {
+  const snapshot = snapshotOf({
+    title: "Films",
+    tiers: [
+      { label: "S", caption: "Masterpiece", colorLight: "#f00", colorDark: "#a00" },
+      { label: "A", caption: null, colorLight: "#0f0", colorDark: "#0a0" },
+    ],
+    items: [],
+  });
+
+  it("takes a reader's words, one a tier, and the list's where a tier has none", () => {
+    const decision = decideTierLabels({ tierLabels: ["Top", " "] }, 2);
+    assert.deepEqual(decision, { ok: true, labels: ["Top", null] });
+    const kept = withTierLabels(snapshot, decision.ok ? decision.labels : null);
+    assert.deepEqual(
+      kept.tiers.map((tier) => [tier.label, tier.caption]),
+      [
+        ["Top", "Masterpiece"],
+        ["A", null],
+      ],
+    );
+  });
+
+  it("leaves the list's words when none are sent", () => {
+    assert.deepEqual(decideTierLabels({ rows: [] }, 2), { ok: true, labels: null });
+    assert.equal(withTierLabels(snapshot, null), snapshot);
+    assert.equal(withTierLabels(snapshot, [null, null]), snapshot);
+  });
+
+  it("refuses words that do not fit the tiers", () => {
+    for (const tierLabels of [["Top"], "Top", [5, null], ["x".repeat(41), null]]) {
+      const decision = decideTierLabels({ tierLabels }, 2);
+      assert.equal(decision.ok, false, JSON.stringify(tierLabels));
+    }
   });
 });
 

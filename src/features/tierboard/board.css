@@ -5,7 +5,9 @@
  * neighbour reads as broken. The tile's size and the row's padding are
  * properties, so the rows, the pool's grid and the dock's rows follow them,
  * and the section too: the pool's column beside the board is so many cards wide.
+ * A page holding a board (.board-frame) knows them too, to line its head up.
  */
+.board-frame,
 .ranking,
 .board,
 .pool {
@@ -56,15 +58,17 @@
   text-align: center;
 }
 
+/* Broken between words only: TierLabel makes the type smaller until every word fits. */
 .tier__label {
+  max-width: 100%;
   font: 500 32px/36px var(--font);
-  overflow-wrap: anywhere;
 }
 
 .tier__caption {
+  max-width: 100%;
   font: var(--text-caption);
   font-weight: 500;
-  /* An unbroken caption wraps inside the band instead of spilling onto the row. */
+  /* Between words; only a word wider than the band is broken, rather than spill onto the row. */
   overflow-wrap: anywhere;
 }
 
@@ -157,6 +161,7 @@
 }
 
 @media (max-width: 1199px) {
+  .board-frame,
   .ranking,
   .board,
   .pool {

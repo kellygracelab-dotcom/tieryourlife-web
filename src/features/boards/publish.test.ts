@@ -49,9 +49,12 @@ describe("publishing a board", () => {
     ]);
     expect(request.coverImageUrls).toEqual([]);
     expect(request.coverImageUrl).toBeNull();
-    // No topic is said out loud: a republish without one takes the list out of its old one.
+    // No topic is said out loud: a republish with it takes the list out of its old one.
     expect(request.topicId).toBeNull();
-    expect(publishRequestOf({ ...b, topic: { id: "t1", name: "A24" } })?.topicId).toBe("t1");
+    expect(request.noTopic).toBe(true);
+    const topical = publishRequestOf({ ...b, topic: { id: "t1", name: "A24" } });
+    expect(topical?.topicId).toBe("t1");
+    expect(topical?.noTopic).toBeUndefined();
     // Anonymity is said every time too, or a republish would put the name back.
     expect(request.anonymous).toBe(false);
     expect(publishRequestOf({ ...b, anonymous: true })?.anonymous).toBe(true);
@@ -194,6 +197,14 @@ describe("a published list as a board of one's own", () => {
     };
     const board = boardFromList(credited, null, 5, uids());
     expect(liveItems(board).map((item) => item.credit)).toEqual(["(c) Jane Doe", null, null]);
+  });
+
+  it("keeps the list it came from and sends it with a publish, as the app does", () => {
+    const board = { ...boardFromList(list, [[2], [0]], 5, uids()), category: "film_tv" };
+    expect(board.takenFrom).toBe("abc");
+    expect(publishRequestOf(board)?.takenFrom).toBe("abc");
+    // A board of one's own names no list it came from.
+    expect(publishRequestOf({ ...board, takenFrom: null })).not.toHaveProperty("takenFrom");
   });
 
   it("leaves every card in the pool when no arrangement is wanted", () => {

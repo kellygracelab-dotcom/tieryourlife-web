@@ -8,6 +8,7 @@ import {
   BOARD_SHOWS,
   BOARD_SORTS,
   isNarrowed,
+  isOut,
   rankedCount,
   restoreBoard,
   setFavourite,
@@ -252,7 +253,7 @@ export function BoardsPage({
   const narrowed = isNarrowed(filters);
   const grouped = shouldGroup(arranged, narrowed);
   const shown = [...arranged.favourites, ...arranged.rest];
-  const publicCount = live.filter((board) => board.publishedId !== null).length;
+  const publicCount = live.filter(isOut).length;
   const rankings = live.reduce((sum, board) => sum + rankedCount(board), 0);
 
   // Only the lists on screen are deleted: one chosen and then hidden by a

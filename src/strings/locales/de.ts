@@ -139,6 +139,13 @@ const de: Translation = {
     showAgain: "Wieder anzeigen",
     placeTitle: "Bild ausrichten",
     placeFrame: "Das Bild, das in den Kreis kommt",
+    placeControls: "Bild verschieben und zoomen",
+    placeLeft: "Nach links verschieben",
+    placeRight: "Nach rechts verschieben",
+    placeUp: "Nach oben verschieben",
+    placeDown: "Nach unten verschieben",
+    placeZoomIn: "Vergrößern",
+    placeZoomOut: "Verkleinern",
     placeUse: "Verwenden",
     placeFailed:
       "Dieses Bild lässt sich nicht laden und kann daher nicht dein Gesicht sein. Wähle ein anderes.",
@@ -358,6 +365,7 @@ const de: Translation = {
     allHidden: "Alles hier ist für dich ausgeblendet. Die Liste steht in den Einstellungen.",
     hiddenTile: "Für dich ausgeblendet",
     undo: "Rückgängig",
+    cardMore: "Mehr zu {title}",
     omitted: {
       one: "{n} ausgeblendete Liste wird nicht gezeigt.",
       other: "{n} ausgeblendete Listen werden nicht gezeigt.",
@@ -496,6 +504,7 @@ const de: Translation = {
     dockBeside: "Karten neben den Stufen",
     dockUnder: "Karten unter den Stufen",
     dockRows: "Kartenreihen unter den Stufen",
+    dockRowsHint: "Zieh oder klick, um die Zahl der Kartenreihen zu ändern",
     allPlaced: { one: "Die Karte ist platziert", other: "Alle {n} platziert" },
     allPlacedNote:
       "Überleg es dir anders, indem du eine Karte ziehst, oder schließ ab und hol dir deinen Link.",
@@ -879,6 +888,9 @@ const de: Translation = {
     topicMissing: "In {section} gibt es kein solches Thema.",
     backToSection: "Zurück zu {section}",
     suggestTopic: "Thema vorschlagen",
+    suggestTopicBody:
+      "Themen werden beim Veröffentlichen einer Liste benannt oder gewählt, unter „Thema“ in ihren Listeneinstellungen. Die Website bietet dort die vorhandenen Themen an; ein neues wird in der App benannt.",
+    suggestTopicMake: "Liste in {section} anlegen",
     sortPopular: "Beliebt",
     sortNewest: "Neueste",
     topicWaiting: "{name} · wartet",
@@ -889,7 +901,7 @@ const de: Translation = {
     tabExplore: "Entdecken",
     tabFollowing: "Gefolgt",
     community: "Community",
-    popularThisWeek: "Beliebt diese Woche",
+    popular: "Beliebt",
     manage: "Verwalten",
     reasonSection: "In {name}",
     emptyTitle: "Du folgst noch nichts",
@@ -1009,6 +1021,8 @@ const de: Translation = {
     play: "Spielen",
     needsCards: "Zum Spielen brauchst du mindestens 3 Karten.",
     savedGame: "Ein Spiel ist gespeichert.",
+    couldNotOpen:
+      "Spielen ließ sich nicht öffnen. Prüfe die Verbindung und versuch es noch einmal.",
     cardsFrom: { one: "{n} Karte aus „{title}“", other: "{n} Karten aus „{title}“" },
     chooseCards: "Karten wählen",
     game: "Spiel",
@@ -1165,8 +1179,7 @@ const de: Translation = {
     category: "Kategorie",
     categoryNone: "Noch nicht gewählt",
     rankedEmpty: "Noch nichts eingestuft",
-    rankedNote:
-      "Wechsle zu „Zeilen“ oder „Einzelner Streifen“, um Karten zwischen Stufen zu verschieben.",
+    rankedRow: "{n}. „{name}“ in {tier}",
     moveTo: "In eine Stufe verschieben",
     currentTier: "Aktuell hier",
     backToPool: "Zurück in den Pool",
@@ -1184,6 +1197,8 @@ const de: Translation = {
     behind: "Die veröffentlichte Fassung ist älter als dieses Board.",
     publishing: "Wird veröffentlicht…",
     publishedNote: "Veröffentlicht. Alle mit dem Link können sie einordnen.",
+    publishedAsRanking:
+      "Draußen als deine Reihung dieser Liste. Im Feed erscheint keine zweite Liste.",
     unpublished: "Nicht mehr veröffentlicht. Der Link funktioniert nicht mehr.",
     shareImage: "Als Bild teilen",
     shareImageSub: "Ein Bild dieses Boards, mit Link zur Website",

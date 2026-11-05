@@ -154,10 +154,7 @@ describe("SectionPage", () => {
     expect(grid.getByRole("button", { name: "Speedruns · waiting" })).toHaveTextContent(
       /Waiting\s*Speedruns/,
     );
-    expect(screen.getByRole("link", { name: /Suggest a topic/ })).toHaveAttribute(
-      "href",
-      "/b/new?category=games",
-    );
+    expect(screen.getByRole("button", { name: /Suggest a topic/ })).toBeInTheDocument();
     // A small count makes the place look empty, a big one is noise: neither is said.
     expect(screen.getByRole("button", { name: "Follow" })).toBeInTheDocument();
     expect(screen.queryByText(/followers?|3,410|812/)).toBeNull();
@@ -291,12 +288,28 @@ describe("SectionPage", () => {
     topics.mine.mockResolvedValue({ topics: [] });
     open("/s/games");
     await waitFor(() => expect(topics.mine).toHaveBeenCalled());
-    expect(await screen.findByRole("link", { name: /Suggest a topic/ })).toHaveAttribute(
-      "href",
-      "/b/new?category=games",
-    );
+    expect(await screen.findByRole("button", { name: /Suggest a topic/ })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 2, name: "Topics" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Topics" })).toBeNull();
+  });
+
+  it("says where topics come from before it makes a list, and makes one only when asked", async () => {
+    const router = open("/s/games");
+    await tiles();
+    await userEvent.click(screen.getByRole("button", { name: /Suggest a topic/ }));
+    const ask = screen.getByRole("dialog", { name: "Suggest a topic" });
+    expect(ask).toHaveTextContent(/when you publish a list/);
+    expect(ask).toHaveTextContent(/List settings/);
+    // Nothing is made by the press alone.
+    expect(router.state.location.pathname).toBe("/s/games");
+    await userEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(router.state.location.pathname).toBe("/s/games");
+
+    await userEvent.click(screen.getByRole("button", { name: /Suggest a topic/ }));
+    expect(
+      within(screen.getByRole("dialog")).getByRole("link", { name: "Make a list in Games" }),
+    ).toHaveAttribute("href", "/b/new?category=games");
   });
 
   it("keeps the order on top, and one ring until the topics and the first page are both in", async () => {
