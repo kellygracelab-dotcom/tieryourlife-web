@@ -95,11 +95,14 @@ p {
   background: rgba(0, 0, 0, 0.42);
 }
 
-/* Every dialog: on the scrim, in the middle. */
+/* Every dialog: on the scrim, in the middle; taller than the window, it scrolls inside itself. */
 .dialog {
   display: flex;
   flex-direction: column;
   width: min(360px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 24px;
   border-radius: 28px;
   background: var(--surface);

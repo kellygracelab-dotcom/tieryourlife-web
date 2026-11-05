@@ -82,6 +82,44 @@ describe("publishing a board", () => {
   });
 });
 
+describe("an own photo on the cover", () => {
+  const own =
+    "https://firebasestorage.googleapis.com/v0/b/b/o/users%2Fme%2Fpictures%2Fpic-1?alt=media&token=t";
+  const board = () => {
+    const next = uids();
+    const b: Board = { ...newBoard("b", "Trips", 1, next), category: "travel", anonymous: true };
+    return addToPool(
+      b,
+      [
+        { title: "Holiday", imageUrl: own, pictureId: "pic-1" },
+        { title: "Poster", imageUrl: "https://x/p.jpg" },
+      ],
+      2,
+      next,
+    );
+  };
+
+  it("goes by id alone, so its private address, which names the account, never travels", () => {
+    const request = publishRequestOf({ ...board(), coverImageUrls: [own] })!;
+    expect(request.coverPictureId).toBe("pic-1");
+    expect(request.coverImageUrl).toBeNull();
+    expect(request.coverImageUrls).toEqual([]);
+    expect(JSON.stringify(request)).not.toContain("users%2F");
+  });
+
+  it("stays out of a collage, which keeps the rest", () => {
+    const request = publishRequestOf({ ...board(), coverImageUrls: [own, "https://x/p.jpg"] })!;
+    expect(request.coverPictureId).toBeNull();
+    expect(request.coverImageUrls).toEqual(["https://x/p.jpg"]);
+    expect(JSON.stringify(request)).not.toContain("users%2F");
+  });
+
+  it("is never sent by a private address, even with its card gone", () => {
+    const request = publishRequestOf({ ...board(), coverImageUrls: ["https://x/p.jpg", own] })!;
+    expect(request.coverImageUrls).toEqual(["https://x/p.jpg"]);
+  });
+});
+
 describe("a picture's credit", () => {
   it("goes out with the card it belongs to, and nowhere else", () => {
     const next = uids();

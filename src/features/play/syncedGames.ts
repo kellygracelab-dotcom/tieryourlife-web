@@ -60,8 +60,25 @@ function scopeOf(chosen: Chosen, poolId: string | null): string[] | null {
   return tiers.length === 0 ? null : tiers;
 }
 
+/**
+ * The synced form has no word for cards picked one by one: they travel as
+ * their row, and the game's own cards say which. One row comes back as those
+ * cards, picked, so a reload never pulls in the rest of the row as cards that
+ * joined the game; a game over a whole row was all of its cards anyway, and
+ * only a card added to that row since is left out of it.
+ */
 function chosenOf(play: SyncedPlay, poolId: string | null): Chosen {
   if (play.scope === undefined || play.scope.length === 0) return { kind: "all" };
+  const [row] = play.scope;
+  if (play.scope.length === 1 && row !== undefined) {
+    const tier = row === poolId ? null : row;
+    return {
+      kind: "picked",
+      tier,
+      ids: [...play.ids],
+      keepTier: tier !== null && play.keepTier === true,
+    };
+  }
   return {
     kind: "rows",
     tiers: play.scope.filter((id) => id !== poolId),

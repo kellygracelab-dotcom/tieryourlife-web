@@ -558,6 +558,8 @@ const ar: Translation = {
     allPlacedNoteLive: "غيّرت رأيك؟ اسحب بطاقة. كل شيء يُحفظ أثناء العمل.",
     allPlacedHint: "اسحب بطاقة إن غيّرت رأيك",
     placeIn: "وضع {name} في {tier}",
+    cardIn: "«{name}» في {tier}",
+    cardInPool: "«{name}» عاد إلى المجموعة",
     undo: "تراجع",
     finish: "إنهاء",
     cancel: "إلغاء",

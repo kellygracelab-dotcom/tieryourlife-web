@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router";
 import type { PublishedList } from "../../api/types";
 import { SessionContext, type Session } from "../../app/session";
 import type { KeyValueStore } from "../../lib/storage";
+import { keepListRanking } from "../../lib/api";
 import { RankingBoard } from "./RankingBoard";
 
 vi.mock("../../lib/api", () => ({
@@ -64,6 +65,31 @@ describe("RankingBoard", () => {
     expect(within(tierList("S")).queryAllByRole("button")).toHaveLength(0);
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Finish" })).toBeDisabled();
+  });
+
+  it("keeps a keyboard's place after a card moves, and says where it went", async () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    card("Ex Machina").focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("1");
+    // Placed, it is drawn anew in S; focus goes on to the card picked next.
+    expect(within(tierList("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
+    expect(document.activeElement).toBe(card("The Witch"));
+    expect(card("The Witch")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Ex Machina in S")).toBeInTheDocument();
+
+    // A placed card moved to another tier keeps the focus, and the move is said too.
+    card("Ex Machina").focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("2");
+    expect(within(tierList("A")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
+    expect(document.activeElement).toHaveAttribute("data-item");
+    expect(document.activeElement).not.toBe(document.body);
+    expect(screen.getByText("Ex Machina in A")).toBeInTheDocument();
   });
 
   it("places a card by tapping it and then a tier", async () => {
@@ -518,45 +544,33 @@ describe("RankingBoard", () => {
     expect(card("The Witch")).toBeEnabled();
   });
 
-  it("counts a signed-in reader's Finish among the list's rankings, as the app shows them, and a guest's not", async () => {
+  it("never puts a signed-in reader's Finish among the list's public rankings unasked", async () => {
     const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
-    const tell = vi.fn(async () => undefined);
-    const finish = async (account: Session["account"]) => {
-      const session: Session = {
-        account,
-        signIn: async () => ({ kind: "cancelled" }),
-        signOut: async () => undefined,
-        refresh: () => undefined,
-      };
-      const view = render(
-        <SessionContext.Provider value={session}>
-          <MemoryRouter>
-            <RankingBoard
-              list={list}
-              store={memoryStore()}
-              keep={keep}
-              take={async () => undefined}
-              tell={tell}
-            />
-          </MemoryRouter>
-        </SessionContext.Provider>,
-      );
-      // The Witch first, then Ex Machina beside it: the order inside S travels.
-      await userEvent.click(card("The Witch"));
-      await userEvent.keyboard("1");
-      await userEvent.click(card("Ex Machina"));
-      await userEvent.keyboard("1");
-      await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-      await screen.findByRole("status");
-      view.unmount();
+    const session: Session = {
+      account: { kind: "signedIn", uid: "u9", displayName: "Reader", photoUrl: null },
+      signIn: async () => ({ kind: "cancelled" }),
+      signOut: async () => undefined,
+      refresh: () => undefined,
     };
-
-    await finish({ kind: "signedIn", uid: "u9", displayName: "Reader", photoUrl: null });
-    expect(tell).toHaveBeenCalledWith(list, [[1, 0], []]);
-
-    tell.mockClear();
-    await finish({ kind: "guest", uid: null });
-    expect(tell).not.toHaveBeenCalled();
+    render(
+      <SessionContext.Provider value={session}>
+        <MemoryRouter>
+          <RankingBoard
+            list={list}
+            store={memoryStore()}
+            keep={keep}
+            take={async () => undefined}
+          />
+        </MemoryRouter>
+      </SessionContext.Provider>,
+    );
+    await userEvent.click(card("The Witch"));
+    await userEvent.keyboard("1");
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+    await screen.findByRole("status");
+    expect(keep).toHaveBeenCalled();
+    // Those rankings carry the reader's name and face: the app lists one only when asked.
+    expect(vi.mocked(keepListRanking)).not.toHaveBeenCalled();
   });
 
   it("keeps the board editable when saving fails, and tries again", async () => {

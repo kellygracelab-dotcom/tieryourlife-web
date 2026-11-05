@@ -11,7 +11,18 @@ export interface Remembered<T> {
   keep(key: string, value: T): void;
 }
 
-export function remembered<T>(store: KeyValueStore, prefix: string, most: number): Remembered<T> {
+/**
+ * `read` turns what was kept back into a value, or throws or says null for
+ * anything it cannot use: an answer kept by an older or newer site, or a
+ * store somebody changed. Such a copy is dropped, never handed on, since a
+ * page drawn from it would fail on every visit until the site data is cleared.
+ */
+export function remembered<T>(
+  store: KeyValueStore,
+  prefix: string,
+  most: number,
+  read: (kept: unknown) => T | null,
+): Remembered<T> {
   const indexKey = `${prefix}:keys`;
   const keys = (): string[] => {
     try {
@@ -26,10 +37,13 @@ export function remembered<T>(store: KeyValueStore, prefix: string, most: number
       const kept = store.read(`${prefix}:${key}`);
       if (kept === null) return null;
       try {
-        return JSON.parse(kept) as T;
+        const value = read(JSON.parse(kept));
+        if (value !== null) return value;
       } catch {
-        return null;
+        // Unusable, as below.
       }
+      store.remove(`${prefix}:${key}`);
+      return null;
     },
     keep(key, value) {
       store.write(`${prefix}:${key}`, JSON.stringify(value));

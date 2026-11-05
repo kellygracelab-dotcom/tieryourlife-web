@@ -22,7 +22,8 @@ export interface Yours {
   photoUrl: string | null;
 }
 
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
+// A name the backend left out is drawn as nobody's rather than failing the whole feed.
+const initialOf = (name: string | null): string => ((name ?? "").trim()[0] ?? "?").toUpperCase();
 
 function Face({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
   if (photoUrl !== null)

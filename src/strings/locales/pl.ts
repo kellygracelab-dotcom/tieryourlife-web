@@ -508,6 +508,8 @@ const pl: Translation = {
     allPlacedNoteLive: "Zmiana zdania? Przeciągnij kartę. Wszystko zapisuje się na bieżąco.",
     allPlacedHint: "Przeciągnij kartę, jeśli zmienisz zdanie",
     placeIn: "Umieść {name} w {tier}",
+    cardIn: "„{name}” w {tier}",
+    cardInPool: "„{name}” z powrotem w puli",
     undo: "Cofnij",
     finish: "Zakończ",
     cancel: "Anuluj",

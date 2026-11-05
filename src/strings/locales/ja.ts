@@ -483,6 +483,8 @@ const ja: Translation = {
     allPlacedNoteLive: "気が変わったらカードをドラッグ。すべてその場で保存されます。",
     allPlacedHint: "気が変わったらカードをドラッグ",
     placeIn: "{name} を {tier} に置く",
+    cardIn: "「{name}」を{tier}に",
+    cardInPool: "「{name}」をプールに戻しました",
     undo: "元に戻す",
     finish: "完了",
     cancel: "キャンセル",

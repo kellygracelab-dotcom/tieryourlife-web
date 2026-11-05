@@ -30,8 +30,41 @@ export interface RememberedPage {
   next: string | null;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isStrings = (value: unknown): boolean =>
+  Array.isArray(value) && value.every((one) => typeof one === "string");
+
+/** A list a card can be drawn from: what the card reads, of the kind it reads. */
+const isCardable = (list: unknown): list is ListSummary =>
+  isRecord(list) &&
+  typeof list.id === "string" &&
+  typeof list.title === "string" &&
+  typeof list.authorUid === "string" &&
+  typeof list.authorName === "string" &&
+  (list.authorPhotoUrl === null || typeof list.authorPhotoUrl === "string") &&
+  typeof list.category === "string" &&
+  typeof list.itemCount === "number" &&
+  typeof list.takeCount === "number" &&
+  (list.coverImageUrl === null || typeof list.coverImageUrl === "string") &&
+  isStrings(list.previewImages) &&
+  isStrings(list.tierColors);
+
+/** A kept first page as this site can draw it, or nothing. */
+export function readRememberedPage(kept: unknown): RememberedPage | null {
+  if (!isRecord(kept) || !Array.isArray(kept.lists) || !kept.lists.every(isCardable)) return null;
+  if (kept.next !== null && typeof kept.next !== "string") return null;
+  return { lists: kept.lists, next: kept.next };
+}
+
 /** The last few feeds' first pages, on this device. */
-export const feedMemory: Remembered<RememberedPage> = remembered(localStorageStore, "tyl:feed", 12);
+export const feedMemory: Remembered<RememberedPage> = remembered(
+  localStorageStore,
+  "tyl:feed",
+  12,
+  readRememberedPage,
+);
 
 const readyFrom = (page: RememberedPage): FeedState => ({
   status: "ready",

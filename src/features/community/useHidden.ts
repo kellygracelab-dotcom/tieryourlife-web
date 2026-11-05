@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
+  HIDDEN_KEY,
   NOTHING_HIDDEN,
   readHidden,
   withAuthor,
@@ -32,11 +33,31 @@ const subscribe = (listener: () => void) => {
 const snapshot = () => current;
 const visitSnapshot = () => thisVisit;
 
-function change(next: Hidden): void {
-  if (next === current) return;
+const notify = () => listeners.forEach((listener) => listener());
+
+/**
+ * Applied to what is stored now, not to this tab's copy: a tab opened earlier
+ * would otherwise write back its old list and unhide what another tab hid,
+ * the person somebody hid to stop seeing among them.
+ */
+function change(apply: (hidden: Hidden) => Hidden): void {
+  const latest = readHidden(store);
+  const next = apply(latest);
+  if (next !== latest) writeHidden(store, next);
+  if (JSON.stringify(next) === JSON.stringify(current)) return;
   current = next;
-  writeHidden(store, next);
-  listeners.forEach((listener) => listener());
+  notify();
+}
+
+// Another tab hid or showed something: this one shows it too.
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (event) => {
+    if (event.key !== null && event.key !== HIDDEN_KEY) return;
+    const latest = readHidden(store);
+    if (JSON.stringify(latest) === JSON.stringify(current)) return;
+    current = latest;
+    notify();
+  });
 }
 
 /** Tests keep their own store; the page keeps the browser's. */
@@ -44,7 +65,7 @@ export function useHiddenStoreForTests(replacement: KeyValueStore): void {
   store = replacement;
   current = readHidden(store);
   thisVisit = [];
-  listeners.forEach((listener) => listener());
+  notify();
 }
 
 export interface HiddenControls {
@@ -62,13 +83,19 @@ export function useHidden(): HiddenControls {
   const hiddenThisVisit = useSyncExternalStore(subscribe, visitSnapshot, () => thisVisit);
   const hideList = useCallback((list: HiddenList) => {
     if (!thisVisit.includes(list.id)) thisVisit = [...thisVisit, list.id];
-    change(withList(current, list));
+    change((hidden) => withList(hidden, list));
   }, []);
   const showList = useCallback((id: string) => {
     thisVisit = thisVisit.filter((one) => one !== id);
-    change(withoutList(current, id));
+    change((hidden) => withoutList(hidden, id));
   }, []);
-  const hideAuthor = useCallback((author: HiddenAuthor) => change(withAuthor(current, author)), []);
-  const showAuthor = useCallback((uid: string) => change(withoutAuthor(current, uid)), []);
+  const hideAuthor = useCallback(
+    (author: HiddenAuthor) => change((hidden) => withAuthor(hidden, author)),
+    [],
+  );
+  const showAuthor = useCallback(
+    (uid: string) => change((hidden) => withoutAuthor(hidden, uid)),
+    [],
+  );
   return { hidden, hiddenThisVisit, hideList, showList, hideAuthor, showAuthor };
 }

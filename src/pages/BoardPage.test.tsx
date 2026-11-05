@@ -7,6 +7,7 @@ import {
   arrangeItems,
   itemsIn,
   liveItems,
+  moveItem,
   newBoard,
   poolTier,
   rankedTiers,
@@ -198,6 +199,28 @@ describe("BoardPage", () => {
       "Ex Machina",
       "The Witch",
     ]);
+  });
+
+  it("draws a move made in another tab, and the next move here keeps it", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    expect(within(tier("S")).queryByRole("button", { name: "The Witch" })).toBeNull();
+    // Another tab puts The Witch in S.
+    const there = repository.get("films")!;
+    const [s, a] = rankedTiers(there);
+    const witch = liveItems(there).find((item) => item.title === "The Witch")!;
+    act(() => {
+      repository.save(moveItem(there, witch.uid, s!.uid, 1, 500));
+    });
+    expect(within(tier("S")).getByRole("button", { name: "The Witch" })).toBeInTheDocument();
+
+    // This tab's move lands on top of it, not over it.
+    await userEvent.click(screen.getByRole("button", { name: "Climax" }));
+    await userEvent.keyboard("2");
+    const kept = repository.get("films")!;
+    expect(itemsIn(kept, s!.uid).map((item) => item.title)).toEqual(["Ex Machina", "The Witch"]);
+    expect(itemsIn(kept, a!.uid).map((item) => item.title)).toEqual(["Climax"]);
   });
 
   it("starts a new board with the name a search brought along", async () => {

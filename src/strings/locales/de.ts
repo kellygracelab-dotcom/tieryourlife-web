@@ -496,6 +496,8 @@ const de: Translation = {
     allPlacedNoteLive: "Anders überlegt? Zieh eine Karte. Alles wird laufend gespeichert.",
     allPlacedHint: "Zieh eine Karte, wenn du es dir anders überlegst",
     placeIn: "{name} in {tier} platzieren",
+    cardIn: "„{name}“ in {tier}",
+    cardInPool: "„{name}“ wieder im Pool",
     undo: "Rückgängig",
     finish: "Abschließen",
     cancel: "Abbrechen",

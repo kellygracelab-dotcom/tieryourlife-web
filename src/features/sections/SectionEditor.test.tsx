@@ -362,13 +362,16 @@ describe("Propose a section", () => {
   });
 
   it("asks in the row of actions on Cancel, Escape and the scrim", async () => {
-    const { onClose, deps } = propose();
+    const { onClose, deps, send } = propose();
     keepProposal(deps.keep, { name: "Old", icon: "pets", fileUnder: "food", picture: null });
+    pick();
     await userEvent.type(nameField(), "Street food");
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByText("Discard this proposal?")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Keep editing" }));
     expect(screen.queryByText("Discard this proposal?")).toBeNull();
+    // Not done means not sent: the button in its place is not pressed by the same click.
+    expect(send).not.toHaveBeenCalled();
 
     await userEvent.keyboard("{Escape}");
     expect(screen.getByText("Discard this proposal?")).toBeInTheDocument();

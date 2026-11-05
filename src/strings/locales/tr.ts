@@ -484,6 +484,8 @@ const tr: Translation = {
     allPlacedNoteLive: "Fikrin mi değişti? Bir kartı sürükle. Her şey anında kaydedilir.",
     allPlacedHint: "Fikriniz değişirse bir kartı sürükleyin",
     placeIn: "{name} kartını {tier} seviyesine yerleştir",
+    cardIn: "“{name}” {tier} katmanında",
+    cardInPool: "“{name}” havuza geri döndü",
     undo: "Geri al",
     finish: "Bitir",
     cancel: "İptal",

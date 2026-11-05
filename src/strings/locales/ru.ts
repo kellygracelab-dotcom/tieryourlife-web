@@ -508,6 +508,8 @@ const ru: Translation = {
     allPlacedNoteLive: "Передумали — перетащите карточку. Всё сохраняется по ходу.",
     allPlacedHint: "Перетащите карточку, если передумали",
     placeIn: "Положить «{name}» в {tier}",
+    cardIn: "«{name}» в {tier}",
+    cardInPool: "«{name}» снова в пуле",
     undo: "Отменить",
     finish: "Завершить",
     cancel: "Отмена",

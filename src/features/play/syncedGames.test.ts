@@ -3,7 +3,7 @@ import type { SyncedPlay } from "../../api/boards";
 import { canonicalPlay } from "../boards/fingerprint";
 import { playOf } from "../boards/repository";
 import { nextPair, type Outcome } from "./engine";
-import { newGame, startRefine, type Game } from "./game";
+import { newGame, reconcile, startRefine, type Game } from "./game";
 import { boardGames, fromSynced, toSynced } from "./syncedGames";
 
 /** Answers a game to its end, the left card winning every duel. */
@@ -38,12 +38,37 @@ const example: SyncedPlay = playOf({
 describe("a game kept in the board", () => {
   it("reads the app's shared example and writes it back the same, its round worked out afresh", () => {
     const game = fromSynced(example, "pool");
-    expect(game.chosen).toEqual({ kind: "rows", tiers: ["t-s"], pool: false, keepTier: true });
+    // One row comes back as the game's own cards: the synced form cannot say they were picked.
+    expect(game.chosen).toEqual({
+      kind: "picked",
+      tier: "t-s",
+      ids: ["a", "b", "c", "d"],
+      keepTier: true,
+    });
     expect(game.history).toEqual(example.history);
     // The example's round is a placeholder; a writer counts it from the answers.
     expect(canonicalPlay(toSynced(game, "pool", 1793146000001))).toBe(
       canonicalPlay({ ...example, round: 2 }),
     );
+  });
+
+  it("resumes a game over cards picked from a big row as it was, after a reload", () => {
+    const pool = Array.from({ length: 80 }, (_, n) => `p${n}`);
+    const board = { tiers: [{ id: "s", cardIds: ["a", "b"] }], pool, order: ["a", "b", ...pool] };
+    const picked = pool.slice(0, 10);
+    for (const kind of ["hill", "swiss"] as const) {
+      const game = newGame(
+        kind,
+        picked,
+        { kind: "picked", tier: null, ids: picked, keepTier: false },
+        3,
+        10,
+      );
+      const back = fromSynced(toSynced(game, "pk-pool", 20), "pk-pool");
+      const resumed = reconcile(back, board as never);
+      expect(resumed.kind).toBe("ready");
+      expect(resumed.kind === "ready" && resumed.game.ids).toEqual(picked);
+    }
   });
 
   it("names the pool by its uid in the scope, and the whole board by no scope", () => {

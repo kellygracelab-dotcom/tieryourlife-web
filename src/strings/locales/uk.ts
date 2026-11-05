@@ -507,6 +507,8 @@ const uk: Translation = {
     allPlacedNoteLive: "Передумали — перетягніть картку. Усе зберігається по ходу.",
     allPlacedHint: "Перетягніть картку, якщо передумали",
     placeIn: "Покласти «{name}» в {tier}",
+    cardIn: "«{name}» у {tier}",
+    cardInPool: "«{name}» знову в пулі",
     undo: "Скасувати",
     finish: "Завершити",
     cancel: "Скасувати",
