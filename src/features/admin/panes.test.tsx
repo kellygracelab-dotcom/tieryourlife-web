@@ -678,7 +678,7 @@ describe("ModeratorsPane", () => {
     await userEvent.type(screen.getByRole("searchbox"), "mar");
     await userEvent.click(await screen.findByRole("button", { name: "Appoint" }));
     expect(
-      screen.getByText("Make mariia a moderator? They'll see reports and proposals."),
+      screen.getByText("Make mariia a moderator? They’ll see reports and proposals."),
     ).toBeInTheDocument();
     await userEvent.click(
       within(screen.getByRole("alertdialog")).getByRole("button", { name: "Appoint" }),

@@ -188,7 +188,7 @@ describe("SectionPage", () => {
     open("/s/games");
     await tiles();
     await userEvent.click(screen.getByRole("button", { name: "Follow" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Couldn't follow. Try again.");
+    expect(await screen.findByRole("status")).toHaveTextContent("Couldn’t follow. Try again.");
   });
 
   it("offers no Follow until whom the person follows is known", async () => {
@@ -226,7 +226,7 @@ describe("SectionPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Follow" }));
     await userEvent.click(screen.getByRole("button", { name: /Following/ }));
     await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent("Couldn't unfollow. Try again."),
+      expect(screen.getByRole("status")).toHaveTextContent("Couldn’t unfollow. Try again."),
     );
   });
 
@@ -443,7 +443,7 @@ describe("TopicPage", () => {
     topics.follow.mockRejectedValue(new ApiFailure({ kind: "offline" }));
     open("/s/games/t/t2");
     await userEvent.click(await screen.findByRole("button", { name: "Follow" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Couldn't follow. Try again.");
+    expect(await screen.findByRole("status")).toHaveTextContent("Couldn’t follow. Try again.");
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
   });
 

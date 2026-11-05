@@ -50,6 +50,13 @@ export function useTray(selected: number | null, shownCount: number, settle = 0)
     const row = tray.current;
     const holder = row?.firstElementChild;
     if (row == null || !(holder instanceof HTMLElement)) return;
+    // A row scrolled to its end shows the last page, though a wide row never
+    // scrolls a whole page's stride further: the dots go by the share scrolled.
+    const max = row.scrollWidth - row.clientWidth;
+    if (max > 0) {
+      setPage(Math.round((Math.min(max, Math.abs(row.scrollLeft)) / max) * (pages - 1)));
+      return;
+    }
     const stride = holder.offsetWidth + TRAY_GAP;
     setPage(Math.min(pages - 1, Math.round(Math.abs(row.scrollLeft) / (stride * TRAY_PAGE))));
   }, [pages]);

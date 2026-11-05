@@ -397,6 +397,7 @@ const es: Translation = {
     copyLink: "Copiar enlace",
     share: "Compartir",
     linkCopied: "Enlace copiado",
+    copyFailed: "No se pudo copiar el enlace: {link}",
     hiddenNotice: "Oculto para ti",
     undo: "Deshacer",
     hiddenTitle: "Ocultaste esta lista",
@@ -504,6 +505,9 @@ const es: Translation = {
       "Cualquiera con ese enlace ve tu versión junto a la del autor. Se conserva sin cuenta.",
     liveNoteKept:
       "Cualquiera con ese enlace ve tu versión junto a la del autor. Está guardada en tus clasificaciones.",
+    liveNoteAlone: "Cualquiera con ese enlace ve tu versión. Se conserva sin cuenta.",
+    liveNoteAloneKept:
+      "Cualquiera con ese enlace ve tu versión. Está guardada en tus clasificaciones.",
     copy: "Copiar enlace",
     copied: "Copiado",
     download: "Descargar imagen",

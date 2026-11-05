@@ -1,15 +1,26 @@
-import { keepLocale, LOCALE_NAMES, type Locale } from "../../lib/locale";
-import { localStorageStore } from "../../lib/storage";
+import { keepLocale, LOCALE_NAMES, LOCALE_PARAM, type Locale } from "../../lib/locale";
+import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { availableLocales, currentLocale, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { onRadioKeys, radioTabIndex } from "../../ui/radioKeys";
 
-// The texts are copied into several modules as they load, so a new language
-// takes a fresh load of the page; it opens in the language just kept.
-const keepAndReload = (locale: Locale): void => {
-  keepLocale(localStorageStore, locale);
-  window.location.reload();
-};
+/**
+ * The texts are copied into several modules as they load, so a new language
+ * takes a fresh load of the page; it opens in the language just kept. A
+ * device that keeps nothing gets the language in the address instead, or
+ * the reload would come back in the old one.
+ */
+export function keepAndReload(
+  locale: Locale,
+  store: KeyValueStore = localStorageStore,
+  go: (address: string | null) => void = (address) =>
+    address === null ? window.location.reload() : window.location.replace(address),
+): void {
+  if (keepLocale(store, locale)) return go(null);
+  const address = new URL(window.location.href);
+  address.searchParams.set(LOCALE_PARAM, locale);
+  go(address.toString());
+}
 
 interface LanguageCardProps {
   locales?: readonly Locale[];
@@ -24,7 +35,7 @@ interface LanguageCardProps {
 export function LanguageCard({
   locales = availableLocales(),
   current = currentLocale(),
-  choose = keepAndReload,
+  choose = (locale) => keepAndReload(locale),
 }: LanguageCardProps) {
   if (locales.length < 2) return null;
   return (

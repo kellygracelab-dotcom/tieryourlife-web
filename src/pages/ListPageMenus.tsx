@@ -37,20 +37,22 @@ function useListLink(list: PublishedList) {
   const link = `${window.location.origin}/l/${encodeURIComponent(list.id)}`;
   const copy = (): Promise<void> =>
     navigator.clipboard?.writeText(link) ?? Promise.reject(new Error("no clipboard"));
+  // The clipboard said no: the link is spelled out, to be copied by hand.
+  const refused = (): SnackbarNotice => ({ text: fill(strings.list.copyFailed, { link }) });
   // The phone's own share sheet, where there is one; closing it is not a failure.
   const canShare = typeof navigator.share === "function";
   const share = () => {
     void navigator.share({ title: list.title, url: link }).catch(() => undefined);
   };
-  return { copy, canShare, share };
+  return { copy, refused, canShare, share };
 }
 
 /**
  * One press and the link is on the clipboard. The address itself used to be
  * spelled out here, forty characters nobody reads and everybody had to select.
  */
-function CopyLinkButton({ list }: { list: PublishedList }) {
-  const { copy } = useListLink(list);
+function CopyLinkButton({ list, notify }: { list: PublishedList; notify: Notify }) {
+  const { copy, refused } = useListLink(list);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -66,7 +68,7 @@ function CopyLinkButton({ list }: { list: PublishedList }) {
       onClick={() => {
         copy().then(
           () => setCopied(true),
-          () => undefined,
+          () => notify(refused()),
         );
       }}
     >
@@ -82,7 +84,7 @@ function CopyLinkButton({ list }: { list: PublishedList }) {
  * menu has no need of.
  */
 function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
-  const { copy, canShare, share } = useListLink(list);
+  const { copy, refused, canShare, share } = useListLink(list);
   return (
     <>
       <li>
@@ -92,7 +94,7 @@ function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
           onClick={() => {
             copy().then(
               () => notify({ text: strings.list.linkCopied }),
-              () => undefined,
+              () => notify(refused()),
             );
           }}
         >
@@ -287,7 +289,7 @@ export function VisitorTools({
       <Button variant="tonal" icon="bookmark" className="list-head__save" onClick={saving.start}>
         {saving.saved === null ? strings.list.saveToMine : strings.list.open}
       </Button>
-      <CopyLinkButton list={list} />
+      <CopyLinkButton list={list} notify={notify} />
       <VisitorMenu
         list={list}
         report={report}
@@ -411,7 +413,7 @@ export function AuthorTools({
         <Icon name="edit" className="btn__icon" />
         <span>{strings.list.edit}</span>
       </Link>
-      <CopyLinkButton list={list} />
+      <CopyLinkButton list={list} notify={notify} />
       <AuthorMenu
         list={list}
         unpublish={unpublish}

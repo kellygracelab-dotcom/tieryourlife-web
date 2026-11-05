@@ -303,7 +303,7 @@ describe("Shell account", () => {
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
   });
 
-  it("tells a person in another app's browser how to get out, instead of the plain failure", async () => {
+  it("tells a person in another app’s browser how to get out, instead of the plain failure", async () => {
     const signIn = vi.fn(async () => ({ kind: "failed" as const, code: IN_APP_BROWSER }));
     open({ signIn });
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));

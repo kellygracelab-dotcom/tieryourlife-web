@@ -347,10 +347,6 @@
   color: var(--ink-faint);
 }
 
-[dir="rtl"] .board-card__chevron {
-  transform: scaleX(-1);
-}
-
 /* No lists yet: where to start, in the middle of the page. */
 .boards__empty {
   display: flex;

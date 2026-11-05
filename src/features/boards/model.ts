@@ -1,4 +1,6 @@
 import type { SyncedPlay } from "../../api/boards";
+import { holds } from "../../lib/locale";
+import { currentLocale } from "../../strings";
 
 /**
  * A board of the person's own, the way the phone keeps one: tiers with a
@@ -642,8 +644,8 @@ const shows = (board: Board, show: BoardShow): boolean => {
 
 const keeps = (board: Board, filters: BoardFilters): boolean => {
   if (board.deletedAt !== null || !shows(board, filters.show ?? "all")) return false;
-  const needle = filters.query?.trim().toLowerCase() ?? "";
-  return needle === "" || board.title.toLowerCase().includes(needle);
+  const needle = filters.query?.trim() ?? "";
+  return needle === "" || holds(board.title, needle);
 };
 
 /** By last touch, then by uid: two boards made in the same millisecond still have to sit somewhere. */
@@ -653,7 +655,10 @@ const byRecent = (a: Board, b: Board): number =>
 const comparator = (sort: BoardSort) => (a: Board, b: Board) => {
   switch (sort) {
     case "name":
-      return a.title.localeCompare(b.title, undefined, { sensitivity: "base" }) || byRecent(a, b);
+      // In the site's language, not the browser's: Polish puts Ć after C, English beside it.
+      return (
+        a.title.localeCompare(b.title, currentLocale(), { sensitivity: "base" }) || byRecent(a, b)
+      );
     case "ranked":
       return rankedCount(b) - rankedCount(a) || byRecent(a, b);
     case "pool":

@@ -37,6 +37,7 @@ import {
   type Board,
 } from "./model";
 import { parseBoard } from "./repository";
+import { setStrings } from "../../strings";
 
 /** Uids a test can read: t0…t5 for the tiers, then i0, i1… for the cards. */
 const uids = () => {
@@ -475,6 +476,30 @@ describe("the list of boards", () => {
     expect(isNarrowed({ show: "all", query: " " })).toBe(false);
     expect(isNarrowed({ show: "saved" })).toBe(true);
     expect(isNarrowed({ query: "x" })).toBe(true);
+  });
+
+  it("finds a title typed without its capital İ or its accents", () => {
+    const boards = [at("İstanbul Hatırası", 1), at("Pokémon cards", 2), at("Iğdır Ovası", 3)];
+    const ids = (query: string) =>
+      arrangeBoards(boards, "recent", { query }).rest.map((b) => b.uid);
+    expect(ids("istanbul")).toEqual(["İstanbul Hatırası"]);
+    expect(ids("pokemon")).toEqual(["Pokémon cards"]);
+    expect(ids("ığdır")).toEqual(["Iğdır Ovası"]);
+  });
+
+  it("orders by name in the site's language, not the browser's", () => {
+    const boards = ["Ćwiczenia", "Czytanie", "Śpiew", "Szachy"].map((title, i) => at(title, i));
+    try {
+      setStrings("pl", {});
+      expect(arrangeBoards(boards, "name").rest.map((b) => b.uid)).toEqual([
+        "Czytanie",
+        "Ćwiczenia",
+        "Szachy",
+        "Śpiew",
+      ]);
+    } finally {
+      setStrings("en", null);
+    }
   });
 
   it("forgets the topic with the section it belongs to, and leaves the copy behind on a new one", () => {

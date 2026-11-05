@@ -52,12 +52,24 @@ export function readLocale(store: KeyValueStore): Locale | null {
   }
 }
 
-export function keepLocale(store: KeyValueStore, locale: Locale): void {
+/** False when the device would not keep the choice: its storage is blocked or full. */
+export function keepLocale(store: KeyValueStore, locale: Locale): boolean {
   try {
-    store.write(LOCALE_KEY, locale);
+    return store.write(LOCALE_KEY, locale) !== false;
   } catch {
-    // Nothing to keep it in: the choice lasts until the page is closed.
+    return false;
   }
+}
+
+/**
+ * A language the address asks for (`?lang=de`): how a choice the device
+ * would not keep survives the reload that puts it on the page.
+ */
+export const LOCALE_PARAM = "lang";
+
+export function localeInAddress(search: string): Locale | null {
+  const asked = new URLSearchParams(search).get(LOCALE_PARAM);
+  return isLocale(asked) ? asked : null;
 }
 
 /**
@@ -81,6 +93,18 @@ export function pickLocale(
   }
   return DEFAULT_LOCALE;
 }
+
+/**
+ * Text as a search compares it, in any language: no case, no accents, and
+ * Turkish İ and ı as plain i, so "istanbul" finds "İstanbul" and "pokemon"
+ * finds "Pokémon". toLowerCase alone turns İ into i and a combining dot.
+ */
+export const fold = (text: string): string =>
+  text.normalize("NFD").replace(/\p{M}/gu, "").replace(/ı/g, "i").toLowerCase();
+
+/** Whether what was typed is somewhere in the text, both folded. */
+export const holds = (text: string, typed: string): boolean =>
+  fold(text).includes(fold(typed.trim()));
 
 /** The language and the direction go on <html>, where the browser, a reader and the stylesheet look. */
 export function applyLocale(locale: Locale, root: HTMLElement = document.documentElement): void {

@@ -334,10 +334,13 @@ function OpenList({
   // into Mine. The board below is drawn afresh from the draft it writes.
   const [mineRound, setMineRound] = useState(0);
   const [mineRows, setMineRows] = useState(() => loadDraft(localStorageStore, scopeOf(list)));
+  // What Mine held before rows were put in it: the board's own Undo goes back there.
+  const [mineBefore, setMineBefore] = useState<Rows | null>(null);
   // Rows into Mine, which is drawn afresh from the draft: Play's result, or
   // Theirs with a first move made on it.
   const putInMine = (rows: Rows) => {
     const placed = rows.map((row) => [...row]);
+    setMineBefore(loadPlacedDraft(localStorageStore, scopeOf(list)));
     saveDraft(localStorageStore, scopeOf(list), placed);
     setMineRows(placed);
     setMineRound((round) => round + 1);
@@ -348,6 +351,7 @@ function OpenList({
     if (before === null) clearDraft(localStorageStore, list.id);
     else localStorageStore.write(draftKey(list.id), before);
     setMineRows(loadDraft(localStorageStore, scopeOf(list)));
+    setMineBefore(null);
     setMineRound((round) => round + 1);
     show(back);
   };
@@ -417,9 +421,11 @@ function OpenList({
       : theirsName === null
         ? strings.list.startedFromUnnamed
         : fill(strings.list.startedFrom, { name: theirsName });
+    // As long as the app's long snackbar: a finished Mine may have just been replaced.
     setNotice({
       text: said,
       action: { text: strings.list.undo, onClick: () => restoreMine(before, "theirs") },
+      long: true,
     });
   };
   // Somebody else's tier words over the same cards: the board draws Theirs under them.
@@ -516,6 +522,7 @@ function OpenList({
               key={`${list.id}:${mineRound}`}
               list={list}
               onListChanged={onListChanged}
+              undoTo={mineBefore}
               onRows={(rows) =>
                 // Nothing placed in Mine: Play starts from the author's, as before.
                 setMineRows(rows.some((row) => row.length > 0) ? rows.map((row) => [...row]) : null)

@@ -13,7 +13,7 @@ import { TooManyDialog } from "../features/sections/TooManyDialog";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import { WaitingSheet } from "../features/sections/WaitingSheet";
 import { proposeSection, withdrawSectionProposal } from "../lib/api";
-import { fill, plural, strings } from "../strings";
+import { currentLocale, fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "../features/sections/sections.css";
@@ -27,7 +27,8 @@ type Order = "lists" | "name";
 
 const byOrder: Record<Order, (a: Section, b: Section) => number> = {
   lists: (a, b) => b.listCount - a.listCount,
-  name: (a, b) => a.name.localeCompare(b.name),
+  // In the site's language, not the browser's: Polish puts Ć after C, English beside it.
+  name: (a, b) => a.name.localeCompare(b.name, currentLocale()),
 };
 
 /** What proposing a section sends, and taking one back. */

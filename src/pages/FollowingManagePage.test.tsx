@@ -147,7 +147,7 @@ describe("FollowingManagePage", () => {
     open();
     const row = (await screen.findByRole("link", { name: /kenji/ })).closest("li")!;
     await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
-    expect(await screen.findByText("Couldn't unfollow. Try again.")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn’t unfollow. Try again.")).toBeInTheDocument();
     expect(within(row).getByRole("button", { name: /Following/ })).toBeInTheDocument();
   });
 
@@ -164,7 +164,7 @@ describe("FollowingManagePage", () => {
     vi.mocked(deps.load).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     open();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load what you follow.");
-    expect(screen.queryByText("You aren't following anything yet")).toBeNull();
+    expect(screen.queryByText("You aren’t following anything yet")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("heading", { name: "People · 1" })).toBeInTheDocument();
   });
@@ -202,13 +202,13 @@ describe("FollowingManagePage", () => {
     open();
     const row = (await screen.findByRole("link", { name: /kenji/ })).closest("li")!;
     await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
-    expect(await screen.findByText("Couldn't unfollow. Try again.")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn’t unfollow. Try again.")).toBeInTheDocument();
     expect(within(row).getByRole("button", { name: /Following/ })).toBeInTheDocument();
 
     vi.mocked(deps.followAuthor).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
     await userEvent.click(screen.getByRole("button", { name: "Undo" }));
-    expect(await screen.findByText("Couldn't follow. Try again.")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn’t follow. Try again.")).toBeInTheDocument();
     expect(within(row).getByRole("button", { name: "Follow" })).toBeInTheDocument();
   });
 

@@ -48,25 +48,25 @@ describe("the sync records", () => {
 });
 
 describe("the device's name", () => {
-  it("is the browser on the system when both are known, and nothing when neither is", () => {
+  it("is the browser and the system in no language when both are known, and nothing when neither is", () => {
     expect(
       deviceNameOf(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36",
       ),
-    ).toBe("Chrome on Windows");
+    ).toBe("Chrome · Windows");
     expect(
       deviceNameOf(
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
       ),
-    ).toBe("Safari on macOS");
+    ).toBe("Safari · macOS");
     expect(
       deviceNameOf("Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"),
-    ).toBe("Firefox on Linux");
+    ).toBe("Firefox · Linux");
     expect(
       deviceNameOf(
         "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/140.0 Safari/537.36 Edg/140.0",
       ),
-    ).toBe("Edge on Windows");
+    ).toBe("Edge · Windows");
     expect(deviceNameOf("curl/8.0")).toBeNull();
   });
 });

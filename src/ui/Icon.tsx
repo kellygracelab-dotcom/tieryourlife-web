@@ -9,7 +9,9 @@ interface IconProps {
 /**
  * The icons that point somewhere along the line of text, and so turn round
  * when the text runs right to left: "back" is to the right in Arabic. A check,
- * a plus or a magnifying glass points nowhere and stays as it is.
+ * a plus or a magnifying glass points nowhere and stays as it is. The pool
+ * beside the board sits at the line's end, the left in Arabic, and its icon
+ * says so.
  */
 const MIRRORED = new Set<IconName>([
   "undo",
@@ -18,6 +20,7 @@ const MIRRORED = new Set<IconName>([
   "format_quote",
   "arrow_back",
   "chevron_right",
+  "dock_to_right",
 ]);
 
 export function Icon({ name, label, className }: IconProps) {

@@ -7,6 +7,7 @@ import type { Topic } from "../../api/sections";
 import { useSession } from "../../app/session";
 import { loadTopics } from "../../lib/api";
 import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
+import { holds } from "../../lib/locale";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -322,9 +323,7 @@ export function BoardSettings({
 
   const [find, setFind] = useState("");
   const uid = account?.kind === "signedIn" ? account.uid : null;
-  const choices = sectionChoices(sections, uid).filter(({ name }) =>
-    name.toLowerCase().includes(find.trim().toLowerCase()),
-  );
+  const choices = sectionChoices(sections, uid).filter(({ name }) => holds(name, find));
 
   // The section's topics are asked for each time the picker opens; until the
   // answer for this section is in, they are loading.

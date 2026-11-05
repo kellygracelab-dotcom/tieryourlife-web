@@ -132,7 +132,9 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
-  padding: 4px;
+  /* No padding at the foot: the clip is the padding's edge, and a fourth line showed through it. */
+  padding: 4px 4px 0;
+  margin-bottom: 4px;
   font: 500 11px/1.2 var(--font);
   text-align: center;
   overflow-wrap: normal;

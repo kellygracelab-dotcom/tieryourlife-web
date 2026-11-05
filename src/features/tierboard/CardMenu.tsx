@@ -269,7 +269,7 @@ export function CardMenu({
           }}
         >
           <span className="card-menu__text">{strings.boards.moveTo}</span>
-          <Icon name="chevron_right" className="card-menu__more ms--mirrored" />
+          <Icon name="chevron_right" className="card-menu__more" />
         </button>
         {current !== null && (
           <button

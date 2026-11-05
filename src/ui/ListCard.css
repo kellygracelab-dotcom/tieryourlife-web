@@ -150,3 +150,14 @@
   color: var(--ink-faint);
   white-space: nowrap;
 }
+
+/*
+ * A 320 px phone in a long language has no room for a name beside
+ * "24 карточки": the count goes under it rather than the name to "d…".
+ */
+@media (max-width: 359px) {
+  .list-card__body {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+}

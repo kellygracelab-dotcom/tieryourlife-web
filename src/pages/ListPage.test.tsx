@@ -156,7 +156,7 @@ describe("ListPage save to my lists", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Save to my lists" })[0]!);
     // The author placed Ex Machina, so there is a choice to make.
     const dialog = screen.getByRole("dialog", { name: "Which ranking to save?" });
-    await userEvent.click(within(dialog).getByRole("button", { name: "The author's" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "The author’s" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByText("Saved to your lists.")).toBeInTheDocument();
 
@@ -707,6 +707,26 @@ describe("ListPage, starting Mine from Theirs", () => {
         name: "S",
       }),
     ).toHaveTextContent("The Witch");
+  });
+
+  it("gives a replaced Mine back from the board's own Undo and Ctrl+Z too", async () => {
+    saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
+    mocks.loadList.mockResolvedValue(twoTiers);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(within(whose()).getByRole("button", { name: "Theirs" }));
+    const theirs = screen.getByRole("region", { name: "Their ranking" });
+    await userEvent.click(within(theirs).getByRole("button", { name: "Climax" }));
+    await userEvent.keyboard("2");
+    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[0], [1, 2]]);
+
+    // The bar's Undo, not the snackbar's.
+    const barUndo = () =>
+      screen.getAllByRole("button", { name: "Undo" }).find((b) => b.closest(".snackbar") === null);
+    expect(barUndo()).toBeEnabled();
+    await userEvent.keyboard("{Control>}z{/Control}");
+    expect(loadDraft(localStorageStore, scopeOf(twoTiers))).toEqual([[1], []]);
+    expect(barUndo()).toBeDisabled();
   });
 
   it("starts from an arrow key too, and names nobody where the list has no author's name", async () => {

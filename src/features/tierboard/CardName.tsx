@@ -23,14 +23,23 @@ interface CardNameProps {
   fit?: FitName;
 }
 
-/** A card's name where it has no picture: as large as its longest word allows. */
+/**
+ * A card's name where it has no picture: as large as its longest word allows.
+ * A word too long even at the smallest size is hyphenated, and broken anyway
+ * where the browser has no hyphens for its language, rather than cut off at
+ * the tile's edge.
+ */
 export function CardName({ title, board, fit = fitShared }: CardNameProps) {
   const { size, hyphenate } = fit(title, board);
   return (
     <span
       className="tile__name"
       dir="auto"
-      style={{ fontSize: size, hyphens: hyphenate ? "auto" : "manual" }}
+      style={{
+        fontSize: size,
+        hyphens: hyphenate ? "auto" : "manual",
+        overflowWrap: hyphenate ? "break-word" : undefined,
+      }}
     >
       {title}
     </span>

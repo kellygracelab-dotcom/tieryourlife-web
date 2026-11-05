@@ -398,6 +398,7 @@ const ptBR: Translation = {
     copyLink: "Copiar link",
     share: "Compartilhar",
     linkCopied: "Link copiado",
+    copyFailed: "Não foi possível copiar o link: {link}",
     hiddenNotice: "Oculto para você",
     undo: "Desfazer",
     hiddenTitle: "Você ocultou esta lista",
@@ -505,6 +506,9 @@ const ptBR: Translation = {
       "Qualquer pessoa com esse link vê a sua versão ao lado da do autor. Ela fica sem precisar de conta.",
     liveNoteKept:
       "Qualquer pessoa com esse link vê a sua versão ao lado da do autor. Ela está guardada nas suas classificações.",
+    liveNoteAlone: "Qualquer pessoa com esse link vê a sua versão. Ela fica sem precisar de conta.",
+    liveNoteAloneKept:
+      "Qualquer pessoa com esse link vê a sua versão. Ela está guardada nas suas classificações.",
     copy: "Copiar link",
     copied: "Copiado",
     download: "Baixar imagem",

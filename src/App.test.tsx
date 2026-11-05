@@ -29,7 +29,7 @@ describe("App", () => {
     render(<App />);
     expect(screen.getByRole("link", { name: "TierYourLife" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "Rank anything, or take someone else's list and rank it your way.",
+      "Rank anything, or take someone else’s list and rank it your way.",
     );
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
   });

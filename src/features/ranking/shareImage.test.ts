@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import type { PublishedList, PublishedTier } from "../../api/types";
 import { loadStrings, setStrings } from "../../strings";
+import ru from "../../strings/locales/ru";
 import {
   BOARD_SHAPE,
   downloadShare,
@@ -180,6 +181,22 @@ describe("drawShare", () => {
     expect(all).toContain("and 3 more tiers @48,1218");
     expect(all.some((text) => text.startsWith("T5 "))).toBe(true);
     expect(all.some((text) => text.startsWith("T6 "))).toBe(false);
+  });
+
+  it("counts the hidden tiers in the reader's language", async () => {
+    const { paint, texts } = recorder();
+    const tall = Array.from({ length: 9 }, (_, n) => ({ ...tiers[1]!, label: `T${n}` }));
+    setStrings("ru", ru);
+    try {
+      await drawShare(
+        paint,
+        { ...data, tiers: tall, rows: [[0, 1, 2], [], [], [], [], [], [], [], []] },
+        async () => picture,
+      );
+    } finally {
+      setStrings("en", null);
+    }
+    expect(texts().some((text) => text.startsWith("и ещё 3 уровня @"))).toBe(true);
   });
 
   it("wraps a long name over three lines and trims what does not fit", async () => {

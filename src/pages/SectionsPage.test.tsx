@@ -240,7 +240,7 @@ describe("All sections: a waiting tile", () => {
     await userEvent.click(await grid().findByRole("button", { name: /Street food/ }));
     const sheet = screen.getByRole("dialog", { name: "Street food" });
     expect(sheet).toHaveTextContent(
-      "A moderator will look at it. Your lists show here once it's approved; until then they're in Games.",
+      "A moderator will look at it. Your lists show here once it’s approved; until then they’re in Games.",
     );
     expect(router.state.location.search).toBe("?waiting=street-food");
     await userEvent.click(within(sheet).getByRole("button", { name: "OK" }));

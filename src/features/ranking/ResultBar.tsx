@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import type { ApiError } from "../../api/errors";
 import { appIsLive, onApple, playUrl } from "../../lib/links";
 import { strings } from "../../strings";
+import { fillNodes } from "../../strings/fillNodes";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import "./result.css";
@@ -22,6 +23,8 @@ interface ResultBarProps {
   kept?: boolean;
   /** Offered to a guest; absent once the ranking is kept. */
   save?: () => void;
+  /** The list has an arrangement of its own to compare with: an author's, or the house's. */
+  compared?: boolean;
   /** Reads the list again after it changed under the ranking; the page's own reload by default. */
   reload?: () => void;
   copy?: (text: string) => Promise<void>;
@@ -40,10 +43,13 @@ export function ResultBar({
   download,
   kept = false,
   save,
+  compared = true,
   reload = () => window.location.reload(),
   copy = clipboardCopy,
 }: ResultBarProps) {
   const [copied, setCopied] = useState(false);
+  // The clipboard said no: the link is spelled out to be copied by hand.
+  const [copyFailed, setCopyFailed] = useState(false);
   const [image, setImage] = useState<ImageState>(null);
   const [acted, setActed] = useState(false);
 
@@ -100,9 +106,13 @@ export function ResultBar({
     copy(`https://${address}`).then(
       () => {
         setCopied(true);
+        setCopyFailed(false);
         setActed(true);
       },
-      () => setCopied(false),
+      () => {
+        setCopied(false);
+        setCopyFailed(true);
+      },
     );
   };
   const imageStatus = image?.code === finish.code ? image.status : null;
@@ -126,7 +136,15 @@ export function ResultBar({
           {address}
         </span>
       </p>
-      <p className="result__note">{kept ? strings.rank.liveNoteKept : strings.rank.liveNote}</p>
+      <p className="result__note">
+        {compared
+          ? kept
+            ? strings.rank.liveNoteKept
+            : strings.rank.liveNote
+          : kept
+            ? strings.rank.liveNoteAloneKept
+            : strings.rank.liveNoteAlone}
+      </p>
       <div className="result__actions">
         <Button variant="filled" icon={copied ? "check" : "link"} onClick={onCopy}>
           {copied ? strings.rank.copied : strings.rank.copy}
@@ -150,6 +168,13 @@ export function ResultBar({
         </Link>
         <Button onClick={onChange}>{strings.rank.change}</Button>
       </div>
+      {copyFailed && (
+        <p className="result__error" role="alert">
+          {fillNodes(strings.list.copyFailed, {
+            link: <span dir="ltr">{`https://${address}`}</span>,
+          })}
+        </p>
+      )}
       {imageStatus === "failed" && (
         <p className="result__error" role="alert">
           {strings.rank.downloadFailed}

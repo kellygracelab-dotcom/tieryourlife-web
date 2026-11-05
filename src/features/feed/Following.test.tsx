@@ -150,7 +150,7 @@ describe("the Following tab", () => {
 
   it("offers the sections to follow and people worth following while nothing is followed", async () => {
     open();
-    expect(await screen.findByText("You aren't following anything yet")).toBeInTheDocument();
+    expect(await screen.findByText("You aren’t following anything yet")).toBeInTheDocument();
     const followGames = await screen.findByRole("button", { name: "Follow Games" });
     expect(followGames).toHaveAttribute("aria-pressed", "false");
     // An editorial account is nobody to follow: its lists stand without an author.
@@ -209,7 +209,7 @@ describe("the Following tab", () => {
     open();
     await userEvent.click(await screen.findByRole("button", { name: "Follow Games" }));
     await userEvent.click(screen.getByRole("button", { name: "Follow · 1" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't follow. Try again.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t follow. Try again.");
     expect(screen.getByRole("button", { name: "Follow Games" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -379,7 +379,7 @@ describe("the Following tab", () => {
     open();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load your feed.");
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(await screen.findByText("You aren't following anything yet")).toBeInTheDocument();
+    expect(await screen.findByText("You aren’t following anything yet")).toBeInTheDocument();
   });
 
   it("is not a guest's: no tabs, and its address leads to Explore", async () => {

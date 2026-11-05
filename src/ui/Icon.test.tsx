@@ -20,10 +20,18 @@ describe("Icon", () => {
         <Icon name="chevron_right" />
         <Icon name="check" />
         <Icon name="search" />
+        <Icon name="dock_to_right" />
+        <Icon name="dock_to_bottom" />
       </>,
     );
     const mirrored = [...container.querySelectorAll(".ms--mirrored")].map((n) => n.textContent);
-    expect(mirrored).toEqual(["undo", "open_in_new", "arrow_back", "chevron_right"]);
+    expect(mirrored).toEqual([
+      "undo",
+      "open_in_new",
+      "arrow_back",
+      "chevron_right",
+      "dock_to_right",
+    ]);
   });
 
   it("becomes an image with a name when labelled", () => {

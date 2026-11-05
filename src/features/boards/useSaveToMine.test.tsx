@@ -35,6 +35,8 @@ const list = (placed: boolean): PublishedList => ({
   ],
 });
 
+const take = async () => undefined;
+
 function Harness({
   of,
   repository,
@@ -48,7 +50,7 @@ function Harness({
   notify: (notice: SnackbarNotice) => void;
   shown: ShownPlacing | null;
 }) {
-  const saving = useSaveToMine(of, notify, { repository, store, now: () => 7, shown });
+  const saving = useSaveToMine(of, notify, { repository, store, now: () => 7, shown, take });
   return (
     <>
       <button type="button" onClick={saving.start}>
@@ -115,8 +117,9 @@ describe("useSaveToMine", () => {
 
   it("saves once when a double click asks twice before the page has redrawn", () => {
     const repository = boardsRepository(memoryStore());
+    const take = vi.fn(async () => undefined);
     const { result } = renderHook(
-      () => useSaveToMine(list(false), () => undefined, { repository, store: memoryStore() }),
+      () => useSaveToMine(list(false), () => undefined, { repository, store: memoryStore(), take }),
       { wrapper: MemoryRouter },
     );
     act(() => {
@@ -126,6 +129,8 @@ describe("useSaveToMine", () => {
     });
     expect(repository.all()).toHaveLength(1);
     expect(result.current.saved).toBe(repository.all()[0]!.uid);
+    // A save is a take of the list, as in the app, and counted once.
+    expect(take).toHaveBeenCalledExactlyOnceWith("L1");
   });
 
   it("asks which ranking to keep when there is a choice, and keeps mine when I say so", async () => {
@@ -134,7 +139,7 @@ describe("useSaveToMine", () => {
     const { repository } = show(list(true), store);
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     const dialog = screen.getByRole("dialog", { name: "Which ranking to save?" });
-    expect(dialog).toHaveTextContent("The author's");
+    expect(dialog).toHaveTextContent("The author’s");
     expect(dialog).toHaveTextContent("Mine");
     // Escape is a change of mind.
     await userEvent.keyboard("{Escape}");
@@ -149,7 +154,7 @@ describe("useSaveToMine", () => {
   it("offers the author's arrangement against an unranked copy when I placed nothing", async () => {
     const { repository } = show(list(true));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    await userEvent.click(screen.getByRole("button", { name: "Unranked, I'll do it" }));
+    await userEvent.click(screen.getByRole("button", { name: "Unranked, I’ll do it" }));
     expect(titlesIn(repository)).toEqual({ s: [], a: [], pool: ["A", "B", "C"] });
   });
 
@@ -178,7 +183,7 @@ describe("useSaveToMine", () => {
     const { repository } = show(template, memoryStore(), olena);
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     const dialog = screen.getByRole("dialog", { name: "Which ranking to save?" });
-    expect(dialog).not.toHaveTextContent("The author's");
+    expect(dialog).not.toHaveTextContent("The author’s");
     await userEvent.click(screen.getByRole("button", { name: "Olena" }));
     expect(titlesIn(repository)).toEqual({ s: ["B"], a: ["A"], pool: ["C"] });
     expect(rankedTiers(repository.all()[0]!).map((tier) => tier.label)).toEqual(["Top", "A"]);
@@ -191,7 +196,7 @@ describe("useSaveToMine", () => {
     show(ranked, store);
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(screen.getByRole("dialog", { name: "Which ranking to save?" })).toHaveTextContent(
-      "The author's",
+      "The author’s",
     );
   });
 });

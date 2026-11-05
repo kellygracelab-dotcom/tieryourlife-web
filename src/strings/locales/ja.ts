@@ -395,6 +395,7 @@ const ja: Translation = {
     copyLink: "リンクをコピー",
     share: "共有",
     linkCopied: "リンクをコピーしました",
+    copyFailed: "リンクをコピーできませんでした：{link}",
     hiddenNotice: "あなたには非表示",
     undo: "元に戻す",
     hiddenTitle: "このリストを非表示にしました",
@@ -503,6 +504,10 @@ const ja: Translation = {
       "このリンクを知っている人は、作者の版と並べてあなたの版を見られます。アカウントなしでも残ります。",
     liveNoteKept:
       "このリンクを知っている人は、作者の版と並べてあなたの版を見られます。あなたのランキングに保存されています。",
+    liveNoteAlone:
+      "このリンクを知っている人は、あなたの版を見られます。アカウントなしでも残ります。",
+    liveNoteAloneKept:
+      "このリンクを知っている人は、あなたの版を見られます。あなたのランキングに保存されています。",
     copy: "リンクをコピー",
     copied: "コピーしました",
     download: "画像を保存",
