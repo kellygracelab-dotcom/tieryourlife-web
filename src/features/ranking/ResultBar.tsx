@@ -22,6 +22,8 @@ interface ResultBarProps {
   kept?: boolean;
   /** Offered to a guest; absent once the ranking is kept. */
   save?: () => void;
+  /** Reads the list again after it changed under the ranking; the page's own reload by default. */
+  reload?: () => void;
   copy?: (text: string) => Promise<void>;
 }
 
@@ -38,6 +40,7 @@ export function ResultBar({
   download,
   kept = false,
   save,
+  reload = () => window.location.reload(),
   copy = clipboardCopy,
 }: ResultBarProps) {
   const [copied, setCopied] = useState(false);
@@ -63,19 +66,30 @@ export function ResultBar({
   if (finish.status === "failed") {
     const { error } = finish;
     const gone = error.kind === "notFound";
+    // Republished while it was ranked: the same rows would mean other cards,
+    // so trying again is no help; the list as it is now is.
+    const changed = error.kind === "conflict";
     const text =
       error.kind === "offline"
         ? strings.rank.failedOffline
         : gone
           ? strings.rank.failedGone
-          : strings.rank.failedOther;
+          : changed
+            ? strings.rank.failedChanged
+            : strings.rank.failedOther;
     return (
       <div className="result result--failed" role="alert">
         <p>{text}</p>
-        {!gone && (
-          <Button variant="filled" icon="refresh" onClick={onRetry}>
-            {strings.rank.tryAgain}
+        {changed ? (
+          <Button variant="filled" icon="refresh" onClick={reload}>
+            {strings.rank.loadAgain}
           </Button>
+        ) : (
+          !gone && (
+            <Button variant="filled" icon="refresh" onClick={onRetry}>
+              {strings.rank.tryAgain}
+            </Button>
+          )
         )}
       </div>
     );

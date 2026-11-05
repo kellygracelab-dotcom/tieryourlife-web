@@ -420,6 +420,7 @@ const ptBR: Translation = {
     seedHint: "Ao colocá-lo, sua versão começa pela classificação de {name}.",
     seedHintUnnamed: "Ao colocá-lo, sua versão começa por esta classificação.",
     dropToStart: "Solte para começar sua versão.",
+    seedStart: "Mova um card do quadro para começar sua versão.",
   },
   rankings: {
     title: "Rankings",
@@ -511,6 +512,9 @@ const ptBR: Translation = {
       "Sem conexão. Nada foi perdido: o que você colocou está a salvo neste aparelho. Tente de novo quando voltar a ficar online.",
     failedGone: "Esta lista não está mais disponível, então a classificação não pode ser guardada.",
     failedOther: "Não foi possível salvar a classificação. Nada foi perdido. Tente de novo.",
+    failedChanged:
+      "O autor mudou esta lista enquanto você a classificava. Carregue de novo para classificá-la como está agora.",
+    loadAgain: "Carregar de novo",
   },
   keep: {
     title: "Guarde esta classificação",

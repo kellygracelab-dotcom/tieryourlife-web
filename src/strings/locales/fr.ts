@@ -429,6 +429,7 @@ const fr: Translation = {
     seedHint: "La placer fait partir votre version du classement de {name}.",
     seedHintUnnamed: "La placer fait partir votre version de ce classement.",
     dropToStart: "Lâchez-la pour commencer votre version.",
+    seedStart: "Déplacez une carte du tableau pour commencer votre version.",
   },
   rankings: {
     title: "Classements",
@@ -523,6 +524,9 @@ const fr: Translation = {
       "Pas de connexion. Rien n’est perdu : vos placements sont à l’abri sur cet appareil. Réessayez une fois de retour en ligne.",
     failedGone: "Cette liste n’est plus disponible, le classement ne peut donc pas être gardé.",
     failedOther: "Impossible d’enregistrer le classement. Rien n’est perdu. Réessayez.",
+    failedChanged:
+      "L’auteur a modifié cette liste pendant que vous la classiez. Rechargez-la pour la classer telle qu’elle est maintenant.",
+    loadAgain: "La recharger",
   },
   keep: {
     title: "Garder ce classement",

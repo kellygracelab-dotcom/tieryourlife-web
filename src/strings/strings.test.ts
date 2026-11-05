@@ -136,12 +136,25 @@ describe("the dictionaries", () => {
   const files = import.meta.glob<{ default: Translation }>("./locales/*.ts", { eager: true });
   const holesOf = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
-  // In a plural group, the forms for none, one and two may say the count in
-  // the word itself (Arabic's «بطاقتان», two cards) and leave the {n} out.
+  // In a plural group, a form that serves one count only may say it in the
+  // word itself (Arabic's «بطاقتان», two cards) and leave the {n} out. Russian
+  // and Ukrainian `one` also serves 21, 31, 41…, so there it must say the number.
+  const singleCounts = (tag: string): Set<string> => {
+    const rules = new Intl.PluralRules(tag);
+    const counts = new Map<string, number>();
+    for (let n = 1; n <= 1000; n++) {
+      const category = rules.select(n);
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+    return new Set(["zero", "one", "two"].filter((category) => (counts.get(category) ?? 0) <= 1));
+  };
+  const tagOf = (file: string) => file.replace(/^.*\/|\.ts$/g, "");
+
   const problemsOf = (
     base: unknown,
     over: unknown,
     path: string,
+    single: Set<string>,
     countInWord = false,
   ): string[] => {
     if (typeof over === "string") {
@@ -157,15 +170,15 @@ describe("the dictionaries", () => {
     const isPlural = typeof english.other === "string" && typeof english.one === "string";
     return Object.entries(over).flatMap(([key, value]) => {
       // A plural form English lacks (few, many…) is compared with English's `other`.
-      const against = isPlural ? (english[key] ?? english.other) : english[key];
+      // So is a form that serves more than one count, whatever English's `one` says.
+      const against = isPlural
+        ? single.has(key)
+          ? (english[key] ?? english.other)
+          : english.other
+        : english[key];
       return against === undefined
         ? [`${path}.${key}: not in English`]
-        : problemsOf(
-            against,
-            value,
-            `${path}.${key}`,
-            isPlural && ["zero", "one", "two"].includes(key),
-          );
+        : problemsOf(against, value, `${path}.${key}`, single, isPlural && single.has(key));
     });
   };
 
@@ -180,7 +193,7 @@ describe("the dictionaries", () => {
 
   it("carry nothing English lacks, and keep every hole of every text", () => {
     for (const [file, module] of Object.entries(files)) {
-      expect(problemsOf(en, module.default, file)).toEqual([]);
+      expect(problemsOf(en, module.default, file, singleCounts(tagOf(file)))).toEqual([]);
     }
   });
 

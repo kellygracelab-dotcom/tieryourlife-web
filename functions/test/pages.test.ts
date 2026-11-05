@@ -141,6 +141,11 @@ describe("listPayload", () => {
     assert.equal(listPayload("abc12345", { basedOn: { title: "no id" } }).basedOn, null);
   });
 
+  it("carries how many readers' rankings the list keeps, which its menu says", () => {
+    assert.equal(listPayload("abc12345", { takeCount: 40, rankingCount: 3 }).rankingCount, 3);
+    assert.equal(listPayload("abc12345", {}).rankingCount, 0);
+  });
+
   it("survives a document without one", () => {
     assert.equal(listPayload("abc12345", {}).authorUid, "");
     assert.equal(listPayload("abc12345", { authorUid: 5 as never }).authorUid, "");

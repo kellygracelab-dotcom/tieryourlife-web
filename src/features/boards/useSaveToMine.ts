@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { PublishedList, PublishedTier } from "../../api/types";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
@@ -39,9 +39,17 @@ export interface SaveChoices {
   mine: Rows | null;
 }
 
+/** The copy a visit made, and of which list: the page may move on to another. */
+interface Made {
+  listId: string;
+  uid: string;
+}
+
 export interface SaveToMine {
-  /** Saves at once when there is nothing to choose between; asks otherwise. */
+  /** Saves at once when there is nothing to choose between; asks otherwise. Once saved, opens the copy. */
   start: () => void;
+  /** The board this visit already made of the list, or null: then Save reads Open. */
+  saved: string | null;
   asking: SaveChoices | null;
   save: (whose: Whose) => void;
   cancel: () => void;
@@ -54,7 +62,8 @@ export interface SaveToMine {
  * to open the new board. A list with nothing placed, a template, has no
  * Theirs to weigh: one's own is saved as it stands, as on the phone. A
  * reader's ranking picked to look at is a Theirs of its own, kept with its
- * own tier words.
+ * own tier words. One visit makes one copy, as on the phone: once saved, the
+ * button opens it instead.
  */
 export function useSaveToMine(
   list: PublishedList,
@@ -67,16 +76,26 @@ export function useSaveToMine(
   }: SaveToMineDeps = {},
 ): SaveToMine {
   const [asking, setAsking] = useState<SaveChoices | null>(null);
+  const [made, setMade] = useState<Made | null>(null);
+  // Read before React has drawn the last save: a double click made two copies.
+  const latest = useRef<Made | null>(null);
   const navigate = useNavigate();
+  const saved = made !== null && made.listId === list.id ? made.uid : null;
 
   const save = useCallback(
     (whose: Whose, choices: SaveChoices | null = asking) => {
+      if (latest.current?.listId === list.id) {
+        setAsking(null);
+        return;
+      }
       const theirs = whose === "theirs" ? (choices?.theirs ?? null) : null;
       const rows =
         theirs !== null ? theirs.rows : whose === "mine" ? (choices?.mine ?? null) : null;
       const from = theirs === null ? list : { ...list, tiers: [...theirs.tiers] };
       const board = boardFromList(from, rows, now(), nextUid);
       repository.save(board);
+      latest.current = { listId: list.id, uid: board.uid };
+      setMade(latest.current);
       setAsking(null);
       notify({
         text: strings.list.savedToMine,
@@ -90,6 +109,11 @@ export function useSaveToMine(
   );
 
   const start = useCallback(() => {
+    const copy = latest.current;
+    if (copy?.listId === list.id) {
+      void navigate(`/b/${encodeURIComponent(copy.uid)}`);
+      return;
+    }
     const author = arrange(list);
     const choices: SaveChoices = {
       theirs:
@@ -102,9 +126,9 @@ export function useSaveToMine(
     };
     if (choices.theirs === null) save(choices.mine === null ? "none" : "mine", choices);
     else setAsking(choices);
-  }, [list, store, save, shown]);
+  }, [list, store, save, shown, navigate]);
 
   const cancel = useCallback(() => setAsking(null), []);
 
-  return { start, asking, save, cancel };
+  return { start, saved, asking, save, cancel };
 }

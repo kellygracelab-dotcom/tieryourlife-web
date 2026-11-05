@@ -247,6 +247,26 @@ describe("POST /api/rank — Finish", () => {
     );
   });
 
+  it("refuses a Finish placed on another version of the list, and takes one that names none", async () => {
+    const { deps, table } = setup(GUEST, ["22222222", "33333333"]);
+    table("publishedLists").set(LIST_ID, { ...LIST, updatedAt: { toMillis: () => 5_000 } });
+    const stale = await call(deps, "POST", "/api/rank", {
+      listId: LIST_ID,
+      rows: [[1], [0]],
+      version: 4_000,
+    });
+    assert.equal(stale.status, 409);
+    assert.equal((stale.body as { code: string }).code, "LIST_CHANGED");
+    assert.equal(table("rankings").size, 0);
+    assert.equal(table("rankUsage").size, 0);
+
+    const fresh = { listId: LIST_ID, rows: [[1], [0]], version: 5_000 };
+    assert.equal((await call(deps, "POST", "/api/rank", fresh)).status, 201);
+    table("rankQuota").clear();
+    const unversioned = { listId: LIST_ID, rows: [[1], [0]] };
+    assert.equal((await call(deps, "POST", "/api/rank", unversioned)).status, 201);
+  });
+
   it("refuses rows that do not fit the list, and counts nothing for them", async () => {
     const { deps, table } = setup();
     const answer = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[0, 0], []] });

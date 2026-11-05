@@ -417,6 +417,7 @@ const tr: Translation = {
     seedHint: "Yerleştirince sürümün {name} sıralamasından başlar.",
     seedHintUnnamed: "Yerleştirince sürümün bu sıralamadan başlar.",
     dropToStart: "Kendi sürümünü başlatmak için bırak.",
+    seedStart: "Kendi sürümünüzü başlatmak için panodaki bir kartı taşıyın.",
   },
   rankings: {
     title: "Sıralamalar",
@@ -510,6 +511,9 @@ const tr: Translation = {
       "Bağlantı yok. Hiçbir şey kaybolmadı: yerleştirmeleriniz bu cihazda güvende. Çevrimiçi olduğunuzda tekrar deneyin.",
     failedGone: "Bu liste artık kullanılamıyor, dolayısıyla sıralama saklanamaz.",
     failedOther: "Sıralama kaydedilemedi. Hiçbir şey kaybolmadı. Tekrar deneyin.",
+    failedChanged:
+      "Siz sıralarken yazar bu listeyi değiştirdi. Şimdiki hâliyle sıralamak için yeniden yükleyin.",
+    loadAgain: "Yeniden yükle",
   },
   keep: {
     title: "Bu sıralamayı saklayın",

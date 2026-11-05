@@ -199,6 +199,22 @@ describe("board model", () => {
     expect(pool(done)).toEqual([]);
   });
 
+  it("picks the next card the search leaves in sight, or none, never a hidden one", () => {
+    const among = [3, 7, 8];
+    const next = run(
+      init(2, 10),
+      { type: "select", item: 3 },
+      { type: "place", item: 3, tier: 0, among },
+    );
+    expect(next.selected).toBe(7);
+    const none = run(
+      init(2, 10),
+      { type: "select", item: 3 },
+      { type: "place", item: 3, tier: 0, among: [3] },
+    );
+    expect(none.selected).toBeNull();
+  });
+
   it("picks nothing after a drag, or after a placed card changes its tier", () => {
     const dragged = run(init(2, 3), { type: "place", item: 0, tier: 0 });
     expect(dragged.selected).toBeNull();

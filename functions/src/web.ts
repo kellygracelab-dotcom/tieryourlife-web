@@ -18,6 +18,7 @@ import {
   decideEdit,
   decideOwner,
   decideRows,
+  decideVersion,
   fromStoredRows,
   isCode,
   isKeptBy,
@@ -239,6 +240,13 @@ async function saveRanking(
       : [null, null];
   if (list === null || !list.exists || list.get("underReview") === true) {
     return notFound(response, "No such list");
+  }
+  const stale = decideVersion(
+    body,
+    (list.get("updatedAt") as FirebaseFirestore.Timestamp | undefined)?.toMillis() ?? 0,
+  );
+  if (stale !== null) {
+    return void response.status(stale.status).json({ error: stale.error, code: stale.code });
   }
   const snapshot = snapshotOf(list.data() ?? {});
   const decision = decideRows(body, snapshot.tiers.length, snapshot.items.length);

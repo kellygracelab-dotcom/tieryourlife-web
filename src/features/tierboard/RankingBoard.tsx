@@ -17,10 +17,10 @@ import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
 import type { PublishedList } from "../../api/types";
 import { useSession } from "../../app/session";
-import { keepRanking, noteTake } from "../../lib/api";
+import { keepRanking, noteTake, rearrangeRanking } from "../../lib/api";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
-import { writeKept } from "../ranking/kept";
+import { keptFor, readKept, writeKept, type KeptRanking } from "../ranking/kept";
 import { ResultBar, type FinishState } from "../ranking/ResultBar";
 import { downloadShare, type Share } from "../ranking/share";
 import { errorOf } from "../../api/errors";
@@ -61,7 +61,11 @@ import "./board.css";
 import "./ranking.css";
 import { sizedFor } from "../../lib/pictureSize";
 
-export type Keep = (listId: string, rows: readonly (readonly number[])[]) => Promise<SavedRanking>;
+export type Keep = (
+  listId: string,
+  rows: readonly (readonly number[])[],
+  version?: number,
+) => Promise<SavedRanking>;
 
 /** The board as the owner's editor: it starts from what is saved, and Save writes it back. */
 export interface EditMode {
@@ -102,6 +106,8 @@ export interface Seed {
   hint: string;
   /** The same, in the line's place, while a card is carried. */
   dropHint: string;
+  /** Said while nothing is picked or carried: that a move here starts one's own. */
+  start?: string;
   onStart: (rows: Rows) => void;
 }
 
@@ -110,6 +116,8 @@ interface RankingBoardProps {
   hitTest?: HitTest;
   store?: KeyValueStore;
   keep?: Keep;
+  /** Changes a ranking already kept, behind the same link. */
+  rearrange?: (code: string, rows: Rows) => Promise<unknown>;
   take?: (listId: string) => Promise<void>;
   share?: Share;
   edit?: EditMode;
@@ -118,6 +126,8 @@ interface RankingBoardProps {
   seed?: Seed;
   /** Every arrangement as it is made, for a page that starts something else from it (Play). */
   onRows?: (rows: Rows) => void;
+  /** The list was republished while it was ranked: the page reads it again. */
+  onListChanged?: () => void;
 }
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
@@ -354,17 +364,38 @@ export function RankingBoard({
   hitTest,
   store = localStorageStore,
   keep = keepRanking,
+  rearrange = rearrangeRanking,
   take = noteTake,
   share = downloadShare,
   edit,
   strip = false,
   seed,
   onRows,
+  onListChanged,
 }: RankingBoardProps) {
   const seeded = seed !== undefined;
-  const [state, dispatch] = useBoard(list, store, seed?.rows ?? edit?.rows ?? null, seeded);
+  const [state, dispatchBoard] = useBoard(list, store, seed?.rows ?? edit?.rows ?? null, seeded);
+  // While the pool's search hides cards, a placement picks the next one among
+  // those in sight: a hidden pick took the next number key unseen.
+  const inSight = useRef<readonly number[] | null>(null);
+  const dispatch = useCallback(
+    (action: BoardAction) =>
+      dispatchBoard(
+        action.type === "place" && inSight.current !== null
+          ? { ...action, among: inSight.current }
+          : action,
+      ),
+    [dispatchBoard],
+  );
   const boardSize = useBoardSize();
-  const [finish, setFinish] = useState<FinishState>({ status: "idle" });
+  // A ranking finished here before, showing as it was: its link again, not a second Finish.
+  const [finish, setFinish] = useState<FinishState>(() => {
+    const code =
+      edit === undefined && !seeded
+        ? keptFor(readKept(store, list.id), list.updatedAt, state.rows)
+        : null;
+    return code === null ? { status: "idle" } : { status: "done", code };
+  });
   const [save, setSave] = useState<SaveState>({ status: "idle" });
   const locked = finish.status === "saving" || finish.status === "done" || save.status === "saving";
   const { account, signIn } = useSession();
@@ -506,9 +537,31 @@ export function RankingBoard({
 
   const onFinish = () => {
     setFinish({ status: "saving" });
-    keep(list.id, state.rows).then(
+    const placed = state.rows.map((row) => [...row]);
+    const uid = account?.kind === "signedIn" ? account.uid : null;
+    const before = readKept(store, list.id);
+    // Changed after Finish, a ranking the account keeps for this version of
+    // the list is changed behind its link, as the /r/ page's Edit does. A
+    // guest's cannot be (the server lets accounts only), nor one gone since.
+    const inPlace =
+      before !== null &&
+      uid !== null &&
+      before.claimedBy === uid &&
+      before.version === list.updatedAt;
+    const saved: Promise<KeptRanking> = inPlace
+      ? rearrange(before.code, placed).then(
+          () => before,
+          (reason: unknown) =>
+            errorOf(reason).kind === "notFound" || errorOf(reason).kind === "notYours"
+              ? keep(list.id, placed, list.updatedAt)
+              : Promise.reject(reason),
+        )
+      : keep(list.id, placed, list.updatedAt);
+    saved.then(
       (kept) => {
-        writeKept(store, list.id, kept);
+        // Made by an account, the ranking already sits in it: nothing to claim later.
+        const owner = uid === null ? {} : { claimedBy: uid };
+        writeKept(store, list.id, { ...kept, ...owner, rows: placed, version: list.updatedAt });
         setFinish({ status: "done", code: kept.code });
         if (guest) setOffer("open");
         // Kept by its /r/ link only: the list's public Rankings name the
@@ -628,6 +681,9 @@ export function RankingBoard({
     needle === ""
       ? left
       : left.filter((item) => list.items[item]?.title.toLowerCase().includes(needle) ?? false);
+  useEffect(() => {
+    inSight.current = needle === "" ? null : shown;
+  });
   const keyboardTiers = Math.min(list.tiers.length, 9);
   // On a phone the pool is one scrolling row with dots under it.
   // The tray waits out a double tap before it scrolls, or the second tap lands on another card.
@@ -752,6 +808,7 @@ export function RankingBoard({
               setOffer("closed");
             }}
             download={(address) => share(list, state.rows, address)}
+            reload={onListChanged}
             kept={!guest}
             save={guest ? () => setOffer("open") : undefined}
           />
@@ -804,11 +861,12 @@ export function RankingBoard({
           )}
           <div className="board__end" ref={boardEnd} aria-hidden="true" />
         </div>
-        {seed !== undefined && (selected !== null || lifted !== null) && (
-          <p className="ranking__seed-hint" role="status">
-            {lifted !== null ? seed.dropHint : seed.hint}
-          </p>
-        )}
+        {seed !== undefined &&
+          (selected !== null || lifted !== null || seed.start !== undefined) && (
+            <p className="ranking__seed-hint" role="status">
+              {lifted !== null ? seed.dropHint : selected !== null ? seed.hint : seed.start}
+            </p>
+          )}
       </div>
 
       {/* Theirs keeps the column empty, so its tiers stand where Mine's do. */}
@@ -1102,7 +1160,7 @@ function TierRow({
         }
       >
         <span className="tier__label">{meta.label}</span>
-        {meta.caption !== null && <span className="tier__caption">{meta.caption}</span>}
+        {meta.caption !== null && <bdi className="tier__caption">{meta.caption}</bdi>}
         {/*
          * While a card is picked the corner's number becomes the row's own
          * button, a pill: the number for a keyboard, a plus for a finger and

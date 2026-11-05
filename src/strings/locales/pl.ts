@@ -437,6 +437,7 @@ const pl: Translation = {
     seedHint: "Umieszczenie jej rozpocznie twoją wersję od rankingu: {name}.",
     seedHintUnnamed: "Umieszczenie jej rozpocznie twoją wersję od tego rankingu.",
     dropToStart: "Upuść ją, aby zacząć swoją wersję.",
+    seedStart: "Przesuń kartę na tablicy, aby zacząć swoją wersję.",
   },
   rankings: {
     title: "Rankingi",
@@ -533,6 +534,9 @@ const pl: Translation = {
       "Brak połączenia. Nic nie przepadło: twoje umieszczenia są bezpieczne na tym urządzeniu. Spróbuj ponownie, gdy wrócisz do sieci.",
     failedGone: "Ta lista nie jest już dostępna, więc rankingu nie da się zachować.",
     failedOther: "Nie udało się zapisać rankingu. Nic nie przepadło. Spróbuj ponownie.",
+    failedChanged:
+      "Autor zmienił tę listę w trakcie układania rankingu. Wczytaj ją ponownie, aby ułożyć ją w obecnej wersji.",
+    loadAgain: "Wczytaj ponownie",
   },
   keep: {
     title: "Zachowaj ten ranking",

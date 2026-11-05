@@ -17,7 +17,21 @@ vi.mock("./preload", () => ({
       ? { id: "embedded", title: "From HTML" }
       : id === "nameless"
         ? { id: "nameless", title: "From HTML", anonymous: true }
-        : null,
+        : id === "house"
+          ? {
+              id: "house",
+              title: "Best sci-fi films",
+              tiers: [{ label: "S", caption: "Masterpiece" }],
+              items: [{ title: "Arrival", imageUrl: null }],
+              translations: {
+                ru: {
+                  "Best sci-fi films": "Лучшая фантастика",
+                  Masterpiece: "Шедевр",
+                  Arrival: "Прибытие",
+                },
+              },
+            }
+          : null,
   preloadedRanking: (code: string) => (code === "embedded" ? { code: "embedded" } : null),
 }));
 
@@ -54,6 +68,7 @@ import {
   unpublish,
   withdrawListRanking,
 } from "./api";
+import { setStrings } from "../strings";
 
 describe("api", () => {
   it("is one client built on the Firebase token providers", () => {
@@ -72,6 +87,17 @@ describe("api", () => {
       title: "From HTML",
     });
     await expect(loadRanking("embedded")).resolves.toEqual({ code: "embedded" });
+    expect(mocks.request).not.toHaveBeenCalled();
+  });
+
+  it("says a house list carried in the page in the reader's language, as one asked for", async () => {
+    mocks.request.mockClear();
+    setStrings("ru", null);
+    const house = await loadList("house");
+    setStrings("en", null);
+    expect(house.title).toBe("Лучшая фантастика");
+    expect(house.tiers.map((tier) => tier.caption)).toEqual(["Шедевр"]);
+    expect(house.items.map((item) => item.title)).toEqual(["Прибытие"]);
     expect(mocks.request).not.toHaveBeenCalled();
   });
 

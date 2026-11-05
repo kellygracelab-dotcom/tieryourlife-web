@@ -34,7 +34,7 @@ export function BoardTile({ board, title, selecting, selected, onSelect, onStar 
   );
   const words = (
     <span className="board-tile__words">
-      <span className="board-tile__title">{title}</span>
+      <bdi className="board-tile__title">{title}</bdi>
       {from !== null && <span className="board-tile__from">{from}</span>}
       <span className="board-tile__meta">{metaOf(board)}</span>
       {board.publishedId !== null && (

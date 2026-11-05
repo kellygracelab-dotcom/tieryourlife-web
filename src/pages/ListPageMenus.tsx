@@ -201,7 +201,7 @@ function VisitorMenu({
           {/* The head's own Save button, where a phone's head has no room for it. */}
           <li className="list-menu__narrow">
             <button type="button" className="menu__action" onClick={saving.start}>
-              {strings.list.saveToMine}
+              {saving.saved === null ? strings.list.saveToMine : strings.list.open}
             </button>
           </li>
           <li>
@@ -271,7 +271,7 @@ export function VisitorTools({
   return (
     <>
       <Button variant="tonal" icon="bookmark" className="list-head__save" onClick={saving.start}>
-        {strings.list.saveToMine}
+        {saving.saved === null ? strings.list.saveToMine : strings.list.open}
       </Button>
       <CopyLinkButton list={list} />
       <VisitorMenu

@@ -118,7 +118,9 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
           </span>
         )}
         <div className="profile__text">
-          <h1 className="profile__name">{name}</h1>
+          <h1 className="profile__name">
+            <bdi>{name}</bdi>
+          </h1>
           {following.failed && (
             <p className="follow__failed" role="alert">
               <Icon name="cloud_off" />

@@ -63,7 +63,7 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
       </span>
       <span className="board-card__text">
         <span className="board-card__title">
-          {title}
+          <bdi>{title}</bdi>
           {from !== null && <span className="board-card__from">{from}</span>}
         </span>
         <span className="board-card__meta">{metaOf(board)}</span>

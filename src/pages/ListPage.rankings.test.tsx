@@ -35,7 +35,8 @@ const list: PublishedList = {
   previewImages: [],
   tierColors: [],
   updatedAt: 0,
-  takeCount: 12,
+  takeCount: 40,
+  rankingCount: 12,
   tiers: [{ label: "S", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" }],
   items: [
     { title: "Ex Machina", imageUrl: null, tierIndex: 0 },

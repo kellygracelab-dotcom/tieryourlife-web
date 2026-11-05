@@ -173,7 +173,7 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
       ) : (
         <>
           <Link className="mine__text" to={to}>
-            <span className="mine__title">{title}</span>
+            <bdi className="mine__title">{title}</bdi>
             <span className="mine__meta">{metaOf(entry)}</span>
             {entry.kind === "list" && entry.movesTo !== null && (
               <span className="mine__meta">{entry.movesTo}</span>
@@ -316,10 +316,14 @@ function Mine({
     );
   }
 
+  // A filter holds only while its chips are there to undo it: a delete that
+  // took them away left the other kind hidden with no way back.
+  const filtering = lists > 0 && rankings > 0 && entries.length > FILTER_FROM;
+  const applied: Filter = filtering ? filter : "all";
   const shown = entries.filter(
     (entry) =>
-      filter === "all" ||
-      (filter === "published" ? entry.kind === "list" : entry.kind === "ranking"),
+      applied === "all" ||
+      (applied === "published" ? entry.kind === "list" : entry.kind === "ranking"),
   );
   const remove = (entry: Entry): Promise<void> =>
     entry.kind === "list" ? unpublish(entry.list.id) : deleteRanking(entry.ranking.code);
@@ -332,7 +336,7 @@ function Mine({
           ...(rankings > 0 ? [plural(strings.me.countRanked, rankings)] : []),
         ].join(" · ")}
       </p>
-      {lists > 0 && rankings > 0 && entries.length > FILTER_FROM && (
+      {filtering && (
         <div className="me__filters" role="group" aria-label={strings.me.filters}>
           <Chip selected={filter === "all"} onClick={() => setFilter("all")}>
             {strings.me.filterAll}

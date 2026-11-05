@@ -93,6 +93,8 @@ interface StoredList {
   tierColors?: string[];
   updatedAt?: FirebaseFirestore.Timestamp;
   takeCount?: number;
+  /** The readers' rankings kept with the list, as the proxy counts them. */
+  rankingCount?: number;
   underReview?: boolean;
   tiers?: unknown[];
   items?: unknown[];
@@ -140,6 +142,8 @@ export function listPayload(id: string, data: StoredList) {
     tierColors: data.tierColors ?? [],
     updatedAt: data.updatedAt?.toMillis() ?? 0,
     takeCount: data.takeCount ?? 0,
+    // The menu's "Rankings · N": without it a list opened by its link said 0.
+    rankingCount: data.rankingCount ?? 0,
     tiers: data.tiers ?? [],
     items: data.items ?? [],
     // Without them a reader in another language got a house list as written,
