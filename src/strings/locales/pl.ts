@@ -374,6 +374,7 @@ const pl: Translation = {
     allHidden: "Wszystko tutaj jest u ciebie ukryte. Lista jest w Ustawieniach.",
     hiddenTile: "Ukryte u ciebie",
     undo: "Cofnij",
+    cardMore: "Więcej o: {title}",
     omitted: {
       one: "{n} ukryta lista nie jest pokazywana.",
       few: "{n} ukryte listy nie są pokazywane.",
@@ -926,6 +927,9 @@ const pl: Translation = {
     topicMissing: "W dziale {section} nie ma takiego tematu.",
     backToSection: "Wróć do działu {section}",
     suggestTopic: "Zaproponuj temat",
+    suggestTopicBody:
+      "Tematy nazywa się lub wybiera przy publikowaniu listy, w polu „Temat” w Ustawieniach listy. Strona oferuje tam istniejące tematy; nowy nazywa się w aplikacji.",
+    suggestTopicMake: "Utwórz listę w: {section}",
     sortPopular: "Popularne",
     sortNewest: "Najnowsze",
     topicWaiting: "{name} · czeka",
@@ -936,7 +940,7 @@ const pl: Translation = {
     tabExplore: "Odkrywaj",
     tabFollowing: "Obserwowane",
     community: "Społeczność",
-    popularThisWeek: "Popularne w tym tygodniu",
+    popular: "Popularne",
     manage: "Zarządzaj",
     reasonSection: "W dziale {name}",
     emptyTitle: "Jeszcze niczego nie obserwujesz",
@@ -1305,6 +1309,8 @@ const pl: Translation = {
     behind: "Opublikowana wersja jest starsza niż ta lista.",
     publishing: "Publikowanie…",
     publishedNote: "Opublikowano. Każdy z linkiem może ją ułożyć.",
+    publishedAsRanking:
+      "Opublikowana jako twój ranking tej listy. W kanale nie pojawia się druga lista.",
     unpublished: "Wycofano z publikacji. Link już nie działa.",
     shareImage: "Udostępnij jako obraz",
     shareImageSub: "Obraz tej tablicy z linkiem do strony",

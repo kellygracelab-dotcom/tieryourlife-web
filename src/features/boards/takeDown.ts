@@ -1,4 +1,5 @@
 import { errorOf } from "../../api/errors";
+import { withdrawListRanking } from "../../lib/api";
 import type { UnpublishBoard } from "./BoardSettings";
 import { setPublished, type Board } from "./model";
 import type { BoardsRepository } from "./repository";
@@ -12,7 +13,20 @@ import type { BoardsRepository } from "./repository";
  * another account. Any other refusal answers false, and the board stays where
  * it is.
  */
-export async function takenDown(board: Board, unpublish: UnpublishBoard): Promise<boolean> {
+export async function takenDown(
+  board: Board,
+  unpublish: UnpublishBoard,
+  withdraw: (listId: string) => Promise<unknown> = withdrawListRanking,
+): Promise<boolean> {
+  // Out as a ranking: it comes down from the list it sits beside, as on the phone.
+  if (board.rankingOf !== null) {
+    try {
+      await withdraw(board.rankingOf);
+      return true;
+    } catch (reason: unknown) {
+      return errorOf(reason).kind === "notFound";
+    }
+  }
   if (board.publishedId === null) return true;
   try {
     await unpublish(board.publishedId);
@@ -28,7 +42,7 @@ export async function takenDown(board: Board, unpublish: UnpublishBoard): Promis
  * Its last edit stays, so Undo or Restore puts it back where it was in Recent.
  */
 export const unpublished = (board: Board, now: number): Board =>
-  board.publishedId === null
+  board.publishedId === null && board.rankingOf === null
     ? board
     : { ...setPublished(board, null, null, now), editedAt: board.editedAt };
 

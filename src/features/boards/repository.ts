@@ -187,6 +187,8 @@ export function parseBoard(raw: unknown): Board | null {
       : [],
     authorName: text(source.authorName),
     publishedId: text(source.publishedId),
+    takenFrom: text(source.takenFrom),
+    rankingOf: text(source.rankingOf),
     deletedAt: time(source.deletedAt),
     tiers,
     items,

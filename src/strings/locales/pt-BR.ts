@@ -359,6 +359,7 @@ const ptBR: Translation = {
     allHidden: "Tudo aqui está oculto para você. A lista está em Configurações.",
     hiddenTile: "Oculto para você",
     undo: "Desfazer",
+    cardMore: "Mais sobre {title}",
     omitted: {
       one: "{n} lista oculta não é mostrada.",
       other: "{n} listas ocultas não são mostradas.",
@@ -868,6 +869,9 @@ const ptBR: Translation = {
     topicMissing: "Não há esse tema em {section}.",
     backToSection: "Voltar para {section}",
     suggestTopic: "Sugerir um tema",
+    suggestTopicBody:
+      "Os temas são nomeados ou escolhidos ao publicar uma lista, em “Tema” nas Configurações da lista. O site oferece ali os temas que já existem; um novo é nomeado no app.",
+    suggestTopicMake: "Criar uma lista em {section}",
     sortPopular: "Populares",
     sortNewest: "Recentes",
     topicWaiting: "{name} · aguardando",
@@ -878,7 +882,7 @@ const ptBR: Translation = {
     tabExplore: "Explorar",
     tabFollowing: "Seguindo",
     community: "Comunidade",
-    popularThisWeek: "Populares da semana",
+    popular: "Populares",
     manage: "Gerenciar",
     reasonSection: "Em {name}",
     emptyTitle: "Você ainda não segue nada",
@@ -1181,6 +1185,8 @@ const ptBR: Translation = {
     behind: "A versão publicada está desatualizada.",
     publishing: "Publicando…",
     publishedNote: "Publicada. Qualquer um com o link pode organizá-la.",
+    publishedAsRanking:
+      "Publicada como seu ranking daquela lista. O feed não mostra uma segunda lista.",
     unpublished: "Despublicada. O link não funciona mais.",
     shareImage: "Compartilhar como imagem",
     shareImageSub: "Uma imagem deste quadro, com link para o site",

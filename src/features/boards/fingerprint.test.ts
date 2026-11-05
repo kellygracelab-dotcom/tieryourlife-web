@@ -12,6 +12,8 @@ const board = (over: Partial<Board> = {}): Board => ({
   coverImageUrls: [],
   authorName: null,
   publishedId: null,
+  takenFrom: null,
+  rankingOf: null,
   deletedAt: null,
   tiers: [
     {

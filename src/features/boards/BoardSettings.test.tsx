@@ -351,6 +351,37 @@ describe("BoardSettings: public", () => {
     );
   });
 
+  it("sends the list a copy was saved from, and keeps a publish the backend took as a ranking as one", async () => {
+    const publish = vi.fn(() => Promise.resolve({ id: "SRC", ranking: true }));
+    const unpublish = vi.fn(() => Promise.resolve());
+    const withdraw = vi.fn(() => Promise.resolve());
+    show({ ...filmBoard(), takenFrom: "SRC", authorName: "Olena" }, signedIn, {
+      publish,
+      unpublish,
+      withdraw,
+    });
+    await userEvent.click(publicSwitch());
+    await waitFor(() => expect(publicSwitch()).toBeChecked());
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ takenFrom: "SRC" }));
+    // Out as one's ranking of the original: no list of its own, the cards still Olena's.
+    expect(held).toMatchObject({
+      publishedId: null,
+      rankingOf: "SRC",
+      authorName: "Olena",
+      publishedEditedAt: 500,
+    });
+    expect(published).toHaveBeenCalledWith("ranking", "SRC");
+    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/SRC");
+
+    // Down from the list it ranks, not by deleting somebody else's list.
+    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
+    await userEvent.click(screen.getAllByRole("button", { name: "Take it down" }).at(-1)!);
+    await waitFor(() => expect(publicSwitch()).not.toBeChecked());
+    expect(withdraw).toHaveBeenCalledExactlyOnceWith("SRC");
+    expect(unpublish).not.toHaveBeenCalled();
+    expect(held).toMatchObject({ publishedId: null, rankingOf: null, authorName: "Olena" });
+  });
+
   it("asks before taking it down, in the sheet, from the switch or from Take it down", async () => {
     const unpublish = vi.fn(() => Promise.resolve());
     show(

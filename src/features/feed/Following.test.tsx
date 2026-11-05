@@ -386,6 +386,6 @@ describe("the Following tab", () => {
     const { router } = open({ kind: "guest", uid: null });
     expect(router.state.location.pathname).toBe("/");
     expect(screen.queryByRole("navigation", { name: "Community" })).toBeNull();
-    expect(await screen.findByRole("heading", { name: "Popular this week" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Popular" })).toBeInTheDocument();
   });
 });

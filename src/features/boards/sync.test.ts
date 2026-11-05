@@ -131,6 +131,8 @@ describe("syncBoards", () => {
     expect(request).not.toHaveProperty("editedAt");
     expect(request).not.toHaveProperty("favouritedAt");
     expect(request).not.toHaveProperty("topic");
+    expect(request).not.toHaveProperty("takenFrom");
+    expect(request).not.toHaveProperty("rankingOf");
     expect(records.all()).toEqual([
       { uid: "films", revision: 1, fingerprint: request.fingerprint },
     ]);
@@ -188,7 +190,13 @@ describe("syncBoards", () => {
     repository.save(films());
     await run();
     const topic = { id: "t1", name: "Sci-fi" };
-    repository.save({ ...setFavourite(repository.get("films")!, 7), topic });
+    // Where it was saved from, and the ranking it is out as, are this device's too.
+    repository.save({
+      ...setFavourite(repository.get("films")!, 7),
+      topic,
+      takenFrom: "src",
+      rankingOf: "src",
+    });
     // Another device renamed it: revision 2 on the account.
     const theirs = account.kept.get("films")!;
     account.kept.set("films", {
@@ -202,6 +210,7 @@ describe("syncBoards", () => {
     expect(board.title).toBe("Their name");
     expect(board.favouritedAt).toBe(7);
     expect(board.topic).toEqual(topic);
+    expect(board).toMatchObject({ takenFrom: "src", rankingOf: "src" });
     expect(records.all()[0]?.revision).toBe(2);
   });
 

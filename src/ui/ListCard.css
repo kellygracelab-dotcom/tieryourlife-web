@@ -37,6 +37,7 @@
 .list-card .art {
   aspect-ratio: auto;
   height: var(--card-cover, 132px);
+  border-radius: 16px 16px 0 0;
   background: var(--surface-container-highest);
 }
 
@@ -149,6 +150,26 @@
   font: 400 12px/16px var(--font);
   color: var(--ink-faint);
   white-space: nowrap;
+}
+
+/* The card's own menu at the end of its footer, no taller than the row it ends. */
+.list-card__menu {
+  width: 28px;
+  height: 28px;
+  margin-block: -4px;
+  margin-inline-end: -6px;
+}
+
+.list-card__menu .ms {
+  font-size: 18px;
+}
+
+/*
+ * An open menu reaches past the card, which otherwise clips what it holds:
+ * the cover keeps the card's corners on its own.
+ */
+.list-card:has(.menu[open]) {
+  overflow: visible;
 }
 
 /*

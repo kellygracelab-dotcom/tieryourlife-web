@@ -82,6 +82,8 @@ export function publishRequestOf(board: Board): PublishRequest | null {
     ...(board.topic === null ? { noTopic: true } : {}),
     // Sent every time too: a republish without it would put the name back.
     anonymous: board.anonymous,
+    // Where the cards came from, as the app sends it: the list credits it.
+    ...(board.takenFrom === null ? {} : { takenFrom: board.takenFrom }),
     tiers: tiers.map((tier) => ({
       label: tier.label,
       caption: tier.caption,
@@ -158,15 +160,16 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
  * Somebody else's published list as a board of one's own, the phone's
  * "Save to my lists": their cards and tiers, and whichever arrangement was
  * asked for (theirs, the one on screen, or none). The author's name stays on
- * it; the published id does not, since this is a copy and not the list.
+ * it; the published id does not, since this is a copy and not the list. The
+ * list it came from is kept, as on the phone, and goes out with a publish.
  */
 export const boardFromList = (
   list: PublishedList,
   rows: readonly (readonly number[])[] | null,
   now: number,
   nextUid: NextUid,
-): Board =>
-  boardOf(
+): Board => ({
+  ...boardOf(
     {
       title: list.title,
       category: list.category,
@@ -181,7 +184,9 @@ export const boardFromList = (
     },
     now,
     nextUid,
-  );
+  ),
+  takenFrom: list.id,
+});
 
 /**
  * What the old editor kept on this device, as a board: a list begun and not

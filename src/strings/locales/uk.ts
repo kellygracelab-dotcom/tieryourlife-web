@@ -374,6 +374,7 @@ const uk: Translation = {
     allHidden: "Усе тут у вас сховано. Список схованого — в налаштуваннях.",
     hiddenTile: "Сховано у вас",
     undo: "Скасувати",
+    cardMore: "Ще про «{title}»",
     omitted: {
       one: "{n} схований список не показано.",
       few: "{n} сховані списки не показано.",
@@ -933,6 +934,9 @@ const uk: Translation = {
     topicMissing: "У розділі {section} немає такої теми.",
     backToSection: "Повернутися до розділу {section}",
     suggestTopic: "Запропонувати тему",
+    suggestTopicBody:
+      "Теми називають або обирають під час публікації списку — у пункті «Тема» в налаштуваннях списку. На сайті там є вже наявні теми; нову називають у застосунку.",
+    suggestTopicMake: "Створити список у розділі «{section}»",
     sortPopular: "Популярні",
     sortNewest: "Нові",
     topicWaiting: "{name} · чекає",
@@ -943,7 +947,7 @@ const uk: Translation = {
     tabExplore: "Огляд",
     tabFollowing: "Підписки",
     community: "Спільнота",
-    popularThisWeek: "Популярне за тиждень",
+    popular: "Популярне",
     manage: "Керувати",
     reasonSection: "У розділі «{name}»",
     emptyTitle: "Ви ще ні на що не підписані",
@@ -1302,6 +1306,8 @@ const uk: Translation = {
     behind: "Опублікована версія відстала від вашої дошки.",
     publishing: "Публікуємо…",
     publishedNote: "Опубліковано. Будь-хто з посиланням може розкласти список.",
+    publishedAsRanking:
+      "Опублікована як ваше ранжування того списку. Другого списку в стрічці не зʼявиться.",
     unpublished: "Знято з публікації. Посилання більше не працює.",
     shareImage: "Поділитися картинкою",
     shareImageSub: "Картинка цієї дошки та посилання на сайт",

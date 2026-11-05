@@ -320,7 +320,15 @@ function boardOf(incoming: KeptBoard, now: number): Board | null {
   const parsed = parseBoard({ ...incoming, editedAt: incoming.updatedAt || now });
   return parsed === null
     ? null
-    : { ...parsed, favouritedAt: null, arrivedFrom: null, publishedEditedAt: null, topic: null };
+    : {
+        ...parsed,
+        favouritedAt: null,
+        arrivedFrom: null,
+        publishedEditedAt: null,
+        topic: null,
+        takenFrom: null,
+        rankingOf: null,
+      };
 }
 
 /**
@@ -359,12 +367,15 @@ async function takeOver(
   ) {
     return "deferred";
   }
-  // The star, the origin and the topic are this device's, and read at the moment of writing.
+  // The star, the origin, the topic, the list it was saved from and the
+  // ranking it is out as are this device's, and read at the moment of writing.
   keep(deps, {
     ...board,
     favouritedAt: latest.favouritedAt,
     arrivedFrom: latest.arrivedFrom,
     topic: latest.topic,
+    takenFrom: latest.takenFrom,
+    rankingOf: latest.rankingOf,
   });
   deps.records.remember({ uid: board.uid, revision: incoming.revision, fingerprint });
   return "carried";
@@ -425,6 +436,7 @@ function renamed(board: Board, from: string | null, nextUid: NextUid): Board {
     uid: nextUid(),
     arrivedFrom: from,
     publishedId: null,
+    rankingOf: null,
     tiers: board.tiers.map((tier) => ({ ...tier, uid: tierUids.get(tier.uid) ?? tier.uid })),
     items: board.items.map((item) => ({
       ...item,

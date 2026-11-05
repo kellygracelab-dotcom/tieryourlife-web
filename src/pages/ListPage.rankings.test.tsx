@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMemoryRouter, RouterProvider } from "react-router";
+import { createMemoryRouter, RouterProvider, type InitialEntry } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RankingsPage, ReaderRanking } from "../api/community";
 import { ApiFailure } from "../api/errors";
@@ -70,7 +70,11 @@ const member: Session["account"] = {
   photoUrl: null,
 };
 
-const openAs = (account: Session["account"] = member) =>
+const openAs = (account: Session["account"] = member, entries: InitialEntry[] = ["/l/abc"]) => {
+  const router = createMemoryRouter(routes, {
+    initialEntries: entries,
+    initialIndex: entries.length - 1,
+  });
   render(
     <SessionContext.Provider
       value={{
@@ -80,9 +84,11 @@ const openAs = (account: Session["account"] = member) =>
         refresh: () => undefined,
       }}
     >
-      <RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/l/abc"] })} />
+      <RouterProvider router={router} />
     </SessionContext.Provider>,
   );
+  return router;
+};
 
 /** Who ranked the list is a line of the ⋮ menu, the one place the number is said. */
 const openSheet = async () => {
@@ -102,6 +108,10 @@ const rowsOf = (sheet: HTMLElement) =>
     );
 
 const whose = () => screen.getByRole("group", { name: "Whose arrangement to show" });
+
+/** The switch once the list has opened. */
+const opened = async () =>
+  within(await screen.findByRole("group", { name: "Whose arrangement to show" }));
 
 beforeEach(() => {
   mocks.loadList.mockReset();
@@ -230,12 +240,12 @@ describe("ListPage rankings", () => {
       rankings: [reader("u5", "olena", { tierLabels: ["", "Fine"] })],
       nextCursor: null,
     });
-    const first = openAs();
+    openAs();
     await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
     const board = screen.getByRole("region", { name: "olena" });
     await userEvent.click(within(board).getByRole("button", { name: "The Witch" }));
     await userEvent.click(screen.getByRole("button", { name: "Place The Witch in Fine" }));
-    first.unmount();
+    cleanup();
 
     // Begun here, the page opens on Mine.
     openAs();
@@ -458,6 +468,68 @@ describe("ListPage rankings", () => {
     // Right under You, before everyone else.
     expect(rows[1]).toHaveTextContent(/You.*Withdraw/);
     expect(rows[2]).toContainElement(said);
+  });
+
+  it("closes the sheet on Back and stays on the list, as the app's back does", async () => {
+    const router = openAs(member, ["/", "/l/abc"]);
+    await openSheet();
+    await act(() => router.navigate(-1));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(router.state.location.pathname).toBe("/l/abc");
+    // With the sheet closed, Back leaves the list as before.
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe("/");
+  });
+
+  it("keeps the reader chosen through Back, Forward and a reload", async () => {
+    const router = openAs(member, ["/", "/l/abc"]);
+    await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
+    expect(router.state.location.pathname).toBe("/l/abc");
+    expect(router.state.historyAction).toBe("REPLACE");
+
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe("/");
+    await act(() => router.navigate(1));
+    expect((await opened()).getByRole("button", { name: "olena" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("region", { name: "olena" })).toHaveTextContent("The Witch");
+
+    // A reload starts afresh from the entry's state.
+    const kept = router.state.location.state;
+    cleanup();
+    const reloaded = openAs(member, [{ pathname: "/l/abc", state: kept }]);
+    expect((await opened()).getByRole("button", { name: "olena" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // Not one page of rankings had to be read again for it.
+    expect(mocks.loadListRankings).toHaveBeenCalledTimes(1);
+
+    // Back to the author's, and the entry forgets the reader.
+    await userEvent.click(
+      within(whose()).getByRole("button", { name: "Back to the author’s ranking" }),
+    );
+    cleanup();
+    openAs(member, [{ pathname: "/l/abc", state: reloaded.state.location.state }]);
+    expect((await opened()).getByRole("button", { name: "Theirs" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("does not bring back a reader chosen on the list before it was republished", async () => {
+    const router = openAs(member, ["/l/abc"]);
+    await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
+    const kept = router.state.location.state;
+    cleanup();
+    mocks.loadList.mockResolvedValue({ ...list, updatedAt: 5 });
+    openAs(member, [{ pathname: "/l/abc", state: kept }]);
+    expect((await opened()).getByRole("button", { name: "Theirs" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("opens again at the reader chosen further down", async () => {

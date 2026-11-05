@@ -122,6 +122,11 @@ export interface PublishRequest {
   boardUid?: string;
   /** No name or face on the list anywhere public; the owner still has it. */
   anonymous?: boolean;
+  /**
+   * The published list the cards were saved from, as the app sends it: the
+   * backend credits it, or keeps the publish as a ranking of it.
+   */
+  takenFrom?: string;
   tiers: PublishedTier[];
   items: {
     title: string;
@@ -133,8 +138,17 @@ export interface PublishRequest {
   }[];
 }
 
-export function publish(client: ApiClient, request: PublishRequest): Promise<{ id: string }> {
-  return client.request<{ id: string }>("POST", "/lists", { body: request });
+/**
+ * Where a publish landed. `ranking` is true when the backend kept it as the
+ * caller's ranking of the list it was taken from, whose id `id` is then.
+ */
+export interface Published {
+  id: string;
+  ranking?: boolean;
+}
+
+export function publish(client: ApiClient, request: PublishRequest): Promise<Published> {
+  return client.request<Published>("POST", "/lists", { body: request });
 }
 
 /** Replaces a published list in place: same id, same link, a fresh snapshot. */
@@ -142,8 +156,8 @@ export function republish(
   client: ApiClient,
   id: string,
   request: PublishRequest,
-): Promise<{ id: string }> {
-  return client.request<{ id: string }>("POST", `/lists/${encodeURIComponent(id)}`, {
+): Promise<Published> {
+  return client.request<Published>("POST", `/lists/${encodeURIComponent(id)}`, {
     body: request,
   });
 }
