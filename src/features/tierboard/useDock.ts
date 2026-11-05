@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
   bandOf,
@@ -29,6 +35,10 @@ export interface DockState {
   resize: (rows: DockRows) => void;
   /** For the 6 px strip on the dock's top edge: drag it to show one to four rows of cards. */
   startResize: (event: ReactPointerEvent<HTMLElement>) => void;
+  /** The most rows the window has room for. */
+  maxRows: DockRows;
+  /** The same strip from the keyboard: ↑ a row more, ↓ a row less. */
+  resizeByKey: (event: ReactKeyboardEvent<HTMLElement>) => void;
 }
 
 const sizeOf = () => ({ width: window.innerWidth, height: window.innerHeight });
@@ -95,6 +105,15 @@ export function useDock(store: KeyValueStore = localStorageStore): DockState {
     grip.addEventListener("pointercancel", onEnd);
   };
 
+  const maxRows = rowsThatFit(size.height);
+  const resizeByKey = (event: ReactKeyboardEvent<HTMLElement>) => {
+    const by = event.key === "ArrowUp" ? 1 : event.key === "ArrowDown" ? -1 : 0;
+    if (by === 0) return;
+    event.preventDefault();
+    const next = Math.min(maxRows, Math.max(1, shown + by)) as DockRows;
+    if (next !== shown) resize(next);
+  };
+
   // A choice of under is kept on a window too short for it, for when it is tall again.
   const canDock = underFits(size.height);
   return {
@@ -106,5 +125,7 @@ export function useDock(store: KeyValueStore = localStorageStore): DockState {
     choose,
     resize,
     startResize,
+    maxRows,
+    resizeByKey,
   };
 }

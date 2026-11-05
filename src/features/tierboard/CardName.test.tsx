@@ -10,9 +10,10 @@ describe("CardName", () => {
     expect(fit).toHaveBeenCalledWith("Ex Machina", "small");
     expect(name).toHaveClass("tile__name");
     expect(name).toHaveStyle({ fontSize: "8.5px", hyphens: "manual" });
+    expect(name.style.overflowWrap).toBe("");
   });
 
-  it("lets a word too long even at the floor break with a hyphen", () => {
+  it("lets a word too long even at the floor break with a hyphen, or without one rather than be cut", () => {
     render(
       <CardName
         title="Supercalifragilistic"
@@ -20,7 +21,9 @@ describe("CardName", () => {
         fit={() => ({ size: 9, hyphenate: true })}
       />,
     );
-    expect(screen.getByText("Supercalifragilistic")).toHaveStyle({ hyphens: "auto" });
+    const name = screen.getByText("Supercalifragilistic");
+    expect(name).toHaveStyle({ hyphens: "auto" });
+    expect(name.style.overflowWrap).toBe("break-word");
   });
 
   it("starts at the board's size and leans on hyphens where there is no canvas to measure on", () => {

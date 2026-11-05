@@ -325,7 +325,7 @@ export async function drawShare(
     const y = (last?.y ?? boardTop) + (last?.height ?? plan.rowHeight) + 34;
     paint.fillStyle = DIM;
     paint.font = `400 22px ${FONT}`;
-    paint.fillText(`and ${plan.moreTiers} more ${plan.moreTiers === 1 ? "tier" : "tiers"}`, pad, y);
+    paint.fillText(plural(strings.card.moreTiers, plan.moreTiers), pad, y);
   }
 
   const footerY = height - pad - 24;

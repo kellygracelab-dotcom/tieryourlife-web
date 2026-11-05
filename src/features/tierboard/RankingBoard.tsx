@@ -18,6 +18,8 @@ import type { SavedRanking } from "../../api/rank";
 import type { PublishedList } from "../../api/types";
 import { useSession } from "../../app/session";
 import { keepRanking, noteTake, rearrangeRanking } from "../../lib/api";
+import { isEditorialAuthor } from "../../lib/editorial";
+import { holds } from "../../lib/locale";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
 import { keptFor, readKept, writeKept, type KeptRanking } from "../ranking/kept";
@@ -32,8 +34,9 @@ import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
 import { flyIn } from "./flight";
+import { arrange } from "./arrange";
 import { DOUBLE_TAP_MS, type DragState } from "./drag";
-import { loadDraft, saveDraft, scopeOf } from "./draft";
+import { draftKey, loadDraft, saveDraft, scopeOf } from "./draft";
 import {
   canUndo,
   init,
@@ -128,6 +131,11 @@ interface RankingBoardProps {
   onRows?: (rows: Rows) => void;
   /** The list was republished while it was ranked: the page reads it again. */
   onListChanged?: () => void;
+  /**
+   * What the board held before the page put other rows in it (a first move
+   * on Theirs, Play's result): the bar's Undo and Ctrl+Z go back to it.
+   */
+  undoTo?: Rows | null;
 }
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
@@ -333,12 +341,14 @@ function useBoard(
   store: KeyValueStore,
   initialRows: readonly (readonly number[])[] | null = null,
   seeded = false,
+  undoTo: Rows | null = null,
 ) {
   const scope = scopeOf(list);
   const kept = () => (seeded ? null : loadDraft(store, scope));
-  const [state, dispatch] = useReducer(reduce, list, (l) =>
-    init(l.tiers.length, l.items.length, kept() ?? initialRows),
-  );
+  const [state, dispatch] = useReducer(reduce, list, (l) => {
+    const start = init(l.tiers.length, l.items.length, kept() ?? initialRows);
+    return undoTo === null ? start : { ...start, history: [undoTo] };
+  });
   // The list changed shape under the board — the owner added or took away a
   // card — and the rows come from the page again. A state that follows a prop
   // is adjusted during the render, React's way, not in an effect.
@@ -356,6 +366,31 @@ function useBoard(
     // Only the rows are worth keeping; scope fields are derived from the list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.rows, store, seeded, list.id, list.updatedAt, list.items.length, list.tiers.length]);
+  // The same list ranked in another tab: its moves are drawn here too, or
+  // the next move here would write over them unseen. Rows kept for another
+  // version of the list are that tab's business.
+  const shown = useRef(state.rows);
+  useEffect(() => {
+    shown.current = state.rows;
+  });
+  useEffect(() => {
+    if (seeded) return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== draftKey(list.id)) return;
+      const theirs = loadDraft(store, scope);
+      if (theirs === null || JSON.stringify(theirs) === JSON.stringify(shown.current)) return;
+      dispatch({
+        type: "reset",
+        tierCount: list.tiers.length,
+        itemCount: list.items.length,
+        rows: theirs,
+      });
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+    // The scope is derived from these fields of the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, seeded, list.id, list.updatedAt, list.items.length, list.tiers.length]);
   return [state, dispatch] as const;
 }
 
@@ -372,9 +407,16 @@ export function RankingBoard({
   seed,
   onRows,
   onListChanged,
+  undoTo = null,
 }: RankingBoardProps) {
   const seeded = seed !== undefined;
-  const [state, dispatchBoard] = useBoard(list, store, seed?.rows ?? edit?.rows ?? null, seeded);
+  const [state, dispatchBoard] = useBoard(
+    list,
+    store,
+    seed?.rows ?? edit?.rows ?? null,
+    seeded,
+    undoTo,
+  );
   // While the pool's search hides cards, a placement picks the next one among
   // those in sight: a hidden pick took the next number key unseen.
   const inSight = useRef<readonly number[] | null>(null);
@@ -414,7 +456,7 @@ export function RankingBoard({
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
-  const { dock, rows, wide, canDock, choose, startResize } = useDock(store);
+  const { dock, rows, wide, canDock, choose, startResize, maxRows, resizeByKey } = useDock(store);
   // On a narrow window the box that brings cards in waits behind Add, in the
   // pool, whichever head the pool shows; on a wide one it stands in the pool,
   // and an empty pool gives it the cursor. Opened, the catalogue's field
@@ -537,6 +579,8 @@ export function RankingBoard({
 
   const onFinish = () => {
     setFinish({ status: "saving" });
+    // A finished board places nothing: no card stays picked, nor a line saying how to place it.
+    dispatch({ type: "select", item: null });
     const placed = state.rows.map((row) => [...row]);
     const uid = account?.kind === "signedIn" ? account.uid : null;
     const before = readKept(store, list.id);
@@ -638,7 +682,9 @@ export function RankingBoard({
       }
       // Keys pressed in a dialog or a menu are theirs, not the board's behind them.
       if (isCovered(section.current)) return;
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+      // Z by its place too, as Play has it: on a Russian or Arabic layout the key says "я" or "ئ".
+      const z = event.key.toLowerCase() === "z" || event.code === "KeyZ";
+      if ((event.ctrlKey || event.metaKey) && z) {
         event.preventDefault();
         return dispatch({ type: "undo" });
       }
@@ -676,11 +722,9 @@ export function RankingBoard({
   }, [dispatch, list.tiers.length, placeSelected, locked, selected, state]);
 
   const left = pool(state);
-  const needle = query.trim().toLowerCase();
+  const needle = query.trim();
   const shown =
-    needle === ""
-      ? left
-      : left.filter((item) => list.items[item]?.title.toLowerCase().includes(needle) ?? false);
+    needle === "" ? left : left.filter((item) => holds(list.items[item]?.title ?? "", needle));
   useEffect(() => {
     inSight.current = needle === "" ? null : shown;
   });
@@ -811,6 +855,8 @@ export function RankingBoard({
             reload={onListChanged}
             kept={!guest}
             save={guest ? () => setOffer("open") : undefined}
+            // A template has no author's version to sit beside, and the house is nobody's.
+            compared={!isEditorialAuthor(list.authorUid) && arrange(list).known}
           />
         )}
 
@@ -886,7 +932,19 @@ export function RankingBoard({
             style={{ "--dock-rows": rows } as CSSProperties}
           >
             {docked && !allPlaced && (
-              <div className="pool__grip" onPointerDown={startResize} aria-hidden="true" />
+              // A drag, or ↑ and ↓ once it has the focus: a separator a reader can name and move.
+              <div
+                className="pool__grip"
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label={strings.rank.dockRows}
+                aria-valuemin={1}
+                aria-valuemax={maxRows}
+                aria-valuenow={rows}
+                tabIndex={0}
+                onPointerDown={startResize}
+                onKeyDown={resizeByKey}
+              />
             )}
             {allPlaced && !wide && !emptyPool ? (
               <div className="pool__done">

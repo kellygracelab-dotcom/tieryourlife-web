@@ -28,9 +28,15 @@ export function saveExport(
     tierEmpty: strings.export.tierEmpty,
     unrankedHeading: strings.export.unranked,
   });
-  save(fill(strings.export.fileName, { date: today.toISOString().slice(0, 10) }), text);
+  save(fill(strings.export.fileName, { date: localDay(today) }), text);
   return live.length;
 }
+
+/** The day as the file's line names it, the person's own: toISOString's is UTC's, a day off in the evening west of it. */
+const localDay = (when: Date): string =>
+  [when.getFullYear(), when.getMonth() + 1, when.getDate()]
+    .map((part, index) => String(part).padStart(index === 0 ? 4 : 2, "0"))
+    .join("-");
 
 function downloadText(name: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));

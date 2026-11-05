@@ -134,9 +134,24 @@ function nextInPool(state: BoardState, after: number, among?: readonly number[])
 
 export const canUndo = (state: BoardState): boolean => state.history.length > 0;
 
+/** 1–9 as an Arabic keyboard types them (١–٩), and as a Persian one does (۱–۹). */
+const EASTERN_DIGITS = ["٠", "۰"] as const;
+
+/** The digit a key types, in any of the scripts above, or null. */
+function digitOf(key: string): number | null {
+  if (/^[1-9]$/.test(key)) return Number(key);
+  if (key.length !== 1) return null;
+  for (const zero of EASTERN_DIGITS) {
+    const digit = key.charCodeAt(0) - zero.charCodeAt(0);
+    if (digit >= 1 && digit <= 9) return digit;
+  }
+  return null;
+}
+
 /** The tier a number key stands for, or null when the key means nothing here. */
 export function tierForKey(key: string, tierCount: number): number | null {
-  if (!/^[1-9]$/.test(key)) return null;
-  const tier = Number(key) - 1;
+  const digit = digitOf(key);
+  if (digit === null) return null;
+  const tier = digit - 1;
   return tier < Math.min(tierCount, KEYBOARD_TIERS) ? tier : null;
 }

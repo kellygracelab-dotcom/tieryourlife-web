@@ -188,7 +188,7 @@ describe("SectionPage", () => {
     open("/s/games");
     await tiles();
     await userEvent.click(screen.getByRole("button", { name: "Follow" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Couldn't follow. Try again.");
+    expect(await screen.findByRole("status")).toHaveTextContent("Couldn’t follow. Try again.");
   });
 
   it("asks a guest to sign in before following", async () => {
@@ -217,7 +217,7 @@ describe("SectionPage", () => {
     const grid = await tiles();
     await userEvent.click(grid.getByRole("button", { name: "Speedruns · waiting" }));
     const sheet = screen.getByRole("dialog", { name: "Speedruns" });
-    expect(sheet).toHaveTextContent("until then they're in Games");
+    expect(sheet).toHaveTextContent("until then they’re in Games");
     expect(sheet).toHaveTextContent("Only you see this topic until then.");
     expect(within(sheet).queryByRole("button", { name: "Withdraw" })).toBeNull();
     expect(router.state.location.pathname).toBe("/s/games");
@@ -398,7 +398,7 @@ describe("TopicPage", () => {
     topics.follow.mockRejectedValue(new ApiFailure({ kind: "offline" }));
     open("/s/games/t/t2");
     await userEvent.click(await screen.findByRole("button", { name: "Follow" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("Couldn't follow. Try again.");
+    expect(await screen.findByRole("status")).toHaveTextContent("Couldn’t follow. Try again.");
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
   });
 

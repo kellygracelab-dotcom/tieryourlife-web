@@ -11,10 +11,6 @@
   font-size: 18px;
 }
 
-[dir="rtl"] .board-page__back .ms {
-  transform: scaleX(-1);
-}
-
 .board-page__title-row {
   display: flex;
   align-items: center;

@@ -394,6 +394,7 @@ const es: Translation = {
     copyLink: "Copiar enlace",
     share: "Compartir",
     linkCopied: "Enlace copiado",
+    copyFailed: "No se pudo copiar el enlace: {link}",
     hiddenNotice: "Oculto para ti",
     undo: "Deshacer",
     hiddenTitle: "Ocultaste esta lista",
@@ -481,6 +482,7 @@ const es: Translation = {
     dock: "Dónde van las tarjetas",
     dockBeside: "Tarjetas junto a los niveles",
     dockUnder: "Tarjetas bajo los niveles",
+    dockRows: "Filas de tarjetas bajo los niveles",
     allPlaced: { one: "La tarjeta está colocada", other: "Las {n} tarjetas están colocadas" },
     allPlacedNote: "Cambia de idea arrastrando una tarjeta, o termina y llévate tu enlace.",
     allPlacedNoteEdit: "Cambia de idea arrastrando una tarjeta, o guarda lo que tienes.",
@@ -500,6 +502,9 @@ const es: Translation = {
       "Cualquiera con ese enlace ve tu versión junto a la del autor. Se conserva sin cuenta.",
     liveNoteKept:
       "Cualquiera con ese enlace ve tu versión junto a la del autor. Está guardada en tus clasificaciones.",
+    liveNoteAlone: "Cualquiera con ese enlace ve tu versión. Se conserva sin cuenta.",
+    liveNoteAloneKept:
+      "Cualquiera con ese enlace ve tu versión. Está guardada en tus clasificaciones.",
     copy: "Copiar enlace",
     copied: "Copiado",
     download: "Descargar imagen",
@@ -606,6 +611,7 @@ const es: Translation = {
     noArt: "Sin imagen",
     yours: "Tu lista",
     yoursAnonymous: "Tu lista, publicada de forma anónima",
+    moreTiers: { one: "y {n} nivel más", other: "y {n} niveles más" },
   },
   android: {
     title: "TierYourLife para Android",

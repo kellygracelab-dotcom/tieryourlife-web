@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { PublishedList, PublishedTier } from "../../api/types";
+import { noteTake } from "../../lib/api";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
@@ -28,6 +29,8 @@ export interface SaveToMineDeps {
   /** Where the ranking board keeps this device's rows for the list. */
   store?: KeyValueStore;
   now?: () => number;
+  /** Counts the save as a take of the list, as the app does: the popular order is made of them. */
+  take?: (listId: string) => Promise<void>;
 }
 
 /**
@@ -73,6 +76,7 @@ export function useSaveToMine(
     store = localStorageStore,
     now = Date.now,
     shown = null,
+    take = noteTake,
   }: SaveToMineDeps = {},
 ): SaveToMine {
   const [asking, setAsking] = useState<SaveChoices | null>(null);
@@ -94,6 +98,8 @@ export function useSaveToMine(
       const from = theirs === null ? list : { ...list, tiers: [...theirs.tiers] };
       const board = boardFromList(from, rows, now(), nextUid);
       repository.save(board);
+      // Counted once a person, and never worth failing a save over.
+      void take(list.id);
       latest.current = { listId: list.id, uid: board.uid };
       setMade(latest.current);
       setAsking(null);
@@ -105,7 +111,7 @@ export function useSaveToMine(
         },
       });
     },
-    [asking, list, now, repository, notify, navigate],
+    [asking, list, now, repository, notify, navigate, take],
   );
 
   const start = useCallback(() => {

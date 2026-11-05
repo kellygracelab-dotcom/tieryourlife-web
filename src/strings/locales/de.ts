@@ -403,6 +403,7 @@ const de: Translation = {
     copyLink: "Link kopieren",
     share: "Teilen",
     linkCopied: "Link kopiert",
+    copyFailed: "Link konnte nicht kopiert werden: {link}",
     hiddenNotice: "Für dich ausgeblendet",
     undo: "Rückgängig",
     hiddenTitle: "Du hast diese Liste ausgeblendet",
@@ -491,6 +492,7 @@ const de: Translation = {
     dock: "Wo die Karten liegen",
     dockBeside: "Karten neben den Stufen",
     dockUnder: "Karten unter den Stufen",
+    dockRows: "Kartenreihen unter den Stufen",
     allPlaced: { one: "Die Karte ist platziert", other: "Alle {n} platziert" },
     allPlacedNote:
       "Überleg es dir anders, indem du eine Karte ziehst, oder schließ ab und hol dir deinen Link.",
@@ -512,6 +514,8 @@ const de: Translation = {
       "Wer den Link hat, sieht deine Fassung neben der des Autors. Sie bleibt auch ohne Konto.",
     liveNoteKept:
       "Wer den Link hat, sieht deine Fassung neben der des Autors. Sie liegt in deinen Ranglisten.",
+    liveNoteAlone: "Wer den Link hat, sieht deine Fassung. Sie bleibt auch ohne Konto.",
+    liveNoteAloneKept: "Wer den Link hat, sieht deine Fassung. Sie liegt in deinen Ranglisten.",
     copy: "Link kopieren",
     copied: "Kopiert",
     download: "Bild herunterladen",
@@ -619,6 +623,7 @@ const de: Translation = {
     noArt: "Kein Bild",
     yours: "Deine Liste",
     yoursAnonymous: "Deine Liste, anonym veröffentlicht",
+    moreTiers: { one: "und {n} weitere Stufe", other: "und {n} weitere Stufen" },
   },
   android: {
     title: "TierYourLife für Android",

@@ -556,7 +556,7 @@ describe("BoardSettings: cover", () => {
     // The row's 40 px picture: the cards' first, while none is chosen.
     expect(row.querySelector("img")).toHaveAttribute("src", EX);
     await userEvent.click(row);
-    expect(screen.getByText("Nothing chosen: up to six of the list's own pictures")).toBeVisible();
+    expect(screen.getByText("Nothing chosen: up to six of the list’s own pictures")).toBeVisible();
     expect(screen.getByText("Your cards · 2")).toBeInTheDocument();
     const pick = (name: string) => screen.getByRole("button", { name: `Use ${name} on the cover` });
 
@@ -595,6 +595,6 @@ describe("BoardSettings: cover", () => {
       signedIn,
     );
     await userEvent.click(screen.getByRole("button", { name: /Cover/ }));
-    expect(screen.getByText("None of this list's cards have a picture yet.")).toBeInTheDocument();
+    expect(screen.getByText("None of this list’s cards have a picture yet.")).toBeInTheDocument();
   });
 });

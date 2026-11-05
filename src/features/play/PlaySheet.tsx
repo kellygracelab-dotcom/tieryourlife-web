@@ -94,7 +94,7 @@ export function PlaySheet({
                 aria-label={strings.play.back}
                 onClick={onBack}
               >
-                <Icon name="arrow_back" className="ms--mirrored" />
+                <Icon name="arrow_back" />
               </button>
             )}
             <h2 id={`${id}-title`} className="dialog__title">

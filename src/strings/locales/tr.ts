@@ -83,7 +83,7 @@ const tr: Translation = {
     faceGalleryCaption: "Fotoğraf",
     facePhotoCaption: "Fotoğrafın",
     faceNote:
-      "Kart görselleri web'de oldukları yerde kalır. Galeriden bir fotoğraf denetlenir ve hesabınla saklanır.",
+      "Kart görselleri web’de oldukları yerde kalır. Galeriden bir fotoğraf denetlenir ve hesabınla saklanır.",
     faceNotMade: "Bu resim yüzün olamaz. Başka birini seç.",
     title: "Ayarlar",
     guestTitle: "Ayarlarınızı değiştirmek için oturum açın.",
@@ -148,8 +148,8 @@ const tr: Translation = {
     title: "Hakkında",
     what: "Her şeyi seviyelere ayırarak sıralayın ya da başkasının listesini alıp kendinizce sıralayın. Bir listeyi sıralamak için hesap gerekmez.",
     creditsTitle: "Teşekkür",
-    catalogue: "Film, dizi ve kişilerin bilgileri ile görselleri TMDB'den gelir.",
-    wikidata: "Katalogdaki diğer her şey Wikidata'dan, görselleri ise Wikimedia Commons'tan gelir.",
+    catalogue: "Film, dizi ve kişilerin bilgileri ile görselleri TMDB’den gelir.",
+    wikidata: "Katalogdaki diğer her şey Wikidata’dan, görselleri ise Wikimedia Commons’tan gelir.",
     dataTitle: "Verileriniz",
     deleteAccount: "Hesabınızı silin",
   },
@@ -178,7 +178,7 @@ const tr: Translation = {
   },
   profile: {
     someone: "Biri",
-    editInSettings: "Ayarlar'da düzenle",
+    editInSettings: "Ayarlar’da düzenle",
     lists: "Listeler",
     newestFirst: "en yeniler önce",
     noLists: "Henüz herkese açık liste yok.",
@@ -281,7 +281,7 @@ const tr: Translation = {
     addAsName: "“{name}” kart olarak ekle",
     add: "Ekle",
     unnamed: "Başlıksız kart",
-    noCardsYet: "Henüz kart yok. Katalogda arayın ya da bir ad yazıp Enter'a basın.",
+    noCardsYet: "Henüz kart yok. Katalogda arayın ya da bir ad yazıp Enter’a basın.",
     tiers: "Seviyeler",
     addTier: "Seviye ekle",
     tierUnnamed: "bu seviye",
@@ -330,7 +330,7 @@ const tr: Translation = {
     publishChanges: "Değişiklikleri yayımla",
     discardChanges: "Değişiklikleri at",
     failedGone:
-      "Bu liste artık yayında değil, dolayısıyla değiştirecek bir şey yok. Yeni liste'den yeniden oluşturun.",
+      "Bu liste artık yayında değil, dolayısıyla değiştirecek bir şey yok. Yeni liste’den yeniden oluşturun.",
   },
   category: {
     anime: "Anime",
@@ -346,7 +346,7 @@ const tr: Translation = {
   feed: {
     empty: "Henüz hiçbir şey yayımlanmadı",
     emptyBody: "İnsanların herkese açık yaptığı listeler burada görünür.",
-    allHidden: "Buradaki her şey sizin için gizli. Listesi Ayarlar'da.",
+    allHidden: "Buradaki her şey sizin için gizli. Listesi Ayarlar’da.",
     hiddenTile: "Sizin için gizlendi",
     undo: "Geri al",
     omitted: { other: "{n} gizli liste gösterilmiyor." },
@@ -384,7 +384,7 @@ const tr: Translation = {
     delete: "Kaldır",
     deleteTitle: "Bu liste yayından kaldırılsın mı?",
     deleteBody:
-      "“{title}” akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin'de kalır.",
+      "“{title}” akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin’de kalır.",
     keepIt: "Kalsın",
     deleting: "Yayından kaldırılıyor…",
     deleteFailed: "Yayından kaldırılamadı. Bir dakika sonra tekrar deneyin.",
@@ -392,6 +392,7 @@ const tr: Translation = {
     copyLink: "Bağlantıyı kopyala",
     share: "Paylaş",
     linkCopied: "Bağlantı kopyalandı",
+    copyFailed: "Bağlantı kopyalanamadı: {link}",
     hiddenNotice: "Sizin için gizlendi",
     undo: "Geri al",
     hiddenTitle: "Bu listeyi gizlediniz",
@@ -479,6 +480,7 @@ const tr: Translation = {
     dock: "Kartların yeri",
     dockBeside: "Kartlar seviyelerin yanında",
     dockUnder: "Kartlar seviyelerin altında",
+    dockRows: "Seviyelerin altındaki kart sıraları",
     allPlaced: { one: "Kart yerleştirildi", other: "{n} kartın hepsi yerleştirildi" },
     allPlacedNote:
       "Fikrinizi değiştirdiyseniz bir kartı sürükleyin ya da bitirip bağlantınızı alın.",
@@ -500,6 +502,9 @@ const tr: Translation = {
       "Bu bağlantıya sahip herkes sizin sürümünüzü yazarınkinin yanında görür. Hesap olmadan da kalır.",
     liveNoteKept:
       "Bu bağlantıya sahip herkes sizin sürümünüzü yazarınkinin yanında görür. Sıralamalarınızda saklanır.",
+    liveNoteAlone: "Bu bağlantıya sahip herkes sizin sürümünüzü görür. Hesap olmadan da kalır.",
+    liveNoteAloneKept:
+      "Bu bağlantıya sahip herkes sizin sürümünüzü görür. Sıralamalarınızda saklanır.",
     copy: "Bağlantıyı kopyala",
     copied: "Kopyalandı",
     download: "Görseli indir",
@@ -525,7 +530,7 @@ const tr: Translation = {
     linkOnly: "Yalnızca bağlantıyı sakla",
     failed: "Oturum açılamadı. Tekrar deneyin ya da bağlantıyı saklayın.",
     inApp:
-      "Google, başka bir uygulamanın tarayıcısı içinden oturum açmaz. Bu sayfayı Chrome veya Safari'de açın: köşedeki menüde “Tarayıcıda aç” var.",
+      "Google, başka bir uygulamanın tarayıcısı içinden oturum açmaz. Bu sayfayı Chrome veya Safari’de açın: köşedeki menüde “Tarayıcıda aç” var.",
   },
   owner: {
     title: "Listeniz",
@@ -561,7 +566,7 @@ const tr: Translation = {
     listsFailed: "Herkese açık listeleriniz yüklenemedi",
     remove: "Kaldır",
     removeAsk:
-      "“{title}” yayından kaldırılsın mı? Akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin'de kalır.",
+      "“{title}” yayından kaldırılsın mı? Akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin’de kalır.",
     keepIt: "Kalsın",
     countPublished: { other: "Yayımlanan: {n}" },
     countRanked: { other: "Sıralama: {n}" },
@@ -603,6 +608,7 @@ const tr: Translation = {
     noArt: "Görsel yok",
     yours: "Listeniz",
     yoursAnonymous: "Listeniz, anonim olarak yayımlandı",
+    moreTiers: { other: "ve {n} seviye daha" },
   },
   android: {
     title: "Android için TierYourLife",
@@ -1162,7 +1168,7 @@ const tr: Translation = {
     modeRows: "Satırlar",
     modeRanking: "Sıralama",
     takeDownTitle: "“{title}” kaldırılsın mı?",
-    takeDownBody: "Topluluktan çıkar ve bağlantısı artık çalışmaz. Panon Listelerin'de kalır.",
+    takeDownBody: "Topluluktan çıkar ve bağlantısı artık çalışmaz. Panon Listelerin’de kalır.",
     anonymousTitle: "Anonim yayınla",
     anonymousBody:
       "Listede ad ve fotoğraf olmaz. Yalnızca sen değiştirebilir veya kaldırabilirsin.",

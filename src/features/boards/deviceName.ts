@@ -1,7 +1,9 @@
 /**
  * What to call this browser when a board arrives from it on another device:
- * "Chrome on Windows" tells two copies apart the way "Pixel 7" does. Only
- * what the browser says of itself; nothing is guessed from a bare build.
+ * "Chrome · Windows" tells two copies apart the way "Pixel 7" does. No word
+ * of any language in it: the phone puts it into its own sentence, "с %1$s"
+ * in Russian. Only what the browser says of itself; nothing is guessed from
+ * a bare build.
  */
 export function deviceNameOf(userAgent: string): string | null {
   const ua = userAgent;
@@ -32,5 +34,5 @@ export function deviceNameOf(userAgent: string): string | null {
   if (browser === null && system === null) return null;
   if (browser === null) return system;
   if (system === null) return browser;
-  return `${browser} on ${system}`;
+  return `${browser} · ${system}`;
 }

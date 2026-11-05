@@ -232,4 +232,39 @@ describe("the dictionaries", () => {
       expect(gapsOf(en, module.default, ""), file).toEqual([]);
     }
   });
+
+  /** Every text of a dictionary, by its path. */
+  const textsOf = (group: unknown, path = ""): [string, string][] =>
+    typeof group === "string"
+      ? [[path, group]]
+      : Object.entries((group ?? {}) as Record<string, unknown>).flatMap(([key, value]) =>
+          textsOf(value, path === "" ? key : `${path}.${key}`),
+        );
+
+  it("write one apostrophe per language: the typographic one, and Ukrainian's ʼ", () => {
+    const wrong = (tag: string, texts: [string, string][], apostrophe: RegExp) =>
+      texts.filter(([, text]) => apostrophe.test(text)).map(([path]) => `${tag}: ${path}`);
+    const straight = /\p{L}'\p{L}/u;
+    expect(wrong("en", textsOf(en), straight)).toEqual([]);
+    for (const [file, module] of Object.entries(files)) {
+      const tag = tagOf(file);
+      const apostrophe = tag === "uk" ? /\p{L}['’]\p{L}/u : straight;
+      expect(wrong(tag, textsOf(module.default), apostrophe)).toEqual([]);
+    }
+  });
+
+  it("call a tier on the board and in its editor what the app's tier editor calls it", () => {
+    // Russian and Ukrainian say тир in general text, as the app does, and уровень / рівень here.
+    const board = (dictionary: Translation) =>
+      textsOf({
+        new: dictionary.new,
+        rank: dictionary.rank,
+        boards: dictionary.boards,
+        // The limit is the app's own sentence, and a list's sample title is general text.
+      }).filter(([path]) => !path.endsWith("tooManyTiers") && !path.endsWith("namePlaceholder"));
+    for (const tag of ["ru", "uk"]) {
+      const dictionary = files[`./locales/${tag}.ts`]!.default;
+      expect(board(dictionary).filter(([, text]) => /(^|\P{L})тир/iu.test(text))).toEqual([]);
+    }
+  });
 });

@@ -111,12 +111,9 @@
     display: contents;
   }
 
+  /* Whole, however long the language makes it: the sentence is the reason to install. */
   .app-card__body {
-    display: -webkit-box;
     grid-column: 1 / -1;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    overflow: hidden;
     margin: 0;
     font: 400 13px/18px var(--font);
   }

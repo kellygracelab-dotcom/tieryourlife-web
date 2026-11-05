@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -64,7 +64,7 @@ describe("RankingPage", () => {
     expect(document.querySelector(".list-head__meta")).toHaveTextContent(
       /^by danylo · ranked by a visitor$/,
     );
-    const board = screen.getByRole("region", { name: "Visitor's ranking" });
+    const board = screen.getByRole("region", { name: "Visitor’s ranking" });
     expect(board).toHaveTextContent("The Witch");
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
     expect(load).toHaveBeenCalledWith("abcdefgh", false);
@@ -106,6 +106,35 @@ describe("RankingPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Download image" }));
     expect(share).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("spells the link out when the clipboard refuses it", async () => {
+    copy.mockRejectedValue(new Error("no clipboard"));
+    load.mockResolvedValue(ranking);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(
+      screen.getByRole("button", { name: `${window.location.host}/r/abcdefgh` }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      `Could not copy the link: https://${window.location.host}/r/abcdefgh`,
+    );
+  });
+
+  it("leads from the title to the list while the list is up", async () => {
+    load.mockResolvedValue(ranking);
+    open();
+    const title = await screen.findByRole("heading", { level: 1 });
+    expect(within(title).getByRole("link", { name: "Every A24 film, ranked" })).toHaveAttribute(
+      "href",
+      "/l/wMRMFDxo8UejcAi2VVMW",
+    );
+
+    cleanup();
+    load.mockResolvedValue({ ...ranking, listAvailable: false });
+    open("zzzzzzzz");
+    expect(await screen.findByText(/The list this ranking was made from/)).toBeInTheDocument();
+    expect(within(screen.getByRole("heading", { level: 1 })).queryByRole("link")).toBeNull();
   });
 
   it("calls the ranking yours on the device that made it", async () => {

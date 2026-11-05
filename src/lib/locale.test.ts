@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   applyLocale,
   directionOf,
+  fold,
+  holds,
   keepLocale,
   LOCALE_KEY,
   LOCALE_NAMES,
   LOCALES,
+  localeInAddress,
   pickLocale,
   readLocale,
   type Locale,
@@ -69,7 +72,26 @@ describe("locale", () => {
     expect(readLocale(store)).toBeNull();
 
     expect(readLocale(refusing)).toBeNull();
-    expect(() => keepLocale(refusing, "de")).not.toThrow();
+    expect(keepLocale(refusing, "de")).toBe(false);
+    // The site's own stores say no instead of throwing.
+    expect(keepLocale({ ...store, write: () => false }, "de")).toBe(false);
+    expect(keepLocale(store, "de")).toBe(true);
+  });
+
+  it("reads a language the address asks for, and nothing else", () => {
+    expect(localeInAddress("?lang=de")).toBe("de");
+    expect(localeInAddress("?q=x&lang=pt-BR")).toBe("pt-BR");
+    expect(localeInAddress("?lang=klingon")).toBeNull();
+    expect(localeInAddress("")).toBeNull();
+  });
+
+  it("folds case, accents and Turkish İ and ı away for a search", () => {
+    expect(holds("İstanbul Hatırası", "istanbul")).toBe(true);
+    expect(holds("İzmir Köftesi", "IZMIR")).toBe(true);
+    expect(holds("Iğdır Ovası", "ığdır")).toBe(true);
+    expect(holds("Pokémon", " pokemon ")).toBe(true);
+    expect(holds("Ankara", "izmir")).toBe(false);
+    expect(fold("Ёлка")).toBe("елка");
   });
 
   it("puts the language and its direction on the page, right to left for Arabic alone", () => {

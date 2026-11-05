@@ -443,7 +443,7 @@ describe("HousePane: made and changed on a board", () => {
     expect(repository.all()).toEqual([]);
   });
 
-  it("keeps the list's own pictures by id when a board replaces it", async () => {
+  it("keeps the list’s own pictures by id when a board replaces it", async () => {
     const board = readyBoard("b1", "Ramen, ranked");
     const withCopy = addToPool(
       board,

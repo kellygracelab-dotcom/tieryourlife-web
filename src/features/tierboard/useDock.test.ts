@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import type { PointerEvent as ReactPointerEvent } from "react";
-import { beforeEach, describe, expect, it } from "vitest";
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { memoryStore } from "../../lib/storage";
 import { useDock, WIDE_BOARD_FROM } from "./useDock";
 
@@ -80,5 +80,25 @@ describe("useDock", () => {
     act(() => grip.moveTo(-9000));
     expect(result.current.rows).toBe(most);
     expect(most).toBeGreaterThan(1);
+  });
+
+  it("takes a row more or less from ↑ and ↓, inside the same bounds, and keeps the choice", () => {
+    const store = memoryStore();
+    const { result } = renderHook(() => useDock(store));
+    const press = (key: string) => {
+      const event = { key, preventDefault: vi.fn() };
+      act(() => result.current.resizeByKey(event as unknown as ReactKeyboardEvent<HTMLElement>));
+      return event;
+    };
+    const start = result.current.rows;
+    expect(press("ArrowUp").preventDefault).toHaveBeenCalled();
+    expect(result.current.rows).toBe(Math.min(start + 1, result.current.maxRows));
+    for (let i = 0; i < 6; i++) press("ArrowUp");
+    expect(result.current.rows).toBe(result.current.maxRows);
+    for (let i = 0; i < 6; i++) press("ArrowDown");
+    expect(result.current.rows).toBe(1);
+    // Any other key is the page's.
+    expect(press("Tab").preventDefault).not.toHaveBeenCalled();
+    expect(renderHook(() => useDock(store)).result.current.rows).toBe(1);
   });
 });

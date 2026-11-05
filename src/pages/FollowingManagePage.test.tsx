@@ -151,7 +151,7 @@ describe("FollowingManagePage", () => {
     vi.mocked(deps.load).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     open();
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load what you follow.");
-    expect(screen.queryByText("You aren't following anything yet")).toBeNull();
+    expect(screen.queryByText("You aren’t following anything yet")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("heading", { name: "People · 1" })).toBeInTheDocument();
   });

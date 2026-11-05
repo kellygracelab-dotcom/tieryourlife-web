@@ -82,6 +82,34 @@ describe("ResultBar", () => {
     show({ status: "done", code: "zzzzzzzz" }, failing);
     await userEvent.click(screen.getAllByRole("button", { name: "Copy link" })[1]!);
     expect(screen.queryByRole("button", { name: "Copied" })).toBeNull();
+    // Refused, the link is spelled out to be copied by hand.
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      `Could not copy the link: https://${window.location.host}/r/zzzzzzzz`,
+    );
+  });
+
+  it("promises no author's version beside a ranking of a list that has none", () => {
+    for (const kept of [false, true]) {
+      render(
+        <MemoryRouter>
+          <ResultBar
+            finish={{ status: "done", code: "abcdefgh" }}
+            onRetry={() => {}}
+            onChange={() => {}}
+            download={async () => {}}
+            kept={kept}
+            compared={false}
+          />
+        </MemoryRouter>,
+      );
+    }
+    expect(
+      screen.getByText("Anyone with that link sees your version. It stays without an account."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Anyone with that link sees your version. It’s kept in your rankings."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/next to the author’s/)).toBeNull();
   });
 
   it("makes the image on request, says so meanwhile, and names a failure", async () => {

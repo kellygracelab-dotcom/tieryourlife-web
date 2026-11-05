@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Snackbar, SNACKBAR_MS, type SnackbarNotice } from "./Snackbar";
+import { Snackbar, SNACKBAR_LONG_MS, SNACKBAR_MS, type SnackbarNotice } from "./Snackbar";
 
 const undoable: SnackbarNotice = {
   text: "1 list deleted",
@@ -40,6 +40,29 @@ describe("Snackbar", () => {
 
     fireEvent.pointerLeave(undo.parentElement!);
     act(() => vi.advanceTimersByTime(SNACKBAR_MS));
+    expect(onDone).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a long notice for the app's long snackbar, ten seconds", () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    const { rerender } = render(
+      <>
+        <button type="button">Elsewhere</button>
+        <Snackbar notice={null} onDone={onDone} />
+      </>,
+    );
+    // The focus has a place, so the notice does not take it and wait.
+    act(() => screen.getByRole("button", { name: "Elsewhere" }).focus());
+    rerender(
+      <>
+        <button type="button">Elsewhere</button>
+        <Snackbar notice={{ ...undoable, long: true }} onDone={onDone} />
+      </>,
+    );
+    act(() => vi.advanceTimersByTime(SNACKBAR_MS + 500));
+    expect(onDone).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(SNACKBAR_LONG_MS - SNACKBAR_MS - 500));
     expect(onDone).toHaveBeenCalledOnce();
   });
 

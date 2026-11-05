@@ -4,10 +4,14 @@ import "./Snackbar.css";
 export interface SnackbarNotice {
   text: string;
   action?: { text: string; onClick: () => void };
+  /** Stays as long as the app's long snackbar: an Undo that is the only way back to something. */
+  long?: boolean;
 }
 
 /** How long a notice stays; the design's six seconds, counted while nobody holds it. */
 export const SNACKBAR_MS = 6000;
+/** A long notice's time, the app's SnackbarDuration.Long. */
+export const SNACKBAR_LONG_MS = 10000;
 
 interface SnackbarProps {
   notice: SnackbarNotice | null;
@@ -40,7 +44,7 @@ function Notice({ notice, onDone }: { notice: SnackbarNotice; onDone: () => void
 
   useEffect(() => {
     if (held) return;
-    const timer = setTimeout(onDone, SNACKBAR_MS);
+    const timer = setTimeout(onDone, notice.long === true ? SNACKBAR_LONG_MS : SNACKBAR_MS);
     return () => clearTimeout(timer);
   }, [notice, onDone, held]);
 

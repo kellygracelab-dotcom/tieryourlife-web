@@ -392,6 +392,7 @@ const ja: Translation = {
     copyLink: "リンクをコピー",
     share: "共有",
     linkCopied: "リンクをコピーしました",
+    copyFailed: "リンクをコピーできませんでした：{link}",
     hiddenNotice: "あなたには非表示",
     undo: "元に戻す",
     hiddenTitle: "このリストを非表示にしました",
@@ -480,6 +481,7 @@ const ja: Translation = {
     dock: "カードの位置",
     dockBeside: "ティアの横にカード",
     dockUnder: "ティアの下にカード",
+    dockRows: "ティアの下のカードの行数",
     allPlaced: { other: "{n} 枚すべて配置しました" },
     allPlacedNote: "カードをドラッグして並べ直すか、完了してリンクを受け取りましょう。",
     allPlacedNoteEdit: "カードをドラッグして並べ直すか、このまま保存しましょう。",
@@ -499,6 +501,10 @@ const ja: Translation = {
       "このリンクを知っている人は、作者の版と並べてあなたの版を見られます。アカウントなしでも残ります。",
     liveNoteKept:
       "このリンクを知っている人は、作者の版と並べてあなたの版を見られます。あなたのランキングに保存されています。",
+    liveNoteAlone:
+      "このリンクを知っている人は、あなたの版を見られます。アカウントなしでも残ります。",
+    liveNoteAloneKept:
+      "このリンクを知っている人は、あなたの版を見られます。あなたのランキングに保存されています。",
     copy: "リンクをコピー",
     copied: "コピーしました",
     download: "画像を保存",
@@ -604,6 +610,7 @@ const ja: Translation = {
     noArt: "画像なし",
     yours: "あなたのリスト",
     yoursAnonymous: "あなたのリスト（匿名で公開）",
+    moreTiers: { other: "ほか{n}個のティア" },
   },
   android: {
     title: "TierYourLife Android版",

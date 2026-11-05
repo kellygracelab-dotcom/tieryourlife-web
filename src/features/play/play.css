@@ -1237,6 +1237,11 @@
   text-align: center;
 }
 
+/* Only the cards keep their left-to-right order: the words between them read the page's way. */
+[dir="rtl"] .duel__centre {
+  direction: rtl;
+}
+
 .duel__centre .duel__line {
   margin-top: 2px;
   white-space: normal;
