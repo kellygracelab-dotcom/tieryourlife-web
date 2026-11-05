@@ -178,7 +178,7 @@ describe("the Following tab", () => {
     expect(strip.getByRole("link", { name: /Anime/ })).toBeInTheDocument();
     expect(load).toHaveBeenLastCalledWith({ following: true, sort: "recent" });
     // The focus goes with it, not to the page.
-    expect(strip.getAllByRole("link")[0]).toHaveFocus();
+    await vi.waitFor(() => expect(strip.getAllByRole("link")[0]).toHaveFocus());
   });
 
   it("turns into the feed of a person followed from the suggestions", async () => {
