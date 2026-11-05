@@ -2,7 +2,7 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
-import { metaOf } from "./boardText";
+import { fromOf, metaOf, spokenTitleOf } from "./boardText";
 import { previewsOf, rankedTiers, type Board } from "./model";
 
 interface BoardTileProps {
@@ -22,6 +22,9 @@ interface BoardTileProps {
  */
 export function BoardTile({ board, title, selecting, selected, onSelect, onStar }: BoardTileProps) {
   const starred = board.favouritedAt !== null;
+  // A conflict's copy says where it came from, here as in rows and on the phone.
+  const from = fromOf(board);
+  const spoken = spokenTitleOf(board);
   const art = (
     <ListArt
       cover={board.coverImageUrl}
@@ -31,7 +34,8 @@ export function BoardTile({ board, title, selecting, selected, onSelect, onStar 
   );
   const words = (
     <span className="board-tile__words">
-      <span className="board-tile__title">{title}</span>
+      <bdi className="board-tile__title">{title}</bdi>
+      {from !== null && <span className="board-tile__from">{from}</span>}
       <span className="board-tile__meta">{metaOf(board)}</span>
       {board.publishedId !== null && (
         <span className="board-tile__public">
@@ -48,7 +52,7 @@ export function BoardTile({ board, title, selecting, selected, onSelect, onStar 
           type="button"
           className="board-tile__main"
           aria-pressed={selected}
-          aria-label={fill(strings.boards.select, { name: title })}
+          aria-label={fill(strings.boards.select, { name: spoken })}
           onClick={onSelect}
         >
           {art}
@@ -62,7 +66,7 @@ export function BoardTile({ board, title, selecting, selected, onSelect, onStar 
           <Link
             className="board-tile__main"
             to={`/b/${encodeURIComponent(board.uid)}`}
-            aria-label={fill(strings.boards.open, { name: title })}
+            aria-label={fill(strings.boards.open, { name: spoken })}
           >
             {art}
             {words}
@@ -71,7 +75,7 @@ export function BoardTile({ board, title, selecting, selected, onSelect, onStar 
             type="button"
             className={starred ? "board-tile__star board-tile__star--on" : "board-tile__star"}
             aria-label={fill(starred ? strings.boards.unstar : strings.boards.star, {
-              name: title,
+              name: spoken,
             })}
             aria-pressed={starred}
             onClick={onStar}

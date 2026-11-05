@@ -27,7 +27,11 @@ interface CardNameProps {
 export function CardName({ title, board, fit = fitShared }: CardNameProps) {
   const { size, hyphenate } = fit(title, board);
   return (
-    <span className="tile__name" style={{ fontSize: size, hyphens: hyphenate ? "auto" : "manual" }}>
+    <span
+      className="tile__name"
+      dir="auto"
+      style={{ fontSize: size, hyphens: hyphenate ? "auto" : "manual" }}
+    >
       {title}
     </span>
   );

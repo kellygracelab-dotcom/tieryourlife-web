@@ -20,7 +20,7 @@ import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
 import { readKept } from "../features/ranking/kept";
-import { arrange } from "../features/tierboard/arrange";
+import { arrange, poolOf } from "../features/tierboard/arrange";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
 import type { Dock } from "../features/tierboard/dock";
 import {
@@ -34,7 +34,7 @@ import {
 import { flyIn } from "../features/tierboard/flight";
 import type { Rows } from "../features/tierboard/model";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
-import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
+import { ReadOnlyBoard, UnrankedPool } from "../features/tierboard/ReadOnlyBoard";
 import {
   loadList,
   preloadHidesAuthor,
@@ -42,6 +42,7 @@ import {
   unpublish as unpublishList,
 } from "../lib/api";
 import { isEditorial, isEditorialAuthor } from "../lib/editorial";
+import { spendPreload } from "../lib/preload";
 import { type KeyValueStore, localStorageStore } from "../lib/storage";
 import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
@@ -50,7 +51,9 @@ import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { PlayButton } from "../features/play/PlayButton";
+import { localGames } from "../features/play/savedGames";
 import { usePlay } from "../features/play/usePlay";
+import { usePlayBack } from "../features/play/usePlayBack";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
@@ -220,6 +223,12 @@ export function ListPage(props: ListPageProps) {
   const asAccount = account?.kind === "signedIn" && preloadHidesAuthor(id);
   const load = useCallback(() => loadList(id, asAccount), [id, asAccount]);
   const { state, retry } = useResource(asAccount ? `${id}#account` : id, load);
+  // Republished while it was ranked: read again from the network, since the
+  // page's copy may be as old as the list a Finish was just refused for.
+  const reread = useCallback(() => {
+    spendPreload();
+    retry();
+  }, [retry]);
 
   if (state.status === "loading") {
     return <ListPageLoading note={strings.list.opening} rows={3} />;
@@ -228,7 +237,7 @@ export function ListPage(props: ListPageProps) {
     return <ListPageTrouble error={state.error} retry={retry} words={strings.list} />;
   }
   // A list of its own: what was chosen on another one does not carry over.
-  return <OpenList key={state.value.id} list={state.value} {...props} />;
+  return <OpenList key={state.value.id} list={state.value} onListChanged={reread} {...props} />;
 }
 
 /**
@@ -264,7 +273,8 @@ function OpenList({
   report = sendReport,
   unpublish = unpublishList,
   repository,
-}: ListPageProps & { list: PublishedList }) {
+  onListChanged,
+}: ListPageProps & { list: PublishedList; onListChanged?: () => void }) {
   const { account } = useSession();
   const { hidden } = useHidden();
   // The author has nobody's arrangement to compare with but their own: they
@@ -328,6 +338,14 @@ function OpenList({
     setMineRound((round) => round + 1);
     show("mine");
   };
+  // Undo for both: Mine's draft as it was, byte for byte, and the view it was on.
+  const restoreMine = (before: string | null, back: View) => {
+    if (before === null) clearDraft(localStorageStore, list.id);
+    else localStorageStore.write(draftKey(list.id), before);
+    setMineRows(loadDraft(localStorageStore, scopeOf(list)));
+    setMineRound((round) => round + 1);
+    show(back);
+  };
   const playCards = useMemo<PlayCard[]>(
     () =>
       list.items.map((item, index) => ({
@@ -348,12 +366,27 @@ function OpenList({
       cardIds: (rows[index] ?? []).map(String),
     }));
   }, [list, author, mineRows]);
+  // A card's id is its place in the list, so a game is kept for this
+  // publication only, as the draft is: after a republish its answers would
+  // be about other films.
+  const games = useMemo(
+    () => localGames(localStorageStore, Date.now, `${list.updatedAt}:${list.items.length}`),
+    [list.updatedAt, list.items.length],
+  );
   const play = usePlay(`list:${list.id}`, playCards, playTiers, localStorageStore, {
     title: list.title,
     theirs: true,
+    games,
     notify: setNotice,
-    onApply: (rows) => putInMine(rows.map((row) => row.map(Number))),
+    // As on the app: "Board arranged · Undo", and Undo gives back a Mine made by hand.
+    onApply: (rows) => {
+      const before = localStorageStore.read(draftKey(list.id));
+      const was = shown;
+      putInMine(rows.map((row) => row.map(Number)));
+      return () => restoreMine(before, was);
+    },
   });
+  usePlayBack(play);
 
   const theirs = useMemo(
     () => (chosen === null ? { tiers: list.tiers, ...author } : placedBy(list, chosen)),
@@ -369,9 +402,8 @@ function OpenList({
   // What Mine held before is kept for Undo, which puts it back byte for byte
   // and shows Theirs again.
   const startFromTheirs = (rows: Rows) => {
-    const scope = scopeOf(list);
     const before = localStorageStore.read(draftKey(list.id));
-    const replaced = loadPlacedDraft(localStorageStore, scope) !== null;
+    const replaced = loadPlacedDraft(localStorageStore, scopeOf(list)) !== null;
     putInMine(rows);
     const said = replaced
       ? theirsName === null
@@ -382,16 +414,7 @@ function OpenList({
         : fill(strings.list.startedFrom, { name: theirsName });
     setNotice({
       text: said,
-      action: {
-        text: strings.list.undo,
-        onClick: () => {
-          if (before === null) clearDraft(localStorageStore, list.id);
-          else localStorageStore.write(draftKey(list.id), before);
-          setMineRows(loadDraft(localStorageStore, scope));
-          setMineRound((round) => round + 1);
-          show("theirs");
-        },
-      },
+      action: { text: strings.list.undo, onClick: () => restoreMine(before, "theirs") },
     });
   };
   // Somebody else's tier words over the same cards: the board draws Theirs under them.
@@ -405,10 +428,10 @@ function OpenList({
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
   // Who else ranked it is a line of the menu, the one place the number is said.
-  const rankingsEntry =
-    list.takeCount > 0 && !outOfSight
-      ? { count: list.takeCount, open: () => setSheet(true) }
-      : null;
+  // Always there, as in the app: the author's own ranking heads the sheet.
+  const rankingsEntry = outOfSight
+    ? null
+    : { count: list.rankingCount ?? 0, open: () => setSheet(true) };
 
   return (
     <article
@@ -418,7 +441,9 @@ function OpenList({
       <header className="list-head">
         <PageTitle title={list.title} />
         <div className="list-head__text">
-          <h1 className="list-head__title">{list.title}</h1>
+          <h1 className="list-head__title">
+            <bdi>{list.title}</bdi>
+          </h1>
           {/* A list that stands without an author has no line naming one. */}
           {!editorial && (
             <div className="list-head__lines">
@@ -449,6 +474,7 @@ function OpenList({
               unpublish={unpublish}
               notify={setNotice}
               rankings={rankingsEntry}
+              repository={repository}
             />
           ) : (
             <>
@@ -474,6 +500,7 @@ function OpenList({
             <RankingBoard
               key={`${list.id}:${mineRound}`}
               list={list}
+              onListChanged={onListChanged}
               onRows={(rows) =>
                 // Nothing placed in Mine: Play starts from the author's, as before.
                 setMineRows(rows.some((row) => row.length > 0) ? rows.map((row) => [...row]) : null)
@@ -492,20 +519,25 @@ function OpenList({
         ) : (
           // A visitor may start from what is on show: a card moved here moves in Mine.
           // Outside the frame, so the header keeps the layout it has for Theirs.
-          <RankingBoard
-            key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}`}
-            list={theirsList}
-            seed={{
-              rows: theirs.rows,
-              label: theirsLabel,
-              hint:
-                theirsName === null
-                  ? strings.list.seedHintUnnamed
-                  : fill(strings.list.seedHint, { name: theirsName }),
-              dropHint: strings.list.dropToStart,
-              onStart: startFromTheirs,
-            }}
-          />
+          // What it left unranked is said under it, as the app's Theirs has it.
+          <>
+            <RankingBoard
+              key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}`}
+              list={theirsList}
+              seed={{
+                rows: theirs.rows,
+                label: theirsLabel,
+                hint:
+                  theirsName === null
+                    ? strings.list.seedHintUnnamed
+                    : fill(strings.list.seedHint, { name: theirsName }),
+                dropHint: strings.list.dropToStart,
+                start: strings.list.seedStart,
+                onStart: startFromTheirs,
+              }}
+            />
+            <UnrankedPool items={list.items} pool={poolOf(theirs.rows, list.items.length)} />
+          </>
         ))}
       {!own && play.view}
       {!outOfSight && <PictureCredits items={list.items} />}

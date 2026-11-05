@@ -6,6 +6,7 @@ import {
   keepDock,
   readDock,
   rowsThatFit,
+  underFits,
   type Band,
   type Dock,
   type DockChoice,
@@ -22,6 +23,8 @@ export interface DockState {
   rows: DockRows;
   /** Whether the window is wide enough for either shape at all. */
   wide: boolean;
+  /** Whether the window is tall enough to offer the dock under the board; too short, the pool stays beside. */
+  canDock: boolean;
   choose: (dock: Dock) => void;
   resize: (rows: DockRows) => void;
   /** For the 6 px strip on the dock's top edge: drag it to show one to four rows of cards. */
@@ -92,11 +95,14 @@ export function useDock(store: KeyValueStore = localStorageStore): DockState {
     grip.addEventListener("pointercancel", onEnd);
   };
 
+  // A choice of under is kept on a window too short for it, for when it is tall again.
+  const canDock = underFits(size.height);
   return {
-    dock: choice.dock ?? defaultDock(size.width, size.height),
+    dock: canDock ? (choice.dock ?? defaultDock(size.width, size.height)) : "beside",
     // The choice is kept as made; a shorter window shows what it can.
     rows: shown,
     wide: size.width >= WIDE_BOARD_FROM,
+    canDock,
     choose,
     resize,
     startResize,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bandOf, DOCK_KEY, defaultDock, keepDock, readDock, rowsThatFit } from "./dock";
+import { bandOf, DOCK_KEY, defaultDock, keepDock, readDock, rowsThatFit, underFits } from "./dock";
 
 const memory = () => {
   const data = new Map<string, string>();
@@ -27,6 +27,12 @@ describe("the pool's dock", () => {
     expect(rowsThatFit(760)).toBe(3);
     expect(rowsThatFit(700)).toBe(2);
     expect(rowsThatFit(500)).toBe(1);
+  });
+
+  it("is offered under the board only where a row of cards and two of the board fit", () => {
+    expect(underFits(558)).toBe(true);
+    expect(underFits(557)).toBe(false);
+    expect(underFits(390)).toBe(false);
   });
 
   it("keeps a choice and the rows per band, and leaves the other band alone", () => {

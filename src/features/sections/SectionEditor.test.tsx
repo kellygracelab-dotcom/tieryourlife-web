@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { createMemoryRouter, MemoryRouter, RouterProvider } from "react-router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure, type ApiError } from "../../api/errors";
 import type { SectionStats } from "../../api/sections";
@@ -83,22 +83,32 @@ function propose({
   const onDone = vi.fn();
   const onClose = vi.fn();
   const onTooMany = vi.fn();
-  render(
-    <MemoryRouter>
-      <SectionEditor
-        mode="propose"
-        sections={SECTIONS}
-        waiting={waiting}
-        fileUnder={fileUnder}
-        send={send}
-        deps={deps}
-        onDone={onDone}
-        onClose={onClose}
-        onTooMany={onTooMany}
-      />
-    </MemoryRouter>,
+  // A router of its own pages: leaving by Back or by a link waits for the question.
+  const router = createMemoryRouter(
+    [
+      { path: "/", element: <h1>Home</h1> },
+      {
+        path: "/s",
+        element: (
+          <SectionEditor
+            mode="propose"
+            sections={SECTIONS}
+            waiting={waiting}
+            fileUnder={fileUnder}
+            send={send}
+            deps={deps}
+            onDone={onDone}
+            onClose={onClose}
+            onTooMany={onTooMany}
+          />
+        ),
+      },
+      { path: "/s/:id", element: <h1>A section</h1> },
+    ],
+    { initialEntries: ["/", "/s"], initialIndex: 1 },
   );
-  return { deps, send, onDone, onClose, onTooMany };
+  render(<RouterProvider router={router} />);
+  return { deps, send, onDone, onClose, onTooMany, router };
 }
 
 const picker = () => screen.getByLabelText("Choose a picture");
@@ -294,6 +304,44 @@ describe("Propose a section", () => {
     expect(deps.check).not.toHaveBeenCalled();
   });
 
+  it("asks before Open it leaves what was typed, and goes there on Discard", async () => {
+    const deps = makeDeps();
+    deps.check.mockResolvedValue({ free: false, id: "food" });
+    const send = vi.fn(async () => PROPOSED);
+    const onClose = vi.fn();
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/",
+          element: (
+            <SectionEditor
+              mode="propose"
+              sections={SECTIONS}
+              waiting={0}
+              send={send}
+              deps={deps}
+              onDone={vi.fn()}
+              onClose={onClose}
+              onTooMany={vi.fn()}
+            />
+          ),
+        },
+        { path: "/s/:id", element: <h1>Section</h1> },
+      ],
+      { initialEntries: ["/"] },
+    );
+    render(<RouterProvider router={router} />);
+    await userEvent.type(nameField(), "Food");
+    await userEvent.click(await screen.findByRole("link", { name: "Open it" }, { timeout: 2000 }));
+    expect(router.state.location.pathname).toBe("/");
+    expect(screen.getByText("Discard this proposal?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(nameField()).toHaveValue("Food");
+    await userEvent.click(screen.getByRole("link", { name: "Open it" }));
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(router.state.location.pathname).toBe("/s/food");
+  });
+
   it("counts the name to 24, turns the count red there, and trims it on leaving the field", async () => {
     propose();
     expect(screen.getByText("0/24")).toBeInTheDocument();
@@ -385,6 +433,60 @@ describe("Propose a section", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     // A proposal kept from an earlier try goes with it.
     expect(readKeptProposal(deps.keep)).toBeNull();
+  });
+
+  it("asks before Back takes the proposal away, and stays on Keep editing", async () => {
+    const { router, onClose } = propose();
+    pick();
+    await userEvent.type(nameField(), "Street food");
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    expect(screen.getByText("Discard this proposal?")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/s");
+    // The question has the focus, so it is heard.
+    expect(screen.getByRole("button", { name: "Keep editing" })).toHaveFocus();
+    await userEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(router.state.location.pathname).toBe("/s");
+    expect(nameField()).toHaveValue("Street food");
+
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(router.state.location.pathname).toBe("/");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("asks before Open it under a taken name leaves the form", async () => {
+    const deps = makeDeps();
+    deps.check.mockResolvedValue({ free: false, id: "food" });
+    const { router } = propose({ deps });
+    await userEvent.type(nameField(), "Food");
+    await userEvent.click(await screen.findByRole("link", { name: "Open it" }, { timeout: 2000 }));
+    expect(screen.getByText("Discard this proposal?")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/s");
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(router.state.location.pathname).toBe("/s/food");
+  });
+
+  it("gives the focus back after Keep editing, and to Try again after a failed send", async () => {
+    const { send } = propose();
+    send.mockRejectedValueOnce(refuse({ kind: "offline" }));
+    pick();
+    await userEvent.type(nameField(), "Street food");
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    cancel.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+
+    proposeButton().focus();
+    await userEvent.keyboard("{Enter}");
+    const alert = await screen.findByRole("alert");
+    await waitFor(() =>
+      expect(within(alert).getByRole("button", { name: "Try again" })).toHaveFocus(),
+    );
   });
 
   it("holds still while sending: the spinner, the fields inert, nothing closes it", async () => {

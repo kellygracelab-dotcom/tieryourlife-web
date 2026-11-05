@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Candidate, Moderator } from "../../api/admin";
 import { errorOf } from "../../api/errors";
 import { appointModerator, findCandidates, loadModerators, removeModerator } from "../../lib/api";
@@ -7,6 +8,7 @@ import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
+import { useModal } from "../../ui/useModal";
 
 export interface ModeratorsDeps {
   load: () => Promise<{ moderators: Moderator[] }>;
@@ -38,6 +40,55 @@ function Face({ photoUrl, name }: { photoUrl: string | null; name: string }) {
 }
 
 type Asking = { kind: "appoint"; who: Candidate } | { kind: "remove"; who: Moderator } | null;
+
+/**
+ * Appoint or Remove, asked over the page: the keyboard goes in, Escape and a
+ * click outside are Cancel, and the focus goes back to the button that asked.
+ */
+function AskDialog({
+  asking,
+  failed,
+  onCancel,
+  onConfirm,
+}: {
+  asking: NonNullable<Asking>;
+  failed: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onCancel);
+  return createPortal(
+    <div className="scrim" onClick={onCancel}>
+      <div
+        ref={box}
+        className="dialog dialog--narrow"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="admin-ask-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="admin-ask-title" className="dialog__title">
+          {fill(asking.kind === "appoint" ? strings.admin.appointAsk : strings.admin.removeAsk, {
+            name: asking.who.name,
+          })}
+        </h2>
+        {failed && (
+          <p className="admin__bar" role="alert">
+            {strings.admin.actionFailed}
+          </p>
+        )}
+        <div className="dialog__actions">
+          <Button onClick={onCancel}>{strings.admin.cancel}</Button>
+          <Button variant={asking.kind === "appoint" ? "filled" : "danger"} onClick={onConfirm}>
+            {asking.kind === "appoint" ? strings.admin.appoint : strings.admin.remove}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
 /**
  * Who besides the owner decides reports and proposals. Only the owner sees
@@ -78,6 +129,11 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
     setFailed(false);
     work.then(
       () => {
+        // The person found is appointed: the search has done its work.
+        if (asking?.kind === "appoint") {
+          setQuery("");
+          setFound([]);
+        }
         setAsking(null);
         setRound((n) => n + 1);
         setNotice({
@@ -117,7 +173,7 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
           }}
         />
       </label>
-      {found.length > 0 && asking === null && (
+      {found.length > 0 && (
         <ul className="admin-people admin-people--found">
           {found.map((person) => (
             <li key={person.uid} className="admin-people__row">
@@ -134,36 +190,24 @@ export function ModeratorsPane({ deps = moderatorsDeps }: { deps?: ModeratorsDep
         </ul>
       )}
       {asking !== null && (
-        <div className="admin-confirm" role="group" aria-label={strings.admin.moderators}>
-          <p>
-            {fill(asking.kind === "appoint" ? strings.admin.appointAsk : strings.admin.removeAsk, {
-              name: asking.who.name,
-            })}
-          </p>
-          <Button onClick={() => setAsking(null)}>{strings.admin.cancel}</Button>
-          <Button
-            variant={asking.kind === "appoint" ? "filled" : "danger"}
-            onClick={() => {
-              const who = asking.who;
-              if (asking.kind === "appoint") {
-                settle(deps.appoint(who), fill(strings.admin.appointed, { name: who.name }));
-                setQuery("");
-                setFound([]);
-              } else {
-                settle(deps.remove(who.uid), fill(strings.admin.removed, { name: who.name }), () =>
-                  deps.appoint(who),
-                );
-              }
-            }}
-          >
-            {asking.kind === "appoint" ? strings.admin.appoint : strings.admin.remove}
-          </Button>
-        </div>
-      )}
-      {failed && (
-        <p className="admin__bar" role="alert">
-          {strings.admin.actionFailed}
-        </p>
+        <AskDialog
+          asking={asking}
+          failed={failed}
+          onCancel={() => {
+            setAsking(null);
+            setFailed(false);
+          }}
+          onConfirm={() => {
+            const who = asking.who;
+            if (asking.kind === "appoint") {
+              settle(deps.appoint(who), fill(strings.admin.appointed, { name: who.name }));
+            } else {
+              settle(deps.remove(who.uid), fill(strings.admin.removed, { name: who.name }), () =>
+                deps.appoint(who),
+              );
+            }
+          }}
+        />
       )}
       {state.status === "loading" ? (
         <PaneLoading />

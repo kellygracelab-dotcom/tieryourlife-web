@@ -103,6 +103,7 @@ export const en = {
     faceLetter: "Just the letter",
     faceLetterCaption: "Letter",
     faceFailed: "Couldn’t save — the server didn’t answer.",
+    faceListsFailed: "Couldn’t load your published lists.",
     privacyTitle: "Privacy",
     signOutNote:
       "Your lists stay in your account and in this browser, hidden until you sign in again. Signed out, you’ll see only lists made without an account.",
@@ -353,6 +354,7 @@ export const en = {
     more: "Show more",
     loadingMore: "Loading…",
     moreFailed: "Could not load more.",
+    stale: "Couldn’t refresh. These are the lists from your last visit.",
   },
   list: {
     pictureCredits: "Picture credits",
@@ -381,7 +383,7 @@ export const en = {
     delete: "Take it down",
     deleteTitle: "Take this list down?",
     deleteBody:
-      "“{title}” leaves the feed and its link stops working. Rankings people already made from it stay. The list on your phone stays on your phone.",
+      "“{title}” leaves the feed and its link stops working. Rankings people already made from it stay. Your board stays in Your lists.",
     keepIt: "Keep it",
     deleting: "Taking it down…",
     deleteFailed: "Could not take it down. Try again in a minute.",
@@ -417,6 +419,7 @@ export const en = {
     seedHint: "Placing it starts your version from {name}’s.",
     seedHintUnnamed: "Placing it starts your version from this ranking.",
     dropToStart: "Drop it to start your version.",
+    seedStart: "Move a card on the board to start your version.",
   },
   // The readers' placings of a list. The title has no count, so it cannot
   // disagree with the chip's, which is the takes (Danylo, 28.10).
@@ -511,6 +514,9 @@ export const en = {
       "No connection. Nothing was lost: your placements are safe on this device. Try again once you are back online.",
     failedGone: "This list isn’t available anymore, so the ranking cannot be kept.",
     failedOther: "Could not save the ranking. Nothing was lost. Try again.",
+    failedChanged:
+      "The author changed this list while you were ranking it. Load it again to rank it as it is now.",
+    loadAgain: "Load it again",
   },
   keep: {
     title: "Keep this ranking",
@@ -554,10 +560,10 @@ export const en = {
     tabs: "Your account",
     lists: "Your public lists",
     listsFailed: "Could not load your public lists",
-    // A list made on the site has no other copy: taking it down deletes it, and the word says so.
+    // Taken down, the list leaves the feed; the board it was published from stays.
     remove: "Take it down",
     removeAsk:
-      "Take “{title}” down? It leaves the feed and its link stops working. Rankings people already made from it stay. The list on your phone stays on your phone.",
+      "Take “{title}” down? It leaves the feed and its link stops working. Rankings people already made from it stay. Your board stays in Your lists.",
     keepIt: "Keep it",
     countPublished: { one: "{n} published", other: "{n} published" },
     countRanked: { one: "{n} ranked", other: "{n} ranked" },
@@ -787,6 +793,12 @@ export const en = {
     takeDownBody: "It leaves the site and its link stops working. Your boards stay as they are.",
     takingDown: "Taking down…",
     takenDown: "“{title}” taken down",
+    mergeFind: "Merge into another topic",
+    houseStaleTitle: "“{title}” changed since you edited it here",
+    houseStaleBody:
+      "Opening it as it stands drops the changes you haven’t sent. Your draft still has them, but updating from it puts the older list back.",
+    houseStaleDraft: "Open my draft",
+    houseStaleFresh: "Open it as it stands",
   },
   sections: {
     followers: { one: "{n} follower", other: "{n} followers" },
@@ -827,9 +839,11 @@ export const en = {
     sections: "Sections",
     group: "{name} · {n}",
     followSection: "Follow {name}",
-    unfollowSection: "Unfollow {name}",
     emptyHelper:
-      "Tap + to follow a section. Topics are inside each section; people, on their profile.",
+      "Tap + on the sections you like, then follow them all at once. Topics are inside each section; people, on their profile.",
+    pickFollow: "Follow · {n}",
+    pickNone: "Pick at least one",
+    followedFailed: "Couldn’t load what you follow.",
     nothingPublished: "Nobody you follow has published anything yet.",
     goExplore: "Go to Explore",
     back: "Navigate back",
@@ -882,6 +896,10 @@ export const en = {
     withdrawAsk: "Withdraw “{name}”? Your lists stay in {section}.",
     withdrawFailed: "Couldn’t withdraw it. Try again.",
     withdrawn: "Proposal withdrawn.",
+    noticeDeclined: "“{name}” wasn’t added as a section. Your lists stay in {section}.",
+    noticeMerged: "“{name}” was merged into {section}.",
+    noticeDismiss: "Dismiss",
+    noticeDismissFailed: "Couldn’t dismiss it. Try again.",
   },
   // Each icon a section may wear, by its plain name: the picker's tooltip and what a screen reader says.
   sectionIcons: {
@@ -1038,6 +1056,8 @@ export const en = {
     boardTrashed: "“{name}” moved to the trash",
     notFound: "List not found.",
     notFoundBody: "It may have been deleted, or it lives on another device.",
+    inTrash: "“{name}” is in the trash.",
+    inTrashBody: "Restore it to rank and edit it again.",
     more: "More about this board",
     delete: "Delete board",
     trash: "Trash",

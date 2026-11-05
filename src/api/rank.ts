@@ -28,13 +28,22 @@ export interface SavedRanking {
   claimToken: string;
 }
 
+/**
+ * `version` is the list's updatedAt as the rows were placed on it: the
+ * server refuses them (409 LIST_CHANGED) once the list was republished since.
+ */
 export function keepRanking(
   client: ApiClient,
   listId: string,
   rows: readonly (readonly number[])[],
+  version?: number,
 ): Promise<SavedRanking> {
   return client.request<SavedRanking>("POST", "/api/rank", {
-    body: { listId, rows: rows.map((row) => [...row]) },
+    body: {
+      listId,
+      rows: rows.map((row) => [...row]),
+      ...(version === undefined ? {} : { version }),
+    },
   });
 }
 

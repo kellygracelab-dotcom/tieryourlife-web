@@ -6,6 +6,7 @@ import type { PublishRequest } from "../../api/lists";
 import type { Topic } from "../../api/sections";
 import { useSession } from "../../app/session";
 import { loadTopics } from "../../lib/api";
+import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -71,6 +72,8 @@ interface BoardSettingsProps {
 }
 
 type Busy = "idle" | "publishing" | "updating" | "unpublishing";
+/** A refusal, by the press it answers: each is said beside its own button. */
+type Failure = { error: ApiError; on: "publish" | "update" | "takeDown" };
 type Open = "none" | "category" | "topic" | "cover";
 /** What came back for a section's topics. */
 type Topics =
@@ -181,7 +184,9 @@ export function BoardSettings({
   const { account, signIn } = useSession();
   const signedIn = account?.kind === "signedIn";
   const [busy, setBusy] = useState<Busy>("idle");
-  const [failure, setFailure] = useState<ApiError | null>(null);
+  const [failure, setFailure] = useState<Failure | null>(null);
+  // Why a guest's Public switch did not sign them in, when it could not.
+  const [signInNote, setSignInNote] = useState<string | null>(null);
   const [open, setOpen] = useState<Open>("none");
   const [asking, setAsking] = useState(false);
   const problems = publishProblemsOf(board);
@@ -204,10 +209,23 @@ export function BoardSettings({
           : await publishing.publish(request);
       const name = account?.kind === "signedIn" ? account.displayName : null;
       const after = latest();
-      keep(setPublished(after, answer.id, name ?? after.authorName, now()));
+      const sent = setPublished(after, answer.id, name ?? after.authorName, now());
+      // A change made while the request was on its way was not in it: the
+      // published copy is behind it, and Update still has it to send.
+      keep(
+        after.editedAt === current.editedAt
+          ? sent
+          : { ...sent, publishedEditedAt: sent.editedAt - 1 },
+      );
       onPublished(what, answer.id);
     } catch (reason: unknown) {
-      setFailure(errorOf(reason));
+      const error = errorOf(reason);
+      // Taken down elsewhere (its page, /me, the phone): the board is no longer
+      // public, and its switch says so; turned on, it goes out anew.
+      if (what === "updated" && error.kind === "notFound") {
+        keep(setPublished(latest(), null, null, now()));
+      }
+      setFailure({ error, on: what === "published" ? "publish" : "update" });
     } finally {
       setBusy("idle");
     }
@@ -235,7 +253,7 @@ export function BoardSettings({
         down();
         setAsking(false);
       } else {
-        setFailure(error);
+        setFailure({ error, on: "takeDown" });
       }
     } finally {
       setBusy("idle");
@@ -250,23 +268,42 @@ export function BoardSettings({
     ask.current?.querySelector<HTMLButtonElement>("button")?.focus();
   }, [asking]);
 
-  // A guest's switch asks them to sign in; the board stays as it is.
+  // A guest's switch asks them to sign in; the board stays as it is. Where
+  // Google cannot sign anybody in, as in an app's own browser, it says so.
   const onSwitch = () => {
     if (isPublic) setAsking(true);
-    else if (!signedIn) void signIn();
-    else void send("published");
+    else if (!signedIn) {
+      setSignInNote(null);
+      void signIn().then((outcome) => {
+        if (outcome.kind !== "failed") return;
+        setSignInNote(
+          outcome.code === IN_APP_BROWSER ? strings.keep.inApp : strings.nav.signInFailed,
+        );
+      });
+    } else void send("published");
   };
 
-  // Why the switch cannot be turned on, the first reason in the phone's order.
-  const blocker = !signedIn
-    ? strings.boards.needsAccount
-    : problems.includes("category")
-      ? strings.new.needCategory
-      : problems.includes("noItems")
-        ? strings.boards.needsItems
-        : problems.length > 0
-          ? strings.new.failedTooLarge.replace("{detail}", "").trim()
-          : null;
+  // What keeps the board from going out, the first reason in the phone's order.
+  const problem = problems.includes("category")
+    ? strings.new.needCategory
+    : problems.includes("noItems")
+      ? strings.boards.needsItems
+      : problems.length > 0
+        ? strings.new.failedTooLarge.replace("{detail}", "").trim()
+        : null;
+  // Why the switch cannot be turned on.
+  const blocker = !signedIn ? strings.boards.needsAccount : problem;
+  const failed = (on: Failure["on"]) =>
+    failure !== null && failure.on === on ? (
+      <span className="sheet-row__problem" role="alert">
+        <Icon name="error" />
+        {on === "takeDown"
+          ? strings.list.deleteFailed
+          : on === "update" && failure.error.kind === "notFound"
+            ? strings.new.listGone
+            : failureText(failure.error, on === "update" ? "edit" : "new")}
+      </span>
+    ) : null;
 
   const pictures = [
     ...new Set(liveItems(board).flatMap((item) => (item.imageUrl === null ? [] : [item.imageUrl]))),
@@ -372,12 +409,14 @@ export function BoardSettings({
                     {strings.boards.publishing}
                   </span>
                 )}
-                {failure !== null && (
+                {signInNote !== null && !signedIn && (
                   <span className="sheet-row__problem" role="alert">
                     <Icon name="error" />
-                    {failureText(failure, isPublic ? "edit" : "new")}
+                    {signInNote}
                   </span>
                 )}
+                {failed("publish")}
+                {!isPublic && failed("update")}
               </Row>
             </li>
           )}
@@ -399,7 +438,8 @@ export function BoardSettings({
                     role="switch"
                     className="switch"
                     checked={board.anonymous}
-                    disabled={busy !== "idle"}
+                    // A public list that cannot be sent cannot change either: the reason is under Update.
+                    disabled={busy !== "idle" || (isPublic && problem !== null)}
                     onChange={(event) => {
                       keep(setAnonymous(latest(), event.target.checked, now()));
                       // A list already out changes at once, as on the phone.
@@ -431,6 +471,8 @@ export function BoardSettings({
                   <Icon name="open_in_new" />
                   <span>{strings.new.openList}</span>
                 </Link>
+                {problem !== null && <span className="sheet-row__note">{problem}</span>}
+                {failed("update")}
               </Row>
             </li>
           )}
@@ -652,6 +694,7 @@ export function BoardSettings({
                     {fill(strings.boards.takeDownTitle, { title })}
                   </p>
                   <p className="sheet-ask__body">{strings.boards.takeDownBody}</p>
+                  {failed("takeDown")}
                   <div className="sheet-ask__actions">
                     <Button onClick={() => setAsking(false)} disabled={busy !== "idle"}>
                       {strings.rank.cancel}

@@ -4,6 +4,7 @@ import {
   hostOf,
   listPayload,
   loadShell,
+  rankingCardVersion,
   rankingVersion,
   resetShellForTests,
   SHELL_TIMEOUT_MS,
@@ -30,43 +31,66 @@ describe("hostOf", () => {
 describe("loadShell", () => {
   beforeEach(() => resetShellForTests());
 
+  /** Hosting as it answers: the shell with its tag, or "not modified" to that tag. */
   const fetching = (html: string, ok = true) => {
+    const site = { html, etag: '"one"' };
     const calls: string[] = [];
+    const tags: (string | undefined)[] = [];
     const signals: unknown[] = [];
     const fetchImpl = (async (url: string, init?: RequestInit) => {
       calls.push(url);
       signals.push(init?.signal);
-      return { ok, status: ok ? 200 : 503, text: async () => html } as Response;
+      const asked = (init?.headers as Record<string, string> | undefined)?.["If-None-Match"];
+      tags.push(asked);
+      if (!ok) return new Response("", { status: 503 });
+      if (asked === site.etag) return new Response(null, { status: 304 });
+      return new Response(site.html, { status: 200, headers: { etag: site.etag } });
     }) as unknown as typeof fetch;
-    return { fetchImpl, calls, signals };
+    return { fetchImpl, calls, tags, signals, site };
   };
 
-  it("fetches the site's own index.html and keeps it for a minute", async () => {
-    const { fetchImpl, calls } = fetching("<html>one</html>");
-    assert.equal(await loadShell("tieryourlife.web.app", 1000, fetchImpl), "<html>one</html>");
-    assert.equal(await loadShell("tieryourlife.web.app", 30_000, fetchImpl), "<html>one</html>");
-    assert.deepEqual(calls, ["https://tieryourlife.web.app/index.html"]);
-    await loadShell("tieryourlife.web.app", 70_000, fetchImpl);
-    assert.equal(calls.length, 2);
+  it("fetches the site's own index.html, then asks only whether it changed", async () => {
+    const { fetchImpl, calls, tags } = fetching("<html>one</html>");
+    assert.equal(await loadShell("tieryourlife.web.app", fetchImpl), "<html>one</html>");
+    assert.equal(await loadShell("tieryourlife.web.app", fetchImpl), "<html>one</html>");
+    assert.deepEqual(calls, [
+      "https://tieryourlife.web.app/index.html",
+      "https://tieryourlife.web.app/index.html",
+    ]);
+    assert.deepEqual(tags, [undefined, '"one"']);
+  });
+
+  // A shell kept for a minute named the script of the deploy before, which
+  // was gone: every shared link was a white page until it expired.
+  it("hands out a new deploy's shell on the very next page", async () => {
+    const { fetchImpl, site } = fetching('<script src="/assets/index-OLD.js"></script>');
+    await loadShell("tieryourlife.web.app", fetchImpl);
+    site.html = '<script src="/assets/index-NEW.js"></script>';
+    site.etag = '"two"';
+    assert.match(await loadShell("tieryourlife.web.app", fetchImpl), /index-NEW/);
   });
 
   it("gives hosting a few seconds, not the function's whole timeout", async () => {
     const { fetchImpl, signals } = fetching("<html/>");
-    await loadShell("tieryourlife.web.app", 0, fetchImpl);
+    await loadShell("tieryourlife.web.app", fetchImpl);
     assert.ok(signals[0] instanceof AbortSignal);
     assert.equal(SHELL_TIMEOUT_MS, 5_000);
   });
 
   it("does not hand one site's shell to another", async () => {
-    const { fetchImpl, calls } = fetching("<html/>");
-    await loadShell("tieryourlife.firebaseapp.com", 0, fetchImpl);
-    await loadShell("tieryourlife.web.app", 1, fetchImpl);
-    assert.equal(calls.length, 2);
+    const { fetchImpl, tags } = fetching("<html/>");
+    await loadShell("tieryourlife.firebaseapp.com", fetchImpl);
+    await loadShell("tieryourlife.web.app", fetchImpl);
+    assert.deepEqual(tags, [undefined, undefined]);
   });
 
-  it("throws when the shell cannot be fetched", async () => {
-    const { fetchImpl } = fetching("", false);
-    await assert.rejects(loadShell("tieryourlife.web.app", 0, fetchImpl), /503/);
+  it("throws when the shell cannot be fetched, and keeps the last one when hosting fails later", async () => {
+    await assert.rejects(loadShell("tieryourlife.web.app", fetching("", false).fetchImpl), /503/);
+    await loadShell("tieryourlife.web.app", fetching("<html>kept</html>").fetchImpl);
+    assert.equal(
+      await loadShell("tieryourlife.web.app", fetching("", false).fetchImpl),
+      "<html>kept</html>",
+    );
   });
 });
 
@@ -117,6 +141,11 @@ describe("listPayload", () => {
     assert.equal(listPayload("abc12345", { basedOn: { title: "no id" } }).basedOn, null);
   });
 
+  it("carries how many readers' rankings the list keeps, which its menu says", () => {
+    assert.equal(listPayload("abc12345", { takeCount: 40, rankingCount: 3 }).rankingCount, 3);
+    assert.equal(listPayload("abc12345", {}).rankingCount, 0);
+  });
+
   it("survives a document without one", () => {
     assert.equal(listPayload("abc12345", {}).authorUid, "");
     assert.equal(listPayload("abc12345", { authorUid: 5 as never }).authorUid, "");
@@ -138,5 +167,14 @@ describe("rankingVersion", () => {
   it("follows the ranking's own edit, and stands at nothing for a list gone", () => {
     assert.equal(rankingVersion(ranking({ createdAt: at(5000), updatedAt: at(7000) }), 0), 7000);
     assert.equal(rankingVersion(ranking({}), 0), 0);
+  });
+
+  // The list went, and its author's name with it: the card kept with the
+  // name must not be the one fetched again under the same address.
+  it("gives the card a version of its own once the list is gone", () => {
+    const stored = ranking({ createdAt: at(5000) });
+    assert.equal(rankingCardVersion(stored, 1000), "5000");
+    assert.equal(rankingCardVersion(stored, 9000), "9000");
+    assert.equal(rankingCardVersion(stored, null), "5000-gone");
   });
 });

@@ -35,7 +35,8 @@ const list: PublishedList = {
   previewImages: [],
   tierColors: [],
   updatedAt: 0,
-  takeCount: 12,
+  takeCount: 40,
+  rankingCount: 12,
   tiers: [{ label: "S", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" }],
   items: [
     { title: "Ex Machina", imageUrl: null, tierIndex: 0 },
@@ -134,6 +135,8 @@ describe("ListPage rankings", () => {
     const sheet = await openSheet();
     await userEvent.click(await within(sheet).findByRole("button", { name: /^olena/ }));
     expect(screen.queryByRole("dialog")).toBeNull();
+    // The sheet came from the menu, which closed behind it: its button has the focus back.
+    expect(screen.getByLabelText("More about this list")).toHaveFocus();
 
     const left = within(whose()).getByRole("button", { name: "olena" });
     expect(left).toHaveAttribute("aria-pressed", "true");
@@ -288,8 +291,12 @@ describe("ListPage rankings", () => {
     const sheet = await openSheet();
     await userEvent.click(await within(sheet).findByRole("button", { name: "Show more" }));
     expect(await within(sheet).findByRole("alert")).toHaveTextContent("Could not load more.");
+    // Never disabled while it loads, so the keyboard is still on it after a failure.
+    expect(within(sheet).getByRole("button", { name: "Show more" })).toHaveFocus();
     await userEvent.click(within(sheet).getByRole("button", { name: "Show more" }));
     expect(await within(sheet).findByRole("button", { name: /^maks/ })).toBeInTheDocument();
+    // The page's first new reader takes the focus; the button is gone with the last page.
+    expect(within(sheet).getByRole("button", { name: /^maks/ })).toHaveFocus();
     expect(mocks.loadListRankings).toHaveBeenLastCalledWith("abc", "abc_u5");
     // olena came twice and is listed once; the shelf's stray is not listed at all.
     expect(rowsOf(sheet)).toHaveLength(3);

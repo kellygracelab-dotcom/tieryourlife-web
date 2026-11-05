@@ -7,7 +7,10 @@ import type { MyList } from "../api/lists";
 import type { MyRankings, RankingSummary } from "../api/rank";
 import type { SectionStats } from "../api/sections";
 import { SessionContext, type Session } from "../app/session";
+import { newBoard } from "../features/boards/model";
+import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import { createSectionsStore, type SectionsDeps } from "../features/sections/useSections";
+import { memoryStore } from "../lib/storage";
 import { MePage } from "./MePage";
 
 vi.mock("../lib/api", () => ({
@@ -18,6 +21,8 @@ vi.mock("../lib/api", () => ({
   loadSections: vi.fn(),
   followSection: vi.fn(),
   unfollowSection: vi.fn(),
+  loadSection: vi.fn(),
+  withdrawSectionProposal: vi.fn(),
 }));
 
 const load = vi.fn<() => Promise<MyRankings>>();
@@ -80,6 +85,7 @@ const stats = (id: string): SectionStats => ({
 const open = (
   account: Session["account"] = member,
   signIn = vi.fn(async () => ({ kind: "cancelled" as const })),
+  repository: BoardsRepository = boardsRepository(memoryStore()),
 ) => {
   const store = createSectionsStore({
     load: loadSections,
@@ -99,6 +105,7 @@ const open = (
             deleteRanking={deleteRanking}
             copy={copy}
             store={store}
+            repository={repository}
           />
         ),
       },
@@ -314,6 +321,30 @@ describe("MePage", () => {
     expect(screen.getByText("1 published")).toBeInTheDocument();
   });
 
+  it("makes the board a list taken down here came from its own again", async () => {
+    load.mockResolvedValue({ rankings: [], more: false });
+    loadLists.mockResolvedValue({ lists: [published("l1", "One")] });
+    unpublish.mockResolvedValue(undefined);
+    const repository = boardsRepository(memoryStore());
+    repository.save({
+      ...newBoard("b1", "One", 1, () => "t"),
+      publishedId: "l1",
+      publishedEditedAt: 1,
+      authorName: "Danylo",
+    });
+    open(member, undefined, repository);
+    await screen.findByText("1 published");
+    await userEvent.click((await menuOf("One")).getByRole("button", { name: "Take it down" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Take it down" })).getByRole("button", {
+        name: "Take it down",
+      }),
+    );
+    await waitFor(() =>
+      expect(repository.get("b1")).toMatchObject({ publishedId: null, authorName: null }),
+    );
+  });
+
   it("gives chips to choose between the kinds once there is a lot of both", async () => {
     load.mockResolvedValue({
       rankings: Array.from({ length: 6 }, (_, i) => ranking(`aaaaaaa${i}`, `Ranking ${i}`)),
@@ -333,6 +364,34 @@ describe("MePage", () => {
     await userEvent.click(chips.getByRole("button", { name: "Rankings" }));
     expect(rows()).toHaveLength(6);
     expect(screen.getByText("Only the newest 6 are shown.")).toBeInTheDocument();
+  });
+
+  it("shows everything again when a delete takes the chips away, rather than keep the other kind hidden", async () => {
+    load.mockResolvedValue({
+      rankings: Array.from({ length: 4 }, (_, i) => ranking(`aaaaaaa${i}`, `Ranking ${i}`)),
+      more: false,
+    });
+    loadLists.mockResolvedValue({
+      lists: Array.from({ length: 5 }, (_, i) => published(`l${i}`, `List ${i}`)),
+    });
+    deleteRanking.mockResolvedValue(undefined);
+    open();
+    await screen.findByText("5 published · 4 ranked");
+    const chips = within(screen.getByRole("group", { name: "Which to show" }));
+    await userEvent.click(chips.getByRole("button", { name: "Rankings" }));
+    expect(rows()).toHaveLength(4);
+
+    await userEvent.click(
+      (await menuOf("Ranking 0")).getByRole("button", { name: "Delete ranking" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Delete ranking" })).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+    await screen.findByText("5 published · 3 ranked");
+    expect(screen.queryByRole("group", { name: "Which to show" })).toBeNull();
+    expect(rows()).toHaveLength(8);
   });
 
   it("says so when there is nothing yet, and leads to the lists", async () => {

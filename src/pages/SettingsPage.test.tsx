@@ -184,6 +184,20 @@ describe("SettingsPage", () => {
     expect(load).not.toHaveBeenCalled();
   });
 
+  it("greys out a guest's sign-in while it is under way, and says so when it fails", async () => {
+    let answer: (value: Awaited<ReturnType<Session["signIn"]>>) => void = () => undefined;
+    const { session } = open({ kind: "guest", uid: "g1" });
+    vi.mocked(session.signIn).mockImplementationOnce(
+      () => new Promise((resolve) => (answer = resolve)),
+    );
+    const button = screen.getByRole("button", { name: "Continue with Google" });
+    await userEvent.click(button);
+    expect(button).toBeDisabled();
+    act(() => answer({ kind: "failed", code: "auth/network-request-failed" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign in. Try again.");
+    expect(button).toBeEnabled();
+  });
+
   it("holds the guest card's place while Firebase says who is here, with the theme already usable", () => {
     open(null);
     const pending = document.querySelector(".settings__card[aria-busy]");
@@ -296,9 +310,11 @@ describe("SettingsPage", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     await userEvent.click(buttons[0]!);
     expect(face).toHaveBeenCalledTimes(1);
+    // A slow save says it is under way, so a tap that does nothing is not taken for a fault.
+    expect(screen.getByRole("status")).toHaveTextContent("Saving…");
 
     act(() => saveFace());
-    expect(await screen.findByRole("status")).toHaveTextContent("Saved.");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Saved."));
     expect(session.refresh).toHaveBeenCalled();
     expect(refreshAuthor).toHaveBeenCalled();
     expect(showFace).toHaveBeenLastCalledWith(undefined);
@@ -306,6 +322,19 @@ describe("SettingsPage", () => {
     await userEvent.click(buttons[0]!);
     expect(showFace).toHaveBeenCalledWith(null);
     expect(face).toHaveBeenLastCalledWith(null);
+  });
+
+  it("says so when the lists for the cards did not come, and Try again asks once more", async () => {
+    load.mockRejectedValueOnce(new Error("offline"));
+    load.mockResolvedValueOnce({ lists: [published("A24 films", ["https://img/1.jpg"])] });
+    open();
+    const alert = await within(faces()).findByRole("alert");
+    expect(alert).toHaveTextContent("Couldn’t load your published lists.");
+    await userEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+    expect(
+      await within(faces()).findByRole("button", { name: "Card from A24 films" }),
+    ).toBeInTheDocument();
+    expect(load).toHaveBeenCalledTimes(2);
   });
 
   it("cuts a card that was zoomed or moved on this device, and sends the square up", async () => {

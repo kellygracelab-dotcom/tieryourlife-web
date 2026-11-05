@@ -78,6 +78,7 @@ describe("ProposalsPane", () => {
         proposal: null,
       })),
       decideTopic: vi.fn(async () => undefined),
+      findTopics: vi.fn(async () => ({ topics: [topic("t2", "Speedrunners"), pendingTopic] })),
       finish: vi.fn(async () => undefined),
     };
   });
@@ -115,6 +116,35 @@ describe("ProposalsPane", () => {
     expect(screen.queryByRole("button", { name: "Merge into…" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Merge into Speedrunning" }));
     expect(deps.decideTopic).toHaveBeenCalledWith("t9", { action: "merge", into: "t1" });
+  });
+
+  it("renames a topic proposal before it is approved, as the app's queue does", async () => {
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Speedruns" })).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Rename" }));
+    const field = within(card).getByRole("textbox", { name: "Name" });
+    await userEvent.clear(field);
+    await userEvent.type(field, "Speed runs{Enter}");
+    expect(deps.decideTopic).toHaveBeenCalledWith("t9", { action: "rename", name: "Speed runs" });
+    expect(await within(card).findByRole("heading", { name: "Speed runs" })).toBeInTheDocument();
+    expect(within(card).getByRole("status")).toHaveTextContent("Renamed to Speed runs");
+    await userEvent.click(within(card).getByRole("button", { name: "Approve" }));
+    expect(await screen.findByText("Speed runs approved")).toBeInTheDocument();
+  });
+
+  it("merges a topic proposal into any approved topic found by name", async () => {
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Speedruns" })).closest("li")!;
+    await userEvent.type(
+      within(card).getByRole("searchbox", { name: "Merge into another topic" }),
+      "Speedrun",
+    );
+    const merge = await within(card).findByRole("button", { name: "Merge into Speedrunners" });
+    expect(deps.findTopics).toHaveBeenCalledWith("Speedrun");
+    // The proposal itself, still waiting, is no place to merge into.
+    expect(within(card).queryByRole("button", { name: "Merge into Speedruns" })).toBeNull();
+    await userEvent.click(merge);
+    expect(deps.decideTopic).toHaveBeenCalledWith("t9", { action: "merge", into: "t2" });
   });
 
   it("lets the owner edit a proposal in a side sheet, and keeps its card in the queue", async () => {
@@ -611,7 +641,7 @@ describe("ModeratorsPane", () => {
       screen.getByText("Make mariia a moderator? They'll see reports and proposals."),
     ).toBeInTheDocument();
     await userEvent.click(
-      within(screen.getByRole("group")).getByRole("button", { name: "Appoint" }),
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Appoint" }),
     );
     expect(deps.appoint).toHaveBeenCalledWith(
       expect.objectContaining({ uid: "u8", name: "mariia" }),
@@ -619,12 +649,29 @@ describe("ModeratorsPane", () => {
     expect(await screen.findByText("mariia is a moderator")).toBeInTheDocument();
   });
 
+  it("asks over the page with the keyboard inside, and gives the focus back on Escape", async () => {
+    wrap(<ModeratorsPane deps={deps} />);
+    await screen.findByText("kenji");
+    const remove = screen.getByRole("button", { name: "Remove" });
+    remove.focus();
+    await userEvent.keyboard("{Enter}");
+    const ask = screen.getByRole("alertdialog", {
+      name: "Remove kenji? They lose access straight away.",
+    });
+    expect(ask).toHaveAttribute("aria-modal", "true");
+    expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(remove).toHaveFocus();
+    expect(deps.remove).not.toHaveBeenCalled();
+  });
+
   it("removes after asking, with Undo", async () => {
     wrap(<ModeratorsPane deps={deps} />);
     await screen.findByText("kenji");
     await userEvent.click(screen.getByRole("button", { name: "Remove" }));
     await userEvent.click(
-      within(screen.getByRole("group")).getByRole("button", { name: "Remove" }),
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Remove" }),
     );
     expect(deps.remove).toHaveBeenCalledWith("u7");
     await userEvent.click(await screen.findByRole("button", { name: "Undo" }));

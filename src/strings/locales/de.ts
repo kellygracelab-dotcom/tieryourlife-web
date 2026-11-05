@@ -111,6 +111,7 @@ const de: Translation = {
     faceLetter: "Nur der Buchstabe",
     faceLetterCaption: "Buchstabe",
     faceFailed: "Konnte nicht speichern – der Server hat nicht geantwortet.",
+    faceListsFailed: "Deine veröffentlichten Listen ließen sich nicht laden.",
     privacyTitle: "Datenschutz",
     signOutNote:
       "Deine Listen bleiben in deinem Konto und in diesem Browser, versteckt, bis du dich wieder anmeldest. Abgemeldet siehst du nur Listen, die ohne Konto gemacht wurden.",
@@ -364,6 +365,7 @@ const de: Translation = {
     more: "Mehr zeigen",
     loadingMore: "Wird geladen…",
     moreFailed: "Mehr konnte nicht geladen werden.",
+    stale: "Aktualisieren hat nicht geklappt. Das sind die Listen von deinem letzten Besuch.",
   },
   list: {
     pictureCredits: "Bildnachweise",
@@ -392,7 +394,7 @@ const de: Translation = {
     delete: "Entfernen",
     deleteTitle: "Veröffentlichung dieser Liste zurücknehmen?",
     deleteBody:
-      "„{title}“ verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Ein Board auf deinem Telefon bleibt auf deinem Telefon.",
+      "„{title}“ verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Dein Board bleibt in „Deine Listen“.",
     keepIt: "Behalten",
     deleting: "Wird zurückgenommen…",
     deleteFailed:
@@ -428,6 +430,7 @@ const de: Translation = {
     seedHint: "Wenn du sie platzierst, beginnt deine Version mit dem Ranking von {name}.",
     seedHintUnnamed: "Wenn du sie platzierst, beginnt deine Version mit diesem Ranking.",
     dropToStart: "Lass sie los, um deine Version zu beginnen.",
+    seedStart: "Verschieb eine Karte auf dem Board, um deine Version zu beginnen.",
   },
   rankings: {
     title: "Reihungen",
@@ -524,6 +527,9 @@ const de: Translation = {
       "Diese Liste ist nicht mehr verfügbar, also kann die Rangliste nicht behalten werden.",
     failedOther:
       "Die Rangliste konnte nicht gespeichert werden. Nichts ist verloren. Versuch es noch einmal.",
+    failedChanged:
+      "Der Autor hat diese Liste geändert, während du sie eingestuft hast. Lade sie neu, um sie so einzustufen, wie sie jetzt ist.",
+    loadAgain: "Neu laden",
   },
   keep: {
     title: "Diese Rangliste behalten",
@@ -570,7 +576,7 @@ const de: Translation = {
     listsFailed: "Deine öffentlichen Listen konnten nicht geladen werden",
     remove: "Entfernen",
     removeAsk:
-      "Veröffentlichung von „{title}“ zurücknehmen? Sie verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Ein Board auf deinem Telefon bleibt auf deinem Telefon.",
+      "Veröffentlichung von „{title}“ zurücknehmen? Sie verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Dein Board bleibt in „Deine Listen“.",
     keepIt: "Behalten",
     countPublished: { other: "Veröffentlicht: {n}" },
     countRanked: { other: "Ranglisten: {n}" },
@@ -833,6 +839,12 @@ const de: Translation = {
       "Sie verschwindet von der Seite, und ihr Link funktioniert nicht mehr. Deine Listen bleiben, wie sie sind.",
     takingDown: "Wird entfernt…",
     takenDown: "„{title}“ entfernt",
+    mergeFind: "Mit einem anderen Thema zusammenführen",
+    houseStaleTitle: "„{title}“ hat sich geändert, seit du sie hier bearbeitet hast",
+    houseStaleBody:
+      "Öffnest du sie, wie sie jetzt ist, gehen deine nicht gesendeten Änderungen verloren. Dein Entwurf hat sie noch, aber eine Aktualisierung daraus bringt die ältere Liste zurück.",
+    houseStaleDraft: "Meinen Entwurf öffnen",
+    houseStaleFresh: "So öffnen, wie sie ist",
   },
   sections: {
     followers: { one: "{n} Follower", other: "{n} Follower" },
@@ -874,9 +886,11 @@ const de: Translation = {
     sections: "Rubriken",
     group: "{name} · {n}",
     followSection: "{name} folgen",
-    unfollowSection: "{name} entfolgen",
     emptyHelper:
-      "Tippe auf +, um einem Bereich zu folgen. Themen stehen in den Bereichen, Personen in ihrem Profil.",
+      "Tippe bei den Bereichen, die dich interessieren, auf + und folge allen auf einmal. Themen stehen in den Bereichen, Personen in ihrem Profil.",
+    pickFollow: "Folgen · {n}",
+    pickNone: "Wähle mindestens einen",
+    followedFailed: "Konnte nicht laden, wem du folgst.",
     nothingPublished: "Wem du folgst, hat noch nichts veröffentlicht.",
     goExplore: "Zu Entdecken",
     back: "Zurück",
@@ -932,6 +946,11 @@ const de: Translation = {
     withdrawAsk: "„{name}“ zurückziehen? Deine Listen bleiben in {section}.",
     withdrawFailed: "Zurückziehen hat nicht geklappt. Versuch es noch einmal.",
     withdrawn: "Vorschlag zurückgezogen.",
+    noticeDeclined:
+      "„{name}“ wurde nicht als Bereich aufgenommen. Deine Listen bleiben in {section}.",
+    noticeMerged: "„{name}“ wurde mit {section} zusammengeführt.",
+    noticeDismiss: "Ausblenden",
+    noticeDismissFailed: "Ausblenden hat nicht geklappt. Versuch es noch einmal.",
   },
   sectionIcons: {
     category: "Formen",
@@ -1093,6 +1112,8 @@ const de: Translation = {
     boardTrashed: "„{name}“ wurde in den Papierkorb verschoben",
     notFound: "Liste wurde nicht gefunden.",
     notFoundBody: "Sie wurde vielleicht gelöscht oder liegt auf einem anderen Gerät.",
+    inTrash: "„{name}“ ist im Papierkorb.",
+    inTrashBody: "Stell sie wieder her, um sie wieder einzustufen und zu bearbeiten.",
     more: "Mehr zu diesem Board",
     delete: "Board löschen",
     trash: "Papierkorb",

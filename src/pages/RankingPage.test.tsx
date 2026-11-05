@@ -61,7 +61,9 @@ describe("RankingPage", () => {
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
       "Every A24 film, ranked",
     );
-    expect(screen.getByText("by danylo · ranked by a visitor")).toBeInTheDocument();
+    expect(document.querySelector(".list-head__meta")).toHaveTextContent(
+      /^by danylo · ranked by a visitor$/,
+    );
     const board = screen.getByRole("region", { name: "Visitor's ranking" });
     expect(board).toHaveTextContent("The Witch");
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
@@ -110,7 +112,10 @@ describe("RankingPage", () => {
     writeKept(localStorageStore, ranking.listId, { code: "abcdefgh", claimToken: "t" });
     load.mockResolvedValue(ranking);
     open();
-    expect(await screen.findByText("by danylo · ranked by you")).toBeInTheDocument();
+    await screen.findByText(/ranked by you/);
+    expect(document.querySelector(".list-head__meta")).toHaveTextContent(
+      /^by danylo · ranked by you$/,
+    );
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
 
     // Whoever made the ranking has ranked it: the invitation is for a visitor.

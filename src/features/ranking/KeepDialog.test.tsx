@@ -38,6 +38,32 @@ describe("KeepDialog", () => {
     expect(onLinkOnly).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps Tab inside, and gives the focus back when it closes", async () => {
+    const onLinkOnly = vi.fn();
+    const at = (state: KeepState) => (
+      <>
+        <button type="button">Finish</button>
+        <a href="/privacy.html">Privacy policy</a>
+        <KeepDialog state={state} onGoogle={vi.fn()} onLinkOnly={onLinkOnly} />
+      </>
+    );
+    const { rerender } = render(at("closed"));
+    screen.getByRole("button", { name: "Finish" }).focus();
+    rerender(at("open"));
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Keep the link only" })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Continue with Google" })).toHaveFocus();
+
+    // A failed sign-in gives back the button it took away.
+    rerender(at("busy"));
+    rerender(at("failed"));
+    expect(screen.getByRole("button", { name: "Continue with Google" })).toHaveFocus();
+
+    rerender(at("closed"));
+    expect(screen.getByRole("button", { name: "Finish" })).toHaveFocus();
+  });
+
   it("waits while the sign-in is under way and names a failure", () => {
     show("busy");
     expect(screen.getByRole("button", { name: "Signing in…" })).toBeDisabled();

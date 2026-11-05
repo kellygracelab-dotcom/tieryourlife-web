@@ -187,4 +187,25 @@ describe("ResultBar", () => {
     expect(screen.getAllByRole("alert")[2]).toHaveTextContent("isn’t available anymore");
     expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(2);
   });
+
+  it("says the list changed under the ranking, and reads it again instead of trying again", async () => {
+    const reload = vi.fn();
+    const onRetry = vi.fn();
+    render(
+      <MemoryRouter>
+        <ResultBar
+          finish={{ status: "failed", error: { kind: "conflict" } }}
+          onRetry={onRetry}
+          onChange={vi.fn()}
+          download={vi.fn(async () => undefined)}
+          reload={reload}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("The author changed this list");
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Load it again" }));
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(onRetry).not.toHaveBeenCalled();
+  });
 });

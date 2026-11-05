@@ -64,6 +64,7 @@ export function TopicEditor(props: TopicEditorProps) {
   const [taken, setTaken] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [asking, setAsking] = useState(false);
 
   const tidy = tidySectionName(name);
   const newPicture = picture?.kind === "framed";
@@ -73,9 +74,16 @@ export function TopicEditor(props: TopicEditorProps) {
   const ready =
     tidy !== "" && pictureReady && (mode === "create" || renamed || newPicture || removed);
   const nameTrouble = taken !== null && taken === tidy;
+  // What closing would throw away: a name or picture typed for a new topic, any change to one.
+  const edited =
+    mode === "create" ? tidy !== "" || picture !== null : renamed || newPicture || removed;
 
+  // Typed work is not thrown away unasked, as the section editor does it.
   const close = () => {
-    if (!sending) onClose();
+    if (sending) return;
+    if (asking) setAsking(false);
+    else if (edited) setAsking(true);
+    else onClose();
   };
   useModal(box, close);
 
@@ -269,7 +277,7 @@ export function TopicEditor(props: TopicEditorProps) {
             </div>
           </div>
         </div>
-        {(!compact || failed) && (
+        {(!compact || failed || asking) && (
           <footer className="section-editor__foot">
             {failed && (
               <div className="section-editor__failed" role="alert">
@@ -277,8 +285,17 @@ export function TopicEditor(props: TopicEditorProps) {
                 <Button onClick={() => void submit()}>{strings.sections.tryAgain}</Button>
               </div>
             )}
-            {!compact && (
-              <div className="section-editor__actions">
+            {asking ? (
+              // Keyed apart from the row it replaces, as in the section editor.
+              <div key="ask" className="section-editor__actions section-editor__ask">
+                <p className="section-editor__ask-text">{strings.admin.discardChanges}</p>
+                <Button onClick={() => setAsking(false)}>{strings.propose.keepEditing}</Button>
+                <Button variant="danger" onClick={onClose}>
+                  {strings.propose.discard}
+                </Button>
+              </div>
+            ) : compact ? null : (
+              <div key="actions" className="section-editor__actions">
                 <Button onClick={close} disabled={sending}>
                   {strings.admin.cancel}
                 </Button>

@@ -24,7 +24,7 @@ import { createSectionsStore, type SectionsStore } from "../features/sections/us
 import { memoryStore, type KeyValueStore } from "../lib/storage";
 import { ApiFailure } from "../api/errors";
 import type { HouseSending } from "../features/admin/HouseBar";
-import { houseLinkOf, linkToHouse } from "../features/boards/houseList";
+import { hasUnsentEdits, houseLinkOf, linkToHouse } from "../features/boards/houseList";
 import { publishRequestOf } from "../features/boards/publish";
 import { BoardPage } from "./BoardPage";
 
@@ -256,11 +256,14 @@ describe("BoardPage", () => {
       "Films I make people watch",
     );
     expect(repository.get("films")?.title).toBe("Films I make people watch");
+    // The field goes, and the keyboard carries on from the pencil rather than the page's top.
+    expect(screen.getByRole("button", { name: "Edit list name" })).toHaveFocus();
 
     // Escape puts the old name back; an empty name is Untitled list.
     await userEvent.click(screen.getByRole("button", { name: "Edit list name" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Title" }), "x{Escape}");
     expect(repository.get("films")?.title).toBe("Films I make people watch");
+    expect(screen.getByRole("button", { name: "Edit list name" })).toHaveFocus();
     await userEvent.click(screen.getByRole("button", { name: "Edit list name" }));
     await userEvent.clear(screen.getByRole("textbox", { name: "Title" }));
     await userEvent.keyboard("{Enter}");
@@ -285,6 +288,8 @@ describe("BoardPage", () => {
     const menu = within(screen.getByRole("menu", { name: "Climax" }));
     await userEvent.click(menu.getByRole("menuitem", { name: "Remove from list" }));
     expect(screen.queryByRole("button", { name: "Climax" })).toBeNull();
+    // The focus went with the card's menu; it lands on the next card or on Undo, not the page.
+    expect(document.activeElement).not.toBe(document.body);
     // Gone from the board, not to the trash: only lists go there.
     expect(repository.get("films")?.items.some((item) => item.title === "Climax")).toBe(false);
     const notice = screen.getByRole("status");
@@ -305,6 +310,22 @@ describe("BoardPage", () => {
     expect(repository.get("films")?.deletedAt).toBe(clock);
     expect(router.state.location.pathname).toBe("/b");
     expect(router.state.location.state).toEqual({ trashed: ["films"] });
+    // In the board's place: Back does not open it again.
+    expect(router.state.historyAction).toBe("REPLACE");
+  });
+
+  it("opens a list in the trash as that, with Restore, and no board to edit", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), deletedAt: 500 });
+    open(repository, "/b/films");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("“Films” is in the trash.");
+    expect(screen.queryByRole("list", { name: "S" })).toBeNull();
+    expect(screen.queryByLabelText("More about this board")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+    expect(repository.get("films")?.deletedAt).toBeNull();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Films");
+    expect(within(tier("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
   });
 
   it("takes a published board's copy down before the trash, and keeps the board while it cannot", async () => {
@@ -411,6 +432,8 @@ describe("BoardPage: tiers and settings", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Tier Top removed · 1 card back in the pool",
     );
+    // The tier's pencil went with it: the keyboard is handed the way back.
+    expect(within(screen.getByRole("status")).getByRole("button", { name: "Undo" })).toHaveFocus();
     await userEvent.click(within(screen.getByRole("status")).getByRole("button", { name: "Undo" }));
     expect(kept().label).toBe("Top");
   });
@@ -442,6 +465,27 @@ describe("BoardPage: tiers and settings", () => {
     pointer("pointerup", window, 150, "touch");
     const dialog = screen.getByRole("dialog", { name: "Edit tier" });
     expect(within(dialog).getByRole("textbox", { name: "Label" })).toHaveValue("A");
+  });
+
+  it("lets the second tap of a finger's double tap fall on nothing in the tier's editor", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    const before = rankedTiers(repository.get("films")!)[1]!;
+    pointer("pointerdown", bandOf("A"), 150, "touch");
+    pointer("pointerup", window, 150, "touch");
+    const dialog = screen.getByRole("dialog", { name: "Edit tier" });
+
+    // The second tap lands on the first swatch, where the band was.
+    const swatch = within(dialog).getByRole("button", { name: TIER_PRESETS[0]!.light });
+    pointer("pointerdown", swatch, 150, "touch");
+    pointer("pointerup", swatch, 150, "touch");
+    fireEvent.click(swatch);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(rankedTiers(repository.get("films")!)[1]).toMatchObject({
+      colorLight: before.colorLight,
+      colorDark: before.colorDark,
+    });
   });
 
   it("moves a tier from its own editor, and by Alt and an arrow on its band, the keyboard staying with it", async () => {
@@ -964,6 +1008,8 @@ describe("BoardPage: a house list", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Update house list" }));
     expect(await screen.findByText("House list updated")).toBeInTheDocument();
     expect(house.replace).toHaveBeenCalledWith("H1", publishRequestOf(board));
+    // What went out is no edit the list lacks: a later Edit need not ask about it.
+    expect(hasUnsentEdits(houseRepository.get("films")!, houseStore)).toBe(false);
     await userEvent.click(screen.getByRole("button", { name: "House lists" }));
     expect(router.state.location.pathname).toBe("/admin/house");
   });

@@ -14,7 +14,7 @@ import {
   type SignInOutcome,
 } from "../lib/signIn";
 import { localStorageStore } from "../lib/storage";
-import { SessionContext, ShowFaceContext } from "./session";
+import { RedirectFailedContext, SessionContext, ShowFaceContext } from "./session";
 
 interface SessionProviderProps {
   children: ReactNode;
@@ -35,8 +35,8 @@ const signInDeps: SignInDeps = {
   inApp: () => isInAppBrowser(navigator.userAgent),
 };
 const defaultSignIn = () => signInWithGoogle(signInDeps);
-const isSignedIn = (outcome: unknown): boolean =>
-  typeof outcome === "object" && outcome !== null && (outcome as SignInOutcome).kind === "signedIn";
+const kindOf = (outcome: unknown): SignInOutcome["kind"] | null =>
+  typeof outcome === "object" && outcome !== null ? (outcome as SignInOutcome).kind : null;
 const defaultComplete = () => completeSignIn(signInDeps);
 
 export function SessionProvider({
@@ -50,6 +50,7 @@ export function SessionProvider({
   const [account, setAccount] = useState<Account | null>(null);
   // A face chosen a moment ago and still on its way to Firebase.
   const [shownFace, showFace] = useState<string | null | undefined>(undefined);
+  const [redirectFailed, setRedirectFailed] = useState(false);
 
   useEffect(
     () =>
@@ -80,7 +81,8 @@ export function SessionProvider({
   // A sign-in that left through a redirect lands back here.
   useEffect(() => {
     void complete().then((outcome) => {
-      if (isSignedIn(outcome)) {
+      if (kindOf(outcome) === "failed") setRedirectFailed(true);
+      if (kindOf(outcome) === "signedIn") {
         const next = current();
         owners.arrived({ owner: next.kind === "signedIn" ? next.uid : null, guestUid: null });
         setAccount(next);
@@ -102,7 +104,11 @@ export function SessionProvider({
   );
   return (
     <SessionContext.Provider value={session}>
-      <ShowFaceContext.Provider value={showFace}>{children}</ShowFaceContext.Provider>
+      <ShowFaceContext.Provider value={showFace}>
+        <RedirectFailedContext.Provider value={redirectFailed}>
+          {children}
+        </RedirectFailedContext.Provider>
+      </ShowFaceContext.Provider>
     </SessionContext.Provider>
   );
 }

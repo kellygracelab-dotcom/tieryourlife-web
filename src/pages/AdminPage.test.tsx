@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
@@ -142,6 +142,34 @@ describe("AdminPage", () => {
     open();
     expect(await screen.findByText("This page isn’t available.")).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Admin" })).toBeNull();
+  });
+
+  it("shows nothing to a moderator until the sections answer names the role", async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    mocks.loadAdminSections.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    open("/admin/anonymous");
+    await vi.waitFor(() => expect(mocks.loadReports).toHaveBeenCalled());
+    await act(async () => undefined);
+    expect(screen.queryByRole("navigation", { name: "Admin" })).toBeNull();
+    act(() => answer({ sections: [], role: "moderator", version: 1 }));
+    await screen.findByRole("heading", { name: "Admin" });
+    expect(panes()).not.toContain("/admin/anonymous");
+    expect(panes()).not.toContain("/admin/moderators");
+  });
+
+  it("shows only a moderator's panes when the sections answer fails", async () => {
+    mocks.loadAdminSections.mockRejectedValue(new ApiFailure({ kind: "unavailable" }));
+    open();
+    await screen.findByRole("heading", { name: "Admin" });
+    expect(panes()).toEqual([
+      "/admin/reports",
+      "/admin/proposals",
+      "/admin/sections",
+      "/admin/topics",
+      "/admin/lists",
+      "/admin/house",
+      "/admin/searches",
+    ]);
   });
 
   it("takes the one who may read the reports for the owner while the backend names no roles yet", async () => {

@@ -107,10 +107,14 @@ describe("shareCardOf", () => {
     const tree = shareCardOf(list, pictures);
     const text = textOf(tree).join(" | ");
     assert.match(text, /Every A24 film, ranked/);
-    assert.match(text, /by Danylo · 30 cards · 2,140 rankings · Film & TV/);
+    assert.match(textOf(tree).join(""), /by Danylo · 30 cards · 2,140 rankings · Film & TV/);
+    // The name is laid out on its own, so a right-to-left one keeps its place.
+    assert.match(text, /by  \| Danylo \|  · 30 cards/);
     assert.match(text, /Masterpiece/);
     assert.equal(count(tree, "img"), LIST_TILES);
     assert.ok(text.includes("TierYourLife"));
+    // At the bottom right, as on a ranking's card.
+    assert.ok(JSON.stringify(tree).includes('"justifyContent":"flex-end"'));
     // The name stands beside the app's icon: five tier bands behind the S.
     assert.match(text, /S \| TierYourLife$/);
     for (const band of ["#b03a32", "#c06a25", "#a98b1f", "#3f7f55", "#3c6e99"]) {
@@ -124,7 +128,12 @@ describe("shareCardOf", () => {
     );
     const tree = shareCardOf(ranking, pictures);
     const text = textOf(tree).join(" | ");
-    assert.match(text, /ranked by a visitor · 20 of 30 cards placed · Danylo’s list/);
+    assert.match(
+      textOf(tree).join(""),
+      /ranked by a visitor · 20 of 30 cards placed · Danylo’s list/,
+    );
+    // "’احمدs list" came of one run of text: the name now stands apart from the English.
+    assert.match(text, /placed · {2}\| Danylo \| ’s list/);
     assert.match(text, /\+3/);
     assert.match(text, /and 2 more tiers/);
     // Nine tiles in S: six with a picture, three named.
@@ -164,9 +173,11 @@ describe("addresses", () => {
   it("points a chat at a versioned picture and keeps one copy per version", () => {
     assert.equal(
       shareImageUrl("tieryourlife.web.app", "l", "abc def", 17),
-      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.3",
+      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.4",
     );
-    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.3.png");
+    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.4.png");
+    // A ranking whose list is gone is kept and fetched apart from the one with the name.
+    assert.equal(shareImagePath("r", "xfruzbap", "0-gone"), "share/r/xfruzbap/0-gone.4.png");
     // The folder ends in a slash, or tidying `abc` would reach into `abcd`.
     assert.equal(shareImageFolder("r", "xfruzbap"), "share/r/xfruzbap/");
     assert.ok(shareImagePath("l", "abc", 5).startsWith(shareImageFolder("l", "abc")));

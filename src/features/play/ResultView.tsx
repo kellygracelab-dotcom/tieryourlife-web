@@ -145,7 +145,13 @@ export function ResultView({
           <span className="result-view__from">{plural(strings.play.fromDuels, duels)}</span>
         </span>
       </header>
-      <div className="result-view__body">
+      <div
+        className="result-view__body"
+        role="group"
+        aria-labelledby={`${id}-title`}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a stop for Tab, so a result longer than the window scrolls from the keyboard too
+        tabIndex={0}
+      >
         {nothing ? (
           <div className="result-view__nothing">
             <Icon name="skip_next" className="result-view__nothing-icon" />

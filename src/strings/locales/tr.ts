@@ -111,6 +111,7 @@ const tr: Translation = {
     faceLetter: "Sadece harf",
     faceLetterCaption: "Harf",
     faceFailed: "Kaydedilemedi: sunucu yanıt vermedi.",
+    faceListsFailed: "Yayımladığınız listeler yüklenemedi.",
     privacyTitle: "Gizlilik",
     signOutNote:
       "Listelerin hesabında ve bu tarayıcıda kalır, yeniden giriş yapana kadar gizli olur. Oturum kapalıyken yalnızca hesapsız yapılan listeleri görürsün.",
@@ -355,6 +356,7 @@ const tr: Translation = {
     more: "Daha fazla göster",
     loadingMore: "Yükleniyor…",
     moreFailed: "Daha fazlası yüklenemedi.",
+    stale: "Yenilenemedi. Bunlar son ziyaretinizdeki listeler.",
   },
   list: {
     pictureCredits: "Görsel kaynakları",
@@ -382,7 +384,7 @@ const tr: Translation = {
     delete: "Kaldır",
     deleteTitle: "Bu liste yayından kaldırılsın mı?",
     deleteBody:
-      "“{title}” akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Telefonunuzdaki pano telefonunuzda kalır.",
+      "“{title}” akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin'de kalır.",
     keepIt: "Kalsın",
     deleting: "Yayından kaldırılıyor…",
     deleteFailed: "Yayından kaldırılamadı. Bir dakika sonra tekrar deneyin.",
@@ -417,6 +419,7 @@ const tr: Translation = {
     seedHint: "Yerleştirince sürümün {name} sıralamasından başlar.",
     seedHintUnnamed: "Yerleştirince sürümün bu sıralamadan başlar.",
     dropToStart: "Kendi sürümünü başlatmak için bırak.",
+    seedStart: "Kendi sürümünüzü başlatmak için panodaki bir kartı taşıyın.",
   },
   rankings: {
     title: "Sıralamalar",
@@ -510,6 +513,9 @@ const tr: Translation = {
       "Bağlantı yok. Hiçbir şey kaybolmadı: yerleştirmeleriniz bu cihazda güvende. Çevrimiçi olduğunuzda tekrar deneyin.",
     failedGone: "Bu liste artık kullanılamıyor, dolayısıyla sıralama saklanamaz.",
     failedOther: "Sıralama kaydedilemedi. Hiçbir şey kaybolmadı. Tekrar deneyin.",
+    failedChanged:
+      "Siz sıralarken yazar bu listeyi değiştirdi. Şimdiki hâliyle sıralamak için yeniden yükleyin.",
+    loadAgain: "Yeniden yükle",
   },
   keep: {
     title: "Bu sıralamayı saklayın",
@@ -555,7 +561,7 @@ const tr: Translation = {
     listsFailed: "Herkese açık listeleriniz yüklenemedi",
     remove: "Kaldır",
     removeAsk:
-      "“{title}” yayından kaldırılsın mı? Akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Telefonunuzdaki pano telefonunuzda kalır.",
+      "“{title}” yayından kaldırılsın mı? Akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin'de kalır.",
     keepIt: "Kalsın",
     countPublished: { other: "Yayımlanan: {n}" },
     countRanked: { other: "Sıralama: {n}" },
@@ -811,6 +817,12 @@ const tr: Translation = {
     takeDownBody: "Siteden kalkar ve bağlantısı artık çalışmaz. Listelerin olduğu gibi kalır.",
     takingDown: "Kaldırılıyor…",
     takenDown: "“{title}” yayından kaldırıldı",
+    mergeFind: "Başka bir konuyla birleştir",
+    houseStaleTitle: "“{title}” burada düzenlediğinizden beri değişti",
+    houseStaleBody:
+      "Olduğu gibi açarsanız göndermediğiniz değişiklikler kaybolur. Taslağınızda hâlâ duruyorlar, ama ondan güncellemek eski listeyi geri getirir.",
+    houseStaleDraft: "Taslağımı aç",
+    houseStaleFresh: "Olduğu gibi aç",
   },
   sections: {
     followers: { one: "{n} takipçi", other: "{n} takipçi" },
@@ -851,9 +863,11 @@ const tr: Translation = {
     sections: "Bölümler",
     group: "{name} · {n}",
     followSection: "{name} bölümünü takip et",
-    unfollowSection: "{name} takibini bırak",
     emptyHelper:
-      "Bir bölümü takip etmek için + simgesine dokunun. Konular bölümlerin içinde, kişiler profillerinde.",
+      "Sevdiğiniz bölümlerde + simgesine dokunun, sonra hepsini birden takip edin. Konular bölümlerin içinde, kişiler profillerinde.",
+    pickFollow: "Takip et · {n}",
+    pickNone: "En az birini seçin",
+    followedFailed: "Takip ettikleriniz yüklenemedi.",
     nothingPublished: "Takip ettikleriniz henüz bir şey yayımlamadı.",
     goExplore: "Keşfet’e git",
     back: "Geri git",
@@ -906,6 +920,10 @@ const tr: Translation = {
     withdrawAsk: "“{name}” geri çekilsin mi? Listeleriniz {section} bölümünde kalır.",
     withdrawFailed: "Geri çekilemedi. Tekrar deneyin.",
     withdrawn: "Öneri geri çekildi.",
+    noticeDeclined: "“{name}” bölüm olarak eklenmedi. Listeleriniz {section} bölümünde kalıyor.",
+    noticeMerged: "“{name}”, {section} ile birleştirildi.",
+    noticeDismiss: "Kapat",
+    noticeDismissFailed: "Kapatılamadı. Tekrar deneyin.",
   },
   sectionIcons: {
     category: "Şekiller",
@@ -1056,6 +1074,8 @@ const tr: Translation = {
     boardTrashed: "“{name}” çöp kutusuna taşındı",
     notFound: "Liste bulunamadı.",
     notFoundBody: "Silinmiş olabilir ya da başka bir cihazda duruyor.",
+    inTrash: "“{name}” çöp kutusunda.",
+    inTrashBody: "Yeniden sıralamak ve düzenlemek için geri yükle.",
     more: "Bu pano hakkında",
     delete: "Panoyu sil",
     trash: "Çöp kutusu",

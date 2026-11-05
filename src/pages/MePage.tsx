@@ -5,7 +5,11 @@ import type { MyList } from "../api/lists";
 import type { MyRankings, RankingSummary } from "../api/rank";
 import { AccountTabs } from "../app/AccountTabs";
 import { useSession } from "../app/session";
+import { SignInButton } from "../app/SignInButton";
 import { errorOf } from "../api/errors";
+import { boards as site } from "../features/boards/owners";
+import type { BoardsRepository } from "../features/boards/repository";
+import { forgetPublished } from "../features/boards/takeDown";
 import { sectionName } from "../features/sections/model";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import { useResource } from "../lib/useResource";
@@ -18,6 +22,7 @@ import { Menu } from "../ui/Menu";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./MePage.css";
+import { usePageTitle } from "../app/pageTitle";
 
 export type LoadMine = () => Promise<MyRankings>;
 export type LoadLists = () => Promise<{ lists: MyList[] }>;
@@ -86,6 +91,8 @@ interface RowProps {
   remove: (entry: Entry) => Promise<void>;
   copy: Copy;
   notify: (notice: SnackbarNotice) => void;
+  /** Taken away: a list's board is its own again at once. */
+  onRemoved: (entry: Entry) => void;
   onGone: (entry: Entry) => void;
 }
 
@@ -93,7 +100,7 @@ interface RowProps {
  * One row for a list or a ranking. Taking it away is asked about in the row
  * itself: it is one thing, and the answer is a press away either way.
  */
-function Row({ entry, remove, copy, notify, onGone }: RowProps) {
+function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
   const [state, setState] = useState<RowState>({ status: "idle" });
   const isList = entry.kind === "list";
   const title = isList ? entry.list.title : entry.ranking.title;
@@ -105,6 +112,7 @@ function Row({ entry, remove, copy, notify, onGone }: RowProps) {
     : entry.ranking.imageUrl;
 
   const gone = () => {
+    onRemoved(entry);
     setState({ status: "gone" });
     notify({ text: isList ? strings.me.unpublished : strings.me.deleted });
     setTimeout(() => onGone(entry), COLLAPSE_MS);
@@ -166,7 +174,7 @@ function Row({ entry, remove, copy, notify, onGone }: RowProps) {
       ) : (
         <>
           <Link className="mine__text" to={to}>
-            <span className="mine__title">{title}</span>
+            <bdi className="mine__title">{title}</bdi>
             <span className="mine__meta">{metaOf(entry)}</span>
             {entry.kind === "list" && entry.movesTo !== null && (
               <span className="mine__meta">{entry.movesTo}</span>
@@ -227,9 +235,19 @@ interface MineProps {
   deleteRanking: DeleteRanking;
   copy: Copy;
   store: SectionsStore;
+  repository: BoardsRepository;
 }
 
-function Mine({ uid, load, loadLists, unpublish, deleteRanking, copy, store }: MineProps) {
+function Mine({
+  uid,
+  load,
+  loadLists,
+  unpublish,
+  deleteRanking,
+  copy,
+  store,
+  repository,
+}: MineProps) {
   const { sections } = useSections(store);
   // Published into a section of one's own still waiting, a list sits in the
   // one the proposal files under, and says where it goes once it is approved.
@@ -299,10 +317,14 @@ function Mine({ uid, load, loadLists, unpublish, deleteRanking, copy, store }: M
     );
   }
 
+  // A filter holds only while its chips are there to undo it: a delete that
+  // took them away left the other kind hidden with no way back.
+  const filtering = lists > 0 && rankings > 0 && entries.length > FILTER_FROM;
+  const applied: Filter = filtering ? filter : "all";
   const shown = entries.filter(
     (entry) =>
-      filter === "all" ||
-      (filter === "published" ? entry.kind === "list" : entry.kind === "ranking"),
+      applied === "all" ||
+      (applied === "published" ? entry.kind === "list" : entry.kind === "ranking"),
   );
   const remove = (entry: Entry): Promise<void> =>
     entry.kind === "list" ? unpublish(entry.list.id) : deleteRanking(entry.ranking.code);
@@ -315,7 +337,7 @@ function Mine({ uid, load, loadLists, unpublish, deleteRanking, copy, store }: M
           ...(rankings > 0 ? [plural(strings.me.countRanked, rankings)] : []),
         ].join(" · ")}
       </p>
-      {lists > 0 && rankings > 0 && entries.length > FILTER_FROM && (
+      {filtering && (
         <div className="me__filters" role="group" aria-label={strings.me.filters}>
           <Chip selected={filter === "all"} onClick={() => setFilter("all")}>
             {strings.me.filterAll}
@@ -336,6 +358,9 @@ function Mine({ uid, load, loadLists, unpublish, deleteRanking, copy, store }: M
             remove={remove}
             copy={copy}
             notify={setNotice}
+            onRemoved={(left) => {
+              if (left.kind === "list") forgetPublished(left.list.id, repository, Date.now());
+            }}
             onGone={(left) => setGone((keys) => [...keys, left.key])}
           />
         ))}
@@ -355,6 +380,8 @@ interface MePageProps {
   deleteRanking?: DeleteRanking;
   copy?: Copy;
   store?: SectionsStore;
+  /** The boards one of which may have published a list taken down here. */
+  repository?: BoardsRepository;
 }
 
 export function MePage({
@@ -364,8 +391,10 @@ export function MePage({
   deleteRanking = removeRanking,
   copy = (text) => navigator.clipboard.writeText(text),
   store = sectionsStore,
+  repository = site,
 }: MePageProps) {
-  const { account, signIn } = useSession();
+  usePageTitle(strings.me.lists, { inBar: false });
+  const { account } = useSession();
   return (
     <section className="me">
       <h1 className="me__title">{strings.me.lists}</h1>
@@ -374,11 +403,7 @@ export function MePage({
       {account?.kind === "guest" && (
         <>
           <p className="me__text">{strings.me.signInFirst}</p>
-          <div>
-            <Button variant="filled" onClick={() => void signIn()}>
-              {strings.nav.signIn}
-            </Button>
-          </div>
+          <SignInButton label={strings.nav.signIn} />
         </>
       )}
       {account?.kind === "signedIn" && (
@@ -390,6 +415,7 @@ export function MePage({
           deleteRanking={deleteRanking}
           copy={copy}
           store={store}
+          repository={repository}
         />
       )}
     </section>

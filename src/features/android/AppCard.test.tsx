@@ -49,4 +49,15 @@ describe("AppCard", () => {
     );
     expect(screen.getByRole("complementary")).toBeInTheDocument();
   });
+
+  it("hands the focus to what follows once closed, not to the page", async () => {
+    render(
+      <>
+        <AppCard slot="home" store={memoryStore()} apple={false} live={false} />
+        <button type="button">Next</button>
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Hide" }));
+    expect(screen.getByRole("button", { name: "Next" })).toHaveFocus();
+  });
 });

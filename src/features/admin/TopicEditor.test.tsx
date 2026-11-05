@@ -213,6 +213,19 @@ describe("TopicEditor", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("asks before Escape throws away a name typed, and keeps it on Keep editing", async () => {
+    const { onClose } = create();
+    await userEvent.type(nameField(), "Soulslikes");
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("Discard your changes?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(nameField()).toHaveValue("Soulslikes");
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("says a picture the page cannot draw cannot be the topic's", async () => {
     const { deps } = create();
     vi.mocked(deps.crop).mockRejectedValueOnce(new Error("tainted"));

@@ -28,6 +28,12 @@ describe("rank", () => {
     expect(request).toHaveBeenCalledWith("POST", "/api/rank", {
       body: { listId: "wMRMFDxo8UejcAi2VVMW", rows: [[2, 0], []] },
     });
+
+    // The version the rows were placed on, so a republished list refuses them.
+    await keepRanking(client, "wMRMFDxo8UejcAi2VVMW", rows, 1_700);
+    expect(request).toHaveBeenLastCalledWith("POST", "/api/rank", {
+      body: { listId: "wMRMFDxo8UejcAi2VVMW", rows: [[2, 0], []], version: 1_700 },
+    });
   });
 
   it("reads a ranking by code with App Check alone", async () => {

@@ -13,6 +13,8 @@ export type RoleState =
  * sections answer names the role. A backend from before roles says nothing,
  * and then the one who may read the reports is taken for the owner; every
  * write is still checked by the backend, so this only decides what is shown.
+ * Until the answer comes the role is unknown, and when it fails the one who
+ * may read the reports is shown only what a moderator may use.
  */
 export function useAdminRole(load: () => Promise<AdminSections> = loadAdminSections): RoleState {
   const { account } = useSession();
@@ -32,9 +34,9 @@ export function useAdminRole(load: () => Promise<AdminSections> = loadAdminSecti
     return { status: "admin", role: state.value.role };
   }
   if (state.status === "ready" && state.value.role === null) return { status: "none" };
-  if (moderator.status === "yes") return { status: "admin", role: "owner" };
-  if (moderator.status === "no" && state.status !== "loading") return { status: "none" };
-  return { status: "unknown" };
+  if (state.status === "loading" || moderator.status === "unknown") return { status: "unknown" };
+  if (moderator.status === "no") return { status: "none" };
+  return { status: "admin", role: state.status === "ready" ? "owner" : "moderator" };
 }
 
 /**

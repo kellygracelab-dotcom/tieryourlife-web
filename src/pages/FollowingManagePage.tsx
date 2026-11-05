@@ -1,9 +1,10 @@
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, Navigate } from "react-router";
 import type { Following } from "../api/community";
 import type { Topic } from "../api/sections";
 import { useSession } from "../app/session";
 import { FollowButton } from "../features/community/FollowButton";
+import { followedSectionIds, followedSectionOf } from "../features/sections/following";
 import {
   builtInSection,
   FOLLOWING_PATH,
@@ -26,10 +27,13 @@ import {
 import { isEditorialAuthor } from "../lib/editorial";
 import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
+import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import "../features/feed/feed.css";
 import "./FollowingManagePage.css";
+import { usePageTitle } from "../app/pageTitle";
 
 export interface ManageDeps {
   load: () => Promise<Following>;
@@ -105,11 +109,27 @@ export function FollowingManagePage({
   deps = manageDeps,
   store = sectionsStore,
 }: FollowingManagePageProps) {
+  usePageTitle(strings.sections.tabFollowing, { inBar: false });
   const { account } = useSession();
-  const { sections } = useSections(store);
+  const snapshot = useSections(store);
+  const { sections } = snapshot;
   const uid = account?.kind === "signedIn" ? account.uid : "";
   const load = useCallback(() => deps.load(), [deps]);
   const followed = useResource(uid, load);
+  const backendSections = followed.state.status === "ready" ? followed.state.value.sections : null;
+  // Every followed section, also one the sections leave out (hidden, or not
+  // read because they would not load): each has its row and its button.
+  const followedIds = useMemo(
+    () =>
+      backendSections === null
+        ? []
+        : followedSectionIds(
+            snapshot,
+            backendSections.map((one) => one.id),
+          ),
+    [snapshot, backendSections],
+  );
+  useEffect(() => followedIds.forEach((id) => store.lookUp(id)), [followedIds, store]);
   // What this visit changed, by key; a row keeps its place either way.
   const [changed, setChanged] = useState<ReadonlyMap<string, boolean>>(new Map());
   // The sections followed when the page opened stay listed after an unfollow.
@@ -152,7 +172,10 @@ export function FollowingManagePage({
 
   const byId = new Map(sections.map((one) => [one.id, one]));
   const sectionOf = (id: string | null): Section => byId.get(id ?? OTHER) ?? builtInSection(OTHER);
-  const sectionRows = sections.filter((one) => one.following || keptSections.has(one.id));
+  const sectionRows = [
+    ...followedIds,
+    ...[...keptSections].filter((id) => !followedIds.includes(id)),
+  ].map((id) => followedSectionOf(snapshot, id));
   const topics: Topic[] = followed.state.status === "ready" ? followed.state.value.topics : [];
   const people =
     followed.state.status === "ready"
@@ -169,6 +192,14 @@ export function FollowingManagePage({
       </header>
       {followed.state.status === "loading" ? (
         <Skeleton height="72px" />
+      ) : followed.state.status === "error" ? (
+        // Never "not following anything" for what could not be read.
+        <div className="feed__trouble" role="alert">
+          <p>{strings.sections.followedFailed}</p>
+          <Button variant="tonal" icon="refresh" onClick={followed.retry}>
+            {strings.feed.tryAgain}
+          </Button>
+        </div>
       ) : sectionRows.length + topics.length + people.length === 0 ? (
         <div className="following-empty">
           <p className="following-empty__title">{strings.sections.emptyTitle}</p>
@@ -191,12 +222,17 @@ export function FollowingManagePage({
                   </span>
                 }
                 headline={section.name}
-                following={section.following}
+                following={isOn(`s:${section.id}`, true)}
                 onToggle={() => {
                   setKeptSections((before) => new Set([...before, section.id]));
-                  toggle(`s:${section.id}`, section.name, section.following, async (on) => {
-                    if (!(await store.setFollowing(section.id, on))) throw new Error("refused");
-                  });
+                  toggle(
+                    `s:${section.id}`,
+                    section.name,
+                    isOn(`s:${section.id}`, true),
+                    async (on) => {
+                      if (!(await store.setFollowing(section.id, on))) throw new Error("refused");
+                    },
+                  );
                 }}
               />
             ))}

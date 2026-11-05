@@ -109,6 +109,7 @@ const ja: Translation = {
     faceLetter: "頭文字だけ",
     faceLetterCaption: "頭文字",
     faceFailed: "保存できませんでした。サーバーが応答しません。",
+    faceListsFailed: "公開したリストを読み込めませんでした。",
     privacyTitle: "プライバシー",
     signOutNote:
       "リストはアカウントとこのブラウザに残り、もう一度ログインするまで非表示になります。ログアウト中は、アカウントなしで作ったリストだけが表示されます。",
@@ -356,6 +357,7 @@ const ja: Translation = {
     more: "もっと見る",
     loadingMore: "読み込み中…",
     moreFailed: "続きを読み込めませんでした。",
+    stale: "更新できませんでした。前回表示したリストです。",
   },
   list: {
     pictureCredits: "画像のクレジット",
@@ -382,7 +384,7 @@ const ja: Translation = {
     delete: "取り下げる",
     deleteTitle: "このリストの公開をやめますか？",
     deleteBody:
-      "「{title}」はフィードから消え、リンクも使えなくなります。すでに作られたランキングは残ります。スマホのボードはスマホに残ります。",
+      "「{title}」はフィードから消え、リンクも使えなくなります。すでに作られたランキングは残ります。ボードは「あなたのリスト」に残ります。",
     keepIt: "残す",
     deleting: "公開を取り消し中…",
     deleteFailed: "公開を取り消せませんでした。1分ほど待ってからもう一度お試しください。",
@@ -417,6 +419,7 @@ const ja: Translation = {
     seedHint: "置くと、{name}のランキングから自分のバージョンが始まります。",
     seedHintUnnamed: "置くと、このランキングから自分のバージョンが始まります。",
     dropToStart: "ドロップすると自分のバージョンが始まります。",
+    seedStart: "ボードのカードを動かすと、自分のバージョンが始まります。",
   },
   rankings: {
     title: "ランキング",
@@ -510,6 +513,9 @@ const ja: Translation = {
     failedGone: "このリストは利用できなくなったため、ランキングを保存できません。",
     failedOther:
       "ランキングを保存できませんでした。内容は失われていません。もう一度お試しください。",
+    failedChanged:
+      "ランキング中に作者がこのリストを変更しました。読み込み直すと、今のリストでランキングできます。",
+    loadAgain: "読み込み直す",
   },
   keep: {
     title: "このランキングを保存",
@@ -556,7 +562,7 @@ const ja: Translation = {
     listsFailed: "公開中のリストを読み込めませんでした",
     remove: "取り下げる",
     removeAsk:
-      "「{title}」の公開をやめますか？ フィードから消え、リンクも使えなくなります。すでに作られたランキングは残ります。スマホのボードはスマホに残ります。",
+      "「{title}」の公開をやめますか？ フィードから消え、リンクも使えなくなります。すでに作られたランキングは残ります。ボードは「あなたのリスト」に残ります。",
     keepIt: "残す",
     countPublished: { other: "公開 {n} 件" },
     countRanked: { other: "ランキング {n} 件" },
@@ -804,6 +810,12 @@ const ja: Translation = {
     takeDownBody: "サイトから消え、リンクも使えなくなります。あなたのリストはそのまま残ります。",
     takingDown: "取り下げ中…",
     takenDown: "「{title}」を取り下げました",
+    mergeFind: "ほかのトピックに統合",
+    houseStaleTitle: "「{title}」はここで編集したあとに変更されました",
+    houseStaleBody:
+      "今の状態で開くと、送信していない変更は失われます。下書きには残っていますが、下書きから更新すると古いリストに戻ります。",
+    houseStaleDraft: "下書きを開く",
+    houseStaleFresh: "今の状態で開く",
   },
   sections: {
     followers: { other: "フォロワー{n}人" },
@@ -844,9 +856,11 @@ const ja: Translation = {
     sections: "セクション",
     group: "{name} · {n}",
     followSection: "{name}をフォロー",
-    unfollowSection: "{name}のフォローを解除",
     emptyHelper:
-      "+をタップしてセクションをフォロー。トピックは各セクションの中に、人はプロフィールにあります。",
+      "好きなセクションの+をタップして、まとめてフォローしましょう。トピックは各セクションの中に、人はプロフィールにあります。",
+    pickFollow: "フォロー · {n}",
+    pickNone: "1つ以上選んでください",
+    followedFailed: "フォロー中の項目を読み込めませんでした。",
     nothingPublished: "フォロー中の人はまだ何も公開していません。",
     goExplore: "見つけるへ",
     back: "戻る",
@@ -899,6 +913,11 @@ const ja: Translation = {
     withdrawAsk: "「{name}」を取り下げますか？リストは{section}に残ります。",
     withdrawFailed: "取り下げられませんでした。もう一度お試しください。",
     withdrawn: "提案を取り下げました。",
+    noticeDeclined:
+      "「{name}」はセクションとして追加されませんでした。リストは「{section}」に残ります。",
+    noticeMerged: "「{name}」は「{section}」に統合されました。",
+    noticeDismiss: "閉じる",
+    noticeDismissFailed: "閉じられませんでした。もう一度お試しください。",
   },
   sectionIcons: {
     category: "図形",
@@ -1048,6 +1067,8 @@ const ja: Translation = {
     boardTrashed: "「{name}」をゴミ箱に移動しました",
     notFound: "リストが見つかりません。",
     notFoundBody: "削除されたか、別の端末にあるのかもしれません。",
+    inTrash: "「{name}」はゴミ箱にあります。",
+    inTrashBody: "復元すると、また並べ替えたり編集したりできます。",
     more: "このボードについて",
     delete: "ボードを削除",
     trash: "ゴミ箱",

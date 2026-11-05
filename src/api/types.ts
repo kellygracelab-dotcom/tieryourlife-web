@@ -64,6 +64,11 @@ export interface ListSummary {
   tierColors: string[];
   updatedAt: number;
   takeCount: number;
+  /**
+   * The readers' rankings the list keeps, the number its Rankings sheet lists.
+   * takeCount counts every Finish, a guest's too, and is not that number.
+   */
+  rankingCount?: number;
   /** A house list's title in the app's other languages, by locale. */
   names?: Partial<Record<string, string>>;
   /** The topic the list was published under, when it has one. */

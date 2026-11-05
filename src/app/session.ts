@@ -36,3 +36,11 @@ export type ShowFace = (photoUrl: string | null | undefined) => void;
 export const ShowFaceContext = createContext<ShowFace>(() => undefined);
 
 export const useShowFace = (): ShowFace => useContext(ShowFaceContext);
+
+/**
+ * Whether a sign-in that left through a redirect came back failed. Nobody
+ * pressed anything on this page, so the header says it in its place.
+ */
+export const RedirectFailedContext = createContext(false);
+
+export const useRedirectFailed = (): boolean => useContext(RedirectFailedContext);

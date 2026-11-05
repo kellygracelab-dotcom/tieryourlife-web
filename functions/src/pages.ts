@@ -21,11 +21,6 @@ const RANKINGS = "rankings";
 const HOSTS = new Set(["tieryourlife.web.app", "tieryourlife.firebaseapp.com"]);
 const DEFAULT_HOST = "tieryourlife.web.app";
 
-/**
- * A hosting-only deploy changes the asset names inside index.html; a minute
- * of staleness is the most a page may point at files that no longer exist.
- */
-const SHELL_TTL_MS = 60_000;
 /** A hosting answer slower than this would hold the page toward the function's own timeout. */
 export const SHELL_TIMEOUT_MS = 5_000;
 const LIST_ID = /^[A-Za-z0-9_-]{8,64}$/;
@@ -33,7 +28,7 @@ const LIST_ID = /^[A-Za-z0-9_-]{8,64}$/;
 interface CachedShell {
   host: string;
   html: string;
-  fetchedAt: number;
+  etag: string | null;
 }
 
 let shell: CachedShell | null = null;
@@ -43,22 +38,34 @@ export function hostOf(request: Request): string {
   return HOSTS.has(forwarded) ? forwarded : DEFAULT_HOST;
 }
 
-export async function loadShell(
-  host: string,
-  now: number,
-  fetchImpl: typeof fetch = fetch,
-): Promise<string> {
-  if (shell !== null && shell.host === host && now - shell.fetchedAt < SHELL_TTL_MS) {
-    return shell.html;
+/**
+ * The site's index.html, asked after on every page. A deploy renames the
+ * script inside it, and a shell kept for a minute named a script that was
+ * gone: the page stayed white, and the edge kept it that way for two more
+ * minutes. Hosting answers "not modified" to the tag it gave, so asking is
+ * a short round trip, not the whole file. When hosting cannot be reached,
+ * the shell already kept is better than no page.
+ */
+export async function loadShell(host: string, fetchImpl: typeof fetch = fetch): Promise<string> {
+  const kept = shell !== null && shell.host === host ? shell : null;
+  try {
+    const response = await fetchImpl(`https://${host}/index.html`, {
+      headers: {
+        Accept: "text/html",
+        ...(kept?.etag ? { "If-None-Match": kept.etag } : {}),
+      },
+      signal: AbortSignal.timeout(SHELL_TIMEOUT_MS),
+    });
+    if (response.status === 304 && kept !== null) return kept.html;
+    if (!response.ok) throw new Error(`index.html answered ${response.status}`);
+    const html = await response.text();
+    shell = { host, html, etag: response.headers.get("etag") };
+    return html;
+  } catch (error) {
+    if (kept === null) throw error;
+    console.warn("index.html not checked; the kept one goes out", error);
+    return kept.html;
   }
-  const response = await fetchImpl(`https://${host}/index.html`, {
-    headers: { Accept: "text/html" },
-    signal: AbortSignal.timeout(SHELL_TIMEOUT_MS),
-  });
-  if (!response.ok) throw new Error(`index.html answered ${response.status}`);
-  const html = await response.text();
-  shell = { host, html, fetchedAt: now };
-  return html;
 }
 
 export function resetShellForTests(): void {
@@ -86,6 +93,8 @@ interface StoredList {
   tierColors?: string[];
   updatedAt?: FirebaseFirestore.Timestamp;
   takeCount?: number;
+  /** The readers' rankings kept with the list, as the proxy counts them. */
+  rankingCount?: number;
   underReview?: boolean;
   tiers?: unknown[];
   items?: unknown[];
@@ -133,6 +142,8 @@ export function listPayload(id: string, data: StoredList) {
     tierColors: data.tierColors ?? [],
     updatedAt: data.updatedAt?.toMillis() ?? 0,
     takeCount: data.takeCount ?? 0,
+    // The menu's "Rankings · N": without it a list opened by its link said 0.
+    rankingCount: data.rankingCount ?? 0,
     tiers: data.tiers ?? [],
     items: data.items ?? [],
     // Without them a reader in another language got a house list as written,
@@ -144,7 +155,7 @@ export function listPayload(id: string, data: StoredList) {
 
 export async function listPage(request: Request, response: Response, id: string): Promise<void> {
   const host = hostOf(request);
-  const html = await loadShell(host, Date.now());
+  const html = await loadShell(host);
   const doc = LIST_ID.test(id) ? await getFirestore().collection(PUBLISHED).doc(id).get() : null;
   const data = doc?.exists ? (doc.data() as StoredList) : null;
   // A hidden or missing list gets the bare shell: the page will say so itself,
@@ -222,9 +233,20 @@ const standingOf = (
 export const rankingVersion = (stored: StoredRanking, listChangedAt: number): number =>
   Math.max(stored.updatedAt?.toMillis() ?? stored.createdAt?.toMillis() ?? 0, listChangedAt);
 
-/** When a list last changed, or nothing when it is gone. */
-const changedAt = (list: FirebaseFirestore.DocumentSnapshot): number =>
-  list.exists ? ((list.get("updatedAt") as StoredList["updatedAt"])?.toMillis() ?? 0) : 0;
+/**
+ * The version a ranking's card is kept and fetched under. A list that is gone
+ * takes its author's name off every ranking of it without a newer date to
+ * show for that, so the card says so in its version; otherwise the copy kept
+ * with the name would be the one sent again. [listChangedAt] is null then.
+ */
+export const rankingCardVersion = (stored: StoredRanking, listChangedAt: number | null): string =>
+  listChangedAt === null
+    ? `${rankingVersion(stored, 0)}-gone`
+    : `${rankingVersion(stored, listChangedAt)}`;
+
+/** When a list last changed, or null when it is gone. */
+const changedAt = (list: FirebaseFirestore.DocumentSnapshot): number | null =>
+  list.exists ? ((list.get("updatedAt") as StoredList["updatedAt"])?.toMillis() ?? 0) : null;
 
 export async function rankingShareImage(response: Response, code: string): Promise<void> {
   const doc = isCode(code) ? await getFirestore().collection(RANKINGS).doc(code).get() : null;
@@ -247,7 +269,7 @@ export async function rankingShareImage(response: Response, code: string): Promi
   };
   sendShareImage(
     response,
-    await shareImageFor("r", code, rankingVersion(stored, changedAt(list)), async () => card),
+    await shareImageFor("r", code, rankingCardVersion(stored, changedAt(list)), async () => card),
   );
 }
 
@@ -257,7 +279,7 @@ export async function rankingPage(
   code: string,
 ): Promise<void> {
   const host = hostOf(request);
-  const html = await loadShell(host, Date.now());
+  const html = await loadShell(host);
   const db = getFirestore();
   const doc = isCode(code) ? await db.collection(RANKINGS).doc(code).get() : null;
   if (doc === null || !doc.exists) return send(response, html);
@@ -283,7 +305,7 @@ export async function rankingPage(
       category: stored.snapshot.category,
       editorial: snapshot.editorial === true,
     }),
-    image: shareImageUrl(host, "r", code, rankingVersion(stored, changedAt(list))),
+    image: shareImageUrl(host, "r", code, rankingCardVersion(stored, changedAt(list))),
     imageSize: SHARE_SIZE,
     url: `https://${host}/r/${code}`,
   };

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { memoryStore } from "../../lib/storage";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { localStorageStore, memoryStore, resetStorageTroubleForTests } from "../../lib/storage";
 import { newBoard, poolTier } from "./model";
 import { boardKey, boardsRepository, HOUSE_BOARD_PREFIX, parseBoard } from "./repository";
 
@@ -169,6 +169,24 @@ describe("parseBoard", () => {
 });
 
 describe("the repository", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    resetStorageTroubleForTests();
+  });
+
+  // A browser told to block the site: the list made now lasts the visit.
+  it("keeps a new board's title and cards while the browser blocks the site", () => {
+    vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+      throw new DOMException("denied", "SecurityError");
+    });
+    const repo = boardsRepository(localStorageStore);
+    const board = { ...newBoard("b1", "Films", 1, uids()), title: "Films" };
+    expect(repo.save(board)).toBe(false);
+    expect(repo.get("b1")?.title).toBe("Films");
+    repo.save({ ...board, title: "Films, ranked" });
+    expect(repo.all().map((one) => one.title)).toEqual(["Films, ranked"]);
+  });
+
   it("keeps the house's boards apart from one's own on the same device", () => {
     const store = memoryStore();
     const own = boardsRepository(store);

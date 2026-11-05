@@ -36,14 +36,39 @@ function Tile({
   );
 }
 
-export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoardProps) {
+function useTiles(items: readonly PublishedItem[]) {
   const board = useBoardSize();
-  const tileOf = (position: number) => {
+  return (position: number) => {
     const item = items[position];
     return item === undefined ? null : (
       <Tile key={`${position}-${item.title}`} item={item} position={position} board={board} />
     );
   };
+}
+
+/**
+ * The cards an arrangement left unranked, under its board: the author's own
+ * view, a ranking's page and a visitor's Theirs all say them, as the app does.
+ */
+export function UnrankedPool({
+  items,
+  pool,
+}: {
+  items: readonly PublishedItem[];
+  pool: readonly number[];
+}) {
+  const tileOf = useTiles(items);
+  if (pool.length === 0) return null;
+  return (
+    <div className="pool">
+      <h2 className="pool__title">{plural(strings.board.unranked, pool.length)}</h2>
+      <ul className="pool__items">{pool.map(tileOf)}</ul>
+    </div>
+  );
+}
+
+export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoardProps) {
+  const tileOf = useTiles(items);
   return (
     <section className="board" aria-label={label}>
       {tiers.map((tier, index) => (
@@ -56,19 +81,14 @@ export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoard
         >
           <div className="tier__band">
             <span className="tier__label">{tier.label}</span>
-            {tier.caption !== null && <span className="tier__caption">{tier.caption}</span>}
+            {tier.caption !== null && <bdi className="tier__caption">{tier.caption}</bdi>}
           </div>
           <ul className="tier__items" aria-label={tier.label}>
             {(rows[index] ?? []).map(tileOf)}
           </ul>
         </div>
       ))}
-      {pool.length > 0 && (
-        <div className="pool">
-          <h2 className="pool__title">{plural(strings.board.unranked, pool.length)}</h2>
-          <ul className="pool__items">{pool.map(tileOf)}</ul>
-        </div>
-      )}
+      <UnrankedPool items={items} pool={pool} />
     </section>
   );
 }

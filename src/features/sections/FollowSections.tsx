@@ -9,49 +9,46 @@ export const MINI_TILES = 9;
 
 interface FollowSectionsProps {
   sections: readonly Section[];
-  /** Follows or unfollows one; the tile's badge turns at once. */
+  /** The ones picked so far, to follow together. */
+  picked: ReadonlySet<string>;
+  /** Picks one or puts it back; nothing is sent until Follow. */
   onToggle: (section: Section) => void;
 }
 
 /**
  * The empty Following tab's way in, as the app has it: every section as a
- * small tile with a + to follow it, a ✓ once followed.
+ * small tile with a + to pick it, a ✓ once picked, all followed together by
+ * the button under them.
  */
-export function FollowSections({ sections, onToggle }: FollowSectionsProps) {
+export function FollowSections({ sections, picked, onToggle }: FollowSectionsProps) {
   const crowded = sections.length > MINI_TILES;
   const shown = crowded ? sections.slice(0, MINI_TILES - 1) : sections;
   return (
     <ul className="mini-sections">
-      {shown.map((section) => (
-        <li key={section.id} className="mini-section">
-          <Link
-            className="mini-section__tile"
-            to={sectionPath(section.id)}
-            style={sectionStyle(section)}
-          >
-            <Icon name={section.icon} className="mini-section__icon" />
-            <span className="mini-section__name">{section.name}</span>
-          </Link>
-          <button
-            type="button"
-            className={
-              section.following
-                ? "mini-section__badge mini-section__badge--on"
-                : "mini-section__badge"
-            }
-            aria-pressed={section.following}
-            aria-label={fill(
-              section.following ? strings.sections.unfollowSection : strings.sections.followSection,
-              {
-                name: section.name,
-              },
-            )}
-            onClick={() => onToggle(section)}
-          >
-            <Icon name={section.following ? "check" : "add"} />
-          </button>
-        </li>
-      ))}
+      {shown.map((section) => {
+        const on = picked.has(section.id);
+        return (
+          <li key={section.id} className="mini-section">
+            <Link
+              className="mini-section__tile"
+              to={sectionPath(section.id)}
+              style={sectionStyle(section)}
+            >
+              <Icon name={section.icon} className="mini-section__icon" />
+              <span className="mini-section__name">{section.name}</span>
+            </Link>
+            <button
+              type="button"
+              className={on ? "mini-section__badge mini-section__badge--on" : "mini-section__badge"}
+              aria-pressed={on}
+              aria-label={fill(strings.sections.followSection, { name: section.name })}
+              onClick={() => onToggle(section)}
+            >
+              <Icon name={on ? "check" : "add"} />
+            </button>
+          </li>
+        );
+      })}
       {crowded && (
         <li className="mini-section">
           <Link className="mini-section__tile mini-section__tile--all" to={ALL_SECTIONS_PATH}>

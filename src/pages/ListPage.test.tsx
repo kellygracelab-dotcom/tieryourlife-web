@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,10 +9,14 @@ import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
-import { itemsIn, poolTier, rankedTiers } from "../features/boards/model";
+import { itemsIn, newBoard, poolTier, rankedTiers } from "../features/boards/model";
 import { boards } from "../features/boards/owners";
+import { EVERYTHING } from "../features/play/chosen";
+import { newGame } from "../features/play/game";
+import { localGames, playKey } from "../features/play/savedGames";
 import { writeKept } from "../features/ranking/kept";
 import { draftKey, loadDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
+import { keepRanking } from "../lib/api";
 import { localStorageStore, memoryStore } from "../lib/storage";
 
 const mocks = vi.hoisted(() => ({
@@ -56,6 +60,7 @@ const list: PublishedList = {
   tierColors: [],
   updatedAt: 0,
   takeCount: 2140,
+  rankingCount: 3,
   tiers: [{ label: "S", caption: "Masterpiece", colorLight: "#b03a32", colorDark: "#f1948c" }],
   items: [
     { title: "Ex Machina", imageUrl: null, tierIndex: 0 },
@@ -160,8 +165,11 @@ describe("ListPage save to my lists", () => {
     expect(itemsIn(saved!, s!.uid).map((item) => item.title)).toEqual(["Ex Machina"]);
     expect(itemsIn(saved!, poolTier(saved!)!.uid).map((item) => item.title)).toEqual(["The Witch"]);
 
+    // One copy a visit: the head's Save now reads Open, as the receipt's action does.
+    const opens = screen.getAllByRole("button", { name: "Open" });
+    expect(screen.queryByRole("button", { name: "Save to my lists" })).toBeNull();
     // Open leads to the new board, which has the list's name and its arrangement.
-    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await userEvent.click(opens[0]!);
     // The board page is a separate chunk; its first load in a test takes a moment.
     expect(await screen.findByText(/1 ranked · 1 in pool/, {}, { timeout: 4000 })).toBeVisible();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Every A24 film, ranked");
@@ -255,7 +263,9 @@ describe("ListPage report and hide", () => {
     await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
     await userEvent.click(screen.getByRole("button", { name: "Hide instead" }));
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
-    const snackbar = screen.getAllByRole("status").find((el) => el.className === "snackbar")!;
+    const snackbar = screen
+      .getAllByRole("status")
+      .find((el) => el.className === "snackbar-region")!;
     expect(snackbar).toHaveTextContent("Hidden for you");
     await userEvent.click(within(snackbar).getByRole("button", { name: "Undo" }));
     expect(screen.queryByRole("heading", { level: 2, name: /You hid/ })).toBeNull();
@@ -311,7 +321,7 @@ describe("ListPage menu", () => {
     // Save to my lists is the head's button on a wide screen and only a phone's line here.
     // Who else ranked it comes first, the one place the number is said.
     expect(menuLines()).toEqual([
-      "Rankings · 2,140",
+      "Rankings · 3",
       "View danylo",
       "Copy link",
       "Save to my lists",
@@ -338,11 +348,30 @@ describe("ListPage menu", () => {
     open();
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(menuLines().slice(0, 2)).toEqual(["Rankings · 2,140", "Copy link"]);
+    expect(menuLines().slice(0, 2)).toEqual(["Rankings · 3", "Copy link"]);
   });
 });
 
 describe("ListPage", () => {
+  it("reads the list again when a Finish is refused because the author republished it", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    vi.mocked(keepRanking).mockRejectedValueOnce(new ApiFailure({ kind: "conflict" }));
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(within(whose()).getByRole("button", { name: "Mine" }));
+    await userEvent.click(screen.getByRole("button", { name: "Ex Machina" }));
+    await userEvent.keyboard("1");
+    await userEvent.click(screen.getAllByRole("button", { name: "Finish" })[0]!);
+    // The rows were placed on the version this page opened with.
+    expect(keepRanking).toHaveBeenCalledWith("abc", [[0]], 0);
+    expect(await screen.findByRole("alert")).toHaveTextContent("The author changed this list");
+
+    mocks.loadList.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "Load it again" }));
+    expect(mocks.loadList).toHaveBeenCalledWith("abc", false);
+    await screen.findByRole("heading", { level: 1 });
+  });
+
   it("puts the count, Undo and Finish in its header while the pool is docked under the board", async () => {
     const had = { width: window.innerWidth, height: window.innerHeight };
     Object.assign(window, { innerWidth: 1600, innerHeight: 900 });
@@ -390,7 +419,8 @@ describe("ListPage", () => {
     // The address is not spelled out any more: one press copies it.
     expect(screen.queryByText(`${window.location.host}/l/abc`)).toBeNull();
 
-    // Theirs has no pool, no tray and no Finish: the author's cards only, where they put them.
+    // Theirs has no tray and no Finish: the author's cards where they put them,
+    // what they left unranked under the board, as the app shows it, and how to start.
     expect(within(whose()).getByRole("button", { name: "Theirs" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -398,9 +428,29 @@ describe("ListPage", () => {
     const theirs = screen.getByRole("region", { name: "Their ranking" });
     expect(within(theirs).getByRole("list", { name: "S" })).toHaveTextContent("Ex Machina");
     expect(theirs).not.toHaveTextContent("The Witch");
-    expect(screen.queryByRole("heading", { name: /unranked/ })).toBeNull();
+    expect(screen.getByRole("heading", { name: "1 unranked" }).parentElement).toHaveTextContent(
+      "The Witch",
+    );
+    expect(within(theirs).getByRole("status")).toHaveTextContent(
+      "Move a card on the board to start your version.",
+    );
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
     expect(mocks.loadList).toHaveBeenCalledWith("abc", false);
+  });
+
+  it("keeps people's text in its own direction, so an Arabic page does not flip a Latin title's '?'", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, title: "Top 10 films (2024)?" });
+    open();
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(heading.querySelector("bdi")).toHaveTextContent("Top 10 films (2024)?");
+    expect(screen.getByRole("link", { name: "by danylo" }).querySelector("bdi")).toHaveTextContent(
+      "danylo",
+    );
+    expect(screen.getByText("Masterpiece").tagName).toBe("BDI");
+    expect(screen.getByText("Ex Machina", { selector: ".tile__name" })).toHaveAttribute(
+      "dir",
+      "auto",
+    );
   });
 
   it("names the photographers the pictures ask for at the list's foot, and has no such part without one", async () => {
@@ -501,7 +551,7 @@ describe("ListPage", () => {
 
     // Hiding its author would hide every editorial list; one list can still be hidden or reported.
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(screen.getByRole("button", { name: "Rankings · 2,140" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rankings · 3" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hide this list" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Report this list" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /^View / })).toBeNull();
@@ -512,18 +562,24 @@ describe("ListPage", () => {
     mocks.loadList.mockResolvedValue({ ...list, authorUid: "" });
     open();
     await screen.findByRole("heading", { level: 1 });
-    expect(screen.getByText("by danylo")).toBeInTheDocument();
+    expect(document.querySelector(".byline__name")).toHaveTextContent("by danylo");
     expect(screen.queryByRole("link", { name: "by danylo" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Follow" })).toBeNull();
   });
 
-  it("has no rankings line in the menu for a list nobody has ranked", async () => {
-    mocks.loadList.mockResolvedValue({ ...list, takeCount: 0 });
+  it("counts the readers' rankings in the menu, not the finishes, and keeps the line when there are none", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, takeCount: 0, rankingCount: 3 });
+    const { unmount } = open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    expect(menuLines()[0]).toBe("Rankings · 3");
+    unmount();
+
+    mocks.loadList.mockResolvedValue({ ...list, takeCount: 40, rankingCount: 0 });
     open();
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(menuLines()[0]).toBe("View danylo");
-    expect(screen.queryByRole("button", { name: /^Rankings/ })).toBeNull();
+    expect(menuLines()[0]).toBe("Rankings · 0");
   });
 
   it("copies the link with one press of the button in the head, and says so there", async () => {
@@ -765,7 +821,7 @@ describe("ListPage for its author", () => {
 
     // The owner's menu: the link and taking it down; nothing to report or hide, nothing to publish as theirs.
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(menuLines()).toEqual(["Rankings · 2,140", "Copy link", "Take it down"]);
+    expect(menuLines()).toEqual(["Rankings · 3", "Copy link", "Take it down"]);
     expect(screen.getByRole("button", { name: "Take it down" })).toHaveClass(
       "menu__action--danger",
     );
@@ -799,7 +855,7 @@ describe("ListPage for its author", () => {
     await userEvent.click(screen.getByLabelText("More about this list"));
     await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
     const dialog = screen.getByRole("dialog", { name: "Take this list down?" });
-    expect(dialog).toHaveTextContent("The list on your phone stays on your phone.");
+    expect(dialog).toHaveTextContent("Your board stays in Your lists.");
     await userEvent.click(within(dialog).getByRole("button", { name: "Keep it" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(mocks.unpublish).not.toHaveBeenCalled();
@@ -819,6 +875,26 @@ describe("ListPage for its author", () => {
     ).toBeInTheDocument();
     expect(mocks.unpublish).toHaveBeenCalledTimes(2);
     expect(mocks.unpublish).toHaveBeenLastCalledWith("abc");
+  });
+
+  it("makes the board the list was published from its own again once it is down", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    mocks.unpublish.mockResolvedValueOnce(undefined);
+    boards.save({
+      ...newBoard("b1", "Every A24 film", 1, () => "t"),
+      publishedId: "abc",
+      publishedEditedAt: 1,
+      authorName: "danylo",
+    });
+    openAs(author);
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Take it down" }),
+    );
+    await screen.findByRole("heading", { level: 1, name: "Your public lists" });
+    expect(boards.get("b1")).toMatchObject({ publishedId: null, authorName: null });
   });
 
   it.each<ApiError>([{ kind: "notFound" }])(
@@ -866,4 +942,90 @@ describe("ListPage for its author", () => {
       expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
     },
   );
+});
+
+describe("ListPage, Play", () => {
+  /** Answers with ← until the result is up. */
+  const playToTheEnd = async () => {
+    const result = () => screen.queryByRole("heading", { name: "Your result" });
+    while (result() === null) {
+      const label = () => screen.queryAllByText(/^Duel/)[0]?.textContent;
+      const before = label();
+      await userEvent.keyboard("{ArrowLeft}");
+      await waitFor(() => expect(result() !== null || label() !== before).toBe(true));
+    }
+  };
+
+  it("puts the result in Mine with an Undo that gives back a Mine made by hand", async () => {
+    saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
+    const before = localStorage.getItem(draftKey("abc"));
+    mocks.loadList.mockResolvedValue(twoTiers);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await playToTheEnd();
+    await userEvent.click(screen.getByRole("button", { name: "Put in Mine" }));
+    expect(localStorage.getItem(draftKey("abc"))).not.toBe(before);
+
+    const said = snackbar("Board arranged from 2 duels");
+    await userEvent.click(said.getByRole("button", { name: "Undo" }));
+    expect(localStorage.getItem(draftKey("abc"))).toBe(before);
+    expect(
+      within(screen.getByRole("region", { name: "Your ranking" })).getByRole("list", {
+        name: "S",
+      }),
+    ).toHaveTextContent("The Witch");
+  });
+
+  it("quits on the browser's Back and stays on the list, the game kept", async () => {
+    mocks.loadList.mockResolvedValue(twoTiers);
+    const router = createMemoryRouter(routes, { initialEntries: ["/about", "/l/abc"] });
+    render(<RouterProvider router={router} />);
+    await screen.findByRole("heading", { level: 1, name: "Every A24 film, ranked" });
+
+    // The picker first: Back closes it.
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(screen.getByRole("dialog", { name: "Play" })).toBeInTheDocument();
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe("/l/abc");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.keyboard("{ArrowLeft}");
+    await waitFor(() => expect(screen.getAllByText("Duel 2 of 2")).not.toHaveLength(0));
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe("/l/abc");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Game saved · 1 of 2")).toBeInTheDocument();
+    expect(localStorage.getItem(playKey("list:abc"))).not.toBeNull();
+
+    // Away from Play, Back goes back.
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe("/about");
+  });
+
+  it("drops a game saved over the list before it was published again", async () => {
+    const game = newGame("swiss", ["0", "1", "2"], EVERYTHING, 4, Date.now());
+    localGames(localStorageStore, Date.now, "0:3").save("list:abc", game);
+    mocks.loadList.mockResolvedValue({ ...twoTiers, updatedAt: 1 });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(screen.queryByRole("button", { name: "Resume" })).not.toBeInTheDocument();
+    expect(localStorage.getItem(playKey("list:abc"))).toBeNull();
+  });
+
+  it("resumes a game saved over the list as it stands", async () => {
+    const game = newGame("swiss", ["0", "1", "2"], EVERYTHING, 4, Date.now());
+    localGames(localStorageStore, Date.now, "0:3").save("list:abc", game);
+    mocks.loadList.mockResolvedValue(twoTiers);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+  });
 });

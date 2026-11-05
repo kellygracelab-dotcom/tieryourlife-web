@@ -288,6 +288,41 @@ describe("Play on a page", () => {
     expect(store.read(playKey("b1"))).toBeNull();
   });
 
+  it("keeps its keys from the board behind the sheet", async () => {
+    const heard = vi.fn();
+    window.addEventListener("keydown", heard);
+    try {
+      render(<Page store={memoryStore()} />);
+      await userEvent.click(playButton());
+      // 1 places a picked card, the arrows move it and Ctrl+Z undoes, on the board.
+      await userEvent.keyboard("1{ArrowRight}{Control>}z{/Control}");
+      expect(heard).not.toHaveBeenCalled();
+      expect(screen.getByRole("dialog", { name: "Play" })).toBeInTheDocument();
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    } finally {
+      window.removeEventListener("keydown", heard);
+    }
+  });
+
+  it("leaves the keys to the browser on the result, and its tiers are a stop for Tab", async () => {
+    render(<Page store={memoryStore()} />);
+    await startGame(/King of the hill/);
+    await pickLeft(2);
+    await screen.findByRole("heading", { name: "Your result" });
+    const tiers = screen.getByRole("group", { name: "Your result" });
+    expect(tiers).toHaveAttribute("tabindex", "0");
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(tiers).toHaveFocus();
+    // ↓ and Page Down scroll a result longer than the window.
+    for (const key of ["ArrowDown", "PageDown", "End", " "]) {
+      const press = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+      tiers.dispatchEvent(press);
+      expect(press.defaultPrevented).toBe(false);
+    }
+  });
+
   it("refines a result on the same screen", async () => {
     render(<Page store={memoryStore()} cards={cardsOf(6)} />);
     await startGame(/King of the hill/);

@@ -67,7 +67,7 @@ export function FaceSection({
   publish: Publish;
 }) {
   const loadFor = useCallback(() => load(), [load]);
-  const { state } = useResource(uid, loadFor);
+  const { state, retry } = useResource(uid, loadFor);
   const [saving, setSaving] = useSaving();
   const [placing, setPlacing] = useState<FaceSource | null>(null);
   const choices = state.status === "ready" ? faceChoicesOf(state.value.lists) : [];
@@ -254,8 +254,25 @@ export function FaceSection({
             <p className="settings__helper">{strings.settings.faceNone}</p>
           </li>
         )}
+        {state.status === "error" && (
+          <li className="settings__face settings__face--none">
+            <p className="settings__error" role="alert">
+              <Icon name="cloud_off" className="settings__error-icon" />
+              {strings.settings.faceListsFailed}
+              <button type="button" className="settings__retry" onClick={retry}>
+                {strings.settings.tryAgain}
+              </button>
+            </p>
+          </li>
+        )}
       </ul>
       <p className="settings__helper">{strings.settings.faceNote}</p>
+      {/* The face on show is already the new one; until the account has it, the card says so. */}
+      {busy && (
+        <p className="settings__saved" role="status">
+          {strings.settings.saving}
+        </p>
+      )}
       {saving.status === "failed" && (
         <p className="settings__error" role="alert">
           <Icon name="cloud_off" className="settings__error-icon" />

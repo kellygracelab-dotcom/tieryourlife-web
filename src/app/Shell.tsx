@@ -20,9 +20,9 @@ import { Button } from "../ui/Button";
 import { ClearButton } from "../ui/ClearButton";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
-import { PageTitleContext, TITLE_AFTER_PX } from "./pageTitle";
+import { documentTitleOf, PageTitleContext, TITLE_AFTER_PX, type PageName } from "./pageTitle";
 import { useScrollCatchUp } from "./scrollCatchUp";
-import { useSession } from "./session";
+import { useRedirectFailed, useSession } from "./session";
 import "./Shell.css";
 
 const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
@@ -123,10 +123,19 @@ function SiteTabs({ className, pathname }: { className: string; pathname: string
   );
 }
 
-/** The bar's field: starts with the words the page was asked for, and takes new ones to the search page. */
+/**
+ * The bar's field: starts with the words the page was asked for, and takes
+ * new ones to the search page. It stays the same field when the words asked
+ * change, so a search made from it keeps the focus in it.
+ */
 function BarSearch({ asked }: { asked: string }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState(asked);
+  const [shown, setShown] = useState(asked);
+  if (shown !== asked) {
+    setShown(asked);
+    setQuery(asked);
+  }
   const field = useRef<HTMLInputElement>(null);
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -171,14 +180,30 @@ function ScrollCatchUp() {
   return null;
 }
 
+/**
+ * Focuses a landmark for the moment only. Kept focusable, it took the focus
+ * of every click on something that is not a control (and in Safari a click
+ * on a button is that too), so code that waits for the focus to fall to the
+ * page never saw it fall.
+ */
+function focusForNow(element: HTMLElement | null) {
+  if (element === null) return;
+  element.setAttribute("tabindex", "-1");
+  element.addEventListener("blur", () => element.removeAttribute("tabindex"), { once: true });
+  element.focus({ preventScroll: true });
+}
+
 export function Shell() {
   const { account, signIn } = useSession();
   const [seen] = useState(() => lastSeen());
-  const [signing, setSigning] = useState<"idle" | "busy" | "failed" | "inApp">("idle");
+  // Nothing pressed here yet: a sign-in that came back from its redirect failed speaks instead.
+  const [pressed, setSigning] = useState<"idle" | "busy" | "failed" | "inApp" | null>(null);
+  const redirectFailed = useRedirectFailed();
+  const signing = pressed ?? (redirectFailed ? "failed" : "idle");
 
   // On a phone the list's heading scrolls away under the tray's work; once it
   // has, the app bar says what the page is instead of the brand.
-  const [pageTitle, setPageTitle] = useState<string | null>(null);
+  const [page, setPage] = useState<PageName | null>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > TITLE_AFTER_PX);
@@ -186,11 +211,31 @@ export function Shell() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-  const titled = pageTitle !== null && scrolled;
+  const titled = page !== null && page.inBar && scrolled;
+  useEffect(() => {
+    document.title = documentTitleOf(page, strings.brand);
+  }, [page]);
 
   // The bar's search box. The home page has its own, larger one, so the bar
   // goes without there; on the search page the box shows the words asked.
   const location = useLocation();
+
+  // A new page takes the focus, so the keyboard starts on it rather than
+  // wherever the old page's link was (often nowhere at all). A page that
+  // took the focus itself keeps it, and so does the bar's search box.
+  const main = useRef<HTMLElement>(null);
+  const shownPath = useRef(location.pathname);
+  useEffect(() => {
+    if (shownPath.current === location.pathname) return;
+    shownPath.current = location.pathname;
+    const active = document.activeElement;
+    const kept =
+      active instanceof HTMLElement &&
+      active !== document.body &&
+      (main.current?.contains(active) === true ||
+        active.closest("[aria-modal='true'], [role='search']") !== null);
+    if (!kept) focusForNow(main.current);
+  }, [location.pathname]);
   const [params] = useSearchParams();
   const home = location.pathname === "/";
   const asked = location.pathname === "/search" ? (params.get("q") ?? "") : "";
@@ -221,11 +266,11 @@ export function Shell() {
         {/* The page's own heading is still there for a screen reader; this is for the eye. */}
         {titled && (
           <span className="top__title" aria-hidden="true">
-            {pageTitle}
+            {page?.title}
           </span>
         )}
         <SiteTabs className="top__tabs" pathname={location.pathname} />
-        {!home && <BarSearch key={asked} asked={asked} />}
+        {!home && <BarSearch asked={asked} />}
         <nav className="top__actions" aria-label={strings.nav.site}>
           {!home && (
             <Link className="top__search-link" to="/search" aria-label={strings.nav.search}>
@@ -271,8 +316,8 @@ export function Shell() {
           {strings.nav.storageRefused}
         </p>
       )}
-      <main className="shell__main">
-        <PageTitleContext.Provider value={setPageTitle}>
+      <main className="shell__main" ref={main}>
+        <PageTitleContext.Provider value={setPage}>
           <Outlet />
         </PageTitleContext.Provider>
       </main>

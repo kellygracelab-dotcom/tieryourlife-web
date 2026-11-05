@@ -1,8 +1,11 @@
 import { approvedOnly, sectionName, sectionPath, sectionsNamed } from "../features/sections/model";
+import { usePageTitle } from "../app/pageTitle";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import type { Topic } from "../api/sections";
 import { isSectionId, type FeedSort } from "../api/types";
+import { isOutOfSight } from "../features/community/hidden";
+import { useHidden } from "../features/community/useHidden";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { SearchBox } from "../features/feed/SearchBox";
 import { useFeed, type FeedState } from "../features/feed/useFeed";
@@ -12,6 +15,7 @@ import { FoundTopicTiles } from "../features/sections/TopicTiles";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import { findTopics, noteSearchMiss } from "../lib/api";
 import { useResource } from "../lib/useResource";
+import { useWidthClass } from "../lib/useWidthClass";
 import { fill, plural, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
 import { Chip } from "../ui/Chip";
@@ -23,8 +27,6 @@ import "./SearchPage.css";
 
 /** Typing pauses this long before the address, and the feed, follow. */
 export const SEARCH_DEBOUNCE_MS = 300;
-/** Shorter than this is browsing, not searching. */
-export const MIN_QUERY = 2;
 
 interface Filters {
   q: string;
@@ -55,7 +57,13 @@ const SUGGESTIONS = 3;
 function Suggestions({ category, name }: { category: string | undefined; name: string }) {
   const popular = useFeed({ category, sort: "popular" });
   const yours = useYours();
-  if (popular.state.status !== "ready" || popular.state.lists.length === 0) return null;
+  const { hidden } = useHidden();
+  // A list hidden, or everything from an author hidden, stays out of sight here too.
+  const shown =
+    popular.state.status === "ready"
+      ? popular.state.lists.filter((list) => !isOutOfSight(hidden, list)).slice(0, SUGGESTIONS)
+      : [];
+  if (shown.length === 0) return null;
   const heading =
     category === undefined
       ? strings.home.popular
@@ -66,7 +74,7 @@ function Suggestions({ category, name }: { category: string | undefined; name: s
         {heading}
       </h2>
       <ul className="feed" aria-label={heading}>
-        {popular.state.lists.slice(0, SUGGESTIONS).map((list) => (
+        {shown.map((list) => (
           <li key={list.id}>
             <ListCard list={list} yours={yours(list)} />
           </li>
@@ -125,7 +133,12 @@ export function SearchPage({
     setSeen(filters.q);
     if (filters.q !== typed.trim()) setTyped(filters.q);
   }
-  const searching = filters.q.length >= MIN_QUERY;
+  // Any words at all are a search, as in the app: one character is a whole
+  // word in Japanese or Chinese (本 is Books).
+  const searching = filters.q.length > 0;
+  usePageTitle(searching ? fill(strings.search.title, { q: filters.q }) : strings.search.browse, {
+    inBar: false,
+  });
 
   // A search sent is a step Back returns from; a chip only narrows it, in place.
   const set = (next: Partial<Filters>) => setParams(write({ ...filters, ...next }));
@@ -173,6 +186,19 @@ export function SearchPage({
 
   // Once per search that found nothing anywhere: the address follows the
   // typing only after its pause, so this is not every keystroke.
+  // From 600 px the bar's field is the search and the page's box is not
+  // drawn. Arriving with the focus nowhere (the home page's box went with its
+  // page), the heading takes it; arriving from the bar's field, it stays there.
+  const wide = useWidthClass() !== "compact";
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (wide && (document.activeElement === null || document.activeElement === document.body)) {
+      heading.current?.focus({ preventScroll: true });
+    }
+    // Only on arrival: later searches keep the focus where the person put it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const noted = useRef<string | null>(null);
   useEffect(() => {
     if (!nothing || noted.current === filters.q) return;
@@ -182,9 +208,10 @@ export function SearchPage({
 
   return (
     <section className="search">
-      <SearchBox value={typed} onChange={setTyped} onSubmit={(q) => set({ q })} autoFocus />
-      <div className="search__head">
-        <h1 className="search__title">
+      <SearchBox value={typed} onChange={setTyped} onSubmit={(q) => set({ q })} autoFocus={!wide} />
+      {/* Said aloud as it changes, what was asked and how much came. */}
+      <div className="search__head" role="status">
+        <h1 ref={heading} className="search__title" tabIndex={-1}>
           {searching ? fill(strings.search.title, { q: filters.q }) : strings.search.browse}
         </h1>
         {results.status === "ready" && (

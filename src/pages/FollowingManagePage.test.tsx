@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Following } from "../api/community";
+import { ApiFailure } from "../api/errors";
 import type { SectionStats } from "../api/sections";
 import { SessionContext, type Session } from "../app/session";
 import { createSectionsStore, type SectionsDeps } from "../features/sections/useSections";
@@ -60,6 +61,7 @@ const sectionsDeps = {
   load: vi.fn<SectionsDeps["load"]>(),
   follow: vi.fn<SectionsDeps["follow"]>(async () => ({ following: true })),
   unfollow: vi.fn<SectionsDeps["unfollow"]>(async () => ({ following: false })),
+  loadOne: vi.fn<NonNullable<SectionsDeps["loadOne"]>>(),
 };
 
 const member: Session["account"] = {
@@ -143,6 +145,43 @@ describe("FollowingManagePage", () => {
     expect(sectionsDeps.unfollow).toHaveBeenCalledWith("food");
     expect(screen.getByRole("link", { name: /Food/ })).toBeInTheDocument();
     expect(within(row).getByRole("button", { name: "Follow" })).toBeInTheDocument();
+  });
+
+  it("says when what one follows could not be read, never that it is nothing, and tries again", async () => {
+    vi.mocked(deps.load).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    open();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load what you follow.");
+    expect(screen.queryByText("You aren't following anything yet")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("heading", { name: "People · 1" })).toBeInTheDocument();
+  });
+
+  it("lists a followed section the sections leave out, and unfollows it", async () => {
+    sectionsDeps.loadOne.mockResolvedValue({
+      ...stats("retro", true),
+      name: "Retro",
+      hidden: true,
+    });
+    vi.mocked(deps.load).mockResolvedValueOnce({
+      ...following,
+      sections: [
+        { id: "food", followerCount: 1 },
+        { id: "retro", followerCount: 1 },
+      ],
+    });
+    open();
+    expect(await screen.findByRole("heading", { name: "Sections · 2" })).toBeInTheDocument();
+    const row = (await screen.findByRole("link", { name: /Retro/ })).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
+    expect(sectionsDeps.unfollow).toHaveBeenCalledWith("retro");
+    expect(within(row).getByRole("button", { name: "Follow" })).toBeInTheDocument();
+  });
+
+  it("lists the sections followed from the backend's word while the sections would not load", async () => {
+    sectionsDeps.load.mockRejectedValue(new ApiFailure({ kind: "unavailable" }));
+    open();
+    expect(await screen.findByRole("heading", { name: "Sections · 1" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Food/ })).toHaveAttribute("href", "/s/food");
   });
 
   it("is a signed-in person's only", () => {

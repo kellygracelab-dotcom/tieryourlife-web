@@ -109,6 +109,7 @@ const es: Translation = {
     faceLetter: "Solo la letra",
     faceLetterCaption: "Letra",
     faceFailed: "No se pudo guardar: el servidor no respondió.",
+    faceListsFailed: "No se pudieron cargar tus listas publicadas.",
     privacyTitle: "Privacidad",
     signOutNote:
       "Tus listas se quedan en tu cuenta y en este navegador, ocultas hasta que vuelvas a iniciar sesión. Sin sesión, solo verás las listas hechas sin cuenta.",
@@ -357,6 +358,7 @@ const es: Translation = {
     more: "Mostrar más",
     loadingMore: "Cargando…",
     moreFailed: "No se pudo cargar más.",
+    stale: "No se pudo actualizar. Estas son las listas de tu última visita.",
   },
   list: {
     pictureCredits: "Créditos de las imágenes",
@@ -384,7 +386,7 @@ const es: Translation = {
     delete: "Retirar",
     deleteTitle: "¿Dejar de publicar esta lista?",
     deleteBody:
-      "«{title}» sale de la comunidad y su enlace deja de funcionar. Las clasificaciones que la gente ya hizo con ella se quedan. Un tablero en tu teléfono se queda en tu teléfono.",
+      "«{title}» sale de la comunidad y su enlace deja de funcionar. Las clasificaciones que la gente ya hizo con ella se quedan. Tu tablero sigue en Tus listas.",
     keepIt: "Conservarla",
     deleting: "Retirando…",
     deleteFailed: "No se pudo retirar. Inténtalo de nuevo en un minuto.",
@@ -419,6 +421,7 @@ const es: Translation = {
     seedHint: "Al colocarla, tu versión parte de la clasificación de {name}.",
     seedHintUnnamed: "Al colocarla, tu versión parte de esta clasificación.",
     dropToStart: "Suéltala para empezar tu versión.",
+    seedStart: "Mueve una tarjeta del tablero para empezar tu versión.",
   },
   rankings: {
     title: "Rankings",
@@ -510,6 +513,9 @@ const es: Translation = {
       "Sin conexión. No se perdió nada: lo que colocaste está a salvo en este dispositivo. Inténtalo de nuevo cuando vuelvas a estar en línea.",
     failedGone: "Esta lista ya no está disponible, así que la clasificación no se puede guardar.",
     failedOther: "No se pudo guardar la clasificación. No se perdió nada. Inténtalo de nuevo.",
+    failedChanged:
+      "El autor cambió esta lista mientras la clasificabas. Vuelve a cargarla para clasificarla tal como está ahora.",
+    loadAgain: "Volver a cargarla",
   },
   keep: {
     title: "Guarda esta clasificación",
@@ -558,7 +564,7 @@ const es: Translation = {
     listsFailed: "No se pudieron cargar tus listas públicas",
     remove: "Retirar",
     removeAsk:
-      "¿Dejar de publicar «{title}»? Sale de la comunidad y su enlace deja de funcionar. Las clasificaciones que la gente ya hizo con ella se quedan. Un tablero en tu teléfono se queda en tu teléfono.",
+      "¿Dejar de publicar «{title}»? Sale de la comunidad y su enlace deja de funcionar. Las clasificaciones que la gente ya hizo con ella se quedan. Tu tablero sigue en Tus listas.",
     keepIt: "Conservarla",
     countPublished: { other: "Publicadas: {n}" },
     countRanked: { other: "Clasificaciones: {n}" },
@@ -820,6 +826,12 @@ const es: Translation = {
     takeDownBody: "Sale del sitio y su enlace deja de funcionar. Tus listas se quedan como están.",
     takingDown: "Retirando…",
     takenDown: "«{title}» retirada",
+    mergeFind: "Fusionar con otro tema",
+    houseStaleTitle: "«{title}» cambió desde que la editaste aquí",
+    houseStaleBody:
+      "Si la abres tal como está, se pierden los cambios que no enviaste. Tu borrador aún los tiene, pero actualizar desde él devuelve la lista anterior.",
+    houseStaleDraft: "Abrir mi borrador",
+    houseStaleFresh: "Abrirla tal como está",
   },
   sections: {
     followers: { one: "{n} seguidor", many: "{n} seguidores", other: "{n} seguidores" },
@@ -861,9 +873,11 @@ const es: Translation = {
     sections: "Secciones",
     group: "{name} · {n}",
     followSection: "Seguir {name}",
-    unfollowSection: "Dejar de seguir {name}",
     emptyHelper:
-      "Toca + para seguir una sección. Los temas están dentro de cada sección; las personas, en su perfil.",
+      "Toca + en las secciones que te gustan y síguelas todas a la vez. Los temas están dentro de cada sección; las personas, en su perfil.",
+    pickFollow: "Seguir · {n}",
+    pickNone: "Elige al menos una",
+    followedFailed: "No se pudo cargar lo que sigues.",
     nothingPublished: "Nadie a quien sigues ha publicado nada todavía.",
     goExplore: "Ir a Explorar",
     back: "Volver",
@@ -921,6 +935,10 @@ const es: Translation = {
     withdrawAsk: "¿Retirar «{name}»? Tus listas se quedan en {section}.",
     withdrawFailed: "No se pudo retirar. Inténtalo de nuevo.",
     withdrawn: "Propuesta retirada.",
+    noticeDeclined: "«{name}» no se añadió como sección. Tus listas siguen en {section}.",
+    noticeMerged: "«{name}» se fusionó con {section}.",
+    noticeDismiss: "Descartar",
+    noticeDismissFailed: "No se pudo descartar. Inténtalo de nuevo.",
   },
   sectionIcons: {
     category: "Formas",
@@ -1092,6 +1110,8 @@ const es: Translation = {
     boardTrashed: "«{name}» se movió a la papelera",
     notFound: "No se encontró la lista.",
     notFoundBody: "Puede que se haya eliminado o que viva en otro dispositivo.",
+    inTrash: "«{name}» está en la papelera.",
+    inTrashBody: "Restáurala para volver a clasificarla y editarla.",
     more: "Más sobre este tablero",
     delete: "Eliminar tablero",
     trash: "Papelera",

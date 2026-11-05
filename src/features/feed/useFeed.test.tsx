@@ -39,7 +39,7 @@ function Probe({ query, load }: { query: FeedQuery; load: LoadFeed }) {
   const { state, retry, more } = useFeed(query, load);
   const text =
     state.status === "ready"
-      ? `${state.lists.map((list) => list.id).join(",")}|${state.next ?? "-"}|${state.more}`
+      ? `${state.lists.map((list) => list.id).join(",")}|${state.next ?? "-"}|${state.more}${state.stale === true ? "|stale" : ""}`
       : state.status === "error"
         ? `error:${state.error.kind}`
         : "loading";
@@ -65,6 +65,37 @@ describe("useFeed", () => {
     render(<Probe query={popular} load={() => fresh.promise} />);
     expect(shown()).toHaveTextContent("a,b|c|idle");
     await act(async () => fresh.resolve(page(["z"])));
+    expect(shown()).toHaveTextContent("z|-|idle");
+  });
+
+  it("does not keep which lists were the reader's own", async () => {
+    const memory = { recall: vi.fn(() => null), keep: vi.fn() };
+    const own = { ...summary("a"), mine: true };
+    function Kept() {
+      useFeed(popular, async () => ({ lists: [own], nextCursor: null }), memory);
+      return null;
+    }
+    render(<Kept />);
+    await vi.waitFor(() => expect(memory.keep).toHaveBeenCalled());
+    expect(memory.keep.mock.calls[0]?.[1].lists[0]).not.toHaveProperty("mine");
+  });
+
+  it("keeps the page read before when the fresh one fails, and says it is old", async () => {
+    const { unmount } = render(<Probe query={popular} load={async () => page(["a", "b"], "c")} />);
+    expect(await screen.findByText("a,b|c|idle")).toBeInTheDocument();
+    unmount();
+
+    const again = deferred<FeedPage>();
+    const load = vi
+      .fn<LoadFeed>()
+      .mockRejectedValueOnce(new ApiFailure({ kind: "offline" }))
+      .mockReturnValueOnce(again.promise);
+    render(<Probe query={popular} load={load} />);
+    expect(await screen.findByText("a,b|c|idle|stale")).toBeInTheDocument();
+    // Another try keeps the lists up meanwhile, then the fresh page replaces them.
+    await userEvent.click(screen.getByRole("button", { name: "retry" }));
+    expect(shown()).toHaveTextContent("a,b|c|idle|stale");
+    await act(async () => again.resolve(page(["z"])));
     expect(shown()).toHaveTextContent("z|-|idle");
   });
 
@@ -159,6 +190,12 @@ describe("readRememberedPage", () => {
   it("gives back a page a card can be drawn from", () => {
     const kept = { lists: [summary("a")], next: "c1" };
     expect(readRememberedPage(JSON.parse(JSON.stringify(kept)))).toEqual(kept);
+  });
+
+  // On a shared browser the next person would see somebody else's anonymous list as theirs.
+  it("keeps nobody's own lists: the flag was said to whoever was signed in then", () => {
+    const own = { ...summary("a"), anonymous: true, mine: true };
+    expect(readRememberedPage({ lists: [own], next: null })?.lists[0]).not.toHaveProperty("mine");
   });
 
   it("takes anything else for nothing, so a bad copy cannot break Home on every visit", () => {

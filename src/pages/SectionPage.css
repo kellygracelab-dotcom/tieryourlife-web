@@ -151,17 +151,27 @@
   color: #ffffff;
 }
 
-/* The header folded into a bar once the page has scrolled past it. */
+/* The header folded into a bar once the page has scrolled past it. It lies
+   over the page rather than in it: a bar in the flow pushed everything under
+   it 64px down as it came, and back up as it went. Its content lines up with
+   the page's column. */
 .section-bar {
-  position: sticky;
+  position: fixed;
   top: var(--header-height);
+  inset-inline: 0;
   z-index: 5;
   display: flex;
   align-items: center;
   gap: var(--space-3);
   height: 64px;
-  margin-top: calc(-1 * var(--space-4));
+  padding-inline: calc(max(0px, (100% - var(--width-board)) / 2) + var(--space-8));
   background: var(--paper);
+}
+
+@media (max-width: 599px) {
+  .section-bar {
+    padding-inline: var(--space-4);
+  }
 }
 
 .section-bar__name {

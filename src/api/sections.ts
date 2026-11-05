@@ -41,6 +41,13 @@ export interface SectionStats {
   fileUnder?: string | null;
   /** Who proposed it: sent only to the proposer and to moderators. */
   proposerUid?: string | null;
+  /**
+   * Why a moderator said no, on one's own declined proposal: sent to its
+   * proposer until they dismiss the notice of it.
+   */
+  declineNote?: string | null;
+  /** The section a merged proposal went into, sent the same way. */
+  mergedInto?: string | null;
 }
 
 export function loadSections(client: ApiClient): Promise<{ sections: SectionStats[] }> {

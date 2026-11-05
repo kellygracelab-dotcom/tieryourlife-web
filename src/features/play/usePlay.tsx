@@ -42,7 +42,7 @@ export interface PlayOptions {
    * order; a card in no row is in the pool. The played cards take their new
    * places and every other card stays where it was. Return a way to take it
    * back and the receipt "Board arranged from 136 duels · Undo" offers it;
-   * return nothing for no receipt (Mine on somebody else's list).
+   * return nothing for no receipt.
    */
   onApply: (rows: string[][], played: Played) => (() => void) | void;
   /** Where Play's notices go: the page's snackbar. */
@@ -58,10 +58,10 @@ export interface Play {
   button: PlayButtonProps;
   /** The picker, the choice of cards and the duel layer: render it once, anywhere in the page. */
   view: ReactNode;
-  /** The duel layer is open; a page may mirror it as ?play=1. */
+  /** Play is on screen: the picker, the choice of cards or the duel layer. */
   playing: boolean;
   open: () => void;
-  /** As the layer's Quit: keeps the game and closes. For the browser's back while playing. */
+  /** As the layer's Quit: keeps the game and closes, a sheet too. For the browser's back while playing. */
   quit: () => void;
 }
 
@@ -287,7 +287,7 @@ export function usePlay(
       saved: savedGame !== null,
     },
     view,
-    playing: screen === "layer" && game !== null,
+    playing: screen !== "none",
     open,
     quit,
   };

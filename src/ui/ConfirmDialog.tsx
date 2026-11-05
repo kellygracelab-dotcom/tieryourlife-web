@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useModal } from "./useModal";
 
 interface ConfirmDialogProps {
   title: string;
@@ -16,9 +17,6 @@ interface ConfirmDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
 }
-
-const FOCUSABLE =
-  "button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
 /**
  * "Are you sure?" before something that cannot be undone. Cancel takes the
@@ -39,37 +37,13 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const titleId = useId();
   const box = useRef<HTMLDivElement>(null);
-  const cancel = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    cancel.current?.focus();
-    return () => opener?.focus();
-  }, []);
-
-  useEffect(() => {
-    if (busy) return;
-    const onKey = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") onCancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [busy, onCancel]);
-
-  const keepTabInside = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Tab" || box.current === null) return;
-    const inside = [...box.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
-    const first = inside[0];
-    const last = inside[inside.length - 1];
-    if (first === undefined || last === undefined) return;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
+  useModal(
+    box,
+    () => {
+      if (!busy) onCancel();
+    },
+    ".confirm__cancel",
+  );
 
   return createPortal(
     <div className="scrim" onClick={busy ? undefined : onCancel}>
@@ -80,7 +54,6 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
-        onKeyDown={keepTabInside}
       >
         <h2 id={titleId} className="dialog__title">
           {title}
@@ -89,9 +62,8 @@ export function ConfirmDialog({
         {trouble}
         <div className="dialog__actions">
           <button
-            ref={cancel}
             type="button"
-            className="btn btn--text"
+            className="btn btn--text confirm__cancel"
             onClick={onCancel}
             disabled={busy}
           >

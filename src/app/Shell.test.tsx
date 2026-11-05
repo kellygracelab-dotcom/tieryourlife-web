@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -6,7 +6,7 @@ import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { PageTitle } from "./pageTitle";
 import { routes } from "./routes";
 import { Shell } from "./Shell";
-import { SessionContext, type Session } from "./session";
+import { RedirectFailedContext, SessionContext, type Session } from "./session";
 
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
@@ -21,7 +21,7 @@ vi.mock("../lib/api", async () => ({
   noteTake: vi.fn(),
 }));
 
-const open = (session: Partial<Session>, at = "/") => {
+const open = (session: Partial<Session>, at = "/", redirectFailed = false) => {
   const value: Session = {
     account: { kind: "guest", uid: null },
     signIn: vi.fn(async () => ({ kind: "signedIn" as const, switched: false })),
@@ -31,7 +31,9 @@ const open = (session: Partial<Session>, at = "/") => {
   };
   render(
     <SessionContext.Provider value={value}>
-      <RouterProvider router={createMemoryRouter(routes, { initialEntries: [at] })} />
+      <RedirectFailedContext.Provider value={redirectFailed}>
+        <RouterProvider router={createMemoryRouter(routes, { initialEntries: [at] })} />
+      </RedirectFailedContext.Provider>
     </SessionContext.Provider>,
   );
   return value;
@@ -51,6 +53,62 @@ describe("Shell search", () => {
     await userEvent.type(bar.getByRole("searchbox", { name: "Search lists" }), "  anime {Enter}");
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“anime”");
     expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveValue("anime");
+  });
+
+  it("keeps the focus in its field from one search to the next", async () => {
+    open({}, "/about");
+    const bar = within(await screen.findByRole("banner"));
+    const field = bar.getByRole("searchbox", { name: "Search lists" });
+    await userEvent.type(field, "anime{Enter}");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“anime”");
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveFocus();
+    await userEvent.clear(bar.getByRole("searchbox", { name: "Search lists" }));
+    await userEvent.keyboard("games{Enter}");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“games”");
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveFocus();
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveValue("games");
+  });
+
+  it("keeps the focus in the box through a search made from it, and says what was found", async () => {
+    open({}, "/search?q=anime");
+    const bar = within(await screen.findByRole("banner"));
+    const box = bar.getByRole("searchbox", { name: "Search lists" });
+    await userEvent.clear(box);
+    await userEvent.type(box, "zzzz{Enter}");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“zzzz”");
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toBe(box);
+    expect(box).toHaveFocus();
+    // The page's head is a status region: what was asked and how much came are read out.
+    expect(screen.getByRole("heading", { level: 1 }).closest("[role='status']")).not.toBeNull();
+  });
+});
+
+describe("Shell page changes", () => {
+  it("names the browser's tab after the page, and the brand alone where a page has no name", async () => {
+    open({}, "/settings");
+    await screen.findByRole("heading", { level: 1, name: "Settings" });
+    await waitFor(() => expect(document.title).toBe("Settings · TierYourLife"));
+    await userEvent.click(screen.getByRole("link", { name: "About" }));
+    await screen.findByRole("heading", { level: 1, name: "About" });
+    await waitFor(() => expect(document.title).toBe("About · TierYourLife"));
+    await userEvent.click(screen.getByRole("link", { name: "TierYourLife" }));
+    await waitFor(() => expect(document.title).toBe("TierYourLife"));
+  });
+
+  it("starts the keyboard on the new page rather than wherever the old page's link was", async () => {
+    open({}, "/about");
+    await screen.findByRole("heading", { level: 1 });
+    const settings = within(screen.getByRole("contentinfo")).getByRole("link", {
+      name: "Settings",
+    });
+    settings.focus();
+    await userEvent.keyboard("{Enter}");
+    await screen.findByRole("heading", { level: 1, name: "Settings" });
+    expect(screen.getByRole("main")).toHaveFocus();
+    // Focusable only for that moment: a click on its words must leave the
+    // focus on the page, where the board looks for it.
+    settings.focus();
+    expect(screen.getByRole("main")).not.toHaveAttribute("tabindex");
   });
 });
 
@@ -162,6 +220,15 @@ describe("Shell account", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Open this page in Chrome or Safari",
     );
+  });
+
+  it("says a sign-in that came back from its redirect failed, and lets Sign in be pressed again", async () => {
+    const signIn = vi.fn(async () => ({ kind: "cancelled" as const }));
+    open({ signIn }, "/", true);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign in");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(signIn).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("stays quiet when the person changes their mind", async () => {

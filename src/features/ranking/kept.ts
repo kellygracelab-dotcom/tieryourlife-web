@@ -7,7 +7,15 @@ export interface KeptRanking {
   claimedBy?: string;
   /** An account the server said it is already kept away from; that account does not ask again. */
   refusedTo?: string;
+  /** The rows the link holds, so a reload can show the link again rather than a fresh Finish. */
+  rows?: number[][];
+  /** The list's updatedAt when it was finished: the rows' numbers mean that version's cards. */
+  version?: number;
 }
+
+const isRows = (value: unknown): value is number[][] =>
+  Array.isArray(value) &&
+  value.every((row) => Array.isArray(row) && row.every((item) => Number.isInteger(item)));
 
 export const KEPT_PREFIX = "tyl:ranking:";
 
@@ -20,13 +28,16 @@ export function readKept(store: KeyValueStore, listId: string): KeptRanking | nu
   try {
     const parsed: unknown = JSON.parse(text);
     if (parsed === null || typeof parsed !== "object") return null;
-    const { code, claimToken, claimedBy, refusedTo } = parsed as Partial<KeptRanking>;
+    const { code, claimToken, claimedBy, refusedTo, rows, version } =
+      parsed as Partial<KeptRanking>;
     if (typeof code !== "string" || typeof claimToken !== "string") return null;
     return {
       code,
       claimToken,
       ...(typeof claimedBy === "string" ? { claimedBy } : {}),
       ...(typeof refusedTo === "string" ? { refusedTo } : {}),
+      ...(isRows(rows) ? { rows } : {}),
+      ...(typeof version === "number" ? { version } : {}),
     };
   } catch {
     return null;
@@ -35,4 +46,18 @@ export function readKept(store: KeyValueStore, listId: string): KeptRanking | nu
 
 export function writeKept(store: KeyValueStore, listId: string, kept: KeptRanking): void {
   store.write(keptKey(listId), JSON.stringify(kept));
+}
+
+/**
+ * The link this device's ranking already has, when the board shows exactly
+ * what it holds, of the same version of the list: a reload then shows that
+ * link instead of offering another Finish.
+ */
+export function keptFor(
+  kept: KeptRanking | null,
+  version: number,
+  rows: readonly (readonly number[])[],
+): string | null {
+  if (kept === null || kept.version !== version || kept.rows === undefined) return null;
+  return JSON.stringify(kept.rows) === JSON.stringify(rows) ? kept.code : null;
 }

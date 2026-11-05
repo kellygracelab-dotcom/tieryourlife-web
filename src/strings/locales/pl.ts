@@ -125,6 +125,7 @@ const pl: Translation = {
     faceLetter: "Tylko litera",
     faceLetterCaption: "Litera",
     faceFailed: "Nie udało się zapisać – serwer nie odpowiedział.",
+    faceListsFailed: "Nie udało się wczytać twoich opublikowanych list.",
     privacyTitle: "Prywatność",
     signOutNote:
       "Twoje listy zostają na koncie i w tej przeglądarce, ukryte do ponownego zalogowania. Po wylogowaniu widać tylko listy zrobione bez konta.",
@@ -375,6 +376,7 @@ const pl: Translation = {
     more: "Pokaż więcej",
     loadingMore: "Wczytywanie…",
     moreFailed: "Nie udało się wczytać więcej.",
+    stale: "Nie udało się odświeżyć. To listy z ostatniej wizyty.",
   },
   list: {
     pictureCredits: "Autorzy zdjęć",
@@ -402,7 +404,7 @@ const pl: Translation = {
     delete: "Usuń",
     deleteTitle: "Cofnąć publikację tej listy?",
     deleteBody:
-      "„{title}” zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Tablica w telefonie zostaje w telefonie.",
+      "„{title}” zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Twoja tablica zostanie w „Twoich listach”.",
     keepIt: "Zostaw",
     deleting: "Cofanie publikacji…",
     deleteFailed: "Nie udało się cofnąć publikacji. Spróbuj ponownie za minutę.",
@@ -437,6 +439,7 @@ const pl: Translation = {
     seedHint: "Umieszczenie jej rozpocznie twoją wersję od rankingu: {name}.",
     seedHintUnnamed: "Umieszczenie jej rozpocznie twoją wersję od tego rankingu.",
     dropToStart: "Upuść ją, aby zacząć swoją wersję.",
+    seedStart: "Przesuń kartę na tablicy, aby zacząć swoją wersję.",
   },
   rankings: {
     title: "Rankingi",
@@ -533,6 +536,9 @@ const pl: Translation = {
       "Brak połączenia. Nic nie przepadło: twoje umieszczenia są bezpieczne na tym urządzeniu. Spróbuj ponownie, gdy wrócisz do sieci.",
     failedGone: "Ta lista nie jest już dostępna, więc rankingu nie da się zachować.",
     failedOther: "Nie udało się zapisać rankingu. Nic nie przepadło. Spróbuj ponownie.",
+    failedChanged:
+      "Autor zmienił tę listę w trakcie układania rankingu. Wczytaj ją ponownie, aby ułożyć ją w obecnej wersji.",
+    loadAgain: "Wczytaj ponownie",
   },
   keep: {
     title: "Zachowaj ten ranking",
@@ -578,7 +584,7 @@ const pl: Translation = {
     listsFailed: "Nie udało się wczytać twoich publicznych list",
     remove: "Usuń",
     removeAsk:
-      "Cofnąć publikację „{title}”? Zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Tablica w telefonie zostaje w telefonie.",
+      "Cofnąć publikację „{title}”? Zniknie ze społeczności, a jej link przestanie działać. Rankingi, które inni już z niej zrobili, zostaną. Twoja tablica zostanie w „Twoich listach”.",
     keepIt: "Zostaw",
     countPublished: { other: "Opublikowane: {n}" },
     countRanked: { other: "Rankingi: {n}" },
@@ -863,6 +869,12 @@ const pl: Translation = {
       "Zniknie ze strony, a jej link przestanie działać. Twoje listy zostaną bez zmian.",
     takingDown: "Usuwanie…",
     takenDown: "Usunięto „{title}”",
+    mergeFind: "Scal z innym tematem",
+    houseStaleTitle: "„{title}” zmieniła się, odkąd edytowano ją tutaj",
+    houseStaleBody:
+      "Jeśli otworzysz ją w obecnej postaci, niewysłane zmiany przepadną. Twój szkic wciąż je ma, ale aktualizacja z niego przywróci starszą listę.",
+    houseStaleDraft: "Otwórz mój szkic",
+    houseStaleFresh: "Otwórz w obecnej postaci",
   },
   sections: {
     followers: {
@@ -908,9 +920,11 @@ const pl: Translation = {
     sections: "Działy",
     group: "{name} · {n}",
     followSection: "Obserwuj: {name}",
-    unfollowSection: "Przestań obserwować: {name}",
     emptyHelper:
-      "Dotknij +, aby obserwować dział. Tematy są w działach, a osoby w swoich profilach.",
+      "Dotknij + przy działach, które cię interesują, i obserwuj je wszystkie naraz. Tematy są w działach, a osoby w swoich profilach.",
+    pickFollow: "Obserwuj · {n}",
+    pickNone: "Wybierz co najmniej jeden",
+    followedFailed: "Nie udało się wczytać tego, co obserwujesz.",
     nothingPublished: "Obserwowani nie opublikowali jeszcze niczego.",
     goExplore: "Przejdź do Odkrywaj",
     back: "Wstecz",
@@ -968,6 +982,11 @@ const pl: Translation = {
     withdrawAsk: "Wycofać „{name}”? Twoje listy zostaną w dziale {section}.",
     withdrawFailed: "Nie udało się wycofać. Spróbuj ponownie.",
     withdrawn: "Propozycja wycofana.",
+    noticeDeclined:
+      "„{name}” nie został dodany jako dział. Twoje listy zostają w dziale {section}.",
+    noticeMerged: "„{name}” połączono z działem {section}.",
+    noticeDismiss: "Odrzuć",
+    noticeDismissFailed: "Nie udało się odrzucić. Spróbuj ponownie.",
   },
   sectionIcons: {
     category: "Kształty",
@@ -1201,6 +1220,8 @@ const pl: Translation = {
     boardTrashed: "„{name}” przeniesiono do kosza",
     notFound: "Nie znaleziono listy.",
     notFoundBody: "Może została usunięta albo jest na innym urządzeniu.",
+    inTrash: "„{name}” jest w koszu.",
+    inTrashBody: "Przywróć ją, aby znów ją układać i edytować.",
     more: "Więcej o tej tablicy",
     delete: "Usuń tablicę",
     trash: "Kosz",

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import type { Category } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
@@ -27,7 +27,7 @@ import { useBoards } from "../features/boards/useBoards";
 import type { UnpublishBoard } from "../features/boards/BoardSettings";
 import "../features/boards/boards.css";
 import { unpublish as unpublishList } from "../lib/api";
-import { localStorageStore, type KeyValueStore } from "../lib/storage";
+import { localStorageStore, sessionStorageStore, type KeyValueStore } from "../lib/storage";
 import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
@@ -41,6 +41,8 @@ interface BoardsPageProps {
   now?: () => number;
   /** Where the chosen view is remembered on this device. */
   store?: KeyValueStore;
+  /** Where the search, the filter and the order wait while a list is open. */
+  shelfStore?: KeyValueStore;
   unpublish?: UnpublishBoard;
 }
 
@@ -49,6 +51,28 @@ type BoardsView = "grid" | "rows";
 export const VIEW_KEY = "boards.view";
 const viewIn = (store: KeyValueStore): BoardsView =>
   store.read(VIEW_KEY) === "rows" ? "rows" : "grid";
+
+/** The search, the filter and the order: the shelf as it was left, found again on the way back from a list. */
+interface Shelf {
+  sort: BoardSort;
+  show: BoardShow;
+  query: string;
+}
+export const SHELF_KEY = "boards.shelf";
+function shelfIn(store: KeyValueStore): Shelf {
+  const fresh: Shelf = { sort: "recent", show: "all", query: "" };
+  try {
+    const kept = JSON.parse(store.read(SHELF_KEY) ?? "null") as Partial<Shelf> | null;
+    if (kept === null || typeof kept !== "object") return fresh;
+    return {
+      sort: BOARD_SORTS.find((sort) => sort === kept.sort) ?? fresh.sort,
+      show: BOARD_SHOWS.find((show) => show === kept.show) ?? fresh.show,
+      query: typeof kept.query === "string" ? kept.query : fresh.query,
+    };
+  } catch {
+    return fresh;
+  }
+}
 
 /** What a board page leaves in the history when it sends a board to the trash. */
 export interface BoardsPageState {
@@ -160,6 +184,7 @@ export function BoardsPage({
   repository = site,
   now = Date.now,
   store = localStorageStore,
+  shelfStore = sessionStorageStore,
   unpublish = unpublishList,
 }: BoardsPageProps) {
   usePageTitle(strings.boards.title);
@@ -167,22 +192,26 @@ export function BoardsPage({
   const { signedIn } = useBoardSync();
   const navigate = useNavigate();
   const location = useLocation();
-  const [sort, setSort] = useState<BoardSort>("recent");
+  // Read once, before the first paint, so the scroll put back on the way back lands on the same lists.
+  const [shelf] = useState(() => shelfIn(shelfStore));
+  const [sort, setSort] = useState<BoardSort>(shelf.sort);
   const [view, setView] = useState<BoardsView>(() => viewIn(store));
   const showAs = (next: BoardsView) => {
     setView(next);
     store.write(VIEW_KEY, next);
   };
-  const [show, setShow] = useState<BoardShow>("all");
-  const [query, setQuery] = useState("");
+  const [show, setShow] = useState<BoardShow>(shelf.show);
+  const [query, setQuery] = useState(shelf.query);
+  useEffect(() => {
+    shelfStore.write(SHELF_KEY, JSON.stringify({ sort, show, query } satisfies Shelf));
+  }, [shelfStore, sort, show, query]);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const undoTrash = (uids: readonly string[]) => {
-    const at = now();
     repository.saveAll(
       uids.flatMap((uid) => {
         const board = repository.get(uid);
-        return board === null ? [] : [restoreBoard(board, at)];
+        return board === null ? [] : [restoreBoard(board)];
       }),
     );
   };
@@ -193,10 +222,13 @@ export function BoardsPage({
 
   // A board page that sent its board to the trash lands here and says so.
   const arrivedWith = (location.state as BoardsPageState | null)?.trashed ?? [];
-  const [notice, setNotice] = useState<SnackbarNotice | null>(() =>
-    arrivedWith.length > 0 ? trashedNotice(arrivedWith) : null,
+  // Notices wait their turn, as on the phone: a deletion's Undo first, then
+  // why some of the lists stayed.
+  const [notices, setNotices] = useState<readonly SnackbarNotice[]>(() =>
+    arrivedWith.length > 0 ? [trashedNotice(arrivedWith)] : [],
   );
-  const forget = useCallback(() => setNotice(null), []);
+  const notice = notices[0] ?? null;
+  const forget = useCallback(() => setNotices((queued) => queued.slice(1)), []);
   useEffect(() => {
     // Said once: a reload must not say it again.
     if (arrivedWith.length > 0) void navigate(location.pathname, { replace: true, state: null });
@@ -230,8 +262,32 @@ export function BoardsPage({
     setSelected(new Set());
   };
 
+  // The control pressed to start or end choosing goes as it is pressed: the
+  // focus moves to the first list to choose, or back to the chip that starts
+  // it, rather than falling to the page.
+  const page = useRef<HTMLElement>(null);
+  const focusNext = useRef<"firstList" | "chip" | null>(null);
+  useEffect(() => {
+    const where = focusNext.current;
+    if (where === null) return;
+    focusNext.current = null;
+    const active = document.activeElement;
+    if (active !== null && active !== document.body) return;
+    page.current
+      ?.querySelector<HTMLElement>(where === "chip" ? ".boards__choose" : ".boards__group button")
+      ?.focus();
+  });
+  const startSelection = () => {
+    focusNext.current = "firstList";
+    setSelecting(true);
+  };
+  const exitSelection = () => {
+    focusNext.current = "chip";
+    leaveSelection();
+  };
+
   // Public copies come down first, as on the phone: a board whose copy could
-  // not be taken down stays, and the notice says so.
+  // not be taken down stays, and a notice after the others' Undo says so.
   const deleteSelected = async () => {
     const chosen = [...selected].flatMap((uid) => repository.get(uid) ?? []);
     leaveSelection();
@@ -244,13 +300,16 @@ export function BoardsPage({
         return board === null ? [] : [trashBoard(unpublished(board, at), at)];
       }),
     );
-    setNotice(
-      trashed.length < chosen.length ? { text: strings.trash.stillPublic } : trashedNotice(trashed),
-    );
+    // Undo takes the focus when there is one; without it, the chip does.
+    if (trashed.length === 0) focusNext.current = "chip";
+    setNotices([
+      ...(trashed.length > 0 ? [trashedNotice(trashed)] : []),
+      ...(trashed.length < chosen.length ? [{ text: strings.trash.stillPublic }] : []),
+    ]);
   };
 
   return (
-    <section className="boards">
+    <section className="boards" ref={page}>
       <header className="boards__head">
         <div className="boards__text">
           <h1 className="boards__title">{strings.boards.title}</h1>
@@ -350,7 +409,7 @@ export function BoardsPage({
                   </button>
                 </div>
                 {!selecting && (
-                  <Chip icon="check" onClick={() => setSelecting(true)}>
+                  <Chip icon="check" className="boards__choose" onClick={startSelection}>
                     {strings.boards.deleteSelected}
                   </Chip>
                 )}
@@ -379,7 +438,7 @@ export function BoardsPage({
                 type="button"
                 className="boards__exit"
                 aria-label={strings.boards.exitSelection}
-                onClick={leaveSelection}
+                onClick={exitSelection}
               >
                 <Icon name="close" />
               </button>

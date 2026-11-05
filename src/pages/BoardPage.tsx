@@ -20,6 +20,7 @@ import {
   rename,
   putBack,
   removeItem,
+  restoreBoard,
   restoreTier,
   setCategory,
   setDisplayMode,
@@ -34,7 +35,7 @@ import {
 } from "../features/boards/BoardSettings";
 import { RankedList } from "../features/boards/RankedList";
 import { filedUnder } from "../features/boards/sectionChoices";
-import { downloadShare, type Share } from "../features/ranking/share";
+import { shareBoard as shareBoardPicture, type Share } from "../features/ranking/share";
 import type { EditorDeps } from "../features/sections/editorDeps";
 import { myWaiting, PENDING_MAX } from "../features/sections/proposal";
 import { SectionEditor } from "../features/sections/SectionEditor";
@@ -67,6 +68,7 @@ import {
   houseLinkOf,
   houseLinkOfParam,
   linkToHouse,
+  markHouseSent,
   unlinkFromHouse,
 } from "../features/boards/houseList";
 import { fill, plural, strings } from "../strings";
@@ -76,6 +78,7 @@ import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { PlayButton } from "../features/play/PlayButton";
 import { boardGames } from "../features/play/syncedGames";
 import { usePlay } from "../features/play/usePlay";
+import { usePlayBack } from "../features/play/usePlayBack";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { localStorageStore } from "../lib/storage";
 import type { BoardsPageState } from "./BoardsPage";
@@ -130,12 +133,23 @@ function TitleEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing]);
 
+  // Done from the keyboard, the field goes and the focus with it: the pencil takes it back.
+  const pencil = useRef<HTMLButtonElement>(null);
+  const backToPencil = useRef(false);
+  useEffect(() => {
+    if (editing || !backToPencil.current) return;
+    backToPencil.current = false;
+    pencil.current?.focus();
+  }, [editing]);
+
   const keep = () => onKeep(draft);
   const onKey = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
+      backToPencil.current = true;
       keep();
     } else if (event.key === "Escape") {
+      backToPencil.current = true;
       onKeep(board.title);
     }
   };
@@ -159,6 +173,7 @@ function TitleEditor({
     <span className="board-page__title-row">
       <h1 className="list-head__title">{shown}</h1>
       <button
+        ref={pencil}
         type="button"
         className="board-page__edit"
         aria-label={strings.boards.editTitle}
@@ -182,6 +197,25 @@ function NotFound() {
   );
 }
 
+/** A list in the trash, reached by Back after its Delete or by an old link: it says so, and Restore brings it back. */
+function InTrash({ title, onRestore }: { title: string; onRestore: () => void }) {
+  return (
+    <section className="list-page list-page--trouble">
+      <h1>{fill(strings.boards.inTrash, { name: title })}</h1>
+      <p>{strings.boards.inTrashBody}</p>
+      <span className="board-page__trash-actions">
+        <button type="button" className="btn btn--filled" onClick={onRestore}>
+          <Icon name="restore_from_trash" className="btn__icon" />
+          <span>{strings.trash.restore}</span>
+        </button>
+        <Link className="btn btn--text" to="/b">
+          <span>{strings.boards.back}</span>
+        </Link>
+      </span>
+    </section>
+  );
+}
+
 /**
  * One of the person's own boards, the way the phone shows it: the rows, the
  * pool, and every move kept the moment it is made. Nothing here is sent
@@ -201,7 +235,7 @@ export function BoardPage({
   keepWeb = (url) => keepWebPicture(url, keepPicture),
   publishing = sitePublishing,
   topics,
-  share = downloadShare,
+  share = shareBoardPicture,
   store = sectionsStore,
   propose = proposeSection,
   proposeDeps,
@@ -376,8 +410,22 @@ export function BoardPage({
       };
     },
   });
+  usePlayBack(play);
 
   if (board === null || view === null) return <NotFound />;
+  // Not a board to edit while it is in the trash: an edit would be kept on a
+  // list Your lists no longer shows.
+  if (board.deletedAt !== null) {
+    return (
+      <InTrash
+        title={board.title.trim().length > 0 ? board.title : strings.boards.untitled}
+        onRestore={() => {
+          const current = repository.get(uid);
+          if (current !== null) repository.save(restoreBoard(current));
+        }}
+      />
+    );
+  }
 
   // What the board is right now: what is kept, or the fresh one until it is.
   const latest = (): Board => repository.get(uid) ?? board;
@@ -390,6 +438,7 @@ export function BoardPage({
   // Out as the house: the board is tied to the list from now on, and the address says which.
   const sentToHouse = (what: "published" | "updated", id: string) => {
     linkToHouse(uid, id, houseStore);
+    markHouseSent(uid, latest().editedAt, houseStore);
     void navigate(houseBoardPath(uid, id), { replace: true });
     setNotice({
       text: what === "published" ? strings.admin.housePublished : strings.admin.houseUpdated,
@@ -538,11 +587,12 @@ export function BoardPage({
       return;
     }
     keep(trashBoard(unpublished(latest(), now()), now()));
-    void navigate("/b", { state: { trashed: [uid] } satisfies BoardsPageState });
+    // In place of the board, so Back does not open a list now in the trash.
+    void navigate("/b", { replace: true, state: { trashed: [uid] } satisfies BoardsPageState });
   };
 
-  // The picture of the board, drawn the way a ranking's is; the address under
-  // it is the published list's when there is one, the site's otherwise.
+  // The picture of the board as the phone draws it, every tier and the pool;
+  // the address under it is the published list's when there is one, the site's otherwise.
   const shareBoard = () =>
     share(
       view.list,

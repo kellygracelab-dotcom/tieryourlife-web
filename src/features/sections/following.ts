@@ -1,6 +1,35 @@
 import type { Following } from "../../api/community";
 import type { ListSummary } from "../../api/types";
 import { fill, strings } from "../../strings";
+import { sectionOf, type Section } from "./model";
+import { heldSection, type SectionsSnapshot } from "./useSections";
+
+/**
+ * The sections one follows: the store's word for those it holds, since a
+ * follow made on this visit turns it at once, and the backend's for the rest:
+ * a hidden section, one approved since the sections were read, or all of them
+ * while the nine stand in for sections that would not load.
+ */
+export function followedSectionIds(
+  snapshot: SectionsSnapshot,
+  backend: readonly string[] | null,
+): string[] {
+  const held = new Map<string, boolean>();
+  if (snapshot.followsKnown) snapshot.sections.forEach((one) => held.set(one.id, one.following));
+  snapshot.extra.forEach((one) => {
+    if (!held.has(one.id)) held.set(one.id, one.following);
+  });
+  const ids = [...held].filter(([, on]) => on).map(([id]) => id);
+  (backend ?? []).forEach((id) => {
+    if (!held.has(id) && !ids.includes(id)) ids.push(id);
+  });
+  return ids;
+}
+
+/** A followed section to draw: as the store holds it, or by its id until it has been asked about. */
+export const followedSectionOf = (snapshot: SectionsSnapshot, id: string): Section =>
+  heldSection(snapshot, id) ??
+  sectionOf({ id, listCount: 0, followerCount: 0, newThisWeek: 0, collage: [], following: true });
 
 /** What one follows, as sets to look a list up in. */
 export interface Followed {

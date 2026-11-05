@@ -111,8 +111,10 @@
     font: 400 20px/26px var(--font);
   }
 
+  /* Follow takes the row but leaves the ⋮ room beside it, at the end: a menu
+     that wrapped to the start opened off the left edge. */
   .profile__head .follow {
-    flex: 1 1 100%;
+    flex: 1 1 calc(100% - 36px - 18px);
     height: 48px;
     justify-content: center;
   }

@@ -183,11 +183,16 @@ describe("snapshotOf", () => {
     assert.equal(snapshotOf({ authorUid: "u1", authorName: "x", anonymous: true }).editorial, true);
   });
 
-  it("shows a ranking kept earlier without the name once its list is editorial", () => {
+  it("shows a ranking kept earlier without the name once its list is editorial or gone", () => {
     const kept = snapshotOf({ title: "Pixar", authorUid: "u1", authorName: "danylo" });
     assert.equal(shownSnapshot(kept, { authorUid: "u1" }), kept);
-    // The list is gone: nothing to ask, the snapshot stays as it was kept.
-    assert.equal(shownSnapshot(kept, null), kept);
+    // The list is gone, perhaps with its author's account: the name goes too.
+    assert.deepEqual(shownSnapshot(kept, null), {
+      ...kept,
+      editorial: true,
+      authorName: "",
+      authorPhotoUrl: null,
+    });
     assert.deepEqual(shownSnapshot(kept, { authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2" }), {
       ...kept,
       editorial: true,

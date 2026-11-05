@@ -112,6 +112,7 @@ const fr: Translation = {
     faceLetter: "Juste la lettre",
     faceLetterCaption: "Lettre",
     faceFailed: "Impossible d’enregistrer : le serveur n’a pas répondu.",
+    faceListsFailed: "Impossible de charger vos listes publiées.",
     privacyTitle: "Confidentialité",
     signOutNote:
       "Vos listes restent dans votre compte et dans ce navigateur, masquées jusqu’à votre prochaine connexion. Déconnecté, vous ne voyez que les listes créées sans compte.",
@@ -365,6 +366,7 @@ const fr: Translation = {
     more: "Afficher plus",
     loadingMore: "Chargement…",
     moreFailed: "Impossible d’en charger plus.",
+    stale: "Impossible d’actualiser. Voici les listes de votre dernière visite.",
   },
   list: {
     pictureCredits: "Crédits photo",
@@ -393,7 +395,7 @@ const fr: Translation = {
     delete: "Retirer",
     deleteTitle: "Dépublier cette liste ?",
     deleteBody:
-      "« {title} » quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Un tableau sur votre téléphone reste sur votre téléphone.",
+      "« {title} » quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Votre tableau reste dans Vos listes.",
     keepIt: "La garder",
     deleting: "Dépublication…",
     deleteFailed: "Impossible de la dépublier. Réessayez dans une minute.",
@@ -429,6 +431,7 @@ const fr: Translation = {
     seedHint: "La placer fait partir votre version du classement de {name}.",
     seedHintUnnamed: "La placer fait partir votre version de ce classement.",
     dropToStart: "Lâchez-la pour commencer votre version.",
+    seedStart: "Déplacez une carte du tableau pour commencer votre version.",
   },
   rankings: {
     title: "Classements",
@@ -523,6 +526,9 @@ const fr: Translation = {
       "Pas de connexion. Rien n’est perdu : vos placements sont à l’abri sur cet appareil. Réessayez une fois de retour en ligne.",
     failedGone: "Cette liste n’est plus disponible, le classement ne peut donc pas être gardé.",
     failedOther: "Impossible d’enregistrer le classement. Rien n’est perdu. Réessayez.",
+    failedChanged:
+      "L’auteur a modifié cette liste pendant que vous la classiez. Rechargez-la pour la classer telle qu’elle est maintenant.",
+    loadAgain: "La recharger",
   },
   keep: {
     title: "Garder ce classement",
@@ -571,7 +577,7 @@ const fr: Translation = {
     listsFailed: "Impossible de charger vos listes publiques",
     remove: "Retirer",
     removeAsk:
-      "Dépublier « {title} » ? Elle quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Un tableau sur votre téléphone reste sur votre téléphone.",
+      "Dépublier « {title} » ? Elle quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Votre tableau reste dans Vos listes.",
     keepIt: "La garder",
     countPublished: { other: "Publiées : {n}" },
     countRanked: { other: "Classements : {n}" },
@@ -836,6 +842,12 @@ const fr: Translation = {
       "Elle quitte le site et son lien ne fonctionne plus. Vos listes restent telles qu’elles sont.",
     takingDown: "Retrait…",
     takenDown: "« {title} » retirée",
+    mergeFind: "Fusionner avec un autre thème",
+    houseStaleTitle: "« {title} » a changé depuis que vous l’avez modifiée ici",
+    houseStaleBody:
+      "L’ouvrir telle qu’elle est fait perdre les modifications non envoyées. Votre brouillon les garde, mais une mise à jour depuis celui-ci remet l’ancienne liste.",
+    houseStaleDraft: "Ouvrir mon brouillon",
+    houseStaleFresh: "L’ouvrir telle qu’elle est",
   },
   sections: {
     followers: { one: "{n} abonné", many: "{n} abonnés", other: "{n} abonnés" },
@@ -877,9 +889,11 @@ const fr: Translation = {
     sections: "Rubriques",
     group: "{name} · {n}",
     followSection: "Suivre {name}",
-    unfollowSection: "Ne plus suivre {name}",
     emptyHelper:
-      "Touchez + pour suivre une section. Les thèmes sont dans chaque section, les personnes sur leur profil.",
+      "Touchez + sur les sections qui vous plaisent, puis suivez-les toutes d’un coup. Les thèmes sont dans chaque section, les personnes sur leur profil.",
+    pickFollow: "Suivre · {n}",
+    pickNone: "Choisissez-en au moins une",
+    followedFailed: "Impossible de charger ce que vous suivez.",
     nothingPublished: "Personne parmi vos abonnements n’a encore rien publié.",
     goExplore: "Aller à Explorer",
     back: "Retour",
@@ -937,6 +951,11 @@ const fr: Translation = {
     withdrawAsk: "Retirer « {name} » ? Vos listes restent dans {section}.",
     withdrawFailed: "Impossible de la retirer. Réessayez.",
     withdrawn: "Proposition retirée.",
+    noticeDeclined:
+      "« {name} » n’a pas été ajoutée comme section. Vos listes restent dans {section}.",
+    noticeMerged: "« {name} » a été fusionnée avec {section}.",
+    noticeDismiss: "Ignorer",
+    noticeDismissFailed: "Impossible d’ignorer cet avis. Réessayez.",
   },
   sectionIcons: {
     category: "Formes",
@@ -1109,6 +1128,8 @@ const fr: Translation = {
     boardTrashed: "« {name} » a été déplacé vers la corbeille",
     notFound: "Liste introuvable.",
     notFoundBody: "Elle a peut-être été supprimée, ou elle se trouve sur un autre appareil.",
+    inTrash: "« {name} » est dans la corbeille.",
+    inTrashBody: "Restaurez-la pour la classer et la modifier à nouveau.",
     more: "Plus sur ce tableau",
     delete: "Supprimer le tableau",
     trash: "Corbeille",

@@ -460,7 +460,7 @@
 .pool__hint--menu {
   padding: 8px 8px 0;
   font: 400 12px/16px var(--font);
-  color: var(--ink-quiet);
+  color: var(--ink-faint);
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -498,7 +498,7 @@
 }
 
 .result {
-  scroll-margin-top: calc(var(--header-height) + 72px);
+  scroll-margin-top: calc(var(--header-height) + var(--list-head-h, 72px));
 }
 
 .pool__dots {
@@ -912,9 +912,10 @@
     min-width: 0;
   }
 
-  /* The field's label and the upload's word stay for screen readers only. */
+  /* The field's label and the upload's and paste's words stay for screen readers only. */
   .pool__tools .editor__label,
-  .pool__tools .cards__upload .btn > span:not(.btn__icon) {
+  .pool__tools .cards__upload .btn > span:not(.btn__icon),
+  .pool__tools .cards__paste:not(.cards__paste--open) .btn > span:not(.btn__icon) {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -940,9 +941,34 @@
     border-radius: 18px;
   }
 
-  /* The pool's head is one row; many names at once are pasted in the editor. */
+  /* The pool's head is one row: Paste a list is an icon after Upload, and its
+     box, once open, hangs from the row of tools as the answers do. */
   .pool__tools .cards__paste {
-    display: none;
+    flex: none;
+    order: 2;
+  }
+
+  .pool__tools .cards__paste--open {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 5;
+    padding: 12px;
+    border-radius: var(--radius-card);
+    background: var(--paper);
+    box-shadow: var(--shadow-up);
+  }
+
+  .pool__tools .cards__paste:not(.cards__paste--open) .btn {
+    justify-content: center;
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    border-radius: 18px;
+  }
+
+  .pool__tools .cards__paste .btn .btn__icon {
+    font-size: 18px;
   }
 
   /* Upload images is its arrow in a filled blue circle, the one coloured control in the
@@ -1010,10 +1036,20 @@
     position: static;
   }
 
-  .ranking:not(.ranking--under) .pool__tools .cards__found {
+  .ranking:not(.ranking--under) .pool__tools .cards__found,
+  .ranking:not(.ranking--under) .pool__tools .cards__paste--open {
     top: calc(100% + 4px);
     inset-inline: auto 0;
     width: min(440px, calc(100vw - 32px));
+  }
+
+  /* In the dock the box opens upward, over the board. */
+  .ranking--under .pool__tools {
+    position: relative;
+  }
+
+  .ranking--under .pool__tools .cards__paste--open {
+    bottom: calc(100% + 4px);
   }
 
   .ranking--under .pool__tools {
@@ -1169,12 +1205,12 @@
 
   .ranking:not(.ranking--under) .pool {
     position: sticky;
-    top: calc(var(--header-height) + 72px + 16px);
+    top: calc(var(--header-height) + var(--list-head-h, 72px) + 16px);
     display: flex;
     flex: none;
     flex-direction: column;
     gap: 12px;
-    max-height: calc(100vh - var(--header-height) - 72px - 32px);
+    max-height: calc(100vh - var(--header-height) - var(--list-head-h, 72px) - 32px);
     min-height: 0;
     margin: 0;
     padding: 16px;
@@ -1297,7 +1333,7 @@
   }
 
   html:has(.ranking--under .pool) {
-    scroll-padding-top: calc(var(--header-height) + 72px);
+    scroll-padding-top: calc(var(--header-height) + var(--list-head-h, 72px));
     scroll-padding-bottom: calc(var(--dock-h, 262px) + 24px);
   }
 
@@ -1387,6 +1423,18 @@
   }
 }
 
+/*
+ * A phone on its side, 840 and wider: the page's header scrolls away
+ * (ListPage.css), as the bar does under 840, so the column sticks under the
+ * app bar alone and takes the rest of the short screen.
+ */
+@media (min-width: 840px) and (max-height: 420px) and (hover: none) and (pointer: coarse) {
+  .ranking:not(.ranking--under) .pool {
+    top: calc(var(--header-height) + 16px);
+    max-height: calc(100vh - var(--header-height) - 32px);
+  }
+}
+
 @keyframes dock-in {
   from {
     opacity: 0;
@@ -1414,7 +1462,7 @@
 .move-sheet__credit {
   margin: -4px 0 8px;
   font: var(--text-small);
-  color: var(--ink-quiet);
+  color: var(--ink-faint);
   overflow-wrap: anywhere;
 }
 
@@ -1535,7 +1583,7 @@
   padding: 8px 16px 4px;
   border-top: 1px solid var(--line);
   font: 400 12px/16px var(--font);
-  color: var(--ink-quiet);
+  color: var(--ink-faint);
   overflow-wrap: anywhere;
 }
 

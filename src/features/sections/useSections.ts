@@ -1,10 +1,23 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { SectionStats } from "../../api/sections";
 import { useSession } from "../../app/session";
-import { followSection, loadSections, unfollowSection } from "../../lib/api";
+import {
+  followSection,
+  loadSection,
+  loadSections,
+  unfollowSection,
+  withdrawSectionProposal,
+} from "../../lib/api";
 import { remembered, type Remembered } from "../../lib/remembered";
 import { localStorageStore } from "../../lib/storage";
-import { orderSections, sectionsFrom, type Section } from "./model";
+import {
+  orderSections,
+  proposalNoticesFrom,
+  sectionOf,
+  sectionsFrom,
+  type ProposalNotice,
+  type Section,
+} from "./model";
 
 /** Counts change slowly; the backend itself keeps them ten minutes. */
 export const SECTIONS_FRESH_MS = 10 * 60 * 1000;
@@ -13,6 +26,10 @@ export interface SectionsDeps {
   load: () => Promise<{ sections: SectionStats[] }>;
   follow: (id: string) => Promise<unknown>;
   unfollow: (id: string) => Promise<unknown>;
+  /** One section by its id, for one followed that the list leaves out; left out, none is asked about. */
+  loadOne?: (id: string) => Promise<SectionStats>;
+  /** Dismisses the notice of one's own declined or merged proposal. */
+  dismiss?: (id: string) => Promise<unknown>;
   now: () => number;
   /** The last answer on this device, to open with: left out, nothing is kept. */
   memory?: Remembered<KeptSections>;
@@ -50,7 +67,24 @@ export interface SectionsSnapshot {
    */
   known: boolean;
   failed: boolean;
+  /**
+   * Sections asked about by their id because the list leaves them out: a
+   * hidden one, or one approved since it was read. Never drawn as tiles, but
+   * followed and unfollowed like the others, as the app's catalogue keeps them.
+   */
+  extra: Section[];
+  /**
+   * Whether the sections' Follow marks are the backend's word for this
+   * person, now or as last read here: the nine standing in know nothing of it.
+   */
+  followsKnown: boolean;
+  /** What became of one's own proposals a moderator did not approve, until dismissed. */
+  notices: ProposalNotice[];
 }
+
+/** A section the store holds, among the sections or those asked about by id. */
+export const heldSection = (snapshot: SectionsSnapshot, id: string): Section | undefined =>
+  snapshot.sections.find((one) => one.id === id) ?? snapshot.extra.find((one) => one.id === id);
 
 export interface SectionsStore {
   get: () => SectionsSnapshot;
@@ -64,6 +98,12 @@ export interface SectionsStore {
   setFollowing: (id: string, following: boolean) => Promise<boolean>;
   /** Forgets the answer, so the next page that shows sections asks again: after an admin's Save. */
   invalidate: () => void;
+  /** Holds a section asked about by its id, which the list leaves out. */
+  keep: (stats: SectionStats) => void;
+  /** Asks once about a followed section the store does not hold, and holds it. */
+  lookUp: (id: string) => void;
+  /** Takes a notice away at once; it comes back if the backend says no. */
+  dismissNotice: (id: string) => Promise<boolean>;
 }
 
 /**
@@ -75,17 +115,29 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
   const kept = deps.memory?.recall("sections") ?? null;
   let snapshot: SectionsSnapshot =
     kept === null
-      ? { sections: sectionsFrom(null), loaded: false, known: false, failed: false }
+      ? {
+          sections: sectionsFrom(null),
+          loaded: false,
+          known: false,
+          failed: false,
+          extra: [],
+          followsKnown: false,
+          notices: [],
+        }
       : {
           sections: orderSections(sectionsFrom(kept.sections, kept.who)),
           loaded: false,
           known: true,
           failed: false,
+          extra: [],
+          followsKnown: true,
+          notices: proposalNoticesFrom(kept.sections, kept.who),
         };
   let loadedAt: number | null = null;
   let loadedFor: string | null = null;
   let wanted: string | null = null;
   let loading = false;
+  const askedAbout = new Set<string>();
   const listeners = new Set<() => void>();
 
   const set = (next: SectionsSnapshot) => {
@@ -93,17 +145,15 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
     listeners.forEach((listener) => listener());
   };
 
-  const withFollowing = (id: string, following: boolean) =>
-    orderSections(
-      snapshot.sections.map((section) =>
-        section.id === id && section.following !== following
-          ? {
-              ...section,
-              following,
-              followerCount: Math.max(0, section.followerCount + (following ? 1 : -1)),
-            }
-          : section,
-      ),
+  const turned = (sections: readonly Section[], id: string, following: boolean): Section[] =>
+    sections.map((section) =>
+      section.id === id && section.following !== following
+        ? {
+            ...section,
+            following,
+            followerCount: Math.max(0, section.followerCount + (following ? 1 : -1)),
+          }
+        : section,
     );
 
   const store: SectionsStore = {
@@ -134,10 +184,21 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
             again();
             return;
           }
+          // What was asked about by id was asked for somebody: another person starts afresh.
+          const extra = loadedFor === null || loadedFor === who ? snapshot.extra : [];
+          if (extra.length === 0) askedAbout.clear();
           loadedAt = deps.now();
           loadedFor = who;
           if (who !== null) deps.memory?.keep("sections", { sections: sections ?? [], who });
-          set({ sections: shown, loaded: true, known: true, failed: false });
+          set({
+            sections: shown,
+            loaded: true,
+            known: true,
+            failed: false,
+            extra,
+            followsKnown: true,
+            notices: who === null ? [] : proposalNoticesFrom(sections ?? [], who),
+          });
           again();
         },
         () => {
@@ -151,13 +212,43 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
       loadedAt = null;
     },
     async setFollowing(id, following) {
-      const before = snapshot.sections;
-      set({ ...snapshot, sections: withFollowing(id, following) });
+      const before = snapshot;
+      set({
+        ...snapshot,
+        sections: orderSections(turned(snapshot.sections, id, following)),
+        extra: turned(snapshot.extra, id, following),
+      });
       try {
         await (following ? deps.follow(id) : deps.unfollow(id));
         return true;
       } catch {
-        set({ ...snapshot, sections: before });
+        set({ ...snapshot, sections: before.sections, extra: before.extra });
+        return false;
+      }
+    },
+    keep(stats) {
+      const section = sectionOf(stats);
+      set({
+        ...snapshot,
+        extra: [...snapshot.extra.filter((one) => one.id !== section.id), section],
+      });
+    },
+    lookUp(id) {
+      if (deps.loadOne === undefined || askedAbout.has(id)) return;
+      if (heldSection(snapshot, id) !== undefined) return;
+      askedAbout.add(id);
+      // Nothing is said when it cannot be had: its row keeps the name it has.
+      deps.loadOne(id).then(store.keep, () => askedAbout.delete(id));
+    },
+    async dismissNotice(id) {
+      const gone = snapshot.notices.find((one) => one.id === id);
+      if (gone === undefined || deps.dismiss === undefined) return false;
+      set({ ...snapshot, notices: snapshot.notices.filter((one) => one.id !== id) });
+      try {
+        await deps.dismiss(id);
+        return true;
+      } catch {
+        set({ ...snapshot, notices: [...snapshot.notices, gone] });
         return false;
       }
     },
@@ -169,6 +260,8 @@ export const sectionsStore = createSectionsStore({
   load: loadSections,
   follow: followSection,
   unfollow: unfollowSection,
+  loadOne: loadSection,
+  dismiss: withdrawSectionProposal,
   now: Date.now,
   memory: remembered(localStorageStore, "tyl:sections", 1, readKeptSections),
 });

@@ -46,15 +46,25 @@ function noteRefusal(): void {
   troubleListeners.forEach((listener) => listener());
 }
 
+/** What each browser store was refused, kept for the visit instead. */
+const refusedWrites = new Set<Map<string, string>>();
+
 export function resetStorageTroubleForTests(): void {
   refused = false;
+  refusedWrites.forEach((held) => held.clear());
 }
 
 // Private mode, a full disk and a browser told to block storage all throw;
-// the site must work anyway, it just forgets on reload, and says so.
+// the site must work anyway, it just forgets on reload, and says so. What
+// the browser would not keep is held here for the visit, so a list made now
+// still has its title and its cards until the tab goes.
 function browserStore(storage: () => Storage): KeyValueStore {
+  const held = new Map<string, string>();
+  refusedWrites.add(held);
   return {
     read(key) {
+      const kept = held.get(key);
+      if (kept !== undefined) return kept;
       try {
         return storage().getItem(key);
       } catch {
@@ -64,13 +74,16 @@ function browserStore(storage: () => Storage): KeyValueStore {
     write(key, value) {
       try {
         storage().setItem(key, value);
+        held.delete(key);
         return true;
       } catch {
+        held.set(key, value);
         noteRefusal();
         return false;
       }
     },
     remove(key) {
+      held.delete(key);
       try {
         storage().removeItem(key);
       } catch {
@@ -78,11 +91,13 @@ function browserStore(storage: () => Storage): KeyValueStore {
       }
     },
     keys() {
+      let stored: string[] = [];
       try {
-        return Object.keys(storage());
+        stored = Object.keys(storage());
       } catch {
-        return [];
+        // Blocked: only what this visit holds.
       }
+      return [...new Set([...stored, ...held.keys()])];
     },
   };
 }
