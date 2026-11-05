@@ -428,6 +428,7 @@ const de: Translation = {
     seedHint: "Wenn du sie platzierst, beginnt deine Version mit dem Ranking von {name}.",
     seedHintUnnamed: "Wenn du sie platzierst, beginnt deine Version mit diesem Ranking.",
     dropToStart: "Lass sie los, um deine Version zu beginnen.",
+    seedStart: "Verschieb eine Karte auf dem Board, um deine Version zu beginnen.",
   },
   rankings: {
     title: "Reihungen",
@@ -524,6 +525,9 @@ const de: Translation = {
       "Diese Liste ist nicht mehr verfügbar, also kann die Rangliste nicht behalten werden.",
     failedOther:
       "Die Rangliste konnte nicht gespeichert werden. Nichts ist verloren. Versuch es noch einmal.",
+    failedChanged:
+      "Der Autor hat diese Liste geändert, während du sie eingestuft hast. Lade sie neu, um sie so einzustufen, wie sie jetzt ist.",
+    loadAgain: "Neu laden",
   },
   keep: {
     title: "Diese Rangliste behalten",

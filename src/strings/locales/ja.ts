@@ -417,6 +417,7 @@ const ja: Translation = {
     seedHint: "置くと、{name}のランキングから自分のバージョンが始まります。",
     seedHintUnnamed: "置くと、このランキングから自分のバージョンが始まります。",
     dropToStart: "ドロップすると自分のバージョンが始まります。",
+    seedStart: "ボードのカードを動かすと、自分のバージョンが始まります。",
   },
   rankings: {
     title: "ランキング",
@@ -510,6 +511,9 @@ const ja: Translation = {
     failedGone: "このリストは利用できなくなったため、ランキングを保存できません。",
     failedOther:
       "ランキングを保存できませんでした。内容は失われていません。もう一度お試しください。",
+    failedChanged:
+      "ランキング中に作者がこのリストを変更しました。読み込み直すと、今のリストでランキングできます。",
+    loadAgain: "読み込み直す",
   },
   keep: {
     title: "このランキングを保存",

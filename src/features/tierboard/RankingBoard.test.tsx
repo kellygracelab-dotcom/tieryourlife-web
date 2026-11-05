@@ -13,6 +13,7 @@ vi.mock("../../lib/api", () => ({
   keepRanking: vi.fn(),
   noteTake: vi.fn(),
   keepListRanking: vi.fn(async () => undefined),
+  rearrangeRanking: vi.fn(async () => ({ code: "abcdefgh" })),
 }));
 
 const list: PublishedList = {
@@ -366,6 +367,34 @@ describe("RankingBoard", () => {
     expect(tray().getAllByRole("button")).toHaveLength(30);
   });
 
+  it("picks the next card among those the search shows, never one it hides", async () => {
+    const long: PublishedList = {
+      ...list,
+      itemCount: 40,
+      items: Array.from({ length: 40 }, (_, i) => ({
+        title: `Film ${i + 1}`,
+        imageUrl: null,
+        tierIndex: null,
+      })),
+    };
+    render(
+      <MemoryRouter>
+        <RankingBoard list={long} store={memoryStore()} />
+      </MemoryRouter>,
+    );
+    const tray = () => within(document.querySelector(".pool__items")!);
+    await userEvent.type(screen.getByRole("searchbox", { name: "Find a card" }), "Film 3");
+    expect(tray().getAllByRole("button")).toHaveLength(11);
+
+    await userEvent.click(tray().getByRole("button", { name: "Film 3" }));
+    await userEvent.keyboard("1");
+    // Film 4 is next in the pool, but out of sight: Film 30 is picked instead.
+    expect(tray().getByRole("button", { name: "Film 30" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.keyboard("1");
+    expect(tierList("S")).toHaveTextContent("Film 3Film 30");
+    expect(tierList("S")).not.toHaveTextContent("Film 4");
+  });
+
   it("docks the pool under the board on a wide, tall window, and keeps the choice to put it beside", async () => {
     const had = { width: window.innerWidth, height: window.innerHeight };
     Object.assign(window, { innerWidth: 1600, innerHeight: 900 });
@@ -470,7 +499,7 @@ describe("RankingBoard", () => {
     expect(document.querySelector(".pool .btn--filled")).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-    expect(keep).toHaveBeenCalledWith("abc", [[0, 1], [2]]);
+    expect(keep).toHaveBeenCalledWith("abc", [[0, 1], [2]], 0);
     expect(await screen.findByText(/\/r\/abcdefgh/)).toBeInTheDocument();
     expect(screen.queryByText("All 3 placed")).toBeNull();
     // Nothing left to place and nothing to change: no tray saying "0 cards left".
@@ -528,7 +557,7 @@ describe("RankingBoard", () => {
     await userEvent.keyboard("1");
     await userEvent.click(screen.getByRole("button", { name: "Finish" }));
 
-    expect(keep).toHaveBeenCalledWith("abc", [[0], []]);
+    expect(keep).toHaveBeenCalledWith("abc", [[0], []], 0);
     expect(await screen.findByRole("status")).toHaveTextContent("Your ranking is live at");
     expect(take).toHaveBeenCalledWith("abc");
     expect(store.data.get("tyl:ranking:abc")).toContain('"code":"abcdefgh"');
@@ -571,6 +600,111 @@ describe("RankingBoard", () => {
     expect(keep).toHaveBeenCalled();
     // Those rankings carry the reader's name and face: the app lists one only when asked.
     expect(vi.mocked(keepListRanking)).not.toHaveBeenCalled();
+  });
+
+  it("changes an account's finished ranking behind the same link, rather than making another", async () => {
+    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
+    const rearrange = vi.fn(async () => ({ code: "abcdefgh" }));
+    const store = memoryStore();
+    const session: Session = {
+      account: { kind: "signedIn", uid: "u9", displayName: "Reader", photoUrl: null },
+      signIn: async () => ({ kind: "cancelled" }),
+      signOut: async () => undefined,
+      refresh: () => undefined,
+    };
+    render(
+      <SessionContext.Provider value={session}>
+        <MemoryRouter>
+          <RankingBoard
+            list={list}
+            store={store}
+            keep={keep}
+            rearrange={rearrange}
+            take={async () => undefined}
+          />
+        </MemoryRouter>
+      </SessionContext.Provider>,
+    );
+    await userEvent.click(card("The Witch"));
+    await userEvent.keyboard("1");
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+    await screen.findByRole("status");
+    await userEvent.click(screen.getByRole("button", { name: "Change ranking" }));
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("2");
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("abcdefgh");
+    expect(keep).toHaveBeenCalledTimes(1);
+    expect(rearrange).toHaveBeenCalledWith("abcdefgh", [[1], [0]]);
+  });
+
+  it("makes a new ranking when the one kept is gone, or was made for another version of the list", async () => {
+    const keep = vi.fn(async () => ({ code: "zzzzzzzz", claimToken: "t" }));
+    const rearrange = vi.fn(async () => Promise.reject(new ApiFailure({ kind: "notFound" })));
+    const session: Session = {
+      account: { kind: "signedIn", uid: "u9", displayName: "Reader", photoUrl: null },
+      signIn: async () => ({ kind: "cancelled" }),
+      signOut: async () => undefined,
+      refresh: () => undefined,
+    };
+    for (const version of [0, 5]) {
+      const store = memoryStore();
+      store.write(
+        "tyl:ranking:abc",
+        JSON.stringify({
+          code: "abcdefgh",
+          claimToken: "s",
+          claimedBy: "u9",
+          rows: [[0], []],
+          version,
+        }),
+      );
+      const { unmount } = render(
+        <SessionContext.Provider value={session}>
+          <MemoryRouter>
+            <RankingBoard
+              list={list}
+              store={store}
+              keep={keep}
+              rearrange={rearrange}
+              take={async () => undefined}
+            />
+          </MemoryRouter>
+        </SessionContext.Provider>,
+      );
+      await userEvent.click(card("Climax"));
+      await userEvent.keyboard("1");
+      await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+      expect(await screen.findByRole("status")).toHaveTextContent("zzzzzzzz");
+      unmount();
+    }
+    // Only the ranking of this version was asked to change; the other was never tried.
+    expect(rearrange).toHaveBeenCalledTimes(1);
+    expect(keep).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the link again after a reload, while the board is as it was finished", () => {
+    const store = memoryStore();
+    const finished = { code: "abcdefgh", claimToken: "s", rows: [[0], []], version: 0 };
+    store.write("tyl:ranking:abc", JSON.stringify(finished));
+    const { unmount } = render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={store} keep={vi.fn()} take={async () => undefined} />
+      </MemoryRouter>,
+    );
+    // Nothing placed on this device: the board is not the ranking, so Finish it is.
+    expect(screen.queryByRole("status")).toBeNull();
+    unmount();
+
+    store.write("tyl:ranking:abc", JSON.stringify({ ...finished, rows: [[], []] }));
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={store} keep={vi.fn()} take={async () => undefined} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
+    expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
   });
 
   it("keeps the board editable when saving fails, and tries again", async () => {

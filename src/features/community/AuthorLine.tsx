@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useSession } from "../../app/session";
 import { fill, strings } from "../../strings";
+import { fillNodes } from "../../strings/fillNodes";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { FollowButton } from "./FollowButton";
 import { SignInDialog } from "./SignInDialog";
@@ -26,7 +27,7 @@ interface AuthorLineProps {
  * the moment somebody most wants to follow and least wants to leave the page.
  */
 export function AuthorLine({ uid, name, photoUrl, own, notify, follow }: AuthorLineProps) {
-  const byline = fill(strings.list.by, { name });
+  const byline = fillNodes(strings.list.by, { name: <bdi>{name}</bdi> });
   return (
     <div className="byline">
       {uid === "" ? (

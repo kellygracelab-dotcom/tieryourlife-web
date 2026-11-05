@@ -419,6 +419,7 @@ const es: Translation = {
     seedHint: "Al colocarla, tu versión parte de la clasificación de {name}.",
     seedHintUnnamed: "Al colocarla, tu versión parte de esta clasificación.",
     dropToStart: "Suéltala para empezar tu versión.",
+    seedStart: "Mueve una tarjeta del tablero para empezar tu versión.",
   },
   rankings: {
     title: "Rankings",
@@ -510,6 +511,9 @@ const es: Translation = {
       "Sin conexión. No se perdió nada: lo que colocaste está a salvo en este dispositivo. Inténtalo de nuevo cuando vuelvas a estar en línea.",
     failedGone: "Esta lista ya no está disponible, así que la clasificación no se puede guardar.",
     failedOther: "No se pudo guardar la clasificación. No se perdió nada. Inténtalo de nuevo.",
+    failedChanged:
+      "El autor cambió esta lista mientras la clasificabas. Vuelve a cargarla para clasificarla tal como está ahora.",
+    loadAgain: "Volver a cargarla",
   },
   keep: {
     title: "Guarda esta clasificación",

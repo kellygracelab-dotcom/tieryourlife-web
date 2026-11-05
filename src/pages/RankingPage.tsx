@@ -15,6 +15,7 @@ import { loadRanking, rearrangeRanking } from "../lib/api";
 import { type KeyValueStore, localStorageStore, memoryStore } from "../lib/storage";
 import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
+import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
@@ -177,11 +178,13 @@ function Body({
       <header className="list-head">
         <PageTitle title={snapshot.title} />
         <div className="list-head__text">
-          <h1 className="list-head__title">{snapshot.title}</h1>
+          <h1 className="list-head__title">
+            <bdi>{snapshot.title}</bdi>
+          </h1>
           <p className="list-head__meta">
             {!editorial && (
               <>
-                {fill(strings.list.by, { name: snapshot.authorName })}
+                {fillNodes(strings.list.by, { name: <bdi>{snapshot.authorName}</bdi> })}
                 {" · "}
               </>
             )}

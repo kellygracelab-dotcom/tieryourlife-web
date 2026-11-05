@@ -417,6 +417,7 @@ export const en = {
     seedHint: "Placing it starts your version from {name}’s.",
     seedHintUnnamed: "Placing it starts your version from this ranking.",
     dropToStart: "Drop it to start your version.",
+    seedStart: "Move a card on the board to start your version.",
   },
   // The readers' placings of a list. The title has no count, so it cannot
   // disagree with the chip's, which is the takes (Danylo, 28.10).
@@ -511,6 +512,9 @@ export const en = {
       "No connection. Nothing was lost: your placements are safe on this device. Try again once you are back online.",
     failedGone: "This list isn’t available anymore, so the ranking cannot be kept.",
     failedOther: "Could not save the ranking. Nothing was lost. Try again.",
+    failedChanged:
+      "The author changed this list while you were ranking it. Load it again to rank it as it is now.",
+    loadAgain: "Load it again",
   },
   keep: {
     title: "Keep this ranking",

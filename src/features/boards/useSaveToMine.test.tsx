@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -52,7 +52,7 @@ function Harness({
   return (
     <>
       <button type="button" onClick={saving.start}>
-        Save
+        {saving.saved === null ? "Save" : "Open"}
       </button>
       <SaveToMineDialog saving={saving} />
     </>
@@ -102,6 +102,30 @@ describe("useSaveToMine", () => {
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ text: "Saved to your lists." }));
     notify.mock.calls[0]![0].action!.onClick();
     expect(await screen.findByRole("heading", { name: "the board" })).toBeInTheDocument();
+  });
+
+  it("makes one copy a visit, as the phone does: once saved, the button opens it", async () => {
+    const { repository } = show(list(false));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(repository.all()).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(await screen.findByRole("heading", { name: "the board" })).toBeInTheDocument();
+    expect(repository.all()).toHaveLength(1);
+  });
+
+  it("saves once when a double click asks twice before the page has redrawn", () => {
+    const repository = boardsRepository(memoryStore());
+    const { result } = renderHook(
+      () => useSaveToMine(list(false), () => undefined, { repository, store: memoryStore() }),
+      { wrapper: MemoryRouter },
+    );
+    act(() => {
+      result.current.start();
+      result.current.start();
+      result.current.save("none");
+    });
+    expect(repository.all()).toHaveLength(1);
+    expect(result.current.saved).toBe(repository.all()[0]!.uid);
   });
 
   it("asks which ranking to keep when there is a choice, and keeps mine when I say so", async () => {

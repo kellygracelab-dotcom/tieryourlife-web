@@ -61,7 +61,7 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
       </span>
       <span className="board-card__text">
         <span className="board-card__title">
-          {title}
+          <bdi>{title}</bdi>
           {board.arrivedFrom !== null && (
             <span className="board-card__from">
               {fill(strings.sync.arrivedFrom, { device: board.arrivedFrom })}

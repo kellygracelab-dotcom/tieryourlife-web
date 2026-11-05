@@ -9,8 +9,12 @@ export interface BoardState {
 
 export type BoardAction =
   | { type: "select"; item: number | null }
-  /** `index` is the card's place among the row's other cards; without it the card goes last. */
-  | { type: "place"; item: number; tier: number; index?: number }
+  /**
+   * `index` is the card's place among the row's other cards; without it the
+   * card goes last. `among` is the pool's cards in sight, when a search hides
+   * some: the next pick comes from those only.
+   */
+  | { type: "place"; item: number; tier: number; index?: number; among?: readonly number[] }
   | { type: "unplace"; item: number }
   | { type: "undo" }
   /** The list has other cards or tiers now (the owner's doing): the board starts over from these rows. */
@@ -71,7 +75,7 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
       // Working through the pool by taps or keys, the next card picks itself,
       // so a whole list is one tap a card. A drag selects nothing.
       return fromPool && state.selected === action.item
-        ? { ...next, selected: nextInPool(next, action.item) }
+        ? { ...next, selected: nextInPool(next, action.item, action.among) }
         : next;
     }
     case "unplace": {
@@ -118,9 +122,13 @@ export function pool(state: BoardState): number[] {
   return Array.from({ length: state.itemCount }, (_, i) => i).filter((i) => !placed.has(i));
 }
 
-/** The card after this one in the pool, or the first when it was the last. */
-function nextInPool(state: BoardState, after: number): number | null {
-  const left = pool(state);
+/**
+ * The card after this one in the pool, or the first when it was the last. A
+ * card the search hides is never picked: the next key would place it unseen.
+ */
+function nextInPool(state: BoardState, after: number, among?: readonly number[]): number | null {
+  const inSight = among === undefined ? null : new Set(among);
+  const left = pool(state).filter((item) => inSight === null || inSight.has(item));
   return left.find((item) => item > after) ?? left[0] ?? null;
 }
 

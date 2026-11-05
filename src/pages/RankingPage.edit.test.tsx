@@ -130,7 +130,9 @@ describe("editing a ranking", () => {
     await screen.findByRole("heading", { level: 1 });
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
-    expect(screen.getByText("by danylo · ranked by a visitor")).toBeInTheDocument();
+    expect(document.querySelector(".list-head__meta")).toHaveTextContent(
+      /^by danylo · ranked by a visitor$/,
+    );
   });
 
   it("asks as a guest until an account is here", async () => {

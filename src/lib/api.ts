@@ -99,8 +99,8 @@ export const loadRanking = (code: string, asAccount = false): Promise<Ranking> =
 export const rearrangeRanking = (code: string, rows: Rows): Promise<{ code: string }> =>
   rank.rearrangeRanking(api, code, rows);
 
-export const keepRanking = (listId: string, rows: Rows): Promise<SavedRanking> =>
-  rank.keepRanking(api, listId, rows);
+export const keepRanking = (listId: string, rows: Rows, version?: number): Promise<SavedRanking> =>
+  rank.keepRanking(api, listId, rows, version);
 
 export const carryGuest = (guestToken: string): Promise<AdoptedGuest> =>
   account.carryGuest(api, guestToken);

@@ -58,7 +58,7 @@ function Row({ name, photoUrl, when, selected, onClick, pill, trailing }: RowPro
         <Face name={name} photoUrl={photoUrl} />
         <span className="rankings__text">
           <span className="rankings__name">
-            <span className="rankings__name-text">{name}</span>
+            <bdi className="rankings__name-text">{name}</bdi>
             {pill !== undefined && <span className="rankings__pill">{pill}</span>}
           </span>
           {when > 0 && <span className="rankings__when">{placedOn(when)}</span>}

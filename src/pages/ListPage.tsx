@@ -20,7 +20,7 @@ import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
 import { readKept } from "../features/ranking/kept";
-import { arrange } from "../features/tierboard/arrange";
+import { arrange, poolOf } from "../features/tierboard/arrange";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
 import type { Dock } from "../features/tierboard/dock";
 import {
@@ -34,7 +34,7 @@ import {
 import { flyIn } from "../features/tierboard/flight";
 import type { Rows } from "../features/tierboard/model";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
-import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
+import { ReadOnlyBoard, UnrankedPool } from "../features/tierboard/ReadOnlyBoard";
 import {
   loadList,
   preloadHidesAuthor,
@@ -42,6 +42,7 @@ import {
   unpublish as unpublishList,
 } from "../lib/api";
 import { isEditorial, isEditorialAuthor } from "../lib/editorial";
+import { spendPreload } from "../lib/preload";
 import { type KeyValueStore, localStorageStore } from "../lib/storage";
 import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
@@ -220,6 +221,12 @@ export function ListPage(props: ListPageProps) {
   const asAccount = account?.kind === "signedIn" && preloadHidesAuthor(id);
   const load = useCallback(() => loadList(id, asAccount), [id, asAccount]);
   const { state, retry } = useResource(asAccount ? `${id}#account` : id, load);
+  // Republished while it was ranked: read again from the network, since the
+  // page's copy may be as old as the list a Finish was just refused for.
+  const reread = useCallback(() => {
+    spendPreload();
+    retry();
+  }, [retry]);
 
   if (state.status === "loading") {
     return <ListPageLoading note={strings.list.opening} rows={3} />;
@@ -228,7 +235,7 @@ export function ListPage(props: ListPageProps) {
     return <ListPageTrouble error={state.error} retry={retry} words={strings.list} />;
   }
   // A list of its own: what was chosen on another one does not carry over.
-  return <OpenList key={state.value.id} list={state.value} {...props} />;
+  return <OpenList key={state.value.id} list={state.value} onListChanged={reread} {...props} />;
 }
 
 /**
@@ -264,7 +271,8 @@ function OpenList({
   report = sendReport,
   unpublish = unpublishList,
   repository,
-}: ListPageProps & { list: PublishedList }) {
+  onListChanged,
+}: ListPageProps & { list: PublishedList; onListChanged?: () => void }) {
   const { account } = useSession();
   const { hidden } = useHidden();
   // The author has nobody's arrangement to compare with but their own: they
@@ -405,10 +413,10 @@ function OpenList({
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
   // Who else ranked it is a line of the menu, the one place the number is said.
-  const rankingsEntry =
-    list.takeCount > 0 && !outOfSight
-      ? { count: list.takeCount, open: () => setSheet(true) }
-      : null;
+  // Always there, as in the app: the author's own ranking heads the sheet.
+  const rankingsEntry = outOfSight
+    ? null
+    : { count: list.rankingCount ?? 0, open: () => setSheet(true) };
 
   return (
     <article
@@ -418,7 +426,9 @@ function OpenList({
       <header className="list-head">
         <PageTitle title={list.title} />
         <div className="list-head__text">
-          <h1 className="list-head__title">{list.title}</h1>
+          <h1 className="list-head__title">
+            <bdi>{list.title}</bdi>
+          </h1>
           {/* A list that stands without an author has no line naming one. */}
           {!editorial && (
             <div className="list-head__lines">
@@ -474,6 +484,7 @@ function OpenList({
             <RankingBoard
               key={`${list.id}:${mineRound}`}
               list={list}
+              onListChanged={onListChanged}
               onRows={(rows) =>
                 // Nothing placed in Mine: Play starts from the author's, as before.
                 setMineRows(rows.some((row) => row.length > 0) ? rows.map((row) => [...row]) : null)
@@ -492,20 +503,25 @@ function OpenList({
         ) : (
           // A visitor may start from what is on show: a card moved here moves in Mine.
           // Outside the frame, so the header keeps the layout it has for Theirs.
-          <RankingBoard
-            key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}`}
-            list={theirsList}
-            seed={{
-              rows: theirs.rows,
-              label: theirsLabel,
-              hint:
-                theirsName === null
-                  ? strings.list.seedHintUnnamed
-                  : fill(strings.list.seedHint, { name: theirsName }),
-              dropHint: strings.list.dropToStart,
-              onStart: startFromTheirs,
-            }}
-          />
+          // What it left unranked is said under it, as the app's Theirs has it.
+          <>
+            <RankingBoard
+              key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}`}
+              list={theirsList}
+              seed={{
+                rows: theirs.rows,
+                label: theirsLabel,
+                hint:
+                  theirsName === null
+                    ? strings.list.seedHintUnnamed
+                    : fill(strings.list.seedHint, { name: theirsName }),
+                dropHint: strings.list.dropToStart,
+                start: strings.list.seedStart,
+                onStart: startFromTheirs,
+              }}
+            />
+            <UnrankedPool items={list.items} pool={poolOf(theirs.rows, list.items.length)} />
+          </>
         ))}
       {!own && play.view}
       {!outOfSight && <PictureCredits items={list.items} />}

@@ -335,6 +335,34 @@ describe("MePage", () => {
     expect(screen.getByText("Only the newest 6 are shown.")).toBeInTheDocument();
   });
 
+  it("shows everything again when a delete takes the chips away, rather than keep the other kind hidden", async () => {
+    load.mockResolvedValue({
+      rankings: Array.from({ length: 4 }, (_, i) => ranking(`aaaaaaa${i}`, `Ranking ${i}`)),
+      more: false,
+    });
+    loadLists.mockResolvedValue({
+      lists: Array.from({ length: 5 }, (_, i) => published(`l${i}`, `List ${i}`)),
+    });
+    deleteRanking.mockResolvedValue(undefined);
+    open();
+    await screen.findByText("5 published · 4 ranked");
+    const chips = within(screen.getByRole("group", { name: "Which to show" }));
+    await userEvent.click(chips.getByRole("button", { name: "Rankings" }));
+    expect(rows()).toHaveLength(4);
+
+    await userEvent.click(
+      (await menuOf("Ranking 0")).getByRole("button", { name: "Delete ranking" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Delete ranking" })).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+    await screen.findByText("5 published · 3 ranked");
+    expect(screen.queryByRole("group", { name: "Which to show" })).toBeNull();
+    expect(rows()).toHaveLength(8);
+  });
+
   it("says so when there is nothing yet, and leads to the lists", async () => {
     load.mockResolvedValue({ rankings: [], more: false });
     loadLists.mockResolvedValue({ lists: [] });

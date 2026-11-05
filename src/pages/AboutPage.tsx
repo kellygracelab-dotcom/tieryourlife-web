@@ -55,7 +55,10 @@ export function AboutPage() {
         <a className="about__tmdb" href={TMDB_URL} target="_blank" rel="noopener">
           <img src={tmdbLogo} alt={strings.about.tmdbLogo} width="123" height="16" />
         </a>
-        <p className="about__notice">{strings.about.tmdb}</p>
+        {/* TMDB's sentence stays in English in every language, so it is read as English. */}
+        <p className="about__notice" lang="en" dir="ltr">
+          {strings.about.tmdb}
+        </p>
       </section>
 
       <section className="about__card" aria-labelledby="about-data">

@@ -65,7 +65,7 @@ export function ListCard({ list, reason = null, yours = null }: ListCardProps) {
         />
         <span className="list-card__text">
           {reason !== null && <span className="list-card__reason">{reason}</span>}
-          <span className="list-card__title">{titleIn(list, currentLocale())}</span>
+          <bdi className="list-card__title">{titleIn(list, currentLocale())}</bdi>
         </span>
       </Link>
       <span className="list-card__body">
@@ -107,7 +107,7 @@ export function ListCard({ list, reason = null, yours = null }: ListCardProps) {
                   {initialOf(list.authorName)}
                 </span>
               )}
-              <span className="list-card__name">{list.authorName}</span>
+              <bdi className="list-card__name">{list.authorName}</bdi>
             </Link>
           )
         )}
