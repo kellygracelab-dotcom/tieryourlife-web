@@ -16,6 +16,11 @@ export type FeedState =
       more: "idle" | "loading" | "failed";
       /** A Following feed of somebody who follows nobody yet. */
       followingNobody: boolean;
+      /**
+       * The page last read on this device, kept on screen because the fresh
+       * one could not be had: the app keeps its lists too, and says so.
+       */
+      stale?: boolean;
     };
 
 type Ready = Extract<FeedState, { status: "ready" }>;
@@ -73,12 +78,13 @@ export const feedMemory: Remembered<RememberedPage> = remembered(
   readRememberedPage,
 );
 
-const readyFrom = (page: RememberedPage): FeedState => ({
+const readyFrom = (page: RememberedPage, stale: boolean): FeedState => ({
   status: "ready",
   lists: page.lists,
   next: page.next,
   more: "idle",
   followingNobody: false,
+  stale,
 });
 
 interface Loaded {
@@ -106,17 +112,24 @@ export function useFeed(
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   // Whatever was loaded for another query or an earlier attempt reads as
-  // loading, unless this query was read before: then that, until the fresh one.
+  // loading, unless this query was read before: then that, until the fresh
+  // one. Another try after a failure keeps the kept page up meanwhile.
+  const keptUp =
+    loaded !== null && loaded.key === key && loaded.state.status === "ready" && loaded.state.stale;
   const state: FeedState =
     loaded !== null && loaded.key === key && loaded.attempt === attempt
       ? loaded.state
-      : attempt === 0 && recalled !== null
-        ? readyFrom(recalled)
+      : recalled !== null && (attempt === 0 || keptUp === true)
+        ? readyFrom(recalled, attempt !== 0)
         : LOADING;
 
   useEffect(() => {
     let current = true;
     const settle = (next: FeedState) => current && setLoaded({ key, attempt, state: next });
+    // A page read before stays when the fresh one fails: lists to read beat a
+    // bare "No connection".
+    const failed = (reason: unknown): FeedState =>
+      recalled !== null ? readyFrom(recalled, true) : { status: "error", error: errorOf(reason) };
     load(stable).then(
       (page) => {
         kept?.keep(key, { lists: page.lists.map(nobodys), next: page.nextCursor });
@@ -128,12 +141,12 @@ export function useFeed(
           followingNobody: page.followingNobody === true,
         });
       },
-      (reason: unknown) => settle({ status: "error", error: errorOf(reason) }),
+      (reason: unknown) => settle(failed(reason)),
     );
     return () => {
       current = false;
     };
-  }, [stable, key, load, attempt, kept]);
+  }, [stable, key, load, attempt, kept, recalled]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 

@@ -5,7 +5,7 @@ import type { Topic } from "../api/sections";
 import { FollowButton } from "../features/community/FollowButton";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
-import { sectionPath, type Section } from "../features/sections/model";
+import { sectionPath, waitingPath, type Section } from "../features/sections/model";
 import { TopicTiles } from "../features/sections/TopicTiles";
 import { sectionsStore, type SectionsStore } from "../features/sections/useSections";
 import { WaitingSheet } from "../features/sections/WaitingSheet";
@@ -141,7 +141,15 @@ export function SectionPage({
   const { id = "" } = useParams();
   return (
     <SectionRoute id={id} store={store} loadOne={loadOne}>
-      {(section) => <SectionView section={section} load={load} store={store} topics={topics} />}
+      {(section) =>
+        // One's own waiting section has no lists and no followers yet: it
+        // opens as its tile does, with the way to take it back.
+        section.status === "pending" ? (
+          <Navigate to={waitingPath(section.id)} replace />
+        ) : (
+          <SectionView section={section} load={load} store={store} topics={topics} />
+        )
+      }
     </SectionRoute>
   );
 }

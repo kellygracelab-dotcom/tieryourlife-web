@@ -1,19 +1,31 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import type { Following, SuggestedAuthor } from "../../api/community";
 import type { FeedQuery, ListSummary } from "../../api/types";
 import { followAuthor, loadFollowing, suggestedAuthors, unfollowAuthor } from "../../lib/api";
 import { isEditorialAuthor } from "../../lib/editorial";
 import { useResource } from "../../lib/useResource";
-import { strings } from "../../strings";
+import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { FollowButton } from "../community/FollowButton";
 import { FollowingStrip } from "../sections/FollowingStrip";
 import { FollowSections } from "../sections/FollowSections";
-import { followedOf, NOTHING_FOLLOWED, reasonFor } from "../sections/following";
-import { OTHER, builtInSection, sectionName, type Section } from "../sections/model";
-import { useSections, type SectionsStore, sectionsStore } from "../sections/useSections";
+import { ProposalNotices } from "../sections/ProposalNotices";
+import {
+  followedOf,
+  followedSectionIds,
+  followedSectionOf,
+  NOTHING_FOLLOWED,
+  reasonFor,
+} from "../sections/following";
+import { OTHER, approvedOnly, builtInSection, sectionName, type Section } from "../sections/model";
+import {
+  heldSection,
+  useSections,
+  type SectionsStore,
+  sectionsStore,
+} from "../sections/useSections";
 import { FeedGrid } from "./FeedGrid";
 import { useFeed, type LoadFeed } from "./useFeed";
 import "./following.css";
@@ -143,7 +155,8 @@ export function FollowingTab({
   store = sectionsStore,
 }: FollowingTabProps) {
   const feed = useFeed(FOLLOWING_FEED, load);
-  const { sections } = useSections(store);
+  const snapshot = useSections(store);
+  const { sections } = snapshot;
   // What is followed is read again whenever the feed is: a follow made from
   // the empty state's tiles changes both.
   const [round, setRound] = useState(0);
@@ -156,23 +169,67 @@ export function FollowingTab({
     (id: string | null): Section => byId.get(id ?? OTHER) ?? builtInSection(OTHER),
     [byId],
   );
+  const followedIds = useMemo(
+    () => followedSectionIds(snapshot, following?.sections.map((one) => one.id) ?? null),
+    [snapshot, following],
+  );
+  // A followed section the sections leave out is asked about, to be drawn by its name.
+  useEffect(() => followedIds.forEach((id) => store.lookUp(id)), [followedIds, store]);
   const sets = useMemo(() => {
     const known = following === null ? NOTHING_FOLLOWED : followedOf(following);
-    // The sections the site knows to be followed are the freshest word.
-    const followedSections = new Set(sections.filter((one) => one.following).map((one) => one.id));
-    return { ...known, sections: followedSections };
-  }, [following, sections]);
+    return { ...known, sections: new Set(followedIds) };
+  }, [following, followedIds]);
+  const nameOf = useCallback(
+    (id: string) => heldSection(snapshot, id)?.name ?? sectionName(id, snapshot.sections),
+    [snapshot],
+  );
   const reasonOf = useCallback(
-    (list: ListSummary) => reasonFor(list, sets, (id) => sectionName(id, sections)),
-    [sets, sections],
+    (list: ListSummary) => reasonFor(list, sets, nameOf),
+    [sets, nameOf],
   );
 
-  const toggleSection = (section: Section) => {
-    void store.setFollowing(section.id, !section.following).then(() => {
-      setRound((n) => n + 1);
-      feed.retry();
+  // The empty tab's sections are picked first, then followed together, as in
+  // the app: following each on its tap turned the tab into the feed at once.
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+  const [followingPicked, setFollowingPicked] = useState(false);
+  const [pickFailed, setPickFailed] = useState(false);
+  const strip = useRef<HTMLElement>(null);
+  const landing = useRef(false);
+  const togglePick = (section: Section) => {
+    if (followingPicked) return;
+    setPicked((before) => {
+      const next = new Set(before);
+      if (!next.delete(section.id)) next.add(section.id);
+      return next;
     });
   };
+  const followPicked = () => {
+    const chosen = [...picked];
+    if (chosen.length === 0 || followingPicked) return;
+    setFollowingPicked(true);
+    setPickFailed(false);
+    void Promise.all(
+      chosen.map((id) => store.setFollowing(id, true).then((done) => (done ? id : null))),
+    ).then((answers) => {
+      const done = answers.filter((id): id is string => id !== null);
+      // A refused one stays picked, and says so.
+      setPicked(new Set(chosen.filter((id) => !done.includes(id))));
+      setFollowingPicked(false);
+      setPickFailed(done.length < chosen.length);
+      if (done.length > 0) {
+        landing.current = true;
+        setRound((n) => n + 1);
+        feed.retry();
+      }
+    });
+  };
+  // The tiles go once something is followed: the focus goes to what is
+  // followed now, not to the page.
+  useEffect(() => {
+    if (!landing.current || strip.current === null) return;
+    strip.current.querySelector<HTMLElement>("a")?.focus();
+    landing.current = false;
+  });
 
   if (feed.state.status === "error") {
     return (
@@ -186,7 +243,8 @@ export function FollowingTab({
   }
 
   const nobody =
-    feed.state.status === "ready" && feed.state.followingNobody && sets.sections.size === 0;
+    followingPicked ||
+    (feed.state.status === "ready" && feed.state.followingNobody && sets.sections.size === 0);
   if (nobody) {
     return (
       <>
@@ -194,26 +252,63 @@ export function FollowingTab({
           <p className="following-empty__title">{strings.sections.emptyTitle}</p>
           <p className="following-empty__body">{strings.sections.emptyBody}</p>
         </div>
-        <FollowSections sections={sections} onToggle={toggleSection} />
+        {/* Only what anybody may follow: one's own waiting section is not yet. */}
+        <FollowSections sections={approvedOnly(sections)} picked={picked} onToggle={togglePick} />
         <p className="following-empty__helper">{strings.sections.emptyHelper}</p>
+        <div className="pick-bar">
+          {pickFailed && (
+            <p className="follow__failed" role="alert">
+              <Icon name="cloud_off" />
+              {strings.sections.followFailed}
+            </p>
+          )}
+          <Button
+            variant="filled"
+            onClick={followPicked}
+            disabled={picked.size === 0 || followingPicked}
+          >
+            {picked.size > 0
+              ? fill(strings.sections.pickFollow, { n: picked.size })
+              : strings.sections.pickNone}
+          </Button>
+        </div>
         <Suggestions uid={uid} load={loadSuggestions} follow={follow} unfollow={unfollow} />
       </>
     );
   }
 
-  const strip = following !== null && (
-    <FollowingStrip
-      // What one follows, and one's own sections still waiting for a moderator.
-      sections={sections.filter((one) => one.following || one.status === "pending")}
-      topics={following.topics}
-      people={following.authors.filter((person) => !isEditorialAuthor(person.uid))}
-      sectionOf={sectionOf}
-    />
+  // What one follows, and one's own sections still waiting for a moderator.
+  const stripSections = [
+    ...followedIds.map((id) => followedSectionOf(snapshot, id)),
+    ...sections.filter((one) => one.status === "pending" && !followedIds.includes(one.id)),
+  ];
+  // Whom one follows could not be read: the sections the site knows stay, and
+  // so does the way to Manage, with another try.
+  const followedFailed = followed.state.status === "error";
+  const stripPart = (
+    <>
+      <ProposalNotices notices={snapshot.notices} nameOf={nameOf} onDismiss={store.dismissNotice} />
+      {(following !== null || followedFailed) && (
+        <FollowingStrip
+          ref={strip}
+          sections={stripSections}
+          topics={following?.topics ?? []}
+          people={(following?.authors ?? []).filter((person) => !isEditorialAuthor(person.uid))}
+          sectionOf={sectionOf}
+        />
+      )}
+      {followedFailed && (
+        <div className="following-failed" role="alert">
+          <p>{strings.sections.followedFailed}</p>
+          <Button onClick={() => setRound((n) => n + 1)}>{strings.feed.tryAgain}</Button>
+        </div>
+      )}
+    </>
   );
   if (feed.state.status === "ready" && feed.state.lists.length === 0) {
     return (
       <>
-        {strip}
+        {stripPart}
         <div className="following-empty">
           <p className="following-empty__body">{strings.sections.nothingPublished}</p>
           <Link className="btn btn--tonal" to="/">
@@ -225,7 +320,7 @@ export function FollowingTab({
   }
   return (
     <>
-      {strip}
+      {stripPart}
       <FeedGrid
         state={feed.state}
         label={strings.sections.tabFollowing}

@@ -15,6 +15,14 @@ export const REPORT_REASONS = [
 ] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
+/**
+ * What the report dialog offers, as the app's ReportReason.offered: the
+ * dialog hides what it reports, and a list in the wrong place is not hidden.
+ */
+export const OFFERED_REASONS: readonly ReportReason[] = REPORT_REASONS.filter(
+  (reason) => reason !== "wrong_category",
+);
+
 /** A note longer than this is cut by the backend anyway. */
 export const REPORT_NOTE_MAX = 500;
 

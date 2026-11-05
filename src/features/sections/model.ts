@@ -210,6 +210,43 @@ export function sectionsFrom(
     .map((stats) => sectionOf(stats));
 }
 
+/** What became of one's own proposal that was not approved, until it is dismissed. */
+export interface ProposalNotice {
+  id: string;
+  name: string;
+  status: "declined" | "merged";
+  /** Where its lists are: the section it went into, or the one they waited in. */
+  into: string;
+  /** The moderator's word on a declined one, if any. */
+  note: string | null;
+}
+
+/**
+ * One's own proposals a moderator declined or merged, which the backend sends
+ * their proposer until the notice is dismissed, as the app shows them: a
+ * proposal never silently disappears.
+ */
+export function proposalNoticesFrom(
+  answer: readonly SectionStats[],
+  who: string | null,
+): ProposalNotice[] {
+  if (who === null) return [];
+  return answer.flatMap((stats): ProposalNotice[] => {
+    if (stats.proposerUid !== who) return [];
+    if (stats.status !== "declined" && stats.status !== "merged") return [];
+    const note = stats.declineNote?.trim() ?? "";
+    return [
+      {
+        id: stats.id,
+        name: stats.name?.trim() || stats.id,
+        status: stats.status,
+        into: (stats.status === "merged" ? stats.mergedInto : stats.fileUnder) ?? OTHER,
+        note: stats.status === "declined" && note !== "" ? note : null,
+      },
+    ];
+  });
+}
+
 /** The sections everybody sees: approved ones, without anybody's waiting proposal. */
 export const approvedOnly = (sections: readonly Section[]): Section[] =>
   sections.filter((section) => section.status === "approved");

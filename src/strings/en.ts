@@ -354,6 +354,7 @@ export const en = {
     more: "Show more",
     loadingMore: "Loading…",
     moreFailed: "Could not load more.",
+    stale: "Couldn’t refresh. These are the lists from your last visit.",
   },
   list: {
     pictureCredits: "Picture credits",
@@ -838,9 +839,11 @@ export const en = {
     sections: "Sections",
     group: "{name} · {n}",
     followSection: "Follow {name}",
-    unfollowSection: "Unfollow {name}",
     emptyHelper:
-      "Tap + to follow a section. Topics are inside each section; people, on their profile.",
+      "Tap + on the sections you like, then follow them all at once. Topics are inside each section; people, on their profile.",
+    pickFollow: "Follow · {n}",
+    pickNone: "Pick at least one",
+    followedFailed: "Couldn’t load what you follow.",
     nothingPublished: "Nobody you follow has published anything yet.",
     goExplore: "Go to Explore",
     back: "Navigate back",
@@ -893,6 +896,10 @@ export const en = {
     withdrawAsk: "Withdraw “{name}”? Your lists stay in {section}.",
     withdrawFailed: "Couldn’t withdraw it. Try again.",
     withdrawn: "Proposal withdrawn.",
+    noticeDeclined: "“{name}” wasn’t added as a section. Your lists stay in {section}.",
+    noticeMerged: "“{name}” was merged into {section}.",
+    noticeDismiss: "Dismiss",
+    noticeDismissFailed: "Couldn’t dismiss it. Try again.",
   },
   // Each icon a section may wear, by its plain name: the picker's tooltip and what a screen reader says.
   sectionIcons: {

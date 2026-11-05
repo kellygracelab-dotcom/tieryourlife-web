@@ -314,6 +314,25 @@ describe("SectionPage", () => {
     expect(load).not.toHaveBeenCalledWith({ sort: "popular" });
   });
 
+  it("turns Follow on a section the sections leave out, both ways", async () => {
+    loadOne.mockResolvedValue(stats("retro", { name: "Retro", hidden: true }));
+    open("/s/retro");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Retro");
+    const header = screen.getByRole("banner");
+    await userEvent.click(within(header).getByRole("button", { name: "Follow" }));
+    expect(sectionsDeps.follow).toHaveBeenCalledExactlyOnceWith("retro");
+    expect(within(header).getByRole("button", { name: /Following/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(within(header).getByRole("button", { name: /Following/ }));
+    expect(sectionsDeps.unfollow).toHaveBeenCalledWith("retro");
+    expect(within(header).getByRole("button", { name: "Follow" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
   it("goes on to the section one was merged into", async () => {
     loadOne.mockRejectedValue(new ApiFailure({ kind: "merged", into: "games", topic: null }));
     const router = open("/s/videogames");

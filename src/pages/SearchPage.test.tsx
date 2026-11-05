@@ -5,7 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SectionStats, Topic } from "../api/sections";
 import type { FeedPage, FeedQuery, ListSummary } from "../api/types";
 import { routes } from "../app/routes";
+import { HIDDEN_KEY } from "../features/community/hidden";
+import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { createSectionsStore } from "../features/sections/useSections";
+import { localStorageStore, memoryStore } from "../lib/storage";
 import { SEARCH_DEBOUNCE_MS, SearchPage } from "./SearchPage";
 
 const mocks = vi.hoisted(() => ({
@@ -278,7 +281,7 @@ describe("SearchPage", () => {
 
   it("browses when there is nothing to search for, and counts what it found", async () => {
     mocks.loadFeed.mockResolvedValue({ lists: [summary("a1", "One")], nextCursor: null });
-    open("/search?category=games&q=a");
+    open("/search?category=games&q=%20");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Browse lists");
     expect(mocks.loadFeed).toHaveBeenCalledWith({ sort: "popular", category: "games" });
     expect(await screen.findByText("1 list")).toBeInTheDocument();
@@ -321,6 +324,51 @@ describe("SearchPage", () => {
       "/",
     );
     expect(await screen.findAllByRole("heading", { name: "Popular" })).not.toHaveLength(0);
+  });
+
+  it("searches one character, a whole word in Japanese", async () => {
+    mocks.loadFeed.mockResolvedValue({ lists: [summary("j1", "本棚")], nextCursor: null });
+    open("/search?q=%E6%9C%AC");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("“本”");
+    await waitFor(() => expect(mocks.loadFeed).toHaveBeenCalledWith({ q: "本", sort: "popular" }));
+    expect(mocks.findTopics).toHaveBeenCalledWith("本", undefined);
+  });
+
+  it("leaves a hidden list, and everything from a hidden author, out of the suggestions", async () => {
+    const store = memoryStore();
+    store.write(
+      HIDDEN_KEY,
+      JSON.stringify({
+        lists: [{ id: "p1", title: "Popular one" }],
+        authors: [{ uid: "u9", name: "olena" }],
+      }),
+    );
+    useHiddenStoreForTests(store);
+    try {
+      mocks.loadFeed.mockImplementation(async (query) =>
+        query.q === undefined
+          ? {
+              lists: [
+                summary("p1", "Popular one"),
+                { ...summary("p2", "By olena"), authorUid: "u9" },
+                summary("p3", "Three"),
+              ],
+              nextCursor: null,
+            }
+          : { lists: [], nextCursor: null },
+      );
+      open("/search?q=zzzz");
+      const popular = await screen.findByRole("list", { name: "Popular" });
+      expect(within(popular).getAllByRole("listitem")).toHaveLength(1);
+      expect(within(popular).getByText("Three")).toBeInTheDocument();
+    } finally {
+      useHiddenStoreForTests(localStorageStore);
+    }
+  });
+
+  it("gives the focus to the heading when it arrives with the focus nowhere", async () => {
+    open("/search?q=anime");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
   });
 
   it("follows what is typed after a pause", async () => {

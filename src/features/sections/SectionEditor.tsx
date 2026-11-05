@@ -1,6 +1,14 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate } from "react-router";
+import { Link, useBlocker, useNavigate, type Blocker } from "react-router";
 import type { SectionChanges, SectionDraft } from "../../api/admin";
 import { errorOf } from "../../api/errors";
 import type { SectionProposal, SectionStats } from "../../api/sections";
@@ -109,6 +117,20 @@ function startOf(props: SectionEditorProps, keep: KeyValueStore): Start {
 }
 
 /**
+ * Leaving the page while a proposal is open, by Back or by a link in it such
+ * as Open it under a taken name, waits for the same question as closing it.
+ * Only a proposal has it: an admin's pane guards its own page, and a router
+ * keeps one guard at a time.
+ */
+function LeaveGuard({ when, onBlocked }: { when: boolean; onBlocked: (blocker: Blocker) => void }) {
+  const blocker = useBlocker(when);
+  useEffect(() => {
+    if (blocker.state === "blocked") onBlocked(blocker);
+  }, [blocker, onBlocked]);
+  return null;
+}
+
+/**
  * Propose a section (docs/design-spec-admin.md, 2), and the owner's New
  * section and Edit made of the same parts (3.4, 3.5). A dialog from 600 px,
  * the whole screen below; the edit is a side sheet. The name is asked about
@@ -134,9 +156,17 @@ export function SectionEditor(props: SectionEditorProps) {
   // The bar above the actions: a failure worth another try, or a refusal that is not.
   const [bar, setBar] = useState<"failed" | "banned" | "tooManyToday" | null>(null);
   const [asking, setAsking] = useState(false);
-  // Open it on a name already taken leaves the form, so it asks as closing does.
+  // A way out of the page held back until the question is answered.
+  const [leaving, setLeaving] = useState<Blocker | null>(null);
+  // An admin's form has no guard of its own (its pane keeps the page's), so
+  // Open it on a name already taken asks first and goes on Discard.
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
   const navigate = useNavigate();
+  // Where the focus was when the question came, to go back to after Keep editing.
+  const askedFrom = useRef<HTMLElement | null>(null);
+  const keepEditing = useRef<HTMLButtonElement>(null);
+  // A failed send hands the focus to what can be done about it.
+  const refocus = useRef(false);
 
   const tidy = tidySectionName(name);
   // An edit's own name, and its own id in a clash, are no clash.
@@ -189,21 +219,63 @@ export function SectionEditor(props: SectionEditorProps) {
   const nameTrouble =
     verdict !== null && verdict.name === tidy && verdict.kind !== "free" ? verdict : null;
 
+  const ask = () => {
+    askedFrom.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setAsking(true);
+  };
+  const stopAsking = () => {
+    setAsking(false);
+    leaving?.reset?.();
+    setLeaving(null);
+    setLeaveTo(null);
+  };
   const close = () => {
     if (sending) return;
-    if (asking) keepEditing();
-    else if (edited) setAsking(true);
+    if (asking) stopAsking();
+    else if (edited) ask();
     else onClose();
-  };
-
-  const keepEditing = () => {
-    setAsking(false);
-    setLeaveTo(null);
   };
   useModal(box, close);
 
+  const onLeave = useCallback((blocker: Blocker) => {
+    askedFrom.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setLeaving(blocker);
+    setAsking(true);
+  }, []);
+
+  // The question takes the focus, so it is heard; Keep editing gives it back.
+  const wasAsking = useRef(false);
+  useEffect(() => {
+    if (asking) keepEditing.current?.focus();
+    else if (wasAsking.current) {
+      const back = askedFrom.current;
+      if (back !== null && back.isConnected && box.current?.contains(back)) back.focus();
+      else box.current?.querySelector<HTMLElement>(".section-editor__actions button")?.focus();
+    }
+    wasAsking.current = asking;
+  }, [asking]);
+
+  useEffect(() => {
+    if (!refocus.current || sending) return;
+    refocus.current = false;
+    const form = box.current;
+    if (form === null || (document.activeElement !== form && form.contains(document.activeElement)))
+      return;
+    form
+      .querySelector<HTMLElement>(
+        ".section-editor__failed button, [aria-invalid='true'], .section-editor__send",
+      )
+      ?.focus();
+  }, [sending]);
+
   const discard = () => {
     if (mode === "propose") forgetProposal(deps.keep);
+    if (leaving !== null) {
+      leaving.proceed?.();
+      return;
+    }
     onClose();
     if (leaveTo !== null) void navigate(leaveTo);
   };
@@ -283,6 +355,9 @@ export function SectionEditor(props: SectionEditorProps) {
 
   const submit = async () => {
     if (!ready || sending) return;
+    // The button pressed is about to be disabled, and the fields inert: the
+    // focus waits on the dialog itself rather than fall to the page.
+    if (box.current?.contains(document.activeElement)) box.current.focus();
     setSending(true);
     setBar(null);
     setAsking(false);
@@ -299,6 +374,7 @@ export function SectionEditor(props: SectionEditorProps) {
           // A picture the page may not draw cannot be anybody's tile.
           setSending(false);
           refusePicture({ kind: "notImage" });
+          refocus.current = true;
           return;
         }
         pictureId = (await deps.upload(bytes)).pictureId;
@@ -309,6 +385,7 @@ export function SectionEditor(props: SectionEditorProps) {
     } catch (reason: unknown) {
       setSending(false);
       fail(troubleOf(errorOf(reason)), bytes);
+      refocus.current = true;
     }
   };
 
@@ -390,10 +467,10 @@ export function SectionEditor(props: SectionEditorProps) {
                 <Link
                   to={sectionPath(nameTrouble.id)}
                   onClick={(event) => {
-                    if (!edited) return;
+                    if (mode === "propose" || !edited) return;
                     event.preventDefault();
                     setLeaveTo(sectionPath(nameTrouble.id ?? ""));
-                    setAsking(true);
+                    ask();
                   }}
                 >
                   {strings.propose.openIt}
@@ -527,15 +604,22 @@ export function SectionEditor(props: SectionEditorProps) {
       </div>
     );
 
-  const ask = (
+  const askRow = (
     // Keyed apart from the row it replaces: React would otherwise hand
     // Keep editing's button over to the send button mid-click, and the
     // browser would send the form the person just said was not done.
-    <div key="ask" className="section-editor__actions section-editor__ask">
-      <p className="section-editor__ask-text">
+    <div
+      key="ask"
+      className="section-editor__actions section-editor__ask"
+      role="group"
+      aria-labelledby={`${id}-ask`}
+    >
+      <p id={`${id}-ask`} className="section-editor__ask-text">
         {mode === "propose" ? strings.propose.discardAsk : strings.admin.discardChanges}
       </p>
-      <Button onClick={keepEditing}>{strings.propose.keepEditing}</Button>
+      <button ref={keepEditing} type="button" className="btn btn--text" onClick={stopAsking}>
+        <span>{strings.propose.keepEditing}</span>
+      </button>
       <Button variant="danger" onClick={discard}>
         {strings.propose.discard}
       </Button>
@@ -551,6 +635,7 @@ export function SectionEditor(props: SectionEditorProps) {
         aria-modal="true"
         aria-labelledby={`${id}-title`}
         aria-busy={sending}
+        tabIndex={-1}
         noValidate
         onClick={(event) => event.stopPropagation()}
         onSubmit={onSubmit}
@@ -587,7 +672,7 @@ export function SectionEditor(props: SectionEditorProps) {
           <footer className="section-editor__foot">
             {failure}
             {asking ? (
-              ask
+              askRow
             ) : compact ? null : (
               <div key="actions" className="section-editor__actions">
                 <Button onClick={close} disabled={sending}>
@@ -601,6 +686,7 @@ export function SectionEditor(props: SectionEditorProps) {
         <p className="visually-hidden" aria-live="polite">
           {sending ? strings.propose.sending : ""}
         </p>
+        {mode === "propose" && <LeaveGuard when={edited && !sending} onBlocked={onLeave} />}
       </form>
     </div>,
     document.body,

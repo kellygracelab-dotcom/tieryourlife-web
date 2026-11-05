@@ -55,6 +55,20 @@ describe("Shell search", () => {
     expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveValue("anime");
   });
 
+  it("keeps the focus in its field from one search to the next", async () => {
+    open({}, "/about");
+    const bar = within(await screen.findByRole("banner"));
+    const field = bar.getByRole("searchbox", { name: "Search lists" });
+    await userEvent.type(field, "anime{Enter}");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“anime”");
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveFocus();
+    await userEvent.clear(bar.getByRole("searchbox", { name: "Search lists" }));
+    await userEvent.keyboard("games{Enter}");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“games”");
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveFocus();
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveValue("games");
+  });
+
   it("keeps the focus in the box through a search made from it, and says what was found", async () => {
     open({}, "/search?q=anime");
     const bar = within(await screen.findByRole("banner"));

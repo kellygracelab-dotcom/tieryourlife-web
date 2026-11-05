@@ -358,6 +358,7 @@ const es: Translation = {
     more: "Mostrar más",
     loadingMore: "Cargando…",
     moreFailed: "No se pudo cargar más.",
+    stale: "No se pudo actualizar. Estas son las listas de tu última visita.",
   },
   list: {
     pictureCredits: "Créditos de las imágenes",
@@ -872,9 +873,11 @@ const es: Translation = {
     sections: "Secciones",
     group: "{name} · {n}",
     followSection: "Seguir {name}",
-    unfollowSection: "Dejar de seguir {name}",
     emptyHelper:
-      "Toca + para seguir una sección. Los temas están dentro de cada sección; las personas, en su perfil.",
+      "Toca + en las secciones que te gustan y síguelas todas a la vez. Los temas están dentro de cada sección; las personas, en su perfil.",
+    pickFollow: "Seguir · {n}",
+    pickNone: "Elige al menos una",
+    followedFailed: "No se pudo cargar lo que sigues.",
     nothingPublished: "Nadie a quien sigues ha publicado nada todavía.",
     goExplore: "Ir a Explorar",
     back: "Volver",
@@ -932,6 +935,10 @@ const es: Translation = {
     withdrawAsk: "¿Retirar «{name}»? Tus listas se quedan en {section}.",
     withdrawFailed: "No se pudo retirar. Inténtalo de nuevo.",
     withdrawn: "Propuesta retirada.",
+    noticeDeclined: "«{name}» no se añadió como sección. Tus listas siguen en {section}.",
+    noticeMerged: "«{name}» se fusionó con {section}.",
+    noticeDismiss: "Descartar",
+    noticeDismissFailed: "No se pudo descartar. Inténtalo de nuevo.",
   },
   sectionIcons: {
     category: "Formas",

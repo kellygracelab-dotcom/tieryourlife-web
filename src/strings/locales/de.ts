@@ -365,6 +365,7 @@ const de: Translation = {
     more: "Mehr zeigen",
     loadingMore: "Wird geladen…",
     moreFailed: "Mehr konnte nicht geladen werden.",
+    stale: "Aktualisieren hat nicht geklappt. Das sind die Listen von deinem letzten Besuch.",
   },
   list: {
     pictureCredits: "Bildnachweise",
@@ -885,9 +886,11 @@ const de: Translation = {
     sections: "Rubriken",
     group: "{name} · {n}",
     followSection: "{name} folgen",
-    unfollowSection: "{name} entfolgen",
     emptyHelper:
-      "Tippe auf +, um einem Bereich zu folgen. Themen stehen in den Bereichen, Personen in ihrem Profil.",
+      "Tippe bei den Bereichen, die dich interessieren, auf + und folge allen auf einmal. Themen stehen in den Bereichen, Personen in ihrem Profil.",
+    pickFollow: "Folgen · {n}",
+    pickNone: "Wähle mindestens einen",
+    followedFailed: "Konnte nicht laden, wem du folgst.",
     nothingPublished: "Wem du folgst, hat noch nichts veröffentlicht.",
     goExplore: "Zu Entdecken",
     back: "Zurück",
@@ -943,6 +946,11 @@ const de: Translation = {
     withdrawAsk: "„{name}“ zurückziehen? Deine Listen bleiben in {section}.",
     withdrawFailed: "Zurückziehen hat nicht geklappt. Versuch es noch einmal.",
     withdrawn: "Vorschlag zurückgezogen.",
+    noticeDeclined:
+      "„{name}“ wurde nicht als Bereich aufgenommen. Deine Listen bleiben in {section}.",
+    noticeMerged: "„{name}“ wurde mit {section} zusammengeführt.",
+    noticeDismiss: "Ausblenden",
+    noticeDismissFailed: "Ausblenden hat nicht geklappt. Versuch es noch einmal.",
   },
   sectionIcons: {
     category: "Formen",

@@ -359,6 +359,7 @@ const ptBR: Translation = {
     more: "Mostrar mais",
     loadingMore: "Carregando…",
     moreFailed: "Não foi possível carregar mais.",
+    stale: "Não foi possível atualizar. Estas são as listas da sua última visita.",
   },
   list: {
     pictureCredits: "Créditos das imagens",
@@ -866,9 +867,11 @@ const ptBR: Translation = {
     sections: "Seções",
     group: "{name} · {n}",
     followSection: "Seguir {name}",
-    unfollowSection: "Deixar de seguir {name}",
     emptyHelper:
-      "Toque em + para seguir uma seção. Os temas ficam em cada seção; as pessoas, no perfil delas.",
+      "Toque em + nas seções de que você gosta e siga todas de uma vez. Os temas ficam em cada seção; as pessoas, no perfil delas.",
+    pickFollow: "Seguir · {n}",
+    pickNone: "Escolha pelo menos uma",
+    followedFailed: "Não foi possível carregar o que você segue.",
     nothingPublished: "Ninguém que você segue publicou nada ainda.",
     goExplore: "Ir para Explorar",
     back: "Voltar",
@@ -926,6 +929,10 @@ const ptBR: Translation = {
     withdrawAsk: "Retirar “{name}”? Suas listas ficam em {section}.",
     withdrawFailed: "Não foi possível retirar. Tente de novo.",
     withdrawn: "Proposta retirada.",
+    noticeDeclined: "“{name}” não foi adicionada como seção. Suas listas continuam em {section}.",
+    noticeMerged: "“{name}” foi mesclada a {section}.",
+    noticeDismiss: "Dispensar",
+    noticeDismissFailed: "Não foi possível dispensar. Tente de novo.",
   },
   sectionIcons: {
     category: "Formas",

@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { Link } from "react-router";
 import type { FollowedAuthor } from "../../api/community";
 import type { Topic } from "../../api/sections";
@@ -9,6 +10,7 @@ import {
   sectionStyle,
   topicPath,
   topicStyle,
+  waitingPath,
   type Section,
 } from "./model";
 import { TopicArt } from "./TopicArt";
@@ -23,19 +25,25 @@ interface FollowingStripProps {
   people: readonly FollowedAuthor[];
   /** The sections the topics belong to, for their colours. */
   sectionOf: (id: string | null) => Section | undefined;
+  ref?: Ref<HTMLElement>;
 }
 
 /**
  * Everything the Following feed is made of, above it, as the app shows it:
  * sections, topics, people, and last the way to manage them.
  */
-export function FollowingStrip({ sections, topics, people, sectionOf }: FollowingStripProps) {
+export function FollowingStrip({ sections, topics, people, sectionOf, ref }: FollowingStripProps) {
   return (
-    <nav className="following-strip" aria-label={strings.sections.tabFollowing}>
+    <nav ref={ref} className="following-strip" aria-label={strings.sections.tabFollowing}>
       <ul className="following-strip__items">
         {sections.map((section) => (
           <li key={`s-${section.id}`}>
-            <Link className="following-strip__item" to={sectionPath(section.id)}>
+            {/* One's own waiting section opens its sheet, with the way to take it
+                back: its page has nothing yet, and nothing to follow. */}
+            <Link
+              className="following-strip__item"
+              to={section.status === "pending" ? waitingPath(section.id) : sectionPath(section.id)}
+            >
               <span
                 className={[
                   "following-strip__visual following-strip__section",

@@ -376,6 +376,7 @@ const pl: Translation = {
     more: "Pokaż więcej",
     loadingMore: "Wczytywanie…",
     moreFailed: "Nie udało się wczytać więcej.",
+    stale: "Nie udało się odświeżyć. To listy z ostatniej wizyty.",
   },
   list: {
     pictureCredits: "Autorzy zdjęć",
@@ -919,9 +920,11 @@ const pl: Translation = {
     sections: "Działy",
     group: "{name} · {n}",
     followSection: "Obserwuj: {name}",
-    unfollowSection: "Przestań obserwować: {name}",
     emptyHelper:
-      "Dotknij +, aby obserwować dział. Tematy są w działach, a osoby w swoich profilach.",
+      "Dotknij + przy działach, które cię interesują, i obserwuj je wszystkie naraz. Tematy są w działach, a osoby w swoich profilach.",
+    pickFollow: "Obserwuj · {n}",
+    pickNone: "Wybierz co najmniej jeden",
+    followedFailed: "Nie udało się wczytać tego, co obserwujesz.",
     nothingPublished: "Obserwowani nie opublikowali jeszcze niczego.",
     goExplore: "Przejdź do Odkrywaj",
     back: "Wstecz",
@@ -979,6 +982,11 @@ const pl: Translation = {
     withdrawAsk: "Wycofać „{name}”? Twoje listy zostaną w dziale {section}.",
     withdrawFailed: "Nie udało się wycofać. Spróbuj ponownie.",
     withdrawn: "Propozycja wycofana.",
+    noticeDeclined:
+      "„{name}” nie został dodany jako dział. Twoje listy zostają w dziale {section}.",
+    noticeMerged: "„{name}” połączono z działem {section}.",
+    noticeDismiss: "Odrzuć",
+    noticeDismissFailed: "Nie udało się odrzucić. Spróbuj ponownie.",
   },
   sectionIcons: {
     category: "Kształty",

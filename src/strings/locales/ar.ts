@@ -412,6 +412,7 @@ const ar: Translation = {
     more: "عرض المزيد",
     loadingMore: "جارٍ التحميل…",
     moreFailed: "تعذّر تحميل المزيد.",
+    stale: "تعذّر التحديث. هذه القوائم من زيارتك الأخيرة.",
   },
   list: {
     pictureCredits: "حقوق الصور",
@@ -1007,8 +1008,11 @@ const ar: Translation = {
     sections: "الأقسام",
     group: "{name} · {n}",
     followSection: "متابعة {name}",
-    unfollowSection: "إلغاء متابعة {name}",
-    emptyHelper: "اضغط + لمتابعة قسم. المواضيع داخل كل قسم، والأشخاص في ملفاتهم.",
+    emptyHelper:
+      "اضغط + على الأقسام التي تهمك ثم تابعها كلها مرة واحدة. المواضيع داخل كل قسم، والأشخاص في ملفاتهم.",
+    pickFollow: "متابعة · {n}",
+    pickNone: "اختر قسمًا واحدًا على الأقل",
+    followedFailed: "تعذّر تحميل ما تتابعه.",
     nothingPublished: "لم ينشر أحد ممن تتابعهم شيئًا بعد.",
     goExplore: "الانتقال إلى الاستكشاف",
     back: "رجوع",
@@ -1066,6 +1070,10 @@ const ar: Translation = {
     withdrawAsk: "سحب «{name}»؟ تبقى قوائمك في {section}.",
     withdrawFailed: "تعذّر السحب. أعد المحاولة.",
     withdrawn: "سُحب الاقتراح.",
+    noticeDeclined: "لم تتم إضافة «{name}» كقسم. تبقى قوائمك في {section}.",
+    noticeMerged: "تم دمج «{name}» في {section}.",
+    noticeDismiss: "إخفاء",
+    noticeDismissFailed: "تعذّر الإخفاء. أعد المحاولة.",
   },
   sectionIcons: {
     category: "أشكال",
