@@ -57,6 +57,51 @@
   pointer-events: none;
 }
 
+/* The moves as buttons, in the screen's order whatever the language: left is left. */
+.placing__controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  direction: ltr;
+}
+
+.placing__control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.placing__control:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.placing__control:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.placing__control:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.placing__arrow--left {
+  transform: rotate(-90deg);
+}
+
+.placing__arrow--right {
+  transform: rotate(90deg);
+}
+
 .placing__help {
   margin: 0;
   font: 400 12px/17px var(--font);

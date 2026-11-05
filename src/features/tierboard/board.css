@@ -56,15 +56,17 @@
   text-align: center;
 }
 
+/* Broken between words only: TierLabel makes the type smaller until every word fits. */
 .tier__label {
+  max-width: 100%;
   font: 500 32px/36px var(--font);
-  overflow-wrap: anywhere;
 }
 
 .tier__caption {
+  max-width: 100%;
   font: var(--text-caption);
   font-weight: 500;
-  /* An unbroken caption wraps inside the band instead of spilling onto the row. */
+  /* Between words; only a word wider than the band is broken, rather than spill onto the row. */
   overflow-wrap: anywhere;
 }
 

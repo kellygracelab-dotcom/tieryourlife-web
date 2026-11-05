@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  BAND_FLOOR,
+  bandLabel,
   LIST_TILES,
   picturesWanted,
   ROW_TILES,
@@ -170,15 +172,44 @@ describe("shareCardOf", () => {
   });
 });
 
+describe("bandLabel", () => {
+  it("keeps a letter at the band's own size", () => {
+    assert.deepEqual(bandLabel("S", null, 64), { size: 28, lines: 1 });
+  });
+
+  it("sets a tier's name whole, smaller and between words, never its first three letters", () => {
+    const fit = bandLabel("Good stuff", null, 64);
+    assert.ok(fit.size < 28 && fit.size > BAND_FLOOR, `size ${fit.size}`);
+    // Each word fits the square's 56 px whole, at 0.6 of the size a letter.
+    assert.ok(5 * 0.6 * fit.size <= 56);
+    assert.ok(fit.lines >= 2);
+  });
+
+  it("leaves the caption room under the name", () => {
+    assert.ok(
+      bandLabel("Good stuff", "Watch again", 56).size <= bandLabel("Good stuff", null, 56).size,
+    );
+  });
+
+  it("puts a ranking's whole tier name on its band", () => {
+    const named: ShareRanking = {
+      ...ranking,
+      tiers: [{ label: "Good stuff", caption: "A caption that is long", colorLight: "#b03a32" }],
+    };
+    const text = textOf(shareCardOf(named, new Map())).join(" | ");
+    assert.match(text, /Good stuff \| A caption that is long/);
+  });
+});
+
 describe("addresses", () => {
   it("points a chat at a versioned picture and keeps one copy per version", () => {
     assert.equal(
       shareImageUrl("tieryourlife.web.app", "l", "abc def", 17),
-      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.5",
+      "https://tieryourlife.web.app/og/l/abc%20def.png?v=17.6",
     );
-    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.5.png");
+    assert.equal(shareImagePath("r", "xfruzbap", 0), "share/r/xfruzbap/0.6.png");
     // A ranking whose list is gone is kept and fetched apart from the one with the name.
-    assert.equal(shareImagePath("r", "xfruzbap", "0-gone"), "share/r/xfruzbap/0-gone.5.png");
+    assert.equal(shareImagePath("r", "xfruzbap", "0-gone"), "share/r/xfruzbap/0-gone.6.png");
     // The folder ends in a slash, or tidying `abc` would reach into `abcd`.
     assert.equal(shareImageFolder("r", "xfruzbap"), "share/r/xfruzbap/");
     assert.ok(shareImagePath("l", "abc", 5).startsWith(shareImageFolder("l", "abc")));

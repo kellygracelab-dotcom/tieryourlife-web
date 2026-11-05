@@ -1363,17 +1363,22 @@
     scroll-padding-bottom: calc(var(--dock-h, 262px) + 24px);
   }
 
+  /*
+   * The dock's top edge, 24 px tall for a pointer to find: half of it over
+   * the room the page leaves above the dock, half over the dock's padding.
+   * The pill stays where it was drawn, on the edge.
+   */
   .ranking--under .pool__grip {
     position: absolute;
-    inset: 0 0 auto;
-    height: 6px;
+    inset: -12px 0 auto;
+    height: 24px;
     cursor: ns-resize;
   }
 
   .ranking--under .pool__grip::after {
     content: "";
     position: absolute;
-    top: 1px;
+    top: 13px;
     inset-inline-start: calc(50% - 16px);
     width: 32px;
     height: 4px;
@@ -1544,8 +1549,11 @@
   background: var(--band);
 }
 
+/* A tier's name of many words wraps between them; the caption beside it gives way first. */
 .move-sheet__label {
+  min-width: 0;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .move-sheet__caption {
@@ -1674,7 +1682,9 @@
 }
 
 .card-menu__label {
+  min-width: 0;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .card-menu__caption {

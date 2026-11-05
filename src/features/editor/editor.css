@@ -760,10 +760,11 @@
   --preview-tint: 20%;
 }
 
+/* As tall as its words need past a phone's row: a long name shows here as the band will draw it. */
 .tier-dialog__preview {
   display: flex;
   width: 96px;
-  height: 72px;
+  min-height: 72px;
   overflow: hidden;
   border-radius: 12px;
   background: color-mix(in oklab, var(--preview-band) var(--preview-tint), var(--preview-paper));
@@ -785,19 +786,17 @@
 }
 
 .tier-dialog__letter {
+  max-width: 100%;
   font: 500 22px/26px var(--font);
-  overflow-wrap: anywhere;
 }
 
 .tier-dialog__caption {
   max-width: 100%;
-  overflow: hidden;
   font: 500 9px/12px var(--font);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
-/* Label 88 wide, three letters at most; the caption takes the rest. */
+/* The label and the caption side by side, the caption a little the wider. */
 .tier-dialog__fields {
   display: flex;
   gap: 12px;
@@ -814,8 +813,21 @@
 }
 
 .tier-dialog__field--label {
-  flex: none;
-  width: 88px;
+  flex: 2;
+}
+
+.tier-dialog__field:not(.tier-dialog__field--label) {
+  flex: 3;
+}
+
+.tier-dialog__counter {
+  align-self: flex-end;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-faint);
+}
+
+.tier-dialog__counter--full {
+  color: var(--error);
 }
 
 .tier-dialog__input {

@@ -139,8 +139,8 @@ describe("drawShare", () => {
       expect.arrayContaining([
         "Oscar films 2025 @48,100",
         "Danylo · 3 cards @48,146",
-        "S @108,264",
-        "best @108,298",
+        "S @108,263",
+        "best @108,302",
         "A @108,442",
         "Film 1 @332,276",
         "Film 2 @226,608",
@@ -181,6 +181,35 @@ describe("drawShare", () => {
     expect(all).toContain("and 3 more tiers @48,1218");
     expect(all.some((text) => text.startsWith("T5 "))).toBe(true);
     expect(all.some((text) => text.startsWith("T6 "))).toBe(false);
+  });
+
+  it("sets a long tier name and caption on the band between words, smaller, never cut", async () => {
+    const { paint, texts } = recorder();
+    // Letters 0.6 of the size wide, as Roboto's are.
+    paint.measureText = (text) => ({
+      width: text.length * Number(/([\d.]+)px/.exec(paint.font)?.[1] ?? 0) * 0.6,
+    });
+    const named = [
+      { ...tiers[0]!, label: "Good stuff", caption: "Watch again soon" },
+      { ...tiers[1]!, label: "Supercalifragilistic" },
+      ...tiers.slice(2),
+    ];
+    await drawShare(paint, { ...data, tiers: named }, async () => picture);
+    const band = (text: string) => /@108,[\d.]+$/.test(text);
+    const words = (all: string[]) => all.map((text) => text.replace(/ @108,[\d.]+$/, ""));
+    // "stuff" fits the band's 104 px from 34.5 px down; the two words take a line each.
+    const onBand = texts().filter(band).slice(0, 4);
+    expect(words(onBand)).toEqual(["Good", "stuff", "Watch again", "soon"]);
+    // One word too long even at the smallest size: in pieces, with hyphens, every letter kept.
+    const long = words(texts().filter(band).slice(4, -1));
+    expect(long.length).toBeGreaterThan(1);
+    expect(long.slice(0, -1).every((piece) => piece.endsWith("-"))).toBe(true);
+    expect(long.join("").replaceAll("-", "")).toBe("Supercalifragilistic");
+    // Top to bottom, inside the row.
+    const ys = onBand.map((text) => Number(/,([\d.]+)$/.exec(text)?.[1]));
+    expect(ys).toEqual([...ys].sort((a, b) => a - b));
+    expect(ys[0]).toBeGreaterThan(198);
+    expect(ys[3]).toBeLessThan(198 + 156);
   });
 
   it("counts the hidden tiers in the reader's language", async () => {
