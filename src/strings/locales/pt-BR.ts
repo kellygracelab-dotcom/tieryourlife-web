@@ -1002,6 +1002,7 @@ const ptBR: Translation = {
     play: "Jogar",
     needsCards: "Para jogar, são necessários pelo menos 3 cards.",
     savedGame: "Há um jogo salvo.",
+    couldNotOpen: "Não foi possível abrir o jogo. Verifique a conexão e tente de novo.",
     cardsFrom: { one: "{n} card de “{title}”", other: "{n} cards de “{title}”" },
     chooseCards: "Escolher cards",
     game: "Jogo",

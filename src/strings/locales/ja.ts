@@ -989,6 +989,7 @@ const ja: Translation = {
     play: "プレイ",
     needsCards: "プレイするにはカードが3枚以上必要です。",
     savedGame: "保存したゲームがあります。",
+    couldNotOpen: "プレイを開けませんでした。接続を確認して、もう一度お試しください。",
     cardsFrom: { other: "「{title}」のカード {n} 枚" },
     chooseCards: "カードを選ぶ",
     game: "ゲーム",

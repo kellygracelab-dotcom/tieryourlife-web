@@ -1150,6 +1150,7 @@ const ar: Translation = {
     play: "العب",
     needsCards: "يحتاج اللعب إلى 3 بطاقات على الأقل.",
     savedGame: "توجد لعبة محفوظة.",
+    couldNotOpen: "تعذّر فتح اللعب. تحقّق من الاتصال وحاول مرة أخرى.",
     cardsFrom: {
       zero: "لا بطاقات من «{title}»",
       one: "بطاقة واحدة من «{title}»",

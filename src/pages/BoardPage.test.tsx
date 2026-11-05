@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   addToPool,
   arrangeItems,
@@ -29,6 +29,7 @@ import type { HouseSending } from "../features/admin/HouseBar";
 import { hasUnsentEdits, houseLinkOf, linkToHouse } from "../features/boards/houseList";
 import { publishRequestOf } from "../features/boards/publish";
 import { resetModeratorForTests, type LoadReports } from "../features/moderation/useModerator";
+import { loadPlayScreens } from "../features/play/usePlay";
 import { BoardPage } from "./BoardPage";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
@@ -1032,6 +1033,9 @@ describe("BoardPage: share and publish", () => {
 });
 
 describe("BoardPage: Play", () => {
+  // The screens come as a chunk of their own; fetched here, Play opens in the frame it is pressed.
+  beforeAll(() => loadPlayScreens());
+
   it("plays the board's cards in duels, applies the result, and undoes it from the snackbar", async () => {
     localStorage.clear();
     const repository = boardsRepository(memoryStore());

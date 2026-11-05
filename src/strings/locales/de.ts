@@ -1021,6 +1021,8 @@ const de: Translation = {
     play: "Spielen",
     needsCards: "Zum Spielen brauchst du mindestens 3 Karten.",
     savedGame: "Ein Spiel ist gespeichert.",
+    couldNotOpen:
+      "Spielen ließ sich nicht öffnen. Prüfe die Verbindung und versuch es noch einmal.",
     cardsFrom: { one: "{n} Karte aus „{title}“", other: "{n} Karten aus „{title}“" },
     chooseCards: "Karten wählen",
     game: "Spiel",

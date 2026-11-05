@@ -15,7 +15,7 @@ vi.mock("firebase/storage", () => ({
   deleteObject: mocks.deleteObject,
 }));
 vi.mock("./firebase", () => ({
-  getFirebaseStorage: () => ({ bucket: "b" }),
+  getFirebaseStorage: async () => ({ bucket: "b" }),
   getFirebaseAuth: () => mocks.auth,
 }));
 

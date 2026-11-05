@@ -14,7 +14,7 @@ import {
   type Auth,
   type User,
 } from "firebase/auth";
-import { getStorage, type FirebaseStorage } from "firebase/storage";
+import type { FirebaseStorage } from "firebase/storage";
 import type { TokenProviders } from "../api/client";
 import { readEnv, type Env } from "./env";
 import { firebaseConfig } from "./firebaseConfig";
@@ -46,7 +46,12 @@ export function getFirebaseAuth(): Auth {
  */
 export const UPLOAD_RETRY_MS = 60_000;
 
-export function getFirebaseStorage(): FirebaseStorage {
+/**
+ * The bucket for that app. Its SDK is fetched with the first picture that
+ * needs it, not with the page: most visits never upload or look one up.
+ */
+export async function getFirebaseStorage(): Promise<FirebaseStorage> {
+  const { getStorage } = await import("firebase/storage");
   const storage = getStorage(getFirebaseApp());
   storage.maxUploadRetryTime = UPLOAD_RETRY_MS;
   return storage;

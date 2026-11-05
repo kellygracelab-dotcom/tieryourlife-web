@@ -1068,6 +1068,7 @@ const uk: Translation = {
     play: "Грати",
     needsCards: "Для гри потрібно щонайменше 3 картки.",
     savedGame: "Є збережена гра.",
+    couldNotOpen: "Не вдалося відкрити гру. Перевірте зʼєднання і спробуйте ще раз.",
     cardsFrom: {
       one: "{n} картка з «{title}»",
       few: "{n} картки з «{title}»",

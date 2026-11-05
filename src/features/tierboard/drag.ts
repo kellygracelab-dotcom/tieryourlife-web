@@ -56,6 +56,25 @@ export function move(state: DragState, at: Point, target: DropTarget): DragState
   return moved > TOUCH_SLOP ? idle : state;
 }
 
+const sameTarget = (a: DropTarget, b: DropTarget): boolean =>
+  a === b ||
+  (a !== null &&
+    b !== null &&
+    (a.kind === "pool"
+      ? b.kind === "pool"
+      : b.kind === "tier" && a.tier === b.tier && a.index === b.index));
+
+/**
+ * Whether the board would draw two states of a drag alike: the same card
+ * held, over the same place. Where the pointer is is the ghost's alone, so a
+ * move within one place draws nothing else.
+ */
+export function sameDrawing(a: DragState, b: DragState): boolean {
+  if (a === b) return true;
+  if (a.phase !== "dragging" || b.phase !== "dragging") return false;
+  return a.item === b.item && a.grab === b.grab && sameTarget(a.target, b.target);
+}
+
 /** The hold timer fired: a finger that stayed put is now dragging. */
 export function hold(state: DragState, target: DropTarget): DragState {
   if (state.phase !== "pressed" || state.holdUntil === null) return state;
