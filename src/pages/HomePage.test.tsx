@@ -79,7 +79,9 @@ describe("HomePage", () => {
     expect(await screen.findByRole("link", { name: /Every A24 film, ranked/ })).toBeInTheDocument();
     expect(screen.getAllByText("34 cards")).toHaveLength(2);
     expect(screen.queryByText(/2,140/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+    // More of what is popular is a press away, as the app's Explore reads on.
+    await userEvent.click(screen.getByRole("button", { name: "Show more" }));
+    expect(mocks.loadFeed).toHaveBeenLastCalledWith({ sort: "popular", after: "c1" });
   });
 
   it("draws Explore and Following from the start on a device last seen signed in", () => {

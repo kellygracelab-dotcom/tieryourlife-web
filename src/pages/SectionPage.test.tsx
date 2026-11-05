@@ -191,11 +191,25 @@ describe("SectionPage", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Couldn't follow. Try again.");
   });
 
+  it("says an unfollow did not go through as an unfollow", async () => {
+    sectionsDeps.follow.mockResolvedValue({ following: true });
+    sectionsDeps.unfollow.mockRejectedValue(new ApiFailure({ kind: "offline" }));
+    open("/s/games");
+    await tiles();
+    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await userEvent.click(screen.getByRole("button", { name: /Following/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("Couldn't unfollow. Try again."),
+    );
+  });
+
   it("asks a guest to sign in before following", async () => {
     open("/s/games", { kind: "guest", uid: null });
     await tiles();
     await userEvent.click(screen.getByRole("button", { name: "Follow" }));
     expect(screen.getByRole("heading", { name: "Sign in to follow" })).toBeInTheDocument();
+    // A section is no person one likes.
+    expect(screen.getByRole("dialog")).toHaveTextContent(/sections and topics/);
     expect(sectionsDeps.follow).not.toHaveBeenCalled();
     // A guest has no waiting topics to be asked about.
     expect(topics.mine).not.toHaveBeenCalled();

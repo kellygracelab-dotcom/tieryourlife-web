@@ -807,6 +807,9 @@ export const en = {
     following: "Following",
     unfollowed: "Unfollowed {name}",
     followFailed: "Couldn't follow. Try again.",
+    unfollowFailed: "Couldn't unfollow. Try again.",
+    followSignInBody:
+      "Following keeps new lists from sections and topics you like at the top of your feed.",
     undo: "Undo",
     waitingOnlyYou: "Only you see this topic until then.",
     topicMissing: "There’s no such topic in {section}.",
@@ -834,6 +837,7 @@ export const en = {
     sortMostLists: "Most lists",
     sortName: "A–Z",
     find: "Find a section",
+    findNone: "No sections match “{q}”",
     propose: "Propose a section",
     waiting: "Waiting",
     sections: "Sections",

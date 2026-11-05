@@ -824,6 +824,9 @@ const ja: Translation = {
     following: "フォロー中",
     unfollowed: "{name}のフォローを解除しました",
     followFailed: "フォローできませんでした。もう一度お試しください。",
+    unfollowFailed: "フォローを解除できませんでした。もう一度お試しください。",
+    followSignInBody:
+      "セクションやトピックをフォローすると、その新しいリストがフィードの先頭に届きます。",
     undo: "元に戻す",
     waitingOnlyYou: "それまでこのトピックはあなたにだけ表示されます。",
     topicMissing: "{section}にそのトピックはありません。",
@@ -851,6 +854,7 @@ const ja: Translation = {
     sortMostLists: "リストが多い順",
     sortName: "名前順",
     find: "セクションを探す",
+    findNone: "「{q}」に一致するセクションはありません",
     propose: "セクションを提案",
     waiting: "承認待ち",
     sections: "セクション",

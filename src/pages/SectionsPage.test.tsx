@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -345,5 +345,40 @@ describe("All sections: a waiting tile", () => {
     open();
     await screen.findByText("4 sections");
     expect(grid().getByRole("link", { name: /Games/ })).toHaveAttribute("href", "/s/games");
+  });
+});
+
+describe("All sections: finding one", () => {
+  beforeEach(() => {
+    sectionsDeps.load.mockResolvedValue({
+      sections: [
+        ...Array.from({ length: 22 }, (_, n) => stats(`s${n}`, { name: `Hobby ${n}` })),
+        stats("cust", { name: "Customs", names: { ru: "Обычаи и раздел" } }),
+      ],
+    });
+  });
+
+  it("keeps the order and the words on the way back, counts what it found, and says when nothing", async () => {
+    const { router } = open();
+    await screen.findByText("23 sections");
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Order" }), "name");
+    await userEvent.type(screen.getByRole("searchbox", { name: "Find a section" }), "cust");
+    expect(screen.getByText("1 section")).toBeInTheDocument();
+    await userEvent.click(grid().getByRole("link", { name: /Customs/ }));
+    expect(router.state.location.pathname).toBe("/s/cust");
+    await act(() => router.navigate(-1));
+    expect(await screen.findByRole("searchbox", { name: "Find a section" })).toHaveValue("cust");
+    expect(screen.getByRole("combobox", { name: "Order" })).toHaveValue("name");
+
+    const find = screen.getByRole("searchbox", { name: "Find a section" });
+    await userEvent.clear(find);
+    await userEvent.type(find, "zzz");
+    expect(screen.getByText("No sections match “zzz”")).toBeInTheDocument();
+    expect(screen.getByText("0 sections")).toBeInTheDocument();
+
+    // A name in another language finds it too.
+    await userEvent.clear(find);
+    await userEvent.type(find, "раздел");
+    expect(grid().getByRole("link", { name: /Customs/ })).toBeInTheDocument();
   });
 });

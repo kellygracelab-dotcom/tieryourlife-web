@@ -138,6 +138,15 @@ describe("FollowingManagePage", () => {
     expect(within(row).getByRole("button", { name: /Following/ })).toBeInTheDocument();
   });
 
+  it("says a refused unfollow is one, and keeps the row followed", async () => {
+    vi.mocked(deps.unfollowAuthor).mockRejectedValueOnce(new ApiFailure({ kind: "offline" }));
+    open();
+    const row = (await screen.findByRole("link", { name: /kenji/ })).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
+    expect(await screen.findByText("Couldn't unfollow. Try again.")).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: /Following/ })).toBeInTheDocument();
+  });
+
   it("keeps an unfollowed section on the page until it is left", async () => {
     open();
     const row = (await screen.findByRole("link", { name: /Food/ })).closest("li")!;

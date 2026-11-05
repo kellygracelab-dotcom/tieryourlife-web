@@ -28,9 +28,11 @@ import { isEditorialAuthor } from "../lib/editorial";
 import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
+import { BackLink } from "../ui/BackLink";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { initialOf } from "../lib/initial";
 import "../features/feed/feed.css";
 import "./FollowingManagePage.css";
 import { usePageTitle } from "../app/pageTitle";
@@ -98,8 +100,6 @@ function Group({ title, count, children }: { title: string; count: number; child
 }
 
 /** A name's first letter; somebody known only by anonymous lists has none, and is drawn as a person. */
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
-
 /**
  * Everything one follows, in three groups, each with its button: unfollowing
  * is one press with an Undo, and the row stays until the page is left, so a
@@ -154,7 +154,7 @@ export function FollowingManagePage({
     set(key, next);
     apply(next).catch(() => {
       set(key, on);
-      setNotice({ text: strings.sections.followFailed });
+      setNotice({ text: next ? strings.sections.followFailed : strings.sections.unfollowFailed });
     });
     if (!next) {
       setNotice({
@@ -185,9 +185,7 @@ export function FollowingManagePage({
   return (
     <section className="manage">
       <header className="manage__head">
-        <Link className="manage__back" to={FOLLOWING_PATH} aria-label={strings.sections.back}>
-          <Icon name="arrow_back" />
-        </Link>
+        <BackLink className="manage__back" to={FOLLOWING_PATH} />
         <h1 className="manage__title">{strings.sections.tabFollowing}</h1>
       </header>
       {followed.state.status === "loading" ? (

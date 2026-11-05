@@ -853,6 +853,9 @@ const de: Translation = {
     following: "Gefolgt",
     unfollowed: "Du folgst {name} nicht mehr",
     followFailed: "Folgen fehlgeschlagen. Versuch es noch einmal.",
+    unfollowFailed: "Entfolgen fehlgeschlagen. Versuch es noch einmal.",
+    followSignInBody:
+      "Wenn du Rubriken und Themen folgst, stehen ihre neuen Listen ganz oben in deinem Feed.",
     undo: "Rückgängig",
     waitingOnlyYou: "Bis dahin siehst nur du dieses Thema.",
     topicMissing: "In {section} gibt es kein solches Thema.",
@@ -881,6 +884,7 @@ const de: Translation = {
     sortMostLists: "Meiste Listen",
     sortName: "A–Z",
     find: "Rubrik finden",
+    findNone: "Keine Rubrik passt zu „{q}“",
     propose: "Rubrik vorschlagen",
     waiting: "Wartet",
     sections: "Rubriken",

@@ -888,6 +888,9 @@ const pl: Translation = {
     following: "Obserwujesz",
     unfollowed: "Nie obserwujesz już: {name}",
     followFailed: "Nie udało się zaobserwować. Spróbuj ponownie.",
+    unfollowFailed: "Nie udało się przestać obserwować. Spróbuj ponownie.",
+    followSignInBody:
+      "Nowe listy z obserwowanych działów i tematów trafiają na górę twojej strony głównej.",
     undo: "Cofnij",
     waitingOnlyYou: "Do tego czasu ten temat widzisz tylko ty.",
     topicMissing: "W dziale {section} nie ma takiego tematu.",
@@ -915,6 +918,7 @@ const pl: Translation = {
     sortMostLists: "Najwięcej list",
     sortName: "A–Z",
     find: "Znajdź dział",
+    findNone: "Brak działów pasujących do „{q}”",
     propose: "Zaproponuj dział",
     waiting: "Czeka",
     sections: "Działy",

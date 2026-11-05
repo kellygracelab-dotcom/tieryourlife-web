@@ -27,13 +27,12 @@ import {
   sectionsStore,
 } from "../sections/useSections";
 import { FeedGrid } from "./FeedGrid";
-import { useFeed, type LoadFeed } from "./useFeed";
+import { useFeed, type FeedState, type LoadFeed } from "./useFeed";
+import { initialOf } from "../../lib/initial";
 import "./following.css";
 
 export type LoadSuggestions = () => Promise<{ authors: SuggestedAuthor[] }>;
 export type Follow = (authorUid: string) => Promise<unknown>;
-
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
 /** A person's picture, or their initial in a circle when they have none. */
 function Face({
@@ -114,9 +113,9 @@ export function Suggestions({
   if (authors.length === 0) return null;
   return (
     <section className="suggestions" aria-labelledby="suggestions-title">
-      <h3 id="suggestions-title" className="suggestions__title">
+      <h2 id="suggestions-title" className="suggestions__title">
         {strings.home.worthFollowing}
-      </h3>
+      </h2>
       <ul className="suggestions__grid">
         {authors.map((author) => (
           <SuggestionCard key={author.uid} author={author} follow={follow} unfollow={unfollow} />
@@ -305,7 +304,9 @@ export function FollowingTab({
       )}
     </>
   );
-  if (feed.state.status === "ready" && feed.state.lists.length === 0) {
+  // The lists wait for the strip above them, so it never pushes them down when it comes late.
+  const lists: FeedState = followed.state.status === "loading" ? { status: "loading" } : feed.state;
+  if (lists.status === "ready" && lists.lists.length === 0) {
     return (
       <>
         {stripPart}
@@ -322,7 +323,7 @@ export function FollowingTab({
     <>
       {stripPart}
       <FeedGrid
-        state={feed.state}
+        state={lists}
         label={strings.sections.tabFollowing}
         retry={feed.retry}
         more={feed.more}

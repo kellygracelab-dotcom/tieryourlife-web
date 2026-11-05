@@ -220,6 +220,19 @@ describe("the Following tab", () => {
     );
   });
 
+  it("holds the lists back until the strip above them is in, so nothing is pushed down", async () => {
+    let answer!: (following: Following) => void;
+    loadFollowing.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    load.mockResolvedValue({ lists: [list("a", { category: "anime" })], nextCursor: null });
+    open();
+    await vi.waitFor(() => expect(load).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.queryByRole("link", { name: /List a/ })).toBeNull();
+    answer({ ...nobody, sections: [{ id: "anime", followerCount: 1 }] });
+    expect(await screen.findByRole("link", { name: /List a/ })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Following" })).toBeInTheDocument();
+  });
+
   it("lists a followed section the sections leave out, by its name, and why its lists are there", async () => {
     sectionsDeps.loadOne.mockResolvedValue(
       stats("retro", { name: "Retro", hidden: true, following: true }),

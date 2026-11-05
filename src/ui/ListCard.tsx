@@ -5,6 +5,7 @@ import { titleIn } from "../lib/translated";
 import { currentLocale, plural, strings } from "../strings";
 import { Icon } from "./Icon";
 import { ListArt } from "./ListArt";
+import { initialOf } from "../lib/initial";
 import "./ListCard.css";
 
 interface ListCardProps {
@@ -21,9 +22,6 @@ export interface Yours {
   name: string | null;
   photoUrl: string | null;
 }
-
-// A name the backend left out is drawn as nobody's rather than failing the whole feed.
-const initialOf = (name: string | null): string => ((name ?? "").trim()[0] ?? "?").toUpperCase();
 
 function Face({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
   if (photoUrl !== null)
@@ -62,6 +60,7 @@ export function ListCard({ list, reason = null, yours = null }: ListCardProps) {
           cover={list.coverImageUrl}
           previews={list.previewImages}
           tierColors={list.tierColors}
+          decorative
         />
         <span className="list-card__text">
           {reason !== null && <span className="list-card__reason">{reason}</span>}

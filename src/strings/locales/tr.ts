@@ -831,6 +831,9 @@ const tr: Translation = {
     following: "Takip ediliyor",
     unfollowed: "{name} takibi bırakıldı",
     followFailed: "Takip edilemedi. Tekrar deneyin.",
+    unfollowFailed: "Takip bırakılamadı. Tekrar deneyin.",
+    followSignInBody:
+      "Takip etmek, sevdiğiniz bölüm ve konuların yeni listelerini akışınızın en üstünde tutar.",
     undo: "Geri al",
     waitingOnlyYou: "O zamana kadar bu konuyu yalnızca sen görürsün.",
     topicMissing: "{section} bölümünde böyle bir konu yok.",
@@ -858,6 +861,7 @@ const tr: Translation = {
     sortMostLists: "En çok liste",
     sortName: "A–Z",
     find: "Bölüm bul",
+    findNone: "“{q}” ile eşleşen bölüm yok",
     propose: "Bölüm öner",
     waiting: "Bekliyor",
     sections: "Bölümler",

@@ -86,6 +86,28 @@ describe("the sections store", () => {
     expect(after.get().sections.map((section) => section.id)).toEqual(["games", "other"]);
   });
 
+  it("never shows the next person on a shared browser what the last one followed or proposed", async () => {
+    const memory = remembered(memoryStore(), "s", 1, readKeptSections);
+    const mine = [
+      stats("anime"),
+      stats("people", { following: true }),
+      stats("club", { status: "pending", proposerUid: "a" }),
+    ];
+    const before = createSectionsStore(deps(mine, { memory }).deps);
+    before.refresh("a");
+    await settle();
+
+    // The answer for the guest is slow; meanwhile the kept one is drawn for them.
+    const after = createSectionsStore(
+      deps([], { memory, load: vi.fn(() => new Promise<never>(() => undefined)) }).deps,
+    );
+    expect(after.get().sections.map((section) => section.id)).toContain("club");
+    after.refresh("guest");
+    expect(after.get().sections.map((section) => section.id)).toEqual(["anime", "people"]);
+    expect(after.get().sections.some((section) => section.following)).toBe(false);
+    expect(after.get().followsKnown).toBe(false);
+  });
+
   it("drops a kept answer it cannot draw, and asks the backend as if nothing was kept", async () => {
     const store = memoryStore();
     const memory = remembered(store, "s", 1, readKeptSections);
@@ -140,6 +162,31 @@ describe("the sections store", () => {
     await expect(pending).resolves.toBe(false);
     expect(store.get().sections.map((section) => section.id)).toEqual(["anime", "games", "other"]);
     expect(refuse).toHaveBeenCalledWith("games");
+  });
+
+  it("puts back only the section refused, not another follow made meanwhile", async () => {
+    let refuse!: (reason: unknown) => void;
+    const { deps: given } = deps(
+      [stats("games", { following: true }), stats("music", { following: true })],
+      {
+        unfollow: vi.fn((id: string) =>
+          id === "games"
+            ? new Promise((_, reject) => (refuse = reject))
+            : Promise.resolve({ following: false }),
+        ),
+      },
+    );
+    const store = createSectionsStore(given);
+    store.refresh("u1");
+    await settle();
+    const games = store.setFollowing("games", false);
+    await expect(store.setFollowing("music", false)).resolves.toBe(true);
+    refuse(new Error("no"));
+    await expect(games).resolves.toBe(false);
+    const following = Object.fromEntries(
+      store.get().sections.map((section) => [section.id, section.following]),
+    );
+    expect(following).toEqual({ games: true, music: false });
   });
 });
 

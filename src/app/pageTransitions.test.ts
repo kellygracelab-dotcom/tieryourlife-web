@@ -19,17 +19,21 @@ describe("animates", () => {
 
 function fakes(pathname: string, still = false) {
   const navigate = vi.fn<(to: unknown, opts?: unknown) => Promise<void>>(async () => {});
+  const subscribers: ((state: { historyAction: string }) => void)[] = [];
   const router = {
     state: { location: { pathname } },
     navigate,
-    subscribe: vi.fn(),
+    subscribe: vi.fn((subscriber: (state: { historyAction: string }) => void) =>
+      subscribers.push(subscriber),
+    ),
   } as unknown as DataRouter;
   const listeners: ((event: Event) => void)[] = [];
   const root = document.createElement("html");
+  const history = { state: { idx: 3 } };
   const win = {
     document: { startViewTransition: () => {}, documentElement: root },
     location: { href: `https://tieryourlife.web.app${pathname}` },
-    history: { state: { idx: 3 } },
+    history,
     matchMedia: () => ({ matches: still }),
     addEventListener: (_: string, listener: (event: Event) => void) => listeners.push(listener),
   } as unknown as Window;
@@ -38,7 +42,12 @@ function fakes(pathname: string, still = false) {
     listeners.forEach((listener) =>
       listener(Object.assign(new Event("popstate"), { state, hasUAVisualTransition: native })),
     );
-  return { router, navigate, root, pop };
+  /** The router heard the step first, as Chrome may run its listener before ours. */
+  const routerMoved = (idx: number, historyAction = "POP") => {
+    history.state = { idx };
+    subscribers.forEach((subscriber) => subscriber({ historyAction }));
+  };
+  return { router, navigate, root, pop, routerMoved };
 }
 
 describe("withPageTransitions", () => {
@@ -78,5 +87,20 @@ describe("withPageTransitions", () => {
     expect(root.dataset.nav).toBe("push");
     pop({ idx: 2 }, true);
     expect(root.dataset.nav).toBe("none");
+  });
+
+  it("slides forward on the browser's Forward even when the router heard the step first", () => {
+    const { root, pop, routerMoved } = fakes("/l/abc");
+    routerMoved(2);
+    pop({ idx: 2 });
+    expect(root.dataset.nav).toBe("back");
+    routerMoved(3);
+    pop({ idx: 3 });
+    expect(root.dataset.nav).toBe("push");
+    // A page opened by a link moves the place on as well.
+    routerMoved(4, "PUSH");
+    routerMoved(3);
+    pop({ idx: 3 });
+    expect(root.dataset.nav).toBe("back");
   });
 });

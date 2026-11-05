@@ -890,6 +890,9 @@ const ru: Translation = {
     following: "Вы подписаны",
     unfollowed: "Вы отписались от «{name}»",
     followFailed: "Не удалось подписаться. Попробуйте ещё раз.",
+    unfollowFailed: "Не удалось отписаться. Попробуйте ещё раз.",
+    followSignInBody:
+      "С подписками новые списки из разделов и тем, которые вам нравятся, стоят в ленте первыми.",
     undo: "Вернуть",
     waitingOnlyYou: "До тех пор эту тему видите только вы.",
     topicMissing: "В разделе {section} нет такой темы.",
@@ -918,6 +921,7 @@ const ru: Translation = {
     sortMostLists: "Больше всего списков",
     sortName: "А–Я",
     find: "Найти раздел",
+    findNone: "Нет разделов по запросу «{q}»",
     propose: "Предложить раздел",
     waiting: "Ждёт",
     sections: "Разделы",

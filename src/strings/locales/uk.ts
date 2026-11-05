@@ -895,6 +895,9 @@ const uk: Translation = {
     following: "Ви підписані",
     unfollowed: "Ви відписалися від «{name}»",
     followFailed: "Не вдалося підписатися. Спробуйте ще раз.",
+    unfollowFailed: "Не вдалося відписатися. Спробуйте ще раз.",
+    followSignInBody:
+      "Із підписками нові списки з розділів і тем, які вам подобаються, стоять у стрічці першими.",
     undo: "Повернути",
     waitingOnlyYou: "До того часу цю тему бачите лише ви.",
     topicMissing: "У розділі {section} немає такої теми.",
@@ -923,6 +926,7 @@ const uk: Translation = {
     sortMostLists: "Найбільше списків",
     sortName: "А–Я",
     find: "Знайти розділ",
+    findNone: "Немає розділів за запитом «{q}»",
     propose: "Запропонувати розділ",
     waiting: "Чекає",
     sections: "Розділи",

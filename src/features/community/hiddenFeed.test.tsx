@@ -91,4 +91,26 @@ describe("FeedGrid with hidden lists", () => {
     expect(screen.queryByRole("list", { name: "Feed" })).toBeNull();
     expect(screen.getByText(/Everything here is hidden for you/)).toBeInTheDocument();
   });
+  it("still offers the next page when everything on this one is hidden", () => {
+    store.write(HIDDEN_KEY, JSON.stringify({ lists: [], authors: [{ uid: "u2", name: "x" }] }));
+    useHiddenStoreForTests(store);
+    render(
+      <MemoryRouter>
+        <FeedGrid
+          state={{
+            status: "ready",
+            lists: [list("c", "u2"), list("d", "u2")],
+            next: "c1",
+            more: "idle",
+            followingNobody: false,
+          }}
+          label="Feed"
+          retry={() => undefined}
+          more={() => undefined}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/Everything here is hidden for you/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show more" })).toBeInTheDocument();
+  });
 });

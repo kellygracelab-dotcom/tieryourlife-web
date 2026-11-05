@@ -969,6 +969,9 @@ const ar: Translation = {
     following: "تتابعه",
     unfollowed: "ألغيت متابعة {name}",
     followFailed: "تعذّرت المتابعة. حاول مرة أخرى.",
+    unfollowFailed: "تعذّر إلغاء المتابعة. حاول مرة أخرى.",
+    followSignInBody:
+      "المتابعة تُبقي القوائم الجديدة من الأقسام والمواضيع التي تحبها في أعلى صفحتك.",
     undo: "تراجع",
     waitingOnlyYou: "أنت وحدك ترى هذا الموضوع حتى ذلك الحين.",
     topicMissing: "لا يوجد موضوع كهذا في قسم {section}.",
@@ -1003,6 +1006,7 @@ const ar: Translation = {
     sortMostLists: "الأكثر قوائم",
     sortName: "أ–ي",
     find: "ابحث عن قسم",
+    findNone: "لا توجد أقسام مطابقة لـ «{q}»",
     propose: "اقترح قسمًا",
     waiting: "قيد الانتظار",
     sections: "الأقسام",

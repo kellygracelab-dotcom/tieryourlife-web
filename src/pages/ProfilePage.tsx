@@ -16,6 +16,7 @@ import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { NotFoundPage } from "./NotFoundPage";
+import { initialOf } from "../lib/initial";
 import "./ProfilePage.css";
 
 /** What a link to a profile may carry along, so the head is drawn before any answer. */
@@ -28,8 +29,6 @@ interface ProfilePageProps {
   load?: LoadFeed;
   follow?: FollowDeps;
 }
-
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
 type Asking = "closed" | "open" | "busy";
 

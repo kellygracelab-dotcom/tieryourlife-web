@@ -114,7 +114,11 @@ export function useFollowFlow() {
   const clearNotice = useCallback(() => setNotice(null), []);
   const closeAsk = useCallback(() => setAsking("closed"), []);
 
-  const failed = () => setNotice({ text: strings.sections.followFailed });
+  /** Says which of the two did not go through: the follow, or the unfollow. */
+  const failed = (following: boolean) =>
+    setNotice({
+      text: following ? strings.sections.followFailed : strings.sections.unfollowFailed,
+    });
 
   const toggle = (name: string, following: boolean, apply: (following: boolean) => void) => {
     if (!signedIn) {
@@ -146,7 +150,7 @@ export function useFollowFlow() {
         open={asking !== "closed"}
         busy={asking === "busy"}
         title={strings.follow.signInTitle}
-        body={strings.follow.signInBody}
+        body={strings.sections.followSignInBody}
         onSignIn={onSignIn}
         onCancel={closeAsk}
       />
