@@ -25,36 +25,60 @@ export const EXPIRES_AFTER = 30 * DAY;
 
 export const playKey = (boardKey: string): string => `play:${boardKey}`;
 
-/** The text a saved game is kept as, here and later in the account. */
-export function encodeGame(game: Game, savedAt: number): string {
-  return JSON.stringify({ version: 1, savedAt, game });
+/**
+ * The text a saved game is kept as, here and later in the account. A
+ * `snapshot` names the cards the game was played over where their ids alone
+ * cannot: a list's cards are their places in it.
+ */
+export function encodeGame(game: Game, savedAt: number, snapshot?: string): string {
+  return JSON.stringify(
+    snapshot === undefined
+      ? { version: 1, savedAt, game }
+      : { version: 1, savedAt, snapshot, game },
+  );
 }
 
 /** A saved game, or null for anything that is not one: a stored text is checked, not trusted. */
-export function decodeGame(text: string): { game: Game; savedAt: number } | null {
+export function decodeGame(
+  text: string,
+): { game: Game; savedAt: number; snapshot: string | null } | null {
   try {
     const value: unknown = JSON.parse(text);
     if (!isRecord(value) || value.version !== 1 || !isNumber(value.savedAt)) return null;
     const game = gameOf(value.game);
-    return game === null ? null : { game, savedAt: value.savedAt };
+    const snapshot = typeof value.snapshot === "string" ? value.snapshot : null;
+    return game === null ? null : { game, savedAt: value.savedAt, snapshot };
   } catch {
     return null;
   }
 }
 
-export function localGames(store: KeyValueStore, now: () => number = Date.now): SavedGames {
+/**
+ * This device's games. With a `snapshot`, a game is kept for that snapshot
+ * only: one saved over a list before it was published again would pin its
+ * answers on whatever cards now stand in those places, so it goes.
+ */
+export function localGames(
+  store: KeyValueStore,
+  now: () => number = Date.now,
+  snapshot?: string,
+): SavedGames {
   return {
     load(boardKey) {
       const text = store.read(playKey(boardKey));
       if (text === null) return null;
       const saved = decodeGame(text);
-      if (saved === null || now() - saved.savedAt > EXPIRES_AFTER) {
+      if (
+        saved === null ||
+        now() - saved.savedAt > EXPIRES_AFTER ||
+        (snapshot !== undefined && saved.snapshot !== snapshot)
+      ) {
         store.remove(playKey(boardKey));
         return null;
       }
       return saved.game;
     },
-    save: (boardKey, game) => store.write(playKey(boardKey), encodeGame(game, now())),
+    save: (boardKey, game) => store.write(playKey(boardKey), encodeGame(game, now(), snapshot)),
     discard: (boardKey) => store.remove(playKey(boardKey)),
   };
 }

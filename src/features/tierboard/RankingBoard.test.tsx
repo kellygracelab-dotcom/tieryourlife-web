@@ -7,6 +7,7 @@ import type { PublishedList } from "../../api/types";
 import { SessionContext, type Session } from "../../app/session";
 import type { KeyValueStore } from "../../lib/storage";
 import { keepListRanking } from "../../lib/api";
+import { BoardFrameContext } from "./boardFrame";
 import { RankingBoard } from "./RankingBoard";
 
 vi.mock("../../lib/api", () => ({
@@ -418,6 +419,68 @@ describe("RankingBoard", () => {
       // The toggle is in the tree for the stylesheet to hide; the board's shape is the phone's.
       expect(document.querySelector(".ranking")).not.toHaveClass("ranking--under");
     } finally {
+      Object.assign(window, { innerWidth: had.width, innerHeight: had.height });
+    }
+  });
+
+  it("offers no dock under the board to a phone on its side, whatever was chosen", () => {
+    const had = { width: window.innerWidth, height: window.innerHeight };
+    Object.assign(window, { innerWidth: 844, innerHeight: 390 });
+    try {
+      const store = memoryStore();
+      store.write("tyl:pool-dock", JSON.stringify({ narrow: { dock: "under", rows: 1 } }));
+      render(
+        <MemoryRouter>
+          <RankingBoard list={list} store={store} />
+        </MemoryRouter>,
+      );
+      expect(document.querySelector(".ranking")).not.toHaveClass("ranking--under");
+      expect(screen.queryByRole("group", { name: "Where the cards sit" })).toBeNull();
+    } finally {
+      Object.assign(window, { innerWidth: had.width, innerHeight: had.height });
+    }
+  });
+
+  it("tells the page how tall its header is, for the pool's column to stick under it", () => {
+    const had = { width: window.innerWidth, height: window.innerHeight };
+    Object.assign(window, { innerWidth: 1024, innerHeight: 768 });
+    const watched: Element[] = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        told: () => void;
+        constructor(told: () => void) {
+          this.told = told;
+        }
+        observe(target: Element) {
+          watched.push(target);
+          this.told();
+        }
+        disconnect() {}
+      },
+    );
+    try {
+      const head = document.createElement("header");
+      head.className = "list-head";
+      head.getBoundingClientRect = () => ({ height: 126.4 }) as DOMRect;
+      const slot = document.createElement("span");
+      head.append(slot);
+      document.body.append(head);
+      const { unmount } = render(
+        <BoardFrameContext.Provider value={{ headSlot: slot, report: () => undefined }}>
+          <MemoryRouter>
+            <RankingBoard list={list} store={memoryStore()} />
+          </MemoryRouter>
+        </BoardFrameContext.Provider>,
+      );
+      expect(watched).toContain(head);
+      const root = document.documentElement.style;
+      expect(root.getPropertyValue("--list-head-h")).toBe("127px");
+      unmount();
+      expect(root.getPropertyValue("--list-head-h")).toBe("");
+      head.remove();
+    } finally {
+      vi.unstubAllGlobals();
       Object.assign(window, { innerWidth: had.width, innerHeight: had.height });
     }
   });

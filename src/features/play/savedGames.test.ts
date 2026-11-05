@@ -29,7 +29,12 @@ const game = (): Game => ({
 describe("a saved game's text", () => {
   it("comes back as the game it was", () => {
     const refining = startRefine(game());
-    expect(decodeGame(encodeGame(game(), 5))).toEqual({ game: game(), savedAt: 5 });
+    expect(decodeGame(encodeGame(game(), 5))).toEqual({
+      game: game(),
+      savedAt: 5,
+      snapshot: null,
+    });
+    expect(decodeGame(encodeGame(game(), 5, "7:3"))?.snapshot).toBe("7:3");
     expect(decodeGame(encodeGame(refining, 5))?.game).toEqual(refining);
   });
 
@@ -55,6 +60,18 @@ describe("a saved game's text", () => {
 });
 
 describe("this device's saved games", () => {
+  it("keeps a game for the snapshot of the cards it was played over, and drops it after", () => {
+    const store = memoryStore();
+    localGames(store, () => 1_000, "7:3").save("list:x", game());
+    expect(localGames(store, () => 1_000, "7:3").load("list:x")).toEqual(game());
+    // Published again: the places in the list are other cards now.
+    expect(localGames(store, () => 1_000, "8:4").load("list:x")).toBeNull();
+    expect(store.read(playKey("list:x"))).toBeNull();
+    // A game kept before snapshots were written cannot say what it was over.
+    localGames(store, () => 1_000).save("list:x", game());
+    expect(localGames(store, () => 1_000, "7:3").load("list:x")).toBeNull();
+  });
+
   it("keeps one game a board, at play:{board}", () => {
     const store = memoryStore();
     const games = localGames(store, () => 1_000);

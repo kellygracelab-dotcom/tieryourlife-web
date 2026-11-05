@@ -46,6 +46,18 @@ export function PlaySheet({
   const leave = () => setLeaving(true);
   useModal(box, leave);
 
+  // The board behind hears its keys on the window: 1 placed its picked card
+  // and Ctrl+Z undid a move under the scrim. A key stops at the document,
+  // after the sheet's own controls have had it; Escape and Tab go on to
+  // useModal, on the window too.
+  useEffect(() => {
+    const hold = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" && event.key !== "Tab") event.stopPropagation();
+    };
+    document.addEventListener("keydown", hold);
+    return () => document.removeEventListener("keydown", hold);
+  }, []);
+
   // Gone once the exit has played; the latest onClose is the one called.
   const close = useRef(onClose);
   useEffect(() => {

@@ -50,7 +50,9 @@ import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { PlayButton } from "../features/play/PlayButton";
+import { localGames } from "../features/play/savedGames";
 import { usePlay } from "../features/play/usePlay";
+import { usePlayBack } from "../features/play/usePlayBack";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
@@ -328,6 +330,14 @@ function OpenList({
     setMineRound((round) => round + 1);
     show("mine");
   };
+  // Undo for both: Mine's draft as it was, byte for byte, and the view it was on.
+  const restoreMine = (before: string | null, back: View) => {
+    if (before === null) clearDraft(localStorageStore, list.id);
+    else localStorageStore.write(draftKey(list.id), before);
+    setMineRows(loadDraft(localStorageStore, scopeOf(list)));
+    setMineRound((round) => round + 1);
+    show(back);
+  };
   const playCards = useMemo<PlayCard[]>(
     () =>
       list.items.map((item, index) => ({
@@ -348,12 +358,27 @@ function OpenList({
       cardIds: (rows[index] ?? []).map(String),
     }));
   }, [list, author, mineRows]);
+  // A card's id is its place in the list, so a game is kept for this
+  // publication only, as the draft is: after a republish its answers would
+  // be about other films.
+  const games = useMemo(
+    () => localGames(localStorageStore, Date.now, `${list.updatedAt}:${list.items.length}`),
+    [list.updatedAt, list.items.length],
+  );
   const play = usePlay(`list:${list.id}`, playCards, playTiers, localStorageStore, {
     title: list.title,
     theirs: true,
+    games,
     notify: setNotice,
-    onApply: (rows) => putInMine(rows.map((row) => row.map(Number))),
+    // As on the app: "Board arranged · Undo", and Undo gives back a Mine made by hand.
+    onApply: (rows) => {
+      const before = localStorageStore.read(draftKey(list.id));
+      const was = shown;
+      putInMine(rows.map((row) => row.map(Number)));
+      return () => restoreMine(before, was);
+    },
   });
+  usePlayBack(play);
 
   const theirs = useMemo(
     () => (chosen === null ? { tiers: list.tiers, ...author } : placedBy(list, chosen)),
@@ -369,9 +394,8 @@ function OpenList({
   // What Mine held before is kept for Undo, which puts it back byte for byte
   // and shows Theirs again.
   const startFromTheirs = (rows: Rows) => {
-    const scope = scopeOf(list);
     const before = localStorageStore.read(draftKey(list.id));
-    const replaced = loadPlacedDraft(localStorageStore, scope) !== null;
+    const replaced = loadPlacedDraft(localStorageStore, scopeOf(list)) !== null;
     putInMine(rows);
     const said = replaced
       ? theirsName === null
@@ -382,16 +406,7 @@ function OpenList({
         : fill(strings.list.startedFrom, { name: theirsName });
     setNotice({
       text: said,
-      action: {
-        text: strings.list.undo,
-        onClick: () => {
-          if (before === null) clearDraft(localStorageStore, list.id);
-          else localStorageStore.write(draftKey(list.id), before);
-          setMineRows(loadDraft(localStorageStore, scope));
-          setMineRound((round) => round + 1);
-          show("theirs");
-        },
-      },
+      action: { text: strings.list.undo, onClick: () => restoreMine(before, "theirs") },
     });
   };
   // Somebody else's tier words over the same cards: the board draws Theirs under them.
