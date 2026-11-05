@@ -1,7 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FollowState } from "../api/community";
 import { ApiFailure, type ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
@@ -15,6 +15,7 @@ import { boards } from "../features/boards/owners";
 import { EVERYTHING } from "../features/play/chosen";
 import { newGame } from "../features/play/game";
 import { localGames, playKey } from "../features/play/savedGames";
+import { loadPlayScreens } from "../features/play/usePlay";
 import { writeKept } from "../features/ranking/kept";
 import { draftKey, loadDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
 import { keepRanking } from "../lib/api";
@@ -1000,6 +1001,9 @@ describe("ListPage for its author", () => {
 });
 
 describe("ListPage, Play", () => {
+  // The screens come as a chunk of their own; fetched here, Play opens in the frame it is pressed.
+  beforeAll(() => loadPlayScreens());
+
   /** Answers with ← until the result is up. */
   const playToTheEnd = async () => {
     const result = () => screen.queryByRole("heading", { name: "Your result" });

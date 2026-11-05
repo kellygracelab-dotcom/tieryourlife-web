@@ -981,6 +981,7 @@ const tr: Translation = {
     play: "Oyna",
     needsCards: "Oynamak için en az 3 kart gerekir.",
     savedGame: "Kayıtlı bir oyun var.",
+    couldNotOpen: "Oyun açılamadı. Bağlantınızı kontrol edip tekrar deneyin.",
     cardsFrom: { other: "“{title}” içinden {n} kart" },
     chooseCards: "Kartları seç",
     game: "Oyun",

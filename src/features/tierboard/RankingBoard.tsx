@@ -1,8 +1,10 @@
 import {
+  memo,
   useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -15,7 +17,7 @@ import {
 import { createPortal } from "react-dom";
 import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
-import type { PublishedList } from "../../api/types";
+import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import { useSession } from "../../app/session";
 import { keepRanking, noteTake, rearrangeRanking } from "../../lib/api";
 import { isEditorialAuthor } from "../../lib/editorial";
@@ -46,7 +48,6 @@ import {
   tierForKey,
   tierOf,
   type BoardAction,
-  type BoardState,
   type Rows,
 } from "./model";
 import { useTileDrag, type HitTest } from "./useTileDrag";
@@ -157,21 +158,32 @@ export const POOL_SEARCH_FROM = 24;
 export const MENU_COUNT_KEY = "tyl.cardMenu.opened";
 export const MENU_HINT_UNTIL = 3;
 
+/** A tier with no row yet: one empty row for all of them, so it reads as unchanged. */
+const NO_ROW: readonly number[] = [];
+
+/**
+ * A tile's props stay the same from one render to the next unless the card
+ * itself changed: the card and the tiers as the list holds them, callbacks
+ * that take the card's number. A list of 2,000 cards then draws again only
+ * the tiles a move touched, not all of them on every move.
+ */
 interface TileProps {
-  list: PublishedList;
+  card: PublishedItem | undefined;
+  /** The list's tiers, for the card's menu. */
+  tiers: PublishedTier[];
   item: number;
   board: BoardSize;
   selected: boolean;
   lifted: boolean;
   locked: boolean;
   dispatch: (action: BoardAction) => void;
-  onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+  pointerDownFor: PointerDownFor;
   /** The drag as it is right now: a press that lifted a card opens no menu. */
   dragNow: () => DragState;
   /** Where the card is, for its menu: a tier, or null in the pool. */
   current: number | null;
   /** The owner may take a card off the list, from its menu. */
-  onRemove?: () => void;
+  onRemove?: (item: number) => void;
   /** The card's menu opened: the board counts it, for its hint. */
   onMenu: () => void;
 }
@@ -196,15 +208,16 @@ type CardMenuAt = { sheet: true } | { sheet: false; at: ScreenPoint };
  * click or a right click; a finger gets the phone's sheet. The keyboard opens
  * it with the context-menu key or Shift+F10, at the card.
  */
-function Tile({
-  list,
+const Tile = memo(function Tile({
+  card,
+  tiers,
   item,
   board,
   selected,
   lifted,
   locked,
   dispatch,
-  onPointerDown,
+  pointerDownFor,
   dragNow,
   current,
   onRemove,
@@ -219,7 +232,6 @@ function Tile({
   // not send on every phone, and a drag between them sends no click at all.
   const lastClick = useRef(0);
   const opener = useRef<HTMLButtonElement>(null);
-  const card = list.items[item];
   if (card === undefined) return null;
   const classes = ["tile", selected && "tile--selected", lifted && "tile--lifted"]
     .filter(Boolean)
@@ -287,7 +299,7 @@ function Tile({
         }}
         onPointerDown={(event) => {
           pressedBy.current = event.pointerType;
-          if (!locked) onPointerDown(event);
+          if (!locked) pointerDownFor(item)(event);
         }}
       >
         {card.imageUrl !== null ? (
@@ -300,11 +312,11 @@ function Tile({
         <MoveSheet
           name={card.title}
           credit={card.credit ?? null}
-          tiers={list.tiers}
+          tiers={tiers}
           current={current}
           onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
           onUnplace={close(() => dispatch({ type: "unplace", item }))}
-          onRemove={onRemove === undefined ? undefined : close(onRemove)}
+          onRemove={onRemove === undefined ? undefined : close(() => onRemove(item))}
           onClose={closeMove}
         />
       )}
@@ -312,19 +324,19 @@ function Tile({
         <CardMenu
           name={card.title}
           credit={card.credit ?? null}
-          tiers={list.tiers}
+          tiers={tiers}
           current={current}
           at={moving.at}
           opener={opener}
           onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
           onUnplace={close(() => dispatch({ type: "unplace", item }))}
-          onRemove={onRemove === undefined ? undefined : close(onRemove)}
+          onRemove={onRemove === undefined ? undefined : close(() => onRemove(item))}
           onClose={closeMove}
         />
       )}
     </li>
   );
-}
+});
 
 /** Save for a ranking, Publish changes for the owner's list; busy, the word says so. */
 const saveLabel = (edit: EditMode, busy: boolean): string =>
@@ -451,6 +463,15 @@ export function RankingBoard({
   const [offer, setOffer] = useState<KeepState>("closed");
   const drag = useTileDrag(dispatch, hitTest);
   const lifted = drag.state.phase === "dragging" ? drag.state.item : null;
+  const dropTarget = drag.state.phase === "dragging" ? drag.state.target : null;
+  // The owner's way to take a card off, one function for every tile: the
+  // page hands a new one with each render, and every tile would draw again.
+  const removeNow = useRef(edit?.owner?.remove);
+  useEffect(() => {
+    removeNow.current = edit?.owner?.remove;
+  });
+  const removeCard = useCallback((item: number) => removeNow.current?.(item), []);
+  const onRemove = edit?.owner?.remove === undefined ? undefined : removeCard;
   const selected = state.selected;
   const selectedTitle = selected === null ? null : (list.items[selected]?.title ?? null);
   const section = useRef<HTMLElement>(null);
@@ -740,13 +761,55 @@ export function RankingBoard({
     return () => window.removeEventListener("keydown", onKey);
   }, [dispatch, list.tiers.length, placeSelected, locked, selected, state]);
 
-  const left = pool(state);
+  // The pool and its tiles are the same from one frame of a drag to the next:
+  // kept, they are not drawn again while a card travels over the rows.
+  const left = useMemo(() => pool(state), [state]);
   const needle = query.trim();
-  const shown =
-    needle === "" ? left : left.filter((item) => holds(list.items[item]?.title ?? "", needle));
+  const shown = useMemo(
+    () =>
+      needle === "" ? left : left.filter((item) => holds(list.items[item]?.title ?? "", needle)),
+    [left, needle, list.items],
+  );
   useEffect(() => {
     inSight.current = needle === "" ? null : shown;
   });
+  const pointerDownFor = drag.onPointerDown;
+  const dragNow = drag.current;
+  const poolTiles = useMemo(
+    () =>
+      shown.map((item) => (
+        <Tile
+          key={item}
+          card={list.items[item]}
+          tiers={list.tiers}
+          item={item}
+          board={boardSize}
+          selected={selected === item}
+          lifted={lifted === item}
+          locked={locked}
+          dispatch={dispatch}
+          pointerDownFor={pointerDownFor}
+          dragNow={dragNow}
+          onMenu={onMenu}
+          current={null}
+          onRemove={onRemove}
+        />
+      )),
+    [
+      shown,
+      list.items,
+      list.tiers,
+      boardSize,
+      selected,
+      lifted,
+      locked,
+      dispatch,
+      pointerDownFor,
+      dragNow,
+      onMenu,
+      onRemove,
+    ],
+  );
   const keyboardTiers = Math.min(list.tiers.length, 9);
   // On a phone the pool is one scrolling row with dots under it.
   // The tray waits out a double tap before it scrolls, or the second tap lands on another card.
@@ -785,7 +848,7 @@ export function RankingBoard({
   }, [wide, restEmpty]);
   const poolClasses = [
     "pool",
-    drag.state.phase === "dragging" && drag.state.target?.kind === "pool" && "pool--target",
+    dropTarget?.kind === "pool" && "pool--target",
     picked && "pool--picked",
     lifted !== null && left.includes(lifted) && "pool--dragging",
     finish.status === "done" && "pool--rest",
@@ -885,13 +948,18 @@ export function RankingBoard({
           {list.tiers.map((tier, index) => (
             <TierRow
               key={`${index}-${tier.label}`}
-              list={list}
-              state={state}
+              meta={tier}
+              tiers={list.tiers}
+              items={list.items}
+              row={state.rows[index] ?? NO_ROW}
+              selected={selected}
               tier={index}
               board={boardSize}
               selectedTitle={selectedTitle}
               dispatch={dispatch}
-              dragState={drag.state}
+              dropAt={
+                dropTarget?.kind === "tier" && dropTarget.tier === index ? dropTarget.index : null
+              }
               pointerDownFor={drag.onPointerDown}
               lifted={lifted}
               locked={locked}
@@ -899,7 +967,7 @@ export function RankingBoard({
               keys={!seeded}
               dragNow={drag.current}
               onMenu={onMenu}
-              onRemove={edit?.owner?.remove}
+              onRemove={onRemove}
               band={
                 tierEditing === undefined || locked
                   ? undefined
@@ -1062,25 +1130,7 @@ export function RankingBoard({
                 {!allPlaced && (
                   <>
                     <ul className="pool__items" ref={tray} onScroll={readPage}>
-                      {shown.map((item) => (
-                        <Tile
-                          key={item}
-                          list={list}
-                          item={item}
-                          board={boardSize}
-                          selected={selected === item}
-                          lifted={lifted === item}
-                          locked={locked}
-                          dispatch={dispatch}
-                          onPointerDown={drag.onPointerDown(item)}
-                          dragNow={drag.current}
-                          onMenu={onMenu}
-                          current={null}
-                          onRemove={
-                            edit?.owner === undefined ? undefined : () => edit.owner?.remove(item)
-                          }
-                        />
-                      ))}
+                      {poolTiles}
                     </ul>
                     {shown.length === 0 && <p className="pool__none">{strings.rank.searchNone}</p>}
                     {edit?.owner !== undefined && menusOpened < MENU_HINT_UNTIL && (
@@ -1117,19 +1167,34 @@ export function RankingBoard({
       {edit === undefined && !seeded && (
         <KeepDialog state={offer} onGoogle={onGoogle} onLinkOnly={onLinkOnly} />
       )}
-      <DragGhost state={drag.state} items={list.items} board={boardSize} />
+      <DragGhost
+        now={drag.current}
+        subscribe={drag.subscribe}
+        items={list.items}
+        board={boardSize}
+      />
     </section>
   );
 }
 
+/**
+ * A row's props are its own: its cards, the pick, and where a carried card
+ * would land in it. A move redraws the rows it changed; a card carried over
+ * one row redraws that row alone.
+ */
 interface TierRowProps {
-  list: PublishedList;
-  state: BoardState;
+  meta: PublishedTier | undefined;
+  /** The list's tiers, for a card's menu. */
+  tiers: PublishedTier[];
+  items: PublishedItem[];
+  row: readonly number[];
+  selected: number | null;
   tier: number;
   board: BoardSize;
   selectedTitle: string | null;
   dispatch: (action: BoardAction) => void;
-  dragState: DragState;
+  /** Where among the row's other cards a card carried over it would land; null when none is. */
+  dropAt: number | null;
   pointerDownFor: PointerDownFor;
   lifted: number | null;
   locked: boolean;
@@ -1154,14 +1219,17 @@ interface TierRowProps {
   };
 }
 
-function TierRow({
-  list,
-  state,
+const TierRow = memo(function TierRow({
+  meta,
+  tiers,
+  items,
+  row,
+  selected,
   tier,
   board,
   selectedTitle,
   dispatch,
-  dragState,
+  dropAt,
   pointerDownFor,
   lifted,
   locked,
@@ -1172,19 +1240,15 @@ function TierRow({
   onRemove,
   band,
 }: TierRowProps) {
-  const meta = list.tiers[tier];
-  const row = state.rows[tier] ?? [];
   if (meta === undefined) return null;
-  const selected = state.selected;
   const armed = !locked && selected !== null && !row.includes(selected);
-  const target = dragState.phase === "dragging" ? dragState.target : null;
-  const targeted = target?.kind === "tier" && target.tier === tier;
+  const targeted = dropAt !== null;
   // A card carried over the row takes its place there at once, the others
   // making room: the card itself when it is this row's, an empty slot of its
   // size when it comes from elsewhere (null below). Where it lands is read
   // from the others' middles, so the room it takes does not move the place.
   const others = row.filter((item) => item !== lifted);
-  const landing = targeted ? Math.min(target.index, others.length) : null;
+  const landing = targeted ? Math.min(dropAt, others.length) : null;
   const shown: readonly (number | null)[] =
     landing === null
       ? row
@@ -1290,25 +1354,26 @@ function TierRow({
           ) : (
             <Tile
               key={item}
-              list={list}
+              card={items[item]}
+              tiers={tiers}
               item={item}
               board={board}
               selected={selected === item}
               lifted={lifted === item}
               locked={locked}
               dispatch={dispatch}
-              onPointerDown={pointerDownFor(item)}
+              pointerDownFor={pointerDownFor}
               dragNow={dragNow}
               onMenu={onMenu}
               current={tier}
-              onRemove={onRemove === undefined ? undefined : () => onRemove(item)}
+              onRemove={onRemove}
             />
           ),
         )}
       </ul>
     </div>
   );
-}
+});
 
 /**
  * A card that moves is drawn anew in its new row, and the button that had
@@ -1330,14 +1395,20 @@ function useMoveFollowing(
     const was = before.current;
     before.current = rows;
     if (was === rows) return;
-    const rowOf = (of: Rows, item: number) => of.findIndex((row) => row.includes(item));
+    // Each card's row looked up once per arrangement: searching the rows for
+    // every card took millions of steps on a list of 2,000.
+    const rowsBy = (of: Rows) =>
+      new Map(of.flatMap((row, tier) => row.map((item) => [item, tier])));
+    const wasIn = rowsBy(was);
+    const nowIn = rowsBy(rows);
+    const rowOf = (of: Map<number, number>, item: number) => of.get(item) ?? -1;
     const moved =
       was.length === rows.length
-        ? list.items.findIndex((_, item) => rowOf(was, item) !== rowOf(rows, item))
+        ? list.items.findIndex((_, item) => rowOf(wasIn, item) !== rowOf(nowIn, item))
         : -1;
     const card = list.items[moved];
     if (card !== undefined && announcer.current !== null) {
-      const tier = list.tiers[rowOf(rows, moved)];
+      const tier = list.tiers[rowOf(nowIn, moved)];
       announcer.current.textContent =
         tier === undefined
           ? fill(strings.rank.cardInPool, { name: card.title })

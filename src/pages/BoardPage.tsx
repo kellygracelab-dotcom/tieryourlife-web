@@ -53,7 +53,14 @@ import { boards as site } from "../features/boards/owners";
 import { takenDown, unpublished } from "../features/boards/takeDown";
 import { applyTierAction, editorTiersOf, newTierOf } from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
-import { arrangementOf, boardView, sameOrder, uidRows } from "../features/boards/view";
+import {
+  arrangementOf,
+  boardView,
+  keepUnchanged,
+  sameOrder,
+  uidRows,
+  type BoardView,
+} from "../features/boards/view";
 import { AddCardBox, type Keep, type Upload } from "../features/editor/AddCardBox";
 import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
 import { TierDialog } from "../features/editor/TierDialog";
@@ -358,10 +365,22 @@ function OpenBoard({
   // The cards keep their indexes while the page is open (see boardView): the
   // order drawn is kept, and taken afresh only when the cards change.
   const [drawn, setDrawn] = useState<readonly string[]>();
-  const view = useMemo(
+  const drawnView = useMemo(
     () => (board === null ? null : boardView(board, strings.boards.untitled, drawn)),
     [board, drawn],
   );
+  // The cards that read as before stay the same objects, so a move redraws
+  // only the card moved (see keepUnchanged). Adjusted during the render, as
+  // the order drawn is.
+  const [kept, setKept] = useState<{ from: BoardView | null; view: BoardView | null }>({
+    from: null,
+    view: null,
+  });
+  let view = kept.view;
+  if (kept.from !== drawnView) {
+    view = drawnView === null ? null : keepUnchanged(kept.view, drawnView);
+    setKept({ from: drawnView, view });
+  }
   if (view !== null && !sameOrder(view.uids, drawn)) setDrawn(view.uids);
 
   // Play's cards and tiers: the board's own, by uid, best tier first.

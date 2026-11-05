@@ -6,9 +6,11 @@ import {
   move,
   NO_GRAB,
   press,
+  sameDrawing,
   targetOf,
   TOUCH_HOLD_MS,
   type DragState,
+  type DropTarget,
 } from "./drag";
 
 const at = (x: number, y: number) => ({ x, y });
@@ -134,5 +136,40 @@ describe("targetOf with a point", () => {
     expect(targetOf(zone, at(110, 40))).toEqual({ kind: "tier", tier: 1, index: 2 });
     // Card 0 is the one held: past card 1's middle is its first place.
     expect(targetOf(zone, at(110, 40), 0)).toEqual({ kind: "tier", tier: 1, index: 1 });
+  });
+});
+
+describe("sameDrawing", () => {
+  const carried = (x: number, target: DropTarget, item = 3): DragState => ({
+    phase: "dragging",
+    item,
+    at: { x, y: 0 },
+    target,
+    grab: NO_GRAB,
+  });
+  const over: DropTarget = { kind: "tier", tier: 1, index: 2 };
+
+  it("is the same while the card stays over one place, wherever the pointer is", () => {
+    expect(sameDrawing(carried(10, over), carried(80, { kind: "tier", tier: 1, index: 2 }))).toBe(
+      true,
+    );
+    expect(sameDrawing(carried(10, { kind: "pool" }), carried(80, { kind: "pool" }))).toBe(true);
+    expect(sameDrawing(carried(10, null), carried(80, null))).toBe(true);
+    expect(sameDrawing(idle, idle)).toBe(true);
+  });
+
+  it("is another drawing for another place, another card, or another phase", () => {
+    expect(sameDrawing(carried(10, over), carried(10, { kind: "tier", tier: 1, index: 3 }))).toBe(
+      false,
+    );
+    expect(sameDrawing(carried(10, over), carried(10, { kind: "tier", tier: 0, index: 2 }))).toBe(
+      false,
+    );
+    expect(sameDrawing(carried(10, over), carried(10, { kind: "pool" }))).toBe(false);
+    expect(sameDrawing(carried(10, over), carried(10, null))).toBe(false);
+    expect(sameDrawing(carried(10, over), carried(10, over, 4))).toBe(false);
+    expect(sameDrawing(idle, carried(10, over))).toBe(false);
+    const pressed = press(3, { x: 0, y: 0 }, "mouse", 0);
+    expect(sameDrawing(pressed, press(3, { x: 0, y: 0 }, "mouse", 0))).toBe(false);
   });
 });

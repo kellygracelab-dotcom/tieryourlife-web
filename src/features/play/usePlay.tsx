@@ -1,27 +1,36 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { freshChunk } from "../../lib/freshChunk";
 import type { KeyValueStore } from "../../lib/storage";
 import { fill, plural, strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { boardOf, type PlayCard, type PlayTier } from "./board";
-import { ChooseCards } from "./ChooseCards";
 import { chosenIds, EVERYTHING, MAX_CARDS, MIN_CARDS, playable, type Chosen } from "./chosen";
-import { DuelLayer } from "./DuelLayer";
 import type { GameKind } from "./engine";
-import {
-  answered,
-  applied,
-  gameProgress,
-  newGame,
-  reconcile,
-  seedOf,
-  startRefine,
-  type Game,
-} from "./game";
-import { GamePicker } from "./GamePicker";
+import type { Game } from "./game";
 import type { PlayButtonProps } from "./PlayButton";
 import { SheetArrival } from "./sheet";
-import { ResultView } from "./ResultView";
 import { lastGame, localGames, rememberGame, type SavedGames } from "./savedGames";
+
+type Screens = typeof import("./screens");
+
+let screens: Screens | null = null;
+let loading: Promise<Screens> | null = null;
+
+/**
+ * Play's screens, fetched the first time Play opens and kept for the tab. A
+ * chunk a deploy took away reloads the tab once, as a page's does; one that
+ * still will not come lets the next press try again.
+ */
+export function loadPlayScreens(): Promise<Screens> {
+  loading ??= freshChunk(() => import("./screens"))().then(
+    (loaded) => (screens = loaded),
+    (failure: unknown) => {
+      loading = null;
+      throw failure;
+    },
+  );
+  return loading;
+}
 
 /** What a page learns of a game it applies: for its history line and its own receipt. */
 export interface Played {
@@ -154,6 +163,29 @@ export function usePlay(
     [games, boardKey, forget],
   );
 
+  // The screens, once they are here: at once for a tab that opened Play before.
+  const [arrived, setArrived] = useState<Screens | null>(screens);
+  const shown = arrived ?? screens;
+  useEffect(() => {
+    if (screen === "none" || shown !== null) return;
+    let live = true;
+    loadPlayScreens().then(
+      (loaded) => {
+        if (live) setArrived(loaded);
+      },
+      () => {
+        if (!live) return;
+        // Nothing was played yet: Play closes, and says why.
+        setGame(null);
+        setAt((current) => ({ screen: "none", from: current.screen }));
+        notify({ text: strings.play.couldNotOpen });
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [screen, shown, notify]);
+
   const close = () => {
     setGame(null);
     setScreen("none");
@@ -173,13 +205,13 @@ export function usePlay(
   };
 
   /** A new game; the one saved before it goes, with a way back for a few seconds. */
-  const begin = (gameKind: GameKind, from: Chosen) => {
+  const begin = (rules: Screens, gameKind: GameKind, from: Chosen) => {
     const ids = chosenIds(board, from);
     if (!playable(ids.length)) return;
     // Read again: a game kept since in another tab goes with a way back too.
     const before = games.load(boardKey);
     rememberGame(store, gameKind);
-    show(newGame(gameKind, ids, from, seedOf(random), now()));
+    show(rules.newGame(gameKind, ids, from, rules.seedOf(random), now()));
     if (before === null) return;
     notify({
       text: strings.play.savedDiscarded,
@@ -195,9 +227,9 @@ export function usePlay(
     });
   };
 
-  const resume = () => {
+  const resume = (rules: Screens) => {
     if (savedGame === null) return;
-    const resumed = reconcile(savedGame, board);
+    const resumed = rules.reconcile(savedGame, board);
     if (resumed.kind !== "ready") return;
     setKind(resumed.game.spec.kind);
     setChosen(resumed.game.chosen);
@@ -205,10 +237,11 @@ export function usePlay(
   };
 
   const quit = () => {
-    // Nothing answered: nothing was kept, and nothing is said.
-    if (game !== null && game.history.length > 0) {
+    // Nothing answered: nothing was kept, and nothing is said. (A game is on
+    // screen only once the screens are here.)
+    if (game !== null && game.history.length > 0 && shown !== null) {
       keep(game);
-      const { overall } = gameProgress(game);
+      const { overall } = shown.gameProgress(game);
       notify({
         text: fill(strings.play.gameSaved, { asked: overall.asked, total: overall.total }),
         action: { text: strings.play.discard, onClick: forget },
@@ -222,13 +255,13 @@ export function usePlay(
     setGame(next);
   };
 
-  const apply = (finished: Game, result: string[][]) => {
+  const apply = (rules: Screens, finished: Game, result: string[][]) => {
     const played: Played = {
       kind: finished.spec.kind,
       cards: finished.ids.length,
-      duels: answered(finished),
+      duels: rules.answered(finished),
     };
-    const takeBack = onApply(applied(board, result, finished.ids), played);
+    const takeBack = onApply(rules.applied(board, result, finished.ids), played);
     forget();
     close();
     if (typeof takeBack === "function") {
@@ -257,53 +290,57 @@ export function usePlay(
     });
   };
 
-  const view = (
-    <SheetArrival.Provider value={arriving}>
-      {screen === "picker" && (
-        <GamePicker
-          title={title}
-          count={chosenIds(board, chosen).length}
-          kind={kind}
-          onKind={setKind}
-          saved={savedGame === null ? null : reconcile(savedGame, board)}
-          theirs={theirs}
-          now={now()}
-          onChooseCards={() => setScreen("cards")}
-          onResume={resume}
-          onStartAgain={() => savedGame !== null && begin(savedGame.spec.kind, savedGame.chosen)}
-          onStart={() => begin(kind, chosen)}
-          onCancel={close}
-        />
-      )}
-      {(screen === "cards" || screen === "cardsFirst") && (
-        <ChooseCards
-          board={board}
-          chosen={chosen}
-          onDone={(next) => {
-            setChosen(next);
-            setScreen("picker");
-          }}
-          // Reached from the picker, the arrow goes back to it; Cancel closes the sheet, as on the app.
-          onBack={screen === "cards" ? () => setScreen("picker") : undefined}
-          onCancel={close}
-        />
-      )}
-      {screen === "layer" && game !== null && (
-        <DuelLayer game={game} board={board} onChange={change} onQuit={quit}>
-          <ResultView
-            game={game}
-            board={board}
+  // Until the screens are here, nothing: the button keeps the focus.
+  const view =
+    shown === null ? null : (
+      <SheetArrival.Provider value={arriving}>
+        {screen === "picker" && (
+          <shown.GamePicker
+            title={title}
+            count={chosenIds(board, chosen).length}
+            kind={kind}
+            onKind={setKind}
+            saved={savedGame === null ? null : shown.reconcile(savedGame, board)}
             theirs={theirs}
-            onApply={(result) => apply(game, result)}
-            onRefine={() => change(startRefine(game))}
-            onPlayAgain={() => playAgain(game)}
-            onCancel={() => cancel(game)}
-            onQuit={quit}
+            now={now()}
+            onChooseCards={() => setScreen("cards")}
+            onResume={() => resume(shown)}
+            onStartAgain={() =>
+              savedGame !== null && begin(shown, savedGame.spec.kind, savedGame.chosen)
+            }
+            onStart={() => begin(shown, kind, chosen)}
+            onCancel={close}
           />
-        </DuelLayer>
-      )}
-    </SheetArrival.Provider>
-  );
+        )}
+        {(screen === "cards" || screen === "cardsFirst") && (
+          <shown.ChooseCards
+            board={board}
+            chosen={chosen}
+            onDone={(next) => {
+              setChosen(next);
+              setScreen("picker");
+            }}
+            // Reached from the picker, the arrow goes back to it; Cancel closes the sheet, as on the app.
+            onBack={screen === "cards" ? () => setScreen("picker") : undefined}
+            onCancel={close}
+          />
+        )}
+        {screen === "layer" && game !== null && (
+          <shown.DuelLayer game={game} board={board} onChange={change} onQuit={quit}>
+            <shown.ResultView
+              game={game}
+              board={board}
+              theirs={theirs}
+              onApply={(result) => apply(shown, game, result)}
+              onRefine={() => change(shown.startRefine(game))}
+              onPlayAgain={() => playAgain(game)}
+              onCancel={() => cancel(game)}
+              onQuit={quit}
+            />
+          </shown.DuelLayer>
+        )}
+      </SheetArrival.Provider>
+    );
 
   const disabled = board.order.length < MIN_CARDS || board.tiers.length === 0;
   return {

@@ -10,6 +10,7 @@ import {
   idle,
   move,
   press,
+  sameDrawing,
   targetOf,
   TOUCH_HOLD_MS,
   type DragState,
@@ -22,10 +23,16 @@ export type HitTest = (at: Point) => Element | null;
 const domHitTest: HitTest = (at) => document.elementFromPoint(at.x, at.y);
 
 export interface TileDrag {
+  /**
+   * The drag as the board draws it: the card held and the place it would
+   * land. It changes when they do; where the pointer is, `current` says.
+   */
   state: DragState;
   onPointerDown(item: number): (event: ReactPointerEvent<HTMLElement>) => void;
   /** The drag as it is right now, ahead of React's commit. */
   current(): DragState;
+  /** Told of every change of `current`, each move of the pointer among them. */
+  subscribe(onChange: () => void): () => void;
   /** The page moved under a still pointer: what is under it is read again. */
   nudge(): void;
 }
@@ -64,9 +71,17 @@ export function useTileDrag(
   // committed state still said "pressed", and the card fell back to the pool.
   const latest = useRef<DragState>(idle);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Every pointermove changes where the card is; the board, some 2,000 tiles
+  // on a big list, is drawn again only when what it shows changes. The ghost
+  // follows the pointer by itself.
+  const drawn = useRef<DragState>(idle);
+  const watchers = useRef(new Set<() => void>());
 
   const become = useCallback((next: DragState) => {
     latest.current = next;
+    for (const watcher of watchers.current) watcher();
+    if (sameDrawing(drawn.current, next)) return;
+    drawn.current = next;
     setState(next);
   }, []);
 
@@ -154,11 +169,16 @@ export function useTileDrag(
   useEffect(() => clearHold, [clearHold]);
 
   const current = useCallback(() => latest.current, []);
+  const subscribe = useCallback((onChange: () => void) => {
+    const all = watchers.current;
+    all.add(onChange);
+    return () => void all.delete(onChange);
+  }, []);
   const nudge = useCallback(() => {
     const now = latest.current;
     if (now.phase !== "dragging") return;
     become(move(now, now.at, targetOf(hitTest(now.at), now.at, now.item)));
   }, [become, hitTest]);
 
-  return { state, onPointerDown, current, nudge };
+  return { state, onPointerDown, current, subscribe, nudge };
 }

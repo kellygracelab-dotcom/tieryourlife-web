@@ -139,3 +139,61 @@ describe("the architecture", () => {
     expect(wrong).toEqual([]);
   });
 });
+
+/**
+ * Every module the site brings along as it starts: the entry's and the app's
+ * static imports, followed through the site's own files. A package is named
+ * as it is imported; `import type` brings nothing.
+ */
+function loadedAtStart(entries: readonly string[]): Set<string> {
+  const byPath = new Map(FILES.map((file) => [file.path, file]));
+  const resolve = (target: string) =>
+    [target, `${target}.ts`, `${target}.tsx`, `${target}/index.ts`].find((path) =>
+      byPath.has(path),
+    );
+  const seen = new Set<string>();
+  const queue = [...entries];
+  while (queue.length > 0) {
+    const path = queue.pop()!;
+    if (seen.has(path)) continue;
+    seen.add(path);
+    const file = byPath.get(path);
+    if (file === undefined) continue;
+    for (const match of file.text.matchAll(
+      /^(?:import|export)\s+(?!type\b)[^;]*?from\s+"([^"]+)"/gm,
+    )) {
+      const named = match[1]!;
+      if (!named.startsWith(".")) {
+        seen.add(named);
+        continue;
+      }
+      const target = resolve(normalize(`${dirname(path)}/${named}`));
+      if (target !== undefined) queue.push(target);
+    }
+  }
+  return seen;
+}
+
+describe("the first load", () => {
+  const loaded = loadedAtStart(["main.tsx", "App.tsx"]);
+
+  it("sees what a page with Play and the boards' sync bring", () => {
+    expect(loaded).toContain("features/play/usePlay.tsx");
+    expect(loaded).toContain("features/boards/BoardSyncProvider.tsx");
+    expect(loaded).toContain("firebase/auth");
+  });
+
+  it("leaves Play's screens, the sync engine and Storage for when they are first needed", () => {
+    const later = [
+      "features/play/screens.ts",
+      "features/play/game.ts",
+      "features/play/GamePicker.tsx",
+      "features/play/ChooseCards.tsx",
+      "features/play/DuelLayer.tsx",
+      "features/play/ResultView.tsx",
+      "features/boards/sync.ts",
+      "firebase/storage",
+    ];
+    expect(later.filter((path) => loaded.has(path))).toEqual([]);
+  });
+});

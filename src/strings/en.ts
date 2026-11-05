@@ -952,6 +952,7 @@ export const en = {
     play: "Play",
     needsCards: "Play needs at least 3 cards.",
     savedGame: "A game is saved.",
+    couldNotOpen: "Play could not open. Check the connection and try again.",
     cardsFrom: { one: "{n} card from {title}", other: "{n} cards from {title}" },
     chooseCards: "Choose cards",
     game: "Game",

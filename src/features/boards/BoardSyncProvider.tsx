@@ -25,13 +25,7 @@ import { deviceNameOf } from "./deviceName";
 import { owners as siteOwners, type BoardOwners, type GuestBoardsQuestion } from "./owners";
 import type { Board } from "./model";
 import type { BoardsRepository } from "./repository";
-import {
-  forgetAccountCopies,
-  liveEntriesOf,
-  syncBoards,
-  SyncCancelled,
-  type BoardsApi,
-} from "./sync";
+import type { BoardsApi } from "./sync";
 import { keepBackUp, readBackUp, syncRecords, type SyncRecords } from "./syncRecords";
 import { nextUid } from "./useBoards";
 import { oneTabAtATime } from "./oneTab";
@@ -82,10 +76,11 @@ interface BoardSyncProviderProps {
   playSyncAfterMs?: number;
 }
 
-/** A deletion stopped because the account changed under it, as the caller is told it. */
-const asAccountChanged = (reason: unknown): never => {
-  throw reason instanceof SyncCancelled ? new AccountChanged() : reason;
-};
+/**
+ * The engine itself, fetched with the first run: only a signed-in account
+ * syncs, and a visitor following a link never needs it.
+ */
+const engine = () => import("./sync");
 
 /**
  * Switching the back-up off. Off has to mean the copy is gone, or the switch
@@ -120,13 +115,20 @@ async function stopBackingUp({
     if (stillMine()) onRunEnded();
   }
   if (!stillMine()) throw new AccountChanged();
-  if (records !== null) await forgetAccountCopies(api, records, stillMine).catch(asAccountChanged);
+  if (records !== null) {
+    const { forgetAccountCopies, SyncCancelled } = await engine();
+    // A deletion stopped because the account changed under it, as the caller is told it.
+    await forgetAccountCopies(api, records, stillMine).catch((reason: unknown) => {
+      throw reason instanceof SyncCancelled ? new AccountChanged() : reason;
+    });
+  }
   keepBackUp(store, uid, false);
   onOff();
 }
 
 /** Every live board on the account, by title: what boards moving in have to be told apart from. */
 async function accountTitles(api: BoardsApi): Promise<Set<string>> {
+  const { liveEntriesOf } = await engine();
   const live = await liveEntriesOf(api);
   return new Set(live.map((entry) => entry.title));
 }
@@ -211,8 +213,9 @@ function ForAccount({
     const started = epoch.current;
     const stillWanted = () => mounted.current && epoch.current === started;
     setStatus("syncing");
-    const promise = oneTabAtATime(() =>
-      syncBoards({
+    const promise = oneTabAtATime(async () => {
+      const { syncBoards } = await engine();
+      return syncBoards({
         repository,
         api,
         records,
@@ -221,8 +224,8 @@ function ForAccount({
         nextUid,
         resolvePicture: resolvePicture(uid),
         stillWanted,
-      }),
-    )
+      });
+    })
       .then(
         (report) => {
           if (stillWanted()) setStatus(report.refused > 0 ? "stuck" : "idle");

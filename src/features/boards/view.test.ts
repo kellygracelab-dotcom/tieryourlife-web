@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { agoOf } from "./ago";
 import { addToPool, arrangeItems, liveItems, newBoard } from "./model";
-import { boardView, uidRows } from "./view";
+import { boardView, keepUnchanged, uidRows } from "./view";
 
 const uids = () => {
   let n = 0;
@@ -52,6 +52,41 @@ describe("boardView", () => {
       "b",
       "d",
     ]);
+  });
+});
+
+describe("keepUnchanged", () => {
+  it("hands back the cards and tiers that read as before, so a move redraws only the card moved", () => {
+    const next = uids();
+    const b0 = addToPool(
+      newBoard("b", "", 1, next),
+      ["a", "b", "c"].map((title) => ({ title, imageUrl: null })),
+      1,
+      next,
+    );
+    const [ia, ib, ic] = liveItems(b0).map((item) => item.uid);
+    const before = boardView(arrangeItems(b0, [[ia!], [], [], [], []], 2), "");
+    // b goes from the pool into S: it reads otherwise, a and c do not.
+    const moved = keepUnchanged(
+      before,
+      boardView(arrangeItems(b0, [[ia!, ib!], [], [], [], []], 3), "", before.uids),
+    );
+    expect(moved.uids).toEqual([ia, ib, ic]);
+    expect(moved.list.tiers).toBe(before.list.tiers);
+    expect(moved.list.items[0]).toBe(before.list.items[0]);
+    expect(moved.list.items[2]).toBe(before.list.items[2]);
+    expect(moved.list.items[1]).not.toBe(before.list.items[1]);
+    expect(moved.list.items[1]).toEqual({ title: "b", imageUrl: null, credit: null });
+    expect(moved.rows[0]).toEqual([0, 1]);
+
+    // Nothing changed but the time it was edited: the very same cards.
+    const again = keepUnchanged(
+      moved,
+      boardView(arrangeItems(b0, [[ia!, ib!], [], [], [], []], 4), "", moved.uids),
+    );
+    expect(again.list.items).toBe(moved.list.items);
+    expect(again.list.updatedAt).toBe(4);
+    expect(keepUnchanged(null, before)).toBe(before);
   });
 });
 

@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { memoryStore, type KeyValueStore } from "../../lib/storage";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import type { PlayCard, PlayTier } from "./board";
@@ -8,7 +8,7 @@ import { EVERYTHING } from "./chosen";
 import { newGame } from "./game";
 import { PlayButton } from "./PlayButton";
 import { localGames, playKey } from "./savedGames";
-import { usePlay, type PlayOptions } from "./usePlay";
+import { loadPlayScreens, usePlay, type PlayOptions } from "./usePlay";
 
 const NOW = new Date(2026, 9, 28, 12, 0).getTime();
 
@@ -83,6 +83,9 @@ async function pickLeft(times: number) {
 }
 
 describe("Play on a page", () => {
+  // The screens come as a chunk of their own; fetched here, Play opens in the frame it is pressed.
+  beforeAll(() => loadPlayScreens());
+
   it("is not offered below three cards", async () => {
     render(<Page store={memoryStore()} cards={cardsOf(2)} />);
     expect(playButton()).toHaveAttribute("aria-disabled", "true");
