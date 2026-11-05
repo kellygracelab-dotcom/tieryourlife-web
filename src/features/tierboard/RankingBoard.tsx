@@ -50,6 +50,7 @@ import { useTierMove, type TierEditing } from "./useTierMove";
 import { BoardFrameContext } from "./boardFrame";
 import { DockToggle } from "./DockToggle";
 import { useDock } from "./useDock";
+import { useHeadHeight } from "./useHeadHeight";
 import { useFixedDock } from "./useFixedDock";
 import { TRAY_DOTS, useTray } from "./useTray";
 import { CardName } from "./CardName";
@@ -381,7 +382,7 @@ export function RankingBoard({
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
-  const { dock, rows, wide, choose, startResize } = useDock(store);
+  const { dock, rows, wide, canDock, choose, startResize } = useDock(store);
   // On a narrow window the box that brings cards in waits behind Add, in the
   // pool, whichever head the pool shows; on a wide one it stands in the pool,
   // and an empty pool gives it the cursor. Opened, the catalogue's field
@@ -446,6 +447,7 @@ export function RankingBoard({
   // On a wide screen the count and the actions stand in the page's header,
   // wherever the pool is: moving the pool does not move the buttons.
   const inHead = wide && frame.headSlot !== null;
+  useHeadHeight(wide ? frame.headSlot : null);
   useEffect(() => {
     // Theirs on show has no pool to place: the page keeps its own layout for it.
     if (seeded) return;
@@ -866,7 +868,7 @@ export function RankingBoard({
                       </h2>
                     )}
                     {emptyPool ? !wide && addChip : addButton}
-                    <DockToggle dock={dock} onChoose={choose} />
+                    {canDock && <DockToggle dock={dock} onChoose={choose} />}
                   </div>
                   {toolsPanel}
                   {emptyPool && <p className="pool__empty">{strings.boards.poolEmpty}</p>}

@@ -76,6 +76,7 @@ import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { PlayButton } from "../features/play/PlayButton";
 import { boardGames } from "../features/play/syncedGames";
 import { usePlay } from "../features/play/usePlay";
+import { usePlayBack } from "../features/play/usePlayBack";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { localStorageStore } from "../lib/storage";
 import type { BoardsPageState } from "./BoardsPage";
@@ -376,6 +377,7 @@ export function BoardPage({
       };
     },
   });
+  usePlayBack(play);
 
   if (board === null || view === null) return <NotFound />;
 

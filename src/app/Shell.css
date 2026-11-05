@@ -54,13 +54,16 @@
 }
 
 /*
- * The bar's search: a field from 600 px, wider from 840; on a phone an icon
- * that leads to the search page.
+ * The bar's search: a field from 720 px, wider from 840; narrower, an icon
+ * that leads to the search page. From 600 the tabs share the bar, and a field
+ * beside them had 40 px for its words in English and none in French.
  */
 .top__search {
   display: none;
   flex: 1;
   align-items: center;
+  /* The input's own width, 20 letters, would hold the bar wider than the window. */
+  min-width: 0;
   gap: 8px;
   max-width: 360px;
   height: 40px;
@@ -120,7 +123,7 @@
 
 /* The way to the person's own boards: an icon, since the words are in the account menu. */
 
-@media (min-width: 600px) {
+@media (min-width: 720px) {
   .top__search {
     display: flex;
   }
@@ -132,7 +135,7 @@
   }
 }
 
-@media (max-width: 599px) {
+@media (max-width: 719px) {
   .top__search-link {
     display: inline-flex;
   }

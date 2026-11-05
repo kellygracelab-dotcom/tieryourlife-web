@@ -28,6 +28,14 @@ export const rowsThatFit = (height: number): DockRows =>
     Math.min(4, Math.floor((height - ABOVE_BOARD - BOARD_LEAST - DOCK_FRAME) / DOCK_ROW)),
   ) as DockRows;
 
+/**
+ * Whether the window is tall enough for a dock under the board at all: one
+ * row of cards and the board's two. A phone on its side, 390 tall, kept a
+ * one-row dock 155 high and left the board 52 px.
+ */
+export const underFits = (height: number): boolean =>
+  height >= ABOVE_BOARD + BOARD_LEAST + DOCK_FRAME + DOCK_ROW;
+
 export interface DockChoice {
   dock: Dock | null;
   rows: DockRows;

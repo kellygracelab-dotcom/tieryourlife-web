@@ -137,17 +137,21 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
   };
   // The key listener is added once; it reaches the latest game through here.
   const latest = useRef(act);
+  const ended = useRef(over);
   useEffect(() => {
     latest.current = act;
+    ended.current = over;
   });
 
   useEffect(() => {
     // Caught on the way down, before the board's own keys hear it. Escape and
-    // Tab go on to useModal, which quits and keeps the focus in.
+    // Tab go on to useModal, which quits and keeps the focus in. Once the
+    // game is over the keys are the browser's again: ↓ and Page Down scroll
+    // a result longer than the window.
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" || event.key === "Tab") return;
       event.stopPropagation();
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.ctrlKey || event.metaKey || event.altKey || ended.current) return;
       const action = actionOf(event);
       if (action === null) return;
       event.preventDefault();

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +11,9 @@ import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { itemsIn, poolTier, rankedTiers } from "../features/boards/model";
 import { boards } from "../features/boards/owners";
+import { EVERYTHING } from "../features/play/chosen";
+import { newGame } from "../features/play/game";
+import { localGames, playKey } from "../features/play/savedGames";
 import { writeKept } from "../features/ranking/kept";
 import { draftKey, loadDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
 import { localStorageStore, memoryStore } from "../lib/storage";
@@ -866,4 +869,90 @@ describe("ListPage for its author", () => {
       expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
     },
   );
+});
+
+describe("ListPage, Play", () => {
+  /** Answers with ← until the result is up. */
+  const playToTheEnd = async () => {
+    const result = () => screen.queryByRole("heading", { name: "Your result" });
+    while (result() === null) {
+      const label = () => screen.queryAllByText(/^Duel/)[0]?.textContent;
+      const before = label();
+      await userEvent.keyboard("{ArrowLeft}");
+      await waitFor(() => expect(result() !== null || label() !== before).toBe(true));
+    }
+  };
+
+  it("puts the result in Mine with an Undo that gives back a Mine made by hand", async () => {
+    saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
+    const before = localStorage.getItem(draftKey("abc"));
+    mocks.loadList.mockResolvedValue(twoTiers);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await playToTheEnd();
+    await userEvent.click(screen.getByRole("button", { name: "Put in Mine" }));
+    expect(localStorage.getItem(draftKey("abc"))).not.toBe(before);
+
+    const said = snackbar("Board arranged from 2 duels");
+    await userEvent.click(said.getByRole("button", { name: "Undo" }));
+    expect(localStorage.getItem(draftKey("abc"))).toBe(before);
+    expect(
+      within(screen.getByRole("region", { name: "Your ranking" })).getByRole("list", {
+        name: "S",
+      }),
+    ).toHaveTextContent("The Witch");
+  });
+
+  it("quits on the browser's Back and stays on the list, the game kept", async () => {
+    mocks.loadList.mockResolvedValue(twoTiers);
+    const router = createMemoryRouter(routes, { initialEntries: ["/about", "/l/abc"] });
+    render(<RouterProvider router={router} />);
+    await screen.findByRole("heading", { level: 1, name: "Every A24 film, ranked" });
+
+    // The picker first: Back closes it.
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(screen.getByRole("dialog", { name: "Play" })).toBeInTheDocument();
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe("/l/abc");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await userEvent.keyboard("{ArrowLeft}");
+    await waitFor(() => expect(screen.getAllByText("Duel 2 of 2")).not.toHaveLength(0));
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe("/l/abc");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Game saved · 1 of 2")).toBeInTheDocument();
+    expect(localStorage.getItem(playKey("list:abc"))).not.toBeNull();
+
+    // Away from Play, Back goes back.
+    await act(() => router.navigate(-1));
+    expect(router.state.location.pathname).toBe("/about");
+  });
+
+  it("drops a game saved over the list before it was published again", async () => {
+    const game = newGame("swiss", ["0", "1", "2"], EVERYTHING, 4, Date.now());
+    localGames(localStorageStore, Date.now, "0:3").save("list:abc", game);
+    mocks.loadList.mockResolvedValue({ ...twoTiers, updatedAt: 1 });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(screen.queryByRole("button", { name: "Resume" })).not.toBeInTheDocument();
+    expect(localStorage.getItem(playKey("list:abc"))).toBeNull();
+  });
+
+  it("resumes a game saved over the list as it stands", async () => {
+    const game = newGame("swiss", ["0", "1", "2"], EVERYTHING, 4, Date.now());
+    localGames(localStorageStore, Date.now, "0:3").save("list:abc", game);
+    mocks.loadList.mockResolvedValue(twoTiers);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
+  });
 });

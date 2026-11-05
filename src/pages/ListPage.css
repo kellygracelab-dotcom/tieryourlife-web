@@ -454,6 +454,18 @@
   }
 }
 
+/*
+ * A phone on its side, 840 and wider: the app bar and a sticky header of two
+ * rows took half of its 390 px. The header scrolls away with the page, as it
+ * does on a phone 740 wide, and the board keeps the screen.
+ */
+@media (min-width: 840px) and (max-height: 420px) and (hover: none) and (pointer: coarse) {
+  .list-page--under .list-head,
+  .list-page--beside .list-head {
+    position: static;
+  }
+}
+
 .list-page__saved {
   display: flex;
   align-items: center;

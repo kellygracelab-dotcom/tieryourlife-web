@@ -30,6 +30,26 @@ describe("useDock", () => {
     expect(renderHook(() => useDock(memoryStore())).result.current.wide).toBe(true);
   });
 
+  it("keeps the pool beside on a window too short for the dock, and the choice for a taller one", () => {
+    windowOf(1024, 768);
+    const { result } = renderHook(() => useDock(memoryStore()));
+    act(() => result.current.choose("under"));
+    expect(result.current).toMatchObject({ dock: "under", canDock: true });
+
+    // A phone on its side.
+    act(() => {
+      windowOf(1024, 390);
+      window.dispatchEvent(new Event("resize"));
+    });
+    expect(result.current).toMatchObject({ dock: "beside", canDock: false });
+
+    act(() => {
+      windowOf(1024, 768);
+      window.dispatchEvent(new Event("resize"));
+    });
+    expect(result.current).toMatchObject({ dock: "under", canDock: true });
+  });
+
   it("grows a row for every hundred pixels the grip goes up, and keeps the choice", () => {
     const store = memoryStore();
     const { result } = renderHook(() => useDock(store));
