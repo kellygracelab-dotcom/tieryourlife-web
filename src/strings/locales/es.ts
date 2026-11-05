@@ -192,6 +192,7 @@ const es: Translation = {
     unfollowed: "Dejaste de seguir a {name}",
     undo: "Deshacer",
     failed: "No se pudo seguir. Inténtalo de nuevo.",
+    unfollowFailed: "No se pudo dejar de seguir. Inténtalo de nuevo.",
     cancel: "Cancelar",
     signInTitle: "Inicia sesión para seguir",
     signInBody: "Al seguir a alguien, sus nuevas listas te aparecen las primeras.",
@@ -840,6 +841,9 @@ const es: Translation = {
     following: "Siguiendo",
     unfollowed: "Dejaste de seguir {name}",
     followFailed: "No se pudo seguir. Inténtalo de nuevo.",
+    unfollowFailed: "No se pudo dejar de seguir. Inténtalo de nuevo.",
+    followLimit:
+      "Ya sigues todas las secciones y temas que se pueden. Deja de seguir alguno primero.",
     undo: "Deshacer",
     waitingOnlyYou: "Hasta entonces, solo tú ves este tema.",
     topicMissing: "No hay ningún tema así en {section}.",

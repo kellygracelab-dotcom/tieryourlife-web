@@ -114,7 +114,7 @@ export function FollowingStrip({ sections, topics, people, sectionOf, ref }: Fol
           </li>
         ))}
         <li>
-          <Link className="following-strip__item" to={MANAGE_PATH}>
+          <Link className="following-strip__item" to={MANAGE_PATH} state={{ fromFollowing: true }}>
             <span className="following-strip__visual following-strip__manage" aria-hidden="true">
               <Icon name="tune" />
             </span>

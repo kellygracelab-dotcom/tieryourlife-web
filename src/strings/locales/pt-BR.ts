@@ -193,6 +193,7 @@ const ptBR: Translation = {
     unfollowed: "Você deixou de seguir {name}",
     undo: "Desfazer",
     failed: "Não foi possível seguir. Tente de novo.",
+    unfollowFailed: "Não foi possível deixar de seguir. Tente de novo.",
     cancel: "Cancelar",
     signInTitle: "Entre para seguir",
     signInBody: "Seguir alguém deixa as novas listas dessa pessoa no topo do seu feed.",
@@ -835,6 +836,9 @@ const ptBR: Translation = {
     following: "Seguindo",
     unfollowed: "Você deixou de seguir {name}",
     followFailed: "Não foi possível seguir. Tente de novo.",
+    unfollowFailed: "Não foi possível deixar de seguir. Tente de novo.",
+    followLimit:
+      "Você já segue o máximo de seções e temas possível. Deixe de seguir alguns primeiro.",
     undo: "Desfazer",
     waitingOnlyYou: "Até lá, só você vê este tema.",
     topicMissing: "Não há esse tema em {section}.",

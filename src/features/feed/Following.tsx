@@ -47,7 +47,7 @@ function Face({
     <img className={className} src={author.photoUrl} alt="" loading="lazy" />
   ) : (
     <span className={`${className} suggestion__face--initial`} aria-hidden="true">
-      {initialOf(author.name)}
+      {author.name.trim() === "" ? <Icon name="person" /> : initialOf(author.name)}
     </span>
   );
 }
@@ -56,10 +56,12 @@ function SuggestionCard({
   author,
   follow,
   unfollow,
+  onFollowed,
 }: {
   author: SuggestedAuthor;
   follow: Follow;
   unfollow: Follow;
+  onFollowed?: () => void;
 }) {
   const [state, setState] = useState<"idle" | "following" | "failed">("idle");
   const toggle = () => {
@@ -68,7 +70,7 @@ function SuggestionCard({
       unfollow(author.uid).catch(() => setState("following"));
     } else {
       setState("following");
-      follow(author.uid).catch(() => setState("failed"));
+      follow(author.uid).then(onFollowed, () => setState("failed"));
     }
   };
   return (
@@ -98,11 +100,14 @@ export function Suggestions({
   load = suggestedAuthors,
   follow = followAuthor,
   unfollow = unfollowAuthor,
+  onFollowed,
 }: {
   uid: string;
   load?: LoadSuggestions;
   follow?: Follow;
   unfollow?: Follow;
+  /** Somebody was followed: the tab becomes their feed, as after following a section. */
+  onFollowed?: () => void;
 }) {
   const loadFor = useCallback(() => load(), [load]);
   const { state } = useResource(uid, loadFor);
@@ -119,7 +124,13 @@ export function Suggestions({
       </h3>
       <ul className="suggestions__grid">
         {authors.map((author) => (
-          <SuggestionCard key={author.uid} author={author} follow={follow} unfollow={unfollow} />
+          <SuggestionCard
+            key={author.uid}
+            author={author}
+            follow={follow}
+            unfollow={unfollow}
+            onFollowed={onFollowed}
+          />
         ))}
       </ul>
     </section>
@@ -203,24 +214,27 @@ export function FollowingTab({
       return next;
     });
   };
+  const showFollowed = () => {
+    landing.current = true;
+    setRound((n) => n + 1);
+    feed.retry();
+  };
   const followPicked = () => {
     const chosen = [...picked];
     if (chosen.length === 0 || followingPicked) return;
     setFollowingPicked(true);
     setPickFailed(false);
     void Promise.all(
-      chosen.map((id) => store.setFollowing(id, true).then((done) => (done ? id : null))),
+      chosen.map((id) =>
+        store.setFollowing(id, true).then((refused) => (refused === null ? id : null)),
+      ),
     ).then((answers) => {
       const done = answers.filter((id): id is string => id !== null);
       // A refused one stays picked, and says so.
       setPicked(new Set(chosen.filter((id) => !done.includes(id))));
       setFollowingPicked(false);
       setPickFailed(done.length < chosen.length);
-      if (done.length > 0) {
-        landing.current = true;
-        setRound((n) => n + 1);
-        feed.retry();
-      }
+      if (done.length > 0) showFollowed();
     });
   };
   // The tiles go once something is followed: the focus goes to what is
@@ -272,7 +286,13 @@ export function FollowingTab({
               : strings.sections.pickNone}
           </Button>
         </div>
-        <Suggestions uid={uid} load={loadSuggestions} follow={follow} unfollow={unfollow} />
+        <Suggestions
+          uid={uid}
+          load={loadSuggestions}
+          follow={follow}
+          unfollow={unfollow}
+          onFollowed={showFollowed}
+        />
       </>
     );
   }

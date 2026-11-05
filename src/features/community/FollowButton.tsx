@@ -12,11 +12,20 @@ interface FollowButtonProps {
 /**
  * Follow in the primary-container colours, or Following with a check that
  * turns into Unfollow under a pointer. Never a spinner: one tap, and the
- * answer is assumed.
+ * answer is assumed. Until the backend has said, the button keeps its place
+ * unseen, as the app draws none: a Follow before then would ask somebody to
+ * undo what they never did.
  */
 export function FollowButton({ following, onClick, size = "profile" }: FollowButtonProps) {
   const on = following === true;
-  const classes = ["btn", "follow", on && "follow--on", size !== "profile" && `follow--${size}`]
+  const waiting = following === null;
+  const classes = [
+    "btn",
+    "follow",
+    on && "follow--on",
+    waiting && "follow--waiting",
+    size !== "profile" && `follow--${size}`,
+  ]
     .filter(Boolean)
     .join(" ");
   return (
@@ -24,7 +33,8 @@ export function FollowButton({ following, onClick, size = "profile" }: FollowBut
       type="button"
       className={classes}
       aria-pressed={on}
-      disabled={following === null}
+      disabled={waiting}
+      aria-hidden={waiting || undefined}
       onClick={onClick}
     >
       {on && <Icon name="check" className="btn__icon follow__check" />}

@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, Navigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
+import { ApiFailure, errorOf } from "../api/errors";
 import type { Following } from "../api/community";
 import type { Topic } from "../api/sections";
 import { useSession } from "../app/session";
 import { FollowButton } from "../features/community/FollowButton";
-import { followedSectionIds, followedSectionOf } from "../features/sections/following";
+import {
+  followedSectionIds,
+  followedSectionOf,
+  followRefusal,
+} from "../features/sections/following";
 import {
   builtInSection,
   FOLLOWING_PATH,
@@ -137,6 +142,10 @@ export function FollowingManagePage({
   const [keptSections, setKeptSections] = useState<ReadonlySet<string>>(new Set());
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
+  // Come from the Following tab, the arrow is Back, as the app pops the screen:
+  // a link would leave this page behind it in the history.
+  const navigate = useNavigate();
+  const cameFromTab = (useLocation().state as { fromFollowing?: unknown } | null)?.fromFollowing;
 
   if (account !== null && account.kind !== "signedIn") return <Navigate to="/" replace />;
 
@@ -152,9 +161,9 @@ export function FollowingManagePage({
   ) => {
     const next = !on;
     set(key, next);
-    apply(next).catch(() => {
+    apply(next).catch((reason: unknown) => {
       set(key, on);
-      setNotice({ text: strings.sections.followFailed });
+      setNotice({ text: followRefusal(errorOf(reason), next) });
     });
     if (!next) {
       setNotice({
@@ -163,7 +172,10 @@ export function FollowingManagePage({
           text: strings.sections.undo,
           onClick: () => {
             set(key, true);
-            apply(true).catch(() => set(key, false));
+            apply(true).catch((reason: unknown) => {
+              set(key, false);
+              setNotice({ text: followRefusal(errorOf(reason), true) });
+            });
           },
         },
       });
@@ -185,8 +197,17 @@ export function FollowingManagePage({
   return (
     <section className="manage">
       <header className="manage__head">
-        <Link className="manage__back" to={FOLLOWING_PATH} aria-label={strings.sections.back}>
-          <Icon name="arrow_back" />
+        <Link
+          className="manage__back"
+          to={FOLLOWING_PATH}
+          aria-label={strings.sections.back}
+          onClick={(event) => {
+            if (cameFromTab !== true) return;
+            event.preventDefault();
+            void navigate(-1);
+          }}
+        >
+          <Icon name="arrow_back" className="ms--mirrored" />
         </Link>
         <h1 className="manage__title">{strings.sections.tabFollowing}</h1>
       </header>
@@ -230,7 +251,8 @@ export function FollowingManagePage({
                     section.name,
                     isOn(`s:${section.id}`, true),
                     async (on) => {
-                      if (!(await store.setFollowing(section.id, on))) throw new Error("refused");
+                      const refused = await store.setFollowing(section.id, on);
+                      if (refused !== null) throw new ApiFailure(refused);
                     },
                   );
                 }}

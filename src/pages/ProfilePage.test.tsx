@@ -1,10 +1,11 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
+import { intentStoreForTests } from "../features/community/afterSignIn";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import type { FollowDeps } from "../features/community/useFollow";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
@@ -25,7 +26,7 @@ const list = (id: string): ListSummary => ({
   id,
   title: `List ${id}`,
   authorUid: "u2",
-  authorName: "someone",
+  authorName: "Someone Nice",
   authorPhotoUrl: null,
   category: "anime",
   itemCount: 3,
@@ -189,13 +190,123 @@ describe("ProfilePage", () => {
       "href",
       "/settings",
     );
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Someone");
+    // One's own page wears one's own name, not a placeholder.
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Danylo");
 
     load.mockResolvedValue({ lists: [list("a")], nextCursor: null });
     open(member, undefined, null);
-    expect(await screen.findAllByRole("heading", { level: 1, name: "someone" })).not.toHaveLength(
-      0,
+    expect(
+      await screen.findAllByRole("heading", { level: 1, name: "Someone Nice" }),
+    ).not.toHaveLength(0);
+  });
+
+  it("prefers the name the author's own lists carry over the one the link brought", async () => {
+    open(undefined, undefined, { author: { name: "olena_1999", photoUrl: null } });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("olena_1999");
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Someone Nice" }),
+    ).toBeInTheDocument();
+  });
+
+  it("calls nobody Someone while their lists may still say who they are", async () => {
+    let answer!: (page: FeedPage) => void;
+    load.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    open(undefined, undefined, null);
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveAttribute("aria-busy", "true");
+    expect(heading).not.toHaveTextContent("Someone");
+    expect(screen.queryByLabelText("More options")).toBeNull();
+    await act(async () => answer({ lists: [list("a")], nextCursor: null }));
+    expect(heading).toHaveTextContent("Someone Nice");
+  });
+
+  it("draws somebody with no name as a person, and hides them under no name", async () => {
+    const store = memoryStore();
+    useHiddenStoreForTests(store);
+    load.mockResolvedValue({ lists: [], nextCursor: null });
+    open(undefined, undefined, { author: { name: "", photoUrl: null } });
+    expect(await screen.findByText("No public lists yet.")).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent("Someone");
+    expect(document.querySelector(".profile__face")).toHaveTextContent("person");
+    await userEvent.click(screen.getByLabelText("More options"));
+    await userEvent.click(screen.getByRole("button", { name: "Hide everything from Someone" }));
+    expect(JSON.parse(store.read(HIDDEN_KEY) ?? "{}")).toEqual({
+      lists: [],
+      authors: [{ uid: "u2", name: "" }],
+    });
+  });
+
+  it("draws the initial when the face will not load", async () => {
+    load.mockResolvedValue({
+      lists: [{ ...list("a"), authorPhotoUrl: "https://img/gone.jpg" }],
+      nextCursor: null,
+    });
+    open();
+    await screen.findByRole("link", { name: /List a/ });
+    const face = document.querySelector("img.profile__face")!;
+    fireEvent.error(face);
+    expect(document.querySelector("img.profile__face")).toBeNull();
+    expect(document.querySelector(".profile__face--initial")).toHaveTextContent("S");
+  });
+
+  it("does not name the author on every card of their own page", async () => {
+    open();
+    await screen.findByRole("link", { name: /List a/ });
+    expect(document.querySelector(".list-card__author")).toBeNull();
+  });
+
+  it("offers no Follow until the backend has said, nor when it cannot", async () => {
+    let answer!: (state: { following: boolean; followers: number }) => void;
+    vi.mocked(follow.state).mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    open();
+    await screen.findByRole("link", { name: /List a/ });
+    expect(screen.queryByRole("button", { name: "Follow" })).toBeNull();
+    await act(async () => answer({ following: true, followers: 3 }));
+    expect(screen.getByRole("button", { name: /Following/ })).toBeInTheDocument();
+  });
+
+  it("offers no Follow to a member when whether they follow cannot be read", async () => {
+    vi.mocked(follow.state).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    open();
+    await screen.findByRole("link", { name: /List a/ });
+    expect(screen.queryByRole("button", { name: "Follow" })).toBeNull();
+  });
+
+  it("says a refused unfollow as one, and takes back the snackbar that said it was done", async () => {
+    vi.mocked(follow.state).mockResolvedValue({ following: true, followers: 1204 });
+    vi.mocked(follow.unfollow).mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    open();
+    await userEvent.click(await screen.findByRole("button", { name: /Following/ }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t unfollow");
+    expect(screen.queryByText("Unfollowed Someone Nice")).toBeNull();
+  });
+
+  it("follows after a sign-in that went through a redirect and came back", async () => {
+    intentStoreForTests(memoryStore());
+    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "redirecting" });
+    open({ kind: "guest", uid: "g1" }, signIn);
+    await userEvent.click(await screen.findByRole("button", { name: "Follow" }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+    expect(follow.follow).not.toHaveBeenCalled();
+    cleanup();
+
+    // Back from Google, on the same page, signed in. The question of whether
+    // they follow was asked before the follow went, and its answer does not undo it.
+    let answer!: (state: { following: boolean; followers: number }) => void;
+    vi.mocked(follow.state).mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    open();
+    await waitFor(() => expect(follow.follow).toHaveBeenCalledWith("u2"));
+    expect(follow.follow).toHaveBeenCalledTimes(1);
+    await act(async () => answer({ following: false, followers: 3 }));
+    expect(screen.getByRole("button", { name: /Following/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
+    cleanup();
+    open();
+    await screen.findByRole("link", { name: /List a/ });
+    expect(follow.follow).toHaveBeenCalledTimes(1);
   });
 
   it("hides everything from the author from the page's menu, with an Undo, as the app does", async () => {

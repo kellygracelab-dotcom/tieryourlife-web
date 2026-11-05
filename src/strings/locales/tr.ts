@@ -194,6 +194,7 @@ const tr: Translation = {
     unfollowed: "{name} artık takip edilmiyor",
     undo: "Geri al",
     failed: "Takip edilemedi. Tekrar deneyin.",
+    unfollowFailed: "Takip bırakılamadı. Tekrar deneyin.",
     cancel: "İptal",
     signInTitle: "Takip etmek için oturum açın",
     signInBody: "Takip etmek, sevdiğiniz kişilerin yeni listelerini akışınızın en üstünde tutar.",
@@ -831,6 +832,9 @@ const tr: Translation = {
     following: "Takip ediliyor",
     unfollowed: "{name} takibi bırakıldı",
     followFailed: "Takip edilemedi. Tekrar deneyin.",
+    unfollowFailed: "Takip bırakılamadı. Tekrar deneyin.",
+    followLimit:
+      "Takip edebileceğiniz bölüm ve konu sınırına ulaştınız. Önce bazılarını takipten çıkın.",
     undo: "Geri al",
     waitingOnlyYou: "O zamana kadar bu konuyu yalnızca sen görürsün.",
     topicMissing: "{section} bölümünde böyle bir konu yok.",

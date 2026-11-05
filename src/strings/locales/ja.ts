@@ -193,6 +193,7 @@ const ja: Translation = {
     unfollowed: "{name}のフォローを解除しました",
     undo: "元に戻す",
     failed: "フォローできませんでした。もう一度お試しください。",
+    unfollowFailed: "フォローを解除できませんでした。もう一度お試しください。",
     cancel: "キャンセル",
     signInTitle: "フォローするにはログイン",
     signInBody: "フォローすると、その人の新しいリストがフィードの先頭に届きます。",
@@ -824,6 +825,9 @@ const ja: Translation = {
     following: "フォロー中",
     unfollowed: "{name}のフォローを解除しました",
     followFailed: "フォローできませんでした。もう一度お試しください。",
+    unfollowFailed: "フォローを解除できませんでした。もう一度お試しください。",
+    followLimit:
+      "フォローできるセクションとトピックの上限に達しました。先にいくつかフォローを解除してください。",
     undo: "元に戻す",
     waitingOnlyYou: "それまでこのトピックはあなたにだけ表示されます。",
     topicMissing: "{section}にそのトピックはありません。",

@@ -22,6 +22,8 @@ interface FeedGridProps {
   hiddenNote?: boolean;
   /** Why a list is there, for a Following feed. */
   reasonOf?: (list: ListSummary) => string | null;
+  /** Whether each card names its author; not on the author's own page. */
+  showAuthor?: boolean;
 }
 
 type Slot = { kind: "card"; list: ListSummary } | { kind: "hidden"; list: ListSummary };
@@ -56,6 +58,7 @@ export function FeedGrid({
   paged = true,
   hiddenNote = false,
   reasonOf,
+  showAuthor = true,
 }: FeedGridProps) {
   const { hidden, hiddenThisVisit, showList } = useHidden();
   const yours = useYours();
@@ -120,7 +123,12 @@ export function FeedGrid({
         {slots.map(({ kind, list }) => (
           <li key={list.id}>
             {kind === "card" ? (
-              <ListCard list={list} reason={reasonOf?.(list) ?? null} yours={yours(list)} />
+              <ListCard
+                list={list}
+                reason={reasonOf?.(list) ?? null}
+                yours={yours(list)}
+                showAuthor={showAuthor}
+              />
             ) : (
               <div className="feed__hidden" role="status">
                 <Icon name="visibility_off" />
