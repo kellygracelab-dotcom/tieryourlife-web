@@ -43,9 +43,11 @@ test.describe("a wide screen", () => {
     await expect
       .poll(async () => Math.round((await head.boundingBox())!.y))
       .toBe(Math.round(header));
+    // The header is as tall as its title and buttons make it, not a fixed 72 px.
+    const headHeight = (await head.boundingBox())!.height;
     await expect
       .poll(async () => Math.round((await page.locator(".pool").boundingBox())!.y))
-      .toBe(Math.round(header) + 72 + 16);
+      .toBe(Math.round(header + headHeight + 16));
     await expect(side.getByRole("button", { name: "Ex Machina" })).toBeInViewport();
   });
 

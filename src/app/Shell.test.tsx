@@ -105,6 +105,10 @@ describe("Shell page changes", () => {
     await userEvent.keyboard("{Enter}");
     await screen.findByRole("heading", { level: 1, name: "Settings" });
     expect(screen.getByRole("main")).toHaveFocus();
+    // Focusable only for that moment: a click on its words must leave the
+    // focus on the page, where the board looks for it.
+    settings.focus();
+    expect(screen.getByRole("main")).not.toHaveAttribute("tabindex");
   });
 });
 

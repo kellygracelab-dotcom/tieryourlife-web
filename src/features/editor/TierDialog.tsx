@@ -57,18 +57,32 @@ export function TierDialog({ tier, mode, canRemove, place, dispatch, onClose }: 
   const [openedAt] = useState(() => Date.now());
   // The finger of that second tap, ignored until its click is over.
   const ignored = useRef<number | null>(null);
+  // Typing first means the person is already at work in the sheet: the tap
+  // that follows is meant, however quick.
+  const working = useRef(false);
   const swallow = (event: SyntheticEvent) => {
     event.preventDefault();
     event.stopPropagation();
   };
   const secondTap = {
     onPointerDownCapture: (event: PointerEvent) => {
-      const second = event.pointerType === "touch" && Date.now() - openedAt < DOUBLE_TAP_MS;
+      // Only a band opens the editor on a tap; Add tier is a button pressed once.
+      const second =
+        mode === "edit" &&
+        !working.current &&
+        event.pointerType === "touch" &&
+        Date.now() - openedAt < DOUBLE_TAP_MS;
       ignored.current = second ? event.pointerId : null;
       if (second) swallow(event);
     },
     onPointerMoveCapture: (event: PointerEvent) => {
       if (ignored.current !== null && event.pointerId === ignored.current) event.stopPropagation();
+    },
+    onInputCapture: () => {
+      working.current = true;
+    },
+    onKeyDownCapture: () => {
+      working.current = true;
     },
     onClickCapture: (event: MouseEvent) => {
       if (ignored.current !== null) swallow(event);

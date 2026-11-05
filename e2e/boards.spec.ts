@@ -332,7 +332,8 @@ test("saves somebody's list to my boards, asking whose ranking to keep", async (
   await expect(page.getByText("Saved to your lists.")).toBeVisible();
 
   // Open leads to the copy: the author's arrangement, the list's name, a board of mine.
-  await page.getByRole("button", { name: "Open", exact: true }).click();
+  // The head's Save button now reads Open as well, and so does the snackbar's.
+  await page.getByRole("button", { name: "Open", exact: true }).first().click();
   await expect(page).toHaveURL(/\/b\//);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
   await expect(page.getByText(/2 ranked · 1 in pool/)).toBeVisible();

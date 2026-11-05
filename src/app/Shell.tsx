@@ -180,6 +180,19 @@ function ScrollCatchUp() {
   return null;
 }
 
+/**
+ * Focuses a landmark for the moment only. Kept focusable, it took the focus
+ * of every click on something that is not a control (and in Safari a click
+ * on a button is that too), so code that waits for the focus to fall to the
+ * page never saw it fall.
+ */
+function focusForNow(element: HTMLElement | null) {
+  if (element === null) return;
+  element.setAttribute("tabindex", "-1");
+  element.addEventListener("blur", () => element.removeAttribute("tabindex"), { once: true });
+  element.focus({ preventScroll: true });
+}
+
 export function Shell() {
   const { account, signIn } = useSession();
   const [seen] = useState(() => lastSeen());
@@ -221,7 +234,7 @@ export function Shell() {
       active !== document.body &&
       (main.current?.contains(active) === true ||
         active.closest("[aria-modal='true'], [role='search']") !== null);
-    if (!kept) main.current?.focus({ preventScroll: true });
+    if (!kept) focusForNow(main.current);
   }, [location.pathname]);
   const [params] = useSearchParams();
   const home = location.pathname === "/";
@@ -303,7 +316,7 @@ export function Shell() {
           {strings.nav.storageRefused}
         </p>
       )}
-      <main className="shell__main" ref={main} tabIndex={-1}>
+      <main className="shell__main" ref={main}>
         <PageTitleContext.Provider value={setPage}>
           <Outlet />
         </PageTitleContext.Provider>

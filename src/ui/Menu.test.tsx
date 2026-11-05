@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { describe, expect, it } from "vitest";
@@ -70,5 +70,15 @@ describe("Menu", () => {
     await userEvent.tab();
     expect(screen.getByRole("button", { name: "Next on the page" })).toHaveFocus();
     expect(details().open).toBe(false);
+  });
+
+  it("stays open when a click, not Tab, moves the focus off it, as Safari's do", () => {
+    render(<Page />);
+    details().open = true;
+    // Safari focuses nothing on a press; the focus leaves the summary for the page.
+    fireEvent.blur(screen.getByLabelText("More"), {
+      relatedTarget: screen.getByRole("button", { name: "Next on the page" }),
+    });
+    expect(details().open).toBe(true);
   });
 });

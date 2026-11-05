@@ -1,4 +1,10 @@
-import { useEffect, useRef, type FocusEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  type FocusEvent,
+  type KeyboardEvent as KeyEvent,
+  type ReactNode,
+} from "react";
 
 interface MenuProps {
   /** What the button is for; it usually shows only an icon or a face. */
@@ -50,14 +56,22 @@ export function Menu({ label, button, buttonClassName = "menu__button", children
   };
 
   // Left open behind the focus, the list would cover the controls Tab goes on to.
+  // Only Tab counts: Safari moves the focus off a menu item that is clicked,
+  // and the menu closed under the click before it was chosen.
+  const tabbing = useRef(false);
+  const onKeyDown = (event: KeyEvent<HTMLDetailsElement>) => {
+    tabbing.current = event.key === "Tab";
+  };
   const onBlur = (event: FocusEvent<HTMLDetailsElement>) => {
     const menu = details.current;
     const next = event.relatedTarget;
+    if (!tabbing.current) return;
+    tabbing.current = false;
     if (menu !== null && next instanceof Node && !menu.contains(next)) menu.open = false;
   };
 
   return (
-    <details className="menu" ref={details} onBlur={onBlur}>
+    <details className="menu" ref={details} onKeyDown={onKeyDown} onBlur={onBlur}>
       <summary className={buttonClassName} aria-label={label}>
         {button}
       </summary>

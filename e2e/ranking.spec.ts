@@ -50,7 +50,12 @@ test.describe("ranking a list", () => {
     await finish(page);
     expect(backend.rankRequests).toHaveLength(1);
     const request = backend.rankRequests[0];
-    expect(request?.postDataJSON()).toEqual({ listId: LIST_ID, rows: [[0], [1]] });
+    expect(request?.postDataJSON()).toEqual({
+      listId: LIST_ID,
+      rows: [[0], [1]],
+      // The version of the list it was placed on, so a list changed since is refused.
+      version: list.updatedAt,
+    });
     expect(await request?.headerValue("authorization")).toMatch(/^Bearer /);
     await expect.poll(() => backend.takes).toBe(1);
   });
@@ -196,7 +201,11 @@ test.describe("ranking a list on a phone", () => {
     await expect(page.getByText("1 of 3 placed")).toBeVisible();
 
     await finish(page);
-    expect(backend.rankRequests[0]?.postDataJSON()).toEqual({ listId: LIST_ID, rows: [[], [2]] });
+    expect(backend.rankRequests[0]?.postDataJSON()).toEqual({
+      listId: LIST_ID,
+      rows: [[], [2]],
+      version: list.updatedAt,
+    });
   });
 
   // The pool used to start two screens down: a visitor saw empty tiers and
