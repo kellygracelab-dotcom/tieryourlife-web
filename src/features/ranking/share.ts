@@ -8,3 +8,7 @@ export type { Share } from "./shareImage";
  */
 export const downloadShare: Share = async (list, rows, address) =>
   (await import("./shareImage")).downloadShare(list, rows, address);
+
+/** One's own board's picture, pool and all, to the phone's share sheet or saved; the same chunk. */
+export const shareBoard: Share = async (list, rows, address) =>
+  (await import("./shareImage")).shareBoardPicture(list, rows, address);

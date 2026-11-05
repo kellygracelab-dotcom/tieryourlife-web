@@ -20,6 +20,7 @@ import {
   rename,
   putBack,
   removeItem,
+  restoreBoard,
   restoreTier,
   setCategory,
   setDisplayMode,
@@ -34,7 +35,7 @@ import {
 } from "../features/boards/BoardSettings";
 import { RankedList } from "../features/boards/RankedList";
 import { filedUnder } from "../features/boards/sectionChoices";
-import { downloadShare, type Share } from "../features/ranking/share";
+import { shareBoard as shareBoardPicture, type Share } from "../features/ranking/share";
 import type { EditorDeps } from "../features/sections/editorDeps";
 import { myWaiting, PENDING_MAX } from "../features/sections/proposal";
 import { SectionEditor } from "../features/sections/SectionEditor";
@@ -183,6 +184,25 @@ function NotFound() {
   );
 }
 
+/** A list in the trash, reached by Back after its Delete or by an old link: it says so, and Restore brings it back. */
+function InTrash({ title, onRestore }: { title: string; onRestore: () => void }) {
+  return (
+    <section className="list-page list-page--trouble">
+      <h1>{fill(strings.boards.inTrash, { name: title })}</h1>
+      <p>{strings.boards.inTrashBody}</p>
+      <span className="board-page__trash-actions">
+        <button type="button" className="btn btn--filled" onClick={onRestore}>
+          <Icon name="restore_from_trash" className="btn__icon" />
+          <span>{strings.trash.restore}</span>
+        </button>
+        <Link className="btn btn--text" to="/b">
+          <span>{strings.boards.back}</span>
+        </Link>
+      </span>
+    </section>
+  );
+}
+
 /**
  * One of the person's own boards, the way the phone shows it: the rows, the
  * pool, and every move kept the moment it is made. Nothing here is sent
@@ -202,7 +222,7 @@ export function BoardPage({
   keepWeb = (url) => keepWebPicture(url, keepPicture),
   publishing = sitePublishing,
   topics,
-  share = downloadShare,
+  share = shareBoardPicture,
   store = sectionsStore,
   propose = proposeSection,
   proposeDeps,
@@ -380,6 +400,19 @@ export function BoardPage({
   usePlayBack(play);
 
   if (board === null || view === null) return <NotFound />;
+  // Not a board to edit while it is in the trash: an edit would be kept on a
+  // list Your lists no longer shows.
+  if (board.deletedAt !== null) {
+    return (
+      <InTrash
+        title={board.title.trim().length > 0 ? board.title : strings.boards.untitled}
+        onRestore={() => {
+          const current = repository.get(uid);
+          if (current !== null) repository.save(restoreBoard(current));
+        }}
+      />
+    );
+  }
 
   // What the board is right now: what is kept, or the fresh one until it is.
   const latest = (): Board => repository.get(uid) ?? board;
@@ -540,11 +573,12 @@ export function BoardPage({
       return;
     }
     keep(trashBoard(unpublished(latest(), now()), now()));
-    void navigate("/b", { state: { trashed: [uid] } satisfies BoardsPageState });
+    // In place of the board, so Back does not open a list now in the trash.
+    void navigate("/b", { replace: true, state: { trashed: [uid] } satisfies BoardsPageState });
   };
 
-  // The picture of the board, drawn the way a ranking's is; the address under
-  // it is the published list's when there is one, the site's otherwise.
+  // The picture of the board as the phone draws it, every tier and the pool;
+  // the address under it is the published list's when there is one, the site's otherwise.
   const shareBoard = () =>
     share(
       view.list,

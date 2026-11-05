@@ -704,6 +704,20 @@
   color: var(--ink-dim);
 }
 
+/* A conflict's copy: where it came from, as the rows' chip says it. */
+.board-tile__from {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+  font: var(--text-caption);
+  color: var(--ink-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Out in Community: said under the rest, in the primary colour. */
 .board-tile__public {
   display: inline-flex;

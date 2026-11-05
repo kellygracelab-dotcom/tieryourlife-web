@@ -91,11 +91,19 @@
   font-size: 13px;
 }
 
+/* The order's menu hangs from the end of this group, which always meets the
+   page's edge, not from its chip: on a phone the chip sits far enough in that
+   a 240 px menu from its end ran off the other side of the screen. */
 .boards__end {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   margin-inline-start: auto;
+}
+
+.boards__end .menu {
+  position: static;
 }
 
 /* The order: a chip that opens its four choices, "Recent ▾". */

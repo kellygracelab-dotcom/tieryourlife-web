@@ -392,7 +392,7 @@ const de: Translation = {
     delete: "Entfernen",
     deleteTitle: "Veröffentlichung dieser Liste zurücknehmen?",
     deleteBody:
-      "„{title}“ verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Ein Board auf deinem Telefon bleibt auf deinem Telefon.",
+      "„{title}“ verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Dein Board bleibt in „Deine Listen“.",
     keepIt: "Behalten",
     deleting: "Wird zurückgenommen…",
     deleteFailed:
@@ -570,7 +570,7 @@ const de: Translation = {
     listsFailed: "Deine öffentlichen Listen konnten nicht geladen werden",
     remove: "Entfernen",
     removeAsk:
-      "Veröffentlichung von „{title}“ zurücknehmen? Sie verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Ein Board auf deinem Telefon bleibt auf deinem Telefon.",
+      "Veröffentlichung von „{title}“ zurücknehmen? Sie verschwindet aus dem Feed und der Link funktioniert nicht mehr. Ranglisten, die andere daraus gemacht haben, bleiben. Dein Board bleibt in „Deine Listen“.",
     keepIt: "Behalten",
     countPublished: { other: "Veröffentlicht: {n}" },
     countRanked: { other: "Ranglisten: {n}" },
@@ -1093,6 +1093,8 @@ const de: Translation = {
     boardTrashed: "„{name}“ wurde in den Papierkorb verschoben",
     notFound: "Liste wurde nicht gefunden.",
     notFoundBody: "Sie wurde vielleicht gelöscht oder liegt auf einem anderen Gerät.",
+    inTrash: "„{name}“ ist im Papierkorb.",
+    inTrashBody: "Stell sie wieder her, um sie wieder einzustufen und zu bearbeiten.",
     more: "Mehr zu diesem Board",
     delete: "Board löschen",
     trash: "Papierkorb",

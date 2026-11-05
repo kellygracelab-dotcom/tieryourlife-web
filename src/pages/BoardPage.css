@@ -61,6 +61,13 @@
   outline: none;
 }
 
+/* A list in the trash: Restore first, the way back beside it. */
+.board-page__trash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 @media (min-width: 840px) {
   .board-page__title-field {
     font: 500 20px/26px var(--font);

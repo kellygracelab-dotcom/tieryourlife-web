@@ -211,7 +211,7 @@ function PasteBox({
 
   if (!open) {
     return (
-      <div className="cards__paste">
+      <div className="cards__paste" title={strings.new.paste}>
         <Button icon="content_paste" onClick={() => setOpen(true)} disabled={room <= 0}>
           {strings.new.paste}
         </Button>

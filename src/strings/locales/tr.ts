@@ -382,7 +382,7 @@ const tr: Translation = {
     delete: "Kaldır",
     deleteTitle: "Bu liste yayından kaldırılsın mı?",
     deleteBody:
-      "“{title}” akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Telefonunuzdaki pano telefonunuzda kalır.",
+      "“{title}” akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin'de kalır.",
     keepIt: "Kalsın",
     deleting: "Yayından kaldırılıyor…",
     deleteFailed: "Yayından kaldırılamadı. Bir dakika sonra tekrar deneyin.",
@@ -555,7 +555,7 @@ const tr: Translation = {
     listsFailed: "Herkese açık listeleriniz yüklenemedi",
     remove: "Kaldır",
     removeAsk:
-      "“{title}” yayından kaldırılsın mı? Akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Telefonunuzdaki pano telefonunuzda kalır.",
+      "“{title}” yayından kaldırılsın mı? Akıştan çıkar ve bağlantısı çalışmaz olur. İnsanların ondan yaptığı sıralamalar kalır. Panon Listelerin'de kalır.",
     keepIt: "Kalsın",
     countPublished: { other: "Yayımlanan: {n}" },
     countRanked: { other: "Sıralama: {n}" },
@@ -1056,6 +1056,8 @@ const tr: Translation = {
     boardTrashed: "“{name}” çöp kutusuna taşındı",
     notFound: "Liste bulunamadı.",
     notFoundBody: "Silinmiş olabilir ya da başka bir cihazda duruyor.",
+    inTrash: "“{name}” çöp kutusunda.",
+    inTrashBody: "Yeniden sıralamak ve düzenlemek için geri yükle.",
     more: "Bu pano hakkında",
     delete: "Panoyu sil",
     trash: "Çöp kutusu",

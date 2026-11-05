@@ -7,7 +7,10 @@ import type { MyList } from "../api/lists";
 import type { MyRankings, RankingSummary } from "../api/rank";
 import type { SectionStats } from "../api/sections";
 import { SessionContext, type Session } from "../app/session";
+import { newBoard } from "../features/boards/model";
+import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import { createSectionsStore, type SectionsDeps } from "../features/sections/useSections";
+import { memoryStore } from "../lib/storage";
 import { MePage } from "./MePage";
 
 vi.mock("../lib/api", () => ({
@@ -80,6 +83,7 @@ const stats = (id: string): SectionStats => ({
 const open = (
   account: Session["account"] = member,
   signIn = vi.fn(async () => ({ kind: "cancelled" as const })),
+  repository: BoardsRepository = boardsRepository(memoryStore()),
 ) => {
   const store = createSectionsStore({
     load: loadSections,
@@ -99,6 +103,7 @@ const open = (
             deleteRanking={deleteRanking}
             copy={copy}
             store={store}
+            repository={repository}
           />
         ),
       },
@@ -312,6 +317,30 @@ describe("MePage", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Taken down");
     await waitFor(() => expect(screen.queryByRole("link", { name: /Two/ })).toBeNull());
     expect(screen.getByText("1 published")).toBeInTheDocument();
+  });
+
+  it("makes the board a list taken down here came from its own again", async () => {
+    load.mockResolvedValue({ rankings: [], more: false });
+    loadLists.mockResolvedValue({ lists: [published("l1", "One")] });
+    unpublish.mockResolvedValue(undefined);
+    const repository = boardsRepository(memoryStore());
+    repository.save({
+      ...newBoard("b1", "One", 1, () => "t"),
+      publishedId: "l1",
+      publishedEditedAt: 1,
+      authorName: "Danylo",
+    });
+    open(member, undefined, repository);
+    await screen.findByText("1 published");
+    await userEvent.click((await menuOf("One")).getByRole("button", { name: "Take it down" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Take it down" })).getByRole("button", {
+        name: "Take it down",
+      }),
+    );
+    await waitFor(() =>
+      expect(repository.get("b1")).toMatchObject({ publishedId: null, authorName: null }),
+    );
   });
 
   it("gives chips to choose between the kinds once there is a lot of both", async () => {

@@ -305,6 +305,22 @@ describe("BoardPage", () => {
     expect(repository.get("films")?.deletedAt).toBe(clock);
     expect(router.state.location.pathname).toBe("/b");
     expect(router.state.location.state).toEqual({ trashed: ["films"] });
+    // In the board's place: Back does not open it again.
+    expect(router.state.historyAction).toBe("REPLACE");
+  });
+
+  it("opens a list in the trash as that, with Restore, and no board to edit", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), deletedAt: 500 });
+    open(repository, "/b/films");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("“Films” is in the trash.");
+    expect(screen.queryByRole("list", { name: "S" })).toBeNull();
+    expect(screen.queryByLabelText("More about this board")).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Restore" }));
+    expect(repository.get("films")?.deletedAt).toBeNull();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Films");
+    expect(within(tier("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
   });
 
   it("takes a published board's copy down before the trash, and keeps the board while it cannot", async () => {
@@ -442,6 +458,27 @@ describe("BoardPage: tiers and settings", () => {
     pointer("pointerup", window, 150, "touch");
     const dialog = screen.getByRole("dialog", { name: "Edit tier" });
     expect(within(dialog).getByRole("textbox", { name: "Label" })).toHaveValue("A");
+  });
+
+  it("lets the second tap of a finger's double tap fall on nothing in the tier's editor", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    const before = rankedTiers(repository.get("films")!)[1]!;
+    pointer("pointerdown", bandOf("A"), 150, "touch");
+    pointer("pointerup", window, 150, "touch");
+    const dialog = screen.getByRole("dialog", { name: "Edit tier" });
+
+    // The second tap lands on the first swatch, where the band was.
+    const swatch = within(dialog).getByRole("button", { name: TIER_PRESETS[0]!.light });
+    pointer("pointerdown", swatch, 150, "touch");
+    pointer("pointerup", swatch, 150, "touch");
+    fireEvent.click(swatch);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(rankedTiers(repository.get("films")!)[1]).toMatchObject({
+      colorLight: before.colorLight,
+      colorDark: before.colorDark,
+    });
   });
 
   it("moves a tier from its own editor, and by Alt and an arrow on its band, the keyboard staying with it", async () => {

@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
-import { metaOf, titleOf } from "./boardText";
+import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
 import { poolCount, previewsOf, rankedCount, rankedTiers, tierShares, type Board } from "./model";
 
 interface BoardRowProps {
@@ -48,6 +48,8 @@ function TierRibbon({ board }: { board: Board }) {
  */
 export function BoardRow({ board, selecting, selected, onSelect, onStar }: BoardRowProps) {
   const title = titleOf(board);
+  const from = fromOf(board);
+  const spoken = spokenTitleOf(board);
   const ranked = rankedCount(board);
   const starred = board.favouritedAt !== null;
   const words = (
@@ -62,11 +64,7 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
       <span className="board-card__text">
         <span className="board-card__title">
           {title}
-          {board.arrivedFrom !== null && (
-            <span className="board-card__from">
-              {fill(strings.sync.arrivedFrom, { device: board.arrivedFrom })}
-            </span>
-          )}
+          {from !== null && <span className="board-card__from">{from}</span>}
         </span>
         <span className="board-card__meta">{metaOf(board)}</span>
         {ranked > 0 ? (
@@ -89,7 +87,7 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
         <Link
           className="board-card__main"
           to={`/b/${encodeURIComponent(board.uid)}`}
-          aria-label={fill(strings.boards.open, { name: title })}
+          aria-label={fill(strings.boards.open, { name: spoken })}
         >
           {words}
         </Link>
@@ -100,7 +98,7 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
             type="checkbox"
             checked={selected}
             onChange={onSelect}
-            aria-label={fill(strings.boards.select, { name: title })}
+            aria-label={fill(strings.boards.select, { name: spoken })}
           />
         </label>
       ) : (
@@ -109,7 +107,7 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
             type="button"
             className={starred ? "board-card__star board-card__star--on" : "board-card__star"}
             aria-label={fill(starred ? strings.boards.unstar : strings.boards.star, {
-              name: title,
+              name: spoken,
             })}
             aria-pressed={starred}
             onClick={onStar}

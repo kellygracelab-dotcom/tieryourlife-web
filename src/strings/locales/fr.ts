@@ -393,7 +393,7 @@ const fr: Translation = {
     delete: "Retirer",
     deleteTitle: "Dépublier cette liste ?",
     deleteBody:
-      "« {title} » quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Un tableau sur votre téléphone reste sur votre téléphone.",
+      "« {title} » quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Votre tableau reste dans Vos listes.",
     keepIt: "La garder",
     deleting: "Dépublication…",
     deleteFailed: "Impossible de la dépublier. Réessayez dans une minute.",
@@ -571,7 +571,7 @@ const fr: Translation = {
     listsFailed: "Impossible de charger vos listes publiques",
     remove: "Retirer",
     removeAsk:
-      "Dépublier « {title} » ? Elle quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Un tableau sur votre téléphone reste sur votre téléphone.",
+      "Dépublier « {title} » ? Elle quitte le fil et son lien cesse de fonctionner. Les classements déjà faits à partir d’elle restent. Votre tableau reste dans Vos listes.",
     keepIt: "La garder",
     countPublished: { other: "Publiées : {n}" },
     countRanked: { other: "Classements : {n}" },
@@ -1109,6 +1109,8 @@ const fr: Translation = {
     boardTrashed: "« {name} » a été déplacé vers la corbeille",
     notFound: "Liste introuvable.",
     notFoundBody: "Elle a peut-être été supprimée, ou elle se trouve sur un autre appareil.",
+    inTrash: "« {name} » est dans la corbeille.",
+    inTrashBody: "Restaurez-la pour la classer et la modifier à nouveau.",
     more: "Plus sur ce tableau",
     delete: "Supprimer le tableau",
     trash: "Corbeille",

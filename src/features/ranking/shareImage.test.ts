@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PublishedList, PublishedTier } from "../../api/types";
 import {
+  BOARD_SHAPE,
   downloadShare,
   drawShare,
   fileNameFor,
@@ -9,6 +10,7 @@ import {
   renderShare,
   saveBlob,
   SHARE,
+  shareBoardPicture,
   type Paint,
   type ShareData,
 } from "./shareImage";
@@ -82,6 +84,23 @@ describe("planShare", () => {
     const plan = planShare(1, [[0, 1, 2, 3, 4, 5, 6, 7, 8]]);
     expect(plan.rows[0]?.cards.length).toBe(7);
     expect(plan.rows[0]?.overflow).toBe(2);
+  });
+
+  it("draws a board's every tier, up to six lines each, on a page as tall as they need", () => {
+    const many = Array.from({ length: 20 }, (_, n) => n);
+    const plan = planShare(9, [many, [0]], BOARD_SHAPE);
+    expect(plan.rows).toHaveLength(9);
+    expect(plan.moreTiers).toBe(0);
+    // Twenty cards are three lines of eight; the next tier starts under them.
+    expect(plan.rows[0]?.height).toBe(plan.rowHeight + 2 * (SHARE.tile.height + SHARE.rowGap));
+    expect(plan.rows[0]?.cards[8]).toMatchObject({ line: 1, x: plan.rows[0]?.cards[0]?.x });
+    expect(plan.rows[1]?.y).toBe((plan.rows[0]?.y ?? 0) + (plan.rows[0]?.height ?? 0) + 10);
+    expect(plan.height).toBeGreaterThan(SHARE.height);
+
+    // Past six lines the last slot is the chip.
+    const plenty = planShare(1, [Array.from({ length: 60 }, (_, n) => n)], BOARD_SHAPE);
+    expect(plenty.rows[0]?.cards).toHaveLength(47);
+    expect(plenty.rows[0]?.overflow).toBe(13);
   });
 
   it("shows as many tiers as fit above the footer and counts the rest", () => {
@@ -295,6 +314,63 @@ describe("saveBlob", () => {
     expect(revokeObjectURL).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1000);
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:tyl/1");
+  });
+});
+
+describe("a board's picture", () => {
+  const board: PublishedList = {
+    id: "films",
+    title: "Films",
+    authorUid: "",
+    authorName: "",
+    authorPhotoUrl: null,
+    category: "film_tv",
+    itemCount: 3,
+    coverImageUrl: null,
+    previewImages: [],
+    tierColors: [],
+    updatedAt: 0,
+    takeCount: 0,
+    tiers,
+    items: [item(0), item(1), item(2)],
+  };
+
+  it("draws the cards still in the pool as a last row", async () => {
+    const { paint, texts } = recorder();
+    await drawShare(paint, { ...data, rows: [[], [], []], pool: [0, 1, 2] }, async () => null);
+    expect(texts()).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Unranked @108,/),
+        expect.stringMatching(/^Film 0 @/),
+        expect.stringMatching(/^Film 2 @/),
+      ]),
+    );
+  });
+
+  it("hands the picture and the link to a phone's share sheet", async () => {
+    const blob = new Blob(["png"]);
+    const render = vi.fn(async () => blob);
+    const save = vi.fn();
+    const share = vi.fn(async () => undefined);
+    const sheet = { canShare: () => true, share };
+    await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, sheet);
+    expect(render).toHaveBeenCalledWith(expect.objectContaining({ pool: [0, 2] }));
+    expect(share).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Films", text: "Films\nhost/l/L1" }),
+    );
+    expect(save).not.toHaveBeenCalled();
+
+    // Closed without sharing: nothing more happens.
+    share.mockRejectedValueOnce(new DOMException("closed", "AbortError"));
+    await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, sheet);
+    expect(save).not.toHaveBeenCalled();
+
+    // No sheet, or a refusal: the file is saved.
+    await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, null);
+    share.mockRejectedValueOnce(new DOMException("too late", "NotAllowedError"));
+    await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, sheet);
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenCalledWith(blob, "films-tieryourlife.png");
   });
 });
 

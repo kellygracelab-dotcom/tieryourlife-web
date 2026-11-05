@@ -1,4 +1,13 @@
-import { useId, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type MouseEvent,
+  type PointerEvent,
+  type SyntheticEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -43,8 +52,29 @@ export function TierDialog({ tier, mode, canRemove, place, dispatch, onClose }: 
   const [colours, setColours] = useState({ light: tier.colorLight, dark: tier.colorDark });
   useModal(box, onClose, "input");
   // A double tap on a band, the habit of a phone, opens the editor with its
-  // first tap; its second must not land on the scrim and close it again.
+  // first tap; its second must not land on the scrim and close it again, nor
+  // on a swatch or the colour field that the sheet put under the finger.
   const [openedAt] = useState(() => Date.now());
+  // The finger of that second tap, ignored until its click is over.
+  const ignored = useRef<number | null>(null);
+  const swallow = (event: SyntheticEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const secondTap = {
+    onPointerDownCapture: (event: PointerEvent) => {
+      const second = event.pointerType === "touch" && Date.now() - openedAt < DOUBLE_TAP_MS;
+      ignored.current = second ? event.pointerId : null;
+      if (second) swallow(event);
+    },
+    onPointerMoveCapture: (event: PointerEvent) => {
+      if (ignored.current !== null && event.pointerId === ignored.current) event.stopPropagation();
+    },
+    onClickCapture: (event: MouseEvent) => {
+      if (ignored.current !== null) swallow(event);
+      ignored.current = null;
+    },
+  };
 
   const named = label.trim().length > 0;
   const save = (event: FormEvent) => {
@@ -112,6 +142,7 @@ export function TierDialog({ tier, mode, canRemove, place, dispatch, onClose }: 
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
+        {...secondTap}
         onClick={(event) => event.stopPropagation()}
         onSubmit={save}
       >

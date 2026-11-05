@@ -366,6 +366,67 @@ describe("BoardSettings: public", () => {
     expect(held.publishedId).toBeNull();
     expect(screen.getAllByRole("switch", { name: "Public" }).at(-1)).not.toBeChecked();
   });
+
+  it("leaves the copy behind a change made while it was on its way", async () => {
+    let answer: (value: { id: string }) => void = () => undefined;
+    const publish = vi.fn(() => new Promise<{ id: string }>((resolve) => (answer = resolve)));
+    show(filmBoard(), signedIn, { publish });
+    await userEvent.click(publicSwitch());
+    // Meanwhile a cover is chosen: it was not in what went out.
+    await userEvent.click(screen.getByRole("button", { name: /Cover/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Use Ex Machina on the cover" }));
+    answer({ id: "L1" });
+    await waitFor(() => expect(publicSwitch()).toBeChecked());
+    expect(held.coverImageUrls).toEqual([EX]);
+    expect(screen.getByText("The published copy is behind this board.")).toBeInTheDocument();
+  });
+
+  it("says a refused take-down by its own name, beside the question", async () => {
+    const unpublish = vi.fn(() => Promise.reject(new ApiFailure({ kind: "unavailable" })));
+    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 }, signedIn, { unpublish });
+    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
+    const ask = screen.getByRole("group", { name: "Take Films down?" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Take it down" }));
+    expect(await within(ask).findByRole("alert")).toHaveTextContent(
+      "Could not take it down. Try again in a minute.",
+    );
+    expect(held.publishedId).toBe("L1");
+  });
+
+  it("says a refused Update under Update, and lets a list taken down elsewhere go", async () => {
+    const republish = vi
+      .fn<PublishingDeps["republish"]>()
+      .mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }))
+      .mockRejectedValueOnce(new ApiFailure({ kind: "notFound" }));
+    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 }, signedIn, { republish });
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    const row = screen.getByRole("button", { name: "Update" }).closest("li")!;
+    expect(await within(row).findByRole("alert")).toHaveTextContent("Could not publish");
+
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(publicSwitch()).not.toBeChecked());
+    expect(held.publishedId).toBeNull();
+    expect(screen.getByRole("alert")).toHaveTextContent("This list isn’t published anymore.");
+  });
+
+  it("tells a guest in an app's own browser to open the page in Chrome or Safari", async () => {
+    const signIn = vi
+      .fn<Session["signIn"]>()
+      .mockResolvedValue({ kind: "failed", code: "in-app-browser" });
+    show(filmBoard(), GUEST, {}, { signIn });
+    await userEvent.click(publicSwitch());
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Chrome or Safari/);
+  });
+
+  it("says why a public list with no cards cannot be sent, and keeps its name on until it can", () => {
+    const empty = { ...filmBoard(), items: [], publishedId: "L1", publishedEditedAt: 100 };
+    show(empty, signedIn);
+    expect(screen.getByRole("button", { name: "Update" })).toBeDisabled();
+    expect(
+      screen.getByText("Add at least one card before you publish this list."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Publish anonymously" })).toBeDisabled();
+  });
 });
 
 describe("BoardSettings: category and topic", () => {

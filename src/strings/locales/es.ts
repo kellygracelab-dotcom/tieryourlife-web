@@ -384,7 +384,7 @@ const es: Translation = {
     delete: "Retirar",
     deleteTitle: "¿Dejar de publicar esta lista?",
     deleteBody:
-      "«{title}» sale de la comunidad y su enlace deja de funcionar. Las clasificaciones que la gente ya hizo con ella se quedan. Un tablero en tu teléfono se queda en tu teléfono.",
+      "«{title}» sale de la comunidad y su enlace deja de funcionar. Las clasificaciones que la gente ya hizo con ella se quedan. Tu tablero sigue en Tus listas.",
     keepIt: "Conservarla",
     deleting: "Retirando…",
     deleteFailed: "No se pudo retirar. Inténtalo de nuevo en un minuto.",
@@ -558,7 +558,7 @@ const es: Translation = {
     listsFailed: "No se pudieron cargar tus listas públicas",
     remove: "Retirar",
     removeAsk:
-      "¿Dejar de publicar «{title}»? Sale de la comunidad y su enlace deja de funcionar. Las clasificaciones que la gente ya hizo con ella se quedan. Un tablero en tu teléfono se queda en tu teléfono.",
+      "¿Dejar de publicar «{title}»? Sale de la comunidad y su enlace deja de funcionar. Las clasificaciones que la gente ya hizo con ella se quedan. Tu tablero sigue en Tus listas.",
     keepIt: "Conservarla",
     countPublished: { other: "Publicadas: {n}" },
     countRanked: { other: "Clasificaciones: {n}" },
@@ -1092,6 +1092,8 @@ const es: Translation = {
     boardTrashed: "«{name}» se movió a la papelera",
     notFound: "No se encontró la lista.",
     notFoundBody: "Puede que se haya eliminado o que viva en otro dispositivo.",
+    inTrash: "«{name}» está en la papelera.",
+    inTrashBody: "Restáurala para volver a clasificarla y editarla.",
     more: "Más sobre este tablero",
     delete: "Eliminar tablero",
     trash: "Papelera",

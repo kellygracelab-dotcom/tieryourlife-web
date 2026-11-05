@@ -9,7 +9,7 @@ import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
-import { itemsIn, poolTier, rankedTiers } from "../features/boards/model";
+import { itemsIn, newBoard, poolTier, rankedTiers } from "../features/boards/model";
 import { boards } from "../features/boards/owners";
 import { EVERYTHING } from "../features/play/chosen";
 import { newGame } from "../features/play/game";
@@ -802,7 +802,7 @@ describe("ListPage for its author", () => {
     await userEvent.click(screen.getByLabelText("More about this list"));
     await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
     const dialog = screen.getByRole("dialog", { name: "Take this list down?" });
-    expect(dialog).toHaveTextContent("The list on your phone stays on your phone.");
+    expect(dialog).toHaveTextContent("Your board stays in Your lists.");
     await userEvent.click(within(dialog).getByRole("button", { name: "Keep it" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(mocks.unpublish).not.toHaveBeenCalled();
@@ -822,6 +822,26 @@ describe("ListPage for its author", () => {
     ).toBeInTheDocument();
     expect(mocks.unpublish).toHaveBeenCalledTimes(2);
     expect(mocks.unpublish).toHaveBeenLastCalledWith("abc");
+  });
+
+  it("makes the board the list was published from its own again once it is down", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    mocks.unpublish.mockResolvedValueOnce(undefined);
+    boards.save({
+      ...newBoard("b1", "Every A24 film", 1, () => "t"),
+      publishedId: "abc",
+      publishedEditedAt: 1,
+      authorName: "danylo",
+    });
+    openAs(author);
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Take it down" }),
+    );
+    await screen.findByRole("heading", { level: 1, name: "Your public lists" });
+    expect(boards.get("b1")).toMatchObject({ publishedId: null, authorName: null });
   });
 
   it.each<ApiError>([{ kind: "notFound" }])(

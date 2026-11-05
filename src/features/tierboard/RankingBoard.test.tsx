@@ -230,6 +230,53 @@ describe("RankingBoard", () => {
     expect(progress()).toHaveTextContent("0 of 3 placed");
   });
 
+  it("leaves its keys to a dialog or a menu over it, and to Alt or Ctrl with a number", async () => {
+    render(
+      <MemoryRouter>
+        <div role="dialog" aria-modal="true">
+          <button type="button">Inside</button>
+        </div>
+        <details className="menu">
+          <summary>More</summary>
+        </details>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("Ex Machina"));
+    screen.getByRole("button", { name: "Inside" }).focus();
+    await userEvent.keyboard("1");
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+
+    // The dialog gone, a menu left open still keeps the number.
+    screen.getByRole("dialog").setAttribute("aria-modal", "false");
+    const menu = document.querySelector("details");
+    if (menu !== null) menu.open = true;
+    await userEvent.keyboard("1");
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+
+    if (menu !== null) menu.open = false;
+    await userEvent.keyboard("{Alt>}1{/Alt}{Control>}1{/Control}");
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+    await userEvent.keyboard("1");
+    expect(progress()).toHaveTextContent("1 of 3 placed");
+  });
+
+  it("leaves Ctrl+Z to a dialog over it", async () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    await userEvent.click(card("Ex Machina"));
+    await userEvent.keyboard("1");
+    const dialog = document.createElement("div");
+    dialog.setAttribute("aria-modal", "true");
+    document.body.append(dialog);
+    await userEvent.keyboard("{Control>}z{/Control}");
+    expect(progress()).toHaveTextContent("1 of 3 placed");
+    dialog.remove();
+  });
+
   it("places a card by tapping anywhere on the tier row, and a row with nothing picked ignores the tap", async () => {
     render(
       <MemoryRouter>

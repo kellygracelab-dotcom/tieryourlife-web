@@ -520,9 +520,12 @@ describe("the trash", () => {
     const entries = trashEntriesOf([live, older, gone]);
     expect(entries.map((entry) => entry.board.uid)).toEqual(["other", "older"]);
     expect(entries[0]).toMatchObject({ deletedAt: 7, itemCount: 0 });
-    expect(restoreBoard(gone, 8).deletedAt).toBeNull();
-    expect(restoreBoard(live, 8)).toBe(live);
+    expect(restoreBoard(gone).deletedAt).toBeNull();
+    expect(restoreBoard(live)).toBe(live);
     expect(trashBoard(gone, 9)).toBe(gone);
+    // To the trash and back, a list keeps its last edit and so its place in Recent.
+    expect(gone.editedAt).toBe(1);
+    expect(restoreBoard(gone).editedAt).toBe(1);
 
     const emptied = withoutTrash([live, gone]);
     expect(emptied.map((b) => b.uid)).toEqual(["board"]);
