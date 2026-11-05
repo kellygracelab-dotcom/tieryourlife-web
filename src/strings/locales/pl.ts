@@ -1025,6 +1025,9 @@ const pl: Translation = {
     withdrawAsk: "Wycofać „{name}”? Twoje listy zostaną w dziale {section}.",
     withdrawFailed: "Nie udało się wycofać. Spróbuj ponownie.",
     withdrawn: "Propozycja wycofana.",
+    alreadyDeclined: "Moderatorzy już odrzucili „{name}”.",
+    alreadyMerged: "„{name}” został już połączony z innym działem.",
+    alreadyApproved: "„{name}” został w międzyczasie zatwierdzony. To teraz dział.",
     noticeDeclined:
       "„{name}” nie został dodany jako dział. Twoje listy zostają w dziale {section}.",
     noticeMerged: "„{name}” połączono z działem {section}.",

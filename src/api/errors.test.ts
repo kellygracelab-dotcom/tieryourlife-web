@@ -64,6 +64,11 @@ describe("parseApiError", () => {
     [409, json({ error: "Decided", code: "SETTLED" }), { kind: "conflict" }],
     [
       409,
+      json({ error: "Decided", code: "SETTLED", status: "approved" }),
+      { kind: "conflict", status: "approved" },
+    ],
+    [
+      409,
       json({ error: "Taken", code: "NAME_TAKEN", detail: "t1", id: "t1" }),
       { kind: "invalid", detail: "Taken", code: "NAME_TAKEN", id: "t1" },
     ],

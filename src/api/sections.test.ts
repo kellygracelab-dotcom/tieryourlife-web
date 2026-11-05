@@ -9,12 +9,25 @@ import {
   loadSection,
   loadSections,
   loadTopic,
+  loadAllTopics,
   loadTopics,
   proposeSection,
   unfollowSection,
   unfollowTopic,
   withdrawSectionProposal,
+  type Topic,
 } from "./sections";
+
+const topic = (id: string): Topic => ({
+  id,
+  name: id,
+  section: "games",
+  status: "approved",
+  listCount: 0,
+  followerCount: 0,
+  following: false,
+  mergedInto: null,
+});
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -54,6 +67,30 @@ describe("sections", () => {
     expect(request).toHaveBeenLastCalledWith("POST", "/lists/sections/film%20tv/follow");
     await unfollowSection(client, "film tv");
     expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/sections/film%20tv/follow");
+  });
+
+  it("reads every topic of a section page by page, and stops on a cursor that repeats", async () => {
+    const request = vi.fn(async (_method: string, _path: string, options?: unknown) => {
+      const cursor = (options as { query: { cursor?: string } }).query.cursor;
+      if (cursor === undefined) return { topics: [topic("a"), topic("b")], nextCursor: "3:b" };
+      if (cursor === "3:b") return { topics: [topic("b"), topic("c")], nextCursor: "0:c" };
+      return { topics: [topic("d")], nextCursor: null };
+    });
+    const client: ApiClient = { request: request as ApiClient["request"] };
+    const { topics } = await loadAllTopics(client, "games");
+    expect(topics.map((one) => one.id)).toEqual(["a", "b", "c", "d"]);
+    expect(request).toHaveBeenNthCalledWith(1, "GET", "/lists/topics", {
+      query: { section: "games", limit: 50, cursor: undefined },
+    });
+    expect(request).toHaveBeenNthCalledWith(3, "GET", "/lists/topics", {
+      query: { section: "games", limit: 50, cursor: "0:c" },
+    });
+
+    // A backend that hands the same cursor back is not followed round for ever.
+    const stuck = vi.fn(async () => ({ topics: [topic("a")], nextCursor: "1:a" }));
+    const answer = await loadAllTopics({ request: stuck as ApiClient["request"] }, "games");
+    expect(stuck).toHaveBeenCalledTimes(2);
+    expect(answer.topics.map((one) => one.id)).toEqual(["a"]);
   });
 
   it("reads a section's topics, mine, one by its id, and follows one", async () => {
@@ -100,6 +137,14 @@ describe("proposals", () => {
     });
     await withdrawSectionProposal(client, "street food");
     expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/sections/proposals/street%20food");
+    // What it came to, when the backend says; nothing from one that answers 204.
+    request.mockResolvedValueOnce({ outcome: "dismissed", status: "merged" });
+    await expect(withdrawSectionProposal(client, "x")).resolves.toEqual({
+      outcome: "dismissed",
+      status: "merged",
+    });
+    request.mockResolvedValueOnce(undefined);
+    await expect(withdrawSectionProposal(client, "x")).resolves.toBeNull();
   });
 
   it("creates and edits a section as the owner, and asks whether a name is free", async () => {

@@ -995,6 +995,9 @@ const fr: Translation = {
     withdrawAsk: "Retirer « {name} » ? Vos listes restent dans {section}.",
     withdrawFailed: "Impossible de la retirer. Réessayez.",
     withdrawn: "Proposition retirée.",
+    alreadyDeclined: "Les modérateurs avaient déjà refusé « {name} ».",
+    alreadyMerged: "« {name} » avait déjà été fusionnée avec une autre section.",
+    alreadyApproved: "« {name} » a été acceptée entre-temps. C’est maintenant une section.",
     noticeDeclined:
       "« {name} » n’a pas été ajoutée comme section. Vos listes restent dans {section}.",
     noticeMerged: "« {name} » a été fusionnée avec {section}.",

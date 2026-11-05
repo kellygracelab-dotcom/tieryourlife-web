@@ -985,6 +985,9 @@ const de: Translation = {
     withdrawAsk: "„{name}“ zurückziehen? Deine Listen bleiben in {section}.",
     withdrawFailed: "Zurückziehen hat nicht geklappt. Versuch es noch einmal.",
     withdrawn: "Vorschlag zurückgezogen.",
+    alreadyDeclined: "Die Moderation hatte „{name}“ schon abgelehnt.",
+    alreadyMerged: "„{name}“ wurde schon mit einem anderen Bereich zusammengelegt.",
+    alreadyApproved: "„{name}“ wurde inzwischen angenommen. Es ist jetzt ein Bereich.",
     noticeDeclined:
       "„{name}“ wurde nicht als Bereich aufgenommen. Deine Listen bleiben in {section}.",
     noticeMerged: "„{name}“ wurde mit {section} zusammengeführt.",

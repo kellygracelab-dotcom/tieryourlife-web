@@ -14,7 +14,7 @@ import {
   loadAdminLists,
   loadAdminSections,
   loadSectionQueue,
-  loadTopics,
+  loadAllTopics,
   moveList,
 } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
@@ -43,7 +43,7 @@ export interface ListsDeps {
 
 const listsDeps: ListsDeps = {
   sections: loadAdminSections,
-  topics: (section) => loadTopics(section, 50),
+  topics: loadAllTopics,
   lists: loadAdminLists,
   move: moveList,
   proposals: loadSectionQueue,

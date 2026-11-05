@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { errorOf } from "../../api/errors";
+import type { Withdrawal } from "../../api/sections";
 import { withdrawSectionProposal } from "../../lib/api";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -33,11 +34,11 @@ export function WaitingSheet({
   topic?: boolean;
   /** A line under the rest, quieter. */
   note?: string;
-  withdraw?: (id: string) => Promise<void>;
+  withdraw?: (id: string) => Promise<Withdrawal | null>;
   /** Without it the sheet offers no way to take the proposal back. */
-  onWithdrawn?: () => void;
-  /** A moderator decided it while it was open: 409 SETTLED. */
-  onSettled?: () => void;
+  onWithdrawn?: (withdrawal: Withdrawal | null) => void;
+  /** A moderator decided it while it was open: 409 SETTLED, with the status when told. */
+  onSettled?: (status: string | null) => void;
   onClose: () => void;
 }) {
   const id = useId();
@@ -71,11 +72,15 @@ export function WaitingSheet({
     setFailed(false);
     // The pressed button is disabled while it goes: the dialog holds the focus meanwhile.
     box.current?.focus();
-    withdraw(section.id).then(onWithdrawn, (reason: unknown) => {
-      setBusy(false);
-      if (errorOf(reason).kind === "conflict") onSettled?.();
-      else setFailed(true);
-    });
+    withdraw(section.id).then(
+      (withdrawal) => onWithdrawn?.(withdrawal),
+      (reason: unknown) => {
+        setBusy(false);
+        const error = errorOf(reason);
+        if (error.kind === "conflict") onSettled?.(error.status ?? null);
+        else setFailed(true);
+      },
+    );
   };
 
   return createPortal(

@@ -15,7 +15,7 @@ export type ApiError =
   | { kind: "tooManyFollowing" }
   | { kind: "cursorGone" }
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
-  | { kind: "conflict"; board?: unknown }
+  | { kind: "conflict"; board?: unknown; status?: string }
   | { kind: "tooLarge"; detail: string | null }
   /**
    * A refused request, with the proxy's code for what was wrong (NAME_TAKEN,
@@ -59,6 +59,7 @@ interface ErrorBody {
   board?: unknown;
   mergedInto?: unknown;
   mergedTopicId?: unknown;
+  status?: unknown;
 }
 
 function bodyOf(text: string): ErrorBody {
@@ -119,9 +120,13 @@ export function parseApiError(status: number, text: string): ApiError {
           ...(section === null ? {} : { section }),
         };
       }
-      return body.board === undefined
-        ? { kind: "conflict" }
-        : { kind: "conflict", board: body.board };
+      // A proposal decided meanwhile says how: SETTLED with its status.
+      const status = stringOrNull(body.status);
+      return {
+        kind: "conflict",
+        ...(body.board === undefined ? {} : { board: body.board }),
+        ...(status === null ? {} : { status }),
+      };
     }
     case 410:
       return code === "MERGED"

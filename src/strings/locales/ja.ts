@@ -953,6 +953,9 @@ const ja: Translation = {
     withdrawAsk: "「{name}」を取り下げますか？リストは{section}に残ります。",
     withdrawFailed: "取り下げられませんでした。もう一度お試しください。",
     withdrawn: "提案を取り下げました。",
+    alreadyDeclined: "「{name}」はすでにモデレーターに却下されていました。",
+    alreadyMerged: "「{name}」はすでに別のセクションに統合されていました。",
+    alreadyApproved: "「{name}」はその間に承認され、セクションになりました。",
     noticeDeclined:
       "「{name}」はセクションとして追加されませんでした。リストは「{section}」に残ります。",
     noticeMerged: "「{name}」は「{section}」に統合されました。",
