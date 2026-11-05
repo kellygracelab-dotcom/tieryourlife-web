@@ -13,6 +13,7 @@ import {
   type SaveToMine,
   type ShownPlacing,
 } from "../features/boards/useSaveToMine";
+import { hasIntent, keepIntent, takeIntent } from "../features/community/afterSignIn";
 import { ReportDialog, type ReportState } from "../features/community/ReportDialog";
 import { useHidden } from "../features/community/useHidden";
 import { report as sendReport, unpublish as unpublishList } from "../lib/api";
@@ -151,7 +152,17 @@ function VisitorMenu({
 }) {
   const { account, signIn } = useSession();
   const { hideList, showList, hideAuthor } = useHidden();
-  const [reporting, setReporting] = useState<ReportState>("closed");
+  // "resume": a report asked for before a sign-in that went through a
+  // redirect, which opens again once the account is back.
+  const [reporting, setReporting] = useState<ReportState | "resume">(() =>
+    hasIntent({ kind: "report", listId: list.id }) ? "resume" : "closed",
+  );
+  const signedIn = account?.kind === "signedIn";
+  const reportShown: ReportState =
+    reporting === "resume" ? (signedIn ? "open" : "closed") : reporting;
+  useEffect(() => {
+    if (reporting === "resume" && signedIn) takeIntent({ kind: "report", listId: list.id });
+  }, [reporting, signedIn, list.id]);
   // An editorial list has no author to show, and a snapshot without the uid no page to show them on.
   const author = isEditorial(list) || list.authorUid === "" ? null : list;
 
@@ -165,7 +176,10 @@ function VisitorMenu({
 
   const onSignIn = () => {
     setReporting("signingIn");
-    signIn().then((outcome) => setReporting(outcome.kind === "signedIn" ? "open" : "signIn"));
+    signIn().then((outcome) => {
+      if (outcome.kind === "redirecting") keepIntent({ kind: "report", listId: list.id });
+      setReporting(outcome.kind === "signedIn" ? "open" : "signIn");
+    });
   };
 
   const send = (reason: ReportReason, note: string | null, alsoAuthor: boolean) => {
@@ -228,7 +242,7 @@ function VisitorMenu({
         </>
       </Menu>
       <ReportDialog
-        state={reporting}
+        state={reportShown}
         authorName={author === null ? null : author.authorName}
         send={send}
         onSignIn={onSignIn}

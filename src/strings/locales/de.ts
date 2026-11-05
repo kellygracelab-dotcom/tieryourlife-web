@@ -197,6 +197,7 @@ const de: Translation = {
     unfollowed: "Du folgst {name} nicht mehr",
     undo: "Rückgängig",
     failed: "Folgen hat nicht geklappt – versuch es noch einmal.",
+    unfollowFailed: "Entfolgen hat nicht geklappt – versuch es noch einmal.",
     cancel: "Abbrechen",
     signInTitle: "Zum Folgen anmelden",
     signInBody: "Wem du folgst, dessen neue Listen stehen ganz oben in deinem Feed.",
@@ -854,6 +855,9 @@ const de: Translation = {
     following: "Gefolgt",
     unfollowed: "Du folgst {name} nicht mehr",
     followFailed: "Folgen fehlgeschlagen. Versuch es noch einmal.",
+    unfollowFailed: "Entfolgen fehlgeschlagen. Versuch es noch einmal.",
+    followLimit:
+      "Du folgst schon so vielen Rubriken und Themen, wie es geht. Entfolge zuerst ein paar.",
     undo: "Rückgängig",
     waitingOnlyYou: "Bis dahin siehst nur du dieses Thema.",
     topicMissing: "In {section} gibt es kein solches Thema.",

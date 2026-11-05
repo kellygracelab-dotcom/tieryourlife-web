@@ -558,7 +558,10 @@ describe("SettingsPage", () => {
       HIDDEN_KEY,
       JSON.stringify({
         lists: [{ id: "l1", title: "Ghibli, ranked" }],
-        authors: [{ uid: "u2", name: "someone" }],
+        authors: [
+          { uid: "u2", name: "someone" },
+          { uid: "u3", name: "" },
+        ],
       }),
     );
     useHiddenStoreForTests(store);
@@ -566,6 +569,9 @@ describe("SettingsPage", () => {
     const card = screen.getByRole("list", { name: "Hidden" });
     expect(card).toHaveTextContent("Ghibli, ranked");
     expect(card).toHaveTextContent("Everything from someone");
+    // Somebody known by no name is somebody, not a gap.
+    expect(card).toHaveTextContent("Everything from Someone");
+    await userEvent.click(within(card).getAllByRole("button", { name: "Show again" })[2]!);
     const [first, second] = within(card).getAllByRole("button", { name: "Show again" });
     await userEvent.click(first!);
     expect(card).not.toHaveTextContent("Ghibli, ranked");

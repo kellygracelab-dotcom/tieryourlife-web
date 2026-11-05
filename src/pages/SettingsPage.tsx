@@ -91,7 +91,9 @@ function HiddenCard() {
           {hidden.authors.map((author) => (
             <li key={`a-${author.uid}`} className="settings__hidden-row">
               <span className="settings__hidden-name">
-                {fill(strings.settings.hiddenAuthor, { name: author.name })}
+                {fill(strings.settings.hiddenAuthor, {
+                  name: author.name.trim() || strings.profile.someone,
+                })}
               </span>
               <Button onClick={() => showAuthor(author.uid)}>{strings.settings.showAgain}</Button>
             </li>

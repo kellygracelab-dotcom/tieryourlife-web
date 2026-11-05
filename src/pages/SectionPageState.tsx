@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
+import type { ApiError } from "../api/errors";
 import type { Topic } from "../api/sections";
 import type { FeedSort } from "../api/types";
 import { useSession } from "../app/session";
 import { SignInDialog } from "../features/community/SignInDialog";
+import { followRefusal } from "../features/sections/following";
 import { OTHER, type Section } from "../features/sections/model";
 import {
   followTopic as followTopicNow,
@@ -100,10 +102,15 @@ export function useSectionTopics(section: Section, topics: TopicDeps): SectionTo
 
 type Asking = "closed" | "open" | "busy";
 
+/** Turns a follow and settles once the backend has answered, whatever it said. */
+export type ApplyFollow = (following: boolean) => Promise<unknown>;
+
 /**
  * Follow the page's way: at once, with Undo after an unfollow, and a guest
- * asked to sign in first, the follow made right after. What it draws, the
- * dialog and the snackbar, goes once at the end of the page.
+ * asked to sign in first, the follow made right after. A press while the
+ * last one is on its way does nothing: a follow and an unfollow sent
+ * together could land in either order. What it draws, the dialog and the
+ * snackbar, goes once at the end of the page.
  */
 export function useFollowFlow() {
   const { account, signIn } = useSession();
@@ -114,19 +121,30 @@ export function useFollowFlow() {
   const clearNotice = useCallback(() => setNotice(null), []);
   const closeAsk = useCallback(() => setAsking("closed"), []);
 
-  const failed = () => setNotice({ text: strings.sections.followFailed });
+  const failed = (error: ApiError, following: boolean) =>
+    setNotice({ text: followRefusal(error, following) });
 
-  const toggle = (name: string, following: boolean, apply: (following: boolean) => void) => {
+  const sending = useRef(false);
+  const send = (apply: ApplyFollow, following: boolean): boolean => {
+    if (sending.current) return false;
+    sending.current = true;
+    void apply(following).finally(() => {
+      sending.current = false;
+    });
+    return true;
+  };
+
+  const toggle = (name: string, following: boolean, apply: ApplyFollow) => {
     if (!signedIn) {
-      setPendingFollow(() => () => apply(true));
+      setPendingFollow(() => () => send(apply, true));
       setAsking("open");
       return;
     }
-    apply(!following);
+    if (!send(apply, !following)) return;
     if (following) {
       setNotice({
         text: fill(strings.sections.unfollowed, { name }),
-        action: { text: strings.sections.undo, onClick: () => apply(true) },
+        action: { text: strings.sections.undo, onClick: () => send(apply, true) },
       });
     }
   };

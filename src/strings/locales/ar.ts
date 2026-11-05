@@ -219,6 +219,7 @@ const ar: Translation = {
     unfollowed: "ألغيت متابعة {name}",
     undo: "تراجع",
     failed: "تعذّرت المتابعة. حاول مرة أخرى.",
+    unfollowFailed: "تعذّر إلغاء المتابعة. حاول مرة أخرى.",
     cancel: "إلغاء",
     signInTitle: "سجّل الدخول للمتابعة",
     signInBody: "المتابعة تُبقي القوائم الجديدة ممن تحبهم في أعلى صفحتك.",
@@ -978,6 +979,9 @@ const ar: Translation = {
     following: "تتابعه",
     unfollowed: "ألغيت متابعة {name}",
     followFailed: "تعذّرت المتابعة. حاول مرة أخرى.",
+    unfollowFailed: "تعذّر إلغاء المتابعة. حاول مرة أخرى.",
+    followLimit:
+      "وصلت إلى أقصى عدد من الأقسام والمواضيع التي يمكنك متابعتها. ألغِ متابعة بعضها أولًا.",
     undo: "تراجع",
     waitingOnlyYou: "أنت وحدك ترى هذا الموضوع حتى ذلك الحين.",
     topicMissing: "لا يوجد موضوع كهذا في قسم {section}.",

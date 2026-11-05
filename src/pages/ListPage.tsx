@@ -444,6 +444,15 @@ function OpenList({
           <h1 className="list-head__title">
             <bdi>{list.title}</bdi>
           </h1>
+          {/* One's own anonymous list says it is one's own, and that nobody else sees so. */}
+          {own && list.anonymous === true && (
+            <div className="list-head__lines">
+              <p className="byline byline--anonymous">
+                <Icon name="visibility_off" />
+                {strings.card.yoursAnonymous}
+              </p>
+            </div>
+          )}
           {/* A list that stands without an author has no line naming one. */}
           {!editorial && (
             <div className="list-head__lines">

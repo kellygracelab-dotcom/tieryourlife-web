@@ -181,6 +181,29 @@ describe("the Following tab", () => {
     expect(strip.getAllByRole("link")[0]).toHaveFocus();
   });
 
+  it("turns into the feed of a person followed from the suggestions", async () => {
+    let followed = false;
+    load.mockImplementation(async (query) =>
+      !query.following
+        ? { lists: [list("p1")], nextCursor: null }
+        : followed
+          ? { lists: [list("f1")], nextCursor: null }
+          : { lists: [], nextCursor: null, followingNobody: true },
+    );
+    follow.mockImplementation(async () => {
+      followed = true;
+    });
+    loadFollowing.mockImplementation(async () =>
+      followed ? { ...nobody, authors: [{ uid: "u2", name: "someone", photoUrl: null }] } : nobody,
+    );
+    open();
+    const card = (await screen.findByText("someone")).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Follow" }));
+    expect(await screen.findByRole("link", { name: /List f1/ })).toBeInTheDocument();
+    expect(screen.queryByText("You aren't following anything yet")).toBeNull();
+    expect(screen.getByRole("navigation", { name: "Following" })).toHaveTextContent("someone");
+  });
+
   it("keeps a refused pick picked, and says so", async () => {
     sectionsDeps.follow.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     open();

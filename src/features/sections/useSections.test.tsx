@@ -137,9 +137,45 @@ describe("the sections store", () => {
       following: true,
       followerCount: 5,
     });
-    await expect(pending).resolves.toBe(false);
+    await expect(pending).resolves.toEqual({ kind: "unknown", status: 0 });
     expect(store.get().sections.map((section) => section.id)).toEqual(["anime", "games", "other"]);
+    expect(store.get().sections[1]).toMatchObject({ following: false, followerCount: 4 });
     expect(refuse).toHaveBeenCalledWith("games");
+  });
+
+  it("keeps a follow made while the sections were asked for, over an answer read before it", async () => {
+    let answer!: (value: { sections: SectionStats[] }) => void;
+    const load = vi
+      .fn<SectionsDeps["load"]>()
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    const memory = remembered(memoryStore(), "s", 1, readKeptSections);
+    const store = createSectionsStore(deps([], { load, memory }).deps);
+    store.refresh("u1");
+    await store.setFollowing("anime", true);
+    answer({ sections: [stats("anime"), stats("other")] });
+    await settle();
+    expect(store.get().sections.find((one) => one.id === "anime")?.following).toBe(true);
+    // And it is what the device opens with next time.
+    expect(memory.recall("sections")?.sections[0]).toMatchObject({ id: "anime", following: true });
+  });
+
+  it("keeps a follow on the device, and takes in one another tab kept there", async () => {
+    const memory = remembered(memoryStore(), "s", 1, readKeptSections);
+    const here = createSectionsStore(deps([stats("anime"), stats("other")], { memory }).deps);
+    here.refresh("u1");
+    await settle();
+    const there = createSectionsStore(deps([stats("anime"), stats("other")], { memory }).deps);
+    there.refresh("u1");
+    await settle();
+
+    await there.setFollowing("anime", true);
+    expect(memory.recall("sections")?.sections[0]).toMatchObject({ id: "anime", following: true });
+    here.adoptKept();
+    expect(here.get().sections.find((one) => one.id === "anime")?.following).toBe(true);
+
+    await there.setFollowing("anime", false);
+    here.adoptKept();
+    expect(here.get().sections.find((one) => one.id === "anime")?.following).toBe(false);
   });
 });
 

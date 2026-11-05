@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePageTitle } from "../app/pageTitle";
 import { Link, useLocation, useParams } from "react-router";
 import { useSession } from "../app/session";
+import { keepIntent, takeIntent } from "../features/community/afterSignIn";
 import { FollowButton } from "../features/community/FollowButton";
 import { isAuthorHidden } from "../features/community/hidden";
 import { SignInDialog } from "../features/community/SignInDialog";
@@ -14,6 +15,7 @@ import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
+import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { NotFoundPage } from "./NotFoundPage";
 import "./ProfilePage.css";
@@ -47,45 +49,75 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
   const feed = useFeed({ author: uid, sort: "recent" }, load);
   const following = useFollow(uid, follow);
   const { hidden, hideAuthor, showAuthor } = useHidden();
-  const [asking, setAsking] = useState<Asking>("closed");
+  const [signingIn, setSigningIn] = useState<Asking>("closed");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
 
   const lists = feed.state.status === "ready" ? feed.state.lists : [];
   const first = lists[0];
-  const name = hint?.name ?? first?.authorName ?? strings.profile.someone;
-  const photoUrl = hint?.photoUrl ?? first?.authorPhotoUrl ?? null;
   const own = account?.kind === "signedIn" && account.uid === uid;
-  usePageTitle(name, { inBar: false });
+  // One's own page wears one's own name. Anybody else's own lists carry a
+  // fresher name and face than the link that led here, as the app prefers
+  // them; somebody known only by anonymous lists has no name at all.
+  const known =
+    (own ? account.displayName?.trim() : undefined) ||
+    first?.authorName.trim() ||
+    hint?.name.trim() ||
+    null;
+  const photoUrl = own
+    ? account.photoUrl
+    : first !== undefined
+      ? first.authorPhotoUrl
+      : (hint?.photoUrl ?? null);
+  // Nobody is called Someone while their lists may yet say who they are.
+  const naming = known === null && feed.state.status === "loading";
+  const name = known ?? strings.profile.someone;
+  usePageTitle(naming ? null : name, { inBar: false });
+  const [brokenFace, setBrokenFace] = useState<string | null>(null);
 
   // A finger gets no hover to say that Following means Unfollow, so an
   // unfollow happens at once and the way back is offered instead.
+  const unfollowed = useRef<SnackbarNotice | null>(null);
   const onFollow = () => {
     const wasFollowing = following.following === true;
     if (following.toggle() === "signIn") {
-      setAsking("open");
+      setSigningIn("open");
     } else if (wasFollowing) {
-      setNotice({
+      unfollowed.current = {
         text: fill(strings.follow.unfollowed, { name }),
         action: { text: strings.follow.undo, onClick: following.followNow },
-      });
+      };
+      setNotice(unfollowed.current);
     }
   };
+
+  // A refused unfollow did not happen: its snackbar goes, and the line says so.
+  useEffect(() => {
+    if (following.failed !== null) setNotice((now) => (now === unfollowed.current ? null : now));
+  }, [following.failed]);
+
+  // A follow asked for before a sign-in that went through a redirect.
+  const { followNow } = following;
+  useEffect(() => {
+    if (account?.kind === "signedIn" && !own && takeIntent({ kind: "follow", uid })) followNow();
+  }, [account, own, uid, followNow]);
 
   // Follow was the reason for the sign-in, so it is applied right after it:
   // the Firebase user is already the account by then, whatever the page shows.
   const onSignIn = () => {
-    setAsking("busy");
+    setSigningIn("busy");
     signIn().then((outcome) => {
-      setAsking("closed");
+      setSigningIn("closed");
       if (outcome.kind === "signedIn") following.followNow();
+      else if (outcome.kind === "redirecting") keepIntent({ kind: "follow", uid });
     });
   };
 
-  const closeAsk = useCallback(() => setAsking("closed"), []);
+  const closeAsk = useCallback(() => setSigningIn("closed"), []);
 
   const hideAuthorNow = () => {
-    hideAuthor({ uid, name });
+    // Kept without a name rather than with the placeholder, which Settings says in its own words.
+    hideAuthor({ uid, name: known ?? "" });
     setNotice({
       text: fill(strings.profile.hiddenAuthorNotice, { name }),
       action: { text: strings.list.undo, onClick: () => showAuthor(uid) },
@@ -110,21 +142,29 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
   return (
     <section className="profile">
       <header className="profile__head" ref={head}>
-        {photoUrl !== null ? (
-          <img className="profile__face" src={photoUrl} alt="" referrerPolicy="no-referrer" />
+        {photoUrl !== null && photoUrl !== brokenFace ? (
+          <img
+            className="profile__face"
+            src={photoUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            onError={() => setBrokenFace(photoUrl)}
+          />
         ) : (
           <span className="profile__face profile__face--initial" aria-hidden="true">
-            {initialOf(name)}
+            {known === null ? <Icon name="person" /> : initialOf(known)}
           </span>
         )}
         <div className="profile__text">
-          <h1 className="profile__name">
-            <bdi>{name}</bdi>
+          <h1 className="profile__name" aria-busy={naming || undefined}>
+            {naming ? <Skeleton width="160px" height="24px" /> : <bdi>{name}</bdi>}
           </h1>
-          {following.failed && (
+          {following.failed !== null && (
             <p className="follow__failed" role="alert">
               <Icon name="cloud_off" />
-              {strings.follow.failed}
+              {following.failed === "unfollow"
+                ? strings.follow.unfollowFailed
+                : strings.follow.failed}
             </p>
           )}
         </div>
@@ -136,7 +176,7 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
           <FollowButton following={following.following} onClick={onFollow} />
         )}
         {/* What a reader can do about a person rather than a list, as on the app's author page. */}
-        {!own && !hiddenAuthor && (
+        {!own && !hiddenAuthor && !naming && (
           <Menu label={strings.profile.more} button={<Icon name="more_vert" />}>
             <li>
               <button type="button" className="menu__action" onClick={hideAuthorNow}>
@@ -168,12 +208,13 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
           label={strings.profile.lists}
           retry={feed.retry}
           more={feed.more}
+          showAuthor={false}
         />
       )}
 
       <SignInDialog
-        open={asking !== "closed"}
-        busy={asking === "busy"}
+        open={signingIn !== "closed"}
+        busy={signingIn === "busy"}
         title={strings.follow.signInTitle}
         body={strings.follow.signInBody}
         onSignIn={onSignIn}

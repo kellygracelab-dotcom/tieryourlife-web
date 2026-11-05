@@ -13,6 +13,8 @@ interface ListCardProps {
   reason?: string | null;
   /** The one signed in, when the list is theirs, named or not. */
   yours?: Yours | null;
+  /** Left out on the author's own page, where every card would name the page it is on. */
+  showAuthor?: boolean;
 }
 
 /** One's own face, the one this device knows, which a new face reaches first. */
@@ -51,7 +53,7 @@ function Face({ name, photoUrl }: { name: string | null; photoUrl: string | null
  * one's own face and say so, anonymous or not; somebody else's anonymous list
  * names nobody and shows no empty face; a named one names its author.
  */
-export function ListCard({ list, reason = null, yours = null }: ListCardProps) {
+export function ListCard({ list, reason = null, yours = null, showAuthor = true }: ListCardProps) {
   // How many people ranked it is not said: a small count makes the place look
   // empty, a big one is noise (Danylo, 01.11.2026). The cards are the list's own.
   const meta = [plural(strings.card.items, list.itemCount)];
@@ -69,7 +71,7 @@ export function ListCard({ list, reason = null, yours = null }: ListCardProps) {
         </span>
       </Link>
       <span className="list-card__body">
-        {yours !== null ? (
+        {!showAuthor ? null : yours !== null ? (
           list.anonymous === true ? (
             // Said with a closed eye, not in words: the row stays one short line.
             <span className="list-card__author list-card__author--own">

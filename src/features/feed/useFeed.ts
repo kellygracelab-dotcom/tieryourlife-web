@@ -78,6 +78,30 @@ export const feedMemory: Remembered<RememberedPage> = remembered(
   readRememberedPage,
 );
 
+/**
+ * The pages a feed was shown beyond its first, for this visit: Back to it
+ * draws them again under the fresh first page, so the place one read at is
+ * still there. A feed asked for afresh (Try again) starts from its first.
+ */
+const furtherPages = new Map<string, RememberedPage>();
+
+export function forgetFurtherPagesForTests(): void {
+  furtherPages.clear();
+}
+
+/** A first page with the further pages read after it, each list once. */
+function withFurther(key: string, first: RememberedPage): RememberedPage {
+  const further = furtherPages.get(key);
+  if (further === undefined) return first;
+  const seen = new Set<string>();
+  const once = (list: ListSummary) => {
+    if (seen.has(list.id)) return false;
+    seen.add(list.id);
+    return true;
+  };
+  return { lists: [...first.lists, ...further.lists].filter(once), next: further.next };
+}
+
 const readyFrom = (page: RememberedPage, stale: boolean): FeedState => ({
   status: "ready",
   lists: page.lists,
@@ -108,7 +132,10 @@ export function useFeed(
   const key = JSON.stringify(query);
   const stable = useMemo(() => JSON.parse(key) as FeedQuery, [key]);
   const kept = query.following === true ? null : memory;
-  const recalled = useMemo(() => kept?.recall(key) ?? null, [kept, key]);
+  const recalled = useMemo(() => {
+    const first = kept?.recall(key) ?? null;
+    return first === null ? null : withFurther(key, first);
+  }, [kept, key]);
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   // Whatever was loaded for another query or an earlier attempt reads as
@@ -133,10 +160,11 @@ export function useFeed(
     load(stable).then(
       (page) => {
         kept?.keep(key, { lists: page.lists.map(nobodys), next: page.nextCursor });
+        const shown = withFurther(key, { lists: page.lists, next: page.nextCursor });
         settle({
           status: "ready",
-          lists: page.lists,
-          next: page.nextCursor,
+          lists: shown.lists,
+          next: shown.next,
           more: "idle",
           followingNobody: page.followingNobody === true,
         });
@@ -148,7 +176,10 @@ export function useFeed(
     };
   }, [stable, key, load, attempt, kept, recalled]);
 
-  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  const retry = useCallback(() => {
+    furtherPages.delete(key);
+    setAttempt((n) => n + 1);
+  }, [key]);
 
   const more = useCallback(() => {
     if (state.status !== "ready" || state.next === null || state.more === "loading") return;
@@ -162,17 +193,26 @@ export function useFeed(
       );
     patch((now) => ({ ...now, more: "loading" }));
     load({ ...stable, after }).then(
-      (page) =>
+      (page) => {
+        // Somebody's own Following feed is not kept, not even for the visit.
+        if (kept !== null) {
+          const further = furtherPages.get(key);
+          furtherPages.set(key, {
+            lists: [...(further?.lists ?? []), ...page.lists],
+            next: page.nextCursor,
+          });
+        }
         patch((now) => ({
           status: "ready",
           lists: [...now.lists, ...page.lists],
           next: page.nextCursor,
           more: "idle",
           followingNobody: now.followingNobody,
-        })),
+        }));
+      },
       () => patch((now) => ({ ...now, more: "failed" })),
     );
-  }, [state, key, stable, load]);
+  }, [state, key, stable, load, kept]);
 
   return { state, retry, more };
 }

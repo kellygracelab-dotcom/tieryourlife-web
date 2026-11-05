@@ -197,6 +197,7 @@ const fr: Translation = {
     unfollowed: "Vous ne suivez plus {name}",
     undo: "Annuler",
     failed: "Impossible de suivre. Réessayez.",
+    unfollowFailed: "Impossible de ne plus suivre. Réessayez.",
     cancel: "Annuler",
     signInTitle: "Connectez-vous pour suivre",
     signInBody: "Suivre quelqu’un garde ses nouvelles listes en haut de votre fil.",
@@ -861,6 +862,9 @@ const fr: Translation = {
     following: "Abonné",
     unfollowed: "Vous ne suivez plus {name}",
     followFailed: "Impossible de suivre. Réessayez.",
+    unfollowFailed: "Impossible de ne plus suivre. Réessayez.",
+    followLimit:
+      "Vous suivez déjà autant de rubriques et de thèmes que possible. Cessez d’en suivre quelques-uns d’abord.",
     undo: "Annuler",
     waitingOnlyYou: "D’ici là, vous seul voyez ce thème.",
     topicMissing: "Il n’y a pas de tel thème dans {section}.",

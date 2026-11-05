@@ -1,9 +1,9 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
-import { readRememberedPage, useFeed, type LoadFeed } from "./useFeed";
+import { forgetFurtherPagesForTests, readRememberedPage, useFeed, type LoadFeed } from "./useFeed";
 
 const summary = (id: string): ListSummary => ({
   id,
@@ -54,6 +54,8 @@ function Probe({ query, load }: { query: FeedQuery; load: LoadFeed }) {
 
 const shown = () => screen.getByRole("status");
 const popular: FeedQuery = { sort: "popular" };
+
+beforeEach(() => forgetFurtherPagesForTests());
 
 describe("useFeed", () => {
   it("opens a feed read before with its last first page, and swaps in the fresh one", async () => {
@@ -138,6 +140,30 @@ describe("useFeed", () => {
     await screen.findByText("a|c1|failed");
     await userEvent.click(screen.getByRole("button", { name: "more" }));
     await screen.findByText("a,b|-|idle");
+  });
+
+  it("draws the pages shown before under the fresh first page on the way back, and not after Try again", async () => {
+    const query: FeedQuery = { author: "u9", sort: "recent" };
+    const load = vi
+      .fn<LoadFeed>()
+      .mockResolvedValueOnce(page(["a"], "c1"))
+      .mockResolvedValueOnce(page(["b", "c"], "c2"));
+    const { unmount } = render(<Probe query={query} load={load} />);
+    await screen.findByText("a|c1|idle");
+    await userEvent.click(screen.getByRole("button", { name: "more" }));
+    await screen.findByText("a,b,c|c2|idle");
+    unmount();
+
+    // Back: the kept first page with the further ones at once, then the fresh first page over them.
+    const fresh = deferred<FeedPage>();
+    render(<Probe query={query} load={() => fresh.promise} />);
+    expect(shown()).toHaveTextContent("a,b,c|c2|idle");
+    await act(async () => fresh.resolve(page(["new", "a"], "c1")));
+    expect(shown()).toHaveTextContent("new,a,b,c|c2|idle");
+
+    // Asked afresh, the feed starts from its first page again.
+    await userEvent.click(screen.getByRole("button", { name: "retry" }));
+    expect(await screen.findByText("new,a|c1|idle")).toBeInTheDocument();
   });
 
   it("names a failed first page and loads it again on retry", async () => {

@@ -36,6 +36,29 @@ describe("ReportDialog", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("opens afresh after a cancel: no reason, note or tick kept from before", async () => {
+    const props = {
+      authorName: "danylo",
+      send: vi.fn(),
+      onSignIn: vi.fn(),
+      onHideInstead: vi.fn(),
+      onClose: vi.fn(),
+    };
+    const { rerender } = render(<ReportDialog state="open" {...props} />);
+    const dialog = screen.getByRole("dialog", { name: "Report this list" });
+    // The dialog is the box, never the form inside it.
+    expect(dialog.tagName).toBe("DIV");
+    await userEvent.click(within(dialog).getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.type(within(dialog).getByLabelText("Anything to add (optional)"), "ads");
+    await userEvent.click(within(dialog).getByRole("checkbox"));
+    rerender(<ReportDialog state="closed" {...props} />);
+    rerender(<ReportDialog state="open" {...props} />);
+    const again = screen.getByRole("dialog", { name: "Report this list" });
+    expect(within(again).getByRole("radio", { name: "Spam or advertising" })).not.toBeChecked();
+    expect(within(again).getByLabelText("Anything to add (optional)")).toHaveValue("");
+    expect(within(again).getByRole("checkbox")).not.toBeChecked();
+  });
+
   it("takes a reason, a note and the author, and sends only once a reason is picked", async () => {
     const { send } = open("open");
     const dialog = screen.getByRole("dialog", { name: "Report this list" });

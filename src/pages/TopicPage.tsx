@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { PageTitle } from "../app/pageTitle";
 import { Link, Navigate, useParams } from "react-router";
+import { errorOf } from "../api/errors";
 import type { Topic } from "../api/sections";
 import type { FeedSort } from "../api/types";
 import { FollowButton } from "../features/community/FollowButton";
@@ -86,9 +87,9 @@ function TopicContent({ section, topic, feed, sort, onSort, topics }: TopicConte
 
   const follow = (next: boolean) => {
     setFollowed(next);
-    (next ? topics.follow(topic.id) : topics.unfollow(topic.id)).catch(() => {
+    return (next ? topics.follow(topic.id) : topics.unfollow(topic.id)).catch((reason: unknown) => {
       setFollowed(!next);
-      failed();
+      failed(errorOf(reason), next);
     });
   };
   const button = (compact: boolean) =>

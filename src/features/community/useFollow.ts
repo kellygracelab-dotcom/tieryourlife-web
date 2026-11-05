@@ -22,7 +22,8 @@ export interface FollowControls {
   /** null until the backend has said. */
   following: boolean | null;
   followers: number | null;
-  failed: boolean;
+  /** Which way the last press was refused, said for a while. */
+  failed: "follow" | "unfollow" | null;
   /** The one answer a guest gets: sign in first. */
   toggle: () => "signIn" | "done";
   /** Follows without asking: right after a sign-in, or to undo an unfollow. */
@@ -53,7 +54,10 @@ export function useFollow(
   const unasked = account !== null && !signedIn && !counted;
   const [following, setFollowing] = useState<boolean | null>(null);
   const [followers, setFollowers] = useState<number | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<"follow" | "unfollow" | null>(null);
+  // Presses so far: an answer to a question asked before the last of them
+  // no longer says what is followed, only how many follow.
+  const presses = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // What the page shows at the moment of a press: the place to come back to
   // if the backend says no. Read at the press rather than closed over, so an
@@ -66,15 +70,17 @@ export function useFollow(
   useEffect(() => {
     if (account === null || unasked) return;
     let current = true;
+    const asked = presses.current;
     deps.state(authorUid).then(
       (state) => {
         if (!current) return;
-        setFollowing(signedIn ? state.following : false);
+        if (presses.current === asked) setFollowing(signedIn ? state.following : false);
         setFollowers(state.followers);
       },
       () => {
-        if (!current) return;
-        setFollowing(false);
+        // A member's answer stays unknown, so no Follow is offered to somebody
+        // who may follow already; a guest follows nobody.
+        if (current && !signedIn && presses.current === asked) setFollowing(false);
       },
     );
     return () => {
@@ -92,15 +98,16 @@ export function useFollow(
   const change = useCallback(
     (next: boolean) => {
       const before = shown.current;
+      presses.current += 1;
       setFollowing(next);
       setFollowers((n) => (n === null ? null : Math.max(0, n + (next ? 1 : -1))));
-      setFailed(false);
+      setFailed(null);
       (next ? deps.follow(authorUid) : deps.unfollow(authorUid)).catch(() => {
         setFollowing(before.following);
         setFollowers(before.followers);
-        setFailed(true);
+        setFailed(next ? "follow" : "unfollow");
         if (timer.current !== null) clearTimeout(timer.current);
-        timer.current = setTimeout(() => setFailed(false), FOLLOW_FAILED_MS);
+        timer.current = setTimeout(() => setFailed(null), FOLLOW_FAILED_MS);
       });
     },
     [authorUid, deps],

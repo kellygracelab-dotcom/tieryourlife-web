@@ -1,4 +1,5 @@
 import type { Following } from "../../api/community";
+import type { ApiError } from "../../api/errors";
 import type { ListSummary } from "../../api/types";
 import { fill, strings } from "../../strings";
 import { sectionOf, type Section } from "./model";
@@ -72,3 +73,14 @@ export function reasonFor(
   }
   return null;
 }
+
+/**
+ * What a refused follow or unfollow of a section or topic says. At the
+ * ceiling another try is refused the same way, so it says what to do instead.
+ */
+export const followRefusal = (error: ApiError, following: boolean): string =>
+  error.kind === "tooManyFollowing"
+    ? strings.sections.followLimit
+    : following
+      ? strings.sections.followFailed
+      : strings.sections.unfollowFailed;

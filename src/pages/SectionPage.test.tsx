@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -189,6 +189,33 @@ describe("SectionPage", () => {
     await tiles();
     await userEvent.click(screen.getByRole("button", { name: "Follow" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Couldn't follow. Try again.");
+  });
+
+  it("offers no Follow until whom the person follows is known", async () => {
+    let answer!: (value: { sections: SectionStats[] }) => void;
+    sectionsDeps.load.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    open("/s/games");
+    await tiles();
+    expect(screen.queryByRole("button", { name: "Follow" })).toBeNull();
+    await act(async () => answer({ sections: [stats("games", { following: true })] }));
+    expect(screen.getByRole("button", { name: /Following/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("takes no second press while the first is on its way", async () => {
+    let landed!: () => void;
+    sectionsDeps.follow.mockReturnValue(new Promise((resolve) => (landed = () => resolve({}))));
+    open("/s/games");
+    await tiles();
+    await userEvent.dblClick(screen.getByRole("button", { name: "Follow" }));
+    expect(sectionsDeps.follow).toHaveBeenCalledTimes(1);
+    expect(sectionsDeps.unfollow).not.toHaveBeenCalled();
+    expect(screen.queryByText("Unfollowed Games")).toBeNull();
+    await act(async () => landed());
+    await userEvent.click(screen.getByRole("button", { name: /Following/ }));
+    expect(sectionsDeps.unfollow).toHaveBeenCalledWith("games");
   });
 
   it("asks a guest to sign in before following", async () => {
@@ -400,6 +427,15 @@ describe("TopicPage", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Follow" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Couldn't follow. Try again.");
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("says when the ceiling of follows is reached, on a topic as on a section", async () => {
+    topics.follow.mockRejectedValue(new ApiFailure({ kind: "tooManyFollowing" }));
+    open("/s/games/t/t2");
+    await userEvent.click(await screen.findByRole("button", { name: "Follow" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "You follow as many sections and topics as you can. Unfollow some first.",
+    );
   });
 
   it("asks a guest to sign in, and follows once they have", async () => {

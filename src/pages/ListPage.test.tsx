@@ -7,6 +7,7 @@ import { ApiFailure, type ApiError } from "../api/errors";
 import type { PublishedList } from "../api/types";
 import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
+import { intentStoreForTests } from "../features/community/afterSignIn";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { itemsIn, newBoard, poolTier, rankedTiers } from "../features/boards/model";
@@ -252,6 +253,22 @@ describe("ListPage report and hide", () => {
     const ask = screen.getByRole("dialog", { name: "Sign in to report" });
     await userEvent.click(within(ask).getByRole("button", { name: "Continue with Google" }));
     expect(signIn).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("dialog", { name: "Report this list" })).toBeInTheDocument();
+  });
+
+  it("opens the report again after a sign-in that went through a redirect and came back", async () => {
+    intentStoreForTests(memoryStore());
+    mocks.loadList.mockResolvedValue(list);
+    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "redirecting" });
+    openAs({ kind: "guest", uid: "g1" }, signIn);
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
+    const ask = screen.getByRole("dialog", { name: "Sign in to report" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Continue with Google" }));
+    cleanup();
+
+    openAs(member);
     expect(await screen.findByRole("dialog", { name: "Report this list" })).toBeInTheDocument();
   });
 
@@ -733,6 +750,16 @@ describe("ListPage author line", () => {
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("says a refused unfollow as one, in place of the snackbar that said it was done", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    mocks.followState.mockResolvedValue({ following: true, followers: 3 });
+    mocks.unfollowAuthor.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    openAs(member);
+    await userEvent.click(await screen.findByRole("button", { name: /Following/ }));
+    expect(await screen.findByText("Couldn’t unfollow — try again.")).toBeInTheDocument();
+    expect(screen.queryByText("Unfollowed danylo")).toBeNull();
+  });
+
   it("asks nothing about a guest, and asks them to sign in when they follow", async () => {
     mocks.loadList.mockResolvedValue(list);
     const signIn = vi
@@ -845,6 +872,8 @@ describe("ListPage for its author", () => {
     expect(
       screen.getAllByRole("link", { name: "Edit" }).map((link) => link.getAttribute("href")),
     ).toEqual(["/b/new?list=abc"]);
+    // And says it is one's own, gone out without a name, as its card does.
+    expect(screen.getByText("Your list, published anonymously")).toBeInTheDocument();
   });
 
   it("deletes the list after asking, names a failure, and leaves for My lists when it is gone", async () => {
