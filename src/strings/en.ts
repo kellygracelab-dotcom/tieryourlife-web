@@ -2,6 +2,7 @@ export const en = {
   brand: "TierYourLife",
   tagline: "Web app",
   nav: {
+    opening: "Opening the page…",
     site: "Site",
     signIn: "Sign in",
     signOut: "Sign out",
@@ -1148,6 +1149,13 @@ export const en = {
     anonymousBody: "No name or face on the list. Only you can change it or take it down.",
     categoryWaiting: "Waiting for a moderator",
     menuHint: "Double-click or right-click a card to move or remove it.",
+    choose: "Select",
+    pickToDelete: "Choose the lists to delete",
+    noneShown: "No lists under “{filter}”",
+    deletedTakenDown: {
+      one: "{n} list deleted and its public copy taken down",
+      other: "{n} lists deleted and their public copies taken down",
+    },
   },
   sync: {
     offBusy: "Deleting…",

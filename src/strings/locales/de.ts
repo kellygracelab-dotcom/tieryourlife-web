@@ -9,6 +9,7 @@ import type { Translation } from "../index";
 const de: Translation = {
   tagline: "Web-Version",
   nav: {
+    opening: "Seite wird geöffnet…",
     site: "Website",
     signIn: "Anmelden",
     signOut: "Abmelden",
@@ -1207,6 +1208,13 @@ const de: Translation = {
     categoryWaiting: "Wartet auf einen Moderator",
     menuHint:
       "Doppelklick oder Rechtsklick auf eine Karte, um sie zu verschieben oder zu entfernen.",
+    choose: "Auswählen",
+    pickToDelete: "Wähle die Listen zum Löschen",
+    noneShown: "Keine Listen unter „{filter}“",
+    deletedTakenDown: {
+      one: "{n} Liste gelöscht, die öffentliche Kopie entfernt",
+      other: "{n} Listen gelöscht, die öffentlichen Kopien entfernt",
+    },
   },
   sync: {
     offBusy: "Wird gelöscht…",

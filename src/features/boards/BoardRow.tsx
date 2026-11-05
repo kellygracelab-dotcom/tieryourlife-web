@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { memo, useId, type CSSProperties } from "react";
 import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
@@ -10,8 +10,8 @@ interface BoardRowProps {
   board: Board;
   selecting: boolean;
   selected: boolean;
-  onSelect: () => void;
-  onStar: () => void;
+  onSelect: (uid: string) => void;
+  onStar: (board: Board) => void;
 }
 
 /**
@@ -44,14 +44,24 @@ function TierRibbon({ board }: { board: Board }) {
 /**
  * One board to a row, as the phone lists them: its picture, its name, how far
  * along it is and the ribbon of its tiers, the star and the way in at the end.
- * Picking boards to delete puts a box where the star was.
+ * Picking boards to delete puts a box where the star was. Drawn again only
+ * when its own board or choice changes, as a tile is.
  */
-export function BoardRow({ board, selecting, selected, onSelect, onStar }: BoardRowProps) {
+export const BoardRow = memo(function BoardRow({
+  board,
+  selecting,
+  selected,
+  onSelect,
+  onStar,
+}: BoardRowProps) {
   const title = titleOf(board);
   const from = fromOf(board);
   const spoken = spokenTitleOf(board);
   const ranked = rankedCount(board);
   const starred = board.favouritedAt !== null;
+  // As on a tile: how far along it is and that it is public are read after the name.
+  const id = useId();
+  const facts = board.publishedId === null ? `${id}-meta` : `${id}-meta ${id}-public`;
   const words = (
     <>
       <span className="board-card__thumb">
@@ -66,7 +76,15 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
           <bdi>{title}</bdi>
           {from !== null && <span className="board-card__from">{from}</span>}
         </span>
-        <span className="board-card__meta">{metaOf(board)}</span>
+        <span className="board-card__meta">
+          <span id={`${id}-meta`}>{metaOf(board)}</span>
+          {board.publishedId !== null && (
+            <span className="board-card__public" id={`${id}-public`}>
+              <Icon name="public" />
+              {strings.boards.filterPublic}
+            </span>
+          )}
+        </span>
         {ranked > 0 ? (
           <TierRibbon board={board} />
         ) : (
@@ -80,7 +98,15 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
   return (
     <li className={selected ? "board-card board-card--selected" : "board-card"}>
       {selecting ? (
-        <button type="button" className="board-card__main" onClick={onSelect}>
+        // The box at the end is what a screen reader and the keyboard use; the
+        // row is only a larger place for a pointer to press.
+        <button
+          type="button"
+          className="board-card__main"
+          tabIndex={-1}
+          aria-hidden="true"
+          onClick={() => onSelect(board.uid)}
+        >
           {words}
         </button>
       ) : (
@@ -88,6 +114,7 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
           className="board-card__main"
           to={`/b/${encodeURIComponent(board.uid)}`}
           aria-label={fill(strings.boards.open, { name: spoken })}
+          aria-describedby={facts}
         >
           {words}
         </Link>
@@ -97,8 +124,9 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
           <input
             type="checkbox"
             checked={selected}
-            onChange={onSelect}
+            onChange={() => onSelect(board.uid)}
             aria-label={fill(strings.boards.select, { name: spoken })}
+            aria-describedby={facts}
           />
         </label>
       ) : (
@@ -110,7 +138,7 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
               name: spoken,
             })}
             aria-pressed={starred}
-            onClick={onStar}
+            onClick={() => onStar(board)}
           >
             <Icon name="star" />
           </button>
@@ -119,4 +147,4 @@ export function BoardRow({ board, selecting, selected, onSelect, onStar }: Board
       )}
     </li>
   );
-}
+});

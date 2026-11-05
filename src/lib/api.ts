@@ -25,6 +25,7 @@ import * as boards from "../api/boards";
 import type { KeepBoardRequest, KeptBoard, KeptBoardIndex } from "../api/boards";
 import type { AdoptedGuest } from "../api/account";
 import { createApiClient } from "../api/client";
+import { errorOf } from "../api/errors";
 import * as community from "../api/community";
 import type {
   Following,
@@ -47,6 +48,7 @@ import type { MyRankings, Ranking, SavedRanking } from "../api/rank";
 import type { FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
+import { noteListChanged } from "./listChanges";
 import { preloadedList, preloadedRanking } from "./preload";
 import { listIn } from "./translated";
 
@@ -93,7 +95,9 @@ export const loadFeed = (query: FeedQuery): Promise<FeedPage> => lists.loadFeed(
 // the server can say whether the ranking is theirs.
 export const loadRanking = (code: string, asAccount = false): Promise<Ranking> => {
   const preloaded = asAccount ? null : preloadedRanking(code);
-  return preloaded === null ? rank.loadRanking(api, code, asAccount) : Promise.resolve(preloaded);
+  return preloaded === null
+    ? rank.loadRanking(api, code, asAccount)
+    : Promise.resolve(rank.rankingOf(preloaded));
 };
 
 export const rearrangeRanking = (code: string, rows: Rows): Promise<{ code: string }> =>
@@ -123,10 +127,22 @@ export const keepPicture = (url: string): Promise<string> => pictures.keepPictur
 export const publish = (request: PublishRequest): Promise<{ id: string }> =>
   lists.publish(api, request);
 
-export const republish = (id: string, request: PublishRequest): Promise<{ id: string }> =>
-  lists.republish(api, id, request);
+/** The call, and then word that the list is no longer as any page last read it; gone already, too. */
+const changing = async <T>(id: string, call: Promise<T>): Promise<T> => {
+  try {
+    const answer = await call;
+    noteListChanged(id);
+    return answer;
+  } catch (reason: unknown) {
+    if (errorOf(reason).kind === "notFound") noteListChanged(id);
+    throw reason;
+  }
+};
 
-export const unpublish = (id: string): Promise<void> => lists.unpublish(api, id);
+export const republish = (id: string, request: PublishRequest): Promise<{ id: string }> =>
+  changing(id, lists.republish(api, id, request));
+
+export const unpublish = (id: string): Promise<void> => changing(id, lists.unpublish(api, id));
 
 export const refreshPublishedAuthor = (): Promise<{ updated: number }> =>
   account.refreshPublishedAuthor(api);
@@ -204,7 +220,7 @@ export const unfollowTopic = (id: string): Promise<{ following: false }> =>
   sections.unfollowTopic(api, id);
 
 export const takeDownList = (id: string, ban: BanLength | null): Promise<void> =>
-  moderation.takeDownList(api, id, ban);
+  changing(id, moderation.takeDownList(api, id, ban));
 
 export const leaveListUp = (id: string): Promise<void> => moderation.leaveListUp(api, id);
 

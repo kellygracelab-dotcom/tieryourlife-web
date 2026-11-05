@@ -11,6 +11,7 @@ import type { Translation } from "../index";
 const fr: Translation = {
   tagline: "Version web",
   nav: {
+    opening: "Ouverture de la page…",
     site: "Site",
     signIn: "Se connecter",
     signOut: "Se déconnecter",
@@ -1222,6 +1223,14 @@ const fr: Translation = {
     categoryWaiting: "En attente d’un modérateur",
     menuHint:
       "Double-cliquez ou faites un clic droit sur une carte pour la déplacer ou la retirer.",
+    choose: "Sélectionner",
+    pickToDelete: "Choisissez les listes à supprimer",
+    noneShown: "Aucune liste dans « {filter} »",
+    deletedTakenDown: {
+      one: "{n} liste supprimée et sa copie publique retirée",
+      many: "{n} listes supprimées et leurs copies publiques retirées",
+      other: "{n} listes supprimées et leurs copies publiques retirées",
+    },
   },
   sync: {
     offBusy: "Suppression…",

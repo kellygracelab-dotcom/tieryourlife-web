@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
+import { noteListChanged } from "../../lib/listChanges";
 import { readRememberedPage, useFeed, type LoadFeed } from "./useFeed";
 
 const summary = (id: string): ListSummary => ({
@@ -68,8 +69,29 @@ describe("useFeed", () => {
     expect(shown()).toHaveTextContent("z|-|idle");
   });
 
+  it("lets a remembered page go once a list on it was taken down or changed here", async () => {
+    const anime: FeedQuery = { category: "anime" };
+    const books: FeedQuery = { category: "books" };
+    for (const [query, ids] of [
+      [anime, ["a", "gone"]],
+      [books, ["c"]],
+    ] as const) {
+      const { unmount } = render(<Probe query={query} load={async () => page([...ids])} />);
+      expect(await screen.findByText(`${ids.join(",")}|-|idle`)).toBeInTheDocument();
+      unmount();
+    }
+
+    noteListChanged("gone");
+    const never = () => new Promise<FeedPage>(() => undefined);
+    const { unmount } = render(<Probe query={anime} load={never} />);
+    expect(shown()).toHaveTextContent("loading");
+    unmount();
+    render(<Probe query={books} load={never} />);
+    expect(shown()).toHaveTextContent("c|-|idle");
+  });
+
   it("does not keep which lists were the reader's own", async () => {
-    const memory = { recall: vi.fn(() => null), keep: vi.fn() };
+    const memory = { recall: vi.fn(() => null), keep: vi.fn(), forget: vi.fn() };
     const own = { ...summary("a"), mine: true };
     function Kept() {
       useFeed(popular, async () => ({ lists: [own], nextCursor: null }), memory);

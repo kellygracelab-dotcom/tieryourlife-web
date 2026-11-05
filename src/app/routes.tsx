@@ -9,6 +9,7 @@ import { ProfilePage } from "../pages/ProfilePage";
 import { RankingPage } from "../pages/RankingPage";
 import { SearchPage } from "../pages/SearchPage";
 import { freshChunk } from "../lib/freshChunk";
+import { PageOpening } from "./PageOpening";
 import { RouteError } from "./RouteError";
 
 import { Shell } from "./Shell";
@@ -35,6 +36,9 @@ export const routes: RouteObject[] = [
       {
         // A page that throws keeps the header and the menu around its apology.
         errorElement: <RouteError />,
+        // A page of its own chunk opened at its address: the header at once,
+        // and a stand-in where the page comes, until the chunk is in.
+        hydrateFallbackElement: <PageOpening />,
         children: [
           { index: true, element: <HomePage /> },
           { path: "following", element: <HomePage tab="following" /> },

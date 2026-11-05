@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   addToPool,
   arrangeItems,
@@ -26,6 +26,7 @@ import { ApiFailure } from "../api/errors";
 import type { HouseSending } from "../features/admin/HouseBar";
 import { hasUnsentEdits, houseLinkOf, linkToHouse } from "../features/boards/houseList";
 import { publishRequestOf } from "../features/boards/publish";
+import { resetModeratorForTests, type LoadReports } from "../features/moderation/useModerator";
 import { BoardPage } from "./BoardPage";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
@@ -76,6 +77,7 @@ const open = (
     house?: HouseSending;
     houseStore?: KeyValueStore;
     houseRepository?: BoardsRepository;
+    loadReports?: LoadReports;
   } = {},
 ) => {
   const router = createMemoryRouter(
@@ -94,6 +96,7 @@ const open = (
             house={extra.house}
             houseStore={extra.houseStore ?? memoryStore()}
             houseRepository={extra.houseRepository ?? boardsRepository(memoryStore())}
+            loadReports={extra.loadReports}
           />
         ),
       },
@@ -938,6 +941,12 @@ describe("BoardPage: Play", () => {
 });
 
 describe("BoardPage: a house list", () => {
+  // Other pages asked about this account already, and the stub never answered them.
+  beforeEach(resetModeratorForTests);
+  afterEach(resetModeratorForTests);
+  // The owner and the moderators read the reports; anyone else is refused them.
+  const staff: LoadReports = () => Promise.resolve({ reports: [] });
+  const notStaff: LoadReports = () => Promise.reject(new ApiFailure({ kind: "notYours" }));
   const sending = (): HouseSending => ({
     publish: vi.fn(() => Promise.resolve({ id: "H1", topicId: null })),
     replace: vi.fn((id: string) => Promise.resolve({ id, topicId: null })),
@@ -952,8 +961,9 @@ describe("BoardPage: a house list", () => {
       houseStore,
       houseRepository,
       account: member,
+      loadReports: staff,
     });
-    const bar = screen.getByRole("region", { name: "House list" });
+    const bar = await screen.findByRole("region", { name: "House list" });
     expect(bar).toHaveTextContent("Goes out as the site: no name, no face, no account.");
     expect(bar).toHaveTextContent(
       "Pick a category. Add at least one card before you publish this list.",
@@ -974,6 +984,23 @@ describe("BoardPage: a house list", () => {
 
     await userEvent.click(screen.getByRole("link", { name: "House lists" }));
     expect(router.state.location.pathname).toBe("/admin/house");
+  });
+
+  it("makes an ordinary list of one's own for anyone else who follows a link for a new house list", async () => {
+    const repository = boardsRepository(memoryStore());
+    const houseRepository = boardsRepository(memoryStore());
+    open(repository, "/b/fresh?new=100&house=new", {
+      house: sending(),
+      houseRepository,
+      account: member,
+      loadReports: notStaff,
+    });
+    const title = await screen.findByRole("textbox", { name: "Title" });
+    expect(screen.queryByRole("region", { name: "House list" })).toBeNull();
+    expect(title).toHaveFocus();
+    await userEvent.keyboard("Ramen{Enter}");
+    expect(repository.get("fresh")?.title).toBe("Ramen");
+    expect(houseRepository.all()).toEqual([]);
   });
 
   it("publishes as the house and only so, then updates the same list", async () => {

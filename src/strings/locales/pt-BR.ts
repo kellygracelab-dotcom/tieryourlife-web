@@ -9,6 +9,7 @@ import type { Translation } from "../index";
 const ptBR: Translation = {
   tagline: "Versão web",
   nav: {
+    opening: "Abrindo a página…",
     site: "Site",
     signIn: "Entrar",
     signOut: "Sair",
@@ -1196,6 +1197,14 @@ const ptBR: Translation = {
     anonymousBody: "Sem nome nem foto na lista. Só você pode alterá-la ou removê-la.",
     categoryWaiting: "Aguardando um moderador",
     menuHint: "Clique duas vezes ou com o botão direito em um card para movê-lo ou removê-lo.",
+    choose: "Selecionar",
+    pickToDelete: "Escolha as listas que quer excluir",
+    noneShown: 'Nenhuma lista em "{filter}"',
+    deletedTakenDown: {
+      one: "{n} lista excluída e a cópia pública retirada",
+      many: "{n} listas excluídas e as cópias públicas retiradas",
+      other: "{n} listas excluídas e as cópias públicas retiradas",
+    },
   },
   sync: {
     offBusy: "Apagando…",

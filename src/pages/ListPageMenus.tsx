@@ -315,9 +315,11 @@ function AuthorMenu({
   const [deleting, setDeleting] = useState<Deleting>({ status: "closed" });
   const busy = deleting.status === "busy";
 
+  // The list's page goes from the history with the list: Back from /me must
+  // not show its author the apology meant for a visitor sent a dead link.
   const gone = () => {
     forgetPublished(list.id, repository, Date.now());
-    void navigate("/me");
+    void navigate("/me", { replace: true });
   };
   const confirm = () => {
     setDeleting({ status: "busy" });

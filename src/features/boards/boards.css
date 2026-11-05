@@ -162,10 +162,18 @@
   vertical-align: middle;
 }
 
+/* A guest's lists live in this browser only: said under them, with the sign-in that keeps them. */
 .boards__local-only {
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   font: var(--text-small);
   color: var(--ink-faint);
+}
+
+.boards__local-only p {
+  margin: 0;
 }
 
 /*
@@ -702,6 +710,8 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+  /* A name with no spaces, a link say, breaks inside the word rather than past the tile's edge. */
+  overflow-wrap: anywhere;
   font: 500 13px/18px var(--font);
 }
 

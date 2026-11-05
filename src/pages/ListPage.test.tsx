@@ -90,13 +90,15 @@ const openAs = (
   account: Session["account"],
   signIn: Session["signIn"] = async () => ({ kind: "cancelled" }),
 ) => {
+  const router = createMemoryRouter(routes, { initialEntries: ["/l/abc"] });
   render(
     <SessionContext.Provider
       value={{ account, signIn, signOut: async () => undefined, refresh: () => undefined }}
     >
-      <RouterProvider router={createMemoryRouter(routes, { initialEntries: ["/l/abc"] })} />
+      <RouterProvider router={router} />
     </SessionContext.Provider>,
   );
+  return router;
 };
 
 const whose = () => screen.getByRole("group", { name: "Whose arrangement to show" });
@@ -886,7 +888,7 @@ describe("ListPage for its author", () => {
       publishedEditedAt: 1,
       authorName: "danylo",
     });
-    openAs(author);
+    const router = openAs(author);
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
     await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
@@ -895,6 +897,8 @@ describe("ListPage for its author", () => {
     );
     await screen.findByRole("heading", { level: 1, name: "Your public lists" });
     expect(boards.get("b1")).toMatchObject({ publishedId: null, authorName: null });
+    // The gone list's page left the history: Back does not lead its author to it.
+    expect(router.state.historyAction).toBe("REPLACE");
   });
 
   it.each<ApiError>([{ kind: "notFound" }])(

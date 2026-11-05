@@ -1,5 +1,12 @@
 import type { ApiClient } from "./client";
-import type { FeedPage, FeedQuery, ListSummary, PublishedList, PublishedTier } from "./types";
+import type {
+  FeedPage,
+  FeedQuery,
+  ListSummary,
+  PublishedItem,
+  PublishedList,
+  PublishedTier,
+} from "./types";
 
 export async function loadList(client: ApiClient, id: string): Promise<PublishedList> {
   return publishedListOf(
@@ -8,14 +15,50 @@ export async function loadList(client: ApiClient, id: string): Promise<Published
 }
 
 /** One list as the site draws it, however it arrived: asked for, or already in the page. */
-export const publishedListOf = (list: PublishedList): PublishedList => {
-  const items = (list.items ?? []).map((item) =>
-    item.imageUrl === null || pictureOf(item.imageUrl) !== null
-      ? item
-      : { ...item, imageUrl: null },
-  );
-  return { ...summaryOf(list), tiers: list.tiers ?? [], items };
+export const publishedListOf = (list: PublishedList): PublishedList => ({
+  ...summaryOf(list),
+  authorName: textOf(list.authorName),
+  tiers: tiersOf(list.tiers),
+  items: itemsOf(list.items),
+});
+
+/**
+ * A slot of words that came as something else, null say: drawn empty. One
+ * field the backend got wrong must not take the whole page down with it.
+ */
+const textOf = (value: unknown): string => (typeof value === "string" ? value : "");
+
+/** A tier that came as nothing at all: an unnamed one in a neutral grey, so the cards under it keep their places. */
+const NO_TIER: PublishedTier = {
+  label: "",
+  caption: null,
+  colorLight: "#8E8E93",
+  colorDark: "#AEAEB2",
 };
+
+/** The tiers as the site can draw them, whatever came. */
+export const tiersOf = (tiers: unknown): PublishedTier[] =>
+  Array.isArray(tiers)
+    ? tiers.map((tier: unknown) =>
+        tier !== null && typeof tier === "object" ? (tier as PublishedTier) : NO_TIER,
+      )
+    : [];
+
+/**
+ * The cards as the site can draw them: words where words belong, and only
+ * real pictures. A card that came as nothing stays as an empty one, since a
+ * ranking names the cards by their places.
+ */
+export const itemsOf = (items: unknown): PublishedItem[] =>
+  Array.isArray(items)
+    ? items.map((item: unknown) => {
+        if (item === null || typeof item !== "object") return { title: "", imageUrl: null };
+        const card = item as PublishedItem;
+        const imageUrl =
+          card.imageUrl === null || card.imageUrl === undefined ? null : pictureOf(card.imageUrl);
+        return { ...card, title: textOf(card.title), imageUrl };
+      })
+    : [];
 
 /**
  * A picture's address, or null when the slot holds none. Only https:// counts,

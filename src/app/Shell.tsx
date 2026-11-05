@@ -6,6 +6,7 @@ import {
   type Location,
   useLocation,
   useNavigate,
+  useNavigation,
   useSearchParams,
 } from "react-router";
 import { useAdminCounts } from "../features/admin/useAdminCounts";
@@ -219,6 +220,9 @@ export function Shell() {
   // The bar's search box. The home page has its own, larger one, so the bar
   // goes without there; on the search page the box shows the words asked.
   const location = useLocation();
+  // A page whose chunk is on its way keeps the old one up until it comes: a
+  // line under the bar says the click was heard.
+  const opening = useNavigation().state === "loading";
 
   // A new page takes the focus, so the keyboard starts on it rather than
   // wherever the old page's link was (often nowhere at all). A page that
@@ -302,6 +306,9 @@ export function Shell() {
             </>
           )}
         </nav>
+        {opening && (
+          <span className="top__pending" role="progressbar" aria-label={strings.nav.opening} />
+        )}
       </header>
       {/^\/(following|b)?$/.test(location.pathname) && (
         <SiteTabs className="site-tabs--row" pathname={location.pathname} />

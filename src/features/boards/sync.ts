@@ -476,9 +476,9 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
       ? [board]
       : [];
   });
+  // The name goes with the id, as on every other way down: a list of one's
+  // own that kept it would read as one saved from somebody else.
   if (gone.length > 0) {
-    deps.repository.saveAll(
-      gone.map((board) => setPublished(board, null, board.authorName, deps.now())),
-    );
+    deps.repository.saveAll(gone.map((board) => setPublished(board, null, null, deps.now())));
   }
 }

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, useLocation } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -252,6 +252,27 @@ describe("NewBoardPage: a kept ranking as a board", () => {
     });
     expect(boardAt(repository, await arrivedAt())?.title).toBe("Mine now");
     expect(store.read(forkDraftKey("aaaaaaaa"))).toBeNull();
+  });
+
+  it("opens the board made of the ranking again on a second visit, and makes one anew once it is in the trash", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(memoryStore());
+    const loadKept = vi.fn(() => Promise.resolve(ranking));
+    open({ path: "/b/new?ranking=aaaaaaaa", store, repository, loadKept });
+    const made = await arrivedAt();
+    cleanup();
+
+    open({ path: "/b/new?ranking=aaaaaaaa", store, repository, loadKept });
+    expect(await arrivedAt()).toBe(made);
+    expect(repository.all()).toHaveLength(1);
+    expect(loadKept).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    const board = boardAt(repository, made)!;
+    repository.save({ ...board, deletedAt: 6000 });
+    open({ path: "/b/new?ranking=aaaaaaaa", store, repository, loadKept });
+    expect(await arrivedAt()).not.toBe(made);
+    expect(repository.all()).toHaveLength(2);
   });
 
   it("says so when the ranking cannot be opened", async () => {

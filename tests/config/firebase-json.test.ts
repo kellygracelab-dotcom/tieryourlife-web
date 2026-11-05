@@ -93,6 +93,28 @@ describe("where a deploy goes", () => {
     );
   });
 
+  // No other site may frame the app, where one click turns a list public;
+  // the site's own frames may. Firebase's sign-in pages under /__/ are framed
+  // by the site from another address and are left out on purpose.
+  it("lets only the site itself frame its pages", () => {
+    const framing = (source: string) =>
+      hosting[0]!.headers
+        .find(
+          (h) =>
+            h.source === source && h.headers.some((one) => one.key === "Content-Security-Policy"),
+        )
+        ?.headers.find((h) => h.key === "Content-Security-Policy")?.value;
+    for (const source of [
+      "/",
+      "/index.html",
+      "/@(new|search|me|c|settings|mod|u|about|b|boards|s|trash|following|admin){,/**}",
+      "/@(l|r)/**",
+    ]) {
+      expect(framing(source)).toBe("frame-ancestors 'self'");
+    }
+    expect(framing("**")).toBeUndefined();
+  });
+
   it("publishes the web target to the main address", () => {
     const rc = JSON.parse(readFileSync(".firebaserc", "utf8")) as {
       targets: Record<string, { hosting: Record<string, string[]> }>;

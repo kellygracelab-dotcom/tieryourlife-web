@@ -76,6 +76,8 @@ function send(response: Response, html: string): void {
   response.setHeader("Content-Type", "text/html; charset=utf-8");
   // Short at the edge, never in the browser: a Finish must not read yesterday's list.
   response.setHeader("Cache-Control", "public, max-age=0, s-maxage=120");
+  // As firebase.json says for the app's other pages: no other site may frame it.
+  response.setHeader("Content-Security-Policy", "frame-ancestors 'self'");
   response.status(200).send(html);
 }
 

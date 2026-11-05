@@ -3,6 +3,7 @@ import type { ApiError } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
 import { loadFeed } from "../../lib/api";
 import { errorOf } from "../../api/errors";
+import { onListChanged } from "../../lib/listChanges";
 import { remembered, type Remembered } from "../../lib/remembered";
 import { localStorageStore } from "../../lib/storage";
 
@@ -76,6 +77,13 @@ export const feedMemory: Remembered<RememberedPage> = remembered(
   "tyl:feed",
   12,
   readRememberedPage,
+);
+
+// A list taken down or sent again from here is no longer as any kept page
+// has it: those pages go, and the feed waits for the fresh one instead of
+// offering what is gone or showing one's own change undone.
+onListChanged((listId) =>
+  feedMemory.forget((page) => page.lists.some((list) => list.id === listId)),
 );
 
 const readyFrom = (page: RememberedPage, stale: boolean): FeedState => ({
