@@ -163,6 +163,14 @@ describe("parseBoard", () => {
     expect(topicOf({ id: "t1", name: "Pokémon" })).toEqual({ id: "t1", name: "Pokémon" });
     expect(topicOf({ id: "", name: "Pokémon" })).toBeNull();
     expect(topicOf({ id: "t1" })).toBeNull();
+    // A name proposed here, not sent yet, and one sent and waiting.
+    expect(topicOf({ id: null, name: "Space operas" })).toEqual({ id: null, name: "Space operas" });
+    expect(topicOf({ name: " " })).toBeNull();
+    expect(topicOf({ id: "t9", name: "Space operas", waiting: true })).toEqual({
+      id: "t9",
+      name: "Space operas",
+      waiting: true,
+    });
     expect(topicOf("t1")).toBeNull();
     expect(topicOf(undefined)).toBeNull();
   });

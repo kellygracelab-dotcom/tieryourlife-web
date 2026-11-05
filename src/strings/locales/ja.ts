@@ -861,7 +861,7 @@ const ja: Translation = {
     backToSection: "{section}に戻る",
     suggestTopic: "トピックを提案",
     suggestTopicBody:
-      "トピックはリストを公開するときに、「リストの設定」の「トピック」で名付けるか選びます。サイトでは既にあるトピックから選べます。新しいトピックはアプリで名付けます。",
+      "トピックは「リストの設定」の「トピック」で名付けるか選びます。新しいトピックはリストの公開と一緒に送られ、モデレーターの確認を待ちます。",
     suggestTopicMake: "{section}でリストを作る",
     sortPopular: "人気",
     sortNewest: "新着",
@@ -1190,6 +1190,16 @@ const ja: Translation = {
     nothingInPool: "プールは空",
     topicsLoading: "トピックを読み込み中…",
     topicsFailed: "トピックを読み込めませんでした。",
+    topicWaiting: "{name}・承認待ち",
+    topicWaitingShort: "承認待ち",
+    topicNew: "新しいトピックを名付ける",
+    topicPropose: "提案する",
+    topicNewNote:
+      "新しいトピックはモデレーターの確認を待ちます。それまでリストはこのラベル付きで「その他」に置かれます。",
+    topicTooMany:
+      "あなたのトピックが3件、モデレーターの確認待ちです。新しいトピックなしで公開するか、どれかが決まるまでお待ちください。",
+    topicUnavailable:
+      "このトピックは却下されたため、リストのトピックはなくなりました。別のトピックを選ぶか、トピックなしで公開してください。",
     findSection: "セクションを探す",
     modeRows: "行",
     modeRanking: "ランキング",

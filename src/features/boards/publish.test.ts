@@ -55,6 +55,19 @@ describe("publishing a board", () => {
     const topical = publishRequestOf({ ...b, topic: { id: "t1", name: "A24" } });
     expect(topical?.topicId).toBe("t1");
     expect(topical?.noTopic).toBeUndefined();
+    expect(topical?.newTopic).toBeUndefined();
+    // A name of one's own goes alone: beside an id or noTopic the backend refuses it.
+    const proposed = publishRequestOf({ ...b, topic: { id: null, name: "Space operas" } })!;
+    expect(proposed.newTopic).toBe("Space operas");
+    expect(proposed).not.toHaveProperty("topicId");
+    expect(proposed).not.toHaveProperty("noTopic");
+    // Once sent it has an id, which is what travels from then on, waiting or not.
+    const waiting = publishRequestOf({
+      ...b,
+      topic: { id: "t9", name: "Space operas", waiting: true },
+    })!;
+    expect(waiting.topicId).toBe("t9");
+    expect(waiting).not.toHaveProperty("newTopic");
     // Anonymity is said every time too, or a republish would put the name back.
     expect(request.anonymous).toBe(false);
     expect(publishRequestOf({ ...b, anonymous: true })?.anonymous).toBe(true);

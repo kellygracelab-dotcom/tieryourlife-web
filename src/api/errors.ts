@@ -11,6 +11,8 @@ export type ApiError =
    */
   | { kind: "merged"; into: string | null; topic: string | null }
   | { kind: "tooManyLists" }
+  /** Three topics of the person's own wait for a moderator: a publish cannot propose a fourth. */
+  | { kind: "tooManyTopics" }
   /** At the ceiling of followed sections or topics (200): one has to go first. */
   | { kind: "tooManyFollowing" }
   | { kind: "cursorGone" }
@@ -105,6 +107,7 @@ export function parseApiError(status: number, text: string): ApiError {
       return { kind: "notFound" };
     case 409: {
       if (code === "TOO_MANY_LISTS") return { kind: "tooManyLists" };
+      if (code === "TOO_MANY_PENDING_TOPICS") return { kind: "tooManyTopics" };
       if (code === "TOO_MANY_FOLLOWING") return { kind: "tooManyFollowing" };
       if (code === "CURSOR_GONE") return { kind: "cursorGone" };
       // A topic's name clashes with 409 where a section's does with 400: one refusal to the form.

@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { onUserDeleted, PAGE_SIZE, releaseRankings, type RankingStore } from "../src/userDeleted";
+import {
+  onUserDeleted,
+  PAGE_SIZE,
+  releaseRankings,
+  scrubAuthor,
+  type RankingStore,
+} from "../src/userDeleted";
 
 interface StoredRanking {
   ownerUid: string | null;
   ownerAnonymous: boolean;
   claimedAt?: number;
+  listAuthorUid?: string;
+  snapshot?: { authorName: string; authorPhotoUrl: string | null };
 }
 
 type Rankings = Map<string, StoredRanking>;
@@ -18,10 +26,17 @@ const owned = (uid: string, count: number, extra: Partial<StoredRanking> = {}) =
     { ownerUid: uid, ownerAnonymous: false, ...extra },
   ]);
 
-/** A store over plain maps that speaks the same three verbs as Firestore. */
-function memoryStore(rankings: Rankings, quotas: Set<string>, failOnRelease = 0) {
+/** A store over plain maps that speaks the same verbs as Firestore; `cards` holds the codes with a card kept. */
+function memoryStore(
+  rankings: Rankings,
+  quotas: Set<string>,
+  failOnRelease = 0,
+  cards = new Set<string>(),
+  failOnScrub = 0,
+) {
   const calls: string[] = [];
   let releases = 0;
+  let scrubs = 0;
   const store: RankingStore<string> = {
     async ownedBy(uid, limit) {
       calls.push(`ownedBy ${limit}`);
@@ -40,6 +55,25 @@ function memoryStore(rankings: Rankings, quotas: Set<string>, failOnRelease = 0)
     async forgetQuota(uid) {
       calls.push(`forgetQuota ${uid}`);
       quotas.delete(uid);
+    },
+    async namingAuthor(uid, limit) {
+      calls.push(`namingAuthor ${limit}`);
+      return [...rankings]
+        .filter(([, ranking]) => ranking.listAuthorUid === uid)
+        .slice(0, limit)
+        .map(([code]) => code);
+    },
+    async forgetCards(codes) {
+      calls.push(`forgetCards ${codes.length}`);
+      for (const code of codes) cards.delete(code);
+    },
+    async scrubAuthor(codes) {
+      calls.push(`scrubAuthor ${codes.length}`);
+      if (++scrubs === failOnScrub) throw new Error("Firestore went away");
+      for (const code of codes) {
+        const { listAuthorUid: _gone, ...rest } = rankings.get(code)!;
+        rankings.set(code, { ...rest, snapshot: { authorName: "", authorPhotoUrl: null } });
+      }
     },
   };
   return { store, calls };
@@ -123,6 +157,61 @@ describe("releaseRankings", () => {
     assert.equal(await releaseRankings(again.store, "gone"), 0);
     assert.deepEqual(rankings, settled);
     assert.deepEqual(again.calls, [`ownedBy ${PAGE_SIZE}`, "forgetQuota gone"]);
+  });
+});
+
+const OF_GONE: StoredRanking = {
+  ownerUid: "reader",
+  ownerAnonymous: false,
+  listAuthorUid: "gone",
+  snapshot: { authorName: "Alice Author", authorPhotoUrl: "https://lh3.example/alice.jpg" },
+};
+
+describe("scrubAuthor", () => {
+  it("takes the author's name, photo and cards out of other people's rankings of their lists", async () => {
+    const rankings: Rankings = new Map<string, StoredRanking>([
+      ["a", OF_GONE],
+      ["b", { ...OF_GONE, ownerUid: null, ownerAnonymous: true }],
+      [
+        "c",
+        {
+          ...OF_GONE,
+          listAuthorUid: "other",
+          snapshot: { authorName: "Bob", authorPhotoUrl: null },
+        },
+      ],
+    ]);
+    const cards = new Set(["a", "b", "c"]);
+    const { store } = memoryStore(rankings, new Set(), 0, cards);
+
+    assert.equal(await scrubAuthor(store, "gone"), 2);
+    for (const code of ["a", "b"]) {
+      const kept = rankings.get(code)!;
+      assert.deepEqual(kept.snapshot, { authorName: "", authorPhotoUrl: null });
+      assert.equal(kept.listAuthorUid, undefined);
+    }
+    // The reader keeps their ranking; another author's stays as it was.
+    assert.equal(rankings.get("a")?.ownerUid, "reader");
+    assert.deepEqual(rankings.get("c")?.snapshot, { authorName: "Bob", authorPhotoUrl: null });
+    assert.deepEqual(cards, new Set(["c"]));
+  });
+
+  it("pages until nothing names the author, and a run after a failure finishes the job", async () => {
+    const rankings: Rankings = new Map(
+      Array.from({ length: PAGE_SIZE + 2 }, (_, i): [string, StoredRanking] => [`r-${i}`, OF_GONE]),
+    );
+    const failing = memoryStore(rankings, new Set(), 0, new Set(), 2);
+    await assert.rejects(scrubAuthor(failing.store, "gone"), /went away/);
+
+    const retry = memoryStore(rankings, new Set());
+    assert.equal(await scrubAuthor(retry.store, "gone"), 2);
+    assert.deepEqual(retry.calls, [
+      `namingAuthor ${PAGE_SIZE}`,
+      "forgetCards 2",
+      "scrubAuthor 2",
+      `namingAuthor ${PAGE_SIZE}`,
+    ]);
+    assert.ok([...rankings.values()].every((ranking) => ranking.listAuthorUid === undefined));
   });
 });
 

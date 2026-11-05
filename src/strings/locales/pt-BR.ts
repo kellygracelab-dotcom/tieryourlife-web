@@ -870,7 +870,7 @@ const ptBR: Translation = {
     backToSection: "Voltar para {section}",
     suggestTopic: "Sugerir um tema",
     suggestTopicBody:
-      "Os temas são nomeados ou escolhidos ao publicar uma lista, em “Tema” nas Configurações da lista. O site oferece ali os temas que já existem; um novo é nomeado no app.",
+      "Os temas são nomeados ou escolhidos em “Tema” nas Configurações da lista. Um novo sai com a lista quando ela é publicada e aguarda um moderador.",
     suggestTopicMake: "Criar uma lista em {section}",
     sortPopular: "Populares",
     sortNewest: "Recentes",
@@ -1227,6 +1227,16 @@ const ptBR: Translation = {
     nothingInPool: "nada no grupo",
     topicsLoading: "Carregando temas…",
     topicsFailed: "Não foi possível carregar os temas.",
+    topicWaiting: "{name} · aguardando aprovação",
+    topicWaitingShort: "Aguardando aprovação",
+    topicNew: "Dê nome a um novo tema",
+    topicPropose: "Sugerir",
+    topicNewNote:
+      "Um tema novo aguarda um moderador. Até lá, a lista fica em Outros com este rótulo.",
+    topicTooMany:
+      "Três dos seus temas aguardam um moderador. Publique sem um tema novo ou espere que um deles seja decidido.",
+    topicUnavailable:
+      "Esse tema foi recusado, então a lista ficou sem tema. Escolha outro ou publique sem nenhum.",
     findSection: "Encontrar uma seção",
     modeRows: "Linhas",
     modeRanking: "Classificação",

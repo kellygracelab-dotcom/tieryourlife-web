@@ -928,7 +928,7 @@ const pl: Translation = {
     backToSection: "Wróć do działu {section}",
     suggestTopic: "Zaproponuj temat",
     suggestTopicBody:
-      "Tematy nazywa się lub wybiera przy publikowaniu listy, w polu „Temat” w Ustawieniach listy. Strona oferuje tam istniejące tematy; nowy nazywa się w aplikacji.",
+      "Tematy nazywa się lub wybiera w polu „Temat” w Ustawieniach listy. Nowy wychodzi razem z listą przy publikacji i czeka na moderatora.",
     suggestTopicMake: "Utwórz listę w: {section}",
     sortPopular: "Popularne",
     sortNewest: "Najnowsze",
@@ -1361,6 +1361,16 @@ const pl: Translation = {
     nothingInPool: "nic w puli",
     topicsLoading: "Wczytywanie tematów…",
     topicsFailed: "Nie udało się wczytać tematów.",
+    topicWaiting: "{name} · czeka na zatwierdzenie",
+    topicWaitingShort: "Czeka na zatwierdzenie",
+    topicNew: "Nazwij nowy temat",
+    topicPropose: "Zaproponuj",
+    topicNewNote:
+      "Nowy temat czeka na moderatora. Do tego czasu lista jest w dziale Inne z tą etykietą.",
+    topicTooMany:
+      "Trzy twoje tematy czekają na moderatora. Opublikuj bez nowego tematu albo poczekaj, aż któryś zostanie rozpatrzony.",
+    topicUnavailable:
+      "Ten temat odrzucono, więc lista nie ma teraz tematu. Wybierz inny albo opublikuj bez niego.",
     findSection: "Znajdź dział",
     modeRows: "Wiersze",
     modeRanking: "Ranking",

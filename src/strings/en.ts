@@ -836,7 +836,7 @@ export const en = {
     backToSection: "Back to {section}",
     suggestTopic: "Suggest a topic",
     suggestTopicBody:
-      "Topics are named or chosen when you publish a list, under Topic in its List settings. The site offers the topics there already; a new one is named in the app.",
+      "Topics are named or chosen under Topic in a list’s List settings. A new one goes out with the list when it is published and waits for a moderator.",
     suggestTopicMake: "Make a list in {section}",
     sortPopular: "Popular",
     sortNewest: "Newest",
@@ -1173,6 +1173,16 @@ export const en = {
     nothingInPool: "nothing in pool",
     topicsLoading: "Loading topics…",
     topicsFailed: "Could not load the topics.",
+    topicWaiting: "{name} · waiting for approval",
+    topicWaitingShort: "Waiting for approval",
+    topicNew: "Name a new topic",
+    topicPropose: "Suggest",
+    topicNewNote:
+      "A new topic waits for a moderator. Until then the list sits under Other with this label.",
+    topicTooMany:
+      "Three of your topics are waiting for a moderator. Publish without a new topic, or wait for one of them.",
+    topicUnavailable:
+      "That topic was turned down, so the list has none now. Choose another, or publish without one.",
     findSection: "Find a section",
     modeRows: "Rows",
     modeRanking: "Ranking",

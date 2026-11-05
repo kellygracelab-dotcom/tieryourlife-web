@@ -120,7 +120,10 @@ function topicOf(raw: unknown): BoardTopic | null {
   const topic = raw as Record<string, unknown>;
   const id = text(topic.id);
   const name = text(topic.name);
-  return id === null || id.length === 0 || name === null ? null : { id, name };
+  if (name === null || id === "") return null;
+  // No id is a name proposed here and not sent yet: it needs a name to be anything.
+  if (id === null) return name.trim() === "" ? null : { id: null, name };
+  return topic.waiting === true ? { id, name, waiting: true } : { id, name };
 }
 
 function itemOf(raw: unknown, tierUids: Set<string>, position: number): BoardItem | null {

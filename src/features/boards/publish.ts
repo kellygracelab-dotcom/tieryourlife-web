@@ -58,6 +58,17 @@ export function coverOf(
 }
 
 /**
+ * The topic as a publish says it, every time. A null id alone keeps the old
+ * topic for stale phones, so no topic is said out loud; a name the backend
+ * has not seen goes alone, since it refuses one beside an id or noTopic.
+ */
+function topicOf(board: Board): Pick<PublishRequest, "topicId" | "noTopic" | "newTopic"> {
+  const topic = board.topic;
+  if (topic === null) return { topicId: null, noTopic: true };
+  return topic.id === null ? { newTopic: topic.name } : { topicId: topic.id };
+}
+
+/**
  * The request the backend takes to publish a board: the snapshot the phone
  * sends. Cards go out ranked ones first, tier by tier, then the pool; a
  * picture of the person's own goes by id, and the backend makes the feed's
@@ -76,10 +87,7 @@ export function publishRequestOf(board: Board): PublishRequest | null {
     title: board.title.trim(),
     category: board.category,
     ...coverOf(board),
-    // Sent every time. A null alone keeps the old topic for stale phones, so
-    // no topic is also said out loud.
-    topicId: board.topic?.id ?? null,
-    ...(board.topic === null ? { noTopic: true } : {}),
+    ...topicOf(board),
     // Sent every time too: a republish without it would put the name back.
     anonymous: board.anonymous,
     // Where the cards came from, as the app sends it: the list credits it.
