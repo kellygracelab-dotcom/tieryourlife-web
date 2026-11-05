@@ -231,7 +231,7 @@ describe("POST /api/rank — Finish", () => {
     });
     assert.equal(answer.status, 201);
     const { code } = answer.body as { code: string };
-    const tiers = (table("rankings").get(code)?.snapshot as { tiers: { label: string }[] }).tiers;
+    const tiers = (table("rankings").get(code)!.snapshot as { tiers: { label: string }[] }).tiers;
     assert.deepEqual(
       tiers.map((tier) => tier.label),
       ["Top", "A"],
@@ -455,7 +455,7 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     const { deps, table } = setup(PERSON);
     table("rankings").set("abcdefgh", ranking("person", false));
     const labels = () =>
-      (table("rankings").get("abcdefgh")?.snapshot as { tiers: { label: string }[] }).tiers.map(
+      (table("rankings").get("abcdefgh")!.snapshot as { tiers: { label: string }[] }).tiers.map(
         (tier) => tier.label,
       );
     const body = { rows: [[0], []], tierLabels: [null, "Meh"] };
