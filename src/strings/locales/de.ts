@@ -415,7 +415,6 @@ const de: Translation = {
     share: "Teilen",
     linkCopied: "Link kopiert",
     copyFailed: "Link konnte nicht kopiert werden: {link}",
-    hiddenNotice: "Für dich ausgeblendet",
     undo: "Rückgängig",
     hiddenTitle: "Du hast diese Liste ausgeblendet",
     hiddenAuthorTitle: "Du hast alles von {name} ausgeblendet",
@@ -473,17 +472,12 @@ const de: Translation = {
     hideAuthor: "Auch alles von {name} ausblenden",
     byHand: "Ein Mensch liest jede Meldung. Genug davon blenden die Liste bis dahin aus.",
     send: "Melden",
-    sending: "Wird gesendet…",
     cancel: "Abbrechen",
     failed:
       "Die Meldung konnte nicht gesendet werden – nichts wurde gesendet. Versuch es in einer Minute noch einmal.",
     sentTitle: "Gemeldet und für dich ausgeblendet",
     sentBody: "Ein Mensch prüft Meldungen. Bis dahin bleibt sie für andere vielleicht sichtbar.",
     done: "Fertig",
-    signInTitle: "Zum Melden anmelden",
-    signInBody:
-      "Meldungen gehen an einen Menschen, deshalb brauchen sie ein Konto. Eine Liste ausblenden geht ohne – das bleibt auf diesem Gerät.",
-    hideInstead: "Lieber ausblenden",
     reasonWrongPlace: "Falsche Rubrik oder falsches Thema",
   },
   board: {
@@ -886,6 +880,8 @@ const de: Translation = {
     undo: "Rückgängig",
     waitingOnlyYou: "Bis dahin siehst nur du dieses Thema.",
     topicMissing: "In {section} gibt es kein solches Thema.",
+    notThisTopic: "Nicht dieses Thema",
+    notThisTopicSent: "Notiert. Ein Moderator verschiebt sie, wenn sie woanders hingehört.",
     backToSection: "Zurück zu {section}",
     suggestTopic: "Thema vorschlagen",
     suggestTopicBody:
@@ -1195,6 +1191,7 @@ const de: Translation = {
     needsItems: "Füge mindestens eine Karte hinzu, bevor du die Liste veröffentlichst.",
     publishedVersion: "Veröffentlichte Fassung",
     publishedVersionBody: "Dieses Board erneut senden, unter demselben Link.",
+    seeInCommunity: "In der Community ansehen",
     update: "Aktualisieren",
     updating: "Wird aktualisiert…",
     behind: "Die veröffentlichte Fassung ist älter als dieses Board.",

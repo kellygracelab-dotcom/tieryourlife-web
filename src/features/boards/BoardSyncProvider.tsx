@@ -55,7 +55,13 @@ const siteApi: BoardsApi = {
   forget: (uid) => forgetBoard(uid),
   published: () =>
     loadMyLists().then(
-      ({ lists }) => lists.map((list) => list.id),
+      ({ lists }) =>
+        lists.map((list) => ({
+          id: list.id,
+          boardUid:
+            typeof list.boardUid === "string" && list.boardUid !== "" ? list.boardUid : null,
+          updatedAt: list.updatedAt,
+        })),
       () => null,
     ),
 };

@@ -2,6 +2,7 @@ import { Fragment, useCallback, type ReactNode } from "react";
 import { Navigate } from "react-router";
 import type { SectionStats } from "../api/sections";
 import { isCategory, type FeedSort } from "../api/types";
+import type { Report } from "../features/community/useReporting";
 import type { LoadFeed } from "../features/feed/useFeed";
 import {
   builtInSection,
@@ -29,6 +30,8 @@ export interface SectionPageProps {
   topics?: TopicDeps;
   /** One section by its id, for one the sections do not hold. */
   loadOne?: (id: string) => Promise<SectionStats>;
+  /** Where a topic page's reports go: "Not this topic" and Report alike. */
+  report?: Report;
 }
 
 /**

@@ -21,6 +21,7 @@ import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import type { SnackbarNotice } from "../ui/Snackbar";
+import { useLeave } from "../ui/useLeave";
 import "../features/community/report.css";
 import "./ListPage.css";
 
@@ -131,10 +132,11 @@ function RankingsItem({ rankings }: { rankings: RankingsEntry | null }) {
 
 /**
  * What a visitor can do about a list besides ranking it, in the app's order:
- * see who made it, pass it on, keep it out of sight, complain. Reporting
- * needs an account, so a guest is asked to sign in first; hiding is this
- * device's business alone. Hiding everything from the author lives on their
- * page and in the report's receipt, as in the app.
+ * see who made it, pass it on, keep it out of sight, complain. A guest
+ * reports too, with no sign-in; hiding is this device's business alone.
+ * Either takes the list out of sight, and the page goes back to where it was
+ * opened from, as the app's screen closes. Hiding everything from the author
+ * lives on their page and in the report's receipt, as in the app.
  */
 function VisitorMenu({
   list,
@@ -149,18 +151,16 @@ function VisitorMenu({
   saving: SaveToMine;
   rankings: RankingsEntry | null;
 }) {
-  const { hideList, showList } = useHidden();
+  const { hideList } = useHidden();
+  const leave = useLeave();
   // An editorial list has no author to show, and a snapshot without the uid no page to show them on.
   const author = isEditorial(list) || list.authorUid === "" ? null : list;
 
   const hideNow = () => {
     hideList({ id: list.id, title: list.title });
-    notify({
-      text: strings.list.hiddenNotice,
-      action: { text: strings.list.undo, onClick: () => showList(list.id) },
-    });
+    leave();
   };
-  const reporting = useReporting({ report, onHide: hideNow, resumable: [list] });
+  const reporting = useReporting({ report, notify, onDone: leave });
 
   return (
     <>

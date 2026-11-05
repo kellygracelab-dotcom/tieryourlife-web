@@ -4,7 +4,8 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
 import type { SectionStats, Topic } from "../api/sections";
-import type { FeedPage, FeedQuery } from "../api/types";
+import type { ReportRequest } from "../api/community";
+import type { FeedPage, FeedQuery, ListSummary } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
 import { createSectionsStore, type SectionsDeps } from "../features/sections/useSections";
 import type { SignInOutcome } from "../lib/signIn";
@@ -62,11 +63,12 @@ const topics = {
 };
 
 const loadOne = vi.fn<(id: string) => Promise<SectionStats>>();
+const report = vi.fn<(id: string, request: ReportRequest) => Promise<void>>();
 const signIn = vi.fn<() => Promise<SignInOutcome>>();
 
 function open(path: string, account: Session["account"] = member) {
   const store = createSectionsStore({ ...sectionsDeps, now: () => 0 });
-  const deps = { load, store, topics, loadOne };
+  const deps = { load, store, topics, loadOne, report };
   const router = createMemoryRouter(
     [
       { path: "/s", element: <SectionsPage store={store} /> },
@@ -92,6 +94,8 @@ function open(path: string, account: Session["account"] = member) {
 }
 
 beforeEach(() => {
+  report.mockReset();
+  report.mockResolvedValue(undefined);
   load.mockReset();
   load.mockResolvedValue({ lists: [], nextCursor: null });
   sectionsDeps.load.mockReset();
@@ -422,6 +426,71 @@ describe("SectionPage", () => {
 });
 
 describe("TopicPage", () => {
+  const summary = (id: string, title: string, authorUid: string): ListSummary => ({
+    id,
+    title,
+    authorUid,
+    authorName: "Ann",
+    authorPhotoUrl: null,
+    category: "games",
+    itemCount: 3,
+    coverImageUrl: null,
+    previewImages: [],
+    tierColors: [],
+    updatedAt: 0,
+    takeCount: 0,
+  });
+
+  it("tells the moderators a list is not of this topic, and hides nothing", async () => {
+    load.mockResolvedValue({
+      lists: [summary("l1", "Mario karts", "u5"), summary("l2", "Mine", "u1")],
+      nextCursor: null,
+    });
+    open("/s/games/t/t2");
+    await userEvent.click(await screen.findByLabelText("More about Mario karts"));
+    const menu = within(screen.getByLabelText("More about Mario karts").closest("details")!);
+    expect(menu.getAllByRole("button").map((line) => line.textContent)).toEqual([
+      "Not this topic",
+      "Hide this list",
+      "Report this list",
+    ]);
+    await userEvent.click(menu.getByRole("button", { name: "Not this topic" }));
+    expect(report).toHaveBeenCalledExactlyOnceWith("l1", {
+      reason: "wrong_category",
+      note: null,
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Noted. A moderator will move it if it belongs elsewhere.",
+    );
+    expect(screen.getByRole("link", { name: /Mario karts/ })).toBeInTheDocument();
+
+    // One's own list may be out of place too, but is neither hidden nor reported.
+    await userEvent.click(screen.getByLabelText("More about Mine"));
+    const own = within(screen.getByLabelText("More about Mine").closest("details")!);
+    expect(own.getAllByRole("button").map((line) => line.textContent)).toEqual(["Not this topic"]);
+  });
+
+  it("says so when the word could not be sent", async () => {
+    report.mockRejectedValue(new ApiFailure({ kind: "offline" }));
+    load.mockResolvedValue({ lists: [summary("l1", "Mario karts", "u5")], nextCursor: null });
+    open("/s/games/t/t2");
+    await userEvent.click(await screen.findByLabelText("More about Mario karts"));
+    await userEvent.click(screen.getByRole("button", { name: "Not this topic" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("nothing was sent"));
+  });
+
+  it("reports a list of the topic and hides it at once", async () => {
+    load.mockResolvedValue({ lists: [summary("l1", "Mario karts", "u5")], nextCursor: null });
+    open("/s/games/t/t2");
+    await userEvent.click(await screen.findByLabelText("More about Mario karts"));
+    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
+    const form = screen.getByRole("dialog", { name: "Report this list" });
+    await userEvent.click(within(form).getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.click(within(form).getByRole("button", { name: "Report" }));
+    expect(report).toHaveBeenCalledExactlyOnceWith("l1", { reason: "spam", note: null });
+    expect(screen.queryByRole("link", { name: /Mario karts/ })).toBeNull();
+  });
+
   it("heads a topic with its section's name, its Follow and no counts, and lists only its lists", async () => {
     open("/s/games/t/t2");
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Pokémon");

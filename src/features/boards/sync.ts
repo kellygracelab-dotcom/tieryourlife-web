@@ -19,8 +19,17 @@ export interface BoardsApi {
   board(uid: string): Promise<KeptBoard>;
   keep(uid: string, request: KeepBoardRequest): Promise<{ uid: string; revision: number }>;
   forget(uid: string): Promise<void>;
-  /** The ids of the lists this account has in the feed, or null when they could not be read. */
-  published(): Promise<string[] | null>;
+  /** The lists this account has in the feed, or null when they could not be read. */
+  published(): Promise<PublishedEntry[] | null>;
+}
+
+/** One of the account's published lists, as `lists/mine` names it. */
+export interface PublishedEntry {
+  id: string;
+  /** The board it was published from; null on lists published before the server kept it. */
+  boardUid: string | null;
+  /** When it last went out. */
+  updatedAt: number;
 }
 
 export interface SyncDeps {
@@ -470,27 +479,73 @@ async function withPictures(board: Board, deps: SyncDeps): Promise<Board> {
 /**
  * Drops a published id the account no longer has: a snapshot can vanish
  * without this device (taken down, or unpublished elsewhere), and a board
- * still claiming to be public hides the one switch that would fix it.
+ * still claiming to be public hides the one switch that would fix it. And
+ * the other way round, as the phone's #236 does: a board whose publish went
+ * through while its answer never came gets its list back, found by the
+ * board's uid the account keeps on it.
  */
 async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
-  const claimed = deps.repository.all().filter((board) => board.publishedId !== null);
-  if (claimed.length === 0) return;
+  const boards = deps.repository.all();
+  const claimed = boards.filter((board) => board.publishedId !== null);
+  const unlinked = boards.filter(lostItsList);
+  if (claimed.length === 0 && unlinked.length === 0) return;
   const theirs = await deps.api.published();
   if (theirs === null) return;
   check(deps);
+  const ids = new Set(theirs.map((entry) => entry.id));
   // Read again after the wait: a board may have moved here meanwhile, and
   // only the publication is this step's to change, and only while it is still the one
   // that was asked about. Everything else is kept as it is now.
   const gone = claimed.flatMap((asked) => {
     const board = deps.repository.get(asked.uid);
     const id = board?.publishedId ?? null;
-    return board !== null && id !== null && id === asked.publishedId && !theirs.includes(id)
-      ? [board]
-      : [];
+    return board !== null && id !== null && id === asked.publishedId && !ids.has(id) ? [board] : [];
   });
   // Private again, the board is one's own: the name publishing put on it
   // goes, or Your lists would take it for a copy of somebody else's.
-  if (gone.length > 0) {
-    deps.repository.saveAll(gone.map((board) => setPublished(board, null, null, deps.now())));
+  const changed = gone.map((board) => setPublished(board, null, null, deps.now()));
+  for (const [uid, entry] of relinks(unlinked, theirs, deps.repository.all())) {
+    const board = deps.repository.get(uid);
+    if (board === null || !lostItsList(board)) continue;
+    // Its own edit time stays, as on the phone: an edit made after the list
+    // went out still reads as not sent, and Update has it to send.
+    changed.push({
+      ...board,
+      publishedId: entry.id,
+      publishedEditedAt: Math.min(board.editedAt, entry.updatedAt),
+    });
   }
+  if (changed.length > 0) deps.repository.saveAll(changed);
+}
+
+/** A board that may have lost its list: out as nothing, and with the section every publish needs. */
+const lostItsList = (board: Board): boolean =>
+  board.publishedId === null &&
+  board.rankingOf === null &&
+  board.deletedAt === null &&
+  board.category !== null &&
+  board.category !== "";
+
+/**
+ * The list each board gets back, by board uid: only a list no board here
+ * claims, and only when the account names a single one for the board.
+ */
+function relinks(
+  unlinked: readonly Board[],
+  theirs: readonly PublishedEntry[],
+  boards: readonly Board[],
+): Map<string, PublishedEntry> {
+  const waiting = new Set(unlinked.map((board) => board.uid));
+  const claimed = new Set(boards.flatMap((board) => board.publishedId ?? []));
+  const found = new Map<string, PublishedEntry[]>();
+  for (const entry of theirs) {
+    if (entry.boardUid === null || !waiting.has(entry.boardUid) || claimed.has(entry.id)) continue;
+    found.set(entry.boardUid, [...(found.get(entry.boardUid) ?? []), entry]);
+  }
+  const single = new Map<string, PublishedEntry>();
+  for (const [uid, entries] of found) {
+    const [only] = entries;
+    if (entries.length === 1 && only !== undefined) single.set(uid, only);
+  }
+  return single;
 }

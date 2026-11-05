@@ -37,6 +37,7 @@ import {
   type DisplayMode,
 } from "./model";
 import { titleOf } from "./boardText";
+import { AS_COMMUNITY } from "./ownList";
 import { publishProblemsOf, publishRequestOf } from "./publish";
 import { filedUnder, sectionChoices } from "./sectionChoices";
 import { sentTopic, settledTopic, type FindTopic } from "./topic";
@@ -572,9 +573,9 @@ export function BoardSettings({
                   </Button>
                 }
               >
-                <Link className="sheet-row__link" to={published}>
+                <Link className="sheet-row__link" to={published} state={AS_COMMUNITY}>
                   <Icon name="open_in_new" />
-                  <span>{strings.new.openList}</span>
+                  <span>{strings.boards.seeInCommunity}</span>
                 </Link>
                 {problem !== null && <span className="sheet-row__note">{problem}</span>}
                 {failed("update")}

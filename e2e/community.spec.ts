@@ -16,39 +16,45 @@ const summary = {
   takeCount: list.takeCount,
 };
 
-test("hides a list from its menu, with a way back in the snackbar and on the page", async ({
+test("hides a list from its menu: the page closes, and says so when opened again, with a way back", async ({
   page,
 }) => {
   await mockBackend(page);
+  await page.route("**/lists?**", (route) =>
+    route.fulfill({ json: { lists: [summary], nextCursor: null } }),
+  );
   await page.goto(`/l/${list.id}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
 
   await page.getByLabel("More about this list").click();
   await page.getByRole("button", { name: "Hide this list" }).click();
+  // Opened by its link, nothing of the site is behind it: the page goes home, as the app's screen closes.
+  await expect(page).toHaveURL("/");
+
+  // Hidden for good: the page says so when opened again, after a reload too.
+  await page.goto(`/l/${list.id}`);
   await expect(page.getByRole("heading", { level: 2, name: "You hid this list" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Whose arrangement to show" })).toBeHidden();
-
-  await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByRole("group", { name: "Whose arrangement to show" })).toBeVisible();
-
-  // Hidden for good this time: the page says so after a reload too.
-  await page.getByLabel("More about this list").click();
-  await page.getByRole("button", { name: "Hide this list" }).click();
-  await page.reload();
-  await expect(page.getByRole("heading", { level: 2, name: "You hid this list" })).toBeVisible();
   await page.getByRole("button", { name: "Unhide" }).click();
   await expect(page.getByRole("group", { name: "Whose arrangement to show" })).toBeVisible();
 });
 
-test("asks a guest to sign in before reporting, and offers to hide instead", async ({ page }) => {
+test("takes a guest's report with no sign-in, and hides the list at once", async ({ page }) => {
   await mockBackend(page);
+  const reports: unknown[] = [];
+  await page.route(`**/lists/${list.id}/report`, (route) => {
+    reports.push(route.request().postDataJSON());
+    return route.fulfill({ status: 204 });
+  });
   await page.goto(`/l/${list.id}`);
   await page.getByLabel("More about this list").click();
   await page.getByRole("button", { name: "Report this list" }).click();
-  const ask = page.getByRole("dialog", { name: "Sign in to report" });
-  await expect(ask).toContainText("Reports go to a person");
-  await ask.getByRole("button", { name: "Hide instead" }).click();
+  const form = page.getByRole("dialog", { name: "Report this list" });
+  await form.getByRole("radio", { name: "Spam or advertising" }).check();
+  await form.getByRole("button", { name: "Report", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Reported, and hidden for you" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "You hid this list" })).toBeVisible();
+  await expect.poll(() => reports).toEqual([{ reason: "spam", note: null }]);
 });
 
 test("a guest's settings: the theme on this device, and the privacy policy", async ({ page }) => {
