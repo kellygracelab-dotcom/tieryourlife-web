@@ -377,11 +377,12 @@ describe("syncBoards", () => {
     const { repository, run } = setUp(["p-still"]);
     repository.saveAll([
       { ...films("a", "A"), publishedId: "p-still" },
-      { ...films("b", "B"), publishedId: "p-gone" },
+      { ...films("b", "B"), publishedId: "p-gone", authorName: "Danylo" },
     ]);
     await run();
     expect(repository.get("a")?.publishedId).toBe("p-still");
-    expect(repository.get("b")?.publishedId).toBeNull();
+    // One's own again, not a copy saved from somebody else.
+    expect(repository.get("b")).toMatchObject({ publishedId: null, authorName: null });
 
     const unsure = setUp(null);
     unsure.repository.save({ ...films("c", "C"), publishedId: "p-unknown" });

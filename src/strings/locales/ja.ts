@@ -310,13 +310,13 @@ const ja: Translation = {
     startOver: "最初からやり直す",
     more: "その他",
     failedOffline:
-      "接続がありません。下書きはこの端末に残っています。オンラインに戻ってからもう一度お試しください。",
+      "接続がありません。リストはこの端末に残っています。オンラインに戻ってからもう一度お試しください。",
     failedBanned: "今は公開できません。",
     failedTooMany:
-      "このアカウントは公開できるリストの上限に達しています。先にアプリで1つ公開を取り消してください。",
+      "このアカウントは公開できるリストの上限に達しています。先に「公開中のリスト」で1つ取り下げてください。",
     failedSignedOut: "公開にはアカウントが必要です。ログインしてもう一度お試しください。",
-    failedTooLarge: "リストが大きすぎて公開できません。{detail}",
-    failedInvalid: "リストが受け付けられませんでした。{detail}",
+    failedTooLarge: "リストが大きすぎて公開できません。",
+    failedInvalid: "リストが受け付けられませんでした。",
     failedOther: "公開できませんでした。内容は失われていません。もう一度お試しください。",
     editTitle: "リストを編集",
     editSignIn: "公開したリストを編集するにはログインしてください。",
@@ -600,6 +600,7 @@ const ja: Translation = {
   card: {
     by: "{name} さん",
     items: { other: "カード {n} 枚" },
+    moreTiers: { other: "ほか{n}個のティア" },
     rankings: { other: "{n}件のランキング" },
     noArt: "画像なし",
     yours: "あなたのリスト",

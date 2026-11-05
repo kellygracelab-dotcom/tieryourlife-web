@@ -15,7 +15,6 @@ import {
   newBoard,
   poolCount,
   poolTier,
-  rankedCount,
   rankedTiers,
   rename,
   putBack,
@@ -34,6 +33,7 @@ import {
   type PublishingDeps,
 } from "../features/boards/BoardSettings";
 import { RankedList } from "../features/boards/RankedList";
+import { metaOf } from "../features/boards/boardText";
 import { filedUnder } from "../features/boards/sectionChoices";
 import { shareBoard as shareBoardPicture, type Share } from "../features/ranking/share";
 import type { EditorDeps } from "../features/sections/editorDeps";
@@ -319,7 +319,8 @@ export function BoardPage({
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
-  // The board's own scratch for the ranking board: nothing of it outlives the page.
+  // The board's own scratch for the ranking board: nothing of it outlives the
+  // page. Where the pool sits and the menu's hint are the device's, and stay.
   const [scratch] = useState(() => memoryStore());
 
   usePageTitle(board === null ? null : board.title || strings.boards.untitled);
@@ -592,14 +593,16 @@ export function BoardPage({
   };
 
   // The picture of the board as the phone draws it, every tier and the pool;
-  // the address under it is the published list's when there is one, the site's otherwise.
+  // the address under it is the published list's when there is one, the site's
+  // otherwise. A house board is tied to its list by the house's link, not by an id of its own.
+  const listId = board.publishedId ?? houseListId;
   const shareBoard = () =>
     share(
       view.list,
       view.rows,
-      board.publishedId === null
+      listId === null
         ? window.location.origin
-        : `${window.location.origin}/l/${encodeURIComponent(board.publishedId)}`,
+        : `${window.location.origin}/l/${encodeURIComponent(listId)}`,
     ).catch(() => setNotice({ text: strings.rank.downloadFailed }));
 
   // A picture belongs to an account: a guest is asked to sign in at the first
@@ -619,7 +622,6 @@ export function BoardPage({
     return keepWeb(url);
   };
 
-  const ranked = rankedCount(board);
   const inPool = poolCount(board);
   const tools = (
     <AddCardBox
@@ -650,13 +652,12 @@ export function BoardPage({
             onEdit={() => setEditingTitle(true)}
             onKeep={(title) => {
               setEditingTitle(false);
-              keep(rename(board, title.trim().length > 0 ? title : strings.boards.untitled, now()));
+              keep(rename(board, title, now()));
             }}
           />
           <p className="list-head__meta">
             {[
-              ranked === 0 ? strings.boards.nothingRanked : plural(strings.boards.ranked, ranked),
-              plural(strings.boards.inPool, inPool),
+              metaOf(board),
               ...(board.category === null ? [] : [filedUnder(board.category, sections, me)]),
             ].join(" · ")}
           </p>
@@ -773,6 +774,7 @@ export function BoardPage({
                 .join(",")}`}
               list={view.list}
               store={scratch}
+              device={localStorageStore}
               strip={board.displayMode === "HORIZONTAL_SCROLL"}
               edit={{
                 rows: view.rows,

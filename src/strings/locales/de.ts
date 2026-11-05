@@ -314,14 +314,14 @@ const de: Translation = {
     startOver: "Von vorn",
     more: "Mehr",
     failedOffline:
-      "Keine Verbindung. Dein Entwurf ist auf diesem Gerät sicher; versuch es erneut, sobald du wieder online bist.",
+      "Keine Verbindung. Nichts ist verloren: Die Liste ist auf diesem Gerät sicher. Versuch es erneut, sobald du wieder online bist.",
     failedBanned: "Du kannst im Moment nicht veröffentlichen.",
     failedTooMany:
-      "Dieses Konto hat so viele Listen veröffentlicht, wie es kann. Nimm erst eine in der App zurück.",
+      "Dieses Konto hat so viele Listen veröffentlicht, wie es kann. Nimm erst eine unter „Deine öffentlichen Listen“ zurück.",
     failedSignedOut:
       "Zum Veröffentlichen brauchst du ein Konto. Melde dich an und versuch es noch einmal.",
-    failedTooLarge: "Die Liste ist zu groß zum Veröffentlichen. {detail}",
-    failedInvalid: "Die Liste wurde abgelehnt. {detail}",
+    failedTooLarge: "Die Liste ist zu groß zum Veröffentlichen.",
+    failedInvalid: "Die Liste wurde abgelehnt.",
     failedOther: "Konnte nicht veröffentlichen. Nichts ist verloren. Versuch es noch einmal.",
     editTitle: "Liste bearbeiten",
     editSignIn: "Melde dich an, um deine veröffentlichten Listen zu bearbeiten.",
@@ -615,6 +615,7 @@ const de: Translation = {
   card: {
     by: "von {name}",
     items: { one: "{n} Karte", other: "{n} Karten" },
+    moreTiers: { one: "und {n} weitere Stufe", other: "und {n} weitere Stufen" },
     rankings: { one: "{n} Rangliste", other: "{n} Ranglisten" },
     noArt: "Kein Bild",
     yours: "Deine Liste",

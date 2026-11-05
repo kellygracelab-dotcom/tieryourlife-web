@@ -309,13 +309,13 @@ const ptBR: Translation = {
     startOver: "Começar de novo",
     more: "Mais",
     failedOffline:
-      "Sem conexão. Seu rascunho está a salvo neste aparelho; tente de novo quando voltar a ficar online.",
+      "Sem conexão. Nada foi perdido: a lista está a salvo neste aparelho. Tente de novo quando voltar a ficar online.",
     failedBanned: "Você não pode publicar no momento.",
     failedTooMany:
-      "Esta conta já publicou o máximo de listas que pode. Retire uma no app primeiro.",
+      "Esta conta já publicou o máximo de listas que pode. Retire uma em Suas listas públicas primeiro.",
     failedSignedOut: "Publicar precisa de uma conta. Entre e tente de novo.",
-    failedTooLarge: "A lista é grande demais para publicar. {detail}",
-    failedInvalid: "A lista foi recusada. {detail}",
+    failedTooLarge: "A lista é grande demais para publicar.",
+    failedInvalid: "A lista foi recusada.",
     failedOther: "Não foi possível publicar. Nada foi perdido. Tente de novo.",
     editTitle: "Editar lista",
     editSignIn: "Entre para editar as listas que você publicou.",
@@ -600,6 +600,7 @@ const ptBR: Translation = {
   card: {
     by: "de {name}",
     items: { one: "{n} card", other: "{n} cards" },
+    moreTiers: { one: "e mais {n} nível", many: "e mais {n} níveis", other: "e mais {n} níveis" },
     rankings: { one: "{n} classificação", other: "{n} classificações" },
     noArt: "Sem imagem",
     yours: "Sua lista",

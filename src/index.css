@@ -71,6 +71,8 @@ p {
      as wide as its letters, and lines with an icon reflowed when it came. */
   width: 1em;
   height: 1em;
+  /* Its square holds in a crowded flex row: an error line, a pill's check. */
+  flex-shrink: 0;
   overflow: hidden;
   white-space: nowrap;
   direction: ltr;

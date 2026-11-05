@@ -308,13 +308,13 @@ const es: Translation = {
     startOver: "Empezar de nuevo",
     more: "Más",
     failedOffline:
-      "Sin conexión. Tu borrador está a salvo en este dispositivo; inténtalo de nuevo cuando vuelvas a estar en línea.",
+      "Sin conexión. No se perdió nada: la lista está a salvo en este dispositivo. Inténtalo de nuevo cuando vuelvas a estar en línea.",
     failedBanned: "Ahora mismo no puedes publicar.",
     failedTooMany:
-      "Esta cuenta ya publicó todas las listas que puede. Retira una en la app primero.",
+      "Esta cuenta ya publicó todas las listas que puede. Retira una en Tus listas públicas primero.",
     failedSignedOut: "Para publicar hace falta una cuenta. Inicia sesión e inténtalo de nuevo.",
-    failedTooLarge: "La lista es demasiado grande para publicarse. {detail}",
-    failedInvalid: "La lista fue rechazada. {detail}",
+    failedTooLarge: "La lista es demasiado grande para publicarse.",
+    failedInvalid: "La lista fue rechazada.",
     failedOther: "No se pudo publicar. No se perdió nada. Inténtalo de nuevo.",
     editTitle: "Editar lista",
     editSignIn: "Inicia sesión para editar las listas que publicaste.",
@@ -602,6 +602,7 @@ const es: Translation = {
   card: {
     by: "de {name}",
     items: { one: "{n} tarjeta", other: "{n} tarjetas" },
+    moreTiers: { one: "y {n} nivel más", many: "y {n} niveles más", other: "y {n} niveles más" },
     rankings: { one: "{n} clasificación", other: "{n} clasificaciones" },
     noArt: "Sin imagen",
     yours: "Tu lista",

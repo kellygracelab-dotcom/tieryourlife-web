@@ -272,10 +272,16 @@ describe("BoardSettings: public", () => {
     expect(held.publishedId).toBeNull();
   });
 
-  it("names the category as what stands in the way of a signed-in person", () => {
-    show({ ...filmBoard(), category: null }, signedIn);
-    expect(publicSwitch()).toBeDisabled();
-    expect(screen.getByText("Pick a category.")).toBeInTheDocument();
+  it("names the category as what stands in the way of a signed-in person, on the switch itself", async () => {
+    const publish = vi.fn();
+    show({ ...filmBoard(), category: null }, signedIn, { publish });
+    // Still a Tab stop, so the keyboard reaches it and hears why.
+    expect(publicSwitch()).toBeEnabled();
+    expect(publicSwitch()).toHaveAttribute("aria-disabled", "true");
+    expect(publicSwitch()).toHaveAccessibleDescription("Pick a category.");
+    await userEvent.click(publicSwitch());
+    expect(publicSwitch()).not.toBeChecked();
+    expect(publish).not.toHaveBeenCalled();
   });
 
   it("publishes the board, keeps the id and the name, and sends it again on Update", async () => {

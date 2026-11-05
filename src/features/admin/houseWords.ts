@@ -1,5 +1,5 @@
 import type { ApiError } from "../../api/errors";
-import { fill, strings } from "../../strings";
+import { strings } from "../../strings";
 import type { PublishProblem } from "../boards/publish";
 
 /** Whether a house list is going out for the first time, or over one already out. */
@@ -19,6 +19,10 @@ export function problemText(problem: PublishProblem): string {
   }
 }
 
+/** Staff are told the proxy's own reason too, as it gave it. */
+const withDetail = (text: string, detail: string | null): string =>
+  detail === null || detail === "" ? text : `${text} ${detail}`;
+
 /**
  * What a refused publish or replace says. The backend refuses these as it
  * refuses any publish; a 403 means the one asking is not staff, or, for a
@@ -27,9 +31,9 @@ export function problemText(problem: PublishProblem): string {
 export function failureText(error: ApiError, kind: HouseSend): string {
   switch (error.kind) {
     case "invalid":
-      return fill(strings.new.failedInvalid, { detail: error.detail ?? "" }).trim();
+      return withDetail(strings.new.failedInvalid, error.detail);
     case "tooLarge":
-      return fill(strings.new.failedTooLarge, { detail: error.detail ?? "" }).trim();
+      return withDetail(strings.new.failedTooLarge, error.detail);
     case "pictureRefused":
       return strings.admin.housePictureRefused;
     case "notYours":

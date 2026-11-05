@@ -289,10 +289,13 @@ export function BoardSettings({
     : problems.includes("noItems")
       ? strings.boards.needsItems
       : problems.length > 0
-        ? strings.new.failedTooLarge.replace("{detail}", "").trim()
+        ? strings.new.failedTooLarge
         : null;
-  // Why the switch cannot be turned on.
+  // Why the switch cannot be turned on. Blocked, it stays a Tab stop that
+  // says so (aria-disabled), as a disabled input would be skipped unheard.
   const blocker = !signedIn ? strings.boards.needsAccount : problem;
+  const blocked = !isPublic && signedIn && blocker !== null;
+  const why = !isPublic && blocker !== null ? `${id}-public-why` : undefined;
   const failed = (on: Failure["on"]) =>
     failure !== null && failure.on === on ? (
       <span className="sheet-row__problem" role="alert">
@@ -396,13 +399,19 @@ export function BoardSettings({
                     role="switch"
                     className="switch"
                     checked={isPublic}
-                    disabled={busy !== "idle" || (!isPublic && signedIn && blocker !== null)}
-                    onChange={onSwitch}
+                    disabled={busy !== "idle"}
+                    aria-disabled={blocked || undefined}
+                    aria-describedby={why}
+                    onChange={() => {
+                      if (!blocked) onSwitch();
+                    }}
                   />
                 }
               >
-                {!isPublic && blocker !== null && (
-                  <span className="sheet-row__note">{blocker}</span>
+                {why !== undefined && (
+                  <span id={why} className="sheet-row__note">
+                    {blocker}
+                  </span>
                 )}
                 {busy === "publishing" && (
                   <span className="sheet-row__note" role="status">
@@ -679,7 +688,7 @@ export function BoardSettings({
                     {board.displayMode === mode && (
                       <Icon name="check" className="segmented__check" />
                     )}
-                    {MODES[mode].title}
+                    <span className="segmented__text">{MODES[mode].title}</span>
                   </button>
                 ))}
               </div>

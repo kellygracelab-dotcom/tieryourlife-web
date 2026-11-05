@@ -309,13 +309,13 @@ const tr: Translation = {
     startOver: "Baştan başla",
     more: "Daha fazla",
     failedOffline:
-      "Bağlantı yok. Taslağınız bu cihazda güvende; çevrimiçi olduğunuzda tekrar deneyin.",
+      "Bağlantı yok. Hiçbir şey kaybolmadı: liste bu cihazda güvende. Çevrimiçi olduğunuzda tekrar deneyin.",
     failedBanned: "Şu anda yayımlayamazsınız.",
     failedTooMany:
-      "Bu hesap yayımlayabileceği kadar liste yayımladı. Önce uygulamada birini yayından kaldırın.",
+      "Bu hesap yayımlayabileceği kadar liste yayımladı. Önce Herkese açık listeleriniz bölümünde birini yayından kaldırın.",
     failedSignedOut: "Yayımlamak için hesap gerekir. Oturum açıp tekrar deneyin.",
-    failedTooLarge: "Liste yayımlanamayacak kadar büyük. {detail}",
-    failedInvalid: "Liste reddedildi. {detail}",
+    failedTooLarge: "Liste yayımlanamayacak kadar büyük.",
+    failedInvalid: "Liste reddedildi.",
     failedOther: "Yayımlanamadı. Hiçbir şey kaybolmadı. Tekrar deneyin.",
     editTitle: "Listeyi düzenle",
     editSignIn: "Yayımladığınız listeleri düzenlemek için oturum açın.",
@@ -599,6 +599,7 @@ const tr: Translation = {
   card: {
     by: "{name} tarafından",
     items: { other: "{n} kart" },
+    moreTiers: { one: "ve {n} seviye daha", other: "ve {n} seviye daha" },
     rankings: { other: "{n} sıralama" },
     noArt: "Görsel yok",
     yours: "Listeniz",

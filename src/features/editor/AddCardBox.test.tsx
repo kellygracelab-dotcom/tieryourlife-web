@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FoundPicture, PicturePage } from "../../api/pictures";
 import { PictureRefused } from "../../lib/pictures";
-import { AddCardBox, type Keep } from "./AddCardBox";
-import type { EditorAction, EditorItem } from "./model";
+import { AddCardBox, type Keep, type Upload } from "./AddCardBox";
+import { LIMITS, type EditorAction, type EditorItem } from "./model";
 import { LOOKUP_DEBOUNCE_MS, type FindPictures } from "./usePictures";
 
 vi.mock("../../lib/api", async () => (await import("../../test/apiMock")).apiStubs());
@@ -34,11 +34,13 @@ function setup({
   keep = vi.fn<Keep>(),
   category = "anime",
   items = [],
+  upload = vi.fn<Upload>(),
 }: {
   find: FindPictures;
   keep?: Keep;
   category?: string | null;
   items?: EditorItem[];
+  upload?: Upload;
 }) {
   const dispatch = vi.fn<(action: EditorAction) => void>();
   render(
@@ -47,7 +49,7 @@ function setup({
       category={category}
       dispatch={dispatch}
       find={find}
-      upload={vi.fn()}
+      upload={upload}
       keep={keep}
     />,
   );
@@ -389,6 +391,68 @@ describe("AddCardBox", () => {
     await userEvent.click(screen.getByRole("button", { name: "Show more" }));
     expect(await screen.findByRole("button", { name: /Two/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+  });
+
+  it("names a single picture with the words typed for it, and leaves several unnamed", async () => {
+    const upload = vi.fn<Upload>(async (file) => ({
+      pictureId: file.name,
+      previewUrl: `https://dl/${file.name}`,
+    }));
+    const { dispatch } = setup({ find: async () => page([]), upload });
+    const field = screen.getByRole("textbox", { name: "Add a card" });
+    fireEvent.change(field, { target: { value: " My cat " } });
+    const picker = document.querySelector<HTMLInputElement>("input[type='file']")!;
+    const png = (name: string) => new File(["x"], name, { type: "image/png" });
+
+    await userEvent.upload(picker, png("cat.png"));
+    await vi.waitFor(() =>
+      expect(dispatch).toHaveBeenCalledWith({
+        type: "addItem",
+        title: "My cat",
+        imageUrl: "https://dl/cat.png",
+        pictureId: "cat.png",
+      }),
+    );
+    expect(field).toHaveValue("");
+
+    fireEvent.change(field, { target: { value: "Pets" } });
+    await userEvent.upload(picker, [png("a.png"), png("b.png")]);
+    await vi.waitFor(() => expect(dispatch).toHaveBeenCalledTimes(3));
+    expect(
+      dispatch.mock.calls.slice(1).map(([action]) => "title" in action && action.title),
+    ).toEqual(["", ""]);
+    expect(field).toHaveValue("Pets");
+  });
+
+  it("says a full board is full, keeps the words, and sends no picture up for it", async () => {
+    const upload = vi.fn<Upload>();
+    const keep = vi.fn<Keep>();
+    const full = Array.from({ length: LIMITS.items }, (_, n) => ({
+      key: `k${n}`,
+      title: `Card ${n}`,
+      imageUrl: null,
+      pictureId: null,
+    }));
+    const find = vi.fn<FindPictures>(async () =>
+      page([
+        picture("anilist:20", { title: "Naruto" }),
+        picture("web:abc", { title: "Borscht", source: "web", kind: "web" }),
+      ]),
+    );
+    const { dispatch } = setup({ find, upload, keep, items: full });
+    await typeAndWait("naruto");
+    const field = screen.getByRole("textbox", { name: "Add a card" });
+    fireEvent.submit(field.closest("form")!);
+    expect(screen.getByRole("alert")).toHaveTextContent("At most 2000 cards.");
+    expect(field).toHaveValue("naruto");
+
+    await userEvent.click(screen.getByRole("button", { name: /^Naruto/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Borscht/ }));
+    const picker = document.querySelector<HTMLInputElement>("input[type='file']")!;
+    await userEvent.upload(picker, new File(["x"], "cat.png", { type: "image/png" }));
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(keep).not.toHaveBeenCalled();
+    expect(upload).not.toHaveBeenCalled();
   });
 
   it("looks pasted names up where the board is about, in the catalogues alone", async () => {

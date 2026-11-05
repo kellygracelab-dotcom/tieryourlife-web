@@ -64,6 +64,8 @@
 .tier__caption {
   font: var(--text-caption);
   font-weight: 500;
+  /* An unbroken caption wraps inside the band instead of spilling onto the row. */
+  overflow-wrap: anywhere;
 }
 
 .tier__items,

@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import type { PublishedList, PublishedTier } from "../../api/types";
+import { loadStrings, setStrings } from "../../strings";
 import {
   BOARD_SHAPE,
   downloadShare,
@@ -204,6 +205,37 @@ describe("drawShare", () => {
       ]),
     );
     expect(texts().some((text) => text.includes("more tier"))).toBe(false);
+  });
+
+  it("cuts a word wider than its tile, on whichever line it falls", async () => {
+    const { paint, texts } = recorder();
+    await drawShare(
+      paint,
+      {
+        ...data,
+        itemCount: 1,
+        items: [{ title: "Supercalifragilistic and other very long names", imageUrl: null }],
+        tiers: [tiers[1]!],
+        rows: [[0]],
+      },
+      async () => null,
+    );
+    expect(texts()).toEqual(
+      expect.arrayContaining(["Superca… @226,258", "and @226,276", "other v… @226,294"]),
+    );
+  });
+
+  it("counts the hidden tiers in the reader's language", async () => {
+    await loadStrings("ru");
+    onTestFinished(() => setStrings("en", null));
+    const { paint, texts } = recorder();
+    const tall = Array.from({ length: 9 }, (_, n) => ({ ...tiers[1]!, label: `T${n}` }));
+    await drawShare(
+      paint,
+      { ...data, tiers: tall, rows: [[0, 1, 2], [], [], [], [], [], [], [], []] },
+      async () => null,
+    );
+    expect(texts()).toContain("и ещё 3 уровня @48,1218");
   });
 });
 

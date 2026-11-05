@@ -324,13 +324,13 @@ const pl: Translation = {
     startOver: "Zacznij od nowa",
     more: "Więcej",
     failedOffline:
-      "Brak połączenia. Twój szkic jest bezpieczny na tym urządzeniu; spróbuj ponownie, gdy wrócisz do sieci.",
+      "Brak połączenia. Nic nie przepadło: lista jest bezpieczna na tym urządzeniu. Spróbuj ponownie, gdy wrócisz do sieci.",
     failedBanned: "Na razie nie możesz publikować.",
     failedTooMany:
-      "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w aplikacji.",
+      "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w Twoich publicznych listach.",
     failedSignedOut: "Do publikowania potrzebne jest konto. Zaloguj się i spróbuj ponownie.",
-    failedTooLarge: "Lista jest za duża, by ją opublikować. {detail}",
-    failedInvalid: "Lista została odrzucona. {detail}",
+    failedTooLarge: "Lista jest za duża, by ją opublikować.",
+    failedInvalid: "Lista została odrzucona.",
     failedOther: "Nie udało się opublikować. Nic nie przepadło. Spróbuj ponownie.",
     editTitle: "Edytuj listę",
     editSignIn: "Zaloguj się, aby edytować swoje opublikowane listy.",
@@ -622,6 +622,12 @@ const pl: Translation = {
   card: {
     by: "od {name}",
     items: { one: "{n} karta", few: "{n} karty", many: "{n} kart", other: "{n} karty" },
+    moreTiers: {
+      one: "i jeszcze {n} poziom",
+      few: "i jeszcze {n} poziomy",
+      many: "i jeszcze {n} poziomów",
+      other: "i jeszcze {n} poziomu",
+    },
     rankings: {
       one: "{n} ranking",
       few: "{n} rankingi",

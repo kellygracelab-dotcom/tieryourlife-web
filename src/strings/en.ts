@@ -307,13 +307,13 @@ export const en = {
     startOver: "Start over",
     more: "More",
     failedOffline:
-      "No connection. Your draft is safe on this device; try again once you are back online.",
+      "No connection. Nothing was lost: the list is safe on this device. Try again once you are back online.",
     failedBanned: "You cannot publish at the moment.",
     failedTooMany:
-      "This account has published as many lists as it can. Unpublish one in the app first.",
+      "This account has published as many lists as it can. Take one down in Your public lists first.",
     failedSignedOut: "Publishing needs an account. Sign in and try again.",
-    failedTooLarge: "The list is too big to publish. {detail}",
-    failedInvalid: "The list was refused. {detail}",
+    failedTooLarge: "The list is too big to publish.",
+    failedInvalid: "The list was refused.",
     failedOther: "Could not publish. Nothing was lost. Try again.",
     editTitle: "Edit list",
     editSignIn: "Sign in to edit the lists you published.",
@@ -1236,6 +1236,7 @@ export const en = {
   card: {
     by: "by {name}",
     items: { one: "{n} card", other: "{n} cards" },
+    moreTiers: { one: "and {n} more tier", other: "and {n} more tiers" },
     rankings: { one: "{n} ranking", other: "{n} rankings" },
     noArt: "No picture",
     yours: "Your list",

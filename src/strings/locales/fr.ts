@@ -316,13 +316,13 @@ const fr: Translation = {
     startOver: "Recommencer",
     more: "Plus",
     failedOffline:
-      "Pas de connexion. Votre brouillon est à l’abri sur cet appareil ; réessayez une fois de retour en ligne.",
+      "Pas de connexion. Rien n’est perdu : la liste est à l’abri sur cet appareil. Réessayez une fois de retour en ligne.",
     failedBanned: "Vous ne pouvez pas publier pour le moment.",
     failedTooMany:
-      "Ce compte a publié autant de listes qu’il le peut. Retirez-en d’abord une dans l’application.",
+      "Ce compte a publié autant de listes qu’il le peut. Retirez-en d’abord une dans Vos listes publiques.",
     failedSignedOut: "Publier demande un compte. Connectez-vous et réessayez.",
-    failedTooLarge: "La liste est trop grande pour être publiée. {detail}",
-    failedInvalid: "La liste a été refusée. {detail}",
+    failedTooLarge: "La liste est trop grande pour être publiée.",
+    failedInvalid: "La liste a été refusée.",
     failedOther: "Impossible de publier. Rien n’est perdu. Réessayez.",
     editTitle: "Modifier la liste",
     editSignIn: "Connectez-vous pour modifier les listes que vous avez publiées.",
@@ -615,6 +615,11 @@ const fr: Translation = {
   card: {
     by: "de {name}",
     items: { one: "{n} carte", other: "{n} cartes" },
+    moreTiers: {
+      one: "et {n} autre rang",
+      many: "et {n} autres rangs",
+      other: "et {n} autres rangs",
+    },
     rankings: { one: "{n} classement", other: "{n} classements" },
     noArt: "Sans image",
     yours: "Votre liste",

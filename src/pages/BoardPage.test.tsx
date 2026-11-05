@@ -16,6 +16,7 @@ import { boardsRepository, type BoardsRepository } from "../features/boards/repo
 import type { PublishingDeps } from "../features/boards/BoardSettings";
 import type { Share } from "../features/ranking/share";
 import { TIER_PRESETS } from "../features/editor/model";
+import { MENU_COUNT_KEY } from "../features/tierboard/RankingBoard";
 import { TIER_HOLD_MS } from "../features/tierboard/useTierMove";
 import { SessionContext, type Session } from "../app/session";
 import type { SectionStats } from "../api/sections";
@@ -259,7 +260,7 @@ describe("BoardPage", () => {
     // The field goes, and the keyboard carries on from the pencil rather than the page's top.
     expect(screen.getByRole("button", { name: "Edit list name" })).toHaveFocus();
 
-    // Escape puts the old name back; an empty name is Untitled list.
+    // Escape puts the old name back, and so does an emptied one, as on the phone.
     await userEvent.click(screen.getByRole("button", { name: "Edit list name" }));
     await userEvent.type(screen.getByRole("textbox", { name: "Title" }), "x{Escape}");
     expect(repository.get("films")?.title).toBe("Films I make people watch");
@@ -267,7 +268,10 @@ describe("BoardPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Edit list name" }));
     await userEvent.clear(screen.getByRole("textbox", { name: "Title" }));
     await userEvent.keyboard("{Enter}");
-    expect(repository.get("films")?.title).toBe("Untitled list");
+    expect(repository.get("films")?.title).toBe("Films I make people watch");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Films I make people watch",
+    );
   });
 
   it("adds a card by name into the pool, and removes one for good, with Undo", async () => {
@@ -301,6 +305,29 @@ describe("BoardPage", () => {
     ).toBeNull();
   });
 
+  it("remembers on this device that a card's menu was opened, past the page", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    await userEvent.dblClick(screen.getByRole("button", { name: "Climax" }));
+    expect(screen.getByRole("menu", { name: "Climax" })).toBeInTheDocument();
+    expect(localStorage.getItem(MENU_COUNT_KEY)).toBe("1");
+  });
+
+  it("starts the line under the title with the pool while nothing is ranked", () => {
+    const repository = boardsRepository(memoryStore());
+    const next = uids();
+    repository.save(
+      addToPool(
+        newBoard("films", "Films", 100, next),
+        [{ title: "Heat", imageUrl: null }],
+        100,
+        next,
+      ),
+    );
+    open(repository, "/b/films");
+    expect(screen.getByText("1 in pool · nothing ranked yet")).toBeInTheDocument();
+  });
   it("sends the whole board to the trash and goes back to the boards", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
@@ -1029,6 +1056,26 @@ describe("BoardPage: a house list", () => {
     expect(house.replace).toHaveBeenCalledWith("H2", expect.objectContaining({ title: "Films" }));
   });
 
+  it("puts the house list's address under its picture", async () => {
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save({ ...filmBoard(), category: "film_tv" });
+    const houseStore = memoryStore();
+    linkToHouse("films", "H2", houseStore);
+    const share = vi.fn<Share>(() => Promise.resolve());
+    open(boardsRepository(memoryStore()), "/b/films", {
+      house: sending(),
+      houseStore,
+      houseRepository,
+      share,
+    });
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    await userEvent.click(screen.getByRole("button", { name: "Share as image" }));
+    expect(share).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      `${window.location.origin}/l/H2`,
+    );
+  });
   it("says why it did not go out, and goes out as a new list when the old one is gone", async () => {
     const houseRepository = boardsRepository(memoryStore());
     houseRepository.save({ ...filmBoard(), category: "film_tv" });

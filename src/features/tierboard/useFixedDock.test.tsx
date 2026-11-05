@@ -213,6 +213,25 @@ describe("useFixedDock", () => {
     expect(fake.frames.size).toBe(0);
   });
 
+  it("scrolls at the window's foot while the pool stays beside the board", () => {
+    const fake = fakeEnv();
+    const el = dockElement(100);
+    el.style.position = "sticky";
+    renderHook(() =>
+      useFixedDock({
+        poolBox: { current: el },
+        boardEnd: { current: document.createElement("div") },
+        fixed: false,
+        dragging: true,
+        dragNow: () => dragging(800 - EDGE_ZONE / 2),
+        nudge: () => undefined,
+        env: fake.env,
+      }),
+    );
+    fake.step();
+    expect(window.scrollBy).toHaveBeenLastCalledWith(0, edgeSpeed(0.5));
+  });
+
   it("does not scroll for a pool that is not fixed to the window, the tray on a phone", () => {
     const fake = fakeEnv();
     const el = dockElement(600);

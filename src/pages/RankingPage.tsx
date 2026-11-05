@@ -68,6 +68,8 @@ interface BodyProps {
   onEdit: () => void;
   edit: EditMode;
   store: KeyValueStore;
+  /** Where the dock and the menu's hint are kept, beyond this visit. */
+  device: KeyValueStore;
   savedNote: boolean;
   share: Share;
   copy: (text: string) => Promise<void>;
@@ -155,6 +157,7 @@ function Body({
   onEdit,
   edit,
   store,
+  device,
   savedNote,
   share,
   copy,
@@ -212,6 +215,7 @@ function Body({
             key={`edit-${ranking.code}`}
             list={listOf(ranking)}
             store={store}
+            device={device}
             edit={edit}
           />
         </BoardFrameContext.Provider>
@@ -354,6 +358,7 @@ export function RankingPage({
         onEdit={() => setChosen(true)}
         edit={{ rows: shown.rows, save, cancel: leaveEditing }}
         store={scratch}
+        device={store}
         savedNote={savedAt !== null}
         share={share}
         copy={copy}

@@ -132,7 +132,11 @@ export const POOL_LABEL = "Unranked";
 
 export type NextUid = () => string;
 
-const clip = (text: string, max: number): string => text.replace(/\s+/g, " ").slice(0, max);
+/** Spaces tidied and at most `max` UTF-16 units, cut between whole characters: an emoji is never halved. */
+const clip = (text: string, max: number): string => {
+  const cut = text.replace(/\s+/g, " ").trim().slice(0, max);
+  return (/[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut).trimEnd();
+};
 
 const captionOf = (caption: string | null): string | null => {
   if (caption === null) return null;
@@ -249,9 +253,10 @@ function tidy(board: Board): Board {
   return { ...board, items: [...items, ...trashed] };
 }
 
+/** A title emptied keeps the old one, as on the phone. */
 export function rename(board: Board, title: string, now: number): Board {
   const next = clip(title, BOARD_LIMITS.title);
-  return next === board.title ? board : touched({ ...board, title: next }, now);
+  return next === "" || next === board.title ? board : touched({ ...board, title: next }, now);
 }
 
 /** A topic lives inside one section: another section leaves the list without one. */

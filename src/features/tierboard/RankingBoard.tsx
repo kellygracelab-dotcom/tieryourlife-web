@@ -115,6 +115,11 @@ interface RankingBoardProps {
   list: PublishedList;
   hitTest?: HitTest;
   store?: KeyValueStore;
+  /**
+   * Where the device's own choices go, the dock and the menu's hint: the
+   * store by default, the browser's for a page whose store is scratch.
+   */
+  device?: KeyValueStore;
   keep?: Keep;
   /** Changes a ranking already kept, behind the same link. */
   rearrange?: (code: string, rows: Rows) => Promise<unknown>;
@@ -363,6 +368,7 @@ export function RankingBoard({
   list,
   hitTest,
   store = localStorageStore,
+  device = store,
   keep = keepRanking,
   rearrange = rearrangeRanking,
   take = noteTake,
@@ -414,7 +420,7 @@ export function RankingBoard({
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
-  const { dock, rows, wide, canDock, choose, startResize } = useDock(store);
+  const { dock, rows, wide, canDock, choose, startResize } = useDock(device);
   // On a narrow window the box that brings cards in waits behind Add, in the
   // pool, whichever head the pool shows; on a wide one it stands in the pool,
   // and an empty pool gives it the cursor. Opened, the catalogue's field
@@ -518,12 +524,12 @@ export function RankingBoard({
 
   // The owner's pool says how to reach a card's menu until it has been
   // opened a few times; the count is kept on the device.
-  const [menusOpened, setMenusOpened] = useState(() => Number(store.read(MENU_COUNT_KEY)) || 0);
+  const [menusOpened, setMenusOpened] = useState(() => Number(device.read(MENU_COUNT_KEY)) || 0);
   const onMenu = useCallback(() => {
-    const next = (Number(store.read(MENU_COUNT_KEY)) || 0) + 1;
-    store.write(MENU_COUNT_KEY, String(next));
+    const next = (Number(device.read(MENU_COUNT_KEY)) || 0) + 1;
+    device.write(MENU_COUNT_KEY, String(next));
     setMenusOpened(next);
-  }, [store]);
+  }, [device]);
 
   // The result opens above the board, and the person may be far below it.
   const finished = finish.status !== "idle";

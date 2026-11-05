@@ -197,8 +197,9 @@ function wrap(paint: Paint, text: string, maxWidth: number, maxLines: number): s
       line = word;
       if (lines.length === maxLines) {
         const rest = `${lines[maxLines - 1] ?? ""} ${words.slice(index).join(" ")}`;
-        lines[maxLines - 1] = ellipsize(paint, rest, maxWidth);
-        return lines;
+        lines[maxLines - 1] = rest;
+        // A word wider than the tile is cut too, on whichever line it fell.
+        return lines.map((part) => ellipsize(paint, part, maxWidth));
       }
     } else {
       line = next;
@@ -325,7 +326,7 @@ export async function drawShare(
     const y = (last?.y ?? boardTop) + (last?.height ?? plan.rowHeight) + 34;
     paint.fillStyle = DIM;
     paint.font = `400 22px ${FONT}`;
-    paint.fillText(`and ${plan.moreTiers} more ${plan.moreTiers === 1 ? "tier" : "tiers"}`, pad, y);
+    paint.fillText(plural(strings.card.moreTiers, plan.moreTiers), pad, y);
   }
 
   const footerY = height - pad - 24;

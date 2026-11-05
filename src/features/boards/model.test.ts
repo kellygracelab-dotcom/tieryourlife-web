@@ -80,6 +80,15 @@ describe("a new board", () => {
     // The same name again is not an edit.
     expect(rename(b, b.title, 3000)).toBe(b);
   });
+
+  it("trims a title, keeps the old one for an empty one, and never halves an emoji", () => {
+    const b = board().board;
+    expect(rename(b, "   Spaced   out   ", 2000).title).toBe("Spaced out");
+    expect(rename(b, "   ", 2000)).toBe(b);
+    const long = `${"a".repeat(BOARD_LIMITS.title - 1)}😀tail`;
+    expect(rename(b, long, 2000).title).toBe("a".repeat(BOARD_LIMITS.title - 1));
+    expect(newBoard("n", long, 1000, () => "t").title).toBe("a".repeat(BOARD_LIMITS.title - 1));
+  });
 });
 
 describe("cards", () => {
