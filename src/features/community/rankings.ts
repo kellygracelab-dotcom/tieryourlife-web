@@ -26,6 +26,46 @@ export function readerName(name: string): string | null {
   return said === "" || said === "Anonymous" ? null : said;
 }
 
+/** A reader's ranking chosen to look at, kept in the page's history entry. */
+interface KeptReader {
+  listId: string;
+  /** The list as it was then: after a republish the ranking may name other cards. */
+  updatedAt: number;
+  ranking: ReaderRanking;
+}
+
+type ListAt = { id: string; updatedAt: number };
+
+/**
+ * The reader chosen on this entry of the history, so Back, Forward and a
+ * reload show their ranking again: the backend has no way to ask for one
+ * reader's ranking alone, and paging to them again is long.
+ */
+export function readerKeptIn(state: unknown, list: ListAt): ReaderRanking | null {
+  const kept = (state as { reader?: Partial<KeptReader> } | null)?.reader;
+  if (typeof kept !== "object" || kept === null) return null;
+  if (kept.listId !== list.id || kept.updatedAt !== list.updatedAt) return null;
+  const ranking = kept.ranking;
+  if (typeof ranking !== "object" || ranking === null || !Array.isArray(ranking.tierLabels)) {
+    return null;
+  }
+  return readersOf([ranking])[0] ?? null;
+}
+
+/** The entry's state with this reader kept in it, or with none; whatever else it held stays. */
+export function keepingReader(
+  state: unknown,
+  list: ListAt,
+  ranking: ReaderRanking | null,
+): Record<string, unknown> {
+  const rest: Record<string, unknown> =
+    typeof state === "object" && state !== null ? { ...(state as Record<string, unknown>) } : {};
+  delete rest.reader;
+  if (ranking === null) return rest;
+  const reader: KeptReader = { listId: list.id, updatedAt: list.updatedAt, ranking };
+  return { ...rest, reader };
+}
+
 export interface Placing {
   tiers: PublishedTier[];
   rows: number[][];

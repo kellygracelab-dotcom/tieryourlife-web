@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PageTitle } from "../app/pageTitle";
-import { Link, Navigate, useParams } from "react-router";
+import { Navigate, useParams } from "react-router";
 import { useSession } from "../app/session";
 import type { Topic } from "../api/sections";
 import { FollowButton } from "../features/community/FollowButton";
@@ -8,6 +8,7 @@ import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
 import { sectionPath, waitingPath, type Section } from "../features/sections/model";
 import { TopicTiles } from "../features/sections/TopicTiles";
+import { SuggestTopicDialog } from "../features/sections/SuggestTopicDialog";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import { WaitingSheet } from "../features/sections/WaitingSheet";
 import { loadSection } from "../lib/api";
@@ -39,6 +40,7 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
   const collapsed = useCollapsed();
   const { toggle, failed, overlays } = useFollowFlow();
   const [opened, setOpened] = useState<Topic | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
 
   const followSection = (following: boolean) =>
     store.setFollowing(section.id, following).then((refused) => {
@@ -59,14 +61,17 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
       onClick={() => toggle(section.name, section.following, followSection)}
     />
   );
+  // Says where topics come from first: a press alone makes no list.
   const suggest = (
-    <Link
+    <button
+      type="button"
       className="btn btn--text section-topics__suggest"
-      to={`/b/new?category=${encodeURIComponent(section.id)}`}
+      aria-haspopup="dialog"
+      onClick={() => setSuggesting(true)}
     >
       <Icon name="add" className="btn__icon" />
       <span>{strings.sections.suggestTopic}</span>
-    </Link>
+    </button>
   );
   const anyTopics = approved.length > 0 || waiting.length > 0;
   // One wait for the topics and the first page together, then everything at
@@ -131,6 +136,7 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
           onClose={() => setOpened(null)}
         />
       )}
+      {suggesting && <SuggestTopicDialog section={section} onClose={() => setSuggesting(false)} />}
     </section>
   );
 }

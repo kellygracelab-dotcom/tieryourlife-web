@@ -359,6 +359,7 @@ const fr: Translation = {
     allHidden: "Tout ici est masqué pour vous. La liste est dans les paramètres.",
     hiddenTile: "Masqué pour vous",
     undo: "Annuler",
+    cardMore: "Plus sur {title}",
     omitted: {
       one: "{n} liste masquée n’est pas affichée.",
       other: "{n} listes masquées ne sont pas affichées.",
@@ -886,6 +887,9 @@ const fr: Translation = {
     topicMissing: "Il n’y a pas de tel thème dans {section}.",
     backToSection: "Retour à {section}",
     suggestTopic: "Proposer un thème",
+    suggestTopicBody:
+      "Les thèmes se nomment ou se choisissent quand vous publiez une liste, sous « Thème » dans ses Paramètres de la liste. Le site y propose les thèmes existants ; un nouveau se nomme dans l’application.",
+    suggestTopicMake: "Créer une liste dans {section}",
     sortPopular: "Populaires",
     sortNewest: "Récentes",
     topicWaiting: "{name} · en attente",
@@ -896,7 +900,7 @@ const fr: Translation = {
     tabExplore: "Explorer",
     tabFollowing: "Abonnements",
     community: "Communauté",
-    popularThisWeek: "Populaire cette semaine",
+    popular: "Populaires",
     manage: "Gérer",
     reasonSection: "Dans {name}",
     emptyTitle: "Vous ne suivez encore rien",
@@ -1204,6 +1208,8 @@ const fr: Translation = {
     behind: "La version publiée est en retard sur ce tableau.",
     publishing: "Publication…",
     publishedNote: "Publiée. Toute personne ayant le lien peut la classer.",
+    publishedAsRanking:
+      "Publiée comme votre classement de cette liste. Aucune seconde liste n’apparaît dans le fil.",
     unpublished: "Dépubliée. Le lien ne fonctionne plus.",
     shareImage: "Partager en image",
     shareImageSub: "Une image de ce tableau, avec un lien vers le site",

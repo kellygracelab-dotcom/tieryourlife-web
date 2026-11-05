@@ -369,6 +369,7 @@ const ru: Translation = {
     allHidden: "Всё здесь у вас скрыто. Список скрытого — в настройках.",
     hiddenTile: "Скрыто у вас",
     undo: "Отменить",
+    cardMore: "Ещё о «{title}»",
     omitted: {
       one: "{n} скрытый список не показан.",
       few: "{n} скрытых списка не показаны.",
@@ -921,6 +922,9 @@ const ru: Translation = {
     topicMissing: "В разделе {section} нет такой темы.",
     backToSection: "Вернуться в раздел {section}",
     suggestTopic: "Предложить тему",
+    suggestTopicBody:
+      "Темы называют или выбирают при публикации списка — в пункте «Тема» в настройках списка. На сайте там есть уже существующие темы; новую называют в приложении.",
+    suggestTopicMake: "Создать список в разделе «{section}»",
     sortPopular: "Популярные",
     sortNewest: "Новые",
     topicWaiting: "{name} · ждёт",
@@ -931,7 +935,7 @@ const ru: Translation = {
     tabExplore: "Обзор",
     tabFollowing: "Подписки",
     community: "Сообщество",
-    popularThisWeek: "Популярное за неделю",
+    popular: "Популярное",
     manage: "Управлять",
     reasonSection: "В разделе «{name}»",
     emptyTitle: "Вы пока ни на что не подписаны",
@@ -1298,6 +1302,8 @@ const ru: Translation = {
     behind: "Опубликованная версия отстала от вашей доски.",
     publishing: "Публикуем…",
     publishedNote: "Опубликовано. Любой со ссылкой может разложить список.",
+    publishedAsRanking:
+      "Опубликована как ваше ранжирование того списка. Второго списка в ленте не появится.",
     unpublished: "Снято с публикации. Ссылка больше не работает.",
     shareImage: "Поделиться картинкой",
     shareImageSub: "Картинка этой доски и ссылка на сайт",

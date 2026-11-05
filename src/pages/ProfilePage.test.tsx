@@ -9,6 +9,7 @@ import { intentStoreForTests } from "../features/community/afterSignIn";
 import { HIDDEN_KEY } from "../features/community/hidden";
 import type { FollowDeps } from "../features/community/useFollow";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
+import { report } from "../lib/api";
 import { memoryStore } from "../lib/storage";
 import { ProfilePage } from "./ProfilePage";
 
@@ -71,6 +72,10 @@ const open = (
     </SessionContext.Provider>,
   );
 };
+
+/** The menu on one list's card. */
+const cardMenu = (title: string) =>
+  within(screen.getByLabelText(`More about ${title}`).closest("details")!);
 
 beforeEach(() => {
   load.mockReset();
@@ -329,10 +334,55 @@ describe("ProfilePage", () => {
     expect(await screen.findByRole("link", { name: /List a/ })).toBeInTheDocument();
   });
 
+  it("offers Hide and Report on each card, as the app's long press does", async () => {
+    open();
+    await screen.findByRole("link", { name: /List a/ });
+    await userEvent.click(screen.getByLabelText("More about List a"));
+    await userEvent.click(cardMenu("List a").getByRole("button", { name: "Hide this list" }));
+    expect(screen.queryByRole("link", { name: /List a/ })).toBeNull();
+    // The card keeps its place as a tile with Undo, which has the focus the menu had.
+    const tile = screen.getByText("Hidden for you").parentElement!;
+    expect(within(tile).getByRole("button", { name: "Undo" })).toHaveFocus();
+    expect(screen.getByRole("link", { name: /List b/ })).toBeInTheDocument();
+    await userEvent.click(within(tile).getByRole("button", { name: "Undo" }));
+    expect(await screen.findByRole("link", { name: /List a/ })).toBeInTheDocument();
+  });
+
+  it("reports a list from its card, and the receipt stays while the card is hidden", async () => {
+    vi.mocked(report).mockReset();
+    vi.mocked(report).mockResolvedValue(undefined);
+    open();
+    await screen.findByRole("link", { name: /List b/ });
+    await userEvent.click(screen.getByLabelText("More about List b"));
+    await userEvent.click(cardMenu("List b").getByRole("button", { name: "Report this list" }));
+    const form = screen.getByRole("dialog", { name: "Report this list" });
+    await userEvent.click(within(form).getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.click(within(form).getByRole("button", { name: "Report" }));
+    expect(report).toHaveBeenCalledExactlyOnceWith("b", { reason: "spam", note: null });
+    expect(
+      await screen.findByRole("dialog", { name: "Reported, and hidden for you" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /List b/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /List a/ })).toBeInTheDocument();
+  });
+
+  it("asks a guest to sign in before a report from a card", async () => {
+    vi.mocked(report).mockReset();
+    open({ kind: "guest", uid: "g1" });
+    await screen.findByRole("link", { name: /List a/ });
+    await userEvent.click(screen.getByLabelText("More about List a"));
+    await userEvent.click(cardMenu("List a").getByRole("button", { name: "Report this list" }));
+    expect(screen.getByRole("dialog", { name: "Sign in to report" })).toBeInTheDocument();
+    expect(report).not.toHaveBeenCalled();
+  });
+
   it("offers no way to hide oneself", async () => {
     open({ ...member, uid: "u2" });
     await screen.findByRole("link", { name: "Edit in Settings" });
     expect(screen.queryByLabelText("More options")).toBeNull();
+    // Nor one's own lists, card by card.
+    await screen.findByRole("link", { name: /List a/ });
+    expect(screen.queryByLabelText("More about List a")).toBeNull();
   });
 
   it("shows a hidden author's page without their lists, with a way back", async () => {

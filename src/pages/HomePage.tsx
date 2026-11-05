@@ -71,12 +71,12 @@ function Explore({
       <SectionGrid sections={sections} known={known} />
       <section className="home__popular" aria-labelledby="popular">
         <div className="home__heading">
-          <h2 id="popular">{strings.sections.popularThisWeek}</h2>
+          <h2 id="popular">{strings.sections.popular}</h2>
           <p>{strings.home.popularNote}</p>
         </div>
         <FeedGrid
           state={popular.state}
-          label={strings.sections.popularThisWeek}
+          label={strings.sections.popular}
           retry={popular.retry}
           more={popular.more}
         />

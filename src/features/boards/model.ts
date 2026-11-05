@@ -77,6 +77,16 @@ export interface Board {
   topic: BoardTopic | null;
   /** Published with no name or face: sent with every publish, and kept in the account when true. */
   anonymous: boolean;
+  /**
+   * This device's, as on the phone: the published list the board was saved
+   * from, sent with every publish so the copy credits it. Never kept in the account.
+   */
+  takenFrom: string | null;
+  /**
+   * This device's: the list the board is out as one's ranking of, when the
+   * backend kept a publish as that; publishedId stays null then. Never kept in the account.
+   */
+  rankingOf: string | null;
   /** A game of Play in progress, kept in the account as the app keeps it; null when none is. */
   play: SyncedPlay | null;
 }
@@ -171,6 +181,8 @@ export function newBoard(uid: string, title: string, now: number, nextUid: NextU
     coverImageUrls: [],
     authorName: null,
     publishedId: null,
+    takenFrom: null,
+    rankingOf: null,
     deletedAt: null,
     tiers,
     items: [],
@@ -303,16 +315,32 @@ export const setPublished = (
 ): Board => ({
   ...board,
   publishedId,
+  rankingOf: null,
   authorName,
   editedAt: now,
   publishedEditedAt: publishedId === null ? null : now,
 });
 
+/**
+ * Out as one's ranking of the list it was saved from, or no longer: the
+ * backend's answer to a copy published as it came. The author's name stays,
+ * since the cards are still theirs.
+ */
+export const setRanking = (board: Board, listId: string | null, now: number): Board => ({
+  ...board,
+  publishedId: null,
+  rankingOf: listId,
+  editedAt: now,
+  publishedEditedAt: listId === null ? null : now,
+});
+
+/** Out in public: as a list of its own, or as one's ranking of another. */
+export const isOut = (board: Board): boolean =>
+  board.publishedId !== null || board.rankingOf !== null;
+
 /** Whether the board moved on since its published copy was sent. */
 export const isBehind = (board: Board): boolean =>
-  board.publishedId !== null &&
-  board.publishedEditedAt !== null &&
-  board.editedAt > board.publishedEditedAt;
+  isOut(board) && board.publishedEditedAt !== null && board.editedAt > board.publishedEditedAt;
 
 /** Cards into the pool, after the ones already there, in the order given. */
 export function addToPool(
@@ -634,7 +662,7 @@ const shows = (board: Board, show: BoardShow): boolean => {
     case "inProgress":
       return poolCount(board) > 0 || rankedCount(board) === 0;
     case "public":
-      return board.publishedId !== null;
+      return isOut(board);
     case "saved":
       return board.authorName !== null && board.publishedId === null;
     default:

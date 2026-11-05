@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePageTitle } from "../app/pageTitle";
 import { Link, useLocation, useParams } from "react-router";
+import type { ListSummary } from "../api/types";
 import { useSession } from "../app/session";
 import { keepIntent, takeIntent } from "../features/community/afterSignIn";
 import { FollowButton } from "../features/community/FollowButton";
@@ -8,8 +9,10 @@ import { isAuthorHidden } from "../features/community/hidden";
 import { SignInDialog } from "../features/community/SignInDialog";
 import { useFollow, type FollowDeps } from "../features/community/useFollow";
 import { useHidden } from "../features/community/useHidden";
+import { useReporting, type Report } from "../features/community/useReporting";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
+import { report as sendReport } from "../lib/api";
 import { isEditorialAuthor } from "../lib/editorial";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
@@ -30,9 +33,12 @@ export interface AuthorHint {
 interface ProfilePageProps {
   load?: LoadFeed;
   follow?: FollowDeps;
+  report?: Report;
 }
 
 type Asking = "closed" | "open" | "busy";
+
+const NO_LISTS: readonly ListSummary[] = [];
 
 /** An editorial account has no page of its own: its lists stand without an author. */
 export function ProfilePage(props: ProfilePageProps) {
@@ -40,19 +46,19 @@ export function ProfilePage(props: ProfilePageProps) {
   return isEditorialAuthor(uid) ? <NotFoundPage /> : <AuthorProfile {...props} />;
 }
 
-function AuthorProfile({ load, follow }: ProfilePageProps) {
+function AuthorProfile({ load, follow, report = sendReport }: ProfilePageProps) {
   const { uid = "" } = useParams();
   const location = useLocation();
   const hint = (location.state as { author?: AuthorHint } | null)?.author ?? null;
   const { account, signIn } = useSession();
   const feed = useFeed({ author: uid, sort: "recent" }, load);
   const following = useFollow(uid, follow);
-  const { hidden, hideAuthor, showAuthor } = useHidden();
+  const { hidden, hideAuthor, showAuthor, hideList } = useHidden();
   const [signingIn, setSigningIn] = useState<Asking>("closed");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
 
-  const lists = feed.state.status === "ready" ? feed.state.lists : [];
+  const lists = feed.state.status === "ready" ? feed.state.lists : NO_LISTS;
   const first = lists[0];
   const own = account?.kind === "signedIn" && account.uid === uid;
   // One's own page wears one's own name. Anybody else's own lists carry a
@@ -124,6 +130,14 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
   };
 
   const hiddenAuthor = isAuthorHidden(hidden, uid);
+
+  // Each card's Report, as the app's long press offers it: one dialog for the
+  // page, so it outlives the card it hides and the author hidden with it.
+  const reporting = useReporting({
+    report,
+    onHide: (list) => hideList({ id: list.id, title: list.title }),
+    resumable: lists,
+  });
 
   // Unhide goes as it is pressed; the menu it stands in for comes back and takes the focus.
   const head = useRef<HTMLElement>(null);
@@ -208,6 +222,7 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
           retry={feed.retry}
           more={feed.more}
           showAuthor={false}
+          onReport={own ? undefined : reporting.start}
         />
       )}
 
@@ -219,6 +234,7 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
         onSignIn={onSignIn}
         onCancel={closeAsk}
       />
+      {reporting.dialog}
       <Snackbar notice={notice} onDone={clearNotice} />
     </section>
   );

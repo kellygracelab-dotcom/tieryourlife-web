@@ -7,7 +7,7 @@ import {
   useState,
   type RefObject,
 } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import type { ReaderRanking } from "../api/community";
 import { isOwnList, type BasedOn, type PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
@@ -15,7 +15,7 @@ import { useSession } from "../app/session";
 import type { BoardsRepository } from "../features/boards/repository";
 import { AuthorLine } from "../features/community/AuthorLine";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
-import { placedBy, readerName } from "../features/community/rankings";
+import { keepingReader, placedBy, readerKeptIn, readerName } from "../features/community/rankings";
 import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
@@ -50,10 +50,10 @@ import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { useBackCloses } from "../ui/useBackCloses";
 import { PlayButton } from "../features/play/PlayButton";
 import { localGames } from "../features/play/savedGames";
 import { usePlay } from "../features/play/usePlay";
-import { usePlayBack } from "../features/play/usePlayBack";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
@@ -64,6 +64,12 @@ type View = "theirs" | "mine";
 
 /** The spec's 200 ms for the cards to move when the switch changes boards. */
 const SWITCH_MS = 200;
+
+/** A reader without a name is "Someone" on the switch too, in this language. */
+const named = (ranking: ReaderRanking): ReaderRanking => ({
+  ...ranking,
+  authorName: readerName(ranking.authorName) ?? strings.profile.someone,
+});
 
 /** This device began ranking the list, or finished: then it opens on Mine. */
 const begunHere = (store: KeyValueStore, list: PublishedList): boolean =>
@@ -289,7 +295,25 @@ function OpenList({
     author.known && !begunHere(localStorageStore, list) ? "theirs" : "mine",
   );
   // A reader's placing chosen in the rankings sheet, shown in the left half.
-  const [chosen, setChosen] = useState<ReaderRanking | null>(null);
+  // It is kept in the history entry too, so Back, Forward and a reload bring
+  // it back as the app's saved state does.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [chosen, setChosen] = useState<ReaderRanking | null>(() => {
+    const kept = readerKeptIn(location.state, list);
+    return kept === null ? null : named(kept);
+  });
+  const keepChosen = (ranking: ReaderRanking | null) => {
+    setChosen(ranking === null ? null : named(ranking));
+    void navigate(
+      { pathname: location.pathname, search: location.search, hash: location.hash },
+      {
+        replace: true,
+        preventScrollReset: true,
+        state: keepingReader(location.state, list, ranking),
+      },
+    );
+  };
   const [sheet, setSheet] = useState(false);
   const rankings = useRankings(list.id);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
@@ -311,12 +335,7 @@ function OpenList({
   };
   const choose = (ranking: ReaderRanking | null) => {
     remember();
-    // A reader without a name is "Someone" on the switch too, in this language.
-    setChosen(
-      ranking === null
-        ? null
-        : { ...ranking, authorName: readerName(ranking.authorName) ?? strings.profile.someone },
-    );
+    keepChosen(ranking);
     setView("theirs");
     setSheet(false);
   };
@@ -324,7 +343,7 @@ function OpenList({
   const withdraw = () => {
     if (chosen?.mine === true) {
       remember();
-      setChosen(null);
+      keepChosen(null);
     }
     rankings.withdraw();
   };
@@ -395,7 +414,14 @@ function OpenList({
       return () => restoreMine(before, was);
     },
   });
-  usePlayBack(play);
+  // Back closes the sheet first, then Play, before it leaves the list: one
+  // blocker for both, the router keeping only one.
+  const { playing, quit } = play;
+  const closeTop = useCallback(() => {
+    if (sheet) setSheet(false);
+    else quit();
+  }, [sheet, quit]);
+  useBackCloses(sheet || playing, closeTop);
 
   const theirs = useMemo(
     () => (chosen === null ? { tiers: list.tiers, ...author } : placedBy(list, chosen)),

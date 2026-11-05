@@ -752,7 +752,9 @@ function OpenBoard({
                   ? strings.boards.unpublished
                   : what === "updated"
                     ? strings.owner.saved
-                    : strings.boards.publishedNote,
+                    : what === "ranking"
+                      ? strings.boards.publishedAsRanking
+                      : strings.boards.publishedNote,
             })
           }
           // A house list never goes out under the person's name: its sheet offers no Public switch.
