@@ -27,6 +27,9 @@ type Ready = Extract<FeedState, { status: "ready" }>;
 
 const LOADING: FeedState = { status: "loading" };
 
+/** How many pages of nothing new Show more reads on its own before it is offered again. */
+export const PAGES_READ_ON = 5;
+
 export type LoadFeed = (query: FeedQuery) => Promise<FeedPage>;
 
 /** A first page as it was last read, to open with while the fresh one is on its way. */
@@ -192,26 +195,46 @@ export function useFeed(
           : now,
       );
     patch((now) => ({ ...now, more: "loading" }));
-    load({ ...stable, after }).then(
-      (page) => {
-        // Somebody's own Following feed is not kept, not even for the visit.
-        if (kept !== null) {
-          const further = furtherPages.get(key);
-          furtherPages.set(key, {
-            lists: [...(further?.lists ?? []), ...page.lists],
-            next: page.nextCursor,
-          });
-        }
-        patch((now) => ({
-          status: "ready",
-          lists: [...now.lists, ...page.lists],
+    // The backend reads the list a page ended at afresh, so a list whose
+    // count changed meanwhile comes again: each list is shown once, as in the
+    // app, and a page of nothing new is read past, a few at most.
+    const shown = new Set(state.lists.map((list) => list.id));
+    const from = (cursor: string | null, left: number): Promise<FeedPage> =>
+      load(cursor === null ? stable : { ...stable, after: cursor }).then((page) => {
+        const lists = page.lists.filter((list) => {
+          if (shown.has(list.id)) return false;
+          shown.add(list.id);
+          return true;
+        });
+        const next = page.nextCursor !== cursor ? page.nextCursor : null;
+        return lists.length === 0 && next !== null && left > 0
+          ? from(next, left - 1)
+          : { ...page, lists, nextCursor: next };
+      });
+    const settle = (page: FeedPage) => {
+      // Somebody's own Following feed is not kept, not even for the visit.
+      if (kept !== null) {
+        const further = furtherPages.get(key);
+        furtherPages.set(key, {
+          lists: [...(further?.lists ?? []), ...page.lists],
           next: page.nextCursor,
-          more: "idle",
-          followingNobody: now.followingNobody,
-        }));
-      },
-      () => patch((now) => ({ ...now, more: "failed" })),
-    );
+        });
+      }
+      patch((now) => ({
+        status: "ready",
+        lists: [...now.lists, ...page.lists],
+        next: page.nextCursor,
+        more: "idle",
+        followingNobody: now.followingNobody,
+      }));
+    };
+    const failed = () => patch((now) => ({ ...now, more: "failed" }));
+    from(after, PAGES_READ_ON).then(settle, (reason: unknown) => {
+      // The list the page ended at was taken down: read again from the top,
+      // keeping what is on screen, as the admin's panes do.
+      if (errorOf(reason).kind === "cursorGone") from(null, PAGES_READ_ON).then(settle, failed);
+      else failed();
+    });
   }, [state, key, stable, load, kept]);
 
   return { state, retry, more };

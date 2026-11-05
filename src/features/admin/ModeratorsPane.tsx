@@ -9,6 +9,7 @@ import { Button } from "../../ui/Button";
 import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { useModal } from "../../ui/useModal";
+import { initialOf } from "../../lib/initial";
 
 export interface ModeratorsDeps {
   load: () => Promise<{ moderators: Moderator[] }>;
@@ -26,8 +27,6 @@ const moderatorsDeps: ModeratorsDeps = {
 
 /** How long the field waits after the last key before it asks for names. */
 export const FIND_AFTER_MS = 300;
-
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
 
 function Face({ photoUrl, name }: { photoUrl: string | null; name: string }) {
   return photoUrl !== null ? (

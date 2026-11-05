@@ -166,6 +166,39 @@ describe("useFeed", () => {
     expect(await screen.findByText("new,a|c1|idle")).toBeInTheDocument();
   });
 
+  it("shows each list once when the next page repeats some, and reads past a page of nothing new", async () => {
+    const query: FeedQuery = { category: "anime", sort: "popular" };
+    const load = vi
+      .fn<LoadFeed>()
+      .mockResolvedValueOnce(page(["a", "b"], "c1"))
+      .mockResolvedValueOnce(page(["b", "c"], "c2"))
+      .mockResolvedValueOnce(page(["c"], "c3"))
+      .mockResolvedValueOnce(page(["d"]));
+    render(<Probe query={query} load={load} />);
+    await screen.findByText("a,b|c1|idle");
+    await userEvent.click(screen.getByRole("button", { name: "more" }));
+    await screen.findByText("a,b,c|c2|idle");
+    await userEvent.click(screen.getByRole("button", { name: "more" }));
+    await screen.findByText("a,b,c,d|-|idle");
+    expect(load.mock.calls.map((call) => call[0].after)).toEqual([undefined, "c1", "c2", "c3"]);
+  });
+
+  it("reads again from the top when the list a page ended at is gone", async () => {
+    const query: FeedQuery = { category: "games", sort: "popular" };
+    const load = vi
+      .fn<LoadFeed>()
+      .mockResolvedValueOnce(page(["a", "b"], "b"))
+      .mockRejectedValueOnce(new ApiFailure({ kind: "cursorGone" }))
+      // b was taken down: the top now ends at a, and the page after it brings c.
+      .mockResolvedValueOnce(page(["a"], "a"))
+      .mockResolvedValueOnce(page(["c"]));
+    render(<Probe query={query} load={load} />);
+    await screen.findByText("a,b|b|idle");
+    await userEvent.click(screen.getByRole("button", { name: "more" }));
+    await screen.findByText("a,b,c|-|idle");
+    expect(load.mock.calls.map((call) => call[0].after)).toEqual([undefined, "b", undefined, "a"]);
+  });
+
   it("names a failed first page and loads it again on retry", async () => {
     const load = vi
       .fn<LoadFeed>()

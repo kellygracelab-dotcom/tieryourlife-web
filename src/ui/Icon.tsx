@@ -11,7 +11,14 @@ interface IconProps {
  * when the text runs right to left: "back" is to the right in Arabic. A check,
  * a plus or a magnifying glass points nowhere and stays as it is.
  */
-const MIRRORED = new Set<IconName>(["undo", "open_in_new", "logout", "format_quote"]);
+const MIRRORED = new Set<IconName>([
+  "undo",
+  "open_in_new",
+  "logout",
+  "format_quote",
+  "arrow_back",
+  "chevron_right",
+]);
 
 export function Icon({ name, label, className }: IconProps) {
   const classes = ["ms", MIRRORED.has(name) && "ms--mirrored", className].filter(Boolean).join(" ");

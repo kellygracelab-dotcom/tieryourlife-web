@@ -17,6 +17,15 @@ export const readersOf = (rankings: readonly ReaderRanking[]): ReaderRanking[] =
       Array.isArray(ranking.arrangement),
   );
 
+/**
+ * A reader's name as a row says it, or null for nobody named: the backend
+ * writes its own English "Anonymous" for a reader without a name.
+ */
+export function readerName(name: string): string | null {
+  const said = name.trim();
+  return said === "" || said === "Anonymous" ? null : said;
+}
+
 export interface Placing {
   tiers: PublishedTier[];
   rows: number[][];

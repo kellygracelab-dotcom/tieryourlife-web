@@ -865,6 +865,8 @@ const fr: Translation = {
     unfollowFailed: "Impossible de ne plus suivre. Réessayez.",
     followLimit:
       "Vous suivez déjà autant de rubriques et de thèmes que possible. Cessez d’en suivre quelques-uns d’abord.",
+    followSignInBody:
+      "Suivre des rubriques et des thèmes garde leurs nouvelles listes en haut de votre fil.",
     undo: "Annuler",
     waitingOnlyYou: "D’ici là, vous seul voyez ce thème.",
     topicMissing: "Il n’y a pas de tel thème dans {section}.",
@@ -893,6 +895,7 @@ const fr: Translation = {
     sortMostLists: "Le plus de listes",
     sortName: "A–Z",
     find: "Trouver une rubrique",
+    findNone: "Aucune rubrique ne correspond à « {q} »",
     propose: "Proposer une rubrique",
     waiting: "En attente",
     sections: "Rubriques",

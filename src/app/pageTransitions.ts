@@ -53,12 +53,13 @@ export function withPageTransitions(router: DataRouter, win: Window = window): D
   }) as DataRouter["navigate"];
 
   // Back and forward come by popstate, and React Router plays the way back of
-  // a move it made. Heard in the capture phase, so before the router's own
-  // listener. Where the browser animates a swipe back itself, ours would
-  // play a second time, so it stands still.
+  // a move it made. Where the browser animates a swipe back itself, ours
+  // would play a second time, so it stands still. Which entry we were on is
+  // kept here, not read from the router after a pop: Chrome may run the
+  // router's own popstate listener first, and the router has then moved on.
   let at = indexOf(win.history.state);
-  router.subscribe(() => {
-    at = indexOf(win.history.state);
+  router.subscribe((state) => {
+    if (state.historyAction !== "POP") at = indexOf(win.history.state);
   });
   win.addEventListener(
     "popstate",
@@ -68,6 +69,7 @@ export function withPageTransitions(router: DataRouter, win: Window = window): D
       const idx = indexOf(event.state);
       if (native === true || still()) set("none");
       else set(idx !== null && at !== null && idx > at ? "push" : "back");
+      at = idx;
     },
     { capture: true },
   );

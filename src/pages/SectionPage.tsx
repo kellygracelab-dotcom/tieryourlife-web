@@ -12,6 +12,7 @@ import { sectionsStore, useSections, type SectionsStore } from "../features/sect
 import { WaitingSheet } from "../features/sections/WaitingSheet";
 import { loadSection } from "../lib/api";
 import { strings } from "../strings";
+import { BackLink } from "../ui/BackLink";
 import { Icon } from "../ui/Icon";
 import { Spinner } from "../ui/Spinner";
 import { HeadArt, SectionRoute, SortRow, type SectionPageProps } from "./SectionPageParts";
@@ -76,9 +77,7 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
     <section className="section-page">
       <header className="section-head">
         <HeadArt section={section} />
-        <Link className="section-head__back" to="/" aria-label={strings.sections.back}>
-          <Icon name="arrow_back" />
-        </Link>
+        <BackLink className="section-head__back" to="/" />
         <div className="section-head__text">
           <PageTitle title={section.name} inBar={false} />
           <h1 className="section-head__name">

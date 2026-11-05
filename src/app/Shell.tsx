@@ -23,9 +23,8 @@ import { Menu } from "../ui/Menu";
 import { documentTitleOf, PageTitleContext, TITLE_AFTER_PX, type PageName } from "./pageTitle";
 import { useScrollCatchUp } from "./scrollCatchUp";
 import { useRedirectFailed, useSession } from "./session";
+import { initialOf } from "../lib/initial";
 import "./Shell.css";
-
-const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
 
 /** The app in the footer: a link once anyone can get it, plain words until then, nothing on an iPhone. */
 function AppFooterLink() {
@@ -130,6 +129,7 @@ function SiteTabs({ className, pathname }: { className: string; pathname: string
  */
 function BarSearch({ asked }: { asked: string }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [query, setQuery] = useState(asked);
   const [shown, setShown] = useState(asked);
   if (shown !== asked) {
@@ -140,7 +140,12 @@ function BarSearch({ asked }: { asked: string }) {
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
     const q = query.trim();
-    if (q !== "") void navigate(`/search?q=${encodeURIComponent(q)}`);
+    if (q === "") return;
+    const search = new URLSearchParams({ q }).toString();
+    // The same words again are the same page: Back should not need two presses.
+    const same =
+      location.pathname === "/search" && new URLSearchParams(location.search).toString() === search;
+    void navigate(`/search?${search}`, { replace: same });
   };
   return (
     <form className="top__search" role="search" onSubmit={onSearch}>
@@ -237,7 +242,8 @@ export function Shell() {
     if (!kept) focusForNow(main.current);
   }, [location.pathname]);
   const [params] = useSearchParams();
-  const home = location.pathname === "/";
+  // Both of the home page's tabs carry its large box.
+  const home = location.pathname === "/" || location.pathname === "/following";
   const asked = location.pathname === "/search" ? (params.get("q") ?? "") : "";
 
   // The browser would not keep something written: lists made now would be lost on the spot.
@@ -271,7 +277,8 @@ export function Shell() {
         )}
         <SiteTabs className="top__tabs" pathname={location.pathname} />
         {!home && <BarSearch asked={asked} />}
-        <nav className="top__actions" aria-label={strings.nav.site}>
+        {/* Not a second landmark named as the tabs are: these are actions, not places. */}
+        <div className="top__actions">
           {!home && (
             <Link className="top__search-link" to="/search" aria-label={strings.nav.search}>
               <Icon name="search" />
@@ -294,7 +301,7 @@ export function Shell() {
               {strings.nav.signIn}
             </Button>
           )}
-        </nav>
+        </div>
       </header>
       {/^\/(following|b)?$/.test(location.pathname) && (
         <SiteTabs className="site-tabs--row" pathname={location.pathname} />

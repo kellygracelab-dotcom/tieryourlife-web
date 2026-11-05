@@ -46,6 +46,36 @@ describe("Shell search", () => {
     expect(screen.queryByRole("link", { name: "Search lists" })).toBeNull();
   });
 
+  it("has none on the home page's Following tab either, which has the same box", () => {
+    open(
+      { account: { kind: "signedIn", uid: "u1", displayName: "D", photoUrl: null } },
+      "/following",
+    );
+    const bar = within(screen.getByRole("banner"));
+    expect(bar.queryByRole("searchbox", { name: "Search lists" })).toBeNull();
+    expect(bar.queryByRole("link", { name: "Search lists" })).toBeNull();
+  });
+
+  it("takes the same words again without a second step for Back", async () => {
+    const router = createMemoryRouter(routes, { initialEntries: ["/about", "/search?q=anime"] });
+    render(
+      <SessionContext.Provider
+        value={{
+          account: { kind: "guest", uid: null },
+          signIn: vi.fn(),
+          signOut: vi.fn(),
+          refresh: vi.fn(),
+        }}
+      >
+        <RouterProvider router={router} />
+      </SessionContext.Provider>,
+    );
+    const bar = within(screen.getByRole("banner"));
+    await userEvent.type(bar.getByRole("searchbox", { name: "Search lists" }), "{Enter}");
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(router.state.location.search).toBe("?q=anime");
+  });
+
   it("takes the words to the search page, whose words it then shows", async () => {
     open({}, "/about");
     const bar = within(await screen.findByRole("banner"));
@@ -151,6 +181,8 @@ describe("Shell header", () => {
     expect(tabs.getByRole("link", { name: "Community" })).toHaveAttribute("aria-current", "page");
     expect(tabs.getByRole("link", { name: "Your lists" })).toHaveAttribute("href", "/b");
     expect(tabs.getByRole("link", { name: "Your lists" })).not.toHaveAttribute("aria-current");
+    // One landmark by that name in the bar: its actions are not a second one.
+    expect(within(screen.getByRole("banner")).getAllByRole("navigation")).toHaveLength(1);
   });
 
   // The theme and signing out are settings, and the header used to repeat both

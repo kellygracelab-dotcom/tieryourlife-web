@@ -15,7 +15,7 @@ import { useSession } from "../app/session";
 import type { BoardsRepository } from "../features/boards/repository";
 import { AuthorLine } from "../features/community/AuthorLine";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
-import { placedBy } from "../features/community/rankings";
+import { placedBy, readerName } from "../features/community/rankings";
 import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
@@ -311,7 +311,12 @@ function OpenList({
   };
   const choose = (ranking: ReaderRanking | null) => {
     remember();
-    setChosen(ranking);
+    // A reader without a name is "Someone" on the switch too, in this language.
+    setChosen(
+      ranking === null
+        ? null
+        : { ...ranking, authorName: readerName(ranking.authorName) ?? strings.profile.someone },
+    );
     setView("theirs");
     setSheet(false);
   };

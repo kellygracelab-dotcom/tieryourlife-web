@@ -15,6 +15,7 @@ import { faceChoicesOf } from "./faces";
 import { type FaceSource, PlaceFaceDialog, type Placed } from "./PlaceFaceDialog";
 import { SavedLine } from "./SavedLine";
 import { type Publish, useSaving } from "./useSaving";
+import { initialOf } from "../../lib/initial";
 
 export type LoadLists = () => Promise<{ lists: ListSummary[] }>;
 export type Face = (photoUrl: string | null) => Promise<void>;
@@ -25,8 +26,6 @@ export type MakeFace = (pictureId: string) => Promise<{ url: string }>;
 
 /** A caption longer than this would be an ellipsis under a 64 px face; the name goes in the tooltip. */
 const CAPTION_MAX = 12;
-
-const initialOf = (name: string | null): string => (name?.trim()[0] ?? "?").toUpperCase();
 
 /**
  * Why a cut face did not become the face. A photo is named by its file; a

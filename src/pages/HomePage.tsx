@@ -79,7 +79,6 @@ function Explore({
           label={strings.sections.popularThisWeek}
           retry={popular.retry}
           more={popular.more}
-          paged={false}
         />
       </section>
     </>

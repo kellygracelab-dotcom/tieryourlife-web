@@ -13,7 +13,7 @@ import { TooManyDialog } from "../features/sections/TooManyDialog";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import { WaitingSheet } from "../features/sections/WaitingSheet";
 import { proposeSection, withdrawSectionProposal } from "../lib/api";
-import { plural, strings } from "../strings";
+import { fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "../features/sections/sections.css";
@@ -63,16 +63,27 @@ export function SectionsPage({
   const { account, signIn } = useSession();
   const uid = account?.kind === "signedIn" ? account.uid : null;
   const [params, setParams] = useSearchParams();
-  const [order, setOrder] = useState<Order>("lists");
-  const [query, setQuery] = useState("");
+  // The order and the words are in the address, so Back from a section finds
+  // the grid as it was left, and the scroll lands where it was.
+  const order: Order = params.get("order") === "name" ? "name" : "lists";
+  const query = params.get("find") ?? "";
+  const change = (key: "order" | "find", value: string | null) => {
+    const next = new URLSearchParams(params);
+    if (value === null || value === "") next.delete(key);
+    else next.set(key, value);
+    setParams(next, { replace: true });
+  };
   const [proposing, setProposing] = useState<Proposing>("closed");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
   const closeSignIn = useCallback(() => setProposing("closed"), []);
 
+  // By any of a section's names, as search finds them: "раздел" on an English page too.
   const words = query.trim().toLocaleLowerCase();
+  const named = (one: Section) =>
+    (one.names ?? []).concat(one.name).some((name) => name.toLocaleLowerCase().includes(words));
   const shown = sections
-    .filter((one) => words === "" || one.name.toLocaleLowerCase().includes(words))
+    .filter((one) => words === "" || named(one))
     .sort(
       (a, b) =>
         Number(b.status === "pending") - Number(a.status === "pending") ||
@@ -98,7 +109,11 @@ export function SectionsPage({
     void signIn().then((outcome) => setProposing(outcome.kind === "signedIn" ? "form" : "closed"));
   };
 
-  const openWaiting = (id: string) => setParams({ waiting: id });
+  const openWaiting = (id: string) => {
+    const next = new URLSearchParams(params);
+    next.set("waiting", id);
+    setParams(next);
+  };
   const closeWaiting = () => {
     const next = new URLSearchParams(params);
     next.delete("waiting");
@@ -112,14 +127,14 @@ export function SectionsPage({
           <h1 className="all-sections__title">{strings.sections.all}</h1>
           {/* Kept in place while the sections come, so the line under it stays put. */}
           <p className="all-sections__count" style={known ? undefined : { visibility: "hidden" }}>
-            {plural(strings.sections.count, sections.length)}
+            {plural(strings.sections.count, shown.length)}
           </p>
         </div>
         <select
           className="all-sections__order"
           aria-label={strings.search.sortBy}
           value={order}
-          onChange={(event) => setOrder(event.target.value === "name" ? "name" : "lists")}
+          onChange={(event) => change("order", event.target.value === "name" ? "name" : null)}
         >
           <option value="lists">{strings.sections.sortMostLists}</option>
           <option value="name">{strings.sections.sortName}</option>
@@ -133,8 +148,13 @@ export function SectionsPage({
           placeholder={strings.sections.find}
           aria-label={strings.sections.find}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => change("find", event.target.value)}
         />
+      )}
+      {known && shown.length === 0 && words !== "" && (
+        <p className="all-sections__none" role="status">
+          {fill(strings.sections.findNone, { q: query.trim() })}
+        </p>
       )}
       <nav
         className="all-sections__grid"

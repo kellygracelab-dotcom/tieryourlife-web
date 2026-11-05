@@ -12,6 +12,7 @@ import { sectionsStore } from "../features/sections/useSections";
 import { loadSection } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
+import { BackLink } from "../ui/BackLink";
 import { Icon } from "../ui/Icon";
 import {
   HeadArt,
@@ -105,13 +106,7 @@ function TopicContent({ section, topic, feed, sort, onSort, topics }: TopicConte
     <section className="section-page">
       <header className="section-head">
         <HeadArt section={section} topic={topic} />
-        <Link
-          className="section-head__back"
-          to={sectionPath(section.id)}
-          aria-label={strings.sections.back}
-        >
-          <Icon name="arrow_back" />
-        </Link>
+        <BackLink className="section-head__back" to={sectionPath(section.id)} />
         <div className="section-head__text">
           <span className="section-head__over">
             <Icon name={section.icon} />

@@ -164,7 +164,7 @@ export function useFollowFlow() {
         open={asking !== "closed"}
         busy={asking === "busy"}
         title={strings.follow.signInTitle}
-        body={strings.follow.signInBody}
+        body={strings.sections.followSignInBody}
         onSignIn={onSignIn}
         onCancel={closeAsk}
       />

@@ -24,9 +24,13 @@
   gap: var(--space-3);
 }
 
+/* A long word breaks rather than pushing the page sideways on a phone. */
 .search__title {
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
   font: var(--text-headline);
+  overflow-wrap: anywhere;
 }
 
 .search__count {
@@ -59,6 +63,11 @@
   margin: 0;
   font: var(--text-body);
   color: var(--ink-dim);
+}
+
+/* A link inside a sentence is told by more than its colour. */
+.search__empty-body a {
+  text-decoration: underline;
 }
 
 .search__make {

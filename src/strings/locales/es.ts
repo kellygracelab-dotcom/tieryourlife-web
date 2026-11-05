@@ -845,6 +845,7 @@ const es: Translation = {
     unfollowFailed: "No se pudo dejar de seguir. Inténtalo de nuevo.",
     followLimit:
       "Ya sigues todas las secciones y temas que se pueden. Deja de seguir alguno primero.",
+    followSignInBody: "Al seguir secciones y temas, sus nuevas listas te aparecen las primeras.",
     undo: "Deshacer",
     waitingOnlyYou: "Hasta entonces, solo tú ves este tema.",
     topicMissing: "No hay ningún tema así en {section}.",
@@ -873,6 +874,7 @@ const es: Translation = {
     sortMostLists: "Más listas",
     sortName: "A–Z",
     find: "Buscar una sección",
+    findNone: "Ninguna sección coincide con «{q}»",
     propose: "Proponer una sección",
     waiting: "En espera",
     sections: "Secciones",

@@ -118,7 +118,7 @@ export interface SectionsStore {
  * shows on the others without asking the backend again.
  */
 export function createSectionsStore(deps: SectionsDeps): SectionsStore {
-  const kept = deps.memory?.recall("sections") ?? null;
+  let kept = deps.memory?.recall("sections") ?? null;
   let snapshot: SectionsSnapshot =
     kept === null
       ? {
@@ -176,6 +176,18 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
     },
     refresh(who) {
       wanted = who;
+      // The answer kept on this device was somebody's: on a shared browser the
+      // next person never sees their waiting proposal or what they follow.
+      if (kept !== null && loadedFor === null && who !== null && who !== kept.who) {
+        const anybodys = kept.sections.map((stats) => ({ ...stats, following: false }));
+        set({
+          ...snapshot,
+          sections: orderSections(sectionsFrom(anybodys, who)),
+          followsKnown: false,
+          notices: [],
+        });
+        kept = null;
+      }
       if (loading) return;
       const fresh = loadedAt !== null && deps.now() - loadedAt < SECTIONS_FRESH_MS;
       if (fresh && loadedFor === who) return;

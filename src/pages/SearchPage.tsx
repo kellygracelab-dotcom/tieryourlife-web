@@ -144,6 +144,8 @@ export function SearchPage({
   const set = (next: Partial<Filters>) => setParams(write({ ...filters, ...next }));
   const narrow = (next: Partial<Filters>) =>
     setParams(write({ ...filters, ...next }), { replace: true });
+  // Enter on the words the address already has (the pause put them there) is no new step.
+  const send = (q: string) => (q.trim() === filters.q ? narrow({ q: q.trim() }) : set({ q }));
 
   // The wait reads the filters as they are when it ends, not as they were when
   // the typing started: a chip pressed during the pause must not be undone.
@@ -208,13 +210,14 @@ export function SearchPage({
 
   return (
     <section className="search">
-      <SearchBox value={typed} onChange={setTyped} onSubmit={(q) => set({ q })} autoFocus={!wide} />
+      <SearchBox value={typed} onChange={setTyped} onSubmit={send} autoFocus={!wide} />
       {/* Said aloud as it changes, what was asked and how much came. */}
       <div className="search__head" role="status">
         <h1 ref={heading} className="search__title" tabIndex={-1}>
           {searching ? fill(strings.search.title, { q: filters.q }) : strings.search.browse}
         </h1>
-        {results.status === "ready" && (
+        {/* Sections or topics alone are the answer: no "0 lists" above them. */}
+        {results.status === "ready" && !(noLists && (named.length > 0 || topics.length > 0)) && (
           <p className="search__count">
             {results.next === null
               ? plural(strings.search.count, results.lists.length)

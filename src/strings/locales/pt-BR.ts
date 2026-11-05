@@ -840,6 +840,7 @@ const ptBR: Translation = {
     unfollowFailed: "Não foi possível deixar de seguir. Tente de novo.",
     followLimit:
       "Você já segue o máximo de seções e temas possível. Deixe de seguir alguns primeiro.",
+    followSignInBody: "Seguir seções e temas deixa as novas listas deles no topo do seu feed.",
     undo: "Desfazer",
     waitingOnlyYou: "Até lá, só você vê este tema.",
     topicMissing: "Não há esse tema em {section}.",
@@ -867,6 +868,7 @@ const ptBR: Translation = {
     sortMostLists: "Mais listas",
     sortName: "A–Z",
     find: "Encontrar uma seção",
+    findNone: "Nenhuma seção corresponde a “{q}”",
     propose: "Propor uma seção",
     waiting: "Aguardando",
     sections: "Seções",

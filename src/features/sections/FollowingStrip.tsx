@@ -14,11 +14,10 @@ import {
   type Section,
 } from "./model";
 import { TopicArt } from "./TopicArt";
+import { initialOf } from "../../lib/initial";
 import "./following.css";
 
 /** A name's first letter; somebody known only by anonymous lists has none, and is drawn as a person. */
-const initialOf = (name: string): string => (name.trim()[0] ?? "?").toUpperCase();
-
 interface FollowingStripProps {
   sections: readonly Section[];
   topics: readonly Topic[];
@@ -114,7 +113,7 @@ export function FollowingStrip({ sections, topics, people, sectionOf, ref }: Fol
           </li>
         ))}
         <li>
-          <Link className="following-strip__item" to={MANAGE_PATH} state={{ fromFollowing: true }}>
+          <Link className="following-strip__item" to={MANAGE_PATH}>
             <span className="following-strip__visual following-strip__manage" aria-hidden="true">
               <Icon name="tune" />
             </span>

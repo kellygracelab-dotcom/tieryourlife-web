@@ -45,6 +45,13 @@
   font: var(--text-body);
 }
 
+/* Words that find no section say so, rather than leaving an empty grid. */
+.all-sections__none {
+  margin: 0;
+  font: var(--text-body);
+  color: var(--ink-dim);
+}
+
 .all-sections__propose {
   display: flex;
   justify-content: center;
