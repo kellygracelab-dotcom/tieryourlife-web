@@ -13,6 +13,7 @@ import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./ModerationPage.css";
+import { usePageTitle } from "../app/pageTitle";
 
 export type LoadQueue = () => Promise<{ reports: QueuedList[] }>;
 export type TakeDown = (id: string, ban: BanLength | null) => Promise<void>;
@@ -369,6 +370,7 @@ export function ModerationPage({
   takeDown = takeDownList,
   leaveUp = leaveListUp,
 }: ModerationPageProps) {
+  usePageTitle(strings.mod.title, { inBar: false });
   const { account } = useSession();
   return (
     <section className="mod">

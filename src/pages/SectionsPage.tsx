@@ -17,6 +17,7 @@ import { Button } from "../ui/Button";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "../features/sections/sections.css";
 import "./SectionsPage.css";
+import { usePageTitle } from "../app/pageTitle";
 
 /** With more sections than this, the page offers a field to find one. */
 export const FIND_FROM = 20;
@@ -56,6 +57,7 @@ export function SectionsPage({
   store?: SectionsStore;
   proposing?: ProposingDeps;
 }) {
+  usePageTitle(strings.sections.all, { inBar: false });
   const { sections, known } = useSections(store);
   const { account, signIn } = useSession();
   const uid = account?.kind === "signedIn" ? account.uid : null;

@@ -130,12 +130,23 @@ function TitleEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing]);
 
+  // Done from the keyboard, the field goes and the focus with it: the pencil takes it back.
+  const pencil = useRef<HTMLButtonElement>(null);
+  const backToPencil = useRef(false);
+  useEffect(() => {
+    if (editing || !backToPencil.current) return;
+    backToPencil.current = false;
+    pencil.current?.focus();
+  }, [editing]);
+
   const keep = () => onKeep(draft);
   const onKey = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
+      backToPencil.current = true;
       keep();
     } else if (event.key === "Escape") {
+      backToPencil.current = true;
       onKeep(board.title);
     }
   };
@@ -159,6 +170,7 @@ function TitleEditor({
     <span className="board-page__title-row">
       <h1 className="list-head__title">{shown}</h1>
       <button
+        ref={pencil}
         type="button"
         className="board-page__edit"
         aria-label={strings.boards.editTitle}

@@ -108,6 +108,52 @@ describe("ReportDialog", () => {
     expect(onSignIn).toHaveBeenCalledTimes(1);
   });
 
+  it("holds the focus at every step, and gives it back to what opened it", async () => {
+    const props = {
+      authorName: "danylo",
+      send: vi.fn(),
+      onSignIn: vi.fn(),
+      onHideInstead: vi.fn(),
+      onClose: vi.fn(),
+    };
+    const at = (state: ReportState) => (
+      <>
+        <button type="button">More about this list</button>
+        <button type="button">Behind the dialog</button>
+        <ReportDialog state={state} {...props} />
+      </>
+    );
+    const { rerender } = render(at("closed"));
+    screen.getByRole("button", { name: "More about this list" }).focus();
+
+    // A guest is asked first; the question takes the focus, has a Cancel, and keeps Tab in.
+    rerender(at("signIn"));
+    const ask = screen.getByRole("dialog", { name: "Sign in to report" });
+    expect(within(ask).getByRole("button", { name: "Continue with Google" })).toHaveFocus();
+    await userEvent.tab();
+    expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(within(ask).getByRole("button", { name: "Continue with Google" })).toHaveFocus();
+
+    rerender(at("open"));
+    const form = screen.getByRole("dialog", { name: "Report this list" });
+    expect(within(form).getByRole("radio", { name: "Sexual content" })).toHaveFocus();
+    within(form).getByRole("button", { name: "Cancel" }).focus();
+    await userEvent.tab();
+    expect(form).toContainElement(document.activeElement as HTMLElement);
+
+    // A refused send gives the button back; the receipt takes the focus too.
+    await userEvent.click(within(form).getByRole("radio", { name: "Spam or advertising" }));
+    rerender(at("sending"));
+    rerender(at("failed"));
+    expect(screen.getByRole("button", { name: "Report" })).toHaveFocus();
+    rerender(at("sent"));
+    expect(screen.getByRole("button", { name: "Done" })).toHaveFocus();
+
+    rerender(at("closed"));
+    expect(screen.getByRole("button", { name: "More about this list" })).toHaveFocus();
+  });
+
   it("closes on Escape when nothing is under way", async () => {
     const { onClose } = open("open");
     await userEvent.keyboard("{Escape}");

@@ -7,14 +7,15 @@ interface ChipProps {
   selected?: boolean;
   onClick?: () => void;
   icon?: IconName;
+  className?: string;
   children: ReactNode;
 }
 
-export function Chip({ selected = false, onClick, icon, children }: ChipProps) {
+export function Chip({ selected = false, onClick, icon, className, children }: ChipProps) {
   return (
     <button
       type="button"
-      className={selected ? "chip chip--selected" : "chip"}
+      className={["chip", selected && "chip--selected", className].filter(Boolean).join(" ")}
       aria-pressed={selected}
       onClick={onClick}
     >

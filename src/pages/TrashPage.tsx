@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { usePageTitle } from "../app/pageTitle";
 import { agoOf, type Ago } from "../features/boards/ago";
@@ -72,29 +72,52 @@ export function TrashPage({
   const stillPublic = () => setNotice({ text: strings.trash.stillPublic });
   const at = now();
 
+  // A row restored or removed goes with the button pressed in it: the focus
+  // moves to the row that takes its place, or the one before it, or, once
+  // the trash is empty, back to the lists.
+  const page = useRef<HTMLElement>(null);
+  const focusRow = useRef<number | null>(null);
+  useEffect(() => {
+    const index = focusRow.current;
+    if (index === null || busy) return;
+    focusRow.current = null;
+    const active = document.activeElement;
+    if (active !== null && active !== document.body) return;
+    const rows = page.current?.querySelectorAll<HTMLElement>(".trash-row") ?? [];
+    const row = rows[Math.min(index, rows.length - 1)];
+    (
+      row?.querySelector<HTMLElement>("button") ??
+      page.current?.querySelector<HTMLElement>(".trash__back")
+    )?.focus();
+  });
+  const rowOf = (entry: TrashEntry) => entries.findIndex((it) => it.board.uid === entry.board.uid);
+
   const restore = (entry: TrashEntry) => {
+    focusRow.current = rowOf(entry);
     const board = repository.get(entry.board.uid);
     if (board === null) return;
     repository.save(restoreBoard(board, now()));
   };
 
   const remove = async (entry: TrashEntry) => {
+    focusRow.current = rowOf(entry);
     close();
     setBusy(true);
     const down = await takenDown(entry.board, unpublish);
-    setBusy(false);
+    // The row goes before the rows wake, so the focus moves past it, not into it.
     if (down) repository.remove(entry.board.uid);
     else stillPublic();
+    setBusy(false);
   };
 
   // Everything goes but a board whose public copy is still out there, which
   // stays for the next try, as on the phone.
   const empty = async () => {
+    focusRow.current = 0;
     close();
     const trashed = boards.filter((board) => board.deletedAt !== null);
     setBusy(true);
     const down = await Promise.all(trashed.map((board) => takenDown(board, unpublish)));
-    setBusy(false);
     const kept = new Set(trashed.filter((_, index) => !down[index]).map((board) => board.uid));
     const current = repository.all();
     for (const board of current) {
@@ -104,10 +127,11 @@ export function TrashPage({
     const unchanged = new Set(current);
     repository.saveAll(withoutTrash(current).filter((board) => !unchanged.has(board)));
     if (kept.size > 0) stillPublic();
+    setBusy(false);
   };
 
   return (
-    <section className="trash">
+    <section className="trash" ref={page}>
       <Link className="trash__back" to="/b">
         <Icon name="arrow_back" />
         <span>{strings.trash.back}</span>

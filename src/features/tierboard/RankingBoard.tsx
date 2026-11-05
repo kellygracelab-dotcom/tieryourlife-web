@@ -528,6 +528,17 @@ export function RankingBoard({
     );
   };
   const onLinkOnly = useCallback(() => setOffer("closed"), []);
+  // Finish goes once the ranking is kept, and the focus with it: the keyboard
+  // carries on in the result, once the offer to keep it (if any) is answered.
+  const done = finish.status === "done";
+  useEffect(() => {
+    if (!done || offer !== "closed") return;
+    const active = document.activeElement;
+    if (active !== null && active !== document.body) return;
+    section.current
+      ?.querySelector<HTMLElement>(".result a[href], .result button:not([disabled])")
+      ?.focus({ preventScroll: true });
+  }, [done, offer]);
 
   // The owner's page keeps the draft: every placement goes out as it happens.
   const report = useRef(edit?.owner?.onChange);

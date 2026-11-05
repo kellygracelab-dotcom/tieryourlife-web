@@ -15,13 +15,13 @@ describe("usePageTitle", () => {
         <Page title="Every A24 film, ranked" />
       </PageTitleContext.Provider>,
     );
-    expect(set).toHaveBeenLastCalledWith("Every A24 film, ranked");
+    expect(set).toHaveBeenLastCalledWith({ title: "Every A24 film, ranked", inBar: true });
     rerender(
       <PageTitleContext.Provider value={set}>
         <Page title="Ghibli, ranked" />
       </PageTitleContext.Provider>,
     );
-    expect(set).toHaveBeenLastCalledWith("Ghibli, ranked");
+    expect(set).toHaveBeenLastCalledWith({ title: "Ghibli, ranked", inBar: true });
     unmount();
     expect(set).toHaveBeenLastCalledWith(null);
   });

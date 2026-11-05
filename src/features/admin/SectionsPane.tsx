@@ -16,6 +16,7 @@ import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
+import { useModal } from "../../ui/useModal";
 import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { sectionOf, sectionStyle, type Section } from "../sections/model";
@@ -94,6 +95,35 @@ type Editing = { kind: "create" } | { kind: "edit"; id: string } | null;
  * kept by one Save: the order is one decision, so it is written whole, and a
  * Save made over somebody else's is refused rather than lost.
  */
+/**
+ * "Leave without saving?", asked before a pane or a link takes the order
+ * away. Stay takes the focus, and Escape stays too; either way the focus
+ * goes back to what was pressed.
+ */
+function LeaveAsk({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onStay);
+  return (
+    <div
+      ref={box}
+      className="dialog admin-leave"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="admin-leave-title"
+    >
+      <h3 id="admin-leave-title" className="dialog__title">
+        {strings.admin.leaveTitle}
+      </h3>
+      <div className="dialog__actions">
+        <Button onClick={onStay}>{strings.admin.stay}</Button>
+        <Button variant="filled" onClick={onLeave}>
+          {strings.admin.leave}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function SectionsPane({
   adminRole: role,
   deps = paneDeps,
@@ -424,17 +454,7 @@ export function SectionsPane({
       )}
 
       {blocker.state === "blocked" && (
-        <div className="dialog admin-leave" role="alertdialog" aria-labelledby="admin-leave-title">
-          <h3 id="admin-leave-title" className="dialog__title">
-            {strings.admin.leaveTitle}
-          </h3>
-          <div className="dialog__actions">
-            <Button onClick={() => blocker.reset()}>{strings.admin.stay}</Button>
-            <Button variant="filled" onClick={() => blocker.proceed()}>
-              {strings.admin.leave}
-            </Button>
-          </div>
-        </div>
+        <LeaveAsk onStay={() => blocker.reset()} onLeave={() => blocker.proceed()} />
       )}
 
       {editing?.kind === "create" && (

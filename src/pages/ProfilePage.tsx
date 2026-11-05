@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePageTitle } from "../app/pageTitle";
 import { Link, useLocation, useParams } from "react-router";
 import { useSession } from "../app/session";
 import { FollowButton } from "../features/community/FollowButton";
@@ -55,6 +56,7 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
   const name = hint?.name ?? first?.authorName ?? strings.profile.someone;
   const photoUrl = hint?.photoUrl ?? first?.authorPhotoUrl ?? null;
   const own = account?.kind === "signedIn" && account.uid === uid;
+  usePageTitle(name, { inBar: false });
 
   // A finger gets no hover to say that Following means Unfollow, so an
   // unfollow happens at once and the way back is offered instead.
@@ -92,9 +94,22 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
 
   const hiddenAuthor = isAuthorHidden(hidden, uid);
 
+  // Unhide goes as it is pressed; the menu it stands in for comes back and takes the focus.
+  const head = useRef<HTMLElement>(null);
+  const toMenu = useRef(false);
+  useEffect(() => {
+    if (hiddenAuthor || !toMenu.current) return;
+    toMenu.current = false;
+    head.current?.querySelector<HTMLElement>("summary")?.focus();
+  }, [hiddenAuthor]);
+  const unhide = () => {
+    toMenu.current = true;
+    showAuthor(uid);
+  };
+
   return (
     <section className="profile">
-      <header className="profile__head">
+      <header className="profile__head" ref={head}>
         {photoUrl !== null ? (
           <img className="profile__face" src={photoUrl} alt="" referrerPolicy="no-referrer" />
         ) : (
@@ -139,7 +154,7 @@ function AuthorProfile({ load, follow }: ProfilePageProps) {
         <div className="profile__hidden" role="status">
           <Icon name="visibility_off" />
           <p>{strings.profile.hiddenAuthor}</p>
-          <Button variant="tonal" onClick={() => showAuthor(uid)}>
+          <Button variant="tonal" onClick={unhide}>
             {strings.list.unhide}
           </Button>
         </div>

@@ -18,6 +18,7 @@ import { Menu } from "../ui/Menu";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./MePage.css";
+import { usePageTitle } from "../app/pageTitle";
 
 export type LoadMine = () => Promise<MyRankings>;
 export type LoadLists = () => Promise<{ lists: MyList[] }>;
@@ -365,6 +366,7 @@ export function MePage({
   copy = (text) => navigator.clipboard.writeText(text),
   store = sectionsStore,
 }: MePageProps) {
+  usePageTitle(strings.me.lists, { inBar: false });
   const { account, signIn } = useSession();
   return (
     <section className="me">

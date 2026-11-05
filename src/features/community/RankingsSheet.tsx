@@ -120,6 +120,22 @@ export function RankingsSheet({
   // Read when the sheet first opens; a list nobody opens the sheet of costs nothing.
   useEffect(() => open(), [open]);
 
+  // Show more hands the focus to the first reader it brought, so the keyboard
+  // reads on from there; after the last page the button is gone anyway.
+  const firstNew = useRef<number | null>(null);
+  const showMore = () => {
+    firstNew.current = box.current?.querySelectorAll(".rankings__row").length ?? null;
+    more();
+  };
+  const shown = state.rankings.length;
+  const loadingMore = state.more === "loading";
+  useEffect(() => {
+    const at = firstNew.current;
+    if (at === null || loadingMore) return;
+    firstNew.current = null;
+    box.current?.querySelectorAll<HTMLElement>(".rankings__row")[at]?.focus();
+  }, [shown, loadingMore]);
+
   return createPortal(
     <div className="scrim rankings-scrim" onClick={onClose}>
       <div
@@ -222,9 +238,15 @@ export function RankingsSheet({
                 {strings.feed.moreFailed}
               </p>
             )}
-            <Button variant="tonal" onClick={more} disabled={state.more === "loading"}>
-              {state.more === "loading" ? strings.feed.loadingMore : strings.feed.more}
-            </Button>
+            {/* Not disabled while it loads: a disabled button drops the focus to the page. */}
+            <button
+              type="button"
+              className="btn btn--tonal"
+              aria-disabled={state.more === "loading"}
+              onClick={state.more === "loading" ? undefined : showMore}
+            >
+              <span>{state.more === "loading" ? strings.feed.loadingMore : strings.feed.more}</span>
+            </button>
           </div>
         )}
       </div>

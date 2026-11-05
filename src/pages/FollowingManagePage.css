@@ -97,7 +97,7 @@
   background: transparent;
   outline: 1.5px dashed var(--ink-quiet);
   outline-offset: -1.5px;
-  color: var(--ink-quiet);
+  color: var(--ink-faint);
 }
 
 .manage-row__face {

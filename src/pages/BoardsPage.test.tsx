@@ -256,7 +256,7 @@ describe("BoardsPage", () => {
     expect(titles()).toEqual(["Open Ghibli films"]);
 
     await userEvent.type(screen.getByRole("searchbox", { name: "Search your lists" }), "piz");
-    expect(screen.getByRole("status")).toHaveTextContent("No lists match “piz”");
+    expect(screen.getAllByRole("status")[0]).toHaveTextContent("No lists match “piz”");
     await userEvent.click(shows.getByRole("button", { name: "All" }));
     expect(titles()).toEqual(["Open Pizza in Lisbon"]);
     await userEvent.type(screen.getByRole("searchbox"), "zz");
@@ -323,6 +323,29 @@ describe("BoardsPage", () => {
       expect(opened()).toHaveLength(2);
     },
   );
+
+  it("keeps the keyboard's place as choosing starts, ends, and deletes", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([board("a", "Albums", 1), board("b", "Books", 2)]);
+    open(repository, "/b");
+
+    // The chip goes as it is pressed: the first list to choose takes the focus.
+    screen.getByRole("button", { name: "Delete" }).focus();
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Select Books" })).toHaveFocus();
+
+    // Leaving gives the focus back to the chip that came back.
+    await userEvent.click(screen.getByRole("button", { name: "Exit selection" }));
+    expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus();
+
+    // Deleting takes the bar away; its Undo is where the keyboard lands.
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("{Enter}");
+    await userEvent.click(
+      within(screen.getByRole("toolbar")).getByRole("button", { name: "Delete" }),
+    );
+    expect(await screen.findByRole("button", { name: "Undo" })).toHaveFocus();
+  });
 
   it("takes the public copies down before the trash, and keeps a board whose copy stays up", async () => {
     const repository = boardsRepository(memoryStore());

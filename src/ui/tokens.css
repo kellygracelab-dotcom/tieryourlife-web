@@ -11,7 +11,7 @@
   --surface-soft: rgba(255, 255, 255, 0.5);
   --ink: #1a1a1a;
   --ink-dim: rgba(0, 0, 0, 0.62);
-  --ink-faint: rgba(0, 0, 0, 0.4);
+  --ink-faint: rgba(0, 0, 0, 0.58);
   --line: rgba(0, 0, 0, 0.1);
   --line-strong: rgba(0, 0, 0, 0.22);
   --hover: rgba(0, 0, 0, 0.06);
@@ -51,6 +51,7 @@
   --surface-container: #efedf4;
   --surface-container-high: #e7e4ed;
   --surface-container-highest: #e4e1e9;
+  /* For lines and outlines; small text is --ink-faint, which keeps 4.5:1 on all of these. */
   --ink-quiet: rgba(0, 0, 0, 0.46);
   --followed: #3f7f55;
 

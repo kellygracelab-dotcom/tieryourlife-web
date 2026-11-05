@@ -147,7 +147,7 @@ describe("ProfilePage", () => {
     expect(follow.unfollow).toHaveBeenCalledWith("u2");
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
     const notice = screen.getByText("Unfollowed Someone Nice").parentElement!;
-    expect(notice).toHaveAttribute("role", "status");
+    expect(notice.parentElement).toHaveAttribute("role", "status");
 
     await userEvent.click(within(notice).getByRole("button", { name: "Undo" }));
     expect(follow.follow).toHaveBeenCalledWith("u2");
@@ -212,6 +212,8 @@ describe("ProfilePage", () => {
     const notice = screen.getByText(
       "Everything from Someone Nice is hidden for you",
     ).parentElement!;
+    // The menu went with the choice; its Undo is where the keyboard lands.
+    expect(within(notice).getByRole("button", { name: "Undo" })).toHaveFocus();
     await userEvent.click(within(notice).getByRole("button", { name: "Undo" }));
     expect(await screen.findByRole("link", { name: /List a/ })).toBeInTheDocument();
   });
@@ -234,5 +236,7 @@ describe("ProfilePage", () => {
     expect(screen.queryByRole("link", { name: /List a/ })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Unhide" }));
     expect(await screen.findByRole("link", { name: /List a/ })).toBeInTheDocument();
+    // Unhide went as it was pressed; the menu that came back has the focus.
+    expect(screen.getByLabelText("More options")).toHaveFocus();
   });
 });

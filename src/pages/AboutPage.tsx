@@ -3,6 +3,7 @@ import { appIsLive, onApple, playUrl } from "../lib/links";
 import { strings } from "../strings";
 import { Icon } from "../ui/Icon";
 import "./AboutPage.css";
+import { usePageTitle } from "../app/pageTitle";
 
 const TMDB_URL = "https://www.themoviedb.org";
 
@@ -12,6 +13,7 @@ const TMDB_URL = "https://www.themoviedb.org";
  * word, in an "About" or "Credits" section; the logo stays smaller than ours.
  */
 export function AboutPage() {
+  usePageTitle(strings.about.title, { inBar: false });
   return (
     <div className="about">
       <h1 className="about__heading">{strings.about.title}</h1>

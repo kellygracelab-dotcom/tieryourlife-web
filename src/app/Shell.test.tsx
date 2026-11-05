@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -51,6 +51,44 @@ describe("Shell search", () => {
     await userEvent.type(bar.getByRole("searchbox", { name: "Search lists" }), "  anime {Enter}");
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“anime”");
     expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveValue("anime");
+  });
+
+  it("keeps the focus in the box through a search made from it, and says what was found", async () => {
+    open({}, "/search?q=anime");
+    const bar = within(await screen.findByRole("banner"));
+    const box = bar.getByRole("searchbox", { name: "Search lists" });
+    await userEvent.clear(box);
+    await userEvent.type(box, "zzzz{Enter}");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("“zzzz”");
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toBe(box);
+    expect(box).toHaveFocus();
+    // The page's head is a status region: what was asked and how much came are read out.
+    expect(screen.getByRole("heading", { level: 1 }).closest("[role='status']")).not.toBeNull();
+  });
+});
+
+describe("Shell page changes", () => {
+  it("names the browser's tab after the page, and the brand alone where a page has no name", async () => {
+    open({}, "/settings");
+    await screen.findByRole("heading", { level: 1, name: "Settings" });
+    await waitFor(() => expect(document.title).toBe("Settings · TierYourLife"));
+    await userEvent.click(screen.getByRole("link", { name: "About" }));
+    await screen.findByRole("heading", { level: 1, name: "About" });
+    await waitFor(() => expect(document.title).toBe("About · TierYourLife"));
+    await userEvent.click(screen.getByRole("link", { name: "TierYourLife" }));
+    await waitFor(() => expect(document.title).toBe("TierYourLife"));
+  });
+
+  it("starts the keyboard on the new page rather than wherever the old page's link was", async () => {
+    open({}, "/about");
+    await screen.findByRole("heading", { level: 1 });
+    const settings = within(screen.getByRole("contentinfo")).getByRole("link", {
+      name: "Settings",
+    });
+    settings.focus();
+    await userEvent.keyboard("{Enter}");
+    await screen.findByRole("heading", { level: 1, name: "Settings" });
+    expect(screen.getByRole("main")).toHaveFocus();
   });
 });
 

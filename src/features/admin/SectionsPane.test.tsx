@@ -195,9 +195,19 @@ describe("SectionsPane", () => {
     screen.getByRole("button", { name: "Move Games" }).focus();
     await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
     void router.navigate("/elsewhere");
-    expect(
-      await screen.findByRole("alertdialog", { name: "Leave without saving?" }),
-    ).toBeInTheDocument();
+    const ask = await screen.findByRole("alertdialog", { name: "Leave without saving?" });
+    expect(ask).toHaveAttribute("aria-modal", "true");
+    // It takes the focus, keeps Tab in, and Escape stays.
+    expect(screen.getByRole("button", { name: "Stay" })).toHaveFocus();
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Stay" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(router.state.location.pathname).toBe("/admin/sections");
+
+    void router.navigate("/elsewhere");
+    await screen.findByRole("alertdialog", { name: "Leave without saving?" });
     await userEvent.click(screen.getByRole("button", { name: "Stay" }));
     expect(router.state.location.pathname).toBe("/admin/sections");
   });

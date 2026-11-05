@@ -30,6 +30,7 @@ import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./FollowingManagePage.css";
+import { usePageTitle } from "../app/pageTitle";
 
 export interface ManageDeps {
   load: () => Promise<Following>;
@@ -105,6 +106,7 @@ export function FollowingManagePage({
   deps = manageDeps,
   store = sectionsStore,
 }: FollowingManagePageProps) {
+  usePageTitle(strings.sections.tabFollowing, { inBar: false });
   const { account } = useSession();
   const { sections } = useSections(store);
   const uid = account?.kind === "signedIn" ? account.uid : "";

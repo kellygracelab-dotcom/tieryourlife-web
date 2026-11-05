@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageTitle } from "../app/pageTitle";
 import { Link, Navigate, useParams } from "react-router";
 import type { Topic } from "../api/sections";
 import { FollowButton } from "../features/community/FollowButton";
@@ -71,6 +72,7 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
           <Icon name="arrow_back" />
         </Link>
         <div className="section-head__text">
+          <PageTitle title={section.name} inBar={false} />
           <h1 className="section-head__name">
             <Icon name={section.icon} className="section-head__icon" />
             {section.name}

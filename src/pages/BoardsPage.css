@@ -272,7 +272,7 @@
 .board-card__hint {
   margin-top: 4px;
   font: 400 12px/16px var(--font);
-  color: var(--ink-quiet);
+  color: var(--ink-faint);
 }
 
 .board-card__star,
@@ -337,7 +337,7 @@
 
 .boards__empty-icon {
   font-size: 38px;
-  color: var(--ink-quiet);
+  color: var(--ink-faint);
 }
 
 .boards__empty-title {
@@ -395,7 +395,13 @@
     font: 400 20px/26px var(--font);
   }
 
+  /* Out of sight but still the link's name: the icon alone says nothing to a screen reader. */
   .boards__actions .btn--text span:not(.ms) {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

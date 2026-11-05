@@ -1,3 +1,8 @@
+/* Always there for the screen reader, out of the page's flow and gaps while it is empty. */
+.snackbar-region {
+  position: absolute;
+}
+
 .snackbar {
   position: fixed;
   inset-inline-start: 16px;
