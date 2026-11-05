@@ -53,7 +53,7 @@ function AuthorProfile({ load, follow, report = sendReport }: ProfilePageProps) 
   const { account, signIn } = useSession();
   const feed = useFeed({ author: uid, sort: "recent" }, load);
   const following = useFollow(uid, follow);
-  const { hidden, hideAuthor, showAuthor, hideList } = useHidden();
+  const { hidden, hideAuthor, showAuthor } = useHidden();
   const [signingIn, setSigningIn] = useState<Asking>("closed");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
@@ -133,11 +133,7 @@ function AuthorProfile({ load, follow, report = sendReport }: ProfilePageProps) 
 
   // Each card's Report, as the app's long press offers it: one dialog for the
   // page, so it outlives the card it hides and the author hidden with it.
-  const reporting = useReporting({
-    report,
-    onHide: (list) => hideList({ id: list.id, title: list.title }),
-    resumable: lists,
-  });
+  const reporting = useReporting({ report, notify: setNotice });
 
   // Unhide goes as it is pressed; the menu it stands in for comes back and takes the focus.
   const head = useRef<HTMLElement>(null);

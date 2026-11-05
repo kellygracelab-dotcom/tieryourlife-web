@@ -3,13 +3,14 @@ import { PageTitle } from "../app/pageTitle";
 import { Link, Navigate, useParams } from "react-router";
 import { errorOf } from "../api/errors";
 import type { Topic } from "../api/sections";
-import type { FeedSort } from "../api/types";
+import type { FeedSort, ListSummary } from "../api/types";
 import { FollowButton } from "../features/community/FollowButton";
+import { useReporting, type Report } from "../features/community/useReporting";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
 import { OTHER, sectionPath, topicPath, type Section } from "../features/sections/model";
 import { sectionsStore } from "../features/sections/useSections";
-import { loadSection } from "../lib/api";
+import { loadSection, report as sendReport } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import { fill, strings } from "../strings";
 import { BackLink } from "../ui/BackLink";
@@ -36,13 +37,14 @@ interface TopicViewProps {
   topicId: string;
   load: LoadFeed | undefined;
   topics: TopicDeps;
+  report: Report;
 }
 
 /**
  * The topic among the section's, or this person's own waiting one; failing
  * both, asked about by its id. Its lists are asked for at once, alongside.
  */
-function TopicView({ section, topicId, load, topics }: TopicViewProps) {
+function TopicView({ section, topicId, load, topics, report }: TopicViewProps) {
   const [sort, setSort] = useSort();
   const feed = useFeed({ category: section.id, topic: topicId, sort }, load);
   const { approved, waiting, settled } = useSectionTopics(section, topics);
@@ -56,6 +58,7 @@ function TopicView({ section, topicId, load, topics }: TopicViewProps) {
       sort={sort}
       onSort={setSort}
       topics={topics}
+      report={report}
     />
   );
   if (listed !== undefined) return page(listed);
@@ -70,17 +73,28 @@ interface TopicContentProps {
   sort: FeedSort;
   onSort: (sort: FeedSort) => void;
   topics: TopicDeps;
+  report: Report;
 }
 
 /**
  * A topic's own page (the app's PR #208): its picture or its section's art,
  * its name under its section's, its Follow, and its lists. The proposer's
  * waiting one says so instead of offering a follow, which the backend takes
- * only for an approved topic.
+ * only for an approved topic. Each card offers "Not this topic", Hide and
+ * Report, as the app's long press on a topic's list does.
  */
-function TopicContent({ section, topic, feed, sort, onSort, topics }: TopicContentProps) {
+function TopicContent({ section, topic, feed, sort, onSort, topics, report }: TopicContentProps) {
   const collapsed = useCollapsed();
-  const { toggle, failed, overlays } = useFollowFlow();
+  const { toggle, failed, notify, overlays } = useFollowFlow();
+  const reporting = useReporting({ report, notify });
+  // A word to the moderators, the app's TopicViewModel.notThisTopic: nothing
+  // on screen changes, so it is said at once; a refusal says so after.
+  const notThisTopic = (list: ListSummary) => {
+    notify({ text: strings.sections.notThisTopicSent });
+    report(list.id, { reason: "wrong_category", note: null }).catch(() =>
+      notify({ text: strings.report.failed }),
+    );
+  };
   // A follow made here shows at once; the backend's answer only corrects it.
   const [followed, setFollowed] = useState<boolean | null>(null);
   const following = followed ?? topic.following;
@@ -133,8 +147,16 @@ function TopicContent({ section, topic, feed, sort, onSort, topics }: TopicConte
 
       <SortRow sort={sort} onSort={onSort} />
 
-      <FeedGrid state={feed.state} label={topic.name} retry={feed.retry} more={feed.more} />
+      <FeedGrid
+        state={feed.state}
+        label={topic.name}
+        retry={feed.retry}
+        more={feed.more}
+        onWrongTopic={notThisTopic}
+        onReport={reporting.start}
+      />
 
+      {reporting.dialog}
       {overlays}
     </section>
   );
@@ -194,12 +216,20 @@ export function TopicPage({
   store = sectionsStore,
   topics = topicDeps,
   loadOne = loadSection,
+  report = sendReport,
 }: SectionPageProps) {
   const { id = "", topic = "" } = useParams();
   return (
     <SectionRoute id={id} store={store} loadOne={loadOne}>
       {(section) => (
-        <TopicView key={topic} section={section} topicId={topic} load={load} topics={topics} />
+        <TopicView
+          key={topic}
+          section={section}
+          topicId={topic}
+          load={load}
+          topics={topics}
+          report={report}
+        />
       )}
     </SectionRoute>
   );

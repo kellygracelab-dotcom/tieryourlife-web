@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -276,7 +276,8 @@ describe("SectionsPane", () => {
     void router.navigate("/elsewhere");
     const ask = await screen.findByRole("alertdialog", { name: "Leave without saving?" });
     expect(ask).toHaveAttribute("aria-modal", "true");
-    expect(within(ask).getByRole("button", { name: "Stay" })).toHaveFocus();
+    // The focus moves in once the question is drawn, which a slow run can see a moment late.
+    await waitFor(() => expect(within(ask).getByRole("button", { name: "Stay" })).toHaveFocus());
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(router.state.location.pathname).toBe("/admin/sections");

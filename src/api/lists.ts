@@ -91,6 +91,8 @@ export async function loadFeed(client: ApiClient, query: FeedQuery = {}): Promis
 export interface MyList extends ListSummary {
   proposedSection?: string | null;
   proposedSectionName?: string | null;
+  /** The uid of the board it was published from, on lists published since the server kept it. */
+  boardUid?: string | null;
 }
 
 /** The lists this account published from the app, newest first; the backend orders them. */
@@ -116,8 +118,15 @@ export interface PublishRequest {
   /** True takes the list out of its topic; a null topicId alone keeps the old one. */
   noTopic?: boolean;
   /**
-   * The board a first publish comes from: the same board publishing again
-   * gets the list it already made, not a second one.
+   * A topic of the person's own to propose, two to forty characters: it
+   * waits for a moderator, the list under Other until then. Never beside
+   * topicId or noTopic, which the backend refuses.
+   */
+  newTopic?: string;
+  /**
+   * The board the list comes from, sent with every publish and replace: the
+   * same board publishing again gets the list it already made, not a second
+   * one, and the account's lists name their boards for a lost answer.
    */
   boardUid?: string;
   /** No name or face on the list anywhere public; the owner still has it. */
@@ -145,6 +154,13 @@ export interface PublishRequest {
 export interface Published {
   id: string;
   ranking?: boolean;
+  /** The topic the list went under, a proposed one included; absent or null for none. */
+  topicId?: string | null;
+  /**
+   * True when the board was out already: `id` is the list an earlier publish
+   * made, and nothing new was. The board takes the id either way.
+   */
+  existing?: boolean;
 }
 
 export function publish(client: ApiClient, request: PublishRequest): Promise<Published> {

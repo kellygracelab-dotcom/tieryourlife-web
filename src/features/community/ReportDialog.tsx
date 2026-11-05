@@ -1,16 +1,15 @@
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { REPORT_NOTE_MAX, OFFERED_REASONS, type ReportReason } from "../../api/community";
 import { REASON_TEXT } from "./reasons";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
-import { InAppNote } from "../../ui/InAppNote";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import "./report.css";
 
-export type ReportState =
-  "closed" | "signIn" | "signingIn" | "open" | "sending" | "failed" | "sent";
+/** No sign-in and no wait: the list is hidden as the report goes, and the receipt comes at once. */
+export type ReportState = "closed" | "open" | "sent";
 
 interface ReportDialogProps {
   state: ReportState;
@@ -18,9 +17,6 @@ interface ReportDialogProps {
   authorName: string | null;
   /** Sends the complaint; the caller decides what happens after. */
   send: (reason: ReportReason, note: string | null, hideAuthor: boolean) => void;
-  /** A guest chose to sign in, or to hide the list instead. */
-  onSignIn: () => void;
-  onHideInstead: () => void;
   /** The receipt's offer, as in the app's: everything from the author, when the box was left unticked. */
   onHideAuthor?: () => void;
   onClose: () => void;
@@ -34,7 +30,6 @@ interface ReportDialogProps {
 function Modal({
   labelledBy,
   className = "dialog",
-  busy,
   initial,
   onClose,
   children,
@@ -42,7 +37,6 @@ function Modal({
 }: {
   labelledBy: string;
   className?: string;
-  busy: boolean;
   initial?: string;
   onClose: () => void;
   children: ReactNode;
@@ -50,13 +44,7 @@ function Modal({
   onSubmit?: () => void;
 }) {
   const box = useRef<HTMLElement | null>(null);
-  useModal(
-    box,
-    () => {
-      if (!busy) onClose();
-    },
-    initial,
-  );
+  useModal(box, onClose, initial);
   const dialog = {
     ref: (node: HTMLElement | null) => {
       box.current = node;
@@ -68,7 +56,7 @@ function Modal({
     onClick: (event: MouseEvent) => event.stopPropagation(),
   };
   return createPortal(
-    <div className="scrim" onClick={busy ? undefined : onClose}>
+    <div className="scrim" onClick={onClose}>
       {onSubmit === undefined ? (
         <div {...dialog}>{children}</div>
       ) : (
@@ -100,59 +88,14 @@ export function ReportDialog(props: ReportDialogProps) {
   return props.state === "closed" ? null : <OpenReportDialog {...props} />;
 }
 
-function OpenReportDialog({
-  state,
-  authorName,
-  send,
-  onSignIn,
-  onHideInstead,
-  onHideAuthor,
-  onClose,
-}: ReportDialogProps) {
+function OpenReportDialog({ state, authorName, send, onHideAuthor, onClose }: ReportDialogProps) {
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [note, setNote] = useState("");
   const [hideAuthor, setHideAuthor] = useState(false);
-  const sendButton = useRef<HTMLButtonElement>(null);
-  const busy = state === "sending" || state === "signingIn";
-
-  // Sending took the button out of reach; a refused send gives it back.
-  useEffect(() => {
-    if (state === "failed") sendButton.current?.focus();
-  }, [state]);
-
-  if (state === "signIn" || state === "signingIn") {
-    return (
-      <Modal
-        key="signIn"
-        labelledBy="report-signin-title"
-        className="dialog dialog--narrow"
-        busy={busy}
-        initial=".report__google"
-        onClose={onClose}
-      >
-        <h2 id="report-signin-title" className="dialog__title">
-          {strings.report.signInTitle}
-        </h2>
-        <p className="dialog__body">{strings.report.signInBody}</p>
-        <InAppNote />
-        <div className="dialog__actions">
-          <Button onClick={onClose} disabled={busy}>
-            {strings.report.cancel}
-          </Button>
-          <Button onClick={onHideInstead} disabled={busy}>
-            {strings.report.hideInstead}
-          </Button>
-          <Button variant="filled" className="report__google" onClick={onSignIn} disabled={busy}>
-            {busy ? strings.keep.busy : strings.keep.google}
-          </Button>
-        </div>
-      </Modal>
-    );
-  }
 
   if (state === "sent") {
     return (
-      <Modal key="sent" labelledBy="report-sent-title" busy={false} onClose={onClose}>
+      <Modal key="sent" labelledBy="report-sent-title" onClose={onClose}>
         <Icon name="check_circle" className="report__sent-icon" />
         <h2 id="report-sent-title" className="dialog__title report__sent-title">
           {strings.report.sentTitle}
@@ -177,11 +120,10 @@ function OpenReportDialog({
       key="form"
       labelledBy="report-title"
       className="dialog report"
-      busy={busy}
       initial="input[type='radio']"
       onClose={onClose}
       onSubmit={() => {
-        if (reason !== null && !busy) {
+        if (reason !== null) {
           send(reason, note.trim() || null, hideAuthor && authorName !== null);
         }
       }}
@@ -190,7 +132,7 @@ function OpenReportDialog({
         {strings.report.title}
       </h2>
       <p className="dialog__body">{strings.report.body}</p>
-      <fieldset className="report__reasons" disabled={busy}>
+      <fieldset className="report__reasons">
         <legend className="report__legend">{strings.report.why}</legend>
         {OFFERED_REASONS.map((option) => (
           <label key={option} className="report__reason">
@@ -215,7 +157,6 @@ function OpenReportDialog({
         maxLength={REPORT_NOTE_MAX}
         rows={3}
         placeholder={strings.report.notePlaceholder}
-        disabled={busy}
         onChange={(event) => setNote(event.target.value)}
       />
       <p
@@ -233,30 +174,16 @@ function OpenReportDialog({
           <input
             type="checkbox"
             checked={hideAuthor}
-            disabled={busy}
             onChange={(event) => setHideAuthor(event.target.checked)}
           />
           <span>{fill(strings.report.hideAuthor, { name: authorName })}</span>
         </label>
       )}
       <p className="report__footnote">{strings.report.byHand}</p>
-      {state === "failed" && (
-        <p className="dialog__bar" role="alert">
-          <Icon name="cloud_off" className="dialog__bar-icon" />
-          {strings.report.failed}
-        </p>
-      )}
       <div className="dialog__actions">
-        <Button onClick={onClose} disabled={busy}>
-          {strings.report.cancel}
-        </Button>
-        <button
-          ref={sendButton}
-          type="submit"
-          className="btn dialog__danger"
-          disabled={reason === null || busy}
-        >
-          <span>{busy ? strings.report.sending : strings.report.send}</span>
+        <Button onClick={onClose}>{strings.report.cancel}</Button>
+        <button type="submit" className="btn dialog__danger" disabled={reason === null}>
+          <span>{strings.report.send}</span>
         </button>
       </div>
     </Modal>

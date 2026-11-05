@@ -351,11 +351,14 @@ describe("RankingBoard's card menu", () => {
 
   it("gives a finger's double tap the phone's sheet instead", async () => {
     const { onChange } = owned();
+    // One clock for both taps: a slow run would otherwise space them past a double tap.
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
     for (let i = 0; i < 2; i++) {
       pointer("pointerdown", card("Climax"), "touch");
       pointer("pointerup", card("Climax"), "touch");
       pointer("click", card("Climax"), "touch");
     }
+    clock.mockRestore();
     const sheet = within(screen.getByRole("dialog", { name: "Climax" }));
     expect(screen.queryByRole("menu")).toBeNull();
     await userEvent.click(sheet.getByRole("button", { name: "S" }));

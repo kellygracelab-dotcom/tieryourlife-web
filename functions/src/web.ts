@@ -23,6 +23,7 @@ import {
   decideClaim,
   decideClaimToken,
   decideEdit,
+  decideEditor,
   decideOwner,
   decideRows,
   decideTierLabels,
@@ -30,6 +31,7 @@ import {
   fromStoredRows,
   isCode,
   isKeptBy,
+  listAuthorOf,
   makeCode,
   MAX_BODY_BYTES,
   MY_RANKINGS_CAP,
@@ -58,6 +60,8 @@ interface RankingDocument {
   ownerUid: string | null;
   ownerAnonymous: boolean;
   claimHash: string;
+  /** The author the snapshot names, until their account is erased; absent when it names nobody. */
+  listAuthorUid?: string;
   createdAt?: FirebaseFirestore.Timestamp;
   claimedAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
@@ -188,7 +192,8 @@ export async function route(
     }
     if (request.method === "PUT" && code !== undefined) {
       if (!(await deps.appCheck(request, response))) return;
-      const identity = await deps.account(request, response);
+      // A guest may change the ranking they made; editRanking checks it is theirs.
+      const identity = await deps.user(request, response);
       if (!identity) return;
       return await editRanking(deps.db(), request.body, identity, response, code);
     }
@@ -224,6 +229,19 @@ async function readRanking(
   const standing = list.exists
     ? { authorUid: list.get("authorUid") as unknown, anonymous: list.get("anonymous") as unknown }
     : null;
+  // A ranking kept before its list's author was stored beside it learns them
+  // on a read while the list stands, so that author's account deletion finds
+  // it too. A failed write only waits for the next read.
+  if (ranking.listAuthorUid === undefined && list.exists && ranking.snapshot.authorName !== "") {
+    const author = listAuthorOf(list.data() ?? {});
+    if (author !== null) {
+      await db
+        .collection(RANKINGS)
+        .doc(code)
+        .update({ listAuthorUid: author })
+        .catch(() => undefined);
+    }
+  }
 
   response.setHeader("Cache-Control", "no-store");
   response.status(200).json({
@@ -300,6 +318,7 @@ async function saveRanking(
   }
 
   const claimToken = randomBytes(24).toString("base64url");
+  const author = listAuthorOf(list.data() ?? {});
   const document: RankingDocument = {
     listId: decision.listId,
     snapshot: withTierLabels(snapshot, words.labels),
@@ -307,6 +326,8 @@ async function saveRanking(
     ownerUid: identity.uid,
     ownerAnonymous: identity.isAnonymous,
     claimHash: claimHashOf(claimToken),
+    // So the author's name can be taken out of it when their account goes.
+    ...(author === null ? {} : { listAuthorUid: author }),
   };
 
   for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
@@ -385,7 +406,7 @@ async function editRanking(
     const doc = await transaction.get(ref);
     if (!doc.exists) return null;
     const ranking = doc.data() as RankingDocument;
-    const owner = decideOwner(ranking, identity.uid);
+    const owner = decideEditor(ranking, identity);
     if (!owner.ok) return owner;
     const edit = decideEdit(body, ranking.snapshot.tiers.length, ranking.snapshot.items.length);
     if (!edit.ok) return edit;

@@ -11,11 +11,13 @@ export type ApiError =
    */
   | { kind: "merged"; into: string | null; topic: string | null }
   | { kind: "tooManyLists" }
+  /** Three topics of the person's own wait for a moderator: a publish cannot propose a fourth. */
+  | { kind: "tooManyTopics" }
   /** At the ceiling of followed sections or topics (200): one has to go first. */
   | { kind: "tooManyFollowing" }
   | { kind: "cursorGone" }
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
-  | { kind: "conflict"; board?: unknown }
+  | { kind: "conflict"; board?: unknown; status?: string }
   | { kind: "tooLarge"; detail: string | null }
   /**
    * A refused request, with the proxy's code for what was wrong (NAME_TAKEN,
@@ -59,6 +61,7 @@ interface ErrorBody {
   board?: unknown;
   mergedInto?: unknown;
   mergedTopicId?: unknown;
+  status?: unknown;
 }
 
 function bodyOf(text: string): ErrorBody {
@@ -105,6 +108,7 @@ export function parseApiError(status: number, text: string): ApiError {
       return { kind: "notFound" };
     case 409: {
       if (code === "TOO_MANY_LISTS") return { kind: "tooManyLists" };
+      if (code === "TOO_MANY_PENDING_TOPICS") return { kind: "tooManyTopics" };
       if (code === "TOO_MANY_FOLLOWING") return { kind: "tooManyFollowing" };
       if (code === "CURSOR_GONE") return { kind: "cursorGone" };
       // A topic's name clashes with 409 where a section's does with 400: one refusal to the form.
@@ -119,9 +123,13 @@ export function parseApiError(status: number, text: string): ApiError {
           ...(section === null ? {} : { section }),
         };
       }
-      return body.board === undefined
-        ? { kind: "conflict" }
-        : { kind: "conflict", board: body.board };
+      // A proposal decided meanwhile says how: SETTLED with its status.
+      const status = stringOrNull(body.status);
+      return {
+        kind: "conflict",
+        ...(body.board === undefined ? {} : { board: body.board }),
+        ...(status === null ? {} : { status }),
+      };
     }
     case 410:
       return code === "MERGED"

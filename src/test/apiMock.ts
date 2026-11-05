@@ -63,6 +63,7 @@ export function apiStubs() {
     loadTopics: pending(),
     findTopics: pending(),
     loadMyTopics: pending(),
+    loadAllTopics: pending(),
     loadTopic: pending(),
     followTopic: pending(),
     unfollowTopic: pending(),

@@ -543,6 +543,10 @@ describe("Propose a section", () => {
       opened.send.mockRejectedValueOnce(error);
       pick(width, height);
       await userEvent.type(nameField(), "Street food");
+      // The name is asked about once typing stops; its answer must not land
+      // after the refusal and clear it, as it could on a slow run.
+      await waitFor(() => expect(opened.deps.check).toHaveBeenCalled(), { timeout: 5000 });
+      await act(async () => undefined);
       await userEvent.click(proposeButton());
       await waitFor(() => expect(opened.send).toHaveBeenCalled());
       return opened;
@@ -550,9 +554,12 @@ describe("Propose a section", () => {
 
     it("NAME_TAKEN: under the name, with the way to the section it clashes with", async () => {
       await sendWith(invalid("NAME_TAKEN", { id: "food" }));
-      const alert = await screen.findByRole("alert");
-      expect(alert).toHaveTextContent("There’s already a section called “Street food”. Open it");
-      expect(alert.closest(".section-editor__field")).toContainElement(nameField());
+      // Read once the form has settled: a slow run can find the alert in a render about to be replaced.
+      await waitFor(() => {
+        const alert = screen.getByRole("alert");
+        expect(alert).toHaveTextContent("There’s already a section called “Street food”. Open it");
+        expect(alert.closest(".section-editor__field")).toContainElement(nameField());
+      });
       expect(nameField()).toHaveAttribute("aria-invalid", "true");
       // The crop stays.
       expect(frame()).toBeInTheDocument();

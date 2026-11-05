@@ -27,9 +27,14 @@ interface FeedGridProps {
   showAuthor?: boolean;
   /**
    * Given, each card offers Hide and Report, as the app's long press on an
-   * author's page does; this reports the list.
+   * author's page does; this reports the list. Never on one's own.
    */
   onReport?: (list: ListSummary) => void;
+  /**
+   * Given, each card offers "Not this topic", as the app's topic page does:
+   * a word to the moderators that the list belongs elsewhere, which hides nothing.
+   */
+  onWrongTopic?: (list: ListSummary) => void;
 }
 
 type Slot = { kind: "card"; list: ListSummary } | { kind: "hidden"; list: ListSummary };
@@ -56,6 +61,59 @@ function CardPlaceholder() {
   );
 }
 
+/** What a reader can do about a list from its card: nothing at all unless the place offers it. */
+function CardMenu({
+  list,
+  own,
+  onWrongTopic,
+  onHide,
+  onReport,
+}: {
+  list: ListSummary;
+  own: boolean;
+  onWrongTopic: ((list: ListSummary) => void) | undefined;
+  onHide: () => void;
+  onReport: ((list: ListSummary) => void) | undefined;
+}) {
+  // One's own list is neither hidden nor reported, as on the phone.
+  const report = own ? undefined : onReport;
+  if (onWrongTopic === undefined && report === undefined) return null;
+  return (
+    <Menu
+      label={fill(strings.feed.cardMore, { title: titleIn(list, currentLocale()) })}
+      button={<Icon name="more_vert" />}
+      buttonClassName="menu__button list-card__menu"
+    >
+      {onWrongTopic !== undefined && (
+        <li>
+          <button type="button" className="menu__action" onClick={() => onWrongTopic(list)}>
+            {strings.sections.notThisTopic}
+          </button>
+        </li>
+      )}
+      {report !== undefined && (
+        <>
+          <li>
+            <button type="button" className="menu__action" onClick={onHide}>
+              {strings.list.hide}
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              className="menu__action menu__action--danger"
+              aria-haspopup="dialog"
+              onClick={() => report(list)}
+            >
+              {strings.list.report}
+            </button>
+          </li>
+        </>
+      )}
+    </Menu>
+  );
+}
+
 export function FeedGrid({
   state,
   label,
@@ -65,6 +123,7 @@ export function FeedGrid({
   reasonOf,
   showAuthor = true,
   onReport,
+  onWrongTopic,
 }: FeedGridProps) {
   const { hidden, hiddenThisVisit, hideList, showList } = useHidden();
   const yours = useYours();
@@ -147,38 +206,16 @@ export function FeedGrid({
                   yours={yours(list)}
                   showAuthor={showAuthor}
                   menu={
-                    onReport !== undefined && (
-                      <Menu
-                        label={fill(strings.feed.cardMore, {
-                          title: titleIn(list, currentLocale()),
-                        })}
-                        button={<Icon name="more_vert" />}
-                        buttonClassName="menu__button list-card__menu"
-                      >
-                        <li>
-                          <button
-                            type="button"
-                            className="menu__action"
-                            onClick={() => {
-                              justHid.current = list.id;
-                              hideList({ id: list.id, title: list.title });
-                            }}
-                          >
-                            {strings.list.hide}
-                          </button>
-                        </li>
-                        <li>
-                          <button
-                            type="button"
-                            className="menu__action menu__action--danger"
-                            aria-haspopup="dialog"
-                            onClick={() => onReport(list)}
-                          >
-                            {strings.list.report}
-                          </button>
-                        </li>
-                      </Menu>
-                    )
+                    <CardMenu
+                      list={list}
+                      own={yours(list) !== null}
+                      onWrongTopic={onWrongTopic}
+                      onHide={() => {
+                        justHid.current = list.id;
+                        hideList({ id: list.id, title: list.title });
+                      }}
+                      onReport={onReport}
+                    />
                   }
                 />
               ) : (

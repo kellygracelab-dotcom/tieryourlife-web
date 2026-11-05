@@ -210,11 +210,14 @@ export const proposeSection = (proposal: SectionProposal): Promise<SectionStats>
 export const loadProposalRoom = (): Promise<sections.ProposalRoom> =>
   sections.loadProposalRoom(api);
 
-export const withdrawSectionProposal = (id: string): Promise<void> =>
+export const withdrawSectionProposal = (id: string): Promise<sections.Withdrawal | null> =>
   sections.withdrawSectionProposal(api, id);
 
 export const loadTopics = (section: string, limit?: number): Promise<{ topics: Topic[] }> =>
   sections.loadTopics(api, section, limit);
+
+export const loadAllTopics = (section: string): Promise<{ topics: Topic[] }> =>
+  sections.loadAllTopics(api, section);
 
 export const findTopics = (q: string, section?: string): Promise<{ topics: Topic[] }> =>
   sections.findTopics(api, q, section);

@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useSearchParams } from "react-router";
-import type { SectionProposal, SectionStats } from "../api/sections";
+import type { SectionProposal, SectionStats, Withdrawal } from "../api/sections";
 import { useSession } from "../app/session";
 import { SignInDialog } from "../features/community/SignInDialog";
 import { OTHER, sectionName, type Section } from "../features/sections/model";
@@ -34,7 +34,7 @@ const byOrder: Record<Order, (a: Section, b: Section) => number> = {
 /** What proposing a section sends, and taking one back. */
 export interface ProposingDeps {
   propose: (proposal: SectionProposal) => Promise<SectionStats>;
-  withdraw: (id: string) => Promise<void>;
+  withdraw: (id: string) => Promise<Withdrawal | null>;
   editor?: EditorDeps;
 }
 
@@ -224,15 +224,29 @@ export function SectionsPage({
           filedIn={nameOf(opened.fileUnder)}
           withdraw={deps.withdraw}
           onClose={closeWaiting}
-          onWithdrawn={() => {
+          onWithdrawn={(withdrawal) => {
             // A withdrawn proposal comes back declined, which no tile shows.
+            // One a moderator had already decided is said as such, not as withdrawn.
+            const name = { name: opened.name };
             closeWaiting();
-            setNotice({ text: strings.propose.withdrawn });
+            setNotice({
+              text:
+                withdrawal?.outcome !== "dismissed"
+                  ? strings.propose.withdrawn
+                  : withdrawal.status === "merged"
+                    ? fill(strings.propose.alreadyMerged, name)
+                    : fill(strings.propose.alreadyDeclined, name),
+            });
             reload();
           }}
-          onSettled={() => {
+          onSettled={(status) => {
             closeWaiting();
-            setNotice({ text: strings.admin.settled });
+            setNotice({
+              text:
+                status === "approved"
+                  ? fill(strings.propose.alreadyApproved, { name: opened.name })
+                  : strings.admin.settled,
+            });
             reload();
           }}
         />

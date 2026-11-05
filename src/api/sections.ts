@@ -117,9 +117,30 @@ export function proposeSection(
   return client.request<SectionStats>("POST", "/lists/sections/proposals", { body: proposal });
 }
 
-/** The proposer takes a waiting proposal back; its lists stay where they were filed. */
-export function withdrawSectionProposal(client: ApiClient, id: string): Promise<void> {
-  return client.request<void>("DELETE", `/lists/sections/proposals/${encodeURIComponent(id)}`);
+/**
+ * What a withdrawal came to: taken back while it waited, or put away after a
+ * moderator had declined or merged it. Null from a backend that answers 204.
+ */
+export interface Withdrawal {
+  outcome: "withdrawn" | "dismissed";
+  status: "declined" | "merged";
+}
+
+/**
+ * The proposer takes a waiting proposal back; its lists stay where they were
+ * filed. 409 SETTLED, with its status, when it was approved meanwhile.
+ */
+export async function withdrawSectionProposal(
+  client: ApiClient,
+  id: string,
+): Promise<Withdrawal | null> {
+  const answer = await client.request<Partial<Withdrawal> | undefined>(
+    "DELETE",
+    `/lists/sections/proposals/${encodeURIComponent(id)}`,
+  );
+  if (answer === undefined || answer === null) return null;
+  const outcome = answer.outcome === "dismissed" ? "dismissed" : "withdrawn";
+  return { outcome, status: answer.status === "merged" ? "merged" : "declined" };
 }
 
 export type TopicStatus = "pending" | "approved" | "rejected" | "merged";
@@ -151,6 +172,39 @@ export function loadTopics(
   return client.request<{ topics: Topic[] }>("GET", "/lists/topics", {
     query: { section, limit },
   });
+}
+
+/** Pages a moderator reads at most: a backend that never ends its pages cannot keep the page waiting. */
+const TOPIC_PAGES_MAX = 100;
+
+/**
+ * Every approved topic of a section, page by page: the backend answers at
+ * most 50 at a time, most lists first, so the empty ones a moderator may
+ * delete come last.
+ */
+export async function loadAllTopics(
+  client: ApiClient,
+  section: string,
+): Promise<{ topics: Topic[] }> {
+  const topics: Topic[] = [];
+  const seen = new Set<string>();
+  let cursor: string | undefined;
+  for (let page = 0; page < TOPIC_PAGES_MAX; page++) {
+    const answer = await client.request<{ topics: Topic[]; nextCursor?: string | null }>(
+      "GET",
+      "/lists/topics",
+      { query: { section, limit: 50, cursor } },
+    );
+    for (const topic of answer.topics) {
+      if (seen.has(topic.id)) continue;
+      seen.add(topic.id);
+      topics.push(topic);
+    }
+    const next = answer.nextCursor ?? null;
+    if (next === null || next === cursor) break;
+    cursor = next;
+  }
+  return { topics };
 }
 
 /** Approved topics whose name starts with what was typed, in one section if given. */

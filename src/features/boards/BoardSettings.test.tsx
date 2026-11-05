@@ -10,6 +10,7 @@ import type { Account } from "../../lib/account";
 import { orderSections, sectionsFrom, type Section } from "../sections/model";
 import { BoardSettings, type LoadTopics, type PublishingDeps } from "./BoardSettings";
 import { addTier, addToPool, newBoard, setCategory, type Board } from "./model";
+import type { FindTopic } from "./topic";
 
 const uids = () => {
   let n = 0;
@@ -98,11 +99,13 @@ function Host({
   initial,
   publishing,
   topics,
+  findTopic,
   sections,
 }: {
   initial: Board;
   publishing: PublishingDeps;
   topics: LoadTopics;
+  findTopic: FindTopic;
   sections: readonly Section[];
 }) {
   const [board, setBoard] = useState(initial);
@@ -123,6 +126,7 @@ function Host({
       onPublished={published}
       publishing={publishing}
       topics={topics}
+      findTopic={findTopic}
       onDone={done}
       now={() => 500}
     />
@@ -133,7 +137,12 @@ const show = (
   board: Board,
   account: Account,
   publishing: Partial<PublishingDeps> = {},
-  extra: { topics?: LoadTopics; signIn?: Session["signIn"]; sections?: readonly Section[] } = {},
+  extra: {
+    topics?: LoadTopics;
+    findTopic?: FindTopic;
+    signIn?: Session["signIn"];
+    sections?: readonly Section[];
+  } = {},
 ) => {
   held = board;
   published.mockReset();
@@ -153,6 +162,7 @@ const show = (
           initial={board}
           publishing={{ ...idle, ...publishing }}
           topics={extra.topics ?? (() => Promise.resolve({ topics: [] }))}
+          findTopic={extra.findTopic ?? (() => Promise.reject(new ApiFailure({ kind: "offline" })))}
           // The nine, as the site draws them before the backend answers.
           sections={extra.sections ?? sectionsFrom(null)}
         />
@@ -336,7 +346,10 @@ describe("BoardSettings: public", () => {
       publishedEditedAt: 500,
     });
     expect(published).toHaveBeenCalledWith("published", "L1");
-    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/L1");
+    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+      "href",
+      "/l/L1",
+    );
     expect(screen.getByText("Send this board again, over the same link.")).toBeInTheDocument();
     // Public now: the sheet ends with the way to take it down.
     const rows = [...sheet().querySelectorAll(".sheet__rows > li")];
@@ -345,9 +358,9 @@ describe("BoardSettings: public", () => {
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(published).toHaveBeenCalledWith("updated", "L1"));
     expect(republish).toHaveBeenCalledWith("L1", expect.objectContaining({ title: "Films" }));
-    expect(republish).not.toHaveBeenCalledWith(
+    expect(republish).toHaveBeenCalledWith(
       "L1",
-      expect.objectContaining({ boardUid: expect.anything() }),
+      expect.objectContaining({ boardUid: filmBoard().uid }),
     );
   });
 
@@ -371,7 +384,10 @@ describe("BoardSettings: public", () => {
       publishedEditedAt: 500,
     });
     expect(published).toHaveBeenCalledWith("ranking", "SRC");
-    expect(screen.getByRole("link", { name: "Open the list" })).toHaveAttribute("href", "/l/SRC");
+    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+      "href",
+      "/l/SRC",
+    );
 
     // Down from the list it ranks, not by deleting somebody else's list.
     await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
@@ -629,6 +645,96 @@ describe("BoardSettings: category and topic", () => {
     await waitFor(() =>
       expect(publish).toHaveBeenCalledWith(expect.objectContaining({ topicId: "t2" })),
     );
+  });
+
+  it("names a new topic, sends it alone with the list, and shows it waiting after", async () => {
+    const publish = vi.fn(() => Promise.resolve({ id: "L1", topicId: "t9" }));
+    const findTopic = vi.fn<FindTopic>(async () => ({
+      ...topic("t9", "Space operas"),
+      status: "pending",
+    }));
+    show(
+      filmBoard(),
+      signedIn,
+      { publish },
+      {
+        topics: async () => ({ topics: [topic("t1", "A24")] }),
+        findTopic,
+      },
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Topic/ }));
+    const field = screen.getByRole("textbox", { name: "Name a new topic" });
+    expect(field).toHaveAccessibleDescription(/waits for a moderator/);
+    // One letter is not a name yet.
+    await userEvent.type(field, "S");
+    expect(screen.getByRole("button", { name: "Suggest" })).toBeDisabled();
+    await userEvent.type(field, "pace   operas{Enter}");
+    expect(held.topic).toEqual({ id: null, name: "Space operas" });
+    expect(screen.getByRole("button", { name: /Topic/ })).toHaveTextContent(
+      "Space operas · waiting for approval",
+    );
+    // Opened again, the picker shows it chosen, above the section's own.
+    await userEvent.click(screen.getByRole("button", { name: /Topic/ }));
+    const picker = screen.getByRole("radiogroup", { name: "Topic" });
+    expect(within(picker).getByRole("radio", { checked: true })).toHaveTextContent(
+      "Space operasWaiting for approval",
+    );
+    expect(findTopic).not.toHaveBeenCalled();
+
+    await userEvent.click(publicSwitch());
+    await waitFor(() => expect(held.publishedId).toBe("L1"));
+    const request = (publish.mock.calls[0] as unknown[])[0];
+    expect(request).toMatchObject({ newTopic: "Space operas" });
+    expect(request).not.toHaveProperty("topicId");
+    expect(request).not.toHaveProperty("noTopic");
+    expect(held.topic).toEqual({ id: "t9", name: "Space operas", waiting: true });
+    await waitFor(() => expect(findTopic).toHaveBeenCalledWith("t9"));
+    expect(held.topic).toEqual({ id: "t9", name: "Space operas", waiting: true });
+    // What the backend answered is not an edit: the list is not behind it.
+    expect(held.publishedEditedAt).toBe(held.editedAt);
+  });
+
+  it("takes a name the section already has as that topic, not a twin", async () => {
+    show(filmBoard(), signedIn, {}, { topics: async () => ({ topics: [topic("t1", "A24")] }) });
+    await userEvent.click(screen.getByRole("button", { name: /Topic/ }));
+    await screen.findByRole("radio", { name: "A24" });
+    await userEvent.type(screen.getByRole("textbox", { name: "Name a new topic" }), "a24{Enter}");
+    expect(held.topic).toEqual({ id: "t1", name: "A24" });
+  });
+
+  it("settles a waiting topic of one's own when the picker opens", async () => {
+    const findTopic = vi.fn<FindTopic>(async () => topic("t9", "Space opera"));
+    show(
+      { ...filmBoard(), topic: { id: "t9", name: "Space operas", waiting: true } },
+      signedIn,
+      {},
+      { findTopic },
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Topic/ }));
+    await waitFor(() => expect(held.topic).toEqual({ id: "t9", name: "Space opera" }));
+    expect(findTopic).toHaveBeenCalledTimes(1);
+  });
+
+  it("says when too many topics wait, and forgets one a moderator turned down", async () => {
+    const tooMany = vi.fn(() => Promise.reject(new ApiFailure({ kind: "tooManyTopics" })));
+    show({ ...filmBoard(), topic: { id: null, name: "Space operas" } }, signedIn, {
+      publish: tooMany,
+    });
+    await userEvent.click(publicSwitch());
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Three of your topics are waiting for a moderator.",
+    );
+    expect(held.topic).toEqual({ id: null, name: "Space operas" });
+
+    const refused = vi.fn(() =>
+      Promise.reject(new ApiFailure({ kind: "invalid", detail: null, code: "TOPIC_UNAVAILABLE" })),
+    );
+    show({ ...filmBoard(), topic: { id: "t9", name: "Space operas", waiting: true } }, signedIn, {
+      publish: refused,
+    });
+    await userEvent.click(screen.getAllByRole("switch", { name: "Public" }).at(-1)!);
+    expect(await screen.findByText(/That topic was turned down/)).toBeInTheDocument();
+    expect(held.topic).toBeNull();
   });
 
   it("has no topic to offer before the section is chosen, and says when the topics do not come", async () => {

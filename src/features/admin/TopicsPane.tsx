@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import type { AdminRole, TopicChanges, TopicDraft } from "../../api/admin";
 import type { Topic } from "../../api/sections";
-import { createTopic, deleteTopic, editTopic, loadTopics } from "../../lib/api";
+import { createTopic, deleteTopic, editTopic, loadAllTopics } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -25,7 +25,7 @@ export interface TopicsDeps {
 }
 
 const topicsDeps: TopicsDeps = {
-  load: (section) => loadTopics(section, 50),
+  load: loadAllTopics,
   create: createTopic,
   edit: editTopic,
   remove: deleteTopic,

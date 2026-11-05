@@ -577,6 +577,31 @@
   padding: 0;
 }
 
+/* The topics on offer, as the picker's own column. */
+.sheet-pick__options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* A new topic: its name and the button on one line, what happens to it under them. */
+.sheet-pick__new {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 8px;
+  margin-top: 8px;
+}
+
+.sheet-pick__new .sheet-pick__find {
+  margin-bottom: 0;
+}
+
+.sheet-pick__new .sheet-pick__note {
+  grid-column: 1 / -1;
+  padding-inline: 4px;
+}
+
 /* "Take it down?", asked where the button was. */
 .sheet-ask {
   display: flex;

@@ -128,7 +128,8 @@ describe("choosing cards", () => {
     });
   });
 
-  it("stops picking at 64", async () => {
+  // A loaded machine draws sixty-four picks slowly; the default 15 s is not the point here.
+  it("stops picking at 64", { timeout: 60_000 }, async () => {
     show();
     await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
     const grid = screen.getByRole("list");

@@ -78,7 +78,7 @@ beforeEach(() => {
   });
   proposing = {
     propose: vi.fn(async () => waiting("pets", "Pets")),
-    withdraw: vi.fn(async () => undefined),
+    withdraw: vi.fn(async () => ({ outcome: "withdrawn" as const, status: "declined" as const })),
     editor: {
       check: vi.fn(async () => ({ free: true })),
       upload: vi.fn(async () => ({ pictureId: "p", previewUrl: "https://p" })),
@@ -288,6 +288,33 @@ describe("All sections: a waiting tile", () => {
     await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
     expect(await screen.findByText("Someone else already decided this one.")).toBeInTheDocument();
     expect(sectionsDeps.load).toHaveBeenCalledTimes(2);
+  });
+
+  it("says a proposal a moderator had already declined or merged was not withdrawn", async () => {
+    proposing.withdraw = vi
+      .fn<ProposingDeps["withdraw"]>()
+      .mockResolvedValueOnce({ outcome: "dismissed", status: "declined" });
+    open({ path: "/s?waiting=street-food" });
+    const sheet = await screen.findByRole("dialog", { name: "Street food" });
+    await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
+    await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
+    expect(
+      await screen.findByText("Moderators had already declined “Street food”."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Proposal withdrawn.")).toBeNull();
+  });
+
+  it("says a proposal approved meanwhile is a section now", async () => {
+    proposing.withdraw = vi
+      .fn<ProposingDeps["withdraw"]>()
+      .mockRejectedValueOnce(new ApiFailure({ kind: "conflict", status: "approved" }));
+    open({ path: "/s?waiting=street-food" });
+    const sheet = await screen.findByRole("dialog", { name: "Street food" });
+    await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
+    await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
+    expect(
+      await screen.findByText("“Street food” was approved meanwhile. It’s a section now."),
+    ).toBeInTheDocument();
   });
 
   it("keeps the focus in the sheet: on the question, then on Withdraw after a refusal", async () => {

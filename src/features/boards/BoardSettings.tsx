@@ -5,7 +5,7 @@ import { errorOf, type ApiError } from "../../api/errors";
 import type { Published, PublishRequest } from "../../api/lists";
 import type { Topic } from "../../api/sections";
 import { useSession } from "../../app/session";
-import { loadTopics, withdrawListRanking } from "../../lib/api";
+import { loadTopic, loadTopics, withdrawListRanking } from "../../lib/api";
 import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import { holds } from "../../lib/locale";
 import { fill, plural, strings } from "../../strings";
@@ -17,9 +17,11 @@ import { failureText } from "../editor/failureText";
 import type { Section } from "../sections/model";
 import {
   BOARD_LIMITS,
+  cleanTopicName,
   DISPLAY_MODES,
   isBehind,
   isOut,
+  isWaitingTopic,
   liveItems,
   previewsOf,
   rankedTiers,
@@ -28,13 +30,17 @@ import {
   setPublished,
   setRanking,
   setTopic,
+  settleTopic,
+  TOPIC_NAME,
   type Board,
   type BoardTopic,
   type DisplayMode,
 } from "./model";
 import { titleOf } from "./boardText";
+import { AS_COMMUNITY } from "./ownList";
 import { publishProblemsOf, publishRequestOf } from "./publish";
 import { filedUnder, sectionChoices } from "./sectionChoices";
+import { sentTopic, settledTopic, type FindTopic } from "./topic";
 import "./boards.css";
 
 export type PublishBoard = (request: PublishRequest) => Promise<Published>;
@@ -79,6 +85,8 @@ interface BoardSettingsProps {
    */
   publishing: PublishingDeps | null;
   topics?: LoadTopics;
+  /** One topic by its id: whether a proposed one still waits. */
+  findTopic?: FindTopic;
   onDone: () => void;
   now?: () => number;
 }
@@ -187,6 +195,7 @@ export function BoardSettings({
   onPublished,
   publishing,
   topics: load = loadTopics,
+  findTopic = loadTopic,
   onDone,
   now = Date.now,
 }: BoardSettingsProps) {
@@ -211,6 +220,18 @@ export function BoardSettings({
     : null;
   const toggle = (which: Open) => setOpen(open === which ? "none" : which);
 
+  // A topic of one's own that waits is asked about, as the phone asks when its
+  // picker opens; the answer lands only if the board still has that topic.
+  const settle = (topic: BoardTopic | null) => {
+    if (topic === null || topic.id === null || topic.waiting !== true) return;
+    void settledTopic(topic, findTopic).then((decided) => {
+      const current = latest();
+      if (decided !== topic && current.topic?.id === topic.id) {
+        keep(settleTopic(current, decided));
+      }
+    });
+  };
+
   const send = async (what: "published" | "updated") => {
     const current = latest();
     const request = publishRequestOf(current);
@@ -218,18 +239,27 @@ export function BoardSettings({
     setBusy(what === "published" ? "publishing" : "updating");
     setFailure(null);
     try {
+      // The board's uid goes with every send, as the phone's does: a first
+      // publish lost to a reload gets its list back, and a replace keeps it.
+      const outgoing = { ...request, boardUid: current.uid };
       const answer =
         what === "updated" && current.publishedId !== null
-          ? await publishing.republish(current.publishedId, request)
-          : await publishing.publish({ ...request, boardUid: current.uid });
+          ? await publishing.republish(current.publishedId, outgoing)
+          : await publishing.publish(outgoing);
       const name = account?.kind === "signedIn" ? account.displayName : null;
       const after = latest();
       // The cards as they came from the list they were saved from: the
       // backend kept them as one's ranking of it, which has no id of its own.
       const ranking = answer.ranking === true;
-      const sent = ranking
+      const out = ranking
         ? setRanking(after, answer.id, now())
         : setPublished(after, answer.id, name ?? after.authorName, now());
+      // A name proposed with it is a topic now, waiting for a moderator,
+      // unless another was chosen while the request was on its way.
+      const sent =
+        ranking || after.topic !== current.topic
+          ? out
+          : settleTopic(out, sentTopic(current.topic, answer.topicId));
       // A change made while the request was on its way was not in it: the
       // published copy is behind it, and Update still has it to send.
       keep(
@@ -238,12 +268,19 @@ export function BoardSettings({
           : { ...sent, publishedEditedAt: sent.editedAt - 1 },
       );
       onPublished(ranking ? "ranking" : what, answer.id);
+      // The backend may have filed it under an approved topic of that name.
+      if (sent.topic !== current.topic) settle(sent.topic);
     } catch (reason: unknown) {
       const error = errorOf(reason);
       // Taken down elsewhere (its page, /me, the phone): the board is no longer
       // public, and its switch says so; turned on, it goes out anew.
       if (what === "updated" && error.kind === "notFound") {
         keep(setPublished(latest(), null, null, now()));
+      }
+      // A topic of one's own that a moderator turned down meanwhile is not
+      // open any more: the board forgets it, and the next try goes without.
+      if (error.kind === "invalid" && error.code === "TOPIC_UNAVAILABLE") {
+        keep(setTopic(latest(), null, now()));
       }
       setFailure({ error, on: what === "published" ? "publish" : "update" });
     } finally {
@@ -331,7 +368,9 @@ export function BoardSettings({
           ? strings.list.deleteFailed
           : on === "update" && failure.error.kind === "notFound"
             ? strings.new.listGone
-            : failureText(failure.error, on === "update" ? "edit" : "new")}
+            : failure.error.kind === "invalid" && failure.error.code === "TOPIC_UNAVAILABLE"
+              ? strings.boards.topicUnavailable
+              : failureText(failure.error, on === "update" ? "edit" : "new")}
       </span>
     ) : null;
 
@@ -371,13 +410,46 @@ export function BoardSettings({
       live = false;
     };
   }, [open, category, load]);
+  // A waiting topic of one's own may have been decided since: asked once per opening.
+  const pickerOpen = open === "topic";
+  const settleNow = useRef(() => settle(latest().topic));
+  useEffect(() => {
+    settleNow.current = () => settle(latest().topic);
+  });
+  useEffect(() => {
+    if (pickerOpen) settleNow.current();
+  }, [pickerOpen]);
+  // One's own, proposed or waiting, is not among the approved ones: it is shown above them.
+  const own = isWaitingTopic(board.topic) ? board.topic : null;
   // The topic chosen among those shown; None takes the Tab stop while it is not.
   const topicShown =
-    topics.status === "ready" && topics.topics.some((topic) => topic.id === board.topic?.id);
+    own !== null ||
+    (topics.status === "ready" && topics.topics.some((topic) => topic.id === board.topic?.id));
+  // A new topic, named here and proposed with the next publish. A name the
+  // section already has is that topic, not a twin of it.
+  const [naming, setNaming] = useState("");
   const pickTopic = (topic: BoardTopic | null) => {
     keep(setTopic(latest(), topic, now()));
     setOpen("none");
+    setNaming("");
   };
+  const proposed = cleanTopicName(naming);
+  const proposeTopic = () => {
+    if (proposed === null) return;
+    const known =
+      topics.status === "ready"
+        ? topics.topics.find((topic) => topic.name.toLowerCase() === proposed.toLowerCase())
+        : undefined;
+    pickTopic(
+      known === undefined ? { id: null, name: proposed } : { id: known.id, name: known.name },
+    );
+  };
+  const topicSub = (topic: BoardTopic | null) =>
+    topic === null
+      ? strings.boards.topicNone
+      : isWaitingTopic(topic)
+        ? fill(strings.boards.topicWaiting, { name: topic.name })
+        : topic.name;
 
   const tierCount = rankedTiers(board).length;
   const title = titleOf(board);
@@ -504,9 +576,9 @@ export function BoardSettings({
                   </Button>
                 }
               >
-                <Link className="sheet-row__link" to={published}>
+                <Link className="sheet-row__link" to={published} state={AS_COMMUNITY}>
                   <Icon name="open_in_new" />
-                  <span>{strings.new.openList}</span>
+                  <span>{strings.boards.seeInCommunity}</span>
                 </Link>
                 {problem !== null && <span className="sheet-row__note">{problem}</span>}
                 {failed("update")}
@@ -592,54 +664,102 @@ export function BoardSettings({
             <RowButton
               icon={<Icon name="label" />}
               title={strings.boards.topic}
-              sub={board.topic?.name ?? strings.boards.topicNone}
+              sub={topicSub(board.topic)}
               open={open === "topic"}
               disabled={category === null}
               onClick={() => toggle("topic")}
             />
             {open === "topic" && (
-              // oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- the radios inside take the focus, one Tab stop for the group
-              <div
-                className="sheet-pick"
-                role="radiogroup"
-                aria-label={strings.boards.topic}
-                onKeyDown={(event) => onRadioKeys(event, false)}
-              >
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={board.topic === null}
-                  tabIndex={board.topic === null || !topicShown ? 0 : -1}
-                  className="sheet-pick__option"
-                  onClick={() => pickTopic(null)}
+              <div className="sheet-pick">
+                {/* oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- the radios inside take the focus, one Tab stop for the group */}
+                <div
+                  className="sheet-pick__options"
+                  role="radiogroup"
+                  aria-label={strings.boards.topic}
+                  onKeyDown={(event) => onRadioKeys(event, false)}
                 >
-                  {strings.boards.topicNone}
-                  {board.topic === null && <Icon name="check" />}
-                </button>
-                {topics.status === "ready" &&
-                  topics.topics.map((topic) => (
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={board.topic === null}
+                    tabIndex={board.topic === null || !topicShown ? 0 : -1}
+                    className="sheet-pick__option"
+                    onClick={() => pickTopic(null)}
+                  >
+                    {strings.boards.topicNone}
+                    {board.topic === null && <Icon name="check" />}
+                  </button>
+                  {own !== null && (
                     <button
-                      key={topic.id}
                       type="button"
                       role="radio"
-                      aria-checked={board.topic?.id === topic.id}
-                      tabIndex={board.topic?.id === topic.id ? 0 : -1}
+                      aria-checked="true"
+                      tabIndex={0}
                       className="sheet-pick__option"
-                      onClick={() => pickTopic({ id: topic.id, name: topic.name })}
+                      onClick={() => setOpen("none")}
                     >
-                      {topic.name}
-                      {board.topic?.id === topic.id && <Icon name="check" />}
+                      <span className="sheet-pick__name">
+                        {own.name}
+                        <span className="sheet-pick__sub">{strings.boards.topicWaitingShort}</span>
+                      </span>
+                      <Icon name="check" />
                     </button>
-                  ))}
-                {topics.status === "loading" && (
-                  <p className="sheet-pick__note" role="status">
-                    {strings.boards.topicsLoading}
-                  </p>
-                )}
-                {topics.status === "failed" && (
-                  <p className="sheet-pick__note" role="alert">
-                    {strings.boards.topicsFailed}
-                  </p>
+                  )}
+                  {topics.status === "ready" &&
+                    topics.topics
+                      .filter((topic) => own === null || topic.id !== own.id)
+                      .map((topic) => (
+                        <button
+                          key={topic.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={board.topic?.id === topic.id}
+                          tabIndex={board.topic?.id === topic.id ? 0 : -1}
+                          className="sheet-pick__option"
+                          onClick={() => pickTopic({ id: topic.id, name: topic.name })}
+                        >
+                          {topic.name}
+                          {board.topic?.id === topic.id && <Icon name="check" />}
+                        </button>
+                      ))}
+                  {topics.status === "loading" && (
+                    <p className="sheet-pick__note" role="status">
+                      {strings.boards.topicsLoading}
+                    </p>
+                  )}
+                  {topics.status === "failed" && (
+                    <p className="sheet-pick__note" role="alert">
+                      {strings.boards.topicsFailed}
+                    </p>
+                  )}
+                </div>
+                {/* A house list is filed by its staff under topics that exist. */}
+                {ownPublish && (
+                  <form
+                    className="sheet-pick__new"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      proposeTopic();
+                    }}
+                  >
+                    <input
+                      type="text"
+                      className="sheet-pick__find"
+                      value={naming}
+                      maxLength={TOPIC_NAME.max}
+                      placeholder={strings.boards.topicNew}
+                      aria-label={strings.boards.topicNew}
+                      aria-describedby={`${id}-topic-new`}
+                      autoComplete="off"
+                      onChange={(event) => setNaming(event.target.value)}
+                    />
+                    <Button type="submit" disabled={proposed === null}>
+                      {strings.boards.topicPropose}
+                    </Button>
+                    <p id={`${id}-topic-new`} className="sheet-pick__note">
+                      {strings.boards.topicNewNote}
+                    </p>
+                  </form>
                 )}
               </div>
             )}

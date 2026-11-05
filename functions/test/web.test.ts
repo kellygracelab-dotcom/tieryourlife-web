@@ -244,6 +244,22 @@ describe("POST /api/rank — Finish", () => {
     assert.equal(refused.status, 400);
   });
 
+  it("keeps the uid of the author it names beside the snapshot, and none for a list without one", async () => {
+    const named = setup();
+    const kept = await call(named.deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[0], []] });
+    const { code } = kept.body as { code: string };
+    assert.equal(named.table("rankings").get(code)?.listAuthorUid, "author");
+
+    const nameless = setup();
+    nameless.table("publishedLists").set(LIST_ID, { ...LIST, anonymous: true });
+    const other = await call(nameless.deps, "POST", "/api/rank", {
+      listId: LIST_ID,
+      rows: [[0], []],
+    });
+    const { code: otherCode } = other.body as { code: string };
+    assert.equal("listAuthorUid" in (nameless.table("rankings").get(otherCode) ?? {}), false);
+  });
+
   it("refuses a body over the limit before reading anything", async () => {
     const { deps, table } = setup();
     const answer = await call(deps, "POST", "/api/rank", {
@@ -371,6 +387,21 @@ describe("GET /api/rank/{code}", () => {
     assert.equal(body.createdAt, 500);
   });
 
+  it("tells a ranking kept before the author was stored whose list it is, once read", async () => {
+    const { deps, table } = setup(PERSON);
+    table("rankings").set("abcdefgh", ranking("person", false));
+    await call(deps, "GET", "/api/rank/abcdefgh");
+    assert.equal(table("rankings").get("abcdefgh")?.listAuthorUid, "author");
+
+    // An anonymous list names nobody, so nothing is stored for it.
+    table("rankings").set("anonymou", {
+      ...ranking("person", false),
+      snapshot: { ...ranking("person", false).snapshot, authorName: "" },
+    });
+    await call(deps, "GET", "/api/rank/anonymou");
+    assert.equal(table("rankings").get("anonymou")?.listAuthorUid, undefined);
+  });
+
   it("says the list is gone when it is under review, and is nobody's for a guest", async () => {
     const { deps, table } = setup(GUEST);
     table("rankings").set("abcdefgh", ranking("guest", true));
@@ -472,6 +503,27 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     assert.equal((await call(deps, "PUT", "/api/rank/abcdefgh", { rows: [[0], []] })).status, 403);
     assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 403);
     assert.ok(table("rankings").has("abcdefgh"));
+  });
+
+  it("lets the guest who made a ranking re-arrange it, and no other guest or account", async () => {
+    const { deps, table } = setup(GUEST);
+    table("rankings").set("abcdefgh", ranking("guest", true));
+    assert.equal((await call(deps, "PUT", "/api/rank/abcdefgh", { rows: [[2], []] })).status, 200);
+    assert.deepEqual(table("rankings").get("abcdefgh")?.rows, [{ items: [2] }, { items: [] }]);
+    // Another guest's, one an account claimed, or one released: not this guest's to change.
+    table("rankings").set("bbbbbbbb", ranking("someone", true));
+    table("rankings").set("cccccccc", ranking("guest", false));
+    table("rankings").set("dddddddd", ranking(null, true));
+    for (const code of ["bbbbbbbb", "cccccccc", "dddddddd"]) {
+      assert.equal((await call(deps, "PUT", `/api/rank/${code}`, { rows: [[0], []] })).status, 403);
+    }
+    // Deleting stays an account's.
+    assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 403);
+    // An account does not change a guest's ranking under the same uid until it claims it.
+    const signedIn = setup({ uid: "guest", isAnonymous: false });
+    signedIn.table("rankings").set("abcdefgh", ranking("guest", true));
+    const put = await call(signedIn.deps, "PUT", "/api/rank/abcdefgh", { rows: [[0], []] });
+    assert.equal(put.status, 403);
   });
 
   it("deletes the owner's ranking for good, with its share pictures", async () => {

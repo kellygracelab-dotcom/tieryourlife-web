@@ -13,6 +13,8 @@ export function failureText(error: ApiError, mode: "new" | "edit"): string {
       return strings.new.failedBanned;
     case "tooManyLists":
       return strings.new.failedTooMany;
+    case "tooManyTopics":
+      return strings.boards.topicTooMany;
     case "notSignedIn":
     case "unauthenticated":
       return strings.new.failedSignedOut;

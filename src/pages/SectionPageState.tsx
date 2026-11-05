@@ -172,5 +172,5 @@ export function useFollowFlow() {
     </>
   );
 
-  return { toggle, failed, overlays };
+  return { toggle, failed, notify: setNotice, overlays };
 }

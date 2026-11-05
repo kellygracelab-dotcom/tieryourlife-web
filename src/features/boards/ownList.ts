@@ -11,6 +11,19 @@ export type CopyBack = (url: string) => Promise<UploadedPicture>;
 /** Pictures brought back at once: enough to keep the line busy. */
 const COPIES_AT_ONCE = 4;
 
+/**
+ * The history entry's state for one's own list seen as the community sees
+ * it, the board's "See it in Community": that page stays the list's page,
+ * and does not give way to the board as one's own list otherwise does.
+ */
+export const AS_COMMUNITY = { asCommunity: true } as const;
+
+/** Whether the list's page was opened from its board, to be seen as the community sees it. */
+export const seenAsCommunity = (state: unknown): boolean =>
+  typeof state === "object" &&
+  state !== null &&
+  (state as { asCommunity?: unknown }).asCommunity === true;
+
 /** The board a published list is changed on: the one that published it, while it is not in the trash. */
 export const boardOfList = (repository: BoardsRepository, listId: string): Board | null =>
   repository.all().find((board) => board.publishedId === listId && board.deletedAt === null) ??
