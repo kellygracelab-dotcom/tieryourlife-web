@@ -10,6 +10,7 @@ const pl: Translation = {
   tagline: "Wersja webowa",
   nav: {
     site: "Witryna",
+    skipToContent: "Przejdź do treści",
     signIn: "Zaloguj się",
     signOut: "Wyloguj się",
     account: "Twoje konto",
@@ -101,8 +102,8 @@ const pl: Translation = {
     title: "Ustawienia",
     guestTitle: "Zaloguj się, aby zmieniać ustawienia.",
     guestBody:
-      "Twoja nazwa, zdjęcie i motyw należą do konta. Do oceniania listy konto nie jest potrzebne.",
-    themeGuestNote: "Zapisywane na tym urządzeniu, dopóki się nie zalogujesz.",
+      "Twoja nazwa i zdjęcie należą do konta. Do oceniania listy konto nie jest potrzebne.",
+    themeGuestNote: "Zapisywane na tym urządzeniu, niezależnie od tego, czy się zalogujesz.",
     nameTitle: "Twoja nazwa",
     nameBody:
       "Nazwa pokazywana jako autor na każdej liście, którą publikujesz. Twój e-mail nigdy nie jest pokazywany.",
@@ -149,7 +150,7 @@ const pl: Translation = {
     placeTitle: "Ustaw zdjęcie",
     placeFrame: "Obraz do umieszczenia w okręgu",
     placeUse: "Użyj",
-    placeFailed: "Nie da się tu pokazać obrazu. Nadal można go użyć bez zmian.",
+    placeFailed: "Ten obraz się nie wczytuje, więc nie może być Twoją twarzą. Wybierz inny.",
     placeHelp: "Przeciągnij, aby przesunąć. Przybliż dwoma palcami lub przewijaniem.",
     placeAsItIs: "Tego obrazu można użyć tylko bez zmian.",
   },
@@ -506,6 +507,7 @@ const pl: Translation = {
     dock: "Gdzie leżą karty",
     dockBeside: "Karty obok poziomów",
     dockUnder: "Karty pod poziomami",
+    dockRows: "Rzędy kart pod poziomami",
     allPlaced: { one: "Karta jest umieszczona", other: "Umieszczono wszystkie: {n}" },
     allPlacedNote: "Zmień zdanie, przeciągając kartę, albo zakończ i odbierz swój link.",
     allPlacedNoteEdit: "Zmień zdanie, przeciągając kartę, albo zapisz to, co masz.",
@@ -615,6 +617,9 @@ const pl: Translation = {
   crash: {
     title: "Coś poszło nie tak na tej stronie",
     body: "Zwykle pomaga odświeżenie. Jeśli nie, reszta serwisu nadal działa.",
+    offlineTitle: "Tej strony nie da się otworzyć offline",
+    offlineBody:
+      "Nie była jeszcze otwierana podczas tej wizyty, a połączenie zostało przerwane. Odśwież, gdy wrócisz do sieci; strony już otwarte nadal działają.",
   },
   notFound: {
     title: "Pod tym adresem nic nie ma.",
@@ -1362,7 +1367,8 @@ const pl: Translation = {
       "Tablice zostają w tej przeglądarce. Kopia na koncie zostanie usunięta, a nowe urządzenie zacznie od pustego.",
     offConfirm: "Usuń kopię",
     offCancel: "Anuluj",
-    stuck: "Brak kopii od {when}. Sprawdź połączenie.",
+    stuck: "Brak kopii od {when}. Spróbuj ponownie przyciskiem „Zapisz kopię teraz”.",
+    stuckNever: "Jeszcze nie ma kopii. Spróbuj ponownie przyciskiem „Zapisz kopię teraz”.",
     now: "Zapisz kopię teraz",
     backingUp: "Zapisywanie kopii…",
     guestNote:

@@ -30,4 +30,22 @@ describe("LanguageCard", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Українська" }));
     expect(choose).toHaveBeenCalledExactlyOnceWith("uk");
   });
+
+  it("is one Tab stop whose arrows move without reloading, and whose Enter takes the language", async () => {
+    const choose = vi.fn();
+    render(<LanguageCard locales={["en", "uk", "ar"]} current="uk" choose={choose} />);
+    // Radios straight in the group: no list items cut off from their list.
+    expect(screen.queryByRole("listitem")).toBeNull();
+    await userEvent.tab();
+    expect(screen.getByRole("radio", { name: /Українська/ })).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("radio", { name: "العربية" })).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("radio", { name: "English" })).toHaveFocus();
+    expect(choose).not.toHaveBeenCalled();
+    await userEvent.keyboard("{Enter}");
+    expect(choose).toHaveBeenCalledExactlyOnceWith("en");
+    await userEvent.tab();
+    expect(document.body).toHaveFocus();
+  });
 });

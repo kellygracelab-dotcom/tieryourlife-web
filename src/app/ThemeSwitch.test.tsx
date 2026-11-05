@@ -38,4 +38,26 @@ describe("ThemeSwitch", () => {
     expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(window.localStorage.getItem(THEME_KEY)).toBeNull();
   });
+
+  it("is one Tab stop, and the arrows move the choice round it", async () => {
+    render(
+      <>
+        <ThemeSwitch />
+        <button type="button">After</button>
+      </>,
+    );
+    await userEvent.tab();
+    expect(screen.getByRole("radio", { name: "System" })).toHaveFocus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(screen.getByRole("radio", { name: "Light" })).toHaveFocus();
+    expect(screen.getByRole("radio", { name: "Light" })).toHaveAttribute("aria-checked", "true");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    await userEvent.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("radio", { name: "System" })).toHaveAttribute("aria-checked", "true");
+    await userEvent.keyboard("{Home}");
+    expect(screen.getByRole("radio", { name: "Light" })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "After" })).toHaveFocus();
+    await userEvent.click(screen.getByRole("radio", { name: "System" }));
+  });
 });

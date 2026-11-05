@@ -123,7 +123,7 @@ export function AdminPage() {
         <PaneList panes={panes} current={current} />
       ) : (
         <>
-          {/* The page keeps its one h1 while the list that holds it is away. */}
+          {/* The page's one h1, as the list of panes has it on a wide screen; the link says it to the eye. */}
           <h1 className="visually-hidden">{strings.admin.title}</h1>
           <Link className="admin__back" to={ADMIN_PATH}>
             <Icon name="arrow_back" />

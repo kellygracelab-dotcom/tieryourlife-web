@@ -10,6 +10,7 @@ import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
+import { onRadioKeys, radioTabIndex } from "../../ui/radioKeys";
 import { useModal } from "../../ui/useModal";
 import { failureText } from "../editor/failureText";
 import type { Section } from "../sections/model";
@@ -346,6 +347,9 @@ export function BoardSettings({
       live = false;
     };
   }, [open, category, load]);
+  // The topic chosen among those shown; None takes the Tab stop while it is not.
+  const topicShown =
+    topics.status === "ready" && topics.topics.some((topic) => topic.id === board.topic?.id);
   const pickTopic = (topic: BoardTopic | null) => {
     keep(setTopic(latest(), topic, now()));
     setOpen("none");
@@ -509,13 +513,24 @@ export function BoardSettings({
                   autoComplete="off"
                   onChange={(event) => setFind(event.target.value)}
                 />
-                <div role="radiogroup" aria-label={strings.boards.category}>
-                  {choices.map((section) => (
+                {/* Choosing closes the picker: the arrows only move, and Space or Enter chooses. */}
+                {/* oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- the radios inside take the focus, one Tab stop for the group */}
+                <div
+                  role="radiogroup"
+                  aria-label={strings.boards.category}
+                  onKeyDown={(event) => onRadioKeys(event, false)}
+                >
+                  {choices.map((section, at) => (
                     <button
                       key={section.id}
                       type="button"
                       role="radio"
                       aria-checked={category === section.id}
+                      tabIndex={radioTabIndex(
+                        category === section.id,
+                        at === 0,
+                        !choices.some((one) => one.id === category),
+                      )}
                       className="sheet-pick__option"
                       onClick={() => {
                         onCategory(section.id);
@@ -559,11 +574,18 @@ export function BoardSettings({
               onClick={() => toggle("topic")}
             />
             {open === "topic" && (
-              <div className="sheet-pick" role="radiogroup" aria-label={strings.boards.topic}>
+              // oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- the radios inside take the focus, one Tab stop for the group
+              <div
+                className="sheet-pick"
+                role="radiogroup"
+                aria-label={strings.boards.topic}
+                onKeyDown={(event) => onRadioKeys(event, false)}
+              >
                 <button
                   type="button"
                   role="radio"
                   aria-checked={board.topic === null}
+                  tabIndex={board.topic === null || !topicShown ? 0 : -1}
                   className="sheet-pick__option"
                   onClick={() => pickTopic(null)}
                 >
@@ -577,6 +599,7 @@ export function BoardSettings({
                       type="button"
                       role="radio"
                       aria-checked={board.topic?.id === topic.id}
+                      tabIndex={board.topic?.id === topic.id ? 0 : -1}
                       className="sheet-pick__option"
                       onClick={() => pickTopic({ id: topic.id, name: topic.name })}
                     >
@@ -675,13 +698,20 @@ export function BoardSettings({
               title={strings.boards.display}
               sub={MODES[board.displayMode].sub}
             >
-              <div className="segmented" role="radiogroup" aria-label={strings.boards.display}>
+              {/* oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- the radios inside take the focus, one Tab stop for the group */}
+              <div
+                className="segmented"
+                role="radiogroup"
+                aria-label={strings.boards.display}
+                onKeyDown={(event) => onRadioKeys(event)}
+              >
                 {DISPLAY_MODES.map((mode) => (
                   <button
                     key={mode}
                     type="button"
                     role="radio"
                     aria-checked={board.displayMode === mode}
+                    tabIndex={board.displayMode === mode ? 0 : -1}
                     className="segmented__option"
                     onClick={() => onMode(mode)}
                   >

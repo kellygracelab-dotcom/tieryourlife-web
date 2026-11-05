@@ -10,6 +10,7 @@ const ja: Translation = {
   tagline: "ウェブ版",
   nav: {
     site: "サイト",
+    skipToContent: "本文へスキップ",
     signIn: "ログイン",
     signOut: "ログアウト",
     account: "アカウント",
@@ -86,8 +87,8 @@ const ja: Translation = {
     title: "設定",
     guestTitle: "設定を変えるにはログインしてください。",
     guestBody:
-      "表示名、アイコン、テーマはアカウントに紐づきます。リストのランク付けにアカウントは要りません。",
-    themeGuestNote: "ログアウト中はこの端末に保存されます。",
+      "表示名とアイコンはアカウントに紐づきます。リストのランク付けにアカウントは要りません。",
+    themeGuestNote: "ログインしていてもいなくても、この端末に保存されます。",
     nameTitle: "表示名",
     nameBody:
       "公開したすべてのリストに作者として表示される名前です。メールアドレスが表示されることはありません。",
@@ -135,7 +136,7 @@ const ja: Translation = {
     placeTitle: "顔の位置を決める",
     placeFrame: "円に収める画像",
     placeUse: "これを使う",
-    placeFailed: "ここでは画像を表示できません。このままでも使えます。",
+    placeFailed: "この画像は読み込めないため、顔に使えません。別の画像を選んでください。",
     placeHelp: "ドラッグで移動、ピンチまたはスクロールで拡大・縮小します。",
     placeAsItIs: "この画像はこのままでしか使えません。",
   },
@@ -481,6 +482,7 @@ const ja: Translation = {
     dock: "カードの位置",
     dockBeside: "ティアの横にカード",
     dockUnder: "ティアの下にカード",
+    dockRows: "ティアの下のカードの行数",
     allPlaced: { other: "{n} 枚すべて配置しました" },
     allPlacedNote: "カードをドラッグして並べ直すか、完了してリンクを受け取りましょう。",
     allPlacedNoteEdit: "カードをドラッグして並べ直すか、このまま保存しましょう。",
@@ -593,6 +595,9 @@ const ja: Translation = {
   crash: {
     title: "このページで問題が発生しました",
     body: "再読み込みでたいてい直ります。直らない場合も、サイトのほかの部分は使えます。",
+    offlineTitle: "このページはオフラインでは開けません",
+    offlineBody:
+      "この訪問ではまだ開いておらず、接続も切れています。オンラインに戻ったら再読み込みしてください。すでに開いたページは使えます。",
   },
   notFound: {
     title: "このアドレスには何もありません。",
@@ -1189,7 +1194,8 @@ const ja: Translation = {
       "ボードはこのブラウザに残ります。アカウント内のコピーは削除され、新しい端末は空の状態から始まります。",
     offConfirm: "停止して削除",
     offCancel: "キャンセル",
-    stuck: "{when}からバックアップされていません。接続を確認してください。",
+    stuck: "{when}からバックアップされていません。「今すぐバックアップ」でもう一度試せます。",
+    stuckNever: "まだバックアップされていません。「今すぐバックアップ」でもう一度試せます。",
     now: "今すぐバックアップ",
     backingUp: "バックアップ中…",
     guestNote:

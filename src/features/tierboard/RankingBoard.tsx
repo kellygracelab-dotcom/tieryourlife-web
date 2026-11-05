@@ -420,7 +420,7 @@ export function RankingBoard({
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
-  const { dock, rows, wide, canDock, choose, startResize } = useDock(device);
+  const { dock, rows, wide, canDock, choose, startResize, resizeByKey, maxRows } = useDock(device);
   // On a narrow window the box that brings cards in waits behind Add, in the
   // pool, whichever head the pool shows; on a wide one it stands in the pool,
   // and an empty pool gives it the cursor. Opened, the catalogue's field
@@ -650,6 +650,19 @@ export function RankingBoard({
       }
       // Alt+1 or Ctrl+1 belongs to the browser or the system, not to the board.
       if (event.altKey || event.ctrlKey || event.metaKey) return;
+      // A single key belongs to the board only while the focus is on it, or
+      // on nothing in particular (the page, after a click Safari does not
+      // focus): pressed on the header's links or the page's buttons, it is theirs.
+      const target = event.target;
+      const board = section.current;
+      if (
+        target instanceof Element &&
+        board !== null &&
+        !board.contains(target) &&
+        !target.contains(board)
+      ) {
+        return;
+      }
       if (event.key === "/") {
         const box = section.current?.querySelector<HTMLInputElement>(".pool__search");
         // jsdom has no layout and no checkVisibility; there the box counts as shown.
@@ -892,7 +905,19 @@ export function RankingBoard({
             style={{ "--dock-rows": rows } as CSSProperties}
           >
             {docked && !allPlaced && (
-              <div className="pool__grip" onPointerDown={startResize} aria-hidden="true" />
+              // A splitter the keyboard reaches too: up and down change the rows a drag does.
+              <div
+                className="pool__grip"
+                role="separator"
+                aria-orientation="horizontal"
+                aria-label={strings.rank.dockRows}
+                aria-valuemin={1}
+                aria-valuemax={maxRows}
+                aria-valuenow={rows}
+                tabIndex={0}
+                onPointerDown={startResize}
+                onKeyDown={resizeByKey}
+              />
             )}
             {allPlaced && !wide && !emptyPool ? (
               <div className="pool__done">

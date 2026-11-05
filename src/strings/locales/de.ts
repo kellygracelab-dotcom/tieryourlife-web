@@ -10,6 +10,7 @@ const de: Translation = {
   tagline: "Web-Version",
   nav: {
     site: "Website",
+    skipToContent: "Zum Inhalt springen",
     signIn: "Anmelden",
     signOut: "Abmelden",
     account: "Dein Konto",
@@ -86,8 +87,8 @@ const de: Translation = {
     title: "Einstellungen",
     guestTitle: "Melde dich an, um deine Einstellungen zu ändern.",
     guestBody:
-      "Dein Name, dein Bild und das Design gehören zu einem Konto. Zum Einordnen einer Liste brauchst du keins.",
-    themeGuestNote: "Wird auf diesem Gerät gespeichert, solange du nicht angemeldet bist.",
+      "Dein Name und dein Bild gehören zu einem Konto. Zum Einordnen einer Liste brauchst du keins.",
+    themeGuestNote: "Wird auf diesem Gerät gespeichert, ob du angemeldet bist oder nicht.",
     nameTitle: "Dein Name",
     nameBody:
       "Der Name, der als Autor auf jeder Liste steht, die du veröffentlichst. Deine E-Mail wird nie gezeigt.",
@@ -139,7 +140,7 @@ const de: Translation = {
     placeFrame: "Das Bild, das in den Kreis kommt",
     placeUse: "Verwenden",
     placeFailed:
-      "Das Bild kann hier nicht angezeigt werden. Es lässt sich trotzdem so verwenden, wie es ist.",
+      "Dieses Bild lässt sich nicht laden und kann daher nicht dein Gesicht sein. Wähle ein anderes.",
     placeHelp: "Zieh zum Verschieben; zoome mit zwei Fingern oder durch Scrollen.",
     placeAsItIs: "Dieses Bild lässt sich nur so verwenden, wie es ist.",
   },
@@ -492,6 +493,7 @@ const de: Translation = {
     dock: "Wo die Karten liegen",
     dockBeside: "Karten neben den Stufen",
     dockUnder: "Karten unter den Stufen",
+    dockRows: "Kartenreihen unter den Stufen",
     allPlaced: { one: "Die Karte ist platziert", other: "Alle {n} platziert" },
     allPlacedNote:
       "Überleg es dir anders, indem du eine Karte ziehst, oder schließ ab und hol dir deinen Link.",
@@ -608,6 +610,9 @@ const de: Translation = {
   crash: {
     title: "Auf dieser Seite ist etwas schiefgegangen",
     body: "Neu laden hilft meistens. Wenn nicht, funktioniert der Rest der Seite weiterhin.",
+    offlineTitle: "Diese Seite lässt sich offline nicht öffnen",
+    offlineBody:
+      "Sie wurde bei diesem Besuch noch nicht geöffnet, und die Verbindung ist weg. Lade neu, sobald du wieder online bist; die schon geöffneten Seiten funktionieren weiter.",
   },
   notFound: {
     title: "Unter dieser Adresse gibt es nichts.",
@@ -1240,7 +1245,8 @@ const de: Translation = {
       "Deine Boards bleiben in diesem Browser. Die Kopie in deinem Konto wird gelöscht, und ein neues Gerät fängt leer an.",
     offConfirm: "Beenden und löschen",
     offCancel: "Abbrechen",
-    stuck: "Seit {when} nicht gesichert. Prüfe deine Verbindung.",
+    stuck: "Seit {when} nicht gesichert. Mit „Jetzt sichern“ versuchst du es noch einmal.",
+    stuckNever: "Noch nicht gesichert. Mit „Jetzt sichern“ versuchst du es noch einmal.",
     now: "Jetzt sichern",
     backingUp: "Wird gesichert…",
     guestNote:

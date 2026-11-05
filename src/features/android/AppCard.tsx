@@ -49,9 +49,10 @@ export function AppCard({
         <Icon name="install_mobile" />
       </span>
       <div className="app-card__text">
-        <h2 id={`app-card-${slot}`} className="app-card__title">
+        {/* Named by its words, not a heading: above the hero it would start the page's outline. */}
+        <p id={`app-card-${slot}`} className="app-card__title">
           {strings.android.title}
-        </h2>
+        </p>
         <p className="app-card__body">{strings.android.body}</p>
       </div>
       {live ? (

@@ -10,6 +10,7 @@ const ptBR: Translation = {
   tagline: "Versão web",
   nav: {
     site: "Site",
+    skipToContent: "Pular para o conteúdo",
     signIn: "Entrar",
     signOut: "Sair",
     account: "Sua conta",
@@ -86,8 +87,8 @@ const ptBR: Translation = {
     title: "Configurações",
     guestTitle: "Entre para mudar suas configurações.",
     guestBody:
-      "Seu nome, sua imagem e o tema pertencem a uma conta. Classificar uma lista não precisa de uma.",
-    themeGuestNote: "Fica salvo neste aparelho enquanto você não entra.",
+      "Seu nome e sua imagem pertencem a uma conta. Classificar uma lista não precisa de uma.",
+    themeGuestNote: "Fica salvo neste aparelho, tendo você entrado ou não.",
     nameTitle: "Seu nome",
     nameBody:
       "O nome que aparece como autor em cada lista que você publica. Seu e-mail nunca é mostrado.",
@@ -135,7 +136,7 @@ const ptBR: Translation = {
     placeTitle: "Posicione sua foto",
     placeFrame: "A imagem que vai no círculo",
     placeUse: "Usar esta",
-    placeFailed: "Não foi possível mostrar a imagem aqui. Ela ainda pode ser usada como está.",
+    placeFailed: "Essa imagem não carrega, então não pode ser seu rosto. Escolha outra.",
     placeHelp: "Arraste para mover; use dois dedos ou role para ampliar.",
     placeAsItIs: "Esta imagem só pode ser usada como está.",
   },
@@ -483,6 +484,7 @@ const ptBR: Translation = {
     dock: "Onde ficam os cards",
     dockBeside: "Cards ao lado dos níveis",
     dockUnder: "Cards abaixo dos níveis",
+    dockRows: "Fileiras de cards abaixo dos níveis",
     allPlaced: { one: "O card está colocado", other: "Os {n} cards estão colocados" },
     allPlacedNote: "Mudou de ideia? Arraste um card, ou termine e pegue seu link.",
     allPlacedNoteEdit: "Mudou de ideia? Arraste um card, ou salve o que tem.",
@@ -593,6 +595,9 @@ const ptBR: Translation = {
   crash: {
     title: "Algo deu errado nesta página",
     body: "Recarregar costuma resolver. Se não resolver, o resto do site continua funcionando.",
+    offlineTitle: "Esta página não abre sem conexão",
+    offlineBody:
+      "Ela ainda não tinha sido aberta nesta visita, e a conexão caiu. Recarregue quando voltar a ficar online; as páginas já abertas continuam funcionando.",
   },
   notFound: {
     title: "Não há nada neste endereço.",
@@ -1226,7 +1231,8 @@ const ptBR: Translation = {
       "Seus quadros ficam neste navegador. A cópia na sua conta é apagada, e um dispositivo novo começará vazio.",
     offConfirm: "Parar e apagar",
     offCancel: "Cancelar",
-    stuck: "Sem cópia desde {when}. Verifique sua conexão.",
+    stuck: "Sem cópia desde {when}. Toque em “Guardar cópia agora” para tentar de novo.",
+    stuckNever: "Ainda sem cópia. Toque em “Guardar cópia agora” para tentar de novo.",
     now: "Guardar cópia agora",
     backingUp: "Guardando cópia…",
     guestNote:

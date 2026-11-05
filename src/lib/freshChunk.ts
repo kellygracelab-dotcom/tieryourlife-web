@@ -11,6 +11,7 @@ export const CHUNK_RETRY_KEY = "tyl:chunk-retry";
 export interface FreshDeps {
   store?: KeyValueStore;
   reload?: () => void;
+  online?: () => boolean;
 }
 
 // A store that refuses (a private window) cannot remember the try, so no reload: it could never end.
@@ -47,7 +48,12 @@ const forget = (store: KeyValueStore) => {
 export function reloadOnce({
   store = sessionStorageStore,
   reload = () => window.location.reload(),
+  online = () => navigator.onLine,
 }: FreshDeps = {}): boolean {
+  // Offline the file is missing for want of a connection, not for a deploy,
+  // and a reload would only trade the whole site for the browser's own error
+  // page: the page that would not open says so instead, in the site.
+  if (!online()) return false;
   if (tried(store) !== false) return false;
   try {
     store.write(CHUNK_RETRY_KEY, "1");

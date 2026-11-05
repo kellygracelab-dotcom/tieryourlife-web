@@ -213,7 +213,7 @@ test("shows the Android app card at the top of the home page, the search still i
 }, testInfo) => {
   await mockBackend(page);
   await page.goto("/");
-  const card = page.getByRole("heading", { name: "TierYourLife for Android" });
+  const card = page.getByRole("complementary", { name: "TierYourLife for Android" });
   // Never on an iPhone or iPad: the app is Android's only.
   if (testInfo.project.name === "iphone") {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

@@ -12,6 +12,7 @@ const tr: Translation = {
   tagline: "Web sürümü",
   nav: {
     site: "Site",
+    skipToContent: "İçeriğe geç",
     signIn: "Oturum aç",
     signOut: "Oturumu kapat",
     account: "Hesabınız",
@@ -87,9 +88,8 @@ const tr: Translation = {
     faceNotMade: "Bu resim yüzün olamaz. Başka birini seç.",
     title: "Ayarlar",
     guestTitle: "Ayarlarınızı değiştirmek için oturum açın.",
-    guestBody:
-      "Adınız, resminiz ve tema bir hesaba aittir. Bir listeyi sıralamak için hesap gerekmez.",
-    themeGuestNote: "Oturum açmadığınız sürece bu cihazda saklanır.",
+    guestBody: "Adınız ve resminiz bir hesaba aittir. Bir listeyi sıralamak için hesap gerekmez.",
+    themeGuestNote: "Oturum açmış olsanız da olmasanız da bu cihazda saklanır.",
     nameTitle: "Adınız",
     nameBody: "Yayımladığınız her listede yazar olarak görünen ad. E-postanız asla gösterilmez.",
     nameField: "Ad",
@@ -136,7 +136,7 @@ const tr: Translation = {
     placeTitle: "Fotoğrafı yerleştir",
     placeFrame: "Daireye yerleştirilecek resim",
     placeUse: "Bunu kullan",
-    placeFailed: "Resim burada gösterilemedi. Yine de olduğu gibi kullanılabilir.",
+    placeFailed: "Bu resim yüklenmiyor, bu yüzden yüzün olamaz. Başka birini seç.",
     placeHelp: "Taşımak için sürükleyin; yakınlaştırmak için iki parmakla açın veya kaydırın.",
     placeAsItIs: "Bu resim yalnızca olduğu gibi kullanılabilir.",
   },
@@ -480,6 +480,7 @@ const tr: Translation = {
     dock: "Kartların yeri",
     dockBeside: "Kartlar seviyelerin yanında",
     dockUnder: "Kartlar seviyelerin altında",
+    dockRows: "Seviyelerin altındaki kart sıraları",
     allPlaced: { one: "Kart yerleştirildi", other: "{n} kartın hepsi yerleştirildi" },
     allPlacedNote:
       "Fikrinizi değiştirdiyseniz bir kartı sürükleyin ya da bitirip bağlantınızı alın.",
@@ -592,6 +593,9 @@ const tr: Translation = {
   crash: {
     title: "Bu sayfada bir şeyler ters gitti",
     body: "Yeniden yüklemek genellikle düzeltir. Düzeltmezse sitenin geri kalanı çalışmaya devam eder.",
+    offlineTitle: "Bu sayfa çevrimdışıyken açılamaz",
+    offlineBody:
+      "Bu ziyarette daha önce açılmadı ve bağlantı kesik. Tekrar çevrimiçi olunca yeniden yükleyin; zaten açılmış sayfalar çalışmaya devam eder.",
   },
   notFound: {
     title: "Bu adreste bir şey yok.",
@@ -1199,7 +1203,8 @@ const tr: Translation = {
       "Panoların bu tarayıcıda kalır. Hesabındaki kopya silinir ve yeni bir cihaz boş başlar.",
     offConfirm: "Durdur ve sil",
     offCancel: "İptal",
-    stuck: "{when} tarihinden beri yedeklenmedi. Bağlantını kontrol et.",
+    stuck: "{when} tarihinden beri yedeklenmedi. Yeniden denemek için “Şimdi yedekle”ye bas.",
+    stuckNever: "Henüz yedeklenmedi. Yeniden denemek için “Şimdi yedekle”ye bas.",
     now: "Şimdi yedekle",
     backingUp: "Yedekleniyor…",
     guestNote:

@@ -18,10 +18,13 @@ export function SignInButton({ label }: { label: string }) {
 
   const press = () => {
     setState("busy");
-    void signIn().then((outcome) => {
-      if (outcome.kind === "redirecting") return;
-      setState(outcome.kind === "failed" && outcome.code !== IN_APP_BROWSER ? "failed" : "idle");
-    });
+    void signIn().then(
+      (outcome) => {
+        if (outcome.kind === "redirecting") return;
+        setState(outcome.kind === "failed" && outcome.code !== IN_APP_BROWSER ? "failed" : "idle");
+      },
+      () => setState("failed"),
+    );
   };
 
   return (

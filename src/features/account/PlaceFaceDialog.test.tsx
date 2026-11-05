@@ -179,16 +179,18 @@ describe("PlaceFaceDialog", () => {
     expect(onUse).toHaveBeenCalledWith(null);
   });
 
-  it("says so when a card cannot be shown at all, and still lets it be used as it is", async () => {
+  it("says so when a card cannot be loaded at all, and does not let it be worn", async () => {
     const { onUse } = open();
     fireEvent.error(picture());
     fireEvent.error(picture());
     expect(frame().querySelector("img")).toBeNull();
     expect(frame()).toHaveAccessibleDescription(
-      "The picture could not be shown here. It can still be used as it is.",
+      "This picture would not load, so it cannot be your face. Pick another.",
     );
+    // A dead address worn as the face would be a broken picture in the header.
+    expect(confirmButton()).toBeDisabled();
     await userEvent.click(confirmButton());
-    expect(onUse).toHaveBeenCalledWith(null);
+    expect(onUse).not.toHaveBeenCalled();
   });
 
   it("gives back a photo the browser cannot draw, and one with no size at all", () => {

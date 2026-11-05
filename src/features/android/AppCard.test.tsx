@@ -8,7 +8,9 @@ import { AppCard, HIDDEN_UNTIL_KEY, HIDE_FOR_MS } from "./AppCard";
 describe("AppCard", () => {
   it("says the app is coming while it is in its closed test, with no link anywhere", () => {
     render(<AppCard slot="home" store={memoryStore()} apple={false} live={false} />);
-    expect(screen.getByRole("heading", { name: "TierYourLife for Android" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("complementary", { name: "TierYourLife for Android" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Coming soon to Google Play")).toBeInTheDocument();
     expect(screen.queryByRole("link")).toBeNull();
   });

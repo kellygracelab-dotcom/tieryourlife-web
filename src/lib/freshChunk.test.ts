@@ -37,6 +37,22 @@ describe("freshChunk", () => {
     expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
   });
 
+  it("does not reload offline, where the reload would land on the browser's error page", async () => {
+    const store = memoryStore();
+    const reload = vi.fn();
+    const missing = freshChunk(
+      async () => {
+        throw new TypeError("Failed to fetch dynamically imported module");
+      },
+      { store, reload, online: () => false },
+    );
+    await expect(missing()).rejects.toThrow(/dynamically imported/);
+    expect(reload).not.toHaveBeenCalled();
+    // Nothing tried yet: back online, a deploy's missing file still gets its one reload.
+    expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
+    expect(reloadOnce({ store, reload, online: () => false })).toBe(false);
+  });
+
   it("does not reload where nothing can be remembered", () => {
     const refusing: KeyValueStore = {
       read: () => {

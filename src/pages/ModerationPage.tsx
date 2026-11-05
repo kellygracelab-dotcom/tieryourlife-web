@@ -435,6 +435,7 @@ export function ModerationPage({
   const { account } = useSession();
   return (
     <section className="mod">
+      {/* A pane of Admin, whose h1 names the page: the pane's title is the next level down. */}
       <h2 className="mod__title">{strings.mod.title}</h2>
       {account?.kind === "guest" && <NotAvailable />}
       {account?.kind === "signedIn" && (

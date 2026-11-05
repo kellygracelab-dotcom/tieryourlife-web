@@ -72,6 +72,7 @@ export function SessionProvider({
     const outcome = await signIn();
     if (outcome.kind === "signedIn") {
       const next = current();
+      noteSignedIn(next);
       owners.arrived({ owner: next.kind === "signedIn" ? next.uid : null, guestUid: null });
       setAccount(next);
     }
@@ -84,6 +85,7 @@ export function SessionProvider({
       if (kindOf(outcome) === "failed") setRedirectFailed(true);
       if (kindOf(outcome) === "signedIn") {
         const next = current();
+        noteSignedIn(next);
         owners.arrived({ owner: next.kind === "signedIn" ? next.uid : null, guestUid: null });
         setAccount(next);
       }
@@ -98,7 +100,13 @@ export function SessionProvider({
           : account,
       signIn: signInAndShow,
       signOut,
-      refresh: () => setAccount(current()),
+      // Firebase fires nothing for a new name or face either: the next visit's
+      // first moment draws what is noted here, so it is noted now.
+      refresh: () => {
+        const next = current();
+        noteSignedIn(next);
+        setAccount(next);
+      },
     }),
     [account, shownFace, signInAndShow, signOut, current],
   );

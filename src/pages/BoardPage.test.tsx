@@ -522,11 +522,21 @@ describe("BoardPage: tiers and settings", () => {
     const labels = () => rankedTiers(repository.get("films")!).map((t) => t.label);
     await userEvent.click(screen.getByRole("button", { name: "Edit tier S" }));
     const editor = () => within(screen.getByRole("dialog", { name: "Edit tier" }));
-    expect(editor().getByRole("button", { name: "Move S up" })).toBeDisabled();
+    expect(editor().getByRole("button", { name: "Move S up" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     await userEvent.click(editor().getByRole("button", { name: "Move S down" }));
     expect(labels()).toEqual(["A", "S", "B", "C", "D"]);
     // The editor stays open on the same tier, now second.
     await userEvent.click(editor().getByRole("button", { name: "Move S up" }));
+    expect(labels()).toEqual(["S", "A", "B", "C", "D"]);
+    // At the top it is greyed out, not taken from the keyboard, and does nothing.
+    const up = editor().getByRole("button", { name: "Move S up" });
+    expect(up).toHaveFocus();
+    expect(up).toHaveAttribute("aria-disabled", "true");
+    expect(up).toBeEnabled();
+    await userEvent.click(up);
     expect(labels()).toEqual(["S", "A", "B", "C", "D"]);
     await userEvent.click(editor().getByRole("button", { name: "Cancel" }));
 

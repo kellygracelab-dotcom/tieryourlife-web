@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, Outlet, RouterProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -49,6 +49,34 @@ describe("RouteError", () => {
     expect(reload).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("link", { name: "Go to the front page" })).toHaveAttribute("href", "/");
     expect(logged).toHaveBeenCalledWith(expect.objectContaining({ name: "TypeError" }));
+  });
+
+  it("says offline that the page cannot open, and offers Reload once the connection is back", async () => {
+    const onLine = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    const reload = vi.fn();
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/",
+          element: <Outlet />,
+          errorElement: <RouteError reload={reload} />,
+          children: [{ path: "settings", element: <Broken /> }],
+        },
+      ],
+      { initialEntries: ["/settings"] },
+    );
+    render(<RouterProvider router={router} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("This page cannot open offline");
+    expect(screen.getByRole("button", { name: "Reload" })).toBeDisabled();
+
+    onLine.mockReturnValue(true);
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong on this page");
+    await userEvent.click(screen.getByRole("button", { name: "Reload" }));
+    expect(reload).toHaveBeenCalledTimes(1);
+    onLine.mockRestore();
   });
 
   it("is what the site's own routes show for a page that throws, and the shell for the rest", () => {

@@ -250,6 +250,24 @@ describe("signInWithGoogle", () => {
     await expect(signInWithGoogle(deps())).resolves.toEqual({ kind: "failed", code: "unknown" });
   });
 
+  it("answers failed, never a rejection, when the guest's token cannot be refreshed or the redirect cannot start", async () => {
+    const user = guest();
+    user.getIdToken.mockRejectedValueOnce(authError("auth/network-request-failed"));
+    mocks.auth.currentUser = user;
+    await expect(signInWithGoogle(deps())).resolves.toEqual({
+      kind: "failed",
+      code: "auth/network-request-failed",
+    });
+    expect(mocks.linkWithPopup).not.toHaveBeenCalled();
+
+    mocks.linkWithPopup.mockRejectedValueOnce(authError("auth/popup-blocked"));
+    mocks.linkWithRedirect.mockRejectedValueOnce(authError("auth/network-request-failed"));
+    await expect(signInWithGoogle(deps())).resolves.toEqual({
+      kind: "failed",
+      code: "auth/network-request-failed",
+    });
+  });
+
   it("does nothing for someone already signed in", async () => {
     mocks.auth.currentUser = fakeUser({ displayName: "Danylo" });
     await expect(signInWithGoogle(deps())).resolves.toEqual({ kind: "signedIn", switched: false });

@@ -670,6 +670,7 @@ export function SectionEditor(props: SectionEditorProps) {
         onClick={(event) => event.stopPropagation()}
         onSubmit={onSubmit}
       >
+        {/* Divs, not header and footer: in a dialog those would be a second banner and contentinfo. */}
         {compact ? (
           <div className="section-editor__bar">
             <button
