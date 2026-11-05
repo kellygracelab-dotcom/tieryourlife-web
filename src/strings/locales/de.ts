@@ -139,6 +139,13 @@ const de: Translation = {
     showAgain: "Wieder anzeigen",
     placeTitle: "Bild ausrichten",
     placeFrame: "Das Bild, das in den Kreis kommt",
+    placeControls: "Bild verschieben und zoomen",
+    placeLeft: "Nach links verschieben",
+    placeRight: "Nach rechts verschieben",
+    placeUp: "Nach oben verschieben",
+    placeDown: "Nach unten verschieben",
+    placeZoomIn: "Vergrößern",
+    placeZoomOut: "Verkleinern",
     placeUse: "Verwenden",
     placeFailed:
       "Dieses Bild lässt sich nicht laden und kann daher nicht dein Gesicht sein. Wähle ein anderes.",
@@ -496,6 +503,7 @@ const de: Translation = {
     dockBeside: "Karten neben den Stufen",
     dockUnder: "Karten unter den Stufen",
     dockRows: "Kartenreihen unter den Stufen",
+    dockRowsHint: "Zieh oder klick, um die Zahl der Kartenreihen zu ändern",
     allPlaced: { one: "Die Karte ist platziert", other: "Alle {n} platziert" },
     allPlacedNote:
       "Überleg es dir anders, indem du eine Karte ziehst, oder schließ ab und hol dir deinen Link.",
@@ -1165,8 +1173,7 @@ const de: Translation = {
     category: "Kategorie",
     categoryNone: "Noch nicht gewählt",
     rankedEmpty: "Noch nichts eingestuft",
-    rankedNote:
-      "Wechsle zu „Zeilen“ oder „Einzelner Streifen“, um Karten zwischen Stufen zu verschieben.",
+    rankedRow: "{n}. „{name}“ in {tier}",
     moveTo: "In eine Stufe verschieben",
     currentTier: "Aktuell hier",
     backToPool: "Zurück in den Pool",

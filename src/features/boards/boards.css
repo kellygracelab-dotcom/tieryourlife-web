@@ -8,14 +8,30 @@
   list-style: none;
 }
 
+/* Each row a button: a press opens the move sheet, as a tap on a row does on the phone. */
 .ranked__row {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
   min-height: 64px;
   padding: 8px 12px;
+  border: none;
   border-radius: var(--radius-card);
   background: var(--surface);
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ranked__row:hover {
+  background: var(--hover);
+}
+
+.ranked__row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .ranked__number {
@@ -52,18 +68,22 @@
   color: var(--ink);
 }
 
+/* A letter, or a tier's name of words: at most a third of the row, wrapping between them. */
 .ranked__badge {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
   min-width: 32px;
-  height: 28px;
-  padding: 0 8px;
+  max-width: 33%;
+  min-height: 28px;
+  padding: 4px 8px;
   border-radius: 8px;
   background: var(--band);
   font: var(--text-label);
   color: var(--on-band);
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .ranked__empty {
@@ -73,10 +93,69 @@
   color: var(--ink-dim);
 }
 
-.board-page__ranked-note {
-  margin: 0;
-  font: var(--text-small);
+/*
+ * The pool under the ranked list, as the phone keeps it at the screen's foot:
+ * its count and a fold, and when open its cards, in a list of their own that
+ * scrolls inside it, so a card just added shows without leaving the add box.
+ */
+.ranked-pool {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--surface);
+  box-shadow: var(--shadow-up);
+}
+
+.ranked-pool__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: none;
+  border-radius: inherit;
+  background: none;
+  font: 500 14px/20px var(--font);
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.ranked-pool__head:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.ranked-pool__chevron {
+  font-size: 20px;
   color: var(--ink-dim);
+  transform: rotate(180deg);
+  transition: transform 150ms ease;
+}
+
+.ranked-pool__chevron--open {
+  transform: none;
+}
+
+.ranked-pool__cards {
+  max-height: min(320px, 40vh);
+  padding: 0 4px 8px;
+  overflow-y: auto;
+}
+
+.ranked-pool__cards[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ranked-pool__chevron {
+    transition: none;
+  }
 }
 
 /* The question on signing into an account that already has boards. */

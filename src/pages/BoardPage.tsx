@@ -12,8 +12,8 @@ import {
   creditOf,
   itemsIn,
   liveItems,
+  moveItem,
   newBoard,
-  poolCount,
   poolTier,
   rankedTiers,
   rename,
@@ -652,7 +652,6 @@ function OpenBoard({
     return keepWeb(url);
   };
 
-  const inPool = poolCount(board);
   const tools = (
     <AddCardBox
       items={editorItems}
@@ -793,10 +792,15 @@ function OpenBoard({
       {board.displayMode === "FLAT_RANKED" ? (
         <section className="owner" aria-label={strings.owner.title}>
           <div className="ranking__tools">{tools}</div>
-          <RankedList board={board} />
-          <p className="board-page__ranked-note">
-            {plural(strings.boards.pool, inPool)} · {strings.boards.rankedNote}
-          </p>
+          <RankedList
+            board={board}
+            onMove={(itemUid, tierUid) => {
+              const current = latest();
+              const to = tierUid ?? poolTier(current)?.uid;
+              if (to !== undefined) keep(moveItem(current, itemUid, to, Infinity, now()));
+            }}
+            onRemove={(itemUid) => remove(view.uids.indexOf(itemUid))}
+          />
         </section>
       ) : (
         <BoardFrameContext.Provider value={frame}>

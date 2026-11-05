@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { sizedFor } from "../../lib/pictureSize";
 import { strings } from "../../strings";
 import { CardName } from "../tierboard/CardName";
+import { TierLabel } from "../tierboard/TierLabel";
 import { useBoardSize } from "../tierboard/useBoardSize";
 import { cardOf, type PlayBoard } from "./board";
 import "../tierboard/board.css";
@@ -40,7 +41,7 @@ export function ResultPreview({ board, rows, dashed, only }: ResultPreviewProps)
         return (
           <div key={tier.id} className="tier band result-tier" style={style}>
             <div className="tier__band">
-              <span className="tier__label">{tier.label}</span>
+              <TierLabel label={tier.label} caption={tier.caption} band={size} />
               {tier.caption !== null && tier.caption.trim() !== "" && (
                 <span className="tier__caption">{tier.caption}</span>
               )}

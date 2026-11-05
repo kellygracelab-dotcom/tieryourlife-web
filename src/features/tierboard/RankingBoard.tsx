@@ -58,6 +58,7 @@ import { useHeadHeight } from "./useHeadHeight";
 import { useFixedDock } from "./useFixedDock";
 import { TRAY_DOTS, useTray } from "./useTray";
 import { CardName } from "./CardName";
+import { TierLabel } from "./TierLabel";
 import { useBoardSize } from "./useBoardSize";
 import type { BoardSize } from "./nameFit";
 import "./board.css";
@@ -967,12 +968,13 @@ export function RankingBoard({
             style={{ "--dock-rows": rows } as CSSProperties}
           >
             {docked && !allPlaced && (
-              // A splitter the keyboard reaches too: up and down change the rows a drag does.
+              // A splitter the keyboard reaches too: up and down change the rows a drag or a click does.
               <div
                 className="pool__grip"
                 role="separator"
                 aria-orientation="horizontal"
                 aria-label={strings.rank.dockRows}
+                title={strings.rank.dockRowsHint}
                 aria-valuemin={1}
                 aria-valuemax={maxRows}
                 aria-valuenow={rows}
@@ -1252,7 +1254,7 @@ function TierRow({
               }
         }
       >
-        <span className="tier__label">{meta.label}</span>
+        <TierLabel label={meta.label} caption={meta.caption} band={board} />
         {meta.caption !== null && <bdi className="tier__caption">{meta.caption}</bdi>}
         {/*
          * While a card is picked the corner's number becomes the row's own

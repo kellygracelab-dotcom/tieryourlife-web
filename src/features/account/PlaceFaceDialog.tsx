@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import type { PixelSquare } from "../../lib/pictures";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { Icon } from "../../ui/Icon";
+import type { IconName } from "../../ui/icons";
 import { useModal } from "../../ui/useModal";
 import {
   boxOf,
@@ -50,6 +52,36 @@ const ARROWS: Record<string, Point> = {
   ArrowDown: { x: 0, y: 1 },
 };
 const ZOOM_KEYS: Record<string, number> = { "+": ZOOM_STEP, "=": ZOOM_STEP, "-": 1 / ZOOM_STEP };
+
+/**
+ * The same moves as buttons, for one pointer and no drag: zoom out, the four
+ * ways, zoom in. Left and right are the screen's, in any language. The
+ * arrows sideways are the up arrow turned.
+ */
+const BUTTONS: {
+  label: () => string;
+  icon: IconName;
+  turn?: "left" | "right";
+  arrow?: Point;
+  zoom?: number;
+}[] = [
+  { label: () => strings.settings.placeZoomOut, icon: "zoom_out", zoom: 1 / ZOOM_STEP },
+  {
+    label: () => strings.settings.placeLeft,
+    icon: "arrow_upward",
+    turn: "left",
+    arrow: ARROWS.ArrowLeft,
+  },
+  { label: () => strings.settings.placeUp, icon: "arrow_upward", arrow: ARROWS.ArrowUp },
+  { label: () => strings.settings.placeDown, icon: "arrow_downward", arrow: ARROWS.ArrowDown },
+  {
+    label: () => strings.settings.placeRight,
+    icon: "arrow_upward",
+    turn: "right",
+    arrow: ARROWS.ArrowRight,
+  },
+  { label: () => strings.settings.placeZoomIn, icon: "zoom_in", zoom: ZOOM_STEP },
+];
 
 /** A place on screen in the circle's units, from its middle; null before the frame is laid out. */
 function pointIn(frame: HTMLElement, clientX: number, clientY: number): Point | null {
@@ -131,20 +163,28 @@ export function PlaceFaceDialog({
     pointers.current.delete(event.pointerId);
   };
 
+  // An arrow's step on screen, in the circle's units; false before the frame is laid out.
+  const nudge = (arrow: Point, px: number): boolean => {
+    const width = frame.current?.getBoundingClientRect().width ?? 0;
+    if (size === null || width === 0) return false;
+    const step = px / width;
+    setPlacing((current) => moved(current, arrow.x * step, arrow.y * step, size));
+    return true;
+  };
+  const zoomBy = (factor: number): boolean => {
+    if (size === null) return false;
+    setPlacing((current) => zoomedAround(current, factor, { x: 0, y: 0 }, size));
+    return true;
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const width = event.currentTarget.getBoundingClientRect().width;
-    if (size === null || width === 0) return;
     const arrow = ARROWS[event.key];
     const zoom = ZOOM_KEYS[event.key];
-    if (arrow !== undefined) {
-      const step = (event.shiftKey ? NUDGE_LONG_PX : NUDGE_PX) / width;
-      setPlacing((current) => moved(current, arrow.x * step, arrow.y * step, size));
-    } else if (zoom !== undefined) {
-      setPlacing((current) => zoomedAround(current, zoom, { x: 0, y: 0 }, size));
-    } else {
-      return;
-    }
-    event.preventDefault();
+    const done =
+      arrow !== undefined
+        ? nudge(arrow, event.shiftKey ? NUDGE_LONG_PX : NUDGE_PX)
+        : zoom !== undefined && zoomBy(zoom);
+    if (done) event.preventDefault();
   };
 
   const onLoad = (picture: HTMLImageElement, plain: boolean) => {
@@ -228,6 +268,31 @@ export function PlaceFaceDialog({
             />
           )}
           <span className="placing__ring" aria-hidden="true" />
+        </div>
+        <div className="placing__controls" role="group" aria-label={strings.settings.placeControls}>
+          {BUTTONS.map((button) => (
+            <button
+              key={button.label()}
+              type="button"
+              className="placing__control"
+              aria-label={button.label()}
+              title={button.label()}
+              disabled={size === null}
+              onClick={() => {
+                if (button.arrow !== undefined) nudge(button.arrow, NUDGE_LONG_PX);
+                if (button.zoom !== undefined) zoomBy(button.zoom);
+              }}
+            >
+              <Icon
+                name={button.icon}
+                className={
+                  button.turn === undefined
+                    ? undefined
+                    : `placing__arrow placing__arrow--${button.turn}`
+                }
+              />
+            </button>
+          ))}
         </div>
         <p id={`${id}-help`} className="placing__help">
           {help}

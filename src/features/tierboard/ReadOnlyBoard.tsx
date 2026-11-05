@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
 import { CardName } from "./CardName";
+import { TierLabel } from "./TierLabel";
 import { useBoardSize } from "./useBoardSize";
 import type { BoardSize } from "./nameFit";
 import "./board.css";
@@ -69,6 +70,7 @@ export function UnrankedPool({
 
 export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoardProps) {
   const tileOf = useTiles(items);
+  const board = useBoardSize();
   return (
     <section className="board" aria-label={label}>
       {tiers.map((tier, index) => (
@@ -80,7 +82,7 @@ export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoard
           }
         >
           <div className="tier__band">
-            <span className="tier__label">{tier.label}</span>
+            <TierLabel label={tier.label} caption={tier.caption} band={board} />
             {tier.caption !== null && <bdi className="tier__caption">{tier.caption}</bdi>}
           </div>
           <ul className="tier__items" aria-label={tier.label}>

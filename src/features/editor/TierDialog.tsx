@@ -14,13 +14,28 @@ import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import { DOUBLE_TAP_MS } from "../tierboard/drag";
-import type { EditorAction, EditorTier } from "./model";
+import { TierLabel } from "../tierboard/TierLabel";
+import { LIMITS, type EditorAction, type EditorTier } from "./model";
 import { TierColours } from "./TierColours";
 import "./editor.css";
 
-/** The designer's limits for what fits on a band: three letters, a short caption. */
-export const TIER_LABEL_MAX = 3;
-export const TIER_CAPTION_MAX = 16;
+/** The counter under a field shows once this few characters are left: the backend's limits are long. */
+const COUNT_FROM = 20;
+
+/** How many characters a field holds of how many, once it is near its limit. */
+function Counter({ length, max }: { length: number; max: number }) {
+  if (max - length > COUNT_FROM) return null;
+  return (
+    <span
+      className={
+        length >= max ? "tier-dialog__counter tier-dialog__counter--full" : "tier-dialog__counter"
+      }
+      aria-hidden="true"
+    >
+      {fill(strings.settings.nameCounter, { n: length, max })}
+    </span>
+  );
+}
 
 interface TierDialogProps {
   tier: EditorTier;
@@ -136,7 +151,12 @@ export function TierDialog({ tier, mode, canRemove, place, dispatch, onClose }: 
         aria-hidden="true"
       >
         <span className="tier-dialog__band">
-          <span className="tier-dialog__letter">{label}</span>
+          <TierLabel
+            className="tier-dialog__letter"
+            label={label}
+            caption={caption.trim().length > 0 ? caption : null}
+            band="preview"
+          />
           {caption.trim().length > 0 && <span className="tier-dialog__caption">{caption}</span>}
         </span>
       </div>
@@ -174,19 +194,21 @@ export function TierDialog({ tier, mode, canRemove, place, dispatch, onClose }: 
             <input
               className="tier-dialog__input"
               value={label}
-              maxLength={TIER_LABEL_MAX}
+              maxLength={LIMITS.label}
               onChange={(event) => setLabel(event.target.value)}
             />
+            <Counter length={label.length} max={LIMITS.label} />
           </label>
           <label className="tier-dialog__field">
             <span>{strings.boards.tierCaption}</span>
             <input
               className="tier-dialog__input"
               value={caption}
-              maxLength={TIER_CAPTION_MAX}
+              maxLength={LIMITS.caption}
               placeholder={strings.new.captionPlaceholder}
               onChange={(event) => setCaption(event.target.value)}
             />
+            <Counter length={caption.length} max={LIMITS.caption} />
           </label>
         </div>
         <TierColours

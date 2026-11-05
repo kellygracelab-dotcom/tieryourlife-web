@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  BAND_FLOOR,
+  bandLabel,
   LIST_TILES,
   picturesWanted,
   ROW_TILES,
@@ -185,6 +187,35 @@ describe("shareCardOf", () => {
   it("keeps to the tier and tile ceilings", () => {
     assert.equal(SHARE_TIERS, 5);
     assert.equal(ROW_TILES, 9);
+  });
+});
+
+describe("bandLabel", () => {
+  it("keeps a letter at the band's own size", () => {
+    assert.deepEqual(bandLabel("S", null, 64), { size: 28, lines: 1 });
+  });
+
+  it("sets a tier's name whole, smaller and between words, never its first three letters", () => {
+    const fit = bandLabel("Good stuff", null, 64);
+    assert.ok(fit.size < 28 && fit.size > BAND_FLOOR, `size ${fit.size}`);
+    // Each word fits the square's 56 px whole, at 0.6 of the size a letter.
+    assert.ok(5 * 0.6 * fit.size <= 56);
+    assert.ok(fit.lines >= 2);
+  });
+
+  it("leaves the caption room under the name", () => {
+    assert.ok(
+      bandLabel("Good stuff", "Watch again", 56).size <= bandLabel("Good stuff", null, 56).size,
+    );
+  });
+
+  it("puts a ranking's whole tier name on its band", () => {
+    const named: ShareRanking = {
+      ...ranking,
+      tiers: [{ label: "Good stuff", caption: "A caption that is long", colorLight: "#b03a32" }],
+    };
+    const text = textOf(shareCardOf(named, new Map())).join(" | ");
+    assert.match(text, /Good stuff \| A caption that is long/);
   });
 });
 
