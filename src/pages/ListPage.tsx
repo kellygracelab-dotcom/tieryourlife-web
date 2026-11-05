@@ -1,12 +1,4 @@
-import {
-  useCallback,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type RefObject,
-} from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Link, useParams } from "react-router";
 import type { ReaderRanking } from "../api/community";
 import { isOwnList, type BasedOn, type PublishedList } from "../api/types";
@@ -15,7 +7,7 @@ import { useSession } from "../app/session";
 import type { BoardsRepository } from "../features/boards/repository";
 import { AuthorLine } from "../features/community/AuthorLine";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
-import { placedBy, readerName } from "../features/community/rankings";
+import { placedBy, readerLabels, readerName } from "../features/community/rankings";
 import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
@@ -27,9 +19,12 @@ import {
   clearDraft,
   draftKey,
   loadDraft,
+  loadDraftLabels,
   loadPlacedDraft,
   saveDraft,
   scopeOf,
+  withLabels,
+  type TierLabels,
 } from "../features/tierboard/draft";
 import { flyIn } from "../features/tierboard/flight";
 import type { Rows } from "../features/tierboard/model";
@@ -56,6 +51,7 @@ import { usePlay } from "../features/play/usePlay";
 import { usePlayBack } from "../features/play/usePlayBack";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
+import { PictureCredits } from "./ListPageCredits";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
@@ -240,34 +236,6 @@ export function ListPage(props: ListPageProps) {
   return <OpenList key={state.value.id} list={state.value} onListChanged={reread} {...props} />;
 }
 
-/**
- * The photographers the cards' pictures ask to be named by, one line a card,
- * at the foot of the list; nothing where none asks.
- */
-function PictureCredits({ items }: { items: PublishedList["items"] }) {
-  const id = useId();
-  const credited = items.flatMap((item) =>
-    typeof item.credit === "string" && item.credit.trim() !== ""
-      ? [{ title: item.title, credit: item.credit.trim() }]
-      : [],
-  );
-  if (credited.length === 0) return null;
-  return (
-    <section className="list-credits" aria-labelledby={id}>
-      <h2 id={id} className="list-credits__title">
-        {strings.list.pictureCredits}
-      </h2>
-      <ul className="list-credits__lines">
-        {credited.map((one, index) => (
-          <li key={index}>
-            {one.title.trim() === "" ? one.credit : `${one.title} — ${one.credit}`}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 function OpenList({
   list,
   report = sendReport,
@@ -334,15 +302,22 @@ function OpenList({
   // into Mine. The board below is drawn afresh from the draft it writes.
   const [mineRound, setMineRound] = useState(0);
   const [mineRows, setMineRows] = useState(() => loadDraft(localStorageStore, scopeOf(list)));
+  // The words Mine's tiers wear: a reader's once Mine started from their placing, as in the app.
+  const [mineLabels, setMineLabels] = useState(() =>
+    loadDraftLabels(localStorageStore, scopeOf(list)),
+  );
+  const mineList = useMemo(() => withLabels(list, mineLabels), [list, mineLabels]);
   // What Mine held before rows were put in it: the board's own Undo goes back there.
   const [mineBefore, setMineBefore] = useState<Rows | null>(null);
   // Rows into Mine, which is drawn afresh from the draft: Play's result, or
-  // Theirs with a first move made on it.
-  const putInMine = (rows: Rows) => {
+  // Theirs with a first move made on it, whose tier words come too. Play's
+  // result leaves the words Mine wears.
+  const putInMine = (rows: Rows, labels?: TierLabels | null) => {
     const placed = rows.map((row) => [...row]);
     setMineBefore(loadPlacedDraft(localStorageStore, scopeOf(list)));
-    saveDraft(localStorageStore, scopeOf(list), placed);
+    saveDraft(localStorageStore, scopeOf(list), placed, labels);
     setMineRows(placed);
+    setMineLabels(loadDraftLabels(localStorageStore, scopeOf(list)));
     setMineRound((round) => round + 1);
     show("mine");
   };
@@ -351,6 +326,7 @@ function OpenList({
     if (before === null) clearDraft(localStorageStore, list.id);
     else localStorageStore.write(draftKey(list.id), before);
     setMineRows(loadDraft(localStorageStore, scopeOf(list)));
+    setMineLabels(loadDraftLabels(localStorageStore, scopeOf(list)));
     setMineBefore(null);
     setMineRound((round) => round + 1);
     show(back);
@@ -366,7 +342,7 @@ function OpenList({
   );
   const playTiers = useMemo<PlayTier[]>(() => {
     const rows = mineRows ?? author.rows;
-    return list.tiers.map((tier, index) => ({
+    return mineList.tiers.map((tier, index) => ({
       id: String(index),
       label: tier.label,
       caption: tier.caption,
@@ -374,7 +350,7 @@ function OpenList({
       colorDark: tier.colorDark,
       cardIds: (rows[index] ?? []).map(String),
     }));
-  }, [list, author, mineRows]);
+  }, [mineList, author, mineRows]);
   // A card's id is its place in the list, so a game is kept for this
   // publication only, as the draft is: after a republish its answers would
   // be about other films.
@@ -413,7 +389,8 @@ function OpenList({
   const startFromTheirs = (rows: Rows) => {
     const before = localStorageStore.read(draftKey(list.id));
     const replaced = loadPlacedDraft(localStorageStore, scopeOf(list)) !== null;
-    putInMine(rows);
+    // What was on screen, the reader's tier words included (the app's mine.copy(tiers = theirs.tiers)).
+    putInMine(rows, chosen === null ? null : readerLabels(list.tiers.length, chosen));
     const said = replaced
       ? theirsName === null
         ? strings.list.replacedYoursUnnamed
@@ -447,7 +424,11 @@ function OpenList({
   return (
     <article
       ref={page}
-      className={boardDock === null ? "list-page" : `list-page list-page--${boardDock}`}
+      className={
+        boardDock === null
+          ? "list-page board-frame"
+          : `list-page board-frame list-page--${boardDock}`
+      }
     >
       <header className="list-head">
         <PageTitle title={list.title} />
@@ -520,7 +501,8 @@ function OpenList({
             {/* Play starts from Mine as it stands, hand moves made since included. */}
             <RankingBoard
               key={`${list.id}:${mineRound}`}
-              list={list}
+              list={mineList}
+              tierLabels={mineLabels ?? undefined}
               onListChanged={onListChanged}
               undoTo={mineBefore}
               onRows={(rows) =>

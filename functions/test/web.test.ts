@@ -222,6 +222,28 @@ describe("POST /api/rank — Finish", () => {
     assert.equal(typeof table("rankQuota").get("guest")?.lastWriteAt, "number");
   });
 
+  it("keeps a reader's tier words with a version started from their placing", async () => {
+    const { deps, table } = setup();
+    const answer = await call(deps, "POST", "/api/rank", {
+      listId: LIST_ID,
+      rows: [[1], [0]],
+      tierLabels: ["Top", null],
+    });
+    assert.equal(answer.status, 201);
+    const { code } = answer.body as { code: string };
+    const tiers = (table("rankings").get(code)?.snapshot as { tiers: { label: string }[] }).tiers;
+    assert.deepEqual(
+      tiers.map((tier) => tier.label),
+      ["Top", "A"],
+    );
+    const refused = await call(deps, "POST", "/api/rank", {
+      listId: LIST_ID,
+      rows: [[1], [0]],
+      tierLabels: ["Top"],
+    });
+    assert.equal(refused.status, 400);
+  });
+
   it("refuses a body over the limit before reading anything", async () => {
     const { deps, table } = setup();
     const answer = await call(deps, "POST", "/api/rank", {
@@ -427,6 +449,21 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     );
     assert.deepEqual(table("rankings").get("abcdefgh")?.rows, [{ items: [] }, { items: [0, 2] }]);
     assert.equal((await call(deps, "PUT", "/api/rank/abcdefgh", { rows: [[9], []] })).status, 400);
+  });
+
+  it("takes a reader's tier words with the rows, and keeps the words when none come", async () => {
+    const { deps, table } = setup(PERSON);
+    table("rankings").set("abcdefgh", ranking("person", false));
+    const labels = () =>
+      (table("rankings").get("abcdefgh")?.snapshot as { tiers: { label: string }[] }).tiers.map(
+        (tier) => tier.label,
+      );
+    const body = { rows: [[0], []], tierLabels: [null, "Meh"] };
+    assert.equal((await call(deps, "PUT", "/api/rank/abcdefgh", body)).status, 200);
+    assert.deepEqual(labels(), ["S", "Meh"]);
+    // The /r/ page's Edit sends rows alone.
+    assert.equal((await call(deps, "PUT", "/api/rank/abcdefgh", { rows: [[1], []] })).status, 200);
+    assert.deepEqual(labels(), ["S", "Meh"]);
   });
 
   it("lets nobody else re-arrange or delete it", async () => {

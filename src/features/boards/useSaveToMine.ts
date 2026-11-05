@@ -6,7 +6,7 @@ import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { arrange } from "../tierboard/arrange";
-import { loadPlacedDraft, scopeOf } from "../tierboard/draft";
+import { loadDraftLabels, loadPlacedDraft, scopeOf, withLabels } from "../tierboard/draft";
 import type { Rows } from "../tierboard/model";
 import { boardFromList } from "./publish";
 import { type BoardsRepository } from "./repository";
@@ -95,7 +95,13 @@ export function useSaveToMine(
       const theirs = whose === "theirs" ? (choices?.theirs ?? null) : null;
       const rows =
         theirs !== null ? theirs.rows : whose === "mine" ? (choices?.mine ?? null) : null;
-      const from = theirs === null ? list : { ...list, tiers: [...theirs.tiers] };
+      // Mine keeps the tier words it wears: a reader's, when it started from their placing.
+      const from =
+        theirs !== null
+          ? { ...list, tiers: [...theirs.tiers] }
+          : whose === "mine"
+            ? withLabels(list, loadDraftLabels(store, scopeOf(list)))
+            : list;
       const board = boardFromList(from, rows, now(), nextUid);
       repository.save(board);
       // Counted once a person, and never worth failing a save over.
@@ -111,7 +117,7 @@ export function useSaveToMine(
         },
       });
     },
-    [asking, list, now, repository, notify, navigate, take],
+    [asking, list, now, repository, notify, navigate, take, store],
   );
 
   const start = useCallback(() => {

@@ -53,6 +53,17 @@ function rowsFrom(
   return rows;
 }
 
+/** The words a reader gave the tiers, one per tier; null where a tier keeps the list's own. */
+export function readerLabels(
+  tierCount: number,
+  ranking: Pick<ReaderRanking, "tierLabels">,
+): (string | null)[] {
+  return Array.from({ length: tierCount }, (_, index) => {
+    const label = ranking.tierLabels[index];
+    return typeof label === "string" && label.trim() !== "" ? label : null;
+  });
+}
+
 /** The author's cards where a reader put them, under the words the reader gave the tiers. */
 export function placedBy(
   list: { tiers: readonly PublishedTier[]; items: readonly PublishedItem[] },
@@ -61,9 +72,10 @@ export function placedBy(
   const rows = rowsFrom(ranking, list.tiers.length, list.items.length);
   const placed = new Set(rows.flat());
   const pool = list.items.map((_, position) => position).filter((at) => !placed.has(at));
+  const labels = readerLabels(list.tiers.length, ranking);
   const tiers = list.tiers.map((tier, index) => {
-    const label = ranking.tierLabels[index];
-    return typeof label === "string" && label.trim() !== "" ? { ...tier, label } : tier;
+    const label = labels[index] ?? null;
+    return label === null ? tier : { ...tier, label };
   });
   return { tiers, rows, pool };
 }

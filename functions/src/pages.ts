@@ -2,8 +2,23 @@ import { getFirestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
 import { isEditorialList } from "./editorial";
-import { describeList, describeRanking, renderPage, type PageMeta } from "./og";
-import { fromStoredRows, isCode, placedCount, shownSnapshot, type StoredRanking } from "./ranking";
+import {
+  describeList,
+  describeRanking,
+  renderPage,
+  sectionLabelOf,
+  type PageMeta,
+  type SectionNames,
+} from "./og";
+import { AS_WRITTEN, offeredLocales, previewLocale, translatorFor, wordsFor } from "./previewWords";
+import {
+  fromStoredRows,
+  isCode,
+  placedCount,
+  shownSnapshot,
+  type Snapshot,
+  type StoredRanking,
+} from "./ranking";
 import {
   SHARE_HEIGHT,
   SHARE_WIDTH,
@@ -146,6 +161,8 @@ interface StoredList {
   items?: unknown[];
   /** A house list's words in other languages, as the proxy keeps them. */
   translations?: Record<string, Record<string, string>>;
+  /** A house list's title by language, where it has one. */
+  names?: Record<string, string>;
   basedOn?: unknown;
 }
 
@@ -199,6 +216,81 @@ export function listPayload(id: string, data: StoredList) {
   };
 }
 
+/** What a reader's request says of the language a preview should speak. */
+export interface Asked {
+  /** `?hl=` in the address: the site's own links, and the picture's. */
+  hl?: unknown;
+  acceptLanguage?: string;
+}
+
+const askedOf = (request: Request): Asked => ({
+  hl: (request.query as Record<string, unknown> | undefined)?.hl,
+  acceptLanguage: request.header("accept-language") ?? undefined,
+});
+
+/**
+ * The language a list's preview speaks: a house list's reader's, when the
+ * list has words in it; every other list as written.
+ */
+export function listLocale(data: StoredList, asked: Asked): string {
+  const offered = isEditorialList(data) ? offeredLocales(data.translations, data.names) : [];
+  return previewLocale(asked.hl, asked.acceptLanguage, offered);
+}
+
+const SECTIONS = "sections";
+/** A section's name changes seldom: read again after this long. */
+const SECTION_TTL_MS = 10 * 60 * 1000;
+const sectionsRead = new Map<string, { at: number; names: SectionNames | null }>();
+
+/**
+ * A section's names as its document keeps them, read a while ago at most;
+ * null when it could not be read, and then the first nine are known anyway.
+ */
+async function sectionNames(category: unknown): Promise<SectionNames | null> {
+  if (typeof category !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(category)) return null;
+  const kept = sectionsRead.get(category);
+  if (kept !== undefined && Date.now() - kept.at < SECTION_TTL_MS) return kept.names;
+  try {
+    const doc = await getFirestore().collection(SECTIONS).doc(category).get();
+    const names = doc.exists ? { name: doc.get("name"), names: doc.get("names") } : null;
+    sectionsRead.set(category, { at: Date.now(), names });
+    return names;
+  } catch (error) {
+    console.warn(`Section ${category} not read`, error);
+    return null;
+  }
+}
+
+/** The words a chat shows for a list's link, in [locale]; [section] as its document names it. */
+export function listMeta(
+  host: string,
+  id: string,
+  data: StoredList,
+  locale: string,
+  section: SectionNames | null,
+): PageMeta {
+  const list = listPayload(id, data);
+  const words = translatorFor(data.translations, data.names, locale);
+  return {
+    title: words.title(list.title),
+    description: describeList({
+      ...list,
+      editorial: isEditorialList(data),
+      section: sectionLabelOf(list.category, section, locale),
+      locale,
+    }),
+    image: shareImageUrl(host, "l", id, list.updatedAt, locale),
+    imageSize: { width: SHARE_WIDTH, height: SHARE_HEIGHT },
+    url: `https://${host}/l/${id}`,
+    locale: wordsFor(locale).ogLocale,
+  };
+}
+
+/** A page whose words follow the reader's language says so to the caches between. */
+const varyByLanguage = (response: Response, offered: readonly string[]): void => {
+  if (offered.length > 0) response.setHeader("Vary", "Accept-Language");
+};
+
 export async function listPage(request: Request, response: Response, id: string): Promise<void> {
   const host = hostOf(request);
   const html = await loadShell(host);
@@ -214,35 +306,31 @@ export async function listPage(request: Request, response: Response, id: string)
   if (data === null || data.underReview === true) return send(response, html);
 
   const list = listPayload(id, data);
-  const meta: PageMeta = {
-    title: list.title,
-    description: describeList({ ...list, editorial: isEditorialList(data) }),
-    image: shareImageUrl(host, "l", id, list.updatedAt),
-    imageSize: { width: SHARE_WIDTH, height: SHARE_HEIGHT },
-    url: `https://${host}/l/${id}`,
-  };
+  const locale = listLocale(data, askedOf(request));
+  const meta = listMeta(host, id, data, locale, await sectionNames(list.category));
+  varyByLanguage(response, offeredLocales(data.translations, data.names));
   send(response, renderPage(html, meta, { kind: "list", list }));
 }
 
 const SHARE_SIZE = { width: SHARE_WIDTH, height: SHARE_HEIGHT };
 
 /** Whatever the stored tiers and items look like, the card gets what it can draw. */
-function shareTiersOf(raw: unknown[] | undefined): ShareTier[] {
+function shareTiersOf(raw: unknown[] | undefined, word: (text: string) => string): ShareTier[] {
   return (raw ?? []).map((tier) => {
     const t = (tier ?? {}) as { label?: unknown; caption?: unknown; colorLight?: unknown };
     return {
-      label: typeof t.label === "string" ? t.label : "",
-      caption: typeof t.caption === "string" ? t.caption : null,
+      label: typeof t.label === "string" ? word(t.label) : "",
+      caption: typeof t.caption === "string" ? word(t.caption) : null,
       colorLight: typeof t.colorLight === "string" ? t.colorLight : "#5d5c66",
     };
   });
 }
 
-function shareItemsOf(raw: unknown[] | undefined): ShareItem[] {
+function shareItemsOf(raw: unknown[] | undefined, word: (text: string) => string): ShareItem[] {
   return (raw ?? []).map((item) => {
     const i = (item ?? {}) as { title?: unknown; imageUrl?: unknown };
     return {
-      title: typeof i.title === "string" ? i.title : "",
+      title: typeof i.title === "string" ? word(i.title) : "",
       imageUrl:
         typeof i.imageUrl === "string" && i.imageUrl.startsWith("https://") ? i.imageUrl : null,
     };
@@ -252,21 +340,44 @@ function shareItemsOf(raw: unknown[] | undefined): ShareItem[] {
 /** The version a card is drawn for: the list's last change, or nothing yet. */
 const listVersion = (data: StoredList): number => data.updatedAt?.toMillis() ?? 0;
 
-export async function listShareImage(response: Response, id: string): Promise<void> {
-  const doc = LIST_ID.test(id) ? await getFirestore().collection(PUBLISHED).doc(id).get() : null;
-  const data = doc?.exists ? (doc.data() as StoredList) : null;
-  if (data === null || data.underReview === true) return sendShareImage(response, null);
-  const card: ShareCard = {
+/** A card kept per language as well: a house list's in Russian is not its English one. */
+const inLanguage = (version: number | string, locale: string): number | string =>
+  locale === AS_WRITTEN ? version : `${version}-${locale}`;
+
+/** A list's card in [locale], its section as its document names it. */
+export function listCard(
+  data: StoredList,
+  locale: string,
+  section: SectionNames | null,
+): ShareCard {
+  const { title, word } = translatorFor(data.translations, data.names, locale);
+  return {
     kind: "list",
-    title: data.title ?? "",
+    title: title(data.title ?? ""),
     editorial: isEditorialList(data),
     authorName: data.authorName ?? "",
     category: data.category ?? "other",
+    section: sectionLabelOf(data.category ?? "other", section, locale),
+    locale,
     itemCount: data.itemCount ?? data.items?.length ?? 0,
-    tiers: shareTiersOf(data.tiers),
-    items: shareItemsOf(data.items),
+    tiers: shareTiersOf(data.tiers, word),
+    items: shareItemsOf(data.items, word),
   };
-  sendShareImage(response, await shareImageFor("l", id, listVersion(data), async () => card));
+}
+
+export async function listShareImage(response: Response, id: string, hl?: unknown): Promise<void> {
+  const doc = LIST_ID.test(id) ? await getFirestore().collection(PUBLISHED).doc(id).get() : null;
+  const data = doc?.exists ? (doc.data() as StoredList) : null;
+  if (data === null || data.underReview === true) return sendShareImage(response, null);
+  // The picture is asked for in the language its page chose, and in no other.
+  const locale = listLocale(data, { hl });
+  const section = await sectionNames(data.category ?? "other");
+  sendShareImage(
+    response,
+    await shareImageFor("l", id, inLanguage(listVersion(data), locale), async () =>
+      listCard(data, locale, section),
+    ),
+  );
 }
 
 /** What the list says of itself today, for telling an editorial one; nothing when it is gone. */
@@ -298,7 +409,41 @@ export const rankingCardVersion = (stored: StoredRanking, listChangedAt: number 
 const changedAt = (list: FirebaseFirestore.DocumentSnapshot): number | null =>
   list.exists ? ((list.get("updatedAt") as StoredList["updatedAt"])?.toMillis() ?? 0) : null;
 
-export async function rankingShareImage(response: Response, code: string): Promise<void> {
+/**
+ * The language a ranking's preview speaks: as its list's, from the words the
+ * ranking kept of a house list (none before it kept them).
+ */
+export function rankingLocale(snapshot: Snapshot, asked: Asked): string {
+  const offered =
+    snapshot.editorial === true ? offeredLocales(snapshot.translations, snapshot.names) : [];
+  return previewLocale(asked.hl, asked.acceptLanguage, offered);
+}
+
+/** A ranking's card in [locale]; [shown] is the snapshot as it is shown today. */
+export function rankingCard(stored: StoredRanking, shown: Snapshot, locale: string): ShareCard {
+  const { title, word } = translatorFor(
+    stored.snapshot.translations,
+    stored.snapshot.names,
+    locale,
+  );
+  return {
+    kind: "ranking",
+    title: title(stored.snapshot.title),
+    editorial: shown.editorial === true,
+    authorName: shown.authorName,
+    category: stored.snapshot.category,
+    locale,
+    tiers: shareTiersOf(stored.snapshot.tiers, word),
+    items: shareItemsOf(stored.snapshot.items, word),
+    rows: fromStoredRows(stored.rows),
+  };
+}
+
+export async function rankingShareImage(
+  response: Response,
+  code: string,
+  hl?: unknown,
+): Promise<void> {
   const doc = isCode(code) ? await getFirestore().collection(RANKINGS).doc(code).get() : null;
   if (doc === null || !doc.exists) return sendShareImage(response, null);
   const stored = doc.data() as StoredRanking;
@@ -307,20 +452,45 @@ export async function rankingShareImage(response: Response, code: string): Promi
     stored.snapshot.editorial === true
       ? stored.snapshot
       : shownSnapshot(stored.snapshot, standingOf(list));
-  const card: ShareCard = {
-    kind: "ranking",
-    title: stored.snapshot.title,
-    editorial: snapshot.editorial === true,
-    authorName: snapshot.authorName,
-    category: stored.snapshot.category,
-    tiers: shareTiersOf(stored.snapshot.tiers),
-    items: shareItemsOf(stored.snapshot.items),
-    rows: fromStoredRows(stored.rows),
-  };
+  const locale = rankingLocale(stored.snapshot, { hl });
   sendShareImage(
     response,
-    await shareImageFor("r", code, rankingCardVersion(stored, changedAt(list)), async () => card),
+    await shareImageFor(
+      "r",
+      code,
+      inLanguage(rankingCardVersion(stored, changedAt(list)), locale),
+      async () => rankingCard(stored, snapshot, locale),
+    ),
   );
+}
+
+/** The words a chat shows for a ranking's link, in [locale]. */
+export function rankingMeta(
+  host: string,
+  code: string,
+  stored: StoredRanking,
+  shown: Snapshot,
+  listChangedAt: number | null,
+  locale: string,
+  section: SectionNames | null,
+): PageMeta {
+  const words = translatorFor(stored.snapshot.translations, stored.snapshot.names, locale);
+  return {
+    title: words.title(stored.snapshot.title),
+    description: describeRanking({
+      placed: placedCount(fromStoredRows(stored.rows)),
+      itemCount: stored.snapshot.items.length,
+      authorName: shown.authorName,
+      category: stored.snapshot.category,
+      editorial: shown.editorial === true,
+      section: sectionLabelOf(stored.snapshot.category, section, locale),
+      locale,
+    }),
+    image: shareImageUrl(host, "r", code, rankingCardVersion(stored, listChangedAt), locale),
+    imageSize: SHARE_SIZE,
+    url: `https://${host}/r/${code}`,
+    locale: wordsFor(locale).ogLocale,
+  };
 }
 
 export async function rankingPage(
@@ -345,28 +515,18 @@ export async function rankingPage(
   if (found === null) return send(response, html);
 
   const { stored, list } = found;
-  const rows = fromStoredRows(stored.rows);
   const snapshot = shownSnapshot(stored.snapshot, standingOf(list));
   const ranking = {
     code,
     listId: stored.listId,
     listAvailable: list.exists && list.get("underReview") !== true,
     snapshot,
-    rows,
+    rows: fromStoredRows(stored.rows),
     createdAt: stored.createdAt?.toMillis() ?? 0,
   };
-  const meta: PageMeta = {
-    title: stored.snapshot.title,
-    description: describeRanking({
-      placed: placedCount(rows),
-      itemCount: stored.snapshot.items.length,
-      authorName: snapshot.authorName,
-      category: stored.snapshot.category,
-      editorial: snapshot.editorial === true,
-    }),
-    image: shareImageUrl(host, "r", code, rankingCardVersion(stored, changedAt(list))),
-    imageSize: SHARE_SIZE,
-    url: `https://${host}/r/${code}`,
-  };
+  const locale = rankingLocale(stored.snapshot, askedOf(request));
+  const section = await sectionNames(stored.snapshot.category);
+  const meta = rankingMeta(host, code, stored, snapshot, changedAt(list), locale, section);
+  varyByLanguage(response, offeredLocales(stored.snapshot.translations, stored.snapshot.names));
   send(response, renderPage(html, meta, { kind: "ranking", ranking }));
 }

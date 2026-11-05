@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
+import type { PublishedList } from "../../api/types";
 import type { KeyValueStore } from "../../lib/storage";
 import {
   clearDraft,
   draftKey,
   loadDraft,
+  loadDraftLabels,
   loadPlacedDraft,
   parseDraft,
   saveDraft,
   serializeDraft,
+  withLabels,
   type DraftScope,
 } from "./draft";
 
@@ -58,6 +61,40 @@ describe("draft", () => {
     expect(loadDraft(store, scope)).toEqual([[0], [1, 2]]);
     clearDraft(store, "abc");
     expect(loadDraft(store, scope)).toBeNull();
+  });
+
+  it("keeps a reader's tier words with the rows until other words are given", () => {
+    const store = memoryStore();
+    saveDraft(store, scope, [[0], []], ["Top", " "]);
+    expect(loadDraftLabels(store, scope)).toEqual(["Top", null]);
+    // A move on the board sends the rows alone: the words stay.
+    saveDraft(store, scope, [[0], [1]]);
+    expect(loadDraftLabels(store, scope)).toEqual(["Top", null]);
+    expect(loadDraft(store, scope)).toEqual([[0], [1]]);
+    // Starting again from the author's puts the list's own words back.
+    saveDraft(store, scope, [[1], []], null);
+    expect(loadDraftLabels(store, scope)).toBeNull();
+    // Words for another version of the list, or for another count of tiers, are nobody's.
+    saveDraft(store, scope, [[0], []], ["Top", "Meh"]);
+    expect(loadDraftLabels(store, { ...scope, updatedAt: 1800 })).toBeNull();
+    store.write(draftKey("abc"), JSON.stringify({ ...base(), rows: [[], []], labels: ["Top"] }));
+    expect(loadDraftLabels(store, scope)).toBeNull();
+  });
+
+  it("draws the list under the words Mine wears", () => {
+    const tier = { caption: "Masterpiece", colorLight: "#f00", colorDark: "#a00" };
+    const list = {
+      id: "abc",
+      tiers: [
+        { ...tier, label: "S" },
+        { ...tier, label: "A" },
+      ],
+    } as PublishedList;
+    expect(withLabels(list, null)).toBe(list);
+    expect(withLabels(list, [null, "Meh"]).tiers.map((one) => [one.label, one.caption])).toEqual([
+      ["S", "Masterpiece"],
+      ["Meh", "Masterpiece"],
+    ]);
   });
 
   it("counts a draft as begun only once a card in it is placed", () => {

@@ -14,9 +14,11 @@ const mocks = vi.hoisted(() => ({
   loadList: vi.fn<(id: string) => Promise<PublishedList>>(),
   loadListRankings: vi.fn<(id: string, after: string | null) => Promise<RankingsPage>>(),
   withdrawListRanking: vi.fn<(id: string) => Promise<void>>(),
+  keepRanking: vi.fn(() => new Promise<never>(() => undefined)),
 }));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
+  keepRanking: mocks.keepRanking,
   loadList: mocks.loadList,
   loadListRankings: mocks.loadListRankings,
   withdrawListRanking: mocks.withdrawListRanking,
@@ -202,10 +204,45 @@ describe("ListPage rankings", () => {
     // Her words for the tiers on her board.
     await userEvent.click(screen.getByRole("button", { name: "Place The Witch in Fine" }));
     // Her placing, The Witch moved, in Mine: Ex Machina, which she left out, waits in the pool.
+    // Mine is what was on screen, her tier words included, as in the app.
     const yours = screen.getByRole("region", { name: "Your ranking" });
-    expect(within(yours).getByRole("list", { name: "A" })).toHaveTextContent("The Witch");
-    expect(within(yours).getByRole("list", { name: "S" })).not.toHaveTextContent("Ex Machina");
+    expect(within(yours).getByRole("list", { name: "Fine" })).toHaveTextContent("The Witch");
+    expect(within(yours).getByRole("list", { name: "Best" })).not.toHaveTextContent("Ex Machina");
+    expect(within(yours).queryByRole("list", { name: "A" })).toBeNull();
     expect(screen.getByText("Your version starts from olena’s ranking")).toBeInTheDocument();
+
+    // Finish keeps her words with the ranking.
+    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
+    expect(mocks.keepRanking).toHaveBeenCalledWith("abc", [[], [1]], 0, ["Best", "Fine"]);
+    localStorage.clear();
+  });
+
+  it("keeps a reader's tier words in Mine on the next visit", async () => {
+    localStorage.clear();
+    mocks.loadList.mockResolvedValue({
+      ...list,
+      tiers: [
+        ...list.tiers,
+        { label: "A", caption: null, colorLight: "#c06a25", colorDark: "#e9a867" },
+      ],
+    });
+    mocks.loadListRankings.mockResolvedValue({
+      rankings: [reader("u5", "olena", { tierLabels: ["", "Fine"] })],
+      nextCursor: null,
+    });
+    const first = openAs();
+    await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
+    const board = screen.getByRole("region", { name: "olena" });
+    await userEvent.click(within(board).getByRole("button", { name: "The Witch" }));
+    await userEvent.click(screen.getByRole("button", { name: "Place The Witch in Fine" }));
+    first.unmount();
+
+    // Begun here, the page opens on Mine.
+    openAs();
+    const yours = await screen.findByRole("region", { name: "Your ranking" });
+    // A tier she left without a word keeps the list's.
+    expect(within(yours).getByRole("list", { name: "S" })).toBeInTheDocument();
+    expect(within(yours).getByRole("list", { name: "Fine" })).toHaveTextContent("The Witch");
     localStorage.clear();
   });
 

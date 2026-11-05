@@ -5,6 +5,7 @@
  */
 
 import { categoryLabel, SITE_NAME } from "./og";
+import { AS_WRITTEN, say, wordsFor } from "./previewWords";
 
 export const SHARE_WIDTH = 1200;
 export const SHARE_HEIGHT = 630;
@@ -47,6 +48,10 @@ export interface ShareList {
   itemCount: number;
   tiers: ShareTier[];
   items: ShareItem[];
+  /** The section's name as read; left out, only the first nine's are known. */
+  section?: string | null;
+  /** The language of a house list's card, its words translated already; as written by default. */
+  locale?: string;
 }
 
 export interface ShareRanking {
@@ -59,6 +64,7 @@ export interface ShareRanking {
   items: ShareItem[];
   /** Item indexes per tier, in order. */
   rows: number[][];
+  locale?: string;
 }
 
 export type ShareCard = ShareList | ShareRanking;
@@ -82,9 +88,6 @@ const el = (
   children?: Node | string | (Node | string)[],
   extra: Record<string, string> = {},
 ): Node => ({ type, props: { style, ...extra, ...(children === undefined ? {} : { children }) } });
-
-const plural = (n: number, one: string, other: string): string =>
-  `${n.toLocaleString("en-US")} ${n === 1 ? one : other}`;
 
 /** The addresses a card will need, in drawing order, capped. */
 export function picturesWanted(card: ShareCard): string[] {
@@ -194,7 +197,7 @@ const heading = (card: ShareCard, line: Byline): Node =>
     el(
       "div",
       { fontSize: 44, fontWeight: 500, lineHeight: 1.15, color: INK, lineClamp: 2 },
-      card.title.trim() || "Untitled list",
+      card.title.trim() || wordsFor(card.locale ?? AS_WRITTEN).untitled,
     ),
     line.name === null
       ? el("div", { fontSize: 22, color: INK_DIM, lineClamp: 1 }, line.before + line.after)
@@ -287,9 +290,11 @@ const frame = (children: (Node | string)[]): Node =>
 
 function listCard(card: ShareList, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
+  const locale = card.locale ?? AS_WRITTEN;
+  const section = card.section === undefined ? categoryLabel(card.category) : card.section;
   // No count of rankings: the card is kept until the list changes, and a
   // count drawn on its first day said "0 rankings" for good.
-  const rest = [plural(card.itemCount, "card", "cards"), categoryLabel(card.category)]
+  const rest = [say(locale, wordsFor(locale).cards, card.itemCount), section]
     .filter((part) => part !== null)
     .join(" · ");
   const line: Byline =
@@ -317,8 +322,10 @@ function listCard(card: ShareList, pictures: Pictures): Node {
 
 function rankingCard(card: ShareRanking, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
+  const locale = card.locale ?? AS_WRITTEN;
+  const words = wordsFor(locale);
   const placed = card.rows.reduce((sum, row) => sum + row.length, 0);
-  const head = `ranked by a visitor · ${placed} of ${plural(card.items.length, "card", "cards")} placed`;
+  const head = say(locale, words.rankedHead, card.items.length, { placed });
   const line: Byline =
     card.editorial === true
       ? { before: head, name: null, after: "" }
@@ -362,7 +369,7 @@ function rankingCard(card: ShareRanking, pictures: Pictures): Node {
       el(
         "div",
         { fontSize: 16, color: INK_FAINT },
-        hidden > 0 ? `and ${plural(hidden, "more tier", "more tiers")}` : "",
+        hidden > 0 ? say(locale, words.moreTiers, hidden) : "",
       ),
       brand(),
     ]),
@@ -379,16 +386,20 @@ export const shareCardOf = (card: ShareCard, pictures: Pictures): Node =>
  * chat keeps a picture by its address, so a change in the drawing has to
  * change both or nobody ever sees it. 4: the footer inside the card, every
  * script's letters, the author's name apart. 5: no count of rankings, and no
- * "Other" for a section approved after the first nine.
+ * "Other" for a section approved after the first nine. 6: a newer section by
+ * its own name, and a house list's card in its reader's language.
  */
-export const SHARE_LOOK = 5;
+export const SHARE_LOOK = 6;
 
 export const shareImageUrl = (
   host: string,
   kind: "l" | "r",
   id: string,
   version: number | string,
-): string => `https://${host}/og/${kind}/${encodeURIComponent(id)}.png?v=${version}.${SHARE_LOOK}`;
+  locale: string = AS_WRITTEN,
+): string =>
+  `https://${host}/og/${kind}/${encodeURIComponent(id)}.png?v=${version}.${SHARE_LOOK}` +
+  (locale === AS_WRITTEN ? "" : `&hl=${encodeURIComponent(locale)}`);
 
 /** The one copy kept per version of a list or ranking, and per look of the card. */
 export const shareImagePath = (kind: "l" | "r", id: string, version: number | string): string =>
