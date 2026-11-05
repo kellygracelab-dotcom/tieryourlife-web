@@ -225,16 +225,14 @@ describe("FollowingManagePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("goes back with its arrow when it came from the Following tab, pointing the reader's way", async () => {
-    const router = open(member, [
-      "/following",
-      { pathname: "/following/manage", state: { fromFollowing: true } },
-    ]);
+  // Whether it steps back or links up is BackLink's (its own tests); here it
+  // lands on the tab either way, and points the reader's way.
+  it("takes its arrow back to the Following tab, pointing the reader's way", async () => {
+    const router = open(member, ["/following", "/following/manage"]);
     const back = await screen.findByRole("link", { name: "Navigate back" });
     expect(back.querySelector(".ms")).toHaveClass("ms--mirrored");
     await userEvent.click(back);
     expect(router.state.location.pathname).toBe("/following");
-    expect(router.state.historyAction).toBe("POP");
   });
 
   it("is a signed-in person's only", () => {

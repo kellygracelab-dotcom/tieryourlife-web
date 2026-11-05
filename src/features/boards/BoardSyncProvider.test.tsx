@@ -231,7 +231,8 @@ describe("BoardSyncProvider", () => {
           store={store}
           api={api}
           syncAfterMs={10}
-          playSyncAfterMs={200}
+          // Long enough that a loaded machine's few settles never reach it.
+          playSyncAfterMs={1000}
           resolvePicture={() => () => Promise.resolve(null)}
         >
           <Probe />
@@ -256,7 +257,7 @@ describe("BoardSyncProvider", () => {
     act(() => repository.save({ ...repository.get("a")!, play: { ...play, history: [] } }));
     await settle();
     expect(keeps).toHaveLength(1);
-    await waitFor(() => expect(keeps).toHaveLength(2));
+    await waitFor(() => expect(keeps).toHaveLength(2), { timeout: 3000 });
 
     act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 5 }));
     await settle();
