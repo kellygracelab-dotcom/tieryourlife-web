@@ -104,6 +104,15 @@ export function FeedGrid({
 
   return (
     <>
+      {state.stale === true && (
+        <div className="feed__stale" role="status">
+          <Icon name="cloud_off" />
+          <p>{strings.feed.stale}</p>
+          <Button variant="text" onClick={retry}>
+            {strings.feed.tryAgain}
+          </Button>
+        </div>
+      )}
       {hiddenNote && omitted > 0 && (
         <p className="feed__omitted">{plural(strings.feed.omitted, omitted)}</p>
       )}

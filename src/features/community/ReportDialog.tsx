@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { REPORT_NOTE_MAX, REPORT_REASONS, type ReportReason } from "../../api/community";
+import { OFFERED_REASONS, REPORT_NOTE_MAX, type ReportReason } from "../../api/community";
 import { REASON_TEXT } from "./reasons";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -143,7 +143,7 @@ export function ReportDialog({
         <p className="dialog__body">{strings.report.body}</p>
         <fieldset className="report__reasons" disabled={busy}>
           <legend className="report__legend">{strings.report.why}</legend>
-          {REPORT_REASONS.map((option, index) => (
+          {OFFERED_REASONS.map((option, index) => (
             <label key={option} className="report__reason">
               <input
                 ref={index === 0 ? first : undefined}

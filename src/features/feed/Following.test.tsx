@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -63,6 +63,7 @@ const sectionsDeps = {
   load: vi.fn<SectionsDeps["load"]>(),
   follow: vi.fn<SectionsDeps["follow"]>(),
   unfollow: vi.fn<SectionsDeps["unfollow"]>(),
+  loadOne: vi.fn<NonNullable<SectionsDeps["loadOne"]>>(),
 };
 
 const nobody: Following = { authors: [], topics: [], sections: [] };
@@ -132,6 +133,8 @@ beforeEach(() => {
   sectionsDeps.follow.mockReset();
   sectionsDeps.follow.mockResolvedValue({ following: true });
   sectionsDeps.unfollow.mockReset();
+  sectionsDeps.loadOne.mockReset();
+  sectionsDeps.loadOne.mockRejectedValue(new ApiFailure({ kind: "notFound" }));
   useHiddenStoreForTests(memoryStore());
 });
 
@@ -153,13 +156,121 @@ describe("the Following tab", () => {
     // An editorial account is nobody to follow: its lists stand without an author.
     expect(await screen.findByText("someone")).toBeInTheDocument();
     expect(screen.queryByText("TierYourLife")).toBeNull();
+    expect(screen.getByRole("button", { name: "Pick at least one" })).toBeDisabled();
 
+    // Picked, as in the app: several, then followed together.
     await userEvent.click(followGames);
+    await userEvent.click(screen.getByRole("button", { name: "Follow Music" }));
+    expect(sectionsDeps.follow).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Follow Games" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Follow Music" }));
+    await userEvent.click(screen.getByRole("button", { name: "Follow Anime" }));
+    await userEvent.click(screen.getByRole("button", { name: "Follow · 2" }));
+    expect(sectionsDeps.follow).toHaveBeenCalledTimes(2);
     expect(sectionsDeps.follow).toHaveBeenCalledWith("games");
-    // Following something turns the tab into its feed, with the section in the strip.
+    expect(sectionsDeps.follow).toHaveBeenCalledWith("anime");
+    // Following something turns the tab into its feed, with the sections in the strip.
     const strip = within(await screen.findByRole("navigation", { name: "Following" }));
     expect(strip.getByRole("link", { name: /Games/ })).toHaveAttribute("href", "/s/games");
+    expect(strip.getByRole("link", { name: /Anime/ })).toBeInTheDocument();
     expect(load).toHaveBeenLastCalledWith({ following: true, sort: "recent" });
+    // The focus goes with it, not to the page.
+    expect(strip.getAllByRole("link")[0]).toHaveFocus();
+  });
+
+  it("keeps a refused pick picked, and says so", async () => {
+    sectionsDeps.follow.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    open();
+    await userEvent.click(await screen.findByRole("button", { name: "Follow Games" }));
+    await userEvent.click(screen.getByRole("button", { name: "Follow · 1" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't follow. Try again.");
+    expect(screen.getByRole("button", { name: "Follow Games" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("offers no tile for one's own waiting section, and its strip item opens its sheet", async () => {
+    const pending = stats("street-food", {
+      name: "Street food",
+      status: "pending",
+      proposerUid: "u1",
+      fileUnder: "games",
+      lists30d: 99,
+    });
+    sectionsDeps.load.mockResolvedValue({ sections: [pending, ...NINE.map((id) => stats(id))] });
+    open();
+    await screen.findByRole("button", { name: "Follow Games" });
+    expect(screen.queryByRole("button", { name: "Follow Street food" })).toBeNull();
+
+    sectionsDeps.load.mockResolvedValue({
+      sections: [pending, ...NINE.map((id) => stats(id, { following: id === "anime" }))],
+    });
+    loadFollowing.mockResolvedValue({ ...nobody, sections: [{ id: "anime", followerCount: 1 }] });
+    load.mockResolvedValue({ lists: [list("a", { category: "anime" })], nextCursor: null });
+    cleanup();
+    open();
+    const strip = within(await screen.findByRole("navigation", { name: "Following" }));
+    expect(await strip.findByRole("link", { name: /Street food/ })).toHaveAttribute(
+      "href",
+      "/s?waiting=street-food",
+    );
+  });
+
+  it("lists a followed section the sections leave out, by its name, and why its lists are there", async () => {
+    sectionsDeps.loadOne.mockResolvedValue(
+      stats("retro", { name: "Retro", hidden: true, following: true }),
+    );
+    loadFollowing.mockResolvedValue({ ...nobody, sections: [{ id: "retro", followerCount: 1 }] });
+    load.mockResolvedValue({
+      lists: [list("r", { category: "retro", title: "Retro list" })],
+      nextCursor: null,
+    });
+    open();
+    const strip = within(await screen.findByRole("navigation", { name: "Following" }));
+    expect(await strip.findByRole("link", { name: /Retro/ })).toHaveAttribute("href", "/s/retro");
+    expect(await screen.findByRole("link", { name: /Retro list/ })).toHaveTextContent("In Retro");
+    expect(sectionsDeps.loadOne).toHaveBeenCalledWith("retro");
+  });
+
+  it("takes whom one follows from the backend while the sections would not load", async () => {
+    sectionsDeps.load.mockRejectedValue(new ApiFailure({ kind: "unavailable" }));
+    loadFollowing.mockResolvedValue({ ...nobody, sections: [{ id: "anime", followerCount: 1 }] });
+    load.mockResolvedValue({
+      lists: [list("a", { category: "anime", title: "Anime list" })],
+      nextCursor: null,
+    });
+    open();
+    const strip = within(await screen.findByRole("navigation", { name: "Following" }));
+    expect(await strip.findByRole("link", { name: /Anime/ })).toHaveAttribute("href", "/s/anime");
+    expect(await screen.findByRole("link", { name: /Anime list/ })).toHaveTextContent("In Anime");
+  });
+
+  it("keeps the way to Manage when whom one follows would not load, and tries again", async () => {
+    sectionsDeps.load.mockResolvedValue({
+      sections: NINE.map((id) => stats(id, { following: id === "anime" })),
+    });
+    loadFollowing.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    loadFollowing.mockResolvedValue({
+      ...nobody,
+      authors: [{ uid: "u7", name: "kenji", photoUrl: null }],
+      sections: [{ id: "anime", followerCount: 1 }],
+    });
+    load.mockResolvedValue({ lists: [list("a", { category: "anime" })], nextCursor: null });
+    open();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t load what you follow.");
+    const strip = within(screen.getByRole("navigation", { name: "Following" }));
+    expect(strip.getByRole("link", { name: /Manage/ })).toHaveAttribute(
+      "href",
+      "/following/manage",
+    );
+    expect(strip.getByRole("link", { name: /Anime/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("link", { name: /kenji/ })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("shows what is followed in a strip, and why each list is in the feed", async () => {

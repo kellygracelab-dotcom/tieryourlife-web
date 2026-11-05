@@ -375,6 +375,7 @@ const uk: Translation = {
     more: "Показати ще",
     loadingMore: "Завантажуємо…",
     moreFailed: "Не вдалося завантажити ще.",
+    stale: "Не вдалося оновити. Це списки з вашого минулого візиту.",
   },
   list: {
     pictureCredits: "Автори фото",
@@ -916,9 +917,11 @@ const uk: Translation = {
     sections: "Розділи",
     group: "{name} · {n}",
     followSection: "Підписатися на «{name}»",
-    unfollowSection: "Відписатися від «{name}»",
     emptyHelper:
-      "Натисніть +, щоб підписатися на розділ. Теми — всередині розділів, люди — у їхніх профілях.",
+      "Натисніть + біля розділів, які подобаються, і підпишіться на всі одразу. Теми — всередині розділів, люди — у їхніх профілях.",
+    pickFollow: "Підписатися · {n}",
+    pickNone: "Виберіть хоча б один",
+    followedFailed: "Не вдалося завантажити ваші підписки.",
     nothingPublished: "Ті, на кого ви підписані, ще нічого не опублікували.",
     goExplore: "Перейти до огляду",
     back: "Назад",
@@ -976,6 +979,10 @@ const uk: Translation = {
     withdrawAsk: "Зняти «{name}»? Ваші списки залишаться в розділі «{section}».",
     withdrawFailed: "Не вдалося зняти. Спробуйте ще раз.",
     withdrawn: "Пропозицію знято.",
+    noticeDeclined: "«{name}» не додали як розділ. Ваші списки залишаються в розділі «{section}».",
+    noticeMerged: "«{name}» обʼєднано з розділом «{section}».",
+    noticeDismiss: "Закрити",
+    noticeDismissFailed: "Не вдалося закрити. Спробуйте ще раз.",
   },
   sectionIcons: {
     category: "Фігури",

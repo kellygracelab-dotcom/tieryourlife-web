@@ -356,6 +356,7 @@ const ja: Translation = {
     more: "もっと見る",
     loadingMore: "読み込み中…",
     moreFailed: "続きを読み込めませんでした。",
+    stale: "更新できませんでした。前回表示したリストです。",
   },
   list: {
     pictureCredits: "画像のクレジット",
@@ -844,9 +845,11 @@ const ja: Translation = {
     sections: "セクション",
     group: "{name} · {n}",
     followSection: "{name}をフォロー",
-    unfollowSection: "{name}のフォローを解除",
     emptyHelper:
-      "+をタップしてセクションをフォロー。トピックは各セクションの中に、人はプロフィールにあります。",
+      "好きなセクションの+をタップして、まとめてフォローしましょう。トピックは各セクションの中に、人はプロフィールにあります。",
+    pickFollow: "フォロー · {n}",
+    pickNone: "1つ以上選んでください",
+    followedFailed: "フォロー中の項目を読み込めませんでした。",
     nothingPublished: "フォロー中の人はまだ何も公開していません。",
     goExplore: "見つけるへ",
     back: "戻る",
@@ -899,6 +902,11 @@ const ja: Translation = {
     withdrawAsk: "「{name}」を取り下げますか？リストは{section}に残ります。",
     withdrawFailed: "取り下げられませんでした。もう一度お試しください。",
     withdrawn: "提案を取り下げました。",
+    noticeDeclined:
+      "「{name}」はセクションとして追加されませんでした。リストは「{section}」に残ります。",
+    noticeMerged: "「{name}」は「{section}」に統合されました。",
+    noticeDismiss: "閉じる",
+    noticeDismissFailed: "閉じられませんでした。もう一度お試しください。",
   },
   sectionIcons: {
     category: "図形",

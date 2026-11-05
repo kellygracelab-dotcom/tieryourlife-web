@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { errorOf } from "../../api/errors";
 import { withdrawSectionProposal } from "../../lib/api";
@@ -42,13 +42,32 @@ export function WaitingSheet({
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const cancel = useRef<HTMLButtonElement>(null);
+  const again = useRef<HTMLButtonElement>(null);
   useModal(box, () => {
     if (!busy) onClose();
   });
 
+  // The question takes the place of the button that asked it, and the focus
+  // with it; a refused withdrawal leaves it on the way to try again. The
+  // focus never falls to the page behind.
+  const wasAsking = useRef(false);
+  useEffect(() => {
+    if (asking) cancel.current?.focus();
+    else if (wasAsking.current) {
+      box.current?.querySelector<HTMLElement>(".waiting-sheet__withdraw")?.focus();
+    }
+    wasAsking.current = asking;
+  }, [asking]);
+  useEffect(() => {
+    if (failed) again.current?.focus();
+  }, [failed]);
+
   const confirm = () => {
     setBusy(true);
     setFailed(false);
+    // The pressed button is disabled while it goes: the dialog holds the focus meanwhile.
+    box.current?.focus();
     withdraw(section.id).then(onWithdrawn, (reason: unknown) => {
       setBusy(false);
       if (errorOf(reason).kind === "conflict") onSettled?.();
@@ -64,6 +83,7 @@ export function WaitingSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <span className="waiting-sheet__pill">
@@ -81,16 +101,32 @@ export function WaitingSheet({
           </p>
         )}
         {asking ? (
-          <div className="dialog__actions waiting-sheet__ask">
-            <p className="waiting-sheet__ask-text">
+          <div
+            className="dialog__actions waiting-sheet__ask"
+            role="group"
+            aria-labelledby={`${id}-ask`}
+          >
+            <p id={`${id}-ask`} className="waiting-sheet__ask-text">
               {fill(strings.propose.withdrawAsk, { name: section.name, section: filedIn })}
             </p>
-            <Button onClick={() => setAsking(false)} disabled={busy}>
-              {strings.admin.cancel}
-            </Button>
-            <Button variant="danger" onClick={confirm} disabled={busy}>
-              {strings.propose.withdraw}
-            </Button>
+            <button
+              ref={cancel}
+              type="button"
+              className="btn btn--text"
+              onClick={() => setAsking(false)}
+              disabled={busy}
+            >
+              <span>{strings.admin.cancel}</span>
+            </button>
+            <button
+              ref={again}
+              type="button"
+              className="btn btn--danger"
+              onClick={confirm}
+              disabled={busy}
+            >
+              <span>{strings.propose.withdraw}</span>
+            </button>
           </div>
         ) : (
           <div className="dialog__actions">

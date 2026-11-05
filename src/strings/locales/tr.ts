@@ -355,6 +355,7 @@ const tr: Translation = {
     more: "Daha fazla göster",
     loadingMore: "Yükleniyor…",
     moreFailed: "Daha fazlası yüklenemedi.",
+    stale: "Yenilenemedi. Bunlar son ziyaretinizdeki listeler.",
   },
   list: {
     pictureCredits: "Görsel kaynakları",
@@ -851,9 +852,11 @@ const tr: Translation = {
     sections: "Bölümler",
     group: "{name} · {n}",
     followSection: "{name} bölümünü takip et",
-    unfollowSection: "{name} takibini bırak",
     emptyHelper:
-      "Bir bölümü takip etmek için + simgesine dokunun. Konular bölümlerin içinde, kişiler profillerinde.",
+      "Sevdiğiniz bölümlerde + simgesine dokunun, sonra hepsini birden takip edin. Konular bölümlerin içinde, kişiler profillerinde.",
+    pickFollow: "Takip et · {n}",
+    pickNone: "En az birini seçin",
+    followedFailed: "Takip ettikleriniz yüklenemedi.",
     nothingPublished: "Takip ettikleriniz henüz bir şey yayımlamadı.",
     goExplore: "Keşfet’e git",
     back: "Geri git",
@@ -906,6 +909,10 @@ const tr: Translation = {
     withdrawAsk: "“{name}” geri çekilsin mi? Listeleriniz {section} bölümünde kalır.",
     withdrawFailed: "Geri çekilemedi. Tekrar deneyin.",
     withdrawn: "Öneri geri çekildi.",
+    noticeDeclined: "“{name}” bölüm olarak eklenmedi. Listeleriniz {section} bölümünde kalıyor.",
+    noticeMerged: "“{name}”, {section} ile birleştirildi.",
+    noticeDismiss: "Kapat",
+    noticeDismissFailed: "Kapatılamadı. Tekrar deneyin.",
   },
   sectionIcons: {
     category: "Şekiller",

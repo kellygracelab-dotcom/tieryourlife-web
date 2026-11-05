@@ -18,6 +18,8 @@ vi.mock("../lib/api", () => ({
   loadSections: vi.fn(),
   followSection: vi.fn(),
   unfollowSection: vi.fn(),
+  loadSection: vi.fn(),
+  withdrawSectionProposal: vi.fn(),
 }));
 
 const load = vi.fn<() => Promise<MyRankings>>();

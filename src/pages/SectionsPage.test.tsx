@@ -36,6 +36,7 @@ const sectionsDeps = {
   load: vi.fn<SectionsDeps["load"]>(),
   follow: vi.fn<SectionsDeps["follow"]>(),
   unfollow: vi.fn<SectionsDeps["unfollow"]>(),
+  dismiss: vi.fn<NonNullable<SectionsDeps["dismiss"]>>(async () => undefined),
 };
 
 let proposing: ProposingDeps;
@@ -284,6 +285,60 @@ describe("All sections: a waiting tile", () => {
     await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
     expect(await screen.findByText("Someone else already decided this one.")).toBeInTheDocument();
     expect(sectionsDeps.load).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the focus in the sheet: on the question, then on Withdraw after a refusal", async () => {
+    proposing.withdraw = vi
+      .fn<ProposingDeps["withdraw"]>()
+      .mockRejectedValueOnce(new ApiFailure({ kind: "offline" }));
+    open({ path: "/s?waiting=street-food" });
+    const sheet = await screen.findByRole("dialog", { name: "Street food" });
+    await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
+    expect(within(sheet).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    expect(within(sheet).getByRole("group")).toHaveAccessibleName(
+      "Withdraw “Street food”? Your lists stay in Games.",
+    );
+    await userEvent.click(within(sheet).getByRole("button", { name: "Cancel" }));
+    expect(within(sheet).getByRole("button", { name: "Withdraw" })).toHaveFocus();
+    await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
+    await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
+    await within(sheet).findByRole("alert");
+    expect(within(sheet).getByRole("button", { name: "Withdraw" })).toHaveFocus();
+  });
+
+  it("tells the proposer what became of a declined or merged proposal, until dismissed", async () => {
+    sectionsDeps.load.mockResolvedValue({
+      sections: [
+        stats("games"),
+        stats("anime"),
+        stats("other"),
+        stats("cats", {
+          name: "Cats",
+          status: "declined",
+          proposerUid: "u1",
+          fileUnder: "games",
+          declineNote: "Too close to Pets",
+        }),
+        stats("kittens", {
+          name: "Kittens",
+          status: "merged",
+          proposerUid: "u1",
+          mergedInto: "anime",
+        }),
+      ],
+    });
+    open();
+    const cats = (
+      await screen.findByText("“Cats” wasn’t added as a section. Your lists stay in Games.")
+    ).closest("li")!;
+    expect(cats).toHaveTextContent("Too close to Pets");
+    expect(screen.getByText("“Kittens” was merged into Anime.")).toBeInTheDocument();
+    // Neither is a tile.
+    expect(screen.getByText("3 sections")).toBeInTheDocument();
+    await userEvent.click(within(cats).getByRole("button", { name: "Dismiss" }));
+    expect(sectionsDeps.dismiss).toHaveBeenCalledWith("cats");
+    expect(screen.queryByText(/“Cats”/)).toBeNull();
+    expect(screen.getByText("“Kittens” was merged into Anime.")).toBeInTheDocument();
   });
 
   it("is a link like any other tile for somebody else's section", async () => {

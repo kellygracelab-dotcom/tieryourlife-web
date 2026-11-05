@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { appIsLive, onApple, playUrl, type PlaySlot } from "../../lib/links";
 import { localStorageStore, type KeyValueStore } from "../../lib/storage";
 import { strings } from "../../strings";
+import { focusAfter } from "../../ui/focus";
 import { Icon } from "../../ui/Icon";
 import "./android.css";
 
@@ -33,15 +34,17 @@ export function AppCard({
     const until = Number(store.read(HIDDEN_UNTIL_KEY));
     return Number.isFinite(until) && until > now();
   });
+  const card = useRef<HTMLElement>(null);
   if (hidden || apple) return null;
 
   const hide = () => {
     store.write(HIDDEN_UNTIL_KEY, String(now() + HIDE_FOR_MS));
+    if (card.current !== null) focusAfter(card.current);
     setHidden(true);
   };
 
   return (
-    <aside className="app-card" aria-labelledby={`app-card-${slot}`}>
+    <aside ref={card} className="app-card" aria-labelledby={`app-card-${slot}`}>
       <span className="app-card__icon" aria-hidden="true">
         <Icon name="install_mobile" />
       </span>

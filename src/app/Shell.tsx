@@ -127,6 +127,13 @@ function SiteTabs({ className, pathname }: { className: string; pathname: string
 function BarSearch({ asked }: { asked: string }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState(asked);
+  // Words asked anew by the address replace what is typed. The field itself
+  // stays: drawn afresh for every search, it dropped the focus each time.
+  const [seen, setSeen] = useState(asked);
+  if (asked !== seen) {
+    setSeen(asked);
+    setQuery(asked);
+  }
   const field = useRef<HTMLInputElement>(null);
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -225,7 +232,7 @@ export function Shell() {
           </span>
         )}
         <SiteTabs className="top__tabs" pathname={location.pathname} />
-        {!home && <BarSearch key={asked} asked={asked} />}
+        {!home && <BarSearch asked={asked} />}
         <nav className="top__actions" aria-label={strings.nav.site}>
           {!home && (
             <Link className="top__search-link" to="/search" aria-label={strings.nav.search}>

@@ -78,6 +78,25 @@
   color: var(--ink-dim);
 }
 
+/* Over a page last read on this device, when the fresh one could not be had. */
+.feed__stale {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.feed__stale p {
+  flex: 1;
+  margin: 0;
+}
+
+.feed__stale .ms {
+  font-size: 18px;
+}
+
 .feed__more {
   display: flex;
   flex-direction: column;

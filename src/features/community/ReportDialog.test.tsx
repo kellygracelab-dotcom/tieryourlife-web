@@ -39,7 +39,7 @@ describe("ReportDialog", () => {
   it("takes a reason, a note and the author, and sends only once a reason is picked", async () => {
     const { send } = open("open");
     const dialog = screen.getByRole("dialog", { name: "Report this list" });
-    // The app's six, in its order.
+    // The app's five, in its order: a list in the wrong place is not hidden.
     expect(
       within(dialog)
         .getAllByRole("radio")
@@ -50,7 +50,6 @@ describe("ReportDialog", () => {
       "Hate or harassment",
       "Spam or advertising",
       "Something else",
-      "Wrong section or topic",
     ]);
     expect(within(dialog).getByRole("radio", { name: "Sexual content" })).toHaveFocus();
     const report = within(dialog).getByRole("button", { name: "Report" });

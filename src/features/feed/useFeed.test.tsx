@@ -39,7 +39,7 @@ function Probe({ query, load }: { query: FeedQuery; load: LoadFeed }) {
   const { state, retry, more } = useFeed(query, load);
   const text =
     state.status === "ready"
-      ? `${state.lists.map((list) => list.id).join(",")}|${state.next ?? "-"}|${state.more}`
+      ? `${state.lists.map((list) => list.id).join(",")}|${state.next ?? "-"}|${state.more}${state.stale === true ? "|stale" : ""}`
       : state.status === "error"
         ? `error:${state.error.kind}`
         : "loading";
@@ -65,6 +65,25 @@ describe("useFeed", () => {
     render(<Probe query={popular} load={() => fresh.promise} />);
     expect(shown()).toHaveTextContent("a,b|c|idle");
     await act(async () => fresh.resolve(page(["z"])));
+    expect(shown()).toHaveTextContent("z|-|idle");
+  });
+
+  it("keeps the page read before when the fresh one fails, and says it is old", async () => {
+    const { unmount } = render(<Probe query={popular} load={async () => page(["a", "b"], "c")} />);
+    expect(await screen.findByText("a,b|c|idle")).toBeInTheDocument();
+    unmount();
+
+    const again = deferred<FeedPage>();
+    const load = vi
+      .fn<LoadFeed>()
+      .mockRejectedValueOnce(new ApiFailure({ kind: "offline" }))
+      .mockReturnValueOnce(again.promise);
+    render(<Probe query={popular} load={load} />);
+    expect(await screen.findByText("a,b|c|idle|stale")).toBeInTheDocument();
+    // Another try keeps the lists up meanwhile, then the fresh page replaces them.
+    await userEvent.click(screen.getByRole("button", { name: "retry" }));
+    expect(shown()).toHaveTextContent("a,b|c|idle|stale");
+    await act(async () => again.resolve(page(["z"])));
     expect(shown()).toHaveTextContent("z|-|idle");
   });
 

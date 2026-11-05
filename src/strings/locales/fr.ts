@@ -365,6 +365,7 @@ const fr: Translation = {
     more: "Afficher plus",
     loadingMore: "Chargement…",
     moreFailed: "Impossible d’en charger plus.",
+    stale: "Impossible d’actualiser. Voici les listes de votre dernière visite.",
   },
   list: {
     pictureCredits: "Crédits photo",
@@ -877,9 +878,11 @@ const fr: Translation = {
     sections: "Rubriques",
     group: "{name} · {n}",
     followSection: "Suivre {name}",
-    unfollowSection: "Ne plus suivre {name}",
     emptyHelper:
-      "Touchez + pour suivre une section. Les thèmes sont dans chaque section, les personnes sur leur profil.",
+      "Touchez + sur les sections qui vous plaisent, puis suivez-les toutes d’un coup. Les thèmes sont dans chaque section, les personnes sur leur profil.",
+    pickFollow: "Suivre · {n}",
+    pickNone: "Choisissez-en au moins une",
+    followedFailed: "Impossible de charger ce que vous suivez.",
     nothingPublished: "Personne parmi vos abonnements n’a encore rien publié.",
     goExplore: "Aller à Explorer",
     back: "Retour",
@@ -937,6 +940,11 @@ const fr: Translation = {
     withdrawAsk: "Retirer « {name} » ? Vos listes restent dans {section}.",
     withdrawFailed: "Impossible de la retirer. Réessayez.",
     withdrawn: "Proposition retirée.",
+    noticeDeclined:
+      "« {name} » n’a pas été ajoutée comme section. Vos listes restent dans {section}.",
+    noticeMerged: "« {name} » a été fusionnée avec {section}.",
+    noticeDismiss: "Ignorer",
+    noticeDismissFailed: "Impossible d’ignorer cet avis. Réessayez.",
   },
   sectionIcons: {
     category: "Formes",

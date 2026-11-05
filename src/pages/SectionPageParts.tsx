@@ -1,11 +1,10 @@
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useCallback, type ReactNode } from "react";
 import { Navigate } from "react-router";
 import type { SectionStats } from "../api/sections";
 import { isCategory, type FeedSort } from "../api/types";
 import type { LoadFeed } from "../features/feed/useFeed";
 import {
   builtInSection,
-  sectionOf,
   sectionPath,
   sectionStyle,
   topicPath,
@@ -13,7 +12,7 @@ import {
   topicPicture,
   type Section,
 } from "../features/sections/model";
-import { useSections, type SectionsStore } from "../features/sections/useSections";
+import { heldSection, useSections, type SectionsStore } from "../features/sections/useSections";
 import { useResource } from "../lib/useResource";
 import { strings } from "../strings";
 import { Button } from "../ui/Button";
@@ -124,36 +123,44 @@ interface SectionRouteProps {
 /**
  * The section an address names, for its own page and for its topics' pages:
  * one of the sections, one of the nine before they have answered, or else
- * asked about by its id.
+ * asked about by its id and then held by the store, so that Follow on it
+ * turns like any other.
  */
 export function SectionRoute({ id, store, loadOne, children }: SectionRouteProps) {
-  const { sections, loaded, failed } = useSections(store);
-  const known = sections.find((one) => one.id === id);
+  const snapshot = useSections(store);
+  const known = heldSection(snapshot, id);
   const section = known ?? (isCategory(id) ? builtInSection(id) : null);
+  // Held once the answer is in, before the page is drawn from it.
+  const lookUp = useCallback(
+    (one: string) =>
+      loadOne(one).then((stats) => {
+        store.keep(stats);
+        return stats;
+      }),
+    [loadOne, store],
+  );
   if (section !== null) return <Fragment key={section.id}>{children(section)}</Fragment>;
   // Not among the sections, which may not have answered yet: asked about on
   // its own only once they have.
-  if (!loaded && !failed) return <SectionLoading />;
-  return <UnlistedSection key={id} id={id} loadOne={loadOne} render={children} />;
+  if (!snapshot.loaded && !snapshot.failed) return <SectionLoading />;
+  return <UnlistedSection key={id} id={id} loadOne={lookUp} />;
 }
 
 /**
  * A section no tile shows, asked about by its id once: hidden, approved since
  * the sections were read, or merged into another, whose address it leads to
- * now. Nothing by that id is Not found.
+ * now. Nothing by that id is Not found. Once found, the store holds it and
+ * the route draws it.
  */
 function UnlistedSection({
   id,
   loadOne,
-  render,
 }: {
   id: string;
   loadOne: (id: string) => Promise<SectionStats>;
-  render: (section: Section) => ReactNode;
 }) {
   const { state, retry } = useResource(id, loadOne);
-  if (state.status === "loading") return <SectionLoading />;
-  if (state.status === "ready") return render(sectionOf(state.value));
+  if (state.status !== "error") return <SectionLoading />;
   const { error } = state;
   // A proposal approved as a topic leads to that topic, inside the section it went into.
   if (error.kind === "merged" && error.into !== null) {

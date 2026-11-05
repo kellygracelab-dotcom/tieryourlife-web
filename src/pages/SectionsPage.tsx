@@ -5,6 +5,7 @@ import { useSession } from "../app/session";
 import { SignInDialog } from "../features/community/SignInDialog";
 import { OTHER, sectionName, type Section } from "../features/sections/model";
 import { myWaiting, PENDING_MAX } from "../features/sections/proposal";
+import { ProposalNotices } from "../features/sections/ProposalNotices";
 import type { EditorDeps } from "../features/sections/editorDeps";
 import { SectionEditor } from "../features/sections/SectionEditor";
 import { SectionTile } from "../features/sections/SectionTile";
@@ -56,7 +57,7 @@ export function SectionsPage({
   store?: SectionsStore;
   proposing?: ProposingDeps;
 }) {
-  const { sections, known } = useSections(store);
+  const { sections, known, notices } = useSections(store);
   const { account, signIn } = useSession();
   const uid = account?.kind === "signedIn" ? account.uid : null;
   const [params, setParams] = useSearchParams();
@@ -122,6 +123,7 @@ export function SectionsPage({
           <option value="name">{strings.sections.sortName}</option>
         </select>
       </div>
+      <ProposalNotices notices={notices} nameOf={nameOf} onDismiss={store.dismissNotice} />
       {sections.length > FIND_FROM && (
         <input
           className="all-sections__find"
