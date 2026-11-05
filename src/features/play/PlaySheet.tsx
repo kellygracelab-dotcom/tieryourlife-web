@@ -1,4 +1,12 @@
-import { useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -21,6 +29,8 @@ interface PlaySheetProps {
   actions: ReactNode;
   /** Called once the sheet has gone. */
   onClose: () => void;
+  /** A selector for what takes the focus on open; the first control otherwise. */
+  focus?: string;
 }
 
 /**
@@ -38,13 +48,14 @@ export function PlaySheet({
   footer,
   actions,
   onClose,
+  focus,
 }: PlaySheetProps) {
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
   const arriving = useContext(SheetArrival);
   const [leaving, setLeaving] = useState(false);
   const leave = () => setLeaving(true);
-  useModal(box, leave);
+  useModal(box, leave, focus);
 
   // The board behind hears its keys on the window: 1 placed its picked card
   // and Ctrl+Z undid a move under the scrim. A key stops at the document,
@@ -80,7 +91,11 @@ export function PlaySheet({
         aria-labelledby={`${id}-title`}
         onClick={(event) => event.stopPropagation()}
       >
-        <span className="play-sheet__handle" aria-hidden="true" />
+        <span
+          className="play-sheet__handle"
+          aria-hidden="true"
+          onPointerDown={(event) => box.current !== null && dragDown(event, box.current, leave)}
+        />
         <div className="play-sheet__scroll">
           <div
             className={
@@ -112,6 +127,38 @@ export function PlaySheet({
     </div>,
     document.body,
   );
+}
+
+/** How far the handle is pulled before the sheet goes when it is let go. */
+export const DRAG_CLOSE_PX = 80;
+
+/**
+ * The handle of a sheet from the bottom, as the app's: the sheet follows a
+ * finger or a mouse down, goes when let go far enough down, and comes back
+ * up otherwise.
+ */
+function dragDown(
+  event: ReactPointerEvent<HTMLSpanElement>,
+  sheet: HTMLElement,
+  leave: () => void,
+): void {
+  const move = (by: number) => {
+    sheet.style.transform = by > 0 ? `translateY(${by}px)` : "";
+  };
+  const handle = event.currentTarget;
+  const from = event.clientY;
+  handle.setPointerCapture?.(event.pointerId);
+  const onMove = (moved: PointerEvent) => move(moved.clientY - from);
+  const onUp = (up: PointerEvent) => {
+    handle.removeEventListener("pointermove", onMove);
+    handle.removeEventListener("pointerup", onUp);
+    handle.removeEventListener("pointercancel", onUp);
+    if (up.type === "pointerup" && up.clientY - from >= DRAG_CLOSE_PX) leave();
+    else move(0);
+  };
+  handle.addEventListener("pointermove", onMove);
+  handle.addEventListener("pointerup", onUp);
+  handle.addEventListener("pointercancel", onUp);
 }
 
 /** "Cancel" in a sheet's buttons: the sheet goes, exit and all. */

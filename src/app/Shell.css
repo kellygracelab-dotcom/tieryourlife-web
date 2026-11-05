@@ -356,11 +356,6 @@
   }
 }
 
-.top__note {
-  font: var(--text-small);
-  color: var(--error);
-}
-
 /* A sentence the header cannot hold: under it, full width. */
 .top__banner {
   margin: 0;
@@ -369,6 +364,10 @@
   font: var(--text-small);
   color: var(--ink);
   background: var(--surface-soft);
+}
+
+.top__banner--error {
+  color: var(--error);
 }
 
 .shell__main {

@@ -237,6 +237,7 @@
   }
 
   .play-sheet__handle {
+    position: relative;
     display: block;
     flex: none;
     width: 32px;
@@ -244,6 +245,15 @@
     margin: 22px auto 0;
     border-radius: 2px;
     background: color-mix(in srgb, var(--ink-dim) 40%, transparent);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  /* The handle is pulled down by a strip as wide as a thumb, not by its 4 px line. */
+  .play-sheet__handle::before {
+    content: "";
+    position: absolute;
+    inset: -18px -40px -12px;
   }
 
   .play-sheet__scroll {
@@ -474,6 +484,49 @@
 .play-footnote {
   font: 400 12px/17px var(--font);
   color: var(--ink-dim);
+}
+
+/* Too many cards for one game: said under the games, in the counter's error colour. */
+.play-over {
+  padding-top: 8px;
+  font: 400 13px/18px var(--font);
+  color: var(--error);
+}
+
+/*
+ * Held sideways, as the app's wide games page: the three games side by side,
+ * every one of them in view without a scroll. The radio and the icon head
+ * each card, the words take its width under them.
+ */
+@media (orientation: landscape) and (max-height: 479px) {
+  .dialog.play-sheet:has(.play-games) {
+    width: min(800px, 100%);
+  }
+
+  .play-sheet__scroll {
+    gap: 12px;
+    padding-top: 16px;
+  }
+
+  .play-games {
+    flex-direction: row;
+  }
+
+  .play-game {
+    flex: 1 1 0;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .play-game__text {
+    flex-basis: 100%;
+  }
+
+  .play-sheet__actions {
+    padding-block: 12px 16px;
+  }
 }
 
 /* ---- The rows to choose from ---- */

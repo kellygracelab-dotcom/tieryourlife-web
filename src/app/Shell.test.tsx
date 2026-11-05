@@ -210,7 +210,10 @@ describe("Shell account", () => {
     open({ signIn });
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(signIn).toHaveBeenCalledTimes(1);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign in");
+    const note = await screen.findByRole("alert");
+    expect(note).toHaveTextContent("Could not sign in");
+    // Under the bar, not in it, where it squeezed a phone's buttons off the screen.
+    expect(note.closest("header")).toBeNull();
   });
 
   it("tells a person in another app's browser how to get out, instead of the plain failure", async () => {

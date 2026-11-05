@@ -81,11 +81,16 @@ function play(game = newGame("bracket", ["a", "b", "c", "d"], EVERYTHING, 3, 0))
   return { game, onChange, onQuit, last: () => onChange.mock.lastCall![0] };
 }
 
-/** Presses a key and waits for the game to take the answer. */
+/** A pick or a skip still playing out on the stage. */
+const moving = () =>
+  document.querySelector(".duel-card--chosen, .duel__slot--fade, .duel__slot--drop") !== null;
+
+/** Presses a key and waits for the game to take the answer and the stage to settle. */
 async function answer(key: string, onChange: { mock: { calls: unknown[] } }) {
   const before = onChange.mock.calls.length;
   await userEvent.keyboard(key);
   await waitFor(() => expect(onChange.mock.calls.length).toBe(before + 1));
+  await waitFor(() => expect(moving()).toBe(false));
 }
 
 describe("the duel layer", () => {
@@ -118,15 +123,24 @@ describe("the duel layer", () => {
     );
   });
 
-  it("picks with a click, after the picked card has shown its ring and check", async () => {
+  it("picks with a click, taken at once while the picked card shows its ring and check", async () => {
     const { game, onChange } = play();
     const [first] = currentPair(game)!;
     const card = screen.getByRole("button", { name: `Pick ${nameOf(game, first)}` });
     await userEvent.click(card);
     expect(card).toHaveClass("duel-card--chosen");
     expect(card.querySelector(".duel-card__check")).not.toBeNull();
-    expect(onChange).not.toHaveBeenCalled();
-    await waitFor(() => expect(onChange).toHaveBeenCalledWith(pick(game, first)));
+    // Taken before the motion ends, so a Quit in the middle of it keeps the pick.
+    expect(onChange).toHaveBeenCalledWith(pick(game, first));
+    await waitFor(() => expect(moving()).toBe(false));
+  });
+
+  it("keeps a pick quit in the middle of its motion", async () => {
+    const { game, onChange, onQuit } = play();
+    const [first] = currentPair(game)!;
+    await userEvent.keyboard("{ArrowLeft}{Escape}");
+    expect(onQuit).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(pick(game, first));
   });
 
   it("picks the left card with ← and the right with →", async () => {
@@ -169,7 +183,8 @@ describe("the duel layer", () => {
   it("takes one answer at a time: a key while a pick settles is not a second one", async () => {
     const { onChange } = play();
     await userEvent.keyboard("{ArrowLeft}{ArrowRight}{ArrowDown}");
-    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(moving()).toBe(false));
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 
   it("says the skip line for the first three duels, then keeps its place unseen", async () => {
@@ -267,8 +282,9 @@ describe("the duel layer", () => {
     act(() => vi.advanceTimersByTime(1));
     expect(document.querySelectorAll(".duel__slot--fade")).toHaveLength(2);
     act(() => vi.advanceTimersByTime(PICK_DONE_MS - PICK_FADE_AT_MS - 1));
-    expect(onChange).not.toHaveBeenCalled();
+    expect(moving()).toBe(true);
     act(() => vi.advanceTimersByTime(1));
+    expect(moving()).toBe(false);
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
@@ -295,8 +311,9 @@ describe("the duel layer", () => {
     act(() => screen.getByRole("button", { name: /Skip/ }).click());
     expect(document.querySelectorAll(".duel__slot--drop")).toHaveLength(2);
     act(() => vi.advanceTimersByTime(SKIP_DONE_MS - 1));
-    expect(onChange).not.toHaveBeenCalled();
+    expect(moving()).toBe(true);
     act(() => vi.advanceTimersByTime(1));
+    expect(moving()).toBe(false);
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
@@ -330,8 +347,9 @@ describe("the duel layer", () => {
     act(() => screen.getAllByRole("button", { name: /^Pick/ })[0]!.click());
     expect(document.querySelectorAll(".duel__slot--fade")).toHaveLength(2);
     act(() => vi.advanceTimersByTime(REDUCED_MS - 1));
-    expect(onChange).not.toHaveBeenCalled();
+    expect(moving()).toBe(true);
     act(() => vi.advanceTimersByTime(1));
+    expect(moving()).toBe(false);
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

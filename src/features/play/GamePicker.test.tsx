@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { EVERYTHING } from "./chosen";
@@ -81,9 +81,30 @@ describe("the game picker", () => {
     );
   });
 
-  it("does not start over more than 64 cards", () => {
-    show({ count: 2000 });
-    expect(screen.getByRole("button", { name: "Start" })).toBeDisabled();
+  it("does not start over more than 64 cards, says why, and gives no estimates", () => {
+    show({ count: 80 });
+    const start = screen.getByRole("button", { name: "Start" });
+    expect(start).toBeDisabled();
+    expect(start).toHaveAccessibleDescription("80 selected, pick up to 64");
+    expect(document.querySelector(".play-game__estimate")).toBeNull();
+  });
+
+  it("goes when its handle is pulled down far enough, and comes back up otherwise", async () => {
+    const { onCancel } = show();
+    const handle = document.querySelector<HTMLElement>(".play-sheet__handle")!;
+    const sheet = document.querySelector<HTMLElement>(".play-sheet")!;
+    const pull = (by: number) => {
+      fireEvent.pointerDown(handle, { clientY: 100, pointerId: 1 });
+      fireEvent.pointerMove(handle, { clientY: 100 + by, pointerId: 1 });
+      expect(sheet.style.transform).toBe(`translateY(${by}px)`);
+      fireEvent.pointerUp(handle, { clientY: 100 + by, pointerId: 1 });
+    };
+    pull(30);
+    expect(sheet.style.transform).toBe("");
+    expect(document.querySelector(".play-scrim--leaving")).toBeNull();
+    pull(120);
+    expect(document.querySelector(".play-scrim--leaving")).not.toBeNull();
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
   });
 
   it("puts a saved game first, with how far it got and when it started", async () => {

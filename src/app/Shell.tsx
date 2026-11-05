@@ -290,16 +290,9 @@ export function Shell() {
               <Icon name="expand_more" className="menu__chevron" />
             </span>
           ) : (
-            <>
-              {signing === "failed" && (
-                <span className="top__note" role="alert">
-                  {strings.nav.signInFailed}
-                </span>
-              )}
-              <Button onClick={onSignIn} disabled={signing === "busy"}>
-                {strings.nav.signIn}
-              </Button>
-            </>
+            <Button onClick={onSignIn} disabled={signing === "busy"}>
+              {strings.nav.signIn}
+            </Button>
           )}
         </nav>
       </header>
@@ -309,6 +302,12 @@ export function Shell() {
       {signing === "inApp" && (
         <p className="top__banner" role="alert">
           {strings.keep.inApp}
+        </p>
+      )}
+      {/* Under the bar, as the line above: in it, a phone's buttons were squeezed off the screen. */}
+      {signing === "failed" && account?.kind !== "signedIn" && (
+        <p className="top__banner top__banner--error" role="alert">
+          {strings.nav.signInFailed}
         </p>
       )}
       {storageTrouble && (

@@ -6,6 +6,7 @@ import type { Response } from "express";
 import { requireAppCheck } from "../src/appCheck";
 import { optionalAccount, requireAccount, requireUser, type DecodedToken } from "../src/auth";
 import { claimHashOf, CODE_ALPHABET, DAILY_CEILING, dayKey, MAX_BODY_BYTES } from "../src/ranking";
+import { resetShellForTests, UNAVAILABLE_HTML } from "../src/pages";
 import { route, type WebDeps } from "../src/web";
 
 type Data = Record<string, unknown>;
@@ -545,6 +546,58 @@ describe("the router", () => {
     } finally {
       console.error = logged;
     }
+  });
+});
+
+describe("the pages a link opens", () => {
+  const SHELL = "<html><head><title>TierYourLife</title></head><body></body></html>";
+
+  /** Hosting answering with the shell, or not at all; the logs kept quiet. */
+  async function withHosting<T>(up: boolean, work: () => Promise<T>): Promise<T> {
+    resetShellForTests();
+    const fetched = globalThis.fetch;
+    const [logged, warned] = [console.error, console.warn];
+    globalThis.fetch = (async () => {
+      if (!up) throw new Error("hosting went away");
+      return new Response(SHELL, { status: 200 });
+    }) as typeof fetch;
+    console.error = () => undefined;
+    console.warn = () => undefined;
+    try {
+      return await work();
+    } finally {
+      globalThis.fetch = fetched;
+      [console.error, console.warn] = [logged, warned];
+      resetShellForTests();
+    }
+  }
+
+  it("gives any other address under /l/ and /r/ the site's own page, which says not found", async () => {
+    const { deps } = setup();
+    for (const path of ["/l/list-0001/extra", "/l/", "/r/abcdefgh/x"]) {
+      const answer = await withHosting(true, () => call(deps, "GET", path));
+      assert.equal(answer.status, 200, path);
+      assert.equal(answer.body, SHELL, path);
+    }
+  });
+
+  it("sends the bare shell when Firestore fails, so the site loads the list itself", async () => {
+    // No Firebase app in the tests: every read of Firestore throws, as an outage does.
+    const { deps } = setup();
+    for (const path of [`/l/${LIST_ID}`, "/r/abcdefgh"]) {
+      const answer = await withHosting(true, () => call(deps, "GET", path));
+      assert.equal(answer.status, 200, path);
+      assert.equal(answer.body, SHELL, path);
+      assert.equal(answer.headers["Cache-Control"], "no-store", path);
+    }
+  });
+
+  it("answers a page, not JSON, when even the shell cannot be had", async () => {
+    const { deps } = setup();
+    const answer = await withHosting(false, () => call(deps, "GET", `/l/${LIST_ID}`));
+    assert.equal(answer.status, 503);
+    assert.equal(answer.headers["Content-Type"], "text/html; charset=utf-8");
+    assert.equal(answer.body, UNAVAILABLE_HTML);
   });
 });
 
