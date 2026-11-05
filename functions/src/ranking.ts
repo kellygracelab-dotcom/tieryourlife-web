@@ -186,14 +186,16 @@ export function snapshotOf(list: Record<string, unknown>): Snapshot {
 
 /**
  * The snapshot as it is shown today. A ranking kept before its list became
- * editorial carries the author's name; while the list is still there to ask,
- * the name stays out of the answer.
+ * editorial carries the author's name, and so does one whose list is gone:
+ * unpublished, taken down for good or erased with its author's account,
+ * which promises to take away everything they published. Either way the
+ * name stays out of the answer; the visitor's own board stays.
  */
 export function shownSnapshot(
   snapshot: Snapshot,
   list: { authorUid?: unknown; anonymous?: unknown } | null,
 ): Snapshot {
-  if (snapshot.editorial !== true && !isEditorialList(list)) return snapshot;
+  if (snapshot.editorial !== true && list !== null && !isEditorialList(list)) return snapshot;
   return { ...snapshot, editorial: true, authorName: "", authorPhotoUrl: null };
 }
 

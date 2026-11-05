@@ -337,6 +337,24 @@ describe("GET /api/rank/{code}", () => {
     assert.equal(body.yours, false);
   });
 
+  it("names nobody once the list is gone, as when its author erased their account", async () => {
+    const { deps, table } = setup(GUEST);
+    table("rankings").set("abcdefgh", {
+      ...ranking("guest", true),
+      snapshot: { ...ranking("guest", true).snapshot, authorPhotoUrl: "https://faces.test/a.jpg" },
+    });
+    table("publishedLists").delete(LIST_ID);
+    const body = (await call(deps, "GET", "/api/rank/abcdefgh")).body as Data;
+    const snapshot = body.snapshot as Data;
+    assert.equal(body.listAvailable, false);
+    assert.equal(snapshot.authorName, "");
+    assert.equal(snapshot.authorPhotoUrl, null);
+    assert.equal(snapshot.editorial, true);
+    // The visitor's own board stays.
+    assert.equal(snapshot.title, "Kept");
+    assert.deepEqual(body.rows, [[0], []]);
+  });
+
   it("answers 404 for a code that is malformed or unknown", async () => {
     const { deps } = setup();
     assert.equal((await call(deps, "GET", "/api/rank/NOPE")).status, 404);

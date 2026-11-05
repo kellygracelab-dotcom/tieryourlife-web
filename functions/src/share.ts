@@ -179,14 +179,45 @@ const band = (tier: ShareTier, size: number): Node =>
     ],
   );
 
-const heading = (card: ShareCard, line: string): Node =>
+/**
+ * The line under the title, with the author's name laid out on its own. In
+ * one run of text an Arabic or Hebrew name pulled the English beside it into
+ * its direction: the card read "’احمدs list".
+ */
+interface Byline {
+  before: string;
+  name: string | null;
+  after: string;
+}
+
+const heading = (card: ShareCard, line: Byline): Node =>
   el("div", { display: "flex", flexDirection: "column", gap: 8 }, [
     el(
       "div",
       { fontSize: 44, fontWeight: 500, lineHeight: 1.15, color: INK, lineClamp: 2 },
       card.title.trim() || "Untitled list",
     ),
-    el("div", { fontSize: 22, color: INK_DIM, lineClamp: 1 }, line),
+    line.name === null
+      ? el("div", { fontSize: 22, color: INK_DIM, lineClamp: 1 }, line.before + line.after)
+      : el(
+          "div",
+          {
+            display: "flex",
+            alignItems: "baseline",
+            fontSize: 22,
+            color: INK_DIM,
+            whiteSpace: "pre",
+          },
+          [
+            ...(line.before === "" ? [] : [line.before]),
+            el(
+              "div",
+              { flexShrink: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+              line.name,
+            ),
+            ...(line.after === "" ? [] : [line.after]),
+          ],
+        ),
   ]);
 
 const MARK_BANDS = ["#b03a32", "#c06a25", "#a98b1f", "#3f7f55", "#3c6e99"];
@@ -243,6 +274,9 @@ const frame = (children: (Node | string)[]): Node =>
       display: "flex",
       flexDirection: "column",
       justifyContent: "space-between",
+      // Satori adds padding outside the box by default: the card came out
+      // 1296×710 and was cut to 1200×630, footer and all.
+      boxSizing: "border-box",
       width: SHARE_WIDTH,
       height: SHARE_HEIGHT,
       padding: "44px 48px 36px",
@@ -254,12 +288,15 @@ const frame = (children: (Node | string)[]): Node =>
 
 function listCard(card: ShareList, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
-  const line = [
-    ...(card.editorial === true ? [] : [`by ${author}`]),
+  const rest = [
     plural(card.itemCount, "card", "cards"),
     plural(card.takeCount, "ranking", "rankings"),
     categoryLabel(card.category),
   ].join(" · ");
+  const line: Byline =
+    card.editorial === true
+      ? { before: rest, name: null, after: "" }
+      : { before: "by ", name: author, after: ` · ${rest}` };
   const shown = card.items.filter((item) => item.imageUrl !== null).slice(0, LIST_TILES);
   const tiles = (shown.length > 0 ? shown : card.items.slice(0, LIST_TILES)).map((item) =>
     tile(item, pictures, 96, 140),
@@ -274,18 +311,19 @@ function listCard(card: ShareList, pictures: Pictures): Node {
       ),
       el("div", { display: "flex", flexWrap: "wrap", gap: 10, width: 5 * 96 + 4 * 10 }, tiles),
     ]),
-    brand(),
+    // At the bottom right, where the ranking card has it.
+    el("div", { display: "flex", justifyContent: "flex-end" }, brand()),
   ]);
 }
 
 function rankingCard(card: ShareRanking, pictures: Pictures): Node {
   const author = card.authorName.trim() || "someone";
   const placed = card.rows.reduce((sum, row) => sum + row.length, 0);
-  const line = [
-    "ranked by a visitor",
-    `${placed} of ${plural(card.items.length, "card", "cards")} placed`,
-    ...(card.editorial === true ? [] : [`${author}’s list`]),
-  ].join(" · ");
+  const head = `ranked by a visitor · ${placed} of ${plural(card.items.length, "card", "cards")} placed`;
+  const line: Byline =
+    card.editorial === true
+      ? { before: head, name: null, after: "" }
+      : { before: `${head} · `, name: author, after: "’s list" };
   const rows = card.tiers.slice(0, SHARE_TIERS).map((tier, index) => {
     const row = card.rows[index] ?? [];
     const items = row
@@ -340,15 +378,20 @@ export const shareCardOf = (card: ShareCard, pictures: Pictures): Node =>
 /**
  * The look of the card. A copy is kept for good per version of a list, and a
  * chat keeps a picture by its address, so a change in the drawing has to
- * change both or nobody ever sees it.
+ * change both or nobody ever sees it. 4: the footer inside the card, every
+ * script's letters, the author's name apart.
  */
-export const SHARE_LOOK = 3;
+export const SHARE_LOOK = 4;
 
-export const shareImageUrl = (host: string, kind: "l" | "r", id: string, version: number): string =>
-  `https://${host}/og/${kind}/${encodeURIComponent(id)}.png?v=${version}.${SHARE_LOOK}`;
+export const shareImageUrl = (
+  host: string,
+  kind: "l" | "r",
+  id: string,
+  version: number | string,
+): string => `https://${host}/og/${kind}/${encodeURIComponent(id)}.png?v=${version}.${SHARE_LOOK}`;
 
 /** The one copy kept per version of a list or ranking, and per look of the card. */
-export const shareImagePath = (kind: "l" | "r", id: string, version: number): string =>
+export const shareImagePath = (kind: "l" | "r", id: string, version: number | string): string =>
   `${shareImageFolder(kind, id)}${version}.${SHARE_LOOK}.png`;
 
 /** Where every copy of one list's or ranking's card lives. The slash keeps `abc` out of `abcd`. */

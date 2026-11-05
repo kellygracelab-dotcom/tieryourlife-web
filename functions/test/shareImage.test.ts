@@ -1,24 +1,32 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { SHARE_HEIGHT, SHARE_WIDTH, type ShareList } from "../src/share";
+import type { Response as ExpressResponse } from "express";
+import { SHARE_HEIGHT, SHARE_WIDTH, type ShareList, type ShareRanking } from "../src/share";
+import { resetAssetsForTests } from "../src/shareFonts";
 import {
   discardOlderCopies,
   fetchPicture,
   fetchPictures,
+  isPublicAddress,
+  PICTURE_MAX_BYTES,
   renderShareImage,
+  renderShareSvg,
+  sendShareImage,
   type CopyShelf,
   type Fetcher,
+  type Resolver,
 } from "../src/shareImage";
 
 const answering =
   (status: number, type: string, bytes: number): Fetcher =>
   async () =>
-    ({
-      ok: status === 200,
+    new Response(new Uint8Array(bytes), {
       status,
-      headers: { get: (name: string) => (name === "content-type" ? type : null) },
-      arrayBuffer: async () => new Uint8Array(bytes).buffer,
-    }) as unknown as globalThis.Response;
+      headers: { "content-type": type },
+    });
+
+/** Every name stands for one public address unless the test says otherwise. */
+const publicDns: Resolver = async () => ["93.184.216.34"];
 
 const list: ShareList = {
   kind: "list",
@@ -55,17 +63,159 @@ describe("fetchPicture", () => {
   });
 
   it("gives nothing for a refusal, a page that is not a picture, an empty or an oversized one", async () => {
-    assert.equal(await fetchPicture("https://a/x", answering(404, "image/jpeg", 3)), null);
-    assert.equal(await fetchPicture("https://a/x", answering(200, "text/html", 3)), null);
-    assert.equal(await fetchPicture("https://a/x", answering(200, "image/png", 0)), null);
-    assert.equal(
-      await fetchPicture("https://a/x", answering(200, "image/png", 3 * 1024 * 1024)),
-      null,
-    );
+    const at = (fetchImpl: Fetcher) => fetchPicture("https://a.test/x", fetchImpl, publicDns);
+    assert.equal(await at(answering(200, "image/png", 3)), "data:image/png;base64,AAAA");
+    assert.equal(await at(answering(404, "image/jpeg", 3)), null);
+    assert.equal(await at(answering(200, "text/html", 3)), null);
+    assert.equal(await at(answering(200, "image/png", 0)), null);
+    assert.equal(await at(answering(200, "image/png", 3 * 1024 * 1024)), null);
     const failing: Fetcher = async () => {
       throw new Error("offline");
     };
-    assert.equal(await fetchPicture("https://a/x", failing), null);
+    assert.equal(await at(failing), null);
+  });
+
+  // One picture of 600 MB with no length was read whole before its size was
+  // looked at, and took the instance past its memory.
+  it("stops reading a picture with no length at the limit", async () => {
+    let served = 0;
+    const endless: Fetcher = async () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          pull(controller) {
+            served += 64 * 1024;
+            controller.enqueue(new Uint8Array(64 * 1024));
+            if (served > 64 * 1024 * 1024) controller.close();
+          },
+        }),
+        { headers: { "content-type": "image/png" } },
+      );
+    assert.equal(await fetchPicture("https://a.test/x", endless, publicDns), null);
+    assert.ok(served <= PICTURE_MAX_BYTES + 4 * 64 * 1024, `read ${served} bytes`);
+  });
+
+  it("does not read a picture whose declared size is over the limit", async () => {
+    let served = 0;
+    const declared: Fetcher = async () =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          pull(controller) {
+            served += 64 * 1024;
+            controller.enqueue(new Uint8Array(64 * 1024));
+            if (served >= PICTURE_MAX_BYTES) controller.close();
+          },
+        }),
+        {
+          headers: { "content-type": "image/png", "content-length": String(PICTURE_MAX_BYTES + 1) },
+        },
+      );
+    assert.equal(await fetchPicture("https://a.test/x", declared, publicDns), null);
+    // The stream fills its first chunk on its own; nothing past that is asked for.
+    assert.ok(served <= 2 * 64 * 1024, `read ${served} bytes`);
+  });
+
+  it("asks only public https addresses, on every hop of a redirect", async () => {
+    const asked: string[] = [];
+    const site =
+      (routes: Record<string, string>): Fetcher =>
+      async (url, init) => {
+        asked.push(url);
+        assert.equal(init?.redirect, "manual");
+        const next = routes[url];
+        if (next !== undefined)
+          return new Response(null, { status: 302, headers: { location: next } });
+        return answering(200, "image/jpeg", 3)(url, init);
+      };
+    const dns: Resolver = async (host) =>
+      host === "inside.test"
+        ? ["10.0.0.7"]
+        : host === "twofaced.test"
+          ? ["8.8.8.8", "127.0.0.1"]
+          : ["93.184.216.34"];
+    const at = (url: string, routes: Record<string, string> = {}) =>
+      fetchPicture(url, site(routes), dns);
+
+    assert.equal(await at("http://a.test/x.jpg"), null);
+    assert.equal(await at("https://a.test:8443/x.jpg"), null);
+    assert.equal(await at("https://user:pw@a.test/x.jpg"), null);
+    assert.equal(await at("https://inside.test/x.jpg"), null);
+    assert.equal(await at("https://twofaced.test/x.jpg"), null);
+    assert.equal(await at("https://169.254.169.254/computeMetadata/v1/"), null);
+    assert.equal(await at("https://[::1]/x.jpg"), null);
+    assert.deepEqual(asked, []);
+
+    // Commons answers with the file's own address; a redirect inward is refused.
+    assert.equal(
+      await at("https://commons.wikimedia.org/wiki/Special:FilePath/A.jpg?width=600", {
+        "https://commons.wikimedia.org/wiki/Special:FilePath/A.jpg?width=600":
+          "https://upload.wikimedia.org/a/a.jpg",
+      }),
+      "data:image/jpeg;base64,AAAA",
+    );
+    assert.equal(
+      await at("https://a.test/x.jpg", { "https://a.test/x.jpg": "https://inside.test/x.jpg" }),
+      null,
+    );
+    assert.equal(
+      await at("https://a.test/x.jpg", { "https://a.test/x.jpg": "http://a.test/x.jpg" }),
+      null,
+    );
+    const loop = {
+      "https://a.test/1": "/2",
+      "https://a.test/2": "/3",
+      "https://a.test/3": "/4",
+      "https://a.test/4": "/5",
+    };
+    assert.equal(await at("https://a.test/1", loop), null);
+    assert.equal(await at("https://a.test/2", loop), "data:image/jpeg;base64,AAAA");
+  });
+
+  it("does not look up the catalogues' own hosts", async () => {
+    const dns: Resolver = async () => {
+      throw new Error("no lookups");
+    };
+    for (const url of [
+      "https://image.tmdb.org/t/p/w500/a.jpg",
+      "https://images.igdb.com/igdb/image/upload/t_cover_big_2x/co1.jpg",
+      "https://shared.akamai.steamstatic.com/store_item_assets/a.jpg",
+      "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/a.jpg",
+      "https://cdn-images.dzcdn.net/images/cover/a/1000x1000.jpg",
+      "https://covers.openlibrary.org/b/id/1-L.jpg",
+      "https://inaturalist-open-data.s3.amazonaws.com/photos/1/large.jpg",
+      "https://upload.wikimedia.org/wikipedia/commons/a/a.jpg",
+      "https://firebasestorage.googleapis.com/v0/b/b/o/published%2Fa%2Fb?alt=media",
+    ]) {
+      assert.equal(
+        await fetchPicture(url, answering(200, "image/jpeg", 3), dns),
+        "data:image/jpeg;base64,AAAA",
+        url,
+      );
+    }
+  });
+
+  it("tells public addresses from private ones", () => {
+    for (const address of ["8.8.8.8", "93.184.216.34", "2606:4700::1111", "172.32.0.1"]) {
+      assert.equal(isPublicAddress(address), true, address);
+    }
+    for (const address of [
+      "10.1.2.3",
+      "127.0.0.1",
+      "169.254.169.254",
+      "172.16.0.1",
+      "192.168.1.1",
+      "100.64.0.1",
+      "0.0.0.0",
+      "224.0.0.1",
+      "::1",
+      "::",
+      "fd00::1",
+      "fe80::1",
+      "::ffff:127.0.0.1",
+      "::ffff:7f00:1",
+      "not an address",
+    ]) {
+      assert.equal(isPublicAddress(address), false, address);
+    }
   });
 
   it("collects the pictures a card wants, leaving out the ones that did not come", async () => {
@@ -92,6 +242,90 @@ describe("renderShareImage", () => {
       new Map([["https://image.tmdb.org/t/p/w500/a.jpg", pixel]]),
     );
     assert.deepEqual(sizeOf(withPicture), { width: SHARE_WIDTH, height: SHARE_HEIGHT });
+  });
+});
+
+describe("renderShareSvg", () => {
+  const ranking: ShareRanking = {
+    kind: "ranking",
+    title: "Seven tiers",
+    authorName: "Danylo",
+    category: "film_tv",
+    tiers: ["S", "A", "B", "C", "D", "E", "F"].map((label) => ({
+      label,
+      caption: null,
+      colorLight: "#777777",
+    })),
+    items: [{ title: "One", imageUrl: null }],
+    rows: [[0], [], [], [], [], [], []],
+  };
+
+  /** Where the last band of the app's mark is drawn: the brand's lowest edge. */
+  const markBottom = (svg: string): number => {
+    const band = /<(?:rect|path)\b[^>]*fill="#3c6e99"[^>]*>/.exec(svg)?.[0];
+    assert.ok(band !== undefined, "the brand's mark is drawn");
+    const y = Number(/\by="([\d.]+)"/.exec(band)?.[1]);
+    const height = Number(/\bheight="([\d.]+)"/.exec(band)?.[1]);
+    const x = Number(/\bx="([\d.]+)"/.exec(band)?.[1]);
+    assert.ok(x < SHARE_WIDTH, `the mark starts at x=${x}`);
+    return y + height;
+  };
+
+  // The padding went outside the 1200×630 box and the footer with it.
+  it("keeps the footer with the brand inside the card", async () => {
+    const offline: Fetcher = async () => {
+      throw new Error("offline");
+    };
+    assert.ok(markBottom(await renderShareSvg(list, new Map(), offline)) <= SHARE_HEIGHT);
+    assert.ok(markBottom(await renderShareSvg(ranking, new Map(), offline)) <= SHARE_HEIGHT);
+  });
+
+  // Roboto has no Japanese, Arabic or emoji: each was a crossed box.
+  it("asks for the fonts and emoji Roboto does not have, and draws anyway when they do not come", async () => {
+    resetAssetsForTests();
+    const asked: string[] = [];
+    const offline: Fetcher = async (url) => {
+      asked.push(url);
+      throw new Error("offline");
+    };
+    const svg = await renderShareSvg(
+      {
+        ...list,
+        title: "進撃の巨人 أفضل الأفلام",
+        items: [{ title: "🍕 Pizza", imageUrl: null }],
+      },
+      new Map(),
+      offline,
+    );
+    assert.match(svg, /^<svg/);
+    const fonts = asked.filter((url) => url.startsWith("https://fonts.googleapis.com/css2?"));
+    assert.ok(
+      fonts.some(
+        (url) => url.includes("family=Noto+Sans+JP") && url.includes(encodeURIComponent("進撃")),
+      ),
+      fonts.join("\n"),
+    );
+    assert.ok(
+      fonts.some((url) => url.includes("family=Noto+Sans+Arabic")),
+      fonts.join("\n"),
+    );
+    assert.ok(
+      asked.some((url) => url.endsWith("/1f355.svg")),
+      asked.join("\n"),
+    );
+  });
+});
+
+describe("sendShareImage", () => {
+  it("lets the edge keep a card for a day, so a list taken down does not stay a month", () => {
+    const headers: Record<string, string> = {};
+    const response = {
+      setHeader: (name: string, value: string) => void (headers[name] = value),
+      status: () => response,
+      send: () => response,
+    };
+    sendShareImage(response as unknown as ExpressResponse, Buffer.from([1]));
+    assert.equal(headers["Cache-Control"], "public, max-age=86400, s-maxage=86400");
   });
 });
 
