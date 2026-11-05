@@ -51,6 +51,14 @@ export function apiStubs() {
     followSection: pending(),
     unfollowSection: pending(),
     proposeSection: pending(),
+    // Room to spare: a proposal's ask before its upload must not hold it up for ever.
+    loadProposalRoom: vi.fn(async () => ({
+      pending: 0,
+      maxPending: 3,
+      proposalsToday: 0,
+      maxPerDay: 10,
+      refusal: null,
+    })),
     withdrawSectionProposal: pending(),
     loadTopics: pending(),
     findTopics: pending(),
