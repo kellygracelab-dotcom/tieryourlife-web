@@ -29,7 +29,7 @@ test("a guest picks Ukrainian in the settings, and the site reloads in it", asyn
   // New list opens a board, built from the dictionary too.
   await page.goto("/b/new");
   await expect(page).toHaveURL(/\/b\//);
-  await expect(page.getByRole("button", { name: "Додати тир" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Додати рівень" })).toBeVisible();
 
   await page.goto("/settings");
   await expect(page.getByText("Увійдіть, щоб змінювати налаштування.")).toBeVisible();

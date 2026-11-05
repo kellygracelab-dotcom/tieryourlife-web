@@ -51,10 +51,11 @@ export function useTray(selected: number | null, shownCount: number, settle = 0)
     const holder = row?.firstElementChild;
     if (row == null || !(holder instanceof HTMLElement)) return;
     // A row scrolled to its end shows the last page, though a wide row never
-    // scrolls a whole page's stride further: the dots go by the share scrolled.
+    // scrolls a whole page's stride further; anywhere else the page is the
+    // card at the start's.
     const max = row.scrollWidth - row.clientWidth;
-    if (max > 0) {
-      setPage(Math.round((Math.min(max, Math.abs(row.scrollLeft)) / max) * (pages - 1)));
+    if (max > 0 && Math.abs(row.scrollLeft) >= max - 1) {
+      setPage(pages - 1);
       return;
     }
     const stride = holder.offsetWidth + TRAY_GAP;

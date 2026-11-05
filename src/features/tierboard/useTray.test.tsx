@@ -129,7 +129,7 @@ describe("useTray", () => {
     Object.defineProperty(row, "clientWidth", { configurable: true, value: 600 });
     for (const [scrolled, page] of [
       [0, 0],
-      [60, 1],
+      [60, 0],
       [120, 2],
       [-120, 2],
     ] as const) {
