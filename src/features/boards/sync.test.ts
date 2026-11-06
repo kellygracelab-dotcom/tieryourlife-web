@@ -339,11 +339,56 @@ describe("syncBoards", () => {
       // Held for the visit, so the shelf shows it, and a second run finds it the same as the account's.
       expect(today.repository.get("big")).not.toBeNull();
       await runOn(today, account.api);
-      expect(today.records.all().map((record) => record.uid)).not.toContain("big");
+      // Agreed on for the visit, never on the disk.
+      expect(today.records.all().map((record) => record.uid)).toContain("big");
+      expect(
+        syncRecords(full.disk, "me")
+          .all()
+          .map((record) => record.uid),
+      ).not.toContain("big");
 
       await runOn(full.visit(), account.api);
       expect(account.forgotten).toEqual([]);
       expect(account.kept.get("big")?.deleted).toBe(false);
+    });
+
+    it("sends edit after edit of a board the browser would not keep, and the account keeps one board", async () => {
+      const account = fakeAccount();
+      let refusing = false;
+      const full = fullFor((key) => refusing && key.endsWith(":films"));
+      const today = full.visit();
+      today.repository.save(films());
+      await runOn(today, account.api);
+
+      refusing = true;
+      for (const title of ["One", "Two", "Three"]) {
+        today.repository.save(rename(today.repository.get("films")!, title, 2000));
+        await runOn(today, account.api);
+        await runOn(today, account.api);
+      }
+      expect(account.kept.size).toBe(1);
+      expect(account.kept.get("films")?.title).toBe("Three");
+      expect(today.repository.all().filter((board) => board.deletedAt === null)).toHaveLength(1);
+    });
+
+    it("leaves one copy of theirs for a conflict on a board the browser would not keep", async () => {
+      const account = fakeAccount();
+      let refusing = false;
+      const full = fullFor((key) => refusing && !key.includes("sync"));
+      const today = full.visit();
+      today.repository.save(films());
+      await runOn(today, account.api);
+
+      // Another device renamed it; here it was renamed too, into a full store.
+      const theirs = account.kept.get("films")!;
+      account.kept.set("films", { ...theirs, revision: 2, title: "Theirs", fingerprint: "else" });
+      refusing = true;
+      today.repository.save(rename(today.repository.get("films")!, "Mine", 2000));
+      for (let run = 0; run < 4; run += 1) await runOn(today, account.api);
+
+      expect(account.kept.size).toBe(2);
+      expect(account.kept.get("films")?.title).toBe("Mine");
+      expect(today.repository.all()).toHaveLength(2);
     });
 
     it("never agrees about an edit the browser would not keep, so the next visit takes the account's newer version", async () => {

@@ -49,7 +49,12 @@ function read(store: KeyValueStore, accountUid: string): Kept {
 
 export interface SyncRecords {
   all(): SyncedBoard[];
-  remember(record: SyncedBoard): void;
+  /**
+   * `forVisit` keeps the record in memory only, for a board the browser holds
+   * for this visit and would not keep: agreed on while it is here, and gone
+   * with it after a reload, so the next visit never reads it as thrown away.
+   */
+  remember(record: SyncedBoard, forVisit?: boolean): void;
   forget(uid: string): void;
   lastSyncedAt(): number | null;
   markSynced(at: number): void;
@@ -60,25 +65,41 @@ export interface SyncRecords {
 export function syncRecords(store: KeyValueStore, accountUid: string): SyncRecords {
   const write = (kept: Kept) => store.write(syncKey(accountUid), JSON.stringify(kept));
   const change = (apply: (kept: Kept) => Kept) => write(apply(read(store, accountUid)));
+  const visit = new Map<string, SyncedBoard>();
   return {
-    all: () =>
-      Object.entries(read(store, accountUid).records).map(([uid, record]) => ({ uid, ...record })),
-    remember: (record) =>
+    all: () => {
+      const kept = Object.entries(read(store, accountUid).records)
+        .filter(([uid]) => !visit.has(uid))
+        .map(([uid, record]) => ({ uid, ...record }));
+      return [...kept, ...visit.values()];
+    },
+    remember: (record, forVisit = false) => {
+      if (forVisit) {
+        visit.set(record.uid, { ...record });
+        return;
+      }
+      visit.delete(record.uid);
       change((kept) => ({
         ...kept,
         records: {
           ...kept.records,
           [record.uid]: { revision: record.revision, fingerprint: record.fingerprint },
         },
-      })),
-    forget: (uid) =>
+      }));
+    },
+    forget: (uid) => {
+      visit.delete(uid);
       change((kept) => {
         const { [uid]: _gone, ...records } = kept.records;
         return { ...kept, records };
-      }),
+      });
+    },
     lastSyncedAt: () => read(store, accountUid).lastSyncedAt,
     markSynced: (at) => change((kept) => ({ ...kept, lastSyncedAt: at })),
-    clear: () => store.remove(syncKey(accountUid)),
+    clear: () => {
+      visit.clear();
+      store.remove(syncKey(accountUid));
+    },
   };
 }
 
