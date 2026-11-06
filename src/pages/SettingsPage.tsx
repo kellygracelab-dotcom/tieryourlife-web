@@ -12,6 +12,7 @@ import { NameSection, type Rename } from "../features/account/NameSection";
 import type { Publish } from "../features/account/useSaving";
 import { DataCard } from "../features/boards/DataCard";
 import { owners } from "../features/boards/owners";
+import { forgetKept } from "../features/ranking/kept";
 import { AccountTabs } from "../app/AccountTabs";
 import { useHidden } from "../features/community/useHidden";
 import { useSession, useShowFace } from "../app/session";
@@ -25,6 +26,7 @@ import {
 } from "../lib/api";
 import { type CutFace, cutFaceOnCanvas, uploadPicture } from "../lib/pictures";
 import { renameAccount, setFace } from "../lib/profile";
+import { localStorageStore } from "../lib/storage";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -225,8 +227,12 @@ export function SettingsPage({
   // The backend has removed the user already; this ends the session on this
   // device, brings a guest back and says so once on the front page.
   const onErased = async () => {
-    // The account is gone, and so are its boards here: nobody can sign into it again.
-    if (account?.kind === "signedIn") owners.forget(account.uid);
+    // The account is gone, and so are its boards and rankings here: nobody can
+    // sign into it again, and the next person must not read them as theirs.
+    if (account?.kind === "signedIn") {
+      owners.forget(account.uid);
+      forgetKept(localStorageStore, account.uid);
+    }
     await signOut().catch(() => undefined);
     await navigate("/", { state: { accountDeleted: true } });
   };

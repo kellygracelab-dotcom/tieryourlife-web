@@ -949,6 +949,44 @@ describe("RankingBoard", () => {
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
   });
 
+  it("shows an account's link only to that account, on a browser others use too", () => {
+    const store = memoryStore();
+    const finished = { code: "abcdefgh", claimToken: "s", rows: [[], []], version: 0 };
+    store.write("tyl:ranking:abc", JSON.stringify({ ...finished, claimedBy: "u9" }));
+    const as = (account: Session["account"]): Session => ({
+      account,
+      signIn: async () => ({ kind: "cancelled" }),
+      signOut: async () => undefined,
+      refresh: () => undefined,
+    });
+    const page = (session: Session) => (
+      <SessionContext.Provider value={session}>
+        <MemoryRouter>
+          <RankingBoard list={list} store={store} keep={vi.fn()} take={async () => undefined} />
+        </MemoryRouter>
+      </SessionContext.Provider>
+    );
+    // Before Firebase says who is here, and once it says it is the account.
+    const { rerender } = render(page(as(null)));
+    expect(screen.queryByRole("status")).toBeNull();
+    rerender(page(as({ kind: "signedIn", uid: "u9", displayName: "R", photoUrl: null })));
+    expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
+    // Signed out, and another account after it: their own Finish, nothing kept for them.
+    rerender(page(as({ kind: "guest", uid: "g2" })));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: "Finish" })).toBeInTheDocument();
+    rerender(page(as({ kind: "signedIn", uid: "q", displayName: "Q", photoUrl: null })));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText(/kept in your rankings/)).toBeNull();
+
+    // A guest's ranking the server keeps for some other account is not Q's either.
+    store.write("tyl:ranking:abc", JSON.stringify({ ...finished, refusedTo: "q" }));
+    rerender(page(as({ kind: "guest", uid: "g3" })));
+    expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
+    rerender(page(as({ kind: "signedIn", uid: "q", displayName: "Q", photoUrl: null })));
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("keeps the board editable when saving fails, and tries again", async () => {
     const keep = vi
       .fn<() => Promise<{ code: string; claimToken: string }>>()

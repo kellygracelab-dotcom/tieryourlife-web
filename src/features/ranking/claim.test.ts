@@ -18,24 +18,31 @@ function memoryStore(): KeyValueStore & { data: Map<string, string> } {
 }
 
 describe("claimKeptRankings", () => {
-  it("claims what this device finished, once per account, and skips what is not a ranking", async () => {
+  it("claims what a guest finished here, once, and skips what is not a ranking", async () => {
     const store = memoryStore();
     writeKept(store, "a", { code: "aaaaaaaa", claimToken: "ta" });
     writeKept(store, "b", { code: "bbbbbbbb", claimToken: "tb", claimedBy: "u1" });
-    writeKept(store, "c", { code: "cccccccc", claimToken: "tc", claimedBy: "someone-else" });
     store.write("tyl:draft:a", "{}");
     store.write(keptKey("broken"), "{");
     const claim = vi.fn(async () => ({ code: "x" }));
 
-    await expect(claimKeptRankings(store, "u1", claim)).resolves.toBe(2);
+    await expect(claimKeptRankings(store, "u1", claim)).resolves.toBe(1);
 
-    expect(claim.mock.calls).toEqual([
-      ["aaaaaaaa", "ta"],
-      ["cccccccc", "tc"],
-    ]);
+    expect(claim.mock.calls).toEqual([["aaaaaaaa", "ta"]]);
     expect(readKept(store, "a")).toEqual({ code: "aaaaaaaa", claimToken: "ta", claimedBy: "u1" });
-    expect(readKept(store, "c")?.claimedBy).toBe("u1");
     expect(store.data.get("tyl:draft:a")).toBe("{}");
+  });
+
+  it("never asks for a ranking another account was handed, even once that account is gone", async () => {
+    const store = memoryStore();
+    // A deleted account's ranking is kept for nobody: the server would hand it to anyone asking.
+    writeKept(store, "c", { code: "cccccccc", claimToken: "tc", claimedBy: "someone-else" });
+    const claim = vi.fn(async () => ({ code: "cccccccc" }));
+
+    await expect(claimKeptRankings(store, "u1", claim)).resolves.toBe(0);
+
+    expect(claim).not.toHaveBeenCalled();
+    expect(readKept(store, "c")?.claimedBy).toBe("someone-else");
   });
 
   it("forgets a ranking the server will not hand over, and keeps trying after other failures", async () => {

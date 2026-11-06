@@ -9,7 +9,7 @@ import { BoardFrameContext, type BoardFrame } from "../features/tierboard/boardF
 import type { Dock } from "../features/tierboard/dock";
 import { RankingBoard, type EditMode } from "../features/tierboard/RankingBoard";
 import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
-import { readKept } from "../features/ranking/kept";
+import { keptBy, readKept } from "../features/ranking/kept";
 import { downloadShare, type Share } from "../features/ranking/share";
 import { loadRanking, rearrangeRanking } from "../lib/api";
 import { type KeyValueStore, localStorageStore, memoryStore } from "../lib/storage";
@@ -392,7 +392,9 @@ export function RankingPage({
   if (ranking === null) return <ListPageLoading note={strings.ranking.opening} rows={2} />;
 
   const shown = inReadersLanguage(rows === null ? ranking : { ...ranking, rows });
-  const mine = readKept(store, ranking.listId)?.code === ranking.code;
+  // Finished on this browser, by the person here: not by an account that signed out of it.
+  const who = account === null ? undefined : account.kind === "signedIn" ? account.uid : null;
+  const mine = keptBy(readKept(store, ranking.listId), who)?.code === ranking.code;
   return (
     <article
       className={

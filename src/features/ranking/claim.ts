@@ -6,11 +6,14 @@ import { KEPT_PREFIX, readKept, writeKept } from "./kept";
 export type Claim = (code: string, claimToken: string) => Promise<unknown>;
 
 /**
- * Hands every ranking this device finished to the account that just signed
- * in. A token the server no longer accepts is forgotten. A ranking another
- * account already keeps stays on the device, so the page still finds it, but
- * the account that was refused does not ask again. Anything else that fails
- * is tried again at the next sign-in.
+ * Hands every ranking a guest finished on this device to the account that
+ * just signed in. One an account finished, or was handed already, is that
+ * account's and is never asked for by another: once that account is
+ * deleted the server keeps the ranking for nobody, and the next person on a
+ * shared browser would take it. A token the server no longer accepts is
+ * forgotten. A ranking another account already keeps stays on the device,
+ * but the account that was refused does not ask again. Anything else that
+ * fails is tried again at the next sign-in.
  */
 export async function claimKeptRankings(
   store: KeyValueStore,
@@ -22,7 +25,7 @@ export async function claimKeptRankings(
   for (const key of keys) {
     const listId = key.slice(KEPT_PREFIX.length);
     const kept = readKept(store, listId);
-    if (kept === null || kept.claimedBy === uid || kept.refusedTo === uid) continue;
+    if (kept === null || kept.claimedBy !== undefined || kept.refusedTo === uid) continue;
     try {
       await claim(kept.code, kept.claimToken);
       writeKept(store, listId, { ...kept, claimedBy: uid });
