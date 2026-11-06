@@ -853,6 +853,11 @@ const ja: Translation = {
     unfollowed: "{name}のフォローを解除しました",
     followFailed: "フォローできませんでした。もう一度お試しください。",
     unfollowFailed: "フォローを解除できませんでした。もう一度お試しください。",
+    mergedFollowed:
+      "「{name}」は「{section}」に統合されました。「{section}」をフォローしています。",
+    mergedUnfollowed:
+      "「{name}」は「{section}」に統合されました。「{section}」のフォローを解除しました。",
+    mergedTryAgain: "「{name}」は「{section}」に統合されました。そちらでもう一度お試しください。",
     followLimit:
       "フォローできるセクションとトピックの上限に達しました。先にいくつかフォローを解除してください。",
     followSignInBody:

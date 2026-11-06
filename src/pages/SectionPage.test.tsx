@@ -207,6 +207,70 @@ describe("SectionPage", () => {
     expect(screen.queryByText("Couldn’t follow. Try again.")).toBeNull();
   });
 
+  // QA W44: the press was lost on the way, and nothing said why the page changed.
+  it("carries a Follow of a merged section over to the one it went into, and says so", async () => {
+    let followsGames = false;
+    sectionsDeps.load.mockImplementation(async () => ({
+      sections: [stats("games", { following: followsGames }), stats("other")],
+    }));
+    sectionsDeps.follow.mockImplementation(async (id) => {
+      if (id === "anime") throw new ApiFailure({ kind: "merged", into: "games", topic: null });
+      followsGames = true;
+      return { following: true };
+    });
+    const router = open("/s/anime");
+    await tiles();
+    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/s/games"));
+    await waitFor(() => expect(sectionsDeps.follow).toHaveBeenLastCalledWith("games"));
+    await waitFor(() =>
+      expect(siteNotice()?.text).toBe("“Anime” was merged into Games. You follow Games now."),
+    );
+    expect(
+      await screen.findByRole("button", { name: /Following/, pressed: true }),
+    ).toBeInTheDocument();
+  });
+
+  // QA P16: the backend now answers an Unfollow of a merged section 410, its
+  // followers moved to the section it went into: that one is left instead.
+  it("carries an Unfollow of a merged section over to the one it went into, with Undo", async () => {
+    sectionsDeps.load.mockResolvedValue({
+      sections: [
+        stats("games", { following: true }),
+        stats("anime", { following: true }),
+        stats("other", { listCount: 900 }),
+      ],
+    });
+    sectionsDeps.unfollow.mockImplementation(async (id) => {
+      if (id === "anime") throw new ApiFailure({ kind: "merged", into: "games", topic: null });
+      return { following: false };
+    });
+    const router = open("/s/anime");
+    await tiles();
+    await userEvent.click(await screen.findByRole("button", { name: /Following/ }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/s/games"));
+    await waitFor(() => expect(sectionsDeps.unfollow).toHaveBeenLastCalledWith("games"));
+    await waitFor(() =>
+      expect(siteNotice()?.text).toBe("“Anime” was merged into Games. You no longer follow Games."),
+    );
+    act(() => siteNotice()?.action?.onClick());
+    await waitFor(() => expect(sectionsDeps.follow).toHaveBeenLastCalledWith("games"));
+  });
+
+  it("says to press again there when the carried-over follow does not go through", async () => {
+    sectionsDeps.follow.mockImplementation(async (id) => {
+      throw id === "anime"
+        ? new ApiFailure({ kind: "merged", into: "games", topic: null })
+        : new ApiFailure({ kind: "offline" });
+    });
+    open("/s/anime");
+    await tiles();
+    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await waitFor(() =>
+      expect(siteNotice()?.text).toBe("“Anime” was merged into Games. Try again there."),
+    );
+  });
+
   it("offers no Follow until whom the person follows is known", async () => {
     let answer!: (value: { sections: SectionStats[] }) => void;
     sectionsDeps.load.mockReturnValue(new Promise((resolve) => (answer = resolve)));

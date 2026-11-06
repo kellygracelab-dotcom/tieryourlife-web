@@ -882,6 +882,10 @@ const de: Translation = {
     unfollowed: "Du folgst {name} nicht mehr",
     followFailed: "Folgen fehlgeschlagen. Versuch es noch einmal.",
     unfollowFailed: "Nicht mehr folgen fehlgeschlagen. Versuch es noch einmal.",
+    mergedFollowed: "„{name}“ wurde mit {section} zusammengeführt. Du folgst jetzt {section}.",
+    mergedUnfollowed:
+      "„{name}“ wurde mit {section} zusammengeführt. Du folgst {section} nicht mehr.",
+    mergedTryAgain: "„{name}“ wurde mit {section} zusammengeführt. Versuch es dort noch einmal.",
     followLimit:
       "Du folgst schon so vielen Rubriken und Themen, wie es geht. Folge zuerst ein paar nicht mehr.",
     followSignInBody:

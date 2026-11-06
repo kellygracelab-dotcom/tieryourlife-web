@@ -860,6 +860,9 @@ const tr: Translation = {
     unfollowed: "{name} takibi bırakıldı",
     followFailed: "Takip edilemedi. Tekrar deneyin.",
     unfollowFailed: "Takip bırakılamadı. Tekrar deneyin.",
+    mergedFollowed: "“{name}”, {section} ile birleştirildi. Artık {section} takip ediliyor.",
+    mergedUnfollowed: "“{name}”, {section} ile birleştirildi. {section} takibi bırakıldı.",
+    mergedTryAgain: "“{name}”, {section} ile birleştirildi. Orada tekrar deneyin.",
     followLimit:
       "Takip edebileceğiniz bölüm ve konu sınırına ulaştınız. Önce bazılarını takipten çıkın.",
     followSignInBody:
