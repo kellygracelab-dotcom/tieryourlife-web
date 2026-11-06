@@ -55,17 +55,21 @@ function memoryFirestore(clock = () => 1_000) {
   const db = {
     collection: (name: string) => ({
       doc: (id: string) => refOf(name, id),
-      where: (field: string, _op: "==", value: unknown) => ({
-        limit: (max: number) => ({
-          get: async () => {
-            const docs = [...table(name)]
-              .filter(([, data]) => data[field] === value)
-              .slice(0, max)
-              .map(([id, data]) => snapshotOf(id, data));
-            return { docs, size: docs.length };
-          },
-        }),
-      }),
+      // Documents come back in the order they were put in, standing in for
+      // Firestore's order by document id.
+      where: (field: string, _op: "==", value: unknown) => {
+        const found = (max = Infinity) => {
+          const docs = [...table(name)]
+            .filter(([, data]) => data[field] === value)
+            .slice(0, max)
+            .map(([id, data]) => snapshotOf(id, data));
+          return { docs, size: docs.length };
+        };
+        return {
+          get: async () => found(),
+          limit: (max: number) => ({ get: async () => found(max) }),
+        };
+      },
     }),
     // All or nothing, as Firestore's: a create that finds its document taken
     // fails the whole commit before anything is written.
@@ -556,6 +560,22 @@ describe("GET /api/me/rankings", () => {
     );
     assert.equal(body.more, false);
     assert.equal(answer.headers["Cache-Control"], "no-store");
+  });
+
+  it("keeps the newest 200 of more, though the newest come last by code", async () => {
+    const { deps, table } = setup(PERSON);
+    for (let at = 1; at <= 201; at++) {
+      table("rankings").set(`r${String(at).padStart(7, "0")}`, {
+        ...ranking("person", false),
+        createdAt: { toMillis: () => at },
+      });
+    }
+    const answer = await call(deps, "GET", "/api/me/rankings");
+    const body = answer.body as { rankings: { code: string }[]; more: boolean };
+    assert.equal(body.rankings.length, 200);
+    assert.equal(body.rankings[0]?.code, "r0000201");
+    assert.equal(body.rankings.at(-1)?.code, "r0000002");
+    assert.equal(body.more, true);
   });
 });
 

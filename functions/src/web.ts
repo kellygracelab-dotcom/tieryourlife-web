@@ -469,16 +469,17 @@ async function listMyRankings(
   response: Response,
 ): Promise<void> {
   // No orderBy: a where and an orderBy on different fields need a composite
-  // index, and this repository deploys no indexes; the sort happens here.
-  const found = await db
-    .collection(RANKINGS)
-    .where("ownerUid", "==", identity.uid)
-    .limit(MY_RANKINGS_CAP)
-    .get();
-  const rankings = newestFirst(
+  // index, and this repository deploys no indexes; the sort happens here. So
+  // every one of the person's rankings is read before the newest are kept: a
+  // limit on the query would keep whichever came first by their random codes,
+  // and the newest could be among those left out.
+  const found = await db.collection(RANKINGS).where("ownerUid", "==", identity.uid).get();
+  const all = newestFirst(
     found.docs.map((doc) => summaryOf(doc.id, doc.data() as RankingDocument)),
   );
 
   response.setHeader("Cache-Control", "no-store");
-  response.status(200).json({ rankings, more: found.size === MY_RANKINGS_CAP });
+  response
+    .status(200)
+    .json({ rankings: all.slice(0, MY_RANKINGS_CAP), more: all.length > MY_RANKINGS_CAP });
 }
