@@ -200,7 +200,8 @@ describe("SectionPage", () => {
     await tiles();
     await userEvent.click(screen.getByRole("button", { name: "Follow" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/s/games"));
-    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Games");
+    // The old page may still be on screen for a moment: wait for the new one's heading.
+    expect(await screen.findByRole("heading", { level: 1, name: /Games/ })).toBeInTheDocument();
     expect(screen.queryByText("Couldn’t follow. Try again.")).toBeNull();
   });
 
