@@ -409,9 +409,18 @@ export const placedCount = (rows: number[][]): number =>
 export const firstImageOf = (items: Snapshot["items"]): string | null =>
   items.find((item) => item.imageUrl?.startsWith("https://"))?.imageUrl ?? null;
 
-/** One ranking as a card on the person's own page: enough to recognise it, not to draw it. */
-export function summaryOf(code: string, doc: StoredRanking): RankingSummary {
-  const { snapshot } = doc;
+/**
+ * One ranking as a card on the person's own page: enough to recognise it, not
+ * to draw it. [list] is what its list says of itself today, null when it is
+ * gone: the author's name and photo follow shownSnapshot, as the ranking's
+ * own page does, so a list made anonymous later names nobody here either.
+ */
+export function summaryOf(
+  code: string,
+  doc: StoredRanking,
+  list: { authorUid?: unknown; anonymous?: unknown } | null,
+): RankingSummary {
+  const snapshot = shownSnapshot(doc.snapshot, list);
   return {
     code,
     listId: doc.listId,

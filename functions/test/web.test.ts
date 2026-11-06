@@ -73,6 +73,13 @@ function memoryFirestore(clock = () => 1_000) {
     }),
     // All or nothing, as Firestore's: a create that finds its document taken
     // fails the whole commit before anything is written.
+    // The options a real getAll takes last (a field mask) are not a reference.
+    getAll: async (...refs: unknown[]) =>
+      Promise.all(
+        refs
+          .filter((ref): ref is Ref => typeof (ref as Partial<Ref>).get === "function")
+          .map((ref) => ref.get()),
+      ),
     batch: () => {
       const writes: { ref: Ref; data: Data; create: boolean; options?: { merge?: boolean } }[] = [];
       return {
@@ -589,6 +596,33 @@ describe("GET /api/me/rankings", () => {
     );
     assert.equal(body.more, false);
     assert.equal(answer.headers["Cache-Control"], "no-store");
+  });
+
+  it("names nobody for a list that went anonymous or is gone, as the ranking's page does", async () => {
+    const { deps, table } = setup(PERSON);
+    const named = {
+      ...ranking("person", false),
+      snapshot: {
+        ...ranking("person", false).snapshot,
+        authorPhotoUrl: "https://faces.test/a.jpg",
+      },
+    };
+    table("rankings").set("aaaaaaaa", named);
+    table("rankings").set("bbbbbbbb", { ...named, listId: "list-0002" });
+    table("publishedLists").set(LIST_ID, { ...LIST, anonymous: true });
+    const answer = await call(deps, "GET", "/api/me/rankings");
+    const rows = (answer.body as { rankings: Data[] }).rankings;
+    assert.equal(rows.length, 2);
+    for (const row of rows) {
+      assert.equal(row.authorName, "", String(row.code));
+      assert.equal(row.authorPhotoUrl, null, String(row.code));
+    }
+    const read = (await call(deps, "GET", "/api/rank/aaaaaaaa")).body as { snapshot: Data };
+    assert.equal(read.snapshot.authorName, "");
+    // A list that still names its author keeps the name on the card.
+    table("publishedLists").set(LIST_ID, LIST);
+    const again = (await call(deps, "GET", "/api/me/rankings")).body as { rankings: Data[] };
+    assert.equal(again.rankings.find((row) => row.code === "aaaaaaaa")?.authorName, "danylo");
   });
 });
 

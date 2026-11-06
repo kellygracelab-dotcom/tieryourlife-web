@@ -12,6 +12,7 @@ import {
   rankingPage,
   rankingShareImage,
   shellPage,
+  standingOf,
   unavailablePage,
   withdrawnByModeration,
 } from "./pages";
@@ -482,8 +483,20 @@ async function listMyRankings(
     .where("ownerUid", "==", identity.uid)
     .limit(MY_RANKINGS_CAP)
     .get();
+  const kept = found.docs.map((doc) => ({ code: doc.id, ranking: doc.data() as RankingDocument }));
+  // Each list read once, and only what says whether it still names its
+  // author: a list made anonymous, or gone, names nobody on these cards,
+  // as it names nobody on the ranking's own page.
+  const listIds = [...new Set(kept.map(({ ranking }) => ranking.listId))];
+  const lists =
+    listIds.length === 0
+      ? []
+      : await db.getAll(...listIds.map((id) => db.collection(PUBLISHED).doc(id)), {
+          fieldMask: ["authorUid", "anonymous"],
+        });
+  const standing = new Map(lists.map((list) => [list.id, standingOf(list)]));
   const rankings = newestFirst(
-    found.docs.map((doc) => summaryOf(doc.id, doc.data() as RankingDocument)),
+    kept.map(({ code, ranking }) => summaryOf(code, ranking, standing.get(ranking.listId) ?? null)),
   );
 
   response.setHeader("Cache-Control", "no-store");

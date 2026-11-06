@@ -383,7 +383,7 @@ export async function listShareImage(response: Response, id: string, hl?: unknow
 }
 
 /** What the list says of itself today, for telling an editorial one; nothing when it is gone. */
-const standingOf = (
+export const standingOf = (
   list: FirebaseFirestore.DocumentSnapshot,
 ): { authorUid?: unknown; anonymous?: unknown } | null =>
   list.exists ? { authorUid: list.get("authorUid"), anonymous: list.get("anonymous") } : null;
