@@ -659,10 +659,68 @@ describe("syncBoards", () => {
     const report = await run();
     expect(report.refused).toBe(2);
     expect([...report.refusals].sort((a, b) => a.uid.localeCompare(b.uid))).toEqual([
-      { uid: "films", title: "Films", why: "tooLarge" },
+      { uid: "films", title: "Films", why: "tooManyTiers" },
       { uid: "more", title: "One too many", why: "tooManyBoards" },
     ]);
     expect(records.lastSyncedAt()).toBeNull();
+  });
+
+  it("tells a refusal for size by the limit the account names", async () => {
+    const said = async (detail: string | null) => {
+      const { repository, account, run } = setUp();
+      repository.save(films());
+      account.api.keep = () => Promise.reject(new ApiFailure({ kind: "tooLarge", detail }));
+      return (await run()).refusals.map((refusal) => refusal.why);
+    };
+    expect(await said("Too many tiers")).toEqual(["tooManyTiers"]);
+    expect(await said("Too many items")).toEqual(["tooManyCards"]);
+    expect(await said("Too many items in the trash")).toEqual(["tooManyTrashed"]);
+    expect(await said("The board is too heavy to keep")).toEqual(["tooLarge"]);
+    expect(await said(null)).toEqual(["tooLarge"]);
+  });
+
+  it("holds back a board the account would refuse, and says why without sending it", async () => {
+    const { repository, account, run } = setUp();
+    const board = films();
+    const pool = board.tiers.find((tier) => tier.isPool)!;
+    // Twenty ranked tiers and the pool: one more than the account keeps.
+    const ranked = Array.from({ length: 20 }, (_, n) => ({
+      ...pool,
+      uid: `t${n}`,
+      position: n,
+      label: `T${n}`,
+      isPool: false,
+    }));
+    repository.save({ ...board, tiers: [...ranked, { ...pool, position: 20 }] });
+    const report = await run();
+    expect(report.refusals).toEqual([{ uid: "films", title: "Films", why: "tooManyTiers" }]);
+    expect(account.keeps).toHaveLength(0);
+  });
+
+  it("counts live cards against the account's 2000, and the trash apart, up to 2000 more", async () => {
+    const card = (uid: string, deletedAt: number | null) => ({
+      ...films().items[0]!,
+      uid,
+      deletedAt,
+    });
+    const cards = (count: number, trashed: number) => [
+      ...Array.from({ length: count }, (_, n) => card(`l${n}`, null)),
+      ...Array.from({ length: trashed }, (_, n) => card(`t${n}`, 50)),
+    ];
+    const full = setUp();
+    full.repository.save({ ...films(), items: cards(2000, 2000) });
+    expect((await full.run()).refusals).toEqual([]);
+    expect(full.account.keeps[0]?.request.items).toHaveLength(4000);
+
+    const live = setUp();
+    live.repository.save({ ...films(), items: cards(2001, 0) });
+    expect((await live.run()).refusals.map((refusal) => refusal.why)).toEqual(["tooManyCards"]);
+    expect(live.account.keeps).toHaveLength(0);
+
+    const trash = setUp();
+    trash.repository.save({ ...films(), items: cards(10, 2001) });
+    expect((await trash.run()).refusals.map((refusal) => refusal.why)).toEqual(["tooManyTrashed"]);
+    expect(trash.account.keeps).toHaveLength(0);
   });
 
   it("drops a published id the account no longer lists, and leaves it when the lists could not be read", async () => {

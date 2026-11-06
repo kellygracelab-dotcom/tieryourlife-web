@@ -1370,6 +1370,12 @@ const fr: Translation = {
       "« {title} » est trop volumineux pour un compte, il n’est donc pas sauvegardé. Retirez-en quelques cartes et il le sera de nouveau.",
     refusedTooMany:
       "« {title} » n’est pas sauvegardé : un compte garde jusqu’à 200 tableaux. Supprimez-en quelques-uns définitivement pour faire de la place.",
+    refusedTooManyTiers:
+      "« {title} » a plus de rangs qu’un compte n’en garde, il n’est donc pas sauvegardé. Un compte garde 19 rangs et la réserve : supprimez un rang et il le sera de nouveau.",
+    refusedTooManyCards:
+      "« {title} » a plus de cartes qu’un compte n’en garde, il n’est donc pas sauvegardé. Un compte garde 2000 cartes par tableau : retirez-en quelques-unes et il le sera de nouveau.",
+    refusedTooManyTrashed:
+      "« {title} » conserve plus de 2000 cartes retirées, plus qu’un compte n’en garde, il n’est donc pas sauvegardé. Videz la corbeille et il le sera de nouveau.",
     now: "Sauvegarder maintenant",
     backingUp: "Sauvegarde en cours…",
     guestNote:

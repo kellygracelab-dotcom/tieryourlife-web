@@ -1418,6 +1418,12 @@ const pl: Translation = {
       "„{title}” jest za duża, by konto ją przechowało, więc nie ma kopii. Usuń z niej kilka kart, a kopia znów się zapisze.",
     refusedTooMany:
       "„{title}” nie ma kopii: konto przechowuje do 200 tablic. Usuń kilka na stałe, by zrobić miejsce.",
+    refusedTooManyTiers:
+      "„{title}” ma więcej poziomów, niż konto przechowuje, więc nie ma kopii. Konto przechowuje 19 poziomów i pulę: usuń poziom, a kopia znów się zapisze.",
+    refusedTooManyCards:
+      "„{title}” ma więcej kart, niż konto przechowuje, więc nie ma kopii. Konto przechowuje 2000 kart na tablicy: usuń kilka, a kopia znów się zapisze.",
+    refusedTooManyTrashed:
+      "„{title}” trzyma ponad 2000 usuniętych kart, więcej, niż konto przechowuje, więc nie ma kopii. Opróżnij kosz, a kopia znów się zapisze.",
     now: "Zapisz kopię teraz",
     backingUp: "Zapisywanie kopii…",
     guestNote:

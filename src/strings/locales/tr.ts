@@ -1255,6 +1255,12 @@ const tr: Translation = {
       "“{title}” bir hesabın tutamayacağı kadar büyük, bu yüzden yedeklenmedi. Birkaç kartını çıkarırsanız yeniden yedeklenir.",
     refusedTooMany:
       "“{title}” yedeklenmedi: bir hesap en fazla 200 pano tutar. Yer açmak için bazılarını kalıcı olarak silin.",
+    refusedTooManyTiers:
+      "“{title}” bir hesabın tuttuğundan fazla seviyeye sahip, bu yüzden yedeklenmedi. Bir hesap 19 seviye ve havuzu tutar: bir seviyeyi silerseniz yeniden yedeklenir.",
+    refusedTooManyCards:
+      "“{title}” bir hesabın tuttuğundan fazla karta sahip, bu yüzden yedeklenmedi. Bir hesap pano başına 2000 kart tutar: birkaçını çıkarırsanız yeniden yedeklenir.",
+    refusedTooManyTrashed:
+      "“{title}” 2000’den fazla kaldırılmış kart barındırıyor, bu bir hesabın tuttuğundan fazla, bu yüzden yedeklenmedi. Çöp kutusunu boşaltırsanız yeniden yedeklenir.",
     now: "Şimdi yedekle",
     backingUp: "Yedekleniyor…",
     guestNote:

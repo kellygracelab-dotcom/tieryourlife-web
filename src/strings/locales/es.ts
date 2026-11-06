@@ -1357,6 +1357,12 @@ const es: Translation = {
       "«{title}» es demasiado grande para guardarse en una cuenta, así que no tiene copia. Quítale algunas tarjetas y volverá a guardarse.",
     refusedTooMany:
       "«{title}» no tiene copia: una cuenta guarda hasta 200 tableros. Elimina algunos definitivamente para hacer sitio.",
+    refusedTooManyTiers:
+      "«{title}» tiene más niveles de los que guarda una cuenta, así que no tiene copia. Una cuenta guarda 19 y la reserva: quita un nivel y volverá a guardarse.",
+    refusedTooManyCards:
+      "«{title}» tiene más tarjetas de las que guarda una cuenta, así que no tiene copia. Una cuenta guarda 2000 por tablero: quítale algunas y volverá a guardarse.",
+    refusedTooManyTrashed:
+      "«{title}» conserva más de 2000 tarjetas quitadas, más de las que guarda una cuenta, así que no tiene copia. Vacía la papelera y volverá a guardarse.",
     now: "Guardar copia ahora",
     backingUp: "Guardando copia…",
     guestNote:
