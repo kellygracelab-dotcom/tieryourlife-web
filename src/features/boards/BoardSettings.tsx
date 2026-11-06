@@ -395,9 +395,11 @@ export function BoardSettings({
     ? strings.new.needCategory
     : problems.includes("noItems")
       ? strings.boards.needsItems
-      : problems.length > 0
-        ? strings.new.failedTooLarge
-        : null;
+      : problems.includes("tooManyTiers")
+        ? strings.new.tooManyTiers
+        : problems.length > 0
+          ? strings.new.failedTooLarge
+          : null;
   // Why the switch cannot be turned on. Blocked, it stays a Tab stop that
   // says so (aria-disabled), as a disabled input would be skipped unheard.
   const blocker = !signedIn ? strings.boards.needsAccount : problem;

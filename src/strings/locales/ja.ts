@@ -315,7 +315,7 @@ const ja: Translation = {
     needCards: "カードを1枚以上追加してください。",
     needTier: "ティアを1つ以上残してください。",
     needTierLabel: "すべてのティアにラベルが必要です。",
-    tooManyTiers: "ティアは20段までです。",
+    tooManyTiers: "ティアは19段までです。",
     tooManyCards: "カードは2000枚までです。",
     ready: "公開できます。",
     startOver: "最初からやり直す",

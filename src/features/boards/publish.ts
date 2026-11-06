@@ -19,11 +19,19 @@ import {
 /** What stands between a board and the feed, in the order the settings show things. */
 export type PublishProblem = "category" | "noItems" | "tooManyTiers" | "tooManyItems";
 
+/**
+ * The ranked tiers a list may go out with. The feed takes nineteen on a new
+ * list (400 TOO_MANY_TIERS past that), the same a board ranks beside its
+ * pool; an Update may keep the twenty an older list was published with.
+ */
+export const publishTierLimitOf = (board: Board): number =>
+  board.publishedId === null ? MAX_RANKED_TIERS : BOARD_LIMITS.tiers;
+
 export function publishProblemsOf(board: Board): PublishProblem[] {
   const problems: PublishProblem[] = [];
   if (board.category === null) problems.push("category");
   if (liveItems(board).length === 0) problems.push("noItems");
-  if (rankedTiers(board).length > BOARD_LIMITS.tiers) problems.push("tooManyTiers");
+  if (rankedTiers(board).length > publishTierLimitOf(board)) problems.push("tooManyTiers");
   if (liveItems(board).length > BOARD_LIMITS.items) problems.push("tooManyItems");
   return problems;
 }

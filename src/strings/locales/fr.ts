@@ -330,7 +330,7 @@ const fr: Translation = {
     needCards: "Ajoutez au moins une carte.",
     needTier: "Gardez au moins un rang.",
     needTierLabel: "Chaque rang a besoin d’un libellé.",
-    tooManyTiers: "20 rangs au maximum.",
+    tooManyTiers: "19 rangs au maximum.",
     tooManyCards: "2000 cartes au maximum.",
     ready: "Prête à publier.",
     startOver: "Recommencer",

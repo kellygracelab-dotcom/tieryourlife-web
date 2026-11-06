@@ -314,7 +314,7 @@ const tr: Translation = {
     needCards: "En az bir kart ekleyin.",
     needTier: "En az bir seviye bırakın.",
     needTierLabel: "Her seviyenin bir etiketi olmalı.",
-    tooManyTiers: "En fazla 20 seviye.",
+    tooManyTiers: "En fazla 19 seviye.",
     tooManyCards: "En fazla 2000 kart.",
     ready: "Yayımlamaya hazır.",
     startOver: "Baştan başla",

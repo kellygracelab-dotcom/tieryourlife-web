@@ -331,7 +331,7 @@ const ru: Translation = {
     needCards: "Добавьте хотя бы одну карточку.",
     needTier: "Оставьте хотя бы один уровень.",
     needTierLabel: "Каждому уровню нужна метка.",
-    tooManyTiers: "Не больше 20 уровней.",
+    tooManyTiers: "Не больше 19 уровней.",
     tooManyCards: "Не больше 2000 карточек.",
     ready: "Готово к публикации.",
     startOver: "Начать заново",

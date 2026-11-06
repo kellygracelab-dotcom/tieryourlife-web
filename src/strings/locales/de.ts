@@ -319,7 +319,7 @@ const de: Translation = {
     needCards: "Füge mindestens eine Karte hinzu.",
     needTier: "Behalte mindestens eine Stufe.",
     needTierLabel: "Jede Stufe braucht eine Bezeichnung.",
-    tooManyTiers: "Höchstens 20 Stufen.",
+    tooManyTiers: "Höchstens 19 Stufen.",
     tooManyCards: "Höchstens 2000 Karten.",
     ready: "Bereit zum Veröffentlichen.",
     startOver: "Von vorn",

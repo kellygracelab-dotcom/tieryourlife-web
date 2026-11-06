@@ -31,7 +31,10 @@ const withDetail = (text: string, detail: string | null): string =>
 export function failureText(error: ApiError, kind: HouseSend): string {
   switch (error.kind) {
     case "invalid":
-      return withDetail(strings.new.failedInvalid, error.detail);
+      return withDetail(
+        error.code === "TOO_MANY_TIERS" ? strings.new.tooManyTiers : strings.new.failedInvalid,
+        error.detail,
+      );
     case "tooLarge":
       return withDetail(strings.new.failedTooLarge, error.detail);
     case "pictureRefused":

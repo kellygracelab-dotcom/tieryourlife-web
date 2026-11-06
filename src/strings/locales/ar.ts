@@ -366,7 +366,7 @@ const ar: Translation = {
     needCards: "أضف بطاقة واحدة على الأقل.",
     needTier: "أبقِ مستوى واحدًا على الأقل.",
     needTierLabel: "كل مستوى يحتاج إلى تسمية.",
-    tooManyTiers: "20 مستوى كحد أقصى.",
+    tooManyTiers: "19 مستوى كحد أقصى.",
     tooManyCards: "2000 بطاقة كحد أقصى.",
     ready: "جاهزة للنشر.",
     startOver: "البدء من جديد",

@@ -323,7 +323,7 @@ const ptBR: Translation = {
     needCards: "Adicione ao menos um cartão.",
     needTier: "Mantenha ao menos um nível.",
     needTierLabel: "Todo nível precisa de um rótulo.",
-    tooManyTiers: "No máximo 20 níveis.",
+    tooManyTiers: "No máximo 19 níveis.",
     tooManyCards: "No máximo 2000 cartões.",
     ready: "Pronto para publicar.",
     startOver: "Começar de novo",

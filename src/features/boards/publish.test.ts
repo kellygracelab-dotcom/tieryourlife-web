@@ -110,6 +110,39 @@ describe("publishing a board", () => {
   });
 });
 
+describe("the tiers a list may rank", () => {
+  // A board with ranked tiers enough to go past what a new list may have.
+  const ranked = (count: number): Board => {
+    const next = uids();
+    const base = addToPool(
+      { ...newBoard("b", "Films", 1, next), category: "film_tv" },
+      [{ title: "Dune", imageUrl: null }],
+      1,
+      next,
+    );
+    const pool = poolTier(base)!;
+    const tiers = Array.from({ length: count }, (_, n) => ({
+      ...pool,
+      uid: `t${n}`,
+      position: n,
+      label: `T${n}`,
+      isPool: false,
+    }));
+    return { ...base, tiers: [...tiers, { ...pool, position: count }] };
+  };
+
+  it("are at most nineteen on a new list, as the feed takes", () => {
+    expect(publishProblemsOf(ranked(19))).toEqual([]);
+    expect(publishProblemsOf(ranked(20))).toEqual(["tooManyTiers"]);
+    expect(publishRequestOf(ranked(20))).toBeNull();
+  });
+
+  it("may stay twenty on an Update of a list that has them", () => {
+    expect(publishProblemsOf({ ...ranked(20), publishedId: "old" })).toEqual([]);
+    expect(publishProblemsOf({ ...ranked(21), publishedId: "old" })).toEqual(["tooManyTiers"]);
+  });
+});
+
 describe("an own photo on the cover", () => {
   const own =
     "https://firebasestorage.googleapis.com/v0/b/b/o/users%2Fme%2Fpictures%2Fpic-1?alt=media&token=t";

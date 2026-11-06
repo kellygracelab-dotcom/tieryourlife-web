@@ -322,7 +322,7 @@ const es: Translation = {
     needCards: "Añade al menos una tarjeta.",
     needTier: "Deja al menos un nivel.",
     needTierLabel: "Cada nivel necesita una etiqueta.",
-    tooManyTiers: "Como máximo 20 niveles.",
+    tooManyTiers: "Como máximo 19 niveles.",
     tooManyCards: "Como máximo 2000 tarjetas.",
     ready: "Todo listo para publicar.",
     startOver: "Empezar de nuevo",

@@ -329,7 +329,7 @@ const uk: Translation = {
     needCards: "Додайте хоча б одну картку.",
     needTier: "Залиште хоча б один рівень.",
     needTierLabel: "Кожному рівню потрібна мітка.",
-    tooManyTiers: "Не більше 20 рівнів.",
+    tooManyTiers: "Не більше 19 рівнів.",
     tooManyCards: "Не більше 2000 карток.",
     ready: "Готово до публікації.",
     startOver: "Почати заново",

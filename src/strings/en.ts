@@ -311,7 +311,7 @@ export const en = {
     needCards: "Add at least one card.",
     needTier: "Keep at least one tier.",
     needTierLabel: "Every tier needs a label.",
-    tooManyTiers: "At most 20 tiers.",
+    tooManyTiers: "At most 19 tiers.",
     tooManyCards: "At most 2000 cards.",
     ready: "Ready to publish.",
     startOver: "Start over",
