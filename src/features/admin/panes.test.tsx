@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Moderator, PendingTopic, ProposedSection } from "../../api/admin";
 import { ApiFailure } from "../../api/errors";
-import type { Topic } from "../../api/sections";
+import type { SectionStats, Topic } from "../../api/sections";
 import { SessionContext } from "../../app/session";
 import { memoryStore } from "../../lib/storage";
 import { setStrings } from "../../strings";
@@ -563,10 +563,25 @@ describe("ProposalsPane", () => {
   });
 });
 
+/** A section as staff read it. */
+const section = (id: string, more: Partial<SectionStats> = {}): SectionStats => ({
+  id,
+  listCount: 4,
+  followerCount: 2,
+  newThisWeek: 0,
+  collage: [],
+  following: false,
+  status: "approved",
+  ...more,
+});
+
 describe("TopicsPane", () => {
   let deps: TopicsDeps;
   beforeEach(() => {
     deps = {
+      sections: vi.fn(async () => ({
+        sections: ["anime", "games", "other"].map((id) => section(id)),
+      })),
       load: vi.fn(async () => ({
         topics: [
           topic("t1", "Indies", {
@@ -667,6 +682,28 @@ describe("TopicsPane", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(await screen.findByText(/1 list/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
+  it("keeps a hidden section's topics in reach, to rename or delete, but makes none there", async () => {
+    deps.sections = vi.fn(async () => ({
+      sections: [
+        section("anime"),
+        section("quiet", { name: "Quiet", hidden: true }),
+        section("other"),
+      ],
+    }));
+    wrap(<TopicsPane adminRole="owner" deps={deps} editor={editorFakes()} />);
+    await screen.findByText("Pokémon");
+    const select = screen.getByRole("combobox", { name: "Section" });
+    await within(select).findByRole("option", { name: "Quiet" });
+    await userEvent.selectOptions(select, "quiet");
+    expect(deps.load).toHaveBeenLastCalledWith("quiet");
+    const row = (await screen.findByText("Pokémon")).closest("li")!;
+    expect(within(row).getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    // The backend takes a new topic only in an open section.
+    expect(screen.queryByRole("button", { name: "New topic" })).toBeNull();
+    expect(screen.getByText(/Hidden — not on the home page/)).toBeInTheDocument();
   });
 
   it("says a delete that did not go through, and topics that did not come", async () => {

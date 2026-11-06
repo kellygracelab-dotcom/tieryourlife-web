@@ -1,8 +1,14 @@
 import { useCallback, useState } from "react";
-import type { AdminRole, TopicChanges, TopicDraft } from "../../api/admin";
+import type { AdminRole, AdminSections, TopicChanges, TopicDraft } from "../../api/admin";
 import { errorOf } from "../../api/errors";
 import type { Topic } from "../../api/sections";
-import { createTopic, deleteTopic, editTopic, loadAllTopics } from "../../lib/api";
+import {
+  createTopic,
+  deleteTopic,
+  editTopic,
+  loadAdminSections,
+  loadAllTopics,
+} from "../../lib/api";
 import { useResource } from "../../lib/useResource";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -10,7 +16,8 @@ import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { PaneLoading } from "./PaneLoading";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import type { EditorDeps } from "../sections/editorDeps";
-import { builtInSection, sectionStyle, topicStyle } from "../sections/model";
+import { builtInSection, sectionOf, sectionStyle, topicStyle } from "../sections/model";
+import { fileUnderChoices } from "../sections/proposal";
 import { TopicArt } from "../sections/TopicArt";
 import { useSections } from "../sections/useSections";
 import { TopicEditor } from "./TopicEditor";
@@ -18,6 +25,8 @@ import { TopicEditor } from "./TopicEditor";
 export { TOPIC_NAME_MAX } from "./TopicEditor";
 
 export interface TopicsDeps {
+  /** Every section as staff read them, hidden ones too: their topics are still staff's to keep. */
+  sections: () => Promise<AdminSections>;
   load: (section: string) => Promise<{ topics: Topic[] }>;
   create: (draft: TopicDraft) => Promise<Topic>;
   /** Its name, its picture, or both: PATCH, the one call that takes a picture. */
@@ -26,6 +35,7 @@ export interface TopicsDeps {
 }
 
 const topicsDeps: TopicsDeps = {
+  sections: loadAdminSections,
   load: loadAllTopics,
   create: createTopic,
   edit: editTopic,
@@ -52,7 +62,15 @@ export function TopicsPane({
   editor?: EditorDeps;
 }) {
   const { sections } = useSections();
-  const approved = sections.filter((one) => one.status === "approved");
+  // The public sections leave the hidden ones out; staff's own answer has them,
+  // and replaces the public ones once it comes.
+  const loadSections = useCallback(() => deps.sections(), [deps]);
+  const everyRead = useResource("admin-topics-sections", loadSections);
+  const every = everyRead.state.status === "ready" ? everyRead.state.value.sections : null;
+  const approved =
+    every === null
+      ? sections.filter((one) => one.status === "approved")
+      : fileUnderChoices(every.map((one) => sectionOf(one)));
   const [section, setSection] = useState(approved[0]?.id ?? "anime");
   const [round, setRound] = useState(0);
   const load = useCallback(() => deps.load(section), [deps, section]);
@@ -65,6 +83,8 @@ export function TopicsPane({
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
   const look = approved.find((one) => one.id === section) ?? builtInSection("other");
+  // The backend takes a new topic only in an open section; a hidden one's are renamed or deleted.
+  const hiddenHere = every?.some((one) => one.id === section && one.hidden === true) === true;
 
   const saved = (text: string) => {
     setEditing(null);
@@ -123,10 +143,13 @@ export function TopicsPane({
             ))}
           </select>
         </label>
-        <Button variant="tonal" icon="add" onClick={() => setEditing({ kind: "create" })}>
-          {strings.admin.newTopic}
-        </Button>
+        {!hiddenHere && (
+          <Button variant="tonal" icon="add" onClick={() => setEditing({ kind: "create" })}>
+            {strings.admin.newTopic}
+          </Button>
+        )}
       </header>
+      {hiddenHere && <p className="admin-pane__note">{strings.admin.hiddenLine}</p>}
       {state.status === "loading" ? (
         <PaneLoading />
       ) : state.status === "error" ? (
