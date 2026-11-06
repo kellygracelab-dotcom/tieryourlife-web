@@ -239,6 +239,21 @@ describe("MePage", () => {
     expect(rowOf(/Oscar films 2025/)).not.toHaveTextContent("Moves to");
   });
 
+  it("says a list held for a moderator waits before others can see it (QA P17)", async () => {
+    load.mockResolvedValue({ rankings: [], more: false });
+    loadLists.mockResolvedValue({
+      lists: [
+        published("l1", "Stalls of Kyiv", { underReview: true }),
+        published("l2", "Oscar films 2025", { updatedAt: Date.UTC(2026, 6, 1, 12) }),
+      ],
+    });
+    open();
+
+    await screen.findByText("It waits for a moderator before others can see it.");
+    expect(rowOf(/Stalls of Kyiv/)).toHaveTextContent("It waits for a moderator");
+    expect(rowOf(/Oscar films 2025/)).not.toHaveTextContent("It waits for a moderator");
+  });
+
   it("offers a ranking to be published as a list of one's own, and a list only to be unpublished", async () => {
     load.mockResolvedValue({ rankings: [ranking("aaaaaaaa", "Ghibli, ranked")], more: false });
     loadLists.mockResolvedValue({ lists: [published("l1", "Oscar films 2025")] });

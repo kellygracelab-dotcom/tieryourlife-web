@@ -1,16 +1,18 @@
 import { createContext, useContext } from "react";
+import type { BeyondAccount } from "./model";
 
 export type SyncStatus = "idle" | "syncing" | "stuck";
 
 /**
- * A board the account said it will not keep, and why: too big, or one
- * board more than an account holds. Trying again changes neither, so the
- * person is told which board it is and what would let it go up.
+ * A board the account said it will not keep, and why: too many tiers, too
+ * many cards or too many in its trash, too big, or one board more than an
+ * account holds. Trying again changes none of them, so the person is told
+ * which board it is and what would let it go up.
  */
 export interface SyncRefusal {
   uid: string;
   title: string;
-  why: "tooLarge" | "tooManyBoards";
+  why: BeyondAccount | "tooLarge" | "tooManyBoards";
 }
 
 export interface BoardSyncControls {

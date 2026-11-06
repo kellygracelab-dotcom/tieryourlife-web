@@ -157,6 +157,17 @@ describe("createApiClient", () => {
     expect(calls).toHaveLength(1);
   });
 
+  it("reads the site's 401 NOT_SIGNED_IN as a guest turned away, not a stale token", async () => {
+    const { client, calls } = clientWith([
+      refused(401, { error: "Sign in first", code: "NOT_SIGNED_IN" }),
+    ]);
+
+    await expect(client.request("GET", "/api/me/rankings")).rejects.toMatchObject({
+      error: { kind: "notSignedIn" },
+    });
+    expect(calls).toHaveLength(1);
+  });
+
   it("does not retry an App-Check-only request on 401", async () => {
     const { client, calls } = clientWith([refused(401, { code: "UNAUTHENTICATED" })]);
 

@@ -14,6 +14,7 @@ vi.mock("../../lib/api", () => ({
   noteTake: vi.fn(),
   keepListRanking: vi.fn(async () => undefined),
   rearrangeRanking: vi.fn(async () => ({ code: "abcdefgh" })),
+  rankingStillThere: vi.fn(async () => true),
 }));
 
 const list: PublishedList = {

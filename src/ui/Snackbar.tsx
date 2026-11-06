@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from "react";
 import "./Snackbar.css";
 
 export interface SnackbarNotice {
@@ -46,6 +53,61 @@ export function SiteSnackbar({ notice, onDone }: SnackbarProps) {
   );
 }
 
+/** How far the lowest notice stands off the window's bottom, and the room between two. */
+const SNACKBAR_EDGE = 16;
+const SNACKBAR_GAP = 8;
+
+/**
+ * The notices on the screen, oldest first, each with its height: the shell's
+ * notice and a page's own can be there at once, and each stands above the
+ * ones before it, so neither covers the other's Undo.
+ */
+let stack: readonly { key: symbol; height: number }[] = [];
+const stackListeners = new Set<() => void>();
+const setStack = (next: readonly { key: symbol; height: number }[]) => {
+  stack = next;
+  stackListeners.forEach((listener) => listener());
+};
+const subscribeToStack = (listener: () => void) => {
+  stackListeners.add(listener);
+  return () => {
+    stackListeners.delete(listener);
+  };
+};
+const currentStack = () => stack;
+
+/** Where a notice stands off the bottom: above the ones shown before it. */
+function useStackPlace(box: RefObject<HTMLDivElement | null>, notice: SnackbarNotice): number {
+  const [key] = useState(() => Symbol("snackbar"));
+  const shown = useSyncExternalStore(subscribeToStack, currentStack, currentStack);
+
+  useLayoutEffect(() => {
+    setStack([...stack, { key, height: 0 }]);
+    return () => setStack(stack.filter((one) => one.key !== key));
+  }, [key]);
+
+  useLayoutEffect(() => {
+    const node = box.current;
+    if (node === null) return;
+    const measure = () => {
+      const height = node.offsetHeight;
+      if (stack.some((one) => one.key === key && one.height !== height)) {
+        setStack(stack.map((one) => (one.key === key ? { key, height } : one)));
+      }
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [box, key, notice]);
+
+  const at = shown.findIndex((one) => one.key === key);
+  return shown
+    .slice(0, Math.max(at, 0))
+    .reduce((bottom, one) => bottom + one.height + SNACKBAR_GAP, SNACKBAR_EDGE);
+}
+
 /**
  * While the pointer or the focus is on a notice, it waits. An action whose
  * press took the focus with it (a card removed, a list deleted) gets the
@@ -56,6 +118,8 @@ function Notice({ notice, onDone }: { notice: SnackbarNotice; onDone: () => void
   const [focused, setFocused] = useState(false);
   const held = hovered || focused;
   const action = useRef<HTMLButtonElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const bottom = useStackPlace(box, notice);
 
   useEffect(() => {
     if (held) return;
@@ -70,7 +134,9 @@ function Notice({ notice, onDone }: { notice: SnackbarNotice; onDone: () => void
 
   return (
     <div
+      ref={box}
       className="snackbar"
+      style={{ bottom }}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
       onFocus={() => setFocused(true)}

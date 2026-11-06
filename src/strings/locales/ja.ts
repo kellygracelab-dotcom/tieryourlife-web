@@ -27,20 +27,20 @@ const ja: Translation = {
     themeLight: "ライト",
     themeDark: "ダーク",
     settings: "設定",
-    reports: "報告",
+    reports: "通報",
     newList: "新しいリスト",
   },
   mod: {
     putBack: "戻す",
     putBackDone: "フィードに戻しました。報告で非表示になることはもうありません。",
-    title: "報告",
+    title: "通報",
     notAvailable: "このページは利用できません。",
     listCount: { other: "{n}件のリスト" },
     reportCount: { other: "{n}件の報告" },
     nothingPending: "待ちはありません",
     blurCovers: "表紙をぼかす",
     revealCover: "この表紙を表示",
-    cover: "表紙",
+    cover: "カバー",
     noCover: "表紙なし",
     hiddenPill: "保留中のため非表示",
     alreadyKept: "一度維持されたため、報告では非表示になりません",
@@ -76,7 +76,7 @@ const ja: Translation = {
     tryAgain: "もう一度試す",
     failed: "報告を読み込めませんでした。",
     emptyTitle: "確認するものはありません",
-    emptyBody: "コミュニティのリストへの報告はここに届きます。",
+    emptyBody: "コミュニティのリストへの通報はここに届きます。",
   },
   settings: {
     faceGallery: "ギャラリーの写真",
@@ -84,7 +84,7 @@ const ja: Translation = {
     facePhotoCaption: "あなたの写真",
     faceNote:
       "カードの画像はウェブ上の元の場所に残ります。ギャラリーの写真は確認のうえ、アカウントに保存されます。",
-    faceNotMade: "この画像は顔に使えません。別の画像を選んでください。",
+    faceNotMade: "この画像はプロフィールに使えません。別のものを選んでください。",
     title: "設定",
     guestTitle: "設定を変えるにはログインしてください。",
     guestBody:
@@ -315,7 +315,7 @@ const ja: Translation = {
     needCards: "カードを1枚以上追加してください。",
     needTier: "ティアを1つ以上残してください。",
     needTierLabel: "すべてのティアにラベルが必要です。",
-    tooManyTiers: "ティアは20段までです。",
+    tooManyTiers: "ティアは19段までです。",
     tooManyCards: "カードは2000枚までです。",
     ready: "公開できます。",
     startOver: "最初からやり直す",
@@ -396,7 +396,7 @@ const ja: Translation = {
     viewTheirs: "作者",
     yourArrangement: "あなたの並べ方",
     more: "このリストについて",
-    report: "このリストを報告",
+    report: "このリストを通報",
     hide: "このリストを非表示",
     edit: "編集",
     delete: "取り下げる",
@@ -447,6 +447,11 @@ const ja: Translation = {
     withdraw: "取り下げる",
     withdrawTitle: "ランキングを取り下げますか？",
     withdrawBody: "このリストのランキングから消えます。",
+    showMine: "自分のランキングをほかの人に見せる",
+    signInToShow: "ランキングを見せるにはログインしてください",
+    shown: "あなたのランキングがリストのランキングに加わりました",
+    showBanned:
+      "モデレーターがあなたのリストの1つを取り下げたため、今はランキングを見せられません。",
     cancel: "キャンセル",
     withdrawFailed: "ランキングを取り下げられませんでした。もう一度お試しください。",
     failed: "ランキングを読み込めませんでした。",
@@ -455,7 +460,7 @@ const ja: Translation = {
     yesterday: "昨日",
   },
   report: {
-    title: "このリストを報告",
+    title: "このリストを通報",
     body: "問題点を教えてください。補足も添えられます。",
     why: "何が問題ですか？",
     reasonSexual: "性的なコンテンツ",
@@ -466,13 +471,13 @@ const ja: Translation = {
     noteLabel: "補足があれば（任意）",
     notePlaceholder: "確認する人に見てほしいところは？",
     hideAuthor: "{name} の投稿もすべて非表示にする",
-    byHand: "報告は人が読みます。数が揃うと、判断までリストは非表示になります。",
-    send: "報告する",
+    byHand: "通報は人が読みます。数が揃うと、判断までリストは非表示になります。",
+    send: "通報する",
     cancel: "キャンセル",
     failed:
       "報告を送信できませんでした。何も送られていません。1分ほど待ってからもう一度お試しください。",
-    sentTitle: "報告しました。あなたには非表示になります",
-    sentBody: "報告は人が確認します。それまでは他の人には表示されたままのことがあります。",
+    sentTitle: "通報しました。あなたには非表示になります",
+    sentBody: "通報は人が確認します。それまでは他の人には表示されたままのことがあります。",
     done: "完了",
     reasonWrongPlace: "セクションまたはトピックが違う",
   },
@@ -530,6 +535,8 @@ const ja: Translation = {
     failedOffline:
       "接続がありません。配置はこの端末に残っています。オンラインに戻ってからもう一度お試しください。",
     failedGone: "このリストは利用できなくなったため、ランキングを保存できません。",
+    failedBanned: "現在、リストをランク付けできません。",
+    failedBannedUntil: "{date}までリストをランク付けできません。",
     failedOther:
       "ランキングを保存できませんでした。内容は失われていません。もう一度お試しください。",
     failedChanged:
@@ -853,6 +860,11 @@ const ja: Translation = {
     unfollowed: "{name}のフォローを解除しました",
     followFailed: "フォローできませんでした。もう一度お試しください。",
     unfollowFailed: "フォローを解除できませんでした。もう一度お試しください。",
+    mergedFollowed:
+      "「{name}」は「{section}」に統合されました。「{section}」をフォローしています。",
+    mergedUnfollowed:
+      "「{name}」は「{section}」に統合されました。「{section}」のフォローを解除しました。",
+    mergedTryAgain: "「{name}」は「{section}」に統合されました。そちらでもう一度お試しください。",
     followLimit:
       "フォローできるセクションとトピックの上限に達しました。先にいくつかフォローを解除してください。",
     followSignInBody:
@@ -1156,6 +1168,8 @@ const ja: Translation = {
     updating: "更新中…",
     behind: "公開中の内容はこのボードより古いです。",
     publishing: "公開中…",
+    publishedHeld: "保存しました。他の人に表示される前に、モデレーターの確認を待っています。",
+    heldBody: "他の人に表示される前に、モデレーターの確認を待っています。",
     publishedNote: "公開しました。リンクを知っている人は誰でも並べられます。",
     publishedAsRanking:
       "そのリストのあなたのランキングとして公開しました。フィードに2つ目のリストは出ません。",
@@ -1245,6 +1259,12 @@ const ja: Translation = {
       "「{title}」は大きすぎてアカウントに保存できないため、バックアップされていません。カードをいくつか減らすと、またバックアップされます。",
     refusedTooMany:
       "「{title}」はバックアップされていません。アカウントに保存できるボードは200個までです。いくつか完全に削除すると空きができます。",
+    refusedTooManyTiers:
+      "「{title}」はアカウントに保存できる数より多くのティアがあるため、バックアップされていません。保存できるのは19段とプールまでです。ティアを削除すると、またバックアップされます。",
+    refusedTooManyCards:
+      "「{title}」はアカウントに保存できる数より多くのカードがあるため、バックアップされていません。1つのボードに保存できるのは2000枚までです。カードをいくつか減らすと、またバックアップされます。",
+    refusedTooManyTrashed:
+      "「{title}」には削除したカードが2000枚を超えて残っていて、アカウントに保存できる数を超えるため、バックアップされていません。ゴミ箱を空にすると、またバックアップされます。",
     now: "今すぐバックアップ",
     backingUp: "バックアップ中…",
     guestNote:

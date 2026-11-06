@@ -90,6 +90,8 @@ export function unlinkFromHouse(uid: string, store: KeyValueStore = localStorage
   store.write(HOUSE_BOARDS_KEY, JSON.stringify(rest));
   const { [uid]: _sent, ...others } = sentIn(store);
   store.write(HOUSE_SENT_KEY, JSON.stringify(others));
+  const { [uid]: _seen, ...seenRest } = numbersIn(store, HOUSE_SEEN_KEY);
+  store.write(HOUSE_SEEN_KEY, JSON.stringify(seenRest));
 }
 
 /**
@@ -99,9 +101,11 @@ export function unlinkFromHouse(uid: string, store: KeyValueStore = localStorage
  */
 export const HOUSE_SENT_KEY = "tyl:houseSent";
 
-function sentIn(store: KeyValueStore): Record<string, number> {
+const sentIn = (store: KeyValueStore): Record<string, number> => numbersIn(store, HOUSE_SENT_KEY);
+
+function numbersIn(store: KeyValueStore, key: string): Record<string, number> {
   try {
-    const parsed: unknown = JSON.parse(store.read(HOUSE_SENT_KEY) ?? "{}");
+    const parsed: unknown = JSON.parse(store.read(key) ?? "{}");
     if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
     return Object.fromEntries(
       Object.entries(parsed).filter(
@@ -120,6 +124,42 @@ export function markHouseSent(
   store: KeyValueStore = localStorageStore,
 ): void {
   store.write(HOUSE_SENT_KEY, JSON.stringify({ ...sentIn(store), [uid]: editedAt }));
+}
+
+/**
+ * Each house board's list as it stood when the board last matched it, by the
+ * list's own updatedAt: the server's clock, which the list's row in the house
+ * pane is read by too. Comparing it with this device's clock lost another
+ * admin's change when that clock ran ahead.
+ */
+export const HOUSE_SEEN_KEY = "tyl:houseSeen";
+
+/** The board matches its list as the server last stamped it; null when that is not known. */
+export function markHouseSeen(
+  uid: string,
+  updatedAt: number | null,
+  store: KeyValueStore = localStorageStore,
+): void {
+  const { [uid]: _before, ...rest } = numbersIn(store, HOUSE_SEEN_KEY);
+  store.write(
+    HOUSE_SEEN_KEY,
+    JSON.stringify(updatedAt === null ? rest : { ...rest, [uid]: updatedAt }),
+  );
+}
+
+/**
+ * Whether the list changed after the board last matched it: by the server's
+ * stamps when this device has one, else, for a board from before they were
+ * kept or one whose list could not be read back once sent, by when the
+ * board was last edited here.
+ */
+export function listChangedSince(
+  board: Board,
+  listUpdatedAt: number,
+  store: KeyValueStore = localStorageStore,
+): boolean {
+  const seen = numbersIn(store, HOUSE_SEEN_KEY)[board.uid];
+  return listUpdatedAt > (seen ?? board.editedAt);
 }
 
 /** Whether the board holds edits its list has not had; one never marked is taken to. */

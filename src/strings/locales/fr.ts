@@ -90,7 +90,7 @@ const fr: Translation = {
     facePhotoCaption: "Votre photo",
     faceNote:
       "Les images des cartes restent là où elles vivent sur le web. Une photo de la galerie est vérifiée et conservée avec votre compte.",
-    faceNotMade: "Cette image ne peut pas être votre visage. Choisissez-en une autre.",
+    faceNotMade: "Cette image ne peut pas être votre photo. Choisissez-en une autre.",
     title: "Paramètres",
     guestTitle: "Connectez-vous pour modifier vos paramètres.",
     guestBody:
@@ -330,7 +330,7 @@ const fr: Translation = {
     needCards: "Ajoutez au moins une carte.",
     needTier: "Gardez au moins un rang.",
     needTierLabel: "Chaque rang a besoin d’un libellé.",
-    tooManyTiers: "20 rangs au maximum.",
+    tooManyTiers: "19 rangs au maximum.",
     tooManyCards: "2000 cartes au maximum.",
     ready: "Prête à publier.",
     startOver: "Recommencer",
@@ -469,6 +469,11 @@ const fr: Translation = {
     withdraw: "Retirer",
     withdrawTitle: "Retirer votre classement ?",
     withdrawBody: "Il disparaîtra des classements de cette liste.",
+    showMine: "Montrer mon classement aux autres",
+    signInToShow: "Connectez-vous pour montrer votre classement",
+    shown: "Votre classement figure parmi ceux de la liste",
+    showBanned:
+      "Un modérateur a retiré l’une de vos listes ; vous ne pouvez pas montrer de classement pour l’instant.",
     cancel: "Annuler",
     withdrawFailed: "Impossible de retirer votre classement. Réessayez.",
     failed: "Impossible de charger les classements.",
@@ -561,6 +566,8 @@ const fr: Translation = {
     failedOffline:
       "Pas de connexion. Rien n’est perdu : vos placements sont à l’abri sur cet appareil. Réessayez une fois de retour en ligne.",
     failedGone: "Cette liste n’est plus disponible, le classement ne peut donc pas être gardé.",
+    failedBanned: "Vous ne pouvez pas classer de listes pour le moment.",
+    failedBannedUntil: "Vous ne pouvez pas classer de listes jusqu’au {date}.",
     failedOther: "Impossible d’enregistrer le classement. Rien n’est perdu. Réessayez.",
     failedChanged:
       "L’auteur a modifié cette liste pendant que vous la classiez. Rechargez-la pour la classer telle qu’elle est maintenant.",
@@ -914,6 +921,9 @@ const fr: Translation = {
     unfollowed: "Vous ne suivez plus {name}",
     followFailed: "Impossible de suivre. Réessayez.",
     unfollowFailed: "Impossible de ne plus suivre. Réessayez.",
+    mergedFollowed: "« {name} » a été fusionnée avec {section}. Vous suivez maintenant {section}.",
+    mergedUnfollowed: "« {name} » a été fusionnée avec {section}. Vous ne suivez plus {section}.",
+    mergedTryAgain: "« {name} » a été fusionnée avec {section}. Réessayez là-bas.",
     followLimit:
       "Vous suivez déjà autant de rubriques et de thèmes que possible. Cessez d’en suivre quelques-uns d’abord.",
     followSignInBody:
@@ -1279,6 +1289,8 @@ const fr: Translation = {
     updating: "Mise à jour…",
     behind: "La version publiée est en retard sur ce tableau.",
     publishing: "Publication…",
+    publishedHeld: "Enregistrée. Elle attend un modérateur avant que d’autres puissent la voir.",
+    heldBody: "Elle attend un modérateur avant que d’autres puissent la voir.",
     publishedNote: "Publiée. Toute personne ayant le lien peut la classer.",
     publishedAsRanking:
       "Publiée comme votre classement de cette liste. Aucune seconde liste n’apparaît dans le fil.",
@@ -1370,6 +1382,12 @@ const fr: Translation = {
       "« {title} » est trop volumineux pour un compte, il n’est donc pas sauvegardé. Retirez-en quelques cartes et il le sera de nouveau.",
     refusedTooMany:
       "« {title} » n’est pas sauvegardé : un compte garde jusqu’à 200 tableaux. Supprimez-en quelques-uns définitivement pour faire de la place.",
+    refusedTooManyTiers:
+      "« {title} » a plus de rangs qu’un compte n’en garde, il n’est donc pas sauvegardé. Un compte garde 19 rangs et la réserve : supprimez un rang et il le sera de nouveau.",
+    refusedTooManyCards:
+      "« {title} » a plus de cartes qu’un compte n’en garde, il n’est donc pas sauvegardé. Un compte garde 2000 cartes par tableau : retirez-en quelques-unes et il le sera de nouveau.",
+    refusedTooManyTrashed:
+      "« {title} » conserve plus de 2000 cartes retirées, plus qu’un compte n’en garde, il n’est donc pas sauvegardé. Videz la corbeille et il le sera de nouveau.",
     now: "Sauvegarder maintenant",
     backingUp: "Sauvegarde en cours…",
     guestNote:

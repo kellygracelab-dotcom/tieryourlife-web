@@ -43,7 +43,13 @@ export function useModal(
       if (event.target instanceof HTMLElement) last.current = event.target;
     };
     dialog?.addEventListener("focusin", onFocusIn);
-    const inside = () => [...(box.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
+    // A control taken out of the Tab order (the radios of a group but the
+    // chosen one, which the arrows reach) is not a stop; the one holding the
+    // focus still counts, so Tab goes on from where it is.
+    const inside = () =>
+      [...(box.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])].filter(
+        (one) => one.tabIndex >= 0 || one === document.activeElement,
+      );
     const start =
       initial === undefined ? undefined : box.current?.querySelector<HTMLElement>(initial);
     (start ?? inside()[0])?.focus();

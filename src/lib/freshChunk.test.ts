@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CHUNK_RETRY_KEY,
-  CHUNK_RETRY_WINDOW_MS,
   freshChunk,
+  inTheMiddle,
   reloadInto,
   reloadOnce,
   resetFreshChunkForTests,
@@ -35,21 +35,53 @@ describe("freshChunk", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("gives a deploy long after the last reload its own reload", () => {
+  it("reloads once in a tab's life, however long after, so a file that never comes cannot reload it again", () => {
     const store = memoryStore();
     const reload = vi.fn();
     let time = 1_000_000;
     const now = () => time;
     expect(reloadOnce({ store, reload, now })).toBe(true);
+    // Eleven minutes on, an edit asks for the back-up engine again.
     resetFreshChunkForTests();
-    time += CHUNK_RETRY_WINDOW_MS + 1;
-    expect(reloadOnce({ store, reload, now })).toBe(true);
-    expect(reload).toHaveBeenCalledTimes(2);
-    // A try kept by the site before it wrote down times.
-    resetFreshChunkForTests();
+    time += 11 * 60_000;
+    expect(reloadOnce({ store, reload, now })).toBe(false);
+    time += 24 * 60 * 60_000;
+    expect(reloadOnce({ store, reload, now })).toBe(false);
+    expect(reload).toHaveBeenCalledTimes(1);
+    // A try kept by the site before it wrote down times counts all the same.
     const old = memoryStore();
     old.write(CHUNK_RETRY_KEY, "1");
-    expect(reloadOnce({ store: old, reload, now })).toBe(true);
+    expect(reloadOnce({ store: old, reload, now })).toBe(false);
+  });
+
+  it("never reloads under someone's hands: text being typed, or a dialog open", async () => {
+    const reload = vi.fn();
+    const store = memoryStore();
+    const missing = freshChunk(
+      async () => {
+        throw new TypeError("Failed to fetch dynamically imported module");
+      },
+      { store, reload, busy: () => true },
+    );
+    await expect(missing()).rejects.toThrow(/dynamically imported/);
+    expect(reload).not.toHaveBeenCalled();
+    // Nothing was spent: once the person is done, a deploy's missing file still gets its reload.
+    expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
+    expect(reloadOnce({ store, reload, busy: () => false })).toBe(true);
+  });
+
+  it("reads a half-typed card name or an open sheet as work a reload would lose", () => {
+    document.body.innerHTML = '<input id="name" /><button id="go">Go</button>';
+    const field = document.getElementById("name") as HTMLInputElement;
+    field.focus();
+    expect(inTheMiddle()).toBe(false);
+    field.value = "Dun";
+    expect(inTheMiddle()).toBe(true);
+    document.getElementById("go")!.focus();
+    expect(inTheMiddle()).toBe(false);
+    document.body.insertAdjacentHTML("beforeend", '<div role="dialog" aria-modal="true"></div>');
+    expect(inTheMiddle()).toBe(true);
+    document.body.innerHTML = "";
   });
 
   it("reloads once for a chunk a deploy took away, and lets the second failure through", async () => {

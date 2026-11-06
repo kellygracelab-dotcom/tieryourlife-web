@@ -88,7 +88,7 @@ const ptBR: Translation = {
     facePhotoCaption: "Sua foto",
     faceNote:
       "As imagens dos cartões ficam onde estão na web. Uma foto da galeria é verificada e guardada com sua conta.",
-    faceNotMade: "Essa imagem não pode ser seu rosto. Escolha outra.",
+    faceNotMade: "Essa imagem não pode ser sua foto. Escolha outra.",
     title: "Configurações",
     guestTitle: "Entre para mudar suas configurações.",
     guestBody:
@@ -323,7 +323,7 @@ const ptBR: Translation = {
     needCards: "Adicione ao menos um cartão.",
     needTier: "Mantenha ao menos um nível.",
     needTierLabel: "Todo nível precisa de um rótulo.",
-    tooManyTiers: "No máximo 20 níveis.",
+    tooManyTiers: "No máximo 19 níveis.",
     tooManyCards: "No máximo 2000 cartões.",
     ready: "Pronto para publicar.",
     startOver: "Começar de novo",
@@ -459,6 +459,11 @@ const ptBR: Translation = {
     withdraw: "Retirar",
     withdrawTitle: "Retirar seu ranking?",
     withdrawBody: "Ele sai dos rankings desta lista.",
+    showMine: "Mostrar meu ranking aos outros",
+    signInToShow: "Entre para mostrar seu ranking",
+    shown: "Seu ranking está entre os rankings da lista",
+    showBanned:
+      "Um moderador removeu uma das suas listas, então por enquanto você não pode mostrar rankings.",
     cancel: "Cancelar",
     withdrawFailed: "Não foi possível retirar seu ranking. Tente de novo.",
     failed: "Não foi possível carregar os rankings.",
@@ -548,6 +553,8 @@ const ptBR: Translation = {
     failedOffline:
       "Sem conexão. Nada foi perdido: o que você colocou está a salvo neste aparelho. Tente de novo quando voltar a ficar online.",
     failedGone: "Esta lista não está mais disponível, então a classificação não pode ser guardada.",
+    failedBanned: "No momento você não pode classificar listas.",
+    failedBannedUntil: "Você não pode classificar listas até {date}.",
     failedOther: "Não foi possível salvar a classificação. Nada foi perdido. Tente de novo.",
     failedChanged:
       "O autor mudou esta lista enquanto você a classificava. Carregue de novo para classificá-la como está agora.",
@@ -895,6 +902,9 @@ const ptBR: Translation = {
     unfollowed: "Você deixou de seguir {name}",
     followFailed: "Não foi possível seguir. Tente de novo.",
     unfollowFailed: "Não foi possível deixar de seguir. Tente de novo.",
+    mergedFollowed: "“{name}” foi mesclada a {section}. Agora você segue {section}.",
+    mergedUnfollowed: "“{name}” foi mesclada a {section}. Você deixou de seguir {section}.",
+    mergedTryAgain: "“{name}” foi mesclada a {section}. Tente de novo lá.",
     followLimit:
       "Você já segue o máximo de seções e temas possível. Deixe de seguir alguns primeiro.",
     followSignInBody: "Seguir seções e temas deixa as novas listas deles no topo do seu feed.",
@@ -1259,6 +1269,8 @@ const ptBR: Translation = {
     updating: "Atualizando…",
     behind: "A versão publicada está desatualizada.",
     publishing: "Publicando…",
+    publishedHeld: "Salva. Ela espera um moderador antes que outras pessoas possam vê-la.",
+    heldBody: "Ela espera um moderador antes que outras pessoas possam vê-la.",
     publishedNote: "Publicada. Qualquer um com o link pode organizá-la.",
     publishedAsRanking:
       "Publicada como seu ranking daquela lista. O feed não mostra uma segunda lista.",
@@ -1349,6 +1361,12 @@ const ptBR: Translation = {
       "“{title}” é grande demais para uma conta guardar, por isso está sem cópia. Tire alguns cartões dele e ele volta a ser guardado.",
     refusedTooMany:
       "“{title}” está sem cópia: uma conta guarda até 200 quadros. Exclua alguns permanentemente para abrir espaço.",
+    refusedTooManyTiers:
+      "“{title}” tem mais níveis do que uma conta guarda, por isso está sem cópia. Uma conta guarda 19 e a reserva: remova um nível e ele volta a ser guardado.",
+    refusedTooManyCards:
+      "“{title}” tem mais cartões do que uma conta guarda, por isso está sem cópia. Uma conta guarda 2000 por quadro: tire alguns e ele volta a ser guardado.",
+    refusedTooManyTrashed:
+      "“{title}” mantém mais de 2000 cartões removidos, mais do que uma conta guarda, por isso está sem cópia. Esvazie a lixeira e ele volta a ser guardado.",
     now: "Guardar cópia agora",
     backingUp: "Guardando cópia…",
     guestNote:

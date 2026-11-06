@@ -29,13 +29,13 @@ const tr: Translation = {
     themeLight: "Açık",
     themeDark: "Koyu",
     settings: "Ayarlar",
-    reports: "Bildirimler",
+    reports: "Şikayetler",
     newList: "Yeni liste",
   },
   mod: {
     putBack: "Geri al",
     putBackDone: "Akışa geri alındı. Şikâyetler artık gizlemiyor.",
-    title: "Bildirimler",
+    title: "Şikayetler",
     notAvailable: "Bu sayfa kullanılamıyor.",
     listCount: { other: "{n} liste" },
     reportCount: { other: "{n} bildirim" },
@@ -78,7 +78,7 @@ const tr: Translation = {
     tryAgain: "Tekrar deneyin",
     failed: "Bildirimler yüklenemedi.",
     emptyTitle: "İncelenecek bir şey yok",
-    emptyBody: "Topluluk listeleriyle ilgili bildirimler buraya gelir.",
+    emptyBody: "Topluluk listeleriyle ilgili şikayetler buraya gelir.",
   },
   settings: {
     faceGallery: "Galeriden bir fotoğraf",
@@ -86,7 +86,7 @@ const tr: Translation = {
     facePhotoCaption: "Fotoğrafınız",
     faceNote:
       "Kart görselleri web’de oldukları yerde kalır. Galeriden bir fotoğraf denetlenir ve hesabınızla saklanır.",
-    faceNotMade: "Bu resim yüzünüz olamaz. Başka birini seçin.",
+    faceNotMade: "Bu görsel profil resminiz olamaz. Başka birini seçin.",
     title: "Ayarlar",
     guestTitle: "Ayarlarınızı değiştirmek için oturum açın.",
     guestBody: "Adınız ve resminiz bir hesaba aittir. Bir listeyi sıralamak için hesap gerekmez.",
@@ -314,7 +314,7 @@ const tr: Translation = {
     needCards: "En az bir kart ekleyin.",
     needTier: "En az bir seviye bırakın.",
     needTierLabel: "Her seviyenin bir etiketi olmalı.",
-    tooManyTiers: "En fazla 20 seviye.",
+    tooManyTiers: "En fazla 19 seviye.",
     tooManyCards: "En fazla 2000 kart.",
     ready: "Yayımlamaya hazır.",
     startOver: "Baştan başla",
@@ -447,6 +447,11 @@ const tr: Translation = {
     withdraw: "Geri çek",
     withdrawTitle: "Sıralamanız geri çekilsin mi?",
     withdrawBody: "Bu listenin sıralamalarından kalkar.",
+    showMine: "Sıralamamı başkalarına göster",
+    signInToShow: "Sıralamanızı göstermek için oturum açın",
+    shown: "Sıralamanız listenin sıralamaları arasında",
+    showBanned:
+      "Bir moderatör listelerinizden birini kaldırdı, bu yüzden şimdilik sıralama gösteremezsiniz.",
     cancel: "Vazgeç",
     withdrawFailed: "Sıralamanız geri çekilemedi. Tekrar deneyin.",
     failed: "Sıralamalar yüklenemedi.",
@@ -466,12 +471,12 @@ const tr: Translation = {
     noteLabel: "Eklemek istediğiniz bir şey (isteğe bağlı)",
     notePlaceholder: "İnceleyen kişi neye bakmalı?",
     hideAuthor: "{name} kullanıcısından gelen her şeyi de gizle",
-    byHand: "Her bildirimi bir kişi okur. Yeterince birikirse liste o ana kadar gizlenir.",
+    byHand: "Her şikayeti bir kişi okur. Yeterince birikirse liste o ana kadar gizlenir.",
     send: "Bildir",
     cancel: "İptal",
     failed: "Bildirim gönderilemedi: hiçbir şey gönderilmedi. Bir dakika sonra tekrar deneyin.",
     sentTitle: "Bildirildi ve sizin için gizlendi",
-    sentBody: "Bildirimleri bir kişi inceler. O ana kadar başkaları hâlâ görebilir.",
+    sentBody: "Şikayetleri bir kişi inceler. O ana kadar başkaları hâlâ görebilir.",
     done: "Tamam",
     reasonWrongPlace: "Yanlış bölüm veya konu",
   },
@@ -530,6 +535,8 @@ const tr: Translation = {
     failedOffline:
       "Bağlantı yok. Hiçbir şey kaybolmadı: yerleştirmeleriniz bu cihazda güvende. Çevrimiçi olduğunuzda tekrar deneyin.",
     failedGone: "Bu liste artık kullanılamıyor, dolayısıyla sıralama saklanamaz.",
+    failedBanned: "Şu anda liste sıralayamazsınız.",
+    failedBannedUntil: "{date} tarihine kadar liste sıralayamazsınız.",
     failedOther: "Sıralama kaydedilemedi. Hiçbir şey kaybolmadı. Tekrar deneyin.",
     failedChanged:
       "Siz sıralarken yazar bu listeyi değiştirdi. Şimdiki hâliyle sıralamak için yeniden yükleyin.",
@@ -860,6 +867,9 @@ const tr: Translation = {
     unfollowed: "{name} takibi bırakıldı",
     followFailed: "Takip edilemedi. Tekrar deneyin.",
     unfollowFailed: "Takip bırakılamadı. Tekrar deneyin.",
+    mergedFollowed: "“{name}”, {section} ile birleştirildi. Artık {section} takip ediliyor.",
+    mergedUnfollowed: "“{name}”, {section} ile birleştirildi. {section} takibi bırakıldı.",
+    mergedTryAgain: "“{name}”, {section} ile birleştirildi. Orada tekrar deneyin.",
     followLimit:
       "Takip edebileceğiniz bölüm ve konu sınırına ulaştınız. Önce bazılarını takipten çıkın.",
     followSignInBody:
@@ -1166,6 +1176,8 @@ const tr: Translation = {
     updating: "Güncelleniyor…",
     behind: "Yayımlanan sürüm bu panonun gerisinde.",
     publishing: "Yayımlanıyor…",
+    publishedHeld: "Kaydedildi. Başkaları görmeden önce bir moderatörü bekliyor.",
+    heldBody: "Başkaları görmeden önce bir moderatörü bekliyor.",
     publishedNote: "Yayımlandı. Bağlantısı olan herkes sıralayabilir.",
     publishedAsRanking:
       "O listenin sizin sıralamanız olarak yayınlandı. Akışta ikinci bir liste görünmez.",
@@ -1255,6 +1267,12 @@ const tr: Translation = {
       "“{title}” bir hesabın tutamayacağı kadar büyük, bu yüzden yedeklenmedi. Birkaç kartını çıkarırsanız yeniden yedeklenir.",
     refusedTooMany:
       "“{title}” yedeklenmedi: bir hesap en fazla 200 pano tutar. Yer açmak için bazılarını kalıcı olarak silin.",
+    refusedTooManyTiers:
+      "“{title}” bir hesabın tuttuğundan fazla seviyeye sahip, bu yüzden yedeklenmedi. Bir hesap 19 seviye ve havuzu tutar: bir seviyeyi silerseniz yeniden yedeklenir.",
+    refusedTooManyCards:
+      "“{title}” bir hesabın tuttuğundan fazla karta sahip, bu yüzden yedeklenmedi. Bir hesap pano başına 2000 kart tutar: birkaçını çıkarırsanız yeniden yedeklenir.",
+    refusedTooManyTrashed:
+      "“{title}” 2000’den fazla kaldırılmış kart barındırıyor, bu bir hesabın tuttuğundan fazla, bu yüzden yedeklenmedi. Çöp kutusunu boşaltırsanız yeniden yedeklenir.",
     now: "Şimdi yedekle",
     backingUp: "Yedekleniyor…",
     guestNote:

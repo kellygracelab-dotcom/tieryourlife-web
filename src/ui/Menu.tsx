@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   type FocusEvent,
@@ -26,6 +27,31 @@ interface MenuProps {
 export function Menu({ label, button, buttonClassName = "menu__button", children }: MenuProps) {
   const details = useRef<HTMLDetailsElement>(null);
   const list = useRef<HTMLUListElement>(null);
+
+  // The list hangs from the end of its button, which suits a button at the
+  // end of a row; a button near the start of a narrow window, as on a card in
+  // the feed's first column, pushed most of the list past the edge. Opened, the
+  // list is moved back inside the window, either way round, and again whenever
+  // the window changes its size or the phone is turned while it is open.
+  const fit = useCallback(() => {
+    const menu = details.current;
+    const items = list.current;
+    if (menu === null || items === null || !menu.open) return;
+    items.style.removeProperty("--menu-shift");
+    const { left, right } = items.getBoundingClientRect();
+    const room = document.documentElement.clientWidth;
+    const shift = left < EDGE ? EDGE - left : right > room - EDGE ? room - EDGE - right : 0;
+    if (shift !== 0) items.style.setProperty("--menu-shift", `${Math.round(shift)}px`);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("resize", fit);
+    window.addEventListener("orientationchange", fit);
+    return () => {
+      window.removeEventListener("resize", fit);
+      window.removeEventListener("orientationchange", fit);
+    };
+  }, [fit]);
 
   useEffect(() => {
     const onPress = (event: Event) => {
@@ -74,29 +100,8 @@ export function Menu({ label, button, buttonClassName = "menu__button", children
     if (menu !== null && next instanceof Node && !menu.contains(next)) menu.open = false;
   };
 
-  // The list hangs from the end of its button, which suits a button at the
-  // end of a row; a button near the start of a narrow window, as on a card in
-  // the feed's first column, pushed most of the list past the edge. Opened, the
-  // list is moved back inside the window, either way round.
-  const onToggle = () => {
-    const menu = details.current;
-    const items = list.current;
-    if (menu === null || items === null || !menu.open) return;
-    items.style.removeProperty("--menu-shift");
-    const { left, right } = items.getBoundingClientRect();
-    const room = document.documentElement.clientWidth;
-    const shift = left < EDGE ? EDGE - left : right > room - EDGE ? room - EDGE - right : 0;
-    if (shift !== 0) items.style.setProperty("--menu-shift", `${Math.round(shift)}px`);
-  };
-
   return (
-    <details
-      className="menu"
-      ref={details}
-      onKeyDown={onKeyDown}
-      onBlur={onBlur}
-      onToggle={onToggle}
-    >
+    <details className="menu" ref={details} onKeyDown={onKeyDown} onBlur={onBlur} onToggle={fit}>
       <summary className={buttonClassName} aria-label={label}>
         {button}
       </summary>

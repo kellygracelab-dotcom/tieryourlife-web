@@ -216,6 +216,22 @@ describe("ResultBar", () => {
     expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(2);
   });
 
+  it("tells a banned account until when it cannot rank, and offers no Try again", () => {
+    // 1 December 2026, midday UTC: the same date in any time zone the tests run in.
+    const until = Date.UTC(2026, 11, 1, 12);
+    show({ status: "failed", error: { kind: "banned", until } });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "You can’t rank lists until December 1, 2026.",
+    );
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+
+    show({ status: "failed", error: { kind: "banned", until: null } });
+    expect(screen.getAllByRole("alert")[1]).toHaveTextContent(
+      "You can’t rank lists at the moment.",
+    );
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
   it("says the list changed under the ranking, and reads it again instead of trying again", async () => {
     const reload = vi.fn();
     const onRetry = vi.fn();

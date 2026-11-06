@@ -87,7 +87,7 @@ const es: Translation = {
     facePhotoCaption: "Tu foto",
     faceNote:
       "Las imágenes de las tarjetas se quedan donde están en la web. Una foto de la galería se revisa y se guarda con tu cuenta.",
-    faceNotMade: "Esa imagen no puede ser tu cara. Elige otra.",
+    faceNotMade: "Esa imagen no puede ser tu foto. Elige otra.",
     title: "Ajustes",
     guestTitle: "Inicia sesión para cambiar tus ajustes.",
     guestBody:
@@ -322,7 +322,7 @@ const es: Translation = {
     needCards: "Añade al menos una tarjeta.",
     needTier: "Deja al menos un nivel.",
     needTierLabel: "Cada nivel necesita una etiqueta.",
-    tooManyTiers: "Como máximo 20 niveles.",
+    tooManyTiers: "Como máximo 19 niveles.",
     tooManyCards: "Como máximo 2000 tarjetas.",
     ready: "Todo listo para publicar.",
     startOver: "Empezar de nuevo",
@@ -457,6 +457,11 @@ const es: Translation = {
     withdraw: "Retirar",
     withdrawTitle: "¿Retirar tu ranking?",
     withdrawBody: "Desaparecerá de los rankings de esta lista.",
+    showMine: "Mostrar mi ranking a los demás",
+    signInToShow: "Inicia sesión para mostrar tu ranking",
+    shown: "Tu ranking ya está entre los de la lista",
+    showBanned:
+      "Un moderador retiró una de tus listas, así que por ahora no puedes mostrar rankings.",
     cancel: "Cancelar",
     withdrawFailed: "No se pudo retirar tu ranking. Inténtalo de nuevo.",
     failed: "No se pudieron cargar los rankings.",
@@ -546,6 +551,8 @@ const es: Translation = {
     failedOffline:
       "Sin conexión. No se perdió nada: lo que colocaste está a salvo en este dispositivo. Inténtalo de nuevo cuando vuelvas a estar en línea.",
     failedGone: "Esta lista ya no está disponible, así que la clasificación no se puede guardar.",
+    failedBanned: "Ahora mismo no puedes clasificar listas.",
+    failedBannedUntil: "No puedes clasificar listas hasta el {date}.",
     failedOther: "No se pudo guardar la clasificación. No se perdió nada. Inténtalo de nuevo.",
     failedChanged:
       "El autor cambió esta lista mientras la clasificabas. Vuelve a cargarla para clasificarla tal como está ahora.",
@@ -900,6 +907,9 @@ const es: Translation = {
     unfollowed: "Dejaste de seguir {name}",
     followFailed: "No se pudo seguir. Inténtalo de nuevo.",
     unfollowFailed: "No se pudo dejar de seguir. Inténtalo de nuevo.",
+    mergedFollowed: "«{name}» se fusionó con {section}. Ahora sigues {section}.",
+    mergedUnfollowed: "«{name}» se fusionó con {section}. Dejaste de seguir {section}.",
+    mergedTryAgain: "«{name}» se fusionó con {section}. Inténtalo de nuevo allí.",
     followLimit:
       "Ya sigues todas las secciones y temas que se pueden. Deja de seguir alguno primero.",
     followSignInBody: "Al seguir secciones y temas, sus nuevas listas te aparecen las primeras.",
@@ -1262,6 +1272,8 @@ const es: Translation = {
     updating: "Actualizando…",
     behind: "La versión publicada está desactualizada.",
     publishing: "Publicando…",
+    publishedHeld: "Guardada. Espera a un moderador antes de que otros puedan verla.",
+    heldBody: "Espera a un moderador antes de que otros puedan verla.",
     publishedNote: "Publicada. Cualquiera con el enlace puede ordenarla.",
     publishedAsRanking:
       "Publicada como tu ranking de esa lista. En el feed no aparece una segunda lista.",
@@ -1357,6 +1369,12 @@ const es: Translation = {
       "«{title}» es demasiado grande para guardarse en una cuenta, así que no tiene copia. Quítale algunas tarjetas y volverá a guardarse.",
     refusedTooMany:
       "«{title}» no tiene copia: una cuenta guarda hasta 200 tableros. Elimina algunos definitivamente para hacer sitio.",
+    refusedTooManyTiers:
+      "«{title}» tiene más niveles de los que guarda una cuenta, así que no tiene copia. Una cuenta guarda 19 y la reserva: quita un nivel y volverá a guardarse.",
+    refusedTooManyCards:
+      "«{title}» tiene más tarjetas de las que guarda una cuenta, así que no tiene copia. Una cuenta guarda 2000 por tablero: quítale algunas y volverá a guardarse.",
+    refusedTooManyTrashed:
+      "«{title}» conserva más de 2000 tarjetas quitadas, más de las que guarda una cuenta, así que no tiene copia. Vacía la papelera y volverá a guardarse.",
     now: "Guardar copia ahora",
     backingUp: "Guardando copia…",
     guestNote:

@@ -13,5 +13,18 @@
 export const EMULATOR_PROJECT = "demo-tieryourlife";
 
 export const EMULATOR_HOST = "127.0.0.1";
-export const AUTH_EMULATOR_PORT = 9099;
-export const STORAGE_EMULATOR_PORT = 9199;
+
+/**
+ * A port from the build's environment, or the proxy's own when it gives none:
+ * VITE_AUTH_EMULATOR_PORT and VITE_STORAGE_EMULATOR_PORT move a second suite
+ * on the same machine to its own emulators (e2e-proxy/README.md).
+ */
+export function portOr(value: string | undefined, fallback: number): number {
+  if (value === undefined || value.trim() === "") return fallback;
+  const port = Number(value);
+  return Number.isInteger(port) && port > 0 && port <= 65_535 ? port : fallback;
+}
+
+export const authEmulatorPort = (): number => portOr(import.meta.env.VITE_AUTH_EMULATOR_PORT, 9099);
+export const storageEmulatorPort = (): number =>
+  portOr(import.meta.env.VITE_STORAGE_EMULATOR_PORT, 9199);

@@ -6,6 +6,7 @@ import {
   creditOf,
   itemsIn,
   liveItems,
+  MAX_RANKED_TIERS,
   newBoard,
   poolTier,
   rankedTiers,
@@ -18,11 +19,19 @@ import {
 /** What stands between a board and the feed, in the order the settings show things. */
 export type PublishProblem = "category" | "noItems" | "tooManyTiers" | "tooManyItems";
 
+/**
+ * The ranked tiers a list may go out with. The feed takes nineteen on a new
+ * list (400 TOO_MANY_TIERS past that), the same a board ranks beside its
+ * pool; an Update may keep the twenty an older list was published with.
+ */
+export const publishTierLimitOf = (board: Board): number =>
+  board.publishedId === null ? MAX_RANKED_TIERS : BOARD_LIMITS.tiers;
+
 export function publishProblemsOf(board: Board): PublishProblem[] {
   const problems: PublishProblem[] = [];
   if (board.category === null) problems.push("category");
   if (liveItems(board).length === 0) problems.push("noItems");
-  if (rankedTiers(board).length > BOARD_LIMITS.tiers) problems.push("tooManyTiers");
+  if (rankedTiers(board).length > publishTierLimitOf(board)) problems.push("tooManyTiers");
   if (liveItems(board).length > BOARD_LIMITS.items) problems.push("tooManyItems");
   return problems;
 }
@@ -67,6 +76,8 @@ export function coverOf(
 function topicOf(board: Board): Pick<PublishRequest, "topicId" | "noTopic" | "newTopic"> {
   const topic = board.topic;
   if (topic === null) return board.topicOff === true ? { noTopic: true } : {};
+  // Learnt from a moderator's move, it is the list's: said, it would read as the person's choice.
+  if (topic.learned === true) return {};
   return topic.id === null ? { newTopic: topic.name } : { topicId: topic.id };
 }
 
@@ -125,7 +136,11 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
   const base = newBoard(nextUid(), makings.title, now, nextUid);
   const pool = poolTier(base);
   if (pool === null) return base;
-  const tiers = makings.tiers.map((tier, position) => ({
+  // A board holds the pool besides its ranked tiers, and the account refuses
+  // one tier more than that on every back-up: an older list ranking twenty
+  // would never be kept. The tiers past the last a board may rank give their
+  // cards, in order, to that last one.
+  const tiers = makings.tiers.slice(0, MAX_RANKED_TIERS).map((tier, position) => ({
     uid: nextUid(),
     position,
     label: tier.label,
@@ -135,11 +150,15 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
     isPool: false,
   }));
   const placed = new Map<number, { tierUid: string; position: number }>();
+  const filled = new Map<string, number>();
   (makings.rows ?? []).forEach((row, tierIndex) => {
-    const tier = tiers[tierIndex];
-    if (tier === undefined) return;
-    row.forEach((cardIndex, position) => {
-      if (!placed.has(cardIndex)) placed.set(cardIndex, { tierUid: tier.uid, position });
+    const tier = tiers[Math.min(tierIndex, MAX_RANKED_TIERS - 1)];
+    if (tier === undefined || tierIndex >= makings.tiers.length) return;
+    row.forEach((cardIndex) => {
+      if (placed.has(cardIndex)) return;
+      const position = filled.get(tier.uid) ?? 0;
+      placed.set(cardIndex, { tierUid: tier.uid, position });
+      filled.set(tier.uid, position + 1);
     });
   });
   let inPool = 0;

@@ -84,7 +84,7 @@ const de: Translation = {
     facePhotoCaption: "Dein Foto",
     faceNote:
       "Kartenbilder bleiben, wo sie im Netz liegen. Ein Foto aus der Galerie wird geprüft und bei deinem Konto aufbewahrt.",
-    faceNotMade: "Dieses Bild kann nicht dein Gesicht sein. Wähle ein anderes.",
+    faceNotMade: "Dieses Bild kann nicht dein Profilbild sein. Wähle ein anderes.",
     title: "Einstellungen",
     guestTitle: "Melde dich an, um deine Einstellungen zu ändern.",
     guestBody:
@@ -319,7 +319,7 @@ const de: Translation = {
     needCards: "Füge mindestens eine Karte hinzu.",
     needTier: "Behalte mindestens eine Stufe.",
     needTierLabel: "Jede Stufe braucht eine Bezeichnung.",
-    tooManyTiers: "Höchstens 20 Stufen.",
+    tooManyTiers: "Höchstens 19 Stufen.",
     tooManyCards: "Höchstens 2000 Karten.",
     ready: "Bereit zum Veröffentlichen.",
     startOver: "Von vorn",
@@ -452,13 +452,18 @@ const de: Translation = {
     seedStart: "Verschieb eine Karte auf dem Board, um deine Version zu beginnen.",
   },
   rankings: {
-    title: "Reihungen",
+    title: "Ranglisten",
     body: "Dieselben Karten, von jemandem anders gesetzt. Wähle, wessen Reihen gezeigt werden.",
     author: "Autor",
     you: "Du",
     withdraw: "Zurückziehen",
     withdrawTitle: "Deine Reihung zurückziehen?",
     withdrawBody: "Sie verschwindet aus den Reihungen dieser Liste.",
+    showMine: "Meine Rangliste anderen zeigen",
+    signInToShow: "Melde dich an, um deine Rangliste zu zeigen",
+    shown: "Deine Rangliste steht jetzt bei den Ranglisten der Liste",
+    showBanned:
+      "Ein Moderator hat eine deiner Listen entfernt, deshalb kannst du vorerst keine Ranglisten zeigen.",
     cancel: "Abbrechen",
     withdrawFailed: "Die Reihung konnte nicht zurückgezogen werden. Versuch es noch einmal.",
     failed: "Die Reihungen konnten nicht geladen werden.",
@@ -543,6 +548,8 @@ const de: Translation = {
       "Keine Verbindung. Nichts ist verloren: Deine Platzierungen sind auf diesem Gerät sicher. Versuch es erneut, sobald du wieder online bist.",
     failedGone:
       "Diese Liste ist nicht mehr verfügbar, also kann die Rangliste nicht behalten werden.",
+    failedBanned: "Du kannst gerade keine Ranglisten erstellen.",
+    failedBannedUntil: "Du kannst bis {date} keine Ranglisten erstellen.",
     failedOther:
       "Die Rangliste konnte nicht gespeichert werden. Nichts ist verloren. Versuch es noch einmal.",
     failedChanged:
@@ -882,6 +889,10 @@ const de: Translation = {
     unfollowed: "Du folgst {name} nicht mehr",
     followFailed: "Folgen fehlgeschlagen. Versuch es noch einmal.",
     unfollowFailed: "Nicht mehr folgen fehlgeschlagen. Versuch es noch einmal.",
+    mergedFollowed: "„{name}“ wurde mit {section} zusammengeführt. Du folgst jetzt {section}.",
+    mergedUnfollowed:
+      "„{name}“ wurde mit {section} zusammengeführt. Du folgst {section} nicht mehr.",
+    mergedTryAgain: "„{name}“ wurde mit {section} zusammengeführt. Versuch es dort noch einmal.",
     followLimit:
       "Du folgst schon so vielen Rubriken und Themen, wie es geht. Folge zuerst ein paar nicht mehr.",
     followSignInBody:
@@ -1205,6 +1216,8 @@ const de: Translation = {
     updating: "Wird aktualisiert…",
     behind: "Die veröffentlichte Fassung ist älter als dieses Board.",
     publishing: "Wird veröffentlicht…",
+    publishedHeld: "Gespeichert. Sie wartet auf einen Moderator, bevor andere sie sehen können.",
+    heldBody: "Sie wartet auf einen Moderator, bevor andere sie sehen können.",
     publishedNote: "Veröffentlicht. Alle mit dem Link können sie einordnen.",
     publishedAsRanking:
       "Draußen als deine Reihung dieser Liste. Im Feed erscheint keine zweite Liste.",
@@ -1296,6 +1309,12 @@ const de: Translation = {
       "„{title}“ ist zu groß für ein Konto und wird nicht gesichert. Nimm ein paar Karten heraus, dann wird das Board wieder gesichert.",
     refusedTooMany:
       "„{title}“ wird nicht gesichert: Ein Konto behält bis zu 200 Boards. Entferne einige endgültig, um Platz zu schaffen.",
+    refusedTooManyTiers:
+      "„{title}“ hat mehr Stufen, als ein Konto behält, und wird nicht gesichert. Ein Konto behält 19 und den Pool: Entferne eine Stufe, dann wird das Board wieder gesichert.",
+    refusedTooManyCards:
+      "„{title}“ hat mehr Karten, als ein Konto behält, und wird nicht gesichert. Ein Konto behält 2000 pro Board: Nimm ein paar Karten heraus, dann wird das Board wieder gesichert.",
+    refusedTooManyTrashed:
+      "„{title}“ enthält mehr als 2000 entfernte Karten, mehr als ein Konto behält, und wird nicht gesichert. Leere den Papierkorb, dann wird das Board wieder gesichert.",
     now: "Jetzt sichern",
     backingUp: "Wird gesichert…",
     guestNote:

@@ -107,4 +107,39 @@ describe("Menu", () => {
     expect(at(100)).toBe("");
     delete (document.documentElement as { clientWidth?: number }).clientWidth;
   });
+
+  // QA W45: the shift was measured only when the menu opened, and a stale one
+  // pushed the list out when the window narrowed or the phone was turned.
+  it("moves an open list back inside when the window changes size or turns", () => {
+    render(<Page />);
+    const list = document.querySelector<HTMLElement>(".menu__list")!;
+    const windowOf = (width: number) =>
+      Object.defineProperty(document.documentElement, "clientWidth", {
+        value: width,
+        configurable: true,
+      });
+    let left = 968;
+    list.getBoundingClientRect = () => ({ left, right: left + 240 }) as DOMRect;
+    windowOf(1240);
+    details().open = true;
+    fireEvent(details(), new Event("toggle"));
+    expect(list.style.getPropertyValue("--menu-shift")).toBe("");
+
+    windowOf(960);
+    fireEvent(window, new Event("resize"));
+    expect(list.style.getPropertyValue("--menu-shift")).toBe("-256px");
+
+    // Turned upright: the button is elsewhere now, and the old shift goes.
+    left = 100;
+    windowOf(414);
+    fireEvent(window, new Event("orientationchange"));
+    expect(list.style.getPropertyValue("--menu-shift")).toBe("");
+
+    // A closed menu is left alone.
+    details().open = false;
+    left = -50;
+    fireEvent(window, new Event("resize"));
+    expect(list.style.getPropertyValue("--menu-shift")).toBe("");
+    delete (document.documentElement as { clientWidth?: number }).clientWidth;
+  });
 });

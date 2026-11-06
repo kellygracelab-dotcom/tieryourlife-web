@@ -143,13 +143,20 @@ function barText(trouble: Trouble, mode: SectionEditorProps["mode"]): string {
  * Leaving the page while a proposal is open, by Back or by a link in it such
  * as Open it under a taken name, waits for the same question as closing it.
  * Only a proposal has it: an admin's pane guards its own page, and a router
- * keeps one guard at a time.
+ * keeps one guard at a time. A reload, or a Back that leaves the site's
+ * first page in the tab, is the browser's to ask about, so it is asked to.
  */
 function LeaveGuard({ when, onBlocked }: { when: boolean; onBlocked: (blocker: Blocker) => void }) {
   const blocker = useBlocker(when);
   useEffect(() => {
     if (blocker.state === "blocked") onBlocked(blocker);
   }, [blocker, onBlocked]);
+  useEffect(() => {
+    if (!when) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [when]);
   return null;
 }
 

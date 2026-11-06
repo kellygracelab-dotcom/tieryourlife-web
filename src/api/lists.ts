@@ -93,6 +93,8 @@ export interface MyList extends ListSummary {
   proposedSectionName?: string | null;
   /** The uid of the board it was published from, on lists published since the server kept it. */
   boardUid?: string | null;
+  /** Kept, but held for a moderator: out of the feed, and its link answers nobody yet. */
+  underReview?: boolean;
 }
 
 /** The lists this account published from the app, newest first; the backend orders them. */
@@ -162,6 +164,11 @@ export interface Published {
    * and is sent again over it, or the list keeps what the earlier one sent.
    */
   existing?: boolean;
+  /**
+   * True when the list was kept but starts out of the feed, held until staff
+   * look: its link answers 404 to everybody, the author too.
+   */
+  underReview?: boolean;
 }
 
 export function publish(client: ApiClient, request: PublishRequest): Promise<Published> {

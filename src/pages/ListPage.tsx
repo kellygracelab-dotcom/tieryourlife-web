@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
 import type { ReaderRanking } from "../api/community";
+import { errorOf } from "../api/errors";
 import { tierWordsToSend } from "../api/rank";
 import { isOwnList, type BasedOn, type PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
@@ -40,7 +41,9 @@ import type { Rows } from "../features/tierboard/model";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
 import { ReadOnlyBoard, UnrankedPool } from "../features/tierboard/ReadOnlyBoard";
 import {
+  keepListRanking,
   loadList,
+  loadListAsWritten,
   preloadHidesAuthor,
   report as sendReport,
   unpublish as unpublishList,
@@ -270,7 +273,7 @@ function OpenList({
   repository,
   onListChanged,
 }: ListPageProps & { list: PublishedList; onListChanged?: () => void }) {
-  const { account } = useSession();
+  const { account, signIn } = useSession();
   const { hidden } = useHidden();
   // The author has nobody's arrangement to compare with but their own: they
   // see the list as they published it, and the way to change it.
@@ -468,9 +471,73 @@ function OpenList({
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
   // Who else ranked it is a line of the menu, the one place the number is said.
   // Always there, as in the app: the author's own ranking heads the sheet.
+  // Readers this page added to the count: one's own, shown to others here for the first time.
+  const [added, setAdded] = useState(0);
   const rankingsEntry = outOfSight
     ? null
-    : { count: list.rankingCount ?? 0, open: () => setSheet(true) };
+    : { count: (list.rankingCount ?? 0) + added, open: () => setSheet(true) };
+
+  // Mine among the list's rankings, as the app's Show my ranking to others:
+  // only somebody else's list, only once Mine is arranged, and only signed in.
+  // Its rows name the cards by their place in the list, so the list is read
+  // again first; one its author changed since sends nothing.
+  const [showing, setShowing] = useState(false);
+  const arranged = mineRows !== null && mineRows.some((row) => row.length > 0);
+  const showToOthers = async () => {
+    if (account?.kind !== "signedIn") {
+      void signIn();
+      return;
+    }
+    const rows = loadPlacedDraft(localStorageStore, scopeOf(list));
+    if (showing || rows === null) return;
+    setShowing(true);
+    try {
+      const fresh = await loadListAsWritten(list.id);
+      if (fresh.updatedAt !== list.updatedAt) {
+        setNotice({
+          text: strings.rank.failedChanged,
+          ...(onListChanged === undefined
+            ? {}
+            : { action: { text: strings.rank.loadAgain, onClick: onListChanged } }),
+        });
+        return;
+      }
+      const labels = loadDraftLabels(localStorageStore, scopeOf(list));
+      const ranking = await keepListRanking(withLabels(list, labels), rows);
+      rankings.put(ranking);
+      if (ranking.created === true) setAdded((n) => n + 1);
+      setNotice({ text: strings.rankings.shown });
+    } catch (reason: unknown) {
+      const error = errorOf(reason);
+      setNotice(
+        error.kind === "banned"
+          ? { text: strings.rankings.showBanned }
+          : error.kind === "notSignedIn"
+            ? {
+                text: strings.rankings.signInToShow,
+                action: { text: strings.nav.signIn, onClick: () => void signIn() },
+              }
+            : {
+                text:
+                  error.kind === "notFound"
+                    ? strings.rank.failedGone
+                    : error.kind === "offline"
+                      ? strings.rank.failedOffline
+                      : strings.rank.failedOther,
+              },
+      );
+    } finally {
+      setShowing(false);
+    }
+  };
+  const showMine =
+    own || outOfSight || !arranged
+      ? null
+      : {
+          signedIn: account?.kind === "signedIn",
+          busy: showing,
+          show: () => void showToOthers(),
+        };
 
   return (
     <article
@@ -539,6 +606,7 @@ function OpenList({
                 repository={repository}
                 rankings={rankingsEntry}
                 shown={shownPlacing}
+                showMine={showMine}
               />
             </>
           )}

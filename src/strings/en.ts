@@ -311,7 +311,7 @@ export const en = {
     needCards: "Add at least one card.",
     needTier: "Keep at least one tier.",
     needTierLabel: "Every tier needs a label.",
-    tooManyTiers: "At most 20 tiers.",
+    tooManyTiers: "At most 19 tiers.",
     tooManyCards: "At most 2000 cards.",
     ready: "Ready to publish.",
     startOver: "Start over",
@@ -446,6 +446,10 @@ export const en = {
     withdraw: "Withdraw",
     withdrawTitle: "Withdraw your ranking?",
     withdrawBody: "It leaves this list’s rankings.",
+    showMine: "Show my ranking to others",
+    signInToShow: "Sign in to show your ranking",
+    shown: "Your ranking is in the list’s rankings",
+    showBanned: "A moderator took down one of your lists, so you cannot show rankings for now.",
     cancel: "Cancel",
     withdrawFailed: "Couldn’t withdraw your ranking. Try again.",
     failed: "Couldn’t load the rankings.",
@@ -527,6 +531,8 @@ export const en = {
     failedOffline:
       "No connection. Nothing was lost: your placements are safe on this device. Try again once you are back online.",
     failedGone: "This list isn’t available anymore, so the ranking cannot be kept.",
+    failedBanned: "You can’t rank lists at the moment.",
+    failedBannedUntil: "You can’t rank lists until {date}.",
     failedOther: "Could not save the ranking. Nothing was lost. Try again.",
     failedChanged:
       "The author changed this list while you were ranking it. Load it again to rank it as it is now.",
@@ -827,6 +833,9 @@ export const en = {
     unfollowed: "Unfollowed {name}",
     followFailed: "Couldn’t follow. Try again.",
     unfollowFailed: "Couldn’t unfollow. Try again.",
+    mergedFollowed: "“{name}” was merged into {section}. You follow {section} now.",
+    mergedUnfollowed: "“{name}” was merged into {section}. You no longer follow {section}.",
+    mergedTryAgain: "“{name}” was merged into {section}. Try again there.",
     followLimit: "You follow as many sections and topics as you can. Unfollow some first.",
     followSignInBody:
       "Following keeps new lists from sections and topics you like at the top of your feed.",
@@ -1138,6 +1147,8 @@ export const en = {
     updating: "Updating…",
     behind: "The published copy is behind this board.",
     publishing: "Publishing…",
+    publishedHeld: "Saved. It waits for a moderator before others can see it.",
+    heldBody: "It waits for a moderator before others can see it.",
     publishedNote: "Published. Anyone with the link can rank it.",
     publishedAsRanking: "Out as your ranking of that list. The feed shows no second list.",
     unpublished: "Unpublished. The link no longer works.",
@@ -1225,6 +1236,12 @@ export const en = {
       "“{title}” is too big for an account to keep, so it is not backed up. Take some cards off it and it goes up again.",
     refusedTooMany:
       "“{title}” is not backed up: an account keeps up to 200 boards. Removing some for good makes room.",
+    refusedTooManyTiers:
+      "“{title}” has more tiers than an account keeps, so it is not backed up. An account keeps 19 and the pool: remove a tier and it goes up again.",
+    refusedTooManyCards:
+      "“{title}” has more cards than an account keeps, so it is not backed up. An account keeps 2000 on a board: take some cards off it and it goes up again.",
+    refusedTooManyTrashed:
+      "“{title}” holds more than 2000 removed cards, more than an account keeps, so it is not backed up. Emptying the trash clears them, and it goes up again.",
     now: "Back up now",
     backingUp: "Backing up…",
     guestNote:

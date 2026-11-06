@@ -161,6 +161,12 @@ describe("parseBoard", () => {
     const topicOf = (topic: unknown) =>
       parseBoard({ uid: "b", topic, tiers: [{ uid: "t", label: "S" }] })?.topic;
     expect(topicOf({ id: "t1", name: "Pokémon" })).toEqual({ id: "t1", name: "Pokémon" });
+    // Learnt from a moderator's move, it stays learnt after a reload.
+    expect(topicOf({ id: "t1", name: "Pokémon", learned: true })).toEqual({
+      id: "t1",
+      name: "Pokémon",
+      learned: true,
+    });
     expect(topicOf({ id: "", name: "Pokémon" })).toBeNull();
     expect(topicOf({ id: "t1" })).toBeNull();
     // A name proposed here, not sent yet, and one sent and waiting.

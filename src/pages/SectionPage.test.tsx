@@ -11,6 +11,7 @@ import { createSectionsStore, type SectionsDeps } from "../features/sections/use
 import type { SignInOutcome } from "../lib/signIn";
 import { memoryStore } from "../lib/storage";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
+import { sayOnTheSite, siteNotice } from "../ui/siteNotice";
 import { SectionPage } from "./SectionPage";
 import { SectionsPage } from "./SectionsPage";
 import type { TopicDeps } from "./SectionPageState";
@@ -94,6 +95,7 @@ function open(path: string, account: Session["account"] = member) {
 }
 
 beforeEach(() => {
+  sayOnTheSite(null);
   report.mockReset();
   report.mockResolvedValue(undefined);
   load.mockReset();
@@ -203,6 +205,70 @@ describe("SectionPage", () => {
     // The old page may still be on screen for a moment: wait for the new one's heading.
     expect(await screen.findByRole("heading", { level: 1, name: /Games/ })).toBeInTheDocument();
     expect(screen.queryByText("Couldn’t follow. Try again.")).toBeNull();
+  });
+
+  // QA W44: the press was lost on the way, and nothing said why the page changed.
+  it("carries a Follow of a merged section over to the one it went into, and says so", async () => {
+    let followsGames = false;
+    sectionsDeps.load.mockImplementation(async () => ({
+      sections: [stats("games", { following: followsGames }), stats("other")],
+    }));
+    sectionsDeps.follow.mockImplementation(async (id) => {
+      if (id === "anime") throw new ApiFailure({ kind: "merged", into: "games", topic: null });
+      followsGames = true;
+      return { following: true };
+    });
+    const router = open("/s/anime");
+    await tiles();
+    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/s/games"));
+    await waitFor(() => expect(sectionsDeps.follow).toHaveBeenLastCalledWith("games"));
+    await waitFor(() =>
+      expect(siteNotice()?.text).toBe("“Anime” was merged into Games. You follow Games now."),
+    );
+    expect(
+      await screen.findByRole("button", { name: /Following/, pressed: true }),
+    ).toBeInTheDocument();
+  });
+
+  // QA P16: the backend now answers an Unfollow of a merged section 410, its
+  // followers moved to the section it went into: that one is left instead.
+  it("carries an Unfollow of a merged section over to the one it went into, with Undo", async () => {
+    sectionsDeps.load.mockResolvedValue({
+      sections: [
+        stats("games", { following: true }),
+        stats("anime", { following: true }),
+        stats("other", { listCount: 900 }),
+      ],
+    });
+    sectionsDeps.unfollow.mockImplementation(async (id) => {
+      if (id === "anime") throw new ApiFailure({ kind: "merged", into: "games", topic: null });
+      return { following: false };
+    });
+    const router = open("/s/anime");
+    await tiles();
+    await userEvent.click(await screen.findByRole("button", { name: /Following/ }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/s/games"));
+    await waitFor(() => expect(sectionsDeps.unfollow).toHaveBeenLastCalledWith("games"));
+    await waitFor(() =>
+      expect(siteNotice()?.text).toBe("“Anime” was merged into Games. You no longer follow Games."),
+    );
+    act(() => siteNotice()?.action?.onClick());
+    await waitFor(() => expect(sectionsDeps.follow).toHaveBeenLastCalledWith("games"));
+  });
+
+  it("says to press again there when the carried-over follow does not go through", async () => {
+    sectionsDeps.follow.mockImplementation(async (id) => {
+      throw id === "anime"
+        ? new ApiFailure({ kind: "merged", into: "games", topic: null })
+        : new ApiFailure({ kind: "offline" });
+    });
+    open("/s/anime");
+    await tiles();
+    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await waitFor(() =>
+      expect(siteNotice()?.text).toBe("“Anime” was merged into Games. Try again there."),
+    );
   });
 
   it("offers no Follow until whom the person follows is known", async () => {
@@ -490,6 +556,24 @@ describe("TopicPage", () => {
     await userEvent.click(await screen.findByLabelText("More about Mario karts"));
     await userEvent.click(screen.getByRole("button", { name: "Not this topic" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("nothing was sent"));
+  });
+
+  // QA W43: the word was said only on the topic page, which the reader had left.
+  it("says on the site that the word did not go, once the reader has left the topic", async () => {
+    let refuse: (reason: unknown) => void = () => undefined;
+    report.mockReturnValue(
+      new Promise<void>((_, reject) => {
+        refuse = reject;
+      }),
+    );
+    load.mockResolvedValue({ lists: [summary("l1", "Mario karts", "u5")], nextCursor: null });
+    const router = open("/s/games/t/t2");
+    await userEvent.click(await screen.findByLabelText("More about Mario karts"));
+    await userEvent.click(screen.getByRole("button", { name: "Not this topic" }));
+    await act(() => router.navigate("/"));
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    await act(async () => refuse(new ApiFailure({ kind: "offline" })));
+    expect(siteNotice()?.text).toMatch(/nothing was sent/);
   });
 
   it("reports a list of the topic and hides it at once", async () => {

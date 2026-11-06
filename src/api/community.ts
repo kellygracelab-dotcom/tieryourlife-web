@@ -86,6 +86,9 @@ export interface ReaderRanking {
   mine: boolean;
 }
 
+/** One's own placing as the backend kept it among the list's rankings; `created` when it was not there before. */
+export type ShownRanking = ReaderRanking & { created?: boolean };
+
 export interface RankingsPage {
   rankings: ReaderRanking[];
   nextCursor: string | null;
@@ -133,14 +136,10 @@ export function keepListRanking(
   client: ApiClient,
   listId: string,
   placing: { tierLabels: string[]; rows: number[][] },
-): Promise<ReaderRanking> {
-  return client.request<ReaderRanking>(
-    "PUT",
-    `/lists/${encodeURIComponent(listId)}/rankings/mine`,
-    {
-      body: placing,
-    },
-  );
+): Promise<ShownRanking> {
+  return client.request<ShownRanking>("PUT", `/lists/${encodeURIComponent(listId)}/rankings/mine`, {
+    body: placing,
+  });
 }
 
 /** Takes the caller's own placing of a list down; the backend answers 204 either way. */

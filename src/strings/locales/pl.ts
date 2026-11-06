@@ -99,7 +99,7 @@ const pl: Translation = {
     facePhotoCaption: "Twoje zdjęcie",
     faceNote:
       "Obrazy kart zostają tam, gdzie są w sieci. Zdjęcie z galerii jest sprawdzane i przechowywane przy Twoim koncie.",
-    faceNotMade: "Ten obraz nie może być Twoją twarzą. Wybierz inny.",
+    faceNotMade: "To zdjęcie nie może być Twoim awatarem. Wybierz inne.",
     title: "Ustawienia",
     guestTitle: "Zaloguj się, aby zmieniać ustawienia.",
     guestBody:
@@ -329,7 +329,7 @@ const pl: Translation = {
     needCards: "Dodaj co najmniej jedną kartę.",
     needTier: "Zostaw co najmniej jeden poziom.",
     needTierLabel: "Każdy poziom potrzebuje etykiety.",
-    tooManyTiers: "Najwyżej 20 poziomów.",
+    tooManyTiers: "Najwyżej 19 poziomów.",
     tooManyCards: "Najwyżej 2000 kart.",
     ready: "Gotowe do publikacji.",
     startOver: "Zacznij od nowa",
@@ -466,6 +466,11 @@ const pl: Translation = {
     withdraw: "Wycofaj",
     withdrawTitle: "Wycofać twój ranking?",
     withdrawBody: "Zniknie z rankingów tej listy.",
+    showMine: "Pokaż mój ranking innym",
+    signInToShow: "Zaloguj się, aby pokazać swój ranking",
+    shown: "Twój ranking jest wśród rankingów listy",
+    showBanned:
+      "Moderator usunął jedną z twoich list, więc na razie nie możesz pokazywać rankingów.",
     cancel: "Anuluj",
     withdrawFailed: "Nie udało się wycofać rankingu. Spróbuj ponownie.",
     failed: "Nie udało się wczytać rankingów.",
@@ -551,6 +556,8 @@ const pl: Translation = {
     failedOffline:
       "Brak połączenia. Nic nie przepadło: twoje umieszczenia są bezpieczne na tym urządzeniu. Spróbuj ponownie, gdy wrócisz do sieci.",
     failedGone: "Ta lista nie jest już dostępna, więc rankingu nie da się zachować.",
+    failedBanned: "W tej chwili nie możesz tworzyć rankingów list.",
+    failedBannedUntil: "Nie możesz tworzyć rankingów list do {date}.",
     failedOther: "Nie udało się zapisać rankingu. Nic nie przepadło. Spróbuj ponownie.",
     failedChanged:
       "Autor zmienił tę listę w trakcie układania rankingu. Wczytaj ją ponownie, aby ułożyć ją w obecnej wersji.",
@@ -919,6 +926,9 @@ const pl: Translation = {
     unfollowed: "Nie obserwujesz już: {name}",
     followFailed: "Nie udało się zaobserwować. Spróbuj ponownie.",
     unfollowFailed: "Nie udało się przestać obserwować. Spróbuj ponownie.",
+    mergedFollowed: "„{name}” połączono z działem {section}. Obserwujesz teraz: {section}.",
+    mergedUnfollowed: "„{name}” połączono z działem {section}. Nie obserwujesz już: {section}.",
+    mergedTryAgain: "„{name}” połączono z działem {section}. Spróbuj ponownie tam.",
     followLimit:
       "Obserwujesz już tyle działów i tematów, ile się da. Najpierw przestań obserwować kilka z nich.",
     followSignInBody:
@@ -1316,6 +1326,8 @@ const pl: Translation = {
     updating: "Aktualizowanie…",
     behind: "Opublikowana wersja jest starsza niż ta lista.",
     publishing: "Publikowanie…",
+    publishedHeld: "Zapisana. Czeka na moderatora, zanim inni będą mogli ją zobaczyć.",
+    heldBody: "Czeka na moderatora, zanim inni będą mogli ją zobaczyć.",
     publishedNote: "Opublikowano. Każdy z linkiem może ją ułożyć.",
     publishedAsRanking:
       "Opublikowana jako twój ranking tej listy. W kanale nie pojawia się druga lista.",
@@ -1418,6 +1430,12 @@ const pl: Translation = {
       "„{title}” jest za duża, by konto ją przechowało, więc nie ma kopii. Usuń z niej kilka kart, a kopia znów się zapisze.",
     refusedTooMany:
       "„{title}” nie ma kopii: konto przechowuje do 200 tablic. Usuń kilka na stałe, by zrobić miejsce.",
+    refusedTooManyTiers:
+      "„{title}” ma więcej poziomów, niż konto przechowuje, więc nie ma kopii. Konto przechowuje 19 poziomów i pulę: usuń poziom, a kopia znów się zapisze.",
+    refusedTooManyCards:
+      "„{title}” ma więcej kart, niż konto przechowuje, więc nie ma kopii. Konto przechowuje 2000 kart na tablicy: usuń kilka, a kopia znów się zapisze.",
+    refusedTooManyTrashed:
+      "„{title}” trzyma ponad 2000 usuniętych kart, więcej, niż konto przechowuje, więc nie ma kopii. Opróżnij kosz, a kopia znów się zapisze.",
     now: "Zapisz kopię teraz",
     backingUp: "Zapisywanie kopii…",
     guestNote:

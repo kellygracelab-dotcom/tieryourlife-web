@@ -75,6 +75,7 @@ import {
   houseLinkOf,
   houseLinkOfParam,
   linkToHouse,
+  markHouseSeen,
   markHouseSent,
   unlinkFromHouse,
 } from "../features/boards/houseList";
@@ -486,9 +487,10 @@ function OpenBoard({
   };
 
   // Out as the house: the board is tied to the list from now on, and the address says which.
-  const sentToHouse = (what: "published" | "updated", id: string) => {
+  const sentToHouse = (what: "published" | "updated", id: string, updatedAt: number | null) => {
     linkToHouse(uid, id, houseStore);
     markHouseSent(uid, latest().editedAt, houseStore);
+    markHouseSeen(uid, updatedAt, houseStore);
     void navigate(houseBoardPath(uid, id), { replace: true });
     setNotice({
       text: what === "published" ? strings.admin.housePublished : strings.admin.houseUpdated,
@@ -646,7 +648,8 @@ function OpenBoard({
   // The picture of the board as the phone draws it, every tier and the pool;
   // the address under it is the published list's when there is one, the site's
   // otherwise. A house board is tied to its list by the house's link, not by an id of its own.
-  const listId = board.publishedId ?? houseListId;
+  // A list held for a moderator answers 404 to everybody: the picture names the site instead.
+  const listId = board.heldForReview === true ? null : (board.publishedId ?? houseListId);
   const shareBoard = () =>
     share(
       view.list,
@@ -771,11 +774,13 @@ function OpenBoard({
               text:
                 what === "unpublished"
                   ? strings.boards.unpublished
-                  : what === "updated"
-                    ? strings.owner.saved
-                    : what === "ranking"
-                      ? strings.boards.publishedAsRanking
-                      : strings.boards.publishedNote,
+                  : what === "held"
+                    ? strings.boards.publishedHeld
+                    : what === "updated"
+                      ? strings.owner.saved
+                      : what === "ranking"
+                        ? strings.boards.publishedAsRanking
+                        : strings.boards.publishedNote,
             })
           }
           // A house list never goes out under the person's name: its sheet offers no Public switch.

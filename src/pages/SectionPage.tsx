@@ -3,18 +3,31 @@ import { PageTitle } from "../app/pageTitle";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { useSession } from "../app/session";
 import type { Topic } from "../api/sections";
+import { isCategory } from "../api/types";
 import { FollowButton } from "../features/community/FollowButton";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
-import { sectionPath, topicPath, waitingPath, type Section } from "../features/sections/model";
+import {
+  builtInSection,
+  sectionPath,
+  topicPath,
+  waitingPath,
+  type Section,
+} from "../features/sections/model";
 import { TopicTiles } from "../features/sections/TopicTiles";
 import { SuggestTopicDialog } from "../features/sections/SuggestTopicDialog";
-import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
+import {
+  heldSection,
+  sectionsStore,
+  useSections,
+  type SectionsStore,
+} from "../features/sections/useSections";
 import { WaitingSheet } from "../features/sections/WaitingSheet";
 import { loadSection } from "../lib/api";
-import { strings } from "../strings";
+import { fill, strings } from "../strings";
 import { BackLink } from "../ui/BackLink";
 import { Icon } from "../ui/Icon";
+import { sayOnTheSite } from "../ui/siteNotice";
 import { Spinner } from "../ui/Spinner";
 import { HeadArt, SectionRoute, SortRow, type SectionPageProps } from "./SectionPageParts";
 import {
@@ -49,16 +62,39 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
       // Merged while the page was open: its follows and its address are the
       // other section's now, so the page goes there, as a reload would take it.
       if (refused.kind === "merged" && refused.into !== null) {
+        const into = refused.into;
         store.invalidate();
-        const to =
-          refused.topic === null
-            ? sectionPath(refused.into)
-            : topicPath(refused.into, refused.topic);
+        const to = refused.topic === null ? sectionPath(into) : topicPath(into, refused.topic);
         void navigate(to, { replace: true });
+        carryOver(into, following);
         return;
       }
       failed(refused, following);
     });
+  // The press is not lost: it goes to the section this one went into, as the
+  // app's follow of a merged id does (the backend moved this one's followers
+  // there, so an Unfollow leaves that one), and the site says so, since this
+  // page has given way to that one's.
+  const carryOver = (into: string, following: boolean) => {
+    const target =
+      heldSection(store.get(), into) ?? (isCategory(into) ? builtInSection(into) : null);
+    const words = { name: section.name, section: target?.name ?? into };
+    void store.setFollowing(into, following).then((again) => {
+      if (again !== null) {
+        sayOnTheSite({ text: fill(strings.sections.mergedTryAgain, words) });
+      } else if (following) {
+        sayOnTheSite({ text: fill(strings.sections.mergedFollowed, words) });
+      } else {
+        sayOnTheSite({
+          text: fill(strings.sections.mergedUnfollowed, words),
+          action: {
+            text: strings.sections.undo,
+            onClick: () => void store.setFollowing(into, true),
+          },
+        });
+      }
+    });
+  };
   // Unknown until the backend has said whom this person follows: the nine
   // standing in before then say nobody does.
   const { account } = useSession();

@@ -31,6 +31,12 @@ export interface BoardTopic {
   name: string;
   /** Proposed and not yet decided by a moderator. */
   waiting?: boolean;
+  /**
+   * Learnt from the backend's answer (a moderator moved the list into it),
+   * not chosen here: a publish says nothing of it, so the move holds. Chosen
+   * in List settings, it is the person's again.
+   */
+  learned?: boolean;
 }
 
 /** The phone's and the backend's bounds on a topic's name. */
@@ -114,6 +120,12 @@ export interface Board {
    * backend kept a publish as that; publishedId stays null then. Never kept in the account.
    */
   rankingOf: string | null;
+  /**
+   * This device's: the backend kept the last publish or Update out of the
+   * feed until a moderator looks (`underReview`), so its link answers 404 to
+   * everybody. Absent otherwise. Never kept in the account.
+   */
+  heldForReview?: boolean;
   /** A game of Play in progress, kept in the account as the app keeps it; null when none is. */
   play: SyncedPlay | null;
 }
@@ -254,6 +266,28 @@ export const poolTier = (board: Board): BoardTier | null =>
 export const liveItems = (board: Board): BoardItem[] =>
   board.items.filter((item) => item.deletedAt === null);
 
+/**
+ * The cards an account keeps in a board's trash besides its live ones. The
+ * site trashes no card itself, but a board from the phone may bring some.
+ */
+export const BOARD_TRASH_LIMIT = 2000;
+
+/** What the account would refuse a board for, before it is sent. */
+export type BeyondAccount = "tooManyTiers" | "tooManyCards" | "tooManyTrashed";
+
+/**
+ * The account's own count, so a board it would refuse is named here instead
+ * of going up on every run: twenty tiers with the pool among them, up to
+ * 2000 live cards, and up to 2000 more in the trash. Null when it fits.
+ */
+export function beyondAccount(board: Board): BeyondAccount | null {
+  if (board.tiers.length > BOARD_LIMITS.tiers) return "tooManyTiers";
+  const live = liveItems(board).length;
+  if (live > BOARD_LIMITS.items) return "tooManyCards";
+  if (board.items.length - live > BOARD_TRASH_LIMIT) return "tooManyTrashed";
+  return null;
+}
+
 /** The cards of one tier, trash left out, in their order. */
 export const itemsIn = (board: Board, tierUid: string): BoardItem[] =>
   liveItems(board)
@@ -330,7 +364,8 @@ const sameTopic = (a: BoardTopic | null, b: BoardTopic | null): boolean =>
     ? a === b
     : a.id === b.id &&
       (a.id !== null || a.name === b.name) &&
-      (a.waiting ?? false) === (b.waiting ?? false);
+      (a.waiting ?? false) === (b.waiting ?? false) &&
+      (a.learned ?? false) === (b.learned ?? false);
 
 /** Sent: a topic taken off is off on the list, and the next publish need not say so again. */
 export function topicSent(board: Board): Board {
@@ -384,7 +419,7 @@ export const setPublished = (
   authorName: string | null,
   now: number,
 ): Board => ({
-  ...board,
+  ...unheld(board),
   publishedId,
   rankingOf: null,
   authorName,
@@ -392,13 +427,24 @@ export const setPublished = (
   publishedEditedAt: publishedId === null ? null : now,
 });
 
+/** The board without the hold: a fresh answer, or none, says whether it still waits. */
+const unheld = (board: Board): Board => {
+  if (board.heldForReview === undefined) return board;
+  const { heldForReview: _held, ...rest } = board;
+  return rest;
+};
+
+/** Held for a moderator or not, as the backend's answer to a publish or Update said. */
+export const setHeld = (board: Board, held: boolean): Board =>
+  held ? { ...board, heldForReview: true } : unheld(board);
+
 /**
  * Out as one's ranking of the list it was saved from, or no longer: the
  * backend's answer to a copy published as it came. The author's name stays,
  * since the cards are still theirs.
  */
 export const setRanking = (board: Board, listId: string | null, now: number): Board => ({
-  ...board,
+  ...unheld(board),
   publishedId: null,
   rankingOf: listId,
   editedAt: now,

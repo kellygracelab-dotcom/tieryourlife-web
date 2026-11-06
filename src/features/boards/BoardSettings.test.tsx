@@ -324,6 +324,21 @@ describe("BoardSettings: public", () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
+  it("names the tier limit as what stands in the way of a new list ranked in twenty tiers", () => {
+    const board = filmBoard();
+    const pool = board.tiers.find((tier) => tier.isPool)!;
+    const ranked = Array.from({ length: 20 }, (_, n) => ({
+      ...pool,
+      uid: `t${n}`,
+      position: n,
+      label: `T${n}`,
+      isPool: false,
+    }));
+    show({ ...board, tiers: [...ranked, { ...pool, position: 20 }] }, signedIn);
+    expect(publicSwitch()).toHaveAttribute("aria-disabled", "true");
+    expect(publicSwitch()).toHaveAccessibleDescription("At most 19 tiers.");
+  });
+
   it("publishes the board, keeps the id and the name, and sends it again on Update", async () => {
     const publish = vi.fn(() => Promise.resolve({ id: "L1" }));
     const republish = vi.fn(() => Promise.resolve({ id: "L1" }));
@@ -398,6 +413,42 @@ describe("BoardSettings: public", () => {
     expect(withdraw).toHaveBeenCalledExactlyOnceWith("SRC");
     expect(unpublish).not.toHaveBeenCalled();
     expect(held).toMatchObject({ publishedId: null, rankingOf: null, authorName: "Olena" });
+  });
+
+  it("says a list the backend holds for a moderator waits, and offers no link to it until an Update comes back without the hold", async () => {
+    const publish = vi.fn(() => Promise.resolve({ id: "L1", topicId: null, underReview: true }));
+    const republish = vi
+      .fn<PublishingDeps["republish"]>()
+      .mockResolvedValueOnce({ id: "L1", topicId: null, underReview: true })
+      .mockResolvedValueOnce({ id: "L1", topicId: null, underReview: false });
+    show(filmBoard(), signedIn, { publish, republish });
+
+    await userEvent.click(publicSwitch());
+    await waitFor(() => expect(publicSwitch()).toBeChecked());
+    expect(held).toMatchObject({ publishedId: "L1", heldForReview: true });
+    expect(published).toHaveBeenCalledWith("held", "L1");
+    expect(published).not.toHaveBeenCalledWith("published", "L1");
+    // Its link answers 404 to everybody, the author too: nothing leads there.
+    expect(screen.queryByRole("link", { name: "See it in Community" })).toBeNull();
+    expect(
+      within(sheet()).getAllByText("It waits for a moderator before others can see it.").length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/Anyone with the link/)).toBeNull();
+
+    // Still held after an Update: said again, not "Saved".
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(published).toHaveBeenCalledTimes(2));
+    expect(published).toHaveBeenLastCalledWith("held", "L1");
+    expect(held).toMatchObject({ heldForReview: true });
+
+    // Staff looked: the next Update finds it in the feed, and the link is back.
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(published).toHaveBeenLastCalledWith("updated", "L1"));
+    expect(held.heldForReview).toBeUndefined();
+    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+      "href",
+      "/l/L1",
+    );
   });
 
   it("asks before taking it down, in the sheet, from the switch or from Take it down", async () => {
@@ -516,9 +567,56 @@ describe("BoardSettings: public", () => {
     const request = (republish.mock.calls[0] as unknown[])[1];
     expect(request).not.toHaveProperty("noTopic");
     expect(request).not.toHaveProperty("topicId");
-    await waitFor(() => expect(held.topic).toEqual({ id: "t1", name: "A24" }));
+    await waitFor(() => expect(held.topic).toEqual({ id: "t1", name: "A24", learned: true }));
     // Learnt from the answer, it is no edit: the list is not behind it.
     expect(held.publishedEditedAt).toBe(held.editedAt);
+  });
+
+  it("says nothing of a learnt topic on the next Update, so a moderator's later move holds, and learns that one", async () => {
+    const republish = vi
+      .fn<PublishingDeps["republish"]>()
+      .mockResolvedValueOnce({ id: "L1", topicId: "t2" })
+      .mockResolvedValueOnce({ id: "L1", topicId: null });
+    const findTopic = vi.fn(async (id: string) => topic(id, id === "t2" ? "Neon" : "A24"));
+    show(
+      {
+        ...filmBoard(),
+        publishedId: "L1",
+        publishedEditedAt: 100,
+        topic: { id: "t1", name: "A24", learned: true },
+      },
+      signedIn,
+      { republish },
+      { findTopic },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(republish).toHaveBeenCalledTimes(1));
+    const request = (republish.mock.calls[0] as unknown[])[1];
+    expect(request).not.toHaveProperty("topicId");
+    expect(request).not.toHaveProperty("noTopic");
+    // The moderator moved it again meanwhile: the board learns where it is now.
+    await waitFor(() => expect(held.topic).toEqual({ id: "t2", name: "Neon", learned: true }));
+
+    // Moved out of every topic: the learnt one goes, and nothing is taken off by the person.
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(republish).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(held.topic).toBeNull());
+    expect(held.topicOff).toBeUndefined();
+  });
+
+  it("does not learn a topic of another section than the board's", async () => {
+    const republish = vi.fn(async () => ({ id: "L1", topicId: "g1" }));
+    const findTopic = vi.fn(async (id: string) => ({ ...topic(id, "Indie"), section: "games" }));
+    show(
+      { ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 },
+      signedIn,
+      { republish },
+      { findTopic },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(findTopic).toHaveBeenCalledWith("g1"));
+    await act(async () => undefined);
+    expect(held.topic).toBeNull();
   });
 
   it("says a refused Update under Update, and lets a list taken down elsewhere go", async () => {

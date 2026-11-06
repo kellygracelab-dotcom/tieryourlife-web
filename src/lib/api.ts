@@ -31,12 +31,12 @@ import type {
   Following,
   FollowState,
   RankingsPage,
-  ReaderRanking,
+  ShownRanking,
   ReportRequest,
   SuggestedAuthor,
 } from "../api/community";
 import * as lists from "../api/lists";
-import type { MyList, PublishRequest } from "../api/lists";
+import type { MyList, Published, PublishRequest } from "../api/lists";
 import * as moderation from "../api/moderation";
 import * as pictures from "../api/pictures";
 import type { PictureAsk, PicturePage } from "../api/pictures";
@@ -123,6 +123,19 @@ export const loadMyRankings = (): Promise<MyRankings> => rank.loadMyRankings(api
 
 export const removeRanking = (code: string): Promise<void> => rank.removeRanking(api, code);
 
+/**
+ * Whether a ranking is still behind its link: false only when the server
+ * says it is gone. Asked of the network, not of the page the site sent.
+ */
+export const rankingStillThere = (code: string): Promise<boolean> =>
+  rank.loadRanking(api, code).then(
+    () => true,
+    (reason: unknown) => {
+      if (errorOf(reason).kind === "notFound") return false;
+      throw reason;
+    },
+  );
+
 export const loadMyLists = (): Promise<{ lists: MyList[] }> => lists.loadMyLists(api);
 
 // The catalogues answer in the language the page is in.
@@ -131,8 +144,7 @@ export const findPictures = (ask: PictureAsk): Promise<PicturePage> =>
 
 export const keepPicture = (url: string): Promise<string> => pictures.keepPicture(api, url);
 
-export const publish = (request: PublishRequest): Promise<{ id: string }> =>
-  lists.publish(api, request);
+export const publish = (request: PublishRequest): Promise<Published> => lists.publish(api, request);
 
 /** The call, and then word that the list is no longer as any page last read it; gone already, too. */
 const changing = async <T>(id: string, call: Promise<T>): Promise<T> => {
@@ -146,7 +158,7 @@ const changing = async <T>(id: string, call: Promise<T>): Promise<T> => {
   }
 };
 
-export const republish = (id: string, request: PublishRequest): Promise<{ id: string }> =>
+export const republish = (id: string, request: PublishRequest): Promise<Published> =>
   changing(id, lists.republish(api, id, request));
 
 export const unpublish = (id: string): Promise<void> => changing(id, lists.unpublish(api, id));
@@ -180,7 +192,7 @@ export const withdrawListRanking = (listId: string): Promise<void> =>
 export const keepListRanking = (
   list: Pick<PublishedList, "id" | "items" | "tiers">,
   rows: readonly (readonly number[])[],
-): Promise<ReaderRanking> =>
+): Promise<ShownRanking> =>
   community.keepListRanking(api, list.id, {
     tierLabels: list.tiers.map((tier) => tier.label),
     rows: community.rowsOf(rows, list.tiers.length, list.items.length),

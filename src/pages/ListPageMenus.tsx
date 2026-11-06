@@ -131,6 +131,33 @@ function RankingsItem({ rankings }: { rankings: RankingsEntry | null }) {
 }
 
 /**
+ * One's own arrangement among the list's public rankings, the app's "Show my
+ * ranking to others": offered once Mine is arranged, to a guest as a way to
+ * sign in first.
+ */
+export interface ShowMineEntry {
+  signedIn: boolean;
+  busy: boolean;
+  show: () => void;
+}
+
+function ShowMineItem({ showMine }: { showMine: ShowMineEntry | null }) {
+  if (showMine === null) return null;
+  return (
+    <li>
+      <button
+        type="button"
+        className="menu__action"
+        disabled={showMine.busy}
+        onClick={showMine.show}
+      >
+        {showMine.signedIn ? strings.rankings.showMine : strings.rankings.signInToShow}
+      </button>
+    </li>
+  );
+}
+
+/**
  * What a visitor can do about a list besides ranking it, in the app's order:
  * see who made it, pass it on, keep it out of sight, complain. A guest
  * reports too, with no sign-in; hiding is this device's business alone.
@@ -144,12 +171,14 @@ function VisitorMenu({
   notify,
   saving,
   rankings,
+  showMine,
 }: {
   list: PublishedList;
   report: Report;
   notify: Notify;
   saving: SaveToMine;
   rankings: RankingsEntry | null;
+  showMine: ShowMineEntry | null;
 }) {
   const { hideList } = useHidden();
   const leave = useLeave();
@@ -167,6 +196,7 @@ function VisitorMenu({
       <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
         <>
           <RankingsItem rankings={rankings} />
+          <ShowMineItem showMine={showMine} />
           {author !== null && (
             <li>
               <Link
@@ -224,12 +254,15 @@ export function VisitorTools({
   repository,
   rankings = null,
   shown = null,
+  showMine = null,
 }: {
   list: PublishedList;
   report: Report;
   notify: Notify;
   repository?: BoardsRepository;
   rankings?: RankingsEntry | null;
+  /** Mine among the list's rankings, once there is a Mine to show. */
+  showMine?: ShowMineEntry | null;
   /** A reader's ranking on show in the left half, which Save then offers to keep. */
   shown?: ShownPlacing | null;
 }) {
@@ -246,6 +279,7 @@ export function VisitorTools({
         notify={notify}
         saving={saving}
         rankings={rankings}
+        showMine={showMine}
       />
       <SaveToMineDialog saving={saving} />
     </>

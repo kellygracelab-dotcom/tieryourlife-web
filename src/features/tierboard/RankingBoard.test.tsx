@@ -15,6 +15,7 @@ vi.mock("../../lib/api", () => ({
   noteTake: vi.fn(),
   keepListRanking: vi.fn(async () => undefined),
   rearrangeRanking: vi.fn(async () => ({ code: "abcdefgh" })),
+  rankingStillThere: vi.fn(async () => true),
 }));
 
 const list: PublishedList = {
@@ -919,6 +920,56 @@ describe("RankingBoard", () => {
     );
     expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
+  });
+
+  it("forgets a ranking deleted elsewhere once the server says its link is gone, without holding up the page", async () => {
+    const store = memoryStore();
+    const finished = { code: "abcdefgh", claimToken: "s", rows: [[], []], version: 0 };
+    store.write("tyl:ranking:abc", JSON.stringify(finished));
+    let answer: (there: boolean) => void = () => undefined;
+    const stillThere = vi.fn(
+      (_code: string) => new Promise<boolean>((resolve) => (answer = resolve)),
+    );
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={store} keep={vi.fn()} stillThere={stillThere} />
+      </MemoryRouter>,
+    );
+    // Drawn at once from the device's copy; the server is asked behind it.
+    expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
+    expect(stillThere).toHaveBeenCalledExactlyOnceWith("abcdefgh");
+
+    await act(async () => answer(false));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("button", { name: "Finish" })).toBeInTheDocument();
+    expect(store.read("tyl:ranking:abc")).toBeNull();
+  });
+
+  it("keeps the link of a ranking the server still has, or could not say about", async () => {
+    // Made one at a time: a rejection made up front goes unhandled while the first one runs.
+    for (const answer of [
+      () => Promise.resolve(true),
+      () => Promise.reject(new Error("offline")),
+    ]) {
+      const reply = answer();
+      reply.catch(() => undefined);
+      const store = memoryStore();
+      const finished = { code: "abcdefgh", claimToken: "s", rows: [[], []], version: 0 };
+      store.write("tyl:ranking:abc", JSON.stringify(finished));
+      const stillThere = vi.fn(() => reply);
+      const { unmount } = render(
+        <MemoryRouter>
+          <RankingBoard list={list} store={store} keep={vi.fn()} stillThere={stillThere} />
+        </MemoryRouter>,
+      );
+      await act(async () => {
+        await reply.catch(() => undefined);
+      });
+      expect(stillThere).toHaveBeenCalledOnce();
+      expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
+      expect(store.read("tyl:ranking:abc")).not.toBeNull();
+      unmount();
+    }
   });
 
   it("shows an account's link only to that account, on a browser others use too", () => {

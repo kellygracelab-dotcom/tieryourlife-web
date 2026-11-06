@@ -4,6 +4,7 @@ import type { Request } from "firebase-functions/https";
 import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
 import { requireAppCheck } from "./appCheck";
+import { bannedAnswer, isBanned, readBan, type Ban } from "./bans";
 import { optionalAccount, requireAccount, requireUser, type Identity } from "./auth";
 import { getStorage } from "firebase-admin/storage";
 import {
@@ -226,6 +227,10 @@ export async function route(
   }
 }
 
+/** A guest is never banned, as at the proxy: a ban is on an account. */
+const banOn = (db: Firestore, identity: Identity): Promise<Ban | null> =>
+  identity.isAnonymous ? Promise.resolve(null) : readBan(db, identity.uid);
+
 async function readRanking(
   db: Firestore,
   response: Response,
@@ -289,12 +294,19 @@ async function saveRanking(
   }
   const listId = (body as { listId?: unknown } | null)?.listId;
   const quota = db.collection(QUOTA).doc(identity.uid);
-  // The list and the caller's last write are read together: one round trip
-  // to the database instead of two before the answer can start.
-  const [list, lastQuota] =
+  // The list, the caller's last write and any ban on the caller are read
+  // together: one round trip to the database before the answer can start.
+  const [list, lastQuota, ban] =
     typeof listId === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(listId)
-      ? await Promise.all([db.collection(PUBLISHED).doc(listId).get(), quota.get()])
-      : [null, null];
+      ? await Promise.all([
+          db.collection(PUBLISHED).doc(listId).get(),
+          quota.get(),
+          banOn(db, identity),
+        ])
+      : [null, null, null];
+  // As the app is refused by the proxy, and before it is told whether the
+  // list is there: a banned account ranks nothing.
+  if (isBanned(ban, Date.now())) return void response.status(403).json(bannedAnswer(ban));
   if (list === null || !list.exists || list.get("underReview") === true) {
     return notFound(response, "No such list");
   }
@@ -334,10 +346,15 @@ async function saveRanking(
       ? db.collection(TOKEN_USE).doc(appCheckKeyOf(appCheckToken))
       : null;
   const verdict = await db.runTransaction(async (transaction) => {
-    const [day, used] = await Promise.all([
+    const [mark, day, used] = await Promise.all([
+      transaction.get(quota),
       transaction.get(usage),
       tokenUse === null ? null : transaction.get(tokenUse),
     ]);
+    // Asked again inside the transaction, and the mark written with the count:
+    // saves sent at once all read the mark before any wrote it, and every one
+    // got through (QA S32). Now the first takes the mark and the rest wait.
+    if (tooSoon((mark.get("lastWriteAt") as number | undefined) ?? null, now)) return "busy";
     const next = ((day.get("count") as number | undefined) ?? 0) + 1;
     if (next > ceilingFor(identity.isAnonymous)) return "ceiling";
     const uses = ((used?.get("count") as number | undefined) ?? 0) + 1;
@@ -350,8 +367,13 @@ async function saveRanking(
         expireAt: Timestamp.fromMillis(now + APP_CHECK_TOKEN_KEPT_MS),
       });
     }
+    transaction.set(quota, { lastWriteAt: now }, { merge: true });
     return "counted";
   });
+  if (verdict === "busy") {
+    response.setHeader("Retry-After", "2");
+    return void response.status(429).json({ error: "One at a time", code: "BUSY" });
+  }
   if (verdict === "ceiling") {
     response.setHeader("Retry-After", "3600");
     return void response.status(503).json({ error: "Daily limit reached", code: "DAILY_CEILING" });
@@ -392,6 +414,8 @@ async function saveRanking(
       if ((error as { code?: number }).code !== 6 /* ALREADY_EXISTS */) throw error;
     }
   }
+  // Nothing was saved: the mark taken for this save goes, so the person is not told to wait.
+  await quota.delete().catch(() => undefined);
   response.status(503).json({ error: "Could not find a free code", code: "UNAVAILABLE" });
 }
 
@@ -446,6 +470,9 @@ async function editRanking(
   if (JSON.stringify(body ?? null).length > MAX_BODY_BYTES) {
     return void response.status(413).json({ error: "Too large", code: "TOO_LARGE" });
   }
+  // A banned account changes no ranking either, as the proxy's PUT refuses a replacement.
+  const ban = await banOn(db, identity);
+  if (isBanned(ban, Date.now())) return void response.status(403).json(bannedAnswer(ban));
   const ref = db.collection(RANKINGS).doc(code);
   const decision = await db.runTransaction(async (transaction) => {
     const doc = await transaction.get(ref);

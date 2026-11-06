@@ -1,7 +1,15 @@
 import type { KeepBoardRequest, KeptBoard, KeptBoardEntry } from "../../api/boards";
 import { errorOf } from "../../api/errors";
 import { fingerprintOf as digest } from "./fingerprint";
-import { setPublished, trashBoard, type Board, type BoardItem, type NextUid } from "./model";
+import {
+  beyondAccount,
+  setPublished,
+  trashBoard,
+  type BeyondAccount,
+  type Board,
+  type BoardItem,
+  type NextUid,
+} from "./model";
 import { parseBoard, type BoardsRepository } from "./repository";
 import { planSync, type RemoteBoard, type SyncedBoard, type SyncStep } from "./syncPlan";
 import type { SyncRefusal } from "./boardSync";
@@ -81,7 +89,8 @@ const request = (
   basedOn: number | null,
   deviceName: string | null,
 ): KeepBoardRequest => ({
-  basedOn,
+  // A first write carries no basedOn at all, not null (CONTRACT, boards).
+  ...(basedOn === null ? {} : { basedOn }),
   deviceName,
   fingerprint,
   title: board.title,
@@ -116,6 +125,33 @@ const request = (
     deletedAt: item.deletedAt,
   })),
 });
+
+/** A board held back before it was sent, since the account would refuse it as it is. */
+class HeldBack extends Error {
+  readonly why: BeyondAccount;
+  constructor(why: BeyondAccount) {
+    super(`held back: ${why}`);
+    this.name = "HeldBack";
+    this.why = why;
+  }
+}
+
+/**
+ * Why the account will go on refusing a board as it is, or null when trying
+ * again may help. A refusal for size names its limit in words: tiers, cards,
+ * cards in the trash, or bytes.
+ */
+function refusalOf(reason: unknown): SyncRefusal["why"] | null {
+  if (reason instanceof HeldBack) return reason.why;
+  const error = errorOf(reason);
+  if (error.kind === "tooManyBoards") return "tooManyBoards";
+  if (error.kind !== "tooLarge") return null;
+  const detail = error.detail?.toLowerCase() ?? "";
+  if (detail.includes("trash")) return "tooManyTrashed";
+  if (detail.includes("tiers")) return "tooManyTiers";
+  if (detail.includes("items")) return "tooManyCards";
+  return "tooLarge";
+}
 
 /** The board the account refused a write over, when the refusal carried one. */
 function conflictBoard(reason: unknown): KeptBoard | null {
@@ -161,10 +197,10 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
         if (reason instanceof SyncCancelled) throw reason;
         refused++;
         // Why is kept only where trying again cannot help; the rest look alike.
-        const { kind } = errorOf(reason);
+        const why = refusalOf(reason);
         const board = repository.get(step.uid);
-        if ((kind === "tooLarge" || kind === "tooManyBoards") && board !== null) {
-          refusals.push({ uid: step.uid, title: board.title, why: kind });
+        if (why !== null && board !== null) {
+          refusals.push({ uid: step.uid, title: board.title, why });
         }
       }
     }
@@ -312,6 +348,9 @@ async function send(
   const { repository, api, records, deviceName } = deps;
   const board = repository.get(uid);
   if (board === null) return;
+  // Not sent at all when the account would refuse it on every run.
+  const beyond = beyondAccount(board);
+  if (beyond !== null) throw new HeldBack(beyond);
   const fingerprint = await fingerprintOf(board);
   check(deps);
   try {
@@ -459,6 +498,10 @@ async function takeOver(
     arrivedFrom: latest.arrivedFrom,
     topic: latest.topic,
     ...(latest.topicOff === true ? { topicOff: true } : {}),
+    // Held for a moderator is said of the list this device published; the account's copy may name another.
+    ...(latest.heldForReview === true && latest.publishedId === board.publishedId
+      ? { heldForReview: true }
+      : {}),
     takenFrom: latest.takenFrom,
     rankingOf: latest.rankingOf,
   });

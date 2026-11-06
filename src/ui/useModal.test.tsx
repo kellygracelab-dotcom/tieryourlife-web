@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { onRadioKeys, radioTabIndex } from "./radioKeys";
 import { useModal } from "./useModal";
 
 function Dialog({ onClose, initial }: { onClose: () => void; initial?: string }) {
@@ -100,5 +101,49 @@ describe("useModal", () => {
     await userEvent.keyboard("{Escape}");
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  // QA W46: every radio of a group was a Tab stop inside a dialog, and the
+  // first one, not the chosen one, was where Tab entered the group.
+  it("stops once in a group of radios, on the chosen one, with the arrows inside", async () => {
+    function Picker() {
+      const box = useRef<HTMLDivElement>(null);
+      const [chosen, setChosen] = useState("Games");
+      useModal(box, () => undefined);
+      const names = ["Film", "Anime", "Games", "Music"];
+      return (
+        <div ref={box} role="dialog" aria-label="Picker">
+          <input type="search" aria-label="Find" />
+          {/* oxlint-disable-next-line jsx-a11y/interactive-supports-focus -- the radios inside take the focus */}
+          <div role="radiogroup" aria-label="Sections" onKeyDown={(event) => onRadioKeys(event)}>
+            {names.map((name, at) => (
+              <button
+                key={name}
+                type="button"
+                role="radio"
+                aria-checked={chosen === name}
+                tabIndex={radioTabIndex(chosen === name, at === 0, false)}
+                onClick={() => setChosen(name)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <button type="button">Propose</button>
+        </div>
+      );
+    }
+    render(<Picker />);
+    expect(screen.getByRole("searchbox", { name: "Find" })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole("radio", { name: "Games" })).toHaveFocus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(screen.getByRole("radio", { name: "Music" })).toHaveFocus();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Propose" })).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(screen.getByRole("radio", { name: "Music" })).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(screen.getByRole("searchbox", { name: "Find" })).toHaveFocus();
   });
 });

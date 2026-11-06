@@ -35,7 +35,9 @@ export function failureText(error: ApiError, mode: "new" | "edit"): string {
     case "tooLarge":
       return strings.new.failedTooLarge;
     // A section that no longer takes lists is changed under Category, so the text says where.
+    // More tiers than the feed takes says what to change: the limit itself.
     case "invalid":
+      if (error.code === "TOO_MANY_TIERS") return strings.new.tooManyTiers;
       return error.field === "category" ? strings.new.failedCategory : strings.new.failedInvalid;
     default:
       return strings.new.failedOther;

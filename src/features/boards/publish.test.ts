@@ -5,6 +5,7 @@ import {
   arrangeItems,
   itemsIn,
   liveItems,
+  MAX_RANKED_TIERS,
   newBoard,
   poolTier,
   rankedTiers,
@@ -79,6 +80,15 @@ describe("publishing a board", () => {
     })!;
     expect(waiting.topicId).toBe("t9");
     expect(waiting).not.toHaveProperty("newTopic");
+    // A topic the board learnt from an answer (a moderator's move) is the
+    // list's, not the person's: nothing is said of it, so the move holds.
+    const learnt = { ...b, topic: { id: "t1", name: "A24", learned: true } };
+    expect(publishRequestOf(learnt)).not.toHaveProperty("topicId");
+    expect(publishRequestOf(learnt)).not.toHaveProperty("noTopic");
+    // Chosen in List settings, the same topic is the person's again and goes out.
+    const chosen = setTopic(learnt, { id: "t1", name: "A24" }, 6);
+    expect(chosen.topic).toEqual({ id: "t1", name: "A24" });
+    expect(publishRequestOf(chosen)?.topicId).toBe("t1");
     // Anonymity is said every time too, or a republish would put the name back.
     expect(request.anonymous).toBe(false);
     expect(publishRequestOf({ ...b, anonymous: true })?.anonymous).toBe(true);
@@ -106,6 +116,39 @@ describe("publishing a board", () => {
     const two = publishRequestOf({ ...b, coverImageUrls: ["https://x/1.jpg", "https://x/2.jpg"] })!;
     expect(two.coverImageUrl).toBeNull();
     expect(two.coverImageUrls).toHaveLength(2);
+  });
+});
+
+describe("the tiers a list may rank", () => {
+  // A board with ranked tiers enough to go past what a new list may have.
+  const ranked = (count: number): Board => {
+    const next = uids();
+    const base = addToPool(
+      { ...newBoard("b", "Films", 1, next), category: "film_tv" },
+      [{ title: "Dune", imageUrl: null }],
+      1,
+      next,
+    );
+    const pool = poolTier(base)!;
+    const tiers = Array.from({ length: count }, (_, n) => ({
+      ...pool,
+      uid: `t${n}`,
+      position: n,
+      label: `T${n}`,
+      isPool: false,
+    }));
+    return { ...base, tiers: [...tiers, { ...pool, position: count }] };
+  };
+
+  it("are at most nineteen on a new list, as the feed takes", () => {
+    expect(publishProblemsOf(ranked(19))).toEqual([]);
+    expect(publishProblemsOf(ranked(20))).toEqual(["tooManyTiers"]);
+    expect(publishRequestOf(ranked(20))).toBeNull();
+  });
+
+  it("may stay twenty on an Update of a list that has them", () => {
+    expect(publishProblemsOf({ ...ranked(20), publishedId: "old" })).toEqual([]);
+    expect(publishProblemsOf({ ...ranked(21), publishedId: "old" })).toEqual(["tooManyTiers"]);
   });
 });
 
@@ -229,6 +272,35 @@ describe("a published list as a board of one's own", () => {
     expect(publishRequestOf(board)?.takenFrom).toBe("abc");
     // A board of one's own names no list it came from.
     expect(publishRequestOf({ ...board, takenFrom: null })).not.toHaveProperty("takenFrom");
+  });
+
+  it("folds every ranked tier past the nineteenth into the nineteenth, so the account keeps it", () => {
+    // An older list may rank twenty tiers; with the pool that is one more than a board may hold.
+    const twenty: PublishedList = {
+      ...list,
+      tiers: Array.from({ length: 20 }, (_, n) => ({
+        label: `T${n + 1}`,
+        caption: null,
+        colorLight: "#111111",
+        colorDark: "#eeeeee",
+      })),
+    };
+    const rows = Array.from({ length: 20 }, (): number[] => []);
+    rows[18] = [1];
+    rows[19] = [2, 0];
+    const board = boardFromList(twenty, rows, 5, uids());
+    expect(board.tiers).toHaveLength(MAX_RANKED_TIERS + 1);
+    const ranked = rankedTiers(board);
+    expect(ranked.map((tier) => tier.label)).toEqual(
+      twenty.tiers.slice(0, MAX_RANKED_TIERS).map((tier) => tier.label),
+    );
+    // The last tier keeps its own cards first, then the folded ones in their order.
+    expect(itemsIn(board, ranked[18]!.uid).map((item) => item.title)).toEqual([
+      "The Witch",
+      "Climax",
+      "Ex Machina",
+    ]);
+    expect(poolTier(board)?.position).toBe(MAX_RANKED_TIERS);
   });
 
   it("leaves every card in the pool when no arrangement is wanted", () => {

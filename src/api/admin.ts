@@ -220,6 +220,11 @@ export function checkSectionName(client: ApiClient, name: string): Promise<NameC
 /** A proposed topic in the queue: who asked, where, and the approved ones it may be a twin of. */
 export interface PendingTopic extends Topic {
   proposerName?: string;
+  /**
+   * First named by an anonymous list: a moderator gets no name, the owner
+   * gets it with this, to mark it as hidden from the others.
+   */
+  proposedAnonymously?: boolean;
   requestedSection?: string | null;
   similar?: Topic[];
 }

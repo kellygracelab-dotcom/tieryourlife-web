@@ -52,6 +52,7 @@ describe("parseApiError", () => {
       json({ error: "Invalid ID token", code: "UNAUTHENTICATED" }),
       { kind: "unauthenticated" },
     ],
+    [401, json({ error: "Sign in first", code: "NOT_SIGNED_IN" }), { kind: "notSignedIn" }],
     [401, "not json at all", { kind: "unauthenticated" }],
     [401, "null", { kind: "unauthenticated" }],
     [

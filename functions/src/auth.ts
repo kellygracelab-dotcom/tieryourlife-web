@@ -58,7 +58,11 @@ export async function optionalAccount(
   }
 }
 
-/** A person with an account: what is kept must outlive the browser's guest uid. */
+/**
+ * A person with an account: what is kept must outlive the browser's guest uid.
+ * A guest is told 401 NOT_SIGNED_IN, as CONTRACT says of the site's account
+ * routes: who they are was read, but it is not an account.
+ */
 export async function requireAccount(
   request: Request,
   response: Response,
@@ -67,7 +71,7 @@ export async function requireAccount(
   const identity = await requireUser(request, response, verify);
   if (identity === null) return null;
   if (identity.isAnonymous) {
-    response.status(403).json({ error: "Sign in first", code: "NOT_SIGNED_IN" });
+    response.status(401).json({ error: "Sign in first", code: "NOT_SIGNED_IN" });
     return null;
   }
   return identity;
