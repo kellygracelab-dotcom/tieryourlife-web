@@ -53,6 +53,32 @@ describe("boardOwners", () => {
     expect(owners.of(null).all()).toEqual([]);
   });
 
+  it("asks a new account that a later guest became, when the boards are an earlier guest's", () => {
+    const { owners } = settled();
+    owners.boards.save(board("made", "Guest made"));
+    // Somebody signs into an account used before and keeps the boards here, then signs out.
+    owners.arrived({ owner: "a", guestUid: null });
+    owners.keepHere();
+    owners.arrived({ owner: null, guestUid: "guest2" });
+    // The next person turns that new guest into an account of their own.
+    owners.arrived({ owner: "guest2", guestUid: null });
+    expect(owners.question()).toEqual({ owner: "guest2", boards: 1 });
+    expect(owners.boards.all()).toEqual([]);
+    expect(titles(owners.of(null).all())).toEqual(["Guest made"]);
+  });
+
+  it("still moves a guest's own boards unasked once the earlier guest's are gone", () => {
+    const { owners } = settled();
+    owners.boards.save(board("made", "Guest made"));
+    owners.arrived({ owner: "a", guestUid: null });
+    owners.moveIn("a");
+    owners.arrived({ owner: null, guestUid: "guest2" });
+    owners.boards.save(board("mine", "Mine"));
+    owners.arrived({ owner: "guest2", guestUid: null });
+    expect(owners.question()).toBeNull();
+    expect(titles(owners.boards.all())).toEqual(["Mine"]);
+  });
+
   it("asks after a sign-in into an account used before, only for the boards in use", () => {
     const { owners } = settled();
     owners.boards.save(board("films", "Films"));
