@@ -11,6 +11,7 @@ import { createSectionsStore, type SectionsDeps } from "../features/sections/use
 import type { SignInOutcome } from "../lib/signIn";
 import { memoryStore } from "../lib/storage";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
+import { sayOnTheSite, siteNotice } from "../ui/siteNotice";
 import { SectionPage } from "./SectionPage";
 import { SectionsPage } from "./SectionsPage";
 import type { TopicDeps } from "./SectionPageState";
@@ -94,6 +95,7 @@ function open(path: string, account: Session["account"] = member) {
 }
 
 beforeEach(() => {
+  sayOnTheSite(null);
   report.mockReset();
   report.mockResolvedValue(undefined);
   load.mockReset();
@@ -490,6 +492,24 @@ describe("TopicPage", () => {
     await userEvent.click(await screen.findByLabelText("More about Mario karts"));
     await userEvent.click(screen.getByRole("button", { name: "Not this topic" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("nothing was sent"));
+  });
+
+  // QA W43: the word was said only on the topic page, which the reader had left.
+  it("says on the site that the word did not go, once the reader has left the topic", async () => {
+    let refuse: (reason: unknown) => void = () => undefined;
+    report.mockReturnValue(
+      new Promise<void>((_, reject) => {
+        refuse = reject;
+      }),
+    );
+    load.mockResolvedValue({ lists: [summary("l1", "Mario karts", "u5")], nextCursor: null });
+    const router = open("/s/games/t/t2");
+    await userEvent.click(await screen.findByLabelText("More about Mario karts"));
+    await userEvent.click(screen.getByRole("button", { name: "Not this topic" }));
+    await act(() => router.navigate("/"));
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    await act(async () => refuse(new ApiFailure({ kind: "offline" })));
+    expect(siteNotice()?.text).toMatch(/nothing was sent/);
   });
 
   it("reports a list of the topic and hides it at once", async () => {

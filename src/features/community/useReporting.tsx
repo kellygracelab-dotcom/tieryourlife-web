@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ReportReason, ReportRequest } from "../../api/community";
 import { isEditorial } from "../../lib/editorial";
 import { strings } from "../../strings";
@@ -42,6 +42,8 @@ export interface Reporting {
   start: (list: Reportable) => void;
   /** The report dialog, wherever the place mounts it; nothing while no report is under way. */
   dialog: ReactNode;
+  /** Says a late answer where the reader is: in the place while it is there, else on the site. */
+  tell: (notice: SnackbarNotice) => void;
 }
 
 /**
@@ -51,14 +53,27 @@ export interface Reporting {
  * in. The list is hidden here the moment the report goes, and the author too
  * when that was ticked; should the report not go through, both come back, so
  * the list can be reported again, and the place says so. A list hidden before
- * the report stays hidden. Once the receipt's Done has left the place, the
- * site says it instead, on whatever page the reader went back to.
+ * the report stays hidden. Once the reader has left the place, by the
+ * receipt's Done or any other way, the site says it instead, on whatever page
+ * the reader is on now.
  */
 export function useReporting({ report, notify, onDone }: ReportingDeps): Reporting {
   const { hidden, hideList, showList, hideAuthor, showAuthor } = useHidden();
   const [current, setCurrent] = useState<Current | null>(null);
   // The receipt's Done took the reader away: the place, and its snackbar, are gone.
   const left = useRef(false);
+  // The place itself is gone: the reader went elsewhere before the answer came.
+  const gone = useRef(false);
+  useEffect(() => {
+    gone.current = false;
+    return () => {
+      gone.current = true;
+    };
+  }, []);
+  const tell = useCallback(
+    (notice: SnackbarNotice) => (gone.current ? sayOnTheSite(notice) : notify(notice)),
+    [notify],
+  );
 
   const start = useCallback((list: Reportable) => {
     left.current = false;
@@ -78,7 +93,7 @@ export function useReporting({ report, notify, onDone }: ReportingDeps): Reporti
       if (hides.author) showAuthor(list.authorUid);
       // The receipt would say the opposite of what happened.
       setCurrent((now) => (now?.list.id === list.id && now.state === "sent" ? null : now));
-      if (left.current) {
+      if (left.current || gone.current) {
         // Wherever the reader is now: Try again sends the same report again.
         sayOnTheSite({
           text: strings.report.failed,
@@ -93,7 +108,7 @@ export function useReporting({ report, notify, onDone }: ReportingDeps): Reporti
     });
   };
 
-  if (current === null) return { start, dialog: null };
+  if (current === null) return { start, dialog: null, tell };
   const { list } = current;
   // An editorial list has no author to hide, and a snapshot without the uid nobody to hide by.
   const authorName = isEditorial(list) || list.authorUid === "" ? null : list.authorName;
@@ -128,5 +143,5 @@ export function useReporting({ report, notify, onDone }: ReportingDeps): Reporti
       onClose={current.state === "sent" ? done : close}
     />
   );
-  return { start, dialog };
+  return { start, dialog, tell };
 }
