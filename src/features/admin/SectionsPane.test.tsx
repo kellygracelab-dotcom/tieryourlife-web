@@ -447,6 +447,36 @@ describe("SectionsPane", () => {
       expect(deps.save).toHaveBeenLastCalledWith(["games", "anime", "food", "other"], ["food"], 8);
     });
 
+    // QA W41: a Save pressed before the quiet read was back sent the old version.
+    it("waits for the version the edit moved on to when Save comes before it", async () => {
+      open();
+      await screen.findByText("4 sections · 1 hidden");
+      let answerRead: (value: AdminSections) => void = () => undefined;
+      deps.load.mockReturnValue(
+        new Promise<AdminSections>((resolve) => {
+          answerRead = resolve;
+        }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Edit Games" }));
+      const name = screen.getByRole("textbox", { name: "Name" });
+      await userEvent.clear(name);
+      await userEvent.type(name, "Video games");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByText("Video games saved")).toBeInTheDocument();
+      screen.getByRole("button", { name: "Move Video games" }).focus();
+      await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(deps.save).not.toHaveBeenCalled();
+      await act(async () => answerRead({ ...answer, version: 8 }));
+      await waitFor(() =>
+        expect(deps.save).toHaveBeenLastCalledWith(
+          ["games", "anime", "food", "other"],
+          ["food"],
+          8,
+        ),
+      );
+    });
+
     it("keeps the old version after an edit when somebody else changed the order meanwhile", async () => {
       open();
       await screen.findByText("4 sections · 1 hidden");

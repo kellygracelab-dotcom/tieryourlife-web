@@ -47,6 +47,9 @@ export interface SectionsPaneDeps {
 
 const paneDeps: SectionsPaneDeps = { load: loadAdminSections, save: saveSectionOrder };
 
+/** A quiet read of the order's version: the one it replaces and the one it read. */
+type VersionRead = { from: number | undefined; to: number | undefined } | null;
+
 /** How near the window's edge a dragged row scrolls the page, and by how much a move. */
 const SCROLL_EDGE = 64;
 const SCROLL_STEP = 16;
@@ -152,6 +155,10 @@ export function SectionsPane({
   const listRef = useRef<HTMLOListElement>(null);
   // The row a pointer holds: where in it the pointer took it, and where the pointer is now.
   const drag = useRef<{ id: string; grab: number; y: number } | null>(null);
+  // The quiet read of the version after an edit, while it is on the way: a Save
+  // pressed meanwhile waits for it. It answers the version it read and the one
+  // it replaces, or null when the order moved elsewhere and the old one stays.
+  const reading = useRef<Promise<VersionRead> | null>(null);
 
   // The held row sits under the pointer, inside the list, while the others keep
   // their places; the answer is its middle, measured from the list's top.
@@ -299,22 +306,28 @@ export function SectionsPane({
     setSaving(true);
     setFailed(false);
     const { ids, hidden } = saveOf(edited);
-    deps.save(ids, hidden, version).then(
-      (answered) => {
-        setSaving(false);
-        setSaved(edited);
-        setVersion(answered.version);
-        setNotice({ text: strings.admin.orderSaved });
-        // The front page reads the sections again, in the new order.
-        sectionsStore.invalidate();
-      },
-      (reason: unknown) => {
-        setSaving(false);
-        const error = errorOf(reason);
-        if (error.kind === "conflict") setConflict(true);
-        else setFailed(true);
-      },
+    const waiting = reading.current ?? Promise.resolve(null);
+    const against = waiting.then((read) =>
+      read !== null && read.from === version ? read.to : version,
     );
+    against
+      .then((sent) => deps.save(ids, hidden, sent))
+      .then(
+        (answered) => {
+          setSaving(false);
+          setSaved(edited);
+          setVersion(answered.version);
+          setNotice({ text: strings.admin.orderSaved });
+          // The front page reads the sections again, in the new order.
+          sectionsStore.invalidate();
+        },
+        (reason: unknown) => {
+          setSaving(false);
+          const error = errorOf(reason);
+          if (error.kind === "conflict") setConflict(true);
+          else setFailed(true);
+        },
+      );
   };
 
   const hiddenCount = edited.filter((row) => !row.shown).length;
@@ -516,14 +529,21 @@ export function SectionsPane({
             // is read again quietly, and taken only while the order is still the
             // one this pane read, so a real change from another tab still stops
             // the Save.
+            // A Save pressed before the read is back waits for it.
             const was = { version, rows: saved };
-            deps.load().then(
-              (fresh) => {
-                if (isChanged(changesOf(was.rows, rowsOf(fresh)))) return;
-                setVersion((now) => (now === was.version ? (fresh.version ?? undefined) : now));
-              },
-              () => undefined,
+            const read = deps.load().then(
+              (fresh) =>
+                isChanged(changesOf(was.rows, rowsOf(fresh)))
+                  ? null
+                  : { from: was.version, to: fresh.version ?? undefined },
+              () => null,
             );
+            reading.current = read;
+            void read.then((got) => {
+              if (reading.current === read) reading.current = null;
+              if (got === null) return;
+              setVersion((now) => (now === got.from ? got.to : now));
+            });
           }}
         />
       )}
