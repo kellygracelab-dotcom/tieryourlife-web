@@ -31,6 +31,12 @@ export interface BoardTopic {
   name: string;
   /** Proposed and not yet decided by a moderator. */
   waiting?: boolean;
+  /**
+   * Learnt from the backend's answer (a moderator moved the list into it),
+   * not chosen here: a publish says nothing of it, so the move holds. Chosen
+   * in List settings, it is the person's again.
+   */
+  learned?: boolean;
 }
 
 /** The phone's and the backend's bounds on a topic's name. */
@@ -114,6 +120,12 @@ export interface Board {
    * backend kept a publish as that; publishedId stays null then. Never kept in the account.
    */
   rankingOf: string | null;
+  /**
+   * This device's: the backend kept the last publish or Update out of the
+   * feed until a moderator looks (`underReview`), so its link answers 404 to
+   * everybody. Absent otherwise. Never kept in the account.
+   */
+  heldForReview?: boolean;
   /** A game of Play in progress, kept in the account as the app keeps it; null when none is. */
   play: SyncedPlay | null;
 }
@@ -330,7 +342,8 @@ const sameTopic = (a: BoardTopic | null, b: BoardTopic | null): boolean =>
     ? a === b
     : a.id === b.id &&
       (a.id !== null || a.name === b.name) &&
-      (a.waiting ?? false) === (b.waiting ?? false);
+      (a.waiting ?? false) === (b.waiting ?? false) &&
+      (a.learned ?? false) === (b.learned ?? false);
 
 /** Sent: a topic taken off is off on the list, and the next publish need not say so again. */
 export function topicSent(board: Board): Board {
@@ -384,7 +397,7 @@ export const setPublished = (
   authorName: string | null,
   now: number,
 ): Board => ({
-  ...board,
+  ...unheld(board),
   publishedId,
   rankingOf: null,
   authorName,
@@ -392,13 +405,24 @@ export const setPublished = (
   publishedEditedAt: publishedId === null ? null : now,
 });
 
+/** The board without the hold: a fresh answer, or none, says whether it still waits. */
+const unheld = (board: Board): Board => {
+  if (board.heldForReview === undefined) return board;
+  const { heldForReview: _held, ...rest } = board;
+  return rest;
+};
+
+/** Held for a moderator or not, as the backend's answer to a publish or Update said. */
+export const setHeld = (board: Board, held: boolean): Board =>
+  held ? { ...board, heldForReview: true } : unheld(board);
+
 /**
  * Out as one's ranking of the list it was saved from, or no longer: the
  * backend's answer to a copy published as it came. The author's name stays,
  * since the cards are still theirs.
  */
 export const setRanking = (board: Board, listId: string | null, now: number): Board => ({
-  ...board,
+  ...unheld(board),
   publishedId: null,
   rankingOf: listId,
   editedAt: now,

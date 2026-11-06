@@ -27,6 +27,7 @@ import {
   rankedTiers,
   setAnonymous,
   setCover,
+  setHeld,
   setPublished,
   setRanking,
   setTopic,
@@ -76,10 +77,11 @@ interface BoardSettingsProps {
   onNewTier: () => void;
   /**
    * The board went public, was sent again, or came down; or the backend kept
-   * it as one's ranking of the list it was saved from. The page says so.
+   * it as one's ranking of the list it was saved from, or kept it out of the
+   * feed until a moderator looks (`held`). The page says so.
    */
   onPublished: (
-    what: "published" | "updated" | "unpublished" | "ranking",
+    what: "published" | "updated" | "unpublished" | "ranking" | "held",
     id: string | null,
   ) => void;
   /**
@@ -221,10 +223,13 @@ export function BoardSettings({
   const ownPublish = publishing !== null;
   const isPublic = ownPublish && isOut(board);
   const behind = isBehind(board);
+  // Held for a moderator, the list's link answers 404 to everybody, the author too.
+  const held = isPublic && board.heldForReview === true;
   // A ranking is out on the page of the list it ranks.
-  const published = isPublic
-    ? `/l/${encodeURIComponent(board.publishedId ?? board.rankingOf ?? "")}`
-    : null;
+  const published =
+    isPublic && !held
+      ? `/l/${encodeURIComponent(board.publishedId ?? board.rankingOf ?? "")}`
+      : null;
   const toggle = (which: Open) => setOpen(open === which ? "none" : which);
   // Choosing in a picker closes it and takes away the radio that had the
   // focus, which then fell to the page inside the open sheet: it goes back to
@@ -249,14 +254,23 @@ export function BoardSettings({
   };
 
   // The list's topic as the backend kept it, named, while the board still has none of its own.
-  const learn = (topicId: string) => {
+  // The topic the list sits under, as the answer said it, for a board that
+  // chose none: learnt, never sent back, and only one of the board's own
+  // section. One chosen here, or taken off here, is not touched.
+  const learn = (topicId: string | null) => {
+    const mayLearn = (board: Board) =>
+      board.topicOff !== true && (board.topic === null || board.topic.learned === true);
+    if (topicId === null) {
+      const current = latest();
+      if (mayLearn(current) && current.topic !== null) keep(settleTopic(current, null));
+      return;
+    }
     findTopic(topicId).then(
       (topic) => {
         const current = latest();
-        if (topic.status !== "approved" || current.topic !== null || current.topicOff === true) {
-          return;
-        }
-        keep(settleTopic(current, { id: topic.id, name: topic.name }));
+        if (!mayLearn(current)) return;
+        const fits = topic.status === "approved" && topic.section === current.category;
+        keep(settleTopic(current, fits ? { id: topic.id, name: topic.name, learned: true } : null));
       },
       () => undefined,
     );
@@ -287,9 +301,11 @@ export function BoardSettings({
       // The cards as they came from the list they were saved from: the
       // backend kept them as one's ranking of it, which has no id of its own.
       const ranking = answer.ranking === true;
+      // Kept out of the feed until a moderator looks: its link works for nobody yet.
+      const waits = !ranking && answer.underReview === true;
       const out = ranking
         ? setRanking(after, answer.id, now())
-        : setPublished(after, answer.id, name ?? after.authorName, now());
+        : setHeld(setPublished(after, answer.id, name ?? after.authorName, now()), waits);
       // A name proposed with it is a topic now, waiting for a moderator,
       // unless another was chosen while the request was on its way.
       const sent =
@@ -306,13 +322,16 @@ export function BoardSettings({
           ? sent
           : { ...sent, publishedEditedAt: sent.editedAt - 1 },
       );
-      onPublished(ranking ? "ranking" : what, answer.id);
+      onPublished(ranking ? "ranking" : waits ? "held" : what, answer.id);
       // The backend may have filed it under an approved topic of that name.
       if (sent.topic !== current.topic) settle(sent.topic);
       // Said nothing of a topic, the list kept its own, a moderator's move
       // into one too: the board learns it, as the published copy has it.
       const kept = answer.topicId;
-      if (!ranking && sent.topic === null && sent.topicOff !== true && kept) learn(kept);
+      const unchosen = sent.topic === null || sent.topic.learned === true;
+      if (!ranking && unchosen && sent.topicOff !== true && kept !== undefined) {
+        learn(kept === "" ? null : kept);
+      }
     } catch (reason: unknown) {
       const error = errorOf(reason);
       // Taken down elsewhere (its page, /me, the phone): the board is no longer
@@ -534,7 +553,7 @@ export function BoardSettings({
                     {strings.boards.publicTitle}
                   </label>
                 }
-                sub={strings.boards.publicBody}
+                sub={held ? strings.boards.heldBody : strings.boards.publicBody}
                 end={
                   <input
                     id={`${id}-public`}
@@ -603,7 +622,7 @@ export function BoardSettings({
             </li>
           )}
 
-          {isPublic && published !== null && (
+          {isPublic && (
             <li className="sheet-row">
               <Row
                 icon={<Icon name="publish" />}
@@ -619,10 +638,12 @@ export function BoardSettings({
                   </Button>
                 }
               >
-                <Link className="sheet-row__link" to={published} state={AS_COMMUNITY}>
-                  <Icon name="open_in_new" />
-                  <span>{strings.boards.seeInCommunity}</span>
-                </Link>
+                {published !== null && (
+                  <Link className="sheet-row__link" to={published} state={AS_COMMUNITY}>
+                    <Icon name="open_in_new" />
+                    <span>{strings.boards.seeInCommunity}</span>
+                  </Link>
+                )}
                 {problem !== null && <span className="sheet-row__note">{problem}</span>}
                 {failed("update")}
               </Row>

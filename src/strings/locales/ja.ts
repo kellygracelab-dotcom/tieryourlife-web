@@ -447,6 +447,11 @@ const ja: Translation = {
     withdraw: "取り下げる",
     withdrawTitle: "ランキングを取り下げますか？",
     withdrawBody: "このリストのランキングから消えます。",
+    showMine: "自分のランキングをほかの人に見せる",
+    signInToShow: "ランキングを見せるにはログインしてください",
+    shown: "あなたのランキングがリストのランキングに加わりました",
+    showBanned:
+      "モデレーターがあなたのリストの1つを取り下げたため、今はランキングを見せられません。",
     cancel: "キャンセル",
     withdrawFailed: "ランキングを取り下げられませんでした。もう一度お試しください。",
     failed: "ランキングを読み込めませんでした。",
@@ -1158,6 +1163,8 @@ const ja: Translation = {
     updating: "更新中…",
     behind: "公開中の内容はこのボードより古いです。",
     publishing: "公開中…",
+    publishedHeld: "保存しました。他の人に表示される前に、モデレーターの確認を待っています。",
+    heldBody: "他の人に表示される前に、モデレーターの確認を待っています。",
     publishedNote: "公開しました。リンクを知っている人は誰でも並べられます。",
     publishedAsRanking:
       "そのリストのあなたのランキングとして公開しました。フィードに2つ目のリストは出ません。",

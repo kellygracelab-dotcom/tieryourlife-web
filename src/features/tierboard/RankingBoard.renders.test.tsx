@@ -12,6 +12,7 @@ vi.mock("../../lib/api", () => ({
   noteTake: vi.fn(),
   keepListRanking: vi.fn(async () => undefined),
   rearrangeRanking: vi.fn(async () => ({ code: "abcdefgh" })),
+  rankingStillThere: vi.fn(async () => true),
 }));
 
 // Every card here has no picture, so each drawing of a tile draws its name once.

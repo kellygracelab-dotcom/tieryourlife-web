@@ -460,6 +460,10 @@ async function takeOver(
     arrivedFrom: latest.arrivedFrom,
     topic: latest.topic,
     ...(latest.topicOff === true ? { topicOff: true } : {}),
+    // Held for a moderator is said of the list this device published; the account's copy may name another.
+    ...(latest.heldForReview === true && latest.publishedId === board.publishedId
+      ? { heldForReview: true }
+      : {}),
     takenFrom: latest.takenFrom,
     rankingOf: latest.rankingOf,
   });

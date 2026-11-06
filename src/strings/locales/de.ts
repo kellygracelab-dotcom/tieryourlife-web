@@ -459,6 +459,11 @@ const de: Translation = {
     withdraw: "Zurückziehen",
     withdrawTitle: "Deine Reihung zurückziehen?",
     withdrawBody: "Sie verschwindet aus den Reihungen dieser Liste.",
+    showMine: "Meine Rangliste anderen zeigen",
+    signInToShow: "Melde dich an, um deine Rangliste zu zeigen",
+    shown: "Deine Rangliste steht jetzt bei den Ranglisten der Liste",
+    showBanned:
+      "Ein Moderator hat eine deiner Listen entfernt, deshalb kannst du vorerst keine Ranglisten zeigen.",
     cancel: "Abbrechen",
     withdrawFailed: "Die Reihung konnte nicht zurückgezogen werden. Versuch es noch einmal.",
     failed: "Die Reihungen konnten nicht geladen werden.",
@@ -1207,6 +1212,8 @@ const de: Translation = {
     updating: "Wird aktualisiert…",
     behind: "Die veröffentlichte Fassung ist älter als dieses Board.",
     publishing: "Wird veröffentlicht…",
+    publishedHeld: "Gespeichert. Sie wartet auf einen Moderator, bevor andere sie sehen können.",
+    heldBody: "Sie wartet auf einen Moderator, bevor andere sie sehen können.",
     publishedNote: "Veröffentlicht. Alle mit dem Link können sie einordnen.",
     publishedAsRanking:
       "Draußen als deine Reihung dieser Liste. Im Feed erscheint keine zweite Liste.",

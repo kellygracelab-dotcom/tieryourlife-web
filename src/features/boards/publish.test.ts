@@ -79,6 +79,15 @@ describe("publishing a board", () => {
     })!;
     expect(waiting.topicId).toBe("t9");
     expect(waiting).not.toHaveProperty("newTopic");
+    // A topic the board learnt from an answer (a moderator's move) is the
+    // list's, not the person's: nothing is said of it, so the move holds.
+    const learnt = { ...b, topic: { id: "t1", name: "A24", learned: true } };
+    expect(publishRequestOf(learnt)).not.toHaveProperty("topicId");
+    expect(publishRequestOf(learnt)).not.toHaveProperty("noTopic");
+    // Chosen in List settings, the same topic is the person's again and goes out.
+    const chosen = setTopic(learnt, { id: "t1", name: "A24" }, 6);
+    expect(chosen.topic).toEqual({ id: "t1", name: "A24" });
+    expect(publishRequestOf(chosen)?.topicId).toBe("t1");
     // Anonymity is said every time too, or a republish would put the name back.
     expect(request.anonymous).toBe(false);
     expect(publishRequestOf({ ...b, anonymous: true })?.anonymous).toBe(true);

@@ -67,6 +67,8 @@ export function coverOf(
 function topicOf(board: Board): Pick<PublishRequest, "topicId" | "noTopic" | "newTopic"> {
   const topic = board.topic;
   if (topic === null) return board.topicOff === true ? { noTopic: true } : {};
+  // Learnt from a moderator's move, it is the list's: said, it would read as the person's choice.
+  if (topic.learned === true) return {};
   return topic.id === null ? { newTopic: topic.name } : { topicId: topic.id };
 }
 

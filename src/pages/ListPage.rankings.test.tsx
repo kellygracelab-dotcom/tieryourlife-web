@@ -15,6 +15,15 @@ const mocks = vi.hoisted(() => ({
   loadListRankings: vi.fn<(id: string, after: string | null) => Promise<RankingsPage>>(),
   withdrawListRanking: vi.fn<(id: string) => Promise<void>>(),
   keepRanking: vi.fn(() => new Promise<never>(() => undefined)),
+  keepListRanking:
+    vi.fn<
+      (
+        list: Pick<PublishedList, "id" | "items" | "tiers">,
+        rows: readonly (readonly number[])[],
+      ) => Promise<ReaderRanking & { created?: boolean }>
+    >(),
+  loadListAsWritten: vi.fn<(id: string) => Promise<PublishedList>>(),
+  signIn: vi.fn(async () => ({ kind: "cancelled" as const })),
 }));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
@@ -22,6 +31,8 @@ vi.mock("../lib/api", async () => ({
   loadList: mocks.loadList,
   loadListRankings: mocks.loadListRankings,
   withdrawListRanking: mocks.withdrawListRanking,
+  keepListRanking: mocks.keepListRanking,
+  loadListAsWritten: mocks.loadListAsWritten,
   followState: vi.fn(async () => ({ following: false, followers: 0 })),
 }));
 
@@ -79,7 +90,7 @@ const openAs = (account: Session["account"] = member, entries: InitialEntry[] = 
     <SessionContext.Provider
       value={{
         account,
-        signIn: async () => ({ kind: "cancelled" }),
+        signIn: mocks.signIn,
         signOut: async () => undefined,
         refresh: () => undefined,
       }}
@@ -120,6 +131,11 @@ beforeEach(() => {
   mocks.loadListRankings.mockResolvedValue({ rankings: [me, olena], nextCursor: null });
   mocks.withdrawListRanking.mockReset();
   mocks.withdrawListRanking.mockResolvedValue(undefined);
+  mocks.keepListRanking.mockReset();
+  mocks.keepListRanking.mockResolvedValue({ ...me, rows: [[0, 1]], created: true });
+  mocks.loadListAsWritten.mockReset();
+  mocks.loadListAsWritten.mockResolvedValue(list);
+  mocks.signIn.mockClear();
   useHiddenStoreForTests(memoryStore());
 });
 
@@ -549,5 +565,100 @@ describe("ListPage rankings", () => {
     } finally {
       delete (Element.prototype as Partial<Element>).scrollIntoView;
     }
+  });
+});
+
+describe("ListPage: showing one's ranking to others", () => {
+  const twoTiers: PublishedList = {
+    ...list,
+    tiers: [
+      ...list.tiers,
+      { label: "A", caption: null, colorLight: "#c06a25", colorDark: "#e9a867" },
+    ],
+  };
+  beforeEach(() => {
+    mocks.loadList.mockResolvedValue(twoTiers);
+    mocks.loadListAsWritten.mockResolvedValue(twoTiers);
+  });
+  /** Ex Machina moved to A on the author's board: Mine starts from it, as on the phone. */
+  const arrangeMine = async () => {
+    const board = await screen.findByRole("region", { name: "Their ranking" });
+    await userEvent.click(within(board).getByRole("button", { name: "Ex Machina" }));
+    await userEvent.click(screen.getByRole("button", { name: "Place Ex Machina in A" }));
+    await screen.findByRole("region", { name: "Your ranking" });
+  };
+  const menu = async () => {
+    await userEvent.click(await screen.findByLabelText("More about this list"));
+  };
+
+  it("is not offered before Mine is arranged", async () => {
+    localStorage.clear();
+    openAs();
+    await menu();
+    expect(screen.queryByRole("button", { name: "Show my ranking to others" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Sign in to show your ranking" })).toBeNull();
+  });
+
+  it("puts Mine among the list's rankings from the menu, as the app's Show my ranking does", async () => {
+    localStorage.clear();
+    openAs();
+    await arrangeMine();
+    await menu();
+    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
+    // The list is read again first: rows name cards by their place in it.
+    expect(mocks.loadListAsWritten).toHaveBeenCalledWith("abc");
+    expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ id: "abc", tiers: twoTiers.tiers }),
+      [[], [0]],
+    );
+    // One more reader counted, and the sheet leads with one's own.
+    await userEvent.click(await screen.findByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Rankings · 13" }));
+    const sheet = screen.getByRole("dialog", { name: "Rankings" });
+    expect(await within(sheet).findByRole("button", { name: "Withdraw" })).toBeInTheDocument();
+    localStorage.clear();
+  });
+
+  it("asks a guest to sign in instead", async () => {
+    localStorage.clear();
+    openAs({ kind: "guest", uid: "g1" });
+    await arrangeMine();
+    await menu();
+    await userEvent.click(screen.getByRole("button", { name: "Sign in to show your ranking" }));
+    expect(mocks.signIn).toHaveBeenCalledOnce();
+    expect(mocks.keepListRanking).not.toHaveBeenCalled();
+    localStorage.clear();
+  });
+
+  it("sends nothing when the author changed the list since, and says why", async () => {
+    localStorage.clear();
+    mocks.loadListAsWritten.mockResolvedValue({ ...twoTiers, updatedAt: 5 });
+    openAs();
+    await arrangeMine();
+    await menu();
+    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    expect(
+      await screen.findByText(
+        "The author changed this list while you were ranking it. Load it again to rank it as it is now.",
+      ),
+    ).toBeInTheDocument();
+    expect(mocks.keepListRanking).not.toHaveBeenCalled();
+    localStorage.clear();
+  });
+
+  it("says why a banned reader cannot show it", async () => {
+    localStorage.clear();
+    mocks.keepListRanking.mockRejectedValue(new ApiFailure({ kind: "banned", until: null }));
+    openAs();
+    await arrangeMine();
+    await menu();
+    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    expect(
+      await screen.findByText(
+        "A moderator took down one of your lists, so you cannot show rankings for now.",
+      ),
+    ).toBeInTheDocument();
+    localStorage.clear();
   });
 });

@@ -19,12 +19,19 @@ import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import { useSession } from "../../app/session";
-import { keepRanking, rearrangeRanking } from "../../lib/api";
+import { keepRanking, rankingStillThere, rearrangeRanking } from "../../lib/api";
 import { isEditorialAuthor } from "../../lib/editorial";
 import { holds } from "../../lib/locale";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
-import { keptBy, keptFor, readKept, writeKept, type KeptRanking } from "../ranking/kept";
+import {
+  forgetKept,
+  keptBy,
+  keptFor,
+  readKept,
+  writeKept,
+  type KeptRanking,
+} from "../ranking/kept";
 import { rankBanText } from "../ranking/failureText";
 import { ResultBar, type FinishState } from "../ranking/ResultBar";
 import { downloadShare, type Share } from "../ranking/share";
@@ -130,6 +137,11 @@ interface RankingBoardProps {
   keep?: Keep;
   /** Changes a ranking already kept, behind the same link. */
   rearrange?: (code: string, rows: Rows, tierLabels?: TierLabels) => Promise<unknown>;
+  /**
+   * Whether a ranking this device finished is still behind its link: false
+   * only when the server says it is gone (deleted in another browser).
+   */
+  stillThere?: (code: string) => Promise<boolean>;
   share?: Share;
   edit?: EditMode;
   /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
@@ -426,6 +438,7 @@ export function RankingBoard({
   device = store,
   keep = keepRanking,
   rearrange = rearrangeRanking,
+  stillThere = rankingStillThere,
   share = downloadShare,
   edit,
   strip = false,
@@ -477,6 +490,25 @@ export function RankingBoard({
     setShownTo(who);
     if (finish.status === "idle" || finish.status === "done") setFinish(keptHere(who));
   }
+  // The link shown from the device's copy is asked about once, behind the
+  // page: deleted in another browser, the copy goes and Finish comes back.
+  // A link just made here needs no asking.
+  const asked = useRef(new Set<string>());
+  const shownCode = finish.status === "done" ? finish.code : null;
+  useEffect(() => {
+    if (shownCode === null || asked.current.has(shownCode)) return;
+    asked.current.add(shownCode);
+    stillThere(shownCode).then(
+      (there) => {
+        if (there) return;
+        forgetKept(store, list.id, shownCode);
+        setFinish((now) =>
+          now.status === "done" && now.code === shownCode ? { status: "idle" } : now,
+        );
+      },
+      () => undefined,
+    );
+  }, [shownCode, stillThere, store, list.id]);
   const [save, setSave] = useState<SaveState>({ status: "idle" });
   const locked = finish.status === "saving" || finish.status === "done" || save.status === "saving";
   const [offer, setOffer] = useState<KeepState>("closed");
@@ -660,6 +692,7 @@ export function RankingBoard({
         // Made by an account, the ranking already sits in it: nothing to claim later.
         const owner = uid === null ? {} : { claimedBy: uid };
         writeKept(store, list.id, { ...kept, ...owner, rows: placed, version: list.updatedAt });
+        asked.current.add(kept.code);
         setFinish({ status: "done", code: kept.code });
         // The same link as before was offered already; only a new one is.
         if (guest && kept !== before) setOffer("open");

@@ -459,6 +459,11 @@ const ptBR: Translation = {
     withdraw: "Retirar",
     withdrawTitle: "Retirar seu ranking?",
     withdrawBody: "Ele sai dos rankings desta lista.",
+    showMine: "Mostrar meu ranking aos outros",
+    signInToShow: "Entre para mostrar seu ranking",
+    shown: "Seu ranking está entre os rankings da lista",
+    showBanned:
+      "Um moderador removeu uma das suas listas, então por enquanto você não pode mostrar rankings.",
     cancel: "Cancelar",
     withdrawFailed: "Não foi possível retirar seu ranking. Tente de novo.",
     failed: "Não foi possível carregar os rankings.",
@@ -1261,6 +1266,8 @@ const ptBR: Translation = {
     updating: "Atualizando…",
     behind: "A versão publicada está desatualizada.",
     publishing: "Publicando…",
+    publishedHeld: "Salva. Ela espera um moderador antes que outras pessoas possam vê-la.",
+    heldBody: "Ela espera um moderador antes que outras pessoas possam vê-la.",
     publishedNote: "Publicada. Qualquer um com o link pode organizá-la.",
     publishedAsRanking:
       "Publicada como seu ranking daquela lista. O feed não mostra uma segunda lista.",

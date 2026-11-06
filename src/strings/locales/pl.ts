@@ -466,6 +466,11 @@ const pl: Translation = {
     withdraw: "Wycofaj",
     withdrawTitle: "Wycofać twój ranking?",
     withdrawBody: "Zniknie z rankingów tej listy.",
+    showMine: "Pokaż mój ranking innym",
+    signInToShow: "Zaloguj się, aby pokazać swój ranking",
+    shown: "Twój ranking jest wśród rankingów listy",
+    showBanned:
+      "Moderator usunął jedną z twoich list, więc na razie nie możesz pokazywać rankingów.",
     cancel: "Anuluj",
     withdrawFailed: "Nie udało się wycofać rankingu. Spróbuj ponownie.",
     failed: "Nie udało się wczytać rankingów.",
@@ -1318,6 +1323,8 @@ const pl: Translation = {
     updating: "Aktualizowanie…",
     behind: "Opublikowana wersja jest starsza niż ta lista.",
     publishing: "Publikowanie…",
+    publishedHeld: "Zapisana. Czeka na moderatora, zanim inni będą mogli ją zobaczyć.",
+    heldBody: "Czeka na moderatora, zanim inni będą mogli ją zobaczyć.",
     publishedNote: "Opublikowano. Każdy z linkiem może ją ułożyć.",
     publishedAsRanking:
       "Opublikowana jako twój ranking tej listy. W kanale nie pojawia się druga lista.",

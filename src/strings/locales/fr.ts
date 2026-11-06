@@ -469,6 +469,11 @@ const fr: Translation = {
     withdraw: "Retirer",
     withdrawTitle: "Retirer votre classement ?",
     withdrawBody: "Il disparaîtra des classements de cette liste.",
+    showMine: "Montrer mon classement aux autres",
+    signInToShow: "Connectez-vous pour montrer votre classement",
+    shown: "Votre classement figure parmi ceux de la liste",
+    showBanned:
+      "Un modérateur a retiré l’une de vos listes ; vous ne pouvez pas montrer de classement pour l’instant.",
     cancel: "Annuler",
     withdrawFailed: "Impossible de retirer votre classement. Réessayez.",
     failed: "Impossible de charger les classements.",
@@ -1281,6 +1286,8 @@ const fr: Translation = {
     updating: "Mise à jour…",
     behind: "La version publiée est en retard sur ce tableau.",
     publishing: "Publication…",
+    publishedHeld: "Enregistrée. Elle attend un modérateur avant que d’autres puissent la voir.",
+    heldBody: "Elle attend un modérateur avant que d’autres puissent la voir.",
     publishedNote: "Publiée. Toute personne ayant le lien peut la classer.",
     publishedAsRanking:
       "Publiée comme votre classement de cette liste. Aucune seconde liste n’apparaît dans le fil.",
