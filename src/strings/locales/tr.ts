@@ -703,6 +703,7 @@ const tr: Translation = {
     topicCreated: "“{name}” oluşturuldu",
     topicRenamed: "“{name}” olarak yeniden adlandırıldı",
     topicDeleted: "“{name}” silindi",
+    topicNotEmpty: "“{name}” artık liste içeriyor, bu yüzden silinemez.",
     deleteTopicAsk: "“{name}” silinsin mi?",
     deleteTopicBody: "Onu takip eden herkesin takibi biter. Bu geri alınamaz.",
     people: { one: "{n} kişi", other: "{n} kişi" },

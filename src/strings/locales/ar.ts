@@ -817,6 +817,7 @@ const ar: Translation = {
     topicCreated: "أُنشئ «{name}»",
     topicRenamed: "أُعيدت التسمية إلى «{name}»",
     topicDeleted: "حُذف «{name}»",
+    topicNotEmpty: "صار في «{name}» قوائم الآن، فلا يمكن حذفه.",
     deleteTopicAsk: "حذف «{name}»؟",
     deleteTopicBody: "سيتوقف كل من يتابعه عن متابعته. لا يمكن التراجع عن ذلك.",
     people: {

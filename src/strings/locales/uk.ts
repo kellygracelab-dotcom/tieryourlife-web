@@ -753,6 +753,7 @@ const uk: Translation = {
     topicCreated: "Тему «{name}» створено",
     topicRenamed: "Перейменовано на «{name}»",
     topicDeleted: "«{name}» видалено",
+    topicNotEmpty: "У темі «{name}» тепер є списки, її не можна видалити.",
     deleteTopicAsk: "Видалити «{name}»?",
     deleteTopicBody: "Усі її підписники відпишуться. Це не можна скасувати.",
     people: { one: "{n} людина", few: "{n} людини", many: "{n} людей", other: "{n} людини" },

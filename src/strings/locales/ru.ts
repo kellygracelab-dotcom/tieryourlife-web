@@ -749,6 +749,7 @@ const ru: Translation = {
     topicCreated: "Тема «{name}» создана",
     topicRenamed: "Переименовано в «{name}»",
     topicDeleted: "«{name}» удалена",
+    topicNotEmpty: "В теме «{name}» теперь есть списки, её нельзя удалить.",
     deleteTopicAsk: "Удалить «{name}»?",
     deleteTopicBody: "Все её подписчики отпишутся. Это нельзя отменить.",
     people: { one: "{n} человек", few: "{n} человека", many: "{n} человек", other: "{n} человека" },

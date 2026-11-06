@@ -746,6 +746,7 @@ const pl: Translation = {
     topicCreated: "Utworzono „{name}”",
     topicRenamed: "Zmieniono nazwę na „{name}”",
     topicDeleted: "Usunięto „{name}”",
+    topicNotEmpty: "W „{name}” są już listy, więc nie da się go usunąć.",
     deleteTopicAsk: "Usunąć „{name}”?",
     deleteTopicBody: "Obserwujący przestaną go obserwować. Tego nie da się cofnąć.",
     people: { one: "{n} osoba", few: "{n} osoby", many: "{n} osób", other: "{n} osoby" },

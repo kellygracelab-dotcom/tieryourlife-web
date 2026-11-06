@@ -701,6 +701,7 @@ const ja: Translation = {
     topicCreated: "「{name}」を作成しました",
     topicRenamed: "「{name}」に名前を変更しました",
     topicDeleted: "「{name}」を削除しました",
+    topicNotEmpty: "「{name}」にリストが入ったため、削除できません。",
     deleteTopicAsk: "「{name}」を削除しますか？",
     deleteTopicBody: "フォローしている人はフォローが外れます。元に戻せません。",
     people: { other: "{n}人" },

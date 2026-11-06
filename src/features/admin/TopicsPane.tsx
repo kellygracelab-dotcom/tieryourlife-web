@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import type { AdminRole, TopicChanges, TopicDraft } from "../../api/admin";
+import { errorOf } from "../../api/errors";
 import type { Topic } from "../../api/sections";
 import { createTopic, deleteTopic, editTopic, loadAllTopics } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
@@ -80,9 +81,15 @@ export function TopicsPane({
         setDeleting(null);
         saved(fill(strings.admin.topicDeleted, { name: topic.name }));
       },
-      () => {
+      (reason: unknown) => {
         setBusy(false);
-        setFailed(true);
+        // 409 NOT_EMPTY, the one conflict a delete meets: a list came into the
+        // topic since its row was drawn. Asking again never helps; the row is
+        // read again, and loses its Delete.
+        if (errorOf(reason).kind === "conflict") {
+          setDeleting(null);
+          saved(fill(strings.admin.topicNotEmpty, { name: topic.name }));
+        } else setFailed(true);
       },
     );
   };

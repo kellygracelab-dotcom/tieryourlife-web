@@ -721,6 +721,7 @@ const de: Translation = {
     topicCreated: "„{name}“ erstellt",
     topicRenamed: "Umbenannt in „{name}“",
     topicDeleted: "„{name}“ gelöscht",
+    topicNotEmpty: "„{name}“ hat jetzt Listen und kann nicht gelöscht werden.",
     deleteTopicAsk: "„{name}“ löschen?",
     deleteTopicBody:
       "Wer dem Thema folgt, folgt ihm danach nicht mehr. Das lässt sich nicht rückgängig machen.",

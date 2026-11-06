@@ -726,6 +726,7 @@ const fr: Translation = {
     topicCreated: "« {name} » créé",
     topicRenamed: "Renommé en « {name} »",
     topicDeleted: "« {name} » supprimé",
+    topicNotEmpty: "« {name} » contient maintenant des listes : impossible de le supprimer.",
     deleteTopicAsk: "Supprimer « {name} » ?",
     deleteTopicBody: "Ceux qui le suivent ne le suivront plus. Impossible d’annuler.",
     people: { one: "{n} personne", other: "{n} personnes" },

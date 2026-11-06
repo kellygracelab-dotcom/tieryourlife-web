@@ -709,6 +709,7 @@ const es: Translation = {
     topicCreated: "«{name}» creado",
     topicRenamed: "Renombrado a «{name}»",
     topicDeleted: "«{name}» eliminado",
+    topicNotEmpty: "«{name}» ya tiene listas, así que no se puede eliminar.",
     deleteTopicAsk: "¿Eliminar «{name}»?",
     deleteTopicBody: "Quien lo sigue dejará de seguirlo. No se puede deshacer.",
     people: { one: "{n} persona", other: "{n} personas" },

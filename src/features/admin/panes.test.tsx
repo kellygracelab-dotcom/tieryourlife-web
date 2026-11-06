@@ -648,6 +648,27 @@ describe("TopicsPane", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("says a topic that got a list meanwhile can no longer be deleted, and reads the topics again", async () => {
+    deps.remove = vi.fn(async () => {
+      throw new ApiFailure({ kind: "conflict" });
+    });
+    deps.load = vi
+      .fn<TopicsDeps["load"]>()
+      .mockResolvedValueOnce({ topics: [topic("t2", "Pokémon", { listCount: 0 })] })
+      .mockResolvedValue({ topics: [topic("t2", "Pokémon", { listCount: 1 })] });
+    wrap(<TopicsPane adminRole="owner" deps={deps} />);
+    const row = (await screen.findByText("Pokémon")).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: "Delete" }));
+    const ask = screen.getByRole("dialog", { name: "Delete Pokémon?" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Delete" }));
+    expect(
+      await screen.findByText("Pokémon has lists now, so it can’t be deleted."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await screen.findByText(/1 list/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
   it("says a delete that did not go through, and topics that did not come", async () => {
     deps.remove = vi.fn(async () => {
       throw new ApiFailure({ kind: "offline" });

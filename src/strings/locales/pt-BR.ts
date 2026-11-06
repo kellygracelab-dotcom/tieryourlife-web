@@ -706,6 +706,7 @@ const ptBR: Translation = {
     topicCreated: "“{name}” criado",
     topicRenamed: "Renomeado para “{name}”",
     topicDeleted: "“{name}” excluído",
+    topicNotEmpty: "“{name}” agora tem listas, então não dá para excluir.",
     deleteTopicAsk: "Excluir “{name}”?",
     deleteTopicBody: "Quem segue deixa de seguir. Não dá para desfazer.",
     people: { one: "{n} pessoa", other: "{n} pessoas" },

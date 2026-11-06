@@ -676,6 +676,7 @@ export const en = {
     topicCreated: "{name} created",
     topicRenamed: "Renamed to {name}",
     topicDeleted: "{name} deleted",
+    topicNotEmpty: "{name} has lists now, so it can’t be deleted.",
     deleteTopicAsk: "Delete {name}?",
     deleteTopicBody: "Anyone following it stops following it. This can’t be undone.",
     people: { one: "{n} person", other: "{n} people" },
