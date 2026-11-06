@@ -277,7 +277,11 @@ function usedTranslations(
   return languages.length === 0 ? null : Object.fromEntries(languages);
 }
 
-/** Longer than any tier word the app or the site lets anybody type. */
+/**
+ * The longest tier word a ranking keeps. The editors let a list's tiers carry
+ * up to 80 characters, so a reader's placing can wear longer words; the site
+ * cuts them to this before it sends a version started from that placing.
+ */
 export const MAX_TIER_LABEL_LENGTH = 40;
 
 export type TierLabelsDecision = { ok: true; labels: (string | null)[] | null } | Refusal;
