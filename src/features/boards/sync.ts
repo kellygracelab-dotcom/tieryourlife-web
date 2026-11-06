@@ -1,7 +1,7 @@
 import type { KeepBoardRequest, KeptBoard, KeptBoardEntry } from "../../api/boards";
 import { errorOf } from "../../api/errors";
 import { fingerprintOf as digest } from "./fingerprint";
-import { setPublished, type Board, type BoardItem, type NextUid } from "./model";
+import { setPublished, trashBoard, type Board, type BoardItem, type NextUid } from "./model";
 import { parseBoard, type BoardsRepository } from "./repository";
 import { planSync, type RemoteBoard, type SyncedBoard, type SyncStep } from "./syncPlan";
 import type { SyncRecords } from "./syncRecords";
@@ -139,7 +139,11 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
     check(deps);
     const remote = await readIndex(api);
     const steps = planSync(
-      local.map((board) => ({ uid: board.uid, fingerprint: fingerprints.get(board.uid) ?? "" })),
+      local.map((board) => ({
+        uid: board.uid,
+        fingerprint: fingerprints.get(board.uid) ?? "",
+        inTrash: board.deletedAt !== null,
+      })),
       [...remote.values()],
       records.all(),
     );
@@ -245,19 +249,23 @@ async function carry(
     case "revive":
       await send(step.uid, step.basedOn, deps, fingerprintOf);
       return "carried";
-    case "keepBoth":
+    case "keepBoth": {
       // Theirs comes down first, so it is safe here even if the write below never happens.
-      await adopt(await api.board(step.uid), true, deps, fingerprintOf);
+      const theirs = await api.board(step.uid);
+      await adopt(theirs, true, deps, fingerprintOf);
+      sawTheirs(deps, theirs);
       await send(step.uid, step.basedOn, deps, fingerprintOf);
       return "carried";
+    }
     case "restore":
       return takeOver(await api.board(step.uid), planned.get(step.uid), deps, fingerprintOf);
     case "adopt":
       await adopt(await api.board(step.uid), false, deps, fingerprintOf);
       return "carried";
-    case "discardLocal":
+    case "trashLocal":
+      return trashHere(step.uid, step.revision, planned.get(step.uid), deps, fingerprintOf);
+    case "letGo":
       check(deps);
-      repository.remove(step.uid);
       records.forget(step.uid);
       return "carried";
     case "forget":
@@ -316,12 +324,52 @@ async function send(
     const agreed = records.all().find((record) => record.uid === uid)?.fingerprint;
     if (theirs.fingerprint === null || theirs.fingerprint !== agreed) {
       await adopt(theirs, true, deps, fingerprintOf);
+      sawTheirs(deps, theirs);
     }
     check(deps);
     const second = await api.keep(uid, request(board, fingerprint, theirs.revision, deviceName));
     check(deps);
     agree(deps, { uid, revision: second.revision, fingerprint });
   }
+}
+
+/**
+ * Their version is kept here as a copy: written down as seen, before ours goes
+ * up. When ours is then refused (too big, a bad field, no network), the next
+ * run reads the board as changed here only and sends it again, instead of
+ * making one more copy of theirs every run.
+ */
+function sawTheirs(deps: SyncDeps, theirs: KeptBoard): void {
+  check(deps);
+  agree(deps, {
+    uid: theirs.uid,
+    revision: theirs.revision,
+    fingerprint: theirs.fingerprint ?? "",
+  });
+}
+
+/**
+ * A marker for a board nothing changed here since the agreement: into this
+ * device's trash, and the agreement moved to the marker. Waits for the next
+ * run when the board moved while the run was on its way.
+ */
+async function trashHere(
+  uid: string,
+  revision: number,
+  plannedFingerprint: string | undefined,
+  deps: SyncDeps,
+  fingerprintOf: (board: Board) => Promise<string>,
+): Promise<"carried" | "deferred"> {
+  const board = deps.repository.get(uid);
+  if (board === null) return "deferred";
+  const trashed = trashBoard(board, deps.now());
+  const [now, fingerprint] = await Promise.all([fingerprintOf(board), fingerprintOf(trashed)]);
+  check(deps);
+  const latest = deps.repository.get(uid);
+  if (latest === null || !sameBoard(latest, board) || now !== plannedFingerprint) return "deferred";
+  if (trashed !== board) keep(deps, trashed);
+  agree(deps, { uid, revision, fingerprint });
+  return "carried";
 }
 
 /**

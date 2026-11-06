@@ -464,7 +464,7 @@ describe("syncBoards", () => {
     expect(account.keeps.slice(-2).map((keep) => keep.request.basedOn)).toEqual([1, 2]);
   });
 
-  it("tells the account about a board removed for good here, and lets go of one removed elsewhere", async () => {
+  it("tells the account about a board removed for good here, and puts one removed elsewhere in the trash", async () => {
     const { repository, records, account, run } = setUp();
     repository.saveAll([films("a", "A"), films("b", "B")]);
     await run();
@@ -473,8 +473,49 @@ describe("syncBoards", () => {
     account.kept.set("b", { ...b, deleted: true, revision: 2 });
     expect(await run()).toEqual({ carried: 2, refused: 0, deferred: 0, cancelled: false });
     expect(account.forgotten).toEqual(["a"]);
-    expect(repository.get("b")).toBeNull();
+    // In the trash here, with the agreement on the marker: the next run does nothing.
+    expect(repository.get("b")?.deletedAt).toBe(1000);
+    expect(records.all().map((record) => [record.uid, record.revision])).toEqual([["b", 2]]);
+    expect(await run()).toEqual({ carried: 0, refused: 0, deferred: 0, cancelled: false });
+    expect(account.kept.get("b")?.deleted).toBe(true);
+    // Emptied out of the trash here: the agreement goes too, and the account is not asked.
+    repository.remove("b");
+    await run();
     expect(records.all()).toEqual([]);
+    expect(account.forgotten).toEqual(["a"]);
+  });
+
+  it("sends edits nobody else saw back over a marker instead of throwing them away", async () => {
+    const { repository, account, run } = setUp();
+    repository.save(films("d", "Doomed"));
+    await run();
+    repository.save(rename(repository.get("d")!, "Doomed, with my work", 2000));
+    const d = account.kept.get("d")!;
+    account.kept.set("d", { ...d, deleted: true, revision: 2 });
+    await run();
+    expect(repository.get("d")?.title).toBe("Doomed, with my work");
+    expect(repository.get("d")?.deletedAt).toBeNull();
+    expect(account.kept.get("d")).toMatchObject({ deleted: false, title: "Doomed, with my work" });
+  });
+
+  it("makes one copy of theirs however many times ours is refused after it", async () => {
+    const { repository, account, run } = setUp();
+    repository.save(films());
+    await run();
+    // Both sides moved: another device wrote rev 2, and the board here changed.
+    account.holds({ ...films(), title: "Their films" }, 2, "Pixel 7", "theirs");
+    repository.save(rename(repository.get("films")!, "My films", 2000));
+    const keep = account.api.keep;
+    account.api.keep = () => Promise.reject(new ApiFailure({ kind: "tooLarge", detail: null }));
+    await run();
+    await run();
+    await run();
+    const copies = repository.all().filter((board) => board.title === "Their films");
+    expect(copies).toHaveLength(1);
+    account.api.keep = keep;
+    await run();
+    expect(account.kept.get("films")?.title).toBe("My films");
+    expect(repository.all().filter((board) => board.title === "Their films")).toHaveLength(1);
   });
 
   it("counts a step that failed and does not call the run complete", async () => {

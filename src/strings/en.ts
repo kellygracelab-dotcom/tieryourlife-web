@@ -1210,7 +1210,7 @@ export const en = {
       "Your own pictures go to your account, where only you can see them. Publishing a list copies its pictures into the feed, where anyone can.",
     offTitle: "Stop backing up?",
     offBody:
-      "Your boards stay in this browser. The copy in your account is deleted, and a new device will start empty.",
+      "Your boards stay in this browser. The copy in your account is deleted: on your other devices the boards move to the trash, and a new device will start empty.",
     offConfirm: "Stop and delete",
     offCancel: "Cancel",
     stuck: "Not backed up since {when}. Back up now to try again.",

@@ -1402,7 +1402,7 @@ const pl: Translation = {
       "Twoje własne obrazy trafiają na Twoje konto, gdzie widzisz je tylko Ty. Publikacja kopiuje obrazy listy do kanału, gdzie widzą je wszyscy.",
     offTitle: "Przestać tworzyć kopię?",
     offBody:
-      "Tablice zostają w tej przeglądarce. Kopia na koncie zostanie usunięta, a nowe urządzenie zacznie od pustego.",
+      "Tablice zostają w tej przeglądarce. Kopia na koncie zostanie usunięta: na innych urządzeniach tablice trafią do kosza, a nowe urządzenie zacznie od pustego.",
     offConfirm: "Usuń kopię",
     offCancel: "Anuluj",
     stuck: "Brak kopii od {when}. Spróbuj ponownie przyciskiem „Zapisz kopię teraz”.",

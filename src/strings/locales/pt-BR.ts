@@ -1266,7 +1266,7 @@ const ptBR: Translation = {
       "Suas próprias imagens vão para sua conta, onde só você as vê. Publicar copia as imagens para o feed, onde qualquer um as vê.",
     offTitle: "Parar de guardar cópia?",
     offBody:
-      "Seus quadros ficam neste navegador. A cópia na sua conta é apagada, e um dispositivo novo começará vazio.",
+      "Seus quadros ficam neste navegador. A cópia na sua conta é apagada: nos seus outros dispositivos os quadros vão para a lixeira, e um dispositivo novo começará vazio.",
     offConfirm: "Parar e apagar",
     offCancel: "Cancelar",
     stuck: "Sem cópia desde {when}. Toque em “Guardar cópia agora” para tentar de novo.",

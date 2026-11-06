@@ -1278,7 +1278,7 @@ const de: Translation = {
       "Deine eigenen Bilder liegen in deinem Konto, wo nur du sie siehst. Beim Veröffentlichen werden die Bilder in den Feed kopiert, wo alle sie sehen.",
     offTitle: "Sicherung beenden?",
     offBody:
-      "Deine Boards bleiben in diesem Browser. Die Kopie in deinem Konto wird gelöscht, und ein neues Gerät fängt leer an.",
+      "Deine Boards bleiben in diesem Browser. Die Kopie in deinem Konto wird gelöscht: Auf deinen anderen Geräten landen die Boards im Papierkorb, und ein neues Gerät fängt leer an.",
     offConfirm: "Beenden und löschen",
     offCancel: "Abbrechen",
     stuck: "Seit {when} nicht gesichert. Mit „Jetzt sichern“ versuchst du es noch einmal.",

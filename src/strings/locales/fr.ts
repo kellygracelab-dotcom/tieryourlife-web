@@ -1298,7 +1298,7 @@ const fr: Translation = {
       "Vos propres images vont dans votre compte, où vous seul les voyez. Publier copie les images dans le fil, où tout le monde les voit.",
     offTitle: "Arrêter la sauvegarde ?",
     offBody:
-      "Vos tableaux restent dans ce navigateur. La copie dans votre compte est supprimée, et un nouvel appareil démarrera vide.",
+      "Vos tableaux restent dans ce navigateur. La copie dans votre compte est supprimée : sur vos autres appareils, les tableaux passent à la corbeille, et un nouvel appareil démarrera vide.",
     offConfirm: "Arrêter et supprimer",
     offCancel: "Annuler",
     stuck: "Pas de sauvegarde depuis {when}. « Sauvegarder maintenant » pour réessayer.",

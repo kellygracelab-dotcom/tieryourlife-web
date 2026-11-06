@@ -1236,7 +1236,7 @@ const tr: Translation = {
       "Kendi resimlerin hesabına gider, orada yalnızca sen görürsün. Yayımlamak, listenin görsellerini herkesin gördüğü akışa kopyalar.",
     offTitle: "Yedekleme durdurulsun mu?",
     offBody:
-      "Panoların bu tarayıcıda kalır. Hesabındaki kopya silinir ve yeni bir cihaz boş başlar.",
+      "Panoların bu tarayıcıda kalır. Hesabındaki kopya silinir: diğer cihazlarında panolar çöp kutusuna taşınır ve yeni bir cihaz boş başlar.",
     offConfirm: "Durdur ve sil",
     offCancel: "İptal",
     stuck: "{when} tarihinden beri yedeklenmedi. Yeniden denemek için “Şimdi yedekle”ye bas.",

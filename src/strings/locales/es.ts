@@ -1278,7 +1278,7 @@ const es: Translation = {
       "Tus propias imágenes van a tu cuenta, donde solo tú las ves. Publicar copia las imágenes al feed, donde las ve cualquiera.",
     offTitle: "¿Dejar de guardar copia?",
     offBody:
-      "Tus tableros siguen en este navegador. La copia de tu cuenta se elimina, y un dispositivo nuevo empezará vacío.",
+      "Tus tableros siguen en este navegador. La copia de tu cuenta se elimina: en tus otros dispositivos los tableros pasan a la papelera, y un dispositivo nuevo empezará vacío.",
     offConfirm: "Detener y eliminar",
     offCancel: "Cancelar",
     stuck: "Sin copia desde {when}. Pulsa «Guardar copia ahora» para volver a intentarlo.",

@@ -9,6 +9,8 @@ export interface LocalBoard {
   uid: string;
   /** Stands in for the whole contents: change anything and it changes. Only ever compared. */
   fingerprint: string;
+  /** In this device's trash. */
+  inTrash: boolean;
 }
 
 /** A board as the account has it, from the index. */
@@ -39,17 +41,23 @@ export type SyncStep =
   | { kind: "adopt"; uid: string }
   /** Changed in both places. The order is the content, so nothing merges: the account's copy arrives as a second board. */
   | { kind: "keepBoth"; uid: string; basedOn: number }
-  /** Thrown away somewhere else after this device agreed about it. Let it go here too. */
-  | { kind: "discardLocal"; uid: string }
   /**
-   * A marker in the account and no agreement here: this device sent the board
-   * once and withdrew it (the back-up was switched off, which forgets every
-   * agreement), or never agreed at all. The board here is the only one, so it
-   * goes up again over the marker. The phone's plan discards in this case; the
-   * site keeps the board, because the only record it has of the agreement is
-   * one it clears on purpose.
+   * Thrown away somewhere else, or withdrawn there with the back-up, after this
+   * device agreed about it and with nothing new here. It goes to this device's
+   * trash, never further: the person empties it, or restores it, which sends
+   * it up again. The agreement moves to the marker, so the next run does
+   * nothing and nothing brings the board back by itself.
+   */
+  | { kind: "trashLocal"; uid: string; revision: number }
+  /**
+   * A marker in the account, and the board here is the only word on it: this
+   * device sent it once and withdrew it (the back-up was switched off, which
+   * forgets every agreement), never agreed at all, or changed it since the
+   * agreement. It goes up again over the marker, so no edit made here is lost.
    */
   | { kind: "revive"; uid: string; basedOn: number }
+  /** An agreement about a board gone here and in the account: nothing left to agree about. */
+  | { kind: "letGo"; uid: string }
   /** Thrown away here. Tell the account, so the other device lets go as well. */
   | { kind: "forget"; uid: string }
   /** Already the same on both sides. Still a step: the device must write down that they agree, or every run asks again. */
@@ -62,12 +70,16 @@ function stepFor(
 ): SyncStep | null {
   if (remote === undefined) return { kind: "create", uid: local.uid };
   if (remote.deleted) {
-    // Thrown away on another device after both agreed. Keeping it here would
-    // make emptying the trash something that only holds on the device you
-    // did it on. Without an agreement the marker is this device's own doing.
-    return synced === undefined
-      ? { kind: "revive", uid: local.uid, basedOn: remote.revision }
-      : { kind: "discardLocal", uid: local.uid };
+    // Without an agreement the marker is this device's own doing.
+    if (synced === undefined) return { kind: "revive", uid: local.uid, basedOn: remote.revision };
+    // Edits nobody else has seen are not thrown away by a marker; edits to a
+    // board in the trash here are not worth bringing it back for.
+    if (local.fingerprint !== synced.fingerprint && !local.inTrash) {
+      return { kind: "revive", uid: local.uid, basedOn: remote.revision };
+    }
+    // Already moved to the trash for this marker.
+    if (synced.revision === remote.revision) return null;
+    return { kind: "trashLocal", uid: local.uid, revision: remote.revision };
   }
   // Asked first: a store restored from a backup has every board twice with
   // no record of agreeing, and the safe reading would duplicate the lot.
@@ -120,9 +132,11 @@ export function planSync(
   // Once here, no longer: emptied out of the trash on this device. Nothing
   // else makes this shape.
   for (const record of synced) {
-    const stillHere = localUids.has(record.uid);
+    if (localUids.has(record.uid)) continue;
     const alreadyGone = remoteByUid.get(record.uid)?.deleted ?? true;
-    if (!stillHere && !alreadyGone) steps.push({ kind: "forget", uid: record.uid });
+    steps.push(
+      alreadyGone ? { kind: "letGo", uid: record.uid } : { kind: "forget", uid: record.uid },
+    );
   }
   return steps;
 }
