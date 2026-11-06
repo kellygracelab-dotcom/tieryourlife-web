@@ -9,6 +9,7 @@ import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
 import { SessionContext, type Session } from "../../app/session";
 import { memoryStore } from "../../lib/storage";
 import { HomePage, type HomeTab } from "../../pages/HomePage";
+import { HIDDEN_KEY } from "../community/hidden";
 import { useHiddenStoreForTests } from "../community/useHidden";
 import { createSectionsStore, type SectionsDeps } from "../sections/useSections";
 import type { Follow, LoadFollowing, LoadSuggestions } from "./Following";
@@ -179,6 +180,24 @@ describe("the Following tab", () => {
     expect(load).toHaveBeenLastCalledWith({ following: true, sort: "recent" });
     // The focus goes with it, not to the page.
     await vi.waitFor(() => expect(strip.getAllByRole("link")[0]).toHaveFocus());
+  });
+
+  it("leaves out of the suggestions a person hidden on this device", async () => {
+    const hiddenStore = memoryStore();
+    hiddenStore.write(
+      HIDDEN_KEY,
+      JSON.stringify({ lists: [], authors: [{ uid: "u2", name: "someone" }] }),
+    );
+    useHiddenStoreForTests(hiddenStore);
+    loadSuggestions.mockResolvedValue({
+      authors: [
+        { uid: "u2", name: "someone", photoUrl: null, takeCount: 12 },
+        { uid: "u3", name: "another", photoUrl: null, takeCount: 7 },
+      ],
+    });
+    open();
+    expect(await screen.findByText("another")).toBeInTheDocument();
+    expect(screen.queryByText("someone")).toBeNull();
   });
 
   it("turns into the feed of a person followed from the suggestions", async () => {

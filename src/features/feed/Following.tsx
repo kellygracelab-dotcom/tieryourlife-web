@@ -9,6 +9,8 @@ import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { FollowButton } from "../community/FollowButton";
+import { isAuthorHidden } from "../community/hidden";
+import { useHidden } from "../community/useHidden";
 import { FollowingStrip } from "../sections/FollowingStrip";
 import { FollowSections } from "../sections/FollowSections";
 import { ProposalNotices } from "../sections/ProposalNotices";
@@ -110,10 +112,14 @@ export function Suggestions({
 }) {
   const loadFor = useCallback(() => load(), [load]);
   const { state } = useResource(uid, loadFor);
+  const { hidden } = useHidden();
   // An editorial account is nobody to follow: its lists stand without an author.
+  // Somebody hidden on this device is kept out of sight here too, as every feed keeps them.
   const authors =
     state.status === "ready"
-      ? state.value.authors.filter((author) => !isEditorialAuthor(author.uid))
+      ? state.value.authors.filter(
+          (author) => !isEditorialAuthor(author.uid) && !isAuthorHidden(hidden, author.uid),
+        )
       : [];
   if (authors.length === 0) return null;
   return (
