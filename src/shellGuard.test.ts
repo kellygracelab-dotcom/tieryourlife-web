@@ -1,12 +1,11 @@
-import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import html from "../index.html?raw";
 
 /**
  * index.html's guard for an entry script that never comes (QA M103): a page
  * opened just after a deploy names a script that is gone. It is plain inline
  * script, so it is read out of the page and run here against stand-ins.
  */
-const html = readFileSync("index.html", "utf8");
 const guard = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
   .map((match) => match[1] ?? "")
   .find((code) => code.includes("tyl:boot-retry"));
