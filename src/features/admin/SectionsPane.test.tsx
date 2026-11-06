@@ -427,7 +427,42 @@ describe("SectionsPane", () => {
       expect(writes.edit).toHaveBeenCalledWith("games", { name: "Video games" });
       expect(await screen.findByText("Video games saved")).toBeInTheDocument();
       expect(rowNames()).toEqual(["Anime", "Video games", "Food", "Other"]);
-      expect(deps.load).toHaveBeenCalledTimes(1);
+    });
+
+    it("saves the order after an edit with the version the edit moved on to", async () => {
+      open();
+      await screen.findByText("4 sections · 1 hidden");
+      // The backend counts the edit as a change of the order's version.
+      deps.load.mockResolvedValue({ ...answer, version: 8 });
+      await userEvent.click(screen.getByRole("button", { name: "Edit Games" }));
+      const name = screen.getByRole("textbox", { name: "Name" });
+      await userEvent.clear(name);
+      await userEvent.type(name, "Video games");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByText("Video games saved")).toBeInTheDocument();
+      expect(deps.load).toHaveBeenCalledTimes(2);
+      screen.getByRole("button", { name: "Move Video games" }).focus();
+      await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(deps.save).toHaveBeenLastCalledWith(["games", "anime", "food", "other"], ["food"], 8);
+    });
+
+    it("keeps the old version after an edit when somebody else changed the order meanwhile", async () => {
+      open();
+      await screen.findByText("4 sections · 1 hidden");
+      const [anime, games, ...rest] = answer.sections;
+      deps.load.mockResolvedValue({ ...answer, sections: [games!, anime!, ...rest], version: 9 });
+      await userEvent.click(screen.getByRole("button", { name: "Edit Games" }));
+      const name = screen.getByRole("textbox", { name: "Name" });
+      await userEvent.clear(name);
+      await userEvent.type(name, "Video games");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByText("Video games saved")).toBeInTheDocument();
+      expect(deps.load).toHaveBeenCalledTimes(2);
+      screen.getByRole("button", { name: "Move Video games" }).focus();
+      await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(deps.save).toHaveBeenLastCalledWith(["games", "anime", "food", "other"], ["food"], 7);
     });
 
     it("closes the sheet with nothing changed", async () => {
