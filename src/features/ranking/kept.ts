@@ -61,3 +61,12 @@ export function keptFor(
   if (kept === null || kept.version !== version || kept.rows === undefined) return null;
   return JSON.stringify(kept.rows) === JSON.stringify(rows) ? kept.code : null;
 }
+
+/**
+ * Forgets this device's ranking for a list once it was deleted, so the list's
+ * page offers Finish again instead of calling a dead link live. Another
+ * ranking finished for that list since is left alone.
+ */
+export function forgetKept(store: KeyValueStore, listId: string, code: string): void {
+  if (readKept(store, listId)?.code === code) store.remove(keptKey(listId));
+}

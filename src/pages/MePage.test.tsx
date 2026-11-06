@@ -10,7 +10,8 @@ import { SessionContext, type Session } from "../app/session";
 import { newBoard } from "../features/boards/model";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import { createSectionsStore, type SectionsDeps } from "../features/sections/useSections";
-import { memoryStore } from "../lib/storage";
+import { type KeyValueStore, memoryStore } from "../lib/storage";
+import { readKept, writeKept } from "../features/ranking/kept";
 import { MePage } from "./MePage";
 
 vi.mock("../lib/api", () => ({
@@ -86,6 +87,7 @@ const open = (
   account: Session["account"] = member,
   signIn = vi.fn(async () => ({ kind: "cancelled" as const })),
   repository: BoardsRepository = boardsRepository(memoryStore()),
+  kept: KeyValueStore = memoryStore(),
 ) => {
   const store = createSectionsStore({
     load: loadSections,
@@ -106,6 +108,7 @@ const open = (
             copy={copy}
             store={store}
             repository={repository}
+            keptStore={kept}
           />
         ),
       },
@@ -290,6 +293,33 @@ describe("MePage", () => {
     expect(screen.getByText("1 ranked")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Pixar/ })).toBeInTheDocument();
     expect(unpublish).not.toHaveBeenCalled();
+  });
+
+  it("forgets this device's copy of a deleted ranking, so its list offers Finish again", async () => {
+    load.mockResolvedValue({
+      rankings: [ranking("aaaaaaaa", "Ghibli, ranked", { listId: "ghibli" })],
+      more: false,
+    });
+    loadLists.mockResolvedValue({ lists: [] });
+    deleteRanking.mockResolvedValue(undefined);
+    const kept = memoryStore();
+    writeKept(kept, "ghibli", { code: "aaaaaaaa", claimToken: "t", rows: [[0]], version: 1 });
+    // Only the deleted list's copy goes: the same code kept under another list stays.
+    writeKept(kept, "pixar", { code: "aaaaaaaa", claimToken: "t" });
+    open(member, undefined, undefined, kept);
+    expect(await screen.findByText("1 ranked")).toBeInTheDocument();
+
+    await userEvent.click(
+      (await menuOf("Ghibli, ranked")).getByRole("button", { name: "Delete ranking" }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Delete ranking" })).getByRole("button", {
+        name: "Delete",
+      }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Ranking deleted");
+    expect(readKept(kept, "ghibli")).toBeNull();
+    expect(readKept(kept, "pixar")).not.toBeNull();
   });
 
   it("unpublishes a list after asking, names a failure and keeps the row; one already gone counts as done", async () => {
