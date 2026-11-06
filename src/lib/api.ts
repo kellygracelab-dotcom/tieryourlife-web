@@ -123,6 +123,19 @@ export const loadMyRankings = (): Promise<MyRankings> => rank.loadMyRankings(api
 
 export const removeRanking = (code: string): Promise<void> => rank.removeRanking(api, code);
 
+/**
+ * Whether a ranking is still behind its link: false only when the server
+ * says it is gone. Asked of the network, not of the page the site sent.
+ */
+export const rankingStillThere = (code: string): Promise<boolean> =>
+  rank.loadRanking(api, code).then(
+    () => true,
+    (reason: unknown) => {
+      if (errorOf(reason).kind === "notFound") return false;
+      throw reason;
+    },
+  );
+
 export const loadMyLists = (): Promise<{ lists: MyList[] }> => lists.loadMyLists(api);
 
 // The catalogues answer in the language the page is in.

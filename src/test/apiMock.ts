@@ -28,6 +28,7 @@ export function apiStubs() {
     claimKept: pending(),
     loadMyRankings: pending(),
     removeRanking: pending(),
+    rankingStillThere: pending(),
     loadMyLists: pending(),
     findPictures: pending(),
     keepPicture: pending(),
