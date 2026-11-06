@@ -532,6 +532,15 @@ describe("SettingsPage", () => {
 
   it("deletes the account only after Delete for good, then leaves as a guest", async () => {
     erase.mockResolvedValue(undefined);
+    // A ranking the account kept, and one a guest finished here.
+    window.localStorage.setItem(
+      "tyl:ranking:l1",
+      JSON.stringify({ code: "aaaaaaaa", claimToken: "t", claimedBy: "u1" }),
+    );
+    window.localStorage.setItem(
+      "tyl:ranking:l2",
+      JSON.stringify({ code: "bbbbbbbb", claimToken: "t" }),
+    );
     const { session, router } = open();
     await userEvent.click(screen.getByRole("button", { name: "Delete account" }));
     const dialog = screen.getByRole("dialog", { name: "Delete this account?" });
@@ -548,6 +557,9 @@ describe("SettingsPage", () => {
     expect(session.signOut).toHaveBeenCalledTimes(1);
     expect(router.state.location.pathname).toBe("/");
     expect(router.state.location.state).toEqual({ accountDeleted: true });
+    // The next person on this browser never reads, nor claims, the deleted account's ranking.
+    expect(window.localStorage.getItem("tyl:ranking:l1")).toBeNull();
+    expect(window.localStorage.getItem("tyl:ranking:l2")).not.toBeNull();
   });
 
   it("says when the account was not deleted, in the card, with the dialog gone", async () => {

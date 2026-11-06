@@ -15,6 +15,8 @@ export type ApiError =
   | { kind: "tooManyTopics" }
   /** At the ceiling of followed sections or topics (200): one has to go first. */
   | { kind: "tooManyFollowing" }
+  /** An account keeps so many boards, and this would be one more. */
+  | { kind: "tooManyBoards" }
   | { kind: "cursorGone" }
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
   | { kind: "conflict"; board?: unknown; status?: string }
@@ -110,6 +112,7 @@ export function parseApiError(status: number, text: string): ApiError {
       if (code === "TOO_MANY_LISTS") return { kind: "tooManyLists" };
       if (code === "TOO_MANY_PENDING_TOPICS") return { kind: "tooManyTopics" };
       if (code === "TOO_MANY_FOLLOWING") return { kind: "tooManyFollowing" };
+      if (code === "TOO_MANY_BOARDS") return { kind: "tooManyBoards" };
       if (code === "CURSOR_GONE") return { kind: "cursorGone" };
       // A topic's name clashes with 409 where a section's does with 400: one refusal to the form.
       if (code === "NAME_TAKEN") {

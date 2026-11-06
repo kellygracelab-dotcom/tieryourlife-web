@@ -24,7 +24,7 @@ import { isEditorialAuthor } from "../../lib/editorial";
 import { holds } from "../../lib/locale";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
-import { keptFor, readKept, writeKept, type KeptRanking } from "../ranking/kept";
+import { keptBy, keptFor, readKept, writeKept, type KeptRanking } from "../ranking/kept";
 import { ResultBar, type FinishState } from "../ranking/ResultBar";
 import { downloadShare, type Share } from "../ranking/share";
 import { errorOf } from "../../api/errors";
@@ -457,18 +457,29 @@ export function RankingBoard({
     [dispatchBoard],
   );
   const boardSize = useBoardSize();
-  // A ranking finished here before, showing as it was: its link again, not a second Finish.
-  const [finish, setFinish] = useState<FinishState>(() => {
-    const code =
-      edit === undefined && !seeded
-        ? keptFor(readKept(store, list.id), list.updatedAt, state.rows)
-        : null;
-    return code === null ? { status: "idle" } : { status: "done", code };
-  });
-  const [save, setSave] = useState<SaveState>({ status: "idle" });
-  const locked = finish.status === "saving" || finish.status === "done" || save.status === "saving";
   const { account, signIn } = useSession();
   const guest = account?.kind !== "signedIn";
+  const who = account === null ? undefined : account.kind === "signedIn" ? account.uid : null;
+  // A ranking finished here before, showing as it was: its link again, not a
+  // second Finish. Only to the person it is theirs: on a shared browser the
+  // guest after a sign-out, or the next account, is offered their own Finish.
+  const keptHere = (here: string | null | undefined): FinishState => {
+    const code =
+      edit === undefined && !seeded
+        ? keptFor(keptBy(readKept(store, list.id), here), list.updatedAt, state.rows)
+        : null;
+    return code === null ? { status: "idle" } : { status: "done", code };
+  };
+  const [finish, setFinish] = useState<FinishState>(() => keptHere(who));
+  // Firebase says who is here a moment after the page draws, and people sign
+  // in and out on it: what was finished here is shown again for whoever came.
+  const [shownTo, setShownTo] = useState(who);
+  if (shownTo !== who) {
+    setShownTo(who);
+    if (finish.status === "idle" || finish.status === "done") setFinish(keptHere(who));
+  }
+  const [save, setSave] = useState<SaveState>({ status: "idle" });
+  const locked = finish.status === "saving" || finish.status === "done" || save.status === "saving";
   const [offer, setOffer] = useState<KeepState>("closed");
   const drag = useTileDrag(dispatch, hitTest);
   const lifted = drag.state.phase === "dragging" ? drag.state.item : null;

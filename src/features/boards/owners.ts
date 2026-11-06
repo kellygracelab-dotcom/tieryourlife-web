@@ -198,7 +198,14 @@ export function boardOwners(store: KeyValueStore): BoardOwners {
       const before = store.read(OWNER_KEY);
       if (!settled) settle(next);
       if (next === null) {
-        if (guestUid !== null) store.write(GUEST_KEY, guestUid);
+        // A new guest on a browser that still holds an earlier guest's boards
+        // (one kept here by somebody who signed into an account, then out)
+        // did not make them: the browser keeps the guest they came from, so
+        // an account this guest turns into is asked, as any other, rather
+        // than handed somebody else's boards unasked.
+        const earlier = store.read(GUEST_KEY);
+        const theirs = earlier === null || earlier === guestUid || of(null).all().length === 0;
+        if (guestUid !== null && theirs) store.write(GUEST_KEY, guestUid);
         if (pending !== null) ask(null);
       } else if (store.read(GUEST_KEY) === next) {
         // The guest became the account: the same person, so their boards go with them unasked.

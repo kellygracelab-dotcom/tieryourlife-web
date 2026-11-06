@@ -1243,6 +1243,10 @@ const tr: Translation = {
     offCancel: "İptal",
     stuck: "{when} tarihinden beri yedeklenmedi. Yeniden denemek için “Şimdi yedekle”ye basın.",
     stuckNever: "Henüz yedeklenmedi. Yeniden denemek için “Şimdi yedekle”ye basın.",
+    refusedTooLarge:
+      "“{title}” bir hesabın tutamayacağı kadar büyük, bu yüzden yedeklenmedi. Birkaç kartını çıkarırsanız yeniden yedeklenir.",
+    refusedTooMany:
+      "“{title}” yedeklenmedi: bir hesap en fazla 200 pano tutar. Yer açmak için bazılarını kalıcı olarak silin.",
     now: "Şimdi yedekle",
     backingUp: "Yedekleniyor…",
     guestNote:

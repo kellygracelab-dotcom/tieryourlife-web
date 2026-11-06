@@ -1407,6 +1407,10 @@ const pl: Translation = {
     offCancel: "Anuluj",
     stuck: "Brak kopii od {when}. Spróbuj ponownie przyciskiem „Zapisz kopię teraz”.",
     stuckNever: "Jeszcze nie ma kopii. Spróbuj ponownie przyciskiem „Zapisz kopię teraz”.",
+    refusedTooLarge:
+      "„{title}” jest za duża, by konto ją przechowało, więc nie ma kopii. Usuń z niej kilka kart, a kopia znów się zapisze.",
+    refusedTooMany:
+      "„{title}” nie ma kopii: konto przechowuje do 200 list. Usuń kilka na stałe, by zrobić miejsce.",
     now: "Zapisz kopię teraz",
     backingUp: "Zapisywanie kopii…",
     guestNote:

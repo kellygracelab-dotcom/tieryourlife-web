@@ -1358,6 +1358,10 @@ const fr: Translation = {
     offCancel: "Annuler",
     stuck: "Pas de sauvegarde depuis {when}. « Sauvegarder maintenant » pour réessayer.",
     stuckNever: "Pas encore de sauvegarde. « Sauvegarder maintenant » pour réessayer.",
+    refusedTooLarge:
+      "« {title} » est trop volumineuse pour un compte, elle n’est donc pas sauvegardée. Retirez-en quelques cartes et elle le sera de nouveau.",
+    refusedTooMany:
+      "« {title} » n’est pas sauvegardée : un compte garde jusqu’à 200 listes. Supprimez-en quelques-unes définitivement pour faire de la place.",
     now: "Sauvegarder maintenant",
     backingUp: "Sauvegarde en cours…",
     guestNote:

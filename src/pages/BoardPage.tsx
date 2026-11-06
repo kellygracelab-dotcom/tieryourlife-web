@@ -24,7 +24,7 @@ import {
   setCategory,
   setDisplayMode,
   trashBoard,
-  BOARD_LIMITS,
+  MAX_RANKED_TIERS,
   type Board,
 } from "../features/boards/model";
 import {
@@ -583,7 +583,7 @@ function OpenBoard({
   const editorTiers: EditorTier[] = editorTiersOf(board);
   const closePanel = () => setPanel("none");
   // The tiers are changed on the board itself, as on the phone.
-  const roomForTier = editorTiers.length < BOARD_LIMITS.tiers;
+  const roomForTier = editorTiers.length < MAX_RANKED_TIERS;
   const tierEditing = {
     move: (from: number, to: number, keyboard = false) => {
       const key = editorTiers[from]?.key;

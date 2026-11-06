@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CHUNK_RETRY_KEY,
+  CHUNK_RETRY_WINDOW_MS,
   freshChunk,
   reloadInto,
   reloadOnce,
@@ -11,13 +12,44 @@ import { memoryStore, type KeyValueStore } from "./storage";
 describe("freshChunk", () => {
   beforeEach(resetFreshChunkForTests);
 
-  it("hands the chunk over and forgets an earlier try", async () => {
-    const store = memoryStore();
-    store.write(CHUNK_RETRY_KEY, "1");
+  it("hands the chunk over", async () => {
     const reload = vi.fn();
-    await expect(freshChunk(async () => "page", { store, reload })()).resolves.toBe("page");
-    expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
+    await expect(freshChunk(async () => "page", { store: memoryStore(), reload })()).resolves.toBe(
+      "page",
+    );
     expect(reload).not.toHaveBeenCalled();
+  });
+
+  it("does not reload again for a piece that never comes once the reloaded page came", async () => {
+    const store = memoryStore();
+    const reload = vi.fn();
+    let time = 1_000_000;
+    const now = () => time;
+    // The back-up engine will not come: one reload.
+    expect(reloadOnce({ store, reload, now })).toBe(true);
+    // The reloaded page's own chunk comes, and the engine still does not.
+    resetFreshChunkForTests();
+    time += 2_000;
+    await expect(freshChunk(async () => "page", { store, reload, now })()).resolves.toBe("page");
+    expect(reloadOnce({ store, reload, now })).toBe(false);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives a deploy long after the last reload its own reload", () => {
+    const store = memoryStore();
+    const reload = vi.fn();
+    let time = 1_000_000;
+    const now = () => time;
+    expect(reloadOnce({ store, reload, now })).toBe(true);
+    resetFreshChunkForTests();
+    time += CHUNK_RETRY_WINDOW_MS + 1;
+    expect(reloadOnce({ store, reload, now })).toBe(true);
+    expect(reload).toHaveBeenCalledTimes(2);
+    // A try kept by the site before it wrote down times.
+    resetFreshChunkForTests();
+    const old = memoryStore();
+    old.write(CHUNK_RETRY_KEY, "1");
+    expect(reloadOnce({ store: old, reload, now })).toBe(true);
   });
 
   it("reloads once for a chunk a deploy took away, and lets the second failure through", async () => {
@@ -36,11 +68,11 @@ describe("freshChunk", () => {
     expect(reload).toHaveBeenCalledTimes(1);
     expect(settled).toBe(false);
 
-    // After the reload the same tab still cannot get it: a real failure.
+    // After the reload the same tab still cannot get it: a real failure, every time it is asked for.
     resetFreshChunkForTests();
     await expect(gone()).rejects.toThrow(/dynamically imported/);
+    await expect(gone()).rejects.toThrow(/dynamically imported/);
     expect(reload).toHaveBeenCalledTimes(1);
-    expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
   });
 
   it("does not reload offline, where the reload would land on the browser's error page", async () => {
@@ -103,7 +135,7 @@ describe("freshChunk", () => {
     expect(settled).toBe(false);
     expect(reload).toHaveBeenCalledTimes(1);
     // The reload that follows still knows the try was made.
-    expect(store.read(CHUNK_RETRY_KEY)).toBe("1");
+    expect(store.read(CHUNK_RETRY_KEY)).not.toBeNull();
   });
 
   it("keeps the try when a stylesheet failed but the module came, so the reload does not loop", async () => {
@@ -111,6 +143,6 @@ describe("freshChunk", () => {
     const reload = vi.fn();
     expect(reloadOnce({ store, reload })).toBe(true);
     await expect(freshChunk(async () => "page", { store, reload })()).resolves.toBe("page");
-    expect(store.read(CHUNK_RETRY_KEY)).toBe("1");
+    expect(store.read(CHUNK_RETRY_KEY)).not.toBeNull();
   });
 });

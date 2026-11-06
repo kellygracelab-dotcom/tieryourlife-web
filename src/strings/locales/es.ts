@@ -1347,6 +1347,10 @@ const es: Translation = {
     offCancel: "Cancelar",
     stuck: "Sin copia desde {when}. Pulsa «Guardar copia ahora» para volver a intentarlo.",
     stuckNever: "Aún no hay copia. Pulsa «Guardar copia ahora» para volver a intentarlo.",
+    refusedTooLarge:
+      "«{title}» es demasiado grande para guardarse en una cuenta, así que no tiene copia. Quítale algunas tarjetas y volverá a guardarse.",
+    refusedTooMany:
+      "«{title}» no tiene copia: una cuenta guarda hasta 200 listas. Elimina algunas definitivamente para hacer sitio.",
     now: "Guardar copia ahora",
     backingUp: "Guardando copia…",
     guestNote:

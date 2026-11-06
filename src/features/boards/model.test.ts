@@ -9,6 +9,8 @@ import {
   isNarrowed,
   itemsIn,
   liveItems,
+  markedTitle,
+  MAX_RANKED_TIERS,
   moveItem,
   newBoard,
   nextTierLabel,
@@ -89,6 +91,13 @@ describe("a new board", () => {
     const long = `${"a".repeat(BOARD_LIMITS.title - 1)}😀tail`;
     expect(rename(b, long, 2000).title).toBe("a".repeat(BOARD_LIMITS.title - 1));
     expect(newBoard("n", long, 1000, () => "t").title).toBe("a".repeat(BOARD_LIMITS.title - 1));
+  });
+
+  it("gives way to a mark that tells it apart, so the account keeps the mark", () => {
+    expect(markedTitle("Films", "(from this device)")).toBe("Films (from this device)");
+    const marked = markedTitle("x".repeat(BOARD_LIMITS.title), "(from this device)");
+    expect(marked).toHaveLength(BOARD_LIMITS.title);
+    expect(marked.endsWith(" (from this device)")).toBe(true);
   });
 });
 
@@ -264,7 +273,7 @@ describe("tiers", () => {
     expect(rankedTiers(b1)[5]?.caption).toBe("fine");
     expect(poolTier(b1)?.position).toBe(6);
     expect(nextTierLabel(b1)).toBe("F");
-    // Not past the ceiling, and not without a label.
+    // Not past the ceiling the account keeps, the pool counted among the tiers, and not without a label.
     let b = b1;
     for (let i = 0; i < 20; i++) {
       b = addTier(
@@ -274,7 +283,8 @@ describe("tiers", () => {
         next,
       );
     }
-    expect(rankedTiers(b)).toHaveLength(BOARD_LIMITS.tiers);
+    expect(rankedTiers(b)).toHaveLength(MAX_RANKED_TIERS);
+    expect(b.tiers).toHaveLength(BOARD_LIMITS.tiers);
     expect(
       addTier(
         b1,

@@ -2,6 +2,17 @@ import { createContext, useContext } from "react";
 
 export type SyncStatus = "idle" | "syncing" | "stuck";
 
+/**
+ * A board the account said it will not keep, and why: too big, or one
+ * board more than an account holds. Trying again changes neither, so the
+ * person is told which board it is and what would let it go up.
+ */
+export interface SyncRefusal {
+  uid: string;
+  title: string;
+  why: "tooLarge" | "tooManyBoards";
+}
+
 export interface BoardSyncControls {
   /** Whether there is an account to keep the boards in. */
   signedIn: boolean;
@@ -9,6 +20,8 @@ export interface BoardSyncControls {
   setBackUp: (on: boolean) => Promise<void>;
   status: SyncStatus;
   lastSyncedAt: number | null;
+  /** The boards the last finished run could not keep in the account for good reason. */
+  refusals: readonly SyncRefusal[];
   syncNow: () => Promise<void>;
 }
 
@@ -19,6 +32,7 @@ export const NOBODY: BoardSyncControls = {
   setBackUp: () => Promise.resolve(),
   status: "idle",
   lastSyncedAt: null,
+  refusals: [],
   syncNow: () => Promise.resolve(),
 };
 
