@@ -31,6 +31,12 @@ export interface BoardTopic {
   name: string;
   /** Proposed and not yet decided by a moderator. */
   waiting?: boolean;
+  /**
+   * Learnt from the backend's answer (a moderator moved the list into it),
+   * not chosen here: a publish says nothing of it, so the move holds. Chosen
+   * in List settings, it is the person's again.
+   */
+  learned?: boolean;
 }
 
 /** The phone's and the backend's bounds on a topic's name. */
@@ -336,7 +342,8 @@ const sameTopic = (a: BoardTopic | null, b: BoardTopic | null): boolean =>
     ? a === b
     : a.id === b.id &&
       (a.id !== null || a.name === b.name) &&
-      (a.waiting ?? false) === (b.waiting ?? false);
+      (a.waiting ?? false) === (b.waiting ?? false) &&
+      (a.learned ?? false) === (b.learned ?? false);
 
 /** Sent: a topic taken off is off on the list, and the next publish need not say so again. */
 export function topicSent(board: Board): Board {

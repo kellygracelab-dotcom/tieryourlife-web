@@ -552,9 +552,56 @@ describe("BoardSettings: public", () => {
     const request = (republish.mock.calls[0] as unknown[])[1];
     expect(request).not.toHaveProperty("noTopic");
     expect(request).not.toHaveProperty("topicId");
-    await waitFor(() => expect(held.topic).toEqual({ id: "t1", name: "A24" }));
+    await waitFor(() => expect(held.topic).toEqual({ id: "t1", name: "A24", learned: true }));
     // Learnt from the answer, it is no edit: the list is not behind it.
     expect(held.publishedEditedAt).toBe(held.editedAt);
+  });
+
+  it("says nothing of a learnt topic on the next Update, so a moderator's later move holds, and learns that one", async () => {
+    const republish = vi
+      .fn<PublishingDeps["republish"]>()
+      .mockResolvedValueOnce({ id: "L1", topicId: "t2" })
+      .mockResolvedValueOnce({ id: "L1", topicId: null });
+    const findTopic = vi.fn(async (id: string) => topic(id, id === "t2" ? "Neon" : "A24"));
+    show(
+      {
+        ...filmBoard(),
+        publishedId: "L1",
+        publishedEditedAt: 100,
+        topic: { id: "t1", name: "A24", learned: true },
+      },
+      signedIn,
+      { republish },
+      { findTopic },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(republish).toHaveBeenCalledTimes(1));
+    const request = (republish.mock.calls[0] as unknown[])[1];
+    expect(request).not.toHaveProperty("topicId");
+    expect(request).not.toHaveProperty("noTopic");
+    // The moderator moved it again meanwhile: the board learns where it is now.
+    await waitFor(() => expect(held.topic).toEqual({ id: "t2", name: "Neon", learned: true }));
+
+    // Moved out of every topic: the learnt one goes, and nothing is taken off by the person.
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(republish).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(held.topic).toBeNull());
+    expect(held.topicOff).toBeUndefined();
+  });
+
+  it("does not learn a topic of another section than the board's", async () => {
+    const republish = vi.fn(async () => ({ id: "L1", topicId: "g1" }));
+    const findTopic = vi.fn(async (id: string) => ({ ...topic(id, "Indie"), section: "games" }));
+    show(
+      { ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 },
+      signedIn,
+      { republish },
+      { findTopic },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(findTopic).toHaveBeenCalledWith("g1"));
+    await act(async () => undefined);
+    expect(held.topic).toBeNull();
   });
 
   it("says a refused Update under Update, and lets a list taken down elsewhere go", async () => {

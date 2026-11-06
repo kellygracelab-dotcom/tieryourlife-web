@@ -123,7 +123,8 @@ function topicOf(raw: unknown): BoardTopic | null {
   if (name === null || id === "") return null;
   // No id is a name proposed here and not sent yet: it needs a name to be anything.
   if (id === null) return name.trim() === "" ? null : { id: null, name };
-  return topic.waiting === true ? { id, name, waiting: true } : { id, name };
+  if (topic.waiting === true) return { id, name, waiting: true };
+  return topic.learned === true ? { id, name, learned: true } : { id, name };
 }
 
 function itemOf(raw: unknown, tierUids: Set<string>, position: number): BoardItem | null {

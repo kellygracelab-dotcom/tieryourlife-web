@@ -254,14 +254,23 @@ export function BoardSettings({
   };
 
   // The list's topic as the backend kept it, named, while the board still has none of its own.
-  const learn = (topicId: string) => {
+  // The topic the list sits under, as the answer said it, for a board that
+  // chose none: learnt, never sent back, and only one of the board's own
+  // section. One chosen here, or taken off here, is not touched.
+  const learn = (topicId: string | null) => {
+    const mayLearn = (board: Board) =>
+      board.topicOff !== true && (board.topic === null || board.topic.learned === true);
+    if (topicId === null) {
+      const current = latest();
+      if (mayLearn(current) && current.topic !== null) keep(settleTopic(current, null));
+      return;
+    }
     findTopic(topicId).then(
       (topic) => {
         const current = latest();
-        if (topic.status !== "approved" || current.topic !== null || current.topicOff === true) {
-          return;
-        }
-        keep(settleTopic(current, { id: topic.id, name: topic.name }));
+        if (!mayLearn(current)) return;
+        const fits = topic.status === "approved" && topic.section === current.category;
+        keep(settleTopic(current, fits ? { id: topic.id, name: topic.name, learned: true } : null));
       },
       () => undefined,
     );
@@ -319,7 +328,10 @@ export function BoardSettings({
       // Said nothing of a topic, the list kept its own, a moderator's move
       // into one too: the board learns it, as the published copy has it.
       const kept = answer.topicId;
-      if (!ranking && sent.topic === null && sent.topicOff !== true && kept) learn(kept);
+      const unchosen = sent.topic === null || sent.topic.learned === true;
+      if (!ranking && unchosen && sent.topicOff !== true && kept !== undefined) {
+        learn(kept === "" ? null : kept);
+      }
     } catch (reason: unknown) {
       const error = errorOf(reason);
       // Taken down elsewhere (its page, /me, the phone): the board is no longer
