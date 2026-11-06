@@ -934,7 +934,7 @@ describe("RankingBoard", () => {
     const page = (session: Session) => (
       <SessionContext.Provider value={session}>
         <MemoryRouter>
-          <RankingBoard list={list} store={store} keep={vi.fn()} take={async () => undefined} />
+          <RankingBoard list={list} store={store} keep={vi.fn()} />
         </MemoryRouter>
       </SessionContext.Provider>
     );
