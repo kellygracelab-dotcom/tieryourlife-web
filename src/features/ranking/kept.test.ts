@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { KeyValueStore } from "../../lib/storage";
-import { forgetKept, keptBy, keptFor, keptKey, readKept, writeKept } from "./kept";
+import { forgetKept, forgetKeptOf, keptBy, keptFor, keptKey, readKept, writeKept } from "./kept";
 
 function memoryStore(): KeyValueStore & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -76,7 +76,7 @@ describe("kept ranking", () => {
     writeKept(store, "b", { code: "bbbbbbbb", claimToken: "tb", claimedBy: "other" });
     writeKept(store, "c", { code: "cccccccc", claimToken: "tc" });
     store.write("tyl:draft:a", "{}");
-    forgetKept(store, "gone");
+    forgetKeptOf(store, "gone");
     expect([...store.data.keys()].sort()).toEqual(["tyl:draft:a", keptKey("b"), keptKey("c")]);
   });
 
@@ -88,4 +88,15 @@ describe("kept ranking", () => {
       expect(readKept(store, "abc")).toBeNull();
     },
   );
+});
+
+describe("forgetting a kept ranking", () => {
+  it("forgets the list's ranking only while it is the one deleted", () => {
+    const store = memoryStore();
+    writeKept(store, "abc", { code: "abcdefgh", claimToken: "secret" });
+    forgetKept(store, "abc", "zzzzzzzz");
+    expect(readKept(store, "abc")).not.toBeNull();
+    forgetKept(store, "abc", "abcdefgh");
+    expect(store.data.has(keptKey("abc"))).toBe(false);
+  });
 });

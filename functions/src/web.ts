@@ -514,13 +514,17 @@ async function listMyRankings(
   response: Response,
 ): Promise<void> {
   // No orderBy: a where and an orderBy on different fields need a composite
-  // index, and this repository deploys no indexes; the sort happens here.
-  const found = await db
-    .collection(RANKINGS)
-    .where("ownerUid", "==", identity.uid)
-    .limit(MY_RANKINGS_CAP)
-    .get();
-  const kept = found.docs.map((doc) => ({ code: doc.id, ranking: doc.data() as RankingDocument }));
+  // index, and this repository deploys no indexes; the sort happens here. So
+  // every one of the person's rankings is read before the newest are kept: a
+  // limit on the query would keep whichever came first by their random codes,
+  // and the newest could be among those left out.
+  const found = await db.collection(RANKINGS).where("ownerUid", "==", identity.uid).get();
+  const when = (code: string, ranking: RankingDocument): number =>
+    summaryOf(code, ranking, null).createdAt;
+  const all = found.docs
+    .map((doc) => ({ code: doc.id, ranking: doc.data() as RankingDocument }))
+    .sort((a, b) => when(b.code, b.ranking) - when(a.code, a.ranking));
+  const kept = all.slice(0, MY_RANKINGS_CAP);
   // Each list read once, and only what says whether it still names its
   // author: a list made anonymous, or gone, names nobody on these cards,
   // as it names nobody on the ranking's own page.
@@ -537,5 +541,5 @@ async function listMyRankings(
   );
 
   response.setHeader("Cache-Control", "no-store");
-  response.status(200).json({ rankings, more: found.size === MY_RANKINGS_CAP });
+  response.status(200).json({ rankings, more: all.length > MY_RANKINGS_CAP });
 }

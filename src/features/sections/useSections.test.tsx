@@ -153,6 +153,28 @@ describe("the sections store", () => {
     }
   });
 
+  it("opens with a kept notice of one's own proposal whose words are not text, and so does a fresh one", async () => {
+    const odd = {
+      ...stats("myprop"),
+      status: "declined",
+      proposerUid: "u1",
+      declineNote: 5,
+      name: 5,
+      fileUnder: 7,
+    } as unknown as SectionStats;
+    const store = memoryStore();
+    store.write("s:sections", JSON.stringify({ who: "u1", sections: [stats("anime"), odd] }));
+    const memory = remembered(store, "s", 1, readKeptSections);
+    // Built as the site's own store is, when the page's script first runs.
+    const kept = createSectionsStore(deps([stats("anime"), odd], { memory }).deps);
+    const notice = { id: "myprop", name: "myprop", status: "declined", into: "other", note: null };
+    expect(kept.get().notices).toEqual([notice]);
+
+    kept.refresh("u1");
+    await settle();
+    expect(kept.get()).toMatchObject({ loaded: true, failed: false, notices: [notice] });
+  });
+
   it("draws an answer whose section has no collage, and keeps nothing it cannot draw", async () => {
     const memory = remembered(memoryStore(), "s", 1, readKeptSections);
     const odd = { ...stats("anime"), collage: undefined } as unknown as SectionStats;

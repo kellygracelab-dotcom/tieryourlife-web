@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
 import type { ReaderRanking } from "../api/community";
+import { tierWordsToSend } from "../api/rank";
 import { isOwnList, type BasedOn, type PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
@@ -435,8 +436,12 @@ function OpenList({
   const startFromTheirs = (rows: Rows) => {
     const before = localStorageStore.read(draftKey(list.id));
     const replaced = loadPlacedDraft(localStorageStore, scopeOf(list)) !== null;
-    // What was on screen, the reader's tier words included (the app's mine.copy(tiers = theirs.tiers)).
-    putInMine(rows, chosen === null ? null : readerLabels(list.tiers.length, chosen));
+    // What was on screen, the reader's tier words included (the app's mine.copy(tiers = theirs.tiers)),
+    // each as short as a saved ranking keeps it, so Mine shows the words Finish will save.
+    putInMine(
+      rows,
+      chosen === null ? null : tierWordsToSend(readerLabels(list.tiers.length, chosen)),
+    );
     const said = replaced
       ? theirsName === null
         ? strings.list.replacedYoursUnnamed

@@ -47,6 +47,28 @@ describe("rank", () => {
     });
   });
 
+  it("cuts a reader's tier word to what the functions keep, on Finish and on a change", async () => {
+    const { client, request } = recordingClient({ code: "abcdefgh", claimToken: "t" });
+    // 51 characters: the editors take up to 80, the functions refuse past 40.
+    const long = "Films I would happily watch again every single year";
+    const pair = `${"x".repeat(39)}\u{1F600}`;
+
+    await keepRanking(client, "wMRMFDxo8UejcAi2VVMW", [[0], []], 1_700, [long, " B "]);
+    expect(request).toHaveBeenLastCalledWith("POST", "/api/rank", {
+      body: {
+        listId: "wMRMFDxo8UejcAi2VVMW",
+        rows: [[0], []],
+        version: 1_700,
+        tierLabels: ["Films I would happily watch again every", "B"],
+      },
+    });
+
+    await rearrangeRanking(client, "abcdefgh", [[0], []], [pair, null]);
+    expect(request).toHaveBeenLastCalledWith("PUT", "/api/rank/abcdefgh", {
+      body: { rows: [[0], []], tierLabels: ["x".repeat(39), null] },
+    });
+  });
+
   it("reads a ranking by code with App Check alone", async () => {
     const { client, request } = recordingClient({ code: "abcdefgh" });
 

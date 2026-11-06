@@ -12,7 +12,7 @@ import { NameSection, type Rename } from "../features/account/NameSection";
 import type { Publish } from "../features/account/useSaving";
 import { DataCard } from "../features/boards/DataCard";
 import { owners } from "../features/boards/owners";
-import { forgetKept } from "../features/ranking/kept";
+import { forgetKeptOf } from "../features/ranking/kept";
 import { AccountTabs } from "../app/AccountTabs";
 import { useHidden } from "../features/community/useHidden";
 import { useSession, useShowFace } from "../app/session";
@@ -231,7 +231,7 @@ export function SettingsPage({
     // sign into it again, and the next person must not read them as theirs.
     if (account?.kind === "signedIn") {
       owners.forget(account.uid);
-      forgetKept(localStorageStore, account.uid);
+      forgetKeptOf(localStorageStore, account.uid);
     }
     await signOut().catch(() => undefined);
     await navigate("/", { state: { accountDeleted: true } });

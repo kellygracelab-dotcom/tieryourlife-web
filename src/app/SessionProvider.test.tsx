@@ -46,6 +46,30 @@ describe("SessionProvider", () => {
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
+  it("tries again on each visit with an account the rankings a failed sign-in left unclaimed", () => {
+    let listener: ((account: Account) => void) | null = null;
+    const subscribe = vi.fn((next: (account: Account) => void) => {
+      listener = next;
+      return () => undefined;
+    });
+    const keep = vi.fn(async () => Promise.reject(new Error("offline")));
+    render(
+      <SessionProvider subscribe={subscribe} complete={async () => null} keep={keep}>
+        <Probe />
+      </SessionProvider>,
+    );
+    const member: Account = { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: null };
+
+    act(() => listener?.({ kind: "guest", uid: "g1" }));
+    expect(keep).not.toHaveBeenCalled();
+    // The visit starts with the account already signed in: no sign-in will claim them.
+    act(() => listener?.(member));
+    expect(keep).toHaveBeenCalledWith("u1");
+    // A new name for the same account is not a reason to ask again.
+    act(() => listener?.({ ...member, displayName: "Dan" }));
+    expect(keep).toHaveBeenCalledTimes(1);
+  });
+
   it("shows a guest linked to Google at once, though Firebase tells its listeners nothing", async () => {
     let listener: ((account: Account) => void) | null = null;
     const subscribe = vi.fn((next: (account: Account) => void) => {

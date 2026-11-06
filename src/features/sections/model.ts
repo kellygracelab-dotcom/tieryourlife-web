@@ -221,6 +221,8 @@ export interface ProposalNotice {
   note: string | null;
 }
 
+const textOr = (value: unknown): string => (typeof value === "string" ? value : "");
+
 /**
  * One's own proposals a moderator declined or merged, which the backend sends
  * their proposer until the notice is dismissed, as the app shows them: a
@@ -234,13 +236,16 @@ export function proposalNoticesFrom(
   return answer.flatMap((stats): ProposalNotice[] => {
     if (stats.proposerUid !== who) return [];
     if (stats.status !== "declined" && stats.status !== "merged") return [];
-    const note = stats.declineNote?.trim() ?? "";
+    // Read as text or nothing: a word that came as anything else, from the
+    // backend or kept on this device, failed every page at its first draw.
+    const note = textOr(stats.declineNote).trim();
+    const into = textOr(stats.status === "merged" ? stats.mergedInto : stats.fileUnder);
     return [
       {
         id: stats.id,
-        name: stats.name?.trim() || stats.id,
+        name: textOr(stats.name).trim() || stats.id,
         status: stats.status,
-        into: (stats.status === "merged" ? stats.mergedInto : stats.fileUnder) ?? OTHER,
+        into: into === "" ? OTHER : into,
         note: stats.status === "declined" && note !== "" ? note : null,
       },
     ];
