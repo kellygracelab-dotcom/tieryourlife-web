@@ -467,12 +467,16 @@ describe("summaryOf", () => {
   });
 
   it("is the card of a ranking: what it ranked, how far, and its first picture", () => {
-    const summary = summaryOf("abcdefgh", {
-      listId: "wMRMFDxo8UejcAi2VVMW",
-      snapshot,
-      rows: toStoredRows([[2], [1]]),
-      createdAt: { toMillis: () => 1_700_000_000_000 },
-    });
+    const summary = summaryOf(
+      "abcdefgh",
+      {
+        listId: "wMRMFDxo8UejcAi2VVMW",
+        snapshot,
+        rows: toStoredRows([[2], [1]]),
+        createdAt: { toMillis: () => 1_700_000_000_000 },
+      },
+      { authorUid: "danylo-uid" },
+    );
     assert.deepEqual(summary, {
       code: "abcdefgh",
       listId: "wMRMFDxo8UejcAi2VVMW",
@@ -488,15 +492,29 @@ describe("summaryOf", () => {
   });
 
   it("has no picture when no card has one, and no time before the server stamped it", () => {
-    const summary = summaryOf("abcdefgh", {
-      listId: "wMRMFDxo8UejcAi2VVMW",
-      snapshot: { ...snapshot, items: [{ title: "Old", imageUrl: null, tierIndex: null }] },
-      rows: null,
-    });
+    const summary = summaryOf(
+      "abcdefgh",
+      {
+        listId: "wMRMFDxo8UejcAi2VVMW",
+        snapshot: { ...snapshot, items: [{ title: "Old", imageUrl: null, tierIndex: null }] },
+        rows: null,
+      },
+      { authorUid: "danylo-uid" },
+    );
     assert.equal(summary.imageUrl, null);
     assert.equal(summary.placed, 0);
     assert.equal(summary.itemCount, 1);
     assert.equal(summary.createdAt, 0);
+  });
+
+  it("names nobody once the list stands without its author, or is gone", () => {
+    const doc = { listId: "wMRMFDxo8UejcAi2VVMW", snapshot, rows: toStoredRows([[2], [1]]) };
+    for (const list of [{ authorUid: "danylo-uid", anonymous: true }, null]) {
+      const summary = summaryOf("abcdefgh", doc, list);
+      assert.equal(summary.authorName, "", JSON.stringify(list));
+      assert.equal(summary.authorPhotoUrl, null, JSON.stringify(list));
+      assert.equal(summary.title, "Films");
+    }
   });
 });
 

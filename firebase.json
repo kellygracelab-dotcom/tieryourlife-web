@@ -93,6 +93,10 @@
             {
               "key": "Referrer-Policy",
               "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
             }
           ]
         },
@@ -110,7 +114,11 @@
           "headers": [
             {
               "key": "Content-Security-Policy",
-              "value": "frame-ancestors 'self'"
+              "value": "frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
             },
             {
               "key": "Cache-Control",
@@ -123,7 +131,11 @@
           "headers": [
             {
               "key": "Content-Security-Policy",
-              "value": "frame-ancestors 'self'"
+              "value": "frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
             },
             {
               "key": "Cache-Control",
@@ -136,7 +148,11 @@
           "headers": [
             {
               "key": "Content-Security-Policy",
-              "value": "frame-ancestors 'self'"
+              "value": "frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
             },
             {
               "key": "Cache-Control",
@@ -149,7 +165,24 @@
           "headers": [
             {
               "key": "Content-Security-Policy",
-              "value": "frame-ancestors 'self'"
+              "value": "frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            }
+          ]
+        },
+        {
+          "source": "/@(privacy|delete-account).html",
+          "headers": [
+            {
+              "key": "Content-Security-Policy",
+              "value": "frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
             }
           ]
         },

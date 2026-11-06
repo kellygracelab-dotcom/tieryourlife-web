@@ -93,26 +93,46 @@ describe("where a deploy goes", () => {
     );
   });
 
+  // Nothing on the site asks for these; a script slipped in could not either.
+  // The clipboard, sharing and fullscreen stay: the site uses them.
+  it("turns off the device features the site never uses, everywhere", () => {
+    const everywhere = hosting[0]!.headers.find((h) => h.source === "**")?.headers ?? [];
+    const policy = everywhere.find((h) => h.key === "Permissions-Policy")?.value ?? "";
+    for (const feature of ["camera", "microphone", "geolocation", "payment", "usb"]) {
+      expect(policy).toContain(`${feature}=()`);
+    }
+    for (const used of ["clipboard-write", "web-share", "fullscreen"]) {
+      expect(policy).not.toContain(used);
+    }
+  });
+
   // No other site may frame the app, where one click turns a list public;
   // the site's own frames may. Firebase's sign-in pages under /__/ are framed
-  // by the site from another address and are left out on purpose.
+  // by the site from another address and are left out on purpose: no rule
+  // for every address carries either header. X-Frame-Options says the same
+  // to browsers that predate frame-ancestors; no plugin or <base> is ever
+  // needed, so a page injected with one gets neither.
   it("lets only the site itself frame its pages", () => {
-    const framing = (source: string) =>
+    const header = (source: string, key: string) =>
       hosting[0]!.headers
-        .find(
-          (h) =>
-            h.source === source && h.headers.some((one) => one.key === "Content-Security-Policy"),
-        )
-        ?.headers.find((h) => h.key === "Content-Security-Policy")?.value;
+        .find((h) => h.source === source && h.headers.some((one) => one.key === key))
+        ?.headers.find((h) => h.key === key)?.value;
     for (const source of [
       "/",
       "/index.html",
       "/@(new|search|me|c|settings|mod|u|about|b|boards|s|trash|following|admin){,/**}",
       "/@(l|r)/**",
+      "/@(privacy|delete-account).html",
     ]) {
-      expect(framing(source)).toBe("frame-ancestors 'self'");
+      expect(header(source, "Content-Security-Policy")).toBe(
+        "frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
+      );
+      expect(header(source, "X-Frame-Options")).toBe("SAMEORIGIN");
     }
-    expect(framing("**")).toBeUndefined();
+    expect(header("**", "Content-Security-Policy")).toBeUndefined();
+    expect(header("**", "X-Frame-Options")).toBeUndefined();
+    expect(readFileSync("public/privacy.html", "utf8")).toBeTruthy();
+    expect(readFileSync("public/delete-account.html", "utf8")).toBeTruthy();
   });
 
   it("publishes the web target to the main address", () => {
