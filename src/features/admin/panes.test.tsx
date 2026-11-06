@@ -229,6 +229,20 @@ describe("ProposalsPane", () => {
     expect(deps.sections).toHaveBeenCalledTimes(2);
   });
 
+  it("says when somebody else decided a topic first, and reads the topics again", async () => {
+    deps.decideTopic = vi.fn(async () => {
+      throw new ApiFailure({ kind: "conflict", status: "approved" });
+    });
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Speedruns" })).closest("li")!;
+    deps.topics = vi.fn(async () => ({ topics: [] }));
+    await userEvent.click(within(card).getByRole("button", { name: "Decline" }));
+    expect(await screen.findByText("Someone else already decided this one.")).toBeInTheDocument();
+    expect(deps.topics).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("heading", { name: "Speedruns" })).toBeNull();
+    expect(screen.queryByText(/try again/)).toBeNull();
+  });
+
   it("says a decision that did not go through on the card itself", async () => {
     deps.approveSection = vi.fn(async () => {
       throw new ApiFailure({ kind: "offline" });
