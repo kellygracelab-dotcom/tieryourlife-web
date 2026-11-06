@@ -5,7 +5,16 @@ import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
 import { requireAppCheck, skipsAppCheck } from "../src/appCheck";
 import { optionalAccount, requireAccount, requireUser, type DecodedToken } from "../src/auth";
-import { claimHashOf, CODE_ALPHABET, DAILY_CEILING, dayKey, MAX_BODY_BYTES } from "../src/ranking";
+import {
+  appCheckKeyOf,
+  claimHashOf,
+  CODE_ALPHABET,
+  DAILY_CEILING,
+  dayKey,
+  GUEST_DAILY_CEILING,
+  GUEST_RANKINGS_PER_APP_CHECK_TOKEN,
+  MAX_BODY_BYTES,
+} from "../src/ranking";
 import { resetShellForTests, UNAVAILABLE_HTML } from "../src/pages";
 import { route, type WebDeps } from "../src/web";
 
@@ -332,6 +341,39 @@ describe("POST /api/rank — Finish", () => {
     assert.equal(answer.headers["Retry-After"], "2");
     assert.equal(table("rankUsage").size, 0);
     assert.equal(table("rankings").size, 0);
+  });
+
+  it("stops guests short of the daily ceiling and keeps the rest of the day for accounts", async () => {
+    const today = dayKey(Date.now());
+    const body = { listId: LIST_ID, rows: [[0], []] };
+    const guest = setup(GUEST);
+    guest.table("rankUsage").set(today, { count: GUEST_DAILY_CEILING });
+    assert.equal((await call(guest.deps, "POST", "/api/rank", body)).status, 503);
+    assert.equal(guest.table("rankUsage").get(today)?.count, GUEST_DAILY_CEILING);
+    const person = setup(PERSON);
+    person.table("rankUsage").set(today, { count: GUEST_DAILY_CEILING });
+    assert.equal((await call(person.deps, "POST", "/api/rank", body)).status, 201);
+    assert.equal(person.table("rankUsage").get(today)?.count, GUEST_DAILY_CEILING + 1);
+  });
+
+  it("lets one App Check token keep only so many guest rankings, whatever the guest", async () => {
+    const { deps, table } = setup(GUEST);
+    const body = { listId: LIST_ID, rows: [[0], []] };
+    table("rankTokens").set(appCheckKeyOf("replayed"), {
+      count: GUEST_RANKINGS_PER_APP_CHECK_TOKEN,
+    });
+    const refused = await call(deps, "POST", "/api/rank", body, {
+      "X-Firebase-AppCheck": "replayed",
+    });
+    assert.equal(refused.status, 429);
+    assert.deepEqual(refused.body, { error: "Too many rankings", code: "TOO_MANY" });
+    assert.equal(table("rankings").size, 0);
+    assert.equal(table("rankUsage").size, 0);
+    // Another browser's token is its own count; the token itself is never stored.
+    const fresh = await call(deps, "POST", "/api/rank", body, { "X-Firebase-AppCheck": "fresh" });
+    assert.equal(fresh.status, 201);
+    assert.equal(table("rankTokens").get(appCheckKeyOf("fresh"))?.count, 1);
+    assert.equal(table("rankTokens").has("fresh"), false);
   });
 
   it("stops at the daily ceiling and leaves the count where it was", async () => {

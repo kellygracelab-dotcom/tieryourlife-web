@@ -1,5 +1,5 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { FieldValue, getFirestore, type Firestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
@@ -19,8 +19,10 @@ import {
 import { sendPicture, storagePictures, type PictureDeps } from "./pictures";
 import { discardOlderCopies } from "./shareImage";
 import {
+  APP_CHECK_TOKEN_KEPT_MS,
+  appCheckKeyOf,
+  ceilingFor,
   claimHashOf,
-  DAILY_CEILING,
   dayKey,
   decideClaim,
   decideClaimToken,
@@ -31,6 +33,7 @@ import {
   decideTierLabels,
   decideVersion,
   fromStoredRows,
+  GUEST_RANKINGS_PER_APP_CHECK_TOKEN,
   isCode,
   isKeptBy,
   listAuthorOf,
@@ -51,6 +54,8 @@ import {
 const RANKINGS = "rankings";
 const QUOTA = "rankQuota";
 const USAGE = "rankUsage";
+/** Guest rankings per App Check token, under the token's hash. */
+const TOKEN_USE = "rankTokens";
 const PUBLISHED = "publishedLists";
 
 const CODE_ATTEMPTS = 3;
@@ -184,7 +189,15 @@ export async function route(
       if (!(await deps.appCheck(request, response))) return;
       const identity = await deps.user(request, response);
       if (!identity) return;
-      return await saveRanking(deps.db(), request.body, identity, response, deps.random);
+      const appCheckToken = request.header("X-Firebase-AppCheck") ?? null;
+      return await saveRanking(
+        deps.db(),
+        request.body,
+        identity,
+        response,
+        deps.random,
+        appCheckToken,
+      );
     }
     if (request.method === "PATCH" && code !== undefined) {
       if (!(await deps.appCheck(request, response))) return;
@@ -269,6 +282,7 @@ async function saveRanking(
   identity: Identity,
   response: Response,
   random: (max: number) => number,
+  appCheckToken: string | null,
 ): Promise<void> {
   if (JSON.stringify(body ?? null).length > MAX_BODY_BYTES) {
     return void response.status(413).json({ error: "Too large", code: "TOO_LARGE" });
@@ -312,17 +326,40 @@ async function saveRanking(
 
   // Counted before the write, like the backend's generation ceiling: the
   // number that bounds the bill when something nobody predicted happens.
+  // Guests stop short of it, and each App Check token keeps only so many
+  // guest rankings, so fresh guests cannot spend the day for everybody.
   const usage = db.collection(USAGE).doc(dayKey(now));
-  const count = await db.runTransaction(async (transaction) => {
-    const today = (await transaction.get(usage)).get("count") as number | undefined;
-    const next = (today ?? 0) + 1;
-    if (next > DAILY_CEILING) return null;
+  const tokenUse =
+    identity.isAnonymous && appCheckToken !== null
+      ? db.collection(TOKEN_USE).doc(appCheckKeyOf(appCheckToken))
+      : null;
+  const verdict = await db.runTransaction(async (transaction) => {
+    const [day, used] = await Promise.all([
+      transaction.get(usage),
+      tokenUse === null ? null : transaction.get(tokenUse),
+    ]);
+    const next = ((day.get("count") as number | undefined) ?? 0) + 1;
+    if (next > ceilingFor(identity.isAnonymous)) return "ceiling";
+    const uses = ((used?.get("count") as number | undefined) ?? 0) + 1;
+    if (tokenUse !== null && uses > GUEST_RANKINGS_PER_APP_CHECK_TOKEN) return "token";
     transaction.set(usage, { count: next }, { merge: true });
-    return next;
+    if (tokenUse !== null) {
+      // expireAt is there for a Firestore TTL policy to clear the spent ones.
+      transaction.set(tokenUse, {
+        count: uses,
+        expireAt: Timestamp.fromMillis(now + APP_CHECK_TOKEN_KEPT_MS),
+      });
+    }
+    return "counted";
   });
-  if (count === null) {
+  if (verdict === "ceiling") {
     response.setHeader("Retry-After", "3600");
     return void response.status(503).json({ error: "Daily limit reached", code: "DAILY_CEILING" });
+  }
+  if (verdict === "token") {
+    // The browser's next token comes within the hour.
+    response.setHeader("Retry-After", "3600");
+    return void response.status(429).json({ error: "Too many rankings", code: "TOO_MANY" });
   }
 
   const claimToken = randomBytes(24).toString("base64url");
