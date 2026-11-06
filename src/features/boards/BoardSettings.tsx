@@ -16,7 +16,7 @@ import { useModal } from "../../ui/useModal";
 import { failureText } from "../editor/failureText";
 import type { Section } from "../sections/model";
 import {
-  BOARD_LIMITS,
+  MAX_RANKED_TIERS,
   cleanTopicName,
   DISPLAY_MODES,
   isBehind,
@@ -477,7 +477,7 @@ export function BoardSettings({
               icon={<Icon name="add" />}
               title={strings.boards.newTier}
               sub={plural(strings.boards.tierCount, tierCount)}
-              disabled={tierCount >= BOARD_LIMITS.tiers}
+              disabled={tierCount >= MAX_RANKED_TIERS}
               onClick={onNewTier}
             />
           </li>

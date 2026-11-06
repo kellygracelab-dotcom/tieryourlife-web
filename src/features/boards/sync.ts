@@ -4,6 +4,7 @@ import { fingerprintOf as digest } from "./fingerprint";
 import { setPublished, trashBoard, type Board, type BoardItem, type NextUid } from "./model";
 import { parseBoard, type BoardsRepository } from "./repository";
 import { planSync, type RemoteBoard, type SyncedBoard, type SyncStep } from "./syncPlan";
+import type { SyncRefusal } from "./boardSync";
 import type { SyncRecords } from "./syncRecords";
 
 /**
@@ -53,6 +54,8 @@ export interface SyncDeps {
 export interface SyncReport {
   carried: number;
   refused: number;
+  /** The refused boards the account will go on refusing as they are, and why. */
+  refusals: SyncRefusal[];
   /** Steps left for the next run: the board moved here while the account's copy was on its way. */
   deferred: number;
   /** Stopped before the end because it was no longer wanted; nothing after the stop was written. */
@@ -130,6 +133,7 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
 
   let carried = 0;
   let refused = 0;
+  const refusals: SyncRefusal[] = [];
   let deferred = 0;
   try {
     const local = repository.all();
@@ -156,6 +160,12 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
       } catch (reason: unknown) {
         if (reason instanceof SyncCancelled) throw reason;
         refused++;
+        // Why is kept only where trying again cannot help; the rest look alike.
+        const { kind } = errorOf(reason);
+        const board = repository.get(step.uid);
+        if ((kind === "tooLarge" || kind === "tooManyBoards") && board !== null) {
+          refusals.push({ uid: step.uid, title: board.title, why: kind });
+        }
       }
     }
 
@@ -170,9 +180,11 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
     // which is what this time is there to report.
     check(deps);
     if (refused === 0) records.markSynced(now());
-    return { carried, refused, deferred, cancelled: false };
+    return { carried, refused, refusals, deferred, cancelled: false };
   } catch (reason: unknown) {
-    if (reason instanceof SyncCancelled) return { carried, refused, deferred, cancelled: true };
+    if (reason instanceof SyncCancelled) {
+      return { carried, refused, refusals, deferred, cancelled: true };
+    }
     throw reason;
   }
 }

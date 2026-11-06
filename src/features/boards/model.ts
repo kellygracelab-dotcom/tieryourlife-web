@@ -138,6 +138,13 @@ export const BOARD_LIMITS = {
   credit: 200,
 } as const;
 
+/**
+ * Ranked tiers a board may have. The account counts the pool among a
+ * board's tiers, where a published list sends none: a board with the full
+ * twenty ranked was refused on every back-up, and never kept.
+ */
+export const MAX_RANKED_TIERS = BOARD_LIMITS.tiers - 1;
+
 /** A picture's credit as the backend keeps it: trimmed, one space between words, none when empty. */
 export function creditOf(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
@@ -559,7 +566,7 @@ export function nextTierLabel(board: Board): string {
 /** A tier at the end of the ranked ones; the pool stays last. */
 export function addTier(board: Board, draft: TierDraft, now: number, nextUid: NextUid): Board {
   const ranked = rankedTiers(board);
-  if (ranked.length >= BOARD_LIMITS.tiers) return board;
+  if (ranked.length >= MAX_RANKED_TIERS) return board;
   const label = clip(draft.label, BOARD_LIMITS.title).trim();
   if (label.length === 0) return board;
   const tier: BoardTier = {
@@ -640,7 +647,7 @@ export function restoreTier(
 ): Board {
   if (
     board.tiers.some((t) => t.uid === tier.uid) ||
-    rankedTiers(board).length >= BOARD_LIMITS.tiers
+    rankedTiers(board).length >= MAX_RANKED_TIERS
   ) {
     return board;
   }

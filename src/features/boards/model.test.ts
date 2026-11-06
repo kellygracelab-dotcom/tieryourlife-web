@@ -10,6 +10,7 @@ import {
   itemsIn,
   liveItems,
   markedTitle,
+  MAX_RANKED_TIERS,
   moveItem,
   newBoard,
   nextTierLabel,
@@ -272,7 +273,7 @@ describe("tiers", () => {
     expect(rankedTiers(b1)[5]?.caption).toBe("fine");
     expect(poolTier(b1)?.position).toBe(6);
     expect(nextTierLabel(b1)).toBe("F");
-    // Not past the ceiling, and not without a label.
+    // Not past the ceiling the account keeps, the pool counted among the tiers, and not without a label.
     let b = b1;
     for (let i = 0; i < 20; i++) {
       b = addTier(
@@ -282,7 +283,8 @@ describe("tiers", () => {
         next,
       );
     }
-    expect(rankedTiers(b)).toHaveLength(BOARD_LIMITS.tiers);
+    expect(rankedTiers(b)).toHaveLength(MAX_RANKED_TIERS);
+    expect(b.tiers).toHaveLength(BOARD_LIMITS.tiers);
     expect(
       addTier(
         b1,

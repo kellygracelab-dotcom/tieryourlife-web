@@ -1283,6 +1283,10 @@ const de: Translation = {
     offCancel: "Abbrechen",
     stuck: "Seit {when} nicht gesichert. Mit „Jetzt sichern“ versuchst du es noch einmal.",
     stuckNever: "Noch nicht gesichert. Mit „Jetzt sichern“ versuchst du es noch einmal.",
+    refusedTooLarge:
+      "„{title}“ ist zu groß für ein Konto und wird nicht gesichert. Nimm ein paar Karten heraus, dann wird sie wieder gesichert.",
+    refusedTooMany:
+      "„{title}“ wird nicht gesichert: Ein Konto behält bis zu 200 Listen. Entferne einige endgültig, um Platz zu schaffen.",
     now: "Jetzt sichern",
     backingUp: "Wird gesichert…",
     guestNote:
