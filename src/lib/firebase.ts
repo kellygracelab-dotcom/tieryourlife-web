@@ -7,6 +7,7 @@ import {
 } from "firebase/app-check";
 import {
   browserLocalPersistence,
+  connectAuthEmulator,
   indexedDBLocalPersistence,
   initializeAuth,
   signInAnonymously,
@@ -16,15 +17,33 @@ import {
 } from "firebase/auth";
 import type { FirebaseStorage } from "firebase/storage";
 import type { TokenProviders } from "../api/client";
+import {
+  AUTH_EMULATOR_PORT,
+  EMULATOR_HOST,
+  EMULATOR_PROJECT,
+  STORAGE_EMULATOR_PORT,
+} from "./emulators";
 import { readEnv, type Env } from "./env";
 import { firebaseConfig } from "./firebaseConfig";
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
 let appCheck: AppCheck | null | undefined;
+let storageOnEmulator = false;
 
 export function getFirebaseApp(): FirebaseApp {
-  app ??= getApps()[0] ?? initializeApp(firebaseConfig);
+  app ??=
+    getApps()[0] ??
+    initializeApp(
+      import.meta.env.VITE_EMULATORS === "1"
+        ? {
+            ...firebaseConfig,
+            projectId: EMULATOR_PROJECT,
+            authDomain: `${EMULATOR_PROJECT}.firebaseapp.com`,
+            storageBucket: `${EMULATOR_PROJECT}.appspot.com`,
+          }
+        : firebaseConfig,
+    );
   return app;
 }
 
@@ -33,9 +52,16 @@ export function getFirebaseApp(): FirebaseApp {
 // on every page a phone opened, to look for a redirect that had not happened.
 // The sign-in calls bring the resolver along themselves.
 export function getFirebaseAuth(): Auth {
-  auth ??= initializeAuth(getFirebaseApp(), {
-    persistence: [indexedDBLocalPersistence, browserLocalPersistence],
-  });
+  if (auth === undefined) {
+    auth = initializeAuth(getFirebaseApp(), {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    });
+    if (import.meta.env.VITE_EMULATORS === "1") {
+      connectAuthEmulator(auth, `http://${EMULATOR_HOST}:${AUTH_EMULATOR_PORT}`, {
+        disableWarnings: true,
+      });
+    }
+  }
   return auth;
 }
 
@@ -51,8 +77,12 @@ export const UPLOAD_RETRY_MS = 60_000;
  * needs it, not with the page: most visits never upload or look one up.
  */
 export async function getFirebaseStorage(): Promise<FirebaseStorage> {
-  const { getStorage } = await import("firebase/storage");
-  const storage = getStorage(getFirebaseApp());
+  const sdk = await import("firebase/storage");
+  const storage = sdk.getStorage(getFirebaseApp());
+  if (import.meta.env.VITE_EMULATORS === "1" && !storageOnEmulator) {
+    sdk.connectStorageEmulator(storage, EMULATOR_HOST, STORAGE_EMULATOR_PORT);
+    storageOnEmulator = true;
+  }
   storage.maxUploadRetryTime = UPLOAD_RETRY_MS;
   return storage;
 }
@@ -118,4 +148,5 @@ export function resetFirebaseForTests(): void {
   app = undefined;
   appCheck = undefined;
   auth = undefined;
+  storageOnEmulator = false;
 }

@@ -39,3 +39,8 @@ coordinator-log.md
 
 # Local tooling of the desktop app
 .claude/
+
+# scripts/e2e-proxy.mjs writes the emulators' config here.
+e2e-proxy/.emulators/
+# playwright.proxy.config.ts builds the site in emulator mode here.
+dist-emulator/

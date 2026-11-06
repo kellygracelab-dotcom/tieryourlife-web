@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
-import { useState } from "react";
+import { StrictMode, useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { KeepBoardRequest, KeptBoard } from "../../api/boards";
@@ -217,6 +217,19 @@ describe("BoardSyncProvider", () => {
     act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 5 }));
     await waitFor(() => expect(keeps).toHaveLength(2));
     expect(keeps[1]).toMatchObject({ uid: "a", request: { basedOn: 1, title: "A2" } });
+  });
+
+  it("brings the account's boards to a new device on sign-in when mounted twice, as StrictMode does", async () => {
+    // StrictMode mounts, unmounts and mounts again: the first run is cancelled
+    // with its mount, and the run the second mount asked for meanwhile must
+    // still happen. It was dropped, and a second device came up empty.
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    const { api, indexReads } = fakeApi([theirBoard("theirs", "Films")]);
+    render(<StrictMode>{tree(signedIn, { children: null, repository, store, api })}</StrictMode>);
+    await waitFor(() => expect(repository.get("theirs")?.title).toBe("Films"));
+    expect(indexReads.length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("in idle -"));
   });
 
   it("lets a change to the game alone wait for the longer pause, an edit going up soon", async () => {

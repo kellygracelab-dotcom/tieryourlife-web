@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
-import { requireAppCheck } from "../src/appCheck";
+import { requireAppCheck, skipsAppCheck } from "../src/appCheck";
 import { optionalAccount, requireAccount, requireUser, type DecodedToken } from "../src/auth";
 import { claimHashOf, CODE_ALPHABET, DAILY_CEILING, dayKey, MAX_BODY_BYTES } from "../src/ranking";
 import { resetShellForTests, UNAVAILABLE_HTML } from "../src/pages";
@@ -786,5 +786,41 @@ describe("the token checks", () => {
       assert.equal(out.seen.status, 401);
       assert.equal((out.seen.body as { code: string }).code, "APP_UNVERIFIED");
     }
+  });
+
+  it("skips App Check only in the emulators of a demo- project", async () => {
+    const emulated = { FUNCTIONS_EMULATOR: "true", GCLOUD_PROJECT: "demo-tieryourlife" };
+    assert.equal(skipsAppCheck(emulated), true);
+    assert.equal(
+      skipsAppCheck({ FUNCTIONS_EMULATOR: "true", FIREBASE_CONFIG: '{"projectId":"demo-x"}' }),
+      true,
+    );
+    // The real project, in the emulator or deployed, and a demo id outside it.
+    assert.equal(
+      skipsAppCheck({ FUNCTIONS_EMULATOR: "true", GCLOUD_PROJECT: "tieryourlife" }),
+      false,
+    );
+    assert.equal(skipsAppCheck({ GCLOUD_PROJECT: "demo-tieryourlife" }), false);
+    assert.equal(skipsAppCheck({ FUNCTIONS_EMULATOR: "1", GCLOUD_PROJECT: "demo-x" }), false);
+    assert.equal(skipsAppCheck({ FUNCTIONS_EMULATOR: "true", FIREBASE_CONFIG: "not json" }), false);
+    // Both names must be a demo project's.
+    assert.equal(
+      skipsAppCheck({
+        FUNCTIONS_EMULATOR: "true",
+        GCLOUD_PROJECT: "demo-x",
+        FIREBASE_CONFIG: '{"projectId":"tieryourlife"}',
+      }),
+      false,
+    );
+    assert.equal(skipsAppCheck({}), false);
+
+    const refuse = async () => {
+      throw new Error("refused");
+    };
+    assert.equal(await requireAppCheck(request({}), response().writer, refuse, emulated), true);
+    const out = response();
+    const deployed = { GCLOUD_PROJECT: "tieryourlife" };
+    assert.equal(await requireAppCheck(request({}), out.writer, refuse, deployed), false);
+    assert.equal(out.seen.status, 401);
   });
 });

@@ -3,6 +3,21 @@
 How the site's code is laid out, what keeps it that way, and what is known
 to be left. Short on purpose: the code and its tests are the detail.
 
+## The contract with the backend
+
+The proxy (`kellygracelab-dotcom/tieryourlife-proxy`) is shared with the
+Android app. Its `CONTRACT.md` is the one description both clients read:
+every route, body, answer, refusal code and limit, and a section on this
+site's own functions. A change to a request or an answer changes that file in
+the same PR: in the proxy for its routes, in this repository's PR text for
+the site's functions (then copied there). `api/` follows it; PARITY.md is
+about behaviour on screen, not the wire.
+
+`e2e/` answers every request from fixtures, which accept whatever the site
+sends. `e2e-proxy/` is the check that the fixtures and the real code still
+agree: publishing and the boards' back-up, run against the proxy's `main` in
+CI.
+
 ## Layers
 
 | Layer       | Holds                                                                    | May import                                                        |
@@ -12,7 +27,7 @@ to be left. Short on purpose: the code and its tests are the detail.
 | `app/`      | the shell, routes, the session                                           | everything below                                                  |
 | `ui/`       | presentational parts and their primitives (`Button`, `Menu`, `useModal`) | `lib`, `strings`; types only from `api`                           |
 | `lib/`      | the outside world behind functions: Firebase, storage, pictures, locale  | `api`, `strings`                                                  |
-| `api/`      | the proxy's contract: types, errors, one function per call               | nothing of the site                                               |
+| `api/`      | the proxy's contract: types, errors, one function per call (see below)   | nothing of the site                                               |
 | `strings/`  | the words, in eleven languages                                           | `lib` (the reader's locale)                                       |
 
 The features:
@@ -42,16 +57,17 @@ page and feature is tested without the network.
 
 ## Where things are
 
-| Path            | Holds                                                                                                     |
-| --------------- | --------------------------------------------------------------------------------------------------------- |
-| `src/`          | the site; `main.tsx` boots it, `App.tsx` mounts the providers and routes                                  |
-| `src/test/`     | what unit tests share: the setup file and the proxy's mock                                                |
-| `tests/config/` | checks on the build's own files: `config/`, `firebase.json`, the icon font, CSS, tokens                   |
-| `e2e/`          | Playwright: one spec per journey, `fixtures.ts` and `signedIn.ts` the mocks                               |
-| `config/`       | what `vite.config.ts` uses: the App Check debug token kept off the bundle, the app preload                |
-| `scripts/`      | `icons.mjs`, which cuts the icon font down to `ui/icons.ts`, and the list it used                         |
-| `functions/`    | the Cloud Functions (share pages and their picture, OG tags, an account's deletion), with their own tests |
-| `public/`       | files served as they are: the icon, the font, the privacy and deletion pages                              |
+| Path            | Holds                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------- |
+| `src/`          | the site; `main.tsx` boots it, `App.tsx` mounts the providers and routes                                    |
+| `src/test/`     | what unit tests share: the setup file and the proxy's mock                                                  |
+| `tests/config/` | checks on the build's own files: `config/`, `firebase.json`, the icon font, CSS, tokens                     |
+| `e2e/`          | Playwright: one spec per journey, `fixtures.ts` and `signedIn.ts` the mocks                                 |
+| `e2e-proxy/`    | Playwright against the real proxy and functions in the Firebase emulators (its README)                      |
+| `config/`       | what `vite.config.ts` uses: the App Check debug token kept off the bundle, the app preload                  |
+| `scripts/`      | `icons.mjs` (the icon font cut down to `ui/icons.ts`), `e2e-proxy.mjs` (starts the emulators for e2e-proxy) |
+| `functions/`    | the Cloud Functions (share pages and their picture, OG tags, an account's deletion), with their own tests   |
+| `public/`       | files served as they are: the icon, the font, the privacy and deletion pages                                |
 
 A unit test sits beside the file it tests as `name.test.ts(x)`; a large
 component's tests may split by subject (`RankingBoard.edit.test.tsx`).
@@ -79,7 +95,8 @@ component's tests may split by subject (`RankingBoard.edit.test.tsx`).
   `close`, `open`, `stop`, `print` refused (a stray `close` once silently
   meant `window.close`).
 - TypeScript strict with `noUncheckedIndexedAccess`; coverage thresholds in
-  Vitest; Playwright smokes on Chromium and WebKit in CI.
+  Vitest; Playwright smokes on Chromium and WebKit in CI, and the e2e-proxy
+  smokes against the proxy's `main` in the Firebase emulators.
 
 ## Known debt
 
