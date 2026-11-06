@@ -260,10 +260,16 @@ export function BoardSettings({
       // The board's uid goes with every send, as the phone's does: a first
       // publish lost to a reload gets its list back, and a replace keeps it.
       const outgoing = { ...request, boardUid: current.uid };
-      const answer =
+      let answer =
         what === "updated" && current.publishedId !== null
           ? await publishing.republish(current.publishedId, outgoing)
           : await publishing.publish(outgoing);
+      // Out already: an earlier publish made the list and its answer was lost
+      // on the way. Nothing of this one was written, so the board goes again
+      // over that list's link, or the edits since would never reach it.
+      if (answer.existing === true && answer.ranking !== true) {
+        answer = await publishing.republish(answer.id, outgoing);
+      }
       const name = account?.kind === "signedIn" ? account.displayName : null;
       const after = latest();
       // The cards as they came from the list they were saved from: the

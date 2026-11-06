@@ -485,6 +485,20 @@ describe("BoardSettings: public", () => {
     expect(held.publishedId).toBe("L1");
   });
 
+  it("sends the board again over the list's link when an earlier publish's answer was lost", async () => {
+    // The first publish made L1, but its answer never came: the retry is told so, and nothing was written.
+    const publish = vi.fn(async () => ({ id: "L1", topicId: null, existing: true }));
+    const republish = vi.fn(async () => ({ id: "L1" }));
+    show({ ...filmBoard(), title: "Films, renamed" }, signedIn, { publish, republish });
+    await userEvent.click(publicSwitch());
+    await waitFor(() => expect(held.publishedId).toBe("L1"));
+    expect(republish).toHaveBeenCalledWith(
+      "L1",
+      expect.objectContaining({ title: "Films, renamed", boardUid: "films" }),
+    );
+    expect(held.publishedEditedAt).toBe(held.editedAt);
+  });
+
   it("keeps a moderator's topic on Update of a board without one, and learns it", async () => {
     const republish = vi.fn(async () => ({ id: "L1", topicId: "t1" }));
     const findTopic = vi.fn(async (id: string) => topic(id, "A24"));
