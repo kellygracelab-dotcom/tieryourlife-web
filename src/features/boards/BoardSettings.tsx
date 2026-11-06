@@ -31,6 +31,7 @@ import {
   setRanking,
   setTopic,
   settleTopic,
+  topicSent,
   TOPIC_NAME,
   type Board,
   type BoardTopic,
@@ -235,6 +236,20 @@ export function BoardSettings({
     });
   };
 
+  // The list's topic as the backend kept it, named, while the board still has none of its own.
+  const learn = (topicId: string) => {
+    findTopic(topicId).then(
+      (topic) => {
+        const current = latest();
+        if (topic.status !== "approved" || current.topic !== null || current.topicOff === true) {
+          return;
+        }
+        keep(settleTopic(current, { id: topic.id, name: topic.name }));
+      },
+      () => undefined,
+    );
+  };
+
   const send = async (what: "published" | "updated") => {
     const current = latest();
     const request = publishRequestOf(current);
@@ -262,7 +277,10 @@ export function BoardSettings({
       const sent =
         ranking || after.topic !== current.topic
           ? out
-          : settleTopic(out, sentTopic(current.topic, answer.topicId));
+          : settleTopic(
+              current.topicOff === true ? topicSent(out) : out,
+              sentTopic(current.topic, answer.topicId),
+            );
       // A change made while the request was on its way was not in it: the
       // published copy is behind it, and Update still has it to send.
       keep(
@@ -273,6 +291,10 @@ export function BoardSettings({
       onPublished(ranking ? "ranking" : what, answer.id);
       // The backend may have filed it under an approved topic of that name.
       if (sent.topic !== current.topic) settle(sent.topic);
+      // Said nothing of a topic, the list kept its own, a moderator's move
+      // into one too: the board learns it, as the published copy has it.
+      const kept = answer.topicId;
+      if (!ranking && sent.topic === null && sent.topicOff !== true && kept) learn(kept);
     } catch (reason: unknown) {
       const error = errorOf(reason);
       // Taken down elsewhere (its page, /me, the phone): the board is no longer

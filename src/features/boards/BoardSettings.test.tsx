@@ -334,8 +334,10 @@ describe("BoardSettings: public", () => {
     await userEvent.click(publicSwitch());
     await waitFor(() => expect(publicSwitch()).toBeChecked());
     expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Films", category: "film_tv", topicId: null }),
+      expect.objectContaining({ title: "Films", category: "film_tv" }),
     );
+    // No topic chosen, none is said.
+    expect(publish).not.toHaveBeenCalledWith(expect.objectContaining({ noTopic: true }));
     // The board's uid goes with a first publish, so publishing again after a
     // reload gets the same list back rather than a second one.
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ boardUid: filmBoard().uid }));
@@ -481,6 +483,28 @@ describe("BoardSettings: public", () => {
       "Could not take it down. Try again in a minute.",
     );
     expect(held.publishedId).toBe("L1");
+  });
+
+  it("keeps a moderator's topic on Update of a board without one, and learns it", async () => {
+    const republish = vi.fn(async () => ({ id: "L1", topicId: "t1" }));
+    const findTopic = vi.fn(async (id: string) => topic(id, "A24"));
+    show(
+      { ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 },
+      signedIn,
+      { republish },
+      {
+        findTopic,
+      },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(republish).toHaveBeenCalled());
+    // Nothing said of a topic: the list keeps the one a moderator moved it into.
+    const request = (republish.mock.calls[0] as unknown[])[1];
+    expect(request).not.toHaveProperty("noTopic");
+    expect(request).not.toHaveProperty("topicId");
+    await waitFor(() => expect(held.topic).toEqual({ id: "t1", name: "A24" }));
+    // Learnt from the answer, it is no edit: the list is not behind it.
+    expect(held.publishedEditedAt).toBe(held.editedAt);
   });
 
   it("says a refused Update under Update, and lets a list taken down elsewhere go", async () => {

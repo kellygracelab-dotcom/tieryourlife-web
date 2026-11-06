@@ -8,6 +8,8 @@ import {
   newBoard,
   poolTier,
   rankedTiers,
+  setTopic,
+  topicSent,
   type Board,
 } from "./model";
 import { boardFromList, publishProblemsOf, publishRequestOf } from "./publish";
@@ -49,9 +51,18 @@ describe("publishing a board", () => {
     ]);
     expect(request.coverImageUrls).toEqual([]);
     expect(request.coverImageUrl).toBeNull();
-    // No topic is said out loud: a republish with it takes the list out of its old one.
-    expect(request.topicId).toBeNull();
-    expect(request.noTopic).toBe(true);
+    // A board without a topic says nothing of one: the list keeps its own,
+    // a moderator's move into a topic too.
+    expect(request).not.toHaveProperty("topicId");
+    expect(request).not.toHaveProperty("noTopic");
+    // Only a topic taken off here takes it off the list, and once sent it is said no more.
+    const off = setTopic({ ...b, topic: { id: "t1", name: "A24" } }, null, 4);
+    expect(publishRequestOf(off)).toMatchObject({ noTopic: true });
+    expect(publishRequestOf(off)).not.toHaveProperty("topicId");
+    expect(publishRequestOf(topicSent(off))).not.toHaveProperty("noTopic");
+    expect(publishRequestOf(setTopic(off, { id: "t2", name: "Neon" }, 5))).not.toHaveProperty(
+      "noTopic",
+    );
     const topical = publishRequestOf({ ...b, topic: { id: "t1", name: "A24" } });
     expect(topical?.topicId).toBe("t1");
     expect(topical?.noTopic).toBeUndefined();
