@@ -1,4 +1,4 @@
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
 import { isEditorialList } from "./editorial";
@@ -31,6 +31,8 @@ import { sendShareImage, shareImageFor } from "./shareImage";
 
 const PUBLISHED = "publishedLists";
 const RANKINGS = "rankings";
+/** The proxy's log of what moderators did; read here, never written. */
+const AUDIT_LOG = "auditLog";
 
 /** The sites this function may be asked to render; anything else is a stranger. */
 const HOSTS = new Set(["tieryourlife.web.app", "tieryourlife.firebaseapp.com"]);
@@ -387,6 +389,38 @@ const standingOf = (
   list.exists ? { authorUid: list.get("authorUid"), anonymous: list.get("anonymous") } : null;
 
 /**
+ * Whether a moderator took the list down. The proxy deletes a list taken
+ * down just as it deletes one its author unpublished, so the only trace left
+ * is the line in its audit log (`report.takedown` on `publishedLists/{id}`).
+ * The log is asked by its target alone, the query the proxy itself makes,
+ * which needs no index of its own; a list has a handful of lines at most.
+ */
+export async function takenDownByModerator(db: Firestore, listId: string): Promise<boolean> {
+  const lines = await db
+    .collection(AUDIT_LOG)
+    .where("target", "==", `${PUBLISHED}/${listId}`)
+    .select("what")
+    .get();
+  return lines.docs.some((line) => line.get("what") === "report.takedown");
+}
+
+/**
+ * Whether a ranking of this list must not be shown. A ranking outlives a list
+ * its author unpublished, but not one moderation took away: its title, tiers
+ * and card names would go on being served under the ranking's address while
+ * the list's own page keeps them hidden. A list under review comes back to
+ * its rankings when a moderator leaves it up; one taken down never does.
+ */
+export async function withdrawnByModeration(
+  db: Firestore,
+  listId: string,
+  list: FirebaseFirestore.DocumentSnapshot,
+): Promise<boolean> {
+  if (list.exists) return list.get("underReview") === true;
+  return takenDownByModerator(db, listId);
+}
+
+/**
  * A ranking's card changes when its owner edits it, and when its list does:
  * a list made anonymous takes its author's name off every ranking of it, so
  * the card kept with the name must not be the one a chat is sent again.
@@ -443,11 +477,15 @@ export async function rankingShareImage(
   response: Response,
   code: string,
   hl?: unknown,
+  database: () => Firestore = getFirestore,
 ): Promise<void> {
-  const doc = isCode(code) ? await getFirestore().collection(RANKINGS).doc(code).get() : null;
+  const db = database();
+  const doc = isCode(code) ? await db.collection(RANKINGS).doc(code).get() : null;
   if (doc === null || !doc.exists) return sendShareImage(response, null);
   const stored = doc.data() as StoredRanking;
-  const list = await getFirestore().collection(PUBLISHED).doc(stored.listId).get();
+  const list = await db.collection(PUBLISHED).doc(stored.listId).get();
+  // The card would draw the hidden list's cards for any chat that asks.
+  if (await withdrawnByModeration(db, stored.listId, list)) return sendShareImage(response, null);
   const snapshot =
     stored.snapshot.editorial === true
       ? stored.snapshot
@@ -497,18 +535,22 @@ export async function rankingPage(
   request: Request,
   response: Response,
   code: string,
+  database: () => Firestore = getFirestore,
 ): Promise<void> {
   const host = hostOf(request);
   const html = await loadShell(host);
   let found: { stored: StoredRanking; list: FirebaseFirestore.DocumentSnapshot } | null;
   try {
-    const db = getFirestore();
+    const db = database();
     const doc = isCode(code) ? await db.collection(RANKINGS).doc(code).get() : null;
     const stored = doc?.exists ? (doc.data() as StoredRanking) : null;
+    const list = stored === null ? null : await db.collection(PUBLISHED).doc(stored.listId).get();
+    // A ranking of a list moderation took away gets the bare shell, as the
+    // list's own page does: the site then says it is not there.
     found =
-      stored === null
+      stored === null || list === null || (await withdrawnByModeration(db, stored.listId, list))
         ? null
-        : { stored, list: await db.collection(PUBLISHED).doc(stored.listId).get() };
+        : { stored, list };
   } catch (error) {
     return sendBare(response, html, error);
   }

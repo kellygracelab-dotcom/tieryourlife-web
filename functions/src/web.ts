@@ -13,6 +13,7 @@ import {
   rankingShareImage,
   shellPage,
   unavailablePage,
+  withdrawnByModeration,
 } from "./pages";
 import { sendPicture, storagePictures, type PictureDeps } from "./pictures";
 import { discardOlderCopies } from "./shareImage";
@@ -139,7 +140,7 @@ export async function route(
       // A house list's card in the language its page asked for (?hl=).
       const hl = (request.query as Record<string, unknown> | undefined)?.hl;
       if (segments[1] === "l") return await listShareImage(response, id, hl);
-      if (segments[1] === "r") return await rankingShareImage(response, id, hl);
+      if (segments[1] === "r") return await rankingShareImage(response, id, hl, deps.db);
       return notFound(response, "No such address");
     }
     // A section's or topic's picture at a page's width: /img/{width}/{kind}/{id}/{picture}.
@@ -152,7 +153,7 @@ export async function route(
       return await listPage(request, response, segments[1] ?? "");
     }
     if (reading && segments.length === 2 && segments[0] === "r") {
-      return await rankingPage(request, response, segments[1] ?? "");
+      return await rankingPage(request, response, segments[1] ?? "", deps.db);
     }
     // Hosting sends all of /l/** and /r/** here: any other address there is
     // the site's to call not found, on its own page.
@@ -221,8 +222,8 @@ async function readRanking(
   const doc = await db.collection(RANKINGS).doc(code).get();
   if (!doc.exists) return notFound(response, "No such ranking");
   const ranking = doc.data() as RankingDocument;
-  // A ranking outlives its list; the page only needs to know whether the
-  // list is still there to link back to.
+  // A ranking outlives a list its author took away; the page only needs to
+  // know whether the list is still there to link back to.
   const list = await db.collection(PUBLISHED).doc(ranking.listId).get();
   const listAvailable = list.exists && list.get("underReview") !== true;
   // A list that stands without an author gives no name to its rankings either.
@@ -241,6 +242,12 @@ async function readRanking(
         .update({ listAuthorUid: author })
         .catch(() => undefined);
     }
+  }
+
+  // What moderation hid or took down is not read here either; the
+  // ranking comes back if its list is left up.
+  if (await withdrawnByModeration(db, ranking.listId, list)) {
+    return notFound(response, "No such ranking");
   }
 
   response.setHeader("Cache-Control", "no-store");

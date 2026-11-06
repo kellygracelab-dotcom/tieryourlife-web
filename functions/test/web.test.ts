@@ -55,17 +55,21 @@ function memoryFirestore(clock = () => 1_000) {
   const db = {
     collection: (name: string) => ({
       doc: (id: string) => refOf(name, id),
-      where: (field: string, _op: "==", value: unknown) => ({
-        limit: (max: number) => ({
-          get: async () => {
-            const docs = [...table(name)]
-              .filter(([, data]) => data[field] === value)
-              .slice(0, max)
-              .map(([id, data]) => snapshotOf(id, data));
-            return { docs, size: docs.length };
-          },
-        }),
-      }),
+      where: (field: string, _op: "==", value: unknown) => {
+        const found = async (max = Infinity) => {
+          const docs = [...table(name)]
+            .filter(([, data]) => data[field] === value)
+            .slice(0, max)
+            .map(([id, data]) => snapshotOf(id, data));
+          return { docs, size: docs.length };
+        };
+        return {
+          limit: (max: number) => ({ get: () => found(max) }),
+          // The fields a select leaves out are kept: no handler reads them.
+          select: () => ({ get: () => found() }),
+          get: () => found(),
+        };
+      },
     }),
     // All or nothing, as Firestore's: a create that finds its document taken
     // fails the whole commit before anything is written.
@@ -402,13 +406,42 @@ describe("GET /api/rank/{code}", () => {
     assert.equal(table("rankings").get("anonymou")?.listAuthorUid, undefined);
   });
 
-  it("says the list is gone when it is under review, and is nobody's for a guest", async () => {
+  it("is nobody's for a guest", async () => {
     const { deps, table } = setup(GUEST);
     table("rankings").set("abcdefgh", ranking("guest", true));
-    table("publishedLists").set(LIST_ID, { ...LIST, underReview: true });
     const body = (await call(deps, "GET", "/api/rank/abcdefgh")).body as Data;
-    assert.equal(body.listAvailable, false);
+    assert.equal(body.listAvailable, true);
     assert.equal(body.yours, false);
+  });
+
+  it("hides a ranking of a list under review, even from its keeper, until the list is left up", async () => {
+    const { deps, table } = setup(PERSON);
+    table("rankings").set("abcdefgh", ranking("person", false));
+    table("publishedLists").set(LIST_ID, { ...LIST, underReview: true });
+    const hidden = await call(deps, "GET", "/api/rank/abcdefgh");
+    assert.equal(hidden.status, 404);
+    assert.equal(JSON.stringify(hidden.body).includes("Moonlight"), false);
+    // A moderator left it up: the ranking is there again, nothing was lost.
+    table("publishedLists").set(LIST_ID, { ...LIST, underReview: false, reviewed: true });
+    assert.equal((await call(deps, "GET", "/api/rank/abcdefgh")).status, 200);
+  });
+
+  it("hides a ranking of a list a moderator took down, and keeps one whose author unpublished it", async () => {
+    const { deps, table } = setup(GUEST);
+    table("rankings").set("abcdefgh", ranking("guest", true));
+    table("rankings").set("bcdefghj", { ...ranking("guest", true), listId: "list-0002" });
+    table("publishedLists").delete(LIST_ID);
+    // The proxy deletes a list taken down as it deletes an unpublished one;
+    // only its audit log tells them apart.
+    table("auditLog").set("line-1", {
+      what: "report.takedown",
+      target: `publishedLists/${LIST_ID}`,
+    });
+    table("auditLog").set("line-2", { what: "list.move", target: "publishedLists/list-0002" });
+    assert.equal((await call(deps, "GET", "/api/rank/abcdefgh")).status, 404);
+    const unpublished = await call(deps, "GET", "/api/rank/bcdefghj");
+    assert.equal(unpublished.status, 200);
+    assert.equal((unpublished.body as Data).listAvailable, false);
   });
 
   it("names nobody once the list is gone, as when its author erased their account", async () => {
@@ -673,12 +706,40 @@ describe("the pages a link opens", () => {
   it("sends the bare shell when Firestore fails, so the site loads the list itself", async () => {
     // No Firebase app in the tests: every read of Firestore throws, as an outage does.
     const { deps } = setup();
+    const down: WebDeps = {
+      ...deps,
+      db: () => {
+        throw new Error("Firestore went away");
+      },
+    };
     for (const path of [`/l/${LIST_ID}`, "/r/abcdefgh"]) {
-      const answer = await withHosting(true, () => call(deps, "GET", path));
+      const answer = await withHosting(true, () => call(down, "GET", path));
       assert.equal(answer.status, 200, path);
       assert.equal(answer.body, SHELL, path);
       assert.equal(answer.headers["Cache-Control"], "no-store", path);
     }
+  });
+
+  it("gives a ranking of a list moderation took away neither its words nor its picture", async () => {
+    const { deps, table } = setup();
+    table("rankings").set("abcdefgh", ranking("guest", true));
+    table("rankings").set("bcdefghj", { ...ranking("guest", true), listId: "list-0002" });
+    table("publishedLists").set(LIST_ID, { ...LIST, underReview: true });
+    table("auditLog").set("line-1", {
+      what: "report.takedown",
+      target: "publishedLists/list-0002",
+    });
+    for (const code of ["abcdefgh", "bcdefghj"]) {
+      const page = await withHosting(true, () => call(deps, "GET", `/r/${code}`));
+      assert.equal(page.status, 200, code);
+      assert.equal(page.body, SHELL, code);
+      const picture = await call(deps, "GET", `/og/r/${code}.png`);
+      assert.equal(picture.status, 404, code);
+    }
+    // A list that stands is drawn into its ranking's page as before.
+    table("publishedLists").set(LIST_ID, LIST);
+    const shown = await withHosting(true, () => call(deps, "GET", "/r/abcdefgh"));
+    assert.match(String(shown.body), /Moonlight/);
   });
 
   it("answers a page, not JSON, when even the shell cannot be had", async () => {
