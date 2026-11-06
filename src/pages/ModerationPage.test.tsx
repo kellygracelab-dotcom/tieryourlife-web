@@ -170,7 +170,7 @@ describe("ModerationPage", () => {
   it("calls the author of an anonymous list Anonymous, and the owner's queue says whose", async () => {
     load.mockResolvedValue({
       reports: [
-        queued("l1", { anonymous: true, authorName: "", authorUid: null }),
+        queued("l1", { authorName: "", authorUid: null }),
         queued("l2", { anonymous: true, authorName: "Mira" }),
       ],
     });

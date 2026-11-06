@@ -740,7 +740,8 @@ function TopicProposal({
         <p className="proposal__meta">
           {fill(strings.admin.topicMeta, {
             section: nameOf(wanted),
-            name: topic.proposerName ?? "",
+            // A topic first named by an anonymous list comes without its proposer.
+            name: topic.proposerName || strings.admin.anonymousAuthor,
           })}
         </p>
         {topic.similar !== undefined && topic.similar.length > 0 && (

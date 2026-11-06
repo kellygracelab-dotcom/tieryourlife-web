@@ -60,7 +60,7 @@ type Decision = { kind: "keep" } | { kind: "remove"; ban: BanLength | null };
 // (docs/design-spec-walk-3.md, E2). The proxy leaves the name out for them;
 // the owner's queue still has it and says whose, as the list of lists does.
 function authorOf(item: QueuedList): string {
-  if (item.anonymous !== true) return item.authorName;
+  if (item.anonymous !== true) return item.authorName || strings.admin.anonymousAuthor;
   return item.authorName
     ? fill(strings.admin.anonymousOf, { name: item.authorName })
     : strings.admin.anonymousAuthor;

@@ -94,6 +94,12 @@ describe("ProposalsPane", () => {
     expect(screen.getByText("Looks like: Speedrunning")).toBeInTheDocument();
   });
 
+  it("says Anonymous for a topic first named by an anonymous list", async () => {
+    deps.topics = vi.fn(async () => ({ topics: [{ ...pendingTopic, proposerName: "" }] }));
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    expect(await screen.findByText("Topic in Games · proposed by Anonymous")).toBeInTheDocument();
+  });
+
   it("approves at once, and declines with a note to the proposer", async () => {
     wrap(<ProposalsPane adminRole="owner" deps={deps} />);
     const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
