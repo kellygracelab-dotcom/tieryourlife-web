@@ -1,5 +1,5 @@
 import type { ApiError } from "../../api/errors";
-import { strings } from "../../strings";
+import { currentLocale, fill, strings } from "../../strings";
 
 /**
  * What a refused publish says, in the page's own words. The proxy's own
@@ -9,8 +9,18 @@ export function failureText(error: ApiError, mode: "new" | "edit"): string {
   switch (error.kind) {
     case "offline":
       return strings.new.failedOffline;
+    // A ban with an end says when it ends, as the app and the proposal form do.
     case "banned":
-      return strings.new.failedBanned;
+      return error.until === null
+        ? strings.new.failedBanned
+        : fill(strings.new.failedBannedUntil, {
+            date: new Intl.DateTimeFormat(currentLocale(), { dateStyle: "long" }).format(
+              error.until,
+            ),
+          });
+    // Trying again sends the same photo: the way out is to remove it or keep the list private.
+    case "pictureRefused":
+      return strings.new.failedPictureRefused;
     case "tooManyLists":
       return strings.new.failedTooMany;
     case "tooManyTopics":
@@ -24,8 +34,9 @@ export function failureText(error: ApiError, mode: "new" | "edit"): string {
       return strings.new.notYours;
     case "tooLarge":
       return strings.new.failedTooLarge;
+    // A section that no longer takes lists is changed under Category, so the text says where.
     case "invalid":
-      return strings.new.failedInvalid;
+      return error.field === "category" ? strings.new.failedCategory : strings.new.failedInvalid;
     default:
       return strings.new.failedOther;
   }

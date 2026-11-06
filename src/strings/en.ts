@@ -317,7 +317,11 @@ export const en = {
     more: "More",
     failedOffline:
       "No connection. Nothing was lost: the list is safe on this device. Try again once you are back online.",
-    failedBanned: "You cannot publish at the moment.",
+    failedBanned: "A moderator took down one of your lists, and you can no longer publish.",
+    failedBannedUntil: "A moderator took down one of your lists. You can publish again on {date}.",
+    failedPictureRefused:
+      "One of your photos cannot go in the public feed. Remove it, or keep this list private.",
+    failedCategory: "This category no longer takes lists. Choose another one under Category.",
     failedTooMany:
       "This account has published as many lists as it can. Take one down in Your public lists first.",
     failedSignedOut: "Publishing needs an account. Sign in and try again.",

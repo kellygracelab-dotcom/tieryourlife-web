@@ -327,7 +327,13 @@ const fr: Translation = {
     more: "Plus",
     failedOffline:
       "Pas de connexion. Rien n’est perdu : la liste est à l’abri sur cet appareil. Réessayez une fois de retour en ligne.",
-    failedBanned: "Vous ne pouvez pas publier pour le moment.",
+    failedBanned: "La modération a retiré l’une de vos listes, et vous ne pouvez plus publier.",
+    failedBannedUntil:
+      "La modération a retiré l’une de vos listes. Vous pourrez publier à nouveau le {date}.",
+    failedPictureRefused:
+      "Une de vos photos ne peut pas figurer dans le fil public. Retirez-la ou gardez la liste privée.",
+    failedCategory:
+      "Cette catégorie n’accepte plus de listes. Choisissez-en une autre dans Catégorie.",
     failedTooMany:
       "Ce compte a publié autant de listes qu’il le peut. Retirez-en d’abord une dans Vos listes publiques.",
     failedSignedOut: "Publier demande un compte. Connectez-vous et réessayez.",
