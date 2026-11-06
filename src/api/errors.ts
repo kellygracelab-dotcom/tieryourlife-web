@@ -103,8 +103,11 @@ export function parseApiError(status: number, text: string): ApiError {
       };
     }
     // An unreadable 401 is about the person's sign-in, never about the
-    // installation: that verdict only ever arrives with its own code.
+    // installation: that verdict only ever arrives with its own code. The
+    // site's own account routes turn a guest away with 401 NOT_SIGNED_IN, the
+    // proxy with 403: both mean the same, and a fresh token would not help.
     case 401:
+      if (code === "NOT_SIGNED_IN") return { kind: "notSignedIn" };
       return code === "APP_UNVERIFIED" ? { kind: "appUnverified" } : { kind: "unauthenticated" };
     case 403:
       if (code === "BANNED") {

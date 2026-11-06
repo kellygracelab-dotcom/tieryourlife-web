@@ -197,7 +197,7 @@ function setup(who: { uid: string; isAnonymous: boolean } | null = GUEST, codes:
     },
     account: async (_request, response) => {
       if (who !== null && !who.isAnonymous) return who;
-      response.status(403).json({ code: "NOT_SIGNED_IN" });
+      response.status(401).json({ code: "NOT_SIGNED_IN" });
       return null;
     },
     viewer: async () => (who !== null && !who.isAnonymous ? who : null),
@@ -598,7 +598,7 @@ describe("PATCH /api/rank/{code} — claim", () => {
     const guest = setup(GUEST);
     assert.equal(
       (await call(guest.deps, "PATCH", "/api/rank/abcdefgh", { claimToken: "x" })).status,
-      403,
+      401,
     );
     const person = setup(PERSON);
     assert.equal((await call(person.deps, "PATCH", "/api/rank/abcdefgh", {})).status, 400);
@@ -664,8 +664,8 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     for (const code of ["bbbbbbbb", "cccccccc", "dddddddd"]) {
       assert.equal((await call(deps, "PUT", `/api/rank/${code}`, { rows: [[0], []] })).status, 403);
     }
-    // Deleting stays an account's.
-    assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 403);
+    // Deleting stays an account's: a guest is told to sign in.
+    assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 401);
     // An account does not change a guest's ranking under the same uid until it claims it.
     const signedIn = setup({ uid: "guest", isAnonymous: false });
     signedIn.table("rankings").set("abcdefgh", ranking("guest", true));
@@ -978,7 +978,7 @@ describe("the token checks", () => {
     }
   });
 
-  it("requireAccount turns a guest away with 403, a person through", async () => {
+  it("requireAccount turns a guest away with 401 NOT_SIGNED_IN, a person through", async () => {
     const guest = response();
     assert.equal(
       await requireAccount(
@@ -988,7 +988,8 @@ describe("the token checks", () => {
       ),
       null,
     );
-    assert.equal(guest.seen.status, 403);
+    assert.equal(guest.seen.status, 401);
+    assert.deepEqual(guest.seen.body, { error: "Sign in first", code: "NOT_SIGNED_IN" });
     const person = response();
     assert.deepEqual(
       await requireAccount(
