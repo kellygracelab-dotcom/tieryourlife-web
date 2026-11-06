@@ -231,6 +231,29 @@ describe("cards", () => {
     expect(removeItem(collage, poster!, 3).coverImageUrls).toEqual(collage.coverImageUrls);
   });
 
+  it("bring their picture back into the cover on Undo, in its old place", () => {
+    const { board: b0, next } = board();
+    const b1 = addToPool(
+      b0,
+      [
+        { title: "one", imageUrl: "https://x/1.jpg" },
+        { title: "two", imageUrl: "https://x/2.jpg" },
+        { title: "three", imageUrl: "https://x/3.jpg" },
+      ],
+      1,
+      next,
+    );
+    const two = liveItems(b1).find((item) => item.title === "two")!;
+    const collage = setCover(b1, ["https://x/2.jpg", "https://x/1.jpg", "https://x/3.jpg"], 2);
+    const gone = removeItem(collage, two.uid, 3);
+    expect(gone.coverImageUrls).toEqual(["https://x/1.jpg", "https://x/3.jpg"]);
+    const back = putBack(gone, two, 4, collage.coverImageUrls);
+    expect(back.coverImageUrls).toEqual(collage.coverImageUrls);
+    expect(back.coverImageUrl).toBeNull();
+    // A cover the card was never part of stays as it is.
+    expect(putBack(removeItem(b1, two.uid, 3), two, 4, []).coverImageUrls).toEqual([]);
+  });
+
   it("come back to the pool on Undo when their tier has gone meanwhile", () => {
     const { board: b0, next } = board();
     const b1 = addToPool(b0, [{ title: "a", imageUrl: null }], 1, next);

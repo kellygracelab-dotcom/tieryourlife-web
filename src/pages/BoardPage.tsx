@@ -518,7 +518,9 @@ function OpenBoard({
         text: strings.boards.undo,
         onClick: () => {
           const again = repository.get(uid);
-          if (again !== null) repository.save(putBack(again, card, now()));
+          if (again !== null) {
+            repository.save(putBack(again, card, now(), current.coverImageUrls));
+          }
         },
       },
     });
