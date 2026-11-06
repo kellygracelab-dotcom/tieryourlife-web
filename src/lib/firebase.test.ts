@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Env } from "./env";
 
 const app = { name: "[DEFAULT]" };
@@ -18,12 +18,15 @@ const mocks = vi.hoisted(() => ({
   initializeAppCheck: vi.fn(),
   getToken: vi.fn(),
   getStorage: vi.fn(() => ({ bucket: "b" })),
+  connectAuthEmulator: vi.fn(),
+  connectStorageEmulator: vi.fn(),
   ReCaptchaEnterpriseProvider: vi.fn(),
 }));
 
 vi.mock("firebase/app", () => ({ getApps: mocks.getApps, initializeApp: mocks.initializeApp }));
 vi.mock("firebase/auth", () => ({
   initializeAuth: mocks.initializeAuth,
+  connectAuthEmulator: mocks.connectAuthEmulator,
   indexedDBLocalPersistence: "indexedDB",
   browserLocalPersistence: "local",
   signInAnonymously: mocks.signInAnonymously,
@@ -34,7 +37,10 @@ vi.mock("firebase/app-check", () => ({
   getToken: mocks.getToken,
   ReCaptchaEnterpriseProvider: mocks.ReCaptchaEnterpriseProvider,
 }));
-vi.mock("firebase/storage", () => ({ getStorage: mocks.getStorage }));
+vi.mock("firebase/storage", () => ({
+  getStorage: mocks.getStorage,
+  connectStorageEmulator: mocks.connectStorageEmulator,
+}));
 
 import {
   getAppCheckToken,
@@ -94,6 +100,42 @@ describe("getFirebaseApp", () => {
       maxUploadRetryTime: 60_000,
     });
     expect(mocks.getStorage).toHaveBeenCalledWith(app);
+  });
+});
+
+describe("in emulator mode", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("stays on the real project and services when VITE_EMULATORS is not set", async () => {
+    getFirebaseAuth();
+    await getFirebaseStorage();
+    expect(mocks.connectAuthEmulator).not.toHaveBeenCalled();
+    expect(mocks.connectStorageEmulator).not.toHaveBeenCalled();
+  });
+
+  it("names the demo project and points Auth and Storage at the emulators, once", async () => {
+    vi.stubEnv("VITE_EMULATORS", "1");
+    expect(getFirebaseApp()).toBe(app);
+    expect(mocks.initializeApp.mock.calls[0]?.[0]).toMatchObject({
+      projectId: "demo-tieryourlife",
+      storageBucket: "demo-tieryourlife.appspot.com",
+    });
+    getFirebaseAuth();
+    getFirebaseAuth();
+    expect(mocks.connectAuthEmulator).toHaveBeenCalledOnce();
+    expect(mocks.connectAuthEmulator).toHaveBeenCalledWith(auth, "http://127.0.0.1:9099", {
+      disableWarnings: true,
+    });
+    await getFirebaseStorage();
+    await getFirebaseStorage();
+    expect(mocks.connectStorageEmulator).toHaveBeenCalledOnce();
+    expect(mocks.connectStorageEmulator).toHaveBeenCalledWith(
+      expect.objectContaining({ bucket: "b" }),
+      "127.0.0.1",
+      9199,
+    );
   });
 });
 

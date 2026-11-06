@@ -243,7 +243,13 @@ function ForAccount({
       .finally(() => {
         running.current = null;
         if (!stillWanted()) {
+          // This run belonged to a mount or an epoch that is over. A run asked
+          // for meanwhile by the one that took over is that one's, and still
+          // owed: StrictMode's second mount asks while the first's run is
+          // ending, and a new device then never fetched the account's boards.
+          const owed = again.current && mounted.current && !stopping.current;
           again.current = false;
+          if (owed) void runAgain.current();
           return;
         }
         setLastSyncedAt(records.lastSyncedAt());
