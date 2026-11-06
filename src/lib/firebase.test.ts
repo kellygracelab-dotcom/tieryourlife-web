@@ -137,6 +137,21 @@ describe("in emulator mode", () => {
       9199,
     );
   });
+  it("points Auth and Storage at the ports the environment names, for a second suite", async () => {
+    vi.stubEnv("VITE_EMULATORS", "1");
+    vi.stubEnv("VITE_AUTH_EMULATOR_PORT", "19099");
+    vi.stubEnv("VITE_STORAGE_EMULATOR_PORT", "19199");
+    getFirebaseAuth();
+    expect(mocks.connectAuthEmulator).toHaveBeenCalledWith(auth, "http://127.0.0.1:19099", {
+      disableWarnings: true,
+    });
+    await getFirebaseStorage();
+    expect(mocks.connectStorageEmulator).toHaveBeenCalledWith(
+      expect.objectContaining({ bucket: "b" }),
+      "127.0.0.1",
+      19199,
+    );
+  });
 });
 
 describe("getAppCheckToken", () => {
