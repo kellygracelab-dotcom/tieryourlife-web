@@ -58,13 +58,15 @@ export function coverOf(
 }
 
 /**
- * The topic as a publish says it, every time. A null id alone keeps the old
- * topic for stale phones, so no topic is said out loud; a name the backend
- * has not seen goes alone, since it refuses one beside an id or noTopic.
+ * The topic as a publish says it. A board without one says nothing, unless
+ * the person took it off here: saying none keeps the list's topic, so a
+ * moderator's move into a topic outlives the next Update, and the topic is
+ * this device's alone, so another device's board has none to send. A name
+ * the backend has not seen goes alone, since it refuses one beside an id or noTopic.
  */
 function topicOf(board: Board): Pick<PublishRequest, "topicId" | "noTopic" | "newTopic"> {
   const topic = board.topic;
-  if (topic === null) return { topicId: null, noTopic: true };
+  if (topic === null) return board.topicOff === true ? { noTopic: true } : {};
   return topic.id === null ? { newTopic: topic.name } : { topicId: topic.id };
 }
 

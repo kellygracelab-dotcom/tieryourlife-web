@@ -14,7 +14,7 @@ describe("parseApiError", () => {
     [
       400,
       json({ error: "Taken", code: "NAME_TAKEN", detail: "food", id: "food" }),
-      { kind: "invalid", detail: "Taken", code: "NAME_TAKEN", id: "food" },
+      { kind: "invalid", detail: "Taken", code: "NAME_TAKEN", id: "food", field: "food" },
     ],
     [
       400,
@@ -24,7 +24,18 @@ describe("parseApiError", () => {
         detail: "too_small",
         why: "too_small",
       }),
-      { kind: "invalid", detail: "Not a section's", code: "BAD_PICTURE", why: "too_small" },
+      {
+        kind: "invalid",
+        detail: "Not a section's",
+        code: "BAD_PICTURE",
+        why: "too_small",
+        field: "too_small",
+      },
+    ],
+    [
+      400,
+      json({ error: "No such section", code: "INVALID", detail: "category" }),
+      { kind: "invalid", detail: "No such section", code: "INVALID", field: "category" },
     ],
     [
       400,
@@ -59,6 +70,7 @@ describe("parseApiError", () => {
     [404, json({ error: "No such list", code: "NOT_FOUND" }), { kind: "notFound" }],
     [409, json({ error: "Too many", code: "TOO_MANY_LISTS" }), { kind: "tooManyLists" }],
     [409, json({ error: "Too many", code: "TOO_MANY_FOLLOWING" }), { kind: "tooManyFollowing" }],
+    [409, json({ error: "Too many", code: "TOO_MANY_BOARDS" }), { kind: "tooManyBoards" }],
     [409, json({ code: "TOO_MANY_PENDING_TOPICS" }), { kind: "tooManyTopics" }],
     [409, json({ error: "That page is gone", code: "CURSOR_GONE" }), { kind: "cursorGone" }],
     [409, json({ error: "Moved on", code: "CONFLICT" }), { kind: "conflict" }],

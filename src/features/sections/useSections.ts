@@ -13,6 +13,7 @@ import { remembered, type Remembered } from "../../lib/remembered";
 import { localStorageStore } from "../../lib/storage";
 import {
   orderSections,
+  proposalHomesFrom,
   proposalNoticesFrom,
   sectionOf,
   sectionsFrom,
@@ -40,6 +41,8 @@ export interface SectionsDeps {
 export interface KeptSections {
   sections: SectionStats[];
   who: string;
+  /** Where the person's own proposals keep their lists, past the answers that named them. */
+  homes?: Record<string, string>;
 }
 
 /**
@@ -48,12 +51,20 @@ export interface KeptSections {
  */
 export function readKeptSections(kept: unknown): KeptSections | null {
   if (typeof kept !== "object" || kept === null) return null;
-  const { sections, who } = kept as Partial<Record<keyof KeptSections, unknown>>;
+  const { sections, who, homes } = kept as Partial<Record<keyof KeptSections, unknown>>;
   if (!Array.isArray(sections) || typeof who !== "string") return null;
   if (!sections.every((one) => typeof one === "object" && one !== null && "id" in one)) return null;
   const answer = sections as SectionStats[];
-  sectionsFrom(answer, who); // throws for anything it cannot draw
-  return { sections: answer, who };
+  // Each throws for anything it cannot draw; the notices of one's own
+  // proposals read sections that sectionsFrom leaves out.
+  sectionsFrom(answer, who);
+  proposalNoticesFrom(answer, who);
+  // Homes that are not all names are dropped on their own: the answer is still good.
+  const named =
+    typeof homes === "object" &&
+    homes !== null &&
+    Object.values(homes).every((home) => typeof home === "string");
+  return { sections: answer, who, ...(named ? { homes: homes as Record<string, string> } : {}) };
 }
 
 export interface SectionsSnapshot {
@@ -81,6 +92,11 @@ export interface SectionsSnapshot {
   followsKnown: boolean;
   /** What became of one's own proposals a moderator did not approve, until dismissed. */
   notices: ProposalNotice[];
+  /**
+   * Where one's own proposals keep their lists, by id, kept after they leave
+   * the answer: a board filed under one withdrawn names where its list is.
+   */
+  homes: Readonly<Record<string, string>>;
 }
 
 /** A section the store holds, among the sections or those asked about by id. */
@@ -129,6 +145,7 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
           extra: [],
           followsKnown: false,
           notices: [],
+          homes: {},
         }
       : {
           sections: orderSections(sectionsFrom(kept.sections, kept.who)),
@@ -138,6 +155,7 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
           extra: [],
           followsKnown: true,
           notices: proposalNoticesFrom(kept.sections, kept.who),
+          homes: kept.homes ?? proposalHomesFrom(kept.sections, kept.who, {}),
         };
   // The backend's answer as kept on this device, so a follow made here is kept in it too.
   let lastAnswer: KeptSections | null = kept;
@@ -185,6 +203,7 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
           sections: orderSections(sectionsFrom(anybodys, who)),
           followsKnown: false,
           notices: [],
+          homes: {},
         });
         kept = null;
       }
@@ -226,8 +245,17 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
           if (extra.length === 0) askedAbout.clear();
           loadedAt = deps.now();
           loadedFor = who;
+          // The homes are the person's own: another's start afresh.
+          const homes =
+            who === null
+              ? {}
+              : proposalHomesFrom(
+                  sections,
+                  who,
+                  lastAnswer?.who === who ? (lastAnswer.homes ?? {}) : {},
+                );
           if (who !== null) {
-            lastAnswer = { sections, who };
+            lastAnswer = { sections, who, homes };
             deps.memory?.keep("sections", lastAnswer);
           }
           set({
@@ -238,6 +266,7 @@ export function createSectionsStore(deps: SectionsDeps): SectionsStore {
             extra,
             followsKnown: true,
             notices: who === null ? [] : proposalNoticesFrom(sections, who),
+            homes,
           });
           again();
         },

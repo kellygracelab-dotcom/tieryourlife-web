@@ -1,5 +1,5 @@
 import { randomBytes, randomInt } from "node:crypto";
-import { FieldValue, getFirestore, type Firestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
@@ -12,13 +12,17 @@ import {
   rankingPage,
   rankingShareImage,
   shellPage,
+  standingOf,
   unavailablePage,
+  withdrawnByModeration,
 } from "./pages";
 import { sendPicture, storagePictures, type PictureDeps } from "./pictures";
 import { discardOlderCopies } from "./shareImage";
 import {
+  APP_CHECK_TOKEN_KEPT_MS,
+  appCheckKeyOf,
+  ceilingFor,
   claimHashOf,
-  DAILY_CEILING,
   dayKey,
   decideClaim,
   decideClaimToken,
@@ -29,6 +33,7 @@ import {
   decideTierLabels,
   decideVersion,
   fromStoredRows,
+  GUEST_RANKINGS_PER_APP_CHECK_TOKEN,
   isCode,
   isKeptBy,
   listAuthorOf,
@@ -49,6 +54,8 @@ import {
 const RANKINGS = "rankings";
 const QUOTA = "rankQuota";
 const USAGE = "rankUsage";
+/** Guest rankings per App Check token, under the token's hash. */
+const TOKEN_USE = "rankTokens";
 const PUBLISHED = "publishedLists";
 
 const CODE_ATTEMPTS = 3;
@@ -139,7 +146,7 @@ export async function route(
       // A house list's card in the language its page asked for (?hl=).
       const hl = (request.query as Record<string, unknown> | undefined)?.hl;
       if (segments[1] === "l") return await listShareImage(response, id, hl);
-      if (segments[1] === "r") return await rankingShareImage(response, id, hl);
+      if (segments[1] === "r") return await rankingShareImage(response, id, hl, deps.db);
       return notFound(response, "No such address");
     }
     // A section's or topic's picture at a page's width: /img/{width}/{kind}/{id}/{picture}.
@@ -152,7 +159,7 @@ export async function route(
       return await listPage(request, response, segments[1] ?? "");
     }
     if (reading && segments.length === 2 && segments[0] === "r") {
-      return await rankingPage(request, response, segments[1] ?? "");
+      return await rankingPage(request, response, segments[1] ?? "", deps.db);
     }
     // Hosting sends all of /l/** and /r/** here: any other address there is
     // the site's to call not found, on its own page.
@@ -182,7 +189,15 @@ export async function route(
       if (!(await deps.appCheck(request, response))) return;
       const identity = await deps.user(request, response);
       if (!identity) return;
-      return await saveRanking(deps.db(), request.body, identity, response, deps.random);
+      const appCheckToken = request.header("X-Firebase-AppCheck") ?? null;
+      return await saveRanking(
+        deps.db(),
+        request.body,
+        identity,
+        response,
+        deps.random,
+        appCheckToken,
+      );
     }
     if (request.method === "PATCH" && code !== undefined) {
       if (!(await deps.appCheck(request, response))) return;
@@ -221,8 +236,8 @@ async function readRanking(
   const doc = await db.collection(RANKINGS).doc(code).get();
   if (!doc.exists) return notFound(response, "No such ranking");
   const ranking = doc.data() as RankingDocument;
-  // A ranking outlives its list; the page only needs to know whether the
-  // list is still there to link back to.
+  // A ranking outlives a list its author took away; the page only needs to
+  // know whether the list is still there to link back to.
   const list = await db.collection(PUBLISHED).doc(ranking.listId).get();
   const listAvailable = list.exists && list.get("underReview") !== true;
   // A list that stands without an author gives no name to its rankings either.
@@ -243,6 +258,12 @@ async function readRanking(
     }
   }
 
+  // What moderation hid or took down is not read here either; the
+  // ranking comes back if its list is left up.
+  if (await withdrawnByModeration(db, ranking.listId, list)) {
+    return notFound(response, "No such ranking");
+  }
+
   response.setHeader("Cache-Control", "no-store");
   response.status(200).json({
     code,
@@ -261,6 +282,7 @@ async function saveRanking(
   identity: Identity,
   response: Response,
   random: (max: number) => number,
+  appCheckToken: string | null,
 ): Promise<void> {
   if (JSON.stringify(body ?? null).length > MAX_BODY_BYTES) {
     return void response.status(413).json({ error: "Too large", code: "TOO_LARGE" });
@@ -304,17 +326,40 @@ async function saveRanking(
 
   // Counted before the write, like the backend's generation ceiling: the
   // number that bounds the bill when something nobody predicted happens.
+  // Guests stop short of it, and each App Check token keeps only so many
+  // guest rankings, so fresh guests cannot spend the day for everybody.
   const usage = db.collection(USAGE).doc(dayKey(now));
-  const count = await db.runTransaction(async (transaction) => {
-    const today = (await transaction.get(usage)).get("count") as number | undefined;
-    const next = (today ?? 0) + 1;
-    if (next > DAILY_CEILING) return null;
+  const tokenUse =
+    identity.isAnonymous && appCheckToken !== null
+      ? db.collection(TOKEN_USE).doc(appCheckKeyOf(appCheckToken))
+      : null;
+  const verdict = await db.runTransaction(async (transaction) => {
+    const [day, used] = await Promise.all([
+      transaction.get(usage),
+      tokenUse === null ? null : transaction.get(tokenUse),
+    ]);
+    const next = ((day.get("count") as number | undefined) ?? 0) + 1;
+    if (next > ceilingFor(identity.isAnonymous)) return "ceiling";
+    const uses = ((used?.get("count") as number | undefined) ?? 0) + 1;
+    if (tokenUse !== null && uses > GUEST_RANKINGS_PER_APP_CHECK_TOKEN) return "token";
     transaction.set(usage, { count: next }, { merge: true });
-    return next;
+    if (tokenUse !== null) {
+      // expireAt is there for a Firestore TTL policy to clear the spent ones.
+      transaction.set(tokenUse, {
+        count: uses,
+        expireAt: Timestamp.fromMillis(now + APP_CHECK_TOKEN_KEPT_MS),
+      });
+    }
+    return "counted";
   });
-  if (count === null) {
+  if (verdict === "ceiling") {
     response.setHeader("Retry-After", "3600");
     return void response.status(503).json({ error: "Daily limit reached", code: "DAILY_CEILING" });
+  }
+  if (verdict === "token") {
+    // The browser's next token comes within the hour.
+    response.setHeader("Retry-After", "3600");
+    return void response.status(429).json({ error: "Too many rankings", code: "TOO_MANY" });
   }
 
   const claimToken = randomBytes(24).toString("base64url");
@@ -469,16 +514,32 @@ async function listMyRankings(
   response: Response,
 ): Promise<void> {
   // No orderBy: a where and an orderBy on different fields need a composite
-  // index, and this repository deploys no indexes; the sort happens here.
-  const found = await db
-    .collection(RANKINGS)
-    .where("ownerUid", "==", identity.uid)
-    .limit(MY_RANKINGS_CAP)
-    .get();
+  // index, and this repository deploys no indexes; the sort happens here. So
+  // every one of the person's rankings is read before the newest are kept: a
+  // limit on the query would keep whichever came first by their random codes,
+  // and the newest could be among those left out.
+  const found = await db.collection(RANKINGS).where("ownerUid", "==", identity.uid).get();
+  const when = (code: string, ranking: RankingDocument): number =>
+    summaryOf(code, ranking, null).createdAt;
+  const all = found.docs
+    .map((doc) => ({ code: doc.id, ranking: doc.data() as RankingDocument }))
+    .sort((a, b) => when(b.code, b.ranking) - when(a.code, a.ranking));
+  const kept = all.slice(0, MY_RANKINGS_CAP);
+  // Each list read once, and only what says whether it still names its
+  // author: a list made anonymous, or gone, names nobody on these cards,
+  // as it names nobody on the ranking's own page.
+  const listIds = [...new Set(kept.map(({ ranking }) => ranking.listId))];
+  const lists =
+    listIds.length === 0
+      ? []
+      : await db.getAll(...listIds.map((id) => db.collection(PUBLISHED).doc(id)), {
+          fieldMask: ["authorUid", "anonymous"],
+        });
+  const standing = new Map(lists.map((list) => [list.id, standingOf(list)]));
   const rankings = newestFirst(
-    found.docs.map((doc) => summaryOf(doc.id, doc.data() as RankingDocument)),
+    kept.map(({ code, ranking }) => summaryOf(code, ranking, standing.get(ranking.listId) ?? null)),
   );
 
   response.setHeader("Cache-Control", "no-store");
-  response.status(200).json({ rankings, more: found.size === MY_RANKINGS_CAP });
+  response.status(200).json({ rankings, more: all.length > MY_RANKINGS_CAP });
 }

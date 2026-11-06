@@ -192,6 +192,19 @@ describe("SectionPage", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Couldn’t follow. Try again.");
   });
 
+  it("goes on to the section it was merged into when a Follow finds it merged", async () => {
+    sectionsDeps.follow.mockRejectedValue(
+      new ApiFailure({ kind: "merged", into: "games", topic: null }),
+    );
+    const router = open("/s/anime");
+    await tiles();
+    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/s/games"));
+    // The old page may still be on screen for a moment: wait for the new one's heading.
+    expect(await screen.findByRole("heading", { level: 1, name: /Games/ })).toBeInTheDocument();
+    expect(screen.queryByText("Couldn’t follow. Try again.")).toBeNull();
+  });
+
   it("offers no Follow until whom the person follows is known", async () => {
     let answer!: (value: { sections: SectionStats[] }) => void;
     sectionsDeps.load.mockReturnValue(new Promise((resolve) => (answer = resolve)));

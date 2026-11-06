@@ -243,12 +243,14 @@
   color: var(--ink);
 }
 
+/* A reporter's note may be one long word: it breaks inside the card rather than widen the page. */
 .queue__note {
   display: flex;
   gap: 6px;
   margin: 0;
   font: var(--text-small);
   color: var(--ink-dim);
+  overflow-wrap: anywhere;
 }
 
 .queue__note-icon {

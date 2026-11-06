@@ -9,6 +9,8 @@ import {
   isNarrowed,
   itemsIn,
   liveItems,
+  markedTitle,
+  MAX_RANKED_TIERS,
   moveItem,
   newBoard,
   nextTierLabel,
@@ -89,6 +91,13 @@ describe("a new board", () => {
     const long = `${"a".repeat(BOARD_LIMITS.title - 1)}😀tail`;
     expect(rename(b, long, 2000).title).toBe("a".repeat(BOARD_LIMITS.title - 1));
     expect(newBoard("n", long, 1000, () => "t").title).toBe("a".repeat(BOARD_LIMITS.title - 1));
+  });
+
+  it("gives way to a mark that tells it apart, so the account keeps the mark", () => {
+    expect(markedTitle("Films", "(from this device)")).toBe("Films (from this device)");
+    const marked = markedTitle("x".repeat(BOARD_LIMITS.title), "(from this device)");
+    expect(marked).toHaveLength(BOARD_LIMITS.title);
+    expect(marked.endsWith(" (from this device)")).toBe(true);
   });
 });
 
@@ -231,6 +240,29 @@ describe("cards", () => {
     expect(removeItem(collage, poster!, 3).coverImageUrls).toEqual(collage.coverImageUrls);
   });
 
+  it("bring their picture back into the cover on Undo, in its old place", () => {
+    const { board: b0, next } = board();
+    const b1 = addToPool(
+      b0,
+      [
+        { title: "one", imageUrl: "https://x/1.jpg" },
+        { title: "two", imageUrl: "https://x/2.jpg" },
+        { title: "three", imageUrl: "https://x/3.jpg" },
+      ],
+      1,
+      next,
+    );
+    const two = liveItems(b1).find((item) => item.title === "two")!;
+    const collage = setCover(b1, ["https://x/2.jpg", "https://x/1.jpg", "https://x/3.jpg"], 2);
+    const gone = removeItem(collage, two.uid, 3);
+    expect(gone.coverImageUrls).toEqual(["https://x/1.jpg", "https://x/3.jpg"]);
+    const back = putBack(gone, two, 4, collage.coverImageUrls);
+    expect(back.coverImageUrls).toEqual(collage.coverImageUrls);
+    expect(back.coverImageUrl).toBeNull();
+    // A cover the card was never part of stays as it is.
+    expect(putBack(removeItem(b1, two.uid, 3), two, 4, []).coverImageUrls).toEqual([]);
+  });
+
   it("come back to the pool on Undo when their tier has gone meanwhile", () => {
     const { board: b0, next } = board();
     const b1 = addToPool(b0, [{ title: "a", imageUrl: null }], 1, next);
@@ -264,7 +296,7 @@ describe("tiers", () => {
     expect(rankedTiers(b1)[5]?.caption).toBe("fine");
     expect(poolTier(b1)?.position).toBe(6);
     expect(nextTierLabel(b1)).toBe("F");
-    // Not past the ceiling, and not without a label.
+    // Not past the ceiling the account keeps, the pool counted among the tiers, and not without a label.
     let b = b1;
     for (let i = 0; i < 20; i++) {
       b = addTier(
@@ -274,7 +306,8 @@ describe("tiers", () => {
         next,
       );
     }
-    expect(rankedTiers(b)).toHaveLength(BOARD_LIMITS.tiers);
+    expect(rankedTiers(b)).toHaveLength(MAX_RANKED_TIERS);
+    expect(b.tiers).toHaveLength(BOARD_LIMITS.tiers);
     expect(
       addTier(
         b1,

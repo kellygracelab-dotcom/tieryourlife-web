@@ -9,6 +9,8 @@ export interface KeyValueStore {
   write(key: string, value: string): boolean | void;
   remove(key: string): void;
   keys?(): string[];
+  /** True when the value is held for this visit only: the browser refused to keep it. */
+  heldOnly?(key: string): boolean;
 }
 
 /** A store that forgets on reload, for what must not outlive the page. */
@@ -99,6 +101,7 @@ function browserStore(storage: () => Storage): KeyValueStore {
       }
       return [...new Set([...stored, ...held.keys()])];
     },
+    heldOnly: (key) => held.has(key),
   };
 }
 

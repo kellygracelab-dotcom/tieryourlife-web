@@ -57,7 +57,8 @@ test.describe("ranking a list", () => {
       version: list.updatedAt,
     });
     expect(await request?.headerValue("authorization")).toMatch(/^Bearer /);
-    await expect.poll(() => backend.takes).toBe(1);
+    // Finish is not a take: only saving the list to one's own counts, as in the app.
+    expect(backend.takes).toBe(0);
   });
 });
 

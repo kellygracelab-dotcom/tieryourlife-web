@@ -156,10 +156,12 @@ export function FollowingManagePage({
     apply: (on: boolean) => Promise<unknown>,
   ) => {
     const next = !on;
+    // People are counted apart from sections and topics, and their ceiling says so.
+    const limit = key.startsWith("p:") ? strings.follow.limit : strings.sections.followLimit;
     set(key, next);
     apply(next).catch((reason: unknown) => {
       set(key, on);
-      setNotice({ text: followRefusal(errorOf(reason), next) });
+      setNotice({ text: followRefusal(errorOf(reason), next, limit) });
     });
     if (!next) {
       setNotice({
@@ -170,7 +172,7 @@ export function FollowingManagePage({
             set(key, true);
             apply(true).catch((reason: unknown) => {
               set(key, false);
-              setNotice({ text: followRefusal(errorOf(reason), true) });
+              setNotice({ text: followRefusal(errorOf(reason), true, limit) });
             });
           },
         },

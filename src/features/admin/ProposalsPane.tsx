@@ -629,6 +629,7 @@ function TopicProposal({
   nameOf,
   deps,
   onDone,
+  onSettled,
 }: {
   topic: PendingTopic;
   /** The open sections: the only ones the backend approves a topic into. */
@@ -638,6 +639,8 @@ function TopicProposal({
   nameOf: (id: string) => string;
   deps: ProposalsDeps;
   onDone: Done;
+  /** Somebody else decided it first: the queue is read again. */
+  onSettled: () => void;
 }) {
   const wanted = topic.requestedSection ?? topic.section ?? "other";
   // A section hidden since it was asked for is no choice: the select starts on
@@ -686,9 +689,11 @@ function TopicProposal({
     setFailed(false);
     deps.decideTopic(topic.id, decision).then(
       () => onDone(text),
-      () => {
+      (reason: unknown) => {
         setBusy(false);
-        setFailed(true);
+        // 409 SETTLED: somebody else approved, rejected or merged it first; asking again never helps.
+        if (errorOf(reason).kind === "conflict") onSettled();
+        else setFailed(true);
       },
     );
   };
@@ -709,9 +714,10 @@ function TopicProposal({
         setRenaming(null);
         setRenamed(true);
       },
-      () => {
+      (reason: unknown) => {
         setBusy(false);
-        setFailed(true);
+        if (errorOf(reason).kind === "conflict") onSettled();
+        else setFailed(true);
       },
     );
   };
@@ -740,7 +746,8 @@ function TopicProposal({
         <p className="proposal__meta">
           {fill(strings.admin.topicMeta, {
             section: nameOf(wanted),
-            name: topic.proposerName ?? "",
+            // A topic first named by an anonymous list comes without its proposer.
+            name: topic.proposerName || strings.admin.anonymousAuthor,
           })}
         </p>
         {topic.similar !== undefined && topic.similar.length > 0 && (
@@ -1001,6 +1008,10 @@ export function ProposalsPane({
                 nameOf={nameOf}
                 deps={deps}
                 onDone={done(`t:${topic.id}`)}
+                onSettled={() => {
+                  setNotice({ text: strings.admin.settled });
+                  topicQueue.retry();
+                }}
               />
             ))}
         </ul>

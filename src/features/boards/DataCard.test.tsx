@@ -14,6 +14,7 @@ const show = (sync: Partial<BoardSyncControls>) => {
     setBackUp: () => Promise.resolve(),
     status: "idle",
     lastSyncedAt: null,
+    refusals: [],
     syncNow: vi.fn(() => Promise.resolve()),
     ...sync,
   };
@@ -44,6 +45,26 @@ describe("DataCard: a back-up that did not go through", () => {
   it("names the day of the last good run once a day has gone by", () => {
     show({ status: "stuck", lastSyncedAt: NOW - STUCK_AFTER_MS });
     expect(screen.getByRole("alert")).toHaveTextContent(/^Not backed up since .+\. Back up now/);
+  });
+
+  it("names at once a board the account will not keep, and what lets it go up", () => {
+    show({
+      status: "stuck",
+      lastSyncedAt: NOW - 60_000,
+      refusals: [
+        { uid: "a", title: "Every film", why: "tooLarge" },
+        { uid: "b", title: "One too many", why: "tooManyBoards" },
+      ],
+    });
+    const [big, many] = screen.getAllByRole("alert");
+    expect(big).toHaveTextContent(
+      /^“Every film” is too big for an account to keep.+Take some cards off it/,
+    );
+    expect(many).toHaveTextContent(
+      /^“One too many” is not backed up: an account keeps up to 200 boards./,
+    );
+    // Trying again would not help, so the page does not ask for it.
+    expect(screen.queryByText(/try again/)).toBeNull();
   });
 
   it("answers a press of Back up now at once", async () => {

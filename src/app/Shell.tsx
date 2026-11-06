@@ -27,6 +27,8 @@ import { Button } from "../ui/Button";
 import { ClearButton } from "../ui/ClearButton";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
+import { sayOnTheSite, siteNotice, subscribeToSiteNotice } from "../ui/siteNotice";
+import { SiteSnackbar } from "../ui/Snackbar";
 import { documentTitleOf, PageTitleContext, TITLE_AFTER_PX, type PageName } from "./pageTitle";
 import { useScrollCatchUp } from "./scrollCatchUp";
 import { useRedirectFailed, useSession } from "./session";
@@ -210,6 +212,8 @@ function focusForNow(element: HTMLElement | null) {
   element.focus({ preventScroll: true });
 }
 
+const clearSiteNotice = () => sayOnTheSite(null);
+
 export function Shell() {
   const { account, signIn } = useSession();
   const [seen] = useState(() => lastSeen());
@@ -273,6 +277,8 @@ export function Shell() {
     storageRefused,
     storageRefused,
   );
+  // What a page that was left meanwhile had to say: a report that did not go through.
+  const outlived = useSyncExternalStore(subscribeToSiteNotice, siteNotice, siteNotice);
 
   const onSignIn = () => {
     const on = location.pathname;
@@ -373,6 +379,7 @@ export function Shell() {
       {/* A new page opens at its top, and Back returns to where the person was. */}
       <ScrollRestoration getKey={scrollKey} />
       <ScrollCatchUp />
+      <SiteSnackbar notice={outlived} onDone={clearSiteNotice} />
     </div>
   );
 }

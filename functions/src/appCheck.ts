@@ -21,13 +21,13 @@ function projectsOf(env: Environment): string[] {
 }
 
 /**
- * The browser smokes in e2e-proxy/ run the site against these functions in
- * the Firebase emulators, where no App Check token can be had. Both have to
- * hold: the emulator sets FUNCTIONS_EMULATOR, and a demo- project exists only
- * there, so a deployed function never skips the check. The proxy keeps the
- * same rule (its CONTRACT.md, E2E).
+ * Whether this runs in the Firebase emulators of a demo- project, where
+ * nothing may reach the real site. Both have to hold: the emulator sets
+ * FUNCTIONS_EMULATOR, and a demo- project exists only there, so a deployed
+ * function never takes this for itself. The proxy keeps the same rule (its
+ * CONTRACT.md, E2E).
  */
-export function skipsAppCheck(env: Environment = process.env): boolean {
+export function inDemoEmulator(env: Environment = process.env): boolean {
   const projects = projectsOf(env);
   return (
     env.FUNCTIONS_EMULATOR === "true" &&
@@ -35,6 +35,12 @@ export function skipsAppCheck(env: Environment = process.env): boolean {
     projects.every((id) => id.startsWith("demo-"))
   );
 }
+
+/**
+ * The browser smokes in e2e-proxy/ run the site against these functions in
+ * the Firebase emulators, where no App Check token can be had.
+ */
+export const skipsAppCheck = (env: Environment = process.env): boolean => inDemoEmulator(env);
 
 export async function requireAppCheck(
   request: Request,

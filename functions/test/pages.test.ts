@@ -13,6 +13,7 @@ import {
   rankingMeta,
   rankingVersion,
   resetShellForTests,
+  EMULATOR_SHELL,
   SHELL_TIMEOUT_MS,
 } from "../src/pages";
 import type { StoredRanking } from "../src/ranking";
@@ -88,6 +89,33 @@ describe("loadShell", () => {
     await loadShell("tieryourlife.firebaseapp.com", fetchImpl);
     await loadShell("tieryourlife.web.app", fetchImpl);
     assert.deepEqual(tags, [undefined, undefined]);
+  });
+
+  it("reads the local emulator build in the emulators of a demo project, never the real site", async () => {
+    const { fetchImpl, calls } = fetching("<html>production</html>");
+    const emulated = {
+      FUNCTIONS_EMULATOR: "true",
+      GCLOUD_PROJECT: "demo-tieryourlife",
+      FIREBASE_CONFIG: '{"projectId":"demo-tieryourlife"}',
+    };
+    const local = async () => "<html>emulator</html>";
+    assert.equal(
+      await loadShell("tieryourlife.web.app", fetchImpl, emulated, local),
+      "<html>emulator</html>",
+    );
+    // No local build: no page, rather than production's.
+    const missing = async () => {
+      throw new Error("ENOENT");
+    };
+    await assert.rejects(loadShell("tieryourlife.web.app", fetchImpl, emulated, missing));
+    assert.deepEqual(calls, []);
+    // A deployed function, even one run with the flag by mistake, asks hosting.
+    const real = { FUNCTIONS_EMULATOR: "true", GCLOUD_PROJECT: "tieryourlife" };
+    assert.equal(
+      await loadShell("tieryourlife.web.app", fetchImpl, real, local),
+      "<html>production</html>",
+    );
+    assert.equal(EMULATOR_SHELL.replaceAll("\\", "/").endsWith("/dist-emulator/index.html"), true);
   });
 
   it("throws when the shell cannot be fetched, and keeps the last one when hosting fails later", async () => {

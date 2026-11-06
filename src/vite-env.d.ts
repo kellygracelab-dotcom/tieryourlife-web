@@ -4,6 +4,7 @@ interface ImportMetaEnv {
   readonly VITE_RECAPTCHA_SITE_KEY?: string;
   /** "1" only in `vite --mode emulator` (src/lib/emulators.ts). */
   readonly VITE_EMULATORS?: string;
+  readonly VITE_FIREBASE_API_KEY?: string;
 }
 
 /** Filled in by the dev server only; always empty in a build (config/debug-token.ts). */

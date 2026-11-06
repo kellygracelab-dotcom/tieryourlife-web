@@ -94,8 +94,14 @@ export interface Board {
   arrivedFrom: string | null;
   /** This device's: the edit time the published copy was sent at, so "behind" can be told. Never sent. */
   publishedEditedAt: number | null;
-  /** This device's, as on the phone: the topic the list goes out under, sent with every publish. Never kept in the account. */
+  /** This device's, as on the phone: the topic the list goes out under. Never kept in the account. */
   topic: BoardTopic | null;
+  /**
+   * This device's: the person took the topic off since the last publish, so
+   * the next one says so. Without it no topic is said at all, and the list
+   * keeps the one it has, a moderator's move into a topic too. Never kept in the account.
+   */
+  topicOff?: boolean;
   /** Published with no name or face: sent with every publish, and kept in the account when true. */
   anonymous: boolean;
   /**
@@ -138,6 +144,13 @@ export const BOARD_LIMITS = {
   credit: 200,
 } as const;
 
+/**
+ * Ranked tiers a board may have. The account counts the pool among a
+ * board's tiers, where a published list sends none: a board with the full
+ * twenty ranked was refused on every back-up, and never kept.
+ */
+export const MAX_RANKED_TIERS = BOARD_LIMITS.tiers - 1;
+
 /** A picture's credit as the backend keeps it: trimmed, one space between words, none when empty. */
 export function creditOf(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
@@ -170,6 +183,16 @@ const clip = (text: string, max: number): string => {
   const cut = text.replace(/\s+/g, " ").trim().slice(0, max);
   return (/[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut).trimEnd();
 };
+
+/**
+ * A title with a mark after it that tells it from another board of the same
+ * name. The mark is the point, so the title gives way: the account keeps
+ * only so many characters and would cut the mark off, leaving two boards of
+ * one name on every other device.
+ */
+export function markedTitle(title: string, mark: string): string {
+  return `${clip(title, BOARD_LIMITS.title - mark.length - 1)} ${mark}`;
+}
 
 const captionOf = (caption: string | null): string | null => {
   if (caption === null) return null;
@@ -309,9 +332,21 @@ const sameTopic = (a: BoardTopic | null, b: BoardTopic | null): boolean =>
       (a.id !== null || a.name === b.name) &&
       (a.waiting ?? false) === (b.waiting ?? false);
 
+/** Sent: a topic taken off is off on the list, and the next publish need not say so again. */
+export function topicSent(board: Board): Board {
+  if (board.topicOff === undefined) return board;
+  const { topicOff: _sent, ...rest } = board;
+  return rest;
+}
+
 /** The topic goes out with the next publish, so a new one leaves the published copy behind. */
 export const setTopic = (board: Board, topic: BoardTopic | null, now: number): Board =>
-  sameTopic(topic, board.topic) ? board : touched({ ...board, topic }, now);
+  sameTopic(topic, board.topic)
+    ? board
+    : touched(
+        topic === null ? { ...board, topic, topicOff: true } : { ...topicSent(board), topic },
+        now,
+      );
 
 /**
  * What the backend made of the board's topic: a proposed name has an id once
@@ -503,15 +538,35 @@ export function removeItem(board: Board, itemUid: string, now: number): Board {
   );
 }
 
-/** A removed card back, for Undo: where it was, as restoreItem places it. */
-export const putBack = (board: Board, card: BoardItem, now: number): Board =>
-  board.items.some((item) => item.uid === card.uid)
-    ? board
-    : restoreItem(
-        { ...board, items: [...board.items, { ...card, deletedAt: now }] },
-        card.uid,
-        now,
-      );
+/**
+ * A removed card back, for Undo: where it was, as restoreItem places it. Its
+ * picture goes back into the cover it left, `cover` being the cover's pictures
+ * before the removal: Undo puts the board back as it was, and the next Update
+ * must not publish a collage short of it.
+ */
+export function putBack(
+  board: Board,
+  card: BoardItem,
+  now: number,
+  cover: readonly string[] = [],
+): Board {
+  if (board.items.some((item) => item.uid === card.uid)) return board;
+  const back = restoreItem(
+    { ...board, items: [...board.items, { ...card, deletedAt: now }] },
+    card.uid,
+    now,
+  );
+  const picture = card.imageUrl;
+  if (picture === null || !cover.includes(picture) || back.coverImageUrls.includes(picture)) {
+    return back;
+  }
+  // In its old place among the pictures still chosen; the rest keep their order.
+  const before = cover.slice(0, cover.indexOf(picture));
+  const at = back.coverImageUrls.filter((url) => before.includes(url)).length;
+  const coverImageUrls = [...back.coverImageUrls];
+  coverImageUrls.splice(at, 0, picture);
+  return setCover(back, coverImageUrls, now);
+}
 
 /** Back where it was, or at the end of its tier if the place has since been taken; to the pool if the tier is gone. */
 export function restoreItem(board: Board, itemUid: string, now: number): Board {
@@ -549,7 +604,7 @@ export function nextTierLabel(board: Board): string {
 /** A tier at the end of the ranked ones; the pool stays last. */
 export function addTier(board: Board, draft: TierDraft, now: number, nextUid: NextUid): Board {
   const ranked = rankedTiers(board);
-  if (ranked.length >= BOARD_LIMITS.tiers) return board;
+  if (ranked.length >= MAX_RANKED_TIERS) return board;
   const label = clip(draft.label, BOARD_LIMITS.title).trim();
   if (label.length === 0) return board;
   const tier: BoardTier = {
@@ -630,7 +685,7 @@ export function restoreTier(
 ): Board {
   if (
     board.tiers.some((t) => t.uid === tier.uid) ||
-    rankedTiers(board).length >= BOARD_LIMITS.tiers
+    rankedTiers(board).length >= MAX_RANKED_TIERS
   ) {
     return board;
   }

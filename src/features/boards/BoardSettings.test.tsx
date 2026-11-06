@@ -334,8 +334,10 @@ describe("BoardSettings: public", () => {
     await userEvent.click(publicSwitch());
     await waitFor(() => expect(publicSwitch()).toBeChecked());
     expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Films", category: "film_tv", topicId: null }),
+      expect.objectContaining({ title: "Films", category: "film_tv" }),
     );
+    // No topic chosen, none is said.
+    expect(publish).not.toHaveBeenCalledWith(expect.objectContaining({ noTopic: true }));
     // The board's uid goes with a first publish, so publishing again after a
     // reload gets the same list back rather than a second one.
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ boardUid: filmBoard().uid }));
@@ -483,6 +485,42 @@ describe("BoardSettings: public", () => {
     expect(held.publishedId).toBe("L1");
   });
 
+  it("sends the board again over the list's link when an earlier publish's answer was lost", async () => {
+    // The first publish made L1, but its answer never came: the retry is told so, and nothing was written.
+    const publish = vi.fn(async () => ({ id: "L1", topicId: null, existing: true }));
+    const republish = vi.fn(async () => ({ id: "L1" }));
+    show({ ...filmBoard(), title: "Films, renamed" }, signedIn, { publish, republish });
+    await userEvent.click(publicSwitch());
+    await waitFor(() => expect(held.publishedId).toBe("L1"));
+    expect(republish).toHaveBeenCalledWith(
+      "L1",
+      expect.objectContaining({ title: "Films, renamed", boardUid: "films" }),
+    );
+    expect(held.publishedEditedAt).toBe(held.editedAt);
+  });
+
+  it("keeps a moderator's topic on Update of a board without one, and learns it", async () => {
+    const republish = vi.fn(async () => ({ id: "L1", topicId: "t1" }));
+    const findTopic = vi.fn(async (id: string) => topic(id, "A24"));
+    show(
+      { ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 },
+      signedIn,
+      { republish },
+      {
+        findTopic,
+      },
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(republish).toHaveBeenCalled());
+    // Nothing said of a topic: the list keeps the one a moderator moved it into.
+    const request = (republish.mock.calls[0] as unknown[])[1];
+    expect(request).not.toHaveProperty("noTopic");
+    expect(request).not.toHaveProperty("topicId");
+    await waitFor(() => expect(held.topic).toEqual({ id: "t1", name: "A24" }));
+    // Learnt from the answer, it is no edit: the list is not behind it.
+    expect(held.publishedEditedAt).toBe(held.editedAt);
+  });
+
   it("says a refused Update under Update, and lets a list taken down elsewhere go", async () => {
     const republish = vi
       .fn<PublishingDeps["republish"]>()
@@ -560,6 +598,8 @@ describe("BoardSettings: category and topic", () => {
     await userEvent.keyboard("{Enter}");
     expect(held.category).not.toBe("film_tv");
     expect(screen.queryByRole("radiogroup", { name: "Category" })).toBeNull();
+    // The radio chosen is gone: the focus is on the row, not dropped to the page.
+    expect(screen.getByRole("button", { name: /Category/ })).toHaveFocus();
   });
 
   it("offers the approved sections in the site's order, then one's own waiting ones, then Propose a section", async () => {
@@ -637,9 +677,11 @@ describe("BoardSettings: category and topic", () => {
         .getAllByRole("radio")
         .map((radio) => radio.textContent),
     ).toEqual(["Nonecheck", "A24", "Oscars"]);
-    await userEvent.click(within(picker).getByRole("radio", { name: "Oscars" }));
+    within(picker).getByRole("radio", { name: "Oscars" }).focus();
+    await userEvent.keyboard(" ");
     expect(held.topic).toEqual({ id: "t2", name: "Oscars" });
     expect(screen.getByRole("button", { name: /Topic/ })).toHaveTextContent("Oscars");
+    expect(screen.getByRole("button", { name: /Topic/ })).toHaveFocus();
 
     await userEvent.click(publicSwitch());
     await waitFor(() =>

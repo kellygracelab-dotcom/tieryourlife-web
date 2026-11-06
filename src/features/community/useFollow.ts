@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FollowState } from "../../api/community";
+import { errorOf } from "../../api/errors";
 import { useSession } from "../../app/session";
 import { followAuthor, followState, unfollowAuthor } from "../../lib/api";
+import { strings } from "../../strings";
 
 export interface FollowDeps {
   state: (authorUid: string) => Promise<FollowState>;
@@ -18,12 +20,25 @@ const defaultDeps: FollowDeps = {
 /** The failure line stays this long. */
 export const FOLLOW_FAILED_MS = 6000;
 
+export type FollowFailure = "follow" | "unfollow" | "limit";
+
+/** What a refused press says. */
+export const followFailureText = (failed: FollowFailure): string =>
+  failed === "unfollow"
+    ? strings.follow.unfollowFailed
+    : failed === "limit"
+      ? strings.follow.limit
+      : strings.follow.failed;
+
 export interface FollowControls {
   /** null until the backend has said. */
   following: boolean | null;
   followers: number | null;
-  /** Which way the last press was refused, said for a while. */
-  failed: "follow" | "unfollow" | null;
+  /**
+   * Which way the last press was refused, said for a while; "limit" when a
+   * follow met the ceiling of people followed, which another try never passes.
+   */
+  failed: FollowFailure | null;
   /** The one answer a guest gets: sign in first. */
   toggle: () => "signIn" | "done";
   /** Follows without asking: right after a sign-in, or to undo an unfollow. */
@@ -54,7 +69,7 @@ export function useFollow(
   const unasked = account !== null && !signedIn && !counted;
   const [following, setFollowing] = useState<boolean | null>(null);
   const [followers, setFollowers] = useState<number | null>(null);
-  const [failed, setFailed] = useState<"follow" | "unfollow" | null>(null);
+  const [failed, setFailed] = useState<FollowFailure | null>(null);
   // Presses so far: an answer to a question asked before the last of them
   // no longer says what is followed, only how many follow.
   const presses = useRef(0);
@@ -102,10 +117,12 @@ export function useFollow(
       setFollowing(next);
       setFollowers((n) => (n === null ? null : Math.max(0, n + (next ? 1 : -1))));
       setFailed(null);
-      (next ? deps.follow(authorUid) : deps.unfollow(authorUid)).catch(() => {
+      (next ? deps.follow(authorUid) : deps.unfollow(authorUid)).catch((reason: unknown) => {
         setFollowing(before.following);
         setFollowers(before.followers);
-        setFailed(next ? "follow" : "unfollow");
+        setFailed(
+          !next ? "unfollow" : errorOf(reason).kind === "tooManyFollowing" ? "limit" : "follow",
+        );
         if (timer.current !== null) clearTimeout(timer.current);
         timer.current = setTimeout(() => setFailed(null), FOLLOW_FAILED_MS);
       });

@@ -12,6 +12,11 @@ export interface QueuedList {
   authorName: string;
   authorUid: string | null;
   authorPhotoUrl: string | null;
+  /**
+   * Published without a name. The proxy then leaves the author out for a
+   * moderator; the owner may still get the name, as in the list of lists.
+   */
+  anonymous?: boolean;
   coverImageUrl: string | null;
   reasons: ReportReason[];
   notes: string[];

@@ -669,6 +669,24 @@ describe("Propose a section", () => {
       expect(deps.upload).toHaveBeenCalled();
     });
 
+    it("a ban answered to the ask for room is the refusal: nothing is uploaded", async () => {
+      const deps = {
+        ...makeDeps(),
+        room: vi.fn<NonNullable<EditorDeps["room"]>>(async () => {
+          throw refuse({ kind: "banned", until: Date.UTC(2026, 10, 13, 12) });
+        }),
+      };
+      const opened = propose({ deps });
+      pick(2000, 1000);
+      await userEvent.type(nameField(), "Street food");
+      await userEvent.click(proposeButton());
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "You can’t propose sections until November 13, 2026.",
+      );
+      expect(deps.upload).not.toHaveBeenCalled();
+      expect(opened.send).not.toHaveBeenCalled();
+    });
+
     it("TOO_MANY_PROPOSALS: a bar with no Try again, ten a day", async () => {
       await sendWith(refuse({ kind: "tooManyRequests", code: "TOO_MANY_PROPOSALS" }));
       expect(await screen.findByRole("alert")).toHaveTextContent(

@@ -1,6 +1,9 @@
-import { getFirestore } from "firebase-admin/firestore";
+import { readFile } from "node:fs/promises";
+import * as path from "node:path";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
+import { inDemoEmulator } from "./appCheck";
 import { isEditorialList } from "./editorial";
 import {
   describeList,
@@ -31,6 +34,8 @@ import { sendShareImage, shareImageFor } from "./shareImage";
 
 const PUBLISHED = "publishedLists";
 const RANKINGS = "rankings";
+/** The proxy's log of what moderators did; read here, never written. */
+const AUDIT_LOG = "auditLog";
 
 /** The sites this function may be asked to render; anything else is a stranger. */
 const HOSTS = new Set(["tieryourlife.web.app", "tieryourlife.firebaseapp.com"]);
@@ -61,7 +66,16 @@ export function hostOf(request: Request): string {
  * a short round trip, not the whole file. When hosting cannot be reached,
  * the shell already kept is better than no page.
  */
-export async function loadShell(host: string, fetchImpl: typeof fetch = fetch): Promise<string> {
+export async function loadShell(
+  host: string,
+  fetchImpl: typeof fetch = fetch,
+  env: Record<string, string | undefined> = process.env,
+  readLocal: () => Promise<string> = readEmulatorShell,
+): Promise<string> {
+  // In the emulators the real site's shell would load the real bundle and the
+  // real Firebase project into a test's browser: the local build is used, and
+  // without one the page is unavailable rather than borrowed from production.
+  if (inDemoEmulator(env)) return readLocal();
   const kept = shell !== null && shell.host === host ? shell : null;
   try {
     const response = await fetchImpl(`https://${host}/index.html`, {
@@ -83,16 +97,33 @@ export async function loadShell(host: string, fetchImpl: typeof fetch = fetch): 
   }
 }
 
+/**
+ * The site as `vite build --mode emulator` leaves it beside these functions
+ * (playwright.proxy.config.ts), never `dist`: that one is built for production.
+ */
+export const EMULATOR_SHELL = path.join(__dirname, "..", "..", "dist-emulator", "index.html");
+
+/** Read on every page, as hosting is asked on every page: a rebuild shows at once. */
+const readEmulatorShell = (): Promise<string> => readFile(EMULATOR_SHELL, "utf8");
+
 export function resetShellForTests(): void {
   shell = null;
+}
+
+/** As firebase.json says for the app's other pages: no other site may frame it, no plugin or <base>. */
+export const PAGE_POLICY = "frame-ancestors 'self'; object-src 'none'; base-uri 'self'";
+
+/** Every page this function answers with, the bare and the unavailable ones too. */
+function guardFrames(response: Response): void {
+  response.setHeader("Content-Security-Policy", PAGE_POLICY);
+  response.setHeader("X-Frame-Options", "SAMEORIGIN");
 }
 
 function send(response: Response, html: string): void {
   response.setHeader("Content-Type", "text/html; charset=utf-8");
   // Short at the edge, never in the browser: a Finish must not read yesterday's list.
   response.setHeader("Cache-Control", "public, max-age=0, s-maxage=120");
-  // As firebase.json says for the app's other pages: no other site may frame it.
-  response.setHeader("Content-Security-Policy", "frame-ancestors 'self'");
+  guardFrames(response);
   response.status(200).send(html);
 }
 
@@ -105,6 +136,7 @@ function sendBare(response: Response, html: string, error: unknown): void {
   console.warn("Firestore not read; the bare shell goes out", error);
   response.setHeader("Content-Type", "text/html; charset=utf-8");
   response.setHeader("Cache-Control", "no-store");
+  guardFrames(response);
   response.status(200).send(html);
 }
 
@@ -121,6 +153,7 @@ export function unavailablePage(response: Response): void {
   response.setHeader("Content-Type", "text/html; charset=utf-8");
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Retry-After", "30");
+  guardFrames(response);
   response.status(503).send(UNAVAILABLE_HTML);
 }
 
@@ -381,10 +414,42 @@ export async function listShareImage(response: Response, id: string, hl?: unknow
 }
 
 /** What the list says of itself today, for telling an editorial one; nothing when it is gone. */
-const standingOf = (
+export const standingOf = (
   list: FirebaseFirestore.DocumentSnapshot,
 ): { authorUid?: unknown; anonymous?: unknown } | null =>
   list.exists ? { authorUid: list.get("authorUid"), anonymous: list.get("anonymous") } : null;
+
+/**
+ * Whether a moderator took the list down. The proxy deletes a list taken
+ * down just as it deletes one its author unpublished, so the only trace left
+ * is the line in its audit log (`report.takedown` on `publishedLists/{id}`).
+ * The log is asked by its target alone, the query the proxy itself makes,
+ * which needs no index of its own; a list has a handful of lines at most.
+ */
+export async function takenDownByModerator(db: Firestore, listId: string): Promise<boolean> {
+  const lines = await db
+    .collection(AUDIT_LOG)
+    .where("target", "==", `${PUBLISHED}/${listId}`)
+    .select("what")
+    .get();
+  return lines.docs.some((line) => line.get("what") === "report.takedown");
+}
+
+/**
+ * Whether a ranking of this list must not be shown. A ranking outlives a list
+ * its author unpublished, but not one moderation took away: its title, tiers
+ * and card names would go on being served under the ranking's address while
+ * the list's own page keeps them hidden. A list under review comes back to
+ * its rankings when a moderator leaves it up; one taken down never does.
+ */
+export async function withdrawnByModeration(
+  db: Firestore,
+  listId: string,
+  list: FirebaseFirestore.DocumentSnapshot,
+): Promise<boolean> {
+  if (list.exists) return list.get("underReview") === true;
+  return takenDownByModerator(db, listId);
+}
 
 /**
  * A ranking's card changes when its owner edits it, and when its list does:
@@ -443,11 +508,15 @@ export async function rankingShareImage(
   response: Response,
   code: string,
   hl?: unknown,
+  database: () => Firestore = getFirestore,
 ): Promise<void> {
-  const doc = isCode(code) ? await getFirestore().collection(RANKINGS).doc(code).get() : null;
+  const db = database();
+  const doc = isCode(code) ? await db.collection(RANKINGS).doc(code).get() : null;
   if (doc === null || !doc.exists) return sendShareImage(response, null);
   const stored = doc.data() as StoredRanking;
-  const list = await getFirestore().collection(PUBLISHED).doc(stored.listId).get();
+  const list = await db.collection(PUBLISHED).doc(stored.listId).get();
+  // The card would draw the hidden list's cards for any chat that asks.
+  if (await withdrawnByModeration(db, stored.listId, list)) return sendShareImage(response, null);
   const snapshot =
     stored.snapshot.editorial === true
       ? stored.snapshot
@@ -497,18 +566,22 @@ export async function rankingPage(
   request: Request,
   response: Response,
   code: string,
+  database: () => Firestore = getFirestore,
 ): Promise<void> {
   const host = hostOf(request);
   const html = await loadShell(host);
   let found: { stored: StoredRanking; list: FirebaseFirestore.DocumentSnapshot } | null;
   try {
-    const db = getFirestore();
+    const db = database();
     const doc = isCode(code) ? await db.collection(RANKINGS).doc(code).get() : null;
     const stored = doc?.exists ? (doc.data() as StoredRanking) : null;
+    const list = stored === null ? null : await db.collection(PUBLISHED).doc(stored.listId).get();
+    // A ranking of a list moderation took away gets the bare shell, as the
+    // list's own page does: the site then says it is not there.
     found =
-      stored === null
+      stored === null || list === null || (await withdrawnByModeration(db, stored.listId, list))
         ? null
-        : { stored, list: await db.collection(PUBLISHED).doc(stored.listId).get() };
+        : { stored, list };
   } catch (error) {
     return sendBare(response, html, error);
   }

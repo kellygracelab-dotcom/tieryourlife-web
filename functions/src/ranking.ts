@@ -22,6 +22,34 @@ export const MIN_WRITE_GAP_MS = 2000;
  */
 export const DAILY_CEILING = 5000;
 
+/**
+ * How much of the day's ceiling guests may take. A guest costs one anonymous
+ * sign-up, so a script of fresh guests could use up the whole day and every
+ * Finish, an account's too, would fail until midnight UTC. An account costs a
+ * real sign-in: the rest of the day stays theirs.
+ */
+export const GUEST_DAILY_CEILING = 4000;
+
+/**
+ * Guest rankings one App Check token may keep. The pause above holds one uid
+ * only, and a script makes a new guest per Finish while it replays the one
+ * token a browser was given; a token lasts about an hour, and nobody honest
+ * finishes thirty rankings in one. Each further batch then costs the script
+ * a fresh attestation in a real browser.
+ */
+export const GUEST_RANKINGS_PER_APP_CHECK_TOKEN = 30;
+
+/** Longer than an App Check token lives, so its count is never forgotten while it works. */
+export const APP_CHECK_TOKEN_KEPT_MS = 2 * 60 * 60 * 1000;
+
+/** The part of the day's ceiling a caller may reach. */
+export const ceilingFor = (isAnonymous: boolean): number =>
+  isAnonymous ? GUEST_DAILY_CEILING : DAILY_CEILING;
+
+/** A token is counted under its hash: the stored id never works as a token itself. */
+export const appCheckKeyOf = (token: string): string =>
+  createHash("sha256").update(token).digest("hex");
+
 export const CODE_PATTERN = new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`);
 
 /** Firestore ids, and nothing that could be a path. */
@@ -277,7 +305,11 @@ function usedTranslations(
   return languages.length === 0 ? null : Object.fromEntries(languages);
 }
 
-/** Longer than any tier word the app or the site lets anybody type. */
+/**
+ * The longest tier word a ranking keeps. The editors let a list's tiers carry
+ * up to 80 characters, so a reader's placing can wear longer words; the site
+ * cuts them to this before it sends a version started from that placing.
+ */
 export const MAX_TIER_LABEL_LENGTH = 40;
 
 export type TierLabelsDecision = { ok: true; labels: (string | null)[] | null } | Refusal;
@@ -409,9 +441,18 @@ export const placedCount = (rows: number[][]): number =>
 export const firstImageOf = (items: Snapshot["items"]): string | null =>
   items.find((item) => item.imageUrl?.startsWith("https://"))?.imageUrl ?? null;
 
-/** One ranking as a card on the person's own page: enough to recognise it, not to draw it. */
-export function summaryOf(code: string, doc: StoredRanking): RankingSummary {
-  const { snapshot } = doc;
+/**
+ * One ranking as a card on the person's own page: enough to recognise it, not
+ * to draw it. [list] is what its list says of itself today, null when it is
+ * gone: the author's name and photo follow shownSnapshot, as the ranking's
+ * own page does, so a list made anonymous later names nobody here either.
+ */
+export function summaryOf(
+  code: string,
+  doc: StoredRanking,
+  list: { authorUid?: unknown; anonymous?: unknown } | null,
+): RankingSummary {
+  const snapshot = shownSnapshot(doc.snapshot, list);
   return {
     code,
     listId: doc.listId,

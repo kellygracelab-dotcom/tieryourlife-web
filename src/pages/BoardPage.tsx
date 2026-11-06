@@ -24,7 +24,7 @@ import {
   setCategory,
   setDisplayMode,
   trashBoard,
-  BOARD_LIMITS,
+  MAX_RANKED_TIERS,
   type Board,
 } from "../features/boards/model";
 import {
@@ -297,7 +297,7 @@ function OpenBoard({
   const repository = house === null ? ownBoards : houseRepository;
   const stored = house === null ? own : forHouse;
   const { account, signIn } = useSession();
-  const { sections } = useSections(store);
+  const { sections, homes } = useSections(store);
   const me = account?.kind === "signedIn" ? account.uid : null;
   // A new board is made here and kept only once it is touched: a name, a
   // card, a star. Left as it came, it was never kept, which is what the
@@ -518,7 +518,9 @@ function OpenBoard({
         text: strings.boards.undo,
         onClick: () => {
           const again = repository.get(uid);
-          if (again !== null) repository.save(putBack(again, card, now()));
+          if (again !== null) {
+            repository.save(putBack(again, card, now(), current.coverImageUrls));
+          }
         },
       },
     });
@@ -583,7 +585,7 @@ function OpenBoard({
   const editorTiers: EditorTier[] = editorTiersOf(board);
   const closePanel = () => setPanel("none");
   // The tiers are changed on the board itself, as on the phone.
-  const roomForTier = editorTiers.length < BOARD_LIMITS.tiers;
+  const roomForTier = editorTiers.length < MAX_RANKED_TIERS;
   const tierEditing = {
     move: (from: number, to: number, keyboard = false) => {
       const key = editorTiers[from]?.key;
@@ -706,7 +708,7 @@ function OpenBoard({
           <p className="list-head__meta">
             {[
               metaOf(board),
-              ...(board.category === null ? [] : [filedUnder(board.category, sections, me)]),
+              ...(board.category === null ? [] : [filedUnder(board.category, sections, me, homes)]),
             ].join(" · ")}
           </p>
         </div>
@@ -759,6 +761,7 @@ function OpenBoard({
           latest={latest}
           keep={keep}
           sections={sections}
+          proposalHomes={homes}
           onCategory={(category) => keep(setCategory(latest(), category, now()))}
           onPropose={openProposal}
           onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}

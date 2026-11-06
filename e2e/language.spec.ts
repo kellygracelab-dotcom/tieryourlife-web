@@ -68,7 +68,7 @@ const SPOKEN: {
     browser: "pt-PT",
     lang: "pt-BR",
     mine: "Meu",
-    left: "Faltam 3 cards",
+    left: "Faltam 3 cartões",
     placed: "0 de 3 colocados",
     about: "Sobre",
   },

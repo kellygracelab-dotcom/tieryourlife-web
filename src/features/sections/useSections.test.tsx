@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { remembered } from "../../lib/remembered";
 import { memoryStore } from "../../lib/storage";
 import type { SectionStats } from "../../api/sections";
+import { filedUnder } from "../boards/sectionChoices";
 import { sectionsFrom } from "./model";
 import { SectionGrid } from "./SectionGrid";
 import {
@@ -108,6 +109,36 @@ describe("the sections store", () => {
     expect(after.get().followsKnown).toBe(false);
   });
 
+  it("keeps where a withdrawn proposal's lists stay, so its boards name that section, not Other", async () => {
+    const memory = remembered(memoryStore(), "s", 1, readKeptSections);
+    const waiting = stats("street", {
+      name: "Street food",
+      status: "pending",
+      proposerUid: "a",
+      fileUnder: "games",
+    });
+    const load = vi
+      .fn<SectionsDeps["load"]>()
+      .mockResolvedValueOnce({ sections: [stats("games"), stats("other"), waiting] })
+      // Withdrawn: the proposal leaves the answer, and its list stays in Games.
+      .mockResolvedValue({ sections: [stats("games"), stats("other")] });
+    const { deps: given, later } = deps([], { memory, load });
+    const store = createSectionsStore(given);
+    store.refresh("a");
+    await settle();
+    later(SECTIONS_FRESH_MS + 1);
+    store.refresh("a");
+    await settle();
+    const { sections, homes } = store.get();
+    expect(sections.map((section) => section.id)).toEqual(["games", "other"]);
+    expect(filedUnder("street", sections, "a", homes)).toBe("Games");
+    // A section nobody here knows yet is still Other, as the app draws it.
+    expect(filedUnder("unknown", sections, "a", homes)).toBe("Other");
+    // The next visit knows it too.
+    const next = createSectionsStore(deps([], { memory }).deps);
+    expect(filedUnder("street", next.get().sections, "a", next.get().homes)).toBe("Games");
+  });
+
   it("drops a kept answer it cannot draw, and asks the backend as if nothing was kept", async () => {
     const store = memoryStore();
     const memory = remembered(store, "s", 1, readKeptSections);
@@ -120,6 +151,28 @@ describe("the sections store", () => {
       await settle();
       expect(sections.get()).toMatchObject({ loaded: true, failed: false });
     }
+  });
+
+  it("opens with a kept notice of one's own proposal whose words are not text, and so does a fresh one", async () => {
+    const odd = {
+      ...stats("myprop"),
+      status: "declined",
+      proposerUid: "u1",
+      declineNote: 5,
+      name: 5,
+      fileUnder: 7,
+    } as unknown as SectionStats;
+    const store = memoryStore();
+    store.write("s:sections", JSON.stringify({ who: "u1", sections: [stats("anime"), odd] }));
+    const memory = remembered(store, "s", 1, readKeptSections);
+    // Built as the site's own store is, when the page's script first runs.
+    const kept = createSectionsStore(deps([stats("anime"), odd], { memory }).deps);
+    const notice = { id: "myprop", name: "myprop", status: "declined", into: "other", note: null };
+    expect(kept.get().notices).toEqual([notice]);
+
+    kept.refresh("u1");
+    await settle();
+    expect(kept.get()).toMatchObject({ loaded: true, failed: false, notices: [notice] });
   });
 
   it("draws an answer whose section has no collage, and keeps nothing it cannot draw", async () => {

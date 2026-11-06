@@ -12,6 +12,7 @@ import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import { editorDeps, type EditorDeps } from "../sections/editorDeps";
 import { topicPicture, type Section } from "../sections/model";
+import { TOPIC_NAME } from "../boards/model";
 import { PictureField, type PictureValue } from "../sections/PictureField";
 import {
   SECTION_ASPECT,
@@ -22,8 +23,11 @@ import {
 } from "../sections/proposal";
 import "../sections/proposal.css";
 
-/** The backend's longest topic name the form lets anybody type. */
-export const TOPIC_NAME_MAX = 24;
+/**
+ * The backend's longest topic name, forty, the same the app's topic dialogs
+ * and the site's own publish form allow: staff are not held to fewer.
+ */
+export const TOPIC_NAME_MAX = TOPIC_NAME.max;
 
 interface Common {
   /** The section the topic is in: its icon labels the picture, its name a clash. */

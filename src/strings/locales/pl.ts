@@ -219,6 +219,7 @@ const pl: Translation = {
     undo: "Cofnij",
     failed: "Nie udało się zaobserwować – spróbuj ponownie.",
     unfollowFailed: "Nie udało się przestać obserwować – spróbuj ponownie.",
+    limit: "Obserwujesz już tyle osób, ile się da. Najpierw przestań kogoś obserwować.",
     cancel: "Anuluj",
     signInTitle: "Zaloguj się, aby obserwować",
     signInBody: "Nowe listy obserwowanych osób trafiają na górę twojej strony głównej.",
@@ -335,7 +336,12 @@ const pl: Translation = {
     more: "Więcej",
     failedOffline:
       "Brak połączenia. Nic nie przepadło: lista jest bezpieczna na tym urządzeniu. Spróbuj ponownie, gdy wrócisz do sieci.",
-    failedBanned: "Na razie nie możesz publikować.",
+    failedBanned: "Moderator usunął jedną z twoich list i nie możesz już publikować.",
+    failedBannedUntil:
+      "Moderator usunął jedną z twoich list. Ponownie możesz publikować od {date}.",
+    failedPictureRefused:
+      "Jedno z Twoich zdjęć nie może trafić do publicznego kanału. Usuń je albo zostaw listę prywatną.",
+    failedCategory: "Ta kategoria nie przyjmuje już list. Wybierz inną w polu Kategoria.",
     failedTooMany:
       "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w Twoich publicznych listach.",
     failedSignedOut: "Do publikowania potrzebne jest konto. Zaloguj się i spróbuj ponownie.",
@@ -746,6 +752,7 @@ const pl: Translation = {
     topicCreated: "Utworzono „{name}”",
     topicRenamed: "Zmieniono nazwę na „{name}”",
     topicDeleted: "Usunięto „{name}”",
+    topicNotEmpty: "W „{name}” są już listy, więc nie da się go usunąć.",
     deleteTopicAsk: "Usunąć „{name}”?",
     deleteTopicBody: "Obserwujący przestaną go obserwować. Tego nie da się cofnąć.",
     people: { one: "{n} osoba", few: "{n} osoby", many: "{n} osób", other: "{n} osoby" },
@@ -1402,11 +1409,15 @@ const pl: Translation = {
       "Twoje własne obrazy trafiają na Twoje konto, gdzie widzisz je tylko Ty. Publikacja kopiuje obrazy listy do kanału, gdzie widzą je wszyscy.",
     offTitle: "Przestać tworzyć kopię?",
     offBody:
-      "Tablice zostają w tej przeglądarce. Kopia na koncie zostanie usunięta, a nowe urządzenie zacznie od pustego.",
+      "Tablice zostają w tej przeglądarce. Kopia na koncie zostanie usunięta: na innych urządzeniach tablice trafią do kosza, a nowe urządzenie zacznie od pustego.",
     offConfirm: "Usuń kopię",
     offCancel: "Anuluj",
     stuck: "Brak kopii od {when}. Spróbuj ponownie przyciskiem „Zapisz kopię teraz”.",
     stuckNever: "Jeszcze nie ma kopii. Spróbuj ponownie przyciskiem „Zapisz kopię teraz”.",
+    refusedTooLarge:
+      "„{title}” jest za duża, by konto ją przechowało, więc nie ma kopii. Usuń z niej kilka kart, a kopia znów się zapisze.",
+    refusedTooMany:
+      "„{title}” nie ma kopii: konto przechowuje do 200 tablic. Usuń kilka na stałe, by zrobić miejsce.",
     now: "Zapisz kopię teraz",
     backingUp: "Zapisywanie kopii…",
     guestNote:

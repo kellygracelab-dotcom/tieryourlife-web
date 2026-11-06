@@ -158,7 +158,8 @@ export interface Published {
   topicId?: string | null;
   /**
    * True when the board was out already: `id` is the list an earlier publish
-   * made, and nothing new was. The board takes the id either way.
+   * made, and nothing of this request was written. The board takes the id
+   * and is sent again over it, or the list keeps what the earlier one sent.
    */
   existing?: boolean;
 }

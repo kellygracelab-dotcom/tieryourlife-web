@@ -167,6 +167,40 @@ describe("ModerationPage", () => {
     expect(await screen.findByText("Taken down. someone banned for a month.")).toBeInTheDocument();
   });
 
+  it("calls the author of an anonymous list Anonymous, and the owner's queue says whose", async () => {
+    load.mockResolvedValue({
+      reports: [
+        queued("l1", { authorName: "", authorUid: null }),
+        queued("l2", { anonymous: true, authorName: "Mira" }),
+      ],
+    });
+    takeDown.mockResolvedValue(undefined);
+    open();
+    expect(await screen.findByText("by Anonymous")).toBeInTheDocument();
+    expect(screen.getByText("by Anonymous (Mira)")).toBeInTheDocument();
+    const first = screen.getAllByRole("button", { name: "Take it down" })[0]!;
+    await userEvent.click(first);
+    const panel = screen.getByRole("group", { name: "Take it down. Ban the author?" });
+    await userEvent.click(within(panel).getByRole("button", { name: "A month" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Take it down" }));
+    expect(takeDown).toHaveBeenCalledWith("l1", "month");
+    expect(
+      await screen.findByText("Taken down. Anonymous banned for a month."),
+    ).toBeInTheDocument();
+  });
+
+  it("asks about banning Anonymous forever, not about nobody", async () => {
+    load.mockResolvedValue({
+      reports: [queued("l1", { anonymous: true, authorName: "", authorUid: null })],
+    });
+    open();
+    await userEvent.click(await screen.findByRole("button", { name: "Take it down" }));
+    const panel = screen.getByRole("group", { name: "Take it down. Ban the author?" });
+    await userEvent.click(within(panel).getByRole("button", { name: "Forever" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Take it down" }));
+    expect(screen.getByRole("dialog", { name: "Ban Anonymous forever?" })).toBeInTheDocument();
+  });
+
   it("takes the keyboard into the ban panel and back out of it", async () => {
     load.mockResolvedValue({ reports: [queued("l1")] });
     open();

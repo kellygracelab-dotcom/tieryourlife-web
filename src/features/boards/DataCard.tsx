@@ -18,8 +18,10 @@ const whenOf = (at: number): string =>
 /**
  * A run that did not go through says so once a day has gone by without one
  * that did, as on the phone: a failure the next run mends is not worth an
- * alarm. A board refused, a connection gone or a busy server all look alike
- * from here, so the note names none of them.
+ * alarm. A connection gone or a busy server look alike from here, so the
+ * note names neither. A board the account will not keep as it is, too big
+ * or one too many, no run mends: that one is named at once, with what would
+ * let it go up, instead of a "try again" that cannot help.
  */
 export const STUCK_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -85,7 +87,18 @@ export function DataCard({ now = Date.now }: { now?: () => number }) {
           {sync.backUp && (
             <>
               <p className="settings__helper">{strings.sync.backUpNote}</p>
+              {sync.refusals.map((refusal) => (
+                <p key={refusal.uid} className="settings__bar" role="alert">
+                  {fill(
+                    refusal.why === "tooLarge"
+                      ? strings.sync.refusedTooLarge
+                      : strings.sync.refusedTooMany,
+                    { title: refusal.title },
+                  )}
+                </p>
+              ))}
               {sync.status === "stuck" &&
+                sync.refusals.length === 0 &&
                 (pressed ||
                   sync.lastSyncedAt === null ||
                   now() - sync.lastSyncedAt >= STUCK_AFTER_MS) && (

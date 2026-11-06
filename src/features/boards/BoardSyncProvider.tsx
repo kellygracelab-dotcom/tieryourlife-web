@@ -19,11 +19,12 @@ import {
   BoardSyncContext,
   NOBODY,
   type BoardSyncControls,
+  type SyncRefusal,
   type SyncStatus,
 } from "./boardSync";
 import { deviceNameOf } from "./deviceName";
 import { owners as siteOwners, type BoardOwners, type GuestBoardsQuestion } from "./owners";
-import type { Board } from "./model";
+import { markedTitle, type Board } from "./model";
 import type { BoardsRepository } from "./repository";
 import type { BoardsApi } from "./sync";
 import { keepBackUp, readBackUp, syncRecords, type SyncRecords } from "./syncRecords";
@@ -181,6 +182,7 @@ function ForAccount({
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(
     () => records?.lastSyncedAt() ?? null,
   );
+  const [refusals, setRefusals] = useState<readonly SyncRefusal[]>([]);
   const question = useSyncExternalStore(owners.subscribeQuestion, owners.question, owners.question);
   // One run at a time; a change during a run asks for one more after it.
   const running = useRef<Promise<void> | null>(null);
@@ -234,7 +236,10 @@ function ForAccount({
     })
       .then(
         (report) => {
-          if (stillWanted()) setStatus(report.refused > 0 ? "stuck" : "idle");
+          if (!stillWanted()) return;
+          setStatus(report.refused > 0 ? "stuck" : "idle");
+          // A run that saw every board says which the account still refuses; one stopped midway does not know.
+          if (!report.cancelled) setRefusals(report.refusals);
         },
         () => {
           if (stillWanted()) setStatus("stuck");
@@ -306,7 +311,7 @@ function ForAccount({
     // Both sets survive in use; only the two have to be tellable apart first.
     const theirs = await accountTitles(api).catch(() => new Set<string>());
     owners.moveIn(question.owner, (title) =>
-      theirs.has(title) ? `${title} ${strings.sync.fromThisDevice}` : null,
+      theirs.has(title) ? markedTitle(title, strings.sync.fromThisDevice) : null,
     );
   }, [question, api, owners]);
 
@@ -331,6 +336,7 @@ function ForAccount({
       onRunEnded: () => setStatus("idle"),
       onOff: () => {
         setLastSyncedAt(null);
+        setRefusals([]);
         setBackUpState(false);
       },
     }).finally(() => {
@@ -347,9 +353,10 @@ function ForAccount({
       setBackUp,
       status,
       lastSyncedAt,
+      refusals,
       syncNow: run,
     }),
-    [uid, backUp, setBackUp, status, lastSyncedAt, run],
+    [uid, backUp, setBackUp, status, lastSyncedAt, refusals, run],
   );
 
   return (

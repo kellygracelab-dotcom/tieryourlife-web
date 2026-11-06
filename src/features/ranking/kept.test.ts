@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { KeyValueStore } from "../../lib/storage";
-import { keptFor, keptKey, readKept, writeKept } from "./kept";
+import { forgetKept, forgetKeptOf, keptBy, keptFor, keptKey, readKept, writeKept } from "./kept";
 
 function memoryStore(): KeyValueStore & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -9,6 +9,7 @@ function memoryStore(): KeyValueStore & { data: Map<string, string> } {
     read: (key) => data.get(key) ?? null,
     write: (key, value) => void data.set(key, value),
     remove: (key) => void data.delete(key),
+    keys: () => [...data.keys()],
   };
 }
 
@@ -54,6 +55,31 @@ describe("kept ranking", () => {
     expect(keptFor(null, 9, [])).toBeNull();
   });
 
+  it("is shown only to the person it is theirs, on a browser others use too", () => {
+    const guests = { code: "abcdefgh", claimToken: "secret" };
+    const accounts = { ...guests, claimedBy: "u1" };
+    expect(keptBy(accounts, "u1")).toBe(accounts);
+    expect(keptBy(accounts, null)).toBeNull();
+    expect(keptBy(accounts, "u2")).toBeNull();
+    expect(keptBy(accounts, undefined)).toBeNull();
+    // A guest's goes to whoever signs in next, unless the server keeps it for another account.
+    expect(keptBy(guests, null)).toBe(guests);
+    expect(keptBy(guests, undefined)).toBe(guests);
+    expect(keptBy(guests, "u2")).toBe(guests);
+    expect(keptBy({ ...guests, refusedTo: "u2" }, "u2")).toBeNull();
+    expect(keptBy(null, "u1")).toBeNull();
+  });
+
+  it("forgets a deleted account's rankings and keeps everyone else's", () => {
+    const store = memoryStore();
+    writeKept(store, "a", { code: "aaaaaaaa", claimToken: "ta", claimedBy: "gone" });
+    writeKept(store, "b", { code: "bbbbbbbb", claimToken: "tb", claimedBy: "other" });
+    writeKept(store, "c", { code: "cccccccc", claimToken: "tc" });
+    store.write("tyl:draft:a", "{}");
+    forgetKeptOf(store, "gone");
+    expect([...store.data.keys()].sort()).toEqual(["tyl:draft:a", keptKey("b"), keptKey("c")]);
+  });
+
   it.each(["{", "null", "7", JSON.stringify({ code: 1, claimToken: "x" })])(
     "ignores what it cannot read: %s",
     (text) => {
@@ -62,4 +88,15 @@ describe("kept ranking", () => {
       expect(readKept(store, "abc")).toBeNull();
     },
   );
+});
+
+describe("forgetting a kept ranking", () => {
+  it("forgets the list's ranking only while it is the one deleted", () => {
+    const store = memoryStore();
+    writeKept(store, "abc", { code: "abcdefgh", claimToken: "secret" });
+    forgetKept(store, "abc", "zzzzzzzz");
+    expect(readKept(store, "abc")).not.toBeNull();
+    forgetKept(store, "abc", "abcdefgh");
+    expect(store.data.has(keptKey("abc"))).toBe(false);
+  });
 });

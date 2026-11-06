@@ -5,8 +5,17 @@ import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
 import { requireAppCheck, skipsAppCheck } from "../src/appCheck";
 import { optionalAccount, requireAccount, requireUser, type DecodedToken } from "../src/auth";
-import { claimHashOf, CODE_ALPHABET, DAILY_CEILING, dayKey, MAX_BODY_BYTES } from "../src/ranking";
-import { resetShellForTests, UNAVAILABLE_HTML } from "../src/pages";
+import {
+  appCheckKeyOf,
+  claimHashOf,
+  CODE_ALPHABET,
+  DAILY_CEILING,
+  dayKey,
+  GUEST_DAILY_CEILING,
+  GUEST_RANKINGS_PER_APP_CHECK_TOKEN,
+  MAX_BODY_BYTES,
+} from "../src/ranking";
+import { PAGE_POLICY, resetShellForTests, UNAVAILABLE_HTML } from "../src/pages";
 import { route, type WebDeps } from "../src/web";
 
 type Data = Record<string, unknown>;
@@ -55,20 +64,33 @@ function memoryFirestore(clock = () => 1_000) {
   const db = {
     collection: (name: string) => ({
       doc: (id: string) => refOf(name, id),
-      where: (field: string, _op: "==", value: unknown) => ({
-        limit: (max: number) => ({
-          get: async () => {
-            const docs = [...table(name)]
-              .filter(([, data]) => data[field] === value)
-              .slice(0, max)
-              .map(([id, data]) => snapshotOf(id, data));
-            return { docs, size: docs.length };
-          },
-        }),
-      }),
+      // Documents come back in the order they were put in, standing in for
+      // Firestore's order by document id.
+      where: (field: string, _op: "==", value: unknown) => {
+        const found = async (max = Infinity) => {
+          const docs = [...table(name)]
+            .filter(([, data]) => data[field] === value)
+            .slice(0, max)
+            .map(([id, data]) => snapshotOf(id, data));
+          return { docs, size: docs.length };
+        };
+        return {
+          limit: (max: number) => ({ get: () => found(max) }),
+          // The fields a select leaves out are kept: no handler reads them.
+          select: () => ({ get: () => found() }),
+          get: () => found(),
+        };
+      },
     }),
     // All or nothing, as Firestore's: a create that finds its document taken
     // fails the whole commit before anything is written.
+    // The options a real getAll takes last (a field mask) are not a reference.
+    getAll: async (...refs: unknown[]) =>
+      Promise.all(
+        refs
+          .filter((ref): ref is Ref => typeof (ref as Partial<Ref>).get === "function")
+          .map((ref) => ref.get()),
+      ),
     batch: () => {
       const writes: { ref: Ref; data: Data; create: boolean; options?: { merge?: boolean } }[] = [];
       return {
@@ -323,6 +345,39 @@ describe("POST /api/rank — Finish", () => {
     assert.equal(table("rankings").size, 0);
   });
 
+  it("stops guests short of the daily ceiling and keeps the rest of the day for accounts", async () => {
+    const today = dayKey(Date.now());
+    const body = { listId: LIST_ID, rows: [[0], []] };
+    const guest = setup(GUEST);
+    guest.table("rankUsage").set(today, { count: GUEST_DAILY_CEILING });
+    assert.equal((await call(guest.deps, "POST", "/api/rank", body)).status, 503);
+    assert.equal(guest.table("rankUsage").get(today)?.count, GUEST_DAILY_CEILING);
+    const person = setup(PERSON);
+    person.table("rankUsage").set(today, { count: GUEST_DAILY_CEILING });
+    assert.equal((await call(person.deps, "POST", "/api/rank", body)).status, 201);
+    assert.equal(person.table("rankUsage").get(today)?.count, GUEST_DAILY_CEILING + 1);
+  });
+
+  it("lets one App Check token keep only so many guest rankings, whatever the guest", async () => {
+    const { deps, table } = setup(GUEST);
+    const body = { listId: LIST_ID, rows: [[0], []] };
+    table("rankTokens").set(appCheckKeyOf("replayed"), {
+      count: GUEST_RANKINGS_PER_APP_CHECK_TOKEN,
+    });
+    const refused = await call(deps, "POST", "/api/rank", body, {
+      "X-Firebase-AppCheck": "replayed",
+    });
+    assert.equal(refused.status, 429);
+    assert.deepEqual(refused.body, { error: "Too many rankings", code: "TOO_MANY" });
+    assert.equal(table("rankings").size, 0);
+    assert.equal(table("rankUsage").size, 0);
+    // Another browser's token is its own count; the token itself is never stored.
+    const fresh = await call(deps, "POST", "/api/rank", body, { "X-Firebase-AppCheck": "fresh" });
+    assert.equal(fresh.status, 201);
+    assert.equal(table("rankTokens").get(appCheckKeyOf("fresh"))?.count, 1);
+    assert.equal(table("rankTokens").has("fresh"), false);
+  });
+
   it("stops at the daily ceiling and leaves the count where it was", async () => {
     const { deps, table } = setup();
     const today = dayKey(Date.now());
@@ -402,13 +457,42 @@ describe("GET /api/rank/{code}", () => {
     assert.equal(table("rankings").get("anonymou")?.listAuthorUid, undefined);
   });
 
-  it("says the list is gone when it is under review, and is nobody's for a guest", async () => {
+  it("is nobody's for a guest", async () => {
     const { deps, table } = setup(GUEST);
     table("rankings").set("abcdefgh", ranking("guest", true));
-    table("publishedLists").set(LIST_ID, { ...LIST, underReview: true });
     const body = (await call(deps, "GET", "/api/rank/abcdefgh")).body as Data;
-    assert.equal(body.listAvailable, false);
+    assert.equal(body.listAvailable, true);
     assert.equal(body.yours, false);
+  });
+
+  it("hides a ranking of a list under review, even from its keeper, until the list is left up", async () => {
+    const { deps, table } = setup(PERSON);
+    table("rankings").set("abcdefgh", ranking("person", false));
+    table("publishedLists").set(LIST_ID, { ...LIST, underReview: true });
+    const hidden = await call(deps, "GET", "/api/rank/abcdefgh");
+    assert.equal(hidden.status, 404);
+    assert.equal(JSON.stringify(hidden.body).includes("Moonlight"), false);
+    // A moderator left it up: the ranking is there again, nothing was lost.
+    table("publishedLists").set(LIST_ID, { ...LIST, underReview: false, reviewed: true });
+    assert.equal((await call(deps, "GET", "/api/rank/abcdefgh")).status, 200);
+  });
+
+  it("hides a ranking of a list a moderator took down, and keeps one whose author unpublished it", async () => {
+    const { deps, table } = setup(GUEST);
+    table("rankings").set("abcdefgh", ranking("guest", true));
+    table("rankings").set("bcdefghj", { ...ranking("guest", true), listId: "list-0002" });
+    table("publishedLists").delete(LIST_ID);
+    // The proxy deletes a list taken down as it deletes an unpublished one;
+    // only its audit log tells them apart.
+    table("auditLog").set("line-1", {
+      what: "report.takedown",
+      target: `publishedLists/${LIST_ID}`,
+    });
+    table("auditLog").set("line-2", { what: "list.move", target: "publishedLists/list-0002" });
+    assert.equal((await call(deps, "GET", "/api/rank/abcdefgh")).status, 404);
+    const unpublished = await call(deps, "GET", "/api/rank/bcdefghj");
+    assert.equal(unpublished.status, 200);
+    assert.equal((unpublished.body as Data).listAvailable, false);
   });
 
   it("names nobody once the list is gone, as when its author erased their account", async () => {
@@ -557,6 +641,49 @@ describe("GET /api/me/rankings", () => {
     assert.equal(body.more, false);
     assert.equal(answer.headers["Cache-Control"], "no-store");
   });
+
+  it("names nobody for a list that went anonymous or is gone, as the ranking's page does", async () => {
+    const { deps, table } = setup(PERSON);
+    const named = {
+      ...ranking("person", false),
+      snapshot: {
+        ...ranking("person", false).snapshot,
+        authorPhotoUrl: "https://faces.test/a.jpg",
+      },
+    };
+    table("rankings").set("aaaaaaaa", named);
+    table("rankings").set("bbbbbbbb", { ...named, listId: "list-0002" });
+    table("publishedLists").set(LIST_ID, { ...LIST, anonymous: true });
+    const answer = await call(deps, "GET", "/api/me/rankings");
+    const rows = (answer.body as { rankings: Data[] }).rankings;
+    assert.equal(rows.length, 2);
+    for (const row of rows) {
+      assert.equal(row.authorName, "", String(row.code));
+      assert.equal(row.authorPhotoUrl, null, String(row.code));
+    }
+    const read = (await call(deps, "GET", "/api/rank/aaaaaaaa")).body as { snapshot: Data };
+    assert.equal(read.snapshot.authorName, "");
+    // A list that still names its author keeps the name on the card.
+    table("publishedLists").set(LIST_ID, LIST);
+    const again = (await call(deps, "GET", "/api/me/rankings")).body as { rankings: Data[] };
+    assert.equal(again.rankings.find((row) => row.code === "aaaaaaaa")?.authorName, "danylo");
+  });
+
+  it("keeps the newest 200 of more, though the newest come last by code", async () => {
+    const { deps, table } = setup(PERSON);
+    for (let at = 1; at <= 201; at++) {
+      table("rankings").set(`r${String(at).padStart(7, "0")}`, {
+        ...ranking("person", false),
+        createdAt: { toMillis: () => at },
+      });
+    }
+    const answer = await call(deps, "GET", "/api/me/rankings");
+    const body = answer.body as { rankings: { code: string }[]; more: boolean };
+    assert.equal(body.rankings.length, 200);
+    assert.equal(body.rankings[0]?.code, "r0000201");
+    assert.equal(body.rankings.at(-1)?.code, "r0000002");
+    assert.equal(body.more, true);
+  });
 });
 
 describe("the router", () => {
@@ -673,12 +800,62 @@ describe("the pages a link opens", () => {
   it("sends the bare shell when Firestore fails, so the site loads the list itself", async () => {
     // No Firebase app in the tests: every read of Firestore throws, as an outage does.
     const { deps } = setup();
+    const down: WebDeps = {
+      ...deps,
+      db: () => {
+        throw new Error("Firestore went away");
+      },
+    };
     for (const path of [`/l/${LIST_ID}`, "/r/abcdefgh"]) {
-      const answer = await withHosting(true, () => call(deps, "GET", path));
+      const answer = await withHosting(true, () => call(down, "GET", path));
       assert.equal(answer.status, 200, path);
       assert.equal(answer.body, SHELL, path);
       assert.equal(answer.headers["Cache-Control"], "no-store", path);
     }
+  });
+
+  it("gives a ranking of a list moderation took away neither its words nor its picture", async () => {
+    const { deps, table } = setup();
+    table("rankings").set("abcdefgh", ranking("guest", true));
+    table("rankings").set("bcdefghj", { ...ranking("guest", true), listId: "list-0002" });
+    table("publishedLists").set(LIST_ID, { ...LIST, underReview: true });
+    table("auditLog").set("line-1", {
+      what: "report.takedown",
+      target: "publishedLists/list-0002",
+    });
+    for (const code of ["abcdefgh", "bcdefghj"]) {
+      const page = await withHosting(true, () => call(deps, "GET", `/r/${code}`));
+      assert.equal(page.status, 200, code);
+      assert.equal(page.body, SHELL, code);
+      const picture = await call(deps, "GET", `/og/r/${code}.png`);
+      assert.equal(picture.status, 404, code);
+    }
+    // A list that stands is drawn into its ranking's page as before.
+    table("publishedLists").set(LIST_ID, LIST);
+    const shown = await withHosting(true, () => call(deps, "GET", "/r/abcdefgh"));
+    assert.match(String(shown.body), /Moonlight/);
+  });
+
+  it("lets no other site frame any page it answers with, bare or unavailable", async () => {
+    const { deps, table } = setup();
+    table("rankings").set("abcdefgh", ranking("guest", true));
+    const down: WebDeps = {
+      ...deps,
+      db: () => {
+        throw new Error("Firestore went away");
+      },
+    };
+    const answers = [
+      await withHosting(true, () => call(deps, "GET", "/r/abcdefgh")),
+      await withHosting(true, () => call(deps, "GET", "/l/list-0001/extra")),
+      await withHosting(true, () => call(down, "GET", "/r/abcdefgh")),
+      await withHosting(false, () => call(deps, "GET", `/l/${LIST_ID}`)),
+    ];
+    for (const answer of answers) {
+      assert.equal(answer.headers["Content-Security-Policy"], PAGE_POLICY);
+      assert.equal(answer.headers["X-Frame-Options"], "SAMEORIGIN");
+    }
+    assert.match(PAGE_POLICY, /frame-ancestors 'self'/);
   });
 
   it("answers a page, not JSON, when even the shell cannot be had", async () => {

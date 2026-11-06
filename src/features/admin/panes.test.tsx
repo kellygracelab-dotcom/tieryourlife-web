@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Moderator, PendingTopic, ProposedSection } from "../../api/admin";
 import { ApiFailure } from "../../api/errors";
-import type { Topic } from "../../api/sections";
+import type { SectionStats, Topic } from "../../api/sections";
 import { SessionContext } from "../../app/session";
 import { memoryStore } from "../../lib/storage";
 import { setStrings } from "../../strings";
@@ -92,6 +92,12 @@ describe("ProposalsPane", () => {
     expect(screen.getByText("6 lists filed under Food until approval")).toBeInTheDocument();
     expect(screen.getByText("Topic in Games · proposed by olehv")).toBeInTheDocument();
     expect(screen.getByText("Looks like: Speedrunning")).toBeInTheDocument();
+  });
+
+  it("says Anonymous for a topic first named by an anonymous list", async () => {
+    deps.topics = vi.fn(async () => ({ topics: [{ ...pendingTopic, proposerName: "" }] }));
+    wrap(<ProposalsPane adminRole="moderator" deps={deps} />);
+    expect(await screen.findByText("Topic in Games · proposed by Anonymous")).toBeInTheDocument();
   });
 
   it("approves at once, and declines with a note to the proposer", async () => {
@@ -221,6 +227,20 @@ describe("ProposalsPane", () => {
     await userEvent.click(within(card).getByRole("button", { name: "Approve as a section" }));
     expect(await screen.findByText("Someone else already decided this one.")).toBeInTheDocument();
     expect(deps.sections).toHaveBeenCalledTimes(2);
+  });
+
+  it("says when somebody else decided a topic first, and reads the topics again", async () => {
+    deps.decideTopic = vi.fn(async () => {
+      throw new ApiFailure({ kind: "conflict", status: "approved" });
+    });
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    const card = (await screen.findByRole("heading", { name: "Speedruns" })).closest("li")!;
+    deps.topics = vi.fn(async () => ({ topics: [] }));
+    await userEvent.click(within(card).getByRole("button", { name: "Decline" }));
+    expect(await screen.findByText("Someone else already decided this one.")).toBeInTheDocument();
+    expect(deps.topics).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("heading", { name: "Speedruns" })).toBeNull();
+    expect(screen.queryByText(/try again/)).toBeNull();
   });
 
   it("says a decision that did not go through on the card itself", async () => {
@@ -543,10 +563,25 @@ describe("ProposalsPane", () => {
   });
 });
 
+/** A section as staff read it. */
+const section = (id: string, more: Partial<SectionStats> = {}): SectionStats => ({
+  id,
+  listCount: 4,
+  followerCount: 2,
+  newThisWeek: 0,
+  collage: [],
+  following: false,
+  status: "approved",
+  ...more,
+});
+
 describe("TopicsPane", () => {
   let deps: TopicsDeps;
   beforeEach(() => {
     deps = {
+      sections: vi.fn(async () => ({
+        sections: ["anime", "games", "other"].map((id) => section(id)),
+      })),
       load: vi.fn(async () => ({
         topics: [
           topic("t1", "Indies", {
@@ -626,6 +661,49 @@ describe("TopicsPane", () => {
     await userEvent.click(await screen.findByRole("button", { name: "New topic" }));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("says a topic that got a list meanwhile can no longer be deleted, and reads the topics again", async () => {
+    deps.remove = vi.fn(async () => {
+      throw new ApiFailure({ kind: "conflict" });
+    });
+    deps.load = vi
+      .fn<TopicsDeps["load"]>()
+      .mockResolvedValueOnce({ topics: [topic("t2", "Pokémon", { listCount: 0 })] })
+      .mockResolvedValue({ topics: [topic("t2", "Pokémon", { listCount: 1 })] });
+    wrap(<TopicsPane adminRole="owner" deps={deps} />);
+    const row = (await screen.findByText("Pokémon")).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: "Delete" }));
+    const ask = screen.getByRole("dialog", { name: "Delete Pokémon?" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Delete" }));
+    expect(
+      await screen.findByText("Pokémon has lists now, so it can’t be deleted."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await screen.findByText(/1 list/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
+  it("keeps a hidden section's topics in reach, to rename or delete, but makes none there", async () => {
+    deps.sections = vi.fn(async () => ({
+      sections: [
+        section("anime"),
+        section("quiet", { name: "Quiet", hidden: true }),
+        section("other"),
+      ],
+    }));
+    wrap(<TopicsPane adminRole="owner" deps={deps} editor={editorFakes()} />);
+    await screen.findByText("Pokémon");
+    const select = screen.getByRole("combobox", { name: "Section" });
+    await within(select).findByRole("option", { name: "Quiet" });
+    await userEvent.selectOptions(select, "quiet");
+    expect(deps.load).toHaveBeenLastCalledWith("quiet");
+    const row = (await screen.findByText("Pokémon")).closest("li")!;
+    expect(within(row).getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    // The backend takes a new topic only in an open section.
+    expect(screen.queryByRole("button", { name: "New topic" })).toBeNull();
+    expect(screen.getByText(/Hidden — not on the home page/)).toBeInTheDocument();
   });
 
   it("says a delete that did not go through, and topics that did not come", async () => {

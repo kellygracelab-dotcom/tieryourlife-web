@@ -7,7 +7,7 @@ import type { SnackbarNotice } from "../../ui/Snackbar";
 import { keepIntent, takeIntent } from "./afterSignIn";
 import { FollowButton } from "./FollowButton";
 import { SignInDialog } from "./SignInDialog";
-import { useFollow, type FollowDeps } from "./useFollow";
+import { followFailureText, useFollow, type FollowDeps } from "./useFollow";
 import "./follow.css";
 
 type Notify = (notice: SnackbarNotice) => void;
@@ -68,10 +68,7 @@ function FollowChip({
 
   useEffect(() => {
     if (following.failed !== null) {
-      notify({
-        text:
-          following.failed === "unfollow" ? strings.follow.unfollowFailed : strings.follow.failed,
-      });
+      notify({ text: followFailureText(following.failed) });
     }
   }, [following.failed, notify]);
 

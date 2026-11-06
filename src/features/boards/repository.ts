@@ -200,6 +200,7 @@ export function parseBoard(raw: unknown): Board | null {
     arrivedFrom: text(source.arrivedFrom),
     publishedEditedAt: time(source.publishedEditedAt),
     topic: topicOf(source.topic),
+    ...(source.topicOff === true ? { topicOff: true } : {}),
     anonymous: source.anonymous === true,
     play: playOf(source.play),
   };
@@ -214,6 +215,11 @@ export interface BoardsRepository {
   saveAll(boards: readonly Board[]): void;
   /** Gone for good; the trash is a time on the board, not this. */
   remove(uid: string): void;
+  /**
+   * Whether the board as read now is in the browser's storage, not only held
+   * for this visit after the browser refused it: a reload would lose it.
+   */
+  kept(uid: string): boolean;
   /** Read again: its keys were written from outside it. */
   reread(): void;
   subscribe(listener: () => void): () => void;
@@ -288,6 +294,9 @@ export function boardsRepository(
     remove(uid) {
       store.remove(keyOf(uid));
       changed();
+    },
+    kept(uid) {
+      return this.get(uid) !== null && store.heldOnly?.(keyOf(uid)) !== true;
     },
     reread: changed,
     subscribe(listener) {

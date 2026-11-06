@@ -49,6 +49,31 @@ export function writeKept(store: KeyValueStore, listId: string, kept: KeptRankin
 }
 
 /**
+ * The ranking finished here, when it is the person's who is here: an
+ * account's only to that account, so a guest or the next account on a shared
+ * browser never reads another's as their own. One a guest finished goes to
+ * whoever signs in next, so it shows to anybody here but an account the
+ * server said it is kept away from. `who` is the account's uid, null for a
+ * guest, undefined while nobody knows yet: then only a guest's shows.
+ */
+export function keptBy(
+  kept: KeptRanking | null,
+  who: string | null | undefined,
+): KeptRanking | null {
+  if (kept === null) return null;
+  if (kept.claimedBy !== undefined) return kept.claimedBy === who ? kept : null;
+  return typeof who === "string" && kept.refusedTo === who ? null : kept;
+}
+
+/** An account deleted: the rankings it kept go from this browser, so nobody here reads them as theirs. */
+export function forgetKeptOf(store: KeyValueStore, uid: string): void {
+  for (const key of store.keys?.() ?? []) {
+    if (!key.startsWith(KEPT_PREFIX)) continue;
+    if (readKept(store, key.slice(KEPT_PREFIX.length))?.claimedBy === uid) store.remove(key);
+  }
+}
+
+/**
  * The link this device's ranking already has, when the board shows exactly
  * what it holds, of the same version of the list: a reload then shows that
  * link instead of offering another Finish.
@@ -60,4 +85,13 @@ export function keptFor(
 ): string | null {
   if (kept === null || kept.version !== version || kept.rows === undefined) return null;
   return JSON.stringify(kept.rows) === JSON.stringify(rows) ? kept.code : null;
+}
+
+/**
+ * Forgets this device's ranking for a list once it was deleted, so the list's
+ * page offers Finish again instead of calling a dead link live. Another
+ * ranking finished for that list since is left alone.
+ */
+export function forgetKept(store: KeyValueStore, listId: string, code: string): void {
+  if (readKept(store, listId)?.code === code) store.remove(keptKey(listId));
 }

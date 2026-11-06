@@ -130,7 +130,13 @@ describe("syncBoards", () => {
   it("sends a board the account has never seen, and writes down the agreement", async () => {
     const { repository, records, account, run } = setUp();
     repository.save(films());
-    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 1,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     expect(account.keeps).toHaveLength(1);
     const { uid, request } = account.keeps[0]!;
     expect(uid).toBe("films");
@@ -152,7 +158,13 @@ describe("syncBoards", () => {
 
     // A second run with nothing changed sends nothing: the one step is writing
     // down that both sides still agree.
-    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 1,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     expect(account.keeps).toHaveLength(1);
   });
 
@@ -190,7 +202,13 @@ describe("syncBoards", () => {
     repository.save(films());
     await run();
     repository.save(rename(repository.get("films")!, "Films I like", 200));
-    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 1,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     expect(account.keeps[1]).toMatchObject({
       uid: "films",
       request: { basedOn: 1, title: "Films I like" },
@@ -217,7 +235,13 @@ describe("syncBoards", () => {
       title: "Their name",
       fingerprint: "other",
     });
-    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 1,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     const board = repository.get("films")!;
     expect(board.title).toBe("Their name");
     expect(board.favouritedAt).toBe(7);
@@ -255,6 +279,97 @@ describe("syncBoards", () => {
     expect(account.kept.get("big")?.deleted).toBe(false);
   });
 
+  describe("a browser that holds a refused board only for the visit", () => {
+    /**
+     * As the browser's own store does: a write that does not fit is held in
+     * memory, read back for the visit, and gone after a reload.
+     */
+    const fullFor = (refused: (key: string) => boolean) => {
+      const disk = memoryStore();
+      const visit = () => {
+        const held = new Map<string, string>();
+        const store = {
+          read: (key: string) => held.get(key) ?? disk.read(key),
+          write: (key: string, value: string) => {
+            if (refused(key)) {
+              held.set(key, value);
+              return false;
+            }
+            held.delete(key);
+            return disk.write(key, value);
+          },
+          remove: (key: string) => {
+            held.delete(key);
+            disk.remove(key);
+          },
+          keys: () => [...new Set([...(disk.keys?.() ?? []), ...held.keys()])],
+          heldOnly: (key: string) => held.has(key),
+        };
+        return { repository: boardsRepository(store), records: syncRecords(disk, "me") };
+      };
+      return { disk, visit };
+    };
+
+    const runOn = (
+      on: {
+        repository: ReturnType<typeof boardsRepository>;
+        records: ReturnType<typeof syncRecords>;
+      },
+      api: BoardsApi,
+    ) =>
+      syncBoards({
+        repository: on.repository,
+        api,
+        records: on.records,
+        deviceName: "Chrome on Linux",
+        now: () => 1000,
+        nextUid: uids("new-"),
+      }).catch(() => null);
+
+    it("never agrees about a board from the account the browser would not keep, and the next visit leaves it in the account", async () => {
+      const account = fakeAccount();
+      // Sent by another device, with its real fingerprint.
+      const first = setUp();
+      first.repository.save(films("big", "Everything I watched"));
+      await first.run({ api: account.api });
+
+      const full = fullFor((key) => key.endsWith(":big"));
+      const today = full.visit();
+      await runOn(today, account.api);
+      // Held for the visit, so the shelf shows it, and a second run finds it the same as the account's.
+      expect(today.repository.get("big")).not.toBeNull();
+      await runOn(today, account.api);
+      expect(today.records.all().map((record) => record.uid)).not.toContain("big");
+
+      await runOn(full.visit(), account.api);
+      expect(account.forgotten).toEqual([]);
+      expect(account.kept.get("big")?.deleted).toBe(false);
+    });
+
+    it("never agrees about an edit the browser would not keep, so the next visit takes the account's newer version", async () => {
+      const account = fakeAccount();
+      let refusing = false;
+      const full = fullFor((key) => refusing && key.endsWith(":films"));
+      const today = full.visit();
+      today.repository.save(films());
+      await runOn(today, account.api);
+      expect(account.kept.get("films")?.revision).toBe(1);
+
+      refusing = true;
+      const edited = rename(today.repository.get("films")!, "Films I loved", 2000);
+      expect(today.repository.save(edited)).toBe(false);
+      await runOn(today, account.api);
+      expect(account.kept.get("films")?.title).toBe("Films I loved");
+
+      refusing = false;
+      const tomorrow = full.visit();
+      await runOn(tomorrow, account.api);
+      // The older board left on the disk did not go up over the newer one.
+      expect(account.kept.get("films")?.title).toBe("Films I loved");
+      expect(tomorrow.repository.get("films")?.title).toBe("Films I loved");
+    });
+  });
+
   it("brings down a board this device has never had, with its pictures found by id", async () => {
     const { repository, account, run } = setUp();
     const theirs = films("theirs", "From the phone");
@@ -269,6 +384,7 @@ describe("syncBoards", () => {
     expect(await run({ resolvePicture })).toEqual({
       carried: 1,
       refused: 0,
+      refusals: [],
       deferred: 0,
       cancelled: false,
     });
@@ -280,7 +396,13 @@ describe("syncBoards", () => {
     );
     expect(resolvePicture).toHaveBeenCalledWith("pic-1");
     // Known now: the next run leaves it alone.
-    expect(await run()).toEqual({ carried: 0, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 0,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
   });
 
   it("keeps both when both sides changed: theirs as a copy named after their device, ours sent over theirs", async () => {
@@ -297,7 +419,13 @@ describe("syncBoards", () => {
       publishedId: "p1",
     };
     account.kept.set("films", theirs);
-    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 1,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     const all = repository.all();
     expect(all).toHaveLength(2);
     const copy = all.find((board) => board.uid !== "films")!;
@@ -329,7 +457,13 @@ describe("syncBoards", () => {
       fingerprint: "elsewhere",
     };
     account.refuseNextWith(theirs);
-    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 1,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     expect(
       repository
         .all()
@@ -349,7 +483,13 @@ describe("syncBoards", () => {
     account.kept.set("films", same);
     records.remember({ uid: "films", revision: 1, fingerprint: "stale" });
     account.refuseNextWith(same);
-    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 1,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     expect(repository.all()).toHaveLength(1);
     expect(records.all()[0]).toEqual({ uid: "films", revision: 5, fingerprint });
   });
@@ -368,29 +508,115 @@ describe("syncBoards", () => {
       fingerprint: agreed,
     };
     account.refuseNextWith(echo);
-    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 1,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     expect(repository.all().map((board) => board.title)).toEqual(["Mine"]);
     expect(account.keeps.slice(-2).map((keep) => keep.request.basedOn)).toEqual([1, 2]);
   });
 
-  it("tells the account about a board removed for good here, and lets go of one removed elsewhere", async () => {
+  it("tells the account about a board removed for good here, and puts one removed elsewhere in the trash", async () => {
     const { repository, records, account, run } = setUp();
     repository.saveAll([films("a", "A"), films("b", "B")]);
     await run();
     repository.remove("a");
     const b = account.kept.get("b")!;
     account.kept.set("b", { ...b, deleted: true, revision: 2 });
-    expect(await run()).toEqual({ carried: 2, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 2,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     expect(account.forgotten).toEqual(["a"]);
-    expect(repository.get("b")).toBeNull();
+    // In the trash here, with the agreement on the marker: the next run does nothing.
+    expect(repository.get("b")?.deletedAt).toBe(1000);
+    expect(records.all().map((record) => [record.uid, record.revision])).toEqual([["b", 2]]);
+    expect(await run()).toEqual({
+      carried: 0,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
+    expect(account.kept.get("b")?.deleted).toBe(true);
+    // Emptied out of the trash here: the agreement goes too, and the account is not asked.
+    repository.remove("b");
+    await run();
     expect(records.all()).toEqual([]);
+    expect(account.forgotten).toEqual(["a"]);
+  });
+
+  it("sends edits nobody else saw back over a marker instead of throwing them away", async () => {
+    const { repository, account, run } = setUp();
+    repository.save(films("d", "Doomed"));
+    await run();
+    repository.save(rename(repository.get("d")!, "Doomed, with my work", 2000));
+    const d = account.kept.get("d")!;
+    account.kept.set("d", { ...d, deleted: true, revision: 2 });
+    await run();
+    expect(repository.get("d")?.title).toBe("Doomed, with my work");
+    expect(repository.get("d")?.deletedAt).toBeNull();
+    expect(account.kept.get("d")).toMatchObject({ deleted: false, title: "Doomed, with my work" });
+  });
+
+  it("makes one copy of theirs however many times ours is refused after it", async () => {
+    const { repository, account, run } = setUp();
+    repository.save(films());
+    await run();
+    // Both sides moved: another device wrote rev 2, and the board here changed.
+    account.holds({ ...films(), title: "Their films" }, 2, "Pixel 7", "theirs");
+    repository.save(rename(repository.get("films")!, "My films", 2000));
+    const keep = account.api.keep;
+    account.api.keep = () => Promise.reject(new ApiFailure({ kind: "tooLarge", detail: null }));
+    await run();
+    await run();
+    await run();
+    const copies = repository.all().filter((board) => board.title === "Their films");
+    expect(copies).toHaveLength(1);
+    account.api.keep = keep;
+    await run();
+    expect(account.kept.get("films")?.title).toBe("My films");
+    expect(repository.all().filter((board) => board.title === "Their films")).toHaveLength(1);
   });
 
   it("counts a step that failed and does not call the run complete", async () => {
     const { repository, records, account, run } = setUp();
     repository.save(films());
     account.api.keep = () => Promise.reject(new ApiFailure({ kind: "unavailable" }));
-    expect(await run()).toEqual({ carried: 0, refused: 1, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 0,
+      refused: 1,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
+    expect(records.lastSyncedAt()).toBeNull();
+  });
+
+  it("names a board the account will go on refusing as it is, and why", async () => {
+    const { repository, records, account, run } = setUp();
+    repository.save(films());
+    repository.save({ ...films(), uid: "more", title: "One too many" });
+    account.api.keep = (uid) =>
+      Promise.reject(
+        new ApiFailure(
+          uid === "films"
+            ? { kind: "tooLarge", detail: "Too many tiers" }
+            : { kind: "tooManyBoards" },
+        ),
+      );
+    const report = await run();
+    expect(report.refused).toBe(2);
+    expect([...report.refusals].sort((a, b) => a.uid.localeCompare(b.uid))).toEqual([
+      { uid: "films", title: "Films", why: "tooLarge" },
+      { uid: "more", title: "One too many", why: "tooManyBoards" },
+    ]);
     expect(records.lastSyncedAt()).toBeNull();
   });
 
@@ -416,7 +642,13 @@ describe("syncBoards", () => {
     repository.save(films());
     account.holds(films(), 2);
     account.kept.set("films", { ...account.kept.get("films")!, deleted: true });
-    expect(await run()).toEqual({ carried: 1, refused: 0, deferred: 0, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 1,
+      refused: 0,
+      refusals: [],
+      deferred: 0,
+      cancelled: false,
+    });
     expect(account.keeps[0]).toMatchObject({ uid: "films", request: { basedOn: 2 } });
     expect(account.kept.get("films")?.deleted).toBe(false);
     expect(records.all()).toHaveLength(1);
@@ -437,13 +669,19 @@ describe("syncBoards", () => {
       repository.save({ ...repository.get("films")!, title: "Mine, edited", editedAt: 2000 });
       return fetch(uid);
     };
-    expect(await run()).toEqual({ carried: 0, refused: 0, deferred: 1, cancelled: false });
+    expect(await run()).toEqual({
+      carried: 0,
+      refused: 0,
+      refusals: [],
+      deferred: 1,
+      cancelled: false,
+    });
     expect(repository.get("films")?.title).toBe("Mine, edited");
     expect(records.all()).toEqual([{ uid: "films", revision: 1, fingerprint }]);
 
     // The next run sees a change on both sides and keeps both.
     account.api.board = fetch;
-    expect(await run()).toMatchObject({ carried: 1, refused: 0, deferred: 0 });
+    expect(await run()).toMatchObject({ carried: 1, refused: 0, refusals: [], deferred: 0 });
     expect(
       repository
         .all()
@@ -465,6 +703,7 @@ describe("syncBoards", () => {
     expect(await run({ stillWanted: () => wanted })).toEqual({
       carried: 0,
       refused: 0,
+      refusals: [],
       deferred: 0,
       cancelled: true,
     });
@@ -490,6 +729,7 @@ describe("syncBoards", () => {
     expect(await run({ fingerprintOf: hooked })).toEqual({
       carried: 0,
       refused: 0,
+      refusals: [],
       deferred: 1,
       cancelled: false,
     });
@@ -508,6 +748,7 @@ describe("syncBoards", () => {
     expect(await run({ fingerprintOf: hooked, stillWanted: () => wanted })).toEqual({
       carried: 0,
       refused: 0,
+      refusals: [],
       deferred: 0,
       cancelled: true,
     });

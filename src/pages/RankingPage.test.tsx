@@ -217,6 +217,19 @@ describe("RankingPage", () => {
     expect(screen.getByRole("region", { name: "Their ranking" })).toHaveTextContent("Climax");
   });
 
+  it("does not call an account's ranking yours once that account signed out of this browser", async () => {
+    writeKept(localStorageStore, ranking.listId, {
+      code: "abcdefgh",
+      claimToken: "t",
+      claimedBy: "signed-out",
+    });
+    load.mockResolvedValue(ranking);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByText(/ranked by you/)).toBeNull();
+    expect(screen.queryByRole("region", { name: "Your ranking" })).toBeNull();
+  });
+
   it("names nobody when the list stands without an author", async () => {
     const items = ranking.snapshot.items.map((item) => ({ ...item, tierIndex: null }));
     load.mockResolvedValue({

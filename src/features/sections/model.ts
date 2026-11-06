@@ -221,6 +221,8 @@ export interface ProposalNotice {
   note: string | null;
 }
 
+const textOr = (value: unknown): string => (typeof value === "string" ? value : "");
+
 /**
  * One's own proposals a moderator declined or merged, which the backend sends
  * their proposer until the notice is dismissed, as the app shows them: a
@@ -234,17 +236,45 @@ export function proposalNoticesFrom(
   return answer.flatMap((stats): ProposalNotice[] => {
     if (stats.proposerUid !== who) return [];
     if (stats.status !== "declined" && stats.status !== "merged") return [];
-    const note = stats.declineNote?.trim() ?? "";
+    // Read as text or nothing: a word that came as anything else, from the
+    // backend or kept on this device, failed every page at its first draw.
+    const note = textOr(stats.declineNote).trim();
+    const into = textOr(stats.status === "merged" ? stats.mergedInto : stats.fileUnder);
     return [
       {
         id: stats.id,
-        name: stats.name?.trim() || stats.id,
+        name: textOr(stats.name).trim() || stats.id,
         status: stats.status,
-        into: (stats.status === "merged" ? stats.mergedInto : stats.fileUnder) ?? OTHER,
+        into: into === "" ? OTHER : into,
         note: stats.status === "declined" && note !== "" ? note : null,
       },
     ];
   });
+}
+
+/** How many proposals' homes are kept past the answers that named them. */
+const MAX_HOMES = 50;
+
+/**
+ * Where one's own proposals keep their lists: a waiting or declined one in
+ * the section it files under, a merged one in the section it went into.
+ * Kept past the last answer that named them: a withdrawn or dismissed
+ * proposal leaves the answer, while a board still names it and its list
+ * stays where it was filed.
+ */
+export function proposalHomesFrom(
+  answer: readonly SectionStats[],
+  who: string,
+  before: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const now: Record<string, string> = {};
+  answer.forEach((stats) => {
+    if (stats.proposerUid !== who || stats.status === "approved") return;
+    now[stats.id] = (stats.status === "merged" ? stats.mergedInto : stats.fileUnder) ?? OTHER;
+  });
+  // The newest last, so the oldest go first once there are too many.
+  const kept = Object.entries(before).filter(([id]) => !(id in now));
+  return Object.fromEntries([...kept, ...Object.entries(now)].slice(-MAX_HOMES));
 }
 
 /** The sections everybody sees: approved ones, without anybody's waiting proposal. */

@@ -206,7 +206,8 @@ const de: Translation = {
     unfollowed: "Du folgst {name} nicht mehr",
     undo: "Rückgängig",
     failed: "Folgen hat nicht geklappt – versuch es noch einmal.",
-    unfollowFailed: "Entfolgen hat nicht geklappt – versuch es noch einmal.",
+    unfollowFailed: "Nicht mehr folgen hat nicht geklappt – versuch es noch einmal.",
+    limit: "Du folgst schon so vielen Leuten, wie es geht. Folge zuerst jemandem nicht mehr.",
     cancel: "Abbrechen",
     signInTitle: "Zum Folgen anmelden",
     signInBody: "Wem du folgst, dessen neue Listen stehen ganz oben in deinem Feed.",
@@ -325,7 +326,14 @@ const de: Translation = {
     more: "Mehr",
     failedOffline:
       "Keine Verbindung. Nichts ist verloren: Die Liste ist auf diesem Gerät sicher. Versuch es erneut, sobald du wieder online bist.",
-    failedBanned: "Du kannst im Moment nicht veröffentlichen.",
+    failedBanned:
+      "Die Moderation hat eine deiner Listen entfernt, und du kannst nicht mehr veröffentlichen.",
+    failedBannedUntil:
+      "Die Moderation hat eine deiner Listen entfernt. Du kannst ab dem {date} wieder veröffentlichen.",
+    failedPictureRefused:
+      "Eines deiner Fotos darf nicht in den öffentlichen Feed. Entferne es oder behalte die Liste privat.",
+    failedCategory:
+      "Diese Kategorie nimmt keine Listen mehr an. Wähle unter Kategorie eine andere.",
     failedTooMany:
       "Dieses Konto hat so viele Listen veröffentlicht, wie es kann. Nimm erst eine unter „Deine öffentlichen Listen“ zurück.",
     failedSignedOut:
@@ -721,6 +729,7 @@ const de: Translation = {
     topicCreated: "„{name}“ erstellt",
     topicRenamed: "Umbenannt in „{name}“",
     topicDeleted: "„{name}“ gelöscht",
+    topicNotEmpty: "„{name}“ hat jetzt Listen und kann nicht gelöscht werden.",
     deleteTopicAsk: "„{name}“ löschen?",
     deleteTopicBody:
       "Wer dem Thema folgt, folgt ihm danach nicht mehr. Das lässt sich nicht rückgängig machen.",
@@ -746,7 +755,7 @@ const de: Translation = {
     recrop: "Neu zuschneiden",
     replace: "Ersetzen",
     recropFailed: "Dieses Bild lässt sich hier nicht neu zuschneiden. Ersetze es stattdessen.",
-    builtInArt: "Ohne Bild zeigt ein integrierter Bereich die eigene Grafik der App.",
+    builtInArt: "Ohne Bild zeigt eine integrierte Rubrik die eigene Grafik der App.",
     sectionCreated: "{name} erstellt",
     sectionSaved: "{name} gespeichert",
     discardChanges: "Änderungen verwerfen?",
@@ -758,7 +767,7 @@ const de: Translation = {
     anonymousNone: "Noch nichts anonym veröffentlicht.",
     searches: "Suchen ohne Ergebnis",
     searchesBody:
-      "Wonach gesucht und nichts gefunden wurde: kein Bereich, kein Thema, keine Liste. Die häufigsten zuerst.",
+      "Wonach gesucht und nichts gefunden wurde: keine Rubrik, kein Thema, keine Liste. Die häufigsten zuerst.",
     searchesNone: "Noch keine leeren Suchen.",
     searchedTimes: { one: "{n}-mal gesucht", other: "{n}-mal gesucht" },
     publishedBy: "von {name}",
@@ -787,7 +796,7 @@ const de: Translation = {
     mergeIntoIt: "Damit zusammenführen",
     mergedIntoTopic: "„{name}“ mit „{topic}“ in „{section}“ zusammengeführt",
     topicMergeRefused:
-      "„{topic}“ kann es gerade nicht aufnehmen: Es ist nicht freigegeben, oder sein Bereich ist ausgeblendet.",
+      "„{topic}“ kann es gerade nicht aufnehmen: Es ist nicht freigegeben, oder seine Rubrik ist ausgeblendet.",
     approvedAsTopic: "„{name}“ als Thema in {section} freigegeben",
     listsMoved: { one: "{n} Liste verschoben", other: "{n} Listen verschoben" },
     lists: "Listen",
@@ -872,9 +881,9 @@ const de: Translation = {
     following: "Gefolgt",
     unfollowed: "Du folgst {name} nicht mehr",
     followFailed: "Folgen fehlgeschlagen. Versuch es noch einmal.",
-    unfollowFailed: "Entfolgen fehlgeschlagen. Versuch es noch einmal.",
+    unfollowFailed: "Nicht mehr folgen fehlgeschlagen. Versuch es noch einmal.",
     followLimit:
-      "Du folgst schon so vielen Rubriken und Themen, wie es geht. Entfolge zuerst ein paar.",
+      "Du folgst schon so vielen Rubriken und Themen, wie es geht. Folge zuerst ein paar nicht mehr.",
     followSignInBody:
       "Wenn du Rubriken und Themen folgst, stehen ihre neuen Listen ganz oben in deinem Feed.",
     undo: "Rückgängig",
@@ -902,7 +911,7 @@ const de: Translation = {
     reasonSection: "In {name}",
     emptyTitle: "Du folgst noch nichts",
     emptyBody:
-      "Folge einem Bereich, einem Thema oder einer Person, und ihre neuen Listen kommen zuerst hier an.",
+      "Folge einer Rubrik, einem Thema oder einer Person, und ihre neuen Listen kommen zuerst hier an.",
     topics: "Themen",
     people: "Personen",
     failedTitle: "Community-Listen konnten nicht geladen werden",
@@ -919,7 +928,7 @@ const de: Translation = {
     group: "{name} · {n}",
     followSection: "{name} folgen",
     emptyHelper:
-      "Tippe bei den Bereichen, die dich interessieren, auf + und folge allen auf einmal. Themen stehen in den Bereichen, Personen in ihrem Profil.",
+      "Tippe bei den Rubriken, die dich interessieren, auf + und folge allen auf einmal. Themen stehen in den Rubriken, Personen in ihrem Profil.",
     pickFollow: "Folgen · {n}",
     pickNone: "Wähle mindestens einen",
     followedFailed: "Konnte nicht laden, wem du folgst.",
@@ -982,10 +991,10 @@ const de: Translation = {
     withdrawFailed: "Zurückziehen hat nicht geklappt. Versuch es noch einmal.",
     withdrawn: "Vorschlag zurückgezogen.",
     alreadyDeclined: "Die Moderation hatte „{name}“ schon abgelehnt.",
-    alreadyMerged: "„{name}“ wurde schon mit einem anderen Bereich zusammengelegt.",
-    alreadyApproved: "„{name}“ wurde inzwischen angenommen. Es ist jetzt ein Bereich.",
+    alreadyMerged: "„{name}“ wurde schon mit einer anderen Rubrik zusammengelegt.",
+    alreadyApproved: "„{name}“ wurde inzwischen angenommen. Es ist jetzt eine Rubrik.",
     noticeDeclined:
-      "„{name}“ wurde nicht als Bereich aufgenommen. Deine Listen bleiben in {section}.",
+      "„{name}“ wurde nicht als Rubrik aufgenommen. Deine Listen bleiben in {section}.",
     noticeMerged: "„{name}“ wurde mit {section} zusammengeführt.",
     noticeDismiss: "Ausblenden",
     noticeDismissFailed: "Ausblenden hat nicht geklappt. Versuch es noch einmal.",
@@ -994,7 +1003,7 @@ const de: Translation = {
     category: "Formen",
     movie: "Film",
     animation: "Animation",
-    sports_esports: "Gamepad",
+    sports_esports: "Controller",
     music_note: "Musik",
     menu_book: "Buch",
     restaurant: "Restaurant",
@@ -1013,7 +1022,7 @@ const de: Translation = {
     mic: "Mikrofon",
     photo_camera: "Kamera",
     sports_basketball: "Basketball",
-    celebration: "Party",
+    celebration: "Feier",
     star: "Stern",
   },
   play: {
@@ -1248,7 +1257,7 @@ const de: Translation = {
       "Drei deiner Themen warten auf einen Moderator. Veröffentliche ohne neues Thema oder warte, bis über eines entschieden ist.",
     topicUnavailable:
       "Dieses Thema wurde abgelehnt, die Liste hat jetzt keins. Wähle ein anderes oder veröffentliche ohne.",
-    findSection: "Bereich suchen",
+    findSection: "Rubrik suchen",
     modeRows: "Zeilen",
     modeRanking: "Rangliste",
     takeDownTitle: "„{title}“ entfernen?",
@@ -1278,11 +1287,15 @@ const de: Translation = {
       "Deine eigenen Bilder liegen in deinem Konto, wo nur du sie siehst. Beim Veröffentlichen werden die Bilder in den Feed kopiert, wo alle sie sehen.",
     offTitle: "Sicherung beenden?",
     offBody:
-      "Deine Boards bleiben in diesem Browser. Die Kopie in deinem Konto wird gelöscht, und ein neues Gerät fängt leer an.",
+      "Deine Boards bleiben in diesem Browser. Die Kopie in deinem Konto wird gelöscht: Auf deinen anderen Geräten landen die Boards im Papierkorb, und ein neues Gerät fängt leer an.",
     offConfirm: "Beenden und löschen",
     offCancel: "Abbrechen",
     stuck: "Seit {when} nicht gesichert. Mit „Jetzt sichern“ versuchst du es noch einmal.",
     stuckNever: "Noch nicht gesichert. Mit „Jetzt sichern“ versuchst du es noch einmal.",
+    refusedTooLarge:
+      "„{title}“ ist zu groß für ein Konto und wird nicht gesichert. Nimm ein paar Karten heraus, dann wird das Board wieder gesichert.",
+    refusedTooMany:
+      "„{title}“ wird nicht gesichert: Ein Konto behält bis zu 200 Boards. Entferne einige endgültig, um Platz zu schaffen.",
     now: "Jetzt sichern",
     backingUp: "Wird gesichert…",
     guestNote:

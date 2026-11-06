@@ -22,6 +22,27 @@ export interface RankingSnapshot {
  */
 export type TierWords = readonly (string | null)[];
 
+/**
+ * The longest tier word the site's functions keep on a ranking. The editors
+ * let a list's tiers carry up to 80, and a reader's ranking keeps whatever
+ * words the list had, so a version started from that placing would otherwise
+ * be refused on every Finish and every Try again.
+ */
+export const RANKING_TIER_WORD_MAX = 40;
+
+/** Each word as the functions will take it: trimmed, and cut short where it is longer. */
+export function tierWordsToSend(words: TierWords): (string | null)[] {
+  return words.map((word) => {
+    if (word === null) return null;
+    const said = word.trim();
+    if (said.length <= RANKING_TIER_WORD_MAX) return said;
+    const cut = said.slice(0, RANKING_TIER_WORD_MAX);
+    // Never half a character: a cut through a surrogate pair drops its first half too.
+    const last = cut.charCodeAt(cut.length - 1);
+    return (last >= 0xd800 && last <= 0xdbff ? cut.slice(0, -1) : cut).trimEnd();
+  });
+}
+
 export interface Ranking {
   code: string;
   listId: string;
@@ -54,7 +75,7 @@ export function keepRanking(
       listId,
       rows: rows.map((row) => [...row]),
       ...(version === undefined ? {} : { version }),
-      ...(tierLabels === undefined ? {} : { tierLabels: [...tierLabels] }),
+      ...(tierLabels === undefined ? {} : { tierLabels: tierWordsToSend(tierLabels) }),
     },
   });
 }
@@ -108,7 +129,7 @@ export function rearrangeRanking(
   return client.request<{ code: string }>("PUT", `/api/rank/${encodeURIComponent(code)}`, {
     body: {
       rows: rows.map((row) => [...row]),
-      ...(tierLabels === undefined ? {} : { tierLabels: [...tierLabels] }),
+      ...(tierLabels === undefined ? {} : { tierLabels: tierWordsToSend(tierLabels) }),
     },
   });
 }

@@ -38,6 +38,14 @@ export async function signIn(page: Page, who: Person): Promise<void> {
     await google.getByText("Add new account").click();
     await google.locator("#email-input").fill(who.email);
     await google.locator("#display-name-input").fill(who.name);
+    // A real Google account always has a picture, and without one the Auth
+    // emulator refuses the site's updateProfile (photoUrl must be a string):
+    // the sign-in then fails before the guest is carried over or its rankings
+    // claimed, so the steps after it would go untested. The site's own icon,
+    // served by the same preview, so the picture loads like a real one.
+    await google
+      .locator("#profile-photo-input")
+      .fill(new URL("/apple-touch-icon.png", page.url()).href);
     await google.locator("#sign-in").click();
   }
   // Signed in once the popup has handed the account over and Sign in is gone.

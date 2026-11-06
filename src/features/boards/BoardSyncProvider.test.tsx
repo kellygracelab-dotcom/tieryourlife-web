@@ -299,6 +299,25 @@ describe("BoardSyncProvider", () => {
     await waitFor(() => expect(keeps.map((keep) => keep.uid)).toEqual(["mine"]));
   });
 
+  it("keeps a moved board's mark within the length the account keeps", async () => {
+    const store = memoryStore();
+    const owners = boardOwners(store);
+    const long = `${"Long title ".repeat(7)}end`.slice(0, 80);
+    owners.arrived({ owner: null, guestUid: "guest" });
+    owners.boards.save(newBoard("mine", long, 1, uids()));
+    owners.arrived({ owner: "me", guestUid: null });
+    const { api } = fakeApi([theirBoard("theirs", long)]);
+    show(signedIn, { children: null, owners, store, api });
+    await screen.findByRole("dialog");
+    await waitFor(() => expect(owners.of("me").get("theirs")).not.toBeNull());
+
+    await userEvent.click(screen.getByRole("button", { name: "Move them into your account" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const moved = owners.of("me").get("mine")?.title ?? "";
+    expect(moved).toHaveLength(80);
+    expect(moved.endsWith(" (from this device)")).toBe(true);
+  });
+
   it("keeps the boards made without an account in this browser on request", async () => {
     const store = memoryStore();
     const owners = boardOwners(store);

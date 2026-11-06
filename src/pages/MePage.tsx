@@ -10,8 +10,10 @@ import { errorOf } from "../api/errors";
 import { boards as site } from "../features/boards/owners";
 import type { BoardsRepository } from "../features/boards/repository";
 import { forgetPublished } from "../features/boards/takeDown";
+import { forgetKept } from "../features/ranking/kept";
 import { sectionName } from "../features/sections/model";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
+import { type KeyValueStore, localStorageStore } from "../lib/storage";
 import { useResource } from "../lib/useResource";
 import { loadMyLists, loadMyRankings, removeRanking, unpublish as unpublishList } from "../lib/api";
 import { currentLocale, fill, plural, strings } from "../strings";
@@ -91,7 +93,7 @@ interface RowProps {
   remove: (entry: Entry) => Promise<void>;
   copy: Copy;
   notify: (notice: SnackbarNotice) => void;
-  /** Taken away: a list's board is its own again at once. */
+  /** Taken away: a list's board is its own again at once, and a ranking leaves this device. */
   onRemoved: (entry: Entry) => void;
   onGone: (entry: Entry) => void;
 }
@@ -238,6 +240,7 @@ interface MineProps {
   copy: Copy;
   store: SectionsStore;
   repository: BoardsRepository;
+  keptStore: KeyValueStore;
 }
 
 function Mine({
@@ -249,6 +252,7 @@ function Mine({
   copy,
   store,
   repository,
+  keptStore,
 }: MineProps) {
   const { sections } = useSections(store);
   // Published into a section of one's own still waiting, a list sits in the
@@ -362,6 +366,7 @@ function Mine({
             notify={setNotice}
             onRemoved={(left) => {
               if (left.kind === "list") forgetPublished(left.list.id, repository, Date.now());
+              else forgetKept(keptStore, left.ranking.listId, left.ranking.code);
             }}
             onGone={(left) => setGone((keys) => [...keys, left.key])}
           />
@@ -384,6 +389,8 @@ interface MePageProps {
   store?: SectionsStore;
   /** The boards one of which may have published a list taken down here. */
   repository?: BoardsRepository;
+  /** Where this device keeps the rankings it finished, one per list. */
+  keptStore?: KeyValueStore;
 }
 
 export function MePage({
@@ -394,6 +401,7 @@ export function MePage({
   copy = (text) => navigator.clipboard.writeText(text),
   store = sectionsStore,
   repository = site,
+  keptStore = localStorageStore,
 }: MePageProps) {
   usePageTitle(strings.me.lists, { inBar: false });
   const { account } = useSession();
@@ -418,6 +426,7 @@ export function MePage({
           copy={copy}
           store={store}
           repository={repository}
+          keptStore={keptStore}
         />
       )}
     </section>

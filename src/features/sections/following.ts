@@ -76,11 +76,16 @@ export function reasonFor(
 
 /**
  * What a refused follow or unfollow of a section or topic says. At the
- * ceiling another try is refused the same way, so it says what to do instead.
+ * ceiling another try is refused the same way, so it says what to do instead;
+ * people have a ceiling of their own, said in `limit`.
  */
-export const followRefusal = (error: ApiError, following: boolean): string =>
+export const followRefusal = (
+  error: ApiError,
+  following: boolean,
+  limit: string = strings.sections.followLimit,
+): string =>
   error.kind === "tooManyFollowing"
-    ? strings.sections.followLimit
+    ? limit
     : following
       ? strings.sections.followFailed
       : strings.sections.unfollowFailed;

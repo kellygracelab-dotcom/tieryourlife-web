@@ -3,7 +3,7 @@ import { planSync, type RemoteBoard, type SyncedBoard, type SyncStep } from "./s
 
 // The phone's own cases (`BoardSyncPlanTest`), one for one.
 const board = "board-1";
-const local = (fingerprint = "aaa") => [{ uid: board, fingerprint }];
+const local = (fingerprint = "aaa", inTrash = false) => [{ uid: board, fingerprint, inTrash }];
 const remote = (
   revision = 3,
   deleted = false,
@@ -47,11 +47,30 @@ describe("planSync", () => {
       [[], remote(), synced()],
     ],
     [
-      "a board thrown away in the account goes here too",
-      [{ kind: "discardLocal", uid: board }],
-      [local(), remote(3, true), synced()],
+      "a board thrown away in the account goes to the trash here, never further",
+      [{ kind: "trashLocal", uid: board, revision: 4 }],
+      [local(), remote(4, true), synced(3)],
     ],
-    ["a board already gone from both sides is left alone", [], [[], remote(3, true), synced()]],
+    [
+      "a board already in the trash for this marker is left there",
+      [],
+      [local("aaa", true), remote(4, true), synced(4, "aaa")],
+    ],
+    [
+      "a board changed here since the agreement goes back up over the marker, edits and all",
+      [{ kind: "revive", uid: board, basedOn: 4 }],
+      [local("bbb"), remote(4, true), synced(3)],
+    ],
+    [
+      "a board in the trash here does not come back for its edits",
+      [{ kind: "trashLocal", uid: board, revision: 4 }],
+      [local("bbb", true), remote(4, true), synced(3)],
+    ],
+    [
+      "an agreement about a board gone from both sides is let go",
+      [{ kind: "letGo", uid: board }],
+      [[], remote(3, true), synced()],
+    ],
     [
       "a marker in the account with no agreement here brings the board back over it",
       [{ kind: "revive", uid: board, basedOn: 3 }],
@@ -91,8 +110,8 @@ describe("planSync", () => {
   it("gives every board its own step", () => {
     const steps = planSync(
       [
-        { uid: "mine", fingerprint: "aaa" },
-        { uid: "edited", fingerprint: "ccc" },
+        { uid: "mine", fingerprint: "aaa", inTrash: false },
+        { uid: "edited", fingerprint: "ccc", inTrash: false },
       ],
       [
         { uid: "edited", revision: 1, deleted: false, fingerprint: null },

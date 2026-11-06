@@ -56,6 +56,16 @@ type Deciding =
 
 type Decision = { kind: "keep" } | { kind: "remove"; ban: BanLength | null };
 
+// Who wrote an anonymous list is not the moderator's to know
+// (docs/design-spec-walk-3.md, E2). The proxy leaves the name out for them;
+// the owner's queue still has it and says whose, as the list of lists does.
+function authorOf(item: QueuedList): string {
+  if (item.anonymous !== true) return item.authorName || strings.admin.anonymousAuthor;
+  return item.authorName
+    ? fill(strings.admin.anonymousOf, { name: item.authorName })
+    : strings.admin.anonymousAuthor;
+}
+
 function QueueCard({
   item,
   blur,
@@ -77,6 +87,7 @@ function QueueCard({
   const acting = deciding.status === "acting";
   const choosing = deciding.status === "choosingBan" || deciding.status === "confirmForever";
   const counts = reasonCounts(item.reasons);
+  const author = authorOf(item);
   const title = useRef<HTMLHeadingElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const takeDownButton = useRef<HTMLButtonElement>(null);
@@ -113,7 +124,7 @@ function QueueCard({
       takeDown(item.listId, ban),
       ban === null
         ? strings.mod.takenDown
-        : fill(strings.mod.takenDownBanned, { name: item.authorName, length: BANNED_FOR[ban] }),
+        : fill(strings.mod.takenDownBanned, { name: author, length: BANNED_FOR[ban] }),
       { kind: "remove", ban },
     );
 
@@ -162,7 +173,7 @@ function QueueCard({
           <h3 ref={title} className="queue__title" tabIndex={-1}>
             {item.listTitle}
           </h3>
-          <p className="queue__byline">{fill(strings.card.by, { name: item.authorName })}</p>
+          <p className="queue__byline">{fill(strings.card.by, { name: author })}</p>
           <div className="queue__pills">
             <span className="queue__pill queue__pill--count">
               {plural(strings.mod.reportCount, item.reportCount)}
@@ -258,7 +269,7 @@ function QueueCard({
       </div>
       {deciding.status === "confirmForever" && (
         <ForeverDialog
-          name={item.authorName}
+          name={author}
           onCancel={() => setDeciding({ status: "choosingBan", ban: "forever" })}
           onConfirm={() => remove("forever")}
         />

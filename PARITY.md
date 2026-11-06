@@ -167,15 +167,22 @@ code is `src/features/play`.
   `ff6e0e8`: `CommunityApi.kt` calls neither. The site follows the app, not
   the proxy, so they stay out until the app ships them; nothing on the site
   needs a 404 from `/lists/topics` any more.
-- Switching the back-up off leaves a deleted marker for every board in the
-  account, on the phone and on the site alike. The phone's plan discards a
-  local board whose marker it meets (`BoardSyncPlan.kt`, `remote.deleted`);
-  the site clears its agreements when the back-up goes off, so for it a
-  marker with no agreement means "sent once and withdrawn", and the board
-  goes up again over the marker (`revive` in `syncPlan.ts`, a `PUT` with
-  `basedOn` the marker's revision, which the proxy takes). The one deliberate
-  difference from the phone's plan. Whether the phone discards its own boards
-  after off → on is the app's to look at.
+- A deleted marker in the account, left by emptying the trash or by switching
+  the back-up off on another device, is read the same way on the phone and on
+  the site since 07.11.2026 (QA W2, W4, A3, A7; agreed between both chats):
+  1. no agreement here: the board goes up again over the marker (`revive`);
+  2. agreed, and changed here since, and not in the trash: it goes up again,
+     so edits nobody else saw are not lost (`revive`);
+  3. agreed and unchanged: into this device's trash, and the agreement moves
+     to the marker's revision (`trashLocal`), so nothing brings it back by
+     itself; restoring it from the trash sends it up again;
+  4. already in the trash for this marker: nothing;
+  5. an agreement about a board gone here and in the account is dropped
+     (`letGo`).
+     Nothing is removed for good by a marker any more; the person empties the
+     trash. A copy of the account's version made for a conflict is written
+     down as seen before ours goes up, so a refused write makes no second copy
+     (QA W3).
 - `/boards` keeps `displayMode` as `WRAP` or `RANKED` only; the app's and
   the site's `HORIZONTAL_SCROLL` and `FLAT_RANKED` are stored as `WRAP`, so a
   board shown as a single strip or a ranked list opens as rows on another

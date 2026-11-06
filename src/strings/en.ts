@@ -200,6 +200,7 @@ export const en = {
     undo: "Undo",
     failed: "Couldn’t follow — try again.",
     unfollowFailed: "Couldn’t unfollow — try again.",
+    limit: "You follow as many people as you can. Unfollow someone first.",
     cancel: "Cancel",
     signInTitle: "Sign in to follow",
     signInBody: "Following keeps new lists from people you like at the top of your feed.",
@@ -317,7 +318,11 @@ export const en = {
     more: "More",
     failedOffline:
       "No connection. Nothing was lost: the list is safe on this device. Try again once you are back online.",
-    failedBanned: "You cannot publish at the moment.",
+    failedBanned: "A moderator took down one of your lists, and you can no longer publish.",
+    failedBannedUntil: "A moderator took down one of your lists. You can publish again on {date}.",
+    failedPictureRefused:
+      "One of your photos cannot go in the public feed. Remove it, or keep this list private.",
+    failedCategory: "This category no longer takes lists. Choose another one under Category.",
     failedTooMany:
       "This account has published as many lists as it can. Take one down in Your public lists first.",
     failedSignedOut: "Publishing needs an account. Sign in and try again.",
@@ -676,6 +681,7 @@ export const en = {
     topicCreated: "{name} created",
     topicRenamed: "Renamed to {name}",
     topicDeleted: "{name} deleted",
+    topicNotEmpty: "{name} has lists now, so it can’t be deleted.",
     deleteTopicAsk: "Delete {name}?",
     deleteTopicBody: "Anyone following it stops following it. This can’t be undone.",
     people: { one: "{n} person", other: "{n} people" },
@@ -1210,11 +1216,15 @@ export const en = {
       "Your own pictures go to your account, where only you can see them. Publishing a list copies its pictures into the feed, where anyone can.",
     offTitle: "Stop backing up?",
     offBody:
-      "Your boards stay in this browser. The copy in your account is deleted, and a new device will start empty.",
+      "Your boards stay in this browser. The copy in your account is deleted: on your other devices the boards move to the trash, and a new device will start empty.",
     offConfirm: "Stop and delete",
     offCancel: "Cancel",
     stuck: "Not backed up since {when}. Back up now to try again.",
     stuckNever: "Not backed up yet. Back up now to try again.",
+    refusedTooLarge:
+      "“{title}” is too big for an account to keep, so it is not backed up. Take some cards off it and it goes up again.",
+    refusedTooMany:
+      "“{title}” is not backed up: an account keeps up to 200 boards. Removing some for good makes room.",
     now: "Back up now",
     backingUp: "Backing up…",
     guestNote:

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { errorOf, type ApiError } from "../../api/errors";
@@ -16,7 +16,7 @@ import { useModal } from "../../ui/useModal";
 import { failureText } from "../editor/failureText";
 import type { Section } from "../sections/model";
 import {
-  BOARD_LIMITS,
+  MAX_RANKED_TIERS,
   cleanTopicName,
   DISPLAY_MODES,
   isBehind,
@@ -31,6 +31,7 @@ import {
   setRanking,
   setTopic,
   settleTopic,
+  topicSent,
   TOPIC_NAME,
   type Board,
   type BoardTopic,
@@ -65,6 +66,8 @@ interface BoardSettingsProps {
   keep: (board: Board) => void;
   /** The sections as the site holds them, the person's own waiting ones among them. */
   sections: readonly Section[];
+  /** Where the person's own proposals no longer waiting keep their lists, by id. */
+  proposalHomes?: Readonly<Record<string, string>>;
   onCategory: (category: string) => void;
   /** Propose a section, from the end of the picker: the page gives the sheet's place to the form. */
   onPropose: () => void;
@@ -142,10 +145,12 @@ function RowButton({
   open,
   disabled = false,
   onClick,
+  ref,
 }: {
   icon: ReactNode;
   title: string;
   sub: string;
+  ref?: Ref<HTMLButtonElement>;
   /** Whether the picker under the row is open; undefined for a row with nothing under it. */
   open?: boolean;
   disabled?: boolean;
@@ -153,6 +158,7 @@ function RowButton({
 }) {
   return (
     <button
+      ref={ref}
       type="button"
       className="sheet-row sheet-row--button"
       aria-expanded={open}
@@ -188,6 +194,7 @@ export function BoardSettings({
   latest,
   keep,
   sections,
+  proposalHomes = {},
   onCategory,
   onPropose,
   onMode,
@@ -219,6 +226,15 @@ export function BoardSettings({
     ? `/l/${encodeURIComponent(board.publishedId ?? board.rankingOf ?? "")}`
     : null;
   const toggle = (which: Open) => setOpen(open === which ? "none" : which);
+  // Choosing in a picker closes it and takes away the radio that had the
+  // focus, which then fell to the page inside the open sheet: it goes back to
+  // the picker's row, now saying what was chosen, as a menu hands it back.
+  const categoryRow = useRef<HTMLButtonElement>(null);
+  const topicRow = useRef<HTMLButtonElement>(null);
+  const closePicker = (row: { current: HTMLButtonElement | null }) => {
+    setOpen("none");
+    row.current?.focus();
+  };
 
   // A topic of one's own that waits is asked about, as the phone asks when its
   // picker opens; the answer lands only if the board still has that topic.
@@ -232,6 +248,20 @@ export function BoardSettings({
     });
   };
 
+  // The list's topic as the backend kept it, named, while the board still has none of its own.
+  const learn = (topicId: string) => {
+    findTopic(topicId).then(
+      (topic) => {
+        const current = latest();
+        if (topic.status !== "approved" || current.topic !== null || current.topicOff === true) {
+          return;
+        }
+        keep(settleTopic(current, { id: topic.id, name: topic.name }));
+      },
+      () => undefined,
+    );
+  };
+
   const send = async (what: "published" | "updated") => {
     const current = latest();
     const request = publishRequestOf(current);
@@ -242,10 +272,16 @@ export function BoardSettings({
       // The board's uid goes with every send, as the phone's does: a first
       // publish lost to a reload gets its list back, and a replace keeps it.
       const outgoing = { ...request, boardUid: current.uid };
-      const answer =
+      let answer =
         what === "updated" && current.publishedId !== null
           ? await publishing.republish(current.publishedId, outgoing)
           : await publishing.publish(outgoing);
+      // Out already: an earlier publish made the list and its answer was lost
+      // on the way. Nothing of this one was written, so the board goes again
+      // over that list's link, or the edits since would never reach it.
+      if (answer.existing === true && answer.ranking !== true) {
+        answer = await publishing.republish(answer.id, outgoing);
+      }
       const name = account?.kind === "signedIn" ? account.displayName : null;
       const after = latest();
       // The cards as they came from the list they were saved from: the
@@ -259,7 +295,10 @@ export function BoardSettings({
       const sent =
         ranking || after.topic !== current.topic
           ? out
-          : settleTopic(out, sentTopic(current.topic, answer.topicId));
+          : settleTopic(
+              current.topicOff === true ? topicSent(out) : out,
+              sentTopic(current.topic, answer.topicId),
+            );
       // A change made while the request was on its way was not in it: the
       // published copy is behind it, and Update still has it to send.
       keep(
@@ -270,6 +309,10 @@ export function BoardSettings({
       onPublished(ranking ? "ranking" : what, answer.id);
       // The backend may have filed it under an approved topic of that name.
       if (sent.topic !== current.topic) settle(sent.topic);
+      // Said nothing of a topic, the list kept its own, a moderator's move
+      // into one too: the board learns it, as the published copy has it.
+      const kept = answer.topicId;
+      if (!ranking && sent.topic === null && sent.topicOff !== true && kept) learn(kept);
     } catch (reason: unknown) {
       const error = errorOf(reason);
       // Taken down elsewhere (its page, /me, the phone): the board is no longer
@@ -430,7 +473,7 @@ export function BoardSettings({
   const [naming, setNaming] = useState("");
   const pickTopic = (topic: BoardTopic | null) => {
     keep(setTopic(latest(), topic, now()));
-    setOpen("none");
+    closePicker(topicRow);
     setNaming("");
   };
   const proposed = cleanTopicName(naming);
@@ -477,7 +520,7 @@ export function BoardSettings({
               icon={<Icon name="add" />}
               title={strings.boards.newTier}
               sub={plural(strings.boards.tierCount, tierCount)}
-              disabled={tierCount >= BOARD_LIMITS.tiers}
+              disabled={tierCount >= MAX_RANKED_TIERS}
               onClick={onNewTier}
             />
           </li>
@@ -588,12 +631,13 @@ export function BoardSettings({
 
           <li>
             <RowButton
+              ref={categoryRow}
               icon={<Icon name="category" />}
               title={strings.boards.category}
               sub={
                 category === null
                   ? strings.boards.categoryNone
-                  : filedUnder(category, sections, uid)
+                  : filedUnder(category, sections, uid, proposalHomes)
               }
               open={open === "category"}
               onClick={() => toggle("category")}
@@ -630,7 +674,7 @@ export function BoardSettings({
                       className="sheet-pick__option"
                       onClick={() => {
                         onCategory(section.id);
-                        setOpen("none");
+                        closePicker(categoryRow);
                         setFind("");
                       }}
                     >
@@ -662,6 +706,7 @@ export function BoardSettings({
 
           <li>
             <RowButton
+              ref={topicRow}
               icon={<Icon name="label" />}
               title={strings.boards.topic}
               sub={topicSub(board.topic)}
@@ -696,7 +741,7 @@ export function BoardSettings({
                       aria-checked="true"
                       tabIndex={0}
                       className="sheet-pick__option"
-                      onClick={() => setOpen("none")}
+                      onClick={() => closePicker(topicRow)}
                     >
                       <span className="sheet-pick__name">
                         {own.name}

@@ -15,6 +15,8 @@ export type ApiError =
   | { kind: "tooManyTopics" }
   /** At the ceiling of followed sections or topics (200): one has to go first. */
   | { kind: "tooManyFollowing" }
+  /** An account keeps so many boards, and this would be one more. */
+  | { kind: "tooManyBoards" }
   | { kind: "cursorGone" }
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
   | { kind: "conflict"; board?: unknown; status?: string }
@@ -30,6 +32,8 @@ export type ApiError =
       code: string | null;
       id?: string;
       why?: string;
+      /** Which field a plain INVALID is about, as the backend's `detail` names it: `category`… */
+      field?: string;
       /** The section of the topic a name is taken by, when the backend says. */
       section?: string;
     }
@@ -55,6 +59,7 @@ interface ErrorBody {
   code?: unknown;
   id?: unknown;
   why?: unknown;
+  detail?: unknown;
   section?: unknown;
   until?: unknown;
   because?: unknown;
@@ -87,12 +92,14 @@ export function parseApiError(status: number, text: string): ApiError {
     case 400: {
       const id = stringOrNull(body.id);
       const why = stringOrNull(body.why);
+      const field = stringOrNull(body.detail);
       return {
         kind: "invalid",
         detail: stringOrNull(body.error),
         code,
         ...(id === null ? {} : { id }),
         ...(why === null ? {} : { why }),
+        ...(field === null ? {} : { field }),
       };
     }
     // An unreadable 401 is about the person's sign-in, never about the
@@ -110,6 +117,7 @@ export function parseApiError(status: number, text: string): ApiError {
       if (code === "TOO_MANY_LISTS") return { kind: "tooManyLists" };
       if (code === "TOO_MANY_PENDING_TOPICS") return { kind: "tooManyTopics" };
       if (code === "TOO_MANY_FOLLOWING") return { kind: "tooManyFollowing" };
+      if (code === "TOO_MANY_BOARDS") return { kind: "tooManyBoards" };
       if (code === "CURSOR_GONE") return { kind: "cursorGone" };
       // A topic's name clashes with 409 where a section's does with 400: one refusal to the form.
       if (code === "NAME_TAKEN") {

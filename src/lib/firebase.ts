@@ -31,18 +31,24 @@ let auth: Auth | undefined;
 let appCheck: AppCheck | null | undefined;
 let storageOnEmulator = false;
 
+// The smokes give a key Google refuses, so a request no fixture answers fails
+// instead of making a real guest in the live project.
+const projectConfig = import.meta.env.VITE_FIREBASE_API_KEY
+  ? { ...firebaseConfig, apiKey: import.meta.env.VITE_FIREBASE_API_KEY }
+  : firebaseConfig;
+
 export function getFirebaseApp(): FirebaseApp {
   app ??=
     getApps()[0] ??
     initializeApp(
       import.meta.env.VITE_EMULATORS === "1"
         ? {
-            ...firebaseConfig,
+            ...projectConfig,
             projectId: EMULATOR_PROJECT,
             authDomain: `${EMULATOR_PROJECT}.firebaseapp.com`,
             storageBucket: `${EMULATOR_PROJECT}.appspot.com`,
           }
-        : firebaseConfig,
+        : projectConfig,
     );
   return app;
 }
