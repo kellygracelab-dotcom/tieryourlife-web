@@ -81,7 +81,8 @@ const request = (
   basedOn: number | null,
   deviceName: string | null,
 ): KeepBoardRequest => ({
-  basedOn,
+  // A first write carries no basedOn at all, not null (CONTRACT, boards).
+  ...(basedOn === null ? {} : { basedOn }),
   deviceName,
   fingerprint,
   title: board.title,

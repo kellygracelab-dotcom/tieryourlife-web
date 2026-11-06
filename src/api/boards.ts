@@ -87,7 +87,8 @@ export interface KeptBoard {
 
 /** A write says what it was based on; the account refuses one that has moved on since, handing the stored board back. */
 export interface KeepBoardRequest {
-  basedOn: number | null;
+  /** The revision this write was made on; absent on a first write, as CONTRACT says. */
+  basedOn?: number;
   deviceName: string | null;
   fingerprint: string;
   title: string;
