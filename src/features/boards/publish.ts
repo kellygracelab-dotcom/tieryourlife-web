@@ -6,6 +6,7 @@ import {
   creditOf,
   itemsIn,
   liveItems,
+  MAX_RANKED_TIERS,
   newBoard,
   poolTier,
   rankedTiers,
@@ -125,7 +126,11 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
   const base = newBoard(nextUid(), makings.title, now, nextUid);
   const pool = poolTier(base);
   if (pool === null) return base;
-  const tiers = makings.tiers.map((tier, position) => ({
+  // A board holds the pool besides its ranked tiers, and the account refuses
+  // one tier more than that on every back-up: an older list ranking twenty
+  // would never be kept. The tiers past the last a board may rank give their
+  // cards, in order, to that last one.
+  const tiers = makings.tiers.slice(0, MAX_RANKED_TIERS).map((tier, position) => ({
     uid: nextUid(),
     position,
     label: tier.label,
@@ -135,11 +140,15 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
     isPool: false,
   }));
   const placed = new Map<number, { tierUid: string; position: number }>();
+  const filled = new Map<string, number>();
   (makings.rows ?? []).forEach((row, tierIndex) => {
-    const tier = tiers[tierIndex];
-    if (tier === undefined) return;
-    row.forEach((cardIndex, position) => {
-      if (!placed.has(cardIndex)) placed.set(cardIndex, { tierUid: tier.uid, position });
+    const tier = tiers[Math.min(tierIndex, MAX_RANKED_TIERS - 1)];
+    if (tier === undefined || tierIndex >= makings.tiers.length) return;
+    row.forEach((cardIndex) => {
+      if (placed.has(cardIndex)) return;
+      const position = filled.get(tier.uid) ?? 0;
+      placed.set(cardIndex, { tierUid: tier.uid, position });
+      filled.set(tier.uid, position + 1);
     });
   });
   let inPool = 0;

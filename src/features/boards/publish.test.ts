@@ -5,6 +5,7 @@ import {
   arrangeItems,
   itemsIn,
   liveItems,
+  MAX_RANKED_TIERS,
   newBoard,
   poolTier,
   rankedTiers,
@@ -229,6 +230,35 @@ describe("a published list as a board of one's own", () => {
     expect(publishRequestOf(board)?.takenFrom).toBe("abc");
     // A board of one's own names no list it came from.
     expect(publishRequestOf({ ...board, takenFrom: null })).not.toHaveProperty("takenFrom");
+  });
+
+  it("folds every ranked tier past the nineteenth into the nineteenth, so the account keeps it", () => {
+    // An older list may rank twenty tiers; with the pool that is one more than a board may hold.
+    const twenty: PublishedList = {
+      ...list,
+      tiers: Array.from({ length: 20 }, (_, n) => ({
+        label: `T${n + 1}`,
+        caption: null,
+        colorLight: "#111111",
+        colorDark: "#eeeeee",
+      })),
+    };
+    const rows = Array.from({ length: 20 }, (): number[] => []);
+    rows[18] = [1];
+    rows[19] = [2, 0];
+    const board = boardFromList(twenty, rows, 5, uids());
+    expect(board.tiers).toHaveLength(MAX_RANKED_TIERS + 1);
+    const ranked = rankedTiers(board);
+    expect(ranked.map((tier) => tier.label)).toEqual(
+      twenty.tiers.slice(0, MAX_RANKED_TIERS).map((tier) => tier.label),
+    );
+    // The last tier keeps its own cards first, then the folded ones in their order.
+    expect(itemsIn(board, ranked[18]!.uid).map((item) => item.title)).toEqual([
+      "The Witch",
+      "Climax",
+      "Ex Machina",
+    ]);
+    expect(poolTier(board)?.position).toBe(MAX_RANKED_TIERS);
   });
 
   it("leaves every card in the pool when no arrangement is wanted", () => {
