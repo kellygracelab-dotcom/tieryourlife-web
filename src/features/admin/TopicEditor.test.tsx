@@ -124,6 +124,18 @@ describe("TopicEditor", () => {
     expect(onDone).toHaveBeenCalledWith(expect.objectContaining({ name: "Soulslikes" }));
   });
 
+  it("takes a name of up to forty characters, as the backend and the app do", async () => {
+    const long = "Metroidvanias with a map worth drawing";
+    const { send } = edit(topic());
+    await userEvent.clear(nameField());
+    await userEvent.type(nameField(), `${long} and more`);
+    expect(nameField()).toHaveAttribute("maxLength", "40");
+    expect(nameField()).toHaveValue(`${long} a`);
+    expect(screen.getByText("40/40")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(send).toHaveBeenCalledWith({ name: `${long} a` });
+  });
+
   it("removes a topic's picture, after which it wears its section's colours", async () => {
     const { send } = edit(topic({ pictureUrl: "https://pictures.test/indies.webp" }));
     expect(screen.getByRole("dialog", { name: "Edit topic" })).toBeInTheDocument();
