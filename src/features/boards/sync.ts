@@ -385,15 +385,18 @@ async function trashHere(
 }
 
 /**
- * Writes down that this device and the account agree about a board, only
- * while the board is in the browser's storage. One the browser refused is
- * held for the visit and gone after a reload, and an agreement about it would
- * then read as thrown away here: the next run would take it out of the
- * account and off every other device. Without the record, the next visit
- * brings the account's copy down instead, or its newer version of an edit.
+ * Writes down that this device and the account agree about a board. One the
+ * browser refused is held for the visit and gone after a reload, and an
+ * agreement on the disk about it would then read as thrown away here: the
+ * next run would take it out of the account and off every other device. So
+ * its agreement is kept for the visit only. Without one at all, each edit to
+ * it would read as changed on both sides and leave one more copy in the
+ * account every run. After a reload, the next visit brings the account's
+ * copy down instead, or its newer version of an edit.
  */
 function agree(deps: SyncDeps, record: SyncedBoard): void {
   if (deps.repository.kept(record.uid)) deps.records.remember(record);
+  else if (deps.repository.get(record.uid) !== null) deps.records.remember(record, true);
 }
 
 /** A kept board as one of ours: the account's fields, and this device's own set afresh. */
@@ -459,7 +462,7 @@ async function takeOver(
     takenFrom: latest.takenFrom,
     rankingOf: latest.rankingOf,
   });
-  deps.records.remember({ uid: board.uid, revision: incoming.revision, fingerprint });
+  agree(deps, { uid: board.uid, revision: incoming.revision, fingerprint });
   return "carried";
 }
 
@@ -472,13 +475,15 @@ export class StorageRefused extends Error {
 }
 
 /**
- * Writes a board the account sent, or stops the run. A board that was never
- * kept must not be written down as agreed on: the next run would read it as
- * thrown away here and take it out of the account, and then out of every
- * other device.
+ * Writes a board the account sent, or stops the run when the browser has
+ * nowhere to put it at all. One held for the visit goes on: its agreement is
+ * kept for the visit too, and stopping here would leave a copy made from
+ * theirs with nothing written down, so the next run made one more.
  */
 function keep(deps: SyncDeps, board: Board): void {
-  if (!deps.repository.save(board)) throw new StorageRefused();
+  if (!deps.repository.save(board) && deps.repository.get(board.uid) === null) {
+    throw new StorageRefused();
+  }
 }
 
 /** The same board, field for field: the store hands out a fresh object every time. */
@@ -507,7 +512,7 @@ async function adopt(
   check(deps);
   keep(deps, board);
   if (fingerprint === null) return;
-  deps.records.remember({ uid: board.uid, revision: incoming.revision, fingerprint });
+  agree(deps, { uid: board.uid, revision: incoming.revision, fingerprint });
 }
 
 /** Every uid new, so the copy and the original never meet; where it came from written on it; not the published list. */
