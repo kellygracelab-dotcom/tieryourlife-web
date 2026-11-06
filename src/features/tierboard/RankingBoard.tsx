@@ -19,7 +19,7 @@ import type { ApiError } from "../../api/errors";
 import type { SavedRanking } from "../../api/rank";
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import { useSession } from "../../app/session";
-import { keepRanking, noteTake, rearrangeRanking } from "../../lib/api";
+import { keepRanking, rearrangeRanking } from "../../lib/api";
 import { isEditorialAuthor } from "../../lib/editorial";
 import { holds } from "../../lib/locale";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
@@ -129,7 +129,6 @@ interface RankingBoardProps {
   keep?: Keep;
   /** Changes a ranking already kept, behind the same link. */
   rearrange?: (code: string, rows: Rows, tierLabels?: TierLabels) => Promise<unknown>;
-  take?: (listId: string) => Promise<void>;
   share?: Share;
   edit?: EditMode;
   /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
@@ -426,7 +425,6 @@ export function RankingBoard({
   device = store,
   keep = keepRanking,
   rearrange = rearrangeRanking,
-  take = noteTake,
   share = downloadShare,
   edit,
   strip = false,
@@ -655,7 +653,7 @@ export function RankingBoard({
         if (guest && kept !== before) setOffer("open");
         // Kept by its /r/ link only: the list's public Rankings name the
         // reader, so a placing joins them only when asked, as in the app.
-        void take(list.id);
+        // Nor is it a take: the app counts one on Save to my lists only.
       },
       (reason: unknown) => setFinish({ status: "failed", error: errorOf(reason) }),
     );

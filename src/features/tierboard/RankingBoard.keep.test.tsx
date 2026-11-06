@@ -59,7 +59,6 @@ const finished = async (account: Session["account"], signIn: () => Promise<SignI
           list={list}
           store={memoryStore()}
           keep={async () => ({ code: "abcdefgh", claimToken: "secret" })}
-          take={async () => undefined}
         />
       </MemoryRouter>
     </SessionContext.Provider>,
