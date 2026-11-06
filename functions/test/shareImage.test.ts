@@ -8,7 +8,9 @@ import {
   fetchPicture,
   fetchPictures,
   isPublicAddress,
+  pinnedFetch,
   PICTURE_MAX_BYTES,
+  publicOnlyLookup,
   renderShareImage,
   renderShareSvg,
   sendShareImage,
@@ -193,7 +195,17 @@ describe("fetchPicture", () => {
   });
 
   it("tells public addresses from private ones", () => {
-    for (const address of ["8.8.8.8", "93.184.216.34", "2606:4700::1111", "172.32.0.1"]) {
+    for (const address of [
+      "8.8.8.8",
+      "93.184.216.34",
+      "2606:4700::1111",
+      "172.32.0.1",
+      // A picture CDN's address: only 192.0.0.0/24 and 192.0.2.0/24 of 192.0/16 are reserved.
+      "192.0.78.9",
+      "2a00:1450:4001:80b::200e",
+      // 6to4 around a public IPv4 address.
+      "2002:808:808::1",
+    ]) {
       assert.equal(isPublicAddress(address), true, address);
     }
     for (const address of [
@@ -211,9 +223,72 @@ describe("fetchPicture", () => {
       "fe80::1",
       "::ffff:127.0.0.1",
       "::ffff:7f00:1",
+      "192.0.0.8",
+      "192.0.2.1",
+      "198.18.0.1",
+      "198.51.100.7",
+      "203.0.113.9",
+      // IPv4-compatible, in both spellings.
+      "::127.0.0.1",
+      "::a9fe:a9fe",
+      "fec0::1",
+      "feff::1",
+      "64:ff9b::a00:1",
+      "64:ff9b::10.0.0.1",
+      "64:ff9b:1::1",
+      "100::1",
+      "2001:db8::1",
+      "2001:0:4136:e378::1",
+      // 6to4 around 10.0.0.1 and 169.254.169.254.
+      "2002:a00:1::1",
+      "2002:a9fe:a9fe::1",
       "not an address",
     ]) {
       assert.equal(isPublicAddress(address), false, address);
+    }
+  });
+
+  it("connects only to the addresses its own lookup found public, so a rebound name gets nowhere", async () => {
+    // The name passed mayFetchPicture's lookup; the connection's lookup now
+    // answers with the server's own loopback, as a rebinding name would.
+    const asked: string[] = [];
+    const rebound = publicOnlyLookup(async (host) => {
+      asked.push(host);
+      return [{ address: "127.0.0.1", family: 4 }];
+    });
+    await assert.rejects(pinnedFetch(rebound)("https://rebind.test/a.jpg"), {
+      code: "ENOTPUBLIC",
+    });
+    assert.deepEqual(asked, ["rebind.test"]);
+  });
+
+  it("hands the connection the public addresses it found, one or all as asked", async () => {
+    const lookupImpl = publicOnlyLookup(async () => [
+      { address: "93.184.216.34", family: 4 },
+      { address: "2606:4700::1111", family: 6 },
+    ]);
+    const answer = (options: { all?: boolean }) =>
+      new Promise<unknown[]>((done) =>
+        lookupImpl("a.test", options as never, (...args: unknown[]) => done(args)),
+      );
+    assert.deepEqual(await answer({}), [null, "93.184.216.34", 4]);
+    const [error, all] = await answer({ all: true });
+    assert.equal(error, null);
+    assert.equal((all as unknown[]).length, 2);
+    // Nothing found, or one private address among public ones, refuses them all.
+    for (const found of [
+      [],
+      [
+        { address: "93.184.216.34", family: 4 },
+        { address: "169.254.169.254", family: 4 },
+      ],
+    ]) {
+      const [refused] = await new Promise<unknown[]>((done) =>
+        publicOnlyLookup(async () => found)("a.test", {} as never, (...args: unknown[]) =>
+          done(args),
+        ),
+      );
+      assert.equal((refused as { code?: string }).code, "ENOTPUBLIC", JSON.stringify(found));
     }
   });
 
