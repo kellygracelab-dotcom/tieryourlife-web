@@ -447,6 +447,11 @@ const tr: Translation = {
     withdraw: "Geri çek",
     withdrawTitle: "Sıralamanız geri çekilsin mi?",
     withdrawBody: "Bu listenin sıralamalarından kalkar.",
+    showMine: "Sıralamamı başkalarına göster",
+    signInToShow: "Sıralamanızı göstermek için oturum açın",
+    shown: "Sıralamanız listenin sıralamaları arasında",
+    showBanned:
+      "Bir moderatör listelerinizden birini kaldırdı, bu yüzden şimdilik sıralama gösteremezsiniz.",
     cancel: "Vazgeç",
     withdrawFailed: "Sıralamanız geri çekilemedi. Tekrar deneyin.",
     failed: "Sıralamalar yüklenemedi.",

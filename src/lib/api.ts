@@ -31,7 +31,7 @@ import type {
   Following,
   FollowState,
   RankingsPage,
-  ReaderRanking,
+  ShownRanking,
   ReportRequest,
   SuggestedAuthor,
 } from "../api/community";
@@ -192,7 +192,7 @@ export const withdrawListRanking = (listId: string): Promise<void> =>
 export const keepListRanking = (
   list: Pick<PublishedList, "id" | "items" | "tiers">,
   rows: readonly (readonly number[])[],
-): Promise<ReaderRanking> =>
+): Promise<ShownRanking> =>
   community.keepListRanking(api, list.id, {
     tierLabels: list.tiers.map((tier) => tier.label),
     rows: community.rowsOf(rows, list.tiers.length, list.items.length),

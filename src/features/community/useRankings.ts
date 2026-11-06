@@ -33,6 +33,8 @@ export interface Rankings {
   more: () => void;
   /** This reader's own comes down at once, and back if the backend says no. */
   withdraw: () => void;
+  /** This reader's own, just shown to others: first, in place of the one there before. */
+  put: (ranking: ReaderRanking) => void;
 }
 
 const NOTHING_YET: RankingsState = {
@@ -136,5 +138,21 @@ export function useRankings(listId: string, deps: RankingsDeps = defaultDeps): R
       );
   }, [listId, deps]);
 
-  return { state, open, more, withdraw };
+  // Not read yet, the sheet reads it with the rest when it opens.
+  const put = useCallback((ranking: ReaderRanking) => {
+    setState((now) =>
+      now.status !== "ready"
+        ? now
+        : {
+            ...now,
+            rankings: [
+              { ...ranking, mine: true },
+              ...now.rankings.filter((one) => !one.mine && one.uid !== ranking.uid),
+            ],
+            withdrawFailed: false,
+          },
+    );
+  }, []);
+
+  return { state, open, more, withdraw, put };
 }

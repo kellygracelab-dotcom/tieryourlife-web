@@ -457,6 +457,11 @@ const es: Translation = {
     withdraw: "Retirar",
     withdrawTitle: "¿Retirar tu ranking?",
     withdrawBody: "Desaparecerá de los rankings de esta lista.",
+    showMine: "Mostrar mi ranking a los demás",
+    signInToShow: "Inicia sesión para mostrar tu ranking",
+    shown: "Tu ranking ya está entre los de la lista",
+    showBanned:
+      "Un moderador retiró una de tus listas, así que por ahora no puedes mostrar rankings.",
     cancel: "Cancelar",
     withdrawFailed: "No se pudo retirar tu ranking. Inténtalo de nuevo.",
     failed: "No se pudieron cargar los rankings.",

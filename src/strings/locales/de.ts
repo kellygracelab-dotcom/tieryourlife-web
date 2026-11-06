@@ -459,6 +459,11 @@ const de: Translation = {
     withdraw: "Zurückziehen",
     withdrawTitle: "Deine Reihung zurückziehen?",
     withdrawBody: "Sie verschwindet aus den Reihungen dieser Liste.",
+    showMine: "Meine Reihung anderen zeigen",
+    signInToShow: "Melde dich an, um deine Reihung zu zeigen",
+    shown: "Deine Reihung steht jetzt bei den Reihungen der Liste",
+    showBanned:
+      "Ein Moderator hat eine deiner Listen entfernt, deshalb kannst du vorerst keine Reihungen zeigen.",
     cancel: "Abbrechen",
     withdrawFailed: "Die Reihung konnte nicht zurückgezogen werden. Versuch es noch einmal.",
     failed: "Die Reihungen konnten nicht geladen werden.",

@@ -466,6 +466,11 @@ const pl: Translation = {
     withdraw: "Wycofaj",
     withdrawTitle: "Wycofać twój ranking?",
     withdrawBody: "Zniknie z rankingów tej listy.",
+    showMine: "Pokaż mój ranking innym",
+    signInToShow: "Zaloguj się, aby pokazać swój ranking",
+    shown: "Twój ranking jest wśród rankingów listy",
+    showBanned:
+      "Moderator usunął jedną z twoich list, więc na razie nie możesz pokazywać rankingów.",
     cancel: "Anuluj",
     withdrawFailed: "Nie udało się wycofać rankingu. Spróbuj ponownie.",
     failed: "Nie udało się wczytać rankingów.",

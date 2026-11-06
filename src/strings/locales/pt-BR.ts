@@ -459,6 +459,11 @@ const ptBR: Translation = {
     withdraw: "Retirar",
     withdrawTitle: "Retirar seu ranking?",
     withdrawBody: "Ele sai dos rankings desta lista.",
+    showMine: "Mostrar meu ranking aos outros",
+    signInToShow: "Entre para mostrar seu ranking",
+    shown: "Seu ranking está entre os rankings da lista",
+    showBanned:
+      "Um moderador removeu uma das suas listas, então por enquanto você não pode mostrar rankings.",
     cancel: "Cancelar",
     withdrawFailed: "Não foi possível retirar seu ranking. Tente de novo.",
     failed: "Não foi possível carregar os rankings.",
