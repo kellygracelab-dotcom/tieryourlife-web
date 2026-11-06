@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, it } from "node:test";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
@@ -15,7 +18,12 @@ import {
   GUEST_RANKINGS_PER_APP_CHECK_TOKEN,
   MAX_BODY_BYTES,
 } from "../src/ranking";
-import { PAGE_POLICY, resetShellForTests, UNAVAILABLE_HTML } from "../src/pages";
+import {
+  PAGE_POLICY,
+  PAGE_SCRIPT_POLICY,
+  resetShellForTests,
+  UNAVAILABLE_HTML,
+} from "../src/pages";
 import { route, type WebDeps } from "../src/web";
 
 type Data = Record<string, unknown>;
@@ -923,9 +931,34 @@ describe("the pages a link opens", () => {
     ];
     for (const answer of answers) {
       assert.equal(answer.headers["Content-Security-Policy"], PAGE_POLICY);
+      assert.equal(answer.headers["Content-Security-Policy-Report-Only"], PAGE_SCRIPT_POLICY);
       assert.equal(answer.headers["X-Frame-Options"], "SAMEORIGIN");
     }
     assert.match(PAGE_POLICY, /frame-ancestors 'self'/);
+  });
+
+  it("names the same policies as hosting does, and every script the shell runs inline", () => {
+    // Compiled to functions/lib-test/test: the repository is three folders up.
+    const root = path.join(__dirname, "..", "..", "..");
+    const hosting = (
+      JSON.parse(readFileSync(path.join(root, "firebase.json"), "utf8")) as {
+        hosting: { headers: { regex?: string; headers: { key: string; value: string }[] }[] }[];
+      }
+    ).hosting[0]!.headers;
+    const everyPage = hosting.find((rule) => rule.regex !== undefined)?.headers ?? [];
+    const value = (key: string) => everyPage.find((header) => header.key === key)?.value;
+    assert.equal(value("Content-Security-Policy"), PAGE_POLICY);
+    assert.equal(value("Content-Security-Policy-Report-Only"), PAGE_SCRIPT_POLICY);
+    // The shell is index.html; a script it runs inline needs its hash in the policy.
+    const shell = readFileSync(path.join(root, "index.html"), "utf8");
+    const inline = [...shell.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)];
+    assert.ok(inline.length > 0);
+    for (const [, body] of inline) {
+      const hash = createHash("sha256")
+        .update(body ?? "")
+        .digest("base64");
+      assert.ok(PAGE_SCRIPT_POLICY.includes(`'sha256-${hash}'`), `no hash for: ${body}`);
+    }
   });
 
   it("answers a page, not JSON, when even the shell cannot be had", async () => {

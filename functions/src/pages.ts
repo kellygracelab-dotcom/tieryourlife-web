@@ -113,9 +113,21 @@ export function resetShellForTests(): void {
 /** As firebase.json says for the app's other pages: no other site may frame it, no plugin or <base>. */
 export const PAGE_POLICY = "frame-ancestors 'self'; object-src 'none'; base-uri 'self'";
 
+/**
+ * The scripts a page may run, as firebase.json says for every address: the
+ * site's own, its one inline script (the theme, by hash: the shell this
+ * function sends is index.html, and the preload it adds is JSON, which never
+ * runs), Google sign-in and App Check's reCAPTCHA. Reported only, until a
+ * live check shows nothing it would block.
+ */
+export const PAGE_SCRIPT_POLICY =
+  "script-src 'self' 'sha256-2iKKgy5SB11PUVBbbTyzt+UMR84yVQVKvL8ExeCn51k=' " +
+  "https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/";
+
 /** Every page this function answers with, the bare and the unavailable ones too. */
 function guardFrames(response: Response): void {
   response.setHeader("Content-Security-Policy", PAGE_POLICY);
+  response.setHeader("Content-Security-Policy-Report-Only", PAGE_SCRIPT_POLICY);
   response.setHeader("X-Frame-Options", "SAMEORIGIN");
 }
 
