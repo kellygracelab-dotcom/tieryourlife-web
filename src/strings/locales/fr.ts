@@ -561,6 +561,8 @@ const fr: Translation = {
     failedOffline:
       "Pas de connexion. Rien n’est perdu : vos placements sont à l’abri sur cet appareil. Réessayez une fois de retour en ligne.",
     failedGone: "Cette liste n’est plus disponible, le classement ne peut donc pas être gardé.",
+    failedBanned: "Vous ne pouvez pas classer de listes pour le moment.",
+    failedBannedUntil: "Vous ne pouvez pas classer de listes jusqu’au {date}.",
     failedOther: "Impossible d’enregistrer le classement. Rien n’est perdu. Réessayez.",
     failedChanged:
       "L’auteur a modifié cette liste pendant que vous la classiez. Rechargez-la pour la classer telle qu’elle est maintenant.",

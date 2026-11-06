@@ -6,6 +6,7 @@ import { strings } from "../../strings";
 import { fillNodes } from "../../strings/fillNodes";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
+import { rankFailureText } from "./failureText";
 import "./result.css";
 
 export type FinishState =
@@ -71,27 +72,20 @@ export function ResultBar({
 
   if (finish.status === "failed") {
     const { error } = finish;
-    const gone = error.kind === "notFound";
+    // Gone, or a ban that has a date of its own: trying again is no help.
+    const final = error.kind === "notFound" || error.kind === "banned";
     // Republished while it was ranked: the same rows would mean other cards,
     // so trying again is no help; the list as it is now is.
     const changed = error.kind === "conflict";
-    const text =
-      error.kind === "offline"
-        ? strings.rank.failedOffline
-        : gone
-          ? strings.rank.failedGone
-          : changed
-            ? strings.rank.failedChanged
-            : strings.rank.failedOther;
     return (
       <div className="result result--failed" role="alert">
-        <p>{text}</p>
+        <p>{rankFailureText(error)}</p>
         {changed ? (
           <Button variant="filled" icon="refresh" onClick={reload}>
             {strings.rank.loadAgain}
           </Button>
         ) : (
-          !gone && (
+          !final && (
             <Button variant="filled" icon="refresh" onClick={onRetry}>
               {strings.rank.tryAgain}
             </Button>

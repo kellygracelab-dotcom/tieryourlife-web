@@ -530,6 +530,8 @@ const tr: Translation = {
     failedOffline:
       "Bağlantı yok. Hiçbir şey kaybolmadı: yerleştirmeleriniz bu cihazda güvende. Çevrimiçi olduğunuzda tekrar deneyin.",
     failedGone: "Bu liste artık kullanılamıyor, dolayısıyla sıralama saklanamaz.",
+    failedBanned: "Şu anda liste sıralayamazsınız.",
+    failedBannedUntil: "{date} tarihine kadar liste sıralayamazsınız.",
     failedOther: "Sıralama kaydedilemedi. Hiçbir şey kaybolmadı. Tekrar deneyin.",
     failedChanged:
       "Siz sıralarken yazar bu listeyi değiştirdi. Şimdiki hâliyle sıralamak için yeniden yükleyin.",

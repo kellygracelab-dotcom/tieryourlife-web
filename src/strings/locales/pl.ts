@@ -551,6 +551,8 @@ const pl: Translation = {
     failedOffline:
       "Brak połączenia. Nic nie przepadło: twoje umieszczenia są bezpieczne na tym urządzeniu. Spróbuj ponownie, gdy wrócisz do sieci.",
     failedGone: "Ta lista nie jest już dostępna, więc rankingu nie da się zachować.",
+    failedBanned: "W tej chwili nie możesz tworzyć rankingów list.",
+    failedBannedUntil: "Nie możesz tworzyć rankingów list do {date}.",
     failedOther: "Nie udało się zapisać rankingu. Nic nie przepadło. Spróbuj ponownie.",
     failedChanged:
       "Autor zmienił tę listę w trakcie układania rankingu. Wczytaj ją ponownie, aby ułożyć ją w obecnej wersji.",

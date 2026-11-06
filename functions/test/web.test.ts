@@ -244,6 +244,37 @@ describe("POST /api/rank — Finish", () => {
     assert.equal(typeof table("rankQuota").get("guest")?.lastWriteAt, "number");
   });
 
+  it("refuses a banned account as the proxy does, and lets it rank once the ban is over", async () => {
+    const { deps, table } = setup(PERSON);
+    const week = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    table("bans").set("person", { until: week, bannedAt: Date.now(), reason: "spam" });
+    const refused = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
+    assert.equal(refused.status, 403);
+    assert.deepEqual(refused.body, {
+      error: "You cannot rank at the moment",
+      code: "BANNED",
+      until: week,
+    });
+    assert.equal(table("rankings").size, 0);
+    assert.equal(table("rankUsage").size, 0);
+    // Forever is null, and still a ban.
+    table("bans").set("person", { until: null, bannedAt: Date.now(), reason: null });
+    const forever = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
+    assert.equal(forever.status, 403);
+    assert.equal((forever.body as Data).until, null);
+    // An expired document is no ban at all.
+    table("bans").set("person", { until: Date.now() - 1, bannedAt: 0, reason: null });
+    const after = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
+    assert.equal(after.status, 201);
+  });
+
+  it("asks a guest about no ban, as the proxy bans accounts only", async () => {
+    const { deps, table } = setup(GUEST);
+    table("bans").set("guest", { until: null, bannedAt: 0, reason: null });
+    const answer = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
+    assert.equal(answer.status, 201);
+  });
+
   it("keeps a reader's tier words with a version started from their placing", async () => {
     const { deps, table } = setup();
     const answer = await call(deps, "POST", "/api/rank", {
@@ -599,6 +630,18 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     // The /r/ page's Edit sends rows alone.
     assert.equal((await call(deps, "PUT", "/api/rank/abcdefgh", { rows: [[1], []] })).status, 200);
     assert.deepEqual(labels(), ["S", "Meh"]);
+  });
+
+  it("lets a banned owner neither re-arrange nor re-word it, but still delete it", async () => {
+    const { deps, table } = setup(PERSON);
+    table("rankings").set("abcdefgh", ranking("person", false));
+    const until = Date.now() + 60_000;
+    table("bans").set("person", { until, bannedAt: Date.now(), reason: null });
+    const put = await call(deps, "PUT", "/api/rank/abcdefgh", { rows: [[], [0, 2]] });
+    assert.equal(put.status, 403);
+    assert.deepEqual(put.body, { error: "You cannot rank at the moment", code: "BANNED", until });
+    assert.deepEqual(table("rankings").get("abcdefgh")?.rows, ranking("person", false).rows);
+    assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 204);
   });
 
   it("lets nobody else re-arrange or delete it", async () => {
