@@ -336,7 +336,12 @@ const pl: Translation = {
     more: "Więcej",
     failedOffline:
       "Brak połączenia. Nic nie przepadło: lista jest bezpieczna na tym urządzeniu. Spróbuj ponownie, gdy wrócisz do sieci.",
-    failedBanned: "Na razie nie możesz publikować.",
+    failedBanned: "Moderator usunął jedną z twoich list i nie możesz już publikować.",
+    failedBannedUntil:
+      "Moderator usunął jedną z twoich list. Ponownie możesz publikować od {date}.",
+    failedPictureRefused:
+      "Jedno z Twoich zdjęć nie może trafić do publicznego kanału. Usuń je albo zostaw listę prywatną.",
+    failedCategory: "Ta kategoria nie przyjmuje już list. Wybierz inną w polu Kategoria.",
     failedTooMany:
       "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w Twoich publicznych listach.",
     failedSignedOut: "Do publikowania potrzebne jest konto. Zaloguj się i spróbuj ponownie.",

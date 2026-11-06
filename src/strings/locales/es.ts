@@ -329,7 +329,11 @@ const es: Translation = {
     more: "Más",
     failedOffline:
       "Sin conexión. No se perdió nada: la lista está a salvo en este dispositivo. Inténtalo de nuevo cuando vuelvas a estar en línea.",
-    failedBanned: "Ahora mismo no puedes publicar.",
+    failedBanned: "Un moderador retiró una de tus listas y ya no puedes publicar.",
+    failedBannedUntil: "Un moderador retiró una de tus listas. Podrás volver a publicar el {date}.",
+    failedPictureRefused:
+      "Una de tus fotos no puede aparecer en el feed público. Quítala o mantén la lista privada.",
+    failedCategory: "Esta categoría ya no admite listas. Elige otra en Categoría.",
     failedTooMany:
       "Esta cuenta ya publicó todas las listas que puede. Retira una en Tus listas públicas primero.",
     failedSignedOut: "Para publicar hace falta una cuenta. Inicia sesión e inténtalo de nuevo.",

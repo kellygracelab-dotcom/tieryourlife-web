@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router";
 import type { PublishedList } from "../../api/types";
 import { SessionContext, type Session } from "../../app/session";
 import type { KeyValueStore } from "../../lib/storage";
-import { keepListRanking } from "../../lib/api";
+import { keepListRanking, noteTake } from "../../lib/api";
 import { BoardFrameContext } from "./boardFrame";
 import { RankingBoard } from "./RankingBoard";
 
@@ -658,12 +658,7 @@ describe("RankingBoard", () => {
     const keep = vi.fn().mockResolvedValue({ code: "abcdefgh", claimToken: "t" });
     render(
       <MemoryRouter>
-        <RankingBoard
-          list={list}
-          keep={keep}
-          take={() => Promise.resolve()}
-          store={memoryStore()}
-        />
+        <RankingBoard list={list} keep={keep} store={memoryStore()} />
       </MemoryRouter>,
     );
     await userEvent.click(card("Ex Machina"));
@@ -722,11 +717,10 @@ describe("RankingBoard", () => {
   it("keeps the ranking on Finish, locks the board and offers the link", async () => {
     const store = memoryStore();
     const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
-    const take = vi.fn(async () => undefined);
     const share = vi.fn(async () => undefined);
     render(
       <MemoryRouter>
-        <RankingBoard list={list} store={store} keep={keep} take={take} share={share} />
+        <RankingBoard list={list} store={store} keep={keep} share={share} />
       </MemoryRouter>,
     );
     expect(screen.getByRole("button", { name: "Finish" })).toBeDisabled();
@@ -737,7 +731,8 @@ describe("RankingBoard", () => {
 
     expect(keep).toHaveBeenCalledWith("abc", [[0], []], 0);
     expect(await screen.findByRole("status")).toHaveTextContent("Your ranking is live at");
-    expect(take).toHaveBeenCalledWith("abc");
+    // A ranking kept by its link is not a take: the app counts one on Save to my lists only.
+    expect(noteTake).not.toHaveBeenCalled();
     expect(store.data.get("tyl:ranking:abc")).toContain('"code":"abcdefgh"');
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
     expect(card("The Witch")).toBeDisabled();
@@ -759,7 +754,7 @@ describe("RankingBoard", () => {
     const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
     render(
       <MemoryRouter>
-        <RankingBoard list={template} store={memoryStore()} keep={keep} take={async () => {}} />
+        <RankingBoard list={template} store={memoryStore()} keep={keep} />
       </MemoryRouter>,
     );
     await userEvent.click(card("Ex Machina"));
@@ -782,12 +777,7 @@ describe("RankingBoard", () => {
     render(
       <SessionContext.Provider value={session}>
         <MemoryRouter>
-          <RankingBoard
-            list={list}
-            store={memoryStore()}
-            keep={keep}
-            take={async () => undefined}
-          />
+          <RankingBoard list={list} store={memoryStore()} keep={keep} />
         </MemoryRouter>
       </SessionContext.Provider>,
     );
@@ -813,13 +803,7 @@ describe("RankingBoard", () => {
     render(
       <SessionContext.Provider value={session}>
         <MemoryRouter>
-          <RankingBoard
-            list={list}
-            store={store}
-            keep={keep}
-            rearrange={rearrange}
-            take={async () => undefined}
-          />
+          <RankingBoard list={list} store={store} keep={keep} rearrange={rearrange} />
         </MemoryRouter>
       </SessionContext.Provider>,
     );
@@ -850,13 +834,7 @@ describe("RankingBoard", () => {
     render(
       <SessionContext.Provider value={session}>
         <MemoryRouter>
-          <RankingBoard
-            list={list}
-            store={store}
-            keep={keep}
-            rearrange={rearrange}
-            take={async () => undefined}
-          />
+          <RankingBoard list={list} store={store} keep={keep} rearrange={rearrange} />
         </MemoryRouter>
       </SessionContext.Provider>,
     );
@@ -905,13 +883,7 @@ describe("RankingBoard", () => {
       const { unmount } = render(
         <SessionContext.Provider value={session}>
           <MemoryRouter>
-            <RankingBoard
-              list={list}
-              store={store}
-              keep={keep}
-              rearrange={rearrange}
-              take={async () => undefined}
-            />
+            <RankingBoard list={list} store={store} keep={keep} rearrange={rearrange} />
           </MemoryRouter>
         </SessionContext.Provider>,
       );
@@ -932,7 +904,7 @@ describe("RankingBoard", () => {
     store.write("tyl:ranking:abc", JSON.stringify(finished));
     const { unmount } = render(
       <MemoryRouter>
-        <RankingBoard list={list} store={store} keep={vi.fn()} take={async () => undefined} />
+        <RankingBoard list={list} store={store} keep={vi.fn()} />
       </MemoryRouter>,
     );
     // Nothing placed on this device: the board is not the ranking, so Finish it is.
@@ -942,7 +914,7 @@ describe("RankingBoard", () => {
     store.write("tyl:ranking:abc", JSON.stringify({ ...finished, rows: [[], []] }));
     render(
       <MemoryRouter>
-        <RankingBoard list={list} store={store} keep={vi.fn()} take={async () => undefined} />
+        <RankingBoard list={list} store={store} keep={vi.fn()} />
       </MemoryRouter>,
     );
     expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
@@ -994,7 +966,7 @@ describe("RankingBoard", () => {
       .mockResolvedValueOnce({ code: "zzzzzzzz", claimToken: "t" });
     render(
       <MemoryRouter>
-        <RankingBoard list={list} store={memoryStore()} keep={keep} take={async () => {}} />
+        <RankingBoard list={list} store={memoryStore()} keep={keep} />
       </MemoryRouter>,
     );
     await userEvent.click(card("Climax"));

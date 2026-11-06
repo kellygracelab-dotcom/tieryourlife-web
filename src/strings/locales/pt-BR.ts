@@ -330,7 +330,12 @@ const ptBR: Translation = {
     more: "Mais",
     failedOffline:
       "Sem conexão. Nada foi perdido: a lista está a salvo neste aparelho. Tente de novo quando voltar a ficar online.",
-    failedBanned: "Você não pode publicar no momento.",
+    failedBanned: "Um moderador removeu uma das suas listas e você não pode mais publicar.",
+    failedBannedUntil:
+      "Um moderador removeu uma das suas listas. Você poderá publicar de novo em {date}.",
+    failedPictureRefused:
+      "Uma das suas fotos não pode aparecer no feed público. Remova-a ou mantenha a lista privada.",
+    failedCategory: "Esta categoria não aceita mais listas. Escolha outra em Categoria.",
     failedTooMany:
       "Esta conta já publicou o máximo de listas que pode. Retire uma em Suas listas públicas primeiro.",
     failedSignedOut: "Publicar precisa de uma conta. Entre e tente de novo.",

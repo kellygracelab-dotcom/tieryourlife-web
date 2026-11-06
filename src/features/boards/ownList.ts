@@ -121,7 +121,33 @@ ${item.imageUrl ?? ""}`,
       item.credit ?? null,
     ]),
   );
-  const cover = list.coverImageUrl;
+  // A picture of the list as the board shows it: the feed's copy of one's own
+  // photo as that photo brought back, which the next Update names by id; one
+  // from elsewhere as it is; a copy not brought back for any card is lost.
+  const ownPicture = (url: string): string | null =>
+    publishedPictureOf(url, list.id) === null ? url : (copies.get(url)?.previewUrl ?? null);
+  const shown = (urls: readonly string[]) =>
+    urls.flatMap((url) => {
+      const picture = ownPicture(url);
+      return picture === null ? [] : [picture];
+    });
+  // The collage the author chose, in their order; the first cards' art the
+  // backend draws for none is no choice, and changes with the cards.
+  const cardArt = list.items
+    .flatMap((item) => (item.imageUrl === null ? [] : [item.imageUrl]))
+    .slice(0, list.previewImages.length);
+  const chose =
+    list.previewImages.length !== cardArt.length ||
+    list.previewImages.some((url, at) => url !== cardArt[at]);
+  const cover = [
+    ...new Set(
+      list.coverImageUrl !== null
+        ? shown([list.coverImageUrl])
+        : chose
+          ? shown(list.previewImages)
+          : [],
+    ),
+  ];
   return {
     ...board,
     items: board.items.map((item, index) => {
@@ -142,8 +168,9 @@ ${card.imageUrl ?? ""}`);
       typeof list.topicId === "string" && list.topicId !== ""
         ? { id: list.topicId, name: list.topicName ?? "" }
         : null,
-    // A cover from elsewhere stays; one of the feed's own copies would be gone after the republish.
-    coverImageUrls: cover !== null && publishedPictureOf(cover, list.id) === null ? [cover] : [],
+    // The cover or collage the author chose stays, so an Update leaves it as it is.
+    coverImageUrls: cover,
+    coverImageUrl: cover.length === 1 ? (cover[0] ?? null) : null,
     // In step with the list, unless it carries changes the old editor had not sent.
     publishedEditedAt: kept === null ? board.editedAt : board.editedAt - 1,
   };

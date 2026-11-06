@@ -247,6 +247,31 @@ export function proposalNoticesFrom(
   });
 }
 
+/** How many proposals' homes are kept past the answers that named them. */
+const MAX_HOMES = 50;
+
+/**
+ * Where one's own proposals keep their lists: a waiting or declined one in
+ * the section it files under, a merged one in the section it went into.
+ * Kept past the last answer that named them: a withdrawn or dismissed
+ * proposal leaves the answer, while a board still names it and its list
+ * stays where it was filed.
+ */
+export function proposalHomesFrom(
+  answer: readonly SectionStats[],
+  who: string,
+  before: Readonly<Record<string, string>>,
+): Record<string, string> {
+  const now: Record<string, string> = {};
+  answer.forEach((stats) => {
+    if (stats.proposerUid !== who || stats.status === "approved") return;
+    now[stats.id] = (stats.status === "merged" ? stats.mergedInto : stats.fileUnder) ?? OTHER;
+  });
+  // The newest last, so the oldest go first once there are too many.
+  const kept = Object.entries(before).filter(([id]) => !(id in now));
+  return Object.fromEntries([...kept, ...Object.entries(now)].slice(-MAX_HOMES));
+}
+
 /** The sections everybody sees: approved ones, without anybody's waiting proposal. */
 export const approvedOnly = (sections: readonly Section[]): Section[] =>
   sections.filter((section) => section.status === "approved");

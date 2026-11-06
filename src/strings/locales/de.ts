@@ -326,7 +326,14 @@ const de: Translation = {
     more: "Mehr",
     failedOffline:
       "Keine Verbindung. Nichts ist verloren: Die Liste ist auf diesem Gerät sicher. Versuch es erneut, sobald du wieder online bist.",
-    failedBanned: "Du kannst im Moment nicht veröffentlichen.",
+    failedBanned:
+      "Die Moderation hat eine deiner Listen entfernt, und du kannst nicht mehr veröffentlichen.",
+    failedBannedUntil:
+      "Die Moderation hat eine deiner Listen entfernt. Du kannst ab dem {date} wieder veröffentlichen.",
+    failedPictureRefused:
+      "Eines deiner Fotos darf nicht in den öffentlichen Feed. Entferne es oder behalte die Liste privat.",
+    failedCategory:
+      "Diese Kategorie nimmt keine Listen mehr an. Wähle unter Kategorie eine andere.",
     failedTooMany:
       "Dieses Konto hat so viele Listen veröffentlicht, wie es kann. Nimm erst eine unter „Deine öffentlichen Listen“ zurück.",
     failedSignedOut:

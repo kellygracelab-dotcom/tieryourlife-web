@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { remembered } from "../../lib/remembered";
 import { memoryStore } from "../../lib/storage";
 import type { SectionStats } from "../../api/sections";
+import { filedUnder } from "../boards/sectionChoices";
 import { sectionsFrom } from "./model";
 import { SectionGrid } from "./SectionGrid";
 import {
@@ -106,6 +107,36 @@ describe("the sections store", () => {
     expect(after.get().sections.map((section) => section.id)).toEqual(["anime", "people"]);
     expect(after.get().sections.some((section) => section.following)).toBe(false);
     expect(after.get().followsKnown).toBe(false);
+  });
+
+  it("keeps where a withdrawn proposal's lists stay, so its boards name that section, not Other", async () => {
+    const memory = remembered(memoryStore(), "s", 1, readKeptSections);
+    const waiting = stats("street", {
+      name: "Street food",
+      status: "pending",
+      proposerUid: "a",
+      fileUnder: "games",
+    });
+    const load = vi
+      .fn<SectionsDeps["load"]>()
+      .mockResolvedValueOnce({ sections: [stats("games"), stats("other"), waiting] })
+      // Withdrawn: the proposal leaves the answer, and its list stays in Games.
+      .mockResolvedValue({ sections: [stats("games"), stats("other")] });
+    const { deps: given, later } = deps([], { memory, load });
+    const store = createSectionsStore(given);
+    store.refresh("a");
+    await settle();
+    later(SECTIONS_FRESH_MS + 1);
+    store.refresh("a");
+    await settle();
+    const { sections, homes } = store.get();
+    expect(sections.map((section) => section.id)).toEqual(["games", "other"]);
+    expect(filedUnder("street", sections, "a", homes)).toBe("Games");
+    // A section nobody here knows yet is still Other, as the app draws it.
+    expect(filedUnder("unknown", sections, "a", homes)).toBe("Other");
+    // The next visit knows it too.
+    const next = createSectionsStore(deps([], { memory }).deps);
+    expect(filedUnder("street", next.get().sections, "a", next.get().homes)).toBe("Games");
   });
 
   it("drops a kept answer it cannot draw, and asks the backend as if nothing was kept", async () => {

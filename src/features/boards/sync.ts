@@ -455,6 +455,7 @@ async function takeOver(
     favouritedAt: latest.favouritedAt,
     arrivedFrom: latest.arrivedFrom,
     topic: latest.topic,
+    ...(latest.topicOff === true ? { topicOff: true } : {}),
     takenFrom: latest.takenFrom,
     rankingOf: latest.rankingOf,
   });

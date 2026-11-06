@@ -321,7 +321,13 @@ const tr: Translation = {
     more: "Daha fazla",
     failedOffline:
       "Bağlantı yok. Hiçbir şey kaybolmadı: liste bu cihazda güvende. Çevrimiçi olduğunuzda tekrar deneyin.",
-    failedBanned: "Şu anda yayımlayamazsınız.",
+    failedBanned: "Bir moderatör listelerinizden birini kaldırdı ve artık yayımlayamazsınız.",
+    failedBannedUntil:
+      "Bir moderatör listelerinizden birini kaldırdı. {date} tarihinden itibaren yeniden yayımlayabilirsiniz.",
+    failedPictureRefused:
+      "Fotoğraflarınızdan biri herkese açık akışta yer alamaz. Kaldırın ya da listeyi özel tutun.",
+    failedCategory:
+      "Bu kategori artık liste kabul etmiyor. Kategori bölümünden başka birini seçin.",
     failedTooMany:
       "Bu hesap yayımlayabileceği kadar liste yayımladı. Önce Herkese açık listeleriniz bölümünde birini yayından kaldırın.",
     failedSignedOut: "Yayımlamak için hesap gerekir. Oturum açıp tekrar deneyin.",
