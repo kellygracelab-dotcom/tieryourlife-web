@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import path from "node:path";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
@@ -939,9 +939,9 @@ describe("the pages a link opens", () => {
 
   it("names the same policies as hosting does, and every script the shell runs inline", () => {
     // Compiled to functions/lib-test/test: the repository is three folders up.
-    const root = path.join(__dirname, "..", "..", "..");
+    const root = join(__dirname, "..", "..", "..");
     const hosting = (
-      JSON.parse(readFileSync(path.join(root, "firebase.json"), "utf8")) as {
+      JSON.parse(readFileSync(join(root, "firebase.json"), "utf8")) as {
         hosting: { headers: { regex?: string; headers: { key: string; value: string }[] }[] }[];
       }
     ).hosting[0]!.headers;
@@ -950,7 +950,7 @@ describe("the pages a link opens", () => {
     assert.equal(value("Content-Security-Policy"), PAGE_POLICY);
     assert.equal(value("Content-Security-Policy-Report-Only"), PAGE_SCRIPT_POLICY);
     // The shell is index.html; a script it runs inline needs its hash in the policy.
-    const shell = readFileSync(path.join(root, "index.html"), "utf8");
+    const shell = readFileSync(join(root, "index.html"), "utf8");
     const inline = [...shell.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)];
     assert.ok(inline.length > 0);
     for (const [, body] of inline) {
