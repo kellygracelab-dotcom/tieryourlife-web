@@ -84,7 +84,7 @@ const de: Translation = {
     facePhotoCaption: "Dein Foto",
     faceNote:
       "Kartenbilder bleiben, wo sie im Netz liegen. Ein Foto aus der Galerie wird geprüft und bei deinem Konto aufbewahrt.",
-    faceNotMade: "Dieses Bild kann nicht dein Gesicht sein. Wähle ein anderes.",
+    faceNotMade: "Dieses Bild kann nicht dein Profilbild sein. Wähle ein anderes.",
     title: "Einstellungen",
     guestTitle: "Melde dich an, um deine Einstellungen zu ändern.",
     guestBody:
@@ -452,7 +452,7 @@ const de: Translation = {
     seedStart: "Verschieb eine Karte auf dem Board, um deine Version zu beginnen.",
   },
   rankings: {
-    title: "Reihungen",
+    title: "Ranglisten",
     body: "Dieselben Karten, von jemandem anders gesetzt. Wähle, wessen Reihen gezeigt werden.",
     author: "Autor",
     you: "Du",

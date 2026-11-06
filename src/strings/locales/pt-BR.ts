@@ -88,7 +88,7 @@ const ptBR: Translation = {
     facePhotoCaption: "Sua foto",
     faceNote:
       "As imagens dos cartões ficam onde estão na web. Uma foto da galeria é verificada e guardada com sua conta.",
-    faceNotMade: "Essa imagem não pode ser seu rosto. Escolha outra.",
+    faceNotMade: "Essa imagem não pode ser sua foto. Escolha outra.",
     title: "Configurações",
     guestTitle: "Entre para mudar suas configurações.",
     guestBody:

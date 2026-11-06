@@ -87,7 +87,7 @@ const es: Translation = {
     facePhotoCaption: "Tu foto",
     faceNote:
       "Las imágenes de las tarjetas se quedan donde están en la web. Una foto de la galería se revisa y se guarda con tu cuenta.",
-    faceNotMade: "Esa imagen no puede ser tu cara. Elige otra.",
+    faceNotMade: "Esa imagen no puede ser tu foto. Elige otra.",
     title: "Ajustes",
     guestTitle: "Inicia sesión para cambiar tus ajustes.",
     guestBody:

@@ -99,7 +99,7 @@ const pl: Translation = {
     facePhotoCaption: "Twoje zdjęcie",
     faceNote:
       "Obrazy kart zostają tam, gdzie są w sieci. Zdjęcie z galerii jest sprawdzane i przechowywane przy Twoim koncie.",
-    faceNotMade: "Ten obraz nie może być Twoją twarzą. Wybierz inny.",
+    faceNotMade: "To zdjęcie nie może być Twoim awatarem. Wybierz inne.",
     title: "Ustawienia",
     guestTitle: "Zaloguj się, aby zmieniać ustawienia.",
     guestBody:
