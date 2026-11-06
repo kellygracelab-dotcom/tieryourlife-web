@@ -527,6 +527,8 @@ export const en = {
     failedOffline:
       "No connection. Nothing was lost: your placements are safe on this device. Try again once you are back online.",
     failedGone: "This list isn’t available anymore, so the ranking cannot be kept.",
+    failedBanned: "You can’t rank lists at the moment.",
+    failedBannedUntil: "You can’t rank lists until {date}.",
     failedOther: "Could not save the ranking. Nothing was lost. Try again.",
     failedChanged:
       "The author changed this list while you were ranking it. Load it again to rank it as it is now.",

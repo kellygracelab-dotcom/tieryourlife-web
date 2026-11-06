@@ -25,6 +25,7 @@ import { holds } from "../../lib/locale";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
 import { keptBy, keptFor, readKept, writeKept, type KeptRanking } from "../ranking/kept";
+import { rankBanText } from "../ranking/failureText";
 import { ResultBar, type FinishState } from "../ranking/ResultBar";
 import { downloadShare, type Share } from "../ranking/share";
 import { errorOf } from "../../api/errors";
@@ -948,7 +949,11 @@ export function RankingBoard({
       <div className="ranking__main">
         {save.status === "failed" && (
           <p className="ranking__error" role="alert">
-            {save.error.kind === "offline" ? strings.rank.failedOffline : strings.rank.failedOther}
+            {save.error.kind === "offline"
+              ? strings.rank.failedOffline
+              : save.error.kind === "banned"
+                ? rankBanText(save.error.until)
+                : strings.rank.failedOther}
           </p>
         )}
 

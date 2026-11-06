@@ -543,6 +543,8 @@ const de: Translation = {
       "Keine Verbindung. Nichts ist verloren: Deine Platzierungen sind auf diesem Gerät sicher. Versuch es erneut, sobald du wieder online bist.",
     failedGone:
       "Diese Liste ist nicht mehr verfügbar, also kann die Rangliste nicht behalten werden.",
+    failedBanned: "Du kannst gerade keine Ranglisten erstellen.",
+    failedBannedUntil: "Du kannst bis {date} keine Ranglisten erstellen.",
     failedOther:
       "Die Rangliste konnte nicht gespeichert werden. Nichts ist verloren. Versuch es noch einmal.",
     failedChanged:

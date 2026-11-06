@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { emulatorPort } from "./config/emulator-ports";
 
 /*
  * The smokes in e2e-proxy/: the site in `vite --mode emulator` against the
@@ -6,7 +7,8 @@ import { defineConfig, devices } from "@playwright/test";
  * them with `npm run e2e:proxy` (scripts/e2e-proxy.mjs starts the emulators).
  * Nothing here is answered by a fixture: every request reaches the real code.
  */
-const PORT = 4174;
+// TYL_PROXY_SITE_PORT, for a second suite on the same machine (e2e-proxy/README.md).
+const PORT = emulatorPort("site");
 const HOST = "127.0.0.1";
 
 export default defineConfig({

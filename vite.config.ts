@@ -8,13 +8,16 @@ import {
   LEAKY_DEBUG_TOKEN_VAR,
   refuseLeakyDebugToken,
 } from "./config/debug-token.ts";
+import { emulatorPort } from "./config/emulator-ports.ts";
 import { preloadApp } from "./config/preload-app.ts";
 
 // The same paths are Hosting rewrites in production, so the client never
 // needs a different base URL. In development they go to the backend's Firebase
 // emulator (`vite --mode emulator`, e2e-proxy/README.md), or to the live
-// functions with `vite --mode live`.
-const EMULATOR = "http://127.0.0.1:5001/demo-tieryourlife/europe-west1";
+// functions with `vite --mode live`. The emulator's port follows
+// TYL_FUNCTIONS_EMULATOR_PORT, so a second suite can run beside the first.
+const emulatorFunctions = (env: Record<string, string>) =>
+  `http://127.0.0.1:${emulatorPort("functions", env)}/demo-tieryourlife/europe-west1`;
 
 const proxyFor = (functionsBase: string) => {
   const to = (name: string) => ({
@@ -43,7 +46,7 @@ export default defineConfig(({ command, mode }) => {
     ],
     define: debugTokenDefine(command, env),
     server: {
-      proxy: proxyFor(env.PROXY_TARGET || EMULATOR),
+      proxy: proxyFor(env.PROXY_TARGET || emulatorFunctions(env)),
     },
     test: {
       environment: "jsdom",

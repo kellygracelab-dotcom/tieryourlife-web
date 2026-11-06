@@ -1,4 +1,5 @@
 import { expect, type Browser, type Page } from "@playwright/test";
+import { emulatorPort } from "../config/emulator-ports";
 
 /*
  * What the smokes in this folder share. Everything runs against the Firebase
@@ -7,7 +8,8 @@ import { expect, type Browser, type Page } from "@playwright/test";
  */
 
 export const PROJECT = "demo-tieryourlife";
-const FIRESTORE = `http://127.0.0.1:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
+// TYL_FIRESTORE_EMULATOR_PORT, for a second suite on the same machine (README.md).
+const FIRESTORE = `http://127.0.0.1:${emulatorPort("firestore")}/v1/projects/${PROJECT}/databases/(default)/documents`;
 
 /** A person who signs in with Google, as the Auth emulator's own page offers one. */
 export interface Person {

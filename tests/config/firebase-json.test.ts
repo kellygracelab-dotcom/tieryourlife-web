@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
@@ -7,7 +8,7 @@ type Rewrite = {
   function?: { functionId: string; region: string };
 };
 
-type Header = { source: string; headers: { key: string; value: string }[] };
+type Header = { source?: string; regex?: string; headers: { key: string; value: string }[] };
 
 type HostingSite = {
   target: string;
@@ -107,32 +108,85 @@ describe("where a deploy goes", () => {
   });
 
   // No other site may frame the app, where one click turns a list public;
-  // the site's own frames may. Firebase's sign-in pages under /__/ are framed
-  // by the site from another address and are left out on purpose: no rule
-  // for every address carries either header. X-Frame-Options says the same
-  // to browsers that predate frame-ancestors; no plugin or <base> is ever
+  // the site's own frames may. Hosting picks headers by the address asked
+  // for, before any rewrite, so a rule for named paths left an unknown one
+  // (/xyz, served the app by the catch-all) without them: one rule takes
+  // every address but Firebase's own under /__/, whose sign-in pages the
+  // site frames from another address. X-Frame-Options says the same to
+  // browsers that predate frame-ancestors; no plugin or <base> is ever
   // needed, so a page injected with one gets neither.
-  it("lets only the site itself frame its pages", () => {
-    const header = (source: string, key: string) =>
-      hosting[0]!.headers
-        .find((h) => h.source === source && h.headers.some((one) => one.key === key))
-        ?.headers.find((h) => h.key === key)?.value;
-    for (const source of [
+  const everyPage = () => {
+    const rules = hosting[0]!.headers.filter((h) => h.regex !== undefined);
+    expect(rules).toHaveLength(1);
+    return rules[0]!;
+  };
+  const valueOf = (rule: Header, key: string) => rule.headers.find((h) => h.key === key)?.value;
+
+  it("lets only the site itself frame any of its addresses, and leaves Firebase's own alone", () => {
+    const rule = everyPage();
+    // Firebase Hosting reads `regex` as RE2: none of JavaScript's lookarounds in it.
+    expect(rule.regex).not.toMatch(/\(\?[=!<]/);
+    const pattern = new RegExp(rule.regex!);
+    for (const path of [
       "/",
       "/index.html",
-      "/@(new|search|me|c|settings|mod|u|about|b|boards|s|trash|following|admin){,/**}",
-      "/@(l|r)/**",
-      "/@(privacy|delete-account).html",
+      "/xyz",
+      "/nonexistent-path-qa",
+      "/slow",
+      "/new",
+      "/l/abc",
+      "/r/abcdefgh",
+      "/privacy.html",
+      "/delete-account.html",
+      "/assets/index-abc.js",
+      "/_",
+      "/__",
+      "/_x",
     ]) {
-      expect(header(source, "Content-Security-Policy")).toBe(
-        "frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
-      );
-      expect(header(source, "X-Frame-Options")).toBe("SAMEORIGIN");
+      expect(pattern.test(path), path).toBe(true);
     }
-    expect(header("**", "Content-Security-Policy")).toBeUndefined();
-    expect(header("**", "X-Frame-Options")).toBeUndefined();
+    for (const path of ["/__/auth/handler", "/__/auth/iframe", "/__/firebase/init.json"]) {
+      expect(pattern.test(path), path).toBe(false);
+    }
+    expect(valueOf(rule, "Content-Security-Policy")).toBe(
+      "frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
+    );
+    expect(valueOf(rule, "X-Frame-Options")).toBe("SAMEORIGIN");
+    // No other rule says otherwise for some of them.
+    for (const other of hosting[0]!.headers.filter((h) => h !== rule)) {
+      for (const key of [
+        "Content-Security-Policy",
+        "Content-Security-Policy-Report-Only",
+        "X-Frame-Options",
+      ]) {
+        expect(valueOf(other, key)).toBeUndefined();
+      }
+    }
     expect(readFileSync("public/privacy.html", "utf8")).toBeTruthy();
     expect(readFileSync("public/delete-account.html", "utf8")).toBeTruthy();
+  });
+
+  // Reported, not enforced, until a live check shows nothing it would block:
+  // the site's own scripts, Google sign-in, App Check's reCAPTCHA (Enterprise),
+  // and each script index.html runs inline, by its hash.
+  it("reports any script that is not the site's, sign-in's or reCAPTCHA's", () => {
+    const policy = valueOf(everyPage(), "Content-Security-Policy-Report-Only") ?? "";
+    const sources = policy.match(/script-src ([^;]*)/)?.[1]?.split(" ") ?? [];
+    const inline = [
+      ...readFileSync("index.html", "utf8").matchAll(
+        /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g,
+      ),
+    ].map(([, body]) => `'sha256-${createHash("sha256").update(body!).digest("base64")}'`);
+    expect(inline.length).toBeGreaterThan(0);
+    expect(sources.sort()).toEqual(
+      [
+        "'self'",
+        "https://apis.google.com",
+        "https://www.google.com/recaptcha/",
+        "https://www.gstatic.com/recaptcha/",
+        ...inline,
+      ].sort(),
+    );
   });
 
   it("publishes the web target to the main address", () => {

@@ -530,6 +530,8 @@ const ja: Translation = {
     failedOffline:
       "接続がありません。配置はこの端末に残っています。オンラインに戻ってからもう一度お試しください。",
     failedGone: "このリストは利用できなくなったため、ランキングを保存できません。",
+    failedBanned: "現在、リストをランク付けできません。",
+    failedBannedUntil: "{date}までリストをランク付けできません。",
     failedOther:
       "ランキングを保存できませんでした。内容は失われていません。もう一度お試しください。",
     failedChanged:

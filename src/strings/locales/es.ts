@@ -546,6 +546,8 @@ const es: Translation = {
     failedOffline:
       "Sin conexión. No se perdió nada: lo que colocaste está a salvo en este dispositivo. Inténtalo de nuevo cuando vuelvas a estar en línea.",
     failedGone: "Esta lista ya no está disponible, así que la clasificación no se puede guardar.",
+    failedBanned: "Ahora mismo no puedes clasificar listas.",
+    failedBannedUntil: "No puedes clasificar listas hasta el {date}.",
     failedOther: "No se pudo guardar la clasificación. No se perdió nada. Inténtalo de nuevo.",
     failedChanged:
       "El autor cambió esta lista mientras la clasificabas. Vuelve a cargarla para clasificarla tal como está ahora.",

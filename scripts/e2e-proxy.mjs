@@ -39,6 +39,21 @@ run("npm", ["--prefix", "functions", "run", "build"], web);
 
 const proxyConfig = JSON.parse(readFileSync(join(proxy, "firebase.json"), "utf8"));
 
+// The proxy's ports unless the environment names others, as the site and
+// the smokes read the same variables (config/emulator-ports.ts): a second
+// suite on this machine sets them and nothing else.
+const PORT_VARIABLES = {
+  functions: "TYL_FUNCTIONS_EMULATOR_PORT",
+  firestore: "TYL_FIRESTORE_EMULATOR_PORT",
+  auth: "VITE_AUTH_EMULATOR_PORT",
+  storage: "VITE_STORAGE_EMULATOR_PORT",
+};
+const emulators = { ...proxyConfig.emulators };
+for (const [name, variable] of Object.entries(PORT_VARIABLES)) {
+  const port = Number(env[variable]);
+  if (Number.isInteger(port) && port > 0) emulators[name] = { ...emulators[name], port };
+}
+
 // One emulator run for both codebases, as Hosting puts them behind one site.
 const here = join(web, "e2e-proxy", ".emulators");
 mkdirSync(here, { recursive: true });
@@ -57,7 +72,7 @@ writeFileSync(
       firestore: { rules: "firestore.rules" },
       storage: { rules: "storage.rules" },
       // The proxy's own ports (its CONTRACT.md, E2E), without the UI.
-      emulators: { ...proxyConfig.emulators, ui: { enabled: false }, singleProjectMode: true },
+      emulators: { ...emulators, ui: { enabled: false }, singleProjectMode: true },
     },
     null,
     2,

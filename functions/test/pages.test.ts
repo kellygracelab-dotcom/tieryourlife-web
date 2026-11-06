@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import {
+  hiddenForGood,
   hostOf,
   listCard,
   listLocale,
@@ -32,6 +33,16 @@ describe("hostOf", () => {
     assert.equal(hostOf(requestWith("tieryourlife.web.app, other")), "tieryourlife.web.app");
     assert.equal(hostOf(requestWith("evil.example")), "tieryourlife.web.app");
     assert.equal(hostOf(requestWith(undefined)), "tieryourlife.web.app");
+  });
+});
+
+describe("hiddenForGood", () => {
+  it("keeps a gone list hidden after a takedown or a withdrawal while hidden, and nothing else", () => {
+    assert.equal(hiddenForGood("report.takedown"), true);
+    assert.equal(hiddenForGood("list.withdrawn_hidden"), true);
+    assert.equal(hiddenForGood("list.move"), false);
+    assert.equal(hiddenForGood("report.dismiss"), false);
+    assert.equal(hiddenForGood(undefined), false);
   });
 });
 

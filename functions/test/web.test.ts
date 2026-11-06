@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it } from "node:test";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
@@ -15,7 +18,12 @@ import {
   GUEST_RANKINGS_PER_APP_CHECK_TOKEN,
   MAX_BODY_BYTES,
 } from "../src/ranking";
-import { PAGE_POLICY, resetShellForTests, UNAVAILABLE_HTML } from "../src/pages";
+import {
+  PAGE_POLICY,
+  PAGE_SCRIPT_POLICY,
+  resetShellForTests,
+  UNAVAILABLE_HTML,
+} from "../src/pages";
 import { route, type WebDeps } from "../src/web";
 
 type Data = Record<string, unknown>;
@@ -197,7 +205,7 @@ function setup(who: { uid: string; isAnonymous: boolean } | null = GUEST, codes:
     },
     account: async (_request, response) => {
       if (who !== null && !who.isAnonymous) return who;
-      response.status(403).json({ code: "NOT_SIGNED_IN" });
+      response.status(401).json({ code: "NOT_SIGNED_IN" });
       return null;
     },
     viewer: async () => (who !== null && !who.isAnonymous ? who : null),
@@ -242,6 +250,37 @@ describe("POST /api/rank — Finish", () => {
     assert.equal((kept.snapshot as { title: string }).title, "Every A24 film, ranked");
     assert.equal(table("rankUsage").size, 1);
     assert.equal(typeof table("rankQuota").get("guest")?.lastWriteAt, "number");
+  });
+
+  it("refuses a banned account as the proxy does, and lets it rank once the ban is over", async () => {
+    const { deps, table } = setup(PERSON);
+    const week = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    table("bans").set("person", { until: week, bannedAt: Date.now(), reason: "spam" });
+    const refused = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
+    assert.equal(refused.status, 403);
+    assert.deepEqual(refused.body, {
+      error: "You cannot rank at the moment",
+      code: "BANNED",
+      until: week,
+    });
+    assert.equal(table("rankings").size, 0);
+    assert.equal(table("rankUsage").size, 0);
+    // Forever is null, and still a ban.
+    table("bans").set("person", { until: null, bannedAt: Date.now(), reason: null });
+    const forever = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
+    assert.equal(forever.status, 403);
+    assert.equal((forever.body as Data).until, null);
+    // An expired document is no ban at all.
+    table("bans").set("person", { until: Date.now() - 1, bannedAt: 0, reason: null });
+    const after = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
+    assert.equal(after.status, 201);
+  });
+
+  it("asks a guest about no ban, as the proxy bans accounts only", async () => {
+    const { deps, table } = setup(GUEST);
+    table("bans").set("guest", { until: null, bannedAt: 0, reason: null });
+    const answer = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
+    assert.equal(answer.status, 201);
   });
 
   it("keeps a reader's tier words with a version started from their placing", async () => {
@@ -495,6 +534,26 @@ describe("GET /api/rank/{code}", () => {
     assert.equal((unpublished.body as Data).listAvailable, false);
   });
 
+  it("keeps a ranking hidden when its author withdrew the list while reports were hiding it", async () => {
+    const { deps, table } = setup(GUEST);
+    table("rankings").set("abcdefgh", ranking("guest", true));
+    table("publishedLists").set(LIST_ID, { ...LIST, underReview: true });
+    assert.equal((await call(deps, "GET", "/api/rank/abcdefgh")).status, 404);
+    // The author deletes it before staff decide; the proxy leaves this line.
+    table("publishedLists").delete(LIST_ID);
+    table("auditLog").set("line-1", {
+      who: "author-uid",
+      role: "author",
+      what: "list.withdrawn_hidden",
+      target: `publishedLists/${LIST_ID}`,
+      before: { underReview: true },
+      after: null,
+    });
+    const gone = await call(deps, "GET", "/api/rank/abcdefgh");
+    assert.equal(gone.status, 404);
+    assert.equal(JSON.stringify(gone.body).includes("Moonlight"), false);
+  });
+
   it("names nobody once the list is gone, as when its author erased their account", async () => {
     const { deps, table } = setup(GUEST);
     table("rankings").set("abcdefgh", {
@@ -547,7 +606,7 @@ describe("PATCH /api/rank/{code} — claim", () => {
     const guest = setup(GUEST);
     assert.equal(
       (await call(guest.deps, "PATCH", "/api/rank/abcdefgh", { claimToken: "x" })).status,
-      403,
+      401,
     );
     const person = setup(PERSON);
     assert.equal((await call(person.deps, "PATCH", "/api/rank/abcdefgh", {})).status, 400);
@@ -581,6 +640,18 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     assert.deepEqual(labels(), ["S", "Meh"]);
   });
 
+  it("lets a banned owner neither re-arrange nor re-word it, but still delete it", async () => {
+    const { deps, table } = setup(PERSON);
+    table("rankings").set("abcdefgh", ranking("person", false));
+    const until = Date.now() + 60_000;
+    table("bans").set("person", { until, bannedAt: Date.now(), reason: null });
+    const put = await call(deps, "PUT", "/api/rank/abcdefgh", { rows: [[], [0, 2]] });
+    assert.equal(put.status, 403);
+    assert.deepEqual(put.body, { error: "You cannot rank at the moment", code: "BANNED", until });
+    assert.deepEqual(table("rankings").get("abcdefgh")?.rows, ranking("person", false).rows);
+    assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 204);
+  });
+
   it("lets nobody else re-arrange or delete it", async () => {
     const { deps, table } = setup(PERSON);
     table("rankings").set("abcdefgh", ranking("someone", false));
@@ -601,8 +672,8 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     for (const code of ["bbbbbbbb", "cccccccc", "dddddddd"]) {
       assert.equal((await call(deps, "PUT", `/api/rank/${code}`, { rows: [[0], []] })).status, 403);
     }
-    // Deleting stays an account's.
-    assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 403);
+    // Deleting stays an account's: a guest is told to sign in.
+    assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 401);
     // An account does not change a guest's ranking under the same uid until it claims it.
     const signedIn = setup({ uid: "guest", isAnonymous: false });
     signedIn.table("rankings").set("abcdefgh", ranking("guest", true));
@@ -823,7 +894,14 @@ describe("the pages a link opens", () => {
       what: "report.takedown",
       target: "publishedLists/list-0002",
     });
-    for (const code of ["abcdefgh", "bcdefghj"]) {
+    // Withdrawn by its author while reports hid it: as good as taken down.
+    table("rankings").set("cdefghjk", { ...ranking("guest", true), listId: "list-0003" });
+    table("auditLog").set("line-2", {
+      role: "author",
+      what: "list.withdrawn_hidden",
+      target: "publishedLists/list-0003",
+    });
+    for (const code of ["abcdefgh", "bcdefghj", "cdefghjk"]) {
       const page = await withHosting(true, () => call(deps, "GET", `/r/${code}`));
       assert.equal(page.status, 200, code);
       assert.equal(page.body, SHELL, code);
@@ -853,9 +931,34 @@ describe("the pages a link opens", () => {
     ];
     for (const answer of answers) {
       assert.equal(answer.headers["Content-Security-Policy"], PAGE_POLICY);
+      assert.equal(answer.headers["Content-Security-Policy-Report-Only"], PAGE_SCRIPT_POLICY);
       assert.equal(answer.headers["X-Frame-Options"], "SAMEORIGIN");
     }
     assert.match(PAGE_POLICY, /frame-ancestors 'self'/);
+  });
+
+  it("names the same policies as hosting does, and every script the shell runs inline", () => {
+    // Compiled to functions/lib-test/test: the repository is three folders up.
+    const root = join(__dirname, "..", "..", "..");
+    const hosting = (
+      JSON.parse(readFileSync(join(root, "firebase.json"), "utf8")) as {
+        hosting: { headers: { regex?: string; headers: { key: string; value: string }[] }[] }[];
+      }
+    ).hosting[0]!.headers;
+    const everyPage = hosting.find((rule) => rule.regex !== undefined)?.headers ?? [];
+    const value = (key: string) => everyPage.find((header) => header.key === key)?.value;
+    assert.equal(value("Content-Security-Policy"), PAGE_POLICY);
+    assert.equal(value("Content-Security-Policy-Report-Only"), PAGE_SCRIPT_POLICY);
+    // The shell is index.html; a script it runs inline needs its hash in the policy.
+    const shell = readFileSync(join(root, "index.html"), "utf8");
+    const inline = [...shell.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)];
+    assert.ok(inline.length > 0);
+    for (const [, body] of inline) {
+      const hash = createHash("sha256")
+        .update(body ?? "")
+        .digest("base64");
+      assert.ok(PAGE_SCRIPT_POLICY.includes(`'sha256-${hash}'`), `no hash for: ${body}`);
+    }
   });
 
   it("answers a page, not JSON, when even the shell cannot be had", async () => {
@@ -908,7 +1011,7 @@ describe("the token checks", () => {
     }
   });
 
-  it("requireAccount turns a guest away with 403, a person through", async () => {
+  it("requireAccount turns a guest away with 401 NOT_SIGNED_IN, a person through", async () => {
     const guest = response();
     assert.equal(
       await requireAccount(
@@ -918,7 +1021,8 @@ describe("the token checks", () => {
       ),
       null,
     );
-    assert.equal(guest.seen.status, 403);
+    assert.equal(guest.seen.status, 401);
+    assert.deepEqual(guest.seen.body, { error: "Sign in first", code: "NOT_SIGNED_IN" });
     const person = response();
     assert.deepEqual(
       await requireAccount(

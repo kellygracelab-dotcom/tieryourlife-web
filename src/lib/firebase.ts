@@ -18,10 +18,10 @@ import {
 import type { FirebaseStorage } from "firebase/storage";
 import type { TokenProviders } from "../api/client";
 import {
-  AUTH_EMULATOR_PORT,
+  authEmulatorPort,
   EMULATOR_HOST,
   EMULATOR_PROJECT,
-  STORAGE_EMULATOR_PORT,
+  storageEmulatorPort,
 } from "./emulators";
 import { readEnv, type Env } from "./env";
 import { firebaseConfig } from "./firebaseConfig";
@@ -63,7 +63,7 @@ export function getFirebaseAuth(): Auth {
       persistence: [indexedDBLocalPersistence, browserLocalPersistence],
     });
     if (import.meta.env.VITE_EMULATORS === "1") {
-      connectAuthEmulator(auth, `http://${EMULATOR_HOST}:${AUTH_EMULATOR_PORT}`, {
+      connectAuthEmulator(auth, `http://${EMULATOR_HOST}:${authEmulatorPort()}`, {
         disableWarnings: true,
       });
     }
@@ -86,7 +86,7 @@ export async function getFirebaseStorage(): Promise<FirebaseStorage> {
   const sdk = await import("firebase/storage");
   const storage = sdk.getStorage(getFirebaseApp());
   if (import.meta.env.VITE_EMULATORS === "1" && !storageOnEmulator) {
-    sdk.connectStorageEmulator(storage, EMULATOR_HOST, STORAGE_EMULATOR_PORT);
+    sdk.connectStorageEmulator(storage, EMULATOR_HOST, storageEmulatorPort());
     storageOnEmulator = true;
   }
   storage.maxUploadRetryTime = UPLOAD_RETRY_MS;

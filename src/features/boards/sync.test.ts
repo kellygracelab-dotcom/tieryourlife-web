@@ -140,7 +140,9 @@ describe("syncBoards", () => {
     expect(account.keeps).toHaveLength(1);
     const { uid, request } = account.keeps[0]!;
     expect(uid).toBe("films");
-    expect(request.basedOn).toBeNull();
+    // A first write says nothing of a revision: the key is absent, not null.
+    expect(request).not.toHaveProperty("basedOn");
+    expect(JSON.stringify(request)).not.toContain("basedOn");
     expect(request.deviceName).toBe("Chrome on Linux");
     expect(request.fingerprint).toMatch(/^[0-9a-f]{64}$/);
     expect(request.items.map((item) => item.title)).toEqual(["Dune", "Heat"]);

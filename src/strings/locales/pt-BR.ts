@@ -548,6 +548,8 @@ const ptBR: Translation = {
     failedOffline:
       "Sem conexão. Nada foi perdido: o que você colocou está a salvo neste aparelho. Tente de novo quando voltar a ficar online.",
     failedGone: "Esta lista não está mais disponível, então a classificação não pode ser guardada.",
+    failedBanned: "No momento você não pode classificar listas.",
+    failedBannedUntil: "Você não pode classificar listas até {date}.",
     failedOther: "Não foi possível salvar a classificação. Nada foi perdido. Tente de novo.",
     failedChanged:
       "O autor mudou esta lista enquanto você a classificava. Carregue de novo para classificá-la como está agora.",

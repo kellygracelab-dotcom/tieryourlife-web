@@ -113,9 +113,21 @@ export function resetShellForTests(): void {
 /** As firebase.json says for the app's other pages: no other site may frame it, no plugin or <base>. */
 export const PAGE_POLICY = "frame-ancestors 'self'; object-src 'none'; base-uri 'self'";
 
+/**
+ * The scripts a page may run, as firebase.json says for every address: the
+ * site's own, its one inline script (the theme, by hash: the shell this
+ * function sends is index.html, and the preload it adds is JSON, which never
+ * runs), Google sign-in and App Check's reCAPTCHA. Reported only, until a
+ * live check shows nothing it would block.
+ */
+export const PAGE_SCRIPT_POLICY =
+  "script-src 'self' 'sha256-2iKKgy5SB11PUVBbbTyzt+UMR84yVQVKvL8ExeCn51k=' " +
+  "https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/";
+
 /** Every page this function answers with, the bare and the unavailable ones too. */
 function guardFrames(response: Response): void {
   response.setHeader("Content-Security-Policy", PAGE_POLICY);
+  response.setHeader("Content-Security-Policy-Report-Only", PAGE_SCRIPT_POLICY);
   response.setHeader("X-Frame-Options", "SAMEORIGIN");
 }
 
@@ -420,19 +432,32 @@ export const standingOf = (
   list.exists ? { authorUid: list.get("authorUid"), anonymous: list.get("anonymous") } : null;
 
 /**
- * Whether a moderator took the list down. The proxy deletes a list taken
- * down just as it deletes one its author unpublished, so the only trace left
- * is the line in its audit log (`report.takedown` on `publishedLists/{id}`).
- * The log is asked by its target alone, the query the proxy itself makes,
- * which needs no index of its own; a list has a handful of lines at most.
+ * The audit lines that keep a deleted list's rankings hidden for good: a
+ * moderator took it down (`report.takedown`), or its author withdrew it while
+ * reports were hiding it (`list.withdrawn_hidden`), which must not bring its
+ * words back just because the list is gone before staff decided.
  */
-export async function takenDownByModerator(db: Firestore, listId: string): Promise<boolean> {
+const HIDDEN_FOR_GOOD: ReadonlySet<string> = new Set(["report.takedown", "list.withdrawn_hidden"]);
+
+/** Whether an audit line's `what` keeps a deleted list's rankings hidden. */
+export const hiddenForGood = (what: unknown): boolean =>
+  typeof what === "string" && HIDDEN_FOR_GOOD.has(what);
+
+/**
+ * Whether moderation still holds the list that is gone. The proxy deletes a
+ * list taken down, or withdrawn while hidden, just as it deletes one its author
+ * unpublished, so the only trace left is a line in its audit log on
+ * `publishedLists/{id}` (see [HIDDEN_FOR_GOOD]). The log is asked by its target
+ * alone, the query the proxy itself makes, and the `what` is read here, so no
+ * composite or `in` index is needed; a list has a handful of lines at most.
+ */
+export async function heldByModeration(db: Firestore, listId: string): Promise<boolean> {
   const lines = await db
     .collection(AUDIT_LOG)
     .where("target", "==", `${PUBLISHED}/${listId}`)
     .select("what")
     .get();
-  return lines.docs.some((line) => line.get("what") === "report.takedown");
+  return lines.docs.some((line) => hiddenForGood(line.get("what")));
 }
 
 /**
@@ -440,7 +465,8 @@ export async function takenDownByModerator(db: Firestore, listId: string): Promi
  * its author unpublished, but not one moderation took away: its title, tiers
  * and card names would go on being served under the ranking's address while
  * the list's own page keeps them hidden. A list under review comes back to
- * its rankings when a moderator leaves it up; one taken down never does.
+ * its rankings when a moderator leaves it up; one taken down, or withdrawn by
+ * its author while under review, never does.
  */
 export async function withdrawnByModeration(
   db: Firestore,
@@ -448,7 +474,7 @@ export async function withdrawnByModeration(
   list: FirebaseFirestore.DocumentSnapshot,
 ): Promise<boolean> {
   if (list.exists) return list.get("underReview") === true;
-  return takenDownByModerator(db, listId);
+  return heldByModeration(db, listId);
 }
 
 /**
