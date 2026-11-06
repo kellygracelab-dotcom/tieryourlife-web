@@ -121,7 +121,7 @@ export const PAGE_POLICY = "frame-ancestors 'self'; object-src 'none'; base-uri 
  * live check shows nothing it would block.
  */
 export const PAGE_SCRIPT_POLICY =
-  "script-src 'self' 'sha256-2iKKgy5SB11PUVBbbTyzt+UMR84yVQVKvL8ExeCn51k=' " +
+  "script-src 'self' 'sha256-2iKKgy5SB11PUVBbbTyzt+UMR84yVQVKvL8ExeCn51k=' 'sha256-r5OZZkdnE7YDlM+2flIVbVo7t4hz5lUfP+HnhdDS8Gs=' " +
   "https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/";
 
 /** Every page this function answers with, the bare and the unavailable ones too. */

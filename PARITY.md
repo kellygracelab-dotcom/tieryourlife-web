@@ -211,8 +211,8 @@ proxy, "Limits" in its `CONTRACT.md`):
 
 At the QA recheck (app `5264782c`) the app still stopped titles at 60 and had
 no tier cap; at `0f2aa39b` both match the site. A list published with 20
-ranked tiers can still be copied to a board, which the account then refuses
-with `TOO_LARGE`; nothing clamps that copy yet (open).
+ranked tiers (before the proxy's limit of 19) is copied to a board with every
+tier past the 19th folded into the 19th, so the account keeps the copy.
 
 ### Plural categories
 
