@@ -346,10 +346,15 @@ async function saveRanking(
       ? db.collection(TOKEN_USE).doc(appCheckKeyOf(appCheckToken))
       : null;
   const verdict = await db.runTransaction(async (transaction) => {
-    const [day, used] = await Promise.all([
+    const [mark, day, used] = await Promise.all([
+      transaction.get(quota),
       transaction.get(usage),
       tokenUse === null ? null : transaction.get(tokenUse),
     ]);
+    // Asked again inside the transaction, and the mark written with the count:
+    // saves sent at once all read the mark before any wrote it, and every one
+    // got through (QA S32). Now the first takes the mark and the rest wait.
+    if (tooSoon((mark.get("lastWriteAt") as number | undefined) ?? null, now)) return "busy";
     const next = ((day.get("count") as number | undefined) ?? 0) + 1;
     if (next > ceilingFor(identity.isAnonymous)) return "ceiling";
     const uses = ((used?.get("count") as number | undefined) ?? 0) + 1;
@@ -362,8 +367,13 @@ async function saveRanking(
         expireAt: Timestamp.fromMillis(now + APP_CHECK_TOKEN_KEPT_MS),
       });
     }
+    transaction.set(quota, { lastWriteAt: now }, { merge: true });
     return "counted";
   });
+  if (verdict === "busy") {
+    response.setHeader("Retry-After", "2");
+    return void response.status(429).json({ error: "One at a time", code: "BUSY" });
+  }
   if (verdict === "ceiling") {
     response.setHeader("Retry-After", "3600");
     return void response.status(503).json({ error: "Daily limit reached", code: "DAILY_CEILING" });
@@ -404,6 +414,8 @@ async function saveRanking(
       if ((error as { code?: number }).code !== 6 /* ALREADY_EXISTS */) throw error;
     }
   }
+  // Nothing was saved: the mark taken for this save goes, so the person is not told to wait.
+  await quota.delete().catch(() => undefined);
   response.status(503).json({ error: "Could not find a free code", code: "UNAVAILABLE" });
 }
 

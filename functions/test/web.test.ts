@@ -69,6 +69,7 @@ function memoryFirestore(clock = () => 1_000) {
     delete: async () => void table(name).delete(id),
   });
   type Ref = ReturnType<typeof refOf>;
+  let queue: Promise<void> = Promise.resolve();
   const db = {
     collection: (name: string) => ({
       doc: (id: string) => refOf(name, id),
@@ -119,13 +120,23 @@ function memoryFirestore(clock = () => 1_000) {
         },
       };
     },
-    runTransaction: async <T>(work: (transaction: unknown) => Promise<T>): Promise<T> =>
-      work({
-        get: (ref: Ref) => ref.get(),
-        set: (ref: Ref, data: Data, options?: { merge?: boolean }) => void ref.set(data, options),
-        update: (ref: Ref, data: Data) => void ref.update(data),
-        delete: (ref: Ref) => void ref.delete(),
-      }),
+    // One after another, as Firestore's are in effect when they touch the same
+    // documents: the loser of a race runs again and reads what the winner wrote.
+    runTransaction: <T>(work: (transaction: unknown) => Promise<T>): Promise<T> => {
+      const run = queue.then(() =>
+        work({
+          get: (ref: Ref) => ref.get(),
+          set: (ref: Ref, data: Data, options?: { merge?: boolean }) => void ref.set(data, options),
+          update: (ref: Ref, data: Data) => void ref.update(data),
+          delete: (ref: Ref) => void ref.delete(),
+        }),
+      );
+      queue = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      return run;
+    },
   };
   return { db: db as unknown as Firestore, table };
 }
@@ -382,6 +393,17 @@ describe("POST /api/rank — Finish", () => {
     assert.equal(answer.headers["Retry-After"], "2");
     assert.equal(table("rankUsage").size, 0);
     assert.equal(table("rankings").size, 0);
+  });
+
+  it("lets one of several Finishes sent at once through, and asks the rest to wait (QA S32)", async () => {
+    const { deps, table } = setup();
+    const body = { listId: LIST_ID, rows: [[0], []] };
+    const answers = await Promise.all(
+      Array.from({ length: 5 }, () => call(deps, "POST", "/api/rank", body)),
+    );
+    assert.deepEqual(answers.map((answer) => answer.status).sort(), [201, 429, 429, 429, 429]);
+    assert.equal(table("rankings").size, 1);
+    assert.equal(table("rankUsage").get(dayKey(Date.now()))?.count, 1);
   });
 
   it("stops guests short of the daily ceiling and keeps the rest of the day for accounts", async () => {
