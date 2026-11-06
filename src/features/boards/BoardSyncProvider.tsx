@@ -23,7 +23,7 @@ import {
 } from "./boardSync";
 import { deviceNameOf } from "./deviceName";
 import { owners as siteOwners, type BoardOwners, type GuestBoardsQuestion } from "./owners";
-import type { Board } from "./model";
+import { markedTitle, type Board } from "./model";
 import type { BoardsRepository } from "./repository";
 import type { BoardsApi } from "./sync";
 import { keepBackUp, readBackUp, syncRecords, type SyncRecords } from "./syncRecords";
@@ -306,7 +306,7 @@ function ForAccount({
     // Both sets survive in use; only the two have to be tellable apart first.
     const theirs = await accountTitles(api).catch(() => new Set<string>());
     owners.moveIn(question.owner, (title) =>
-      theirs.has(title) ? `${title} ${strings.sync.fromThisDevice}` : null,
+      theirs.has(title) ? markedTitle(title, strings.sync.fromThisDevice) : null,
     );
   }, [question, api, owners]);
 

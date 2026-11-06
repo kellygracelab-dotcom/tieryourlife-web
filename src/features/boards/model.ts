@@ -171,6 +171,16 @@ const clip = (text: string, max: number): string => {
   return (/[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut).trimEnd();
 };
 
+/**
+ * A title with a mark after it that tells it from another board of the same
+ * name. The mark is the point, so the title gives way: the account keeps
+ * only so many characters and would cut the mark off, leaving two boards of
+ * one name on every other device.
+ */
+export function markedTitle(title: string, mark: string): string {
+  return `${clip(title, BOARD_LIMITS.title - mark.length - 1)} ${mark}`;
+}
+
 const captionOf = (caption: string | null): string | null => {
   if (caption === null) return null;
   const clean = clip(caption, BOARD_LIMITS.caption).trim();

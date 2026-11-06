@@ -9,6 +9,7 @@ import {
   isNarrowed,
   itemsIn,
   liveItems,
+  markedTitle,
   moveItem,
   newBoard,
   nextTierLabel,
@@ -89,6 +90,13 @@ describe("a new board", () => {
     const long = `${"a".repeat(BOARD_LIMITS.title - 1)}😀tail`;
     expect(rename(b, long, 2000).title).toBe("a".repeat(BOARD_LIMITS.title - 1));
     expect(newBoard("n", long, 1000, () => "t").title).toBe("a".repeat(BOARD_LIMITS.title - 1));
+  });
+
+  it("gives way to a mark that tells it apart, so the account keeps the mark", () => {
+    expect(markedTitle("Films", "(from this device)")).toBe("Films (from this device)");
+    const marked = markedTitle("x".repeat(BOARD_LIMITS.title), "(from this device)");
+    expect(marked).toHaveLength(BOARD_LIMITS.title);
+    expect(marked.endsWith(" (from this device)")).toBe(true);
   });
 });
 
