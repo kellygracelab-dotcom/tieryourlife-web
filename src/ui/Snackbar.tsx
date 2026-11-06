@@ -32,6 +32,21 @@ export function Snackbar({ notice, onDone }: SnackbarProps) {
 }
 
 /**
+ * The shell's snackbar, for what a page that is gone could not say itself.
+ * It is there only while it says something, so the pages' own status regions
+ * stay the only ones; an alert is read out as it appears, which a status
+ * region that comes with its words already in it is not.
+ */
+export function SiteSnackbar({ notice, onDone }: SnackbarProps) {
+  if (notice === null) return null;
+  return (
+    <div className="snackbar-region" role="alert">
+      <Notice notice={notice} onDone={onDone} />
+    </div>
+  );
+}
+
+/**
  * While the pointer or the focus is on a notice, it waits. An action whose
  * press took the focus with it (a card removed, a list deleted) gets the
  * focus, so its Undo is one Enter away rather than the whole page.

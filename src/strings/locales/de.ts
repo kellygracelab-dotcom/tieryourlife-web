@@ -207,6 +207,7 @@ const de: Translation = {
     undo: "Rückgängig",
     failed: "Folgen hat nicht geklappt – versuch es noch einmal.",
     unfollowFailed: "Nicht mehr folgen hat nicht geklappt – versuch es noch einmal.",
+    limit: "Du folgst schon so vielen Leuten, wie es geht. Folge zuerst jemandem nicht mehr.",
     cancel: "Abbrechen",
     signInTitle: "Zum Folgen anmelden",
     signInBody: "Wem du folgst, dessen neue Listen stehen ganz oben in deinem Feed.",
@@ -721,6 +722,7 @@ const de: Translation = {
     topicCreated: "„{name}“ erstellt",
     topicRenamed: "Umbenannt in „{name}“",
     topicDeleted: "„{name}“ gelöscht",
+    topicNotEmpty: "„{name}“ hat jetzt Listen und kann nicht gelöscht werden.",
     deleteTopicAsk: "„{name}“ löschen?",
     deleteTopicBody:
       "Wer dem Thema folgt, folgt ihm danach nicht mehr. Das lässt sich nicht rückgängig machen.",

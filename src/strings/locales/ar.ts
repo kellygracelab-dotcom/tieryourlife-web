@@ -229,6 +229,7 @@ const ar: Translation = {
     undo: "تراجع",
     failed: "تعذّرت المتابعة. حاول مرة أخرى.",
     unfollowFailed: "تعذّر إلغاء المتابعة. حاول مرة أخرى.",
+    limit: "وصلت إلى أقصى عدد من الأشخاص الذين يمكنك متابعتهم. ألغِ متابعة أحدهم أولًا.",
     cancel: "إلغاء",
     signInTitle: "سجّل الدخول للمتابعة",
     signInBody: "المتابعة تُبقي القوائم الجديدة ممن تحبهم في أعلى صفحتك.",
@@ -817,6 +818,7 @@ const ar: Translation = {
     topicCreated: "أُنشئ «{name}»",
     topicRenamed: "أُعيدت التسمية إلى «{name}»",
     topicDeleted: "حُذف «{name}»",
+    topicNotEmpty: "صار في «{name}» قوائم الآن، فلا يمكن حذفه.",
     deleteTopicAsk: "حذف «{name}»؟",
     deleteTopicBody: "سيتوقف كل من يتابعه عن متابعته. لا يمكن التراجع عن ذلك.",
     people: {

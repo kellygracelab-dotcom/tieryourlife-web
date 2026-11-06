@@ -146,6 +146,16 @@ describe("ProfilePage", () => {
     expect(follow.unfollow).toHaveBeenCalledWith("u2");
   });
 
+  it("says the ceiling of people followed, which another press would not pass", async () => {
+    vi.mocked(follow.follow).mockRejectedValueOnce(new ApiFailure({ kind: "tooManyFollowing" }));
+    open();
+    await userEvent.click(await screen.findByRole("button", { name: "Follow" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "You follow as many people as you can. Unfollow someone first.",
+    );
+    expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("unfollows on press and keeps an Undo in a snackbar, which follows again", async () => {
     vi.mocked(follow.state).mockResolvedValue({ following: true, followers: 1204 });
     open();

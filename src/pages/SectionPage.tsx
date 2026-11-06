@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { PageTitle } from "../app/pageTitle";
-import { Navigate, useParams } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
 import { useSession } from "../app/session";
 import type { Topic } from "../api/sections";
 import { FollowButton } from "../features/community/FollowButton";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
-import { sectionPath, waitingPath, type Section } from "../features/sections/model";
+import { sectionPath, topicPath, waitingPath, type Section } from "../features/sections/model";
 import { TopicTiles } from "../features/sections/TopicTiles";
 import { SuggestTopicDialog } from "../features/sections/SuggestTopicDialog";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
@@ -42,9 +42,22 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
   const [opened, setOpened] = useState<Topic | null>(null);
   const [suggesting, setSuggesting] = useState(false);
 
+  const navigate = useNavigate();
   const followSection = (following: boolean) =>
     store.setFollowing(section.id, following).then((refused) => {
-      if (refused !== null) failed(refused, following);
+      if (refused === null) return;
+      // Merged while the page was open: its follows and its address are the
+      // other section's now, so the page goes there, as a reload would take it.
+      if (refused.kind === "merged" && refused.into !== null) {
+        store.invalidate();
+        const to =
+          refused.topic === null
+            ? sectionPath(refused.into)
+            : topicPath(refused.into, refused.topic);
+        void navigate(to, { replace: true });
+        return;
+      }
+      failed(refused, following);
     });
   // Unknown until the backend has said whom this person follows: the nine
   // standing in before then say nobody does.

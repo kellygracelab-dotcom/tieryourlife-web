@@ -510,6 +510,20 @@ export function SectionsPane({
             setEdits(new Map(edits).set(stored.id, stored));
             setNotice({ text: fill(strings.admin.sectionSaved, { name: sectionOf(stored).name }) });
             sectionsStore.invalidate();
+            // The backend counts an edit of a section as a change of the order's
+            // version, and the edit's answer does not say the new one: without it
+            // the next Save said somebody else had changed the order. The version
+            // is read again quietly, and taken only while the order is still the
+            // one this pane read, so a real change from another tab still stops
+            // the Save.
+            const was = { version, rows: saved };
+            deps.load().then(
+              (fresh) => {
+                if (isChanged(changesOf(was.rows, rowsOf(fresh)))) return;
+                setVersion((now) => (now === was.version ? (fresh.version ?? undefined) : now));
+              },
+              () => undefined,
+            );
           }}
         />
       )}
