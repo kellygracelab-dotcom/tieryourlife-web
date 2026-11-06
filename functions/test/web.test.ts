@@ -495,6 +495,26 @@ describe("GET /api/rank/{code}", () => {
     assert.equal((unpublished.body as Data).listAvailable, false);
   });
 
+  it("keeps a ranking hidden when its author withdrew the list while reports were hiding it", async () => {
+    const { deps, table } = setup(GUEST);
+    table("rankings").set("abcdefgh", ranking("guest", true));
+    table("publishedLists").set(LIST_ID, { ...LIST, underReview: true });
+    assert.equal((await call(deps, "GET", "/api/rank/abcdefgh")).status, 404);
+    // The author deletes it before staff decide; the proxy leaves this line.
+    table("publishedLists").delete(LIST_ID);
+    table("auditLog").set("line-1", {
+      who: "author-uid",
+      role: "author",
+      what: "list.withdrawn_hidden",
+      target: `publishedLists/${LIST_ID}`,
+      before: { underReview: true },
+      after: null,
+    });
+    const gone = await call(deps, "GET", "/api/rank/abcdefgh");
+    assert.equal(gone.status, 404);
+    assert.equal(JSON.stringify(gone.body).includes("Moonlight"), false);
+  });
+
   it("names nobody once the list is gone, as when its author erased their account", async () => {
     const { deps, table } = setup(GUEST);
     table("rankings").set("abcdefgh", {
@@ -823,7 +843,14 @@ describe("the pages a link opens", () => {
       what: "report.takedown",
       target: "publishedLists/list-0002",
     });
-    for (const code of ["abcdefgh", "bcdefghj"]) {
+    // Withdrawn by its author while reports hid it: as good as taken down.
+    table("rankings").set("cdefghjk", { ...ranking("guest", true), listId: "list-0003" });
+    table("auditLog").set("line-2", {
+      role: "author",
+      what: "list.withdrawn_hidden",
+      target: "publishedLists/list-0003",
+    });
+    for (const code of ["abcdefgh", "bcdefghj", "cdefghjk"]) {
       const page = await withHosting(true, () => call(deps, "GET", `/r/${code}`));
       assert.equal(page.status, 200, code);
       assert.equal(page.body, SHELL, code);
