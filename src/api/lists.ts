@@ -93,6 +93,8 @@ export interface MyList extends ListSummary {
   proposedSectionName?: string | null;
   /** The uid of the board it was published from, on lists published since the server kept it. */
   boardUid?: string | null;
+  /** Kept, but held for a moderator: out of the feed, and its link answers nobody yet. */
+  underReview?: boolean;
 }
 
 /** The lists this account published from the app, newest first; the backend orders them. */

@@ -183,6 +183,9 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
             {entry.kind === "list" && entry.movesTo !== null && (
               <span className="mine__meta">{entry.movesTo}</span>
             )}
+            {entry.kind === "list" && entry.list.underReview === true && (
+              <span className="mine__meta">{strings.boards.heldBody}</span>
+            )}
           </Link>
           <div className="mine__actions">
             <Link className="btn btn--text" to={isList ? to : `${to}?edit`}>
