@@ -75,6 +75,7 @@ import {
   houseLinkOf,
   houseLinkOfParam,
   linkToHouse,
+  markHouseSeen,
   markHouseSent,
   unlinkFromHouse,
 } from "../features/boards/houseList";
@@ -486,9 +487,10 @@ function OpenBoard({
   };
 
   // Out as the house: the board is tied to the list from now on, and the address says which.
-  const sentToHouse = (what: "published" | "updated", id: string) => {
+  const sentToHouse = (what: "published" | "updated", id: string, updatedAt: number | null) => {
     linkToHouse(uid, id, houseStore);
     markHouseSent(uid, latest().editedAt, houseStore);
+    markHouseSeen(uid, updatedAt, houseStore);
     void navigate(houseBoardPath(uid, id), { replace: true });
     setNotice({
       text: what === "published" ? strings.admin.housePublished : strings.admin.houseUpdated,

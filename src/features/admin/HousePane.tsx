@@ -31,6 +31,8 @@ import {
   houseBoardsOf,
   hasUnsentEdits,
   linkToHouse,
+  listChangedSince,
+  markHouseSeen,
   markHouseSent,
   NEW_HOUSE_PATH,
   unlinkFromHouse,
@@ -454,7 +456,7 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
       .map((uid) => deps.houseRepository.get(uid))
       .find((board) => board !== null && board.deletedAt === null);
     if (editing !== undefined && editing !== null) {
-      if (list.updatedAt <= editing.editedAt) {
+      if (!listChangedSince(editing, list.updatedAt, deps.links)) {
         void navigate(houseBoardPath(editing.uid, list.id));
         return;
       }
@@ -478,6 +480,7 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
         deps.houseRepository.save(board);
         linkToHouse(board.uid, list.id, deps.links);
         markHouseSent(board.uid, board.editedAt, deps.links);
+        markHouseSeen(board.uid, full.updatedAt, deps.links);
         void navigate(houseBoardPath(board.uid, list.id));
       },
       (reason: unknown) => {

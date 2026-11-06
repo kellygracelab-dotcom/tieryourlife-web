@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { HouseAnswer } from "../../api/admin";
 import { errorOf } from "../../api/errors";
 import type { PublishRequest } from "../../api/lists";
-import { publishAsHouse, replaceHouseList } from "../../lib/api";
+import { loadListAsWritten, publishAsHouse, replaceHouseList } from "../../lib/api";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -13,12 +13,29 @@ import { failureText, problemText, type HouseSend } from "./houseWords";
 import "./house.css";
 
 /** The house's two ways out: a new list, or a new snapshot of one. */
+/** What a send answers, and the list's own updatedAt when it could be read back after. */
+export type HouseSent = HouseAnswer & { updatedAt?: number };
+
 export interface HouseSending {
-  publish: (request: PublishRequest) => Promise<HouseAnswer>;
-  replace: (id: string, request: PublishRequest) => Promise<HouseAnswer>;
+  publish: (request: PublishRequest) => Promise<HouseSent>;
+  replace: (id: string, request: PublishRequest) => Promise<HouseSent>;
 }
 
-const houseSending: HouseSending = { publish: publishAsHouse, replace: replaceHouseList };
+/**
+ * The backend's answer does not say when, by its clock, the list now stands
+ * as sent: it is read back, so this device can tell another admin's later
+ * change from its own without asking its own clock. Not read, it is unknown.
+ */
+const readBack = (answer: HouseAnswer): Promise<HouseSent> =>
+  loadListAsWritten(answer.id).then(
+    (list) => ({ ...answer, updatedAt: list.updatedAt }),
+    () => answer,
+  );
+
+const houseSending: HouseSending = {
+  publish: (request) => publishAsHouse(request).then(readBack),
+  replace: (id, request) => replaceHouseList(id, request).then(readBack),
+};
 
 /** The admin pane the house's lists are kept in, where a board edited for the house leads back to. */
 export const HOUSE_PANE_PATH = "/admin/house";
@@ -32,7 +49,7 @@ interface HouseBarProps {
   listId: string | null;
   send?: HouseSending;
   /** It went out: the page ties the board to the list and says so. */
-  onSent: (what: "published" | "updated", id: string) => void;
+  onSent: (what: "published" | "updated", id: string, updatedAt: number | null) => void;
   /** The list it updated was taken down elsewhere: the board is a new house list again. */
   onGone: () => void;
 }
@@ -65,7 +82,7 @@ export function HouseBar({
     sent.then(
       (answer) => {
         setBusy(false);
-        onSent(listId === null ? "published" : "updated", answer.id);
+        onSent(listId === null ? "published" : "updated", answer.id, answer.updatedAt ?? null);
       },
       (reason: unknown) => {
         setBusy(false);
