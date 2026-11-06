@@ -994,7 +994,7 @@ const de: Translation = {
     category: "Formen",
     movie: "Film",
     animation: "Animation",
-    sports_esports: "Gamepad",
+    sports_esports: "Controller",
     music_note: "Musik",
     menu_book: "Buch",
     restaurant: "Restaurant",
@@ -1013,7 +1013,7 @@ const de: Translation = {
     mic: "Mikrofon",
     photo_camera: "Kamera",
     sports_basketball: "Basketball",
-    celebration: "Party",
+    celebration: "Feier",
     star: "Stern",
   },
   play: {
