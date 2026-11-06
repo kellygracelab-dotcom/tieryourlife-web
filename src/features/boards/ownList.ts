@@ -12,6 +12,17 @@ export type CopyBack = (url: string) => Promise<UploadedPicture>;
 const COPIES_AT_ONCE = 4;
 
 /**
+ * One of the person's own pictures the backend copied for this list, to bring
+ * back into their folder. Not a picture a copy took from another list: that one
+ * goes out again by its address, so it stays tied to that list and goes with it
+ * when a moderator takes that list down.
+ */
+const ownCopyIn = (list: PublishedList, url: string): boolean => {
+  const name = publishedPictureOf(url, list.id);
+  return name !== null && !(list.picturesFrom ?? []).some((from) => name.startsWith(`${from}-`));
+};
+
+/**
  * The history entry's state for one's own list seen as the community sees
  * it, the board's "See it in Community": that page stays the list's page,
  * and does not give way to the board as one's own list otherwise does.
@@ -83,9 +94,7 @@ export async function boardForOwnList(
   const wanted = [
     ...new Set(
       draft.items.flatMap((item) =>
-        item.pictureId === null &&
-        item.imageUrl !== null &&
-        publishedPictureOf(item.imageUrl, list.id) !== null
+        item.pictureId === null && item.imageUrl !== null && ownCopyIn(list, item.imageUrl)
           ? [item.imageUrl]
           : [],
       ),
@@ -125,7 +134,7 @@ ${item.imageUrl ?? ""}`,
   // photo as that photo brought back, which the next Update names by id; one
   // from elsewhere as it is; a copy not brought back for any card is lost.
   const ownPicture = (url: string): string | null =>
-    publishedPictureOf(url, list.id) === null ? url : (copies.get(url)?.previewUrl ?? null);
+    ownCopyIn(list, url) ? (copies.get(url)?.previewUrl ?? null) : url;
   const shown = (urls: readonly string[]) =>
     urls.flatMap((url) => {
       const picture = ownPicture(url);

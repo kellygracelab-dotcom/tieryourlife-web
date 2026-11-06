@@ -99,6 +99,12 @@ export interface PublishedList extends ListSummary {
   items: PublishedItem[];
   /** A house list's words by locale, from the text as written to the text in that language. */
   translations?: Partial<Record<string, Partial<Record<string, string>>>>;
+  /**
+   * The lists a copy took pictures from. The backend keeps each such picture
+   * in this list's folder as `{that list's id}-{name}`, and takes it down
+   * with that list.
+   */
+  picturesFrom?: string[];
 }
 
 // A type rather than an interface so it can travel as a query object.

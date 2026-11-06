@@ -115,6 +115,43 @@ describe("boardForOwnList", () => {
     expect(drawn.coverImageUrls).toEqual([]);
   });
 
+  it("sends a picture a copy took from another list out again by its address, and brings back only one's own (QA P22)", async () => {
+    const feed = (name: string) =>
+      `https://firebasestorage.googleapis.com/v0/b/tyl.appspot.com/o/published%2FL9%2F${name}?alt=media`;
+    const borrowed = feed("AbCdEfGhIjKlMnOpQrSt-poster");
+    const copied: string[] = [];
+    const copyBack = async (url: string) => {
+      copied.push(url);
+      return {
+        pictureId: "own-h",
+        previewUrl: "https://firebasestorage.googleapis.com/v0/b/tyl/o/users%2Fme%2Fpictures%2Fh",
+      };
+    };
+    const board = await boardForOwnList(
+      {
+        ...ownAnonymous,
+        picturesFrom: ["AbCdEfGhIjKlMnOpQrSt"],
+        items: [
+          { title: "Holiday", imageUrl: feed("h"), tierIndex: 0 },
+          { title: "Poster", imageUrl: borrowed, tierIndex: 1 },
+        ],
+        previewImages: [borrowed, feed("h")],
+        coverImageUrl: null,
+      },
+      null,
+      copyBack,
+      5,
+      uids(),
+    );
+    expect(copied).toEqual([feed("h")]);
+    const poster = board.items.find((item) => item.title === "Poster")!;
+    expect(poster).toMatchObject({ imageUrl: borrowed, pictureId: null });
+    expect(board.coverImageUrls).toEqual([
+      borrowed,
+      "https://firebasestorage.googleapis.com/v0/b/tyl/o/users%2Fme%2Fpictures%2Fh",
+    ]);
+  });
+
   it("stays named when the list went out with its author's name, and in no topic when it had none", async () => {
     const named = { ...ownAnonymous, anonymous: false, topicId: null, topicName: null };
     const board = await boardForOwnList(named, null, noCopies, 5, uids());
