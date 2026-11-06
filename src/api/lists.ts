@@ -162,6 +162,11 @@ export interface Published {
    * and is sent again over it, or the list keeps what the earlier one sent.
    */
   existing?: boolean;
+  /**
+   * True when the list was kept but starts out of the feed, held until staff
+   * look: its link answers 404 to everybody, the author too.
+   */
+  underReview?: boolean;
 }
 
 export function publish(client: ApiClient, request: PublishRequest): Promise<Published> {

@@ -36,7 +36,7 @@ import type {
   SuggestedAuthor,
 } from "../api/community";
 import * as lists from "../api/lists";
-import type { MyList, PublishRequest } from "../api/lists";
+import type { MyList, Published, PublishRequest } from "../api/lists";
 import * as moderation from "../api/moderation";
 import * as pictures from "../api/pictures";
 import type { PictureAsk, PicturePage } from "../api/pictures";
@@ -131,8 +131,7 @@ export const findPictures = (ask: PictureAsk): Promise<PicturePage> =>
 
 export const keepPicture = (url: string): Promise<string> => pictures.keepPicture(api, url);
 
-export const publish = (request: PublishRequest): Promise<{ id: string }> =>
-  lists.publish(api, request);
+export const publish = (request: PublishRequest): Promise<Published> => lists.publish(api, request);
 
 /** The call, and then word that the list is no longer as any page last read it; gone already, too. */
 const changing = async <T>(id: string, call: Promise<T>): Promise<T> => {
@@ -146,7 +145,7 @@ const changing = async <T>(id: string, call: Promise<T>): Promise<T> => {
   }
 };
 
-export const republish = (id: string, request: PublishRequest): Promise<{ id: string }> =>
+export const republish = (id: string, request: PublishRequest): Promise<Published> =>
   changing(id, lists.republish(api, id, request));
 
 export const unpublish = (id: string): Promise<void> => changing(id, lists.unpublish(api, id));

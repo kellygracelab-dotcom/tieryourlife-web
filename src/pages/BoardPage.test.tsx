@@ -1033,6 +1033,38 @@ describe("BoardPage: share and publish", () => {
       `${window.location.origin}/l/L1`,
     );
   });
+
+  it("says a publish held for a moderator waits, keeps it after a reload, and shares the site's address, not the dead link", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const share = vi.fn<Share>(() => Promise.resolve());
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      publish: vi.fn(() => Promise.resolve({ id: "L1", topicId: null, underReview: true })),
+    };
+    open(repository, "/b/films", { share, publishing, account: member });
+    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Public" }));
+    expect(
+      await screen.findByText("Saved. It waits for a moderator before others can see it."),
+    ).toBeVisible();
+    expect(screen.queryByText("Published. Anyone with the link can rank it.")).toBeNull();
+    // Read back as the browser keeps it: the hold is still known.
+    expect(boardsRepository(store).get("films")).toMatchObject({
+      publishedId: "L1",
+      heldForReview: true,
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    await userEvent.click(screen.getByRole("button", { name: "Share as image" }));
+    expect(share).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      window.location.origin,
+    );
+  });
 });
 
 describe("BoardPage: Play", () => {

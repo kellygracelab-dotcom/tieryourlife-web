@@ -1262,6 +1262,8 @@ const es: Translation = {
     updating: "Actualizando…",
     behind: "La versión publicada está desactualizada.",
     publishing: "Publicando…",
+    publishedHeld: "Guardada. Espera a un moderador antes de que otros puedan verla.",
+    heldBody: "Espera a un moderador antes de que otros puedan verla.",
     publishedNote: "Publicada. Cualquiera con el enlace puede ordenarla.",
     publishedAsRanking:
       "Publicada como tu ranking de esa lista. En el feed no aparece una segunda lista.",

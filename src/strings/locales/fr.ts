@@ -1279,6 +1279,8 @@ const fr: Translation = {
     updating: "Mise à jour…",
     behind: "La version publiée est en retard sur ce tableau.",
     publishing: "Publication…",
+    publishedHeld: "Enregistrée. Elle attend un modérateur avant que d’autres puissent la voir.",
+    heldBody: "Elle attend un modérateur avant que d’autres puissent la voir.",
     publishedNote: "Publiée. Toute personne ayant le lien peut la classer.",
     publishedAsRanking:
       "Publiée comme votre classement de cette liste. Aucune seconde liste n’apparaît dans le fil.",

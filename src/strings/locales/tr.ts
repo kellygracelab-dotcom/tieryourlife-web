@@ -1166,6 +1166,8 @@ const tr: Translation = {
     updating: "Güncelleniyor…",
     behind: "Yayımlanan sürüm bu panonun gerisinde.",
     publishing: "Yayımlanıyor…",
+    publishedHeld: "Kaydedildi. Başkaları görmeden önce bir moderatörü bekliyor.",
+    heldBody: "Başkaları görmeden önce bir moderatörü bekliyor.",
     publishedNote: "Yayımlandı. Bağlantısı olan herkes sıralayabilir.",
     publishedAsRanking:
       "O listenin sizin sıralamanız olarak yayınlandı. Akışta ikinci bir liste görünmez.",

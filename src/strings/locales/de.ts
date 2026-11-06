@@ -1205,6 +1205,8 @@ const de: Translation = {
     updating: "Wird aktualisiert…",
     behind: "Die veröffentlichte Fassung ist älter als dieses Board.",
     publishing: "Wird veröffentlicht…",
+    publishedHeld: "Gespeichert. Sie wartet auf einen Moderator, bevor andere sie sehen können.",
+    heldBody: "Sie wartet auf einen Moderator, bevor andere sie sehen können.",
     publishedNote: "Veröffentlicht. Alle mit dem Link können sie einordnen.",
     publishedAsRanking:
       "Draußen als deine Reihung dieser Liste. Im Feed erscheint keine zweite Liste.",

@@ -1259,6 +1259,8 @@ const ptBR: Translation = {
     updating: "Atualizando…",
     behind: "A versão publicada está desatualizada.",
     publishing: "Publicando…",
+    publishedHeld: "Salva. Ela espera um moderador antes que outras pessoas possam vê-la.",
+    heldBody: "Ela espera um moderador antes que outras pessoas possam vê-la.",
     publishedNote: "Publicada. Qualquer um com o link pode organizá-la.",
     publishedAsRanking:
       "Publicada como seu ranking daquela lista. O feed não mostra uma segunda lista.",

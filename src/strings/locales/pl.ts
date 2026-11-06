@@ -1316,6 +1316,8 @@ const pl: Translation = {
     updating: "Aktualizowanie…",
     behind: "Opublikowana wersja jest starsza niż ta lista.",
     publishing: "Publikowanie…",
+    publishedHeld: "Zapisana. Czeka na moderatora, zanim inni będą mogli ją zobaczyć.",
+    heldBody: "Czeka na moderatora, zanim inni będą mogli ją zobaczyć.",
     publishedNote: "Opublikowano. Każdy z linkiem może ją ułożyć.",
     publishedAsRanking:
       "Opublikowana jako twój ranking tej listy. W kanale nie pojawia się druga lista.",

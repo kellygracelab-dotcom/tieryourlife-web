@@ -1138,6 +1138,8 @@ export const en = {
     updating: "Updating…",
     behind: "The published copy is behind this board.",
     publishing: "Publishing…",
+    publishedHeld: "Saved. It waits for a moderator before others can see it.",
+    heldBody: "It waits for a moderator before others can see it.",
     publishedNote: "Published. Anyone with the link can rank it.",
     publishedAsRanking: "Out as your ranking of that list. The feed shows no second list.",
     unpublished: "Unpublished. The link no longer works.",

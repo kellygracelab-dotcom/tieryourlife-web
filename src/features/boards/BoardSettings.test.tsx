@@ -400,6 +400,42 @@ describe("BoardSettings: public", () => {
     expect(held).toMatchObject({ publishedId: null, rankingOf: null, authorName: "Olena" });
   });
 
+  it("says a list the backend holds for a moderator waits, and offers no link to it until an Update comes back without the hold", async () => {
+    const publish = vi.fn(() => Promise.resolve({ id: "L1", topicId: null, underReview: true }));
+    const republish = vi
+      .fn<PublishingDeps["republish"]>()
+      .mockResolvedValueOnce({ id: "L1", topicId: null, underReview: true })
+      .mockResolvedValueOnce({ id: "L1", topicId: null, underReview: false });
+    show(filmBoard(), signedIn, { publish, republish });
+
+    await userEvent.click(publicSwitch());
+    await waitFor(() => expect(publicSwitch()).toBeChecked());
+    expect(held).toMatchObject({ publishedId: "L1", heldForReview: true });
+    expect(published).toHaveBeenCalledWith("held", "L1");
+    expect(published).not.toHaveBeenCalledWith("published", "L1");
+    // Its link answers 404 to everybody, the author too: nothing leads there.
+    expect(screen.queryByRole("link", { name: "See it in Community" })).toBeNull();
+    expect(
+      within(sheet()).getAllByText("It waits for a moderator before others can see it.").length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/Anyone with the link/)).toBeNull();
+
+    // Still held after an Update: said again, not "Saved".
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(published).toHaveBeenCalledTimes(2));
+    expect(published).toHaveBeenLastCalledWith("held", "L1");
+    expect(held).toMatchObject({ heldForReview: true });
+
+    // Staff looked: the next Update finds it in the feed, and the link is back.
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() => expect(published).toHaveBeenLastCalledWith("updated", "L1"));
+    expect(held.heldForReview).toBeUndefined();
+    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+      "href",
+      "/l/L1",
+    );
+  });
+
   it("asks before taking it down, in the sheet, from the switch or from Take it down", async () => {
     const unpublish = vi.fn(() => Promise.resolve());
     show(

@@ -201,6 +201,7 @@ export function parseBoard(raw: unknown): Board | null {
     publishedEditedAt: time(source.publishedEditedAt),
     topic: topicOf(source.topic),
     ...(source.topicOff === true ? { topicOff: true } : {}),
+    ...(source.heldForReview === true ? { heldForReview: true } : {}),
     anonymous: source.anonymous === true,
     play: playOf(source.play),
   };
