@@ -571,7 +571,7 @@ const ar: Translation = {
     allPlacedHint: "اسحب بطاقة إن غيّرت رأيك",
     placeIn: "وضع {name} في {tier}",
     cardIn: "«{name}» في {tier}",
-    cardInPool: "«{name}» عاد إلى المجموعة",
+    cardInPool: "«{name}» عاد إلى المجمّع",
     undo: "تراجع",
     finish: "إنهاء",
     cancel: "إلغاء",
