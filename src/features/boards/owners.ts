@@ -179,6 +179,7 @@ export function boardOwners(store: KeyValueStore): BoardOwners {
     save: (board) => of(owner).save(board),
     saveAll: (all) => of(owner).saveAll(all),
     remove: (uid) => of(owner).remove(uid),
+    kept: (uid) => settled && of(owner).kept(uid),
     reread: () => of(owner).reread(),
     subscribe(listener) {
       listeners.add(listener);

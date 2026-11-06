@@ -3,7 +3,7 @@ import { errorOf } from "../../api/errors";
 import { fingerprintOf as digest } from "./fingerprint";
 import { setPublished, type Board, type BoardItem, type NextUid } from "./model";
 import { parseBoard, type BoardsRepository } from "./repository";
-import { planSync, type RemoteBoard, type SyncStep } from "./syncPlan";
+import { planSync, type RemoteBoard, type SyncedBoard, type SyncStep } from "./syncPlan";
 import type { SyncRecords } from "./syncRecords";
 
 /**
@@ -273,7 +273,7 @@ async function carry(
       // computed once more only if it was not. No wait between the check and the write.
       const fingerprint = planned.get(step.uid) ?? (await fingerprintOf(board));
       check(deps);
-      records.remember({ uid: step.uid, revision: step.revision, fingerprint });
+      agree(deps, { uid: step.uid, revision: step.revision, fingerprint });
       return "carried";
     }
   }
@@ -297,7 +297,7 @@ async function send(
   try {
     const answer = await api.keep(uid, request(board, fingerprint, basedOn, deviceName));
     check(deps);
-    records.remember({ uid, revision: answer.revision, fingerprint });
+    agree(deps, { uid, revision: answer.revision, fingerprint });
     return;
   } catch (reason: unknown) {
     if (reason instanceof SyncCancelled) throw reason;
@@ -308,7 +308,7 @@ async function send(
     // content, so take the missed number and stop; otherwise a copy of your
     // own board appears every time.
     if (theirs.fingerprint !== null && theirs.fingerprint === fingerprint) {
-      records.remember({ uid, revision: theirs.revision, fingerprint });
+      agree(deps, { uid, revision: theirs.revision, fingerprint });
       return;
     }
     // The board as last agreed, written again by another device: nothing in
@@ -320,8 +320,20 @@ async function send(
     check(deps);
     const second = await api.keep(uid, request(board, fingerprint, theirs.revision, deviceName));
     check(deps);
-    records.remember({ uid, revision: second.revision, fingerprint });
+    agree(deps, { uid, revision: second.revision, fingerprint });
   }
+}
+
+/**
+ * Writes down that this device and the account agree about a board, only
+ * while the board is in the browser's storage. One the browser refused is
+ * held for the visit and gone after a reload, and an agreement about it would
+ * then read as thrown away here: the next run would take it out of the
+ * account and off every other device. Without the record, the next visit
+ * brings the account's copy down instead, or its newer version of an edit.
+ */
+function agree(deps: SyncDeps, record: SyncedBoard): void {
+  if (deps.repository.kept(record.uid)) deps.records.remember(record);
 }
 
 /** A kept board as one of ours: the account's fields, and this device's own set afresh. */

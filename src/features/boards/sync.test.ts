@@ -255,6 +255,97 @@ describe("syncBoards", () => {
     expect(account.kept.get("big")?.deleted).toBe(false);
   });
 
+  describe("a browser that holds a refused board only for the visit", () => {
+    /**
+     * As the browser's own store does: a write that does not fit is held in
+     * memory, read back for the visit, and gone after a reload.
+     */
+    const fullFor = (refused: (key: string) => boolean) => {
+      const disk = memoryStore();
+      const visit = () => {
+        const held = new Map<string, string>();
+        const store = {
+          read: (key: string) => held.get(key) ?? disk.read(key),
+          write: (key: string, value: string) => {
+            if (refused(key)) {
+              held.set(key, value);
+              return false;
+            }
+            held.delete(key);
+            return disk.write(key, value);
+          },
+          remove: (key: string) => {
+            held.delete(key);
+            disk.remove(key);
+          },
+          keys: () => [...new Set([...(disk.keys?.() ?? []), ...held.keys()])],
+          heldOnly: (key: string) => held.has(key),
+        };
+        return { repository: boardsRepository(store), records: syncRecords(disk, "me") };
+      };
+      return { disk, visit };
+    };
+
+    const runOn = (
+      on: {
+        repository: ReturnType<typeof boardsRepository>;
+        records: ReturnType<typeof syncRecords>;
+      },
+      api: BoardsApi,
+    ) =>
+      syncBoards({
+        repository: on.repository,
+        api,
+        records: on.records,
+        deviceName: "Chrome on Linux",
+        now: () => 1000,
+        nextUid: uids("new-"),
+      }).catch(() => null);
+
+    it("never agrees about a board from the account the browser would not keep, and the next visit leaves it in the account", async () => {
+      const account = fakeAccount();
+      // Sent by another device, with its real fingerprint.
+      const first = setUp();
+      first.repository.save(films("big", "Everything I watched"));
+      await first.run({ api: account.api });
+
+      const full = fullFor((key) => key.endsWith(":big"));
+      const today = full.visit();
+      await runOn(today, account.api);
+      // Held for the visit, so the shelf shows it, and a second run finds it the same as the account's.
+      expect(today.repository.get("big")).not.toBeNull();
+      await runOn(today, account.api);
+      expect(today.records.all().map((record) => record.uid)).not.toContain("big");
+
+      await runOn(full.visit(), account.api);
+      expect(account.forgotten).toEqual([]);
+      expect(account.kept.get("big")?.deleted).toBe(false);
+    });
+
+    it("never agrees about an edit the browser would not keep, so the next visit takes the account's newer version", async () => {
+      const account = fakeAccount();
+      let refusing = false;
+      const full = fullFor((key) => refusing && key.endsWith(":films"));
+      const today = full.visit();
+      today.repository.save(films());
+      await runOn(today, account.api);
+      expect(account.kept.get("films")?.revision).toBe(1);
+
+      refusing = true;
+      const edited = rename(today.repository.get("films")!, "Films I loved", 2000);
+      expect(today.repository.save(edited)).toBe(false);
+      await runOn(today, account.api);
+      expect(account.kept.get("films")?.title).toBe("Films I loved");
+
+      refusing = false;
+      const tomorrow = full.visit();
+      await runOn(tomorrow, account.api);
+      // The older board left on the disk did not go up over the newer one.
+      expect(account.kept.get("films")?.title).toBe("Films I loved");
+      expect(tomorrow.repository.get("films")?.title).toBe("Films I loved");
+    });
+  });
+
   it("brings down a board this device has never had, with its pictures found by id", async () => {
     const { repository, account, run } = setUp();
     const theirs = films("theirs", "From the phone");
