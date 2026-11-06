@@ -417,10 +417,14 @@ export function SectionEditor(props: SectionEditorProps) {
         }
         if (mode === "propose" && deps.room !== undefined) {
           // Asked before the upload, so a refusal costs none. A failed ask
-          // is no answer: the backend still refuses on the send.
+          // is no answer: the backend still refuses on the send. A ban is
+          // one, though: the send would only be refused after the upload.
           const refusal = await deps.room().then(
             (room) => room.refusal,
-            () => null,
+            (reason: unknown) => {
+              if (errorOf(reason).kind === "banned") throw reason;
+              return null;
+            },
           );
           if (refusal !== null) {
             setSending(false);
