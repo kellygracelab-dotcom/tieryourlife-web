@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +10,7 @@ import {
   houseBoardsOf,
   houseLinkOf,
   linkToHouse,
+  markHouseSeen,
   markHouseSent,
 } from "../boards/houseList";
 import {
@@ -386,6 +387,45 @@ describe("HousePane: made and changed on a board", () => {
     const [fresh] = houseRepository.all();
     expect(fresh?.title).toBe("Best ramen");
     expect(router.state.location.pathname).toBe(`/b/${fresh?.uid}`);
+  });
+
+  // QA M24: the list's time is the server's and the board's this device's;
+  // with this device's clock 15 minutes ahead, another admin's change went
+  // unseen and the old board opened, and Update put the old list back.
+  it("sees a change made elsewhere by the server's times, whatever this device's clock says", async () => {
+    const listed = Date.UTC(2026, 9, 30);
+    deps.now = () => listed + 15 * 60_000;
+    open();
+    await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    const [made] = houseRepository.all();
+    cleanup();
+
+    // Another admin fills it out a minute later, by the server's clock.
+    deps.load = vi.fn(async () => ({
+      lists: [house("l1", "Best ramen", { updatedAt: listed + 60_000 })],
+      nextCursor: null,
+    }));
+    open();
+    await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(deps.loadList).toHaveBeenCalledTimes(2);
+    expect(houseRepository.get(made!.uid)).toBeNull();
+  });
+
+  it("opens its own board after its own Update, by the time the list was read back with", async () => {
+    // This device's clock is behind: the board looks older than the list it updated.
+    houseRepository.save(readyBoard("mine", "Ramen, my edit", Date.UTC(2026, 9, 29)));
+    linkToHouse("mine", "l1", links);
+    markHouseSent("mine", Date.UTC(2026, 9, 29), links);
+    markHouseSeen("mine", Date.UTC(2026, 9, 30), links);
+    const router = open();
+    await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(deps.loadList).not.toHaveBeenCalled();
+    expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
+      "/b/mine?house=l1",
+    );
   });
 
   it("asks before a list changed elsewhere drops edits this device has not sent", async () => {

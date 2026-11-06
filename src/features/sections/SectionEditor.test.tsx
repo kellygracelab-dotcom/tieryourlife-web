@@ -486,6 +486,20 @@ describe("Propose a section", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  // QA M64: on the tab's first page a reload or Back left without a word.
+  it("has the browser ask before a reload or leaving the tab drops what was typed", async () => {
+    propose();
+    const leave = () => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(leave()).toBe(false);
+    pick();
+    await userEvent.type(nameField(), "Street food");
+    expect(leave()).toBe(true);
+  });
+
   it("asks before Open it under a taken name leaves the form", async () => {
     const deps = makeDeps();
     deps.check.mockResolvedValue({ free: false, id: "food" });

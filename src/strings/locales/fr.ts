@@ -921,6 +921,9 @@ const fr: Translation = {
     unfollowed: "Vous ne suivez plus {name}",
     followFailed: "Impossible de suivre. Réessayez.",
     unfollowFailed: "Impossible de ne plus suivre. Réessayez.",
+    mergedFollowed: "« {name} » a été fusionnée avec {section}. Vous suivez maintenant {section}.",
+    mergedUnfollowed: "« {name} » a été fusionnée avec {section}. Vous ne suivez plus {section}.",
+    mergedTryAgain: "« {name} » a été fusionnée avec {section}. Réessayez là-bas.",
     followLimit:
       "Vous suivez déjà autant de rubriques et de thèmes que possible. Cessez d’en suivre quelques-uns d’abord.",
     followSignInBody:

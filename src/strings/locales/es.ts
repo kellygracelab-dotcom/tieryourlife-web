@@ -907,6 +907,9 @@ const es: Translation = {
     unfollowed: "Dejaste de seguir {name}",
     followFailed: "No se pudo seguir. Inténtalo de nuevo.",
     unfollowFailed: "No se pudo dejar de seguir. Inténtalo de nuevo.",
+    mergedFollowed: "«{name}» se fusionó con {section}. Ahora sigues {section}.",
+    mergedUnfollowed: "«{name}» se fusionó con {section}. Dejaste de seguir {section}.",
+    mergedTryAgain: "«{name}» se fusionó con {section}. Inténtalo de nuevo allí.",
     followLimit:
       "Ya sigues todas las secciones y temas que se pueden. Deja de seguir alguno primero.",
     followSignInBody: "Al seguir secciones y temas, sus nuevas listas te aparecen las primeras.",

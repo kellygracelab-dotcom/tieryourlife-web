@@ -1007,6 +1007,9 @@ const ar: Translation = {
     unfollowed: "ألغيت متابعة {name}",
     followFailed: "تعذّرت المتابعة. حاول مرة أخرى.",
     unfollowFailed: "تعذّر إلغاء المتابعة. حاول مرة أخرى.",
+    mergedFollowed: "تم دمج «{name}» في {section}. أنت تتابع {section} الآن.",
+    mergedUnfollowed: "تم دمج «{name}» في {section}. ألغيت متابعة {section}.",
+    mergedTryAgain: "تم دمج «{name}» في {section}. حاول مرة أخرى هناك.",
     followLimit:
       "وصلت إلى أقصى عدد من الأقسام والمواضيع التي يمكنك متابعتها. ألغِ متابعة بعضها أولًا.",
     followSignInBody:

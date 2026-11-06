@@ -26,7 +26,12 @@ import { createSectionsStore, type SectionsStore } from "../features/sections/us
 import { memoryStore, type KeyValueStore } from "../lib/storage";
 import { ApiFailure } from "../api/errors";
 import type { HouseSending } from "../features/admin/HouseBar";
-import { hasUnsentEdits, houseLinkOf, linkToHouse } from "../features/boards/houseList";
+import {
+  hasUnsentEdits,
+  houseLinkOf,
+  linkToHouse,
+  listChangedSince,
+} from "../features/boards/houseList";
 import { publishRequestOf } from "../features/boards/publish";
 import { resetModeratorForTests, type LoadReports } from "../features/moderation/useModerator";
 import { loadPlayScreens } from "../features/play/usePlay";
@@ -1133,7 +1138,8 @@ describe("BoardPage: a house list", () => {
   const notStaff: LoadReports = () => Promise.reject(new ApiFailure({ kind: "notYours" }));
   const sending = (): HouseSending => ({
     publish: vi.fn(() => Promise.resolve({ id: "H1", topicId: null })),
-    replace: vi.fn((id: string) => Promise.resolve({ id, topicId: null })),
+    // The list read back after the send, by the server's clock.
+    replace: vi.fn((id: string) => Promise.resolve({ id, topicId: null, updatedAt: 7_000 })),
   });
 
   it("says a new board is the house's, leads back to House lists, and offers no Public switch", async () => {
@@ -1221,6 +1227,9 @@ describe("BoardPage: a house list", () => {
     expect(house.replace).toHaveBeenCalledWith("H1", publishRequestOf(board));
     // What went out is no edit the list lacks: a later Edit need not ask about it.
     expect(hasUnsentEdits(houseRepository.get("films")!, houseStore)).toBe(false);
+    // The list as read back after it is the one the board matches, by the server's time.
+    expect(listChangedSince(houseRepository.get("films")!, 7_000, houseStore)).toBe(false);
+    expect(listChangedSince(houseRepository.get("films")!, 7_001, houseStore)).toBe(true);
     await userEvent.click(screen.getByRole("button", { name: "House lists" }));
     expect(router.state.location.pathname).toBe("/admin/house");
   });

@@ -88,11 +88,12 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
   const { toggle, failed, notify, overlays } = useFollowFlow();
   const reporting = useReporting({ report, notify });
   // A word to the moderators, the app's TopicViewModel.notThisTopic: nothing
-  // on screen changes, so it is said at once; a refusal says so after.
+  // on screen changes, so it is said at once; a refusal says so after, on the
+  // site when the reader has left the page meanwhile.
   const notThisTopic = (list: ListSummary) => {
     notify({ text: strings.sections.notThisTopicSent });
     report(list.id, { reason: "wrong_category", note: null }).catch(() =>
-      notify({ text: strings.report.failed }),
+      reporting.tell({ text: strings.report.failed }),
     );
   };
   // A follow made here shows at once; the backend's answer only corrects it.

@@ -11,6 +11,7 @@ import type { FollowDeps } from "../features/community/useFollow";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { report } from "../lib/api";
 import { memoryStore } from "../lib/storage";
+import { sayOnTheSite, siteNotice } from "../ui/siteNotice";
 import { ProfilePage } from "./ProfilePage";
 
 vi.mock("../lib/api", () => ({
@@ -71,6 +72,7 @@ const open = (
       <RouterProvider router={router} />
     </SessionContext.Provider>,
   );
+  return router;
 };
 
 /** The menu on one list's card. */
@@ -87,6 +89,7 @@ beforeEach(() => {
   vi.mocked(follow.unfollow).mockReset();
   vi.mocked(follow.unfollow).mockResolvedValue(undefined);
   useHiddenStoreForTests(memoryStore());
+  sayOnTheSite(null);
 });
 
 describe("ProfilePage", () => {
@@ -403,6 +406,31 @@ describe("ProfilePage", () => {
     expect(await screen.findByText(/nothing was sent/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /List b/ })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  // QA W43: only the list page's Done told the site; a card's report was lost silently.
+  it("says on the site that a card's report did not go, once the reader has left the page", async () => {
+    let refuse: (reason: unknown) => void = () => undefined;
+    vi.mocked(report).mockReset();
+    vi.mocked(report).mockReturnValue(
+      new Promise<void>((_, reject) => {
+        refuse = reject;
+      }),
+    );
+    const router = open();
+    await screen.findByRole("link", { name: /List b/ });
+    await userEvent.click(screen.getByLabelText("More about List b"));
+    await userEvent.click(cardMenu("List b").getByRole("button", { name: "Report this list" }));
+    const form = screen.getByRole("dialog", { name: "Report this list" });
+    await userEvent.click(within(form).getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.click(within(form).getByRole("button", { name: "Report" }));
+    const receipt = await screen.findByRole("dialog", { name: "Reported, and hidden for you" });
+    await userEvent.click(within(receipt).getByRole("button", { name: "Done" }));
+    await act(() => router.navigate("/settings"));
+    expect(await screen.findByText("Settings page")).toBeInTheDocument();
+    await act(async () => refuse(new Error("offline")));
+    expect(siteNotice()?.text).toMatch(/nothing was sent/);
+    expect(siteNotice()?.action?.text).toBe("Try again");
   });
 
   it("offers no way to hide oneself", async () => {

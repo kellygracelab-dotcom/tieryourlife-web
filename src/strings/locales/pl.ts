@@ -926,6 +926,9 @@ const pl: Translation = {
     unfollowed: "Nie obserwujesz już: {name}",
     followFailed: "Nie udało się zaobserwować. Spróbuj ponownie.",
     unfollowFailed: "Nie udało się przestać obserwować. Spróbuj ponownie.",
+    mergedFollowed: "„{name}” połączono z działem {section}. Obserwujesz teraz: {section}.",
+    mergedUnfollowed: "„{name}” połączono z działem {section}. Nie obserwujesz już: {section}.",
+    mergedTryAgain: "„{name}” połączono z działem {section}. Spróbuj ponownie tam.",
     followLimit:
       "Obserwujesz już tyle działów i tematów, ile się da. Najpierw przestań obserwować kilka z nich.",
     followSignInBody:
