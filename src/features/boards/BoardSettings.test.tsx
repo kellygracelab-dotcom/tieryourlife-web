@@ -560,6 +560,8 @@ describe("BoardSettings: category and topic", () => {
     await userEvent.keyboard("{Enter}");
     expect(held.category).not.toBe("film_tv");
     expect(screen.queryByRole("radiogroup", { name: "Category" })).toBeNull();
+    // The radio chosen is gone: the focus is on the row, not dropped to the page.
+    expect(screen.getByRole("button", { name: /Category/ })).toHaveFocus();
   });
 
   it("offers the approved sections in the site's order, then one's own waiting ones, then Propose a section", async () => {
@@ -637,9 +639,11 @@ describe("BoardSettings: category and topic", () => {
         .getAllByRole("radio")
         .map((radio) => radio.textContent),
     ).toEqual(["Nonecheck", "A24", "Oscars"]);
-    await userEvent.click(within(picker).getByRole("radio", { name: "Oscars" }));
+    within(picker).getByRole("radio", { name: "Oscars" }).focus();
+    await userEvent.keyboard(" ");
     expect(held.topic).toEqual({ id: "t2", name: "Oscars" });
     expect(screen.getByRole("button", { name: /Topic/ })).toHaveTextContent("Oscars");
+    expect(screen.getByRole("button", { name: /Topic/ })).toHaveFocus();
 
     await userEvent.click(publicSwitch());
     await waitFor(() =>

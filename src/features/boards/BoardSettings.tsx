@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { errorOf, type ApiError } from "../../api/errors";
@@ -142,10 +142,12 @@ function RowButton({
   open,
   disabled = false,
   onClick,
+  ref,
 }: {
   icon: ReactNode;
   title: string;
   sub: string;
+  ref?: Ref<HTMLButtonElement>;
   /** Whether the picker under the row is open; undefined for a row with nothing under it. */
   open?: boolean;
   disabled?: boolean;
@@ -153,6 +155,7 @@ function RowButton({
 }) {
   return (
     <button
+      ref={ref}
       type="button"
       className="sheet-row sheet-row--button"
       aria-expanded={open}
@@ -219,6 +222,15 @@ export function BoardSettings({
     ? `/l/${encodeURIComponent(board.publishedId ?? board.rankingOf ?? "")}`
     : null;
   const toggle = (which: Open) => setOpen(open === which ? "none" : which);
+  // Choosing in a picker closes it and takes away the radio that had the
+  // focus, which then fell to the page inside the open sheet: it goes back to
+  // the picker's row, now saying what was chosen, as a menu hands it back.
+  const categoryRow = useRef<HTMLButtonElement>(null);
+  const topicRow = useRef<HTMLButtonElement>(null);
+  const closePicker = (row: { current: HTMLButtonElement | null }) => {
+    setOpen("none");
+    row.current?.focus();
+  };
 
   // A topic of one's own that waits is asked about, as the phone asks when its
   // picker opens; the answer lands only if the board still has that topic.
@@ -430,7 +442,7 @@ export function BoardSettings({
   const [naming, setNaming] = useState("");
   const pickTopic = (topic: BoardTopic | null) => {
     keep(setTopic(latest(), topic, now()));
-    setOpen("none");
+    closePicker(topicRow);
     setNaming("");
   };
   const proposed = cleanTopicName(naming);
@@ -588,6 +600,7 @@ export function BoardSettings({
 
           <li>
             <RowButton
+              ref={categoryRow}
               icon={<Icon name="category" />}
               title={strings.boards.category}
               sub={
@@ -630,7 +643,7 @@ export function BoardSettings({
                       className="sheet-pick__option"
                       onClick={() => {
                         onCategory(section.id);
-                        setOpen("none");
+                        closePicker(categoryRow);
                         setFind("");
                       }}
                     >
@@ -662,6 +675,7 @@ export function BoardSettings({
 
           <li>
             <RowButton
+              ref={topicRow}
               icon={<Icon name="label" />}
               title={strings.boards.topic}
               sub={topicSub(board.topic)}
@@ -696,7 +710,7 @@ export function BoardSettings({
                       aria-checked="true"
                       tabIndex={0}
                       className="sheet-pick__option"
-                      onClick={() => setOpen("none")}
+                      onClick={() => closePicker(topicRow)}
                     >
                       <span className="sheet-pick__name">
                         {own.name}
