@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { owners } from "../features/boards/owners";
 import { claimKeptRankings } from "../features/ranking/claim";
 import { currentAccount, subscribeToAccount, type Account } from "../lib/account";
@@ -23,6 +23,8 @@ interface SessionProviderProps {
   signOut?: () => Promise<void>;
   complete?: () => Promise<unknown>;
   current?: () => Account;
+  /** Hands this device's finished rankings to an account; see signInDeps.keep. */
+  keep?: (uid: string) => Promise<unknown>;
 }
 
 // What signing in touches beyond Firebase: the guest's credits, the rankings
@@ -46,15 +48,25 @@ export function SessionProvider({
   signOut = signOutToGuest,
   complete = defaultComplete,
   current = currentAccount,
+  keep = signInDeps.keep,
 }: SessionProviderProps) {
   const [account, setAccount] = useState<Account | null>(null);
   // A face chosen a moment ago and still on its way to Firebase.
   const [shownFace, showFace] = useState<string | null | undefined>(undefined);
   const [redirectFailed, setRedirectFailed] = useState(false);
+  // A claim that failed at sign-in (the network, the server) would otherwise
+  // wait for the next sign-in, while /me already lists the ranking as the
+  // account's and the server refuses to delete or change it. Each visit with
+  // an account tries the ones still owed once; those handed over are skipped.
+  const claimedFor = useRef<string | null>(null);
 
   useEffect(
     () =>
       subscribe((next) => {
+        if (next.kind === "signedIn" && claimedFor.current !== next.uid) {
+          claimedFor.current = next.uid;
+          void keep(next.uid).catch(() => undefined);
+        }
         noteSignedIn(next);
         // Whose boards show changes with whoever is here, before anything renders them.
         owners.arrived({
@@ -63,7 +75,7 @@ export function SessionProvider({
         });
         setAccount(next);
       }),
-    [subscribe],
+    [subscribe, keep],
   );
 
   // A guest linked to Google keeps its uid, and Firebase tells its listeners
