@@ -189,6 +189,18 @@ describe("ModerationPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("asks about banning Anonymous forever, not about nobody", async () => {
+    load.mockResolvedValue({
+      reports: [queued("l1", { anonymous: true, authorName: "", authorUid: null })],
+    });
+    open();
+    await userEvent.click(await screen.findByRole("button", { name: "Take it down" }));
+    const panel = screen.getByRole("group", { name: "Take it down. Ban the author?" });
+    await userEvent.click(within(panel).getByRole("button", { name: "Forever" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Take it down" }));
+    expect(screen.getByRole("dialog", { name: "Ban Anonymous forever?" })).toBeInTheDocument();
+  });
+
   it("takes the keyboard into the ban panel and back out of it", async () => {
     load.mockResolvedValue({ reports: [queued("l1")] });
     open();

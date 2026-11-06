@@ -269,7 +269,7 @@ function QueueCard({
       </div>
       {deciding.status === "confirmForever" && (
         <ForeverDialog
-          name={item.authorName}
+          name={author}
           onCancel={() => setDeciding({ status: "choosingBan", ban: "forever" })}
           onConfirm={() => remove("forever")}
         />
