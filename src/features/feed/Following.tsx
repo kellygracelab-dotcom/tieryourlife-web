@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import type { Following, SuggestedAuthor } from "../../api/community";
+import { errorOf } from "../../api/errors";
 import type { FeedQuery, ListSummary } from "../../api/types";
 import { followAuthor, loadFollowing, suggestedAuthors, unfollowAuthor } from "../../lib/api";
 import { isEditorialAuthor } from "../../lib/editorial";
@@ -64,14 +65,17 @@ function SuggestionCard({
   unfollow: Follow;
   onFollowed?: () => void;
 }) {
-  const [state, setState] = useState<"idle" | "following" | "failed">("idle");
+  const [state, setState] = useState<"idle" | "following" | "failed" | "limit">("idle");
   const toggle = () => {
     if (state === "following") {
       setState("idle");
       unfollow(author.uid).catch(() => setState("following"));
     } else {
       setState("following");
-      follow(author.uid).then(onFollowed, () => setState("failed"));
+      follow(author.uid).then(onFollowed, (reason: unknown) =>
+        // At the ceiling of people followed, another press is refused the same way.
+        setState(errorOf(reason).kind === "tooManyFollowing" ? "limit" : "failed"),
+      );
     }
   };
   return (
@@ -85,10 +89,10 @@ function SuggestionCard({
         <span className="suggestion__name">{author.name.trim() || strings.profile.someone}</span>
       </Link>
       <FollowButton following={state === "following"} onClick={toggle} size="card" />
-      {state === "failed" && (
+      {(state === "failed" || state === "limit") && (
         <p className="follow__failed" role="alert">
           <Icon name="cloud_off" />
-          {strings.follow.failed}
+          {state === "limit" ? strings.follow.limit : strings.follow.failed}
         </p>
       )}
     </li>

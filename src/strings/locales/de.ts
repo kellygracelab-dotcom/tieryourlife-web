@@ -207,6 +207,7 @@ const de: Translation = {
     undo: "Rückgängig",
     failed: "Folgen hat nicht geklappt – versuch es noch einmal.",
     unfollowFailed: "Entfolgen hat nicht geklappt – versuch es noch einmal.",
+    limit: "Du folgst schon so vielen Leuten, wie es geht. Entfolge zuerst jemandem.",
     cancel: "Abbrechen",
     signInTitle: "Zum Folgen anmelden",
     signInBody: "Wem du folgst, dessen neue Listen stehen ganz oben in deinem Feed.",

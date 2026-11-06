@@ -219,6 +219,7 @@ const pl: Translation = {
     undo: "Cofnij",
     failed: "Nie udało się zaobserwować – spróbuj ponownie.",
     unfollowFailed: "Nie udało się przestać obserwować – spróbuj ponownie.",
+    limit: "Obserwujesz już tyle osób, ile się da. Najpierw przestań kogoś obserwować.",
     cancel: "Anuluj",
     signInTitle: "Zaloguj się, aby obserwować",
     signInBody: "Nowe listy obserwowanych osób trafiają na górę twojej strony głównej.",

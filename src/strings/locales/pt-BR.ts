@@ -203,6 +203,7 @@ const ptBR: Translation = {
     undo: "Desfazer",
     failed: "Não foi possível seguir. Tente de novo.",
     unfollowFailed: "Não foi possível deixar de seguir. Tente de novo.",
+    limit: "Você já segue o máximo de pessoas possível. Deixe de seguir alguém primeiro.",
     cancel: "Cancelar",
     signInTitle: "Entre para seguir",
     signInBody: "Seguir alguém deixa as novas listas dessa pessoa no topo do seu feed.",

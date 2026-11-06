@@ -7,7 +7,7 @@ import { keepIntent, takeIntent } from "../features/community/afterSignIn";
 import { FollowButton } from "../features/community/FollowButton";
 import { isAuthorHidden } from "../features/community/hidden";
 import { SignInDialog } from "../features/community/SignInDialog";
-import { useFollow, type FollowDeps } from "../features/community/useFollow";
+import { followFailureText, useFollow, type FollowDeps } from "../features/community/useFollow";
 import { useHidden } from "../features/community/useHidden";
 import { useReporting, type Report } from "../features/community/useReporting";
 import { FeedGrid } from "../features/feed/FeedGrid";
@@ -171,9 +171,7 @@ function AuthorProfile({ load, follow, report = sendReport }: ProfilePageProps) 
           {following.failed !== null && (
             <p className="follow__failed" role="alert">
               <Icon name="cloud_off" />
-              {following.failed === "unfollow"
-                ? strings.follow.unfollowFailed
-                : strings.follow.failed}
+              {followFailureText(following.failed)}
             </p>
           )}
         </div>

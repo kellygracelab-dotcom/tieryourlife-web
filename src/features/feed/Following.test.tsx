@@ -200,6 +200,16 @@ describe("the Following tab", () => {
     expect(screen.queryByText("someone")).toBeNull();
   });
 
+  it("says the ceiling of people followed on a suggestion, rather than to try again", async () => {
+    follow.mockRejectedValueOnce(new ApiFailure({ kind: "tooManyFollowing" }));
+    open();
+    const card = (await screen.findByText("someone")).closest("li")!;
+    await userEvent.click(within(card).getByRole("button", { name: "Follow" }));
+    expect(await within(card).findByRole("alert")).toHaveTextContent(
+      "You follow as many people as you can. Unfollow someone first.",
+    );
+  });
+
   it("turns into the feed of a person followed from the suggestions", async () => {
     let followed = false;
     load.mockImplementation(async (query) =>

@@ -202,6 +202,7 @@ const es: Translation = {
     undo: "Deshacer",
     failed: "No se pudo seguir. Inténtalo de nuevo.",
     unfollowFailed: "No se pudo dejar de seguir. Inténtalo de nuevo.",
+    limit: "Ya sigues a todas las personas que se puede. Deja de seguir a alguien primero.",
     cancel: "Cancelar",
     signInTitle: "Inicia sesión para seguir",
     signInBody: "Al seguir a alguien, sus nuevas listas te aparecen las primeras.",

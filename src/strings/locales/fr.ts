@@ -207,6 +207,7 @@ const fr: Translation = {
     undo: "Annuler",
     failed: "Impossible de suivre. Réessayez.",
     unfollowFailed: "Impossible de ne plus suivre. Réessayez.",
+    limit: "Vous suivez déjà autant de personnes que possible. Cessez d’en suivre une d’abord.",
     cancel: "Annuler",
     signInTitle: "Connectez-vous pour suivre",
     signInBody: "Suivre quelqu’un garde ses nouvelles listes en haut de votre fil.",

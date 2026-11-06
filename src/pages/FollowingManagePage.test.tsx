@@ -212,6 +212,19 @@ describe("FollowingManagePage", () => {
     expect(within(row).getByRole("button", { name: "Follow" })).toBeInTheDocument();
   });
 
+  it("says the ceiling of people followed when an Undo meets it", async () => {
+    open();
+    const row = (await screen.findByRole("link", { name: /kenji/ })).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: /Following/ }));
+    vi.mocked(deps.followAuthor).mockRejectedValueOnce(
+      new ApiFailure({ kind: "tooManyFollowing" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(
+      await screen.findByText("You follow as many people as you can. Unfollow someone first."),
+    ).toBeInTheDocument();
+  });
+
   it("says when the ceiling of follows is reached, rather than to try again", async () => {
     sectionsDeps.follow.mockRejectedValueOnce(new ApiFailure({ kind: "tooManyFollowing" }));
     open();

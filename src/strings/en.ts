@@ -200,6 +200,7 @@ export const en = {
     undo: "Undo",
     failed: "Couldn’t follow — try again.",
     unfollowFailed: "Couldn’t unfollow — try again.",
+    limit: "You follow as many people as you can. Unfollow someone first.",
     cancel: "Cancel",
     signInTitle: "Sign in to follow",
     signInBody: "Following keeps new lists from people you like at the top of your feed.",

@@ -811,6 +811,17 @@ describe("ListPage author line", () => {
     expect(screen.getByRole("button", { name: "Follow" })).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("says the ceiling of people followed, rather than to try again", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    mocks.followAuthor.mockRejectedValueOnce(new ApiFailure({ kind: "tooManyFollowing" }));
+    openAs(member);
+    await userEvent.click(await screen.findByRole("button", { name: "Follow" }));
+    expect(
+      await screen.findByText("You follow as many people as you can. Unfollow someone first."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/try again/)).toBeNull();
+  });
+
   it("says a refused unfollow as one, in place of the snackbar that said it was done", async () => {
     mocks.loadList.mockResolvedValue(list);
     mocks.followState.mockResolvedValue({ following: true, followers: 3 });

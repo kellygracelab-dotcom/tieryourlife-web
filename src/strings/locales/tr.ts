@@ -203,6 +203,7 @@ const tr: Translation = {
     undo: "Geri al",
     failed: "Takip edilemedi. Tekrar deneyin.",
     unfollowFailed: "Takip bırakılamadı. Tekrar deneyin.",
+    limit: "Takip edebileceğiniz kişi sınırına ulaştınız. Önce birini takipten çıkın.",
     cancel: "İptal",
     signInTitle: "Takip etmek için oturum açın",
     signInBody: "Takip etmek, sevdiğiniz kişilerin yeni listelerini akışınızın en üstünde tutar.",
