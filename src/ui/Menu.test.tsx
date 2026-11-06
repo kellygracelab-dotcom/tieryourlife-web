@@ -81,4 +81,30 @@ describe("Menu", () => {
     });
     expect(details().open).toBe(true);
   });
+
+  it("moves an open list back inside the window from either edge", () => {
+    render(<Page />);
+    const list = document.querySelector<HTMLElement>(".menu__list")!;
+    // A phone's window: jsdom lays nothing out and has no width of its own.
+    const width = 360;
+    Object.defineProperty(document.documentElement, "clientWidth", {
+      value: width,
+      configurable: true,
+    });
+    const at = (left: number) => {
+      list.getBoundingClientRect = () => ({ left, right: left + 240 }) as DOMRect;
+      details().open = true;
+      fireEvent(details(), new Event("toggle"));
+      return list.style.getPropertyValue("--menu-shift");
+    };
+
+    // A ⋮ near the start of a phone's window hung its list past the left edge,
+    // and one in a right-to-left page past the right edge.
+    expect(at(-76)).toBe("84px");
+    details().open = false;
+    expect(at(width - 200)).toBe("-48px");
+    details().open = false;
+    expect(at(100)).toBe("");
+    delete (document.documentElement as { clientWidth?: number }).clientWidth;
+  });
 });
