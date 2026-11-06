@@ -110,12 +110,20 @@ export function resetShellForTests(): void {
   shell = null;
 }
 
+/** As firebase.json says for the app's other pages: no other site may frame it, no plugin or <base>. */
+export const PAGE_POLICY = "frame-ancestors 'self'; object-src 'none'; base-uri 'self'";
+
+/** Every page this function answers with, the bare and the unavailable ones too. */
+function guardFrames(response: Response): void {
+  response.setHeader("Content-Security-Policy", PAGE_POLICY);
+  response.setHeader("X-Frame-Options", "SAMEORIGIN");
+}
+
 function send(response: Response, html: string): void {
   response.setHeader("Content-Type", "text/html; charset=utf-8");
   // Short at the edge, never in the browser: a Finish must not read yesterday's list.
   response.setHeader("Cache-Control", "public, max-age=0, s-maxage=120");
-  // As firebase.json says for the app's other pages: no other site may frame it.
-  response.setHeader("Content-Security-Policy", "frame-ancestors 'self'");
+  guardFrames(response);
   response.status(200).send(html);
 }
 
@@ -128,6 +136,7 @@ function sendBare(response: Response, html: string, error: unknown): void {
   console.warn("Firestore not read; the bare shell goes out", error);
   response.setHeader("Content-Type", "text/html; charset=utf-8");
   response.setHeader("Cache-Control", "no-store");
+  guardFrames(response);
   response.status(200).send(html);
 }
 
@@ -144,6 +153,7 @@ export function unavailablePage(response: Response): void {
   response.setHeader("Content-Type", "text/html; charset=utf-8");
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Retry-After", "30");
+  guardFrames(response);
   response.status(503).send(UNAVAILABLE_HTML);
 }
 

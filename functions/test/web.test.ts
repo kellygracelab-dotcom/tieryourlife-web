@@ -15,7 +15,7 @@ import {
   GUEST_RANKINGS_PER_APP_CHECK_TOKEN,
   MAX_BODY_BYTES,
 } from "../src/ranking";
-import { resetShellForTests, UNAVAILABLE_HTML } from "../src/pages";
+import { PAGE_POLICY, resetShellForTests, UNAVAILABLE_HTML } from "../src/pages";
 import { route, type WebDeps } from "../src/web";
 
 type Data = Record<string, unknown>;
@@ -816,6 +816,28 @@ describe("the pages a link opens", () => {
     table("publishedLists").set(LIST_ID, LIST);
     const shown = await withHosting(true, () => call(deps, "GET", "/r/abcdefgh"));
     assert.match(String(shown.body), /Moonlight/);
+  });
+
+  it("lets no other site frame any page it answers with, bare or unavailable", async () => {
+    const { deps, table } = setup();
+    table("rankings").set("abcdefgh", ranking("guest", true));
+    const down: WebDeps = {
+      ...deps,
+      db: () => {
+        throw new Error("Firestore went away");
+      },
+    };
+    const answers = [
+      await withHosting(true, () => call(deps, "GET", "/r/abcdefgh")),
+      await withHosting(true, () => call(deps, "GET", "/l/list-0001/extra")),
+      await withHosting(true, () => call(down, "GET", "/r/abcdefgh")),
+      await withHosting(false, () => call(deps, "GET", `/l/${LIST_ID}`)),
+    ];
+    for (const answer of answers) {
+      assert.equal(answer.headers["Content-Security-Policy"], PAGE_POLICY);
+      assert.equal(answer.headers["X-Frame-Options"], "SAMEORIGIN");
+    }
+    assert.match(PAGE_POLICY, /frame-ancestors 'self'/);
   });
 
   it("answers a page, not JSON, when even the shell cannot be had", async () => {
