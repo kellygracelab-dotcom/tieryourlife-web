@@ -1,6 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Snackbar, SNACKBAR_LONG_MS, SNACKBAR_MS, type SnackbarNotice } from "./Snackbar";
+import {
+  SiteSnackbar,
+  Snackbar,
+  SNACKBAR_LONG_MS,
+  SNACKBAR_MS,
+  type SnackbarNotice,
+} from "./Snackbar";
 
 const undoable: SnackbarNotice = {
   text: "1 list deleted",
@@ -88,5 +94,27 @@ describe("Snackbar", () => {
       </>,
     );
     expect(screen.getByRole("button", { name: "Star" })).toHaveFocus();
+  });
+
+  // QA W42: the shell's notice lay exactly on a page's own and covered its Undo.
+  it("stands a second notice above the first, and back down when the first goes", () => {
+    const { rerender } = render(
+      <>
+        <Snackbar notice={undoable} onDone={vi.fn()} />
+        <SiteSnackbar notice={{ text: "Couldn't send the report" }} onDone={vi.fn()} />
+      </>,
+    );
+    const page = screen.getByText("1 list deleted").parentElement!;
+    const site = screen.getByText("Couldn't send the report").parentElement!;
+    expect(page.style.bottom).toBe("16px");
+    expect(site.style.bottom).not.toBe("16px");
+    expect(parseFloat(site.style.bottom)).toBeGreaterThan(16);
+    rerender(
+      <>
+        <Snackbar notice={null} onDone={vi.fn()} />
+        <SiteSnackbar notice={{ text: "Couldn't send the report" }} onDone={vi.fn()} />
+      </>,
+    );
+    expect(screen.getByText("Couldn't send the report").parentElement!.style.bottom).toBe("16px");
   });
 });
