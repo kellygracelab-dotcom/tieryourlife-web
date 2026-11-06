@@ -20,6 +20,7 @@ import { writeKept } from "../features/ranking/kept";
 import { draftKey, loadDraft, saveDraft, scopeOf } from "../features/tierboard/draft";
 import { keepRanking } from "../lib/api";
 import { localStorageStore, memoryStore } from "../lib/storage";
+import { sayOnTheSite } from "../ui/siteNotice";
 
 const mocks = vi.hoisted(() => ({
   loadList: vi.fn<(id: string) => Promise<PublishedList>>(),
@@ -127,6 +128,7 @@ beforeEach(() => {
   hiddenStore = memoryStore();
   useHiddenStoreForTests(hiddenStore);
   localStorage.clear();
+  sayOnTheSite(null);
 });
 
 describe("ListPage and a list without its author's name", () => {
@@ -255,6 +257,53 @@ describe("ListPage report and hide", () => {
     expect(snackbar).toHaveTextContent("nothing was sent");
     await userEvent.click(within(snackbar).getByRole("button", { name: "Try again" }));
     expect(screen.getByRole("dialog", { name: "Report this list" })).toBeInTheDocument();
+  });
+
+  it("says a report did not go through on the page the reader went back to, and sends it again", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    let fail: (reason: unknown) => void = () => undefined;
+    mocks.report.mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          fail = reject;
+        }),
+    );
+    const router = openAs(member);
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.click(screen.getByRole("button", { name: "Report" }));
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
+
+    // The list page and its snackbar are gone; the site says it.
+    await act(async () => fail(new ApiFailure({ kind: "unavailable" })));
+    expect(hiddenStore.read(HIDDEN_KEY)).toBeNull();
+    const alert = screen.getAllByRole("alert").find((el) => el.className === "snackbar-region")!;
+    expect(alert).toHaveTextContent("nothing was sent");
+    mocks.report.mockResolvedValue(undefined);
+    await userEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+    expect(mocks.report).toHaveBeenCalledTimes(2);
+    expect(mocks.report).toHaveBeenLastCalledWith("abc", { reason: "spam", note: null });
+    expect(hiddenStore.read(HIDDEN_KEY)).toContain('"abc"');
+    expect(screen.queryByText(/nothing was sent/)).toBeNull();
+  });
+
+  it("keeps a list hidden before its report hidden when the report fails", async () => {
+    hiddenStore.write(HIDDEN_KEY, JSON.stringify({ lists: [{ id: "abc", title: list.title }] }));
+    useHiddenStoreForTests(hiddenStore);
+    mocks.loadList.mockResolvedValue(list);
+    mocks.report.mockRejectedValue(new ApiFailure({ kind: "unavailable" }));
+    openAs(member);
+    expect(await screen.findByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.click(screen.getByRole("button", { name: "Report" }));
+    expect(await screen.findByText(/nothing was sent/)).toBeInTheDocument();
+    expect(hiddenStore.read(HIDDEN_KEY)).toContain('"abc"');
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
   });
 
   it("takes a guest's report with no sign-in, as the proxy takes it from the guest's own account", async () => {

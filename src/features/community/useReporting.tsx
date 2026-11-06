@@ -1,9 +1,10 @@
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import type { ReportReason, ReportRequest } from "../../api/community";
 import { isEditorial } from "../../lib/editorial";
 import { strings } from "../../strings";
+import { sayOnTheSite } from "../../ui/siteNotice";
 import type { SnackbarNotice } from "../../ui/Snackbar";
-import { isAuthorHidden } from "./hidden";
+import { isAuthorHidden, isListHidden } from "./hidden";
 import { ReportDialog, type ReportState } from "./ReportDialog";
 import { useHidden } from "./useHidden";
 
@@ -26,6 +27,12 @@ interface ReportingDeps {
   onDone?: () => void;
 }
 
+/** What a report takes out of sight that was in sight before it. */
+interface Hides {
+  list: boolean;
+  author: boolean;
+}
+
 interface Current {
   list: Reportable;
   state: ReportState;
@@ -43,14 +50,48 @@ export interface Reporting {
  * the report from the guest's anonymous account, so nobody is asked to sign
  * in. The list is hidden here the moment the report goes, and the author too
  * when that was ticked; should the report not go through, both come back, so
- * the list can be reported again, and the place says so.
+ * the list can be reported again, and the place says so. A list hidden before
+ * the report stays hidden. Once the receipt's Done has left the place, the
+ * site says it instead, on whatever page the reader went back to.
  */
 export function useReporting({ report, notify, onDone }: ReportingDeps): Reporting {
   const { hidden, hideList, showList, hideAuthor, showAuthor } = useHidden();
   const [current, setCurrent] = useState<Current | null>(null);
+  // The receipt's Done took the reader away: the place, and its snackbar, are gone.
+  const left = useRef(false);
 
-  const start = useCallback((list: Reportable) => setCurrent({ list, state: "open" }), []);
+  const start = useCallback((list: Reportable) => {
+    left.current = false;
+    setCurrent({ list, state: "open" });
+  }, []);
   const close = useCallback(() => setCurrent(null), []);
+
+  /**
+   * Hides what the report hides and sends it. Only what this report hid comes
+   * back when it fails: a list or an author hidden before it stays hidden.
+   */
+  const file = (list: Reportable, request: ReportRequest, hides: Hides) => {
+    if (hides.list) hideList({ id: list.id, title: list.title });
+    if (hides.author) hideAuthor({ uid: list.authorUid, name: list.authorName });
+    report(list.id, request).catch(() => {
+      if (hides.list) showList(list.id);
+      if (hides.author) showAuthor(list.authorUid);
+      // The receipt would say the opposite of what happened.
+      setCurrent((now) => (now?.list.id === list.id && now.state === "sent" ? null : now));
+      if (left.current) {
+        // Wherever the reader is now: Try again sends the same report again.
+        sayOnTheSite({
+          text: strings.report.failed,
+          action: { text: strings.feed.tryAgain, onClick: () => file(list, request, hides) },
+        });
+      } else {
+        notify({
+          text: strings.report.failed,
+          action: { text: strings.feed.tryAgain, onClick: () => start(list) },
+        });
+      }
+    });
+  };
 
   if (current === null) return { start, dialog: null };
   const { list } = current;
@@ -58,23 +99,19 @@ export function useReporting({ report, notify, onDone }: ReportingDeps): Reporti
   const authorName = isEditorial(list) || list.authorUid === "" ? null : list.authorName;
 
   const send = (reason: ReportReason, note: string | null, alsoAuthor: boolean) => {
-    const author = alsoAuthor && !isAuthorHidden(hidden, list.authorUid);
-    hideList({ id: list.id, title: list.title });
-    if (author) hideAuthor({ uid: list.authorUid, name: list.authorName });
     setCurrent({ list, state: "sent" });
-    report(list.id, { reason, note }).catch(() => {
-      showList(list.id);
-      if (author) showAuthor(list.authorUid);
-      // The receipt would say the opposite of what happened.
-      setCurrent((now) => (now?.list.id === list.id && now.state === "sent" ? null : now));
-      notify({
-        text: strings.report.failed,
-        action: { text: strings.feed.tryAgain, onClick: () => start(list) },
-      });
-    });
+    file(
+      list,
+      { reason, note },
+      {
+        list: !isListHidden(hidden, list.id),
+        author: alsoAuthor && !isAuthorHidden(hidden, list.authorUid),
+      },
+    );
   };
 
   const done = () => {
+    if (onDone !== undefined) left.current = true;
     close();
     onDone?.();
   };
