@@ -622,6 +622,17 @@ function UnfinishedDecision({
   );
 }
 
+/**
+ * Who proposed a topic, as the reports queue names a list's author: a topic
+ * first named by an anonymous list comes to a moderator without its proposer,
+ * and to the owner with the name, marked as hidden from the others.
+ */
+function proposerOf(topic: PendingTopic): string {
+  const name = topic.proposerName ?? "";
+  if (topic.proposedAnonymously !== true) return name || strings.admin.anonymousAuthor;
+  return name ? fill(strings.admin.anonymousOf, { name }) : strings.admin.anonymousAuthor;
+}
+
 function TopicProposal({
   topic,
   sections,
@@ -746,8 +757,7 @@ function TopicProposal({
         <p className="proposal__meta">
           {fill(strings.admin.topicMeta, {
             section: nameOf(wanted),
-            // A topic first named by an anonymous list comes without its proposer.
-            name: topic.proposerName || strings.admin.anonymousAuthor,
+            name: proposerOf(topic),
           })}
         </p>
         {topic.similar !== undefined && topic.similar.length > 0 && (

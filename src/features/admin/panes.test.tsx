@@ -100,6 +100,17 @@ describe("ProposalsPane", () => {
     expect(await screen.findByText("Topic in Games · proposed by Anonymous")).toBeInTheDocument();
   });
 
+  // QA P18: the owner saw the anonymous proposer's name with no mark.
+  it("marks the name of a topic's anonymous proposer for the owner", async () => {
+    deps.topics = vi.fn(async () => ({
+      topics: [{ ...pendingTopic, proposerName: "Real Author", proposedAnonymously: true }],
+    }));
+    wrap(<ProposalsPane adminRole="owner" deps={deps} />);
+    expect(
+      await screen.findByText("Topic in Games · proposed by Anonymous (Real Author)"),
+    ).toBeInTheDocument();
+  });
+
   it("approves at once, and declines with a note to the proposer", async () => {
     wrap(<ProposalsPane adminRole="owner" deps={deps} />);
     const card = (await screen.findByRole("heading", { name: "Street food" })).closest("li")!;
