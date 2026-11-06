@@ -297,7 +297,7 @@ function OpenBoard({
   const repository = house === null ? ownBoards : houseRepository;
   const stored = house === null ? own : forHouse;
   const { account, signIn } = useSession();
-  const { sections } = useSections(store);
+  const { sections, homes } = useSections(store);
   const me = account?.kind === "signedIn" ? account.uid : null;
   // A new board is made here and kept only once it is touched: a name, a
   // card, a star. Left as it came, it was never kept, which is what the
@@ -708,7 +708,7 @@ function OpenBoard({
           <p className="list-head__meta">
             {[
               metaOf(board),
-              ...(board.category === null ? [] : [filedUnder(board.category, sections, me)]),
+              ...(board.category === null ? [] : [filedUnder(board.category, sections, me, homes)]),
             ].join(" · ")}
           </p>
         </div>
@@ -761,6 +761,7 @@ function OpenBoard({
           latest={latest}
           keep={keep}
           sections={sections}
+          proposalHomes={homes}
           onCategory={(category) => keep(setCategory(latest(), category, now()))}
           onPropose={openProposal}
           onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}

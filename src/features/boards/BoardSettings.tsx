@@ -65,6 +65,8 @@ interface BoardSettingsProps {
   keep: (board: Board) => void;
   /** The sections as the site holds them, the person's own waiting ones among them. */
   sections: readonly Section[];
+  /** Where the person's own proposals no longer waiting keep their lists, by id. */
+  proposalHomes?: Readonly<Record<string, string>>;
   onCategory: (category: string) => void;
   /** Propose a section, from the end of the picker: the page gives the sheet's place to the form. */
   onPropose: () => void;
@@ -188,6 +190,7 @@ export function BoardSettings({
   latest,
   keep,
   sections,
+  proposalHomes = {},
   onCategory,
   onPropose,
   onMode,
@@ -593,7 +596,7 @@ export function BoardSettings({
               sub={
                 category === null
                   ? strings.boards.categoryNone
-                  : filedUnder(category, sections, uid)
+                  : filedUnder(category, sections, uid, proposalHomes)
               }
               open={open === "category"}
               onClick={() => toggle("category")}

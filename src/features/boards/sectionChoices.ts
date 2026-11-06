@@ -1,3 +1,4 @@
+import { isCategory } from "../../api/types";
 import { fill, strings } from "../../strings";
 import { approvedOnly, sectionName, type Section } from "../sections/model";
 import { myWaiting } from "../sections/proposal";
@@ -28,14 +29,18 @@ export const sectionChoices = (
 /**
  * What the board says of its section: the section's name, or, for one of the
  * person's own still waiting, where the list goes once a moderator approves it.
+ * A proposal of theirs no longer waiting (withdrawn, declined, merged) names
+ * the section its lists stay in, from `homes`: Other would not be where the list is.
  */
 export function filedUnder(
   category: string,
   sections: readonly Section[],
   uid: string | null,
+  homes: Readonly<Record<string, string>> = {},
 ): string {
   const waiting = myWaiting(sections, uid).find((section) => section.id === category);
-  return waiting === undefined
-    ? sectionName(category, sections)
-    : fill(strings.sections.movesTo, { name: waiting.name });
+  if (waiting !== undefined) return fill(strings.sections.movesTo, { name: waiting.name });
+  const known = isCategory(category) || sections.some((section) => section.id === category);
+  const home = known ? undefined : homes[category];
+  return sectionName(home ?? category, sections);
 }
