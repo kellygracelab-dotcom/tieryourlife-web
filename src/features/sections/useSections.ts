@@ -52,7 +52,10 @@ export function readKeptSections(kept: unknown): KeptSections | null {
   if (!Array.isArray(sections) || typeof who !== "string") return null;
   if (!sections.every((one) => typeof one === "object" && one !== null && "id" in one)) return null;
   const answer = sections as SectionStats[];
-  sectionsFrom(answer, who); // throws for anything it cannot draw
+  // Each throws for anything it cannot draw; the notices of one's own
+  // proposals read sections that sectionsFrom leaves out.
+  sectionsFrom(answer, who);
+  proposalNoticesFrom(answer, who);
   return { sections: answer, who };
 }
 
