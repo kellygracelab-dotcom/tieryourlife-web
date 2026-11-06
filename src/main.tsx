@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { boot, drawFailure } from "./boot";
+import { boot, drawFailure, withoutFreshMark } from "./boot";
 import { reloadOnce } from "./lib/freshChunk";
 import { applyLocale, LOCALE_PARAM, localeInAddress, pickLocale, readLocale } from "./lib/locale";
 import { localStorageStore, sessionStorageStore } from "./lib/storage";
@@ -13,6 +13,9 @@ import "./index.css";
 const root = document.getElementById("root");
 if (root === null) throw new Error("index.html has no #root");
 const reload = () => window.location.reload();
+// The page came after index.html's reload past the caches: the address goes back as it was.
+const unmarked = withoutFreshMark(window.location.href);
+if (unmarked !== null) window.history.replaceState(window.history.state, "", unmarked);
 // A file a page's piece leans on, gone with a deploy: the same one quiet reload.
 window.addEventListener("vite:preloadError", (event) => {
   if (reloadOnce()) event.preventDefault();

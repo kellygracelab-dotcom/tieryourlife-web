@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { boot, drawFailure, RETRY_KEY } from "./boot";
+import { boot, drawFailure, RETRY_KEY, withoutFreshMark } from "./boot";
 import type { KeyValueStore } from "./lib/storage";
 
 function memoryStore(): KeyValueStore & { data: Map<string, string> } {
@@ -98,5 +98,14 @@ describe("drawFailure", () => {
     expect(root.querySelector("[role=alert] h1")?.textContent).toBe("The site could not start");
     root.querySelector("button")?.click();
     expect(reload).toHaveBeenCalledOnce();
+  });
+});
+
+describe("withoutFreshMark", () => {
+  it("takes index.html's reload mark off the address, and leaves an address without one", () => {
+    expect(withoutFreshMark("https://x.app/l/abc?view=rows&tyl-fresh=17#top")).toBe(
+      "https://x.app/l/abc?view=rows#top",
+    );
+    expect(withoutFreshMark("https://x.app/l/abc?view=rows")).toBeNull();
   });
 });

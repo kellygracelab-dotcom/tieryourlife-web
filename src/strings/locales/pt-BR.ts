@@ -323,7 +323,7 @@ const ptBR: Translation = {
     needCards: "Adicione ao menos um cartão.",
     needTier: "Mantenha ao menos um nível.",
     needTierLabel: "Todo nível precisa de um rótulo.",
-    tooManyTiers: "No máximo 20 níveis.",
+    tooManyTiers: "No máximo 19 níveis.",
     tooManyCards: "No máximo 2000 cartões.",
     ready: "Pronto para publicar.",
     startOver: "Começar de novo",
@@ -1358,6 +1358,12 @@ const ptBR: Translation = {
       "“{title}” é grande demais para uma conta guardar, por isso está sem cópia. Tire alguns cartões dele e ele volta a ser guardado.",
     refusedTooMany:
       "“{title}” está sem cópia: uma conta guarda até 200 quadros. Exclua alguns permanentemente para abrir espaço.",
+    refusedTooManyTiers:
+      "“{title}” tem mais níveis do que uma conta guarda, por isso está sem cópia. Uma conta guarda 19 e a reserva: remova um nível e ele volta a ser guardado.",
+    refusedTooManyCards:
+      "“{title}” tem mais cartões do que uma conta guarda, por isso está sem cópia. Uma conta guarda 2000 por quadro: tire alguns e ele volta a ser guardado.",
+    refusedTooManyTrashed:
+      "“{title}” mantém mais de 2000 cartões removidos, mais do que uma conta guarda, por isso está sem cópia. Esvazie a lixeira e ele volta a ser guardado.",
     now: "Guardar cópia agora",
     backingUp: "Guardando cópia…",
     guestNote:

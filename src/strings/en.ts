@@ -311,7 +311,7 @@ export const en = {
     needCards: "Add at least one card.",
     needTier: "Keep at least one tier.",
     needTierLabel: "Every tier needs a label.",
-    tooManyTiers: "At most 20 tiers.",
+    tooManyTiers: "At most 19 tiers.",
     tooManyCards: "At most 2000 cards.",
     ready: "Ready to publish.",
     startOver: "Start over",
@@ -1233,6 +1233,12 @@ export const en = {
       "“{title}” is too big for an account to keep, so it is not backed up. Take some cards off it and it goes up again.",
     refusedTooMany:
       "“{title}” is not backed up: an account keeps up to 200 boards. Removing some for good makes room.",
+    refusedTooManyTiers:
+      "“{title}” has more tiers than an account keeps, so it is not backed up. An account keeps 19 and the pool: remove a tier and it goes up again.",
+    refusedTooManyCards:
+      "“{title}” has more cards than an account keeps, so it is not backed up. An account keeps 2000 on a board: take some cards off it and it goes up again.",
+    refusedTooManyTrashed:
+      "“{title}” holds more than 2000 removed cards, more than an account keeps, so it is not backed up. Emptying the trash clears them, and it goes up again.",
     now: "Back up now",
     backingUp: "Backing up…",
     guestNote:

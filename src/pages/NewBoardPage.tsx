@@ -205,10 +205,21 @@ function OwnList({
   const sync = useBoardSync();
   // A browser that has never had the account's boards may have this list's
   // on its way: Edit waits for the first sync, or a second board would be
-  // made for the same list and sent up to the account. A sync that cannot
-  // finish lets it go on.
-  const firstSync =
-    sync.signedIn && sync.backUp && sync.lastSyncedAt === null && sync.status !== "stuck";
+  // made for the same list and sent up to the account. A first sync that
+  // failed is asked once more, since one answer the account could not give
+  // is no reason for a second board; failing again, it lets Edit go on.
+  const [secondTryOver, setSecondTryOver] = useState(false);
+  // Asked once a visit, StrictMode's second effect included.
+  const askedAgain = useRef(false);
+  const neverSynced = sync.signedIn && sync.backUp && sync.lastSyncedAt === null;
+  const stuck = neverSynced && sync.status === "stuck";
+  const { syncNow } = sync;
+  useEffect(() => {
+    if (!stuck || askedAgain.current) return;
+    askedAgain.current = true;
+    void syncNow().finally(() => setSecondTryOver(true));
+  }, [stuck, syncNow]);
+  const firstSync = neverSynced && (sync.status !== "stuck" || !secondTryOver);
   if (account === null || firstSync) {
     return <ListPageLoading note={strings.new.openingList} rows={2} />;
   }

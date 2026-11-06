@@ -322,7 +322,7 @@ const es: Translation = {
     needCards: "Añade al menos una tarjeta.",
     needTier: "Deja al menos un nivel.",
     needTierLabel: "Cada nivel necesita una etiqueta.",
-    tooManyTiers: "Como máximo 20 niveles.",
+    tooManyTiers: "Como máximo 19 niveles.",
     tooManyCards: "Como máximo 2000 tarjetas.",
     ready: "Todo listo para publicar.",
     startOver: "Empezar de nuevo",
@@ -1366,6 +1366,12 @@ const es: Translation = {
       "«{title}» es demasiado grande para guardarse en una cuenta, así que no tiene copia. Quítale algunas tarjetas y volverá a guardarse.",
     refusedTooMany:
       "«{title}» no tiene copia: una cuenta guarda hasta 200 tableros. Elimina algunos definitivamente para hacer sitio.",
+    refusedTooManyTiers:
+      "«{title}» tiene más niveles de los que guarda una cuenta, así que no tiene copia. Una cuenta guarda 19 y la reserva: quita un nivel y volverá a guardarse.",
+    refusedTooManyCards:
+      "«{title}» tiene más tarjetas de las que guarda una cuenta, así que no tiene copia. Una cuenta guarda 2000 por tablero: quítale algunas y volverá a guardarse.",
+    refusedTooManyTrashed:
+      "«{title}» conserva más de 2000 tarjetas quitadas, más de las que guarda una cuenta, así que no tiene copia. Vacía la papelera y volverá a guardarse.",
     now: "Guardar copia ahora",
     backingUp: "Guardando copia…",
     guestNote:

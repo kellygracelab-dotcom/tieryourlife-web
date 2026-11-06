@@ -12,6 +12,20 @@ import type { KeyValueStore } from "./lib/storage";
 
 export const RETRY_KEY = "tyl:boot-retry";
 
+/**
+ * The mark index.html's guard puts on the address when it reloads past the
+ * caches for a script that never came. Its work is done once the site runs.
+ */
+export const FRESH_PARAM = "tyl-fresh";
+
+/** The address without the guard's mark, or null when it carries none. */
+export function withoutFreshMark(href: string): string | null {
+  const address = new URL(href);
+  if (!address.searchParams.has(FRESH_PARAM)) return null;
+  address.searchParams.delete(FRESH_PARAM);
+  return address.href;
+}
+
 export interface BootDeps {
   /** Fetches everything the first screen needs and hands back the way to draw it. */
   load: () => Promise<{ mount: () => void }>;

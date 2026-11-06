@@ -324,6 +324,21 @@ describe("BoardSettings: public", () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
+  it("names the tier limit as what stands in the way of a new list ranked in twenty tiers", () => {
+    const board = filmBoard();
+    const pool = board.tiers.find((tier) => tier.isPool)!;
+    const ranked = Array.from({ length: 20 }, (_, n) => ({
+      ...pool,
+      uid: `t${n}`,
+      position: n,
+      label: `T${n}`,
+      isPool: false,
+    }));
+    show({ ...board, tiers: [...ranked, { ...pool, position: 20 }] }, signedIn);
+    expect(publicSwitch()).toHaveAttribute("aria-disabled", "true");
+    expect(publicSwitch()).toHaveAccessibleDescription("At most 19 tiers.");
+  });
+
   it("publishes the board, keeps the id and the name, and sends it again on Update", async () => {
     const publish = vi.fn(() => Promise.resolve({ id: "L1" }));
     const republish = vi.fn(() => Promise.resolve({ id: "L1" }));

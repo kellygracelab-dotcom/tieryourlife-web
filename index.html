@@ -15,6 +15,49 @@
         if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
       } catch (e) {}
     </script>
+    <script>
+      // A link opened just after a deploy can bring a page naming the old
+      // script, now gone: it never runs, and the page stays white. One reload,
+      // past any cache, brings the new page; boot.ts keeps the same try and
+      // clears it once the site starts. A second failure says so in words.
+      addEventListener(
+        "error",
+        function (event) {
+          var script = event.target;
+          if (!script || script.tagName !== "SCRIPT" || script.type !== "module") return;
+          try {
+            if (sessionStorage.getItem("tyl:boot-retry") === null) {
+              sessionStorage.setItem("tyl:boot-retry", "1");
+              var address = new URL(location.href);
+              address.searchParams.set("tyl-fresh", String(Date.now()));
+              location.replace(address.href);
+              return;
+            }
+            sessionStorage.removeItem("tyl:boot-retry");
+          } catch (e) {}
+          var root = document.getElementById("root");
+          if (!root) return;
+          var section = document.createElement("section");
+          section.setAttribute("role", "alert");
+          section.style.cssText =
+            "max-width:40rem;margin:0 auto;padding:72px 16px;font-family:sans-serif";
+          var title = document.createElement("h1");
+          title.textContent = "The site could not start";
+          var body = document.createElement("p");
+          body.textContent =
+            "Part of it did not arrive: the connection dropped, or the site was updated this very minute. Reloading usually does it.";
+          var button = document.createElement("button");
+          button.type = "button";
+          button.textContent = "Reload";
+          button.addEventListener("click", function () {
+            location.reload();
+          });
+          section.append(title, body, button);
+          root.replaceChildren(section);
+        },
+        true,
+      );
+    </script>
     <!-- Until the site moves to its final address; robots.txt says the same. -->
     <meta name="robots" content="noindex" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

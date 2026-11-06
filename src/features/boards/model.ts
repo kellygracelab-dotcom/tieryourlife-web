@@ -266,6 +266,28 @@ export const poolTier = (board: Board): BoardTier | null =>
 export const liveItems = (board: Board): BoardItem[] =>
   board.items.filter((item) => item.deletedAt === null);
 
+/**
+ * The cards an account keeps in a board's trash besides its live ones. The
+ * site trashes no card itself, but a board from the phone may bring some.
+ */
+export const BOARD_TRASH_LIMIT = 2000;
+
+/** What the account would refuse a board for, before it is sent. */
+export type BeyondAccount = "tooManyTiers" | "tooManyCards" | "tooManyTrashed";
+
+/**
+ * The account's own count, so a board it would refuse is named here instead
+ * of going up on every run: twenty tiers with the pool among them, up to
+ * 2000 live cards, and up to 2000 more in the trash. Null when it fits.
+ */
+export function beyondAccount(board: Board): BeyondAccount | null {
+  if (board.tiers.length > BOARD_LIMITS.tiers) return "tooManyTiers";
+  const live = liveItems(board).length;
+  if (live > BOARD_LIMITS.items) return "tooManyCards";
+  if (board.items.length - live > BOARD_TRASH_LIMIT) return "tooManyTrashed";
+  return null;
+}
+
 /** The cards of one tier, trash left out, in their order. */
 export const itemsIn = (board: Board, tierUid: string): BoardItem[] =>
   liveItems(board)

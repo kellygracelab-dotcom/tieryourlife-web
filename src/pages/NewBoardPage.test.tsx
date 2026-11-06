@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, useLocation } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -343,6 +343,90 @@ describe("NewBoardPage: one's own published list is changed on its board", () =>
     expect(await arrivedAt()).toBe("/b/acct");
     expect(load).not.toHaveBeenCalled();
     expect(repository.all()).toHaveLength(1);
+  });
+
+  it("asks a first sync that failed once more before making a second board of the list", async () => {
+    const repository = boardsRepository(memoryStore());
+    const load = vi.fn(() => Promise.resolve(list));
+    let answer: () => void = () => undefined;
+    const syncNow = vi.fn(() => new Promise<void>((resolve) => (answer = resolve)));
+    // One answer the account could not give: the run that would bring the board failed.
+    const stuck: BoardSyncControls = {
+      ...NOBODY,
+      signedIn: true,
+      status: "stuck",
+      lastSyncedAt: null,
+      syncNow,
+    };
+    const router = createMemoryRouter(
+      [
+        { path: "/b/new", element: <NewBoardPage repository={repository} load={load} /> },
+        { path: "/b/:uid", element: <Arrived /> },
+      ],
+      { initialEntries: ["/b/new?list=abc"] },
+    );
+    const page = (sync: BoardSyncControls) => (
+      <SessionContext.Provider
+        value={{
+          account: me,
+          signIn: () => Promise.resolve({ kind: "cancelled" }),
+          signOut: () => Promise.resolve(),
+          refresh: () => undefined,
+        }}
+      >
+        <BoardSyncContext.Provider value={sync}>
+          <RouterProvider router={router} />
+        </BoardSyncContext.Provider>
+      </SessionContext.Provider>
+    );
+    const { rerender } = render(page(stuck));
+    expect(screen.getByText("Opening the list…")).toBeInTheDocument();
+    expect(syncNow).toHaveBeenCalledTimes(1);
+    expect(load).not.toHaveBeenCalled();
+
+    // The second try brings the account's board of that list.
+    repository.save({
+      ...newBoard("acct", "Films", 1, () => `x${Math.random()}`),
+      publishedId: "abc",
+    });
+    rerender(page({ ...stuck, status: "idle", lastSyncedAt: 9 }));
+    await act(async () => answer());
+    expect(await arrivedAt()).toBe("/b/acct");
+    expect(load).not.toHaveBeenCalled();
+    expect(repository.all()).toHaveLength(1);
+    expect(syncNow).toHaveBeenCalledTimes(1);
+  });
+
+  it("goes on once the first sync has failed twice: an account out of reach does not hold Edit up", async () => {
+    const repository = boardsRepository(memoryStore());
+    const load = vi.fn(() => Promise.resolve(list));
+    const syncNow = vi.fn(() => Promise.resolve());
+    const router = createMemoryRouter(
+      [
+        { path: "/b/new", element: <NewBoardPage repository={repository} load={load} /> },
+        { path: "/b/:uid", element: <Arrived /> },
+      ],
+      { initialEntries: ["/b/new?list=abc"] },
+    );
+    render(
+      <SessionContext.Provider
+        value={{
+          account: me,
+          signIn: () => Promise.resolve({ kind: "cancelled" }),
+          signOut: () => Promise.resolve(),
+          refresh: () => undefined,
+        }}
+      >
+        <BoardSyncContext.Provider
+          value={{ ...NOBODY, signedIn: true, status: "stuck", lastSyncedAt: null, syncNow }}
+        >
+          <RouterProvider router={router} />
+        </BoardSyncContext.Provider>
+      </SessionContext.Provider>,
+    );
+    // Edit goes on to make the board of the list, as before.
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    expect(syncNow).toHaveBeenCalledTimes(1);
   });
 
   it("makes the board of a list published before boards, its own pictures brought over first", async () => {

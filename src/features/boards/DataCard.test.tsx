@@ -67,6 +67,23 @@ describe("DataCard: a back-up that did not go through", () => {
     expect(screen.queryByText(/try again/)).toBeNull();
   });
 
+  it("gives the advice that fits the limit: a tier, cards, or the trash", () => {
+    show({
+      status: "stuck",
+      lastSyncedAt: NOW - 60_000,
+      refusals: [
+        { uid: "a", title: "Twenty rows", why: "tooManyTiers" },
+        { uid: "b", title: "Every card", why: "tooManyCards" },
+        { uid: "c", title: "Old trash", why: "tooManyTrashed" },
+      ],
+    });
+    const [tiers, cards, trash] = screen.getAllByRole("alert");
+    expect(tiers).toHaveTextContent(/^“Twenty rows” has more tiers.+remove a tier/);
+    expect(tiers).not.toHaveTextContent(/cards/);
+    expect(cards).toHaveTextContent(/^“Every card” has more cards.+take some cards off/);
+    expect(trash).toHaveTextContent(/^“Old trash” holds more than 2000 removed cards.+trash/);
+  });
+
   it("answers a press of Back up now at once", async () => {
     const sync = show({ status: "stuck", lastSyncedAt: NOW - 60_000 });
     expect(screen.queryByRole("alert")).toBeNull();

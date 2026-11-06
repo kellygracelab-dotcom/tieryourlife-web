@@ -4,7 +4,7 @@ import { currentLocale, fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { ConfirmDialog } from "../../ui/ConfirmDialog";
 import { Icon } from "../../ui/Icon";
-import { useBoardSync } from "./boardSync";
+import { useBoardSync, type SyncRefusal } from "./boardSync";
 import { trashEntriesOf } from "./model";
 import { saveExport } from "./saveExport";
 import { useBoards } from "./useBoards";
@@ -15,13 +15,23 @@ const whenOf = (at: number): string =>
     new Date(at),
   );
 
+/** What each refusal says, read when shown: the words follow the language. */
+const REFUSED: Record<SyncRefusal["why"], () => string> = {
+  tooManyTiers: () => strings.sync.refusedTooManyTiers,
+  tooManyCards: () => strings.sync.refusedTooManyCards,
+  tooManyTrashed: () => strings.sync.refusedTooManyTrashed,
+  tooLarge: () => strings.sync.refusedTooLarge,
+  tooManyBoards: () => strings.sync.refusedTooMany,
+};
+
 /**
  * A run that did not go through says so once a day has gone by without one
  * that did, as on the phone: a failure the next run mends is not worth an
  * alarm. A connection gone or a busy server look alike from here, so the
- * note names neither. A board the account will not keep as it is, too big
- * or one too many, no run mends: that one is named at once, with what would
- * let it go up, instead of a "try again" that cannot help.
+ * note names neither. A board the account will not keep as it is, with too
+ * many tiers or cards, too big, or one too many, no run mends: that one is
+ * named at once, with what would let it go up, instead of a "try again"
+ * that cannot help.
  */
 export const STUCK_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -89,12 +99,7 @@ export function DataCard({ now = Date.now }: { now?: () => number }) {
               <p className="settings__helper">{strings.sync.backUpNote}</p>
               {sync.refusals.map((refusal) => (
                 <p key={refusal.uid} className="settings__bar" role="alert">
-                  {fill(
-                    refusal.why === "tooLarge"
-                      ? strings.sync.refusedTooLarge
-                      : strings.sync.refusedTooMany,
-                    { title: refusal.title },
-                  )}
+                  {fill(REFUSED[refusal.why](), { title: refusal.title })}
                 </p>
               ))}
               {sync.status === "stuck" &&
