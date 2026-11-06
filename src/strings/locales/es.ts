@@ -1350,7 +1350,7 @@ const es: Translation = {
     refusedTooLarge:
       "«{title}» es demasiado grande para guardarse en una cuenta, así que no tiene copia. Quítale algunas tarjetas y volverá a guardarse.",
     refusedTooMany:
-      "«{title}» no tiene copia: una cuenta guarda hasta 200 listas. Elimina algunas definitivamente para hacer sitio.",
+      "«{title}» no tiene copia: una cuenta guarda hasta 200 tableros. Elimina algunos definitivamente para hacer sitio.",
     now: "Guardar copia ahora",
     backingUp: "Guardando copia…",
     guestNote:

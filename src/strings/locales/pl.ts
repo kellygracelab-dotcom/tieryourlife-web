@@ -1410,7 +1410,7 @@ const pl: Translation = {
     refusedTooLarge:
       "„{title}” jest za duża, by konto ją przechowało, więc nie ma kopii. Usuń z niej kilka kart, a kopia znów się zapisze.",
     refusedTooMany:
-      "„{title}” nie ma kopii: konto przechowuje do 200 list. Usuń kilka na stałe, by zrobić miejsce.",
+      "„{title}” nie ma kopii: konto przechowuje do 200 tablic. Usuń kilka na stałe, by zrobić miejsce.",
     now: "Zapisz kopię teraz",
     backingUp: "Zapisywanie kopii…",
     guestNote:

@@ -1339,9 +1339,9 @@ const ptBR: Translation = {
     stuck: "Sem cópia desde {when}. Toque em “Guardar cópia agora” para tentar de novo.",
     stuckNever: "Ainda sem cópia. Toque em “Guardar cópia agora” para tentar de novo.",
     refusedTooLarge:
-      "“{title}” é grande demais para uma conta guardar, por isso está sem cópia. Tire alguns cards dela e ela volta a ser guardada.",
+      "“{title}” é grande demais para uma conta guardar, por isso está sem cópia. Tire alguns cartões dele e ele volta a ser guardado.",
     refusedTooMany:
-      "“{title}” está sem cópia: uma conta guarda até 200 listas. Exclua algumas permanentemente para abrir espaço.",
+      "“{title}” está sem cópia: uma conta guarda até 200 quadros. Exclua alguns permanentemente para abrir espaço.",
     now: "Guardar cópia agora",
     backingUp: "Guardando cópia…",
     guestNote:

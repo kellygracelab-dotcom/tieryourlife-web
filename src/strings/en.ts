@@ -1218,7 +1218,7 @@ export const en = {
     refusedTooLarge:
       "“{title}” is too big for an account to keep, so it is not backed up. Take some cards off it and it goes up again.",
     refusedTooMany:
-      "“{title}” is not backed up: an account keeps up to 200 lists. Removing some for good makes room.",
+      "“{title}” is not backed up: an account keeps up to 200 boards. Removing some for good makes room.",
     now: "Back up now",
     backingUp: "Backing up…",
     guestNote:

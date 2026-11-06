@@ -61,7 +61,7 @@ describe("DataCard: a back-up that did not go through", () => {
       /^“Every film” is too big for an account to keep.+Take some cards off it/,
     );
     expect(many).toHaveTextContent(
-      /^“One too many” is not backed up: an account keeps up to 200 lists\./,
+      /^“One too many” is not backed up: an account keeps up to 200 boards./,
     );
     // Trying again would not help, so the page does not ask for it.
     expect(screen.queryByText(/try again/)).toBeNull();
