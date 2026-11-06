@@ -946,7 +946,12 @@ describe("RankingBoard", () => {
   });
 
   it("keeps the link of a ranking the server still has, or could not say about", async () => {
-    for (const reply of [Promise.resolve(true), Promise.reject(new Error("offline"))]) {
+    // Made one at a time: a rejection made up front goes unhandled while the first one runs.
+    for (const answer of [
+      () => Promise.resolve(true),
+      () => Promise.reject(new Error("offline")),
+    ]) {
+      const reply = answer();
       reply.catch(() => undefined);
       const store = memoryStore();
       const finished = { code: "abcdefgh", claimToken: "s", rows: [[], []], version: 0 };
