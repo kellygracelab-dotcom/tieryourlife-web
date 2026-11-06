@@ -1,6 +1,9 @@
+import { readFile } from "node:fs/promises";
+import * as path from "node:path";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
+import { inDemoEmulator } from "./appCheck";
 import { isEditorialList } from "./editorial";
 import {
   describeList,
@@ -63,7 +66,16 @@ export function hostOf(request: Request): string {
  * a short round trip, not the whole file. When hosting cannot be reached,
  * the shell already kept is better than no page.
  */
-export async function loadShell(host: string, fetchImpl: typeof fetch = fetch): Promise<string> {
+export async function loadShell(
+  host: string,
+  fetchImpl: typeof fetch = fetch,
+  env: Record<string, string | undefined> = process.env,
+  readLocal: () => Promise<string> = readEmulatorShell,
+): Promise<string> {
+  // In the emulators the real site's shell would load the real bundle and the
+  // real Firebase project into a test's browser: the local build is used, and
+  // without one the page is unavailable rather than borrowed from production.
+  if (inDemoEmulator(env)) return readLocal();
   const kept = shell !== null && shell.host === host ? shell : null;
   try {
     const response = await fetchImpl(`https://${host}/index.html`, {
@@ -84,6 +96,15 @@ export async function loadShell(host: string, fetchImpl: typeof fetch = fetch): 
     return kept.html;
   }
 }
+
+/**
+ * The site as `vite build --mode emulator` leaves it beside these functions
+ * (playwright.proxy.config.ts), never `dist`: that one is built for production.
+ */
+export const EMULATOR_SHELL = path.join(__dirname, "..", "..", "dist-emulator", "index.html");
+
+/** Read on every page, as hosting is asked on every page: a rebuild shows at once. */
+const readEmulatorShell = (): Promise<string> => readFile(EMULATOR_SHELL, "utf8");
 
 export function resetShellForTests(): void {
   shell = null;
