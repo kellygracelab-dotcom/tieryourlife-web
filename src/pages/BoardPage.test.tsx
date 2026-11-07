@@ -987,9 +987,11 @@ describe("BoardPage: a new board", () => {
     expect(screen.queryByRole("textbox", { name: "Add a card" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveFocus();
-    // The names drawn without pictures are the phone's size.
+    // The names drawn without pictures are the phone's size, on the board's wider name tile.
     await userEvent.type(screen.getByRole("textbox", { name: "Add a card" }), "Heat{Enter}");
-    expect(screen.getByText("Heat", { selector: ".tile__name" })).toHaveStyle({ fontSize: "9px" });
+    const heat = screen.getByText("Heat", { selector: ".tile__name" });
+    expect(heat).toHaveStyle({ fontSize: "13px" });
+    expect(heat.closest(".tile")).toHaveClass("tile--name");
   });
 });
 

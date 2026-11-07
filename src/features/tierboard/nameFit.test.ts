@@ -96,3 +96,44 @@ describe("canvasMeasure", () => {
     expect(canvasMeasure()).toBeNull();
   });
 });
+
+// Danylo's release walk: "Moonligh / t" on a 390 px phone, "The Lighthouse" hard to read.
+describe("fitName on the board's wide name tile", () => {
+  it("starts larger and keeps a long word whole on a phone", () => {
+    // A 66 px tile leaves 56: "Moonlight" is 58.5 at 13 and 54 at 12.
+    expect(fitName("Moonlight", "small", halfEm, "wide")).toEqual({ size: 12, hyphenate: false });
+    expect(fitName("The Lighthouse", "small", halfEm, "wide")).toEqual({
+      size: 11,
+      hyphenate: false,
+    });
+  });
+
+  it("steps down until the whole name fits the tile's three lines", () => {
+    // On a 96 px tile it takes three lines at 14: "Everything / Everywhere / All at Once".
+    expect(fitName("Everything Everywhere All at Once", "large", halfEm, "wide")).toEqual({
+      size: 14,
+      hyphenate: false,
+    });
+    // On a phone each word fits at 11, but "All at Once" then needs a fourth line; at 10 it does not.
+    expect(fitName("Everything Everywhere All at Once", "small", halfEm, "wide")).toEqual({
+      size: 10,
+      hyphenate: false,
+    });
+  });
+
+  it("never goes under its own floor, and hyphenates only a word too long there", () => {
+    expect(fitName("Supercalifragilistic", "small", halfEm, "wide")).toEqual({
+      size: 10,
+      hyphenate: true,
+    });
+    // Many short words: too many lines at the floor, but no word needs a hyphen.
+    expect(fitName("a b c d e f g h i j k l m n o p", "small", halfEm, "wide")).toEqual({
+      size: 10,
+      hyphenate: false,
+    });
+  });
+
+  it("keeps a poster-wide tile's answers as they were", () => {
+    expect(fitName("Moonlight", "small", halfEm)).toEqual({ size: 8, hyphenate: false });
+  });
+});

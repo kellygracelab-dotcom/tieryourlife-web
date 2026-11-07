@@ -103,6 +103,8 @@ describe("HomePage", () => {
     expect(screen.getByRole("link", { name: "Following" })).toHaveAttribute("aria-current", "page");
     // Whose Following it is, Firebase has not said yet: a ring, not Explore.
     expect(screen.getByRole("progressbar", { name: "Following" })).toBeInTheDocument();
+    // The app card is Explore's: under Following's late lists it would jump.
+    expect(screen.queryByRole("complementary", { name: "TierYourLife for Android" })).toBeNull();
   });
 
   it("opens a section from its tile", async () => {
@@ -128,12 +130,14 @@ describe("HomePage", () => {
     expect(await screen.findByRole("link", { name: "Anime" })).toBeInTheDocument();
   });
 
-  it("shows the Android app card first, above the hero", () => {
+  it("shows the Android app card under the lists, not above the hero", () => {
     mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
     open();
     const card = screen.getByRole("complementary", { name: "TierYourLife for Android" });
     const hero = screen.getByRole("heading", { level: 1 });
-    expect(card.compareDocumentPosition(hero) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const popular = screen.getByRole("region", { name: "Popular" });
+    expect(card.compareDocumentPosition(hero) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(card.compareDocumentPosition(popular) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     // The page's outline still starts at its h1: the card's title is no heading.
     expect(screen.getAllByRole("heading")[0]).toBe(hero);
   });

@@ -7,7 +7,7 @@ describe("CardName", () => {
     const fit = vi.fn<FitName>(() => ({ size: 8.5, hyphenate: false }));
     render(<CardName title="Ex Machina" board="small" fit={fit} />);
     const name = screen.getByText("Ex Machina");
-    expect(fit).toHaveBeenCalledWith("Ex Machina", "small");
+    expect(fit).toHaveBeenCalledWith("Ex Machina", "small", "poster");
     expect(name).toHaveClass("tile__name");
     expect(name).toHaveStyle({ fontSize: "8.5px", hyphens: "manual" });
     expect(name.style.overflowWrap).toBe("");
@@ -30,5 +30,12 @@ describe("CardName", () => {
     // jsdom has no OffscreenCanvas.
     render(<CardName title="Heat" board="large" />);
     expect(screen.getByText("Heat")).toHaveStyle({ fontSize: "11px", hyphens: "auto" });
+  });
+
+  it("fits a name on the board's wider tile as wide", () => {
+    const fit = vi.fn<FitName>(() => ({ size: 12, hyphenate: false }));
+    render(<CardName title="Moonlight" board="small" wide fit={fit} />);
+    expect(fit).toHaveBeenCalledWith("Moonlight", "small", "wide");
+    expect(screen.getByText("Moonlight")).toHaveStyle({ fontSize: "12px" });
   });
 });

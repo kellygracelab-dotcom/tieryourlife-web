@@ -19,9 +19,9 @@ interface AppCardProps {
 }
 
 /**
- * The Android app, at the top of the home page where everyone sees it at once:
- * what it adds and the way to Google Play, or "coming soon" while the app is in its closed test.
- * Never on an iPhone, and gone for 90 days once closed.
+ * The Android app, a compact card at the foot of the home page, under the
+ * lists: what it adds and the way to Google Play, or "coming soon" while the
+ * app is in its closed test. Never on an iPhone, and gone for 90 days once closed.
  */
 export function AppCard({
   slot,
@@ -49,7 +49,7 @@ export function AppCard({
         <Icon name="install_mobile" />
       </span>
       <div className="app-card__text">
-        {/* Named by its words, not a heading: above the hero it would start the page's outline. */}
+        {/* Named by its words, not a heading: the page's outline is its lists. */}
         <p id={`app-card-${slot}`} className="app-card__title">
           {strings.android.title}
         </p>

@@ -1,24 +1,37 @@
-import { canvasMeasure, nameFitter, NAME_TYPE, type BoardSize, type NameFit } from "./nameFit";
+import {
+  canvasMeasure,
+  nameFitter,
+  NAME_TYPE,
+  WIDE_NAME_TYPE,
+  type BoardSize,
+  type NameFit,
+  type NameShape,
+} from "./nameFit";
 
-export type FitName = (name: string, board: BoardSize) => NameFit;
+export type FitName = (name: string, board: BoardSize, shape?: NameShape) => NameFit;
 
 // Made at the first name drawn and shared by every board after it. Without a
 // canvas to measure on, a name starts at its size and leans on hyphens.
 let shared: FitName | null = null;
-const fitShared: FitName = (name, board) => {
+const fitShared: FitName = (name, board, shape = "poster") => {
   if (shared === null) {
     const measure = canvasMeasure();
     shared =
       measure === null
-        ? (_, at) => ({ size: NAME_TYPE[at].start, hyphenate: true })
+        ? (_, at, kind) => ({
+            size: (kind === "wide" ? WIDE_NAME_TYPE : NAME_TYPE)[at].start,
+            hyphenate: true,
+          })
         : nameFitter(measure);
   }
-  return shared(name, board);
+  return shared(name, board, shape);
 };
 
 interface CardNameProps {
   title: string;
   board: BoardSize;
+  /** On the board's wider name tile (`.tile--name`), not a poster-wide one. */
+  wide?: boolean;
   /** How the name is fitted; measured on a canvas unless a test says otherwise. */
   fit?: FitName;
 }
@@ -29,8 +42,8 @@ interface CardNameProps {
  * where the browser has no hyphens for its language, rather than cut off at
  * the tile's edge.
  */
-export function CardName({ title, board, fit = fitShared }: CardNameProps) {
-  const { size, hyphenate } = fit(title, board);
+export function CardName({ title, board, wide = false, fit = fitShared }: CardNameProps) {
+  const { size, hyphenate } = fit(title, board, wide ? "wide" : "poster");
   return (
     <span
       className="tile__name"
