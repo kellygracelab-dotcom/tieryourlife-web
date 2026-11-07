@@ -417,6 +417,47 @@ describe("syncBoards", () => {
     });
   });
 
+  // QA A13: the phone's cover from its gallery is named by id, and the account kept nothing of it.
+  it("brings down a cover of the person's own photo by id, shows it, and sends it back by id alone", async () => {
+    const { repository, account, run } = setUp();
+    const theirs = films("theirs", "From the phone");
+    account.holds({
+      ...theirs,
+      coverImageUrl: null,
+      coverImageUrls: [],
+      coverPictureId: "gallery-1",
+    });
+    const resolvePicture = vi.fn((id: string) => Promise.resolve(`https://pictures/${id}`));
+    await run({ resolvePicture });
+    const board = repository.get("theirs")!;
+    expect(board.coverPictureId).toBe("gallery-1");
+    expect(board.coverImageUrl).toBe("https://pictures/gallery-1");
+    expect(board.coverImageUrls).toEqual(["https://pictures/gallery-1"]);
+
+    // Its address is this browser's: the id fingerprints, so nothing went back up.
+    expect(account.keeps).toEqual([]);
+    repository.save(rename(board, "Mine now", 5000));
+    await run({ resolvePicture });
+    const sent = account.keeps.at(-1)!.request;
+    expect(sent.coverPictureId).toBe("gallery-1");
+    expect(sent.coverImageUrl).toBeNull();
+    expect(sent.coverImageUrls).toEqual([]);
+    expect(JSON.stringify(sent)).not.toContain("pictures/gallery-1");
+  });
+
+  it("says no own-photo cover as null, so the account drops one a cover from the web replaced", async () => {
+    const { repository, account, run } = setUp();
+    repository.save({
+      ...films(),
+      coverImageUrl: "https://x/p.jpg",
+      coverImageUrls: ["https://x/p.jpg"],
+    });
+    await run();
+    const sent = account.keeps.at(-1)!.request;
+    expect(sent.coverPictureId).toBeNull();
+    expect(sent.coverImageUrl).toBe("https://x/p.jpg");
+  });
+
   it("brings down a board this device has never had, with its pictures found by id", async () => {
     const { repository, account, run } = setUp();
     const theirs = films("theirs", "From the phone");

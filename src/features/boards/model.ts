@@ -86,6 +86,12 @@ export interface Board {
   category: string | null;
   coverImageUrl: string | null;
   coverImageUrls: string[];
+  /**
+   * The person's own photo the cover shows, by id, as the account keeps it:
+   * a card's picture, or one the phone took from its gallery. The address in
+   * coverImageUrl is only where this browser shows it from (QA A13).
+   */
+  coverPictureId: string | null;
   authorName: string | null;
   publishedId: string | null;
   /** When the whole board went to the trash; null while it is in use. */
@@ -235,6 +241,7 @@ export function newBoard(uid: string, title: string, now: number, nextUid: NextU
     category: null,
     coverImageUrl: null,
     coverImageUrls: [],
+    coverPictureId: null,
     authorName: null,
     publishedId: null,
     takenFrom: null,
@@ -398,6 +405,20 @@ export const setDisplayMode = (board: Board, displayMode: DisplayMode, now: numb
 export const setFavourite = (board: Board, at: number | null): Board =>
   at === board.favouritedAt ? board : { ...board, favouritedAt: at };
 
+/**
+ * The own photo a cover of these pictures shows, by id: only a cover of one
+ * picture, which is a card's own photo or the one the account already named.
+ */
+export function coverPictureOf(board: Board, pictures: readonly string[]): string | null {
+  const [only] = pictures;
+  if (pictures.length !== 1 || only === undefined) return null;
+  const card = board.items.find(
+    (item) => item.deletedAt === null && item.pictureId !== null && item.imageUrl === only,
+  );
+  if (card !== undefined) return card.pictureId;
+  return only === board.coverImageUrl ? board.coverPictureId : null;
+}
+
 /** No pictures leave the cover to the cards, one is the cover itself, two to six make a collage. */
 export function setCover(board: Board, pictures: readonly string[], now: number): Board {
   const chosen = [...new Set(pictures)].slice(0, 6);
@@ -407,6 +428,7 @@ export function setCover(board: Board, pictures: readonly string[], now: number)
       ...board,
       coverImageUrls: chosen,
       coverImageUrl: chosen.length === 1 ? (chosen[0] ?? null) : null,
+      coverPictureId: coverPictureOf(board, chosen),
     },
     now,
   );
@@ -578,6 +600,7 @@ export function removeItem(board: Board, itemUid: string, now: number): Board {
         : {
             coverImageUrls,
             coverImageUrl: coverImageUrls.length === 1 ? (coverImageUrls[0] ?? null) : null,
+            coverPictureId: coverPictureOf({ ...board, items }, coverImageUrls),
           }),
     }),
     now,

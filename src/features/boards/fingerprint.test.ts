@@ -10,6 +10,7 @@ const board = (over: Partial<Board> = {}): Board => ({
   category: null,
   coverImageUrl: null,
   coverImageUrls: [],
+  coverPictureId: null,
   authorName: null,
   publishedId: null,
   takenFrom: null,
@@ -167,6 +168,16 @@ describe("the fingerprint", () => {
     expect(fingerprintText(board({ coverImageUrls: ["a", "b"] }))).not.toBe(a);
     // One picture alone is no collage: the phone keeps nothing for it.
     expect(fingerprintText(board({ coverImageUrls: ["a"] }))).toBe(a);
+  });
+
+  // QA A13: the cover's term is the id when the cover is an own photo, as pictureOf is for a card.
+  it("names an own-photo cover by its id, whatever address this browser shows it from", () => {
+    const byId = fingerprintText(board({ coverPictureId: "gallery-1" }));
+    expect(
+      fingerprintText(board({ coverPictureId: "gallery-1", coverImageUrl: "https://a" })),
+    ).toBe(byId);
+    expect(byId).toBe(fingerprintText(board({ coverImageUrl: "gallery-1" })));
+    expect(byId).not.toBe(fingerprintText(board()));
   });
 
   it("reads the same whatever order the rows come in", () => {

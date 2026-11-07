@@ -29,6 +29,26 @@ export const boardKey = (uid: string): string => `${BOARD_PREFIX}${uid}`;
 export const HOUSE_BOARD_PREFIX = "tyl:houseBoard:";
 
 const text = (value: unknown): string | null => (typeof value === "string" ? value : null);
+
+/** A picture's id as the account takes it (CONTRACT, boards): anything else is no id. */
+const PICTURE_ID = /^[A-Za-z0-9_-]{1,100}$/;
+
+/**
+ * The cover's own photo by id: as kept, or, for a board kept before the id
+ * was, the card whose own photo the cover shows.
+ */
+function coverPictureIdOf(
+  value: unknown,
+  coverImageUrl: string | null,
+  items: readonly BoardItem[],
+): string | null {
+  if (typeof value === "string" && PICTURE_ID.test(value)) return value;
+  if (coverImageUrl === null) return null;
+  const card = items.find(
+    (item) => item.deletedAt === null && item.pictureId !== null && item.imageUrl === coverImageUrl,
+  );
+  return card?.pictureId ?? null;
+}
 const time = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
 const hex = (value: unknown, fallback: string): string =>
@@ -178,6 +198,7 @@ export function parseBoard(raw: unknown): Board | null {
     .map((item, index) => itemOf(item, tierUids, index))
     .filter((item): item is BoardItem => item !== null);
   const category = text(source.category);
+  const coverImageUrl = text(source.coverImageUrl);
   return {
     uid,
     title: text(source.title) ?? "",
@@ -185,10 +206,11 @@ export function parseBoard(raw: unknown): Board | null {
     // Any section's id stays, one the site does not know yet too: read as
     // none, it would go back to the account as none and unfile the list there.
     category: category === null || category === "" ? null : category,
-    coverImageUrl: text(source.coverImageUrl),
+    coverImageUrl,
     coverImageUrls: Array.isArray(source.coverImageUrls)
       ? source.coverImageUrls.filter((url): url is string => typeof url === "string")
       : [],
+    coverPictureId: coverPictureIdOf(source.coverPictureId, coverImageUrl, items),
     authorName: text(source.authorName),
     publishedId: text(source.publishedId),
     takenFrom: text(source.takenFrom),

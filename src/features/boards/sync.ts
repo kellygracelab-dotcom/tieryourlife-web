@@ -99,8 +99,14 @@ const request = (
   title: board.title,
   displayMode: board.displayMode,
   category: board.category,
-  coverImageUrl: board.coverImageUrl,
-  coverImageUrls: board.coverImageUrls,
+  // An own photo goes by id, never by its private address (QA A13).
+  ...(board.coverPictureId === null
+    ? {
+        coverImageUrl: board.coverImageUrl,
+        coverImageUrls: board.coverImageUrls,
+        coverPictureId: null,
+      }
+    : { coverImageUrl: null, coverImageUrls: [], coverPictureId: board.coverPictureId }),
   authorName: board.authorName,
   publishedId: board.publishedId,
   deletedAt: board.deletedAt,
@@ -597,7 +603,12 @@ async function withPictures(board: Board, deps: SyncDeps): Promise<Board> {
     items.push(url === null ? item : { ...item, imageUrl: url });
     changed ||= url !== null;
   }
-  return changed ? { ...board, items } : board;
+  const withItems = changed ? { ...board, items } : board;
+  // The cover's own photo the same way: the account names it by id alone.
+  const coverId = board.coverPictureId;
+  if (coverId === null || board.coverImageUrl?.startsWith("https://") === true) return withItems;
+  const url = await resolve(coverId).catch(() => null);
+  return url === null ? withItems : { ...withItems, coverImageUrl: url, coverImageUrls: [url] };
 }
 
 /**
