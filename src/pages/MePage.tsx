@@ -7,6 +7,7 @@ import { AccountTabs } from "../app/AccountTabs";
 import { useSession } from "../app/session";
 import { SignInButton } from "../app/SignInButton";
 import { errorOf } from "../api/errors";
+import { boardOfList } from "../features/boards/ownList";
 import { boards as site } from "../features/boards/owners";
 import type { BoardsRepository } from "../features/boards/repository";
 import { forgetPublished } from "../features/boards/takeDown";
@@ -93,6 +94,11 @@ interface RowProps {
   remove: (entry: Entry) => Promise<void>;
   copy: Copy;
   notify: (notice: SnackbarNotice) => void;
+  /**
+   * The board here a held list was published from: its page answers nobody,
+   * its author included, until a moderator looks, so it is changed there.
+   */
+  heldBoard: string | null;
   /** Taken away: a list's board is its own again at once, and a ranking leaves this device. */
   onRemoved: (entry: Entry) => void;
   onGone: (entry: Entry) => void;
@@ -102,7 +108,7 @@ interface RowProps {
  * One row for a list or a ranking. Taking it away is asked about in the row
  * itself: it is one thing, and the answer is a press away either way.
  */
-function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
+function Row({ entry, heldBoard, remove, copy, notify, onRemoved, onGone }: RowProps) {
   const [state, setState] = useState<RowState>({ status: "idle" });
   const isList = entry.kind === "list";
   // Kept, but its link answers nobody until a moderator looks: the row says
@@ -112,6 +118,8 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
   const to = isList
     ? `/l/${encodeURIComponent(entry.list.id)}`
     : `/r/${encodeURIComponent(entry.ranking.code)}`;
+  // Where the row and its Edit lead: the list's page, or the held list's board.
+  const home = held && heldBoard !== null ? `/b/${encodeURIComponent(heldBoard)}` : to;
   const picture = isList
     ? (entry.list.coverImageUrl ?? entry.list.previewImages[0] ?? null)
     : entry.ranking.imageUrl;
@@ -143,7 +151,7 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
   const asking = state.status === "asking" || state.status === "busy" || state.status === "failed";
   return (
     <li className={state.status === "gone" ? "mine mine--gone" : "mine"}>
-      <Link className="mine__face" to={to} tabIndex={-1} aria-hidden="true">
+      <Link className="mine__face" to={home} tabIndex={-1} aria-hidden="true">
         <Picture src={picture} title={title} />
       </Link>
       {asking ? (
@@ -180,7 +188,7 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
         </div>
       ) : (
         <>
-          <Link className="mine__text" to={to}>
+          <Link className="mine__text" to={home}>
             <bdi className="mine__title">{title}</bdi>
             <span className="mine__meta">{metaOf(entry)}</span>
             {entry.kind === "list" && entry.movesTo !== null && (
@@ -189,7 +197,7 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
             {held && <span className="mine__meta">{strings.boards.heldBody}</span>}
           </Link>
           <div className="mine__actions">
-            <Link className="btn btn--text" to={isList ? to : `${to}?edit`}>
+            <Link className="btn btn--text" to={isList ? home : `${to}?edit`}>
               <span>{strings.me.edit}</span>
             </Link>
             <Menu label={fill(strings.me.moreAbout, { title })} button={<Icon name="more_vert" />}>
@@ -367,6 +375,11 @@ function Mine({
           <Row
             key={entry.key}
             entry={entry}
+            heldBoard={
+              entry.kind === "list" && entry.list.underReview === true
+                ? (boardOfList(repository, entry.list.id)?.uid ?? null)
+                : null
+            }
             remove={remove}
             copy={copy}
             notify={setNotice}
