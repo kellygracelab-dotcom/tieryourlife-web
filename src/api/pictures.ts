@@ -4,8 +4,9 @@ import type { CatalogueItem } from "./types";
 /**
  * Where a card's picture is looked for, the backend choosing the catalogues
  * (proxy #57–#61): TMDB for film, TV and people, AniList for anime, Steam
- * and IGDB for games, Deezer for music, Open Library for books, iNaturalist
- * for animals, Wikidata everywhere, and in All the web too when the
+ * and IGDB for games, Open Library for books, iNaturalist for animals,
+ * Wikidata everywhere and for music on its own (Deezer is out until the
+ * right to show its covers is clear), and in All the web too when the
  * catalogues have little.
  */
 export const PICTURE_SCOPES = [
@@ -32,7 +33,6 @@ export const PICTURE_SOURCES = [
   "anilist",
   "steam",
   "igdb",
-  "deezer",
   "openlibrary",
   "wikidata",
   "inaturalist",

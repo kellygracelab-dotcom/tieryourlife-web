@@ -97,7 +97,6 @@ const SOURCE_NAMES: Record<Exclude<PictureSource, "web" | "other">, string> = {
   anilist: "AniList",
   steam: "Steam",
   igdb: "IGDB",
-  deezer: "Deezer",
   openlibrary: "Open Library",
   wikidata: "Wikidata",
   inaturalist: "iNaturalist",
