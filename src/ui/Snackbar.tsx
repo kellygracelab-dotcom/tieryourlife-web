@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type RefObject,
 } from "react";
 import "./Snackbar.css";
@@ -53,8 +54,7 @@ export function SiteSnackbar({ notice, onDone }: SnackbarProps) {
   );
 }
 
-/** How far the lowest notice stands off the window's bottom, and the room between two. */
-const SNACKBAR_EDGE = 16;
+/** The room between two notices. */
 const SNACKBAR_GAP = 8;
 
 /**
@@ -76,8 +76,12 @@ const subscribeToStack = (listener: () => void) => {
 };
 const currentStack = () => stack;
 
-/** Where a notice stands off the bottom: above the ones shown before it. */
-function useStackPlace(box: RefObject<HTMLDivElement | null>, notice: SnackbarNotice): number {
+/**
+ * How much higher than its place a notice stands: the height of the ones shown
+ * before it. The place itself is the stylesheets' (16 px, or above a page's
+ * pool, dock or bar); the lift is added to it, never put in its stead.
+ */
+function useStackLift(box: RefObject<HTMLDivElement | null>, notice: SnackbarNotice): number {
   const [key] = useState(() => Symbol("snackbar"));
   const shown = useSyncExternalStore(subscribeToStack, currentStack, currentStack);
 
@@ -103,9 +107,7 @@ function useStackPlace(box: RefObject<HTMLDivElement | null>, notice: SnackbarNo
   }, [box, key, notice]);
 
   const at = shown.findIndex((one) => one.key === key);
-  return shown
-    .slice(0, Math.max(at, 0))
-    .reduce((bottom, one) => bottom + one.height + SNACKBAR_GAP, SNACKBAR_EDGE);
+  return shown.slice(0, Math.max(at, 0)).reduce((lift, one) => lift + one.height + SNACKBAR_GAP, 0);
 }
 
 /**
@@ -119,7 +121,7 @@ function Notice({ notice, onDone }: { notice: SnackbarNotice; onDone: () => void
   const held = hovered || focused;
   const action = useRef<HTMLButtonElement>(null);
   const box = useRef<HTMLDivElement>(null);
-  const bottom = useStackPlace(box, notice);
+  const lift = useStackLift(box, notice);
 
   useEffect(() => {
     if (held) return;
@@ -136,7 +138,7 @@ function Notice({ notice, onDone }: { notice: SnackbarNotice; onDone: () => void
     <div
       ref={box}
       className="snackbar"
-      style={{ bottom }}
+      style={{ "--snackbar-lift": `${lift}px` } as CSSProperties}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
       onFocus={() => setFocused(true)}

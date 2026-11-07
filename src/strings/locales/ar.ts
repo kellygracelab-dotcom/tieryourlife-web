@@ -166,7 +166,7 @@ const ar: Translation = {
     placeZoomIn: "تكبير",
     placeZoomOut: "تصغير",
     placeUse: "استخدم هذه",
-    placeFailed: "تعذّر تحميل هذه الصورة، فلا يمكن أن تكون وجهك. اختر صورة أخرى.",
+    placeFailed: "تعذّر تحميل هذه الصورة، فلا يمكن استخدامها. اختر صورة أخرى.",
     placeHelp: "اسحب للتحريك، وقرّب بإصبعين أو بالتمرير.",
     placeAsItIs: "لا يمكن استخدام هذه الصورة إلا كما هي.",
   },
@@ -1010,6 +1010,9 @@ const ar: Translation = {
     mergedFollowed: "تم دمج «{name}» في {section}. أنت تتابع {section} الآن.",
     mergedUnfollowed: "تم دمج «{name}» في {section}. ألغيت متابعة {section}.",
     mergedTryAgain: "تم دمج «{name}» في {section}. حاول مرة أخرى هناك.",
+    mergedFollowedUnnamed: "تم دمج «{name}» في قسم آخر. أنت تتابعه الآن.",
+    mergedUnfollowedUnnamed: "تم دمج «{name}» في قسم آخر. ألغيت متابعته.",
+    mergedTryAgainUnnamed: "تم دمج «{name}» في قسم آخر. حاول مرة أخرى هناك.",
     followLimit:
       "وصلت إلى أقصى عدد من الأقسام والمواضيع التي يمكنك متابعتها. ألغِ متابعة بعضها أولًا.",
     followSignInBody:

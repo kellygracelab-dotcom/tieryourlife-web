@@ -124,11 +124,19 @@ export const PAGE_SCRIPT_POLICY =
   "script-src 'self' 'sha256-2iKKgy5SB11PUVBbbTyzt+UMR84yVQVKvL8ExeCn51k=' 'sha256-r5OZZkdnE7YDlM+2flIVbVo7t4hz5lUfP+HnhdDS8Gs=' " +
   "https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/";
 
+/**
+ * As firebase.json says for every address: a window another site opened
+ * cannot reach into the page, while the Google sign-in popup the app opens
+ * keeps its link back. Never "same-origin": that cuts the popup off too.
+ */
+export const PAGE_OPENER_POLICY = "same-origin-allow-popups";
+
 /** Every page this function answers with, the bare and the unavailable ones too. */
 function guardFrames(response: Response): void {
   response.setHeader("Content-Security-Policy", PAGE_POLICY);
   response.setHeader("Content-Security-Policy-Report-Only", PAGE_SCRIPT_POLICY);
   response.setHeader("X-Frame-Options", "SAMEORIGIN");
+  response.setHeader("Cross-Origin-Opener-Policy", PAGE_OPENER_POLICY);
 }
 
 function send(response: Response, html: string): void {

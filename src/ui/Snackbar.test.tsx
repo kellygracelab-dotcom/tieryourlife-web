@@ -106,15 +106,32 @@ describe("Snackbar", () => {
     );
     const page = screen.getByText("1 list deleted").parentElement!;
     const site = screen.getByText("Couldn't send the report").parentElement!;
-    expect(page.style.bottom).toBe("16px");
-    expect(site.style.bottom).not.toBe("16px");
-    expect(parseFloat(site.style.bottom)).toBeGreaterThan(16);
+    const lift = (notice: HTMLElement) =>
+      parseFloat(notice.style.getPropertyValue("--snackbar-lift"));
+    expect(lift(page)).toBe(0);
+    expect(lift(site)).toBeGreaterThan(0);
     rerender(
       <>
         <Snackbar notice={null} onDone={vi.fn()} />
         <SiteSnackbar notice={{ text: "Couldn't send the report" }} onDone={vi.fn()} />
       </>,
     );
-    expect(screen.getByText("Couldn't send the report").parentElement!.style.bottom).toBe("16px");
+    expect(lift(screen.getByText("Couldn't send the report").parentElement!)).toBe(0);
+  });
+
+  // QA W48: an inline bottom beat the rules that stand a notice above a board's
+  // pool or dock, so the notices covered the cards. The stack only adds a lift.
+  it("leaves its place to the stylesheets and only says how much higher to stand", () => {
+    render(
+      <>
+        <Snackbar notice={undoable} onDone={vi.fn()} />
+        <SiteSnackbar notice={{ text: "Couldn't send the report" }} onDone={vi.fn()} />
+      </>,
+    );
+    for (const text of ["1 list deleted", "Couldn't send the report"]) {
+      const notice = screen.getByText(text).parentElement!;
+      expect(notice.style.bottom).toBe("");
+      expect(notice.style.getPropertyValue("--snackbar-lift")).toMatch(/^\d+(\.\d+)?px$/);
+    }
   });
 });

@@ -5,6 +5,7 @@ import { agoOf, type Ago } from "../features/boards/ago";
 import {
   restoreBoard,
   trashEntriesOf,
+  trashedCardCount,
   withoutTrash,
   type Board,
   type TrashEntry,
@@ -62,6 +63,9 @@ export function TrashPage({
   usePageTitle(strings.trash.title);
   const boards = useBoards(repository);
   const entries = trashEntriesOf(boards);
+  // Cards trashed elsewhere are not listed, but Settings sends a board that
+  // holds too many here, so the trash can still be emptied of them.
+  const trashedCards = trashedCardCount(boards);
   const [asking, setAsking] = useState<Asking>({ what: "nothing" });
   const close = useCallback(() => setAsking({ what: "nothing" }), []);
   // While a public copy is being taken down the rows wait: a board restored
@@ -142,7 +146,7 @@ export function TrashPage({
           <p className="trash__subtitle">{strings.trash.subtitle}</p>
         </div>
         {/* Not composed at all while there is nothing to empty: that absence is the empty state. */}
-        {entries.length > 0 && (
+        {(entries.length > 0 || trashedCards > 0) && (
           <Menu label={strings.trash.more} button={<Icon name="more_vert" />}>
             <li>
               <button
@@ -228,7 +232,10 @@ export function TrashPage({
           narrow
           title={strings.trash.emptyTitle}
           body={fill(strings.trash.emptyBody, {
-            count: plural(strings.trash.entries, entries.length),
+            count:
+              entries.length > 0
+                ? plural(strings.trash.entries, entries.length)
+                : plural(strings.boards.cards, trashedCards),
           })}
           confirmLabel={strings.trash.emptyMenu}
           cancelLabel={strings.trash.cancel}

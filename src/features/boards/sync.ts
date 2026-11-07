@@ -3,6 +3,7 @@ import { errorOf } from "../../api/errors";
 import { fingerprintOf as digest } from "./fingerprint";
 import {
   beyondAccount,
+  setHeld,
   setPublished,
   trashBoard,
   type BeyondAccount,
@@ -39,6 +40,8 @@ export interface PublishedEntry {
   boardUid: string | null;
   /** When it last went out. */
   updatedAt: number;
+  /** Kept, but out of the feed until a moderator looks; left out or false when it is not. */
+  underReview?: boolean;
 }
 
 export interface SyncDeps {
@@ -603,7 +606,10 @@ async function withPictures(board: Board, deps: SyncDeps): Promise<Board> {
  * still claiming to be public hides the one switch that would fix it. And
  * the other way round, as the phone's #236 does: a board whose publish went
  * through while its answer never came gets its list back, found by the
- * board's uid the account keeps on it.
+ * board's uid the account keeps on it. Whether its list waits for a
+ * moderator comes from the account too: only the browser that published
+ * heard it in the answer, and every other one showed a link nobody could
+ * open. The hold stays this browser's, never sent and never fingerprinted.
  */
 async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
   const boards = deps.repository.all();
@@ -613,7 +619,8 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
   const theirs = await deps.api.published();
   if (theirs === null) return;
   check(deps);
-  const ids = new Set(theirs.map((entry) => entry.id));
+  const byId = new Map(theirs.map((entry) => [entry.id, entry]));
+  const ids = new Set(byId.keys());
   // Read again after the wait: a board may have moved here meanwhile, and
   // only the publication is this step's to change, and only while it is still the one
   // that was asked about. Everything else is kept as it is now.
@@ -625,16 +632,31 @@ async function forgetWhatIsNoLongerPublished(deps: SyncDeps): Promise<void> {
   // Private again, the board is one's own: the name publishing put on it
   // goes, or Your lists would take it for a copy of somebody else's.
   const changed = gone.map((board) => setPublished(board, null, null, deps.now()));
+  // A hold the account says otherwise of, on the list that was asked about,
+  // and only while no publish answer has said it since.
+  for (const asked of claimed) {
+    const board = deps.repository.get(asked.uid);
+    const entry = byId.get(asked.publishedId ?? "");
+    if (board === null || entry === undefined || board.publishedId !== asked.publishedId) continue;
+    const held = board.heldForReview === true;
+    if (held !== (asked.heldForReview === true)) continue;
+    if (held !== (entry.underReview === true)) changed.push(setHeld(board, !held));
+  }
   for (const [uid, entry] of relinks(unlinked, theirs, deps.repository.all())) {
     const board = deps.repository.get(uid);
     if (board === null || !lostItsList(board)) continue;
     // Its own edit time stays, as on the phone: an edit made after the list
     // went out still reads as not sent, and Update has it to send.
-    changed.push({
-      ...board,
-      publishedId: entry.id,
-      publishedEditedAt: Math.min(board.editedAt, entry.updatedAt),
-    });
+    changed.push(
+      setHeld(
+        {
+          ...board,
+          publishedId: entry.id,
+          publishedEditedAt: Math.min(board.editedAt, entry.updatedAt),
+        },
+        entry.underReview === true,
+      ),
+    );
   }
   if (changed.length > 0) deps.repository.saveAll(changed);
 }

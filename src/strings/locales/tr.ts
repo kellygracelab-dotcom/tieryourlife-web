@@ -1,7 +1,7 @@
 import type { Translation } from "../index";
 
 // The terms are the phone app's own (its values-tr): sıralama, kart, seviye,
-// pano, «Benimki / Onun sıralaması», «Takip et / Takiptesiniz», bildirim,
+// pano, «Benimki / Onun sıralaması», «Takip et / Takiptesiniz», şikayet,
 // yasak, the report reasons, the names of the five tiers. The app mixes "sen"
 // and "siz"; here it is "siz" throughout. A name never takes a suffix (the
 // app's «{name} kullanıcısından»), because the suffix would depend on the
@@ -38,14 +38,14 @@ const tr: Translation = {
     title: "Şikayetler",
     notAvailable: "Bu sayfa kullanılamıyor.",
     listCount: { other: "{n} liste" },
-    reportCount: { other: "{n} bildirim" },
+    reportCount: { other: "{n} şikayet" },
     nothingPending: "Bekleyen yok",
     blurCovers: "Kapakları bulanıklaştır",
     revealCover: "Bu kapağı göster",
     cover: "Kapak",
     noCover: "Kapak yok",
     hiddenPill: "Beklerken gizli",
-    alreadyKept: "Bir kez korundu, artık bildirimler onu gizlemiyor",
+    alreadyKept: "Bir kez korundu, artık şikayetler onu gizlemiyor",
     moreNotes: { other: "{n} not daha göster" },
     today: "bugün",
     yesterday: "dün",
@@ -73,10 +73,10 @@ const tr: Translation = {
     bannedThreeMonths: "üç aylık",
     bannedSixMonths: "altı aylık",
     bannedForever: "sonsuza dek",
-    leftUp: "Yayında kaldı. Bildirimler artık onu gizlemiyor.",
+    leftUp: "Yayında kaldı. Şikayetler artık onu gizlemiyor.",
     failedDecision: "Karar kaydedilemedi: hiçbir şey değişmedi.",
     tryAgain: "Tekrar deneyin",
-    failed: "Bildirimler yüklenemedi.",
+    failed: "Şikayetler yüklenemedi.",
     emptyTitle: "İncelenecek bir şey yok",
     emptyBody: "Topluluk listeleriyle ilgili şikayetler buraya gelir.",
   },
@@ -92,7 +92,7 @@ const tr: Translation = {
     guestBody: "Adınız ve resminiz bir hesaba aittir. Bir listeyi sıralamak için hesap gerekmez.",
     themeGuestNote: "Oturum açmış olsanız da olmasanız da bu cihazda saklanır.",
     nameTitle: "Adınız",
-    nameBody: "Yayımladığınızız her listede yazar olarak görünen ad. E-postanız asla gösterilmez.",
+    nameBody: "Yayımladığınız her listede yazar olarak görünen ad. E-postanız asla gösterilmez.",
     nameField: "Ad",
     nameNeeded: "Bir ad gerekli: insanların gördüğü şey bu.",
     nameNote:
@@ -105,14 +105,14 @@ const tr: Translation = {
     nameFailed: "Kaydedilemedi: sunucu yanıt vermedi. Adınız değişmedi.",
     tryAgain: "Tekrar deneyin",
     faceTitle: "Profil resminiz",
-    faceBody: "Yayımladığınızız bir listeden bir kart ya da cihazınızdan bir fotoğraf seçin.",
+    faceBody: "Yayımladığınız bir listeden bir kart ya da cihazınızdan bir fotoğraf seçin.",
     faceNone: "Bir liste yayımlayın, görselleri burada görünsün.",
     faceChoices: "Profil resminiz",
     faceChoice: "{list} listesinden kart",
     faceLetter: "Sadece harf",
     faceLetterCaption: "Harf",
     faceFailed: "Kaydedilemedi: sunucu yanıt vermedi.",
-    faceListsFailed: "Yayımladığınızız listeler yüklenemedi.",
+    faceListsFailed: "Yayımladığınız listeler yüklenemedi.",
     privacyTitle: "Gizlilik",
     signOutNote:
       "Listeleriniz hesabınızda ve bu tarayıcıda kalır, yeniden giriş yapana kadar gizli olur. Oturum kapalıyken yalnızca hesapsız yapılan listeleri görürsünüz.",
@@ -144,7 +144,7 @@ const tr: Translation = {
     placeZoomIn: "Yakınlaştır",
     placeZoomOut: "Uzaklaştır",
     placeUse: "Bunu kullan",
-    placeFailed: "Bu resim yüklenmiyor, bu yüzden yüzünüz olamaz. Başka birini seçin.",
+    placeFailed: "Bu resim yüklenmiyor, bu yüzden profil resminiz olamaz. Başka birini seçin.",
     placeHelp: "Taşımak için sürükleyin; yakınlaştırmak için iki parmakla açın veya kaydırın.",
     placeAsItIs: "Bu resim yalnızca olduğu gibi kullanılabilir.",
   },
@@ -335,7 +335,7 @@ const tr: Translation = {
     failedInvalid: "Liste reddedildi.",
     failedOther: "Yayımlanamadı. Hiçbir şey kaybolmadı. Tekrar deneyin.",
     editTitle: "Listeyi düzenle",
-    editSignIn: "Yayımladığınızız listeleri düzenlemek için oturum açın.",
+    editSignIn: "Yayımladığınız listeleri düzenlemek için oturum açın.",
     openingList: "Liste açılıyor…",
     picturesFailed:
       "Listenin görselleri panosuna taşınamadı. Hiçbir şey kaybolmadı. Tekrar deneyin.",
@@ -474,7 +474,7 @@ const tr: Translation = {
     byHand: "Her şikayeti bir kişi okur. Yeterince birikirse liste o ana kadar gizlenir.",
     send: "Bildir",
     cancel: "İptal",
-    failed: "Bildirim gönderilemedi: hiçbir şey gönderilmedi. Bir dakika sonra tekrar deneyin.",
+    failed: "Şikayet gönderilemedi: hiçbir şey gönderilmedi. Bir dakika sonra tekrar deneyin.",
     sentTitle: "Bildirildi ve sizin için gizlendi",
     sentBody: "Şikayetleri bir kişi inceler. O ana kadar başkaları hâlâ görebilir.",
     done: "Tamam",
@@ -602,7 +602,7 @@ const tr: Translation = {
     deleted: "Sıralama silindi",
     unpublished: "Yayından kaldırıldı",
     emptyTitle: "Henüz burada bir şey yok",
-    emptyBody: "Yayımladığınızız listeler ve sakladığınız sıralamalar burada görünür.",
+    emptyBody: "Yayımladığınız listeler ve sakladığınız sıralamalar burada görünür.",
     moreAbout: "{title} hakkında daha fazla",
     removing: "Siliniyor…",
     removeFailed: "Silinemedi. Tekrar deneyin.",
@@ -870,6 +870,11 @@ const tr: Translation = {
     mergedFollowed: "“{name}”, {section} ile birleştirildi. Artık {section} takip ediliyor.",
     mergedUnfollowed: "“{name}”, {section} ile birleştirildi. {section} takibi bırakıldı.",
     mergedTryAgain: "“{name}”, {section} ile birleştirildi. Orada tekrar deneyin.",
+    mergedFollowedUnnamed:
+      "“{name}”, başka bir bölümle birleştirildi. Artık o bölüm takip ediliyor.",
+    mergedUnfollowedUnnamed:
+      "“{name}”, başka bir bölümle birleştirildi. O bölümün takibi bırakıldı.",
+    mergedTryAgainUnnamed: "“{name}”, başka bir bölümle birleştirildi. Orada tekrar deneyin.",
     followLimit:
       "Takip edebileceğiniz bölüm ve konu sınırına ulaştınız. Önce bazılarını takipten çıkın.",
     followSignInBody:

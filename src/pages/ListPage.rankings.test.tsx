@@ -620,6 +620,34 @@ describe("ListPage: showing one's ranking to others", () => {
     localStorage.clear();
   });
 
+  // QA W51: Show, Withdraw, Show again said 13, 13, 14 while the server had 13, 12, 13.
+  it("counts one's own once through Show, Withdraw and Show again", async () => {
+    localStorage.clear();
+    openAs();
+    await arrangeMine();
+    const show = async () => {
+      await menu();
+      await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+      expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
+    };
+    await show();
+    await menu();
+    await userEvent.click(screen.getByRole("button", { name: "Rankings · 13" }));
+    const sheet = screen.getByRole("dialog", { name: "Rankings" });
+    await userEvent.click(await within(sheet).findByRole("button", { name: "Withdraw" }));
+    await userEvent.click(
+      within(within(sheet).getByRole("group")).getByRole("button", { name: "Withdraw" }),
+    );
+    await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+    await menu();
+    expect(screen.getByRole("button", { name: "Rankings · 12" })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await show();
+    await menu();
+    expect(screen.getByRole("button", { name: "Rankings · 13" })).toBeInTheDocument();
+    localStorage.clear();
+  });
+
   it("asks a guest to sign in instead", async () => {
     localStorage.clear();
     openAs({ kind: "guest", uid: "g1" });

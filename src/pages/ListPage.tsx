@@ -471,11 +471,13 @@ function OpenList({
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
   // Who else ranked it is a line of the menu, the one place the number is said.
   // Always there, as in the app: the author's own ranking heads the sheet.
-  // Readers this page added to the count: one's own, shown to others here for the first time.
-  const [added, setAdded] = useState(0);
+  // The count the list came with, and one's own as it is shown or withdrawn here.
   const rankingsEntry = outOfSight
     ? null
-    : { count: (list.rankingCount ?? 0) + added, open: () => setSheet(true) };
+    : {
+        count: Math.max(0, (list.rankingCount ?? 0) + rankings.state.countChange),
+        open: () => setSheet(true),
+      };
 
   // Mine among the list's rankings, as the app's Show my ranking to others:
   // only somebody else's list, only once Mine is arranged, and only signed in.
@@ -505,7 +507,6 @@ function OpenList({
       const labels = loadDraftLabels(localStorageStore, scopeOf(list));
       const ranking = await keepListRanking(withLabels(list, labels), rows);
       rankings.put(ranking);
-      if (ranking.created === true) setAdded((n) => n + 1);
       setNotice({ text: strings.rankings.shown });
     } catch (reason: unknown) {
       const error = errorOf(reason);
@@ -561,6 +562,12 @@ function OpenList({
                 <Icon name="visibility_off" />
                 {strings.card.yoursAnonymous}
               </p>
+            </div>
+          )}
+          {/* Held for a moderator, the list is the author's and the moderators' alone for now. */}
+          {own && list.underReview === true && (
+            <div className="list-head__lines">
+              <p className="byline">{strings.boards.heldBody}</p>
             </div>
           )}
           {/* A list that stands without an author has no line naming one. */}

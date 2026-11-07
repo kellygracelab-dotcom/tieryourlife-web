@@ -105,6 +105,11 @@ export interface PublishedList extends ListSummary {
    * with that list.
    */
   picturesFrom?: string[];
+  /**
+   * Kept, but out of the feed until a moderator looks: then the list answers
+   * only its author and moderators, and its link nobody else yet.
+   */
+  underReview?: boolean;
 }
 
 // A type rather than an interface so it can travel as a query object.

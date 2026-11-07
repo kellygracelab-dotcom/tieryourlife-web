@@ -910,6 +910,9 @@ const es: Translation = {
     mergedFollowed: "«{name}» se fusionó con {section}. Ahora sigues {section}.",
     mergedUnfollowed: "«{name}» se fusionó con {section}. Dejaste de seguir {section}.",
     mergedTryAgain: "«{name}» se fusionó con {section}. Inténtalo de nuevo allí.",
+    mergedFollowedUnnamed: "«{name}» se fusionó con otra sección. Ahora sigues esa sección.",
+    mergedUnfollowedUnnamed: "«{name}» se fusionó con otra sección. Dejaste de seguirla.",
+    mergedTryAgainUnnamed: "«{name}» se fusionó con otra sección. Inténtalo de nuevo allí.",
     followLimit:
       "Ya sigues todas las secciones y temas que se pueden. Deja de seguir alguno primero.",
     followSignInBody: "Al seguir secciones y temas, sus nuevas listas te aparecen las primeras.",

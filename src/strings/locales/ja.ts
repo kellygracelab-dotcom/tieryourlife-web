@@ -1,7 +1,7 @@
 import type { Translation } from "../index";
 
 // The terms are the phone app's own (its values-ja): ランキング, カード, ティア,
-// ボード, 「自分の並べ方 / 作者の並べ方」, 「フォロー / フォロー中」, 報告, 禁止,
+// ボード, 「自分の並べ方 / 作者の並べ方」, 「フォロー / フォロー中」, 通報, 禁止,
 // the report reasons, the names of the five tiers, and the polite です・ます
 // throughout. Japanese counts without plural forms, so every plural group
 // carries one. The brand and TMDB's sentence stay as they are: TMDB's terms
@@ -32,18 +32,18 @@ const ja: Translation = {
   },
   mod: {
     putBack: "戻す",
-    putBackDone: "フィードに戻しました。報告で非表示になることはもうありません。",
+    putBackDone: "フィードに戻しました。通報で非表示になることはもうありません。",
     title: "通報",
     notAvailable: "このページは利用できません。",
     listCount: { other: "{n}件のリスト" },
-    reportCount: { other: "{n}件の報告" },
+    reportCount: { other: "{n}件の通報" },
     nothingPending: "待ちはありません",
     blurCovers: "表紙をぼかす",
     revealCover: "この表紙を表示",
     cover: "カバー",
     noCover: "表紙なし",
     hiddenPill: "保留中のため非表示",
-    alreadyKept: "一度維持されたため、報告では非表示になりません",
+    alreadyKept: "一度維持されたため、通報では非表示になりません",
     moreNotes: { other: "さらに{n}件のメモを表示" },
     today: "今日",
     yesterday: "昨日",
@@ -71,10 +71,10 @@ const ja: Translation = {
     bannedThreeMonths: "3か月",
     bannedSixMonths: "6か月",
     bannedForever: "永久に",
-    leftUp: "残しました。報告では非表示になりません。",
+    leftUp: "残しました。通報では非表示になりません。",
     failedDecision: "判断を保存できませんでした。何も変わっていません。",
     tryAgain: "もう一度試す",
-    failed: "報告を読み込めませんでした。",
+    failed: "通報を読み込めませんでした。",
     emptyTitle: "確認するものはありません",
     emptyBody: "コミュニティのリストへの通報はここに届きます。",
   },
@@ -134,7 +134,7 @@ const ja: Translation = {
       "コミュニティで非表示にしたリストと人は、気が変わったときのためにここに残ります。",
     hiddenAuthor: "{name} の投稿すべて",
     showAgain: "再表示",
-    placeTitle: "顔の位置を決める",
+    placeTitle: "アイコンの位置を決める",
     placeFrame: "円に収める画像",
     placeControls: "画像の移動と拡大・縮小",
     placeLeft: "左へ移動",
@@ -144,7 +144,7 @@ const ja: Translation = {
     placeZoomIn: "拡大",
     placeZoomOut: "縮小",
     placeUse: "これを使う",
-    placeFailed: "この画像は読み込めないため、顔に使えません。別の画像を選んでください。",
+    placeFailed: "この画像は読み込めないため、プロフィールに使えません。別の画像を選んでください。",
     placeHelp: "ドラッグで移動、ピンチまたはスクロールで拡大・縮小します。",
     placeAsItIs: "この画像はこのままでしか使えません。",
   },
@@ -475,7 +475,7 @@ const ja: Translation = {
     send: "通報する",
     cancel: "キャンセル",
     failed:
-      "報告を送信できませんでした。何も送られていません。1分ほど待ってからもう一度お試しください。",
+      "通報を送信できませんでした。何も送られていません。1分ほど待ってからもう一度お試しください。",
     sentTitle: "通報しました。あなたには非表示になります",
     sentBody: "通報は人が確認します。それまでは他の人には表示されたままのことがあります。",
     done: "完了",
@@ -865,6 +865,12 @@ const ja: Translation = {
     mergedUnfollowed:
       "「{name}」は「{section}」に統合されました。「{section}」のフォローを解除しました。",
     mergedTryAgain: "「{name}」は「{section}」に統合されました。そちらでもう一度お試しください。",
+    mergedFollowedUnnamed:
+      "「{name}」は別のセクションに統合されました。そのセクションをフォローしています。",
+    mergedUnfollowedUnnamed:
+      "「{name}」は別のセクションに統合されました。そのセクションのフォローを解除しました。",
+    mergedTryAgainUnnamed:
+      "「{name}」は別のセクションに統合されました。そちらでもう一度お試しください。",
     followLimit:
       "フォローできるセクションとトピックの上限に達しました。先にいくつかフォローを解除してください。",
     followSignInBody:

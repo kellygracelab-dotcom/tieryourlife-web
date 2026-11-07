@@ -918,6 +918,67 @@ describe("syncBoards", () => {
     expect(repository.get("f")?.publishedId).toBe("p-claimed");
   });
 
+  // The hold is said only to the browser that published; every other browser
+  // of the account learns it from lists/mine, or shows a link nobody can open.
+  it("holds a board whose list the account says waits for a moderator, and lets it go once it does not", async () => {
+    const entry = { id: "p-held", boardUid: "a", updatedAt: 800, underReview: true };
+    const { repository, account, run } = setUp([entry]);
+    account.holds({ ...films("a", "A"), publishedId: "p-held" }, 1, "Chrome on Windows");
+    await run();
+    expect(repository.get("a")).toMatchObject({ publishedId: "p-held", heldForReview: true });
+    // This browser's to know: never sent to the account, and the board still agrees with it.
+    const sent = account.keeps.length;
+    expect(await run()).toMatchObject({ carried: 0, refused: 0 });
+    expect(account.keeps).toHaveLength(sent);
+    expect(account.keeps.some(({ request }) => "heldForReview" in request)).toBe(false);
+    expect(repository.get("a")?.heldForReview).toBe(true);
+
+    account.api.published = () => Promise.resolve([{ ...entry, underReview: false }]);
+    await run();
+    expect(repository.get("a")).toMatchObject({ publishedId: "p-held" });
+    expect(repository.get("a")?.heldForReview).toBeUndefined();
+
+    account.api.published = () => Promise.resolve([{ ...entry, underReview: true }]);
+    await run();
+    expect(repository.get("a")?.heldForReview).toBe(true);
+    // An entry that does not say it is not held either.
+    account.api.published = () =>
+      Promise.resolve([{ id: "p-held", boardUid: "a", updatedAt: 800 }]);
+    await run();
+    expect(repository.get("a")?.heldForReview).toBeUndefined();
+    expect(account.keeps).toHaveLength(sent);
+  });
+
+  it("holds a board that gets its list back when the account says that list waits", async () => {
+    const { repository, run } = setUp([
+      { id: "p-lost", boardUid: "a", updatedAt: 800, underReview: true },
+    ]);
+    repository.save({ ...films("a", "A"), category: "film_tv", editedAt: 700 });
+    await run();
+    expect(repository.get("a")).toMatchObject({ publishedId: "p-lost", heldForReview: true });
+  });
+
+  it("leaves the hold as a publish answered it while the account was asked", async () => {
+    const { repository, account, run } = setUp();
+    repository.saveAll([
+      { ...films("a", "A"), publishedId: "p-a" },
+      { ...films("b", "B"), publishedId: "p-b", heldForReview: true },
+    ]);
+    account.api.published = () => {
+      // Meanwhile an Update of each comes back: a is held now, b no longer.
+      repository.save({ ...repository.get("a")!, heldForReview: true });
+      const { heldForReview: _held, ...b } = repository.get("b")!;
+      repository.save(b);
+      return Promise.resolve([
+        { id: "p-a", boardUid: "a", updatedAt: 800 },
+        { id: "p-b", boardUid: "b", updatedAt: 800, underReview: true },
+      ]);
+    };
+    await run();
+    expect(repository.get("a")?.heldForReview).toBe(true);
+    expect(repository.get("b")?.heldForReview).toBeUndefined();
+  });
+
   it("takes in a board whose cards have the uids of a board here: uids are the board's own", async () => {
     const { repository, account, run } = setUp();
     const here = films("here", "Here");

@@ -101,4 +101,32 @@ describe("useRankings", () => {
     await waitFor(() => expect(result.current.state.status).toBe("ready"));
     expect(result.current.state.rankings.map((ranking) => ranking.authorName)).toEqual(["a", "b"]);
   });
+
+  // QA W51: the count follows the server through Show, Withdraw and Show again.
+  it("takes one's own off the count when withdrawn, back on when it fails, and adds a new one", async () => {
+    const withdraw = vi.fn(async () => undefined);
+    const load = vi.fn(async (): Promise<RankingsPage> => ({
+      rankings: [{ ...reader("me"), mine: true }, reader("b")],
+      nextCursor: null,
+    }));
+    const { result } = renderHook(() => useRankings("l1", { load, withdraw }));
+    // Shown before the sheet was read: counted, nothing listed yet.
+    act(() => result.current.put({ ...reader("me"), created: true }));
+    expect(result.current.state.countChange).toBe(1);
+    act(() => result.current.open());
+    await waitFor(() => expect(result.current.state.status).toBe("ready"));
+    act(() => result.current.withdraw());
+    expect(result.current.state.countChange).toBe(0);
+    // Shown again: a new one on the server.
+    act(() => result.current.put({ ...reader("me"), created: true }));
+    expect(result.current.state.countChange).toBe(1);
+    // Changed in place: no new reader.
+    act(() => result.current.put({ ...reader("me"), created: false }));
+    expect(result.current.state.countChange).toBe(1);
+    withdraw.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+    act(() => result.current.withdraw());
+    expect(result.current.state.countChange).toBe(0);
+    await waitFor(() => expect(result.current.state.withdrawFailed).toBe(true));
+    expect(result.current.state.countChange).toBe(1);
+  });
 });

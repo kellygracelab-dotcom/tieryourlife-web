@@ -10,7 +10,7 @@ import {
 import { createPortal } from "react-dom";
 import { useBlocker } from "react-router";
 import type { AdminRole, AdminSections } from "../../api/admin";
-import { errorOf } from "../../api/errors";
+import { ApiFailure, errorOf } from "../../api/errors";
 import type { SectionStats } from "../../api/sections";
 import { loadAdminSections, saveSectionOrder } from "../../lib/api";
 import { useResource } from "../../lib/useResource";
@@ -159,6 +159,10 @@ export function SectionsPane({
   // pressed meanwhile waits for it. It answers the version it read and the one
   // it replaces, or null when the order moved elsewhere and the old one stays.
   const reading = useRef<Promise<VersionRead> | null>(null);
+  // The version an edit moved past when the quiet read of the new one failed:
+  // while it is still the one held, Save reads the order before it sends, so
+  // one's own edit is not taken for somebody else's change. QA W53.
+  const staleVersion = useRef<{ version: number | undefined } | null>(null);
 
   // The held row sits under the pointer, inside the list, while the others keep
   // their places; the answer is its middle, measured from the list's top.
@@ -307,9 +311,23 @@ export function SectionsPane({
     setFailed(false);
     const { ids, hidden } = saveOf(edited);
     const waiting = reading.current ?? Promise.resolve(null);
-    const against = waiting.then((read) =>
-      read !== null && read.from === version ? read.to : version,
-    );
+    const was = { version, rows: saved };
+    const against = waiting.then((read) => {
+      if (read !== null && read.from === version) return read.to;
+      if (staleVersion.current === null || staleVersion.current.version !== version) {
+        return version;
+      }
+      // The version after one's own edit is not known: read it now. The
+      // order moved elsewhere meanwhile is a conflict; a read that fails
+      // says only that the Save did not go.
+      return deps.load().then((fresh) => {
+        if (isChanged(changesOf(was.rows, rowsOf(fresh)))) {
+          throw new ApiFailure({ kind: "conflict" });
+        }
+        staleVersion.current = null;
+        return fresh.version ?? undefined;
+      });
+    });
     against
       .then((sent) => deps.save(ids, hidden, sent))
       .then(
@@ -536,7 +554,11 @@ export function SectionsPane({
                 isChanged(changesOf(was.rows, rowsOf(fresh)))
                   ? null
                   : { from: was.version, to: fresh.version ?? undefined },
-              () => null,
+              () => {
+                // Not known now: the next Save reads it first.
+                staleVersion.current = { version: was.version };
+                return null;
+              },
             );
             reading.current = read;
             void read.then((got) => {

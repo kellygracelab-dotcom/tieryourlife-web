@@ -1,7 +1,7 @@
 import type { Translation } from "../index";
 
 // The terms are the phone app's own (its values-de): Rangliste, Karte, Stufe,
-// Board, «Meine / Ihre Reihung», «Folgen / Abonniert», Meldung, Sperre, the
+// Board, «Meine / Ihre», «Folgen / Abonniert», Meldung, Sperre, the
 // report reasons, the names of the five tiers, and "du" throughout. A person
 // who publishes on the phone and ranks here should not meet two vocabularies.
 // The brand and TMDB's sentence stay as they are: TMDB's terms give that
@@ -148,7 +148,7 @@ const de: Translation = {
     placeZoomOut: "Verkleinern",
     placeUse: "Verwenden",
     placeFailed:
-      "Dieses Bild lässt sich nicht laden und kann daher nicht dein Gesicht sein. Wähle ein anderes.",
+      "Dieses Bild lässt sich nicht laden und kann daher nicht dein Profilbild sein. Wähle ein anderes.",
     placeHelp: "Zieh zum Verschieben; zoome mit zwei Fingern oder durch Scrollen.",
     placeAsItIs: "Dieses Bild lässt sich nur so verwenden, wie es ist.",
   },
@@ -440,8 +440,8 @@ const de: Translation = {
     basedOn: "Nach „{title}“ von {name}",
     basedOnUnnamed: "Nach „{title}“",
     viewAuthor: "{name} ansehen",
-    theirRanking: "Ihre Reihung",
-    backToAuthor: "Zurück zur Reihung des Autors",
+    theirRanking: "Ihre Rangliste",
+    backToAuthor: "Zurück zur Rangliste des Autors",
     startedFrom: "Deine Version beginnt mit dem Ranking von {name}",
     startedFromUnnamed: "Deine Version beginnt mit diesem Ranking",
     replacedYours: "Deine Version durch das Ranking von {name} ersetzt",
@@ -457,16 +457,16 @@ const de: Translation = {
     author: "Autor",
     you: "Du",
     withdraw: "Zurückziehen",
-    withdrawTitle: "Deine Reihung zurückziehen?",
-    withdrawBody: "Sie verschwindet aus den Reihungen dieser Liste.",
+    withdrawTitle: "Deine Rangliste zurückziehen?",
+    withdrawBody: "Sie verschwindet aus den Ranglisten dieser Liste.",
     showMine: "Meine Rangliste anderen zeigen",
     signInToShow: "Melde dich an, um deine Rangliste zu zeigen",
     shown: "Deine Rangliste steht jetzt bei den Ranglisten der Liste",
     showBanned:
       "Ein Moderator hat eine deiner Listen entfernt, deshalb kannst du vorerst keine Ranglisten zeigen.",
     cancel: "Abbrechen",
-    withdrawFailed: "Die Reihung konnte nicht zurückgezogen werden. Versuch es noch einmal.",
-    failed: "Die Reihungen konnten nicht geladen werden.",
+    withdrawFailed: "Die Rangliste konnte nicht zurückgezogen werden. Versuch es noch einmal.",
+    failed: "Die Ranglisten konnten nicht geladen werden.",
     close: "Schließen",
     today: "Heute",
     yesterday: "Gestern",
@@ -893,6 +893,12 @@ const de: Translation = {
     mergedUnfollowed:
       "„{name}“ wurde mit {section} zusammengeführt. Du folgst {section} nicht mehr.",
     mergedTryAgain: "„{name}“ wurde mit {section} zusammengeführt. Versuch es dort noch einmal.",
+    mergedFollowedUnnamed:
+      "„{name}“ wurde mit einer anderen Rubrik zusammengeführt. Du folgst jetzt dieser Rubrik.",
+    mergedUnfollowedUnnamed:
+      "„{name}“ wurde mit einer anderen Rubrik zusammengeführt. Du folgst ihr nicht mehr.",
+    mergedTryAgainUnnamed:
+      "„{name}“ wurde mit einer anderen Rubrik zusammengeführt. Versuch es dort noch einmal.",
     followLimit:
       "Du folgst schon so vielen Rubriken und Themen, wie es geht. Folge zuerst ein paar nicht mehr.",
     followSignInBody:
@@ -1220,7 +1226,7 @@ const de: Translation = {
     heldBody: "Sie wartet auf einen Moderator, bevor andere sie sehen können.",
     publishedNote: "Veröffentlicht. Alle mit dem Link können sie einordnen.",
     publishedAsRanking:
-      "Draußen als deine Reihung dieser Liste. Im Feed erscheint keine zweite Liste.",
+      "Draußen als deine Rangliste dieser Liste. Im Feed erscheint keine zweite Liste.",
     unpublished: "Nicht mehr veröffentlicht. Der Link funktioniert nicht mehr.",
     shareImage: "Als Bild teilen",
     shareImageSub: "Ein Bild dieses Boards, mit Link zur Website",

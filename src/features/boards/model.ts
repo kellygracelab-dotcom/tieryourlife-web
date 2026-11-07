@@ -884,6 +884,17 @@ export function trashEntriesOf(boards: readonly Board[]): TrashEntry[] {
     .sort((a, b) => b.deletedAt - a.deletedAt);
 }
 
+/**
+ * Cards in the trash on boards that are not: a device from before, or the
+ * phone, trashed them. The trash does not list them, but emptying it clears
+ * them, and a board with too many is not backed up until it does (QA W52).
+ */
+export function trashedCardCount(boards: readonly Board[]): number {
+  return boards
+    .filter((board) => board.deletedAt === null)
+    .reduce((n, board) => n + board.items.filter((item) => item.deletedAt !== null).length, 0);
+}
+
 /** Every board without its trash, and every trashed board gone: what emptying the trash leaves. */
 export function withoutTrash(boards: readonly Board[]): Board[] {
   return boards.flatMap((board) => {

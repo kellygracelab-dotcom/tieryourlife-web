@@ -267,4 +267,34 @@ describe("the dictionaries", () => {
       expect(board(dictionary).filter(([, text]) => /(^|\P{L})тир/iu.test(text))).toEqual([]);
     }
   });
+
+  // QA W56: the profile picture's step said "your face" where the rest of it
+  // says the app's word (аватар, Profilbild, profil resmi, アイコン…).
+  it("call the profile picture what the app calls it while it is placed", () => {
+    // Turkish "bu yüzden" is "so", not a face.
+    const face = /лиц[оа]|обличч|Gesicht|顔|yüzünüz|وجه/u;
+    for (const tag of ["ar", "de", "ja", "ru", "tr", "uk"]) {
+      const { settings } = files[`./locales/${tag}.ts`]!.default;
+      const texts = textsOf({ settings });
+      expect(
+        texts.filter(([, text]) => face.test(text)).map(([path]) => `${tag}: ${path}`),
+      ).toEqual([]);
+    }
+  });
+
+  // QA W55: the app's words for a ranking and a report, everywhere: de
+  // Rangliste, ja 通報, tr şikayet (the verb stays bildir, as in the app).
+  it("call a ranking and a report what the app calls them", () => {
+    const retired: [string, RegExp][] = [
+      ["de", /Reihung/u],
+      ["ja", /報告/u],
+      ["tr", /(^|\P{L})bildirim/iu],
+    ];
+    for (const [tag, word] of retired) {
+      const texts = textsOf(files[`./locales/${tag}.ts`]!.default);
+      expect(
+        texts.filter(([, text]) => word.test(text)).map(([path]) => `${tag}: ${path}`),
+      ).toEqual([]);
+    }
+  });
 });

@@ -254,6 +254,62 @@ describe("MePage", () => {
     expect(rowOf(/Oscar films 2025/)).not.toHaveTextContent("It waits for a moderator");
   });
 
+  it("offers no link to a list held for a moderator, which nobody could open yet (QA W50)", async () => {
+    load.mockResolvedValue({ rankings: [], more: false });
+    loadLists.mockResolvedValue({
+      lists: [
+        published("l1", "Stalls of Kyiv", { underReview: true }),
+        published("l2", "Oscar films 2025", { updatedAt: Date.UTC(2026, 6, 1, 12) }),
+      ],
+    });
+    open();
+    await screen.findByText("It waits for a moderator before others can see it.");
+
+    const held = await menuOf("Stalls of Kyiv");
+    expect(held.queryByRole("button", { name: "Copy link" })).toBeNull();
+    expect(held.queryByRole("separator")).toBeNull();
+    expect(held.getByRole("button", { name: "Take it down" })).toBeInTheDocument();
+    expect(copy).not.toHaveBeenCalled();
+
+    const out = await menuOf("Oscar films 2025");
+    await userEvent.click(out.getByRole("button", { name: "Copy link" }));
+    expect(copy).toHaveBeenCalledWith(`${window.location.origin}/l/l2`);
+  });
+
+  // A held list's page answers nobody, its author included, until a
+  // moderator looks: the board it was published from is where it is changed.
+  it("leads a held list's title and Edit to the board here that published it (QA W50)", async () => {
+    load.mockResolvedValue({ rankings: [], more: false });
+    loadLists.mockResolvedValue({
+      lists: [
+        published("l1", "Stalls of Kyiv", { underReview: true }),
+        published("l2", "Held elsewhere", { underReview: true }),
+        published("l3", "Oscar films 2025"),
+      ],
+    });
+    const repository = boardsRepository(memoryStore());
+    let n = 0;
+    repository.saveAll([
+      { ...newBoard("kyiv", "Stalls of Kyiv", 1, () => `k${n++}`), publishedId: "l1" },
+      { ...newBoard("oscars", "Oscar films 2025", 1, () => `o${n++}`), publishedId: "l3" },
+    ]);
+    open(member, undefined, repository);
+    await screen.findByText("3 published");
+
+    const held = rowOf(/Stalls of Kyiv/);
+    expect(within(held).getByRole("link", { name: /Stalls of Kyiv/ })).toHaveAttribute(
+      "href",
+      "/b/kyiv",
+    );
+    expect(within(held).getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/b/kyiv");
+    // No board here: the list's own address, which the author can open once the proxy lets them.
+    const elsewhere = rowOf(/Held elsewhere/);
+    expect(within(elsewhere).getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/l/l2");
+    // Out in the feed: its page, which opens the board for its author anyway.
+    const out = rowOf(/Oscar films 2025/);
+    expect(within(out).getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/l/l3");
+  });
+
   it("offers a ranking to be published as a list of one's own, and a list only to be unpublished", async () => {
     load.mockResolvedValue({ rankings: [ranking("aaaaaaaa", "Ghibli, ranked")], more: false });
     loadLists.mockResolvedValue({ lists: [published("l1", "Oscar films 2025")] });

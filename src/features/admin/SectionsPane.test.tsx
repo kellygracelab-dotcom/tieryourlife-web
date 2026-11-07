@@ -477,6 +477,43 @@ describe("SectionsPane", () => {
       );
     });
 
+    // QA W53: a failed quiet read left the old version, and Save said somebody
+    // else had changed the order when only this admin had.
+    it("reads the version before saving when the quiet read after an edit failed", async () => {
+      open();
+      await screen.findByText("4 sections · 1 hidden");
+      deps.load.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+      await userEvent.click(screen.getByRole("button", { name: "Edit Games" }));
+      const name = screen.getByRole("textbox", { name: "Name" });
+      await userEvent.clear(name);
+      await userEvent.type(name, "Video games");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByText("Video games saved")).toBeInTheDocument();
+      await waitFor(() => expect(deps.load).toHaveBeenCalledTimes(2));
+      screen.getByRole("button", { name: "Move Video games" }).focus();
+      await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+
+      // The read before the Save fails too: the Save did not go, nobody else is blamed.
+      deps.load.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(deps.load).toHaveBeenCalledTimes(3));
+      expect(deps.save).not.toHaveBeenCalled();
+      expect(await screen.findByText(/Couldn.t save/)).toBeInTheDocument();
+      expect(screen.queryByText(/Someone else changed the order/)).toBeNull();
+
+      // Read this time: the edit's version goes with the Save.
+      deps.load.mockResolvedValue({ ...answer, version: 8 });
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() =>
+        expect(deps.save).toHaveBeenLastCalledWith(
+          ["games", "anime", "food", "other"],
+          ["food"],
+          8,
+        ),
+      );
+      expect(screen.queryByText(/Someone else changed the order/)).toBeNull();
+    });
+
     it("keeps the old version after an edit when somebody else changed the order meanwhile", async () => {
       open();
       await screen.findByText("4 sections · 1 hidden");

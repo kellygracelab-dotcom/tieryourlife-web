@@ -94,6 +94,27 @@ describe("TrashPage", () => {
     expect(rows[1]).toHaveTextContent("List · 0 cards · deleted 2 days ago");
   });
 
+  // QA W52: Settings says emptying the trash clears a board's trashed cards,
+  // but with no deleted board the trash had nothing to press.
+  it("offers Empty trash for cards trashed elsewhere on a live board, and clears them", async () => {
+    const repository = boardsRepository(memoryStore());
+    const b = films();
+    const [witch] = liveItems(b).filter((item) => item.title === "The Witch");
+    repository.saveAll([trashedElsewhere(b, witch!.uid, NOW - HOUR)]);
+    open(repository);
+    expect(screen.getByText("Nothing in the trash")).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText("More options"));
+    await userEvent.click(screen.getByRole("button", { name: "Empty trash" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "1 card will be deleted from this device.",
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Empty trash" }),
+    );
+    expect(repository.get("films")?.items.map((item) => item.title)).toEqual(["Ex Machina"]);
+    expect(screen.queryByLabelText("More options")).toBeNull();
+  });
+
   it("restores without asking, removes for good after asking, and empties after asking", async () => {
     const repository = boardsRepository(memoryStore());
     const b = films();

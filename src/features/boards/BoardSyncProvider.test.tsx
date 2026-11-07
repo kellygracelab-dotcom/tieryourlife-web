@@ -10,7 +10,7 @@ import { memoryStore } from "../../lib/storage";
 import { boardOwners } from "./owners";
 import { readBackUp } from "./syncRecords";
 import { BoardSyncProvider } from "./BoardSyncProvider";
-import { useBoardSync } from "./boardSync";
+import { publishedEntryOf, useBoardSync } from "./boardSync";
 import { newBoard } from "./model";
 import { boardsRepository } from "./repository";
 import type { BoardsApi } from "./sync";
@@ -466,5 +466,27 @@ describe("BoardSyncProvider", () => {
     act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 9 }));
     await settle();
     expect(keeps).toHaveLength(1);
+  });
+});
+
+describe("publishedEntryOf", () => {
+  const list = {
+    id: "p-1",
+    title: "Films",
+    category: "film_tv",
+    updatedAt: 800,
+    boardUid: "a",
+  } as Parameters<typeof publishedEntryOf>[0];
+
+  it("carries the account's word that a list waits for a moderator, and no word as none", () => {
+    expect(publishedEntryOf({ ...list, underReview: true })).toEqual({
+      id: "p-1",
+      boardUid: "a",
+      updatedAt: 800,
+      underReview: true,
+    });
+    expect(publishedEntryOf({ ...list, underReview: false }).underReview).toBe(false);
+    expect(publishedEntryOf(list).underReview).toBe(false);
+    expect(publishedEntryOf({ ...list, boardUid: "" }).boardUid).toBeNull();
   });
 });
