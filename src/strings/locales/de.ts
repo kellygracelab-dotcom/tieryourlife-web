@@ -148,7 +148,7 @@ const de: Translation = {
     placeZoomOut: "Verkleinern",
     placeUse: "Verwenden",
     placeFailed:
-      "Dieses Bild lässt sich nicht laden und kann daher nicht dein Gesicht sein. Wähle ein anderes.",
+      "Dieses Bild lässt sich nicht laden und kann daher nicht dein Profilbild sein. Wähle ein anderes.",
     placeHelp: "Zieh zum Verschieben; zoome mit zwei Fingern oder durch Scrollen.",
     placeAsItIs: "Dieses Bild lässt sich nur so verwenden, wie es ist.",
   },

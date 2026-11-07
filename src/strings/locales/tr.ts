@@ -144,7 +144,7 @@ const tr: Translation = {
     placeZoomIn: "Yakınlaştır",
     placeZoomOut: "Uzaklaştır",
     placeUse: "Bunu kullan",
-    placeFailed: "Bu resim yüklenmiyor, bu yüzden yüzünüz olamaz. Başka birini seçin.",
+    placeFailed: "Bu resim yüklenmiyor, bu yüzden profil resminiz olamaz. Başka birini seçin.",
     placeHelp: "Taşımak için sürükleyin; yakınlaştırmak için iki parmakla açın veya kaydırın.",
     placeAsItIs: "Bu resim yalnızca olduğu gibi kullanılabilir.",
   },
