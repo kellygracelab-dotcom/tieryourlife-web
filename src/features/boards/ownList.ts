@@ -12,6 +12,13 @@ export type CopyBack = (url: string) => Promise<UploadedPicture>;
 const COPIES_AT_ONCE = 4;
 
 /**
+ * A picture from another site the backend fetched, checked and kept for this
+ * list at publish (QA S11): `w-` and 32 hex of its address. Not the person's
+ * own: it goes out again by its address, and the backend knows it by that.
+ */
+const WEB_COPY = /^w-[0-9a-f]{32}$/;
+
+/**
  * One of the person's own pictures the backend copied for this list, to bring
  * back into their folder. Not a picture a copy took from another list: that one
  * goes out again by its address, so it stays tied to that list and goes with it
@@ -19,7 +26,11 @@ const COPIES_AT_ONCE = 4;
  */
 const ownCopyIn = (list: PublishedList, url: string): boolean => {
   const name = publishedPictureOf(url, list.id);
-  return name !== null && !(list.picturesFrom ?? []).some((from) => name.startsWith(`${from}-`));
+  return (
+    name !== null &&
+    !WEB_COPY.test(name) &&
+    !(list.picturesFrom ?? []).some((from) => name.startsWith(`${from}-`))
+  );
 };
 
 /**

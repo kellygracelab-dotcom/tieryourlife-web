@@ -339,6 +339,12 @@ const de: Translation = {
     failedSignedOut:
       "Zum Veröffentlichen brauchst du ein Konto. Melde dich an und versuch es noch einmal.",
     failedTooLarge: "Die Liste ist zu groß zum Veröffentlichen.",
+    failedPictureRefusedCard:
+      "Das Bild bei „{title}“ darf nicht in den öffentlichen Feed. Ändere es oder behalte die Liste privat.",
+    failedWebPicturesToday:
+      "Die Liste hat mehr Bilder von anderen Seiten, als dieses Konto heute veröffentlichen kann. Versuch es morgen wieder oder nimm weniger davon.",
+    failedWebPicturesTooMany:
+      "Die Liste hat zu viele Bilder von anderen Seiten zum Veröffentlichen. Entferne einige davon.",
     failedInvalid: "Die Liste wurde abgelehnt.",
     failedOther: "Konnte nicht veröffentlichen. Nichts ist verloren. Versuch es noch einmal.",
     editTitle: "Liste bearbeiten",

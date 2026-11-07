@@ -346,6 +346,12 @@ const pl: Translation = {
       "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w Twoich publicznych listach.",
     failedSignedOut: "Do publikowania potrzebne jest konto. Zaloguj się i spróbuj ponownie.",
     failedTooLarge: "Lista jest za duża, by ją opublikować.",
+    failedPictureRefusedCard:
+      "Obrazek przy „{title}” nie może trafić do publicznego kanału. Zmień go albo zostaw listę prywatną.",
+    failedWebPicturesToday:
+      "Lista ma więcej obrazków z innych stron, niż to konto może dziś opublikować. Spróbuj jutro albo użyj ich mniej.",
+    failedWebPicturesTooMany:
+      "Lista ma za dużo obrazków z innych stron, by ją opublikować. Usuń część z nich.",
     failedInvalid: "Lista została odrzucona.",
     failedOther: "Nie udało się opublikować. Nic nie przepadło. Spróbuj ponownie.",
     editTitle: "Edytuj listę",

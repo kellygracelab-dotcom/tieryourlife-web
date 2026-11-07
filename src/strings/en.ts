@@ -327,6 +327,12 @@ export const en = {
       "This account has published as many lists as it can. Take one down in Your public lists first.",
     failedSignedOut: "Publishing needs an account. Sign in and try again.",
     failedTooLarge: "The list is too big to publish.",
+    failedPictureRefusedCard:
+      "The picture on “{title}” cannot go in the public feed. Change it, or keep this list private.",
+    failedWebPicturesToday:
+      "This list has more pictures from other sites than this account can publish today. Try again tomorrow, or use fewer of them.",
+    failedWebPicturesTooMany:
+      "This list has too many pictures from other sites to publish. Remove some of them.",
     failedInvalid: "The list was refused.",
     failedOther: "Could not publish. Nothing was lost. Try again.",
     editTitle: "Edit list",

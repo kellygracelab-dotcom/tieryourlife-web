@@ -7,7 +7,14 @@ import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
 import { requireAppCheck, requireFreshAppCheck, skipsAppCheck } from "../src/appCheck";
-import { optionalAccount, requireAccount, requireUser, type DecodedToken } from "../src/auth";
+import {
+  optionalAccount,
+  requireAccount,
+  requireUser,
+  type DecodedToken,
+  type Identity,
+} from "../src/auth";
+import { hashedKey } from "../src/banIdentities";
 import {
   appCheckKeyOf,
   claimHashOf,
@@ -197,11 +204,11 @@ const LIST: Data = {
   items: [{ title: "Ex Machina" }, { title: "Moonlight" }, { title: "Lady Bird" }],
 };
 
-const GUEST = { uid: "guest", isAnonymous: true };
-const PERSON = { uid: "person", isAnonymous: false };
+const GUEST = { uid: "guest", isAnonymous: true, banKeys: [] };
+const PERSON = { uid: "person", isAnonymous: false, banKeys: [] };
 
 /** Every check passes as [who]; the code source walks a fixed sequence, then repeats it. */
-function setup(who: { uid: string; isAnonymous: boolean } | null = GUEST, codes: string[] = []) {
+function setup(who: Identity | null = GUEST, codes: string[] = []) {
   const store = memoryFirestore();
   store.table("publishedLists").set(LIST_ID, LIST);
   let next = 0;
@@ -287,6 +294,22 @@ describe("POST /api/rank — Finish", () => {
     table("bans").set("person", { until: Date.now() - 1, bannedAt: 0, reason: null });
     const after = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
     assert.equal(after.status, 201);
+  });
+
+  // QA S12: the person banned on an account they then erased, signed in again with a new uid.
+  it("refuses a person whose ban the proxy kept from an erased account", async () => {
+    const key = hashedKey("google.com:sub-1");
+    const { deps, table } = setup({ uid: "person", isAnonymous: false, banKeys: [key] });
+    const until = Date.now() + 60_000;
+    table("bannedIdentities").set(key, { until, bannedAt: Date.now() });
+    const refused = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[1], [0]] });
+    assert.equal(refused.status, 403);
+    assert.deepEqual(refused.body, {
+      error: "You cannot rank at the moment",
+      code: "BANNED",
+      until,
+    });
+    assert.equal(table("rankings").size, 0);
   });
 
   it("asks a guest about no ban, as the proxy bans accounts only", async () => {
@@ -717,7 +740,7 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     // Deleting stays an account's: a guest is told to sign in.
     assert.equal((await call(deps, "DELETE", "/api/rank/abcdefgh")).status, 401);
     // An account does not change a guest's ranking under the same uid until it claims it.
-    const signedIn = setup({ uid: "guest", isAnonymous: false });
+    const signedIn = setup({ uid: "guest", isAnonymous: false, banKeys: [] });
     signedIn.table("rankings").set("abcdefgh", ranking("guest", true));
     const put = await call(signedIn.deps, "PUT", "/api/rank/abcdefgh", { rows: [[0], []] });
     assert.equal(put.status, 403);
@@ -1049,8 +1072,10 @@ describe("the pages a link opens", () => {
 });
 
 describe("the token checks", () => {
+  // A read: whether the account was erased is asked of writes alone, below.
   const request = (headers: Record<string, string | undefined>) =>
     ({
+      method: "GET",
       header: (name: string) =>
         Object.entries(headers).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1],
     }) as unknown as Request;
@@ -1079,7 +1104,7 @@ describe("the token checks", () => {
     const out = response();
     assert.deepEqual(
       await requireUser(request({ Authorization: "Bearer good" }), out.writer, decode("anonymous")),
-      { uid: "u1", isAnonymous: true },
+      { uid: "u1", isAnonymous: true, banKeys: [] },
     );
     for (const header of [{}, { Authorization: "Basic good" }, { Authorization: "Bearer bad" }]) {
       const refused = response();
@@ -1087,6 +1112,98 @@ describe("the token checks", () => {
       assert.equal(refused.seen.status, 401);
       assert.equal((refused.seen.body as { code: string }).code, "UNAUTHENTICATED");
     }
+  });
+
+  it("requireUser keeps who a person is to their provider, hashed as the proxy does", async () => {
+    const out = response();
+    const identity = await requireUser(
+      request({ Authorization: "Bearer good" }),
+      out.writer,
+      async () => ({
+        uid: "u1",
+        email: "A@B.example",
+        email_verified: true,
+        firebase: {
+          sign_in_provider: "google.com",
+          identities: { "google.com": ["sub-1"], email: ["a@b.example"] },
+        },
+      }),
+    );
+    assert.deepEqual(identity?.banKeys, [
+      hashedKey("email:a@b.example"),
+      hashedKey("google.com:sub-1"),
+    ]);
+    // An address nobody checked is not who somebody is.
+    const unchecked = await requireUser(
+      request({ Authorization: "Bearer good" }),
+      out.writer,
+      async () => ({
+        uid: "u1",
+        email: "a@b.example",
+        email_verified: false,
+        firebase: { sign_in_provider: "password", identities: { email: ["a@b.example"] } },
+      }),
+    );
+    assert.deepEqual(unchecked?.banKeys, []);
+  });
+
+  // QA S8: an erased account's token stays good for up to an hour; its writes are refused.
+  it("refuses every write of an erased account with 401 ACCOUNT_ERASED, a guest's token too, and lets reads by", async () => {
+    const asked: string[] = [];
+    const erased = async (uid: string) => {
+      asked.push(uid);
+      return true;
+    };
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      const out = response();
+      const req = { ...request({ Authorization: "Bearer good" }), method } as unknown as Request;
+      assert.equal(await requireUser(req, out.writer, decode("google.com"), erased), null);
+      assert.equal(out.seen.status, 401);
+      assert.deepEqual(out.seen.body, {
+        error: "This account was deleted",
+        code: "ACCOUNT_ERASED",
+      });
+      const account = response();
+      assert.equal(await requireAccount(req, account.writer, decode("google.com"), erased), null);
+      assert.equal((account.seen.body as { code: string }).code, "ACCOUNT_ERASED");
+    }
+    asked.length = 0;
+    const read = {
+      ...request({ Authorization: "Bearer good" }),
+      method: "GET",
+    } as unknown as Request;
+    assert.notEqual(
+      await requireAccount(read, response().writer, decode("google.com"), erased),
+      null,
+    );
+    assert.deepEqual(asked, []);
+    // A token minted while the account was still a guest has the same uid.
+    const guest = {
+      ...request({ Authorization: "Bearer good" }),
+      method: "POST",
+    } as unknown as Request;
+    const guestOut = response();
+    assert.equal(await requireUser(guest, guestOut.writer, decode("anonymous"), erased), null);
+    assert.equal((guestOut.seen.body as { code: string }).code, "ACCOUNT_ERASED");
+    assert.deepEqual(asked, ["u1"]);
+    // When the check cannot be made, nothing is written either.
+    const down = response();
+    const failing = async () => {
+      throw new Error("firestore down");
+    };
+    const write = {
+      ...request({ Authorization: "Bearer good" }),
+      method: "POST",
+    } as unknown as Request;
+    const quiet = console.error;
+    console.error = () => undefined;
+    try {
+      assert.equal(await requireUser(write, down.writer, decode("google.com"), failing), null);
+    } finally {
+      console.error = quiet;
+    }
+    assert.equal(down.seen.status, 503);
+    assert.deepEqual(down.seen.body, { error: "Unavailable", code: "UNAVAILABLE" });
   });
 
   it("requireAccount turns a guest away with 401 NOT_SIGNED_IN, a person through", async () => {
@@ -1108,7 +1225,7 @@ describe("the token checks", () => {
         person.writer,
         decode("google.com"),
       ),
-      { uid: "u1", isAnonymous: false },
+      { uid: "u1", isAnonymous: false, banKeys: [] },
     );
   });
 
@@ -1127,6 +1244,7 @@ describe("the token checks", () => {
       {
         uid: "u1",
         isAnonymous: false,
+        banKeys: [],
       },
     );
   });

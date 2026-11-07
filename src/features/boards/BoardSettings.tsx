@@ -434,7 +434,11 @@ export function BoardSettings({
             ? strings.new.listGone
             : failure.error.kind === "invalid" && failure.error.code === "TOPIC_UNAVAILABLE"
               ? strings.boards.topicUnavailable
-              : failureText(failure.error, on === "update" ? "edit" : "new")}
+              : failureText(
+                  failure.error,
+                  on === "update" ? "edit" : "new",
+                  (url) => liveItems(board).find((item) => item.imageUrl === url)?.title ?? null,
+                )}
       </span>
     ) : null;
 

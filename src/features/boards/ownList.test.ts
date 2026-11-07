@@ -152,6 +152,41 @@ describe("boardForOwnList", () => {
     ]);
   });
 
+  it("sends a picture from another site the backend kept out again by its address, unchanged (QA S11)", async () => {
+    const feed = (name: string) =>
+      `https://firebasestorage.googleapis.com/v0/b/tyl.appspot.com/o/published%2FL9%2F${name}?alt=media`;
+    const fetched = feed(`w-${"0123456789abcdef".repeat(2)}`);
+    const copied: string[] = [];
+    const copyBack = async (url: string) => {
+      copied.push(url);
+      return {
+        pictureId: "own-h",
+        previewUrl: "https://firebasestorage.googleapis.com/v0/b/tyl/o/h",
+      };
+    };
+    const board = await boardForOwnList(
+      {
+        ...ownAnonymous,
+        items: [
+          { title: "Holiday", imageUrl: feed("h"), tierIndex: 0 },
+          { title: "Found", imageUrl: fetched, tierIndex: 1 },
+        ],
+        previewImages: [fetched],
+        coverImageUrl: null,
+      },
+      null,
+      copyBack,
+      5,
+      uids(),
+    );
+    expect(copied).toEqual([feed("h")]);
+    expect(board.items.find((item) => item.title === "Found")).toMatchObject({
+      imageUrl: fetched,
+      pictureId: null,
+    });
+    expect(board.coverImageUrls).toEqual([fetched]);
+  });
+
   it("stays named when the list went out with its author's name, and in no topic when it had none", async () => {
     const named = { ...ownAnonymous, anonymous: false, topicId: null, topicName: null };
     const board = await boardForOwnList(named, null, noCopies, 5, uids());

@@ -39,6 +39,9 @@ export function failureText(error: ApiError, kind: HouseSend): string {
       return withDetail(strings.new.failedTooLarge, error.detail);
     case "pictureRefused":
       return strings.admin.housePictureRefused;
+    case "tooManyRequests":
+      if (error.code === "WEB_PICTURES_DAILY_LIMIT") return strings.new.failedWebPicturesToday;
+      break;
     case "notYours":
       return kind === "publish" ? strings.admin.houseStaffOnly : strings.admin.houseNotHouse;
     case "notFound":

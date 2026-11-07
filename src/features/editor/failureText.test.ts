@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { failureText } from "./failureText";
+import { failureText, WEB_PICTURES_TOO_MANY } from "./failureText";
 
 describe("failureText", () => {
   it("sends the reader to the site's own take-down, speaks of the list, and leaves the proxy's English out", () => {
@@ -39,5 +39,32 @@ describe("failureText", () => {
         failureText({ kind: "invalid", detail: "Too many", code: "TOO_MANY_TIERS" }, mode),
       ).toBe("At most 19 tiers.");
     }
+  });
+
+  // QA S11: pictures from other sites are fetched and checked at publish.
+  it("says which card's picture from another site was refused, and why pictures from other sites stopped it", () => {
+    const refused = {
+      kind: "pictureRefused",
+      because: "racy",
+      imageUrl: "https://x.test/p.jpg",
+    } as const;
+    expect(
+      failureText(refused, "new", (url) => (url === "https://x.test/p.jpg" ? "Poster" : null)),
+    ).toBe(
+      "The picture on “Poster” cannot go in the public feed. Change it, or keep this list private.",
+    );
+    // A picture no card holds any more: the plain words.
+    expect(failureText(refused, "edit")).toBe(
+      "One of your photos cannot go in the public feed. Remove it, or keep this list private.",
+    );
+    expect(failureText({ kind: "tooManyRequests", code: "WEB_PICTURES_DAILY_LIMIT" }, "new")).toBe(
+      "This list has more pictures from other sites than this account can publish today. Try again tomorrow, or use fewer of them.",
+    );
+    expect(failureText({ kind: "tooManyRequests", code: null }, "new")).toBe(
+      "Could not publish. Nothing was lost. Try again.",
+    );
+    expect(failureText({ kind: "tooLarge", detail: WEB_PICTURES_TOO_MANY }, "new")).toBe(
+      "This list has too many pictures from other sites to publish. Remove some of them.",
+    );
   });
 });

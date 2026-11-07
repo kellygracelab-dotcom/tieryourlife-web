@@ -340,6 +340,12 @@ const ptBR: Translation = {
       "Esta conta já publicou o máximo de listas que pode. Retire uma em Suas listas públicas primeiro.",
     failedSignedOut: "Publicar precisa de uma conta. Entre e tente de novo.",
     failedTooLarge: "A lista é grande demais para publicar.",
+    failedPictureRefusedCard:
+      "A imagem de “{title}” não pode aparecer no feed público. Troque-a ou mantenha a lista privada.",
+    failedWebPicturesToday:
+      "A lista tem mais imagens de outros sites do que esta conta pode publicar hoje. Tente amanhã ou use menos delas.",
+    failedWebPicturesTooMany:
+      "A lista tem imagens de outros sites demais para publicar. Remova algumas.",
     failedInvalid: "A lista foi recusada.",
     failedOther: "Não foi possível publicar. Nada foi perdido. Tente de novo.",
     editTitle: "Editar lista",

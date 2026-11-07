@@ -5,7 +5,18 @@ import { currentLocale, fill, strings } from "../../strings";
  * What a refused publish says, in the page's own words. The proxy's own
  * reason is English, so it is not passed on.
  */
-export function failureText(error: ApiError, mode: "new" | "edit"): string {
+/** What the proxy says when a list has more pictures from other sites than it fetches for one (QA S11). */
+export const WEB_PICTURES_TOO_MANY = "Too many pictures from other sites";
+
+/**
+ * [titleOf] names the card a refused picture from another site is on, when
+ * the caller has the cards: the person is told which one to change.
+ */
+export function failureText(
+  error: ApiError,
+  mode: "new" | "edit",
+  titleOf: (imageUrl: string) => string | null = () => null,
+): string {
   switch (error.kind) {
     case "offline":
       return strings.new.failedOffline;
@@ -19,8 +30,12 @@ export function failureText(error: ApiError, mode: "new" | "edit"): string {
             ),
           });
     // Trying again sends the same photo: the way out is to remove it or keep the list private.
-    case "pictureRefused":
-      return strings.new.failedPictureRefused;
+    case "pictureRefused": {
+      const title = error.imageUrl === undefined ? null : titleOf(error.imageUrl);
+      return title === null
+        ? strings.new.failedPictureRefused
+        : fill(strings.new.failedPictureRefusedCard, { title });
+    }
     case "tooManyLists":
       return strings.new.failedTooMany;
     case "tooManyTopics":
@@ -33,7 +48,14 @@ export function failureText(error: ApiError, mode: "new" | "edit"): string {
     case "notYours":
       return strings.new.notYours;
     case "tooLarge":
-      return strings.new.failedTooLarge;
+      return error.detail === WEB_PICTURES_TOO_MANY
+        ? strings.new.failedWebPicturesTooMany
+        : strings.new.failedTooLarge;
+    // The account's pictures from other sites for today are used up; nothing was published.
+    case "tooManyRequests":
+      return error.code === "WEB_PICTURES_DAILY_LIMIT"
+        ? strings.new.failedWebPicturesToday
+        : strings.new.failedOther;
     // A section that no longer takes lists is changed under Category, so the text says where.
     // More tiers than the feed takes says what to change: the limit itself.
     case "invalid":

@@ -255,7 +255,7 @@ export async function route(
 
 /** A guest is never banned, as at the proxy: a ban is on an account. */
 const banOn = (db: Firestore, identity: Identity): Promise<Ban | null> =>
-  identity.isAnonymous ? Promise.resolve(null) : readBan(db, identity.uid);
+  identity.isAnonymous ? Promise.resolve(null) : readBan(db, identity);
 
 async function readRanking(
   db: Firestore,
