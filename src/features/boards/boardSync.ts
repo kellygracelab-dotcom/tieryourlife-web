@@ -1,5 +1,7 @@
 import { createContext, useContext } from "react";
+import type { MyList } from "../../api/lists";
 import type { BeyondAccount } from "./model";
+import type { PublishedEntry } from "./sync";
 
 export type SyncStatus = "idle" | "syncing" | "stuck";
 
@@ -49,3 +51,14 @@ export class AccountChanged extends Error {
     this.name = "AccountChanged";
   }
 }
+
+/**
+ * One of `lists/mine`'s lists as the run reads it: the hold too, which only
+ * the browser that published heard in the answer.
+ */
+export const publishedEntryOf = (list: MyList): PublishedEntry => ({
+  id: list.id,
+  boardUid: typeof list.boardUid === "string" && list.boardUid !== "" ? list.boardUid : null,
+  updatedAt: list.updatedAt,
+  underReview: list.underReview === true,
+});
