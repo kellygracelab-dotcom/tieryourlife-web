@@ -734,7 +734,10 @@
   }
 
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .snackbar {
-    bottom: max(calc(160px + env(safe-area-inset-bottom)), calc(var(--tray-h, 0px) + 8px));
+    bottom: calc(
+      max(calc(160px + env(safe-area-inset-bottom)), calc(var(--tray-h, 0px) + 8px)) +
+        var(--snackbar-lift, 0px)
+    );
   }
 
   html:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) {
@@ -776,7 +779,10 @@
   }
 
   body:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) .snackbar {
-    bottom: max(calc(172px + env(safe-area-inset-bottom)), calc(var(--tray-h, 0px) + 8px));
+    bottom: calc(
+      max(calc(172px + env(safe-area-inset-bottom)), calc(var(--tray-h, 0px) + 8px)) +
+        var(--snackbar-lift, 0px)
+    );
   }
 
   html:has(.ranking:not(.ranking--read) .pool:not(.pool--rest)) {
@@ -1366,7 +1372,7 @@
 
   body:has(.ranking--under .pool) .snackbar {
     inset-inline-start: max(var(--space-8), calc((100vw - var(--board-cap)) / 2));
-    bottom: calc(var(--dock-h, 262px) + 16px);
+    bottom: calc(var(--dock-h, 262px) + 16px + var(--snackbar-lift, 0px));
   }
 
   html:has(.ranking--under .pool) {

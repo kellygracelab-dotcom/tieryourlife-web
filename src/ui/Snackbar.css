@@ -6,7 +6,9 @@
 .snackbar {
   position: fixed;
   inset-inline-start: 16px;
-  bottom: 16px;
+  /* Each rule that lifts a notice above a page's pool, dock or bar adds the
+     stack's lift (Snackbar.tsx), so a second notice stands over the first. */
+  bottom: calc(16px + var(--snackbar-lift, 0px));
   z-index: 90;
   display: flex;
   align-items: center;
