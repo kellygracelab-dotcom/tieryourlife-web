@@ -253,7 +253,12 @@ const Tile = memo(function Tile({
   const lastClick = useRef(0);
   const opener = useRef<HTMLButtonElement>(null);
   if (card === undefined) return null;
-  const classes = ["tile", selected && "tile--selected", lifted && "tile--lifted"]
+  const classes = [
+    "tile",
+    card.imageUrl === null && "tile--name",
+    selected && "tile--selected",
+    lifted && "tile--lifted",
+  ]
     .filter(Boolean)
     .join(" ");
   const openMenu = (how: CardMenuAt) => {
@@ -325,7 +330,7 @@ const Tile = memo(function Tile({
         {card.imageUrl !== null ? (
           <img {...sizedFor(card.imageUrl, TILE_WIDTH)} alt="" loading="lazy" draggable={false} />
         ) : (
-          <CardName title={card.title} board={board} />
+          <CardName title={card.title} board={board} wide />
         )}
       </button>
       {moving !== null && !locked && moving.sheet && (

@@ -122,8 +122,6 @@ export function HomePage({
           {strings.settings.deleted}
         </p>
       )}
-      {/* The app card comes first, above the hero, so everyone sees it at once. */}
-      <AppCard slot="home" />
       <section className="home__intro">
         <h1 className="home__hero">{strings.home.hero}</h1>
         <SearchBox
@@ -150,6 +148,11 @@ export function HomePage({
       ) : (
         <Explore load={load} store={store} />
       )}
+      {/*
+       * The app card after the lists, small: the first screen is for a board
+       * one can open, a phone's too, not for an app that is not out yet.
+       */}
+      <AppCard slot="home" />
     </div>
   );
 }

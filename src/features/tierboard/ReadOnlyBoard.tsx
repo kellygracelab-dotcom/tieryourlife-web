@@ -27,11 +27,15 @@ function Tile({
   board: BoardSize;
 }) {
   return (
-    <li className="tile" title={item.title} data-item={position}>
+    <li
+      className={item.imageUrl === null ? "tile tile--name" : "tile"}
+      title={item.title}
+      data-item={position}
+    >
       {item.imageUrl !== null ? (
         <img {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
       ) : (
-        <CardName title={item.title} board={board} />
+        <CardName title={item.title} board={board} wide />
       )}
     </li>
   );

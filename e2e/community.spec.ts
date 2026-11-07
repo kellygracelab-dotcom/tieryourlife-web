@@ -214,18 +214,27 @@ test("a section's topics are tiles, two to a phone's row, and a tile opens the t
   await expect(page).toHaveURL("/s/games");
 });
 
-test("shows the Android app card at the top of the home page, the search still in sight", async ({
+test("opens on a list one can open, a phone's first screen too, and keeps the app card small under the lists", async ({
   page,
 }, testInfo) => {
   await mockBackend(page);
+  await page.route("**/lists?**", (route) =>
+    route.fulfill({ json: { lists: [summary], nextCursor: null } }),
+  );
   await page.goto("/");
+  // Danylo's release walk: the first screen shows a list, its title, ready to open.
+  const popular = page.getByRole("region", { name: "Popular" });
+  const first = popular.getByRole("link", { name: /Every A24 film, ranked/ }).first();
+  await expect(first).toBeInViewport();
+  await expect(page.getByRole("searchbox")).toBeInViewport();
   const card = page.getByRole("complementary", { name: "TierYourLife for Android" });
   // Never on an iPhone or iPad: the app is Android's only.
   if (testInfo.project.name === "iphone") {
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(card).toHaveCount(0);
     return;
   }
-  await expect(card).toBeInViewport();
-  await expect(page.getByRole("searchbox")).toBeInViewport();
+  // Under the lists, not above them.
+  const [cardBox, listBox] = await Promise.all([card.boundingBox(), first.boundingBox()]);
+  expect(cardBox!.y).toBeGreaterThan(listBox!.y + listBox!.height);
+  expect(cardBox!.height).toBeLessThanOrEqual(140);
 });

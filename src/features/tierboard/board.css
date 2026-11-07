@@ -145,6 +145,19 @@
   word-break: normal;
 }
 
+/*
+ * On the board, a card without a picture is one and a half posters wide and
+ * as tall, so its name reads at a glance: larger type, whole words on a line
+ * (nameFit.ts, "wide"). Posters keep their size and shape.
+ */
+.tile--name {
+  width: calc(var(--tile-w) * 1.5);
+}
+
+.tile--name .tile__name {
+  text-wrap: balance;
+}
+
 /* The pool is a surface of its own: a band under the board, not loose cards on the page. */
 .pool {
   margin-top: 8px;

@@ -35,7 +35,7 @@ export function DragGhost({ now, subscribe, items, board }: DragGhostProps) {
       {card.imageUrl !== null ? (
         <img {...sizedFor(card.imageUrl, 64)} alt="" />
       ) : (
-        <CardName title={card.title} board={board} />
+        <CardName title={card.title} board={board} wide />
       )}
     </div>
   );
