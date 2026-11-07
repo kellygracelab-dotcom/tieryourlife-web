@@ -155,6 +155,12 @@ export interface PublishRequest {
  */
 export interface Published {
   id: string;
+  /**
+   * How many pictures from other sites the backend could not fetch or check
+   * in time and left out (QA S11); absent when none were. Publishing again
+   * tries them again.
+   */
+  droppedPictures?: number;
   ranking?: boolean;
   /** The topic the list went under, a proposed one included; absent or null for none. */
   topicId?: string | null;

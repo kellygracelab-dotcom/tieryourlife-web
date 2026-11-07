@@ -90,7 +90,7 @@ const someSections = (): Section[] =>
 // The board as the page would hold it: the settings read the latest through
 // `latest`, and every change lands here.
 let held: Board;
-const published = vi.fn<(what: string, id: string | null) => void>();
+const published = vi.fn<(what: string, id: string | null, dropped?: number) => void>();
 const newTier = vi.fn();
 const done = vi.fn();
 const propose = vi.fn();
@@ -339,6 +339,14 @@ describe("BoardSettings: public", () => {
     expect(publicSwitch()).toHaveAccessibleDescription("At most 19 tiers.");
   });
 
+  // QA S11: pictures from other sites the backend could not fetch or check in time.
+  it("passes on how many pictures from other sites were left out", async () => {
+    const publish = vi.fn(() => Promise.resolve({ id: "L1", droppedPictures: 2 }));
+    show(filmBoard(), signedIn, { publish });
+    await userEvent.click(publicSwitch());
+    await waitFor(() => expect(published).toHaveBeenCalledWith("published", "L1", 2));
+  });
+
   it("publishes the board, keeps the id and the name, and sends it again on Update", async () => {
     const publish = vi.fn(() => Promise.resolve({ id: "L1" }));
     const republish = vi.fn(() => Promise.resolve({ id: "L1" }));
@@ -362,7 +370,7 @@ describe("BoardSettings: public", () => {
       editedAt: 500,
       publishedEditedAt: 500,
     });
-    expect(published).toHaveBeenCalledWith("published", "L1");
+    expect(published).toHaveBeenCalledWith("published", "L1", 0);
     expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
       "href",
       "/l/L1",
@@ -373,7 +381,7 @@ describe("BoardSettings: public", () => {
     expect(rows.at(-1)).toHaveTextContent("Take it down");
 
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(published).toHaveBeenCalledWith("updated", "L1"));
+    await waitFor(() => expect(published).toHaveBeenCalledWith("updated", "L1", 0));
     expect(republish).toHaveBeenCalledWith("L1", expect.objectContaining({ title: "Films" }));
     expect(republish).toHaveBeenCalledWith(
       "L1",
@@ -400,7 +408,7 @@ describe("BoardSettings: public", () => {
       authorName: "Olena",
       publishedEditedAt: 500,
     });
-    expect(published).toHaveBeenCalledWith("ranking", "SRC");
+    expect(published).toHaveBeenCalledWith("ranking", "SRC", 0);
     expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
       "href",
       "/l/SRC",
@@ -426,8 +434,8 @@ describe("BoardSettings: public", () => {
     await userEvent.click(publicSwitch());
     await waitFor(() => expect(publicSwitch()).toBeChecked());
     expect(held).toMatchObject({ publishedId: "L1", heldForReview: true });
-    expect(published).toHaveBeenCalledWith("held", "L1");
-    expect(published).not.toHaveBeenCalledWith("published", "L1");
+    expect(published).toHaveBeenCalledWith("held", "L1", 0);
+    expect(published).not.toHaveBeenCalledWith("published", "L1", 0);
     // Its link answers 404 to everybody, the author too: nothing leads there.
     expect(screen.queryByRole("link", { name: "See it in Community" })).toBeNull();
     expect(
@@ -438,12 +446,12 @@ describe("BoardSettings: public", () => {
     // Still held after an Update: said again, not "Saved".
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(published).toHaveBeenCalledTimes(2));
-    expect(published).toHaveBeenLastCalledWith("held", "L1");
+    expect(published).toHaveBeenLastCalledWith("held", "L1", 0);
     expect(held).toMatchObject({ heldForReview: true });
 
     // Staff looked: the next Update finds it in the feed, and the link is back.
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(published).toHaveBeenLastCalledWith("updated", "L1"));
+    await waitFor(() => expect(published).toHaveBeenLastCalledWith("updated", "L1", 0));
     expect(held.heldForReview).toBeUndefined();
     expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
       "href",

@@ -73,6 +73,7 @@ const ja: Translation = {
     bannedForever: "永久に",
     leftUp: "残しました。通報では非表示になりません。",
     failedDecision: "判断を保存できませんでした。何も変わっていません。",
+    staffList: "これはスタッフのリストです。対応できるのはオーナーだけです。",
     tryAgain: "もう一度試す",
     failed: "通報を読み込めませんでした。",
     emptyTitle: "確認するものはありません",
@@ -482,6 +483,7 @@ const ja: Translation = {
     cancel: "キャンセル",
     failed:
       "通報を送信できませんでした。何も送られていません。1分ほど待ってからもう一度お試しください。",
+    staffList: "これはスタッフのリストです。通報できるのはオーナーだけです。",
     sentTitle: "通報しました。あなたには非表示になります",
     sentBody: "通報は人が確認します。それまでは他の人には表示されたままのことがあります。",
     done: "完了",
@@ -1185,6 +1187,9 @@ const ja: Translation = {
     publishedNote: "公開しました。リンクを知っている人は誰でも並べられます。",
     publishedAsRanking:
       "そのリストのあなたのランキングとして公開しました。フィードに2つ目のリストは出ません。",
+    picturesDropped: {
+      other: "他サイトの画像{n}枚を追加できませんでした。もう一度公開すると再試行します。",
+    },
     unpublished: "非公開にしました。リンクはもう使えません。",
     shareImage: "画像として共有",
     shareImageSub: "このボードの画像とサイトへのリンク",

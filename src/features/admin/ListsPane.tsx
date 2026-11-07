@@ -517,7 +517,8 @@ function MoveDialog({
   waits: Waits;
   narrow: boolean;
   busy: boolean;
-  failed: boolean;
+  /** What went wrong with the last move, in the page's words; null when nothing did. */
+  failed: string | null;
   deps: ListsDeps;
   onMove: (to: Place) => void;
   onClose: () => void;
@@ -596,9 +597,9 @@ function MoveDialog({
               : fill(strings.admin.mayWait, { names: waits.names })}
           </p>
         )}
-        {failed && (
+        {failed !== null && (
           <p className="admin__bar" role="alert">
-            {strings.admin.actionFailed}
+            {failed}
           </p>
         )}
         <div className="dialog__actions">
@@ -663,7 +664,7 @@ export function ListsPane({
   const [delta, setDelta] = useState<ReadonlyMap<string, number>>(new Map());
   const [moving, setMoving] = useState<{ list: AdminList; group: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
   const timers = useRef<number[]>([]);
@@ -721,7 +722,7 @@ export function ListsPane({
   const move = (list: AdminList, to: Place, group: string) => {
     const from = placeOf(list);
     setBusy(true);
-    setFailed(false);
+    setFailed(null);
     deps.move(list.id, moveTo(to)).then(
       () => {
         setBusy(false);
@@ -744,9 +745,13 @@ export function ListsPane({
           },
         });
       },
-      () => {
+      (reason: unknown) => {
         setBusy(false);
-        setFailed(true);
+        setFailed(
+          errorOf(reason).kind === "targetIsModerator"
+            ? strings.mod.staffList
+            : strings.admin.actionFailed,
+        );
       },
     );
   };
@@ -795,7 +800,7 @@ export function ListsPane({
             gone={gone}
             leaving={leaving}
             onMove={(list, group) => {
-              setFailed(false);
+              setFailed(null);
               setMoving({ list, group });
             }}
           />

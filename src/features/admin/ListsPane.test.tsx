@@ -267,6 +267,20 @@ describe("ListsPane", () => {
     expect(sectionHead(/^Games/)).toHaveTextContent("5 lists");
   });
 
+  it("says a list by staff is the owner's to move, and keeps the dialog open", async () => {
+    vi.mocked(deps.move).mockRejectedValueOnce(new ApiFailure({ kind: "targetIsModerator" }));
+    render(<ListsPane adminRole="moderator" deps={deps} />);
+    await openGames();
+    const alpha = (await screen.findByText("Alpha")).closest("li")!;
+    await userEvent.click(within(alpha).getByRole("button", { name: "Move" }));
+    const dialog = within(screen.getByRole("dialog", { name: "Move “Alpha”" }));
+    await userEvent.selectOptions(dialog.getByRole("combobox", { name: "Section" }), "food");
+    await userEvent.click(dialog.getByRole("button", { name: "Move" }));
+    expect(await dialog.findByRole("alert")).toHaveTextContent(
+      "This list is by staff: only the owner can act on it.",
+    );
+  });
+
   it("moves a list into a topic of its section", async () => {
     render(<ListsPane adminRole="owner" deps={deps} />);
     await openGames();

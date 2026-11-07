@@ -76,6 +76,7 @@ const es: Translation = {
     bannedForever: "para siempre",
     leftUp: "Se queda. Las denuncias ya no la ocultan.",
     failedDecision: "No se pudo guardar la decisión: no cambió nada.",
+    staffList: "Esta lista es del equipo: solo el propietario puede decidir sobre ella.",
     tryAgain: "Intentar de nuevo",
     failed: "No se pudieron cargar las denuncias.",
     emptyTitle: "Nada que revisar",
@@ -491,6 +492,7 @@ const es: Translation = {
     send: "Denunciar",
     cancel: "Cancelar",
     failed: "No se pudo enviar la denuncia: no se envió nada. Inténtalo de nuevo en un minuto.",
+    staffList: "Esta lista es del equipo: solo el propietario puede denunciarla.",
     sentTitle: "Denunciada y oculta para ti",
     sentBody: "Una persona revisa las denuncias. Hasta entonces otros pueden seguir viéndola.",
     done: "Hecho",
@@ -1286,6 +1288,12 @@ const es: Translation = {
     publishedNote: "Publicada. Cualquiera con el enlace puede ordenarla.",
     publishedAsRanking:
       "Publicada como tu ranking de esa lista. En el feed no aparece una segunda lista.",
+    picturesDropped: {
+      one: "No se pudo añadir {n} imagen de otro sitio. Vuelve a publicar para intentarlo de nuevo.",
+      many: "No se pudieron añadir {n} imágenes de otros sitios. Vuelve a publicar para intentarlo de nuevo.",
+      other:
+        "No se pudieron añadir {n} imágenes de otros sitios. Vuelve a publicar para intentarlo de nuevo.",
+    },
     unpublished: "Ya no está publicada. El enlace dejó de funcionar.",
     shareImage: "Compartir como imagen",
     shareImageSub: "Una imagen de este tablero, con enlace al sitio",

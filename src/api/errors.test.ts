@@ -74,6 +74,7 @@ describe("parseApiError", () => {
     ],
     [403, json({ error: "Not yours", code: "NOT_YOURS" }), { kind: "notYours" }],
     [403, json({ error: "Sign in to publish", code: "NOT_SIGNED_IN" }), { kind: "notSignedIn" }],
+    [403, json({ error: "Staff", code: "TARGET_IS_MODERATOR" }), { kind: "targetIsModerator" }],
     [403, "", { kind: "notSignedIn" }],
     [404, json({ error: "No such list", code: "NOT_FOUND" }), { kind: "notFound" }],
     [409, json({ error: "Too many", code: "TOO_MANY_LISTS" }), { kind: "tooManyLists" }],

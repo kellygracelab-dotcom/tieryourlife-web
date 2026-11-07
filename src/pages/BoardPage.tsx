@@ -769,20 +769,23 @@ function OpenBoard({
           onPropose={openProposal}
           onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
           onNewTier={newTier}
-          onPublished={(what) =>
+          onPublished={(what, _id, dropped = 0) => {
+            const said =
+              what === "unpublished"
+                ? strings.boards.unpublished
+                : what === "held"
+                  ? strings.boards.publishedHeld
+                  : what === "updated"
+                    ? strings.owner.saved
+                    : what === "ranking"
+                      ? strings.boards.publishedAsRanking
+                      : strings.boards.publishedNote;
+            // Pictures from other sites that could not be fetched or checked in time (QA S11).
             setNotice({
               text:
-                what === "unpublished"
-                  ? strings.boards.unpublished
-                  : what === "held"
-                    ? strings.boards.publishedHeld
-                    : what === "updated"
-                      ? strings.owner.saved
-                      : what === "ranking"
-                        ? strings.boards.publishedAsRanking
-                        : strings.boards.publishedNote,
-            })
-          }
+                dropped > 0 ? `${said} ${plural(strings.boards.picturesDropped, dropped)}` : said,
+            });
+          }}
           // A house list never goes out under the person's name: its sheet offers no Public switch.
           publishing={house === null ? publishing : null}
           topics={topics}

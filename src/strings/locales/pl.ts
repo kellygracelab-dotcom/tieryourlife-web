@@ -88,6 +88,7 @@ const pl: Translation = {
     bannedForever: "na zawsze",
     leftUp: "Zostaje. Zgłoszenia już jej nie ukrywają.",
     failedDecision: "Nie udało się zapisać decyzji – nic się nie zmieniło.",
+    staffList: "To lista członka zespołu: decydować o niej może tylko właściciel.",
     tryAgain: "Spróbuj ponownie",
     failed: "Nie udało się wczytać zgłoszeń.",
     emptyTitle: "Nic do sprawdzenia",
@@ -501,6 +502,7 @@ const pl: Translation = {
     cancel: "Anuluj",
     failed:
       "Nie udało się wysłać zgłoszenia – nic nie zostało wysłane. Spróbuj ponownie za minutę.",
+    staffList: "To lista członka zespołu: zgłosić ją może tylko właściciel.",
     sentTitle: "Zgłoszono i ukryto u ciebie",
     sentBody: "Zgłoszenia rozpatruje człowiek. Do tego czasu inni mogą wciąż ją widzieć.",
     done: "Gotowe",
@@ -1340,6 +1342,13 @@ const pl: Translation = {
     publishedNote: "Opublikowano. Każdy z linkiem może ją ułożyć.",
     publishedAsRanking:
       "Opublikowana jako twój ranking tej listy. W kanale nie pojawia się druga lista.",
+    picturesDropped: {
+      one: "Nie udało się dodać {n} obrazka z innej strony. Opublikuj ponownie, by spróbować jeszcze raz.",
+      few: "Nie udało się dodać {n} obrazków z innych stron. Opublikuj ponownie, by spróbować jeszcze raz.",
+      many: "Nie udało się dodać {n} obrazków z innych stron. Opublikuj ponownie, by spróbować jeszcze raz.",
+      other:
+        "Nie udało się dodać {n} obrazka z innych stron. Opublikuj ponownie, by spróbować jeszcze raz.",
+    },
     unpublished: "Wycofano z publikacji. Link już nie działa.",
     shareImage: "Udostępnij jako obraz",
     shareImageSub: "Obraz tej tablicy z linkiem do strony",
