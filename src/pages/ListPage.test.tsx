@@ -929,6 +929,39 @@ describe("ListPage for its author", () => {
     expect(screen.queryByRole("link", { name: "Publish as my list" })).toBeNull();
   });
 
+  // Held, the list answers its author and moderators, and nobody else yet:
+  // a link handed on would open on "This list isn't available".
+  it("tells its author a held list waits for a moderator and hands out no link to it (QA P17)", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, underReview: true });
+    const share = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "share", { value: share, configurable: true });
+    try {
+      openAs(author);
+      await screen.findByRole("heading", { level: 1 });
+      expect(
+        within(document.querySelector<HTMLElement>(".list-head")!).getByText(
+          "It waits for a moderator before others can see it.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+      expect(
+        screen.getAllByRole("link", { name: "Edit" }).map((link) => link.getAttribute("href")),
+      ).toEqual(["/b/new?list=abc"]);
+      await userEvent.click(screen.getByLabelText("More about this list"));
+      expect(menuLines()).toEqual(["Rankings · 3", "Take it down"]);
+    } finally {
+      Reflect.deleteProperty(navigator, "share");
+    }
+  });
+
+  it("says nothing of a moderator on its author's list that is out", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, underReview: false });
+    openAs(author);
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByText("It waits for a moderator before others can see it.")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Copy link" }).length).toBeGreaterThan(0);
+  });
+
   it("knows its author's own anonymous list by the backend's word, there being no name to compare", async () => {
     mocks.loadList.mockResolvedValue({
       ...list,

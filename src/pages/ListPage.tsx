@@ -563,6 +563,12 @@ function OpenList({
               </p>
             </div>
           )}
+          {/* Held for a moderator, the list is the author's and the moderators' alone for now. */}
+          {own && list.underReview === true && (
+            <div className="list-head__lines">
+              <p className="byline">{strings.boards.heldBody}</p>
+            </div>
+          )}
           {/* A list that stands without an author has no line naming one. */}
           {!editorial && (
             <div className="list-head__lines">

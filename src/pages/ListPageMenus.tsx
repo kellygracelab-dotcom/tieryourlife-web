@@ -337,7 +337,8 @@ function AuthorMenu({
       <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
         <>
           <RankingsItem rankings={rankings} />
-          <LinkItems list={list} notify={notify} />
+          {/* Held, the link answers nobody else yet: it is not handed out. */}
+          {list.underReview !== true && <LinkItems list={list} notify={notify} />}
           <li>
             <button
               type="button"
@@ -376,7 +377,11 @@ function AuthorMenu({
   );
 }
 
-/** The author's head: Edit for the board the list is changed on, the link, the menu. */
+/**
+ * The author's head: Edit for the board the list is changed on, the link, the
+ * menu. A list held for a moderator has no link to give: it answers nobody
+ * else until a moderator looks.
+ */
 export function AuthorTools({
   list,
   unpublish,
@@ -397,7 +402,7 @@ export function AuthorTools({
         <Icon name="edit" className="btn__icon" />
         <span>{strings.list.edit}</span>
       </Link>
-      <CopyLinkButton list={list} notify={notify} />
+      {list.underReview !== true && <CopyLinkButton list={list} notify={notify} />}
       <AuthorMenu
         list={list}
         unpublish={unpublish}
