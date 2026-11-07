@@ -567,6 +567,8 @@ const pl: Translation = {
     failedBanned: "W tej chwili nie możesz tworzyć rankingów list.",
     failedBannedUntil: "Nie możesz tworzyć rankingów list do {date}.",
     failedOther: "Nie udało się zapisać rankingu. Nic nie przepadło. Spróbuj ponownie.",
+    failedTooLarge:
+      "Ta lista jest za duża, aby zapisać ranking do udostępnienia. Twój układ pozostaje na tym urządzeniu.",
     failedChanged:
       "Autor zmienił tę listę w trakcie układania rankingu. Wczytaj ją ponownie, aby ułożyć ją w obecnej wersji.",
     loadAgain: "Wczytaj ponownie",

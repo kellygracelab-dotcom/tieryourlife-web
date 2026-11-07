@@ -379,7 +379,7 @@ export const en = {
     stale: "Couldn’t refresh. These are the lists from your last visit.",
   },
   list: {
-    pictureCredits: "Picture credits",
+    pictureCredits: "Image credits",
     opening: "Opening the list…",
     by: "by {name}",
     home: "Go to the front page",
@@ -542,6 +542,8 @@ export const en = {
     failedBanned: "You can’t rank lists at the moment.",
     failedBannedUntil: "You can’t rank lists until {date}.",
     failedOther: "Could not save the ranking. Nothing was lost. Try again.",
+    failedTooLarge:
+      "This list is too large to save as a shared ranking. Your arrangement stays on this device.",
     failedChanged:
       "The author changed this list while you were ranking it. Load it again to rank it as it is now.",
     loadAgain: "Load it again",

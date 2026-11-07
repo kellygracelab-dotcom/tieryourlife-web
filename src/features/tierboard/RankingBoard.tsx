@@ -32,7 +32,7 @@ import {
   writeKept,
   type KeptRanking,
 } from "../ranking/kept";
-import { rankBanText } from "../ranking/failureText";
+import { rankFailureText } from "../ranking/failureText";
 import { ResultBar, type FinishState } from "../ranking/ResultBar";
 import { downloadShare, type Share } from "../ranking/share";
 import { errorOf } from "../../api/errors";
@@ -43,6 +43,7 @@ import { Icon } from "../../ui/Icon";
 import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
+import { ImageCredits } from "./ImageCredits";
 import { flyIn } from "./flight";
 import { arrange } from "./arrange";
 import { DOUBLE_TAP_MS, type DragState } from "./drag";
@@ -194,7 +195,9 @@ interface TileProps {
   item: number;
   board: BoardSize;
   selected: boolean;
+  coarse: boolean;
   lifted: boolean;
+  insertion?: "before" | "after" | undefined;
   locked: boolean;
   dispatch: (action: BoardAction) => void;
   pointerDownFor: PointerDownFor;
@@ -234,7 +237,9 @@ const Tile = memo(function Tile({
   item,
   board,
   selected,
+  coarse,
   lifted,
+  insertion,
   locked,
   dispatch,
   pointerDownFor,
@@ -244,6 +249,7 @@ const Tile = memo(function Tile({
   onMenu,
 }: TileProps) {
   const [moving, setMoving] = useState<CardMenuAt | null>(null);
+  const [showCredits, setShowCredits] = useState(false);
   const closeMove = useCallback(() => setMoving(null), []);
   // What made the last press, so a double tap of a finger gets the sheet and a mouse's the menu.
   const pressedBy = useRef("mouse");
@@ -253,6 +259,8 @@ const Tile = memo(function Tile({
   const lastClick = useRef(0);
   const opener = useRef<HTMLButtonElement>(null);
   if (card === undefined) return null;
+  const credit = card.credit?.trim();
+  const openCredits = credit ? () => setShowCredits(true) : undefined;
   const classes = [
     "tile",
     card.imageUrl === null && "tile--name",
@@ -280,21 +288,26 @@ const Tile = memo(function Tile({
     then();
   };
   return (
-    <li>
+    <li className={insertion && "tile-anchor"}>
+      {insertion && <span className={`tile--slot tile--slot-${insertion}`} aria-hidden="true" />}
       <button
         ref={opener}
         type="button"
         className={classes}
         aria-pressed={selected}
         aria-label={card.title}
-        aria-haspopup={fingerFirst() ? "dialog" : "menu"}
+        aria-haspopup={coarse ? "dialog" : "menu"}
         aria-keyshortcuts="Shift+F10"
         title={card.title}
-        disabled={locked}
+        disabled={locked && !credit}
         data-item={item}
         onClick={(event) => {
           // The armed row underneath would take the same tap as "place here".
           event.stopPropagation();
+          if (locked) {
+            openCredits?.();
+            return;
+          }
           // Enter and Space click too (detail 0): they pick, and twice is not a double click.
           const at = event.detail > 0 ? Date.now() : 0;
           if (at > 0 && at - lastClick.current < DOUBLE_TAP_MS) {
@@ -333,10 +346,22 @@ const Tile = memo(function Tile({
           <CardName title={card.title} board={board} wide />
         )}
       </button>
-      {moving !== null && !locked && moving.sheet && (
+      {showCredits && credit && (
+        <ImageCredits
+          title={card.title}
+          credit={credit}
+          back={() => setShowCredits(false)}
+          close={() => {
+            setMoving(null);
+            setShowCredits(false);
+            opener.current?.focus({ preventScroll: true });
+          }}
+        />
+      )}
+      {moving !== null && !showCredits && !locked && moving.sheet && (
         <MoveSheet
           name={card.title}
-          credit={card.credit ?? null}
+          onCredits={openCredits}
           tiers={tiers}
           current={current}
           onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
@@ -345,10 +370,10 @@ const Tile = memo(function Tile({
           onClose={closeMove}
         />
       )}
-      {moving !== null && !locked && !moving.sheet && (
+      {moving !== null && !showCredits && !locked && !moving.sheet && (
         <CardMenu
           name={card.title}
-          credit={card.credit ?? null}
+          onCredits={openCredits}
           tiers={tiers}
           current={current}
           at={moving.at}
@@ -474,6 +499,7 @@ export function RankingBoard({
     [dispatchBoard],
   );
   const boardSize = useBoardSize();
+  const coarse = fingerFirst();
   const { account, signIn } = useSession();
   const guest = account?.kind !== "signedIn";
   const who = account === null ? undefined : account.kind === "signedIn" ? account.uid : null;
@@ -539,7 +565,8 @@ export function RankingBoard({
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
-  const { dock, rows, wide, canDock, choose, startResize, resizeByKey, maxRows } = useDock(device);
+  const { dock, rows, wide, canDock, choose, resize, startResize, resizeByKey, maxRows } =
+    useDock(device);
   // On a narrow window the box that brings cards in waits behind Add, in the
   // pool, whichever head the pool shows; on a wide one it stands in the pool,
   // and an empty pool gives it the cursor. Opened, the catalogue's field
@@ -850,6 +877,7 @@ export function RankingBoard({
           tiers={list.tiers}
           item={item}
           board={boardSize}
+          coarse={coarse}
           selected={selected === item}
           lifted={lifted === item}
           locked={locked}
@@ -863,6 +891,7 @@ export function RankingBoard({
       )),
     [
       shown,
+      coarse,
       list.items,
       list.tiers,
       boardSize,
@@ -879,7 +908,11 @@ export function RankingBoard({
   const keyboardTiers = Math.min(list.tiers.length, 9);
   // On a phone the pool is one scrolling row with dots under it.
   // The tray waits out a double tap before it scrolls, or the second tap lands on another card.
-  const { tray, page, pages, readPage } = useTray(selected, shown.length, DOUBLE_TAP_MS);
+  const { tray, page, pages, readPage } = useTray(
+    selected,
+    !wide && rows > 1 ? Math.ceil(shown.length / 2) : shown.length,
+    DOUBLE_TAP_MS,
+  );
   const picked = selected !== null && left.includes(selected);
   const allPlaced = left.length === 0 && finish.status !== "done";
   // Finished with every card placed: the tray has nothing to say and goes.
@@ -914,6 +947,8 @@ export function RankingBoard({
   }, [wide, restEmpty]);
   const poolClasses = [
     "pool",
+    (docked || !wide) && rows === 1 && "pool--single",
+    !wide && rows > 1 && "pool--expanded",
     dropTarget?.kind === "pool" && "pool--target",
     picked && "pool--picked",
     lifted !== null && left.includes(lifted) && "pool--dragging",
@@ -978,7 +1013,9 @@ export function RankingBoard({
 
   return (
     <section
-      className={docked ? "ranking ranking--under" : "ranking"}
+      className={["ranking", docked && "ranking--under", lifted !== null && "ranking--drag"]
+        .filter(Boolean)
+        .join(" ")}
       aria-label={seed?.label ?? strings.rank.yours}
       ref={section}
       onFocus={followFocus}
@@ -987,11 +1024,7 @@ export function RankingBoard({
       <div className="ranking__main">
         {save.status === "failed" && (
           <p className="ranking__error" role="alert">
-            {save.error.kind === "offline"
-              ? strings.rank.failedOffline
-              : save.error.kind === "banned"
-                ? rankBanText(save.error.until)
-                : strings.rank.failedOther}
+            {rankFailureText(save.error)}
           </p>
         )}
 
@@ -1025,6 +1058,7 @@ export function RankingBoard({
               selected={selected}
               tier={index}
               board={boardSize}
+              coarse={coarse}
               selectedTitle={selectedTitle}
               dispatch={dispatch}
               dropAt={
@@ -1034,7 +1068,6 @@ export function RankingBoard({
               lifted={lifted}
               locked={locked}
               onPlace={placeSelected}
-              keys={!seeded}
               dragNow={drag.current}
               onMenu={onMenu}
               onRemove={onRemove}
@@ -1158,7 +1191,18 @@ export function RankingBoard({
                       </h2>
                     )}
                     {emptyPool ? !wide && addChip : addButton}
-                    {canDock && <DockToggle dock={dock} onChoose={choose} />}
+                    {!wide && maxRows > 1 && !allPlaced && (
+                      <button
+                        type="button"
+                        className="pool__expand"
+                        aria-label={strings.rank.dockRows}
+                        aria-expanded={rows > 1}
+                        onClick={() => resize(rows > 1 ? 1 : 2)}
+                      >
+                        <Icon name="expand_more" />
+                      </button>
+                    )}
+                    {wide && canDock && <DockToggle dock={dock} onChoose={choose} />}
                   </div>
                   {toolsPanel}
                   {emptyPool && <p className="pool__empty">{strings.boards.poolEmpty}</p>}
@@ -1262,6 +1306,7 @@ interface TierRowProps {
   selected: number | null;
   tier: number;
   board: BoardSize;
+  coarse: boolean;
   selectedTitle: string | null;
   dispatch: (action: BoardAction) => void;
   /** Where among the row's other cards a card carried over it would land; null when none is. */
@@ -1271,8 +1316,6 @@ interface TierRowProps {
   locked: boolean;
   /** Places the picked card here; the board plans the tile's flight first. */
   onPlace: (tier: number) => void;
-  /** The tier's number key on its band; Theirs on show has none. */
-  keys: boolean;
   dragNow: () => DragState;
   onMenu: () => void;
   /** The owner's: a card off the list, from the card's menu. */
@@ -1299,13 +1342,13 @@ const TierRow = memo(function TierRow({
   tier,
   board,
   selectedTitle,
+  coarse,
   dispatch,
   dropAt,
   pointerDownFor,
   lifted,
   locked,
   onPlace,
-  keys,
   dragNow,
   onMenu,
   onRemove,
@@ -1314,20 +1357,15 @@ const TierRow = memo(function TierRow({
   if (meta === undefined) return null;
   const armed = !locked && selected !== null && !row.includes(selected);
   const targeted = dropAt !== null;
-  // A card carried over the row takes its place there at once, the others
-  // making room: the card itself when it is this row's, an empty slot of its
-  // size when it comes from elsewhere (null below). Where it lands is read
-  // from the others' middles, so the room it takes does not move the place.
-  const others = row.filter((item) => item !== lifted);
+  // Keep the destination's geometry while crossing tiers. A new flex item
+  // can wrap to another line and move the target out from under the pointer.
+  const local = lifted !== null && targeted && row.includes(lifted);
+  const others = local ? row.filter((item) => item !== lifted) : row;
   const landing = targeted ? Math.min(dropAt, others.length) : null;
-  const shown: readonly (number | null)[] =
-    landing === null
-      ? row
-      : [
-          ...others.slice(0, landing),
-          lifted !== null && row.includes(lifted) ? lifted : null,
-          ...others.slice(landing),
-        ];
+  const shown =
+    local && landing !== null
+      ? [...others.slice(0, landing), lifted, ...others.slice(landing)]
+      : row;
   const place = () => onPlace(tier);
   // The tier as the row's button says it: its letter, and its caption when it has one.
   const where =
@@ -1373,36 +1411,17 @@ const TierRow = memo(function TierRow({
       >
         <TierLabel label={meta.label} caption={meta.caption} band={board} />
         {meta.caption !== null && <bdi className="tier__caption">{meta.caption}</bdi>}
-        {/*
-         * While a card is picked the corner's number becomes the row's own
-         * button, a pill: the number for a keyboard, a plus for a finger and
-         * past the ninth tier. It is in the tab order only while there is
-         * something to place; the rest of the row takes a tap as well.
-         */}
-        {armed && selectedTitle !== null ? (
+        {armed && selectedTitle !== null && (
           <button
             type="button"
             className="tier__place"
             aria-label={fill(strings.rank.placeIn, { name: selectedTitle, tier: where })}
+            aria-keyshortcuts={tier < 9 ? String(tier + 1) : undefined}
             onClick={(event) => {
-              // The row would place it a second time and drop the pick of the next card.
               event.stopPropagation();
               place();
             }}
-          >
-            {tier < 9 && <span className="tier__place-key">{tier + 1}</span>}
-            <Icon
-              name="add"
-              className={tier < 9 ? "tier__place-add" : "tier__place-add tier__place-add--only"}
-            />
-          </button>
-        ) : (
-          keys &&
-          tier < 9 && (
-            <span className="tier__key" aria-hidden="true">
-              {tier + 1}
-            </span>
-          )
+          />
         )}
         {held !== undefined && (
           <button
@@ -1417,30 +1436,37 @@ const TierRow = memo(function TierRow({
         )}
       </div>
       <ul className="tier__items" aria-label={meta.label}>
-        {shown.map((item) =>
-          item === null ? (
-            <li key="slot" className="tile-slot" aria-hidden="true">
-              <span className="tile tile--slot" />
-            </li>
-          ) : (
-            <Tile
-              key={item}
-              card={items[item]}
-              tiers={tiers}
-              item={item}
-              board={board}
-              selected={selected === item}
-              lifted={lifted === item}
-              locked={locked}
-              dispatch={dispatch}
-              pointerDownFor={pointerDownFor}
-              dragNow={dragNow}
-              onMenu={onMenu}
-              current={tier}
-              onRemove={onRemove}
-            />
-          ),
+        {targeted && row.length === 0 && (
+          <li className="tile-slot" aria-hidden="true">
+            <span className="tile--slot" />
+          </li>
         )}
+        {shown.map((item, i) => (
+          <Tile
+            insertion={
+              !local && landing !== null && i === Math.min(landing, row.length - 1)
+                ? landing === row.length
+                  ? "after"
+                  : "before"
+                : undefined
+            }
+            key={item}
+            card={items[item]}
+            tiers={tiers}
+            item={item}
+            board={board}
+            coarse={coarse}
+            selected={selected === item}
+            lifted={lifted === item}
+            locked={locked}
+            dispatch={dispatch}
+            pointerDownFor={pointerDownFor}
+            dragNow={dragNow}
+            onMenu={onMenu}
+            current={tier}
+            onRemove={onRemove}
+          />
+        ))}
       </ul>
     </div>
   );

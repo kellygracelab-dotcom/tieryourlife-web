@@ -357,6 +357,59 @@ describe("POST /api/rank — Finish", () => {
     assert.equal("listAuthorUid" in (nameless.table("rankings").get(otherCode) ?? {}), false);
   });
 
+  it("counts UTF-8 bytes in the saved snapshot, before writing the ranking or charging its quota", async () => {
+    const url = "https://creativecommons.org/licenses/by/4.0/";
+    for (const [count, status] of [
+      [12, 201],
+      [600, 413],
+    ] as const) {
+      const { deps, table } = setup();
+      const credit = "字я".repeat(460) + " " + url;
+      const items = Array.from({ length: count }, () => ({
+        title: "Панда 熊猫",
+        imageUrl: "https://art.example/panda.jpg",
+        tierIndex: 0,
+        credit,
+      }));
+      table("publishedLists").set(LIST_ID, { ...LIST, items });
+      const answer = await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[0], []] });
+      assert.equal(answer.status, status);
+      if (status === 413) {
+        for (const name of ["rankings", "rankQuota", "rankUsage"])
+          assert.equal(table(name).size, 0);
+      } else {
+        const doc = [...table("rankings").values()][0];
+        const snapshot = doc?.snapshot as { items: { credit: string }[] };
+        assert.equal(snapshot.items[0]?.credit, credit);
+      }
+    }
+  });
+
+  it("can finish a normal 2000-card list and refuses a legacy list with 160 CJK characters per credit", async () => {
+    for (const [credit, expected] of [
+      ["© Автор", 201],
+      ["画".repeat(160), 413],
+    ] as const) {
+      const { deps, table } = setup();
+      const items = Array.from({ length: 2000 }, (_, i) => ({
+        title: `Карточка ${i}`,
+        imageUrl: null,
+        credit,
+      }));
+      table("publishedLists").set(LIST_ID, { ...LIST, items });
+      const rows = [items.map((_, i) => i), []];
+      const body = { listId: LIST_ID, rows };
+      assert.ok(Buffer.byteLength(JSON.stringify(body)) < 10000);
+      const answer = await call(deps, "POST", "/api/rank", body);
+      assert.equal(answer.status, expected);
+      if (expected === 413) {
+        assert.equal((answer.body as { code: string }).code, "TOO_LARGE");
+        for (const name of ["rankings", "rankQuota", "rankUsage"])
+          assert.equal(table(name).size, 0);
+      }
+    }
+  });
+
   it("refuses a body over the limit before reading anything", async () => {
     const { deps, table } = setup();
     const answer = await call(deps, "POST", "/api/rank", {

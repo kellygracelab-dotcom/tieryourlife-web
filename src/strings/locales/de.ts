@@ -560,6 +560,8 @@ const de: Translation = {
     failedBannedUntil: "Du kannst bis {date} keine Ranglisten erstellen.",
     failedOther:
       "Die Rangliste konnte nicht gespeichert werden. Nichts ist verloren. Versuch es noch einmal.",
+    failedTooLarge:
+      "Diese Liste ist zu groß, um die Rangliste per Link zu teilen. Deine Anordnung bleibt auf diesem Gerät.",
     failedChanged:
       "Der Autor hat diese Liste geändert, während du sie eingestuft hast. Lade sie neu, um sie so einzustufen, wie sie jetzt ist.",
     loadAgain: "Neu laden",

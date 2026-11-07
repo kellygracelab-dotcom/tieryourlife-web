@@ -1,3 +1,4 @@
+import { creditField } from "../../api/pictureCredit";
 import type { Ranking } from "../../api/rank";
 import type { PublishedList, PublishedTier } from "../../api/types";
 import { publishedPictureOf } from "../../lib/pictures";
@@ -45,6 +46,7 @@ export const LIMITS = {
 } as const;
 
 export interface EditorItem {
+  credit?: string;
   /** Stable within the draft; a catalogue id when the card came from there. */
   key: string;
   title: string;
@@ -115,6 +117,7 @@ export function draftOf(list: PublishedList): Draft {
       key: `p${index}`,
       title: item.title,
       imageUrl: item.imageUrl,
+      ...creditField(item.credit),
       pictureId: null,
     })),
     rows: arrange(list).rows,
@@ -134,15 +137,19 @@ export function draftOfRanking(ranking: Pick<Ranking, "listId" | "snapshot" | "r
     title: snapshot.title,
     category: snapshot.category,
     tiers: snapshot.tiers.map((tier, index) => ({ ...tier, key: `t${index}` })),
-    items: snapshot.items.map((item, index) => ({
-      key: `p${index}`,
-      title: item.title,
-      imageUrl:
+    items: snapshot.items.map((item, index) => {
+      const imageUrl =
         item.imageUrl !== null && publishedPictureOf(item.imageUrl, ranking.listId) === null
           ? item.imageUrl
-          : null,
-      pictureId: null,
-    })),
+          : null;
+      return {
+        key: `p${index}`,
+        title: item.title,
+        imageUrl,
+        pictureId: null,
+        ...creditField(imageUrl === null ? null : item.credit),
+      };
+    }),
     rows: tidyRows(ranking.rows, snapshot.tiers.length, snapshot.items.length),
     serial: snapshot.tiers.length + snapshot.items.length,
   };
@@ -199,7 +206,10 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
       return {
         ...draft,
         serial: draft.serial + 1,
-        items: [...draft.items, { key, title, imageUrl: action.imageUrl, pictureId }],
+        items: [
+          ...draft.items,
+          { key, title, imageUrl: action.imageUrl, pictureId, ...creditField(action.credit) },
+        ],
       };
     }
     case "removeItem": {
@@ -327,6 +337,7 @@ export interface PublishBody {
     imageUrl: string | null;
     pictureId: string | null;
     tierIndex: number | null;
+    credit?: string;
   }[];
 }
 
@@ -363,6 +374,7 @@ export function publishBodyOf(draft: Draft): PublishBody | null {
           imageUrl: item.pictureId === null ? item.imageUrl : null,
           pictureId: item.pictureId,
           tierIndex: tier,
+          ...creditField(item.credit),
         },
       ];
     }),
@@ -409,6 +421,7 @@ export function loadEditorDraft(store: KeyValueStore, key = NEW_DRAFT_KEY): Draf
       title: typeof item.title === "string" ? item.title : "",
       imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : null,
       pictureId: typeof item.pictureId === "string" ? item.pictureId : null,
+      ...creditField(item.credit),
     }));
     return {
       title: draft.title,

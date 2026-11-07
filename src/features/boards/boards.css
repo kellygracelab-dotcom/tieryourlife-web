@@ -887,6 +887,9 @@
 }
 
 .board-tile__star {
+  background: #202124;
+  border: 1px solid #fff;
+  box-shadow: 0 1px 3px #0009;
   inset-inline-end: 8px;
   cursor: pointer;
 }
@@ -897,7 +900,7 @@
 }
 
 .board-tile__star:hover {
-  background: rgba(0, 0, 0, 0.55);
+  background: #35373b;
 }
 
 .board-tile__star--on {
@@ -953,4 +956,13 @@
   .board-page .list-head__text {
     flex: 1 1 0;
   }
+}
+
+.board-settings__cover-preview {
+  display: block;
+  width: min(100%, 240px);
+  height: 120px;
+  object-fit: contain;
+  background: var(--surface-soft);
+  border-radius: var(--radius-card);
 }

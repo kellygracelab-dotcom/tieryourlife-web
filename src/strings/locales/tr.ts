@@ -546,6 +546,8 @@ const tr: Translation = {
     failedBanned: "Şu anda liste sıralayamazsınız.",
     failedBannedUntil: "{date} tarihine kadar liste sıralayamazsınız.",
     failedOther: "Sıralama kaydedilemedi. Hiçbir şey kaybolmadı. Tekrar deneyin.",
+    failedTooLarge:
+      "Bu liste, sıralamayı bağlantıyla paylaşmak için çok büyük. Sıralaman bu cihazda kalır.",
     failedChanged:
       "Siz sıralarken yazar bu listeyi değiştirdi. Şimdiki hâliyle sıralamak için yeniden yükleyin.",
     loadAgain: "Yeniden yükle",

@@ -333,3 +333,65 @@ test.describe("ranking a list on a phone", () => {
     });
   }
 });
+
+test("opens card credits with two taps and closes them back to the board", async ({
+  page,
+  hasTouch,
+}) => {
+  await mockBackend(page);
+  const url = "https://creativecommons.org/licenses/by/4.0/";
+  const credit = "Commons contributor ".repeat(16) + url;
+  await page.route("**/lists/abc", (r) =>
+    r.fulfill({
+      json: {
+        ...list,
+        items: list.items.map((item, i) => ({ ...item, credit: i === 0 ? credit : null })),
+      },
+    }),
+  );
+  await page.goto("/l/abc");
+  const poster = page.getByRole("button", { name: "Ex Machina", exact: true });
+  if (hasTouch) {
+    await poster.tap();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.waitForTimeout(350);
+    const box = (await poster.boundingBox())!;
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+  } else {
+    await poster.focus();
+    await page.keyboard.press("Shift+F10");
+  }
+  await page
+    .getByRole(hasTouch ? "button" : "menuitem", { name: "Image credits", exact: true })
+    .click();
+  const details = page.getByRole("dialog", { name: "Image credits" });
+  await expect(details.getByRole("link", { name: url })).toHaveAttribute("href", url);
+  await details.getByRole("button", { name: "Close" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("menu")).toHaveCount(0);
+});
+
+test("explains a 413 at Finish and keeps the visitor's placement", async ({ page }) => {
+  await mockBackend(page);
+  await page.route("**/api/rank", (r) =>
+    r.fulfill({
+      status: 413,
+      json: { code: "TOO_LARGE", error: "Ranking exceeds the document size limit" },
+    }),
+  );
+  await page.goto("/l/abc");
+  await page.getByRole("button", { name: "Mine", exact: true }).click();
+  const card = page.getByRole("button", { name: "Climax", exact: true });
+  await card.click();
+  await page.getByRole("button", { name: /Place Climax in S/ }).click();
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "This list is too large to save as a shared ranking.",
+  );
+  await expect(page.getByRole("alert").getByRole("button", { name: "Try again" })).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page.getByRole("list", { name: "S", exact: true }).getByRole("button", { name: "Climax" }),
+  ).toBeVisible();
+});

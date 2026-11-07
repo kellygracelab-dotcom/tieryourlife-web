@@ -564,6 +564,8 @@ const ptBR: Translation = {
     failedBanned: "No momento você não pode classificar listas.",
     failedBannedUntil: "Você não pode classificar listas até {date}.",
     failedOther: "Não foi possível salvar a classificação. Nada foi perdido. Tente de novo.",
+    failedTooLarge:
+      "A lista é grande demais para salvar o ranking com um link. Sua classificação fica neste dispositivo.",
     failedChanged:
       "O autor mudou esta lista enquanto você a classificava. Carregue de novo para classificá-la como está agora.",
     loadAgain: "Carregar de novo",

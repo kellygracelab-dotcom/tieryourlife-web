@@ -1,3 +1,4 @@
+import { creditOf } from "./pictureCredit";
 import type { ApiClient } from "./client";
 import type { CatalogueItem } from "./types";
 
@@ -120,8 +121,7 @@ export function pictureOf(raw: unknown): FoundPicture | null {
     thumbUrl: https(item.thumbUrl) ? item.thumbUrl : null,
     source: oneOf(PICTURE_SOURCES, item.source) ? item.source : "other",
     kind: oneOf(PICTURE_KINDS, item.kind) ? item.kind : "thing",
-    credit:
-      typeof item.credit === "string" && item.credit.trim() !== "" ? item.credit.trim() : null,
+    credit: creditOf(item.credit),
   };
 }
 

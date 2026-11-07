@@ -252,3 +252,45 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
   await expect(page.getByLabel(/Back up my boards/)).not.toBeChecked();
   expect(account.calls.filter((call) => call.startsWith("PUT /boards")).length).toBe(puts);
 });
+
+test("uploads a cover from the board settings and keeps the owner's photo after reopening", async ({
+  page,
+  hasTouch,
+}) => {
+  const account = await signIn(page);
+  await newBoard(page, hasTouch, "A cover of my own");
+  const boardUrl = page.url();
+  const settings = async () => {
+    await press(page.getByLabel("More about this board"), hasTouch);
+    await press(page.getByRole("button", { name: "List settings" }), hasTouch);
+    await press(page.getByRole("button", { name: /Cover/ }), hasTouch);
+  };
+  await settings();
+  const choose = page.getByRole("button", { name: "A photo from the gallery" });
+  const select = async (name: string, mimeType: string, buffer: Buffer) => {
+    const picking = page.waitForEvent("filechooser");
+    await press(choose, hasTouch);
+    await (await picking).setFiles({ name, mimeType, buffer });
+  };
+  await select("notes.txt", "text/plain", Buffer.from("test"));
+  await expect(page.getByRole("alert")).toContainText("notes.txt");
+  await select("poster.png", "image/png", PIXEL);
+  const cover = page.locator(".sheet-row__thumb").filter({ visible: true });
+  const thumb = page.locator("img.sheet-row__thumb");
+  await expect(thumb.last()).toHaveAttribute("src", /users%2F/i);
+  const src = await thumb.last().getAttribute("src");
+  await expect
+    .poll(
+      () =>
+        [...account.boards.values()].find((b) => b.title === "A cover of my own")?.body
+          .coverPictureId,
+    )
+    .toBeTruthy();
+  await page.goBack();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(page.url()).toBe(boardUrl);
+  await page.reload();
+  await settings();
+  await expect(cover.last()).toHaveAttribute("src", src!);
+  await expect(page.getByRole("button", { name: /Auto|Reset|Remove cover/ }).first()).toBeVisible();
+});

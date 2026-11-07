@@ -2,10 +2,13 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
   type FocusEvent,
   type KeyboardEvent as KeyEvent,
   type ReactNode,
 } from "react";
+
+import { useBackLayer } from "./backLayers";
 
 /** How close to the window's edge an open list may come. */
 const EDGE = 8;
@@ -25,6 +28,7 @@ interface MenuProps {
  * at once sat on top of each other.
  */
 export function Menu({ label, button, buttonClassName = "menu__button", children }: MenuProps) {
+  const [open, setOpen] = useState(false);
   const details = useRef<HTMLDetailsElement>(null);
   const list = useRef<HTMLUListElement>(null);
 
@@ -85,6 +89,8 @@ export function Menu({ label, button, buttonClassName = "menu__button", children
     if (hadFocus) menu.querySelector("summary")?.focus();
   };
 
+  useBackLayer(open, close);
+
   // Left open behind the focus, the list would cover the controls Tab goes on to.
   // Only Tab counts: Safari moves the focus off a menu item that is clicked,
   // and the menu closed under the click before it was chosen.
@@ -101,7 +107,16 @@ export function Menu({ label, button, buttonClassName = "menu__button", children
   };
 
   return (
-    <details className="menu" ref={details} onKeyDown={onKeyDown} onBlur={onBlur} onToggle={fit}>
+    <details
+      className="menu"
+      ref={details}
+      onKeyDown={onKeyDown}
+      onBlur={onBlur}
+      onToggle={(event) => {
+        setOpen(event.currentTarget.open);
+        fit();
+      }}
+    >
       <summary className={buttonClassName} aria-label={label}>
         {button}
       </summary>

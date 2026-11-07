@@ -579,6 +579,8 @@ const fr: Translation = {
     failedBanned: "Vous ne pouvez pas classer de listes pour le moment.",
     failedBannedUntil: "Vous ne pouvez pas classer de listes jusqu’au {date}.",
     failedOther: "Impossible d’enregistrer le classement. Rien n’est perdu. Réessayez.",
+    failedTooLarge:
+      "Cette liste est trop grande pour enregistrer le classement avec un lien. Ton classement reste sur cet appareil.",
     failedChanged:
       "L’auteur a modifié cette liste pendant que vous la classiez. Rechargez-la pour la classer telle qu’elle est maintenant.",
     loadAgain: "La recharger",

@@ -7,6 +7,7 @@ import {
 } from "react";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
+  WIDE_BOARD_FROM,
   bandOf,
   defaultDock,
   keepDock,
@@ -20,7 +21,7 @@ import {
 } from "./dock";
 
 /** From here the board has room for a column or a dock; below it the tray or the strip is the only shape. */
-export const WIDE_BOARD_FROM = 840;
+export { WIDE_BOARD_FROM } from "./dock";
 
 /** A press on the grip that moves less than this, in px, is a click rather than a drag. */
 const CLICK_SLOP = 4;

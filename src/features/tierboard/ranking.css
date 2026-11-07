@@ -139,7 +139,6 @@
  * button has the keyboard, the one a finger is pressing. Pressing a card in
  * that row picks the card, so the row does not light up for it.
  */
-.tier--target,
 .tier--armed:has(.tier__place:focus-visible),
 .tier--armed:active:not(:has(.tile:active)) {
   outline: 2px dashed var(--band);
@@ -149,22 +148,31 @@
 
 /* A finger's hover stays where it tapped: only a pointer that hovers aims by it. */
 @media (hover: hover) {
-  .tier--armed:hover:not(:has(.tile:hover)) {
+  .ranking:not(.ranking--drag) .tier--armed:hover:not(:has(.tile:hover)) {
     outline: 2px dashed var(--band);
     outline-offset: -2px;
     background: color-mix(in oklab, var(--band-base) var(--band-tint-hover), var(--paper));
   }
 }
 
-/*
- * Where a card from another row or the pool would land: an empty place of a
- * card's size, the row's own colour round it. A card of the row itself moves
- * there, faded.
- */
+/* The insertion marker takes no space, including in an empty tier. */
 .tile--slot {
-  background: none;
-  outline: 2px dashed var(--band);
-  outline-offset: -2px;
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -3px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--band);
+  pointer-events: none;
+}
+.tile--slot-after {
+  inset-inline-start: auto;
+  inset-inline-end: -3px;
+}
+.tile-slot {
+  position: absolute;
+  inset: var(--tier-pad);
+  pointer-events: none;
 }
 
 /* The pool has no colour of its own: dashed in the line's. */
@@ -219,100 +227,25 @@
   transition: background-color 100ms ease-out;
 }
 
-/* The other cards step back while one is picked; one value on every screen. */
-.pool .tile,
-.pool .tile img {
-  transition:
-    opacity 120ms ease-out,
-    background-color 120ms ease-out;
-}
-
-/*
- * The first tap of a double tap picks the card, and the second opens its
- * menu. The board shows a card is picked only once no second tap has come
- * (DOUBLE_TAP_MS, 300 ms), so a double tap does not flash every row and
- * card; it lets go at once.
- */
-/*
- * A picture fades; a name stays as dark as ever and its card pales around
- * it, since those cards can still be picked and their names read (4.5:1).
- */
-.pool--picked .tile:not(.tile--selected) {
-  background-color: color-mix(in srgb, var(--tile-placeholder) 50%, var(--surface));
-  transition-delay: 300ms;
-}
-
-.pool--picked .tile:not(.tile--selected) img {
-  opacity: 0.6;
-  transition-delay: 300ms;
-}
-
-.tier__band {
+.tier__band,
+.tier__items,
+.tile-anchor {
   position: relative;
-}
-
-.tier__key {
-  position: absolute;
-  top: 4px;
-  inset-inline-end: 6px;
-  font: var(--text-caption);
-  font-weight: 500;
-  opacity: 0.7;
 }
 
 .tier__place {
   position: absolute;
-  top: 6px;
-  inset-inline-end: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
+  inset: 0;
   padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  font: 500 12px/1 var(--font);
-  color: var(--ink);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
   cursor: pointer;
-  animation: pill-in 120ms ease-out 300ms both;
 }
 
 .tier__place:focus-visible {
   outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-
-/* The plus is a finger's, and a tenth tier's, which has no key. */
-.tier__place-add {
-  display: none;
-  font-size: 14px;
-}
-
-.tier__place-add--only {
-  display: inline;
-}
-
-/* After a double tap's window, as the dimming waits (above). */
-@keyframes pill-in {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-}
-
-@keyframes pill-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tier__place {
-    animation-name: pill-fade;
-  }
+  outline-offset: -3px;
 }
 
 /*
@@ -529,19 +462,6 @@
   display: none;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .tier__items .tile {
-    animation: tile-land 180ms ease-out;
-  }
-}
-
-@keyframes tile-land {
-  from {
-    opacity: 0.4;
-    transform: scale(0.82);
-  }
-}
-
 @media (max-width: 599px) {
   .ranking__bar {
     margin: 0;
@@ -676,10 +596,6 @@
     transition:
       transform 120ms ease-out,
       opacity 120ms ease-out;
-  }
-
-  .pool .tile--selected {
-    transform: scale(1.04);
   }
 
   .pool__done {
@@ -1466,8 +1382,22 @@
   .ranking--under .pool__items {
     gap: var(--tile-gap);
     max-height: calc(
-      var(--dock-rows, 2) * var(--tile-h) + (var(--dock-rows, 2) - 1) * var(--tile-gap) + 6px
+      var(--dock-rows, 1) * var(--tile-h) + (var(--dock-rows, 1) - 1) * var(--tile-gap) + 6px
     );
+  }
+
+  .ranking--under .pool--single .pool__items {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+  }
+  .pool--single .pool__items > li {
+    flex: none;
+  }
+  .ranking--under .pool--single .tile--name {
+    width: calc(var(--tile-w) * 1.5);
   }
 
   .ranking--under .pool__none {
@@ -1525,14 +1455,6 @@
   margin: 0 0 4px;
   font: var(--text-small);
   color: var(--ink-dim);
-}
-
-/* The photographer the picture asks to be named by, under the card's name. */
-.move-sheet__credit {
-  margin: -4px 0 8px;
-  font: var(--text-small);
-  color: var(--ink-faint);
-  overflow-wrap: anywhere;
 }
 
 .move-sheet__tiers {
@@ -1648,17 +1570,6 @@
   cursor: pointer;
 }
 
-/* Not an item: the photographer the picture asks to be named by, at the foot. */
-.card-menu__credit {
-  max-width: 280px;
-  margin: 4px 0 0;
-  padding: 8px 16px 4px;
-  border-top: 1px solid var(--line);
-  font: 400 12px/16px var(--font);
-  color: var(--ink-faint);
-  overflow-wrap: anywhere;
-}
-
 .card-menu__item:focus {
   outline: none;
   background: var(--hover);
@@ -1732,18 +1643,6 @@
   color: var(--ink-dim);
 }
 
-/* A number key on the band means nothing to a finger: the row's pill is a plus there. */
-@media (hover: none) and (pointer: coarse) {
-  .tier__key,
-  .tier__place-key {
-    display: none;
-  }
-
-  .tier__place-add {
-    display: inline;
-  }
-}
-
 /* On a narrow window the box that brings cards in waits behind Add, inside the pool. */
 .pool__add {
   flex: none;
@@ -1798,5 +1697,37 @@
   .board-frame,
   .ranking {
     --pool-cols: 8;
+  }
+}
+
+@media (max-width: 839px) {
+  .pool__expand {
+    flex: none;
+    align-self: center;
+    border: 0;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    background: var(--surface-soft);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .pool__expand[aria-expanded="false"] .ms {
+    transform: rotate(180deg);
+  }
+  .pool--single .pool__items {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .pool--single .pool__items > li {
+    flex: none;
+  }
+  .pool--expanded .pool__items {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(2, var(--tile-h));
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+    justify-content: start;
   }
 }

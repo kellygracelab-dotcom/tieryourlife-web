@@ -1,3 +1,4 @@
+import { useBackCloses } from "../ui/useBackCloses";
 import {
   useEffect,
   useRef,
@@ -214,6 +215,10 @@ function focusForNow(element: HTMLElement | null) {
 
 const clearSiteNotice = () => sayOnTheSite(null);
 
+function ShellBackGuard() {
+  useBackCloses(false, () => {});
+  return null;
+}
 export function Shell() {
   const { account, signIn } = useSession();
   const [seen] = useState(() => lastSeen());
@@ -379,6 +384,9 @@ export function Shell() {
       {/* A new page opens at its top, and Back returns to where the person was. */}
       <ScrollRestoration getKey={scrollKey} />
       <ScrollCatchUp />
+      {/* Board and list pages also handle Play. Section editors own their unsaved-change guard. */}
+      {(location.pathname === "/b/new" ||
+        !/^\/(b\/|l\/|admin(?:\/|$)|s$)/.test(location.pathname)) && <ShellBackGuard />}
       <SiteSnackbar notice={outlived} onDone={clearSiteNotice} />
     </div>
   );

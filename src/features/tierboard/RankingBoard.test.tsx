@@ -543,7 +543,7 @@ describe("RankingBoard", () => {
     }
   });
 
-  it("keeps the pool beside the board on a laptop window, and offers no toggle to a phone", () => {
+  it("starts with one row on a laptop and uses the compact tray on a phone", () => {
     const had = { width: window.innerWidth, height: window.innerHeight };
     Object.assign(window, { innerWidth: 1280, innerHeight: 720 });
     try {
@@ -552,7 +552,8 @@ describe("RankingBoard", () => {
           <RankingBoard list={list} store={memoryStore()} />
         </MemoryRouter>,
       );
-      expect(document.querySelector(".ranking")).not.toHaveClass("ranking--under");
+      expect(document.querySelector(".ranking")).toHaveClass("ranking--under");
+      expect(document.querySelector(".pool")).toHaveClass("pool--single");
       expect(screen.getByRole("group", { name: "Where the cards sit" })).toBeInTheDocument();
       unmount();
       Object.assign(window, { innerWidth: 390, innerHeight: 800 });
@@ -1030,14 +1031,14 @@ describe("RankingBoard", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("zzzzzzzz");
   });
 
-  it("shows the number of each of the first nine tiers on its band", () => {
+  it("keeps number hints off the bands", () => {
     render(
       <MemoryRouter>
         <RankingBoard list={list} />
       </MemoryRouter>,
     );
     const s = tierList("S").parentElement!;
-    expect(s.querySelector(".tier__key")).toHaveTextContent("1");
+    expect(s.querySelector(".tier__key")).toBeNull();
   });
 
   it("turns the band's number into the row's own button while a card is picked, and no other", async () => {
@@ -1055,12 +1056,13 @@ describe("RankingBoard", () => {
     const row = (label: string) => tierList(label).parentElement!;
     // Nothing picked: no row is a button, and the band shows its key.
     expect(screen.queryByRole("button", { name: /^Place / })).toBeNull();
-    expect(row("T1").querySelector(".tier__key")).toHaveTextContent("1");
+    expect(row("T1").querySelector(".tier__key")).toBeNull();
 
     await userEvent.click(card("Climax"));
     const first = screen.getByRole("button", { name: "Place Climax in T1 · Best" });
     expect(first).toHaveClass("tier__place");
-    expect(first).toHaveTextContent("1");
+    expect(first).toHaveAttribute("aria-keyshortcuts", "1");
+    expect(first).toBeEmptyDOMElement();
     // The key became the pill; the pool's other cards step back.
     expect(row("T1").querySelector(".tier__key")).toBeNull();
     expect(row("T1")).toHaveClass("tier--armed");
@@ -1068,7 +1070,7 @@ describe("RankingBoard", () => {
     // The tenth tier has no key: its pill is a plus alone.
     const tenth = screen.getByRole("button", { name: "Place Climax in T10" });
     expect(tenth.querySelector(".tier__place-key")).toBeNull();
-    expect(tenth.querySelector(".tier__place-add--only")).toHaveTextContent("add");
+    expect(tenth).toBeEmptyDOMElement();
 
     // In the tab order only while there is something to place.
     await userEvent.click(first);

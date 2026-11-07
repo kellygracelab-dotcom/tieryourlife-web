@@ -562,6 +562,8 @@ const es: Translation = {
     failedBanned: "Ahora mismo no puedes clasificar listas.",
     failedBannedUntil: "No puedes clasificar listas hasta el {date}.",
     failedOther: "No se pudo guardar la clasificación. No se perdió nada. Inténtalo de nuevo.",
+    failedTooLarge:
+      "La lista es demasiado grande para guardar la clasificación con un enlace. Tu orden se conserva en este dispositivo.",
     failedChanged:
       "El autor cambió esta lista mientras la clasificabas. Vuelve a cargarla para clasificarla tal como está ahora.",
     loadAgain: "Volver a cargarla",

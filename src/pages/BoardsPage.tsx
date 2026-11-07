@@ -386,6 +386,11 @@ export function BoardsPage({
           )}
         </div>
         <div className="boards__actions">
+          {signedIn && (
+            <Link className="btn btn--text" to="/me">
+              {strings.nav.myLists}
+            </Link>
+          )}
           <Link className="btn btn--text" to="/trash">
             <Icon name="delete" className="btn__icon" />
             <span>{strings.boards.trash}</span>

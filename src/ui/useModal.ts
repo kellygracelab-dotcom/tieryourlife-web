@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from "react";
+import { useBackLayer } from "./backLayers";
 import { FOCUSABLE } from "./focus";
 
 /**
@@ -15,7 +16,9 @@ export function useModal(
   box: RefObject<HTMLElement | null>,
   onClose: () => void,
   initial?: string,
+  onBack = onClose,
 ): void {
+  useBackLayer(true, onBack);
   const close = useRef(onClose);
   useEffect(() => {
     close.current = onClose;

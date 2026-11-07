@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { VisitMemory } from "../../app/visitMemory";
 import type { ApiError } from "../../api/errors";
 import type { FeedPage, FeedQuery, ListSummary } from "../../api/types";
 import { loadFeed } from "../../lib/api";
@@ -94,8 +95,8 @@ export function forgetFurtherPagesForTests(): void {
 }
 
 /** A first page with the further pages read after it, each list once. */
-function withFurther(key: string, first: RememberedPage): RememberedPage {
-  const further = furtherPages.get(key);
+function withFurther(key: string, first: RememberedPage, later = furtherPages): RememberedPage {
+  const further = later.get(key);
   if (further === undefined) return first;
   const seen = new Set<string>();
   const once = (list: ListSummary) => {
@@ -140,6 +141,7 @@ export function useFeed(
   query: FeedQuery,
   load: LoadFeed = loadFeed,
   memory: Remembered<RememberedPage> | null = feedMemory,
+  visit: VisitMemory | null = null,
 ) {
   // The query travels as a string so a fresh object literal on each render does not refetch.
   const key = JSON.stringify(query);
@@ -161,7 +163,7 @@ export function useFeed(
       ? loaded.state
       : recalled !== null && (attempt === 0 || keptUp === true)
         ? readyFrom(recalled, attempt !== 0)
-        : LOADING;
+        : ((attempt === 0 ? visit?.feed : null) ?? LOADING);
 
   useEffect(() => {
     let current = true;
@@ -173,26 +175,36 @@ export function useFeed(
     load(stable).then(
       (page) => {
         kept?.keep(key, { lists: page.lists.map(nobodys), next: page.nextCursor });
-        const shown = withFurther(key, { lists: page.lists, next: page.nextCursor });
-        settle({
+        if (!current) return;
+        const shown = withFurther(
+          key,
+          { lists: page.lists, next: page.nextCursor },
+          visit?.further,
+        );
+        const next: Ready = {
           status: "ready",
           lists: shown.lists,
           next: shown.next,
           more: "idle",
           followingNobody: page.followingNobody === true,
-        });
+        };
+        if (visit) visit.feed = next;
+        settle(next);
       },
-      (reason: unknown) => settle(failed(reason)),
+      (reason: unknown) => {
+        if (current) visit?.clear();
+        settle(failed(reason));
+      },
     );
     return () => {
       current = false;
     };
-  }, [stable, key, load, attempt, kept, recalled]);
+  }, [stable, key, load, attempt, kept, recalled, visit]);
 
   const retry = useCallback(() => {
-    furtherPages.delete(key);
+    (visit?.further ?? furtherPages).delete(key);
     setAttempt((n) => n + 1);
-  }, [key]);
+  }, [key, visit]);
 
   const more = useCallback(() => {
     if (state.status !== "ready" || state.next === null || state.more === "loading") return;
@@ -222,21 +234,25 @@ export function useFeed(
           : { ...page, lists, nextCursor: next };
       });
     const settle = (page: FeedPage) => {
-      // Somebody's own Following feed is not kept, not even for the visit.
-      if (kept !== null) {
-        const further = furtherPages.get(key);
-        furtherPages.set(key, {
+      if (kept !== null || visit !== null) {
+        const pages = visit?.further ?? furtherPages;
+        const further = pages.get(key);
+        pages.set(key, {
           lists: [...(further?.lists ?? []), ...page.lists],
           next: page.nextCursor,
         });
       }
-      patch((now) => ({
-        status: "ready",
-        lists: [...now.lists, ...page.lists],
-        next: page.nextCursor,
-        more: "idle",
-        followingNobody: now.followingNobody,
-      }));
+      patch((now) => {
+        const next: Ready = {
+          status: "ready",
+          lists: [...now.lists, ...page.lists],
+          next: page.nextCursor,
+          more: "idle",
+          followingNobody: now.followingNobody,
+        };
+        if (visit) visit.feed = next;
+        return next;
+      });
     };
     const failed = () => patch((now) => ({ ...now, more: "failed" }));
     from(after, PAGES_READ_ON).then(settle, (reason: unknown) => {
@@ -245,7 +261,7 @@ export function useFeed(
       if (errorOf(reason).kind === "cursorGone") from(null, PAGES_READ_ON).then(settle, failed);
       else failed();
     });
-  }, [state, key, stable, load, kept]);
+  }, [state, key, stable, load, kept, visit]);
 
   return { state, retry, more };
 }

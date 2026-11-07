@@ -13,6 +13,28 @@ export const CODE_LENGTH = 8;
 
 export const MAX_BODY_BYTES = 64 * 1024;
 
+/**
+ * Firestore limits the whole document to 1 MiB. Count UTF-8 bytes and reserve
+ * room for the encoded field names, type and length tags, nested maps and the
+ * document path. Numbers and timestamps fit in 16 bytes in this schema.
+ * https://firebase.google.com/docs/firestore/storage-size
+ */
+function storedBytes(value: unknown): number {
+  if (typeof value === "string") return Buffer.byteLength(value, "utf8") + 8;
+  if (Array.isArray(value))
+    return value.reduce<number>((total, item) => total + 8 + storedBytes(item), 16);
+  if (value && typeof value === "object") {
+    return Object.entries(value).reduce(
+      (total, [name, child]) => total + Buffer.byteLength(name, "utf8") + 16 + storedBytes(child),
+      32,
+    );
+  }
+  return 16;
+}
+
+export const rankingFits = (document: unknown): boolean =>
+  storedBytes(document) + 1024 <= 1024 * 1024;
+
 /** One person, one ranking every couple of seconds. Anything faster is a script. */
 export const MIN_WRITE_GAP_MS = 2000;
 

@@ -139,6 +139,40 @@ describe("targetOf with a point", () => {
   });
 });
 
+it("finds the same insertion point in a long wrapped row in either reading direction", () => {
+  const zone = document.createElement("div");
+  zone.dataset.drop = "tier:0";
+  const items = document.createElement("ul");
+  items.className = "tier__items";
+  zone.append(items);
+  document.body.append(zone);
+  for (const rtl of [false, true]) {
+    zone.style.direction = rtl ? "rtl" : "ltr";
+    items.replaceChildren();
+    const boxes = Array.from({ length: 72 }, (_, item) => {
+      const x = (rtl ? 7 - (item % 8) : item % 8) * 70;
+      const y = Math.floor(item / 8) * 100;
+      const box = { item, left: x, right: x + 60, top: y, bottom: y + 90 };
+      const li = document.createElement("li");
+      const button = document.createElement("button");
+      button.dataset.item = String(item);
+      li.getBoundingClientRect = button.getBoundingClientRect = () => new DOMRect(x, y, 60, 90);
+      li.append(button);
+      items.append(li);
+      return box;
+    });
+    for (const point of [at(0, -10), at(210, 130), at(100, 195), at(520, 840), at(800, 1600)]) {
+      const index = insertionIndex(
+        boxes.filter((b) => b.item !== 10),
+        point,
+        rtl,
+      );
+      expect(targetOf(zone, point, 10)).toEqual({ kind: "tier", tier: 0, index });
+    }
+  }
+  zone.remove();
+});
+
 describe("sameDrawing", () => {
   const carried = (x: number, target: DropTarget, item = 3): DragState => ({
     phase: "dragging",

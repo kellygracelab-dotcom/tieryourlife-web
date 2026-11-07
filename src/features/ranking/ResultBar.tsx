@@ -73,7 +73,7 @@ export function ResultBar({
   if (finish.status === "failed") {
     const { error } = finish;
     // Gone, or a ban that has a date of its own: trying again is no help.
-    const final = error.kind === "notFound" || error.kind === "banned";
+    const final = error.kind === "notFound" || error.kind === "banned" || error.kind === "tooLarge";
     // Republished while it was ranked: the same rows would mean other cards,
     // so trying again is no help; the list as it is now is.
     const changed = error.kind === "conflict";

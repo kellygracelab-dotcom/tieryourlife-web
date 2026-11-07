@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { topLayer } from "./backLayers";
 import { NavigationType, useBlocker } from "react-router";
 
 /**
@@ -8,10 +9,13 @@ import { NavigationType, useBlocker } from "react-router";
  * once and closes the top one. It needs the site's data router.
  */
 export function useBackCloses(open: boolean, close: () => void): void {
-  const blocker = useBlocker(({ historyAction }) => open && historyAction === NavigationType.Pop);
+  const blocker = useBlocker(
+    ({ historyAction }) =>
+      (open || topLayer() !== undefined) && historyAction === NavigationType.Pop,
+  );
   useEffect(() => {
     if (blocker.state !== "blocked") return;
     blocker.reset();
-    close();
+    (topLayer() ?? close)();
   }, [blocker, close]);
 }

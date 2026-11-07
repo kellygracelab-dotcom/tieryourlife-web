@@ -104,8 +104,15 @@ describe("RankingPage, a house list's words and its pictures' credits", () => {
   it("names the photographers its pictures ask for, as the list page does", async () => {
     load.mockResolvedValue(house);
     open();
-    const credits = await screen.findByRole("region", { name: "Picture credits" });
-    expect(credits).toHaveTextContent("Ex Machina — Jane Doe, CC BY 2.0");
+    const card = (await screen.findAllByRole("button", { name: "Ex Machina" }))[0]!;
+    await userEvent.click(card);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    card.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.click(screen.getByText("Image credits"));
+    expect(screen.getByRole("dialog", { name: "Ex Machina" })).toHaveTextContent(
+      "Jane Doe, CC BY 2.0",
+    );
     cleanup();
     load.mockResolvedValue(ranking);
     open();

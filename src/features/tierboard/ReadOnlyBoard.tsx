@@ -1,6 +1,8 @@
-import type { CSSProperties } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
+import { DOUBLE_TAP_MS } from "./drag";
+import { ImageCredits } from "./ImageCredits";
 import { CardName } from "./CardName";
 import { TierLabel } from "./TierLabel";
 import { useBoardSize } from "./useBoardSize";
@@ -26,16 +28,49 @@ function Tile({
   position: number;
   board: BoardSize;
 }) {
+  const lastClick = useRef<number | null>(null);
+  const [open, setOpen] = useState(false);
+  const credit = item.credit?.trim();
+  const className = item.imageUrl === null ? "tile tile--name" : "tile";
+  const art =
+    item.imageUrl !== null ? (
+      <img {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
+    ) : (
+      <CardName title={item.title} board={board} wide />
+    );
   return (
-    <li
-      className={item.imageUrl === null ? "tile tile--name" : "tile"}
-      title={item.title}
-      data-item={position}
-    >
-      {item.imageUrl !== null ? (
-        <img {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
-      ) : (
-        <CardName title={item.title} board={board} wide />
+    <li>
+      <button
+        type="button"
+        data-item={position}
+        aria-label={item.title}
+        aria-haspopup="dialog"
+        className={`${className} tile--credit`}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          setOpen(true);
+        }}
+        onClick={(event) => {
+          const now = Date.now();
+          if (
+            event.detail === 0 ||
+            (lastClick.current !== null && now - lastClick.current < DOUBLE_TAP_MS)
+          ) {
+            lastClick.current = null;
+            setOpen(true);
+          } else lastClick.current = now;
+        }}
+      >
+        {art}
+      </button>
+      {open && (
+        <ImageCredits
+          title={item.title}
+          credit={credit ?? ""}
+          imageUrl={item.imageUrl}
+          details
+          close={() => setOpen(false)}
+        />
       )}
     </li>
   );

@@ -760,6 +760,7 @@ function OpenBoard({
 
       {panel === "settings" && (
         <BoardSettings
+          upload={upload}
           board={board}
           latest={latest}
           keep={keep}

@@ -9,8 +9,8 @@ export const DOCK_KEY = "tyl:pool-dock";
 /** From here the dock under the board is the default, and a choice is kept apart from narrower windows. */
 export const WIDE_FROM = 1400;
 /** Under this height a window cannot afford a dock under the board, whatever its width. */
-export const SHORT_BELOW = 760;
-export const DEFAULT_ROWS: DockRows = 2;
+export const WIDE_BOARD_FROM = 840;
+export const DEFAULT_ROWS: DockRows = 1;
 
 /** The app bar and the list's header, above the board on a window wide enough for a dock. */
 const ABOVE_BOARD = 136;
@@ -45,7 +45,7 @@ export const bandOf = (width: number): Band => (width >= WIDE_FROM ? "wide" : "n
 
 /** The place the pool takes when nobody has chosen: under the board only on a wide, tall window. */
 export const defaultDock = (width: number, height: number): Dock =>
-  width >= WIDE_FROM && height >= SHORT_BELOW ? "under" : "beside";
+  width >= WIDE_BOARD_FROM && underFits(height) ? "under" : "beside";
 
 const isDock = (value: unknown): value is Dock => value === "beside" || value === "under";
 const isRows = (value: unknown): value is DockRows =>

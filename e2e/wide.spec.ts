@@ -20,6 +20,7 @@ test.describe("a wide screen", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
     await page.getByRole("button", { name: "Mine", exact: true }).click();
 
+    await page.getByRole("button", { name: "Cards beside the board" }).click();
     const side = page.locator(".ranking__side");
     const board = page.locator(".board");
     const sideBox = (await side.boundingBox())!;
