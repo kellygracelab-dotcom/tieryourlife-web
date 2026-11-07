@@ -92,6 +92,18 @@ test.describe("a notice over a board", () => {
     const notice = await box(page, ".snackbar");
     // 16 px over the dock, as ranking.css has it.
     expect(Math.round(dock.y - (notice.y + notice.height))).toBe(16);
+    // The site's own notice lives outside the board, where --board-cap is not
+    // set; it starts where the page's notice does all the same (QA W58).
+    const siteX = await page.evaluate(() => {
+      const site = document.createElement("div");
+      site.className = "snackbar";
+      site.textContent = "site";
+      document.body.append(site);
+      const x = site.getBoundingClientRect().x;
+      site.remove();
+      return x;
+    });
+    expect(Math.round(siteX)).toBe(Math.round(notice.x));
     await expectLiftAdds(page);
   });
 });
