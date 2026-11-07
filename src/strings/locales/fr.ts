@@ -152,7 +152,7 @@ const fr: Translation = {
     placeZoomOut: "Zoom arrière",
     placeUse: "Utiliser",
     placeFailed:
-      "Cette image ne se charge pas, elle ne peut donc pas être votre visage. Choisissez-en une autre.",
+      "Cette image ne se charge pas, elle ne peut donc pas être votre photo. Choisissez-en une autre.",
     placeHelp: "Faites glisser pour déplacer. Pincez ou faites défiler pour zoomer.",
     placeAsItIs: "Cette image ne peut être utilisée que telle quelle.",
   },

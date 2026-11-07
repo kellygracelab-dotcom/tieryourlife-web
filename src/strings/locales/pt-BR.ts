@@ -148,7 +148,7 @@ const ptBR: Translation = {
     placeZoomIn: "Ampliar",
     placeZoomOut: "Reduzir",
     placeUse: "Usar esta",
-    placeFailed: "Essa imagem não carrega, então não pode ser seu rosto. Escolha outra.",
+    placeFailed: "Essa imagem não carrega, então não pode ser sua foto. Escolha outra.",
     placeHelp: "Arraste para mover; use dois dedos ou role para ampliar.",
     placeAsItIs: "Esta imagem só pode ser usada como está.",
   },

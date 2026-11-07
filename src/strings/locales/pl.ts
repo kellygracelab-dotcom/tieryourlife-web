@@ -158,7 +158,7 @@ const pl: Translation = {
     placeZoomIn: "Przybliż",
     placeZoomOut: "Oddal",
     placeUse: "Użyj",
-    placeFailed: "Ten obraz się nie wczytuje, więc nie może być Twoją twarzą. Wybierz inny.",
+    placeFailed: "Ten obraz się nie wczytuje, więc nie może być Twoim zdjęciem. Wybierz inny.",
     placeHelp: "Przeciągnij, aby przesunąć. Przybliż dwoma palcami lub przewijaniem.",
     placeAsItIs: "Tego obrazu można użyć tylko bez zmian.",
   },

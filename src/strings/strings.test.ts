@@ -268,12 +268,12 @@ describe("the dictionaries", () => {
     }
   });
 
-  // QA W56: the profile picture's step said "your face" where the rest of it
+  // QA W56, W57: the profile picture's step said "your face" where the rest of it
   // says the app's word (аватар, Profilbild, profil resmi, アイコン…).
   it("call the profile picture what the app calls it while it is placed", () => {
     // Turkish "bu yüzden" is "so", not a face.
-    const face = /лиц[оа]|обличч|Gesicht|顔|yüzünüz|وجه/u;
-    for (const tag of ["ar", "de", "ja", "ru", "tr", "uk"]) {
+    const face = /лиц[оа]|обличч|Gesicht|顔|yüzünüz|وجه|visage|(^|\P{L})cara(\P{L}|$)|twarz|rosto/u;
+    for (const tag of ["ar", "de", "es", "fr", "ja", "pl", "pt-BR", "ru", "tr", "uk"]) {
       const { settings } = files[`./locales/${tag}.ts`]!.default;
       const texts = textsOf({ settings });
       expect(

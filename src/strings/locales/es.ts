@@ -147,7 +147,7 @@ const es: Translation = {
     placeZoomIn: "Acercar",
     placeZoomOut: "Alejar",
     placeUse: "Usar esta",
-    placeFailed: "Esta imagen no carga, así que no puede ser tu cara. Elige otra.",
+    placeFailed: "Esta imagen no carga, así que no puede ser tu foto. Elige otra.",
     placeHelp: "Arrastra para mover; pellizca o desplaza para hacer zoom.",
     placeAsItIs: "Esta imagen solo se puede usar tal cual.",
   },
