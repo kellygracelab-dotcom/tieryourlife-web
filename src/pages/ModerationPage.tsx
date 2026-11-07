@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { errorOf } from "../api/errors";
 import { BAN_LENGTHS, type BanLength, type QueuedList } from "../api/moderation";
 import { useSession } from "../app/session";
 import { REASON_TEXT } from "../features/community/reasons";
@@ -52,7 +53,8 @@ type Deciding =
   | { status: "confirmForever" }
   | { status: "acting" }
   // What was decided is kept, so Try again sends it again, ban and all.
-  | { status: "failed"; decision: Decision };
+  // A list by staff is the owner's alone to judge: no Try again for that one.
+  | { status: "failed"; decision: Decision; staff: boolean };
 
 type Decision = { kind: "keep" } | { kind: "remove"; ban: BanLength | null };
 
@@ -109,7 +111,12 @@ function QueueCard({
     setDeciding({ status: "acting" });
     work.then(
       () => onDone(notice),
-      () => setDeciding({ status: "failed", decision }),
+      (reason: unknown) =>
+        setDeciding({
+          status: "failed",
+          decision,
+          staff: errorOf(reason).kind === "targetIsModerator",
+        }),
     );
   };
 
@@ -148,10 +155,12 @@ function QueueCard({
       {deciding.status === "failed" && (
         <p className="queue__bar" role="alert">
           <Icon name="cloud_off" className="queue__bar-icon" />
-          {strings.mod.failedDecision}
-          <button type="button" className="queue__retry" onClick={() => again(deciding.decision)}>
-            {strings.mod.tryAgain}
-          </button>
+          {deciding.staff ? strings.mod.staffList : strings.mod.failedDecision}
+          {!deciding.staff && (
+            <button type="button" className="queue__retry" onClick={() => again(deciding.decision)}>
+              {strings.mod.tryAgain}
+            </button>
+          )}
         </p>
       )}
       <div className="queue__body">

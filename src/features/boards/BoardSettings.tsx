@@ -83,6 +83,8 @@ interface BoardSettingsProps {
   onPublished: (
     what: "published" | "updated" | "unpublished" | "ranking" | "held",
     id: string | null,
+    /** Pictures from other sites the backend left out of this publish (QA S11). */
+    dropped?: number,
   ) => void;
   /**
    * How the board goes public under the person's name; null for a board that
@@ -322,7 +324,11 @@ export function BoardSettings({
           ? sent
           : { ...sent, publishedEditedAt: sent.editedAt - 1 },
       );
-      onPublished(ranking ? "ranking" : waits ? "held" : what, answer.id);
+      onPublished(
+        ranking ? "ranking" : waits ? "held" : what,
+        answer.id,
+        ranking ? 0 : (answer.droppedPictures ?? 0),
+      );
       // The backend may have filed it under an approved topic of that name.
       if (sent.topic !== current.topic) settle(sent.topic);
       // Said nothing of a topic, the list kept its own, a moderator's move

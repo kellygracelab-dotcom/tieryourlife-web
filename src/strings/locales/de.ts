@@ -73,6 +73,7 @@ const de: Translation = {
     bannedForever: "für immer",
     leftUp: "Bleibt. Meldungen blenden sie nicht mehr aus.",
     failedDecision: "Die Entscheidung konnte nicht gespeichert werden – nichts hat sich geändert.",
+    staffList: "Diese Liste ist vom Team: nur der Inhaber kann darüber entscheiden.",
     tryAgain: "Erneut versuchen",
     failed: "Meldungen konnten nicht geladen werden.",
     emptyTitle: "Nichts zu prüfen",
@@ -494,6 +495,7 @@ const de: Translation = {
     cancel: "Abbrechen",
     failed:
       "Die Meldung konnte nicht gesendet werden – nichts wurde gesendet. Versuch es in einer Minute noch einmal.",
+    staffList: "Diese Liste ist vom Team: nur der Inhaber kann sie melden.",
     sentTitle: "Gemeldet und für dich ausgeblendet",
     sentBody: "Ein Mensch prüft Meldungen. Bis dahin bleibt sie für andere vielleicht sichtbar.",
     done: "Fertig",
@@ -1233,6 +1235,11 @@ const de: Translation = {
     publishedNote: "Veröffentlicht. Alle mit dem Link können sie einordnen.",
     publishedAsRanking:
       "Draußen als deine Rangliste dieser Liste. Im Feed erscheint keine zweite Liste.",
+    picturesDropped: {
+      one: "{n} Bild von einer anderen Seite konnte nicht hinzugefügt werden. Veröffentliche noch einmal, um es erneut zu versuchen.",
+      other:
+        "{n} Bilder von anderen Seiten konnten nicht hinzugefügt werden. Veröffentliche noch einmal, um es erneut zu versuchen.",
+    },
     unpublished: "Nicht mehr veröffentlicht. Der Link funktioniert nicht mehr.",
     shareImage: "Als Bild teilen",
     shareImageSub: "Ein Bild dieses Boards, mit Link zur Website",

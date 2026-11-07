@@ -75,6 +75,7 @@ const tr: Translation = {
     bannedForever: "sonsuza dek",
     leftUp: "Yayında kaldı. Şikayetler artık onu gizlemiyor.",
     failedDecision: "Karar kaydedilemedi: hiçbir şey değişmedi.",
+    staffList: "Bu liste ekipten birine ait: yalnızca sahibi işlem yapabilir.",
     tryAgain: "Tekrar deneyin",
     failed: "Şikayetler yüklenemedi.",
     emptyTitle: "İncelenecek bir şey yok",
@@ -481,6 +482,7 @@ const tr: Translation = {
     send: "Bildir",
     cancel: "İptal",
     failed: "Şikayet gönderilemedi: hiçbir şey gönderilmedi. Bir dakika sonra tekrar deneyin.",
+    staffList: "Bu liste ekipten birine ait: yalnızca sahibi bildirebilir.",
     sentTitle: "Bildirildi ve sizin için gizlendi",
     sentBody: "Şikayetleri bir kişi inceler. O ana kadar başkaları hâlâ görebilir.",
     done: "Tamam",
@@ -1192,6 +1194,10 @@ const tr: Translation = {
     publishedNote: "Yayımlandı. Bağlantısı olan herkes sıralayabilir.",
     publishedAsRanking:
       "O listenin sizin sıralamanız olarak yayınlandı. Akışta ikinci bir liste görünmez.",
+    picturesDropped: {
+      one: "Başka bir siteden {n} görsel eklenemedi. Yeniden denemek için tekrar yayımlayın.",
+      other: "Başka sitelerden {n} görsel eklenemedi. Yeniden denemek için tekrar yayımlayın.",
+    },
     unpublished: "Yayından kaldırıldı. Bağlantı artık çalışmıyor.",
     shareImage: "Görsel olarak paylaş",
     shareImageSub: "Bu panonun görseli ve siteye bağlantı",

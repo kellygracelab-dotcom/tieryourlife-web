@@ -4,6 +4,8 @@ export type ApiError =
   | { kind: "notSignedIn" }
   | { kind: "banned"; until: number | null }
   | { kind: "notYours" }
+  /** Staff do not judge staff: a moderator acting on the owner's or a moderator's list. */
+  | { kind: "targetIsModerator" }
   | { kind: "notFound" }
   /**
    * A section that went into another one (410 MERGED); its lists, follows and
@@ -115,6 +117,7 @@ export function parseApiError(status: number, text: string): ApiError {
       if (code === "BANNED") {
         return { kind: "banned", until: typeof body.until === "number" ? body.until : null };
       }
+      if (code === "TARGET_IS_MODERATOR") return { kind: "targetIsModerator" };
       return code === "NOT_YOURS" ? { kind: "notYours" } : { kind: "notSignedIn" };
     case 404:
       return { kind: "notFound" };

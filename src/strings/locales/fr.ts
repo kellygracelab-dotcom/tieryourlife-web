@@ -79,6 +79,8 @@ const fr: Translation = {
     bannedForever: "pour toujours",
     leftUp: "Laissée. Les signalements ne la masquent plus.",
     failedDecision: "Impossible d’enregistrer la décision : rien n’a changé.",
+    staffList:
+      "Cette liste est celle d’un membre de l’équipe : seul le propriétaire peut agir dessus.",
     tryAgain: "Réessayer",
     failed: "Impossible de charger les signalements.",
     emptyTitle: "Rien à examiner",
@@ -503,6 +505,8 @@ const fr: Translation = {
     send: "Signaler",
     cancel: "Annuler",
     failed: "Impossible d’envoyer le signalement : rien n’a été envoyé. Réessayez dans une minute.",
+    staffList:
+      "Cette liste est celle d’un membre de l’équipe : seul le propriétaire peut la signaler.",
     sentTitle: "Signalée et masquée pour vous",
     sentBody:
       "Une personne examine les signalements. D’ici là, elle peut rester visible pour les autres.",
@@ -1305,6 +1309,12 @@ const fr: Translation = {
     publishedNote: "Publiée. Toute personne ayant le lien peut la classer.",
     publishedAsRanking:
       "Publiée comme votre classement de cette liste. Aucune seconde liste n’apparaît dans le fil.",
+    picturesDropped: {
+      one: "{n} image d’un autre site n’a pas pu être ajoutée. Publiez à nouveau pour réessayer.",
+      many: "{n} images d’autres sites n’ont pas pu être ajoutées. Publiez à nouveau pour réessayer.",
+      other:
+        "{n} images d’autres sites n’ont pas pu être ajoutées. Publiez à nouveau pour réessayer.",
+    },
     unpublished: "Dépubliée. Le lien ne fonctionne plus.",
     shareImage: "Partager en image",
     shareImageSub: "Une image de ce tableau, avec un lien vers le site",

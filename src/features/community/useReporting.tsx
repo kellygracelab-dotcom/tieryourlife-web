@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ReportReason, ReportRequest } from "../../api/community";
+import { errorOf } from "../../api/errors";
 import { isEditorial } from "../../lib/editorial";
 import { strings } from "../../strings";
 import { sayOnTheSite } from "../../ui/siteNotice";
@@ -88,11 +89,16 @@ export function useReporting({ report, notify, onDone }: ReportingDeps): Reporti
   const file = (list: Reportable, request: ReportRequest, hides: Hides) => {
     if (hides.list) hideList({ id: list.id, title: list.title });
     if (hides.author) hideAuthor({ uid: list.authorUid, name: list.authorName });
-    report(list.id, request).catch(() => {
+    report(list.id, request).catch((reason: unknown) => {
       if (hides.list) showList(list.id);
       if (hides.author) showAuthor(list.authorUid);
       // The receipt would say the opposite of what happened.
       setCurrent((now) => (now?.list.id === list.id && now.state === "sent" ? null : now));
+      // A moderator reporting a list by staff: only the owner may. Sending it again would not help.
+      if (errorOf(reason).kind === "targetIsModerator") {
+        (left.current || gone.current ? sayOnTheSite : notify)({ text: strings.report.staffList });
+        return;
+      }
       if (left.current || gone.current) {
         // Wherever the reader is now: Try again sends the same report again.
         sayOnTheSite({

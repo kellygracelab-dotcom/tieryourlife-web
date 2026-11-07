@@ -267,6 +267,19 @@ describe("ModerationPage", () => {
     expect(await screen.findByText("Taken down. someone banned for a month.")).toBeInTheDocument();
   });
 
+  // Staff do not judge staff: only the owner acts on a list by the owner or a moderator.
+  it("says a list by staff is the owner's to judge, and offers no Try again", async () => {
+    load.mockResolvedValue({ reports: [queued("l1")] });
+    leaveUp.mockRejectedValue(new ApiFailure({ kind: "targetIsModerator" }));
+    open();
+    await userEvent.click(await screen.findByRole("button", { name: "Put back" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This list is by staff: only the owner can act on it.",
+    );
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(screen.getByText("List l1")).toBeInTheDocument();
+  });
+
   it("blurs covers on request and reveals one on click, remembering the choice", async () => {
     load.mockResolvedValue({ reports: [queued("l1")] });
     open();
