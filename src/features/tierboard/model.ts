@@ -4,6 +4,12 @@ export interface BoardState {
   readonly itemCount: number;
   readonly rows: Rows;
   readonly selected: number | null;
+  /**
+   * The pick is the board's own, the next card after one placed by a tap: a
+   * tap on it keeps it picked, as the hint "tap a card, then a tier" asks,
+   * where a tap on a card picked by hand puts it down.
+   */
+  readonly pickedByBoard?: boolean;
   readonly history: readonly Rows[];
 }
 
@@ -42,6 +48,7 @@ const remember = (state: BoardState, rows: Rows): BoardState => ({
   ...state,
   rows,
   selected: null,
+  pickedByBoard: false,
   history: [...state.history.slice(-(MAX_HISTORY - 1)), state.rows],
 });
 
@@ -49,8 +56,11 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
   switch (action.type) {
     case "select": {
       if (action.item !== null && !isItem(state, action.item)) return state;
+      if (action.item !== null && action.item === state.selected && state.pickedByBoard === true) {
+        return { ...state, pickedByBoard: false };
+      }
       const selected = action.item === state.selected ? null : action.item;
-      return selected === state.selected ? state : { ...state, selected };
+      return selected === state.selected ? state : { ...state, selected, pickedByBoard: false };
     }
     case "place": {
       if (!isItem(state, action.item) || !isTier(state, action.tier)) return state;
@@ -64,7 +74,8 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
             : was
           : Math.min(Math.max(0, Math.trunc(action.index)), others.length);
       // Where it already is: nothing to remember, only the pick goes.
-      if (was === at) return state.selected === null ? state : { ...state, selected: null };
+      if (was === at)
+        return state.selected === null ? state : { ...state, selected: null, pickedByBoard: false };
       const fromPool = tierOf(state, action.item) === null;
       const rows = without(state.rows, action.item).map((cards, tier) =>
         tier === action.tier ? [...cards.slice(0, at), action.item, ...cards.slice(at)] : cards,
@@ -74,9 +85,9 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
       if (was !== -1 && state.selected === action.item) return { ...next, selected: action.item };
       // Working through the pool by taps or keys, the next card picks itself,
       // so a whole list is one tap a card. A drag selects nothing.
-      return fromPool && state.selected === action.item
-        ? { ...next, selected: nextInPool(next, action.item, action.among) }
-        : next;
+      if (!fromPool || state.selected !== action.item) return next;
+      const following = nextInPool(next, action.item, action.among);
+      return { ...next, selected: following, pickedByBoard: following !== null };
     }
     case "unplace": {
       if (tierOf(state, action.item) === null) return state;
@@ -91,13 +102,16 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
         ...state,
         rows: previous,
         selected: null,
+        pickedByBoard: false,
         history: state.history.slice(0, -1),
       };
       // The card that went back to the pool comes back picked: undo and
       // another tier is two taps.
       const before = new Set(pool(state));
       const back = pool(restored).filter((item) => !before.has(item));
-      return back.length === 1 ? { ...restored, selected: back[0] ?? null } : restored;
+      return back.length === 1
+        ? { ...restored, selected: back[0] ?? null, pickedByBoard: true }
+        : restored;
     }
   }
 }

@@ -199,6 +199,24 @@ describe("board model", () => {
     expect(pool(done)).toEqual([]);
   });
 
+  it("keeps a card the board picked when it is tapped, as the hint says, and puts it down on a second tap", () => {
+    const next = run(init(2, 3), { type: "select", item: 0 }, { type: "place", item: 0, tier: 0 });
+    expect(next.selected).toBe(1);
+    const tapped = reduce(next, { type: "select", item: 1 });
+    expect(tapped.selected).toBe(1);
+    expect(reduce(tapped, { type: "place", item: 1, tier: 1 }).rows).toEqual([[0], [1]]);
+    expect(reduce(tapped, { type: "select", item: 1 }).selected).toBeNull();
+    // Another card is picked at once; one picked by hand goes down at its first tap.
+    expect(reduce(next, { type: "select", item: 2 }).selected).toBe(2);
+    expect(
+      run(init(1, 2), { type: "select", item: 0 }, { type: "select", item: 0 }).selected,
+    ).toBeNull();
+    // The card an undo brings back is the board's pick too.
+    const back = reduce(next, { type: "undo" });
+    expect(back.selected).toBe(0);
+    expect(reduce(back, { type: "select", item: 0 }).selected).toBe(0);
+  });
+
   it("picks the next card the search leaves in sight, or none, never a hidden one", () => {
     const among = [3, 7, 8];
     const next = run(

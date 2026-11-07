@@ -135,11 +135,21 @@ export async function getLimitedAppCheckToken(env: Env = readEnv()): Promise<str
   }
 }
 
+// A guest's sign-in on its way: the first visit's requests start together,
+// and each signing in on its own made one guest each (two per visitor).
+let guestSignIn: Promise<User> | undefined;
+
 // Persisted sign-ins arrive a moment after the page loads; asking before that
 // would mint a fresh guest on every visit.
 async function currentUser(on: Auth): Promise<User> {
   await on.authStateReady();
-  return on.currentUser ?? (await signInAnonymously(on)).user;
+  if (on.currentUser !== null) return on.currentUser;
+  guestSignIn ??= signInAnonymously(on)
+    .then((credential) => credential.user)
+    .finally(() => {
+      guestSignIn = undefined;
+    });
+  return guestSignIn;
 }
 
 export async function getIdToken(options: { forceRefresh?: boolean } = {}): Promise<string | null> {
@@ -167,5 +177,6 @@ export function resetFirebaseForTests(): void {
   app = undefined;
   appCheck = undefined;
   auth = undefined;
+  guestSignIn = undefined;
   storageOnEmulator = false;
 }

@@ -217,6 +217,12 @@ describe("getIdToken", () => {
     expect(mocks.signInAnonymously).not.toHaveBeenCalled();
   });
 
+  it("signs one guest in for requests that ask at the same time", async () => {
+    const [first, second] = await Promise.all([getIdToken(), getIdToken()]);
+    expect([first, second]).toEqual(["guest:false", "guest:false"]);
+    expect(mocks.signInAnonymously).toHaveBeenCalledTimes(1);
+  });
+
   it("is null when signing in fails", async () => {
     mocks.signInAnonymously.mockRejectedValue(new Error("auth down"));
     await expect(getIdToken()).resolves.toBeNull();
