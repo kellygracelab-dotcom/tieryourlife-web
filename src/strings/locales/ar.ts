@@ -1010,6 +1010,9 @@ const ar: Translation = {
     mergedFollowed: "تم دمج «{name}» في {section}. أنت تتابع {section} الآن.",
     mergedUnfollowed: "تم دمج «{name}» في {section}. ألغيت متابعة {section}.",
     mergedTryAgain: "تم دمج «{name}» في {section}. حاول مرة أخرى هناك.",
+    mergedFollowedUnnamed: "تم دمج «{name}» في قسم آخر. أنت تتابعه الآن.",
+    mergedUnfollowedUnnamed: "تم دمج «{name}» في قسم آخر. ألغيت متابعته.",
+    mergedTryAgainUnnamed: "تم دمج «{name}» في قسم آخر. حاول مرة أخرى هناك.",
     followLimit:
       "وصلت إلى أقصى عدد من الأقسام والمواضيع التي يمكنك متابعتها. ألغِ متابعة بعضها أولًا.",
     followSignInBody:

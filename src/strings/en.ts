@@ -836,6 +836,9 @@ export const en = {
     mergedFollowed: "“{name}” was merged into {section}. You follow {section} now.",
     mergedUnfollowed: "“{name}” was merged into {section}. You no longer follow {section}.",
     mergedTryAgain: "“{name}” was merged into {section}. Try again there.",
+    mergedFollowedUnnamed: "“{name}” was merged into another section. You follow that one now.",
+    mergedUnfollowedUnnamed: "“{name}” was merged into another section. You no longer follow it.",
+    mergedTryAgainUnnamed: "“{name}” was merged into another section. Try again there.",
     followLimit: "You follow as many sections and topics as you can. Unfollow some first.",
     followSignInBody:
       "Following keeps new lists from sections and topics you like at the top of your feed.",

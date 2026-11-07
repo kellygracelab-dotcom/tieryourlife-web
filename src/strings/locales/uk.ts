@@ -935,6 +935,9 @@ const uk: Translation = {
     mergedFollowed: "«{name}» обʼєднано з розділом «{section}». Тепер ви підписані на «{section}».",
     mergedUnfollowed: "«{name}» обʼєднано з розділом «{section}». Ви відписалися від «{section}».",
     mergedTryAgain: "«{name}» обʼєднано з розділом «{section}». Спробуйте ще раз там.",
+    mergedFollowedUnnamed: "«{name}» обʼєднано з іншим розділом. Тепер ви підписані на нього.",
+    mergedUnfollowedUnnamed: "«{name}» обʼєднано з іншим розділом. Ви відписалися від нього.",
+    mergedTryAgainUnnamed: "«{name}» обʼєднано з іншим розділом. Спробуйте ще раз там.",
     followLimit: "Ви вже підписані на максимум розділів і тем. Спершу відпишіться від деяких.",
     followSignInBody:
       "Із підписками нові списки з розділів і тем, які вам подобаються, стоять у стрічці першими.",

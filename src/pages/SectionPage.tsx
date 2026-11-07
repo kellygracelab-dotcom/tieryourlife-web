@@ -2,13 +2,14 @@ import { useState } from "react";
 import { PageTitle } from "../app/pageTitle";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { useSession } from "../app/session";
-import type { Topic } from "../api/sections";
+import type { SectionStats, Topic } from "../api/sections";
 import { isCategory } from "../api/types";
 import { FollowButton } from "../features/community/FollowButton";
 import { FeedGrid } from "../features/feed/FeedGrid";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
 import {
   builtInSection,
+  sectionOf,
   sectionPath,
   topicPath,
   waitingPath,
@@ -44,9 +45,10 @@ interface SectionViewProps {
   load: LoadFeed | undefined;
   store: SectionsStore;
   topics: TopicDeps;
+  loadOne: (id: string) => Promise<SectionStats>;
 }
 
-function SectionView({ section, load, store, topics }: SectionViewProps) {
+function SectionView({ section, load, store, topics, loadOne }: SectionViewProps) {
   const [sort, setSort] = useSort();
   const feed = useFeed({ category: section.id, sort }, load);
   const { approved, waiting, settled } = useSectionTopics(section, topics);
@@ -63,10 +65,12 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
       // other section's now, so the page goes there, as a reload would take it.
       if (refused.kind === "merged" && refused.into !== null) {
         const into = refused.into;
+        const held =
+          heldSection(store.get(), into) ?? (isCategory(into) ? builtInSection(into) : null);
         store.invalidate();
         const to = refused.topic === null ? sectionPath(into) : topicPath(into, refused.topic);
         void navigate(to, { replace: true });
-        carryOver(into, following);
+        carryOver(into, following, held?.name ?? null);
         return;
       }
       failed(refused, following);
@@ -74,19 +78,31 @@ function SectionView({ section, load, store, topics }: SectionViewProps) {
   // The press is not lost: it goes to the section this one went into, as the
   // app's follow of a merged id does (the backend moved this one's followers
   // there, so an Unfollow leaves that one), and the site says so, since this
-  // page has given way to that one's.
-  const carryOver = (into: string, following: boolean) => {
-    const target =
-      heldSection(store.get(), into) ?? (isCategory(into) ? builtInSection(into) : null);
-    const words = { name: section.name, section: target?.name ?? into };
-    void store.setFollowing(into, following).then((again) => {
+  // page has given way to that one's. A section newer than the ones this site
+  // read, or a hidden one, is asked about by its id for its name; without
+  // one the words name no section, never its id (QA W54).
+  const carryOver = (into: string, following: boolean, held: string | null) => {
+    const named =
+      held !== null
+        ? Promise.resolve(held)
+        : loadOne(into).then(
+            (stats) => sectionOf(stats).name,
+            () => null,
+          );
+    void Promise.all([store.setFollowing(into, following), named]).then(([again, name]) => {
+      const say = (known: string, unnamed: string) =>
+        fill(name === null ? unnamed : known, { name: section.name, section: name ?? "" });
       if (again !== null) {
-        sayOnTheSite({ text: fill(strings.sections.mergedTryAgain, words) });
+        sayOnTheSite({
+          text: say(strings.sections.mergedTryAgain, strings.sections.mergedTryAgainUnnamed),
+        });
       } else if (following) {
-        sayOnTheSite({ text: fill(strings.sections.mergedFollowed, words) });
+        sayOnTheSite({
+          text: say(strings.sections.mergedFollowed, strings.sections.mergedFollowedUnnamed),
+        });
       } else {
         sayOnTheSite({
-          text: fill(strings.sections.mergedUnfollowed, words),
+          text: say(strings.sections.mergedUnfollowed, strings.sections.mergedUnfollowedUnnamed),
           action: {
             text: strings.sections.undo,
             onClick: () => void store.setFollowing(into, true),
@@ -210,7 +226,13 @@ export function SectionPage({
         section.status === "pending" ? (
           <Navigate to={waitingPath(section.id)} replace />
         ) : (
-          <SectionView section={section} load={load} store={store} topics={topics} />
+          <SectionView
+            section={section}
+            load={load}
+            store={store}
+            topics={topics}
+            loadOne={loadOne}
+          />
         )
       }
     </SectionRoute>

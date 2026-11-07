@@ -924,6 +924,11 @@ const fr: Translation = {
     mergedFollowed: "« {name} » a été fusionnée avec {section}. Vous suivez maintenant {section}.",
     mergedUnfollowed: "« {name} » a été fusionnée avec {section}. Vous ne suivez plus {section}.",
     mergedTryAgain: "« {name} » a été fusionnée avec {section}. Réessayez là-bas.",
+    mergedFollowedUnnamed:
+      "« {name} » a été fusionnée avec une autre rubrique. Vous suivez maintenant celle-ci.",
+    mergedUnfollowedUnnamed:
+      "« {name} » a été fusionnée avec une autre rubrique. Vous ne la suivez plus.",
+    mergedTryAgainUnnamed: "« {name} » a été fusionnée avec une autre rubrique. Réessayez là-bas.",
     followLimit:
       "Vous suivez déjà autant de rubriques et de thèmes que possible. Cessez d’en suivre quelques-uns d’abord.",
     followSignInBody:

@@ -893,6 +893,12 @@ const de: Translation = {
     mergedUnfollowed:
       "„{name}“ wurde mit {section} zusammengeführt. Du folgst {section} nicht mehr.",
     mergedTryAgain: "„{name}“ wurde mit {section} zusammengeführt. Versuch es dort noch einmal.",
+    mergedFollowedUnnamed:
+      "„{name}“ wurde mit einer anderen Rubrik zusammengeführt. Du folgst jetzt dieser Rubrik.",
+    mergedUnfollowedUnnamed:
+      "„{name}“ wurde mit einer anderen Rubrik zusammengeführt. Du folgst ihr nicht mehr.",
+    mergedTryAgainUnnamed:
+      "„{name}“ wurde mit einer anderen Rubrik zusammengeführt. Versuch es dort noch einmal.",
     followLimit:
       "Du folgst schon so vielen Rubriken und Themen, wie es geht. Folge zuerst ein paar nicht mehr.",
     followSignInBody:

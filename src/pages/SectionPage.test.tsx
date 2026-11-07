@@ -257,6 +257,40 @@ describe("SectionPage", () => {
     await waitFor(() => expect(sectionsDeps.follow).toHaveBeenLastCalledWith("games"));
   });
 
+  // QA W54: a section newer than the site's list, or a hidden one, was named by its id.
+  it("names a section this site does not hold yet by asking for it, and never by its id", async () => {
+    sectionsDeps.follow.mockImplementation(async (id) => {
+      if (id === "anime") throw new ApiFailure({ kind: "merged", into: "s-new1", topic: null });
+      return { following: true };
+    });
+    loadOne.mockResolvedValue(stats("s-new1", { name: "Japanese animation", hidden: true }));
+    const router = open("/s/anime");
+    await tiles();
+    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/s/s-new1"));
+    await waitFor(() =>
+      expect(siteNotice()?.text).toBe(
+        "“Anime” was merged into Japanese animation. You follow Japanese animation now.",
+      ),
+    );
+  });
+
+  it("says another section, not its id, when the one it went into cannot be read", async () => {
+    sectionsDeps.follow.mockImplementation(async (id) => {
+      if (id === "anime") throw new ApiFailure({ kind: "merged", into: "s-new1", topic: null });
+      return { following: true };
+    });
+    loadOne.mockRejectedValue(new ApiFailure({ kind: "offline" }));
+    open("/s/anime");
+    await tiles();
+    await userEvent.click(screen.getByRole("button", { name: "Follow" }));
+    await waitFor(() =>
+      expect(siteNotice()?.text).toBe(
+        "“Anime” was merged into another section. You follow that one now.",
+      ),
+    );
+  });
+
   it("says to press again there when the carried-over follow does not go through", async () => {
     sectionsDeps.follow.mockImplementation(async (id) => {
       throw id === "anime"

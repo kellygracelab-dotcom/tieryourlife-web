@@ -865,6 +865,12 @@ const ja: Translation = {
     mergedUnfollowed:
       "「{name}」は「{section}」に統合されました。「{section}」のフォローを解除しました。",
     mergedTryAgain: "「{name}」は「{section}」に統合されました。そちらでもう一度お試しください。",
+    mergedFollowedUnnamed:
+      "「{name}」は別のセクションに統合されました。そのセクションをフォローしています。",
+    mergedUnfollowedUnnamed:
+      "「{name}」は別のセクションに統合されました。そのセクションのフォローを解除しました。",
+    mergedTryAgainUnnamed:
+      "「{name}」は別のセクションに統合されました。そちらでもう一度お試しください。",
     followLimit:
       "フォローできるセクションとトピックの上限に達しました。先にいくつかフォローを解除してください。",
     followSignInBody:

@@ -905,6 +905,10 @@ const ptBR: Translation = {
     mergedFollowed: "“{name}” foi mesclada a {section}. Agora você segue {section}.",
     mergedUnfollowed: "“{name}” foi mesclada a {section}. Você deixou de seguir {section}.",
     mergedTryAgain: "“{name}” foi mesclada a {section}. Tente de novo lá.",
+    mergedFollowedUnnamed: "“{name}” foi mesclada a outra seção. Agora você segue essa seção.",
+    mergedUnfollowedUnnamed:
+      "“{name}” foi mesclada a outra seção. Você deixou de seguir essa seção.",
+    mergedTryAgainUnnamed: "“{name}” foi mesclada a outra seção. Tente de novo lá.",
     followLimit:
       "Você já segue o máximo de seções e temas possível. Deixe de seguir alguns primeiro.",
     followSignInBody: "Seguir seções e temas deixa as novas listas deles no topo do seu feed.",
