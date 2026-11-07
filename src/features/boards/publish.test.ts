@@ -177,6 +177,23 @@ describe("an own photo on the cover", () => {
     expect(JSON.stringify(request)).not.toContain("users%2F");
   });
 
+  it("goes by the id the account named when no card shows it, as a cover from the phone's gallery does", () => {
+    const shown =
+      "https://firebasestorage.googleapis.com/v0/b/x/o/users%2Fu%2Fpictures%2Fgallery-1?alt=media";
+    const request = publishRequestOf({
+      ...board(),
+      coverImageUrl: shown,
+      coverImageUrls: [shown],
+      coverPictureId: "gallery-1",
+    })!;
+    expect(request.coverPictureId).toBe("gallery-1");
+    expect(request.coverImageUrl).toBeNull();
+    expect(JSON.stringify(request)).not.toContain("users%2F");
+    // Not found here yet, it still goes by id.
+    const unfound = publishRequestOf({ ...board(), coverPictureId: "gallery-1" })!;
+    expect(unfound.coverPictureId).toBe("gallery-1");
+  });
+
   it("stays out of a collage, which keeps the rest", () => {
     const request = publishRequestOf({ ...board(), coverImageUrls: [own, "https://x/p.jpg"] })!;
     expect(request.coverPictureId).toBeNull();

@@ -75,6 +75,8 @@ export interface KeptBoard {
   category: string | null;
   coverImageUrl: string | null;
   coverImageUrls: string[];
+  /** The cover as one of the person's own photos, by id; absent from an older account. */
+  coverPictureId?: string | null;
   authorName: string | null;
   publishedId: string | null;
   deletedAt: number | null;
@@ -96,6 +98,8 @@ export interface KeepBoardRequest {
   category: string | null;
   coverImageUrl: string | null;
   coverImageUrls: string[];
+  /** Always said: null when the cover is not an own photo, so the account drops an old one. */
+  coverPictureId: string | null;
   authorName: string | null;
   publishedId: string | null;
   deletedAt: number | null;

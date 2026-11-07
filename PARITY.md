@@ -207,6 +207,13 @@ code is `src/features/play`.
   gets 404. The site opens the list page for its author, says there that it
   waits for a moderator, and hands out no link (`ListPage.tsx`); `/me` gives it
   no Copy link (2.9, 2.10, 3.7).
+- A cover of the person's own photo (QA A13): from proxy #92 the account
+  keeps it by id (`coverPictureId` on `PUT /boards`, left out of `GET` when
+  there is none), and the cover term of the fingerprint is
+  `coverPictureId ?? coverImageUrl`, as `pictureOf` is for a card. The site
+  sends the id for a cover of one of its cards' own photos or the one the
+  account named, and `null` otherwise; it finds the address the way it
+  does a card's.
 
 ### Limits
 

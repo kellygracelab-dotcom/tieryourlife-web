@@ -1,4 +1,5 @@
 import type { ApiClient } from "./client";
+import { ApiFailure } from "./errors";
 import { itemsOf, tiersOf } from "./lists";
 import type { PublishedItem, PublishedList, PublishedTier } from "./types";
 
@@ -59,6 +60,33 @@ export interface SavedRanking {
   claimToken: string;
 }
 
+/** How long the server asks a second save to wait (Retry-After on 429 BUSY). */
+export const BUSY_WAIT_MS = 2000;
+
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * One save at a time per person (429 BUSY, QA S32): a save sent within the
+ * pause after another waits it out once, so a quick Finish again is not
+ * shown as a failure. A second refusal is the answer.
+ */
+export async function onceMoreWhenBusy<T>(
+  save: () => Promise<T>,
+  wait: (ms: number) => Promise<void> = pause,
+): Promise<T> {
+  try {
+    return await save();
+  } catch (reason) {
+    const busy =
+      reason instanceof ApiFailure &&
+      reason.error.kind === "tooManyRequests" &&
+      reason.error.code === "BUSY";
+    if (!busy) throw reason;
+    await wait(BUSY_WAIT_MS);
+    return save();
+  }
+}
+
 /**
  * `version` is the list's updatedAt as the rows were placed on it: the
  * server refuses them (409 LIST_CHANGED) once the list was republished since.
@@ -70,14 +98,16 @@ export function keepRanking(
   version?: number,
   tierLabels?: TierWords,
 ): Promise<SavedRanking> {
-  return client.request<SavedRanking>("POST", "/api/rank", {
-    body: {
-      listId,
-      rows: rows.map((row) => [...row]),
-      ...(version === undefined ? {} : { version }),
-      ...(tierLabels === undefined ? {} : { tierLabels: tierWordsToSend(tierLabels) }),
-    },
-  });
+  return onceMoreWhenBusy(() =>
+    client.request<SavedRanking>("POST", "/api/rank", {
+      body: {
+        listId,
+        rows: rows.map((row) => [...row]),
+        ...(version === undefined ? {} : { version }),
+        ...(tierLabels === undefined ? {} : { tierLabels: tierWordsToSend(tierLabels) }),
+      },
+    }),
+  );
 }
 
 /** Read as an account when there is one, so the answer can say whether it is yours. */
@@ -126,12 +156,14 @@ export function rearrangeRanking(
   rows: readonly (readonly number[])[],
   tierLabels?: TierWords,
 ): Promise<{ code: string }> {
-  return client.request<{ code: string }>("PUT", `/api/rank/${encodeURIComponent(code)}`, {
-    body: {
-      rows: rows.map((row) => [...row]),
-      ...(tierLabels === undefined ? {} : { tierLabels: tierWordsToSend(tierLabels) }),
-    },
-  });
+  return onceMoreWhenBusy(() =>
+    client.request<{ code: string }>("PUT", `/api/rank/${encodeURIComponent(code)}`, {
+      body: {
+        rows: rows.map((row) => [...row]),
+        ...(tierLabels === undefined ? {} : { tierLabels: tierWordsToSend(tierLabels) }),
+      },
+    }),
+  );
 }
 
 export function claimKept(

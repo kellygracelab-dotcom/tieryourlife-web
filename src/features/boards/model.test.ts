@@ -240,6 +240,36 @@ describe("cards", () => {
     expect(removeItem(collage, poster!, 3).coverImageUrls).toEqual(collage.coverImageUrls);
   });
 
+  // QA A13: a cover of the person's own photo goes by that photo's id.
+  it("name a cover of a card's own photo by its id, and drop the id when the card goes", () => {
+    const { board: b0, next } = board();
+    const own = "https://x/o/users%2Fu%2Fpictures%2Fpic-1?alt=media";
+    const b1 = addToPool(
+      b0,
+      [
+        { title: "holiday", imageUrl: own, pictureId: "pic-1" },
+        { title: "poster", imageUrl: "https://x/p.jpg" },
+      ],
+      1,
+      next,
+    );
+    const [holiday] = liveItems(b1).map((item) => item.uid);
+    const covered = setCover(b1, [own], 2);
+    expect(covered.coverPictureId).toBe("pic-1");
+    expect(setCover(covered, ["https://x/p.jpg"], 3).coverPictureId).toBeNull();
+    expect(setCover(covered, [own, "https://x/p.jpg"], 3).coverPictureId).toBeNull();
+    const gone = removeItem(covered, holiday!, 3);
+    expect(gone.coverPictureId).toBeNull();
+    expect(
+      putBack(
+        gone,
+        covered.items.find((item) => item.uid === holiday)!,
+        4,
+        [own],
+      ).coverPictureId,
+    ).toBe("pic-1");
+  });
+
   it("bring their picture back into the cover on Undo, in its old place", () => {
     const { board: b0, next } = board();
     const b1 = addToPool(

@@ -6,8 +6,10 @@ import {
   loadMyRankings,
   loadRanking,
   keepRanking,
+  onceMoreWhenBusy,
   rearrangeRanking,
 } from "./rank";
+import { ApiFailure } from "./errors";
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -143,5 +145,32 @@ describe("rank", () => {
     await expect(loadMyRankings(client)).resolves.toEqual(page);
 
     expect(request).toHaveBeenCalledWith("GET", "/api/me/rankings");
+  });
+
+  // QA S32: one save at a time per person; a quick second save waits the pause out once.
+  describe("a save the server asks to wait", () => {
+    const busy = () => new ApiFailure({ kind: "tooManyRequests", code: "BUSY" });
+
+    it("is sent once more after the pause, and its answer is the answer", async () => {
+      const save = vi
+        .fn()
+        .mockRejectedValueOnce(busy())
+        .mockResolvedValueOnce({ code: "abcdefgh" });
+      const wait = vi.fn(() => Promise.resolve());
+      await expect(onceMoreWhenBusy(save, wait)).resolves.toEqual({ code: "abcdefgh" });
+      expect(wait).toHaveBeenCalledWith(2000);
+      expect(save).toHaveBeenCalledTimes(2);
+    });
+
+    it("is refused for good the second time, and anything else is not tried again", async () => {
+      const wait = vi.fn(() => Promise.resolve());
+      const twice = vi.fn().mockRejectedValue(busy());
+      await expect(onceMoreWhenBusy(twice, wait)).rejects.toBeInstanceOf(ApiFailure);
+      expect(twice).toHaveBeenCalledTimes(2);
+      const other = new ApiFailure({ kind: "tooManyRequests", code: "TOO_MANY" });
+      const once = vi.fn().mockRejectedValue(other);
+      await expect(onceMoreWhenBusy(once, wait)).rejects.toBe(other);
+      expect(once).toHaveBeenCalledTimes(1);
+    });
   });
 });

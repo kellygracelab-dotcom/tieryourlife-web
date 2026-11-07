@@ -658,9 +658,25 @@ describe("PUT and DELETE /api/rank/{code} — the owner's own", () => {
     const body = { rows: [[0], []], tierLabels: [null, "Meh"] };
     assert.equal((await call(deps, "PUT", "/api/rank/abcdefgh", body)).status, 200);
     assert.deepEqual(labels(), ["S", "Meh"]);
-    // The /r/ page's Edit sends rows alone.
+    // The /r/ page's Edit sends rows alone; the pause between saves is over.
+    table("rankQuota").clear();
     assert.equal((await call(deps, "PUT", "/api/rank/abcdefgh", { rows: [[1], []] })).status, 200);
     assert.deepEqual(labels(), ["S", "Meh"]);
+  });
+
+  it("lets one of several changes sent at once through, and asks the rest to wait (QA S32)", async () => {
+    const { deps, table } = setup(PERSON);
+    table("rankings").set("abcdefgh", ranking("person", false));
+    const answers = await Promise.all(
+      Array.from({ length: 5 }, (_, n) =>
+        call(deps, "PUT", "/api/rank/abcdefgh", { rows: [[n % 3], []] }),
+      ),
+    );
+    assert.deepEqual(answers.map((answer) => answer.status).sort(), [200, 429, 429, 429, 429]);
+    const busy = answers.find((answer) => answer.status === 429)!;
+    assert.deepEqual(busy.body, { error: "One at a time", code: "BUSY" });
+    assert.equal(busy.headers["Retry-After"], "2");
+    assert.equal(typeof table("rankQuota").get("person")?.lastWriteAt, "number");
   });
 
   it("lets a banned owner neither re-arrange nor re-word it, but still delete it", async () => {

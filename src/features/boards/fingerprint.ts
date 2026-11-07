@@ -33,7 +33,8 @@ export function fingerprintText(board: Board): string {
     board.title,
     board.displayMode,
     board.category,
-    board.coverImageUrl,
+    // An own photo goes by its id, as a card's does (pictureOf): its address is this browser's.
+    board.coverPictureId ?? board.coverImageUrl,
     // The phone keeps a collage as lines in one column, and nothing at all for fewer than two.
     board.coverImageUrls.length >= 2 ? board.coverImageUrls.join("\n") : null,
     board.authorName,

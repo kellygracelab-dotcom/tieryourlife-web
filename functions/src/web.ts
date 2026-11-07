@@ -459,6 +459,8 @@ async function claimRanking(
   response.status(200).json({ code });
 }
 
+const BUSY = { ok: false, status: 429, error: "One at a time", code: "BUSY" } as const;
+
 async function editRanking(
   db: Firestore,
   body: unknown,
@@ -474,8 +476,10 @@ async function editRanking(
   const ban = await banOn(db, identity);
   if (isBanned(ban, Date.now())) return void response.status(403).json(bannedAnswer(ban));
   const ref = db.collection(RANKINGS).doc(code);
+  const quota = db.collection(QUOTA).doc(identity.uid);
+  const now = Date.now();
   const decision = await db.runTransaction(async (transaction) => {
-    const doc = await transaction.get(ref);
+    const [doc, mark] = await Promise.all([transaction.get(ref), transaction.get(quota)]);
     if (!doc.exists) return null;
     const ranking = doc.data() as RankingDocument;
     const owner = decideEditor(ranking, identity);
@@ -485,15 +489,20 @@ async function editRanking(
     // A Finish again from the list page may bring a reader's tier words; the /r/ page's Edit brings none.
     const words = decideTierLabels(body, ranking.snapshot.tiers.length);
     if (!words.ok) return words;
+    // One save at a time per person, as for a new ranking: a change takes the
+    // same mark, so a burst of them goes through one by one (QA S32).
+    if (tooSoon((mark.get("lastWriteAt") as number | undefined) ?? null, now)) return BUSY;
     const snapshot = withTierLabels(ranking.snapshot, words.labels);
     transaction.update(ref, {
       rows: toStoredRows(edit.rows),
       ...(snapshot === ranking.snapshot ? {} : { snapshot }),
       updatedAt: FieldValue.serverTimestamp(),
     });
+    transaction.set(quota, { lastWriteAt: now }, { merge: true });
     return edit;
   });
   if (decision === null) return notFound(response, "No such ranking");
+  if (decision === BUSY) response.setHeader("Retry-After", "2");
   if (!decision.ok) {
     return void response
       .status(decision.status)

@@ -52,9 +52,12 @@ export function coverOf(
     liveItems(board).find((item) => item.pictureId !== null && item.imageUrl === url) ?? null;
   const [only] = board.coverImageUrls;
   if (board.coverImageUrls.length === 1 && only !== undefined) {
-    const own = ownCard(only);
-    if (own !== null)
-      return { coverImageUrl: null, coverPictureId: own.pictureId, coverImageUrls: [] };
+    const own = ownCard(only)?.pictureId ?? board.coverPictureId;
+    if (own !== null) return { coverImageUrl: null, coverPictureId: own, coverImageUrls: [] };
+  }
+  // A cover the account named by id whose address this browser has not found yet.
+  if (board.coverImageUrls.length === 0 && board.coverPictureId !== null) {
+    return { coverImageUrl: null, coverPictureId: board.coverPictureId, coverImageUrls: [] };
   }
   const urls = board.coverImageUrls.filter(
     (url) => url.startsWith("https://") && ownCard(url) === null && !isPrivatePicture(url),

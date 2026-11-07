@@ -17,6 +17,35 @@ describe("parseBoard", () => {
     expect(parseBoard(without)?.anonymous).toBe(false);
   });
 
+  // QA A13: the account names an own-photo cover by id, and leaves the field out when there is none.
+  it("reads the cover's own photo by id, none when the account leaves it out, and finds it for an older board", () => {
+    const board = newBoard("b1", "Films", 1, uids());
+    expect(parseBoard({ ...board, coverPictureId: "gallery-1" })?.coverPictureId).toBe("gallery-1");
+    const { coverPictureId: _left, ...without } = board;
+    expect(parseBoard(without)?.coverPictureId).toBeNull();
+    expect(parseBoard({ ...board, coverPictureId: "../x" })?.coverPictureId).toBeNull();
+    const pool = poolTier(board)!;
+    const own = "https://x/o/users%2Fu%2Fpictures%2Fpic-1?alt=media";
+    const older = {
+      ...without,
+      coverImageUrl: own,
+      coverImageUrls: [own],
+      items: [
+        {
+          uid: "i1",
+          pictureId: "pic-1",
+          tierUid: pool.uid,
+          position: 0,
+          title: "Holiday",
+          imageUrl: own,
+          source: "MANUAL",
+          deletedAt: null,
+        },
+      ],
+    };
+    expect(parseBoard(older)?.coverPictureId).toBe("pic-1");
+  });
+
   it("reads a picture's credit as the backend keeps it, and none where there is none", () => {
     const board = newBoard("b1", "Films", 1, uids());
     const pool = poolTier(board)!;
