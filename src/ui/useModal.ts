@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { useBackLayer } from "./backLayers";
 import { FOCUSABLE } from "./focus";
 
@@ -39,7 +39,7 @@ export function useModal(
     if (held.isConnected && (active === null || active === document.body)) held.focus();
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const dialog = box.current;
     const onFocusIn = (event: FocusEvent) => {
