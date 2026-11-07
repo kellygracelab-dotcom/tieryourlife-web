@@ -1,7 +1,7 @@
 import type { Translation } from "../index";
 
 // The terms are the phone app's own (its values-tr): sıralama, kart, seviye,
-// pano, «Benimki / Onun sıralaması», «Takip et / Takiptesiniz», bildirim,
+// pano, «Benimki / Onun sıralaması», «Takip et / Takiptesiniz», şikayet,
 // yasak, the report reasons, the names of the five tiers. The app mixes "sen"
 // and "siz"; here it is "siz" throughout. A name never takes a suffix (the
 // app's «{name} kullanıcısından»), because the suffix would depend on the
@@ -38,14 +38,14 @@ const tr: Translation = {
     title: "Şikayetler",
     notAvailable: "Bu sayfa kullanılamıyor.",
     listCount: { other: "{n} liste" },
-    reportCount: { other: "{n} bildirim" },
+    reportCount: { other: "{n} şikayet" },
     nothingPending: "Bekleyen yok",
     blurCovers: "Kapakları bulanıklaştır",
     revealCover: "Bu kapağı göster",
     cover: "Kapak",
     noCover: "Kapak yok",
     hiddenPill: "Beklerken gizli",
-    alreadyKept: "Bir kez korundu, artık bildirimler onu gizlemiyor",
+    alreadyKept: "Bir kez korundu, artık şikayetler onu gizlemiyor",
     moreNotes: { other: "{n} not daha göster" },
     today: "bugün",
     yesterday: "dün",
@@ -73,10 +73,10 @@ const tr: Translation = {
     bannedThreeMonths: "üç aylık",
     bannedSixMonths: "altı aylık",
     bannedForever: "sonsuza dek",
-    leftUp: "Yayında kaldı. Bildirimler artık onu gizlemiyor.",
+    leftUp: "Yayında kaldı. Şikayetler artık onu gizlemiyor.",
     failedDecision: "Karar kaydedilemedi: hiçbir şey değişmedi.",
     tryAgain: "Tekrar deneyin",
-    failed: "Bildirimler yüklenemedi.",
+    failed: "Şikayetler yüklenemedi.",
     emptyTitle: "İncelenecek bir şey yok",
     emptyBody: "Topluluk listeleriyle ilgili şikayetler buraya gelir.",
   },
@@ -474,7 +474,7 @@ const tr: Translation = {
     byHand: "Her şikayeti bir kişi okur. Yeterince birikirse liste o ana kadar gizlenir.",
     send: "Bildir",
     cancel: "İptal",
-    failed: "Bildirim gönderilemedi: hiçbir şey gönderilmedi. Bir dakika sonra tekrar deneyin.",
+    failed: "Şikayet gönderilemedi: hiçbir şey gönderilmedi. Bir dakika sonra tekrar deneyin.",
     sentTitle: "Bildirildi ve sizin için gizlendi",
     sentBody: "Şikayetleri bir kişi inceler. O ana kadar başkaları hâlâ görebilir.",
     done: "Tamam",

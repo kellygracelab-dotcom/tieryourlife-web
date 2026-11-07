@@ -267,4 +267,20 @@ describe("the dictionaries", () => {
       expect(board(dictionary).filter(([, text]) => /(^|\P{L})тир/iu.test(text))).toEqual([]);
     }
   });
+
+  // QA W55: the app's words for a ranking and a report, everywhere: de
+  // Rangliste, ja 通報, tr şikayet (the verb stays bildir, as in the app).
+  it("call a ranking and a report what the app calls them", () => {
+    const retired: [string, RegExp][] = [
+      ["de", /Reihung/u],
+      ["ja", /報告/u],
+      ["tr", /(^|\P{L})bildirim/iu],
+    ];
+    for (const [tag, word] of retired) {
+      const texts = textsOf(files[`./locales/${tag}.ts`]!.default);
+      expect(
+        texts.filter(([, text]) => word.test(text)).map(([path]) => `${tag}: ${path}`),
+      ).toEqual([]);
+    }
+  });
 });
