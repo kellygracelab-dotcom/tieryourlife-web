@@ -3,7 +3,7 @@ import { FieldValue, getFirestore, Timestamp, type Firestore } from "firebase-ad
 import type { Request } from "firebase-functions/https";
 import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
-import { requireAppCheck } from "./appCheck";
+import { requireAppCheck, requireFreshAppCheck } from "./appCheck";
 import { bannedAnswer, isBanned, readBan, type Ban } from "./bans";
 import { optionalAccount, requireAccount, requireUser, type Identity } from "./auth";
 import { getStorage } from "firebase-admin/storage";
@@ -87,6 +87,8 @@ const methodNotAllowed = (response: Response): void =>
 export interface WebDeps {
   db: () => Firestore;
   appCheck: (request: Request, response: Response) => Promise<boolean>;
+  /** The same, for a request that costs something: the token is spent as it is checked (QA S25). */
+  freshAppCheck: (request: Request, response: Response) => Promise<boolean>;
   user: (request: Request, response: Response) => Promise<Identity | null>;
   account: (request: Request, response: Response) => Promise<Identity | null>;
   viewer: (request: Request) => Promise<Identity | null>;
@@ -103,6 +105,7 @@ const bucketPictures = storagePictures(() => getStorage().bucket());
 const production: WebDeps = {
   db: () => getFirestore(),
   appCheck: requireAppCheck,
+  freshAppCheck: requireFreshAppCheck,
   user: requireUser,
   account: requireAccount,
   viewer: optionalAccount,
@@ -187,7 +190,7 @@ export async function route(
       return await readRanking(deps.db(), response, code, await deps.viewer(request));
     }
     if (request.method === "POST" && code === undefined) {
-      if (!(await deps.appCheck(request, response))) return;
+      if (!(await deps.freshAppCheck(request, response))) return;
       const identity = await deps.user(request, response);
       if (!identity) return;
       const appCheckToken = request.header("X-Firebase-AppCheck") ?? null;

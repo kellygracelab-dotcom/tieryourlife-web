@@ -42,6 +42,25 @@ function clientWith(
 const headersOf = (call: Call) => call.init.headers as Record<string, string>;
 
 describe("createApiClient", () => {
+  // QA S25: a new ranking goes with a one-use token, fetched afresh for every send.
+  it("sends a one-use App Check token where asked, a new one on the retry, and the usual one elsewhere", async () => {
+    const { fetch, calls } = stubFetch([refused(401, { code: "UNAUTHENTICATED" }), ok({}), ok({})]);
+    let n = 0;
+    const client = createApiClient({
+      fetch,
+      appCheckToken: async () => "session-token",
+      limitedAppCheckToken: async () => `one-use-${++n}`,
+      idToken: async () => "id-token",
+    });
+    await client.request("POST", "/api/rank", { body: {}, appCheck: "limited" });
+    await client.request("GET", "/api/rank/abcdefgh");
+    expect(calls.map((call) => headersOf(call)["X-Firebase-AppCheck"])).toEqual([
+      "one-use-1",
+      "one-use-2",
+      "session-token",
+    ]);
+  });
+
   it("sends both tokens, a JSON body and a relative url", async () => {
     const { client, calls } = clientWith([ok({ id: "abc" }, 201)]);
 

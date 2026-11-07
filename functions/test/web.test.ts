@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
-import { requireAppCheck, skipsAppCheck } from "../src/appCheck";
+import { requireAppCheck, requireFreshAppCheck, skipsAppCheck } from "../src/appCheck";
 import { optionalAccount, requireAccount, requireUser, type DecodedToken } from "../src/auth";
 import {
   appCheckKeyOf,
@@ -210,6 +210,7 @@ function setup(who: { uid: string; isAnonymous: boolean } | null = GUEST, codes:
   const deps: WebDeps = {
     db: () => store.db,
     appCheck: async () => true,
+    freshAppCheck: async () => true,
     user: async (_request, response) => {
       if (who !== null) return who;
       response.status(401).json({ code: "UNAUTHENTICATED" });
@@ -477,13 +478,15 @@ describe("POST /api/rank — Finish", () => {
       (await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[0], []] })).status,
       401,
     );
-    const blocked: WebDeps = {
-      ...deps,
-      appCheck: async (_request, response) => {
-        response.status(401).json({ code: "APP_UNVERIFIED" });
-        return false;
-      },
+    const refuse = async (
+      _request: unknown,
+      response: { status(n: number): { json(body: unknown): unknown } },
+    ) => {
+      response.status(401).json({ code: "APP_UNVERIFIED" });
+      return false;
     };
+    // A new ranking spends its token: the fresh check is the one asked (QA S25).
+    const blocked: WebDeps = { ...deps, freshAppCheck: refuse };
     const answer = await call(blocked, "POST", "/api/rank", { listId: LIST_ID, rows: [[0], []] });
     assert.deepEqual(answer.body, { code: "APP_UNVERIFIED" });
     assert.equal(table("rankUsage").size, 0);
@@ -1094,6 +1097,78 @@ describe("the token checks", () => {
         isAnonymous: false,
       },
     );
+  });
+
+  // QA S25: a new ranking's token is spent as it is checked, so it cannot be sent again.
+  it("requireFreshAppCheck lets a token through once, and refuses it spent, missing or bad", async () => {
+    const spentOnes = new Set<string>();
+    const spend = async (token: string) => {
+      if (token !== "fresh") throw new Error("refused");
+      const alreadyConsumed = spentOnes.has(token);
+      spentOnes.add(token);
+      return { alreadyConsumed };
+    };
+    const verify = async (token: string) => {
+      if (token !== "fresh") throw new Error("refused");
+    };
+    const env = { GCLOUD_PROJECT: "tieryourlife" };
+    const quiet = () => undefined;
+    const fresh = { "X-Firebase-AppCheck": "fresh" };
+    assert.equal(
+      await requireFreshAppCheck(request(fresh), response().writer, spend, verify, env, quiet),
+      true,
+    );
+    for (const header of [fresh, {}, { "X-Firebase-AppCheck": "bad" }]) {
+      const out = response();
+      assert.equal(
+        await requireFreshAppCheck(request(header), out.writer, spend, verify, env, quiet),
+        false,
+      );
+      assert.equal(out.seen.status, 401);
+      assert.equal((out.seen.body as { code: string }).code, "APP_UNVERIFIED");
+    }
+  });
+
+  it("requireFreshAppCheck falls back to the ordinary check, and says so, when spending cannot run", async () => {
+    const noRole = async () => {
+      throw Object.assign(new Error("permission denied"), { code: "app-check/permission-denied" });
+    };
+    const verify = async (token: string) => {
+      if (token !== "good") throw new Error("refused");
+    };
+    const env = { GCLOUD_PROJECT: "tieryourlife" };
+    const logged: unknown[] = [];
+    const log = (message: string, detail: unknown) => logged.push([message, detail]);
+    assert.equal(
+      await requireFreshAppCheck(
+        request({ "X-Firebase-AppCheck": "good" }),
+        response().writer,
+        noRole,
+        verify,
+        env,
+        log,
+      ),
+      true,
+    );
+    assert.deepEqual(logged, [
+      [
+        "App Check replay protection did not run",
+        { code: "app-check/permission-denied", message: "permission denied" },
+      ],
+    ]);
+    const out = response();
+    assert.equal(
+      await requireFreshAppCheck(
+        request({ "X-Firebase-AppCheck": "bad" }),
+        out.writer,
+        noRole,
+        verify,
+        env,
+        log,
+      ),
+      false,
+    );
+    assert.equal(out.seen.status, 401);
   });
 
   it("requireAppCheck answers APP_UNVERIFIED for a missing or a refused token", async () => {

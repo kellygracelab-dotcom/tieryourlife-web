@@ -1,5 +1,6 @@
 import { getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import {
+  getLimitedUseToken,
   getToken,
   initializeAppCheck,
   ReCaptchaEnterpriseProvider,
@@ -123,6 +124,17 @@ export async function getAppCheckToken(env: Env = readEnv()): Promise<string | n
   }
 }
 
+/** A token the server may accept once, for a request that costs something (QA S25). */
+export async function getLimitedAppCheckToken(env: Env = readEnv()): Promise<string | null> {
+  const check = appCheckFor(env);
+  if (check === null) return null;
+  try {
+    return (await getLimitedUseToken(check)).token;
+  } catch {
+    return null;
+  }
+}
+
 // Persisted sign-ins arrive a moment after the page loads; asking before that
 // would mint a fresh guest on every visit.
 async function currentUser(on: Auth): Promise<User> {
@@ -147,6 +159,7 @@ export async function signOutToGuest(): Promise<void> {
 
 export const tokenProviders: TokenProviders = {
   appCheckToken: () => getAppCheckToken(),
+  limitedAppCheckToken: () => getLimitedAppCheckToken(),
   idToken: (options) => getIdToken(options),
 };
 

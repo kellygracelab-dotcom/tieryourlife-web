@@ -100,6 +100,8 @@ export function keepRanking(
 ): Promise<SavedRanking> {
   return onceMoreWhenBusy(() =>
     client.request<SavedRanking>("POST", "/api/rank", {
+      // The server spends this token as it checks it, so it is a one-use one (QA S25).
+      appCheck: "limited",
       body: {
         listId,
         rows: rows.map((row) => [...row]),
