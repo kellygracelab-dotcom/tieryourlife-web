@@ -1371,7 +1371,7 @@
   }
 
   body:has(.ranking--under .pool) .snackbar {
-    inset-inline-start: max(var(--space-8), calc((100vw - var(--board-cap)) / 2));
+    inset-inline-start: max(var(--space-8), calc((100vw - var(--board-cap, 1760px)) / 2));
     bottom: calc(var(--dock-h, 262px) + 16px + var(--snackbar-lift, 0px));
   }
 

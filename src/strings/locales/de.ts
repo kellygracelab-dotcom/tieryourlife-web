@@ -1364,12 +1364,18 @@ const de: Translation = {
     removeOf: "{name} endgültig entfernen",
     removeTitle: "Endgültig entfernen?",
     removeBodyList:
-      "{title} und die {count} werden von diesem Gerät gelöscht. Das kann nicht rückgängig gemacht werden.",
+      "{title} und die {count} werden gelöscht. Das kann nicht rückgängig gemacht werden.",
     emptyMenu: "Papierkorb leeren",
     emptyTitle: "Papierkorb leeren?",
-    emptyBody:
-      "{count} werden von diesem Gerät gelöscht. Das kann nicht rückgängig gemacht werden.",
+    emptyBody: "Gelöscht wird: {count}. Das kann nicht rückgängig gemacht werden.",
     entries: { one: "{n} Eintrag", other: "{n} Einträge" },
+    emptyCards:
+      "Aus deinen Listen entfernte Karten werden endgültig gelöscht: {count}. Das kann nicht rückgängig gemacht werden.",
+    emptyBoth:
+      "Gelöscht werden: {entries} und aus deinen Listen entfernte Karten: {count}. Das kann nicht rückgängig gemacht werden.",
+    cardsTitle: "Keine gelöschten Listen",
+    cardsBody:
+      "Aus deinen Listen entfernte Karten bleiben hier, bis du den Papierkorb leerst: {count}.",
     nothingTitle: "Papierkorb ist leer",
     nothingBody: "Listen, die du löschst, erscheinen hier. Sie bleiben, bis du sie entfernst.",
     cancel: "Abbrechen",

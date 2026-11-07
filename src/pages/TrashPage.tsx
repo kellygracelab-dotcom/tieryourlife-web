@@ -47,6 +47,16 @@ const agoText = (ago: Ago): string => {
 const boardTitle = (board: Board): string =>
   board.title.trim().length > 0 ? board.title : strings.boards.untitled;
 
+/** What emptying takes, named in full: the deleted lists and the cards removed from live ones (QA W59). */
+const emptyingText = (lists: number, cards: number): string => {
+  const count = plural(strings.boards.cards, cards);
+  if (lists === 0) return fill(strings.trash.emptyCards, { count });
+  const entries = plural(strings.trash.entries, lists);
+  return cards === 0
+    ? fill(strings.trash.emptyBody, { count: entries })
+    : fill(strings.trash.emptyBoth, { entries, count });
+};
+
 type Asking = { what: "nothing" } | { what: "entry"; entry: TrashEntry } | { what: "all" };
 
 /**
@@ -163,10 +173,18 @@ export function TrashPage({
       </header>
 
       {entries.length === 0 ? (
+        // Cards removed from live boards are not rows, but while they wait the
+        // trash is not empty, and the page does not say it is (QA W59).
         <div className="trash__empty" role="status">
           <Icon name="delete" className="trash__empty-icon" />
-          <p className="trash__empty-title">{strings.trash.nothingTitle}</p>
-          <p className="trash__empty-body">{strings.trash.nothingBody}</p>
+          <p className="trash__empty-title">
+            {trashedCards > 0 ? strings.trash.cardsTitle : strings.trash.nothingTitle}
+          </p>
+          <p className="trash__empty-body">
+            {trashedCards > 0
+              ? fill(strings.trash.cardsBody, { count: plural(strings.boards.cards, trashedCards) })
+              : strings.trash.nothingBody}
+          </p>
         </div>
       ) : (
         <ul className="trash__rows" aria-label={strings.trash.title}>
@@ -231,12 +249,7 @@ export function TrashPage({
         <ConfirmDialog
           narrow
           title={strings.trash.emptyTitle}
-          body={fill(strings.trash.emptyBody, {
-            count:
-              entries.length > 0
-                ? plural(strings.trash.entries, entries.length)
-                : plural(strings.boards.cards, trashedCards),
-          })}
+          body={emptyingText(entries.length, trashedCards)}
           confirmLabel={strings.trash.emptyMenu}
           cancelLabel={strings.trash.cancel}
           onConfirm={() => void empty()}

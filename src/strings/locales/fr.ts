@@ -152,7 +152,7 @@ const fr: Translation = {
     placeZoomOut: "Zoom arrière",
     placeUse: "Utiliser",
     placeFailed:
-      "Cette image ne se charge pas, elle ne peut donc pas être votre visage. Choisissez-en une autre.",
+      "Cette image ne se charge pas, elle ne peut donc pas être votre photo. Choisissez-en une autre.",
     placeHelp: "Faites glisser pour déplacer. Pincez ou faites défiler pour zoomer.",
     placeAsItIs: "Cette image ne peut être utilisée que telle quelle.",
   },
@@ -1438,12 +1438,18 @@ const fr: Translation = {
     restoreOf: "Restaurer {name}",
     removeOf: "Supprimer {name} définitivement",
     removeTitle: "Supprimer définitivement ?",
-    removeBodyList:
-      "{title} et ses {count} seront supprimés de cet appareil. Cette action est irréversible.",
+    removeBodyList: "{title} et ses {count} seront supprimés. Cette action est irréversible.",
     emptyMenu: "Vider la corbeille",
     emptyTitle: "Vider la corbeille ?",
-    emptyBody: "{count} seront supprimés de cet appareil. Cette action est irréversible.",
+    emptyBody: "Sera supprimé : {count}. Cette action est irréversible.",
     entries: { one: "{n} entrée", many: "{n} entrées", other: "{n} entrées" },
+    emptyCards:
+      "Les cartes retirées de vos listes seront supprimées définitivement : {count}. Cette action est irréversible.",
+    emptyBoth:
+      "Sera supprimé : {entries}, ainsi que les cartes retirées de vos listes : {count}. Cette action est irréversible.",
+    cardsTitle: "Aucune liste supprimée",
+    cardsBody:
+      "Les cartes retirées de vos listes restent ici jusqu’à ce que vous vidiez la corbeille : {count}.",
     nothingTitle: "La corbeille est vide",
     nothingBody:
       "Les listes que vous supprimez apparaissent ici. Elles restent jusqu’à ce que vous les supprimiez.",

@@ -147,7 +147,7 @@ const es: Translation = {
     placeZoomIn: "Acercar",
     placeZoomOut: "Alejar",
     placeUse: "Usar esta",
-    placeFailed: "Esta imagen no carga, así que no puede ser tu cara. Elige otra.",
+    placeFailed: "Esta imagen no carga, así que no puede ser tu foto. Elige otra.",
     placeHelp: "Arrastra para mover; pellizca o desplaza para hacer zoom.",
     placeAsItIs: "Esta imagen solo se puede usar tal cual.",
   },
@@ -1423,12 +1423,18 @@ const es: Translation = {
     restoreOf: "Restaurar {name}",
     removeOf: "Eliminar {name} definitivamente",
     removeTitle: "¿Eliminar definitivamente?",
-    removeBodyList:
-      "{title} y sus {count} se eliminarán de este dispositivo. Esto no se puede deshacer.",
+    removeBodyList: "{title} y sus {count} se eliminarán. Esto no se puede deshacer.",
     emptyMenu: "Vaciar la papelera",
     emptyTitle: "¿Vaciar la papelera?",
-    emptyBody: "{count} se eliminarán de este dispositivo. Esto no se puede deshacer.",
+    emptyBody: "Se eliminará: {count}. Esto no se puede deshacer.",
     entries: { one: "{n} entrada", many: "{n} entradas", other: "{n} entradas" },
+    emptyCards:
+      "Las tarjetas quitadas de tus listas se eliminarán para siempre: {count}. Esto no se puede deshacer.",
+    emptyBoth:
+      "Se eliminará: {entries}, y también las tarjetas quitadas de tus listas: {count}. Esto no se puede deshacer.",
+    cardsTitle: "No hay listas eliminadas",
+    cardsBody:
+      "Las tarjetas quitadas de tus listas se guardan hasta que vacíes la papelera: {count}.",
     nothingTitle: "La papelera está vacía",
     nothingBody: "Las listas que eliminas aparecen aquí. Permanecen hasta que las quites.",
     cancel: "Cancelar",

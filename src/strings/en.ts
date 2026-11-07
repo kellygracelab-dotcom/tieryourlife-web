@@ -1286,12 +1286,17 @@ export const en = {
     restoreOf: "Restore {name}",
     removeOf: "Remove {name} permanently",
     removeTitle: "Remove permanently?",
-    removeBodyList:
-      "{title} and its {count} will be deleted from this device. This can’t be undone.",
+    removeBodyList: "{title} and its {count} will be deleted. This can’t be undone.",
     emptyMenu: "Empty trash",
     emptyTitle: "Empty the trash?",
-    emptyBody: "{count} will be deleted from this device. This can’t be undone.",
+    emptyBody: "{count} will be deleted. This can’t be undone.",
     entries: { one: "{n} entry", other: "{n} entries" },
+    emptyCards:
+      "Cards removed from your lists will be deleted for good: {count}. This can’t be undone.",
+    emptyBoth:
+      "{entries} will be deleted, and so will the cards removed from your lists: {count}. This can’t be undone.",
+    cardsTitle: "No deleted lists",
+    cardsBody: "Cards removed from your lists are kept until you empty the trash: {count}.",
     nothingTitle: "Nothing in the trash",
     nothingBody: "Lists you delete appear here. They stay until you remove them.",
     cancel: "Cancel",

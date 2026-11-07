@@ -1319,11 +1319,18 @@ const tr: Translation = {
     restoreOf: "{name} öğesini geri yükle",
     removeOf: "{name} öğesini kalıcı olarak sil",
     removeTitle: "Kalıcı olarak silinsin mı?",
-    removeBodyList: "{title} ve {count} bu cihazdan silinecek. Bu geri alınamaz.",
+    removeBodyList: "{title} ve {count} silinecek. Bu geri alınamaz.",
     emptyMenu: "Çöp kutusunu boşalt",
     emptyTitle: "Çöp kutusu boşaltılsın mı?",
-    emptyBody: "{count} bu cihazdan silinecek. Bu geri alınamaz.",
+    emptyBody: "{count} silinecek. Bu geri alınamaz.",
     entries: { one: "{n} kayıt", other: "{n} kayıt" },
+    emptyCards:
+      "Listelerinizden çıkardığınız kartlar kalıcı olarak silinecek: {count}. Bu geri alınamaz.",
+    emptyBoth:
+      "{entries} ve listelerinizden çıkardığınız kartlar ({count}) silinecek. Bu geri alınamaz.",
+    cardsTitle: "Silinmiş liste yok",
+    cardsBody:
+      "Listelerinizden çıkardığınız kartlar, çöp kutusunu boşaltana kadar burada kalır: {count}.",
     nothingTitle: "Çöp kutusu boş",
     nothingBody: "Sildiğiniz listeler burada görünür. Siz silene kadar kalırlar.",
     cancel: "Vazgeç",

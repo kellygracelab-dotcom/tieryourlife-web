@@ -102,17 +102,40 @@ describe("TrashPage", () => {
     const [witch] = liveItems(b).filter((item) => item.title === "The Witch");
     repository.saveAll([trashedElsewhere(b, witch!.uid, NOW - HOUR)]);
     open(repository);
-    expect(screen.getByText("Nothing in the trash")).toBeInTheDocument();
+    // QA W59: while cards wait, the page does not call the trash empty.
+    expect(screen.queryByText("Nothing in the trash")).toBeNull();
+    expect(screen.getByText("No deleted lists")).toBeInTheDocument();
+    expect(
+      screen.getByText("Cards removed from your lists are kept until you empty the trash: 1 card."),
+    ).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText("More options"));
     await userEvent.click(screen.getByRole("button", { name: "Empty trash" }));
     expect(screen.getByRole("dialog")).toHaveTextContent(
-      "1 card will be deleted from this device.",
+      "Cards removed from your lists will be deleted for good: 1 card. This can’t be undone.",
     );
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Empty trash" }),
     );
     expect(repository.get("films")?.items.map((item) => item.title)).toEqual(["Ex Machina"]);
     expect(screen.queryByLabelText("More options")).toBeNull();
+    expect(screen.getByText("Nothing in the trash")).toBeInTheDocument();
+  });
+
+  // QA W59: "1 entry" also took the cards removed from a live board.
+  it("names both the deleted lists and the cards removed from live ones before emptying", async () => {
+    const repository = boardsRepository(memoryStore());
+    const b = films();
+    const [witch] = liveItems(b).filter((item) => item.title === "The Witch");
+    repository.saveAll([
+      trashedElsewhere(b, witch!.uid, NOW - HOUR),
+      trashBoard(newBoard("albums", "Albums", 1, uids()), NOW - HOUR),
+    ]);
+    open(repository);
+    await userEvent.click(screen.getByLabelText("More options"));
+    await userEvent.click(screen.getByRole("button", { name: "Empty trash" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "1 entry will be deleted, and so will the cards removed from your lists: 1 card. This can’t be undone.",
+    );
   });
 
   it("restores without asking, removes for good after asking, and empties after asking", async () => {
@@ -134,7 +157,9 @@ describe("TrashPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove Albums permanently" }));
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent("Remove permanently?");
-    expect(dialog).toHaveTextContent("Albums and its 0 cards will be deleted from this device.");
+    expect(dialog).toHaveTextContent(
+      "Albums and its 0 cards will be deleted. This can’t be undone.",
+    );
     await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(repository.get("albums")).not.toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Remove Albums permanently" }));
@@ -147,7 +172,7 @@ describe("TrashPage", () => {
     await userEvent.click(screen.getByLabelText("More options"));
     await userEvent.click(screen.getByRole("button", { name: "Empty trash" }));
     expect(screen.getByRole("dialog")).toHaveTextContent(
-      "1 entry will be deleted from this device.",
+      "1 entry will be deleted. This can’t be undone.",
     );
     await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Empty trash" }),
