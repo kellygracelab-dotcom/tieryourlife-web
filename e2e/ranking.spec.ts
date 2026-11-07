@@ -200,11 +200,20 @@ test.describe("ranking a list on a phone", () => {
     await tier(page, "A").tap();
     await expect(tier(page, "A").getByRole("button", { name: "Climax" })).toBeVisible();
     await expect(page.getByText("1 of 3 placed")).toBeVisible();
+    // The board picks the next card by itself; a tap on it, as the hint says,
+    // keeps it picked rather than putting it down (the live walk of 07.11).
+    const next = page.getByRole("button", { name: "Ex Machina", exact: true });
+    await expect(next).toHaveAttribute("aria-pressed", "true");
+    await next.tap();
+    await expect(next).toHaveAttribute("aria-pressed", "true");
+    await tier(page, "S").tap();
+    await expect(tier(page, "S").getByRole("button", { name: "Ex Machina" })).toBeVisible();
+    await expect(page.getByText("2 of 3 placed")).toBeVisible();
 
     await finish(page);
     expect(backend.rankRequests[0]?.postDataJSON()).toEqual({
       listId: LIST_ID,
-      rows: [[], [2]],
+      rows: [[0], [2]],
       version: list.updatedAt,
     });
   });
