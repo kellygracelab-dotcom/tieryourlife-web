@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import type { Request } from "firebase-functions/https";
 import type { Response } from "express";
-import { requireAppCheck, skipsAppCheck } from "../src/appCheck";
+import { requireAppCheck, requireFreshAppCheck, skipsAppCheck } from "../src/appCheck";
 import { optionalAccount, requireAccount, requireUser, type DecodedToken } from "../src/auth";
 import {
   appCheckKeyOf,
@@ -210,6 +210,7 @@ function setup(who: { uid: string; isAnonymous: boolean } | null = GUEST, codes:
   const deps: WebDeps = {
     db: () => store.db,
     appCheck: async () => true,
+    freshAppCheck: async () => true,
     user: async (_request, response) => {
       if (who !== null) return who;
       response.status(401).json({ code: "UNAUTHENTICATED" });
@@ -477,13 +478,15 @@ describe("POST /api/rank — Finish", () => {
       (await call(deps, "POST", "/api/rank", { listId: LIST_ID, rows: [[0], []] })).status,
       401,
     );
-    const blocked: WebDeps = {
-      ...deps,
-      appCheck: async (_request, response) => {
-        response.status(401).json({ code: "APP_UNVERIFIED" });
-        return false;
-      },
+    const refuse = async (
+      _request: unknown,
+      response: { status(n: number): { json(body: unknown): unknown } },
+    ) => {
+      response.status(401).json({ code: "APP_UNVERIFIED" });
+      return false;
     };
+    // A new ranking spends its token: the fresh check is the one asked (QA S25).
+    const blocked: WebDeps = { ...deps, freshAppCheck: refuse };
     const answer = await call(blocked, "POST", "/api/rank", { listId: LIST_ID, rows: [[0], []] });
     assert.deepEqual(answer.body, { code: "APP_UNVERIFIED" });
     assert.equal(table("rankUsage").size, 0);
@@ -979,6 +982,38 @@ describe("the pages a link opens", () => {
     assert.match(PAGE_POLICY, /frame-ancestors 'self'/);
   });
 
+  // QA S27: the report-only policy says where it reports, and the site takes the reports.
+  it("takes a browser's CSP report with no token, logs what it says, and answers 204", async () => {
+    const { deps } = setup();
+    const seen: unknown[] = [];
+    const reporting: WebDeps = {
+      ...deps,
+      appCheck: async () => false,
+      reportViolation: (violation) => seen.push(violation),
+    };
+    const report = {
+      "csp-report": {
+        "document-uri": "https://tieryourlife.web.app/b?x=1",
+        "effective-directive": "script-src-elem",
+        "blocked-uri": "https://cdn.example/a.js",
+      },
+    };
+    const answer = await call(reporting, "POST", "/api/csp-report", report);
+    assert.equal(answer.status, 204);
+    assert.deepEqual(seen, [
+      {
+        directive: "script-src-elem",
+        blocked: "https://cdn.example/a.js",
+        page: "/b",
+        source: null,
+        line: null,
+      },
+    ]);
+    assert.equal((await call(reporting, "POST", "/api/csp-report", "junk")).status, 204);
+    assert.equal((await call(reporting, "GET", "/api/csp-report")).status, 405);
+    assert.ok(PAGE_SCRIPT_POLICY.endsWith("; report-uri /api/csp-report"));
+  });
+
   it("names the same policies as hosting does, and every script the shell runs inline", () => {
     // Compiled to functions/lib-test/test: the repository is three folders up.
     const root = join(__dirname, "..", "..", "..");
@@ -1094,6 +1129,78 @@ describe("the token checks", () => {
         isAnonymous: false,
       },
     );
+  });
+
+  // QA S25: a new ranking's token is spent as it is checked, so it cannot be sent again.
+  it("requireFreshAppCheck lets a token through once, and refuses it spent, missing or bad", async () => {
+    const spentOnes = new Set<string>();
+    const spend = async (token: string) => {
+      if (token !== "fresh") throw new Error("refused");
+      const alreadyConsumed = spentOnes.has(token);
+      spentOnes.add(token);
+      return { alreadyConsumed };
+    };
+    const verify = async (token: string) => {
+      if (token !== "fresh") throw new Error("refused");
+    };
+    const env = { GCLOUD_PROJECT: "tieryourlife" };
+    const quiet = () => undefined;
+    const fresh = { "X-Firebase-AppCheck": "fresh" };
+    assert.equal(
+      await requireFreshAppCheck(request(fresh), response().writer, spend, verify, env, quiet),
+      true,
+    );
+    for (const header of [fresh, {}, { "X-Firebase-AppCheck": "bad" }]) {
+      const out = response();
+      assert.equal(
+        await requireFreshAppCheck(request(header), out.writer, spend, verify, env, quiet),
+        false,
+      );
+      assert.equal(out.seen.status, 401);
+      assert.equal((out.seen.body as { code: string }).code, "APP_UNVERIFIED");
+    }
+  });
+
+  it("requireFreshAppCheck falls back to the ordinary check, and says so, when spending cannot run", async () => {
+    const noRole = async () => {
+      throw Object.assign(new Error("permission denied"), { code: "app-check/permission-denied" });
+    };
+    const verify = async (token: string) => {
+      if (token !== "good") throw new Error("refused");
+    };
+    const env = { GCLOUD_PROJECT: "tieryourlife" };
+    const logged: unknown[] = [];
+    const log = (message: string, detail: unknown) => logged.push([message, detail]);
+    assert.equal(
+      await requireFreshAppCheck(
+        request({ "X-Firebase-AppCheck": "good" }),
+        response().writer,
+        noRole,
+        verify,
+        env,
+        log,
+      ),
+      true,
+    );
+    assert.deepEqual(logged, [
+      [
+        "App Check replay protection did not run",
+        { code: "app-check/permission-denied", message: "permission denied" },
+      ],
+    ]);
+    const out = response();
+    assert.equal(
+      await requireFreshAppCheck(
+        request({ "X-Firebase-AppCheck": "bad" }),
+        out.writer,
+        noRole,
+        verify,
+        env,
+        log,
+      ),
+      false,
+    );
+    assert.equal(out.seen.status, 401);
   });
 
   it("requireAppCheck answers APP_UNVERIFIED for a missing or a refused token", async () => {

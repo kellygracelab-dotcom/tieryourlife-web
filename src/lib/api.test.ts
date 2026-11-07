@@ -141,6 +141,7 @@ describe("api", () => {
     });
     await keepRanking("abc", [[1], []]);
     expect(mocks.request).toHaveBeenCalledWith("POST", "/api/rank", {
+      appCheck: "limited",
       body: { listId: "abc", rows: [[1], []] },
     });
   });

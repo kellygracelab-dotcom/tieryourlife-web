@@ -2,6 +2,8 @@ import { ApiFailure, parseApiError } from "./errors";
 
 export interface TokenProviders {
   appCheckToken(): Promise<string | null>;
+  /** A token good for one request, which the server spends as it checks it (QA S25). */
+  limitedAppCheckToken?(): Promise<string | null>;
   idToken(options?: { forceRefresh?: boolean }): Promise<string | null>;
 }
 
@@ -11,6 +13,8 @@ export interface RequestOptions {
   query?: Query;
   body?: unknown;
   auth?: "user" | "appCheckOnly";
+  /** "limited" for a request the server lets through once per token: a new ranking. */
+  appCheck?: "session" | "limited";
 }
 
 export type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -46,6 +50,7 @@ function urlOf(path: string, query: Query | undefined): string {
 export function createApiClient({
   fetch = (input, init) => globalThis.fetch(input, init),
   appCheckToken,
+  limitedAppCheckToken,
   idToken,
   timeoutMs = REQUEST_TIMEOUT_MS,
 }: ClientOptions): ApiClient {
@@ -60,8 +65,11 @@ export function createApiClient({
     // one after the other they kept "Saving your ranking…" up for both. App
     // Check is asked first, so it is set up before a guest's sign-in goes out.
     // A missing token still lets the request go: the server names the refusal.
+    // A one-use token is fetched afresh for each send, a retry included.
     const [appCheck, token] = await Promise.all([
-      appCheckToken(),
+      options.appCheck === "limited" && limitedAppCheckToken !== undefined
+        ? limitedAppCheckToken()
+        : appCheckToken(),
       options.auth === "appCheckOnly" ? null : idToken({ forceRefresh }),
     ]);
     if (appCheck) headers["X-Firebase-AppCheck"] = appCheck;
