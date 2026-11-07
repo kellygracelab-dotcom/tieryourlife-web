@@ -236,7 +236,7 @@ describe("BoardSyncProvider", () => {
     const store = memoryStore();
     const repository = boardsRepository(store);
     repository.save(newBoard("a", "A", 1, uids()));
-    const { api, keeps } = fakeApi();
+    const { api, keeps, indexReads } = fakeApi();
     render(
       <SessionContext.Provider value={sessionOf(signedIn)}>
         <BoardSyncProvider
@@ -244,7 +244,6 @@ describe("BoardSyncProvider", () => {
           store={store}
           api={api}
           syncAfterMs={10}
-          // Long enough that a loaded machine's few settles never reach it.
           playSyncAfterMs={1000}
           resolvePicture={() => () => Promise.resolve(null)}
         >
@@ -265,18 +264,42 @@ describe("BoardSyncProvider", () => {
       round: 0,
       startedAt: 1,
     };
-    act(() => repository.save({ ...repository.get("a")!, play }));
-    await settle();
-    act(() => repository.save({ ...repository.get("a")!, play: { ...play, history: [] } }));
-    await settle();
-    expect(keeps).toHaveLength(1);
-    await waitFor(() => expect(keeps).toHaveLength(2), { timeout: 3000 });
+    const advance = (ms: number) =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    const initialReads = indexReads.length;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      act(() => repository.save({ ...repository.get("a")!, play }));
+      await advance(500);
+      act(() => repository.save({ ...repository.get("a")!, play: { ...play, history: [] } }));
+      await advance(499);
+      expect(indexReads).toHaveLength(initialReads);
+      await advance(1);
+      expect(indexReads).toHaveLength(initialReads + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(keeps).toHaveLength(2));
+    await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("in idle -"));
 
-    act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 5 }));
-    await settle();
-    expect(keeps).toHaveLength(3);
+    // Check when the edit starts a sync. Hashing and writing the payload can
+    // complete later on a busy machine without changing the debounce.
+    const beforeEdit = indexReads.length;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 5 }));
+      await advance(9);
+      expect(indexReads).toHaveLength(beforeEdit);
+      await advance(1);
+      expect(indexReads).toHaveLength(beforeEdit + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(keeps).toHaveLength(3));
+    expect(keeps[2]?.request.title).toBe("A2");
   });
-
   it("asks after signing into an account used before, and moves the boards made without one in", async () => {
     const store = memoryStore();
     const owners = boardOwners(store);

@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
+import { portFrom } from "./config/emulator-ports";
 
-const PORT = 4173;
+const PORT = portFrom(process.env.TYL_WEB_SMOKE_PORT, 4173, "TYL_WEB_SMOKE_PORT");
 const HOST = "127.0.0.1";
 
 export default defineConfig({
@@ -33,7 +34,8 @@ export default defineConfig({
     // is answered by a fixture, so the smokes never leave the machine.
     command: `npx vite --mode e2e --host ${HOST} --port ${PORT} --strictPort`,
     url: `http://${HOST}:${PORT}`,
-    reuseExistingServer: process.env.CI === undefined,
+    reuseExistingServer:
+      process.env.CI === undefined && process.env.TYL_WEB_SMOKE_PORT === undefined,
     timeout: 60_000,
   },
 });
