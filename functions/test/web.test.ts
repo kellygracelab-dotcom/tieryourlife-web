@@ -982,6 +982,38 @@ describe("the pages a link opens", () => {
     assert.match(PAGE_POLICY, /frame-ancestors 'self'/);
   });
 
+  // QA S27: the report-only policy says where it reports, and the site takes the reports.
+  it("takes a browser's CSP report with no token, logs what it says, and answers 204", async () => {
+    const { deps } = setup();
+    const seen: unknown[] = [];
+    const reporting: WebDeps = {
+      ...deps,
+      appCheck: async () => false,
+      reportViolation: (violation) => seen.push(violation),
+    };
+    const report = {
+      "csp-report": {
+        "document-uri": "https://tieryourlife.web.app/b?x=1",
+        "effective-directive": "script-src-elem",
+        "blocked-uri": "https://cdn.example/a.js",
+      },
+    };
+    const answer = await call(reporting, "POST", "/api/csp-report", report);
+    assert.equal(answer.status, 204);
+    assert.deepEqual(seen, [
+      {
+        directive: "script-src-elem",
+        blocked: "https://cdn.example/a.js",
+        page: "/b",
+        source: null,
+        line: null,
+      },
+    ]);
+    assert.equal((await call(reporting, "POST", "/api/csp-report", "junk")).status, 204);
+    assert.equal((await call(reporting, "GET", "/api/csp-report")).status, 405);
+    assert.ok(PAGE_SCRIPT_POLICY.endsWith("; report-uri /api/csp-report"));
+  });
+
   it("names the same policies as hosting does, and every script the shell runs inline", () => {
     // Compiled to functions/lib-test/test: the repository is three folders up.
     const root = join(__dirname, "..", "..", "..");

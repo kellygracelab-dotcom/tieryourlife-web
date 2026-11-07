@@ -122,7 +122,9 @@ export const PAGE_POLICY = "frame-ancestors 'self'; object-src 'none'; base-uri 
  */
 export const PAGE_SCRIPT_POLICY =
   "script-src 'self' 'sha256-2iKKgy5SB11PUVBbbTyzt+UMR84yVQVKvL8ExeCn51k=' 'sha256-r5OZZkdnE7YDlM+2flIVbVo7t4hz5lUfP+HnhdDS8Gs=' " +
-  "https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/";
+  "https://apis.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; " +
+  // Where a browser says what this policy would have blocked (QA S27).
+  "report-uri /api/csp-report";
 
 /**
  * As firebase.json says for every address: a window another site opened

@@ -4,6 +4,7 @@ import type { Request } from "firebase-functions/https";
 import { onRequest } from "firebase-functions/v2/https";
 import type { Response } from "express";
 import { requireAppCheck, requireFreshAppCheck } from "./appCheck";
+import { payloadOf, reportLimiter, violationsOf, type Violation } from "./cspReport";
 import { bannedAnswer, isBanned, readBan, type Ban } from "./bans";
 import { optionalAccount, requireAccount, requireUser, type Identity } from "./auth";
 import { getStorage } from "firebase-admin/storage";
@@ -89,6 +90,9 @@ export interface WebDeps {
   appCheck: (request: Request, response: Response) => Promise<boolean>;
   /** The same, for a request that costs something: the token is spent as it is checked (QA S25). */
   freshAppCheck: (request: Request, response: Response) => Promise<boolean>;
+  /** Where a browser's report of a script the page's policy would block goes (QA S27). */
+  reportViolation?: (violation: Violation) => void;
+  now?: () => number;
   user: (request: Request, response: Response) => Promise<Identity | null>;
   account: (request: Request, response: Response) => Promise<Identity | null>;
   viewer: (request: Request) => Promise<Identity | null>;
@@ -128,6 +132,10 @@ export const web = onRequest(
   },
   (request, response) => route(request, response),
 );
+
+const reportRoom = reportLimiter();
+
+const logViolation = (violation: Violation): void => console.warn("CSP violation", violation);
 
 export async function route(
   request: Request,
@@ -173,6 +181,21 @@ export async function route(
     const api = segments[0] === "api" ? segments.slice(1) : null;
     if (api === null || api.length > 2) return notFound(response, "No such address");
     const [resource, rest] = api;
+
+    // Reports of what the report-only policy would block: no token, no
+    // account, as a browser sends them on its own. A few a minute reach the
+    // log; nothing else is kept, and the answer is always the same (QA S27).
+    if (resource === "csp-report" && rest === undefined) {
+      if (request.method !== "POST") return methodNotAllowed(response);
+      const at = (deps.now ?? Date.now)();
+      const write = deps.reportViolation ?? logViolation;
+      for (const violation of violationsOf(payloadOf(request.rawBody, request.body))) {
+        const { write: room, heldBefore } = reportRoom(at);
+        if (heldBefore > 0) console.warn("CSP reports held back last minute", heldBefore);
+        if (room) write(violation);
+      }
+      return void response.status(204).end();
+    }
 
     if (resource === "me") {
       if (rest !== "rankings") return notFound(response, "No such address");
