@@ -24,6 +24,11 @@ export interface RankingsState {
   more: "idle" | "loading" | "failed";
   /** The last withdrawal did not go through, and the ranking is back. */
   withdrawFailed: boolean;
+  /**
+   * Readers this page took from or added to the count the list came with:
+   * one's own withdrawn, or shown to others where there was none. QA W51.
+   */
+  countChange: number;
 }
 
 export interface Rankings {
@@ -33,8 +38,11 @@ export interface Rankings {
   more: () => void;
   /** This reader's own comes down at once, and back if the backend says no. */
   withdraw: () => void;
-  /** This reader's own, just shown to others: first, in place of the one there before. */
-  put: (ranking: ReaderRanking) => void;
+  /**
+   * This reader's own, just shown to others: first, in place of the one there
+   * before, and one more on the count when the backend made a new one.
+   */
+  put: (ranking: ReaderRanking & { created?: boolean }) => void;
 }
 
 const NOTHING_YET: RankingsState = {
@@ -43,6 +51,7 @@ const NOTHING_YET: RankingsState = {
   next: null,
   more: "idle",
   withdrawFailed: false,
+  countChange: 0,
 };
 
 /**
@@ -130,19 +139,24 @@ export function useRankings(listId: string, deps: RankingsDeps = defaultDeps): R
       ...now,
       rankings: now.rankings.filter((ranking) => ranking !== mine),
       withdrawFailed: false,
+      countChange: now.countChange - 1,
     }));
-    deps
-      .withdraw(listId)
-      .catch(() =>
-        setState((now) => ({ ...now, rankings: [mine, ...now.rankings], withdrawFailed: true })),
-      );
+    deps.withdraw(listId).catch(() =>
+      setState((now) => ({
+        ...now,
+        rankings: [mine, ...now.rankings],
+        withdrawFailed: true,
+        countChange: now.countChange + 1,
+      })),
+    );
   }, [listId, deps]);
 
   // Not read yet, the sheet reads it with the rest when it opens.
-  const put = useCallback((ranking: ReaderRanking) => {
-    setState((now) =>
-      now.status !== "ready"
-        ? now
+  const put = useCallback(({ created, ...ranking }: ReaderRanking & { created?: boolean }) => {
+    setState((now) => {
+      const countChange = now.countChange + (created === true ? 1 : 0);
+      return now.status !== "ready"
+        ? { ...now, countChange }
         : {
             ...now,
             rankings: [
@@ -150,8 +164,9 @@ export function useRankings(listId: string, deps: RankingsDeps = defaultDeps): R
               ...now.rankings.filter((one) => !one.mine && one.uid !== ranking.uid),
             ],
             withdrawFailed: false,
-          },
-    );
+            countChange,
+          };
+    });
   }, []);
 
   return { state, open, more, withdraw, put };
