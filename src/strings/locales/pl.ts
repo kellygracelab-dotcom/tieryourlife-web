@@ -1501,12 +1501,17 @@ const pl: Translation = {
     restoreOf: "Przywróć {name}",
     removeOf: "Usuń {name} na stałe",
     removeTitle: "Usunąć na stałe?",
-    removeBodyList:
-      "{title} i jego {count} zostaną usunięte z tego urządzenia. Tego nie można cofnąć.",
+    removeBodyList: "{title} i jego {count} zostaną usunięte. Tego nie można cofnąć.",
     emptyMenu: "Opróżnij kosz",
     emptyTitle: "Opróżnić kosz?",
-    emptyBody: "{count} zostanie usunięte z tego urządzenia. Tego nie można cofnąć.",
+    emptyBody: "Zostanie usunięte: {count}. Tego nie można cofnąć.",
     entries: { one: "{n} wpis", few: "{n} wpisy", many: "{n} wpisów", other: "{n} wpisu" },
+    emptyCards:
+      "Karty zdjęte z Twoich list zostaną usunięte na zawsze: {count}. Tego nie można cofnąć.",
+    emptyBoth:
+      "Zostanie usunięte: {entries} oraz karty zdjęte z Twoich list: {count}. Tego nie można cofnąć.",
+    cardsTitle: "Brak usuniętych list",
+    cardsBody: "Karty zdjęte z Twoich list zostają tu, dopóki nie opróżnisz kosza: {count}.",
     nothingTitle: "Kosz jest pusty",
     nothingBody: "Usunięte listy pojawiają się tutaj. Pozostają, dopóki ich nie usuniesz.",
     cancel: "Anuluj",

@@ -1423,12 +1423,18 @@ const es: Translation = {
     restoreOf: "Restaurar {name}",
     removeOf: "Eliminar {name} definitivamente",
     removeTitle: "¿Eliminar definitivamente?",
-    removeBodyList:
-      "{title} y sus {count} se eliminarán de este dispositivo. Esto no se puede deshacer.",
+    removeBodyList: "{title} y sus {count} se eliminarán. Esto no se puede deshacer.",
     emptyMenu: "Vaciar la papelera",
     emptyTitle: "¿Vaciar la papelera?",
-    emptyBody: "{count} se eliminarán de este dispositivo. Esto no se puede deshacer.",
+    emptyBody: "Se eliminará: {count}. Esto no se puede deshacer.",
     entries: { one: "{n} entrada", many: "{n} entradas", other: "{n} entradas" },
+    emptyCards:
+      "Las tarjetas quitadas de tus listas se eliminarán para siempre: {count}. Esto no se puede deshacer.",
+    emptyBoth:
+      "Se eliminará: {entries}, y también las tarjetas quitadas de tus listas: {count}. Esto no se puede deshacer.",
+    cardsTitle: "No hay listas eliminadas",
+    cardsBody:
+      "Las tarjetas quitadas de tus listas se guardan hasta que vacíes la papelera: {count}.",
     nothingTitle: "La papelera está vacía",
     nothingBody: "Las listas que eliminas aparecen aquí. Permanecen hasta que las quites.",
     cancel: "Cancelar",

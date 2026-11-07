@@ -1416,12 +1416,18 @@ const ptBR: Translation = {
     restoreOf: "Restaurar {name}",
     removeOf: "Excluir {name} permanentemente",
     removeTitle: "Remover permanentemente?",
-    removeBodyList:
-      "{title} e seus {count} serão excluídos deste dispositivo. Isso não pode ser desfeito.",
+    removeBodyList: "{title} e seus {count} serão excluídos. Isso não pode ser desfeito.",
     emptyMenu: "Esvaziar lixeira",
     emptyTitle: "Esvaziar a lixeira?",
-    emptyBody: "{count} serão excluídos deste dispositivo. Isso não pode ser desfeito.",
+    emptyBody: "Será excluído: {count}. Isso não pode ser desfeito.",
     entries: { one: "{n} registro", many: "{n} registros", other: "{n} registros" },
+    emptyCards:
+      "Os cartões tirados das suas listas serão excluídos para sempre: {count}. Isso não pode ser desfeito.",
+    emptyBoth:
+      "Será excluído: {entries}, e também os cartões tirados das suas listas: {count}. Isso não pode ser desfeito.",
+    cardsTitle: "Nenhuma lista excluída",
+    cardsBody:
+      "Os cartões tirados das suas listas ficam aqui até você esvaziar a lixeira: {count}.",
     nothingTitle: "A lixeira está vazia",
     nothingBody: "As listas que você exclui aparecem aqui. Elas ficam até que você as remova.",
     cancel: "Cancelar",
