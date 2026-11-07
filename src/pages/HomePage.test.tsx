@@ -103,6 +103,8 @@ describe("HomePage", () => {
     expect(screen.getByRole("link", { name: "Following" })).toHaveAttribute("aria-current", "page");
     // Whose Following it is, Firebase has not said yet: a ring, not Explore.
     expect(screen.getByRole("progressbar", { name: "Following" })).toBeInTheDocument();
+    // The app card is Explore's: under Following's late lists it would jump.
+    expect(screen.queryByRole("complementary", { name: "TierYourLife for Android" })).toBeNull();
   });
 
   it("opens a section from its tile", async () => {

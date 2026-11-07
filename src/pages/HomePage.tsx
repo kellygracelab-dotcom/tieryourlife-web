@@ -146,13 +146,16 @@ export function HomePage({
           store={store}
         />
       ) : (
-        <Explore load={load} store={store} />
+        <>
+          <Explore load={load} store={store} />
+          {/*
+           * The app card after the lists, small: the first screen is for a board
+           * one can open, a phone's too, not for an app that is not out yet.
+           * Explore's only: under Following's late lists it would jump.
+           */}
+          <AppCard slot="home" />
+        </>
       )}
-      {/*
-       * The app card after the lists, small: the first screen is for a board
-       * one can open, a phone's too, not for an app that is not out yet.
-       */}
-      <AppCard slot="home" />
     </div>
   );
 }
