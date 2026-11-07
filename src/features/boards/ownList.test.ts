@@ -93,6 +93,18 @@ describe("boardForOwnList", () => {
       coverImageUrls: [],
     });
 
+    const separate = await boardForOwnList(
+      { ...mine, coverImageUrl: feed("separate"), previewImages: [] },
+      null,
+      copyBack,
+      5,
+      uids(),
+    );
+    expect(coverOf(separate)).toEqual({
+      coverImageUrl: null,
+      coverImageUrls: [],
+      coverPictureId: "own-x",
+    });
     const collage = await boardForOwnList(
       { ...mine, previewImages: ["https://img.test/p.jpg", feed("h")] },
       null,

@@ -214,15 +214,29 @@ describe("a picture's credit", () => {
     b = addToPool(
       b,
       [
-        { title: "Red fox", imageUrl: "https://x/f.jpg", credit: "(c) Jane Doe (CC BY)" },
+        {
+          title: "Red fox",
+          imageUrl: "https://x/f.jpg",
+          credit:
+            "Commons contributor ".repeat(25) +
+            "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
+        },
         { title: "Fennec", imageUrl: "https://x/n.jpg" },
       ],
       2,
       next,
     );
-    expect(liveItems(b).map((item) => item.credit)).toEqual(["(c) Jane Doe (CC BY)", null]);
+    expect(liveItems(b).map((item) => item.credit)).toEqual([
+      "Commons contributor ".repeat(25) + "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
+      null,
+    ]);
     const [fox, fennec] = publishRequestOf(b)!.items;
-    expect(fox).toMatchObject({ title: "Red fox", credit: "(c) Jane Doe (CC BY)" });
+    expect(fox).toMatchObject({
+      title: "Red fox",
+      credit:
+        "Commons contributor ".repeat(25) +
+        "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
+    });
     expect(fennec).not.toHaveProperty("credit");
   });
 });

@@ -5,6 +5,7 @@ import { errorOf } from "../../api/errors";
 import type { FeedQuery, ListSummary } from "../../api/types";
 import { followAuthor, loadFollowing, suggestedAuthors, unfollowAuthor } from "../../lib/api";
 import { isEditorialAuthor } from "../../lib/editorial";
+import { useVisit } from "../../app/visitMemory";
 import { useResource } from "../../lib/useResource";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -174,14 +175,15 @@ export function FollowingTab({
   unfollow,
   store = sectionsStore,
 }: FollowingTabProps) {
-  const feed = useFeed(FOLLOWING_FEED, load);
+  const visit = useVisit();
+  const feed = useFeed(FOLLOWING_FEED, load, null, visit);
   const snapshot = useSections(store);
   const { sections } = snapshot;
   // What is followed is read again whenever the feed is: a follow made from
   // the empty state's tiles changes both.
   const [round, setRound] = useState(0);
   const loadFor = useCallback(() => loadFollowed(), [loadFollowed]);
-  const followed = useResource(`${uid}:${round}`, loadFor);
+  const followed = useResource(`${uid}:${round}`, loadFor, visit?.follows);
   const following = followed.state.status === "ready" ? followed.state.value : null;
 
   const byId = useMemo(() => new Map(sections.map((one) => [one.id, one])), [sections]);

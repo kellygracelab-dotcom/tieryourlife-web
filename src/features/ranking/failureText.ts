@@ -18,6 +18,8 @@ export function rankFailureText(error: ApiError): string {
   switch (error.kind) {
     case "offline":
       return strings.rank.failedOffline;
+    case "tooLarge":
+      return strings.rank.failedTooLarge;
     case "notFound":
       return strings.rank.failedGone;
     case "conflict":

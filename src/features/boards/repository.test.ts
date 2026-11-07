@@ -66,8 +66,8 @@ describe("parseBoard", () => {
     });
     expect(read?.items.map((item) => item.credit)).toEqual(["(c) Jane Doe", null, null, null]);
     expect(
-      parseBoard({ ...board, items: [card("e", "x".repeat(300))] })?.items[0]?.credit,
-    ).toHaveLength(200);
+      parseBoard({ ...board, items: [card("e", "x".repeat(1100))] })?.items[0]?.credit,
+    ).toHaveLength(1000);
   });
 
   it("reads back what was written, whole", () => {

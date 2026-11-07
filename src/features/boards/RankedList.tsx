@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode 
 import { sizedFor } from "../../lib/pictureSize";
 import { fill, plural, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
+import { ImageCredits } from "../tierboard/ImageCredits";
 import { MoveSheet } from "../tierboard/MoveSheet";
 import { itemsIn, liveItems, poolTier, rankedTiers, type Board, type BoardItem } from "./model";
 import "./boards.css";
@@ -34,6 +35,7 @@ function Poster({ item }: { item: BoardItem }) {
  * added opens it and shows there.
  */
 export function RankedList({ board, onMove, onRemove }: RankedListProps) {
+  const [credited, setCredited] = useState<BoardItem | null>(null);
   const poolId = useId();
   const tiers = rankedTiers(board);
   const pool = poolTier(board);
@@ -164,10 +166,24 @@ export function RankedList({ board, onMove, onRemove }: RankedListProps) {
           </ul>
         </section>
       )}
+      {credited?.credit && (
+        <ImageCredits
+          title={credited.title}
+          credit={credited.credit}
+          close={() => setCredited(null)}
+        />
+      )}
       {chosen !== undefined && (
         <MoveSheet
           name={chosen.title}
-          credit={chosen.credit}
+          onCredits={
+            chosen.credit?.trim()
+              ? () => {
+                  setMoving(null);
+                  setCredited(chosen);
+                }
+              : undefined
+          }
           tiers={tiers}
           current={current === -1 ? null : current}
           onPlace={(index) => move(chosen.uid, tiers[index]?.uid ?? null)}

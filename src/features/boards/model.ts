@@ -1,4 +1,6 @@
 import type { SyncedPlay } from "../../api/boards";
+import { PICTURE_CREDIT_LIMIT, creditOf } from "../../api/pictureCredit";
+export { creditOf } from "../../api/pictureCredit";
 import { holds } from "../../lib/locale";
 import { currentLocale } from "../../strings";
 
@@ -159,7 +161,7 @@ export const BOARD_LIMITS = {
   caption: 60,
   tiers: 20,
   items: 2000,
-  credit: 200,
+  credit: PICTURE_CREDIT_LIMIT,
 } as const;
 
 /**
@@ -168,13 +170,6 @@ export const BOARD_LIMITS = {
  * twenty ranked was refused on every back-up, and never kept.
  */
 export const MAX_RANKED_TIERS = BOARD_LIMITS.tiers - 1;
-
-/** A picture's credit as the backend keeps it: trimmed, one space between words, none when empty. */
-export function creditOf(raw: unknown): string | null {
-  if (typeof raw !== "string") return null;
-  const credit = raw.trim().replace(/\s+/g, " ").slice(0, BOARD_LIMITS.credit).trim();
-  return credit.length === 0 ? null : credit;
-}
 
 /** The phone's five tiers and its pool, light and dark (its `DefaultTierColors`). */
 export const DEFAULT_TIER_DRAFTS: readonly TierDraft[] = [
@@ -422,7 +417,11 @@ export function coverPictureOf(board: Board, pictures: readonly string[]): strin
 /** No pictures leave the cover to the cards, one is the cover itself, two to six make a collage. */
 export function setCover(board: Board, pictures: readonly string[], now: number): Board {
   const chosen = [...new Set(pictures)].slice(0, 6);
-  if (chosen.join("\n") === board.coverImageUrls.join("\n")) return board;
+  if (
+    chosen.join("\n") === board.coverImageUrls.join("\n") &&
+    (chosen.length > 0 || (board.coverPictureId === null && board.coverImageUrl === null))
+  )
+    return board;
   return touched(
     {
       ...board,
@@ -505,7 +504,7 @@ export function addToPool(
         position: position++,
         title,
         imageUrl: draft.imageUrl,
-        credit: draft.credit ?? null,
+        credit: creditOf(draft.credit),
         source: draft.source ?? "MANUAL",
         deletedAt: null,
       },

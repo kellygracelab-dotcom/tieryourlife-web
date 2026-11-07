@@ -235,3 +235,23 @@
     opacity: 0.85;
   }
 }
+
+.image-credit {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.tile--credit {
+  touch-action: manipulation;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.card-detail__picture {
+  display: block;
+  max-width: 100%;
+  max-height: min(45dvh, 340px);
+  object-fit: contain;
+  margin: 0 auto 12px;
+}

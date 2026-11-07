@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { onRadioKeys, radioTabIndex } from "./radioKeys";
 import { useModal } from "./useModal";
@@ -47,6 +47,18 @@ function Host({ initial }: { initial?: string }) {
 }
 
 describe("useModal", () => {
+  it("puts focus inside the dialog before its first paint", () => {
+    let focusAtLayout: Element | null = null;
+    function Opening() {
+      useLayoutEffect(() => {
+        focusAtLayout = document.activeElement;
+      }, []);
+      return <Dialog onClose={() => undefined} />;
+    }
+    render(<Opening />);
+    expect(focusAtLayout).toBe(screen.getByRole("button", { name: "First" }));
+  });
+
   it("moves the focus in, keeps Tab inside both ways, and hands it back on Escape", async () => {
     render(<Host />);
     const opener = screen.getByRole("button", { name: "Open" });

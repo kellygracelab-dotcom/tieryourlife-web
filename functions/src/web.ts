@@ -41,6 +41,7 @@ import {
   listAuthorOf,
   makeCode,
   MAX_BODY_BYTES,
+  rankingFits,
   MY_RANKINGS_CAP,
   newestFirst,
   shownSnapshot,
@@ -75,6 +76,13 @@ interface RankingDocument {
   claimedAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
 }
+
+const RANK_TOO_LARGE = {
+  ok: false,
+  status: 413,
+  code: "TOO_LARGE",
+  error: "Ranking exceeds the document size limit",
+} as const;
 
 const notFound = (response: Response, error: string): void =>
   void response.status(404).json({ error, code: "NOT_FOUND" });
@@ -315,7 +323,7 @@ async function saveRanking(
   random: (max: number) => number,
   appCheckToken: string | null,
 ): Promise<void> {
-  if (JSON.stringify(body ?? null).length > MAX_BODY_BYTES) {
+  if (Buffer.byteLength(JSON.stringify(body ?? null), "utf8") > MAX_BODY_BYTES) {
     return void response.status(413).json({ error: "Too large", code: "TOO_LARGE" });
   }
   const listId = (body as { listId?: unknown } | null)?.listId;
@@ -360,6 +368,26 @@ async function saveRanking(
   if (tooSoon(lastWrite ?? null, now)) {
     response.setHeader("Retry-After", "2");
     return void response.status(429).json({ error: "One at a time", code: "BUSY" });
+  }
+
+  const claimToken = randomBytes(24).toString("base64url");
+  const author = listAuthorOf(list.data() ?? {});
+  const document: RankingDocument = {
+    listId: decision.listId,
+    snapshot: withTierLabels(snapshot, words.labels),
+    rows: toStoredRows(decision.rows),
+    ownerUid: identity.uid,
+    ownerAnonymous: identity.isAnonymous,
+    claimHash: claimHashOf(claimToken),
+    // So the author's name can be taken out of it when their account goes.
+    ...(author === null ? {} : { listAuthorUid: author }),
+  };
+
+  // Reserve the timestamp fields before charging any quota or creating a link.
+  if (!rankingFits({ ...document, createdAt: now, claimedAt: now, updatedAt: now })) {
+    return void response
+      .status(RANK_TOO_LARGE.status)
+      .json({ code: RANK_TOO_LARGE.code, error: RANK_TOO_LARGE.error });
   }
 
   // Counted before the write, like the backend's generation ceiling: the
@@ -410,19 +438,6 @@ async function saveRanking(
     return void response.status(429).json({ error: "Too many rankings", code: "TOO_MANY" });
   }
 
-  const claimToken = randomBytes(24).toString("base64url");
-  const author = listAuthorOf(list.data() ?? {});
-  const document: RankingDocument = {
-    listId: decision.listId,
-    snapshot: withTierLabels(snapshot, words.labels),
-    rows: toStoredRows(decision.rows),
-    ownerUid: identity.uid,
-    ownerAnonymous: identity.isAnonymous,
-    claimHash: claimHashOf(claimToken),
-    // So the author's name can be taken out of it when their account goes.
-    ...(author === null ? {} : { listAuthorUid: author }),
-  };
-
   for (let attempt = 0; attempt < CODE_ATTEMPTS; attempt++) {
     const code = makeCode(random);
     try {
@@ -466,6 +481,15 @@ async function claimRanking(
     if (!doc.exists) return null;
     const verdict = decideClaim(doc.data() as RankingDocument, identity.uid, claimToken);
     if (verdict.ok && verdict.write) {
+      if (
+        !rankingFits({
+          ...doc.data(),
+          ownerUid: identity.uid,
+          ownerAnonymous: false,
+          claimedAt: Date.now(),
+        })
+      )
+        return RANK_TOO_LARGE;
       transaction.update(ref, {
         ownerUid: identity.uid,
         ownerAnonymous: false,
@@ -495,7 +519,7 @@ async function editRanking(
   code: string,
 ): Promise<void> {
   if (!isCode(code)) return notFound(response, "No such ranking");
-  if (JSON.stringify(body ?? null).length > MAX_BODY_BYTES) {
+  if (Buffer.byteLength(JSON.stringify(body ?? null), "utf8") > MAX_BODY_BYTES) {
     return void response.status(413).json({ error: "Too large", code: "TOO_LARGE" });
   }
   // A banned account changes no ranking either, as the proxy's PUT refuses a replacement.
@@ -519,8 +543,10 @@ async function editRanking(
     // same mark, so a burst of them goes through one by one (QA S32).
     if (tooSoon((mark.get("lastWriteAt") as number | undefined) ?? null, now)) return BUSY;
     const snapshot = withTierLabels(ranking.snapshot, words.labels);
+    const rows = toStoredRows(edit.rows);
+    if (!rankingFits({ ...ranking, snapshot, rows, updatedAt: now })) return RANK_TOO_LARGE;
     transaction.update(ref, {
-      rows: toStoredRows(edit.rows),
+      rows,
       ...(snapshot === ranking.snapshot ? {} : { snapshot }),
       updatedAt: FieldValue.serverTimestamp(),
     });

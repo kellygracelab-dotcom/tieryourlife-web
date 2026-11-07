@@ -31,6 +31,7 @@ playwright-report
 functions/lib
 functions/lib-test
 firebase-debug.log
+gha-creds-*.json
 
 # Working notes with personal details; the public roadmap lives in the README
 PLAN.md

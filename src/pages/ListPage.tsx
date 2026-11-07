@@ -5,6 +5,7 @@ import { errorOf } from "../api/errors";
 import { tierWordsToSend } from "../api/rank";
 import { isOwnList, type BasedOn, type PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
+import { useVisit } from "../app/visitMemory";
 import { useSession } from "../app/session";
 import { boards as site } from "../features/boards/owners";
 import { boardOfList, seenAsCommunity } from "../features/boards/ownList";
@@ -52,7 +53,7 @@ import { isEditorial, isEditorialAuthor } from "../lib/editorial";
 import { spendPreload } from "../lib/preload";
 import { type KeyValueStore, localStorageStore } from "../lib/storage";
 import { useResource } from "../lib/useResource";
-import { fill, strings } from "../strings";
+import { currentLocale, fill, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
@@ -63,7 +64,6 @@ import { localGames } from "../features/play/savedGames";
 import { usePlay } from "../features/play/usePlay";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
-import { PictureCredits } from "./ListPageCredits";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
@@ -236,7 +236,13 @@ export function ListPage(props: ListPageProps) {
   // known; any other keeps its key, and so its board, when the account arrives.
   const asAccount = account?.kind === "signedIn" && preloadHidesAuthor(id);
   const load = useCallback(() => loadList(id, asAccount), [id, asAccount]);
-  const { state, retry } = useResource(asAccount ? `${id}#account` : id, load);
+  const visit = useVisit();
+  const reader = account?.kind === "signedIn" ? account.uid : "";
+  const { state, retry } = useResource(
+    JSON.stringify([id, currentLocale(), reader, asAccount]),
+    load,
+    visit?.lists,
+  );
   // Republished while it was ranked: read again from the network, since the
   // page's copy may be as old as the list a Finish was just refused for.
   const reread = useCallback(() => {
@@ -670,7 +676,6 @@ function OpenList({
           </>
         ))}
       {!own && !outOfSight && play.view}
-      {!outOfSight && <PictureCredits items={list.items} />}
       {sheet && (
         <RankingsSheet
           list={list}

@@ -516,15 +516,25 @@ describe("ListPage", () => {
   it("names the photographers the pictures ask for at the list's foot, and has no such part without one", async () => {
     mocks.loadList.mockResolvedValue({
       ...list,
-      items: [{ ...list.items[0]!, credit: "(c) Jane Doe (CC BY)" }, list.items[1]!],
+      items: [
+        {
+          ...list.items[0]!,
+          credit:
+            "Commons contributor ".repeat(24) + "https://creativecommons.org/licenses/by/4.0/",
+        },
+        list.items[1]!,
+      ],
     });
     const { unmount } = open();
-    const credits = await screen.findByRole("region", { name: "Picture credits" });
+    const card = await screen.findByRole("button", { name: "Ex Machina" });
+    await userEvent.dblClick(card);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Image credits" }));
+    expect(screen.getByRole("dialog", { name: "Image credits" })).toHaveTextContent(
+      "Commons contributor ".repeat(24) + "https://creativecommons.org/licenses/by/4.0/",
+    );
     expect(
-      within(credits)
-        .getAllByRole("listitem")
-        .map((line) => line.textContent),
-    ).toEqual(["Ex Machina — (c) Jane Doe (CC BY)"]);
+      screen.getByRole("link", { name: "https://creativecommons.org/licenses/by/4.0/" }),
+    ).toHaveAttribute("href", "https://creativecommons.org/licenses/by/4.0/");
     unmount();
 
     mocks.loadList.mockResolvedValue(list);

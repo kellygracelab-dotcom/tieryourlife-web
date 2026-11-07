@@ -335,6 +335,8 @@ const es: Translation = {
     failedPictureRefused:
       "Una de tus fotos no puede aparecer en el feed público. Quítala o mantén la lista privada.",
     failedCategory: "Esta categoría ya no admite listas. Elige otra en Categoría.",
+    publicationChanged:
+      "La lista publicada cambió durante la actualización. Tus cambios están guardados en este dispositivo. Intenta publicarla de nuevo.",
     failedTooMany:
       "Esta cuenta ya publicó todas las listas que puede. Retira una en Tus listas públicas primero.",
     failedSignedOut: "Para publicar hace falta una cuenta. Inicia sesión e inténtalo de nuevo.",
@@ -562,6 +564,8 @@ const es: Translation = {
     failedBanned: "Ahora mismo no puedes clasificar listas.",
     failedBannedUntil: "No puedes clasificar listas hasta el {date}.",
     failedOther: "No se pudo guardar la clasificación. No se perdió nada. Inténtalo de nuevo.",
+    failedTooLarge:
+      "La lista es demasiado grande para guardar la clasificación con un enlace. Tu orden se conserva en este dispositivo.",
     failedChanged:
       "El autor cambió esta lista mientras la clasificabas. Vuelve a cargarla para clasificarla tal como está ahora.",
     loadAgain: "Volver a cargarla",

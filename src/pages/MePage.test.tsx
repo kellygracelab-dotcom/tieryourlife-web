@@ -199,7 +199,10 @@ describe("MePage", () => {
     // Who ranked it is said on the list itself, in its menu.
     expect(list).toHaveTextContent("Published · 34 cards");
     expect(list).not.toHaveTextContent(/2,140|rankings/);
-    expect(within(list).getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/l/l1");
+    expect(within(list).getByRole("link", { name: "Edit" })).toHaveAttribute(
+      "href",
+      "/b/new?list=l1",
+    );
     // Few enough to see at once: no chips to choose between the kinds.
     expect(screen.queryByRole("group", { name: "Which to show" })).toBeNull();
   });
@@ -307,7 +310,7 @@ describe("MePage", () => {
     expect(within(elsewhere).getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/l/l2");
     // Out in the feed: its page, which opens the board for its author anyway.
     const out = rowOf(/Oscar films 2025/);
-    expect(within(out).getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/l/l3");
+    expect(within(out).getByRole("link", { name: "Edit" })).toHaveAttribute("href", "/b/oscars");
   });
 
   it("offers a ranking to be published as a list of one's own, and a list only to be unpublished", async () => {

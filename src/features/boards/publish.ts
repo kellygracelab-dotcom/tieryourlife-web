@@ -52,7 +52,7 @@ export function coverOf(
     liveItems(board).find((item) => item.pictureId !== null && item.imageUrl === url) ?? null;
   const [only] = board.coverImageUrls;
   if (board.coverImageUrls.length === 1 && only !== undefined) {
-    const own = ownCard(only)?.pictureId ?? board.coverPictureId;
+    const own = board.coverPictureId ?? ownCard(only)?.pictureId ?? null;
     if (own !== null) return { coverImageUrl: null, coverPictureId: own, coverImageUrls: [] };
   }
   // A cover the account named by id whose address this browser has not found yet.

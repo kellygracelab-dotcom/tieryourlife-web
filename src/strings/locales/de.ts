@@ -335,6 +335,8 @@ const de: Translation = {
       "Eines deiner Fotos darf nicht in den öffentlichen Feed. Entferne es oder behalte die Liste privat.",
     failedCategory:
       "Diese Kategorie nimmt keine Listen mehr an. Wähle unter Kategorie eine andere.",
+    publicationChanged:
+      "Die veröffentlichte Liste wurde während der Aktualisierung geändert. Deine Änderungen sind auf diesem Gerät gespeichert. Versuche erneut, die Liste zu veröffentlichen.",
     failedTooMany:
       "Dieses Konto hat so viele Listen veröffentlicht, wie es kann. Nimm erst eine unter „Deine öffentlichen Listen“ zurück.",
     failedSignedOut:
@@ -560,6 +562,8 @@ const de: Translation = {
     failedBannedUntil: "Du kannst bis {date} keine Ranglisten erstellen.",
     failedOther:
       "Die Rangliste konnte nicht gespeichert werden. Nichts ist verloren. Versuch es noch einmal.",
+    failedTooLarge:
+      "Diese Liste ist zu groß, um die Rangliste per Link zu teilen. Deine Anordnung bleibt auf diesem Gerät.",
     failedChanged:
       "Der Autor hat diese Liste geändert, während du sie eingestuft hast. Lade sie neu, um sie so einzustufen, wie sie jetzt ist.",
     loadAgain: "Neu laden",

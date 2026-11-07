@@ -85,6 +85,58 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   expect(account.published.size).toBe(0);
 });
 
+test("keeps local edits after PUBLICATION_CHANGED and retries the same publication", async ({
+  page,
+  hasTouch,
+}) => {
+  const account = await signIn(page);
+  await newBoard(page, hasTouch, "Festival films");
+  const openSettings = async () => {
+    await press(page.getByLabel("More about this board"), hasTouch);
+    await press(page.getByRole("button", { name: "List settings" }), hasTouch);
+  };
+  await openSettings();
+  await press(page.getByRole("button", { name: /Category/ }), hasTouch);
+  await press(page.getByRole("radio", { name: "Film & TV" }), hasTouch);
+  await press(page.getByRole("switch", { name: "Public", exact: true }), hasTouch);
+  await expect(page.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+    "href",
+    "/l/L1",
+  );
+
+  const anonymity = page.getByRole("switch", { name: "Publish anonymously" });
+  let refusedBody: unknown;
+  await page.route(
+    "**/lists/L1",
+    async (route) => {
+      refusedBody = route.request().postDataJSON();
+      return route.fulfill({
+        status: 409,
+        json: {
+          code: "PUBLICATION_CHANGED",
+          error: "The list changed while publishing. Try again.",
+        },
+      });
+    },
+    { times: 1 },
+  );
+  await press(anonymity, hasTouch);
+  await expect(page.getByRole("alert")).toContainText(
+    "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
+  );
+  await expect(page.getByRole("button", { name: "Update", exact: true })).toBeEnabled();
+  expect(account.published.get("L1")?.anonymous).toBe(false);
+  expect(refusedBody).toMatchObject({ anonymous: true, title: "Festival films" });
+
+  await page.reload();
+  await openSettings();
+  await expect(anonymity).toBeChecked();
+  await press(page.getByRole("button", { name: "Update", exact: true }), hasTouch);
+  await expect(page.getByText("Send this board again, over the same link.")).toBeVisible();
+  expect(account.published.size).toBe(1);
+  expect(account.published.get("L1")).toEqual(refusedBody);
+});
+
 test("shows the people followed, unfollows from Manage, and brings a row back when that failed", async ({
   page,
   hasTouch,
@@ -251,4 +303,46 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
   await page.reload();
   await expect(page.getByLabel(/Back up my boards/)).not.toBeChecked();
   expect(account.calls.filter((call) => call.startsWith("PUT /boards")).length).toBe(puts);
+});
+
+test("uploads a cover from the board settings and keeps the owner's photo after reopening", async ({
+  page,
+  hasTouch,
+}) => {
+  const account = await signIn(page);
+  await newBoard(page, hasTouch, "A cover of my own");
+  const boardUrl = page.url();
+  const settings = async () => {
+    await press(page.getByLabel("More about this board"), hasTouch);
+    await press(page.getByRole("button", { name: "List settings" }), hasTouch);
+    await press(page.getByRole("button", { name: /Cover/ }), hasTouch);
+  };
+  await settings();
+  const choose = page.getByRole("button", { name: "A photo from the gallery" });
+  const select = async (name: string, mimeType: string, buffer: Buffer) => {
+    const picking = page.waitForEvent("filechooser");
+    await press(choose, hasTouch);
+    await (await picking).setFiles({ name, mimeType, buffer });
+  };
+  await select("notes.txt", "text/plain", Buffer.from("test"));
+  await expect(page.getByRole("alert")).toContainText("notes.txt");
+  await select("poster.png", "image/png", PIXEL);
+  const cover = page.locator(".sheet-row__thumb").filter({ visible: true });
+  const thumb = page.locator("img.sheet-row__thumb");
+  await expect(thumb.last()).toHaveAttribute("src", /users%2F/i);
+  const src = await thumb.last().getAttribute("src");
+  await expect
+    .poll(
+      () =>
+        [...account.boards.values()].find((b) => b.title === "A cover of my own")?.body
+          .coverPictureId,
+    )
+    .toBeTruthy();
+  await page.goBack();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(page.url()).toBe(boardUrl);
+  await page.reload();
+  await settings();
+  await expect(cover.last()).toHaveAttribute("src", src!);
+  await expect(page.getByRole("button", { name: /Auto|Reset|Remove cover/ }).first()).toBeVisible();
 });

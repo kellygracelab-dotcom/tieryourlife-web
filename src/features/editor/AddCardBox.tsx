@@ -59,7 +59,7 @@ interface AddCardBoxProps {
   keep?: Keep;
 }
 
-function pictureFailureText(name: string, failure: unknown): string {
+export function pictureFailureText(name: string, failure: unknown): string {
   const reason = failure instanceof PictureRefused ? failure.reason : "upload";
   switch (reason) {
     case "signIn":

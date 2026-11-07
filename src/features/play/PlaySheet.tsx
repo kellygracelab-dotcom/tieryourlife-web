@@ -55,7 +55,7 @@ export function PlaySheet({
   const arriving = useContext(SheetArrival);
   const [leaving, setLeaving] = useState(false);
   const leave = () => setLeaving(true);
-  useModal(box, leave, focus);
+  useModal(box, leave, focus, onClose);
 
   // The board behind hears its keys on the window: 1 placed its picked card
   // and Ctrl+Z undid a move under the scrim. A key stops at the document,

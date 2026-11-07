@@ -346,6 +346,8 @@ const fr: Translation = {
       "Une de vos photos ne peut pas figurer dans le fil public. Retirez-la ou gardez la liste privée.",
     failedCategory:
       "Cette catégorie n’accepte plus de listes. Choisissez-en une autre dans Catégorie.",
+    publicationChanged:
+      "La liste publiée a changé pendant la mise à jour. Tes modifications sont enregistrées sur cet appareil. Réessaie de la publier.",
     failedTooMany:
       "Ce compte a publié autant de listes qu’il le peut. Retirez-en d’abord une dans Vos listes publiques.",
     failedSignedOut: "Publier demande un compte. Connectez-vous et réessayez.",
@@ -579,6 +581,8 @@ const fr: Translation = {
     failedBanned: "Vous ne pouvez pas classer de listes pour le moment.",
     failedBannedUntil: "Vous ne pouvez pas classer de listes jusqu’au {date}.",
     failedOther: "Impossible d’enregistrer le classement. Rien n’est perdu. Réessayez.",
+    failedTooLarge:
+      "Cette liste est trop grande pour enregistrer le classement avec un lien. Ton classement reste sur cet appareil.",
     failedChanged:
       "L’auteur a modifié cette liste pendant que vous la classiez. Rechargez-la pour la classer telle qu’elle est maintenant.",
     loadAgain: "La recharger",

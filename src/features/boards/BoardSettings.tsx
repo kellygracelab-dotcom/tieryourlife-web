@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { errorOf, type ApiError } from "../../api/errors";
@@ -13,6 +21,8 @@ import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { onRadioKeys, radioTabIndex } from "../../ui/radioKeys";
 import { useModal } from "../../ui/useModal";
+import { pictureFailureText, type Upload } from "../editor/AddCardBox";
+import { uploadPicture } from "../../lib/pictures";
 import { failureText } from "../editor/failureText";
 import type { Section } from "../sections/model";
 import {
@@ -91,6 +101,7 @@ interface BoardSettingsProps {
    * goes out some other way (a house list), whose sheet then offers none of it.
    */
   publishing: PublishingDeps | null;
+  upload?: Upload;
   topics?: LoadTopics;
   /** One topic by its id: whether a proposed one still waits. */
   findTopic?: FindTopic;
@@ -205,6 +216,7 @@ export function BoardSettings({
   onNewTier,
   onPublished,
   publishing,
+  upload = uploadPicture,
   topics: load = loadTopics,
   findTopic = loadTopic,
   onDone,
@@ -448,12 +460,61 @@ export function BoardSettings({
       </span>
     ) : null;
 
-  const pictures = [
-    ...new Set(liveItems(board).flatMap((item) => (item.imageUrl === null ? [] : [item.imageUrl]))),
-  ];
+  const pictures = new Map<string, string>();
+  for (const card of liveItems(board)) {
+    if (card.imageUrl !== null && !pictures.has(card.imageUrl))
+      pictures.set(card.imageUrl, card.title);
+  }
   const chosen = board.coverImageUrls;
+  const fileInput = useRef<HTMLInputElement>(null);
+  const owner = signedIn ? account.uid : null;
+  const [transfer, setTransfer] = useState<{
+    owner: string;
+    board: string;
+    error: string | null;
+    busy: boolean;
+  } | null>(null);
+  const active = transfer?.owner === owner && transfer?.board === board.uid ? transfer : null;
+  const uploading = active?.busy === true;
+  const uploadError = active?.error;
+  const pending = useRef<AbortController | null>(null);
+  useLayoutEffect(() => {
+    return () => pending.current?.abort();
+  }, [owner, board.uid]);
+  const chooseFile = async (file: File) => {
+    if (owner === null) return;
+    pending.current?.abort();
+    const task = new AbortController();
+    pending.current = task;
+    const currentTransfer = { owner, board: board.uid };
+    setTransfer({ ...currentTransfer, busy: true, error: null });
+    try {
+      const picture = await upload(file);
+      if (task.signal.aborted) return;
+      const current = latest();
+      if (current.deletedAt !== null) {
+        setTransfer(null);
+        return;
+      }
+      keep({
+        ...setCover(current, [picture.previewUrl], now()),
+        coverPictureId: picture.pictureId,
+      });
+      setTransfer(null);
+    } catch (failure) {
+      if (!task.signal.aborted)
+        setTransfer({
+          ...currentTransfer,
+          busy: false,
+          error: pictureFailureText(file.name, failure),
+        });
+    }
+  };
   const toggleCover = (url: string) => {
-    const next = chosen.includes(url) ? chosen.filter((one) => one !== url) : [...chosen, url];
+    const fromCards = chosen.filter((one) => pictures.has(one));
+    const next = fromCards.includes(url)
+      ? fromCards.filter((one) => one !== url)
+      : [...fromCards, url];
     if (next.length > MAX_COVER) return;
     keep(setCover(latest(), next, now()));
   };
@@ -866,16 +927,51 @@ export function BoardSettings({
                       ? strings.boards.coverOne
                       : fill(strings.boards.coverCollage, { n: chosen.length })}
                 </p>
-                {pictures.length === 0 ? (
+                {chosen.length === 1 && chosen[0] && (
+                  <img
+                    className="board-settings__cover-preview"
+                    src={chosen[0]}
+                    alt={strings.boards.cover}
+                  />
+                )}
+                <input
+                  ref={fileInput}
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  aria-label={strings.settings.faceGallery}
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+                    if (file) void chooseFile(file);
+                  }}
+                />
+                <Button
+                  icon="add_photo_alternate"
+                  disabled={uploading}
+                  onClick={() => (signedIn ? fileInput.current?.click() : void signIn())}
+                >
+                  {uploading ? plural(strings.new.uploading, 1) : strings.settings.faceGallery}
+                </Button>
+                {uploadError && <p role="alert">{uploadError}</p>}
+                {chosen.length > 0 && (
+                  <Button
+                    icon="undo"
+                    disabled={uploading}
+                    onClick={() => keep(setCover(latest(), [], now()))}
+                  >
+                    {strings.boards.coverReset}
+                  </Button>
+                )}
+                {pictures.size === 0 ? (
                   <p className="sheet-pick__note">{strings.boards.coverNoCards}</p>
                 ) : (
                   <>
                     <p className="sheet-pick__note">
-                      {fill(strings.boards.coverCards, { n: pictures.length })}
+                      {fill(strings.boards.coverCards, { n: pictures.size })}
                     </p>
                     <ul className="board-settings__covers" aria-label={strings.boards.cover}>
-                      {pictures.map((url) => {
-                        const card = liveItems(board).find((item) => item.imageUrl === url);
+                      {Array.from(pictures, ([url, name]) => {
                         const on = chosen.includes(url);
                         const place = chosen.indexOf(url);
                         return (
@@ -889,9 +985,9 @@ export function BoardSettings({
                               }
                               aria-pressed={on}
                               aria-label={fill(strings.boards.coverPick, {
-                                name: card?.title ?? "",
+                                name,
                               })}
-                              disabled={!on && chosen.length >= MAX_COVER}
+                              disabled={uploading || (!on && chosen.length >= MAX_COVER)}
                               onClick={() => toggleCover(url)}
                             >
                               <img src={url} alt="" loading="lazy" />
@@ -901,13 +997,6 @@ export function BoardSettings({
                         );
                       })}
                     </ul>
-                    {chosen.length > 0 && (
-                      <div>
-                        <Button icon="undo" onClick={() => keep(setCover(latest(), [], now()))}>
-                          {strings.boards.coverReset}
-                        </Button>
-                      </div>
-                    )}
                   </>
                 )}
               </div>

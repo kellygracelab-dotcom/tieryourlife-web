@@ -36,6 +36,8 @@ export function failureText(
         ? strings.new.failedPictureRefused
         : fill(strings.new.failedPictureRefusedCard, { title });
     }
+    case "publicationChanged":
+      return strings.new.publicationChanged;
     case "tooManyLists":
       return strings.new.failedTooMany;
     case "tooManyTopics":

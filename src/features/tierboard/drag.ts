@@ -122,6 +122,27 @@ export function targetOf(element: Element | null, at?: Point, dragged?: number):
   const tier = Number(drop.replace("tier:", ""));
   if (!Number.isInteger(tier)) return null;
   if (at === undefined) return { kind: "tier", tier, index: Number.MAX_SAFE_INTEGER };
+  const rtl = getComputedStyle(zone).direction === "rtl";
+  const children = zone.querySelector(".tier__items")?.children;
+  if (children && children.length > 32) {
+    const before = (box: DOMRect) =>
+      box.bottom <= at.y ||
+      (box.top <= at.y &&
+        (rtl ? (box.left + box.right) / 2 > at.x : (box.left + box.right) / 2 < at.x));
+    let low = 0;
+    let high = children.length;
+    while (low < high) {
+      const mid = (low + high) >>> 1;
+      if (before(children[mid]!.getBoundingClientRect())) low = mid + 1;
+      else high = mid;
+    }
+    const held = dragged === undefined ? null : zone.querySelector(`[data-item="${dragged}"]`);
+    return {
+      kind: "tier",
+      tier,
+      index: low - (held && before(held.getBoundingClientRect()) ? 1 : 0),
+    };
+  }
   const boxes: CardBox[] = [];
   for (const card of zone.querySelectorAll<HTMLElement>(".tier__items [data-item]")) {
     const item = Number(card.dataset.item);
@@ -129,6 +150,5 @@ export function targetOf(element: Element | null, at?: Point, dragged?: number):
     const rect = card.getBoundingClientRect();
     boxes.push({ item, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
   }
-  const rtl = getComputedStyle(zone).direction === "rtl";
   return { kind: "tier", tier, index: insertionIndex(boxes, at, rtl) };
 }

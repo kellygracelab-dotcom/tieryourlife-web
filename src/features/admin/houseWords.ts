@@ -35,6 +35,8 @@ export function failureText(error: ApiError, kind: HouseSend): string {
         error.code === "TOO_MANY_TIERS" ? strings.new.tooManyTiers : strings.new.failedInvalid,
         error.detail,
       );
+    case "publicationChanged":
+      return strings.new.publicationChanged;
     case "tooLarge":
       return withDetail(strings.new.failedTooLarge, error.detail);
     case "pictureRefused":

@@ -332,9 +332,8 @@ describe("RankingBoard's card menu", () => {
     );
     await userEvent.dblClick(card("Climax"));
     const menu = screen.getByRole("menu", { name: "Climax" });
-    expect(menu).toHaveAccessibleDescription("Photo: (c) Jane Doe (CC BY)");
-    // Words, not one more thing to choose.
-    expect(within(menu).queryByRole("menuitem", { name: /Photo/ })).toBeNull();
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "Image credits" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("(c) Jane Doe (CC BY)");
     await userEvent.keyboard("{Escape}");
     await userEvent.dblClick(card("The Witch"));
     expect(screen.getByRole("menu", { name: "The Witch" })).not.toHaveTextContent("Photo");
@@ -345,9 +344,12 @@ describe("RankingBoard's card menu", () => {
       pointer("pointerup", card("Climax"), "touch");
       pointer("click", card("Climax"), "touch");
     }
-    expect(screen.getByRole("dialog", { name: "Climax" })).toHaveAccessibleDescription(
-      "Photo: (c) Jane Doe (CC BY)",
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Climax" })).getByRole("button", {
+        name: "Image credits",
+      }),
     );
+    expect(screen.getByRole("dialog", { name: "Image credits" })).toHaveTextContent("Jane Doe");
   });
 
   it("gives a finger's double tap the phone's sheet instead", async () => {

@@ -1,3 +1,4 @@
+import { creditOf } from "../../api/pictureCredit";
 import type { PublishedList } from "../../api/types";
 import { publishedPictureOf, type UploadedPicture } from "../../lib/pictures";
 import type { KeyValueStore } from "../../lib/storage";
@@ -103,13 +104,16 @@ export async function boardForOwnList(
 ): Promise<Board> {
   const draft = kept ?? draftOf(list);
   const wanted = [
-    ...new Set(
-      draft.items.flatMap((item) =>
+    ...new Set([
+      ...(list.coverImageUrl !== null && ownCopyIn(list, list.coverImageUrl)
+        ? [list.coverImageUrl]
+        : []),
+      ...draft.items.flatMap((item) =>
         item.pictureId === null && item.imageUrl !== null && ownCopyIn(list, item.imageUrl)
           ? [item.imageUrl]
           : [],
       ),
-    ),
+    ]),
   ];
   const copies = new Map<string, UploadedPicture>();
   for (let start = 0; start < wanted.length; start += COPIES_AT_ONCE) {
@@ -138,7 +142,7 @@ export async function boardForOwnList(
     list.items.map((item) => [
       `${item.title}
 ${item.imageUrl ?? ""}`,
-      item.credit ?? null,
+      creditOf(item.credit),
     ]),
   );
   // A picture of the list as the board shows it: the feed's copy of one's own
@@ -189,6 +193,8 @@ ${card.imageUrl ?? ""}`);
         ? { id: list.topicId, name: list.topicName ?? "" }
         : null,
     // The cover or collage the author chose stays, so an Update leaves it as it is.
+    coverPictureId:
+      list.coverImageUrl === null ? null : (copies.get(list.coverImageUrl)?.pictureId ?? null),
     coverImageUrls: cover,
     coverImageUrl: cover.length === 1 ? (cover[0] ?? null) : null,
     // In step with the list, unless it carries changes the old editor had not sent.

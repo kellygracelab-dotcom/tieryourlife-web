@@ -176,12 +176,24 @@ describe("syncBoards", () => {
     repository.save({
       ...board,
       items: board.items.map((item) =>
-        item.title === "Dune" ? { ...item, credit: "(c) Jane Doe (CC BY)" } : item,
+        item.title === "Dune"
+          ? {
+              ...item,
+              credit:
+                "Commons contributor ".repeat(25) +
+                "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
+            }
+          : item,
       ),
     });
     await run();
     const [dune, heat] = account.keeps[0]!.request.items;
-    expect(dune).toMatchObject({ title: "Dune", credit: "(c) Jane Doe (CC BY)" });
+    expect(dune).toMatchObject({
+      title: "Dune",
+      credit:
+        "Commons contributor ".repeat(25) +
+        "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
+    });
     expect(heat).not.toHaveProperty("credit");
 
     const there = setUp();
@@ -189,12 +201,19 @@ describe("syncBoards", () => {
     there.account.holds({
       ...theirs,
       items: theirs.items.map((item) =>
-        item.title === "Dune" ? { ...item, credit: "(c) Jane Doe (CC BY)" } : item,
+        item.title === "Dune"
+          ? {
+              ...item,
+              credit:
+                "Commons contributor ".repeat(25) +
+                "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
+            }
+          : item,
       ),
     });
     await there.run();
     expect(there.repository.get("theirs")!.items.map((item) => item.credit)).toEqual([
-      "(c) Jane Doe (CC BY)",
+      "Commons contributor ".repeat(25) + "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
       null,
     ]);
   });

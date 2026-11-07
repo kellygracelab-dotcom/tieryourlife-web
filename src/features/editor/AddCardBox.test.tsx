@@ -196,7 +196,9 @@ describe("AddCardBox", () => {
           title: "Red fox",
           source: "inaturalist",
           kind: "animal",
-          credit: "(c) Jane Doe, some rights reserved (CC BY)",
+          credit:
+            "Commons contributor ".repeat(25) +
+            "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
         }),
         picture("inaturalist:2", { title: "Lost", source: "inaturalist", kind: "animal" }),
         picture("x:3", { title: "Fennec", source: "other", kind: "thing" }),
@@ -216,7 +218,7 @@ describe("AddCardBox", () => {
     expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent("Animal");
     // The photographer its license asks to name, beside the picture; none where none is asked.
     expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent(
-      "(c) Jane Doe, some rights reserved (CC BY)",
+      "Commons contributor ".repeat(25) + "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
     );
     expect(screen.getByRole("button", { name: /Fennec/ })).not.toHaveTextContent("(c)");
     expect(screen.getByText("From iNaturalist")).toBeInTheDocument();
@@ -229,7 +231,9 @@ describe("AddCardBox", () => {
       title: "Red fox",
       imageUrl: "https://img.test/inaturalist:1.jpg",
       key: "inaturalist:1",
-      credit: "(c) Jane Doe, some rights reserved (CC BY)",
+      credit:
+        "Commons contributor ".repeat(25) +
+        "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
     });
     await userEvent.click(screen.getByRole("button", { name: /Fennec/ }));
     expect(dispatch.mock.lastCall?.[0]).not.toHaveProperty("credit");

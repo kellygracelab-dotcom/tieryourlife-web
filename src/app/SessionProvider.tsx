@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { VisitContext, VisitMemory } from "./visitMemory";
+import { onListChanged } from "../lib/listChanges";
 import { owners } from "../features/boards/owners";
 import { claimKeptRankings } from "../features/ranking/claim";
 import { currentAccount, subscribeToAccount, type Account } from "../lib/account";
@@ -52,6 +54,9 @@ export function SessionProvider({
 }: SessionProviderProps) {
   const [account, setAccount] = useState<Account | null>(null);
   // A face chosen a moment ago and still on its way to Firebase.
+  const reader = account?.kind === "signedIn" ? account.uid : null;
+  const visit = useMemo(() => new VisitMemory(), [reader]);
+  useEffect(() => onListChanged(() => visit.clear()), [visit]);
   const [shownFace, showFace] = useState<string | null | undefined>(undefined);
   const [redirectFailed, setRedirectFailed] = useState(false);
   // A claim that failed at sign-in (the network, the server) would otherwise
@@ -123,12 +128,14 @@ export function SessionProvider({
     [account, shownFace, signInAndShow, signOut, current],
   );
   return (
-    <SessionContext.Provider value={session}>
-      <ShowFaceContext.Provider value={showFace}>
-        <RedirectFailedContext.Provider value={redirectFailed}>
-          {children}
-        </RedirectFailedContext.Provider>
-      </ShowFaceContext.Provider>
-    </SessionContext.Provider>
+    <VisitContext.Provider value={visit}>
+      <SessionContext.Provider value={session}>
+        <ShowFaceContext.Provider value={showFace}>
+          <RedirectFailedContext.Provider value={redirectFailed}>
+            {children}
+          </RedirectFailedContext.Provider>
+        </ShowFaceContext.Provider>
+      </SessionContext.Provider>
+    </VisitContext.Provider>
   );
 }

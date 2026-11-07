@@ -33,16 +33,22 @@ npm run check
 
 ## Deploying
 
-Deploys are run by hand:
+Once any dependent Proxy release is live, finish the Web PR from this checkout:
 
 ```bash
-npm run deploy
+npm run release:pr -- <PR-number>
 ```
 
-That runs the full check first and then `firebase deploy --only hosting:web,functions:web`. The `web`
-target is `tieryourlife.web.app`, the site's one address, the one the phone app shares. Never run a
-bare `firebase deploy` here: it would reach for everything in the project. Rolling back is the release
-history in the Firebase console, Hosting section.
+The command checks the CI run for the exact PR head, accepts a PR already squash-merged by GitHub,
+and waits for both checks on its merge commit on remote main. If a newer commit has reached main,
+it reports the original release as superseded. A successful cloud deployment is verified locally.
+When the cloud job is skipped, the command builds and tests the merge commit in a separate checkout,
+deploys Web Functions and Hosting via the authenticated Firebase CLI, then checks the public HTML,
+JavaScript and Web API responses. Both paths update the canonical main checkout.
+
+For an already checked main, `npm run deploy` runs the main part of this process.
+The target is `tieryourlife.web.app`, the address the app shares. The GitHub deployment job
+needs the workload identity and deployment account described in [AGENTS.md](AGENTS.md).
 
 `/lists` and `/3/search` are rewritten to the backend's Cloud Functions, so the browser talks to its own
 origin and never runs into CORS. In development, `vite` proxies the same two paths to the backend's
@@ -53,4 +59,4 @@ Firebase emulator on port 5001.
 - Branch, pull request, green CI, squash-merge, delete the branch. `main` is the only long-lived branch.
 - Tests land in the same pull request as the code they cover.
 - Comments only where the code cannot say why.
-- Nothing here deploys on its own; deploys are run by hand with `npm run deploy` once it exists.
+- A release is complete when the public site has been verified against the build from main.

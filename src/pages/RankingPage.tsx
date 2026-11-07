@@ -20,7 +20,6 @@ import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
-import { PictureCredits } from "./ListPageCredits";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
@@ -329,7 +328,6 @@ function Body({
           </div>
         </div>
       )}
-      <PictureCredits items={snapshot.items} />
     </>
   );
 }

@@ -343,6 +343,8 @@ const pl: Translation = {
     failedPictureRefused:
       "Jedno z Twoich zdjęć nie może trafić do publicznego kanału. Usuń je albo zostaw listę prywatną.",
     failedCategory: "Ta kategoria nie przyjmuje już list. Wybierz inną w polu Kategoria.",
+    publicationChanged:
+      "Opublikowana lista zmieniła się w trakcie aktualizacji. Twoje zmiany są zapisane na tym urządzeniu. Spróbuj opublikować listę ponownie.",
     failedTooMany:
       "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w Twoich publicznych listach.",
     failedSignedOut: "Do publikowania potrzebne jest konto. Zaloguj się i spróbuj ponownie.",
@@ -567,6 +569,8 @@ const pl: Translation = {
     failedBanned: "W tej chwili nie możesz tworzyć rankingów list.",
     failedBannedUntil: "Nie możesz tworzyć rankingów list do {date}.",
     failedOther: "Nie udało się zapisać rankingu. Nic nie przepadło. Spróbuj ponownie.",
+    failedTooLarge:
+      "Ta lista jest za duża, aby zapisać ranking do udostępnienia. Twój układ pozostaje na tym urządzeniu.",
     failedChanged:
       "Autor zmienił tę listę w trakcie układania rankingu. Wczytaj ją ponownie, aby ułożyć ją w obecnej wersji.",
     loadAgain: "Wczytaj ponownie",
