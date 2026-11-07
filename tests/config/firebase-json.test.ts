@@ -158,12 +158,20 @@ describe("where a deploy goes", () => {
         "Content-Security-Policy",
         "Content-Security-Policy-Report-Only",
         "X-Frame-Options",
+        "Cross-Origin-Opener-Policy",
       ]) {
         expect(valueOf(other, key)).toBeUndefined();
       }
     }
     expect(readFileSync("public/privacy.html", "utf8")).toBeTruthy();
     expect(readFileSync("public/delete-account.html", "utf8")).toBeTruthy();
+  });
+
+  // A page another site opened cannot reach back into the app through
+  // window.opener. "same-origin" would also cut the app off from the Google
+  // sign-in popup it opens, and sign-in would never finish: popups keep theirs.
+  it("keeps other sites' windows out of the app's, and sign-in's popup in it", () => {
+    expect(valueOf(everyPage(), "Cross-Origin-Opener-Policy")).toBe("same-origin-allow-popups");
   });
 
   // Reported, not enforced, until a live check shows nothing it would block:

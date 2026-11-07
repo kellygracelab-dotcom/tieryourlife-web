@@ -20,6 +20,7 @@ import {
 } from "../src/ranking";
 import {
   PAGE_POLICY,
+  PAGE_OPENER_POLICY,
   PAGE_SCRIPT_POLICY,
   resetShellForTests,
   UNAVAILABLE_HTML,
@@ -955,7 +956,10 @@ describe("the pages a link opens", () => {
       assert.equal(answer.headers["Content-Security-Policy"], PAGE_POLICY);
       assert.equal(answer.headers["Content-Security-Policy-Report-Only"], PAGE_SCRIPT_POLICY);
       assert.equal(answer.headers["X-Frame-Options"], "SAMEORIGIN");
+      assert.equal(answer.headers["Cross-Origin-Opener-Policy"], PAGE_OPENER_POLICY);
     }
+    // Never "same-origin": the Google sign-in popup the app opens must stay its own.
+    assert.equal(PAGE_OPENER_POLICY, "same-origin-allow-popups");
     assert.match(PAGE_POLICY, /frame-ancestors 'self'/);
   });
 
@@ -971,6 +975,7 @@ describe("the pages a link opens", () => {
     const value = (key: string) => everyPage.find((header) => header.key === key)?.value;
     assert.equal(value("Content-Security-Policy"), PAGE_POLICY);
     assert.equal(value("Content-Security-Policy-Report-Only"), PAGE_SCRIPT_POLICY);
+    assert.equal(value("Cross-Origin-Opener-Policy"), PAGE_OPENER_POLICY);
     // The shell is index.html; a script it runs inline needs its hash in the policy.
     const shell = readFileSync(join(root, "index.html"), "utf8");
     const inline = [...shell.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)];
