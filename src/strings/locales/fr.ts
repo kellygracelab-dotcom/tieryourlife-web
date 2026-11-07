@@ -348,6 +348,12 @@ const fr: Translation = {
       "Ce compte a publié autant de listes qu’il le peut. Retirez-en d’abord une dans Vos listes publiques.",
     failedSignedOut: "Publier demande un compte. Connectez-vous et réessayez.",
     failedTooLarge: "La liste est trop grande pour être publiée.",
+    failedPictureRefusedCard:
+      "L’image de « {title} » ne peut pas figurer dans le fil public. Changez-la ou gardez la liste privée.",
+    failedWebPicturesToday:
+      "La liste contient plus d’images d’autres sites que ce compte ne peut en publier aujourd’hui. Réessayez demain ou utilisez-en moins.",
+    failedWebPicturesTooMany:
+      "La liste contient trop d’images d’autres sites pour être publiée. Retirez-en quelques-unes.",
     failedInvalid: "La liste a été refusée.",
     failedOther: "Impossible de publier. Rien n’est perdu. Réessayez.",
     editTitle: "Modifier la liste",

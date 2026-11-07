@@ -332,6 +332,12 @@ const tr: Translation = {
       "Bu hesap yayımlayabileceği kadar liste yayımladı. Önce Herkese açık listeleriniz bölümünde birini yayından kaldırın.",
     failedSignedOut: "Yayımlamak için hesap gerekir. Oturum açıp tekrar deneyin.",
     failedTooLarge: "Liste yayımlanamayacak kadar büyük.",
+    failedPictureRefusedCard:
+      "“{title}” kartındaki görsel herkese açık akışta yer alamaz. Değiştirin ya da listeyi özel tutun.",
+    failedWebPicturesToday:
+      "Listede bu hesabın bugün yayımlayabileceğinden fazla başka sitelerden görsel var. Yarın yeniden deneyin ya da daha azını kullanın.",
+    failedWebPicturesTooMany:
+      "Listede yayımlanamayacak kadar çok başka sitelerden görsel var. Bazılarını kaldırın.",
     failedInvalid: "Liste reddedildi.",
     failedOther: "Yayımlanamadı. Hiçbir şey kaybolmadı. Tekrar deneyin.",
     editTitle: "Listeyi düzenle",

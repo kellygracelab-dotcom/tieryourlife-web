@@ -37,7 +37,8 @@ export type ApiError =
       /** The section of the topic a name is taken by, when the backend says. */
       section?: string;
     }
-  | { kind: "pictureRefused"; because: string | null }
+  /** `imageUrl`: the address as sent, when the refused picture came from another site (QA S11). */
+  | { kind: "pictureRefused"; because: string | null; imageUrl?: string }
   /** Too much of something in too short a time: TOO_MANY_PROPOSALS, ten sections a day. */
   | { kind: "tooManyRequests"; code: string | null }
   | { kind: "unavailable" }
@@ -63,6 +64,7 @@ interface ErrorBody {
   section?: unknown;
   until?: unknown;
   because?: unknown;
+  imageUrl?: unknown;
   board?: unknown;
   mergedInto?: unknown;
   mergedTopicId?: unknown;
@@ -152,9 +154,15 @@ export function parseApiError(status: number, text: string): ApiError {
         : { kind: "unknown", status };
     case 413:
       return { kind: "tooLarge", detail: stringOrNull(body.error) };
-    case 422:
-      // A kept picture says why by its code: TOO_BIG, KEEP_LIMIT…
-      return { kind: "pictureRefused", because: stringOrNull(body.because) ?? code };
+    // A kept picture says why by its code: TOO_BIG, KEEP_LIMIT…
+    case 422: {
+      const imageUrl = stringOrNull(body.imageUrl);
+      return {
+        kind: "pictureRefused",
+        because: stringOrNull(body.because) ?? code,
+        ...(imageUrl === null ? {} : { imageUrl }),
+      };
+    }
     case 429:
       return { kind: "tooManyRequests", code };
     case 503:

@@ -338,6 +338,12 @@ const es: Translation = {
       "Esta cuenta ya publicó todas las listas que puede. Retira una en Tus listas públicas primero.",
     failedSignedOut: "Para publicar hace falta una cuenta. Inicia sesión e inténtalo de nuevo.",
     failedTooLarge: "La lista es demasiado grande para publicarse.",
+    failedPictureRefusedCard:
+      "La imagen de «{title}» no puede aparecer en el feed público. Cámbiala o mantén la lista privada.",
+    failedWebPicturesToday:
+      "La lista tiene más imágenes de otros sitios de las que esta cuenta puede publicar hoy. Vuelve a intentarlo mañana o usa menos.",
+    failedWebPicturesTooMany:
+      "La lista tiene demasiadas imágenes de otros sitios para publicarse. Quita algunas.",
     failedInvalid: "La lista fue rechazada.",
     failedOther: "No se pudo publicar. No se perdió nada. Inténtalo de nuevo.",
     editTitle: "Editar lista",

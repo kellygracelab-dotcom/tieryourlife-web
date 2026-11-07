@@ -53,6 +53,13 @@ describe("parseApiError", () => {
       { kind: "unauthenticated" },
     ],
     [401, json({ error: "Sign in first", code: "NOT_SIGNED_IN" }), { kind: "notSignedIn" }],
+    // An account erased on another device (QA S8): the forced refresh that
+    // follows finds no such user, and Firebase signs this browser out.
+    [
+      401,
+      json({ error: "This account was deleted", code: "ACCOUNT_ERASED" }),
+      { kind: "unauthenticated" },
+    ],
     [401, "not json at all", { kind: "unauthenticated" }],
     [401, "null", { kind: "unauthenticated" }],
     [
@@ -116,6 +123,11 @@ describe("parseApiError", () => {
     ],
     [422, json({ error: "Refused" }), { kind: "pictureRefused", because: null }],
     [422, json({ code: "KEEP_LIMIT" }), { kind: "pictureRefused", because: "KEEP_LIMIT" }],
+    [
+      422,
+      json({ code: "PICTURE_REFUSED", because: "adult", imageUrl: "https://x.test/p.jpg" }),
+      { kind: "pictureRefused", because: "adult", imageUrl: "https://x.test/p.jpg" },
+    ],
     [
       429,
       json({ error: "Ten today", code: "TOO_MANY_PROPOSALS" }),
