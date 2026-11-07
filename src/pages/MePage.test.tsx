@@ -254,6 +254,28 @@ describe("MePage", () => {
     expect(rowOf(/Oscar films 2025/)).not.toHaveTextContent("It waits for a moderator");
   });
 
+  it("offers no link to a list held for a moderator, which nobody could open yet (QA W50)", async () => {
+    load.mockResolvedValue({ rankings: [], more: false });
+    loadLists.mockResolvedValue({
+      lists: [
+        published("l1", "Stalls of Kyiv", { underReview: true }),
+        published("l2", "Oscar films 2025", { updatedAt: Date.UTC(2026, 6, 1, 12) }),
+      ],
+    });
+    open();
+    await screen.findByText("It waits for a moderator before others can see it.");
+
+    const held = await menuOf("Stalls of Kyiv");
+    expect(held.queryByRole("button", { name: "Copy link" })).toBeNull();
+    expect(held.queryByRole("separator")).toBeNull();
+    expect(held.getByRole("button", { name: "Take it down" })).toBeInTheDocument();
+    expect(copy).not.toHaveBeenCalled();
+
+    const out = await menuOf("Oscar films 2025");
+    await userEvent.click(out.getByRole("button", { name: "Copy link" }));
+    expect(copy).toHaveBeenCalledWith(`${window.location.origin}/l/l2`);
+  });
+
   it("offers a ranking to be published as a list of one's own, and a list only to be unpublished", async () => {
     load.mockResolvedValue({ rankings: [ranking("aaaaaaaa", "Ghibli, ranked")], more: false });
     loadLists.mockResolvedValue({ lists: [published("l1", "Oscar films 2025")] });

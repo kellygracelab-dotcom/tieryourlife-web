@@ -105,6 +105,9 @@ interface RowProps {
 function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
   const [state, setState] = useState<RowState>({ status: "idle" });
   const isList = entry.kind === "list";
+  // Kept, but its link answers nobody until a moderator looks: the row says
+  // so, and there is no link to copy.
+  const held = entry.kind === "list" && entry.list.underReview === true;
   const title = isList ? entry.list.title : entry.ranking.title;
   const to = isList
     ? `/l/${encodeURIComponent(entry.list.id)}`
@@ -183,9 +186,7 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
             {entry.kind === "list" && entry.movesTo !== null && (
               <span className="mine__meta">{entry.movesTo}</span>
             )}
-            {entry.kind === "list" && entry.list.underReview === true && (
-              <span className="mine__meta">{strings.boards.heldBody}</span>
-            )}
+            {held && <span className="mine__meta">{strings.boards.heldBody}</span>}
           </Link>
           <div className="mine__actions">
             <Link className="btn btn--text" to={isList ? to : `${to}?edit`}>
@@ -193,11 +194,13 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
             </Link>
             <Menu label={fill(strings.me.moreAbout, { title })} button={<Icon name="more_vert" />}>
               <>
-                <li>
-                  <button type="button" className="menu__action" onClick={copyLink}>
-                    {strings.list.copyLink}
-                  </button>
-                </li>
+                {!held && (
+                  <li>
+                    <button type="button" className="menu__action" onClick={copyLink}>
+                      {strings.list.copyLink}
+                    </button>
+                  </li>
+                )}
                 {entry.kind === "ranking" && (
                   <li>
                     <Link to={`/b/new?ranking=${encodeURIComponent(entry.ranking.code)}`}>
@@ -205,7 +208,7 @@ function Row({ entry, remove, copy, notify, onRemoved, onGone }: RowProps) {
                     </Link>
                   </li>
                 )}
-                <li className="menu__divider" role="separator" />
+                {!held && <li className="menu__divider" role="separator" />}
                 <li>
                   <button
                     type="button"
