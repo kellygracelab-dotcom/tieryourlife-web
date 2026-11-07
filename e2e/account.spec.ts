@@ -85,6 +85,58 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   expect(account.published.size).toBe(0);
 });
 
+test("keeps local edits after PUBLICATION_CHANGED and retries the same publication", async ({
+  page,
+  hasTouch,
+}) => {
+  const account = await signIn(page);
+  await newBoard(page, hasTouch, "Festival films");
+  const openSettings = async () => {
+    await press(page.getByLabel("More about this board"), hasTouch);
+    await press(page.getByRole("button", { name: "List settings" }), hasTouch);
+  };
+  await openSettings();
+  await press(page.getByRole("button", { name: /Category/ }), hasTouch);
+  await press(page.getByRole("radio", { name: "Film & TV" }), hasTouch);
+  await press(page.getByRole("switch", { name: "Public", exact: true }), hasTouch);
+  await expect(page.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+    "href",
+    "/l/L1",
+  );
+
+  const anonymity = page.getByRole("switch", { name: "Publish anonymously" });
+  let refusedBody: unknown;
+  await page.route(
+    "**/lists/L1",
+    async (route) => {
+      refusedBody = route.request().postDataJSON();
+      return route.fulfill({
+        status: 409,
+        json: {
+          code: "PUBLICATION_CHANGED",
+          error: "The list changed while publishing. Try again.",
+        },
+      });
+    },
+    { times: 1 },
+  );
+  await press(anonymity, hasTouch);
+  await expect(page.getByRole("alert")).toContainText(
+    "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
+  );
+  await expect(page.getByRole("button", { name: "Update", exact: true })).toBeEnabled();
+  expect(account.published.get("L1")?.anonymous).toBe(false);
+  expect(refusedBody).toMatchObject({ anonymous: true, title: "Festival films" });
+
+  await page.reload();
+  await openSettings();
+  await expect(anonymity).toBeChecked();
+  await press(page.getByRole("button", { name: "Update", exact: true }), hasTouch);
+  await expect(page.getByText("Send this board again, over the same link.")).toBeVisible();
+  expect(account.published.size).toBe(1);
+  expect(account.published.get("L1")).toEqual(refusedBody);
+});
+
 test("shows the people followed, unfollows from Manage, and brings a row back when that failed", async ({
   page,
   hasTouch,

@@ -335,6 +335,8 @@ const de: Translation = {
       "Eines deiner Fotos darf nicht in den öffentlichen Feed. Entferne es oder behalte die Liste privat.",
     failedCategory:
       "Diese Kategorie nimmt keine Listen mehr an. Wähle unter Kategorie eine andere.",
+    publicationChanged:
+      "Die veröffentlichte Liste wurde während der Aktualisierung geändert. Deine Änderungen sind auf diesem Gerät gespeichert. Versuche erneut, die Liste zu veröffentlichen.",
     failedTooMany:
       "Dieses Konto hat so viele Listen veröffentlicht, wie es kann. Nimm erst eine unter „Deine öffentlichen Listen“ zurück.",
     failedSignedOut:

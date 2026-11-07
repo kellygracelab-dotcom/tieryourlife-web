@@ -337,6 +337,8 @@ const ptBR: Translation = {
     failedPictureRefused:
       "Uma das suas fotos não pode aparecer no feed público. Remova-a ou mantenha a lista privada.",
     failedCategory: "Esta categoria não aceita mais listas. Escolha outra em Categoria.",
+    publicationChanged:
+      "A lista publicada mudou durante a atualização. Suas alterações estão salvas neste dispositivo. Tente publicar novamente.",
     failedTooMany:
       "Esta conta já publicou o máximo de listas que pode. Retire uma em Suas listas públicas primeiro.",
     failedSignedOut: "Publicar precisa de uma conta. Entre e tente de novo.",

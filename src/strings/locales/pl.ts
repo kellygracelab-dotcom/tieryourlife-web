@@ -343,6 +343,8 @@ const pl: Translation = {
     failedPictureRefused:
       "Jedno z Twoich zdjęć nie może trafić do publicznego kanału. Usuń je albo zostaw listę prywatną.",
     failedCategory: "Ta kategoria nie przyjmuje już list. Wybierz inną w polu Kategoria.",
+    publicationChanged:
+      "Opublikowana lista zmieniła się w trakcie aktualizacji. Twoje zmiany są zapisane na tym urządzeniu. Spróbuj opublikować listę ponownie.",
     failedTooMany:
       "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w Twoich publicznych listach.",
     failedSignedOut: "Do publikowania potrzebne jest konto. Zaloguj się i spróbuj ponownie.",

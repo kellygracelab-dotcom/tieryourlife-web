@@ -22,6 +22,12 @@ describe("the house's words", () => {
     expect(failureText(refused, "publish")).toBe("At most 19 tiers. At most 19 tiers");
   });
 
+  it("explains when the same house list changed during replacement", () => {
+    expect(failureText({ kind: "publicationChanged" }, "replace")).toBe(
+      "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
+    );
+  });
+
   it("reads a missing list as gone only for a replace", () => {
     expect(failureText({ kind: "notFound" }, "replace")).toBe("This list isn’t published anymore.");
     expect(failureText({ kind: "notFound" }, "publish")).toBe("Couldn’t publish. Try again.");

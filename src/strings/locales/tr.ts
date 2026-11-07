@@ -329,6 +329,8 @@ const tr: Translation = {
       "Fotoğraflarınızdan biri herkese açık akışta yer alamaz. Kaldırın ya da listeyi özel tutun.",
     failedCategory:
       "Bu kategori artık liste kabul etmiyor. Kategori bölümünden başka birini seçin.",
+    publicationChanged:
+      "Yayımlanan liste güncelleme sırasında değişti. Düzenlemelerin bu cihazda kayıtlı. Tekrar yayımlamayı dene.",
     failedTooMany:
       "Bu hesap yayımlayabileceği kadar liste yayımladı. Önce Herkese açık listeleriniz bölümünde birini yayından kaldırın.",
     failedSignedOut: "Yayımlamak için hesap gerekir. Oturum açıp tekrar deneyin.",

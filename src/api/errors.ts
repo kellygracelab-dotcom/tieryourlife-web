@@ -13,6 +13,7 @@ export type ApiError =
    */
   | { kind: "merged"; into: string | null; topic: string | null }
   | { kind: "tooManyLists" }
+  | { kind: "publicationChanged" }
   /** Three topics of the person's own wait for a moderator: a publish cannot propose a fourth. */
   | { kind: "tooManyTopics" }
   /** At the ceiling of followed sections or topics (200): one has to go first. */
@@ -122,6 +123,7 @@ export function parseApiError(status: number, text: string): ApiError {
     case 404:
       return { kind: "notFound" };
     case 409: {
+      if (code === "PUBLICATION_CHANGED") return { kind: "publicationChanged" };
       if (code === "TOO_MANY_LISTS") return { kind: "tooManyLists" };
       if (code === "TOO_MANY_PENDING_TOPICS") return { kind: "tooManyTopics" };
       if (code === "TOO_MANY_FOLLOWING") return { kind: "tooManyFollowing" };

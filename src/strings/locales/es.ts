@@ -335,6 +335,8 @@ const es: Translation = {
     failedPictureRefused:
       "Una de tus fotos no puede aparecer en el feed público. Quítala o mantén la lista privada.",
     failedCategory: "Esta categoría ya no admite listas. Elige otra en Categoría.",
+    publicationChanged:
+      "La lista publicada cambió durante la actualización. Tus cambios están guardados en este dispositivo. Intenta publicarla de nuevo.",
     failedTooMany:
       "Esta cuenta ya publicó todas las listas que puede. Retira una en Tus listas públicas primero.",
     failedSignedOut: "Para publicar hace falta una cuenta. Inicia sesión e inténtalo de nuevo.",

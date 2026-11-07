@@ -324,6 +324,8 @@ export const en = {
     failedPictureRefused:
       "One of your photos cannot go in the public feed. Remove it, or keep this list private.",
     failedCategory: "This category no longer takes lists. Choose another one under Category.",
+    publicationChanged:
+      "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
     failedTooMany:
       "This account has published as many lists as it can. Take one down in Your public lists first.",
     failedSignedOut: "Publishing needs an account. Sign in and try again.",
