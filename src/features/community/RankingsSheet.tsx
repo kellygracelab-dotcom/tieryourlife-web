@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { ReaderRanking } from "../../api/community";
@@ -27,7 +28,7 @@ interface RankingsSheetProps {
 function Face({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
   const [broken, setBroken] = useState(false);
   return photoUrl !== null && photoUrl.trim() !== "" && !broken ? (
-    <img
+    <MediaImage
       className="rankings__face"
       src={photoUrl}
       alt=""

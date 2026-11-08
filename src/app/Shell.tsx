@@ -1,3 +1,4 @@
+import { MediaImage } from "../ui/MediaImage";
 import { useBackCloses } from "../ui/useBackCloses";
 import {
   useEffect,
@@ -52,7 +53,7 @@ function AppFooterLink() {
 /** A signed-in person's face in the header, or the first letter of their name. */
 function FaceOf({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
   return photoUrl !== null ? (
-    <img className="face" src={photoUrl} alt="" referrerPolicy="no-referrer" />
+    <MediaImage className="face" src={photoUrl} alt="" referrerPolicy="no-referrer" />
   ) : (
     <span className="face face--initial">{initialOf(name)}</span>
   );

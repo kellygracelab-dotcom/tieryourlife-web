@@ -1,3 +1,4 @@
+import { mediaSrc } from "../../../functions/src/publicMedia";
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import { isEditorial } from "../../lib/editorial";
 import { drawnLines, fitText, type Measure } from "../../lib/textFit";
@@ -423,7 +424,7 @@ const fetchImage = (url: string) =>
     image.crossOrigin = "anonymous";
     image.onload = () => resolve(image);
     image.onerror = () => resolve(null);
-    image.src = url;
+    image.src = mediaSrc(url);
   });
 
 // A picture the page has already shown may sit in the cache without CORS

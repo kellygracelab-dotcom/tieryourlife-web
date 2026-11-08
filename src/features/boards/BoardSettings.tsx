@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import {
   useEffect,
   useId,
@@ -910,7 +911,7 @@ export function BoardSettings({
                 thumbnail === null ? (
                   <span className="sheet-row__thumb sheet-row__thumb--none" />
                 ) : (
-                  <img className="sheet-row__thumb" src={thumbnail} alt="" loading="lazy" />
+                  <MediaImage className="sheet-row__thumb" src={thumbnail} alt="" loading="lazy" />
                 )
               }
               title={strings.boards.cover}
@@ -928,7 +929,7 @@ export function BoardSettings({
                       : fill(strings.boards.coverCollage, { n: chosen.length })}
                 </p>
                 {chosen.length === 1 && chosen[0] && (
-                  <img
+                  <MediaImage
                     className="board-settings__cover-preview"
                     src={chosen[0]}
                     alt={strings.boards.cover}
@@ -990,7 +991,7 @@ export function BoardSettings({
                               disabled={uploading || (!on && chosen.length >= MAX_COVER)}
                               onClick={() => toggleCover(url)}
                             >
-                              <img src={url} alt="" loading="lazy" />
+                              <MediaImage src={url} alt="" loading="lazy" />
                               {on && <span className="board-settings__cover-n">{place + 1}</span>}
                             </button>
                           </li>

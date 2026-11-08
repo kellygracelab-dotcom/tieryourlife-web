@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import type { Following, SuggestedAuthor } from "../../api/community";
@@ -47,7 +48,7 @@ function Face({
   className?: string;
 }) {
   return author.photoUrl !== null ? (
-    <img className={className} src={author.photoUrl} alt="" loading="lazy" />
+    <MediaImage className={className} src={author.photoUrl} alt="" loading="lazy" />
   ) : (
     <span className={`${className} suggestion__face--initial`} aria-hidden="true">
       {author.name.trim() === "" ? <Icon name="person" /> : initialOf(author.name)}

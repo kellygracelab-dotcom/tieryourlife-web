@@ -1,3 +1,4 @@
+import { MediaImage } from "../ui/MediaImage";
 import { useCallback, useState } from "react";
 import { Link } from "react-router";
 import type { ApiError } from "../api/errors";
@@ -66,7 +67,7 @@ type RowState =
 
 function Picture({ src, title }: { src: string | null; title: string }) {
   return src !== null ? (
-    <img className="mine__picture" src={src} alt="" loading="lazy" />
+    <MediaImage className="mine__picture" src={src} alt="" loading="lazy" />
   ) : (
     <span className="mine__picture mine__picture--blank" aria-hidden="true">
       {title.trim()[0]?.toUpperCase() ?? ""}

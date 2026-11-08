@@ -1,3 +1,4 @@
+import { MediaImage } from "../ui/MediaImage";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, Navigate } from "react-router";
 import { ApiFailure, errorOf } from "../api/errors";
@@ -300,7 +301,7 @@ export function FollowingManagePage({
                   to={`/u/${encodeURIComponent(person.uid)}`}
                   leading={
                     person.photoUrl !== null ? (
-                      <img
+                      <MediaImage
                         className="manage-row__face"
                         src={person.photoUrl}
                         alt=""

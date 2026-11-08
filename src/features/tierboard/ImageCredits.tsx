@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { strings } from "../../strings";
@@ -50,7 +51,9 @@ export function ImageCredits({
         <h2 id={id} className="dialog__title">
           {details ? title : strings.list.pictureCredits}
         </h2>
-        {details && imageUrl && <img className="card-detail__picture" src={imageUrl} alt="" />}
+        {details && imageUrl && (
+          <MediaImage className="card-detail__picture" src={imageUrl} alt="" />
+        )}
         {details ? (
           credit && (
             <>

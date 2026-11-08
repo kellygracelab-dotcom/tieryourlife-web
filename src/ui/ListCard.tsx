@@ -1,3 +1,4 @@
+import { MediaImage } from "./MediaImage";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { ListSummary } from "../api/types";
@@ -30,7 +31,7 @@ export interface Yours {
 
 function Face({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
   if (photoUrl !== null)
-    return <img className="list-card__face" src={photoUrl} alt="" loading="lazy" />;
+    return <MediaImage className="list-card__face" src={photoUrl} alt="" loading="lazy" />;
   if (name === null || name.trim() === "")
     return (
       <span className="list-card__face list-card__face--initial" aria-hidden="true">
@@ -111,7 +112,12 @@ export function ListCard({
               state={{ author: { name: list.authorName, photoUrl: list.authorPhotoUrl } }}
             >
               {list.authorPhotoUrl !== null ? (
-                <img className="list-card__face" src={list.authorPhotoUrl} alt="" loading="lazy" />
+                <MediaImage
+                  className="list-card__face"
+                  src={list.authorPhotoUrl}
+                  alt=""
+                  loading="lazy"
+                />
               ) : (
                 <span className="list-card__face list-card__face--initial" aria-hidden="true">
                   {initialOf(list.authorName)}

@@ -70,6 +70,27 @@ beforeEach(() => {
 });
 
 describe("getFirebaseApp", () => {
+  it.each(["auth", "storage"])(
+    "activates App Check once before %s can make its first request",
+    async (first) => {
+      vi.stubEnv("DEV", false);
+      vi.stubEnv("VITE_RECAPTCHA_SITE_KEY", "test-site");
+      try {
+        if (first === "auth") getFirebaseAuth();
+        await getFirebaseStorage();
+        getFirebaseAuth();
+        await getIdToken();
+        expect(mocks.initializeAppCheck).toHaveBeenCalledExactlyOnceWith(app, expect.any(Object));
+        const activated = mocks.initializeAppCheck.mock.invocationCallOrder[0]!;
+        for (const service of [mocks.initializeAuth, mocks.getStorage, mocks.signInAnonymously]) {
+          expect(activated).toBeLessThan(service.mock.invocationCallOrder[0]!);
+        }
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  );
+
   it("initializes the app once and reuses it", () => {
     expect(getFirebaseApp()).toBe(app);
     expect(getFirebaseApp()).toBe(app);

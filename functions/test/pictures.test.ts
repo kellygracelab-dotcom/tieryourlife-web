@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { Response } from "express";
 import { picturePathOf, sendPicture, storagePictures, type PictureDeps } from "../src/pictures";
+import { mediaSrc, storedPublicMedia } from "../src/publicMedia";
 
 interface Answer {
   status: number;
@@ -52,6 +53,63 @@ const deps = (): PictureDeps & { asked: string[]; shrunk: number[] } => {
 };
 
 describe("pictures through the site's address", () => {
+  it("maps old addresses for this bucket and keeps private references outside the public endpoint", () => {
+    const prefix =
+      "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/";
+    const name = "w-" + "a".repeat(32) + "_p_" + "b".repeat(36);
+    for (const kind of ["published", "avatars", "sections", "topics"]) {
+      const old = prefix + kind + "%2Fabc%2F" + name + "?alt=media";
+      assert.equal(mediaSrc(old), "/img/original/" + kind + "/abc/" + name);
+    }
+    for (const url of [
+      prefix + "users%2Fabc%2Fpictures%2Fp?alt=media&token=private",
+      prefix + "proposals%2Fabc%2Fp?alt=media&token=private",
+      prefix + "published%2F..%2Fp?alt=media",
+      prefix + "published%2Fa%2Fp%252Fprivate?alt=media",
+      prefix + "published%2Fa%2Fp",
+      prefix.replace("tieryourlife.firebasestorage.app", "other-bucket") +
+        "published%2Fa%2Fp?alt=media",
+      "https://example.test/a.jpg",
+    ]) {
+      assert.equal(storedPublicMedia(url), null);
+      assert.equal(mediaSrc(url), url);
+    }
+  });
+
+  it("serves only raster originals from one explicitly public object, with bounded caching", async () => {
+    const bytes = Buffer.from([0xff, 0xd8, 0xff, 0xdb]);
+    const fake = {
+      ...deps(),
+      read: async (p: string, limit?: number) => {
+        assert.equal(p, "published/list/pic");
+        assert.equal(limit, 4 * 1024 * 1024);
+        return bytes;
+      },
+    };
+    const got = await ask(["original", "published", "list", "pic"], fake);
+    assert.equal(got.status, 200);
+    assert.equal(got.body, bytes);
+    assert.equal(got.headers["Content-Type"], "image/jpeg");
+    assert.equal(got.headers["X-Content-Type-Options"], "nosniff");
+    assert.match(got.headers["Cache-Control"]!, /s-maxage=60/);
+    assert.deepEqual(fake.shrunk, []);
+    const bad = await ask(["original", "published", "list", "pic"], {
+      ...fake,
+      read: async () => Buffer.from("<svg onload='alert(1)'/>"),
+    });
+    assert.equal(bad.status, 404);
+    for (const path of [
+      ["users", "uid", "pic"],
+      ["proposals", "id", "p"],
+      ["share", "r", "x"],
+      ["avatars", "..", "p"],
+      ["published", "id", "p", "more"],
+    ]) {
+      const denied = deps();
+      assert.equal((await ask(["original", ...path], denied)).status, 404);
+      assert.deepEqual(denied.asked, []);
+    }
+  });
   it("names a section's or a topic's picture in the bucket, and nothing else", () => {
     assert.equal(picturePathOf("sections", "film_tv", "579c-14"), "sections/film_tv/579c-14");
     assert.equal(picturePathOf("topics", "AbC123", "p1"), "topics/AbC123/p1");
@@ -101,6 +159,18 @@ describe("pictures through the site's address", () => {
     assert.equal(String(await pictures.read("sections/a/p")), "ok");
     assert.equal(await pictures.read("sections/b/p"), null);
     await assert.rejects(pictures.read("sections/c/p"), /down/);
+  });
+
+  it("caps original downloads at one byte past the maximum, before returning bytes to a client", async () => {
+    const deps = storagePictures(() => ({
+      file: () => ({
+        download: async (options) => {
+          assert.deepEqual(options, { start: 0, end: 2, decompress: false, validation: false });
+          return [Buffer.from("abc")];
+        },
+      }),
+    }));
+    assert.equal(await deps.read("published/l/p", 2), null);
   });
 
   it("shrinks a wide picture to the width, and leaves a narrow one its own size", async () => {

@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorOf } from "../../api/errors";
 import type { ListSummary } from "../../api/types";
@@ -222,7 +223,7 @@ export function FaceSection({
               aria-label={strings.settings.facePhotoCaption}
               aria-pressed="true"
             >
-              <img src={current} alt="" loading="lazy" />
+              <MediaImage src={current} alt="" loading="lazy" />
               <Icon name="check" className="settings__choice-check" />
             </button>
             <span className="settings__face-from">{strings.settings.facePhotoCaption}</span>
@@ -238,7 +239,7 @@ export function FaceSection({
               aria-pressed={choice.url === current}
               onClick={() => place({ kind: "card", url: choice.url })}
             >
-              <img
+              <MediaImage
                 src={choice.url}
                 alt=""
                 loading="lazy"

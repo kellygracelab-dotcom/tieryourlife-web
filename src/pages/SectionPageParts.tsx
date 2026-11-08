@@ -1,3 +1,4 @@
+import { MediaImage } from "../ui/MediaImage";
 import { Fragment, useCallback, type ReactNode } from "react";
 import { Navigate } from "react-router";
 import type { SectionStats } from "../api/sections";
@@ -59,7 +60,7 @@ export function HeadArt({
       style={sectionStyle(section, 1600)}
       aria-hidden="true"
     >
-      {collage && section.collage.map((url) => <img key={url} src={url} alt="" />)}
+      {collage && section.collage.map((url) => <MediaImage key={url} src={url} alt="" />)}
       {picture !== null && <img src={servedPicture(picture, 1600)} alt="" decoding="async" />}
     </div>
   );

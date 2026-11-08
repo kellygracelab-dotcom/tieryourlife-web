@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type {
@@ -105,7 +106,7 @@ function Cover({ list }: { list: AdminList }) {
   return (
     <span className="admin-list__cover" aria-hidden="true">
       {picture !== null ? (
-        <img src={picture} alt="" loading="lazy" />
+        <MediaImage src={picture} alt="" loading="lazy" />
       ) : (
         list.tierColors
           .slice(0, 5)

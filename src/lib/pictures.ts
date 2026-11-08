@@ -1,3 +1,4 @@
+import { mediaSrc } from "../../functions/src/publicMedia";
 import { errorOf } from "../api/errors";
 import { getFirebaseAuth, getFirebaseStorage } from "./firebase";
 import type { PixelRect, Size } from "./framing";
@@ -299,7 +300,7 @@ export async function copyPublishedBack(
   if (uid === null) throw new PictureRefused("signIn");
   let bytes: Blob;
   try {
-    const response = await fetch(url);
+    const response = await fetch(mediaSrc(url));
     if (!response.ok) throw new Error(`${response.status}`);
     bytes = await response.blob();
   } catch {

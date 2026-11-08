@@ -1,3 +1,4 @@
+import { MediaImage } from "./MediaImage";
 import { strings } from "../strings";
 import "./ListArt.css";
 
@@ -27,7 +28,7 @@ export function ListArt({ cover, previews, tierColors, title, decorative = false
   if (cover !== null) {
     return (
       <div className="art art--cover">
-        <img src={cover} alt="" loading="lazy" />
+        <MediaImage src={cover} alt="" loading="lazy" />
       </div>
     );
   }
@@ -35,7 +36,7 @@ export function ListArt({ cover, previews, tierColors, title, decorative = false
     return (
       <div className="art art--mosaic" data-count={Math.min(previews.length, MOSAIC_MAX)}>
         {previews.slice(0, MOSAIC_MAX).map((url, index) => (
-          <img key={`${index}-${url}`} src={url} alt="" loading="lazy" />
+          <MediaImage key={`${index}-${url}`} src={url} alt="" loading="lazy" />
         ))}
       </div>
     );

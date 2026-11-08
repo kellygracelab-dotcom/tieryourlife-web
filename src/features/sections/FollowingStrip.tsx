@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import type { Ref } from "react";
 import { Link } from "react-router";
 import type { FollowedAuthor } from "../../api/community";
@@ -92,7 +93,7 @@ export function FollowingStrip({ sections, topics, people, sectionOf, ref }: Fol
               state={{ author: { name: person.name, photoUrl: person.photoUrl } }}
             >
               {person.photoUrl !== null ? (
-                <img
+                <MediaImage
                   className="following-strip__visual following-strip__face"
                   src={person.photoUrl}
                   alt=""

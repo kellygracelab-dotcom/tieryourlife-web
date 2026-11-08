@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import {
   useEffect,
   useId,
@@ -72,11 +73,11 @@ function placed(framing: Framing, size: Size): CSSProperties {
 /** The picture as a tile shows it: framed where it was placed, or the section's own, covering. */
 function Drawn({ value }: { value: PictureValue }) {
   if (value.kind === "kept") {
-    return <img className="crop__picture crop__picture--cover" src={value.url} alt="" />;
+    return <MediaImage className="crop__picture crop__picture--cover" src={value.url} alt="" />;
   }
   if (value.size === null) return null;
   return (
-    <img
+    <MediaImage
       className="crop__picture"
       src={value.url}
       crossOrigin={value.remote ? "anonymous" : undefined}
@@ -350,7 +351,7 @@ export function PictureField({
           onKeyDown={onKeyDown}
         >
           {value.kind === "kept" ? (
-            <img
+            <MediaImage
               ref={image}
               className="crop__picture crop__picture--cover"
               src={value.url}
@@ -358,7 +359,7 @@ export function PictureField({
             />
           ) : (
             // A new element for each picture: a changed crossorigin would not fetch again.
-            <img
+            <MediaImage
               key={value.url}
               ref={image}
               className={

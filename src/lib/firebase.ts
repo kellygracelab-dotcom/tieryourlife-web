@@ -60,6 +60,7 @@ export function getFirebaseApp(): FirebaseApp {
 // The sign-in calls bring the resolver along themselves.
 export function getFirebaseAuth(): Auth {
   if (auth === undefined) {
+    appCheckFor(readEnv());
     auth = initializeAuth(getFirebaseApp(), {
       persistence: [indexedDBLocalPersistence, browserLocalPersistence],
     });
@@ -84,6 +85,7 @@ export const UPLOAD_RETRY_MS = 60_000;
  * needs it, not with the page: most visits never upload or look one up.
  */
 export async function getFirebaseStorage(): Promise<FirebaseStorage> {
+  appCheckFor(readEnv());
   const sdk = await import("firebase/storage");
   const storage = sdk.getStorage(getFirebaseApp());
   if (import.meta.env.VITE_EMULATORS === "1" && !storageOnEmulator) {
