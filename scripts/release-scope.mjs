@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import path from "node:path";
 import { cache, markerFile, readJson } from "./release-artifact.mjs";
 import { repo } from "./release-checks.mjs";
@@ -90,7 +90,7 @@ export async function scope(manifest) {
       ["run", "download", live.run, "-R", repo, "-n", "web-verified-" + live.sha, "-D", dir],
       { stdio: "pipe" },
     );
-    const receipt = JSON.parse(readFileSync(path.join(dir, "receipt.json")));
+    const receipt = readJson(path.join(dir, "receipt.json"));
     if (
       receipt.inputs === manifest.inputs &&
       matchesReceipt(live, ci, receipt, manifest.inputs, deployedFunctions())

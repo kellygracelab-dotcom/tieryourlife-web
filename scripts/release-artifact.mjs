@@ -48,17 +48,13 @@ export function artifact(mode, sha, run) {
     if (existsSync("dist") || existsSync("functions/lib") || existsSync(archive))
       throw Error("Restore needs an empty build checkout.");
     const source = JSON.parse(
-      execFileSync(
-        "gh",
-        ["run", "view", run, "-R", repo, "--json", "event,headBranch,headSha,workflowName"],
-        { encoding: "utf8" },
-      ),
+      execFileSync("gh", ["api", "repos/" + repo + "/actions/runs/" + run], { encoding: "utf8" }),
     );
     if (
       source.event !== "push" ||
-      source.headBranch !== "main" ||
-      source.headSha !== sha ||
-      source.workflowName !== "CI"
+      source.head_branch !== "main" ||
+      source.head_sha !== sha ||
+      source.path !== ".github/workflows/ci.yml"
     )
       throw Error("Untrusted build artifact source.");
     execFileSync("gh", ["run", "download", run, "-R", repo, "-n", artifactName(sha), "-D", cache], {
