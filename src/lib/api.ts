@@ -91,10 +91,10 @@ export const loadList = async (id: string, asAccount = false): Promise<Published
 
 export const loadFeed = (query: FeedQuery): Promise<FeedPage> => lists.loadFeed(api, query);
 
-export function embeddedRanking(code: string): Ranking | null {
+export const embeddedRanking = (code: string): Ranking | null => {
   const preloaded = preloadedRanking(code);
   return preloaded === null ? null : rank.rankingOf(preloaded);
-}
+};
 
 // An account asks the network even when the page carries the public board.
 export const loadRanking = (code: string, asAccount = false): Promise<Ranking> => {
