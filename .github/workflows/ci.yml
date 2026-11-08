@@ -20,8 +20,8 @@ permissions:
 # Every action is pinned to the commit of the release named beside it: a tag
 # can be moved to other code, a commit cannot.
 jobs:
-  check:
-    name: Typecheck, lint, test, build
+  build:
+    name: Build and test release artifact
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
@@ -37,43 +37,81 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - name: Install
-        run: npm ci
-
-      - name: Install functions
-        run: npm --prefix functions ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Format
-        run: npm run format:check
-
-      - name: Test
-        run: npm run coverage
-
-      - name: Build
-        run: npm run build
-
-      - name: Build and test functions
-        run: npm --prefix functions run check
-
-      - name: Install the smoke browsers
-        run: npx playwright install --with-deps chromium webkit
-
-      - name: Browser smokes
-        run: npm run e2e
-
-      - name: Keep the smoke report
-        if: failure()
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - run: npm --prefix functions ci --prefer-offline --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run coverage
+      # build includes tsc -b.
+      - run: npm run build
+      - run: npm --prefix functions run check
+      - name: Cache Chromium
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-chromium-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke the actual production build
+        run: node scripts/smoke-build.mjs
+      - name: Pack this push's checked output
+        if: github.event_name == 'push'
+        run: node scripts/release-artifact.mjs pack "$GITHUB_SHA" "$GITHUB_RUN_ID"
+      - name: Keep checked output for cloud and local delivery
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
-          name: playwright-report
-          path: playwright-report
+          name: web-release-${{ github.sha }}
+          path: |
+            .firebase/cd/bundle.tar
+            .firebase/cd/manifest.json
+          include-hidden-files: true
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
+
+  browsers:
+    name: Browser smokes (${{ matrix.shard }}/4)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - name: Cache Chromium and WebKit
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-both-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run e2e -- --shard=${{ matrix.shard }}/4
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: failure()
+        with:
+          name: browser-traces-${{ matrix.shard }}
+          path: test-results
           retention-days: 7
+
+  check:
+    # Keep the protected branch's existing required check; no failed/skipped shard can pass.
+    name: Typecheck, lint, test, build
+    needs: [build, browsers]
+    if: always() && github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "$BUILD" = success && test "$BROWSERS" = success
+        env:
+          BUILD: ${{ needs.build.result }}
+          BROWSERS: ${{ needs.browsers.result }}
 
   proxy:
     # The site against the real backend code in the Firebase emulators:
@@ -127,6 +165,11 @@ jobs:
           npm --prefix proxy/functions ci
           npm install --global firebase-tools@15.34.2
 
+      - name: Cache Chromium
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-chromium-${{ hashFiles('package-lock.json') }}
       - name: Install the smoke browser
         run: npx playwright install --with-deps chromium
 
@@ -150,6 +193,7 @@ jobs:
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       vars.FIREBASE_WORKLOAD_IDENTITY_PROVIDER != '' && vars.FIREBASE_DEPLOY_SERVICE_ACCOUNT != ''
     runs-on: ubuntu-latest
+    environment: web-production
     concurrency:
       group: tieryourlife-web-production
       cancel-in-progress: false
@@ -165,22 +209,28 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-      - name: Build the checked revision
-        run: |
-          npm ci
-          npm --prefix functions ci
-          npm install --global firebase-tools@15.34.2
-          npm run build
-          node scripts/check-release-main.mjs
+      - name: Restore the checked build from this push
+        run: node scripts/release-artifact.mjs restore "$GITHUB_SHA" "$GITHUB_RUN_ID"
+      - name: Install pinned deployment CLI
+        run: npm install --global firebase-tools@15.34.2 --prefer-offline --no-audit --no-fund
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           project_id: tieryourlife
           workload_identity_provider: ${{ vars.FIREBASE_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.FIREBASE_DEPLOY_SERVICE_ACCOUNT }}
-      - name: Deploy Web Functions and Hosting
+      - name: Deploy checked artifact to Web production
         run: npm run deploy:firebase
-      - name: Verify public release
+      - name: Verify public revision, HTML, JavaScript and Web APIs
         run: |
           npm run verify:production
-          node scripts/check-release-main.mjs
+          node scripts/record-release.mjs
+      - name: Keep verified Functions baseline
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: web-verified-${{ github.sha }}
+          path: .firebase/cd/receipt.json
+          include-hidden-files: true
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 90

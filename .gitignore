@@ -45,3 +45,6 @@ coordinator-log.md
 e2e-proxy/.emulators/
 # playwright.proxy.config.ts builds the site in emulator mode here.
 dist-emulator/
+
+# Disposable config for the checked Functions build (normal deploy preserves its predeploy hook).
+.firebase-release.json

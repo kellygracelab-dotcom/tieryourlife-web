@@ -165,6 +165,15 @@
               "value": "public, max-age=604800"
             }
           ]
+        },
+        {
+          "source": "/web-release.json",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store"
+            }
+          ]
         }
       ]
     }

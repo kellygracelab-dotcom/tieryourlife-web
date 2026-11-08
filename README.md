@@ -41,10 +41,16 @@ npm run release:pr -- <PR-number>
 
 The command checks the CI run for the exact PR head, accepts a PR already squash-merged by GitHub,
 and waits for both checks on its merge commit on remote main. If a newer commit has reached main,
-it reports the original release as superseded. A successful cloud deployment is verified locally.
-When the cloud job is skipped, the command builds and tests the merge commit in a separate checkout,
-deploys Web Functions and Hosting via the authenticated Firebase CLI, then checks the public HTML,
-JavaScript and Web API responses. Both paths update the canonical main checkout.
+it reports the original release as superseded. The push job tests the compiled production bundle,
+archives that bundle and the compiled Web Functions, and passes the same artifact to deployment.
+Four parallel browser shards and the Proxy suite remain mandatory. After admission to the
+web-production environment, OIDC authorizes only the Web deploy. The public release marker, HTML,
+JavaScript bytes and two Web API probes are verified. Functions are skipped only if their inputs
+and live revisions still match the verified release currently served by Hosting.
+
+The local command downloads that same push artifact into an isolated checkout: it independently
+checks production after cloud success, or deploys the artifact if cloud identity is unconfigured.
+It never substitutes a local rebuild after a failed cloud job or for missing CI evidence.
 
 For an already checked main, `npm run deploy` runs the main part of this process.
 The target is `tieryourlife.web.app`, the address the app shares. The GitHub deployment job

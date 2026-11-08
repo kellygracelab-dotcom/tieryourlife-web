@@ -41,7 +41,7 @@ function run(scenario: string) {
   }
 }
 it.each(["open", "already-merged"])(
-  "verifies both exact CI revisions and deploys a private build for %s",
+  "verifies both exact CI revisions and deploys the checked artifact for %s",
   (scenario) => {
     const r = run(scenario);
     expect(r.status, r.log).toBe(0);
@@ -49,7 +49,9 @@ it.each(["open", "already-merged"])(
     expect(r.calls).toContain("main:" + merge);
     expect(r.calls.includes("merge:" + head)).toBe(scenario === "open");
     expect(r.calls.filter((c) => c === "stage-deploy:firebase")).toHaveLength(1);
-    expect(r.calls).toContain("canonical-verify:production");
+    expect(r.calls).toContain("stage-release:restore");
+    expect(r.calls).toContain("stage-verify:production");
+    expect(r.calls.some((c) => c.endsWith("-check") || c.endsWith("-build"))).toBe(false);
   },
 );
 it("verifies an auto-merged, cloud-deployed PR without uploading again", () => {
@@ -57,7 +59,7 @@ it("verifies an auto-merged, cloud-deployed PR without uploading again", () => {
   expect(r.status, r.log).toBe(0);
   expect(r.calls).toContain("pr:" + head);
   expect(r.calls).not.toContain("stage-deploy:firebase");
-  expect(r.calls).toContain("canonical-verify:production");
+  expect(r.calls).toContain("stage-verify:production");
 });
 it("refuses a merged PR with a failed PR check", () => {
   const r = run("bad-pr");

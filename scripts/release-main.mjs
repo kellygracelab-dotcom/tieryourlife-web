@@ -8,7 +8,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { createServer } from "node:net";
+
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertRevision, git, remoteMain, waitCI } from "./release-checks.mjs";
@@ -27,16 +27,6 @@ function mainCheckout(dir) {
     .find((s) => s.split("\0").includes("branch refs/heads/main"));
   if (!entry) throw new Error("No checkout of main was found.");
   return realpathSync(entry.split("\0")[0].slice("worktree ".length));
-}
-async function fixturePort() {
-  const server = createServer();
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolve);
-  });
-  const port = server.address().port;
-  await new Promise((resolve, reject) => server.close((e) => (e ? reject(e) : resolve())));
-  return String(port);
 }
 function removeStage(main, stage, sha) {
   const parent = path.dirname(main);
@@ -102,30 +92,23 @@ export async function finishMain(checkout, sha, label) {
     const deployment = ci.jobs.find((job) => job.name === "Deploy and verify production");
     if (!deployment || !["success", "skipped"].includes(deployment.conclusion))
       throw new Error(`Check the deployment job before retrying: ${ci.url}`);
-    const env = { TYL_RELEASE_SHA: sha };
-    if (deployment.conclusion === "skipped") {
-      // Isolate dist, functions/lib and the dependency tree from concurrent work in the canonical checkout.
-      const stage = mkdtempSync(path.join(path.dirname(main), ".web-release-"));
-      console.log(`Building local release ${sha} in ${stage}`);
-      git(main, "worktree", "add", "--detach", stage, sha);
-      try {
-        assertRevision(stage, sha);
-        npm(stage, ["ci"], env);
-        npm(stage, ["--prefix", "functions", "ci"], env);
-        npm(stage, ["run", "check"], { ...env, TYL_WEB_SMOKE_PORT: await fixturePort() });
-        // The internal Firebase command repeats the immutable-SHA guard immediately before the upload.
-        assertRevision(stage, sha);
+    const run = String(ci.databaseId);
+    const env = { TYL_RELEASE_SHA: sha, TYL_RELEASE_RUN: run };
+    // The canonical checkout may have private local configuration or an old dist.
+    // Restore the very same Linux build used by the push run in a disposable checkout.
+    const stage = mkdtempSync(path.join(path.dirname(main), ".web-release-"));
+    git(main, "worktree", "add", "--detach", stage, sha);
+    try {
+      npm(stage, ["run", "release:restore", "--", sha, run], env);
+      assertRevision(stage, sha);
+      if (deployment.conclusion === "skipped") {
         npm(stage, ["run", "deploy:firebase"], env);
-        npm(stage, ["run", "verify:production"], env);
-        assertRevision(stage, sha);
-      } finally {
-        removeStage(main, stage, sha);
       }
+      npm(stage, ["run", "verify:production"], env);
+      assertRevision(stage, sha);
+    } finally {
+      removeStage(main, stage, sha);
     }
-    assertRevision(main, sha);
-    npm(main, ["run", "build"], env);
-    npm(main, ["--prefix", "functions", "run", "build"], env);
-    npm(main, ["run", "verify:production"], env);
     assertRevision(main, sha);
     console.log(`Released ${label} at main ${sha}. CI: ${ci.url}`);
   } finally {

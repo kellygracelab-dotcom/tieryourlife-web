@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { markerFile } from "./release-artifact.mjs";
 import { setTimeout as delay } from "node:timers/promises";
 
 const origin = "https://tieryourlife.web.app";
@@ -34,6 +35,11 @@ async function verifyApi(path, status, code) {
 // Hosting edges may not all serve the new release on the first request.
 for (let attempt = 1; ; attempt++) {
   try {
+    const marker = await readFile(new URL("../dist/" + markerFile, import.meta.url));
+    const sha = process.env.TYL_RELEASE_SHA ?? process.env.GITHUB_SHA;
+    if (sha && JSON.parse(marker).sha !== sha)
+      throw Error("Public verification requested for a different revision.");
+    await verifyFile("/" + markerFile + "?check=" + Date.now(), marker);
     await verifyFile("/", html);
     await verifyFile(entry, javascript);
     await verifyApi("/api/rank", 405, "METHOD_NOT_ALLOWED");
