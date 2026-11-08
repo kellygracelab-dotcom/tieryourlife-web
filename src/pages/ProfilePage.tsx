@@ -1,3 +1,4 @@
+import { MediaImage } from "../ui/MediaImage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePageTitle } from "../app/pageTitle";
 import { Link, useLocation, useParams } from "react-router";
@@ -152,7 +153,7 @@ function AuthorProfile({ load, follow, report = sendReport }: ProfilePageProps) 
     <section className="profile">
       <header className="profile__head" ref={head}>
         {photoUrl !== null && photoUrl !== brokenFace ? (
-          <img
+          <MediaImage
             className="profile__face"
             src={photoUrl}
             alt=""

@@ -1,3 +1,5 @@
+import { mediaSrc } from "../../functions/src/publicMedia";
+
 /** TMDB serves each poster at fixed widths, named in its address. */
 const TMDB = /^(https:\/\/image\.tmdb\.org\/t\/p\/)w\d+(\/.+)$/;
 /** Wikimedia Commons draws a file at any width asked for. */
@@ -26,5 +28,5 @@ export function sizedFor(url: string, width: number): Sized {
     const at = (w: number) => `${commons[1]}?width=${w}`;
     return { src: at(width * 2), srcSet: `${at(width * 2)} 1x, ${at(width * 3)} 2x` };
   }
-  return { src: url };
+  return { src: mediaSrc(url) };
 }

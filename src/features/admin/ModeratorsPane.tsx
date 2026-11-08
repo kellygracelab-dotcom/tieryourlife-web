@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Candidate, Moderator } from "../../api/admin";
@@ -31,7 +32,7 @@ export const FIND_AFTER_MS = 300;
 
 function Face({ photoUrl, name }: { photoUrl: string | null; name: string }) {
   return photoUrl !== null ? (
-    <img className="admin-people__face" src={photoUrl} alt="" loading="lazy" />
+    <MediaImage className="admin-people__face" src={photoUrl} alt="" loading="lazy" />
   ) : (
     <span className="admin-people__face admin-people__face--initial" aria-hidden="true">
       {initialOf(name)}

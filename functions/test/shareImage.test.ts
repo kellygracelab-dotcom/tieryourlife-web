@@ -51,6 +51,29 @@ function sizeOf(png: Buffer): { width: number; height: number } {
 }
 
 describe("fetchPicture", () => {
+  it("draws a published upload directly from the public bucket path for a social crawler", async () => {
+    const root = "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/";
+    const read: string[] = [];
+    const network: string[] = [];
+    const fetcher: Fetcher = async (url) => {
+      network.push(url);
+      return new Response(null, { status: 403 });
+    };
+    const picture = (url: string) =>
+      fetchPicture(url, fetcher, publicDns, async (path, limit) => {
+        read.push(path);
+        assert.equal(limit, PICTURE_MAX_BYTES);
+        return Buffer.from([255, 216, 255, 219]);
+      });
+    assert.equal(
+      await picture(root + "published%2Flist%2Fpic?alt=media"),
+      "data:image/jpeg;base64,/9j/2w==",
+    );
+    assert.equal(network.length, 0);
+    assert.equal(await picture(root + "users%2Fowner%2Fpictures%2Fx?alt=media"), null);
+    assert.deepEqual(read, ["published/list/pic"]);
+  });
+
   it("brings a picture back as a data URI at the tile size", async () => {
     const seen: string[] = [];
     const fetchImpl: Fetcher = async (url, init) => {

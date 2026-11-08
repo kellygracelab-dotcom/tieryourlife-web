@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import type { PixelSquare } from "../../lib/pictures";
@@ -243,7 +244,7 @@ export function PlaceFaceDialog({
         >
           {shown.status !== "failed" && (
             // A new element for the plain try: changing crossorigin on the old one would not fetch again.
-            <img
+            <MediaImage
               key={shown.plain ? "plain" : "read"}
               ref={image}
               className={

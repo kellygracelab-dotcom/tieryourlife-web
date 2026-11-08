@@ -5,6 +5,8 @@
  */
 
 import type { LookupAddress } from "node:dns";
+import { storedPublicMedia } from "./publicMedia";
+import { rasterType, storagePictures, type PictureDeps } from "./pictures";
 import { lookup } from "node:dns/promises";
 import { readFile, stat } from "node:fs/promises";
 import { Agent, request as httpsRequest } from "node:https";
@@ -311,9 +313,16 @@ export async function fetchPicture(
   url: string,
   fetchImpl: Fetcher = pictureFetch,
   resolve: Resolver = resolveHost,
+  readPublic?: PictureDeps["read"],
 ): Promise<string | null> {
   const signal = AbortSignal.timeout(PICTURE_TIMEOUT_MS);
   const attempt = async (): Promise<string | null> => {
+    const path = storedPublicMedia(url);
+    if (path !== null && readPublic) {
+      const bytes = await readPublic(path, PICTURE_MAX_BYTES);
+      const type = bytes && rasterType(bytes);
+      return bytes && type ? `data:${type};base64,${bytes.toString("base64")}` : null;
+    }
     let address = new URL(tileSizeOf(url));
     for (let hop = 0; ; hop++) {
       if (!(await mayFetchPicture(address, resolve))) return null;
@@ -344,9 +353,12 @@ export async function fetchPictures(
   card: ShareCard,
   fetchImpl: Fetcher = pictureFetch,
   resolve: Resolver = resolveHost,
+  readPublic?: PictureDeps["read"],
 ): Promise<Pictures> {
   const wanted = picturesWanted(card);
-  const found = await Promise.all(wanted.map((url) => fetchPicture(url, fetchImpl, resolve)));
+  const found = await Promise.all(
+    wanted.map((url) => fetchPicture(url, fetchImpl, resolve, readPublic)),
+  );
   const pictures = new Map<string, string>();
   wanted.forEach((url, index) => {
     const data = found[index];
@@ -436,7 +448,12 @@ export async function shareImageFor(
   const data = await card();
   if (data === null) return null;
   // The pictures come from anywhere an author pointed, the fonts from one known host.
-  const pictures = await fetchPictures(data, fetchImpl === fetch ? pictureFetch : fetchImpl);
+  const pictures = await fetchPictures(
+    data,
+    fetchImpl === fetch ? pictureFetch : fetchImpl,
+    resolveHost,
+    storagePictures(() => bucket).read,
+  );
   const png = await renderShareImage(data, pictures, fetchImpl);
   await file
     .save(png, {

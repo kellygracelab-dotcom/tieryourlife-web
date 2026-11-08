@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { mediaSrc, storedPublicMedia } from "../../../functions/src/publicMedia";
 import type { SectionStats, SectionStatus, ThemePair } from "../../api/sections";
 import { CATEGORIES, isCategory, type Category } from "../../api/types";
 import { BUILT_IN_NAMES } from "./builtInNames";
@@ -364,8 +365,7 @@ export const waitingPath = (id: string): string =>
 /** The widths the site's own address makes a picture at: a tile, and a section's header. */
 export type PictureWidth = 480 | 1600;
 
-const STORED_PICTURE =
-  /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/[^/]+\/o\/(sections|topics)%2F([A-Za-z0-9_-]{1,64})%2F([A-Za-z0-9_-]{1,64})(?:\?|$)/;
+const RESIZABLE = /^(sections|topics)\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_-]{1,64}$/;
 
 /**
  * A section's or topic's stored picture through the site's own address, which
@@ -374,8 +374,8 @@ const STORED_PICTURE =
  * was never kept. Any other address is drawn as it is.
  */
 export function servedPicture(url: string, width: PictureWidth = 480): string {
-  const stored = STORED_PICTURE.exec(url);
-  return stored === null ? url : `/img/${width}/${stored[1]}/${stored[2]}/${stored[3]}`;
+  const stored = storedPublicMedia(url);
+  return stored !== null && RESIZABLE.test(stored) ? `/img/${width}/${stored}` : mediaSrc(url);
 }
 
 /** The tile's own colours, light and dark, and its picture when it has one, at the width drawn. */

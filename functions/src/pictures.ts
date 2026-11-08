@@ -1,4 +1,5 @@
 import type { Response } from "express";
+import { publicMediaPath } from "./publicMedia";
 
 /*
  * Section and topic pictures through the site's own address, so Hosting's CDN
@@ -28,9 +29,22 @@ export function picturePathOf(kind: string, id: string, picture: string): string
 
 export interface PictureDeps {
   /** The stored picture's bytes, or null when there is none. */
-  read: (path: string) => Promise<Buffer | null>;
+  read: (path: string, limit?: number) => Promise<Buffer | null>;
   /** The picture at most this wide, as a WebP. */
   shrink: (bytes: Buffer, width: number) => Promise<Buffer>;
+}
+
+// The shared publisher accepts these four raster formats, up to four MiB.
+const ORIGINAL_LIMIT = 4 * 1024 * 1024;
+
+export function rasterType(bytes: Buffer): string | null {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])))
+    return "image/png";
+  if (["GIF87a", "GIF89a"].includes(bytes.toString("latin1", 0, 6))) return "image/gif";
+  if (bytes.toString("latin1", 0, 4) === "RIFF" && bytes.toString("latin1", 8, 12) === "WEBP")
+    return "image/webp";
+  return null;
 }
 
 /** Answers /img/{width}/{kind}/{id}/{picture}; `segments` are the four after /img. */
@@ -41,33 +55,54 @@ export async function sendPicture(
 ): Promise<void> {
   const [width, kind, id, picture] = segments;
   const wide = Number(width);
-  const path =
-    segments.length === 4 && PICTURE_WIDTHS.includes(wide)
+  const original = width === "original" && segments.length === 4;
+  const path = original
+    ? publicMediaPath(kind ?? "", id ?? "", picture ?? "")
+    : segments.length === 4 && PICTURE_WIDTHS.includes(wide)
       ? picturePathOf(kind ?? "", id ?? "", picture ?? "")
       : null;
-  const bytes = path === null ? null : await deps.read(path);
-  if (bytes === null) {
+  const bytes = path === null ? null : await deps.read(path, original ? ORIGINAL_LIMIT : undefined);
+  const type = original && bytes !== null ? rasterType(bytes) : "image/webp";
+  if (bytes === null || type === null) {
     response.setHeader("Cache-Control", MISSING);
     response.status(404).json({ error: "No such picture", code: "NOT_FOUND" });
     return;
   }
-  const shrunk = await deps.shrink(bytes, wide);
-  response.setHeader("Content-Type", "image/webp");
-  response.setHeader("Cache-Control", KEEP);
-  response.status(200).send(shrunk);
+  response.setHeader("Content-Type", type);
+  response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+  // Readers must see a removal or a moderated publication after a short edge TTL.
+  response.setHeader(
+    "Cache-Control",
+    original ? "public, max-age=0, s-maxage=60, must-revalidate" : KEEP,
+  );
+  response.status(200).send(original ? bytes : await deps.shrink(bytes, wide));
 }
 
 export const storagePictures = (
-  bucket: () => { file: (path: string) => { download: () => Promise<[Buffer]> } },
+  bucket: () => {
+    file: (path: string) => {
+      download: (options?: {
+        start: number;
+        end: number;
+        decompress: false;
+        validation: false;
+      }) => Promise<[Buffer]>;
+    };
+  },
 ): PictureDeps => ({
-  read: (path) =>
+  read: (path, limit) =>
     bucket()
       .file(path)
-      .download()
+      .download(
+        limit === undefined
+          ? undefined
+          : { start: 0, end: limit, decompress: false, validation: false },
+      )
       .then(
-        ([bytes]) => bytes,
+        ([bytes]) => (limit !== undefined && bytes.length > limit ? null : bytes),
         (error: { code?: number }) => {
-          if (error.code === 404) return null;
+          if (error.code === 404 || error.code === 416) return null;
           throw error;
         },
       ),

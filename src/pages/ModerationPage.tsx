@@ -1,3 +1,4 @@
+import { MediaImage } from "../ui/MediaImage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorOf } from "../api/errors";
 import { BAN_LENGTHS, type BanLength, type QueuedList } from "../api/moderation";
@@ -172,7 +173,7 @@ function QueueCard({
           disabled={!blur || revealed}
         >
           {item.coverImageUrl !== null ? (
-            <img src={item.coverImageUrl} alt="" loading="lazy" />
+            <MediaImage src={item.coverImageUrl} alt="" loading="lazy" />
           ) : (
             <span className="queue__cover-none">{item.listTitle}</span>
           )}
