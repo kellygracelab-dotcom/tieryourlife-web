@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { list } from "./fixtures";
+import { gate, list } from "./fixtures";
 import { FACE_URL, PIXEL, shot, signIn } from "./signedIn";
 
 /*
@@ -303,6 +303,75 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
   await page.reload();
   await expect(page.getByLabel(/Back up my boards/)).not.toBeChecked();
   expect(account.calls.filter((call) => call.startsWith("PUT /boards")).length).toBe(puts);
+});
+
+test("reopens illustrated lists from Community and Following and returns to the same feed", async ({
+  page,
+}) => {
+  const art = "https://posters.example.test/cover.png";
+  const illustrated = {
+    ...list,
+    coverImageUrl: art,
+    items: list.items.map((item) => ({ ...item, imageUrl: art })),
+  };
+  await signIn(page, {
+    followed: [{ uid: list.authorUid, name: list.authorName, photoUrl: null }],
+    followedLists: [illustrated],
+  });
+  await page.route(art, (route) => route.fulfill({ contentType: "image/png", body: PIXEL }));
+  await page.route(
+    (url) => url.pathname.endsWith("/lists"),
+    (route) =>
+      route.fulfill({ json: { lists: [illustrated], nextCursor: null, followingNobody: false } }),
+  );
+  await page.route(`**/lists/${list.id}`, (route) => route.fulfill({ json: illustrated }));
+  const loaded = (image: Locator) =>
+    expect
+      .poll(() => image.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0))
+      .toBe(true);
+  for (const path of ["/", "/following"]) {
+    await page.goto(path);
+    const link = page.locator(`.list-card__main[href="/l/${list.id}"]`).first();
+    for (let visit = 0; visit < 2; visit++) {
+      await expect(link).toBeVisible();
+      await loaded(link.locator("img").first());
+      await link.click();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
+      await loaded(page.getByRole("button", { name: "Ex Machina", exact: true }).locator("img"));
+      await page.goBack();
+      await expect(page).toHaveURL(path);
+      await expect(link).toBeVisible();
+    }
+  }
+});
+
+test("restores favourites without labelling an account's boards as device-only", async ({
+  page,
+  hasTouch,
+}) => {
+  await signIn(page);
+  await newBoard(page, hasTouch, "Weekend films");
+  await page.goto("/b");
+  await page.getByRole("button", { name: /Add Weekend films to favourites/ }).click();
+  const favourite = page.getByRole("button", { name: /Remove Weekend films from favourites/ });
+  await expect(favourite).toHaveAttribute("aria-pressed", "true");
+  const auth = gate();
+  await page.route("**/identitytoolkit.googleapis.com/**/accounts:lookup?*", async (route) => {
+    await auth.promise;
+    await route.fallback();
+  });
+  await page.reload();
+  await expect(favourite).toBeVisible();
+  await expect(page.getByText(/on this device only/)).toHaveCount(0);
+  auth.resolve();
+  await expect(
+    page.getByRole("link", { name: "Your public lists", exact: true }).last(),
+  ).toBeVisible();
+  await expect(favourite).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("link", { name: "Open Weekend films" }).click();
+  await expect(page.getByRole("heading", { name: "Weekend films" })).toBeVisible();
+  await page.goBack();
+  await expect(favourite).toBeVisible();
 });
 
 test("uploads a cover from the board settings and keeps the owner's photo after reopening", async ({

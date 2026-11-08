@@ -44,6 +44,13 @@
 /* Below 840 the panel's pieces take the places they had: the chips above the board, the rest under it. */
 .ranking--read .list-page__views {
   order: 0;
+  min-height: 36px;
+  align-items: center;
+}
+
+.list-head__meta .ranking-byline-placeholder {
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .ranking--read .list-page__status {
@@ -51,11 +58,11 @@
 }
 
 .ranking--read .list-page__foot {
-  order: 5;
+  order: 6;
 }
 
 .ranking--read .handout {
-  order: 6;
+  order: 5;
 }
 
 @media (min-width: 840px) {
@@ -67,6 +74,11 @@
 
   .ranking--read .ranking__side {
     gap: 16px;
+  }
+
+  /* The download is available while ownership resolves. Keep it in the same place. */
+  .ranking--read .handout {
+    order: -1;
   }
 
   .ranking--read .list-page__views {

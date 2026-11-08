@@ -11,7 +11,7 @@ import { RankingBoard, type EditMode } from "../features/tierboard/RankingBoard"
 import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
 import { keptBy, readKept } from "../features/ranking/kept";
 import { downloadShare, type Share } from "../features/ranking/share";
-import { loadRanking, rearrangeRanking } from "../lib/api";
+import { embeddedRanking, loadRanking, rearrangeRanking } from "../lib/api";
 import { type KeyValueStore, localStorageStore, memoryStore } from "../lib/storage";
 import { listIn } from "../lib/translated";
 import { useResource } from "../lib/useResource";
@@ -20,6 +20,7 @@ import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
+import { Skeleton } from "../ui/Skeleton";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
@@ -42,6 +43,7 @@ const COPIED_MS = 2000;
 export const SAVED_NOTE_MS = 6000;
 
 type View = "visitor" | "author";
+type Viewer = "pending" | "owner" | "local" | "visitor";
 
 /** The board only knows lists; a ranking's snapshot is one, frozen at Finish. */
 const listOf = (ranking: Ranking): PublishedList => ({
@@ -78,7 +80,7 @@ const inReadersLanguage = (ranking: Ranking): Ranking => {
 
 interface BodyProps {
   ranking: Ranking;
-  mine: boolean;
+  viewer: Viewer;
   editing: boolean;
   onEdit: () => void;
   edit: EditMode;
@@ -178,7 +180,7 @@ function Handout({ ranking, share }: { ranking: Ranking; share: Share }) {
 
 function Body({
   ranking,
-  mine,
+  viewer,
   editing,
   onEdit,
   edit,
@@ -195,15 +197,20 @@ function Body({
   const [copyRefused, setCopyRefused] = useState(false);
   const { snapshot } = ranking;
   const author = arrange(snapshot);
-  const owned = ranking.yours === true;
+  const pending = viewer === "pending";
+  const mine = viewer === "owner" || viewer === "local";
   const editorial = snapshot.editorial === true;
-  const visitorLabel = mine || owned ? strings.rank.yours : strings.ranking.visitors;
+  const visitorLabel = pending
+    ? snapshot.title
+    : mine
+      ? strings.rank.yours
+      : strings.ranking.visitors;
   // The chips use the phone app's words when the ranking is this person's own;
   // somebody else's ranking has three parties, and "Mine" would name the wrong one.
-  const visitorChip = mine || owned ? strings.list.viewMine : strings.ranking.visitors;
+  const visitorChip = mine ? strings.list.viewMine : strings.ranking.visitors;
   // The list page's "Theirs" would be ambiguous beside a visitor's ranking.
   const authorChip = strings.list.theirRanking;
-  const byline = mine || owned ? strings.ranking.byYou : strings.ranking.byVisitor;
+  const byline = mine ? strings.ranking.byYou : strings.ranking.byVisitor;
   return (
     <>
       <header className="list-head">
@@ -226,8 +233,12 @@ function Body({
                 {" · "}
               </>
             )}
-            {byline}
-            {owned && (
+            {pending ? (
+              <Skeleton className="ranking-byline-placeholder" width="8ch" height="0.8em" />
+            ) : (
+              byline
+            )}
+            {viewer === "owner" && (
               <>
                 {" · "}
                 {strings.ranking.editNote}
@@ -291,23 +302,28 @@ function Body({
             )}
           </div>
           <div className="ranking__side">
+            <Handout ranking={ranking} share={share} />
             <div className="list-page__views" role="group" aria-label={strings.list.views}>
-              <Chip selected={view === "visitor"} onClick={() => setView("visitor")}>
-                {visitorChip}
-              </Chip>
+              {pending ? (
+                <Skeleton width="6rem" height="32px" />
+              ) : (
+                <Chip selected={view === "visitor"} onClick={() => setView("visitor")}>
+                  {visitorChip}
+                </Chip>
+              )}
               {author.known && (
                 <Chip selected={view === "author"} onClick={() => setView("author")}>
                   {authorChip}
                 </Chip>
               )}
-              {owned && (
+              {viewer === "owner" && (
                 <Button variant="tonal" icon="edit" onClick={onEdit} className="list-page__edit">
                   {strings.ranking.edit}
                 </Button>
               )}
             </div>
             {/* The invitation is for a visitor: whoever made the ranking has ranked it. */}
-            {(!ranking.listAvailable || !(mine || owned)) && (
+            {(!ranking.listAvailable || viewer === "visitor") && (
               <div className="list-page__foot">
                 {ranking.listAvailable ? (
                   <>
@@ -324,7 +340,6 @@ function Body({
                 )}
               </div>
             )}
-            <Handout ranking={ranking} share={share} />
           </div>
         </div>
       )}
@@ -334,20 +349,34 @@ function Body({
 
 export type LoadRanking = (code: string, asAccount?: boolean) => Promise<Ranking>;
 
-export function RankingPage({
+export function RankingPage(props: RankingPageProps) {
+  const { code = "" } = useParams();
+  return <OpenRanking key={code} code={code} {...props} />;
+}
+
+function OpenRanking({
+  code,
   load = loadRanking,
   store = localStorageStore,
   rearrange = rearrangeRanking,
   share = downloadShare,
   copy = clipboardCopy,
-}: RankingPageProps) {
-  const { code = "" } = useParams();
+}: RankingPageProps & { code: string }) {
   const [params, setParams] = useSearchParams();
   const { account } = useSession();
   const asAccount = account?.kind === "signedIn";
-  // Loads again once an account is here, since only then can the answer say "yours".
+  const reader = asAccount ? account.uid : null;
+  // Keep only public data for this visit. Account permissions always come from the current request.
+  const [publicBoard] = useState(() => {
+    const embedded = embeddedRanking(code);
+    return new Map<string, Ranking>(embedded === null ? [] : [[code, embedded]]);
+  });
   const loader = useCallback(() => load(code, asAccount), [load, code, asAccount]);
-  const { state, retry } = useResource(asAccount ? `${code}@account` : code, loader);
+  const { state, retry } = useResource(
+    reader === null ? code : JSON.stringify([code, reader]),
+    loader,
+    asAccount ? undefined : publicBoard,
+  );
   // What the owner saved here, until the page is loaded afresh.
   const [rows, setRows] = useState<number[][] | null>(null);
   // null until the person chooses; before that `?edit` in the address decides.
@@ -360,8 +389,8 @@ export function RankingPage({
   const frame = useMemo<BoardFrame>(() => ({ headSlot, report: setBoardDock }), [headSlot]);
 
   const wantsEdit = params.has("edit");
-  const ranking = state.status === "ready" ? state.value : null;
-  const owned = ranking?.yours === true;
+  const ranking = state.status === "ready" ? state.value : publicBoard.get(code);
+  const owned = asAccount && state.status === "ready" && state.value.yours === true;
   const editing = owned && (chosen ?? wantsEdit);
   const leaveEditing = useCallback(() => {
     setChosen(false);
@@ -387,12 +416,19 @@ export function RankingPage({
   if (state.status === "error") {
     return <ListPageTrouble error={state.error} retry={retry} words={strings.ranking} />;
   }
-  if (ranking === null) return <ListPageLoading note={strings.ranking.opening} rows={2} />;
+  if (ranking === undefined) return <ListPageLoading note={strings.ranking.opening} rows={2} />;
 
   const shown = inReadersLanguage(rows === null ? ranking : { ...ranking, rows });
   // Finished on this browser, by the person here: not by an account that signed out of it.
-  const who = account === null ? undefined : account.kind === "signedIn" ? account.uid : null;
-  const mine = keptBy(readKept(store, ranking.listId), who)?.code === ranking.code;
+  const mine = keptBy(readKept(store, ranking.listId), reader)?.code === ranking.code;
+  const viewer: Viewer =
+    account === null || state.status !== "ready"
+      ? "pending"
+      : owned
+        ? "owner"
+        : mine
+          ? "local"
+          : "visitor";
   return (
     <article
       className={
@@ -403,7 +439,7 @@ export function RankingPage({
     >
       <Body
         ranking={shown}
-        mine={mine}
+        viewer={viewer}
         editing={editing}
         onEdit={() => setChosen(true)}
         edit={{ rows: shown.rows, save, cancel: leaveEditing }}

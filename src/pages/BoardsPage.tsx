@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import type { Category } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
+import { useSession } from "../app/session";
 import { SignInButton } from "../app/SignInButton";
 import {
   arrangeBoards,
@@ -194,6 +195,7 @@ export function BoardsPage({
   usePageTitle(strings.boards.title);
   const all = useBoards(repository);
   const { signedIn } = useBoardSync();
+  const { account } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   // Read once, before the first paint, so the scroll put back on the way back lands on the same lists.
@@ -563,7 +565,7 @@ export function BoardsPage({
         </>
       )}
       {/* Lists kept only in this browser, and the way to keep them for good, as the phone offers. */}
-      {!signedIn && live.length > 0 && (
+      {account?.kind === "guest" && !signedIn && live.length > 0 && (
         <div className="boards__local-only">
           <p>
             {fill(strings.sync.localOnly, { count: plural(strings.boards.count, live.length) })}

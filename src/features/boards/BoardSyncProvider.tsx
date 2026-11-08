@@ -1,6 +1,8 @@
 import {
+  Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -142,20 +144,29 @@ async function accountTitles(api: BoardsApi): Promise<Set<string>> {
  * part: those made without an account stay out unless the person moves them
  * in, which a guest turned account does unasked and anybody else is asked.
  */
-export function BoardSyncProvider(props: BoardSyncProviderProps) {
+export function BoardSyncProvider({ children, ...props }: BoardSyncProviderProps) {
   const { account } = useSession();
   const uid = account?.kind === "signedIn" ? account.uid : null;
-  // Everything below is one account's: a sign-out or a change of account starts afresh.
+  const [controls, setControls] = useState<{ uid: string | null; value: BoardSyncControls } | null>(
+    null,
+  );
+  // The first auth result completes this visit. A subsequent account change resets page-local edits.
+  const [firstReader, setFirstReader] = useState<string | null | undefined>(
+    account === null ? undefined : uid,
+  );
+  if (firstReader === undefined && account !== null) setFirstReader(uid);
+  const pageKey = account === null || uid === firstReader ? "initial" : JSON.stringify([uid]);
   return (
-    <ForAccount key={uid ?? ""} uid={uid} {...props}>
-      {props.children}
-    </ForAccount>
+    <BoardSyncContext.Provider value={controls?.uid === uid ? controls.value : NOBODY}>
+      <ForAccount key={`sync:${uid ?? ""}`} uid={uid} publish={setControls} {...props} />
+      <Fragment key={pageKey}>{children}</Fragment>
+    </BoardSyncContext.Provider>
   );
 }
 
 function ForAccount({
   uid,
-  children,
+  publish,
   owners = siteOwners,
   // Bound to this account, not to whoever is here: a late write of a run
   // that outlived a sign-out still lands with the account it belongs to.
@@ -167,7 +178,10 @@ function ForAccount({
   now = Date.now,
   syncAfterMs = SYNC_AFTER_MS,
   playSyncAfterMs = PLAY_SYNC_AFTER_MS,
-}: BoardSyncProviderProps & { uid: string | null }) {
+}: Omit<BoardSyncProviderProps, "children"> & {
+  uid: string | null;
+  publish: (controls: { uid: string | null; value: BoardSyncControls }) => void;
+}) {
   const [backUp, setBackUpState] = useState(() => uid === null || readBackUp(store, uid));
   const [status, setStatus] = useState<SyncStatus>("idle");
   const records = useMemo<SyncRecords | null>(
@@ -354,13 +368,16 @@ function ForAccount({
     [uid, backUp, setBackUp, status, lastSyncedAt, refusals, run],
   );
 
+  // Only the sync engine remounts during auth restoration. Its controls reach the
+  // existing route before paint, and can never be used for a different account.
+  useLayoutEffect(() => {
+    publish({ uid, value: uid === null ? { ...NOBODY, backUp, setBackUp } : value });
+  }, [publish, uid, value, backUp, setBackUp]);
   return (
-    <BoardSyncContext.Provider value={uid === null ? { ...NOBODY, backUp, setBackUp } : value}>
-      {children}
-      {question !== null && question.owner === uid && (
-        <GuestBoardsDialog question={question} moveIn={moveIn} keepHere={owners.keepHere} />
-      )}
-    </BoardSyncContext.Provider>
+    question !== null &&
+    question.owner === uid && (
+      <GuestBoardsDialog question={question} moveIn={moveIn} keepHere={owners.keepHere} />
+    )
   );
 }
 

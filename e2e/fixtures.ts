@@ -3,6 +3,15 @@ import type { Page, Request } from "@playwright/test";
 export const LIST_ID = "abc";
 export const CODE = "abcdefgh";
 
+/** Hold a fixture response until the page has drawn the state before it. */
+export function gate() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 export const list = {
   id: LIST_ID,
   title: "Every A24 film, ranked",

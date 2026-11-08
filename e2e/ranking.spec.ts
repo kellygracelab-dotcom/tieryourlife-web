@@ -165,6 +165,34 @@ test.describe("moving a card along its tier", () => {
       .getByRole("button")
       .evaluateAll((tiles) => tiles.map((tile) => tile.getAttribute("aria-label")));
 
+  test("moves a card between tiers on a long board and keeps the move after reload", async ({
+    page,
+    hasTouch,
+  }) => {
+    await mockBackend(page);
+    const items = Array.from({ length: 60 }, (_, i) => ({
+      title: `Film ${i + 1}`,
+      imageUrl: null,
+      tierIndex: i === 0 ? 0 : 1,
+    }));
+    await page.route(`**/lists/${LIST_ID}`, (route) =>
+      route.fulfill({ json: { ...list, itemCount: items.length, items } }),
+    );
+    await page.goto(`/l/${LIST_ID}`);
+    const source = row(page).getByRole("button", { name: "Film 1", exact: true });
+    await source.scrollIntoViewIfNeeded();
+    const dest = page.getByRole("list", { name: "A", exact: true });
+    const first = await dest.getByRole("button", { name: "Film 2", exact: true }).boundingBox();
+    if (first === null) throw new Error("Missing destination");
+    await drag(page, hasTouch, "Film 1", first.x + 3, first.y + first.height / 2);
+    const moved = dest.getByRole("button", { name: "Film 1", exact: true });
+    await expect(moved).toBeVisible();
+    await expect(dest.locator("[data-item]")).toHaveCount(60);
+    await page.reload();
+    await expect(moved).toBeVisible();
+    await expect(row(page).locator("[data-item]")).toHaveCount(0);
+  });
+
   test("drag a card past its neighbours, and back to the start", async ({ page, hasTouch }) => {
     const backend = await openList(page);
     await card(page, "Ex Machina").click();

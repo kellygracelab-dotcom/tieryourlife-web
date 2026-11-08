@@ -168,14 +168,14 @@ function Probe() {
   );
 }
 
-const sessionOf = (account: Account): Session => ({
+const sessionOf = (account: Account | null): Session => ({
   account,
   signIn: () => new Promise<SignInOutcome>(() => undefined),
   signOut: () => Promise.resolve(),
   refresh: () => undefined,
 });
 
-const tree = (account: Account, deps: Parameters<typeof BoardSyncProvider>[0]) => (
+const tree = (account: Account | null, deps: Parameters<typeof BoardSyncProvider>[0]) => (
   <SessionContext.Provider value={sessionOf(account)}>
     <BoardSyncProvider
       {...deps}
@@ -202,6 +202,21 @@ describe("BoardSyncProvider", () => {
     expect(screen.getByTestId("probe")).toHaveTextContent("out idle -");
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(keeps).toEqual([]);
+  });
+
+  it("keeps the current screen through auth restoration and starts afresh on real account switches", () => {
+    const deps = { children: null, store: memoryStore(), api: fakeApi().api };
+    const view = render(tree(null, deps));
+    const opening = screen.getByTestId("probe");
+    view.rerender(tree(signedIn, deps));
+    expect(screen.getByTestId("probe")).toBe(opening);
+    expect(opening).toHaveTextContent("in");
+    view.rerender(tree(other, deps));
+    const next = screen.getByTestId("probe");
+    expect(next).not.toBe(opening);
+    view.rerender(tree(GUEST, deps));
+    expect(screen.getByTestId("probe")).not.toBe(next);
+    expect(screen.getByTestId("probe")).toHaveTextContent("out");
   });
 
   it("sends the boards up on sign-in, and again a moment after a change", async () => {
@@ -236,7 +251,7 @@ describe("BoardSyncProvider", () => {
     const store = memoryStore();
     const repository = boardsRepository(store);
     repository.save(newBoard("a", "A", 1, uids()));
-    const { api, keeps, indexReads } = fakeApi();
+    const { api, keeps, indexReads, releaseIndex } = fakeApi([], { holdIndexAfter: 1 });
     render(
       <SessionContext.Provider value={sessionOf(signedIn)}>
         <BoardSyncProvider
@@ -275,12 +290,17 @@ describe("BoardSyncProvider", () => {
       await advance(500);
       act(() => repository.save({ ...repository.get("a")!, play: { ...play, history: [] } }));
       await advance(499);
+      expect(screen.getByTestId("probe")).toHaveTextContent("in idle -");
       expect(indexReads).toHaveLength(initialReads);
       await advance(1);
-      expect(indexReads).toHaveLength(initialReads + 1);
+      expect(screen.getByTestId("probe")).toHaveTextContent("in syncing -");
     } finally {
       vi.useRealTimers();
     }
+    // The debounce starts the run at this boundary. The module and cross-tab
+    // lock are asynchronous; hold the index until that run reaches the network.
+    await waitFor(() => expect(indexReads).toHaveLength(initialReads + 1));
+    act(releaseIndex);
     await waitFor(() => expect(keeps).toHaveLength(2));
     await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("in idle -"));
 
@@ -291,12 +311,15 @@ describe("BoardSyncProvider", () => {
     try {
       act(() => repository.save({ ...repository.get("a")!, title: "A2", editedAt: 5 }));
       await advance(9);
+      expect(screen.getByTestId("probe")).toHaveTextContent("in idle -");
       expect(indexReads).toHaveLength(beforeEdit);
       await advance(1);
-      expect(indexReads).toHaveLength(beforeEdit + 1);
+      expect(screen.getByTestId("probe")).toHaveTextContent("in syncing -");
     } finally {
       vi.useRealTimers();
     }
+    await waitFor(() => expect(indexReads).toHaveLength(beforeEdit + 1));
+    act(releaseIndex);
     await waitFor(() => expect(keeps).toHaveLength(3));
     expect(keeps[2]?.request.title).toBe("A2");
   });
