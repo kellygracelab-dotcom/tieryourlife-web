@@ -91,13 +91,15 @@ export const loadList = async (id: string, asAccount = false): Promise<Published
 
 export const loadFeed = (query: FeedQuery): Promise<FeedPage> => lists.loadFeed(api, query);
 
-// An account asks the network even when the page carries the ranking: only
-// the server can say whether the ranking is theirs.
+export function embeddedRanking(code: string): Ranking | null {
+  const preloaded = preloadedRanking(code);
+  return preloaded === null ? null : rank.rankingOf(preloaded);
+}
+
+// An account asks the network even when the page carries the public board.
 export const loadRanking = (code: string, asAccount = false): Promise<Ranking> => {
-  const preloaded = asAccount ? null : preloadedRanking(code);
-  return preloaded === null
-    ? rank.loadRanking(api, code, asAccount)
-    : Promise.resolve(rank.rankingOf(preloaded));
+  const preloaded = asAccount ? null : embeddedRanking(code);
+  return preloaded === null ? rank.loadRanking(api, code, asAccount) : Promise.resolve(preloaded);
 };
 
 export const rearrangeRanking = (

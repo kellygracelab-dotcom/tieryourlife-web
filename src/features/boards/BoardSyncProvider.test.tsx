@@ -168,14 +168,14 @@ function Probe() {
   );
 }
 
-const sessionOf = (account: Account): Session => ({
+const sessionOf = (account: Account | null): Session => ({
   account,
   signIn: () => new Promise<SignInOutcome>(() => undefined),
   signOut: () => Promise.resolve(),
   refresh: () => undefined,
 });
 
-const tree = (account: Account, deps: Parameters<typeof BoardSyncProvider>[0]) => (
+const tree = (account: Account | null, deps: Parameters<typeof BoardSyncProvider>[0]) => (
   <SessionContext.Provider value={sessionOf(account)}>
     <BoardSyncProvider
       {...deps}
@@ -202,6 +202,21 @@ describe("BoardSyncProvider", () => {
     expect(screen.getByTestId("probe")).toHaveTextContent("out idle -");
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(keeps).toEqual([]);
+  });
+
+  it("keeps the current screen through auth restoration and starts afresh on real account switches", () => {
+    const deps = { children: null, store: memoryStore(), api: fakeApi().api };
+    const view = render(tree(null, deps));
+    const opening = screen.getByTestId("probe");
+    view.rerender(tree(signedIn, deps));
+    expect(screen.getByTestId("probe")).toBe(opening);
+    expect(opening).toHaveTextContent("in");
+    view.rerender(tree(other, deps));
+    const next = screen.getByTestId("probe");
+    expect(next).not.toBe(opening);
+    view.rerender(tree(GUEST, deps));
+    expect(screen.getByTestId("probe")).not.toBe(next);
+    expect(screen.getByTestId("probe")).toHaveTextContent("out");
   });
 
   it("sends the boards up on sign-in, and again a moment after a change", async () => {
