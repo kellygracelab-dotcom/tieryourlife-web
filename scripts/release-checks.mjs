@@ -56,7 +56,7 @@ export async function waitCI(event, sha, { prNumber, wholeRun = true } = {}) {
         "-R",
         repo,
         "--json",
-        "headSha,event,status,conclusion,jobs,url",
+        "databaseId,headSha,event,status,conclusion,jobs,url",
       );
       if (result.headSha !== sha || result.event !== event)
         throw new Error("Unexpected CI revision or event.");

@@ -210,10 +210,9 @@ describe("where a deploy goes", () => {
     const scripts = (
       JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> }
     ).scripts;
-    expect(scripts["deploy:firebase"]).toMatch(
-      /&& firebase deploy --project tieryourlife --only hosting:web,functions:web --non-interactive$/,
+    expect(scripts["deploy:firebase"]).toBe(
+      "node scripts/check-release-main.mjs && node scripts/deploy-artifact.mjs",
     );
-    expect(scripts["deploy:firebase"]).not.toContain("tieryourlife-web");
   });
 });
 

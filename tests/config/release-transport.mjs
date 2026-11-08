@@ -77,6 +77,7 @@ child.execFileSync = (command, args, opts = {}) => {
         pr = id === "11",
         fail = pr && scenario === "bad-pr";
       return json({
+        databaseId: Number(id),
         event: pr ? "pull_request" : "push",
         headSha: pr ? head : id === "13" ? newer : merged,
         status: "completed",
@@ -96,11 +97,11 @@ child.execFileSync = (command, args, opts = {}) => {
       });
     }
   } else if (command === process.execPath) {
-    const action = args.at(-1);
+    const action = args[2];
     if (opts.env.TYL_RELEASE_SHA !== merged)
       throw Error("Release SHA was not pinned before the build");
     record((opts.cwd === stage ? "stage-" : "canonical-") + action);
-    if (scenario === "tip-during-build" && action === "check") tip = newer;
+    if (scenario === "tip-during-build" && action === "release:restore") tip = newer;
     if (scenario === "tip-during-smoke" && action === "verify:production") tip = newer;
     return "";
   }

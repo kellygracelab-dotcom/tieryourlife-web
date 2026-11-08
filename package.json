@@ -22,10 +22,12 @@
     "e2e:proxy": "node scripts/e2e-proxy.mjs",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run coverage && npm run build && npm --prefix functions run check && npm run e2e",
     "deploy": "node scripts/release-main.mjs",
-    "deploy:firebase": "node scripts/check-release-main.mjs && firebase deploy --project tieryourlife --only hosting:web,functions:web --non-interactive",
+    "deploy:firebase": "node scripts/check-release-main.mjs && node scripts/deploy-artifact.mjs",
     "verify:production": "node scripts/verify-production.mjs",
     "release:pr": "node scripts/release-pr.mjs",
-    "dev:live": "vite --mode live"
+    "dev:live": "vite --mode live",
+    "release:restore": "node scripts/release-artifact.mjs restore",
+    "firebase:cli": "firebase"
   },
   "dependencies": {
     "@fontsource/roboto": "^5.3.0",
