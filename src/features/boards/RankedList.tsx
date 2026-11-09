@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { sizedFor } from "../../lib/pictureSize";
 import { fill, plural, strings } from "../../strings";
@@ -20,7 +21,7 @@ const sameCards = (a: readonly string[], b: readonly string[]): boolean =>
 
 function Poster({ item }: { item: BoardItem }) {
   return item.imageUrl !== null ? (
-    <img className="ranked__poster" {...sizedFor(item.imageUrl, 32)} alt="" loading="lazy" />
+    <MediaImage className="ranked__poster" {...sizedFor(item.imageUrl, 32)} alt="" loading="lazy" />
   ) : (
     <span className="ranked__poster ranked__poster--blank" aria-hidden="true" />
   );

@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import {
   memo,
   useCallback,
@@ -341,7 +342,12 @@ const Tile = memo(function Tile({
         }}
       >
         {card.imageUrl !== null ? (
-          <img {...sizedFor(card.imageUrl, TILE_WIDTH)} alt="" loading="lazy" draggable={false} />
+          <MediaImage
+            {...sizedFor(card.imageUrl, TILE_WIDTH)}
+            alt=""
+            loading="lazy"
+            draggable={false}
+          />
         ) : (
           <CardName title={card.title} board={board} wide />
         )}

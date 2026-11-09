@@ -1,3 +1,4 @@
+import { privatePicturePath } from "../../lib/privatePictureRef";
 import { mediaSrc } from "../../../functions/src/publicMedia";
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import { isEditorial } from "../../lib/editorial";
@@ -430,8 +431,21 @@ const fetchImage = (url: string) =>
 // A picture the page has already shown may sit in the cache without CORS
 // headers, which makes that same URL unusable on a canvas. A fresh URL goes
 // around the cached copy.
-export const loadCanvasImage: LoadImage = async (url) =>
-  (await fetchImage(url)) ?? fetchImage(`${url}${url.includes("?") ? "&" : "?"}canvas=1`);
+export const loadCanvasImage: LoadImage = async (url) => {
+  const path = privatePicturePath(url);
+  if (path) {
+    const { privatePictureBytes } = await import("../../lib/privatePictureBytes");
+    const bytes = await privatePictureBytes(path);
+    if (!bytes) return null;
+    const local = URL.createObjectURL(bytes);
+    try {
+      return await fetchImage(local);
+    } finally {
+      URL.revokeObjectURL(local);
+    }
+  }
+  return (await fetchImage(url)) ?? fetchImage(`${url}${url.includes("?") ? "&" : "?"}canvas=1`);
+};
 
 export async function renderShare(
   data: ShareData,

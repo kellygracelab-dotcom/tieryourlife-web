@@ -61,7 +61,9 @@ export function HeadArt({
       aria-hidden="true"
     >
       {collage && section.collage.map((url) => <MediaImage key={url} src={url} alt="" />)}
-      {picture !== null && <img src={servedPicture(picture, 1600)} alt="" decoding="async" />}
+      {picture !== null && (
+        <MediaImage src={servedPicture(picture, 1600)} alt="" decoding="async" />
+      )}
     </div>
   );
 }

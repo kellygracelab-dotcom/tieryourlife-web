@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import type { CSSProperties } from "react";
 import { sizedFor } from "../../lib/pictureSize";
 import { strings } from "../../strings";
@@ -61,7 +62,11 @@ export function ResultPreview({ board, rows, dashed, only }: ResultPreviewProps)
                       title={card.name}
                     >
                       {card.imageUrl !== null ? (
-                        <img {...sizedFor(card.imageUrl, 64)} alt={card.name} loading="lazy" />
+                        <MediaImage
+                          {...sizedFor(card.imageUrl, 64)}
+                          alt={card.name}
+                          loading="lazy"
+                        />
                       ) : (
                         <CardName title={card.name} board={size} />
                       )}

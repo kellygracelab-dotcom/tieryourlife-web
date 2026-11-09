@@ -1,3 +1,4 @@
+import { ownPictureRef } from "../../lib/privatePictureRef";
 import type { SyncedPlay } from "../../api/boards";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
@@ -147,7 +148,18 @@ function topicOf(raw: unknown): BoardTopic | null {
   return topic.learned === true ? { id, name, learned: true } : { id, name };
 }
 
-function itemOf(raw: unknown, tierUids: Set<string>, position: number): BoardItem | null {
+function localPicture(url: string | null, id: string | null, owner: string | null) {
+  if (owner && id && (!url || /^(blob:|content:|file:)/i.test(url)))
+    return ownPictureRef(owner, id);
+  return url;
+}
+
+function itemOf(
+  raw: unknown,
+  tierUids: Set<string>,
+  position: number,
+  owner: string | null,
+): BoardItem | null {
   if (raw === null || typeof raw !== "object") return null;
   const item = raw as Record<string, unknown>;
   const uid = text(item.uid);
@@ -162,7 +174,7 @@ function itemOf(raw: unknown, tierUids: Set<string>, position: number): BoardIte
     tierUid,
     position: typeof item.position === "number" ? item.position : position,
     title,
-    imageUrl: text(item.imageUrl),
+    imageUrl: localPicture(text(item.imageUrl), text(item.pictureId), owner),
     credit: creditOf(item.credit),
     source: source === "TMDB" || source === "GENERATED" ? source : "MANUAL",
     deletedAt: time(item.deletedAt),
@@ -174,7 +186,7 @@ function itemOf(raw: unknown, tierUids: Set<string>, position: number): BoardIte
  * does not parse is left out rather than guessed at. A board with no pool is
  * given one, since every move needs somewhere to put a card.
  */
-export function parseBoard(raw: unknown): Board | null {
+export function parseBoard(raw: unknown, owner: string | null = null): Board | null {
   if (raw === null || typeof raw !== "object") return null;
   const source = raw as Record<string, unknown>;
   const uid = text(source.uid);
@@ -195,10 +207,15 @@ export function parseBoard(raw: unknown): Board | null {
   }
   const tierUids = new Set(tiers.map((tier) => tier.uid));
   const items = (Array.isArray(source.items) ? source.items : [])
-    .map((item, index) => itemOf(item, tierUids, index))
+    .map((item, index) => itemOf(item, tierUids, index, owner))
     .filter((item): item is BoardItem => item !== null);
   const category = text(source.category);
-  const coverImageUrl = text(source.coverImageUrl);
+  const originalCover = text(source.coverImageUrl);
+  const coverPictureId = coverPictureIdOf(source.coverPictureId, originalCover, items);
+  const coverImageUrl = localPicture(originalCover, coverPictureId, owner);
+  const covers = Array.isArray(source.coverImageUrls)
+    ? source.coverImageUrls.filter((url): url is string => typeof url === "string")
+    : [];
   return {
     uid,
     title: text(source.title) ?? "",
@@ -207,10 +224,11 @@ export function parseBoard(raw: unknown): Board | null {
     // none, it would go back to the account as none and unfile the list there.
     category: category === null || category === "" ? null : category,
     coverImageUrl,
-    coverImageUrls: Array.isArray(source.coverImageUrls)
-      ? source.coverImageUrls.filter((url): url is string => typeof url === "string")
-      : [],
-    coverPictureId: coverPictureIdOf(source.coverPictureId, coverImageUrl, items),
+    coverImageUrls:
+      coverImageUrl && coverImageUrl !== originalCover && covers.length <= 1
+        ? [coverImageUrl]
+        : covers,
+    coverPictureId,
     authorName: text(source.authorName),
     publishedId: text(source.publishedId),
     takenFrom: text(source.takenFrom),
@@ -252,6 +270,7 @@ export interface BoardsRepository {
 export function boardsRepository(
   store: KeyValueStore,
   prefix: string = BOARD_PREFIX,
+  owner: string | null = null,
 ): BoardsRepository {
   const keyOf = (uid: string): string => `${prefix}${uid}`;
   const listeners = new Set<() => void>();
@@ -275,7 +294,7 @@ export function boardsRepository(
         continue;
       }
       try {
-        const board = parseBoard(JSON.parse(raw));
+        const board = parseBoard(JSON.parse(raw), owner);
         if (board !== null) {
           next.set(key, { raw, board });
           boards.push(board);

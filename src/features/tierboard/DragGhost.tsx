@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useSyncExternalStore, type CSSProperties } from "react";
 import type { PublishedItem } from "../../api/types";
 import type { DragState } from "./drag";
@@ -33,7 +34,7 @@ export function DragGhost({ now, subscribe, items, board }: DragGhostProps) {
   return (
     <div className="ghost" style={style} aria-hidden="true">
       {card.imageUrl !== null ? (
-        <img {...sizedFor(card.imageUrl, 64)} alt="" />
+        <MediaImage {...sizedFor(card.imageUrl, 64)} alt="" />
       ) : (
         <CardName title={card.title} board={board} wide />
       )}

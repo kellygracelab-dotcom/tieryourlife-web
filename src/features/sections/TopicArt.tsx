@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
 import { servedPicture, topicPicture } from "./model";
@@ -19,7 +20,7 @@ export function TopicArt({
   return picture === null ? (
     <Icon name={icon} />
   ) : (
-    <img
+    <MediaImage
       className="topic-art"
       src={servedPicture(picture)}
       alt=""

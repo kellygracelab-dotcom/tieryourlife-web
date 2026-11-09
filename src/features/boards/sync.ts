@@ -1,3 +1,4 @@
+import { privatePicturePath } from "../../lib/privatePictureRef";
 import type { KeepBoardRequest, KeptBoard, KeptBoardEntry } from "../../api/boards";
 import { errorOf } from "../../api/errors";
 import { fingerprintOf as digest } from "./fingerprint";
@@ -128,7 +129,8 @@ const request = (
     tierUid: item.tierUid,
     position: item.position,
     title: item.title,
-    imageUrl: item.imageUrl,
+    imageUrl:
+      item.pictureId !== null && privatePicturePath(item.imageUrl) !== null ? null : item.imageUrl,
     ...(item.credit === null ? {} : { credit: item.credit }),
     source: item.source,
     deletedAt: item.deletedAt,

@@ -1,17 +1,22 @@
+import { ownPictureRef } from "./privatePictureRef";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  auth: { currentUser: null as null | { uid: string; isAnonymous: boolean } },
+  auth: {
+    onAuthStateChanged: vi.fn(),
+    authStateReady: vi.fn(async () => undefined),
+    currentUser: null as null | { uid: string; isAnonymous: boolean },
+  },
   ref: vi.fn((_storage: unknown, path: string) => ({ path })),
   uploadBytes: vi.fn(async () => undefined),
-  getDownloadURL: vi.fn(async (target: { path: string }) => `https://dl/${target.path}`),
+  getBlob: vi.fn(async () => new Blob(["pixels"])),
   deleteObject: vi.fn(async () => undefined),
 }));
 
 vi.mock("firebase/storage", () => ({
   ref: mocks.ref,
   uploadBytes: mocks.uploadBytes,
-  getDownloadURL: mocks.getDownloadURL,
+  getBlob: mocks.getBlob,
   deleteObject: mocks.deleteObject,
 }));
 vi.mock("./firebase", () => ({
@@ -63,7 +68,7 @@ describe("uploadPicture", () => {
     );
     expect(uploaded).toEqual({
       pictureId: "pic-1",
-      previewUrl: "https://dl/users/u1/pictures/pic-1",
+      previewUrl: ownPictureRef("u1", "pic-1"),
     });
   });
 
@@ -157,7 +162,7 @@ describe("copyPublishedBack", () => {
     // The feed's copy goes once the list is sent again; the board shows its own.
     await expect(copyPublishedBack(url, () => "new-1")).resolves.toEqual({
       pictureId: "new-1",
-      previewUrl: "https://dl/users/u1/pictures/new-1",
+      previewUrl: ownPictureRef("u1", "new-1"),
     });
     expect(mocks.uploadBytes).toHaveBeenCalledWith(
       { path: "users/u1/pictures/new-1" },
@@ -320,13 +325,13 @@ describe("keepWebPicture", () => {
     const keep = vi.fn(async () => "kept-1");
     await expect(keepWebPicture("https://pictures.test/a.jpg", keep)).resolves.toEqual({
       pictureId: "kept-1",
-      previewUrl: "https://dl/users/u1/pictures/kept-1",
+      previewUrl: ownPictureRef("u1", "kept-1"),
     });
     expect(keep).toHaveBeenCalledWith("https://pictures.test/a.jpg");
   });
 
   it("shows the found picture while the copy's address cannot be had", async () => {
-    mocks.getDownloadURL.mockRejectedValueOnce(new Error("later"));
+    mocks.getBlob.mockRejectedValueOnce(new Error("later"));
     await expect(
       keepWebPicture("https://pictures.test/a.jpg", async () => "kept-2"),
     ).resolves.toEqual({ pictureId: "kept-2", previewUrl: "https://pictures.test/a.jpg" });

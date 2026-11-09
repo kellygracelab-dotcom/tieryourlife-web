@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { sizedFor } from "../../lib/pictureSize";
@@ -335,7 +336,7 @@ function Slot({ card, keycap, state, leaving, onPick }: SlotProps) {
         onClick={onPick}
       >
         {card.imageUrl !== null ? (
-          <img className="duel-card__picture" {...sizedFor(card.imageUrl, 300)} alt="" />
+          <MediaImage className="duel-card__picture" {...sizedFor(card.imageUrl, 300)} alt="" />
         ) : (
           <FittedName name={card.name} />
         )}

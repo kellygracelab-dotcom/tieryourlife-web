@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useContext, useId, useState, type CSSProperties } from "react";
 import { sizedFor } from "../../lib/pictureSize";
 import { fill, plural, strings } from "../../strings";
@@ -435,7 +436,7 @@ function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsP
                     onChange={(event) => flip(card.id, event.target.checked)}
                   />
                   {card.imageUrl !== null ? (
-                    <img {...sizedFor(card.imageUrl, 64)} alt={card.name} loading="lazy" />
+                    <MediaImage {...sizedFor(card.imageUrl, 64)} alt={card.name} loading="lazy" />
                   ) : (
                     <CardName title={card.name} board={size} />
                   )}
