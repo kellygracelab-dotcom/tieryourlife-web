@@ -398,7 +398,7 @@ test("uploads a cover from the board settings and keeps the owner's photo after 
   await select("poster.png", "image/png", PIXEL);
   const cover = page.locator(".sheet-row__thumb").filter({ visible: true });
   const thumb = page.locator("img.sheet-row__thumb");
-  await expect(thumb.last()).toHaveAttribute("src", /users%2F/i);
+  await expect(thumb.last()).toHaveAttribute("src", /^blob:/);
   const src = await thumb.last().getAttribute("src");
   await expect
     .poll(
@@ -410,8 +410,52 @@ test("uploads a cover from the board settings and keeps the owner's photo after 
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(page.url()).toBe(boardUrl);
+  const reads: string[] = [];
+  await page.route("**/firebasestorage.googleapis.com/**", async (route) => {
+    const request = route.request();
+    if (!request.url().includes("alt=media")) return route.fallback();
+    const auth = await request.headerValue("authorization");
+    const range = await request.headerValue("range");
+    if (!auth || !range || new URL(request.url()).searchParams.has("token")) {
+      reads.push("unauthorized");
+      return route.fulfill({ status: 403 });
+    }
+    reads.push("sdk");
+    return route.fulfill({ body: PIXEL, contentType: "image/png" });
+  });
+  // A previous Web release persisted the token-bearing preview URL. Reopen those exact local bytes.
+  const seeded = await page.evaluate(() => {
+    for (const key of Object.keys(localStorage)) {
+      const raw = localStorage.getItem(key);
+      if (!raw?.includes("A cover of my own") || !raw.includes("coverPictureId")) continue;
+      const board = JSON.parse(raw);
+      if (!board.coverImageUrl?.includes("users%2F")) continue;
+      board.coverImageUrl += "&token=old-test-token";
+      board.coverImageUrls = [board.coverImageUrl];
+      board.items[0].imageUrl = board.coverImageUrl;
+      board.items[0].pictureId = board.coverPictureId;
+      board.items[1].imageUrl = null;
+      board.items[1].pictureId = board.coverPictureId;
+      localStorage.setItem(key, JSON.stringify(board));
+      return true;
+    }
+    return false;
+  });
+  expect(seeded).toBe(true);
   await page.reload();
+  for (const name of ["Ex Machina", "The Witch"]) {
+    const image = page.getByRole("button", { name, exact: true }).locator("img").first();
+    await expect(image).toHaveAttribute("src", /^blob:/);
+    await expect
+      .poll(() => image.evaluate((img) => (img as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0);
+  }
   await settings();
-  await expect(cover.last()).toHaveAttribute("src", src!);
+  await expect(cover.last()).toHaveAttribute("src", /^blob:/);
+  await expect(cover.last()).not.toHaveAttribute("src", src!);
+  await expect
+    .poll(() => cover.last().evaluate((img) => (img as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+  expect(reads).toEqual(["sdk"]);
   await expect(page.getByRole("button", { name: /Auto|Reset|Remove cover/ }).first()).toBeVisible();
 });

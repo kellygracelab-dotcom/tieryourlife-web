@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useRef, useState, type CSSProperties } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
@@ -34,7 +35,7 @@ function Tile({
   const className = item.imageUrl === null ? "tile tile--name" : "tile";
   const art =
     item.imageUrl !== null ? (
-      <img {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
+      <MediaImage {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
     ) : (
       <CardName title={item.title} board={board} wide />
     );

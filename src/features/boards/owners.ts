@@ -62,7 +62,7 @@ export function boardOwners(store: KeyValueStore): BoardOwners {
     const prefix = prefixOf(owner);
     let repository = repositories.get(prefix);
     if (repository === undefined) {
-      repository = boardsRepository(store, prefix);
+      repository = boardsRepository(store, prefix, owner);
       repositories.set(prefix, repository);
     }
     return repository;

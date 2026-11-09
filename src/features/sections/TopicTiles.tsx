@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { Link } from "react-router";
 import type { Topic } from "../../api/sections";
 import { fill, strings } from "../../strings";
@@ -91,7 +92,7 @@ function TopicTile({
   const inside = (
     <>
       {picture !== null && (
-        <img
+        <MediaImage
           className="topic-tile__picture"
           src={servedPicture(picture)}
           alt=""

@@ -1,6 +1,8 @@
 import { mediaSrc } from "../../functions/src/publicMedia";
 import { errorOf } from "../api/errors";
 import { getFirebaseAuth, getFirebaseStorage } from "./firebase";
+import { MAX_PICTURE_BYTES, ownPictureRef, picturePath } from "./privatePictureRef";
+import { forgetPrivateBytes, keepPrivateBytes, privatePictureBytes } from "./privatePictureBytes";
 import type { PixelRect, Size } from "./framing";
 
 /**
@@ -11,7 +13,7 @@ import type { PixelRect, Size } from "./framing";
  */
 export const MAX_SIDE = 640;
 export const JPEG_QUALITY = 0.8;
-export const MAX_BYTES = 4 * 1024 * 1024;
+export const MAX_BYTES = MAX_PICTURE_BYTES;
 
 export type Shrink = (file: Blob) => Promise<Blob>;
 
@@ -170,23 +172,12 @@ export class PictureRefused extends Error {
   }
 }
 
-export const picturePath = (uid: string, pictureId: string): string =>
-  `users/${uid}/pictures/${pictureId}`;
+export { picturePath } from "./privatePictureRef";
 
 /** Storage's calls and the bucket, fetched with the first picture that needs them. */
 async function bucket() {
   const [calls, storage] = await Promise.all([import("firebase/storage"), getFirebaseStorage()]);
   return { ...calls, storage };
-}
-
-/** Where one of the person's own pictures can be seen from, or null when it cannot be found. */
-export async function ownPictureUrl(uid: string, pictureId: string): Promise<string | null> {
-  try {
-    const { getDownloadURL, ref, storage } = await bucket();
-    return await getDownloadURL(ref(storage, picturePath(uid, pictureId)));
-  } catch {
-    return null;
-  }
 }
 
 /** Pictures belong to an account: a guest's folder would not follow a collision sign-in. */
@@ -219,12 +210,13 @@ export async function uploadPicture(
   if (bytes.size >= MAX_BYTES) throw new PictureRefused("tooBig");
   const pictureId = newId();
   try {
-    const { getDownloadURL, ref, storage, uploadBytes } = await bucket();
+    const { ref, storage, uploadBytes } = await bucket();
     const target = ref(storage, picturePath(uid, pictureId));
     await uploadBytes(target, bytes, {
       contentType: bytes.type.startsWith("image/") ? bytes.type : "image/jpeg",
     });
-    return { pictureId, previewUrl: await getDownloadURL(target) };
+    keepPrivateBytes(picturePath(uid, pictureId), bytes);
+    return { pictureId, previewUrl: ownPictureRef(uid, pictureId) };
   } catch {
     throw new PictureRefused("upload");
   }
@@ -257,7 +249,8 @@ export async function keepWebPicture(
       why.kind === "pictureRefused" ? (KEPT_REFUSALS[why.because ?? ""] ?? "upload") : "upload",
     );
   }
-  return { pictureId, previewUrl: (await ownPictureUrl(uid, pictureId)) ?? url };
+  const bytes = await privatePictureBytes(picturePath(uid, pictureId));
+  return { pictureId, previewUrl: bytes ? ownPictureRef(uid, pictureId) : url };
 }
 
 /** The id of a picture the backend copied for this list, when the address is one of those. */
@@ -308,13 +301,14 @@ export async function copyPublishedBack(
   }
   const pictureId = newId();
   try {
-    const { getDownloadURL, ref, storage, uploadBytes } = await bucket();
+    const { ref, storage, uploadBytes } = await bucket();
     const target = ref(storage, picturePath(uid, pictureId));
     await uploadBytes(target, bytes, {
       contentType: bytes.type.startsWith("image/") ? bytes.type : "image/jpeg",
     });
     // Shown from the copy: the feed's goes once the list is sent again.
-    return { pictureId, previewUrl: await getDownloadURL(target) };
+    keepPrivateBytes(picturePath(uid, pictureId), bytes);
+    return { pictureId, previewUrl: ownPictureRef(uid, pictureId) };
   } catch {
     throw new PictureRefused("upload");
   }
@@ -333,7 +327,9 @@ export async function discardPictures(pictureIds: readonly string[]): Promise<vo
   const { deleteObject, ref, storage } = loaded;
   await Promise.all(
     pictureIds.map((pictureId) =>
-      deleteObject(ref(storage, picturePath(uid, pictureId))).catch(() => undefined),
+      deleteObject(ref(storage, picturePath(uid, pictureId)))
+        .then(() => forgetPrivateBytes(picturePath(uid, pictureId)))
+        .catch(() => undefined),
     ),
   );
 }

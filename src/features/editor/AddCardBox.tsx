@@ -1,3 +1,4 @@
+import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   PICTURE_SCOPES,
@@ -139,7 +140,7 @@ function PictureTile({
       aria-busy={busy || undefined}
     >
       <span className="cards__pick-picture">
-        <img
+        <MediaImage
           {...sizedFor(found.thumbUrl ?? found.imageUrl, 120)}
           alt=""
           loading="lazy"
