@@ -1,14 +1,20 @@
-import { useEffect, useImperativeHandle, useRef, useState, type ComponentProps } from "react";
+import {
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ComponentProps,
+} from "react";
 import { mediaSrc } from "../../functions/src/publicMedia";
-import { useSession } from "../app/session";
+import { PrivatePictureOwner } from "./privatePictureOwner";
 import { privatePicturePath } from "../lib/privatePictureRef";
 
 type ImageProps = ComponentProps<"img">;
 
 function PrivateImage({ path, loading, ref, ...props }: ImageProps & { path: string }) {
-  const { account } = useSession();
-  const mine =
-    account?.kind === "signedIn" && path.startsWith("users/" + account.uid + "/pictures/");
+  const owner = useContext(PrivatePictureOwner);
+  const mine = owner !== null && path.startsWith("users/" + owner + "/pictures/");
   const image = useRef<HTMLImageElement>(null);
   useImperativeHandle(ref, () => image.current!, []);
   const [src, setSrc] = useState<string>();

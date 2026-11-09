@@ -1,3 +1,4 @@
+import { PrivatePictureOwner } from "../ui/privatePictureOwner";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { VisitContext, VisitMemory } from "./visitMemory";
 import { onListChanged } from "../lib/listChanges";
@@ -132,7 +133,9 @@ export function SessionProvider({
       <SessionContext.Provider value={session}>
         <ShowFaceContext.Provider value={showFace}>
           <RedirectFailedContext.Provider value={redirectFailed}>
-            {children}
+            <PrivatePictureOwner.Provider value={account?.kind === "signedIn" ? account.uid : null}>
+              {children}
+            </PrivatePictureOwner.Provider>
           </RedirectFailedContext.Provider>
         </ShowFaceContext.Provider>
       </SessionContext.Provider>
