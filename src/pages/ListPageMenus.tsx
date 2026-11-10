@@ -17,6 +17,7 @@ import { report as sendReport, unpublish as unpublishList } from "../lib/api";
 import { isEditorial } from "../lib/editorial";
 import { fill, formatCount, strings } from "../strings";
 import { Button } from "../ui/Button";
+import { ResetPoolItem } from "../features/tierboard/ResetPoolItem";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
@@ -172,6 +173,7 @@ function VisitorMenu({
   saving,
   rankings,
   showMine,
+  resetMine,
 }: {
   list: PublishedList;
   report: Report;
@@ -179,6 +181,7 @@ function VisitorMenu({
   saving: SaveToMine;
   rankings: RankingsEntry | null;
   showMine: ShowMineEntry | null;
+  resetMine?: (() => void) | null;
 }) {
   const { hideList } = useHidden();
   const leave = useLeave();
@@ -197,6 +200,7 @@ function VisitorMenu({
         <>
           <RankingsItem rankings={rankings} />
           <ShowMineItem showMine={showMine} />
+          {resetMine !== undefined && <ResetPoolItem onReset={resetMine} />}
           {author !== null && (
             <li>
               <Link
@@ -255,6 +259,7 @@ export function VisitorTools({
   rankings = null,
   shown = null,
   showMine = null,
+  resetMine,
 }: {
   list: PublishedList;
   report: Report;
@@ -263,6 +268,7 @@ export function VisitorTools({
   rankings?: RankingsEntry | null;
   /** Mine among the list's rankings, once there is a Mine to show. */
   showMine?: ShowMineEntry | null;
+  resetMine?: (() => void) | null;
   /** A reader's ranking on show in the left half, which Save then offers to keep. */
   shown?: ShownPlacing | null;
 }) {
@@ -280,6 +286,7 @@ export function VisitorTools({
         saving={saving}
         rankings={rankings}
         showMine={showMine}
+        resetMine={resetMine}
       />
       <SaveToMineDialog saving={saving} />
     </>

@@ -57,10 +57,10 @@ describe("the chosen cards", () => {
     expect(keptTier(board, EVERYTHING)).toBeNull();
   });
 
-  it("can be played from two to 64", () => {
+  it("keeps the two-card minimum for a selection of any supported size", () => {
     expect(playable(1)).toBe(false);
     expect(playable(2)).toBe(true);
     expect(playable(64)).toBe(true);
-    expect(playable(65)).toBe(false);
+    expect(playable(65)).toBe(true);
   });
 });

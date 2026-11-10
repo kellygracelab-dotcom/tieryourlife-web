@@ -631,6 +631,7 @@ export async function rankingPage(
     listAvailable: list.exists && list.get("underReview") !== true,
     snapshot,
     rows: fromStoredRows(stored.rows),
+    ...(stored.poolOrder === undefined ? {} : { poolOrder: stored.poolOrder }),
     createdAt: stored.createdAt?.toMillis() ?? 0,
   };
   const locale = rankingLocale(stored.snapshot, askedOf(request));

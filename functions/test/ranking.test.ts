@@ -331,6 +331,22 @@ describe("decideEdit", () => {
     assert.deepEqual(decideEdit({ rows: [[2], [0, 1]] }, 2, 3), { ok: true, rows: [[2], [0, 1]] });
   });
 
+  it("accepts an explicitly reset ranking with a full ordered pool", () => {
+    assert.deepEqual(decideEdit({ rows: [[], []], poolOrder: [2, 0, 1] }, 2, 3), {
+      ok: true,
+      rows: [[], []],
+      poolOrder: [2, 0, 1],
+    });
+    for (const poolOrder of [
+      [2, 0],
+      [0, 0, 2],
+      [0, 1, 3],
+      [0, -1, 1],
+    ]) {
+      assert.equal(decideEdit({ rows: [[], []], poolOrder }, 2, 3).ok, false);
+    }
+  });
+
   const refusals: [string, unknown][] = [
     ["no body", null],
     ["no rows", {}],

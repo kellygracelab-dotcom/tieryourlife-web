@@ -31,25 +31,27 @@ export const STRENGTH_ROUNDS = 200;
  * both round the same nine places.
  */
 export function standing(count: number, duels: readonly Duel[]): Standing {
-  const met = Array.from({ length: count }, () => zeros(count));
+  const met = Array.from({ length: count }, () => new Map<number, number>());
   const wins = zeros(count);
   const played = zeros(count);
   for (const { winner, loser } of duels) {
-    increment(at(met, winner), loser);
-    increment(at(met, loser), winner);
+    const a = at(met, winner);
+    const b = at(met, loser);
+    a.set(loser, (a.get(loser) ?? 0) + 1);
+    b.set(winner, (b.get(winner) ?? 0) + 1);
     increment(wins, winner);
     increment(played, winner);
     increment(played, loser);
   }
+  // Ascending opponent index preserves the shared floating-point sum order.
+  const opponents = met.map((row) => [...row].sort(([a], [b]) => a - b));
   let strength = new Array<number>(count).fill(1);
   for (let round = 0; round < STRENGTH_ROUNDS; round++) {
     const previous = strength;
     strength = previous.map((own, i) => {
-      const meetings = at(met, i);
       let denominator = 0;
-      for (let j = 0; j < count; j++) {
-        const times = at(meetings, j);
-        if (j !== i && times > 0) denominator += times / (own + at(previous, j));
+      for (const [j, times] of at(opponents, i)) {
+        denominator += times / (own + at(previous, j));
       }
       denominator += 2 / (own + 1);
       return (at(wins, i) + 1) / denominator;

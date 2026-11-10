@@ -46,7 +46,7 @@ export function bracketRoundText(cards: number): string {
   if (n === 2) return strings.play.final;
   if (n === 4) return strings.play.semiFinals;
   if (n === 8) return strings.play.quarterFinals;
-  return fill(strings.play.roundOfLast, { n });
+  return fill(strings.play.roundOfLast, { n: cards });
 }
 
 /** A hill's run worth saying: two wins and more. */

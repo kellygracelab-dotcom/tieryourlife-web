@@ -50,6 +50,7 @@ export interface Ranking {
   listAvailable: boolean;
   snapshot: RankingSnapshot;
   rows: number[][];
+  poolOrder?: number[];
   createdAt: number;
   /** Set when the caller's account keeps this ranking; pages made before it asked never carry it. */
   yours?: boolean;
@@ -97,6 +98,7 @@ export function keepRanking(
   rows: readonly (readonly number[])[],
   version?: number,
   tierLabels?: TierWords,
+  poolOrder?: readonly number[],
 ): Promise<SavedRanking> {
   return onceMoreWhenBusy(() =>
     client.request<SavedRanking>("POST", "/api/rank", {
@@ -104,6 +106,7 @@ export function keepRanking(
       appCheck: "limited",
       body: {
         listId,
+        ...(poolOrder === undefined ? {} : { poolOrder }),
         rows: rows.map((row) => [...row]),
         ...(version === undefined ? {} : { version }),
         ...(tierLabels === undefined ? {} : { tierLabels: tierWordsToSend(tierLabels) }),
@@ -157,10 +160,12 @@ export function rearrangeRanking(
   code: string,
   rows: readonly (readonly number[])[],
   tierLabels?: TierWords,
+  poolOrder?: readonly number[],
 ): Promise<{ code: string }> {
   return onceMoreWhenBusy(() =>
     client.request<{ code: string }>("PUT", `/api/rank/${encodeURIComponent(code)}`, {
       body: {
+        ...(poolOrder === undefined ? {} : { poolOrder }),
         rows: rows.map((row) => [...row]),
         ...(tierLabels === undefined ? {} : { tierLabels: tierWordsToSend(tierLabels) }),
       },

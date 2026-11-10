@@ -11,6 +11,7 @@ export {
   goesOn,
   isOver,
   nextPair,
+  mainGame,
   outcomeOf,
   progress,
   refinePairs,

@@ -1,10 +1,18 @@
-import { useEffect, useId, useMemo, useRef } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import type { PlayBoard } from "./board";
 import { keptTier } from "./chosen";
-import { answered, dashedIds, isThinResult, refineCount, resultOf, type Game } from "./game";
+import {
+  answered,
+  dashedIds,
+  isThinResult,
+  refineCount,
+  resultOf,
+  type Game,
+  type Unplayed,
+} from "./game";
 import { thinText } from "./labels";
 import { PHONE, SIDEWAYS, useMedia } from "./media";
 import { ResultPreview } from "./ResultPreview";
@@ -16,7 +24,7 @@ interface ResultViewProps {
   /** Somebody else's list: Apply puts the result into Mine. */
   theirs: boolean;
   /** The result, one row of card ids per tier of the board; the played cards only. */
-  onApply: (tiers: string[][]) => void;
+  onApply: (tiers: string[][], unplayed: Unplayed) => void;
   onRefine: () => void;
   onPlayAgain: () => void;
   onCancel: () => void;
@@ -60,6 +68,7 @@ export function ResultView({
   onCancel,
   onQuit,
 }: ResultViewProps) {
+  const [unplayed, setUnplayed] = useState<Unplayed>("keep");
   const id = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
@@ -74,11 +83,7 @@ export function ResultView({
   const nothing = duels === 0;
 
   const apply = (
-    <Button
-      variant="filled"
-      className="result-view__apply"
-      onClick={() => onApply(rows.map((row) => [...row]))}
-    >
+    <Button variant="filled" className="result-view__apply" onClick={() => onApply(rows, unplayed)}>
       {theirs ? strings.play.putInMine : strings.play.apply}
     </Button>
   );
@@ -179,6 +184,22 @@ export function ResultView({
                 </p>
               )}
             </div>
+            {board.order.length > game.ids.length && (
+              <fieldset className="play-unplayed">
+                <legend>{strings.play.unplayed}</legend>
+                {(["keep", "pool"] as const).map((choice) => (
+                  <label key={choice}>
+                    <input
+                      type="radio"
+                      name={id}
+                      checked={unplayed === choice}
+                      onChange={() => setUnplayed(choice)}
+                    />
+                    {choice === "keep" ? strings.play.keepUnplayed : strings.play.poolUnplayed}
+                  </label>
+                ))}
+              </fieldset>
+            )}
             <div className="result-view__tiers">
               <ResultPreview
                 board={board}

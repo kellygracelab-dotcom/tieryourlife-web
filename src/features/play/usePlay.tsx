@@ -4,9 +4,9 @@ import type { KeyValueStore } from "../../lib/storage";
 import { fill, plural, strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { boardOf, type PlayCard, type PlayTier } from "./board";
-import { chosenIds, EVERYTHING, MAX_CARDS, MIN_CARDS, playable, type Chosen } from "./chosen";
+import { chosenIds, EVERYTHING, MIN_CARDS, playable, type Chosen } from "./chosen";
 import type { GameKind } from "./engine";
-import type { Game } from "./game";
+import type { Game, Unplayed } from "./game";
 import type { PlayButtonProps } from "./PlayButton";
 import { SheetArrival } from "./sheet";
 import { lastGame, localGames, rememberGame, type SavedGames } from "./savedGames";
@@ -74,7 +74,7 @@ export interface Play {
   quit: () => void;
 }
 
-type Screen = "none" | "picker" | "cards" | "cardsFirst" | "layer";
+type Screen = "none" | "picker" | "cards" | "layer";
 
 /**
  * Play mode for one board, everything a page needs in one call.
@@ -199,9 +199,7 @@ export function usePlay(
 
   const open = () => {
     if (board.order.length < MIN_CARDS) return;
-    // A board too big for one game chooses its cards first, unless a saved game waits.
-    const tooMany = chosenIds(board, chosen).length > MAX_CARDS;
-    setScreen(tooMany && savedGame === null ? "cardsFirst" : "picker");
+    setScreen("picker");
   };
 
   /** A new game; the one saved before it goes, with a way back for a few seconds. */
@@ -255,13 +253,13 @@ export function usePlay(
     setGame(next);
   };
 
-  const apply = (rules: Screens, finished: Game, result: string[][]) => {
+  const apply = (rules: Screens, finished: Game, result: string[][], unplayed: Unplayed) => {
     const played: Played = {
       kind: finished.spec.kind,
       cards: finished.ids.length,
       duels: rules.answered(finished),
     };
-    const takeBack = onApply(rules.applied(board, result, finished.ids), played);
+    const takeBack = onApply(rules.applied(board, result, finished.ids, unplayed), played);
     forget();
     close();
     if (typeof takeBack === "function") {
@@ -312,7 +310,7 @@ export function usePlay(
             onCancel={close}
           />
         )}
-        {(screen === "cards" || screen === "cardsFirst") && (
+        {screen === "cards" && (
           <shown.ChooseCards
             board={board}
             chosen={chosen}
@@ -321,7 +319,7 @@ export function usePlay(
               setScreen("picker");
             }}
             // Reached from the picker, the arrow goes back to it; Cancel closes the sheet, as on the app.
-            onBack={screen === "cards" ? () => setScreen("picker") : undefined}
+            onBack={() => setScreen("picker")}
             onCancel={close}
           />
         )}
@@ -331,7 +329,7 @@ export function usePlay(
               game={game}
               board={board}
               theirs={theirs}
-              onApply={(result) => apply(shown, game, result)}
+              onApply={(result, unplayed) => apply(shown, game, result, unplayed)}
               onRefine={() => change(shown.startRefine(game))}
               onPlayAgain={() => playAgain(game)}
               onCancel={() => cancel(game)}

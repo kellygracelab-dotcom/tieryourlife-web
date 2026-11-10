@@ -1,7 +1,9 @@
+import { poolOf } from "./arrange";
 export type Rows = readonly (readonly number[])[];
 
 export interface BoardState {
   readonly itemCount: number;
+  readonly poolOrder?: readonly number[];
   readonly rows: Rows;
   readonly selected: number | null;
   /**
@@ -24,7 +26,13 @@ export type BoardAction =
   | { type: "unplace"; item: number }
   | { type: "undo" }
   /** The list has other cards or tiers now (the owner's doing): the board starts over from these rows. */
-  | { type: "reset"; tierCount: number; itemCount: number; rows: Rows | null };
+  | {
+      type: "reset";
+      tierCount: number;
+      itemCount: number;
+      rows: Rows | null;
+      poolOrder?: readonly number[];
+    };
 
 // Enough for a whole evening of misdrops; unbounded would keep every board
 // state a stream ever produced.
@@ -32,9 +40,15 @@ export const MAX_HISTORY = 200;
 
 export const KEYBOARD_TIERS = 9;
 
-export function init(tierCount: number, itemCount: number, rows?: Rows | null): BoardState {
+export function init(
+  tierCount: number,
+  itemCount: number,
+  rows?: Rows | null,
+  poolOrder?: readonly number[],
+): BoardState {
   return {
     itemCount,
+    ...(poolOrder === undefined ? {} : { poolOrder }),
     rows: rows ?? Array.from({ length: tierCount }, () => []),
     selected: null,
     history: [],
@@ -94,7 +108,7 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
       return remember(state, without(state.rows, action.item));
     }
     case "reset":
-      return init(action.tierCount, action.itemCount, action.rows);
+      return init(action.tierCount, action.itemCount, action.rows, action.poolOrder);
     case "undo": {
       const previous = state.history[state.history.length - 1];
       if (previous === undefined) return state;
@@ -132,8 +146,7 @@ export function placedCount(state: BoardState): number {
 }
 
 export function pool(state: BoardState): number[] {
-  const placed = new Set(state.rows.flat());
-  return Array.from({ length: state.itemCount }, (_, i) => i).filter((i) => !placed.has(i));
+  return poolOf(state.rows, state.itemCount, state.poolOrder);
 }
 
 /**
@@ -143,7 +156,13 @@ export function pool(state: BoardState): number[] {
 function nextInPool(state: BoardState, after: number, among?: readonly number[]): number | null {
   const inSight = among === undefined ? null : new Set(among);
   const left = pool(state).filter((item) => inSight === null || inSight.has(item));
-  return left.find((item) => item > after) ?? left[0] ?? null;
+  if (state.poolOrder === undefined) return left.find((item) => item > after) ?? left[0] ?? null;
+  const order = [
+    ...new Set([...state.poolOrder, ...Array.from({ length: state.itemCount }, (_, i) => i)]),
+  ];
+  const at = order.indexOf(after);
+  const available = new Set(left);
+  return order.slice(at + 1).find((item) => available.has(item)) ?? left[0] ?? null;
 }
 
 export const canUndo = (state: BoardState): boolean => state.history.length > 0;

@@ -54,7 +54,12 @@ describe("a game kept in the board", () => {
 
   it("resumes a game over cards picked from a big row as it was, after a reload", () => {
     const pool = Array.from({ length: 80 }, (_, n) => `p${n}`);
-    const board = { tiers: [{ id: "s", cardIds: ["a", "b"] }], pool, order: ["a", "b", ...pool] };
+    const board = {
+      cards: new Map(["a", "b", ...pool].map((id) => [id, { id }])),
+      tiers: [{ id: "s", cardIds: ["a", "b"] }],
+      pool,
+      order: ["a", "b", ...pool],
+    };
     const picked = pool.slice(0, 10);
     for (const kind of ["hill", "swiss"] as const) {
       const game = newGame(

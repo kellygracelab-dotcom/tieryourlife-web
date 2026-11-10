@@ -1,17 +1,16 @@
 import type { PlayBoard } from "./board";
-import { chosenIds, keptTier, MAX_CARDS, MIN_CHOSEN, type Chosen } from "./chosen";
+import { keptTier, type Chosen } from "./chosen";
 import {
   duels,
   duelsPlayed,
   isThin,
   nextPair,
   outcomeOf,
-  progress,
+  mainGame,
   refinePairs,
   result,
   SOLID_DUELS,
   standing,
-  swissRound,
   swissRounds,
   type GameKind,
   type GameSpec,
@@ -133,32 +132,14 @@ export function gameProgress(game: Game): GameProgress {
       overall: { asked: game.history.length, total: fixed.from + total },
     };
   }
-  const main = progress({ ...game.spec, refine: false }, game.history);
-  const round = game.spec.kind === "swiss" ? swissRoundNow(game.spec.count, game.history) : null;
+  const main = mainGame(game.spec, game.history);
+  const overall = { asked: game.history.length, total: main.planned };
   return {
     phase: "main",
-    ...main,
-    round: round === null ? null : { n: round, of: swissRounds(game.spec.count) },
-    overall: main,
+    ...overall,
+    overall,
+    round: main.round === undefined ? null : { n: main.round, of: swissRounds(game.spec.count) },
   };
-}
-
-/**
- * The round the next answer belongs to, counted from 1, or null when the game
- * is over. The engine's own walk through the rounds (games.ts), kept to the
- * count: a round is the pairs found from the answers before it.
- */
-function swissRoundNow(count: number, history: readonly Outcome[]): number | null {
-  if (count < 2) return null;
-  const rounds = swissRounds(count);
-  let used = 0;
-  for (let round = 0; round < rounds; round++) {
-    const pairs = swissRound(count, history.slice(0, used));
-    if (pairs.length === 0) return null;
-    if (history.length - used < pairs.length) return round + 1;
-    used += pairs.length;
-  }
-  return null;
 }
 
 /**
@@ -225,7 +206,7 @@ export function dashedIds(game: Game): Set<string> {
 
 /** More than a quarter of the cards dashed: the result says it rests on little. */
 export const isThinResult = (game: Game): boolean =>
-  isThin(standing(game.spec.count, duels(game.history)));
+  isThin({ played: duelsPlayed(game.spec.count, game.history) });
 
 /** A duel takes about this long to answer, for the picker's estimate. */
 const SECONDS_PER_DUEL = 2.2;
@@ -251,78 +232,25 @@ export function estimate(kind: GameKind, count: number): Estimate {
   return { duels: asked, minutes, rough: kind === "swiss" };
 }
 
-/** How a saved game meets the board as it is now. */
-export type Resume =
-  /** Resumable; `joined` new cards came in (losers stay only). */
-  | { kind: "ready"; game: Game; joined: number }
-  /** The cards changed under a game that cannot take that, or too few are left: start over. */
-  | { kind: "changed"; game: Game };
+/** A session always keeps the exact participant IDs with which it began. */
+export type Resume = { kind: "ready" | "changed"; game: Game };
 
-/**
- * A saved game against the board it was saved from, changed since or not.
- * Cards still on the board stay in the game wherever they moved.
- *
- * - Losers stay: answers with a card that left the board are dropped, the rest
- *   renumbered, and cards that are now in the chosen rows join at the end, up
- *   to 64 in all. The engine works its rounds out from the answers, so they
- *   come into the rounds still to be asked. Close calls start afresh.
- * - King of the hill and bracket: the order of the duels is the game, so any
- *   change means starting over.
- */
 export function reconcile(game: Game, board: PlayBoard): Resume {
-  const onBoard = new Set(board.order);
-  const ids = new Set(game.ids);
-  const kept = game.ids.filter((id) => onBoard.has(id));
-  const newcomers =
-    game.chosen.kind === "picked" ? [] : chosenIds(board, game.chosen).filter((id) => !ids.has(id));
-  if (kept.length === game.ids.length && newcomers.length === 0) {
-    return { kind: "ready", game, joined: 0 };
-  }
-  if (game.spec.kind !== "swiss") return { kind: "changed", game };
-  const joining = newcomers.slice(0, Math.max(0, MAX_CARDS - kept.length));
-  const next = [...kept, ...joining];
-  if (next.length < MIN_CHOSEN) return { kind: "changed", game };
-  const indexOf = new Map(next.map((id, index) => [id, index]));
-  const renumber = (card: number): number | undefined => indexOf.get(game.ids[card] ?? "");
-  const history = game.history.flatMap(([first, second, winner]): Outcome[] => {
-    const a = renumber(first);
-    const b = renumber(second);
-    if (a === undefined || b === undefined) return [];
-    return [[a, b, winner === null ? null : winner === first ? a : b]];
-  });
-  const { refineFixed: _, ...rest } = game;
-  return {
-    kind: "ready",
-    game: {
-      ...rest,
-      spec: { ...game.spec, count: next.length, refine: false },
-      ids: next,
-      history,
-    },
-    joined: joining.length,
-  };
+  const complete = game.ids.every((id) => board.cards.has(id));
+  return { kind: complete ? "ready" : "changed", game };
 }
 
-/**
- * The board's tiers once a result is applied: the played cards take the places
- * the result gives them, every other card stays where it is. In each tier the
- * played cards go as one block, best first, where the first of them stood, or
- * at the end when none of them was there, as a card placed from the pool goes.
- * A card in no row is in the pool.
- */
+export type Unplayed = "keep" | "pool";
+
 export function applied(
   board: PlayBoard,
   placed: readonly (readonly string[])[],
   played: readonly string[],
+  unplayed: Unplayed = "keep",
 ): string[][] {
   const playing = new Set(played);
-  return board.tiers.map((tier, index) => {
-    const row = tier.cardIds;
-    const block = placed[index] ?? [];
-    const first = row.findIndex((id) => playing.has(id));
-    const others = row.filter((id) => !playing.has(id));
-    const at =
-      first === -1 ? others.length : row.slice(0, first).filter((id) => !playing.has(id)).length;
-    return [...others.slice(0, at), ...block, ...others.slice(at)];
-  });
+  return board.tiers.map((tier, i) => [
+    ...(placed[i] ?? []),
+    ...(unplayed === "keep" ? tier.cardIds.filter((id) => !playing.has(id)) : []),
+  ]);
 }

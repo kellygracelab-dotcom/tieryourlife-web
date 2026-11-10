@@ -106,14 +106,16 @@ export const rearrangeRanking = (
   code: string,
   rows: Rows,
   tierLabels?: TierWords,
-): Promise<{ code: string }> => rank.rearrangeRanking(api, code, rows, tierLabels);
+  poolOrder?: readonly number[],
+): Promise<{ code: string }> => rank.rearrangeRanking(api, code, rows, tierLabels, poolOrder);
 
 export const keepRanking = (
   listId: string,
   rows: Rows,
   version?: number,
   tierLabels?: TierWords,
-): Promise<SavedRanking> => rank.keepRanking(api, listId, rows, version, tierLabels);
+  poolOrder?: readonly number[],
+): Promise<SavedRanking> => rank.keepRanking(api, listId, rows, version, tierLabels, poolOrder);
 
 export const carryGuest = (guestToken: string): Promise<AdoptedGuest> =>
   account.carryGuest(api, guestToken);

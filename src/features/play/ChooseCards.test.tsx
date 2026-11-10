@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { boardOf, type PlayCard, type PlayTier } from "./board";
@@ -30,7 +30,7 @@ const board = boardOf(
   [tier("S", "S", "Masterpieces", s), tier("A", "A", null, a), tier("B", "B", null, [])],
 );
 
-function show(chosen: Chosen = EVERYTHING) {
+function show(chosen: Chosen = { kind: "rows", tiers: [], pool: false, keepTier: true }) {
   const onDone = vi.fn();
   const onCancel = vi.fn();
   render(<ChooseCards board={board} chosen={chosen} onDone={onDone} onCancel={onCancel} />);
@@ -40,7 +40,7 @@ function show(chosen: Chosen = EVERYTHING) {
 const continueButton = () => screen.getByRole("button", { name: "Continue" });
 
 describe("choosing cards", () => {
-  it("lists the pool and the tiers with cards, and everything only below 64", () => {
+  it("lists the pool, occupied tiers and the exact whole-board count", () => {
     show();
     expect(screen.getByRole("dialog", { name: "Choose cards" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "The pool · 22 cards" })).not.toBeChecked();
@@ -49,9 +49,9 @@ describe("choosing cards", () => {
     );
     expect(screen.getByRole("checkbox", { name: /^Tier A/ })).toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: /^Tier B/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "Everything · 194 cards" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "Everything · 194 cards" })).toBeEnabled();
     // Nothing chosen yet on a board too big for one game.
-    expect(screen.getByText("0 of 64 selected")).toBeInTheDocument();
+    expect(screen.getByText("0 selected")).toBeInTheDocument();
     expect(continueButton()).toBeDisabled();
   });
 
@@ -59,7 +59,7 @@ describe("choosing cards", () => {
     const { onDone } = show();
     await userEvent.click(screen.getByRole("checkbox", { name: "The pool · 22 cards" }));
     await userEvent.click(screen.getByRole("checkbox", { name: /^Tier A/ }));
-    expect(screen.getByText("52 of 64 selected")).toBeInTheDocument();
+    expect(screen.getByText("52 selected")).toBeInTheDocument();
     // Two rows: no keeping them in a tier.
     expect(screen.queryByRole("switch")).not.toBeInTheDocument();
     await userEvent.click(continueButton());
@@ -71,11 +71,22 @@ describe("choosing cards", () => {
     });
   });
 
-  it("says when there are too many, and does not go on", async () => {
-    show();
+  it("samples without replacement from the selected tier and previews the fixed members", async () => {
+    const { onDone } = show();
     await userEvent.click(screen.getByRole("checkbox", { name: /S Masterpieces/ }));
-    expect(screen.getByText("142 selected, pick up to 64")).toHaveClass("play-counter--over");
-    expect(continueButton()).toBeDisabled();
+    expect(screen.getByText("142 selected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "128" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "64" }));
+    await userEvent.click(screen.getByText("64 picked"));
+    const names = screen
+      .getAllByRole("listitem")
+      .filter((el) => el.closest("details"))
+      .map((el) => el.textContent);
+    expect(new Set(names).size).toBe(64);
+    expect(names.every((n) => n?.startsWith("s "))).toBe(true);
+    await userEvent.click(continueButton());
+    const selection = onDone.mock.lastCall![0];
+    expect(selection.ids).toEqual(names.map((n) => n?.replace(" ", "")));
   });
 
   it("keeps one tier's cards in it unless told otherwise", async () => {
@@ -102,8 +113,12 @@ describe("choosing cards", () => {
 
   it("picks cards one by one in a tier too big for a game, up to 64", async () => {
     const { onDone } = show();
-    expect(screen.getByText("Too many for one game. Use search to pick some.")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    await userEvent.click(
+      within(screen.getByRole("checkbox", { name: /Masterpieces/ }).closest("li")!).getByRole(
+        "button",
+        { name: "Pick cards" },
+      ),
+    );
     expect(screen.getByRole("dialog", { name: "Pick cards" })).toBeInTheDocument();
 
     // A search narrows the grid.
@@ -112,12 +127,12 @@ describe("choosing cards", () => {
     expect(within(screen.getByRole("list")).getAllByRole("checkbox")).toHaveLength(3);
     await userEvent.click(screen.getByRole("checkbox", { name: "s 140" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "s 141" }));
-    expect(screen.getByText("2 of 64 selected")).toBeInTheDocument();
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
     await userEvent.click(continueButton());
 
     // Back on the rows: the tier shows its picks, and the cards stay in it by default.
     expect(screen.getByText("2 picked")).toBeInTheDocument();
-    expect(screen.getByText("2 of 64 selected")).toBeInTheDocument();
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "Keep them in S, just order them" })).toBeChecked();
     await userEvent.click(continueButton());
     expect(onDone).toHaveBeenCalledWith({
@@ -128,40 +143,50 @@ describe("choosing cards", () => {
     });
   });
 
-  // A loaded machine draws sixty-four picks slowly; the default 15 s is not the point here.
-  it("stops picking at 64", { timeout: 60_000 }, async () => {
-    show();
-    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
-    const grid = screen.getByRole("list");
-    const boxes = within(grid).getAllByRole("checkbox");
-    // Sixty-four clicks, as plain events: a user-event each would take seconds.
-    for (const box of boxes.slice(0, 64)) fireEvent.click(box);
-    expect(screen.getByText("64 of 64 selected")).toBeInTheDocument();
-    expect(boxes[64]).toBeDisabled();
-    expect(boxes[0]).toBeEnabled();
+  it("accepts an existing manual selection above 64", async () => {
+    const ids = s.slice(0, 91).map((c) => c.id);
+    const { onDone } = show({ kind: "picked", tier: "S", ids, keepTier: true });
+    expect(screen.getByText("91 selected")).toBeInTheDocument();
+    await userEvent.click(continueButton());
+    expect(onDone.mock.lastCall![0].ids).toEqual(ids);
   });
 
   it("goes back from the picking without keeping it", async () => {
     show();
-    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    await userEvent.click(
+      within(screen.getByRole("checkbox", { name: /Masterpieces/ }).closest("li")!).getByRole(
+        "button",
+        { name: "Pick cards" },
+      ),
+    );
     await userEvent.click(screen.getByRole("checkbox", { name: "s 0" }));
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(screen.getByText("0 of 64 selected")).toBeInTheDocument();
+    expect(screen.getByText("0 selected")).toBeInTheDocument();
   });
 
   it("keeps the rows ticked before when nothing is picked", async () => {
     show();
     await userEvent.click(screen.getByRole("checkbox", { name: /^Tier A/ }));
-    expect(screen.getByText("30 of 64 selected")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    expect(screen.getByText("30 selected")).toBeInTheDocument();
+    await userEvent.click(
+      within(screen.getByRole("checkbox", { name: /Masterpieces/ }).closest("li")!).getByRole(
+        "button",
+        { name: "Pick cards" },
+      ),
+    );
     await userEvent.click(continueButton());
-    expect(screen.getByText("30 of 64 selected")).toBeInTheDocument();
+    expect(screen.getByText("30 selected")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /^Tier A/ })).toBeChecked();
   });
 
   it("puts the focus in the search when the picking opens", async () => {
     show();
-    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    await userEvent.click(
+      within(screen.getByRole("checkbox", { name: /Masterpieces/ }).closest("li")!).getByRole(
+        "button",
+        { name: "Pick cards" },
+      ),
+    );
     expect(screen.getByRole("searchbox", { name: "Find a card" })).toHaveFocus();
   });
 
@@ -170,9 +195,9 @@ describe("choosing cards", () => {
     const onDone = vi.fn();
     render(<ChooseCards board={small} chosen={EVERYTHING} onDone={onDone} onCancel={vi.fn()} />);
     expect(screen.getByRole("checkbox", { name: "Everything · 5 cards" })).toBeChecked();
-    expect(screen.getByText("5 of 64 selected")).toBeInTheDocument();
+    expect(screen.getByText("5 selected")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: "Everything · 5 cards" }));
-    expect(screen.getByText("0 of 64 selected")).toBeInTheDocument();
+    expect(screen.getByText("0 selected")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: "Everything · 5 cards" }));
     await userEvent.click(continueButton());
     expect(onDone).toHaveBeenCalledWith({ kind: "all" });
@@ -186,7 +211,12 @@ describe("choosing cards", () => {
 
   it("cancels the whole sheet from the picking too, not just the picking", async () => {
     const { onCancel } = show();
-    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    await userEvent.click(
+      within(screen.getByRole("checkbox", { name: /Masterpieces/ }).closest("li")!).getByRole(
+        "button",
+        { name: "Pick cards" },
+      ),
+    );
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(onCancel).toHaveBeenCalled());
   });
@@ -219,7 +249,12 @@ describe("choosing cards", () => {
 
   it("marks a picked card with a check", async () => {
     show();
-    await userEvent.click(screen.getByRole("button", { name: "Pick cards" }));
+    await userEvent.click(
+      within(screen.getByRole("checkbox", { name: /Masterpieces/ }).closest("li")!).getByRole(
+        "button",
+        { name: "Pick cards" },
+      ),
+    );
     const box = screen.getByRole("checkbox", { name: "s 0" });
     await userEvent.click(box);
     expect(box).toBeChecked();

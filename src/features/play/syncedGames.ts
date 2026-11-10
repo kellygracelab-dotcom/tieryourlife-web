@@ -1,6 +1,6 @@
 import type { SyncedPlay } from "../../api/boards";
 import type { Chosen } from "./chosen";
-import { isOver, refinePairs, swissRound, swissRounds, type Outcome } from "./engine";
+import { mainGame, refinePairs, type Outcome } from "./engine";
 import type { Game } from "./game";
 import { EXPIRES_AFTER, type SavedGames } from "./savedGames";
 
@@ -16,8 +16,9 @@ import { EXPIRES_AFTER, type SavedGames } from "./savedGames";
  * before it (refinePairs is the same on both sides).
  */
 export function toSynced(game: Game, poolId: string | null, now: number): SyncedPlay {
-  const scope = scopeOf(game.chosen, poolId);
-  const keepTier = game.chosen.kind !== "all" && game.chosen.keepTier && scope?.length === 1;
+  const chosen = game.chosen.kind === "sample" ? game.chosen.source : game.chosen;
+  const scope = scopeOf(chosen, poolId);
+  const keepTier = chosen.kind !== "all" && chosen.keepTier && scope?.length === 1;
   return {
     kind: game.spec.kind,
     count: game.spec.count,
@@ -43,7 +44,7 @@ export function fromSynced(play: SyncedPlay, poolId: string | null): Game {
     chosen: chosenOf(play, poolId),
   };
   if (!play.refine) return game;
-  const from = mainLength(spec, history);
+  const from = mainGame(spec, history).used;
   return {
     ...game,
     spec: { ...spec, refine: true },
@@ -51,7 +52,10 @@ export function fromSynced(play: SyncedPlay, poolId: string | null): Game {
   };
 }
 
-function scopeOf(chosen: Chosen, poolId: string | null): string[] | null {
+function scopeOf(
+  chosen: Exclude<Chosen, { kind: "sample" }>,
+  poolId: string | null,
+): string[] | null {
   if (chosen.kind === "all") return null;
   const tiers =
     chosen.kind === "rows"
@@ -87,34 +91,9 @@ function chosenOf(play: SyncedPlay, poolId: string | null): Chosen {
   };
 }
 
-/** How many answers the main game took: the rest of a history are Refine's. */
-function mainLength(
-  spec: { kind: Game["spec"]["kind"]; count: number; seed: number },
-  history: readonly Outcome[],
-): number {
-  const main = { ...spec, refine: false };
-  for (let length = 0; length <= history.length; length++) {
-    if (isOver(main, history.slice(0, length))) return length;
-  }
-  return history.length;
-}
-
-/**
- * The Swiss round being asked, counted from 1, as the app's GameProgress.round:
- * 0 for the other games and once the main game is over. Only the Resume row
- * reads it; the game itself is always replayed from its answers.
- */
 function roundOf(game: Game): number {
   if (game.spec.kind !== "swiss" || game.refineFixed !== undefined) return 0;
-  const rounds = swissRounds(game.spec.count);
-  let used = 0;
-  for (let round = 0; round < rounds; round++) {
-    const pairs = swissRound(game.spec.count, game.history.slice(0, used));
-    if (pairs.length === 0) return 0;
-    if (game.history.length - used < pairs.length) return round + 1;
-    used += pairs.length;
-  }
-  return 0;
+  return mainGame(game.spec, game.history).round ?? 0;
 }
 
 /** A board's own game, read from and written to the board: the page hands `usePlay` this. */

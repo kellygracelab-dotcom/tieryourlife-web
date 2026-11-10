@@ -1,8 +1,9 @@
 import { ownPictureRef } from "../../lib/privatePictureRef";
-import type { SyncedPlay } from "../../api/boards";
+import { MAX_PLAY_ANSWERS, type SyncedPlay } from "../../api/boards";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
   creditOf,
+  BOARD_LIMITS,
   DISPLAY_MODES,
   POOL_COLOURS,
   POOL_LABEL,
@@ -97,21 +98,35 @@ export function playOf(raw: unknown): SyncedPlay | null {
   const play = raw as Record<string, unknown>;
   const { kind, count, seed, refine, ids, history, round, startedAt, scope, keepTier } = play;
   if (typeof kind !== "string" || !KINDS.includes(kind)) return null;
-  if (!isInt(count) || !isInt(seed) || typeof refine !== "boolean") return null;
+  if (
+    !isInt(count) ||
+    count < 2 ||
+    count > BOARD_LIMITS.items ||
+    !isInt(seed) ||
+    typeof refine !== "boolean"
+  )
+    return null;
   if (!isInt(round) || typeof startedAt !== "number") return null;
-  if (!Array.isArray(ids) || ids.length !== count || !ids.every((id) => typeof id === "string")) {
+  if (
+    !Array.isArray(ids) ||
+    ids.length !== count ||
+    new Set(ids).size !== count ||
+    !ids.every((id) => typeof id === "string")
+  ) {
     return null;
   }
   const inGame = (n: unknown): n is number => isInt(n) && n >= 0 && n < count;
   if (
     !Array.isArray(history) ||
+    history.length > MAX_PLAY_ANSWERS ||
     !history.every(
       (answer) =>
         Array.isArray(answer) &&
         answer.length === 3 &&
         inGame(answer[0]) &&
         inGame(answer[1]) &&
-        (answer[2] === null || inGame(answer[2])),
+        answer[0] !== answer[1] &&
+        (answer[2] === null || answer[2] === answer[0] || answer[2] === answer[1]),
     )
   ) {
     return null;

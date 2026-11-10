@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { boardOf, type PlayCard, type PlayTier } from "./board";
+import { decodeGame, encodeGame } from "./savedGames";
+import { fromSynced, toSynced } from "./syncedGames";
+import { playOf } from "../boards/repository";
 import { EVERYTHING, type Chosen } from "./chosen";
-import { refinePairs, swissRounds, type GameKind } from "./engine";
+import { refinePairs, swissRound, swissRounds, type GameKind } from "./engine";
 import {
   answered,
   applied,
@@ -277,7 +280,7 @@ describe("resuming on a board that changed", () => {
   it("resumes as it was when nothing changed, wherever the cards moved", () => {
     const board = boardOf(cardsNamed("a", "b", "c"), [tier("s", ["c"]), tier("a")]);
     const game = pick(start("hill", ["a", "b", "c"]), 0);
-    expect(reconcile(game, board)).toEqual({ kind: "ready", game, joined: 0 });
+    expect(reconcile(game, board)).toEqual({ kind: "ready", game });
   });
 
   it("asks the hill and the bracket to start over", () => {
@@ -285,46 +288,16 @@ describe("resuming on a board that changed", () => {
     const fewer = boardOf(cardsNamed("a", "b"), [tier("s")]);
     const more = boardOf(cardsNamed("a", "b", "c", "d"), [tier("s")]);
     expect(reconcile(game, fewer).kind).toBe("changed");
-    expect(reconcile(game, more).kind).toBe("changed");
+    expect(reconcile(game, more)).toEqual({ kind: "ready", game });
   });
 
-  it("drops a deleted card's answers from losers stay, renumbers the rest and adds new cards at the end", () => {
-    const game: Game = {
-      ...start("swiss", ["a", "b", "c", "d"]),
-      history: [
-        [0, 1, 0],
-        [2, 3, 3],
-        [0, 3, null],
-        [1, 2, 2],
-      ],
-    };
-    // b is gone; e and f are new.
-    const board = boardOf(cardsNamed("a", "c", "d", "e", "f"), [tier("s")]);
-    const resumed = reconcile(game, board);
-    expect(resumed.kind).toBe("ready");
-    if (resumed.kind !== "ready") return;
-    expect(resumed.joined).toBe(2);
-    expect(resumed.game.ids).toEqual(["a", "c", "d", "e", "f"]);
-    expect(resumed.game.spec.count).toBe(5);
-    // c and d were 2 and 3; now 1 and 2.
-    expect(resumed.game.history).toEqual([
-      [1, 2, 2],
-      [0, 2, null],
-    ]);
-  });
-
-  it("lets only the chosen rows' new cards join, and starts the close calls afresh", () => {
-    const over = playOut(
-      start("swiss", ["p1", "p2", "p3"], { kind: "rows", tiers: [], pool: true, keepTier: false }),
-      lowerWins,
+  it("keeps the saved participants and the fixed close calls when new cards appear", () => {
+    const refining = startRefine(playOut(start("swiss", ["p1", "p2", "p3"]), lowerWins));
+    const board = boardOf(cardsNamed("p1", "p2", "p3", "extra"), [tier("s")]);
+    expect(reconcile(refining, board)).toEqual({ kind: "ready", game: refining });
+    expect(reconcile(refining, boardOf(cardsNamed("p1", "p2", "extra"), [tier("s")])).kind).toBe(
+      "changed",
     );
-    const refining = startRefine(over);
-    const board = boardOf(cardsNamed("p1", "p2", "p3", "p4", "s1"), [tier("s", ["s1"])]);
-    const resumed = reconcile(refining, board);
-    if (resumed.kind !== "ready") throw new Error("not resumed");
-    expect(resumed.game.ids).toEqual(["p1", "p2", "p3", "p4"]);
-    expect(resumed.game.refineFixed).toBeUndefined();
-    expect(resumed.game.spec.refine).toBe(false);
   });
 
   it("starts over when too few cards are left", () => {
@@ -341,18 +314,57 @@ describe("applying a result", () => {
       tier("a", ["y", "z"]),
     ]);
     expect(applied(board, [["q"], ["p"]], ["p", "q"])).toEqual([
-      ["x", "q"],
-      ["y", "z", "p"],
+      ["q", "x"],
+      ["p", "y", "z"],
     ]);
   });
 
-  it("keeps a reordered tier's block where its first played card stood", () => {
+  it("keeps a reordered tier's block before the other cards", () => {
     const board = boardOf(cardsNamed("a", "b", "c", "d"), [tier("s", ["a", "b", "c", "d"])]);
-    expect(applied(board, [["d", "b"]], ["b", "d"])).toEqual([["a", "d", "b", "c"]]);
+    expect(applied(board, [["d", "b"]], ["b", "d"])).toEqual([["d", "b", "a", "c"]]);
   });
 
   it("re-tiers every card of a whole-board game", () => {
     const board = boardOf(cardsNamed("a", "b", "c"), [tier("s", ["a"]), tier("a", ["b"])]);
     expect(applied(board, [["c"], ["b", "a"]], ["a", "b", "c"])).toEqual([["c"], ["b", "a"]]);
+  });
+});
+
+describe("full-board games", () => {
+  for (const count of [65, 91, 128, 257]) {
+    it.each(["hill", "bracket", "swiss"] as const)(
+      "finishes %s with every participant at " + count,
+      (kind) => {
+        const board = poolBoard(count);
+        const game = start(kind, [...board.order]);
+        const first = pick(game, currentPair(game)![0]);
+        const saved = toSynced(first, "pool", 20_000);
+        const remote = fromSynced(playOf(JSON.parse(JSON.stringify(saved)))!, "pool");
+        expect(currentPair(remote)).toEqual(currentPair(first));
+        expect(remote.ids).toEqual(board.order);
+        expect(decodeGame(encodeGame(first, 20_000))?.game).toEqual(first);
+        const over = playOut(remote, lowerWins);
+        expect(over.history.length).toBeGreaterThanOrEqual(count - 1);
+        const rows = resultOf(over, board).flat();
+        expect(rows).toHaveLength(count);
+        expect(new Set(rows)).toEqual(new Set(board.order));
+      },
+    );
+  }
+
+  it("recovers the last Swiss round and the fixed refinement on a 2,000-card board", () => {
+    const board = poolBoard(2000);
+    const game = start("swiss", [...board.order]);
+    for (let round = 0; round < swissRounds(2000); round++) {
+      for (const [a, b] of swissRound(2000, game.history)) game.history.push([a, b, a]);
+    }
+    expect(game.history.length).toBeGreaterThan(12_000);
+    const from = game.history.length;
+    const refining = startRefine(game);
+    expect(refining.refineFixed?.from).toBe(from);
+    const decoded = fromSynced(playOf(toSynced(refining, "pool", 20_000))!, "pool");
+    expect(currentPair(decoded)).toEqual(currentPair(refining));
+    expect(decoded.history).toEqual(game.history);
+    expect(resultOf(game, board).flat()).toHaveLength(2000);
   });
 });

@@ -81,6 +81,7 @@ import {
 } from "../features/boards/houseList";
 import { fill, plural, strings } from "../strings";
 import { Icon } from "../ui/Icon";
+import { ResetPoolItem } from "../features/tierboard/ResetPoolItem";
 import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import { PlayButton } from "../features/play/PlayButton";
@@ -389,11 +390,13 @@ function OpenBoard({
     () =>
       board === null
         ? []
-        : liveItems(board).map((item) => ({
-            id: item.uid,
-            name: item.title,
-            imageUrl: item.imageUrl,
-          })),
+        : liveItems(board)
+            .sort((a, b) => a.position - b.position)
+            .map((item) => ({
+              id: item.uid,
+              name: item.title,
+              imageUrl: item.imageUrl,
+            })),
     [board],
   );
   const playTiers = useMemo<PlayTier[]>(
@@ -719,6 +722,16 @@ function OpenBoard({
           <PlayButton {...play.button} />
           <Menu label={strings.boards.more} button={<Icon name="more_vert" />}>
             <>
+              <ResetPoolItem
+                onReset={
+                  view.rows.some((row) => row.length > 0)
+                    ? () => {
+                        repository.save(arrangeItems(latest(), [], now()));
+                        setArranged((round) => round + 1);
+                      }
+                    : null
+                }
+              />
               <li>
                 <button type="button" className="menu__action" onClick={() => setPanel("settings")}>
                   {strings.boards.settings}
@@ -850,6 +863,7 @@ function OpenBoard({
               strip={board.displayMode === "HORIZONTAL_SCROLL"}
               edit={{
                 rows: view.rows,
+                poolOrder: view.pool,
                 save: () => Promise.resolve(),
                 cancel: () => undefined,
                 owner: {

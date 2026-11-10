@@ -109,7 +109,8 @@ export interface Refusal {
   error: string;
 }
 
-export type RankDecision = { ok: true; listId: string; rows: number[][] } | Refusal;
+export type RankDecision =
+  { ok: true; listId: string; rows: number[][]; poolOrder?: number[] } | Refusal;
 
 const refuse = (status: number, code: string, error: string): Refusal => ({
   ok: false,
@@ -128,13 +129,14 @@ export function decideListId(body: unknown): string | null {
  * one array per tier, in the order the cards were dropped. Everything the
  * rows do not mention stays unranked.
  */
-export type PlacementDecision = { ok: true; rows: number[][] } | Refusal;
+export type PlacementDecision = { ok: true; rows: number[][]; poolOrder?: number[] } | Refusal;
 
 /** Rows as the client sends them: one list of card indexes per tier, each card at most once. */
 export function decidePlacement(
   rows: unknown,
   tierCount: number,
   itemCount: number,
+  poolOrder?: unknown,
 ): PlacementDecision {
   if (!Array.isArray(rows) || rows.length !== tierCount) {
     return refuse(400, "INVALID", "Rows do not match the list's tiers");
@@ -152,16 +154,29 @@ export function decidePlacement(
     }
     clean.push(row as number[]);
   }
+  if (poolOrder !== undefined) {
+    if (
+      !Array.isArray(poolOrder) ||
+      poolOrder.length !== itemCount - seen.size ||
+      poolOrder.some((i) => !Number.isInteger(i) || i < 0 || i >= itemCount || seen.has(i)) ||
+      new Set(poolOrder).size !== poolOrder.length
+    )
+      return refuse(400, "INVALID", "Invalid pool order");
+    return { ok: true, rows: clean, poolOrder };
+  }
   if (seen.size === 0) return refuse(400, "INVALID", "Nothing is placed yet");
   return { ok: true, rows: clean };
 }
 
 export function decideRows(body: unknown, tierCount: number, itemCount: number): RankDecision {
-  const source = body as { listId?: unknown; rows?: unknown } | null;
+  const source = body as { listId?: unknown; rows?: unknown; poolOrder?: unknown } | null;
   const listId = decideListId(source);
   if (listId === null) return refuse(400, "INVALID", "Which list?");
-  const placement = decidePlacement(source?.rows, tierCount, itemCount);
-  return placement.ok ? { ok: true, listId, rows: placement.rows } : placement;
+  const placement = decidePlacement(source?.rows, tierCount, itemCount, source?.poolOrder);
+  if (!placement.ok) return placement;
+  if (!placement.rows.some((row) => row.length > 0))
+    return refuse(400, "INVALID", "Nothing is placed yet");
+  return { ...placement, listId };
 }
 
 /**
@@ -179,7 +194,8 @@ export function decideVersion(body: unknown, storedMillis: number): Refusal | nu
 
 /** A new arrangement for a ranking that already exists; the rows are all it can change. */
 export function decideEdit(body: unknown, tierCount: number, itemCount: number): PlacementDecision {
-  return decidePlacement((body as { rows?: unknown } | null)?.rows, tierCount, itemCount);
+  const source = body as { rows?: unknown; poolOrder?: unknown } | null;
+  return decidePlacement(source?.rows, tierCount, itemCount, source?.poolOrder);
 }
 
 /** Only the account that keeps a ranking may change it; a guest's copy is not an account. */
@@ -450,6 +466,7 @@ export interface RankingSummary {
 
 /** The fields of a stored ranking these helpers read; a Firestore Timestamp fits createdAt. */
 export interface StoredRanking {
+  poolOrder?: number[];
   listId: string;
   snapshot: Snapshot;
   rows: unknown;

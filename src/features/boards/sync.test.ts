@@ -143,6 +143,7 @@ describe("syncBoards", () => {
     // A first write says nothing of a revision: the key is absent, not null.
     expect(request).not.toHaveProperty("basedOn");
     expect(JSON.stringify(request)).not.toContain("basedOn");
+    expect(request.play).toBeNull();
     expect(request.deviceName).toBe("Chrome on Linux");
     expect(request.fingerprint).toMatch(/^[0-9a-f]{64}$/);
     expect(request.items.map((item) => item.title)).toEqual(["Dune", "Heat"]);
@@ -1050,4 +1051,39 @@ describe("syncBoards", () => {
     );
     expect(repository.get("here")?.items).toEqual(here.items);
   });
+});
+
+it("carries the precise next duel to another device and explicitly clears a large game", async () => {
+  const { newGame, currentPair, pick } = await import("../play/game");
+  const { fromSynced, toSynced } = await import("../play/syncedGames");
+  const first = setUp();
+  const second = setUp();
+  const uid = uids("large");
+  const board = addToPool(
+    newBoard("big", "Big", 100, uid),
+    Array.from({ length: 91 }, (_, i) => ({ title: String(i), imageUrl: null })),
+    100,
+    uid,
+  );
+  const game = newGame(
+    "bracket",
+    board.items.map((i) => i.uid),
+    { kind: "all" },
+    3,
+    100,
+  );
+  const progressed = pick(game, currentPair(game)![0]);
+  first.repository.save({ ...board, play: toSynced(progressed, null, 200) });
+  await first.run();
+  await second.run({ api: first.account.api });
+  const downloaded = second.repository.get(board.uid)!;
+  const resumed = fromSynced(downloaded.play!, null);
+  expect(resumed.ids).toEqual(progressed.ids);
+  expect(resumed.history).toEqual(progressed.history);
+  expect(currentPair(resumed)).toEqual(currentPair(progressed));
+  second.repository.save({ ...downloaded, play: null });
+  await second.run({ api: first.account.api });
+  expect(first.account.keeps.at(-1)?.request.play).toBeNull();
+  await first.run();
+  expect(first.repository.get(board.uid)?.play).toBeNull();
 });

@@ -67,6 +67,7 @@ interface RankingDocument {
   listId: string;
   snapshot: Snapshot;
   rows: StoredRow[];
+  poolOrder?: number[];
   ownerUid: string | null;
   ownerAnonymous: boolean;
   claimHash: string;
@@ -310,6 +311,7 @@ async function readRanking(
     listAvailable,
     snapshot: shownSnapshot(ranking.snapshot, standing),
     rows: fromStoredRows(ranking.rows),
+    ...(ranking.poolOrder === undefined ? {} : { poolOrder: ranking.poolOrder }),
     createdAt: ranking.createdAt?.toMillis() ?? 0,
     yours: isKeptBy(ranking, viewer?.uid ?? null),
   });
@@ -376,6 +378,7 @@ async function saveRanking(
     listId: decision.listId,
     snapshot: withTierLabels(snapshot, words.labels),
     rows: toStoredRows(decision.rows),
+    ...(decision.poolOrder === undefined ? {} : { poolOrder: decision.poolOrder }),
     ownerUid: identity.uid,
     ownerAnonymous: identity.isAnonymous,
     claimHash: claimHashOf(claimToken),
@@ -544,9 +547,12 @@ async function editRanking(
     if (tooSoon((mark.get("lastWriteAt") as number | undefined) ?? null, now)) return BUSY;
     const snapshot = withTierLabels(ranking.snapshot, words.labels);
     const rows = toStoredRows(edit.rows);
-    if (!rankingFits({ ...ranking, snapshot, rows, updatedAt: now })) return RANK_TOO_LARGE;
+    const pool = edit.poolOrder === undefined ? {} : { poolOrder: edit.poolOrder };
+    if (!rankingFits({ ...ranking, ...pool, snapshot, rows, updatedAt: now }))
+      return RANK_TOO_LARGE;
     transaction.update(ref, {
       rows,
+      ...pool,
       ...(snapshot === ranking.snapshot ? {} : { snapshot }),
       updatedAt: FieldValue.serverTimestamp(),
     });

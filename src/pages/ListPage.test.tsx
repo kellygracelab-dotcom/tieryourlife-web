@@ -382,6 +382,7 @@ describe("ListPage menu", () => {
     // Who else ranked it comes first, the one place the number is said.
     expect(menuLines()).toEqual([
       "Rankings · 3",
+      "Return all cards to the pool",
       "View danylo",
       "Copy link",
       "Save to my lists",
@@ -408,7 +409,11 @@ describe("ListPage menu", () => {
     open();
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(menuLines().slice(0, 2)).toEqual(["Rankings · 3", "Copy link"]);
+    expect(menuLines().slice(0, 3)).toEqual([
+      "Rankings · 3",
+      "Return all cards to the pool",
+      "Copy link",
+    ]);
   });
 });
 
