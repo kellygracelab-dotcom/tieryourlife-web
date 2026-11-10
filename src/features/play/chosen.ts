@@ -6,19 +6,7 @@ export const MIN_CARDS = 3;
 /** A chosen part of a board may be as small as the engine allows: two cards, one duel. */
 export const MIN_CHOSEN = 2;
 
-/**
- * Which of a board's cards a game is over, kept with the game: a resumed game
- * knows which new cards belong to it, Apply knows whether to keep the cards in
- * their tier, and Play again starts from the same cards.
- *
- * - all: every card on the board.
- * - rows: whole tiers (by id) and the pool.
- * - picked: cards picked one by one in one row too big for a game; `tier` is
- *   null for the pool.
- *
- * `keepTier` counts only when the cards come from exactly one tier: they stay
- * in it and the game only puts them in order.
- */
+/** The source selection for a new game. A sample also keeps its exact members. */
 export type Selection =
   | { kind: "all" }
   | { kind: "rows"; tiers: readonly string[]; pool: boolean; keepTier: boolean }
@@ -41,6 +29,7 @@ export function chosenIds(board: PlayBoard, chosen: Chosen): string[] {
       ];
     }
     case "sample":
+      return chosen.ids.filter((id) => board.cards.has(id));
     case "picked": {
       const picked = new Set(chosen.ids);
       return board.order.filter((id) => picked.has(id));
@@ -80,4 +69,12 @@ export function sampleSizes(count: number): number[] {
   const sizes: number[] = [];
   for (let size = 16; size <= count; size *= 2) sizes.push(size);
   return sizes;
+}
+
+/** Replay uses the saved participants. “Everything” in a new picker uses the current board. */
+export function replaySelection(board: PlayBoard, source: Chosen, ids: readonly string[]): Chosen {
+  const candidates = chosenIds(board, source);
+  const current = new Set(candidates);
+  if (current.size === ids.length && ids.every((id) => current.has(id))) return source;
+  return { kind: "sample", source: source.kind === "sample" ? source.source : source, ids };
 }

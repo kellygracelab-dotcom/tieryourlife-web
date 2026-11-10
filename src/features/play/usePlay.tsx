@@ -4,7 +4,7 @@ import type { KeyValueStore } from "../../lib/storage";
 import { fill, plural, strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { boardOf, type PlayCard, type PlayTier } from "./board";
-import { chosenIds, EVERYTHING, MIN_CARDS, playable, type Chosen } from "./chosen";
+import { chosenIds, EVERYTHING, MIN_CARDS, playable, replaySelection, type Chosen } from "./chosen";
 import type { GameKind } from "./engine";
 import type { Game, Unplayed } from "./game";
 import type { PlayButtonProps } from "./PlayButton";
@@ -49,7 +49,7 @@ export interface PlayOptions {
   /**
    * Apply: every ranked tier's card ids after the result, the board's tiers in
    * order; a card in no row is in the pool. The played cards take their new
-   * places and every other card stays where it was. Return a way to take it
+   * places and the unplayed cards follow the selected policy. Return a way to take it
    * back and the receipt "Board arranged from 136 duels · Undo" offers it;
    * return nothing for no receipt.
    */
@@ -274,7 +274,7 @@ export function usePlay(
   // it to resume, and Start says it went, with a way back.
   const playAgain = (finished: Game) => {
     setKind(finished.spec.kind);
-    setChosen(finished.chosen);
+    setChosen(replaySelection(board, finished.chosen, finished.ids));
     setGame(null);
     setScreen("picker");
   };

@@ -99,11 +99,13 @@ export function refineCount(game: Game): number {
 
 /** The game, over, going on with its close calls; as it was when there are none. */
 export function startRefine(game: Game): Game {
-  if (refineCount(game) === 0) return game;
+  if (game.refineFixed !== undefined || !isOver(game)) return game;
+  const pairs = refinePairs(game.spec.count, game.history);
+  if (pairs.length === 0) return game;
   return {
     ...game,
     spec: { ...game.spec, refine: true },
-    refineFixed: { from: game.history.length, pairs: refinePairs(game.spec.count, game.history) },
+    refineFixed: { from: game.history.length, pairs },
   };
 }
 

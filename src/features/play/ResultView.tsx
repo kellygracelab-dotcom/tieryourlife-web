@@ -81,6 +81,10 @@ export function ResultView({
   const refine = useMemo(() => refineCount(game), [game]);
   const duels = answered(game);
   const nothing = duels === 0;
+  const hasUnplayed = useMemo(() => {
+    const played = new Set(game.ids);
+    return board.order.some((id) => !played.has(id));
+  }, [board.order, game.ids]);
 
   const apply = (
     <Button variant="filled" className="result-view__apply" onClick={() => onApply(rows, unplayed)}>
@@ -184,7 +188,7 @@ export function ResultView({
                 </p>
               )}
             </div>
-            {board.order.length > game.ids.length && (
+            {hasUnplayed && (
               <fieldset className="play-unplayed">
                 <legend>{strings.play.unplayed}</legend>
                 {(["keep", "pool"] as const).map((choice) => (

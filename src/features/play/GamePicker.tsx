@@ -111,11 +111,7 @@ export function GamePicker({
   );
 }
 
-/**
- * The saved game, above the choice. Losers stay takes new cards in from its
- * next round and goes on; a hill or a bracket drew its order from the cards
- * it began with, so once they changed it starts again.
- */
+/** Resume the saved participants, or offer a fresh start if a participant was removed. */
 function SavedRow({
   saved,
   now,

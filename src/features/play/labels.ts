@@ -41,11 +41,9 @@ export const roundText = (progress: GameProgress): string | null =>
  * quarter-finals.
  */
 export function bracketRoundText(cards: number): string {
-  let n = 2;
-  while (n < cards) n *= 2;
-  if (n === 2) return strings.play.final;
-  if (n === 4) return strings.play.semiFinals;
-  if (n === 8) return strings.play.quarterFinals;
+  if (cards <= 2) return strings.play.final;
+  if (cards <= 4) return strings.play.semiFinals;
+  if (cards <= 8) return strings.play.quarterFinals;
   return fill(strings.play.roundOfLast, { n: cards });
 }
 

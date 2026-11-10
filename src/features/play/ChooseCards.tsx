@@ -51,7 +51,7 @@ function tickedOf(board: PlayBoard, chosen: Selection): Ticked {
         tiers: new Set(board.tiers.filter((t) => t.cardIds.length > 0).map((t) => t.id)),
         pool: board.pool.length > 0,
         picked: null,
-        keepTier: true,
+        keepTier: false,
       };
     }
     case "rows":
@@ -90,7 +90,7 @@ function chosenOf(board: PlayBoard, ticked: Ticked): Selection {
   const rows = board.tiers.filter((tier) => tier.cardIds.length > 0);
   const every =
     rows.every((tier) => ticked.tiers.has(tier.id)) && (board.pool.length === 0 || ticked.pool);
-  if (every) return { kind: "all" };
+  if (every && !(oneTier(ticked) !== null && ticked.keepTier)) return { kind: "all" };
   return {
     kind: "rows",
     tiers: board.tiers.filter((tier) => ticked.tiers.has(tier.id)).map((tier) => tier.id),
@@ -135,6 +135,7 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
                 tiers: new Set(),
                 pool: false,
                 picked: { row: picking.row, ids },
+                keepTier: ticked.picked === null ? true : ticked.keepTier,
               });
             } else if (ticked.picked?.row === picking.row) {
               setTicked({ ...ticked, picked: null });
@@ -152,7 +153,7 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
   const count = sample?.length ?? candidates.length;
   const rows = board.tiers.filter((tier) => tier.cardIds.length > 0);
   const total = board.order.length;
-  const everything = chosenOf(board, ticked).kind === "all";
+  const everything = source.kind === "all" && sample === null;
   const kept = oneTier(ticked);
   const keptLabel = board.tiers.find((tier) => tier.id === kept)?.label ?? "";
 
@@ -163,7 +164,7 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
     if (row === null) pool = on;
     else if (on) tiers.add(row);
     else tiers.delete(row);
-    setTicked({ ...ticked, tiers, pool, picked: null });
+    setTicked({ ...ticked, tiers, pool, picked: null, keepTier: true });
   };
   const toggleEverything = (on: boolean) => {
     setSample(null);
@@ -171,6 +172,7 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
       ...ticked,
       tiers: new Set(on ? rows.map((tier) => tier.id) : []),
       pool: on && board.pool.length > 0,
+      keepTier: false,
       picked: null,
     });
   };
@@ -291,12 +293,10 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
 function Check({
   id,
   checked,
-  disabled = false,
   onChange,
 }: {
   id: string;
   checked: boolean;
-  disabled?: boolean;
   onChange: (on: boolean) => void;
 }) {
   return (
@@ -306,7 +306,6 @@ function Check({
         type="checkbox"
         className="play-check__input"
         checked={checked}
-        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
       />
       <span className="play-check__box" aria-hidden="true">

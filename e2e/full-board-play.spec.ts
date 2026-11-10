@@ -23,7 +23,7 @@ const board = {
   })),
 };
 
-async function openBoard(page: Page) {
+async function openBoard(page: Page, fixture = board) {
   await mockBackend(page);
   await page.route("**/lists/sections", (r) => r.fulfill({ json: { sections: [] } }));
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -31,7 +31,7 @@ async function openBoard(page: Page) {
     ({ key, board }) => {
       if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(board));
     },
-    { key, board },
+    { key, board: fixture },
   );
   await page.goto("/b");
   await page
@@ -238,3 +238,46 @@ test("a guest can reset Mine and reopen it without altering the author's ranking
   await page.getByRole("button", { name: "Theirs", exact: true }).click();
   await expect(page.locator(".tier .tile").first()).toHaveAttribute("aria-label", "Ex Machina");
 });
+
+for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
+  test("replays the same 16 after reloading a saved sample from " + scope, async ({ page }) => {
+    const items = board.items.map((item, i) => ({
+      ...item,
+      tierUid: scope === "one occupied tier" ? "S" : i < 25 ? "S" : i < 50 ? "A" : "Pool",
+    }));
+    await openBoard(page, { ...board, items });
+    await play(page).click();
+    await page.getByRole("button", { name: "Choose cards" }).click();
+    if (scope === "two tiers") await page.getByRole("checkbox", { name: /The pool/ }).uncheck();
+    if (scope === "one occupied tier")
+      await page.getByRole("switch", { name: /Keep them in S/ }).check();
+    await page.getByRole("button", { name: "16", exact: true }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.locator("label.play-game").filter({ hasText: "Bracket" }).click();
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    const pick = page.getByRole("button", { name: /^Pick / }).first();
+    await pick.click();
+    await expect.poll(async () => (await persisted(page)).play?.history.length).toBe(1);
+    const original = (await persisted(page)).play;
+    expect(original.ids).toHaveLength(16);
+    if (scope === "one occupied tier") {
+      expect(original.keepTier).toBe(true);
+      expect(original.scope).toEqual(["S"]);
+    }
+    await page.reload();
+    await play(page).click();
+    await page.getByRole("button", { name: "Resume" }).click();
+    for (let i = 1; i < 15; i++) {
+      await expect(page.getByRole("heading", { name: "Duel " + (i + 1) + " of 15" })).toBeVisible();
+      await pick.click();
+    }
+    await expect(page.getByRole("heading", { name: "Your result" })).toBeVisible();
+    if (scope === "one occupied tier")
+      await expect(page.locator(".result-view__tiers .tier")).toHaveCount(1);
+    await page.getByRole("button", { name: "Play again" }).click();
+    await expect(page.getByText("16 cards from " + title)).toBeVisible();
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await pick.click();
+    await expect.poll(async () => (await persisted(page)).play?.ids).toEqual(original.ids);
+  });
+}

@@ -114,7 +114,7 @@ export function loadPlacedDraft(store: KeyValueStore, scope: DraftScope): Rows |
   return rows !== null && rows.some((row) => row.length > 0) ? rows : null;
 }
 
-/** The words Mine's tiers wear, or null while they are the list's own. */
+/** The explicit pool order of this exact list snapshot, if one has been saved. */
 export function loadPoolOrder(
   store: KeyValueStore,
   scope: DraftScope,

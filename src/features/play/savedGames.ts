@@ -4,15 +4,7 @@ import { MAX_BOARD_ITEMS, MAX_PLAY_ANSWERS } from "../../api/boards";
 import type { GameKind, Outcome, Pair } from "./engine";
 import type { Game } from "./game";
 
-/**
- * Where a board's game in progress is kept between visits: one per board, on
- * this device, at `play:{boardKey}`, for 30 days after it was last played.
- *
- * The account copy comes later: the synced board document gets a `play` field
- * holding `encodeGame`'s text, and an account-backed `SavedGames` writes both
- * places and reads the newer one. Pages hand that one to `usePlay` instead of
- * this device's; nothing else changes.
- */
+/** One active game per board. List drafts use local storage and owned boards sync with the account. */
 export interface SavedGames {
   load(boardKey: string): Game | null;
   save(boardKey: string, game: Game): void;

@@ -17,7 +17,13 @@ import { listIn } from "../lib/translated";
 import { useResource } from "../lib/useResource";
 import { currentLocale, fill, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
-import { loadDraft, loadPoolOrder, saveDraft, scopeOf } from "../features/tierboard/draft";
+import {
+  clearDraft,
+  loadDraft,
+  loadPoolOrder,
+  saveDraft,
+  scopeOf,
+} from "../features/tierboard/draft";
 import { ResetPoolItem } from "../features/tierboard/ResetPoolItem";
 import { Menu } from "../ui/Menu";
 import { useBackCloses } from "../ui/useBackCloses";
@@ -430,9 +436,10 @@ function OpenRanking({
   const owned = asAccount && state.status === "ready" && state.value.yours === true;
   const editing = owned && (chosen ?? wantsEdit);
   const leaveEditing = useCallback(() => {
+    if (ranking !== undefined) clearDraft(scratch, ranking.listId);
     setChosen(false);
     if (wantsEdit) setParams({}, { replace: true });
-  }, [wantsEdit, setParams]);
+  }, [wantsEdit, setParams, ranking, scratch]);
 
   useEffect(() => {
     if (savedAt === null) return;
@@ -485,7 +492,7 @@ function OpenRanking({
         onEdit={() => setChosen(true)}
         edit={{
           rows: shown.rows,
-          poolOrder: loadPoolOrder(scratch, scopeOf(listOf(shown))) ?? shown.poolOrder,
+          poolOrder: shown.poolOrder,
           save,
           cancel: leaveEditing,
         }}
