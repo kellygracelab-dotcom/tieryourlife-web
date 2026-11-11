@@ -26,11 +26,8 @@ interface OfferProps {
 
 export function RankingOffer(props: OfferProps) {
   const { account } = useSession();
-  const sync = useBoardSync();
-  const restoring =
-    sync.signedIn && sync.backUp && sync.status === "syncing" && sync.lastSyncedAt === null;
   const owner = account?.kind === "signedIn" ? account.uid : null;
-  return account === null || restoring ? null : (
+  return account === null ? null : (
     <Offer
       key={offerKey(owner, props.listId)}
       {...props}
@@ -56,7 +53,10 @@ function Offer({
   const [state, setState] = useState<"waiting" | "open" | "closed">("waiting");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const eligible = total > 0 && placed * 10 > total * 3;
+  const sync = useBoardSync();
+  const restoring =
+    sync.signedIn && sync.backUp && sync.status === "syncing" && sync.lastSyncedAt === null;
+  const eligible = !restoring && total > 0 && placed * 10 > total * 3;
   if (state === "waiting" && eligible) {
     setState(!known && localStorageStore.read(key) === null ? "open" : "closed");
   }
