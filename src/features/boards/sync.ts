@@ -383,8 +383,12 @@ async function send(
     }
     // The board as last agreed, written again by another device: nothing in
     // it is new, so ours goes over it without a copy.
-    const agreed = records.all().find((record) => record.uid === uid)?.fingerprint;
-    if (theirs.fingerprint === null || theirs.fingerprint !== agreed) {
+    const agreed = records.all().find((record) => record.uid === uid);
+    if (
+      theirs.fingerprint === null ||
+      (theirs.fingerprint !== agreed?.fingerprint &&
+        theirs.fingerprint !== agreed?.remoteFingerprint)
+    ) {
       await adopt(theirs, true, deps, fingerprintOf);
       sawTheirs(deps, theirs);
     }
@@ -407,6 +411,7 @@ function sawTheirs(deps: SyncDeps, theirs: KeptBoard): void {
     uid: theirs.uid,
     revision: theirs.revision,
     fingerprint: theirs.fingerprint ?? "",
+    ...gameFingerprint(theirs),
   });
 }
 
@@ -447,6 +452,14 @@ async function trashHere(
 function agree(deps: SyncDeps, record: SyncedBoard): void {
   if (deps.repository.kept(record.uid)) deps.records.remember(record);
   else if (deps.repository.get(record.uid) !== null) deps.records.remember(record, true);
+}
+
+/** The index may publish the server's combined content hash after preserving a game.
+ * Only a full board read establishes that this device has seen that game. */
+function gameFingerprint(incoming: KeptBoard): Pick<SyncedBoard, "remoteFingerprint"> {
+  return incoming.fingerprint?.startsWith("game-v1:") === true
+    ? { remoteFingerprint: incoming.fingerprint }
+    : {};
 }
 
 /** A kept board as one of ours: the account's fields, and this device's own set afresh. */
@@ -516,7 +529,12 @@ async function takeOver(
     takenFrom: latest.takenFrom,
     rankingOf: latest.rankingOf,
   });
-  agree(deps, { uid: board.uid, revision: incoming.revision, fingerprint });
+  agree(deps, {
+    uid: board.uid,
+    revision: incoming.revision,
+    fingerprint,
+    ...gameFingerprint(incoming),
+  });
   return "carried";
 }
 
@@ -566,22 +584,39 @@ async function adopt(
   check(deps);
   keep(deps, board);
   if (fingerprint === null) return;
-  agree(deps, { uid: board.uid, revision: incoming.revision, fingerprint });
+  agree(deps, {
+    uid: board.uid,
+    revision: incoming.revision,
+    fingerprint,
+    ...gameFingerprint(incoming),
+  });
 }
 
 /** Every uid new, so the copy and the original never meet; where it came from written on it; not the published list. */
 function renamed(board: Board, from: string | null, nextUid: NextUid): Board {
   const tierUids = new Map(board.tiers.map((tier) => [tier.uid, nextUid()]));
+  const uid = nextUid();
+  const itemUids = new Map(board.items.map((item) => [item.uid, nextUid()]));
   return {
     ...board,
-    uid: nextUid(),
+    uid,
+    play:
+      board.play === null
+        ? null
+        : {
+            ...board.play,
+            ids: board.play.ids.map((id) => itemUids.get(id) ?? id),
+            ...(board.play.scope
+              ? { scope: board.play.scope.map((id) => tierUids.get(id) ?? id) }
+              : {}),
+          },
     arrivedFrom: from,
     publishedId: null,
     rankingOf: null,
     tiers: board.tiers.map((tier) => ({ ...tier, uid: tierUids.get(tier.uid) ?? tier.uid })),
     items: board.items.map((item) => ({
       ...item,
-      uid: nextUid(),
+      uid: itemUids.get(item.uid) ?? item.uid,
       tierUid: tierUids.get(item.tierUid) ?? item.tierUid,
     })),
   };

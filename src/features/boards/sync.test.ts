@@ -127,6 +127,71 @@ const setUp = (published: (string | PublishedEntry)[] | null = []) => {
 };
 
 describe("syncBoards", () => {
+  function legacyGame() {
+    const board = addToPool(
+      films(),
+      Array.from({ length: 89 }, (_, i) => ({ title: "Member " + i, imageUrl: null })),
+      200,
+      uids("extra-"),
+    );
+    const play: NonNullable<Board["play"]> = {
+      kind: "swiss",
+      count: 91,
+      seed: 37,
+      refine: false,
+      ids: board.items.map((item) => item.uid),
+      history: [[0, 1, 1]],
+      round: 1,
+      startedAt: 201,
+      scope: [board.tiers.find((tier) => tier.isPool)!.uid],
+    };
+    return { board, play };
+  }
+
+  it("recovers a preserved game once even at a known revision, keeps it on rename and clears it on finish", async () => {
+    const { repository, records, account, run } = setUp();
+    const { board, play } = legacyGame();
+    const renamed = rename(board, "Legacy rename", 202);
+    repository.save(renamed);
+    records.remember({ uid: renamed.uid, revision: 2, fingerprint: await fingerprintOf(renamed) });
+    const marker = "game-v1:" + "a".repeat(64);
+    account.holds({ ...renamed, play }, 2, "Old phone", marker);
+    const get = vi.spyOn(account.api, "board");
+    await run();
+    expect(repository.get(renamed.uid)?.play).toEqual(play);
+    expect(records.all()[0]?.remoteFingerprint).toBe(marker);
+    await run();
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(account.keeps).toHaveLength(0);
+    const recovered = rename(repository.get(renamed.uid)!, "Another title", 203);
+    repository.save(recovered);
+    await run();
+    expect(account.keeps.at(-1)?.request.play).toEqual(play);
+    expect(records.all()[0]?.remoteFingerprint).toBeUndefined();
+    repository.save({ ...recovered, play: null });
+    await run();
+    expect(account.keeps.at(-1)?.request.play).toBeNull();
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a changed local board and a playable copy of a previously unseen server game", async () => {
+    const { repository, records, account, run } = setUp();
+    const { board, play } = legacyGame();
+    repository.save(rename(board, "Offline rename", 204));
+    records.remember({ uid: board.uid, revision: 2, fingerprint: await fingerprintOf(board) });
+    account.holds({ ...board, play }, 2, "Old phone", "game-v1:" + "b".repeat(64));
+    await run();
+    expect(repository.get(board.uid)?.title).toBe("Offline rename");
+    const copy = repository.all().find((b) => b.uid !== board.uid)!;
+    expect(copy.play?.ids).toEqual(copy.items.map((item) => item.uid));
+    expect(copy.play?.ids[0]).not.toBe(play.ids[0]);
+    expect(copy.play?.scope).toEqual([copy.tiers.find((tier) => tier.isPool)!.uid]);
+    expect(copy.play?.history).toEqual(play.history);
+    await run();
+    expect(repository.all()).toHaveLength(2);
+    expect(account.kept.get(copy.uid)?.play).toEqual(copy.play);
+  });
+
   it("sends a board the account has never seen, and writes down the agreement", async () => {
     const { repository, records, account, run } = setUp();
     repository.save(films());
