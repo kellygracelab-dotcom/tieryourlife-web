@@ -337,6 +337,8 @@ const de: Translation = {
       "Diese Kategorie nimmt keine Listen mehr an. Wähle unter Kategorie eine andere.",
     publicationChanged:
       "Die veröffentlichte Liste wurde während der Aktualisierung geändert. Deine Änderungen sind auf diesem Gerät gespeichert. Versuche erneut, die Liste zu veröffentlichen.",
+    weeklyPublicationLimit:
+      "Du hast das Veröffentlichungslimit für 7 Tage erreicht. Ab {date} kannst du wieder eine Liste veröffentlichen.",
     failedTooMany:
       "Dieses Konto hat so viele Listen veröffentlicht, wie es kann. Nimm erst eine unter „Deine öffentlichen Listen“ zurück.",
     failedSignedOut:

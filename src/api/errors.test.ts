@@ -4,6 +4,18 @@ import { ApiFailure, parseApiError } from "./errors";
 const json = (body: unknown) => JSON.stringify(body);
 
 describe("parseApiError", () => {
+  it("accepts an HTTP retry date and discards unusable quota dates", () => {
+    const refusal = json({ code: "TOO_MANY_LISTS", retryAt: 1e25 });
+    const date = "Fri, 13 Nov 2026 09:10:11 GMT";
+    expect(parseApiError(409, refusal, date)).toEqual({
+      kind: "tooManyLists",
+      retryAt: Date.parse(date),
+    });
+    for (const malformed of ["-4", "later", "999999999999999999999999"]) {
+      expect(parseApiError(409, refusal, malformed)).toEqual({ kind: "tooManyLists" });
+    }
+  });
+
   it.each([
     [
       400,

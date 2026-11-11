@@ -12,7 +12,7 @@ export type ApiError =
    * address are that one's now, under the topic it became when there is one.
    */
   | { kind: "merged"; into: string | null; topic: string | null }
-  | { kind: "tooManyLists" }
+  | { kind: "tooManyLists"; retryAt?: number }
   | { kind: "sourceChanged" }
   | { kind: "publicationChanged" }
   /** Three topics of the person's own wait for a moderator: a publish cannot propose a fourth. */
@@ -67,6 +67,7 @@ interface ErrorBody {
   detail?: unknown;
   section?: unknown;
   until?: unknown;
+  retryAt?: unknown;
   because?: unknown;
   imageUrl?: unknown;
   board?: unknown;
@@ -90,7 +91,29 @@ const stringOrNull = (value: unknown): string | null => (typeof value === "strin
 export const errorOf = (reason: unknown): ApiError =>
   reason instanceof ApiFailure ? reason.error : { kind: "unknown", status: 0 };
 
-export function parseApiError(status: number, text: string): ApiError {
+/** The Proxy gives an absolute Unix time in milliseconds and also a Retry-After header. */
+function publicationRetryAt(value: unknown, header: string | null): number | undefined {
+  if (
+    typeof value === "number" &&
+    value > 0 &&
+    Number.isSafeInteger(value) &&
+    Number.isFinite(new Date(value).getTime())
+  ) {
+    return value;
+  }
+  const hint = header?.trim() ?? "";
+  let at: number;
+  if (/^\d+$/.test(hint)) at = Date.now() + Number(hint) * 1000;
+  else if (/^[A-Za-z]{3}/.test(hint)) at = Date.parse(hint);
+  else return undefined;
+  return at > 0 && Number.isFinite(new Date(at).getTime()) ? at : undefined;
+}
+
+export function parseApiError(
+  status: number,
+  text: string,
+  retryAfter: string | null = null,
+): ApiError {
   const body = bodyOf(text);
   const code = stringOrNull(body.code);
 
@@ -126,7 +149,10 @@ export function parseApiError(status: number, text: string): ApiError {
     case 409: {
       if (code === "LIST_CHANGED") return { kind: "sourceChanged" };
       if (code === "PUBLICATION_CHANGED") return { kind: "publicationChanged" };
-      if (code === "TOO_MANY_LISTS") return { kind: "tooManyLists" };
+      if (code === "TOO_MANY_LISTS") {
+        const retryAt = publicationRetryAt(body.retryAt, retryAfter);
+        return retryAt === undefined ? { kind: "tooManyLists" } : { kind: "tooManyLists", retryAt };
+      }
       if (code === "TOO_MANY_PENDING_TOPICS") return { kind: "tooManyTopics" };
       if (code === "TOO_MANY_FOLLOWING") return { kind: "tooManyFollowing" };
       if (code === "TOO_MANY_BOARDS") return { kind: "tooManyBoards" };

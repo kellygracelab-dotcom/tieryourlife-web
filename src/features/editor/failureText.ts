@@ -41,7 +41,13 @@ export function failureText(
     case "publicationChanged":
       return strings.new.publicationChanged;
     case "tooManyLists":
-      return strings.new.failedTooMany;
+      if (error.retryAt === undefined) return strings.new.failedTooMany;
+      return fill(strings.new.weeklyPublicationLimit, {
+        date: new Intl.DateTimeFormat(currentLocale(), {
+          dateStyle: "medium",
+          timeStyle: "medium",
+        }).format(Math.ceil(error.retryAt / 1000) * 1000),
+      });
     case "tooManyTopics":
       return strings.boards.topicTooMany;
     case "notSignedIn":
