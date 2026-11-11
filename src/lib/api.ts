@@ -24,7 +24,7 @@ import type {
 import * as boards from "../api/boards";
 import type { KeepBoardRequest, KeptBoard, KeptBoardIndex } from "../api/boards";
 import type { AdoptedGuest } from "../api/account";
-import { createApiClient } from "../api/client";
+import { createApiClient, type AccountAction } from "../api/client";
 import { errorOf } from "../api/errors";
 import * as community from "../api/community";
 import type {
@@ -148,10 +148,11 @@ export const findPictures = (ask: PictureAsk): Promise<PicturePage> =>
 
 export const keepPicture = (url: string): Promise<string> => pictures.keepPicture(api, url);
 
-export const classifyPublication = (request: PublishRequest) =>
-  lists.classifyPublication(api, request);
+export const classifyPublication = (request: PublishRequest, action?: AccountAction) =>
+  lists.classifyPublication(api, request, action);
 
-export const publish = (request: PublishRequest): Promise<Published> => lists.publish(api, request);
+export const publish = (request: PublishRequest, action?: AccountAction): Promise<Published> =>
+  lists.publish(api, request, action);
 
 /** The call, and then word that the list is no longer as any page last read it; gone already, too. */
 const changing = async <T>(id: string, call: Promise<T>): Promise<T> => {
@@ -165,8 +166,11 @@ const changing = async <T>(id: string, call: Promise<T>): Promise<T> => {
   }
 };
 
-export const republish = (id: string, request: PublishRequest): Promise<Published> =>
-  changing(id, lists.republish(api, id, request));
+export const republish = (
+  id: string,
+  request: PublishRequest,
+  action?: AccountAction,
+): Promise<Published> => changing(id, lists.republish(api, id, request, action));
 
 export const unpublish = (id: string): Promise<void> => changing(id, lists.unpublish(api, id));
 
@@ -199,12 +203,18 @@ export const withdrawListRanking = (listId: string): Promise<void> =>
 export const keepListRanking = (
   list: Pick<PublishedList, "id" | "items" | "tiers" | "updatedAt">,
   rows: readonly (readonly number[])[],
+  action: AccountAction,
 ): Promise<ShownRanking> =>
-  community.keepListRanking(api, list.id, {
-    version: list.updatedAt,
-    tierLabels: list.tiers.map((tier) => tier.label),
-    rows: community.rowsOf(rows, list.tiers.length, list.items.length),
-  });
+  community.keepListRanking(
+    api,
+    list.id,
+    {
+      version: list.updatedAt,
+      tierLabels: list.tiers.map((tier) => tier.label),
+      rows: community.rowsOf(rows, list.tiers.length, list.items.length),
+    },
+    action,
+  );
 
 export const loadFollowing = (): Promise<Following> => community.loadFollowing(api);
 
@@ -273,8 +283,8 @@ export const forgetBoard = (uid: string): Promise<void> => boards.forgetBoard(ap
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.
-export const noteTake = (listId: string): Promise<void> =>
-  lists.recordTake(api, listId).then(
+export const noteTake = (listId: string, action?: AccountAction): Promise<void> =>
+  lists.recordTake(api, listId, action).then(
     () => undefined,
     () => undefined,
   );

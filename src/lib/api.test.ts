@@ -160,8 +160,10 @@ describe("api", () => {
         { title: "The Witch", imageUrl: null, tierIndex: null },
       ],
     };
-    await keepListRanking(list, [[1, 0, 5]]);
+    const action = { uid: "fixture", isCurrent: () => true, idToken: async () => "fixture" };
+    await keepListRanking(list, [[1, 0, 5]], action);
     expect(mocks.request).toHaveBeenCalledWith("PUT", "/lists/abc/rankings/mine", {
+      action,
       body: { version: 321, tierLabels: ["S", "A"], rows: [[1, 0], []] },
     });
   });

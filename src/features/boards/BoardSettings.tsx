@@ -58,13 +58,19 @@ import {
 import { titleOf } from "./boardText";
 import { AS_COMMUNITY } from "./ownList";
 import { publishProblemsOf, publishRequestOf } from "./publish";
+import type { AccountAction } from "../../api/client";
+import { captureAccountAction } from "../../lib/accountAction";
 import { checkCopiedPublication, type CheckedPublication } from "./copiedPublication";
 import { filedUnder, sectionChoices } from "./sectionChoices";
 import { sentTopic, settledTopic, type FindTopic } from "./topic";
 import "./boards.css";
 
-export type PublishBoard = (request: PublishRequest) => Promise<Published>;
-export type RepublishBoard = (id: string, request: PublishRequest) => Promise<Published>;
+export type PublishBoard = (request: PublishRequest, action: AccountAction) => Promise<Published>;
+export type RepublishBoard = (
+  id: string,
+  request: PublishRequest,
+  action: AccountAction,
+) => Promise<Published>;
 export type UnpublishBoard = (id: string) => Promise<void>;
 
 export interface PublishingDeps {
@@ -239,7 +245,12 @@ export function BoardSettings({
   const signedIn = account?.kind === "signedIn";
   const [busy, setBusy] = useState<Busy>("idle");
   const [preview, setPreview] = useState<
-    (CheckedPublication & { what: "published" | "updated"; snapshot: string }) | null
+    | (CheckedPublication & {
+        what: "published" | "updated";
+        snapshot: string;
+        action: AccountAction;
+      })
+    | null
   >(null);
   const [failure, setFailure] = useState<Failure | null>(null);
   // Why a guest's Public switch did not sign them in, when it could not.
@@ -270,9 +281,10 @@ export function BoardSettings({
 
   // A topic of one's own that waits is asked about, as the phone asks when its
   // picker opens; the answer lands only if the board still has that topic.
-  const settle = (topic: BoardTopic | null) => {
+  const settle = (topic: BoardTopic | null, action?: AccountAction) => {
     if (topic === null || topic.id === null || topic.waiting !== true) return;
     void settledTopic(topic, findTopic).then((decided) => {
+      if (action && !action.isCurrent()) return;
       const current = latest();
       if (decided !== topic && current.topic?.id === topic.id) {
         keep(settleTopic(current, decided));
@@ -284,7 +296,7 @@ export function BoardSettings({
   // The topic the list sits under, as the answer said it, for a board that
   // chose none: learnt, never sent back, and only one of the board's own
   // section. One chosen here, or taken off here, is not touched.
-  const learn = (topicId: string | null) => {
+  const learn = (topicId: string | null, action: AccountAction) => {
     const mayLearn = (board: Board) =>
       board.topicOff !== true && (board.topic === null || board.topic.learned === true);
     if (topicId === null) {
@@ -294,6 +306,7 @@ export function BoardSettings({
     }
     findTopic(topicId).then(
       (topic) => {
+        if (!action.isCurrent()) return;
         const current = latest();
         if (!mayLearn(current)) return;
         const fits = topic.status === "approved" && topic.section === current.category;
@@ -304,10 +317,15 @@ export function BoardSettings({
   };
 
   const send = async (what: "published" | "updated", checked?: typeof preview) => {
+    const action = checked?.action ?? (signedIn ? captureAccountAction(account.uid) : null);
+    if (!action?.isCurrent() || !signedIn || action.uid !== account.uid) {
+      setPreview(null);
+      return;
+    }
     const current = latest();
     const request = publishRequestOf(current);
     if (request === null || publishing === null) return;
-    const snapshot = JSON.stringify(request);
+    const snapshot = JSON.stringify([current.uid, request]);
     const needsPreview = current.takenFrom !== null && current.publishedId === null;
     if (needsPreview && current.takenFrom !== null && (!checked || checked.snapshot !== snapshot)) {
       setPreview(null);
@@ -316,11 +334,12 @@ export function BoardSettings({
       try {
         const result = await checkCopiedPublication(
           { ...request, takenFrom: current.takenFrom, boardUid: current.uid },
-          publishing.classify ?? classifyPublication,
+          (payload) => (publishing.classify ?? classifyPublication)(payload, action),
           publishing.loadOriginal,
         );
-        setPreview({ ...result, what, snapshot });
+        if (action.isCurrent()) setPreview({ ...result, what, snapshot, action });
       } catch (reason) {
+        if (!action.isCurrent()) return;
         setFailure({ error: errorOf(reason), on: what === "published" ? "publish" : "update" });
       } finally {
         setBusy("idle");
@@ -336,13 +355,15 @@ export function BoardSettings({
       const outgoing = checked?.request ?? { ...request, boardUid: current.uid };
       let answer =
         what === "updated" && current.publishedId !== null
-          ? await publishing.republish(current.publishedId, outgoing)
-          : await publishing.publish(outgoing);
+          ? await publishing.republish(current.publishedId, outgoing, action)
+          : await publishing.publish(outgoing, action);
+      if (!action.isCurrent()) return;
       // Out already: an earlier publish made the list and its answer was lost
       // on the way. Nothing of this one was written, so the board goes again
       // over that list's link, or the edits since would never reach it.
       if (answer.existing === true && answer.ranking !== true) {
-        answer = await publishing.republish(answer.id, outgoing);
+        answer = await publishing.republish(answer.id, outgoing, action);
+        if (!action.isCurrent()) return;
       }
       const name = account?.kind === "signedIn" ? account.displayName : null;
       const after = latest();
@@ -376,15 +397,16 @@ export function BoardSettings({
         ranking ? 0 : (answer.droppedPictures ?? 0),
       );
       // The backend may have filed it under an approved topic of that name.
-      if (sent.topic !== current.topic) settle(sent.topic);
+      if (sent.topic !== current.topic) settle(sent.topic, action);
       // Said nothing of a topic, the list kept its own, a moderator's move
       // into one too: the board learns it, as the published copy has it.
       const kept = answer.topicId;
       const unchosen = sent.topic === null || sent.topic.learned === true;
       if (!ranking && unchosen && sent.topicOff !== true && kept !== undefined) {
-        learn(kept === "" ? null : kept);
+        learn(kept === "" ? null : kept, action);
       }
     } catch (reason: unknown) {
+      if (!action.isCurrent()) return;
       const error = errorOf(reason);
       // Taken down elsewhere (its page, /me, the phone): the board is no longer
       // public, and its switch says so; turned on, it goes out anew.

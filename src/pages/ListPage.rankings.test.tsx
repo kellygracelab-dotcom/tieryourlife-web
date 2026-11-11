@@ -1,3 +1,9 @@
+import { actionAuth, actionUser, deferred } from "../test/actionAccount";
+
+vi.mock("../lib/firebase", async (original) => ({
+  ...(await original<typeof import("../lib/firebase")>()),
+  getFirebaseAuth: () => actionAuth,
+}));
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type InitialEntry } from "react-router";
@@ -82,6 +88,7 @@ const member: Session["account"] = {
 };
 
 const openAs = (account: Session["account"] = member, entries: InitialEntry[] = ["/l/abc"]) => {
+  actionAuth.currentUser = actionUser(account?.uid ?? "guest");
   const router = createMemoryRouter(routes, {
     initialEntries: entries,
     initialIndex: entries.length - 1,
@@ -591,6 +598,70 @@ describe("ListPage: showing one's ranking to others", () => {
     await userEvent.click(await screen.findByLabelText("More about this list"));
   };
 
+  it("cancels the reader's click if another account signs in during the original GET", async () => {
+    localStorage.clear();
+    openAs();
+    await arrangeMine();
+    const gate = deferred<PublishedList>();
+    mocks.loadListAsWritten.mockReturnValueOnce(gate.promise);
+    await menu();
+    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    expect(mocks.loadListAsWritten).toHaveBeenCalledWith("abc");
+    actionAuth.currentUser = actionUser("new-reader");
+    await act(async () => gate.resolve(twoTiers));
+    expect(mocks.keepListRanking).not.toHaveBeenCalled();
+    expect(screen.queryByText("Your ranking is in the list’s rankings")).toBeNull();
+    cleanup();
+    openAs({ kind: "signedIn", uid: "new-reader", displayName: null, photoUrl: null });
+    const offer = await screen.findByRole("complementary", { name: "Share your ranking?" });
+    expect(mocks.keepListRanking).not.toHaveBeenCalled();
+    await userEvent.click(within(offer).getByRole("button", { name: "Show in Rankings" }));
+    expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(),
+      [[], [0]],
+      expect.objectContaining({ uid: "new-reader" }),
+    );
+  });
+
+  it("publishes the tier labels and rows that were confirmed before the source GET", async () => {
+    localStorage.clear();
+    openAs();
+    await arrangeMine();
+    const gate = deferred<PublishedList>();
+    mocks.loadListAsWritten.mockReturnValueOnce(gate.promise);
+    await menu();
+    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    const key = "tyl:draft:abc";
+    const draft = JSON.parse(localStorage.getItem(key)!);
+    localStorage.setItem(
+      key,
+      JSON.stringify({ ...draft, rows: [[0], []], labels: ["changed", null] }),
+    );
+    await act(async () => gate.resolve(twoTiers));
+    expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ tiers: twoTiers.tiers }),
+      [[], [0]],
+      expect.objectContaining({ uid: "u9" }),
+    );
+  });
+
+  it("a late PUT receipt does not settle the offer or mark a board public for the next account", async () => {
+    localStorage.clear();
+    openAs();
+    await arrangeMine();
+    const receipt = deferred<ReaderRanking>();
+    mocks.keepListRanking.mockReturnValueOnce(receipt.promise);
+    const offer = await screen.findByRole("complementary", { name: "Share your ranking?" });
+    await userEvent.click(within(offer).getByRole("button", { name: "Show in Rankings" }));
+    expect(mocks.keepListRanking).toHaveBeenCalledTimes(1);
+    actionAuth.currentUser = actionUser("new-reader");
+    await act(async () => receipt.resolve(me));
+    expect(localStorage.getItem('tyl:ranking-offer:["new-reader","abc"]')).toBeNull();
+    expect(localStorage.getItem('tyl:ranking-offer:["u9","abc"]')).toBe("seen");
+    expect(Object.values(localStorage).join("")).not.toContain('"rankingChoice":"ranking"');
+    expect(screen.queryByText("Your ranking is in the list’s rankings")).toBeNull();
+  });
+
   it("keeps the personal board and publishes exactly once after explicitly choosing the progress offer", async () => {
     localStorage.clear();
     openAs();
@@ -602,6 +673,7 @@ describe("ListPage: showing one's ranking to others", () => {
     expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ id: "abc" }),
       [[], [0]],
+      expect.objectContaining({ uid: "u9" }),
     );
     cleanup();
     openAs();
@@ -630,6 +702,7 @@ describe("ListPage: showing one's ranking to others", () => {
     expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ id: "abc", tiers: twoTiers.tiers }),
       [[], [0]],
+      expect.objectContaining({ uid: "u9" }),
     );
     // One more reader counted, and the sheet leads with one's own.
     await userEvent.click(await screen.findByLabelText("More about this list"));

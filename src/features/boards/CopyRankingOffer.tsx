@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { AccountAction } from "../../api/client";
 import { isOwnList, type PublishedList } from "../../api/types";
 import { errorOf } from "../../api/errors";
 import { useSession } from "../../app/session";
@@ -61,21 +62,25 @@ export function CopyRankingOffer({
   );
   if (!ready || rows === null || source === null || (owner !== null && isOwnList(source, owner)))
     return null;
-  const share = async () => {
+  const share = async (action: AccountAction) => {
     try {
       const fresh = await loadListAsWritten(sourceId);
-      const latest = repository.get(board.uid);
-      const current = latest === null ? null : rowsOfSource(latest, fresh);
-      if (latest === null || current === null || isOwnList(fresh, owner ?? "")) {
+      if (!action.isCurrent()) return false;
+      if (
+        repository.get(board.uid) !== board ||
+        fresh.updatedAt !== source.updatedAt ||
+        isOwnList(fresh, action.uid)
+      ) {
         notify({ text: strings.rank.failedChanged });
         return false;
       }
-      await keepListRanking(fresh, current);
-      const saved = repository.get(board.uid);
-      if (saved !== null) repository.save(setRanking(saved, sourceId, Date.now()));
+      await keepListRanking(source, rows, action);
+      if (!action.isCurrent() || repository.get(board.uid) !== board) return false;
+      repository.save(setRanking(board, sourceId, Date.now()));
       notify({ text: strings.rankings.shown });
       return true;
     } catch (reason: unknown) {
+      if (!action.isCurrent()) return false;
       const error = errorOf(reason);
       notify({
         text:
@@ -110,7 +115,7 @@ export function CopyRankingOffer({
         )
           repository.save({ ...current, rankingChoice: choice });
       }}
-      keep={() => repository.kept(board.uid)}
+      keep={() => (repository.kept(board.uid) ? board.uid : null)}
       share={share}
     />
   );

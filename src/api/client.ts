@@ -9,7 +9,14 @@ export interface TokenProviders {
 
 export type Query = Record<string, string | number | boolean | undefined>;
 
+export interface AccountAction {
+  readonly uid: string;
+  isCurrent(): boolean;
+  idToken(forceRefresh: boolean): Promise<string>;
+}
+
 export interface RequestOptions {
+  action?: AccountAction;
   query?: Query;
   body?: unknown;
   auth?: "user" | "appCheckOnly";
@@ -70,7 +77,11 @@ export function createApiClient({
       options.appCheck === "limited" && limitedAppCheckToken !== undefined
         ? limitedAppCheckToken()
         : appCheckToken(),
-      options.auth === "appCheckOnly" ? null : idToken({ forceRefresh }),
+      options.action
+        ? options.action.idToken(forceRefresh)
+        : options.auth === "appCheckOnly"
+          ? null
+          : idToken({ forceRefresh }),
     ]);
     if (appCheck) headers["X-Firebase-AppCheck"] = appCheck;
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -83,12 +94,18 @@ export function createApiClient({
     options: RequestOptions,
     forceRefresh: boolean,
   ): Promise<Response> {
+    const checkAccount = () => {
+      if (options.action && !options.action.isCurrent())
+        throw new ApiFailure({ kind: "notSignedIn" });
+    };
+    checkAccount();
     const init: RequestInit = {
       method,
       headers: await headersFor(options, forceRefresh),
       signal: AbortSignal.timeout(timeoutMs),
     };
     if (options.body !== undefined) init.body = JSON.stringify(options.body);
+    checkAccount();
     try {
       return await fetch(urlOf(path, options.query), init);
     } catch {

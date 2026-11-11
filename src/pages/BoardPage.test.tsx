@@ -1,3 +1,9 @@
+import { actionAuth } from "../test/actionAccount";
+
+vi.mock("../lib/firebase", async (original) => ({
+  ...(await original<typeof import("../lib/firebase")>()),
+  getFirebaseAuth: () => actionAuth,
+}));
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
@@ -1024,6 +1030,7 @@ describe("BoardPage: share and publish", () => {
     expect(await screen.findByText("Published. Anyone with the link can rank it.")).toBeVisible();
     expect(publishing.publish).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Films", category: "film_tv" }),
+      expect.objectContaining({ uid: "me" }),
     );
     expect(repository.get("films")).toMatchObject({ publishedId: "L1", authorName: "Danylo" });
     expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(

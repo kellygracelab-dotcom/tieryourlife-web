@@ -1,4 +1,4 @@
-import type { ApiClient } from "./client";
+import type { AccountAction, ApiClient } from "./client";
 import type { Topic } from "./sections";
 
 /**
@@ -136,9 +136,11 @@ export function keepListRanking(
   client: ApiClient,
   listId: string,
   placing: { tierLabels: string[]; rows: number[][]; version?: number },
+  action: AccountAction,
 ): Promise<ShownRanking> {
   return client.request<ShownRanking>("PUT", `/lists/${encodeURIComponent(listId)}/rankings/mine`, {
     body: placing,
+    action,
   });
 }
 

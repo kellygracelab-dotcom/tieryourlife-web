@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import type { AccountAction } from "../../api/client";
+import { captureAccountAction } from "../../lib/accountAction";
 import { useBoardSync } from "./boardSync";
 import type { RankingChoice } from "../../api/boards";
 import { useSession } from "../../app/session";
@@ -18,10 +20,10 @@ interface OfferProps {
   listId: string;
   placed: number;
   total: number;
-  keep: () => boolean;
+  keep: (action?: AccountAction) => string | null;
   known?: boolean;
-  remember: (choice: RankingChoice) => void;
-  share: () => Promise<boolean>;
+  remember: (choice: RankingChoice, boardUid?: string) => void;
+  share: (action: AccountAction) => Promise<boolean>;
 }
 
 export function RankingOffer(props: OfferProps) {
@@ -92,12 +94,15 @@ function Offer({
         if (outcome.kind === "failed") setError(strings.nav.signInFailed);
         return;
       }
-      if (!keep()) {
+      const action = uid === null ? null : captureAccountAction(uid);
+      if (uid !== null && !action) return;
+      const kept = keep(action ?? undefined);
+      if (kept === null) {
         setError(strings.nav.storageRefused);
         return;
       }
-      if (!publish || (await share())) {
-        remember(publish ? "ranking" : "private");
+      if (!publish || (action && (await share(action)) && action.isCurrent())) {
+        remember(publish ? "ranking" : "private", kept);
         settleRankingOffer(uid, listId);
       }
     } finally {
@@ -136,6 +141,7 @@ function Offer({
           className="btn btn--text"
           disabled={busy}
           onClick={() => {
+            if (uid !== null && !captureAccountAction(uid)) return;
             remember("offered");
             settleRankingOffer(uid, listId);
           }}

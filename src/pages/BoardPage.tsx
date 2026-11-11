@@ -772,7 +772,7 @@ function OpenBoard({
       </header>
       {house === null && board.takenFrom !== null && board.publishedId === null && (
         <CopyRankingOffer
-          key={board.uid}
+          key={JSON.stringify([board.uid, me])}
           board={board}
           sourceId={board.takenFrom}
           repository={repository}
@@ -792,6 +792,7 @@ function OpenBoard({
 
       {panel === "settings" && (
         <BoardSettings
+          key={JSON.stringify([board.uid, me])}
           upload={upload}
           board={board}
           latest={latest}

@@ -1,5 +1,11 @@
+import { actionAuth, actionUser, deferred } from "../../test/actionAccount";
+
+vi.mock("../../lib/firebase", async (original) => ({
+  ...(await original<typeof import("../../lib/firebase")>()),
+  getFirebaseAuth: () => actionAuth,
+}));
 import { boardView } from "./view";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
@@ -145,6 +151,7 @@ const show = (
     sections?: readonly Section[];
   } = {},
 ) => {
+  actionAuth.currentUser = actionUser(account.uid ?? "guest");
   held = board;
   published.mockReset();
   newTier.mockReset();
@@ -204,14 +211,21 @@ describe("BoardSettings: the sheet", () => {
     await userEvent.click(anonymous);
     expect(held.anonymous).toBe(true);
     await userEvent.click(publicSwitch());
-    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ anonymous: true }));
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({ anonymous: true }),
+      expect.objectContaining({ uid: "me" }),
+    );
   });
 
   it("sends a public list again at once when its anonymity changes, as the phone does", async () => {
     const republish = vi.fn(async () => ({ id: "L1" }));
     show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 1 }, signedIn, { republish });
     await userEvent.click(screen.getByRole("switch", { name: "Publish anonymously" }));
-    expect(republish).toHaveBeenCalledWith("L1", expect.objectContaining({ anonymous: true }));
+    expect(republish).toHaveBeenCalledWith(
+      "L1",
+      expect.objectContaining({ anonymous: true }),
+      expect.objectContaining({ uid: "me" }),
+    );
   });
 
   it("offers anonymity on a copy of somebody else's list too: it goes out as a list of one's own", () => {
@@ -281,6 +295,67 @@ describe("BoardSettings: the sheet", () => {
 });
 
 describe("BoardSettings: public", () => {
+  it("drops a reader's ranking preview when the original author becomes the current account", async () => {
+    const board = { ...filmBoard(), takenFrom: "SRC" };
+    const source = {
+      ...boardView(board, "Films").list,
+      id: "SRC",
+      authorUid: "author",
+      updatedAt: 32,
+    };
+    const classify = vi.fn<NonNullable<PublishingDeps["classify"]>>(async (_payload, action) =>
+      action?.uid === "author"
+        ? { kind: "list" as const, basedOn: null, version: 32 }
+        : { kind: "ranking" as const, listId: "SRC", version: 32 },
+    );
+    const publish = vi.fn(async () => ({ id: "new-list" }));
+    const deps = { publish, classify, loadOriginal: async () => source };
+    show(board, signedIn, deps);
+    await userEvent.click(publicSwitch());
+    const confirm = await screen.findByRole("button", { name: "Show in Rankings" });
+    actionAuth.currentUser = actionUser("author");
+    await userEvent.click(confirm);
+    expect(publish).not.toHaveBeenCalled();
+    expect(held.rankingOf).toBeNull();
+    cleanup();
+    show(board, { ...signedIn, uid: "author" }, deps);
+    await userEvent.click(publicSwitch());
+    const publishList = await screen.findByRole("button", { name: "Publish a separate list" });
+    expect(publish).not.toHaveBeenCalled();
+    await userEvent.click(publishList);
+    expect(publish).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ sourceVersion: 32 }),
+      expect.objectContaining({ uid: "author" }),
+    );
+  });
+
+  it("ignores a pending classification and a late publish receipt after account changes", async () => {
+    const board = { ...filmBoard(), takenFrom: "SRC" };
+    const source = { ...boardView(board, "Films").list, id: "SRC", updatedAt: 25 };
+    const ranking = { kind: "ranking" as const, listId: "SRC", version: 25 };
+    const check = deferred<typeof ranking>();
+    const receipt = deferred<{ id: string; existing: true }>();
+    const classify = vi.fn().mockReturnValueOnce(check.promise).mockResolvedValue(ranking);
+    const publish = vi.fn(() => receipt.promise);
+    const republish = vi.fn();
+    const deps = { classify, publish, republish, loadOriginal: async () => source };
+    show(board, signedIn, deps);
+    await userEvent.click(publicSwitch());
+    actionAuth.currentUser = actionUser("author");
+    await act(async () => check.resolve(ranking));
+    expect(screen.queryByRole("button", { name: "Show in Rankings" })).toBeNull();
+    expect(publish).not.toHaveBeenCalled();
+    cleanup();
+    show(board, signedIn, deps);
+    await userEvent.click(publicSwitch());
+    await userEvent.click(await screen.findByRole("button", { name: "Show in Rankings" }));
+    expect(publish).toHaveBeenCalledTimes(1);
+    actionAuth.currentUser = actionUser("author");
+    await act(async () => receipt.resolve({ id: "prior", existing: true }));
+    expect(republish).not.toHaveBeenCalled();
+    expect(published).not.toHaveBeenCalled();
+    expect(held.publishedId).toBeNull();
+  });
   it.each([false, true])(
     "explains a publication limit at the public switch (weekly=%s)",
     async (weekly) => {
@@ -383,12 +458,19 @@ describe("BoardSettings: public", () => {
     await waitFor(() => expect(publicSwitch()).toBeChecked());
     expect(publish).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Films", category: "film_tv" }),
+      expect.objectContaining({ uid: "me" }),
     );
     // No topic chosen, none is said.
-    expect(publish).not.toHaveBeenCalledWith(expect.objectContaining({ noTopic: true }));
+    expect(publish).not.toHaveBeenCalledWith(
+      expect.objectContaining({ noTopic: true }),
+      expect.objectContaining({ uid: "me" }),
+    );
     // The board's uid goes with a first publish, so publishing again after a
     // reload gets the same list back rather than a second one.
-    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ boardUid: filmBoard().uid }));
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({ boardUid: filmBoard().uid }),
+      expect.objectContaining({ uid: "me" }),
+    );
     expect(held).toMatchObject({
       publishedId: "L1",
       authorName: "Danylo",
@@ -407,10 +489,15 @@ describe("BoardSettings: public", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(published).toHaveBeenCalledWith("updated", "L1", 0));
-    expect(republish).toHaveBeenCalledWith("L1", expect.objectContaining({ title: "Films" }));
+    expect(republish).toHaveBeenCalledWith(
+      "L1",
+      expect.objectContaining({ title: "Films" }),
+      expect.objectContaining({ uid: "me" }),
+    );
     expect(republish).toHaveBeenCalledWith(
       "L1",
       expect.objectContaining({ boardUid: filmBoard().uid }),
+      expect.objectContaining({ uid: "me" }),
     );
   });
 
@@ -434,7 +521,10 @@ describe("BoardSettings: public", () => {
     expect(publish).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Show in Rankings" }));
     await waitFor(() => expect(publicSwitch()).toBeChecked());
-    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ takenFrom: "SRC" }));
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({ takenFrom: "SRC" }),
+      expect.objectContaining({ uid: "me" }),
+    );
     // Out as one's ranking of the original: no list of its own, the cards still Olena's.
     expect(held).toMatchObject({
       publishedId: null,
@@ -484,6 +574,7 @@ describe("BoardSettings: public", () => {
     const request = classify.mock.calls.at(-1);
     expect(publish).toHaveBeenCalledWith(
       expect.objectContaining({ title: "My favourites", sourceVersion: 125 }),
+      expect.objectContaining({ uid: "me" }),
     );
     expect(JSON.stringify(request)).not.toContain("sourceIndex");
   });
@@ -619,6 +710,7 @@ describe("BoardSettings: public", () => {
     expect(republish).toHaveBeenCalledWith(
       "L1",
       expect.objectContaining({ title: "Films, renamed", boardUid: "films" }),
+      expect.objectContaining({ uid: "me" }),
     );
     expect(held.publishedEditedAt).toBe(held.editedAt);
   });
@@ -814,7 +906,10 @@ describe("BoardSettings: category and topic", () => {
 
     await userEvent.click(publicSwitch());
     await waitFor(() => expect(publicSwitch()).toBeChecked());
-    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ category: "night-markets" }));
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({ category: "night-markets" }),
+      expect.objectContaining({ uid: "me" }),
+    );
   });
 
   it("keeps a section it has no name for, and calls it Other", () => {
@@ -856,7 +951,10 @@ describe("BoardSettings: category and topic", () => {
 
     await userEvent.click(publicSwitch());
     await waitFor(() =>
-      expect(publish).toHaveBeenCalledWith(expect.objectContaining({ topicId: "t2" })),
+      expect(publish).toHaveBeenCalledWith(
+        expect.objectContaining({ topicId: "t2" }),
+        expect.objectContaining({ uid: "me" }),
+      ),
     );
   });
 
