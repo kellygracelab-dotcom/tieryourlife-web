@@ -107,12 +107,13 @@ export function progress(spec: GameSpec, history: readonly Outcome[]): GameProgr
 
 /** How many duels the main game took, the next one if it is not over, and how many it should take in all. */
 interface MainGame {
+  round?: number;
   used: number;
   next: Pair | null;
   planned: number;
 }
 
-function mainGame(spec: GameSpec, history: readonly Outcome[]): MainGame {
+export function mainGame(spec: GameSpec, history: readonly Outcome[]): MainGame {
   switch (spec.kind) {
     case "hill":
       return hillPairs(spec, history);
@@ -175,7 +176,7 @@ function swissPairs(spec: GameSpec, history: readonly Outcome[]): MainGame {
     if (next !== undefined) {
       const fullRound = Math.floor(spec.count / 2);
       const planned = used + pairs.length + (rounds - round - 1) * fullRound;
-      return { used: used + answered, next, planned };
+      return { used: used + answered, next, planned, round: round + 1 };
     }
     used += answered;
   }
@@ -209,9 +210,14 @@ export function swissRound(count: number, history: readonly Outcome[]): Pair[] {
   const pairs: Pair[] = [];
   standings.forEach((card, place) => {
     if (paired.has(card)) return;
-    const partner = standings
-      .slice(place + 1)
-      .find((other) => !paired.has(other) && !met(card, other));
+    let partner: number | undefined;
+    for (let i = place + 1; i < standings.length; i++) {
+      const other = at(standings, i);
+      if (!paired.has(other) && !met(card, other)) {
+        partner = other;
+        break;
+      }
+    }
     if (partner === undefined) return;
     paired.add(card);
     paired.add(partner);

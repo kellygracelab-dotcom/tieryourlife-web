@@ -67,6 +67,31 @@ beforeEach(() => {
 });
 
 describe("editing a ranking", () => {
+  it("resets the owner's ranking after confirmation, then saves its ordered pool under the same code", async () => {
+    load.mockResolvedValue(ranking);
+    rearrange.mockResolvedValue({ code: ranking.code });
+    open("/r/abcdefgh?edit");
+    await userEvent.click(await screen.findByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Return all cards to the pool" }));
+    await userEvent.click(screen.getByRole("button", { name: "Return to pool" }));
+    expect(rearrange).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(rearrange).toHaveBeenCalledWith(ranking.code, [[], []], undefined, [2, 1, 0]);
+    expect(await screen.findByRole("heading", { name: "3 unranked" })).toBeInTheDocument();
+  });
+
+  it("drops the confirmed reset when editing is cancelled and reopened", async () => {
+    load.mockResolvedValue(ranking);
+    open("/r/abcdefgh?edit");
+    await userEvent.click(await screen.findByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Return all cards to the pool" }));
+    await userEvent.click(screen.getByRole("button", { name: "Return to pool" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(within(tier("S")).getByRole("button", { name: "The Witch" })).toBeVisible();
+    expect(rearrange).not.toHaveBeenCalled();
+  });
+
   it("asks as the account, offers the owner Edit, saves under the same code and says so", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     load.mockResolvedValue(ranking);

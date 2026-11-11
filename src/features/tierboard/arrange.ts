@@ -30,7 +30,21 @@ export function arrange(list: {
 }
 
 /** What a stored ranking leaves unranked: every item its rows do not mention. */
-export function poolOf(rows: readonly (readonly number[])[], itemCount: number): number[] {
+export function poolOf(
+  rows: readonly (readonly number[])[],
+  itemCount: number,
+  order?: readonly number[],
+): number[] {
   const placed = new Set(rows.flat());
-  return Array.from({ length: itemCount }, (_, i) => i).filter((i) => !placed.has(i));
+  const indexes = Array.from({ length: itemCount }, (_, i) => i);
+  const ordered =
+    order === undefined
+      ? indexes
+      : [
+          ...new Set([
+            ...order.filter((i) => Number.isInteger(i) && i >= 0 && i < itemCount),
+            ...indexes,
+          ]),
+        ];
+  return ordered.filter((i) => !placed.has(i));
 }

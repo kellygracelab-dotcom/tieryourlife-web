@@ -3,7 +3,7 @@ import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
-import { MAX_CARDS, playable } from "./chosen";
+import { playable } from "./chosen";
 import type { GameKind } from "./engine";
 import { gameProgress, type Resume } from "./game";
 import { estimateText, gameName, startedText } from "./labels";
@@ -68,13 +68,7 @@ export function GamePicker({
       actions={
         <>
           <SheetCancel />
-          <Button
-            variant="tonal"
-            className="play-tonal"
-            onClick={onStart}
-            disabled={!fits}
-            aria-describedby={count > MAX_CARDS ? `${id}-over` : undefined}
-          >
+          <Button variant="tonal" className="play-tonal" onClick={onStart} disabled={!fits}>
             {strings.play.start}
           </Button>
         </>
@@ -111,23 +105,13 @@ export function GamePicker({
             </label>
           ))}
         </div>
-        {/* Reached with a saved game over a board too big for one: why Start is off. */}
-        {count > MAX_CARDS && (
-          <p className="play-over" id={`${id}-over`}>
-            {fill(strings.play.tooMany, { n: count, max: MAX_CARDS })}
-          </p>
-        )}
       </div>
       {theirs && <p className="play-footnote">{strings.play.intoMine}</p>}
     </PlaySheet>
   );
 }
 
-/**
- * The saved game, above the choice. Losers stay takes new cards in from its
- * next round and goes on; a hill or a bracket drew its order from the cards
- * it began with, so once they changed it starts again.
- */
+/** Resume the saved participants, or offer a fresh start if a participant was removed. */
 function SavedRow({
   saved,
   now,
@@ -146,12 +130,7 @@ function SavedRow({
     asked: overall.asked,
     total: overall.total,
   });
-  const note =
-    saved.kind === "changed"
-      ? strings.play.changed
-      : saved.joined > 0
-        ? plural(strings.play.joining, saved.joined)
-        : startedText(game.startedAt, now);
+  const note = saved.kind === "changed" ? strings.play.changed : startedText(game.startedAt, now);
   return (
     <div className="play-saved">
       <Icon name="history" className="play-saved__icon" />

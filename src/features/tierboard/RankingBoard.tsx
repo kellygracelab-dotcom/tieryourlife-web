@@ -48,7 +48,7 @@ import { ImageCredits } from "./ImageCredits";
 import { flyIn } from "./flight";
 import { arrange } from "./arrange";
 import { DOUBLE_TAP_MS, type DragState } from "./drag";
-import { draftKey, loadDraft, saveDraft, scopeOf, type TierLabels } from "./draft";
+import { draftKey, loadDraft, loadPoolOrder, saveDraft, scopeOf, type TierLabels } from "./draft";
 import {
   canUndo,
   init,
@@ -81,12 +81,14 @@ export type Keep = (
   rows: readonly (readonly number[])[],
   version?: number,
   tierLabels?: TierLabels,
+  poolOrder?: readonly number[],
 ) => Promise<SavedRanking>;
 
 /** The board as the owner's editor: it starts from what is saved, and Save writes it back. */
 export interface EditMode {
+  poolOrder?: readonly number[];
   rows: readonly (readonly number[])[];
-  save: (rows: readonly (readonly number[])[]) => Promise<unknown>;
+  save: (rows: readonly (readonly number[])[], poolOrder?: readonly number[]) => Promise<unknown>;
   cancel: () => void;
   /**
    * The list's own author changing the list, not a ranking of it: Publish
@@ -138,7 +140,12 @@ interface RankingBoardProps {
   device?: KeyValueStore;
   keep?: Keep;
   /** Changes a ranking already kept, behind the same link. */
-  rearrange?: (code: string, rows: Rows, tierLabels?: TierLabels) => Promise<unknown>;
+  rearrange?: (
+    code: string,
+    rows: Rows,
+    tierLabels?: TierLabels,
+    poolOrder?: readonly number[],
+  ) => Promise<unknown>;
   /**
    * Whether a ranking this device finished is still behind its link: false
    * only when the server says it is gone (deleted in another browser).
@@ -415,11 +422,13 @@ function useBoard(
   initialRows: readonly (readonly number[])[] | null = null,
   seeded = false,
   undoTo: Rows | null = null,
+  initialPool?: readonly number[],
 ) {
   const scope = scopeOf(list);
   const kept = () => (seeded ? null : loadDraft(store, scope));
+  const poolOrder = () => (seeded ? undefined : (loadPoolOrder(store, scope) ?? initialPool));
   const [state, dispatch] = useReducer(reduce, list, (l) => {
-    const start = init(l.tiers.length, l.items.length, kept() ?? initialRows);
+    const start = init(l.tiers.length, l.items.length, kept() ?? initialRows, poolOrder());
     return undoTo === null ? start : { ...start, history: [undoTo] };
   });
   // The list changed shape under the board — the owner added or took away a
@@ -431,32 +440,49 @@ function useBoard(
       tierCount: list.tiers.length,
       itemCount: list.items.length,
       rows: kept() ?? initialRows,
+      poolOrder: poolOrder(),
     });
   }
   useEffect(() => {
     if (seeded) return;
-    saveDraft(store, scope, state.rows);
+    saveDraft(store, scope, state.rows, undefined, state.poolOrder);
     // Only the rows are worth keeping; scope fields are derived from the list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.rows, store, seeded, list.id, list.updatedAt, list.items.length, list.tiers.length]);
+  }, [
+    state.rows,
+    state.poolOrder,
+    store,
+    seeded,
+    list.id,
+    list.updatedAt,
+    list.items.length,
+    list.tiers.length,
+  ]);
   // The same list ranked in another tab: its moves are drawn here too, or
   // the next move here would write over them unseen. Rows kept for another
   // version of the list are that tab's business.
-  const shown = useRef(state.rows);
+  const shown = useRef(state);
   useEffect(() => {
-    shown.current = state.rows;
+    shown.current = state;
   });
   useEffect(() => {
     if (seeded) return;
     const onStorage = (event: StorageEvent) => {
       if (event.key !== draftKey(list.id)) return;
       const theirs = loadDraft(store, scope);
-      if (theirs === null || JSON.stringify(theirs) === JSON.stringify(shown.current)) return;
+      const poolOrder = loadPoolOrder(store, scope);
+      if (
+        theirs === null ||
+        (JSON.stringify(theirs) === JSON.stringify(shown.current.rows) &&
+          JSON.stringify(poolOrder) === JSON.stringify(shown.current.poolOrder))
+      )
+        return;
       dispatch({
         type: "reset",
         tierCount: list.tiers.length,
         itemCount: list.items.length,
         rows: theirs,
+        poolOrder,
       });
     };
     window.addEventListener("storage", onStorage);
@@ -491,6 +517,7 @@ export function RankingBoard({
     seed?.rows ?? edit?.rows ?? null,
     seeded,
     undoTo,
+    edit?.poolOrder,
   );
   // While the pool's search hides cards, a placement picks the next one among
   // those in sight: a hidden pick took the next number key unseen.
@@ -709,14 +736,19 @@ export function RankingBoard({
       before.version === list.updatedAt &&
       (before.claimedBy === undefined ? uid === null : before.claimedBy === uid);
     // A reader's tier words go with the rows; a version in the list's own words sends none.
+    const order = state.poolOrder === undefined ? undefined : pool(state);
     const keepIt = () =>
-      tierLabels === undefined
-        ? keep(list.id, placed, list.updatedAt)
-        : keep(list.id, placed, list.updatedAt, tierLabels);
+      order !== undefined
+        ? keep(list.id, placed, list.updatedAt, tierLabels, order)
+        : tierLabels === undefined
+          ? keep(list.id, placed, list.updatedAt)
+          : keep(list.id, placed, list.updatedAt, tierLabels);
     const saved: Promise<KeptRanking> = inPlace
-      ? (tierLabels === undefined
-          ? rearrange(before.code, placed)
-          : rearrange(before.code, placed, tierLabels)
+      ? (order !== undefined
+          ? rearrange(before.code, placed, tierLabels, order)
+          : tierLabels === undefined
+            ? rearrange(before.code, placed)
+            : rearrange(before.code, placed, tierLabels)
         ).then(
           () => before,
           (reason: unknown) =>
@@ -794,7 +826,10 @@ export function RankingBoard({
   const onSave = () => {
     if (edit === undefined) return;
     setSave({ status: "saving" });
-    edit.save(state.rows).then(
+    (state.poolOrder === undefined
+      ? edit.save(state.rows)
+      : edit.save(state.rows, pool(state))
+    ).then(
       () => setSave({ status: "idle" }),
       (reason: unknown) => setSave({ status: "failed", error: errorOf(reason) }),
     );
@@ -997,7 +1032,10 @@ export function RankingBoard({
             icon="check"
             onClick={onSave}
             disabled={
-              locked || (edit.owner === undefined ? placedCount(state) === 0 : !edit.owner.canSave)
+              locked ||
+              (edit.owner === undefined
+                ? placedCount(state) === 0 && state.poolOrder === undefined
+                : !edit.owner.canSave)
             }
           >
             {saveLabel(edit, save.status === "saving")}

@@ -1,4 +1,4 @@
-import type { SyncedPlay } from "../../api/boards";
+import { MAX_BOARD_ITEMS, type SyncedPlay } from "../../api/boards";
 import { PICTURE_CREDIT_LIMIT, creditOf } from "../../api/pictureCredit";
 export { creditOf } from "../../api/pictureCredit";
 import { holds } from "../../lib/locale";
@@ -160,7 +160,7 @@ export const BOARD_LIMITS = {
   title: 80,
   caption: 60,
   tiers: 20,
-  items: 2000,
+  items: MAX_BOARD_ITEMS,
   credit: PICTURE_CREDIT_LIMIT,
 } as const;
 
@@ -553,15 +553,14 @@ export function arrangeItems(
       if (!place.has(uid)) place.set(uid, { tierUid: tier.uid, position });
     });
   });
+  const tierOrder = new Map([pool, ...tiers].map((tier, i) => [tier.uid, i]));
   const poolOrder = liveItems(board)
     .filter((item) => !place.has(item.uid))
-    .sort((a, b) => {
-      // Cards already in the pool keep their order; cards coming back join at the end, by tier then place.
-      const aIn = a.tierUid === pool.uid ? 0 : 1;
-      const bIn = b.tierUid === pool.uid ? 0 : 1;
-      if (aIn !== bIn) return aIn - bIn;
-      return a.position - b.position;
-    });
+    .sort(
+      (a, b) =>
+        (tierOrder.get(a.tierUid) ?? Infinity) - (tierOrder.get(b.tierUid) ?? Infinity) ||
+        a.position - b.position,
+    );
   poolOrder.forEach((item, position) => place.set(item.uid, { tierUid: pool.uid, position }));
 
   let changed = false;

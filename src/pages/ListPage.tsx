@@ -31,6 +31,7 @@ import {
   draftKey,
   loadDraft,
   loadDraftLabels,
+  loadPoolOrder,
   loadPlacedDraft,
   saveDraft,
   scopeOf,
@@ -81,7 +82,9 @@ const named = (ranking: ReaderRanking): ReaderRanking => ({
 
 /** This device began ranking the list, or finished: then it opens on Mine. */
 const begunHere = (store: KeyValueStore, list: PublishedList): boolean =>
-  loadPlacedDraft(store, scopeOf(list)) !== null || readKept(store, list.id) !== null;
+  loadPlacedDraft(store, scopeOf(list)) !== null ||
+  loadPoolOrder(store, scopeOf(list)) !== undefined ||
+  readKept(store, list.id) !== null;
 
 /**
  * Switching boards moves the same cards rather than swapping one picture for
@@ -361,10 +364,10 @@ function OpenList({
   // Rows into Mine, which is drawn afresh from the draft: Play's result, or
   // Theirs with a first move made on it, whose tier words come too. Play's
   // result leaves the words Mine wears.
-  const putInMine = (rows: Rows, labels?: TierLabels | null) => {
+  const putInMine = (rows: Rows, labels?: TierLabels | null, poolOrder?: readonly number[]) => {
     const placed = rows.map((row) => [...row]);
     setMineBefore(loadPlacedDraft(localStorageStore, scopeOf(list)));
-    saveDraft(localStorageStore, scopeOf(list), placed, labels);
+    saveDraft(localStorageStore, scopeOf(list), placed, labels, poolOrder);
     setMineRows(placed);
     setMineLabels(loadDraftLabels(localStorageStore, scopeOf(list)));
     setMineRound((round) => round + 1);
@@ -380,14 +383,18 @@ function OpenList({
     setMineRound((round) => round + 1);
     show(back);
   };
+  const mineOrder = useMemo(() => {
+    const order = loadPoolOrder(localStorageStore, scopeOf(list)) ?? [];
+    return [...new Set([...order, ...list.items.keys()])];
+  }, [list, mineRound, mineRows]);
   const playCards = useMemo<PlayCard[]>(
     () =>
-      list.items.map((item, index) => ({
+      mineOrder.map((index) => ({
         id: String(index),
-        name: item.title,
-        imageUrl: item.imageUrl,
+        name: list.items[index]!.title,
+        imageUrl: list.items[index]!.imageUrl,
       })),
-    [list],
+    [list, mineOrder],
   );
   const playTiers = useMemo<PlayTier[]>(() => {
     const rows = mineRows ?? author.rows;
@@ -416,7 +423,13 @@ function OpenList({
     onApply: (rows) => {
       const before = localStorageStore.read(draftKey(list.id));
       const was = shown;
-      putInMine(rows.map((row) => row.map(Number)));
+      const beforeRows = mineRows ?? author.rows;
+      const placed = new Set(beforeRows.flat());
+      putInMine(
+        rows.map((row) => row.map(Number)),
+        undefined,
+        [...mineOrder.filter((i) => !placed.has(i)), ...beforeRows.flat()],
+      );
       return () => restoreMine(before, was);
     },
   });
@@ -620,6 +633,22 @@ function OpenList({
                 rankings={rankingsEntry}
                 shown={shownPlacing}
                 showMine={showMine}
+                resetMine={
+                  outOfSight
+                    ? undefined
+                    : !arranged
+                      ? null
+                      : () => {
+                          const current = loadPlacedDraft(localStorageStore, scopeOf(list));
+                          if (current === null) return;
+                          const placed = new Set(current.flat());
+                          putInMine(
+                            current.map(() => []),
+                            undefined,
+                            [...mineOrder.filter((i) => !placed.has(i)), ...current.flat()],
+                          );
+                        }
+                }
               />
             </>
           )}
@@ -639,7 +668,12 @@ function OpenList({
               undoTo={mineBefore}
               onRows={(rows) =>
                 // Nothing placed in Mine: Play starts from the author's, as before.
-                setMineRows(rows.some((row) => row.length > 0) ? rows.map((row) => [...row]) : null)
+                setMineRows(
+                  rows.some((row) => row.length > 0) ||
+                    loadPoolOrder(localStorageStore, scopeOf(list)) !== undefined
+                    ? rows.map((row) => [...row])
+                    : null,
+                )
               }
             />
           </BoardFrameContext.Provider>

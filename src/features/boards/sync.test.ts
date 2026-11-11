@@ -127,6 +127,71 @@ const setUp = (published: (string | PublishedEntry)[] | null = []) => {
 };
 
 describe("syncBoards", () => {
+  function legacyGame() {
+    const board = addToPool(
+      films(),
+      Array.from({ length: 89 }, (_, i) => ({ title: "Member " + i, imageUrl: null })),
+      200,
+      uids("extra-"),
+    );
+    const play: NonNullable<Board["play"]> = {
+      kind: "swiss",
+      count: 91,
+      seed: 37,
+      refine: false,
+      ids: board.items.map((item) => item.uid),
+      history: [[0, 1, 1]],
+      round: 1,
+      startedAt: 201,
+      scope: [board.tiers.find((tier) => tier.isPool)!.uid],
+    };
+    return { board, play };
+  }
+
+  it("recovers a preserved game once even at a known revision, keeps it on rename and clears it on finish", async () => {
+    const { repository, records, account, run } = setUp();
+    const { board, play } = legacyGame();
+    const renamed = rename(board, "Legacy rename", 202);
+    repository.save(renamed);
+    records.remember({ uid: renamed.uid, revision: 2, fingerprint: await fingerprintOf(renamed) });
+    const marker = "game-v1:" + "a".repeat(64);
+    account.holds({ ...renamed, play }, 2, "Old phone", marker);
+    const get = vi.spyOn(account.api, "board");
+    await run();
+    expect(repository.get(renamed.uid)?.play).toEqual(play);
+    expect(records.all()[0]?.remoteFingerprint).toBe(marker);
+    await run();
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(account.keeps).toHaveLength(0);
+    const recovered = rename(repository.get(renamed.uid)!, "Another title", 203);
+    repository.save(recovered);
+    await run();
+    expect(account.keeps.at(-1)?.request.play).toEqual(play);
+    expect(records.all()[0]?.remoteFingerprint).toBeUndefined();
+    repository.save({ ...recovered, play: null });
+    await run();
+    expect(account.keeps.at(-1)?.request.play).toBeNull();
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a changed local board and a playable copy of a previously unseen server game", async () => {
+    const { repository, records, account, run } = setUp();
+    const { board, play } = legacyGame();
+    repository.save(rename(board, "Offline rename", 204));
+    records.remember({ uid: board.uid, revision: 2, fingerprint: await fingerprintOf(board) });
+    account.holds({ ...board, play }, 2, "Old phone", "game-v1:" + "b".repeat(64));
+    await run();
+    expect(repository.get(board.uid)?.title).toBe("Offline rename");
+    const copy = repository.all().find((b) => b.uid !== board.uid)!;
+    expect(copy.play?.ids).toEqual(copy.items.map((item) => item.uid));
+    expect(copy.play?.ids[0]).not.toBe(play.ids[0]);
+    expect(copy.play?.scope).toEqual([copy.tiers.find((tier) => tier.isPool)!.uid]);
+    expect(copy.play?.history).toEqual(play.history);
+    await run();
+    expect(repository.all()).toHaveLength(2);
+    expect(account.kept.get(copy.uid)?.play).toEqual(copy.play);
+  });
+
   it("sends a board the account has never seen, and writes down the agreement", async () => {
     const { repository, records, account, run } = setUp();
     repository.save(films());
@@ -143,6 +208,7 @@ describe("syncBoards", () => {
     // A first write says nothing of a revision: the key is absent, not null.
     expect(request).not.toHaveProperty("basedOn");
     expect(JSON.stringify(request)).not.toContain("basedOn");
+    expect(request.play).toBeNull();
     expect(request.deviceName).toBe("Chrome on Linux");
     expect(request.fingerprint).toMatch(/^[0-9a-f]{64}$/);
     expect(request.items.map((item) => item.title)).toEqual(["Dune", "Heat"]);
@@ -1050,4 +1116,39 @@ describe("syncBoards", () => {
     );
     expect(repository.get("here")?.items).toEqual(here.items);
   });
+});
+
+it("carries the precise next duel to another device and explicitly clears a large game", async () => {
+  const { newGame, currentPair, pick } = await import("../play/game");
+  const { fromSynced, toSynced } = await import("../play/syncedGames");
+  const first = setUp();
+  const second = setUp();
+  const uid = uids("large");
+  const board = addToPool(
+    newBoard("big", "Big", 100, uid),
+    Array.from({ length: 91 }, (_, i) => ({ title: String(i), imageUrl: null })),
+    100,
+    uid,
+  );
+  const game = newGame(
+    "bracket",
+    board.items.map((i) => i.uid),
+    { kind: "all" },
+    3,
+    100,
+  );
+  const progressed = pick(game, currentPair(game)![0]);
+  first.repository.save({ ...board, play: toSynced(progressed, null, 200) });
+  await first.run();
+  await second.run({ api: first.account.api });
+  const downloaded = second.repository.get(board.uid)!;
+  const resumed = fromSynced(downloaded.play!, null);
+  expect(resumed.ids).toEqual(progressed.ids);
+  expect(resumed.history).toEqual(progressed.history);
+  expect(currentPair(resumed)).toEqual(currentPair(progressed));
+  second.repository.save({ ...downloaded, play: null });
+  await second.run({ api: first.account.api });
+  expect(first.account.keeps.at(-1)?.request.play).toBeNull();
+  await first.run();
+  expect(first.repository.get(board.uid)?.play).toBeNull();
 });

@@ -51,7 +51,8 @@ describe("the words of a game", () => {
     expect(bracketRoundText(4)).toBe("Semi-finals");
     expect(bracketRoundText(7)).toBe("Quarter-finals");
     expect(bracketRoundText(16)).toBe("Round of 16");
-    expect(bracketRoundText(34)).toBe("Round of 64");
+    expect(bracketRoundText(34)).toBe("Round of 34");
+    expect(bracketRoundText(91)).toBe("Round of 91");
   });
 });
 

@@ -1,17 +1,10 @@
 import type { KeyValueStore } from "../../lib/storage";
-import { MAX_CARDS, type Chosen } from "./chosen";
+import type { Chosen, Selection } from "./chosen";
+import { MAX_BOARD_ITEMS, MAX_PLAY_ANSWERS } from "../../api/boards";
 import type { GameKind, Outcome, Pair } from "./engine";
 import type { Game } from "./game";
 
-/**
- * Where a board's game in progress is kept between visits: one per board, on
- * this device, at `play:{boardKey}`, for 30 days after it was last played.
- *
- * The account copy comes later: the synced board document gets a `play` field
- * holding `encodeGame`'s text, and an account-backed `SavedGames` writes both
- * places and reads the newer one. Pages hand that one to `usePlay` instead of
- * this device's; nothing else changes.
- */
+/** One active game per board. List drafts use local storage and owned boards sync with the account. */
 export interface SavedGames {
   load(boardKey: string): Game | null;
   save(boardKey: string, game: Game): void;
@@ -140,7 +133,7 @@ function pairOf(value: unknown, count: number): Pair | null {
     : null;
 }
 
-function chosenOf(value: unknown): Chosen | null {
+function selectionOf(value: unknown): Selection | null {
   if (!isRecord(value)) return null;
   if (value.kind === "all") return { kind: "all" };
   const keepTier = value.keepTier === true;
@@ -157,8 +150,24 @@ function chosenOf(value: unknown): Chosen | null {
   return null;
 }
 
+function chosenOf(value: unknown): Chosen | null {
+  if (!isRecord(value) || value.kind !== "sample") return selectionOf(value);
+  const source = selectionOf(value.source);
+  return source !== null && isStrings(value.ids)
+    ? { kind: "sample", source, ids: value.ids }
+    : null;
+}
+
 function refineOf(value: unknown, count: number, asked: number): Game["refineFixed"] | null {
-  if (!isRecord(value) || !isInteger(value.from) || value.from > asked) return null;
+  if (
+    !isRecord(value) ||
+    !isInteger(value.from) ||
+    value.from < 0 ||
+    value.from > asked ||
+    !Array.isArray(value.pairs) ||
+    value.pairs.length > Math.ceil(count / 2)
+  )
+    return null;
   const pairs = every(value.pairs, (pair) => pairOf(pair, count));
   return pairs === null ? null : { from: value.from, pairs };
 }
@@ -167,9 +176,15 @@ function gameOf(value: unknown): Game | null {
   if (!isRecord(value) || !isRecord(value.spec)) return null;
   const { kind, count, seed, refine } = value.spec;
   if (!isKind(kind) || !isInteger(seed) || typeof refine !== "boolean") return null;
-  if (!isInteger(count) || count < 2 || count > MAX_CARDS) return null;
-  if (!isStrings(value.ids) || value.ids.length !== count || !isNumber(value.startedAt))
+  if (!isInteger(count) || count < 2 || count > MAX_BOARD_ITEMS) return null;
+  if (
+    !isStrings(value.ids) ||
+    value.ids.length !== count ||
+    new Set(value.ids).size !== count ||
+    !isNumber(value.startedAt)
+  )
     return null;
+  if (!Array.isArray(value.history) || value.history.length > MAX_PLAY_ANSWERS) return null;
   const history = every(value.history, (outcome) => outcomeOf(outcome, count));
   const chosen = chosenOf(value.chosen);
   if (history === null || chosen === null) return null;

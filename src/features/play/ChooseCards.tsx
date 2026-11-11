@@ -7,7 +7,7 @@ import { Icon } from "../../ui/Icon";
 import { CardName } from "../tierboard/CardName";
 import { useBoardSize } from "../tierboard/useBoardSize";
 import type { PlayBoard, PlayTier } from "./board";
-import { chosenIds, MAX_CARDS, playable, type Chosen } from "./chosen";
+import { chosenIds, playable, sampleIds, sampleSizes, type Selection, type Chosen } from "./chosen";
 import { PlaySheet, SheetCancel } from "./PlaySheet";
 import { SheetArrival } from "./sheet";
 import "../tierboard/board.css";
@@ -44,18 +44,14 @@ interface Ticked {
   keepTier: boolean;
 }
 
-function tickedOf(board: PlayBoard, chosen: Chosen): Ticked {
+function tickedOf(board: PlayBoard, chosen: Selection): Ticked {
   switch (chosen.kind) {
     case "all": {
-      // Everything is the start only where everything can be played.
-      const fits = board.order.length <= MAX_CARDS;
       return {
-        tiers: new Set(
-          fits ? board.tiers.filter((t) => t.cardIds.length > 0).map((t) => t.id) : [],
-        ),
-        pool: fits && board.pool.length > 0,
+        tiers: new Set(board.tiers.filter((t) => t.cardIds.length > 0).map((t) => t.id)),
+        pool: board.pool.length > 0,
         picked: null,
-        keepTier: true,
+        keepTier: false,
       };
     }
     case "rows":
@@ -86,7 +82,7 @@ function oneTier(ticked: Ticked): string | null {
   return [...ticked.tiers][0] ?? null;
 }
 
-function chosenOf(board: PlayBoard, ticked: Ticked): Chosen {
+function chosenOf(board: PlayBoard, ticked: Ticked): Selection {
   if (ticked.picked !== null) {
     const { row, ids } = ticked.picked;
     return { kind: "picked", tier: row, ids: [...ids], keepTier: row !== null && ticked.keepTier };
@@ -94,7 +90,7 @@ function chosenOf(board: PlayBoard, ticked: Ticked): Chosen {
   const rows = board.tiers.filter((tier) => tier.cardIds.length > 0);
   const every =
     rows.every((tier) => ticked.tiers.has(tier.id)) && (board.pool.length === 0 || ticked.pool);
-  if (every) return { kind: "all" };
+  if (every && !(oneTier(ticked) !== null && ticked.keepTier)) return { kind: "all" };
   return {
     kind: "rows",
     tiers: board.tiers.filter((tier) => ticked.tiers.has(tier.id)).map((tier) => tier.id),
@@ -103,14 +99,15 @@ function chosenOf(board: PlayBoard, ticked: Ticked): Chosen {
   };
 }
 
-/**
- * "Choose cards": the pool, tiers, or everything, up to 64 cards; a tier too
- * big for a game is searched and its cards picked one by one. Opens by
- * itself on a board of more than 64 cards.
- */
+/** Choose whole rows, individual cards, or a fixed sample of that selection. */
 export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseCardsProps) {
   const id = useId();
-  const [ticked, setTicked] = useState(() => tickedOf(board, chosen));
+  const [ticked, setTicked] = useState(() =>
+    tickedOf(board, chosen.kind === "sample" ? chosen.source : chosen),
+  );
+  const [sample, setSample] = useState<readonly string[] | null>(
+    chosen.kind === "sample" ? chosen.ids : null,
+  );
   // The row whose cards are being picked one by one, if any.
   const [picking, setPickingNow] = useState<{ row: Row } | null>(null);
   // Once a page has turned, the sheet is open: the next page comes without the sheet's entrance.
@@ -131,12 +128,14 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
           onBack={() => setPicking(null)}
           onDone={(ids) => {
             // Nothing picked leaves the rows ticked before as they were, as Back does.
+            setSample(null);
             if (ids.size > 0) {
               setTicked({
                 ...ticked,
                 tiers: new Set(),
                 pool: false,
                 picked: { row: picking.row, ids },
+                keepTier: ticked.picked === null ? true : ticked.keepTier,
               });
             } else if (ticked.picked?.row === picking.row) {
               setTicked({ ...ticked, picked: null });
@@ -149,29 +148,34 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
     );
   }
 
-  const count = chosenIds(board, chosenOf(board, ticked)).length;
+  const source = chosenOf(board, ticked);
+  const candidates = chosenIds(board, source);
+  const count = sample?.length ?? candidates.length;
   const rows = board.tiers.filter((tier) => tier.cardIds.length > 0);
   const total = board.order.length;
-  const everything = chosenOf(board, ticked).kind === "all";
+  const everything = source.kind === "all" && sample === null;
   const kept = oneTier(ticked);
   const keptLabel = board.tiers.find((tier) => tier.id === kept)?.label ?? "";
 
   const toggle = (row: Row, on: boolean) => {
+    setSample(null);
     const tiers = new Set(ticked.picked === null ? ticked.tiers : []);
     let pool = ticked.picked === null ? ticked.pool : false;
     if (row === null) pool = on;
     else if (on) tiers.add(row);
     else tiers.delete(row);
-    setTicked({ ...ticked, tiers, pool, picked: null });
+    setTicked({ ...ticked, tiers, pool, picked: null, keepTier: true });
   };
-  const toggleEverything = (on: boolean) =>
+  const toggleEverything = (on: boolean) => {
+    setSample(null);
     setTicked({
       ...ticked,
       tiers: new Set(on ? rows.map((tier) => tier.id) : []),
       pool: on && board.pool.length > 0,
+      keepTier: false,
       picked: null,
     });
-
+  };
   const isTicked = (row: Row) =>
     ticked.picked === null && (row === null ? ticked.pool : ticked.tiers.has(row));
   const pickedHere = (row: Row) =>
@@ -190,7 +194,9 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
             <Button
               variant="tonal"
               className="play-tonal"
-              onClick={() => onDone(chosenOf(board, ticked))}
+              onClick={() =>
+                onDone(sample === null ? source : { kind: "sample", source, ids: sample })
+              }
               disabled={!playable(count)}
             >
               {strings.play.continue}
@@ -203,7 +209,6 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
             <RowItem
               id={`${id}-pool`}
               title={plural(strings.play.thePool, board.pool.length)}
-              size={board.pool.length}
               checked={isTicked(null)}
               picked={pickedHere(null)}
               onToggle={(on) => toggle(null, on)}
@@ -217,7 +222,6 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
               title={tierTitle(tier)}
               sub={plural(strings.boards.cards, tier.cardIds.length)}
               band={tier}
-              size={tier.cardIds.length}
               checked={isTicked(tier.id)}
               picked={pickedHere(tier.id)}
               onToggle={(on) => toggle(tier.id, on)}
@@ -225,17 +229,40 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
             />
           ))}
           <li className="play-row">
-            <Check
-              id={`${id}-everything`}
-              checked={everything}
-              disabled={total > MAX_CARDS}
-              onChange={toggleEverything}
-            />
+            <Check id={`${id}-everything`} checked={everything} onChange={toggleEverything} />
             <label htmlFor={`${id}-everything`} className="play-row__text">
               <span className="play-row__title">{plural(strings.play.everything, total)}</span>
             </label>
           </li>
         </ul>
+        {candidates.length >= 16 && (
+          <fieldset className="play-sampling">
+            <legend>{strings.play.randomSample}</legend>
+            <button type="button" aria-pressed={sample === null} onClick={() => setSample(null)}>
+              {plural(strings.play.everything, candidates.length)}
+            </button>
+            {sampleSizes(candidates.length).map((size) => (
+              <button
+                type="button"
+                key={size}
+                aria-pressed={sample?.length === size}
+                onClick={() => setSample(sampleIds(candidates, size))}
+              >
+                {size}
+              </button>
+            ))}
+          </fieldset>
+        )}
+        {sample !== null && (
+          <details className="play-members">
+            <summary>{plural(strings.play.picked, sample.length)}</summary>
+            <ul>
+              {sample.map((card) => (
+                <li key={card}>{board.cards.get(card)?.name}</li>
+              ))}
+            </ul>
+          </details>
+        )}
         {kept !== null && (
           <label className="play-switch">
             <span>{fill(strings.play.keepIn, { tier: keptLabel })}</span>
@@ -266,12 +293,10 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
 function Check({
   id,
   checked,
-  disabled = false,
   onChange,
 }: {
   id: string;
   checked: boolean;
-  disabled?: boolean;
   onChange: (on: boolean) => void;
 }) {
   return (
@@ -281,7 +306,6 @@ function Check({
         type="checkbox"
         className="play-check__input"
         checked={checked}
-        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
       />
       <span className="play-check__box" aria-hidden="true">
@@ -291,12 +315,10 @@ function Check({
   );
 }
 
-/** "36 of 64 selected", or in the error colour once there are too many. */
 function Counter({ count }: { count: number }) {
-  const over = count > MAX_CARDS;
   return (
-    <p className={over ? "play-counter play-counter--over" : "play-counter"} aria-live="polite">
-      {fill(over ? strings.play.tooMany : strings.play.selected, { n: count, max: MAX_CARDS })}
+    <p className="play-counter" aria-live="polite">
+      {plural(strings.boards.selected, count)}
     </p>
   );
 }
@@ -307,7 +329,6 @@ interface RowItemProps {
   sub?: string;
   /** A tier: its band colour as a swatch, its letter on it. */
   band?: PlayTier;
-  size: number;
   checked: boolean;
   /** Cards picked one by one in this row, or null when none are. */
   picked: number | null;
@@ -315,8 +336,7 @@ interface RowItemProps {
   onPick: () => void;
 }
 
-function RowItem({ id, title, sub, band, size, checked, picked, onToggle, onPick }: RowItemProps) {
-  const tooBig = size > MAX_CARDS;
+function RowItem({ id, title, sub, band, checked, picked, onToggle, onPick }: RowItemProps) {
   return (
     <li className="play-row">
       <Check id={id} checked={checked || picked !== null} onChange={onToggle} />
@@ -338,14 +358,11 @@ function RowItem({ id, title, sub, band, size, checked, picked, onToggle, onPick
           {picked !== null && (
             <span className="play-row__sub">{plural(strings.play.picked, picked)}</span>
           )}
-          {tooBig && <span className="play-row__sub">{strings.play.tooBig}</span>}
         </span>
       </label>
-      {tooBig && (
-        <button type="button" className="play-link play-row__pick" onClick={onPick}>
-          {strings.play.pickCards}
-        </button>
-      )}
+      <button type="button" className="play-link play-row__pick" onClick={onPick}>
+        {strings.play.pickCards}
+      </button>
     </li>
   );
 }
@@ -359,12 +376,7 @@ interface PickCardsProps {
   onCancel: () => void;
 }
 
-/**
- * One row's cards with a search over them, ticked one by one up to 64. The
- * tiles are the board's own size, so a card looks here as it does there; a
- * ticked one wears a ring and a check, and once 64 are ticked the others
- * fade.
- */
+/** The row’s cards can be searched and selected individually. */
 function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsProps) {
   const id = useId();
   const size = useBoardSize();
@@ -374,7 +386,6 @@ function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsP
   const words = query.trim().toLocaleLowerCase();
   const shown =
     words === "" ? cards : cards.filter((card) => card.name.toLocaleLowerCase().includes(words));
-  const full = ids.size >= MAX_CARDS;
   const tier = board.tiers.find((one) => one.id === row);
   const where =
     tier === undefined
@@ -399,12 +410,7 @@ function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsP
       actions={
         <>
           <SheetCancel />
-          <Button
-            variant="tonal"
-            className="play-tonal"
-            onClick={() => onDone(ids)}
-            disabled={ids.size > MAX_CARDS}
-          >
+          <Button variant="tonal" className="play-tonal" onClick={() => onDone(ids)}>
             {strings.play.continue}
           </Button>
         </>
@@ -432,7 +438,6 @@ function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsP
                     type="checkbox"
                     className="play-pick__input"
                     checked={on}
-                    disabled={!on && full}
                     onChange={(event) => flip(card.id, event.target.checked)}
                   />
                   {card.imageUrl !== null ? (

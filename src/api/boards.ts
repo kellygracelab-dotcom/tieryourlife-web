@@ -6,6 +6,10 @@ import type { ApiClient } from "./client";
  * included, under the uid the device gave it.
  */
 
+/** Limits shared with the board sync service. */
+export const MAX_BOARD_ITEMS = 2000;
+export const MAX_PLAY_ANSWERS = 14_000;
+
 export interface KeptTier {
   uid: string;
   position: number;

@@ -14,7 +14,7 @@ export const backUpKey = (accountUid: string): string => `${BACKUP_KEY}@${accoun
 export const syncKey = (accountUid: string): string => `${SYNC_PREFIX}${accountUid}`;
 
 interface Kept {
-  records: Record<string, { revision: number; fingerprint: string }>;
+  records: Record<string, Omit<SyncedBoard, "uid">>;
   /** When the last complete run ended; a partial run leaves it, which is what the stuck note reports. */
   lastSyncedAt: number | null;
 }
@@ -35,7 +35,13 @@ function read(store: KeyValueStore, accountUid: string): Kept {
         typeof record.revision === "number" &&
         typeof record.fingerprint === "string"
       ) {
-        records[uid] = { revision: record.revision, fingerprint: record.fingerprint };
+        records[uid] = {
+          revision: record.revision,
+          fingerprint: record.fingerprint,
+          ...(typeof record.remoteFingerprint === "string"
+            ? { remoteFingerprint: record.remoteFingerprint }
+            : {}),
+        };
       }
     }
     return {
@@ -83,7 +89,11 @@ export function syncRecords(store: KeyValueStore, accountUid: string): SyncRecor
         ...kept,
         records: {
           ...kept.records,
-          [record.uid]: { revision: record.revision, fingerprint: record.fingerprint },
+          [record.uid]: {
+            revision: record.revision,
+            fingerprint: record.fingerprint,
+            remoteFingerprint: record.remoteFingerprint,
+          },
         },
       }));
     },

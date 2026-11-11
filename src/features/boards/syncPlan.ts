@@ -28,6 +28,8 @@ export interface SyncedBoard {
   uid: string;
   revision: number;
   fingerprint: string;
+  /** Server content hash when a legacy client saved a board without its large game. */
+  remoteFingerprint?: string;
 }
 
 export type SyncStep =
@@ -92,8 +94,11 @@ function stepFor(
   // A newer revision with the very contents agreed on is the same board
   // written again (another device saving what it was sent): no news, and no
   // reason to keep a second copy of it.
-  const echoed = remote.revision !== synced.revision && remote.fingerprint === synced.fingerprint;
-  const changedThere = remote.revision !== synced.revision && !echoed;
+  // A server-preserved game can be new even at the revision an old client recorded.
+  const changedThere =
+    remote.fingerprint?.startsWith("game-v1:") === true
+      ? remote.fingerprint !== synced.remoteFingerprint
+      : remote.revision !== synced.revision && remote.fingerprint !== synced.fingerprint;
   if (changedHere && changedThere) {
     return { kind: "keepBoth", uid: local.uid, basedOn: remote.revision };
   }

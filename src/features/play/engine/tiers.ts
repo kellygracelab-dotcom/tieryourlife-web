@@ -10,7 +10,7 @@ export const THIN_GROUPS = 3;
 const QUARTERS = 4;
 
 /** A card that met fewer than SOLID_DUELS others is drawn dashed in the result. */
-export function isDashed(standing: Standing, card: number): boolean {
+export function isDashed(standing: Pick<Standing, "played">, card: number): boolean {
   return at(standing.played, card) < SOLID_DUELS;
 }
 
@@ -19,7 +19,7 @@ export function isDashed(standing: Standing, card: number): boolean {
  * An empty tier between filled ones is not thin; it is the tiering showing a
  * real gap.
  */
-export function isThin(standing: Standing): boolean {
+export function isThin(standing: Pick<Standing, "played">): boolean {
   const dashed = standing.played.filter((_, card) => isDashed(standing, card)).length;
   return dashed * QUARTERS > standing.played.length;
 }

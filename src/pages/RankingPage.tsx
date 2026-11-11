@@ -17,6 +17,16 @@ import { listIn } from "../lib/translated";
 import { useResource } from "../lib/useResource";
 import { currentLocale, fill, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
+import {
+  clearDraft,
+  loadDraft,
+  loadPoolOrder,
+  saveDraft,
+  scopeOf,
+} from "../features/tierboard/draft";
+import { ResetPoolItem } from "../features/tierboard/ResetPoolItem";
+import { Menu } from "../ui/Menu";
+import { useBackCloses } from "../ui/useBackCloses";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
@@ -24,7 +34,12 @@ import { Skeleton } from "../ui/Skeleton";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
 
-export type Rearrange = (code: string, rows: readonly (readonly number[])[]) => Promise<unknown>;
+export type Rearrange = (
+  code: string,
+  rows: readonly (readonly number[])[],
+  tierLabels?: undefined,
+  poolOrder?: readonly number[],
+) => Promise<unknown>;
 
 interface RankingPageProps {
   load?: LoadRanking;
@@ -195,6 +210,9 @@ function Body({
   const [view, setView] = useState<View>("visitor");
   // The clipboard said no: the link is spelled out, to be copied by hand.
   const [copyRefused, setCopyRefused] = useState(false);
+  const [editRound, setEditRound] = useState(0);
+  const [hasPlaced, setHasPlaced] = useState(ranking.rows.some((row) => row.length > 0));
+  useBackCloses(false, () => undefined);
   const { snapshot } = ranking;
   const author = arrange(snapshot);
   const pending = viewer === "pending";
@@ -246,6 +264,29 @@ function Body({
             )}
           </p>
         </div>
+        {editing && (
+          <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
+            <ResetPoolItem
+              onReset={
+                !hasPlaced
+                  ? null
+                  : () => {
+                      const scope = scopeOf(listOf(ranking));
+                      const rows = loadDraft(store, scope) ?? edit.rows;
+                      const order = loadPoolOrder(store, scope) ?? ranking.poolOrder;
+                      saveDraft(
+                        store,
+                        scope,
+                        rows.map(() => []),
+                        undefined,
+                        [...poolOf(rows, scope.itemCount, order), ...rows.flat()],
+                      );
+                      setEditRound((round) => round + 1);
+                    }
+              }
+            />
+          </Menu>
+        )}
         <AddressChip code={ranking.code} copy={copy} onRefused={() => setCopyRefused(true)} />
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
@@ -265,7 +306,8 @@ function Body({
       {editing ? (
         <BoardFrameContext.Provider value={frame}>
           <RankingBoard
-            key={`edit-${ranking.code}`}
+            key={`edit-${ranking.code}-${editRound}`}
+            onRows={(rows) => setHasPlaced(rows.some((row) => row.length > 0))}
             list={listOf(ranking)}
             store={store}
             device={device}
@@ -289,7 +331,7 @@ function Body({
                 tiers={snapshot.tiers}
                 items={snapshot.items}
                 rows={ranking.rows}
-                pool={poolOf(ranking.rows, snapshot.items.length)}
+                pool={poolOf(ranking.rows, snapshot.items.length, ranking.poolOrder)}
               />
             ) : (
               <ReadOnlyBoard
@@ -379,6 +421,7 @@ function OpenRanking({
   );
   // What the owner saved here, until the page is loaded afresh.
   const [rows, setRows] = useState<number[][] | null>(null);
+  const [poolOrder, setPoolOrder] = useState<number[] | undefined>();
   // null until the person chooses; before that `?edit` in the address decides.
   const [chosen, setChosen] = useState<boolean | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -393,9 +436,10 @@ function OpenRanking({
   const owned = asAccount && state.status === "ready" && state.value.yours === true;
   const editing = owned && (chosen ?? wantsEdit);
   const leaveEditing = useCallback(() => {
+    if (ranking !== undefined) clearDraft(scratch, ranking.listId);
     setChosen(false);
     if (wantsEdit) setParams({}, { replace: true });
-  }, [wantsEdit, setParams]);
+  }, [wantsEdit, setParams, ranking, scratch]);
 
   useEffect(() => {
     if (savedAt === null) return;
@@ -404,8 +448,10 @@ function OpenRanking({
   }, [savedAt]);
 
   const save = useCallback(
-    async (next: readonly (readonly number[])[]) => {
-      await rearrange(code, next);
+    async (next: readonly (readonly number[])[], order?: readonly number[]) => {
+      if (order === undefined) await rearrange(code, next);
+      else await rearrange(code, next, undefined, order);
+      setPoolOrder(order === undefined ? undefined : [...order]);
       setRows(next.map((row) => [...row]));
       leaveEditing();
       setSavedAt(Date.now());
@@ -418,7 +464,9 @@ function OpenRanking({
   }
   if (ranking === undefined) return <ListPageLoading note={strings.ranking.opening} rows={2} />;
 
-  const shown = inReadersLanguage(rows === null ? ranking : { ...ranking, rows });
+  const shown = inReadersLanguage(
+    rows === null ? ranking : { ...ranking, rows, poolOrder: poolOrder ?? ranking.poolOrder },
+  );
   // Finished on this browser, by the person here: not by an account that signed out of it.
   const mine = keptBy(readKept(store, ranking.listId), reader)?.code === ranking.code;
   const viewer: Viewer =
@@ -442,7 +490,12 @@ function OpenRanking({
         viewer={viewer}
         editing={editing}
         onEdit={() => setChosen(true)}
-        edit={{ rows: shown.rows, save, cancel: leaveEditing }}
+        edit={{
+          rows: shown.rows,
+          poolOrder: shown.poolOrder,
+          save,
+          cancel: leaveEditing,
+        }}
         store={scratch}
         device={store}
         savedNote={savedAt !== null}

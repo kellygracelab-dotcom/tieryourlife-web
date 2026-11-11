@@ -81,12 +81,10 @@ describe("the game picker", () => {
     );
   });
 
-  it("does not start over more than 64 cards, says why, and gives no estimates", () => {
-    show({ count: 80 });
-    const start = screen.getByRole("button", { name: "Start" });
-    expect(start).toBeDisabled();
-    expect(start).toHaveAccessibleDescription("80 selected, pick up to 64");
-    expect(document.querySelector(".play-game__estimate")).toBeNull();
+  it("offers all games and their estimates on a board of 91", () => {
+    show({ count: 91 });
+    expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
+    expect(document.querySelectorAll(".play-game__estimate")).toHaveLength(3);
   });
 
   it("goes when its handle is pulled down far enough, and comes back up otherwise", async () => {
@@ -108,7 +106,7 @@ describe("the game picker", () => {
   });
 
   it("puts a saved game first, with how far it got and when it started", async () => {
-    const saved: Resume = { kind: "ready", game: savedGame("swiss"), joined: 0 };
+    const saved: Resume = { kind: "ready", game: savedGame("swiss") };
     const { onResume } = show({ saved });
     expect(screen.getByText(/^Losers stay · 1 of \d+$/)).toBeInTheDocument();
     expect(screen.getByText("Started yesterday")).toBeInTheDocument();
@@ -116,14 +114,6 @@ describe("the game picker", () => {
     expect(screen.getByText("Or start a new game")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Resume" }));
     expect(onResume).toHaveBeenCalled();
-  });
-
-  it("says when losers stay takes new cards in, and still resumes", () => {
-    const saved: Resume = { kind: "ready", game: savedGame("swiss"), joined: 3 };
-    show({ saved });
-    expect(screen.getByText("3 new cards join from the next round")).toBeInTheDocument();
-    expect(screen.queryByText("Started yesterday")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   });
 
   it("starts again a hill or a bracket whose board changed under it", async () => {

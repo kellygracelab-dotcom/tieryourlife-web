@@ -1672,3 +1672,39 @@ body:has(.result-view__bar) .snackbar {
     transition: none;
   }
 }
+
+.play-sampling,
+.play-unplayed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 0;
+  padding: 0;
+  margin: 14px 0;
+}
+.play-sampling legend,
+.play-unplayed legend {
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.play-sampling button {
+  color: inherit;
+  background: var(--surface-soft);
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.play-sampling button[aria-pressed="true"] {
+  color: var(--on-primary-container);
+  background: var(--primary-container);
+}
+.play-members ul {
+  max-height: 12rem;
+  overflow: auto;
+}
+.play-unplayed label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

@@ -1387,6 +1387,9 @@
   }
 
   .ranking--under .pool--single .pool__items {
+    /* Intrinsic height includes the tile, its outline padding and a classic scrollbar. */
+    max-height: none;
+    padding-block: 6px;
     display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;

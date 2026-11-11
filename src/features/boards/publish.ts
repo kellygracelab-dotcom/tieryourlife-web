@@ -126,6 +126,7 @@ export function publishRequestOf(board: Board): PublishRequest | null {
 
 /** What a board is made from when it comes from elsewhere: a list, or the old editor's draft. */
 interface Makings {
+  poolOrder?: readonly number[];
   title: string;
   category: string | null;
   authorName: string | null;
@@ -164,6 +165,13 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
       filled.set(tier.uid, position + 1);
     });
   });
+  if (makings.poolOrder !== undefined) {
+    const order = new Set([...makings.poolOrder, ...makings.cards.keys()]);
+    let position = 0;
+    for (const i of order) {
+      if (!placed.has(i)) placed.set(i, { tierUid: pool.uid, position: position++ });
+    }
+  }
   let inPool = 0;
   const items = makings.cards.map((card, index) => {
     const place = placed.get(index) ?? { tierUid: pool.uid, position: inPool++ };
@@ -200,6 +208,7 @@ export const boardFromList = (
   rows: readonly (readonly number[])[] | null,
   now: number,
   nextUid: NextUid,
+  poolOrder?: readonly number[],
 ): Board => ({
   ...boardOf(
     {
@@ -213,6 +222,7 @@ export const boardFromList = (
         credit: creditOf(item.credit),
       })),
       rows,
+      poolOrder,
     },
     now,
     nextUid,

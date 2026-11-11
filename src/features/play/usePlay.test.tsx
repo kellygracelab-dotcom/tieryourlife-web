@@ -197,14 +197,11 @@ describe("Play on a page", () => {
     expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
   });
 
-  it("asks a board too big for one game to choose its cards first", async () => {
-    render(<Page store={memoryStore()} cards={cardsOf(70)} />);
+  it("opens the game picker with the full board above 64", async () => {
+    render(<Page store={memoryStore()} cards={cardsOf(91)} />);
     await userEvent.click(playButton());
-    expect(screen.getByRole("dialog", { name: "Choose cards" })).toBeInTheDocument();
-    // No way back to a picker it never showed.
-    expect(screen.queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByText("91 cards from Films")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
   });
 
   it("goes from the picker to the choice of cards and back with the choice", async () => {
@@ -227,13 +224,13 @@ describe("Play on a page", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("resumes losers stay when cards joined the board, saying how many", async () => {
+  it("resumes the same participants after a card was added to the board", async () => {
     const store = memoryStore();
     const old = { ...newGame("swiss", ["c0", "c1", "c2"], EVERYTHING, 4, NOW), history: [] };
     localGames(store, () => NOW).save("b1", old);
     render(<Page store={store} cards={cardsOf(4)} />);
     await userEvent.click(playButton());
-    expect(screen.getByText("1 new card joins from the next round")).toBeInTheDocument();
+    expect(screen.getByText("4 cards from Films")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Resume" }));
     expect(screen.getByRole("dialog", { name: "Losers stay" })).toBeInTheDocument();
   });

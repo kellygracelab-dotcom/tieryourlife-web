@@ -18,6 +18,7 @@ export interface BoardView {
   list: PublishedList;
   uids: string[];
   rows: number[][];
+  pool: number[];
 }
 
 const publishedTier = (tier: BoardTier) => ({
@@ -72,6 +73,7 @@ export function boardView(board: Board, untitled: string, before?: readonly stri
     },
     uids,
     rows,
+    pool: inPool.map((item) => indexOf.get(item.uid)!),
   };
 }
 

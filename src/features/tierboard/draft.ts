@@ -24,6 +24,7 @@ interface Draft {
   rows: number[][];
   /** Left out while every tier keeps the list's own words. */
   labels?: (string | null)[];
+  poolOrder?: readonly number[];
 }
 
 /** The scope of a list's draft: the parts a republish changes. */
@@ -44,11 +45,17 @@ const wordOf = (label: unknown): string | null =>
 const someWords = (labels: TierLabels | null | undefined): labels is TierLabels =>
   labels != null && labels.some((label) => wordOf(label) !== null);
 
-export function serializeDraft(scope: DraftScope, rows: Rows, labels?: TierLabels | null): string {
+export function serializeDraft(
+  scope: DraftScope,
+  rows: Rows,
+  labels?: TierLabels | null,
+  poolOrder?: readonly number[],
+): string {
   const draft: Draft = {
     listId: scope.id,
     updatedAt: scope.updatedAt,
     itemCount: scope.itemCount,
+    ...(poolOrder === undefined ? {} : { poolOrder }),
     rows: rows.map((row) => [...row]),
     ...(someWords(labels) ? { labels: labels.map(wordOf) } : {}),
   };
@@ -107,7 +114,22 @@ export function loadPlacedDraft(store: KeyValueStore, scope: DraftScope): Rows |
   return rows !== null && rows.some((row) => row.length > 0) ? rows : null;
 }
 
-/** The words Mine's tiers wear, or null while they are the list's own. */
+/** The explicit pool order of this exact list snapshot, if one has been saved. */
+export function loadPoolOrder(
+  store: KeyValueStore,
+  scope: DraftScope,
+): readonly number[] | undefined {
+  const draft = draftFor(store.read(draftKey(scope.id)), scope);
+  const order = draft?.poolOrder;
+  return draft?.itemCount === scope.itemCount &&
+    Array.isArray(order) &&
+    order.length <= scope.itemCount &&
+    new Set(order).size === order.length &&
+    order.every((i) => isIndex(i, scope.itemCount))
+    ? order
+    : undefined;
+}
+
 export function loadDraftLabels(store: KeyValueStore, scope: DraftScope): TierLabels | null {
   const labels: unknown = draftFor(store.read(draftKey(scope.id)), scope)?.labels;
   return Array.isArray(labels) && labels.length === scope.tierCount && someWords(labels)
@@ -124,9 +146,10 @@ export function saveDraft(
   scope: DraftScope,
   rows: Rows,
   labels?: TierLabels | null,
+  poolOrder = loadPoolOrder(store, scope),
 ): void {
   const words = labels === undefined ? loadDraftLabels(store, scope) : labels;
-  store.write(draftKey(scope.id), serializeDraft(scope, rows, words));
+  store.write(draftKey(scope.id), serializeDraft(scope, rows, words, poolOrder));
 }
 
 export function clearDraft(store: KeyValueStore, listId: string): void {

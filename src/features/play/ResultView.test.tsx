@@ -110,7 +110,7 @@ describe("the result", () => {
   it("applies the result's rows, into Mine on somebody else's list", async () => {
     const own = show(solid);
     await userEvent.click(screen.getByRole("button", { name: "Apply" }));
-    expect(own.onApply).toHaveBeenCalledWith(resultOf(solid, board));
+    expect(own.onApply).toHaveBeenCalledWith(resultOf(solid, board), "keep");
   });
 
   it("calls Apply Put in Mine on somebody else's list", () => {

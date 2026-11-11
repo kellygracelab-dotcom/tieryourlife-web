@@ -6,7 +6,13 @@ import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { arrange } from "../tierboard/arrange";
-import { loadDraftLabels, loadPlacedDraft, scopeOf, withLabels } from "../tierboard/draft";
+import {
+  loadDraftLabels,
+  loadPoolOrder,
+  loadPlacedDraft,
+  scopeOf,
+  withLabels,
+} from "../tierboard/draft";
 import type { Rows } from "../tierboard/model";
 import { boardFromList } from "./publish";
 import { type BoardsRepository } from "./repository";
@@ -102,7 +108,8 @@ export function useSaveToMine(
           : whose === "mine"
             ? withLabels(list, loadDraftLabels(store, scopeOf(list)))
             : list;
-      const board = boardFromList(from, rows, now(), nextUid);
+      const poolOrder = whose === "theirs" ? undefined : loadPoolOrder(store, scopeOf(list));
+      const board = boardFromList(from, rows, now(), nextUid, poolOrder);
       repository.save(board);
       // Counted once a person, and never worth failing a save over.
       void take(list.id);
