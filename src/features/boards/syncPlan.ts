@@ -9,6 +9,7 @@ export interface LocalBoard {
   uid: string;
   /** Stands in for the whole contents: change anything and it changes. Only ever compared. */
   fingerprint: string;
+  legacyFingerprint?: string;
   /** In this device's trash. */
   inTrash: boolean;
 }
@@ -79,7 +80,11 @@ function stepFor(
     if (synced === undefined) return { kind: "revive", uid: local.uid, basedOn: remote.revision };
     // Edits nobody else has seen are not thrown away by a marker; edits to a
     // board in the trash here are not worth bringing it back for.
-    if (local.fingerprint !== synced.fingerprint && !local.inTrash) {
+    if (
+      local.fingerprint !== synced.fingerprint &&
+      local.legacyFingerprint !== synced.fingerprint &&
+      !local.inTrash
+    ) {
       return { kind: "revive", uid: local.uid, basedOn: remote.revision };
     }
     // Already moved to the trash for this marker.
@@ -91,7 +96,11 @@ function stepFor(
   if (remote.fingerprint !== null && remote.fingerprint === local.fingerprint) {
     return { kind: "remember", uid: local.uid, revision: remote.revision };
   }
-  if (synced === undefined) return { kind: "keepBoth", uid: local.uid, basedOn: remote.revision };
+  if (synced === undefined) {
+    if (remote.fingerprint === local.legacyFingerprint)
+      return { kind: "update", uid: local.uid, basedOn: remote.revision };
+    return { kind: "keepBoth", uid: local.uid, basedOn: remote.revision };
+  }
 
   const changedHere = local.fingerprint !== synced.fingerprint;
   // A newer revision with the very contents agreed on is the same board
@@ -101,11 +110,11 @@ function stepFor(
   const changedThere = isServerFingerprint(remote.fingerprint)
     ? remote.fingerprint !== synced.remoteFingerprint
     : remote.revision !== synced.revision && remote.fingerprint !== synced.fingerprint;
-  if (changedHere && changedThere) {
+  if (changedHere && changedThere && local.legacyFingerprint !== synced.fingerprint) {
     return { kind: "keepBoth", uid: local.uid, basedOn: remote.revision };
   }
-  if (changedHere) return { kind: "update", uid: local.uid, basedOn: remote.revision };
   if (changedThere) return { kind: "restore", uid: local.uid };
+  if (changedHere) return { kind: "update", uid: local.uid, basedOn: remote.revision };
   // Neither side moved and the fingerprints disagree: written before devices
   // sent one. Nothing to do until an edit.
   return null;

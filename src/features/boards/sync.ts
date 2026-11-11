@@ -195,7 +195,14 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
   try {
     const local = repository.all();
     const fingerprints = new Map<string, string>();
-    for (const board of local) fingerprints.set(board.uid, await fingerprintOf(board));
+    const legacyCopies = new Map<string, string>();
+    for (const board of local) {
+      fingerprints.set(board.uid, await fingerprintOf(board));
+      // Before private provenance travelled, the source id was local and outside the digest.
+      if (board.takenFrom !== null && !board.origin && !board.rankingChoice) {
+        legacyCopies.set(board.uid, await fingerprintOf({ ...board, takenFrom: null }));
+      }
+    }
 
     check(deps);
     const remote = await readIndex(api);
@@ -203,6 +210,7 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
       local.map((board) => ({
         uid: board.uid,
         fingerprint: fingerprints.get(board.uid) ?? "",
+        legacyFingerprint: legacyCopies.get(board.uid),
         inTrash: board.deletedAt !== null,
       })),
       [...remote.values()],

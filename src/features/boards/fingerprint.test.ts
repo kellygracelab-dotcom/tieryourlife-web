@@ -73,6 +73,22 @@ const board = (over: Partial<Board> = {}): Board => ({
 describe("the fingerprint", () => {
   // Both digests were worked out apart from this code, with the phone's rules
   // (length-prefixed fields, tiers and cards by uid, "~|" for nothing).
+  it("uses the Android ordering for positional bindings and the saved ranking choice", () => {
+    const copy = board({
+      takenFrom: "SRC",
+      origin: { listId: "SRC", version: 125 },
+      rankingChoice: "private",
+      anonymous: true,
+    });
+    const text = fingerprintText({
+      ...copy,
+      items: copy.items.map((item, sourceIndex) => ({ ...item, sourceIndex })),
+    });
+    expect(text).toContain("11:sourceIndex|1:0|6:item-2|");
+    expect(text).toContain("11:sourceIndex|1:1|");
+    expect(text).toMatch(/6:origin\|3:SRC\|3:125\|7:private\|9:anonymous\|$/);
+  });
+
   it("hashes the way the phone does", async () => {
     expect(await fingerprintOf(board())).toBe(
       "0b16834695e174e611125c65f03e0a0c4e819defecffd1a2124cd7964e0a96d5",

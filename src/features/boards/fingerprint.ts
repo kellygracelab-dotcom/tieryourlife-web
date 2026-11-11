@@ -59,27 +59,22 @@ export function fingerprintText(board: Board): string {
         item.source,
         whole(item.deletedAt),
       ]);
+      if (item.sourceIndex !== undefined) text += encode(["sourceIndex", whole(item.sourceIndex)]);
     }
+  }
+  if (board.takenFrom !== null || board.origin || board.rankingChoice) {
+    text += encode([
+      "origin",
+      board.takenFrom,
+      whole(board.origin?.version ?? null),
+      board.rankingChoice ?? null,
+    ]);
   }
   // Said only when true, last, so every board that is not anonymous keeps the
   // fingerprint it had: the app appends the same field the same way.
   if (board.anonymous) text += encode(["anonymous"]);
   // A game in progress last of all, as its canonical JSON (canonicalPlay).
   if (board.play !== null) text += encode([canonicalPlay(board.play)]);
-  // Legacy copies with only a local source id keep their last agreed digest.
-  // The new cross-device metadata changes it as soon as the board gains a binding or choice.
-  if (board.origin || board.rankingChoice) {
-    text += encode([
-      "origin-v1",
-      board.takenFrom,
-      board.origin?.listId ?? null,
-      whole(board.origin?.version ?? null),
-      board.rankingChoice ?? null,
-    ]);
-    for (const card of [...board.items].sort(byUid)) {
-      if (card.sourceIndex !== undefined) text += encode([card.uid, whole(card.sourceIndex)]);
-    }
-  }
   return text;
 }
 
