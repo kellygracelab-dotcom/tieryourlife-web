@@ -20,7 +20,14 @@ export interface KeptTier {
   isPool: boolean;
 }
 
+export interface BoardOrigin {
+  listId: string;
+  version: number;
+}
+export type RankingChoice = "offered" | "private" | "ranking";
+
 export interface KeptItem {
+  sourceIndex?: number;
   uid: string;
   pictureId: string | null;
   tierUid: string;
@@ -86,6 +93,9 @@ export interface KeptBoard {
   deletedAt: number | null;
   /** Kept only when true: published with no name or face. */
   anonymous?: boolean;
+  takenFrom?: string | null;
+  origin?: BoardOrigin | null;
+  rankingChoice?: RankingChoice | null;
   play?: SyncedPlay | null;
   tiers: KeptTier[];
   items: KeptItem[];
@@ -108,6 +118,9 @@ export interface KeepBoardRequest {
   publishedId: string | null;
   deletedAt: number | null;
   anonymous?: boolean;
+  takenFrom?: string | null;
+  origin?: BoardOrigin | null;
+  rankingChoice?: RankingChoice | null;
   play?: SyncedPlay | null;
   tiers: KeptTier[];
   items: KeptItem[];

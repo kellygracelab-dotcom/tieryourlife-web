@@ -459,6 +459,11 @@ const es: Translation = {
     seedStart: "Mueve una tarjeta del tablero para empezar tu versión.",
   },
   rankings: {
+    checkOriginal: "Comprobando la lista original…",
+    publicationPreview: "Revisar publicación",
+    previewRanking: "Tu clasificación aparecerá en las clasificaciones de la lista original.",
+    previewList: "Se publicará una lista independiente con un enlace a la original.",
+    publishSeparate: "Publicar una lista independiente",
     progressTitle: "¿Compartir tu clasificación?",
     progressCount: "Has colocado {placed} de {total} tarjetas.",
     progressPrivate: "Puedes guardar una copia en Tus listas.",

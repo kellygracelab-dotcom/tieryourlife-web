@@ -33,7 +33,12 @@ export function CopyRankingOffer({
     hasRankingEdit(board.uid) &&
     placed * 10 > count * 3;
   useEffect(() => {
-    if (!ready || localStorageStore.read(offerKey(owner, sourceId)) !== null) return;
+    if (
+      !ready ||
+      board.rankingChoice !== undefined ||
+      localStorageStore.read(offerKey(owner, sourceId)) !== null
+    )
+      return;
     let current = true;
     const read = () => {
       void loadListAsWritten(sourceId).then(
@@ -49,7 +54,7 @@ export function CopyRankingOffer({
       current = false;
       window.removeEventListener("online", read);
     };
-  }, [ready, sourceId, owner]);
+  }, [ready, sourceId, owner, board.rankingChoice]);
   const rows = useMemo(
     () => (source === null ? null : rowsOfSource(board, source)),
     [board, source],
@@ -74,11 +79,13 @@ export function CopyRankingOffer({
       const error = errorOf(reason);
       notify({
         text:
-          error.kind === "offline"
-            ? strings.rank.failedOffline
-            : error.kind === "banned"
-              ? strings.rankings.showBanned
-              : strings.rank.failedOther,
+          error.kind === "sourceChanged"
+            ? strings.rank.failedChanged
+            : error.kind === "offline"
+              ? strings.rank.failedOffline
+              : error.kind === "banned"
+                ? strings.rankings.showBanned
+                : strings.rank.failedOther,
       });
       return false;
     }
@@ -88,6 +95,21 @@ export function CopyRankingOffer({
       listId={sourceId}
       placed={placed}
       total={count}
+      known={
+        board.rankingChoice !== undefined ||
+        repository
+          .all()
+          .some((other) => other.takenFrom === sourceId && other.rankingChoice !== undefined)
+      }
+      remember={(choice) => {
+        const current = repository.get(board.uid);
+        if (
+          current &&
+          current.rankingChoice !== choice &&
+          (choice !== "offered" || !current.rankingChoice)
+        )
+          repository.save({ ...current, rankingChoice: choice });
+      }}
       keep={() => repository.kept(board.uid)}
       share={share}
     />

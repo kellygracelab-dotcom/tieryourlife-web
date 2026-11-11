@@ -148,6 +148,9 @@ export const findPictures = (ask: PictureAsk): Promise<PicturePage> =>
 
 export const keepPicture = (url: string): Promise<string> => pictures.keepPicture(api, url);
 
+export const classifyPublication = (request: PublishRequest) =>
+  lists.classifyPublication(api, request);
+
 export const publish = (request: PublishRequest): Promise<Published> => lists.publish(api, request);
 
 /** The call, and then word that the list is no longer as any page last read it; gone already, too. */
@@ -194,10 +197,11 @@ export const withdrawListRanking = (listId: string): Promise<void> =>
 
 /** A reader's finished placing, among the list's rankings where the app shows them. */
 export const keepListRanking = (
-  list: Pick<PublishedList, "id" | "items" | "tiers">,
+  list: Pick<PublishedList, "id" | "items" | "tiers" | "updatedAt">,
   rows: readonly (readonly number[])[],
 ): Promise<ShownRanking> =>
   community.keepListRanking(api, list.id, {
+    version: list.updatedAt,
     tierLabels: list.tiers.map((tier) => tier.label),
     rows: community.rowsOf(rows, list.tiers.length, list.items.length),
   });

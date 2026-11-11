@@ -501,6 +501,11 @@ const ar: Translation = {
     seedStart: "حرّك بطاقة على اللوحة لتبدأ نسختك.",
   },
   rankings: {
+    checkOriginal: "جارٍ التحقق من القائمة الأصلية…",
+    publicationPreview: "مراجعة النشر",
+    previewRanking: "سيظهر ترتيبك ضمن ترتيبات القائمة الأصلية.",
+    previewList: "ستُنشر قائمة مستقلة تتضمن رابطًا إلى الأصل.",
+    publishSeparate: "نشر قائمة مستقلة",
     progressTitle: "هل تريد مشاركة ترتيبك؟",
     progressCount: "وزّعت {placed} من أصل {total} بطاقة.",
     progressPrivate: "يمكنك حفظ نسخة في قوائمك.",

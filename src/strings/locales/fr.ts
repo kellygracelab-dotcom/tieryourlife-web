@@ -472,6 +472,11 @@ const fr: Translation = {
     seedStart: "Déplacez une carte du tableau pour commencer votre version.",
   },
   rankings: {
+    checkOriginal: "Vérification de la liste d’origine…",
+    publicationPreview: "Vérifier la publication",
+    previewRanking: "Ton classement figurera parmi ceux de la liste d’origine.",
+    previewList: "Une nouvelle liste sera publiée avec un lien vers l’originale.",
+    publishSeparate: "Publier une liste distincte",
     progressTitle: "Partager ton classement ?",
     progressCount: "Tu as placé {placed} cartes sur {total}.",
     progressPrivate: "Tu peux en garder une copie dans tes listes.",

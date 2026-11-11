@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useBoardSync } from "./boardSync";
+import type { RankingChoice } from "../../api/boards";
 import { useSession } from "../../app/session";
 import { localStorageStore } from "../../lib/storage";
 import { fill, strings } from "../../strings";
@@ -17,13 +19,18 @@ interface OfferProps {
   placed: number;
   total: number;
   keep: () => boolean;
+  known?: boolean;
+  remember: (choice: RankingChoice) => void;
   share: () => Promise<boolean>;
 }
 
 export function RankingOffer(props: OfferProps) {
   const { account } = useSession();
+  const sync = useBoardSync();
+  const restoring =
+    sync.signedIn && sync.backUp && sync.status === "syncing" && sync.lastSyncedAt === null;
   const owner = account?.kind === "signedIn" ? account.uid : null;
-  return account === null ? null : (
+  return account === null || restoring ? null : (
     <Offer
       key={offerKey(owner, props.listId)}
       {...props}
@@ -40,6 +47,8 @@ function Offer({
   keep,
   share,
   signedIn,
+  known = false,
+  remember,
   uid,
 }: OfferProps & { signedIn: boolean; uid: string | null }) {
   const { signIn } = useSession();
@@ -49,7 +58,7 @@ function Offer({
   const [error, setError] = useState("");
   const eligible = total > 0 && placed * 10 > total * 3;
   if (state === "waiting" && eligible) {
-    setState(localStorageStore.read(key) === null ? "open" : "closed");
+    setState(!known && localStorageStore.read(key) === null ? "open" : "closed");
   }
   useEffect(() => {
     if (state === "open" && localStorageStore.read(key) === null) {
@@ -71,7 +80,7 @@ function Offer({
       window.removeEventListener("storage", synced);
     };
   }, [state, key]);
-  if (state !== "open" || !eligible) return null;
+  if (state !== "open" || !eligible || known) return null;
 
   const choose = async (publish: boolean) => {
     if (busy) return;
@@ -87,7 +96,10 @@ function Offer({
         setError(strings.nav.storageRefused);
         return;
       }
-      if (!publish || (await share())) settleRankingOffer(uid, listId);
+      if (!publish || (await share())) {
+        remember(publish ? "ranking" : "private");
+        settleRankingOffer(uid, listId);
+      }
     } finally {
       setBusy(false);
     }
@@ -123,7 +135,10 @@ function Offer({
           type="button"
           className="btn btn--text"
           disabled={busy}
-          onClick={() => settleRankingOffer(uid, listId)}
+          onClick={() => {
+            remember("offered");
+            settleRankingOffer(uid, listId);
+          }}
         >
           {strings.rankings.progressLater}
         </button>

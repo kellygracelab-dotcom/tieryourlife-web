@@ -65,6 +65,9 @@ export type SyncStep =
   /** Already the same on both sides. Still a step: the device must write down that they agree, or every run asks again. */
   | { kind: "remember"; uid: string; revision: number };
 
+export const isServerFingerprint = (hash: string | null): hash is string =>
+  hash?.startsWith("game-v1:") === true || hash?.startsWith("state-v1:") === true;
+
 function stepFor(
   local: LocalBoard,
   remote: RemoteBoard | undefined,
@@ -95,10 +98,9 @@ function stepFor(
   // written again (another device saving what it was sent): no news, and no
   // reason to keep a second copy of it.
   // A server-preserved game can be new even at the revision an old client recorded.
-  const changedThere =
-    remote.fingerprint?.startsWith("game-v1:") === true
-      ? remote.fingerprint !== synced.remoteFingerprint
-      : remote.revision !== synced.revision && remote.fingerprint !== synced.fingerprint;
+  const changedThere = isServerFingerprint(remote.fingerprint)
+    ? remote.fingerprint !== synced.remoteFingerprint
+    : remote.revision !== synced.revision && remote.fingerprint !== synced.fingerprint;
   if (changedHere && changedThere) {
     return { kind: "keepBoth", uid: local.uid, basedOn: remote.revision };
   }

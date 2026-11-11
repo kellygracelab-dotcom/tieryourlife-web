@@ -76,7 +76,7 @@ export function ResultBar({
     const final = error.kind === "notFound" || error.kind === "banned" || error.kind === "tooLarge";
     // Republished while it was ranked: the same rows would mean other cards,
     // so trying again is no help; the list as it is now is.
-    const changed = error.kind === "conflict";
+    const changed = error.kind === "conflict" || error.kind === "sourceChanged";
     return (
       <div className="result result--failed" role="alert">
         <p>{rankFailureText(error)}</p>

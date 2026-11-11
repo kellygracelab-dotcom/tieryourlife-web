@@ -461,6 +461,11 @@ const ptBR: Translation = {
     seedStart: "Mova um cartão do quadro para começar sua versão.",
   },
   rankings: {
+    checkOriginal: "Verificando a lista original…",
+    publicationPreview: "Revisar publicação",
+    previewRanking: "Sua classificação aparecerá nas classificações da lista original.",
+    previewList: "Será publicada uma lista separada com um link para a original.",
+    publishSeparate: "Publicar uma lista separada",
     progressTitle: "Compartilhar sua classificação?",
     progressCount: "Você posicionou {placed} de {total} cartas.",
     progressPrivate: "Você pode salvar uma cópia em Suas listas.",

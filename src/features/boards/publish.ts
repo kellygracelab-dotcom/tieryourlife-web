@@ -108,6 +108,7 @@ export function publishRequestOf(board: Board): PublishRequest | null {
     anonymous: board.anonymous,
     // Where the cards came from, as the app sends it: the list credits it.
     ...(board.takenFrom === null ? {} : { takenFrom: board.takenFrom }),
+    ...(board.origin ? { sourceVersion: board.origin.version } : {}),
     tiers: tiers.map((tier) => ({
       label: tier.label,
       caption: tier.caption,
@@ -118,6 +119,7 @@ export function publishRequestOf(board: Board): PublishRequest | null {
       title: item.title,
       imageUrl: item.pictureId === null ? item.imageUrl : null,
       pictureId: item.pictureId,
+      ...(item.sourceIndex === undefined ? {} : { sourceIndex: item.sourceIndex }),
       ...(item.credit === null ? {} : { credit: item.credit }),
       tierIndex,
     })),
@@ -131,7 +133,7 @@ interface Makings {
   category: string | null;
   authorName: string | null;
   tiers: readonly TierDraft[];
-  cards: readonly CardDraft[];
+  cards: readonly (CardDraft & { sourceIndex?: number })[];
   /** Card indexes per tier, in order; every card not in them waits in the pool. */
   rows: readonly (readonly number[])[] | null;
 }
@@ -177,6 +179,7 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
     const place = placed.get(index) ?? { tierUid: pool.uid, position: inPool++ };
     return {
       uid: nextUid(),
+      ...(card.sourceIndex === undefined ? {} : { sourceIndex: card.sourceIndex }),
       pictureId: card.pictureId ?? null,
       tierUid: place.tierUid,
       position: place.position,
@@ -216,7 +219,8 @@ export const boardFromList = (
       category: list.category,
       authorName: list.authorName,
       tiers: list.tiers,
-      cards: list.items.map((item) => ({
+      cards: list.items.map((item, sourceIndex) => ({
+        sourceIndex,
         title: item.title,
         imageUrl: item.imageUrl,
         credit: creditOf(item.credit),
@@ -228,6 +232,7 @@ export const boardFromList = (
     nextUid,
   ),
   takenFrom: list.id,
+  origin: { listId: list.id, version: list.updatedAt },
 });
 
 /**

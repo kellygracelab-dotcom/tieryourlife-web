@@ -1,3 +1,4 @@
+import { boardView } from "./view";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -393,12 +394,21 @@ describe("BoardSettings: public", () => {
     const publish = vi.fn(() => Promise.resolve({ id: "SRC", ranking: true }));
     const unpublish = vi.fn(() => Promise.resolve());
     const withdraw = vi.fn(() => Promise.resolve());
+    const source = { ...boardView(filmBoard(), "Films").list, id: "SRC", updatedAt: 120 };
+    const classify = vi.fn(async () => ({ kind: "ranking" as const, listId: "SRC", version: 120 }));
     show({ ...filmBoard(), takenFrom: "SRC", authorName: "Olena" }, signedIn, {
       publish,
       unpublish,
       withdraw,
+      classify,
+      loadOriginal: async () => source,
     });
     await userEvent.click(publicSwitch());
+    expect(
+      await screen.findByText("Your arrangement will appear in the original list’s Rankings."),
+    ).toBeVisible();
+    expect(publish).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Show in Rankings" }));
     await waitFor(() => expect(publicSwitch()).toBeChecked());
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ takenFrom: "SRC" }));
     // Out as one's ranking of the original: no list of its own, the cards still Olena's.
@@ -421,6 +431,37 @@ describe("BoardSettings: public", () => {
     expect(withdraw).toHaveBeenCalledExactlyOnceWith("SRC");
     expect(unpublish).not.toHaveBeenCalled();
     expect(held).toMatchObject({ publishedId: null, rankingOf: null, authorName: "Olena" });
+  });
+
+  it("asks before publishing a renamed copy and does not carry stale source positions", async () => {
+    const board = filmBoard();
+    const source = { ...boardView(board, "Films").list, id: "SRC", updatedAt: 125 };
+    const publish = vi.fn(async () => ({ id: "NEW" }));
+    const classify = vi.fn(async () => ({ kind: "list" as const, basedOn: null, version: 125 }));
+    show(
+      {
+        ...board,
+        title: "My favourites",
+        takenFrom: "SRC",
+        origin: { listId: "SRC", version: 100 },
+        items: board.items.map((item, sourceIndex) => ({ ...item, sourceIndex })),
+      },
+      signedIn,
+      { publish, classify, loadOriginal: async () => source },
+    );
+    await userEvent.click(publicSwitch());
+    const review = await screen.findByRole("group", { name: "Review publication" });
+    expect(publish).not.toHaveBeenCalled();
+    await userEvent.click(within(review).getByRole("button", { name: "Cancel" }));
+    expect(publish).not.toHaveBeenCalled();
+    await userEvent.click(publicSwitch());
+    await userEvent.click(await screen.findByRole("button", { name: "Publish a separate list" }));
+    await waitFor(() => expect(held.publishedId).toBe("NEW"));
+    const request = classify.mock.calls.at(-1);
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "My favourites", sourceVersion: 125 }),
+    );
+    expect(JSON.stringify(request)).not.toContain("sourceIndex");
   });
 
   it("says a list the backend holds for a moderator waits, and offers no link to it until an Update comes back without the hold", async () => {

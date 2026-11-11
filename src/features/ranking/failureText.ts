@@ -22,6 +22,7 @@ export function rankFailureText(error: ApiError): string {
       return strings.rank.failedTooLarge;
     case "notFound":
       return strings.rank.failedGone;
+    case "sourceChanged":
     case "conflict":
       return strings.rank.failedChanged;
     case "banned":

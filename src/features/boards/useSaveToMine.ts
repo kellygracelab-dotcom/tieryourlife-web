@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import type { RankingChoice } from "../../api/boards";
 import type { PublishedList, PublishedTier } from "../../api/types";
 import { noteTake } from "../../lib/api";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
@@ -63,6 +64,7 @@ export interface SaveToMine {
   asking: SaveChoices | null;
   save: (whose: Whose) => void;
   keepProgress: () => boolean;
+  rememberChoice: (choice: RankingChoice) => void;
   cancel: () => void;
 }
 
@@ -170,5 +172,13 @@ export function useSaveToMine(
     const mine = loadPlacedDraft(store, scopeOf(list));
     return mine !== null && save("mine", { mine, theirs: null }, true);
   };
-  return { start, saved, asking, save, keepProgress, cancel };
+  const rememberChoice = (choice: RankingChoice) => {
+    const made = latest.current;
+    if (!made || made.listId !== list.id) return;
+    const board = repository.get(made.uid);
+    if (board && board.rankingChoice !== choice && (choice !== "offered" || !board.rankingChoice)) {
+      repository.save({ ...board, rankingChoice: choice });
+    }
+  };
+  return { start, saved, asking, save, keepProgress, rememberChoice, cancel };
 }

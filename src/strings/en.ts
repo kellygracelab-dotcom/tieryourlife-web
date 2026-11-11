@@ -448,6 +448,11 @@ export const en = {
   // The readers' placings of a list. The title has no count, so it cannot
   // disagree with the chip's, which is the takes (Danylo, 28.10).
   rankings: {
+    checkOriginal: "Checking the original list…",
+    publicationPreview: "Review publication",
+    previewRanking: "Your arrangement will appear in the original list’s Rankings.",
+    previewList: "This will publish a separate list with a link to the original.",
+    publishSeparate: "Publish a separate list",
     progressTitle: "Share your ranking?",
     progressCount: "You’ve placed {placed} of {total} cards.",
     progressPrivate: "You can keep a copy in Your lists.",

@@ -66,6 +66,20 @@ export function fingerprintText(board: Board): string {
   if (board.anonymous) text += encode(["anonymous"]);
   // A game in progress last of all, as its canonical JSON (canonicalPlay).
   if (board.play !== null) text += encode([canonicalPlay(board.play)]);
+  // Legacy copies with only a local source id keep their last agreed digest.
+  // The new cross-device metadata changes it as soon as the board gains a binding or choice.
+  if (board.origin || board.rankingChoice) {
+    text += encode([
+      "origin-v1",
+      board.takenFrom,
+      board.origin?.listId ?? null,
+      whole(board.origin?.version ?? null),
+      board.rankingChoice ?? null,
+    ]);
+    for (const card of [...board.items].sort(byUid)) {
+      if (card.sourceIndex !== undefined) text += encode([card.uid, whole(card.sourceIndex)]);
+    }
+  }
   return text;
 }
 

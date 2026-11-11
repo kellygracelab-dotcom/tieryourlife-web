@@ -20,6 +20,7 @@ import {
   readerName,
 } from "../features/community/rankings";
 import { RankingOffer, settleRankingOffer } from "../features/boards/RankingOffer";
+import { useBoards } from "../features/boards/useBoards";
 import { useSaveToMine } from "../features/boards/useSaveToMine";
 import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
@@ -491,6 +492,10 @@ function OpenList({
       chosen === null ? null : { name: chosen.authorName, tiers: theirs.tiers, rows: theirs.rows },
     [chosen, theirs],
   );
+  const keptBoards = useBoards(repository ?? site);
+  const knownChoice = keptBoards.some(
+    (board) => board.takenFrom === list.id && board.rankingChoice !== undefined,
+  );
   const saving = useSaveToMine(list, setNotice, { repository, shown: shownPlacing });
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
@@ -547,11 +552,13 @@ function OpenList({
               }
             : {
                 text:
-                  error.kind === "notFound"
-                    ? strings.rank.failedGone
-                    : error.kind === "offline"
-                      ? strings.rank.failedOffline
-                      : strings.rank.failedOther,
+                  error.kind === "sourceChanged"
+                    ? strings.rank.failedChanged
+                    : error.kind === "notFound"
+                      ? strings.rank.failedGone
+                      : error.kind === "offline"
+                        ? strings.rank.failedOffline
+                        : strings.rank.failedOther,
               },
       );
       return false;
@@ -668,6 +675,8 @@ function OpenList({
           listId={list.id}
           placed={mineRows?.flat().length ?? 0}
           total={list.items.length}
+          known={knownChoice}
+          remember={saving.rememberChoice}
           keep={saving.keepProgress}
           share={showToOthers}
         />
