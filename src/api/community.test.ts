@@ -88,8 +88,10 @@ describe("community", () => {
       ),
     ).toEqual([[1], [0]]);
     const { client, request } = recordingClient({ uid: "u1" });
-    await keepListRanking(client, "a b", { tierLabels: ["S", "A"], rows: [[1, 0], []] });
+    const action = { uid: "fixture", isCurrent: () => true, idToken: async () => "fixture" };
+    await keepListRanking(client, "a b", { tierLabels: ["S", "A"], rows: [[1, 0], []] }, action);
     expect(request).toHaveBeenCalledWith("PUT", "/lists/a%20b/rankings/mine", {
+      action,
       body: { tierLabels: ["S", "A"], rows: [[1, 0], []] },
     });
   });

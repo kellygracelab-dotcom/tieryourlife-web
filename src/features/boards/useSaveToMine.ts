@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import type { AccountAction } from "../../api/client";
 import type { RankingChoice } from "../../api/boards";
 import type { PublishedList, PublishedTier } from "../../api/types";
 import { noteTake } from "../../lib/api";
@@ -38,7 +39,7 @@ export interface SaveToMineDeps {
   store?: KeyValueStore;
   now?: () => number;
   /** Counts the save as a take of the list, as the app does: the popular order is made of them. */
-  take?: (listId: string) => Promise<void>;
+  take?: (listId: string, action?: AccountAction) => Promise<void>;
 }
 
 /**
@@ -63,8 +64,8 @@ export interface SaveToMine {
   saved: string | null;
   asking: SaveChoices | null;
   save: (whose: Whose) => void;
-  keepProgress: () => boolean;
-  rememberChoice: (choice: RankingChoice) => void;
+  keepProgress: (action?: AccountAction) => string | null;
+  rememberChoice: (choice: RankingChoice, boardUid?: string) => void;
   cancel: () => void;
 }
 
@@ -98,7 +99,12 @@ export function useSaveToMine(
   const saved = made !== null && made.listId === list.id ? made.uid : null;
 
   const save = useCallback(
-    (whose: Whose, choices: SaveChoices | null = asking, forProgress = false) => {
+    (
+      whose: Whose,
+      choices: SaveChoices | null = asking,
+      forProgress = false,
+      action?: AccountAction,
+    ) => {
       if (!forProgress && latest.current?.listId === list.id) {
         setAsking(null);
         return false;
@@ -130,7 +136,7 @@ export function useSaveToMine(
       if (snapshot !== null && kept) progress.current = { rows: snapshot, uid: board.uid };
       if (forProgress && !kept) return false;
       // Counted once a person, and never worth failing a save over.
-      void take(list.id);
+      void (action ? take(list.id, action) : take(list.id));
       latest.current = { listId: list.id, uid: board.uid };
       setMade(latest.current);
       setAsking(null);
@@ -168,14 +174,15 @@ export function useSaveToMine(
 
   const cancel = useCallback(() => setAsking(null), []);
 
-  const keepProgress = () => {
+  const keepProgress = (action?: AccountAction) => {
     const mine = loadPlacedDraft(store, scopeOf(list));
-    return mine !== null && save("mine", { mine, theirs: null }, true);
+    if (mine === null || !save("mine", { mine, theirs: null }, true, action)) return null;
+    return progress.current?.uid ?? null;
   };
-  const rememberChoice = (choice: RankingChoice) => {
-    const made = latest.current;
-    if (!made || made.listId !== list.id) return;
-    const board = repository.get(made.uid);
+  const rememberChoice = (choice: RankingChoice, boardUid?: string) => {
+    const uid = boardUid ?? (latest.current?.listId === list.id ? latest.current.uid : null);
+    if (!uid) return;
+    const board = repository.get(uid);
     if (board && board.rankingChoice !== choice && (choice !== "offered" || !board.rankingChoice)) {
       repository.save({ ...board, rankingChoice: choice });
     }

@@ -16,23 +16,26 @@ const base64url = (value: unknown): string =>
 
 // What the SDK reads from a Google user's token; the page only reads claims.
 const now = Math.floor(Date.now() / 1000);
-const SIGNED_TOKEN = [
-  base64url({ alg: "RS256", typ: "JWT" }),
-  base64url({
-    iss: "https://securetoken.google.com/tieryourlife",
-    aud: "tieryourlife",
-    auth_time: now,
-    user_id: ME.uid,
-    sub: ME.uid,
-    iat: now,
-    exp: now + 3600,
-    name: ME.name,
-    email: ME.email,
-    email_verified: true,
-    firebase: { identities: { "google.com": ["g-me"] }, sign_in_provider: "google.com" },
-  }),
-  "signature",
-].join(".");
+const tokenFor = (person: typeof ME) =>
+  [
+    base64url({ alg: "RS256", typ: "JWT" }),
+    base64url({
+      iss: "https://securetoken.google.com/tieryourlife",
+      aud: "tieryourlife",
+      auth_time: now,
+      user_id: person.uid,
+      sub: person.uid,
+      iat: now,
+      exp: now + 3600,
+      name: person.name,
+      email: person.email,
+      email_verified: true,
+      firebase: { identities: { "google.com": ["g-me"] }, sign_in_provider: "google.com" },
+    }),
+    "signature",
+  ].join(".");
+
+const SIGNED_TOKEN = tokenFor(ME);
 
 /** A one-pixel PNG: what a face looks like when nobody needs to see it. */
 export const PIXEL = Buffer.from(
@@ -354,6 +357,14 @@ export async function signIn(
   if (key === null) throw new Error("the page never stored a user");
 
   await mockIdentity(page, account);
+  await writeSignedUser(page, ME, key);
+  return account;
+}
+
+/** Write another fixture sign-in from a second tab and let Firebase notify the first. */
+export async function writeSignedUser(page: Page, person: typeof ME, key?: string) {
+  const storageKey = key ?? (await storedUserKey(page));
+  if (storageKey === null) throw new Error("no stored fixture session");
   await page.evaluate(
     async ({ key: stored, token, me }) => {
       await new Promise<void>((resolve, reject) => {
@@ -402,9 +413,8 @@ export async function signIn(
         open.onerror = () => reject(open.error);
       });
     },
-    { key, token: SIGNED_TOKEN, me: ME },
+    { key: storageKey, token: tokenFor(person), me: person },
   );
-  return account;
 }
 
 /** A picture for the pull request, only when a folder for them is named. */

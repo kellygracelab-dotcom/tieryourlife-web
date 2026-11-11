@@ -1,4 +1,4 @@
-import type { ApiClient } from "./client";
+import type { AccountAction, ApiClient } from "./client";
 import type {
   FeedPage,
   FeedQuery,
@@ -185,12 +185,17 @@ export type PublicationPreview =
 export function classifyPublication(
   client: ApiClient,
   request: PublishRequest,
+  action?: AccountAction,
 ): Promise<PublicationPreview> {
-  return client.request("POST", "/lists/classify", { body: request });
+  return client.request("POST", "/lists/classify", { body: request, action });
 }
 
-export function publish(client: ApiClient, request: PublishRequest): Promise<Published> {
-  return client.request<Published>("POST", "/lists", { body: request });
+export function publish(
+  client: ApiClient,
+  request: PublishRequest,
+  action?: AccountAction,
+): Promise<Published> {
+  return client.request<Published>("POST", "/lists", { body: request, action });
 }
 
 /** Replaces a published list in place: same id, same link, a fresh snapshot. */
@@ -198,9 +203,11 @@ export function republish(
   client: ApiClient,
   id: string,
   request: PublishRequest,
+  action?: AccountAction,
 ): Promise<Published> {
   return client.request<Published>("POST", `/lists/${encodeURIComponent(id)}`, {
     body: request,
+    action,
   });
 }
 
@@ -209,6 +216,11 @@ export function unpublish(client: ApiClient, id: string): Promise<void> {
   return client.request<void>("DELETE", `/lists/${encodeURIComponent(id)}`);
 }
 
-export function recordTake(client: ApiClient, id: string): Promise<{ counted: boolean }> {
-  return client.request<{ counted: boolean }>("POST", `/lists/${encodeURIComponent(id)}/taken`);
+export function recordTake(
+  client: ApiClient,
+  id: string,
+  action?: AccountAction,
+): Promise<{ counted: boolean }> {
+  const path = `/lists/${encodeURIComponent(id)}/taken`;
+  return action ? client.request("POST", path, { action }) : client.request("POST", path);
 }

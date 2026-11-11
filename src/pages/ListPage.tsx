@@ -19,6 +19,8 @@ import {
   readerLabels,
   readerName,
 } from "../features/community/rankings";
+import type { AccountAction } from "../api/client";
+import { captureAccountAction } from "../lib/accountAction";
 import { RankingOffer, settleRankingOffer } from "../features/boards/RankingOffer";
 import { useBoards } from "../features/boards/useBoards";
 import { useSaveToMine } from "../features/boards/useSaveToMine";
@@ -275,7 +277,14 @@ export function ListPage(props: ListPageProps) {
     return <ListPageTrouble error={state.error} retry={retry} words={strings.list} />;
   }
   // A list of its own: what was chosen on another one does not carry over.
-  return <OpenList key={state.value.id} list={state.value} onListChanged={reread} {...props} />;
+  return (
+    <OpenList
+      key={JSON.stringify([state.value.id, reader])}
+      list={state.value}
+      onListChanged={reread}
+      {...props}
+    />
+  );
 }
 
 function OpenList({
@@ -515,16 +524,19 @@ function OpenList({
   // again first; one its author changed since sends nothing.
   const [showing, setShowing] = useState(false);
   const arranged = mineRows !== null && mineRows.some((row) => row.length > 0);
-  const showToOthers = async () => {
+  const showToOthers = async (confirmed?: AccountAction) => {
     if (account?.kind !== "signedIn") {
       void signIn();
       return false;
     }
     const rows = loadPlacedDraft(localStorageStore, scopeOf(list));
-    if (showing || rows === null) return false;
+    const action = confirmed ?? captureAccountAction(account.uid);
+    if (showing || rows === null || !action?.isCurrent()) return false;
+    const snapshot = withLabels(list, loadDraftLabels(localStorageStore, scopeOf(list)));
     setShowing(true);
     try {
       const fresh = await loadListAsWritten(list.id);
+      if (!action.isCurrent()) return false;
       if (fresh.updatedAt !== list.updatedAt) {
         setNotice({
           text: strings.rank.failedChanged,
@@ -534,13 +546,14 @@ function OpenList({
         });
         return false;
       }
-      const labels = loadDraftLabels(localStorageStore, scopeOf(list));
-      const ranking = await keepListRanking(withLabels(list, labels), rows);
-      settleRankingOffer(account.uid, list.id);
+      const ranking = await keepListRanking(snapshot, rows, action);
+      if (!action.isCurrent()) return false;
+      settleRankingOffer(action.uid, list.id);
       rankings.put(ranking);
       setNotice({ text: strings.rankings.shown });
       return true;
     } catch (reason: unknown) {
+      if (!action.isCurrent()) return false;
       const error = errorOf(reason);
       setNotice(
         error.kind === "banned"
