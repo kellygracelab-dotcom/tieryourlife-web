@@ -6,11 +6,7 @@ import { boards as site } from "../features/boards/owners";
 import type { BoardsRepository } from "../features/boards/repository";
 import { forgetPublished } from "../features/boards/takeDown";
 import { SaveToMineDialog } from "../features/boards/SaveToMineDialog";
-import {
-  useSaveToMine,
-  type SaveToMine,
-  type ShownPlacing,
-} from "../features/boards/useSaveToMine";
+import { type SaveToMine } from "../features/boards/useSaveToMine";
 import { useHidden } from "../features/community/useHidden";
 import { useReporting } from "../features/community/useReporting";
 import { report as sendReport, unpublish as unpublishList } from "../lib/api";
@@ -255,24 +251,20 @@ export function VisitorTools({
   list,
   report,
   notify,
-  repository,
+  saving,
   rankings = null,
-  shown = null,
   showMine = null,
   resetMine,
 }: {
   list: PublishedList;
   report: Report;
   notify: Notify;
-  repository?: BoardsRepository;
+  saving: SaveToMine;
   rankings?: RankingsEntry | null;
   /** Mine among the list's rankings, once there is a Mine to show. */
   showMine?: ShowMineEntry | null;
   resetMine?: (() => void) | null;
-  /** A reader's ranking on show in the left half, which Save then offers to keep. */
-  shown?: ShownPlacing | null;
 }) {
-  const saving = useSaveToMine(list, notify, { repository, shown });
   return (
     <>
       <Button variant="tonal" icon="bookmark" className="list-head__save" onClick={saving.start}>

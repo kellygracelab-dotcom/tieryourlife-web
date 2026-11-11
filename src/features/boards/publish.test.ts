@@ -13,6 +13,8 @@ import {
   topicSent,
   type Board,
 } from "./model";
+import { listIn } from "../../lib/translated";
+import { rowsOfSource } from "./sourceRanking";
 import { boardFromList, publishProblemsOf, publishRequestOf } from "./publish";
 
 const uids = () => {
@@ -265,6 +267,39 @@ describe("a published list as a board of one's own", () => {
       { title: "Climax", imageUrl: null, tierIndex: null },
     ],
   };
+
+  it("maps a translated copy and duplicate cards back to the original indexes", () => {
+    const source = {
+      ...list,
+      items: [list.items[0]!, list.items[1]!, list.items[0]!],
+      translations: { ru: { "Ex Machina": "Из машины", S: "Лучшие" } },
+    };
+    const board = boardFromList(listIn(source, "ru"), [[2, 1], [0]], 5, uids());
+    expect(rowsOfSource(board, source)).toEqual([[2, 1], [0]]);
+    expect(rowsOfSource({ ...board, title: "Changed" }, source)).toBeNull();
+    expect(
+      rowsOfSource(
+        {
+          ...board,
+          items: board.items.map((item, i) =>
+            i === 1 ? { ...item, title: "Changed film" } : item,
+          ),
+        },
+        source,
+      ),
+    ).toBeNull();
+    expect(
+      rowsOfSource(
+        {
+          ...board,
+          tiers: board.tiers.map((tier, i) =>
+            i === 0 ? { ...tier, caption: "Other criterion" } : tier,
+          ),
+        },
+        source,
+      ),
+    ).toBeNull();
+  });
 
   it("takes their tiers and cards, in the arrangement asked for", () => {
     const board = boardFromList(list, [[2], [0]], 5, uids());

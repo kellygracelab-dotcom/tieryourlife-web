@@ -14,6 +14,7 @@ import {
   withLabels,
 } from "../tierboard/draft";
 import type { Rows } from "../tierboard/model";
+import { noteRankingEdit } from "./sourceRanking";
 import { boardFromList } from "./publish";
 import { type BoardsRepository } from "./repository";
 import { boards as site } from "./owners";
@@ -61,6 +62,7 @@ export interface SaveToMine {
   saved: string | null;
   asking: SaveChoices | null;
   save: (whose: Whose) => void;
+  keepProgress: () => boolean;
   cancel: () => void;
 }
 
@@ -89,14 +91,15 @@ export function useSaveToMine(
   const [made, setMade] = useState<Made | null>(null);
   // Read before React has drawn the last save: a double click made two copies.
   const latest = useRef<Made | null>(null);
+  const progress = useRef<{ rows: string; uid: string } | null>(null);
   const navigate = useNavigate();
   const saved = made !== null && made.listId === list.id ? made.uid : null;
 
   const save = useCallback(
-    (whose: Whose, choices: SaveChoices | null = asking) => {
-      if (latest.current?.listId === list.id) {
+    (whose: Whose, choices: SaveChoices | null = asking, forProgress = false) => {
+      if (!forProgress && latest.current?.listId === list.id) {
         setAsking(null);
-        return;
+        return false;
       }
       const theirs = whose === "theirs" ? (choices?.theirs ?? null) : null;
       const rows =
@@ -109,8 +112,21 @@ export function useSaveToMine(
             ? withLabels(list, loadDraftLabels(store, scopeOf(list)))
             : list;
       const poolOrder = whose === "theirs" ? undefined : loadPoolOrder(store, scopeOf(list));
+      const snapshot =
+        whose === "mine"
+          ? JSON.stringify([list.id, list.updatedAt, rows, from.tiers, poolOrder])
+          : null;
+      if (
+        snapshot !== null &&
+        progress.current?.rows === snapshot &&
+        repository.kept(progress.current.uid)
+      )
+        return true;
       const board = boardFromList(from, rows, now(), nextUid, poolOrder);
-      repository.save(board);
+      if (whose === "mine" && rows !== null) noteRankingEdit(board.uid);
+      const kept = repository.save(board);
+      if (snapshot !== null && kept) progress.current = { rows: snapshot, uid: board.uid };
+      if (forProgress && !kept) return false;
       // Counted once a person, and never worth failing a save over.
       void take(list.id);
       latest.current = { listId: list.id, uid: board.uid };
@@ -123,6 +139,7 @@ export function useSaveToMine(
           onClick: () => void navigate(`/b/${encodeURIComponent(board.uid)}`),
         },
       });
+      return kept;
     },
     [asking, list, now, repository, notify, navigate, take, store],
   );
@@ -149,5 +166,9 @@ export function useSaveToMine(
 
   const cancel = useCallback(() => setAsking(null), []);
 
-  return { start, saved, asking, save, cancel };
+  const keepProgress = () => {
+    const mine = loadPlacedDraft(store, scopeOf(list));
+    return mine !== null && save("mine", { mine, theirs: null }, true);
+  };
+  return { start, saved, asking, save, keepProgress, cancel };
 }

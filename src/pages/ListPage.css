@@ -602,3 +602,28 @@
     order: 3;
   }
 }
+
+.ranking-offer {
+  position: sticky;
+  top: calc(var(--header-height, 0px) + 72px);
+  z-index: 2;
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.ranking-offer p {
+  margin: 2px 0 0;
+  font: var(--text-small);
+}
+.ranking-offer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

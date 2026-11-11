@@ -32,6 +32,8 @@ import {
   type LoadTopics,
   type PublishingDeps,
 } from "../features/boards/BoardSettings";
+import { CopyRankingOffer } from "../features/boards/CopyRankingOffer";
+import { noteRankingEdit } from "../features/boards/sourceRanking";
 import { RankedList } from "../features/boards/RankedList";
 import { metaOf } from "../features/boards/boardText";
 import { filedUnder } from "../features/boards/sectionChoices";
@@ -455,6 +457,7 @@ function OpenBoard({
       const was = rankedTiers(before).map((tier) =>
         itemsIn(before, tier.uid).map((item) => item.uid),
       );
+      if (before.takenFrom !== null) noteRankingEdit(before.uid);
       repository.save(arrangeItems(before, rows, now()));
       setArranged((round) => round + 1);
       return () => {
@@ -485,7 +488,9 @@ function OpenBoard({
   const latest = (): Board => repository.get(uid) ?? board;
   const keep = (next: Board) => {
     if (next === board) return;
-    setOwnArrangement(arrangementOf(next));
+    const nextOrder = arrangementOf(next);
+    if (next.takenFrom !== null && nextOrder !== arrangement) noteRankingEdit(next.uid);
+    setOwnArrangement(nextOrder);
     repository.save(next);
   };
 
@@ -711,6 +716,11 @@ function OpenBoard({
               keep(rename(board, title, now()));
             }}
           />
+          {board.takenFrom !== null && (
+            <Link to={`/l/${encodeURIComponent(board.takenFrom)}?rankings=1`}>
+              {strings.rankings.progressOriginal}
+            </Link>
+          )}
           <p className="list-head__meta">
             {[
               metaOf(board),
@@ -760,6 +770,15 @@ function OpenBoard({
         </span>
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
+      {house === null && board.takenFrom !== null && board.publishedId === null && (
+        <CopyRankingOffer
+          key={board.uid}
+          board={board}
+          sourceId={board.takenFrom}
+          repository={repository}
+          notify={setNotice}
+        />
+      )}
       {house !== null && (
         <HouseBar
           board={board}
