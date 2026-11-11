@@ -14,7 +14,13 @@ import { errorOf, type ApiError } from "../../api/errors";
 import type { Published, PublishRequest } from "../../api/lists";
 import type { Topic } from "../../api/sections";
 import { useSession } from "../../app/session";
-import { loadTopic, loadTopics, withdrawListRanking } from "../../lib/api";
+import {
+  classifyPublication,
+  loadListAsWritten,
+  loadTopic,
+  loadTopics,
+  withdrawListRanking,
+} from "../../lib/api";
 import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import { holds } from "../../lib/locale";
 import { fill, plural, strings } from "../../strings";
@@ -52,6 +58,7 @@ import {
 import { titleOf } from "./boardText";
 import { AS_COMMUNITY } from "./ownList";
 import { publishProblemsOf, publishRequestOf } from "./publish";
+import { checkCopiedPublication, type CheckedPublication } from "./copiedPublication";
 import { filedUnder, sectionChoices } from "./sectionChoices";
 import { sentTopic, settledTopic, type FindTopic } from "./topic";
 import "./boards.css";
@@ -65,6 +72,8 @@ export interface PublishingDeps {
   republish: RepublishBoard;
   unpublish: UnpublishBoard;
   /** Takes one's ranking of a list down; the site's own unless told otherwise. */
+  classify?: typeof classifyPublication;
+  loadOriginal?: typeof loadListAsWritten;
   withdraw?: (listId: string) => Promise<unknown>;
 }
 
@@ -110,7 +119,7 @@ interface BoardSettingsProps {
   now?: () => number;
 }
 
-type Busy = "idle" | "publishing" | "updating" | "unpublishing";
+type Busy = "checking" | "idle" | "publishing" | "updating" | "unpublishing";
 /** A refusal, by the press it answers: each is said beside its own button. */
 type Failure = { error: ApiError; on: "publish" | "update" | "takeDown" };
 type Open = "none" | "category" | "topic" | "cover";
@@ -229,6 +238,9 @@ export function BoardSettings({
   const { account, signIn } = useSession();
   const signedIn = account?.kind === "signedIn";
   const [busy, setBusy] = useState<Busy>("idle");
+  const [preview, setPreview] = useState<
+    (CheckedPublication & { what: "published" | "updated"; snapshot: string }) | null
+  >(null);
   const [failure, setFailure] = useState<Failure | null>(null);
   // Why a guest's Public switch did not sign them in, when it could not.
   const [signInNote, setSignInNote] = useState<string | null>(null);
@@ -291,16 +303,37 @@ export function BoardSettings({
     );
   };
 
-  const send = async (what: "published" | "updated") => {
+  const send = async (what: "published" | "updated", checked?: typeof preview) => {
     const current = latest();
     const request = publishRequestOf(current);
     if (request === null || publishing === null) return;
+    const snapshot = JSON.stringify(request);
+    const needsPreview = current.takenFrom !== null && current.publishedId === null;
+    if (needsPreview && current.takenFrom !== null && (!checked || checked.snapshot !== snapshot)) {
+      setPreview(null);
+      setFailure(null);
+      setBusy("checking");
+      try {
+        const result = await checkCopiedPublication(
+          { ...request, takenFrom: current.takenFrom, boardUid: current.uid },
+          publishing.classify ?? classifyPublication,
+          publishing.loadOriginal,
+        );
+        setPreview({ ...result, what, snapshot });
+      } catch (reason) {
+        setFailure({ error: errorOf(reason), on: what === "published" ? "publish" : "update" });
+      } finally {
+        setBusy("idle");
+      }
+      return;
+    }
+    setPreview(null);
     setBusy(what === "published" ? "publishing" : "updating");
     setFailure(null);
     try {
       // The board's uid goes with every send, as the phone's does: a first
       // publish lost to a reload gets its list back, and a replace keeps it.
-      const outgoing = { ...request, boardUid: current.uid };
+      const outgoing = checked?.request ?? { ...request, boardUid: current.uid };
       let answer =
         what === "updated" && current.publishedId !== null
           ? await publishing.republish(current.publishedId, outgoing)
@@ -627,7 +660,15 @@ export function BoardSettings({
                     {strings.boards.publicTitle}
                   </label>
                 }
-                sub={held ? strings.boards.heldBody : strings.boards.publicBody}
+                sub={
+                  held
+                    ? strings.boards.heldBody
+                    : board.rankingOf
+                      ? strings.rankings.previewRanking
+                      : board.takenFrom && !isPublic
+                        ? strings.rankings.publicationPreview
+                        : strings.boards.publicBody
+                }
                 end={
                   <input
                     id={`${id}-public`}
@@ -659,6 +700,38 @@ export function BoardSettings({
                     <Icon name="error" />
                     {signInNote}
                   </span>
+                )}
+                {busy === "checking" && <span role="status">{strings.rankings.checkOriginal}</span>}
+                {preview && (
+                  <div
+                    className="sheet-row__question"
+                    role="group"
+                    aria-label={strings.rankings.publicationPreview}
+                  >
+                    <p>
+                      {preview.preview.kind === "ranking"
+                        ? strings.rankings.previewRanking
+                        : preview.preview.basedOn
+                          ? strings.rankings.previewList
+                          : strings.boards.publicBody}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn--tonal"
+                      onClick={() => void send(preview.what, preview)}
+                    >
+                      {preview.preview.kind === "ranking"
+                        ? strings.rankings.progressShare
+                        : strings.rankings.publishSeparate}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--text"
+                      onClick={() => setPreview(null)}
+                    >
+                      {strings.rankings.cancel}
+                    </button>
+                  </div>
                 )}
                 {failed("publish")}
                 {!isPublic && failed("update")}

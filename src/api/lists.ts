@@ -138,8 +138,10 @@ export interface PublishRequest {
    * backend credits it, or keeps the publish as a ranking of it.
    */
   takenFrom?: string;
+  sourceVersion?: number;
   tiers: PublishedTier[];
   items: {
+    sourceIndex?: number;
     title: string;
     imageUrl: string | null;
     pictureId: string | null;
@@ -175,6 +177,16 @@ export interface Published {
    * look: its link answers 404 to everybody, the author too.
    */
   underReview?: boolean;
+}
+
+export type PublicationPreview =
+  | { kind: "ranking"; listId: string; version: number }
+  | { kind: "list"; basedOn: PublishedList["basedOn"]; version?: number };
+export function classifyPublication(
+  client: ApiClient,
+  request: PublishRequest,
+): Promise<PublicationPreview> {
+  return client.request("POST", "/lists/classify", { body: request });
 }
 
 export function publish(client: ApiClient, request: PublishRequest): Promise<Published> {

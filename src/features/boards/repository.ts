@@ -185,6 +185,9 @@ function itemOf(
   const source = item.source;
   return {
     uid,
+    ...(isInt(item.sourceIndex) && item.sourceIndex >= 0 && item.sourceIndex < BOARD_LIMITS.items
+      ? { sourceIndex: item.sourceIndex }
+      : {}),
     pictureId: text(item.pictureId),
     tierUid,
     position: typeof item.position === "number" ? item.position : position,
@@ -224,6 +227,16 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
   const items = (Array.isArray(source.items) ? source.items : [])
     .map((item, index) => itemOf(item, tierUids, index, owner))
     .filter((item): item is BoardItem => item !== null);
+  const rawOrigin = source.origin as Record<string, unknown> | null | undefined;
+  const origin =
+    rawOrigin &&
+    typeof rawOrigin.listId === "string" &&
+    /^[A-Za-z0-9_-]{1,64}$/.test(rawOrigin.listId) &&
+    isInt(rawOrigin.version) &&
+    rawOrigin.version >= 0
+      ? { listId: rawOrigin.listId, version: rawOrigin.version }
+      : null;
+  const choice = source.rankingChoice;
   const category = text(source.category);
   const originalCover = text(source.coverImageUrl);
   const coverPictureId = coverPictureIdOf(source.coverPictureId, originalCover, items);
@@ -246,7 +259,11 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
     coverPictureId,
     authorName: text(source.authorName),
     publishedId: text(source.publishedId),
-    takenFrom: text(source.takenFrom),
+    takenFrom: origin?.listId ?? text(source.takenFrom),
+    ...(origin === null ? {} : { origin }),
+    ...(choice === "offered" || choice === "private" || choice === "ranking"
+      ? { rankingChoice: choice }
+      : {}),
     rankingOf: text(source.rankingOf),
     deletedAt: time(source.deletedAt),
     tiers,

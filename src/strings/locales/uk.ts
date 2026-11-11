@@ -467,6 +467,11 @@ const uk: Translation = {
     seedStart: "Перемістіть картку на дошці, щоб почати свою версію.",
   },
   rankings: {
+    checkOriginal: "Звіряємо з початковим списком…",
+    publicationPreview: "Що буде опубліковано",
+    previewRanking: "Ваша розкладка зʼявиться в рейтингах початкового списку.",
+    previewList: "Буде опубліковано окремий список із посиланням на початковий.",
+    publishSeparate: "Опублікувати окремий список",
     progressTitle: "Поділитися розкладкою?",
     progressCount: "Розкладено {placed} із {total} карток.",
     progressPrivate: "Копію можна зберегти в «Моїх списках».",

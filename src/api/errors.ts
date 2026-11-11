@@ -13,6 +13,7 @@ export type ApiError =
    */
   | { kind: "merged"; into: string | null; topic: string | null }
   | { kind: "tooManyLists" }
+  | { kind: "sourceChanged" }
   | { kind: "publicationChanged" }
   /** Three topics of the person's own wait for a moderator: a publish cannot propose a fourth. */
   | { kind: "tooManyTopics" }
@@ -123,6 +124,7 @@ export function parseApiError(status: number, text: string): ApiError {
     case 404:
       return { kind: "notFound" };
     case 409: {
+      if (code === "LIST_CHANGED") return { kind: "sourceChanged" };
       if (code === "PUBLICATION_CHANGED") return { kind: "publicationChanged" };
       if (code === "TOO_MANY_LISTS") return { kind: "tooManyLists" };
       if (code === "TOO_MANY_PENDING_TOPICS") return { kind: "tooManyTopics" };

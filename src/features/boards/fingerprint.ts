@@ -59,7 +59,16 @@ export function fingerprintText(board: Board): string {
         item.source,
         whole(item.deletedAt),
       ]);
+      if (item.sourceIndex !== undefined) text += encode(["sourceIndex", whole(item.sourceIndex)]);
     }
+  }
+  if (board.takenFrom !== null || board.origin || board.rankingChoice) {
+    text += encode([
+      "origin",
+      board.takenFrom,
+      whole(board.origin?.version ?? null),
+      board.rankingChoice ?? null,
+    ]);
   }
   // Said only when true, last, so every board that is not anonymous keeps the
   // fingerprint it had: the app appends the same field the same way.

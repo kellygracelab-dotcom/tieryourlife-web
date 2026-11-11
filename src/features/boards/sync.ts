@@ -13,7 +13,13 @@ import {
   type NextUid,
 } from "./model";
 import { parseBoard, type BoardsRepository } from "./repository";
-import { planSync, type RemoteBoard, type SyncedBoard, type SyncStep } from "./syncPlan";
+import {
+  isServerFingerprint,
+  planSync,
+  type RemoteBoard,
+  type SyncedBoard,
+  type SyncStep,
+} from "./syncPlan";
 import type { SyncRefusal } from "./boardSync";
 import type { SyncRecords } from "./syncRecords";
 
@@ -113,6 +119,9 @@ const request = (
   deletedAt: board.deletedAt,
   // The account keeps it only when true, as the app writes it.
   ...(board.anonymous ? { anonymous: true } : {}),
+  ...(board.takenFrom === null ? {} : { takenFrom: board.takenFrom }),
+  ...(board.origin ? { origin: board.origin } : {}),
+  ...(board.rankingChoice ? { rankingChoice: board.rankingChoice } : {}),
   play: board.play,
   tiers: board.tiers.map((tier) => ({
     uid: tier.uid,
@@ -125,6 +134,7 @@ const request = (
   })),
   items: board.items.map((item) => ({
     uid: item.uid,
+    ...(item.sourceIndex === undefined ? {} : { sourceIndex: item.sourceIndex }),
     pictureId: item.pictureId,
     tierUid: item.tierUid,
     position: item.position,
@@ -185,7 +195,14 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
   try {
     const local = repository.all();
     const fingerprints = new Map<string, string>();
-    for (const board of local) fingerprints.set(board.uid, await fingerprintOf(board));
+    const legacyCopies = new Map<string, string>();
+    for (const board of local) {
+      fingerprints.set(board.uid, await fingerprintOf(board));
+      // Before private provenance travelled, the source id was local and outside the digest.
+      if (board.takenFrom !== null && !board.origin && !board.rankingChoice) {
+        legacyCopies.set(board.uid, await fingerprintOf({ ...board, takenFrom: null }));
+      }
+    }
 
     check(deps);
     const remote = await readIndex(api);
@@ -193,6 +210,7 @@ export async function syncBoards(deps: SyncDeps): Promise<SyncReport> {
       local.map((board) => ({
         uid: board.uid,
         fingerprint: fingerprints.get(board.uid) ?? "",
+        legacyFingerprint: legacyCopies.get(board.uid),
         inTrash: board.deletedAt !== null,
       })),
       [...remote.values()],
@@ -411,7 +429,7 @@ function sawTheirs(deps: SyncDeps, theirs: KeptBoard): void {
     uid: theirs.uid,
     revision: theirs.revision,
     fingerprint: theirs.fingerprint ?? "",
-    ...gameFingerprint(theirs),
+    ...serverFingerprint(theirs),
   });
 }
 
@@ -456,8 +474,8 @@ function agree(deps: SyncDeps, record: SyncedBoard): void {
 
 /** The index may publish the server's combined content hash after preserving a game.
  * Only a full board read establishes that this device has seen that game. */
-function gameFingerprint(incoming: KeptBoard): Pick<SyncedBoard, "remoteFingerprint"> {
-  return incoming.fingerprint?.startsWith("game-v1:") === true
+function serverFingerprint(incoming: KeptBoard): Pick<SyncedBoard, "remoteFingerprint"> {
+  return isServerFingerprint(incoming.fingerprint)
     ? { remoteFingerprint: incoming.fingerprint }
     : {};
 }
@@ -473,7 +491,6 @@ function boardOf(incoming: KeptBoard, now: number): Board | null {
         arrivedFrom: null,
         publishedEditedAt: null,
         topic: null,
-        takenFrom: null,
         rankingOf: null,
       };
 }
@@ -514,8 +531,7 @@ async function takeOver(
   ) {
     return "deferred";
   }
-  // The star, the origin, the topic, the list it was saved from and the
-  // ranking it is out as are this device's, and read at the moment of writing.
+  // Keep presentation settings local. Older backups may omit a copy's provenance.
   keep(deps, {
     ...board,
     favouritedAt: latest.favouritedAt,
@@ -526,14 +542,18 @@ async function takeOver(
     ...(latest.heldForReview === true && latest.publishedId === board.publishedId
       ? { heldForReview: true }
       : {}),
-    takenFrom: latest.takenFrom,
+    takenFrom: board.takenFrom ?? latest.takenFrom,
+    ...((board.origin ?? latest.origin) ? { origin: board.origin ?? latest.origin } : {}),
+    ...((board.rankingChoice ?? latest.rankingChoice)
+      ? { rankingChoice: board.rankingChoice ?? latest.rankingChoice }
+      : {}),
     rankingOf: latest.rankingOf,
   });
   agree(deps, {
     uid: board.uid,
     revision: incoming.revision,
     fingerprint,
-    ...gameFingerprint(incoming),
+    ...serverFingerprint(incoming),
   });
   return "carried";
 }
@@ -588,7 +608,7 @@ async function adopt(
     uid: board.uid,
     revision: incoming.revision,
     fingerprint,
-    ...gameFingerprint(incoming),
+    ...serverFingerprint(incoming),
   });
 }
 

@@ -1,4 +1,9 @@
-import { MAX_BOARD_ITEMS, type SyncedPlay } from "../../api/boards";
+import {
+  MAX_BOARD_ITEMS,
+  type SyncedPlay,
+  type BoardOrigin,
+  type RankingChoice,
+} from "../../api/boards";
 import { PICTURE_CREDIT_LIMIT, creditOf } from "../../api/pictureCredit";
 export { creditOf } from "../../api/pictureCredit";
 import { holds } from "../../lib/locale";
@@ -66,6 +71,7 @@ export interface BoardTier {
 }
 
 export interface BoardItem {
+  sourceIndex?: number;
   uid: string;
   /** A picture of the person's own, kept in their account by this id. */
   pictureId: string | null;
@@ -119,10 +125,12 @@ export interface Board {
   /** Published with no name or face: sent with every publish, and kept in the account when true. */
   anonymous: boolean;
   /**
-   * This device's, as on the phone: the published list the board was saved
-   * from, sent with every publish so the copy credits it. Never kept in the account.
+   * The published list the board was saved
+   * from, backed up with the board so a copy on another device still credits it.
    */
   takenFrom: string | null;
+  origin?: BoardOrigin;
+  rankingChoice?: RankingChoice;
   /**
    * This device's: the list the board is out as one's ranking of, when the
    * backend kept a publish as that; publishedId stays null then. Never kept in the account.
@@ -468,6 +476,9 @@ export const setRanking = (board: Board, listId: string | null, now: number): Bo
   ...unheld(board),
   publishedId: null,
   rankingOf: listId,
+  ...(board.takenFrom !== null
+    ? { rankingChoice: listId !== null ? ("ranking" as const) : ("private" as const) }
+    : {}),
   editedAt: now,
   publishedEditedAt: listId === null ? null : now,
 });

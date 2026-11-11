@@ -192,6 +192,37 @@ describe("syncBoards", () => {
     expect(account.kept.get(copy.uid)?.play).toEqual(copy.play);
   });
 
+  it("backs up source positions and a private choice, including a legacy writer's combined state hash", async () => {
+    const { repository, records, account, run } = setUp();
+    const base = films();
+    const source = {
+      ...base,
+      takenFrom: "SRC",
+      origin: { listId: "SRC", version: 33 },
+      rankingChoice: "private" as const,
+      items: base.items.map((item, sourceIndex) => ({ ...item, sourceIndex })),
+    };
+    repository.save(base);
+    records.remember({ uid: base.uid, revision: 1, fingerprint: await fingerprintOf(base) });
+    account.holds(source, 1, "Old device", "state-v1:" + "c".repeat(64));
+    await run();
+    expect(repository.get(base.uid)).toMatchObject({
+      origin: source.origin,
+      takenFrom: "SRC",
+      rankingChoice: "private",
+      items: [{ sourceIndex: 0 }, { sourceIndex: 1 }],
+    });
+    expect(records.all()[0]?.remoteFingerprint).toMatch(/^state-v1:/);
+    const got = repository.get(base.uid)!;
+    repository.save({ ...got, rankingChoice: "ranking" });
+    await run();
+    expect(account.keeps.at(-1)?.request).toMatchObject({
+      origin: source.origin,
+      rankingChoice: "ranking",
+      items: [{ sourceIndex: 0 }, { sourceIndex: 1 }],
+    });
+  });
+
   it("sends a board the account has never seen, and writes down the agreement", async () => {
     const { repository, records, account, run } = setUp();
     repository.save(films());

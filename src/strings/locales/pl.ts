@@ -468,6 +468,11 @@ const pl: Translation = {
     seedStart: "Przesuń kartę na tablicy, aby zacząć swoją wersję.",
   },
   rankings: {
+    checkOriginal: "Sprawdzanie oryginalnej listy…",
+    publicationPreview: "Sprawdź publikację",
+    previewRanking: "Twój układ pojawi się w rankingach oryginalnej listy.",
+    previewList: "Powstanie osobna lista z linkiem do oryginału.",
+    publishSeparate: "Opublikuj osobną listę",
     progressTitle: "Udostępnić Twój ranking?",
     progressCount: "Rozłożone karty: {placed} z {total}.",
     progressPrivate: "Możesz zapisać kopię w swoich listach.",

@@ -449,6 +449,11 @@ const tr: Translation = {
     seedStart: "Kendi sürümünüzü başlatmak için panodaki bir kartı taşıyın.",
   },
   rankings: {
+    checkOriginal: "Asıl liste kontrol ediliyor…",
+    publicationPreview: "Yayını gözden geçir",
+    previewRanking: "Sıralaman asıl listenin sıralamalarında görünecek.",
+    previewList: "Asıl listeye bağlantı içeren ayrı bir liste yayınlanacak.",
+    publishSeparate: "Ayrı liste yayınla",
     progressTitle: "Sıralamanı paylaşmak ister misin?",
     progressCount: "{total} karttan {placed} tanesini yerleştirdin.",
     progressPrivate: "Listelerine bir kopya kaydedebilirsin.",

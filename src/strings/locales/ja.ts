@@ -449,6 +449,11 @@ const ja: Translation = {
     seedStart: "ボードのカードを動かすと、自分のバージョンが始まります。",
   },
   rankings: {
+    checkOriginal: "元のリストを確認中…",
+    publicationPreview: "公開内容の確認",
+    previewRanking: "作成した順位が元のリストのランキングに表示されます。",
+    previewList: "元のリストへのリンクが付いた別のリストとして公開されます。",
+    publishSeparate: "別のリストとして公開",
     progressTitle: "ランキングを共有しますか？",
     progressCount: "{total}枚のうち{placed}枚を配置しました。",
     progressPrivate: "マイリストにコピーを保存できます。",

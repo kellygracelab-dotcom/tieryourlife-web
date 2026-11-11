@@ -135,7 +135,7 @@ export function rowsOf(
 export function keepListRanking(
   client: ApiClient,
   listId: string,
-  placing: { tierLabels: string[]; rows: number[][] },
+  placing: { tierLabels: string[]; rows: number[][]; version?: number },
 ): Promise<ShownRanking> {
   return client.request<ShownRanking>("PUT", `/lists/${encodeURIComponent(listId)}/rankings/mine`, {
     body: placing,
