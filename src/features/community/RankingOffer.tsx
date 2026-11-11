@@ -48,11 +48,14 @@ function Offer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const eligible = total > 0 && placed * 10 > total * 3;
+  if (state === "waiting" && eligible) {
+    setState(localStorageStore.read(key) === null ? "open" : "closed");
+  }
   useEffect(() => {
-    if (state !== "waiting" || !eligible || localStorageStore.read(key) !== null) return;
-    localStorageStore.write(key, "seen");
-    setState("open");
-  }, [state, eligible, key, uid, listId]);
+    if (state === "open" && localStorageStore.read(key) === null) {
+      localStorageStore.write(key, "seen");
+    }
+  }, [state, key]);
   useEffect(() => {
     if (state !== "open") return;
     const decided = (event: Event) => {
