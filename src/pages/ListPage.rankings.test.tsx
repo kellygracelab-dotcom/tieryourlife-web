@@ -591,6 +591,25 @@ describe("ListPage: showing one's ranking to others", () => {
     await userEvent.click(await screen.findByLabelText("More about this list"));
   };
 
+  it("keeps the personal board and publishes exactly once after explicitly choosing the progress offer", async () => {
+    localStorage.clear();
+    openAs();
+    await arrangeMine();
+    const offer = await screen.findByRole("complementary", { name: "Share your ranking?" });
+    expect(mocks.keepListRanking).not.toHaveBeenCalled();
+    await userEvent.click(within(offer).getByRole("button", { name: "Show in Rankings" }));
+    expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
+    expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ id: "abc" }),
+      [[], [0]],
+    );
+    cleanup();
+    openAs();
+    await screen.findByRole("region", { name: "Your ranking" });
+    expect(screen.queryByRole("complementary", { name: "Share your ranking?" })).toBeNull();
+    localStorage.clear();
+  });
+
   it("is not offered before Mine is arranged", async () => {
     localStorage.clear();
     openAs();

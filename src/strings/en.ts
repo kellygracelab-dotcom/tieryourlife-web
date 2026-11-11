@@ -448,6 +448,15 @@ export const en = {
   // The readers' placings of a list. The title has no count, so it cannot
   // disagree with the chip's, which is the takes (Danylo, 28.10).
   rankings: {
+    progressTitle: "Share your ranking?",
+    progressCount: "You’ve placed {placed} of {total} cards.",
+    progressPrivate: "You can keep a copy in Your lists.",
+    progressGuest: "Your private copy stays in Your lists in this browser.",
+    progressSignIn: "Sign in to share",
+    progressShare: "Show in Rankings",
+    progressKeep: "Keep privately",
+    progressLater: "Not now",
+    progressOriginal: "Original list and rankings",
     title: "Rankings",
     body: "The same cards, placed somebody’s way. Choose whose rows to show.",
     author: "Author",

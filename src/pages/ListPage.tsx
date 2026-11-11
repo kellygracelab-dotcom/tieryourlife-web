@@ -19,6 +19,8 @@ import {
   readerLabels,
   readerName,
 } from "../features/community/rankings";
+import { RankingOffer, settleRankingOffer } from "../features/community/RankingOffer";
+import { useSaveToMine } from "../features/boards/useSaveToMine";
 import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
@@ -315,7 +317,9 @@ function OpenList({
       },
     );
   };
-  const [sheet, setSheet] = useState(false);
+  const [sheet, setSheet] = useState(
+    () => new URLSearchParams(location.search).get("rankings") === "1",
+  );
   const rankings = useRankings(list.id);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
@@ -346,6 +350,7 @@ function OpenList({
       remember();
       keepChosen(null);
     }
+    if (account?.kind === "signedIn") settleRankingOffer(account.uid, list.id);
     rankings.withdraw();
   };
 
@@ -486,6 +491,7 @@ function OpenList({
       chosen === null ? null : { name: chosen.authorName, tiers: theirs.tiers, rows: theirs.rows },
     [chosen, theirs],
   );
+  const saving = useSaveToMine(list, setNotice, { repository, shown: shownPlacing });
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
   // Who else ranked it is a line of the menu, the one place the number is said.
@@ -507,10 +513,10 @@ function OpenList({
   const showToOthers = async () => {
     if (account?.kind !== "signedIn") {
       void signIn();
-      return;
+      return false;
     }
     const rows = loadPlacedDraft(localStorageStore, scopeOf(list));
-    if (showing || rows === null) return;
+    if (showing || rows === null) return false;
     setShowing(true);
     try {
       const fresh = await loadListAsWritten(list.id);
@@ -521,12 +527,14 @@ function OpenList({
             ? {}
             : { action: { text: strings.rank.loadAgain, onClick: onListChanged } }),
         });
-        return;
+        return false;
       }
       const labels = loadDraftLabels(localStorageStore, scopeOf(list));
       const ranking = await keepListRanking(withLabels(list, labels), rows);
+      settleRankingOffer(account.uid, list.id);
       rankings.put(ranking);
       setNotice({ text: strings.rankings.shown });
+      return true;
     } catch (reason: unknown) {
       const error = errorOf(reason);
       setNotice(
@@ -546,6 +554,7 @@ function OpenList({
                       : strings.rank.failedOther,
               },
       );
+      return false;
     } finally {
       setShowing(false);
     }
@@ -629,9 +638,8 @@ function OpenList({
                 list={list}
                 report={report}
                 notify={setNotice}
-                repository={repository}
+                saving={saving}
                 rankings={rankingsEntry}
-                shown={shownPlacing}
                 showMine={showMine}
                 resetMine={
                   outOfSight
@@ -655,6 +663,15 @@ function OpenList({
         </span>
         <span className="list-head__bar" ref={setHeadSlot} />
       </header>
+      {!outOfSight && !own && shown === "mine" && !sheet && !playing && (
+        <RankingOffer
+          listId={list.id}
+          placed={mineRows?.flat().length ?? 0}
+          total={list.items.length}
+          keep={saving.keepProgress}
+          share={showToOthers}
+        />
+      )}
       {outOfSight && <HiddenView list={list} />}
       {!outOfSight &&
         (shown === "mine" ? (
