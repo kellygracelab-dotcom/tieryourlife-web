@@ -19,7 +19,7 @@ import {
   readerLabels,
   readerName,
 } from "../features/community/rankings";
-import { RankingOffer, settleRankingOffer } from "../features/community/RankingOffer";
+import { RankingOffer, settleRankingOffer } from "../features/boards/RankingOffer";
 import { useSaveToMine } from "../features/boards/useSaveToMine";
 import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";

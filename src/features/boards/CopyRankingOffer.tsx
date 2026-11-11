@@ -4,7 +4,7 @@ import { errorOf } from "../../api/errors";
 import { useSession } from "../../app/session";
 import { keepListRanking, loadListAsWritten } from "../../lib/api";
 import { strings } from "../../strings";
-import { RankingOffer, offerKey } from "../community/RankingOffer";
+import { RankingOffer, offerKey } from "./RankingOffer";
 import { localStorageStore } from "../../lib/storage";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { liveItems, rankedCount, setRanking, type Board } from "./model";
