@@ -112,3 +112,74 @@ test("two devices that changed one board while apart both keep their cards", asy
   expect(seen).toEqual(expect.arrayContaining(["Gouda", "Brie", "Comté"]));
   await phone.context().close();
 });
+
+test("the account carries all 91 participants and the next duel to a second device", async ({
+  page,
+  browser,
+}) => {
+  const who = person("Sol");
+  const title = "Full board " + Date.now();
+  await signIn(page, who);
+  const backed = backedUpWith(page, "First participant");
+  await newBoard(page, title, ["First participant"]);
+  await backed;
+  // Seed only the cards, as a batch import on the first device. The game, sync
+  // request, independent second login, download and resumed duel use the app.
+  const uid = new URL(page.url()).pathname.split("/").at(-1);
+  if (!uid) throw new Error("Missing board ID");
+  await page.evaluate((boardUid) => {
+    const key = "tyl:board@" + localStorage.getItem("tyl:owner") + ":" + boardUid;
+    const stored = localStorage.getItem(key);
+    if (!stored) throw new Error("Missing saved board");
+    const board = JSON.parse(stored);
+    const first = board.items[0];
+    for (let i = 1; i < 91; i++)
+      board.items.push({ ...first, uid: crypto.randomUUID(), title: "Player " + i, position: i });
+    board.editedAt = Date.now();
+    localStorage.setItem(key, JSON.stringify(board));
+  }, uid);
+  await page.reload();
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(page.getByText("91 cards from " + title)).toBeVisible();
+  await page.getByRole("button", { name: "Start", exact: true }).click();
+  const pick = page.getByRole("button", { name: /^Pick / });
+  const upload = page.waitForResponse(
+    (res) =>
+      res.ok() &&
+      res.request().method() === "PUT" &&
+      new URL(res.url()).pathname === "/boards/" + uid &&
+      res.request().postDataJSON()?.play?.history?.length === 1,
+  );
+  await pick.first().click();
+  await expect(page.getByRole("heading", { name: /Duel 2/ })).toBeVisible();
+  const next = await pick.evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  await page.reload(); // a new visit runs the normal pending sync now
+  const response = await upload;
+  const saved = response.request().postDataJSON().play;
+  expect(saved.count).toBe(91);
+  expect(new Set(saved.ids).size).toBe(91);
+  const other = await device(browser);
+  try {
+    await signIn(other, who);
+    await (await boardsTitled(other, title, 1)).click();
+    await other.getByRole("button", { name: "Play", exact: true }).click();
+    await other.getByRole("button", { name: "Resume" }).click();
+    await expect(other.getByRole("heading", { name: /Duel 2/ })).toBeVisible();
+    expect(
+      await other
+        .getByRole("button", { name: /^Pick / })
+        .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label"))),
+    ).toEqual(next);
+    const remote = await other.evaluate((boardUid) => {
+      const stored = localStorage.getItem(
+        "tyl:board@" + localStorage.getItem("tyl:owner") + ":" + boardUid,
+      );
+      if (!stored) throw new Error("Missing downloaded board");
+      return JSON.parse(stored).play;
+    }, uid);
+    expect(remote.ids).toEqual(saved.ids);
+    expect(remote.history).toEqual(saved.history);
+  } finally {
+    await other.context().close();
+  }
+});
