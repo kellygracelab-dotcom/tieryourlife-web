@@ -339,6 +339,8 @@ const ptBR: Translation = {
     failedCategory: "Esta categoria não aceita mais listas. Escolha outra em Categoria.",
     publicationChanged:
       "A lista publicada mudou durante a atualização. Suas alterações estão salvas neste dispositivo. Tente publicar novamente.",
+    weeklyPublicationLimit:
+      "Você atingiu o limite de publicações em 7 dias. Poderá publicar outra lista a partir de {date}.",
     failedTooMany:
       "Esta conta já publicou o máximo de listas que pode. Retire uma em Suas listas públicas primeiro.",
     failedSignedOut: "Publicar precisa de uma conta. Entre e tente de novo.",

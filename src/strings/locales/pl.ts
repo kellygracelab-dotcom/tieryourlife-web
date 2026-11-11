@@ -345,6 +345,8 @@ const pl: Translation = {
     failedCategory: "Ta kategoria nie przyjmuje już list. Wybierz inną w polu Kategoria.",
     publicationChanged:
       "Opublikowana lista zmieniła się w trakcie aktualizacji. Twoje zmiany są zapisane na tym urządzeniu. Spróbuj opublikować listę ponownie.",
+    weeklyPublicationLimit:
+      "Limit publikacji w ciągu 7 dni został osiągnięty. Kolejną listę możesz opublikować od {date}.",
     failedTooMany:
       "To konto ma już opublikowaną maksymalną liczbę list. Najpierw wycofaj jedną w Twoich publicznych listach.",
     failedSignedOut: "Do publikowania potrzebne jest konto. Zaloguj się i spróbuj ponownie.",

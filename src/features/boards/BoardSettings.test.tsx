@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
-import { ApiFailure } from "../../api/errors";
+import { ApiFailure, parseApiError } from "../../api/errors";
 import type { SectionStats, Topic } from "../../api/sections";
 import { GUEST, SessionContext, type Session } from "../../app/session";
 import type { Account } from "../../lib/account";
@@ -281,6 +281,30 @@ describe("BoardSettings: the sheet", () => {
 });
 
 describe("BoardSettings: public", () => {
+  it.each([false, true])(
+    "explains a publication limit at the public switch (weekly=%s)",
+    async (weekly) => {
+      const retryAt = Date.UTC(2026, 10, 13, 10, 15);
+      const body = JSON.stringify({ code: "TOO_MANY_LISTS", ...(weekly ? { retryAt } : {}) });
+      const publish = vi.fn().mockRejectedValue(new ApiFailure(parseApiError(409, body)));
+      show(filmBoard(), signedIn, { publish });
+      await userEvent.click(publicSwitch());
+      const alert = await screen.findByRole("alert");
+      if (weekly) {
+        expect(alert).toHaveTextContent(
+          new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "medium" }).format(
+            retryAt,
+          ),
+        );
+        expect(alert).not.toHaveTextContent("Take one down");
+      } else {
+        expect(alert).toHaveTextContent("Take one down in Your public lists first.");
+      }
+      expect(publicSwitch()).not.toBeChecked();
+      expect(publish).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("asks a guest to sign in from the switch, and leaves the board as it was", async () => {
     const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
     const publish = vi.fn();

@@ -337,6 +337,8 @@ const es: Translation = {
     failedCategory: "Esta categoría ya no admite listas. Elige otra en Categoría.",
     publicationChanged:
       "La lista publicada cambió durante la actualización. Tus cambios están guardados en este dispositivo. Intenta publicarla de nuevo.",
+    weeklyPublicationLimit:
+      "Has alcanzado el límite de publicaciones de los últimos 7 días. Podrás publicar otra lista a partir del {date}.",
     failedTooMany:
       "Esta cuenta ya publicó todas las listas que puede. Retira una en Tus listas públicas primero.",
     failedSignedOut: "Para publicar hace falta una cuenta. Inicia sesión e inténtalo de nuevo.",

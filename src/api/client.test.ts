@@ -42,6 +42,34 @@ function clientWith(
 const headersOf = (call: Call) => call.init.headers as Record<string, string>;
 
 describe("createApiClient", () => {
+  it("reads the next publication time from the weekly conflict, including after a token refresh", async () => {
+    const retryAt = Date.UTC(2026, 10, 13, 9, 10, 11);
+    const body = JSON.stringify({ code: "TOO_MANY_LISTS", retryAt });
+    const response = new Response(body, { status: 409, headers: { "Retry-After": "60" } });
+    const { client } = clientWith([refused(401, { code: "UNAUTHENTICATED" }), response]);
+    await expect(client.request("POST", "/lists")).rejects.toMatchObject({
+      error: { kind: "tooManyLists", retryAt },
+    });
+  });
+
+  it("uses Retry-After seconds if the response lacks an absolute retry time", async () => {
+    const now = Date.UTC(2026, 10, 13, 9);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+    try {
+      const { client } = clientWith([
+        new Response(JSON.stringify({ code: "TOO_MANY_LISTS" }), {
+          status: 409,
+          headers: { "Retry-After": "3600" },
+        }),
+      ]);
+      await expect(client.request("POST", "/lists")).rejects.toMatchObject({
+        error: { kind: "tooManyLists", retryAt: now + 3600000 },
+      });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   // QA S25: a new ranking goes with a one-use token, fetched afresh for every send.
   it("sends a one-use App Check token where asked, a new one on the retry, and the usual one elsewhere", async () => {
     const { fetch, calls } = stubFetch([refused(401, { code: "UNAUTHENTICATED" }), ok({}), ok({})]);

@@ -331,6 +331,8 @@ const tr: Translation = {
       "Bu kategori artık liste kabul etmiyor. Kategori bölümünden başka birini seçin.",
     publicationChanged:
       "Yayımlanan liste güncelleme sırasında değişti. Düzenlemelerin bu cihazda kayıtlı. Tekrar yayımlamayı dene.",
+    weeklyPublicationLimit:
+      "Son 7 gün için yayın sınırına ulaştın. {date} itibarıyla yeni bir liste yayınlayabilirsin.",
     failedTooMany:
       "Bu hesap yayımlayabileceği kadar liste yayımladı. Önce Herkese açık listeleriniz bölümünde birini yayından kaldırın.",
     failedSignedOut: "Yayımlamak için hesap gerekir. Oturum açıp tekrar deneyin.",

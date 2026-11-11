@@ -1,7 +1,25 @@
 import { describe, expect, it } from "vitest";
+import { setStrings } from "../../strings";
+import ru from "../../strings/locales/ru";
 import { failureText, WEB_PICTURES_TOO_MANY } from "./failureText";
 
 describe("failureText", () => {
+  it("shows the next weekly slot in the interface language and device time zone", () => {
+    const retryAt = Date.UTC(2026, 10, 13, 23, 59, 59, 500);
+    const display = new Intl.DateTimeFormat("ru", {
+      dateStyle: "medium",
+      timeStyle: "medium",
+    }).format(retryAt + 500);
+    try {
+      setStrings("ru", ru);
+      expect(failureText({ kind: "tooManyLists", retryAt }, "new")).toBe(
+        `Вы достигли лимита публикаций за 7 дней. Следующий список можно опубликовать с ${display}.`,
+      );
+    } finally {
+      setStrings("en", null);
+    }
+  });
+
   it("sends the reader to the site's own take-down, speaks of the list, and leaves the proxy's English out", () => {
     expect(failureText({ kind: "tooManyLists" }, "new")).toBe(
       "This account has published as many lists as it can. Take one down in Your public lists first.",

@@ -326,6 +326,8 @@ export const en = {
     failedCategory: "This category no longer takes lists. Choose another one under Category.",
     publicationChanged:
       "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
+    weeklyPublicationLimit:
+      "You’ve reached the 7-day publishing limit. You can publish your next list on {date}.",
     failedTooMany:
       "This account has published as many lists as it can. Take one down in Your public lists first.",
     failedSignedOut: "Publishing needs an account. Sign in and try again.",

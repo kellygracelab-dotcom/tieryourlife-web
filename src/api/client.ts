@@ -100,13 +100,23 @@ export function createApiClient({
     async request<T>(method: Method, path: string, options: RequestOptions = {}): Promise<T> {
       let response = await send(method, path, options, false);
       if (!response.ok) {
-        const error = parseApiError(response.status, await response.text());
+        const error = parseApiError(
+          response.status,
+          await response.text(),
+          response.headers.get("Retry-After"),
+        );
         if (error.kind !== "unauthenticated" || options.auth === "appCheckOnly") {
           throw new ApiFailure(error);
         }
         response = await send(method, path, options, true);
         if (!response.ok) {
-          throw new ApiFailure(parseApiError(response.status, await response.text()));
+          throw new ApiFailure(
+            parseApiError(
+              response.status,
+              await response.text(),
+              response.headers.get("Retry-After"),
+            ),
+          );
         }
       }
       if (response.status === 204) return undefined as T;
