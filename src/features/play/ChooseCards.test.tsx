@@ -89,11 +89,10 @@ describe("choosing cards", () => {
     expect(selection.ids).toEqual(names.map((n) => n?.replace(" ", "")));
   });
 
-  it("keeps one tier's cards in it unless told otherwise", async () => {
+  it("keeps one tier's cards in it, with no switch to re-tier them", async () => {
     const { onDone } = show();
     await userEvent.click(screen.getByRole("checkbox", { name: /^Tier A/ }));
-    const keep = screen.getByRole("switch", { name: "Keep them in A, just order them" });
-    expect(keep).toBeChecked();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
     await userEvent.click(continueButton());
     expect(onDone).toHaveBeenLastCalledWith({
       kind: "rows",
@@ -101,13 +100,49 @@ describe("choosing cards", () => {
       pool: false,
       keepTier: true,
     });
-    await userEvent.click(keep);
+  });
+
+  it("offers the ranked tiers as one area, written as the tiers that hold a card", async () => {
+    const { onDone } = show();
+    const ranked = screen.getByRole("checkbox", { name: "Ranked · 172 cards" });
+    await userEvent.click(ranked);
+    expect(screen.getByText("172 selected")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /^Tier A/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "The pool · 22 cards" })).not.toBeChecked();
+    // Random sizes double on, each below the cards there are.
+    for (const size of ["16", "32", "64", "128"]) {
+      expect(screen.getByRole("button", { name: size })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("button", { name: "256" })).not.toBeInTheDocument();
     await userEvent.click(continueButton());
     expect(onDone).toHaveBeenLastCalledWith({
       kind: "rows",
-      tiers: ["A"],
+      tiers: ["S", "A"],
       pool: false,
       keepTier: false,
+    });
+  });
+
+  it("picks cards one by one across the whole board", async () => {
+    const { onDone } = show();
+    await userEvent.click(
+      within(screen.getByRole("checkbox", { name: /^Everything/ }).closest("li")!).getByRole(
+        "button",
+        { name: "Pick cards" },
+      ),
+    );
+    await userEvent.type(screen.getByRole("searchbox", { name: "Find a card" }), " 0");
+    await userEvent.click(screen.getByRole("checkbox", { name: "p 0" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "a 0" }));
+    await userEvent.click(continueButton());
+    const everything = screen.getByRole("checkbox", { name: /^Everything/ });
+    expect(everything).toBeChecked();
+    expect(within(everything.closest("li")!).getByText("2 picked")).toBeInTheDocument();
+    await userEvent.click(continueButton());
+    expect(onDone).toHaveBeenLastCalledWith({
+      kind: "sample",
+      source: { kind: "all" },
+      ids: ["a0", "p0"],
     });
   });
 
@@ -130,10 +165,9 @@ describe("choosing cards", () => {
     expect(screen.getByText("2 selected")).toBeInTheDocument();
     await userEvent.click(continueButton());
 
-    // Back on the rows: the tier shows its picks, and the cards stay in it by default.
+    // Back on the rows: the tier shows its picks, and the cards stay in it.
     expect(screen.getByText("2 picked")).toBeInTheDocument();
     expect(screen.getByText("2 selected")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Keep them in S, just order them" })).toBeChecked();
     await userEvent.click(continueButton());
     expect(onDone).toHaveBeenCalledWith({
       kind: "picked",

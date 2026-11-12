@@ -18,6 +18,14 @@ export const readersOf = (rankings: readonly ReaderRanking[]): ReaderRanking[] =
   );
 
 /**
+ * An author as a byline says them: their public name, or "Author" when they
+ * have none, never anything that would say who they are (as the app's
+ * "Your ranking of a list by Author").
+ */
+export const bylineName = (name: string | null | undefined): string =>
+  name?.trim() || strings.rankings.author;
+
+/**
  * A reader's name as a row says it, or null for nobody named: the backend
  * writes its own English "Anonymous" for a reader without a name.
  */

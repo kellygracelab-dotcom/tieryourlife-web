@@ -7,7 +7,7 @@ import { Icon } from "../../ui/Icon";
 import { CardName } from "../tierboard/CardName";
 import { useBoardSize } from "../tierboard/useBoardSize";
 import type { PlayBoard, PlayTier } from "./board";
-import { chosenIds, playable, sampleIds, sampleSizes, type Selection, type Chosen } from "./chosen";
+import { chosenIds, playable, sampleIds, sampleSizes, type Chosen, type Selection } from "./chosen";
 import { PlaySheet, SheetCancel } from "./PlaySheet";
 import { SheetArrival } from "./sheet";
 import "../tierboard/board.css";
@@ -36,38 +36,46 @@ const bandOf = (tier: PlayTier) =>
 /** A row of the board to choose from: a tier by its id, or the pool as null. */
 type Row = string | null;
 
-/** What is ticked: whole rows, or cards picked one by one inside one row. */
+/** Where cards are picked one by one: one row, the ranked tiers, or the whole board. */
+type PickArea = { kind: "row"; row: Row } | { kind: "ranked" } | { kind: "everything" };
+
+/**
+ * What is ticked: whole rows, or cards picked one by one inside one row. One
+ * tier alone is only ordered, its cards staying in it (WIRE-SPEC).
+ */
 interface Ticked {
   tiers: ReadonlySet<string>;
   pool: boolean;
   picked: { row: Row; ids: ReadonlySet<string> } | null;
-  keepTier: boolean;
+  /** Everything was ticked as such: on a board of one tier, not that tier alone. */
+  whole?: boolean;
 }
+
+const NOTHING: Ticked = { tiers: new Set(), pool: false, picked: null };
+
+/** Every ranked tier and the pool: the whole board. */
+const everyRow = (board: PlayBoard): Ticked => ({
+  tiers: new Set(board.tiers.filter((tier) => tier.cardIds.length > 0).map((tier) => tier.id)),
+  pool: board.pool.length > 0,
+  picked: null,
+  whole: true,
+});
+
+/** Every ranked tier that holds a card, and not the pool. */
+const rankedRows = (board: PlayBoard): Ticked => ({
+  tiers: new Set(board.tiers.filter((tier) => tier.cardIds.length > 0).map((tier) => tier.id)),
+  pool: false,
+  picked: null,
+});
 
 function tickedOf(board: PlayBoard, chosen: Selection): Ticked {
   switch (chosen.kind) {
-    case "all": {
-      return {
-        tiers: new Set(board.tiers.filter((t) => t.cardIds.length > 0).map((t) => t.id)),
-        pool: board.pool.length > 0,
-        picked: null,
-        keepTier: false,
-      };
-    }
+    case "all":
+      return everyRow(board);
     case "rows":
-      return {
-        tiers: new Set(chosen.tiers),
-        pool: chosen.pool,
-        picked: null,
-        keepTier: chosen.keepTier,
-      };
+      return { tiers: new Set(chosen.tiers), pool: chosen.pool, picked: null };
     case "picked":
-      return {
-        tiers: new Set(),
-        pool: false,
-        picked: { row: chosen.tier, ids: new Set(chosen.ids) },
-        keepTier: chosen.keepTier,
-      };
+      return { ...NOTHING, picked: { row: chosen.tier, ids: new Set(chosen.ids) } };
   }
 }
 
@@ -75,31 +83,41 @@ function tickedOf(board: PlayBoard, chosen: Selection): Ticked {
 const cardsOf = (board: PlayBoard, row: Row): readonly string[] =>
   row === null ? board.pool : (board.tiers.find((tier) => tier.id === row)?.cardIds ?? []);
 
-/** Exactly one tier, so its cards can stay in it. */
-function oneTier(ticked: Ticked): string | null {
-  if (ticked.picked !== null) return ticked.picked.row;
-  if (ticked.pool || ticked.tiers.size !== 1) return null;
-  return [...ticked.tiers][0] ?? null;
-}
+/** Every ranked tier with a card is ticked, and the pool is not. */
+const rankedTicked = (board: PlayBoard, ticked: Ticked): boolean =>
+  ticked.picked === null &&
+  !ticked.pool &&
+  board.tiers.some((tier) => tier.cardIds.length > 0) &&
+  board.tiers.every((tier) => tier.cardIds.length === 0 || ticked.tiers.has(tier.id));
 
 function chosenOf(board: PlayBoard, ticked: Ticked): Selection {
   if (ticked.picked !== null) {
     const { row, ids } = ticked.picked;
-    return { kind: "picked", tier: row, ids: [...ids], keepTier: row !== null && ticked.keepTier };
+    return { kind: "picked", tier: row, ids: [...ids], keepTier: row !== null };
   }
   const rows = board.tiers.filter((tier) => tier.cardIds.length > 0);
+  const tiers = board.tiers.filter((tier) => ticked.tiers.has(tier.id)).map((tier) => tier.id);
   const every =
-    rows.every((tier) => ticked.tiers.has(tier.id)) && (board.pool.length === 0 || ticked.pool);
-  if (every && !(oneTier(ticked) !== null && ticked.keepTier)) return { kind: "all" };
-  return {
-    kind: "rows",
-    tiers: board.tiers.filter((tier) => ticked.tiers.has(tier.id)).map((tier) => tier.id),
-    pool: ticked.pool,
-    keepTier: oneTier(ticked) !== null && ticked.keepTier,
-  };
+    rows.length + board.pool.length > 0 &&
+    rows.every((tier) => ticked.tiers.has(tier.id)) &&
+    (board.pool.length === 0 || ticked.pool);
+  // Ticked one by one, every row is everything too, but for one tier alone, which is only ordered.
+  if (every && (ticked.whole === true || ticked.pool || tiers.length !== 1)) return { kind: "all" };
+  const named = tiers.filter((tier) => cardsOf(board, tier).length > 0);
+  // Every ranked tier: written as those that hold a card, in the board's order, as the app
+  // writes them; an empty tier deleted later then never stops the game (WIRE-SPEC rule 6).
+  if (rankedTicked(board, ticked) && named.length > 1) {
+    return { kind: "rows", tiers: named, pool: false, keepTier: false };
+  }
+  // One tier alone is only ordered: its cards stay in it.
+  const one = !ticked.pool && tiers.length === 1;
+  return { kind: "rows", tiers, pool: ticked.pool, keepTier: one };
 }
 
-/** Choose whole rows, individual cards, or a fixed sample of that selection. */
+/**
+ * Choose an area: everything, the ranked tiers, the pool, one tier or
+ * several; then all of it, a random part, or cards one by one.
+ */
 export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseCardsProps) {
   const id = useId();
   const [ticked, setTicked] = useState(() =>
@@ -108,37 +126,70 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
   const [sample, setSample] = useState<readonly string[] | null>(
     chosen.kind === "sample" ? chosen.ids : null,
   );
-  // The row whose cards are being picked one by one, if any.
-  const [picking, setPickingNow] = useState<{ row: Row } | null>(null);
+  // Cards picked one by one over the ranked tiers or the whole board, kept as that area's sample.
+  const [byHand, setByHand] = useState<"ranked" | "everything" | null>(null);
+  // Where cards are being picked one by one, if anywhere.
+  const [picking, setPickingNow] = useState<PickArea | null>(null);
   // Once a page has turned, the sheet is open: the next page comes without the sheet's entrance.
   const arriving = useContext(SheetArrival);
   const [turned, setTurned] = useState(false);
-  const setPicking = (next: { row: Row } | null) => {
+  const setPicking = (next: PickArea | null) => {
     setTurned(true);
     setPickingNow(next);
   };
 
   if (picking !== null) {
+    const area =
+      picking.kind === "ranked"
+        ? rankedRows(board)
+        : picking.kind === "everything"
+          ? everyRow(board)
+          : null;
+    const ids =
+      area === null
+        ? cardsOf(board, picking.kind === "row" ? picking.row : null)
+        : chosenIds(board, chosenOf(board, area));
+    const initial: ReadonlySet<string> =
+      picking.kind === "row"
+        ? ticked.picked?.row === picking.row
+          ? ticked.picked.ids
+          : new Set()
+        : byHand === picking.kind && sample !== null
+          ? new Set(sample)
+          : new Set();
+    const tier =
+      picking.kind === "row" ? board.tiers.find((one) => one.id === picking.row) : undefined;
+    const where =
+      picking.kind === "ranked"
+        ? plural(strings.play.rankedRow, ids.length)
+        : picking.kind === "everything"
+          ? plural(strings.play.everything, ids.length)
+          : tier === undefined
+            ? plural(strings.play.thePool, ids.length)
+            : `${tierTitle(tier)} · ${plural(strings.boards.cards, ids.length)}`;
     return (
       <SheetArrival.Provider value={false}>
         <PickCards
           board={board}
-          row={picking.row}
-          initial={ticked.picked?.row === picking.row ? ticked.picked.ids : new Set()}
+          ids={ids}
+          where={where}
+          initial={initial}
           onBack={() => setPicking(null)}
-          onDone={(ids) => {
-            // Nothing picked leaves the rows ticked before as they were, as Back does.
-            setSample(null);
-            if (ids.size > 0) {
-              setTicked({
-                ...ticked,
-                tiers: new Set(),
-                pool: false,
-                picked: { row: picking.row, ids },
-                keepTier: ticked.picked === null ? true : ticked.keepTier,
-              });
-            } else if (ticked.picked?.row === picking.row) {
-              setTicked({ ...ticked, picked: null });
+          onDone={(picked) => {
+            // Nothing picked leaves what was ticked before as it was, as Back does.
+            if (picking.kind === "row") {
+              if (picked.size > 0) {
+                setSample(null);
+                setByHand(null);
+                setTicked({ ...NOTHING, picked: { row: picking.row, ids: picked } });
+              } else if (ticked.picked?.row === picking.row) {
+                setTicked({ ...ticked, picked: null });
+              }
+            } else if (picked.size > 0 && area !== null) {
+              const all = picked.size === ids.length;
+              setTicked(area);
+              setSample(all ? null : ids.filter((card) => picked.has(card)));
+              setByHand(all ? null : picking.kind);
             }
             setPicking(null);
           }}
@@ -153,33 +204,31 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
   const count = sample?.length ?? candidates.length;
   const rows = board.tiers.filter((tier) => tier.cardIds.length > 0);
   const total = board.order.length;
-  const everything = source.kind === "all" && sample === null;
-  const kept = oneTier(ticked);
-  const keptLabel = board.tiers.find((tier) => tier.id === kept)?.label ?? "";
+  const everything = source.kind === "all";
 
-  const toggle = (row: Row, on: boolean) => {
+  const clear = () => {
     setSample(null);
+    setByHand(null);
+  };
+  const toggle = (row: Row, on: boolean) => {
+    clear();
     const tiers = new Set(ticked.picked === null ? ticked.tiers : []);
     let pool = ticked.picked === null ? ticked.pool : false;
     if (row === null) pool = on;
     else if (on) tiers.add(row);
     else tiers.delete(row);
-    setTicked({ ...ticked, tiers, pool, picked: null, keepTier: true });
+    setTicked({ tiers, pool, picked: null });
   };
-  const toggleEverything = (on: boolean) => {
-    setSample(null);
-    setTicked({
-      ...ticked,
-      tiers: new Set(on ? rows.map((tier) => tier.id) : []),
-      pool: on && board.pool.length > 0,
-      keepTier: false,
-      picked: null,
-    });
+  const toggleArea = (area: Ticked, on: boolean) => {
+    clear();
+    setTicked(on ? area : NOTHING);
   };
   const isTicked = (row: Row) =>
     ticked.picked === null && (row === null ? ticked.pool : ticked.tiers.has(row));
   const pickedHere = (row: Row) =>
     ticked.picked !== null && ticked.picked.row === row ? ticked.picked.ids.size : null;
+  const byHandHere = (area: "ranked" | "everything") =>
+    byHand === area && sample !== null ? sample.length : null;
 
   return (
     <SheetArrival.Provider value={arriving && !turned}>
@@ -205,6 +254,25 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
         }
       >
         <ul className="play-rows">
+          <RowItem
+            id={`${id}-everything`}
+            title={plural(strings.play.everything, total)}
+            checked={everything}
+            picked={byHandHere("everything")}
+            onToggle={(on) => toggleArea(everyRow(board), on)}
+            onPick={() => setPicking({ kind: "everything" })}
+          />
+          {/* Without a pool, or with one tier, Ranked would only repeat a row. */}
+          {rows.length > 1 && board.pool.length > 0 && (
+            <RowItem
+              id={`${id}-ranked`}
+              title={plural(strings.play.rankedRow, total - board.pool.length)}
+              checked={rankedTicked(board, ticked)}
+              picked={byHandHere("ranked")}
+              onToggle={(on) => toggleArea(rankedRows(board), on)}
+              onPick={() => setPicking({ kind: "ranked" })}
+            />
+          )}
           {board.pool.length > 0 && (
             <RowItem
               id={`${id}-pool`}
@@ -212,7 +280,7 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
               checked={isTicked(null)}
               picked={pickedHere(null)}
               onToggle={(on) => toggle(null, on)}
-              onPick={() => setPicking({ row: null })}
+              onPick={() => setPicking({ kind: "row", row: null })}
             />
           )}
           {rows.map((tier) => (
@@ -225,28 +293,25 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
               checked={isTicked(tier.id)}
               picked={pickedHere(tier.id)}
               onToggle={(on) => toggle(tier.id, on)}
-              onPick={() => setPicking({ row: tier.id })}
+              onPick={() => setPicking({ kind: "row", row: tier.id })}
             />
           ))}
-          <li className="play-row">
-            <Check id={`${id}-everything`} checked={everything} onChange={toggleEverything} />
-            <label htmlFor={`${id}-everything`} className="play-row__text">
-              <span className="play-row__title">{plural(strings.play.everything, total)}</span>
-            </label>
-          </li>
         </ul>
-        {candidates.length >= 16 && (
+        {candidates.length > 16 && (
           <fieldset className="play-sampling">
             <legend>{strings.play.randomSample}</legend>
-            <button type="button" aria-pressed={sample === null} onClick={() => setSample(null)}>
+            <button type="button" aria-pressed={sample === null} onClick={clear}>
               {plural(strings.play.everything, candidates.length)}
             </button>
             {sampleSizes(candidates.length).map((size) => (
               <button
                 type="button"
                 key={size}
-                aria-pressed={sample?.length === size}
-                onClick={() => setSample(sampleIds(candidates, size))}
+                aria-pressed={byHand === null && sample?.length === size}
+                onClick={() => {
+                  setByHand(null);
+                  setSample(sampleIds(candidates, size));
+                }}
               >
                 {size}
               </button>
@@ -262,22 +327,6 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
               ))}
             </ul>
           </details>
-        )}
-        {kept !== null && (
-          <label className="play-switch">
-            <span>{fill(strings.play.keepIn, { tier: keptLabel })}</span>
-            {/* A checkbox under an M3 switch's face: the role says what it is. */}
-            <span className="play-switch__track">
-              <input
-                type="checkbox"
-                role="switch"
-                className="play-switch__input"
-                checked={ticked.keepTier}
-                onChange={(event) => setTicked({ ...ticked, keepTier: event.target.checked })}
-              />
-              <span className="play-switch__handle" aria-hidden="true" />
-            </span>
-          </label>
         )}
       </PlaySheet>
     </SheetArrival.Provider>
@@ -369,28 +418,26 @@ function RowItem({ id, title, sub, band, checked, picked, onToggle, onPick }: Ro
 
 interface PickCardsProps {
   board: PlayBoard;
-  row: Row;
+  /** The cards to pick from, in the board’s order. */
+  ids: readonly string[];
+  /** Where they are, under the title: "The pool · 22 cards". */
+  where: string;
   initial: ReadonlySet<string>;
   onBack: () => void;
   onDone: (ids: ReadonlySet<string>) => void;
   onCancel: () => void;
 }
 
-/** The row’s cards can be searched and selected individually. */
-function PickCards({ board, row, initial, onBack, onDone, onCancel }: PickCardsProps) {
+/** The area’s cards can be searched and selected individually. */
+function PickCards({ board, ids: from, where, initial, onBack, onDone, onCancel }: PickCardsProps) {
   const id = useId();
   const size = useBoardSize();
   const [query, setQuery] = useState("");
   const [ids, setIds] = useState<ReadonlySet<string>>(initial);
-  const cards = cardsOf(board, row).flatMap((card) => board.cards.get(card) ?? []);
+  const cards = from.flatMap((card) => board.cards.get(card) ?? []);
   const words = query.trim().toLocaleLowerCase();
   const shown =
     words === "" ? cards : cards.filter((card) => card.name.toLocaleLowerCase().includes(words));
-  const tier = board.tiers.find((one) => one.id === row);
-  const where =
-    tier === undefined
-      ? plural(strings.play.thePool, cards.length)
-      : `${tierTitle(tier)} · ${plural(strings.boards.cards, cards.length)}`;
 
   const flip = (card: string, on: boolean) => {
     const next = new Set(ids);

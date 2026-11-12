@@ -37,18 +37,106 @@ export function chosenIds(board: PlayBoard, chosen: Chosen): string[] {
   }
 }
 
+/** The selection a chosen set was drawn from: a sample's source, or itself. */
+export const sourceOf = (chosen: Chosen): Selection =>
+  chosen.kind === "sample" ? chosen.source : chosen;
+
+/** The id of the one tier the game only orders, whether or not it is still on the board. */
+export function keepsTier(chosen: Chosen): string | null {
+  const source = sourceOf(chosen);
+  if (source.kind === "rows" && source.keepTier && !source.pool && source.tiers.length === 1) {
+    return source.tiers[0] ?? null;
+  }
+  return source.kind === "picked" && source.keepTier ? source.tier : null;
+}
+
 /** The one tier the cards stay in, by its place on the board, or null when the game re-tiers them. */
 export function keptTier(board: PlayBoard, chosen: Chosen): number | null {
-  if (chosen.kind === "sample") return keptTier(board, chosen.source);
-  const tier =
-    chosen.kind === "rows" && chosen.keepTier && !chosen.pool && chosen.tiers.length === 1
-      ? chosen.tiers[0]
-      : chosen.kind === "picked" && chosen.keepTier
-        ? chosen.tier
-        : null;
-  if (tier === null || tier === undefined) return null;
+  const tier = keepsTier(chosen);
+  if (tier === null) return null;
   const index = board.tiers.findIndex((row) => row.id === tier);
   return index === -1 ? null : index;
+}
+
+/**
+ * The part of the board a game was drawn from, by tier id and the pool
+ * (game-scopes WIRE-SPEC): what the unplayed-cards choice may touch. A card
+ * outside it never moves but to the place the game gave it.
+ */
+export interface Area {
+  tiers: ReadonlySet<string>;
+  pool: boolean;
+}
+
+export function areaOf(board: PlayBoard, chosen: Chosen): Area {
+  const source = sourceOf(chosen);
+  switch (source.kind) {
+    case "all":
+      return { tiers: new Set(board.tiers.map((tier) => tier.id)), pool: true };
+    case "rows":
+      return { tiers: new Set(source.tiers), pool: source.pool };
+    case "picked":
+      return source.tier === null
+        ? { tiers: new Set(), pool: true }
+        : { tiers: new Set([source.tier]), pool: false };
+  }
+}
+
+/**
+ * A tier the game was drawn from has left the board (a renamed one keeps its
+ * id): the game cannot go on as if it were drawn from the rest, or from
+ * everything (WIRE-SPEC rule 6).
+ */
+export function lostTier(board: PlayBoard, chosen: Chosen): boolean {
+  const here = new Set(board.tiers.map((tier) => tier.id));
+  const source = sourceOf(chosen);
+  if (source.kind === "all") return false;
+  const named = source.kind === "rows" ? source.tiers : source.tier === null ? [] : [source.tier];
+  return named.some((tier) => !here.has(tier));
+}
+
+/**
+ * Every ranked tier and nothing else: "Ranked". It is written as the tiers
+ * that hold a card, in the board's order, as the app writes it, and read back
+ * as such when the tiers named cover every tier that holds a card; empty ones
+ * named besides do not count (WIRE-SPEC). A tier filled since the game began
+ * makes it a choice of rows by name only: what the result may move is the
+ * tiers named, either way.
+ */
+export function isRanked(board: PlayBoard, tiers: readonly string[]): boolean {
+  const named = new Set(tiers);
+  const here = new Set(board.tiers.map((tier) => tier.id));
+  return (
+    named.size > 0 &&
+    tiers.every((tier) => here.has(tier)) &&
+    board.tiers.every((tier) => tier.cardIds.length === 0 || named.has(tier.id))
+  );
+}
+
+/** Which area a choice is, for the picker's "34 cards from …": a named one, or the board. */
+export type AreaName =
+  | { kind: "board" }
+  | { kind: "pool" }
+  | { kind: "ranked" }
+  | { kind: "tier"; tier: PlayBoard["tiers"][number] };
+
+export function areaName(board: PlayBoard, chosen: Chosen): AreaName {
+  const source = sourceOf(chosen);
+  const named = (id: string | null | undefined): AreaName => {
+    const tier = board.tiers.find((row) => row.id === id);
+    return tier === undefined ? { kind: "board" } : { kind: "tier", tier };
+  };
+  switch (source.kind) {
+    case "all":
+      return { kind: "board" };
+    case "picked":
+      if (source.tier === null) return { kind: "pool" };
+      return source.keepTier ? named(source.tier) : { kind: "board" };
+    case "rows":
+      if (source.pool) return source.tiers.length === 0 ? { kind: "pool" } : { kind: "board" };
+      if (source.keepTier && source.tiers.length === 1) return named(source.tiers[0]);
+      return isRanked(board, source.tiers) ? { kind: "ranked" } : { kind: "board" };
+  }
 }
 
 /** Whether a game can be played over this many cards. */
@@ -65,9 +153,10 @@ export function sampleIds(ids: readonly string[], count: number, random = Math.r
   return ids.filter((id) => picked.has(id));
 }
 
+/** The random sizes offered, as on the app: 16, 32, 64, 128 and on, doubling, each below the cards there are. */
 export function sampleSizes(count: number): number[] {
   const sizes: number[] = [];
-  for (let size = 16; size <= count; size *= 2) sizes.push(size);
+  for (let size = 16; size < count; size *= 2) sizes.push(size);
   return sizes;
 }
 

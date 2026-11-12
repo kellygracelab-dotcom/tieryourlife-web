@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { ReaderRanking } from "../../api/community";
 import type { PublishedTier } from "../../api/types";
 import { setStrings } from "../../strings";
-import { placedBy, placedOn, readersOf } from "./rankings";
+import { bylineName, placedBy, placedOn, readersOf } from "./rankings";
 
 const tier = (label: string): PublishedTier => ({
   label,
@@ -102,5 +102,12 @@ describe("placedOn", () => {
     setStrings("uk", { rankings: { today: "Сьогодні" } });
     expect(placedOn(noon, noon)).toBe("Сьогодні");
     expect(placedOn(new Date(2026, 9, 3).getTime(), noon)).toMatch(/2026/);
+  });
+});
+
+describe("bylineName", () => {
+  it("says the public name, or Author for an author without one", () => {
+    expect(bylineName(" Olena ")).toBe("Olena");
+    for (const none of ["", "   ", null, undefined]) expect(bylineName(none)).toBe("Author");
   });
 });

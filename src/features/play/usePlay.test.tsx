@@ -213,7 +213,8 @@ describe("Play on a page", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: /Everything/ }));
     await userEvent.click(screen.getByRole("checkbox", { name: /The pool/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByText("3 cards from Films")).toBeInTheDocument();
+    // The pool alone: the picker names it, as the app does.
+    expect(screen.getByText("3 cards from The pool")).toBeInTheDocument();
     // Cancel there goes back to the picker, not out.
     // The arrow goes back to the picker; Cancel there closes the whole sheet, as on the app.
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));

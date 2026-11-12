@@ -9,6 +9,7 @@ import { BoardFrameContext, type BoardFrame } from "../features/tierboard/boardF
 import type { Dock } from "../features/tierboard/dock";
 import { RankingBoard, type EditMode } from "../features/tierboard/RankingBoard";
 import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
+import { bylineName } from "../features/community/rankings";
 import { keptBy, readKept } from "../features/ranking/kept";
 import { downloadShare, type Share } from "../features/ranking/share";
 import { embeddedRanking, loadRanking, rearrangeRanking } from "../lib/api";
@@ -247,7 +248,9 @@ function Body({
           <p className="list-head__meta">
             {!editorial && (
               <>
-                {fillNodes(strings.list.by, { name: <bdi>{snapshot.authorName}</bdi> })}
+                {fillNodes(strings.list.by, {
+                  name: <bdi>{bylineName(snapshot.authorName)}</bdi>,
+                })}
                 {" · "}
               </>
             )}
