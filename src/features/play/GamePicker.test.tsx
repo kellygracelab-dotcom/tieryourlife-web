@@ -14,6 +14,7 @@ function show(props: Partial<Parameters<typeof GamePicker>[0]> = {}) {
     onChooseCards: vi.fn(),
     onResume: vi.fn(),
     onStartAgain: vi.fn(),
+    onDiscard: vi.fn(),
     onStart: vi.fn(),
     onCancel: vi.fn(),
   };
@@ -25,6 +26,7 @@ function show(props: Partial<Parameters<typeof GamePicker>[0]> = {}) {
       saved={null}
       theirs={false}
       now={NOW}
+      canStartAgain
       {...handlers}
       {...props}
     />,
@@ -125,6 +127,16 @@ describe("the game picker", () => {
     expect(again).toHaveClass("play-outlined");
     await userEvent.click(again);
     expect(onStartAgain).toHaveBeenCalled();
+  });
+
+  it("only lets go of a game a tier of whose area is gone, as the app does", async () => {
+    const saved: Resume = { kind: "changed", game: savedGame("hill") };
+    const { onStartAgain, onDiscard } = show({ saved, canStartAgain: false });
+    expect(screen.getByText("The board changed, so this game can’t go on")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start again" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(onDiscard).toHaveBeenCalled();
+    expect(onStartAgain).not.toHaveBeenCalled();
   });
 
   it("has no new-game line without a saved game", () => {

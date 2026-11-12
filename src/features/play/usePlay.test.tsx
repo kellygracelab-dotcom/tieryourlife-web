@@ -252,6 +252,56 @@ describe("Play on a page", () => {
     expect(screen.getByRole("heading", { name: "Duel 1 of 2" })).toBeInTheDocument();
   });
 
+  it("only lets go of a game whose tier was deleted, and offers the whole board (QA W-GS2)", async () => {
+    const store = memoryStore();
+    const inA = { kind: "picked", tier: "a", ids: ["c0", "c1", "c2"], keepTier: true } as const;
+    const old = {
+      ...newGame("hill", ["c0", "c1", "c2"], inA, 4, NOW),
+      history: [[0, 1, 0] as const],
+    };
+    localGames(store, () => NOW).save("b1", old);
+    // A was deleted: its cards went to the pool.
+    render(<Page store={store} tiers={[tier("s"), tier("b")]} />);
+    await userEvent.click(playButton());
+    expect(screen.getByText("The board changed, so this game can’t go on")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start again" })).not.toBeInTheDocument();
+    // Never "0 cards" with Start off: a new game is over the whole board.
+    expect(screen.getByText("3 cards from Films")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(
+      screen.queryByText("The board changed, so this game can’t go on"),
+    ).not.toBeInTheDocument();
+    expect(store.read(playKey("b1"))).toBeNull();
+  });
+
+  it("starts the next game from the whole board once a result is applied (QA W-GS1)", async () => {
+    const onApply = vi.fn<PlayOptions["onApply"]>(() => undefined);
+    render(
+      <Page
+        store={memoryStore()}
+        onApply={onApply}
+        cards={cardsOf(4)}
+        tiers={[tier("s", ["c0"]), tier("a")]}
+      />,
+    );
+    await userEvent.click(playButton());
+    await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Everything/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /The pool/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("3 cards from The pool")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await pickLeft(1);
+    await userEvent.keyboard("{ArrowLeft}");
+    await userEvent.click(await screen.findByRole("button", { name: "Apply" }));
+    expect(onApply).toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await userEvent.click(playButton());
+    expect(screen.getByText("4 cards from Films")).toBeInTheDocument();
+  });
+
   it("keeps a finished game when its result is quit", async () => {
     const store = memoryStore();
     render(<Page store={store} />);
