@@ -3,8 +3,17 @@ import { freshChunk } from "../../lib/freshChunk";
 import type { KeyValueStore } from "../../lib/storage";
 import { fill, plural, strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
-import { boardOf, type PlayCard, type PlayTier } from "./board";
-import { chosenIds, EVERYTHING, MIN_CARDS, playable, replaySelection, type Chosen } from "./chosen";
+import { boardOf, type PlayBoard, type PlayCard, type PlayTier } from "./board";
+import {
+  areaName,
+  chosenIds,
+  EVERYTHING,
+  lostTier,
+  MIN_CARDS,
+  playable,
+  replaySelection,
+  type Chosen,
+} from "./chosen";
 import type { GameKind } from "./engine";
 import type { Game, Unplayed } from "./game";
 import type { PlayButtonProps } from "./PlayButton";
@@ -30,6 +39,28 @@ export function loadPlayScreens(): Promise<Screens> {
     },
   );
   return loading;
+}
+
+/**
+ * What the picker says the cards are from: the pool, the ranked tiers or a
+ * tier by its letter and caption, as on the app; the board’s name for the
+ * whole board or a choice of rows.
+ */
+export function areaTitle(board: PlayBoard, chosen: Chosen, title: string): string {
+  const area = areaName(board, chosen);
+  switch (area.kind) {
+    case "board":
+      return title;
+    case "pool":
+      return strings.play.poolArea;
+    case "ranked":
+      return strings.play.rankedArea;
+    case "tier": {
+      const caption = area.tier.caption?.trim() ?? "";
+      // The letter alone without a caption, as the app has it: "34 cards from S".
+      return caption === "" ? area.tier.label : `${area.tier.label} · ${caption}`;
+    }
+  }
 }
 
 /** What a page learns of a game it applies: for its history line and its own receipt. */
@@ -254,12 +285,17 @@ export function usePlay(
   };
 
   const apply = (rules: Screens, finished: Game, result: string[][], unplayed: Unplayed) => {
+    // A tier the game was drawn from left the board since: nothing is put anywhere (WIRE-SPEC rule 6).
+    if (lostTier(board, finished.chosen)) {
+      notify({ text: strings.play.changed });
+      return;
+    }
     const played: Played = {
       kind: finished.spec.kind,
       cards: finished.ids.length,
       duels: rules.answered(finished),
     };
-    const takeBack = onApply(rules.applied(board, result, finished.ids, unplayed), played);
+    const takeBack = onApply(rules.applied(board, result, finished, unplayed), played);
     forget();
     close();
     if (typeof takeBack === "function") {
@@ -294,7 +330,7 @@ export function usePlay(
       <SheetArrival.Provider value={arriving}>
         {screen === "picker" && (
           <shown.GamePicker
-            title={title}
+            title={areaTitle(board, chosen, title)}
             count={chosenIds(board, chosen).length}
             kind={kind}
             onKind={setKind}

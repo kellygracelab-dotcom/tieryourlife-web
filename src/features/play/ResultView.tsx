@@ -11,6 +11,7 @@ import {
   refineCount,
   resultOf,
   type Game,
+  unplayedMatters,
   type Unplayed,
 } from "./game";
 import { thinText } from "./labels";
@@ -81,10 +82,7 @@ export function ResultView({
   const refine = useMemo(() => refineCount(game), [game]);
   const duels = answered(game);
   const nothing = duels === 0;
-  const hasUnplayed = useMemo(() => {
-    const played = new Set(game.ids);
-    return board.order.some((id) => !played.has(id));
-  }, [board.order, game.ids]);
+  const hasUnplayed = useMemo(() => unplayedMatters(game, board), [game, board]);
 
   const apply = (
     <Button variant="filled" className="result-view__apply" onClick={() => onApply(rows, unplayed)}>

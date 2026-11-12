@@ -1171,6 +1171,14 @@ const pl: Translation = {
       many: "Pula · {n} kart",
       other: "Pula · {n} karty",
     },
+    rankedRow: {
+      one: "Uszeregowane · {n} karta",
+      few: "Uszeregowane · {n} karty",
+      many: "Uszeregowane · {n} kart",
+      other: "Uszeregowane · {n} karty",
+    },
+    poolArea: "Pula",
+    rankedArea: "Uszeregowane",
     everything: {
       one: "Wszystko · {n} karta",
       few: "Wszystko · {n} karty",
@@ -1179,7 +1187,6 @@ const pl: Translation = {
     },
     selected: "Wybrano {n} z {max}",
     tooMany: "Wybrano {n}, możesz najwyżej {max}",
-    keepIn: "Zostaw je w {tier}, tylko ułóż po kolei",
     tierNamed: "Poziom {tier}",
     tooBig: "Za dużo na jedną grę. Wybierz kilka przez wyszukiwanie.",
     pickCards: "Zaznacz karty",

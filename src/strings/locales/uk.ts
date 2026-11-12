@@ -1171,6 +1171,14 @@ const uk: Translation = {
       many: "Пул · {n} карток",
       other: "Пул · {n} картки",
     },
+    rankedRow: {
+      one: "Ранжовані · {n} картка",
+      few: "Ранжовані · {n} картки",
+      many: "Ранжовані · {n} карток",
+      other: "Ранжовані · {n} картки",
+    },
+    poolArea: "Пул",
+    rankedArea: "Ранжовані",
     everything: {
       one: "Усе · {n} картка",
       few: "Усе · {n} картки",
@@ -1179,7 +1187,6 @@ const uk: Translation = {
     },
     selected: "Вибрано {n} з {max}",
     tooMany: "Вибрано {n}, можна до {max}",
-    keepIn: "Залишити їх у {tier}, лише впорядкувати",
     tierNamed: "Рівень {tier}",
     tooBig: "Забагато для однієї гри. Відберіть кілька через пошук.",
     pickCards: "Відібрати картки",

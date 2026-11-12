@@ -1,5 +1,5 @@
 import type { PlayBoard } from "./board";
-import { keptTier, type Chosen } from "./chosen";
+import { areaOf, keepsTier, keptTier, lostTier, type Chosen } from "./chosen";
 import {
   duels,
   duelsPlayed,
@@ -191,6 +191,8 @@ export const answered = (game: Game): number => duels(game.history).length;
 export function resultOf(game: Game, board: PlayBoard): string[][] {
   const tierCount = Math.max(1, board.tiers.length);
   const idOf = (card: number): string => game.ids[card] ?? "";
+  // A game drawn from a tier that is gone places nothing: never the whole board instead.
+  if (lostTier(board, game.chosen)) return Array.from({ length: tierCount }, () => []);
   const kept = keptTier(board, game.chosen);
   if (kept !== null) {
     const rows: string[][] = Array.from({ length: tierCount }, () => []);
@@ -237,22 +239,46 @@ export function estimate(kind: GameKind, count: number): Estimate {
 /** A session always keeps the exact participant IDs with which it began. */
 export type Resume = { kind: "ready" | "changed"; game: Game };
 
+/** A card gone from the board, or a tier the game was drawn from: the board changed, start again. */
 export function reconcile(game: Game, board: PlayBoard): Resume {
-  const complete = game.ids.every((id) => board.cards.has(id));
+  const complete = game.ids.every((id) => board.cards.has(id)) && !lostTier(board, game.chosen);
   return { kind: complete ? "ready" : "changed", game };
 }
 
 export type Unplayed = "keep" | "pool";
 
+/**
+ * Whether "Not played" is a choice: a card of the game's ranked tiers sat it
+ * out and the game re-tiers. A game in one tier keeps its unplayed cards
+ * behind the played ones, and one in the pool leaves them where they are
+ * (WIRE-SPEC rules 1, 2 and 5).
+ */
+export function unplayedMatters(game: Game, board: PlayBoard): boolean {
+  if (keepsTier(game.chosen) !== null) return false;
+  const area = areaOf(board, game.chosen);
+  const played = new Set(game.ids);
+  return board.tiers.some(
+    (tier) => area.tiers.has(tier.id) && tier.cardIds.some((id) => !played.has(id)),
+  );
+}
+
+/**
+ * The board after a result: each tier's played cards first, as the result has
+ * them, then the cards that sat out in the order they had. "To the pool"
+ * takes only those of the game's own tiers there; a tier outside the game,
+ * and the one tier a game orders, keep theirs (WIRE-SPEC rules 1 to 5).
+ */
 export function applied(
   board: PlayBoard,
   placed: readonly (readonly string[])[],
-  played: readonly string[],
+  game: Pick<Game, "ids" | "chosen">,
   unplayed: Unplayed = "keep",
 ): string[][] {
-  const playing = new Set(played);
+  const playing = new Set(game.ids);
+  const area = areaOf(board, game.chosen);
+  const pooling = unplayed === "pool" && keepsTier(game.chosen) === null;
   return board.tiers.map((tier, i) => [
     ...(placed[i] ?? []),
-    ...(unplayed === "keep" ? tier.cardIds.filter((id) => !playing.has(id)) : []),
+    ...(pooling && area.tiers.has(tier.id) ? [] : tier.cardIds.filter((id) => !playing.has(id))),
   ]);
 }

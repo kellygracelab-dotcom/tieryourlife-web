@@ -3,7 +3,7 @@ import { boardOf, type PlayCard, type PlayTier } from "./board";
 import { decodeGame, encodeGame } from "./savedGames";
 import { fromSynced, toSynced } from "./syncedGames";
 import { playOf } from "../boards/repository";
-import { EVERYTHING, type Chosen } from "./chosen";
+import { areaName, areaOf, EVERYTHING, type Chosen } from "./chosen";
 import { refinePairs, swissRound, swissRounds, type GameKind } from "./engine";
 import {
   answered,
@@ -26,6 +26,7 @@ import {
   skip,
   startRefine,
   undo,
+  unplayedMatters,
   type Game,
 } from "./game";
 
@@ -313,7 +314,7 @@ describe("applying a result", () => {
       tier("s", ["x"]),
       tier("a", ["y", "z"]),
     ]);
-    expect(applied(board, [["q"], ["p"]], ["p", "q"])).toEqual([
+    expect(applied(board, [["q"], ["p"]], { ids: ["p", "q"], chosen: EVERYTHING })).toEqual([
       ["q", "x"],
       ["p", "y", "z"],
     ]);
@@ -321,12 +322,152 @@ describe("applying a result", () => {
 
   it("keeps a reordered tier's block before the other cards", () => {
     const board = boardOf(cardsNamed("a", "b", "c", "d"), [tier("s", ["a", "b", "c", "d"])]);
-    expect(applied(board, [["d", "b"]], ["b", "d"])).toEqual([["d", "b", "a", "c"]]);
+    expect(applied(board, [["d", "b"]], { ids: ["b", "d"], chosen: EVERYTHING })).toEqual([
+      ["d", "b", "a", "c"],
+    ]);
   });
 
   it("re-tiers every card of a whole-board game", () => {
     const board = boardOf(cardsNamed("a", "b", "c"), [tier("s", ["a"]), tier("a", ["b"])]);
-    expect(applied(board, [["c"], ["b", "a"]], ["a", "b", "c"])).toEqual([["c"], ["b", "a"]]);
+    expect(
+      applied(board, [["c"], ["b", "a"]], { ids: ["a", "b", "c"], chosen: EVERYTHING }),
+    ).toEqual([["c"], ["b", "a"]]);
+  });
+});
+
+describe("game areas (game-scopes WIRE-SPEC)", () => {
+  // S s1 s2 s3, A a1 a2, B empty; the pool p1 p2 p3.
+  const areaBoard = boardOf(cardsNamed("s1", "s2", "s3", "a1", "a2", "p1", "p2", "p3"), [
+    tier("s", ["s1", "s2", "s3"]),
+    tier("a", ["a1", "a2"]),
+    tier("b"),
+  ]);
+  const ranked: Chosen = { kind: "rows", tiers: ["s", "a"], pool: false, keepTier: false };
+  const pool: Chosen = { kind: "rows", tiers: [], pool: true, keepTier: false };
+  const oneTier: Chosen = { kind: "rows", tiers: ["s"], pool: false, keepTier: true };
+  const finish = (ids: string[], chosen: Chosen) => playOut(start("swiss", ids, chosen), lowerWins);
+  const pooled = (rows: string[][]) => areaBoard.order.filter((id) => !rows.flat().includes(id));
+
+  it("orders only its tier in one tier: the played first, the rest behind as they were", () => {
+    const game = finish(["s3", "s1"], { kind: "sample", source: oneTier, ids: ["s3", "s1"] });
+    const rows = resultOf(game, areaBoard);
+    expect(rows).toEqual([["s3", "s1"], [], []]);
+    expect(unplayedMatters(game, areaBoard)).toBe(false);
+    // "To the pool" changes nothing here: s2 follows the played cards.
+    const after = applied(areaBoard, rows, game, "pool");
+    expect(after).toEqual([["s3", "s1", "s2"], ["a1", "a2"], []]);
+    expect(pooled(after)).toEqual(["p1", "p2", "p3"]);
+  });
+
+  it("plays only the pool, and leaves every ranked card in its tier and order", () => {
+    const game = finish(["p1", "p2", "p3"], pool);
+    const rows = resultOf(game, areaBoard);
+    expect(rows.flat().sort()).toEqual(["p1", "p2", "p3"]);
+    expect(unplayedMatters(game, areaBoard)).toBe(false);
+    const after = applied(areaBoard, rows, game, "pool");
+    const ranked = (row: string[]) => row.filter((id) => !id.startsWith("p"));
+    expect(after.map(ranked)).toEqual([["s1", "s2", "s3"], ["a1", "a2"], []]);
+    // The played cards lead their tiers.
+    after.forEach((row, i) => expect(row.slice(0, rows[i]!.length)).toEqual(rows[i]));
+    expect(pooled(after)).toEqual([]);
+  });
+
+  it("leaves the pool alone in a ranked game, even sending the unplayed to it", () => {
+    const game = finish(["s1", "a1"], { kind: "sample", source: ranked, ids: ["s1", "a1"] });
+    expect(unplayedMatters(game, areaBoard)).toBe(true);
+    const rows = resultOf(game, areaBoard);
+    const after = applied(areaBoard, rows, game, "pool");
+    expect(after.flat().sort()).toEqual(["a1", "s1"]);
+    expect(pooled(after)).toEqual(["s2", "s3", "a2", "p1", "p2", "p3"]);
+    expect(applied(areaBoard, rows, game, "keep").flat().sort()).toEqual([
+      "a1",
+      "a2",
+      "s1",
+      "s2",
+      "s3",
+    ]);
+  });
+
+  it("sends to the pool only the unplayed cards of the tiers it was drawn from", () => {
+    const rows: Chosen = { kind: "rows", tiers: ["a"], pool: true, keepTier: false };
+    const game = finish(["a1", "p1"], { kind: "sample", source: rows, ids: ["a1", "p1"] });
+    const after = applied(areaBoard, resultOf(game, areaBoard), game, "pool");
+    expect(after.flat()).not.toContain("a2");
+    expect(after.flat()).toEqual(expect.arrayContaining(["s1", "s2", "s3"]));
+    expect(after[0]!.filter((id) => id.startsWith("s"))).toEqual(["s1", "s2", "s3"]);
+  });
+
+  it("does not go on, nor fall back to the whole board, when its tier is gone", () => {
+    const game = finish(["s1", "s2", "s3"], oneTier);
+    // S deleted: its cards went to the pool, and a new S under another id holds none of them.
+    const without = boardOf(cardsNamed("s1", "s2", "s3", "a1", "a2", "p1", "p2", "p3"), [
+      tier("s-new"),
+      tier("a", ["a1", "a2"]),
+    ]);
+    expect(reconcile(game, without).kind).toBe("changed");
+    expect(resultOf(game, without)).toEqual([[], []]);
+  });
+
+  it("goes on in a renamed tier: the id is the same", () => {
+    const game = finish(["s1", "s2", "s3"], oneTier);
+    const renamed = boardOf(cardsNamed("s1", "s2", "s3", "a1", "a2", "p1", "p2", "p3"), [
+      { ...tier("s", ["s1", "s2", "s3"]), label: "X", caption: "Renamed" },
+      tier("a", ["a1", "a2"]),
+      tier("b"),
+    ]);
+    expect(reconcile(game, renamed).kind).toBe("ready");
+    expect(resultOf(game, renamed)[0]).toEqual(["s1", "s2", "s3"]);
+  });
+
+  it("moves the same cards when a tier filled since makes Ranked a choice of rows", () => {
+    const game = finish(["s1", "a1"], { kind: "sample", source: ranked, ids: ["s1", "a1"] });
+    // A new tier N took p1 from the pool after the game began.
+    const later = boardOf(cardsNamed("s1", "s2", "s3", "a1", "a2", "p1", "p2", "p3"), [
+      tier("s", ["s1", "s2", "s3"]),
+      tier("a", ["a1", "a2"]),
+      tier("b"),
+      tier("n", ["p1"]),
+    ]);
+    expect(areaName(areaBoard, game.chosen)).toEqual({ kind: "ranked" });
+    expect(areaName(later, game.chosen)).toEqual({ kind: "board" });
+    expect(reconcile(game, later).kind).toBe("ready");
+    expect(areaOf(later, game.chosen)).toEqual(areaOf(areaBoard, game.chosen));
+    const after = applied(later, resultOf(game, later), game, "pool");
+    // N was not in the game: its card stays, while the unplayed of S and A go to the pool.
+    expect(after[3]!.filter((id) => id === "p1")).toEqual(["p1"]);
+    expect(after.flat()).not.toContain("s2");
+    expect(after.flat()).not.toContain("a2");
+  });
+
+  it("goes on after an empty tier is deleted: Ranked names only tiers with cards", () => {
+    const game = finish(["s1", "a1"], ranked);
+    const without = boardOf(cardsNamed("s1", "s2", "s3", "a1", "a2", "p1", "p2", "p3"), [
+      tier("s", ["s1", "s2", "s3"]),
+      tier("a", ["a1", "a2"]),
+    ]);
+    expect(reconcile(game, without).kind).toBe("ready");
+    expect(areaName(without, game.chosen)).toEqual({ kind: "ranked" });
+  });
+
+  it("travels as the scope the app writes and comes back as the same area", () => {
+    const cases: [Chosen, string[], Record<string, unknown>][] = [
+      [EVERYTHING, ["s1", "a1"], {}],
+      [pool, ["p1", "p2"], { scope: ["pool"] }],
+      [ranked, ["s1", "a1"], { scope: ["s", "a"] }],
+      [oneTier, ["s1", "s2"], { scope: ["s"], keepTier: true }],
+    ];
+    for (const [chosen, ids, wire] of cases) {
+      const game = pick(start("hill", ids, chosen), 0);
+      const synced = toSynced(game, "pool", 20_000);
+      expect({ scope: synced.scope, keepTier: synced.keepTier }).toEqual({
+        scope: undefined,
+        keepTier: undefined,
+        ...wire,
+      });
+      const back = fromSynced(playOf(JSON.parse(JSON.stringify(synced)))!, "pool");
+      expect(areaName(areaBoard, back.chosen)).toEqual(areaName(areaBoard, chosen));
+      expect(areaOf(areaBoard, back.chosen)).toEqual(areaOf(areaBoard, chosen));
+    }
   });
 });
 

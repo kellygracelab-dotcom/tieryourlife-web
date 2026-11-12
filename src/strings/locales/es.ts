@@ -1143,6 +1143,13 @@ const es: Translation = {
       many: "La reserva · {n} tarjetas",
       other: "La reserva · {n} tarjetas",
     },
+    rankedRow: {
+      one: "Clasificadas · {n} tarjeta",
+      many: "Clasificadas · {n} tarjetas",
+      other: "Clasificadas · {n} tarjetas",
+    },
+    poolArea: "La reserva",
+    rankedArea: "Clasificadas",
     everything: {
       one: "Todo · {n} tarjeta",
       many: "Todo · {n} tarjetas",
@@ -1150,7 +1157,6 @@ const es: Translation = {
     },
     selected: "{n} de {max} seleccionadas",
     tooMany: "{n} seleccionadas, elige hasta {max}",
-    keepIn: "Dejarlas en {tier}, solo ordenarlas",
     tierNamed: "Nivel {tier}",
     tooBig: "Demasiadas para una partida. Usa la búsqueda para elegir algunas.",
     pickCards: "Escoger tarjetas",

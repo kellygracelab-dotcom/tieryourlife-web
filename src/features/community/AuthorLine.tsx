@@ -6,6 +6,7 @@ import { fillNodes } from "../../strings/fillNodes";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { keepIntent, takeIntent } from "./afterSignIn";
 import { FollowButton } from "./FollowButton";
+import { bylineName } from "./rankings";
 import { SignInDialog } from "./SignInDialog";
 import { followFailureText, useFollow, type FollowDeps } from "./useFollow";
 import "./follow.css";
@@ -28,7 +29,7 @@ interface AuthorLineProps {
  * the moment somebody most wants to follow and least wants to leave the page.
  */
 export function AuthorLine({ uid, name, photoUrl, own, notify, follow }: AuthorLineProps) {
-  const byline = fillNodes(strings.list.by, { name: <bdi>{name}</bdi> });
+  const byline = fillNodes(strings.list.by, { name: <bdi>{bylineName(name)}</bdi> });
   return (
     <div className="byline">
       {uid === "" ? (
