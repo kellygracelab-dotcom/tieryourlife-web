@@ -235,6 +235,8 @@ export function usePlay(
 
   /** A new game; the one saved before it goes, with a way back for a few seconds. */
   const begin = (rules: Screens, gameKind: GameKind, from: Chosen) => {
+    // Never a new game in an area a tier of which is gone (WIRE-SPEC rule 6, QA W-GS2).
+    if (lostTier(board, from)) return;
     const ids = chosenIds(board, from);
     if (!playable(ids.length)) return;
     // Read again: a game kept since in another tab goes with a way back too.
@@ -297,6 +299,9 @@ export function usePlay(
     };
     const takeBack = onApply(rules.applied(board, result, finished, unplayed), played);
     forget();
+    // The cards are elsewhere now: the next game starts from the whole board,
+    // not from members and rows the result has just moved (QA W-GS1).
+    setChosen(EVERYTHING);
     close();
     if (typeof takeBack === "function") {
       notify({
@@ -324,14 +329,19 @@ export function usePlay(
     });
   };
 
+  // A choice one of whose tiers left the board is no choice: the picker
+  // starts from the whole board again, never "0 cards" with Start off.
+  const current = lostTier(board, chosen) ? EVERYTHING : chosen;
+  const savedLost = savedGame !== null && lostTier(board, savedGame.chosen);
+
   // Until the screens are here, nothing: the button keeps the focus.
   const view =
     shown === null ? null : (
       <SheetArrival.Provider value={arriving}>
         {screen === "picker" && (
           <shown.GamePicker
-            title={areaTitle(board, chosen, title)}
-            count={chosenIds(board, chosen).length}
+            title={areaTitle(board, current, title)}
+            count={chosenIds(board, current).length}
             kind={kind}
             onKind={setKind}
             saved={savedGame === null ? null : shown.reconcile(savedGame, board)}
@@ -339,17 +349,20 @@ export function usePlay(
             now={now()}
             onChooseCards={() => setScreen("cards")}
             onResume={() => resume(shown)}
+            // A tier of its area is gone: the same cards cannot start again, only be let go, as on the app.
+            canStartAgain={!savedLost}
             onStartAgain={() =>
               savedGame !== null && begin(shown, savedGame.spec.kind, savedGame.chosen)
             }
-            onStart={() => begin(shown, kind, chosen)}
+            onDiscard={forget}
+            onStart={() => begin(shown, kind, current)}
             onCancel={close}
           />
         )}
         {screen === "cards" && (
           <shown.ChooseCards
             board={board}
-            chosen={chosen}
+            chosen={current}
             onDone={(next) => {
               setChosen(next);
               setScreen("picker");

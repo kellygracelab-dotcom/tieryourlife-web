@@ -28,11 +28,20 @@ export function chosenIds(board: PlayBoard, chosen: Chosen): string[] {
         ...(chosen.pool ? board.pool : []),
       ];
     }
-    case "sample":
-      return chosen.ids.filter((id) => board.cards.has(id));
+    // Fixed members and picked cards count only while they are still in the
+    // area: one moved out of it since (by an applied game, or by hand) never
+    // plays in it again (WIRE-SPEC rule 5, QA W-GS1).
+    case "sample": {
+      const within = new Set(chosenIds(board, chosen.source));
+      return chosen.ids.filter((id) => within.has(id));
+    }
     case "picked": {
       const picked = new Set(chosen.ids);
-      return board.order.filter((id) => picked.has(id));
+      const row =
+        chosen.tier === null
+          ? board.pool
+          : (board.tiers.find((tier) => tier.id === chosen.tier)?.cardIds ?? []);
+      return row.filter((id) => picked.has(id));
     }
   }
 }

@@ -30,7 +30,10 @@ interface GamePickerProps {
   now: number;
   onChooseCards: () => void;
   onResume: () => void;
+  /** False when a tier of the saved game's area is gone: then it can only be discarded. */
+  canStartAgain: boolean;
   onStartAgain: () => void;
+  onDiscard: () => void;
   onStart: () => void;
   onCancel: () => void;
 }
@@ -46,7 +49,9 @@ export function GamePicker({
   now,
   onChooseCards,
   onResume,
+  canStartAgain,
   onStartAgain,
+  onDiscard,
   onStart,
   onCancel,
 }: GamePickerProps) {
@@ -77,7 +82,13 @@ export function GamePicker({
       <div className="play-choice">
         {saved !== null && (
           <>
-            <SavedRow saved={saved} now={now} onResume={onResume} onStartAgain={onStartAgain} />
+            <SavedRow
+              saved={saved}
+              now={now}
+              onResume={onResume}
+              onStartAgain={canStartAgain ? onStartAgain : null}
+              onDiscard={onDiscard}
+            />
             <p className="play-choice__label">{strings.play.newGame}</p>
           </>
         )}
@@ -111,17 +122,22 @@ export function GamePicker({
   );
 }
 
-/** Resume the saved participants, or offer a fresh start if a participant was removed. */
+/**
+ * Resume the saved participants, or offer a fresh start if a participant was
+ * removed; when a tier of its area is gone, only to let it go.
+ */
 function SavedRow({
   saved,
   now,
   onResume,
   onStartAgain,
+  onDiscard,
 }: {
   saved: Resume;
   now: number;
   onResume: () => void;
-  onStartAgain: () => void;
+  onStartAgain: (() => void) | null;
+  onDiscard: () => void;
 }) {
   const { game } = saved;
   const { overall } = gameProgress(game);
@@ -142,9 +158,9 @@ function SavedRow({
         <button
           type="button"
           className="btn play-outlined play-saved__action"
-          onClick={onStartAgain}
+          onClick={onStartAgain ?? onDiscard}
         >
-          <span>{strings.play.startAgain}</span>
+          <span>{onStartAgain === null ? strings.play.discard : strings.play.startAgain}</span>
         </button>
       ) : (
         <Button variant="tonal" className="play-tonal play-saved__action" onClick={onResume}>

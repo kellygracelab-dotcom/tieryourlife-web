@@ -75,7 +75,8 @@ function tickedOf(board: PlayBoard, chosen: Selection): Ticked {
     case "rows":
       return { tiers: new Set(chosen.tiers), pool: chosen.pool, picked: null };
     case "picked":
-      return { ...NOTHING, picked: { row: chosen.tier, ids: new Set(chosen.ids) } };
+      // Only the picked cards still in that row: one moved out since is no longer picked.
+      return { ...NOTHING, picked: { row: chosen.tier, ids: new Set(chosenIds(board, chosen)) } };
   }
 }
 
@@ -123,8 +124,9 @@ export function ChooseCards({ board, chosen, onDone, onBack, onCancel }: ChooseC
   const [ticked, setTicked] = useState(() =>
     tickedOf(board, chosen.kind === "sample" ? chosen.source : chosen),
   );
+  // A sample's members still in its area; one moved out of it since is gone from it (QA W-GS1).
   const [sample, setSample] = useState<readonly string[] | null>(
-    chosen.kind === "sample" ? chosen.ids : null,
+    chosen.kind === "sample" ? chosenIds(board, chosen) : null,
   );
   // Cards picked one by one over the ranked tiers or the whole board, kept as that area's sample.
   const [byHand, setByHand] = useState<"ranked" | "everything" | null>(null);

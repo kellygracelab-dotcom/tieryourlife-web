@@ -40,6 +40,21 @@ describe("the chosen cards", () => {
     ).toEqual(["b", "a"]);
   });
 
+  it("leave out fixed or picked cards that left the area since (QA W-GS1)", () => {
+    // d was among S's members, and a result has put it in A since.
+    const inS = { kind: "rows", tiers: ["s"], pool: false, keepTier: true } as const;
+    expect(chosenIds(board, { kind: "sample", source: inS, ids: ["b", "d"] })).toEqual(["b"]);
+    expect(
+      chosenIds(board, { kind: "picked", tier: "s", ids: ["b", "d"], keepTier: true }),
+    ).toEqual(["b"]);
+    expect(
+      chosenIds(board, { kind: "picked", tier: null, ids: ["c", "a"], keepTier: false }),
+    ).toEqual(["c"]);
+    expect(chosenIds(board, { kind: "picked", tier: "gone", ids: ["b"], keepTier: true })).toEqual(
+      [],
+    );
+  });
+
   it("stay in their tier only when they are one tier's and that is asked", () => {
     expect(keptTier(board, { kind: "rows", tiers: ["a"], pool: false, keepTier: true })).toBe(1);
     expect(
