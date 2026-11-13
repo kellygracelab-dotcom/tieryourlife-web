@@ -287,10 +287,8 @@ export const loadBoardIndex = (after: string | null = null): Promise<KeptBoardIn
 
 export const loadKeptBoard = (uid: string): Promise<KeptBoard> => boards.loadKeptBoard(api, uid);
 
-export const keepBoard = (
-  uid: string,
-  request: KeepBoardRequest,
-): Promise<{ uid: string; revision: number }> => boards.keepBoard(api, uid, request);
+export const keepBoard = (uid: string, request: KeepBoardRequest): Promise<boards.KeptAnswer> =>
+  boards.keepBoard(api, uid, request);
 
 export const forgetBoard = (uid: string): Promise<void> => boards.forgetBoard(api, uid);
 

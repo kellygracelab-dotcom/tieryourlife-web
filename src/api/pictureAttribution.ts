@@ -234,6 +234,53 @@ export const knownSourceOf = (
     : null;
 
 /**
+ * The catalogues' own picture hosts (CONTRACT, `CATALOGUE_HOSTS`), each with
+ * the source the backend names for it. Wikimedia's only under
+ * `/wikipedia/commons/`: a local Wikipedia's uploads are another site's.
+ */
+const CATALOGUE_HOSTS: Readonly<Record<string, AttributionSource>> = {
+  "image.tmdb.org": "tmdb",
+  "s4.anilist.co": "anilist",
+  "images.igdb.com": "igdb",
+  "shared.akamai.steamstatic.com": "steam",
+  "cdn-images.dzcdn.net": "deezer",
+  "e-cdns-images.dzcdn.net": "deezer",
+  "covers.openlibrary.org": "openlibrary",
+  "inaturalist-open-data.s3.amazonaws.com": "inaturalist",
+  "static.inaturalist.org": "inaturalist",
+  "commons.wikimedia.org": "wikimedia",
+  "upload.wikimedia.org": "wikimedia",
+  "thumb.wikimedia.org": "wikimedia",
+};
+
+/**
+ * The catalogue a picture's address is on, by its host; null for any other
+ * address. For a card that has no attribution when the account moves its
+ * picture to our copy: the credit then goes by the catalogue it came from.
+ */
+export function catalogueSourceOf(url: string): AttributionSource | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:") return null;
+  const source = Object.hasOwn(CATALOGUE_HOSTS, parsed.hostname)
+    ? CATALOGUE_HOSTS[parsed.hostname]
+    : undefined;
+  if (source === undefined) return null;
+  if (
+    source === "wikimedia" &&
+    parsed.hostname !== "commons.wikimedia.org" &&
+    !parsed.pathname.startsWith("/wikipedia/commons/")
+  ) {
+    return null;
+  }
+  return source;
+}
+
+/**
  * Whether a picture is TMDB's, for its notice and the card's source: by the
  * attribution, as the contract asks, and only for a hit that carries none
  * (an older backend) by the catalogue id it came with.
