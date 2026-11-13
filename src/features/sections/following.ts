@@ -2,7 +2,7 @@ import type { Following } from "../../api/community";
 import type { ApiError } from "../../api/errors";
 import type { ListSummary } from "../../api/types";
 import { fill, strings } from "../../strings";
-import { sectionOf, type Section } from "./model";
+import { sectionOf, topicNameOf, type Section } from "./model";
 import { heldSection, type SectionsSnapshot } from "./useSections";
 
 /**
@@ -49,7 +49,7 @@ export const NOTHING_FOLLOWED: Followed = {
 export function followedOf(following: Following): Followed {
   return {
     authors: new Set(following.authors.map((author) => author.uid)),
-    topics: new Map(following.topics.map((topic) => [topic.id, topic.name])),
+    topics: new Map(following.topics.map((topic) => [topic.id, topicNameOf(topic)])),
     sections: new Set(following.sections.map((section) => section.id)),
   };
 }

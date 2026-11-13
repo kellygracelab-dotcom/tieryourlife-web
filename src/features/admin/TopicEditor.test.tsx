@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TopicChanges, TopicDraft } from "../../api/admin";
@@ -247,5 +247,232 @@ describe("TopicEditor", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "That picture can’t be used. Pick another one.",
     );
+  });
+  describe("translations", () => {
+    const language = (name: string) => screen.getByRole("textbox", { name });
+
+    it("has a field for each of the ten other languages, by their own names", () => {
+      create();
+      const fields = screen.getAllByRole("textbox").slice(1);
+      expect(fields.map((field) => field.getAttribute("lang"))).toEqual([
+        "uk",
+        "ru",
+        "es",
+        "pt-BR",
+        "de",
+        "fr",
+        "pl",
+        "tr",
+        "ja",
+        "ar",
+      ]);
+      expect(language("العربية")).toHaveAttribute("dir", "rtl");
+    });
+
+    it("sends the translations a new topic has, and leaves the empty ones out", async () => {
+      const { send } = create();
+      await userEvent.type(nameField(), "Indies");
+      await userEvent.type(language("Українська"), "Інді");
+      await userEvent.type(language("Deutsch"), "  Indie-Spiele ");
+      await userEvent.click(screen.getByRole("button", { name: "Create" }));
+      expect(send).toHaveBeenCalledWith({
+        name: "Indies",
+        section: "games",
+        names: { uk: "Інді", de: "Indie-Spiele" },
+      });
+    });
+
+    it("starts an edit from the topic's translations and sends only what changed", async () => {
+      const { send } = edit(topic({ names: { uk: "Інді", ru: "Инди", en: "Indies" } }));
+      expect(language("Українська")).toHaveValue("Інді");
+      expect(language("Русский")).toHaveValue("Инди");
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+      await userEvent.clear(language("Українська"));
+      await userEvent.type(language("Polski"), "Gry indie");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      // "" takes a translation away.
+      expect(send).toHaveBeenCalledWith({ names: { uk: "", pl: "Gry indie" } });
+    });
+
+    it("says at the translations that the backend refused them, until they are touched", async () => {
+      const send = vi
+        .fn<(changes: TopicChanges) => Promise<Topic>>()
+        .mockRejectedValueOnce(
+          new ApiFailure({ kind: "invalid", detail: null, code: "INVALID", field: "names" }),
+        );
+      edit(topic(), send);
+      await userEvent.type(language("Deutsch"), "Indie");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "A translation wasn’t accepted. Each is up to 40 characters.",
+      );
+      expect(language("Deutsch")).toHaveAttribute("aria-invalid", "true");
+      await userEvent.type(language("Deutsch"), "s");
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("asks before Escape throws away a translation typed", async () => {
+      const { onClose } = create();
+      await userEvent.type(language("Deutsch"), "Indie");
+      await userEvent.keyboard("{Escape}");
+      expect(onClose).not.toHaveBeenCalled();
+      expect(screen.getByText("Discard your changes?")).toBeInTheDocument();
+    });
+  });
+
+  describe("About the picture", () => {
+    const COMMONS = "https://commons.wikimedia.org/wiki/File:Indies.jpg";
+    const stored = {
+      manual: true,
+      author: "Ann",
+      license: "CC BY 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+      link: COMMONS,
+    };
+    const pictured = (more: Partial<Topic> = {}) =>
+      topic({ pictureUrl: "https://pictures.test/indies.webp", ...more });
+    const withCredit = () => pictured({ pictureAttribution: stored });
+    const link = () => screen.getByRole("textbox", { name: "Source link" });
+
+    it("is there only while the topic has a picture", async () => {
+      create();
+      expect(screen.queryByText("About the picture")).toBeNull();
+      pick();
+      expect(await screen.findByText("About the picture")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add credit" })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Remove picture" }));
+      expect(screen.queryByText("About the picture")).toBeNull();
+    });
+
+    it("shows the credit the topic has, as the cover's does", () => {
+      edit(withCredit());
+      const group = within(screen.getByRole("region", { name: "About the picture" }));
+      expect(group.getByText("Ann")).toBeInTheDocument();
+      expect(group.getByRole("link", { name: "CC BY 4.0" })).toBeInTheDocument();
+      expect(group.getByRole("link", { name: "commons.wikimedia.org" })).toBeInTheDocument();
+      expect(group.getByRole("button", { name: "Edit credit" })).toBeInTheDocument();
+    });
+
+    it("saves a new topic's credit with its picture, the link alone for a Commons page", async () => {
+      const { send } = create();
+      pick();
+      await userEvent.type(nameField(), "Indies");
+      await userEvent.click(screen.getByRole("button", { name: "Add credit" }));
+      const save = screen.getByRole("button", { name: "Save credit" });
+      expect(save).toBeDisabled();
+      expect(screen.getByRole("status")).toHaveTextContent("Choose a licence.");
+      await userEvent.type(link(), COMMONS);
+      expect(screen.getByText(/will be read from this page/)).toBeInTheDocument();
+      expect(save).toBeEnabled();
+      // Enter in the credit's field saves the credit, not the topic.
+      await userEvent.type(link(), "{Enter}");
+      expect(send).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Edit credit" })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Create" }));
+      expect(send).toHaveBeenCalledWith({
+        name: "Indies",
+        section: "games",
+        pictureId: "pic-1",
+        pictureAttribution: { link: COMMONS },
+      });
+    });
+
+    it("wants a licence and a page for any other source", async () => {
+      create();
+      pick();
+      await userEvent.click(await screen.findByRole("button", { name: "Add credit" }));
+      await userEvent.type(link(), "https://example.com/photo");
+      expect(screen.getByRole("button", { name: "Save credit" })).toBeDisabled();
+      await userEvent.selectOptions(screen.getByRole("combobox", { name: "Licence" }), "CC0 1.0");
+      expect(screen.getByRole("button", { name: "Save credit" })).toBeEnabled();
+      await userEvent.clear(link());
+      expect(screen.getByRole("status")).toHaveTextContent("Add the source link");
+      expect(screen.getByRole("button", { name: "Save credit" })).toBeDisabled();
+    });
+
+    it("sends nothing about the credit while it is untouched", async () => {
+      const { send } = edit(withCredit());
+      await userEvent.clear(nameField());
+      await userEvent.type(nameField(), "Indie games");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(send).toHaveBeenCalledWith({ name: "Indie games" });
+    });
+
+    it("changes the credit alone", async () => {
+      const { send } = edit(withCredit());
+      await userEvent.click(screen.getByRole("button", { name: "Edit credit" }));
+      await userEvent.clear(screen.getByRole("textbox", { name: "Author" }));
+      await userEvent.type(screen.getByRole("textbox", { name: "Author" }), "Bob");
+      await userEvent.click(screen.getByRole("button", { name: "Save credit" }));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(send).toHaveBeenLastCalledWith({
+        pictureAttribution: {
+          author: "Bob",
+          license: "CC BY 4.0",
+          licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+          link: COMMONS,
+        },
+      });
+    });
+
+    it("takes the credit away with null", async () => {
+      const { send } = edit(withCredit());
+      await userEvent.click(screen.getByRole("button", { name: "Edit credit" }));
+      await userEvent.click(screen.getByRole("button", { name: "Remove credit" }));
+      expect(screen.getByRole("button", { name: "Add credit" })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(send).toHaveBeenCalledWith({ pictureAttribution: null });
+    });
+
+    it("gives the old credit up with the old picture", async () => {
+      const { send } = edit(withCredit());
+      pick();
+      expect(await screen.findByRole("button", { name: "Add credit" })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      // The backend drops the old credit with the old picture: none is sent.
+      expect(send).toHaveBeenLastCalledWith({ pictureId: "pic-1" });
+    });
+
+    it("sends a credit given for a new picture with it", async () => {
+      const { send } = edit(withCredit());
+      pick();
+      await userEvent.click(await screen.findByRole("button", { name: "Add credit" }));
+      await userEvent.type(link(), COMMONS);
+      await userEvent.click(screen.getByRole("button", { name: "Save credit" }));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(send).toHaveBeenLastCalledWith({
+        pictureId: "pic-1",
+        pictureAttribution: { link: COMMONS },
+      });
+    });
+
+    it("says at the credit why the backend refused it, and keeps everything", async () => {
+      const send = vi.fn<(changes: TopicChanges) => Promise<Topic>>().mockRejectedValueOnce(
+        new ApiFailure({
+          kind: "invalid",
+          detail: null,
+          code: "BAD_ATTRIBUTION",
+          why: "UNKNOWN_LICENSE",
+        }),
+      );
+      edit(pictured(), send);
+      await userEvent.click(screen.getByRole("button", { name: "Add credit" }));
+      await userEvent.type(link(), COMMONS);
+      await userEvent.click(screen.getByRole("button", { name: "Save credit" }));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent(
+        "The picture’s credit wasn’t accepted: its page names a licence",
+      );
+      expect(
+        within(screen.getByRole("region", { name: "About the picture" })).getByRole("alert"),
+      ).toBe(alert);
+      expect(screen.getByRole("button", { name: "Edit credit" })).toBeInTheDocument();
+    });
+  });
+
+  it("shows no credit for a topic without a picture", () => {
+    edit(topic({ pictureAttribution: { license: "CC0 1.0", link: "https://a.test" } }));
+    expect(screen.queryByText("About the picture")).toBeNull();
   });
 });

@@ -892,6 +892,7 @@ const ar: Translation = {
     picture: "الصورة",
     translations: "الترجمات",
     translationsHelp: "واحدة لكل لغة. إن تُركت فارغة يظهر الاسم كما كُتب.",
+    topicNamesRefused: "لم تُقبل إحدى الترجمات. لكل ترجمة حتى {max} حرفًا.",
     recrop: "إعادة القص",
     replace: "استبدال",
     recropFailed: "لا يمكن إعادة قص هذه الصورة هنا. استبدلها بدلًا من ذلك.",
@@ -1872,6 +1873,8 @@ const ar: Translation = {
     coverOf: "غلاف {name}",
     refused: "لم تُقبل نسبة صورة «{name}»: {why}",
     refusedCover: "لم تُقبل نسبة الغلاف: {why}",
+    refusedPicture: "لم تُقبل نسبة الصورة: {why}",
+    topicNote: "تُحفظ نسبة الصورة مع الموضوع.",
     why: {
       noLicense: "لا يوجد ترخيص. اختر واحدًا.",
       unknownLicense:

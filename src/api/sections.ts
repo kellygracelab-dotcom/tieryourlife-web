@@ -1,4 +1,5 @@
 import type { ApiClient } from "./client";
+import { editorCreditOf, type EditorCredit } from "./pictureAttribution";
 
 /** A colour for each theme. */
 export interface ThemePair {
@@ -161,6 +162,20 @@ export interface Topic {
   names?: Partial<Record<string, string>>;
   /** Its 16:10 picture, public; null or absent when it has none and wears its section's colours. */
   pictureUrl?: string | null;
+  /** The picture's credit as the editor gave it; only while the topic has a picture. */
+  pictureAttribution?: EditorCredit | null;
+}
+
+/**
+ * The credit of a topic's picture, read as defensively as a card's: none when
+ * the topic has no picture, none without the page it stands on.
+ */
+export function topicCreditOf(topic: {
+  pictureUrl?: string | null;
+  pictureAttribution?: unknown;
+}): EditorCredit | null {
+  if (typeof topic.pictureUrl !== "string" || topic.pictureUrl === "") return null;
+  return editorCreditOf(topic.pictureAttribution);
 }
 
 /** The approved topics of a section, the biggest first. */

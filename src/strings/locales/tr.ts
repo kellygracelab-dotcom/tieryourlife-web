@@ -775,6 +775,7 @@ const tr: Translation = {
     picture: "Görsel",
     translations: "Çeviriler",
     translationsHelp: "Her dil için bir tane. Boş bırakılırsa ad yazıldığı gibi görünür.",
+    topicNamesRefused: "Bir çeviri kabul edilmedi. Her biri en fazla {max} karakter olabilir.",
     recrop: "Yeniden kırp",
     replace: "Değiştir",
     recropFailed: "Bu görsel burada yeniden kırpılamıyor. Bunun yerine değiştirin.",
@@ -1491,6 +1492,8 @@ const tr: Translation = {
     coverOf: "{name} kapağı",
     refused: "“{name}” görselinin kaynak bilgisi kabul edilmedi: {why}",
     refusedCover: "Kapağın kaynak bilgisi kabul edilmedi: {why}",
+    refusedPicture: "Görselin kaynak bilgisi kabul edilmedi: {why}",
+    topicNote: "Kaynak bilgisi konuyla birlikte kaydedilir.",
     why: {
       noLicense: "lisansı yok. Bir lisans seç.",
       unknownLicense:

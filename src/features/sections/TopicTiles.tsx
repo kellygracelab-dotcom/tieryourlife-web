@@ -9,6 +9,7 @@ import {
   sectionStyle,
   servedPicture,
   topicPath,
+  topicNameOf,
   topicPicture,
   type Section,
 } from "./model";
@@ -106,7 +107,7 @@ function TopicTile({
           {strings.sections.waiting}
         </span>
       )}
-      <span className="topic-tile__name">{topic.name}</span>
+      <span className="topic-tile__name">{topicNameOf(topic)}</span>
     </>
   );
   return onOpen === undefined ? (
@@ -118,7 +119,7 @@ function TopicTile({
       type="button"
       className={className}
       style={sectionStyle(section)}
-      aria-label={fill(strings.sections.topicWaiting, { name: topic.name })}
+      aria-label={fill(strings.sections.topicWaiting, { name: topicNameOf(topic) })}
       onClick={onOpen}
     >
       {inside}

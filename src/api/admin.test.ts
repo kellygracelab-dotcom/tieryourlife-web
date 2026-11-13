@@ -39,6 +39,37 @@ describe("admin", () => {
     });
   });
 
+  it("sends a topic's translations and its picture's credit as they are", async () => {
+    const { client, request } = recordingClient({ id: "t1" });
+    const credit = {
+      author: "Ann",
+      license: "CC BY 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+      link: "https://commons.wikimedia.org/wiki/File:Indies.jpg",
+    };
+    await createTopic(client, {
+      name: "Indies",
+      section: "games",
+      names: { uk: "Інді", de: "Indie-Spiele" },
+      pictureId: "p1",
+      pictureAttribution: credit,
+    });
+    expect(request).toHaveBeenCalledWith("POST", "/lists/topics", {
+      body: {
+        name: "Indies",
+        section: "games",
+        names: { uk: "Інді", de: "Indie-Spiele" },
+        pictureId: "p1",
+        pictureAttribution: credit,
+      },
+    });
+    // "" takes a translation away, null takes the credit away.
+    await editTopic(client, "t1", { names: { uk: "", ru: "Инди" }, pictureAttribution: null });
+    expect(request).toHaveBeenLastCalledWith("PATCH", "/lists/topics/t1", {
+      body: { names: { uk: "", ru: "Инди" }, pictureAttribution: null },
+    });
+  });
+
   it("reads one section's lists by topic, none, or all, a page after another", async () => {
     const { client, request } = recordingClient({ lists: [], nextCursor: null });
     await expect(loadAdminLists(client, { section: "games", topic: "none" })).resolves.toEqual({

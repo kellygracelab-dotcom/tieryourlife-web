@@ -793,6 +793,8 @@ const de: Translation = {
     picture: "Bild",
     translations: "Übersetzungen",
     translationsHelp: "Eine pro Sprache. Leer gelassen, erscheint der Name wie eingegeben.",
+    topicNamesRefused:
+      "Eine Übersetzung wurde nicht angenommen. Jede darf bis zu {max} Zeichen lang sein.",
     recrop: "Neu zuschneiden",
     replace: "Ersetzen",
     recropFailed: "Dieses Bild lässt sich hier nicht neu zuschneiden. Ersetze es stattdessen.",
@@ -1543,6 +1545,8 @@ const de: Translation = {
     coverOf: "Titelbild von {name}",
     refused: "Der Nachweis für das Bild von „{name}“ wurde nicht angenommen: {why}",
     refusedCover: "Der Nachweis für das Titelbild wurde nicht angenommen: {why}",
+    refusedPicture: "Der Nachweis für das Bild wurde nicht angenommen: {why}",
+    topicNote: "Der Nachweis wird mit dem Thema gespeichert.",
     why: {
       noLicense: "Es fehlt die Lizenz. Wähle eine.",
       unknownLicense:

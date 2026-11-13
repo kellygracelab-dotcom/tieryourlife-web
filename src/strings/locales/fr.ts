@@ -821,6 +821,8 @@ const fr: Translation = {
     picture: "Image",
     translations: "Traductions",
     translationsHelp: "Une par langue. Laissée vide, le nom s’affiche tel qu’il a été saisi.",
+    topicNamesRefused:
+      "Une traduction n’a pas été acceptée. Chacune compte au plus {max} caractères.",
     recrop: "Recadrer",
     replace: "Remplacer",
     recropFailed: "Cette image ne peut pas être recadrée ici. Remplacez-la plutôt.",
@@ -1627,6 +1629,8 @@ const fr: Translation = {
     coverOf: "Couverture de {name}",
     refused: "Le crédit de l’image de « {name} » n’a pas été accepté : {why}",
     refusedCover: "Le crédit de la couverture n’a pas été accepté : {why}",
+    refusedPicture: "Le crédit de l’image n’a pas été accepté : {why}",
+    topicNote: "Le crédit est enregistré avec le sujet.",
     why: {
       noLicense: "il n’a pas de licence. Choisissez-en une.",
       unknownLicense:

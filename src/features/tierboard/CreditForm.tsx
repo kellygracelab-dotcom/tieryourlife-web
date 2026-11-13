@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ATTRIBUTION_LIMITS, type EditorCredit } from "../../api/pictureAttribution";
 import {
   creditOfFields,
@@ -41,28 +41,50 @@ export function CreditForm({
   initial,
   editing,
   onDone,
+  inForm = false,
+  note = strings.credit.goesOut,
 }: {
   initial: CreditFields;
   editing: CreditEditing;
   /** Saved, removed or given up: back to the picture. */
   onDone: () => void;
+  /** Inside another form, which a form cannot nest: Enter and Save work here, and send nothing else. */
+  inForm?: boolean;
+  /** When the credit goes out. */
+  note?: string;
 }) {
   const id = useId();
   const [fields, setFields] = useState(initial);
   const problems = creditProblemsOf(fields);
   const reads = readsFromPage(fields.link);
   const set = (change: Partial<CreditFields>) => setFields((was) => ({ ...was, ...change }));
+  const save = () => {
+    const credit = creditOfFields(fields);
+    if (credit === null) return;
+    editing.save(credit);
+    onDone();
+  };
+  const Box = inForm ? "div" : "form";
   return (
-    <form
+    <Box
       className="credit-form"
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        const credit = creditOfFields(fields);
-        if (credit === null) return;
-        editing.save(credit);
-        onDone();
-      }}
+      {...(inForm
+        ? {
+            role: "group",
+            "aria-label": strings.link.about,
+            onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+              if (event.key !== "Enter" || event.target instanceof HTMLButtonElement) return;
+              event.preventDefault();
+              save();
+            },
+          }
+        : {
+            noValidate: true,
+            onSubmit: (event: FormEvent) => {
+              event.preventDefault();
+              save();
+            },
+          })}
     >
       <label className="credit-form__field">
         <span className="credit-form__label">{strings.credit.author}</span>
@@ -110,7 +132,7 @@ export function CreditForm({
           {problems.map(problemText).join(" ")}
         </p>
       )}
-      <p className="credit-form__note">{strings.credit.goesOut}</p>
+      <p className="credit-form__note">{note}</p>
       <div className="dialog__actions credit-form__actions">
         {editing.remove !== undefined && (
           <Button
@@ -126,13 +148,14 @@ export function CreditForm({
         <Button onClick={onDone}>{strings.credit.cancel}</Button>
         <Button
           variant="filled"
-          type="submit"
+          type={inForm ? "button" : "submit"}
+          {...(inForm ? { onClick: save } : {})}
           disabled={problems.length > 0}
           aria-describedby={problems.length > 0 ? `${id}-missing` : undefined}
         >
           {strings.credit.save}
         </Button>
       </div>
-    </form>
+    </Box>
   );
 }
