@@ -266,6 +266,12 @@ const tr: Translation = {
     lookingFurther: "Başka yerlerde de aranıyor…",
     nothingFound: "Katalogda bu adla bir şey yok. Yine de kart olarak ekleyin.",
     catalogueDown: "Katalog yanıt vermiyor. Adla eklenen kartlar yine çalışır.",
+    searchLimit: "Çok fazla resim araması yapıldı. {time} itibarıyla yeniden arayabilirsiniz.",
+    searchLimitSoon: "Çok fazla resim araması yapıldı. Biraz sonra yeniden deneyin.",
+    pasteLimited: {
+      other:
+        "{n} kart resimsiz eklendi: çok fazla arama. {time} itibarıyla yeniden arayabilirsiniz.",
+    },
     whereToLook: "Nerede aranacak",
     animals: "Hayvanlar",
     fromSources: "Kaynak: {sources}",

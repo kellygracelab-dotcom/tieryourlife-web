@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ApiFailure, parseApiError } from "./errors";
 
 const json = (body: unknown) => JSON.stringify(body);
@@ -147,12 +147,30 @@ describe("parseApiError", () => {
       { kind: "tooManyRequests", code: "TOO_MANY_PROPOSALS" },
     ],
     [429, "", { kind: "tooManyRequests", code: null }],
+    [
+      429,
+      json({ error: "Too many picture searches", code: "SEARCH_LIMIT", retryAt: 1794571200000 }),
+      { kind: "searchLimit", retryAt: 1794571200000 },
+    ],
+    [429, json({ code: "SEARCH_LIMIT" }), { kind: "searchLimit" }],
     [503, json({ error: "Unavailable", code: "UNAVAILABLE" }), { kind: "unavailable" }],
     [405, json({ error: "Use GET" }), { kind: "unknown", status: 405 }],
     [500, "[]", { kind: "unknown", status: 500 }],
   ])("maps %i %s", (status, body, expected) => {
     expect(parseApiError(status, body)).toEqual(expected);
   });
+});
+
+it("takes the time picture searches start again from Retry-After without one in the body", () => {
+  vi.useFakeTimers({ now: 1_000_000 });
+  try {
+    expect(parseApiError(429, json({ code: "SEARCH_LIMIT" }), "120")).toEqual({
+      kind: "searchLimit",
+      retryAt: 1_120_000,
+    });
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 describe("ApiFailure", () => {

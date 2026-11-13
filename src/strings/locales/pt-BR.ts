@@ -274,6 +274,13 @@ const ptBR: Translation = {
     lookingFurther: "Procurando em mais lugares…",
     nothingFound: "Nada com esse nome no catálogo. Adicione como cartão mesmo assim.",
     catalogueDown: "O catálogo não está respondendo. Cartões por nome continuam funcionando.",
+    searchLimit: "Buscas de imagens demais. Busque de novo às {time}.",
+    searchLimitSoon: "Buscas de imagens demais. Tente de novo daqui a pouco.",
+    pasteLimited: {
+      one: "{n} cartão entrou sem imagem: buscas demais. Busque de novo às {time}.",
+      many: "{n} cartões entraram sem imagem: buscas demais. Busque de novo às {time}.",
+      other: "{n} cartões entraram sem imagem: buscas demais. Busque de novo às {time}.",
+    },
     whereToLook: "Onde procurar",
     animals: "Animais",
     fromSources: "De {sources}",

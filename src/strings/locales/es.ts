@@ -274,6 +274,14 @@ const es: Translation = {
     lookingFurther: "Buscando en más sitios…",
     nothingFound: "No hay nada con ese nombre en el catálogo. Añádelo como tarjeta de todos modos.",
     catalogueDown: "El catálogo no responde. Las tarjetas por nombre siguen funcionando.",
+    searchLimit: "Demasiadas búsquedas de imágenes. Vuelve a buscar a las {time}.",
+    searchLimitSoon: "Demasiadas búsquedas de imágenes. Vuelve a intentarlo en un rato.",
+    pasteLimited: {
+      one: "{n} tarjeta se añadió sin imagen: demasiadas búsquedas. Vuelve a buscar a las {time}.",
+      many: "{n} tarjetas se añadieron sin imagen: demasiadas búsquedas. Vuelve a buscar a las {time}.",
+      other:
+        "{n} tarjetas se añadieron sin imagen: demasiadas búsquedas. Vuelve a buscar a las {time}.",
+    },
     whereToLook: "Dónde buscar",
     animals: "Animales",
     fromSources: "De {sources}",

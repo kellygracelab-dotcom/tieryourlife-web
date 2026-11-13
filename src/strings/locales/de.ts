@@ -270,6 +270,12 @@ const de: Translation = {
     lookingFurther: "Suche an weiteren Stellen…",
     nothingFound: "Nichts im Katalog mit diesem Namen. Füge es trotzdem als Karte hinzu.",
     catalogueDown: "Der Katalog antwortet nicht. Karten nach Namen gehen weiterhin.",
+    searchLimit: "Zu viele Bildsuchen. Wieder möglich um {time}.",
+    searchLimitSoon: "Zu viele Bildsuchen. Versuch es gleich noch einmal.",
+    pasteLimited: {
+      one: "{n} Karte kam ohne Bild: zu viele Bildsuchen. Wieder möglich um {time}.",
+      other: "{n} Karten kamen ohne Bild: zu viele Bildsuchen. Wieder möglich um {time}.",
+    },
     whereToLook: "Wo suchen",
     animals: "Tiere",
     fromSources: "Aus {sources}",

@@ -8,6 +8,7 @@ import {
   type PictureScope,
 } from "../../api/pictures";
 import { findPictures } from "../../lib/api";
+import { isSearchLimit, searchLimitOf } from "../../lib/searchLimit";
 
 export type FindPictures = (ask: PictureAsk) => Promise<PicturePage>;
 
@@ -36,7 +37,15 @@ export type PicturesState =
       /** Shown from the quick answer; the whole search is still adding to it. */
       filling: boolean;
     })
-  | (Asked & { status: "failed" });
+  | (Asked & {
+      status: "failed";
+      /**
+       * The hour's or the day's picture searches are used up (429 SEARCH_LIMIT):
+       * when they start again, if the backend said. Asking again before then
+       * is no use, so there is nothing to retry.
+       */
+      limit?: { retryAt: number | null };
+    });
 
 const same = (a: Asked, b: Asked): boolean =>
   a.query === b.query && a.scope === b.scope && a.web === b.web;
@@ -62,7 +71,13 @@ export function usePictures(
     let current = true;
     const asked: Asked = { query: wanted, scope, web };
     const ask = { q: wanted, scope, web, page: 1 };
-    const failed = () => current && setAnswer({ ...asked, status: "failed" });
+    const failed = (reason: unknown) =>
+      current &&
+      setAnswer(
+        isSearchLimit(reason)
+          ? { ...asked, status: "failed", limit: { retryAt: searchLimitOf(reason) } }
+          : { ...asked, status: "failed" },
+      );
     const shown = (page: PicturePage, filling: boolean) =>
       current &&
       setAnswer({
@@ -103,8 +118,13 @@ export function usePictures(
           shown(quick, quick.rest);
           if (current && quick.rest) find(ask).then(filled, unfilled);
         },
-        // A quick answer that would not come: the whole search, as before.
-        () => current && find(ask).then((page) => shown(page, false), failed),
+        // A quick answer that would not come: the whole search, as before,
+        // unless the searches are used up: then it would be refused as well.
+        (reason: unknown) => {
+          if (!current) return;
+          if (isSearchLimit(reason)) failed(reason);
+          else find(ask).then((page) => shown(page, false), failed);
+        },
       );
     }, LOOKUP_DEBOUNCE_MS);
     return () => {
