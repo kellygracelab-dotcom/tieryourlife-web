@@ -1,5 +1,6 @@
 import { scopeFor } from "../../api/pictures";
 import type { CatalogueItem } from "../../api/types";
+import { isSearchLimit, searchLimitOf } from "../../lib/searchLimit";
 
 /** A name somebody pasted, and what they put in brackets after it, if anything. */
 export interface Wanted {
@@ -127,33 +128,58 @@ export interface PastedCard {
 }
 
 /**
+ * The picture searches ran out partway (429 SEARCH_LIMIT): how many names
+ * came without the catalogue being asked, or answering, and when searching
+ * works again, if the backend said.
+ */
+export interface PasteLimited {
+  unanswered: number;
+  retryAt: number | null;
+}
+
+/**
  * Every pasted name as a card, in the order pasted, a few at a time. A name
  * the catalogue does not answer for, or fails on, comes as its name alone.
  * The name stays the way it was written: the catalogue differs by its case
  * only, and Wikidata writes "pizza" where a card wants "Pizza".
+ *
+ * Once the picture searches are used up, nothing more is asked: the names
+ * left come as names alone, and what is said back is how many, and when.
  */
 export async function cardsFor(
   wanted: readonly Wanted[],
   lookup: (query: string) => Promise<CatalogueItem[]>,
   onCard: (card: PastedCard, done: number) => void,
   { going = () => true, preferred = null, paceMs = PASTE_PACE_MS }: PasteOptions = {},
-): Promise<void> {
+): Promise<PasteLimited | null> {
+  // Set from inside the lookups: a cast, so the null it starts as is not taken for its type.
+  let limit = null as { retryAt: number | null } | null;
+  let unanswered = 0;
   // Wikidata finds a subject by its number as it does by a name, and then it
   // is the only answer: nothing depends on what else carries the name.
-  const ask = (one: Wanted): Promise<CatalogueItem[]> =>
-    lookup(one.id === undefined ? one.title : one.id.slice(one.id.indexOf(":") + 1)).catch(
-      (): CatalogueItem[] => [],
-    );
+  // None at all once the searches ran out: undefined, not an empty answer.
+  const ask = async (one: Wanted): Promise<CatalogueItem[] | undefined> => {
+    if (limit !== null) return undefined;
+    try {
+      return await lookup(one.id === undefined ? one.title : one.id.slice(one.id.indexOf(":") + 1));
+    } catch (reason) {
+      if (!isSearchLimit(reason)) return [];
+      limit ??= { retryAt: searchLimitOf(reason) };
+      return undefined;
+    }
+  };
   // A catalogue that is busy says nothing, the same as one that knows nothing.
   // The one this name is for gets a second question before the name goes alone.
-  const answerFor = async (one: Wanted): Promise<CatalogueItem[]> => {
+  const answerFor = async (one: Wanted): Promise<CatalogueItem[] | undefined> => {
     const needed = one.id === undefined ? preferred : "wikidata";
     const first = await ask(one);
+    if (first === undefined) return undefined;
     if (needed === null ? first.length > 0 : first.some(from(needed))) return first;
+    if (limit !== null) return first;
     if (paceMs > 0) await pause(paceMs);
     if (!going()) return first;
     const second = await ask(one);
-    return second.length > 0 ? second : first;
+    return second !== undefined && second.length > 0 ? second : first;
   };
 
   for (let start = 0; start < wanted.length; start += PASTE_AT_ONCE) {
@@ -161,12 +187,15 @@ export async function cardsFor(
     const last = start + PASTE_AT_ONCE >= wanted.length;
     const [answers] = await Promise.all([
       Promise.all(few.map(answerFor)),
-      // Nothing is asked after the last few, so nothing is waited for.
-      last || paceMs <= 0 ? undefined : pause(paceMs),
+      // Nothing is asked after the last few, or once the searches ran out,
+      // so nothing is waited for.
+      last || paceMs <= 0 || limit !== null ? undefined : pause(paceMs),
     ]);
-    if (!going()) return;
+    if (!going()) return null;
     few.forEach((one, index) => {
-      const card = pick(one, answers[index] ?? [], preferred);
+      const answer = answers[index];
+      if (answer === undefined) unanswered++;
+      const card = pick(one, answer ?? [], preferred);
       onCard(
         card === null
           ? { title: one.title, imageUrl: null }
@@ -180,4 +209,5 @@ export async function cardsFor(
       );
     });
   }
+  return limit === null ? null : { unanswered, retryAt: limit.retryAt };
 }

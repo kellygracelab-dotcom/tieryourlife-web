@@ -50,6 +50,7 @@ import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
 import { noteListChanged } from "./listChanges";
 import { preloadedList, preloadedRanking } from "./preload";
+import { limitedSearch } from "./searchLimit";
 import { listIn } from "./translated";
 
 /**
@@ -142,9 +143,11 @@ export const rankingStillThere = (code: string): Promise<boolean> =>
 
 export const loadMyLists = (): Promise<{ lists: MyList[] }> => lists.loadMyLists(api);
 
-// The catalogues answer in the language the page is in.
-export const findPictures = (ask: PictureAsk): Promise<PicturePage> =>
-  pictures.searchPictures(api, { ...ask, lang: currentLocale() });
+// The catalogues answer in the language the page is in. Once the hour's or
+// the day's searches are used up, nothing more is asked until the time given.
+export const findPictures: (ask: PictureAsk) => Promise<PicturePage> = limitedSearch((ask) =>
+  pictures.searchPictures(api, { ...ask, lang: currentLocale() }),
+);
 
 export const keepPicture = (url: string): Promise<string> => pictures.keepPicture(api, url);
 

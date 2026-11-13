@@ -281,6 +281,13 @@ const fr: Translation = {
     lookingFurther: "Recherche ailleurs aussi…",
     nothingFound: "Rien de ce nom dans le catalogue. Ajoutez-le quand même comme carte.",
     catalogueDown: "Le catalogue ne répond pas. Les cartes par nom fonctionnent toujours.",
+    searchLimit: "Trop de recherches d’images. Réessayez à {time}.",
+    searchLimitSoon: "Trop de recherches d’images. Réessayez dans un instant.",
+    pasteLimited: {
+      one: "{n} carte ajoutée sans image. Trop de recherches d’images, réessayez à {time}.",
+      many: "{n} cartes ajoutées sans image. Trop de recherches d’images, réessayez à {time}.",
+      other: "{n} cartes ajoutées sans image. Trop de recherches d’images, réessayez à {time}.",
+    },
     whereToLook: "Où chercher",
     animals: "Animaux",
     fromSources: "Depuis {sources}",

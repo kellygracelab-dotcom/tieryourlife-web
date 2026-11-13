@@ -20,6 +20,7 @@ import { LIMITS, type EditorAction, type EditorItem } from "./model";
 import { cardsFor, preferredFor, wantedOf } from "./paste";
 import { usePictures, type FindPictures } from "./usePictures";
 import { sizedFor } from "../../lib/pictureSize";
+import { pasteLimitText, searchLimitText } from "../../lib/searchLimit";
 
 /** Pictures going up at once: enough to keep the line busy, few enough not to starve each other. */
 const UPLOADS_AT_ONCE = 4;
@@ -169,11 +170,14 @@ function PasteBox({
   category,
   dispatch,
   lookup,
+  onNote,
 }: {
   room: number;
   category: string | null;
   dispatch: (action: EditorAction) => void;
   lookup: (query: string) => Promise<CatalogueItem[]>;
+  /** Said where the box's other warnings are, since the paste box closes when it is done. */
+  onNote: (note: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -193,6 +197,7 @@ function PasteBox({
     event.preventDefault();
     if (busy || wanted.length === 0) return;
     setProgress({ done: 0, total: wanted.length });
+    onNote(null);
     void cardsFor(
       wanted,
       lookup,
@@ -201,12 +206,18 @@ function PasteBox({
         setProgress({ done, total: wanted.length });
       },
       { going: () => here.current, preferred: preferredFor(category) },
-    ).finally(() => {
-      if (!here.current) return;
-      setProgress(null);
-      setText("");
-      setOpen(false);
-    });
+    )
+      .then((ranOut) => {
+        if (here.current && ranOut !== null) {
+          onNote(pasteLimitText(ranOut.unanswered, ranOut.retryAt));
+        }
+      })
+      .finally(() => {
+        if (!here.current) return;
+        setProgress(null);
+        setText("");
+        setOpen(false);
+      });
   };
 
   if (!open) {
@@ -490,10 +501,18 @@ export function AddCardBox({
             {found.status === "searching" && <p className="cards__note">{strings.new.searching}</p>}
             {found.status === "failed" && (
               <div className="cards__empty">
-                <p className="cards__note">{strings.new.catalogueDown}</p>
-                <Button variant="outlined" onClick={retry}>
-                  {strings.new.tryAgain}
-                </Button>
+                {found.limit === undefined ? (
+                  <>
+                    <p className="cards__note">{strings.new.catalogueDown}</p>
+                    <Button variant="outlined" onClick={retry}>
+                      {strings.new.tryAgain}
+                    </Button>
+                  </>
+                ) : (
+                  <p className="cards__note" role="status">
+                    {searchLimitText(found.limit.retryAt)}
+                  </p>
+                )}
               </div>
             )}
             {found.status === "ready" &&
@@ -555,7 +574,13 @@ export function AddCardBox({
         )}
       </form>
 
-      <PasteBox room={room} category={category} dispatch={dispatch} lookup={pasteLookup} />
+      <PasteBox
+        room={room}
+        category={category}
+        dispatch={dispatch}
+        lookup={pasteLookup}
+        onNote={setNote}
+      />
     </>
   );
 }

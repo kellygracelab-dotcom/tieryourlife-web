@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { ApiFailure } from "../../api/errors";
 import type { CatalogueItem } from "../../api/types";
 import {
   cardsFor,
@@ -285,6 +286,41 @@ describe("cardsFor", () => {
       { title: "Muse", imageUrl: "https://img/wikidata:Q22151.jpg", key: "wikidata:Q22151" },
       { title: "Muse", imageUrl: null, key: "wikidata:Q16877643" },
     ]);
+  });
+
+  it("asks nothing more once the searches ran out, and says how many names went alone and when", async () => {
+    const asked: string[] = [];
+    const lookup = vi.fn(async (query: string) => {
+      asked.push(query);
+      if (query === "Two")
+        throw new ApiFailure({ kind: "searchLimit", retryAt: 1_794_571_200_000 });
+      return query === "Three" ? [] : [card(`tmdb:${query}`, query)];
+    });
+    const got: [PastedCard, number][] = [];
+    const wanted = wantedOf("One\nTwo\nThree\nFour\nFive", 100);
+
+    const limited = await cardsFor(wanted, lookup, (one, done) => got.push([one, done]), {
+      paceMs: 0,
+    });
+
+    // The first few were asked together; nothing after the refusal, not even
+    // the second question for Three, which said nothing.
+    expect(asked).toEqual(["One", "Two", "Three"]);
+    expect(got).toEqual([
+      [{ title: "One", imageUrl: "https://img/tmdb:One.jpg", key: "tmdb:One" }, 1],
+      [{ title: "Two", imageUrl: null }, 2],
+      [{ title: "Three", imageUrl: null }, 3],
+      [{ title: "Four", imageUrl: null }, 4],
+      [{ title: "Five", imageUrl: null }, 5],
+    ]);
+    expect(limited).toEqual({ unanswered: 3, retryAt: 1_794_571_200_000 });
+  });
+
+  it("says nothing of a limit when the searches did not run out", async () => {
+    const lookup = vi.fn(async (query: string) => [card(`tmdb:${query}`, query)]);
+    await expect(cardsFor(wantedOf("One", 10), lookup, () => {}, { paceMs: 0 })).resolves.toBe(
+      null,
+    );
   });
 
   it("stops when the box is gone", async () => {

@@ -266,6 +266,11 @@ const ja: Translation = {
     lookingFurther: "ほかの場所も検索中…",
     nothingFound: "カタログにその名前はありません。そのままカードとして追加できます。",
     catalogueDown: "カタログが応答しません。名前だけのカードは追加できます。",
+    searchLimit: "画像検索が多すぎます。{time} から再び検索できます。",
+    searchLimitSoon: "画像検索が多すぎます。少し待ってからもう一度お試しください。",
+    pasteLimited: {
+      other: "{n} 枚は画像なしで追加されました。検索が多すぎます。{time} から再び検索できます。",
+    },
     whereToLook: "探す場所",
     animals: "動物",
     fromSources: "提供: {sources}",

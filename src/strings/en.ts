@@ -262,6 +262,12 @@ export const en = {
     lookingFurther: "Looking in more places…",
     nothingFound: "Nothing in the catalogue by that name. Add it as a card anyway.",
     catalogueDown: "The catalogue is not answering. Cards by name still work.",
+    searchLimit: "Too many picture searches. Search again at {time}.",
+    searchLimitSoon: "Too many picture searches. Search again in a little while.",
+    pasteLimited: {
+      one: "{n} card came without a picture: too many picture searches. Search again at {time}.",
+      other: "{n} cards came without pictures: too many picture searches. Search again at {time}.",
+    },
     whereToLook: "Where to look",
     animals: "Animals",
     fromSources: "From {sources}",

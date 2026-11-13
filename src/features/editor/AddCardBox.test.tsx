@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ApiFailure } from "../../api/errors";
 import type { FoundPicture, PicturePage } from "../../api/pictures";
 import { PictureRefused } from "../../lib/pictures";
 import { AddCardBox, type Keep, type Upload } from "./AddCardBox";
@@ -481,5 +482,34 @@ describe("AddCardBox", () => {
       }),
     );
     expect(find).toHaveBeenCalledWith({ q: "Naruto", scope: "anime", page: 1, web: false });
+  });
+
+  it("says when picture searches work again, with nothing to retry before then", async () => {
+    const find = vi.fn<FindPictures>(async () => {
+      throw new ApiFailure({ kind: "searchLimit" });
+    });
+    setup({ find });
+    await typeAndWait("naruto");
+    expect(screen.getByText(/Too many picture searches/)).toBeInTheDocument();
+    expect(screen.queryByText(/catalogue is not answering/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("adds the rest of a paste by name once the searches ran out, and says so", async () => {
+    const find = vi.fn<FindPictures>(async ({ q }) => {
+      if (q !== "Naruto") throw new ApiFailure({ kind: "searchLimit" });
+      return page([picture(`anilist:${q}`, { title: q })]);
+    });
+    const { dispatch } = setup({ find });
+    await userEvent.click(screen.getByRole("button", { name: "Paste a list" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Names, one to a line" }), {
+      target: { value: "Naruto\nBleach" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Add 2 cards" }));
+    await vi.waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/Too many picture searches/),
+    );
+    expect(dispatch).toHaveBeenCalledWith({ type: "addItem", title: "Bleach", imageUrl: null });
+    expect(find).toHaveBeenCalledTimes(2);
   });
 });

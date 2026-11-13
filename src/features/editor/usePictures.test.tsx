@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiFailure } from "../../api/errors";
 import type { FoundPicture, PictureScope } from "../../api/pictures";
 import { LOOKUP_DEBOUNCE_MS, usePictures, type FindPictures } from "./usePictures";
 
@@ -33,7 +34,9 @@ function Probe({
       <output>
         {state.status === "ready"
           ? `ready:${state.items.map((item) => item.id).join(",")}|next:${state.next ?? "-"}|${state.notices.join(",")}${state.more ? "|more" : ""}${state.filling ? "|filling" : ""}`
-          : state.status}
+          : state.status === "failed" && state.limit !== undefined
+            ? `limited:${state.limit.retryAt ?? "-"}`
+            : state.status}
       </output>
       <button type="button" onClick={more}>
         more
@@ -108,6 +111,27 @@ describe("usePictures", () => {
     render(<Probe query="naruto" find={find} />);
     await settle();
     expect(shown()).toHaveTextContent("failed");
+  });
+
+  it("says when the searches start again, and asks no whole search after a refused quick one", async () => {
+    const find = vi.fn<FindPictures>(async () => {
+      throw new ApiFailure({ kind: "searchLimit", retryAt: 1_794_571_200_000 });
+    });
+    render(<Probe query="naruto" find={find} />);
+    await settle();
+    expect(shown()).toHaveTextContent("limited:1794571200000");
+    expect(find).toHaveBeenCalledTimes(1);
+  });
+
+  it("names the limit when the whole search is refused after a failed quick one", async () => {
+    const find = vi.fn<FindPictures>(async ({ quick }) => {
+      if (quick === true) throw new Error("slow");
+      throw new ApiFailure({ kind: "searchLimit" });
+    });
+    render(<Probe query="naruto" find={find} />);
+    await settle();
+    expect(shown()).toHaveTextContent("limited:-");
+    expect(find).toHaveBeenCalledTimes(2);
   });
 
   it("adds the next pages, each picture once, until there are no more", async () => {

@@ -45,6 +45,8 @@ export type ApiError =
   | { kind: "pictureRefused"; because: string | null; imageUrl?: string }
   /** Too much of something in too short a time: TOO_MANY_PROPOSALS, ten sections a day. */
   | { kind: "tooManyRequests"; code: string | null }
+  /** Too many picture searches this hour or day (429 SEARCH_LIMIT): none until `retryAt`. */
+  | { kind: "searchLimit"; retryAt?: number }
   | { kind: "unavailable" }
   | { kind: "offline" }
   | { kind: "unknown"; status: number };
@@ -196,8 +198,13 @@ export function parseApiError(
         ...(imageUrl === null ? {} : { imageUrl }),
       };
     }
-    case 429:
+    case 429: {
+      if (code === "SEARCH_LIMIT") {
+        const retryAt = publicationRetryAt(body.retryAt, retryAfter);
+        return retryAt === undefined ? { kind: "searchLimit" } : { kind: "searchLimit", retryAt };
+      }
       return { kind: "tooManyRequests", code };
+    }
     case 503:
       return { kind: "unavailable" };
     default:
