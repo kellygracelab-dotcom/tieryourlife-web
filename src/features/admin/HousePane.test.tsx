@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +9,9 @@ import {
   hasUnsentEdits,
   houseBoardsOf,
   houseLinkOf,
+  houseRevisionOf,
   linkToHouse,
+  markHouseRevision,
   markHouseSeen,
   markHouseSent,
 } from "../boards/houseList";
@@ -110,6 +112,94 @@ afterEach(() => {
 });
 
 const row = async (title: string) => (await screen.findByText(title)).closest("li")!;
+
+describe("HousePane: Edit by the list's revision", () => {
+  /** "Best ramen" as the server has it now: a fix made there moved its revision, not its time. */
+  const fixed: PublishedList = {
+    ...ramenInFull,
+    title: "Best ramen, fixed",
+    updatedAt: Date.UTC(2026, 9, 28),
+    revision: 5,
+  };
+  const editRamen = async () =>
+    userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
+  /** A board kept here, edited after the list's own time, and sent (or not) at that. */
+  const keep = (sent: boolean, revision: number | null) => {
+    houseRepository.save(readyBoard("mine", "Ramen, kept", Date.UTC(2026, 9, 31)));
+    linkToHouse("mine", "l1", links);
+    if (sent) markHouseSent("mine", Date.UTC(2026, 9, 31), links);
+    if (revision !== null) markHouseRevision("mine", revision, links);
+  };
+
+  beforeEach(() => {
+    deps.loadList = vi.fn(async () => fixed);
+  });
+
+  it("opens the board kept here while it stands on the revision the list has", async () => {
+    keep(false, 5);
+    const router = open();
+    await editRamen();
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
+      "/b/mine?house=l1",
+    );
+    expect(houseRepository.all()).toHaveLength(1);
+  });
+
+  // Content, 13.11.2026: the house list Fruit was fixed on the server, its
+  // updatedAt stayed, and Edit opened the old board kept in the browser.
+  it("opens the list as it stands once its revision moved on, whatever the times say", async () => {
+    keep(true, 4);
+    const router = open();
+    await editRamen();
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(houseRepository.get("mine")).toBeNull();
+    const [fresh] = houseRepository.all();
+    expect(fresh?.title).toBe("Best ramen, fixed");
+    expect(houseRevisionOf(fresh!.uid, links)).toBe(5);
+    expect(router.state.location.pathname).toBe(`/b/${fresh!.uid}`);
+  });
+
+  it("opens the list as it stands over a board kept before revisions were", async () => {
+    keep(true, null);
+    open();
+    await editRamen();
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(houseRepository.get("mine")).toBeNull();
+    expect(houseRepository.all()[0]?.title).toBe("Best ramen, fixed");
+  });
+
+  it("asks over unsent edits, and opens the list it read without reading it again", async () => {
+    keep(false, 4);
+    open();
+    await editRamen();
+    await userEvent.click(await screen.findByRole("button", { name: "Open it as it stands" }));
+    expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
+    expect(deps.loadList).toHaveBeenCalledTimes(1);
+    const [fresh] = houseRepository.all();
+    expect(fresh?.title).toBe("Best ramen, fixed");
+    expect(houseRevisionOf(fresh!.uid, links)).toBe(5);
+  });
+
+  it("keeps a draft by choice on the revision it was read at, for its Update to be refused", async () => {
+    keep(false, 4);
+    const router = open();
+    await editRamen();
+    await userEvent.click(await screen.findByRole("button", { name: "Open my draft" }));
+    expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
+      "/b/mine?house=l1",
+    );
+    expect(houseRevisionOf("mine", links)).toBe(4);
+  });
+
+  it("marks a draft kept by choice from before revisions as behind the list", async () => {
+    keep(false, null);
+    open();
+    await editRamen();
+    await userEvent.click(await screen.findByRole("button", { name: "Open my draft" }));
+    expect(houseRevisionOf("mine", links)).toBe("behind");
+  });
+});
 
 describe("HousePane", () => {
   it("lists the house's lists with their section and topic, a page at a time", async () => {
@@ -366,7 +456,8 @@ describe("HousePane: made and changed on a board", () => {
     const router = open();
     await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
     expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
-    expect(deps.loadList).not.toHaveBeenCalled();
+    // Read all the same, to know where the list stands; this one says no revision.
+    expect(deps.loadList).toHaveBeenCalledWith("l1");
     expect(houseRepository.all()).toHaveLength(2);
     expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
       "/b/mine?house=l1",
@@ -402,14 +493,11 @@ describe("HousePane: made and changed on a board", () => {
     cleanup();
 
     // Another admin fills it out a minute later, by the server's clock.
-    deps.load = vi.fn(async () => ({
-      lists: [house("l1", "Best ramen", { updatedAt: listed + 60_000 })],
-      nextCursor: null,
-    }));
+    deps.loadList = vi.fn(async () => ({ ...ramenInFull, updatedAt: listed + 60_000 }));
     open();
     await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
     expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
-    expect(deps.loadList).toHaveBeenCalledTimes(2);
+    expect(deps.loadList).toHaveBeenCalledTimes(1);
     expect(houseRepository.get(made!.uid)).toBeNull();
   });
 
@@ -422,7 +510,7 @@ describe("HousePane: made and changed on a board", () => {
     const router = open();
     await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
     expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
-    expect(deps.loadList).not.toHaveBeenCalled();
+    expect(deps.loadList).toHaveBeenCalledTimes(1);
     expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
       "/b/mine?house=l1",
     );
@@ -436,16 +524,16 @@ describe("HousePane: made and changed on a board", () => {
     const edit = async () =>
       userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
     await edit();
-    const ask = screen.getByRole("alertdialog", {
+    const ask = await screen.findByRole("alertdialog", {
       name: "“Best ramen” changed since you edited it here",
     });
     expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
     await userEvent.keyboard("{Escape}");
     expect(houseRepository.get("mine")).not.toBeNull();
-    expect(deps.loadList).not.toHaveBeenCalled();
+    expect(deps.loadList).toHaveBeenCalledTimes(1);
 
     await edit();
-    await userEvent.click(screen.getByRole("button", { name: "Open my draft" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Open my draft" }));
     expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
       "/b/mine?house=l1",
     );
@@ -457,7 +545,7 @@ describe("HousePane: made and changed on a board", () => {
     linkToHouse("mine", "l1", links);
     open();
     await userEvent.click(within(await row("Best ramen")).getByRole("button", { name: "Edit" }));
-    await userEvent.click(screen.getByRole("button", { name: "Open it as it stands" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Open it as it stands" }));
     expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
     expect(houseRepository.get("mine")).toBeNull();
     const [fresh] = houseRepository.all();
@@ -514,6 +602,26 @@ describe("HousePane: made and changed on a board", () => {
     await userEvent.click(within(ramenRow).getByRole("button", { name: "Edit" }));
     expect(await screen.findByRole("heading", { name: "Board page" })).toBeInTheDocument();
     expect(router.state.location.search).toBe("?house=l1");
+  });
+
+  it("re-reads a list after its translations are saved, and follows only the revision they made", async () => {
+    deps.loadList = vi
+      .fn<HouseDeps["loadList"]>()
+      .mockResolvedValueOnce({ ...ramenInFull, revision: 4 })
+      .mockResolvedValueOnce({ ...ramenInFull, revision: 5, updatedAt: 9_000 });
+    houseRepository.save(readyBoard("mine", "Ramen, my edit"));
+    linkToHouse("mine", "l1", links);
+    markHouseRevision("mine", 4, links);
+    open();
+    await userEvent.click(
+      within(await row("Best ramen")).getByRole("button", { name: "Translations" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.type(await within(dialog).findByLabelText("Miso"), "Мисо");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Translations saved")).toBeInTheDocument();
+    await waitFor(() => expect(houseRevisionOf("mine", links)).toBe(5));
+    expect(deps.loadList).toHaveBeenCalledTimes(2);
   });
 
   it("keeps a house list's words in another language, one language at a time", async () => {

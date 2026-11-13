@@ -931,9 +931,18 @@ const es: Translation = {
     mergeFind: "Fusionar con otro tema",
     houseStaleTitle: "«{title}» cambió desde que la editaste aquí",
     houseStaleBody:
-      "Si la abres tal como está, se pierden los cambios que no enviaste. Tu borrador aún los tiene, pero actualizar desde él devuelve la lista anterior.",
+      "Si la abres tal como está, se pierden los cambios que no enviaste. Tu borrador aún los tiene, pero se hizo con una versión anterior, así que no se puede actualizar la lista desde él.",
     houseStaleDraft: "Abrir mi borrador",
     houseStaleFresh: "Abrirla tal como está",
+    houseChanged:
+      "La lista cambió en el servidor. Tus cambios aquí no se enviaron: carga la versión actual para editar la lista tal como está ahora.",
+    houseLoadCurrent: "Cargar la versión actual",
+    houseBusy: "Wikimedia está ocupada. Inténtalo de nuevo a las {time}.",
+    houseNotCopied:
+      "Imágenes que no se copiaron a tiempo: {names}. Inténtalo de nuevo a las {time}; si alguna sigue fallando, cámbiala.",
+    houseNotCopiedSome:
+      "Algunas imágenes no se copiaron a tiempo. Inténtalo de nuevo a las {time}.",
+    houseRetrying: "Entonces se enviará sola de nuevo.",
   },
   sections: {
     followers: { one: "{n} seguidor", many: "{n} seguidores", other: "{n} seguidores" },

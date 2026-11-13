@@ -116,6 +116,14 @@ export interface PublishedList extends ListSummary {
   underReview?: boolean;
   /** A house list's editor's credit for its cover (CONTRACT, Editor's credit); absent for none. */
   coverAttribution?: EditorCredit;
+  /**
+   * The list's revision (CONTRACT, List revision): it moves on with every
+   * write to what the list shows, whoever makes it, the house's translations
+   * and the server's own fixes too. A copy edited to be sent over the list
+   * keeps the one it was read at, as its `baseRevision`. Absent from a server
+   * that does not say it.
+   */
+  revision?: number;
 }
 
 // A type rather than an interface so it can travel as a query object.

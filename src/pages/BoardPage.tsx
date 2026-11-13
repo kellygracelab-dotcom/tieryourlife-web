@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { isTmdbPicture, type EditorCredit } from "../api/pictureAttribution";
 import type { SectionProposal, SectionStats } from "../api/sections";
-import { isSectionId } from "../api/types";
+import { isSectionId, type PublishedList } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
@@ -89,11 +89,15 @@ import { useSession } from "../app/session";
 import { type KeyValueStore, memoryStore } from "../lib/storage";
 import { HOUSE_PANE_PATH, HouseBar, type HouseSending } from "../features/admin/HouseBar";
 import {
+  boardFromHouseList,
   HOUSE_PARAM,
   houseBoardPath,
   houseLinkOf,
   houseLinkOfParam,
+  houseRevisionOf,
   linkToHouse,
+  markHouseCopy,
+  markHouseRevision,
   markHouseSeen,
   markHouseSent,
   unlinkFromHouse,
@@ -524,10 +528,17 @@ function OpenBoard({
   };
 
   // Out as the house: the board is tied to the list from now on, and the address says which.
-  const sentToHouse = (what: "published" | "updated", id: string, updatedAt: number | null) => {
+  // The revision the list now has goes with it: the next Update stands on it.
+  const sentToHouse = (
+    what: "published" | "updated",
+    id: string,
+    updatedAt: number | null,
+    revision: number | null,
+  ) => {
     linkToHouse(uid, id, houseStore);
     markHouseSent(uid, latest().editedAt, houseStore);
     markHouseSeen(uid, updatedAt, houseStore);
+    markHouseRevision(uid, revision, houseStore);
     void navigate(houseBoardPath(uid, id), { replace: true });
     setNotice({
       text: what === "published" ? strings.admin.housePublished : strings.admin.houseUpdated,
@@ -537,7 +548,15 @@ function OpenBoard({
   // The list it updated is gone: the board can still go out as a new one.
   const houseGone = () => {
     linkToHouse(uid, null, houseStore);
+    markHouseRevision(uid, null, houseStore);
     void navigate(houseBoardPath(uid, null), { replace: true });
+  };
+  // The list moved on while this board was edited, and the editor loaded it:
+  // the board becomes the list as it stands, under its own uid and address.
+  const houseLoaded = (list: PublishedList) => {
+    const asItStands = { ...boardFromHouseList(list, now(), nextUid), uid };
+    repository.save(asItStands);
+    markHouseCopy(asItStands, list, houseStore);
   };
 
   const onRows = (rows: readonly (readonly number[])[]) => {
@@ -908,9 +927,11 @@ function OpenBoard({
           board={board}
           latest={latest}
           listId={house.listId}
+          base={() => houseRevisionOf(uid, houseStore)}
           send={houseSend}
           onSent={sentToHouse}
           onGone={houseGone}
+          onLoaded={houseLoaded}
         />
       )}
 

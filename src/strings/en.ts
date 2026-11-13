@@ -856,9 +856,17 @@ export const en = {
     mergeFind: "Merge into another topic",
     houseStaleTitle: "“{title}” changed since you edited it here",
     houseStaleBody:
-      "Opening it as it stands drops the changes you haven’t sent. Your draft still has them, but updating from it puts the older list back.",
+      "Opening it as it stands drops the changes you haven’t sent. Your draft still has them, but it was made from an older version, so the list can’t be updated from it.",
     houseStaleDraft: "Open my draft",
     houseStaleFresh: "Open it as it stands",
+    houseChanged:
+      "List changed on the server. Your changes here weren’t sent: load the current version to edit the list as it stands now.",
+    houseLoadCurrent: "Load the current version",
+    houseBusy: "Wikimedia is busy. Try again at {time}.",
+    houseNotCopied:
+      "Pictures not copied in time: {names}. Try again at {time}; if one keeps failing, replace it.",
+    houseNotCopiedSome: "Some pictures weren’t copied in time. Try again at {time}.",
+    houseRetrying: "It goes out again by itself then.",
   },
   sections: {
     followers: { one: "{n} follower", other: "{n} followers" },

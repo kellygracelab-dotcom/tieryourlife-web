@@ -946,9 +946,17 @@ const fr: Translation = {
     mergeFind: "Fusionner avec un autre thème",
     houseStaleTitle: "« {title} » a changé depuis que vous l’avez modifiée ici",
     houseStaleBody:
-      "L’ouvrir telle qu’elle est fait perdre les modifications non envoyées. Votre brouillon les garde, mais une mise à jour depuis celui-ci remet l’ancienne liste.",
+      "L’ouvrir telle qu’elle est fait perdre les modifications non envoyées. Votre brouillon les garde, mais il vient d’une version plus ancienne : la liste ne peut pas être mise à jour depuis celui-ci.",
     houseStaleDraft: "Ouvrir mon brouillon",
     houseStaleFresh: "L’ouvrir telle qu’elle est",
+    houseChanged:
+      "La liste a changé sur le serveur. Vos modifications ici n’ont pas été envoyées : chargez la version actuelle pour modifier la liste telle qu’elle est maintenant.",
+    houseLoadCurrent: "Charger la version actuelle",
+    houseBusy: "Wikimedia est occupé. Réessayez à {time}.",
+    houseNotCopied:
+      "Images non copiées à temps : {names}. Réessayez à {time} ; si l’une échoue encore, remplacez-la.",
+    houseNotCopiedSome: "Certaines images n’ont pas été copiées à temps. Réessayez à {time}.",
+    houseRetrying: "Elle repartira alors d’elle-même.",
   },
   sections: {
     followers: { one: "{n} abonné", many: "{n} abonnés", other: "{n} abonnés" },
