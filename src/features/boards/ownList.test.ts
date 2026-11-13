@@ -201,6 +201,10 @@ describe("boardForOwnList", () => {
     const feed = (name: string) =>
       `https://firebasestorage.googleapis.com/v0/b/tyl.appspot.com/o/published%2FL9%2F${name}?alt=media`;
     const fetched = feed(`w-${"0123456789abcdef".repeat(2)}`);
+    // A later publication attempt names its copy with a `_p_` suffix.
+    const attempt = feed(
+      `w-${"fedcba9876543210".repeat(2)}_p_0b5e7c1a-2d3f-4a6b-8c9d-0e1f2a3b4c5d`,
+    );
     const copied: string[] = [];
     const copyBack = async (url: string) => {
       copied.push(url);
@@ -215,6 +219,7 @@ describe("boardForOwnList", () => {
         items: [
           { title: "Holiday", imageUrl: feed("h"), tierIndex: 0 },
           { title: "Found", imageUrl: fetched, tierIndex: 1 },
+          { title: "Again", imageUrl: attempt, tierIndex: 1 },
         ],
         previewImages: [fetched],
         coverImageUrl: null,

@@ -18,7 +18,8 @@ const COPIES_AT_ONCE = 4;
  * list at publish (QA S11): `w-` and 32 hex of its address. Not the person's
  * own: it goes out again by its address, and the backend knows it by that.
  */
-const WEB_COPY = /^w-[0-9a-f]{32}$/;
+// A publication attempt may add `_p_` and a UUID after it (CONTRACT, Publication attempts).
+const WEB_COPY = /^w-[0-9a-f]{32}(?:_p_[0-9A-Za-z-]+)?$/;
 
 /**
  * One of the person's own pictures the backend copied for this list, to bring
