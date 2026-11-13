@@ -66,7 +66,13 @@ describe("RankingPage, a house list's words and its pictures' credits", () => {
       editorial: true,
       authorName: "",
       items: ranking.snapshot.items.map((item, index) =>
-        index === 0 ? { ...item, credit: "Jane Doe, CC BY 2.0" } : item,
+        index === 0
+          ? {
+              ...item,
+              imageUrl: "https://example.com/ex-machina.jpg",
+              credit: "Jane Doe, CC BY 2.0",
+            }
+          : item,
       ),
       translations: {
         ru: {
@@ -109,7 +115,6 @@ describe("RankingPage, a house list's words and its pictures' credits", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     card.focus();
     await userEvent.keyboard("{Enter}");
-    await userEvent.click(screen.getByText("Image credits"));
     expect(screen.getByRole("dialog", { name: "Ex Machina" })).toHaveTextContent(
       "Jane Doe, CC BY 2.0",
     );

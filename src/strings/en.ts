@@ -152,6 +152,8 @@ export const en = {
     catalogue: "The details and pictures of films, series and people come from TMDB.",
     wikidata:
       "Everything else in the catalogue comes from Wikidata, and its pictures from Wikimedia Commons.",
+    // IGDB's terms ask for this line, with IGDB.com linking to its site.
+    igdb: "Game data and covers from {igdb}",
     tmdbLogo: "TMDB",
     // TMDB's terms give this sentence word for word.
     tmdb: "This product uses the TMDB API but is not endorsed or certified by TMDB.",
@@ -251,7 +253,7 @@ export const en = {
     pictureTooBig: "{name} is too big even after shrinking.",
     pictureFailed: "{name} could not be uploaded. Try again.",
     addLabel: "Add a card",
-    addPlaceholder: "Search the catalogue, or type a name",
+    addPlaceholder: "Search, type a name, or paste a picture link",
     paste: "Paste a list",
     pasteLabel: "Names, one to a line",
     pasteHint: "A year in brackets tells two of one name apart: Dune (2021)",
@@ -389,7 +391,6 @@ export const en = {
     stale: "Couldn’t refresh. These are the lists from your last visit.",
   },
   list: {
-    pictureCredits: "Image credits",
     opening: "Opening the list…",
     by: "by {name}",
     home: "Go to the front page",
@@ -1379,5 +1380,76 @@ export const en = {
     noArt: "No picture",
     yours: "Your list",
     yoursAnonymous: "Your list, published anonymously",
+  },
+  // A picture from a link, a paste or a drop, and who made a picture
+  // (docs/design-spec-picture-link.md).
+  link: {
+    draftLabel: "Picture from a link",
+    fromDevice: "Picture from your device",
+    name: "Name",
+    page: "Page it’s from",
+    pagePlaceholder: "Optional",
+    checking: "Checking the picture…",
+    addCard: "Add card",
+    addWithout: "Add without picture",
+    signInToAdd: "Sign in to add the picture",
+    from: "from {host}",
+    notAPicture:
+      "That link is a page, not a picture. Open the picture itself and copy its address.",
+    unreachable: "That link doesn’t open. Check it, or try another picture.",
+    tooBig: "That picture is too big. Try a smaller copy of it.",
+    refused: "This picture can’t be used here. Pick another one.",
+    limit:
+      "That’s all the pictures from links for today. More at {time}. You can still upload one from your device.",
+    limitTomorrow:
+      "That’s all the pictures from links for today. More tomorrow. You can still upload one from your device.",
+    failed: "The picture didn’t come through. Try again.",
+    busy: "The picture’s site is busy. Try again at {time}.",
+    busySoon: "The picture’s site is busy. Try again in a moment.",
+    waiting: "Waiting for the source until {time}…",
+    badPage: "That doesn’t look like a page address. Leave it empty if you don’t know it.",
+    added: "Added “{name}”",
+    dropTitle: "Drop to add a card",
+    dropNote: "The picture is copied into your list",
+    replace: "Replace picture",
+    changed: "Picture changed on “{name}”",
+    pasteHint: "Have a picture? Put its link after the name. A second link is the page it’s from.",
+    houseLabel: "Name | picture link | page it’s from",
+    fromCatalogue: "{n} from the catalogue",
+    fromLinks: "{n} from links",
+    houseHint:
+      "Pictures from other sites need the page they’re from. Catalogue and Commons pictures don’t.",
+    pageless: {
+      one: "{n} needs the page its picture is from:",
+      other: "{n} need the page their pictures are from:",
+    },
+    pagelessHint:
+      "The list won’t publish without the page. Remove these cards and add them again from the picture’s link, with the page.",
+    quota: "{left} of {limit} pictures left today",
+    doneAdded: { one: "{n} card added.", other: "{n} cards added." },
+    doneMissing: { one: "{n} came without a picture:", other: "{n} came without a picture:" },
+    doneHint: "Pick a card to give it a picture: search, paste a link or drop one on it.",
+    ok: "OK",
+    missing: {
+      notFound: "nothing by that name in the catalogue",
+      searchLimit: "too many picture searches",
+      signIn: "sign in to add pictures from links",
+      notAPicture: "the link is a page, not a picture",
+      unreachable: "the link doesn’t open",
+      tooBig: "the picture is too big",
+      refused: "the picture can’t be used here",
+      limit: "no more pictures from links today",
+      badLink: "the page link isn’t a web address",
+      failed: "the picture didn’t come through",
+      busy: "the picture’s site stayed busy",
+    },
+    linkNeeded:
+      "“{name}” needs the page its picture is from. Remove it and add it again from the picture’s link, with the page.",
+    about: "About the picture",
+    aboutOf: "About the picture of {name}",
+    openPage: "Open its page",
+    photo: "Photo",
+    licence: "Licence",
+    fromRow: "From",
   },
 } as const;

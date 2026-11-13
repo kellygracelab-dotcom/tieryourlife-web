@@ -163,6 +163,7 @@ const de: Translation = {
     creditsTitle: "Danksagung",
     catalogue: "Die Angaben und Bilder zu Filmen, Serien und Menschen kommen von TMDB.",
     wikidata: "Alles andere im Katalog kommt von Wikidata, die Bilder dazu von Wikimedia Commons.",
+    igdb: "Spieldaten und Cover von {igdb}",
     dataTitle: "Deine Daten",
     deleteAccount: "Dein Konto löschen",
   },
@@ -259,7 +260,7 @@ const de: Translation = {
     pictureTooBig: "{name} ist selbst verkleinert zu groß.",
     pictureFailed: "{name} konnte nicht hochgeladen werden. Versuch es noch einmal.",
     addLabel: "Karte hinzufügen",
-    addPlaceholder: "Im Katalog suchen oder einen Namen tippen",
+    addPlaceholder: "Suchen, einen Namen tippen oder einen Bildlink einfügen",
     paste: "Liste einfügen",
     pasteLabel: "Namen, einer pro Zeile",
     pasteHint: "Ein Jahr in Klammern unterscheidet Gleichnamige: Dune (2021)",
@@ -404,7 +405,6 @@ const de: Translation = {
     stale: "Aktualisieren hat nicht geklappt. Das sind die Listen von deinem letzten Besuch.",
   },
   list: {
-    pictureCredits: "Bildnachweise",
     opening: "Liste wird geöffnet…",
     by: "von {name}",
     home: "Zur Startseite",
@@ -1432,6 +1432,84 @@ const de: Translation = {
     back: "Deine Listen",
     stillPublic:
       "Behalten statt gelöscht: Die öffentliche Kopie ließ sich nicht entfernen. Versuche es erneut, sobald du online bist.",
+  },
+  link: {
+    draftLabel: "Bild aus einem Link",
+    fromDevice: "Bild von deinem Gerät",
+    name: "Name",
+    page: "Seite, von der es stammt",
+    pagePlaceholder: "Optional",
+    checking: "Bild wird geprüft…",
+    addCard: "Karte hinzufügen",
+    addWithout: "Ohne Bild hinzufügen",
+    signInToAdd: "Anmelden, um das Bild hinzuzufügen",
+    from: "von {host}",
+    notAPicture:
+      "Dieser Link führt zu einer Seite, nicht zu einem Bild. Öffne das Bild selbst und kopiere seine Adresse.",
+    unreachable: "Dieser Link öffnet sich nicht. Prüfe ihn oder versuch ein anderes Bild.",
+    tooBig: "Das Bild ist zu groß. Versuch eine kleinere Version davon.",
+    refused: "Dieses Bild kann hier nicht verwendet werden. Wähle ein anderes.",
+    limit:
+      "Das waren alle Bilder aus Links für heute. Weitere ab {time}. Vom Gerät hochladen geht weiterhin.",
+    limitTomorrow:
+      "Das waren alle Bilder aus Links für heute. Weitere morgen. Vom Gerät hochladen geht weiterhin.",
+    failed: "Das Bild ist nicht angekommen. Versuch es noch einmal.",
+    busy: "Die Seite des Bildes ist ausgelastet. Versuch es um {time} noch einmal.",
+    busySoon: "Die Seite des Bildes ist ausgelastet. Versuch es gleich noch einmal.",
+    waiting: "Warten auf die Quelle bis {time}…",
+    badPage:
+      "Das sieht nicht nach einer Seitenadresse aus. Lass das Feld leer, wenn du sie nicht kennst.",
+    added: "„{name}“ hinzugefügt",
+    dropTitle: "Ablegen, um eine Karte hinzuzufügen",
+    dropNote: "Das Bild wird in deine Liste kopiert",
+    replace: "Bild ersetzen",
+    changed: "Bild von „{name}“ geändert",
+    pasteHint:
+      "Hast du ein Bild? Setze seinen Link hinter den Namen. Ein zweiter Link ist die Seite, von der es stammt.",
+    houseLabel: "Name | Bildlink | Seite, von der es stammt",
+    fromCatalogue: "{n} aus dem Katalog",
+    fromLinks: "{n} aus Links",
+    houseHint:
+      "Bilder von anderen Seiten brauchen die Seite, von der sie stammen. Bilder aus dem Katalog und von Commons nicht.",
+    pageless: {
+      one: "{n} braucht die Seite, von der das Bild stammt:",
+      other: "{n} brauchen die Seite, von der die Bilder stammen:",
+    },
+    pagelessHint:
+      "Ohne die Seite wird die Liste nicht veröffentlicht. Entferne diese Karten und füge sie erneut über den Link des Bildes hinzu, mit der Seite.",
+    quota: "Heute noch {left} von {limit} Bildern",
+    doneAdded: {
+      one: "{n} Karte hinzugefügt.",
+      other: "{n} Karten hinzugefügt.",
+    },
+    doneMissing: {
+      one: "{n} kam ohne Bild:",
+      other: "{n} kamen ohne Bild:",
+    },
+    doneHint:
+      "Wähle eine Karte, um ihr ein Bild zu geben: suche, füge einen Link ein oder zieh ein Bild darauf.",
+    ok: "OK",
+    missing: {
+      notFound: "nichts mit diesem Namen im Katalog",
+      searchLimit: "zu viele Bildsuchen",
+      signIn: "melde dich an, um Bilder aus Links hinzuzufügen",
+      notAPicture: "der Link führt zu einer Seite, nicht zu einem Bild",
+      unreachable: "der Link öffnet sich nicht",
+      tooBig: "das Bild ist zu groß",
+      refused: "das Bild kann hier nicht verwendet werden",
+      limit: "heute keine Bilder aus Links mehr",
+      badLink: "der Seitenlink ist keine Webadresse",
+      failed: "das Bild ist nicht angekommen",
+      busy: "die Seite des Bildes blieb ausgelastet",
+    },
+    linkNeeded:
+      "„{name}“ braucht die Seite, von der sein Bild stammt. Entferne die Karte und füge sie erneut über den Link des Bildes hinzu, mit der Seite.",
+    about: "Über das Bild",
+    aboutOf: "Über das Bild von {name}",
+    openPage: "Seite öffnen",
+    photo: "Foto",
+    licence: "Lizenz",
+    fromRow: "Quelle",
   },
 };
 

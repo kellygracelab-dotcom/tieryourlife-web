@@ -1,24 +1,43 @@
 import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import type { LinkQuota } from "../../api/linkQuota";
 import {
   PICTURE_SCOPES,
   scopeFor,
   type FoundPicture,
+  type LinkAsk,
   type PictureKind,
   type PictureScope,
   type PictureSource,
 } from "../../api/pictures";
 import type { CatalogueItem } from "../../api/types";
-import { findPictures, keepPicture } from "../../lib/api";
+import { useSession } from "../../app/session";
+import { findPictures, keepPicture, linkPicture, loadLinkQuota } from "../../lib/api";
+import {
+  isLink,
+  keepLinkedPicture,
+  linkRefusalOf,
+  pageLinkOf,
+  type LinkedPicture,
+} from "../../lib/linkPictures";
 import { keepWebPicture, PictureRefused, type UploadedPicture } from "../../lib/pictures";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Chip } from "../../ui/Chip";
 import { ClearButton } from "../../ui/ClearButton";
 import { Icon } from "../../ui/Icon";
+import { DraftCard, type Draft, type DraftPicture, type DraftSource } from "./DraftCard";
+import {
+  forgetDraftForSignIn,
+  keepDraftForSignIn,
+  takeDraftForSignIn,
+  type DraftToResume,
+} from "./draftAfterSignIn";
+import { nameOfFile, type Incoming } from "../../lib/incoming";
+import { missText, refusedText, waitingText } from "./linkText";
 import { LIMITS, type EditorAction, type EditorItem } from "./model";
-import { cardsFor, preferredFor, wantedOf } from "./paste";
-import { usePictures, type FindPictures } from "./usePictures";
+import { cardsFor, preferredFor, sourcesCount, wantedOf, type MissReason } from "./paste";
+import { LOOKUP_DEBOUNCE_MS, usePictures, type FindPictures } from "./usePictures";
 import { sizedFor } from "../../lib/pictureSize";
 import { pasteLimitText, searchLimitText } from "../../lib/searchLimit";
 
@@ -28,6 +47,8 @@ const UPLOADS_AT_ONCE = 4;
 export type Upload = (file: File) => Promise<UploadedPicture>;
 /** A picture found on the web, made the person's own. */
 export type Keep = (url: string) => Promise<UploadedPicture>;
+/** A picture by its address, with the page it is from: kept, or refused with why (LinkRefused). */
+export type LinkKeep = (ask: LinkAsk) => Promise<LinkedPicture>;
 
 /** `work` on every item, at most `limit` running at once; each item comes back with its promise. */
 function limited<T, R>(items: readonly T[], limit: number, work: (item: T) => Promise<R>) {
@@ -59,6 +80,16 @@ interface AddCardBoxProps {
   find?: FindPictures;
   upload: Upload;
   keep?: Keep;
+  /** How a picture from a link is kept. */
+  link?: LinkKeep;
+  /** A paste or a drop the page took: a link or one picture opens the draft, several go up. */
+  incoming?: Incoming | null;
+  /** The page may forget the paste or drop: it has been taken. */
+  onIncomingTaken?: () => void;
+  /** The board speaks for the house: every picture from a pasted link needs its page. */
+  house?: boolean;
+  /** What is left of today's pictures from links, for the house's count. */
+  loadQuota?: () => Promise<LinkQuota | null>;
 }
 
 export function pictureFailureText(name: string, failure: unknown): string {
@@ -75,6 +106,19 @@ export function pictureFailureText(name: string, failure: unknown): string {
     default:
       return fill(strings.new.pictureFailed, { name });
   }
+}
+
+/** A refused picture from a link as the draft says it, and what the draft offers beside. */
+export function draftFailureOf(failure: unknown): DraftPicture & { status: "failed" } {
+  const refused = linkRefusalOf(failure);
+  return {
+    status: "failed",
+    text: refusedText(refused),
+    ...(refused.reason === "limit" ? { limit: true } : {}),
+    ...(refused.reason === "failed" ? { retry: true } : {}),
+    // A busy site is a wait: Try again turns on when it said, at once when it did not.
+    ...(refused.reason === "busy" ? { busyUntil: refused.retryAt ?? Date.now() } : {}),
+  };
 }
 
 const scopeName = (scope: PictureScope): string =>
@@ -98,7 +142,7 @@ const SOURCE_NAMES: Record<Exclude<PictureSource, "web" | "other">, string> = {
   tmdb: "TMDB",
   anilist: "AniList",
   steam: "Steam",
-  igdb: "IGDB",
+  igdb: "IGDB.com",
   openlibrary: "Open Library",
   wikidata: "Wikidata",
   inaturalist: "iNaturalist",
@@ -161,27 +205,58 @@ function PictureTile({
   );
 }
 
+/** What a paste of many lines came to: how many cards, and those without a picture, and why. */
+export interface PasteOutcome {
+  added: number;
+  missing: { title: string; reason: MissReason }[];
+  /**
+   * The house's cards whose picture was copied from another site without the
+   * page it is from: the list is refused until they have one.
+   */
+  pageless: string[];
+}
+
+/** Whether a paste has anything to say once it is done. */
+const worthSaying = (outcome: PasteOutcome): boolean =>
+  outcome.missing.length > 0 || outcome.pageless.length > 0;
+
 /**
  * Many cards at once: names pasted one to a line, each looked up in the
- * catalogue for its picture. A list of fifty films is a minute, not an hour.
+ * catalogue for its picture, or given its own by a link after the name. A
+ * list of fifty films is a minute, not an hour. On a house board a picture
+ * from another site wants its page: nothing is held back, since only the
+ * backend knows a catalogue's or Commons' picture, which needs none; the
+ * cards that came back copied without one are named when the paste is done.
  */
 function PasteBox({
   room,
   category,
   dispatch,
   lookup,
+  link,
+  house,
+  loadQuota,
   onNote,
+  onDone,
 }: {
   room: number;
   category: string | null;
   dispatch: (action: EditorAction) => void;
   lookup: (query: string) => Promise<CatalogueItem[]>;
+  /** None for a guest: their lines with a link come by name. */
+  link: LinkKeep | undefined;
+  house: boolean;
+  loadQuota: () => Promise<LinkQuota | null>;
   /** Said where the box's other warnings are, since the paste box closes when it is done. */
   onNote: (note: string | null) => void;
+  onDone: (outcome: PasteOutcome) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [quota, setQuota] = useState<LinkQuota | null>(null);
+  // A busy picture site: the paste waits for it until this time.
+  const [waiting, setWaiting] = useState<number | null>(null);
   const here = useRef(true);
   useEffect(() => {
     here.current = true;
@@ -189,8 +264,24 @@ function PasteBox({
       here.current = false;
     };
   }, []);
+  // The house sees what is left of today's pictures from links once the backend says.
+  const counted = open && house && link !== undefined;
+  useEffect(() => {
+    if (!counted) return;
+    let current = true;
+    loadQuota().then(
+      (now) => {
+        if (current && now !== null) setQuota(now);
+      },
+      () => undefined,
+    );
+    return () => {
+      current = false;
+    };
+  }, [counted, loadQuota]);
 
-  const wanted = wantedOf(text, Math.max(0, room));
+  const wanted = wantedOf(text, Math.max(0, room), house);
+  const counts = sourcesCount(wanted);
   const busy = progress !== null;
 
   const onSubmit = (event: FormEvent) => {
@@ -198,23 +289,40 @@ function PasteBox({
     if (busy || wanted.length === 0) return;
     setProgress({ done: 0, total: wanted.length });
     onNote(null);
+    const missing: PasteOutcome["missing"] = [];
+    const pageless: string[] = [];
+    let added = 0;
     void cardsFor(
       wanted,
       lookup,
       (card, done) => {
         dispatch({ type: "addItem", ...card });
+        added++;
         setProgress({ done, total: wanted.length });
       },
-      { going: () => here.current, preferred: preferredFor(category) },
+      {
+        going: () => here.current,
+        preferred: preferredFor(category),
+        link,
+        onMissing: (title, reason) => missing.push({ title, reason }),
+        onQuota: (now) => {
+          if (here.current) setQuota(now);
+        },
+        ...(house ? { onPageless: (title: string) => pageless.push(title) } : {}),
+        onWaiting: (until) => {
+          if (here.current) setWaiting(until);
+        },
+      },
     )
       .then((ranOut) => {
-        if (here.current && ranOut !== null) {
-          onNote(pasteLimitText(ranOut.unanswered, ranOut.retryAt));
-        }
+        if (!here.current) return;
+        if (ranOut !== null) onNote(pasteLimitText(ranOut.unanswered, ranOut.retryAt));
+        onDone({ added, missing, pageless });
       })
       .finally(() => {
         if (!here.current) return;
         setProgress(null);
+        setWaiting(null);
         setText("");
         setOpen(false);
       });
@@ -232,7 +340,7 @@ function PasteBox({
   return (
     <form className="cards__paste cards__paste--open" onSubmit={onSubmit}>
       <label className="editor__label" htmlFor="paste-input">
-        {strings.new.pasteLabel}
+        {house ? strings.link.houseLabel : strings.new.pasteLabel}
       </label>
       <textarea
         id="paste-input"
@@ -243,9 +351,29 @@ function PasteBox({
         aria-describedby="paste-hint"
         onChange={(event) => setText(event.target.value)}
       />
-      <p id="paste-hint" className="cards__note">
-        {strings.new.pasteHint}
-      </p>
+      <div id="paste-hint" className="cards__paste-hints">
+        <p className="cards__note">{strings.new.pasteHint}</p>
+        <p className="cards__note">{strings.link.pasteHint}</p>
+        {house && <p className="cards__note">{strings.link.houseHint}</p>}
+      </div>
+      {wanted.length > 0 && (
+        <p className="cards__pills">
+          <span className="cards__pill">
+            {fill(strings.link.fromCatalogue, { n: counts.catalogue })}
+          </span>
+          <span className="cards__pill">{fill(strings.link.fromLinks, { n: counts.links })}</span>
+        </p>
+      )}
+      {house && quota !== null && (
+        <p className="cards__note" role="status">
+          {fill(strings.link.quota, { left: quota.left, limit: quota.limit })}
+        </p>
+      )}
+      {busy && waiting !== null && (
+        <p className="cards__note" role="status">
+          {waitingText(waiting)}
+        </p>
+      )}
       <div className="cards__paste-actions">
         <Button onClick={() => setOpen(false)} disabled={busy}>
           {strings.rank.cancel}
@@ -261,9 +389,77 @@ function PasteBox({
 }
 
 /**
+ * The note a paste leaves in the pool when some of its cards came without a
+ * picture: which, and why, and how to give them one.
+ */
+function PasteNote({
+  outcome,
+  onSignIn,
+  onClose,
+}: {
+  outcome: PasteOutcome;
+  onSignIn: (() => void) | null;
+  onClose: () => void;
+}) {
+  return (
+    <div className="cards__paste-note" role="status">
+      <p className="cards__paste-note-head">
+        {plural(strings.link.doneAdded, outcome.added)}
+        {outcome.missing.length > 0 && (
+          <> {plural(strings.link.doneMissing, outcome.missing.length)}</>
+        )}
+      </p>
+      {outcome.missing.length > 0 && (
+        <>
+          <ul className="cards__paste-missing">
+            {outcome.missing.map(({ title, reason }, index) => (
+              <li key={`${index}-${title}`}>
+                <span className="cards__paste-missing-name">{title || strings.new.unnamed}</span>
+                <span className="cards__paste-missing-why">{missText(reason)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="cards__note">{strings.link.doneHint}</p>
+        </>
+      )}
+      {outcome.pageless.length > 0 && (
+        <>
+          <p className="cards__paste-note-head">
+            {plural(strings.link.pageless, outcome.pageless.length)}
+          </p>
+          <ul className="cards__paste-missing">
+            {outcome.pageless.map((title, index) => (
+              <li key={`${index}-${title}`}>{title || strings.new.unnamed}</li>
+            ))}
+          </ul>
+          <p className="cards__note">{strings.link.pagelessHint}</p>
+        </>
+      )}
+      <div className="cards__paste-actions">
+        {onSignIn !== null && <Button onClick={onSignIn}>{strings.nav.signIn}</Button>}
+        <Button variant="filled" onClick={onClose}>
+          {strings.link.ok}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const defaultLink: LinkKeep = (ask) => keepLinkedPicture(ask, linkPicture);
+
+/** An upload as a picture the draft can show: our copy, no attribution. */
+const uploaded = ({ pictureId, previewUrl }: UploadedPicture): LinkedPicture => ({
+  imageUrl: previewUrl,
+  pictureId,
+  attribution: null,
+  credit: null,
+  quota: null,
+});
+
+/**
  * The way cards come in: pictures from the device, pictures the catalogues
- * and the web find for a name, the name alone, or many names at once. Shared
- * by the editor and the owner's own board.
+ * and the web find for a name, a picture's own link, the name alone, or many
+ * names at once. The owner's own board shares it with the pool.
  */
 export function AddCardBox({
   items,
@@ -272,10 +468,18 @@ export function AddCardBox({
   find = findPictures,
   upload,
   keep = (url) => keepWebPicture(url, keepPicture),
+  link = defaultLink,
+  incoming = null,
+  onIncomingTaken,
+  house = false,
+  loadQuota = loadLinkQuota,
 }: AddCardBoxProps) {
+  const { account, signIn } = useSession();
+  const signedIn = account?.kind === "signedIn";
   const [typed, setTyped] = useState("");
   const [uploading, setUploading] = useState(0);
   const [note, setNote] = useState<string | null>(null);
+  const [pasted, setPasted] = useState<PasteOutcome | null>(null);
   const own = scopeFor(category);
   const [scope, setScope] = useState<PictureScope>(own);
   // The board moved to another section: the search starts there.
@@ -293,10 +497,36 @@ export function AddCardBox({
   const picker = useRef<HTMLInputElement>(null);
   const field = useRef<HTMLInputElement>(null);
   const form = useRef<HTMLFormElement>(null);
+
+  // One address in the field is a picture's link, not words to search for:
+  // the catalogues are not asked, and a draft card stands in the answers' place.
+  const linkTyped = isLink(typed) ? typed.trim() : null;
+  const [draft, setDraft] = useState<Draft | null>(null);
+  // The draft's Name takes the cursor when the link came by a paste or a drop,
+  // not while it is being typed.
+  const [nameFirst, setNameFirst] = useState(false);
+  const draftFor = (source: DraftSource, was: Draft | null): Draft => ({
+    source,
+    name: was?.name ?? "",
+    page: was?.source.kind === "link" ? was.page : "",
+    picture: source.kind === "file" || signedIn ? { status: "checking" } : { status: "waiting" },
+    attempt: 0,
+  });
+  if (linkTyped !== null && (draft?.source.kind !== "link" || draft.source.url !== linkTyped)) {
+    setDraft(draftFor({ kind: "link", url: linkTyped }, draft));
+  } else if (linkTyped === null && draft?.source.kind === "link") {
+    setDraft(null);
+  }
+  // A guest who signed in: their draft's picture is kept now.
+  if (signedIn && draft?.picture.status === "waiting") {
+    setDraft({ ...draft, picture: { status: "checking" } });
+  }
+
   const name = typed.trim();
+  const words = linkTyped === null ? typed : "";
   const web = everywhere !== null && everywhere === name;
-  const { state: found, more, retry } = usePictures(typed, scope, web, find);
-  const showing = open && name.length > 0;
+  const { state: found, more, retry } = usePictures(words, scope, web, find);
+  const showing = open && (draft !== null || name.length > 0);
   useEffect(() => {
     if (!showing) return;
     const away = (event: PointerEvent) => {
@@ -305,6 +535,77 @@ export function AddCardBox({
     document.addEventListener("pointerdown", away);
     return () => document.removeEventListener("pointerdown", away);
   }, [showing]);
+
+  // The draft's picture is kept once it is asked for: a link a moment after
+  // it stops changing, a file of one's own at once. The latest ways are used,
+  // whatever the page hands in from one render to the next.
+  const ways = useRef({ link, upload });
+  useEffect(() => {
+    ways.current = { link, upload };
+  });
+  const draftSource = draft?.source;
+  const draftAttempt = draft?.attempt ?? 0;
+  const checking = draft?.picture.status === "checking";
+  useEffect(() => {
+    if (draftSource === undefined || !checking) return;
+    let current = true;
+    const settle = (picture: DraftPicture) => {
+      if (!current) return;
+      setDraft((now) =>
+        now !== null && now.source === draftSource && now.attempt === draftAttempt
+          ? { ...now, picture }
+          : now,
+      );
+    };
+    const timer = setTimeout(
+      () => {
+        const work =
+          draftSource.kind === "link"
+            ? ways.current.link({ url: draftSource.url })
+            : ways.current.upload(draftSource.file).then(uploaded);
+        work.then(
+          (picture) => settle({ status: "ready", picture }),
+          (failure: unknown) =>
+            settle(
+              draftSource.kind === "link"
+                ? draftFailureOf(failure)
+                : {
+                    status: "failed",
+                    text: pictureFailureText(draftSource.file.name, failure),
+                    ...(failure instanceof PictureRefused && failure.reason === "upload"
+                      ? { retry: true }
+                      : {}),
+                  },
+            ),
+        );
+      },
+      draftSource.kind === "link" ? LOOKUP_DEBOUNCE_MS : 0,
+    );
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [draftSource, draftAttempt, checking]);
+
+  // Back from a sign-in that left the page: the guest's draft comes back as it was.
+  const resume = useRef((kept: DraftToResume) => {
+    const url = kept.url.trim();
+    setTyped(url);
+    setOpen(true);
+    setNameFirst(true);
+    setDraft({
+      source: { kind: "link", url },
+      name: kept.name,
+      page: kept.page,
+      picture: { status: "checking" },
+      attempt: 0,
+    });
+  });
+  useEffect(() => {
+    if (!signedIn) return;
+    const kept = takeDraftForSignIn(window.location.pathname);
+    if (kept !== null && isLink(kept.url)) resume.current(kept);
+  }, [signedIn]);
 
   // A full board says so, and nothing goes up or is copied for a card it would drop.
   const room = LIMITS.items - items.length;
@@ -317,24 +618,23 @@ export function AddCardBox({
   // One card per file, in the order chosen; a file that fails names itself
   // and the rest still go in. The first goes up alone, since it may ask a
   // guest to sign in; the rest then go up together, and each card comes in as
-  // soon as it and the ones before it are up.
-  const onFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const files = [...(event.target.files ?? [])];
-    event.target.value = "";
+  // soon as it and the ones before it are up. A single picture takes the name
+  // typed for it, as the phone's dialog lets one photo be named; several from
+  // the picker go in unnamed, and several dropped are named from their files.
+  const addFiles = async (files: readonly File[], namedFromFiles: boolean) => {
     if (files.length === 0 || full()) return;
     const [first, ...rest] = files.slice(0, room);
     if (first === undefined) return;
     setNote(files.length > room ? strings.new.tooManyCards : null);
     setUploading(rest.length + 1);
-    // A single picture takes the name typed for it, as the phone's dialog lets
-    // one photo be named; several go in unnamed.
-    const named = rest.length === 0 ? name : "";
+    const typedName = rest.length === 0 && linkTyped === null ? name : "";
+    const nameFor = (file: File) => (namedFromFiles ? nameOfFile(file) : typedName);
     /** Whether to go on: a guest who would not sign in has said no to all of them. */
     const take = async (file: File, picture: Promise<UploadedPicture>) => {
       try {
         const { previewUrl, pictureId } = await picture;
-        dispatch({ type: "addItem", title: named, imageUrl: previewUrl, pictureId });
-        if (named !== "") setTyped("");
+        dispatch({ type: "addItem", title: nameFor(file), imageUrl: previewUrl, pictureId });
+        if (typedName !== "" && !namedFromFiles) setTyped("");
         return true;
       } catch (failure) {
         setNote(pictureFailureText(file.name, failure));
@@ -352,6 +652,98 @@ export function AddCardBox({
       }
     }
     setUploading(0);
+  };
+  const onFiles = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = [...(event.target.files ?? [])];
+    event.target.value = "";
+    void addFiles(files, false);
+  };
+
+  // A paste or a drop the page took: a link or one picture opens the draft,
+  // several pictures go up as Upload images sends them, named from their files.
+  const takeIncoming = useRef<(what: Incoming) => void>(() => undefined);
+  useEffect(() => {
+    takeIncoming.current = (what) => {
+      setNote(null);
+      if (what.kind === "link") {
+        setTyped(what.url);
+        setOpen(true);
+        setNameFirst(true);
+        return;
+      }
+      const [file, ...others] = what.files;
+      if (file === undefined) return;
+      if (others.length > 0) {
+        void addFiles(what.files, true);
+        return;
+      }
+      if (full()) return;
+      setDraft({
+        source: { kind: "file", file },
+        name: linkTyped === null ? name : "",
+        page: "",
+        picture: { status: "checking" },
+        attempt: 0,
+      });
+      setTyped("");
+      setOpen(true);
+      setNameFirst(true);
+    };
+  });
+  useEffect(() => {
+    if (incoming === null) return;
+    onIncomingTaken?.();
+    takeIncoming.current(incoming);
+  }, [incoming, onIncomingTaken]);
+
+  const closeDraft = () => {
+    setDraft(null);
+    setTyped("");
+    setNameFirst(false);
+    field.current?.focus();
+  };
+  // The card goes first in the pool, and the page says so with an Undo.
+  const addDraft = () => {
+    if (draft === null || draft.picture.status !== "ready" || full()) return;
+    const title = draft.name.trim();
+    if (title === "") return;
+    const { picture } = draft.picture;
+    const page = draft.source.kind === "link" ? pageLinkOf(draft.page) : null;
+    const attribution =
+      page === null || picture.attribution?.link !== undefined
+        ? picture.attribution
+        : { ...(picture.attribution ?? { source: "web" }), link: page };
+    dispatch({
+      type: "addItem",
+      title,
+      imageUrl: picture.imageUrl,
+      ...(picture.pictureId === null ? {} : { pictureId: picture.pictureId }),
+      ...(picture.credit === null ? {} : { credit: picture.credit }),
+      ...(attribution === null ? {} : { attribution }),
+      drafted: true,
+    });
+    closeDraft();
+  };
+  const addWithout = () => {
+    if (draft === null || full()) return;
+    const title = draft.name.trim();
+    if (title === "") return;
+    dispatch({ type: "addItem", title, imageUrl: null, drafted: true });
+    closeDraft();
+  };
+  // A guest's draft waits through the sign-in; one that leaves the page is
+  // kept for the way back.
+  const signInForDraft = () => {
+    if (draft?.source.kind !== "link") return;
+    keepDraftForSignIn({
+      path: window.location.pathname,
+      url: draft.source.url,
+      name: draft.name,
+      page: draft.page,
+    });
+    void signIn().then((outcome) => {
+      if (outcome.kind !== "redirecting") forgetDraftForSignIn();
+    });
   };
 
   const addName = () => {
@@ -402,7 +794,13 @@ export function AddCardBox({
   };
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    addName();
+    if (draft === null) {
+      addName();
+      return;
+    }
+    // Enter in the field with a link in it goes on to the draft's name.
+    setOpen(true);
+    form.current?.querySelector<HTMLInputElement>(".draft__input--name")?.focus();
   };
   const lookEverywhere = () => {
     setScope("all");
@@ -428,7 +826,7 @@ export function AddCardBox({
           multiple
           hidden
           aria-label={strings.new.upload}
-          onChange={(event) => void onFiles(event)}
+          onChange={onFiles}
         />
         <Button
           variant="tonal"
@@ -463,7 +861,7 @@ export function AddCardBox({
           {strings.new.addLabel}
         </label>
         <div className="editor__field">
-          <Icon name="search" />
+          <Icon name={linkTyped === null ? "search" : "link"} />
           <input
             ref={field}
             id="card-input"
@@ -471,27 +869,57 @@ export function AddCardBox({
             value={typed}
             placeholder={strings.new.addPlaceholder}
             autoComplete="off"
-            maxLength={80}
+            // A link is longer than any name.
+            maxLength={linkTyped === null && !typed.includes("://") ? 80 : 2000}
             aria-expanded={showing}
             onClick={() => setOpen(true)}
             onChange={(event) => {
-              setTyped(event.target.value);
+              const value = event.target.value;
+              // Words typed over a picture of one's own leave it.
+              if (draft?.source.kind === "file") setDraft(null);
+              const how = (event.nativeEvent as InputEvent).inputType;
+              setNameFirst(how === "insertFromPaste" || how === "insertFromDrop");
+              setTyped(value);
               setOpen(true);
             }}
             onKeyDown={(event) => {
               if (event.key === "ArrowDown") setOpen(true);
             }}
           />
-          {typed !== "" && (
+          {(typed !== "" || draft !== null) && (
             <ClearButton
               onClear={() => {
                 setTyped("");
+                setDraft(null);
                 field.current?.focus();
               }}
             />
           )}
         </div>
-        {showing && (
+        {showing && draft !== null && (
+          <div className="cards__found cards__found--draft">
+            <DraftCard
+              key={
+                draft.source.kind === "link"
+                  ? draft.source.url
+                  : `file:${draft.source.file.name}:${draft.source.file.size}:${draft.source.file.lastModified}`
+              }
+              draft={draft}
+              guest={!signedIn}
+              focusName={nameFirst}
+              onName={(value) => setDraft({ ...draft, name: value })}
+              onPage={(value) => setDraft({ ...draft, page: value })}
+              onAdd={addDraft}
+              onAddWithout={addWithout}
+              onSignIn={signInForDraft}
+              onUpload={() => picker.current?.click()}
+              onRetry={() =>
+                setDraft({ ...draft, picture: { status: "checking" }, attempt: draft.attempt + 1 })
+              }
+            />
+          </div>
+        )}
+        {showing && draft === null && (
           <div className="cards__found" role="group" aria-label={strings.new.suggestions}>
             <div className="cards__scopes" role="group" aria-label={strings.new.whereToLook}>
               {scopesFrom(own).map((one) => (
@@ -581,8 +1009,23 @@ export function AddCardBox({
         category={category}
         dispatch={dispatch}
         lookup={pasteLookup}
+        link={signedIn ? link : undefined}
+        house={house}
+        loadQuota={loadQuota}
         onNote={setNote}
+        onDone={(outcome) => setPasted(worthSaying(outcome) ? outcome : null)}
       />
+      {pasted !== null && (
+        <PasteNote
+          outcome={pasted}
+          onSignIn={
+            !signedIn && pasted.missing.some((one) => one.reason === "signIn")
+              ? () => void signIn()
+              : null
+          }
+          onClose={() => setPasted(null)}
+        />
+      )}
     </>
   );
 }

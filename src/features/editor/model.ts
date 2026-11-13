@@ -85,6 +85,11 @@ export type EditorAction =
       pictureId?: string;
       credit?: string | null;
       attribution?: PictureAttribution | null;
+      /**
+       * Made in the draft card from a link or a picture of one's own: on a
+       * board it goes first in the pool, is shown, and can be undone.
+       */
+      drafted?: boolean;
     }
   | { type: "removeItem"; key: string }
   /** With `tier`, the one the tier editor made; without, the next letter in the next preset. */

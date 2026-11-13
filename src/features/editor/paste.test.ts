@@ -1,12 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
+import type { LinkAsk } from "../../api/pictures";
 import type { CatalogueItem } from "../../api/types";
+import { LinkRefused, type LinkedPicture } from "../../lib/linkPictures";
 import {
+  BUSY_FALLBACK_MS,
+  BUSY_TRIES,
+  BUSY_WAIT_MAX_MS,
   cardsFor,
   PASTE_AT_ONCE,
   PASTE_PACE_MS,
   pick,
   preferredFor,
+  sourcesCount,
   wantedOf,
   type PastedCard,
 } from "./paste";
@@ -354,5 +360,480 @@ describe("cardsFor", () => {
     );
     // The first few had been asked for together; nothing is asked after them.
     expect(got.map((one) => one.title)).toEqual(["1", "2", "3"]);
+  });
+});
+
+describe("a pasted line with its own picture", () => {
+  it("takes the picture's address after the name, and a second address as its page", () => {
+    expect(
+      wantedOf(
+        [
+          "Dune https://img.test/dune.jpg",
+          "1. Arrival (2016) https://img.test/arrival.jpg https://site.test/arrival",
+          "- Heat   http://img.test/heat.jpg   ",
+          "Plain name",
+        ].join("\n"),
+        100,
+      ),
+    ).toEqual([
+      { title: "Dune", year: null, picture: "https://img.test/dune.jpg" },
+      {
+        title: "Arrival",
+        year: "2016",
+        picture: "https://img.test/arrival.jpg",
+        page: "https://site.test/arrival",
+      },
+      { title: "Heat", year: null, picture: "http://img.test/heat.jpg" },
+      { title: "Plain name", year: null },
+    ]);
+  });
+
+  it("leaves out a page the backend would not keep, and keeps the picture", () => {
+    expect(wantedOf("Dune https://img.test/dune.jpg http://site.test/dune", 100)).toEqual([
+      { title: "Dune", year: null, picture: "https://img.test/dune.jpg" },
+    ]);
+  });
+
+  it("takes a link alone for a card without a name, and one name with two pictures twice", () => {
+    expect(
+      wantedOf(
+        "https://img.test/a.jpg\nDune https://img.test/1.jpg\nDune https://img.test/2.jpg",
+        100,
+      ),
+    ).toEqual([
+      { title: "", year: null, picture: "https://img.test/a.jpg" },
+      { title: "Dune", year: null, picture: "https://img.test/1.jpg" },
+      { title: "Dune", year: null, picture: "https://img.test/2.jpg" },
+    ]);
+  });
+
+  it("reads the house's «Name | picture link | page» on a house board only", () => {
+    const text = "Dune | https://img.test/dune.jpg | https://site.test/dune\nHeat|not a link|";
+    expect(wantedOf(text, 100, true)).toEqual([
+      {
+        title: "Dune",
+        year: null,
+        picture: "https://img.test/dune.jpg",
+        page: "https://site.test/dune",
+      },
+      { title: "Heat", year: null },
+    ]);
+    // Everyone else's line is its name, bars and all.
+    expect(wantedOf("Dune | Part Two", 100)).toEqual([{ title: "Dune | Part Two", year: null }]);
+    // The house may write a line the plain way too.
+    expect(wantedOf("Dune https://img.test/dune.jpg https://site.test/dune", 100, true)).toEqual([
+      {
+        title: "Dune",
+        year: null,
+        picture: "https://img.test/dune.jpg",
+        page: "https://site.test/dune",
+      },
+    ]);
+  });
+
+  it("takes a house line with its page column empty, or left out", () => {
+    const text = [
+      "Mango | https://commons.wikimedia.org/wiki/File:Mangos_-_single_and_halved.jpg",
+      "Kiwi | https://img.test/kiwi.jpg |",
+      "Fig | https://img.test/fig.jpg |   ",
+    ].join("\n");
+    expect(wantedOf(text, 100, true)).toEqual([
+      {
+        title: "Mango",
+        year: null,
+        picture: "https://commons.wikimedia.org/wiki/File:Mangos_-_single_and_halved.jpg",
+      },
+      { title: "Kiwi", year: null, picture: "https://img.test/kiwi.jpg" },
+      { title: "Fig", year: null, picture: "https://img.test/fig.jpg" },
+    ]);
+  });
+
+  it("counts the cards from the catalogue and the ones from links", () => {
+    expect(
+      sourcesCount(
+        wantedOf("One\nTwo https://img.test/2.jpg\nThree\nFour https://img.test/4.jpg", 100),
+      ),
+    ).toEqual({ catalogue: 2, links: 2 });
+  });
+});
+
+describe("cardsFor, with pictures from links", () => {
+  const linked = (url: string, more: Partial<LinkedPicture> = {}): LinkedPicture => ({
+    imageUrl: `${url}#copy`,
+    pictureId: "p1",
+    attribution: { source: "web" },
+    credit: null,
+    quota: { left: 9, limit: 50, resetsAt: 5 },
+    ...more,
+  });
+
+  it("keeps a line's own picture without asking the catalogue, its page on the attribution", async () => {
+    const lookup = vi.fn(async (query: string) => [card(`tmdb:${query}`, query)]);
+    const link = vi.fn(async (ask: LinkAsk) => linked(ask.url));
+    const onQuota = vi.fn();
+    const got: PastedCard[] = [];
+    await cardsFor(
+      wantedOf("Dune https://img.test/dune.jpg https://site.test/dune\nHeat", 100),
+      lookup,
+      (one) => got.push(one),
+      { paceMs: 0, link, onQuota },
+    );
+    expect(link).toHaveBeenCalledWith({
+      url: "https://img.test/dune.jpg",
+      link: "https://site.test/dune",
+    });
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(got).toEqual([
+      {
+        title: "Dune",
+        imageUrl: "https://img.test/dune.jpg#copy",
+        pictureId: "p1",
+        attribution: { source: "web", link: "https://site.test/dune" },
+      },
+      { title: "Heat", imageUrl: "https://img/tmdb:Heat.jpg", key: "tmdb:Heat" },
+    ]);
+    expect(onQuota).toHaveBeenCalledWith({ left: 9, limit: 50, resetsAt: 5 });
+  });
+
+  it("keeps a catalogue's own attribution and credit, its page untouched", async () => {
+    const got: PastedCard[] = [];
+    const tmdb = { source: "tmdb", link: "https://www.themoviedb.org/movie/1" };
+    await cardsFor(
+      wantedOf("Dune https://image.tmdb.org/a.jpg https://site.test/dune", 100),
+      vi.fn(),
+      (one) => got.push(one),
+      {
+        paceMs: 0,
+        link: async () =>
+          linked("https://image.tmdb.org/a.jpg", {
+            imageUrl: "https://image.tmdb.org/a.jpg",
+            pictureId: null,
+            attribution: tmdb,
+            credit: "TMDB",
+            quota: null,
+          }),
+      },
+    );
+    expect(got).toEqual([
+      {
+        title: "Dune",
+        imageUrl: "https://image.tmdb.org/a.jpg",
+        credit: "TMDB",
+        attribution: tmdb,
+      },
+    ]);
+  });
+
+  it("gives a refused line its name alone, and says why", async () => {
+    const onMissing = vi.fn();
+    const onQuota = vi.fn();
+    const got: PastedCard[] = [];
+    const quota = { left: 3, limit: 50, resetsAt: 5 };
+    await cardsFor(
+      wantedOf("Page https://site.test/page\nNobody", 100),
+      async () => [],
+      (one) => got.push(one),
+      {
+        paceMs: 0,
+        onMissing,
+        onQuota,
+        link: async () => {
+          throw new LinkRefused("notAPicture", null, quota);
+        },
+      },
+    );
+    expect(got).toEqual([
+      { title: "Page", imageUrl: null },
+      { title: "Nobody", imageUrl: null },
+    ]);
+    expect(onMissing.mock.calls).toEqual([
+      ["Page", "notAPicture"],
+      ["Nobody", "notFound"],
+    ]);
+    expect(onQuota).toHaveBeenCalledWith(quota);
+  });
+
+  it("gives a guest's lines with a picture their names alone: pictures belong to an account", async () => {
+    const onMissing = vi.fn();
+    const got: PastedCard[] = [];
+    await cardsFor(
+      wantedOf("Dune https://img.test/dune.jpg", 100),
+      vi.fn(),
+      (one) => got.push(one),
+      { onMissing },
+    );
+    expect(got).toEqual([{ title: "Dune", imageUrl: null }]);
+    expect(onMissing).toHaveBeenCalledWith("Dune", "signIn");
+  });
+
+  it("says a name went alone for the search limit", async () => {
+    const onMissing = vi.fn();
+    await cardsFor(
+      wantedOf("Dune", 100),
+      async () => {
+        throw new ApiFailure({ kind: "searchLimit", retryAt: 9 });
+      },
+      () => undefined,
+      { paceMs: 0, onMissing },
+    );
+    expect(onMissing).toHaveBeenCalledWith("Dune", "searchLimit");
+  });
+
+  it("does not wait between links alone", async () => {
+    vi.useFakeTimers();
+    try {
+      const got: PastedCard[] = [];
+      const done = cardsFor(
+        wantedOf([1, 2, 3, 4].map((n) => `${n} https://img.test/${n}.jpg`).join("\n"), 100),
+        vi.fn(),
+        (one) => got.push(one),
+        { link: async (ask) => linked(ask.url) },
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      await done;
+      expect(got).toHaveLength(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("takes a Commons address as the catalogue's picture, with its attribution", async () => {
+    const got: PastedCard[] = [];
+    const commons = {
+      source: "wikimedia",
+      author: "Someone",
+      license: "CC BY-SA 4.0",
+      link: "https://commons.wikimedia.org/wiki/File:Fuji.jpg",
+    };
+    const url = "https://upload.wikimedia.org/wikipedia/commons/a/ab/Fuji.jpg";
+    await cardsFor(wantedOf(`Fuji ${url}`, 100), vi.fn(), (one) => got.push(one), {
+      paceMs: 0,
+      link: async () =>
+        linked(url, {
+          imageUrl:
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Fuji.jpg/640px-Fuji.jpg",
+          pictureId: null,
+          attribution: commons,
+          quota: null,
+        }),
+    });
+    expect(got).toEqual([
+      {
+        title: "Fuji",
+        imageUrl:
+          "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Fuji.jpg/640px-Fuji.jpg",
+        attribution: commons,
+      },
+    ]);
+  });
+
+  it("names the pictures copied from another site that came without their page", async () => {
+    const onPageless = vi.fn();
+    const got: PastedCard[] = [];
+    await cardsFor(
+      wantedOf(
+        [
+          "Kiwi | https://img.test/kiwi.jpg |",
+          "Fig | https://img.test/fig.jpg | https://site.test/fig",
+          "Mango | https://commons.wikimedia.org/wiki/File:Mango.jpg",
+          "Dune | https://image.tmdb.org/dune.jpg",
+        ].join("\n"),
+        100,
+        true,
+      ),
+      vi.fn(),
+      (one) => got.push(one),
+      {
+        paceMs: 0,
+        onPageless,
+        link: async (ask) =>
+          ask.url.includes("commons")
+            ? linked(ask.url, {
+                imageUrl: "https://commons.wikimedia.org/wiki/Special:FilePath/Mango.jpg",
+                pictureId: null,
+                attribution: {
+                  source: "wikimedia",
+                  author: "Someone",
+                  link: "https://commons.wikimedia.org/wiki/File:Mango.jpg",
+                },
+                quota: null,
+              })
+            : ask.url.includes("tmdb")
+              ? linked(ask.url, {
+                  imageUrl: ask.url,
+                  pictureId: null,
+                  attribution: { source: "tmdb" },
+                  quota: null,
+                })
+              : linked(ask.url),
+      },
+    );
+    // Only the copy from another site without a page; all four come as cards.
+    expect(onPageless.mock.calls).toEqual([["Kiwi"]]);
+    expect(got.map((one) => one.title)).toEqual(["Kiwi", "Fig", "Mango", "Dune"]);
+    expect(got[0]).toMatchObject({ pictureId: "p1", attribution: { source: "web" } });
+  });
+
+  describe("a busy picture site", () => {
+    const START = 1_000_000;
+
+    it("waits until its time, says so, and asks the same line again", async () => {
+      vi.useFakeTimers({ now: START });
+      try {
+        const got: PastedCard[] = [];
+        const onWaiting = vi.fn();
+        const onQuota = vi.fn();
+        const quota = { left: 9, limit: 50, resetsAt: 5 };
+        const link = vi
+          .fn()
+          .mockRejectedValueOnce(new LinkRefused("busy", START + 30_000, quota))
+          .mockImplementation(async (ask: LinkAsk) => linked(ask.url));
+        const done = cardsFor(
+          wantedOf("Dune https://img.test/dune.jpg", 100),
+          vi.fn(),
+          (one) => got.push(one),
+          { link, onWaiting, onQuota },
+        );
+        await vi.advanceTimersByTimeAsync(0);
+        expect(onWaiting).toHaveBeenLastCalledWith(START + 30_000);
+        expect(onQuota).toHaveBeenCalledWith(quota);
+        expect(link).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(29_999);
+        expect(link).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(1);
+        await done;
+        expect(link).toHaveBeenCalledTimes(2);
+        expect(link.mock.calls[1]).toEqual(link.mock.calls[0]);
+        expect(onWaiting.mock.calls).toEqual([[START + 30_000], [null]]);
+        expect(got).toEqual([
+          expect.objectContaining({ title: "Dune", imageUrl: "https://img.test/dune.jpg#copy" }),
+        ]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("waits a little when the site gave no time", async () => {
+      vi.useFakeTimers({ now: START });
+      try {
+        const onWaiting = vi.fn();
+        const link = vi
+          .fn()
+          .mockRejectedValueOnce(new LinkRefused("busy"))
+          .mockImplementation(async (ask: LinkAsk) => linked(ask.url));
+        const done = cardsFor(wantedOf("Dune https://img.test/dune.jpg", 100), vi.fn(), vi.fn(), {
+          link,
+          onWaiting,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        expect(onWaiting).toHaveBeenCalledWith(START + BUSY_FALLBACK_MS);
+        await vi.advanceTimersByTimeAsync(BUSY_FALLBACK_MS);
+        await done;
+        expect(link).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("gives the name alone when the wait is too long", async () => {
+      vi.useFakeTimers({ now: START });
+      try {
+        const onMissing = vi.fn();
+        const onWaiting = vi.fn();
+        const got: PastedCard[] = [];
+        const link = vi.fn(async () => {
+          throw new LinkRefused("busy", START + BUSY_WAIT_MAX_MS + 1);
+        });
+        await cardsFor(
+          wantedOf("Dune https://img.test/dune.jpg", 100),
+          vi.fn(),
+          (one) => got.push(one),
+          { link, onMissing, onWaiting },
+        );
+        expect(link).toHaveBeenCalledTimes(1);
+        expect(onWaiting).not.toHaveBeenCalled();
+        expect(got).toEqual([{ title: "Dune", imageUrl: null }]);
+        expect(onMissing).toHaveBeenCalledWith("Dune", "busy");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("gives up after a few tries", async () => {
+      vi.useFakeTimers({ now: START });
+      try {
+        const onMissing = vi.fn();
+        const link = vi.fn(async () => {
+          throw new LinkRefused("busy", Date.now() + 1_000);
+        });
+        const done = cardsFor(wantedOf("Dune https://img.test/dune.jpg", 100), vi.fn(), vi.fn(), {
+          link,
+          onMissing,
+        });
+        await vi.advanceTimersByTimeAsync(BUSY_TRIES * 1_000);
+        await done;
+        expect(link).toHaveBeenCalledTimes(BUSY_TRIES);
+        expect(onMissing).toHaveBeenCalledWith("Dune", "busy");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("asks nothing more once the box is gone", async () => {
+      vi.useFakeTimers({ now: START });
+      try {
+        let open = true;
+        const onCard = vi.fn();
+        const link = vi.fn(async () => {
+          throw new LinkRefused("busy", START + 5_000);
+        });
+        const done = cardsFor(wantedOf("Dune https://img.test/dune.jpg", 100), vi.fn(), onCard, {
+          link,
+          going: () => open,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        open = false;
+        await vi.advanceTimersByTimeAsync(5_000);
+        await expect(done).resolves.toBeNull();
+        expect(link).toHaveBeenCalledTimes(1);
+        expect(onCard).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("keeps no more than three lines asking at once while one waits", async () => {
+      vi.useFakeTimers({ now: START });
+      try {
+        let asking = 0;
+        let most = 0;
+        let first = true;
+        const link = vi.fn(async (ask: LinkAsk) => {
+          asking++;
+          most = Math.max(most, asking);
+          await Promise.resolve();
+          asking--;
+          if (first) {
+            first = false;
+            throw new LinkRefused("busy", START + 2_000);
+          }
+          return linked(ask.url);
+        });
+        const got: PastedCard[] = [];
+        const done = cardsFor(
+          wantedOf([1, 2, 3, 4, 5].map((n) => `${n} https://img.test/${n}.jpg`).join("\n"), 100),
+          vi.fn(),
+          (one) => got.push(one),
+          { link },
+        );
+        await vi.advanceTimersByTimeAsync(2_000);
+        await done;
+        expect(most).toBeLessThanOrEqual(3);
+        expect(got.map((one) => one.title)).toEqual(["1", "2", "3", "4", "5"]);
+        expect(got.every((one) => one.imageUrl !== null)).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

@@ -159,6 +159,7 @@ const tr: Translation = {
     creditsTitle: "Teşekkür",
     catalogue: "Film, dizi ve kişilerin bilgileri ile görselleri TMDB’den gelir.",
     wikidata: "Katalogdaki diğer her şey Wikidata’dan, görselleri ise Wikimedia Commons’tan gelir.",
+    igdb: "Oyun verileri ve kapakları {igdb} kaynaklıdır",
     dataTitle: "Verileriniz",
     deleteAccount: "Hesabınızı silin",
   },
@@ -255,7 +256,7 @@ const tr: Translation = {
     pictureTooBig: "{name} küçültülse bile çok büyük.",
     pictureFailed: "{name} yüklenemedi. Tekrar deneyin.",
     addLabel: "Kart ekle",
-    addPlaceholder: "Katalogda arayın ya da bir ad yazın",
+    addPlaceholder: "Arayın, bir ad yazın ya da bir görsel bağlantısı yapıştırın",
     paste: "Liste yapıştır",
     pasteLabel: "Adlar, her satıra bir tane",
     pasteHint: "Parantez içindeki yıl aynı adlıları ayırır: Dune (2021)",
@@ -394,7 +395,6 @@ const tr: Translation = {
     stale: "Yenilenemedi. Bunlar son ziyaretinizdeki listeler.",
   },
   list: {
-    pictureCredits: "Görsel kaynakları",
     opening: "Liste açılıyor…",
     by: "{name} tarafından",
     home: "Ana sayfaya git",
@@ -1386,6 +1386,80 @@ const tr: Translation = {
     back: "Listeleriniz",
     stillPublic:
       "Silinmedi, korundu: herkese açık kopyası kaldırılamadı. Çevrimiçi olduğunuzda yeniden deneyin.",
+  },
+  link: {
+    draftLabel: "Bağlantıdan görsel",
+    fromDevice: "Cihazınızdan görsel",
+    name: "Ad",
+    page: "Geldiği sayfa",
+    pagePlaceholder: "İsteğe bağlı",
+    checking: "Görsel kontrol ediliyor…",
+    addCard: "Kart ekle",
+    addWithout: "Görselsiz ekle",
+    signInToAdd: "Görseli eklemek için oturum açın",
+    from: "kaynak: {host}",
+    notAPicture:
+      "Bu bağlantı bir sayfa, görsel değil. Görselin kendisini açıp adresini kopyalayın.",
+    unreachable: "Bu bağlantı açılmıyor. Kontrol edin ya da başka bir görsel deneyin.",
+    tooBig: "Bu görsel çok büyük. Daha küçük bir kopyasını deneyin.",
+    refused: "Bu görsel burada kullanılamaz. Başka bir tane seçin.",
+    limit:
+      "Bağlantıdan görsel hakkı bugünlük bitti. {time} itibarıyla yenileri gelir. Cihazınızdan yine de görsel yükleyebilirsiniz.",
+    limitTomorrow:
+      "Bağlantıdan görsel hakkı bugünlük bitti. Yarın yenileri gelir. Cihazınızdan yine de görsel yükleyebilirsiniz.",
+    failed: "Görsel gelmedi. Tekrar deneyin.",
+    busy: "Görselin sitesi meşgul. {time} itibarıyla tekrar deneyin.",
+    busySoon: "Görselin sitesi meşgul. Biraz sonra tekrar deneyin.",
+    waiting: "Kaynak {time} saatine kadar bekleniyor…",
+    badPage: "Bu bir sayfa adresine benzemiyor. Bilmiyorsanız boş bırakın.",
+    added: "“{name}” eklendi",
+    dropTitle: "Kart eklemek için bırakın",
+    dropNote: "Görsel listenize kopyalanır",
+    replace: "Görseli değiştir",
+    changed: "“{name}” kartının görseli değişti",
+    pasteHint:
+      "Görseliniz mi var? Bağlantısını addan sonra koyun. İkinci bağlantı, görselin geldiği sayfadır.",
+    houseLabel: "Ad | görsel bağlantısı | geldiği sayfa",
+    fromCatalogue: "Katalogdan {n}",
+    fromLinks: "Bağlantılardan {n}",
+    houseHint:
+      "Başka sitelerden gelen görsellerin geldiği sayfa gerekir. Katalog ve Commons görsellerinde gerekmez.",
+    pageless: {
+      other: "{n} kart için görselin geldiği sayfa gerekiyor:",
+    },
+    pagelessHint:
+      "Sayfa olmadan liste yayımlanmaz. Bu kartları kaldırıp görselin bağlantısıyla, sayfasıyla birlikte yeniden ekleyin.",
+    quota: "Bugün {limit} görselden {left} kaldı",
+    doneAdded: {
+      other: "{n} kart eklendi.",
+    },
+    doneMissing: {
+      other: "{n} kart görselsiz geldi:",
+    },
+    doneHint:
+      "Görsel vermek için bir kart seçin: arayın, bağlantı yapıştırın ya da üzerine bir görsel bırakın.",
+    ok: "Tamam",
+    missing: {
+      notFound: "katalogda bu adla bir şey yok",
+      searchLimit: "çok fazla görsel araması",
+      signIn: "bağlantıdan görsel eklemek için oturum açın",
+      notAPicture: "bağlantı bir sayfa, görsel değil",
+      unreachable: "bağlantı açılmıyor",
+      tooBig: "görsel çok büyük",
+      refused: "görsel burada kullanılamaz",
+      limit: "bağlantıdan görsel hakkı bugünlük bitti",
+      badLink: "sayfa bağlantısı bir web adresi değil",
+      failed: "görsel gelmedi",
+      busy: "görselin sitesi meşgul kaldı",
+    },
+    linkNeeded:
+      "“{name}” için görselin geldiği sayfa gerekiyor. Kartı kaldırıp görselin bağlantısıyla, sayfasıyla birlikte yeniden ekleyin.",
+    about: "Görsel hakkında",
+    aboutOf: "{name} görseli hakkında",
+    openPage: "Sayfasını aç",
+    photo: "Fotoğraf",
+    licence: "Lisans",
+    fromRow: "Kaynak",
   },
 };
 

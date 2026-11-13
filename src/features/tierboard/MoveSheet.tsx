@@ -8,8 +8,10 @@ import { useModal } from "../../ui/useModal";
 interface MoveSheetProps {
   /** The card's name, which is the sheet's title. */
   name: string;
-  /** The photographer the card's picture asks to be named by. */
-  onCredits?: (() => void) | undefined;
+  /** About the picture: who made it, its licence, the page it is from. */
+  onAbout?: (() => void) | undefined;
+  /** The page the picture is from, in a new tab. */
+  onOpenPage?: (() => void) | undefined;
   tiers: readonly PublishedTier[];
   /** Where the card is now, or null in the pool. */
   current: number | null;
@@ -27,7 +29,8 @@ interface MoveSheetProps {
  */
 export function MoveSheet({
   name,
-  onCredits,
+  onAbout,
+  onOpenPage,
   tiers,
   current,
   onPlace,
@@ -53,7 +56,12 @@ export function MoveSheet({
         <h2 id={`${id}-title`} className="dialog__title">
           {name}
         </h2>
-        {onCredits && <Button onClick={onCredits}>{strings.list.pictureCredits}</Button>}
+        {(onAbout !== undefined || onOpenPage !== undefined) && (
+          <div className="move-sheet__picture">
+            {onAbout && <Button onClick={onAbout}>{strings.link.about}</Button>}
+            {onOpenPage && <Button onClick={onOpenPage}>{strings.link.openPage}</Button>}
+          </div>
+        )}
         <p className="move-sheet__who">{strings.boards.moveTo}</p>
         <ul className="move-sheet__tiers">
           {tiers.map((tier, index) => (

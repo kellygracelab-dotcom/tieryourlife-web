@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "./client";
-import { keepPicture, pictureOf, scopeFor, searchPictures } from "./pictures";
+import {
+  keepPicture,
+  linkPicture,
+  linkQuota,
+  pictureOf,
+  scopeFor,
+  searchPictures,
+} from "./pictures";
 
 function recordingClient(result: unknown) {
   const request = vi.fn(async () => result);
@@ -154,5 +161,87 @@ describe("pictures", () => {
     await expect(
       keepPicture(recordingClient({}).client, "https://site.test/a.jpg"),
     ).rejects.toThrow();
+  });
+});
+
+describe("a picture from a link", () => {
+  const quota = { left: 7, limit: 50, resetsAt: 1_800_000_000_000 };
+
+  it("sends the address, the page and the credit, and takes the copy it became", async () => {
+    const { client, request } = recordingClient({
+      pictureId: "pic_1-a",
+      attribution: { source: "web", link: "https://site.test/page" },
+      quota,
+    });
+    await expect(
+      linkPicture(client, {
+        url: "https://site.test/a.jpg",
+        link: "https://site.test/page",
+        credit: "Jane",
+      }),
+    ).resolves.toEqual({
+      pictureId: "pic_1-a",
+      imageUrl: null,
+      attribution: { source: "web", link: "https://site.test/page" },
+      credit: null,
+      quota,
+    });
+    expect(request).toHaveBeenCalledWith("POST", "/lists/pictures/link", {
+      body: { url: "https://site.test/a.jpg", link: "https://site.test/page", credit: "Jane" },
+    });
+  });
+
+  it("sends only the address when that is all there is", async () => {
+    const { client, request } = recordingClient({ pictureId: "p1" });
+    const answer = await linkPicture(client, { url: "https://site.test/a.jpg" });
+    expect(request).toHaveBeenCalledWith("POST", "/lists/pictures/link", {
+      body: { url: "https://site.test/a.jpg" },
+    });
+    expect(answer).toEqual({
+      pictureId: "p1",
+      imageUrl: null,
+      attribution: null,
+      credit: null,
+      quota: null,
+    });
+  });
+
+  it("keeps a catalogue's address as it is, with the catalogue's attribution and credit", async () => {
+    const { client } = recordingClient({
+      imageUrl: "https://image.tmdb.org/t/p/w500/a.jpg",
+      attribution: { source: "tmdb", id: "tmdb:movie:603" },
+      credit: "TMDB",
+      quota,
+    });
+    await expect(
+      linkPicture(client, { url: "https://www.themoviedb.org/movie/603" }),
+    ).resolves.toEqual({
+      pictureId: null,
+      imageUrl: "https://image.tmdb.org/t/p/w500/a.jpg",
+      attribution: { source: "tmdb", id: "tmdb:movie:603" },
+      credit: "TMDB",
+      quota,
+    });
+  });
+
+  it("takes no answer without a picture in it", async () => {
+    for (const answer of [
+      {},
+      { pictureId: "../escape" },
+      { pictureId: "x".repeat(101) },
+      { imageUrl: "http://img.test/a.jpg" },
+      { imageUrl: 5 },
+    ]) {
+      await expect(
+        linkPicture(recordingClient(answer).client, { url: "https://site.test/a.jpg" }),
+      ).rejects.toThrow("no picture");
+    }
+  });
+
+  it("reads today's quota before anything is sent", async () => {
+    const { client, request } = recordingClient({ quota });
+    await expect(linkQuota(client)).resolves.toEqual(quota);
+    expect(request).toHaveBeenCalledWith("GET", "/lists/pictures/link");
+    await expect(linkQuota(recordingClient({}).client)).resolves.toBeNull();
   });
 });

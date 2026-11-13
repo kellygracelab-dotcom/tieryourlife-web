@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode 
 import { sizedFor } from "../../lib/pictureSize";
 import { fill, plural, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
-import { ImageCredits } from "../tierboard/ImageCredits";
+import { AboutPicture, hasAbout, openPage, pageOf } from "../tierboard/AboutPicture";
 import { MoveSheet } from "../tierboard/MoveSheet";
 import { itemsIn, liveItems, poolTier, rankedTiers, type Board, type BoardItem } from "./model";
 import "./boards.css";
@@ -167,24 +167,34 @@ export function RankedList({ board, onMove, onRemove }: RankedListProps) {
           </ul>
         </section>
       )}
-      {credited?.credit && (
-        <ImageCredits
-          title={credited.title}
+      {credited !== null && (
+        <AboutPicture
+          name={credited.title}
+          attribution={credited.attribution}
           credit={credited.credit}
-          close={() => setCredited(null)}
+          onClose={() => setCredited(null)}
         />
       )}
       {chosen !== undefined && (
         <MoveSheet
           name={chosen.title}
-          onCredits={
-            chosen.credit?.trim()
+          onAbout={
+            chosen.imageUrl !== null && hasAbout(chosen)
               ? () => {
                   setMoving(null);
                   setCredited(chosen);
                 }
               : undefined
           }
+          onOpenPage={(() => {
+            const page = chosen.imageUrl === null ? null : pageOf(chosen);
+            return page === null
+              ? undefined
+              : () => {
+                  setMoving(null);
+                  openPage(page);
+                };
+          })()}
           tiers={tiers}
           current={current === -1 ? null : current}
           onPlace={(index) => move(chosen.uid, tiers[index]?.uid ?? null)}

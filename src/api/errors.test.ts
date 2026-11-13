@@ -132,15 +132,65 @@ describe("parseApiError", () => {
     [
       422,
       json({ error: "Refused", code: "PICTURE_REFUSED", because: "adult" }),
-      { kind: "pictureRefused", because: "adult" },
+      { kind: "pictureRefused", because: "adult", code: "PICTURE_REFUSED" },
     ],
     [422, json({ error: "Refused" }), { kind: "pictureRefused", because: null }],
-    [422, json({ code: "KEEP_LIMIT" }), { kind: "pictureRefused", because: "KEEP_LIMIT" }],
+    [
+      422,
+      json({ code: "KEEP_LIMIT" }),
+      { kind: "pictureRefused", because: "KEEP_LIMIT", code: "KEEP_LIMIT" },
+    ],
     [
       422,
       json({ code: "PICTURE_REFUSED", because: "adult", imageUrl: "https://x.test/p.jpg" }),
-      { kind: "pictureRefused", because: "adult", imageUrl: "https://x.test/p.jpg" },
+      {
+        kind: "pictureRefused",
+        because: "adult",
+        imageUrl: "https://x.test/p.jpg",
+        code: "PICTURE_REFUSED",
+      },
     ],
+    // A house publication of a picture from a link without its page names the card.
+    [
+      422,
+      json({ code: "PICTURE_LINK_NEEDED", itemIndex: 3 }),
+      {
+        kind: "pictureRefused",
+        because: "PICTURE_LINK_NEEDED",
+        code: "PICTURE_LINK_NEEDED",
+        itemIndex: 3,
+      },
+    ],
+    [
+      422,
+      json({ code: "PICTURE_LINK_NEEDED", itemIndex: -1 }),
+      { kind: "pictureRefused", because: "PICTURE_LINK_NEEDED", code: "PICTURE_LINK_NEEDED" },
+    ],
+    // A picture from a link: the refusal carries what is left of the day.
+    [
+      422,
+      json({ code: "NOT_A_PICTURE", quota: { left: 12, limit: 400, resetsAt: 1_800_000_000_000 } }),
+      {
+        kind: "pictureRefused",
+        because: "NOT_A_PICTURE",
+        code: "NOT_A_PICTURE",
+        quota: { left: 12, limit: 400, resetsAt: 1_800_000_000_000 },
+      },
+    ],
+    [
+      429,
+      json({
+        code: "LINK_LIMIT",
+        retryAt: 1_800_000_000_000,
+        quota: { left: 0, limit: 400, resetsAt: 1_800_003_600_000 },
+      }),
+      {
+        kind: "linkLimit",
+        retryAt: 1_800_000_000_000,
+        quota: { left: 0, limit: 400, resetsAt: 1_800_003_600_000 },
+      },
+    ],
+    [429, json({ code: "LINK_LIMIT", quota: { left: "x" } }), { kind: "linkLimit" }],
     [
       429,
       json({ error: "Ten today", code: "TOO_MANY_PROPOSALS" }),
@@ -154,6 +204,22 @@ describe("parseApiError", () => {
     ],
     [429, json({ code: "SEARCH_LIMIT" }), { kind: "searchLimit" }],
     [503, json({ error: "Unavailable", code: "UNAVAILABLE" }), { kind: "unavailable" }],
+    [503, "", { kind: "unavailable" }],
+    // The picture's site is busy: a wait, with the day's links given back.
+    [
+      503,
+      json({
+        code: "SOURCE_BUSY",
+        retryAt: 1_800_000_060_000,
+        quota: { left: 12, limit: 400, resetsAt: 1_800_003_600_000 },
+      }),
+      {
+        kind: "sourceBusy",
+        retryAt: 1_800_000_060_000,
+        quota: { left: 12, limit: 400, resetsAt: 1_800_003_600_000 },
+      },
+    ],
+    [503, json({ code: "SOURCE_BUSY" }), { kind: "sourceBusy" }],
     [405, json({ error: "Use GET" }), { kind: "unknown", status: 405 }],
     [500, "[]", { kind: "unknown", status: 500 }],
   ])("maps %i %s", (status, body, expected) => {
@@ -167,6 +233,16 @@ it("takes the time picture searches start again from Retry-After without one in 
     expect(parseApiError(429, json({ code: "SEARCH_LIMIT" }), "120")).toEqual({
       kind: "searchLimit",
       retryAt: 1_120_000,
+    });
+    // Pictures from links the same way.
+    expect(parseApiError(429, json({ code: "LINK_LIMIT" }), "60")).toEqual({
+      kind: "linkLimit",
+      retryAt: 1_060_000,
+    });
+    // And a busy picture site.
+    expect(parseApiError(503, json({ code: "SOURCE_BUSY" }), "30")).toEqual({
+      kind: "sourceBusy",
+      retryAt: 1_030_000,
     });
   } finally {
     vi.useRealTimers();

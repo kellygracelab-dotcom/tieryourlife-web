@@ -116,6 +116,15 @@ describe("AddCardBox", () => {
     });
   });
 
+  it("names IGDB by IGDB.com under its covers, as its terms ask", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page([picture("igdb:1942", { title: "The Witcher 3", source: "igdb", kind: "game" })]),
+    );
+    setup({ find, category: "games" });
+    await typeAndWait("witcher");
+    expect(screen.getByText("From IGDB.com")).toBeInTheDocument();
+  });
+
   it("starts in All where the section has no catalogues of its own", async () => {
     const find = vi.fn<FindPictures>(async () => page([]));
     setup({ find, category: "food" });

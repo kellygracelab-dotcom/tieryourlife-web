@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { ReadOnlyBoard } from "./ReadOnlyBoard";
@@ -59,5 +59,58 @@ describe("ReadOnlyBoard", () => {
     );
     expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
     expect(screen.getAllByRole("listitem")).toHaveLength(3);
+  });
+});
+
+describe("a card one only looks at, and its picture", () => {
+  const credited: PublishedItem[] = [
+    {
+      title: "Ex Machina",
+      imageUrl: "https://img/ex.jpg",
+      tierIndex: 0,
+      attribution: { source: "tmdb", link: "https://www.themoviedb.org/movie/264660" },
+    },
+    { title: "The Witch", imageUrl: "https://img/witch.jpg", tierIndex: 0 },
+  ];
+  const show = () =>
+    render(
+      <ReadOnlyBoard label="Board" tiers={tiers} items={credited} rows={[[0, 1]]} pool={[]} />,
+    );
+
+  it("opens About the picture beside the card from its «i»", () => {
+    show();
+    expect(screen.queryByRole("button", { name: "About the picture of The Witch" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "About the picture of Ex Machina" }));
+    const about = screen.getByRole("dialog", { name: "Ex Machina" });
+    expect(about).toHaveTextContent("This product uses the TMDB API");
+    expect(about.querySelector(".card-detail__picture")).toBeNull();
+  });
+
+  it("offers About the picture and Open its page on a right click, and leaves Shift to the browser", () => {
+    show();
+    const card = screen.getByRole("button", { name: "Ex Machina" });
+    const shifted = createEvent.contextMenu(card, { shiftKey: true });
+    fireEvent(card, shifted);
+    expect(shifted.defaultPrevented).toBe(false);
+    expect(screen.queryByRole("menu")).toBeNull();
+    fireEvent.contextMenu(card, { clientX: 5, clientY: 5 });
+    const menu = screen.getByRole("menu", { name: "Ex Machina" });
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent),
+    ).toEqual(["About the picture", "Open its page"]);
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "About the picture" }));
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Ex Machina" })).toBeInTheDocument();
+  });
+
+  it("shows a card with nothing to say large on a right click, as before", () => {
+    show();
+    fireEvent.contextMenu(screen.getByRole("button", { name: "The Witch" }));
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(
+      screen.getByRole("dialog", { name: "The Witch" }).querySelector(".card-detail__picture"),
+    ).toHaveAttribute("src", "https://img/witch.jpg");
   });
 });
