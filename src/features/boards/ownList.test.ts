@@ -98,6 +98,29 @@ describe("boardForOwnList", () => {
     expect(poster?.attribution).toEqual({ source: "tmdb" });
   });
 
+  it("leaves the list's copy of a board's shared catalogue copy where it is, credit and all", async () => {
+    const feed = (name: string) =>
+      `https://firebasestorage.googleapis.com/v0/b/tyl.appspot.com/o/published%2FL9%2F${name}?alt=media`;
+    const poster = {
+      source: "tmdb",
+      originalUrl: "https://image.tmdb.org/t/p/w500/p.jpg",
+    };
+    const copied = feed("catalogue-w-0123456789abcdef0123456789abcdef");
+    const list: PublishedList = {
+      ...ownAnonymous,
+      coverImageUrl: copied,
+      items: [{ title: "Poster", imageUrl: copied, attribution: poster, tierIndex: 0 }],
+    };
+    const board = await boardForOwnList(list, null, noCopies, 5, uids());
+    expect(board.items[0]).toMatchObject({
+      imageUrl: copied,
+      pictureId: null,
+      attribution: poster,
+    });
+    expect(board.coverPictureId).toBeNull();
+    expect(board.coverImageUrl).toBe(copied);
+  });
+
   it("keeps a cover of one's own photo as that photo brought back, and a chosen collage in its order", async () => {
     const feed = (name: string) =>
       `https://firebasestorage.googleapis.com/v0/b/tyl.appspot.com/o/published%2FL9%2F${name}?alt=media`;

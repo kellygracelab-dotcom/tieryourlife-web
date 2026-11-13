@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  copiesOf,
   forgetBoard,
   keepBoard,
   loadBoardIndex,
@@ -38,6 +39,43 @@ describe("boards", () => {
     expect(request).toHaveBeenLastCalledWith("PUT", "/boards/a%20b", { body });
     await forgetBoard(client, "a/b");
     expect(request).toHaveBeenLastCalledWith("DELETE", "/boards/a%2Fb");
+  });
+
+  it("reads the copies a write is answered with, the catalogue address to ours", async () => {
+    const tmdb = "https://image.tmdb.org/t/p/w500/x.jpg";
+    const ours =
+      "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2Fcatalogue%2Fw-0123456789abcdef0123456789abcdef?alt=media";
+    const { client } = recordingClient({ uid: "b", revision: 4, copies: { [tmdb]: ours } });
+    const body = { fingerprint: "f", tiers: [], items: [] } as unknown as KeepBoardRequest;
+    const answer = await keepBoard(client, "b", body);
+    expect(answer.revision).toBe(4);
+    expect([...(answer.copies ?? [])]).toEqual([[tmdb, ours]]);
+  });
+
+  it("reads copies with care: https to https only, none when nothing is left", () => {
+    const ours =
+      "https://firebasestorage.googleapis.com/v0/b/x/o/published%2Fcatalogue%2Fw-1?alt=media";
+    expect(copiesOf(undefined)).toBeNull();
+    expect(copiesOf(null)).toBeNull();
+    expect(copiesOf([ours])).toBeNull();
+    expect(copiesOf("copies")).toBeNull();
+    expect(copiesOf({})).toBeNull();
+    const read = copiesOf({
+      "https://s4.anilist.co/a.png": ours,
+      "http://image.tmdb.org/t/p/w500/x.jpg": ours,
+      "https://image.tmdb.org/t/p/w500/y.jpg": "http://example.com/y.jpg",
+      "https://image.tmdb.org/t/p/w500/z.jpg": 7,
+      "https://image.tmdb.org/t/p/w500/same.jpg": "https://image.tmdb.org/t/p/w500/same.jpg",
+      "https://image.tmdb.org/t/p/w500/js.jpg": "javascript:alert(1)",
+      "not an address": ours,
+    });
+    expect(read === null ? null : [...read]).toEqual([["https://s4.anilist.co/a.png", ours]]);
+  });
+
+  it("answers a write without copies as before", async () => {
+    const { client } = recordingClient({ uid: "b", revision: 2, copies: { x: "y" } });
+    const body = { fingerprint: "f", tiers: [], items: [] } as unknown as KeepBoardRequest;
+    await expect(keepBoard(client, "b", body)).resolves.toEqual({ uid: "b", revision: 2 });
   });
 
   it("hands back the board a refused write carries", () => {

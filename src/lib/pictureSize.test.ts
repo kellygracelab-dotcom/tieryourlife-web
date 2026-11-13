@@ -22,6 +22,14 @@ describe("sizedFor", () => {
     });
   });
 
+  it("shows a board's shared catalogue copy through the site, as any published picture", () => {
+    const copy =
+      "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2Fcatalogue%2Fw-0123456789abcdef0123456789abcdef?alt=media";
+    expect(sizedFor(copy, 64)).toEqual({
+      src: "/img/original/published/catalogue/w-0123456789abcdef0123456789abcdef",
+    });
+  });
+
   it("leaves any other picture as it is: an own upload, another site", () => {
     expect(sizedFor("https://firebasestorage.googleapis.com/x.png", 64)).toEqual({
       src: "https://firebasestorage.googleapis.com/x.png",

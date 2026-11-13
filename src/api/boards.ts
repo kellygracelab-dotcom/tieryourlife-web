@@ -150,16 +150,57 @@ export function loadKeptBoard(client: ApiClient, uid: string): Promise<KeptBoard
   return client.request<KeptBoard>("GET", `/boards/${encodeURIComponent(uid)}`);
 }
 
-export function keepBoard(
+/**
+ * The account's answer to a write: the revision it keeps the board at, and
+ * the catalogue pictures it now shows from our shared copies (CONTRACT,
+ * Catalogue pictures on a board), each catalogue address to its copy's.
+ */
+export interface KeptAnswer {
+  uid: string;
+  revision: number;
+  /** Absent when the account named none. */
+  copies?: ReadonlyMap<string, string>;
+}
+
+const isHttps = (value: unknown): value is string => {
+  if (typeof value !== "string" || !value.startsWith("https://")) return false;
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * `copies` as the account sent it, read with care: an object of https
+ * addresses to https addresses, anything else in it left out; null when
+ * nothing is left. A Map, so no address can be mistaken for an object's own key.
+ */
+export function copiesOf(raw: unknown): ReadonlyMap<string, string> | null {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const copies = new Map<string, string>();
+  for (const [from, to] of Object.entries(raw as Record<string, unknown>)) {
+    if (isHttps(from) && isHttps(to) && from !== to) copies.set(from, to);
+  }
+  return copies.size === 0 ? null : copies;
+}
+
+export async function keepBoard(
   client: ApiClient,
   uid: string,
   request: KeepBoardRequest,
-): Promise<{ uid: string; revision: number }> {
-  return client.request<{ uid: string; revision: number }>(
+): Promise<KeptAnswer> {
+  const answer = await client.request<{ uid: string; revision: number; copies?: unknown }>(
     "PUT",
     `/boards/${encodeURIComponent(uid)}`,
     { body: request },
   );
+  const copies = copiesOf(answer.copies);
+  return {
+    uid: answer.uid,
+    revision: answer.revision,
+    ...(copies === null ? {} : { copies }),
+  };
 }
 
 /** Leaves a marker rather than nothing, so the other device lets go of the board too. */
