@@ -86,13 +86,20 @@ without picture**.
     picture: search, paste a link or drop one on it.» and OK.
 - **For the house** (shown only where the board speaks for the house: the
   owner and moderators, on a house board):
-  - the label reads «Name | picture link | page it’s from», and the page is
-    required;
-  - a line without a page is highlighted before sending, with «Line {n} needs
-    the page it’s from.», and Add stays off;
+  - the label reads «Name | picture | page it’s from», and the page column
+    may be empty (Content team, 13.11);
+  - a Commons file page `…/wiki/File:<name>` is sent as
+    `…/wiki/Special:FilePath/<name>`, so the server fills in the author and
+    licence; this happens everywhere a link is taken;
+  - nothing is blocked before sending. Only pictures copied as web pictures
+    need a page for the house; catalogue and Commons pictures do not. After
+    the paste, the closing note lists the house cards copied as web pictures
+    without a page. `422 PICTURE_LINK_NEEDED {itemIndex}` at publish names
+    the card;
+  - a hint stays in the box: «Pictures from other sites need the page
+    they’re from. Catalogue and Commons pictures don’t.»;
   - an empty picture makes a card by name;
-  - «{left} of {limit} pictures left today» is shown once the backend says it.
-    This waits for the Backend contract.
+  - «{left} of {limit} pictures left today» comes from `quota`.
 
 ## 4. Phone
 
