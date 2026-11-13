@@ -1584,6 +1584,50 @@ describe("BoardPage: the editor's credits on a house list", () => {
     expect(vi.mocked(house.replace).mock.calls[0]?.[1].items[0]?.attribution).toEqual(credit);
   });
 
+  it("shows the author and licence the server read from the credit's page once the update is back", async () => {
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save(pictured());
+    const houseStore = memoryStore();
+    linkToHouse("films", "H1", houseStore);
+    const page = "https://commons.wikimedia.org/wiki/File:Witch.jpg";
+    const filled = {
+      source: "tmdb",
+      id: "tmdb:movie:2",
+      manual: true,
+      author: "Jane Roe",
+      license: "CC BY-SA 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
+      link: page,
+    };
+    const house = sending();
+    vi.mocked(house.replace).mockImplementation((id: string) =>
+      Promise.resolve({
+        id,
+        topicId: null,
+        revision: 3,
+        list: {
+          id,
+          revision: 3,
+          items: [{ title: "The Witch", imageUrl: POSTER, tierIndex: null, attribution: filled }],
+        } as unknown as PublishedList,
+      }),
+    );
+    open(boardsRepository(memoryStore()), "/b/films", { house, houseStore, houseRepository });
+
+    const about = await aboutOf("The Witch");
+    await userEvent.click(within(about).getByRole("button", { name: "Add credit" }));
+    await userEvent.type(within(about).getByRole("textbox", { name: "Source link" }), page);
+    await userEvent.click(within(about).getByRole("button", { name: "Save credit" }));
+    await userEvent.keyboard("{Escape}");
+    expect(liveItems(houseRepository.get("films")!)[0]?.attribution?.author).toBeUndefined();
+
+    await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
+    await screen.findByText("House list updated");
+    expect(liveItems(houseRepository.get("films")!)[0]?.attribution).toEqual(filled);
+    expect(hasUnsentEdits(houseRepository.get("films")!, houseStore)).toBe(false);
+    expect(await aboutOf("The Witch")).toHaveTextContent("Jane Roe");
+  });
+
   it("credits the cover of one picture in the list's settings", async () => {
     const houseRepository = boardsRepository(memoryStore());
     houseRepository.save({ ...pictured(), coverImageUrls: [POSTER], coverImageUrl: POSTER });

@@ -1453,7 +1453,6 @@ const ja: Translation = {
     linkNeeded:
       "「{name}」には画像の掲載ページが必要です。カードを削除し、画像のリンクとページを付けてもう一度追加してください。",
     about: "画像について",
-    aboutOf: "{name} の画像について",
     openPage: "掲載ページを開く",
     photo: "写真",
     licence: "ライセンス",

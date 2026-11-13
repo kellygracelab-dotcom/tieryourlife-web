@@ -1514,7 +1514,6 @@ const de: Translation = {
     linkNeeded:
       "„{name}“ braucht die Seite, von der sein Bild stammt. Entferne die Karte und füge sie erneut über den Link des Bildes hinzu, mit der Seite.",
     about: "Über das Bild",
-    aboutOf: "Über das Bild von {name}",
     openPage: "Seite öffnen",
     photo: "Foto",
     licence: "Lizenz",

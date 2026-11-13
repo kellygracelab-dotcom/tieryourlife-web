@@ -77,13 +77,14 @@ describe("a card one only looks at, and its picture", () => {
       <ReadOnlyBoard label="Board" tiers={tiers} items={credited} rows={[[0, 1]]} pool={[]} />,
     );
 
-  it("opens About the picture beside the card from its «i»", () => {
+  it("has no «i» on its cards, and Enter on a card tells about its picture", () => {
     show();
-    expect(screen.queryByRole("button", { name: "About the picture of The Witch" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "About the picture of Ex Machina" }));
-    const about = screen.getByRole("dialog", { name: "Ex Machina" });
-    expect(about).toHaveTextContent("This product uses the TMDB API");
-    expect(about.querySelector(".card-detail__picture")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^About the picture/ })).toBeNull();
+    // Enter clicks with no count of clicks, as a keyboard does.
+    fireEvent.click(screen.getByRole("button", { name: "Ex Machina" }), { detail: 0 });
+    expect(screen.getByRole("dialog", { name: "Ex Machina" })).toHaveTextContent(
+      "This product uses the TMDB API",
+    );
   });
 
   it("offers About the picture and Open its page on a right click, and leaves Shift to the browser", () => {
