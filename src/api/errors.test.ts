@@ -242,6 +242,20 @@ describe("parseApiError", () => {
       },
     ],
     [503, json({ code: "SOURCE_BUSY" }), { kind: "sourceBusy" }],
+    // A picture search that found nothing while a catalogue it needs is busy.
+    [
+      503,
+      json({ code: "SOURCE_BUSY", retryAt: 1_800_000_060_000, busy: ["anilist", "tmdb"] }),
+      { kind: "sourceBusy", retryAt: 1_800_000_060_000, busy: ["anilist", "tmdb"] },
+    ],
+    // Names that are not names are left out, and an empty list is none.
+    [
+      503,
+      json({ code: "SOURCE_BUSY", busy: ["anilist", 7, "", null] }),
+      { kind: "sourceBusy", busy: ["anilist"] },
+    ],
+    [503, json({ code: "SOURCE_BUSY", busy: [] }), { kind: "sourceBusy" }],
+    [503, json({ code: "SOURCE_BUSY", busy: "anilist" }), { kind: "sourceBusy" }],
     [405, json({ error: "Use GET" }), { kind: "unknown", status: 405 }],
     [500, "[]", { kind: "unknown", status: 500 }],
   ])("maps %i %s", (status, body, expected) => {

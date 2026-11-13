@@ -89,8 +89,11 @@ without picture**.
   - the label reads «Name | picture | page it’s from», and the page column
     may be empty (Content team, 13.11);
   - a Commons file page `…/wiki/File:<name>` is sent as
-    `…/wiki/Special:FilePath/<name>`, so the server fills in the author and
-    licence; this happens everywhere a link is taken;
+    `…/wiki/Special:FilePath/<name>?width=600`, so the server fills in the
+    author and licence, and the preview before publication does not pull the
+    uploaded original (Wikimedia serves its 960 px copy; a direct
+    `upload.wikimedia.org/…/thumb/…px-` address is never built, since other
+    widths answer 400); this happens everywhere a link is taken;
   - nothing is blocked before sending. Only pictures copied as web pictures
     need a page for the house; catalogue and Commons pictures do not. After
     the paste, the closing note lists the house cards copied as web pictures

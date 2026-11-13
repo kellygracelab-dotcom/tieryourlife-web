@@ -152,6 +152,38 @@ describe("pictures", () => {
     expect(pictureOf("text")).toBeNull();
   });
 
+  it("says which catalogues were busy, and when they may be asked again", async () => {
+    const ask = { q: "naruto", scope: "anime", page: 1, web: false, lang: "en" } as const;
+    const busy = recordingClient({
+      items: [raw()],
+      hasMore: false,
+      notices: [],
+      busy: ["anilist", 3, ""],
+      retryAt: 1_800_000_060_000,
+    });
+    await expect(searchPictures(busy.client, ask)).resolves.toMatchObject({
+      busy: ["anilist"],
+      retryAt: 1_800_000_060_000,
+    });
+
+    // A time that is no time is left out; the busy catalogues are still said.
+    for (const retryAt of ["soon", Number.NaN, Number.POSITIVE_INFINITY, -5, null]) {
+      const page = await searchPictures(
+        recordingClient({ items: [], busy: ["tmdb"], retryAt }).client,
+        ask,
+      );
+      expect(page.busy).toEqual(["tmdb"]);
+      expect(page).not.toHaveProperty("retryAt");
+    }
+
+    // None busy, or nothing readable: neither is said.
+    for (const answer of [{ busy: [] }, { busy: "anilist" }, { retryAt: 5 }, {}]) {
+      const page = await searchPictures(recordingClient({ items: [], ...answer }).client, ask);
+      expect(page).not.toHaveProperty("busy");
+      expect(page).not.toHaveProperty("retryAt");
+    }
+  });
+
   it("has the backend copy a web picture, and wants its id back", async () => {
     const { client, request } = recordingClient({ pictureId: "p1" });
     await expect(keepPicture(client, "https://site.test/a.jpg")).resolves.toBe("p1");

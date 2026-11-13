@@ -7,13 +7,16 @@ import {
   BUSY_FALLBACK_MS,
   BUSY_TRIES,
   BUSY_WAIT_MAX_MS,
+  busyUntil,
   cardsFor,
   PASTE_AT_ONCE,
   PASTE_PACE_MS,
   pick,
   preferredFor,
   sourcesCount,
+  waitsForIn,
   wantedOf,
+  type LookedUp,
   type PastedCard,
 } from "./paste";
 
@@ -835,5 +838,273 @@ describe("cardsFor, with pictures from links", () => {
         vi.useRealTimers();
       }
     });
+  });
+});
+
+describe("cardsFor, with a busy catalogue", () => {
+  const START = 1_000_000;
+  const dish = card("wikidata:Q177", "pizza", "Italian dish");
+  const film = card("tmdb:9", "Pizza", "2012");
+  const busyFailure = (retryAt?: number, busy: string[] = ["wikidata"]) =>
+    new ApiFailure({ kind: "sourceBusy", busy, ...(retryAt === undefined ? {} : { retryAt }) });
+
+  it("waits for the catalogues of a section, Wikidata elsewhere, and none for a list about nothing", () => {
+    const anime = waitsForIn("anime");
+    expect(anime("anilist")).toBe(true);
+    expect(anime("wikidata")).toBe(false);
+    expect(anime("web")).toBe(false);
+    const food = waitsForIn("food");
+    expect(food("wikidata")).toBe(true);
+    expect(food("tmdb")).toBe(false);
+    expect(waitsForIn(null)("wikidata")).toBe(false);
+    expect(waitsForIn(null)("tmdb")).toBe(false);
+  });
+
+  it("gives up a wait asked often enough, or too far off", () => {
+    expect(busyUntil(START + 5_000, 1, START)).toBe(START + 5_000);
+    expect(busyUntil(undefined, 1, START)).toBe(START + BUSY_FALLBACK_MS);
+    expect(busyUntil(null, 1, START)).toBe(START + BUSY_FALLBACK_MS);
+    expect(busyUntil(START + BUSY_WAIT_MAX_MS, 1, START)).toBe(START + BUSY_WAIT_MAX_MS);
+    expect(busyUntil(START + BUSY_WAIT_MAX_MS + 1, 1, START)).toBeNull();
+    expect(busyUntil(START + 5_000, BUSY_TRIES, START)).toBeNull();
+  });
+
+  it("waits when nothing was found while a catalogue was busy, and asks the same name again", async () => {
+    vi.useFakeTimers({ now: START });
+    try {
+      const got: PastedCard[] = [];
+      const onWaiting = vi.fn();
+      const onMissing = vi.fn();
+      const lookup = vi
+        .fn<(query: string) => Promise<CatalogueItem[]>>()
+        .mockRejectedValueOnce(busyFailure(START + 20_000))
+        .mockResolvedValue([dish]);
+      const done = cardsFor(wantedOf("Pizza", 100), lookup, (one) => got.push(one), {
+        preferred: "wikidata",
+        paceMs: 0,
+        onWaiting,
+        onMissing,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(onWaiting).toHaveBeenLastCalledWith(START + 20_000);
+      await vi.advanceTimersByTimeAsync(19_999);
+      expect(lookup).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      await done;
+      expect(lookup.mock.calls).toEqual([["Pizza"], ["Pizza"]]);
+      expect(onWaiting.mock.calls).toEqual([[START + 20_000], [null]]);
+      expect(onMissing).not.toHaveBeenCalled();
+      expect(got).toEqual([
+        { title: "Pizza", imageUrl: "https://img/wikidata:Q177.jpg", key: "wikidata:Q177" },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("waits for a busy catalogue even where any card would do", async () => {
+    vi.useFakeTimers({ now: START });
+    try {
+      const naruto = card("anilist:20", "Naruto", "2002");
+      const lookup = vi
+        .fn<(query: string) => Promise<CatalogueItem[]>>()
+        .mockRejectedValueOnce(busyFailure(undefined, ["anilist"]))
+        .mockResolvedValue([naruto]);
+      const got: PastedCard[] = [];
+      const done = cardsFor(wantedOf("Naruto", 100), lookup, (one) => got.push(one), {
+        paceMs: 0,
+      });
+      await vi.advanceTimersByTimeAsync(BUSY_FALLBACK_MS);
+      await done;
+      expect(lookup).toHaveBeenCalledTimes(2);
+      expect(got).toEqual([
+        { title: "Naruto", imageUrl: "https://img/anilist:20.jpg", key: "anilist:20" },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("gives the name alone, saying the site stayed busy, after a few tries", async () => {
+    vi.useFakeTimers({ now: START });
+    try {
+      const onMissing = vi.fn();
+      const got: PastedCard[] = [];
+      const lookup = vi.fn(async () => {
+        throw busyFailure(Date.now() + 1_000);
+      });
+      const done = cardsFor(wantedOf("Pizza", 100), lookup, (one) => got.push(one), {
+        preferred: "wikidata",
+        paceMs: 0,
+        onMissing,
+      });
+      await vi.advanceTimersByTimeAsync(BUSY_TRIES * 1_000);
+      await expect(done).resolves.toBeNull();
+      expect(lookup).toHaveBeenCalledTimes(BUSY_TRIES);
+      expect(got).toEqual([{ title: "Pizza", imageUrl: null }]);
+      expect(onMissing).toHaveBeenCalledWith("Pizza", "busy");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not wait for a time too far off", async () => {
+    vi.useFakeTimers({ now: START });
+    try {
+      const onMissing = vi.fn();
+      const onWaiting = vi.fn();
+      const lookup = vi.fn(async () => {
+        throw busyFailure(START + BUSY_WAIT_MAX_MS + 1);
+      });
+      await cardsFor(wantedOf("Pizza", 100), lookup, vi.fn(), {
+        paceMs: 0,
+        onMissing,
+        onWaiting,
+      });
+      expect(lookup).toHaveBeenCalledTimes(1);
+      expect(onWaiting).not.toHaveBeenCalled();
+      expect(onMissing).toHaveBeenCalledWith("Pizza", "busy");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("counts a name as unanswered when the searches run out while it waits", async () => {
+    vi.useFakeTimers({ now: START });
+    try {
+      const onMissing = vi.fn();
+      const lookup = vi
+        .fn<(query: string) => Promise<CatalogueItem[]>>()
+        .mockRejectedValueOnce(busyFailure(START + 1_000))
+        .mockRejectedValue(new ApiFailure({ kind: "searchLimit", retryAt: 1_794_571_200_000 }));
+      const done = cardsFor(wantedOf("Pizza", 100), lookup, vi.fn(), { paceMs: 0, onMissing });
+      await vi.advanceTimersByTimeAsync(1_000);
+      await expect(done).resolves.toEqual({ unanswered: 1, retryAt: 1_794_571_200_000 });
+      expect(onMissing).toHaveBeenCalledWith("Pizza", "searchLimit");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("waits for the catalogue whose card the name takes, and takes it once it answers", async () => {
+    vi.useFakeTimers({ now: START });
+    try {
+      const onWaiting = vi.fn();
+      const lookup = vi
+        .fn<(query: string) => Promise<LookedUp>>()
+        .mockResolvedValueOnce({ items: [film], busy: ["wikidata"], retryAt: START + 5_000 })
+        .mockResolvedValue({ items: [film, dish] });
+      const got: PastedCard[] = [];
+      const done = cardsFor(wantedOf("Pizza", 100), lookup, (one) => got.push(one), {
+        preferred: "wikidata",
+        waitFor: waitsForIn("food"),
+        paceMs: 0,
+        onWaiting,
+      });
+      await vi.advanceTimersByTimeAsync(4_999);
+      expect(lookup).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      await done;
+      expect(lookup).toHaveBeenCalledTimes(2);
+      expect(onWaiting.mock.calls).toEqual([[START + 5_000], [null]]);
+      // The film's poster was not taken for the dish while Wikidata rested.
+      expect(got).toEqual([
+        { title: "Pizza", imageUrl: "https://img/wikidata:Q177.jpg", key: "wikidata:Q177" },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("takes what was found once its own catalogue has been waited for long enough", async () => {
+    vi.useFakeTimers({ now: START });
+    try {
+      const other = card("wikidata:Q1", "Naruto", "manga series");
+      const lookup = vi.fn(async (): Promise<LookedUp> => ({
+        items: [other],
+        busy: ["anilist"],
+        retryAt: Date.now() + 1_000,
+      }));
+      const onMissing = vi.fn();
+      const got: PastedCard[] = [];
+      const done = cardsFor(wantedOf("Naruto", 100), lookup, (one) => got.push(one), {
+        waitFor: waitsForIn("anime"),
+        paceMs: 0,
+        onMissing,
+      });
+      await vi.advanceTimersByTimeAsync(BUSY_TRIES * 1_000);
+      await done;
+      expect(lookup).toHaveBeenCalledTimes(BUSY_TRIES);
+      expect(got).toEqual([
+        { title: "Naruto", imageUrl: "https://img/wikidata:Q1.jpg", key: "wikidata:Q1" },
+      ]);
+      expect(onMissing).not.toHaveBeenCalled();
+
+      // Where only Wikidata's card would do and it never answered, the name goes alone.
+      lookup.mockClear();
+      got.length = 0;
+      lookup.mockImplementation(async () => ({
+        items: [film],
+        busy: ["wikidata"],
+        retryAt: START + BUSY_WAIT_MAX_MS * 10,
+      }));
+      await cardsFor(wantedOf("Pizza", 100), lookup, (one) => got.push(one), {
+        preferred: "wikidata",
+        waitFor: waitsForIn("food"),
+        paceMs: 0,
+        onMissing,
+      });
+      expect(lookup).toHaveBeenCalledTimes(1);
+      expect(got).toEqual([{ title: "Pizza", imageUrl: null }]);
+      expect(onMissing).toHaveBeenCalledWith("Pizza", "busy");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not wait for a busy catalogue whose card the name would not take", async () => {
+    const lookup = vi.fn(async (): Promise<LookedUp> => ({
+      items: [film, dish],
+      busy: ["tmdb"],
+      retryAt: Date.now() + 5_000,
+    }));
+    const onWaiting = vi.fn();
+    const got: PastedCard[] = [];
+    await cardsFor(wantedOf("Pizza", 100), lookup, (one) => got.push(one), {
+      preferred: "wikidata",
+      waitFor: waitsForIn("food"),
+      paceMs: 0,
+      onWaiting,
+    });
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(onWaiting).not.toHaveBeenCalled();
+    expect(got).toEqual([
+      { title: "Pizza", imageUrl: "https://img/wikidata:Q177.jpg", key: "wikidata:Q177" },
+    ]);
+  });
+
+  it("waits for Wikidata on a line that gives the subject's id", async () => {
+    vi.useFakeTimers({ now: START });
+    try {
+      const band = card("wikidata:Q22151", "Muse", "English rock band");
+      const lookup = vi
+        .fn<(query: string) => Promise<LookedUp>>()
+        .mockResolvedValueOnce({ items: [], busy: ["wikidata"], retryAt: START + 1_000 })
+        .mockResolvedValue({ items: [band] });
+      const got: PastedCard[] = [];
+      // A section with catalogues of its own, which would not wait for Wikidata otherwise.
+      const done = cardsFor(wantedOf("Muse (Q22151)", 100), lookup, (one) => got.push(one), {
+        waitFor: waitsForIn("music"),
+        paceMs: 0,
+      });
+      await vi.advanceTimersByTimeAsync(1_000);
+      await done;
+      expect(lookup.mock.calls).toEqual([["Q22151"], ["Q22151"]]);
+      expect(got).toEqual([
+        { title: "Muse", imageUrl: "https://img/wikidata:Q22151.jpg", key: "wikidata:Q22151" },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

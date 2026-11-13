@@ -1,3 +1,4 @@
+import { errorOf } from "../../api/errors";
 import type { LinkQuota } from "../../api/linkQuota";
 import type { PictureAttribution } from "../../api/pictureAttribution";
 import { scopeFor, type LinkAsk } from "../../api/pictures";
@@ -124,6 +125,21 @@ export const preferredFor = (category: string | null): Preferred => {
   return "wikidata";
 };
 
+/**
+ * The busy catalogues a pasted name waits for, rather than take another
+ * catalogue's card in their place. Wikidata where its card is the one to take;
+ * in a section with catalogues of its own, those (AniList for anime, TMDB for
+ * films…), and not Wikidata, which answers everywhere; none while the list is
+ * about nothing yet, when any card will do.
+ */
+export const waitsForIn =
+  (category: string | null) =>
+  (catalogue: string): boolean => {
+    if (category === null) return false;
+    if (scopeFor(category) === "all") return catalogue === "wikidata";
+    return catalogue !== "wikidata" && catalogue !== "web";
+  };
+
 const from =
   (catalogue: "tmdb" | "wikidata") =>
   (item: CatalogueItem): boolean =>
@@ -187,6 +203,31 @@ export const BUSY_FALLBACK_MS = 10_000;
 /** How many times one line asks a busy site before it goes by its name. */
 export const BUSY_TRIES = 5;
 
+/**
+ * When a busy site is asked again, after it was asked `tries` times and gave
+ * `retryAt`; null when it is given up: asked often enough, or a time too far off.
+ */
+export function busyUntil(
+  retryAt: number | null | undefined,
+  tries: number,
+  now: number,
+): number | null {
+  if (tries >= BUSY_TRIES) return null;
+  const until = retryAt ?? now + BUSY_FALLBACK_MS;
+  return until - now > BUSY_WAIT_MAX_MS ? null : until;
+}
+
+/**
+ * What the catalogue said of a name: its cards, and the catalogues that were
+ * too busy to answer (`busy`) until when (`retryAt`). A plain list is cards
+ * with every catalogue answering.
+ */
+export interface LookedUp {
+  items: CatalogueItem[];
+  busy?: readonly string[];
+  retryAt?: number;
+}
+
 /** Why a pasted card came without a picture. */
 export type MissReason = "notFound" | "searchLimit" | LinkFailure;
 
@@ -194,6 +235,11 @@ export interface PasteOptions {
   /** False once the box is gone: nothing more is asked, nothing handed over. */
   going?: () => boolean;
   preferred?: Preferred;
+  /**
+   * The busy catalogues a name waits for (`waitsForIn`); by default the
+   * preferred one. A line with the subject's id waits for Wikidata.
+   */
+  waitFor?: (catalogue: string) => boolean;
   paceMs?: number;
   /**
    * How a line's own picture is kept, by its address; none for a guest,
@@ -220,6 +266,21 @@ const pause = (ms: number): Promise<void> =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+
+/** One search for a name, as the paste reads it. */
+interface Searched {
+  items: CatalogueItem[];
+  busy: readonly string[];
+  retryAt?: number | undefined;
+  /** Nothing was found while a catalogue it needs was busy (503 SOURCE_BUSY). */
+  unknown: boolean;
+}
+
+/** What the catalogue gave a name in the end, and whether a busy one was given up on. */
+interface Found {
+  items: CatalogueItem[];
+  stayedBusy?: true;
+}
 
 export interface PastedCard {
   title: string;
@@ -253,14 +314,22 @@ export interface PasteLimited {
  * A line with its own picture's address asks no catalogue: the picture is
  * kept by `link`, with the page it is from on its attribution. Refused, or
  * without `link` (a guest), the card comes by its name, and `onMissing` says why.
+ *
+ * A busy site is waited for until the time it gives, and the same line asked
+ * again: a picture's own site, a search that found nothing while a catalogue
+ * it needs was busy (503 SOURCE_BUSY: "nothing by that name" is not known
+ * then), and a search whose answer misses the catalogue the name waits for.
+ * Past `BUSY_TRIES` or `BUSY_WAIT_MAX_MS`, the name takes what was found, or
+ * goes alone, and `onMissing` says the site stayed busy.
  */
 export async function cardsFor(
   wanted: readonly Wanted[],
-  lookup: (query: string) => Promise<CatalogueItem[]>,
+  lookup: (query: string) => Promise<CatalogueItem[] | LookedUp>,
   onCard: (card: PastedCard, done: number) => void,
   {
     going = () => true,
     preferred = null,
+    waitFor = (catalogue) => catalogue === preferred,
     paceMs = PASTE_PACE_MS,
     link,
     onMissing,
@@ -273,31 +342,68 @@ export async function cardsFor(
   // Set from inside the lookups: a cast, so the null it starts as is not taken for its type.
   let limit = null as { retryAt: number | null } | null;
   let unanswered = 0;
+  // Waits for a busy site until the time it gave, saying so, and tells
+  // whether to ask it again: not once it was asked often enough, nor for a
+  // time too far off, nor when the box is gone meanwhile.
+  const waitedOut = async (retryAt: number | null | undefined, tries: number) => {
+    const until = busyUntil(retryAt, tries, now());
+    if (until === null) return false;
+    onWaiting?.(until);
+    const wait = until - now();
+    if (wait > 0) await pause(wait);
+    onWaiting?.(null);
+    return going();
+  };
   // Wikidata finds a subject by its number as it does by a name, and then it
   // is the only answer: nothing depends on what else carries the name.
   // None at all once the searches ran out: undefined, not an empty answer.
-  const ask = async (one: Wanted): Promise<CatalogueItem[] | undefined> => {
+  // A search that found nothing while a catalogue was busy is `unknown`.
+  const ask = async (one: Wanted): Promise<Searched | undefined> => {
     if (limit !== null) return undefined;
     try {
-      return await lookup(one.id === undefined ? one.title : one.id.slice(one.id.indexOf(":") + 1));
+      const answer = await lookup(
+        one.id === undefined ? one.title : one.id.slice(one.id.indexOf(":") + 1),
+      );
+      return Array.isArray(answer)
+        ? { items: answer, busy: [], unknown: false }
+        : { items: answer.items, busy: answer.busy ?? [], retryAt: answer.retryAt, unknown: false };
     } catch (reason) {
-      if (!isSearchLimit(reason)) return [];
+      const error = errorOf(reason);
+      if (error.kind === "sourceBusy") {
+        return { items: [], busy: error.busy ?? [], retryAt: error.retryAt, unknown: true };
+      }
+      if (!isSearchLimit(reason)) return { items: [], busy: [], unknown: false };
       limit ??= { retryAt: searchLimitOf(reason) };
       return undefined;
     }
   };
-  // A catalogue that is busy says nothing, the same as one that knows nothing.
-  // The one this name is for gets a second question before the name goes alone.
-  const answerFor = async (one: Wanted): Promise<CatalogueItem[] | undefined> => {
+  // A busy catalogue says so, and the name waits for it when its card is the
+  // one to take, or when nothing could be found without it. One that says
+  // nothing may still have been busy: the one this name is for gets a second
+  // question before the name goes alone.
+  const answerFor = async (one: Wanted): Promise<Found | undefined> => {
     const needed = one.id === undefined ? preferred : "wikidata";
-    const first = await ask(one);
+    const waits = one.id === undefined ? waitFor : (catalogue: string) => catalogue === "wikidata";
+    const waiting = (answer: Searched) => answer.unknown || answer.busy.some(waits);
+    let first = await ask(one);
+    for (let tries = 1; first !== undefined && waiting(first); tries++) {
+      if (!(await waitedOut(first.retryAt, tries))) {
+        return { items: first.items, stayedBusy: true };
+      }
+      const again = await ask(one);
+      // The searches ran out meanwhile: what the last answer had, if anything.
+      if (again === undefined) return first.unknown ? undefined : { items: first.items };
+      first = again;
+    }
     if (first === undefined) return undefined;
-    if (needed === null ? first.length > 0 : first.some(from(needed))) return first;
-    if (limit !== null) return first;
+    if (needed === null ? first.items.length > 0 : first.items.some(from(needed))) {
+      return { items: first.items };
+    }
+    if (limit !== null) return { items: first.items };
     if (paceMs > 0) await pause(paceMs);
-    if (!going()) return first;
+    if (!going()) return { items: first.items };
     const second = await ask(one);
-    return second !== undefined && second.length > 0 ? second : first;
+    return { items: second !== undefined && second.items.length > 0 ? second.items : first.items };
   };
   // A line's own picture: kept by its address, the page it is from on its
   // attribution. A refusal leaves the name, and says why; a busy site is
@@ -307,14 +413,9 @@ export async function cardsFor(
     for (let tries = 1; ; tries++) {
       const answer = await linkedOnce(one, url);
       if (!(answer instanceof LinkRefused)) return answer;
-      if (answer.reason !== "busy" || tries >= BUSY_TRIES) return answer.reason;
-      const until = answer.retryAt ?? now() + BUSY_FALLBACK_MS;
-      const wait = until - now();
-      if (wait > BUSY_WAIT_MAX_MS) return "busy";
-      onWaiting?.(until);
-      if (wait > 0) await pause(wait);
-      onWaiting?.(null);
-      if (!going()) return "busy";
+      if (answer.reason !== "busy" || !(await waitedOut(answer.retryAt, tries))) {
+        return answer.reason;
+      }
     }
   };
   const linkedOnce = async (one: Wanted, url: string): Promise<PastedCard | LinkRefused> => {
@@ -344,7 +445,7 @@ export async function cardsFor(
       return refused;
     }
   };
-  type Answer = CatalogueItem[] | undefined | PastedCard | MissReason;
+  type Answer = Found | undefined | PastedCard | MissReason;
   const answerOf = (one: Wanted): Promise<Answer> =>
     one.picture === undefined ? answerFor(one) : linked(one, one.picture);
 
@@ -368,13 +469,18 @@ export async function cardsFor(
         onCard({ title: one.title, imageUrl: null }, done);
         return;
       }
-      if (answer !== undefined && !Array.isArray(answer)) {
+      if (answer !== undefined && !("items" in answer)) {
         onCard(answer, done);
         return;
       }
       if (answer === undefined) unanswered++;
-      const card = pick(one, answer ?? [], preferred);
-      if (card === null) onMissing?.(one.title, answer === undefined ? "searchLimit" : "notFound");
+      const card = pick(one, answer?.items ?? [], preferred);
+      if (card === null) {
+        onMissing?.(
+          one.title,
+          answer === undefined ? "searchLimit" : answer.stayedBusy === true ? "busy" : "notFound",
+        );
+      }
       onCard(
         card === null
           ? { title: one.title, imageUrl: null }
