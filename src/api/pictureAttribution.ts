@@ -48,9 +48,27 @@ export interface PictureAttribution {
    * one, oldest first. Written by the server only; never shown, sent back as it came.
    */
   formerUrls?: string[];
+  /**
+   * True: author, licence and link are a house editor's own credit (CONTRACT,
+   * Editor's credit), shown as any other. False, sent once, takes it off.
+   */
+  manual?: boolean;
 }
 
-/** The backend's limits, in characters. */
+/**
+ * A house editor's own credit for a picture, as the editor writes it: the
+ * page the picture stands on, the licence (left out only for a page the
+ * server reads it from) and whom to name.
+ */
+export interface EditorCredit {
+  author?: string;
+  license?: string;
+  licenseUrl?: string;
+  link: string;
+}
+
+/** An editor's credit as it travels: on a card's attribution, or as a list's coverAttribution. */
+export type ManualCredit = EditorCredit & { manual: true };
 export const ATTRIBUTION_LIMITS = {
   author: 300,
   license: 100,
@@ -133,8 +151,64 @@ export function attributionOf(raw: unknown): PictureAttribution | null {
     ...(originalUrl === null ? {} : { originalUrl }),
     ...(id === null ? {} : { id }),
     ...(formerUrls.length === 0 ? {} : { formerUrls }),
+    ...(typeof value.manual === "boolean" ? { manual: value.manual } : {}),
   };
 }
+
+/**
+ * An editor's credit as kept or as read (a house list's coverAttribution):
+ * the known fields cleaned as an attribution's are; none without its page.
+ */
+export function editorCreditOf(raw: unknown): EditorCredit | null {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const cleaned = attributionOf({ ...(raw as Record<string, unknown>), source: "web" });
+  if (cleaned?.link === undefined) return null;
+  return {
+    ...(cleaned.author === undefined ? {} : { author: cleaned.author }),
+    ...(cleaned.license === undefined ? {} : { license: cleaned.license }),
+    ...(cleaned.licenseUrl === undefined ? {} : { licenseUrl: cleaned.licenseUrl }),
+    link: cleaned.link,
+  };
+}
+
+/** The credit as the backend takes it. */
+export const manualCreditOf = (credit: EditorCredit): ManualCredit => ({ manual: true, ...credit });
+
+/**
+ * A card's attribution with the editor's credit over it: its source, its
+ * catalogue id and the addresses it was copied from stay; whom it names,
+ * its licence and its page are the editor's. An uploaded picture is "web".
+ */
+export function withEditorCredit(
+  attribution: PictureAttribution | null | undefined,
+  credit: EditorCredit,
+  uploaded: boolean,
+): PictureAttribution {
+  const before = attribution ?? undefined;
+  return {
+    source: uploaded || before === undefined ? "web" : before.source,
+    ...(before?.originalUrl === undefined ? {} : { originalUrl: before.originalUrl }),
+    ...(before?.id === undefined ? {} : { id: before.id }),
+    ...(before?.formerUrls === undefined ? {} : { formerUrls: before.formerUrls }),
+    ...manualCreditOf(credit),
+  };
+}
+
+/**
+ * A card's attribution with the editor's credit taken off (`manual: false`):
+ * the server works out whom to name again. The page stays, for a picture
+ * from another site needs it.
+ */
+export function withoutEditorCredit(attribution: PictureAttribution): PictureAttribution {
+  const { author: _author, license: _license, licenseUrl: _licenseUrl, ...rest } = attribution;
+  return { ...rest, manual: false };
+}
+
+/** An editor's credit shown as a picture's attribution, for About the picture. */
+export const creditAsAttribution = (credit: EditorCredit): PictureAttribution => ({
+  source: "web",
+  ...manualCreditOf(credit),
+});
 
 /**
  * A card's attribution, as a field to spread into it: none on a card without
@@ -189,6 +263,7 @@ export const sameAttribution = (
     a.link === b.link &&
     a.originalUrl === b.originalUrl &&
     a.id === b.id &&
+    a.manual === b.manual &&
     (a.formerUrls ?? []).join("\n") === (b.formerUrls ?? []).join("\n")
   );
 };

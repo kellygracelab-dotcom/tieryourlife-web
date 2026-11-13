@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { errorOf, type ApiError } from "../api/errors";
+import { creditAsAttribution } from "../api/pictureAttribution";
 import type { PublishedList } from "../api/types";
 import { boards as site } from "../features/boards/owners";
 import type { BoardsRepository } from "../features/boards/repository";
@@ -13,6 +14,7 @@ import { report as sendReport, unpublish as unpublishList } from "../lib/api";
 import { isEditorial } from "../lib/editorial";
 import { fill, formatCount, strings } from "../strings";
 import { Button } from "../ui/Button";
+import { AboutPicture } from "../features/tierboard/AboutPicture";
 import { ResetPoolItem } from "../features/tierboard/ResetPoolItem";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
@@ -108,6 +110,34 @@ function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
 }
 
 /**
+ * About the cover picture: a house list's editor credits its cover, and the
+ * credit is read here, as a card's is in About the picture. Offered only when
+ * there is one.
+ */
+function CoverAboutItem({ list, onOpen }: { list: PublishedList; onOpen: () => void }) {
+  if (list.coverAttribution === undefined || list.coverImageUrl === null) return null;
+  return (
+    <li>
+      <button type="button" className="menu__action" aria-haspopup="dialog" onClick={onOpen}>
+        {strings.credit.coverAbout}
+      </button>
+    </li>
+  );
+}
+
+function CoverAbout({ list, onClose }: { list: PublishedList; onClose: () => void }) {
+  if (list.coverAttribution === undefined) return null;
+  return (
+    <AboutPicture
+      name={fill(strings.credit.coverOf, { name: list.title })}
+      attribution={creditAsAttribution(list.coverAttribution)}
+      imageUrl={list.coverImageUrl}
+      onClose={onClose}
+    />
+  );
+}
+
+/**
  * Who else ranked the list, as the app's menu has it: "Rankings · N", the one
  * place the number is said (Danylo, 01.11.2026), opening the sheet of them.
  */
@@ -189,6 +219,7 @@ function VisitorMenu({
     leave();
   };
   const reporting = useReporting({ report, notify, onDone: leave });
+  const [coverAbout, setCoverAbout] = useState(false);
 
   return (
     <>
@@ -208,6 +239,7 @@ function VisitorMenu({
             </li>
           )}
           <LinkItems list={list} notify={notify} />
+          <CoverAboutItem list={list} onOpen={() => setCoverAbout(true)} />
           {/* The head's own Save button, where a phone's head has no room for it. */}
           <li className="list-menu__narrow">
             <button type="button" className="menu__action" onClick={saving.start}>
@@ -238,6 +270,7 @@ function VisitorMenu({
         </>
       </Menu>
       {reporting.dialog}
+      {coverAbout && <CoverAbout list={list} onClose={() => setCoverAbout(false)} />}
     </>
   );
 }

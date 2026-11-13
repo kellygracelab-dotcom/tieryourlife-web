@@ -150,6 +150,28 @@ describe("parseApiError", () => {
         code: "PICTURE_REFUSED",
       },
     ],
+    // A house editor's credit refused: why, and the card or the cover it is on.
+    [
+      400,
+      json({ code: "BAD_ATTRIBUTION", reason: "NO_LICENSE", itemIndex: 2, error: "No licence" }),
+      {
+        kind: "invalid",
+        code: "BAD_ATTRIBUTION",
+        detail: "No licence",
+        why: "NO_LICENSE",
+        itemIndex: 2,
+      },
+    ],
+    [
+      400,
+      json({ code: "BAD_ATTRIBUTION", reason: "BAD_LINK", cover: true }),
+      { kind: "invalid", code: "BAD_ATTRIBUTION", detail: null, why: "BAD_LINK", cover: true },
+    ],
+    [
+      400,
+      json({ code: "BAD_ATTRIBUTION", itemIndex: -1 }),
+      { kind: "invalid", code: "BAD_ATTRIBUTION", detail: null },
+    ],
     // A house publication of a picture from a link without its page names the card.
     [
       422,

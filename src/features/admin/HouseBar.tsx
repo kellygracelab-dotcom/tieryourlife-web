@@ -9,7 +9,7 @@ import { Icon } from "../../ui/Icon";
 import { houseRequestOf } from "../boards/houseList";
 import type { Board } from "../boards/model";
 import { publishProblemsOf } from "../boards/publish";
-import { failureText, problemText, type HouseSend } from "./houseWords";
+import { creditRefusalText, failureText, problemText, type HouseSend } from "./houseWords";
 import "./house.css";
 
 /** The house's two ways out: a new list, or a new snapshot of one. */
@@ -97,7 +97,7 @@ export function HouseBar({
             : undefined;
         setFailure(
           card === undefined
-            ? failureText(error, kind)
+            ? (creditRefusalText(error, request) ?? failureText(error, kind))
             : fill(strings.link.linkNeeded, { name: card.title }),
         );
       },

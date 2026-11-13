@@ -12,6 +12,7 @@ import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { errorOf, type ApiError } from "../../api/errors";
 import type { Published, PublishRequest } from "../../api/lists";
+import { creditAsAttribution, type EditorCredit } from "../../api/pictureAttribution";
 import type { Topic } from "../../api/sections";
 import { useSession } from "../../app/session";
 import {
@@ -21,6 +22,7 @@ import {
   loadTopics,
   withdrawListRanking,
 } from "../../lib/api";
+import { fieldsOf } from "../../lib/editorCredit";
 import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import { holds } from "../../lib/locale";
 import { fill, plural, strings } from "../../strings";
@@ -32,9 +34,12 @@ import { pictureFailureText, type Upload } from "../editor/AddCardBox";
 import { uploadPicture } from "../../lib/pictures";
 import { failureText } from "../editor/failureText";
 import type { Section } from "../sections/model";
+import { PictureRows } from "../tierboard/AboutPicture";
+import { CreditForm } from "../tierboard/CreditForm";
 import {
   MAX_RANKED_TIERS,
   cleanTopicName,
+  coverCreditOf,
   DISPLAY_MODES,
   isBehind,
   isOut,
@@ -44,6 +49,7 @@ import {
   rankedTiers,
   setAnonymous,
   setCover,
+  setCoverCredit,
   setHeld,
   setPublished,
   setRanking,
@@ -117,6 +123,8 @@ interface BoardSettingsProps {
    * goes out some other way (a house list), whose sheet then offers none of it.
    */
   publishing: PublishingDeps | null;
+  /** A house board: its cover of one picture takes the editor's own credit here. */
+  house?: boolean;
   upload?: Upload;
   topics?: LoadTopics;
   /** One topic by its id: whether a proposed one still waits. */
@@ -220,6 +228,45 @@ function RowButton({
  * made; publishing is the one that waits on the network and says why when it
  * cannot.
  */
+/**
+ * About the cover picture, on a house board: the editor's own credit for a
+ * cover of one picture, shown as About the picture shows a card's, and
+ * given, changed or taken off here. It goes out with the next publish or
+ * update, and stays with this cover only.
+ */
+function CoverCreditPanel({
+  credit,
+  onCredit,
+}: {
+  credit: EditorCredit | null;
+  onCredit: (credit: EditorCredit | null) => void;
+}) {
+  const [form, setForm] = useState(false);
+  const attribution = credit === null ? null : creditAsAttribution(credit);
+  return (
+    <section className="board-settings__credit" aria-label={strings.credit.coverAbout}>
+      <p className="sheet-pick__note">{strings.credit.coverAbout}</p>
+      {form ? (
+        <CreditForm
+          initial={fieldsOf(attribution)}
+          editing={{
+            save: onCredit,
+            remove: credit === null ? undefined : () => onCredit(null),
+          }}
+          onDone={() => setForm(false)}
+        />
+      ) : (
+        <>
+          <PictureRows attribution={attribution} />
+          <Button icon="edit" onClick={() => setForm(true)}>
+            {credit === null ? strings.credit.add : strings.credit.edit}
+          </Button>
+        </>
+      )}
+    </section>
+  );
+}
+
 export function BoardSettings({
   board,
   latest,
@@ -232,6 +279,7 @@ export function BoardSettings({
   onNewTier,
   onPublished,
   publishing,
+  house = false,
   upload = uploadPicture,
   topics: load = loadTopics,
   findTopic = loadTopic,
@@ -1028,6 +1076,13 @@ export function BoardSettings({
                     className="board-settings__cover-preview"
                     src={chosen[0]}
                     alt={strings.boards.cover}
+                  />
+                )}
+                {house && chosen.length === 1 && (
+                  <CoverCreditPanel
+                    key={chosen[0]}
+                    credit={coverCreditOf(board) ?? null}
+                    onCredit={(given) => keep(setCoverCredit(latest(), given, now()))}
                   />
                 )}
                 <input

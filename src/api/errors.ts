@@ -42,6 +42,10 @@ export type ApiError =
       field?: string;
       /** The section of the topic a name is taken by, when the backend says. */
       section?: string;
+      /** BAD_ATTRIBUTION: the card of a house publication whose editor's credit was refused. */
+      itemIndex?: number;
+      /** BAD_ATTRIBUTION: the cover's credit was refused. */
+      cover?: true;
     }
   /**
    * `imageUrl`: the address as sent, when the refused picture came from another site (QA S11).
@@ -94,6 +98,8 @@ interface ErrorBody {
   because?: unknown;
   imageUrl?: unknown;
   itemIndex?: unknown;
+  reason?: unknown;
+  cover?: unknown;
   quota?: unknown;
   board?: unknown;
   mergedInto?: unknown;
@@ -111,6 +117,10 @@ function bodyOf(text: string): ErrorBody {
 }
 
 const stringOrNull = (value: unknown): string | null => (typeof value === "string" ? value : null);
+
+/** A place in what was sent, or null for anything that cannot be one. */
+const indexOrNull = (value: unknown): number | null =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 
 /** What any rejection means to a page: an API's own refusal, or nothing it can name. */
 export const errorOf = (reason: unknown): ApiError =>
@@ -147,6 +157,19 @@ export function parseApiError(
       const id = stringOrNull(body.id);
       const why = stringOrNull(body.why);
       const field = stringOrNull(body.detail);
+      // A house editor's credit refused: why (`reason`), and the card or the cover it is on.
+      if (code === "BAD_ATTRIBUTION") {
+        const reason = stringOrNull(body.reason);
+        const itemIndex = indexOrNull(body.itemIndex);
+        return {
+          kind: "invalid",
+          detail: stringOrNull(body.error),
+          code,
+          ...(reason === null ? {} : { why: reason }),
+          ...(body.cover === true ? { cover: true as const } : {}),
+          ...(body.cover !== true && itemIndex !== null ? { itemIndex } : {}),
+        };
+      }
       return {
         kind: "invalid",
         detail: stringOrNull(body.error),
@@ -215,17 +238,14 @@ export function parseApiError(
     // A kept picture says why by its code: TOO_BIG, KEEP_LIMIT…
     case 422: {
       const imageUrl = stringOrNull(body.imageUrl);
-      const itemIndex =
-        typeof body.itemIndex === "number" && Number.isSafeInteger(body.itemIndex)
-          ? body.itemIndex
-          : null;
+      const itemIndex = indexOrNull(body.itemIndex);
       const quota = quotaOf(body.quota);
       return {
         kind: "pictureRefused",
         because: stringOrNull(body.because) ?? code,
         ...(imageUrl === null ? {} : { imageUrl }),
         ...(code === null ? {} : { code }),
-        ...(itemIndex === null || itemIndex < 0 ? {} : { itemIndex }),
+        ...(itemIndex === null ? {} : { itemIndex }),
         ...(quota === null ? {} : { quota }),
       };
     }

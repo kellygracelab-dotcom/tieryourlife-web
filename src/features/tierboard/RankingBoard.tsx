@@ -18,6 +18,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import type { ApiError } from "../../api/errors";
+import type { EditorCredit } from "../../api/pictureAttribution";
 import type { SavedRanking } from "../../api/rank";
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import { useSession } from "../../app/session";
@@ -46,6 +47,7 @@ import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
 import { AboutButton, AboutPicture, hasAbout, openPage, pageOf, type Anchor } from "./AboutPicture";
+import { CardCredit } from "./cardCredit";
 import { flyIn } from "./flight";
 import { arrange } from "./arrange";
 import { DOUBLE_TAP_MS, type DragState } from "./drag";
@@ -119,6 +121,11 @@ export interface EditMode {
     fresh?: number | null;
     /** The tools start open: a draft is coming back after a sign-in. */
     toolsOpen?: boolean;
+    /**
+     * A house board's: the editor's own credit for a card's picture, by the
+     * card's number, or null to take it off, from About the picture.
+     */
+    credit?: (item: number, credit: EditorCredit | null) => void;
   };
 }
 
@@ -280,8 +287,10 @@ const Tile = memo(function Tile({
   // not send on every phone, and a drag between them sends no click at all.
   const lastClick = useRef(0);
   const opener = useRef<HTMLButtonElement>(null);
+  // On a house board every picture can be given the editor's own credit.
+  const credit = useContext(CardCredit);
   if (card === undefined) return null;
-  const knows = card.imageUrl !== null && hasAbout(card);
+  const knows = card.imageUrl !== null && (hasAbout(card) || credit !== null);
   const page = card.imageUrl === null ? null : pageOf(card);
   const cardAt = (): Anchor | null => opener.current?.getBoundingClientRect() ?? null;
   const openCredits = knows ? () => setAbout(cardAt() ?? { x: 0, y: 0 }) : undefined;
@@ -384,6 +393,14 @@ const Tile = memo(function Tile({
           attribution={card.attribution}
           credit={card.credit}
           anchor={about}
+          editing={
+            credit === null
+              ? undefined
+              : {
+                  save: (given) => credit(item, given),
+                  remove: card.attribution?.manual === true ? () => credit(item, null) : undefined,
+                }
+          }
           onClose={() => {
             setMoving(null);
             setAbout(null);
@@ -609,6 +626,16 @@ export function RankingBoard({
   });
   const removeCard = useCallback((item: number) => removeNow.current?.(item), []);
   const onRemove = edit?.owner?.remove === undefined ? undefined : removeCard;
+  // The same for a house editor's credit, handed to the tiles that open About the picture.
+  const creditNow = useRef(edit?.owner?.credit);
+  useEffect(() => {
+    creditNow.current = edit?.owner?.credit;
+  });
+  const creditCard = useCallback(
+    (item: number, given: EditorCredit | null) => creditNow.current?.(item, given),
+    [],
+  );
+  const cardCredit = edit?.owner?.credit === undefined ? null : creditCard;
   const selected = state.selected;
   const selectedTitle = selected === null ? null : (list.items[selected]?.title ?? null);
   const section = useRef<HTMLElement>(null);
@@ -1143,7 +1170,8 @@ export function RankingBoard({
     </div>
   );
 
-  return (
+  // The board, its tiles told whether a house editor may credit their pictures.
+  const drawn = (
     <section
       className={["ranking", docked && "ranking--under", lifted !== null && "ranking--drag"]
         .filter(Boolean)
@@ -1431,6 +1459,7 @@ export function RankingBoard({
       />
     </section>
   );
+  return <CardCredit.Provider value={cardCredit}>{drawn}</CardCredit.Provider>;
 }
 
 /**

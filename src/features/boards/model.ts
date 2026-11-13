@@ -4,7 +4,13 @@ import {
   type BoardOrigin,
   type RankingChoice,
 } from "../../api/boards";
-import { attributionField, type PictureAttribution } from "../../api/pictureAttribution";
+import {
+  attributionField,
+  withEditorCredit,
+  withoutEditorCredit,
+  type EditorCredit,
+  type PictureAttribution,
+} from "../../api/pictureAttribution";
 import { PICTURE_CREDIT_LIMIT, creditOf } from "../../api/pictureCredit";
 export { creditOf } from "../../api/pictureCredit";
 import { holds } from "../../lib/locale";
@@ -151,6 +157,19 @@ export interface Board {
   heldForReview?: boolean;
   /** A game of Play in progress, kept in the account as the app keeps it; null when none is. */
   play: SyncedPlay | null;
+  /**
+   * A house board's only: the editor's credit for its cover, null to take it
+   * off, tied to the one cover picture it was given for, so another cover
+   * does not carry it. Absent says nothing, and the list keeps its own.
+   * Never kept in the account.
+   */
+  coverCredit?: CoverCredit;
+}
+
+/** The editor's credit for a house board's cover, and the cover picture it is for. */
+export interface CoverCredit {
+  url: string;
+  credit: EditorCredit | null;
 }
 
 /** What a card is made from: enough for a tile. */
@@ -431,7 +450,10 @@ export function coverPictureOf(board: Board, pictures: readonly string[]): strin
   return only === board.coverImageUrl ? board.coverPictureId : null;
 }
 
-/** No pictures leave the cover to the cards, one is the cover itself, two to six make a collage. */
+/**
+ * No pictures leave the cover to the cards, one is the cover itself, two to
+ * six make a collage. Another cover drops the editor's credit for the old one.
+ */
 export function setCover(board: Board, pictures: readonly string[], now: number): Board {
   const chosen = [...new Set(pictures)].slice(0, 6);
   if (
@@ -439,9 +461,10 @@ export function setCover(board: Board, pictures: readonly string[], now: number)
     (chosen.length > 0 || (board.coverPictureId === null && board.coverImageUrl === null))
   )
     return board;
+  const { coverCredit, ...uncredited } = board;
   return touched(
     {
-      ...board,
+      ...(chosen.length === 1 && coverCredit?.url === chosen[0] ? board : uncredited),
       coverImageUrls: chosen,
       coverImageUrl: chosen.length === 1 ? (chosen[0] ?? null) : null,
       coverPictureId: coverPictureOf(board, chosen),
@@ -593,6 +616,47 @@ export function setPicture(
     cover.filter((url) => url !== old),
     now,
   );
+}
+
+/**
+ * A house editor's own credit on a card's picture, or, with null, the credit
+ * taken off. A card without a picture has nothing to credit.
+ */
+export function setCardCredit(
+  board: Board,
+  itemUid: string,
+  credit: EditorCredit | null,
+  now: number,
+): Board {
+  const card = board.items.find((item) => item.uid === itemUid && item.deletedAt === null);
+  if (card === undefined || card.imageUrl === null) return board;
+  let attribution: PictureAttribution;
+  if (credit !== null) {
+    attribution = withEditorCredit(card.attribution, credit, card.pictureId !== null);
+  } else if (card.attribution?.manual === true) {
+    attribution = withoutEditorCredit(card.attribution);
+  } else return board;
+  const items = board.items.map((item) => (item === card ? { ...item, attribution } : item));
+  return touched({ ...board, items }, now);
+}
+
+/**
+ * A house editor's own credit on the cover, or, with null, the cover's credit
+ * taken off: only a cover of one picture has one.
+ */
+export function setCoverCredit(board: Board, credit: EditorCredit | null, now: number): Board {
+  const [url] = board.coverImageUrls;
+  if (board.coverImageUrls.length !== 1 || url === undefined) return board;
+  return touched({ ...board, coverCredit: { url, credit } }, now);
+}
+
+/** The editor's credit for the board's cover as it stands; undefined says nothing of it. */
+export function coverCreditOf(board: Board): EditorCredit | null | undefined {
+  const [url] = board.coverImageUrls;
+  const kept = board.coverCredit;
+  return board.coverImageUrls.length === 1 && kept !== undefined && kept.url === url
+    ? kept.credit
+    : undefined;
 }
 
 /** A card to the front of the pool, the rest after it in their order: a card just made is seen first. */

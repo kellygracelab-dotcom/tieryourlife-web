@@ -1,4 +1,4 @@
-import type { PictureAttribution } from "./pictureAttribution";
+import type { EditorCredit, PictureAttribution } from "./pictureAttribution";
 
 export const CATEGORIES = [
   "anime",
@@ -114,6 +114,8 @@ export interface PublishedList extends ListSummary {
    * only its author and moderators, and its link nobody else yet.
    */
   underReview?: boolean;
+  /** A house list's editor's credit for its cover (CONTRACT, Editor's credit); absent for none. */
+  coverAttribution?: EditorCredit;
 }
 
 // A type rather than an interface so it can travel as a query object.

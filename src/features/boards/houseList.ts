@@ -1,9 +1,10 @@
 import type { PublishRequest } from "../../api/lists";
+import { manualCreditOf } from "../../api/pictureAttribution";
 import type { PublishedList } from "../../api/types";
 import { publishedPictureOf } from "../../lib/pictures";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { arrange } from "../tierboard/arrange";
-import type { Board, NextUid } from "./model";
+import { coverCreditOf, type Board, type NextUid } from "./model";
 import { boardFromList, publishRequestOf } from "./publish";
 
 /**
@@ -173,10 +174,18 @@ export function hasUnsentEdits(board: Board, store: KeyValueStore = localStorage
  * picture is one the backend already copied for this list goes by that
  * copy's id: a replace keeps only the copies it names by id, and a card
  * naming its copy by address would lose it the moment the list is replaced.
+ * The editor's credits go with it: each card's on its attribution, the
+ * cover's as coverAttribution while the cover is the one it was given for.
  */
 export function houseRequestOf(board: Board, listId: string | null): PublishRequest | null {
-  const request = publishRequestOf(board);
-  if (request === null || listId === null) return request;
+  const own = publishRequestOf(board);
+  if (own === null) return null;
+  const coverCredit = coverCreditOf(board);
+  const request: PublishRequest =
+    coverCredit === undefined
+      ? own
+      : { ...own, coverAttribution: coverCredit === null ? null : manualCreditOf(coverCredit) };
+  if (listId === null) return request;
   return {
     ...request,
     items: request.items.map((item) => {
@@ -191,13 +200,24 @@ export function houseRequestOf(board: Board, listId: string | null): PublishRequ
 
 /**
  * A house list as a board to edit it on: its cards in the tiers they stand
- * in, its section and its topic. Nobody's name goes on it: the house has none.
+ * in, its section, its topic, and its cover with the editor's credit for it.
+ * Nobody's name goes on it: the house has none.
  */
 export function boardFromHouseList(list: PublishedList, now: number, nextUid: NextUid): Board {
   const theirs = arrange(list);
   const board = boardFromList(list, theirs.known ? theirs.rows : null, now, nextUid);
+  const cover = list.coverImageUrl;
   return {
     ...board,
+    ...(cover === null
+      ? {}
+      : {
+          coverImageUrl: cover,
+          coverImageUrls: [cover],
+          ...(list.coverAttribution === undefined
+            ? {}
+            : { coverCredit: { url: cover, credit: list.coverAttribution } }),
+        }),
     authorName: null,
     topic:
       list.topicId === null || list.topicId === undefined

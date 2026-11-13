@@ -1439,3 +1439,168 @@ describe("BoardPage: pictures from links", () => {
     expect(liveItems(repository.get("films")!).map((item) => item.title)).not.toContain("Dune");
   });
 });
+
+describe("BoardPage: the editor's credits on a house list", () => {
+  const POSTER = "https://image.tmdb.org/t/p/w500/witch.jpg";
+  const pictured = () => {
+    const next = uids();
+    const b = addToPool(
+      { ...newBoard("films", "Films", 100, next), category: "film_tv" },
+      [
+        {
+          title: "The Witch",
+          imageUrl: POSTER,
+          attribution: { source: "tmdb", id: "tmdb:movie:2" },
+        },
+      ],
+      100,
+      next,
+    );
+    return b;
+  };
+  const sending = (): HouseSending => ({
+    publish: vi.fn(() => Promise.resolve({ id: "H1", topicId: null })),
+    replace: vi.fn((id: string) => Promise.resolve({ id, topicId: null })),
+  });
+  const aboutOf = async (name: string) => {
+    await userEvent.dblClick(screen.getByRole("button", { name }));
+    const menu = screen.getByRole("menu", { name });
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "About the picture" }));
+    return screen.getByRole("dialog", { name });
+  };
+
+  it("credits a card's picture in About the picture, and sends it with the update", async () => {
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save(pictured());
+    const houseStore = memoryStore();
+    linkToHouse("films", "H1", houseStore);
+    const house = sending();
+    open(boardsRepository(memoryStore()), "/b/films", { house, houseStore, houseRepository });
+
+    const about = await aboutOf("The Witch");
+    await userEvent.click(within(about).getByRole("button", { name: "Add credit" }));
+    expect(within(about).getByRole("button", { name: "Save credit" })).toBeDisabled();
+    await userEvent.type(within(about).getByRole("textbox", { name: "Author" }), "Jane");
+    await userEvent.selectOptions(within(about).getByRole("combobox", { name: "Licence" }), [
+      "CC BY 4.0",
+    ]);
+    await userEvent.type(
+      within(about).getByRole("textbox", { name: "Source link" }),
+      "https://site.test/witch",
+    );
+    await userEvent.click(within(about).getByRole("button", { name: "Save credit" }));
+    expect(about).toHaveTextContent("Jane");
+    expect(within(about).getByRole("button", { name: "Edit credit" })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+
+    const credit = {
+      source: "tmdb",
+      id: "tmdb:movie:2",
+      manual: true,
+      author: "Jane",
+      license: "CC BY 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+      link: "https://site.test/witch",
+    };
+    expect(liveItems(houseRepository.get("films")!)[0]?.attribution).toEqual(credit);
+    await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
+    await screen.findByText("House list updated");
+    expect(vi.mocked(house.replace).mock.calls[0]?.[1].items[0]?.attribution).toEqual(credit);
+  });
+
+  it("credits the cover of one picture in the list's settings", async () => {
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save({ ...pictured(), coverImageUrls: [POSTER], coverImageUrl: POSTER });
+    const houseStore = memoryStore();
+    linkToHouse("films", "H1", houseStore);
+    const house = sending();
+    open(boardsRepository(memoryStore()), "/b/films", { house, houseStore, houseRepository });
+
+    await userEvent.click(await screen.findByRole("button", { name: "List settings" }));
+    const settings = screen.getByRole("dialog", { name: "List settings" });
+    await userEvent.click(within(settings).getByRole("button", { name: /Cover/ }));
+    const panel = within(settings).getByRole("region", { name: "About the cover picture" });
+    await userEvent.click(within(panel).getByRole("button", { name: "Add credit" }));
+    await userEvent.type(
+      within(panel).getByRole("textbox", { name: "Source link" }),
+      "https://www.flickr.com/photos/someone/123/",
+    );
+    expect(panel).toHaveTextContent("Author and licence will be read from this page");
+    await userEvent.click(within(panel).getByRole("button", { name: "Save credit" }));
+    expect(within(panel).getByRole("link", { name: "flickr.com" })).toBeInTheDocument();
+    await userEvent.click(within(settings).getByRole("button", { name: "Done" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
+    await screen.findByText("House list updated");
+    expect(vi.mocked(house.replace).mock.calls[0]?.[1].coverAttribution).toEqual({
+      manual: true,
+      link: "https://www.flickr.com/photos/someone/123/",
+    });
+  });
+
+  it("credits a card's picture from the ranked list too, and takes the credit off", async () => {
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save(setDisplayMode(pictured(), "FLAT_RANKED", 100));
+    const houseStore = memoryStore();
+    linkToHouse("films", "H1", houseStore);
+    open(boardsRepository(memoryStore()), "/b/films", {
+      house: sending(),
+      houseStore,
+      houseRepository,
+    });
+    await userEvent.click(await screen.findByRole("button", { name: /unranked/ }));
+    await userEvent.click(screen.getByRole("button", { name: /The Witch/ }));
+    const sheet = screen.getByRole("dialog", { name: "The Witch" });
+    await userEvent.click(within(sheet).getByRole("button", { name: "About the picture" }));
+    const about = screen.getByRole("dialog", { name: "The Witch" });
+    await userEvent.click(within(about).getByRole("button", { name: "Add credit" }));
+    await userEvent.selectOptions(within(about).getByRole("combobox", { name: "Licence" }), [
+      "Public domain",
+    ]);
+    await userEvent.type(
+      within(about).getByRole("textbox", { name: "Source link" }),
+      "https://site.test/witch",
+    );
+    await userEvent.click(within(about).getByRole("button", { name: "Save credit" }));
+    expect(liveItems(houseRepository.get("films")!)[0]?.attribution).toMatchObject({
+      manual: true,
+      license: "Public domain",
+    });
+    await userEvent.click(within(about).getByRole("button", { name: "Edit credit" }));
+    await userEvent.click(within(about).getByRole("button", { name: "Remove credit" }));
+    expect(liveItems(houseRepository.get("films")!)[0]?.attribution).toEqual({
+      source: "tmdb",
+      id: "tmdb:movie:2",
+      link: "https://site.test/witch",
+      manual: false,
+    });
+  });
+
+  it("offers no editing on a board of one's own, for a card or the cover", async () => {
+    const repository = boardsRepository(memoryStore());
+    const b = pictured();
+    repository.save({
+      ...b,
+      items: b.items.map((item) => ({
+        ...item,
+        attribution: { source: "tmdb", link: "https://www.themoviedb.org/movie/2" },
+      })),
+    });
+    open(repository, "/b/films");
+    const about = await aboutOf("The Witch");
+    expect(within(about).queryByRole("button", { name: "Add credit" })).toBeNull();
+    expect(within(about).queryByRole("button", { name: "Edit credit" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+
+    // Nor for its cover.
+    repository.save({
+      ...repository.get("films")!,
+      coverImageUrls: [POSTER],
+      coverImageUrl: POSTER,
+    });
+    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
+    const settings = screen.getByRole("dialog", { name: "List settings" });
+    await userEvent.click(within(settings).getByRole("button", { name: /Cover/ }));
+    expect(within(settings).queryByRole("region", { name: "About the cover picture" })).toBeNull();
+  });
+});

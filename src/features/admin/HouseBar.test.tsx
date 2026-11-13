@@ -72,3 +72,40 @@ describe("the house's publish of a picture from a link with no page", () => {
     expect(await screen.findByRole("alert")).not.toHaveTextContent("needs the page");
   });
 });
+
+describe("the house's publish of an editor's credit the backend would not keep", () => {
+  const refused = (body: { why?: string; itemIndex?: number; cover?: true }) =>
+    sendRefusing(
+      new ApiFailure({ kind: "invalid", detail: null, code: "BAD_ATTRIBUTION", ...body }),
+    );
+
+  it("names the card it is on, by its place in what was sent, and says why", async () => {
+    bar(refused({ why: "NO_LICENSE", itemIndex: 1 }));
+    await userEvent.click(screen.getByRole("button", { name: "Publish to House lists" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The credit for the picture of “Shoyu” wasn’t accepted: it has no licence. Choose one.",
+    );
+  });
+
+  it("says when it is the cover's", async () => {
+    bar(refused({ why: "UNKNOWN_LICENSE", cover: true }));
+    await userEvent.click(screen.getByRole("button", { name: "Publish to House lists" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The cover’s credit wasn’t accepted: its page names a licence a house list can’t use.",
+    );
+  });
+
+  it("says something even for a reason it does not know", async () => {
+    bar(refused({ why: "SOMETHING_NEW", itemIndex: 0 }));
+    await userEvent.click(screen.getByRole("button", { name: "Publish to House lists" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The credit for the picture of “Tonkotsu” wasn’t accepted: check it and try again.",
+    );
+  });
+
+  it("falls back to the plain refusal when it names neither", async () => {
+    bar(refused({ why: "TOO_LONG" }));
+    await userEvent.click(screen.getByRole("button", { name: "Publish to House lists" }));
+    expect(await screen.findByRole("alert")).not.toHaveTextContent("credit");
+  });
+});

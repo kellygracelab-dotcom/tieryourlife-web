@@ -1,5 +1,6 @@
 import type { ApiError } from "../../api/errors";
-import { strings } from "../../strings";
+import type { PublishRequest } from "../../api/lists";
+import { fill, strings } from "../../strings";
 import type { PublishProblem } from "../boards/publish";
 
 /** Whether a house list is going out for the first time, or over one already out. */
@@ -51,4 +52,27 @@ export function failureText(error: ApiError, kind: HouseSend): string {
       break;
   }
   return kind === "publish" ? strings.admin.houseFailed : strings.admin.houseReplaceFailed;
+}
+
+/** Why the backend would not keep an editor's credit (BAD_ATTRIBUTION), in words. */
+const WHY: Readonly<Record<string, keyof typeof strings.credit.why>> = {
+  NO_LICENSE: "noLicense",
+  UNKNOWN_LICENSE: "unknownLicense",
+  NO_LINK: "noLink",
+  BAD_LINK: "badLink",
+  BAD_LICENSE_URL: "badLicenseUrl",
+  TOO_LONG: "tooLong",
+};
+
+/**
+ * A refused editor's credit, said of the card it is on (by its place in what
+ * was sent) or of the cover; null for any other refusal, and for one that
+ * names neither.
+ */
+export function creditRefusalText(error: ApiError, request: PublishRequest): string | null {
+  if (error.kind !== "invalid" || error.code !== "BAD_ATTRIBUTION") return null;
+  const why = strings.credit.why[WHY[error.why ?? ""] ?? "other"];
+  if (error.cover === true) return fill(strings.credit.refusedCover, { why });
+  const card = error.itemIndex === undefined ? undefined : request.items[error.itemIndex];
+  return card === undefined ? null : fill(strings.credit.refused, { name: card.title, why });
 }
