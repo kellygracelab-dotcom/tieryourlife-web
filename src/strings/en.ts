@@ -1454,7 +1454,6 @@ export const en = {
     linkNeeded:
       "“{name}” needs the page its picture is from. Remove it and add it again from the picture’s link, with the page.",
     about: "About the picture",
-    aboutOf: "About the picture of {name}",
     openPage: "Open its page",
     photo: "Photo",
     licence: "Licence",

@@ -256,54 +256,7 @@
   margin: 0 auto 12px;
 }
 
-/*
- * About the picture (docs/design-spec-picture-link.md, 5): the «i» at the
- * card's bottom end corner, on hover and on focus, and on touch for the
- * picked card; then the popover, 300 wide.
- */
-li:has(> .tile__about) {
-  position: relative;
-}
-
-.tile__about {
-  position: absolute;
-  inset-block-end: 2px;
-  inset-inline-end: 2px;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--ink) 72%, transparent);
-  color: #fff;
-  font:
-    700 14px/1 Georgia,
-    "Times New Roman",
-    serif;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 120ms ease;
-}
-
-li:hover > .tile__about,
-li:focus-within > .tile__about,
-.tile--selected ~ .tile__about,
-.tile__about:focus-visible {
-  opacity: 1;
-}
-
-.tile__about:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
-
-/* A card on its way somewhere: the «i» keeps out of the way. */
-.ranking--drag .tile__about {
-  display: none;
-}
-
+/* About the picture (docs/design-spec-picture-link.md, 5): the popover, 300 wide. */
 .scrim--clear {
   background: transparent;
 }

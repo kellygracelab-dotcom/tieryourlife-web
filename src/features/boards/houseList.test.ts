@@ -20,6 +20,7 @@ import {
   markHouseSent,
   NEW_HOUSE_PATH,
   unlinkFromHouse,
+  withServerCredits,
 } from "./houseList";
 import {
   addToPool,
@@ -401,5 +402,72 @@ describe("a house board's list revision", () => {
     markHouseRevision("unknown", 2, store);
     await afterHouseTranslations("h1", () => Promise.reject(new Error("offline")), store);
     expect(houseRevisionOf("unknown", store)).toBe(2);
+  });
+});
+
+describe("withServerCredits", () => {
+  const PIC = "https://img.test/fox.jpg";
+  const COVER = "https://img.test/cover.jpg";
+  const PAGE = "https://commons.wikimedia.org/wiki/File:Fox.jpg";
+  const credited = () => {
+    const next = uids();
+    const board = addToPool(
+      newBoard("b1", "Foxes", 10, next),
+      [{ title: "Fox", imageUrl: PIC }],
+      10,
+      next,
+    );
+    const uid = board.items[0]!.uid;
+    const withCard = setCardCredit(board, uid, { link: PAGE }, 20);
+    const withCover = setCoverCredit(setCover(withCard, [COVER], 30), { link: PAGE }, 40);
+    return { ...withCover, editedAt: 40 };
+  };
+  const filled = {
+    author: "Jane Roe",
+    license: "CC BY-SA 4.0",
+    licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",
+    link: PAGE,
+  };
+  const list = (over: Partial<PublishedList> = {}) =>
+    ({
+      id: "H1",
+      revision: 2,
+      items: [
+        {
+          title: "Fox",
+          imageUrl: PIC,
+          tierIndex: null,
+          attribution: { source: "web", manual: true, ...filled },
+        },
+      ],
+      coverAttribution: filled,
+      ...over,
+    }) as unknown as PublishedList;
+
+  it("takes the author and licence the server read for a card and the cover, and keeps the edit time", () => {
+    const board = credited();
+    const next = withServerCredits(board, list());
+    expect(next.items[0]?.attribution).toEqual({ source: "web", manual: true, ...filled });
+    expect(coverCreditOf(next)).toEqual(filled);
+    expect(next.editedAt).toBe(40);
+  });
+
+  it("leaves the board alone when nothing matches or nothing was filled in", () => {
+    const board = credited();
+    expect(withServerCredits(board, list({ items: [], coverAttribution: undefined }))).toBe(board);
+    const other = list({
+      items: [
+        {
+          title: "Wolf",
+          imageUrl: PIC,
+          tierIndex: null,
+          attribution: { source: "web", manual: true, ...filled },
+        },
+      ],
+      coverAttribution: { ...filled, link: "https://site.test/other" },
+    } as Partial<PublishedList>);
+    expect(withServerCredits(board, other)).toBe(board);
+    const once = withServerCredits(board, list());
+    expect(withServerCredits(once, list())).toBe(once);
   });
 });

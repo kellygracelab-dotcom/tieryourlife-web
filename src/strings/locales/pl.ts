@@ -1656,7 +1656,6 @@ const pl: Translation = {
     linkNeeded:
       "„{name}” potrzebuje strony, z której pochodzi obraz. Usuń kartę i dodaj ją ponownie z linku do obrazu, podając stronę.",
     about: "O obrazie",
-    aboutOf: "O obrazie: {name}",
     openPage: "Otwórz jego stronę",
     photo: "Zdjęcie",
     licence: "Licencja",

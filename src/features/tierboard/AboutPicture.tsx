@@ -12,7 +12,7 @@ import { createPortal } from "react-dom";
 import type { PictureAttribution } from "../../api/pictureAttribution";
 import { fieldsOf } from "../../lib/editorCredit";
 import { hostOf } from "../../lib/linkPictures";
-import { fill, strings } from "../../strings";
+import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { MediaImage } from "../../ui/MediaImage";
 import { useModal } from "../../ui/useModal";
@@ -248,25 +248,6 @@ export function AboutPicture({
       </div>
     </div>,
     document.body,
-  );
-}
-
-/** The «i» on a card: About the picture, from the pointer, the keyboard or a finger. */
-export function AboutButton({ name, onOpen }: { name: string; onOpen: (at: DOMRect) => void }) {
-  return (
-    <button
-      type="button"
-      className="tile__about"
-      aria-label={fill(strings.link.aboutOf, { name })}
-      aria-haspopup="dialog"
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => {
-        event.stopPropagation();
-        onOpen(event.currentTarget.getBoundingClientRect());
-      }}
-    >
-      <span aria-hidden="true">i</span>
-    </button>
   );
 }
 

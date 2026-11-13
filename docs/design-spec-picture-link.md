@@ -114,11 +114,12 @@ it’s from». Name is 16 px so iOS does not zoom.
 The data is `attribution {source, author?, license?, licenseUrl?, link?,
 originalUrl?}` (Proxy #112).
 
-- An **«i» button** (24 px, ink at 72%, white icon) sits at the bottom end
-  corner of a card.
-  - It shows on hover and on focus, and on touch for the picked card.
-  - It shows only when the card has an attribution or a credit.
-  - Its label is «About the picture of {name}».
+- **No badge on the card** (Danylo, 14.11.2026: the «i» is not to show). About
+  the picture opens from the card itself:
+  - a double click or double tap opens the card's menu, with «About the picture»
+    at its foot (on a board one only looks at, the card large with its credit);
+  - the keyboard reaches the same menu by Shift+F10 or the menu key, and Enter
+    on a card one only looks at opens it.
 - A **right-click** on a card opens our own menu with «About the picture» and
   «Open its page». Shift + right-click leaves the browser’s menu.
 - The **popover** (300 wide, 16 radius) shows:

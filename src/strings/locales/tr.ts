@@ -1463,7 +1463,6 @@ const tr: Translation = {
     linkNeeded:
       "“{name}” için görselin geldiği sayfa gerekiyor. Kartı kaldırıp görselin bağlantısıyla, sayfasıyla birlikte yeniden ekleyin.",
     about: "Görsel hakkında",
-    aboutOf: "{name} görseli hakkında",
     openPage: "Sayfasını aç",
     photo: "Fotoğraf",
     licence: "Lisans",

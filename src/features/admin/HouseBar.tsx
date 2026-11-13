@@ -23,7 +23,7 @@ import "./house.css";
 
 /** The house's two ways out: a new list, or a new snapshot of one. */
 /** What a send answers, and the list's own updatedAt when it could be read back after. */
-export type HouseSent = HouseAnswer & { updatedAt?: number };
+export type HouseSent = HouseAnswer & { updatedAt?: number; list?: PublishedList };
 
 export interface HouseSending {
   publish: (request: PublishRequest) => Promise<HouseSent>;
@@ -39,7 +39,7 @@ export interface HouseSending {
  */
 const readBack = (answer: HouseAnswer): Promise<HouseSent> =>
   loadListAsWritten(answer.id).then(
-    (list) => ({ ...answer, updatedAt: list.updatedAt }),
+    (list) => ({ ...answer, updatedAt: list.updatedAt, list }),
     () => answer,
   );
 
@@ -71,6 +71,8 @@ export interface HouseBarProps {
     id: string,
     updatedAt: number | null,
     revision: number | null,
+    /** The list as read back after it went out, when it was. */
+    list?: PublishedList | null,
   ) => void;
   /** The list it updated was taken down elsewhere: the board is a new house list again. */
   onGone: () => void;
@@ -154,6 +156,7 @@ export function HouseBar({
           answer.id,
           answer.updatedAt ?? null,
           answer.revision ?? null,
+          answer.list ?? null,
         );
       },
       (reason: unknown) => {

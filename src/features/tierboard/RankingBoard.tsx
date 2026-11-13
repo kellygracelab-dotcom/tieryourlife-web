@@ -46,7 +46,7 @@ import { Icon } from "../../ui/Icon";
 import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
-import { AboutButton, AboutPicture, hasAbout, openPage, pageOf, type Anchor } from "./AboutPicture";
+import { AboutPicture, hasAbout, openPage, pageOf, type Anchor } from "./AboutPicture";
 import { CardCredit } from "./cardCredit";
 import { flyIn } from "./flight";
 import { arrange } from "./arrange";
@@ -386,7 +386,6 @@ const Tile = memo(function Tile({
           <CardName title={card.title} board={board} wide />
         )}
       </button>
-      {knows && <AboutButton name={card.title} onOpen={(at) => setAbout(at)} />}
       {about !== null && (
         <AboutPicture
           name={card.title}
@@ -1061,12 +1060,9 @@ export function RankingBoard({
     ],
   );
   const keyboardTiers = Math.min(list.tiers.length, 9);
-  // On a phone the pool is one scrolling row with dots under it.
-  // The tray waits out a double tap before it scrolls, or the second tap lands on another card.
+  // On a phone the pool is one scrolling row with dots under it; picking a card leaves it where it is.
   const { tray, page, pages, readPage } = useTray(
-    selected,
     !wide && rows > 1 ? Math.ceil(shown.length / 2) : shown.length,
-    DOUBLE_TAP_MS,
   );
   const picked = selected !== null && left.includes(selected);
   const allPlaced = left.length === 0 && finish.status !== "done";

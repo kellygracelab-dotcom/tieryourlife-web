@@ -94,7 +94,7 @@ describe("the house's Update over a list that may have moved on", () => {
       ...houseRequestOf(b, "h1"),
       baseRevision: 3,
     });
-    await waitFor(() => expect(onSent).toHaveBeenCalledWith("updated", "h1", null, 4));
+    await waitFor(() => expect(onSent).toHaveBeenCalledWith("updated", "h1", null, 4, null));
   });
 
   it("sends none when the board's revision is not known, and none with a first publish", async () => {
@@ -107,7 +107,7 @@ describe("the house's Update over a list that may have moved on", () => {
     const { onSent } = bar(send, { base: 7 });
     await userEvent.click(screen.getByRole("button", { name: "Publish to House lists" }));
     expect(vi.mocked(send.publish).mock.calls[0]![0]).not.toHaveProperty("baseRevision");
-    await waitFor(() => expect(onSent).toHaveBeenCalledWith("published", "h1", null, 1));
+    await waitFor(() => expect(onSent).toHaveBeenCalledWith("published", "h1", null, 1, null));
   });
 
   it("says the list changed on the server, and loads it as it stands only when asked", async () => {
@@ -174,7 +174,7 @@ describe("the house's Update over a list that may have moved on", () => {
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(send.replace).toHaveBeenCalledTimes(2);
     expect(vi.mocked(send.replace).mock.calls[1]![1]).toMatchObject({ baseRevision: 3 });
-    await waitFor(() => expect(onSent).toHaveBeenCalledWith("updated", "h1", null, 4));
+    await waitFor(() => expect(onSent).toHaveBeenCalledWith("updated", "h1", null, 4, null));
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 
@@ -304,7 +304,7 @@ describe("the house's send held back by its pictures", () => {
     // Exactly as it went: the same body, the same revision it stood on.
     expect(send.replace.mock.calls[1]).toEqual(send.replace.mock.calls[0]);
     expect(send.replace.mock.calls[1]![1]).toMatchObject({ baseRevision: 3 });
-    expect(p.onSent).toHaveBeenCalledWith("updated", "h1", null, 4);
+    expect(p.onSent).toHaveBeenCalledWith("updated", "h1", null, 4, null);
   });
 
   it("gives up after five tries, and leaves Try again to the editor", async () => {
