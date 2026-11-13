@@ -634,6 +634,44 @@ describe("ListPage", () => {
     expect(screen.queryByText(/Danylo/)).toBeNull();
   });
 
+  it("tells about a house list's cover picture, as its editor credited it", async () => {
+    mocks.loadList.mockResolvedValue({
+      ...list,
+      authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2",
+      coverImageUrl: "https://img.test/cover.jpg",
+      coverAttribution: {
+        author: "Jane",
+        license: "CC BY 4.0",
+        licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+        link: "https://commons.wikimedia.org/wiki/File:Cover.jpg",
+      },
+    });
+    open();
+    const title = await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "About the cover picture" }));
+    const about = screen.getByRole("dialog", { name: `Cover of ${title.textContent}` });
+    expect(about).toHaveTextContent("Jane");
+    expect(within(about).getByRole("link", { name: "CC BY 4.0" })).toHaveAttribute(
+      "href",
+      "https://creativecommons.org/licenses/by/4.0/",
+    );
+    expect(within(about).getByRole("link", { name: "commons.wikimedia.org" })).toBeInTheDocument();
+    // Only read here: nothing to edit.
+    expect(within(about).queryByRole("button", { name: "Add credit" })).toBeNull();
+    expect(within(about).queryByRole("button", { name: "Edit credit" })).toBeNull();
+    await userEvent.click(within(about).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog", { name: /^Cover of/ })).toBeNull();
+  });
+
+  it("offers nothing about the cover of a list with no credit for it", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, coverImageUrl: "https://img.test/cover.jpg" });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    expect(screen.queryByRole("button", { name: "About the cover picture" })).toBeNull();
+  });
+
   it("names the author without a link and offers no Follow when the list came without their uid", async () => {
     mocks.loadList.mockResolvedValue({ ...list, authorUid: "" });
     open();

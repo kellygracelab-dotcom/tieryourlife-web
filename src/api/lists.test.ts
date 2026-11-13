@@ -118,6 +118,40 @@ describe("lists", () => {
     expect(opened.items.map((item) => item.imageUrl)).toEqual([null, "https://img/b.jpg", null]);
   });
 
+  it("reads a house list's credit for its cover, cleaned, and none without a cover", async () => {
+    const credit = {
+      manual: true,
+      author: " Jane ",
+      license: "CC BY 4.0",
+      link: "https://commons.wikimedia.org/wiki/File:Fox.jpg",
+    };
+    const list = {
+      id: "h1",
+      title: "Foxes",
+      coverImageUrl: "https://img/fox.jpg",
+      previewImages: [],
+      tiers: [],
+      items: [],
+      coverAttribution: credit,
+    };
+    const opened = await loadList(recordingClient(list).client, "h1");
+    expect(opened.coverAttribution).toEqual({
+      author: "Jane",
+      license: "CC BY 4.0",
+      link: "https://commons.wikimedia.org/wiki/File:Fox.jpg",
+    });
+    const coverless = await loadList(
+      recordingClient({ ...list, coverImageUrl: null }).client,
+      "h1",
+    );
+    expect(coverless).not.toHaveProperty("coverAttribution");
+    const broken = await loadList(
+      recordingClient({ ...list, coverAttribution: { license: "CC0 1.0" } }).client,
+      "h1",
+    );
+    expect(broken).not.toHaveProperty("coverAttribution");
+  });
+
   it("republishes one list in place, escaping the id", async () => {
     const { client, request } = recordingClient({ id: "a b" });
     const body: PublishRequest = {

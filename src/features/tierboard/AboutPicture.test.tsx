@@ -248,3 +248,117 @@ describe("the right-click menu of a card one only looks at", () => {
     expect(onClose).toHaveBeenCalledTimes(4);
   });
 });
+
+describe("About the picture on a house board", () => {
+  const COMMONS = "https://commons.wikimedia.org/wiki/File:Red_fox.jpg";
+  const open = (
+    attribution: Parameters<typeof AboutPicture>[0]["attribution"],
+    remove?: () => void,
+  ) => {
+    const save = vi.fn();
+    render(
+      <AboutPicture
+        name="Fox"
+        attribution={attribution}
+        editing={{ save, remove }}
+        onClose={vi.fn()}
+      />,
+    );
+    return { save, dialog: screen.getByRole("dialog", { name: "Fox" }) };
+  };
+
+  it("gives a picture with no credit one: Save waits for the licence and the link, and says so", async () => {
+    const { save, dialog } = open({ source: "web" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add credit" }));
+    const saveButton = within(dialog).getByRole("button", { name: "Save credit" });
+    expect(saveButton).toBeDisabled();
+    expect(within(dialog).getByRole("status")).toHaveTextContent(
+      "Choose a licence. Add the source link: the page the picture is on.",
+    );
+    expect(within(dialog).queryByRole("button", { name: "Remove credit" })).toBeNull();
+
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Author" }), "Jane");
+    await userEvent.selectOptions(within(dialog).getByRole("combobox", { name: "Licence" }), [
+      "CC BY-SA 3.0",
+    ]);
+    const link = within(dialog).getByRole("textbox", { name: "Source link" });
+    await userEvent.type(link, "http://site.test/fox");
+    expect(within(dialog).getByRole("status")).toHaveTextContent(
+      "The source link has to be a web page starting with https://.",
+    );
+    await userEvent.clear(link);
+    await userEvent.type(link, "https://site.test/fox");
+    expect(within(dialog).queryByRole("status")).toBeNull();
+    expect(saveButton).toBeEnabled();
+    await userEvent.click(saveButton);
+    expect(save).toHaveBeenCalledWith({
+      author: "Jane",
+      license: "CC BY-SA 3.0",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0/",
+      link: "https://site.test/fox",
+    });
+    // Back to the picture, with the way to change it again.
+    expect(within(dialog).getByRole("button", { name: "Add credit" })).toBeInTheDocument();
+  });
+
+  it("names its licences in words where they are words", async () => {
+    const { dialog } = open({ source: "web" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add credit" }));
+    const options = within(within(dialog).getByRole("combobox", { name: "Licence" }))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(options[0]).toBe("Choose a licence");
+    expect(options.slice(-2)).toEqual(["Public domain", "Used with permission"]);
+    expect(options).toContain("CC BY 1.0");
+  });
+
+  it("saves only the link of a Commons file, saying the backend reads the rest", async () => {
+    const { save, dialog } = open(null);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add credit" }));
+    await userEvent.type(within(dialog).getByRole("textbox", { name: "Source link" }), COMMONS);
+    expect(dialog).toHaveTextContent(
+      "Author and licence will be read from this page if you leave them empty",
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save credit" }));
+    expect(save).toHaveBeenCalledWith({ link: COMMONS });
+  });
+
+  it("edits the editor's credit from where it stands, or takes it off", async () => {
+    const remove = vi.fn();
+    const { save, dialog } = open(
+      {
+        source: "igdb",
+        manual: true,
+        author: "Jane",
+        license: "CC0 1.0",
+        link: "https://site.test/witcher",
+      },
+      remove,
+    );
+    // The editor's page stands where IGDB.com would.
+    expect(within(dialog).getByRole("link", { name: "site.test" })).toHaveAttribute(
+      "href",
+      "https://site.test/witcher",
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Edit credit" }));
+    expect(within(dialog).getByRole("textbox", { name: "Author" })).toHaveValue("Jane");
+    expect(within(dialog).getByRole("combobox", { name: "Licence" })).toHaveValue("CC0 1.0");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(save).not.toHaveBeenCalled();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Edit credit" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remove credit" }));
+    expect(remove).toHaveBeenCalledOnce();
+  });
+
+  it("offers no editing anywhere else", () => {
+    render(
+      <AboutPicture name="Fox" attribution={{ source: "web", link: COMMONS }} onClose={vi.fn()} />,
+    );
+    const dialog = screen.getByRole("dialog", { name: "Fox" });
+    expect(
+      within(dialog)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Close"]);
+  });
+});

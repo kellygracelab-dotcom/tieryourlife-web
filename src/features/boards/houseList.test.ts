@@ -14,7 +14,19 @@ import {
   NEW_HOUSE_PATH,
   unlinkFromHouse,
 } from "./houseList";
-import { addToPool, itemsIn, newBoard, poolTier, rankedTiers, setCategory } from "./model";
+import {
+  addToPool,
+  coverCreditOf,
+  itemsIn,
+  newBoard,
+  poolTier,
+  rankedTiers,
+  setCardCredit,
+  setCategory,
+  setCover,
+  setCoverCredit,
+} from "./model";
+import { parseBoard } from "./repository";
 import { publishRequestOf } from "./publish";
 
 const uids = () => {
@@ -170,5 +182,137 @@ describe("boardFromHouseList", () => {
       id: "t1",
       name: "",
     });
+  });
+});
+
+describe("the editor's credits on a house board", () => {
+  const COMMONS = "https://commons.wikimedia.org/wiki/File:Ramen.jpg";
+  const credit = { author: "Jane", license: "CC BY 4.0", link: COMMONS };
+  const board = () => {
+    const next = uids();
+    const filed = setCategory(newBoard("b1", "Ramen", 1, next), "food", 1);
+    return addToPool(
+      filed,
+      [
+        {
+          title: "Shoyu",
+          imageUrl: POSTER,
+          attribution: { source: "tmdb", id: "tmdb:movie:1", license: "x" },
+        },
+        { title: "Mine", imageUrl: "https://example.com/mine.jpg", pictureId: "own1" },
+        { title: "Miso", imageUrl: null },
+      ],
+      1,
+      next,
+    );
+  };
+  const uidOf = (b: ReturnType<typeof board>, title: string) =>
+    b.items.find((item) => item.title === title)!.uid;
+
+  it("sends a card's credit on its attribution, marked manual, keeping its source and id", () => {
+    const b = board();
+    const credited = setCardCredit(
+      setCardCredit(b, uidOf(b, "Shoyu"), credit, 2),
+      uidOf(b, "Mine"),
+      { license: "Used with permission", link: "https://site.test/p" },
+      3,
+    );
+    const items = houseRequestOf(credited, "h1")!.items;
+    expect(items[0]!.attribution).toEqual({
+      source: "tmdb",
+      id: "tmdb:movie:1",
+      manual: true,
+      author: "Jane",
+      license: "CC BY 4.0",
+      link: COMMONS,
+    });
+    // An uploaded picture is "web".
+    expect(items[1]!.attribution).toEqual({
+      source: "web",
+      manual: true,
+      license: "Used with permission",
+      link: "https://site.test/p",
+    });
+    // A card with no picture has nothing to credit.
+    expect(setCardCredit(credited, uidOf(b, "Miso"), credit, 4)).toBe(credited);
+  });
+
+  it("takes a card's credit off with manual false, keeping its page", () => {
+    const b = board();
+    const credited = setCardCredit(b, uidOf(b, "Shoyu"), credit, 2);
+    const removed = setCardCredit(credited, uidOf(b, "Shoyu"), null, 3);
+    expect(houseRequestOf(removed, "h1")!.items[0]!.attribution).toEqual({
+      source: "tmdb",
+      id: "tmdb:movie:1",
+      link: COMMONS,
+      manual: false,
+    });
+    // Nothing to take off: the board stays as it is.
+    expect(setCardCredit(b, uidOf(b, "Shoyu"), null, 3)).toBe(b);
+  });
+
+  it("sends the cover's credit, null once it is taken off, and nothing while untouched", () => {
+    const covered = setCover(board(), [POSTER], 2);
+    expect(houseRequestOf(covered, "h1")).not.toHaveProperty("coverAttribution");
+    const credited = setCoverCredit(covered, credit, 3);
+    expect(houseRequestOf(credited, "h1")!.coverAttribution).toEqual({ manual: true, ...credit });
+    expect(houseRequestOf(credited, null)!.coverAttribution).toEqual({ manual: true, ...credit });
+    expect(houseRequestOf(setCoverCredit(credited, null, 4), "h1")!.coverAttribution).toBeNull();
+  });
+
+  it("drops the cover's credit when the cover changes, and gives none to a collage", () => {
+    const b = board();
+    const credited = setCoverCredit(setCover(b, [POSTER], 2), credit, 3);
+    const other = setCover(credited, ["https://example.com/mine.jpg"], 4);
+    expect(other.coverCredit).toBeUndefined();
+    expect(houseRequestOf(other, "h1")).not.toHaveProperty("coverAttribution");
+    // The same cover kept keeps it; one taken off and chosen again has none.
+    expect(setCover(credited, [POSTER], 4).coverCredit).toEqual({ url: POSTER, credit });
+    expect(setCover(setCover(credited, [], 4), [POSTER], 5).coverCredit).toBeUndefined();
+    const collage = setCover(b, [POSTER, "https://example.com/mine.jpg"], 2);
+    expect(setCoverCredit(collage, credit, 3)).toBe(collage);
+    expect(coverCreditOf(collage)).toBeUndefined();
+  });
+
+  it("keeps the cover's credit on a board kept on this device", () => {
+    const credited = setCoverCredit(setCover(board(), [POSTER], 2), credit, 3);
+    const removed = setCoverCredit(credited, null, 4);
+    expect(parseBoard(JSON.parse(JSON.stringify(credited)))?.coverCredit).toEqual({
+      url: POSTER,
+      credit,
+    });
+    expect(parseBoard(JSON.parse(JSON.stringify(removed)))?.coverCredit).toEqual({
+      url: POSTER,
+      credit: null,
+    });
+    expect(
+      parseBoard({ ...JSON.parse(JSON.stringify(credited)), coverCredit: { url: POSTER } }),
+    ).not.toHaveProperty("coverCredit");
+  });
+
+  it("opens a house list with its cover and the cover's credit, and its cards' credits", () => {
+    const list: PublishedList = {
+      ...houseList,
+      coverImageUrl: POSTER,
+      coverAttribution: credit,
+      items: [
+        {
+          title: "Shoyu",
+          imageUrl: POSTER,
+          tierIndex: 0,
+          attribution: { source: "tmdb", manual: true, ...credit },
+        },
+      ],
+    };
+    const b = boardFromHouseList(list, 5, uids());
+    expect(b.coverImageUrls).toEqual([POSTER]);
+    expect(b.coverCredit).toEqual({ url: POSTER, credit });
+    const request = houseRequestOf(b, "h1")!;
+    expect(request.coverImageUrl).toBe(POSTER);
+    // Sent back as stored: the server keeps it without reading it again.
+    expect(request.coverAttribution).toEqual({ manual: true, ...credit });
+    expect(request.items[0]!.attribution).toEqual({ source: "tmdb", manual: true, ...credit });
+    expect(boardFromHouseList(houseList, 5, uids())).not.toHaveProperty("coverCredit");
+    expect(boardFromHouseList(houseList, 5, uids()).coverImageUrls).toEqual([]);
   });
 });

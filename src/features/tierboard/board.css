@@ -369,6 +369,47 @@ li:focus-within > .tile__about,
 
 .about-picture .dialog__actions {
   margin-top: 0;
+  flex-wrap: wrap;
+}
+
+/* A house editor's credit for a picture, in About the picture. */
+.credit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.credit-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.credit-form__label {
+  font: var(--text-caption);
+  color: var(--ink-dim);
+}
+
+.credit-form__field input,
+.credit-form__field select {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--text-body);
+}
+
+.credit-form__note,
+.credit-form__missing {
+  margin: 0;
+  font: var(--text-caption);
+  color: var(--ink-dim);
+}
+
+.credit-form__missing {
+  color: var(--error);
 }
 
 /* A picture or a link dragged over a card: its picture is replaced on the drop. */

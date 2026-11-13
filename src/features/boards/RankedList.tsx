@@ -1,5 +1,6 @@
 import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import type { EditorCredit } from "../../api/pictureAttribution";
 import { sizedFor } from "../../lib/pictureSize";
 import { fill, plural, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
@@ -14,6 +15,8 @@ interface RankedListProps {
   onMove: (itemUid: string, tierUid: string | null) => void;
   /** A card off the list. */
   onRemove: (itemUid: string) => void;
+  /** A house board's: the editor's own credit for a card's picture, or null to take it off. */
+  onCredit?: ((itemUid: string, credit: EditorCredit | null) => void) | undefined;
 }
 
 const sameCards = (a: readonly string[], b: readonly string[]): boolean =>
@@ -35,8 +38,13 @@ function Poster({ item }: { item: BoardItem }) {
  * the list. Under it the pool, folded to its count until opened; a card just
  * added opens it and shows there.
  */
-export function RankedList({ board, onMove, onRemove }: RankedListProps) {
-  const [credited, setCredited] = useState<BoardItem | null>(null);
+export function RankedList({ board, onMove, onRemove, onCredit }: RankedListProps) {
+  // The card whose About the picture is open, by its uid: it shows the card as it is now.
+  const [creditedUid, setCredited] = useState<string | null>(null);
+  const credited =
+    creditedUid === null
+      ? null
+      : (liveItems(board).find((item) => item.uid === creditedUid) ?? null);
   const poolId = useId();
   const tiers = rankedTiers(board);
   const pool = poolTier(board);
@@ -172,6 +180,17 @@ export function RankedList({ board, onMove, onRemove }: RankedListProps) {
           name={credited.title}
           attribution={credited.attribution}
           credit={credited.credit}
+          editing={
+            onCredit === undefined
+              ? undefined
+              : {
+                  save: (given) => onCredit(credited.uid, given),
+                  remove:
+                    credited.attribution?.manual === true
+                      ? () => onCredit(credited.uid, null)
+                      : undefined,
+                }
+          }
           onClose={() => setCredited(null)}
         />
       )}
@@ -179,10 +198,10 @@ export function RankedList({ board, onMove, onRemove }: RankedListProps) {
         <MoveSheet
           name={chosen.title}
           onAbout={
-            chosen.imageUrl !== null && hasAbout(chosen)
+            chosen.imageUrl !== null && (hasAbout(chosen) || onCredit !== undefined)
               ? () => {
                   setMoving(null);
-                  setCredited(chosen);
+                  setCredited(chosen.uid);
                 }
               : undefined
           }

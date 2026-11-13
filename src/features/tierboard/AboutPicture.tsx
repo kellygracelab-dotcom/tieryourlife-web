@@ -10,11 +10,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import type { PictureAttribution } from "../../api/pictureAttribution";
+import { fieldsOf } from "../../lib/editorCredit";
 import { hostOf } from "../../lib/linkPictures";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { MediaImage } from "../../ui/MediaImage";
 import { useModal } from "../../ui/useModal";
+import { CreditForm, type CreditEditing } from "./CreditForm";
 
 const TMDB_URL = "https://www.themoviedb.org";
 const IGDB_URL = "https://www.igdb.com";
@@ -40,8 +42,9 @@ function rowsOf(attribution: PictureAttribution | null | undefined) {
       ...(attribution.licenseUrl === undefined ? {} : { href: attribution.licenseUrl }),
     });
   }
-  // IGDB's terms ask for its name, IGDB.com, wherever its covers are shown.
-  if (attribution.source === "igdb") {
+  // IGDB's terms ask for its name, IGDB.com, wherever its covers are shown,
+  // unless a house editor credited the picture themselves.
+  if (attribution.source === "igdb" && attribution.manual !== true) {
     rows.push({
       key: "from",
       label: strings.link.fromRow,
@@ -57,6 +60,34 @@ function rowsOf(attribution: PictureAttribution | null | undefined) {
     });
   }
   return rows;
+}
+
+/** Who took the picture, its licence and where it is from, each a row when the attribution says it. */
+export function PictureRows({
+  attribution,
+}: {
+  attribution: PictureAttribution | null | undefined;
+}) {
+  const rows = rowsOf(attribution);
+  if (rows.length === 0) return null;
+  return (
+    <dl className="about-picture__rows">
+      {rows.map((row) => (
+        <div key={row.key} className="about-picture__row">
+          <dt>{row.label}</dt>
+          <dd>
+            {row.href === undefined ? (
+              row.value
+            ) : (
+              <a href={row.href} target="_blank" rel="noopener noreferrer">
+                {row.value}
+              </a>
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 /** TMDB's notice is decided by the attribution's source, never by the picture's host. */
@@ -119,6 +150,8 @@ interface AboutPictureProps extends PictureFacts {
   anchor?: Anchor | null;
   /** The card's picture, drawn large, for a board one only looks at. */
   imageUrl?: string | null;
+  /** A house board's: the editor may give the picture a credit of their own here. */
+  editing?: CreditEditing | undefined;
   onClose: () => void;
 }
 
@@ -127,7 +160,8 @@ interface AboutPictureProps extends PictureFacts {
  * then who took the picture, its licence and the page it is from, each only
  * when the attribution says it; an IGDB cover is from IGDB.com, by name. A
  * TMDB picture adds TMDB's logo and their sentence word for word. A card
- * without an attribution still shows its old credit text.
+ * without an attribution still shows its old credit text. On a house board
+ * the editor gives the picture a credit of their own here, or takes it off.
  */
 export function AboutPicture({
   name,
@@ -135,18 +169,25 @@ export function AboutPicture({
   credit,
   anchor = null,
   imageUrl = null,
+  editing,
   onClose,
 }: AboutPictureProps) {
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
   const [where, setWhere] = useState<{ x: number; y: number } | null>(null);
+  const [form, setForm] = useState(false);
   useModal(box, onClose);
+  // Placed after every render, the form's opening and closing among them: it
+  // is taller than the credit, and its hints come and go. The same place again
+  // changes nothing, so this never chains.
+  // oxlint-disable-next-line react-hooks/exhaustive-deps -- placed after every render on purpose
   useLayoutEffect(() => {
     const element = box.current;
     if (anchor === null || element === null) return;
     const size = element.getBoundingClientRect();
-    setWhere(placed(anchor, size.width, size.height));
-  }, [anchor]);
+    const next = placed(anchor, size.width, size.height);
+    setWhere((was) => (was !== null && was.x === next.x && was.y === next.y ? was : next));
+  });
   const facts = { attribution, credit };
   const rows = rowsOf(attribution);
   const tmdb = isTmdb(facts);
@@ -172,40 +213,38 @@ export function AboutPicture({
           {name}
         </h2>
         {imageUrl !== null && <MediaImage className="card-detail__picture" src={imageUrl} alt="" />}
-        {rows.length > 0 && (
-          <dl className="about-picture__rows">
-            {rows.map((row) => (
-              <div key={row.key} className="about-picture__row">
-                <dt>{row.label}</dt>
-                <dd>
-                  {row.href === undefined ? (
-                    row.value
-                  ) : (
-                    <a href={row.href} target="_blank" rel="noopener noreferrer">
-                      {row.value}
-                    </a>
-                  )}
-                </dd>
+        {form && editing !== undefined ? (
+          <CreditForm
+            initial={fieldsOf(attribution)}
+            editing={editing}
+            onDone={() => setForm(false)}
+          />
+        ) : (
+          <>
+            <PictureRows attribution={attribution} />
+            {(attribution === null || attribution === undefined || (rows.length === 0 && !tmdb)) &&
+              words !== "" && <CreditWords credit={words} />}
+            {tmdb && (
+              <div className="about-picture__tmdb">
+                <a href={TMDB_URL} target="_blank" rel="noopener">
+                  <img src={tmdbLogo} alt={strings.about.tmdbLogo} width="92" height="12" />
+                </a>
+                {/* TMDB's sentence stays in English in every language, so it is read as English. */}
+                <p lang="en" dir="ltr">
+                  {strings.about.tmdb}
+                </p>
               </div>
-            ))}
-          </dl>
+            )}
+            <div className="dialog__actions">
+              {editing !== undefined && (
+                <Button icon="edit" onClick={() => setForm(true)}>
+                  {attribution?.manual === true ? strings.credit.edit : strings.credit.add}
+                </Button>
+              )}
+              <Button onClick={onClose}>{strings.rankings.close}</Button>
+            </div>
+          </>
         )}
-        {(attribution === null || attribution === undefined || (rows.length === 0 && !tmdb)) &&
-          words !== "" && <CreditWords credit={words} />}
-        {tmdb && (
-          <div className="about-picture__tmdb">
-            <a href={TMDB_URL} target="_blank" rel="noopener">
-              <img src={tmdbLogo} alt={strings.about.tmdbLogo} width="92" height="12" />
-            </a>
-            {/* TMDB's sentence stays in English in every language, so it is read as English. */}
-            <p lang="en" dir="ltr">
-              {strings.about.tmdb}
-            </p>
-          </div>
-        )}
-        <div className="dialog__actions">
-          <Button onClick={onClose}>{strings.rankings.close}</Button>
-        </div>
       </div>
     </div>,
     document.body,

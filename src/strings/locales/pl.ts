@@ -1653,6 +1653,41 @@ const pl: Translation = {
     licence: "Licencja",
     fromRow: "Źródło",
   },
+  credit: {
+    add: "Dodaj informację o autorstwie",
+    edit: "Edytuj informację o autorstwie",
+    author: "Autor",
+    optional: "Opcjonalnie",
+    licence: "Licencja",
+    chooseLicence: "Wybierz licencję",
+    publicDomain: "Domena publiczna",
+    permission: "Użyte za zgodą",
+    link: "Link do źródła",
+    readFromPage: "Jeśli zostawisz autora i licencję puste, zostaną odczytane z tej strony",
+    needLicence: "Wybierz licencję.",
+    needLink: "Dodaj link do źródła: stronę, na której jest obraz.",
+    badLink: "Link do źródła musi być stroną internetową zaczynającą się od https://.",
+    linkTooLong: "Link do źródła jest za długi.",
+    goesOut:
+      "Informacja o autorstwie trafi na listę przy jej następnej publikacji lub aktualizacji.",
+    save: "Zapisz informację",
+    cancel: "Anuluj",
+    remove: "Usuń informację o autorstwie",
+    coverAbout: "O obrazie okładki",
+    coverOf: "Okładka: {name}",
+    refused: "Informacja o autorstwie obrazu „{name}” nie została przyjęta: {why}",
+    refusedCover: "Informacja o autorstwie okładki nie została przyjęta: {why}",
+    why: {
+      noLicense: "brak licencji. Wybierz ją.",
+      unknownLicense:
+        "jej strona podaje licencję, której lista redakcji nie może użyć. Wybierz licencję lub inny obraz.",
+      noLink: "brak linku do źródła.",
+      badLink: "link do źródła nie jest stroną, do której ta witryna może linkować.",
+      badLicenseUrl: "link do licencji nie jest adresem internetowym.",
+      tooLong: "jedno z pól jest za długie. Skróć autora albo link.",
+      other: "sprawdź ją i spróbuj ponownie.",
+    },
+  },
 };
 
 export default pl;

@@ -966,3 +966,16 @@
   background: var(--surface-soft);
   border-radius: var(--radius-card);
 }
+
+/* About the cover picture on a house board: the editor's own credit for it. */
+.board-settings__credit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: min(100%, 360px);
+}
+
+.board-settings__credit .credit-form {
+  align-self: stretch;
+}

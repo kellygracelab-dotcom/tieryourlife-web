@@ -3,9 +3,13 @@ import { itemsOf } from "./lists";
 import {
   attributionField,
   attributionOf,
+  creditAsAttribution,
+  editorCreditOf,
   isTmdbPicture,
   knownSourceOf,
   sameAttribution,
+  withEditorCredit,
+  withoutEditorCredit,
 } from "./pictureAttribution";
 
 describe("a picture's attribution", () => {
@@ -192,5 +196,84 @@ describe("a picture's catalogue id and its former addresses", () => {
     expect(sameAttribution(one, { ...one, id: "tmdb:movie:604" })).toBe(false);
     expect(sameAttribution(one, { ...one, formerUrls: [] })).toBe(false);
     expect(sameAttribution({ source: "tmdb" }, { source: "tmdb", formerUrls: [] })).toBe(true);
+  });
+});
+
+describe("a house editor's own credit", () => {
+  const COMMONS = "https://commons.wikimedia.org/wiki/File:Fox.jpg";
+
+  it("is kept by the cleaner as manual, true or false, and nothing else", () => {
+    const manual = { source: "tmdb", manual: true, author: "Jane", license: "CC0 1.0" };
+    expect(attributionOf(manual)).toEqual(manual);
+    expect(attributionOf({ source: "web", manual: false })).toEqual({
+      source: "web",
+      manual: false,
+    });
+    expect(attributionOf({ source: "web", manual: "yes" })).toEqual({ source: "web" });
+    expect(sameAttribution({ source: "web", manual: true }, { source: "web" })).toBe(false);
+    expect(itemsOf([{ title: "Fox", imageUrl: COMMONS, attribution: manual }])[0]).toMatchObject({
+      attribution: manual,
+    });
+  });
+
+  it("reads a cover's credit cleaned, and none without its page", () => {
+    expect(
+      editorCreditOf({
+        manual: true,
+        author: "  Jane  Doe ",
+        license: "CC BY 4.0",
+        licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+        link: COMMONS,
+        source: "dropped",
+        id: "dropped:1",
+      }),
+    ).toEqual({
+      author: "Jane Doe",
+      license: "CC BY 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+      link: COMMONS,
+    });
+    expect(editorCreditOf({ manual: true, license: "CC0 1.0" })).toBeNull();
+    expect(editorCreditOf({ link: "http://plain.test/p" })).toBeNull();
+    expect(editorCreditOf(null)).toBeNull();
+    expect(editorCreditOf(["x"])).toBeNull();
+  });
+
+  it("goes over a card's attribution, keeping its source, id and addresses", () => {
+    const before = {
+      source: "wikimedia",
+      author: "Commons",
+      license: "CC BY-SA 3.0",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0/",
+      link: COMMONS,
+      originalUrl: "https://upload.wikimedia.org/wikipedia/commons/a/ab/Fox.jpg",
+      id: "x:1",
+      formerUrls: ["https://upload.wikimedia.org/old.jpg"],
+    };
+    const credit = { license: "CC0 1.0", link: "https://site.test/fox" };
+    expect(withEditorCredit(before, credit, false)).toEqual({
+      source: "wikimedia",
+      originalUrl: before.originalUrl,
+      id: "x:1",
+      formerUrls: before.formerUrls,
+      manual: true,
+      license: "CC0 1.0",
+      link: "https://site.test/fox",
+    });
+    expect(withEditorCredit(before, credit, true).source).toBe("web");
+    expect(withEditorCredit(null, credit, false)).toEqual({
+      source: "web",
+      manual: true,
+      ...credit,
+    });
+    expect(withoutEditorCredit(withEditorCredit(before, credit, false))).toEqual({
+      source: "wikimedia",
+      originalUrl: before.originalUrl,
+      id: "x:1",
+      formerUrls: before.formerUrls,
+      link: "https://site.test/fox",
+      manual: false,
+    });
+    expect(creditAsAttribution(credit)).toEqual({ source: "web", manual: true, ...credit });
   });
 });

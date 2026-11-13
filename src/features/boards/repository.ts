@@ -1,5 +1,5 @@
 import { ownPictureRef } from "../../lib/privatePictureRef";
-import { attributionField } from "../../api/pictureAttribution";
+import { attributionField, editorCreditOf } from "../../api/pictureAttribution";
 import { MAX_PLAY_ANSWERS, type SyncedPlay } from "../../api/boards";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
@@ -12,6 +12,7 @@ import {
   type BoardItem,
   type BoardTier,
   type BoardTopic,
+  type CoverCredit,
   type DisplayMode,
 } from "./model";
 
@@ -152,6 +153,17 @@ export function playOf(raw: unknown): SyncedPlay | null {
   };
 }
 
+/** A house board's credit for its cover, as kept: the cover it is for, and the credit or null. */
+function coverCreditOf(raw: unknown): CoverCredit | null {
+  if (raw === null || typeof raw !== "object") return null;
+  const kept = raw as Record<string, unknown>;
+  const url = text(kept.url);
+  if (url === null || url === "") return null;
+  if (kept.credit === null) return { url, credit: null };
+  const credit = editorCreditOf(kept.credit);
+  return credit === null ? null : { url, credit };
+}
+
 function topicOf(raw: unknown): BoardTopic | null {
   if (raw === null || typeof raw !== "object") return null;
   const topic = raw as Record<string, unknown>;
@@ -245,6 +257,7 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
   const originalCover = text(source.coverImageUrl);
   const coverPictureId = coverPictureIdOf(source.coverPictureId, originalCover, items);
   const coverImageUrl = localPicture(originalCover, coverPictureId, owner);
+  const coverCredit = coverCreditOf(source.coverCredit);
   const covers = Array.isArray(source.coverImageUrls)
     ? source.coverImageUrls.filter((url): url is string => typeof url === "string")
     : [];
@@ -281,6 +294,7 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
     ...(source.heldForReview === true ? { heldForReview: true } : {}),
     anonymous: source.anonymous === true,
     play: playOf(source.play),
+    ...(coverCredit === null ? {} : { coverCredit }),
   };
 }
 

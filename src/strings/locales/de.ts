@@ -1511,6 +1511,41 @@ const de: Translation = {
     licence: "Lizenz",
     fromRow: "Quelle",
   },
+  credit: {
+    add: "Nachweis hinzufügen",
+    edit: "Nachweis bearbeiten",
+    author: "Urheber",
+    optional: "Optional",
+    licence: "Lizenz",
+    chooseLicence: "Lizenz wählen",
+    publicDomain: "Gemeinfrei",
+    permission: "Mit Genehmigung verwendet",
+    link: "Quelllink",
+    readFromPage: "Urheber und Lizenz werden von dieser Seite gelesen, wenn du sie leer lässt",
+    needLicence: "Wähle eine Lizenz.",
+    needLink: "Füge den Quelllink hinzu: die Seite, auf der das Bild steht.",
+    badLink: "Der Quelllink muss eine Webseite sein, die mit https:// beginnt.",
+    linkTooLong: "Der Quelllink ist zu lang.",
+    goesOut:
+      "Der Nachweis geht mit der nächsten Veröffentlichung oder Aktualisierung der Liste raus.",
+    save: "Nachweis speichern",
+    cancel: "Abbrechen",
+    remove: "Nachweis entfernen",
+    coverAbout: "Über das Titelbild",
+    coverOf: "Titelbild von {name}",
+    refused: "Der Nachweis für das Bild von „{name}“ wurde nicht angenommen: {why}",
+    refusedCover: "Der Nachweis für das Titelbild wurde nicht angenommen: {why}",
+    why: {
+      noLicense: "Es fehlt die Lizenz. Wähle eine.",
+      unknownLicense:
+        "Die Seite nennt eine Lizenz, die eine Redaktionsliste nicht nutzen kann. Wähle eine Lizenz oder ein anderes Bild.",
+      noLink: "Es fehlt der Quelllink.",
+      badLink: "Der Quelllink ist keine Seite, auf die diese Website verlinken kann.",
+      badLicenseUrl: "Der Link zur Lizenz ist keine Webadresse.",
+      tooLong: "Ein Feld ist zu lang. Kürze den Urheber oder den Link.",
+      other: "Prüfe ihn und versuche es noch einmal.",
+    },
+  },
 };
 
 export default de;

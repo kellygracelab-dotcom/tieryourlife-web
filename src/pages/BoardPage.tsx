@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { isTmdbPicture } from "../api/pictureAttribution";
+import { isTmdbPicture, type EditorCredit } from "../api/pictureAttribution";
 import type { SectionProposal, SectionStats } from "../api/sections";
 import { isSectionId } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
@@ -26,6 +26,7 @@ import {
   removeItem,
   restoreBoard,
   restoreTier,
+  setCardCredit,
   setCategory,
   setDisplayMode,
   trashBoard,
@@ -795,6 +796,13 @@ function OpenBoard({
     else replacePicture(itemUid, what);
   };
   const freshAt = freshUid === null ? -1 : view.uids.indexOf(freshUid);
+  // A house board's editor credits a card's picture in About the picture; it
+  // goes out with the next publish or update. Nobody else's board edits credits.
+  const creditCard =
+    house === null
+      ? undefined
+      : (itemUid: string, given: EditorCredit | null) =>
+          keep(setCardCredit(latest(), itemUid, given, now()));
 
   const tools = (
     <AddCardBox
@@ -938,6 +946,8 @@ function OpenBoard({
           }}
           // A house list never goes out under the person's name: its sheet offers no Public switch.
           publishing={house === null ? publishing : null}
+          // Its cover takes the editor's own credit, as its cards' pictures do.
+          house={house !== null}
           topics={topics}
           onDone={closePanel}
           now={now}
@@ -982,6 +992,7 @@ function OpenBoard({
               if (to !== undefined) keep(moveItem(current, itemUid, to, Infinity, now()));
             }}
             onRemove={(itemUid) => remove(view.uids.indexOf(itemUid))}
+            onCredit={creditCard}
           />
         </section>
       ) : (
@@ -1012,6 +1023,14 @@ function OpenBoard({
                   pictures: takePictures,
                   fresh: freshAt === -1 ? null : freshAt,
                   toolsOpen,
+                  ...(creditCard === undefined
+                    ? {}
+                    : {
+                        credit: (item: number, given: EditorCredit | null) => {
+                          const itemUid = view.uids[item];
+                          if (itemUid !== undefined) creditCard(itemUid, given);
+                        },
+                      }),
                 },
               }}
             />

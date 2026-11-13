@@ -1,5 +1,10 @@
 import type { AccountAction, ApiClient } from "./client";
-import { attributionField, type PictureAttribution } from "./pictureAttribution";
+import {
+  attributionField,
+  editorCreditOf,
+  type ManualCredit,
+  type PictureAttribution,
+} from "./pictureAttribution";
 import type {
   FeedPage,
   FeedQuery,
@@ -16,12 +21,19 @@ export async function loadList(client: ApiClient, id: string): Promise<Published
 }
 
 /** One list as the site draws it, however it arrived: asked for, or already in the page. */
-export const publishedListOf = (list: PublishedList): PublishedList => ({
-  ...summaryOf(list),
-  authorName: textOf(list.authorName),
-  tiers: tiersOf(list.tiers),
-  items: itemsOf(list.items),
-});
+export const publishedListOf = (list: PublishedList): PublishedList => {
+  const { coverAttribution, ...rest } = list;
+  // The cover's credit is the cover picture's: none on a list drawn without one.
+  const coverCredit =
+    pictureOf(list.coverImageUrl) === null ? null : editorCreditOf(coverAttribution);
+  return {
+    ...summaryOf(rest),
+    authorName: textOf(list.authorName),
+    tiers: tiersOf(list.tiers),
+    items: itemsOf(list.items),
+    ...(coverCredit === null ? {} : { coverAttribution: coverCredit }),
+  };
+};
 
 /**
  * A slot of words that came as something else, null say: drawn empty. One
@@ -122,6 +134,11 @@ export interface PublishRequest {
   coverPictureId: string | null;
   /** The pictures chosen for the cover collage, in their order; left out or empty when the cards' art decides. */
   coverImageUrls?: string[];
+  /**
+   * A house publication only: the editor's credit for the cover; null takes
+   * it off, absent keeps the one the same cover had (CONTRACT, Editor's credit).
+   */
+  coverAttribution?: ManualCredit | null;
   /** An approved topic of the list's section, which files the list under it; null for none. */
   topicId?: string | null;
   /** True takes the list out of its topic; a null topicId alone keeps the old one. */
@@ -156,7 +173,8 @@ export interface PublishRequest {
     credit?: string;
     /**
      * Sent back as the card keeps it; the backend reads only its `link` and
-     * `originalUrl` (which keeps a catalogue copy's name) and works out the rest.
+     * `originalUrl` (which keeps a catalogue copy's name) and works out the
+     * rest, except a house editor's own credit (`manual`).
      */
     attribution?: PictureAttribution;
     tierIndex: number | null;
