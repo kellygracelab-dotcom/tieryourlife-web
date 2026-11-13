@@ -3,6 +3,7 @@ import { itemsOf } from "./lists";
 import {
   attributionField,
   attributionOf,
+  catalogueSourceOf,
   creditAsAttribution,
   editorCreditOf,
   isTmdbPicture,
@@ -275,5 +276,57 @@ describe("a house editor's own credit", () => {
       manual: false,
     });
     expect(creditAsAttribution(credit)).toEqual({ source: "web", manual: true, ...credit });
+  });
+});
+
+describe("the catalogue a picture's address is on", () => {
+  it("is told by the catalogues' own hosts", () => {
+    expect(
+      [
+        "https://image.tmdb.org/t/p/w500/x.jpg",
+        "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1.png",
+        "https://images.igdb.com/igdb/image/upload/t_cover_big/co1.jpg",
+        "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/header.jpg",
+        "https://cdn-images.dzcdn.net/images/cover/x/500x500.jpg",
+        "https://covers.openlibrary.org/b/id/1-L.jpg",
+        "https://inaturalist-open-data.s3.amazonaws.com/photos/1/medium.jpg",
+        "https://static.inaturalist.org/photos/1/medium.jpg",
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Pizza.jpg?width=500",
+        "https://upload.wikimedia.org/wikipedia/commons/a/ab/Pizza.jpg",
+        "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Pizza.jpg/500px-Pizza.jpg",
+      ].map(catalogueSourceOf),
+    ).toEqual([
+      "tmdb",
+      "anilist",
+      "igdb",
+      "steam",
+      "deezer",
+      "openlibrary",
+      "inaturalist",
+      "inaturalist",
+      "wikimedia",
+      "wikimedia",
+      "wikimedia",
+    ]);
+  });
+
+  it("is none for any other address: another site, a local Wikipedia's upload, our copy, not https", () => {
+    for (const url of [
+      "https://img.test/a.jpg",
+      "https://upload.wikimedia.org/wikipedia/en/a/ab/Poster.jpg",
+      "https://firebasestorage.googleapis.com/v0/b/x/o/published%2Fcatalogue%2Fw-1?alt=media",
+      "http://image.tmdb.org/t/p/w500/x.jpg",
+      "https://image.tmdb.org.example.com/x.jpg",
+      "not an address",
+    ]) {
+      expect(catalogueSourceOf(url)).toBeNull();
+    }
+  });
+
+  it("keeps the catalogue address on a card shown from our shared copy", () => {
+    const copy =
+      "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2Fcatalogue%2Fw-0123456789abcdef0123456789abcdef?alt=media";
+    const attribution = { source: "tmdb", originalUrl: "https://image.tmdb.org/t/p/w500/x.jpg" };
+    expect(attributionField(copy, attribution)).toEqual({ attribution });
   });
 });

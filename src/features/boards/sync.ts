@@ -1,6 +1,7 @@
 import { privatePicturePath } from "../../lib/privatePictureRef";
-import type { KeepBoardRequest, KeptBoard, KeptBoardEntry } from "../../api/boards";
+import type { KeepBoardRequest, KeptAnswer, KeptBoard, KeptBoardEntry } from "../../api/boards";
 import { errorOf } from "../../api/errors";
+import { withCopies } from "./boardCopies";
 import { fingerprintOf as digest } from "./fingerprint";
 import {
   beyondAccount,
@@ -34,7 +35,7 @@ import type { SyncRecords } from "./syncRecords";
 export interface BoardsApi {
   index(after: string | null): Promise<{ boards: KeptBoardEntry[]; next: string | null }>;
   board(uid: string): Promise<KeptBoard>;
-  keep(uid: string, request: KeepBoardRequest): Promise<{ uid: string; revision: number }>;
+  keep(uid: string, request: KeepBoardRequest): Promise<KeptAnswer>;
   forget(uid: string): Promise<void>;
   /** The lists this account has in the feed, or null when they could not be read. */
   published(): Promise<PublishedEntry[] | null>;
@@ -384,11 +385,9 @@ async function send(
   if (beyond !== null) throw new HeldBack(beyond);
   const fingerprint = await fingerprintOf(board);
   check(deps);
+  let answer: KeptAnswer;
   try {
-    const answer = await api.keep(uid, request(board, fingerprint, basedOn, deviceName));
-    check(deps);
-    agree(deps, { uid, revision: answer.revision, fingerprint });
-    return;
+    answer = await api.keep(uid, request(board, fingerprint, basedOn, deviceName));
   } catch (reason: unknown) {
     if (reason instanceof SyncCancelled) throw reason;
     const theirs = conflictBoard(reason);
@@ -416,7 +415,62 @@ async function send(
     const second = await api.keep(uid, request(board, fingerprint, theirs.revision, deviceName));
     check(deps);
     agree(deps, { uid, revision: second.revision, fingerprint });
+    await takeCopies(uid, second, deps, fingerprintOf);
+    return;
   }
+  check(deps);
+  agree(deps, { uid, revision: answer.revision, fingerprint });
+  await takeCopies(uid, answer, deps, fingerprintOf);
+}
+
+/**
+ * The account answered that it shows some of the board's catalogue pictures
+ * from our shared copies, without moving the board's revision or fingerprint
+ * for it (CONTRACT, Catalogue pictures on a board). The board here takes
+ * them too (withCopies) and goes up again as an ordinary edit on the
+ * revision just answered, so the account and this device agree on what it
+ * shows. Not an edit of the person's: the edit time stays.
+ *
+ * The board as it is now, an edit made while the answer was on its way
+ * included: that edit goes up with it. Kept here only once the account has
+ * it, so a write that fails leaves the board as last agreed, and the next
+ * run reads it as nothing new here rather than as changed on both sides,
+ * with a second board for a picture's move; the next write's answer names
+ * the copies again. One write more at most: an answer to it naming further
+ * copies waits for the next edit, so this never goes round.
+ */
+async function takeCopies(
+  uid: string,
+  answer: KeptAnswer,
+  deps: SyncDeps,
+  fingerprintOf: (board: Board) => Promise<string>,
+): Promise<void> {
+  const copies = answer.copies;
+  if (copies === undefined || copies.size === 0) return;
+  const current = deps.repository.get(uid);
+  if (current === null) return;
+  const moved = withCopies(current, copies);
+  // Nothing here names those addresses any more.
+  if (moved === current) return;
+  const fingerprint = await fingerprintOf(moved);
+  check(deps);
+  // Changed while its fingerprint was worked out: that edit's own run sends it.
+  const before = deps.repository.get(uid);
+  if (before === null || !sameBoard(before, current)) return;
+  let again: KeptAnswer;
+  try {
+    again = await deps.api.keep(uid, request(moved, fingerprint, answer.revision, deps.deviceName));
+  } catch (reason: unknown) {
+    if (reason instanceof SyncCancelled) throw reason;
+    // Another device wrote meanwhile, or the write failed: the next run sorts it out as any other.
+    return;
+  }
+  check(deps);
+  // An edit made while this write was on its way stays, the copies under it.
+  const latest = deps.repository.get(uid);
+  if (latest === null) return;
+  keep(deps, sameBoard(latest, current) ? moved : withCopies(latest, copies));
+  agree(deps, { uid, revision: again.revision, fingerprint });
 }
 
 /**
