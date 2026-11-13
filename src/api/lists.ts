@@ -1,4 +1,5 @@
 import type { AccountAction, ApiClient } from "./client";
+import { attributionField, type PictureAttribution } from "./pictureAttribution";
 import type {
   FeedPage,
   FeedQuery,
@@ -53,10 +54,16 @@ export const itemsOf = (items: unknown): PublishedItem[] =>
   Array.isArray(items)
     ? items.map((item: unknown) => {
         if (item === null || typeof item !== "object") return { title: "", imageUrl: null };
-        const card = item as PublishedItem;
+        const { attribution, ...card } = item as PublishedItem;
         const imageUrl =
           card.imageUrl === null || card.imageUrl === undefined ? null : pictureOf(card.imageUrl);
-        return { ...card, title: textOf(card.title), imageUrl };
+        // The attribution is the picture's: cleaned, and none on a card drawn without one.
+        return {
+          ...card,
+          title: textOf(card.title),
+          imageUrl,
+          ...attributionField(imageUrl, attribution),
+        };
       })
     : [];
 
@@ -147,6 +154,11 @@ export interface PublishRequest {
     pictureId: string | null;
     /** Left out when the picture names nobody. */
     credit?: string;
+    /**
+     * Sent back as the card keeps it; the backend reads only its `link` and
+     * `originalUrl` (which keeps a catalogue copy's name) and works out the rest.
+     */
+    attribution?: PictureAttribution;
     tierIndex: number | null;
   }[];
 }

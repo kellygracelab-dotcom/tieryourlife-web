@@ -54,6 +54,7 @@ describe("pictures", () => {
           source: "anilist",
           kind: "anime",
           credit: null,
+          attribution: null,
         },
       ],
       hasMore: true,
@@ -71,6 +72,25 @@ describe("pictures", () => {
     expect(request).toHaveBeenLastCalledWith("GET", "/lists/pictures", {
       query: { q: "x".repeat(100), scope: "all", lang: "en", page: 1, web: 1 },
     });
+  });
+
+  it("keeps a hit's attribution, cleaned, and none from a backend that sends none", () => {
+    expect(
+      pictureOf(
+        raw({
+          id: "tmdb:movie:438631",
+          source: "tmdb",
+          attribution: {
+            source: "tmdb",
+            link: "https://www.themoviedb.org/movie/438631",
+            author: "  ",
+            licenseUrl: "http://example.test/",
+          },
+        }),
+      )?.attribution,
+    ).toEqual({ source: "tmdb", link: "https://www.themoviedb.org/movie/438631" });
+    expect(pictureOf(raw())?.attribution).toBeNull();
+    expect(pictureOf(raw({ attribution: { link: "https://x" } }))?.attribution).toBeNull();
   });
 
   it("keeps only answers it can draw, and only the notices it knows", async () => {

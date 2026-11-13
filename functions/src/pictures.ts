@@ -19,6 +19,20 @@ const QUALITY = 80;
 const KEEP = "public, max-age=31536000, s-maxage=31536000, immutable";
 // A picture not there yet may be there in a minute: a race with its upload.
 const MISSING = "public, max-age=60, s-maxage=60";
+/*
+ * A published list's picture, as it is (/img/original/published/...). A name
+ * under published/ never changes its bytes: one's own photo is named by its
+ * pictureId, a picture from outside or a catalogue's copy by w-{hash of its
+ * address}, a copy of another list's picture by {original}-{name}. So a
+ * browser keeps it for a year and never asks again. Hosting's shared CDN keeps
+ * it only 60 s: it cannot be purged by path, and a picture deleted by a
+ * moderation takedown must stop reaching anyone new within a minute. A
+ * browser that already has it keeps its copy; that is the trade-off.
+ */
+export const PUBLISHED_ORIGINAL = "public, max-age=31536000, s-maxage=60, immutable";
+// Avatars, sections and topics as they are: an edge TTL so readers see a
+// removal soon, and browsers ask again every time.
+const OTHER_ORIGINAL = "public, max-age=0, s-maxage=60, must-revalidate";
 
 /** Where a picture lives in the bucket, or null for an address that names none. */
 export function picturePathOf(kind: string, id: string, picture: string): string | null {
@@ -71,10 +85,9 @@ export async function sendPicture(
   response.setHeader("Content-Type", type);
   response.setHeader("X-Content-Type-Options", "nosniff");
   response.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
-  // Readers must see a removal or a moderated publication after a short edge TTL.
   response.setHeader(
     "Cache-Control",
-    original ? "public, max-age=0, s-maxage=60, must-revalidate" : KEEP,
+    !original ? KEEP : kind === "published" ? PUBLISHED_ORIGINAL : OTHER_ORIGINAL,
   );
   response.status(200).send(original ? bytes : await deps.shrink(bytes, wide));
 }

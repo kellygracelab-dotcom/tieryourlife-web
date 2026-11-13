@@ -1,4 +1,5 @@
 import type { ApiClient } from "./client";
+import type { PictureAttribution } from "./pictureAttribution";
 
 /**
  * The copy of the person's boards their account keeps (`/boards` in the
@@ -36,6 +37,11 @@ export interface KeptItem {
   imageUrl: string | null;
   /** Left out when the picture names nobody; the backend keeps it out of the fingerprint. */
   credit?: string | null;
+  /**
+   * Left out on a card without one. The account keeps it so a card picked on
+   * one device publishes with its page link from another; not in the fingerprint.
+   */
+  attribution?: PictureAttribution;
   source: string;
   deletedAt: number | null;
 }

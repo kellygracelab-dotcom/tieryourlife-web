@@ -372,6 +372,8 @@ export function AddCardBox({
         imageUrl: picture.imageUrl,
         key: picture.id,
         ...(picture.credit === null ? {} : { credit: picture.credit }),
+        // Kept on the card, and sent back when it publishes (CONTRACT, PictureHit).
+        ...(picture.attribution === null ? {} : { attribution: picture.attribution }),
       });
       return;
     }

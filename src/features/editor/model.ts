@@ -1,3 +1,4 @@
+import { attributionField, type PictureAttribution } from "../../api/pictureAttribution";
 import { creditField } from "../../api/pictureCredit";
 import type { Ranking } from "../../api/rank";
 import type { PublishedList, PublishedTier } from "../../api/types";
@@ -47,6 +48,8 @@ export const LIMITS = {
 
 export interface EditorItem {
   credit?: string;
+  /** The picture's, so it goes with the picture; absent on a card without one. */
+  attribution?: PictureAttribution;
   /** Stable within the draft; a catalogue id when the card came from there. */
   key: string;
   title: string;
@@ -81,6 +84,7 @@ export type EditorAction =
       key?: string;
       pictureId?: string;
       credit?: string | null;
+      attribution?: PictureAttribution | null;
     }
   | { type: "removeItem"; key: string }
   /** With `tier`, the one the tier editor made; without, the next letter in the next preset. */
@@ -118,6 +122,7 @@ export function draftOf(list: PublishedList): Draft {
       title: item.title,
       imageUrl: item.imageUrl,
       ...creditField(item.credit),
+      ...attributionField(item.imageUrl, item.attribution),
       pictureId: null,
     })),
     rows: arrange(list).rows,
@@ -148,6 +153,7 @@ export function draftOfRanking(ranking: Pick<Ranking, "listId" | "snapshot" | "r
         imageUrl,
         pictureId: null,
         ...creditField(imageUrl === null ? null : item.credit),
+        ...attributionField(imageUrl, item.attribution),
       };
     }),
     rows: tidyRows(ranking.rows, snapshot.tiers.length, snapshot.items.length),
@@ -208,7 +214,14 @@ export function reduce(draft: Draft, action: EditorAction): Draft {
         serial: draft.serial + 1,
         items: [
           ...draft.items,
-          { key, title, imageUrl: action.imageUrl, pictureId, ...creditField(action.credit) },
+          {
+            key,
+            title,
+            imageUrl: action.imageUrl,
+            pictureId,
+            ...creditField(action.credit),
+            ...attributionField(action.imageUrl, action.attribution),
+          },
         ],
       };
     }
@@ -338,6 +351,7 @@ export interface PublishBody {
     pictureId: string | null;
     tierIndex: number | null;
     credit?: string;
+    attribution?: PictureAttribution;
   }[];
 }
 
@@ -375,6 +389,7 @@ export function publishBodyOf(draft: Draft): PublishBody | null {
           pictureId: item.pictureId,
           tierIndex: tier,
           ...creditField(item.credit),
+          ...attributionField(item.imageUrl, item.attribution),
         },
       ];
     }),
@@ -416,13 +431,17 @@ export function loadEditorDraft(store: KeyValueStore, key = NEW_DRAFT_KEY): Draf
     ) {
       return null;
     }
-    const items = draft.items.map((item: Partial<EditorItem>) => ({
-      key: String(item.key ?? ""),
-      title: typeof item.title === "string" ? item.title : "",
-      imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : null,
-      pictureId: typeof item.pictureId === "string" ? item.pictureId : null,
-      ...creditField(item.credit),
-    }));
+    const items = draft.items.map((item: Partial<EditorItem>) => {
+      const imageUrl = typeof item.imageUrl === "string" ? item.imageUrl : null;
+      return {
+        key: String(item.key ?? ""),
+        title: typeof item.title === "string" ? item.title : "",
+        imageUrl,
+        pictureId: typeof item.pictureId === "string" ? item.pictureId : null,
+        ...creditField(item.credit),
+        ...attributionField(imageUrl, item.attribution),
+      };
+    });
     return {
       title: draft.title,
       category: typeof draft.category === "string" ? draft.category : null,

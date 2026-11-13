@@ -1,3 +1,4 @@
+import type { PictureAttribution } from "../../api/pictureAttribution";
 import { scopeFor } from "../../api/pictures";
 import type { CatalogueItem } from "../../api/types";
 import { isSearchLimit, searchLimitOf } from "../../lib/searchLimit";
@@ -125,6 +126,7 @@ export interface PastedCard {
   imageUrl: string | null;
   key?: string;
   credit?: string | null;
+  attribution?: PictureAttribution;
 }
 
 /**
@@ -204,6 +206,9 @@ export async function cardsFor(
               imageUrl: card.imageUrl,
               key: card.id,
               ...(typeof card.credit === "string" ? { credit: card.credit } : {}),
+              ...(card.attribution === null || card.attribution === undefined
+                ? {}
+                : { attribution: card.attribution }),
             },
         start + index + 1,
       );

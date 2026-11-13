@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { isTmdbPicture } from "../api/pictureAttribution";
 import type { SectionProposal, SectionStats } from "../api/sections";
 import { isSectionId } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
@@ -552,7 +553,9 @@ function OpenBoard({
             imageUrl: action.imageUrl,
             pictureId: action.pictureId ?? null,
             credit: creditOf(action.credit),
-            source: action.key?.startsWith("tmdb:") ? "TMDB" : "MANUAL",
+            attribution: action.attribution ?? null,
+            // TMDB's by the attribution; by the catalogue id only for a hit without one.
+            source: isTmdbPicture(action.attribution, action.key) ? "TMDB" : "MANUAL",
           },
         ],
         now(),

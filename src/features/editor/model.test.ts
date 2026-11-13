@@ -432,3 +432,88 @@ describe("the draft between visits", () => {
     expect(loadEditorDraft(store)).toBeNull();
   });
 });
+
+describe("a picture's attribution in the editor", () => {
+  const tmdb = { source: "tmdb", link: "https://www.themoviedb.org/movie/264660" };
+
+  it("goes on the card with its picture, out with a publish, and comes back from a kept draft", () => {
+    const store = memoryStore();
+    const draft = apply(
+      ready(),
+      {
+        type: "addItem",
+        title: "Climax",
+        imageUrl: "https://image.tmdb.org/t/p/w500/c.jpg",
+        key: "tmdb:2",
+        attribution: tmdb,
+      },
+      // A card without a picture names nobody's.
+      { type: "addItem", title: "Named", imageUrl: null, attribution: tmdb },
+    );
+    expect(draft.items.find((item) => item.key === "tmdb:2")?.attribution).toEqual(tmdb);
+    expect(draft.items.find((item) => item.title === "Named")).not.toHaveProperty("attribution");
+    const body = publishBodyOf(draft)!;
+    expect(body.items.find((item) => item.title === "Climax")?.attribution).toEqual(tmdb);
+    expect(body.items.find((item) => item.title === "Ex Machina")).not.toHaveProperty(
+      "attribution",
+    );
+    saveEditorDraft(store, draft);
+    expect(
+      loadEditorDraft(store)?.items.find((item) => item.key === "tmdb:2")?.attribution,
+    ).toEqual(tmdb);
+  });
+
+  it("leaves with a picture a kept ranking does not take along", () => {
+    const own =
+      "https://firebasestorage.googleapis.com/v0/b/tieryourlife.appspot.com/o/published%2Fabc%2Fpic1?alt=media";
+    const draft = draftOfRanking({
+      listId: "abc",
+      rows: [],
+      snapshot: {
+        title: "Films",
+        authorName: "danylo",
+        authorPhotoUrl: null,
+        category: "film_tv",
+        tiers: [{ label: "S", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" }],
+        items: [
+          {
+            title: "Ex Machina",
+            imageUrl: "https://image.tmdb.org/t/p/w500/ex.jpg",
+            attribution: tmdb,
+            tierIndex: 0,
+          },
+          { title: "Home video", imageUrl: own, attribution: { source: "web" }, tierIndex: null },
+        ],
+      },
+    });
+    expect(draft.items[0]?.attribution).toEqual(tmdb);
+    expect(draft.items[1]?.imageUrl).toBeNull();
+    expect(draft.items[1]).not.toHaveProperty("attribution");
+  });
+
+  it("comes with a published list into its editor", () => {
+    const draft = draftOf({
+      id: "l1",
+      title: "Films",
+      authorUid: "u",
+      authorName: "",
+      authorPhotoUrl: null,
+      category: "film_tv",
+      itemCount: 1,
+      coverImageUrl: null,
+      previewImages: [],
+      tierColors: [],
+      updatedAt: 1,
+      takeCount: 0,
+      tiers: [{ label: "S", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" }],
+      items: [
+        {
+          title: "Ex Machina",
+          imageUrl: "https://image.tmdb.org/t/p/w500/ex.jpg",
+          attribution: tmdb,
+        },
+      ],
+    });
+    expect(draft.items[0]?.attribution).toEqual(tmdb);
+  });
+});

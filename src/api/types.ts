@@ -1,3 +1,5 @@
+import type { PictureAttribution } from "./pictureAttribution";
+
 export const CATEGORIES = [
   "anime",
   "film_tv",
@@ -90,6 +92,8 @@ export interface PublishedItem {
   imageUrl: string | null;
   /** The photographer the picture's license asks to name; absent for none. */
   credit?: string | null;
+  /** Where the picture came from and whom it names; absent on cards without one and on older snapshots. */
+  attribution?: PictureAttribution;
   // Absent on snapshots published before the author's arrangement travelled.
   tierIndex?: number | null;
 }
@@ -140,4 +144,6 @@ export interface CatalogueItem {
   imageUrl: string | null;
   /** The photographer the picture's license asks to name, where the picture search knows one. */
   credit?: string | null;
+  /** Where the picture came from and whom it names, where the picture search says. */
+  attribution?: PictureAttribution | null;
 }

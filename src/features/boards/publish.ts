@@ -1,4 +1,5 @@
 import type { PublishRequest } from "../../api/lists";
+import { attributionField } from "../../api/pictureAttribution";
 import type { PublishedList } from "../../api/types";
 import type { Draft } from "../editor/model";
 import {
@@ -121,6 +122,9 @@ export function publishRequestOf(board: Board): PublishRequest | null {
       pictureId: item.pictureId,
       ...(item.sourceIndex === undefined ? {} : { sourceIndex: item.sourceIndex }),
       ...(item.credit === null ? {} : { credit: item.credit }),
+      // Sent back whole; the backend reads its link and originalUrl, which
+      // keeps a catalogue copy under its own name when the copy goes out again.
+      ...(item.attribution === undefined ? {} : { attribution: item.attribution }),
       tierIndex,
     })),
   };
@@ -186,6 +190,7 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
       title: card.title,
       imageUrl: card.imageUrl,
       credit: card.credit ?? null,
+      ...attributionField(card.imageUrl, card.attribution),
       source: "MANUAL" as const,
       deletedAt: null,
     };
@@ -224,6 +229,9 @@ export const boardFromList = (
         title: item.title,
         imageUrl: item.imageUrl,
         credit: creditOf(item.credit),
+        // With its originalUrl when the picture is the list's copy of a
+        // catalogue's: a publish of the copy sends it back with the address.
+        ...attributionField(item.imageUrl, item.attribution),
       })),
       rows,
       poolOrder,

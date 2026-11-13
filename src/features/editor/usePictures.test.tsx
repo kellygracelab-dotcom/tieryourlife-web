@@ -15,6 +15,7 @@ const picture = (id: string): FoundPicture => ({
   source: "tmdb",
   kind: "movie",
   credit: null,
+  attribution: null,
 });
 
 function Probe({

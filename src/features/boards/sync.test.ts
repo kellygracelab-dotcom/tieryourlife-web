@@ -315,6 +315,31 @@ describe("syncBoards", () => {
     ]);
   });
 
+  it("sends a picture's attribution up and brings it down, and leaves it out where there is none", async () => {
+    const tmdb = { source: "tmdb", link: "https://www.themoviedb.org/movie/438631" };
+    const withPictures = (board: Board): Board => ({
+      ...board,
+      items: board.items.map((item) =>
+        item.title === "Dune"
+          ? { ...item, imageUrl: "https://image.tmdb.org/t/p/w500/d.jpg", attribution: tmdb }
+          : { ...item, imageUrl: "https://x/h.jpg" },
+      ),
+    });
+    const { repository, account, run } = setUp();
+    repository.save(withPictures(films()));
+    await run();
+    const [dune, heat] = account.keeps[0]!.request.items;
+    expect(dune).toMatchObject({ title: "Dune", attribution: tmdb });
+    expect(heat).not.toHaveProperty("attribution");
+
+    const there = setUp();
+    there.account.holds(withPictures(films("theirs")));
+    await there.run();
+    const [down, other] = there.repository.get("theirs")!.items;
+    expect(down?.attribution).toEqual(tmdb);
+    expect(other).not.toHaveProperty("attribution");
+  });
+
   it("sends a board changed here over the revision it was working from", async () => {
     const { repository, account, run } = setUp();
     repository.save(films());

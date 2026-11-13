@@ -195,6 +195,23 @@ describe("cardsFor", () => {
     expect(PASTE_AT_ONCE).toBe(3);
   });
 
+  it("gives each card its picture's attribution, and none where the catalogue said none", async () => {
+    const tmdb = { source: "tmdb", link: "https://www.themoviedb.org/movie/1" };
+    const got: PastedCard[] = [];
+    await cardsFor(
+      wantedOf(["Dune", "Heat"].join("\n"), 100),
+      async (query) => [
+        query === "Dune"
+          ? { ...card("tmdb:1", "Dune"), attribution: tmdb }
+          : { ...card("tmdb:2", "Heat"), attribution: null },
+      ],
+      (one) => got.push(one),
+      { paceMs: 0 },
+    );
+    expect(got[0]).toMatchObject({ title: "Dune", attribution: tmdb });
+    expect(got[1]).not.toHaveProperty("attribution");
+  });
+
   it("keeps to a pace between the few, and waits for nothing after the last", async () => {
     vi.useFakeTimers();
     const asked: string[] = [];

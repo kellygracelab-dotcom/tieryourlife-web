@@ -4,6 +4,7 @@ import {
   type BoardOrigin,
   type RankingChoice,
 } from "../../api/boards";
+import { attributionField, type PictureAttribution } from "../../api/pictureAttribution";
 import { PICTURE_CREDIT_LIMIT, creditOf } from "../../api/pictureCredit";
 export { creditOf } from "../../api/pictureCredit";
 import { holds } from "../../lib/locale";
@@ -81,6 +82,12 @@ export interface BoardItem {
   imageUrl: string | null;
   /** The photographer the picture's license asks to name; null for none. Not part of the fingerprint. */
   credit: string | null;
+  /**
+   * Where the picture came from and whom it names (CONTRACT,
+   * PictureAttribution); absent on a card without one. It is the picture's:
+   * kept, synced and published with it, and gone with it. Not part of the fingerprint.
+   */
+  attribution?: PictureAttribution;
   source: ItemSource;
   /** When it went to the trash; null while it is on the board. */
   deletedAt: number | null;
@@ -153,6 +160,8 @@ export interface CardDraft {
   pictureId?: string | null;
   /** The photographer the picture's license asks to name. */
   credit?: string | null;
+  /** The picture's attribution; none is kept on a card without a picture. */
+  attribution?: PictureAttribution | null;
   source?: ItemSource;
 }
 
@@ -516,6 +525,7 @@ export function addToPool(
         title,
         imageUrl: draft.imageUrl,
         credit: creditOf(draft.credit),
+        ...attributionField(draft.imageUrl, draft.attribution),
         source: draft.source ?? "MANUAL",
         deletedAt: null,
       },

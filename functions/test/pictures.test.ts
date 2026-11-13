@@ -91,7 +91,8 @@ describe("pictures through the site's address", () => {
     assert.equal(got.body, bytes);
     assert.equal(got.headers["Content-Type"], "image/jpeg");
     assert.equal(got.headers["X-Content-Type-Options"], "nosniff");
-    assert.match(got.headers["Cache-Control"]!, /s-maxage=60/);
+    // A year in the browser, a minute at the shared CDN, so a takedown reaches everyone new within a minute.
+    assert.equal(got.headers["Cache-Control"], "public, max-age=31536000, s-maxage=60, immutable");
     assert.deepEqual(fake.shrunk, []);
     const bad = await ask(["original", "published", "list", "pic"], {
       ...fake,
@@ -110,6 +111,28 @@ describe("pictures through the site's address", () => {
       assert.deepEqual(denied.asked, []);
     }
   });
+  it("keeps only a published list's original in the browser for a year; avatars, sections and topics are asked again", async () => {
+    const bytes = Buffer.from([0xff, 0xd8, 0xff, 0xdb]);
+    for (const kind of ["avatars", "sections", "topics"]) {
+      const got = await ask(["original", kind, "abc", "pic"], {
+        ...deps(),
+        read: async () => bytes,
+      });
+      assert.equal(got.status, 200, kind);
+      assert.equal(
+        got.headers["Cache-Control"],
+        "public, max-age=0, s-maxage=60, must-revalidate",
+        kind,
+      );
+    }
+    const missing = await ask(["original", "published", "list", "gone"], {
+      ...deps(),
+      read: async () => null,
+    });
+    assert.equal(missing.status, 404);
+    assert.equal(missing.headers["Cache-Control"], "public, max-age=60, s-maxage=60");
+  });
+
   it("names a section's or a topic's picture in the bucket, and nothing else", () => {
     assert.equal(picturePathOf("sections", "film_tv", "579c-14"), "sections/film_tv/579c-14");
     assert.equal(picturePathOf("topics", "AbC123", "p1"), "topics/AbC123/p1");

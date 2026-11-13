@@ -142,6 +142,8 @@ const request = (
     imageUrl:
       item.pictureId !== null && privatePicturePath(item.imageUrl) !== null ? null : item.imageUrl,
     ...(item.credit === null ? {} : { credit: item.credit }),
+    // So a card picked here publishes with its page link from another device.
+    ...(item.attribution === undefined ? {} : { attribution: item.attribution }),
     source: item.source,
     deletedAt: item.deletedAt,
   })),
