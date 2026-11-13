@@ -1,5 +1,9 @@
 import type { PublishRequest } from "../../api/lists";
-import { manualCreditOf } from "../../api/pictureAttribution";
+import {
+  editorCreditOf,
+  manualCreditOf,
+  type PictureAttribution,
+} from "../../api/pictureAttribution";
 import type { PublishedList } from "../../api/types";
 import { publishedPictureOf } from "../../lib/pictures";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
@@ -266,6 +270,61 @@ export async function afterHouseTranslations(
     markHouseRevision(uid, list.revision, store);
     markHouseSeen(uid, list.updatedAt, store);
   }
+}
+
+/**
+ * The board with the editor's credits as the list now holds them, read back
+ * after its own Update: a credit given by its page alone (a Commons file, a
+ * Flickr photo, an iNaturalist observation) gets the author and the licence
+ * the server read there, so the editor sees what readers will. A card is
+ * matched by its title and its credit's page; the cover's credit by the
+ * cover. Nothing else changes, its edit time neither, so nothing is taken
+ * for an unsent edit; the same board when nothing was filled in.
+ */
+export function withServerCredits(board: Board, list: PublishedList): Board {
+  let changed = false;
+  const items = board.items.map((item) => {
+    const mine = item.attribution;
+    if (item.deletedAt !== null || mine?.manual !== true || mine.link === undefined) return item;
+    const theirs = list.items.find(
+      (one) =>
+        one.title === item.title &&
+        one.attribution?.manual === true &&
+        one.attribution.link === mine.link,
+    );
+    const credit = editorCreditOf(theirs?.attribution);
+    if (credit === null) return item;
+    const { author: _a, license: _l, licenseUrl: _u, ...rest } = mine;
+    const filled: PictureAttribution = { ...rest, ...credit, manual: true };
+    if (
+      filled.author === mine.author &&
+      filled.license === mine.license &&
+      filled.licenseUrl === mine.licenseUrl
+    ) {
+      return item;
+    }
+    changed = true;
+    return { ...item, attribution: filled };
+  });
+  const cover = coverCreditOf(board);
+  const theirCover = list.coverAttribution;
+  const coverFilled =
+    cover !== undefined &&
+    cover !== null &&
+    theirCover !== undefined &&
+    board.coverCredit !== undefined &&
+    theirCover.link === cover.link &&
+    (theirCover.author !== cover.author ||
+      theirCover.license !== cover.license ||
+      theirCover.licenseUrl !== cover.licenseUrl);
+  if (!changed && !coverFilled) return board;
+  return {
+    ...board,
+    items,
+    ...(coverFilled && board.coverCredit !== undefined
+      ? { coverCredit: { url: board.coverCredit.url, credit: theirCover } }
+      : {}),
+  };
 }
 
 /** Whether the board holds edits its list has not had; one never marked is taken to. */

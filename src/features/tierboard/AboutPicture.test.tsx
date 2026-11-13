@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AboutButton, AboutPicture, hasAbout, openPage, pageOf, PictureMenu } from "./AboutPicture";
+import { AboutPicture, hasAbout, openPage, pageOf, PictureMenu } from "./AboutPicture";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -191,15 +191,6 @@ describe("About the picture", () => {
       "src",
       "https://img.test/fox.jpg",
     );
-  });
-});
-
-describe("the «i» on a card", () => {
-  it("is named for the card, and opens beside it", async () => {
-    const onOpen = vi.fn();
-    render(<AboutButton name="Fox" onOpen={onOpen} />);
-    await userEvent.click(screen.getByRole("button", { name: "About the picture of Fox" }));
-    expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ x: expect.any(Number) }));
   });
 });
 

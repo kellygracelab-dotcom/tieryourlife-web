@@ -3,15 +3,7 @@ import { useRef, useState, type CSSProperties } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
 import { DOUBLE_TAP_MS } from "./drag";
-import {
-  AboutButton,
-  AboutPicture,
-  hasAbout,
-  openPage,
-  pageOf,
-  PictureMenu,
-  type Anchor,
-} from "./AboutPicture";
+import { AboutPicture, hasAbout, openPage, pageOf, PictureMenu, type Anchor } from "./AboutPicture";
 import { CardName } from "./CardName";
 import { TierLabel } from "./TierLabel";
 import { useBoardSize } from "./useBoardSize";
@@ -38,8 +30,8 @@ function Tile({
   board: BoardSize;
 }) {
   const lastClick = useRef<number | null>(null);
-  // The card large with what its picture says: by a double tap, a right click
-  // or the «i»; the «i» opens it beside the card, without the picture.
+  // The card large with what its picture says: by a double tap, or Enter;
+  // a right click offers it beside the card, without the picture.
   const [open, setOpen] = useState<{ anchor: Anchor | null; large: boolean } | null>(null);
   const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
   const knows = item.imageUrl !== null && hasAbout(item);
@@ -79,9 +71,6 @@ function Tile({
       >
         {art}
       </button>
-      {knows && (
-        <AboutButton name={item.title} onOpen={(at) => setOpen({ anchor: at, large: false })} />
-      )}
       {menuAt !== null && (
         <PictureMenu
           name={item.title}

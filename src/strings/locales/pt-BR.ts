@@ -1573,7 +1573,6 @@ const ptBR: Translation = {
     linkNeeded:
       "“{name}” precisa da página de origem da imagem. Remova o cartão e adicione de novo pelo link da imagem, com a página.",
     about: "Sobre a imagem",
-    aboutOf: "Sobre a imagem de {name}",
     openPage: "Abrir a página",
     photo: "Foto",
     licence: "Licença",

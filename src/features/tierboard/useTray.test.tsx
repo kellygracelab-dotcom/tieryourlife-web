@@ -1,22 +1,12 @@
 import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TRAY_GAP, TRAY_INSET, TRAY_PAGE, useTray } from "./useTray";
+import { TRAY_GAP, TRAY_PAGE, useTray } from "./useTray";
 
 const TILE = 52;
 
 /** A tray of `count` tiles, laid out by hand: jsdom has no layout of its own. */
-function Tray({
-  selected,
-  count,
-  dir = "ltr",
-  settle = 0,
-}: {
-  selected: number | null;
-  count: number;
-  dir?: string;
-  settle?: number;
-}) {
-  const { tray, page, pages, readPage } = useTray(selected, count, settle);
+function Tray({ count, dir = "ltr" }: { selected?: number | null; count: number; dir?: string }) {
+  const { tray, page, pages, readPage } = useTray(count);
   return (
     <div dir={dir}>
       <ul ref={tray} onScroll={readPage} style={{ direction: dir as "ltr" | "rtl" }}>
@@ -52,52 +42,19 @@ function layOut(row: HTMLUListElement, rtl = false) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("useTray", () => {
-  it("brings the picked card to the row's start, left to right", () => {
-    const { container, rerender } = render(<Tray selected={null} count={12} />);
-    const row = container.querySelector("ul") as HTMLUListElement;
-    layOut(row);
-    rerender(<Tray selected={4} count={12} />);
-    expect(row.scrollBy).toHaveBeenCalledWith({
-      left: 4 * (TILE + TRAY_GAP) - TRAY_INSET,
-      behavior: "smooth",
-    });
-  });
-
-  it("brings it to the right edge in Arabic, where the row starts", () => {
-    const { container, rerender } = render(<Tray selected={null} count={12} dir="rtl" />);
-    const row = container.querySelector("ul") as HTMLUListElement;
-    layOut(row, true);
-    rerender(<Tray selected={4} count={12} dir="rtl" />);
-    expect(row.scrollBy).toHaveBeenCalledWith({
-      left: -(4 * (TILE + TRAY_GAP)) + TRAY_INSET,
-      behavior: "smooth",
-    });
-  });
-
-  it("waits out a double tap before it scrolls, and a pick undone meanwhile stays put", () => {
-    vi.useFakeTimers();
-    try {
-      const { container, rerender } = render(<Tray selected={null} count={12} settle={300} />);
+  it("leaves the row where it is when a card is picked, in either direction", () => {
+    for (const dir of ["ltr", "rtl"]) {
+      const { container, rerender, unmount } = render(
+        <Tray selected={null} count={12} dir={dir} />,
+      );
       const row = container.querySelector("ul") as HTMLUListElement;
-      layOut(row);
-      // The first tap picks, the second, 120 ms on, opens the card's menu and picks nothing.
-      rerender(<Tray selected={4} count={12} settle={300} />);
-      act(() => vi.advanceTimersByTime(120));
-      rerender(<Tray selected={null} count={12} settle={300} />);
-      act(() => vi.advanceTimersByTime(1000));
+      layOut(row, dir === "rtl");
+      row.scrollLeft = 0;
+      rerender(<Tray selected={4} count={12} dir={dir} />);
+      rerender(<Tray selected={11} count={12} dir={dir} />);
       expect(row.scrollBy).not.toHaveBeenCalled();
-
-      // A single tap: once the wait is over, the card comes to the start.
-      rerender(<Tray selected={4} count={12} settle={300} />);
-      act(() => vi.advanceTimersByTime(299));
-      expect(row.scrollBy).not.toHaveBeenCalled();
-      act(() => vi.advanceTimersByTime(1));
-      expect(row.scrollBy).toHaveBeenCalledWith({
-        left: 4 * (TILE + TRAY_GAP) - TRAY_INSET,
-        behavior: "smooth",
-      });
-    } finally {
-      vi.useRealTimers();
+      expect(row.scrollLeft).toBe(0);
+      unmount();
     }
   });
 

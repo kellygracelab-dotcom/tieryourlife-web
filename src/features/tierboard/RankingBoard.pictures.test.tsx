@@ -191,14 +191,24 @@ describe("the card just added", () => {
 });
 
 describe("a card's picture on the owner's board", () => {
-  it("has an «i» that tells about the picture, beside the card", async () => {
+  it("tells about the picture from the card's menu, with no «i» on the card", async () => {
     owned();
-    expect(screen.queryByRole("button", { name: "About the picture of Arctic fox" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "About the picture of Fennec" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "About the picture of Red fox" }));
+    expect(screen.queryByRole("button", { name: /^About the picture/ })).toBeNull();
+    await userEvent.dblClick(card("Red fox"));
+    const menu = within(screen.getByRole("menu", { name: "Red fox" }));
+    await userEvent.click(menu.getByRole("menuitem", { name: "About the picture" }));
     const about = screen.getByRole("dialog", { name: "Red fox" });
     expect(about).toHaveTextContent("Jane Doe");
     expect(within(about).getByRole("link", { name: "commons.example.org" })).toBeInTheDocument();
+  });
+
+  it("tells about the picture from the keyboard, by the card's menu", async () => {
+    owned();
+    card("Red fox").focus();
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    const menu = within(screen.getByRole("menu", { name: "Red fox" }));
+    await userEvent.click(menu.getByRole("menuitem", { name: "About the picture" }));
+    expect(screen.getByRole("dialog", { name: "Red fox" })).toHaveTextContent("Jane Doe");
   });
 
   it("offers About the picture and Open its page in the card's menu", async () => {

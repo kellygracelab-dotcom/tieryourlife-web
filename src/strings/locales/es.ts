@@ -1582,7 +1582,6 @@ const es: Translation = {
     linkNeeded:
       "«{name}» necesita la página de origen de su imagen. Quítala y vuelve a añadirla desde el enlace de la imagen, con la página.",
     about: "Sobre la imagen",
-    aboutOf: "Sobre la imagen de {name}",
     openPage: "Abrir su página",
     photo: "Foto",
     licence: "Licencia",

@@ -1599,7 +1599,6 @@ const fr: Translation = {
     linkNeeded:
       "« {name} » a besoin de la page d’origine de son image. Retirez la carte et ajoutez-la de nouveau depuis le lien de l’image, avec la page.",
     about: "À propos de l’image",
-    aboutOf: "À propos de l’image de {name}",
     openPage: "Ouvrir sa page",
     photo: "Photo",
     licence: "Licence",

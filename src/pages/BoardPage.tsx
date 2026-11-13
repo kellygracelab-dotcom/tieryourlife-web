@@ -98,6 +98,7 @@ import {
   linkToHouse,
   markHouseCopy,
   markHouseRevision,
+  withServerCredits,
   markHouseSeen,
   markHouseSent,
   unlinkFromHouse,
@@ -534,7 +535,15 @@ function OpenBoard({
     id: string,
     updatedAt: number | null,
     revision: number | null,
+    list: PublishedList | null = null,
   ) => {
+    // The credits the server filled in from their pages, read back with the
+    // list, unless somebody else wrote it in between.
+    if (list !== null && (revision === null || list.revision === revision)) {
+      const before = latest();
+      const filled = withServerCredits(before, list);
+      if (filled !== before) repository.save(filled);
+    }
     linkToHouse(uid, id, houseStore);
     markHouseSent(uid, latest().editedAt, houseStore);
     markHouseSeen(uid, updatedAt, houseStore);
