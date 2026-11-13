@@ -4,7 +4,7 @@ vi.mock("../lib/firebase", async (original) => ({
   ...(await original<typeof import("../lib/firebase")>()),
   getFirebaseAuth: () => actionAuth,
 }));
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
@@ -27,6 +27,7 @@ import { MENU_COUNT_KEY } from "../features/tierboard/RankingBoard";
 import { TIER_HOLD_MS } from "../features/tierboard/useTierMove";
 import { SessionContext, type Session } from "../app/session";
 import type { SectionStats } from "../api/sections";
+import type { PublishedList } from "../api/types";
 import type { LinkKeep, Upload } from "../features/editor/AddCardBox";
 import { createSectionsStore, type SectionsStore } from "../features/sections/useSections";
 import { memoryStore, type KeyValueStore } from "../lib/storage";
@@ -36,7 +37,9 @@ import {
   hasUnsentEdits,
   houseLinkOf,
   linkToHouse,
+  houseRevisionOf,
   listChangedSince,
+  markHouseRevision,
 } from "../features/boards/houseList";
 import { publishRequestOf } from "../features/boards/publish";
 import { resetModeratorForTests, type LoadReports } from "../features/moderation/useModerator";
@@ -1148,9 +1151,12 @@ describe("BoardPage: a house list", () => {
   const staff: LoadReports = () => Promise.resolve({ reports: [] });
   const notStaff: LoadReports = () => Promise.reject(new ApiFailure({ kind: "notYours" }));
   const sending = (): HouseSending => ({
-    publish: vi.fn(() => Promise.resolve({ id: "H1", topicId: null })),
+    publish: vi.fn(() => Promise.resolve({ id: "H1", topicId: null, revision: 1 })),
     // The list read back after the send, by the server's clock.
-    replace: vi.fn((id: string) => Promise.resolve({ id, topicId: null, updatedAt: 7_000 })),
+    replace: vi.fn((id: string) =>
+      Promise.resolve({ id, topicId: null, updatedAt: 7_000, revision: 2 }),
+    ),
+    load: vi.fn(() => Promise.reject(new ApiFailure({ kind: "offline" }))),
   });
 
   it("says a new board is the house's, leads back to House lists, and offers no Public switch", async () => {
@@ -1233,9 +1239,16 @@ describe("BoardPage: a house list", () => {
       "Your changes reach the list only when you update it.",
     );
 
+    // The revision the list went out at is the board's from now on.
+    expect(houseRevisionOf("films", houseStore)).toBe(1);
+
     await userEvent.click(await screen.findByRole("button", { name: "Update house list" }));
     expect(await screen.findByText("House list updated")).toBeInTheDocument();
-    expect(house.replace).toHaveBeenCalledWith("H1", publishRequestOf(board));
+    expect(house.replace).toHaveBeenCalledWith("H1", {
+      ...publishRequestOf(board),
+      baseRevision: 1,
+    });
+    expect(houseRevisionOf("films", houseStore)).toBe(2);
     // What went out is no edit the list lacks: a later Edit need not ask about it.
     expect(hasUnsentEdits(houseRepository.get("films")!, houseStore)).toBe(false);
     // The list as read back after it is the one the board matches, by the server's time.
@@ -1258,6 +1271,67 @@ describe("BoardPage: a house list", () => {
     expect(houseLinkOf("films", houseStore)).toEqual({ listId: "H2" });
     await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
     expect(house.replace).toHaveBeenCalledWith("H2", expect.objectContaining({ title: "Films" }));
+    // Its revision is not known here: nothing is checked against one.
+    expect(vi.mocked(house.replace).mock.calls[0]![1]).not.toHaveProperty("baseRevision");
+  });
+
+  // Content, 13.11.2026: a fix made on the server to the house list Fruit left
+  // its updatedAt alone, Edit opened the board this browser kept from before,
+  // and Update from it would have put the old list back over the fix.
+  it("is refused once the list moved on, and becomes the list as it stands when asked", async () => {
+    const houseRepository = boardsRepository(memoryStore());
+    houseRepository.save({ ...filmBoard(), category: "film_tv" });
+    const houseStore = memoryStore();
+    linkToHouse("films", "H1", houseStore);
+    markHouseRevision("films", 3, houseStore);
+    const asItStands: PublishedList = {
+      id: "H1",
+      title: "Fruit",
+      anonymous: true,
+      authorUid: "",
+      authorName: "",
+      authorPhotoUrl: null,
+      category: "food",
+      itemCount: 1,
+      coverImageUrl: null,
+      previewImages: [],
+      tierColors: [],
+      updatedAt: 9_000,
+      takeCount: 0,
+      tiers: [{ label: "S", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" }],
+      items: [{ title: "Mango", imageUrl: null, tierIndex: 0 }],
+      revision: 5,
+    };
+    const house: HouseSending = {
+      publish: vi.fn(),
+      replace: vi.fn(() => Promise.reject(new ApiFailure({ kind: "sourceChanged", revision: 5 }))),
+      load: vi.fn(() => Promise.resolve(asItStands)),
+    };
+    const router = open(boardsRepository(memoryStore()), "/b/films?house=H1", {
+      house,
+      houseStore,
+      houseRepository,
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
+    expect(house.replace).toHaveBeenCalledWith("H1", expect.objectContaining({ baseRevision: 3 }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("List changed on the server.");
+    // Never sent again over it, by itself or by the editor, until the list is loaded.
+    expect(screen.getByRole("button", { name: "Update house list" })).toBeDisabled();
+    expect(house.replace).toHaveBeenCalledTimes(1);
+    expect(houseRepository.get("films")?.title).toBe("Films");
+
+    await userEvent.click(screen.getByRole("button", { name: "Load the current version" }));
+    expect(house.load).toHaveBeenCalledWith("H1");
+    await waitFor(() => expect(houseRepository.get("films")?.title).toBe("Fruit"));
+    expect(houseRepository.get("films")?.items.map((item) => item.title)).toEqual(["Mango"]);
+    expect(houseRevisionOf("films", houseStore)).toBe(5);
+    expect(hasUnsentEdits(houseRepository.get("films")!, houseStore)).toBe(false);
+    expect(houseLinkOf("films", houseStore)).toEqual({ listId: "H1" });
+    expect(`${router.state.location.pathname}${router.state.location.search}`).toBe(
+      "/b/films?house=H1",
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("button", { name: "Update house list" })).toBeEnabled();
   });
 
   it("puts the house list's address under its picture", async () => {
@@ -1288,6 +1362,7 @@ describe("BoardPage: a house list", () => {
     const house: HouseSending = {
       publish: vi.fn(() => Promise.reject(new ApiFailure({ kind: "notYours" }))),
       replace: vi.fn(() => Promise.reject(new ApiFailure({ kind: "notFound" }))),
+      load: vi.fn(() => Promise.reject(new ApiFailure({ kind: "notFound" }))),
     };
     const router = open(boardsRepository(memoryStore()), "/b/films?house=H1", {
       house,
@@ -1461,6 +1536,7 @@ describe("BoardPage: the editor's credits on a house list", () => {
   const sending = (): HouseSending => ({
     publish: vi.fn(() => Promise.resolve({ id: "H1", topicId: null })),
     replace: vi.fn((id: string) => Promise.resolve({ id, topicId: null })),
+    load: vi.fn(() => Promise.reject(new ApiFailure({ kind: "offline" }))),
   });
   const aboutOf = async (name: string) => {
     await userEvent.dblClick(screen.getByRole("button", { name }));

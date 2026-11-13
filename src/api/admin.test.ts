@@ -119,6 +119,27 @@ describe("admin", () => {
     expect(request).toHaveBeenLastCalledWith("DELETE", "/lists/editorial/l1");
   });
 
+  it("hands on the revision a house publish or replace answered with", async () => {
+    const body: PublishRequest = {
+      title: "Best ramen",
+      category: "food",
+      coverImageUrl: null,
+      coverPictureId: null,
+      baseRevision: 2,
+      tiers: [],
+      items: [],
+    };
+    const { client, request } = recordingClient({ id: "l1", topicId: null, revision: 3 });
+    await expect(replaceHouseList(client, "l1", body)).resolves.toEqual({
+      id: "l1",
+      topicId: null,
+      revision: 3,
+    });
+    expect(request).toHaveBeenLastCalledWith("PUT", "/lists/editorial/l1", { body });
+    const odd = recordingClient({ id: "l2", topicId: null, revision: -3 });
+    await expect(publishAsHouse(odd.client, body)).resolves.toEqual({ id: "l2", topicId: null });
+  });
+
   it("reads the house's lists a page after another, their covers only real pictures", async () => {
     const list = {
       id: "l1",

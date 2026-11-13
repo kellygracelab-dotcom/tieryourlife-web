@@ -925,9 +925,17 @@ const ptBR: Translation = {
     mergeFind: "Mesclar com outro tema",
     houseStaleTitle: "“{title}” mudou desde que você a editou aqui",
     houseStaleBody:
-      "Abrir como está descarta as alterações que você não enviou. Seu rascunho ainda as tem, mas atualizar a partir dele traz de volta a lista mais antiga.",
+      "Abrir como está descarta as alterações que você não enviou. Seu rascunho ainda as tem, mas ele foi feito a partir de uma versão mais antiga, então não dá para atualizar a lista a partir dele.",
     houseStaleDraft: "Abrir meu rascunho",
     houseStaleFresh: "Abrir como está",
+    houseChanged:
+      "A lista mudou no servidor. Suas alterações aqui não foram enviadas: carregue a versão atual para editar a lista como está agora.",
+    houseLoadCurrent: "Carregar a versão atual",
+    houseBusy: "O Wikimedia está ocupado. Tente de novo às {time}.",
+    houseNotCopied:
+      "Imagens não copiadas a tempo: {names}. Tente de novo às {time}; se alguma continuar falhando, troque-a.",
+    houseNotCopiedSome: "Algumas imagens não foram copiadas a tempo. Tente de novo às {time}.",
+    houseRetrying: "Aí ela será enviada de novo sozinha.",
   },
   sections: {
     followers: { one: "{n} seguidor", many: "{n} seguidores", other: "{n} seguidores" },

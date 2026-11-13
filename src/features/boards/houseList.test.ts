@@ -1,15 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { PublishedList } from "../../api/types";
 import { memoryStore } from "../../lib/storage";
 import {
+  afterHouseTranslations,
   boardFromHouseList,
+  boardMatchesList,
   hasUnsentEdits,
   HOUSE_BOARDS_KEY,
+  HOUSE_REVISION_KEY,
   houseBoardPath,
   houseLinkOf,
   houseLinkOfParam,
   houseRequestOf,
+  houseRevisionOf,
   linkToHouse,
+  listChangedSince,
+  markHouseCopy,
+  markHouseRevision,
   markHouseSent,
   NEW_HOUSE_PATH,
   unlinkFromHouse,
@@ -314,5 +321,85 @@ describe("the editor's credits on a house board", () => {
     expect(request.items[0]!.attribution).toEqual({ source: "tmdb", manual: true, ...credit });
     expect(boardFromHouseList(houseList, 5, uids())).not.toHaveProperty("coverCredit");
     expect(boardFromHouseList(houseList, 5, uids()).coverImageUrls).toEqual([]);
+  });
+});
+
+describe("a house board's list revision", () => {
+  const list = (revision: number | undefined, updatedAt = 100) => ({ revision, updatedAt });
+
+  it("is kept beside the board, read back as it was, and forgotten with the board", () => {
+    const store = memoryStore();
+    expect(houseRevisionOf("b1", store)).toBeNull();
+    markHouseRevision("b1", 0, store);
+    markHouseRevision("b2", "behind", store);
+    expect(houseRevisionOf("b1", store)).toBe(0);
+    expect(houseRevisionOf("b2", store)).toBe("behind");
+    markHouseRevision("b1", null, store);
+    expect(houseRevisionOf("b1", store)).toBeNull();
+    linkToHouse("b2", "h1", store);
+    unlinkFromHouse("b2", store);
+    expect(houseRevisionOf("b2", store)).toBeNull();
+    store.write(HOUSE_REVISION_KEY, JSON.stringify({ b3: 1.5, b4: "2" }));
+    expect(houseRevisionOf("b3", store)).toBeNull();
+    expect(houseRevisionOf("b4", store)).toBeNull();
+  });
+
+  it("opens a kept board only at the revision the list has; none known is not it", () => {
+    const store = memoryStore();
+    const b = { ...newBoard("b1", "Ramen", 10, uids()), editedAt: 500 };
+    expect(boardMatchesList(b, list(3), store)).toBe(false);
+    markHouseRevision(b.uid, 3, store);
+    expect(boardMatchesList(b, list(3), store)).toBe(true);
+    // Whatever the times say: a fix on the server moves only the revision.
+    expect(boardMatchesList(b, list(4, 1), store)).toBe(false);
+    markHouseRevision(b.uid, "behind", store);
+    expect(boardMatchesList(b, list(3), store)).toBe(false);
+  });
+
+  it("judges by the times, as before, a list from a server that says no revision", () => {
+    const store = memoryStore();
+    const b = { ...newBoard("b1", "Ramen", 10, uids()), editedAt: 500 };
+    expect(boardMatchesList(b, list(undefined, 400), store)).toBe(true);
+    expect(boardMatchesList(b, list(undefined, 600), store)).toBe(false);
+  });
+
+  it("remembers a board made from its list as matching it: tied, sent, its time and revision", () => {
+    const store = memoryStore();
+    const b = { ...newBoard("b1", "Ramen", 10, uids()), editedAt: 500 };
+    markHouseCopy(b, { id: "h1", revision: 6, updatedAt: 900 }, store);
+    expect(houseLinkOf(b.uid, store)).toEqual({ listId: "h1" });
+    expect(hasUnsentEdits(b, store)).toBe(false);
+    expect(listChangedSince(b, 900, store)).toBe(false);
+    expect(houseRevisionOf(b.uid, store)).toBe(6);
+  });
+
+  it("follows the translations' own write only: the next revision after its own", async () => {
+    const store = memoryStore();
+    linkToHouse("next", "h1", store);
+    markHouseRevision("next", 4, store);
+    linkToHouse("passed", "h1", store);
+    markHouseRevision("passed", 3, store);
+    linkToHouse("unknown", "h1", store);
+    linkToHouse("other", "h2", store);
+    markHouseRevision("other", 4, store);
+    const read = vi.fn(async () => list(5, 900));
+    await afterHouseTranslations("h1", read, store);
+    expect(read).toHaveBeenCalledWith("h1");
+    expect(houseRevisionOf("next", store)).toBe(5);
+    // Somebody else wrote too: left behind, for its Update to be refused.
+    expect(houseRevisionOf("passed", store)).toBe(3);
+    expect(houseRevisionOf("unknown", store)).toBeNull();
+    expect(houseRevisionOf("other", store)).toBe(4);
+  });
+
+  it("reads nothing when no board here knows its list's revision, and keeps it when the read fails", async () => {
+    const store = memoryStore();
+    linkToHouse("unknown", "h1", store);
+    const read = vi.fn(async () => list(1));
+    await afterHouseTranslations("h1", read, store);
+    expect(read).not.toHaveBeenCalled();
+    markHouseRevision("unknown", 2, store);
+    await afterHouseTranslations("h1", () => Promise.reject(new Error("offline")), store);
+    expect(houseRevisionOf("unknown", store)).toBe(2);
   });
 });

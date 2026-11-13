@@ -911,9 +911,18 @@ const de: Translation = {
     mergeFind: "Mit einem anderen Thema zusammenführen",
     houseStaleTitle: "„{title}“ hat sich geändert, seit du sie hier bearbeitet hast",
     houseStaleBody:
-      "Öffnest du sie, wie sie jetzt ist, gehen deine nicht gesendeten Änderungen verloren. Dein Entwurf hat sie noch, aber eine Aktualisierung daraus bringt die ältere Liste zurück.",
+      "Öffnest du sie, wie sie jetzt ist, gehen deine nicht gesendeten Änderungen verloren. Dein Entwurf hat sie noch, stammt aber aus einer älteren Version, daher lässt sich die Liste daraus nicht aktualisieren.",
     houseStaleDraft: "Meinen Entwurf öffnen",
     houseStaleFresh: "So öffnen, wie sie ist",
+    houseChanged:
+      "Die Liste wurde auf dem Server geändert. Deine Änderungen hier wurden nicht gesendet: Lade die aktuelle Version, um die Liste so zu bearbeiten, wie sie jetzt ist.",
+    houseLoadCurrent: "Aktuelle Version laden",
+    houseBusy: "Wikimedia ist ausgelastet. Versuch es um {time} noch einmal.",
+    houseNotCopied:
+      "Nicht rechtzeitig kopierte Bilder: {names}. Versuch es um {time} noch einmal; scheitert eines immer wieder, ersetze es.",
+    houseNotCopiedSome:
+      "Einige Bilder wurden nicht rechtzeitig kopiert. Versuch es um {time} noch einmal.",
+    houseRetrying: "Dann geht sie von selbst noch einmal raus.",
   },
   sections: {
     followers: { one: "{n} Follower", other: "{n} Follower" },

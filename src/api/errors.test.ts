@@ -256,6 +256,31 @@ describe("parseApiError", () => {
     ],
     [503, json({ code: "SOURCE_BUSY", busy: [] }), { kind: "sourceBusy" }],
     [503, json({ code: "SOURCE_BUSY", busy: "anilist" }), { kind: "sourceBusy" }],
+    // A house publication whose licensed pictures were not copied in time: which, and when again.
+    [
+      503,
+      json({
+        code: "PICTURES_NOT_COPIED",
+        imageUrls: ["https://upload.wikimedia.org/a.jpg", 7, "", null],
+        retryAt: 1_800_000_060_000,
+      }),
+      {
+        kind: "picturesNotCopied",
+        imageUrls: ["https://upload.wikimedia.org/a.jpg"],
+        retryAt: 1_800_000_060_000,
+      },
+    ],
+    [
+      503,
+      json({ code: "PICTURES_NOT_COPIED", imageUrls: "x" }),
+      { kind: "picturesNotCopied", imageUrls: [] },
+    ],
+    // The list a replace stood on moved on: the revision it has now, when the answer says one.
+    [409, json({ code: "LIST_CHANGED", revision: 7 }), { kind: "sourceChanged", revision: 7 }],
+    [409, json({ code: "LIST_CHANGED", revision: 0 }), { kind: "sourceChanged", revision: 0 }],
+    [409, json({ code: "LIST_CHANGED", revision: -1 }), { kind: "sourceChanged" }],
+    [409, json({ code: "LIST_CHANGED", revision: 1.5 }), { kind: "sourceChanged" }],
+    [409, json({ code: "LIST_CHANGED", version: 12 }), { kind: "sourceChanged" }],
     [405, json({ error: "Use GET" }), { kind: "unknown", status: 405 }],
     [500, "[]", { kind: "unknown", status: 500 }],
   ])("maps %i %s", (status, body, expected) => {
@@ -278,6 +303,12 @@ it("takes the time picture searches start again from Retry-After without one in 
     // And a busy picture site.
     expect(parseApiError(503, json({ code: "SOURCE_BUSY" }), "30")).toEqual({
       kind: "sourceBusy",
+      retryAt: 1_030_000,
+    });
+    // And pictures a house publication could not copy in time.
+    expect(parseApiError(503, json({ code: "PICTURES_NOT_COPIED", imageUrls: [] }), "30")).toEqual({
+      kind: "picturesNotCopied",
+      imageUrls: [],
       retryAt: 1_030_000,
     });
   } finally {

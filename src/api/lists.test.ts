@@ -4,8 +4,10 @@ import {
   loadFeed,
   loadList,
   loadMyLists,
+  publish,
   recordTake,
   republish,
+  revisionOf,
   unpublish,
   type PublishRequest,
 } from "./lists";
@@ -166,6 +168,45 @@ describe("lists", () => {
     await expect(republish(client, "a b", body)).resolves.toEqual({ id: "a b" });
 
     expect(request).toHaveBeenCalledWith("POST", "/lists/a%20b", { body });
+  });
+
+  it("reads a list's revision, a whole number from 0, and none from anything else", async () => {
+    for (const [revision, read] of [
+      [0, 0],
+      [7, 7],
+      [-1, undefined],
+      [1.5, undefined],
+      ["3", undefined],
+      [null, undefined],
+      [Number.MAX_SAFE_INTEGER + 1, undefined],
+    ] as const) {
+      expect(revisionOf(revision)).toBe(read);
+      const { client } = recordingClient({ id: "a", tiers: [], items: [], revision });
+      const list = await loadList(client, "a");
+      if (read === undefined) expect(list).not.toHaveProperty("revision");
+      else expect(list.revision).toBe(read);
+    }
+  });
+
+  it("hands on the revision a publish or a replace answered with, and sends baseRevision as given", async () => {
+    const body: PublishRequest = {
+      title: "T",
+      category: "anime",
+      coverImageUrl: null,
+      coverPictureId: null,
+      baseRevision: 4,
+      tiers: [],
+      items: [],
+    };
+    const { client, request } = recordingClient({ id: "a", topicId: null, revision: 5 });
+    await expect(republish(client, "a", body)).resolves.toEqual({
+      id: "a",
+      topicId: null,
+      revision: 5,
+    });
+    expect(request).toHaveBeenCalledWith("POST", "/lists/a", { body });
+    const odd = recordingClient({ id: "b", existing: true, revision: "5" });
+    await expect(publish(odd.client, body)).resolves.toEqual({ id: "b", existing: true });
   });
 
   it("unpublishes one list by id, escaping the id", async () => {

@@ -1,5 +1,5 @@
 import type { ApiClient } from "./client";
-import { summaryOf, type PublishRequest } from "./lists";
+import { summaryOf, withRevision, type PublishRequest } from "./lists";
 import type { SectionStats, ThemePair, Topic } from "./sections";
 import type { FeedSort, ListSummary } from "./types";
 
@@ -402,6 +402,8 @@ export function moveList(client: ApiClient, id: string, to: ListMove): Promise<v
 export interface HouseAnswer {
   id: string;
   topicId: string | null;
+  /** The list's revision after this write: the next replace's `baseRevision`. */
+  revision?: number;
 }
 
 /**
@@ -411,18 +413,24 @@ export interface HouseAnswer {
  * `anonymous` is ignored here, and it is refused the way a publish is.
  */
 export function publishAsHouse(client: ApiClient, request: PublishRequest): Promise<HouseAnswer> {
-  return client.request<HouseAnswer>("POST", "/lists/editorial", { body: request });
+  return client
+    .request<HouseAnswer>("POST", "/lists/editorial", { body: request })
+    .then(withRevision);
 }
 
-/** A house list replaced in place, same id and link; 403 NOT_YOURS when it is not the house's. */
+/**
+ * A house list replaced in place, same id and link; 403 NOT_YOURS when it is
+ * not the house's. With the request's `baseRevision`, 409 LIST_CHANGED when
+ * the list moved on since, and nothing is written.
+ */
 export function replaceHouseList(
   client: ApiClient,
   id: string,
   request: PublishRequest,
 ): Promise<HouseAnswer> {
-  return client.request<HouseAnswer>("PUT", `/lists/editorial/${encodeURIComponent(id)}`, {
-    body: request,
-  });
+  return client
+    .request<HouseAnswer>("PUT", `/lists/editorial/${encodeURIComponent(id)}`, { body: request })
+    .then(withRevision);
 }
 
 /**

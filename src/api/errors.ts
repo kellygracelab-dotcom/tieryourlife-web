@@ -15,7 +15,12 @@ export type ApiError =
    */
   | { kind: "merged"; into: string | null; topic: string | null }
   | { kind: "tooManyLists"; retryAt?: number }
-  | { kind: "sourceChanged" }
+  /**
+   * 409 LIST_CHANGED: the list a write stands on moved on. Of a replace sent
+   * with `baseRevision`, `revision` is the one the list has now; without it,
+   * the source a copy or a ranking was made from changed.
+   */
+  | { kind: "sourceChanged"; revision?: number }
   | { kind: "publicationChanged" }
   /** Three topics of the person's own wait for a moderator: a publish cannot propose a fourth. */
   | { kind: "tooManyTopics" }
@@ -74,6 +79,13 @@ export type ApiError =
    * "nothing by that name" is not known then.
    */
   | { kind: "sourceBusy"; retryAt?: number; quota?: LinkQuota; busy?: string[] }
+  /**
+   * 503 PICTURES_NOT_COPIED: a house publication is written only once its
+   * openly licensed catalogue pictures are our copies, and these (as sent)
+   * were not copied in time. Nothing was written; the same body goes again
+   * at `retryAt`, and a picture that keeps failing is best replaced.
+   */
+  | { kind: "picturesNotCopied"; imageUrls: string[]; retryAt?: number }
   | { kind: "unavailable" }
   | { kind: "offline" }
   | { kind: "unknown"; status: number };
@@ -108,6 +120,8 @@ interface ErrorBody {
   mergedInto?: unknown;
   mergedTopicId?: unknown;
   status?: unknown;
+  revision?: unknown;
+  imageUrls?: unknown;
 }
 
 function bodyOf(text: string): ErrorBody {
@@ -205,7 +219,10 @@ export function parseApiError(
     case 404:
       return { kind: "notFound" };
     case 409: {
-      if (code === "LIST_CHANGED") return { kind: "sourceChanged" };
+      if (code === "LIST_CHANGED") {
+        const revision = indexOrNull(body.revision);
+        return revision === null ? { kind: "sourceChanged" } : { kind: "sourceChanged", revision };
+      }
       if (code === "PUBLICATION_CHANGED") return { kind: "publicationChanged" };
       if (code === "TOO_MANY_LISTS") {
         const retryAt = publicationRetryAt(body.retryAt, retryAfter);
@@ -276,6 +293,17 @@ export function parseApiError(
       return { kind: "tooManyRequests", code };
     }
     case 503: {
+      if (code === "PICTURES_NOT_COPIED") {
+        const retryAt = publicationRetryAt(body.retryAt, retryAfter);
+        const imageUrls = Array.isArray(body.imageUrls)
+          ? body.imageUrls.filter((url): url is string => typeof url === "string" && url !== "")
+          : [];
+        return {
+          kind: "picturesNotCopied",
+          imageUrls,
+          ...(retryAt === undefined ? {} : { retryAt }),
+        };
+      }
       if (code !== "SOURCE_BUSY") return { kind: "unavailable" };
       const retryAt = publicationRetryAt(body.retryAt, retryAfter);
       const quota = quotaOf(body.quota);

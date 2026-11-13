@@ -881,9 +881,18 @@ const ja: Translation = {
     mergeFind: "ほかのトピックに統合",
     houseStaleTitle: "「{title}」はここで編集したあとに変更されました",
     houseStaleBody:
-      "今の状態で開くと、送信していない変更は失われます。下書きには残っていますが、下書きから更新すると古いリストに戻ります。",
+      "今の状態で開くと、送信していない変更は失われます。下書きには残っていますが、古いバージョンから作られているため、下書きからリストを更新することはできません。",
     houseStaleDraft: "下書きを開く",
     houseStaleFresh: "今の状態で開く",
+    houseChanged:
+      "サーバー上でリストが変更されました。ここでの変更は送信されていません。現在のバージョンを読み込んで、今の状態のリストを編集してください。",
+    houseLoadCurrent: "現在のバージョンを読み込む",
+    houseBusy: "Wikimedia が混み合っています。{time} にもう一度お試しください。",
+    houseNotCopied:
+      "時間内にコピーできなかった画像：{names}。{time} にもう一度お試しください。何度も失敗する画像は差し替えてください。",
+    houseNotCopiedSome:
+      "一部の画像を時間内にコピーできませんでした。{time} にもう一度お試しください。",
+    houseRetrying: "その時刻に自動でもう一度送信します。",
   },
   sections: {
     followers: { other: "フォロワー{n}人" },

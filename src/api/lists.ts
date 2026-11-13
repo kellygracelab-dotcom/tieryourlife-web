@@ -22,7 +22,7 @@ export async function loadList(client: ApiClient, id: string): Promise<Published
 
 /** One list as the site draws it, however it arrived: asked for, or already in the page. */
 export const publishedListOf = (list: PublishedList): PublishedList => {
-  const { coverAttribution, ...rest } = list;
+  const { coverAttribution, revision, ...rest } = list;
   // The cover's credit is the cover picture's: none on a list drawn without one.
   const coverCredit =
     pictureOf(list.coverImageUrl) === null ? null : editorCreditOf(coverAttribution);
@@ -32,7 +32,23 @@ export const publishedListOf = (list: PublishedList): PublishedList => {
     tiers: tiersOf(list.tiers),
     items: itemsOf(list.items),
     ...(coverCredit === null ? {} : { coverAttribution: coverCredit }),
+    ...revisionField(revision),
   };
+};
+
+/** A list's revision as the backend says it: a whole number from 0, else not known. */
+export const revisionOf = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+
+const revisionField = (value: unknown): { revision?: number } => {
+  const revision = revisionOf(value);
+  return revision === undefined ? {} : { revision };
+};
+
+/** A write's answer with the revision the list now has, when it says one the site can read. */
+export const withRevision = <T extends { revision?: number }>(answer: T): T => {
+  const { revision, ...rest } = answer;
+  return { ...rest, ...revisionField(revision) } as T;
 };
 
 /**
@@ -163,6 +179,12 @@ export interface PublishRequest {
    */
   takenFrom?: string;
   sourceVersion?: number;
+  /**
+   * The list's revision the board was read at, on a replace (CONTRACT, List
+   * revision): when the list has moved on since, the backend writes nothing
+   * and answers 409 LIST_CHANGED with the one it has. Left out, not checked.
+   */
+  baseRevision?: number;
   tiers: PublishedTier[];
   items: {
     sourceIndex?: number;
@@ -207,6 +229,8 @@ export interface Published {
    * look: its link answers 404 to everybody, the author too.
    */
   underReview?: boolean;
+  /** The list's revision after this write, or the existing list's; absent on a ranking. */
+  revision?: number;
 }
 
 export type PublicationPreview =
@@ -225,7 +249,7 @@ export function publish(
   request: PublishRequest,
   action?: AccountAction,
 ): Promise<Published> {
-  return client.request<Published>("POST", "/lists", { body: request, action });
+  return client.request<Published>("POST", "/lists", { body: request, action }).then(withRevision);
 }
 
 /** Replaces a published list in place: same id, same link, a fresh snapshot. */
@@ -235,10 +259,9 @@ export function republish(
   request: PublishRequest,
   action?: AccountAction,
 ): Promise<Published> {
-  return client.request<Published>("POST", `/lists/${encodeURIComponent(id)}`, {
-    body: request,
-    action,
-  });
+  return client
+    .request<Published>("POST", `/lists/${encodeURIComponent(id)}`, { body: request, action })
+    .then(withRevision);
 }
 
 /** Takes the list out of the feed and off its address; the backend answers 204 either way. */

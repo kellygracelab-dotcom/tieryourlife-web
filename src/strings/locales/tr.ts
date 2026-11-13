@@ -889,9 +889,17 @@ const tr: Translation = {
     mergeFind: "Başka bir konuyla birleştir",
     houseStaleTitle: "“{title}” burada düzenlediğinizden beri değişti",
     houseStaleBody:
-      "Olduğu gibi açarsanız göndermediğiniz değişiklikler kaybolur. Taslağınızda hâlâ duruyorlar, ama ondan güncellemek eski listeyi geri getirir.",
+      "Olduğu gibi açarsanız göndermediğiniz değişiklikler kaybolur. Taslağınızda hâlâ duruyorlar, ama taslak daha eski bir sürümden yapıldığı için liste ondan güncellenemez.",
     houseStaleDraft: "Taslağımı aç",
     houseStaleFresh: "Olduğu gibi aç",
+    houseChanged:
+      "Liste sunucuda değişti. Buradaki değişiklikleriniz gönderilmedi: listeyi şimdiki hâliyle düzenlemek için güncel sürümü yükleyin.",
+    houseLoadCurrent: "Güncel sürümü yükle",
+    houseBusy: "Wikimedia meşgul. {time} saatinde tekrar deneyin.",
+    houseNotCopied:
+      "Zamanında kopyalanamayan resimler: {names}. {time} saatinde tekrar deneyin; biri hâlâ başarısız olursa onu değiştirin.",
+    houseNotCopiedSome: "Bazı resimler zamanında kopyalanamadı. {time} saatinde tekrar deneyin.",
+    houseRetrying: "O saatte kendiliğinden yeniden gönderilir.",
   },
   sections: {
     followers: { one: "{n} takipçi", other: "{n} takipçi" },

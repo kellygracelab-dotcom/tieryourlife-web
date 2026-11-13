@@ -25,15 +25,17 @@ import { Menu } from "../../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../../ui/Snackbar";
 import { useModal } from "../../ui/useModal";
 import {
+  afterHouseTranslations,
   boardFromHouseList,
+  boardMatchesList,
   houseBoardPath,
   houseRequestOf,
   houseBoardsOf,
+  houseRevisionOf,
   hasUnsentEdits,
-  linkToHouse,
-  listChangedSince,
+  markHouseCopy,
+  markHouseRevision,
   markHouseSeen,
-  markHouseSent,
   NEW_HOUSE_PATH,
   unlinkFromHouse,
 } from "../boards/houseList";
@@ -360,7 +362,7 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
   const [takingDown, setTakingDown] = useState(false);
   const [takeDownFailed, setTakeDownFailed] = useState(false);
   const [opening, setOpening] = useState(false);
-  const [stale, setStale] = useState<{ list: ListSummary; board: Board } | null>(null);
+  const [stale, setStale] = useState<{ full: PublishedList; board: Board } | null>(null);
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const clearNotice = useCallback(() => setNotice(null), []);
   const { sections } = useSections();
@@ -444,44 +446,35 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
 
   // Edit: the list as it stands now becomes a board kept for the house on this
   // device, tied to it, and the editor opens on it. It is nobody's own and
-  // never reaches the account. A board this device already edits for the
-  // list opens instead: a second one would be a stale copy that the next
-  // edits went to. Unless the list changed after this device last touched
-  // that board (another admin, or a script that filled it out): then the
-  // board is the stale one, and Update would put the old list back over the
-  // new, so it goes and the list as it stands comes in its place. Edits this
-  // device has not sent yet are not dropped unasked.
+  // never reaches the account. The list is always read first: a board this
+  // device already edits for it opens instead only while it stands on the
+  // revision the list still has, since a second copy would be a stale one
+  // the next edits went to. Once the list moved on (another admin, a script
+  // that filled it out, a fix made on the server), the board is the stale
+  // one, and Update would put the old list back over the new, so it goes
+  // and the list as it stands comes in its place. Edits this device has not
+  // sent yet are not dropped unasked.
   const edit = (list: ListSummary) => {
-    const editing = houseBoardsOf(list.id, deps.links)
-      .map((uid) => deps.houseRepository.get(uid))
-      .find((board) => board !== null && board.deletedAt === null);
-    if (editing !== undefined && editing !== null) {
-      if (!listChangedSince(editing, list.updatedAt, deps.links)) {
-        void navigate(houseBoardPath(editing.uid, list.id));
-        return;
-      }
-      if (hasUnsentEdits(editing, deps.links)) {
-        setStale({ list, board: editing });
-        return;
-      }
-    }
-    openAsItStands(list, editing ?? null);
-  };
-
-  const openAsItStands = (list: ListSummary, old: Board | null) => {
-    if (old !== null) {
-      deps.houseRepository.remove(old.uid);
-      unlinkFromHouse(old.uid, deps.links);
-    }
+    const editing =
+      houseBoardsOf(list.id, deps.links)
+        .map((uid) => deps.houseRepository.get(uid))
+        .find((board) => board !== null && board.deletedAt === null) ?? null;
     setOpening(true);
     deps.loadList(list.id).then(
       (full) => {
-        const board = boardFromHouseList(full, deps.now(), nextUid);
-        deps.houseRepository.save(board);
-        linkToHouse(board.uid, list.id, deps.links);
-        markHouseSent(board.uid, board.editedAt, deps.links);
-        markHouseSeen(board.uid, full.updatedAt, deps.links);
-        void navigate(houseBoardPath(board.uid, list.id));
+        if (editing !== null) {
+          if (boardMatchesList(editing, full, deps.links)) {
+            markHouseSeen(editing.uid, full.updatedAt, deps.links);
+            void navigate(houseBoardPath(editing.uid, list.id));
+            return;
+          }
+          if (hasUnsentEdits(editing, deps.links)) {
+            setOpening(false);
+            setStale({ full, board: editing });
+            return;
+          }
+        }
+        openAsItStands(full, editing);
       },
       (reason: unknown) => {
         setOpening(false);
@@ -492,6 +485,27 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
         setNotice({ text: strings.admin.houseOpenFailed });
       },
     );
+  };
+
+  const openAsItStands = (full: PublishedList, old: Board | null) => {
+    if (old !== null) {
+      deps.houseRepository.remove(old.uid);
+      unlinkFromHouse(old.uid, deps.links);
+    }
+    const board = boardFromHouseList(full, deps.now(), nextUid);
+    deps.houseRepository.save(board);
+    markHouseCopy(board, full, deps.links);
+    void navigate(houseBoardPath(board.uid, full.id));
+  };
+
+  // The draft kept by choice stands on an older list: its Update is refused,
+  // and says so, rather than putting that list back. One whose revision this
+  // device never had is told so here, since the backend could not tell.
+  const openDraft = (full: PublishedList, draft: Board) => {
+    if (full.revision !== undefined && houseRevisionOf(draft.uid, deps.links) === null) {
+      markHouseRevision(draft.uid, "behind", deps.links);
+    }
+    void navigate(houseBoardPath(draft.uid, full.id));
   };
 
   const takeDown = (list: ListSummary) => {
@@ -605,12 +619,12 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
       )}
       {stale !== null && (
         <StaleDialog
-          title={stale.list.title}
+          title={stale.full.title}
           onCancel={() => setStale(null)}
-          onDraft={() => void navigate(houseBoardPath(stale.board.uid, stale.list.id))}
+          onDraft={() => openDraft(stale.full, stale.board)}
           onFresh={() => {
             setStale(null);
-            openAsItStands(stale.list, stale.board);
+            openAsItStands(stale.full, stale.board);
           }}
         />
       )}
@@ -621,6 +635,8 @@ export function HousePane({ deps = houseDeps }: { deps?: HouseDeps }) {
           load={deps.loadList}
           save={deps.saveTranslations}
           onSaved={() => {
+            // The words moved the list's revision on: a board kept here for it follows.
+            void afterHouseTranslations(translating.id, deps.loadList, deps.links);
             setTranslating(null);
             setNotice({ text: strings.admin.houseWordsSaved });
           }}

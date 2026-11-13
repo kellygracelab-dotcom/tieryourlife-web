@@ -93,6 +93,8 @@ export function unlinkFromHouse(uid: string, store: KeyValueStore = localStorage
   store.write(HOUSE_SENT_KEY, JSON.stringify(others));
   const { [uid]: _seen, ...seenRest } = numbersIn(store, HOUSE_SEEN_KEY);
   store.write(HOUSE_SEEN_KEY, JSON.stringify(seenRest));
+  const { [uid]: _base, ...baseRest } = numbersIn(store, HOUSE_REVISION_KEY);
+  store.write(HOUSE_REVISION_KEY, JSON.stringify(baseRest));
 }
 
 /**
@@ -161,6 +163,109 @@ export function listChangedSince(
 ): boolean {
   const seen = numbersIn(store, HOUSE_SEEN_KEY)[board.uid];
   return listUpdatedAt > (seen ?? board.editedAt);
+}
+
+/**
+ * Each house board's list revision (CONTRACT, List revision) as it stood
+ * when the board last matched it: read with the list, or answered by the
+ * board's own Update. Beside the board and never on it, like the rest, so
+ * it never reaches the account. Unlike updatedAt it moves on with every
+ * write, a fix made on the server too, so a board kept here is opened only
+ * at the revision the list still has, and Update sends it as `baseRevision`.
+ */
+export const HOUSE_REVISION_KEY = "tyl:houseRevision";
+
+/** Stored for a draft kept over a newer list without knowing the revision it was read at. */
+const BEHIND = -1;
+
+/**
+ * The list revision a house board stands on: a number; "behind" for a draft
+ * kept by choice over a list that moved on, whose own revision this device
+ * never had (a board from before revisions were kept); null when not known.
+ */
+export type HouseBase = number | "behind" | null;
+
+export function houseRevisionOf(uid: string, store: KeyValueStore = localStorageStore): HouseBase {
+  const stored = numbersIn(store, HOUSE_REVISION_KEY)[uid];
+  if (stored === BEHIND) return "behind";
+  return stored !== undefined && Number.isSafeInteger(stored) && stored >= 0 ? stored : null;
+}
+
+/** The list revision a house board now stands on; null forgets it. */
+export function markHouseRevision(
+  uid: string,
+  base: HouseBase,
+  store: KeyValueStore = localStorageStore,
+): void {
+  const { [uid]: _before, ...rest } = numbersIn(store, HOUSE_REVISION_KEY);
+  const value = base === "behind" ? BEHIND : base;
+  store.write(
+    HOUSE_REVISION_KEY,
+    JSON.stringify(value === null ? rest : { ...rest, [uid]: value }),
+  );
+}
+
+/**
+ * Whether the board kept here may open as the list's copy: only at the
+ * revision the list has now. A board with none (kept before revisions were)
+ * may not: nothing tells whether the list moved on since, and the server's
+ * own fixes never moved its updatedAt. A list read from a server that says
+ * no revision is judged by the times, as before.
+ */
+export function boardMatchesList(
+  board: Board,
+  list: Pick<PublishedList, "revision" | "updatedAt">,
+  store: KeyValueStore = localStorageStore,
+): boolean {
+  if (list.revision === undefined) return !listChangedSince(board, list.updatedAt, store);
+  return houseRevisionOf(board.uid, store) === list.revision;
+}
+
+/**
+ * A board just made from its list, or made to match it again: tied to it,
+ * nothing of it unsent, and the list's time and revision remembered with it.
+ */
+export function markHouseCopy(
+  board: Board,
+  list: Pick<PublishedList, "id" | "revision" | "updatedAt">,
+  store: KeyValueStore = localStorageStore,
+): void {
+  linkToHouse(board.uid, list.id, store);
+  markHouseSent(board.uid, board.editedAt, store);
+  markHouseSeen(board.uid, list.updatedAt, store);
+  markHouseRevision(board.uid, list.revision ?? null, store);
+}
+
+/**
+ * After the house's translations of a list were saved: that write moved the
+ * list's revision on without saying to what, so the list is read again. A
+ * board kept here for it takes the revision read only when it is the next
+ * one after its own, the translations alone; any other means somebody else
+ * wrote too, and the board keeps its own, for its Update to be refused and
+ * the list loaded as it stands. Nothing is read when no board here knows its
+ * revision.
+ */
+export async function afterHouseTranslations(
+  listId: string,
+  read: (id: string) => Promise<Pick<PublishedList, "revision" | "updatedAt">>,
+  store: KeyValueStore = localStorageStore,
+): Promise<void> {
+  const known = houseBoardsOf(listId, store).flatMap((uid) => {
+    const base = houseRevisionOf(uid, store);
+    return typeof base === "number" ? [{ uid, base }] : [];
+  });
+  if (known.length === 0) return;
+  let list: Pick<PublishedList, "revision" | "updatedAt">;
+  try {
+    list = await read(listId);
+  } catch {
+    return;
+  }
+  for (const { uid, base } of known) {
+    if (list.revision !== base + 1) continue;
+    markHouseRevision(uid, list.revision, store);
+    markHouseSeen(uid, list.updatedAt, store);
+  }
 }
 
 /** Whether the board holds edits its list has not had; one never marked is taken to. */

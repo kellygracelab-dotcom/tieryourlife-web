@@ -945,9 +945,18 @@ const pl: Translation = {
     mergeFind: "Scal z innym tematem",
     houseStaleTitle: "„{title}” zmieniła się, odkąd edytowano ją tutaj",
     houseStaleBody:
-      "Jeśli otworzysz ją w obecnej postaci, niewysłane zmiany przepadną. Twój szkic wciąż je ma, ale aktualizacja z niego przywróci starszą listę.",
+      "Jeśli otworzysz ją w obecnej postaci, niewysłane zmiany przepadną. Twój szkic wciąż je ma, ale powstał ze starszej wersji, więc nie można z niego zaktualizować listy.",
     houseStaleDraft: "Otwórz mój szkic",
     houseStaleFresh: "Otwórz w obecnej postaci",
+    houseChanged:
+      "Lista zmieniła się na serwerze. Twoje zmiany tutaj nie zostały wysłane: wczytaj bieżącą wersję, aby edytować listę w obecnej postaci.",
+    houseLoadCurrent: "Wczytaj bieżącą wersję",
+    houseBusy: "Wikimedia jest zajęta. Spróbuj ponownie o {time}.",
+    houseNotCopied:
+      "Obrazy nieskopiowane na czas: {names}. Spróbuj ponownie o {time}; jeśli któryś wciąż się nie udaje, zamień go.",
+    houseNotCopiedSome:
+      "Niektóre obrazy nie zostały skopiowane na czas. Spróbuj ponownie o {time}.",
+    houseRetrying: "Wtedy lista wyśle się sama ponownie.",
   },
   sections: {
     followers: {
