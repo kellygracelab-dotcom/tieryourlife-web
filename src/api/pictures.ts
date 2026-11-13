@@ -1,3 +1,4 @@
+import { attributionOf, type PictureAttribution } from "./pictureAttribution";
 import { creditOf } from "./pictureCredit";
 import type { ApiClient } from "./client";
 import type { CatalogueItem } from "./types";
@@ -69,6 +70,8 @@ export interface FoundPicture extends CatalogueItem {
   kind: PictureKind;
   /** Who the picture's license asks to be named beside it; null when it asks for nobody. */
   credit: string | null;
+  /** Where the picture came from and whom it names; null from a backend that says nothing of it. */
+  attribution: PictureAttribution | null;
 }
 
 /** A quiet line over the results: the web is done for today, or for now. */
@@ -122,6 +125,7 @@ export function pictureOf(raw: unknown): FoundPicture | null {
     source: oneOf(PICTURE_SOURCES, item.source) ? item.source : "other",
     kind: oneOf(PICTURE_KINDS, item.kind) ? item.kind : "thing",
     credit: creditOf(item.credit),
+    attribution: attributionOf(item.attribution),
   };
 }
 

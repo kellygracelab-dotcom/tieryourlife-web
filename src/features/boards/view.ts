@@ -1,3 +1,4 @@
+import { sameAttribution } from "../../api/pictureAttribution";
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import {
   itemsIn,
@@ -68,6 +69,7 @@ export function boardView(board: Board, untitled: string, before?: readonly stri
         title: item.title,
         imageUrl: item.imageUrl,
         credit: item.credit,
+        ...(item.attribution === undefined ? {} : { attribution: item.attribution }),
         tierIndex: placed.has(position) ? undefined : null,
       })),
     },
@@ -81,6 +83,7 @@ const sameItem = (a: PublishedItem, b: PublishedItem): boolean =>
   a.title === b.title &&
   a.imageUrl === b.imageUrl &&
   a.credit === b.credit &&
+  sameAttribution(a.attribution, b.attribution) &&
   a.tierIndex === b.tierIndex;
 
 const sameTier = (a: PublishedTier, b: PublishedTier): boolean =>

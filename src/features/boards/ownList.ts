@@ -1,3 +1,4 @@
+import { attributionOf } from "../../api/pictureAttribution";
 import { creditOf } from "../../api/pictureCredit";
 import type { PublishedList } from "../../api/types";
 import { publishedPictureOf, type UploadedPicture } from "../../lib/pictures";
@@ -129,20 +130,25 @@ export async function boardForOwnList(
       ...draft,
       items: draft.items.map((item) => {
         const copy = item.imageUrl === null ? undefined : copies.get(item.imageUrl);
-        return copy === undefined
-          ? item
-          : { ...item, imageUrl: copy.previewUrl, pictureId: copy.pictureId };
+        if (copy === undefined) return item;
+        // One's own photo again, which names nobody: no attribution goes with it.
+        const { attribution: _gone, ...own } = item;
+        return { ...own, imageUrl: copy.previewUrl, pictureId: copy.pictureId };
       }),
     },
     now,
     nextUid,
   );
-  // A card's credit is its picture's, which the draft does not carry: found again on the list.
-  const credits = new Map(
+  // A card's credit and attribution are its picture's, which a draft the old
+  // editor kept does not carry: found again on the list.
+  const cardKey = (card: { title: string; imageUrl: string | null }) =>
+    `${card.title}
+${card.imageUrl ?? ""}`;
+  const credits = new Map(list.items.map((item) => [cardKey(item), creditOf(item.credit)]));
+  const attributions = new Map(
     list.items.map((item) => [
-      `${item.title}
-${item.imageUrl ?? ""}`,
-      creditOf(item.credit),
+      cardKey(item),
+      item.imageUrl === null ? null : attributionOf(item.attribution),
     ]),
   );
   // A picture of the list as the board shows it: the feed's copy of one's own
@@ -176,12 +182,20 @@ ${item.imageUrl ?? ""}`,
     ...board,
     items: board.items.map((item, index) => {
       const card = draft.items[index];
-      const credit =
-        card === undefined
+      const credit = card === undefined ? null : credits.get(cardKey(card));
+      const attribution =
+        card === undefined ||
+        item.attribution !== undefined ||
+        item.imageUrl === null ||
+        item.pictureId !== null
           ? null
-          : credits.get(`${card.title}
-${card.imageUrl ?? ""}`);
-      return credit === undefined || credit === null ? item : { ...item, credit };
+          : attributions.get(cardKey(card));
+      if ((credit ?? null) === null && (attribution ?? null) === null) return item;
+      return {
+        ...item,
+        ...(credit === undefined || credit === null ? {} : { credit }),
+        ...(attribution === undefined || attribution === null ? {} : { attribution }),
+      };
     }),
     authorName: list.authorName,
     publishedId: list.id,

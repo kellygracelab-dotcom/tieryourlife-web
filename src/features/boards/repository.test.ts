@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { localStorageStore, memoryStore, resetStorageTroubleForTests } from "../../lib/storage";
-import { newBoard, poolTier } from "./model";
+import { addToPool, newBoard, poolTier } from "./model";
 import { boardKey, boardsRepository, HOUSE_BOARD_PREFIX, parseBoard } from "./repository";
 
 const uids = () => {
@@ -68,6 +68,66 @@ describe("parseBoard", () => {
     expect(
       parseBoard({ ...board, items: [card("e", "x".repeat(1100))] })?.items[0]?.credit,
     ).toHaveLength(1000);
+  });
+
+  it("keeps a picture's attribution through a save and a load, and loads a board kept before it", () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    const next = uids();
+    const board = addToPool(
+      newBoard("b1", "Animals", 1, next),
+      [
+        {
+          title: "Red fox",
+          imageUrl: "https://firebasestorage.googleapis.com/v0/b/x/o/published%2Fl1%2Fw-0f",
+          attribution: {
+            source: "inaturalist",
+            author: "Ann",
+            license: "CC BY 4.0",
+            originalUrl: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpg",
+          },
+        },
+        { title: "Fennec", imageUrl: "https://x/n.jpg" },
+      ],
+      2,
+      next,
+    );
+    repository.save(board);
+    const [fox, fennec] = repository.get("b1")!.items;
+    expect(fox?.attribution).toEqual({
+      source: "inaturalist",
+      author: "Ann",
+      license: "CC BY 4.0",
+      originalUrl: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpg",
+    });
+    expect(fennec).not.toHaveProperty("attribution");
+    // Kept by an older self: no attribution at all, and it loads as it was.
+    const older = JSON.parse(store.read(boardKey("b1"))!) as { items: Record<string, unknown>[] };
+    for (const item of older.items) delete item.attribution;
+    const elsewhere = memoryStore();
+    elsewhere.write(boardKey("b1"), JSON.stringify(older));
+    const loaded = boardsRepository(elsewhere);
+    expect(loaded.get("b1")?.items.map((item) => item.title)).toEqual(["Red fox", "Fennec"]);
+    expect(loaded.get("b1")?.items.some((item) => "attribution" in item)).toBe(false);
+    // On a card without a picture, or broken, there is none.
+    const pool = poolTier(board)!;
+    const card = (imageUrl: string | null, attribution: unknown) => ({
+      uid: "c",
+      pictureId: null,
+      tierUid: pool.uid,
+      position: 0,
+      title: "c",
+      imageUrl,
+      attribution,
+      source: "MANUAL",
+      deletedAt: null,
+    });
+    expect(
+      parseBoard({ ...board, items: [card(null, { source: "tmdb" })] })?.items[0],
+    ).not.toHaveProperty("attribution");
+    expect(
+      parseBoard({ ...board, items: [card("https://x/a.jpg", "tmdb")] })?.items[0],
+    ).not.toHaveProperty("attribution");
   });
 
   it("reads back what was written, whole", () => {

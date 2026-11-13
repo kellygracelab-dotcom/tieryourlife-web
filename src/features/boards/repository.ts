@@ -1,4 +1,5 @@
 import { ownPictureRef } from "../../lib/privatePictureRef";
+import { attributionField } from "../../api/pictureAttribution";
 import { MAX_PLAY_ANSWERS, type SyncedPlay } from "../../api/boards";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import {
@@ -183,6 +184,7 @@ function itemOf(
   if (uid === null || uid.length === 0 || tierUid === null || !tierUids.has(tierUid)) return null;
   if (title === null) return null;
   const source = item.source;
+  const imageUrl = localPicture(text(item.imageUrl), text(item.pictureId), owner);
   return {
     uid,
     ...(isInt(item.sourceIndex) && item.sourceIndex >= 0 && item.sourceIndex < BOARD_LIMITS.items
@@ -192,8 +194,10 @@ function itemOf(
     tierUid,
     position: typeof item.position === "number" ? item.position : position,
     title,
-    imageUrl: localPicture(text(item.imageUrl), text(item.pictureId), owner),
+    imageUrl,
     credit: creditOf(item.credit),
+    // Boards kept before attributions travelled have none, and load as they were.
+    ...attributionField(imageUrl, item.attribution),
     source: source === "TMDB" || source === "GENERATED" ? source : "MANUAL",
     deletedAt: time(item.deletedAt),
   };

@@ -109,3 +109,38 @@ describe("boardView of an anonymous list", () => {
     expect(boardView({ ...board, anonymous: true }, "Untitled list").list.authorName).toBe("");
   });
 });
+
+describe("a picture's attribution in the view", () => {
+  it("is drawn with its card, and an equal one read again keeps the card as it was drawn", () => {
+    const next = uids();
+    const board = addToPool(
+      newBoard("b", "Films", 1, next),
+      [
+        {
+          title: "Dune",
+          imageUrl: "https://image.tmdb.org/t/p/w500/d.jpg",
+          attribution: { source: "tmdb", link: "https://www.themoviedb.org/movie/438631" },
+        },
+      ],
+      1,
+      next,
+    );
+    const before = boardView(board, "");
+    expect(before.list.items[0]?.attribution).toEqual({
+      source: "tmdb",
+      link: "https://www.themoviedb.org/movie/438631",
+    });
+    const again = boardView(JSON.parse(JSON.stringify(board)) as typeof board, "");
+    expect(keepUnchanged(before, again).list.items[0]).toBe(before.list.items[0]);
+    const relinked = {
+      ...board,
+      items: board.items.map((item) => ({
+        ...item,
+        attribution: { source: "tmdb", link: "https://www.themoviedb.org/movie/1" },
+      })),
+    };
+    expect(keepUnchanged(before, boardView(relinked, "")).list.items[0]).not.toBe(
+      before.list.items[0],
+    );
+  });
+});

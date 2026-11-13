@@ -378,3 +378,82 @@ describe("a published list as a board of one's own", () => {
     ]);
   });
 });
+
+describe("a picture's attribution", () => {
+  const copy =
+    "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2Forig%2Fw-0123456789abcdef0123456789abcdef?alt=media";
+  const fox = {
+    source: "inaturalist",
+    author: "Ann Example",
+    license: "CC BY 4.0",
+    licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+    link: "https://www.inaturalist.org/photos/1",
+    originalUrl: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpg",
+  };
+  const list: PublishedList = {
+    id: "orig",
+    title: "Foxes",
+    authorUid: "u1",
+    authorName: "ann",
+    authorPhotoUrl: null,
+    category: "animals",
+    itemCount: 3,
+    coverImageUrl: null,
+    previewImages: [],
+    tierColors: [],
+    updatedAt: 7,
+    takeCount: 0,
+    tiers: [{ label: "S", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" }],
+    items: [
+      { title: "Red fox", imageUrl: copy, attribution: fox, tierIndex: 0 },
+      { title: "Fennec", imageUrl: "https://x/n.jpg", tierIndex: null },
+      { title: "Arctic fox", imageUrl: null, tierIndex: null },
+    ],
+  };
+
+  it("comes with a published list into a board, the copy's original address with it", () => {
+    const board = boardFromList(list, [[0]], 5, uids());
+    const [red, fennec, arctic] = liveItems(board);
+    expect(red?.imageUrl).toBe(copy);
+    expect(red?.attribution).toEqual(fox);
+    expect(fennec).not.toHaveProperty("attribution");
+    expect(arctic).not.toHaveProperty("attribution");
+  });
+
+  it("goes out with a publish of the copy, originalUrl and all, and with no card that has none", () => {
+    const board = { ...boardFromList(list, [[0]], 5, uids()), category: "animals" };
+    const request = publishRequestOf(board)!;
+    expect(request.items[0]).toMatchObject({
+      title: "Red fox",
+      imageUrl: copy,
+      attribution: { link: fox.link, originalUrl: fox.originalUrl },
+    });
+    expect(request.items[1]).not.toHaveProperty("attribution");
+    expect(request.items[2]).not.toHaveProperty("attribution");
+  });
+
+  it("is kept on a card picked from a search, and decides nothing of TMDB by the address", () => {
+    const next = uids();
+    const b = addToPool(
+      { ...newBoard("b", "Films", 1, next), category: "film_tv" },
+      [
+        {
+          title: "Dune",
+          imageUrl: "https://image.tmdb.org/t/p/w500/d.jpg",
+          attribution: { source: "tmdb", link: "https://www.themoviedb.org/movie/438631" },
+          source: "TMDB",
+        },
+        { title: "Heat", imageUrl: null, attribution: { source: "tmdb" } },
+      ],
+      2,
+      next,
+    );
+    const [dune, heat] = liveItems(b);
+    expect(dune?.attribution).toEqual({
+      source: "tmdb",
+      link: "https://www.themoviedb.org/movie/438631",
+    });
+    // A card with no picture has no attribution to keep.
+    expect(heat).not.toHaveProperty("attribution");
+  });
+});

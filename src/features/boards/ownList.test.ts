@@ -65,6 +65,39 @@ describe("boardForOwnList", () => {
     ]);
   });
 
+  it("keeps each picture's attribution, a catalogue copy's original address with it, and none on one's own photo brought back", async () => {
+    const feed = (name: string) =>
+      `https://firebasestorage.googleapis.com/v0/b/tyl.appspot.com/o/published%2FL9%2F${name}?alt=media`;
+    const fox = {
+      source: "inaturalist",
+      author: "Ann",
+      originalUrl: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpg",
+    };
+    const list: PublishedList = {
+      ...ownAnonymous,
+      items: [
+        { title: "Fox", imageUrl: feed("w-0123456789abcdef0123456789abcdef"), attribution: fox },
+        // Not one the backend would name, but if it did, one's own photo again names nobody.
+        { title: "Holiday", imageUrl: feed("h"), attribution: { source: "web" } },
+        {
+          title: "Poster",
+          imageUrl: "https://image.tmdb.org/t/p/w500/p.jpg",
+          attribution: { source: "tmdb" },
+        },
+      ],
+    };
+    const copyBack = async () => ({
+      pictureId: "own-h",
+      previewUrl: "https://firebasestorage.googleapis.com/v0/b/tyl/o/users%2Fme%2Fpictures%2Fh",
+    });
+    const board = await boardForOwnList(list, null, copyBack, 5, uids());
+    const [fromFox, holiday, poster] = board.items;
+    expect(fromFox?.attribution).toEqual(fox);
+    expect(holiday?.pictureId).toBe("own-h");
+    expect(holiday).not.toHaveProperty("attribution");
+    expect(poster?.attribution).toEqual({ source: "tmdb" });
+  });
+
   it("keeps a cover of one's own photo as that photo brought back, and a chosen collage in its order", async () => {
     const feed = (name: string) =>
       `https://firebasestorage.googleapis.com/v0/b/tyl.appspot.com/o/published%2FL9%2F${name}?alt=media`;

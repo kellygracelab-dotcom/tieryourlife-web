@@ -19,6 +19,7 @@ const picture = (id: string, more: Partial<FoundPicture> = {}): FoundPicture => 
   source: "anilist",
   kind: "anime",
   credit: null,
+  attribution: null,
   ...more,
 });
 
@@ -200,6 +201,12 @@ describe("AddCardBox", () => {
           credit:
             "Commons contributor ".repeat(25) +
             "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
+          attribution: {
+            source: "inaturalist",
+            author: "Commons contributor",
+            license: "CC BY 4.0",
+            link: "https://www.inaturalist.org/photos/1",
+          },
         }),
         picture("inaturalist:2", { title: "Lost", source: "inaturalist", kind: "animal" }),
         picture("x:3", { title: "Fennec", source: "other", kind: "thing" }),
@@ -225,7 +232,7 @@ describe("AddCardBox", () => {
     expect(screen.getByText("From iNaturalist")).toBeInTheDocument();
     fireEvent.error(screen.getByRole("button", { name: /Lost/ }).querySelector("img")!);
     expect(screen.queryByRole("button", { name: /Lost/ })).toBeNull();
-    // The card keeps the credit; one with none carries no empty one.
+    // The card keeps the credit and the attribution; one with none carries no empty one.
     await userEvent.click(screen.getByRole("button", { name: /Red fox/ }));
     expect(dispatch).toHaveBeenLastCalledWith({
       type: "addItem",
@@ -235,9 +242,16 @@ describe("AddCardBox", () => {
       credit:
         "Commons contributor ".repeat(25) +
         "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
+      attribution: {
+        source: "inaturalist",
+        author: "Commons contributor",
+        license: "CC BY 4.0",
+        link: "https://www.inaturalist.org/photos/1",
+      },
     });
     await userEvent.click(screen.getByRole("button", { name: /Fennec/ }));
     expect(dispatch.mock.lastCall?.[0]).not.toHaveProperty("credit");
+    expect(dispatch.mock.lastCall?.[0]).not.toHaveProperty("attribution");
   });
 
   it("shows a picture already on the board as added", async () => {
