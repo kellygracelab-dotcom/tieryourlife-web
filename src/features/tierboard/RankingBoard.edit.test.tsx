@@ -322,7 +322,9 @@ describe("RankingBoard's card menu", () => {
     const credited: PublishedList = {
       ...list,
       items: list.items.map((item) =>
-        item.title === "Climax" ? { ...item, credit: "(c) Jane Doe (CC BY)" } : item,
+        item.title === "Climax"
+          ? { ...item, imageUrl: "https://example.com/climax.jpg", credit: "(c) Jane Doe (CC BY)" }
+          : item,
       ),
     };
     render(
@@ -332,11 +334,15 @@ describe("RankingBoard's card menu", () => {
     );
     await userEvent.dblClick(card("Climax"));
     const menu = screen.getByRole("menu", { name: "Climax" });
-    await userEvent.click(within(menu).getByRole("menuitem", { name: "Image credits" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("(c) Jane Doe (CC BY)");
+    await userEvent.click(within(menu).getByRole("menuitem", { name: "About the picture" }));
+    expect(screen.getByRole("dialog", { name: "Climax" })).toHaveTextContent(
+      "(c) Jane Doe (CC BY)",
+    );
     await userEvent.keyboard("{Escape}");
     await userEvent.dblClick(card("The Witch"));
-    expect(screen.getByRole("menu", { name: "The Witch" })).not.toHaveTextContent("Photo");
+    expect(screen.getByRole("menu", { name: "The Witch" })).not.toHaveTextContent(
+      "About the picture",
+    );
     await userEvent.keyboard("{Escape}");
 
     for (let i = 0; i < 2; i++) {
@@ -346,10 +352,10 @@ describe("RankingBoard's card menu", () => {
     }
     await userEvent.click(
       within(screen.getByRole("dialog", { name: "Climax" })).getByRole("button", {
-        name: "Image credits",
+        name: "About the picture",
       }),
     );
-    expect(screen.getByRole("dialog", { name: "Image credits" })).toHaveTextContent("Jane Doe");
+    expect(screen.getByRole("dialog", { name: "Climax" })).toHaveTextContent("Jane Doe");
   });
 
   it("gives a finger's double tap the phone's sheet instead", async () => {

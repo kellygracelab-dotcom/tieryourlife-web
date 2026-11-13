@@ -535,6 +535,72 @@ export function addToPool(
   return touched({ ...board, items: [...board.items, ...added] }, now);
 }
 
+/** A card's picture, all that goes with it: where it is shown from, our copy's id, whom it names. */
+export interface CardPicture {
+  imageUrl: string | null;
+  pictureId: string | null;
+  credit: string | null;
+  attribution?: PictureAttribution | null;
+  source: ItemSource;
+}
+
+/** The picture a card has now, to give back by Undo. */
+export const pictureOf = (item: BoardItem): CardPicture => ({
+  imageUrl: item.imageUrl,
+  pictureId: item.pictureId,
+  credit: item.credit,
+  attribution: item.attribution ?? null,
+  source: item.source,
+});
+
+/**
+ * Another picture on a card: its name and its place stay, only its picture
+ * and what goes with it change. A cover that showed the old picture shows
+ * the new one in its place, unless another card still shows the old.
+ */
+export function setPicture(
+  board: Board,
+  itemUid: string,
+  picture: CardPicture,
+  now: number,
+): Board {
+  const card = board.items.find((item) => item.uid === itemUid && item.deletedAt === null);
+  if (card === undefined) return board;
+  const { attribution: _was, ...rest } = card;
+  const changed: BoardItem = {
+    ...rest,
+    imageUrl: picture.imageUrl,
+    pictureId: picture.pictureId,
+    credit: creditOf(picture.credit),
+    ...attributionField(picture.imageUrl, picture.attribution),
+    source: picture.source,
+  };
+  const items = board.items.map((item) => (item === card ? changed : item));
+  const next = touched({ ...board, items }, now);
+  const old = card.imageUrl;
+  if (
+    old === null ||
+    !board.coverImageUrls.includes(old) ||
+    items.some((i) => i.imageUrl === old)
+  ) {
+    return next;
+  }
+  const cover = board.coverImageUrls.map((url) =>
+    url === old && picture.imageUrl !== null ? picture.imageUrl : url,
+  );
+  return setCover(
+    next,
+    cover.filter((url) => url !== old),
+    now,
+  );
+}
+
+/** A card to the front of the pool, the rest after it in their order: a card just made is seen first. */
+export function toPoolFront(board: Board, itemUid: string, now: number): Board {
+  const pool = poolTier(board);
+  return pool === null ? board : moveItem(board, itemUid, pool.uid, 0, now);
+}
+
 /** A card to a tier at a place among its cards; past the end means last. The same move again changes nothing. */
 export function moveItem(
   board: Board,

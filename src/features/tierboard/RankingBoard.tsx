@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type DragEvent,
   type FocusEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
@@ -44,7 +45,7 @@ import { Icon } from "../../ui/Icon";
 import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
-import { ImageCredits } from "./ImageCredits";
+import { AboutButton, AboutPicture, hasAbout, openPage, pageOf, type Anchor } from "./AboutPicture";
 import { flyIn } from "./flight";
 import { arrange } from "./arrange";
 import { DOUBLE_TAP_MS, type DragState } from "./drag";
@@ -64,6 +65,7 @@ import { useTileDrag, type HitTest } from "./useTileDrag";
 import { useTierMove, type TierEditing } from "./useTierMove";
 import { BoardFrameContext } from "./boardFrame";
 import { DockToggle } from "./DockToggle";
+import { bringsPicture, incomingOf, usePastedPictures, type Incoming } from "../../lib/incoming";
 import { useDock } from "./useDock";
 import { useHeadHeight } from "./useHeadHeight";
 import { useFixedDock } from "./useFixedDock";
@@ -107,6 +109,16 @@ export interface EditMode {
     live?: boolean;
     /** The tiers themselves, changed on the board: carried by their band, opened by a double tap. */
     tiers?: TierEditing;
+    /**
+     * Pictures and links brought to the board, pasted (Ctrl+V, ⌘V) or
+     * dropped: on a card (or with one picked) for that card, `item`; on the
+     * pool, or with nothing picked, for a new one, `null`, and the tools open.
+     */
+    pictures?: (incoming: Incoming, item: number | null) => void;
+    /** The card just added, by its number: it is shown for a moment. */
+    fresh?: number | null;
+    /** The tools start open: a draft is coming back after a sign-in. */
+    toolsOpen?: boolean;
   };
 }
 
@@ -257,7 +269,9 @@ const Tile = memo(function Tile({
   onMenu,
 }: TileProps) {
   const [moving, setMoving] = useState<CardMenuAt | null>(null);
-  const [showCredits, setShowCredits] = useState(false);
+  // About the picture, open beside the card or the point it was asked from.
+  const [about, setAbout] = useState<Anchor | null>(null);
+  const showCredits = about !== null;
   const closeMove = useCallback(() => setMoving(null), []);
   // What made the last press, so a double tap of a finger gets the sheet and a mouse's the menu.
   const pressedBy = useRef("mouse");
@@ -267,8 +281,11 @@ const Tile = memo(function Tile({
   const lastClick = useRef(0);
   const opener = useRef<HTMLButtonElement>(null);
   if (card === undefined) return null;
-  const credit = card.credit?.trim();
-  const openCredits = credit ? () => setShowCredits(true) : undefined;
+  const knows = card.imageUrl !== null && hasAbout(card);
+  const page = card.imageUrl === null ? null : pageOf(card);
+  const cardAt = (): Anchor | null => opener.current?.getBoundingClientRect() ?? null;
+  const openCredits = knows ? () => setAbout(cardAt() ?? { x: 0, y: 0 }) : undefined;
+  const openItsPage = page === null ? undefined : () => openPage(page);
   const classes = [
     "tile",
     card.imageUrl === null && "tile--name",
@@ -307,7 +324,7 @@ const Tile = memo(function Tile({
         aria-haspopup={coarse ? "dialog" : "menu"}
         aria-keyshortcuts="Shift+F10"
         title={card.title}
-        disabled={locked && !credit}
+        disabled={locked && !knows}
         data-item={item}
         onClick={(event) => {
           // The armed row underneath would take the same tap as "place here".
@@ -332,8 +349,9 @@ const Tile = memo(function Tile({
         }}
         onContextMenu={(event) => {
           // A finger held on a card lifts it, as on the phone; its long press is not a menu.
+          // Shift with the right click leaves the browser's own menu.
           const touch = (event.nativeEvent as PointerEvent).pointerType === "touch";
-          if (touch || dragNow().phase !== "idle") return;
+          if (touch || event.shiftKey || dragNow().phase !== "idle") return;
           event.preventDefault();
           openMenu({ sheet: false, at: { x: event.clientX, y: event.clientY } });
         }}
@@ -359,14 +377,16 @@ const Tile = memo(function Tile({
           <CardName title={card.title} board={board} wide />
         )}
       </button>
-      {showCredits && credit && (
-        <ImageCredits
-          title={card.title}
-          credit={credit}
-          back={() => setShowCredits(false)}
-          close={() => {
+      {knows && <AboutButton name={card.title} onOpen={(at) => setAbout(at)} />}
+      {about !== null && (
+        <AboutPicture
+          name={card.title}
+          attribution={card.attribution}
+          credit={card.credit}
+          anchor={about}
+          onClose={() => {
             setMoving(null);
-            setShowCredits(false);
+            setAbout(null);
             opener.current?.focus({ preventScroll: true });
           }}
         />
@@ -374,7 +394,8 @@ const Tile = memo(function Tile({
       {moving !== null && !showCredits && !locked && moving.sheet && (
         <MoveSheet
           name={card.title}
-          onCredits={openCredits}
+          onAbout={openCredits}
+          onOpenPage={openItsPage === undefined ? undefined : close(openItsPage)}
           tiers={tiers}
           current={current}
           onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
@@ -386,7 +407,8 @@ const Tile = memo(function Tile({
       {moving !== null && !showCredits && !locked && !moving.sheet && (
         <CardMenu
           name={card.title}
-          onCredits={openCredits}
+          onAbout={openCredits}
+          onOpenPage={openItsPage === undefined ? undefined : close(openItsPage)}
           tiers={tiers}
           current={current}
           at={moving.at}
@@ -604,7 +626,7 @@ export function RankingBoard({
   // pool, whichever head the pool shows; on a wide one it stands in the pool,
   // and an empty pool gives it the cursor. Opened, the catalogue's field
   // takes the cursor.
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(edit?.owner?.toolsOpen === true);
   const tools = edit?.owner?.tools;
   const emptyPool = edit?.owner?.live === true && pool(state).length === 0;
   const openTools = useRef(false);
@@ -637,6 +659,71 @@ export function RankingBoard({
   const toolsPanel = tools !== undefined && (adding || wide) && (
     <div className={wide ? "pool__tools" : "pool__tools pool__tools--sheet"}>{tools}</div>
   );
+  // A picture or a link pasted or dropped: on a card it takes that card's
+  // picture, anywhere else it makes a new card, in the tools, opened for it.
+  const takePictures = edit?.owner?.pictures;
+  const canTake = takePictures !== undefined && !locked;
+  usePastedPictures(canTake, (incoming) => {
+    if (selected === null) setAdding(true);
+    takePictures?.(incoming, selected);
+  });
+  const [dropping, setDropping] = useState(false);
+  // The card under a drag wears its outline straight from here: one tile
+  // changes, and the board of 2,000 is not drawn again on every move.
+  const dropCard = useRef<HTMLElement | null>(null);
+  const markCard = (tile: HTMLElement | null) => {
+    if (dropCard.current === tile) return;
+    dropCard.current?.classList.remove("tile--drop");
+    dropCard.current?.removeAttribute("data-replace");
+    dropCard.current = tile;
+    tile?.classList.add("tile--drop");
+    tile?.setAttribute("data-replace", strings.link.replace);
+  };
+  const tileUnder = (target: EventTarget | null): HTMLElement | null =>
+    target instanceof Element ? target.closest<HTMLElement>(".tile[data-item]") : null;
+  const onDragOver = (event: DragEvent<HTMLElement>) => {
+    if (!canTake || !bringsPicture(event.dataTransfer)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    const tile = tileUnder(event.target);
+    markCard(tile);
+    setDropping(tile === null);
+  };
+  const onDragLeave = (event: DragEvent<HTMLElement>) => {
+    const to = event.relatedTarget;
+    if (to instanceof Node && event.currentTarget.contains(to)) return;
+    markCard(null);
+    setDropping(false);
+  };
+  const onDrop = (event: DragEvent<HTMLElement>) => {
+    if (!canTake) return;
+    const tile = tileUnder(event.target);
+    markCard(null);
+    setDropping(false);
+    const incoming = incomingOf(event.dataTransfer);
+    if (incoming === null) return;
+    event.preventDefault();
+    const item = tile === null ? null : Number(tile.dataset.item);
+    if (item === null || Number.isNaN(item)) {
+      setAdding(true);
+      takePictures(incoming, null);
+    } else takePictures(incoming, item);
+  };
+  // The card just added is shown: brought into view in the pool, and lit for a moment.
+  const fresh = edit?.owner?.fresh ?? null;
+  useEffect(() => {
+    if (fresh === null) return;
+    const tile = section.current?.querySelector<HTMLElement>(`.pool [data-item="${fresh}"]`);
+    if (tile === null || tile === undefined) return;
+    tile.classList.add("tile--fresh");
+    tile.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+    const timer = setTimeout(() => tile.classList.remove("tile--fresh"), 1600);
+    return () => {
+      clearTimeout(timer);
+      tile.classList.remove("tile--fresh");
+    };
+  }, [fresh]);
+
   // Nothing to place yet and nobody typing elsewhere (the new board's name is
   // asked for first): the cursor waits in the field that brings cards in.
   const askForCards = wide && emptyPool && tools !== undefined;
@@ -995,6 +1082,7 @@ export function RankingBoard({
     lifted !== null && left.includes(lifted) && "pool--dragging",
     finish.status === "done" && "pool--rest",
     over && "pool--over",
+    dropping && "pool--drop",
   ]
     .filter(Boolean)
     .join(" ");
@@ -1063,6 +1151,9 @@ export function RankingBoard({
       aria-label={seed?.label ?? strings.rank.yours}
       ref={section}
       onFocus={followFocus}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
     >
       <p className="visually-hidden" aria-live="polite" ref={announcer} />
       <div className="ranking__main">
@@ -1165,6 +1256,12 @@ export function RankingBoard({
             data-drop="pool"
             style={{ "--dock-rows": rows } as CSSProperties}
           >
+            {dropping && (
+              <div className="pool__drop" aria-hidden="true">
+                <p className="pool__drop-title">{strings.link.dropTitle}</p>
+                <p className="pool__drop-note">{strings.link.dropNote}</p>
+              </div>
+            )}
             {docked && !allPlaced && (
               // A splitter the keyboard reaches too: up and down change the rows a drag or a click does.
               <div

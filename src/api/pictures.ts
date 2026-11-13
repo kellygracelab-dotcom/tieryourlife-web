@@ -1,5 +1,6 @@
 import { attributionOf, type PictureAttribution } from "./pictureAttribution";
 import { creditOf } from "./pictureCredit";
+import { quotaOf, type LinkQuota } from "./linkQuota";
 import type { ApiClient } from "./client";
 import type { CatalogueItem } from "./types";
 
@@ -173,4 +174,61 @@ export async function keepPicture(client: ApiClient, url: string): Promise<strin
     throw new Error("no picture id");
   }
   return answer.pictureId;
+}
+
+/** A picture asked for by its address (POST /lists/pictures/link). */
+export interface LinkAsk {
+  url: string;
+  /** The page the picture was found on: https, at most 500 characters. */
+  link?: string;
+  credit?: string;
+}
+
+/**
+ * What a picture from a link became. A plain picture is fetched, checked and
+ * kept in the person's own folder: its `pictureId`, and no address. A
+ * catalogue's own address is kept as it is: its `imageUrl` and the
+ * catalogue's attribution, and no copy.
+ */
+export interface LinkAnswer {
+  pictureId: string | null;
+  imageUrl: string | null;
+  attribution: PictureAttribution | null;
+  credit: string | null;
+  quota: LinkQuota | null;
+}
+
+export async function linkPicture(client: ApiClient, ask: LinkAsk): Promise<LinkAnswer> {
+  const answer = await client.request<{
+    pictureId?: unknown;
+    imageUrl?: unknown;
+    attribution?: unknown;
+    credit?: unknown;
+    quota?: unknown;
+  }>("POST", "/lists/pictures/link", {
+    body: {
+      url: ask.url,
+      ...(ask.link === undefined ? {} : { link: ask.link }),
+      ...(ask.credit === undefined ? {} : { credit: ask.credit }),
+    },
+  });
+  const pictureId =
+    typeof answer.pictureId === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(answer.pictureId)
+      ? answer.pictureId
+      : null;
+  const imageUrl = pictureId === null && https(answer.imageUrl) ? answer.imageUrl : null;
+  if (pictureId === null && imageUrl === null) throw new Error("no picture");
+  return {
+    pictureId,
+    imageUrl,
+    attribution: attributionOf(answer.attribution),
+    credit: creditOf(answer.credit),
+    quota: quotaOf(answer.quota),
+  };
+}
+
+/** What is left of today's pictures from links before anything is sent; null when it is not said. */
+export async function linkQuota(client: ApiClient): Promise<LinkQuota | null> {
+  const answer = await client.request<{ quota?: unknown }>("GET", "/lists/pictures/link");
+  return quotaOf(answer.quota);
 }

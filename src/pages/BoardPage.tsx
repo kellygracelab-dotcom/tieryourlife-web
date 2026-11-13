@@ -15,6 +15,10 @@ import {
   liveItems,
   moveItem,
   newBoard,
+  pictureOf,
+  setPicture,
+  toPoolFront,
+  type CardPicture,
   poolTier,
   rankedTiers,
   rename,
@@ -46,6 +50,7 @@ import { TooManyDialog } from "../features/sections/TooManyDialog";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import {
   keepPicture,
+  linkPicture,
   proposeSection,
   publish as publishList,
   republish as republishList,
@@ -64,11 +69,21 @@ import {
   uidRows,
   type BoardView,
 } from "../features/boards/view";
-import { AddCardBox, type Keep, type Upload } from "../features/editor/AddCardBox";
+import {
+  AddCardBox,
+  pictureFailureText,
+  type Keep,
+  type LinkKeep,
+  type Upload,
+} from "../features/editor/AddCardBox";
+import { draftForSignIn } from "../features/editor/draftAfterSignIn";
+import { usePastedPictures, type Incoming } from "../lib/incoming";
+import { refusedText } from "../features/editor/linkText";
 import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
 import { TierDialog } from "../features/editor/TierDialog";
 import type { FindPictures } from "../features/editor/usePictures";
 import { keepWebPicture, PictureRefused, uploadPicture } from "../lib/pictures";
+import { keepLinkedPicture, LinkRefused, linkRefusalOf } from "../lib/linkPictures";
 import { useSession } from "../app/session";
 import { type KeyValueStore, memoryStore } from "../lib/storage";
 import { HOUSE_PANE_PATH, HouseBar, type HouseSending } from "../features/admin/HouseBar";
@@ -107,6 +122,8 @@ interface BoardPageProps {
   find?: FindPictures;
   upload?: Upload;
   keepWeb?: Keep;
+  /** How a picture from a link is kept. */
+  linkWeb?: LinkKeep;
   publishing?: PublishingDeps;
   topics?: LoadTopics;
   share?: Share;
@@ -273,6 +290,7 @@ function OpenBoard({
   find,
   upload = (file) => uploadPicture(file),
   keepWeb = (url) => keepWebPicture(url, keepPicture),
+  linkWeb = (ask) => keepLinkedPicture(ask, linkPicture),
   publishing = sitePublishing,
   topics,
   share = shareBoardPicture,
@@ -344,6 +362,15 @@ function OpenBoard({
   const [panel, setPanel] = useState<Panel>(params.get("settings") === "1" ? "settings" : "none");
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const forget = useCallback(() => setNotice(null), []);
+  // A paste or a drop for a new card, on its way to the add box.
+  const [incoming, setIncoming] = useState<Incoming | null>(null);
+  const incomingTaken = useCallback(() => setIncoming(null), []);
+  // The card the draft just made, shown for a moment in the pool.
+  const [freshUid, setFreshUid] = useState<string | null>(null);
+  // A guest's draft coming back from a sign-in that left the page: the tools open for it.
+  const [toolsOpen] = useState(() => draftForSignIn(window.location.pathname) !== null);
+  // Ctrl+V on a board shown as one ranked column: the add box above it takes it.
+  usePastedPictures(board?.displayMode === "FLAT_RANKED" && board.deletedAt === null, setIncoming);
   // The tier opened from the board, by its uid; or a tier still to be made, by Add tier.
   const [openTier, setOpenTier] = useState<string | null>(null);
   const [makingTier, setMakingTier] = useState(false);
@@ -543,25 +570,41 @@ function OpenBoard({
     const current = latest();
     const key = action.key;
     const taken = key !== undefined && current.items.some((it) => it.uid === key);
-    const uidFor = key !== undefined && !taken ? () => key : nextUid;
-    keep(
-      addToPool(
-        current,
-        [
-          {
-            title: action.title.length > 0 ? action.title : strings.new.unnamed,
-            imageUrl: action.imageUrl,
-            pictureId: action.pictureId ?? null,
-            credit: creditOf(action.credit),
-            attribution: action.attribution ?? null,
-            // TMDB's by the attribution; by the catalogue id only for a hit without one.
-            source: isTmdbPicture(action.attribution, action.key) ? "TMDB" : "MANUAL",
-          },
-        ],
-        now(),
-        uidFor,
-      ),
+    const cardUid = key !== undefined && !taken ? key : nextUid();
+    const title = action.title.length > 0 ? action.title : strings.new.unnamed;
+    const added = addToPool(
+      current,
+      [
+        {
+          title,
+          imageUrl: action.imageUrl,
+          pictureId: action.pictureId ?? null,
+          credit: creditOf(action.credit),
+          attribution: action.attribution ?? null,
+          // TMDB's by the attribution; by the catalogue id only for a hit without one.
+          source: isTmdbPicture(action.attribution, action.key) ? "TMDB" : "MANUAL",
+        },
+      ],
+      now(),
+      () => cardUid,
     );
+    if (action.drafted !== true || added === current) {
+      keep(added);
+      return;
+    }
+    // A card made in the draft goes first in the pool, is shown, and can be undone.
+    keep(toPoolFront(added, cardUid, now()));
+    setFreshUid(cardUid);
+    setNotice({
+      text: fill(strings.link.added, { name: title }),
+      action: {
+        text: strings.boards.undo,
+        onClick: () => {
+          const again = repository.get(uid);
+          if (again !== null) repository.save(removeItem(again, cardUid, now()));
+        },
+      },
+    });
   };
   const editorItems: EditorItem[] = view.uids.map((itemUid, index) => ({
     key: itemUid,
@@ -686,6 +729,72 @@ function OpenBoard({
     }
     return keepWeb(url);
   };
+  const linkAsAccount: LinkKeep = async (ask) => {
+    if (account?.kind !== "signedIn") {
+      const outcome = await signIn();
+      if (outcome.kind !== "signedIn") throw new LinkRefused("signIn");
+    }
+    return linkWeb(ask);
+  };
+
+  // A picture or a link dropped on a card, or pasted with it picked: the
+  // card keeps its name and place, and only its picture changes, with an Undo.
+  const replacePicture = (itemUid: string, what: Incoming) => {
+    const file = what.kind === "files" ? what.files[0] : undefined;
+    let picture: Promise<CardPicture>;
+    if (what.kind === "link") {
+      picture = linkAsAccount({ url: what.url }).then((linked) => ({
+        imageUrl: linked.imageUrl,
+        pictureId: linked.pictureId,
+        credit: linked.credit,
+        attribution: linked.attribution,
+        source: isTmdbPicture(linked.attribution) ? "TMDB" : "MANUAL",
+      }));
+    } else if (file !== undefined) {
+      picture = uploadAsAccount(file).then(({ pictureId, previewUrl }) => ({
+        imageUrl: previewUrl,
+        pictureId,
+        credit: null,
+        attribution: null,
+        source: "MANUAL",
+      }));
+    } else return;
+    picture.then(
+      (next) => {
+        const current = latest();
+        const before = current.items.find((it) => it.uid === itemUid && it.deletedAt === null);
+        if (before === undefined) return;
+        const was = pictureOf(before);
+        keep(setPicture(current, itemUid, next, now()));
+        setNotice({
+          text: fill(strings.link.changed, { name: before.title }),
+          action: {
+            text: strings.boards.undo,
+            onClick: () => {
+              const again = repository.get(uid);
+              if (again !== null) repository.save(setPicture(again, itemUid, was, now()));
+            },
+          },
+        });
+      },
+      (failure: unknown) => {
+        if (file !== undefined) {
+          setNotice({ text: pictureFailureText(file.name, failure) });
+          return;
+        }
+        const refused = linkRefusalOf(failure);
+        setNotice({
+          text: refusedText(refused),
+        });
+      },
+    );
+  };
+  const takePictures = (what: Incoming, item: number | null) => {
+    const itemUid = item === null ? undefined : view.uids[item];
+    if (itemUid === undefined) setIncoming(what);
+    else replacePicture(itemUid, what);
+  };
+  const freshAt = freshUid === null ? -1 : view.uids.indexOf(freshUid);
 
   const tools = (
     <AddCardBox
@@ -695,6 +804,10 @@ function OpenBoard({
       find={find}
       upload={uploadAsAccount}
       keep={keepAsAccount}
+      link={linkAsAccount}
+      incoming={incoming}
+      onIncomingTaken={incomingTaken}
+      house={house !== null}
     />
   );
 
@@ -896,6 +1009,9 @@ function OpenBoard({
                   remove,
                   tools,
                   tiers: tierEditing,
+                  pictures: takePictures,
+                  fresh: freshAt === -1 ? null : freshAt,
+                  toolsOpen,
                 },
               }}
             />

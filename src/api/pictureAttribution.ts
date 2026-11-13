@@ -37,10 +37,41 @@ export interface PictureAttribution {
   link?: string;
   /** Only while the card's imageUrl is our copy: the catalogue address it was copied from. */
   originalUrl?: string;
+  /**
+   * The catalogue's own id for what the picture shows, as its search hit
+   * names it (`tmdb:movie:603`, `anilist:c40`, `openlibrary:OL45W`…). Never
+   * shown; kept on the card and sent back as it came.
+   */
+  id?: string;
+  /**
+   * Catalogue addresses the card showed before the server moved it to a new
+   * one, oldest first. Written by the server only; never shown, sent back as it came.
+   */
+  formerUrls?: string[];
 }
 
 /** The backend's limits, in characters. */
-export const ATTRIBUTION_LIMITS = { author: 300, license: 100, url: 500 } as const;
+export const ATTRIBUTION_LIMITS = {
+  author: 300,
+  license: 100,
+  url: 500,
+  id: 100,
+  formerUrls: 5,
+} as const;
+
+/**
+ * A catalogue id in one of the shapes the backend names (CONTRACT,
+ * PictureAttribution): `tmdb:{movie|tv|person}:{n}`, `anilist:{n}`,
+ * `anilist:c{n}`, `igdb:{n}`, `steam:{n}`, `openlibrary:OL{n}W|M`. A
+ * catalogue the site does not know yet may come with its own: a lowercase
+ * name, a colon, then letters, digits and colons. Anything else is dropped.
+ */
+const CATALOGUE_ID = /^[a-z][a-z0-9_-]{0,39}:[A-Za-z0-9:]{1,60}$/;
+
+const catalogueId = (value: unknown): string | null =>
+  typeof value === "string" && value.length <= ATTRIBUTION_LIMITS.id && CATALOGUE_ID.test(value)
+    ? value
+    : null;
 
 /** A source as a name: lowercase letters, digits, `_` and `-`, as every one of them is. */
 const SOURCE_NAME = /^[a-z0-9_-]{1,40}$/;
@@ -86,6 +117,13 @@ export function attributionOf(raw: unknown): PictureAttribution | null {
   const licenseUrl = httpsAddress(value.licenseUrl);
   const link = httpsAddress(value.link);
   const originalUrl = httpsAddress(value.originalUrl);
+  const id = catalogueId(value.id);
+  const formerUrls = Array.isArray(value.formerUrls)
+    ? value.formerUrls
+        .map(httpsAddress)
+        .filter((url): url is string => url !== null)
+        .slice(0, ATTRIBUTION_LIMITS.formerUrls)
+    : [];
   return {
     source: value.source,
     ...(author === null ? {} : { author }),
@@ -93,6 +131,8 @@ export function attributionOf(raw: unknown): PictureAttribution | null {
     ...(licenseUrl === null ? {} : { licenseUrl }),
     ...(link === null ? {} : { link }),
     ...(originalUrl === null ? {} : { originalUrl }),
+    ...(id === null ? {} : { id }),
+    ...(formerUrls.length === 0 ? {} : { formerUrls }),
   };
 }
 
@@ -147,6 +187,8 @@ export const sameAttribution = (
     a.license === b.license &&
     a.licenseUrl === b.licenseUrl &&
     a.link === b.link &&
-    a.originalUrl === b.originalUrl
+    a.originalUrl === b.originalUrl &&
+    a.id === b.id &&
+    (a.formerUrls ?? []).join("\n") === (b.formerUrls ?? []).join("\n")
   );
 };

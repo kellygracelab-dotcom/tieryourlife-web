@@ -34,6 +34,9 @@ import {
   trashBoard,
   trashEntriesOf,
   putBack,
+  pictureOf,
+  setPicture,
+  toPoolFront,
   removeItem,
   withoutTrash,
   type Board,
@@ -629,5 +632,99 @@ describe("the trash", () => {
     expect(emptied[0]?.items.map((item) => item.title)).toEqual(["b"]);
     // Nothing in the trash: the same boards back.
     expect(withoutTrash([b1])[0]).toBe(b1);
+  });
+});
+
+describe("a card's picture changed", () => {
+  const cards = () => {
+    const { board: b0, next } = board();
+    const b1 = addToPool(
+      b0,
+      [
+        {
+          title: "Dune",
+          imageUrl: "https://x/old.jpg",
+          credit: "Old credit",
+          attribution: { source: "tmdb", id: "tmdb:movie:1" },
+        },
+        { title: "Heat", imageUrl: null },
+      ],
+      1,
+      next,
+    );
+    const [dune, heat] = liveItems(b1);
+    return { b1, dune: dune!, heat: heat! };
+  };
+  const fresh = {
+    imageUrl: "https://x/new.jpg",
+    pictureId: "p9",
+    credit: null,
+    attribution: { source: "web", link: "https://site.test/dune" },
+    source: "MANUAL" as const,
+  };
+
+  it("keeps the card's name and place, and takes the new picture with what goes with it", () => {
+    const { b1, dune } = cards();
+    const b2 = setPicture(b1, dune.uid, fresh, 5);
+    const after = liveItems(b2).find((item) => item.uid === dune.uid)!;
+    expect(after).toMatchObject({
+      title: "Dune",
+      tierUid: dune.tierUid,
+      position: dune.position,
+      imageUrl: "https://x/new.jpg",
+      pictureId: "p9",
+      credit: null,
+      attribution: { source: "web", link: "https://site.test/dune" },
+      source: "MANUAL",
+    });
+    expect(b2.editedAt).toBe(5);
+    // Undo gives the old one back, whole.
+    const back = setPicture(b2, dune.uid, pictureOf(dune), 6);
+    expect(liveItems(back).find((item) => item.uid === dune.uid)).toMatchObject({
+      imageUrl: "https://x/old.jpg",
+      pictureId: null,
+      credit: "Old credit",
+      attribution: { source: "tmdb", id: "tmdb:movie:1" },
+    });
+  });
+
+  it("drops the attribution with the picture, and changes nothing for a card that is gone", () => {
+    const { b1, dune } = cards();
+    const none = setPicture(
+      b1,
+      dune.uid,
+      { imageUrl: null, pictureId: null, credit: null, source: "MANUAL" },
+      5,
+    );
+    expect(liveItems(none).find((item) => item.uid === dune.uid)).not.toHaveProperty("attribution");
+    expect(setPicture(b1, "nobody", fresh, 5)).toBe(b1);
+    const removed = removeItem(b1, dune.uid, 2);
+    expect(setPicture(removed, dune.uid, fresh, 5)).toBe(removed);
+  });
+
+  it("puts the new picture on the cover in the old one's place, unless another card shows the old", () => {
+    const { b1, dune } = cards();
+    const covered = setCover(b1, ["https://x/a.jpg", "https://x/old.jpg"], 2);
+    expect(setPicture(covered, dune.uid, fresh, 5).coverImageUrls).toEqual([
+      "https://x/a.jpg",
+      "https://x/new.jpg",
+    ]);
+    expect(setPicture(covered, dune.uid, { ...fresh, imageUrl: null }, 5).coverImageUrls).toEqual([
+      "https://x/a.jpg",
+    ]);
+    const twice = addToPool(
+      covered,
+      [{ title: "Dune again", imageUrl: "https://x/old.jpg" }],
+      3,
+      () => "again",
+    );
+    expect(setPicture(twice, dune.uid, fresh, 5).coverImageUrls).toEqual(covered.coverImageUrls);
+  });
+
+  it("puts a card at the front of the pool, the rest after it in their order", () => {
+    const { b1, heat } = cards();
+    const pool = poolTier(b1)!;
+    const b2 = toPoolFront(b1, heat.uid, 5);
+    expect(titlesIn(b2, pool.uid)).toEqual(["Heat", "Dune"]);
   });
 });

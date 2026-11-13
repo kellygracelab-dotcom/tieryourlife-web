@@ -160,6 +160,7 @@ const ja: Translation = {
     catalogue: "映画、ドラマ、人物の情報と画像は TMDB から取得しています。",
     wikidata:
       "カタログのそのほかの項目は Wikidata から、その画像は Wikimedia Commons から取得しています。",
+    igdb: "ゲームの情報とカバー画像は {igdb} から取得しています",
     dataTitle: "あなたのデータ",
     deleteAccount: "アカウントを削除する",
   },
@@ -255,7 +256,7 @@ const ja: Translation = {
     pictureTooBig: "{name} は縮小しても大きすぎます。",
     pictureFailed: "{name} をアップロードできませんでした。もう一度お試しください。",
     addLabel: "カードを追加",
-    addPlaceholder: "カタログを検索するか、名前を入力",
+    addPlaceholder: "検索、名前を入力、または画像のリンクを貼り付け",
     paste: "リストを貼り付け",
     pasteLabel: "名前を 1 行に 1 つ",
     pasteHint: "同じ名前は括弧内の年で区別できます: Dune (2021)",
@@ -394,7 +395,6 @@ const ja: Translation = {
     stale: "更新できませんでした。前回表示したリストです。",
   },
   list: {
-    pictureCredits: "画像のクレジット",
     opening: "リストを開いています…",
     by: "{name} さん",
     home: "トップページへ",
@@ -1375,6 +1375,80 @@ const ja: Translation = {
     back: "あなたのリスト",
     stillPublic:
       "削除せず残しました。公開コピーを取り下げられませんでした。オンラインのときにもう一度お試しください。",
+  },
+  link: {
+    draftLabel: "リンクからの画像",
+    fromDevice: "デバイスからの画像",
+    name: "名前",
+    page: "画像の掲載ページ",
+    pagePlaceholder: "任意",
+    checking: "画像を確認中…",
+    addCard: "カードを追加",
+    addWithout: "画像なしで追加",
+    signInToAdd: "ログインして画像を追加",
+    from: "出典: {host}",
+    notAPicture:
+      "このリンクは画像ではなくページです。画像そのものを開いて、そのアドレスをコピーしてください。",
+    unreachable: "このリンクは開けません。確認するか、別の画像をお試しください。",
+    tooBig: "この画像は大きすぎます。小さいサイズのものをお試しください。",
+    refused: "この画像はここでは使えません。別の画像を選んでください。",
+    limit:
+      "今日のリンクからの画像は上限に達しました。{time} から再び追加できます。デバイスからのアップロードは引き続き使えます。",
+    limitTomorrow:
+      "今日のリンクからの画像は上限に達しました。明日また追加できます。デバイスからのアップロードは引き続き使えます。",
+    failed: "画像を取得できませんでした。もう一度お試しください。",
+    busy: "画像のサイトが混み合っています。{time} にもう一度お試しください。",
+    busySoon: "画像のサイトが混み合っています。少し待ってからもう一度お試しください。",
+    waiting: "{time} まで取得元を待っています…",
+    badPage: "ページのアドレスではないようです。わからない場合は空欄のままにしてください。",
+    added: "「{name}」を追加しました",
+    dropTitle: "ドロップしてカードを追加",
+    dropNote: "画像はリストにコピーされます",
+    replace: "画像を差し替え",
+    changed: "「{name}」の画像を変更しました",
+    pasteHint:
+      "画像がある場合は、名前の後にリンクを付けてください。2 つ目のリンクは画像の掲載ページです。",
+    houseLabel: "名前 | 画像のリンク | 掲載ページ",
+    fromCatalogue: "カタログから {n} 枚",
+    fromLinks: "リンクから {n} 枚",
+    houseHint:
+      "ほかのサイトの画像には掲載ページが必要です。カタログや Commons の画像には不要です。",
+    pageless: {
+      other: "{n} 枚は画像の掲載ページが必要です:",
+    },
+    pagelessHint:
+      "ページがないとリストを公開できません。これらのカードを削除し、画像のリンクとページを付けてもう一度追加してください。",
+    quota: "今日の残り: {limit} 枚中 {left} 枚",
+    doneAdded: {
+      other: "{n} 枚のカードを追加しました。",
+    },
+    doneMissing: {
+      other: "{n} 枚は画像なしで追加されました:",
+    },
+    doneHint:
+      "カードを選んで画像を付けられます。検索するか、リンクを貼り付けるか、画像をドロップしてください。",
+    ok: "OK",
+    missing: {
+      notFound: "カタログにその名前はありません",
+      searchLimit: "画像検索が多すぎます",
+      signIn: "リンクから画像を追加するにはログインしてください",
+      notAPicture: "リンクは画像ではなくページです",
+      unreachable: "リンクが開けません",
+      tooBig: "画像が大きすぎます",
+      refused: "この画像はここでは使えません",
+      limit: "今日のリンクからの画像は上限です",
+      badLink: "ページのリンクがウェブアドレスではありません",
+      failed: "画像を取得できませんでした",
+      busy: "画像のサイトが混み合ったままでした",
+    },
+    linkNeeded:
+      "「{name}」には画像の掲載ページが必要です。カードを削除し、画像のリンクとページを付けてもう一度追加してください。",
+    about: "画像について",
+    aboutOf: "{name} の画像について",
+    openPage: "掲載ページを開く",
+    photo: "写真",
+    licence: "ライセンス",
+    fromRow: "出典",
   },
 };
 

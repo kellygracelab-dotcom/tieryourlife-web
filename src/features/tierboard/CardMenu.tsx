@@ -23,8 +23,10 @@ export interface ScreenPoint {
 interface CardMenuProps {
   /** The card's name, which names the menu. */
   name: string;
-  /** The photographer the card's picture asks to be named by: said at the menu's foot. */
-  onCredits?: (() => void) | undefined;
+  /** About the picture: who made it, its licence, the page it is from. At the menu's foot. */
+  onAbout?: (() => void) | undefined;
+  /** The page the picture is from, in a new tab. */
+  onOpenPage?: (() => void) | undefined;
   tiers: readonly PublishedTier[];
   /** Where the card is now, or null in the pool. */
   current: number | null;
@@ -80,7 +82,8 @@ function focusFirstTier(box: HTMLElement) {
  */
 export function CardMenu({
   name,
-  onCredits,
+  onAbout,
+  onOpenPage,
   tiers,
   current,
   at,
@@ -302,16 +305,28 @@ export function CardMenu({
             <span className="card-menu__text">{strings.boards.removeFromList}</span>
           </button>
         )}
-        {onCredits && (
+        {onAbout && (
           <button
             type="button"
             role="menuitem"
             tabIndex={-1}
             className="card-menu__item"
             onPointerEnter={leaveTiers}
-            onClick={onCredits}
+            onClick={onAbout}
           >
-            {strings.list.pictureCredits}
+            <span className="card-menu__text">{strings.link.about}</span>
+          </button>
+        )}
+        {onOpenPage && (
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className="card-menu__item"
+            onPointerEnter={leaveTiers}
+            onClick={onOpenPage}
+          >
+            <span className="card-menu__text">{strings.link.openPage}</span>
           </button>
         )}
       </div>

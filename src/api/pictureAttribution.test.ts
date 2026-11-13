@@ -145,3 +145,52 @@ describe("a picture's attribution", () => {
     expect(items[3]).not.toHaveProperty("attribution");
   });
 });
+
+describe("a picture's catalogue id and its former addresses", () => {
+  it("keeps the catalogue's id in the shapes the backend names, and an unknown catalogue's own", () => {
+    for (const id of [
+      "tmdb:movie:603",
+      "tmdb:person:287",
+      "anilist:c40",
+      "igdb:1942",
+      "steam:620",
+      "openlibrary:OL45W",
+      "newcat:Abc123",
+    ]) {
+      expect(attributionOf({ source: "tmdb", id })?.id).toBe(id);
+    }
+    for (const id of [
+      "",
+      "TMDB:1",
+      "tmdb",
+      "tmdb:",
+      "tmdb:movie 603",
+      `a:${"1".repeat(61)}`,
+      603,
+    ]) {
+      expect(attributionOf({ source: "tmdb", id })).not.toHaveProperty("id");
+    }
+  });
+
+  it("keeps up to five https former addresses, oldest first, and drops the rest", () => {
+    const urls = [1, 2, 3, 4, 5, 6].map((n) => `https://img.test/${n}.jpg`);
+    expect(
+      attributionOf({
+        source: "anilist",
+        formerUrls: ["http://img.test/0.jpg", 7, `https://img.test/${"x".repeat(500)}`, ...urls],
+      })?.formerUrls,
+    ).toEqual(urls.slice(0, 5));
+    expect(attributionOf({ source: "anilist", formerUrls: [] })).not.toHaveProperty("formerUrls");
+    expect(attributionOf({ source: "anilist", formerUrls: "https://img.test/1.jpg" })).toEqual({
+      source: "anilist",
+    });
+  });
+
+  it("tells two attributions apart by the id and the former addresses", () => {
+    const one = { source: "tmdb", id: "tmdb:movie:603", formerUrls: ["https://img.test/a.jpg"] };
+    expect(sameAttribution(one, { ...one })).toBe(true);
+    expect(sameAttribution(one, { ...one, id: "tmdb:movie:604" })).toBe(false);
+    expect(sameAttribution(one, { ...one, formerUrls: [] })).toBe(false);
+    expect(sameAttribution({ source: "tmdb" }, { source: "tmdb", formerUrls: [] })).toBe(true);
+  });
+});

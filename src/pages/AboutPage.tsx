@@ -1,16 +1,19 @@
 import tmdbLogo from "../assets/tmdb.svg";
 import { appIsLive, onApple, playUrl } from "../lib/links";
 import { strings } from "../strings";
+import { fillNodes } from "../strings/fillNodes";
 import { Icon } from "../ui/Icon";
 import "./AboutPage.css";
 import { usePageTitle } from "../app/pageTitle";
 
 const TMDB_URL = "https://www.themoviedb.org";
+const IGDB_URL = "https://www.igdb.com";
 
 /**
  * What the site is, whose data it shows, and where a person's own data is
  * dealt with. TMDB's terms ask for their logo and their sentence, word for
  * word, in an "About" or "Credits" section; the logo stays smaller than ours.
+ * IGDB's ask for its name, IGDB.com, as a link to its site.
  */
 export function AboutPage() {
   usePageTitle(strings.about.title, { inBar: false });
@@ -54,6 +57,15 @@ export function AboutPage() {
         </h2>
         <p className="about__text">{strings.about.catalogue}</p>
         <p className="about__text">{strings.about.wikidata}</p>
+        <p className="about__text">
+          {fillNodes(strings.about.igdb, {
+            igdb: (
+              <a href={IGDB_URL} target="_blank" rel="noopener" dir="ltr">
+                IGDB.com
+              </a>
+            ),
+          })}
+        </p>
         <a className="about__tmdb" href={TMDB_URL} target="_blank" rel="noopener">
           <img src={tmdbLogo} alt={strings.about.tmdbLogo} width="123" height="16" />
         </a>

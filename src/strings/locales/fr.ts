@@ -168,6 +168,7 @@ const fr: Translation = {
     creditsTitle: "Crédits",
     catalogue: "Les informations et les images des films, séries et personnes viennent de TMDB.",
     wikidata: "Tout le reste du catalogue vient de Wikidata, et ses images de Wikimedia Commons.",
+    igdb: "Données et jaquettes des jeux fournies par {igdb}",
     dataTitle: "Vos données",
     deleteAccount: "Supprimer votre compte",
   },
@@ -270,7 +271,7 @@ const fr: Translation = {
     pictureTooBig: "{name} est trop lourde, même réduite.",
     pictureFailed: "Impossible d’envoyer {name}. Réessayez.",
     addLabel: "Ajouter une carte",
-    addPlaceholder: "Cherchez dans le catalogue ou tapez un nom",
+    addPlaceholder: "Cherchez, tapez un nom ou collez le lien d’une image",
     paste: "Coller une liste",
     pasteLabel: "Des noms, un par ligne",
     pasteHint: "Une année entre parenthèses distingue les homonymes : Dune (2021)",
@@ -416,7 +417,6 @@ const fr: Translation = {
     stale: "Impossible d’actualiser. Voici les listes de votre dernière visite.",
   },
   list: {
-    pictureCredits: "Crédits photo",
     opening: "Ouverture de la liste…",
     by: "de {name}",
     home: "Aller à la page d’accueil",
@@ -1515,6 +1515,87 @@ const fr: Translation = {
     back: "Vos listes",
     stillPublic:
       "Conservée, pas supprimée : sa copie publique n’a pas pu être retirée. Réessayez une fois en ligne.",
+  },
+  link: {
+    draftLabel: "Image depuis un lien",
+    fromDevice: "Image de votre appareil",
+    name: "Nom",
+    page: "Page d’origine",
+    pagePlaceholder: "Facultatif",
+    checking: "Vérification de l’image…",
+    addCard: "Ajouter la carte",
+    addWithout: "Ajouter sans image",
+    signInToAdd: "Se connecter pour ajouter l’image",
+    from: "depuis {host}",
+    notAPicture:
+      "Ce lien mène à une page, pas à une image. Ouvrez l’image elle-même et copiez son adresse.",
+    unreachable: "Ce lien ne s’ouvre pas. Vérifiez-le ou essayez une autre image.",
+    tooBig: "Cette image est trop lourde. Essayez une copie plus petite.",
+    refused: "Cette image ne peut pas être utilisée ici. Choisissez-en une autre.",
+    limit:
+      "C’est tout pour les images depuis un lien aujourd’hui. D’autres à {time}. Vous pouvez toujours en importer une depuis votre appareil.",
+    limitTomorrow:
+      "C’est tout pour les images depuis un lien aujourd’hui. D’autres demain. Vous pouvez toujours en importer une depuis votre appareil.",
+    failed: "L’image n’est pas arrivée. Réessayez.",
+    busy: "Le site de l’image est occupé. Réessayez à {time}.",
+    busySoon: "Le site de l’image est occupé. Réessayez dans un instant.",
+    waiting: "En attente de la source jusqu’à {time}…",
+    badPage:
+      "Cela ne ressemble pas à l’adresse d’une page. Laissez vide si vous ne la connaissez pas.",
+    added: "Carte « {name} » ajoutée",
+    dropTitle: "Déposez pour ajouter une carte",
+    dropNote: "L’image est copiée dans votre liste",
+    replace: "Remplacer l’image",
+    changed: "Image de « {name} » modifiée",
+    pasteHint:
+      "Vous avez une image ? Mettez son lien après le nom. Un second lien indique la page d’origine.",
+    houseLabel: "Nom | lien de l’image | page d’origine",
+    fromCatalogue: "{n} du catalogue",
+    fromLinks: "{n} depuis des liens",
+    houseHint:
+      "Les images d’autres sites ont besoin de leur page d’origine. Celles du catalogue et de Commons, non.",
+    pageless: {
+      one: "{n} a besoin de la page d’origine de son image :",
+      many: "{n} ont besoin de la page d’origine de leurs images :",
+      other: "{n} ont besoin de la page d’origine de leurs images :",
+    },
+    pagelessHint:
+      "Sans la page, la liste ne sera pas publiée. Retirez ces cartes et ajoutez-les de nouveau depuis le lien de l’image, avec la page.",
+    quota: "Encore {left} images sur {limit} aujourd’hui",
+    doneAdded: {
+      one: "{n} carte ajoutée.",
+      many: "{n} cartes ajoutées.",
+      other: "{n} cartes ajoutées.",
+    },
+    doneMissing: {
+      one: "{n} est arrivée sans image :",
+      many: "{n} sont arrivées sans image :",
+      other: "{n} sont arrivées sans image :",
+    },
+    doneHint:
+      "Choisissez une carte pour lui donner une image : cherchez, collez un lien ou déposez-en une dessus.",
+    ok: "OK",
+    missing: {
+      notFound: "rien de ce nom dans le catalogue",
+      searchLimit: "trop de recherches d’images",
+      signIn: "connectez-vous pour ajouter des images depuis un lien",
+      notAPicture: "le lien mène à une page, pas à une image",
+      unreachable: "le lien ne s’ouvre pas",
+      tooBig: "l’image est trop lourde",
+      refused: "l’image ne peut pas être utilisée ici",
+      limit: "plus d’images depuis un lien aujourd’hui",
+      badLink: "le lien de la page n’est pas une adresse web",
+      failed: "l’image n’est pas arrivée",
+      busy: "le site de l’image est resté occupé",
+    },
+    linkNeeded:
+      "« {name} » a besoin de la page d’origine de son image. Retirez la carte et ajoutez-la de nouveau depuis le lien de l’image, avec la page.",
+    about: "À propos de l’image",
+    aboutOf: "À propos de l’image de {name}",
+    openPage: "Ouvrir sa page",
+    photo: "Photo",
+    licence: "Licence",
+    fromRow: "Source",
   },
 };
 

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { CODE, LIST_ID, list, mockBackend } from "./fixtures";
+import { PIXEL } from "./signedIn";
 
 const openList = async (page: Page) => {
   const backend = await mockBackend(page);
@@ -373,9 +374,14 @@ test("opens card credits with two taps and closes them back to the board", async
     r.fulfill({
       json: {
         ...list,
-        items: list.items.map((item, i) => ({ ...item, credit: i === 0 ? credit : null })),
+        items: list.items.map((item, i) =>
+          i === 0 ? { ...item, imageUrl: "https://img.test/ex.png", credit } : item,
+        ),
       },
     }),
+  );
+  await page.route("https://img.test/**", (r) =>
+    r.fulfill({ contentType: "image/png", body: PIXEL }),
   );
   await page.goto("/l/abc");
   const poster = page.getByRole("button", { name: "Ex Machina", exact: true });
@@ -391,9 +397,9 @@ test("opens card credits with two taps and closes them back to the board", async
     await page.keyboard.press("Shift+F10");
   }
   await page
-    .getByRole(hasTouch ? "button" : "menuitem", { name: "Image credits", exact: true })
+    .getByRole(hasTouch ? "button" : "menuitem", { name: "About the picture", exact: true })
     .click();
-  const details = page.getByRole("dialog", { name: "Image credits" });
+  const details = page.getByRole("dialog", { name: "Ex Machina" });
   await expect(details.getByRole("link", { name: url })).toHaveAttribute("href", url);
   await details.getByRole("button", { name: "Close" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);

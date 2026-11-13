@@ -10,4 +10,12 @@ describe("AboutPage", () => {
     expect(notice).toHaveAttribute("lang", "en");
     expect(notice).toHaveAttribute("dir", "ltr");
   });
+
+  it("credits IGDB for games, IGDB.com a link to its site", () => {
+    render(<AboutPage />);
+    const igdb = screen.getByRole("link", { name: "IGDB.com" });
+    expect(igdb).toHaveAttribute("href", "https://www.igdb.com");
+    expect(igdb).toHaveAttribute("rel", "noopener");
+    expect(igdb.parentElement).toHaveTextContent("Game data and covers from IGDB.com");
+  });
 });

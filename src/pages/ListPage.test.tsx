@@ -524,6 +524,7 @@ describe("ListPage", () => {
       items: [
         {
           ...list.items[0]!,
+          imageUrl: "https://example.com/ex-machina.jpg",
           credit:
             "Commons contributor ".repeat(24) + "https://creativecommons.org/licenses/by/4.0/",
         },
@@ -533,8 +534,8 @@ describe("ListPage", () => {
     const { unmount } = open();
     const card = await screen.findByRole("button", { name: "Ex Machina" });
     await userEvent.dblClick(card);
-    await userEvent.click(screen.getByRole("menuitem", { name: "Image credits" }));
-    expect(screen.getByRole("dialog", { name: "Image credits" })).toHaveTextContent(
+    await userEvent.click(screen.getByRole("menuitem", { name: "About the picture" }));
+    expect(screen.getByRole("dialog", { name: "Ex Machina" })).toHaveTextContent(
       "Commons contributor ".repeat(24) + "https://creativecommons.org/licenses/by/4.0/",
     );
     expect(

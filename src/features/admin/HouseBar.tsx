@@ -3,7 +3,7 @@ import type { HouseAnswer } from "../../api/admin";
 import { errorOf } from "../../api/errors";
 import type { PublishRequest } from "../../api/lists";
 import { loadListAsWritten, publishAsHouse, replaceHouseList } from "../../lib/api";
-import { strings } from "../../strings";
+import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { houseRequestOf } from "../boards/houseList";
@@ -88,7 +88,18 @@ export function HouseBar({
         setBusy(false);
         const error = errorOf(reason);
         if (kind === "replace" && error.kind === "notFound") onGone();
-        setFailure(failureText(error, kind));
+        // A picture from a link with no page: the card it names, by its place in what was sent.
+        const card =
+          error.kind === "pictureRefused" &&
+          error.code === "PICTURE_LINK_NEEDED" &&
+          error.itemIndex !== undefined
+            ? request.items[error.itemIndex]
+            : undefined;
+        setFailure(
+          card === undefined
+            ? failureText(error, kind)
+            : fill(strings.link.linkNeeded, { name: card.title }),
+        );
       },
     );
   };

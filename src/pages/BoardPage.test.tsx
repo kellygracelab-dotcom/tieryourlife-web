@@ -27,7 +27,7 @@ import { MENU_COUNT_KEY } from "../features/tierboard/RankingBoard";
 import { TIER_HOLD_MS } from "../features/tierboard/useTierMove";
 import { SessionContext, type Session } from "../app/session";
 import type { SectionStats } from "../api/sections";
-import type { Upload } from "../features/editor/AddCardBox";
+import type { LinkKeep, Upload } from "../features/editor/AddCardBox";
 import { createSectionsStore, type SectionsStore } from "../features/sections/useSections";
 import { memoryStore, type KeyValueStore } from "../lib/storage";
 import { ApiFailure } from "../api/errors";
@@ -86,6 +86,7 @@ const open = (
     publishing?: PublishingDeps;
     account?: Session["account"];
     upload?: Upload;
+    linkWeb?: LinkKeep;
     signIn?: Session["signIn"];
     store?: SectionsStore;
     house?: HouseSending;
@@ -104,6 +105,7 @@ const open = (
             now={() => ++clock}
             find={() => Promise.resolve({ items: [], hasMore: false, notices: [], rest: false })}
             upload={extra.upload ?? (() => Promise.reject(new Error("no uploads here")))}
+            linkWeb={extra.linkWeb ?? (() => Promise.reject(new Error("no links here")))}
             publishing={extra.publishing ?? noPublishing}
             share={extra.share ?? (() => Promise.resolve())}
             store={extra.store}
@@ -1333,5 +1335,107 @@ describe("BoardPage: a house list", () => {
     expect(houseLinkOf("films", houseStore)).toBeNull();
     expect(unpublish).not.toHaveBeenCalled();
     expect(router.state.location.pathname).toBe("/admin/house");
+  });
+});
+
+describe("BoardPage: pictures from links", () => {
+  const linked = (imageUrl: string) => ({
+    imageUrl,
+    pictureId: "p1",
+    attribution: { source: "web" },
+    credit: null,
+    quota: null,
+  });
+  const dropLink = (target: Element, url: string) =>
+    fireEvent.drop(target, {
+      dataTransfer: {
+        types: ["text/uri-list"],
+        files: [],
+        getData: (type: string) => (type === "text/uri-list" ? url : ""),
+      },
+    });
+  const itemOf = (repository: BoardsRepository, title: string) =>
+    liveItems(repository.get("films")!).find((item) => item.title === title)!;
+
+  it("puts a picture dropped on a card in its place, and Undo gives the old one back", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    const linkWeb = vi.fn<LinkKeep>(async (ask) => linked(ask.url));
+    open(repository, "/b/films", { account: member, linkWeb });
+    dropLink(screen.getByRole("button", { name: "The Witch" }), "https://img.test/witch.jpg");
+    const notice = await screen.findByText("Picture changed on “The Witch”");
+    expect(linkWeb).toHaveBeenCalledWith({ url: "https://img.test/witch.jpg" });
+    expect(itemOf(repository, "The Witch")).toMatchObject({
+      imageUrl: "https://img.test/witch.jpg",
+      pictureId: "p1",
+      attribution: { source: "web" },
+    });
+    // The card keeps its place.
+    expect(
+      itemsIn(repository.get("films")!, poolTier(repository.get("films")!)!.uid).map(
+        (item) => item.title,
+      ),
+    ).toEqual(["The Witch", "Climax"]);
+    await userEvent.click(
+      within(notice.closest<HTMLElement>("[role='status']")!).getByRole("button", {
+        name: "Undo",
+      }),
+    );
+    expect(itemOf(repository, "The Witch")).toMatchObject({ imageUrl: null, pictureId: null });
+    expect(itemOf(repository, "The Witch")).not.toHaveProperty("attribution");
+  });
+
+  it("says why a link dropped on a card brought no picture, and changes nothing", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    const linkWeb = vi.fn<LinkKeep>(async () => {
+      throw new ApiFailure({ kind: "pictureRefused", because: null, code: "NOT_A_PICTURE" });
+    });
+    open(repository, "/b/films", { account: member, linkWeb });
+    dropLink(screen.getByRole("button", { name: "The Witch" }), "https://site.test/page");
+    expect(
+      await screen.findByText(
+        "That link is a page, not a picture. Open the picture itself and copy its address.",
+      ),
+    ).toBeInTheDocument();
+    expect(itemOf(repository, "The Witch").imageUrl).toBeNull();
+  });
+
+  it("asks a guest to sign in before a dropped link is kept", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    const linkWeb = vi.fn<LinkKeep>();
+    const signIn = vi.fn<Session["signIn"]>(async () => ({ kind: "cancelled" }));
+    open(repository, "/b/films", { account: { kind: "guest", uid: null }, linkWeb, signIn });
+    dropLink(screen.getByRole("button", { name: "The Witch" }), "https://img.test/witch.jpg");
+    expect(await screen.findByText("Sign in to add the picture")).toBeInTheDocument();
+    expect(signIn).toHaveBeenCalled();
+    expect(linkWeb).not.toHaveBeenCalled();
+  });
+
+  it("puts a card from the draft first in the pool, says so, and Undo takes it away", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    const linkWeb = vi.fn<LinkKeep>(async (ask) => linked(ask.url));
+    open(repository, "/b/films", { account: member, linkWeb });
+    dropLink(document.querySelector(".pool")!, "https://img.test/dune.jpg");
+    const draft = await screen.findByRole("group", { name: "Picture from a link" });
+    await vi.waitFor(() =>
+      expect(within(draft).getByRole("button", { name: "Add card" })).toBeInTheDocument(),
+    );
+    await userEvent.type(within(draft).getByRole("textbox", { name: "Name" }), "Dune");
+    await vi.waitFor(() =>
+      expect(within(draft).getByRole("button", { name: "Add card" })).toBeEnabled(),
+    );
+    await userEvent.click(within(draft).getByRole("button", { name: "Add card" }));
+    const kept = repository.get("films")!;
+    expect(itemsIn(kept, poolTier(kept)!.uid).map((item) => item.title)).toEqual([
+      "Dune",
+      "The Witch",
+      "Climax",
+    ]);
+    const notice = screen.getByText("Added “Dune”").closest<HTMLElement>("[role='status']")!;
+    await userEvent.click(within(notice).getByRole("button", { name: "Undo" }));
+    expect(liveItems(repository.get("films")!).map((item) => item.title)).not.toContain("Dune");
   });
 });

@@ -39,7 +39,8 @@ import * as lists from "../api/lists";
 import type { MyList, Published, PublishRequest } from "../api/lists";
 import * as moderation from "../api/moderation";
 import * as pictures from "../api/pictures";
-import type { PictureAsk, PicturePage } from "../api/pictures";
+import type { LinkAnswer, LinkAsk, PictureAsk, PicturePage } from "../api/pictures";
+import type { LinkQuota } from "../api/linkQuota";
 import type { BanLength, QueuedList } from "../api/moderation";
 import * as rank from "../api/rank";
 import * as sections from "../api/sections";
@@ -51,6 +52,7 @@ import { tokenProviders } from "./firebase";
 import { noteListChanged } from "./listChanges";
 import { preloadedList, preloadedRanking } from "./preload";
 import { limitedSearch } from "./searchLimit";
+import { limitedLink } from "./linkPictures";
 import { listIn } from "./translated";
 
 /**
@@ -150,6 +152,14 @@ export const findPictures: (ask: PictureAsk) => Promise<PicturePage> = limitedSe
 );
 
 export const keepPicture = (url: string): Promise<string> => pictures.keepPicture(api, url);
+
+// A picture by its address; once the hour's or the day's are used up, none is
+// asked for until the time given.
+export const linkPicture: (ask: LinkAsk) => Promise<LinkAnswer> = limitedLink((ask) =>
+  pictures.linkPicture(api, ask),
+);
+
+export const loadLinkQuota = (): Promise<LinkQuota | null> => pictures.linkQuota(api);
 
 export const classifyPublication = (request: PublishRequest, action?: AccountAction) =>
   lists.classifyPublication(api, request, action);

@@ -1734,3 +1734,44 @@
     justify-content: start;
   }
 }
+
+/*
+ * A picture or a link dragged over the pool: a dashed frame says where it
+ * goes (docs/design-spec-picture-link.md, 2).
+ */
+.pool--drop {
+  position: relative;
+}
+
+.pool__drop {
+  position: absolute;
+  inset: 4px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 2px dashed var(--accent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary-container) 72%, transparent);
+  color: var(--on-primary-container);
+  text-align: center;
+  pointer-events: none;
+}
+
+.pool__drop-title {
+  margin: 0;
+  font: var(--text-title);
+}
+
+.pool__drop-note {
+  margin: 0;
+  font: var(--text-small);
+}
+
+.move-sheet__picture {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

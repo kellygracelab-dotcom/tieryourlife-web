@@ -1,3 +1,5 @@
+import { quotaOf, type LinkQuota } from "./linkQuota";
+
 export type ApiError =
   | { kind: "appUnverified" }
   | { kind: "unauthenticated" }
@@ -41,12 +43,31 @@ export type ApiError =
       /** The section of the topic a name is taken by, when the backend says. */
       section?: string;
     }
-  /** `imageUrl`: the address as sent, when the refused picture came from another site (QA S11). */
-  | { kind: "pictureRefused"; because: string | null; imageUrl?: string }
+  /**
+   * `imageUrl`: the address as sent, when the refused picture came from another site (QA S11).
+   * `code`: the 422's own code (PICTURE_REFUSED, NOT_A_PICTURE, PICTURE_LINK_NEEDED…);
+   * `itemIndex`: the card of a publication it is about; `quota`: what a picture from a link left.
+   */
+  | {
+      kind: "pictureRefused";
+      because: string | null;
+      imageUrl?: string;
+      code?: string;
+      itemIndex?: number;
+      quota?: LinkQuota;
+    }
   /** Too much of something in too short a time: TOO_MANY_PROPOSALS, ten sections a day. */
   | { kind: "tooManyRequests"; code: string | null }
   /** Too many picture searches this hour or day (429 SEARCH_LIMIT): none until `retryAt`. */
   | { kind: "searchLimit"; retryAt?: number }
+  /** Too many pictures from links this hour or day (429 LINK_LIMIT): none until `retryAt`. */
+  | { kind: "linkLimit"; retryAt?: number; quota?: LinkQuota }
+  /**
+   * 503 SOURCE_BUSY: the site a picture from a link comes from (Wikimedia)
+   * is busy. Not a refusal: the same link is asked again at `retryAt`, and
+   * the day's quota was given back.
+   */
+  | { kind: "sourceBusy"; retryAt?: number; quota?: LinkQuota }
   | { kind: "unavailable" }
   | { kind: "offline" }
   | { kind: "unknown"; status: number };
@@ -72,6 +93,8 @@ interface ErrorBody {
   retryAt?: unknown;
   because?: unknown;
   imageUrl?: unknown;
+  itemIndex?: unknown;
+  quota?: unknown;
   board?: unknown;
   mergedInto?: unknown;
   mergedTopicId?: unknown;
@@ -192,10 +215,18 @@ export function parseApiError(
     // A kept picture says why by its code: TOO_BIG, KEEP_LIMIT…
     case 422: {
       const imageUrl = stringOrNull(body.imageUrl);
+      const itemIndex =
+        typeof body.itemIndex === "number" && Number.isSafeInteger(body.itemIndex)
+          ? body.itemIndex
+          : null;
+      const quota = quotaOf(body.quota);
       return {
         kind: "pictureRefused",
         because: stringOrNull(body.because) ?? code,
         ...(imageUrl === null ? {} : { imageUrl }),
+        ...(code === null ? {} : { code }),
+        ...(itemIndex === null || itemIndex < 0 ? {} : { itemIndex }),
+        ...(quota === null ? {} : { quota }),
       };
     }
     case 429: {
@@ -203,10 +234,27 @@ export function parseApiError(
         const retryAt = publicationRetryAt(body.retryAt, retryAfter);
         return retryAt === undefined ? { kind: "searchLimit" } : { kind: "searchLimit", retryAt };
       }
+      if (code === "LINK_LIMIT") {
+        const retryAt = publicationRetryAt(body.retryAt, retryAfter);
+        const quota = quotaOf(body.quota);
+        return {
+          kind: "linkLimit",
+          ...(retryAt === undefined ? {} : { retryAt }),
+          ...(quota === null ? {} : { quota }),
+        };
+      }
       return { kind: "tooManyRequests", code };
     }
-    case 503:
-      return { kind: "unavailable" };
+    case 503: {
+      if (code !== "SOURCE_BUSY") return { kind: "unavailable" };
+      const retryAt = publicationRetryAt(body.retryAt, retryAfter);
+      const quota = quotaOf(body.quota);
+      return {
+        kind: "sourceBusy",
+        ...(retryAt === undefined ? {} : { retryAt }),
+        ...(quota === null ? {} : { quota }),
+      };
+    }
     default:
       return { kind: "unknown", status };
   }

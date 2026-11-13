@@ -917,3 +917,258 @@
     opacity: 0.4;
   }
 }
+
+/*
+ * A card from a link or a picture of one's own, before it goes on the board
+ * (docs/design-spec-picture-link.md, 1 and 4).
+ */
+.cards__found--draft {
+  background: transparent;
+  box-shadow: none;
+}
+
+.draft {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.draft__body {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.draft__picture {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 108px;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface-container);
+  color: var(--ink-faint);
+}
+
+.draft__picture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.draft__picture--checking {
+  background: linear-gradient(
+    100deg,
+    var(--surface-container) 20%,
+    var(--surface-container-high) 50%,
+    var(--surface-container) 80%
+  );
+  background-size: 200% 100%;
+  animation: draft-shimmer 1.2s linear infinite;
+}
+
+@keyframes draft-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draft__picture--checking {
+    animation: none;
+  }
+}
+
+.draft__spinner {
+  width: 32px;
+  height: 32px;
+}
+
+.draft__placeholder {
+  font-size: 32px;
+}
+
+.draft__fields {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.draft__label {
+  margin: 0;
+  font: var(--text-label);
+  color: var(--ink-dim);
+}
+
+.draft__status {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.draft__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.draft__field-name {
+  font: var(--text-caption);
+  color: var(--ink-dim);
+}
+
+.draft__input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-tile);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink);
+  font: var(--text-body);
+}
+
+.draft__input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus);
+}
+
+.draft__input[aria-invalid="true"] {
+  box-shadow: inset 0 0 0 1px var(--error);
+}
+
+.draft__chip {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-dim);
+  font: var(--text-label);
+  cursor: pointer;
+}
+
+.draft__chip .ms {
+  font-size: 18px;
+}
+
+.draft__note {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.draft__error {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--error);
+}
+
+.draft__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.draft__host {
+  margin: 0;
+  font: var(--text-caption);
+  color: var(--ink-dim);
+  overflow-wrap: anywhere;
+}
+
+/* The phone: Name at 16 px, so iOS does not zoom into the field. */
+@media (max-width: 599px) {
+  .draft__input {
+    font-size: 16px;
+  }
+
+  .draft__picture {
+    width: 84px;
+  }
+}
+
+/* What a pasted list brings: from the catalogue, from links; what is left today. */
+.cards__paste-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cards__paste-hints .cards__note {
+  padding: 0;
+}
+
+.cards__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.cards__pill {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-container);
+  color: var(--ink-dim);
+  font: var(--text-caption);
+}
+
+.cards__paste-note {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.cards__paste-note .cards__note {
+  padding: 0;
+}
+
+.cards__paste-note-head {
+  margin: 0;
+  font: var(--text-label);
+}
+
+.cards__paste-missing {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-inline-start: 18px;
+  font: var(--text-small);
+}
+
+.cards__paste-missing-name {
+  font-weight: 600;
+}
+
+.cards__paste-missing-name::after {
+  content: " — ";
+  font-weight: 400;
+}
+
+.cards__paste-missing-why {
+  color: var(--ink-dim);
+}
