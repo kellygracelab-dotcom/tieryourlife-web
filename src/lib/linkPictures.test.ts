@@ -13,6 +13,7 @@ vi.mock("./privatePictureBytes", () => ({ privatePictureBytes: mocks.bytes }));
 import { ApiFailure } from "../api/errors";
 import type { LinkAnswer } from "../api/pictures";
 import {
+  COMMONS_WIDTH,
   commonsFilePathOf,
   hostOf,
   isLink,
@@ -23,6 +24,7 @@ import {
   PAGE_LINK_MAX,
   pageLinkOf,
 } from "./linkPictures";
+import { sizedFor } from "./pictureSize";
 import { ownPictureRef } from "./privatePictureRef";
 
 beforeEach(() => {
@@ -168,26 +170,35 @@ describe("pictures from links after a limit", () => {
 
 describe("a Commons file page", () => {
   const FILE_PATH = "https://commons.wikimedia.org/wiki/Special:FilePath/";
+  const WIDTH = "?width=600";
 
   it("goes as the picture itself, its name encoded once", () => {
     expect(
       commonsFilePathOf("https://commons.wikimedia.org/wiki/File:Mangos_-_single_and_halved.jpg"),
-    ).toBe(`${FILE_PATH}Mangos_-_single_and_halved.jpg`);
+    ).toBe(`${FILE_PATH}Mangos_-_single_and_halved.jpg${WIDTH}`);
     // Encoded already, or not at all: the same address.
     expect(commonsFilePathOf("https://commons.wikimedia.org/wiki/File:Caf%C3%A9_(Paris).jpg")).toBe(
-      `${FILE_PATH}Caf%C3%A9_(Paris).jpg`,
+      `${FILE_PATH}Caf%C3%A9_(Paris).jpg${WIDTH}`,
     );
     expect(commonsFilePathOf("https://commons.wikimedia.org/wiki/File:Café (Paris).jpg")).toBe(
-      `${FILE_PATH}Caf%C3%A9_(Paris).jpg`,
+      `${FILE_PATH}Caf%C3%A9_(Paris).jpg${WIDTH}`,
     );
     // The mobile site, a query and an anchor.
     expect(
       commonsFilePathOf("https://commons.m.wikimedia.org/wiki/File:A%2BB.png?uselang=de#file"),
-    ).toBe(`${FILE_PATH}A%2BB.png`);
+    ).toBe(`${FILE_PATH}A%2BB.png${WIDTH}`);
     // A stray % stays as written, encoded.
     expect(commonsFilePathOf("https://commons.wikimedia.org/wiki/File:100%.jpg")).toBe(
-      `${FILE_PATH}100%25.jpg`,
+      `${FILE_PATH}100%25.jpg${WIDTH}`,
     );
+  });
+
+  it("asks for a width Wikimedia makes, never the uploaded original", () => {
+    const url = commonsFilePathOf("https://commons.wikimedia.org/wiki/File:Big_photo.jpg");
+    expect(url).toBe(`${FILE_PATH}Big_photo.jpg?width=${COMMONS_WIDTH}`);
+    expect(url).not.toContain("upload.wikimedia.org");
+    // The card's tile draws it at its own size, from the same file.
+    expect(sizedFor(url, 120).src).toBe(`${FILE_PATH}Big_photo.jpg?width=240`);
   });
 
   it("leaves every other address as it was", () => {
@@ -217,10 +228,10 @@ describe("a Commons file page", () => {
       link,
     );
     expect(link).toHaveBeenCalledWith({
-      url: `${FILE_PATH}Mango.jpg`,
+      url: `${FILE_PATH}Mango.jpg${WIDTH}`,
       link: "https://site.test/mango",
     });
-    expect(picture).toMatchObject({ imageUrl: `${FILE_PATH}Mango.jpg`, pictureId: null });
+    expect(picture).toMatchObject({ imageUrl: `${FILE_PATH}Mango.jpg${WIDTH}`, pictureId: null });
   });
 });
 

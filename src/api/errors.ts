@@ -69,9 +69,11 @@ export type ApiError =
   /**
    * 503 SOURCE_BUSY: the site a picture from a link comes from (Wikimedia)
    * is busy. Not a refusal: the same link is asked again at `retryAt`, and
-   * the day's quota was given back.
+   * the day's quota was given back. A picture search says it when it found
+   * nothing while a catalogue it needs is busy, and names those in `busy`:
+   * "nothing by that name" is not known then.
    */
-  | { kind: "sourceBusy"; retryAt?: number; quota?: LinkQuota }
+  | { kind: "sourceBusy"; retryAt?: number; quota?: LinkQuota; busy?: string[] }
   | { kind: "unavailable" }
   | { kind: "offline" }
   | { kind: "unknown"; status: number };
@@ -102,6 +104,7 @@ interface ErrorBody {
   cover?: unknown;
   quota?: unknown;
   board?: unknown;
+  busy?: unknown;
   mergedInto?: unknown;
   mergedTopicId?: unknown;
   status?: unknown;
@@ -121,6 +124,13 @@ const stringOrNull = (value: unknown): string | null => (typeof value === "strin
 /** A place in what was sent, or null for anything that cannot be one. */
 const indexOrNull = (value: unknown): number | null =>
   typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+
+/** The catalogues an answer names busy, or null when it names none this page can read. */
+export function busyOf(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const names = value.filter((one): one is string => typeof one === "string" && one !== "");
+  return names.length === 0 ? null : names;
+}
 
 /** What any rejection means to a page: an API's own refusal, or nothing it can name. */
 export const errorOf = (reason: unknown): ApiError =>
@@ -269,10 +279,12 @@ export function parseApiError(
       if (code !== "SOURCE_BUSY") return { kind: "unavailable" };
       const retryAt = publicationRetryAt(body.retryAt, retryAfter);
       const quota = quotaOf(body.quota);
+      const busy = busyOf(body.busy);
       return {
         kind: "sourceBusy",
         ...(retryAt === undefined ? {} : { retryAt }),
         ...(quota === null ? {} : { quota }),
+        ...(busy === null ? {} : { busy }),
       };
     }
     default:

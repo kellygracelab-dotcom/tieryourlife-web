@@ -536,3 +536,91 @@ describe("AddCardBox", () => {
     expect(find).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("AddCardBox, with a busy catalogue", () => {
+  const busy = (retryAt: number) =>
+    new ApiFailure({ kind: "sourceBusy", retryAt, busy: ["anilist"] });
+
+  const typeNow = async (words: string) => {
+    fireEvent.change(screen.getByRole("textbox", { name: "Add a card" }), {
+      target: { value: words },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LOOKUP_DEBOUNCE_MS + 10);
+    });
+  };
+
+  it("waits quietly while nothing is known, then shows what the same words find", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const at = Date.now() + 20_000;
+    const find = vi
+      .fn<FindPictures>()
+      .mockRejectedValueOnce(busy(at))
+      .mockResolvedValue(page([picture("anilist:20", { title: "Naruto" })]));
+    setup({ find });
+    await typeNow("naruto");
+    expect(screen.getByText(/Waiting for the source until/)).toBeInTheDocument();
+    // Not a failure, and not "nothing by that name": neither is known yet.
+    expect(screen.queryByText(/not answering/)).toBeNull();
+    expect(screen.queryByText(/Nothing in/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("button", { name: /Naruto/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Waiting for the source/)).toBeNull();
+  });
+
+  it("says the site is busy when it stays busy too long, and offers to try again", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const find = vi.fn<FindPictures>(async () => {
+      throw busy(Date.now() + 60 * 60 * 1000);
+    });
+    setup({ find });
+    await typeNow("naruto");
+    expect(screen.getByText(/The picture’s site is busy. Try again at/)).toBeInTheDocument();
+    expect(screen.queryByText(/not answering/)).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+      await vi.advanceTimersByTimeAsync(LOOKUP_DEBOUNCE_MS + 10);
+    });
+    expect(find).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits in a paste for the board's own catalogue rather than take another's card", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const at = Date.now() + 20_000;
+    const find = vi
+      .fn<FindPictures>()
+      .mockResolvedValueOnce(
+        page([picture("wikidata:Q1", { title: "Naruto", source: "wikidata", kind: "thing" })], {
+          busy: ["anilist"],
+          retryAt: at,
+        }),
+      )
+      .mockResolvedValue(page([picture("anilist:20", { title: "Naruto" })]));
+    const { dispatch } = setup({ find });
+    fireEvent.click(screen.getByRole("button", { name: "Paste a list" }));
+    const field = screen.getByRole("textbox", { name: "Names, one to a line" });
+    fireEvent.change(field, { target: { value: "Naruto" } });
+    await act(async () => {
+      fireEvent.submit(field.closest("form")!);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText(/Waiting for the source until/)).toBeInTheDocument();
+    expect(dispatch).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "addItem",
+      title: "Naruto",
+      imageUrl: "https://img.test/anilist:20.jpg",
+      key: "anilist:20",
+    });
+  });
+});

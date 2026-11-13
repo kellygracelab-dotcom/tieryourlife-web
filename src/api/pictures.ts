@@ -1,3 +1,4 @@
+import { busyOf } from "./errors";
 import { attributionOf, type PictureAttribution } from "./pictureAttribution";
 import { creditOf } from "./pictureCredit";
 import { quotaOf, type LinkQuota } from "./linkQuota";
@@ -86,6 +87,13 @@ export interface PicturePage {
   notices: PictureNotice[];
   /** A quick answer only: the whole search, slow catalogues and the web, can still add hits. */
   rest: boolean;
+  /**
+   * The catalogues of this search that are busy (`anilist`, `tmdb`…): what
+   * they would have found is missing. Only when there are any.
+   */
+  busy?: string[];
+  /** When the busy catalogues may be asked again (epoch ms); only beside `busy`. */
+  retryAt?: number;
 }
 
 export interface PictureAsk {
@@ -139,6 +147,8 @@ export async function searchPictures(
     hasMore?: unknown;
     notices?: unknown;
     rest?: unknown;
+    busy?: unknown;
+    retryAt?: unknown;
   }>("GET", "/lists/pictures", {
     query: {
       q: ask.q.trim().slice(0, MAX_PICTURE_QUERY),
@@ -151,6 +161,11 @@ export async function searchPictures(
   });
   const items = Array.isArray(answer.items) ? answer.items : [];
   const notices = Array.isArray(answer.notices) ? answer.notices : [];
+  const busy = busyOf(answer.busy);
+  const retryAt =
+    typeof answer.retryAt === "number" && Number.isFinite(answer.retryAt) && answer.retryAt > 0
+      ? answer.retryAt
+      : null;
   return {
     items: items.map(pictureOf).filter((one): one is FoundPicture => one !== null),
     hasMore: answer.hasMore === true,
@@ -158,6 +173,8 @@ export async function searchPictures(
     notices: notices.filter((one): one is PictureNotice => NOTICES.includes(one as string)),
     // A backend from before quick answers sends the whole one, and no rest.
     rest: answer.rest === true,
+    // A backend from before busy catalogues says nothing of them: none was.
+    ...(busy === null ? {} : { busy, ...(retryAt === null ? {} : { retryAt }) }),
   };
 }
 

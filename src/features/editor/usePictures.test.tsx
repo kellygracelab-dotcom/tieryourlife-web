@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../../api/errors";
 import type { FoundPicture, PictureScope } from "../../api/pictures";
+import { BUSY_FALLBACK_MS, BUSY_TRIES, BUSY_WAIT_MAX_MS } from "./paste";
 import { LOOKUP_DEBOUNCE_MS, usePictures, type FindPictures } from "./usePictures";
 
 vi.mock("../../lib/api", () => ({ findPictures: vi.fn() }));
@@ -37,7 +38,11 @@ function Probe({
           ? `ready:${state.items.map((item) => item.id).join(",")}|next:${state.next ?? "-"}|${state.notices.join(",")}${state.more ? "|more" : ""}${state.filling ? "|filling" : ""}`
           : state.status === "failed" && state.limit !== undefined
             ? `limited:${state.limit.retryAt ?? "-"}`
-            : state.status}
+            : state.status === "failed" && state.busy !== undefined
+              ? `busy:${state.busy.retryAt ?? "-"}`
+              : state.status === "waiting"
+                ? `waiting:${state.until}`
+                : state.status}
       </output>
       <button type="button" onClick={more}>
         more
@@ -280,5 +285,164 @@ describe("usePictures", () => {
     render(<Probe query="dune" find={down} />);
     await settle();
     expect(screen.getAllByRole("status")[1]).toHaveTextContent("failed");
+  });
+});
+
+describe("usePictures, with a busy catalogue", () => {
+  const START = 1_800_000_000_000;
+  const busy = (retryAt?: number) =>
+    new ApiFailure({
+      kind: "sourceBusy",
+      busy: ["anilist"],
+      ...(retryAt === undefined ? {} : { retryAt }),
+    });
+  const page = (ids: string[], more: Partial<Awaited<ReturnType<FindPictures>>> = {}) => ({
+    items: ids.map(picture),
+    hasMore: false,
+    notices: [],
+    rest: false,
+    ...more,
+  });
+
+  beforeEach(() => {
+    vi.setSystemTime(START);
+  });
+
+  it("waits quietly when nothing was found while a catalogue was busy, then asks again by itself", async () => {
+    const find = vi
+      .fn<FindPictures>()
+      .mockRejectedValueOnce(busy(START + 20_000))
+      .mockResolvedValue(page(["naruto"]));
+    render(<Probe query="naruto" scope="anime" find={find} />);
+    await settle();
+    // The whole search would find nothing more: only the quick one was asked.
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(shown()).toHaveTextContent(`waiting:${START + 20_000}`);
+
+    await act(async () => {
+      vi.advanceTimersByTime(20_000 - LOOKUP_DEBOUNCE_MS - 20);
+    });
+    expect(find).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      vi.advanceTimersByTime(20);
+    });
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(find).toHaveBeenLastCalledWith({
+      q: "naruto",
+      scope: "anime",
+      web: false,
+      page: 1,
+      quick: true,
+    });
+    expect(shown()).toHaveTextContent("ready:naruto");
+  });
+
+  it("says the site is busy after a few tries, or at once when its time is too far off", async () => {
+    const find = vi.fn<FindPictures>(async () => {
+      throw busy(Date.now() + 1_000);
+    });
+    const { unmount } = render(<Probe query="naruto" find={find} />);
+    await settle();
+    for (let tries = 1; tries < BUSY_TRIES; tries++) {
+      expect(shown()).toHaveTextContent("waiting:");
+      await act(async () => {
+        vi.advanceTimersByTime(1_000);
+      });
+    }
+    expect(find).toHaveBeenCalledTimes(BUSY_TRIES);
+    expect(shown()).toHaveTextContent(/^busy:\d+$/);
+    expect(vi.getTimerCount()).toBe(0);
+    unmount();
+
+    const far = vi.fn<FindPictures>(async () => {
+      throw busy(START + BUSY_WAIT_MAX_MS + 60_000);
+    });
+    render(<Probe query="naruto" find={far} />);
+    await settle();
+    expect(far).toHaveBeenCalledTimes(1);
+    expect(shown()).toHaveTextContent(`busy:${START + BUSY_WAIT_MAX_MS + 60_000}`);
+  });
+
+  it("waits when the whole search finds nothing with a catalogue busy", async () => {
+    const find = vi.fn<FindPictures>(async ({ quick }) => {
+      if (quick === true) return page([], { rest: true });
+      throw busy();
+    });
+    render(<Probe query="naruto" find={find} />);
+    await settle();
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(shown()).toHaveTextContent(`waiting:${Date.now() + BUSY_FALLBACK_MS}`);
+
+    // The quick one failed, and the whole one found nothing while busy.
+    const slow = vi.fn<FindPictures>(async ({ quick }) => {
+      if (quick === true) throw new Error("timeout");
+      throw busy(Date.now() + 5_000);
+    });
+    render(<Probe query="naruto" find={slow} />);
+    await settle();
+    expect(screen.getAllByRole("status")[1]).toHaveTextContent("waiting:");
+  });
+
+  it("stops waiting for words that changed, and when the box is gone", async () => {
+    const find = vi.fn<FindPictures>(async ({ q }) => {
+      if (q === "naruto") throw busy(Date.now() + 10_000);
+      return page([q]);
+    });
+    const { rerender, unmount } = render(<Probe query="naruto" find={find} />);
+    await settle();
+    expect(shown()).toHaveTextContent("waiting:");
+
+    // New words are not kept waiting by the old ones' wait.
+    rerender(<Probe query="bleach" find={find} />);
+    expect(shown()).toHaveTextContent("searching");
+    await settle();
+    expect(shown()).toHaveTextContent("ready:bleach");
+    await act(async () => {
+      vi.advanceTimersByTime(20_000);
+    });
+    expect(find.mock.calls.map(([ask]) => ask.q)).toEqual(["naruto", "bleach"]);
+
+    rerender(<Probe query="naruto" find={find} />);
+    await settle();
+    expect(shown()).toHaveTextContent("waiting:");
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("shows what was found, and asks once more for the busy catalogue's hits when it may", async () => {
+    const find = vi
+      .fn<FindPictures>()
+      .mockResolvedValueOnce(page(["a"], { busy: ["anilist"], retryAt: START + 30_000 }))
+      .mockResolvedValueOnce(
+        page(["naruto", "a"], { busy: ["tmdb"], retryAt: START + 60_000, hasMore: true }),
+      );
+    render(<Probe query="naruto" scope="anime" find={find} />);
+    await settle();
+    expect(shown()).toHaveTextContent("ready:a|next:-|");
+
+    await act(async () => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(find).toHaveBeenLastCalledWith({ q: "naruto", scope: "anime", web: false, page: 1 });
+    expect(shown()).toHaveTextContent("ready:a,naruto|next:2|");
+
+    // Once only, however busy the next answer says the catalogues are.
+    await act(async () => {
+      vi.advanceTimersByTime(120_000);
+    });
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("asks nothing more for a busy catalogue whose time is too far off", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page(["a"], { busy: ["anilist"], retryAt: START + BUSY_WAIT_MAX_MS + 1_000 }),
+    );
+    render(<Probe query="naruto" find={find} />);
+    await settle();
+    expect(shown()).toHaveTextContent("ready:a");
+    expect(vi.getTimerCount()).toBe(0);
+    expect(find).toHaveBeenCalledTimes(1);
   });
 });

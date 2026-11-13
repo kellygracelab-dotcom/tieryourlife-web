@@ -27,11 +27,19 @@ export function isLink(text: string): boolean {
 const COMMONS_FILE = /^https?:\/\/commons(?:\.m)?\.wikimedia\.org\/wiki\/File:([^?#]+)/i;
 
 /**
+ * The width a Commons file is asked at, the one the backend keeps a Commons
+ * address at: Wikimedia rounds it up to a width it makes and serves its
+ * 960-pixel copy. Never a direct thumbnail of another width: it answers 400.
+ */
+export const COMMONS_WIDTH = 600;
+
+/**
  * A Commons file page («…/wiki/File:Mango.jpg») as the picture itself
- * («…/wiki/Special:FilePath/Mango.jpg»), which the backend takes as Commons'
- * own and names its author and licence. The name is read as written, encoded
- * or not, spaces made underscores, and encoded once. Any other address comes
- * back as it was.
+ * («…/wiki/Special:FilePath/Mango.jpg?width=600»), which the backend takes as
+ * Commons' own and names its author and licence. The name is read as written,
+ * encoded or not, spaces made underscores, and encoded once. The width keeps
+ * the preview before publication from pulling the uploaded original, which
+ * can be thousands of pixels wide. Any other address comes back as it was.
  */
 export function commonsFilePathOf(url: string): string {
   const words = url.trim();
@@ -45,7 +53,7 @@ export function commonsFilePathOf(url: string): string {
   }
   name = name.replace(/\s+/g, "_");
   if (name === "" || name === "_") return words;
-  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(name)}`;
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(name)}?width=${COMMONS_WIDTH}`;
 }
 
 /**

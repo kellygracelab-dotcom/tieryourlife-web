@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { errorOf } from "../../api/errors";
 import {
   MIN_PICTURE_QUERY,
   type FoundPicture,
@@ -9,6 +10,7 @@ import {
 } from "../../api/pictures";
 import { findPictures } from "../../lib/api";
 import { isSearchLimit, searchLimitOf } from "../../lib/searchLimit";
+import { busyUntil } from "./paste";
 
 export type FindPictures = (ask: PictureAsk) => Promise<PicturePage>;
 
@@ -26,6 +28,12 @@ interface Asked {
 export type PicturesState =
   | { status: "idle" }
   | { status: "searching" }
+  /**
+   * Nothing found while a catalogue the search needs is busy (503
+   * SOURCE_BUSY): "nothing by that name" is not known, so the same words are
+   * asked again at `until`, by themselves.
+   */
+  | (Asked & { status: "waiting"; until: number })
   | (Asked & {
       status: "ready";
       items: FoundPicture[];
@@ -45,7 +53,14 @@ export type PicturesState =
        * is no use, so there is nothing to retry.
        */
       limit?: { retryAt: number | null };
+      /**
+       * A busy catalogue was waited for as long as is worth it (`busyUntil`)
+       * and is busy still: until when, if the backend said.
+       */
+      busy?: { retryAt: number | null };
     });
+
+const SEARCHING: PicturesState = { status: "searching" };
 
 const same = (a: Asked, b: Asked): boolean =>
   a.query === b.query && a.scope === b.scope && a.web === b.web;
@@ -69,6 +84,11 @@ export function usePictures(
   useEffect(() => {
     if (!asking) return;
     let current = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // How many times these words were searched, for the waits on a busy catalogue.
+    let tries = 0;
+    // A busy catalogue's hits are asked for once more, at most.
+    let refilled = false;
     const asked: Asked = { query: wanted, scope, web };
     const ask = { q: wanted, scope, web, page: 1 };
     const failed = (reason: unknown) =>
@@ -78,6 +98,21 @@ export function usePictures(
           ? { ...asked, status: "failed", limit: { retryAt: searchLimitOf(reason) } }
           : { ...asked, status: "failed" },
       );
+    // Nothing found while a catalogue was busy: the same words again when it
+    // said, quietly, until it has been waited for long enough.
+    const busy = (reason: unknown): boolean => {
+      const error = errorOf(reason);
+      if (error.kind !== "sourceBusy") return false;
+      if (!current) return true;
+      const until = busyUntil(error.retryAt, tries, Date.now());
+      if (until === null) {
+        setAnswer({ ...asked, status: "failed", busy: { retryAt: error.retryAt ?? null } });
+        return true;
+      }
+      setAnswer({ ...asked, status: "waiting", until });
+      timer = setTimeout(search, Math.max(0, until - Date.now()));
+      return true;
+    };
     const shown = (page: PicturePage, filling: boolean) =>
       current &&
       setAnswer({
@@ -110,23 +145,68 @@ export function usePictures(
       setAnswer((now) =>
         now.status === "ready" && same(now, asked) ? { ...now, filling: false } : now,
       );
+    // The search's last answer misses a busy catalogue's hits: the whole
+    // search once more when it may be asked, its new hits going below the
+    // others. Nothing is said of it, and a time too far off is not waited for.
+    const settled = (page: PicturePage) => {
+      if (!current || refilled || page.busy === undefined) return;
+      const until = busyUntil(page.retryAt, tries, Date.now());
+      if (until === null) return;
+      refilled = true;
+      timer = setTimeout(
+        () => {
+          find(ask).then(filled, () => undefined);
+        },
+        Math.max(0, until - Date.now()),
+      );
+    };
     // The fast catalogues first, the slow ones and the web after: the grid
     // fills in a second, and books and the web's pictures join it when they come.
-    const timer = setTimeout(() => {
+    const search = () => {
+      tries++;
       find({ ...ask, quick: true }).then(
         (quick) => {
           shown(quick, quick.rest);
-          if (current && quick.rest) find(ask).then(filled, unfilled);
+          if (!current) return;
+          if (!quick.rest) {
+            settled(quick);
+            return;
+          }
+          find(ask).then(
+            (page) => {
+              filled(page);
+              settled(page);
+            },
+            // The whole search found nothing either, with a catalogue busy.
+            (reason: unknown) => {
+              if (!busy(reason)) unfilled();
+            },
+          );
         },
         // A quick answer that would not come: the whole search, as before,
         // unless the searches are used up: then it would be refused as well.
+        // Nothing found while a catalogue is busy: the whole search would
+        // find nothing more, so the same words wait.
         (reason: unknown) => {
           if (!current) return;
-          if (isSearchLimit(reason)) failed(reason);
-          else find(ask).then((page) => shown(page, false), failed);
+          if (isSearchLimit(reason)) {
+            failed(reason);
+            return;
+          }
+          if (busy(reason)) return;
+          find(ask).then(
+            (page) => {
+              shown(page, false);
+              settled(page);
+            },
+            (failure: unknown) => {
+              if (!busy(failure)) failed(failure);
+            },
+          );
         },
       );
-    }, LOOKUP_DEBOUNCE_MS);
+    };
+    timer = setTimeout(search, LOOKUP_DEBOUNCE_MS);
     return () => {
       current = false;
       clearTimeout(timer);
@@ -164,6 +244,10 @@ export function usePictures(
   }, [answer, find]);
 
   if (!asking) return { state: { status: "idle" }, more, retry };
+  // A wait is for the words it was asked for, and no others.
+  if (answer.status === "waiting") {
+    return { state: same(answer, { query: wanted, scope, web }) ? answer : SEARCHING, more, retry };
+  }
   // An old answer stays on screen while the next one is on its way, unless the
   // words changed enough that it would mislead, or it was asked somewhere else.
   if (
@@ -174,5 +258,5 @@ export function usePictures(
   ) {
     return { state: answer, more, retry };
   }
-  return { state: { status: "searching" }, more, retry };
+  return { state: SEARCHING, more, retry };
 }

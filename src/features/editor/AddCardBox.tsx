@@ -10,7 +10,6 @@ import {
   type PictureScope,
   type PictureSource,
 } from "../../api/pictures";
-import type { CatalogueItem } from "../../api/types";
 import { useSession } from "../../app/session";
 import { findPictures, keepPicture, linkPicture, loadLinkQuota } from "../../lib/api";
 import {
@@ -34,9 +33,17 @@ import {
   type DraftToResume,
 } from "./draftAfterSignIn";
 import { nameOfFile, type Incoming } from "../../lib/incoming";
-import { missText, refusedText, waitingText } from "./linkText";
+import { busyText, missText, refusedText, waitingText } from "./linkText";
 import { LIMITS, type EditorAction, type EditorItem } from "./model";
-import { cardsFor, preferredFor, sourcesCount, wantedOf, type MissReason } from "./paste";
+import {
+  cardsFor,
+  preferredFor,
+  sourcesCount,
+  waitsForIn,
+  wantedOf,
+  type LookedUp,
+  type MissReason,
+} from "./paste";
 import { LOOKUP_DEBOUNCE_MS, usePictures, type FindPictures } from "./usePictures";
 import { sizedFor } from "../../lib/pictureSize";
 import { pasteLimitText, searchLimitText } from "../../lib/searchLimit";
@@ -242,7 +249,7 @@ function PasteBox({
   room: number;
   category: string | null;
   dispatch: (action: EditorAction) => void;
-  lookup: (query: string) => Promise<CatalogueItem[]>;
+  lookup: (query: string) => Promise<LookedUp>;
   /** None for a guest: their lines with a link come by name. */
   link: LinkKeep | undefined;
   house: boolean;
@@ -303,6 +310,7 @@ function PasteBox({
       {
         going: () => here.current,
         preferred: preferredFor(category),
+        waitFor: waitsForIn(category),
         link,
         onMissing: (title, reason) => missing.push({ title, reason }),
         onQuota: (now) => {
@@ -811,10 +819,13 @@ export function AddCardBox({
   const sources = found.status === "ready" ? sourcesOf(found.items) : null;
   // Pasted names are looked for where the board is about, in the catalogues
   // alone: a web picture is copied one at a time, by somebody choosing it.
-  const pasteLookup = (query: string): Promise<CatalogueItem[]> =>
-    find({ q: query, scope: own, page: 1, web: false }).then((page) =>
-      page.items.filter((item) => item.source !== "web"),
-    );
+  // The catalogues that were busy come along: a name may wait for its own.
+  const pasteLookup = (query: string): Promise<LookedUp> =>
+    find({ q: query, scope: own, page: 1, web: false }).then((page) => ({
+      items: page.items.filter((item) => item.source !== "web"),
+      ...(page.busy === undefined ? {} : { busy: page.busy }),
+      ...(page.retryAt === undefined ? {} : { retryAt: page.retryAt }),
+    }));
 
   return (
     <>
@@ -929,11 +940,23 @@ export function AddCardBox({
               ))}
             </div>
             {found.status === "searching" && <p className="cards__note">{strings.new.searching}</p>}
+            {/* A busy catalogue is waited for, quietly: the same words go again by themselves. */}
+            {found.status === "waiting" && (
+              <p className="cards__note" role="status">
+                {waitingText(found.until)}
+              </p>
+            )}
             {found.status === "failed" && (
               <div className="cards__empty">
                 {found.limit === undefined ? (
                   <>
-                    <p className="cards__note">{strings.new.catalogueDown}</p>
+                    {found.busy === undefined ? (
+                      <p className="cards__note">{strings.new.catalogueDown}</p>
+                    ) : (
+                      <p className="cards__note" role="status">
+                        {busyText(found.busy.retryAt)}
+                      </p>
+                    )}
                     <Button variant="outlined" onClick={retry}>
                       {strings.new.tryAgain}
                     </Button>
