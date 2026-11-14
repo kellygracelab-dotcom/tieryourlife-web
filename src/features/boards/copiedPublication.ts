@@ -5,6 +5,8 @@ import { loadListAsWritten } from "../../lib/api";
 export interface CheckedPublication {
   preview: PublicationPreview;
   request: PublishRequest;
+  /** Whose the list the copy came from is: only its own author may publish a copy as a list. */
+  originalAuthor: string;
 }
 
 /** Confirm the classification of the exact snapshot that will be submitted.
@@ -24,5 +26,9 @@ export async function checkCopiedPublication(
           return copy;
         });
   const outgoing = { ...request, items, sourceVersion: original.updatedAt };
-  return { preview: await classify(outgoing), request: outgoing };
+  return {
+    preview: await classify(outgoing),
+    request: outgoing,
+    originalAuthor: original.authorUid,
+  };
 }

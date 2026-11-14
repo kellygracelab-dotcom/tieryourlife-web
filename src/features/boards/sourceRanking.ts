@@ -10,6 +10,17 @@ export const hasRankingEdit = (uid: string) => localStorageStore.read(editedKey(
 /** Published cards are positional. Recover their positions from the snapshot,
  * including duplicate cards, without using the board's current tier order. */
 export function rowsOfSource(board: Board, source: PublishedList): number[][] | null {
+  const byUid = sourceIndexes(board, source);
+  if (byUid === null) return null;
+  return rankedTiers(board).map((t) => itemsIn(board, t.uid).map((c) => byUid.get(c.uid)!));
+}
+
+/**
+ * Each card of a copy by its place in the list it was saved from, or null
+ * when the copy is no longer that list's cards and tiers: renamed, given
+ * cards of its own, or saved from another version that differs.
+ */
+export function sourceIndexes(board: Board, source: PublishedList): Map<string, number> | null {
   if (board.takenFrom !== source.id) return null;
   const words = (value: string | null | undefined) => (value ?? "").replace(/\s+/g, " ").trim();
   const cards = liveItems(board);
@@ -54,8 +65,7 @@ export function rowsOfSource(board: Board, source: PublishedList): number[][] | 
       if (index === undefined || card.pictureId !== null) break;
       byUid.set(card.uid, index);
     }
-    if (byUid.size === cards.length)
-      return tiers.map((t) => itemsIn(board, t.uid).map((c) => byUid.get(c.uid)!));
+    if (byUid.size === cards.length) return byUid;
   }
   return null;
 }

@@ -22,7 +22,7 @@ describe("failureText", () => {
 
   it("sends the reader to the site's own take-down, speaks of the list, and leaves the proxy's English out", () => {
     expect(failureText({ kind: "tooManyLists" }, "new")).toBe(
-      "This account has published as many lists as it can. Take one down in Your public lists first.",
+      "This account has published as many lists as it can. Take one down first: show the Public ones in Your lists, open one and choose Take it down in its ⋮ menu.",
     );
     expect(failureText({ kind: "offline" }, "edit")).toBe(
       "No connection. Nothing was lost: the list is safe on this device. Try again once you are back online.",

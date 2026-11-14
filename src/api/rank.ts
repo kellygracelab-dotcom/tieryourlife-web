@@ -88,33 +88,6 @@ export async function onceMoreWhenBusy<T>(
   }
 }
 
-/**
- * `version` is the list's updatedAt as the rows were placed on it: the
- * server refuses them (409 LIST_CHANGED) once the list was republished since.
- */
-export function keepRanking(
-  client: ApiClient,
-  listId: string,
-  rows: readonly (readonly number[])[],
-  version?: number,
-  tierLabels?: TierWords,
-  poolOrder?: readonly number[],
-): Promise<SavedRanking> {
-  return onceMoreWhenBusy(() =>
-    client.request<SavedRanking>("POST", "/api/rank", {
-      // The server spends this token as it checks it, so it is a one-use one (QA S25).
-      appCheck: "limited",
-      body: {
-        listId,
-        ...(poolOrder === undefined ? {} : { poolOrder }),
-        rows: rows.map((row) => [...row]),
-        ...(version === undefined ? {} : { version }),
-        ...(tierLabels === undefined ? {} : { tierLabels: tierWordsToSend(tierLabels) }),
-      },
-    }),
-  );
-}
-
 /** Read as an account when there is one, so the answer can say whether it is yours. */
 export async function loadRanking(
   client: ApiClient,

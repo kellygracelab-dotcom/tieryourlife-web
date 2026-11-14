@@ -69,7 +69,7 @@ for (const mode of ["Losers stay", "King of the hill", "Bracket"]) {
   });
 }
 
-/** Card 1 and Card 2 picked by hand in the row named `row`, played to the result. */
+/** Card 1 and Card 2 picked by hand in the row named `row`, played to the end, on the board. */
 async function playTwo(page: Page, row: string) {
   await openBoard(page);
   await play(page).click();
@@ -89,49 +89,33 @@ async function playTwo(page: Page, row: string) {
     .getByRole("button", { name: /^Pick / })
     .first()
     .click();
-  await expect(page.getByRole("heading", { name: "Your result" })).toBeVisible();
+  // No result screen: the game ends on the board, its result already there.
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Your result" })).toHaveCount(0);
 }
 
 const labels = (tiles: Locator) =>
   tiles.evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
 
-for (const leftovers of ["keep", "pool"]) {
-  test(
-    "applies a ranked game with its other ranked cards set to " + leftovers,
-    async ({ page }) => {
-      await playTwo(page, "Ranked");
-      await expect(
-        page.getByRole("radio", { name: "Leave in their current places" }),
-      ).toBeChecked();
-      if (leftovers === "pool") await page.getByRole("radio", { name: "Move to the pool" }).check();
-      expect((await persisted(page)).items.map((i: { tierUid: string }) => i.tierUid)).toEqual(
-        board.items.map((i) => i.tierUid),
-      );
-      await page.getByRole("button", { name: "Apply", exact: true }).click();
-      await page.reload();
-      await expect(page.locator(".ranking .tile")).toHaveCount(91);
-      const ranked = await labels(page.locator(".tier .tile"));
-      expect(ranked.filter((name) => name === "Card 1" || name === "Card 2")).toHaveLength(2);
-      expect(ranked.filter((name) => name === "Card 0" || name === "Card 3")).toHaveLength(
-        leftovers === "keep" ? 2 : 0,
-      );
-      // The pool was outside the game: it keeps every card it had, the unplayed ranked ones after.
-      const wanted = board.items.slice(4).map((i) => i.title);
-      if (leftovers === "pool") wanted.push("Card 0", "Card 3");
-      expect(await labels(page.locator(".pool__items .tile"))).toEqual(wanted);
-      await expect(page.locator(".ranking .tile")).toHaveCount(91);
-      expect((await persisted(page)).play).toBeNull();
-    },
+test("applies a ranked game with its other ranked cards left in their places", async ({ page }) => {
+  await playTwo(page, "Ranked");
+  await expect.poll(async () => (await persisted(page)).play).toBeNull();
+  await page.reload();
+  await expect(page.locator(".ranking .tile")).toHaveCount(91);
+  const ranked = await labels(page.locator(".tier .tile"));
+  expect(ranked.filter((name) => name === "Card 1" || name === "Card 2")).toHaveLength(2);
+  expect(ranked.filter((name) => name === "Card 0" || name === "Card 3")).toHaveLength(2);
+  // The pool was outside the game: it keeps every card it had.
+  expect(await labels(page.locator(".pool__items .tile"))).toEqual(
+    board.items.slice(4).map((i) => i.title),
   );
-}
+});
 
 test("orders one tier only: its unplayed card behind, the other tier and the pool untouched", async ({
   page,
 }) => {
   await playTwo(page, "Tier S");
-  // Nothing outside the played cards moves, so there is nothing to choose.
-  await expect(page.getByRole("radio")).toHaveCount(0);
-  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect.poll(async () => (await persisted(page)).play).toBeNull();
   await page.reload();
   await expect(page.locator(".ranking .tile")).toHaveCount(91);
   const [s, a] = [page.locator(".tier").nth(0), page.locator(".tier").nth(1)];
@@ -269,7 +253,7 @@ test("a guest can reset Mine and reopen it without altering the author's ranking
     "The Witch",
     "Ex Machina",
   ]);
-  await page.getByRole("button", { name: "Theirs", exact: true }).click();
+  await page.getByRole("button", { name: "Author", exact: true }).click();
   await expect(page.locator(".tier .tile").first()).toHaveAttribute("aria-label", "Ex Machina");
 });
 
@@ -281,7 +265,7 @@ const areaTitle: Record<string, string> = {
 };
 
 for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
-  test("replays the same 16 after reloading a saved sample from " + scope, async ({ page }) => {
+  test("resumes the same 16 after reloading a saved sample from " + scope, async ({ page }) => {
     const items = board.items.map((item, i) => ({
       ...item,
       tierUid: scope === "one occupied tier" ? "S" : i < 25 ? "S" : i < 50 ? "A" : "Pool",
@@ -299,6 +283,7 @@ for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
     }
     await page.getByRole("button", { name: "16", exact: true }).click();
     await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page.getByText("16 cards from " + areaTitle[scope])).toBeVisible();
     await page.locator("label.play-game").filter({ hasText: "Bracket" }).click();
     await page.getByRole("button", { name: "Start", exact: true }).click();
     const pick = page.getByRole("button", { name: /^Pick / }).first();
@@ -317,13 +302,11 @@ for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
       await expect(page.getByRole("heading", { name: "Duel " + (i + 1) + " of 15" })).toBeVisible();
       await pick.click();
     }
-    await expect(page.getByRole("heading", { name: "Your result" })).toBeVisible();
-    if (scope === "one occupied tier")
-      await expect(page.locator(".result-view__tiers .tier")).toHaveCount(1);
-    await page.getByRole("button", { name: "Play again" }).click();
-    await expect(page.getByText("16 cards from " + areaTitle[scope])).toBeVisible();
-    await page.getByRole("button", { name: "Start", exact: true }).click();
-    await pick.click();
-    await expect.poll(async () => (await persisted(page)).play?.ids).toEqual(original.ids);
+    // The last duel ends the game on the board, the 16 placed by it.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect.poll(async () => (await persisted(page)).play).toBeNull();
+    const placed = await labels(page.locator(".tier .tile"));
+    const titles = new Map(board.items.map((item) => [item.uid, item.title]));
+    for (const id of original.ids as string[]) expect(placed).toContain(titles.get(id));
   });
 }

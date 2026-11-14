@@ -322,21 +322,22 @@ test("the key that places the last card is not typed into the box that brings ca
   await expect(add).toHaveValue("");
 });
 
-test("saves somebody's list to my boards, asking whose ranking to keep", async ({ page }) => {
+test("saves somebody's list to my boards with one button, and only once", async ({ page }) => {
   await mockBackend(page);
   await page.goto(`/l/${list.id}`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
 
+  // On Author, the one button saves the author's arrangement; nothing asks whose.
   await page.getByLabel("More about this list").click();
-  await page.getByRole("button", { name: "Save to my lists" }).click();
-  const dialog = page.getByRole("dialog", { name: "Which ranking to save?" });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "The author’s" }).click();
+  await page.getByRole("button", { name: "Save author’s list" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByText("Saved to your lists.")).toBeVisible();
 
-  // Open leads to the copy: the author's arrangement, the list's name, a board of mine.
-  // The head's Save button now reads Open as well, and so does the snackbar's.
-  await page.getByRole("button", { name: "Open", exact: true }).first().click();
+  // Saved, the button opens the copy: the author's arrangement, the list's name, a board of mine.
+  // On a phone it is a line of the ⋮ menu, which closed with the save.
+  const saved = page.getByRole("button", { name: "Saved", exact: true }).first();
+  if (!(await saved.isVisible())) await page.getByLabel("More about this list").click();
+  await saved.click();
   await expect(page).toHaveURL(/\/b\//);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
   await expect(page.getByText(/2 ranked · 1 in pool/)).toBeVisible();
@@ -344,7 +345,7 @@ test("saves somebody's list to my boards, asking whose ranking to keep", async (
     page.getByRole("list", { name: "S" }).getByRole("button", { name: "Ex Machina", exact: true }),
   ).toBeVisible();
 
-  // And it is on the shelf with the others.
+  // And it is on the shelf with the others, once.
   await page.getByRole("link", { name: "Your lists" }).first().click();
-  await expect(page.getByRole("link", { name: `Open ${list.title}` })).toBeVisible();
+  await expect(page.getByRole("link", { name: `Open ${list.title}` })).toHaveCount(1);
 });

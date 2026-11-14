@@ -5,7 +5,6 @@ import {
   removeRanking,
   loadMyRankings,
   loadRanking,
-  keepRanking,
   onceMoreWhenBusy,
   rearrangeRanking,
 } from "./rank";
@@ -18,55 +17,15 @@ function recordingClient(result: unknown) {
 }
 
 describe("rank", () => {
-  it("saves the rows of a ranking as plain arrays with the caller's tokens", async () => {
-    const { client, request } = recordingClient({ code: "abcdefgh", claimToken: "t" });
-    const rows: readonly (readonly number[])[] = [[2, 0], []];
-
-    await expect(keepRanking(client, "wMRMFDxo8UejcAi2VVMW", rows)).resolves.toEqual({
-      code: "abcdefgh",
-      claimToken: "t",
-    });
-
-    expect(request).toHaveBeenCalledWith("POST", "/api/rank", {
-      appCheck: "limited",
-      body: { listId: "wMRMFDxo8UejcAi2VVMW", rows: [[2, 0], []] },
-    });
-
-    // The version the rows were placed on, so a republished list refuses them.
-    await keepRanking(client, "wMRMFDxo8UejcAi2VVMW", rows, 1_700);
-    expect(request).toHaveBeenLastCalledWith("POST", "/api/rank", {
-      appCheck: "limited",
-      body: { listId: "wMRMFDxo8UejcAi2VVMW", rows: [[2, 0], []], version: 1_700 },
-    });
-
-    // A version started from a reader's placing keeps that reader's tier words.
-    await keepRanking(client, "wMRMFDxo8UejcAi2VVMW", rows, 1_700, ["Top", null]);
-    expect(request).toHaveBeenLastCalledWith("POST", "/api/rank", {
-      appCheck: "limited",
-      body: {
-        listId: "wMRMFDxo8UejcAi2VVMW",
-        rows: [[2, 0], []],
-        version: 1_700,
-        tierLabels: ["Top", null],
-      },
-    });
-  });
-
-  it("cuts a reader's tier word to what the functions keep, on Finish and on a change", async () => {
+  it("cuts a reader's tier word to what the functions keep on a change", async () => {
     const { client, request } = recordingClient({ code: "abcdefgh", claimToken: "t" });
     // 51 characters: the editors take up to 80, the functions refuse past 40.
     const long = "Films I would happily watch again every single year";
     const pair = `${"x".repeat(39)}\u{1F600}`;
 
-    await keepRanking(client, "wMRMFDxo8UejcAi2VVMW", [[0], []], 1_700, [long, " B "]);
-    expect(request).toHaveBeenLastCalledWith("POST", "/api/rank", {
-      appCheck: "limited",
-      body: {
-        listId: "wMRMFDxo8UejcAi2VVMW",
-        rows: [[0], []],
-        version: 1_700,
-        tierLabels: ["Films I would happily watch again every", "B"],
-      },
+    await rearrangeRanking(client, "abcdefgh", [[0], []], [long, " B "]);
+    expect(request).toHaveBeenLastCalledWith("PUT", "/api/rank/abcdefgh", {
+      body: { rows: [[0], []], tierLabels: ["Films I would happily watch again every", "B"] },
     });
 
     await rearrangeRanking(client, "abcdefgh", [[0], []], [pair, null]);

@@ -1,19 +1,17 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, useLocation } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { ApiFailure } from "../api/errors";
-import type { Ranking } from "../api/rank";
 import type { PublishedList } from "../api/types";
 import { SessionContext, type Session } from "../app/session";
 import { BoardSyncContext, NOBODY, type BoardSyncControls } from "../features/boards/boardSync";
 import { itemsIn, liveItems, newBoard, poolTier, rankedTiers } from "../features/boards/model";
-import type { CopyBack } from "../features/boards/ownList";
+import { rankingBoardKey, type CopyBack } from "../features/boards/ownList";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import {
   DEFAULT_TIERS,
   editDraftKey,
-  forkDraftKey,
   NEW_DRAFT_KEY,
   saveEditorDraft,
   type Draft,
@@ -85,7 +83,6 @@ interface Setup {
   repository?: BoardsRepository;
   store?: KeyValueStore;
   load?: (id: string) => Promise<PublishedList>;
-  loadKept?: (code: string) => Promise<Ranking>;
   copyBack?: CopyBack;
   signIn?: Session["signIn"];
 }
@@ -96,7 +93,6 @@ const open = ({
   repository = boardsRepository(memoryStore()),
   store = memoryStore(),
   load = () => Promise.resolve(list),
-  loadKept = () => Promise.reject(new Error("no rankings here")),
   copyBack = () => Promise.reject(new Error("no copies here")),
   signIn = () => Promise.resolve({ kind: "cancelled" }),
 }: Setup) => {
@@ -109,7 +105,6 @@ const open = ({
             repository={repository}
             store={store}
             load={load}
-            loadKept={loadKept}
             copyBack={copyBack}
             now={() => 5000}
           />
@@ -117,6 +112,7 @@ const open = ({
       },
       { path: "/b/:uid", element: <Arrived /> },
       { path: "/l/:id", element: <Arrived /> },
+      { path: "/r/:code", element: <Arrived /> },
     ],
     { initialEntries: [path] },
   );
@@ -207,82 +203,20 @@ describe("NewBoardPage: making a list is making a board", () => {
   });
 });
 
-describe("NewBoardPage: a kept ranking as a board", () => {
-  const ranking: Ranking = {
-    code: "aaaaaaaa",
-    listId: "abc",
-    listAvailable: true,
-    createdAt: 0,
-    snapshot: {
-      title: list.title,
-      authorName: "someone",
-      authorPhotoUrl: null,
-      category: "film_tv",
-      tiers: list.tiers,
-      items: list.items,
-    },
-    rows: [[2], [0]],
-  };
-
-  it("arranges the cards as the ranking had them, without the author's own pictures", async () => {
-    const { repository } = open({
-      path: "/b/new?ranking=aaaaaaaa",
-      loadKept: () => Promise.resolve(ranking),
-    });
-    const board = boardAt(repository, await arrivedAt());
-    expect(titlesIn(board)).toEqual([["Climax"], ["Ex Machina"], ["The Witch"]]);
-    const pictures = Object.fromEntries(
-      liveItems(board!).map((item) => [item.title, item.imageUrl]),
-    );
-    // The author's upload goes when they do; the catalogue's poster stays.
-    expect(pictures).toEqual({ "Ex Machina": null, "The Witch": POSTER, Climax: null });
+describe("NewBoardPage: a kept ranking's old Publish as my list link", () => {
+  it("shows the ranking itself, pictures and all, and makes no board of somebody else's list", async () => {
+    const { repository } = open({ path: "/b/new?ranking=aaaaaaaa" });
+    expect(await arrivedAt()).toBe("/r/aaaaaaaa");
+    expect(repository.all()).toEqual([]);
   });
 
-  it("takes what the old editor kept for that ranking instead, and lets it go", async () => {
-    const store = memoryStore();
-    saveEditorDraft(
-      store,
-      draft("Mine now", ["Climax"], [[0], [], [], [], []]),
-      forkDraftKey("aaaaaaaa"),
-    );
-    const { repository } = open({
-      path: "/b/new?ranking=aaaaaaaa",
-      store,
-      loadKept: () => Promise.resolve(ranking),
-    });
-    expect(boardAt(repository, await arrivedAt())?.title).toBe("Mine now");
-    expect(store.read(forkDraftKey("aaaaaaaa"))).toBeNull();
-  });
-
-  it("opens the board made of the ranking again on a second visit, and makes one anew once it is in the trash", async () => {
+  it("opens the board made of the ranking before, while it is out of the trash", async () => {
     const store = memoryStore();
     const repository = boardsRepository(memoryStore());
-    const loadKept = vi.fn(() => Promise.resolve(ranking));
-    open({ path: "/b/new?ranking=aaaaaaaa", store, repository, loadKept });
-    const made = await arrivedAt();
-    cleanup();
-
-    open({ path: "/b/new?ranking=aaaaaaaa", store, repository, loadKept });
-    expect(await arrivedAt()).toBe(made);
-    expect(repository.all()).toHaveLength(1);
-    expect(loadKept).toHaveBeenCalledTimes(1);
-    cleanup();
-
-    const board = boardAt(repository, made)!;
-    repository.save({ ...board, deletedAt: 6000 });
-    open({ path: "/b/new?ranking=aaaaaaaa", store, repository, loadKept });
-    expect(await arrivedAt()).not.toBe(made);
-    expect(repository.all()).toHaveLength(2);
-  });
-
-  it("says so when the ranking cannot be opened", async () => {
-    open({
-      path: "/b/new?ranking=aaaaaaaa",
-      loadKept: () => Promise.reject(new ApiFailure({ kind: "notFound" })),
-    });
-    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
-      "This ranking isn’t available",
-    );
+    repository.save(newBoard("made", "Mine now", 1, () => `x${Math.random()}`));
+    store.write(rankingBoardKey("aaaaaaaa"), "made");
+    open({ path: "/b/new?ranking=aaaaaaaa", store, repository });
+    expect(await arrivedAt()).toBe("/b/made");
   });
 });
 

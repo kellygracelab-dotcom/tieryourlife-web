@@ -77,6 +77,9 @@ function shelfIn(store: KeyValueStore): Shelf {
   }
 }
 
+/** Which of them a link asks to show, by its ?show=. */
+const shownIn = (search: string): string | null => new URLSearchParams(search).get("show");
+
 /** What a board page leaves in the history when it sends a board to the trash. */
 export interface BoardsPageState {
   trashed?: string[];
@@ -206,7 +209,10 @@ export function BoardsPage({
     setView(next);
     store.write(VIEW_KEY, next);
   };
-  const [show, setShow] = useState<BoardShow>(shelf.show);
+  // A link may ask for some of them: /b?show=public is where "Your public lists" went.
+  const [show, setShow] = useState<BoardShow>(
+    () => BOARD_SHOWS.find((asked) => asked === shownIn(location.search)) ?? shelf.show,
+  );
   const [query, setQuery] = useState(shelf.query);
   useEffect(() => {
     shelfStore.write(SHELF_KEY, JSON.stringify({ sort, show, query } satisfies Shelf));
@@ -388,11 +394,6 @@ export function BoardsPage({
           )}
         </div>
         <div className="boards__actions">
-          {signedIn && (
-            <Link className="btn btn--text" to="/me">
-              {strings.nav.myLists}
-            </Link>
-          )}
           <Link className="btn btn--text" to="/trash">
             <Icon name="delete" className="btn__icon" />
             <span>{strings.boards.trash}</span>

@@ -13,7 +13,6 @@ import type { Publish } from "../features/account/useSaving";
 import { DataCard } from "../features/boards/DataCard";
 import { owners } from "../features/boards/owners";
 import { forgetKeptOf } from "../features/ranking/kept";
-import { AccountTabs } from "../app/AccountTabs";
 import { useHidden } from "../features/community/useHidden";
 import { useSession, useShowFace } from "../app/session";
 import { SignInButton } from "../app/SignInButton";
@@ -240,7 +239,6 @@ export function SettingsPage({
   return (
     <div className="settings">
       <h1 className="settings__heading">{strings.settings.title}</h1>
-      {account?.kind === "signedIn" && <AccountTabs current="settings" />}
 
       {account === null && (
         // The guest card's shape while Firebase says who is here: it arrives some

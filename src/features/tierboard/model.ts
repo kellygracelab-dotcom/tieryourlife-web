@@ -13,6 +13,14 @@ export interface BoardState {
    */
   readonly pickedByBoard?: boolean;
   readonly history: readonly Rows[];
+  /**
+   * Where in the history a game's result stands as one step that Undo turns
+   * over rather than spends: the entry there is the other side of it, the
+   * board before the game or the game's arrangement, and Undo on it swaps the
+   * two, so pressing it again and again goes before and after the game.
+   * Moves made since are undone first, one by one.
+   */
+  readonly toggleAt?: number;
 }
 
 export type BoardAction =
@@ -58,13 +66,21 @@ export function init(
 const without = (rows: Rows, item: number): Rows =>
   rows.map((row) => (row.includes(item) ? row.filter((i) => i !== item) : row));
 
-const remember = (state: BoardState, rows: Rows): BoardState => ({
-  ...state,
-  rows,
-  selected: null,
-  pickedByBoard: false,
-  history: [...state.history.slice(-(MAX_HISTORY - 1)), state.rows],
-});
+const remember = (state: BoardState, rows: Rows): BoardState => {
+  const kept = state.history.slice(-(MAX_HISTORY - 1));
+  const dropped = state.history.length - kept.length;
+  const { toggleAt, ...rest } = state;
+  // A game's step pushed out of the history by a long evening is an ordinary past now.
+  const at = toggleAt === undefined ? -1 : toggleAt - dropped;
+  return {
+    ...rest,
+    ...(at >= 0 ? { toggleAt: at } : {}),
+    rows,
+    selected: null,
+    pickedByBoard: false,
+    history: [...kept, state.rows],
+  };
+};
 
 export function reduce(state: BoardState, action: BoardAction): BoardState {
   switch (action.type) {
@@ -112,12 +128,14 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
     case "undo": {
       const previous = state.history[state.history.length - 1];
       if (previous === undefined) return state;
+      // The game's step: what is on the board now becomes the other side of it.
+      const turning = state.toggleAt === state.history.length - 1;
       const restored = {
         ...state,
         rows: previous,
         selected: null,
         pickedByBoard: false,
-        history: state.history.slice(0, -1),
+        history: turning ? [...state.history.slice(0, -1), state.rows] : state.history.slice(0, -1),
       };
       // The card that went back to the pool comes back picked: undo and
       // another tier is two taps.

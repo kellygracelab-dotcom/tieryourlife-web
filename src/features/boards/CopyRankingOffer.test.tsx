@@ -96,3 +96,57 @@ it.each([
     );
   },
 );
+
+it("is asked after a game, or once every card has its place, and not before", async () => {
+  localStorage.clear();
+  vi.mocked(loadListAsWritten).mockReset();
+  const owner = actionUser("reader");
+  actionAuth.currentUser = owner;
+  let n = 0;
+  const uid = () => String(++n);
+  const original = addToPool(
+    newBoard("source", "Films", 100, uid),
+    [
+      { title: "One", imageUrl: null },
+      { title: "Two", imageUrl: null },
+    ],
+    100,
+    uid,
+  );
+  const source = { ...boardView(original, "Films").list, authorUid: "author" };
+  vi.mocked(loadListAsWritten).mockResolvedValue(source);
+  const repo = boardsRepository(memoryStore());
+  const copy = boardFromList(source, [[0]], 200, uid);
+  repo.save(copy);
+  noteRankingEdit(copy.uid);
+  const session = {
+    account: { kind: "signedIn" as const, uid: owner.uid, displayName: null, photoUrl: null },
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    refresh: vi.fn(),
+  };
+  const view = (board = repo.get(copy.uid)!, afterGame = false) => (
+    <SessionContext.Provider value={session}>
+      <CopyRankingOffer
+        board={board}
+        sourceId={source.id}
+        repository={repo}
+        notify={vi.fn()}
+        afterGame={afterGame}
+      />
+    </SessionContext.Provider>
+  );
+  const offer = () =>
+    screen.queryByRole("complementary", { name: "Show others how you ranked it?" });
+  // One card of two placed by hand: not yet.
+  const { rerender } = render(view());
+  await act(async () => undefined);
+  expect(offer()).toBeNull();
+  // A game just put its result on the board: now, with the app's two answers.
+  rerender(view(repo.get(copy.uid)!, true));
+  expect(await screen.findByRole("button", { name: "Show in Rankings" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Not now" })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Not now" }));
+  expect(offer()).toBeNull();
+  expect(repo.get(copy.uid)?.rankingChoice).toBe("offered");
+});

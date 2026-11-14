@@ -29,9 +29,9 @@ test.describe("a wide screen", () => {
     await expect(page.locator(".pool__items")).toHaveCSS("display", "grid");
     // Moving the pool does not move the buttons: they are the header's.
     const head = page.locator(".list-head");
-    await expect(head.getByRole("button", { name: "Finish" })).toBeVisible();
+    await expect(head.getByRole("button", { name: "Undo" })).toBeVisible();
     await expect(head.getByText("0 of 3 placed")).toBeVisible();
-    await expect(side.getByRole("button", { name: "Finish" })).toHaveCount(0);
+    await expect(side.getByRole("button", { name: "Undo" })).toHaveCount(0);
 
     const header = await page.evaluate(() =>
       parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-height")),
@@ -66,12 +66,12 @@ test.describe("a wide screen", () => {
       await page.getByRole("button", { name: "Mine", exact: true }).click();
       await expect(page.locator(".ranking")).toBeVisible();
       const mine = (await tier.boundingBox())!;
-      await page.getByRole("button", { name: "Theirs", exact: true }).click();
+      await page.getByRole("button", { name: "Author", exact: true }).click();
       await expect(page.getByRole("region", { name: "Their ranking" })).toBeVisible();
       const theirs = (await tier.boundingBox())!;
       expect(Math.round(theirs.x)).toBe(Math.round(mine.x));
       expect(Math.round(theirs.width)).toBe(Math.round(mine.width));
-      // Mine's first tier is empty and Theirs' holds a card: one height, 90 + 2 × 12.
+      // Mine's first tier is empty and the author's holds a card: one height, 90 + 2 × 12.
       expect(Math.round(mine.height)).toBe(114);
       expect(Math.round(theirs.height)).toBe(114);
     }
@@ -97,7 +97,7 @@ test.describe("a wide screen", () => {
     const board = page.locator(".ranking");
     await expect(board).toHaveClass(/ranking--under/);
     await expect(page.locator(".pool")).toHaveCSS("position", "fixed");
-    await expect(page.locator(".list-head").getByRole("button", { name: "Finish" })).toBeVisible();
+    await expect(page.locator(".list-head").getByRole("button", { name: "Undo" })).toBeVisible();
     const poolBox = (await page.locator(".pool").boundingBox())!;
     expect(Math.round(poolBox.y + poolBox.height)).toBe(900);
     // The page keeps room under the board for the dock: the footer waits, and at

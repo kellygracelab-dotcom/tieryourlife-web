@@ -1,191 +1,100 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import type { AccountAction } from "../../api/client";
-import type { RankingChoice } from "../../api/boards";
 import type { PublishedList, PublishedTier } from "../../api/types";
 import { noteTake } from "../../lib/api";
-import { type KeyValueStore, localStorageStore } from "../../lib/storage";
 import { strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
-import { arrange } from "../tierboard/arrange";
-import {
-  loadDraftLabels,
-  loadPoolOrder,
-  loadPlacedDraft,
-  scopeOf,
-  withLabels,
-} from "../tierboard/draft";
 import type { Rows } from "../tierboard/model";
+import { copyOfList, holdsArrangement, rearrangeCopy } from "./listCopies";
 import { noteRankingEdit } from "./sourceRanking";
 import { boardFromList } from "./publish";
 import { type BoardsRepository } from "./repository";
 import { boards as site } from "./owners";
-import { nextUid } from "./useBoards";
+import { nextUid, useBoards } from "./useBoards";
 
-export type Whose = "theirs" | "mine" | "none";
-
-/** Another reader's placing on show in the left half instead of the author's. */
-export interface ShownPlacing {
-  name: string;
+/**
+ * What Save keeps, as the Author | Mine switch shows it: the author's
+ * arrangement, or one's own with the tier words and the pool's order it
+ * wears. Rows of null place nothing.
+ */
+export interface Shown {
+  whose: "author" | "mine";
+  rows: Rows | null;
   tiers: readonly PublishedTier[];
-  rows: Rows;
+  poolOrder?: readonly number[];
 }
 
 export interface SaveToMineDeps {
   repository?: BoardsRepository;
-  /** A reader's ranking picked from the rankings sheet: what Theirs then keeps. */
-  shown?: ShownPlacing | null;
-  /** Where the ranking board keeps this device's rows for the list. */
-  store?: KeyValueStore;
   now?: () => number;
   /** Counts the save as a take of the list, as the app does: the popular order is made of them. */
   take?: (listId: string, action?: AccountAction) => Promise<void>;
 }
 
-/**
- * The arrangements on offer: what the left half shows (a reader picked, or
- * the author's when the snapshot carries one), and mine when I placed anything.
- */
-export interface SaveChoices {
-  theirs: { rows: Rows; tiers: readonly PublishedTier[]; name: string | null } | null;
-  mine: Rows | null;
-}
-
-/** The copy a visit made, and of which list: the page may move on to another. */
-interface Made {
-  listId: string;
-  uid: string;
-}
-
 export interface SaveToMine {
-  /** Saves at once when there is nothing to choose between; asks otherwise. Once saved, opens the copy. */
+  /** The list's board in one's lists already holds what is shown: the button reads Saved and opens it. */
+  saved: boolean;
+  /** Saves what is shown, or opens the board once it holds it. */
   start: () => void;
-  /** The board this visit already made of the list, or null: then Save reads Open. */
-  saved: string | null;
-  asking: SaveChoices | null;
-  save: (whose: Whose) => void;
-  keepProgress: (action?: AccountAction) => string | null;
-  rememberChoice: (choice: RankingChoice, boardUid?: string) => void;
-  cancel: () => void;
 }
 
 /**
- * The phone's "Save to my lists": somebody else's list becomes a board of
- * one's own, with the author's arrangement, the one on screen, or none. The
- * question is asked only when there is a choice to make; the receipt offers
- * to open the new board. A list with nothing placed, a template, has no
- * Theirs to weigh: one's own is saved as it stands, as on the phone. A
- * reader's ranking picked to look at is a Theirs of its own, kept with its
- * own tier words. One visit makes one copy, as on the phone: once saved, the
- * button opens it instead.
+ * The one Save of somebody else's list (Danylo, 14.11.2026): it keeps what
+ * the switch shows, the author's arrangement or one's own, with no question
+ * asked. One list is one board in one's lists: the first Save makes it,
+ * with the list's cover, and a Save after that puts the arrangement shown on
+ * the same board. Once the board holds it, the button says Saved and opens it.
  */
 export function useSaveToMine(
   list: PublishedList,
+  shown: Shown,
   notify: (notice: SnackbarNotice) => void,
-  {
-    repository = site,
-    store = localStorageStore,
-    now = Date.now,
-    shown = null,
-    take = noteTake,
-  }: SaveToMineDeps = {},
+  { repository = site, now = Date.now, take = noteTake }: SaveToMineDeps = {},
 ): SaveToMine {
-  const [asking, setAsking] = useState<SaveChoices | null>(null);
-  const [made, setMade] = useState<Made | null>(null);
-  // Read before React has drawn the last save: a double click made two copies.
-  const latest = useRef<Made | null>(null);
-  const progress = useRef<{ rows: string; uid: string } | null>(null);
   const navigate = useNavigate();
-  const saved = made !== null && made.listId === list.id ? made.uid : null;
+  const boards = useBoards(repository);
+  const copy = copyOfList(boards, list.id);
+  const saved = copy !== null && holdsArrangement(copy, list, shown.rows);
 
-  const save = useCallback(
-    (
-      whose: Whose,
-      choices: SaveChoices | null = asking,
-      forProgress = false,
-      action?: AccountAction,
-    ) => {
-      if (!forProgress && latest.current?.listId === list.id) {
-        setAsking(null);
-        return false;
-      }
-      const theirs = whose === "theirs" ? (choices?.theirs ?? null) : null;
-      const rows =
-        theirs !== null ? theirs.rows : whose === "mine" ? (choices?.mine ?? null) : null;
-      // Mine keeps the tier words it wears: a reader's, when it started from their placing.
-      const from =
-        theirs !== null
-          ? { ...list, tiers: [...theirs.tiers] }
-          : whose === "mine"
-            ? withLabels(list, loadDraftLabels(store, scopeOf(list)))
-            : list;
-      const poolOrder = whose === "theirs" ? undefined : loadPoolOrder(store, scopeOf(list));
-      const snapshot =
-        whose === "mine"
-          ? JSON.stringify([list.id, list.updatedAt, rows, from.tiers, poolOrder])
-          : null;
-      if (
-        snapshot !== null &&
-        progress.current?.rows === snapshot &&
-        repository.kept(progress.current.uid)
-      )
-        return true;
-      const board = boardFromList(from, rows, now(), nextUid, poolOrder);
-      if (whose === "mine" && rows !== null) noteRankingEdit(board.uid);
-      const kept = repository.save(board);
-      if (snapshot !== null && kept) progress.current = { rows: snapshot, uid: board.uid };
-      if (forProgress && !kept) return false;
-      // Counted once a person, and never worth failing a save over.
-      void (action ? take(list.id, action) : take(list.id));
-      latest.current = { listId: list.id, uid: board.uid };
-      setMade(latest.current);
-      setAsking(null);
-      notify({
-        text: strings.list.savedToMine,
-        action: {
-          text: strings.list.open,
-          onClick: () => void navigate(`/b/${encodeURIComponent(board.uid)}`),
-        },
-      });
-      return kept;
-    },
-    [asking, list, now, repository, notify, navigate, take, store],
+  const open = useCallback(
+    (uid: string) => void navigate(`/b/${encodeURIComponent(uid)}`),
+    [navigate],
   );
-
   const start = useCallback(() => {
-    const copy = latest.current;
-    if (copy?.listId === list.id) {
-      void navigate(`/b/${encodeURIComponent(copy.uid)}`);
+    // Read again rather than from the render: a double click finds the board the first one made.
+    const kept = copyOfList(repository.all(), list.id);
+    if (kept !== null && holdsArrangement(kept, list, shown.rows)) {
+      open(kept.uid);
       return;
     }
-    const author = arrange(list);
-    const choices: SaveChoices = {
-      theirs:
-        shown !== null
-          ? shown
-          : author.known
-            ? { rows: author.rows, tiers: list.tiers, name: null }
-            : null,
-      mine: loadPlacedDraft(store, scopeOf(list)),
-    };
-    if (choices.theirs === null) save(choices.mine === null ? "none" : "mine", choices);
-    else setAsking(choices);
-  }, [list, store, save, shown, navigate]);
-
-  const cancel = useCallback(() => setAsking(null), []);
-
-  const keepProgress = (action?: AccountAction) => {
-    const mine = loadPlacedDraft(store, scopeOf(list));
-    if (mine === null || !save("mine", { mine, theirs: null }, true, action)) return null;
-    return progress.current?.uid ?? null;
-  };
-  const rememberChoice = (choice: RankingChoice, boardUid?: string) => {
-    const uid = boardUid ?? (latest.current?.listId === list.id ? latest.current.uid : null);
-    if (!uid) return;
-    const board = repository.get(uid);
-    if (board && board.rankingChoice !== choice && (choice !== "offered" || !board.rankingChoice)) {
-      repository.save({ ...board, rankingChoice: choice });
+    const board =
+      kept === null
+        ? boardFromList(
+            { ...list, tiers: [...shown.tiers] },
+            shown.rows,
+            now(),
+            nextUid,
+            shown.poolOrder,
+          )
+        : rearrangeCopy(kept, list, shown.rows, now());
+    if (board === null) return;
+    if (shown.whose === "mine" && shown.rows !== null) noteRankingEdit(board.uid);
+    if (!repository.save(board)) {
+      notify({ text: strings.nav.storageRefused });
+      return;
     }
-  };
-  return { start, saved, asking, save, keepProgress, rememberChoice, cancel };
+    // Counted once a person, and never worth failing a save over.
+    if (kept === null) void take(list.id);
+    notify({
+      text: strings.list.savedToMine,
+      // A board saved before had an arrangement of its own: Undo gives it back.
+      action:
+        kept === null
+          ? { text: strings.list.open, onClick: () => open(board.uid) }
+          : { text: strings.list.undo, onClick: () => void repository.save(kept) },
+    });
+  }, [repository, list, shown, now, take, notify, open]);
+
+  return { saved, start };
 }

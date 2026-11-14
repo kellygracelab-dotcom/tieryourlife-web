@@ -1086,11 +1086,54 @@ describe("BoardPage: share and publish", () => {
   });
 });
 
+describe("BoardPage: one's own list from its ⋮ menu", () => {
+  it("publishes an own list, then updates it or takes it down, from the menu", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      publish: vi.fn(() => Promise.resolve({ id: "L1", topicId: null })),
+      unpublish: vi.fn(() => Promise.resolve()),
+    };
+    open(repository, "/b/films", { publishing, account: member });
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Take it down" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Publish" }));
+    // The sheet opens on it and sends it, as its Public switch does.
+    expect(await screen.findByText("Published. Anyone with the link can rank it.")).toBeVisible();
+    expect(publishing.publish).toHaveBeenCalledTimes(1);
+    expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
+    // Asked first, in the sheet, with the cursor on the way back.
+    const ask = screen.getByRole("group", { name: /Take .* down\?/ });
+    expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await userEvent.click(within(ask).getByRole("button", { name: "Take it down" }));
+    await waitFor(() => expect(repository.get("films")?.publishedId).toBeNull());
+    expect(publishing.unpublish).toHaveBeenCalledWith("L1");
+  });
+
+  it("offers no Publish on a list saved from somebody else's, nor on a house list's menu", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), takenFrom: "theirs" });
+    open(repository, "/b/films", { account: member });
+    await userEvent.click(screen.getByLabelText("More about this board"));
+    expect(screen.getByRole("button", { name: "List settings" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Publish (a separate|as my)/ })).toBeNull();
+  });
+});
+
 describe("BoardPage: Play", () => {
   // The screens come as a chunk of their own; fetched here, Play opens in the frame it is pressed.
   beforeAll(() => loadPlayScreens());
 
-  it("plays the board's cards in duels, applies the result, and undoes it from the snackbar", async () => {
+  it("plays the board's cards in duels onto the board, one step of its Undo that turns over", async () => {
     localStorage.clear();
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
@@ -1105,22 +1148,28 @@ describe("BoardPage: Play", () => {
       const [left] = await screen.findAllByRole("button", { name: /^Pick / });
       await userEvent.click(left!);
     }
-    expect(
-      await screen.findByRole("heading", { name: "Your result" }, { timeout: 3000 }),
-    ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
-
+    // The game ends on the board itself: no result screen, nothing to apply.
+    const receipt = (
+      await screen.findByText("Board arranged from 2 duels", undefined, { timeout: 3000 })
+    ).closest(".snackbar")!;
+    expect(screen.queryByRole("heading", { name: "Your result" })).toBeNull();
+    expect(within(receipt as HTMLElement).queryByRole("button", { name: "Undo" })).toBeNull();
     const played = repository.get("films")!;
     expect(poolTier(played) === null ? 0 : itemsIn(played, poolTier(played)!.uid).length).toBe(0);
-    // The board on screen is the result, not the arrangement it had before.
     expect(await screen.findByText("3 of 3 placed")).toBeInTheDocument();
-    const receipt = (await screen.findByText("Board arranged from 2 duels")).closest(".snackbar")!;
-    await userEvent.click(within(receipt as HTMLElement).getByRole("button", { name: "Undo" }));
+
+    // The board's Undo puts the board from before the game back…
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
     const back = repository.get("films")!;
     const [first] = rankedTiers(back);
     expect(itemsIn(back, first!.uid).map((item) => item.title)).toEqual(["Ex Machina"]);
     expect(itemsIn(back, poolTier(back)!.uid)).toHaveLength(2);
     expect(await screen.findByText("1 of 3 placed")).toBeInTheDocument();
+    // …and again, the game's arrangement.
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(await screen.findByText("3 of 3 placed")).toBeInTheDocument();
+    const again = repository.get("films")!;
+    expect(itemsIn(again, poolTier(again)!.uid)).toHaveLength(0);
   });
 
   it("keeps Play off a board of fewer than three cards", () => {

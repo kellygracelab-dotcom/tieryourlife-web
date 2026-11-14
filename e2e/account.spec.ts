@@ -363,10 +363,10 @@ test("restores favourites without labelling an account's boards as device-only",
   await page.reload();
   await expect(favourite).toBeVisible();
   await expect(page.getByText(/on this device only/)).toHaveCount(0);
+  const lookedUp = page.waitForResponse((response) => response.url().includes("accounts:lookup"));
   auth.resolve();
-  await expect(
-    page.getByRole("link", { name: "Your public lists", exact: true }).last(),
-  ).toBeVisible();
+  await lookedUp;
+  await expect(page.getByText(/on this device only/)).toHaveCount(0);
   await expect(favourite).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("link", { name: "Open Weekend films" }).click();
   await expect(page.getByRole("heading", { name: "Weekend films" })).toBeVisible();

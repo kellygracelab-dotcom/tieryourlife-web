@@ -743,12 +743,6 @@
   color: var(--on-link);
 }
 
-/* "Which ranking to save?": the choices stacked, each the full width. */
-.save-mine__choices {
-  flex-direction: column;
-  align-items: stretch;
-}
-
 /* The boards as the phone's grid: tiles at least 160px wide, their picture on top. */
 .boards__grid {
   display: grid;

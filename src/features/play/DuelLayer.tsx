@@ -65,7 +65,7 @@ interface DuelLayerProps {
   onChange: (game: Game) => void;
   /** Quit, Escape: the page keeps the game and says so. */
   onQuit: () => void;
-  /** Shown in place of the duels once the game is over: the result, with its own header. */
+  /** Shown in place of the duels once the game is over: what puts its result on the board. */
   children?: ReactNode;
 }
 
@@ -81,8 +81,7 @@ interface DuelLayerProps {
 export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayerProps) {
   const box = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
-  // A layer that opens on a finished game shows its result, whose heading takes the focus.
-  useModal(box, onQuit, ".duel__title, .result-view__title");
+  useModal(box, onQuit, ".duel__title");
   const sideways = useMedia(SIDEWAYS);
 
   const [motion, setMotion] = useState<Motion | null>(null);

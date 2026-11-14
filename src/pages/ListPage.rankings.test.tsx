@@ -14,13 +14,14 @@ import type { PublishedList } from "../api/types";
 import { routes } from "../app/routes";
 import { SessionContext, type Session } from "../app/session";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
+import { itemsIn, rankedTiers } from "../features/boards/model";
+import { boards } from "../features/boards/owners";
 import { memoryStore } from "../lib/storage";
 
 const mocks = vi.hoisted(() => ({
   loadList: vi.fn<(id: string) => Promise<PublishedList>>(),
   loadListRankings: vi.fn<(id: string, after: string | null) => Promise<RankingsPage>>(),
   withdrawListRanking: vi.fn<(id: string) => Promise<void>>(),
-  keepRanking: vi.fn(() => new Promise<never>(() => undefined)),
   keepListRanking:
     vi.fn<
       (
@@ -33,7 +34,6 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
-  keepRanking: mocks.keepRanking,
   loadList: mocks.loadList,
   loadListRankings: mocks.loadListRankings,
   withdrawListRanking: mocks.withdrawListRanking,
@@ -193,7 +193,7 @@ describe("ListPage rankings", () => {
     await userEvent.click(
       within(whose()).getByRole("button", { name: "Back to the author’s ranking" }),
     );
-    expect(within(whose()).getByRole("button", { name: "Theirs" })).toHaveAttribute(
+    expect(within(whose()).getByRole("button", { name: "Author" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -244,9 +244,12 @@ describe("ListPage rankings", () => {
     expect(within(yours).queryByRole("list", { name: "A" })).toBeNull();
     expect(screen.getByText("Your version starts from olena’s ranking")).toBeInTheDocument();
 
-    // Finish keeps her words with the ranking.
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-    expect(mocks.keepRanking).toHaveBeenCalledWith("abc", [[], [1]], 0, ["Best", "Fine"]);
+    // Saved, the board keeps her words with the arrangement.
+    await userEvent.click(screen.getAllByRole("button", { name: "Save my list" })[0]!);
+    const [saved] = boards.all();
+    expect(rankedTiers(saved!).map((tier) => tier.label)).toEqual(["Best", "Fine"]);
+    const fine = rankedTiers(saved!)[1]!;
+    expect(itemsIn(saved!, fine.uid).map((item) => item.title)).toEqual(["The Witch"]);
     localStorage.clear();
   });
 
@@ -401,21 +404,20 @@ describe("ListPage rankings", () => {
       "aria-pressed",
       "true",
     );
-    // Two halves, so Save asks, and offers the reader's placing by name.
-    await userEvent.click(screen.getAllByRole("button", { name: "Save to my lists" })[0]!);
-    const asking = screen.getByRole("dialog", { name: "Which ranking to save?" });
-    expect(within(asking).getByRole("button", { name: "olena" })).toBeInTheDocument();
-    await userEvent.click(within(asking).getByRole("button", { name: "Cancel" }));
+    // The author has no arrangement to save: the one button saves one's own, and asks nothing.
+    expect(screen.queryByRole("button", { name: "Save author’s list" })).toBeNull();
+    await userEvent.click(screen.getAllByRole("button", { name: "Save my list" })[0]!);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await screen.findByText("Saved to your lists.")).toBeInTheDocument();
 
     await userEvent.click(
       within(whose()).getByRole("button", { name: "Back to the author’s ranking" }),
     );
     expect(screen.queryByRole("group", { name: "Whose arrangement to show" })).toBeNull();
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
-    // One half again: a template is saved as one's own without a question.
-    await userEvent.click(screen.getAllByRole("button", { name: "Save to my lists" })[0]!);
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(await screen.findByText("Saved to your lists.")).toBeInTheDocument();
+    // Saved already: the button says so, and there is still one board of the list.
+    expect(screen.getAllByRole("button", { name: "Saved" })).not.toHaveLength(0);
+    expect(boards.all()).toHaveLength(1);
   });
 
   it("names nobody in the first row of an editorial list", async () => {
@@ -536,7 +538,7 @@ describe("ListPage rankings", () => {
     );
     cleanup();
     openAs(member, [{ pathname: "/l/abc", state: reloaded.state.location.state }]);
-    expect((await opened()).getByRole("button", { name: "Theirs" })).toHaveAttribute(
+    expect((await opened()).getByRole("button", { name: "Author" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -549,7 +551,7 @@ describe("ListPage rankings", () => {
     cleanup();
     mocks.loadList.mockResolvedValue({ ...list, updatedAt: 5 });
     openAs(member, [{ pathname: "/l/abc", state: kept }]);
-    expect((await opened()).getByRole("button", { name: "Theirs" })).toHaveAttribute(
+    expect((await opened()).getByRole("button", { name: "Author" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -594,18 +596,27 @@ describe("ListPage: showing one's ranking to others", () => {
     await userEvent.click(screen.getByRole("button", { name: "Place Ex Machina in A" }));
     await screen.findByRole("region", { name: "Your ranking" });
   };
+  /** The Witch, which the author left out, placed too: every card has its place. */
+  const placeAll = async () => {
+    await arrangeMine();
+    const mine = screen.getByRole("region", { name: "Your ranking" });
+    await userEvent.click(within(mine).getByRole("button", { name: "The Witch" }));
+    await userEvent.click(screen.getByRole("button", { name: "Place The Witch in S" }));
+  };
   const menu = async () => {
     await userEvent.click(await screen.findByLabelText("More about this list"));
   };
+  /** A line of the open ⋮ menu: the offer under the board may have a button of the same name. */
+  const inMenu = () => within(screen.getByLabelText("More about this list").closest("details")!);
 
   it("cancels the reader's click if another account signs in during the original GET", async () => {
     localStorage.clear();
     openAs();
-    await arrangeMine();
+    await placeAll();
     const gate = deferred<PublishedList>();
     mocks.loadListAsWritten.mockReturnValueOnce(gate.promise);
     await menu();
-    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
     expect(mocks.loadListAsWritten).toHaveBeenCalledWith("abc");
     actionAuth.currentUser = actionUser("new-reader");
     await act(async () => gate.resolve(twoTiers));
@@ -613,12 +624,14 @@ describe("ListPage: showing one's ranking to others", () => {
     expect(screen.queryByText("Your ranking is in the list’s rankings")).toBeNull();
     cleanup();
     openAs({ kind: "signedIn", uid: "new-reader", displayName: null, photoUrl: null });
-    const offer = await screen.findByRole("complementary", { name: "Share your ranking?" });
+    const offer = await screen.findByRole("complementary", {
+      name: "Show others how you ranked it?",
+    });
     expect(mocks.keepListRanking).not.toHaveBeenCalled();
     await userEvent.click(within(offer).getByRole("button", { name: "Show in Rankings" }));
     expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
       expect.anything(),
-      [[], [0]],
+      [[1], [0]],
       expect.objectContaining({ uid: "new-reader" }),
     );
   });
@@ -630,7 +643,7 @@ describe("ListPage: showing one's ranking to others", () => {
     const gate = deferred<PublishedList>();
     mocks.loadListAsWritten.mockReturnValueOnce(gate.promise);
     await menu();
-    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
     const key = "tyl:draft:abc";
     const draft = JSON.parse(localStorage.getItem(key)!);
     localStorage.setItem(
@@ -648,10 +661,12 @@ describe("ListPage: showing one's ranking to others", () => {
   it("a late PUT receipt does not settle the offer or mark a board public for the next account", async () => {
     localStorage.clear();
     openAs();
-    await arrangeMine();
+    await placeAll();
     const receipt = deferred<ReaderRanking>();
     mocks.keepListRanking.mockReturnValueOnce(receipt.promise);
-    const offer = await screen.findByRole("complementary", { name: "Share your ranking?" });
+    const offer = await screen.findByRole("complementary", {
+      name: "Show others how you ranked it?",
+    });
     await userEvent.click(within(offer).getByRole("button", { name: "Show in Rankings" }));
     expect(mocks.keepListRanking).toHaveBeenCalledTimes(1);
     actionAuth.currentUser = actionUser("new-reader");
@@ -665,20 +680,58 @@ describe("ListPage: showing one's ranking to others", () => {
   it("keeps the personal board and publishes exactly once after explicitly choosing the progress offer", async () => {
     localStorage.clear();
     openAs();
-    await arrangeMine();
-    const offer = await screen.findByRole("complementary", { name: "Share your ranking?" });
+    await placeAll();
+    const offer = await screen.findByRole("complementary", {
+      name: "Show others how you ranked it?",
+    });
     expect(mocks.keepListRanking).not.toHaveBeenCalled();
     await userEvent.click(within(offer).getByRole("button", { name: "Show in Rankings" }));
     expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
     expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ id: "abc" }),
-      [[], [0]],
+      [[1], [0]],
       expect.objectContaining({ uid: "u9" }),
     );
     cleanup();
     openAs();
     await screen.findByRole("region", { name: "Your ranking" });
-    expect(screen.queryByRole("complementary", { name: "Share your ranking?" })).toBeNull();
+    expect(
+      screen.queryByRole("complementary", { name: "Show others how you ranked it?" }),
+    ).toBeNull();
+    localStorage.clear();
+  });
+
+  it("waits for every card to have its place before it asks", async () => {
+    localStorage.clear();
+    openAs();
+    await arrangeMine();
+    expect(
+      screen.queryByRole("complementary", { name: "Show others how you ranked it?" }),
+    ).toBeNull();
+    const mine = screen.getByRole("region", { name: "Your ranking" });
+    await userEvent.click(within(mine).getByRole("button", { name: "The Witch" }));
+    await userEvent.click(screen.getByRole("button", { name: "Place The Witch in S" }));
+    const offer = await screen.findByRole("complementary", {
+      name: "Show others how you ranked it?",
+    });
+    expect(
+      within(offer)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Show in Rankings", "Not now"]);
+    localStorage.clear();
+  });
+
+  it("offers a guest Sign in to share", async () => {
+    localStorage.clear();
+    openAs({ kind: "guest", uid: "g1" });
+    await placeAll();
+    const offer = await screen.findByRole("complementary", {
+      name: "Show others how you ranked it?",
+    });
+    await userEvent.click(within(offer).getByRole("button", { name: "Sign in to share" }));
+    expect(mocks.signIn).toHaveBeenCalled();
+    expect(mocks.keepListRanking).not.toHaveBeenCalled();
     localStorage.clear();
   });
 
@@ -686,8 +739,8 @@ describe("ListPage: showing one's ranking to others", () => {
     localStorage.clear();
     openAs();
     await menu();
-    expect(screen.queryByRole("button", { name: "Show my ranking to others" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Sign in to show your ranking" })).toBeNull();
+    expect(inMenu().queryByRole("button", { name: "Show in Rankings" })).toBeNull();
+    expect(inMenu().queryByRole("button", { name: "Sign in to share" })).toBeNull();
   });
 
   it("puts Mine among the list's rankings from the menu, as the app's Show my ranking does", async () => {
@@ -695,7 +748,7 @@ describe("ListPage: showing one's ranking to others", () => {
     openAs();
     await arrangeMine();
     await menu();
-    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
     expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
     // The list is read again first: rows name cards by their place in it.
     expect(mocks.loadListAsWritten).toHaveBeenCalledWith("abc");
@@ -719,7 +772,7 @@ describe("ListPage: showing one's ranking to others", () => {
     await arrangeMine();
     const show = async () => {
       await menu();
-      await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+      await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
       expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
     };
     await show();
@@ -745,7 +798,7 @@ describe("ListPage: showing one's ranking to others", () => {
     openAs({ kind: "guest", uid: "g1" });
     await arrangeMine();
     await menu();
-    await userEvent.click(screen.getByRole("button", { name: "Sign in to show your ranking" }));
+    await userEvent.click(inMenu().getByRole("button", { name: "Sign in to share" }));
     expect(mocks.signIn).toHaveBeenCalledOnce();
     expect(mocks.keepListRanking).not.toHaveBeenCalled();
     localStorage.clear();
@@ -757,7 +810,7 @@ describe("ListPage: showing one's ranking to others", () => {
     openAs();
     await arrangeMine();
     await menu();
-    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
     expect(
       await screen.findByText(
         "The author changed this list while you were ranking it. Load it again to rank it as it is now.",
@@ -773,7 +826,7 @@ describe("ListPage: showing one's ranking to others", () => {
     openAs();
     await arrangeMine();
     await menu();
-    await userEvent.click(screen.getByRole("button", { name: "Show my ranking to others" }));
+    await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
     expect(
       await screen.findByText(
         "A moderator took down one of your lists, so you cannot show rankings for now.",

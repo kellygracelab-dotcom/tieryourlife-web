@@ -1238,9 +1238,9 @@
   margin-top: 8px;
 }
 
-/* ---- The result, in the same layer ---- */
+/* ---- The end, in the same layer ---- */
 
-/* It comes once the bar is full: a fade, the rows filling in from the top. */
+/* It comes once the bar is full, for the moment the result goes onto the board. */
 .duel__result {
   display: flex;
   flex: 1;
@@ -1250,303 +1250,12 @@
   animation: play-fade-in 200ms cubic-bezier(0.05, 0.7, 0.1, 1) both;
 }
 
-.result-view {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* The app's result bar: Quit, "Your result", "From 136 duels", a hairline under them. */
-.result-view__head {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 4px;
-  height: 64px;
-  padding-inline: 8px 16px;
-  border-bottom: 1px solid var(--line);
-}
-
-.result-view__heading {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  padding-inline-start: 4px;
-}
-
-.result-view__title {
-  flex: none;
-  font: 400 22px/28px var(--font);
-  outline: none;
-}
-
-.result-view__from {
-  overflow: hidden;
-  font: 400 13px/18px var(--font);
-  color: var(--ink-dim);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.result-view__body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 12px 16px 24px;
-}
-
-/* Reached by Tab to scroll it: the ring inside, where the layer cannot cut it. */
-.result-view__body:focus-visible {
-  outline-offset: -2px;
-}
-
-.result-view__notes,
-.result-view__tiers,
-.result-view__nothing {
-  max-width: 720px;
-  margin-inline: auto;
-}
-
-.result-view__notes {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.result-view__notes:not(:empty) {
-  margin-bottom: 12px;
-}
-
-.result-view__thin {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--surface-container);
-  font: 400 13px/18px var(--font);
-  color: var(--ink);
-}
-
-.result-view__thin-icon {
-  flex: none;
-  font-size: 18px;
-  color: var(--ink-dim);
-}
-
-.result-view__legend {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font: 400 12px/16px var(--font);
-  color: var(--ink-dim);
-}
-
-/* A dashed card in small: 14 × 20, hatched, the tiles' own dashed outline. */
-.result-view__swatch {
-  flex: none;
-  width: 14px;
-  height: 20px;
-  margin: 2px;
-  border-radius: 3px;
-  outline: 1.5px dashed var(--ink-quiet);
-  outline-offset: 2px;
-  background: repeating-linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--ink-quiet) 45%, transparent) 0 2px,
-    transparent 2px 5px
-  );
-}
-
-/* The preview is the board's own rows (board.css); here they only come in, one after another. */
-.result-tier {
-  animation: result-row 120ms ease-out backwards;
-  animation-delay: min(calc(var(--row, 0) * 30ms), 180ms);
-}
-
-@keyframes result-row {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-
-.result-tier__empty {
-  align-self: center;
-  padding-inline: 12px;
-  font: 400 12px/16px var(--font);
-  color: var(--ink-dim);
-}
-
-/* Played fewer than two duels: its place is a guess. */
-.result-tile--dashed {
-  outline: 1.5px dashed var(--ink-quiet);
-  outline-offset: 2px;
-}
-
-/* Every duel skipped: nothing to preview, and nothing to apply. */
-.result-view__nothing {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 48px 16px;
-  text-align: center;
-}
-
-.result-view__nothing-icon {
-  font-size: 32px;
-  color: var(--ink-faint);
-}
-
-.result-view__nothing-text {
-  max-width: 340px;
-  font: 400 14px/20px var(--font);
-  color: var(--ink);
-}
-
-.result-view__nothing-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
-
 /*
- * The buttons, pinned at the foot on the paper with a hairline over them.
- * Wide: Cancel at the start; Play again, Refine and Apply at the end.
- */
-.result-view__bar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 24px calc(14px + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--line);
-  background: var(--paper);
-}
-
-.result-view__gap {
-  flex: 1;
-}
-
-.result-view__more {
-  font: 400 12px/16px var(--font);
-  color: var(--ink-faint);
-}
-
-.result-view__apply {
-  min-height: 44px;
-}
-
-.result-view__pair,
-.result-view__row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* A phone: Apply across, Refine across under it, then Play again and Cancel side by side. */
-@media (max-width: 599px) {
-  .result-view__bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .result-view__bar .btn {
-    justify-content: center;
-  }
-
-  .result-view__bar .result-view__apply {
-    min-height: 48px;
-  }
-
-  .result-view__pair {
-    justify-content: center;
-  }
-}
-
-/*
- * Sideways, as the app's: a 320 column with the header, the notes and the
- * buttons, and the tiers scrolling beside it.
- */
-.result-view--side {
-  display: grid;
-  grid-template-areas:
-    "head tiers"
-    "notes tiers"
-    "bar tiers";
-  grid-template-columns: 320px minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-
-.result-view--side .result-view__head {
-  grid-area: head;
-  height: auto;
-  padding: 8px 16px 0 4px;
-  border-bottom: none;
-}
-
-.result-view--side .result-view__heading {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0;
-}
-
-.result-view--side .result-view__title {
-  font: 400 20px/26px var(--font);
-}
-
-.result-view--side .result-view__body {
-  display: contents;
-}
-
-.result-view--side .result-view__notes {
-  grid-area: notes;
-  max-width: none;
-  margin: 0;
-  overflow-y: auto;
-  padding: 12px 16px 0;
-}
-
-.result-view--side .result-view__tiers {
-  grid-area: tiers;
-  max-width: none;
-  margin: 0;
-  overflow-y: auto;
-  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
-  border-inline-start: 1px solid var(--line);
-}
-
-.result-view--side .result-view__nothing {
-  grid-column: 1 / -1;
-  grid-row: 2 / 4;
-}
-
-.result-view--side .result-view__bar {
-  grid-area: bar;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  border-top: none;
-}
-
-.result-view--side .result-view__bar .result-view__apply {
-  justify-content: center;
-}
-
-/*
- * The snackbar over Play: during a duel 96 up, clear of Skip; on the result
- * just above its bar (ResultView writes the bar's height). The board's tray
- * rule (ranking.css) still matches under the layer, hence the weight.
+ * The snackbar over Play: during a duel 96 up, clear of Skip. The board's
+ * tray rule (ranking.css) still matches under the layer, hence the weight.
  */
 body:has(.duel) .snackbar {
   bottom: calc(96px + env(safe-area-inset-bottom) + var(--snackbar-lift, 0px)) !important;
-}
-
-body:has(.result-view__bar) .snackbar {
-  bottom: calc(var(--play-bar-h, 72px) + 8px + var(--snackbar-lift, 0px)) !important;
 }
 
 /* Less motion: every step a 90 ms cross-fade; nothing grows, slides or drops. */
@@ -1592,14 +1301,9 @@ body:has(.result-view__bar) .snackbar {
   .duel__result {
     animation: play-fade-in 90ms linear both;
   }
-
-  .result-tier {
-    animation: none;
-  }
 }
 
-.play-sampling,
-.play-unplayed {
+.play-sampling {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1607,8 +1311,7 @@ body:has(.result-view__bar) .snackbar {
   padding: 0;
   margin: 14px 0;
 }
-.play-sampling legend,
-.play-unplayed legend {
+.play-sampling legend {
   margin-bottom: 8px;
   font-weight: 500;
 }
@@ -1627,9 +1330,4 @@ body:has(.result-view__bar) .snackbar {
 .play-members ul {
   max-height: 12rem;
   overflow: auto;
-}
-.play-unplayed label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }

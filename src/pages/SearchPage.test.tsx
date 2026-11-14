@@ -37,7 +37,6 @@ vi.mock("../lib/api", async () => ({
   noteSearchMiss: mocks.noteSearchMiss,
   loadList: vi.fn(),
   loadRanking: vi.fn(),
-  keepRanking: vi.fn(),
   noteTake: vi.fn(),
   claimKept: vi.fn(),
   loadMyRankings: vi.fn(),

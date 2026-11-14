@@ -1,22 +1,11 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ApiFailure } from "../../api/errors";
 import { MemoryRouter } from "react-router";
 import type { PublishedList } from "../../api/types";
-import { SessionContext, type Session } from "../../app/session";
 import type { KeyValueStore } from "../../lib/storage";
-import { keepListRanking, noteTake } from "../../lib/api";
 import { BoardFrameContext } from "./boardFrame";
 import { RankingBoard } from "./RankingBoard";
-
-vi.mock("../../lib/api", () => ({
-  keepRanking: vi.fn(),
-  noteTake: vi.fn(),
-  keepListRanking: vi.fn(async () => undefined),
-  rearrangeRanking: vi.fn(async () => ({ code: "abcdefgh" })),
-  rankingStillThere: vi.fn(async () => true),
-}));
 
 const list: PublishedList = {
   id: "abc",
@@ -67,7 +56,7 @@ describe("RankingBoard", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("3 cards left");
     expect(within(tierList("S")).queryAllByRole("button")).toHaveLength(0);
     expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Finish" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
   });
 
   it("keeps a keyboard's place after a card moves, and says where it went", async () => {
@@ -657,28 +646,51 @@ describe("RankingBoard", () => {
   });
 
   it("turns the pool into the way out once every card has a tier", async () => {
-    const keep = vi.fn().mockResolvedValue({ code: "abcdefgh", claimToken: "t" });
     render(
       <MemoryRouter>
-        <RankingBoard list={list} keep={keep} store={memoryStore()} />
+        <RankingBoard list={list} store={memoryStore()} />
       </MemoryRouter>,
     );
     await userEvent.click(card("Ex Machina"));
     await userEvent.keyboard("112");
     expect(screen.getByText("All 3 placed")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
-    // On a wide screen the pool says so in one line and keeps its place toggle;
-    // Finish is the bar's, not repeated below.
+    // On a wide screen the pool says so in one line and keeps its place toggle.
+    // There is no Finish: what is on the board is kept as it is made.
     expect(screen.getByText("Drag a card to change your mind")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Where the cards sit" })).toBeInTheDocument();
     expect(document.querySelector(".pool .btn--filled")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
+  });
 
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-    expect(keep).toHaveBeenCalledWith("abc", [[0, 1], [2]], 0);
-    expect(await screen.findByText(/\/r\/abcdefgh/)).toBeInTheDocument();
-    expect(screen.queryByText("All 3 placed")).toBeNull();
-    // Nothing left to place and nothing to change: no tray saying "0 cards left".
-    expect(document.querySelector(".pool")).toBeNull();
+  it("turns a game's result over with Undo: before the game, after it, and back again", async () => {
+    const store = memoryStore();
+    store.write(
+      "tyl:draft:abc",
+      JSON.stringify({ listId: "abc", updatedAt: 0, itemCount: 3, rows: [[0, 1], [2]] }),
+    );
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={store} undoTo={[[], []]} undoToggles />
+      </MemoryRouter>,
+    );
+    expect(progress()).toHaveTextContent("3 of 3 placed");
+    // A move made after the game is undone first, on its own.
+    await userEvent.click(card("Climax"));
+    await userEvent.keyboard("1");
+    const undo = screen.getByRole("button", { name: "Undo" });
+    await userEvent.click(undo);
+    expect(within(tierList("A")).getByRole("button", { name: "Climax" })).toBeInTheDocument();
+    // Then the game's step: every card it placed goes back to the pool…
+    await userEvent.click(undo);
+    expect(progress()).toHaveTextContent("0 of 3 placed");
+    // …and Undo again brings the game's arrangement back, as often as it is pressed.
+    expect(undo).toBeEnabled();
+    await userEvent.click(undo);
+    expect(progress()).toHaveTextContent("3 of 3 placed");
+    expect(within(tierList("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
+    await userEvent.keyboard("{Control>}z{/Control}");
+    expect(progress()).toHaveTextContent("0 of 3 placed");
   });
 
   it("keeps the placements in the store and picks them up again", async () => {
@@ -714,321 +726,6 @@ describe("RankingBoard", () => {
       </MemoryRouter>,
     );
     expect(progress()).toHaveTextContent("0 of 3 placed");
-  });
-
-  it("keeps the ranking on Finish, locks the board and offers the link", async () => {
-    const store = memoryStore();
-    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
-    const share = vi.fn(async () => undefined);
-    render(
-      <MemoryRouter>
-        <RankingBoard list={list} store={store} keep={keep} share={share} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("button", { name: "Finish" })).toBeDisabled();
-
-    await userEvent.click(card("Ex Machina"));
-    await userEvent.keyboard("1");
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-
-    expect(keep).toHaveBeenCalledWith("abc", [[0], []], 0);
-    expect(await screen.findByRole("status")).toHaveTextContent("Your ranking is live at");
-    // A ranking kept by its link is not a take: the app counts one on Save to my lists only.
-    expect(noteTake).not.toHaveBeenCalled();
-    expect(store.data.get("tyl:ranking:abc")).toContain('"code":"abcdefgh"');
-    expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
-    expect(card("The Witch")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Undo" })).toBeDisabled();
-    // The card picked after the last placement is let go: nothing says how to place it.
-    expect(card("The Witch")).toHaveAttribute("aria-pressed", "false");
-    expect(screen.queryByText(/to place The Witch/)).toBeNull();
-
-    await userEvent.click(screen.getByRole("button", { name: "Download image" }));
-    expect(share).toHaveBeenCalledWith(list, [[0], []], `${window.location.host}/r/abcdefgh`);
-
-    await userEvent.click(screen.getByRole("button", { name: "Change ranking" }));
-    expect(screen.getByRole("button", { name: "Finish" })).toBeEnabled();
-    expect(card("The Witch")).toBeEnabled();
-  });
-
-  it("promises no author's version on a list the author placed nothing on", async () => {
-    const template = { ...list, items: list.items.map((item) => ({ ...item, tierIndex: null })) };
-    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
-    render(
-      <MemoryRouter>
-        <RankingBoard list={template} store={memoryStore()} keep={keep} />
-      </MemoryRouter>,
-    );
-    await userEvent.click(card("Ex Machina"));
-    await userEvent.keyboard("1");
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-    expect(
-      await screen.findByText(/^Anyone with that link sees your version\./),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/next to the author’s/)).toBeNull();
-  });
-
-  it("never puts a signed-in reader's Finish among the list's public rankings unasked", async () => {
-    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
-    const session: Session = {
-      account: { kind: "signedIn", uid: "u9", displayName: "Reader", photoUrl: null },
-      signIn: async () => ({ kind: "cancelled" }),
-      signOut: async () => undefined,
-      refresh: () => undefined,
-    };
-    render(
-      <SessionContext.Provider value={session}>
-        <MemoryRouter>
-          <RankingBoard list={list} store={memoryStore()} keep={keep} />
-        </MemoryRouter>
-      </SessionContext.Provider>,
-    );
-    await userEvent.click(card("The Witch"));
-    await userEvent.keyboard("1");
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-    await screen.findByRole("status");
-    expect(keep).toHaveBeenCalled();
-    // Those rankings carry the reader's name and face: the app lists one only when asked.
-    expect(vi.mocked(keepListRanking)).not.toHaveBeenCalled();
-  });
-
-  it("changes an account's finished ranking behind the same link, rather than making another", async () => {
-    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
-    const rearrange = vi.fn(async () => ({ code: "abcdefgh" }));
-    const store = memoryStore();
-    const session: Session = {
-      account: { kind: "signedIn", uid: "u9", displayName: "Reader", photoUrl: null },
-      signIn: async () => ({ kind: "cancelled" }),
-      signOut: async () => undefined,
-      refresh: () => undefined,
-    };
-    render(
-      <SessionContext.Provider value={session}>
-        <MemoryRouter>
-          <RankingBoard list={list} store={store} keep={keep} rearrange={rearrange} />
-        </MemoryRouter>
-      </SessionContext.Provider>,
-    );
-    await userEvent.click(card("The Witch"));
-    await userEvent.keyboard("1");
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-    await screen.findByRole("status");
-    await userEvent.click(screen.getByRole("button", { name: "Change ranking" }));
-    await userEvent.click(card("Ex Machina"));
-    await userEvent.keyboard("2");
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-
-    expect(await screen.findByRole("status")).toHaveTextContent("abcdefgh");
-    expect(keep).toHaveBeenCalledTimes(1);
-    expect(rearrange).toHaveBeenCalledWith("abcdefgh", [[1], [0]]);
-  });
-
-  it("changes a guest's finished ranking behind the same link too, without offering to keep it again", async () => {
-    const keep = vi.fn(async () => ({ code: "abcdefgh", claimToken: "secret" }));
-    const rearrange = vi.fn(async () => ({ code: "abcdefgh" }));
-    const store = memoryStore();
-    const session: Session = {
-      account: { kind: "guest", uid: "g1" },
-      signIn: async () => ({ kind: "cancelled" }),
-      signOut: async () => undefined,
-      refresh: () => undefined,
-    };
-    render(
-      <SessionContext.Provider value={session}>
-        <MemoryRouter>
-          <RankingBoard list={list} store={store} keep={keep} rearrange={rearrange} />
-        </MemoryRouter>
-      </SessionContext.Provider>,
-    );
-    await userEvent.click(card("The Witch"));
-    await userEvent.keyboard("1");
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-    await userEvent.click(await screen.findByRole("button", { name: "Keep the link only" }));
-    await userEvent.click(screen.getByRole("button", { name: "Change ranking" }));
-    await userEvent.click(card("Ex Machina"));
-    await userEvent.keyboard("2");
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-
-    expect(await screen.findByRole("status")).toHaveTextContent("abcdefgh");
-    expect(keep).toHaveBeenCalledTimes(1);
-    expect(rearrange).toHaveBeenCalledWith("abcdefgh", [[1], [0]]);
-    expect(screen.queryByRole("dialog", { name: "Keep this ranking" })).toBeNull();
-    // Still the guest's to claim with the token it came with.
-    expect(JSON.parse(store.read("tyl:ranking:abc") ?? "{}")).toMatchObject({
-      code: "abcdefgh",
-      claimToken: "secret",
-      rows: [[1], [0]],
-    });
-  });
-
-  it("makes a new ranking when the one kept is gone, or was made for another version of the list", async () => {
-    const keep = vi.fn(async () => ({ code: "zzzzzzzz", claimToken: "t" }));
-    const rearrange = vi.fn(async () => Promise.reject(new ApiFailure({ kind: "notFound" })));
-    const session: Session = {
-      account: { kind: "signedIn", uid: "u9", displayName: "Reader", photoUrl: null },
-      signIn: async () => ({ kind: "cancelled" }),
-      signOut: async () => undefined,
-      refresh: () => undefined,
-    };
-    for (const version of [0, 5]) {
-      const store = memoryStore();
-      store.write(
-        "tyl:ranking:abc",
-        JSON.stringify({
-          code: "abcdefgh",
-          claimToken: "s",
-          claimedBy: "u9",
-          rows: [[0], []],
-          version,
-        }),
-      );
-      const { unmount } = render(
-        <SessionContext.Provider value={session}>
-          <MemoryRouter>
-            <RankingBoard list={list} store={store} keep={keep} rearrange={rearrange} />
-          </MemoryRouter>
-        </SessionContext.Provider>,
-      );
-      await userEvent.click(card("Climax"));
-      await userEvent.keyboard("1");
-      await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-      expect(await screen.findByRole("status")).toHaveTextContent("zzzzzzzz");
-      unmount();
-    }
-    // Only the ranking of this version was asked to change; the other was never tried.
-    expect(rearrange).toHaveBeenCalledTimes(1);
-    expect(keep).toHaveBeenCalledTimes(2);
-  });
-
-  it("shows the link again after a reload, while the board is as it was finished", () => {
-    const store = memoryStore();
-    const finished = { code: "abcdefgh", claimToken: "s", rows: [[0], []], version: 0 };
-    store.write("tyl:ranking:abc", JSON.stringify(finished));
-    const { unmount } = render(
-      <MemoryRouter>
-        <RankingBoard list={list} store={store} keep={vi.fn()} />
-      </MemoryRouter>,
-    );
-    // Nothing placed on this device: the board is not the ranking, so Finish it is.
-    expect(screen.queryByRole("status")).toBeNull();
-    unmount();
-
-    store.write("tyl:ranking:abc", JSON.stringify({ ...finished, rows: [[], []] }));
-    render(
-      <MemoryRouter>
-        <RankingBoard list={list} store={store} keep={vi.fn()} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
-    expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
-  });
-
-  it("forgets a ranking deleted elsewhere once the server says its link is gone, without holding up the page", async () => {
-    const store = memoryStore();
-    const finished = { code: "abcdefgh", claimToken: "s", rows: [[], []], version: 0 };
-    store.write("tyl:ranking:abc", JSON.stringify(finished));
-    let answer: (there: boolean) => void = () => undefined;
-    const stillThere = vi.fn(
-      (_code: string) => new Promise<boolean>((resolve) => (answer = resolve)),
-    );
-    render(
-      <MemoryRouter>
-        <RankingBoard list={list} store={store} keep={vi.fn()} stillThere={stillThere} />
-      </MemoryRouter>,
-    );
-    // Drawn at once from the device's copy; the server is asked behind it.
-    expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
-    expect(stillThere).toHaveBeenCalledExactlyOnceWith("abcdefgh");
-
-    await act(async () => answer(false));
-    expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.getByRole("button", { name: "Finish" })).toBeInTheDocument();
-    expect(store.read("tyl:ranking:abc")).toBeNull();
-  });
-
-  it("keeps the link of a ranking the server still has, or could not say about", async () => {
-    // Made one at a time: a rejection made up front goes unhandled while the first one runs.
-    for (const answer of [
-      () => Promise.resolve(true),
-      () => Promise.reject(new Error("offline")),
-    ]) {
-      const reply = answer();
-      reply.catch(() => undefined);
-      const store = memoryStore();
-      const finished = { code: "abcdefgh", claimToken: "s", rows: [[], []], version: 0 };
-      store.write("tyl:ranking:abc", JSON.stringify(finished));
-      const stillThere = vi.fn(() => reply);
-      const { unmount } = render(
-        <MemoryRouter>
-          <RankingBoard list={list} store={store} keep={vi.fn()} stillThere={stillThere} />
-        </MemoryRouter>,
-      );
-      await act(async () => {
-        await reply.catch(() => undefined);
-      });
-      expect(stillThere).toHaveBeenCalledOnce();
-      expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
-      expect(store.read("tyl:ranking:abc")).not.toBeNull();
-      unmount();
-    }
-  });
-
-  it("shows an account's link only to that account, on a browser others use too", () => {
-    const store = memoryStore();
-    const finished = { code: "abcdefgh", claimToken: "s", rows: [[], []], version: 0 };
-    store.write("tyl:ranking:abc", JSON.stringify({ ...finished, claimedBy: "u9" }));
-    const as = (account: Session["account"]): Session => ({
-      account,
-      signIn: async () => ({ kind: "cancelled" }),
-      signOut: async () => undefined,
-      refresh: () => undefined,
-    });
-    const page = (session: Session) => (
-      <SessionContext.Provider value={session}>
-        <MemoryRouter>
-          <RankingBoard list={list} store={store} keep={vi.fn()} />
-        </MemoryRouter>
-      </SessionContext.Provider>
-    );
-    // Before Firebase says who is here, and once it says it is the account.
-    const { rerender } = render(page(as(null)));
-    expect(screen.queryByRole("status")).toBeNull();
-    rerender(page(as({ kind: "signedIn", uid: "u9", displayName: "R", photoUrl: null })));
-    expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
-    // Signed out, and another account after it: their own Finish, nothing kept for them.
-    rerender(page(as({ kind: "guest", uid: "g2" })));
-    expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.getByRole("button", { name: "Finish" })).toBeInTheDocument();
-    rerender(page(as({ kind: "signedIn", uid: "q", displayName: "Q", photoUrl: null })));
-    expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.queryByText(/kept in your rankings/)).toBeNull();
-
-    // A guest's ranking the server keeps for some other account is not Q's either.
-    store.write("tyl:ranking:abc", JSON.stringify({ ...finished, refusedTo: "q" }));
-    rerender(page(as({ kind: "guest", uid: "g3" })));
-    expect(screen.getByRole("status")).toHaveTextContent("abcdefgh");
-    rerender(page(as({ kind: "signedIn", uid: "q", displayName: "Q", photoUrl: null })));
-    expect(screen.queryByRole("status")).toBeNull();
-  });
-
-  it("keeps the board editable when saving fails, and tries again", async () => {
-    const keep = vi
-      .fn<() => Promise<{ code: string; claimToken: string }>>()
-      .mockRejectedValueOnce(new ApiFailure({ kind: "offline" }))
-      .mockResolvedValueOnce({ code: "zzzzzzzz", claimToken: "t" });
-    render(
-      <MemoryRouter>
-        <RankingBoard list={list} store={memoryStore()} keep={keep} />
-      </MemoryRouter>,
-    );
-    await userEvent.click(card("Climax"));
-    await userEvent.keyboard("2");
-    await userEvent.click(screen.getByRole("button", { name: "Finish" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent("No connection");
-    expect(card("Ex Machina")).toBeEnabled();
-    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("zzzzzzzz");
   });
 
   it("keeps number hints off the bands", () => {

@@ -9,7 +9,6 @@ import { TIERS_GRACE_MS } from "./CardMenu";
 import { RankingBoard, type EditMode } from "./RankingBoard";
 
 vi.mock("../../lib/api", () => ({
-  keepRanking: vi.fn(),
   noteTake: vi.fn(),
   keepListRanking: vi.fn(async () => undefined),
   rearrangeRanking: vi.fn(async () => ({ code: "abcdefgh" })),

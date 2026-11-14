@@ -11,12 +11,12 @@ import {
   lostTier,
   MIN_CARDS,
   playable,
-  replaySelection,
   type Chosen,
 } from "./chosen";
 import type { GameKind } from "./engine";
 import type { Game, Unplayed } from "./game";
 import type { PlayButtonProps } from "./PlayButton";
+import { OnEnd } from "./OnEnd";
 import { SheetArrival } from "./sheet";
 import { lastGame, localGames, rememberGame, type SavedGames } from "./savedGames";
 
@@ -75,14 +75,15 @@ export interface Played {
 export interface PlayOptions {
   /** The board's name, for the picker's "34 cards from …". */
   title: string;
-  /** Somebody else's list: the picker says the result goes into Mine, and Apply is "Put in Mine". */
+  /** Somebody else's list: the picker says the result goes into Mine. */
   theirs?: boolean;
   /**
-   * Apply: every ranked tier's card ids after the result, the board's tiers in
+   * The game is over and its result goes on the board at once, as on the
+   * app: every ranked tier's card ids after the result, the board's tiers in
    * order; a card in no row is in the pool. The played cards take their new
-   * places and the unplayed cards follow the selected policy. Return a way to take it
-   * back and the receipt "Board arranged from 136 duels · Undo" offers it;
-   * return nothing for no receipt.
+   * places and the unplayed ones stay where they were. The board's own Undo
+   * takes the result back as one step; a way to take it back returned here
+   * is offered on the receipt "Board arranged from 136 duels" too.
    */
   onApply: (rows: string[][], played: Played) => (() => void) | void;
   /** Where Play's notices go: the page's snackbar. */
@@ -303,30 +304,24 @@ export function usePlay(
     // not from members and rows the result has just moved (QA W-GS1).
     setChosen(EVERYTHING);
     close();
-    if (typeof takeBack === "function") {
-      notify({
-        text: plural(strings.play.arranged, played.duels),
-        action: { text: strings.play.undo, onClick: takeBack },
-      });
+    const text = plural(strings.play.arranged, played.duels);
+    notify(
+      typeof takeBack === "function"
+        ? { text, action: { text: strings.play.undo, onClick: takeBack } }
+        : { text },
+    );
+  };
+
+  // Over: the result is on the board, with nothing to confirm. A game whose
+  // every duel was skipped has nothing to put anywhere, and says so.
+  const end = (rules: Screens, finished: Game) => {
+    if (rules.answered(finished) === 0) {
+      forget();
+      close();
+      notify({ text: strings.play.nothingToApply });
+      return;
     }
-  };
-
-  // The finished game stays put down until another starts: the picker offers
-  // it to resume, and Start says it went, with a way back.
-  const playAgain = (finished: Game) => {
-    setKind(finished.spec.kind);
-    setChosen(replaySelection(board, finished.chosen, finished.ids));
-    setGame(null);
-    setScreen("picker");
-  };
-
-  const cancel = (finished: Game) => {
-    forget();
-    close();
-    notify({
-      text: strings.play.resultDiscarded,
-      action: { text: strings.play.undo, onClick: () => show(finished) },
-    });
+    apply(rules, finished, rules.resultOf(finished, board), "keep");
   };
 
   // A choice one of whose tiers left the board is no choice: the picker
@@ -374,16 +369,7 @@ export function usePlay(
         )}
         {screen === "layer" && game !== null && (
           <shown.DuelLayer game={game} board={board} onChange={change} onQuit={quit}>
-            <shown.ResultView
-              game={game}
-              board={board}
-              theirs={theirs}
-              onApply={(result, unplayed) => apply(shown, game, result, unplayed)}
-              onRefine={() => change(shown.startRefine(game))}
-              onPlayAgain={() => playAgain(game)}
-              onCancel={() => cancel(game)}
-              onQuit={quit}
-            />
+            <OnEnd run={() => end(shown, game)} />
           </shown.DuelLayer>
         )}
       </SheetArrival.Provider>

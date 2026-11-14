@@ -10,7 +10,6 @@ import { RankingBoard } from "./RankingBoard";
 import type { HitTest } from "./useTileDrag";
 
 vi.mock("../../lib/api", () => ({
-  keepRanking: vi.fn(),
   noteTake: vi.fn(),
   keepListRanking: vi.fn(async () => undefined),
   rearrangeRanking: vi.fn(async () => ({ code: "abcdefgh" })),

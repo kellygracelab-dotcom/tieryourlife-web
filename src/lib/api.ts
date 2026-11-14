@@ -45,7 +45,7 @@ import type { BanLength, QueuedList } from "../api/moderation";
 import * as rank from "../api/rank";
 import * as sections from "../api/sections";
 import type { SectionProposal, SectionStats, Topic } from "../api/sections";
-import type { MyRankings, Ranking, SavedRanking, TierWords } from "../api/rank";
+import type { MyRankings, Ranking, TierWords } from "../api/rank";
 import type { FeedPage, FeedQuery, ListSummary, PublishedList } from "../api/types";
 import { currentLocale } from "../strings";
 import { tokenProviders } from "./firebase";
@@ -111,14 +111,6 @@ export const rearrangeRanking = (
   tierLabels?: TierWords,
   poolOrder?: readonly number[],
 ): Promise<{ code: string }> => rank.rearrangeRanking(api, code, rows, tierLabels, poolOrder);
-
-export const keepRanking = (
-  listId: string,
-  rows: Rows,
-  version?: number,
-  tierLabels?: TierWords,
-  poolOrder?: readonly number[],
-): Promise<SavedRanking> => rank.keepRanking(api, listId, rows, version, tierLabels, poolOrder);
 
 export const carryGuest = (guestToken: string): Promise<AdoptedGuest> =>
   account.carryGuest(api, guestToken);

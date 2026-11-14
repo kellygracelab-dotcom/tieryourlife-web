@@ -43,7 +43,6 @@ import {
   followAuthor,
   followState,
   keepListRanking,
-  keepRanking,
   leaveListUp,
   loadFeed,
   loadList,
@@ -134,15 +133,10 @@ describe("api", () => {
     });
   });
 
-  it("loads a ranking and keeps one", async () => {
+  it("loads a ranking", async () => {
     await loadRanking("abcdefgh");
     expect(mocks.request).toHaveBeenCalledWith("GET", "/api/rank/abcdefgh", {
       auth: "appCheckOnly",
-    });
-    await keepRanking("abc", [[1], []]);
-    expect(mocks.request).toHaveBeenCalledWith("POST", "/api/rank", {
-      appCheck: "limited",
-      body: { listId: "abc", rows: [[1], []] },
     });
   });
 

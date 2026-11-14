@@ -71,7 +71,7 @@ test.describe("Play on a wide screen", () => {
 test.describe("Play on a phone", () => {
   test.skip(({ hasTouch }) => !hasTouch, "the phone layout");
 
-  test("a bottom sheet, two cards side by side with Skip in view, a result bar at the foot", async ({
+  test("a bottom sheet, two cards side by side with Skip in view, and back to the board", async ({
     page,
   }) => {
     await openMine(page);
@@ -119,13 +119,13 @@ test.describe("Play on a phone", () => {
       .getByRole("button", { name: /^Pick / })
       .first()
       .tap();
-    await expect(page.getByRole("heading", { name: "Your result" })).toBeVisible();
-    await settled(page);
-    const bar = await boxOf(page.locator(".result-view__bar"));
-    expect(Math.abs(bar.y + bar.height - viewport.height)).toBeLessThan(2);
-    // On somebody else's list Apply is named for where the result goes.
-    const apply = await boxOf(page.locator(".result-view__apply"));
-    // Apply stretches across the bar, first.
-    expect(apply.width).toBeGreaterThan(viewport.width / 2);
+    // The game ends on the list's board, its result in Mine: no result screen to leave.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Your result" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Mine", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(page.getByText("3 of 3 placed")).toBeVisible();
   });
 });
