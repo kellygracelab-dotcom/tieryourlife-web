@@ -5,6 +5,7 @@ import {
   copyOfList,
   extraCopies,
   holdsArrangement,
+  mineOfCopy,
   rearrangeCopy,
   tidiedKey,
   tidyCopies,
@@ -119,6 +120,102 @@ describe("one board per list", () => {
     const repository = boardsRepository(memoryStore());
     repository.saveAll([copy("a", list("euro"), [[0]]), copy("b")]);
     expect(tidyCopies(repository, store, "me", 5)).toEqual(["b"]);
+  });
+});
+
+describe("a board that lost its tie to the list", () => {
+  const pictured: PublishedList = {
+    ...list("euro"),
+    items: list("euro").items.map((item, i) => ({ ...item, imageUrl: `https://p.test/${i}.webp` })),
+  };
+  /** The copy's cards as text, the tie to the list gone: an old Publish's board. */
+  const textOf = (board: Board, uid: string, editedAt = 1): Board => ({
+    ...board,
+    uid,
+    takenFrom: null,
+    origin: undefined,
+    editedAt,
+    items: board.items.map((item) => ({ ...item, imageUrl: null })),
+  });
+  const kept = copy("b7ea", pictured, [[0, 1], []]);
+
+  it("is extra beside a copy with the same cards by title in the same tiers, pictures aside", () => {
+    const text = textOf(kept, "cf04");
+    expect(extraCopies([kept, text], new Set()).map((board) => board.uid)).toEqual(["cf04"]);
+    // Showing the copy's own pictures is no difference either.
+    expect(extraCopies([kept, { ...text, items: kept.items }], new Set())).toHaveLength(1);
+  });
+
+  it("stays at any difference: a card, a tier, a picture of its own, or when brought back", () => {
+    const text = textOf(kept, "cf04");
+    const [s, a] = rankedTiers(text);
+    const moved = {
+      ...text,
+      items: text.items.map((item) =>
+        item.title === "Sweden" ? { ...item, tierUid: a!.uid, position: 0 } : item,
+      ),
+    };
+    const renamedCard = {
+      ...text,
+      items: text.items.map((item) =>
+        item.title === "Ukraine" ? { ...item, title: "Ukraina" } : item,
+      ),
+    };
+    const renamedTier = {
+      ...text,
+      tiers: text.tiers.map((tier) => (tier.uid === s!.uid ? { ...tier, label: "Top" } : tier)),
+    };
+    const uploaded = {
+      ...text,
+      items: text.items.map((item, i) => (i === 0 ? { ...item, pictureId: "up-1" } : item)),
+    };
+    const elsewhere = {
+      ...text,
+      items: text.items.map((item, i) =>
+        i === 0 ? { ...item, imageUrl: "https://other.test/u.webp" } : item,
+      ),
+    };
+    const ownCover = { ...text, coverImageUrl: "https://other.test/c.webp" };
+    for (const board of [moved, renamedCard, renamedTier, uploaded, elsewhere, ownCover]) {
+      expect(extraCopies([kept, board], new Set()), board.uid).toEqual([]);
+    }
+    expect(extraCopies([kept, text], new Set(["cf04"]))).toEqual([]);
+    // Published, a ranking of somebody's, or in the trash: none of them is a loose board.
+    expect(extraCopies([kept, { ...text, publishedId: "mine" }], new Set())).toEqual([]);
+    expect(extraCopies([kept, { ...text, rankingOf: "x" }], new Set())).toEqual([]);
+    expect(extraCopies([kept, { ...text, deletedAt: 5 }], new Set())).toEqual([]);
+  });
+
+  it("keeps the one edited last of two with no copy, and never empty boards", () => {
+    const older = textOf(kept, "old", 1);
+    const newer = textOf(kept, "new", 2);
+    expect(extraCopies([newer, older], new Set()).map((board) => board.uid)).toEqual(["old"]);
+    const empty = (uid: string) => newBoard(uid, "Untitled list", 1, uids(uid));
+    expect(extraCopies([empty("u1"), empty("u2")], new Set())).toEqual([]);
+  });
+
+  it("goes to the trash with the copies tidied, once", () => {
+    const store = memoryStore();
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([kept, textOf(kept, "cf04")]);
+    expect(tidyCopies(repository, store, "u1", 7)).toEqual(["cf04"]);
+    expect(repository.get("cf04")?.deletedAt).toBe(7);
+    expect(repository.get("b7ea")?.deletedAt).toBeNull();
+  });
+});
+
+describe("Mine from the saved board", () => {
+  it("reads the list's cards by their place, in the board's tiers, the pool in its order", () => {
+    expect(mineOfCopy(copy("c", list("euro"), [[1], [0]]), list("euro"))).toEqual({
+      rows: [[1], [0]],
+      poolOrder: [2],
+    });
+  });
+
+  it("gives nothing for a board that places nothing or is no longer the list's", () => {
+    expect(mineOfCopy(copy("c"), list("euro"))).toBeNull();
+    const board = copy("c", list("euro"), [[1], [0]]);
+    expect(mineOfCopy({ ...board, title: "Mine now" }, list("euro"))).toBeNull();
   });
 });
 
