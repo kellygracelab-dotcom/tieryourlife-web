@@ -2,8 +2,7 @@ import { useState, type ReactNode } from "react";
 import { PageTitle } from "../app/pageTitle";
 import { Link, Navigate, useParams } from "react-router";
 import { errorOf } from "../api/errors";
-import { creditAsAttribution } from "../api/pictureAttribution";
-import { topicCreditOf, type Topic } from "../api/sections";
+import { topicAttributionOf, type Topic } from "../api/sections";
 import type { FeedSort, ListSummary } from "../api/types";
 import { FollowButton } from "../features/community/FollowButton";
 import { useReporting, type Report } from "../features/community/useReporting";
@@ -111,7 +110,7 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
   const following = followed ?? topic.following;
   const waiting = topic.status === "pending";
   const name = topicNameOf(topic);
-  const credit = topicCreditOf(topic);
+  const credit = topicAttributionOf(topic);
   const [about, setAbout] = useState(false);
 
   const follow = (next: boolean) => {
@@ -181,11 +180,7 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
       />
 
       {about && credit !== null && (
-        <AboutPicture
-          name={name}
-          attribution={creditAsAttribution(credit)}
-          onClose={() => setAbout(false)}
-        />
+        <AboutPicture name={name} attribution={credit} onClose={() => setAbout(false)} />
       )}
       {reporting.dialog}
       {overlays}

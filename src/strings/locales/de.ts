@@ -1448,6 +1448,7 @@ const de: Translation = {
     permission: "Mit Genehmigung verwendet",
     link: "Quelllink",
     readFromPage: "Urheber und Lizenz werden von dieser Seite gelesen, wenn du sie leer lässt",
+    fromCatalogue: "Dieser Katalog wird mit Link genannt; eine Lizenz ist nicht nötig",
     needLicence: "Wähle eine Lizenz.",
     needLink: "Füge den Quelllink hinzu: die Seite, auf der das Bild steht.",
     badLink: "Der Quelllink muss eine Webseite sein, die mit https:// beginnt.",

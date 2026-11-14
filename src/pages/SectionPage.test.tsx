@@ -646,6 +646,23 @@ describe("TopicPage", () => {
     expect(about.queryByRole("button", { name: /credit/ })).toBeNull();
   });
 
+  it("names the catalogue a topic's picture is credited to, linked as a card's", async () => {
+    const link = "https://anilist.co/anime/1/Cowboy-Bebop/";
+    topics.load.mockResolvedValue({
+      topics: [
+        topic("t2", "Cowboy Bebop", {
+          pictureUrl: "https://pictures.test/cb.webp",
+          pictureAttribution: { source: "anilist", link, id: "anilist:1" },
+        }),
+      ],
+    });
+    open("/s/games/t/t2", { kind: "guest", uid: null });
+    await userEvent.click(await screen.findByRole("button", { name: "About the picture" }));
+    const about = within(screen.getByRole("dialog", { name: "Cowboy Bebop" }));
+    expect(about.getByRole("link", { name: "anilist.co" })).toHaveAttribute("href", link);
+    expect(about.queryByText("Licence")).toBeNull();
+  });
+
   it("offers no credit for a topic without a picture, or a credit without its page", async () => {
     topics.load.mockResolvedValue({
       topics: [

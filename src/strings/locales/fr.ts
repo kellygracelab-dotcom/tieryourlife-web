@@ -1524,6 +1524,7 @@ const fr: Translation = {
     permission: "Utilisée avec autorisation",
     link: "Lien source",
     readFromPage: "L’auteur et la licence seront lus sur cette page si vous les laissez vides",
+    fromCatalogue: "Ce catalogue sera cité avec un lien ; aucune licence n’est nécessaire",
     needLicence: "Choisissez une licence.",
     needLink: "Ajoutez le lien source : la page où se trouve l’image.",
     badLink: "Le lien source doit être une page web qui commence par https://.",

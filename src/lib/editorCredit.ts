@@ -63,6 +63,28 @@ const READ_FROM = [
 export const readsFromPage = (link: string): boolean =>
   READ_FROM.some((shape) => shape.test(link.trim()));
 
+/**
+ * A catalogue's page for a title (CONTRACT, From a catalogue): TMDB, AniList,
+ * IGDB, Steam and Open Library. A topic's picture credited to one needs no
+ * licence: the backend keeps the credit as the catalogue's, linked to the
+ * page. A slug after the id, a query or a trailing slash is allowed.
+ */
+const CATALOGUE_PAGES = [
+  /^https:\/\/(www\.)?themoviedb\.org\/(movie|tv|collection)\/\d+([-/?#]|$)/i,
+  /^https:\/\/anilist\.co\/(anime|manga)\/\d+([/?#]|$)/i,
+  /^https:\/\/(www\.)?igdb\.com\/games\/[a-z0-9][a-z0-9-]*([/?#]|$)/i,
+  /^https:\/\/store\.steampowered\.com\/app\/\d+([/?#]|$)/i,
+  /^https:\/\/openlibrary\.org\/works\/OL\d+W([/?#]|$)/,
+];
+
+export const isCataloguePage = (link: string): boolean =>
+  CATALOGUE_PAGES.some((shape) => shape.test(link.trim()));
+
+/** What the form takes the credit for: a topic's picture may also be credited to a catalogue. */
+export interface CreditKind {
+  catalogue?: boolean;
+}
+
 const isHttpsPage = (link: string): boolean => {
   if (!link.startsWith("https://")) return false;
   try {
@@ -74,10 +96,13 @@ const isHttpsPage = (link: string): boolean => {
 };
 
 /** What stands in the way of saving; none, and the credit can go. */
-export function creditProblemsOf(fields: CreditFields): CreditProblem[] {
+export function creditProblemsOf(fields: CreditFields, kind: CreditKind = {}): CreditProblem[] {
   const link = fields.link.trim();
   const problems: CreditProblem[] = [];
-  if (fields.licence === "" && !(isHttpsPage(link) && readsFromPage(link))) {
+  const noLicenceNeeded =
+    isHttpsPage(link) &&
+    (readsFromPage(link) || (kind.catalogue === true && isCataloguePage(link)));
+  if (fields.licence === "" && !noLicenceNeeded) {
     problems.push("needLicence");
   }
   if (link === "") problems.push("needLink");
@@ -87,8 +112,8 @@ export function creditProblemsOf(fields: CreditFields): CreditProblem[] {
 }
 
 /** The credit the form makes, or null while something stands in the way. */
-export function creditOfFields(fields: CreditFields): EditorCredit | null {
-  if (creditProblemsOf(fields).length > 0) return null;
+export function creditOfFields(fields: CreditFields, kind: CreditKind = {}): EditorCredit | null {
+  if (creditProblemsOf(fields, kind).length > 0) return null;
   const author = fields.author.trim().replace(/\s+/g, " ").slice(0, ATTRIBUTION_LIMITS.author);
   const deed = fields.licence === "" ? null : deedOf(fields.licence);
   return {
