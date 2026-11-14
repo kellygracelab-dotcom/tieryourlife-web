@@ -1,4 +1,5 @@
 import { MediaImage } from "../../ui/MediaImage";
+import { useBrokenPicture } from "../../ui/useBrokenPicture";
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { EditorCredit } from "../../api/pictureAttribution";
 import { sizedFor } from "../../lib/pictureSize";
@@ -23,8 +24,15 @@ const sameCards = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && a.every((uid, index) => uid === b[index]);
 
 function Poster({ item }: { item: BoardItem }) {
-  return item.imageUrl !== null ? (
-    <MediaImage className="ranked__poster" {...sizedFor(item.imageUrl, 32)} alt="" loading="lazy" />
+  const [broken, onBroken] = useBrokenPicture(item.imageUrl);
+  return item.imageUrl !== null && !broken ? (
+    <MediaImage
+      className="ranked__poster"
+      {...sizedFor(item.imageUrl, 32)}
+      alt=""
+      loading="lazy"
+      onError={onBroken}
+    />
   ) : (
     <span className="ranked__poster ranked__poster--blank" aria-hidden="true" />
   );

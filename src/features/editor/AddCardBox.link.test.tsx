@@ -233,7 +233,7 @@ describe("a picture's link in the add field", () => {
   });
 
   it("says a busy picture site is a wait, and turns Try again on at its time", async () => {
-    const retryAt = Date.now() + 400;
+    const retryAt = Date.now() + 1_500;
     const link = vi
       .fn<LinkKeep>()
       .mockRejectedValueOnce(new LinkRefused("busy", retryAt, null))
@@ -250,13 +250,14 @@ describe("a picture's link in the add field", () => {
     const again = within(draft()).getByRole("button", { name: "Try again" });
     expect(again).toBeDisabled();
     expect(within(draft()).getByRole("button", { name: "Add without picture" })).toBeDisabled();
-    await vi.waitFor(() => expect(again).toBeEnabled(), { timeout: 2_000 });
+    await vi.waitFor(() => expect(again).toBeEnabled(), { timeout: 4_000 });
     await userEvent.click(again);
     await vi.waitFor(() => expect(link).toHaveBeenCalledTimes(2));
-    await vi.waitFor(() =>
-      expect(within(draft()).getByRole("button", { name: "Add card" })).toBeInTheDocument(),
-    );
-    expect(within(draft()).queryByRole("status")).toBeNull();
+    // Add card is there while the picture is still being checked: wait for the check to end.
+    await vi.waitFor(() => {
+      expect(within(draft()).getByRole("button", { name: "Add card" })).toBeInTheDocument();
+      expect(within(draft()).queryByRole("status")).toBeNull();
+    });
   });
 
   it("adds a Commons picture as the catalogue's, with its attribution and no copy", async () => {
@@ -432,7 +433,7 @@ describe("a pasted list with pictures from links", () => {
   });
 
   it("waits for a busy picture site, says until when, then asks the line again", async () => {
-    const retryAt = Date.now() + 400;
+    const retryAt = Date.now() + 1_500;
     const link = vi
       .fn<LinkKeep>()
       .mockRejectedValueOnce(new LinkRefused("busy", retryAt, null))
@@ -446,14 +447,15 @@ describe("a pasted list with pictures from links", () => {
     expect(
       await screen.findByText(`Waiting for the source until ${searchAgainAt(retryAt)}…`),
     ).toHaveAttribute("role", "status");
-    await vi.waitFor(() => expect(link).toHaveBeenCalledTimes(2), { timeout: 2_000 });
+    await vi.waitFor(() => expect(link).toHaveBeenCalledTimes(2), { timeout: 4_000 });
     expect(link.mock.calls[1]).toEqual(link.mock.calls[0]);
     await vi.waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith(
         expect.objectContaining({ type: "addItem", title: "Dune", pictureId: "p1" }),
       ),
     );
-    expect(screen.queryByText(/Waiting for the source/)).toBeNull();
+    // The note goes with the render after the card, which a loaded machine may draw a moment later.
+    await vi.waitFor(() => expect(screen.queryByText(/Waiting for the source/)).toBeNull());
   });
 
   it("gives a guest's lines with a link their names, and offers the sign-in", async () => {

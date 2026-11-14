@@ -81,7 +81,7 @@ describe("pictures through the site's address", () => {
     const fake = {
       ...deps(),
       read: async (p: string, limit?: number) => {
-        assert.equal(p, "published/list/pic");
+        assert.ok(p === "published/list/pic" || p === "published/catalogue/w-0123", p);
         assert.equal(limit, 4 * 1024 * 1024);
         return bytes;
       },
@@ -94,6 +94,13 @@ describe("pictures through the site's address", () => {
     // A year in the browser, a minute at the shared CDN, so a takedown reaches everyone new within a minute.
     assert.equal(got.headers["Cache-Control"], "public, max-age=31536000, s-maxage=60, immutable");
     assert.deepEqual(fake.shrunk, []);
+    // A board's shared catalogue copy is never taken down: a day at the CDN.
+    const shared = await ask(["original", "published", "catalogue", "w-0123"], fake);
+    assert.equal(shared.status, 200);
+    assert.equal(
+      shared.headers["Cache-Control"],
+      "public, max-age=31536000, s-maxage=86400, immutable",
+    );
     const bad = await ask(["original", "published", "list", "pic"], {
       ...fake,
       read: async () => Buffer.from("<svg onload='alert(1)'/>"),

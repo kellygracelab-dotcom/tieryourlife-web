@@ -244,3 +244,13 @@ describe("a card's picture on the owner's board", () => {
     expect(screen.getByRole("menu", { name: "Red fox" })).toBeInTheDocument();
   });
 });
+
+describe("a card whose picture is gone on one's own board", () => {
+  it("shows its name instead of an empty tile", () => {
+    owned();
+    const tile = card("Red fox");
+    fireEvent.error(tile.querySelector("img")!);
+    expect(card("Red fox").querySelector("img")).toBeNull();
+    expect(card("Red fox")).toHaveClass("tile--name");
+  });
+});

@@ -115,3 +115,23 @@ describe("a card one only looks at, and its picture", () => {
     ).toHaveAttribute("src", "https://img/witch.jpg");
   });
 });
+
+describe("a card whose picture is gone", () => {
+  it("shows its name instead of an empty tile", () => {
+    const tiers: PublishedTier[] = [
+      { label: "S", caption: null, colorLight: "#f00", colorDark: "#f00" },
+    ];
+    const items: PublishedItem[] = [
+      { title: "Lost poster", imageUrl: "https://img.test/gone.jpg", tierIndex: 0 },
+    ];
+    const { container } = render(
+      <ReadOnlyBoard label="Board" tiers={tiers} items={items} rows={[[0]]} pool={[]} />,
+    );
+    const picture = container.querySelector("img")!;
+    fireEvent.error(picture);
+    const tile = screen.getByRole("button", { name: "Lost poster" });
+    expect(tile.querySelector("img")).toBeNull();
+    expect(tile).toHaveClass("tile--name");
+    expect(tile).toHaveTextContent("Lost poster");
+  });
+});
