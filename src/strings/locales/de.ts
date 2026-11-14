@@ -491,6 +491,13 @@ const de: Translation = {
     close: "Schließen",
     today: "Heute",
     yesterday: "Gestern",
+    like: "Rangliste von {name} liken",
+    likeUnnamed: "Diese Rangliste liken",
+    likeSignIn: "Melde dich an, um Ranglisten zu liken",
+    likeGone: "Diese Rangliste gibt es nicht mehr.",
+    likeLimit: "Zu viele Likes. Ab {time} kannst du wieder liken.",
+    likeLimitSoon: "Zu viele Likes. Versuch es gleich noch einmal.",
+    likeFailed: "Dein Like konnte nicht geändert werden. Versuch es noch einmal.",
   },
   report: {
     title: "Diese Liste melden",

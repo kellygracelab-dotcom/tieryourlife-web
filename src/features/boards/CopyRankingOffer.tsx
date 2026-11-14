@@ -9,13 +9,15 @@ import { RankingOffer, offerKey } from "./RankingOffer";
 import { localStorageStore } from "../../lib/storage";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { liveItems, rankedCount, setRanking, type Board } from "./model";
-import { hasRankingEdit, rowsOfSource } from "./sourceRanking";
+import { hasRankingEdit } from "./sourceRanking";
+import { copyRankingOf, rankingFailureText } from "./copyRanking";
 import type { BoardsRepository } from "./repository";
 
 /**
  * The offer on a board saved from somebody else's list: once a game put its
  * result on the board, or once every card has its place, Show in Rankings
- * puts the board's arrangement among the list's.
+ * puts the board's arrangement among the list's, with the cards the person
+ * added of their own (K3).
  */
 export function CopyRankingOffer({
   board,
@@ -65,11 +67,11 @@ export function CopyRankingOffer({
       window.removeEventListener("online", read);
     };
   }, [ready, sourceId, owner, board.rankingChoice]);
-  const rows = useMemo(
-    () => (source === null ? null : rowsOfSource(board, source)),
+  const ranking = useMemo(
+    () => (source === null ? null : copyRankingOf(board, source)),
     [board, source],
   );
-  if (!ready || rows === null || source === null || (owner !== null && isOwnList(source, owner)))
+  if (!ready || ranking === null || source === null || (owner !== null && isOwnList(source, owner)))
     return null;
   const share = async (action: AccountAction) => {
     try {
@@ -83,24 +85,18 @@ export function CopyRankingOffer({
         notify({ text: strings.rank.failedChanged });
         return false;
       }
-      await keepListRanking(source, rows, action);
+      // Every save sends the cards of one's own: one sent without them takes them away.
+      await keepListRanking(source, ranking.rows, action, {
+        addedCards: ranking.addedCards,
+        tierLabels: ranking.tierLabels,
+      });
       if (!action.isCurrent() || repository.get(board.uid) !== board) return false;
       repository.save(setRanking(board, sourceId, Date.now()));
       notify({ text: strings.rankings.shown });
       return true;
     } catch (reason: unknown) {
       if (!action.isCurrent()) return false;
-      const error = errorOf(reason);
-      notify({
-        text:
-          error.kind === "sourceChanged"
-            ? strings.rank.failedChanged
-            : error.kind === "offline"
-              ? strings.rank.failedOffline
-              : error.kind === "banned"
-                ? strings.rankings.showBanned
-                : strings.rank.failedOther,
-      });
+      notify({ text: rankingFailureText(errorOf(reason), ranking.addedCards) });
       return false;
     }
   };

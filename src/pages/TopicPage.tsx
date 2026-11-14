@@ -54,7 +54,9 @@ interface TopicViewProps {
  */
 function TopicView({ section, topicId, load, topics, report }: TopicViewProps) {
   const [sort, setSort] = useSort();
-  const feed = useFeed({ category: section.id, topic: topicId, sort }, load);
+  // The topic alone, as the app asks (CONTRACT K6): a list of the topic filed
+  // under another section is the topic's all the same.
+  const feed = useFeed({ topic: topicId, sort }, load);
   const { approved, waiting, settled } = useSectionTopics(section, topics);
   const listed =
     approved.find((one) => one.id === topicId) ?? waiting.find((one) => one.id === topicId);

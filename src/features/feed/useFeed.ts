@@ -176,11 +176,10 @@ export function useFeed(
       (page) => {
         kept?.keep(key, { lists: page.lists.map(nobodys), next: page.nextCursor });
         if (!current) return;
-        const shown = withFurther(
-          key,
-          { lists: page.lists, next: page.nextCursor },
-          visit?.further,
-        );
+        // In the backend's order, never sorted again here, and each list once (K6).
+        const seen = new Set<string>();
+        const lists = page.lists.filter((list) => !seen.has(list.id) && Boolean(seen.add(list.id)));
+        const shown = withFurther(key, { lists, next: page.nextCursor }, visit?.further);
         const next: Ready = {
           status: "ready",
           lists: shown.lists,

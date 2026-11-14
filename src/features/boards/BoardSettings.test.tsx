@@ -580,6 +580,104 @@ describe("BoardSettings: public", () => {
     expect(JSON.stringify(classify.mock.calls.at(-1))).not.toContain("sourceIndex");
   });
 
+  it("puts a changed copy of somebody else's list in its Rankings with the cards of one's own, never as a list (RANK_INSTEAD)", async () => {
+    const original = filmBoard();
+    const source = {
+      ...boardView(original, "Films").list,
+      id: "SRC",
+      authorUid: "author",
+      updatedAt: 125,
+      // The list has two of the board's three cards: Climax is one's own.
+      items: boardView(original, "Films").list.items.slice(0, 2),
+    };
+    const publish = vi.fn(async () => ({ id: "NEW" }));
+    const classify = vi.fn(async () => {
+      throw new ApiFailure(
+        parseApiError(409, JSON.stringify({ code: "RANK_INSTEAD", listId: "SRC" })),
+      );
+    });
+    const rank = vi.fn<NonNullable<PublishingDeps["rank"]>>(async () => ({
+      uid: "me",
+      authorName: "Danylo",
+      authorPhotoUrl: null,
+      arrangement: [],
+      rows: [],
+      tierLabels: [],
+      updatedAtMs: 1,
+      mine: true,
+    }));
+    show({ ...original, takenFrom: "SRC" }, signedIn, {
+      publish,
+      classify,
+      rank,
+      loadOriginal: async () => source,
+    });
+    await userEvent.click(publicSwitch());
+    const ask = await screen.findByRole("group", { name: "Review publication" });
+    expect(ask).toHaveTextContent("This is someone else’s list");
+    await userEvent.click(within(ask).getByRole("button", { name: "Show in Rankings" }));
+    await waitFor(() => expect(publicSwitch()).toBeChecked());
+    expect(rank).toHaveBeenCalledExactlyOnceWith(
+      source,
+      source.tiers.map(() => []),
+      expect.objectContaining({ uid: "me" }),
+      {
+        addedCards: [{ title: "Climax" }],
+        tierLabels: source.tiers.map((tier) => tier.label),
+      },
+    );
+    expect(publish).not.toHaveBeenCalled();
+    expect(held).toMatchObject({ publishedId: null, rankingOf: "SRC" });
+    expect(published).toHaveBeenCalledWith("ranking", "SRC", 0);
+
+    // Sent again, it goes as the ranking with its own cards, never as a publish that would drop them.
+    classify.mockClear();
+    await userEvent.click(screen.getByRole("switch", { name: /anonymous|name/i }));
+    await waitFor(() => expect(rank).toHaveBeenCalledTimes(2));
+    expect(rank.mock.calls[1]?.[3]).toEqual({
+      addedCards: [{ title: "Climax" }],
+      tierLabels: source.tiers.map((tier) => tier.label),
+    });
+    expect(classify).not.toHaveBeenCalled();
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it("names the card of one's own whose picture the ranking was refused for", async () => {
+    const original = filmBoard();
+    const source = {
+      ...boardView(original, "Films").list,
+      id: "SRC",
+      authorUid: "author",
+      items: boardView(original, "Films").list.items.slice(1),
+    };
+    const rank = vi.fn(async () => {
+      throw new ApiFailure(
+        parseApiError(
+          422,
+          JSON.stringify({ code: "PICTURE_REFUSED", because: "adult", addedIndex: 0 }),
+        ),
+      );
+    });
+    const classify = vi.fn(async () => {
+      throw new ApiFailure(
+        parseApiError(409, JSON.stringify({ code: "RANK_INSTEAD", listId: "SRC" })),
+      );
+    });
+    show({ ...original, takenFrom: "SRC" }, signedIn, {
+      ...idle,
+      classify,
+      rank,
+      loadOriginal: async () => source,
+    });
+    await userEvent.click(publicSwitch());
+    const ask = await screen.findByRole("group", { name: "Review publication" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Show in Rankings" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The picture on “Ex Machina” cannot go in the public feed.",
+    );
+    expect(publicSwitch()).not.toBeChecked();
+  });
+
   it("says a list the backend holds for a moderator waits, and offers no link to it until an Update comes back without the hold", async () => {
     const publish = vi.fn(() => Promise.resolve({ id: "L1", topicId: null, underReview: true }));
     const republish = vi

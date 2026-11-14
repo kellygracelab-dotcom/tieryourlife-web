@@ -91,6 +91,7 @@ export const ICONS = [
   "star",
   "theater_comedy",
   "theaters",
+  "thumb_up",
   "tune",
   "undo",
   "upload",

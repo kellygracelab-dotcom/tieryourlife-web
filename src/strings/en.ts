@@ -479,6 +479,13 @@ export const en = {
     close: "Close",
     today: "Today",
     yesterday: "Yesterday",
+    like: "Like {name}’s ranking",
+    likeUnnamed: "Like this ranking",
+    likeSignIn: "Sign in to like rankings",
+    likeGone: "This ranking isn’t here any more.",
+    likeLimit: "Too many likes for now. Like again at {time}.",
+    likeLimitSoon: "Too many likes for now. Try again in a little while.",
+    likeFailed: "Couldn’t change your like. Try again.",
   },
   report: {
     title: "Report this list",
