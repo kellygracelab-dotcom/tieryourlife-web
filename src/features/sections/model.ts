@@ -397,6 +397,18 @@ export const topicPicture = (topic: { pictureUrl?: string | null }): string | nu
     ? topic.pictureUrl
     : null;
 
+/**
+ * A topic's name for a reader: its translation for this language when the
+ * backend has one, else the name as written (English).
+ */
+export function topicNameOf(
+  topic: { name: string; names?: Partial<Record<string, string>> | undefined },
+  locale: string = currentLocale(),
+): string {
+  const named = topic.names?.[locale];
+  return typeof named === "string" && named.trim() !== "" ? named : topic.name;
+}
+
 /** A topic wears its section's topic colours. */
 export function topicStyle(section: Section | undefined): CSSProperties | undefined {
   return section === undefined

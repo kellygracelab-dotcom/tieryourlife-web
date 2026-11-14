@@ -9,6 +9,7 @@ import {
   MANAGE_PATH,
   sectionPath,
   sectionStyle,
+  topicNameOf,
   topicPath,
   topicStyle,
   waitingPath,
@@ -80,7 +81,7 @@ export function FollowingStrip({ sections, topics, people, sectionOf, ref }: Fol
                 >
                   <TopicArt topic={topic} icon={section?.icon ?? "label"} />
                 </span>
-                <span className="following-strip__name">{topic.name}</span>
+                <span className="following-strip__name">{topicNameOf(topic)}</span>
               </Link>
             </li>
           );

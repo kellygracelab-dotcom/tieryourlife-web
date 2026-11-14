@@ -17,6 +17,7 @@ import {
   OTHER,
   sectionPath,
   sectionStyle,
+  topicNameOf,
   topicPath,
   topicStyle,
   type Section,
@@ -273,7 +274,7 @@ export function FollowingManagePage({
                       )}
                     </span>
                   }
-                  headline={topic.name}
+                  headline={topicNameOf(topic)}
                   supporting={[
                     fill(strings.sections.reasonSection, { name: section.name }),
                     ...(waiting ? [strings.sections.waiting] : []),
@@ -283,7 +284,7 @@ export function FollowingManagePage({
                     waiting
                       ? null
                       : () =>
-                          toggle(`t:${topic.id}`, topic.name, on, (next) =>
+                          toggle(`t:${topic.id}`, topicNameOf(topic), on, (next) =>
                             next ? deps.followTopic(topic.id) : deps.unfollowTopic(topic.id),
                           )
                   }

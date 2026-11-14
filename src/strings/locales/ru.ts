@@ -821,6 +821,7 @@ const ru: Translation = {
     picture: "Картинка",
     translations: "Переводы",
     translationsHelp: "По одному на язык. Если оставить пустым, название покажется как написано.",
+    topicNamesRefused: "Перевод не принят. Каждый — до {max} символов.",
     recrop: "Обрезать заново",
     replace: "Заменить",
     recropFailed: "Эту картинку здесь не обрезать заново. Замените её.",
@@ -1678,6 +1679,8 @@ const ru: Translation = {
     coverOf: "Обложка: {name}",
     refused: "Авторство картинки «{name}» не принято: {why}",
     refusedCover: "Авторство обложки не принято: {why}",
+    refusedPicture: "Авторство картинки не принято: {why}",
+    topicNote: "Авторство сохраняется вместе с темой.",
     why: {
       noLicense: "не указана лицензия. Выберите её.",
       unknownLicense:

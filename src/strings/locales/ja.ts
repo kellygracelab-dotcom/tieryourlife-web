@@ -770,6 +770,7 @@ const ja: Translation = {
     picture: "画像",
     translations: "翻訳",
     translationsHelp: "言語ごとに1つ。空欄なら入力した名前がそのまま表示されます。",
+    topicNamesRefused: "翻訳が受け付けられませんでした。それぞれ{max}文字までです。",
     recrop: "切り抜き直す",
     replace: "差し替える",
     recropFailed: "この画像はここでは切り抜き直せません。差し替えてください。",
@@ -1481,6 +1482,8 @@ const ja: Translation = {
     coverOf: "{name} のカバー",
     refused: "「{name}」の画像のクレジットは受け付けられませんでした：{why}",
     refusedCover: "カバーのクレジットは受け付けられませんでした：{why}",
+    refusedPicture: "画像のクレジットは受け付けられませんでした：{why}",
+    topicNote: "クレジットはトピックと一緒に保存されます。",
     why: {
       noLicense: "ライセンスがありません。選んでください。",
       unknownLicense:

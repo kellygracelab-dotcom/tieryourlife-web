@@ -12,6 +12,7 @@ import type { SignInOutcome } from "../lib/signIn";
 import { memoryStore } from "../lib/storage";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { sayOnTheSite, siteNotice } from "../ui/siteNotice";
+import { setStrings } from "../strings";
 import { SectionPage } from "./SectionPage";
 import { SectionsPage } from "./SectionsPage";
 import type { TopicDeps } from "./SectionPageState";
@@ -581,6 +582,65 @@ describe("TopicPage", () => {
     await userEvent.click(screen.getByLabelText("More about Mine"));
     const own = within(screen.getByLabelText("More about Mine").closest("details")!);
     expect(own.getAllByRole("button").map((line) => line.textContent)).toEqual(["Not this topic"]);
+  });
+
+  it("credits the topic's picture in the header, for everyone, read only", async () => {
+    topics.load.mockResolvedValue({
+      topics: [
+        topic("t2", "Pokémon", {
+          pictureUrl: "https://pictures.test/p.webp",
+          pictureAttribution: {
+            author: "Ann",
+            license: "CC BY 4.0",
+            licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+            link: "https://commons.wikimedia.org/wiki/File:Pikachu.jpg",
+          },
+        }),
+      ],
+    });
+    open("/s/games/t/t2", { kind: "guest", uid: null });
+    await userEvent.click(await screen.findByRole("button", { name: "About the picture" }));
+    const about = within(screen.getByRole("dialog", { name: "Pokémon" }));
+    expect(about.getByText("Ann")).toBeInTheDocument();
+    expect(about.getByRole("link", { name: "CC BY 4.0" })).toHaveAttribute(
+      "href",
+      "https://creativecommons.org/licenses/by/4.0/",
+    );
+    expect(about.getByRole("link", { name: "commons.wikimedia.org" })).toHaveAttribute(
+      "href",
+      "https://commons.wikimedia.org/wiki/File:Pikachu.jpg",
+    );
+    // Nobody edits it here.
+    expect(about.queryByRole("button", { name: /credit/ })).toBeNull();
+  });
+
+  it("offers no credit for a topic without a picture, or a credit without its page", async () => {
+    topics.load.mockResolvedValue({
+      topics: [
+        topic("t2", "Pokémon", {
+          pictureAttribution: { license: "CC0 1.0", link: "https://a.test" },
+        }),
+      ],
+    });
+    open("/s/games/t/t2");
+    await screen.findByRole("heading", { name: "Pokémon" });
+    expect(screen.queryByRole("button", { name: "About the picture" })).toBeNull();
+  });
+
+  it("names the topic in the reader's language when the backend has a translation", async () => {
+    topics.load.mockResolvedValue({
+      topics: [topic("t2", "Pokémon", { names: { uk: "Покемони" } })],
+    });
+    setStrings("uk", null);
+    try {
+      open("/s/games/t/t2");
+      expect(
+        await screen.findByRole("heading", { level: 1, name: "Покемони" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("Pokémon")).toBeNull();
+    } finally {
+      setStrings("en", null);
+    }
   });
 
   it("says so when the word could not be sent", async () => {

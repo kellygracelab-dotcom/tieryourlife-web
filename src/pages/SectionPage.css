@@ -82,6 +82,28 @@
   color: #ffffff;
 }
 
+/* The topic's picture credit, in the corner across from the back arrow: About the picture. */
+.section-head__about {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #ffffff;
+}
+
+.section-head__about:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.section-head__about .ms {
+  font-size: 22px;
+}
+
 .section-head__back:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.12);

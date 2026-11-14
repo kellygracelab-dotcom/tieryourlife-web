@@ -822,6 +822,7 @@ const uk: Translation = {
     picture: "Картинка",
     translations: "Переклади",
     translationsHelp: "По одному на мову. Якщо лишити порожнім, назва покажеться як написано.",
+    topicNamesRefused: "Переклад не прийнято. Кожен — до {max} символів.",
     recrop: "Обрізати знову",
     replace: "Замінити",
     recropFailed: "Цю картинку тут не обрізати знову. Замініть її.",
@@ -1676,6 +1677,8 @@ const uk: Translation = {
     coverOf: "Обкладинка: {name}",
     refused: "Авторство картинки «{name}» не прийнято: {why}",
     refusedCover: "Авторство обкладинки не прийнято: {why}",
+    refusedPicture: "Авторство картинки не прийнято: {why}",
+    topicNote: "Авторство зберігається разом із темою.",
     why: {
       noLicense: "не вказано ліцензію. Виберіть її.",
       unknownLicense:
