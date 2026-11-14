@@ -4,7 +4,9 @@ import type { Rows } from "../tierboard/model";
 import {
   arrangeItems,
   isOut,
+  itemsIn,
   liveItems,
+  poolTier,
   rankedCount,
   rankedTiers,
   trashBoard,
@@ -45,10 +47,73 @@ export function copyOfList(boards: readonly Board[], listId: string): Board | nu
 }
 
 /**
+ * A board of one's own that only a list's copy can be the same as: in one's
+ * lists, never published, no ranking of anybody's, with cards on it.
+ */
+const isLooseBoard = (board: Board): boolean =>
+  board.deletedAt === null &&
+  board.takenFrom === null &&
+  board.publishedId === null &&
+  board.rankingOf === null &&
+  liveItems(board).length > 0;
+
+const words = (value: string | null | undefined): string =>
+  (value ?? "").replace(/\s+/g, " ").trim();
+
+/**
+ * What makes two boards the same list, pictures aside: the title, each tier's
+ * word with its cards by title in their order, and the pool's cards.
+ */
+function contentOf(board: Board): string {
+  const pool = poolTier(board);
+  return JSON.stringify([
+    words(board.title),
+    rankedTiers(board).map((tier) => [
+      words(tier.label),
+      itemsIn(board, tier.uid).map((card) => words(card.title)),
+    ]),
+    pool === null
+      ? []
+      : itemsIn(board, pool.uid)
+          .map((card) => words(card.title))
+          .sort(),
+  ]);
+}
+
+/**
+ * Whether a board has no picture of its own beside another's: none uploaded,
+ * and each picture it shows, the cover's too, one the other board has.
+ */
+function picturesWithin(board: Board, other: Board): boolean {
+  const theirs = new Set(
+    [other.coverImageUrl, ...liveItems(other).map((card) => card.imageUrl)].filter(
+      (url): url is string => url !== null,
+    ),
+  );
+  return (
+    board.coverPictureId === null &&
+    (board.coverImageUrl === null || theirs.has(board.coverImageUrl)) &&
+    liveItems(board).every(
+      (card) => card.pictureId === null && (card.imageUrl === null || theirs.has(card.imageUrl)),
+    )
+  );
+}
+
+const editedLast = (a: Board, b: Board): number =>
+  b.editedAt - a.editedAt || a.uid.localeCompare(b.uid);
+
+/**
  * The copies one too many: for each list saved more than once, every copy
  * but the one kept. A copy out in the list's Rankings is never one of them,
  * nor are the copies of a list one of whose copies the person brought back
  * from the trash after it was tidied away: two of them is their choice.
+ *
+ * A board that lost its tie to the list is one of them too when it is the
+ * same list as a copy (Eurovision in Danylo's lists again, 14.11.2026, a
+ * board of text cards from an old Publish): the same title and the same
+ * cards by title in the same tiers, and no picture of its own. Two such
+ * boards with no copy keep the one edited last. Any difference, and the
+ * board stays.
  */
 export function extraCopies(boards: readonly Board[], spared: ReadonlySet<string>): Board[] {
   const byList = new Map<string, Board[]>();
@@ -56,11 +121,29 @@ export function extraCopies(boards: readonly Board[], spared: ReadonlySet<string
     if (!isLiveCopy(board) || board.takenFrom === null) continue;
     byList.set(board.takenFrom, [...(byList.get(board.takenFrom) ?? []), board]);
   }
+  const loose = new Map<string, Board[]>();
+  for (const board of boards) {
+    if (!isLooseBoard(board)) continue;
+    const content = contentOf(board);
+    loose.set(content, [...(loose.get(content) ?? []), board]);
+  }
   const extra: Board[] = [];
   for (const copies of byList.values()) {
-    if (copies.length < 2 || copies.some((board) => spared.has(board.uid))) continue;
-    const [, ...rest] = [...copies].sort(keeperFirst);
-    extra.push(...rest.filter((board) => !isOut(board)));
+    const kept = [...copies].sort(keeperFirst);
+    const same = kept.flatMap((copy) => loose.get(contentOf(copy)) ?? []);
+    if ([...copies, ...same].some((board) => spared.has(board.uid))) continue;
+    extra.push(...kept.slice(1).filter((board) => !isOut(board)));
+    // Gone from the loose ones either way: a copy of the list has them.
+    for (const board of new Set(same)) {
+      loose.delete(contentOf(board));
+      if (kept.some((copy) => picturesWithin(board, copy))) extra.push(board);
+    }
+  }
+  for (const group of loose.values()) {
+    if (group.length < 2 || group.some((board) => spared.has(board.uid))) continue;
+    const [keeper, ...rest] = [...group].sort(editedLast);
+    if (keeper === undefined) continue;
+    extra.push(...rest.filter((board) => picturesWithin(board, keeper)));
   }
   return extra;
 }
@@ -97,6 +180,25 @@ export function tidyCopies(
   const uids = extra.map((board) => board.uid);
   store.write(tidiedKey(owner), JSON.stringify([...before, ...uids]));
   return uids;
+}
+
+/**
+ * Mine as the saved board holds the list (QA, 14.11.2026: the list's page
+ * showed 0 of 31 over a copy with 13 placed): the list's cards by their place
+ * in it, in the board's tiers, and the pool in the board's order. Null when
+ * the board is no longer the list's, or places nothing.
+ */
+export function mineOfCopy(
+  copy: Board,
+  list: PublishedList,
+): { rows: number[][]; poolOrder: number[] } | null {
+  const at = sourceIndexes(copy, list);
+  const rows = rowsOfSource(copy, list);
+  if (at === null || rows === null || !rows.some((row) => row.length > 0)) return null;
+  const pool = poolTier(copy);
+  const poolOrder =
+    pool === null ? [] : itemsIn(copy, pool.uid).flatMap((card) => at.get(card.uid) ?? []);
+  return { rows, poolOrder };
 }
 
 /** Rows of a list's card numbers as they read placed: a missing arrangement places nothing. */

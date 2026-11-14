@@ -1,4 +1,12 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
 import type { ReaderRanking } from "../api/community";
 import { errorOf } from "../api/errors";
@@ -9,6 +17,7 @@ import { useVisit } from "../app/visitMemory";
 import { useSession } from "../app/session";
 import { boards as site } from "../features/boards/owners";
 import { boardOfList, seenAsCommunity } from "../features/boards/ownList";
+import type { Board } from "../features/boards/model";
 import type { BoardsRepository } from "../features/boards/repository";
 import { AuthorLine } from "../features/community/AuthorLine";
 import { isAuthorHidden, isOutOfSight } from "../features/community/hidden";
@@ -23,7 +32,7 @@ import type { AccountAction } from "../api/client";
 import { captureAccountAction } from "../lib/accountAction";
 import { RankingOffer, settleRankingOffer } from "../features/boards/RankingOffer";
 import { useBoards } from "../features/boards/useBoards";
-import { copyOfList } from "../features/boards/listCopies";
+import { copyOfList, mineOfCopy } from "../features/boards/listCopies";
 import {
   findMyRanking,
   ownCardsOfBoard,
@@ -93,6 +102,24 @@ const named = (ranking: ReaderRanking): ReaderRanking => ({
   ...ranking,
   authorName: readerName(ranking.authorName) ?? strings.profile.someone,
 });
+
+/**
+ * A device that has placed nothing of a list saved to one's lists starts
+ * Mine from the saved board, so Mine is that board and Save reads Saved.
+ * True when it did.
+ */
+function mineFromCopy(
+  store: KeyValueStore,
+  list: PublishedList,
+  boards: readonly Board[],
+): boolean {
+  if (loadPlacedDraft(store, scopeOf(list)) !== null) return false;
+  const copy = copyOfList(boards, list.id);
+  const mine = copy === null ? null : mineOfCopy(copy, list);
+  if (mine === null) return false;
+  saveDraft(store, scopeOf(list), mine.rows, null, mine.poolOrder);
+  return true;
+}
 
 /** This device began ranking the list, or finished: then it opens on Mine. */
 const begunHere = (store: KeyValueStore, list: PublishedList): boolean =>
@@ -313,9 +340,13 @@ function OpenList({
   const author = useMemo(() => arrange(list), [list]);
   // What somebody came for, as in the app: the author's ranking, unless this
   // device has begun its own. An author who placed nothing has no half to show.
-  const [view, setView] = useState<View>(() =>
-    author.known && !begunHere(localStorageStore, list) ? "theirs" : "mine",
-  );
+  // Mine starts from the board the list was saved to; once anything is placed,
+  // here or there, it is never put over Mine again while the page is open.
+  const minePlaced = useRef(false);
+  const [view, setView] = useState<View>(() => {
+    mineFromCopy(localStorageStore, list, (repository ?? site).all());
+    return author.known && !begunHere(localStorageStore, list) ? "theirs" : "mine";
+  });
   // A reader's placing chosen in the rankings sheet, shown in the left half.
   // It is kept in the history entry too, so Back, Forward and a reload bring
   // it back as the app's saved state does.
@@ -408,6 +439,7 @@ function OpenList({
           : { rows: before, toggles: false },
     );
     saveDraft(localStorageStore, scopeOf(list), placed, labels, poolOrder);
+    minePlaced.current = true;
     setMineRows(placed);
     setMineLabels(loadDraftLabels(localStorageStore, scopeOf(list)));
     setMineRound((round) => round + 1);
@@ -531,6 +563,15 @@ function OpenList({
     [list, theirs],
   );
   const keptBoards = useBoards(repository ?? site);
+  // The account's boards may come after the page: the saved board then starts Mine.
+  useEffect(() => {
+    if (loadPlacedDraft(localStorageStore, scopeOf(list)) !== null) minePlaced.current = true;
+    if (minePlaced.current || !mineFromCopy(localStorageStore, list, keptBoards)) return;
+    minePlaced.current = true;
+    setMineRows(loadDraft(localStorageStore, scopeOf(list)));
+    setMineLabels(loadDraftLabels(localStorageStore, scopeOf(list)));
+    setMineRound((round) => round + 1);
+  }, [list, keptBoards]);
   const knownChoice = keptBoards.some(
     (board) => board.takenFrom === list.id && board.rankingChoice !== undefined,
   );
@@ -551,6 +592,11 @@ function OpenList({
   const saveCopy = useSaveToMine(list, toSave, setNotice, { repository });
   const saving = {
     ...saveCopy,
+    // A board saved here is what was shown: it never comes back over Mine.
+    start: () => {
+      minePlaced.current = true;
+      saveCopy.start();
+    },
     label: authorShown ? strings.list.saveAuthors : strings.list.saveMyList,
   };
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.

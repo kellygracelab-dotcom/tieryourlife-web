@@ -11,6 +11,7 @@ import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { itemsIn, newBoard, poolTier, rankedTiers } from "../features/boards/model";
 import { boards } from "../features/boards/owners";
+import { boardFromList } from "../features/boards/publish";
 import { AS_COMMUNITY } from "../features/boards/ownList";
 import { EVERYTHING } from "../features/play/chosen";
 import { newGame } from "../features/play/game";
@@ -189,6 +190,48 @@ describe("ListPage save to my lists", () => {
     expect(await screen.findByText(/2 in pool/, {}, { timeout: 4000 })).toBeVisible();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Every A24 film, ranked");
     expect(boards.all()).toHaveLength(1);
+  });
+});
+
+describe("ListPage and the board the list was saved to", () => {
+  const counter = () => {
+    let n = 0;
+    return () => `card-${n++}`;
+  };
+  const savedCopy = () => ({
+    ...boardFromList(unarranged, [[1]], 1, counter()),
+    uid: "copy-1",
+  });
+
+  it("starts Mine from it when this device placed nothing, and the button says Saved", async () => {
+    mocks.loadList.mockResolvedValue(unarranged);
+    // This device only opened the list once: its draft places nothing.
+    saveDraft(localStorageStore, scopeOf(unarranged), [[]]);
+    boards.save(savedCopy());
+    openAs(member);
+    expect(await screen.findByText("1 of 2 placed")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Saved" })).not.toHaveLength(0);
+    expect(loadDraft(localStorageStore, scopeOf(unarranged))).toEqual([[1]]);
+    expect(boards.all()).toHaveLength(1);
+  });
+
+  it("starts Mine from it when the account's boards come after the page", async () => {
+    mocks.loadList.mockResolvedValue(unarranged);
+    openAs(member);
+    expect(await screen.findByText("0 of 2 placed")).toBeInTheDocument();
+    act(() => void boards.save(savedCopy()));
+    expect(await screen.findByText("1 of 2 placed")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Saved" })).not.toHaveLength(0);
+  });
+
+  it("leaves what this device placed itself", async () => {
+    mocks.loadList.mockResolvedValue(unarranged);
+    saveDraft(localStorageStore, scopeOf(unarranged), [[0]]);
+    boards.save(savedCopy());
+    openAs(member);
+    expect(await screen.findByText("1 of 2 placed")).toBeInTheDocument();
+    expect(loadDraft(localStorageStore, scopeOf(unarranged))).toEqual([[0]]);
+    expect(screen.getAllByRole("button", { name: "Save my list" })).not.toHaveLength(0);
   });
 });
 
