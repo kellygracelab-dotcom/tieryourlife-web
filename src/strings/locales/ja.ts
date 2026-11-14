@@ -459,6 +459,8 @@ const ja: Translation = {
     progressTitle: "あなたの並べ方を他の人に見せますか？",
     progressSignIn: "ログインして共有",
     progressShare: "ランキングに表示",
+    updateInRankings: "ランキングを更新",
+    removeFromRankings: "ランキングから外す",
     progressLater: "今はしない",
     progressOriginal: "元のリストとランキング",
     title: "ランキング",
@@ -470,6 +472,7 @@ const ja: Translation = {
     withdrawBody: "このリストのランキングから消えます。",
     signInToShow: "ランキングを見せるにはログインしてください",
     shown: "あなたのランキングがリストのランキングに加わりました",
+    removed: "あなたのランキングをリストのランキングから外しました",
     showBanned:
       "モデレーターがあなたのリストの1つを取り下げたため、今はランキングを見せられません。",
     cancel: "キャンセル",

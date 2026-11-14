@@ -481,6 +481,8 @@ const pl: Translation = {
     progressTitle: "Pokazać innym Twój ranking tej listy?",
     progressSignIn: "Zaloguj się, aby udostępnić",
     progressShare: "Pokaż w rankingach",
+    updateInRankings: "Zaktualizuj w rankingach",
+    removeFromRankings: "Usuń z rankingów",
     progressLater: "Nie teraz",
     progressOriginal: "Oryginalna lista i rankingi",
     title: "Rankingi",
@@ -492,6 +494,7 @@ const pl: Translation = {
     withdrawBody: "Zniknie z rankingów tej listy.",
     signInToShow: "Zaloguj się, aby pokazać swój ranking",
     shown: "Twój ranking jest wśród rankingów listy",
+    removed: "Twój ranking nie jest już wśród rankingów listy",
     showBanned:
       "Moderator usunął jedną z twoich list, więc na razie nie możesz pokazywać rankingów.",
     cancel: "Anuluj",
