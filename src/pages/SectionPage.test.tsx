@@ -363,9 +363,7 @@ describe("SectionPage", () => {
     await userEvent.click(grid.getByRole("link", { name: "Pokémon" }));
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Pokémon");
     expect(router.state.location.pathname).toBe("/s/games/t/t2");
-    await waitFor(() =>
-      expect(load).toHaveBeenLastCalledWith({ category: "games", topic: "t2", sort: "popular" }),
-    );
+    await waitFor(() => expect(load).toHaveBeenLastCalledWith({ topic: "t2", sort: "popular" }));
   });
 
   it("opens what is known of a waiting topic in place, without a way to take it back", async () => {
@@ -524,9 +522,7 @@ describe("SectionPage", () => {
     const router = open("/s/s-pokemon");
     expect(await screen.findByRole("heading", { level: 1, name: "Pokémon" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/s/games/t/t2");
-    await waitFor(() =>
-      expect(load).toHaveBeenLastCalledWith({ category: "games", topic: "t2", sort: "popular" }),
-    );
+    await waitFor(() => expect(load).toHaveBeenLastCalledWith({ topic: "t2", sort: "popular" }));
   });
 
   it("offers another try when the section could not be asked about", async () => {
@@ -691,7 +687,7 @@ describe("TopicPage", () => {
       "href",
       "/s/games",
     );
-    expect(load).toHaveBeenCalledWith({ category: "games", topic: "t2", sort: "popular" });
+    expect(load).toHaveBeenCalledWith({ topic: "t2", sort: "popular" });
     expect(screen.queryByText(/followers?|210|64 lists/)).toBeNull();
     // A topic's page has no tiles of its own, and no Follow for the section.
     expect(screen.queryByRole("navigation", { name: "Topics" })).toBeNull();
@@ -755,7 +751,7 @@ describe("TopicPage", () => {
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Speedruns");
     expect(screen.getByRole("banner")).toHaveTextContent("Waiting");
     expect(screen.queryByRole("button", { name: "Follow" })).toBeNull();
-    expect(load).toHaveBeenCalledWith({ category: "games", topic: "t3", sort: "popular" });
+    expect(load).toHaveBeenCalledWith({ topic: "t3", sort: "popular" });
   });
 
   it("draws the topic's own picture in its header, and its section's art without one", async () => {

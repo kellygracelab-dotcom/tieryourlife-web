@@ -34,6 +34,7 @@ import type {
   ShownRanking,
   ReportRequest,
   SuggestedAuthor,
+  AddedCard,
 } from "../api/community";
 import * as lists from "../api/lists";
 import type { MyList, Published, PublishRequest } from "../api/lists";
@@ -204,22 +205,38 @@ export const loadListRankings = (
 export const withdrawListRanking = (listId: string): Promise<void> =>
   community.withdrawListRanking(api, listId);
 
-/** A reader's finished placing, among the list's rankings where the app shows them. */
+/**
+ * A reader's finished placing, among the list's rankings where the app shows
+ * them. Cards of one's own go with it (K3) as `N + k` in the rows; a placing
+ * sent without them takes away any the ranking had.
+ */
 export const keepListRanking = (
   list: Pick<PublishedList, "id" | "items" | "tiers" | "updatedAt">,
   rows: readonly (readonly number[])[],
   action: AccountAction,
-): Promise<ShownRanking> =>
-  community.keepListRanking(
+  own?: { addedCards: readonly AddedCard[]; tierLabels?: readonly (string | null)[] },
+): Promise<ShownRanking> => {
+  const added = own?.addedCards ?? [];
+  return community.keepListRanking(
     api,
     list.id,
     {
       version: list.updatedAt,
-      tierLabels: list.tiers.map((tier) => tier.label),
-      rows: community.rowsOf(rows, list.tiers.length, list.items.length),
+      tierLabels:
+        own?.tierLabels === undefined ? list.tiers.map((tier) => tier.label) : [...own.tierLabels],
+      rows: community.rowsOf(rows, list.tiers.length, list.items.length + added.length),
+      ...(added.length === 0 ? {} : { addedCards: [...added] }),
     },
     action,
   );
+};
+
+/** Likes somebody's ranking of a list, or takes the like back. */
+export const likeListRanking = (
+  listId: string,
+  uid: string,
+  like: boolean,
+): Promise<{ likedByMe: boolean }> => community.likeListRanking(api, listId, uid, like);
 
 export const loadFollowing = (): Promise<Following> => community.loadFollowing(api);
 

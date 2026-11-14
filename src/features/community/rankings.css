@@ -240,3 +240,35 @@
 .rankings__foot .rankings__trouble {
   margin: 0;
 }
+
+/* The thumbs-up beside somebody's ranking: an outline, filled in tonally once liked. */
+.rankings__like {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-inline-end: 12px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.rankings__like:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.rankings__like--on,
+.rankings__like--on:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* A guest's like asks them to sign in, in the sheet where they pressed. */
+.rankings__ask--sign-in {
+  background: color-mix(in srgb, var(--link) 8%, var(--surface));
+}

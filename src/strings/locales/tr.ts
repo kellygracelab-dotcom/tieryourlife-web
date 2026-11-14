@@ -479,6 +479,13 @@ const tr: Translation = {
     close: "Kapat",
     today: "Bugün",
     yesterday: "Dün",
+    like: "{name} adlı kişinin sıralamasını beğen",
+    likeUnnamed: "Bu sıralamayı beğen",
+    likeSignIn: "Sıralamaları beğenmek için giriş yapın",
+    likeGone: "Bu sıralama artık yok.",
+    likeLimit: "Şimdilik çok fazla beğeni. {time} itibarıyla yeniden beğenebilirsiniz.",
+    likeLimitSoon: "Şimdilik çok fazla beğeni. Biraz sonra tekrar deneyin.",
+    likeFailed: "Beğeniniz değiştirilemedi. Tekrar deneyin.",
   },
   report: {
     title: "Bu listeyi bildir",

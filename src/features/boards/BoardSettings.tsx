@@ -10,13 +10,16 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
+import type { AddedCard } from "../../api/community";
 import { errorOf, type ApiError } from "../../api/errors";
 import type { Published, PublishRequest } from "../../api/lists";
 import { creditAsAttribution, type EditorCredit } from "../../api/pictureAttribution";
 import type { Topic } from "../../api/sections";
+import { isOwnList } from "../../api/types";
 import { useSession } from "../../app/session";
 import {
   classifyPublication,
+  keepListRanking,
   loadListAsWritten,
   loadTopic,
   loadTopics,
@@ -67,6 +70,7 @@ import { publishProblemsOf, publishRequestOf } from "./publish";
 import type { AccountAction } from "../../api/client";
 import { captureAccountAction } from "../../lib/accountAction";
 import { checkCopiedPublication, type CheckedPublication } from "./copiedPublication";
+import { copyRankingOf, rankingFailureText } from "./copyRanking";
 import { filedUnder, sectionChoices } from "./sectionChoices";
 import { sentTopic, settledTopic, type FindTopic } from "./topic";
 import "./boards.css";
@@ -87,6 +91,8 @@ export interface PublishingDeps {
   classify?: typeof classifyPublication;
   loadOriginal?: typeof loadListAsWritten;
   withdraw?: (listId: string) => Promise<unknown>;
+  /** Puts one's ranking of a list among its Rankings (K3); the site's own unless told otherwise. */
+  rank?: typeof keepListRanking;
 }
 
 /** The approved topics of a section, the biggest first. */
@@ -142,7 +148,12 @@ export type SettingsStart = "publish" | "update" | "takeDown";
 
 type Busy = "checking" | "idle" | "publishing" | "updating" | "unpublishing";
 /** A refusal, by the press it answers: each is said beside its own button. */
-type Failure = { error: ApiError; on: "publish" | "update" | "takeDown" };
+type Failure = {
+  error: ApiError;
+  on: "publish" | "update" | "takeDown";
+  /** Refused as one's ranking (K3): said in a ranking's words, naming a card of one's own. */
+  ranking?: readonly AddedCard[];
+};
 type Open = "none" | "category" | "topic" | "cover";
 /** What came back for a section's topics. */
 type Topics =
@@ -309,6 +320,8 @@ export function BoardSettings({
     | null
   >(null);
   const [failure, setFailure] = useState<Failure | null>(null);
+  // The backend said the copy goes out only as one's ranking of this list (409 RANK_INSTEAD).
+  const [rankInstead, setRankInstead] = useState<string | null>(null);
   // Why a guest's Public switch did not sign them in, when it could not.
   const [signInNote, setSignInNote] = useState<string | null>(null);
   const [open, setOpen] = useState<Open>("none");
@@ -382,12 +395,19 @@ export function BoardSettings({
       return;
     }
     const current = latest();
+    // Out as one's ranking of a list: sent again as that ranking, with the
+    // cards of one's own, never as a publish, which would take them away.
+    if (current.rankingOf !== null && current.publishedId === null) {
+      await rankCopy(current.rankingOf, action);
+      return;
+    }
     const request = publishRequestOf(current);
     if (request === null || publishing === null) return;
     const snapshot = JSON.stringify([current.uid, request]);
     const needsPreview = current.takenFrom !== null && current.publishedId === null;
     if (needsPreview && current.takenFrom !== null && (!checked || checked.snapshot !== snapshot)) {
       setPreview(null);
+      setRankInstead(null);
       setFailure(null);
       setBusy("checking");
       try {
@@ -399,13 +419,16 @@ export function BoardSettings({
         if (action.isCurrent()) setPreview({ ...result, what, snapshot, action });
       } catch (reason) {
         if (!action.isCurrent()) return;
-        setFailure({ error: errorOf(reason), on: what === "published" ? "publish" : "update" });
+        const error = errorOf(reason);
+        if (error.kind === "rankInstead") setRankInstead(error.listId);
+        else setFailure({ error, on: what === "published" ? "publish" : "update" });
       } finally {
         setBusy("idle");
       }
       return;
     }
     setPreview(null);
+    setRankInstead(null);
     setBusy(what === "published" ? "publishing" : "updating");
     setFailure(null);
     try {
@@ -477,7 +500,58 @@ export function BoardSettings({
       if (error.kind === "invalid" && error.code === "TOPIC_UNAVAILABLE") {
         keep(setTopic(latest(), null, now()));
       }
-      setFailure({ error, on: what === "published" ? "publish" : "update" });
+      // Somebody else's list, changed: it goes out only as one's ranking of it.
+      if (error.kind === "rankInstead") setRankInstead(error.listId);
+      else setFailure({ error, on: what === "published" ? "publish" : "update" });
+    } finally {
+      setBusy("idle");
+    }
+  };
+
+  /**
+   * The board as one's ranking of the list it was saved from (K3, K4): the
+   * list's cards in their places, the board's others as cards of one's own.
+   * Every send carries them all, since a ranking sent without them loses them.
+   */
+  const rankCopy = async (listId: string, given?: AccountAction | null) => {
+    const action = given ?? (signedIn ? captureAccountAction(account.uid) : null);
+    if (!action?.isCurrent() || publishing === null) return;
+    setPreview(null);
+    setRankInstead(null);
+    setFailure(null);
+    setBusy("publishing");
+    let added: readonly AddedCard[] = [];
+    try {
+      const source = await (publishing.loadOriginal ?? loadListAsWritten)(listId);
+      if (!action.isCurrent()) return;
+      const current = latest();
+      // Made the ranking of a list it was not saved from, it has no places of the list's to keep.
+      const ranking = copyRankingOf(
+        current.takenFrom === listId
+          ? current
+          : { ...current, takenFrom: listId, origin: undefined },
+        source,
+      );
+      if (ranking === null || isOwnList(source, action.uid)) {
+        setFailure({ error: { kind: "invalid", detail: null, code: null }, on: "publish" });
+        return;
+      }
+      added = ranking.addedCards;
+      await (publishing.rank ?? keepListRanking)(source, ranking.rows, action, {
+        addedCards: ranking.addedCards,
+        tierLabels: ranking.tierLabels,
+      });
+      if (!action.isCurrent()) return;
+      const after = latest();
+      const out = setRanking(after, listId, now());
+      // A change made while the ranking was on its way was not in it.
+      keep(
+        after.editedAt === current.editedAt ? out : { ...out, publishedEditedAt: out.editedAt - 1 },
+      );
+      onPublished("ranking", listId, 0);
+    } catch (reason: unknown) {
+      if (!action.isCurrent()) return;
+      setFailure({ error: errorOf(reason), on: "publish", ranking: added });
     } finally {
       setBusy("idle");
     }
@@ -579,13 +653,15 @@ export function BoardSettings({
           ? strings.list.deleteFailed
           : on === "update" && failure.error.kind === "notFound"
             ? strings.new.listGone
-            : failure.error.kind === "invalid" && failure.error.code === "TOPIC_UNAVAILABLE"
-              ? strings.boards.topicUnavailable
-              : failureText(
-                  failure.error,
-                  on === "update" ? "edit" : "new",
-                  (url) => liveItems(board).find((item) => item.imageUrl === url)?.title ?? null,
-                )}
+            : failure.ranking !== undefined
+              ? rankingFailureText(failure.error, failure.ranking)
+              : failure.error.kind === "invalid" && failure.error.code === "TOPIC_UNAVAILABLE"
+                ? strings.boards.topicUnavailable
+                : failureText(
+                    failure.error,
+                    on === "update" ? "edit" : "new",
+                    (url) => liveItems(board).find((item) => item.imageUrl === url)?.title ?? null,
+                  )}
       </span>
     ) : null;
 
@@ -813,8 +889,8 @@ export function BoardSettings({
                           ? strings.boards.publicBody
                           : strings.rankings.notYours}
                     </p>
-                    {(preview.preview.kind === "ranking" ||
-                      preview.originalAuthor === preview.action.uid) && (
+                    {preview.preview.kind === "ranking" ||
+                    preview.originalAuthor === preview.action.uid ? (
                       <button
                         type="button"
                         className="btn btn--tonal"
@@ -824,11 +900,48 @@ export function BoardSettings({
                           ? strings.rankings.progressShare
                           : strings.new.publish}
                       </button>
+                    ) : (
+                      // Changed, it still goes into the list's Rankings, with its own cards (K3).
+                      board.takenFrom !== null && (
+                        <button
+                          type="button"
+                          className="btn btn--tonal"
+                          onClick={() => {
+                            const listId = board.takenFrom;
+                            if (listId !== null) void rankCopy(listId, preview.action);
+                          }}
+                        >
+                          {strings.rankings.progressShare}
+                        </button>
+                      )
                     )}
                     <button
                       type="button"
                       className="btn btn--text"
                       onClick={() => setPreview(null)}
+                    >
+                      {strings.rankings.cancel}
+                    </button>
+                  </div>
+                )}
+                {rankInstead !== null && (
+                  <div
+                    className="sheet-row__question"
+                    role="group"
+                    aria-label={strings.rankings.publicationPreview}
+                  >
+                    <p>{strings.rankings.notYours}</p>
+                    <button
+                      type="button"
+                      className="btn btn--tonal"
+                      onClick={() => void rankCopy(rankInstead)}
+                    >
+                      {strings.rankings.progressShare}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--text"
+                      onClick={() => setRankInstead(null)}
                     >
                       {strings.rankings.cancel}
                     </button>

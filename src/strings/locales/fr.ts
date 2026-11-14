@@ -502,6 +502,13 @@ const fr: Translation = {
     close: "Fermer",
     today: "Aujourd’hui",
     yesterday: "Hier",
+    like: "Aimer le classement de {name}",
+    likeUnnamed: "Aimer ce classement",
+    likeSignIn: "Connectez-vous pour aimer des classements",
+    likeGone: "Ce classement n’est plus là.",
+    likeLimit: "Trop de mentions J’aime pour l’instant. Réessayez à {time}.",
+    likeLimitSoon: "Trop de mentions J’aime pour l’instant. Réessayez dans un moment.",
+    likeFailed: "Impossible de modifier votre mention J’aime. Réessayez.",
   },
   report: {
     title: "Signaler cette liste",

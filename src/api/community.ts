@@ -1,5 +1,8 @@
 import type { AccountAction, ApiClient } from "./client";
+import { itemsOf } from "./lists";
 import type { Topic } from "./sections";
+import type { PictureAttribution } from "./pictureAttribution";
+import type { PublishedItem } from "./types";
 
 /**
  * The proxy's reasons, in the order the app's report sheet shows them. The
@@ -76,17 +79,31 @@ export interface ReaderRanking {
   /**
    * The cards in each tier, left to right, by their place in the list. Empty
    * for a ranking kept before the backend kept the order inside a tier: the
-   * arrangement is then all there is of it.
+   * arrangement is then all there is of it. Only ever the list's own cards.
    */
   rows: number[][];
   /** The words they gave the tiers; a tier without one keeps the author's. */
   tierLabels: string[];
   updatedAtMs: number;
-  /** The caller's own, which leads the first page. */
+  /** The caller's own, in its place among the rest (CONTRACT K1). */
   mine: boolean;
+  /**
+   * The list's author's own arrangement, which heads the first page when it
+   * is asked for (`withAuthor=1`). Its uid is "" on an anonymous list.
+   */
+  isAuthor?: boolean;
+  /** Whether the caller likes it; how many others do is never said (K2). */
+  likedByMe?: boolean;
+  /** Cards the reader added of their own (K3), as the backend keeps them. */
+  addedCards?: PublishedItem[];
+  /**
+   * The rows with the added cards in them: `N + k` is `addedCards[k]`, N the
+   * list's cards. Drawn in place of `rows` when it is there.
+   */
+  allRows?: number[][];
 }
 
-/** One's own placing as the backend kept it among the list's rankings; `created` when it was not there before. */
+/** One's own placing of a list as the backend kept it among the list's rankings; `created` when it was not there before. */
 export type ShownRanking = ReaderRanking & { created?: boolean };
 
 export interface RankingsPage {
@@ -94,17 +111,105 @@ export interface RankingsPage {
   nextCursor: string | null;
 }
 
-/** Newest first, thirty at a time; the caller's own leads the first page. */
-export function loadListRankings(
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isPosition = (value: unknown): value is number =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+
+/** Rows as numbers in rows: anything else in them is no card. */
+const rowsIn = (value: unknown): number[][] =>
+  Array.isArray(value)
+    ? value.map((row: unknown) => (Array.isArray(row) ? row.filter(isPosition) : []))
+    : [];
+
+/**
+ * A ranking however it arrived, or null for nothing that is one: each field
+ * read on its own, so one gone wrong (or one an older backend never sends)
+ * leaves the rest drawn.
+ */
+export function readerRankingOf(value: unknown): ShownRanking | null {
+  if (!isRecord(value) || typeof value.uid !== "string") return null;
+  const addedCards = Array.isArray(value.addedCards) ? itemsOf(value.addedCards) : [];
+  return {
+    uid: value.uid,
+    authorName: typeof value.authorName === "string" ? value.authorName : "",
+    authorPhotoUrl:
+      typeof value.authorPhotoUrl === "string" && value.authorPhotoUrl !== ""
+        ? value.authorPhotoUrl
+        : null,
+    arrangement: Array.isArray(value.arrangement)
+      ? value.arrangement.map((tier: unknown) => (isPosition(tier) ? tier : null))
+      : [],
+    rows: rowsIn(value.rows),
+    tierLabels: Array.isArray(value.tierLabels)
+      ? value.tierLabels.map((label: unknown) => (typeof label === "string" ? label : ""))
+      : [],
+    updatedAtMs:
+      typeof value.updatedAtMs === "number" && Number.isFinite(value.updatedAtMs)
+        ? value.updatedAtMs
+        : 0,
+    mine: value.mine === true,
+    ...(value.isAuthor === true ? { isAuthor: true } : {}),
+    likedByMe: value.likedByMe === true,
+    ...(addedCards.length === 0 ? {} : { addedCards }),
+    ...(addedCards.length === 0 || !Array.isArray(value.allRows)
+      ? {}
+      : { allRows: rowsIn(value.allRows) }),
+    ...(value.created === true ? { created: true } : {}),
+  };
+}
+
+/** A page of rankings as the site reads it: what is not a ranking is left out. */
+export function rankingsPageOf(value: unknown): RankingsPage {
+  const page = isRecord(value) ? value : {};
+  return {
+    rankings: Array.isArray(page.rankings)
+      ? page.rankings.flatMap((one: unknown) => {
+          const ranking = readerRankingOf(one);
+          return ranking === null ? [] : [ranking];
+        })
+      : [],
+    nextCursor:
+      typeof page.nextCursor === "string" && page.nextCursor !== "" ? page.nextCursor : null,
+  };
+}
+
+/**
+ * The list's rankings in the backend's order, thirty at a time (CONTRACT
+ * K1): the author first, then the most liked, the newer first among equals,
+ * one's own in its place. 409 CURSOR_GONE for a cursor it no longer reads.
+ */
+export async function loadListRankings(
   client: ApiClient,
   listId: string,
   after: string | null = null,
 ): Promise<RankingsPage> {
-  return client.request<RankingsPage>(
-    "GET",
-    `/lists/${encodeURIComponent(listId)}/rankings`,
-    after === null ? {} : { query: { after } },
+  return rankingsPageOf(
+    await client.request<unknown>("GET", `/lists/${encodeURIComponent(listId)}/rankings`, {
+      query: after === null ? { withAuthor: "1" } : { withAuthor: "1", after },
+    }),
   );
+}
+
+/**
+ * Likes somebody's ranking of a list, or takes the like back (CONTRACT K2).
+ * Asking twice is safe. 403 for a guest or a ban, 404 for a ranking that is
+ * gone, 409 CANNOT_LIKE for one's own or the author's, 429 LIKE_LIMIT.
+ */
+export async function likeListRanking(
+  client: ApiClient,
+  listId: string,
+  uid: string,
+  like: boolean,
+): Promise<{ likedByMe: boolean }> {
+  const answer = await client.request<unknown>(
+    like ? "PUT" : "DELETE",
+    `/lists/${encodeURIComponent(listId)}/rankings/${encodeURIComponent(uid)}/like`,
+  );
+  return {
+    likedByMe: isRecord(answer) && typeof answer.likedByMe === "boolean" ? answer.likedByMe : like,
+  };
 }
 
 /**
@@ -132,16 +237,48 @@ export function rowsOf(
  * replaces the one there, with the order inside each tier. Not for a guest,
  * and not on one's own list.
  */
-export function keepListRanking(
+export async function keepListRanking(
   client: ApiClient,
   listId: string,
-  placing: { tierLabels: string[]; rows: number[][]; version?: number },
+  placing: {
+    tierLabels: (string | null)[];
+    rows: number[][];
+    version?: number;
+    /** One's own cards (K3), `N + k` in the rows; left out, the ranking keeps none. */
+    addedCards?: AddedCard[];
+  },
   action: AccountAction,
 ): Promise<ShownRanking> {
-  return client.request<ShownRanking>("PUT", `/lists/${encodeURIComponent(listId)}/rankings/mine`, {
-    body: placing,
-    action,
-  });
+  const answer = await client.request<unknown>(
+    "PUT",
+    `/lists/${encodeURIComponent(listId)}/rankings/mine`,
+    { body: placing, action },
+  );
+  // An answer that is no ranking still says it went in: what was sent is what is shown.
+  return (
+    readerRankingOf(answer) ?? {
+      uid: "",
+      authorName: "",
+      authorPhotoUrl: null,
+      arrangement: [],
+      rows: placing.rows,
+      tierLabels: placing.tierLabels.map((label) => label ?? ""),
+      updatedAtMs: Date.now(),
+      mine: true,
+    }
+  );
+}
+
+/** At most this many cards of one's own go with a ranking (K3). */
+export const ADDED_CARDS_MAX = 50;
+
+/** A card of one's own in a ranking, as a card goes in a publish, without its place. */
+export interface AddedCard {
+  title: string;
+  imageUrl?: string | null;
+  pictureId?: string | null;
+  attribution?: PictureAttribution;
+  credit?: string;
 }
 
 /** Takes the caller's own placing of a list down; the backend answers 204 either way. */

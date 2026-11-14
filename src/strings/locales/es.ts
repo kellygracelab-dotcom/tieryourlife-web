@@ -491,6 +491,13 @@ const es: Translation = {
     close: "Cerrar",
     today: "Hoy",
     yesterday: "Ayer",
+    like: "Me gusta el ranking de {name}",
+    likeUnnamed: "Me gusta este ranking",
+    likeSignIn: "Inicia sesión para dar me gusta a los rankings",
+    likeGone: "Este ranking ya no está.",
+    likeLimit: "Demasiados me gusta por ahora. Vuelve a intentarlo a las {time}.",
+    likeLimitSoon: "Demasiados me gusta por ahora. Inténtalo de nuevo en un rato.",
+    likeFailed: "No se pudo cambiar tu me gusta. Inténtalo de nuevo.",
   },
   report: {
     title: "Denunciar esta lista",

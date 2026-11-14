@@ -1,16 +1,18 @@
 import { MediaImage } from "../../ui/MediaImage";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { ReaderRanking } from "../../api/community";
 import type { PublishedList } from "../../api/types";
 import { isEditorial } from "../../lib/editorial";
-import { strings } from "../../strings";
+import { currentLocale, fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
 import { useModal } from "../../ui/useModal";
+import { useSession } from "../../app/session";
+import { searchAgainAt } from "../../lib/searchLimit";
 import { placedOn, readerName } from "./rankings";
-import type { Rankings } from "./useRankings";
+import type { LikeTrouble, Rankings } from "./useRankings";
 import { initialOf } from "../../lib/initial";
 import "./rankings.css";
 
@@ -79,6 +81,101 @@ function Row({ name, photoUrl, when, selected, onClick, pill, trailing }: RowPro
   );
 }
 
+/**
+ * The thumbs-up beside somebody's ranking (K2): pressed, it is liked; how many
+ * others like it is never said. A toggle, so a screen reader hears its state.
+ */
+function LikeButton({
+  name,
+  liked,
+  onPress,
+}: {
+  name: string | null;
+  liked: boolean;
+  onPress: () => void;
+}) {
+  const label =
+    name === null ? strings.rankings.likeUnnamed : fill(strings.rankings.like, { name });
+  return (
+    <button
+      type="button"
+      className={liked ? "rankings__like rankings__like--on" : "rankings__like"}
+      aria-pressed={liked}
+      aria-label={label}
+      title={label}
+      onClick={onPress}
+    >
+      <Icon name="thumb_up" />
+    </button>
+  );
+}
+
+/** What a like that did not go through says, beside the ranking it was for. */
+function likeTroubleText(trouble: LikeTrouble, now?: number): string {
+  switch (trouble.kind) {
+    case "signIn":
+      return strings.rankings.likeSignIn;
+    // A ban says what publishing says: the same moderator's decision.
+    case "banned":
+      return trouble.until === null
+        ? strings.new.failedBanned
+        : fill(strings.new.failedBannedUntil, {
+            date: new Intl.DateTimeFormat(currentLocale(), { dateStyle: "long" }).format(
+              trouble.until,
+            ),
+          });
+    case "gone":
+      return strings.rankings.likeGone;
+    case "limit":
+      return trouble.retryAt === null
+        ? strings.rankings.likeLimitSoon
+        : fill(strings.rankings.likeLimit, { time: searchAgainAt(trouble.retryAt, now) });
+    case "failed":
+      return strings.rankings.likeFailed;
+  }
+}
+
+/** A guest's like: sign in first, offered where they pressed. */
+function LikeSignIn({ onClose }: { onClose: () => void }) {
+  const { signIn } = useSession();
+  const titleId = useId();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  return (
+    <li className="rankings__ask rankings__ask--sign-in" role="group" aria-labelledby={titleId}>
+      <p id={titleId} className="rankings__ask-title">
+        {strings.rankings.likeSignIn}
+      </p>
+      {failed && (
+        <p className="rankings__trouble" role="alert">
+          {strings.nav.signInFailed}
+        </p>
+      )}
+      <div className="rankings__ask-actions">
+        <button type="button" className="btn btn--text" disabled={busy} onClick={onClose}>
+          <span>{strings.rankings.progressLater}</span>
+        </button>
+        <button
+          type="button"
+          className="btn btn--tonal"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            setFailed(false);
+            void signIn().then((outcome) => {
+              setBusy(false);
+              if (outcome.kind === "failed") setFailed(true);
+              else onClose();
+            });
+          }}
+        >
+          <span>{strings.nav.signIn}</span>
+        </button>
+      </div>
+    </li>
+  );
+}
+
 /** "Withdraw your ranking?", asked where the button was, with Cancel taking the focus. */
 function WithdrawAsk({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
   const titleId = useId();
@@ -103,9 +200,10 @@ function WithdrawAsk({ onCancel, onConfirm }: { onCancel: () => void; onConfirm:
 }
 
 /**
- * The people who placed this list's cards their own way: the author first,
- * this reader next, everyone else newest first. Choosing one shows their
- * placing on the board. A side sheet on a wide screen, a bottom sheet on a
+ * The people who placed this list's cards their own way, in the backend's
+ * order (K1): the author first, then the most liked, the newer first among
+ * equals, this reader's own in its place with You. Choosing one shows their
+ * placing on the board; everybody else's has a like beside it. A side sheet on a wide screen, a bottom sheet on a
  * narrow one; Escape, the cross and a press outside close it.
  */
 export function RankingsSheet({
@@ -119,15 +217,23 @@ export function RankingsSheet({
   const titleId = useId();
   const box = useRef<HTMLDivElement>(null);
   const [asking, setAsking] = useState(false);
-  const { state, open, more } = rankings;
+  const { state, open, more, like, askSignIn, dismissTrouble } = rankings;
+  const { account } = useSession();
+  const signedIn = account?.kind === "signedIn";
   // A list without an author has nobody to name in the first row.
   const editorial = isEditorial(list);
-  const mine = state.rankings.find((ranking) => ranking.mine);
-  const others = state.rankings.filter((ranking) => !ranking.mine);
+  const authorName = list.authorName.trim();
+  const trouble = state.likeTrouble;
 
   useModal(box, onClose);
-  // Read when the sheet first opens; a list nobody opens the sheet of costs nothing.
+  // Read when the sheet first opens, and again after one's own was put where
+  // only the backend knows its place; a list nobody opens the sheet of costs nothing.
+  // A sheet opened again after a failed read tries once more by itself.
   useEffect(() => open(), [open]);
+  const idle = state.status === "idle";
+  useEffect(() => {
+    if (idle) open();
+  }, [idle, open]);
   // Opened again after choosing somebody further down, the sheet starts at them.
   useEffect(() => {
     box.current
@@ -176,61 +282,79 @@ export function RankingsSheet({
         </div>
         <p className="rankings__body">{strings.rankings.body}</p>
         <ul className="rankings__rows">
+          {/* The author's arrangement is the list's own, drawn from it; one
+              without a name (an anonymous or editorial list) is just Author. */}
           <Row
-            name={editorial ? strings.rankings.author : list.authorName}
+            name={editorial || authorName === "" ? strings.rankings.author : list.authorName}
             photoUrl={editorial ? null : list.authorPhotoUrl}
             when={list.updatedAt}
             selected={chosen === null}
-            pill={editorial ? undefined : strings.rankings.author}
+            pill={editorial || authorName === "" ? undefined : strings.rankings.author}
             onClick={() => onChoose(null)}
           />
-          {mine !== undefined && (
-            <Row
-              name={strings.rankings.you}
-              photoUrl={mine.authorPhotoUrl}
-              when={mine.updatedAtMs}
-              selected={chosen === mine.uid}
-              onClick={() => onChoose(mine)}
-              trailing={
-                !asking && (
-                  <button
-                    type="button"
-                    className="btn rankings__withdraw"
-                    onClick={() => setAsking(true)}
-                  >
-                    <span>{strings.rankings.withdraw}</span>
-                  </button>
-                )
-              }
-            />
-          )}
-          {/* Said beside the row that came back, not under a long list of readers. */}
-          {mine !== undefined && state.withdrawFailed && (
-            <li>
-              <p className="rankings__trouble" role="alert">
-                {strings.rankings.withdrawFailed}
-              </p>
-            </li>
-          )}
-          {mine !== undefined && asking && (
-            <WithdrawAsk
-              onCancel={() => setAsking(false)}
-              onConfirm={() => {
-                setAsking(false);
-                onWithdraw();
-              }}
-            />
-          )}
-          {others.map((ranking) => (
-            <Row
-              key={ranking.uid}
-              name={readerName(ranking.authorName)}
-              photoUrl={ranking.authorPhotoUrl}
-              when={ranking.updatedAtMs}
-              selected={chosen === ranking.uid}
-              onClick={() => onChoose(ranking)}
-            />
-          ))}
+          {state.rankings.map((ranking) => {
+            const name = readerName(ranking.authorName);
+            const gone = state.gone.includes(ranking.uid);
+            const troubled = trouble !== null && trouble.uid === ranking.uid;
+            return (
+              <Fragment key={ranking.uid}>
+                <Row
+                  name={name}
+                  photoUrl={ranking.authorPhotoUrl}
+                  when={ranking.updatedAtMs}
+                  selected={chosen === ranking.uid}
+                  pill={ranking.mine ? strings.rankings.you : undefined}
+                  onClick={() => onChoose(ranking)}
+                  trailing={
+                    ranking.mine ? (
+                      !asking && (
+                        <button
+                          type="button"
+                          className="btn rankings__withdraw"
+                          onClick={() => setAsking(true)}
+                        >
+                          <span>{strings.rankings.withdraw}</span>
+                        </button>
+                      )
+                    ) : gone ? null : (
+                      <LikeButton
+                        name={name}
+                        liked={ranking.likedByMe === true}
+                        onPress={() => (signedIn ? like(ranking.uid) : askSignIn(ranking.uid))}
+                      />
+                    )
+                  }
+                />
+                {/* Said beside the row that came back, not under a long list of readers. */}
+                {ranking.mine && state.withdrawFailed && (
+                  <li>
+                    <p className="rankings__trouble" role="alert">
+                      {strings.rankings.withdrawFailed}
+                    </p>
+                  </li>
+                )}
+                {ranking.mine && asking && (
+                  <WithdrawAsk
+                    onCancel={() => setAsking(false)}
+                    onConfirm={() => {
+                      setAsking(false);
+                      onWithdraw();
+                    }}
+                  />
+                )}
+                {troubled &&
+                  (trouble.kind === "signIn" ? (
+                    <LikeSignIn onClose={dismissTrouble} />
+                  ) : (
+                    <li>
+                      <p className="rankings__trouble" role="alert">
+                        {likeTroubleText(trouble)}
+                      </p>
+                    </li>
+                  ))}
+              </Fragment>
+            );
+          })}
         </ul>
         {state.status === "loading" && (
           <div className="rankings__waiting" aria-busy="true">

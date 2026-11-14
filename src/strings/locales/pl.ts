@@ -500,6 +500,13 @@ const pl: Translation = {
     close: "Zamknij",
     today: "Dzisiaj",
     yesterday: "Wczoraj",
+    like: "Polub ranking: {name}",
+    likeUnnamed: "Polub ten ranking",
+    likeSignIn: "Zaloguj się, aby polubić rankingi",
+    likeGone: "Tego rankingu już nie ma.",
+    likeLimit: "Za dużo polubień na razie. Spróbuj ponownie o {time}.",
+    likeLimitSoon: "Za dużo polubień na razie. Spróbuj ponownie za chwilę.",
+    likeFailed: "Nie udało się zmienić polubienia. Spróbuj ponownie.",
   },
   report: {
     title: "Zgłoś tę listę",

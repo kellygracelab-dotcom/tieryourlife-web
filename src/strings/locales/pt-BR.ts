@@ -492,6 +492,13 @@ const ptBR: Translation = {
     close: "Fechar",
     today: "Hoje",
     yesterday: "Ontem",
+    like: "Curtir o ranking de {name}",
+    likeUnnamed: "Curtir este ranking",
+    likeSignIn: "Entre para curtir rankings",
+    likeGone: "Este ranking não está mais aqui.",
+    likeLimit: "Curtidas demais por agora. Curta de novo às {time}.",
+    likeLimitSoon: "Curtidas demais por agora. Tente de novo daqui a pouco.",
+    likeFailed: "Não foi possível mudar sua curtida. Tente de novo.",
   },
   report: {
     title: "Denunciar esta lista",

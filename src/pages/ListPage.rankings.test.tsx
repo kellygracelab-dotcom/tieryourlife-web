@@ -30,6 +30,8 @@ const mocks = vi.hoisted(() => ({
       ) => Promise<ReaderRanking & { created?: boolean }>
     >(),
   loadListAsWritten: vi.fn<(id: string) => Promise<PublishedList>>(),
+  likeListRanking:
+    vi.fn<(listId: string, uid: string, like: boolean) => Promise<{ likedByMe: boolean }>>(),
   signIn: vi.fn(async () => ({ kind: "cancelled" as const })),
 }));
 vi.mock("../lib/api", async () => ({
@@ -39,6 +41,7 @@ vi.mock("../lib/api", async () => ({
   withdrawListRanking: mocks.withdrawListRanking,
   keepListRanking: mocks.keepListRanking,
   loadListAsWritten: mocks.loadListAsWritten,
+  likeListRanking: mocks.likeListRanking,
   followState: vi.fn(async () => ({ following: false, followers: 0 })),
 }));
 
@@ -142,19 +145,21 @@ beforeEach(() => {
   mocks.keepListRanking.mockResolvedValue({ ...me, rows: [[0, 1]], created: true });
   mocks.loadListAsWritten.mockReset();
   mocks.loadListAsWritten.mockResolvedValue(list);
+  mocks.likeListRanking.mockReset();
+  mocks.likeListRanking.mockImplementation(async (_l, _u, like) => ({ likedByMe: like }));
   mocks.signIn.mockClear();
   useHiddenStoreForTests(memoryStore());
 });
 
 describe("ListPage rankings", () => {
-  it("lists the author with a pill, then you with Withdraw, then everyone else, under a title without a number", async () => {
+  it("lists the author with a pill, then everyone in the server's order, one's own with You and Withdraw, under a title without a number", async () => {
     openAs();
     const sheet = await openSheet();
     // The title cannot disagree with the menu's line: it has no number of its own.
     expect(within(sheet).getByRole("heading", { level: 2 })).toHaveTextContent(/^Rankings$/);
     expect(await within(sheet).findByRole("button", { name: /^olena/ })).toBeInTheDocument();
     expect(mocks.loadListRankings).toHaveBeenCalledWith("abc", null);
-    expect(rowsOf(sheet)).toEqual(["danylo Author", "You Withdraw", "olena"]);
+    expect(rowsOf(sheet)).toEqual(["danylo Author", "Reader You Withdraw", "olena"]);
     // The author's is the one on the board.
     expect(within(sheet).getByRole("button", { name: /^danylo/ })).toHaveAttribute(
       "aria-current",
@@ -327,12 +332,14 @@ describe("ListPage rankings", () => {
     expect(await within(sheet).findByRole("alert")).toHaveTextContent(
       "Couldn’t withdraw your ranking. Try again.",
     );
-    expect(rowsOf(sheet)[1]).toBe("You Withdraw");
+    expect(rowsOf(sheet)[1]).toBe("Reader You Withdraw");
   });
 
   it("shows the author's again when the placing on the board is the one withdrawn", async () => {
     openAs();
-    await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^You/ }));
+    await userEvent.click(
+      await within(await openSheet()).findByRole("button", { name: /^Reader\s*You/ }),
+    );
     expect(screen.getByRole("region", { name: "Reader" })).toBeInTheDocument();
     const sheet = await openSheet();
     await userEvent.click(within(sheet).getByRole("button", { name: "Withdraw" }));
@@ -469,7 +476,7 @@ describe("ListPage rankings", () => {
     ]);
     // An empty address is no picture at all.
     expect(sheet.querySelector('img[src=""]')).toBeNull();
-    const emoji = within(sheet).getByRole("button", { name: /emoji/ });
+    const emoji = within(sheet).getByRole("button", { name: /^😀 emoji/ });
     expect(emoji.querySelector(".rankings__face--initial")).toHaveTextContent(/^😀$/);
     const lost = within(sheet).getByRole("button", { name: /^lost face/ });
     fireEvent.error(lost.querySelector("img")!);
@@ -490,7 +497,7 @@ describe("ListPage rankings", () => {
     );
     const said = await within(sheet).findByRole("alert");
     const rows = within(sheet).getAllByRole("listitem");
-    // Right under You, before everyone else.
+    // Right under one's own, before everyone else.
     expect(rows[1]).toHaveTextContent(/You.*Withdraw/);
     expect(rows[2]).toContainElement(said);
   });
@@ -833,5 +840,102 @@ describe("ListPage: showing one's ranking to others", () => {
       ),
     ).toBeInTheDocument();
     localStorage.clear();
+  });
+
+  it("likes somebody's ranking with the thumb, never one's own or the author's, and says no count", async () => {
+    mocks.loadListRankings.mockResolvedValue({
+      rankings: [
+        { ...reader("u1", "danylo"), isAuthor: true },
+        olena,
+        me,
+        reader("u6", "maks", { likedByMe: true }),
+      ],
+      nextCursor: null,
+    });
+    openAs();
+    const sheet = await openSheet();
+    const like = await within(sheet).findByRole("button", { name: "Like olena’s ranking" });
+    // The author's own is the list's: one row, not two.
+    expect(rowsOf(sheet)).toEqual(["danylo Author", "olena", "Reader You Withdraw", "maks"]);
+    expect(within(sheet).getAllByRole("button", { name: /^Like / })).toHaveLength(2);
+    expect(like).toHaveAttribute("aria-pressed", "false");
+    expect(within(sheet).getByRole("button", { name: "Like maks’s ranking" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(like);
+    expect(like).toHaveAttribute("aria-pressed", "true");
+    expect(mocks.likeListRanking).toHaveBeenCalledWith("abc", "u5", true);
+    await userEvent.click(like);
+    expect(like).toHaveAttribute("aria-pressed", "false");
+    expect(mocks.likeListRanking).toHaveBeenLastCalledWith("abc", "u5", false);
+    expect(sheet).not.toHaveTextContent(/\d+ likes?/i);
+  });
+
+  it("takes a like back and says why when the hour's likes are used up", async () => {
+    mocks.likeListRanking.mockRejectedValueOnce(
+      new ApiFailure({ kind: "likeLimit", retryAt: new Date(2030, 0, 1, 14, 0).getTime() }),
+    );
+    openAs();
+    const sheet = await openSheet();
+    const like = await within(sheet).findByRole("button", { name: "Like olena’s ranking" });
+    await userEvent.click(like);
+    expect(await within(sheet).findByRole("alert")).toHaveTextContent(
+      /^Too many likes for now\. Like again at .+\.$/,
+    );
+    expect(like).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("says a banned reader's like in publishing's words", async () => {
+    mocks.likeListRanking.mockRejectedValueOnce(new ApiFailure({ kind: "banned", until: null }));
+    openAs();
+    const sheet = await openSheet();
+    await userEvent.click(
+      await within(sheet).findByRole("button", { name: "Like olena’s ranking" }),
+    );
+    expect(await within(sheet).findByRole("alert")).toHaveTextContent(/moderator|banned/i);
+  });
+
+  it("asks a guest to sign in where they pressed the thumb", async () => {
+    mocks.loadListRankings.mockResolvedValue({ rankings: [olena], nextCursor: null });
+    openAs({ kind: "guest", uid: "g1" } as Session["account"]);
+    const sheet = await openSheet();
+    await userEvent.click(
+      await within(sheet).findByRole("button", { name: "Like olena’s ranking" }),
+    );
+    expect(mocks.likeListRanking).not.toHaveBeenCalled();
+    const ask = within(sheet).getByRole("group", { name: "Sign in to like rankings" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Sign in" }));
+    expect(mocks.signIn).toHaveBeenCalled();
+  });
+
+  it("draws the cards a reader added of their own in their places", async () => {
+    mocks.loadListRankings.mockResolvedValue({
+      rankings: [
+        reader("u5", "olena", {
+          rows: [[1]],
+          addedCards: [
+            { title: "Heat", imageUrl: null },
+            { title: "Tenet", imageUrl: null },
+          ],
+          allRows: [[2, 1]],
+        }),
+      ],
+      nextCursor: null,
+    });
+    openAs();
+    await userEvent.click(await within(await openSheet()).findByRole("button", { name: /^olena/ }));
+    const board = screen.getByRole("region", { name: "olena" });
+    expect(within(board).getByRole("list", { name: "Best" })).toHaveTextContent(/Heat.*The Witch/);
+    // What they left out, their own card too, waits unranked under the board.
+    expect(document.body).toHaveTextContent("Tenet");
+  });
+
+  it("names the author of an anonymous list just Author", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, authorName: "", authorUid: "" });
+    openAs();
+    const sheet = await openSheet();
+    await within(sheet).findByRole("button", { name: /^olena/ });
+    expect(rowsOf(sheet)[0]).toBe("Author");
   });
 });

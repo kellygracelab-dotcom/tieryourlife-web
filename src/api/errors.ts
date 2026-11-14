@@ -29,6 +29,15 @@ export type ApiError =
   /** An account keeps so many boards, and this would be one more. */
   | { kind: "tooManyBoards" }
   | { kind: "cursorGone" }
+  /**
+   * 409 RANK_INSTEAD (CONTRACT K4): the copy is of somebody else's published
+   * list and differs from it, so it goes out only as one's ranking of `listId`.
+   */
+  | { kind: "rankInstead"; listId: string }
+  /** 409 CANNOT_LIKE (K2): one's own ranking or the author's takes no like. */
+  | { kind: "cannotLike" }
+  /** 429 LIKE_LIMIT (K2): more than an hour's likes; none until `retryAt`. */
+  | { kind: "likeLimit"; retryAt?: number }
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
   | { kind: "conflict"; board?: unknown; status?: string }
   | { kind: "tooLarge"; detail: string | null }
@@ -63,6 +72,8 @@ export type ApiError =
       imageUrl?: string;
       code?: string;
       itemIndex?: number;
+      /** A ranking's own card the picture is on (K3): its place among `addedCards`. */
+      addedIndex?: number;
       quota?: LinkQuota;
     }
   /** Too much of something in too short a time: TOO_MANY_PROPOSALS, ten sections a day. */
@@ -112,6 +123,8 @@ interface ErrorBody {
   because?: unknown;
   imageUrl?: unknown;
   itemIndex?: unknown;
+  addedIndex?: unknown;
+  listId?: unknown;
   reason?: unknown;
   cover?: unknown;
   quota?: unknown;
@@ -232,6 +245,11 @@ export function parseApiError(
       if (code === "TOO_MANY_FOLLOWING") return { kind: "tooManyFollowing" };
       if (code === "TOO_MANY_BOARDS") return { kind: "tooManyBoards" };
       if (code === "CURSOR_GONE") return { kind: "cursorGone" };
+      if (code === "CANNOT_LIKE") return { kind: "cannotLike" };
+      if (code === "RANK_INSTEAD") {
+        const listId = stringOrNull(body.listId);
+        if (listId !== null && listId !== "") return { kind: "rankInstead", listId };
+      }
       // A topic's name clashes with 409 where a section's does with 400: one refusal to the form.
       if (code === "NAME_TAKEN") {
         const id = stringOrNull(body.id);
@@ -266,6 +284,7 @@ export function parseApiError(
     case 422: {
       const imageUrl = stringOrNull(body.imageUrl);
       const itemIndex = indexOrNull(body.itemIndex);
+      const addedIndex = indexOrNull(body.addedIndex);
       const quota = quotaOf(body.quota);
       return {
         kind: "pictureRefused",
@@ -273,6 +292,7 @@ export function parseApiError(
         ...(imageUrl === null ? {} : { imageUrl }),
         ...(code === null ? {} : { code }),
         ...(itemIndex === null ? {} : { itemIndex }),
+        ...(addedIndex === null ? {} : { addedIndex }),
         ...(quota === null ? {} : { quota }),
       };
     }
@@ -280,6 +300,10 @@ export function parseApiError(
       if (code === "SEARCH_LIMIT") {
         const retryAt = publicationRetryAt(body.retryAt, retryAfter);
         return retryAt === undefined ? { kind: "searchLimit" } : { kind: "searchLimit", retryAt };
+      }
+      if (code === "LIKE_LIMIT") {
+        const retryAt = publicationRetryAt(body.retryAt, retryAfter);
+        return retryAt === undefined ? { kind: "likeLimit" } : { kind: "likeLimit", retryAt };
       }
       if (code === "LINK_LIMIT") {
         const retryAt = publicationRetryAt(body.retryAt, retryAfter);

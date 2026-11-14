@@ -476,7 +476,10 @@ function OpenList({
   useBackCloses(sheet || playing, closeTop);
 
   const theirs = useMemo(
-    () => (chosen === null ? { tiers: list.tiers, ...author } : placedBy(list, chosen)),
+    () =>
+      chosen === null
+        ? { tiers: list.tiers, items: list.items, ...author }
+        : placedBy(list, chosen),
     [list, author, chosen],
   );
   const theirsLabel = chosen?.authorName ?? (own ? strings.owner.title : strings.list.theirRanking);
@@ -493,8 +496,9 @@ function OpenList({
     const replaced = loadPlacedDraft(localStorageStore, scopeOf(list)) !== null;
     // What was on screen, the reader's tier words included (the app's mine.copy(tiers = theirs.tiers)),
     // each as short as a saved ranking keeps it, so Mine shows the words Finish will save.
+    // Cards a reader added of their own (K3) are theirs: Mine holds the list's.
     putInMine(
-      rows,
+      rows.map((row) => row.filter((item) => item < list.items.length)),
       chosen === null ? null : tierWordsToSend(readerLabels(list.tiers.length, chosen)),
     );
     const said = replaced
@@ -512,7 +516,11 @@ function OpenList({
     });
   };
   // Somebody else's tier words over the same cards: the board draws Theirs under them.
-  const theirsList = useMemo(() => ({ ...list, tiers: theirs.tiers }), [list, theirs]);
+  // A reader's cards of their own come after the list's, as their rows name them.
+  const theirsList = useMemo(
+    () => ({ ...list, tiers: theirs.tiers, items: [...theirs.items] }),
+    [list, theirs],
+  );
   const keptBoards = useBoards(repository ?? site);
   const knownChoice = keptBoards.some(
     (board) => board.takenFrom === list.id && board.rankingChoice !== undefined,
@@ -749,7 +757,7 @@ function OpenList({
           <ReadOnlyBoard
             label={theirsLabel}
             tiers={theirs.tiers}
-            items={list.items}
+            items={theirs.items}
             rows={theirs.rows}
             pool={chosen === null ? author.pool : []}
           />
@@ -773,7 +781,7 @@ function OpenList({
                 onStart: startFromTheirs,
               }}
             />
-            <UnrankedPool items={list.items} pool={poolOf(theirs.rows, list.items.length)} />
+            <UnrankedPool items={theirs.items} pool={poolOf(theirs.rows, theirs.items.length)} />
           </>
         ))}
       {!own && !outOfSight && play.view}

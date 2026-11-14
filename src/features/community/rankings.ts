@@ -76,6 +76,8 @@ export function keepingReader(
 
 export interface Placing {
   tiers: PublishedTier[];
+  /** The list's cards, then the reader's own (K3): what the rows' positions name. */
+  items: readonly PublishedItem[];
   rows: number[][];
   pool: number[];
 }
@@ -112,20 +114,29 @@ export function readerLabels(
   });
 }
 
-/** The author's cards where a reader put them, under the words the reader gave the tiers. */
+/**
+ * The author's cards where a reader put them, under the words the reader gave
+ * the tiers, and after them the cards the reader added (K3): `allRows` places
+ * those too, and is drawn in place of `rows` whenever it is there.
+ */
 export function placedBy(
   list: { tiers: readonly PublishedTier[]; items: readonly PublishedItem[] },
-  ranking: Pick<ReaderRanking, "arrangement" | "rows" | "tierLabels">,
+  ranking: Pick<ReaderRanking, "arrangement" | "rows" | "tierLabels" | "addedCards" | "allRows">,
 ): Placing {
-  const rows = rowsFrom(ranking, list.tiers.length, list.items.length);
+  const added = ranking.addedCards ?? [];
+  const items = added.length === 0 ? list.items : [...list.items, ...added];
+  const rows =
+    added.length > 0 && Array.isArray(ranking.allRows) && ranking.allRows.length > 0
+      ? rowsOf(ranking.allRows, list.tiers.length, items.length)
+      : rowsFrom(ranking, list.tiers.length, list.items.length);
   const placed = new Set(rows.flat());
-  const pool = list.items.map((_, position) => position).filter((at) => !placed.has(at));
+  const pool = items.map((_, position) => position).filter((at) => !placed.has(at));
   const labels = readerLabels(list.tiers.length, ranking);
   const tiers = list.tiers.map((tier, index) => {
     const label = labels[index] ?? null;
     return label === null ? tier : { ...tier, label };
   });
-  return { tiers, rows, pool };
+  return { tiers, items, rows, pool };
 }
 
 const DAY = 24 * 60 * 60 * 1000;

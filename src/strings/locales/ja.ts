@@ -478,6 +478,13 @@ const ja: Translation = {
     close: "閉じる",
     today: "今日",
     yesterday: "昨日",
+    like: "{name}さんのランキングにいいね",
+    likeUnnamed: "このランキングにいいね",
+    likeSignIn: "ランキングにいいねするにはログインしてください",
+    likeGone: "このランキングはもうありません。",
+    likeLimit: "いいねが多すぎます。{time} から再びいいねできます。",
+    likeLimitSoon: "いいねが多すぎます。しばらくしてからもう一度お試しください。",
+    likeFailed: "いいねを変更できませんでした。もう一度お試しください。",
   },
   report: {
     title: "このリストを通報",

@@ -94,6 +94,21 @@ describe("parseApiError", () => {
     [409, json({ error: "Too many", code: "TOO_MANY_BOARDS" }), { kind: "tooManyBoards" }],
     [409, json({ code: "TOO_MANY_PENDING_TOPICS" }), { kind: "tooManyTopics" }],
     [409, json({ error: "That page is gone", code: "CURSOR_GONE" }), { kind: "cursorGone" }],
+    [409, json({ code: "CANNOT_LIKE", detail: "own" }), { kind: "cannotLike" }],
+    [409, json({ code: "RANK_INSTEAD", listId: "L1" }), { kind: "rankInstead", listId: "L1" }],
+    // Without the list it is about, there is nothing to rank instead.
+    [409, json({ code: "RANK_INSTEAD" }), { kind: "conflict" }],
+    [
+      429,
+      json({ code: "LIKE_LIMIT", retryAt: 1_800_000_000_000 }),
+      { kind: "likeLimit", retryAt: 1_800_000_000_000 },
+    ],
+    [429, json({ code: "LIKE_LIMIT" }), { kind: "likeLimit" }],
+    [
+      422,
+      json({ code: "PICTURE_REFUSED", because: "adult", addedIndex: 2 }),
+      { kind: "pictureRefused", because: "adult", code: "PICTURE_REFUSED", addedIndex: 2 },
+    ],
     [409, json({ error: "Moved on", code: "CONFLICT" }), { kind: "conflict" }],
     [409, json({ error: "Decided", code: "SETTLED" }), { kind: "conflict" }],
     [

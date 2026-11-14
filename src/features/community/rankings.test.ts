@@ -38,6 +38,7 @@ describe("placedBy", () => {
     const placing = ranking({ arrangement: [1, 0, null, 0], rows: [[3, 1], [0]] });
     expect(placedBy(list, placing)).toEqual({
       tiers: list.tiers,
+      items: list.items,
       rows: [[3, 1], [0]],
       pool: [2],
     });
@@ -46,7 +47,12 @@ describe("placedBy", () => {
   it("reads the rows over the arrangement, and leaves out what the list lacks", () => {
     // A row past the list's tiers, a card it no longer has, or one placed twice.
     const placing = ranking({ arrangement: [0, 0, 0, 0], rows: [[9, 2, 2], [1], [0]] });
-    expect(placedBy(list, placing)).toEqual({ tiers: list.tiers, rows: [[2], [1]], pool: [0, 3] });
+    expect(placedBy(list, placing)).toEqual({
+      tiers: list.tiers,
+      items: list.items,
+      rows: [[2], [1]],
+      pool: [0, 3],
+    });
   });
 
   it("falls back to the arrangement for a ranking kept without rows, or a reply without them", () => {
@@ -60,6 +66,7 @@ describe("placedBy", () => {
   it("puts the list's cards where the reader put them, the rest in the pool", () => {
     expect(placedBy(list, ranking({ arrangement: [1, 0, null, 0] }))).toEqual({
       tiers: list.tiers,
+      items: list.items,
       rows: [[1, 3], [0]],
       pool: [2],
     });
@@ -69,6 +76,41 @@ describe("placedBy", () => {
     const { rows, pool } = placedBy(list, ranking({ arrangement: [0, 7] }));
     expect(rows).toEqual([[0], []]);
     expect(pool).toEqual([1, 2, 3]);
+  });
+
+  it("draws a reader's own cards after the list's, by allRows", () => {
+    const added = [
+      { title: "Tenet", imageUrl: "https://img.test/tenet.jpg" },
+      { title: "Heat", imageUrl: null },
+    ];
+    const placing = ranking({
+      rows: [[1], [0]],
+      addedCards: added,
+      allRows: [
+        [4, 1],
+        [0, 9],
+      ],
+    });
+    const { items, rows, pool } = placedBy(list, placing);
+    expect(items.map((item) => item.title)).toEqual([
+      "Ex Machina",
+      "The Witch",
+      "Climax",
+      "Moonlight",
+      "Tenet",
+      "Heat",
+    ]);
+    // 9 names no card; Heat (5) placed nowhere waits in the pool with the list's.
+    expect(rows).toEqual([[4, 1], [0]]);
+    expect(pool).toEqual([2, 3, 5]);
+  });
+
+  it("draws by rows when allRows is missing, the added cards then unranked", () => {
+    const placing = ranking({ rows: [[1], [0]], addedCards: [{ title: "Heat", imageUrl: null }] });
+    const { rows, pool, items } = placedBy(list, placing);
+    expect(items).toHaveLength(5);
+    expect(rows).toEqual([[1], [0]]);
+    expect(pool).toEqual([2, 3, 4]);
   });
 
   it("names the tiers with the reader's words, and keeps the author's where they gave none", () => {

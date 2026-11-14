@@ -75,6 +75,7 @@ it.each([
         source,
         source.tiers.map((_, i) => (i === 0 ? [0] : [])),
         expect.objectContaining({ uid: "reader" }),
+        { addedCards: [], tierLabels: source.tiers.map((tier) => tier.label) },
       );
       if (scenario === "account during PUT") actionAuth.currentUser = actionUser("author");
       await act(async () =>
