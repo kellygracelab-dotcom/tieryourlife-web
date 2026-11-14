@@ -900,6 +900,13 @@ const ptBR: Translation = {
     notThisTopicSent: "Anotado. Um moderador vai movê-la se for de outro lugar.",
     backToSection: "Voltar para {section}",
     suggestTopic: "Sugerir um tema",
+    tierLists: "Tier lists",
+    showAllTopics: {
+      one: "Ver todos os {n} temas",
+      many: "Ver todos os {n} temas",
+      other: "Ver todos os {n} temas",
+    },
+    showFewer: "Ver menos",
     suggestTopicBody:
       "Os temas são nomeados ou escolhidos em “Tema” nas Configurações da lista. Um novo sai com a lista quando ela é publicada e aguarda um moderador.",
     suggestTopicMake: "Criar uma lista em {section}",

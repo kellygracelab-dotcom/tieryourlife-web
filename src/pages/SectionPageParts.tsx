@@ -16,7 +16,7 @@ import {
 } from "../features/sections/model";
 import { heldSection, useSections, type SectionsStore } from "../features/sections/useSections";
 import { useResource } from "../lib/useResource";
-import { strings } from "../strings";
+import { formatCount, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
@@ -69,18 +69,31 @@ export function HeadArt({
 }
 
 /** Popular or Newest, at the end of the row; the row may lead with something of its own. */
+/** A block's title in the section headers' style, with its count when there is one: «TOPICS · 8». */
+export function BlockTitle({ title, count }: { title: string; count?: number | null }) {
+  return (
+    <h2 className="section-block__title">
+      {count === undefined || count === null ? title : `${title} · ${formatCount(count)}`}
+    </h2>
+  );
+}
+
+/**
+ * The tier lists' row: their title at the start, their order at the end. The
+ * order sorts only the lists, so it sits with them (section layout, 14.11).
+ */
 export function SortRow({
   sort,
   onSort,
-  children,
+  count,
 }: {
   sort: FeedSort;
   onSort: (sort: FeedSort) => void;
-  children?: ReactNode;
+  count?: number | null;
 }) {
   return (
     <div className="section-sort">
-      {children}
+      <BlockTitle title={strings.sections.tierLists} count={count} />
       <label className="section-sort__order">
         <select
           aria-label={strings.search.sortBy}

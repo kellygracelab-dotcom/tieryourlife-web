@@ -1013,6 +1013,16 @@ const ar: Translation = {
     notThisTopicSent: "تم التسجيل. سينقلها مشرف إن كان مكانها آخر.",
     backToSection: "العودة إلى {section}",
     suggestTopic: "اقتراح موضوع",
+    tierLists: "قوائم التصنيف",
+    showAllTopics: {
+      zero: "عرض كل المواضيع",
+      one: "عرض الموضوع",
+      two: "عرض الموضوعين",
+      few: "عرض كل المواضيع الـ{n}",
+      many: "عرض كل المواضيع الـ{n}",
+      other: "عرض كل المواضيع الـ{n}",
+    },
+    showFewer: "عرض أقل",
     suggestTopicBody:
       "تُسمّى المواضيع أو تُختار تحت «الموضوع» في «إعدادات القائمة». يخرج الموضوع الجديد مع القائمة عند نشرها وينتظر مشرفًا.",
     suggestTopicMake: "أنشئ قائمة في {section}",

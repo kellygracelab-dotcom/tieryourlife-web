@@ -870,6 +870,9 @@ const tr: Translation = {
     notThisTopicSent: "Not alındı. Başka bir yere aitse bir moderatör taşır.",
     backToSection: "{section} bölümüne dön",
     suggestTopic: "Konu öner",
+    tierLists: "Seviye listeleri",
+    showAllTopics: { one: "{n} konunun tümünü göster", other: "{n} konunun tümünü göster" },
+    showFewer: "Daha az göster",
     suggestTopicBody:
       "Konular Liste ayarlarında “Konu” altında adlandırılır ya da seçilir. Yeni bir konu, liste yayımlanırken onunla gider ve bir moderatörü bekler.",
     suggestTopicMake: "{section} bölümünde liste oluştur",

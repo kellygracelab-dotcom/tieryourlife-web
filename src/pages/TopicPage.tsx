@@ -168,7 +168,7 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
         </div>
       )}
 
-      <SortRow sort={sort} onSort={onSort} />
+      <SortRow sort={sort} onSort={onSort} count={topic.listCount} />
 
       <FeedGrid
         state={feed.state}
