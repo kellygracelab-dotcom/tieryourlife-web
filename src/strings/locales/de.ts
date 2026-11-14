@@ -724,6 +724,10 @@ const de: Translation = {
     picture: "Bild",
     translations: "Übersetzungen",
     translationsHelp: "Eine pro Sprache. Leer gelassen, erscheint der Name wie eingegeben.",
+    topicNamesRefusedIn:
+      "Nicht angenommen: {languages}. Jede Übersetzung hat bis zu {max} Zeichen.",
+    topicNameRefused:
+      "Dieser Name wurde nicht angenommen. Ein Themenname hat bis zu {max} Zeichen.",
     topicNamesRefused:
       "Eine Übersetzung wurde nicht angenommen. Jede darf bis zu {max} Zeichen lang sein.",
     recrop: "Neu zuschneiden",

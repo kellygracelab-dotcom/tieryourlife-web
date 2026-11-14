@@ -73,7 +73,9 @@ export function TopicEditor(props: TopicEditorProps) {
   });
   const [name, setName] = useState(start.name);
   const [names, setNames] = useState(start.names);
-  const [namesTrouble, setNamesTrouble] = useState(false);
+  // The translations the backend refused, by language; empty when it did not say which.
+  const [namesTrouble, setNamesTrouble] = useState<readonly string[] | null>(null);
+  const [nameRefused, setNameRefused] = useState<string | null>(null);
   const [picture, setPicture] = useState<PictureValue | null>(start.picture);
   // The credit the editor gave or took off; null while they have not touched it.
   const [given, setGiven] = useState<{ credit: EditorCredit | null } | null>(null);
@@ -98,7 +100,8 @@ export function TopicEditor(props: TopicEditorProps) {
     (newPicture ? credit !== null : given !== null && !sameCredit(credit, start.credit));
   const changed = renamed || newPicture || removed || translated !== null || creditChanged;
   const ready = tidy !== "" && pictureReady && (mode === "create" || changed);
-  const nameTrouble = taken !== null && taken === tidy;
+  const nameTaken = taken !== null && taken === tidy;
+  const nameTrouble = nameTaken || (nameRefused !== null && nameRefused === tidy);
   // What closing would throw away: what was typed or chosen for a new topic, any change to one.
   const edited =
     mode === "create" ? tidy !== "" || picture !== null || newNames(names) !== null : changed;
@@ -158,8 +161,21 @@ export function TopicEditor(props: TopicEditorProps) {
       setCreditTrouble(fill(strings.credit.refusedPicture, { why: creditWhyText(error.why) }));
       return true;
     }
-    if (error.code === "INVALID" && error.field === "names") {
-      setNamesTrouble(true);
+    if (error.code !== "INVALID") return false;
+    // The languages this save sent a translation in: an empty one only takes a translation away.
+    const sent = Object.entries(mode === "create" ? (newNames(names) ?? {}) : (translated ?? {}))
+      .filter(([, text]) => text !== "")
+      .map(([locale]) => locale);
+    // An edit's refusal may not say which field (Content, 14.11.2026): what was sent tells.
+    const field =
+      error.field ??
+      (sent.length > 0 && !renamed ? "names" : renamed && sent.length === 0 ? "name" : null);
+    if (field === "names") {
+      setNamesTrouble(sent);
+      return true;
+    }
+    if (field === "name") {
+      setNameRefused(tidy);
       return true;
     }
     return false;
@@ -169,7 +185,8 @@ export function TopicEditor(props: TopicEditorProps) {
     if (!ready || sending) return;
     setSending(true);
     setFailed(false);
-    setNamesTrouble(false);
+    setNamesTrouble(null);
+    setNameRefused(null);
     setCreditTrouble(null);
     try {
       let pictureId: string | null = null;
@@ -356,7 +373,9 @@ export function TopicEditor(props: TopicEditorProps) {
               {nameTrouble && (
                 <p id={`${id}-name-trouble`} className="section-editor__error" role="alert">
                   {/* A topic's name is taken in every section, not only this one. */}
-                  {fill(strings.admin.topicExists, { name: tidy })}
+                  {nameTaken
+                    ? fill(strings.admin.topicExists, { name: tidy })
+                    : fill(strings.admin.topicNameRefused, { max: TOPIC_NAME_MAX })}
                 </p>
               )}
               <span
@@ -384,18 +403,28 @@ export function TopicEditor(props: TopicEditorProps) {
                     maxLength={TOPIC_NAME_MAX}
                     value={names[locale] ?? ""}
                     placeholder={tidy}
-                    aria-invalid={namesTrouble}
+                    aria-invalid={
+                      namesTrouble !== null &&
+                      (namesTrouble.length === 0 || namesTrouble.includes(locale))
+                    }
                     onChange={(event) => {
                       setNames({ ...names, [locale]: event.target.value });
-                      setNamesTrouble(false);
+                      setNamesTrouble(null);
                     }}
                   />
                 </label>
               ))}
             </div>
-            {namesTrouble && (
+            {namesTrouble !== null && (
               <p className="section-editor__error" role="alert">
-                {fill(strings.admin.topicNamesRefused, { max: TOPIC_NAME_MAX })}
+                {namesTrouble.length === 0
+                  ? fill(strings.admin.topicNamesRefused, { max: TOPIC_NAME_MAX })
+                  : fill(strings.admin.topicNamesRefusedIn, {
+                      languages: namesTrouble
+                        .map((locale) => LOCALE_NAMES[locale as keyof typeof LOCALE_NAMES])
+                        .join(", "),
+                      max: TOPIC_NAME_MAX,
+                    })}
               </p>
             )}
           </fieldset>

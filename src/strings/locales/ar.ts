@@ -827,6 +827,8 @@ const ar: Translation = {
     picture: "الصورة",
     translations: "الترجمات",
     translationsHelp: "واحدة لكل لغة. إن تُركت فارغة يظهر الاسم كما كُتب.",
+    topicNamesRefusedIn: "لم تُقبل: {languages}. لكل ترجمة حتى {max} حرفًا.",
+    topicNameRefused: "لم يُقبل هذا الاسم. اسم الموضوع حتى {max} حرفًا.",
     topicNamesRefused: "لم تُقبل إحدى الترجمات. لكل ترجمة حتى {max} حرفًا.",
     recrop: "إعادة القص",
     replace: "استبدال",

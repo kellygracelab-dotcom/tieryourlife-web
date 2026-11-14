@@ -728,6 +728,8 @@ const ptBR: Translation = {
     picture: "Imagem",
     translations: "Traduções",
     translationsHelp: "Uma por idioma. Se ficar vazia, o nome aparece como foi digitado.",
+    topicNamesRefusedIn: "Não aceita: {languages}. Cada tradução tem até {max} caracteres.",
+    topicNameRefused: "Este nome não foi aceito. O nome de um tema tem até {max} caracteres.",
     topicNamesRefused: "Uma tradução não foi aceita. Cada uma tem até {max} caracteres.",
     recrop: "Recortar de novo",
     replace: "Substituir",

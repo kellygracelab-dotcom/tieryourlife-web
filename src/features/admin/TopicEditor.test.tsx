@@ -304,11 +304,39 @@ describe("TopicEditor", () => {
       await userEvent.type(language("Deutsch"), "Indie");
       await userEvent.click(screen.getByRole("button", { name: "Save" }));
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "A translation wasn’t accepted. Each is up to 40 characters.",
+        "Not accepted: Deutsch. Each translation is up to 40 characters.",
       );
       expect(language("Deutsch")).toHaveAttribute("aria-invalid", "true");
+      expect(language("Polski")).toHaveAttribute("aria-invalid", "false");
       await userEvent.type(language("Deutsch"), "s");
       expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("says which translation an edit's plain refusal is about, from what it sent (ja 犬, 14.11)", async () => {
+      const send = vi
+        .fn<(changes: TopicChanges) => Promise<Topic>>()
+        .mockRejectedValueOnce(new ApiFailure({ kind: "invalid", detail: null, code: "INVALID" }));
+      edit(topic(), send);
+      await userEvent.type(language("日本語"), "犬");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Not accepted: 日本語. Each translation is up to 40 characters.",
+      );
+      expect(language("日本語")).toHaveAttribute("aria-invalid", "true");
+      expect(screen.queryByText(/Couldn’t save/)).toBeNull();
+    });
+
+    it("says at the name that a plain refusal of a rename is about the name", async () => {
+      const send = vi
+        .fn<(changes: TopicChanges) => Promise<Topic>>()
+        .mockRejectedValueOnce(new ApiFailure({ kind: "invalid", detail: null, code: "INVALID" }));
+      edit(topic(), send);
+      await userEvent.type(nameField(), "s");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "This name wasn’t accepted. A topic name is up to 40 characters.",
+      );
+      expect(nameField()).toHaveAttribute("aria-invalid", "true");
     });
 
     it("asks before Escape throws away a translation typed", async () => {

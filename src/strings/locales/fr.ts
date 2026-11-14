@@ -748,6 +748,10 @@ const fr: Translation = {
     picture: "Image",
     translations: "Traductions",
     translationsHelp: "Une par langue. Laissée vide, le nom s’affiche tel qu’il a été saisi.",
+    topicNamesRefusedIn:
+      "Non acceptée : {languages}. Chaque traduction fait au plus {max} caractères.",
+    topicNameRefused:
+      "Ce nom n’a pas été accepté. Le nom d’un sujet fait au plus {max} caractères.",
     topicNamesRefused:
       "Une traduction n’a pas été acceptée. Chacune compte au plus {max} caractères.",
     recrop: "Recadrer",

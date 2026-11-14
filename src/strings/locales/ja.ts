@@ -701,6 +701,8 @@ const ja: Translation = {
     picture: "画像",
     translations: "翻訳",
     translationsHelp: "言語ごとに1つ。空欄なら入力した名前がそのまま表示されます。",
+    topicNamesRefusedIn: "受け付けられませんでした：{languages}。翻訳はそれぞれ{max}文字までです。",
+    topicNameRefused: "この名前は受け付けられませんでした。トピック名は{max}文字までです。",
     topicNamesRefused: "翻訳が受け付けられませんでした。それぞれ{max}文字までです。",
     recrop: "切り抜き直す",
     replace: "差し替える",
