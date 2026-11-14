@@ -54,6 +54,8 @@ export type ApiError =
       why?: string;
       /** Which field a plain INVALID is about, as the backend's `detail` names it: `category`… */
       field?: string;
+      /** `detail: names`: the first language whose translation was refused (Proxy #134). */
+      locale?: string;
       /** The section of the topic a name is taken by, when the backend says. */
       section?: string;
       /** BAD_ATTRIBUTION: the card of a house publication whose editor's credit was refused. */
@@ -117,6 +119,7 @@ interface ErrorBody {
   id?: unknown;
   why?: unknown;
   detail?: unknown;
+  locale?: unknown;
   section?: unknown;
   until?: unknown;
   retryAt?: unknown;
@@ -194,6 +197,7 @@ export function parseApiError(
       const id = stringOrNull(body.id);
       const why = stringOrNull(body.why);
       const field = stringOrNull(body.detail);
+      const locale = stringOrNull(body.locale);
       // A house editor's credit refused: why (`reason`), and the card or the cover it is on.
       if (code === "BAD_ATTRIBUTION") {
         const reason = stringOrNull(body.reason);
@@ -214,6 +218,7 @@ export function parseApiError(
         ...(id === null ? {} : { id }),
         ...(why === null ? {} : { why }),
         ...(field === null ? {} : { field }),
+        ...(locale === null ? {} : { locale }),
       };
     }
     // An unreadable 401 is about the person's sign-in, never about the

@@ -166,12 +166,13 @@ export function TopicEditor(props: TopicEditorProps) {
     const sent = Object.entries(mode === "create" ? (newNames(names) ?? {}) : (translated ?? {}))
       .filter(([, text]) => text !== "")
       .map(([locale]) => locale);
-    // An edit's refusal may not say which field (Content, 14.11.2026): what was sent tells.
+    // The backend names the field and the first language refused (Proxy #134); a refusal
+    // without them is told from what was sent.
     const field =
       error.field ??
       (sent.length > 0 && !renamed ? "names" : renamed && sent.length === 0 ? "name" : null);
     if (field === "names") {
-      setNamesTrouble(sent);
+      setNamesTrouble(error.locale !== undefined ? [error.locale] : sent);
       return true;
     }
     if (field === "name") {

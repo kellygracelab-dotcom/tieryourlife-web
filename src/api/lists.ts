@@ -160,7 +160,7 @@ export interface PublishRequest {
   /** True takes the list out of its topic; a null topicId alone keeps the old one. */
   noTopic?: boolean;
   /**
-   * A topic of the person's own to propose, two to forty characters: it
+   * A topic of the person's own to propose, one to forty characters: it
    * waits for a moderator, the list under Other until then. Never beside
    * topicId or noTopic, which the backend refuses.
    */

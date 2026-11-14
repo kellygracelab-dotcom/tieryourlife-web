@@ -51,6 +51,11 @@ describe("parseApiError", () => {
     ],
     [
       400,
+      json({ error: "A translation", code: "INVALID", detail: "names", locale: "ja" }),
+      { kind: "invalid", detail: "A translation", code: "INVALID", field: "names", locale: "ja" },
+    ],
+    [
+      400,
       json({ error: "Three waiting", code: "TOO_MANY_PENDING", id: 7 }),
       { kind: "invalid", detail: "Three waiting", code: "TOO_MANY_PENDING" },
     ],
