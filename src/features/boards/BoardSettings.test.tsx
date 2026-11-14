@@ -320,7 +320,9 @@ describe("BoardSettings: public", () => {
     cleanup();
     show(board, { ...signedIn, uid: "author" }, deps);
     await userEvent.click(publicSwitch());
-    const publishList = await screen.findByRole("button", { name: "Publish a separate list" });
+    // A copy of one's own list may go out as a list; there is no "Publish a separate list".
+    expect(screen.queryByRole("button", { name: "Publish a separate list" })).toBeNull();
+    const publishList = await screen.findByRole("button", { name: "Publish" });
     expect(publish).not.toHaveBeenCalled();
     await userEvent.click(publishList);
     expect(publish).toHaveBeenCalledExactlyOnceWith(
@@ -373,7 +375,7 @@ describe("BoardSettings: public", () => {
         );
         expect(alert).not.toHaveTextContent("Take one down");
       } else {
-        expect(alert).toHaveTextContent("Take one down in Your public lists first.");
+        expect(alert).toHaveTextContent("Take one down first: show the Public ones in Your lists");
       }
       expect(publicSwitch()).not.toBeChecked();
       expect(publish).toHaveBeenCalledTimes(1);
@@ -547,9 +549,14 @@ describe("BoardSettings: public", () => {
     expect(held).toMatchObject({ publishedId: null, rankingOf: null, authorName: "Olena" });
   });
 
-  it("asks before publishing a renamed copy and does not carry stale source positions", async () => {
+  it("never publishes a renamed copy of somebody else's list as a list, and sends no stale source positions", async () => {
     const board = filmBoard();
-    const source = { ...boardView(board, "Films").list, id: "SRC", updatedAt: 125 };
+    const source = {
+      ...boardView(board, "Films").list,
+      id: "SRC",
+      authorUid: "author",
+      updatedAt: 125,
+    };
     const publish = vi.fn(async () => ({ id: "NEW" }));
     const classify = vi.fn(async () => ({ kind: "list" as const, basedOn: null, version: 125 }));
     show(
@@ -565,18 +572,12 @@ describe("BoardSettings: public", () => {
     );
     await userEvent.click(publicSwitch());
     const review = await screen.findByRole("group", { name: "Review publication" });
-    expect(publish).not.toHaveBeenCalled();
+    expect(review).toHaveTextContent("This is someone else’s list");
+    expect(within(review).queryByRole("button", { name: /Publish/ })).toBeNull();
     await userEvent.click(within(review).getByRole("button", { name: "Cancel" }));
     expect(publish).not.toHaveBeenCalled();
-    await userEvent.click(publicSwitch());
-    await userEvent.click(await screen.findByRole("button", { name: "Publish a separate list" }));
-    await waitFor(() => expect(held.publishedId).toBe("NEW"));
-    const request = classify.mock.calls.at(-1);
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "My favourites", sourceVersion: 125 }),
-      expect.objectContaining({ uid: "me" }),
-    );
-    expect(JSON.stringify(request)).not.toContain("sourceIndex");
+    expect(held.publishedId).toBeNull();
+    expect(JSON.stringify(classify.mock.calls.at(-1))).not.toContain("sourceIndex");
   });
 
   it("says a list the backend holds for a moderator waits, and offers no link to it until an Update comes back without the hold", async () => {

@@ -72,12 +72,12 @@ async function startGame(name: RegExp) {
   await userEvent.click(screen.getByRole("button", { name: "Start" }));
 }
 
-/** Answers with ← and waits for the next duel. */
-async function pickLeft(times: number) {
+/** Answers with a key, ← by default, and waits for the next duel or the end. */
+async function pickLeft(times: number, key = "{ArrowLeft}") {
   for (let i = 0; i < times; i++) {
-    const label = () => screen.queryAllByText(/^(Duel|Refine)/)[0]?.textContent;
+    const label = () => screen.queryAllByText(/^Duel/)[0]?.textContent;
     const before = label();
-    await userEvent.keyboard("{ArrowLeft}");
+    await userEvent.keyboard(key);
     await waitFor(() => expect(label()).not.toBe(before));
   }
 }
@@ -110,14 +110,16 @@ describe("Play on a page", () => {
     expect(screen.getByText("King of the hill")).toBeInTheDocument();
 
     await pickLeft(2);
-    expect(await screen.findByRole("heading", { name: "Your result" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+    // The last duel puts the result on the board: no result screen, nothing to confirm.
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("heading", { name: "Your result" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^(Apply|Refine)$/ })).toBeNull();
 
     const [rows, played] = onApply.mock.lastCall!;
     expect(rows).toHaveLength(3);
     expect(rows.flat().sort()).toEqual(["c0", "c1", "c2"]);
     expect(played).toEqual({ kind: "hill", cards: 3, duels: 2 });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(store.read(playKey("b1"))).toBeNull();
 
     const receipt = notify.mock.lastCall![0] as SnackbarNotice;
@@ -126,18 +128,36 @@ describe("Play on a page", () => {
     expect(takeBack).toHaveBeenCalled();
   });
 
-  it("gives no receipt when Apply has nothing to take back", async () => {
+  it("says what a game did with no Undo of its own when the board's Undo takes it back", async () => {
     const notify = vi.fn();
-    render(<Page store={memoryStore()} notify={notify} theirs />);
+    const onApply = vi.fn<PlayOptions["onApply"]>(() => undefined);
+    render(<Page store={memoryStore()} notify={notify} onApply={onApply} theirs />);
     await userEvent.click(playButton());
     expect(
-      screen.getByText("The result goes into Mine. Theirs doesn’t change."),
+      screen.getByText("The result goes into Mine. The author’s ranking doesn’t change."),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole("radio", { name: /Bracket/ }));
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     await pickLeft(2);
-    await userEvent.click(await screen.findByRole("button", { name: "Put in Mine" }));
-    expect(notify).not.toHaveBeenCalled();
+    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+    expect(notify).toHaveBeenCalledExactlyOnceWith({ text: "Board arranged from 2 duels" });
+  });
+
+  it("puts nothing anywhere when every duel was skipped, and says so", async () => {
+    const store = memoryStore();
+    const notify = vi.fn();
+    const onApply = vi.fn<PlayOptions["onApply"]>(() => undefined);
+    render(<Page store={store} notify={notify} onApply={onApply} />);
+    await startGame(/King of the hill/);
+    await pickLeft(2, "{ArrowDown}");
+    await waitFor(() =>
+      expect(notify).toHaveBeenCalledWith({
+        text: "Every duel was skipped, so there is nothing to apply.",
+      }),
+    );
+    expect(onApply).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(store.read(playKey("b1"))).toBeNull();
   });
 
   it("keeps the game on Quit, says so, and resumes it from the picker", async () => {
@@ -293,24 +313,11 @@ describe("Play on a page", () => {
     expect(screen.getByText("3 cards from The pool")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
-    await pickLeft(1);
-    await userEvent.keyboard("{ArrowLeft}");
-    await userEvent.click(await screen.findByRole("button", { name: "Apply" }));
-    expect(onApply).toHaveBeenCalled();
+    await pickLeft(2);
+    await waitFor(() => expect(onApply).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await userEvent.click(playButton());
     expect(screen.getByText("4 cards from Films")).toBeInTheDocument();
-  });
-
-  it("keeps a finished game when its result is quit", async () => {
-    const store = memoryStore();
-    render(<Page store={store} />);
-    await startGame(/King of the hill/);
-    await pickLeft(2);
-    await screen.findByRole("heading", { name: "Your result" });
-    await userEvent.click(screen.getByRole("button", { name: "Quit" }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(store.read(playKey("b1"))).not.toBeNull();
   });
 
   it("remembers the last game on this device", async () => {
@@ -322,34 +329,6 @@ describe("Play on a page", () => {
     render(<Page store={store} boardKey="b2" />);
     await userEvent.click(playButton());
     expect(screen.getByRole("radio", { name: /Bracket/ })).toBeChecked();
-  });
-
-  it("cancels a result with a way back to it, and plays again over the same cards", async () => {
-    const store = memoryStore();
-    const notify = vi.fn();
-    render(<Page store={store} notify={notify} />);
-    await startGame(/King of the hill/);
-    await pickLeft(2);
-    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    const receipt = notify.mock.lastCall![0] as SnackbarNotice;
-    expect(receipt.text).toBe("Result discarded");
-    expect(store.read(playKey("b1"))).toBeNull();
-
-    act(() => receipt.action!.onClick());
-    expect(screen.getByRole("heading", { name: "Your result" })).toHaveFocus();
-    await userEvent.click(screen.getByRole("button", { name: "Play again" }));
-    expect(screen.getByRole("dialog", { name: "Play" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /King of the hill/ })).toBeChecked();
-    // The finished game stays put down until another starts, as on the app.
-    expect(store.read(playKey("b1"))).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Resume" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(store.read(playKey("b1"))).not.toBeNull();
-    await userEvent.click(playButton());
-    await userEvent.click(screen.getByRole("button", { name: "Start" }));
-    expect((notify.mock.lastCall![0] as SnackbarNotice).text).toBe("Saved game discarded");
   });
 
   it("keeps nothing of a game quit before any answer, and says nothing", async () => {
@@ -408,31 +387,5 @@ describe("Play on a page", () => {
     } finally {
       window.removeEventListener("keydown", heard);
     }
-  });
-
-  it("leaves the keys to the browser on the result, and its tiers are a stop for Tab", async () => {
-    render(<Page store={memoryStore()} />);
-    await startGame(/King of the hill/);
-    await pickLeft(2);
-    await screen.findByRole("heading", { name: "Your result" });
-    const tiers = screen.getByRole("group", { name: "Your result" });
-    expect(tiers).toHaveAttribute("tabindex", "0");
-    await userEvent.tab();
-    await userEvent.tab();
-    expect(tiers).toHaveFocus();
-    // ↓ and Page Down scroll a result longer than the window.
-    for (const key of ["ArrowDown", "PageDown", "End", " "]) {
-      const press = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
-      tiers.dispatchEvent(press);
-      expect(press.defaultPrevented).toBe(false);
-    }
-  });
-
-  it("refines a result on the same screen", async () => {
-    render(<Page store={memoryStore()} cards={cardsOf(6)} />);
-    await startGame(/King of the hill/);
-    await pickLeft(5);
-    await userEvent.click(await screen.findByRole("button", { name: "Refine" }));
-    expect(screen.getAllByText(/^Refine · 1 of \d+$/)).not.toHaveLength(0);
   });
 });

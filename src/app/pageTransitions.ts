@@ -10,7 +10,7 @@ import type { DataRouter } from "react-router";
 type Way = "push" | "back" | "none";
 
 /** The top-level switches: the header's own links and the home page's tabs. */
-const TOP = new Set(["/", "/following", "/b", "/me"]);
+const TOP = new Set(["/", "/following", "/b"]);
 
 const inAdmin = (path: string): boolean => path === "/admin" || path.startsWith("/admin/");
 

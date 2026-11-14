@@ -17,7 +17,6 @@ vi.mock("../lib/api", async () => ({
   rearrangeRanking: vi.fn(),
   loadList: vi.fn(),
   loadRanking: vi.fn(),
-  keepRanking: vi.fn(),
   noteTake: vi.fn(),
 }));
 
@@ -228,7 +227,7 @@ describe("Shell header", () => {
     expect(button).toHaveFocus();
 
     await userEvent.click(button);
-    await userEvent.click(screen.getByRole("link", { name: "Your public lists" }));
+    await userEvent.click(within(menu).getByRole("link", { name: "Your lists" }));
     expect(menu.open).toBe(false);
   });
 });
@@ -341,8 +340,10 @@ describe("Shell account", () => {
     expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
     expect(screen.getByText("D")).toHaveClass("face--initial");
     expect(screen.getByText("Danylo")).toBeInTheDocument();
-    // One place for everything that is theirs: the lists and the rankings together.
-    expect(screen.getByRole("link", { name: "Your public lists" })).toHaveAttribute("href", "/me");
+    // One place for everything that is theirs: their lists, the public ones among them.
+    const menu = within(screen.getByLabelText("Your account").closest("details")!);
+    expect(menu.getByRole("link", { name: "Your lists" })).toHaveAttribute("href", "/b");
+    expect(screen.queryByRole("link", { name: "Your public lists" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Your rankings" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });

@@ -25,6 +25,7 @@ import {
   type SyncRefusal,
   type SyncStatus,
 } from "./boardSync";
+import { tidyCopies } from "./listCopies";
 import { deviceNameOf } from "./deviceName";
 import { owners as siteOwners, type BoardOwners, type GuestBoardsQuestion } from "./owners";
 import { markedTitle, type Board } from "./model";
@@ -279,6 +280,16 @@ function ForAccount({
   useEffect(() => {
     runAgain.current = run;
   }, [run]);
+
+  // A list saved twice, before Save reused the board it had, left two boards
+  // of it (QA, 14.11.2026): the extra ones go to the trash, where they can be
+  // brought back. Only once the account's boards are all here, so the one
+  // kept is chosen among all of them; again after each run, for a copy
+  // another device made meanwhile.
+  useEffect(() => {
+    if (uid !== null && backUp && lastSyncedAt === null) return;
+    tidyCopies(repository, store, uid, now());
+  }, [uid, backUp, lastSyncedAt, repository, store, now]);
 
   // On sign-in, or with a page that opens signed in.
   useEffect(() => {

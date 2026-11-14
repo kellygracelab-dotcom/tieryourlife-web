@@ -23,7 +23,7 @@ import type { AccountAction } from "../api/client";
 import { captureAccountAction } from "../lib/accountAction";
 import { RankingOffer, settleRankingOffer } from "../features/boards/RankingOffer";
 import { useBoards } from "../features/boards/useBoards";
-import { useSaveToMine } from "../features/boards/useSaveToMine";
+import { useSaveToMine, type Shown } from "../features/boards/useSaveToMine";
 import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
@@ -187,7 +187,7 @@ interface WhoseSwitchProps {
 }
 
 /**
- * Theirs | Mine, the app's switch: one pill, the chosen half filled and
+ * Author | Mine, the app's switch: one pill, the chosen half filled and
  * ticked. The left half is whoever's placing is on screen: the author's, or
  * a reader's by name with a cross back to the author's.
  */
@@ -374,14 +374,30 @@ function OpenList({
     loadDraftLabels(localStorageStore, scopeOf(list)),
   );
   const mineList = useMemo(() => withLabels(list, mineLabels), [list, mineLabels]);
-  // What Mine held before rows were put in it: the board's own Undo goes back there.
-  const [mineBefore, setMineBefore] = useState<Rows | null>(null);
+  // What Mine held before rows were put in it: the board's own Undo goes back
+  // there. Before a game it is the other side of the game's step, which Undo
+  // turns over: before the game, after it, and back.
+  const [mineBefore, setMineBefore] = useState<{ rows: Rows; toggles: boolean } | null>(null);
+  // A game has just put its result in Mine: the offer to show it may come.
+  const [afterGame, setAfterGame] = useState(false);
   // Rows into Mine, which is drawn afresh from the draft: Play's result, or
   // Theirs with a first move made on it, whose tier words come too. Play's
   // result leaves the words Mine wears.
-  const putInMine = (rows: Rows, labels?: TierLabels | null, poolOrder?: readonly number[]) => {
+  const putInMine = (
+    rows: Rows,
+    labels?: TierLabels | null,
+    poolOrder?: readonly number[],
+    beforeGame?: Rows,
+  ) => {
     const placed = rows.map((row) => [...row]);
-    setMineBefore(loadPlacedDraft(localStorageStore, scopeOf(list)));
+    const before = loadPlacedDraft(localStorageStore, scopeOf(list));
+    setMineBefore(
+      beforeGame !== undefined
+        ? { rows: beforeGame, toggles: true }
+        : before === null
+          ? null
+          : { rows: before, toggles: false },
+    );
     saveDraft(localStorageStore, scopeOf(list), placed, labels, poolOrder);
     setMineRows(placed);
     setMineLabels(loadDraftLabels(localStorageStore, scopeOf(list)));
@@ -434,18 +450,20 @@ function OpenList({
     theirs: true,
     games,
     notify: setNotice,
-    // As on the app: "Board arranged · Undo", and Undo gives back a Mine made by hand.
+    // The game ends on Mine, its result one step of the board's history:
+    // Undo puts Mine back as it was before the game, and again brings the
+    // game's arrangement back.
     onApply: (rows) => {
-      const before = localStorageStore.read(draftKey(list.id));
-      const was = shown;
       const beforeRows = mineRows ?? author.rows;
       const placed = new Set(beforeRows.flat());
+      const was = loadDraft(localStorageStore, scopeOf(list)) ?? list.tiers.map((): number[] => []);
       putInMine(
         rows.map((row) => row.map(Number)),
         undefined,
         [...mineOrder.filter((i) => !placed.has(i)), ...beforeRows.flat()],
+        was,
       );
-      return () => restoreMine(before, was);
+      setAfterGame(true);
     },
   });
   // Back closes the sheet first, then Play, before it leaves the list: one
@@ -495,17 +513,29 @@ function OpenList({
   };
   // Somebody else's tier words over the same cards: the board draws Theirs under them.
   const theirsList = useMemo(() => ({ ...list, tiers: theirs.tiers }), [list, theirs]);
-  // A reader's ranking on show is what Save offers as Theirs, as on the phone.
-  const shownPlacing = useMemo(
-    () =>
-      chosen === null ? null : { name: chosen.authorName, tiers: theirs.tiers, rows: theirs.rows },
-    [chosen, theirs],
-  );
   const keptBoards = useBoards(repository ?? site);
   const knownChoice = keptBoards.some(
     (board) => board.takenFrom === list.id && board.rankingChoice !== undefined,
   );
-  const saving = useSaveToMine(list, setNotice, { repository, shown: shownPlacing });
+  // Save keeps what the switch shows: the author's arrangement, or one's own.
+  const authorShown = shown === "theirs" && author.known;
+  const toSave = useMemo<Shown>(
+    () =>
+      authorShown
+        ? { whose: "author", rows: author.rows, tiers: list.tiers }
+        : {
+            whose: "mine",
+            rows: mineRows,
+            tiers: mineList.tiers,
+            poolOrder: loadPoolOrder(localStorageStore, scopeOf(list)),
+          },
+    [authorShown, author, list, mineRows, mineList],
+  );
+  const saveCopy = useSaveToMine(list, toSave, setNotice, { repository });
+  const saving = {
+    ...saveCopy,
+    label: authorShown ? strings.list.saveAuthors : strings.list.saveMyList,
+  };
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
   // Who else ranked it is a line of the menu, the one place the number is said.
@@ -524,6 +554,8 @@ function OpenList({
   // again first; one its author changed since sends nothing.
   const [showing, setShowing] = useState(false);
   const arranged = mineRows !== null && mineRows.some((row) => row.length > 0);
+  const allPlaced =
+    list.items.length > 0 && new Set(mineRows?.flat() ?? []).size === list.items.length;
   const showToOthers = async (confirmed?: AccountAction) => {
     if (account?.kind !== "signedIn") {
       void signIn();
@@ -686,11 +718,8 @@ function OpenList({
       {!outOfSight && !own && shown === "mine" && !sheet && !playing && (
         <RankingOffer
           listId={list.id}
-          placed={mineRows?.flat().length ?? 0}
-          total={list.items.length}
+          due={arranged && (afterGame || allPlaced)}
           known={knownChoice}
-          remember={saving.rememberChoice}
-          keep={saving.keepProgress}
           share={showToOthers}
         />
       )}
@@ -702,9 +731,8 @@ function OpenList({
             <RankingBoard
               key={`${list.id}:${mineRound}`}
               list={mineList}
-              tierLabels={mineLabels ?? undefined}
-              onListChanged={onListChanged}
-              undoTo={mineBefore}
+              undoTo={mineBefore?.rows ?? null}
+              undoToggles={mineBefore?.toggles === true}
               onRows={(rows) =>
                 // Nothing placed in Mine: Play starts from the author's, as before.
                 setMineRows(

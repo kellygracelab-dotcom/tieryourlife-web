@@ -12,16 +12,24 @@ import { liveItems, rankedCount, setRanking, type Board } from "./model";
 import { hasRankingEdit, rowsOfSource } from "./sourceRanking";
 import type { BoardsRepository } from "./repository";
 
+/**
+ * The offer on a board saved from somebody else's list: once a game put its
+ * result on the board, or once every card has its place, Show in Rankings
+ * puts the board's arrangement among the list's.
+ */
 export function CopyRankingOffer({
   board,
   sourceId,
   repository,
   notify,
+  afterGame = false,
 }: {
   board: Board;
   sourceId: string;
   repository: BoardsRepository;
   notify: (notice: SnackbarNotice) => void;
+  /** A game has just put its result on the board. */
+  afterGame?: boolean;
 }) {
   const { account } = useSession();
   const owner = account?.kind === "signedIn" ? account.uid : null;
@@ -32,7 +40,8 @@ export function CopyRankingOffer({
     account !== null &&
     board.rankingOf === null &&
     hasRankingEdit(board.uid) &&
-    placed * 10 > count * 3;
+    placed > 0 &&
+    (afterGame || placed === count);
   useEffect(() => {
     if (
       !ready ||
@@ -98,15 +107,16 @@ export function CopyRankingOffer({
   return (
     <RankingOffer
       listId={sourceId}
-      placed={placed}
-      total={count}
+      due
       known={
         board.rankingChoice !== undefined ||
         repository
           .all()
           .some((other) => other.takenFrom === sourceId && other.rankingChoice !== undefined)
       }
-      remember={(choice) => {
+      // Kept with the board, so the phone does not ask again: shown, or asked and let be.
+      onSettled={(shown) => {
+        const choice = shown ? "ranking" : "offered";
         const current = repository.get(board.uid);
         if (
           current &&
@@ -115,7 +125,6 @@ export function CopyRankingOffer({
         )
           repository.save({ ...current, rankingChoice: choice });
       }}
-      keep={() => (repository.kept(board.uid) ? board.uid : null)}
       share={share}
     />
   );

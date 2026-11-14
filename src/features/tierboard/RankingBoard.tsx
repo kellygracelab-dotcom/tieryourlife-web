@@ -20,25 +20,10 @@ import {
 import { createPortal } from "react-dom";
 import type { ApiError } from "../../api/errors";
 import type { EditorCredit } from "../../api/pictureAttribution";
-import type { SavedRanking } from "../../api/rank";
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
-import { useSession } from "../../app/session";
-import { keepRanking, rankingStillThere, rearrangeRanking } from "../../lib/api";
-import { isEditorialAuthor } from "../../lib/editorial";
 import { holds } from "../../lib/locale";
 import { type KeyValueStore, localStorageStore } from "../../lib/storage";
-import { KeepDialog, type KeepState } from "../ranking/KeepDialog";
-import {
-  forgetKept,
-  keptBy,
-  keptFor,
-  readKept,
-  writeKept,
-  type KeptRanking,
-} from "../ranking/kept";
 import { rankFailureText } from "../ranking/failureText";
-import { ResultBar, type FinishState } from "../ranking/ResultBar";
-import { downloadShare, type Share } from "../ranking/share";
 import { errorOf } from "../../api/errors";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -50,9 +35,8 @@ import { DragGhost } from "./DragGhost";
 import { AboutPicture, hasAbout, openPage, pageOf, type Anchor } from "./AboutPicture";
 import { CardCredit } from "./cardCredit";
 import { flyIn } from "./flight";
-import { arrange } from "./arrange";
 import { DOUBLE_TAP_MS, type DragState } from "./drag";
-import { draftKey, loadDraft, loadPoolOrder, saveDraft, scopeOf, type TierLabels } from "./draft";
+import { draftKey, loadDraft, loadPoolOrder, saveDraft, scopeOf } from "./draft";
 import {
   canUndo,
   init,
@@ -80,14 +64,6 @@ import type { BoardSize } from "./nameFit";
 import "./board.css";
 import "./ranking.css";
 import { sizedFor } from "../../lib/pictureSize";
-
-export type Keep = (
-  listId: string,
-  rows: readonly (readonly number[])[],
-  version?: number,
-  tierLabels?: TierLabels,
-  poolOrder?: readonly number[],
-) => Promise<SavedRanking>;
 
 /** The board as the owner's editor: it starts from what is saved, and Save writes it back. */
 export interface EditMode {
@@ -158,39 +134,22 @@ interface RankingBoardProps {
    * store by default, the browser's for a page whose store is scratch.
    */
   device?: KeyValueStore;
-  keep?: Keep;
-  /** Changes a ranking already kept, behind the same link. */
-  rearrange?: (
-    code: string,
-    rows: Rows,
-    tierLabels?: TierLabels,
-    poolOrder?: readonly number[],
-  ) => Promise<unknown>;
-  /**
-   * Whether a ranking this device finished is still behind its link: false
-   * only when the server says it is gone (deleted in another browser).
-   */
-  stillThere?: (code: string) => Promise<boolean>;
-  share?: Share;
   edit?: EditMode;
   /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
   strip?: boolean;
   seed?: Seed;
   /** Every arrangement as it is made, for a page that starts something else from it (Play). */
   onRows?: (rows: Rows) => void;
-  /** The list was republished while it was ranked: the page reads it again. */
-  onListChanged?: () => void;
   /**
    * What the board held before the page put other rows in it (a first move
    * on Theirs, Play's result): the bar's Undo and Ctrl+Z go back to it.
    */
   undoTo?: Rows | null;
   /**
-   * The words a reader gave the tiers, when this version started from their
-   * placing: the list comes under them already, and Finish keeps them with
-   * the ranking.
+   * `undoTo` is the board before a game: the game's result is one step that
+   * Undo turns over, before the game and after it, as often as it is pressed.
    */
-  tierLabels?: TierLabels;
+  undoToggles?: boolean;
 }
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
@@ -465,13 +424,17 @@ function useBoard(
   seeded = false,
   undoTo: Rows | null = null,
   initialPool?: readonly number[],
+  undoToggles = false,
 ) {
   const scope = scopeOf(list);
   const kept = () => (seeded ? null : loadDraft(store, scope));
   const poolOrder = () => (seeded ? undefined : (loadPoolOrder(store, scope) ?? initialPool));
   const [state, dispatch] = useReducer(reduce, list, (l) => {
     const start = init(l.tiers.length, l.items.length, kept() ?? initialRows, poolOrder());
-    return undoTo === null ? start : { ...start, history: [undoTo] };
+    if (undoTo === null) return start;
+    return undoToggles
+      ? { ...start, history: [undoTo], toggleAt: 0 }
+      : { ...start, history: [undoTo] };
   });
   // The list changed shape under the board — the owner added or took away a
   // card — and the rows come from the page again. A state that follows a prop
@@ -540,17 +503,12 @@ export function RankingBoard({
   hitTest,
   store = localStorageStore,
   device = store,
-  keep = keepRanking,
-  rearrange = rearrangeRanking,
-  stillThere = rankingStillThere,
-  share = downloadShare,
   edit,
   strip = false,
   seed,
   onRows,
-  onListChanged,
   undoTo = null,
-  tierLabels,
+  undoToggles = false,
 }: RankingBoardProps) {
   const seeded = seed !== undefined;
   const [state, dispatchBoard] = useBoard(
@@ -560,6 +518,7 @@ export function RankingBoard({
     seeded,
     undoTo,
     edit?.poolOrder,
+    undoToggles,
   );
   // While the pool's search hides cards, a placement picks the next one among
   // those in sight: a hidden pick took the next number key unseen.
@@ -575,49 +534,8 @@ export function RankingBoard({
   );
   const boardSize = useBoardSize();
   const coarse = fingerFirst();
-  const { account, signIn } = useSession();
-  const guest = account?.kind !== "signedIn";
-  const who = account === null ? undefined : account.kind === "signedIn" ? account.uid : null;
-  // A ranking finished here before, showing as it was: its link again, not a
-  // second Finish. Only to the person it is theirs: on a shared browser the
-  // guest after a sign-out, or the next account, is offered their own Finish.
-  const keptHere = (here: string | null | undefined): FinishState => {
-    const code =
-      edit === undefined && !seeded
-        ? keptFor(keptBy(readKept(store, list.id), here), list.updatedAt, state.rows)
-        : null;
-    return code === null ? { status: "idle" } : { status: "done", code };
-  };
-  const [finish, setFinish] = useState<FinishState>(() => keptHere(who));
-  // Firebase says who is here a moment after the page draws, and people sign
-  // in and out on it: what was finished here is shown again for whoever came.
-  const [shownTo, setShownTo] = useState(who);
-  if (shownTo !== who) {
-    setShownTo(who);
-    if (finish.status === "idle" || finish.status === "done") setFinish(keptHere(who));
-  }
-  // The link shown from the device's copy is asked about once, behind the
-  // page: deleted in another browser, the copy goes and Finish comes back.
-  // A link just made here needs no asking.
-  const asked = useRef(new Set<string>());
-  const shownCode = finish.status === "done" ? finish.code : null;
-  useEffect(() => {
-    if (shownCode === null || asked.current.has(shownCode)) return;
-    asked.current.add(shownCode);
-    stillThere(shownCode).then(
-      (there) => {
-        if (there) return;
-        forgetKept(store, list.id, shownCode);
-        setFinish((now) =>
-          now.status === "done" && now.code === shownCode ? { status: "idle" } : now,
-        );
-      },
-      () => undefined,
-    );
-  }, [shownCode, stillThere, store, list.id]);
   const [save, setSave] = useState<SaveState>({ status: "idle" });
-  const locked = finish.status === "saving" || finish.status === "done" || save.status === "saving";
-  const [offer, setOffer] = useState<KeepState>("closed");
+  const locked = save.status === "saving";
   const drag = useTileDrag(dispatch, hitTest);
   const lifted = drag.state.phase === "dragging" ? drag.state.item : null;
   const dropTarget = drag.state.phase === "dragging" ? drag.state.target : null;
@@ -827,94 +745,6 @@ export function RankingBoard({
     setMenusOpened(next);
   }, [device]);
 
-  // The result opens above the board, and the person may be far below it.
-  const finished = finish.status !== "idle";
-  useEffect(() => {
-    if (!finished) return;
-    const result = section.current?.querySelector(".result");
-    if (result != null && typeof result.scrollIntoView === "function") {
-      result.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    }
-  }, [finished]);
-
-  const onFinish = () => {
-    setFinish({ status: "saving" });
-    // A finished board places nothing: no card stays picked, nor a line saying how to place it.
-    dispatch({ type: "select", item: null });
-    const placed = state.rows.map((row) => [...row]);
-    const uid = account?.kind === "signedIn" ? account.uid : null;
-    const before = readKept(store, list.id);
-    // Changed after Finish, a ranking finished here for this version of the
-    // list is changed behind its link, as the /r/ page's Edit does: the
-    // account's, or a guest's own while nobody has claimed it. One gone
-    // since, or not the caller's any more, is made anew.
-    const inPlace =
-      before !== null &&
-      before.version === list.updatedAt &&
-      (before.claimedBy === undefined ? uid === null : before.claimedBy === uid);
-    // A reader's tier words go with the rows; a version in the list's own words sends none.
-    const order = state.poolOrder === undefined ? undefined : pool(state);
-    const keepIt = () =>
-      order !== undefined
-        ? keep(list.id, placed, list.updatedAt, tierLabels, order)
-        : tierLabels === undefined
-          ? keep(list.id, placed, list.updatedAt)
-          : keep(list.id, placed, list.updatedAt, tierLabels);
-    const saved: Promise<KeptRanking> = inPlace
-      ? (order !== undefined
-          ? rearrange(before.code, placed, tierLabels, order)
-          : tierLabels === undefined
-            ? rearrange(before.code, placed)
-            : rearrange(before.code, placed, tierLabels)
-        ).then(
-          () => before,
-          (reason: unknown) =>
-            ["notFound", "notYours", "notSignedIn"].includes(errorOf(reason).kind)
-              ? keepIt()
-              : Promise.reject(reason),
-        )
-      : keepIt();
-    saved.then(
-      (kept) => {
-        // Made by an account, the ranking already sits in it: nothing to claim later.
-        const owner = uid === null ? {} : { claimedBy: uid };
-        writeKept(store, list.id, { ...kept, ...owner, rows: placed, version: list.updatedAt });
-        asked.current.add(kept.code);
-        setFinish({ status: "done", code: kept.code });
-        // The same link as before was offered already; only a new one is.
-        if (guest && kept !== before) setOffer("open");
-        // Kept by its /r/ link only: the list's public Rankings name the
-        // reader, so a placing joins them only when asked, as in the app.
-        // Nor is it a take: the app counts one on Save to my lists only.
-      },
-      (reason: unknown) => setFinish({ status: "failed", error: errorOf(reason) }),
-    );
-  };
-
-  const onGoogle = () => {
-    setOffer("busy");
-    signIn().then((outcome) =>
-      setOffer((now) => {
-        if (now === "closed") return now;
-        if (outcome.kind === "signedIn") return "closed";
-        if (outcome.kind === "cancelled") return "open";
-        return outcome.kind === "redirecting" ? "busy" : "failed";
-      }),
-    );
-  };
-  const onLinkOnly = useCallback(() => setOffer("closed"), []);
-  // Finish goes once the ranking is kept, and the focus with it: the keyboard
-  // carries on in the result, once the offer to keep it (if any) is answered.
-  const done = finish.status === "done";
-  useEffect(() => {
-    if (!done || offer !== "closed") return;
-    const active = document.activeElement;
-    if (active !== null && active !== document.body) return;
-    section.current
-      ?.querySelector<HTMLElement>(".result a[href], .result button:not([disabled])")
-      ?.focus({ preventScroll: true });
-  }, [done, offer]);
-
   // The owner's page keeps the draft: every placement goes out as it happens.
   const report = useRef(edit?.owner?.onChange);
   const follow = useRef(onRows);
@@ -1069,9 +899,7 @@ export function RankingBoard({
     !wide && rows > 1 ? Math.ceil(shown.length / 2) : shown.length,
   );
   const picked = selected !== null && left.includes(selected);
-  const allPlaced = left.length === 0 && finish.status !== "done";
-  // Finished with every card placed: the tray has nothing to say and goes.
-  const restEmpty = finish.status === "done" && left.length === 0;
+  const allPlaced = left.length === 0;
 
   // The dock is fixed to the window's foot; the page leaves room under the
   // board for it, its shadow says a row is underneath, and a card dragged
@@ -1079,7 +907,7 @@ export function RankingBoard({
   const { over } = useFixedDock({
     poolBox,
     boardEnd,
-    fixed: docked && !restEmpty && !seeded,
+    fixed: docked && !seeded,
     dragging: drag.state.phase === "dragging",
     dragNow: drag.current,
     nudge: drag.nudge,
@@ -1089,7 +917,7 @@ export function RankingBoard({
   // keeps that much room under the board and the last row scrolls clear.
   useEffect(() => {
     const box = poolBox.current;
-    if (box === null || wide || restEmpty || typeof ResizeObserver === "undefined") return;
+    if (box === null || wide || typeof ResizeObserver === "undefined") return;
     const root = document.documentElement;
     const observer = new ResizeObserver(() =>
       root.style.setProperty("--tray-h", `${Math.ceil(box.getBoundingClientRect().height)}px`),
@@ -1099,7 +927,7 @@ export function RankingBoard({
       observer.disconnect();
       root.style.removeProperty("--tray-h");
     };
-  }, [wide, restEmpty]);
+  }, [wide]);
   const poolClasses = [
     "pool",
     (docked || !wide) && rows === 1 && "pool--single",
@@ -1107,7 +935,6 @@ export function RankingBoard({
     dropTarget?.kind === "pool" && "pool--target",
     picked && "pool--picked",
     lifted !== null && left.includes(lifted) && "pool--dragging",
-    finish.status === "done" && "pool--rest",
     over && "pool--over",
     dropping && "pool--drop",
   ]
@@ -1156,16 +983,6 @@ export function RankingBoard({
             {saveLabel(edit, save.status === "saving")}
           </Button>
         )}
-        {edit === undefined && finish.status !== "done" && (
-          <Button
-            variant="filled"
-            icon="check"
-            onClick={onFinish}
-            disabled={locked || placedCount(state) === 0}
-          >
-            {strings.rank.finish}
-          </Button>
-        )}
       </div>
     </div>
   );
@@ -1189,23 +1006,6 @@ export function RankingBoard({
           <p className="ranking__error" role="alert">
             {rankFailureText(save.error)}
           </p>
-        )}
-
-        {edit === undefined && !seeded && (
-          <ResultBar
-            finish={finish}
-            onRetry={onFinish}
-            onChange={() => {
-              setFinish({ status: "idle" });
-              setOffer("closed");
-            }}
-            download={(address) => share(list, state.rows, address)}
-            reload={onListChanged}
-            kept={!guest}
-            save={guest ? () => setOffer("open") : undefined}
-            // A template has no author's version to sit beside, and the house is nobody's.
-            compared={!isEditorialAuthor(list.authorUid) && arrange(list).known}
-          />
         )}
 
         {!inHead && edit?.owner?.status}
@@ -1276,7 +1076,7 @@ export function RankingBoard({
             ? createPortal(bar, frame.headSlot)
             : bar}
 
-        {!seeded && !restEmpty && (
+        {!seeded && (
           <div
             key={dock}
             ref={poolBox}
@@ -1313,20 +1113,18 @@ export function RankingBoard({
                   {plural(strings.rank.allPlaced, list.items.length)}
                 </p>
                 <p className="pool__done-note">
-                  {edit === undefined
-                    ? strings.rank.allPlacedNote
-                    : edit.owner?.live
-                      ? strings.rank.allPlacedNoteLive
-                      : strings.rank.allPlacedNoteEdit}
+                  {edit === undefined || edit.owner?.live
+                    ? strings.rank.allPlacedNoteLive
+                    : strings.rank.allPlacedNoteEdit}
                 </p>
-                {!edit?.owner?.live && (
+                {edit !== undefined && !edit.owner?.live && (
                   <Button
                     variant="filled"
                     icon="check"
-                    onClick={edit === undefined ? onFinish : onSave}
-                    disabled={locked || (edit?.owner !== undefined && !edit.owner.canSave)}
+                    onClick={onSave}
+                    disabled={locked || (edit.owner !== undefined && !edit.owner.canSave)}
                   >
-                    {edit === undefined ? strings.rank.finish : saveLabel(edit, false)}
+                    {saveLabel(edit, false)}
                   </Button>
                 )}
                 {addButton}
@@ -1448,9 +1246,6 @@ export function RankingBoard({
         )}
       </div>
 
-      {edit === undefined && !seeded && (
-        <KeepDialog state={offer} onGoogle={onGoogle} onLinkOnly={onLinkOnly} />
-      )}
       <DragGhost
         now={drag.current}
         subscribe={drag.subscribe}

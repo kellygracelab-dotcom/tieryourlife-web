@@ -11,7 +11,7 @@ import { boardOwners } from "./owners";
 import { readBackUp } from "./syncRecords";
 import { BoardSyncProvider } from "./BoardSyncProvider";
 import { publishedEntryOf, useBoardSync } from "./boardSync";
-import { newBoard } from "./model";
+import { newBoard, type Board } from "./model";
 import { boardsRepository } from "./repository";
 import type { BoardsApi } from "./sync";
 import { syncRecords } from "./syncRecords";
@@ -217,6 +217,27 @@ describe("BoardSyncProvider", () => {
     view.rerender(tree(GUEST, deps));
     expect(screen.getByTestId("probe")).not.toBe(next);
     expect(screen.getByTestId("probe")).toHaveTextContent("out");
+  });
+
+  it("puts a list saved twice in the trash once the account's boards are here, and nothing else", async () => {
+    const store = memoryStore();
+    const repository = boardsRepository(store);
+    const copyOf = (uid: string, listId: string): Board => ({
+      ...newBoard(uid, "Eurovision", 1, uids()),
+      takenFrom: listId,
+    });
+    repository.saveAll([
+      copyOf("a", "euro"),
+      copyOf("b", "euro"),
+      copyOf("c", "other"),
+      newBoard("own", "Own", 1, uids()),
+    ]);
+    const { api } = fakeApi();
+    show(signedIn, { children: null, repository, store, api, now: () => 40 });
+    await waitFor(() => expect(repository.get("b")?.deletedAt).toBe(40));
+    expect(repository.get("a")?.deletedAt).toBeNull();
+    expect(repository.get("c")?.deletedAt).toBeNull();
+    expect(repository.get("own")?.deletedAt).toBeNull();
   });
 
   it("sends the boards up on sign-in, and again a moment after a change", async () => {

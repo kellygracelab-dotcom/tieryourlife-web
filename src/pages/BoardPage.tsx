@@ -30,6 +30,7 @@ import {
   setCategory,
   setDisplayMode,
   trashBoard,
+  isOut,
   MAX_RANKED_TIERS,
   type Board,
 } from "../features/boards/model";
@@ -37,6 +38,7 @@ import {
   BoardSettings,
   type LoadTopics,
   type PublishingDeps,
+  type SettingsStart,
 } from "../features/boards/BoardSettings";
 import { CopyRankingOffer } from "../features/boards/CopyRankingOffer";
 import { noteRankingEdit } from "../features/boards/sourceRanking";
@@ -366,6 +368,12 @@ function OpenBoard({
   }, [editingTitle, empty]);
   // ?settings=1 opens the sheet at once: the admin's anonymous publish leads here.
   const [panel, setPanel] = useState<Panel>(params.get("settings") === "1" ? "settings" : "none");
+  // Publish, Update or Take it down chosen in the ⋮ menu: the sheet opens on it.
+  const [settingsStart, setSettingsStart] = useState<SettingsStart | undefined>(undefined);
+  const openSettings = (start?: SettingsStart) => {
+    setSettingsStart(start);
+    setPanel("settings");
+  };
   const [notice, setNotice] = useState<SnackbarNotice | null>(null);
   const forget = useCallback(() => setNotice(null), []);
   // A paste or a drop for a new card, on its way to the add box.
@@ -480,11 +488,17 @@ function OpenBoard({
       setArranged((round) => round + 1);
     }
   }
+  // The arrangement before the last game, by card uid, and the board drawn
+  // over its result: that board's Undo turns the game's step over, before
+  // the game and after it. Any other fresh board leaves it behind.
+  const [gameStep, setGameStep] = useState<{ round: number; rows: string[][] } | null>(null);
+  // A game has just put its result on the board: the offer to show it may come.
+  const [afterGame, setAfterGame] = useState(false);
   const play = usePlay(uid, playCards, playTiers, localStorageStore, {
     title: board?.title || strings.boards.untitled,
     games,
     notify: setNotice,
-    // The result replaces the arrangement; Undo puts the one before it back.
+    // The result replaces the arrangement, one step of the board's history.
     onApply: (rows) => {
       const before = repository.get(uid) ?? board;
       if (before === null) return;
@@ -492,13 +506,14 @@ function OpenBoard({
         itemsIn(before, tier.uid).map((item) => item.uid),
       );
       if (before.takenFrom !== null) noteRankingEdit(before.uid);
-      repository.save(arrangeItems(before, rows, now()));
-      setArranged((round) => round + 1);
-      return () => {
-        const current = repository.get(uid);
-        if (current !== null) repository.save(arrangeItems(current, was, now()));
-        setArranged((round) => round + 1);
-      };
+      const after = arrangeItems(before, rows, now());
+      // Drawn afresh here, not again as an arrangement that came from elsewhere.
+      setOwnArrangement(arrangementOf(after));
+      repository.save(after);
+      const round = arranged + 1;
+      setArranged(round);
+      setGameStep({ round, rows: was });
+      setAfterGame(true);
     },
   });
   usePlayBack(play);
@@ -832,6 +847,16 @@ function OpenBoard({
       : (itemUid: string, given: EditorCredit | null) =>
           keep(setCardCredit(latest(), itemUid, given, now()));
 
+  // The board before the last game, by the cards' numbers on the board drawn over its result.
+  const beforeGame =
+    gameStep !== null &&
+    gameStep.round === arranged &&
+    gameStep.rows.length === rankedTiers(board).length
+      ? gameStep.rows.map((row) =>
+          row.map((itemUid) => view.uids.indexOf(itemUid)).filter((index) => index >= 0),
+        )
+      : null;
+
   const tools = (
     <AddCardBox
       items={editorItems}
@@ -895,10 +920,45 @@ function OpenBoard({
                 }
               />
               <li>
-                <button type="button" className="menu__action" onClick={() => setPanel("settings")}>
+                <button type="button" className="menu__action" onClick={() => openSettings()}>
                   {strings.boards.settings}
                 </button>
               </li>
+              {/* One's own list goes out, is sent again and comes down from here
+                  too (Danylo, 14.11.2026); a saved copy goes out only as a ranking. */}
+              {house === null && board.takenFrom === null && !isOut(board) && (
+                <li>
+                  <button
+                    type="button"
+                    className="menu__action"
+                    onClick={() => openSettings("publish")}
+                  >
+                    {strings.new.publish}
+                  </button>
+                </li>
+              )}
+              {house === null && board.publishedId !== null && (
+                <>
+                  <li>
+                    <button
+                      type="button"
+                      className="menu__action"
+                      onClick={() => openSettings("update")}
+                    >
+                      {strings.boards.update}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="menu__action"
+                      onClick={() => openSettings("takeDown")}
+                    >
+                      {strings.boards.takeDown}
+                    </button>
+                  </li>
+                </>
+              )}
               <li>
                 <button type="button" className="menu__action" onClick={() => void shareBoard()}>
                   {strings.boards.shareImage}
@@ -929,6 +989,7 @@ function OpenBoard({
           sourceId={board.takenFrom}
           repository={repository}
           notify={setNotice}
+          afterGame={afterGame}
         />
       )}
       {house !== null && (
@@ -981,6 +1042,7 @@ function OpenBoard({
           topics={topics}
           onDone={closePanel}
           now={now}
+          start={settingsStart}
         />
       )}
       {panel === "propose" && (
@@ -997,9 +1059,9 @@ function OpenBoard({
             store.invalidate();
             store.refresh(me ?? "guest");
           }}
-          onClose={() => setPanel("settings")}
+          onClose={() => openSettings()}
           onDone={() => {
-            setPanel("settings");
+            openSettings();
             setNotice({ text: strings.propose.proposed });
             // The new proposal is offered in the picker at once: the sections are asked for again.
             store.invalidate();
@@ -1007,9 +1069,7 @@ function OpenBoard({
           }}
         />
       )}
-      {panel === "tooMany" && (
-        <TooManyDialog waiting={waiting} onClose={() => setPanel("settings")} />
-      )}
+      {panel === "tooMany" && <TooManyDialog waiting={waiting} onClose={() => openSettings()} />}
 
       {board.displayMode === "FLAT_RANKED" ? (
         <section className="owner" aria-label={strings.owner.title}>
@@ -1037,6 +1097,8 @@ function OpenBoard({
               list={view.list}
               store={scratch}
               device={localStorageStore}
+              undoTo={beforeGame}
+              undoToggles
               strip={board.displayMode === "HORIZONTAL_SCROLL"}
               edit={{
                 rows: view.rows,

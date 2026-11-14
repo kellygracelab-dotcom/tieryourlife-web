@@ -24,7 +24,6 @@ export function apiStubs() {
     embeddedRanking: vi.fn(() => null),
     loadRanking: pending(),
     rearrangeRanking: pending(),
-    keepRanking: pending(),
     carryGuest: pending(),
     claimKept: pending(),
     loadMyRankings: pending(),

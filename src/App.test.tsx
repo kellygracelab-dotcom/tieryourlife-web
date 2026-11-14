@@ -10,7 +10,6 @@ vi.mock("./lib/api", async () => ({
   unfollowAuthor: vi.fn(),
   loadList: vi.fn(),
   loadRanking: vi.fn(),
-  keepRanking: vi.fn(),
   noteTake: vi.fn(),
 }));
 vi.mock("./lib/account", () => ({

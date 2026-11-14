@@ -87,9 +87,6 @@ function AccountMenu({ name, photoUrl }: { name: string | null; photoUrl: string
         <li>
           <Link to="/b">{strings.nav.boards}</Link>
         </li>
-        <li>
-          <Link to="/me">{strings.nav.myLists}</Link>
-        </li>
         {appIsLive() && !onApple() && (
           <li>
             <a href={playUrl("menu")} target="_blank" rel="noopener">

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
-import type { Ranking } from "../api/rank";
 import { isOwnList, isSectionId, type PublishedList } from "../api/types";
 import { useSession } from "../app/session";
 import { SignInButton } from "../app/SignInButton";
@@ -11,20 +10,13 @@ import {
   boardOfList,
   boardOfRanking,
   keepOldDraft,
-  rankingBoardKey,
   type CopyBack,
 } from "../features/boards/ownList";
-import { boardFromDraft } from "../features/boards/publish";
 import { type BoardsRepository } from "../features/boards/repository";
 import { boards as site } from "../features/boards/owners";
 import { nextUid } from "../features/boards/useBoards";
-import {
-  draftOfRanking,
-  editDraftKey,
-  forkDraftKey,
-  loadEditorDraft,
-} from "../features/editor/model";
-import { loadList, loadRanking } from "../lib/api";
+import { editDraftKey, loadEditorDraft } from "../features/editor/model";
+import { loadList } from "../lib/api";
 import { copyPublishedBack } from "../lib/pictures";
 import { type KeyValueStore, localStorageStore } from "../lib/storage";
 import { useResource } from "../lib/useResource";
@@ -38,7 +30,6 @@ interface NewBoardPageProps {
   repository?: BoardsRepository;
   store?: KeyValueStore;
   load?: (id: string) => Promise<PublishedList>;
-  loadKept?: (code: string) => Promise<Ranking>;
   copyBack?: CopyBack;
   now?: () => number;
 }
@@ -49,16 +40,14 @@ const boardPath = (board: Board) => `/b/${encodeURIComponent(board.uid)}`;
  * New list, the one way a list is made: /b/new. A list is made where it is
  * changed, on a board, as on the phone, and kept private until the Public
  * switch in its settings says otherwise. This page only opens the board — a
- * new one, named or filed as the link asks (`title`, `category`), one made of
- * a ranking kept (`ranking`), or the one behind a list one published
- * (`list`) — and brings along what the old editor kept on this device, so
+ * new one, named or filed as the link asks (`title`, `category`), or the one
+ * behind a list one published (`list`) — and brings along what the old editor kept on this device, so
  * nothing begun there is lost.
  */
 export function NewBoardPage({
   repository = site,
   store = localStorageStore,
   load = loadList,
-  loadKept = (code) => loadRanking(code, true),
   copyBack = copyPublishedBack,
   now = Date.now,
 }: NewBoardPageProps) {
@@ -78,9 +67,7 @@ export function NewBoardPage({
   }
   const code = params.get("ranking");
   if (code !== null && code !== "") {
-    return (
-      <FromRanking code={code} repository={repository} store={store} load={loadKept} now={now} />
-    );
+    return <FromRanking code={code} repository={repository} store={store} />;
   }
   const category = params.get("category") ?? "";
   return (
@@ -145,49 +132,26 @@ function NewBoard({
   return null;
 }
 
-function FromRanking(props: {
-  code: string;
-  repository: BoardsRepository;
-  store: KeyValueStore;
-  load: (code: string) => Promise<Ranking>;
-  now: () => number;
-}) {
-  // A board already made of this ranking opens again: a second visit, from
-  // the menu on /me say, must not make a second copy.
-  const made = boardOfRanking(props.store, props.repository, props.code);
-  if (made !== null) return <Navigate to={boardPath(made)} replace />;
-  return <BoardOfRanking {...props} />;
-}
-
-function BoardOfRanking({
+/**
+ * A kept ranking made into a list of one's own was "Publish as my list";
+ * somebody else's list is not published as one's own any more (Danylo,
+ * 14.11.2026), and that board came without the author's pictures, names
+ * only. A board made of the ranking before opens; otherwise the link shows
+ * the ranking itself, pictures and all.
+ */
+function FromRanking({
   code,
   repository,
   store,
-  load,
-  now,
 }: {
   code: string;
   repository: BoardsRepository;
   store: KeyValueStore;
-  load: (code: string) => Promise<Ranking>;
-  now: () => number;
 }) {
-  const { state, retry } = useResource(code, load);
-  const navigate = useNavigate();
-  useOnce(state.status === "ready", () => {
-    if (state.status !== "ready") return;
-    const key = forkDraftKey(code);
-    const kept = loadEditorDraft(store, key);
-    const board = boardFromDraft(kept ?? draftOfRanking(state.value), now(), nextUid);
-    repository.save(board);
-    store.remove(key);
-    store.write(rankingBoardKey(code), board.uid);
-    void navigate(boardPath(board), { replace: true });
-  });
-  if (state.status === "error") {
-    return <ListPageTrouble error={state.error} retry={retry} words={strings.ranking} />;
-  }
-  return <ListPageLoading note={strings.ranking.opening} rows={2} />;
+  const made = boardOfRanking(store, repository, code);
+  return (
+    <Navigate to={made !== null ? boardPath(made) : `/r/${encodeURIComponent(code)}`} replace />
+  );
 }
 
 function OwnList({

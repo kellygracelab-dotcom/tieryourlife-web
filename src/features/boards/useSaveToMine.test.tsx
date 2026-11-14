@@ -1,17 +1,16 @@
-import { act, render, renderHook, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import type { PublishedList } from "../../api/types";
-import { memoryStore, type KeyValueStore } from "../../lib/storage";
+import { memoryStore } from "../../lib/storage";
 import type { SnackbarNotice } from "../../ui/Snackbar";
-import { saveDraft, scopeOf } from "../tierboard/draft";
-import { itemsIn, poolTier, rankedTiers } from "./model";
+import type { Rows } from "../tierboard/model";
+import { itemsIn, liveItems, poolTier, rankedTiers, type Board } from "./model";
 import { boardsRepository, type BoardsRepository } from "./repository";
-import { SaveToMineDialog } from "./SaveToMineDialog";
-import { useSaveToMine, type ShownPlacing } from "./useSaveToMine";
+import { useSaveToMine, type Shown } from "./useSaveToMine";
 
-const list = (placed: boolean): PublishedList => ({
+const list = (cover: string | null = null): PublishedList => ({
   id: "L1",
   title: "Albums",
   authorUid: "u1",
@@ -19,7 +18,7 @@ const list = (placed: boolean): PublishedList => ({
   authorPhotoUrl: null,
   category: "music",
   itemCount: 3,
-  coverImageUrl: null,
+  coverImageUrl: cover,
   previewImages: [],
   tierColors: [],
   updatedAt: 9,
@@ -29,174 +28,166 @@ const list = (placed: boolean): PublishedList => ({
     { label: "A", caption: null, colorLight: "#b03a32", colorDark: "#f1948c" },
   ],
   items: [
-    { title: "A", imageUrl: null, tierIndex: placed ? 0 : null },
-    { title: "B", imageUrl: null, tierIndex: placed ? 1 : null },
+    { title: "A", imageUrl: "https://img/a.jpg", tierIndex: 0 },
+    { title: "B", imageUrl: null, tierIndex: 1 },
     { title: "C", imageUrl: null, tierIndex: null },
   ],
 });
 
-const take = async () => undefined;
+const author = (of: PublishedList): Shown => ({
+  whose: "author",
+  rows: [[0], [1]],
+  tiers: of.tiers,
+});
+const mine = (of: PublishedList, rows: Rows | null): Shown => ({
+  whose: "mine",
+  rows,
+  tiers: of.tiers,
+});
 
 function Harness({
   of,
-  repository,
-  store,
-  notify,
   shown,
+  repository,
+  notify,
+  take,
 }: {
   of: PublishedList;
+  shown: Shown;
   repository: BoardsRepository;
-  store: KeyValueStore;
   notify: (notice: SnackbarNotice) => void;
-  shown: ShownPlacing | null;
+  take: () => Promise<void>;
 }) {
-  const saving = useSaveToMine(of, notify, { repository, store, now: () => 7, shown, take });
+  const saving = useSaveToMine(of, shown, notify, { repository, now: () => 7, take });
   return (
-    <>
-      <button type="button" onClick={saving.start}>
-        {saving.saved === null ? "Save" : "Open"}
-      </button>
-      <SaveToMineDialog saving={saving} />
-    </>
+    <button type="button" onClick={saving.start}>
+      {saving.saved ? "Saved" : "Save"}
+    </button>
   );
 }
 
-const show = (
-  of: PublishedList,
-  store: KeyValueStore = memoryStore(),
-  shown: ShownPlacing | null = null,
-) => {
-  const repository = boardsRepository(memoryStore());
+function show(of: PublishedList, shown: Shown, repository = boardsRepository(memoryStore())) {
   const notify = vi.fn<(notice: SnackbarNotice) => void>();
-  render(
+  const take = vi.fn(async () => undefined);
+  const page = (next: Shown) => (
     <MemoryRouter>
       <Routes>
         <Route
           path="/"
           element={
-            <Harness of={of} repository={repository} store={store} notify={notify} shown={shown} />
+            <Harness of={of} shown={next} repository={repository} notify={notify} take={take} />
           }
         />
         <Route path="/b/:uid" element={<h1>the board</h1>} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
-  return { repository, notify };
-};
+  const { rerender } = render(page(shown));
+  return { repository, notify, take, rerender: (next: Shown) => rerender(page(next)) };
+}
 
-const titlesIn = (repository: BoardsRepository) => {
-  const [board] = repository.all();
-  const [s, a] = rankedTiers(board!);
-  return {
-    s: itemsIn(board!, s!.uid).map((item) => item.title),
-    a: itemsIn(board!, a!.uid).map((item) => item.title),
-    pool: itemsIn(board!, poolTier(board!)!.uid).map((item) => item.title),
-  };
-};
+const titlesIn = (board: Board) => [
+  ...rankedTiers(board).map((tier) => itemsIn(board, tier.uid).map((item) => item.title)),
+  itemsIn(board, poolTier(board)!.uid).map((item) => item.title),
+];
 
 describe("useSaveToMine", () => {
-  it("saves at once when neither the author nor I placed anything, and offers to open the board", async () => {
-    const { repository, notify } = show(list(false));
+  it("saves the author's arrangement on Author, with the list's cover, and then reads Saved and opens it", async () => {
+    const { repository, notify, take } = show(list("https://img/cover.jpg"), author(list()));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(titlesIn(repository)).toEqual({ s: [], a: [], pool: ["A", "B", "C"] });
-    expect(repository.all()[0]).toMatchObject({ title: "Albums", category: "music", editedAt: 7 });
-    expect(notify).toHaveBeenCalledWith(expect.objectContaining({ text: "Saved to your lists." }));
-    notify.mock.calls[0]![0].action!.onClick();
-    expect(await screen.findByRole("heading", { name: "the board" })).toBeInTheDocument();
-  });
-
-  it("makes one copy a visit, as the phone does: once saved, the button opens it", async () => {
-    const { repository } = show(list(false));
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(repository.all()).toHaveLength(1);
-    await userEvent.click(screen.getByRole("button", { name: "Open" }));
-    expect(await screen.findByRole("heading", { name: "the board" })).toBeInTheDocument();
-    expect(repository.all()).toHaveLength(1);
-  });
-
-  it("saves once when a double click asks twice before the page has redrawn", () => {
-    const repository = boardsRepository(memoryStore());
-    const take = vi.fn(async () => undefined);
-    const { result } = renderHook(
-      () => useSaveToMine(list(false), () => undefined, { repository, store: memoryStore(), take }),
-      { wrapper: MemoryRouter },
-    );
-    act(() => {
-      result.current.start();
-      result.current.start();
-      result.current.save("none");
+    const [board] = repository.all();
+    expect(titlesIn(board!)).toEqual([["A"], ["B"], ["C"]]);
+    expect(board).toMatchObject({
+      takenFrom: "L1",
+      authorName: "danylo",
+      coverImageUrl: "https://img/cover.jpg",
+      coverImageUrls: ["https://img/cover.jpg"],
     });
-    expect(repository.all()).toHaveLength(1);
-    expect(result.current.saved).toBe(repository.all()[0]!.uid);
-    // A save is a take of the list, as in the app, and counted once.
-    expect(take).toHaveBeenCalledExactlyOnceWith("L1");
-  });
-
-  it("asks which ranking to keep when there is a choice, and keeps mine when I say so", async () => {
-    const store = memoryStore();
-    saveDraft(store, scopeOf(list(true)), [[2], []]);
-    const { repository } = show(list(true), store);
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    const dialog = screen.getByRole("dialog", { name: "Which ranking to save?" });
-    expect(dialog).toHaveTextContent("The author’s");
-    expect(dialog).toHaveTextContent("Mine");
-    // Escape is a change of mind.
-    await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(repository.all()).toEqual([]);
-
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    await userEvent.click(screen.getByRole("button", { name: "Mine" }));
-    expect(titlesIn(repository)).toEqual({ s: ["C"], a: [], pool: ["A", "B"] });
-  });
-
-  it("offers the author's arrangement against an unranked copy when I placed nothing", async () => {
-    const { repository } = show(list(true));
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    await userEvent.click(screen.getByRole("button", { name: "Unranked, I’ll do it" }));
-    expect(titlesIn(repository)).toEqual({ s: [], a: [], pool: ["A", "B", "C"] });
-  });
-
-  it("keeps my own at once on a template, a list with nothing placed, whoever made it", async () => {
-    for (const template of [
-      list(false),
-      { ...list(false), anonymous: true },
-      { ...list(false), authorUid: "85RRieyLyUPCEqHjdYCdxVlWxHx2" },
-    ]) {
-      const store = memoryStore();
-      saveDraft(store, scopeOf(template), [[2], []]);
-      const { repository } = show(template, store);
-      await userEvent.click(screen.getAllByRole("button", { name: "Save" }).at(-1)!);
-      expect(screen.queryByRole("dialog")).toBeNull();
-      expect(titlesIn(repository)).toEqual({ s: ["C"], a: [], pool: ["A", "B"] });
-    }
-  });
-
-  it("offers a reader's ranking on show as Theirs, by name, with its own tier words", async () => {
-    const template = list(false);
-    const olena: ShownPlacing = {
-      name: "Olena",
-      tiers: [{ ...template.tiers[0]!, label: "Top" }, template.tiers[1]!],
-      rows: [[1], [0]],
-    };
-    const { repository } = show(template, memoryStore(), olena);
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    const dialog = screen.getByRole("dialog", { name: "Which ranking to save?" });
-    expect(dialog).not.toHaveTextContent("The author’s");
-    await userEvent.click(screen.getByRole("button", { name: "Olena" }));
-    expect(titlesIn(repository)).toEqual({ s: ["B"], a: ["A"], pool: ["C"] });
-    expect(rankedTiers(repository.all()[0]!).map((tier) => tier.label)).toEqual(["Top", "A"]);
-  });
-
-  it("still asks on a ranked list without an author", async () => {
-    const ranked = { ...list(true), anonymous: true };
-    const store = memoryStore();
-    saveDraft(store, scopeOf(ranked), [[2], []]);
-    show(ranked, store);
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(screen.getByRole("dialog", { name: "Which ranking to save?" })).toHaveTextContent(
-      "The author’s",
+    expect(take).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Saved to your lists.", action: expect.anything() }),
     );
+    // No question asked, no second copy: the button opens the board now.
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Saved" }));
+    expect(screen.getByRole("heading", { name: "the board" })).toBeInTheDocument();
+    expect(repository.all()).toHaveLength(1);
+  });
+
+  it("leaves a list without a cover to its cards' collage", async () => {
+    const { repository } = show(list(), mine(list(), null));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(repository.all()[0]).toMatchObject({ coverImageUrl: null, coverImageUrls: [] });
+    expect(titlesIn(repository.all()[0]!)).toEqual([[], [], ["A", "B", "C"]]);
+  });
+
+  it("makes one board of a list however often Save is pressed, and puts what is shown on it", async () => {
+    const of = list();
+    const { repository, notify, take, rerender } = show(of, mine(of, [[2], []]));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(repository.all()).toHaveLength(1);
+    const uid = repository.all()[0]!.uid;
+    expect(titlesIn(repository.all()[0]!)).toEqual([["C"], [], ["A", "B"]]);
+    expect(screen.getByRole("button", { name: "Saved" })).toBeInTheDocument();
+
+    // Mine moved on: Save again updates the same board, with a way back.
+    rerender(mine(of, [[2, 0], [1]]));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(repository.all()).toHaveLength(1);
+    expect(repository.all()[0]!.uid).toBe(uid);
+    expect(titlesIn(repository.all()[0]!)).toEqual([["C", "A"], ["B"], []]);
+    expect(take).toHaveBeenCalledTimes(1);
+    const undo = notify.mock.calls.at(-1)![0].action!;
+    expect(undo.text).toBe("Undo");
+    undo.onClick();
+    expect(titlesIn(repository.get(uid)!)).toEqual([["C"], [], ["A", "B"]]);
+
+    // The author's arrangement on the switch goes on the same board too.
+    rerender(author(of));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(repository.all()).toHaveLength(1);
+    expect(titlesIn(repository.get(uid)!)).toEqual([["A"], ["B"], ["C"]]);
+  });
+
+  it("makes no second board on a double click: the second click opens the first", async () => {
+    const of = list();
+    const { repository, take } = show(of, mine(of, [[2], []]));
+    await userEvent.dblClick(screen.getByRole("button", { name: "Save" }));
+    expect(repository.all()).toHaveLength(1);
+    expect(take).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading", { name: "the board" })).toBeInTheDocument();
+  });
+
+  it("opens a board the person made their own (a card added) rather than putting the list over it", async () => {
+    const of = list();
+    const { repository, rerender } = show(of, mine(of, [[0], []]));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    const board = repository.all()[0]!;
+    const pool = poolTier(board)!;
+    repository.save({
+      ...board,
+      items: [
+        ...board.items,
+        { ...liveItems(board)[0]!, uid: "extra", title: "Mine", tierUid: pool.uid, position: 9 },
+      ],
+    });
+    rerender(author(of));
+    expect(screen.getByRole("button", { name: "Saved" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Saved" }));
+    expect(screen.getByRole("heading", { name: "the board" })).toBeInTheDocument();
+    expect(liveItems(repository.get(board.uid)!)).toHaveLength(4);
+  });
+
+  it("reuses a copy already in one's lists, one made on another visit or device", async () => {
+    const of = list();
+    const first = show(of, author(of));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    const repository = first.repository;
+    first.rerender(mine(of, [[1], [0]]));
+    // A later visit: a fresh page over the same boards.
+    const again = show(of, mine(of, [[1], [0]]), repository);
+    await userEvent.click(screen.getAllByRole("button", { name: "Save" }).at(-1)!);
+    expect(repository.all()).toHaveLength(1);
+    expect(again.take).not.toHaveBeenCalled();
   });
 });

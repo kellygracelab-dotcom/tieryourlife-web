@@ -29,7 +29,6 @@ vi.mock("../lib/api", async () => ({
   loadFeed: mocks.loadFeed,
   loadList: vi.fn(),
   loadRanking: vi.fn(),
-  keepRanking: vi.fn(),
   noteTake: vi.fn(),
   // A section's page waits for its topics before it shows its lists.
   loadTopics: vi.fn(async () => ({ topics: [] })),

@@ -22,6 +22,9 @@ import { Shell } from "./Shell";
  * that still fails to come is a thrown route, and the error element says so
  * in the person's words.
  */
+/** One's lists with only the public ones shown: where "Your public lists" went. */
+const PUBLIC_LISTS = "/b?show=public";
+
 const later = (load: () => Promise<{ Component: ComponentType }>) => ({
   lazy: freshChunk(load),
 });
@@ -96,12 +99,10 @@ export const routes: RouteObject[] = [
           { path: "c/:category", element: <SectionRedirect /> },
           { path: "l/:id", element: <ListPage /> },
           { path: "r/:code", element: <RankingPage /> },
-          {
-            path: "me",
-            ...later(async () => ({ Component: (await import("../pages/MePage")).MePage })),
-          },
-          // The lists had a page of their own once; links to it still lead home.
-          { path: "me/lists", element: <Navigate to="/me" replace /> },
+          // "Your public lists" had a page of their own once (Danylo took it
+          // away, 14.11.2026): its links lead to one's lists, the public ones shown.
+          { path: "me", element: <Navigate to={PUBLIC_LISTS} replace /> },
+          { path: "me/lists", element: <Navigate to={PUBLIC_LISTS} replace /> },
           {
             path: "settings",
             ...later(async () => ({

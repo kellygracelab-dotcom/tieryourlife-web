@@ -168,7 +168,6 @@ const PAGES = [
   "/s/anime/t/t1",
   "/search?q=star",
   "/b",
-  "/me",
   `/l/${list.id}`,
   "/settings",
   "/about",

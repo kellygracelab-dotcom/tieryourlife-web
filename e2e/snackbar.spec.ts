@@ -15,11 +15,8 @@ const box = async (page: Page, selector: string) => {
 
 const saveToMine = async (page: Page) => {
   await page.getByLabel("More about this list").click();
-  await page.getByRole("button", { name: "Save to my lists" }).click();
-  const dialog = page.getByRole("dialog", { name: "Which ranking to save?" });
-  if (await dialog.isVisible().catch(() => false)) {
-    await dialog.getByRole("button", { name: "The author’s" }).click();
-  }
+  // On Mine, the one button saves one's own version.
+  await page.getByRole("button", { name: "Save my list" }).click();
   await expect(page.locator(".snackbar")).toContainText("Saved to your lists.");
 };
 

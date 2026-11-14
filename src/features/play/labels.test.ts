@@ -9,7 +9,6 @@ import {
   roundText,
   secondLine,
   startedText,
-  thinText,
 } from "./labels";
 import { fittedSize } from "./useFitText";
 
@@ -83,23 +82,6 @@ describe("the line under the count", () => {
     let game = newGame("bracket", ids, EVERYTHING, 1, 0);
     while (currentPair(game) !== null) game = skip(game);
     expect(secondLine({ ...game, refineFixed: { from: 3, pairs: [] } }, nameOf)).toBe("Bracket");
-  });
-});
-
-describe("the thin banner", () => {
-  it("is plural by the guesses and by the duels Refine adds", () => {
-    expect(thinText(6, 17)).toBe(
-      "6 cards played fewer than 2 duels, so their places are a guess. Refine adds up to 17 duels for them, or apply now and adjust by hand.",
-    );
-    expect(thinText(1, 1)).toBe(
-      "1 card played fewer than 2 duels, so its place is a guess. Refine adds up to 1 duel for it, or apply now and adjust by hand.",
-    );
-  });
-
-  it("only says to adjust by hand once Refine is used", () => {
-    expect(thinText(2, 0)).toBe(
-      "2 cards played fewer than 2 duels, so their places are a guess. Apply now and adjust by hand.",
-    );
   });
 });
 

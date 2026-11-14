@@ -5,6 +5,5 @@
  */
 export { ChooseCards } from "./ChooseCards";
 export { DuelLayer } from "./DuelLayer";
-export { answered, applied, gameProgress, newGame, reconcile, seedOf, startRefine } from "./game";
+export { answered, applied, gameProgress, newGame, reconcile, resultOf, seedOf } from "./game";
 export { GamePicker } from "./GamePicker";
-export { ResultView } from "./ResultView";

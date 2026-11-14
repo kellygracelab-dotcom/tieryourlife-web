@@ -6,7 +6,7 @@ describe("animates", () => {
   it("moves when a page changes, and only then", () => {
     expect(animates("/", "/l/abc")).toBe(true);
     expect(animates("/l/abc", "/b/xyz")).toBe(true);
-    expect(animates("/me", "/b/xyz")).toBe(true);
+    expect(animates("/settings", "/b/xyz")).toBe(true);
     // The same page with another query, the home page's tabs, the header's links.
     expect(animates("/search", "/search")).toBe(false);
     expect(animates("/", "/following")).toBe(false);

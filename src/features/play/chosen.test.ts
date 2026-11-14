@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { boardOf, cardOf, type PlayTier } from "./board";
-import { replaySelection, chosenIds, EVERYTHING, keptTier, playable } from "./chosen";
+import { chosenIds, EVERYTHING, keptTier, playable } from "./chosen";
 
 const tier = (id: string, cardIds: string[]): PlayTier => ({
   id,
@@ -78,15 +78,4 @@ describe("the chosen cards", () => {
     expect(playable(64)).toBe(true);
     expect(playable(65)).toBe(true);
   });
-});
-
-it("replays even an originally full game over its old members until Everything is explicitly chosen", () => {
-  const oldIds = ["a", "b", "c"];
-  const board = boardOf(
-    ["a", "b", "c", "new"].map((id) => ({ id, name: id, imageUrl: null })),
-    [],
-  );
-  const replay = replaySelection(board, EVERYTHING, oldIds);
-  expect(chosenIds(board, replay)).toEqual(oldIds);
-  expect(chosenIds(board, EVERYTHING)).toEqual(["a", "b", "c", "new"]);
 });

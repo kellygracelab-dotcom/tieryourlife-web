@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -14,9 +14,6 @@ vi.mock("../lib/api", async () => ({
   loadMyLists: vi.fn(),
   unpublish: vi.fn(),
   rearrangeRanking: vi.fn(),
-  loadMyRankings: vi.fn(),
-  removeRanking: vi.fn(),
-  keepRanking: vi.fn(),
   noteTake: vi.fn(),
 }));
 
@@ -50,15 +47,16 @@ describe("routes", () => {
     expect(screen.getByText("Opening the ranking…")).toBeInTheDocument();
   });
 
-  it("has one place for a person's own lists and rankings, and the old address leads to it", async () => {
-    open("/me");
-    // A page of its own chunk: it arrives a moment after the address.
-    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Your public lists");
-  });
-
-  it("leads the lists' old address to the same place", async () => {
-    open("/me/lists");
-    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Your public lists");
+  it("has no Your public lists page: its addresses lead to one's lists, the public ones shown", async () => {
+    for (const path of ["/me", "/me/lists"]) {
+      const router = open(path);
+      // A page of its own chunk: it arrives a moment after the address.
+      expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Your lists");
+      expect(router.state.location.pathname).toBe("/b");
+      expect(router.state.location.search).toBe("?show=public");
+      expect(screen.queryByText("Your public lists")).toBeNull();
+      cleanup();
+    }
   });
 
   it("keeps every page off the addresses Hosting hands to a function", () => {

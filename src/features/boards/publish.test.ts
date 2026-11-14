@@ -323,6 +323,20 @@ describe("a published list as a board of one's own", () => {
     expect(poolTier(board)?.position).toBe(2);
   });
 
+  it("wears the list's Community cover, and a list without one leaves the board to its collage", () => {
+    const covered = boardFromList(
+      { ...list, coverImageUrl: "https://x/cover.jpg" },
+      null,
+      5,
+      uids(),
+    );
+    expect(covered.coverImageUrl).toBe("https://x/cover.jpg");
+    expect(covered.coverImageUrls).toEqual(["https://x/cover.jpg"]);
+    const bare = boardFromList({ ...list, coverImageUrl: null }, null, 5, uids());
+    expect(bare.coverImageUrl ?? null).toBeNull();
+    expect(bare.coverImageUrls ?? []).toEqual([]);
+  });
+
   it("keeps the photographers the pictures ask to be named by", () => {
     const credited: PublishedList = {
       ...list,

@@ -213,11 +213,8 @@ describe("SettingsPage", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     rename.mockImplementation(async (name) => name);
     const { session } = open();
-    expect(
-      within(screen.getByRole("navigation", { name: "Your account" })).getByRole("link", {
-        name: "Settings",
-      }),
-    ).toHaveAttribute("aria-current", "page");
+    // "Your public lists" is gone, and the tabs that led there with it.
+    expect(screen.queryByRole("navigation", { name: "Your account" })).toBeNull();
     const field = screen.getByLabelText("Name");
     expect(field).toHaveValue("Danylo");
     expect(screen.getByText("6/24")).toBeInTheDocument();

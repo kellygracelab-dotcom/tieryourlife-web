@@ -5,8 +5,9 @@ import { creditAsAttribution } from "../api/pictureAttribution";
 import type { PublishedList } from "../api/types";
 import { boards as site } from "../features/boards/owners";
 import type { BoardsRepository } from "../features/boards/repository";
+import { boardOfList } from "../features/boards/ownList";
 import { forgetPublished } from "../features/boards/takeDown";
-import { SaveToMineDialog } from "../features/boards/SaveToMineDialog";
+import { useBoards } from "../features/boards/useBoards";
 import { type SaveToMine } from "../features/boards/useSaveToMine";
 import { useHidden } from "../features/community/useHidden";
 import { useReporting } from "../features/community/useReporting";
@@ -158,9 +159,9 @@ function RankingsItem({ rankings }: { rankings: RankingsEntry | null }) {
 }
 
 /**
- * One's own arrangement among the list's public rankings, the app's "Show my
- * ranking to others": offered once Mine is arranged, to a guest as a way to
- * sign in first.
+ * One's own arrangement among the list's public rankings, Show in Rankings
+ * as the offer after a game says it: in the menu once Mine is arranged, to a
+ * guest as a way to sign in first.
  */
 export interface ShowMineEntry {
   signedIn: boolean;
@@ -178,7 +179,7 @@ function ShowMineItem({ showMine }: { showMine: ShowMineEntry | null }) {
         disabled={showMine.busy}
         onClick={showMine.show}
       >
-        {showMine.signedIn ? strings.rankings.showMine : strings.rankings.signInToShow}
+        {showMine.signedIn ? strings.rankings.progressShare : strings.rankings.progressSignIn}
       </button>
     </li>
   );
@@ -204,7 +205,7 @@ function VisitorMenu({
   list: PublishedList;
   report: Report;
   notify: Notify;
-  saving: SaveToMine;
+  saving: SaveButton;
   rankings: RankingsEntry | null;
   showMine: ShowMineEntry | null;
   resetMine?: (() => void) | null;
@@ -243,7 +244,7 @@ function VisitorMenu({
           {/* The head's own Save button, where a phone's head has no room for it. */}
           <li className="list-menu__narrow">
             <button type="button" className="menu__action" onClick={saving.start}>
-              {saving.saved === null ? strings.list.saveToMine : strings.list.open}
+              {saving.saved ? strings.list.saved : saving.label}
             </button>
           </li>
           <li>
@@ -276,9 +277,29 @@ function VisitorMenu({
 }
 
 /**
- * A visitor's head: the phone's "Save to my lists" as a button beside Copy
- * link, the menu with the rest. One saving flow serves the button and the
- * menu's copy of it.
+ * The one Save, with the words for what it keeps: "Save author’s list" or
+ * "Save my list" as the switch says, "Saved" once one's lists hold it.
+ */
+export interface SaveButton extends SaveToMine {
+  label: string;
+}
+
+function SaveListButton({ saving }: { saving: SaveButton }) {
+  return (
+    <Button
+      variant="tonal"
+      icon={saving.saved ? "check" : "bookmark"}
+      className="list-head__save"
+      onClick={saving.start}
+    >
+      {saving.saved ? strings.list.saved : saving.label}
+    </Button>
+  );
+}
+
+/**
+ * A visitor's head: Save as a button beside Copy link, the menu with the
+ * rest. One saving flow serves the button and the menu's copy of it.
  */
 export function VisitorTools({
   list,
@@ -292,7 +313,7 @@ export function VisitorTools({
   list: PublishedList;
   report: Report;
   notify: Notify;
-  saving: SaveToMine;
+  saving: SaveButton;
   rankings?: RankingsEntry | null;
   /** Mine among the list's rankings, once there is a Mine to show. */
   showMine?: ShowMineEntry | null;
@@ -300,9 +321,7 @@ export function VisitorTools({
 }) {
   return (
     <>
-      <Button variant="tonal" icon="bookmark" className="list-head__save" onClick={saving.start}>
-        {saving.saved === null ? strings.list.saveToMine : strings.list.open}
-      </Button>
+      <SaveListButton saving={saving} />
       <CopyLinkButton list={list} notify={notify} />
       <VisitorMenu
         list={list}
@@ -313,7 +332,6 @@ export function VisitorTools({
         showMine={showMine}
         resetMine={resetMine}
       />
-      <SaveToMineDialog saving={saving} />
     </>
   );
 }
@@ -326,9 +344,7 @@ type Deleting =
 
 /**
  * The author's own menu: the link, and taking the list down. The board it was
- * published from stays, here and on the phone, and is its own again. "Publish
- * as my list", the owner's other line elsewhere, has nothing to do on one's
- * own list.
+ * published from stays, here and on the phone, and is its own again.
  */
 function AuthorMenu({
   list,
@@ -347,11 +363,11 @@ function AuthorMenu({
   const [deleting, setDeleting] = useState<Deleting>({ status: "closed" });
   const busy = deleting.status === "busy";
 
-  // The list's page goes from the history with the list: Back from /me must
-  // not show its author the apology meant for a visitor sent a dead link.
+  // The list's page goes from the history with the list: Back from one's
+  // lists must not show its author the apology meant for a visitor sent a dead link.
   const gone = () => {
     forgetPublished(list.id, repository, Date.now());
-    void navigate("/me", { replace: true });
+    void navigate("/b", { replace: true });
   };
   const confirm = () => {
     setDeleting({ status: "busy" });
@@ -410,9 +426,10 @@ function AuthorMenu({
 }
 
 /**
- * The author's head: Edit for the board the list is changed on, the link, the
- * menu. A list held for a moderator has no link to give: it answers nobody
- * else until a moderator looks.
+ * The author's head: Save my list for the board the list is changed on, or
+ * Saved once one's lists have it, the link, the menu. There is no switch on
+ * one's own list. A list held for a moderator has no link to give: it
+ * answers nobody else until a moderator looks.
  */
 export function AuthorTools({
   list,
@@ -428,11 +445,21 @@ export function AuthorTools({
   /** The boards one of which may have published the list. */
   repository?: BoardsRepository;
 }) {
+  // The board of one's own list is made from it once, after the account's boards are in.
+  useBoards(repository);
+  const board = boardOfList(repository, list.id);
   return (
     <>
-      <Link className="btn btn--tonal" to={`/b/new?list=${encodeURIComponent(list.id)}`}>
-        <Icon name="edit" className="btn__icon" />
-        <span>{strings.list.edit}</span>
+      <Link
+        className="btn btn--tonal"
+        to={
+          board === null
+            ? `/b/new?list=${encodeURIComponent(list.id)}`
+            : `/b/${encodeURIComponent(board.uid)}`
+        }
+      >
+        <Icon name={board === null ? "bookmark" : "check"} className="btn__icon" />
+        <span>{board === null ? strings.list.saveMyList : strings.list.saved}</span>
       </Link>
       {list.underReview !== true && <CopyLinkButton list={list} notify={notify} />}
       <AuthorMenu

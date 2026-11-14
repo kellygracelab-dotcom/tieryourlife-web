@@ -131,7 +131,14 @@ interface BoardSettingsProps {
   findTopic?: FindTopic;
   onDone: () => void;
   now?: () => number;
+  /**
+   * Opened from the board's ⋮ menu for one of these: the sheet starts it at
+   * once, as its own switch or button would (Publish, Update, Take it down).
+   */
+  start?: SettingsStart;
 }
+
+export type SettingsStart = "publish" | "update" | "takeDown";
 
 type Busy = "checking" | "idle" | "publishing" | "updating" | "unpublishing";
 /** A refusal, by the press it answers: each is said beside its own button. */
@@ -285,6 +292,7 @@ export function BoardSettings({
   findTopic = loadTopic,
   onDone,
   now = Date.now,
+  start,
 }: BoardSettingsProps) {
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
@@ -304,7 +312,10 @@ export function BoardSettings({
   // Why a guest's Public switch did not sign them in, when it could not.
   const [signInNote, setSignInNote] = useState<string | null>(null);
   const [open, setOpen] = useState<Open>("none");
-  const [asking, setAsking] = useState(false);
+  // Take it down from the ⋮ menu opens on its question.
+  const [asking, setAsking] = useState(
+    () => start === "takeDown" && publishing !== null && isOut(board),
+  );
   const problems = publishProblemsOf(board);
   const ownPublish = publishing !== null;
   const isPublic = ownPublish && isOut(board);
@@ -545,6 +556,20 @@ export function BoardSettings({
   // says so (aria-disabled), as a disabled input would be skipped unheard.
   const blocker = !signedIn ? strings.boards.needsAccount : problem;
   const blocked = !isPublic && signedIn && blocker !== null;
+
+  // Publish or Update from the ⋮ menu, once the sheet is up: a reason it
+  // cannot is said where the switch is.
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current || start === undefined || !ownPublish) return;
+    const timer = setTimeout(() => {
+      if (started.current) return;
+      started.current = true;
+      if (start === "publish" && !isPublic && !blocked) onSwitch();
+      else if (start === "update" && isPublic && problems.length === 0) void send("updated");
+    });
+    return () => clearTimeout(timer);
+  });
   const why = !isPublic && blocker !== null ? `${id}-public-why` : undefined;
   const failed = (on: Failure["on"]) =>
     failure !== null && failure.on === on ? (
@@ -778,22 +803,28 @@ export function BoardSettings({
                     role="group"
                     aria-label={strings.rankings.publicationPreview}
                   >
+                    {/* Somebody else's list goes out only into its own Rankings,
+                        never as a separate list of one's own (Danylo, 14.11.2026);
+                        a copy of one's own list may still go out as a list. */}
                     <p>
                       {preview.preview.kind === "ranking"
                         ? strings.rankings.previewRanking
-                        : preview.preview.basedOn
-                          ? strings.rankings.previewList
-                          : strings.boards.publicBody}
+                        : preview.originalAuthor === preview.action.uid
+                          ? strings.boards.publicBody
+                          : strings.rankings.notYours}
                     </p>
-                    <button
-                      type="button"
-                      className="btn btn--tonal"
-                      onClick={() => void send(preview.what, preview)}
-                    >
-                      {preview.preview.kind === "ranking"
-                        ? strings.rankings.progressShare
-                        : strings.rankings.publishSeparate}
-                    </button>
+                    {(preview.preview.kind === "ranking" ||
+                      preview.originalAuthor === preview.action.uid) && (
+                      <button
+                        type="button"
+                        className="btn btn--tonal"
+                        onClick={() => void send(preview.what, preview)}
+                      >
+                        {preview.preview.kind === "ranking"
+                          ? strings.rankings.progressShare
+                          : strings.new.publish}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn btn--text"

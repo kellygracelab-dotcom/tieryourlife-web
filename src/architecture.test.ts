@@ -191,7 +191,6 @@ describe("the first load", () => {
       "features/play/GamePicker.tsx",
       "features/play/ChooseCards.tsx",
       "features/play/DuelLayer.tsx",
-      "features/play/ResultView.tsx",
       "features/boards/sync.ts",
       "firebase/storage",
     ];

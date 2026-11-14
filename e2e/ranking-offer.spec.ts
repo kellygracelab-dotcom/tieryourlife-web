@@ -11,7 +11,8 @@ const source = {
     tierIndex: i === 0 ? 0 : null,
   })),
 };
-const offer = (page: Page) => page.getByRole("complementary", { name: "Share your ranking?" });
+const offer = (page: Page) =>
+  page.getByRole("complementary", { name: "Show others how you ranked it?" });
 
 async function visit(page: Page, placed: number, signedIn = false) {
   if (!signedIn) await mockBackend(page);
@@ -40,73 +41,67 @@ async function visit(page: Page, placed: number, signedIn = false) {
   await expect(page.getByRole("heading", { name: source.title })).toBeVisible();
 }
 
-test("the seventh of twenty offers a private copy once, including after reopening", async ({
+test("asks once when the last card is placed, keeps nothing by itself, and not again after reopening", async ({
   page,
 }) => {
-  await visit(page, 6);
-  await expect(page.getByText("6 of 20 placed")).toBeVisible();
+  await visit(page, 19);
+  await expect(page.getByText("19 of 20 placed")).toBeVisible();
   await expect(offer(page)).toHaveCount(0);
-  await page.getByRole("button", { name: "Film 6", exact: true }).click();
+  await page.getByRole("button", { name: "Film 19", exact: true }).click();
   await page.keyboard.press("1");
   await expect(offer(page)).toBeVisible();
-  await expect(offer(page)).toContainText("7 of 20");
-  await offer(page).getByRole("button", { name: "Keep privately" }).click();
+  // Two answers, the app's, a guest's first one to sign in: no private copy is made behind the question.
+  await expect(offer(page).getByRole("button")).toHaveText(["Sign in to share", "Not now"]);
+  await offer(page).getByRole("button", { name: "Not now" }).click();
   await expect(offer(page)).toHaveCount(0);
   await page.goto("/b");
-  await page
-    .getByRole("link", { name: new RegExp(source.title) })
-    .first()
-    .click();
-  await expect(page.locator(".tier .tile")).toHaveCount(7);
-  const original = page.getByRole("link", { name: "Original list and rankings" });
-  await expect(original).toHaveAttribute("href", "/l/abc?rankings=1");
-  await original.click();
-  await expect(page.getByRole("dialog", { name: "Rankings" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Your lists" })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(source.title) })).toHaveCount(0);
   await page.goto("/l/abc");
-  await expect(page.getByText("7 of 20 placed")).toBeVisible();
+  await expect(page.getByText("20 of 20 placed")).toBeVisible();
   await expect(offer(page)).toHaveCount(0);
 });
 
-test("an existing draft above the threshold gets the offer on its first visit after upgrade", async ({
-  page,
-}) => {
-  await visit(page, 8);
+test("a draft with every card placed gets the offer on its first visit", async ({ page }) => {
+  await visit(page, 20);
   await expect(offer(page)).toBeVisible();
-  await expect(offer(page)).toContainText("8 of 20");
   await offer(page).getByRole("button", { name: "Not now" }).click();
   await page.reload();
-  await expect(page.getByText("8 of 20 placed")).toBeVisible();
+  await expect(page.getByText("20 of 20 placed")).toBeVisible();
   await expect(offer(page)).toHaveCount(0);
 });
 
-test("the author's arrangement starts no offer; editing a matching saved copy does", async ({
+test("the author's arrangement starts no offer; placing every card of a saved copy does", async ({
   page,
 }) => {
   await visit(page, 0);
-  await expect(page.getByRole("button", { name: "Theirs", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Author", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
   await expect(offer(page)).toHaveCount(0);
-  const save = page.getByRole("button", { name: "Save to my lists" }).first();
+  const save = page.getByRole("button", { name: "Save author’s list" }).first();
   if (!(await save.isVisible())) await page.getByLabel("More about this list").click();
   await save.click();
-  await page.getByRole("button", { name: "The author’s" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.goto("/b");
   await page
     .getByRole("link", { name: new RegExp(source.title) })
     .first()
     .click();
   await expect(offer(page)).toHaveCount(0);
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i < 19; i++) {
     await page.getByRole("button", { name: "Film " + i, exact: true }).click();
     await page.keyboard.press("1");
   }
+  await expect(page.locator(".tier .tile")).toHaveCount(19);
+  await expect(offer(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "Film 19", exact: true }).click();
+  await page.keyboard.press("1");
   await expect(offer(page)).toBeVisible();
-  await expect(offer(page)).toContainText("7 of 20");
-  await offer(page).getByRole("button", { name: "Keep privately" }).click();
+  await offer(page).getByRole("button", { name: "Not now" }).click();
   await page.reload();
-  await expect(page.locator(".tier .tile")).toHaveCount(7);
+  await expect(page.locator(".tier .tile")).toHaveCount(20);
   await expect(offer(page)).toHaveCount(0);
 });
 
@@ -118,7 +113,7 @@ test("a second tab's sign-in requires a new ranking decision while the reader's 
   await page.route("**/lists/follow/u1", (r) =>
     r.fulfill({ json: { following: false, followers: 0 } }),
   );
-  await visit(page, 8, true);
+  await visit(page, 20, true);
   const show = offer(page).getByRole("button", { name: "Show in Rankings" });
   await expect(show).toBeVisible();
   const sentBy: string[] = [];

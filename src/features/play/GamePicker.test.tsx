@@ -147,7 +147,7 @@ describe("the game picker", () => {
   it("says where the result goes on somebody else's list", () => {
     show({ theirs: true });
     expect(
-      screen.getByText("The result goes into Mine. Theirs doesn’t change."),
+      screen.getByText("The result goes into Mine. The author’s ranking doesn’t change."),
     ).toBeInTheDocument();
   });
 

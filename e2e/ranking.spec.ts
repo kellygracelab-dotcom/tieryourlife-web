@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { CODE, LIST_ID, list, mockBackend } from "./fixtures";
+import { LIST_ID, list, mockBackend } from "./fixtures";
 import { PIXEL } from "./signedIn";
 
 const openList = async (page: Page) => {
@@ -16,21 +16,15 @@ const openList = async (page: Page) => {
 const tier = (page: Page, label: string) => page.getByRole("list", { name: label });
 const card = (page: Page, title: string) => page.getByRole("button", { name: title });
 
-const finish = async (page: Page) => {
-  await page.getByRole("button", { name: "Finish" }).click();
-  await expect(page.getByText("Your ranking is live at")).toBeVisible();
-  // A guest is offered an account exactly once, after the link exists.
-  await page.getByRole("button", { name: "Keep the link only" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Open" })).toHaveAttribute("href", `/r/${CODE}`);
-};
-
 test.describe("ranking a list", () => {
   test.skip(({ hasTouch }) => hasTouch, "the mouse path");
 
-  test("drag a card into a tier with the mouse, finish, get a link", async ({ page }) => {
+  test("drag a card into a tier with the mouse, and save the list as one's own", async ({
+    page,
+  }) => {
     const backend = await openList(page);
-    await expect(page.getByRole("button", { name: "Finish" })).toBeDisabled();
+    // Nothing to finish: one's own version is kept as it goes, and saved with one button.
+    await expect(page.getByRole("button", { name: "Finish" })).toHaveCount(0);
 
     const from = await card(page, "Ex Machina").boundingBox();
     const to = await tier(page, "S").boundingBox();
@@ -48,25 +42,20 @@ test.describe("ranking a list", () => {
     await expect(tier(page, "A").getByRole("button", { name: "The Witch" })).toBeVisible();
     await expect(page.getByText("2 of 3 placed")).toBeVisible();
 
-    await finish(page);
-    expect(backend.rankRequests).toHaveLength(1);
-    const request = backend.rankRequests[0];
-    expect(request?.postDataJSON()).toEqual({
-      listId: LIST_ID,
-      rows: [[0], [1]],
-      // The version of the list it was placed on, so a list changed since is refused.
-      version: list.updatedAt,
-    });
-    expect(await request?.headerValue("authorization")).toMatch(/^Bearer /);
-    // Finish is not a take: only saving the list to one's own counts, as in the app.
-    expect(backend.takes).toBe(0);
+    await page.getByRole("button", { name: "Save my list" }).first().click();
+    await expect(page.getByText("Saved to your lists.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Saved" }).first()).toBeVisible();
+    // Saved as a board of one's own: no shared ranking is made by it.
+    expect(backend.rankRequests).toHaveLength(0);
+    // Saving the list to one's own is a take, as in the app.
+    await expect.poll(() => backend.takes).toBe(1);
   });
 });
 
 test.describe("starting from the author's ranking", () => {
   test.skip(({ hasTouch }) => hasTouch, "the mouse path");
 
-  test("a card dragged on Theirs starts Mine from the author's ranking, and Undo goes back", async ({
+  test("a card dragged on Author starts Mine from the author's ranking, and Undo goes back", async ({
     page,
   }) => {
     await mockBackend(page);
@@ -222,7 +211,7 @@ test.describe("moving a card along its tier", () => {
 test.describe("ranking a list on a phone", () => {
   test.skip(({ hasTouch }) => !hasTouch, "the touch path");
 
-  test("tap a card, tap a tier, finish, get a link", async ({ page }) => {
+  test("tap a card, tap a tier, and save the list as one's own", async ({ page }) => {
     const backend = await openList(page);
 
     await card(page, "Climax").tap();
@@ -239,12 +228,11 @@ test.describe("ranking a list on a phone", () => {
     await expect(tier(page, "S").getByRole("button", { name: "Ex Machina" })).toBeVisible();
     await expect(page.getByText("2 of 3 placed")).toBeVisible();
 
-    await finish(page);
-    expect(backend.rankRequests[0]?.postDataJSON()).toEqual({
-      listId: LIST_ID,
-      rows: [[0], [2]],
-      version: list.updatedAt,
-    });
+    // On a phone the save is a line of the ⋮ menu.
+    await page.getByLabel("More about this list").tap();
+    await page.getByRole("button", { name: "Save my list" }).first().tap();
+    await expect(page.getByText("Saved to your lists.")).toBeVisible();
+    expect(backend.rankRequests).toHaveLength(0);
   });
 
   // The pool used to start two screens down: a visitor saw empty tiers and
@@ -400,28 +388,4 @@ test("opens card credits with two taps and closes them back to the board", async
   await details.getByRole("button", { name: "Close" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("menu")).toHaveCount(0);
-});
-
-test("explains a 413 at Finish and keeps the visitor's placement", async ({ page }) => {
-  await mockBackend(page);
-  await page.route("**/api/rank", (r) =>
-    r.fulfill({
-      status: 413,
-      json: { code: "TOO_LARGE", error: "Ranking exceeds the document size limit" },
-    }),
-  );
-  await page.goto("/l/abc");
-  await page.getByRole("button", { name: "Mine", exact: true }).click();
-  const card = page.getByRole("button", { name: "Climax", exact: true });
-  await card.click();
-  await page.getByRole("button", { name: /Place Climax in S/ }).click();
-  await page.getByRole("button", { name: "Finish", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText(
-    "This list is too large to save as a shared ranking.",
-  );
-  await expect(page.getByRole("alert").getByRole("button", { name: "Try again" })).toHaveCount(0);
-  await page.reload();
-  await expect(
-    page.getByRole("list", { name: "S", exact: true }).getByRole("button", { name: "Climax" }),
-  ).toBeVisible();
 });

@@ -84,15 +84,3 @@ export function startedText(startedAt: number, now: number): string {
   if (days === 1) return strings.play.startedYesterday;
   return plural(strings.play.startedDaysAgo, days);
 }
-
-/**
- * The thin banner's words: how many cards are a guess, then what Refine would
- * add for them, or only "apply and adjust" once Refine is used. Two counts,
- * so two plurals; "for it" when the guess is one card.
- */
-export function thinText(dashed: number, refine: number): string {
-  const cards = plural(strings.play.thinCards, dashed);
-  if (refine === 0) return `${cards} ${strings.play.thinByHand}`;
-  const more = plural(dashed === 1 ? strings.play.thinRefineIt : strings.play.thinRefine, refine);
-  return `${cards} ${more}`;
-}

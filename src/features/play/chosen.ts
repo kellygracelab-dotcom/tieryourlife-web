@@ -168,11 +168,3 @@ export function sampleSizes(count: number): number[] {
   for (let size = 16; size < count; size *= 2) sizes.push(size);
   return sizes;
 }
-
-/** Replay uses the saved participants. “Everything” in a new picker uses the current board. */
-export function replaySelection(board: PlayBoard, source: Chosen, ids: readonly string[]): Chosen {
-  const candidates = chosenIds(board, source);
-  const current = new Set(candidates);
-  if (current.size === ids.length && ids.every((id) => current.has(id))) return source;
-  return { kind: "sample", source: source.kind === "sample" ? source.source : source, ids };
-}
