@@ -1386,6 +1386,7 @@ export const en = {
     permission: "Used with permission",
     link: "Source link",
     readFromPage: "Author and licence will be read from this page if you leave them empty",
+    fromCatalogue: "This catalogue will be named and linked; no licence is needed",
     needLicence: "Choose a licence.",
     needLink: "Add the source link: the page the picture is on.",
     badLink: "The source link has to be a web page starting with https://.",

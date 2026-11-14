@@ -1,5 +1,11 @@
 import type { ApiClient } from "./client";
-import { editorCreditOf, type EditorCredit } from "./pictureAttribution";
+import {
+  attributionOf,
+  creditAsAttribution,
+  editorCreditOf,
+  type EditorCredit,
+  type PictureAttribution,
+} from "./pictureAttribution";
 
 /** A colour for each theme. */
 export interface ThemePair {
@@ -162,8 +168,12 @@ export interface Topic {
   names?: Partial<Record<string, string>>;
   /** Its 16:10 picture, public; null or absent when it has none and wears its section's colours. */
   pictureUrl?: string | null;
-  /** The picture's credit as the editor gave it; only while the topic has a picture. */
-  pictureAttribution?: EditorCredit | null;
+  /**
+   * The picture's credit as the editor gave it, or, for a catalogue's page
+   * for a title, the catalogue's (`{source, link, id?}`); only while the
+   * topic has a picture.
+   */
+  pictureAttribution?: EditorCredit | PictureAttribution | null;
 }
 
 /**
@@ -176,6 +186,26 @@ export function topicCreditOf(topic: {
 }): EditorCredit | null {
   if (typeof topic.pictureUrl !== "string" || topic.pictureUrl === "") return null;
   return editorCreditOf(topic.pictureAttribution);
+}
+
+/** The catalogues a topic's picture may be credited to (CONTRACT, From a catalogue). */
+const TOPIC_CATALOGUES: readonly string[] = ["tmdb", "anilist", "igdb", "steam", "openlibrary"];
+
+/**
+ * The credit of a topic's picture as About the picture shows it: one taken
+ * from a catalogue's page names the catalogue, linked as a card's is; an
+ * editor's own names whom, the licence and the page.
+ */
+export function topicAttributionOf(topic: {
+  pictureUrl?: string | null;
+  pictureAttribution?: unknown;
+}): PictureAttribution | null {
+  const credit = topicCreditOf(topic);
+  if (credit === null) return null;
+  const stored = attributionOf(topic.pictureAttribution);
+  return stored !== null && stored.manual !== true && TOPIC_CATALOGUES.includes(stored.source)
+    ? stored
+    : creditAsAttribution(credit);
 }
 
 /** The approved topics of a section, the biggest first. */

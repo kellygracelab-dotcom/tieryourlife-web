@@ -319,6 +319,7 @@ export function TopicEditor(props: TopicEditorProps) {
               <p className="section-editor__label">{strings.link.about}</p>
               {creditForm ? (
                 <CreditForm
+                  catalogue
                   inForm
                   note={strings.credit.topicNote}
                   initial={fieldsOf(credit === null ? null : creditAsAttribution(credit))}

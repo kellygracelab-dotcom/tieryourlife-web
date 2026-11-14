@@ -473,6 +473,19 @@ describe("TopicEditor", () => {
       });
     });
 
+    it("takes a catalogue's page for a title with no licence, and says the catalogue is named", async () => {
+      const { send } = edit(pictured());
+      await userEvent.click(screen.getByRole("button", { name: "Add credit" }));
+      const page = "https://www.themoviedb.org/movie/603-the-matrix";
+      await userEvent.type(link(), page);
+      expect(
+        screen.getByText("This catalogue will be named and linked; no licence is needed"),
+      ).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Save credit" }));
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(send).toHaveBeenLastCalledWith({ pictureAttribution: { link: page } });
+    });
+
     it("takes the credit away with null", async () => {
       const { send } = edit(withCredit());
       await userEvent.click(screen.getByRole("button", { name: "Edit credit" }));

@@ -1396,6 +1396,7 @@ const tr: Translation = {
     permission: "İzinle kullanıldı",
     link: "Kaynak bağlantısı",
     readFromPage: "Yazarı ve lisansı boş bırakırsan bu sayfadan okunur",
+    fromCatalogue: "Bu katalog bağlantısıyla belirtilecek; lisans gerekmez",
     needLicence: "Bir lisans seç.",
     needLink: "Kaynak bağlantısını ekle: görselin bulunduğu sayfa.",
     badLink: "Kaynak bağlantısı https:// ile başlayan bir web sayfası olmalı.",

@@ -1386,6 +1386,7 @@ const ja: Translation = {
     permission: "許可を得て使用",
     link: "出典リンク",
     readFromPage: "作者とライセンスを空欄にすると、このページから読み取られます",
+    fromCatalogue: "このカタログがリンク付きで表示されます。ライセンスは不要です",
     needLicence: "ライセンスを選んでください。",
     needLink: "出典リンク（画像が掲載されているページ）を追加してください。",
     badLink: "出典リンクは https:// で始まるウェブページにしてください。",

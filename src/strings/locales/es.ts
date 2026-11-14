@@ -1500,6 +1500,7 @@ const es: Translation = {
     permission: "Usada con permiso",
     link: "Enlace de origen",
     readFromPage: "El autor y la licencia se leerán de esta página si los dejas vacíos",
+    fromCatalogue: "Se citará este catálogo con un enlace; no hace falta licencia",
     needLicence: "Elige una licencia.",
     needLink: "Añade el enlace de origen: la página donde está la imagen.",
     badLink: "El enlace de origen tiene que ser una página web que empiece por https://.",

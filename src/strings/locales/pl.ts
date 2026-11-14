@@ -1568,6 +1568,7 @@ const pl: Translation = {
     permission: "Użyte za zgodą",
     link: "Link do źródła",
     readFromPage: "Jeśli zostawisz autora i licencję puste, zostaną odczytane z tej strony",
+    fromCatalogue: "Ten katalog zostanie podany z linkiem; licencja nie jest potrzebna",
     needLicence: "Wybierz licencję.",
     needLink: "Dodaj link do źródła: stronę, na której jest obraz.",
     badLink: "Link do źródła musi być stroną internetową zaczynającą się od https://.",

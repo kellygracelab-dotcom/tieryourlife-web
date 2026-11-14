@@ -4,6 +4,7 @@ import {
   creditOfFields,
   creditProblemsOf,
   EDITOR_LICENCES,
+  isCataloguePage,
   readsFromPage,
   type CreditFields,
   type CreditProblem,
@@ -43,6 +44,7 @@ export function CreditForm({
   onDone,
   inForm = false,
   note = strings.credit.goesOut,
+  catalogue = false,
 }: {
   initial: CreditFields;
   editing: CreditEditing;
@@ -52,14 +54,17 @@ export function CreditForm({
   inForm?: boolean;
   /** When the credit goes out. */
   note?: string;
+  /** A topic's picture: a catalogue's page for a title needs no licence either. */
+  catalogue?: boolean;
 }) {
   const id = useId();
   const [fields, setFields] = useState(initial);
-  const problems = creditProblemsOf(fields);
+  const problems = creditProblemsOf(fields, { catalogue });
   const reads = readsFromPage(fields.link);
+  const fromCatalogue = catalogue && !reads && isCataloguePage(fields.link);
   const set = (change: Partial<CreditFields>) => setFields((was) => ({ ...was, ...change }));
   const save = () => {
-    const credit = creditOfFields(fields);
+    const credit = creditOfFields(fields, { catalogue });
     if (credit === null) return;
     editing.save(credit);
     onDone();
@@ -118,13 +123,13 @@ export function CreditForm({
           dir="ltr"
           value={fields.link}
           maxLength={ATTRIBUTION_LIMITS.url + 1}
-          aria-describedby={reads ? `${id}-reads` : undefined}
+          aria-describedby={reads || fromCatalogue ? `${id}-reads` : undefined}
           onChange={(event) => set({ link: event.target.value })}
         />
       </label>
-      {reads && (
+      {(reads || fromCatalogue) && (
         <p id={`${id}-reads`} className="credit-form__note">
-          {strings.credit.readFromPage}
+          {reads ? strings.credit.readFromPage : strings.credit.fromCatalogue}
         </p>
       )}
       {problems.length > 0 && (

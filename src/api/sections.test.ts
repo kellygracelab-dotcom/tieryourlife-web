@@ -15,6 +15,7 @@ import {
   unfollowSection,
   unfollowTopic,
   withdrawSectionProposal,
+  topicAttributionOf,
   topicCreditOf,
   type Topic,
 } from "./sections";
@@ -35,6 +36,33 @@ function recordingClient(result: unknown) {
   const client: ApiClient = { request: request as ApiClient["request"] };
   return { client, request };
 }
+
+describe("topicAttributionOf", () => {
+  const pictureUrl = "https://p.test/a.webp";
+  const link = "https://www.themoviedb.org/movie/603-the-matrix";
+
+  it("names the catalogue a topic's picture was credited to, as a card's", () => {
+    expect(
+      topicAttributionOf({
+        pictureUrl,
+        pictureAttribution: { source: "tmdb", link, id: "tmdb:movie:603" },
+      }),
+    ).toEqual({ source: "tmdb", link, id: "tmdb:movie:603" });
+  });
+
+  it("shows an editor's own credit as it is, and none without a picture", () => {
+    const manual = { manual: true, license: "CC0 1.0", link: "https://a.test/p" };
+    expect(topicAttributionOf({ pictureUrl, pictureAttribution: manual })).toEqual({
+      source: "web",
+      ...manual,
+    });
+    expect(
+      topicAttributionOf({ pictureUrl, pictureAttribution: { source: "wikimedia", link } }),
+    ).toEqual({ source: "web", manual: true, link });
+    expect(topicAttributionOf({ pictureAttribution: { source: "tmdb", link } })).toBeNull();
+    expect(topicAttributionOf({ pictureUrl, pictureAttribution: { source: "tmdb" } })).toBeNull();
+  });
+});
 
 describe("topicCreditOf", () => {
   const stored = {

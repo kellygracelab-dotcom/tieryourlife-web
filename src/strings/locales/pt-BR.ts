@@ -1485,6 +1485,7 @@ const ptBR: Translation = {
     permission: "Usada com permissão",
     link: "Link da fonte",
     readFromPage: "O autor e a licença serão lidos desta página se você deixá-los vazios",
+    fromCatalogue: "Este catálogo será citado com link; não é preciso licença",
     needLicence: "Escolha uma licença.",
     needLink: "Adicione o link da fonte: a página onde a imagem está.",
     badLink: "O link da fonte precisa ser uma página da web que comece com https://.",

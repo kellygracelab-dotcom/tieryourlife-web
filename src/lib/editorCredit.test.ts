@@ -5,6 +5,7 @@ import {
   deedOf,
   EDITOR_LICENCES,
   fieldsOf,
+  isCataloguePage,
   readsFromPage,
   type CreditFields,
 } from "./editorCredit";
@@ -89,6 +90,45 @@ describe("a house editor's credit form", () => {
       expect(creditOfFields(fields({ link }))).toEqual({ link });
     }
     expect(creditOfFields(fields({ link: OTHER }))).toBeNull();
+  });
+
+  it("knows a catalogue's page for a title, a slug, query or slash after it", () => {
+    for (const page of [
+      "https://www.themoviedb.org/movie/603-the-matrix",
+      "https://themoviedb.org/tv/1399",
+      "https://www.themoviedb.org/collection/2344?language=uk",
+      "https://anilist.co/anime/1/Cowboy-Bebop/",
+      "https://anilist.co/manga/30013",
+      "https://www.igdb.com/games/hollow-knight",
+      "https://igdb.com/games/celeste/",
+      "https://store.steampowered.com/app/570/Dota_2/",
+      "https://openlibrary.org/works/OL45804W/Fantastic_Mr_Fox",
+    ]) {
+      expect(isCataloguePage(page), page).toBe(true);
+    }
+    for (const page of [
+      "http://www.themoviedb.org/movie/603",
+      "https://www.themoviedb.org/person/6384",
+      "https://www.themoviedb.org/movie/the-matrix",
+      "https://anilist.co/character/1",
+      "https://www.igdb.com/companies/nintendo",
+      "https://store.steampowered.com/bundle/232",
+      "https://openlibrary.org/books/OL7353617M",
+      "https://evil.test/https://anilist.co/anime/1",
+      OTHER,
+    ]) {
+      expect(isCataloguePage(page), page).toBe(false);
+    }
+  });
+
+  it("takes a catalogue's page with no licence only for a topic's picture", () => {
+    const link = "https://www.themoviedb.org/movie/603-the-matrix";
+    expect(creditProblemsOf(fields({ link }))).toEqual(["needLicence"]);
+    expect(creditOfFields(fields({ link }))).toBeNull();
+    expect(creditProblemsOf(fields({ link }), { catalogue: true })).toEqual([]);
+    expect(creditOfFields(fields({ link }), { catalogue: true })).toEqual({ link });
+    // Any other page still asks for a licence there.
+    expect(creditProblemsOf(fields({ link: OTHER }), { catalogue: true })).toEqual(["needLicence"]);
   });
 
   it("makes the credit: spaces tidied, the deed with a CC licence, nothing left empty", () => {
