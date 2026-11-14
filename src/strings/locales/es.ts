@@ -805,6 +805,7 @@ const es: Translation = {
     translations: "Traducciones",
     translationsHelp:
       "Una por idioma. Si se deja vacía, el nombre se muestra tal como se escribió.",
+    topicNamesRefused: "No se aceptó una traducción. Cada una admite hasta {max} caracteres.",
     recrop: "Recortar de nuevo",
     replace: "Reemplazar",
     recropFailed: "Esta imagen no se puede recortar aquí. Reemplázala.",
@@ -1610,6 +1611,8 @@ const es: Translation = {
     coverOf: "Portada de {name}",
     refused: "No se aceptó el crédito de la imagen de «{name}»: {why}",
     refusedCover: "No se aceptó el crédito de la portada: {why}",
+    refusedPicture: "No se aceptó el crédito de la imagen: {why}",
+    topicNote: "El crédito se guarda con el tema.",
     why: {
       noLicense: "no tiene licencia. Elige una.",
       unknownLicense:

@@ -15,6 +15,7 @@ import {
   unfollowSection,
   unfollowTopic,
   withdrawSectionProposal,
+  topicCreditOf,
   type Topic,
 } from "./sections";
 
@@ -34,6 +35,38 @@ function recordingClient(result: unknown) {
   const client: ApiClient = { request: request as ApiClient["request"] };
   return { client, request };
 }
+
+describe("topicCreditOf", () => {
+  const stored = {
+    manual: true,
+    author: " Ann  ",
+    license: "CC BY 4.0",
+    licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+    link: "https://commons.wikimedia.org/wiki/File:Indies.jpg",
+  };
+
+  it("reads the credit of a topic that has a picture", () => {
+    expect(
+      topicCreditOf({ pictureUrl: "https://p.test/a.webp", pictureAttribution: stored }),
+    ).toEqual({
+      author: "Ann",
+      license: "CC BY 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+      link: "https://commons.wikimedia.org/wiki/File:Indies.jpg",
+    });
+  });
+
+  it("reads none without a picture, without a page, or from anything that is not a credit", () => {
+    expect(topicCreditOf({ pictureUrl: null, pictureAttribution: stored })).toBeNull();
+    expect(topicCreditOf({ pictureAttribution: stored })).toBeNull();
+    const pictureUrl = "https://p.test/a.webp";
+    expect(topicCreditOf({ pictureUrl, pictureAttribution: { license: "CC0 1.0" } })).toBeNull();
+    expect(topicCreditOf({ pictureUrl, pictureAttribution: null })).toBeNull();
+    expect(topicCreditOf({ pictureUrl, pictureAttribution: "CC0" })).toBeNull();
+    expect(topicCreditOf({ pictureUrl, pictureAttribution: [stored] })).toBeNull();
+    expect(topicCreditOf({ pictureUrl })).toBeNull();
+  });
+});
 
 describe("sections", () => {
   it("reads the sections with their counts and whether this person follows each", async () => {

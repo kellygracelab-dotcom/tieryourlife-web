@@ -2,13 +2,21 @@ import { useState, type ReactNode } from "react";
 import { PageTitle } from "../app/pageTitle";
 import { Link, Navigate, useParams } from "react-router";
 import { errorOf } from "../api/errors";
-import type { Topic } from "../api/sections";
+import { creditAsAttribution } from "../api/pictureAttribution";
+import { topicCreditOf, type Topic } from "../api/sections";
 import type { FeedSort, ListSummary } from "../api/types";
 import { FollowButton } from "../features/community/FollowButton";
 import { useReporting, type Report } from "../features/community/useReporting";
 import { FeedGrid } from "../features/feed/FeedGrid";
+import { AboutPicture } from "../features/tierboard/AboutPicture";
 import { useFeed, type LoadFeed } from "../features/feed/useFeed";
-import { OTHER, sectionPath, topicPath, type Section } from "../features/sections/model";
+import {
+  OTHER,
+  sectionPath,
+  topicNameOf,
+  topicPath,
+  type Section,
+} from "../features/sections/model";
 import { sectionsStore } from "../features/sections/useSections";
 import { loadSection, report as sendReport } from "../lib/api";
 import { useResource } from "../lib/useResource";
@@ -100,6 +108,9 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
   const [followed, setFollowed] = useState<boolean | null>(null);
   const following = followed ?? topic.following;
   const waiting = topic.status === "pending";
+  const name = topicNameOf(topic);
+  const credit = topicCreditOf(topic);
+  const [about, setAbout] = useState(false);
 
   const follow = (next: boolean) => {
     setFollowed(next);
@@ -113,7 +124,7 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
       <FollowButton
         following={following}
         size={compact ? "card" : "profile"}
-        onClick={() => toggle(topic.name, following, follow)}
+        onClick={() => toggle(name, following, follow)}
       />
     );
 
@@ -122,13 +133,23 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
       <header className="section-head">
         <HeadArt section={section} topic={topic} />
         <BackLink className="section-head__back" to={sectionPath(section.id)} />
+        {credit !== null && (
+          <button
+            type="button"
+            className="section-head__about"
+            aria-label={strings.link.about}
+            onClick={() => setAbout(true)}
+          >
+            <Icon name="info" />
+          </button>
+        )}
         <div className="section-head__text">
           <span className="section-head__over">
             <Icon name={section.icon} />
             {section.name}
           </span>
-          <PageTitle title={topic.name} inBar={false} />
-          <h1 className="section-head__name">{topic.name}</h1>
+          <PageTitle title={name} inBar={false} />
+          <h1 className="section-head__name">{name}</h1>
           {waiting ? (
             <span className="section-head__pill">
               <Icon name="schedule" />
@@ -141,7 +162,7 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
       </header>
       {collapsed && (
         <div className="section-bar">
-          <span className="section-bar__name">{topic.name}</span>
+          <span className="section-bar__name">{name}</span>
           {button(true)}
         </div>
       )}
@@ -150,13 +171,20 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
 
       <FeedGrid
         state={feed.state}
-        label={topic.name}
+        label={name}
         retry={feed.retry}
         more={feed.more}
         onWrongTopic={notThisTopic}
         onReport={reporting.start}
       />
 
+      {about && credit !== null && (
+        <AboutPicture
+          name={name}
+          attribution={creditAsAttribution(credit)}
+          onClose={() => setAbout(false)}
+        />
+      )}
       {reporting.dialog}
       {overlays}
     </section>

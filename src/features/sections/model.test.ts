@@ -16,6 +16,7 @@ import {
   namedLike,
   sectionsNamed,
   servedPicture,
+  topicNameOf,
   topicPath,
   topicPicture,
   type Section,
@@ -35,6 +36,18 @@ const ids = (sections: readonly Section[]) => sections.map((section) => section.
 
 const many = (n: number): Section[] =>
   Array.from({ length: n }, (_, at) => sectionOf(stats(`s-${at}`, { name: `S${at}` })));
+
+describe("topicNameOf", () => {
+  const topic = { name: "Indies", names: { uk: "Інді", ru: "  " } };
+
+  it("is the translation for the language, else the name as written", () => {
+    expect(topicNameOf(topic, "uk")).toBe("Інді");
+    expect(topicNameOf(topic, "de")).toBe("Indies");
+    expect(topicNameOf(topic, "ru")).toBe("Indies");
+    expect(topicNameOf({ name: "Indies" }, "uk")).toBe("Indies");
+    expect(topicNameOf(topic, "en")).toBe("Indies");
+  });
+});
 
 describe("sections", () => {
   it("stands in with the nine, in the app's order, before the backend answers", () => {

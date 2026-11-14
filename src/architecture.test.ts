@@ -98,7 +98,8 @@ describe("the architecture", () => {
       boards: ["editor", "ranking", "sections", "tierboard"],
       editor: ["tierboard"],
       feed: ["community", "sections"],
-      admin: ["sections", "moderation", "boards"],
+      // A topic form gives its picture the credit form and rows the house covers have.
+      admin: ["sections", "moderation", "boards", "tierboard"],
       // Play's result and its picking draw cards and rows the way the board does, at its sizes.
       play: ["tierboard"],
     };

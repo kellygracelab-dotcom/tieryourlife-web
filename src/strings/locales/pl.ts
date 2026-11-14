@@ -817,6 +817,7 @@ const pl: Translation = {
     picture: "Obraz",
     translations: "Tłumaczenia",
     translationsHelp: "Po jednym na język. Puste pole pokazuje nazwę tak, jak ją wpisano.",
+    topicNamesRefused: "Tłumaczenie nie zostało przyjęte. Każde ma do {max} znaków.",
     recrop: "Przytnij ponownie",
     replace: "Zastąp",
     recropFailed: "Tego obrazu nie da się tu ponownie przyciąć. Zastąp go.",
@@ -1685,6 +1686,8 @@ const pl: Translation = {
     coverOf: "Okładka: {name}",
     refused: "Informacja o autorstwie obrazu „{name}” nie została przyjęta: {why}",
     refusedCover: "Informacja o autorstwie okładki nie została przyjęta: {why}",
+    refusedPicture: "Informacja o autorstwie obrazu nie została przyjęta: {why}",
+    topicNote: "Informacja o autorstwie zapisuje się razem z tematem.",
     why: {
       noLicense: "brak licencji. Wybierz ją.",
       unknownLicense:

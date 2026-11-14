@@ -744,6 +744,7 @@ export const en = {
     picture: "Picture",
     translations: "Translations",
     translationsHelp: "One per language. Left empty, the name shows as typed.",
+    topicNamesRefused: "A translation wasn’t accepted. Each is up to {max} characters.",
     recrop: "Recrop",
     replace: "Replace",
     recropFailed: "This picture can’t be recropped here. Replace it instead.",
@@ -1482,6 +1483,8 @@ export const en = {
     coverOf: "Cover of {name}",
     refused: "The credit for the picture of “{name}” wasn’t accepted: {why}",
     refusedCover: "The cover’s credit wasn’t accepted: {why}",
+    refusedPicture: "The picture’s credit wasn’t accepted: {why}",
+    topicNote: "The credit is saved with the topic.",
     why: {
       noLicense: "it has no licence. Choose one.",
       unknownLicense:

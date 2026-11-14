@@ -1,4 +1,5 @@
 import type { ApiClient } from "./client";
+import type { EditorCredit } from "./pictureAttribution";
 import { summaryOf, withRevision, type PublishRequest } from "./lists";
 import type { SectionStats, ThemePair, Topic } from "./sections";
 import type { FeedSort, ListSummary } from "./types";
@@ -250,24 +251,32 @@ export function decideTopic(client: ApiClient, id: string, decision: TopicDecisi
 export interface TopicDraft {
   name: string;
   section: string;
+  /** The name in the other languages, by locale; an empty one is left out. */
   names?: Record<string, string>;
   /** A 16:10 picture already uploaded to the person's own folder. */
   pictureId?: string;
+  /** Whom the picture is by, its licence and its page (CONTRACT, A topic picture's credit). */
+  pictureAttribution?: EditorCredit;
 }
 
 /**
  * What an edit of a topic may change. A picture id replaces its picture,
- * null takes it away, and left out it stays as it is.
+ * null takes it away, and left out it stays as it is. A new picture sent
+ * without a credit takes the old one away with it.
  */
 export interface TopicChanges {
   name?: string;
+  /** Only the languages that changed; "" takes a translation away. */
   names?: Record<string, string>;
   pictureId?: string | null;
+  /** The picture's credit: null takes it away, left out it stays as it is. */
+  pictureAttribution?: EditorCredit | null;
 }
 
 /**
  * An approved topic made by hand, without waiting in the queue. Refused with
- * 409 NAME_TAKEN {id} and 400 BAD_PICTURE {why}, as a section's picture is.
+ * 409 NAME_TAKEN {id} and 400 BAD_PICTURE {why}, as a section's picture is;
+ * 400 INVALID (detail names) and 400 BAD_ATTRIBUTION (reason) for the rest.
  */
 export function createTopic(client: ApiClient, draft: TopicDraft): Promise<Topic> {
   return client.request<Topic>("POST", "/lists/topics", { body: draft });

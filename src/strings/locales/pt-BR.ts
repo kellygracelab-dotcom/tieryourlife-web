@@ -800,6 +800,7 @@ const ptBR: Translation = {
     picture: "Imagem",
     translations: "Traduções",
     translationsHelp: "Uma por idioma. Se ficar vazia, o nome aparece como foi digitado.",
+    topicNamesRefused: "Uma tradução não foi aceita. Cada uma tem até {max} caracteres.",
     recrop: "Recortar de novo",
     replace: "Substituir",
     recropFailed: "Esta imagem não pode ser recortada aqui. Substitua-a.",
@@ -1601,6 +1602,8 @@ const ptBR: Translation = {
     coverOf: "Capa de {name}",
     refused: "O crédito da imagem de “{name}” não foi aceito: {why}",
     refusedCover: "O crédito da capa não foi aceito: {why}",
+    refusedPicture: "O crédito da imagem não foi aceito: {why}",
+    topicNote: "O crédito é salvo junto com o tópico.",
     why: {
       noLicense: "não tem licença. Escolha uma.",
       unknownLicense:

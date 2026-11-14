@@ -68,6 +68,10 @@ const WHY: Readonly<Record<string, keyof typeof strings.credit.why>> = {
   TOO_LONG: "tooLong",
 };
 
+/** The backend's reason a credit was refused, in words; "check it" for one this site does not know. */
+export const creditWhyText = (reason: string | undefined): string =>
+  strings.credit.why[WHY[reason ?? ""] ?? "other"];
+
 /**
  * A refused editor's credit, said of the card it is on (by its place in what
  * was sent) or of the cover; null for any other refusal, and for one that
@@ -75,7 +79,7 @@ const WHY: Readonly<Record<string, keyof typeof strings.credit.why>> = {
  */
 export function creditRefusalText(error: ApiError, request: PublishRequest): string | null {
   if (error.kind !== "invalid" || error.code !== "BAD_ATTRIBUTION") return null;
-  const why = strings.credit.why[WHY[error.why ?? ""] ?? "other"];
+  const why = creditWhyText(error.why);
   if (error.cover === true) return fill(strings.credit.refusedCover, { why });
   const card = error.itemIndex === undefined ? undefined : request.items[error.itemIndex];
   return card === undefined ? null : fill(strings.credit.refused, { name: card.title, why });

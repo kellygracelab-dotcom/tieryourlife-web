@@ -698,6 +698,15 @@
   color: var(--ink-dim);
 }
 
+/* About the picture in the topic form: the credit's rows, then the way to change it. */
+.topic-editor__credit {
+  align-items: flex-start;
+}
+
+.topic-editor__credit .credit-form {
+  align-self: stretch;
+}
+
 .admin-people__face {
   width: 40px;
   height: 40px;

@@ -1,15 +1,22 @@
 import { useId, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import type { TopicChanges, TopicDraft } from "../../api/admin";
-import { errorOf } from "../../api/errors";
-import type { Topic } from "../../api/sections";
+import { errorOf, type ApiError } from "../../api/errors";
+import { creditAsAttribution, type EditorCredit } from "../../api/pictureAttribution";
+import { topicCreditOf, type Topic } from "../../api/sections";
+import { fieldsOf } from "../../lib/editorCredit";
 import { cropOf } from "../../lib/framing";
+import { directionOf, LOCALE_NAMES } from "../../lib/locale";
 import { SECTION_PICTURE_MIN } from "../../lib/pictures";
 import { useWidthClass } from "../../lib/useWidthClass";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
+import { PictureRows } from "../tierboard/AboutPicture";
+import { CreditForm } from "../tierboard/CreditForm";
+import { creditWhyText } from "./houseWords";
+import { changedNames, newNames, sameCredit, topicNamesOf, TOPIC_LOCALES } from "./topicWords";
 import { editorDeps, type EditorDeps } from "../sections/editorDeps";
 import { topicPicture, type Section } from "../sections/model";
 import { TOPIC_NAME } from "../boards/model";
@@ -59,11 +66,19 @@ export function TopicEditor(props: TopicEditorProps) {
     const own = mode === "edit" ? topicPicture(props.topic) : null;
     return {
       name: mode === "edit" ? props.topic.name : "",
+      names: mode === "edit" ? topicNamesOf(props.topic.names) : {},
+      credit: mode === "edit" ? topicCreditOf(props.topic) : null,
       picture: own === null ? null : ({ kind: "kept", url: own } as PictureValue),
     };
   });
   const [name, setName] = useState(start.name);
+  const [names, setNames] = useState(start.names);
+  const [namesTrouble, setNamesTrouble] = useState(false);
   const [picture, setPicture] = useState<PictureValue | null>(start.picture);
+  // The credit the editor gave or took off; null while they have not touched it.
+  const [given, setGiven] = useState<{ credit: EditorCredit | null } | null>(null);
+  const [creditForm, setCreditForm] = useState(false);
+  const [creditTrouble, setCreditTrouble] = useState<string | null>(null);
   const [pictureTrouble, setPictureTrouble] = useState<string | null>(null);
   const [taken, setTaken] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -75,12 +90,18 @@ export function TopicEditor(props: TopicEditorProps) {
   const removed = start.picture !== null && picture === null;
   const pictureReady = picture === null || picture.kind === "kept" || picture.size !== null;
   const renamed = tidy !== tidySectionName(start.name);
-  const ready =
-    tidy !== "" && pictureReady && (mode === "create" || renamed || newPicture || removed);
+  const translated = changedNames(start.names, names);
+  // A new picture comes without the old one's credit (the backend drops it) until one is given.
+  const credit = given !== null ? given.credit : newPicture ? null : start.credit;
+  const creditChanged =
+    picture !== null &&
+    (newPicture ? credit !== null : given !== null && !sameCredit(credit, start.credit));
+  const changed = renamed || newPicture || removed || translated !== null || creditChanged;
+  const ready = tidy !== "" && pictureReady && (mode === "create" || changed);
   const nameTrouble = taken !== null && taken === tidy;
-  // What closing would throw away: a name or picture typed for a new topic, any change to one.
+  // What closing would throw away: what was typed or chosen for a new topic, any change to one.
   const edited =
-    mode === "create" ? tidy !== "" || picture !== null : renamed || newPicture || removed;
+    mode === "create" ? tidy !== "" || picture !== null || newNames(names) !== null : changed;
 
   // Typed work is not thrown away unasked, as the section editor does it.
   const close = () => {
@@ -108,22 +129,48 @@ export function TopicEditor(props: TopicEditorProps) {
 
   const sendNow = (pictureId: string | null): Promise<Topic> => {
     if (props.mode === "create") {
+      const all = newNames(names);
       return props.send({
         name: tidy,
         section: section.id,
+        ...(all === null ? {} : { names: all }),
         ...(pictureId === null ? {} : { pictureId }),
+        ...(pictureId !== null && credit !== null ? { pictureAttribution: credit } : {}),
       });
     }
+    // The credit goes with a new picture, or alone when it was changed on the picture the topic keeps.
+    const withCredit =
+      picture === null || (newPicture ? credit === null : !creditChanged)
+        ? {}
+        : { pictureAttribution: credit };
     return props.send({
       ...(renamed ? { name: tidy } : {}),
+      ...(translated === null ? {} : { names: translated }),
       ...(pictureId !== null ? { pictureId } : removed ? { pictureId: null } : {}),
+      ...withCredit,
     });
+  };
+
+  // What the backend refused in the translations or the credit, said at its field.
+  const refusedWords = (error: ApiError): boolean => {
+    if (error.kind !== "invalid") return false;
+    if (error.code === "BAD_ATTRIBUTION") {
+      setCreditTrouble(fill(strings.credit.refusedPicture, { why: creditWhyText(error.why) }));
+      return true;
+    }
+    if (error.code === "INVALID" && error.field === "names") {
+      setNamesTrouble(true);
+      return true;
+    }
+    return false;
   };
 
   const submit = async () => {
     if (!ready || sending) return;
     setSending(true);
     setFailed(false);
+    setNamesTrouble(false);
+    setCreditTrouble(null);
     try {
       let pictureId: string | null = null;
       if (picture?.kind === "framed" && picture.size !== null) {
@@ -145,7 +192,9 @@ export function TopicEditor(props: TopicEditorProps) {
       onDone(await sendNow(pictureId));
     } catch (reason: unknown) {
       setSending(false);
-      const trouble = troubleOf(errorOf(reason));
+      const error = errorOf(reason);
+      if (refusedWords(error)) return;
+      const trouble = troubleOf(error);
       switch (trouble.kind) {
         case "nameTaken":
           setTaken(tidy);
@@ -244,6 +293,47 @@ export function TopicEditor(props: TopicEditorProps) {
               </Button>
             )}
           </div>
+          {picture !== null && (
+            <section
+              className="section-editor__field topic-editor__credit"
+              aria-label={strings.link.about}
+            >
+              <p className="section-editor__label">{strings.link.about}</p>
+              {creditForm ? (
+                <CreditForm
+                  inForm
+                  note={strings.credit.topicNote}
+                  initial={fieldsOf(credit === null ? null : creditAsAttribution(credit))}
+                  editing={{
+                    save: (next) => {
+                      setGiven({ credit: next });
+                      setCreditTrouble(null);
+                    },
+                    remove:
+                      credit === null
+                        ? undefined
+                        : () => {
+                            setGiven({ credit: null });
+                            setCreditTrouble(null);
+                          },
+                  }}
+                  onDone={() => setCreditForm(false)}
+                />
+              ) : (
+                <>
+                  <PictureRows attribution={credit === null ? null : creditAsAttribution(credit)} />
+                  <Button icon="edit" onClick={() => setCreditForm(true)}>
+                    {credit === null ? strings.credit.add : strings.credit.edit}
+                  </Button>
+                </>
+              )}
+              {creditTrouble !== null && (
+                <p className="section-editor__error" role="alert">
+                  {creditTrouble}
+                </p>
+              )}
+            </section>
+          )}
           <div className="section-editor__field">
             <div className={nameTrouble ? "outlined outlined--error" : "outlined"}>
               <label className="outlined__label" htmlFor={`${id}-name`}>
@@ -281,6 +371,34 @@ export function TopicEditor(props: TopicEditorProps) {
               </span>
             </div>
           </div>
+          <fieldset className="section-editor__field translations">
+            <legend className="section-editor__label">{strings.admin.translations}</legend>
+            <p className="section-editor__help">{strings.admin.translationsHelp}</p>
+            <div className="translations__grid">
+              {TOPIC_LOCALES.map((locale) => (
+                <label key={locale} className="translations__field">
+                  <span className="translations__language">{LOCALE_NAMES[locale]}</span>
+                  <input
+                    lang={locale}
+                    dir={directionOf(locale)}
+                    maxLength={TOPIC_NAME_MAX}
+                    value={names[locale] ?? ""}
+                    placeholder={tidy}
+                    aria-invalid={namesTrouble}
+                    onChange={(event) => {
+                      setNames({ ...names, [locale]: event.target.value });
+                      setNamesTrouble(false);
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+            {namesTrouble && (
+              <p className="section-editor__error" role="alert">
+                {fill(strings.admin.topicNamesRefused, { max: TOPIC_NAME_MAX })}
+              </p>
+            )}
+          </fieldset>
         </div>
         {(!compact || failed || asking) && (
           <div className="section-editor__foot">
