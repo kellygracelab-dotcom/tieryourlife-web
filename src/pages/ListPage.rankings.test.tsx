@@ -708,6 +708,83 @@ describe("ListPage: showing one's ranking to others", () => {
     localStorage.clear();
   });
 
+  it("sends Mine with the cards of one's own the saved board has, where they stand on it", async () => {
+    localStorage.clear();
+    openAs();
+    await placeAll();
+    await userEvent.click(screen.getAllByRole("button", { name: "Save my list" })[0]!);
+    const [saved] = boards.all();
+    const best = rankedTiers(saved!)[0]!;
+    const like = saved!.items[0]!;
+    // A card of one's own, added on the board after it was saved.
+    boards.save({
+      ...saved!,
+      items: [
+        ...saved!.items,
+        {
+          ...like,
+          uid: "own-1",
+          sourceIndex: undefined,
+          tierUid: best.uid,
+          position: 99,
+          title: "Lady Bird",
+          imageUrl: "https://pictures.test/lady-bird.webp",
+          pictureId: null,
+          credit: null,
+          attribution: undefined,
+        },
+      ],
+    });
+    await menu();
+    await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
+    expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
+    // Mine's places for the list's cards, and Lady Bird as N + 0 in S, as on the board.
+    expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ id: "abc" }),
+      [[1, 2], [0]],
+      expect.objectContaining({ uid: "u9" }),
+      { addedCards: [{ title: "Lady Bird", imageUrl: "https://pictures.test/lady-bird.webp" }] },
+    );
+    expect(mocks.loadListRankings).not.toHaveBeenCalled();
+    localStorage.clear();
+  });
+
+  it("keeps the cards of one's own the ranking went out with when there is no board", async () => {
+    localStorage.clear();
+    const kept = {
+      title: "Lady Bird",
+      imageUrl: "https://firebasestorage.test/published/ranking-abc_u9/lb.webp",
+      tierIndex: null,
+      credit: "Someone",
+    };
+    mocks.loadListRankings.mockResolvedValue({
+      rankings: [olena, { ...me, addedCards: [kept], allRows: [[0, 2], []] }],
+      nextCursor: null,
+    });
+    openAs();
+    await placeAll();
+    await menu();
+    await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
+    expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
+    // Read back from the rankings and sent again as they are: the backend keeps its copies.
+    expect(mocks.loadListRankings).toHaveBeenCalledWith("abc", null);
+    expect(mocks.keepListRanking).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ id: "abc" }),
+      [[1, 2], [0]],
+      expect.objectContaining({ uid: "u9" }),
+      {
+        addedCards: [
+          {
+            title: "Lady Bird",
+            imageUrl: "https://firebasestorage.test/published/ranking-abc_u9/lb.webp",
+            credit: "Someone",
+          },
+        ],
+      },
+    );
+    localStorage.clear();
+  });
+
   it("waits for every card to have its place before it asks", async () => {
     localStorage.clear();
     openAs();
