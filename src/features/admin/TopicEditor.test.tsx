@@ -326,6 +326,36 @@ describe("TopicEditor", () => {
       expect(screen.queryByText(/Couldn’t save/)).toBeNull();
     });
 
+    it("marks the language the backend names, of several sent with a new name (Proxy #134)", async () => {
+      const send = vi.fn<(changes: TopicChanges) => Promise<Topic>>().mockRejectedValueOnce(
+        new ApiFailure({
+          kind: "invalid",
+          detail: null,
+          code: "INVALID",
+          field: "names",
+          locale: "pl",
+        }),
+      );
+      edit(topic(), send);
+      await userEvent.type(nameField(), "s");
+      await userEvent.type(language("Deutsch"), "Indie");
+      await userEvent.type(language("Polski"), "Gry");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Not accepted: Polski. Each translation is up to 40 characters.",
+      );
+      expect(language("Polski")).toHaveAttribute("aria-invalid", "true");
+      expect(language("Deutsch")).toHaveAttribute("aria-invalid", "false");
+      expect(nameField()).toHaveAttribute("aria-invalid", "false");
+    });
+
+    it("takes a one-letter translation as the backend does", async () => {
+      const { send } = edit(topic());
+      await userEvent.type(language("日本語"), "犬");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(send).toHaveBeenCalledWith({ names: { ja: "犬" } });
+    });
+
     it("says at the name that a plain refusal of a rename is about the name", async () => {
       const send = vi
         .fn<(changes: TopicChanges) => Promise<Topic>>()

@@ -54,9 +54,9 @@ export interface BoardTopic {
 }
 
 /** The phone's and the backend's bounds on a topic's name. */
-export const TOPIC_NAME = { min: 2, max: 40 } as const;
+export const TOPIC_NAME = { min: 1, max: 40 } as const;
 
-/** A name fit to propose: spaces tidied, two to forty characters, a letter or a digit in it. Null otherwise. */
+/** A name fit to propose: spaces tidied, one to forty characters (犬 is one, Proxy #134), a letter or a digit in it. Null otherwise. */
 export function cleanTopicName(raw: string): string | null {
   const name = raw.replace(/\s+/g, " ").trim();
   if (name.length < TOPIC_NAME.min || name.length > TOPIC_NAME.max) return null;

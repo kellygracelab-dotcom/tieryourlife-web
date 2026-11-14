@@ -1075,9 +1075,12 @@ describe("BoardSettings: category and topic", () => {
     await userEvent.click(screen.getByRole("button", { name: /Topic/ }));
     const field = screen.getByRole("textbox", { name: "Name a new topic" });
     expect(field).toHaveAccessibleDescription(/waits for a moderator/);
-    // One letter is not a name yet.
-    await userEvent.type(field, "S");
+    // A sign alone is not a name; one letter is (犬, Proxy #134).
+    await userEvent.type(field, "-");
     expect(screen.getByRole("button", { name: "Suggest" })).toBeDisabled();
+    await userEvent.clear(field);
+    await userEvent.type(field, "S");
+    expect(screen.getByRole("button", { name: "Suggest" })).toBeEnabled();
     await userEvent.type(field, "pace   operas{Enter}");
     expect(held.topic).toEqual({ id: null, name: "Space operas" });
     expect(screen.getByRole("button", { name: /Topic/ })).toHaveTextContent(
