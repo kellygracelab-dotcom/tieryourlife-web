@@ -23,6 +23,14 @@ import type { AccountAction } from "../api/client";
 import { captureAccountAction } from "../lib/accountAction";
 import { RankingOffer, settleRankingOffer } from "../features/boards/RankingOffer";
 import { useBoards } from "../features/boards/useBoards";
+import { copyOfList } from "../features/boards/listCopies";
+import {
+  findMyRanking,
+  ownCardsOfBoard,
+  ownCardsOfRanking,
+  withOwnCards,
+  type OwnCards,
+} from "../features/boards/ownCards";
 import { useSaveToMine, type Shown } from "../features/boards/useSaveToMine";
 import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
@@ -51,6 +59,7 @@ import {
   keepListRanking,
   loadList,
   loadListAsWritten,
+  loadListRankings,
   preloadHidesAuthor,
   report as sendReport,
   unpublish as unpublishList,
@@ -586,7 +595,23 @@ function OpenList({
         });
         return false;
       }
-      const ranking = await keepListRanking(snapshot, rows, action);
+      // Mine never goes out without the cards of one's own the ranking has:
+      // the board saved from the list holds them, else the ranking as it went
+      // out does (Coordinator, 14.11). Mine's places for the list's cards.
+      const copy = copyOfList(keptBoards, list.id);
+      let own: OwnCards | null = copy === null ? null : ownCardsOfBoard(copy, fresh);
+      if (copy === null) {
+        const known =
+          rankings.state.rankings.find((one) => one.mine && one.isAuthor !== true) ??
+          (await findMyRanking((after) => loadListRankings(list.id, after)));
+        if (!action.isCurrent()) return false;
+        own = known === null ? null : ownCardsOfRanking(known);
+      }
+      const sent = own === null ? null : withOwnCards(rows, fresh.items.length, own);
+      const ranking =
+        sent === null
+          ? await keepListRanking(snapshot, rows, action)
+          : await keepListRanking(snapshot, sent.rows, action, { addedCards: sent.addedCards });
       if (!action.isCurrent()) return false;
       settleRankingOffer(action.uid, list.id);
       rankings.put(ranking);
