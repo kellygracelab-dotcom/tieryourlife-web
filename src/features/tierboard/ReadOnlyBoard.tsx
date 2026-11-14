@@ -1,4 +1,5 @@
 import { MediaImage } from "../../ui/MediaImage";
+import { useBrokenPicture } from "../../ui/useBrokenPicture";
 import { useRef, useState, type CSSProperties } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
@@ -36,10 +37,17 @@ function Tile({
   const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
   const knows = item.imageUrl !== null && hasAbout(item);
   const page = item.imageUrl === null ? null : pageOf(item);
-  const className = item.imageUrl === null ? "tile tile--name" : "tile";
+  const [broken, onBroken] = useBrokenPicture(item.imageUrl);
+  const pictured = item.imageUrl !== null && !broken;
+  const className = pictured ? "tile" : "tile tile--name";
   const art =
-    item.imageUrl !== null ? (
-      <MediaImage {...sizedFor(item.imageUrl, 64)} alt={item.title} loading="lazy" />
+    pictured && item.imageUrl !== null ? (
+      <MediaImage
+        {...sizedFor(item.imageUrl, 64)}
+        alt={item.title}
+        loading="lazy"
+        onError={onBroken}
+      />
     ) : (
       <CardName title={item.title} board={board} wide />
     );

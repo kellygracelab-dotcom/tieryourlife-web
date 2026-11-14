@@ -30,6 +30,15 @@ const MISSING = "public, max-age=60, s-maxage=60";
  * browser that already has it keeps its copy; that is the trade-off.
  */
 export const PUBLISHED_ORIGINAL = "public, max-age=31536000, s-maxage=60, immutable";
+/*
+ * The shared catalogue copies boards show (published/catalogue/w-…): a poster
+ * or a Commons photo, named by its catalogue address, never a person's own
+ * picture and never taken down by moderation, so the CDN keeps it a day and
+ * fewer views wake the function (QA, 14.11.2026). Lists' own copies keep the
+ * minute above: their w- names do not say a catalogue poster from a picture
+ * of another site, which a takedown must stop showing soon.
+ */
+export const CATALOGUE_ORIGINAL = "public, max-age=31536000, s-maxage=86400, immutable";
 // Avatars, sections and topics as they are: an edge TTL so readers see a
 // removal soon, and browsers ask again every time.
 const OTHER_ORIGINAL = "public, max-age=0, s-maxage=60, must-revalidate";
@@ -87,7 +96,13 @@ export async function sendPicture(
   response.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
   response.setHeader(
     "Cache-Control",
-    !original ? KEEP : kind === "published" ? PUBLISHED_ORIGINAL : OTHER_ORIGINAL,
+    !original
+      ? KEEP
+      : kind !== "published"
+        ? OTHER_ORIGINAL
+        : id === "catalogue"
+          ? CATALOGUE_ORIGINAL
+          : PUBLISHED_ORIGINAL,
   );
   response.status(200).send(original ? bytes : await deps.shrink(bytes, wide));
 }

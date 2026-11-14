@@ -1,4 +1,5 @@
 import { MediaImage } from "../../ui/MediaImage";
+import { useBrokenPicture } from "../../ui/useBrokenPicture";
 import {
   memo,
   useCallback,
@@ -289,7 +290,9 @@ const Tile = memo(function Tile({
   const opener = useRef<HTMLButtonElement>(null);
   // On a house board every picture can be given the editor's own credit.
   const credit = useContext(CardCredit);
+  const [broken, onBroken] = useBrokenPicture(card?.imageUrl);
   if (card === undefined) return null;
+  const pictured = card.imageUrl !== null && !broken;
   const knows = card.imageUrl !== null && (hasAbout(card) || credit !== null);
   const page = card.imageUrl === null ? null : pageOf(card);
   const cardAt = (): Anchor | null => opener.current?.getBoundingClientRect() ?? null;
@@ -297,7 +300,7 @@ const Tile = memo(function Tile({
   const openItsPage = page === null ? undefined : () => openPage(page);
   const classes = [
     "tile",
-    card.imageUrl === null && "tile--name",
+    !pictured && "tile--name",
     selected && "tile--selected",
     lifted && "tile--lifted",
   ]
@@ -375,12 +378,13 @@ const Tile = memo(function Tile({
           if (!locked) pointerDownFor(item)(event);
         }}
       >
-        {card.imageUrl !== null ? (
+        {pictured && card.imageUrl !== null ? (
           <MediaImage
             {...sizedFor(card.imageUrl, TILE_WIDTH)}
             alt=""
             loading="lazy"
             draggable={false}
+            onError={onBroken}
           />
         ) : (
           <CardName title={card.title} board={board} wide />
