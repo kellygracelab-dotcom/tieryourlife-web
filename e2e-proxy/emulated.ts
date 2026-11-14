@@ -28,7 +28,8 @@ export function person(name: string): Person {
  * page: a new account the first time, the same account on a second device.
  */
 export async function signIn(page: Page, who: Person): Promise<void> {
-  await page.goto("/me");
+  // Your lists: /me now opens it filtered to Public, which would hide new boards.
+  await page.goto("/b");
   const popup = page.waitForEvent("popup");
   await page.getByRole("button", { name: "Sign in" }).first().click();
   const google = await popup;
