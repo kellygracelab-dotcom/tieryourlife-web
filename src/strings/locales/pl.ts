@@ -932,6 +932,14 @@ const pl: Translation = {
     notThisTopicSent: "Zapisane. Moderator przeniesie listę, jeśli należy gdzie indziej.",
     backToSection: "Wróć do działu {section}",
     suggestTopic: "Zaproponuj temat",
+    tierLists: "Tier listy",
+    showAllTopics: {
+      one: "Pokaż {n} temat",
+      few: "Pokaż wszystkie {n} tematy",
+      many: "Pokaż wszystkie {n} tematów",
+      other: "Pokaż wszystkie {n} tematu",
+    },
+    showFewer: "Pokaż mniej",
     suggestTopicBody:
       "Tematy nazywa się lub wybiera w polu „Temat” w Ustawieniach listy. Nowy wychodzi razem z listą przy publikacji i czeka na moderatora.",
     suggestTopicMake: "Utwórz listę w: {section}",

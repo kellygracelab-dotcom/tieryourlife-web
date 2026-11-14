@@ -908,6 +908,13 @@ const es: Translation = {
     notThisTopicSent: "Anotado. Un moderador la moverá si va en otro sitio.",
     backToSection: "Volver a {section}",
     suggestTopic: "Proponer un tema",
+    tierLists: "Tier lists",
+    showAllTopics: {
+      one: "Ver los {n} temas",
+      many: "Ver los {n} temas",
+      other: "Ver los {n} temas",
+    },
+    showFewer: "Ver menos",
     suggestTopicBody:
       "Los temas se nombran o se eligen en «Tema» de los Ajustes de la lista. Uno nuevo sale con la lista al publicarla y espera a un moderador.",
     suggestTopicMake: "Crear una lista en {section}",

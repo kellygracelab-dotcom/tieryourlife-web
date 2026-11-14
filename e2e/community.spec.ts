@@ -162,7 +162,7 @@ const topics = ["Pokémon", "Indies", "Speedruns", "Retro", "Roguelikes"].map((n
 const PICTURE =
   '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="100"><rect width="160" height="100" fill="#e0b84a"/><circle cx="80" cy="50" r="30" fill="#c0392b"/></svg>';
 
-test("a section's topics are tiles, two to a phone's row, and a tile opens the topic's page", async ({
+test("a section's topics are low tiles, two rows at most, then the lists under their own title", async ({
   page,
 }, testInfo) => {
   await mockBackend(page);
@@ -192,7 +192,7 @@ test("a section's topics are tiles, two to a phone's row, and a tile opens the t
   await page.goto("/s/games");
 
   const grid = page.getByRole("navigation", { name: "Topics" });
-  await expect(grid.getByRole("link")).toHaveCount(topics.length);
+  await expect(grid.getByRole("link", { includeHidden: true })).toHaveCount(topics.length);
   // Tiles at least 170 px wide besides the gaps, and never fewer than two in a row:
   // two on a phone, five across the desktop's page, as the app counts.
   const { columns, width } = await grid.evaluate((element) => ({
@@ -202,9 +202,24 @@ test("a section's topics are tiles, two to a phone's row, and a tile opens the t
   expect(columns).toBe(Math.max(2, Math.floor((width + 12) / 182)));
   const phone = testInfo.project.name === "phone" || testInfo.project.name === "iphone";
   expect(columns).toBe(phone ? 2 : Math.floor(width / 170));
+  // Lower than a list's card, so a topic reads as a way in (section layout, 14.11).
   const tile = await grid.getByRole("link").first().boundingBox();
   if (tile === null) throw new Error("no tile");
-  expect(tile.width / tile.height).toBeCloseTo(2, 1);
+  expect(tile.height).toBe(64);
+  // Two rows while folded; the rest under Show all, in place.
+  await expect(grid.getByRole("link")).toHaveCount(Math.min(topics.length, columns * 2));
+  if (topics.length > columns * 2) {
+    await page.getByRole("button", { name: `Show all ${topics.length} topics` }).click();
+    await expect(grid.getByRole("link")).toHaveCount(topics.length);
+  }
+  // The lists under a line and their own title, with their order beside it.
+  const lists = page.getByRole("heading", { level: 2, name: "Tier lists · 9" });
+  await expect(lists).toBeVisible();
+  const [gridBottom, listsTop] = await Promise.all([
+    grid.evaluate((element) => element.getBoundingClientRect().bottom),
+    lists.evaluate((element) => element.getBoundingClientRect().top),
+  ]);
+  expect(listsTop).toBeGreaterThan(gridBottom + 24);
 
   await grid.getByRole("link", { name: "Pokémon" }).click();
   await expect(page).toHaveURL("/s/games/t/t1");

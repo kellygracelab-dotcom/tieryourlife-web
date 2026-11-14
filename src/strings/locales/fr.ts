@@ -925,6 +925,13 @@ const fr: Translation = {
     notThisTopicSent: "Noté. Un modérateur la déplacera si elle va ailleurs.",
     backToSection: "Retour à {section}",
     suggestTopic: "Proposer un thème",
+    tierLists: "Tier lists",
+    showAllTopics: {
+      one: "Voir les {n} sujets",
+      many: "Voir les {n} sujets",
+      other: "Voir les {n} sujets",
+    },
+    showFewer: "Voir moins",
     suggestTopicBody:
       "Les thèmes se nomment ou se choisissent sous « Thème » dans les Paramètres de la liste. Un nouveau part avec la liste à sa publication et attend un modérateur.",
     suggestTopicMake: "Créer une liste dans {section}",

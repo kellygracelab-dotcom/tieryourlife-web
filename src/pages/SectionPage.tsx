@@ -30,7 +30,13 @@ import { BackLink } from "../ui/BackLink";
 import { Icon } from "../ui/Icon";
 import { sayOnTheSite } from "../ui/siteNotice";
 import { Spinner } from "../ui/Spinner";
-import { HeadArt, SectionRoute, SortRow, type SectionPageProps } from "./SectionPageParts";
+import {
+  BlockTitle,
+  HeadArt,
+  SectionRoute,
+  SortRow,
+  type SectionPageProps,
+} from "./SectionPageParts";
 import {
   topicDeps,
   useCollapsed,
@@ -164,31 +170,37 @@ function SectionView({ section, load, store, topics, loadOne }: SectionViewProps
         </div>
       )}
 
-      {/* The sort sits right under the header and never moves. With no topic
-          to show, the way to suggest one leads it instead of a title of its own. */}
-      <SortRow sort={sort} onSort={setSort}>
-        {ready && !anyTopics && suggest}
-      </SortRow>
-
       {!ready && <Spinner className="section-page__loading" label={section.name} />}
 
-      {ready && anyTopics && (
+      {/* Topics, a line, then the tier lists with their order (section layout,
+          14.11): each block under its own title, so the two never run together. */}
+      {ready && (
         <div className="section-topics">
           <div className="section-topics__head">
-            <h2 className="section-topics__title">{strings.sections.topics}</h2>
+            <BlockTitle
+              title={strings.sections.topics}
+              count={anyTopics ? approved.length + waiting.length : null}
+            />
             {suggest}
           </div>
-          <TopicTiles
-            section={section}
-            approved={approved}
-            waiting={waiting}
-            onOpenWaiting={setOpened}
-          />
+          {anyTopics && (
+            <TopicTiles
+              section={section}
+              approved={approved}
+              waiting={waiting}
+              onOpenWaiting={setOpened}
+            />
+          )}
         </div>
       )}
 
+      {ready && <hr className="section-page__divider" />}
+
       {ready && (
-        <FeedGrid state={feed.state} label={section.name} retry={feed.retry} more={feed.more} />
+        <>
+          <SortRow sort={sort} onSort={setSort} count={section.listCount} />
+          <FeedGrid state={feed.state} label={section.name} retry={feed.retry} more={feed.more} />
+        </>
       )}
 
       {overlays}

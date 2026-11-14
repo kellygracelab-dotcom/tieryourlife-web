@@ -835,6 +835,9 @@ export const en = {
     notThisTopicSent: "Noted. A moderator will move it if it belongs elsewhere.",
     backToSection: "Back to {section}",
     suggestTopic: "Suggest a topic",
+    tierLists: "Tier lists",
+    showAllTopics: { one: "Show all {n} topics", other: "Show all {n} topics" },
+    showFewer: "Show fewer",
     suggestTopicBody:
       "Topics are named or chosen under Topic in a list’s List settings. A new one goes out with the list when it is published and waits for a moderator.",
     suggestTopicMake: "Make a list in {section}",

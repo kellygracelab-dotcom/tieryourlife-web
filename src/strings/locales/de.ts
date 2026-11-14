@@ -897,6 +897,9 @@ const de: Translation = {
     notThisTopicSent: "Notiert. Ein Moderator verschiebt sie, wenn sie woanders hingehört.",
     backToSection: "Zurück zu {section}",
     suggestTopic: "Thema vorschlagen",
+    tierLists: "Tierlisten",
+    showAllTopics: { one: "Alle {n} Themen zeigen", other: "Alle {n} Themen zeigen" },
+    showFewer: "Weniger zeigen",
     suggestTopicBody:
       "Themen werden unter „Thema“ in den Listeneinstellungen benannt oder gewählt. Ein neues geht beim Veröffentlichen mit der Liste hinaus und wartet auf einen Moderator.",
     suggestTopicMake: "Liste in {section} anlegen",

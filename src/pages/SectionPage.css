@@ -229,9 +229,21 @@
   min-height: 40px;
 }
 
-.section-topics__title {
+/* A block's title, as the app's section headers: capitals in the page's language, dimmed, spaced. */
+.section-block__title {
   margin: 0;
-  font: 500 16px/24px var(--font);
+  color: var(--ink-dim);
+  font: 500 14px/20px var(--font);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Between the topics and the tier lists: 24 above the line, 16 under it, the page's 16 gap included. */
+.section-page__divider {
+  height: 1px;
+  margin: 8px 0 0;
+  border: 0;
+  background: var(--line);
 }
 
 .section-topics__suggest {
@@ -241,13 +253,9 @@
 .section-sort {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
   min-height: 44px;
-}
-
-/* With no topics, Suggest a topic leads the row and Order stays at its end. */
-.section-sort .section-topics__suggest {
-  margin-inline-end: auto;
 }
 
 .section-sort__order {
