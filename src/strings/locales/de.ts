@@ -472,6 +472,8 @@ const de: Translation = {
     progressTitle: "Anderen zeigen, wie du sie eingestuft hast?",
     progressSignIn: "Zum Teilen anmelden",
     progressShare: "In den Ranglisten zeigen",
+    updateInRankings: "In den Ranglisten aktualisieren",
+    removeFromRankings: "Aus den Ranglisten entfernen",
     progressLater: "Nicht jetzt",
     progressOriginal: "Originalliste und Ranglisten",
     title: "Ranglisten",
@@ -483,6 +485,7 @@ const de: Translation = {
     withdrawBody: "Sie verschwindet aus den Ranglisten dieser Liste.",
     signInToShow: "Melde dich an, um deine Rangliste zu zeigen",
     shown: "Deine Rangliste steht jetzt bei den Ranglisten der Liste",
+    removed: "Deine Rangliste steht nicht mehr bei den Ranglisten der Liste",
     showBanned:
       "Ein Moderator hat eine deiner Listen entfernt, deshalb kannst du vorerst keine Ranglisten zeigen.",
     cancel: "Abbrechen",

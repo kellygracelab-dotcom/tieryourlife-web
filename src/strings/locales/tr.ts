@@ -460,6 +460,8 @@ const tr: Translation = {
     progressTitle: "Nasıl sıraladığını başkalarına göstermek ister misin?",
     progressSignIn: "Paylaşmak için giriş yap",
     progressShare: "Sıralamalarda göster",
+    updateInRankings: "Sıralamalarda güncelle",
+    removeFromRankings: "Sıralamalardan kaldır",
     progressLater: "Şimdi değil",
     progressOriginal: "Asıl liste ve sıralamalar",
     title: "Sıralamalar",
@@ -471,6 +473,7 @@ const tr: Translation = {
     withdrawBody: "Bu listenin sıralamalarından kalkar.",
     signInToShow: "Sıralamanızı göstermek için oturum açın",
     shown: "Sıralamanız listenin sıralamaları arasında",
+    removed: "Sıralamanız artık listenin sıralamaları arasında değil",
     showBanned:
       "Bir moderatör listelerinizden birini kaldırdı, bu yüzden şimdilik sıralama gösteremezsiniz.",
     cancel: "Vazgeç",

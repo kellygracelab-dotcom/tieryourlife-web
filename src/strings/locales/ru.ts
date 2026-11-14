@@ -484,6 +484,8 @@ const ru: Translation = {
     progressTitle: "Показать другим, как вы его расставили?",
     progressSignIn: "Войти и поделиться",
     progressShare: "Показать в рейтингах",
+    updateInRankings: "Обновить в рейтингах",
+    removeFromRankings: "Убрать из рейтингов",
     progressLater: "Не сейчас",
     progressOriginal: "Исходный список и рейтинги",
     title: "Рейтинги",
@@ -495,6 +497,7 @@ const ru: Translation = {
     withdrawBody: "Он исчезнет из рейтингов этого списка.",
     signInToShow: "Войдите, чтобы показать свой рейтинг",
     shown: "Ваш рейтинг теперь среди рейтингов списка",
+    removed: "Ваш рейтинг убран из рейтингов списка",
     showBanned:
       "Модератор снял один из ваших списков, поэтому пока вы не можете показывать рейтинги.",
     cancel: "Отмена",

@@ -161,27 +161,65 @@ function RankingsItem({ rankings }: { rankings: RankingsEntry | null }) {
 /**
  * One's own arrangement among the list's public rankings, Show in Rankings
  * as the offer after a game says it: in the menu once Mine is arranged, to a
- * guest as a way to sign in first.
+ * guest as a way to sign in first. Once it is out there it is Update in
+ * Rankings, which sends Mine as it is now, beside Remove from Rankings,
+ * asked as the sheet's Withdraw is (Coordinator, 14.11.2026).
  */
 export interface ShowMineEntry {
   signedIn: boolean;
   busy: boolean;
   show: () => void;
+  /** Mine is among the list's rankings: how to take it out. */
+  remove: (() => void) | null;
 }
 
 function ShowMineItem({ showMine }: { showMine: ShowMineEntry | null }) {
+  const [asking, setAsking] = useState(false);
   if (showMine === null) return null;
+  const { remove } = showMine;
   return (
-    <li>
-      <button
-        type="button"
-        className="menu__action"
-        disabled={showMine.busy}
-        onClick={showMine.show}
-      >
-        {showMine.signedIn ? strings.rankings.progressShare : strings.rankings.progressSignIn}
-      </button>
-    </li>
+    <>
+      <li>
+        <button
+          type="button"
+          className="menu__action"
+          disabled={showMine.busy}
+          onClick={showMine.show}
+        >
+          {!showMine.signedIn
+            ? strings.rankings.progressSignIn
+            : remove === null
+              ? strings.rankings.progressShare
+              : strings.rankings.updateInRankings}
+        </button>
+      </li>
+      {remove !== null && (
+        <li>
+          <button
+            type="button"
+            className="menu__action"
+            aria-haspopup="dialog"
+            disabled={showMine.busy}
+            onClick={() => setAsking(true)}
+          >
+            {strings.rankings.removeFromRankings}
+          </button>
+          {asking && (
+            <ConfirmDialog
+              title={strings.rankings.withdrawTitle}
+              body={strings.rankings.withdrawBody}
+              confirmLabel={strings.rankings.withdraw}
+              cancelLabel={strings.rankings.cancel}
+              onCancel={() => setAsking(false)}
+              onConfirm={() => {
+                setAsking(false);
+                remove();
+              }}
+            />
+          )}
+        </li>
+      )}
+    </>
   );
 }
 

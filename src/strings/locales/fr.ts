@@ -483,6 +483,8 @@ const fr: Translation = {
     progressTitle: "Montrer aux autres comment tu l’as classée ?",
     progressSignIn: "Se connecter pour partager",
     progressShare: "Afficher dans les classements",
+    updateInRankings: "Mettre à jour dans les classements",
+    removeFromRankings: "Retirer des classements",
     progressLater: "Pas maintenant",
     progressOriginal: "Liste d’origine et classements",
     title: "Classements",
@@ -494,6 +496,7 @@ const fr: Translation = {
     withdrawBody: "Il disparaîtra des classements de cette liste.",
     signInToShow: "Connectez-vous pour montrer votre classement",
     shown: "Votre classement figure parmi ceux de la liste",
+    removed: "Votre classement ne figure plus parmi ceux de la liste",
     showBanned:
       "Un modérateur a retiré l’une de vos listes ; vous ne pouvez pas montrer de classement pour l’instant.",
     cancel: "Annuler",

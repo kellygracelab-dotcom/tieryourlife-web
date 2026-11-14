@@ -81,8 +81,12 @@ export interface Rankings {
   /** The first page, asked for once; again only after it failed or one's own moved. */
   open: () => void;
   more: () => void;
-  /** This reader's own comes down at once, and back in its place if the backend says no. */
-  withdraw: () => void;
+  /**
+   * This reader's own comes down at once, and back in its place if the
+   * backend says no; `done` hears which. Before the rankings were read it is
+   * asked of the backend all the same.
+   */
+  withdraw: (done?: (withdrawn: boolean) => void) => void;
   /**
    * This reader's own, just shown to others: in place of the one there
    * before, and one more on the count when the backend made a new one. A
@@ -203,28 +207,35 @@ export function useRankings(listId: string, deps: RankingsDeps = defaultDeps): R
     if (next !== null && paging !== "loading") read(next);
   }, [read]);
 
-  const withdraw = useCallback(() => {
-    const at = current.current.rankings.findIndex((ranking) => ranking.mine);
-    const mine = current.current.rankings[at];
-    if (mine === undefined) return;
-    setState((now) => ({
-      ...now,
-      rankings: now.rankings.filter((ranking) => ranking !== mine),
-      withdrawFailed: false,
-      countChange: now.countChange - 1,
-    }));
-    deps.withdraw(listId).catch(() =>
-      setState((now) => {
-        const rest = now.rankings.filter((ranking) => ranking.uid !== mine.uid);
-        return {
-          ...now,
-          rankings: [...rest.slice(0, at), mine, ...rest.slice(at)],
-          withdrawFailed: true,
-          countChange: now.countChange + 1,
-        };
-      }),
-    );
-  }, [listId, deps]);
+  const withdraw = useCallback(
+    (done: (withdrawn: boolean) => void = () => undefined) => {
+      const at = current.current.rankings.findIndex((ranking) => ranking.mine);
+      const mine = current.current.rankings[at];
+      setState((now) => ({
+        ...now,
+        rankings: now.rankings.filter((ranking) => ranking !== mine),
+        withdrawFailed: false,
+        countChange: now.countChange - 1,
+      }));
+      deps.withdraw(listId).then(
+        () => done(true),
+        () => {
+          setState((now) => {
+            if (mine === undefined) return { ...now, countChange: now.countChange + 1 };
+            const rest = now.rankings.filter((ranking) => ranking.uid !== mine.uid);
+            return {
+              ...now,
+              rankings: [...rest.slice(0, at), mine, ...rest.slice(at)],
+              withdrawFailed: true,
+              countChange: now.countChange + 1,
+            };
+          });
+          done(false);
+        },
+      );
+    },
+    [listId, deps],
+  );
 
   // Not read yet, the sheet reads it with the rest when it opens.
   const put = useCallback(({ created, ...ranking }: ReaderRanking & { created?: boolean }) => {

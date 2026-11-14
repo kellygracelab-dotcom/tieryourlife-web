@@ -394,14 +394,22 @@ function OpenList({
     setView("theirs");
     setSheet(false);
   };
+  // Mine shown to others from this page, or taken back: until then the
+  // rankings say whether it is among them.
+  const [mineShown, setMineShown] = useState<boolean | null>(null);
   // One's own placing on the board as it is withdrawn gives way to the author's.
-  const withdraw = () => {
+  const withdraw = (done?: (withdrawn: boolean) => void) => {
     if (chosen?.mine === true) {
       remember();
       keepChosen(null);
     }
     if (account?.kind === "signedIn") settleRankingOffer(account.uid, list.id);
-    rankings.withdraw();
+    const was = mineShown;
+    setMineShown(false);
+    rankings.withdraw((withdrawn) => {
+      if (!withdrawn) setMineShown(was);
+      done?.(withdrawn);
+    });
   };
 
   // Play over somebody else's list: the cards by their place in it, starting
@@ -661,6 +669,7 @@ function OpenList({
       if (!action.isCurrent()) return false;
       settleRankingOffer(action.uid, list.id);
       rankings.put(ranking);
+      setMineShown(true);
       setNotice({ text: strings.rankings.shown });
       return true;
     } catch (reason: unknown) {
@@ -690,13 +699,30 @@ function OpenList({
       setShowing(false);
     }
   };
+  const signedIn = account?.kind === "signedIn";
+  const mineOut =
+    signedIn &&
+    (mineShown ?? rankings.state.rankings.some((one) => one.mine && one.isAuthor !== true));
+  // Whether Mine is out there is read from the rankings as the page opens.
+  const asksRankings = signedIn && !own && !outOfSight && arranged;
+  const openRankings = rankings.open;
+  useEffect(() => {
+    if (asksRankings) openRankings();
+  }, [asksRankings, openRankings]);
+  const removeMine = () =>
+    withdraw((withdrawn) =>
+      setNotice({
+        text: withdrawn ? strings.rankings.removed : strings.rankings.withdrawFailed,
+      }),
+    );
   const showMine =
     own || outOfSight || !arranged
       ? null
       : {
-          signedIn: account?.kind === "signedIn",
+          signedIn,
           busy: showing,
           show: () => void showToOthers(),
+          remove: mineOut ? removeMine : null,
         };
 
   return (
@@ -862,7 +888,7 @@ function OpenList({
           rankings={rankings}
           chosen={chosen?.uid ?? null}
           onChoose={choose}
-          onWithdraw={withdraw}
+          onWithdraw={() => withdraw()}
           onClose={() => setSheet(false)}
         />
       )}

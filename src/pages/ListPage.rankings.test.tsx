@@ -4,7 +4,7 @@ vi.mock("../lib/firebase", async (original) => ({
   ...(await original<typeof import("../lib/firebase")>()),
   getFirebaseAuth: () => actionAuth,
 }));
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type InitialEntry } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -595,6 +595,8 @@ describe("ListPage: showing one's ranking to others", () => {
   beforeEach(() => {
     mocks.loadList.mockResolvedValue(twoTiers);
     mocks.loadListAsWritten.mockResolvedValue(twoTiers);
+    // Mine is not among the rankings yet: the menu offers to show it.
+    mocks.loadListRankings.mockResolvedValue({ rankings: [olena], nextCursor: null });
   });
   /** Ex Machina moved to A on the author's board: Mine starts from it, as on the phone. */
   const arrangeMine = async () => {
@@ -745,7 +747,8 @@ describe("ListPage: showing one's ranking to others", () => {
       expect.objectContaining({ uid: "u9" }),
       { addedCards: [{ title: "Lady Bird", imageUrl: "https://pictures.test/lady-bird.webp" }] },
     );
-    expect(mocks.loadListRankings).not.toHaveBeenCalled();
+    // Only the page's own look at the rankings: no paging for Mine.
+    expect(mocks.loadListRankings).toHaveBeenCalledTimes(1);
     localStorage.clear();
   });
 
@@ -764,7 +767,7 @@ describe("ListPage: showing one's ranking to others", () => {
     openAs();
     await placeAll();
     await menu();
-    await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
+    await userEvent.click(inMenu().getByRole("button", { name: "Update in Rankings" }));
     expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
     // Read back from the rankings and sent again as they are: the backend keeps its copies.
     expect(mocks.loadListRankings).toHaveBeenCalledWith("abc", null);
@@ -832,6 +835,8 @@ describe("ListPage: showing one's ranking to others", () => {
     openAs();
     await arrangeMine();
     await menu();
+    // From now on the backend has one's own among them.
+    mocks.loadListRankings.mockResolvedValue({ rankings: [me, olena], nextCursor: null });
     await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
     expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
     // The list is read again first: rows name cards by their place in it.
@@ -856,6 +861,7 @@ describe("ListPage: showing one's ranking to others", () => {
     await arrangeMine();
     const show = async () => {
       await menu();
+      mocks.loadListRankings.mockResolvedValue({ rankings: [me, olena], nextCursor: null });
       await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
       expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
     };
@@ -874,6 +880,53 @@ describe("ListPage: showing one's ranking to others", () => {
     await show();
     await menu();
     expect(screen.getByRole("button", { name: "Rankings · 13" })).toBeInTheDocument();
+    localStorage.clear();
+  });
+
+  it("updates Mine in the rankings once it is there, and takes it out as Withdraw does", async () => {
+    localStorage.clear();
+    openAs();
+    await arrangeMine();
+    await menu();
+    mocks.loadListRankings.mockResolvedValue({ rankings: [me, olena], nextCursor: null });
+    await userEvent.click(inMenu().getByRole("button", { name: "Show in Rankings" }));
+    expect(await screen.findByText("Your ranking is in the list’s rankings")).toBeInTheDocument();
+    // Shown: the same line sends Mine as it is now, and Remove stands beside it.
+    await menu();
+    expect(inMenu().queryByRole("button", { name: "Show in Rankings" })).toBeNull();
+    await userEvent.click(inMenu().getByRole("button", { name: "Update in Rankings" }));
+    await waitFor(() => expect(mocks.keepListRanking).toHaveBeenCalledTimes(2));
+    await menu();
+    await userEvent.click(inMenu().getByRole("button", { name: "Remove from Rankings" }));
+    const ask = screen.getByRole("dialog", { name: "Withdraw your ranking?" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Withdraw" }));
+    expect(mocks.withdrawListRanking).toHaveBeenCalledExactlyOnceWith("abc");
+    expect(
+      await screen.findByText("Your ranking is out of the list’s rankings"),
+    ).toBeInTheDocument();
+    await menu();
+    expect(inMenu().getByRole("button", { name: "Show in Rankings" })).toBeInTheDocument();
+    expect(inMenu().queryByRole("button", { name: "Remove from Rankings" })).toBeNull();
+    localStorage.clear();
+  });
+
+  it("finds Mine already among the rankings as the page opens", async () => {
+    localStorage.clear();
+    mocks.loadListRankings.mockResolvedValue({ rankings: [me, olena], nextCursor: null });
+    openAs();
+    await arrangeMine();
+    await menu();
+    expect(await inMenu().findByRole("button", { name: "Update in Rankings" })).toBeInTheDocument();
+    // A withdrawal the backend refuses puts it back, and says so.
+    mocks.withdrawListRanking.mockRejectedValueOnce(new Error("offline"));
+    await userEvent.click(inMenu().getByRole("button", { name: "Remove from Rankings" }));
+    const ask = screen.getByRole("dialog", { name: "Withdraw your ranking?" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Withdraw" }));
+    expect(
+      await screen.findByText("Couldn’t withdraw your ranking. Try again."),
+    ).toBeInTheDocument();
+    await menu();
+    expect(inMenu().getByRole("button", { name: "Update in Rankings" })).toBeInTheDocument();
     localStorage.clear();
   });
 
