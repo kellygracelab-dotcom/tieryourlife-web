@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -396,7 +396,17 @@ describe("SectionPage", () => {
     open("/s/games");
     const grid = await tiles();
     const indies = grid.getByRole("link", { name: "Indies" });
-    expect(indies.querySelector("img")).toHaveAttribute("src", "https://pictures.test/indies.webp");
+    const own = indies.querySelector("img")!;
+    expect(own).toHaveAttribute("src", "https://pictures.test/indies.webp");
+    // Under its own picture only the section's tone, never the section's art,
+    // which showed first and then blinked into the topic's (Danylo, 14.11).
+    expect(indies).toHaveClass("topic-tile--own");
+    expect(indies).not.toHaveClass("topic-tile--pictured");
+    // The first two rows are asked for at once, and the picture fades in once it is here.
+    expect(own).toHaveAttribute("loading", "eager");
+    expect(own).not.toHaveClass("topic-tile__picture--in");
+    fireEvent.load(own);
+    expect(own).toHaveClass("topic-tile__picture--in");
     const plain = grid.getByRole("link", { name: "Pokémon" });
     expect(plain.querySelector("img")).toBeNull();
     expect(plain).toHaveStyle({ "--tint-light": "#3D6B58" });

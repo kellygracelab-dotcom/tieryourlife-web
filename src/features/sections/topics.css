@@ -67,6 +67,11 @@
   --tint: var(--tint-dark);
 }
 
+/* Its own picture over the section's flat tone: no section art, no hatch. */
+.topic-tile--own {
+  background-image: none;
+}
+
 .topic-tile__picture {
   position: absolute;
   inset: 0;
@@ -75,6 +80,18 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.topic-tile__picture--in {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topic-tile__picture {
+    transition: none;
+  }
 }
 
 /* The scrim under the name, and a darker one that fades in on hover. */

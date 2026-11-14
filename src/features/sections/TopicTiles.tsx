@@ -45,7 +45,13 @@ export function TopicTiles({ section, approved, waiting, onOpenWaiting }: TopicT
     <>
       <nav ref={grid} className="topic-tiles" aria-label={strings.sections.topics}>
         {approved.map((topic, index) => (
-          <TopicTile key={topic.id} section={section} topic={topic} hidden={!shown(index)} />
+          <TopicTile
+            key={topic.id}
+            section={section}
+            topic={topic}
+            hidden={!shown(index)}
+            eager={index < fold}
+          />
         ))}
         {waiting.map((topic, index) => (
           <TopicTile
@@ -53,6 +59,7 @@ export function TopicTiles({ section, approved, waiting, onOpenWaiting }: TopicT
             section={section}
             topic={topic}
             hidden={!shown(approved.length + index)}
+            eager={approved.length + index < fold}
             onOpen={() => onOpenWaiting(topic)}
           />
         ))}
@@ -120,17 +127,24 @@ function TopicTile({
   topic,
   onOpen,
   hidden = false,
+  eager = false,
 }: {
   section: Section;
   topic: Topic;
   onOpen?: () => void;
   /** Folded away under Show all. */
   hidden?: boolean;
+  /** In the first two rows, seen at once: its picture is asked for at once too. */
+  eager?: boolean;
 }) {
   const picture = topicPicture(topic);
+  const [loaded, setLoaded] = useState(false);
+  // A topic with a picture of its own wears only its section's tone under it,
+  // never the section's art, which showed first and then blinked into the
+  // topic's (Danylo, 14.11): the picture fades in over that tone.
   const className = [
     "topic-tile",
-    section.picture === null ? "" : "topic-tile--pictured",
+    picture !== null ? "topic-tile--own" : section.picture === null ? "" : "topic-tile--pictured",
     onOpen === undefined ? "" : "topic-tile--waiting",
   ]
     .filter(Boolean)
@@ -139,11 +153,12 @@ function TopicTile({
     <>
       {picture !== null && (
         <MediaImage
-          className="topic-tile__picture"
+          className={loaded ? "topic-tile__picture topic-tile__picture--in" : "topic-tile__picture"}
           src={servedPicture(picture)}
           alt=""
-          loading="lazy"
+          loading={eager ? "eager" : "lazy"}
           decoding="async"
+          onLoad={() => setLoaded(true)}
         />
       )}
       {onOpen !== undefined && (
