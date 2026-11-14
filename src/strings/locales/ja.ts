@@ -865,6 +865,9 @@ const ja: Translation = {
     notThisTopicSent: "記録しました。別の場所に属するなら、モデレーターが移動します。",
     backToSection: "{section}に戻る",
     suggestTopic: "トピックを提案",
+    tierLists: "ティア表",
+    showAllTopics: { other: "トピックをすべて表示（{n}件）" },
+    showFewer: "折りたたむ",
     suggestTopicBody:
       "トピックは「リストの設定」の「トピック」で名付けるか選びます。新しいトピックはリストの公開と一緒に送られ、モデレーターの確認を待ちます。",
     suggestTopicMake: "{section}でリストを作る",

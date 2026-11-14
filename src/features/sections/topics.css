@@ -31,10 +31,11 @@
   justify-content: flex-end;
   width: 100%;
   min-width: 0;
-  aspect-ratio: 2 / 1;
-  padding: 0 10px 10px 12px;
+  /* Lower than a list's card, so a topic reads as a way in, not one more list (14.11). */
+  height: 64px;
+  padding: 0 10px 8px 12px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   color: #ffffff;
   font: inherit;
@@ -66,6 +67,11 @@
   --tint: var(--tint-dark);
 }
 
+/* Its own picture over the section's flat tone: no section art, no hatch. */
+.topic-tile--own {
+  background-image: none;
+}
+
 .topic-tile__picture {
   position: absolute;
   inset: 0;
@@ -74,6 +80,18 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.topic-tile__picture--in {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topic-tile__picture {
+    transition: none;
+  }
 }
 
 /* The scrim under the name, and a darker one that fades in on hover. */
@@ -113,6 +131,15 @@
   box-shadow:
     0 0 0 3px var(--paper),
     0 0 0 5px var(--link);
+}
+
+.topic-tile[hidden] {
+  display: none;
+}
+
+/* Show all N topics / Show fewer, under the tiles at their start. */
+.topic-tiles__more {
+  align-self: flex-start;
 }
 
 .topic-tile__name {

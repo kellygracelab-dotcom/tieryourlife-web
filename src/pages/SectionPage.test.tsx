@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -142,7 +142,7 @@ const tiles = async () => {
 };
 
 describe("SectionPage", () => {
-  it("heads the section with Follow and no counts, its topics as tiles, and all its lists", async () => {
+  it("heads the section with Follow, its topics as tiles, a line, and all its lists", async () => {
     open("/s/games");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Games");
     await waitFor(() => expect(sectionsDeps.load).toHaveBeenCalled());
@@ -150,7 +150,10 @@ describe("SectionPage", () => {
     expect(load).toHaveBeenCalledWith({ category: "games", sort: "popular" });
 
     const grid = await tiles();
-    expect(screen.getByRole("heading", { level: 2, name: "Topics" })).toBeInTheDocument();
+    // Each block under its own title, with its count (section layout, 14.11).
+    expect(screen.getByRole("heading", { level: 2, name: "Topics · 3" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Tier lists · 812" })).toBeInTheDocument();
+    expect(screen.getByRole("separator")).toBeInTheDocument();
     const all = screen.getByRole("navigation", { name: "Topics" }).querySelectorAll("a, button");
     // By followers, then this person's waiting ones.
     expect([...all].map((tile) => tile.getAttribute("href"))).toEqual([
@@ -162,9 +165,9 @@ describe("SectionPage", () => {
       /Waiting\s*Speedruns/,
     );
     expect(screen.getByRole("button", { name: /Suggest a topic/ })).toBeInTheDocument();
-    // A small count makes the place look empty, a big one is noise: neither is said.
+    // Followers are not counted on the page: a small count makes it look empty.
     expect(screen.getByRole("button", { name: "Follow" })).toBeInTheDocument();
-    expect(screen.queryByText(/followers?|3,410|812/)).toBeNull();
+    expect(screen.queryByText(/followers?|3,410/)).toBeNull();
     // The chips and their All are gone with the filtering they did.
     expect(screen.queryByRole("link", { name: "All" })).toBeNull();
   });
@@ -393,20 +396,53 @@ describe("SectionPage", () => {
     open("/s/games");
     const grid = await tiles();
     const indies = grid.getByRole("link", { name: "Indies" });
-    expect(indies.querySelector("img")).toHaveAttribute("src", "https://pictures.test/indies.webp");
+    const own = indies.querySelector("img")!;
+    expect(own).toHaveAttribute("src", "https://pictures.test/indies.webp");
+    // Under its own picture only the section's tone, never the section's art,
+    // which showed first and then blinked into the topic's (Danylo, 14.11).
+    expect(indies).toHaveClass("topic-tile--own");
+    expect(indies).not.toHaveClass("topic-tile--pictured");
+    // The first two rows are asked for at once, and the picture fades in once it is here.
+    expect(own).toHaveAttribute("loading", "eager");
+    expect(own).not.toHaveClass("topic-tile__picture--in");
+    fireEvent.load(own);
+    expect(own).toHaveClass("topic-tile__picture--in");
     const plain = grid.getByRole("link", { name: "Pokémon" });
     expect(plain.querySelector("img")).toBeNull();
     expect(plain).toHaveStyle({ "--tint-light": "#3D6B58" });
   });
 
-  it("has no Topics title without topics, and still the way to suggest one", async () => {
+  it("keeps the Topics row with the way to suggest one when there are none, and no tiles", async () => {
     topics.load.mockResolvedValue({ topics: [] });
     topics.mine.mockResolvedValue({ topics: [] });
     open("/s/games");
     await waitFor(() => expect(topics.mine).toHaveBeenCalled());
     expect(await screen.findByRole("button", { name: /Suggest a topic/ })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { level: 2, name: "Topics" })).toBeNull();
+    expect(screen.getByRole("heading", { level: 2, name: "Topics" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Topics" })).toBeNull();
+    expect(screen.getByRole("heading", { level: 2, name: "Tier lists · 812" })).toBeInTheDocument();
+  });
+
+  it("folds the topics to two rows, with Show all and Show fewer", async () => {
+    const many = ["a", "b", "c", "d", "e", "f"].map((id, at) => ({
+      ...topic(id, "Topic " + id),
+      followerCount: 100 - at,
+    }));
+    topics.load.mockResolvedValue({ topics: many });
+    topics.mine.mockResolvedValue({ topics: [] });
+    open("/s/games");
+    const grid = within(await screen.findByRole("navigation", { name: "Topics" }));
+    await grid.findAllByRole("link", { hidden: true });
+    // Two columns before the grid is laid out (jsdom draws none): four tiles.
+    const shownNow = () =>
+      grid.getAllByRole("link", { hidden: true }).filter((tile) => !tile.hidden).length;
+    expect(shownNow()).toBe(4);
+    const more = screen.getByRole("button", { name: "Show all 6 topics" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(more);
+    expect(shownNow()).toBe(6);
+    await userEvent.click(screen.getByRole("button", { name: "Show fewer" }));
+    expect(shownNow()).toBe(4);
   });
 
   it("says where topics come from before it makes a list, and makes one only when asked", async () => {
@@ -430,12 +466,12 @@ describe("SectionPage", () => {
     ).toHaveAttribute("href", "/b/new?category=games");
   });
 
-  it("keeps the order on top, and one ring until the topics and the first page are both in", async () => {
+  it("puts the order with the lists, under the topics, after one ring for both", async () => {
     let answer: (value: { topics: Topic[] }) => void = () => undefined;
     topics.load.mockReturnValue(new Promise((resolve) => (answer = resolve)));
     open("/s/games");
-    const order = screen.getByRole("combobox", { name: "Order" });
     expect(await screen.findByRole("progressbar", { name: "Games" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Order" })).toBeNull();
     await waitFor(() => expect(load).toHaveBeenCalled());
     // The lists are in, the topics not yet: still the ring, and no grey cards.
     expect(screen.queryByText("Nothing published yet")).toBeNull();
@@ -445,15 +481,15 @@ describe("SectionPage", () => {
     answer({ topics: [topic("t2", "Pokémon")] });
     const nav = (await tiles()).getByRole("link", { name: "Pokémon" }).closest("nav")!;
     expect(screen.queryByRole("progressbar")).toBeNull();
-    // Under the order, which has not moved, and then the section's lists, none yet.
-    expect(order.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "Order" })).toBe(order);
+    // The order sorts only the lists, so it comes after the topics, with them.
+    const order = screen.getByRole("combobox", { name: "Order" });
+    expect(nav.compareDocumentPosition(order) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText("Nothing published yet")).toBeInTheDocument();
   });
 
   it("orders by newest on request, in the address", async () => {
     const router = open("/s/games");
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Order" }), "recent");
+    await userEvent.selectOptions(await screen.findByRole("combobox", { name: "Order" }), "recent");
     expect(router.state.location.search).toBe("?sort=recent");
     expect(load).toHaveBeenLastCalledWith({ category: "games", sort: "recent" });
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Order" }), "popular");
