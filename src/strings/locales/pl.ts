@@ -751,6 +751,8 @@ const pl: Translation = {
     picture: "Obraz",
     translations: "Tłumaczenia",
     translationsHelp: "Po jednym na język. Puste pole pokazuje nazwę tak, jak ją wpisano.",
+    topicNamesRefusedIn: "Nie przyjęto: {languages}. Każde tłumaczenie ma do {max} znaków.",
+    topicNameRefused: "Ta nazwa nie została przyjęta. Nazwa tematu ma do {max} znaków.",
     topicNamesRefused: "Tłumaczenie nie zostało przyjęte. Każde ma do {max} znaków.",
     recrop: "Przytnij ponownie",
     replace: "Zastąp",

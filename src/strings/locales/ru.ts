@@ -753,6 +753,8 @@ const ru: Translation = {
     picture: "Картинка",
     translations: "Переводы",
     translationsHelp: "По одному на язык. Если оставить пустым, название покажется как написано.",
+    topicNamesRefusedIn: "Не принято: {languages}. Каждый перевод — до {max} символов.",
+    topicNameRefused: "Это название не принято. Название темы — до {max} символов.",
     topicNamesRefused: "Перевод не принят. Каждый — до {max} символов.",
     recrop: "Обрезать заново",
     replace: "Заменить",

@@ -753,6 +753,8 @@ const uk: Translation = {
     picture: "Картинка",
     translations: "Переклади",
     translationsHelp: "По одному на мову. Якщо лишити порожнім, назва покажеться як написано.",
+    topicNamesRefusedIn: "Не прийнято: {languages}. Кожен переклад — до {max} символів.",
+    topicNameRefused: "Цю назву не прийнято. Назва теми — до {max} символів.",
     topicNamesRefused: "Переклад не прийнято. Кожен — до {max} символів.",
     recrop: "Обрізати знову",
     replace: "Замінити",

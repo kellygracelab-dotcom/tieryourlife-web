@@ -706,6 +706,9 @@ const tr: Translation = {
     picture: "Görsel",
     translations: "Çeviriler",
     translationsHelp: "Her dil için bir tane. Boş bırakılırsa ad yazıldığı gibi görünür.",
+    topicNamesRefusedIn:
+      "Kabul edilmedi: {languages}. Her çeviri en fazla {max} karakter olabilir.",
+    topicNameRefused: "Bu ad kabul edilmedi. Konu adı en fazla {max} karakter olabilir.",
     topicNamesRefused: "Bir çeviri kabul edilmedi. Her biri en fazla {max} karakter olabilir.",
     recrop: "Yeniden kırp",
     replace: "Değiştir",
