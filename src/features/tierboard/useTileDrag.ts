@@ -109,15 +109,15 @@ export function useTileDrag(
       const grab = {
         x: at.x - rect.left,
         y: at.y - rect.top,
-        width: rect.width,
-        height: rect.height,
+        width: rect.right - rect.left,
+        height: rect.bottom - rect.top,
       };
       const next = press(item, at, event.pointerType ?? "mouse", Date.now(), grab);
       become(next);
       if (next.phase === "pressed" && next.holdUntil !== null) {
         clearHold();
         holdTimer.current = setTimeout(() => {
-          become(hold(latest.current, targetOf(hitTest(at), at, item)));
+          become(hold(latest.current, targetOf(hitTest(at), at, item, grab)));
         }, TOUCH_HOLD_MS);
       }
     },
@@ -132,7 +132,7 @@ export function useTileDrag(
       const current = latest.current;
       if (current.phase === "idle" || another(event)) return;
       const at = { x: event.clientX, y: event.clientY };
-      const under = () => targetOf(hitTest(at), at, current.item);
+      const under = () => targetOf(hitTest(at), at, current.item, current.grab);
       const next = move(current, at, current.phase === "pressed" ? null : under());
       become(
         next.phase === "dragging" && current.phase !== "dragging"
@@ -195,7 +195,7 @@ export function useTileDrag(
   const nudge = useCallback(() => {
     const now = latest.current;
     if (now.phase !== "dragging") return;
-    become(move(now, now.at, targetOf(hitTest(now.at), now.at, now.item)));
+    become(move(now, now.at, targetOf(hitTest(now.at), now.at, now.item, now.grab)));
   }, [become, hitTest]);
 
   const settledAt = useRef<Point | null>(null);
@@ -203,7 +203,7 @@ export function useTileDrag(
     const now = latest.current;
     if (now.phase !== "dragging" || settledAt.current === now.at) return;
     settledAt.current = now.at;
-    become(move(now, now.at, targetOf(hitTest(now.at), now.at, now.item)));
+    become(move(now, now.at, targetOf(hitTest(now.at), now.at, now.item, now.grab)));
   }, [become, hitTest]);
 
   return { state, onPointerDown, current, subscribe, nudge, settle };

@@ -11,6 +11,7 @@ const es: Translation = {
     opening: "Abriendo la página…",
     site: "Sitio",
     skipToContent: "Saltar al contenido",
+    dismissNotice: "Cerrar",
     signIn: "Iniciar sesión",
     signOut: "Cerrar sesión",
     account: "Tu cuenta",

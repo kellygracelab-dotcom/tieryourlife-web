@@ -6,6 +6,7 @@ import {
   insertionIndex,
   move,
   NO_GRAB,
+  placedBy,
   press,
   sameDrawing,
   targetOf,
@@ -126,6 +127,51 @@ describe("insertionIndex", () => {
   });
 });
 
+describe("one place along a line, either way", () => {
+  // Five cards 64 wide, 10 apart; the carried card's place is the middle one.
+  const slot = (n: number) => ({ item: n, left: n * 74, right: n * 74 + 64, top: 0, bottom: 90 });
+  const held = slot(2);
+  const others = [0, 1, 3, 4].map(slot);
+  const middle = 2 * 74 + 32;
+
+  it("goes over as the card's middle passes the neighbour's near edge, as far left as right", () => {
+    const placeAt = (x: number) => insertionIndex(others, at(x, 45), false, held);
+    expect(placeAt(middle)).toBe(2);
+    // Left: past card 1's far edge at 138, 42 from the middle.
+    expect(placeAt(139)).toBe(2);
+    expect(placeAt(137)).toBe(1);
+    // Right: past card 3's near edge at 222, the same 42.
+    expect(placeAt(221)).toBe(2);
+    expect(placeAt(223)).toBe(3);
+    expect(middle - 137).toBe(223 - middle);
+  });
+
+  it("stays put once over: drawn in its new place, the way back is a gap away", () => {
+    // Moved to place 1: card 1 is now where the carried card was.
+    const moved = [slot(0), { ...slot(2), item: 1 }, slot(3), slot(4)];
+    expect(insertionIndex(moved, at(137, 45), false, slot(1))).toBe(1);
+    expect(insertionIndex(moved, at(147, 45), false, slot(1))).toBe(1);
+    expect(insertionIndex(moved, at(149, 45), false, slot(1))).toBe(2);
+  });
+
+  it("mirrors in a right-to-left row", () => {
+    const mirror = (box: ReturnType<typeof slot>) => ({
+      ...box,
+      left: 1000 - box.right,
+      right: 1000 - box.left,
+    });
+    const placeAt = (x: number) =>
+      insertionIndex(others.map(mirror), at(1000 - x, 45), true, mirror(held));
+    expect([placeAt(137), placeAt(139), placeAt(221), placeAt(223)]).toEqual([1, 2, 2, 3]);
+  });
+
+  it("places by the carried card's middle, wherever it was taken hold of", () => {
+    expect(placedBy(at(100, 100), { x: 10, y: 20, width: 64, height: 90 })).toEqual(at(122, 125));
+    expect(placedBy(at(100, 100), { x: 54, y: 20, width: 64, height: 90 })).toEqual(at(78, 125));
+    expect(placedBy(at(100, 100), NO_GRAB)).toEqual(at(100, 100));
+  });
+});
+
 describe("targetOf with a point", () => {
   it("places the card among the row's other cards, leaving itself out", () => {
     document.body.innerHTML =
@@ -170,6 +216,7 @@ it("finds the same insertion point in a long wrapped row in either reading direc
         boxes.filter((b) => b.item !== 10),
         point,
         rtl,
+        boxes[10],
       );
       expect(targetOf(zone, point, 10)).toEqual({ kind: "tier", tier: 0, index });
     }

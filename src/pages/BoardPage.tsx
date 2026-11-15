@@ -111,7 +111,7 @@ import { fill, plural, strings } from "../strings";
 import { Icon } from "../ui/Icon";
 import { ResetPoolItem } from "../features/tierboard/ResetPoolItem";
 import { Menu } from "../ui/Menu";
-import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { Snackbar, useBoardNotice } from "../ui/Snackbar";
 import { PlayButton } from "../features/play/PlayButton";
 import { boardGames } from "../features/play/syncedGames";
 import { usePlay } from "../features/play/usePlay";
@@ -376,8 +376,8 @@ function OpenBoard({
     setSettingsStart(start);
     setPanel("settings");
   };
-  const [notice, setNotice] = useState<SnackbarNotice | null>(null);
-  const forget = useCallback(() => setNotice(null), []);
+  // Brief, and gone at the board's next action (Friends, 16.11).
+  const { notice, setNotice, done: forget, acted } = useBoardNotice();
   // A paste or a drop for a new card, on its way to the add box.
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const incomingTaken = useCallback(() => setIncoming(null), []);
@@ -546,6 +546,7 @@ function OpenBoard({
   const latest = (): Board => repository.get(uid) ?? board;
   const keep = (next: Board) => {
     if (next === board) return;
+    acted();
     const nextOrder = arrangementOf(next);
     if (next.takenFrom !== null && nextOrder !== arrangement) noteRankingEdit(next.uid);
     setOwnArrangement(nextOrder);
@@ -1166,7 +1167,7 @@ function OpenBoard({
         />
       )}
       {play.view}
-      <Snackbar notice={notice} onDone={forget} />
+      <Snackbar notice={notice} onDone={forget} onBoard />
     </article>
   );
 }

@@ -438,7 +438,8 @@ describe("BoardsPage", () => {
       }),
     );
     // Nothing of this account's came down, so nothing is said about a copy.
-    expect(await screen.findByRole("status")).toHaveTextContent(/^1 list deletedUndo$/);
+    const said = within(await screen.findByRole("status")).getByText(/list deleted/);
+    expect(said).toHaveTextContent(/^1 list deleted$/);
     expect(repository.get("a")).toMatchObject({ deletedAt: 5000, publishedId: null });
   });
 

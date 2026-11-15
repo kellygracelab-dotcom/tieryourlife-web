@@ -34,3 +34,59 @@
   color: #dee0ff;
   cursor: pointer;
 }
+
+.snackbar__text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Up and down stay the page's scroll; sideways is the notice's own swipe. */
+.snackbar {
+  touch-action: pan-y;
+  transition:
+    transform 150ms ease-out,
+    opacity 150ms ease-out;
+}
+
+.snackbar--swiped {
+  transform: translateX(var(--snackbar-shift, 0px));
+  opacity: var(--snackbar-fade, 1);
+  transition: none;
+}
+
+/* The cross: 40 px to press, drawn in the notice's padding so the line keeps its height. */
+.snackbar__close {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-block: -10px;
+  margin-inline: -12px -10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #c8c5d0;
+  cursor: pointer;
+}
+
+.snackbar__close .ms {
+  font-size: 20px;
+}
+
+.snackbar__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2eff7;
+}
+
+.snackbar__close:focus-visible {
+  outline: 2px solid #dee0ff;
+  outline-offset: -4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snackbar {
+    transition: none;
+  }
+}

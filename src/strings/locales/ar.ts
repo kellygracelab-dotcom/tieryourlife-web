@@ -12,6 +12,7 @@ const ar: Translation = {
     opening: "جارٍ فتح الصفحة…",
     site: "الموقع",
     skipToContent: "تخطَّ إلى المحتوى",
+    dismissNotice: "إغلاق",
     signIn: "تسجيل الدخول",
     signOut: "تسجيل الخروج",
     account: "حسابك",

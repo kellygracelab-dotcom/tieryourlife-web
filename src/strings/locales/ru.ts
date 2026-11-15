@@ -12,6 +12,7 @@ const ru: Translation = {
     opening: "Открываем страницу…",
     site: "Сайт",
     skipToContent: "Перейти к содержимому",
+    dismissNotice: "Закрыть",
     signIn: "Войти",
     signOut: "Выйти",
     account: "Ваш аккаунт",

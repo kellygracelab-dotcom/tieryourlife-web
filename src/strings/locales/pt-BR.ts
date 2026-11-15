@@ -12,6 +12,7 @@ const ptBR: Translation = {
     opening: "Abrindo a página…",
     site: "Site",
     skipToContent: "Pular para o conteúdo",
+    dismissNotice: "Fechar",
     signIn: "Entrar",
     signOut: "Sair",
     account: "Sua conta",

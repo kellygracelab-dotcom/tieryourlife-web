@@ -14,6 +14,7 @@ const tr: Translation = {
     opening: "Sayfa açılıyor…",
     site: "Site",
     skipToContent: "İçeriğe geç",
+    dismissNotice: "Kapat",
     signIn: "Oturum aç",
     signOut: "Oturumu kapat",
     account: "Hesabınız",
