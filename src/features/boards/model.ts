@@ -170,6 +170,12 @@ export interface Board {
   /** A game of Play in progress, kept in the account as the app keeps it; null when none is. */
   play: SyncedPlay | null;
   /**
+   * A game of a kind this site does not know yet, as the account sent it, so
+   * writing the board back never ends a game another device is playing.
+   * Absent otherwise; a game started here takes its place.
+   */
+  otherPlay?: Readonly<Record<string, unknown>>;
+  /**
    * A house board's only: the editor's credit for its cover, null to take it
    * off, tied to the one cover picture it was given for, so another cover
    * does not carry it. Absent says nothing, and the list keeps its own.

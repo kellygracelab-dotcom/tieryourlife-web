@@ -8,6 +8,7 @@ import {
   areaName,
   chosenIds,
   EVERYTHING,
+  keptTier,
   lostTier,
   MIN_CARDS,
   playable,
@@ -243,7 +244,9 @@ export function usePlay(
     // Read again: a game kept since in another tab goes with a way back too.
     const before = games.load(boardKey);
     rememberGame(store, gameKind);
-    show(rules.newGame(gameKind, ids, from, rules.seedOf(random), now()));
+    // Smart sorts into the board's tiers, or orders the one tier it keeps.
+    const tiers = keptTier(board, from) === null ? board.tiers.length : ids.length;
+    show(rules.newGame(gameKind, ids, from, rules.seedOf(random), now(), tiers));
     if (before === null) return;
     notify({
       text: strings.play.savedDiscarded,

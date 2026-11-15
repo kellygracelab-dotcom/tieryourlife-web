@@ -1059,6 +1059,9 @@ const tr: Translation = {
     cardsFrom: { other: "“{title}” içinden {n} kart" },
     chooseCards: "Kartları seç",
     game: "Oyun",
+    smart: "Akıllı seçim",
+    smartLine:
+      "Yalnızca seviyesi hâlâ değişebilecek kartları sorar. Çok daha az düelloyla neredeyse aynı seviyeler.",
     swiss: "Kimse elenmez",
     swissLine: "Herkes her turda oynar. Daha yavaş; seviyeleri doldurmak için en iyisi.",
     hill: "Tepenin kralı",

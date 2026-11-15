@@ -77,15 +77,16 @@ export function localGames(
 }
 
 /** The game this device last started, which the picker offers first. */
-export const LAST_GAME_KEY = "tyl:playGame";
+// A new key since smart came: everyone starts on smart once, then their own choice again (SPEC).
+export const LAST_GAME_KEY = "tyl:playKind";
 
-const KINDS: readonly GameKind[] = ["swiss", "hill", "bracket"];
+const KINDS: readonly GameKind[] = ["smart", "swiss", "hill", "bracket"];
 
 const isKind = (value: unknown): value is GameKind => KINDS.some((kind) => kind === value);
 
 export function lastGame(store: KeyValueStore): GameKind {
   const kind = store.read(LAST_GAME_KEY);
-  return isKind(kind) ? kind : "swiss";
+  return isKind(kind) ? kind : "smart";
 }
 
 export const rememberGame = (store: KeyValueStore, kind: GameKind): void =>
@@ -174,9 +175,11 @@ function refineOf(value: unknown, count: number, asked: number): Game["refineFix
 
 function gameOf(value: unknown): Game | null {
   if (!isRecord(value) || !isRecord(value.spec)) return null;
-  const { kind, count, seed, refine } = value.spec;
+  const { kind, count, seed, refine, tiers } = value.spec;
   if (!isKind(kind) || !isInteger(seed) || typeof refine !== "boolean") return null;
   if (!isInteger(count) || count < 2 || count > MAX_BOARD_ITEMS) return null;
+  const smart = kind === "smart";
+  if (smart && (!isInteger(tiers) || tiers < 1 || tiers > count)) return null;
   if (
     !isStrings(value.ids) ||
     value.ids.length !== count ||
@@ -189,7 +192,7 @@ function gameOf(value: unknown): Game | null {
   const chosen = chosenOf(value.chosen);
   if (history === null || chosen === null) return null;
   const game: Game = {
-    spec: { kind, count, seed, refine },
+    spec: { kind, count, seed, refine, ...(smart ? { tiers: tiers as number } : {}) },
     ids: value.ids,
     history,
     startedAt: value.startedAt,

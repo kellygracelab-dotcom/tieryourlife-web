@@ -1,6 +1,6 @@
 import type { SyncedPlay } from "../../api/boards";
 import type { Chosen } from "./chosen";
-import { mainGame, refinePairs, type Outcome } from "./engine";
+import { mainGame, refinePairs, type GameSpec, type Outcome } from "./engine";
 import type { Game } from "./game";
 import { EXPIRES_AFTER, type SavedGames } from "./savedGames";
 
@@ -28,13 +28,20 @@ export function toSynced(game: Game, poolId: string | null, now: number): Synced
     history: game.history.map(([first, second, winner]) => [first, second, winner]),
     round: roundOf(game),
     startedAt: Math.min(game.startedAt, now),
+    ...(game.spec.kind === "smart" ? { tiers: game.spec.tiers ?? 1 } : {}),
     ...(scope === null ? {} : { scope }),
     ...(keepTier ? { keepTier: true as const } : {}),
   };
 }
 
 export function fromSynced(play: SyncedPlay, poolId: string | null): Game {
-  const spec = { kind: play.kind, count: play.count, seed: play.seed, refine: false };
+  const spec: GameSpec = {
+    kind: play.kind,
+    count: play.count,
+    seed: play.seed,
+    refine: false,
+    ...(play.kind === "smart" ? { tiers: play.tiers ?? 1 } : {}),
+  };
   const history: Outcome[] = play.history.map(([first, second, winner]) => [first, second, winner]);
   const game: Game = {
     spec,

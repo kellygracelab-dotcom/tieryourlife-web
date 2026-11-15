@@ -1025,6 +1025,9 @@ export const en = {
     cardsFrom: { one: "{n} card from {title}", other: "{n} cards from {title}" },
     chooseCards: "Choose cards",
     game: "Game",
+    smart: "Smart",
+    smartLine:
+      "Asks only about cards that could still change tier. Nearly the same tiers in far fewer duels.",
     swiss: "Losers stay",
     swissLine: "Everyone plays every round. Slower, best for filling tiers.",
     hill: "King of the hill",

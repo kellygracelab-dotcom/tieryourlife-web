@@ -43,9 +43,18 @@ export function newGame(
   chosen: Chosen,
   seed: number,
   now: number,
+  /** Smart only: the tiers it sorts into, fixed now; at most the cards there are. */
+  tiers = 1,
 ): Game {
+  const count = ids.length;
   return {
-    spec: { kind, count: ids.length, seed, refine: false },
+    spec: {
+      kind,
+      count,
+      seed,
+      refine: false,
+      ...(kind === "smart" ? { tiers: Math.max(1, Math.min(tiers, count)) } : {}),
+    },
     ids: [...ids],
     history: [],
     startedAt: now,
@@ -218,22 +227,29 @@ const SECONDS_PER_DUEL = 2.2;
 export interface Estimate {
   duels: number;
   minutes: number;
-  /** Losers stay may end a round or two early: its count is an upper bound. */
+  /** Losers stay may end a round or two early, smart's length depends on the answers: shown with ≈. */
   rough: boolean;
 }
 
+/** Smart asked about this many duels a card in the simulation (smart-pairs-2026-11-15). */
+const SMART_DUELS_PER_CARD = 2.5;
+
 /**
  * What a game over `count` cards will ask: hill and bracket n − 1 (a bye is no
- * duel), losers stay R × ⌊n/2⌋ with R = ⌈log₂ n⌉ + 2; about 2.2 s a duel,
- * rounded to whole minutes, never under one.
+ * duel), losers stay R × ⌊n/2⌋ with R = ⌈log₂ n⌉ + 2, smart about 2.5 n and
+ * never more than losers stay; about 2.2 s a duel, rounded to whole minutes,
+ * never under one.
  */
 export function estimate(kind: GameKind, count: number): Estimate {
+  const swiss = swissRounds(Math.max(2, count)) * Math.floor(count / 2);
   const asked =
     kind === "swiss"
-      ? swissRounds(Math.max(2, count)) * Math.floor(count / 2)
-      : Math.max(0, count - 1);
+      ? swiss
+      : kind === "smart"
+        ? Math.min(swiss, Math.round(count * SMART_DUELS_PER_CARD))
+        : Math.max(0, count - 1);
   const minutes = Math.max(1, Math.round((asked * SECONDS_PER_DUEL) / 60));
-  return { duels: asked, minutes, rough: kind === "swiss" };
+  return { duels: asked, minutes, rough: kind === "swiss" || kind === "smart" };
 }
 
 /** A session always keeps the exact participant IDs with which it began. */

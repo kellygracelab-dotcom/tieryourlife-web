@@ -126,6 +126,16 @@ describe("a game kept in the board", () => {
     );
   });
 
+  it("keeps a smart game's tiers both ways, at most its cards", () => {
+    const game = newGame("smart", ["x", "y", "z"], { kind: "all" }, 3, 10, 5);
+    expect(game.spec.tiers).toBe(3);
+    const synced = toSynced(game, "pool", 20);
+    expect(synced).toMatchObject({ kind: "smart", tiers: 3, round: 0 });
+    expect(playOf(JSON.parse(JSON.stringify(synced)))).toEqual(synced);
+    expect(fromSynced(synced, "pool").spec).toEqual(game.spec);
+    expect(newGame("hill", ["x", "y"], { kind: "all" }, 3, 10, 5).spec).not.toHaveProperty("tiers");
+  });
+
   it("loads, saves and discards through the board", () => {
     let kept: SyncedPlay | null = null;
     const games = boardGames(

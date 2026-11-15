@@ -155,6 +155,19 @@ describe("syncBoards", () => {
     return { board, play };
   }
 
+  it("sends a game of a kind it does not know back as it came, and drops it only for a game started here", async () => {
+    const { repository, account, run } = setUp();
+    const later = { kind: "elo", count: 2, ids: ["x", "y"], nested: { at: [1, null] } };
+    account.holds({ ...films(), play: later } as unknown as Board);
+    await run();
+    const here = repository.get("films")!;
+    expect(here.play).toBeNull();
+    expect(here.otherPlay).toEqual(later);
+    repository.save(rename(here, "Films, renamed", 1001));
+    await run();
+    expect(account.keeps.at(-1)?.request.play).toEqual(later);
+  });
+
   it("recovers a preserved game once even at a known revision, keeps it on rename and clears it on finish", async () => {
     const { repository, records, account, run } = setUp();
     const { board, play } = legacyGame();

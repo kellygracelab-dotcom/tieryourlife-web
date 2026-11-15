@@ -48,10 +48,14 @@ describe("the game picker", () => {
     expect(onChooseCards).toHaveBeenCalled();
   });
 
-  it("offers three games with the design's estimates, the chosen one checked", async () => {
+  it("offers four games, smart first, with the design's estimates, the chosen one checked", async () => {
     const { onKind } = show({ kind: "hill" });
     const radios = screen.getAllByRole("radio");
-    expect(radios).toHaveLength(3);
+    expect(radios).toHaveLength(4);
+    expect(radios[0]).toHaveAccessibleName(expect.stringContaining("Smart"));
+    expect(screen.getByRole("radio", { name: /Smart/ })).toHaveAccessibleName(
+      expect.stringContaining("≈ 85 duels · about 3 min"),
+    );
     expect(screen.getByRole("radio", { name: /King of the hill/ })).toBeChecked();
     expect(screen.getByRole("radio", { name: /Losers stay/ })).toHaveAccessibleName(
       expect.stringContaining("≈ 136 duels · about 5 min"),
@@ -86,7 +90,7 @@ describe("the game picker", () => {
   it("offers all games and their estimates on a board of 91", () => {
     show({ count: 91 });
     expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
-    expect(document.querySelectorAll(".play-game__estimate")).toHaveLength(3);
+    expect(document.querySelectorAll(".play-game__estimate")).toHaveLength(4);
   });
 
   it("goes when its handle is pulled down far enough, and comes back up otherwise", async () => {

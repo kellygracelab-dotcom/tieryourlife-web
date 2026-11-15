@@ -43,7 +43,7 @@ async function openBoard(page: Page, fixture = board) {
 const play = (page: Page) => page.getByRole("button", { name: "Play", exact: true });
 const persisted = (page: Page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)!), key);
 
-for (const mode of ["Losers stay", "King of the hill", "Bracket"]) {
+for (const mode of ["Smart", "Losers stay", "King of the hill", "Bracket"]) {
   test(mode + " keeps all 91 cards and the same next duel after reloading", async ({ page }) => {
     await openBoard(page);
     await play(page).click();
@@ -58,6 +58,8 @@ for (const mode of ["Losers stay", "King of the hill", "Bracket"]) {
     const saved = (await persisted(page)).play;
     expect(saved.ids).toHaveLength(91);
     expect(new Set(saved.ids).size).toBe(91);
+    // Smart carries the tiers it sorts into, the board's two ranked ones; the others none.
+    expect(saved.tiers).toBe(mode === "Smart" ? 2 : undefined);
     await page.reload();
     await play(page).click();
     await page.getByRole("button", { name: "Resume" }).click();

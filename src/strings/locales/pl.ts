@@ -1142,6 +1142,9 @@ const pl: Translation = {
     },
     chooseCards: "Wybierz karty",
     game: "Gra",
+    smart: "Sprytny wybór",
+    smartLine:
+      "Pyta tylko o karty, które mogą jeszcze zmienić poziom. Prawie te same poziomy przy znacznie mniejszej liczbie pojedynków.",
     swiss: "Nikt nie odpada",
     swissLine: "Wszystkie grają w każdej rundzie. Wolniej, najlepiej do wypełnienia poziomów.",
     hill: "Król wzgórza",

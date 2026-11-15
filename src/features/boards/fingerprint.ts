@@ -75,6 +75,7 @@ export function fingerprintText(board: Board): string {
   if (board.anonymous) text += encode(["anonymous"]);
   // A game in progress last of all, as its canonical JSON (canonicalPlay).
   if (board.play !== null) text += encode([canonicalPlay(board.play)]);
+  else if (board.otherPlay !== undefined) text += encode([JSON.stringify(board.otherPlay)]);
   // The cover's focus after everything, and only when it has one, so every
   // board without one keeps its fingerprint; whole numbers, so "1" and "1.0"
   // never part the phone and the site (agreed with Android, 15.11.2026).
@@ -106,8 +107,8 @@ export function fingerprintText(board: Board): string {
 
 /**
  * A saved game as one line of JSON, the same on the phone: no spaces, the
- * keys in this order, scope only when there is one and keepTier only when
- * true, a skip's winner as null.
+ * keys in this order, tiers for smart only, scope only when there is one and
+ * keepTier only when true, a skip's winner as null.
  */
 export function canonicalPlay(play: SyncedPlay): string {
   return JSON.stringify({
@@ -119,6 +120,7 @@ export function canonicalPlay(play: SyncedPlay): string {
     history: play.history,
     round: play.round,
     startedAt: play.startedAt,
+    ...(play.kind === "smart" ? { tiers: play.tiers } : {}),
     ...(play.scope === undefined || play.scope.length === 0 ? {} : { scope: play.scope }),
     ...(play.keepTier === true ? { keepTier: true } : {}),
   });

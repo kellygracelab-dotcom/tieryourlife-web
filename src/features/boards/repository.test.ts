@@ -9,6 +9,39 @@ const uids = () => {
 };
 
 describe("parseBoard", () => {
+  it("reads a smart game only with its tiers, 1 to its cards, and keeps them", () => {
+    const board = newBoard("b1", "Films", 1, uids());
+    const game = {
+      kind: "smart",
+      count: 3,
+      seed: 4,
+      refine: false,
+      ids: ["a", "b", "c"],
+      history: [[0, 1, 0]],
+      round: 0,
+      startedAt: 9,
+    };
+    expect(parseBoard({ ...board, play: { ...game, tiers: 3 } })?.play?.tiers).toBe(3);
+    expect(parseBoard({ ...board, play: game })?.play).toBeNull();
+    expect(parseBoard({ ...board, play: { ...game, tiers: 4 } })?.play).toBeNull();
+    expect(parseBoard({ ...board, play: { ...game, tiers: 0 } })?.play).toBeNull();
+    // Other kinds have no tiers: the account drops them, and so does this site.
+    expect(
+      parseBoard({ ...board, play: { ...game, kind: "hill", tiers: 3 } })?.play,
+    ).not.toHaveProperty("tiers");
+  });
+
+  it("keeps a game of a kind it does not know as it came, and again from this device's copy", () => {
+    const board = newBoard("b1", "Films", 1, uids());
+    const later = { kind: "elo", count: 2, cards: ["a", "b"], extra: { deep: [1, null] } };
+    const read = parseBoard({ ...board, play: later });
+    expect(read?.play).toBeNull();
+    expect(read?.otherPlay).toEqual(later);
+    expect(parseBoard(JSON.parse(JSON.stringify(read)))?.otherPlay).toEqual(later);
+    expect(parseBoard({ ...board, play: null })).not.toHaveProperty("otherPlay");
+    expect(parseBoard({ ...board, play: { kind: 7 } })).not.toHaveProperty("otherPlay");
+  });
+
   it("reads an anonymous board from the account, and takes anything but true for no", () => {
     const board = newBoard("b1", "Films", 1, () => "t");
     expect(parseBoard({ ...board, anonymous: true })?.anonymous).toBe(true);

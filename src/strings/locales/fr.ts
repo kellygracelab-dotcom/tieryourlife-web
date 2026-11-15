@@ -1134,6 +1134,9 @@ const fr: Translation = {
     },
     chooseCards: "Choisir les cartes",
     game: "Jeu",
+    smart: "Choix malin",
+    smartLine:
+      "Ne demande que les cartes qui pourraient encore changer de rang. Presque les mêmes rangs en bien moins de duels.",
     swiss: "Personne n’est éliminé",
     swissLine: "Tout le monde joue à chaque manche. Plus long, idéal pour remplir les rangs.",
     hill: "Roi de la colline",

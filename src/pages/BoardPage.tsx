@@ -468,7 +468,14 @@ function OpenBoard({
         () => repository.get(uid)?.play ?? null,
         (game) => {
           const current = repository.get(uid);
-          if (current !== null) repository.save({ ...current, play: game });
+          // A game started here takes the place of one this site cannot read.
+          if (current !== null) {
+            repository.save({
+              ...current,
+              play: game,
+              ...(game === null ? {} : { otherPlay: undefined }),
+            });
+          }
         },
         poolId,
       ),

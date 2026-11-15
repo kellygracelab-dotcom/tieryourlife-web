@@ -12,6 +12,7 @@ export const ICONS = [
   "arrow_back",
   "arrow_downward",
   "arrow_upward",
+  "auto_awesome",
   "autorenew",
   "bookmark",
   "bookmarks",

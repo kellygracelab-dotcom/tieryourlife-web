@@ -281,6 +281,32 @@ describe("the fingerprint", () => {
     ).toBe(`1:u|1:T|4:WRAP|~|~|~|~|~|9:anonymous|${example.length}:${example}|`);
   });
 
+  it("writes a smart game's tiers after startedAt, before the scope, as the proxy answers it", () => {
+    const example =
+      '{"kind":"smart","count":3,"seed":2,"refine":false,"ids":["a","b","c"],' +
+      '"history":[[0,1,0]],"round":0,"startedAt":5,"tiers":3,"scope":["t-s"]}';
+    expect(canonicalPlay(playOf(JSON.parse(example))!)).toBe(example);
+  });
+
+  it("carries a game of a kind this site does not know as it came", () => {
+    const later = { kind: "elo", count: 2 };
+    expect(
+      fingerprintText(
+        board({
+          uid: "u",
+          title: "T",
+          displayMode: "WRAP",
+          tiers: [],
+          items: [],
+          anonymous: true,
+          otherPlay: later,
+        }),
+      ),
+    ).toBe(
+      `1:u|1:T|4:WRAP|~|~|~|~|~|9:anonymous|${JSON.stringify(later).length}:${JSON.stringify(later)}|`,
+    );
+  });
+
   it("writes a game in its normal form: no empty scope, keepTier only when true with one tier", () => {
     const base = {
       kind: "hill",

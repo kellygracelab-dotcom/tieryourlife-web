@@ -105,12 +105,13 @@ describe("this device's saved games", () => {
 });
 
 describe("the last game started", () => {
-  it("is losers stay until one is started, then that one", () => {
+  it("is smart until one is started, then that one; a choice from before smart counts for nothing", () => {
     const store = memoryStore();
-    expect(lastGame(store)).toBe("swiss");
+    store.write("tyl:playGame", "bracket");
+    expect(lastGame(store)).toBe("smart");
     rememberGame(store, "bracket");
     expect(lastGame(store)).toBe("bracket");
     store.write(LAST_GAME_KEY, "chess");
-    expect(lastGame(store)).toBe("swiss");
+    expect(lastGame(store)).toBe("smart");
   });
 });
