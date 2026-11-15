@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { plural, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ALL_SECTIONS_PATH, sectionPath, sectionStyle, type Section } from "./model";
+import { SectionBackdrop } from "./SectionBackdrop";
 
 interface SectionTileProps {
   section: Section;
@@ -28,6 +29,7 @@ export function SectionTile({ section, row = false, onOpen }: SectionTileProps) 
     .join(" ");
   const inside = (
     <>
+      <SectionBackdrop section={section} />
       {waiting && (
         <span className="section-tile__pill">
           <Icon name="schedule" />

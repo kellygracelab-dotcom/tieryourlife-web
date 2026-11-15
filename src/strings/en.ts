@@ -884,6 +884,20 @@ export const en = {
     movesTo: "Moves to {name} once it’s approved",
   },
   // Propose a section (docs/design-spec-admin.md, 2), and its waiting tile's sheet.
+  // Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md).
+  cover: {
+    adjust: "Adjust cover",
+    zoom: "Zoom",
+    preview: "Preview",
+    feed: "Feed",
+    pageHeader: "Page header",
+    reset: "Reset",
+    done: "Done",
+    cancel: "Cancel",
+    adjustPosition: "Adjust position",
+    frame: "The cover, to move and zoom inside the frame",
+    frameHelp: "Drag to move, pinch or scroll to zoom. The arrow keys move it, + and − zoom.",
+  },
   propose: {
     title: "Propose a section",
     intro:

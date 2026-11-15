@@ -8,6 +8,7 @@ import {
   liveItems,
   newBoard,
   rename,
+  setCoverFocus,
   setFavourite,
   type Board,
 } from "./model";
@@ -590,6 +591,26 @@ describe("syncBoards", () => {
     expect(sent.coverImageUrl).toBeNull();
     expect(sent.coverImageUrls).toEqual([]);
     expect(JSON.stringify(sent)).not.toContain("pictures/gallery-1");
+  });
+
+  // CONTRACT, Cover focus: it travels with the board, null for the middle.
+  it("brings down a cover's focus and sends it back, null once it is the middle again", async () => {
+    const { repository, account, run } = setUp();
+    account.holds({
+      ...films("theirs", "From the phone"),
+      coverImageUrl: "https://x/p.jpg",
+      coverImageUrls: ["https://x/p.jpg"],
+      coverFocus: { x: 0.3, y: 0.15, zoom: 2 },
+    });
+    await run();
+    const board = repository.get("theirs")!;
+    expect(board.coverFocus).toEqual({ x: 0.3, y: 0.15, zoom: 2 });
+    repository.save(rename(board, "Mine now", 5000));
+    await run();
+    expect(account.keeps.at(-1)!.request.coverFocus).toEqual({ x: 0.3, y: 0.15, zoom: 2 });
+    repository.save(setCoverFocus(repository.get("theirs")!, null, 6000));
+    await run();
+    expect(account.keeps.at(-1)!.request.coverFocus).toBeNull();
   });
 
   it("says no own-photo cover as null, so the account drops one a cover from the web replaced", async () => {

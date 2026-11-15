@@ -58,6 +58,10 @@ export function useModal(
     (start ?? inside()[0])?.focus();
 
     const onKey = (event: KeyboardEvent) => {
+      // A dialog opened over this one (Adjust cover over List settings) has the keys to itself.
+      const active = document.activeElement;
+      const over = active instanceof Element ? active.closest('[aria-modal="true"]') : null;
+      if (over !== null && box.current !== null && !box.current.contains(over)) return;
       if (event.key === "Escape") {
         close.current();
         return;
@@ -68,7 +72,6 @@ export function useModal(
       // field behind the dialog.
       const items = inside();
       if (items.length === 0) return;
-      const active = document.activeElement;
       const at = active instanceof HTMLElement ? items.indexOf(active) : -1;
       const next = event.shiftKey
         ? items[at <= 0 ? items.length - 1 : at - 1]

@@ -5,6 +5,7 @@ import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
 import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
 import {
+  coverFocusOf,
   isOut,
   poolCount,
   previewsOf,
@@ -75,6 +76,7 @@ export const BoardRow = memo(function BoardRow({
       <span className="board-card__thumb">
         <ListArt
           cover={board.coverImageUrl}
+          focus={coverFocusOf(board)}
           previews={board.coverImageUrls.length > 1 ? board.coverImageUrls : previewsOf(board)}
           tierColors={rankedTiers(board).map((tier) => tier.colorLight)}
         />

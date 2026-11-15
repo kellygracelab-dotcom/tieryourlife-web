@@ -965,6 +965,21 @@ const es: Translation = {
     back: "Volver",
     movesTo: "Pasará a {name} cuando se apruebe",
   },
+  // Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md).
+  cover: {
+    adjust: "Ajustar portada",
+    zoom: "Zoom",
+    preview: "Vista previa",
+    feed: "Feed",
+    pageHeader: "Cabecera de la página",
+    reset: "Restablecer",
+    done: "Listo",
+    cancel: "Cancelar",
+    adjustPosition: "Ajustar posición",
+    frame: "La portada, para mover y ampliar dentro del marco",
+    frameHelp:
+      "Arrastra para mover; pellizca o usa la rueda para ampliar. Las flechas la mueven, + y − amplían.",
+  },
   propose: {
     title: "Proponer una sección",
     intro:

@@ -13,6 +13,7 @@ import type { SectionChanges, SectionDraft } from "../../api/admin";
 import { errorOf } from "../../api/errors";
 import { useSession } from "../../app/session";
 import type { SectionProposal, SectionStats } from "../../api/sections";
+import { isCentre, sameFocus, type CoverFocus } from "../../lib/coverFocus";
 import { CENTRED, cropOf } from "../../lib/framing";
 import { directionOf, LOCALE_NAMES, LOCALES } from "../../lib/locale";
 import { dataUrlOf, SECTION_PICTURE_MIN } from "../../lib/pictures";
@@ -20,11 +21,19 @@ import type { KeyValueStore } from "../../lib/storage";
 import { useWidthClass } from "../../lib/useWidthClass";
 import { currentLocale, fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { CoverAdjust } from "../../ui/CoverAdjust";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import { editorDeps, type EditorDeps } from "./editorDeps";
 import { IconGrid } from "./IconGrid";
-import { OTHER, sectionOf, sectionPath, type Section, type SectionIcon } from "./model";
+import {
+  OTHER,
+  sectionOf,
+  sectionPath,
+  servedPicture,
+  type Section,
+  type SectionIcon,
+} from "./model";
 import { PictureField, type PictureValue } from "./PictureField";
 import {
   changesOf,
@@ -83,6 +92,8 @@ type Verdict = { name: string } & (
 interface Start extends SectionWords {
   fileUnder: string;
   picture: PictureValue | null;
+  /** Where the kept picture is looked at; an edit's only. */
+  focus?: CoverFocus | null;
 }
 
 /** Where the form starts: the section as it is, a proposal kept from a failed try, or nothing. */
@@ -93,6 +104,7 @@ function startOf(props: SectionEditorProps, keep: KeyValueStore, owner: string |
       ...wordsOf(props.section, look),
       fileUnder: OTHER,
       picture: look.picture === null ? null : { kind: "kept", url: look.picture },
+      focus: look.pictureFocus,
     };
   }
   const fileUnder = props.mode === "propose" ? (props.fileUnder ?? OTHER) : OTHER;
@@ -183,6 +195,9 @@ export function SectionEditor(props: SectionEditorProps) {
   const [icon, setIcon] = useState<SectionIcon>(start.icon);
   const [fileUnder, setFileUnder] = useState(start.fileUnder);
   const [picture, setPicture] = useState<PictureValue | null>(start.picture);
+  // A new picture starts in the middle, as the backend has it.
+  const [focus, setFocus] = useState<CoverFocus | null>(start.focus ?? null);
+  const [adjusting, setAdjusting] = useState(false);
   const [pictureTrouble, setPictureTrouble] = useState<string | null>(null);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [sending, setSending] = useState(false);
@@ -211,6 +226,8 @@ export function SectionEditor(props: SectionEditorProps) {
   const words: SectionWords = { name, names, icon };
   const changes = mode === "edit" ? changesOf(start, words) : {};
   const newPicture = picture?.kind === "framed";
+  const refocused =
+    mode === "edit" && picture?.kind === "kept" && !sameFocus(focus, start.focus ?? null);
   const pictureReady = picture === null || picture.kind === "kept" || picture.size !== null;
   const nameTrouble =
     verdict !== null && verdict.name === tidy && verdict.kind !== "free" ? verdict : null;
@@ -223,11 +240,11 @@ export function SectionEditor(props: SectionEditorProps) {
     (mode === "propose"
       ? newPicture
       : mode === "edit"
-        ? Object.keys(changes).length > 0 || newPicture
+        ? Object.keys(changes).length > 0 || newPicture || refocused
         : true);
   const edited =
     mode === "edit"
-      ? Object.keys(changes).length > 0 || newPicture
+      ? Object.keys(changes).length > 0 || newPicture || refocused
       : picture !== null || tidy !== "" || Object.keys(translationsOf(names)).length > 0;
 
   // Once typing stops, whether the name is free; a section's own name is not
@@ -394,7 +411,11 @@ export function SectionEditor(props: SectionEditorProps) {
         });
       }
       case "edit":
-        return props.send({ ...changes, ...(pictureId === null ? {} : { pictureId }) });
+        return props.send({
+          ...changes,
+          ...(pictureId === null ? {} : { pictureId }),
+          ...(refocused && pictureId === null ? { pictureFocus: focus } : {}),
+        });
     }
   };
 
@@ -646,6 +667,22 @@ export function SectionEditor(props: SectionEditorProps) {
         <div className="section-editor__field">
           <p className="section-editor__label">{strings.admin.picture}</p>
           {pictureField}
+          {mode === "edit" && picture?.kind === "kept" && (
+            <Button icon="zoom_in" onClick={() => setAdjusting(true)}>
+              {strings.cover.adjustPosition}
+            </Button>
+          )}
+          {adjusting && picture?.kind === "kept" && (
+            <CoverAdjust
+              src={servedPicture(picture.url, 1600)}
+              focus={focus}
+              onCancel={() => setAdjusting(false)}
+              onDone={(placed) => {
+                setFocus(isCentre(placed) ? null : placed);
+                setAdjusting(false);
+              }}
+            />
+          )}
           {builtIn && <p className="section-editor__help">{strings.admin.builtInArt}</p>}
         </div>
       </>

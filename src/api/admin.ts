@@ -1,3 +1,4 @@
+import type { CoverFocus } from "./coverFocus";
 import type { ApiClient } from "./client";
 import type { EditorCredit } from "./pictureAttribution";
 import { summaryOf, withRevision, type PublishRequest } from "./lists";
@@ -51,7 +52,11 @@ export interface SectionDraft {
 }
 
 /** What an edit may change: any of a draft's fields, and whether the section is hidden. */
-export type SectionChanges = Partial<SectionDraft> & { hidden?: boolean };
+export type SectionChanges = Partial<SectionDraft> & {
+  hidden?: boolean;
+  /** Which part of the kept picture shows: null for the middle, left out it stays (CONTRACT, Cover focus). */
+  pictureFocus?: CoverFocus | null;
+};
 
 export function createSection(client: ApiClient, draft: SectionDraft): Promise<SectionStats> {
   return client.request<SectionStats>("POST", "/lists/sections", { body: draft });
@@ -271,6 +276,8 @@ export interface TopicChanges {
   pictureId?: string | null;
   /** The picture's credit: null takes it away, left out it stays as it is. */
   pictureAttribution?: EditorCredit | null;
+  /** Which part of the kept picture shows: null for the middle, left out it stays (CONTRACT, Cover focus). */
+  pictureFocus?: CoverFocus | null;
 }
 
 /**

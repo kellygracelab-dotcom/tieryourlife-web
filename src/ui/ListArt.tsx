@@ -1,9 +1,13 @@
+import type { CoverFocus } from "../lib/coverFocus";
+import { FocusedPicture } from "./FocusedPicture";
 import { MediaImage } from "./MediaImage";
 import { strings } from "../strings";
 import "./ListArt.css";
 
 interface ListArtProps {
   cover: string | null;
+  /** Which part of the cover shows; none for the middle. */
+  focus?: CoverFocus | null;
   previews: string[];
   tierColors: string[];
   /** Drawn on the tile when there is no picture at all. */
@@ -20,7 +24,14 @@ const BARS_MAX = 5;
 
 // The feed shows the same thing the app does: the cover if there is one,
 // otherwise the first few card pictures, otherwise the author's palette.
-export function ListArt({ cover, previews, tierColors, title, decorative = false }: ListArtProps) {
+export function ListArt({
+  cover,
+  focus,
+  previews,
+  tierColors,
+  title,
+  decorative = false,
+}: ListArtProps) {
   const named = (label: string) =>
     decorative
       ? ({ "aria-hidden": true } as const)
@@ -28,7 +39,7 @@ export function ListArt({ cover, previews, tierColors, title, decorative = false
   if (cover !== null) {
     return (
       <div className="art art--cover">
-        <MediaImage src={cover} alt="" loading="lazy" />
+        <FocusedPicture src={cover} focus={focus} loading="lazy" />
       </div>
     );
   }

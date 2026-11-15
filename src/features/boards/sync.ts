@@ -11,6 +11,7 @@ import { withCopies } from "./boardCopies";
 import { fingerprintOf as digest } from "./fingerprint";
 import {
   beyondAccount,
+  coverFocusOf,
   setHeld,
   setPublished,
   trashBoard,
@@ -122,6 +123,7 @@ const request = (
         coverPictureId: null,
       }
     : { coverImageUrl: null, coverImageUrls: [], coverPictureId: board.coverPictureId }),
+  coverFocus: coverFocusOf(board),
   authorName: board.authorName,
   publishedId: board.publishedId,
   deletedAt: board.deletedAt,

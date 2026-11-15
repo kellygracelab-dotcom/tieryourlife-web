@@ -196,6 +196,24 @@ describe("an own photo on the cover", () => {
     expect(unfound.coverPictureId).toBe("gallery-1");
   });
 
+  it("sends the single cover's focus, null for the middle and for a collage", () => {
+    const single = {
+      ...board(),
+      coverImageUrl: "https://x/p.jpg",
+      coverImageUrls: ["https://x/p.jpg"],
+    };
+    const focus = { x: 0.3, y: 0.15, zoom: 2 };
+    expect(publishRequestOf({ ...single, coverFocus: focus })!.coverFocus).toEqual(focus);
+    expect(publishRequestOf(single)!.coverFocus).toBeNull();
+    expect(
+      publishRequestOf({
+        ...board(),
+        coverImageUrls: ["https://x/p.jpg", "https://x/q.jpg"],
+        coverFocus: focus,
+      })!.coverFocus,
+    ).toBeNull();
+  });
+
   it("stays out of a collage, which keeps the rest", () => {
     const request = publishRequestOf({ ...board(), coverImageUrls: [own, "https://x/p.jpg"] })!;
     expect(request.coverPictureId).toBeNull();

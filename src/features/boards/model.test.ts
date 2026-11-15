@@ -5,6 +5,7 @@ import {
   arrangeBoards,
   arrangeItems,
   BOARD_LIMITS,
+  coverFocusOf,
   editTier,
   isNarrowed,
   itemsIn,
@@ -27,6 +28,7 @@ import {
   restoreTier,
   setCategory,
   setCover,
+  setCoverFocus,
   setFavourite,
   setTopic,
   shouldGroup,
@@ -241,6 +243,38 @@ describe("cards", () => {
       coverImageUrl: "https://x/p.jpg",
     });
     expect(removeItem(collage, poster!, 3).coverImageUrls).toEqual(collage.coverImageUrls);
+  });
+
+  // CONTRACT, Cover focus: only a cover of one picture has a place to be looked at.
+  it("keep a focus on a cover of one picture until the cover changes", () => {
+    const { board: b0, next } = board();
+    const b1 = addToPool(
+      b0,
+      [
+        { title: "holiday", imageUrl: "https://x/h.jpg" },
+        { title: "poster", imageUrl: "https://x/p.jpg" },
+      ],
+      1,
+      next,
+    );
+    const [holiday] = liveItems(b1).map((item) => item.uid);
+    const covered = setCover(b1, ["https://x/h.jpg"], 2);
+    expect(coverFocusOf(covered)).toBeNull();
+    const placed = setCoverFocus(covered, { x: 0.123456, y: 0.2, zoom: 1.555 }, 3);
+    expect(placed.coverFocus).toEqual({ x: 0.1235, y: 0.2, zoom: 1.56 });
+    expect(placed.editedAt).toBe(3);
+    expect(setCoverFocus(placed, { x: 0.1235, y: 0.2, zoom: 1.56 }, 4)).toBe(placed);
+    // The middle is no focus at all.
+    expect(setCoverFocus(placed, { x: 0.5, y: 0.5, zoom: 1 }, 4)).not.toHaveProperty("coverFocus");
+    expect(setCoverFocus(placed, null, 4)).not.toHaveProperty("coverFocus");
+    // Another picture, a collage, or the cover card gone: the old place says nothing of it.
+    expect(setCover(placed, ["https://x/p.jpg"], 4)).not.toHaveProperty("coverFocus");
+    const collage = setCover(placed, ["https://x/h.jpg", "https://x/p.jpg"], 4);
+    expect(collage).not.toHaveProperty("coverFocus");
+    expect(setCoverFocus(collage, { x: 0.2, y: 0.2, zoom: 2 }, 5)).toBe(collage);
+    expect(removeItem(placed, holiday!, 4)).not.toHaveProperty("coverFocus");
+    // A focus read from somewhere on a collage is never drawn.
+    expect(coverFocusOf({ ...collage, coverFocus: { x: 0.2, y: 0.2, zoom: 2 } })).toBeNull();
   });
 
   // QA A13: a cover of the person's own photo goes by that photo's id.

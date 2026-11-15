@@ -1,4 +1,6 @@
+import { FocusedPicture } from "../ui/FocusedPicture";
 import { MediaImage } from "../ui/MediaImage";
+import { SectionBackdrop } from "../features/sections/SectionBackdrop";
 import { Fragment, useCallback, type ReactNode } from "react";
 import { Navigate } from "react-router";
 import type { SectionStats } from "../api/sections";
@@ -7,6 +9,7 @@ import type { Report } from "../features/community/useReporting";
 import type { LoadFeed } from "../features/feed/useFeed";
 import {
   builtInSection,
+  pictureFocusOf,
   sectionPath,
   sectionStyle,
   topicPath,
@@ -46,7 +49,7 @@ export function HeadArt({
   topic,
 }: {
   section: Section;
-  topic?: { pictureUrl?: string | null };
+  topic?: { pictureUrl?: string | null; pictureFocus?: unknown };
 }) {
   const picture = topic === undefined ? null : topicPicture(topic);
   const collage = topic === undefined && section.collage.length > 0;
@@ -61,8 +64,9 @@ export function HeadArt({
       aria-hidden="true"
     >
       {collage && section.collage.map((url) => <MediaImage key={url} src={url} alt="" />)}
-      {picture !== null && (
-        <MediaImage src={servedPicture(picture, 1600)} alt="" decoding="async" />
+      {!collage && picture === null && <SectionBackdrop section={section} width={1600} />}
+      {picture !== null && topic !== undefined && (
+        <FocusedPicture src={servedPicture(picture, 1600)} focus={pictureFocusOf(topic)} />
       )}
     </div>
   );

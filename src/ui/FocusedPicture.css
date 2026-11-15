@@ -1,0 +1,24 @@
+/*
+ * A cover cropped where its focus says: the box it fills, the picture placed
+ * inside. Laid out as a block filling its parent unless its own class says
+ * otherwise (no specificity), but it always clips.
+ */
+:where(.focused-picture) {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.focused-picture {
+  overflow: hidden;
+}
+
+/* Until its size and its box's shape are known, it covers its box as before. */
+.focused-picture > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

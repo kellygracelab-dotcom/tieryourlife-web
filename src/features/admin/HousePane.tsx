@@ -128,6 +128,7 @@ function HouseRow({
       <span className="house-list__art" aria-hidden="true">
         <ListArt
           cover={list.coverImageUrl}
+          focus={list.coverFocus}
           previews={list.previewImages}
           tierColors={list.tierColors}
         />

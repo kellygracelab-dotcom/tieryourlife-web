@@ -378,6 +378,7 @@ export function boardFromHouseList(list: PublishedList, now: number, nextUid: Ne
       : {
           coverImageUrl: cover,
           coverImageUrls: [cover],
+          ...(list.coverFocus === undefined ? {} : { coverFocus: list.coverFocus }),
           ...(list.coverAttribution === undefined
             ? {}
             : { coverCredit: { url: cover, credit: list.coverAttribution } }),

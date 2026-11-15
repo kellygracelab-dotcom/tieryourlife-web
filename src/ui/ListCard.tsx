@@ -70,6 +70,7 @@ export function ListCard({
       <Link className="list-card__main" to={`/l/${encodeURIComponent(list.id)}`}>
         <ListArt
           cover={list.coverImageUrl}
+          focus={list.coverFocus}
           previews={list.previewImages}
           tierColors={list.tierColors}
           decorative

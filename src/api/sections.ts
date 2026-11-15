@@ -36,6 +36,8 @@ export interface SectionStats {
   names?: Partial<Record<string, string>>;
   icon?: string;
   pictureUrl?: string | null;
+  /** Which part of the picture shows; absent for the middle (CONTRACT, Cover focus). */
+  pictureFocus?: unknown;
   tint?: ThemePair;
   topicBg?: ThemePair;
   topicIcon?: ThemePair;
@@ -168,6 +170,8 @@ export interface Topic {
   names?: Partial<Record<string, string>>;
   /** Its 16:10 picture, public; null or absent when it has none and wears its section's colours. */
   pictureUrl?: string | null;
+  /** Which part of the picture shows; absent for the middle (CONTRACT, Cover focus). */
+  pictureFocus?: unknown;
   /**
    * The picture's credit as the editor gave it, or, for a catalogue's page
    * for a title, the catalogue's (`{source, link, id?}`); only while the

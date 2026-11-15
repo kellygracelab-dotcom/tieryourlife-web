@@ -46,7 +46,34 @@ function Host({ initial }: { initial?: string }) {
   );
 }
 
+function Layer({ label, onClose }: { label: string; onClose: () => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  useModal(box, onClose);
+  return (
+    <div ref={box} role="dialog" aria-modal="true" aria-label={label}>
+      <button type="button">{label} first</button>
+      <button type="button">{label} last</button>
+    </div>
+  );
+}
+
 describe("useModal", () => {
+  // Adjust cover over List settings: Escape and Tab are the top dialog's.
+  it("leaves the keys to a dialog opened over it", async () => {
+    const under = vi.fn();
+    const over = vi.fn();
+    // Two portals in the app; two roots here, apart all the same.
+    render(<Layer label="Under" onClose={under} />);
+    render(<Layer label="Over" onClose={over} />);
+    expect(screen.getByRole("button", { name: "Over first" })).toHaveFocus();
+    await userEvent.tab();
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: "Over first" })).toHaveFocus();
+    await userEvent.keyboard("{Escape}");
+    expect(over).toHaveBeenCalledTimes(1);
+    expect(under).not.toHaveBeenCalled();
+  });
+
   it("puts focus inside the dialog before its first paint", () => {
     let focusAtLayout: Element | null = null;
     function Opening() {

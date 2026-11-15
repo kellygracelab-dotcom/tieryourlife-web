@@ -147,6 +147,7 @@ describe("boardForOwnList", () => {
       coverImageUrl: null,
       coverPictureId: "own-h",
       coverImageUrls: [],
+      coverFocus: null,
     });
 
     const separate = await boardForOwnList(
@@ -160,6 +161,7 @@ describe("boardForOwnList", () => {
       coverImageUrl: null,
       coverImageUrls: [],
       coverPictureId: "own-x",
+      coverFocus: null,
     });
     const collage = await boardForOwnList(
       { ...mine, previewImages: ["https://img.test/p.jpg", feed("h")] },

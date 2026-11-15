@@ -13,6 +13,7 @@ import {
 } from "../../api/pictureAttribution";
 import { PICTURE_CREDIT_LIMIT, creditOf } from "../../api/pictureCredit";
 export { creditOf } from "../../api/pictureCredit";
+import { isCentre, roundedFocus, sameFocus, type CoverFocus } from "../../lib/coverFocus";
 import { holds } from "../../lib/locale";
 import { currentLocale } from "../../strings";
 
@@ -113,6 +114,12 @@ export interface Board {
    * coverImageUrl is only where this browser shows it from (QA A13).
    */
   coverPictureId: string | null;
+  /**
+   * Which part of the single cover picture shows (CONTRACT, Cover focus),
+   * kept in the account and published with the list. Absent for the middle;
+   * meaningless for a collage or no cover, and dropped when the cover changes.
+   */
+  coverFocus?: CoverFocus;
   authorName: string | null;
   publishedId: string | null;
   /** When the whole board went to the trash; null while it is in use. */
@@ -461,16 +468,38 @@ export function setCover(board: Board, pictures: readonly string[], now: number)
     (chosen.length > 0 || (board.coverPictureId === null && board.coverImageUrl === null))
   )
     return board;
-  const { coverCredit, ...uncredited } = board;
+  // Another picture starts in the middle: the old one's place says nothing of it.
+  const { coverCredit, coverFocus: _placed, ...uncredited } = board;
   return touched(
     {
-      ...(chosen.length === 1 && coverCredit?.url === chosen[0] ? board : uncredited),
+      ...uncredited,
+      ...(chosen.length === 1 && coverCredit?.url === chosen[0] ? { coverCredit } : {}),
       coverImageUrls: chosen,
       coverImageUrl: chosen.length === 1 ? (chosen[0] ?? null) : null,
       coverPictureId: coverPictureOf(board, chosen),
     },
     now,
   );
+}
+
+/** The cover is one picture, by address or as an own photo: the only kind a focus places. */
+export const hasSingleCover = (board: Board): boolean =>
+  board.coverImageUrls.length === 1 ||
+  (board.coverImageUrls.length === 0 && (board.coverPictureId ?? board.coverImageUrl) !== null);
+
+/** Where the single cover is looked at; null for the middle, a collage or no cover. */
+export function coverFocusOf(board: Board): CoverFocus | null {
+  const focus = board.coverFocus;
+  return focus === undefined || isCentre(focus) || !hasSingleCover(board) ? null : focus;
+}
+
+/** Another part of the single cover to show; the middle, or null, takes the focus off. */
+export function setCoverFocus(board: Board, focus: CoverFocus | null, now: number): Board {
+  if (!hasSingleCover(board)) return board;
+  const next = focus === null || isCentre(focus) ? null : roundedFocus(focus);
+  if (sameFocus(coverFocusOf(board), next)) return board;
+  const { coverFocus: _was, ...rest } = board;
+  return touched(next === null ? rest : { ...rest, coverFocus: next }, now);
 }
 
 /** Published, updated or taken down: the published copy now reflects the board as it stands. */
@@ -740,9 +769,10 @@ export function removeItem(board: Board, itemUid: string, now: number): Board {
     gone.imageUrl === null || items.some((item) => item.imageUrl === gone.imageUrl)
       ? board.coverImageUrls
       : board.coverImageUrls.filter((url) => url !== gone.imageUrl);
+  const { coverFocus: _placed, ...unplaced } = board;
   return touched(
     tidy({
-      ...board,
+      ...(coverImageUrls === board.coverImageUrls ? board : unplaced),
       items,
       ...(coverImageUrls === board.coverImageUrls
         ? {}

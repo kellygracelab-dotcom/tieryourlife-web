@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { mediaSrc, storedPublicMedia } from "../../../functions/src/publicMedia";
 import type { SectionStats, SectionStatus, ThemePair } from "../../api/sections";
+import { focusOf, isCentre, type CoverFocus } from "../../lib/coverFocus";
 import { CATEGORIES, isCategory, type Category } from "../../api/types";
 import { BUILT_IN_NAMES } from "./builtInNames";
 import type { WidthClass } from "../../lib/useWidthClass";
@@ -97,6 +98,8 @@ export interface Section extends SectionLook {
   name: string;
   /** A picture of somebody's own; the nine have none and draw their hatch. */
   picture: string | null;
+  /** Which part of the picture shows; null for the middle or no picture. */
+  pictureFocus: CoverFocus | null;
   status: SectionStatus;
   builtIn: boolean;
   rank: number | null;
@@ -126,6 +129,7 @@ export function builtInSection(id: Category): Section {
     names: BUILT_IN_NAMES[id],
     ...BUILT_IN_LOOKS[id],
     picture: null,
+    pictureFocus: null,
     status: "approved",
     builtIn: true,
     rank: null,
@@ -171,6 +175,7 @@ export function sectionOf(stats: SectionStats, locale: string = currentLocale())
       typeof stats.pictureUrl === "string" && stats.pictureUrl.startsWith("https://")
         ? stats.pictureUrl
         : null,
+    pictureFocus: pictureFocusOf(stats),
     status: stats.status ?? "approved",
     builtIn: stats.builtIn ?? isCategory(stats.id),
     rank: stats.rank ?? null,
@@ -380,7 +385,11 @@ export function servedPicture(url: string, width: PictureWidth = 480): string {
 
 /** The tile's own colours, light and dark, and its picture when it has one, at the width drawn. */
 export function sectionStyle(section: Section, width: PictureWidth = 480): CSSProperties {
-  const picture = section.picture === null ? null : servedPicture(section.picture, width);
+  // A picture with a focus is drawn by SectionBackdrop instead: a background cannot be cut by the frame.
+  const picture =
+    section.picture === null || section.pictureFocus !== null
+      ? null
+      : servedPicture(section.picture, width);
   return {
     "--tint-light": section.tint.light,
     "--tint-dark": section.tint.dark,
@@ -396,6 +405,19 @@ export const topicPicture = (topic: { pictureUrl?: string | null }): string | nu
   typeof topic.pictureUrl === "string" && topic.pictureUrl.startsWith("https://")
     ? topic.pictureUrl
     : null;
+
+/**
+ * Which part of a topic's or a section's picture shows (CONTRACT, Cover
+ * focus): only with a picture, read with care, and none for the middle.
+ */
+export function pictureFocusOf(owner: {
+  pictureUrl?: string | null;
+  pictureFocus?: unknown;
+}): CoverFocus | null {
+  if (topicPicture(owner) === null) return null;
+  const focus = focusOf(owner.pictureFocus);
+  return focus === null || isCentre(focus) ? null : focus;
+}
 
 /**
  * A topic's name for a reader: its translation for this language when the

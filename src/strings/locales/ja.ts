@@ -913,6 +913,20 @@ const ja: Translation = {
     back: "戻る",
     movesTo: "承認されると「{name}」に移ります",
   },
+  // Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md).
+  cover: {
+    adjust: "カバーを調整",
+    zoom: "ズーム",
+    preview: "プレビュー",
+    feed: "フィード",
+    pageHeader: "ページヘッダー",
+    reset: "リセット",
+    done: "完了",
+    cancel: "キャンセル",
+    adjustPosition: "位置を調整",
+    frame: "枠の中で動かしたりズームしたりできるカバー",
+    frameHelp: "ドラッグで移動、ピンチまたはホイールでズーム。矢印キーで移動、+ と − でズーム。",
+  },
   propose: {
     title: "セクションを提案",
     intro:

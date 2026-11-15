@@ -1,3 +1,4 @@
+import { focusOf, isCentre, type CoverFocus } from "./coverFocus";
 import type { AccountAction, ApiClient } from "./client";
 import {
   attributionField,
@@ -104,13 +105,26 @@ export const itemsOf = (items: unknown): PublishedItem[] =>
 export const pictureOf = (value: unknown): string | null =>
   typeof value === "string" && value.startsWith("https://") ? value : null;
 
-/** A list as the site draws it: its cover and previews only real pictures. */
+/** A list as the site draws it: its cover and previews only real pictures, a focus only on a cover. */
 export const summaryOf = <T extends ListSummary>(list: T): T => {
   const previews = (list.previewImages ?? []).filter((url) => pictureOf(url) !== null);
   const cover = pictureOf(list.coverImageUrl);
-  return previews.length === list.previewImages?.length && cover === list.coverImageUrl
-    ? list
-    : { ...list, previewImages: previews, coverImageUrl: cover };
+  const read = cover === null ? null : focusOf(list.coverFocus);
+  const focus = read === null || isCentre(read) ? null : read;
+  if (
+    previews.length === list.previewImages?.length &&
+    cover === list.coverImageUrl &&
+    (list.coverFocus ?? null) === focus
+  ) {
+    return list;
+  }
+  const { coverFocus: _sent, ...rest } = list;
+  return {
+    ...rest,
+    previewImages: previews,
+    coverImageUrl: cover,
+    ...(focus === null ? {} : { coverFocus: focus }),
+  } as T;
 };
 
 export async function loadFeed(client: ApiClient, query: FeedQuery = {}): Promise<FeedPage> {
@@ -150,6 +164,8 @@ export interface PublishRequest {
   coverPictureId: string | null;
   /** The pictures chosen for the cover collage, in their order; left out or empty when the cards' art decides. */
   coverImageUrls?: string[];
+  /** Which part of the single cover shows; null for the middle (CONTRACT, Cover focus). */
+  coverFocus?: CoverFocus | null;
   /**
    * A house publication only: the editor's credit for the cover; null takes
    * it off, absent keeps the one the same cover had (CONTRACT, Editor's credit).

@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ALL_SECTIONS_PATH, sectionStyle, type Section } from "./model";
+import { SectionBackdrop } from "./SectionBackdrop";
 import "./following.css";
 
 /**
@@ -47,6 +48,7 @@ export function FollowSections({ sections, picked, onToggle }: FollowSectionsPro
                 aria-label={fill(strings.sections.followSection, { name: section.name })}
                 onClick={() => onToggle(section)}
               >
+                <SectionBackdrop section={section} />
                 <span className="mini-section__check" aria-hidden="true">
                   <Icon name={on ? "check" : "add"} />
                 </span>

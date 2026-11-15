@@ -5,12 +5,14 @@ import { errorOf, type ApiError } from "../../api/errors";
 import { creditAsAttribution, type EditorCredit } from "../../api/pictureAttribution";
 import { topicCreditOf, type Topic } from "../../api/sections";
 import { fieldsOf } from "../../lib/editorCredit";
+import { isCentre, sameFocus, type CoverFocus } from "../../lib/coverFocus";
 import { cropOf } from "../../lib/framing";
 import { directionOf, LOCALE_NAMES } from "../../lib/locale";
 import { SECTION_PICTURE_MIN } from "../../lib/pictures";
 import { useWidthClass } from "../../lib/useWidthClass";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { CoverAdjust } from "../../ui/CoverAdjust";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import { PictureRows } from "../tierboard/AboutPicture";
@@ -18,7 +20,7 @@ import { CreditForm } from "../tierboard/CreditForm";
 import { creditWhyText } from "./houseWords";
 import { changedNames, newNames, sameCredit, topicNamesOf, TOPIC_LOCALES } from "./topicWords";
 import { editorDeps, type EditorDeps } from "../sections/editorDeps";
-import { topicPicture, type Section } from "../sections/model";
+import { pictureFocusOf, servedPicture, topicPicture, type Section } from "../sections/model";
 import { TOPIC_NAME } from "../boards/model";
 import { PictureField, type PictureValue } from "../sections/PictureField";
 import {
@@ -69,6 +71,7 @@ export function TopicEditor(props: TopicEditorProps) {
       names: mode === "edit" ? topicNamesOf(props.topic.names) : {},
       credit: mode === "edit" ? topicCreditOf(props.topic) : null,
       picture: own === null ? null : ({ kind: "kept", url: own } as PictureValue),
+      focus: mode === "edit" ? pictureFocusOf(props.topic) : null,
     };
   });
   const [name, setName] = useState(start.name);
@@ -77,6 +80,9 @@ export function TopicEditor(props: TopicEditorProps) {
   const [namesTrouble, setNamesTrouble] = useState<readonly string[] | null>(null);
   const [nameRefused, setNameRefused] = useState<string | null>(null);
   const [picture, setPicture] = useState<PictureValue | null>(start.picture);
+  // Where the kept picture is looked at; a new one starts in the middle, as the backend has it.
+  const [focus, setFocus] = useState<CoverFocus | null>(start.focus);
+  const [adjusting, setAdjusting] = useState(false);
   // The credit the editor gave or took off; null while they have not touched it.
   const [given, setGiven] = useState<{ credit: EditorCredit | null } | null>(null);
   const [creditForm, setCreditForm] = useState(false);
@@ -98,7 +104,9 @@ export function TopicEditor(props: TopicEditorProps) {
   const creditChanged =
     picture !== null &&
     (newPicture ? credit !== null : given !== null && !sameCredit(credit, start.credit));
-  const changed = renamed || newPicture || removed || translated !== null || creditChanged;
+  const refocused = picture?.kind === "kept" && !sameFocus(focus, start.focus);
+  const changed =
+    renamed || newPicture || removed || translated !== null || creditChanged || refocused;
   const ready = tidy !== "" && pictureReady && (mode === "create" || changed);
   const nameTaken = taken !== null && taken === tidy;
   const nameTrouble = nameTaken || (nameRefused !== null && nameRefused === tidy);
@@ -151,6 +159,7 @@ export function TopicEditor(props: TopicEditorProps) {
       ...(translated === null ? {} : { names: translated }),
       ...(pictureId !== null ? { pictureId } : removed ? { pictureId: null } : {}),
       ...withCredit,
+      ...(refocused ? { pictureFocus: focus } : {}),
     });
   };
 
@@ -299,6 +308,22 @@ export function TopicEditor(props: TopicEditorProps) {
               editing={mode === "edit"}
               thumbs={false}
             />
+            {picture?.kind === "kept" && (
+              <Button icon="zoom_in" onClick={() => setAdjusting(true)}>
+                {strings.cover.adjustPosition}
+              </Button>
+            )}
+            {adjusting && picture?.kind === "kept" && (
+              <CoverAdjust
+                src={servedPicture(picture.url, 1600)}
+                focus={focus}
+                onCancel={() => setAdjusting(false)}
+                onDone={(placed) => {
+                  setFocus(isCentre(placed) ? null : placed);
+                  setAdjusting(false);
+                }}
+              />
+            )}
             {picture !== null && (
               <Button
                 className="topic-editor__remove"

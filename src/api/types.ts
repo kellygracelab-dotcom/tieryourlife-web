@@ -1,3 +1,4 @@
+import type { CoverFocus } from "./coverFocus";
 import type { EditorCredit, PictureAttribution } from "./pictureAttribution";
 
 export const CATEGORIES = [
@@ -62,6 +63,8 @@ export interface ListSummary {
   category: string;
   itemCount: number;
   coverImageUrl: string | null;
+  /** Which part of the cover shows; absent for the middle (CONTRACT, Cover focus). */
+  coverFocus?: CoverFocus;
   previewImages: string[];
   tierColors: string[];
   updatedAt: number;

@@ -7,6 +7,7 @@ import {
   homeSlots,
   isSectionIcon,
   orderSections,
+  pictureFocusOf,
   SECTION_ICONS,
   sectionName,
   sectionOf,
@@ -217,6 +218,30 @@ describe("sections", () => {
     expect(sectionStyle(look, 1600)).toMatchObject({
       "--section-picture": 'url("/img/1600/sections/film_tv/p1")',
     });
+  });
+
+  // CONTRACT, Cover focus: a section's and a topic's pictureFocus.
+  it("reads a picture's focus only with a picture, and draws a focused one apart from the background", () => {
+    const focus = { x: 0.3, y: 0.2, zoom: 1.5 };
+    const look = sectionOf(
+      stats("s1", { pictureUrl: "https://img/p.jpg", pictureFocus: focus, name: "S" }),
+    );
+    expect(look.pictureFocus).toEqual(focus);
+    // A background cannot be cut by the frame: SectionBackdrop draws it instead.
+    expect(sectionStyle(look)).not.toHaveProperty("--section-picture");
+    expect(sectionOf(stats("s1", { pictureFocus: focus, name: "S" })).pictureFocus).toBeNull();
+    expect(
+      sectionOf(stats("s1", { pictureUrl: "https://img/p.jpg", pictureFocus: { x: 3 }, name: "S" }))
+        .pictureFocus,
+    ).toBeNull();
+    expect(pictureFocusOf({ pictureUrl: "https://img/p.jpg", pictureFocus: focus })).toEqual(focus);
+    expect(
+      pictureFocusOf({
+        pictureUrl: "https://img/p.jpg",
+        pictureFocus: { x: 0.5, y: 0.5, zoom: 1 },
+      }),
+    ).toBeNull();
+    expect(pictureFocusOf({ pictureUrl: null, pictureFocus: focus })).toBeNull();
   });
 
   it("addresses a section and a topic the way the app's links do", () => {

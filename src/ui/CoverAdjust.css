@@ -1,0 +1,155 @@
+/*
+ * Adjust cover, as in the app (15.11.2026): ✕ and the title, a 4:3 frame as
+ * wide as the dialog up to 480 with the rest of the picture dimmed around it,
+ * Zoom, the two previews, and Reset and Done in the middle.
+ */
+.dialog.cover-adjust {
+  width: min(528px, 100%);
+  padding: 16px 24px 24px;
+  gap: 16px;
+}
+
+.cover-adjust__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: -8px;
+}
+
+.cover-adjust__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.cover-adjust__close:hover {
+  background: var(--surface-soft);
+}
+
+.cover-adjust__title {
+  margin: 0;
+  font: 400 22px/28px var(--font);
+  color: var(--ink);
+}
+
+/* The picture around the frame shows, dimmed: the area clips it, the frame does not. */
+.cover-adjust__area {
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  border-radius: 16px;
+  background: #000000;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.cover-adjust__area:active {
+  cursor: grabbing;
+}
+
+.cover-adjust__frame {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  outline: none;
+}
+
+.cover-adjust__picture {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.cover-adjust__area--waiting .cover-adjust__picture {
+  opacity: 0;
+}
+
+/* The frame's white edge, and everything outside it dimmed by half. */
+.cover-adjust__edge {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.cover-adjust__frame:focus-visible .cover-adjust__edge {
+  border-color: var(--focus);
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 999px rgba(0, 0, 0, 0.5);
+}
+
+.cover-adjust__zoom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font: var(--text-label);
+  color: var(--ink);
+}
+
+.cover-adjust__zoom input {
+  flex: 1;
+  accent-color: var(--link);
+}
+
+.cover-adjust__label {
+  margin: 0 0 -8px;
+  font: var(--text-label);
+  color: var(--ink-dim);
+}
+
+.cover-adjust__previews {
+  display: grid;
+  grid-template-columns: 1.6fr 2.05fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.cover-adjust__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.cover-adjust__shape {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--tile-placeholder);
+}
+
+.cover-adjust__actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.cover-adjust__actions .btn {
+  min-width: 112px;
+  height: 40px;
+  justify-content: center;
+}

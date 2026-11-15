@@ -1,5 +1,5 @@
 import type { SyncedPlay } from "../../api/boards";
-import type { Board } from "./model";
+import { coverFocusOf, type Board } from "./model";
 
 /**
  * What stands for a board's contents when two devices compare notes: the
@@ -75,6 +75,18 @@ export function fingerprintText(board: Board): string {
   if (board.anonymous) text += encode(["anonymous"]);
   // A game in progress last of all, as its canonical JSON (canonicalPlay).
   if (board.play !== null) text += encode([canonicalPlay(board.play)]);
+  // The cover's focus after everything, and only away from the middle, so every
+  // board without one keeps its fingerprint; whole numbers, so "1" and "1.0"
+  // never part the phone and the site (agreed with Android, 15.11.2026).
+  const focus = coverFocusOf(board);
+  if (focus !== null) {
+    text += encode([
+      "coverFocus",
+      String(Math.round(focus.x * 10_000)),
+      String(Math.round(focus.y * 10_000)),
+      String(Math.round(focus.zoom * 100)),
+    ]);
+  }
   return text;
 }
 

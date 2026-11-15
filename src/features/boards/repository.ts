@@ -1,3 +1,4 @@
+import { focusOf, isCentre } from "../../lib/coverFocus";
 import { ownPictureRef } from "../../lib/privatePictureRef";
 import { attributionField, editorCreditOf } from "../../api/pictureAttribution";
 import { MAX_PLAY_ANSWERS, type SyncedPlay } from "../../api/boards";
@@ -258,6 +259,7 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
   const coverPictureId = coverPictureIdOf(source.coverPictureId, originalCover, items);
   const coverImageUrl = localPicture(originalCover, coverPictureId, owner);
   const coverCredit = coverCreditOf(source.coverCredit);
+  const coverFocus = focusOf(source.coverFocus);
   const covers = Array.isArray(source.coverImageUrls)
     ? source.coverImageUrls.filter((url): url is string => typeof url === "string")
     : [];
@@ -274,6 +276,7 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
         ? [coverImageUrl]
         : covers,
     coverPictureId,
+    ...(coverFocus === null || isCentre(coverFocus) ? {} : { coverFocus }),
     authorName: text(source.authorName),
     publishedId: text(source.publishedId),
     takenFrom: origin?.listId ?? text(source.takenFrom),
