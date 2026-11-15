@@ -5,6 +5,7 @@ import { SessionProvider } from "./app/SessionProvider";
 import { BoardSyncProvider } from "./features/boards/BoardSyncProvider";
 import { reloadInto } from "./lib/freshChunk";
 import { spendPreload } from "./lib/preload";
+import { NameTip } from "./ui/NameTip";
 
 const router = withPageTransitions(createBrowserRouter(routes));
 
@@ -60,6 +61,7 @@ export function App() {
       {/* The boards follow the account from here, whatever page is open. */}
       <BoardSyncProvider>
         <RouterProvider router={router} />
+        <NameTip />
       </BoardSyncProvider>
     </SessionProvider>
   );

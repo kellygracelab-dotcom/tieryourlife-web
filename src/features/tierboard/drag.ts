@@ -90,31 +90,71 @@ export interface CardBox {
   bottom: number;
 }
 
+type Box = Pick<CardBox, "left" | "right" | "top" | "bottom">;
+
+const middleOf = (box: Box): number => (box.left + box.right) / 2;
+
 /**
- * How many of a row's cards come before the point, in reading order: every
- * card on a line above it, and on its own line every card whose middle is on
- * the reading side of it — left in English, right in Arabic. Rows wrap, so
- * the line matters before the side.
+ * Whether a card comes before the point in reading order: it is on a line
+ * above, or on the point's line with its turning edge on the reading side of
+ * the point, left in English, right in Arabic.
+ *
+ * On the line of the place the carried card stands in (`held`), a card turns
+ * at its edge nearer that place: a card before it at its far edge, a card
+ * after it at its near edge. The carried card's middle passing a neighbour's
+ * edge takes it one place over, the same way left as right, a little over
+ * half a card's travel; drawn there, the neighbour's other edge is the line
+ * back, a gap away, so the place does not flicker between the two. Elsewhere
+ * a card turns at its middle.
  */
-export function insertionIndex(boxes: readonly CardBox[], at: Point, rtl: boolean): number {
-  let before = 0;
-  for (const box of boxes) {
-    if (box.bottom <= at.y) {
-      before += 1;
-    } else if (box.top <= at.y) {
-      const middle = (box.left + box.right) / 2;
-      if (rtl ? middle > at.x : middle < at.x) before += 1;
-    }
+function comesBefore(box: Box, held: Box | null, at: Point, rtl: boolean): boolean {
+  if (box.bottom <= at.y) return true;
+  if (box.top > at.y) return false;
+  let edge = middleOf(box);
+  if (held !== null && held.top < box.bottom && box.top < held.bottom) {
+    const beforeHeld = rtl ? middleOf(box) > middleOf(held) : middleOf(box) < middleOf(held);
+    edge = beforeHeld === rtl ? box.left : box.right;
   }
+  return rtl ? edge > at.x : edge < at.x;
+}
+
+/**
+ * How many of a row's cards come before the point, in reading order (see
+ * `comesBefore`). Rows wrap, so the line matters before the side.
+ */
+export function insertionIndex(
+  boxes: readonly CardBox[],
+  at: Point,
+  rtl: boolean,
+  held: Box | null = null,
+): number {
+  let before = 0;
+  for (const box of boxes) if (comesBefore(box, held, at, rtl)) before += 1;
   return before;
+}
+
+/**
+ * The point a carried card is placed by: its middle, where it was taken hold
+ * of known, so a card held by its right edge goes left as soon as one held by
+ * its left edge goes right. Otherwise the pointer.
+ */
+export function placedBy(at: Point, grab: Grab = NO_GRAB): Point {
+  if (!(grab.width > 0 && grab.height > 0)) return at;
+  return { x: at.x - grab.x + grab.width / 2, y: at.y - grab.y + grab.height / 2 };
 }
 
 /**
  * What is under the pointer: a tier or the pool, and the place in it, or
  * nothing. The card being dragged does not count among the row's cards: its
- * place is where it would land without it.
+ * place is where it would land without it. The place is found by the carried
+ * card's middle (`placedBy`), the row by the pointer.
  */
-export function targetOf(element: Element | null, at?: Point, dragged?: number): DropTarget {
+export function targetOf(
+  element: Element | null,
+  pointer?: Point,
+  dragged?: number,
+  grab?: Grab,
+): DropTarget {
   const zone = element?.closest<HTMLElement>("[data-drop]");
   const drop = zone?.dataset.drop;
   if (zone == null || drop === undefined) return null;
@@ -123,24 +163,34 @@ export function targetOf(element: Element | null, at?: Point, dragged?: number):
   if (!Number.isInteger(tier)) return null;
   const toward = (index: number): DropTarget =>
     inPool ? { kind: "pool", index } : { kind: "tier", tier, index };
-  if (at === undefined) return toward(Number.MAX_SAFE_INTEGER);
+  if (pointer === undefined) return toward(Number.MAX_SAFE_INTEGER);
+  const at = placedBy(pointer, grab);
   const list = inPool ? ".pool__items" : ".tier__items";
   const rtl = getComputedStyle(zone).direction === "rtl";
-  const children = zone.querySelector(list)?.children;
+  const heldCard =
+    dragged === undefined ? null : zone.querySelector(`${list} [data-item="${dragged}"]`);
+  const held = heldCard?.getBoundingClientRect() ?? null;
+  const row = zone.querySelector(list);
+  const children = row?.children;
   if (children && children.length > 32) {
-    const before = (box: DOMRect) =>
-      box.bottom <= at.y ||
-      (box.top <= at.y &&
-        (rtl ? (box.left + box.right) / 2 > at.x : (box.left + box.right) / 2 < at.x));
+    let heldChild: Element | null = heldCard;
+    while (heldChild !== null && heldChild.parentElement !== row) {
+      heldChild = heldChild.parentElement;
+    }
+    // In order along the line: a card before the carried one turns at its far
+    // edge, the carried one's place at its middle, a card after it at its near edge.
+    const before = (child: Element) => {
+      const box = child.getBoundingClientRect();
+      return child === heldChild ? heldBefore(box, at, rtl) : comesBefore(box, held, at, rtl);
+    };
     let low = 0;
     let high = children.length;
     while (low < high) {
       const mid = (low + high) >>> 1;
-      if (before(children[mid]!.getBoundingClientRect())) low = mid + 1;
+      if (before(children[mid]!)) low = mid + 1;
       else high = mid;
     }
-    const held = dragged === undefined ? null : zone.querySelector(`[data-item="${dragged}"]`);
-    return toward(low - (held && before(held.getBoundingClientRect()) ? 1 : 0));
+    return toward(low - (held !== null && heldBefore(held, at, rtl) ? 1 : 0));
   }
   const boxes: CardBox[] = [];
   for (const card of zone.querySelectorAll<HTMLElement>(`${list} [data-item]`)) {
@@ -149,8 +199,13 @@ export function targetOf(element: Element | null, at?: Point, dragged?: number):
     const rect = card.getBoundingClientRect();
     boxes.push({ item, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
   }
-  return toward(insertionIndex(boxes, at, rtl));
+  return toward(insertionIndex(boxes, at, rtl, held));
 }
+
+/** The carried card's own place, in a long row's search: before the point when its middle is. */
+const heldBefore = (held: Box, at: Point, rtl: boolean): boolean =>
+  held.bottom <= at.y ||
+  (held.top <= at.y && (rtl ? middleOf(held) > at.x : middleOf(held) < at.x));
 
 /**
  * A row's cards as drawn while a card is carried, the same for a tier and

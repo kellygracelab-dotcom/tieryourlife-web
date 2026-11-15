@@ -301,7 +301,6 @@ const Tile = memo(function Tile({
         aria-label={card.title}
         aria-haspopup={coarse ? "dialog" : "menu"}
         aria-keyshortcuts="Shift+F10"
-        title={card.title}
         disabled={locked && !knows}
         data-item={item}
         onClick={(event) => {
