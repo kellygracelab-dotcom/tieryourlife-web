@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalPlay, fingerprintOf, fingerprintText } from "./fingerprint";
+import { canonicalOtherPlay, canonicalPlay, fingerprintOf, fingerprintText } from "./fingerprint";
 import { playOf } from "./repository";
 import type { Board } from "./model";
 
@@ -281,14 +281,26 @@ describe("the fingerprint", () => {
     ).toBe(`1:u|1:T|4:WRAP|~|~|~|~|~|9:anonymous|${example.length}:${example}|`);
   });
 
-  it("writes a smart game's tiers after startedAt, before the scope, as the proxy answers it", () => {
-    const example =
+  it("leaves a smart game's tiers out, as the phones already out there do", () => {
+    const answered =
       '{"kind":"smart","count":3,"seed":2,"refine":false,"ids":["a","b","c"],' +
       '"history":[[0,1,0]],"round":0,"startedAt":5,"tiers":3,"scope":["t-s"]}';
-    expect(canonicalPlay(playOf(JSON.parse(example))!)).toBe(example);
+    expect(canonicalPlay(playOf(JSON.parse(answered))!)).toBe(answered.replace(',"tiers":3', ""));
   });
 
-  it("carries a game of a kind this site does not know as it came", () => {
+  it("carries a game of a kind this site does not know by the phone's keys", () => {
+    expect(
+      canonicalOtherPlay({
+        extra: 1,
+        keepTier: true,
+        scope: ["s"],
+        round: null,
+        count: 2,
+        kind: "elo",
+        history: [[0, 1, null]],
+      }),
+    ).toBe('{"kind":"elo","count":2,"history":[[0,1,null]],"scope":["s"],"keepTier":true}');
+    expect(canonicalOtherPlay({ kind: "elo", scope: [], keepTier: "yes" })).toBe('{"kind":"elo"}');
     const later = { kind: "elo", count: 2 };
     expect(
       fingerprintText(
