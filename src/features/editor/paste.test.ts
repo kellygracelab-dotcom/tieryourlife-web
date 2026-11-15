@@ -11,7 +11,9 @@ import {
   cardsFor,
   PASTE_AT_ONCE,
   PASTE_PACE_MS,
+  looseIn,
   pick,
+  plainName,
   preferredFor,
   sourcesCount,
   waitsForIn,
@@ -90,6 +92,97 @@ describe("pick", () => {
     expect(pick({ title: "Dune", year: "2021" }, found)?.id).toBe("tmdb:2");
     expect(pick({ title: "Dune", year: "1984" }, found)?.id).toBe("tmdb:1");
     expect(pick({ title: "Dune", year: "2000" }, found)).toBeNull();
+  });
+});
+
+describe("a pasted name in a section with catalogues of its own", () => {
+  // IGDB's answers for a search, in its own order, as the proxy hands them on.
+  const mario = [
+    card("igdb:1074", "Super Mario 64", "1996"),
+    card("igdb:358", "Super Mario Bros.", "1985"),
+    card("igdb:26758", "Super Mario Odyssey", "2017"),
+    card("igdb:2349", "Mario Kart 8 Deluxe", "2017"),
+  ];
+  const zelda = [
+    card("igdb:7346", "The Legend of Zelda: Breath of the Wild", "2017"),
+    card("igdb:1022", "The Legend of Zelda", "1986"),
+    card("igdb:119388", "The Legend of Zelda: Tears of the Kingdom", "2023"),
+  ];
+  const pokemon = [
+    card("igdb:1514", "Pokémon Red", "1996"),
+    card("igdb:1561", "Pokémon Blue", "1996"),
+    card("igdb:119133", "Pokémon Scarlet", "2022"),
+  ];
+  const games = looseIn("games");
+
+  it("loosens the name in a section of its own catalogues only", () => {
+    for (const own of ["games", "anime", "film_tv", "people", "music", "books"]) {
+      expect(looseIn(own)).toBe(true);
+    }
+    expect(looseIn("food")).toBe(false);
+    expect(looseIn("other")).toBe(false);
+    expect(looseIn(null)).toBe(false);
+  });
+
+  it("takes the catalogue's best card with every word of a name no card carries exactly", () => {
+    expect(pick({ title: "Mario", year: null }, mario, null, games)?.id).toBe("igdb:1074");
+    expect(pick({ title: "Zelda", year: null }, zelda, null, games)?.id).toBe("igdb:7346");
+    expect(pick({ title: "Pokémon", year: null }, pokemon, null, games)?.id).toBe("igdb:1514");
+    // Without its accent too.
+    expect(pick({ title: "Pokemon", year: null }, pokemon, null, games)?.id).toBe("igdb:1514");
+    // A year still decides.
+    expect(pick({ title: "Mario", year: "2017" }, mario, null, games)?.id).toBe("igdb:26758");
+  });
+
+  it("takes the card of exactly the name first, wherever the catalogue put it", () => {
+    expect(pick({ title: "Super Mario Odyssey", year: null }, mario, null, games)?.id).toBe(
+      "igdb:26758",
+    );
+    expect(
+      pick({ title: "The Legend of Zelda: Breath of the Wild", year: null }, zelda, null, games)
+        ?.id,
+    ).toBe("igdb:7346");
+    // Its punctuation as one types it, without the colon.
+    expect(
+      pick({ title: "the legend of zelda breath of the wild", year: null }, zelda, null, games)?.id,
+    ).toBe("igdb:7346");
+    expect(pick({ title: "The Legend of Zelda", year: null }, zelda, null, games)?.id).toBe(
+      "igdb:1022",
+    );
+  });
+
+  it("takes nothing that lacks a word of the name, and nothing loose elsewhere", () => {
+    expect(pick({ title: "Mario Party", year: null }, mario, null, games)).toBeNull();
+    expect(
+      pick({ title: "Upside", year: null }, [card("tmdb:1", "Up in the Air")], null, true),
+    ).toBeNull();
+    // A list about nothing yet, or of food: exactly the name or nothing.
+    expect(pick({ title: "Mario", year: null }, mario)).toBeNull();
+    expect(pick({ title: "Mario", year: null }, mario, "wikidata", false)).toBeNull();
+  });
+
+  it("compares names without case, accents or punctuation", () => {
+    expect(plainName("Pokémon: Let's Go, Pikachu!")).toBe("pokemon let s go pikachu");
+    expect(plainName("Ratchet & Clank")).toBe(plainName("Ratchet and Clank"));
+    expect(plainName("  ")).toBe("");
+  });
+
+  it("is passed on to every name of a pasted list", async () => {
+    const lookup = vi.fn(async (query: string) =>
+      query === "Zelda" ? zelda : query.includes("Mario") ? mario : [],
+    );
+    const cards: PastedCard[] = [];
+    await cardsFor(
+      wantedOf(["Mario", "Zelda", "Super Mario Odyssey"].join("\n"), 10),
+      lookup,
+      (one) => cards.push(one),
+      { loose: true, paceMs: 0 },
+    );
+    expect(cards.map((one) => [one.title, one.imageUrl])).toEqual([
+      ["Mario", "https://img/igdb:1074.jpg"],
+      ["Zelda", "https://img/igdb:7346.jpg"],
+      ["Super Mario Odyssey", "https://img/igdb:26758.jpg"],
+    ]);
   });
 });
 

@@ -147,11 +147,38 @@ const from =
     item.id.startsWith(`${catalogue}:`);
 
 /**
- * The catalogue's card for a pasted name, or none. Only a card of exactly
- * that name is taken: a near miss would put the wrong poster on a card, and a
- * card with its name alone is the better mistake. With a year, only a card
- * that carries it. Of several, the first from the preferred catalogue, and
- * the first of all when that one knows nothing by the name.
+ * Where a pasted name may take the catalogue's best card when none carries
+ * exactly that name: a section with catalogues of its own, where every
+ * answer is of the right kind. "Mario" in a list of games is a game of
+ * Mario's, and IGDB has none called just that (Content, 15.11.2026).
+ * Elsewhere a near miss would be another thing's picture: Wikidata's
+ * "Pizza" film for the dish.
+ */
+export const looseIn = (category: string | null): boolean =>
+  category !== null && scopeFor(category) !== "all";
+
+/** A name as it is compared: no case, no accents, no punctuation, "&" as "and". */
+export const plainName = (name: string): string =>
+  name
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
+/**
+ * The catalogue's card for a pasted name, or none. A card of that name is
+ * taken first, whatever its case, accents or punctuation ("Pokemon" is
+ * "Pokémon"); with a year, only a card that carries it. Of several, the first
+ * from the preferred catalogue, and the first of all when that one knows
+ * nothing by the name.
+ *
+ * Where the section's catalogues are its own (`loose`), a name no card
+ * carries exactly takes the catalogue's best card with every word of it:
+ * the catalogue ranks its answers, so "Zelda" is its best Zelda. Anywhere
+ * else a near miss would put the wrong poster on a card, and a card with its
+ * name alone is the better mistake.
  *
  * TMDB knows films, series and people only. Where the list is about something
  * else and nothing of Wikidata's came at all, Wikidata did not answer, and a
@@ -166,16 +193,23 @@ export function pick(
   wanted: Wanted,
   found: readonly CatalogueItem[],
   preferred: Preferred = null,
+  loose = false,
 ): CatalogueItem | null {
   if (wanted.id !== undefined) return found.find((item) => item.id === wanted.id) ?? null;
-  const name = wanted.title.toLowerCase();
+  const name = plainName(wanted.title);
   const year = wanted.year;
-  const named = found.filter(
-    (item) =>
-      item.title.trim().toLowerCase() === name &&
-      (year === null || item.subtitle?.includes(year) === true),
-  );
-  if (preferred === null) return named[0] ?? null;
+  const dated = (item: CatalogueItem) => year === null || item.subtitle?.includes(year) === true;
+  const named = found.filter((item) => plainName(item.title) === name && dated(item));
+  if (preferred === null) {
+    if (named[0] !== undefined || !loose || name === "") return named[0] ?? null;
+    const words = name.split(" ");
+    return (
+      found.find((item) => {
+        const has = new Set(plainName(item.title).split(" "));
+        return dated(item) && words.every((word) => has.has(word));
+      }) ?? null
+    );
+  }
   const own = named.find(from(preferred));
   if (own !== undefined) return own;
   if (preferred === "wikidata" && !found.some(from("wikidata"))) return null;
@@ -214,6 +248,8 @@ export interface PasteOptions {
   /** False once the box is gone: nothing more is asked, nothing handed over. */
   going?: () => boolean;
   preferred?: Preferred;
+  /** A name no card carries exactly may take the best card with its words (`looseIn`). */
+  loose?: boolean;
   /**
    * The busy catalogues a name waits for (`waitsForIn`); by default the
    * preferred one. A line with the subject's id waits for Wikidata.
@@ -308,6 +344,7 @@ export async function cardsFor(
   {
     going = () => true,
     preferred = null,
+    loose = false,
     waitFor = (catalogue) => catalogue === preferred,
     paceMs = PASTE_PACE_MS,
     link,
@@ -453,7 +490,7 @@ export async function cardsFor(
         return;
       }
       if (answer === undefined) unanswered++;
-      const card = pick(one, answer?.items ?? [], preferred);
+      const card = pick(one, answer?.items ?? [], preferred, loose);
       if (card === null) {
         onMissing?.(
           one.title,
