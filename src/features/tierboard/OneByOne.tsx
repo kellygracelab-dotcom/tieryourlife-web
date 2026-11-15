@@ -8,7 +8,6 @@ import { Icon } from "../../ui/Icon";
 import { useBrokenPicture } from "../../ui/useBrokenPicture";
 import { CardName } from "./CardName";
 import type { BoardSize } from "./nameFit";
-import "./one-by-one.css";
 
 /** Where the device keeps whether the pool shows one card at a time; it is not synced. */
 export const ONE_BY_ONE_KEY = "tyl.board.oneByOne";
