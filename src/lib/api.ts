@@ -299,7 +299,8 @@ export const loadKeptBoard = (uid: string): Promise<KeptBoard> => boards.loadKep
 export const keepBoard = (uid: string, request: KeepBoardRequest): Promise<boards.KeptAnswer> =>
   boards.keepBoard(api, uid, request);
 
-export const forgetBoard = (uid: string): Promise<void> => boards.forgetBoard(api, uid);
+export const forgetBoard = (uid: string, removal: boards.Removal): Promise<void> =>
+  boards.forgetBoard(api, uid, removal);
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.

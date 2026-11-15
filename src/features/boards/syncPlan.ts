@@ -20,6 +20,12 @@ export interface RemoteBoard {
   revision: number;
   /** True once the board was thrown away; nothing else is left of it. */
   deleted: boolean;
+  /**
+   * Thrown away for good by its owner (emptied from a trash, deleted for
+   * good), not just taken out of the account with the back-up: every device
+   * deletes its copy too (15.11.2026).
+   */
+  forever?: boolean;
   /** The fingerprint of whichever device wrote it last, if it sent one. */
   fingerprint: string | null;
 }
@@ -53,6 +59,14 @@ export type SyncStep =
    */
   | { kind: "trashLocal"; uid: string; revision: number }
   /**
+   * Deleted for good on another device, and nothing new here since this
+   * device and the account agreed about it: it goes from here as well, trash
+   * and agreement too (Danylo, 15.11.2026: what is deleted for good is gone
+   * everywhere). A board changed here since goes to this device's trash
+   * instead, never lost unseen.
+   */
+  | { kind: "dropLocal"; uid: string }
+  /**
    * A marker in the account, and the board here is the only word on it: this
    * device sent it once and withdrew it (the back-up was switched off, which
    * forgets every agreement), never agreed at all, or changed it since the
@@ -75,6 +89,21 @@ function stepFor(
   synced: SyncedBoard | undefined,
 ): SyncStep | null {
   if (remote === undefined) return { kind: "create", uid: local.uid };
+  if (remote.deleted && remote.forever === true) {
+    const changed =
+      synced === undefined ||
+      (local.fingerprint !== synced.fingerprint && local.legacyFingerprint !== synced.fingerprint);
+    // This device already put it in its trash for this marker: brought back
+    // from there since, it goes up again, as any edit over a marker does.
+    if (synced?.revision === remote.revision) {
+      return changed && !local.inTrash
+        ? { kind: "revive", uid: local.uid, basedOn: remote.revision }
+        : null;
+    }
+    return changed
+      ? { kind: "trashLocal", uid: local.uid, revision: remote.revision }
+      : { kind: "dropLocal", uid: local.uid };
+  }
   if (remote.deleted) {
     // Without an agreement the marker is this device's own doing.
     if (synced === undefined) return { kind: "revive", uid: local.uid, basedOn: remote.revision };

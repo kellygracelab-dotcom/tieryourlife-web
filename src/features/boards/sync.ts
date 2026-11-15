@@ -1,5 +1,11 @@
 import { privatePicturePath } from "../../lib/privatePictureRef";
-import type { KeepBoardRequest, KeptAnswer, KeptBoard, KeptBoardEntry } from "../../api/boards";
+import type {
+  KeepBoardRequest,
+  KeptAnswer,
+  KeptBoard,
+  KeptBoardEntry,
+  Removal,
+} from "../../api/boards";
 import { errorOf } from "../../api/errors";
 import { withCopies } from "./boardCopies";
 import { fingerprintOf as digest } from "./fingerprint";
@@ -36,7 +42,8 @@ export interface BoardsApi {
   index(after: string | null): Promise<{ boards: KeptBoardEntry[]; next: string | null }>;
   board(uid: string): Promise<KeptBoard>;
   keep(uid: string, request: KeepBoardRequest): Promise<KeptAnswer>;
-  forget(uid: string): Promise<void>;
+  /** Leaves a marker saying why the board is gone: `forever` from the trash, `cloud` with the back-up. */
+  forget(uid: string, removal: Removal): Promise<void>;
   /** The lists this account has in the feed, or null when they could not be read. */
   published(): Promise<PublishedEntry[] | null>;
 }
@@ -284,7 +291,8 @@ export async function forgetAccountCopies(
   const live = await liveEntriesOf(api);
   for (const entry of live) {
     if (!stillWanted()) throw new SyncCancelled();
-    await api.forget(entry.uid);
+    // Only the account's copy goes: every device keeps its own.
+    await api.forget(entry.uid, "cloud");
     records.forget(entry.uid);
   }
   if (!stillWanted()) throw new SyncCancelled();
@@ -301,6 +309,7 @@ async function readIndex(api: BoardsApi): Promise<Map<string, RemoteBoard>> {
         uid: entry.uid,
         revision: entry.revision,
         deleted: entry.deleted,
+        forever: entry.deleted && entry.removal === "forever",
         fingerprint: entry.fingerprint,
       });
     }
@@ -344,13 +353,16 @@ async function carry(
       return "carried";
     case "trashLocal":
       return trashHere(step.uid, step.revision, planned.get(step.uid), deps, fingerprintOf);
+    case "dropLocal":
+      return dropHere(step.uid, planned.get(step.uid), deps, fingerprintOf);
     case "letGo":
       check(deps);
       records.forget(step.uid);
       return "carried";
     case "forget":
       check(deps);
-      await api.forget(step.uid);
+      // Only a board deleted for good here is missing here with an agreement left.
+      await api.forget(step.uid, "forever");
       check(deps);
       records.forget(step.uid);
       return "carried";
@@ -510,6 +522,31 @@ async function trashHere(
   if (latest === null || !sameBoard(latest, board) || now !== plannedFingerprint) return "deferred";
   if (trashed !== board) keep(deps, trashed);
   agree(deps, { uid, revision, fingerprint });
+  return "carried";
+}
+
+/**
+ * A board deleted for good elsewhere goes from here too, with its agreement,
+ * unless it moved here since the plan was made: then the next run decides.
+ */
+async function dropHere(
+  uid: string,
+  plannedFingerprint: string | undefined,
+  deps: SyncDeps,
+  fingerprintOf: (board: Board) => Promise<string>,
+): Promise<"carried" | "deferred"> {
+  const board = deps.repository.get(uid);
+  if (board === null) {
+    check(deps);
+    deps.records.forget(uid);
+    return "carried";
+  }
+  const now = await fingerprintOf(board);
+  check(deps);
+  const latest = deps.repository.get(uid);
+  if (latest === null || !sameBoard(latest, board) || now !== plannedFingerprint) return "deferred";
+  deps.repository.remove(uid);
+  deps.records.forget(uid);
   return "carried";
 }
 

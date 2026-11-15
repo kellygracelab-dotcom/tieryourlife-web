@@ -57,7 +57,7 @@ const siteApi: BoardsApi = {
   index: (after) => loadBoardIndex(after),
   board: (uid) => loadKeptBoard(uid),
   keep: (uid, request) => keepBoard(uid, request),
-  forget: (uid) => forgetBoard(uid),
+  forget: (uid, removal) => forgetBoard(uid, removal),
   published: () =>
     loadMyLists().then(
       ({ lists }) => lists.map(publishedEntryOf),

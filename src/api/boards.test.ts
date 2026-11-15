@@ -37,8 +37,14 @@ describe("boards", () => {
     } as unknown as KeepBoardRequest;
     await expect(keepBoard(client, "a b", body)).resolves.toEqual({ uid: "a b", revision: 2 });
     expect(request).toHaveBeenLastCalledWith("PUT", "/boards/a%20b", { body });
-    await forgetBoard(client, "a/b");
-    expect(request).toHaveBeenLastCalledWith("DELETE", "/boards/a%2Fb");
+    await forgetBoard(client, "a/b", "forever");
+    expect(request).toHaveBeenLastCalledWith("DELETE", "/boards/a%2Fb", {
+      query: { removal: "forever" },
+    });
+    await forgetBoard(client, "a/b", "cloud");
+    expect(request).toHaveBeenLastCalledWith("DELETE", "/boards/a%2Fb", {
+      query: { removal: "cloud" },
+    });
   });
 
   it("reads the copies a write is answered with, the catalogue address to ours", async () => {
