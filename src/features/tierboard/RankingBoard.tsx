@@ -562,6 +562,9 @@ export function RankingBoard({
   const [save, setSave] = useState<SaveState>({ status: "idle" });
   const locked = save.status === "saving";
   const drag = useTileDrag(dispatch, hitTest);
+  // Drawn for the drag, the rows may have moved under a pointer that stays put.
+  const { state: dragDrawn, settle } = drag;
+  useEffect(() => settle(), [dragDrawn, settle]);
   const lifted = drag.state.phase === "dragging" ? drag.state.item : null;
   const dropTarget = drag.state.phase === "dragging" ? drag.state.target : null;
   // The owner's way to take a card off, one function for every tile: the

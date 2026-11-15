@@ -35,6 +35,12 @@ export interface TileDrag {
   subscribe(onChange: () => void): () => void;
   /** The page moved under a still pointer: what is under it is read again. */
   nudge(): void;
+  /**
+   * The board was drawn again for the drag: the card stood in at its place
+   * and the rows moved. What is under the still pointer is read once more,
+   * once for each place of the pointer, so two drawings cannot take turns.
+   */
+  settle(): void;
 }
 
 /**
@@ -181,5 +187,13 @@ export function useTileDrag(
     become(move(now, now.at, targetOf(hitTest(now.at), now.at, now.item)));
   }, [become, hitTest]);
 
-  return { state, onPointerDown, current, subscribe, nudge };
+  const settledAt = useRef<Point | null>(null);
+  const settle = useCallback(() => {
+    const now = latest.current;
+    if (now.phase !== "dragging" || settledAt.current === now.at) return;
+    settledAt.current = now.at;
+    become(move(now, now.at, targetOf(hitTest(now.at), now.at, now.item)));
+  }, [become, hitTest]);
+
+  return { state, onPointerDown, current, subscribe, nudge, settle };
 }

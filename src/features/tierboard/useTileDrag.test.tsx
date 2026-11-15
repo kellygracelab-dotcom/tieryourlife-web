@@ -214,6 +214,26 @@ describe("dragging a card", () => {
     expect(named(inPool())).not.toContain("Anora");
   });
 
+  it("reads again what is under a still pointer once the board is drawn for the drag", () => {
+    // The rows move as the card stands in: under the same point, now the pool.
+    let reads = 0;
+    const shifting: HitTest = () => (reads++ === 0 ? tierRow("A") : poolBox());
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} hitTest={shifting} />
+      </MemoryRouter>,
+    );
+    pointer("pointerdown", card("Anora"), 10, 10, { button: 0 });
+    pointer("pointermove", window, 300, 40);
+    expect(poolBox()).toHaveClass("pool--target");
+    expect(tierRow("A")).not.toHaveClass("tier--target");
+    // Once for a place of the pointer: the drawings cannot take turns.
+    const after = reads;
+    expect(after).toBeLessThanOrEqual(3);
+    pointer("pointerup", window, 300, 40);
+    expect(within(screen.getByRole("list", { name: "A" })).queryAllByRole("button")).toEqual([]);
+  });
+
   it("does nothing when let go outside every target, or on a right button", () => {
     render(
       <MemoryRouter>

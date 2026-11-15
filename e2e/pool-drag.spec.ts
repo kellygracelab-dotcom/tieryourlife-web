@@ -31,8 +31,12 @@ async function newBoard(page: Page, touch: boolean) {
     await add.press("Enter");
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
-  // The box closed again, so the pool's cards stand where they will.
-  if (touch) await page.keyboard.press("Escape");
+  // The box closed again: the tray is short, and no row lies under it.
+  if (touch) {
+    const add = page.getByRole("button", { name: "Add", exact: true });
+    await add.tap();
+    await expect(add).toHaveAttribute("aria-expanded", "false");
+  }
   await expect(poolCards(page)).toHaveCount(NAMES.length);
   await page.evaluate(() => window.scrollTo(0, 0));
 }
