@@ -100,7 +100,10 @@ function stepFor(
         ? { kind: "revive", uid: local.uid, basedOn: remote.revision }
         : null;
     }
-    return changed
+    // Already in the trash here, it goes whatever moved it there since: the
+    // move itself changes it, and the trash would keep it for good (as the
+    // app does, 15.11.2026).
+    return changed && !local.inTrash
       ? { kind: "trashLocal", uid: local.uid, revision: remote.revision }
       : { kind: "dropLocal", uid: local.uid };
   }
