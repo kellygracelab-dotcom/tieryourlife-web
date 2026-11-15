@@ -94,26 +94,49 @@
   }
 }
 
-/* The scrim under the name, and a darker one that fades in on hover. */
+/*
+ * The picture at full brightness, darkened only in a strip under the name:
+ * the bottom 45%, clear at its top and dark at the tile's edge (Content and
+ * Danylo, 15.11.2026; the app draws the same). The strip is darkest where the
+ * name's letters stand, and they wear a soft shadow, so white words keep 4.5:1
+ * over a white picture; the same in both themes. Hover deepens the strip.
+ */
 .topic-tile::before,
 .topic-tile::after {
   content: "";
   position: absolute;
-  /* A pixel past every edge, as on the section tiles: a tile a fraction of a
-   * pixel wide drew its picture to the edge but the scrims a pixel short. */
-  inset: -1px;
+  /* A pixel past the edges, as on the section tiles: a tile a fraction of a
+   * pixel wide drew its picture to the edge but the strip a pixel short. */
+  inset: auto -1px -1px;
+  height: calc(45% + 1px);
   z-index: -1;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.7));
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.75),
+    rgba(0, 0, 0, 0.66) 45%,
+    rgba(0, 0, 0, 0.58) 80%,
+    rgba(0, 0, 0, 0.3) 90%,
+    rgba(0, 0, 0, 0)
+  );
 }
 
 .topic-tile::after {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.7));
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.85),
+    rgba(0, 0, 0, 0.76) 45%,
+    rgba(0, 0, 0, 0.66) 80%,
+    rgba(0, 0, 0, 0.34) 90%,
+    rgba(0, 0, 0, 0)
+  );
   opacity: 0;
   transition: opacity 120ms ease;
 }
 
 /* Waiting: dimmed all over, so it reads as not a place yet. */
 .topic-tile--waiting::before {
+  inset: -1px;
+  height: auto;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 30%, rgba(0, 0, 0, 0.7));
 }
 
@@ -145,6 +168,7 @@
 .topic-tile__name {
   overflow: hidden;
   font: 500 15px/20px var(--font);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

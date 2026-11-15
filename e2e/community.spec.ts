@@ -206,6 +206,13 @@ test("a section's topics are low tiles, two rows at most, then the lists under t
   const tile = await grid.getByRole("link").first().boundingBox();
   if (tile === null) throw new Error("no tile");
   expect(tile.height).toBe(64);
+  // The picture at full brightness: darkened only in a strip under the name,
+  // the bottom 45% of the tile (15.11.2026).
+  const strip = await grid
+    .getByRole("link")
+    .first()
+    .evaluate((element) => parseFloat(getComputedStyle(element, "::before").height));
+  expect(strip).toBeCloseTo(64 * 0.45 + 1, 0);
   // Two rows while folded; the rest under Show all, in place.
   await expect(grid.getByRole("link")).toHaveCount(Math.min(topics.length, columns * 2));
   if (topics.length > columns * 2) {
