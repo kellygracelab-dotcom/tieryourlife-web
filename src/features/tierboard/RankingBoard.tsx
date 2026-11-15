@@ -1343,9 +1343,25 @@ export function RankingBoard({
                       }}
                     />
                   )}
-                  {single ? (
+                  {single && panel !== null && selected !== null ? (
+                    // The hints stand where they stood: switching does not move the head's buttons.
+                    <>
+                      <p className="pool__hint pool__hint--keys">
+                        {fill(
+                          tierOf(state, selected) === null
+                            ? strings.rank.oneByOneKeys
+                            : strings.rank.oneByOneKeysPlaced,
+                          { keys: keyboardTiers > 1 ? `1–${keyboardTiers}` : "1" },
+                        )}
+                      </p>
+                      <p className="pool__hint pool__hint--touch">
+                        {fill(strings.rank.hintPlaceTouch, {
+                          name: list.items[selected]?.title ?? "",
+                        })}
+                      </p>
+                    </>
+                  ) : single ? (
                     allPlaced &&
-                    panel === null &&
                     !emptyPool && (
                       <Button variant="tonal" onClick={() => chooseOneByOne(false)}>
                         {strings.rank.oneByOneLeave}

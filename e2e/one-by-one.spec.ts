@@ -52,9 +52,12 @@ test("one card at a time: a tier places it, Skip comes back round, a card from t
     );
   const [a, b, c, d] = await newBoard(page, hasTouch);
 
+  // The switch stays where it was pressed (Content, 15.11.2026: it ran off from under the pointer).
+  const was = await toggle(page).boundingBox();
   await press(toggle(page));
   await expect(toggle(page)).toHaveAttribute("aria-pressed", "true");
   await expect(poolCards(page)).toHaveCount(0);
+  expect((await toggle(page).boundingBox())?.x).toBeCloseTo(was!.x, 0);
   await expect(up(page)).toHaveText(a!);
 
   // A tier: the card goes last in it and the pool's next comes up.

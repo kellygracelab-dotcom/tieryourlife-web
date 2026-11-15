@@ -25,7 +25,7 @@ interface OneByOneProps {
   locked: boolean;
   /** Another card waits in the pool, so a skip has somewhere to go. */
   canSkip: boolean;
-  /** The keyboard has number keys for the tiers: the hint names them. */
+  /** How many tiers have a number key: the first nine. */
   keys: number;
   onPlace: (tier: number) => void;
   onSkip: () => void;
@@ -63,7 +63,6 @@ export function OneByOne({
 }: OneByOneProps) {
   const [broken, onBroken] = useBrokenPicture(card.imageUrl);
   const pictured = card.imageUrl !== null && !broken;
-  const range = keys > 1 ? `1–${keys}` : "1";
   return (
     <div className="one">
       <div
@@ -128,11 +127,6 @@ export function OneByOne({
               {placedIn === null ? strings.rank.oneByOneSkip : strings.rank.oneByOneToPool}
             </span>
           </button>
-          <p className="one__keys">
-            {fill(placedIn === null ? strings.rank.oneByOneKeys : strings.rank.oneByOneKeysPlaced, {
-              keys: range,
-            })}
-          </p>
         </div>
       </div>
     </div>
@@ -153,8 +147,8 @@ export function OneByOneToggle({ on, onChange }: OneByOneToggleProps) {
       aria-pressed={on}
       onClick={pressed(() => onChange(!on))}
     >
-      <Icon name={on ? "check" : "view_agenda"} />
-      <span>{strings.rank.oneByOne}</span>
+      <Icon name="view_agenda" />
+      <span className="one-toggle__label">{strings.rank.oneByOne}</span>
     </button>
   );
 }
