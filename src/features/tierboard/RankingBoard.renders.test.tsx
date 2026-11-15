@@ -103,10 +103,10 @@ describe("a board of 2,000 cards", () => {
       transform: "translate(50px, 30px) rotate(-4deg) scale(1.06)",
     });
 
-    // Over the row's first place: the room opens there, and still no tile is drawn again.
+    // Over the row's first place: the card stands there faded, and no other tile is drawn again.
     drawn.names = 0;
     pointer("pointermove", window, 61, -1);
-    expect(row(2).querySelector(".tile--slot")).not.toBeNull();
+    expect(row(2).querySelector('[data-item="1700"]')).toHaveClass("tile--lifted");
     expect(drawn.names).toBeLessThanOrEqual(3);
 
     pointer("pointerup", window, 61, -1);

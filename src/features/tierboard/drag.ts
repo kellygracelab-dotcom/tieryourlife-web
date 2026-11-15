@@ -3,8 +3,9 @@ export interface Point {
   y: number;
 }
 
-/** `index`: where among the row's other cards the dragged one would land. */
-export type DropTarget = { kind: "tier"; tier: number; index: number } | { kind: "pool" } | null;
+/** `index`: where among the row's (or the pool's) other cards the dragged one would land. */
+export type DropTarget =
+  { kind: "tier"; tier: number; index: number } | { kind: "pool"; index: number } | null;
 
 /** Where the card was taken hold of, and how big it is, so the ghost moves as the card itself. */
 export interface Grab {
@@ -60,9 +61,8 @@ const sameTarget = (a: DropTarget, b: DropTarget): boolean =>
   a === b ||
   (a !== null &&
     b !== null &&
-    (a.kind === "pool"
-      ? b.kind === "pool"
-      : b.kind === "tier" && a.tier === b.tier && a.index === b.index));
+    a.index === b.index &&
+    (a.kind === "pool" ? b.kind === "pool" : b.kind === "tier" && a.tier === b.tier));
 
 /**
  * Whether the board would draw two states of a drag alike: the same card
@@ -110,7 +110,7 @@ export function insertionIndex(boxes: readonly CardBox[], at: Point, rtl: boolea
 }
 
 /**
- * What is under the pointer: a tier and the place in it, the pool, or
+ * What is under the pointer: a tier or the pool, and the place in it, or
  * nothing. The card being dragged does not count among the row's cards: its
  * place is where it would land without it.
  */
@@ -118,12 +118,15 @@ export function targetOf(element: Element | null, at?: Point, dragged?: number):
   const zone = element?.closest<HTMLElement>("[data-drop]");
   const drop = zone?.dataset.drop;
   if (zone == null || drop === undefined) return null;
-  if (drop === "pool") return { kind: "pool" };
-  const tier = Number(drop.replace("tier:", ""));
+  const inPool = drop === "pool";
+  const tier = inPool ? -1 : Number(drop.replace("tier:", ""));
   if (!Number.isInteger(tier)) return null;
-  if (at === undefined) return { kind: "tier", tier, index: Number.MAX_SAFE_INTEGER };
+  const toward = (index: number): DropTarget =>
+    inPool ? { kind: "pool", index } : { kind: "tier", tier, index };
+  if (at === undefined) return toward(Number.MAX_SAFE_INTEGER);
+  const list = inPool ? ".pool__items" : ".tier__items";
   const rtl = getComputedStyle(zone).direction === "rtl";
-  const children = zone.querySelector(".tier__items")?.children;
+  const children = zone.querySelector(list)?.children;
   if (children && children.length > 32) {
     const before = (box: DOMRect) =>
       box.bottom <= at.y ||
@@ -137,18 +140,34 @@ export function targetOf(element: Element | null, at?: Point, dragged?: number):
       else high = mid;
     }
     const held = dragged === undefined ? null : zone.querySelector(`[data-item="${dragged}"]`);
-    return {
-      kind: "tier",
-      tier,
-      index: low - (held && before(held.getBoundingClientRect()) ? 1 : 0),
-    };
+    return toward(low - (held && before(held.getBoundingClientRect()) ? 1 : 0));
   }
   const boxes: CardBox[] = [];
-  for (const card of zone.querySelectorAll<HTMLElement>(".tier__items [data-item]")) {
+  for (const card of zone.querySelectorAll<HTMLElement>(`${list} [data-item]`)) {
     const item = Number(card.dataset.item);
     if (item === dragged) continue;
     const rect = card.getBoundingClientRect();
     boxes.push({ item, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
   }
-  return { kind: "tier", tier, index: insertionIndex(boxes, at, rtl) };
+  return toward(insertionIndex(boxes, at, rtl));
+}
+
+/**
+ * A row's cards as drawn while a card is carried, the same for a tier and
+ * for the pool, from wherever the card came: over this row, the card stands
+ * where it would land, faded, and the others make room for it; carried
+ * over another row (`landing` says it lands somewhere), it is gone from
+ * here, as it will be once let go. Over nothing it stays where it was.
+ */
+export function carried(
+  row: readonly number[],
+  lifted: number | null,
+  dropAt: number | null,
+  landing: boolean,
+): readonly number[] {
+  if (lifted === null || (dropAt === null && !landing)) return row;
+  const others = row.includes(lifted) ? row.filter((item) => item !== lifted) : row;
+  if (dropAt === null) return others;
+  const at = Math.min(Math.max(0, dropAt), others.length);
+  return [...others.slice(0, at), lifted, ...others.slice(at)];
 }

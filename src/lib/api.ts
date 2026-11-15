@@ -74,11 +74,22 @@ export const preloadHidesAuthor = (id: string): boolean => preloadedList(id)?.an
 // What the page function already put into the HTML needs no request, and
 // therefore no App Check and no guest sign-in until Finish. An account asks
 // the network for a list without its author's name, which may be its own.
-const pageOrNetwork = (id: string, asAccount: boolean): Promise<PublishedList> => {
+let handed: { from: object; locale: string; list: PublishedList } | null = null;
+
+/**
+ * The list the page itself carries, there before the first frame: a reload
+ * draws the board at once, never a skeleton for a list already in the HTML.
+ * The same object every time, so the page drawn from it and the page loaded
+ * after it are one.
+ */
+export const listAtHand = (id: string, asAccount = false): PublishedList | undefined => {
   const preloaded = preloadedList(id);
-  return preloaded === null || (asAccount && preloaded.anonymous === true)
-    ? lists.loadList(api, id)
-    : Promise.resolve(lists.publishedListOf(preloaded));
+  if (preloaded === null || (asAccount && preloaded.anonymous === true)) return undefined;
+  const locale = currentLocale();
+  if (handed === null || handed.from !== preloaded || handed.locale !== locale) {
+    handed = { from: preloaded, locale, list: listIn(lists.publishedListOf(preloaded), locale) };
+  }
+  return handed.list;
 };
 
 /**
@@ -91,7 +102,7 @@ export const loadListAsWritten = (id: string): Promise<PublishedList> => lists.l
 
 /** A list as its reader sees it: a house list comes in the reader's language. */
 export const loadList = async (id: string, asAccount = false): Promise<PublishedList> =>
-  listIn(await pageOrNetwork(id, asAccount), currentLocale());
+  listAtHand(id, asAccount) ?? listIn(await lists.loadList(api, id), currentLocale());
 
 export const loadFeed = (query: FeedQuery): Promise<FeedPage> => lists.loadFeed(api, query);
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  carried,
   hold,
   idle,
   insertionIndex,
@@ -38,11 +39,11 @@ describe("drag", () => {
 
   it("turns a held finger into a drag, and a pen counts as a finger", () => {
     const pressed = press(1, at(0, 0), "pen", 0, grab);
-    expect(hold(pressed, { kind: "pool" })).toEqual({
+    expect(hold(pressed, { kind: "pool", index: 0 })).toEqual({
       phase: "dragging",
       item: 1,
       at: at(0, 0),
-      target: { kind: "pool" },
+      target: { kind: "pool", index: 0 },
       grab,
     });
     expect(hold(press(1, at(0, 0), "mouse", 0), null)).toMatchObject({ phase: "pressed" });
@@ -78,7 +79,10 @@ describe("drag", () => {
       tier: 2,
       index: Number.MAX_SAFE_INTEGER,
     });
-    expect(targetOf(document.getElementById("in-pool"))).toEqual({ kind: "pool" });
+    expect(targetOf(document.getElementById("in-pool"))).toEqual({
+      kind: "pool",
+      index: Number.MAX_SAFE_INTEGER,
+    });
     expect(targetOf(document.getElementById("bad"))).toBeNull();
     expect(targetOf(document.getElementById("outside"))).toBeNull();
     expect(targetOf(null)).toBeNull();
@@ -187,7 +191,9 @@ describe("sameDrawing", () => {
     expect(sameDrawing(carried(10, over), carried(80, { kind: "tier", tier: 1, index: 2 }))).toBe(
       true,
     );
-    expect(sameDrawing(carried(10, { kind: "pool" }), carried(80, { kind: "pool" }))).toBe(true);
+    expect(
+      sameDrawing(carried(10, { kind: "pool", index: 0 }), carried(80, { kind: "pool", index: 0 })),
+    ).toBe(true);
     expect(sameDrawing(carried(10, null), carried(80, null))).toBe(true);
     expect(sameDrawing(idle, idle)).toBe(true);
   });
@@ -199,11 +205,26 @@ describe("sameDrawing", () => {
     expect(sameDrawing(carried(10, over), carried(10, { kind: "tier", tier: 0, index: 2 }))).toBe(
       false,
     );
-    expect(sameDrawing(carried(10, over), carried(10, { kind: "pool" }))).toBe(false);
+    expect(sameDrawing(carried(10, over), carried(10, { kind: "pool", index: 0 }))).toBe(false);
     expect(sameDrawing(carried(10, over), carried(10, null))).toBe(false);
     expect(sameDrawing(carried(10, over), carried(10, over, 4))).toBe(false);
     expect(sameDrawing(idle, carried(10, over))).toBe(false);
     const pressed = press(3, { x: 0, y: 0 }, "mouse", 0);
     expect(sameDrawing(pressed, press(3, { x: 0, y: 0 }, "mouse", 0))).toBe(false);
+  });
+});
+
+describe("a row while a card is carried", () => {
+  it("stands the card where it would land, the others making room, from its own row or another", () => {
+    expect(carried([1, 2, 3], 3, 0, true)).toEqual([3, 1, 2]);
+    expect(carried([1, 2, 3], 9, 1, true)).toEqual([1, 9, 2, 3]);
+    expect(carried([1, 2, 3], 9, 99, true)).toEqual([1, 2, 3, 9]);
+    expect(carried([], 9, 0, true)).toEqual([9]);
+  });
+
+  it("lets the card go from its row while it is over another, and keeps it there over nothing", () => {
+    expect(carried([1, 2, 3], 2, null, true)).toEqual([1, 3]);
+    expect(carried([1, 2, 3], 2, null, false)).toEqual([1, 2, 3]);
+    expect(carried([1, 2, 3], null, 0, true)).toEqual([1, 2, 3]);
   });
 });

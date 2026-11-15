@@ -585,8 +585,9 @@ function OpenBoard({
     markHouseCopy(asItStands, list, houseStore);
   };
 
-  const onRows = (rows: readonly (readonly number[])[]) => {
-    keep(arrangeItems(latest(), uidRows(view, rows), now()));
+  const onRows = (rows: readonly (readonly number[])[], pool: readonly number[]) => {
+    const [poolUids = []] = uidRows(view, [pool]);
+    keep(arrangeItems(latest(), uidRows(view, rows), now(), poolUids));
   };
 
   const remove = (item: number) => {

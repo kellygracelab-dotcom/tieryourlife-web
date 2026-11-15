@@ -69,6 +69,7 @@ import {
   loadList,
   loadListAsWritten,
   loadListRankings,
+  listAtHand,
   preloadHidesAuthor,
   report as sendReport,
   unpublish as unpublishList,
@@ -292,10 +293,15 @@ export function ListPage(props: ListPageProps) {
   const load = useCallback(() => loadList(id, asAccount), [id, asAccount]);
   const visit = useVisit();
   const reader = account?.kind === "signedIn" ? account.uid : "";
+  // The list in the page's own HTML is drawn in the first frame, and stays
+  // drawn while the account arrives and the list is asked again for it: a
+  // reload never shows the skeleton in place of a board already there.
+  const peek = useCallback(() => listAtHand(id, asAccount), [id, asAccount]);
   const { state, retry } = useResource(
     JSON.stringify([id, currentLocale(), reader, asAccount]),
     load,
     visit?.lists,
+    { peek, group: id },
   );
   // Republished while it was ranked: read again from the network, since the
   // page's copy may be as old as the list a Finish was just refused for.
