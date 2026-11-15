@@ -939,8 +939,7 @@ const de: Translation = {
     followSection: "{name} folgen",
     emptyHelper:
       "Tippe bei den Rubriken, die dich interessieren, auf + und folge allen auf einmal. Themen stehen in den Rubriken, Personen in ihrem Profil.",
-    pickFollow: "Folgen · {n}",
-    pickNone: "Wähle mindestens einen",
+    pickFollow: { one: "{n} Rubrik folgen", other: "{n} Rubriken folgen" },
     followedFailed: "Konnte nicht laden, wem du folgst.",
     nothingPublished: "Wem du folgst, hat noch nichts veröffentlicht.",
     goExplore: "Zu Entdecken",

@@ -911,8 +911,7 @@ const tr: Translation = {
     followSection: "{name} bölümünü takip et",
     emptyHelper:
       "Sevdiğiniz bölümlerde + simgesine dokunun, sonra hepsini birden takip edin. Konular bölümlerin içinde, kişiler profillerinde.",
-    pickFollow: "Takip et · {n}",
-    pickNone: "En az birini seçin",
+    pickFollow: { one: "{n} bölümü takip et", other: "{n} bölümü takip et" },
     followedFailed: "Takip ettikleriniz yüklenemedi.",
     nothingPublished: "Takip ettikleriniz henüz bir şey yayımlamadı.",
     goExplore: "Keşfet’e git",

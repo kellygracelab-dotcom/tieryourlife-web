@@ -954,8 +954,11 @@ const es: Translation = {
     followSection: "Seguir {name}",
     emptyHelper:
       "Toca + en las secciones que te gustan y síguelas todas a la vez. Los temas están dentro de cada sección; las personas, en su perfil.",
-    pickFollow: "Seguir · {n}",
-    pickNone: "Elige al menos una",
+    pickFollow: {
+      one: "Seguir {n} sección",
+      many: "Seguir {n} secciones",
+      other: "Seguir {n} secciones",
+    },
     followedFailed: "No se pudo cargar lo que sigues.",
     nothingPublished: "Nadie a quien sigues ha publicado nada todavía.",
     goExplore: "Ir a Explorar",

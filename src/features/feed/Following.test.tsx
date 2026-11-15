@@ -157,7 +157,8 @@ describe("the Following tab", () => {
     // An editorial account is nobody to follow: its lists stand without an author.
     expect(await screen.findByText("someone")).toBeInTheDocument();
     expect(screen.queryByText("TierYourLife")).toBeNull();
-    expect(screen.getByRole("button", { name: "Pick at least one" })).toBeDisabled();
+    // Follow comes only once something is picked.
+    expect(screen.queryByRole("button", { name: /^Follow \d/ })).toBeNull();
 
     // Picked, as in the app: several, then followed together.
     await userEvent.click(followGames);
@@ -169,7 +170,7 @@ describe("the Following tab", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Follow Music" }));
     await userEvent.click(screen.getByRole("button", { name: "Follow Anime" }));
-    await userEvent.click(screen.getByRole("button", { name: "Follow · 2" }));
+    await userEvent.click(screen.getByRole("button", { name: "Follow 2 sections" }));
     expect(sectionsDeps.follow).toHaveBeenCalledTimes(2);
     expect(sectionsDeps.follow).toHaveBeenCalledWith("games");
     expect(sectionsDeps.follow).toHaveBeenCalledWith("anime");
@@ -237,7 +238,7 @@ describe("the Following tab", () => {
     sectionsDeps.follow.mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }));
     open();
     await userEvent.click(await screen.findByRole("button", { name: "Follow Games" }));
-    await userEvent.click(screen.getByRole("button", { name: "Follow · 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "Follow 1 section" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn’t follow. Try again.");
     expect(screen.getByRole("button", { name: "Follow Games" })).toHaveAttribute(
       "aria-pressed",

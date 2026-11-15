@@ -971,8 +971,11 @@ const fr: Translation = {
     followSection: "Suivre {name}",
     emptyHelper:
       "Touchez + sur les rubriques qui vous plaisent, puis suivez-les toutes d’un coup. Les thèmes sont dans chaque rubrique, les personnes sur leur profil.",
-    pickFollow: "Suivre · {n}",
-    pickNone: "Choisissez-en au moins une",
+    pickFollow: {
+      one: "Suivre {n} rubrique",
+      many: "Suivre {n} rubriques",
+      other: "Suivre {n} rubriques",
+    },
     followedFailed: "Impossible de charger ce que vous suivez.",
     nothingPublished: "Personne parmi vos abonnements n’a encore rien publié.",
     goExplore: "Aller à Explorer",

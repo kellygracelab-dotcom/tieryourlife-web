@@ -1,11 +1,14 @@
 import { Link } from "react-router";
-import { fill, plural, strings } from "../../strings";
+import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
-import { ALL_SECTIONS_PATH, sectionPath, sectionStyle, type Section } from "./model";
+import { ALL_SECTIONS_PATH, sectionStyle, type Section } from "./model";
 import "./following.css";
 
-/** Small tiles before the way to all sections: three rows of three, or five and four. */
-export const MINI_TILES = 9;
+/**
+ * Tiles before the way to all sections: twelve fill three rows of four on a
+ * computer and four rows of three on a phone, so no row is left half full.
+ */
+export const MINI_TILES = 12;
 
 interface FollowSectionsProps {
   sections: readonly Section[];
@@ -16,50 +19,50 @@ interface FollowSectionsProps {
 }
 
 /**
- * The empty Following tab's way in, as the app has it: every section as a
- * small tile with a + to pick it, a ✓ once picked, all followed together by
- * the button under them.
+ * The empty Following tab's way in: every section as a tile, picked or put
+ * back by a tap anywhere on it, a ring and a ✓ once picked, all followed
+ * together by the button under them (Danylo, 15.11.2026: one centred grid,
+ * a clear choice). A row short of full sits in the middle; the rest of the
+ * sections are a link under the tiles.
  */
 export function FollowSections({ sections, picked, onToggle }: FollowSectionsProps) {
   const crowded = sections.length > MINI_TILES;
-  const shown = crowded ? sections.slice(0, MINI_TILES - 1) : sections;
+  const shown = crowded ? sections.slice(0, MINI_TILES) : sections;
   return (
-    <ul className="mini-sections">
-      {shown.map((section) => {
-        const on = picked.has(section.id);
-        return (
-          <li key={section.id} className="mini-section">
-            <Link
-              className="mini-section__tile"
-              to={sectionPath(section.id)}
-              style={sectionStyle(section)}
-            >
-              <Icon name={section.icon} className="mini-section__icon" />
-              <span className="mini-section__name">{section.name}</span>
-            </Link>
-            <button
-              type="button"
-              className={on ? "mini-section__badge mini-section__badge--on" : "mini-section__badge"}
-              aria-pressed={on}
-              aria-label={fill(strings.sections.followSection, { name: section.name })}
-              onClick={() => onToggle(section)}
-            >
-              <Icon name={on ? "check" : "add"} />
-            </button>
-          </li>
-        );
-      })}
+    <>
+      <ul className="mini-sections">
+        {shown.map((section) => {
+          const on = picked.has(section.id);
+          return (
+            <li key={section.id} className="mini-section">
+              <button
+                type="button"
+                className={
+                  section.picture === null
+                    ? "mini-section__tile"
+                    : "mini-section__tile mini-section__tile--pictured"
+                }
+                style={sectionStyle(section)}
+                aria-pressed={on}
+                aria-label={fill(strings.sections.followSection, { name: section.name })}
+                onClick={() => onToggle(section)}
+              >
+                <span className="mini-section__check" aria-hidden="true">
+                  <Icon name={on ? "check" : "add"} />
+                </span>
+                <Icon name={section.icon} className="mini-section__icon" />
+                <span className="mini-section__name">{section.name}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
       {crowded && (
-        <li className="mini-section">
-          <Link className="mini-section__tile mini-section__tile--all" to={ALL_SECTIONS_PATH}>
-            <Icon name="grid_view" className="mini-section__icon" />
-            <span className="mini-section__name">{strings.sections.all}</span>
-            <span className="mini-section__count">
-              {plural(strings.sections.count, sections.length)}
-            </span>
-          </Link>
-        </li>
+        <Link className="mini-sections__all" to={ALL_SECTIONS_PATH}>
+          {strings.sections.all}
+          <Icon name="chevron_right" />
+        </Link>
       )}
-    </ul>
+    </>
   );
 }

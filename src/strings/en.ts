@@ -876,8 +876,7 @@ export const en = {
     followSection: "Follow {name}",
     emptyHelper:
       "Tap + on the sections you like, then follow them all at once. Topics are inside each section; people, on their profile.",
-    pickFollow: "Follow · {n}",
-    pickNone: "Pick at least one",
+    pickFollow: { one: "Follow {n} section", other: "Follow {n} sections" },
     followedFailed: "Couldn’t load what you follow.",
     nothingPublished: "Nobody you follow has published anything yet.",
     goExplore: "Go to Explore",

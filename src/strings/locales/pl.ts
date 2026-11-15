@@ -978,8 +978,12 @@ const pl: Translation = {
     followSection: "Obserwuj: {name}",
     emptyHelper:
       "Dotknij + przy działach, które cię interesują, i obserwuj je wszystkie naraz. Tematy są w działach, a osoby w swoich profilach.",
-    pickFollow: "Obserwuj · {n}",
-    pickNone: "Wybierz co najmniej jeden",
+    pickFollow: {
+      one: "Obserwuj {n} dział",
+      few: "Obserwuj {n} działy",
+      many: "Obserwuj {n} działów",
+      other: "Obserwuj {n} działu",
+    },
     followedFailed: "Nie udało się wczytać tego, co obserwujesz.",
     nothingPublished: "Obserwowani nie opublikowali jeszcze niczego.",
     goExplore: "Przejdź do Odkrywaj",
