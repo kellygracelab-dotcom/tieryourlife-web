@@ -161,6 +161,46 @@ describe("a pasted name in a section with catalogues of its own", () => {
     expect(pick({ title: "Mario", year: null }, mario, "wikidata", false)).toBeNull();
   });
 
+  // Content on the live site, 15.11.2026: "Mario" took the singer's photo,
+  // "Zelda" a pet's, "Pokémon" Pokémon Stadium.
+  it("takes its own catalogues' card before Wikidata's, and of a series the most rated game", () => {
+    const singer = card("wikidata:Q295463", "Mario", "American singer");
+    const pet = card("wikidata:Q1", "Zelda", "dog");
+    expect(pick({ title: "Mario", year: null }, [singer, ...mario], null, games)?.id).toBe(
+      "igdb:1074",
+    );
+    expect(pick({ title: "Zelda", year: null }, [pet, ...zelda], null, games)?.id).toBe(
+      "igdb:7346",
+    );
+    const rated = (id: string, title: string, popularity: number) => ({
+      ...card(id, title, null),
+      popularity,
+    });
+    const series = [
+      rated("igdb:2286", "Pokémon Stadium", 120),
+      rated("igdb:1514", "Pokémon Red", 2400),
+      rated("igdb:119133", "Pokémon Scarlet", 900),
+      card("igdb:5", "Pokémon Puzzle League", null),
+    ];
+    expect(pick({ title: "Pokémon", year: null }, series, null, games)?.id).toBe("igdb:1514");
+    // A card of exactly the name is still the one, however few rated it.
+    expect(pick({ title: "Pokémon Stadium", year: null }, series, null, games)?.id).toBe(
+      "igdb:2286",
+    );
+    // Wikidata's card of the name only when the section's catalogues know nothing like it.
+    expect(pick({ title: "Mario", year: null }, [singer], null, games)?.id).toBe(
+      "wikidata:Q295463",
+    );
+    expect(
+      pick(
+        { title: "Mario", year: null },
+        [card("wikidata:Q2", "Mario Lemieux", null)],
+        null,
+        games,
+      ),
+    ).toBeNull();
+  });
+
   it("compares names without case, accents or punctuation", () => {
     expect(plainName("Pokémon: Let's Go, Pikachu!")).toBe("pokemon let s go pikachu");
     expect(plainName("Ratchet & Clank")).toBe(plainName("Ratchet and Clank"));

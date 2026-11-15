@@ -181,4 +181,9 @@ export interface CatalogueItem {
   credit?: string | null;
   /** Where the picture came from and whom it names, where the picture search says. */
   attribution?: PictureAttribution | null;
+  /**
+   * How many people have rated it, where the catalogue says (IGDB): of a
+   * series' games the one most played. Absent where nothing is known.
+   */
+  popularity?: number;
 }

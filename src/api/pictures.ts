@@ -135,6 +135,11 @@ export function pictureOf(raw: unknown): FoundPicture | null {
     kind: oneOf(PICTURE_KINDS, item.kind) ? item.kind : "thing",
     credit: creditOf(item.credit),
     attribution: attributionOf(item.attribution),
+    ...(typeof item.popularity === "number" &&
+    Number.isFinite(item.popularity) &&
+    item.popularity >= 0
+      ? { popularity: item.popularity }
+      : {}),
   };
 }
 

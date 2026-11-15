@@ -147,6 +147,22 @@ const from =
     item.id.startsWith(`${catalogue}:`);
 
 /**
+ * Wikidata answers in every section, with whatever carries the name: in a
+ * list of games, "Mario" the singer and "Zelda" somebody's pet, their photos
+ * from Commons (Content, 15.11.2026). Where the section has catalogues of
+ * its own, theirs is the card to take.
+ */
+const general = (item: CatalogueItem): boolean => item.id.startsWith("wikidata:");
+
+/** The most rated of these, or the catalogue's first where it says nothing of that. */
+const best = (cards: readonly CatalogueItem[]): CatalogueItem | null =>
+  cards.reduce<CatalogueItem | null>(
+    (most, item) =>
+      most === null || (item.popularity ?? -1) > (most.popularity ?? -1) ? item : most,
+    null,
+  );
+
+/**
  * Where a pasted name may take the catalogue's best card when none carries
  * exactly that name: a section with catalogues of its own, where every
  * answer is of the right kind. "Mario" in a list of games is a game of
@@ -174,9 +190,12 @@ export const plainName = (name: string): string =>
  * from the preferred catalogue, and the first of all when that one knows
  * nothing by the name.
  *
- * Where the section's catalogues are its own (`loose`), a name no card
- * carries exactly takes the catalogue's best card with every word of it:
- * the catalogue ranks its answers, so "Zelda" is its best Zelda. Anywhere
+ * Where the section's catalogues are its own (`loose`), their cards come
+ * before Wikidata's, which answers everywhere. A name none of theirs carries
+ * exactly takes their card with every word of it that most people rated, or
+ * their first where they say nothing of that: "Pokémon" is the series' most
+ * played game, not the first IGDB's search lists. Wikidata's card of exactly
+ * the name only when their catalogues know nothing like it. Anywhere
  * else a near miss would put the wrong poster on a card, and a card with its
  * name alone is the better mistake.
  *
@@ -201,14 +220,17 @@ export function pick(
   const dated = (item: CatalogueItem) => year === null || item.subtitle?.includes(year) === true;
   const named = found.filter((item) => plainName(item.title) === name && dated(item));
   if (preferred === null) {
-    if (named[0] !== undefined || !loose || name === "") return named[0] ?? null;
+    if (!loose || name === "") return named[0] ?? null;
+    const own = named.find((item) => !general(item));
+    if (own !== undefined) return own;
     const words = name.split(" ");
-    return (
-      found.find((item) => {
-        const has = new Set(plainName(item.title).split(" "));
-        return dated(item) && words.every((word) => has.has(word));
-      }) ?? null
-    );
+    const near = found.filter((item) => {
+      if (general(item) || !dated(item)) return false;
+      const has = new Set(plainName(item.title).split(" "));
+      return words.every((word) => has.has(word));
+    });
+    // Only when the section's own catalogues know nothing like it: Wikidata's card of that name.
+    return best(near) ?? named[0] ?? null;
   }
   const own = named.find(from(preferred));
   if (own !== undefined) return own;
