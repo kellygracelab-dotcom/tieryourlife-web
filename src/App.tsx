@@ -25,15 +25,22 @@ const stopWatching = router.subscribe((state) => {
   }
 });
 
+/** A board of one's own, at its address. */
+const BOARD = /^\/b\/[^/]+\/?$/;
+
 /**
- * Settles once the page asked for has its own chunk, or after a moment at
- * most. Mounting then draws the page itself as the first frame: a reload of
- * a board goes from the board the browser still shows to the board, never
- * through the stand-in that waits for the chunk. Only a slow network sees
- * the header and the stand-in first.
+ * Settles once a board opened at its address has its page's chunk, or after a
+ * moment at most. Mounting then draws the board itself as the first frame: a
+ * reload of a board goes from the board the browser still shows to the board,
+ * never through the stand-in that waits for the chunk. Only a slow network
+ * sees the header and the stand-in first. Other pages keep the header at once
+ * and the stand-in: some of them still settle once the account is known, and
+ * the stand-in is what keeps that from showing as a jump.
  */
 export function opened(within = 1500): Promise<void> {
-  if (router.state.initialized) return Promise.resolve();
+  if (router.state.initialized || !BOARD.test(router.state.location.pathname)) {
+    return Promise.resolve();
+  }
   return new Promise((resolve) => {
     const done = () => {
       clearTimeout(timer);
