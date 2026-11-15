@@ -443,9 +443,11 @@ describe("SearchPage inside a section or a topic", () => {
     // Inside a topic the words look for its lists, not for topics or sections.
     expect(mocks.findTopics).not.toHaveBeenCalled();
     expect(mocks.loadTopic).toHaveBeenCalledWith("t1");
-    // The bar's field carries the same place.
+    // The bar's field carries the same place, once the page has told the shell.
     expect(
-      within(screen.getByRole("banner")).getByRole("searchbox", { name: "Search in Naruto" }),
+      await within(screen.getByRole("banner")).findByRole("searchbox", {
+        name: "Search in Naruto",
+      }),
     ).toBeInTheDocument();
   });
 
