@@ -451,6 +451,7 @@ const es: Translation = {
     open: "Abrir",
     basedOn: "Basada en «{title}» de {name}",
     basedOnUnnamed: "Basada en «{title}»",
+    source: "Fuente: {label}",
     viewAuthor: "Ver a {name}",
     theirRanking: "Su orden",
     backToAuthor: "Volver al orden del autor",
@@ -856,6 +857,17 @@ const es: Translation = {
     updateHouse: "Actualizar lista de la casa",
     houseUpdated: "Lista de la casa actualizada",
     houseOpenFailed: "No se pudo abrir esa lista. Inténtalo de nuevo.",
+    houseSource: "Fuente",
+    houseSourceTitle: "Fuente de la lista",
+    houseSourceNote:
+      "Se muestra en la página de la lista como «Fuente: …», con el enlace. Deja ambos campos vacíos para quitarla.",
+    houseSourceLabel: "Se muestra como",
+    houseSourceUrl: "Enlace",
+    houseSourceBadUrl: "Usa un enlace https sin usuario ni puerto.",
+    houseSourceDone: "Listo",
+    houseSourcePending:
+      "La fuente «{label}» se enviará con la próxima publicación o actualización.",
+    houseSourceRemoved: "La fuente se quitará con la próxima actualización.",
     houseWords: "Traducciones",
     houseWordsTitle: "Traducciones de «{title}»",
     houseWordsNote:

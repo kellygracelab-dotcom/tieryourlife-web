@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { HouseAnswer } from "../../api/admin";
 import { errorOf } from "../../api/errors";
 import type { PublishRequest } from "../../api/lists";
-import type { PublishedList } from "../../api/types";
+import type { ListSource, PublishedList } from "../../api/types";
 import { loadListAsWritten, publishAsHouse, replaceHouseList } from "../../lib/api";
 import { busyUntil } from "../../lib/busyWait";
 import { fill, strings } from "../../strings";
@@ -19,6 +19,7 @@ import {
   problemText,
   type HouseSend,
 } from "./houseWords";
+import { HouseSource } from "./HouseSource";
 import "./house.css";
 
 /** The house's two ways out: a new list, or a new snapshot of one. */
@@ -108,6 +109,9 @@ export function HouseBar({
 }: HouseBarProps) {
   const [busy, setBusy] = useState(false);
   const [trouble, setTrouble] = useState<Trouble | null>(null);
+  // The source chosen here, sent with the next publish or update; undefined leaves the list's as it is.
+  const [source, setSource] = useState<ListSource | null | undefined>(undefined);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const problems = publishProblemsOf(board);
   const kind: HouseSend = listId === null ? "publish" : "replace";
 
@@ -151,6 +155,10 @@ export function HouseBar({
     sent.then(
       (answer) => {
         setBusy(false);
+        // The source went with it: the list has it now.
+        if (request.listSource !== undefined) {
+          setSource((was) => (was === request.listSource ? undefined : was));
+        }
         onSent(
           listId === null ? "published" : "updated",
           answer.id,
@@ -210,8 +218,9 @@ export function HouseBar({
   // the backend then refuses it once the list moved on, and nothing is written.
   // Never sent again on its own: the editor loads the list as it stands.
   const go = () => {
-    const own = houseRequestOf(latest(), listId);
-    if (own === null) return;
+    const made = houseRequestOf(latest(), listId);
+    if (made === null) return;
+    const own = source === undefined ? made : { ...made, listSource: source };
     const at = listId === null ? null : base();
     if (at === "behind") {
       stopWaiting();
@@ -253,6 +262,13 @@ export function HouseBar({
         {problems.length > 0 && (
           <p className="house-bar__problem">{problems.map(problemText).join(" ")}</p>
         )}
+        {source !== undefined && (
+          <p className="house-bar__note">
+            {source === null
+              ? strings.admin.houseSourceRemoved
+              : fill(strings.admin.houseSourcePending, { label: source.label })}
+          </p>
+        )}
         {busy && (
           <p className="house-bar__note" role="status">
             {listId === null ? strings.new.publishing : strings.boards.updating}
@@ -284,6 +300,9 @@ export function HouseBar({
             {strings.feed.tryAgain}
           </Button>
         )}
+        <Button icon="link" disabled={busy} onClick={() => setSourceOpen(true)}>
+          {strings.admin.houseSource}
+        </Button>
         {listId !== null && (
           <Button href={`/l/${encodeURIComponent(listId)}`} external>
             {strings.admin.open}
@@ -298,6 +317,19 @@ export function HouseBar({
           {listId === null ? strings.admin.publishToHouse : strings.admin.updateHouse}
         </Button>
       </span>
+      {sourceOpen && (
+        <HouseSource
+          chosen={source}
+          load={
+            listId === null ? null : () => send.load(listId).then((list) => list.listSource ?? null)
+          }
+          onDone={(chosen) => {
+            setSource(chosen);
+            setSourceOpen(false);
+          }}
+          onClose={() => setSourceOpen(false)}
+        />
+      )}
     </section>
   );
 }

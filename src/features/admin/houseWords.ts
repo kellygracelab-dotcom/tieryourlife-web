@@ -1,5 +1,6 @@
 import type { ApiError } from "../../api/errors";
-import type { PublishRequest } from "../../api/lists";
+import { isSourceUrl, LIST_SOURCE_LABEL_MAX, type PublishRequest } from "../../api/lists";
+import type { ListSource } from "../../api/types";
 import { searchAgainAt } from "../../lib/searchLimit";
 import { fill, strings } from "../../strings";
 import type { PublishProblem } from "../boards/publish";
@@ -118,4 +119,21 @@ export function busyText(error: HouseBusy, request: PublishRequest | null, at: n
   return names.length === 0
     ? fill(strings.admin.houseNotCopiedSome, { time })
     : fill(strings.admin.houseNotCopied, { names: names.join(", "), time });
+}
+
+/** Spaces collapsed and trimmed, on one line, as the backend keeps a label. */
+export const tidySourceLabel = (label: string): string => label.replace(/\s+/g, " ").trim();
+
+/**
+ * What the two fields say: a source, null when both are empty (no source),
+ * or undefined while they do not make one yet.
+ */
+export function sourceOfFields(label: string, url: string): ListSource | null | undefined {
+  const words = tidySourceLabel(label);
+  const page = url.trim();
+  if (words === "" && page === "") return null;
+  if (words === "" || [...words].length > LIST_SOURCE_LABEL_MAX || !isSourceUrl(page)) {
+    return undefined;
+  }
+  return { label: words, url: page };
 }

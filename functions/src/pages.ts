@@ -219,6 +219,18 @@ interface StoredList {
   /** A house list's title by language, where it has one. */
   names?: Record<string, string>;
   basedOn?: unknown;
+  /** Where a house list's cards came from, `{label, url}`, as the proxy keeps it. */
+  listSource?: unknown;
+}
+
+/** A house list's source as the proxy gives it out: words and an https page, or none. */
+function sourceOf(stored: unknown): { listSource?: { label: string; url: string } } {
+  if (typeof stored !== "object" || stored === null) return {};
+  const { label, url } = stored as Record<string, unknown>;
+  if (typeof label !== "string" || typeof url !== "string" || !url.startsWith("https://")) {
+    return {};
+  }
+  return { listSource: { label, url } };
 }
 
 /** A copy's credit to the list it came from, as the proxy's shownCredit gives it out. */
@@ -268,6 +280,8 @@ export function listPayload(id: string, data: StoredList) {
     // and a copy lost its 'Based on' on every visit by its link.
     translations: data.translations ?? {},
     basedOn: creditOf(data.basedOn),
+    // "Source: …" on a house list opened by its link, as the proxy answers it.
+    ...sourceOf(data.listSource),
   };
 }
 

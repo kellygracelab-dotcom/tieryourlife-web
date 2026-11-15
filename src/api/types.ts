@@ -81,6 +81,14 @@ export interface ListSummary {
   topicName?: string | null;
   /** Absent on lists made from nobody's, and on snapshots older than the credit. */
   basedOn?: BasedOn | null;
+  /** Where a house list's cards came from, shown as "Source: {label}"; absent for none (CONTRACT, A house list's source). */
+  listSource?: ListSource;
+}
+
+/** A house list's source: the words after "Source:", and the https page they lead to. */
+export interface ListSource {
+  label: string;
+  url: string;
 }
 
 export interface PublishedTier {
