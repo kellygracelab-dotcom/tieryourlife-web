@@ -100,6 +100,16 @@ describe("pictures", () => {
     expect(pictureOf(raw({ attribution: { link: "https://x" } }))?.attribution).toBeNull();
   });
 
+  it("keeps how many rated a game, where the backend says, and nothing that is not a count", () => {
+    expect(pictureOf(raw({ id: "igdb:1514", source: "igdb", popularity: 2400 }))?.popularity).toBe(
+      2400,
+    );
+    expect(pictureOf(raw())).not.toHaveProperty("popularity");
+    for (const wrong of [-1, "12", Number.NaN, null]) {
+      expect(pictureOf(raw({ popularity: wrong }))).not.toHaveProperty("popularity");
+    }
+  });
+
   it("keeps only answers it can draw, and only the notices it knows", async () => {
     const { client } = recordingClient({
       items: [
