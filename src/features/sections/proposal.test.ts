@@ -7,8 +7,8 @@ import {
   changesOf,
   fileUnderChoices,
   forgetProposal,
+  graphemeCount,
   isSectionName,
-  isSectionTranslation,
   KEPT_KEY,
   KEPT_PICTURE_KEY,
   keepProposal,
@@ -38,23 +38,20 @@ describe("a proposal's name", () => {
     expect(tidySectionName("  Street   food \n")).toBe("Street food");
   });
 
-  it("follows the backend: 2 to 24 characters, a letter or a digit among them", () => {
+  it("follows the backend: 1 to 24 characters as a person counts them, a letter or a digit among them", () => {
     expect(isSectionName("Go")).toBe(true);
-    expect(isSectionName("  G  ")).toBe(false);
+    // One character is a name now (Proxy #150): 車, S.
+    expect(isSectionName("車")).toBe(true);
+    expect(isSectionName("  G  ")).toBe(true);
     expect(isSectionName("--")).toBe(false);
+    expect(isSectionName("")).toBe(false);
     expect(isSectionName("a".repeat(24))).toBe(true);
     expect(isSectionName("a".repeat(25))).toBe(false);
-    // Characters, not UTF-16 units: twelve emoji and a letter are thirteen.
-    expect(isSectionName(`${"🍜".repeat(12)}a`)).toBe(true);
+    // Graphemes: 👍🏽 is one, though two code points and four UTF-16 units.
+    expect(graphemeCount("👍🏽")).toBe(1);
+    expect(isSectionName(`${"👍🏽".repeat(23)}a`)).toBe(true);
+    expect(isSectionName(`${"👍🏽".repeat(24)}a`)).toBe(false);
     expect(isSectionName("Їжа")).toBe(true);
-  });
-
-  it("takes a translation of one character, as 車, with a letter or a digit, up to 24", () => {
-    expect(isSectionTranslation("車")).toBe(true);
-    expect(isSectionTranslation(" 7 ")).toBe(true);
-    expect(isSectionTranslation("—")).toBe(false);
-    expect(isSectionTranslation("a".repeat(24))).toBe(true);
-    expect(isSectionTranslation("a".repeat(25))).toBe(false);
   });
 });
 

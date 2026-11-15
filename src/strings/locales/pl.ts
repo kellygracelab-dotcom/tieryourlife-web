@@ -1053,7 +1053,7 @@ const pl: Translation = {
     namePlaceholder: "Jedzenie uliczne",
     nameTaken: "Dział „{name}” już istnieje.",
     openIt: "Otwórz",
-    badName: "Nazwa musi mieć od 2 do 24 znaków, w tym literę lub cyfrę.",
+    badName: "Nazwa musi mieć od 1 do 24 znaków, w tym literę lub cyfrę.",
     icon: "Ikona",
     fileUnder: "Umieść moje listy w",
     fileUnderHelp: "Twoje listy przejdą do nowego działu, gdy zostanie zatwierdzony.",

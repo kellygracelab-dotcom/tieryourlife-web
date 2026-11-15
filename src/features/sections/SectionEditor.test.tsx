@@ -313,15 +313,21 @@ describe("Propose a section", () => {
     expect(screen.queryByText(/There’s already/)).toBeNull();
     expect(
       await screen.findByText(
-        "A name needs 2 to 24 characters, with a letter or a number in it.",
+        "A name needs 1 to 24 characters, with a letter or a number in it.",
         {},
         { timeout: 2000 },
       ),
     ).toBeInTheDocument();
-    // Too short to ask about at all.
+    // One character is a name too, and asked about (Proxy #150).
+    deps.check.mockClear();
+    deps.check.mockResolvedValue({ free: true });
+    await userEvent.clear(nameField());
+    await userEvent.type(nameField(), "車");
+    await waitFor(() => expect(deps.check).toHaveBeenCalledWith("車"), { timeout: 2000 });
+    // No letter or digit is not asked about at all.
     deps.check.mockClear();
     await userEvent.clear(nameField());
-    await userEvent.type(nameField(), "F");
+    await userEvent.type(nameField(), "—");
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(deps.check).not.toHaveBeenCalled();
   });
@@ -582,7 +588,7 @@ describe("Propose a section", () => {
     it("BAD_NAME: under the name", async () => {
       await sendWith(invalid("BAD_NAME"));
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "A name needs 2 to 24 characters, with a letter or a number in it.",
+        "A name needs 1 to 24 characters, with a letter or a number in it.",
       );
     });
 
@@ -790,13 +796,13 @@ describe("Propose a section", () => {
       expect(proposeButton()).toBeDisabled();
     });
 
-    it.each(["A", "!!!"])("%s: too short, or no letter, said once typing stops", async (typed) => {
+    it.each(["!!!", "—"])("%s: no letter or digit, said once typing stops", async (typed) => {
       const { deps } = propose();
       pick();
       await userEvent.type(nameField(), typed);
       expect(proposeButton()).toBeDisabled();
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "A name needs 2 to 24 characters, with a letter or a number in it.",
+        "A name needs 1 to 24 characters, with a letter or a number in it.",
       );
       expect(deps.check).not.toHaveBeenCalled();
     });
@@ -914,8 +920,8 @@ describe("the owner's New section", () => {
       return { ...opened, translations };
     }
 
-    it("a translation of one character the backend refused: under it, not under the name", async () => {
-      const { translations } = await refusedWith();
+    it("the translation the backend named: under it, not under the name", async () => {
+      const { translations } = await refusedWith("names.ja");
       const japanese = within(translations).getByRole("textbox", { name: "日本語" });
       await waitFor(() => expect(japanese).toHaveAttribute("aria-invalid", "true"));
       expect(japanese).toHaveAccessibleDescription(
@@ -954,19 +960,27 @@ describe("the owner's New section", () => {
       const { translations } = await refusedWith("name");
       await waitFor(() => expect(nameField()).toHaveAttribute("aria-invalid", "true"));
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "A name needs 2 to 24 characters, with a letter or a number in it.",
+        "A name needs 1 to 24 characters, with a letter or a number in it.",
       );
       await userEvent.type(within(translations).getByRole("textbox", { name: "Deutsch" }), "!");
       expect(screen.getByRole("button", { name: "Create" })).toBeEnabled();
     });
 
-    it("all the translations, when no language is named and none is short", async () => {
+    it("all the translations, when the backend names no language", async () => {
       const opened = create();
       opened.send.mockRejectedValueOnce(invalid("BAD_NAME", { field: "names" }));
       await userEvent.type(nameField(), "Cars");
       const translations = screen.getByRole("group", { name: "Translations" });
       await userEvent.type(within(translations).getByRole("textbox", { name: "Deutsch" }), "Autos");
       await userEvent.click(screen.getByRole("button", { name: "Create" }));
+      expect(await within(translations).findByRole("alert")).toHaveTextContent(
+        "A translation wasn’t accepted. Check them and try again.",
+      );
+      expect(nameField()).toHaveAttribute("aria-invalid", "false");
+    });
+
+    it("from a backend that names no field: under the translations when the name keeps the rule", async () => {
+      const { translations } = await refusedWith();
       expect(await within(translations).findByRole("alert")).toHaveTextContent(
         "A translation wasn’t accepted. Check them and try again.",
       );

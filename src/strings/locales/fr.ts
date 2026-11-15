@@ -1045,7 +1045,7 @@ const fr: Translation = {
     namePlaceholder: "Cuisine de rue",
     nameTaken: "Il existe déjà une rubrique nommée « {name} ».",
     openIt: "L’ouvrir",
-    badName: "Un nom compte de 2 à 24 caractères, dont au moins une lettre ou un chiffre.",
+    badName: "Un nom compte de 1 à 24 caractères, dont au moins une lettre ou un chiffre.",
     icon: "Icône",
     fileUnder: "Classer mes listes dans",
     fileUnderHelp: "Vos listes passeront dans la nouvelle rubrique une fois celle-ci approuvée.",

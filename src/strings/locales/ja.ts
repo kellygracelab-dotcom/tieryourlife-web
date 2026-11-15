@@ -975,7 +975,7 @@ const ja: Translation = {
     namePlaceholder: "屋台料理",
     nameTaken: "「{name}」というセクションはすでにあります。",
     openIt: "開く",
-    badName: "名前は2〜24文字で、文字か数字を含めてください。",
+    badName: "名前は1〜24文字で、文字か数字を含めてください。",
     icon: "アイコン",
     fileUnder: "リストの置き場所",
     fileUnderHelp: "承認されると、リストは新しいセクションに移動します。",

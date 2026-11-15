@@ -1011,7 +1011,7 @@ const de: Translation = {
     namePlaceholder: "Streetfood",
     nameTaken: "Es gibt schon eine Rubrik namens „{name}“.",
     openIt: "Öffnen",
-    badName: "Ein Name braucht 2 bis 24 Zeichen, darunter einen Buchstaben oder eine Ziffer.",
+    badName: "Ein Name braucht 1 bis 24 Zeichen, darunter einen Buchstaben oder eine Ziffer.",
     icon: "Symbol",
     fileUnder: "Meine Listen ablegen unter",
     fileUnderHelp: "Deine Listen ziehen in die neue Rubrik um, sobald sie freigegeben ist.",

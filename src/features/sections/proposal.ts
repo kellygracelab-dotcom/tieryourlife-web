@@ -10,7 +10,7 @@ import { isSectionIcon, OTHER, type Section, type SectionIcon } from "./model";
 /** A section's picture is a 16:10 tile, on the phone and here. */
 export const SECTION_ASPECT = 16 / 10;
 /** The backend's bounds for a name, counted in characters. */
-export const SECTION_NAME_MIN = 2;
+export const SECTION_NAME_MIN = 1;
 export const SECTION_NAME_MAX = 24;
 /** One account cannot fill the queue while its first proposal is still being read. */
 export const PENDING_MAX = 3;
@@ -28,20 +28,24 @@ export const NAME_CHECK_MS = 400;
 /** Spaces collapsed and trimmed, as the backend keeps a name. */
 export const tidySectionName = (name: string): string => name.replace(/\s+/g, " ").trim();
 
-/** Two to twenty-four characters with a letter or a digit in them: the backend's own rule. */
-export function isSectionName(name: string): boolean {
-  const tidy = tidySectionName(name);
-  const length = [...tidy].length;
-  return length >= SECTION_NAME_MIN && length <= SECTION_NAME_MAX && /[\p{L}\p{N}]/u.test(tidy);
+const graphemes = new Intl.Segmenter("und", { granularity: "grapheme" });
+
+/** Characters as a person counts them: 👍🏽 is one, as the backend counts it. */
+export function graphemeCount(text: string): number {
+  let count = 0;
+  for (const _ of graphemes.segment(text)) count++;
+  return count;
 }
 
 /**
- * A translation may be one character, as 車 is in Japanese (Content's report
- * of 15.11.2026): up to twenty-four with a letter or a digit in it.
+ * One to twenty-four characters with a letter or a digit in them, for a
+ * name and each translation alike: the backend's own rule (Proxy #150,
+ * 15.11.2026), which takes 車 or S.
  */
-export function isSectionTranslation(name: string): boolean {
+export function isSectionName(name: string): boolean {
   const tidy = tidySectionName(name);
-  return [...tidy].length <= SECTION_NAME_MAX && /[\p{L}\p{N}]/u.test(tidy);
+  const length = graphemeCount(tidy);
+  return length >= SECTION_NAME_MIN && length <= SECTION_NAME_MAX && /[\p{L}\p{N}]/u.test(tidy);
 }
 
 /** The person's own proposals still waiting for a moderator. */
