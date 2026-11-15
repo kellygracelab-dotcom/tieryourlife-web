@@ -1,8 +1,7 @@
 /* A pictured card's name while a mouse rests on it or the keyboard is on it (NameTip.tsx). */
 .name-tip {
+  /* Screen coordinates, set beside the card (NameTip.tsx), not a side of the text. */
   position: fixed;
-  top: 0;
-  left: 0;
   z-index: 95;
   max-width: min(280px, calc(100vw - 16px));
   padding: 6px 10px;
