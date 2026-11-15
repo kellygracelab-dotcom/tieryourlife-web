@@ -68,4 +68,51 @@ describe("useResource", () => {
     act(() => resolveFirst({ ...list, id: "abc" }));
     expect(result.current.state).toEqual({ status: "ready", value: { ...list, id: "def" } });
   });
+  it("draws a value at hand at once and still loads the fresh one", async () => {
+    const fresh = { ...list, title: "Films, fresher" };
+    const load = vi.fn(async () => fresh);
+    const { result } = renderHook(() => useResource("abc", load, undefined, { peek: () => list }));
+
+    expect(result.current.state).toEqual({ status: "ready", value: list });
+    await waitFor(() => expect(result.current.state).toEqual({ status: "ready", value: fresh }));
+  });
+
+  it("keeps the shown value while another key of its group loads", async () => {
+    let answer: (value: PublishedList) => void = () => undefined;
+    const load = vi
+      .fn<(key: string) => Promise<PublishedList>>()
+      .mockResolvedValueOnce(list)
+      .mockImplementationOnce(
+        () =>
+          new Promise<PublishedList>((resolve) => {
+            answer = resolve;
+          }),
+      );
+    const { result, rerender } = renderHook(
+      ({ key, group }) => useResource(key, load, undefined, { group }),
+      { initialProps: { key: "abc|guest", group: "abc" } },
+    );
+    await waitFor(() => expect(result.current.state).toEqual({ status: "ready", value: list }));
+
+    rerender({ key: "abc|u1", group: "abc" });
+    expect(result.current.state).toEqual({ status: "ready", value: list });
+    const theirs = { ...list, title: "Films, as u1 sees them" };
+    act(() => answer(theirs));
+    await waitFor(() => expect(result.current.state).toEqual({ status: "ready", value: theirs }));
+  });
+
+  it("does not keep a value for a key of another group", async () => {
+    const load = vi
+      .fn<(key: string) => Promise<PublishedList>>()
+      .mockResolvedValueOnce(list)
+      .mockImplementationOnce(() => new Promise<PublishedList>(() => undefined));
+    const { result, rerender } = renderHook(
+      ({ key }) => useResource(key, load, undefined, { group: key }),
+      { initialProps: { key: "abc" } },
+    );
+    await waitFor(() => expect(result.current.state).toEqual({ status: "ready", value: list }));
+
+    rerender({ key: "def" });
+    expect(result.current.state).toEqual({ status: "loading" });
+  });
 });

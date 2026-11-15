@@ -40,7 +40,8 @@ void boot({
     );
     // What actually loaded: a dictionary that would not come leaves the page in English.
     applyLocale(currentLocale());
-    const { App } = await import("./App.tsx");
+    const { App, opened } = await import("./App.tsx");
+    await opened();
     return {
       mount: () =>
         createRoot(root).render(

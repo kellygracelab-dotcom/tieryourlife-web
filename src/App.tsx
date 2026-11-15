@@ -25,6 +25,28 @@ const stopWatching = router.subscribe((state) => {
   }
 });
 
+/**
+ * Settles once the page asked for has its own chunk, or after a moment at
+ * most. Mounting then draws the page itself as the first frame: a reload of
+ * a board goes from the board the browser still shows to the board, never
+ * through the stand-in that waits for the chunk. Only a slow network sees
+ * the header and the stand-in first.
+ */
+export function opened(within = 1500): Promise<void> {
+  if (router.state.initialized) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      stop();
+      resolve();
+    };
+    const timer = setTimeout(done, within);
+    const stop = router.subscribe((state) => {
+      if (state.initialized) done();
+    });
+  });
+}
+
 export function App() {
   return (
     <SessionProvider>
