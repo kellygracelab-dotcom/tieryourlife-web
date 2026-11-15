@@ -37,6 +37,7 @@ import { busyText, missText, refusedText, waitingText } from "./linkText";
 import { LIMITS, type EditorAction, type EditorItem } from "./model";
 import {
   cardsFor,
+  looseIn,
   preferredFor,
   sourcesCount,
   waitsForIn,
@@ -310,6 +311,7 @@ function PasteBox({
       {
         going: () => here.current,
         preferred: preferredFor(category),
+        loose: looseIn(category),
         waitFor: waitsForIn(category),
         link,
         onMissing: (title, reason) => missing.push({ title, reason }),
