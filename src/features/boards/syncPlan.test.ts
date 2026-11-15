@@ -123,6 +123,16 @@ describe("planSync", () => {
         [local("aaa", true), forever(), synced(3)],
       ],
       [
+        "goes from this device's trash even when the move there was not sent yet",
+        [{ kind: "dropLocal", uid: board }],
+        [local("bbb", true), forever(), synced(3)],
+      ],
+      [
+        "goes from this device's trash when this device never agreed about it",
+        [{ kind: "dropLocal", uid: board }],
+        [local("aaa", true), forever(), []],
+      ],
+      [
         "goes to the trash here when it changed here since",
         [{ kind: "trashLocal", uid: board, revision: 4 }],
         [local("bbb"), forever(), synced(3)],
