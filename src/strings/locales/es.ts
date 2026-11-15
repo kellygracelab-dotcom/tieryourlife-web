@@ -1287,6 +1287,10 @@ const es: Translation = {
     removeFromList: "Quitar de la lista",
     photoBy: "Foto: {credit}",
     publicTitle: "Pública",
+    publication: "Publicación",
+    publishedStatus: "Publicada",
+    inRankingsStatus: "En clasificaciones",
+    rankedBody: "Tu clasificación está en las clasificaciones de la lista original.",
     publicBody: "Cualquiera con el enlace puede ordenarla. Aparece en Comunidad.",
     needsAccount:
       "Inicia sesión con Google para publicar. Leer y guardar las de otros no necesita cuenta.",

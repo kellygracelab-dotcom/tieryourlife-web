@@ -1335,6 +1335,10 @@ const ru: Translation = {
     removeFromList: "Удалить из списка",
     photoBy: "Фото: {credit}",
     publicTitle: "Публичный",
+    publication: "Публикация",
+    publishedStatus: "Опубликован",
+    inRankingsStatus: "В рейтингах",
+    rankedBody: "Ваша раскладка есть в рейтингах исходного списка.",
     publicBody: "Любой, у кого есть ссылка, сможет его разложить. Список появится в Сообществе.",
     needsAccount:
       "Войдите через Google, чтобы публиковать. Читать и сохранять чужие можно без аккаунта.",

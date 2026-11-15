@@ -1192,6 +1192,10 @@ const tr: Translation = {
     removeFromList: "Listeden sil",
     photoBy: "Fotoğraf: {credit}",
     publicTitle: "Herkese açık",
+    publication: "Yayın",
+    publishedStatus: "Yayımlandı",
+    inRankingsStatus: "Sıralamalarda",
+    rankedBody: "Sıralaman asıl listenin sıralamalarında.",
     publicBody: "Bağlantıya sahip herkes sıralayabilir. Toplulukta görünür.",
     needsAccount:
       "Yayımlamak için Google ile oturum açın. Başkalarınınkini okumak ve kaydetmek hesap istemez.",

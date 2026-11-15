@@ -1161,6 +1161,10 @@ export const en = {
     removeFromList: "Remove from list",
     photoBy: "Photo: {credit}",
     publicTitle: "Public",
+    publication: "Publication",
+    publishedStatus: "Published",
+    inRankingsStatus: "In Rankings",
+    rankedBody: "Your arrangement is in the original list’s Rankings.",
     publicBody: "Anyone with the link can rank it. It shows in Community.",
     needsAccount:
       "Sign in with Google to publish. Reading and saving others’ lists needs no account.",

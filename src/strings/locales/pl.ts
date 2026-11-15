@@ -1337,6 +1337,10 @@ const pl: Translation = {
     removeFromList: "Usuń z listy",
     photoBy: "Zdjęcie: {credit}",
     publicTitle: "Publiczna",
+    publication: "Publikacja",
+    publishedStatus: "Opublikowana",
+    inRankingsStatus: "W rankingach",
+    rankedBody: "Twój układ jest w rankingach oryginalnej listy.",
     publicBody: "Każdy, kto ma link, może ją ułożyć. Pojawi się w Społeczności.",
     needsAccount:
       "Zaloguj się przez Google, aby publikować. Czytanie i zapisywanie cudzych nie wymaga konta.",

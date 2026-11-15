@@ -1234,6 +1234,10 @@ const de: Translation = {
     removeFromList: "Aus der Liste entfernen",
     photoBy: "Foto: {credit}",
     publicTitle: "Öffentlich",
+    publication: "Veröffentlichung",
+    publishedStatus: "Veröffentlicht",
+    inRankingsStatus: "In den Ranglisten",
+    rankedBody: "Deine Anordnung steht in den Ranglisten der Originalliste.",
     publicBody: "Alle mit dem Link können sie einordnen. Sie erscheint in der Community.",
     needsAccount:
       "Melde dich mit Google an, um zu veröffentlichen. Lesen und Speichern geht ohne Konto.",

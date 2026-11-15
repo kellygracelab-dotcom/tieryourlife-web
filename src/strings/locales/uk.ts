@@ -1327,6 +1327,10 @@ const uk: Translation = {
     removeFromList: "Видалити зі списку",
     photoBy: "Фото: {credit}",
     publicTitle: "Публічний",
+    publication: "Публікація",
+    publishedStatus: "Опублікований",
+    inRankingsStatus: "У рейтингах",
+    rankedBody: "Ваша розкладка є в рейтингах початкового списку.",
     publicBody: "Будь-хто з посиланням зможе його розкласти. Список зʼявиться в Спільноті.",
     needsAccount:
       "Увійдіть через Google, щоб публікувати. Читати й зберігати чужі можна без облікового запису.",

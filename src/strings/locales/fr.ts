@@ -1305,6 +1305,10 @@ const fr: Translation = {
     removeFromList: "Supprimer de la liste",
     photoBy: "Photo : {credit}",
     publicTitle: "Publique",
+    publication: "Publication",
+    publishedStatus: "Publiée",
+    inRankingsStatus: "Dans les classements",
+    rankedBody: "Ton classement figure parmi ceux de la liste d’origine.",
     publicBody: "Toute personne ayant le lien peut la classer. Elle apparaît dans Communauté.",
     needsAccount:
       "Connectez-vous avec Google pour publier. Lire et enregistrer celles des autres ne demande aucun compte.",

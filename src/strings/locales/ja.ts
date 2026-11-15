@@ -1184,6 +1184,10 @@ const ja: Translation = {
     removeFromList: "リストから削除",
     photoBy: "写真: {credit}",
     publicTitle: "公開",
+    publication: "公開",
+    publishedStatus: "公開中",
+    inRankingsStatus: "ランキングに表示中",
+    rankedBody: "作成した順位は元のリストのランキングに表示されています。",
     publicBody: "リンクを知っている人なら誰でも並べられます。コミュニティに表示されます。",
     needsAccount:
       "公開するには Google でログインしてください。読むことと保存はアカウントなしでできます。",

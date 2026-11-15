@@ -15,10 +15,9 @@ import { errorOf, type ApiError } from "../../api/errors";
 import type { Published, PublishRequest } from "../../api/lists";
 import { creditAsAttribution, type EditorCredit } from "../../api/pictureAttribution";
 import type { Topic } from "../../api/sections";
-import { isOwnList } from "../../api/types";
+import { isOwnList, type PublishedList } from "../../api/types";
 import { useSession } from "../../app/session";
 import {
-  classifyPublication,
   keepListRanking,
   loadListAsWritten,
   loadAllTopics,
@@ -27,6 +26,7 @@ import {
 } from "../../lib/api";
 import { fieldsOf } from "../../lib/editorCredit";
 import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
+import type { SignInOutcome } from "../../lib/signIn";
 import { holds } from "../../lib/locale";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
@@ -73,7 +73,7 @@ import { AS_COMMUNITY } from "./ownList";
 import { publishProblemsOf, publishRequestOf } from "./publish";
 import type { AccountAction } from "../../api/client";
 import { captureAccountAction } from "../../lib/accountAction";
-import { checkCopiedPublication, type CheckedPublication } from "./copiedPublication";
+import { boundToSource } from "./copiedPublication";
 import { copyRankingOf, rankingFailureText } from "./copyRanking";
 import { filedUnder, sectionChoices } from "./sectionChoices";
 import { sentTopic, settledTopic, type FindTopic } from "./topic";
@@ -91,9 +91,8 @@ export interface PublishingDeps {
   publish: PublishBoard;
   republish: RepublishBoard;
   unpublish: UnpublishBoard;
-  /** Takes one's ranking of a list down; the site's own unless told otherwise. */
-  classify?: typeof classifyPublication;
   loadOriginal?: typeof loadListAsWritten;
+  /** Takes one's ranking of a list down; the site's own unless told otherwise. */
   withdraw?: (listId: string) => Promise<unknown>;
   /** Puts one's ranking of a list among its Rankings (K3); the site's own unless told otherwise. */
   rank?: typeof keepListRanking;
@@ -146,15 +145,22 @@ interface BoardSettingsProps {
   onDone: () => void;
   now?: () => number;
   /**
-   * Opened from the board's ⋮ menu for one of these: the sheet starts it at
-   * once, as its own switch or button would (Publish, Update, Take it down).
+   * Opened from the board's header or ⋮ menu for one of these: the sheet
+   * starts it at once, as its own button would (Publish or Show in Rankings,
+   * Update, Take it down).
    */
   start?: SettingsStart;
+  /**
+   * A guest's Publish: signs in, and the page opens the sheet on Publish again
+   * once the account is there, so the publish goes on by itself. Without it,
+   * the sheet only signs in.
+   */
+  signInToPublish?: () => Promise<SignInOutcome>;
 }
 
 export type SettingsStart = "publish" | "update" | "takeDown";
 
-type Busy = "checking" | "idle" | "publishing" | "updating" | "unpublishing";
+type Busy = "idle" | "publishing" | "updating" | "unpublishing";
 /** A refusal, by the press it answers: each is said beside its own button. */
 type Failure = {
   error: ApiError;
@@ -313,6 +319,7 @@ export function BoardSettings({
   onDone,
   now = Date.now,
   start,
+  signInToPublish,
 }: BoardSettingsProps) {
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
@@ -320,18 +327,10 @@ export function BoardSettings({
   const { account, signIn } = useSession();
   const signedIn = account?.kind === "signedIn";
   const [busy, setBusy] = useState<Busy>("idle");
-  const [preview, setPreview] = useState<
-    | (CheckedPublication & {
-        what: "published" | "updated";
-        snapshot: string;
-        action: AccountAction;
-      })
-    | null
-  >(null);
   const [failure, setFailure] = useState<Failure | null>(null);
   // The backend said the copy goes out only as one's ranking of this list (409 RANK_INSTEAD).
   const [rankInstead, setRankInstead] = useState<string | null>(null);
-  // Why a guest's Public switch did not sign them in, when it could not.
+  // Why a guest's Publish did not sign them in, when it could not.
   const [signInNote, setSignInNote] = useState<string | null>(null);
   const [open, setOpen] = useState<Open>("none");
   // Take it down from the ⋮ menu opens on its question.
@@ -342,6 +341,8 @@ export function BoardSettings({
   const ownPublish = publishing !== null;
   const isPublic = ownPublish && isOut(board);
   const behind = isBehind(board);
+  // Somebody else's list's copy, or one's ranking out: it goes into a list's Rankings.
+  const ranks = board.rankingOf !== null || (board.takenFrom !== null && board.publishedId === null);
   // Held for a moderator, the list's link answers 404 to everybody, the author too.
   const held = isPublic && board.heldForReview === true;
   // A ranking is out on the page of the list it ranks.
@@ -397,12 +398,19 @@ export function BoardSettings({
     );
   };
 
-  const send = async (what: "published" | "updated", checked?: typeof preview) => {
-    const action = checked?.action ?? (signedIn ? captureAccountAction(account.uid) : null);
-    if (!action?.isCurrent() || !signedIn || action.uid !== account.uid) {
-      setPreview(null);
-      return;
-    }
+  /**
+   * Out it goes, at the press, with nothing more to confirm (Danylo, 16.11):
+   * what it will be was said on the button and above it. A copy of somebody
+   * else's list goes into that list's Rankings; a copy of one's own list goes
+   * out as a list (`ownSource`, found when its list is read).
+   */
+  const send = async (
+    what: "published" | "updated",
+    given?: AccountAction | null,
+    ownSource?: PublishedList,
+  ) => {
+    const action = given ?? (signedIn ? captureAccountAction(account.uid) : null);
+    if (!action?.isCurrent() || !signedIn || action.uid !== account.uid) return;
     const current = latest();
     // Out as one's ranking of a list: sent again as that ranking, with the
     // cards of one's own, never as a publish, which would take them away.
@@ -410,40 +418,22 @@ export function BoardSettings({
       await rankCopy(current.rankingOf, action);
       return;
     }
-    const request = publishRequestOf(current);
-    if (request === null || publishing === null) return;
-    const snapshot = JSON.stringify([current.uid, request]);
-    const needsPreview = current.takenFrom !== null && current.publishedId === null;
-    if (needsPreview && current.takenFrom !== null && (!checked || checked.snapshot !== snapshot)) {
-      setPreview(null);
-      setRankInstead(null);
-      setFailure(null);
-      setBusy("checking");
-      try {
-        const result = await checkCopiedPublication(
-          { ...request, takenFrom: current.takenFrom, boardUid: current.uid },
-          (payload) => (publishing.classify ?? classifyPublication)(payload, action),
-          publishing.loadOriginal,
-        );
-        if (action.isCurrent()) setPreview({ ...result, what, snapshot, action });
-      } catch (reason) {
-        if (!action.isCurrent()) return;
-        const error = errorOf(reason);
-        if (error.kind === "rankInstead") setRankInstead(error.listId);
-        else setFailure({ error, on: what === "published" ? "publish" : "update" });
-      } finally {
-        setBusy("idle");
-      }
+    if (ownSource === undefined && current.takenFrom !== null && current.publishedId === null) {
+      await rankCopy(current.takenFrom, action);
       return;
     }
-    setPreview(null);
+    const request = publishRequestOf(current);
+    if (request === null || publishing === null) return;
     setRankInstead(null);
     setBusy(what === "published" ? "publishing" : "updating");
     setFailure(null);
     try {
       // The board's uid goes with every send, as the phone's does: a first
       // publish lost to a reload gets its list back, and a replace keeps it.
-      const outgoing = checked?.request ?? { ...request, boardUid: current.uid };
+      const outgoing =
+        ownSource === undefined
+          ? { ...request, boardUid: current.uid }
+          : boundToSource({ ...request, boardUid: current.uid }, ownSource);
       let answer =
         what === "updated" && current.publishedId !== null
           ? await publishing.republish(current.publishedId, outgoing, action)
@@ -525,7 +515,6 @@ export function BoardSettings({
   const rankCopy = async (listId: string, given?: AccountAction | null) => {
     const action = given ?? (signedIn ? captureAccountAction(account.uid) : null);
     if (!action?.isCurrent() || publishing === null) return;
-    setPreview(null);
     setRankInstead(null);
     setFailure(null);
     setBusy("publishing");
@@ -541,6 +530,12 @@ export function BoardSettings({
           : { ...current, takenFrom: listId, origin: undefined },
         source,
       );
+      // A copy of one's own list goes out as a list, as it always could.
+      if (isOwnList(source, action.uid) && current.publishedId === null) {
+        setBusy("idle");
+        await send("published", action, source);
+        return;
+      }
       if (ranking === null || isOwnList(source, action.uid)) {
         setFailure({ error: { kind: "invalid", detail: null, code: null }, on: "publish" });
         return;
@@ -610,13 +605,14 @@ export function BoardSettings({
     ask.current?.querySelector<HTMLButtonElement>("button")?.focus();
   }, [asking]);
 
-  // A guest's switch asks them to sign in; the board stays as it is. Where
-  // Google cannot sign anybody in, as in an app's own browser, it says so.
-  const onSwitch = () => {
+  // Publish, or Show in Rankings. A guest's press signs them in, and the
+  // publish goes on once they are (`signInToPublish`). Where Google cannot
+  // sign anybody in, as in an app's own browser, it says so.
+  const onPublish = () => {
     if (isPublic) setAsking(true);
     else if (!signedIn) {
       setSignInNote(null);
-      void signIn().then((outcome) => {
+      void (signInToPublish ?? signIn)().then((outcome) => {
         if (outcome.kind !== "failed") return;
         setSignInNote(
           outcome.code === IN_APP_BROWSER ? strings.keep.inApp : strings.nav.signInFailed,
@@ -648,7 +644,7 @@ export function BoardSettings({
     const timer = setTimeout(() => {
       if (started.current) return;
       started.current = true;
-      if (start === "publish" && !isPublic && !blocked) onSwitch();
+      if (start === "publish" && !isPublic && !blocked) onPublish();
       else if (start === "update" && isPublic && problems.length === 0) void send("updated");
     });
     return () => clearTimeout(timer);
@@ -837,36 +833,45 @@ export function BoardSettings({
 
           {ownPublish && (
             <li className="sheet-row">
+              {/* A button that says what it will do, and the line above it says
+                  where it goes: no switch that stays off while a question waits
+                  (Danylo, 16.11.2026). Out, the row says so, with Take it down. */}
               <Row
-                icon={<Icon name="public" />}
-                title={
-                  <label htmlFor={`${id}-public`} className="sheet-row__label">
-                    {strings.boards.publicTitle}
-                  </label>
-                }
+                icon={<Icon name={ranks ? "leaderboard" : "public"} />}
+                title={strings.boards.publication}
                 sub={
                   held
                     ? strings.boards.heldBody
-                    : board.rankingOf
-                      ? strings.rankings.previewRanking
-                      : board.takenFrom && !isPublic
-                        ? strings.rankings.publicationPreview
-                        : strings.boards.publicBody
+                    : ranks
+                      ? isPublic
+                        ? strings.boards.rankedBody
+                        : strings.rankings.previewRanking
+                      : strings.boards.publicBody
                 }
                 end={
-                  <input
-                    id={`${id}-public`}
-                    type="checkbox"
-                    role="switch"
-                    className="switch"
-                    checked={isPublic}
-                    disabled={busy !== "idle"}
-                    aria-disabled={blocked || undefined}
-                    aria-describedby={why}
-                    onChange={() => {
-                      if (!blocked) onSwitch();
-                    }}
-                  />
+                  isPublic ? (
+                    <span className="sheet-row__status">
+                      <Icon name="check_circle" />
+                      {ranks ? strings.boards.inRankingsStatus : strings.boards.publishedStatus}
+                    </span>
+                  ) : (
+                    <Button
+                      variant="tonal"
+                      icon={ranks ? "leaderboard" : "publish"}
+                      disabled={busy !== "idle"}
+                      aria-disabled={blocked || undefined}
+                      aria-describedby={why}
+                      onClick={() => {
+                        if (!blocked) onPublish();
+                      }}
+                    >
+                      {busy === "publishing"
+                        ? strings.boards.publishing
+                        : ranks
+                          ? strings.rankings.progressShare
+                          : strings.new.publish}
+                    </Button>
+                  )
                 }
               >
                 {why !== undefined && (
@@ -874,68 +879,21 @@ export function BoardSettings({
                     {blocker}
                   </span>
                 )}
-                {busy === "publishing" && (
-                  <span className="sheet-row__note" role="status">
-                    {strings.boards.publishing}
-                  </span>
+                {isPublic && (
+                  <button
+                    type="button"
+                    className="sheet-row__link sheet-row__link--button"
+                    disabled={busy !== "idle"}
+                    onClick={() => setAsking(true)}
+                  >
+                    {strings.boards.takeDown}
+                  </button>
                 )}
                 {signInNote !== null && !signedIn && (
                   <span className="sheet-row__problem" role="alert">
                     <Icon name="error" />
                     {signInNote}
                   </span>
-                )}
-                {busy === "checking" && <span role="status">{strings.rankings.checkOriginal}</span>}
-                {preview && (
-                  <div
-                    className="sheet-row__question"
-                    role="group"
-                    aria-label={strings.rankings.publicationPreview}
-                  >
-                    {/* Somebody else's list goes out only into its own Rankings,
-                        never as a separate list of one's own (Danylo, 14.11.2026);
-                        a copy of one's own list may still go out as a list. */}
-                    <p>
-                      {preview.preview.kind === "ranking"
-                        ? strings.rankings.previewRanking
-                        : preview.originalAuthor === preview.action.uid
-                          ? strings.boards.publicBody
-                          : strings.rankings.notYours}
-                    </p>
-                    {preview.preview.kind === "ranking" ||
-                    preview.originalAuthor === preview.action.uid ? (
-                      <button
-                        type="button"
-                        className="btn btn--tonal"
-                        onClick={() => void send(preview.what, preview)}
-                      >
-                        {preview.preview.kind === "ranking"
-                          ? strings.rankings.progressShare
-                          : strings.new.publish}
-                      </button>
-                    ) : (
-                      // Changed, it still goes into the list's Rankings, with its own cards (K3).
-                      board.takenFrom !== null && (
-                        <button
-                          type="button"
-                          className="btn btn--tonal"
-                          onClick={() => {
-                            const listId = board.takenFrom;
-                            if (listId !== null) void rankCopy(listId, preview.action);
-                          }}
-                        >
-                          {strings.rankings.progressShare}
-                        </button>
-                      )
-                    )}
-                    <button
-                      type="button"
-                      className="btn btn--text"
-                      onClick={() => setPreview(null)}
-                    >
-                      {strings.rankings.cancel}
-                    </button>
-                  </div>
                 )}
                 {rankInstead !== null && (
                   <div
@@ -1363,37 +1321,29 @@ export function BoardSettings({
             </Row>
           </li>
 
-          {isPublic && (
+          {/* Take it down, from beside the row's status or the ⋮ menu: it asks
+              first, since the link others have stops working. */}
+          {isPublic && asking && (
             <li>
-              {asking ? (
-                <div ref={ask} className="sheet-ask" role="group" aria-labelledby={`${id}-ask`}>
-                  <p id={`${id}-ask`} className="sheet-ask__title">
-                    {fill(strings.boards.takeDownTitle, { title })}
-                  </p>
-                  <p className="sheet-ask__body">{strings.boards.takeDownBody}</p>
-                  {failed("takeDown")}
-                  <div className="sheet-ask__actions">
-                    <Button onClick={() => setAsking(false)} disabled={busy !== "idle"}>
-                      {strings.rank.cancel}
-                    </Button>
-                    <Button
-                      className="dialog__danger"
-                      onClick={() => void takeDown()}
-                      disabled={busy !== "idle"}
-                    >
-                      {strings.boards.takeDown}
-                    </Button>
-                  </div>
+              <div ref={ask} className="sheet-ask" role="group" aria-labelledby={`${id}-ask`}>
+                <p id={`${id}-ask`} className="sheet-ask__title">
+                  {fill(strings.boards.takeDownTitle, { title })}
+                </p>
+                <p className="sheet-ask__body">{strings.boards.takeDownBody}</p>
+                {failed("takeDown")}
+                <div className="sheet-ask__actions">
+                  <Button onClick={() => setAsking(false)} disabled={busy !== "idle"}>
+                    {strings.rank.cancel}
+                  </Button>
+                  <Button
+                    className="dialog__danger"
+                    onClick={() => void takeDown()}
+                    disabled={busy !== "idle"}
+                  >
+                    {strings.boards.takeDown}
+                  </Button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  className="sheet-row sheet-row--button sheet-row--danger"
-                  onClick={() => setAsking(true)}
-                >
-                  <Row icon={<Icon name="visibility_off" />} title={strings.boards.takeDown} />
-                </button>
-              )}
+              </div>
             </li>
           )}
         </ul>

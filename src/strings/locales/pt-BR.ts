@@ -1276,6 +1276,10 @@ const ptBR: Translation = {
     removeFromList: "Remover da lista",
     photoBy: "Foto: {credit}",
     publicTitle: "Pública",
+    publication: "Publicação",
+    publishedStatus: "Publicada",
+    inRankingsStatus: "Nas classificações",
+    rankedBody: "Sua classificação está nas classificações da lista original.",
     publicBody: "Qualquer pessoa com o link pode organizá-la. Ela aparece em Comunidade.",
     needsAccount:
       "Entre com o Google para publicar. Ler e salvar as dos outros não precisa de conta.",
