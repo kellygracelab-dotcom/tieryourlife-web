@@ -401,8 +401,9 @@ test("uploads a cover from the board settings and keeps the owner's photo after 
   await expect(adjust).toBeVisible();
   await press(adjust.getByRole("button", { name: "Cancel" }), hasTouch);
   await expect(adjust).toBeHidden();
-  const cover = page.locator(".sheet-row__thumb").filter({ visible: true });
-  const thumb = page.locator("img.sheet-row__thumb");
+  const cover = page.locator(".sheet-row__thumb img").filter({ visible: true });
+  // The thumbnail is cut by the cover's focus or its shape's default: its box carries the class.
+  const thumb = page.locator(".sheet-row__thumb img");
   await expect(thumb.last()).toHaveAttribute("src", /^blob:/);
   const src = await thumb.last().getAttribute("src");
   await expect

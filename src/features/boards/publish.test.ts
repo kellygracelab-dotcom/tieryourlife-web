@@ -48,8 +48,14 @@ describe("publishing a board", () => {
     expect(request.tiers.map((tier) => tier.label)).toEqual(["S", "A", "B", "C", "D"]);
     // Ranked first in tier order, then the pool; an own picture by id, never by its private address.
     expect(request.items).toEqual([
-      { title: "Mine", imageUrl: null, pictureId: "pic-1", tierIndex: 0 },
-      { title: "Dune", imageUrl: "https://x/d.jpg", pictureId: null, tierIndex: 1 },
+      { title: "Mine", imageUrl: null, pictureId: "pic-1", pictureFocus: null, tierIndex: 0 },
+      {
+        title: "Dune",
+        imageUrl: "https://x/d.jpg",
+        pictureId: null,
+        pictureFocus: null,
+        tierIndex: 1,
+      },
       { title: "Heat", imageUrl: null, pictureId: null, tierIndex: null },
     ]);
     expect(request.coverImageUrls).toEqual([]);

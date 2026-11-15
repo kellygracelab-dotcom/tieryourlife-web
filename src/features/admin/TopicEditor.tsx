@@ -5,7 +5,7 @@ import { errorOf, type ApiError } from "../../api/errors";
 import { creditAsAttribution, type EditorCredit } from "../../api/pictureAttribution";
 import { topicCreditOf, type Topic } from "../../api/sections";
 import { fieldsOf } from "../../lib/editorCredit";
-import { isCentre, sameFocus, type CoverFocus } from "../../lib/coverFocus";
+import { sameFocus, type CoverFocus } from "../../lib/coverFocus";
 import { cropOf } from "../../lib/framing";
 import { directionOf, LOCALE_NAMES } from "../../lib/locale";
 import { SECTION_PICTURE_MIN } from "../../lib/pictures";
@@ -13,6 +13,7 @@ import { useWidthClass } from "../../lib/useWidthClass";
 import { fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { CoverAdjust } from "../../ui/CoverAdjust";
+import { TOPIC_PREVIEWS } from "../../ui/focusPreviews";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import { PictureRows } from "../tierboard/AboutPicture";
@@ -317,9 +318,10 @@ export function TopicEditor(props: TopicEditorProps) {
               <CoverAdjust
                 src={servedPicture(picture.url, 1600)}
                 focus={focus}
+                previews={TOPIC_PREVIEWS}
                 onCancel={() => setAdjusting(false)}
                 onDone={(placed) => {
-                  setFocus(isCentre(placed) ? null : placed);
+                  setFocus(placed);
                   setAdjusting(false);
                 }}
               />

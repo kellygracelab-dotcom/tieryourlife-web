@@ -404,9 +404,11 @@ describe("SectionPage", () => {
     expect(indies).not.toHaveClass("topic-tile--pictured");
     // The first two rows are asked for at once, and the picture fades in once it is here.
     expect(own).toHaveAttribute("loading", "eager");
-    expect(own).not.toHaveClass("topic-tile__picture--in");
+    // The box that cuts it by its focus, or by its shape's default, carries the class.
+    const placed = own.closest(".focused-picture")!;
+    expect(placed).not.toHaveClass("topic-tile__picture--in");
     fireEvent.load(own);
-    expect(own).toHaveClass("topic-tile__picture--in");
+    expect(placed).toHaveClass("topic-tile__picture--in");
     const plain = grid.getByRole("link", { name: "Pokémon" });
     expect(plain.querySelector("img")).toBeNull();
     expect(plain).toHaveStyle({ "--tint-light": "#3D6B58" });

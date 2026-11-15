@@ -1,4 +1,4 @@
-import { MediaImage } from "../../ui/MediaImage";
+import { FocusedPicture } from "../../ui/FocusedPicture";
 import { useSyncExternalStore, type CSSProperties } from "react";
 import type { PublishedItem } from "../../api/types";
 import type { DragState } from "./drag";
@@ -34,7 +34,7 @@ export function DragGhost({ now, subscribe, items, board }: DragGhostProps) {
   return (
     <div className="ghost" style={style} aria-hidden="true">
       {card.imageUrl !== null ? (
-        <MediaImage {...sizedFor(card.imageUrl, 64)} alt="" />
+        <FocusedPicture {...sizedFor(card.imageUrl, 64)} focus={card.pictureFocus} />
       ) : (
         <CardName title={card.title} board={board} wide />
       )}

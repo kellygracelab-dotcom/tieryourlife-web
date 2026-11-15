@@ -14,7 +14,8 @@ import { fieldsOf } from "../../lib/editorCredit";
 import { hostOf } from "../../lib/linkPictures";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
-import { MediaImage } from "../../ui/MediaImage";
+import { FocusedPicture } from "../../ui/FocusedPicture";
+import type { CoverFocus } from "../../lib/coverFocus";
 import { useModal } from "../../ui/useModal";
 import { CreditForm, type CreditEditing } from "./CreditForm";
 
@@ -150,6 +151,8 @@ interface AboutPictureProps extends PictureFacts {
   anchor?: Anchor | null;
   /** The card's picture, drawn large, for a board one only looks at. */
   imageUrl?: string | null;
+  /** Where that picture is cut, as its owner placed it (null: its default). */
+  pictureFocus?: CoverFocus | null | undefined;
   /** A house board's: the editor may give the picture a credit of their own here. */
   editing?: CreditEditing | undefined;
   onClose: () => void;
@@ -169,6 +172,7 @@ export function AboutPicture({
   credit,
   anchor = null,
   imageUrl = null,
+  pictureFocus = null,
   editing,
   onClose,
 }: AboutPictureProps) {
@@ -212,7 +216,9 @@ export function AboutPicture({
         <h2 id={id} className="about-picture__name">
           {name}
         </h2>
-        {imageUrl !== null && <MediaImage className="card-detail__picture" src={imageUrl} alt="" />}
+        {imageUrl !== null && (
+          <FocusedPicture className="card-detail__picture" src={imageUrl} focus={pictureFocus} />
+        )}
         {form && editing !== undefined ? (
           <CreditForm
             initial={fieldsOf(attribution)}

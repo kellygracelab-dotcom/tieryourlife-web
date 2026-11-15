@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { mediaSrc, storedPublicMedia } from "../../../functions/src/publicMedia";
 import type { SectionStats, SectionStatus, ThemePair } from "../../api/sections";
-import { focusOf, isCentre, type CoverFocus } from "../../lib/coverFocus";
+import { focusOf, type CoverFocus } from "../../lib/coverFocus";
 import { CATEGORIES, isCategory, type Category } from "../../api/types";
 import { BUILT_IN_NAMES } from "./builtInNames";
 import type { WidthClass } from "../../lib/useWidthClass";
@@ -408,15 +408,14 @@ export const topicPicture = (topic: { pictureUrl?: string | null }): string | nu
 
 /**
  * Which part of a topic's or a section's picture shows (CONTRACT, Cover
- * focus): only with a picture, read with care, and none for the middle.
+ * focus): only with a picture, read with care.
  */
 export function pictureFocusOf(owner: {
   pictureUrl?: string | null;
   pictureFocus?: unknown;
 }): CoverFocus | null {
   if (topicPicture(owner) === null) return null;
-  const focus = focusOf(owner.pictureFocus);
-  return focus === null || isCentre(focus) ? null : focus;
+  return focusOf(owner.pictureFocus);
 }
 
 /**

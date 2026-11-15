@@ -5,12 +5,34 @@ import { FocusedPicture } from "./FocusedPicture";
 describe("FocusedPicture", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("is the plain covering picture without a focus, or with the middle", () => {
-    const { container, rerender } = render(<FocusedPicture src="https://img/c.jpg" focus={null} />);
-    expect(container.querySelector(".focused-picture")).toBeNull();
-    rerender(<FocusedPicture src="https://img/c.jpg" focus={{ x: 0.5, y: 0.5, zoom: 1 }} />);
-    expect(container.querySelector(".focused-picture")).toBeNull();
-    expect(container.querySelector("img")).toHaveAttribute("src", "https://img/c.jpg");
+  it("covers its box as before without a focus, a wide picture in the middle", () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      width: 160,
+      height: 100,
+    } as DOMRect);
+    const { container } = render(<FocusedPicture src="https://img/c.jpg" focus={null} />);
+    const picture = container.querySelector("img")!;
+    expect(picture).toHaveAttribute("src", "https://img/c.jpg");
+    Object.defineProperty(picture, "naturalWidth", { value: 1600 });
+    Object.defineProperty(picture, "naturalHeight", { value: 900 });
+    fireEvent.load(picture);
+    expect(picture.style.position).toBe("");
+  });
+
+  it("shows a tall picture without a focus high, at y 0.35 (SPEC, second round)", () => {
+    // A 16:10 tile, 160 × 100, over a 1000 × 1500 portrait: a frame 1000 × 625,
+    // its middle 525 down, so it starts 212.5 down: 34% of its height above the box.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      width: 160,
+      height: 100,
+    } as DOMRect);
+    const { container } = render(<FocusedPicture src="https://img/c.jpg" focus={null} />);
+    const picture = container.querySelector("img")!;
+    Object.defineProperty(picture, "naturalWidth", { value: 1000 });
+    Object.defineProperty(picture, "naturalHeight", { value: 1500 });
+    fireEvent.load(picture);
+    expect(picture.style.top).toBe("-34%");
+    expect(picture.style.position).toBe("absolute");
   });
 
   it("cuts the picture by the shared formula for its box's shape, its class on the box", () => {

@@ -240,7 +240,7 @@ describe("sections", () => {
         pictureUrl: "https://img/p.jpg",
         pictureFocus: { x: 0.5, y: 0.5, zoom: 1 },
       }),
-    ).toBeNull();
+    ).toEqual({ x: 0.5, y: 0.5, zoom: 1 });
     expect(pictureFocusOf({ pictureUrl: null, pictureFocus: focus })).toBeNull();
   });
 

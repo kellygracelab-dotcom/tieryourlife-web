@@ -18,6 +18,7 @@ const OTHER = "https://example.com/fox";
 const fields = (change: Partial<CreditFields> = {}): CreditFields => ({
   author: "",
   licence: "",
+  country: "",
   link: "",
   ...change,
 });
@@ -37,6 +38,7 @@ describe("a house editor's credit form", () => {
       "CC BY-SA 2.0",
       "CC BY-SA 1.0",
       "Public domain",
+      "Copyrighted free use",
       "Used with permission",
     ]);
   });
@@ -149,8 +151,40 @@ describe("a house editor's credit form", () => {
   it("starts from what the picture says, its licence only when it is one of the list", () => {
     expect(
       fieldsOf({ source: "wikimedia", author: "Jane", license: "cc by-sa 4.0", link: COMMONS }),
-    ).toEqual({ author: "Jane", licence: "CC BY-SA 4.0", link: COMMONS });
+    ).toEqual({ author: "Jane", licence: "CC BY-SA 4.0", country: "", link: COMMONS });
     expect(fieldsOf({ source: "wikimedia", license: "GFDL" }).licence).toBe("");
     expect(fieldsOf(null)).toEqual(fields());
+  });
+
+  it("takes Copyrighted free use and a Creative Commons licence ported to a country (Proxy #142)", () => {
+    expect(deedOf("Copyrighted free use")).toBe(
+      "https://commons.wikimedia.org/wiki/Template:Copyrighted_free_use",
+    );
+    expect(deedOf("CC BY-SA 2.0 de")).toBe("https://creativecommons.org/licenses/by-sa/2.0/de/");
+    expect(
+      creditOfFields(fields({ licence: "CC BY-SA 2.0", country: " DE ", link: OTHER })),
+    ).toEqual({
+      license: "CC BY-SA 2.0 de",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/2.0/de/",
+      link: OTHER,
+    });
+    // 4.0 was never ported: a country there is not said.
+    expect(creditOfFields(fields({ licence: "CC BY 4.0", country: "de", link: OTHER }))).toEqual({
+      license: "CC BY 4.0",
+      licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+      link: OTHER,
+    });
+    expect(creditProblemsOf(fields({ licence: "CC BY 3.0", country: "deu", link: OTHER }))).toEqual(
+      ["badCountry"],
+    );
+    expect(fieldsOf({ source: "web", license: "CC BY-SA 2.0 de", link: OTHER })).toEqual({
+      author: "",
+      licence: "CC BY-SA 2.0",
+      country: "de",
+      link: OTHER,
+    });
+    expect(fieldsOf({ source: "web", license: "Copyrighted free use", link: OTHER }).licence).toBe(
+      "Copyrighted free use",
+    );
   });
 });

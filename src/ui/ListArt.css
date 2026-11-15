@@ -20,7 +20,7 @@
   gap: 2px;
 }
 
-.art--mosaic img {
+.art--mosaic > .art__cell {
   min-width: 0;
   min-height: 0;
 }
@@ -42,11 +42,11 @@
   grid-template-columns: repeat(6, 1fr);
 }
 
-.art--mosaic[data-count="5"] img {
+.art--mosaic[data-count="5"] > .art__cell {
   grid-column: span 2;
 }
 
-.art--mosaic[data-count="5"] img:nth-child(n + 4) {
+.art--mosaic[data-count="5"] > .art__cell:nth-child(n + 4) {
   grid-column: span 3;
 }
 

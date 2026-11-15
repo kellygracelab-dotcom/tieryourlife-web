@@ -43,6 +43,8 @@ export interface KeptItem {
    * one device publishes with its page link from another; not in the fingerprint.
    */
   attribution?: PictureAttribution;
+  /** Where the card's picture is looked at (CONTRACT, Cover focus); null for its default. */
+  pictureFocus?: CoverFocus | null;
   source: string;
   deletedAt: number | null;
 }

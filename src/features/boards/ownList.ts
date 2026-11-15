@@ -156,6 +156,13 @@ ${card.imageUrl ?? ""}`;
       item.imageUrl === null ? null : attributionOf(item.attribution),
     ]),
   );
+  const focuses = new Map(
+    list.items.flatMap((item) =>
+      item.imageUrl === null || item.pictureFocus === undefined
+        ? []
+        : [[cardKey(item), item.pictureFocus] as const],
+    ),
+  );
   // A picture of the list as the board shows it: the feed's copy of one's own
   // photo as that photo brought back, which the next Update names by id; one
   // from elsewhere as it is; a copy not brought back for any card is lost.
@@ -195,11 +202,22 @@ ${card.imageUrl ?? ""}`;
         item.pictureId !== null
           ? null
           : attributions.get(cardKey(card));
-      if ((credit ?? null) === null && (attribution ?? null) === null) return item;
+      const pictureFocus =
+        card === undefined || item.imageUrl === null || item.pictureFocus !== undefined
+          ? undefined
+          : focuses.get(cardKey(card));
+      if (
+        (credit ?? null) === null &&
+        (attribution ?? null) === null &&
+        pictureFocus === undefined
+      ) {
+        return item;
+      }
       return {
         ...item,
         ...(credit === undefined || credit === null ? {} : { credit }),
         ...(attribution === undefined || attribution === null ? {} : { attribution }),
+        ...(pictureFocus === undefined ? {} : { pictureFocus }),
       };
     }),
     authorName: list.authorName,

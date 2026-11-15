@@ -23,6 +23,7 @@ export const EDITOR_LICENCES = [
   "CC BY-SA 2.0",
   "CC BY-SA 1.0",
   "Public domain",
+  "Copyrighted free use",
   "Used with permission",
 ] as const;
 export type EditorLicence = (typeof EDITOR_LICENCES)[number];
@@ -31,11 +32,25 @@ export type EditorLicence = (typeof EDITOR_LICENCES)[number];
 export interface CreditFields {
   author: string;
   licence: EditorLicence | "";
+  /**
+   * The country a Creative Commons licence 2.0 to 3.0 was ported to, its code
+   * in lower case ("de"); "" for the licence itself.
+   */
+  country: string;
   link: string;
 }
 
 /** What keeps the credit from being saved, in the order the form shows its fields. */
-export type CreditProblem = "needLicence" | "needLink" | "badLink" | "linkTooLong";
+export type CreditProblem = "needLicence" | "badCountry" | "needLink" | "badLink" | "linkTooLong";
+
+/** The Commons template's page, its deed (CONTRACT, Editor's credit). */
+const FREE_USE_DEED = "https://commons.wikimedia.org/wiki/Template:Copyrighted_free_use";
+/** A country's code, as a ported licence names it. */
+const COUNTRY = /^[a-z]{2}$/;
+
+/** Creative Commons ported its 2.0, 2.5 and 3.0 licences to countries' laws; never 1.0 or 4.0. */
+export const isPortable = (licence: string): boolean =>
+  /^CC (BY|BY-SA) (2\.0|2\.5|3\.0)$/.test(licence);
 
 /**
  * A Creative Commons licence's deed, sent as its licenseUrl, so the licence is
@@ -44,9 +59,11 @@ export type CreditProblem = "needLicence" | "needLink" | "badLink" | "linkTooLon
  */
 export function deedOf(licence: string): string | null {
   if (licence === "CC0 1.0") return "https://creativecommons.org/publicdomain/zero/1.0/";
-  const [, kind, version] = /^CC (BY|BY-SA) (\d\.\d)$/.exec(licence) ?? [];
+  if (licence === "Copyrighted free use") return FREE_USE_DEED;
+  const [, kind, version, country] = /^CC (BY|BY-SA) (\d\.\d)(?: ([a-z]{2}))?$/.exec(licence) ?? [];
   if (kind === undefined || version === undefined) return null;
-  return `https://creativecommons.org/licenses/${kind.toLowerCase()}/${version}/`;
+  const ported = country === undefined ? "" : `${country}/`;
+  return `https://creativecommons.org/licenses/${kind.toLowerCase()}/${version}/${ported}`;
 }
 
 /**
@@ -105,6 +122,10 @@ export function creditProblemsOf(fields: CreditFields, kind: CreditKind = {}): C
   if (fields.licence === "" && !noLicenceNeeded) {
     problems.push("needLicence");
   }
+  const country = fields.country.trim().toLowerCase();
+  if (country !== "" && isPortable(fields.licence) && !COUNTRY.test(country)) {
+    problems.push("badCountry");
+  }
   if (link === "") problems.push("needLink");
   else if (link.length > ATTRIBUTION_LIMITS.url) problems.push("linkTooLong");
   else if (!isHttpsPage(link)) problems.push("badLink");
@@ -115,18 +136,32 @@ export function creditProblemsOf(fields: CreditFields, kind: CreditKind = {}): C
 export function creditOfFields(fields: CreditFields, kind: CreditKind = {}): EditorCredit | null {
   if (creditProblemsOf(fields, kind).length > 0) return null;
   const author = fields.author.trim().replace(/\s+/g, " ").slice(0, ATTRIBUTION_LIMITS.author);
-  const deed = fields.licence === "" ? null : deedOf(fields.licence);
+  const country = fields.country.trim().toLowerCase();
+  const license =
+    fields.licence !== "" && country !== "" && isPortable(fields.licence)
+      ? `${fields.licence} ${country}`
+      : fields.licence;
+  const deed = license === "" ? null : deedOf(license);
   return {
     ...(author === "" ? {} : { author }),
-    ...(fields.licence === "" ? {} : { license: fields.licence }),
+    ...(license === "" ? {} : { license }),
     ...(deed === null ? {} : { licenseUrl: deed }),
     link: fields.link.trim(),
   };
 }
 
-/** One of the licences, however it was spelt; "" for any other. */
-const licenceOf = (license: string | undefined): EditorLicence | "" =>
-  EDITOR_LICENCES.find((one) => one.toLowerCase() === license?.trim().toLowerCase()) ?? "";
+/** One of the licences, however it was spelt, with the country a ported one names; "" for any other. */
+function licenceOf(license: string | undefined): { licence: EditorLicence | ""; country: string } {
+  const said = license?.trim().toLowerCase() ?? "";
+  const exact = EDITOR_LICENCES.find((one) => one.toLowerCase() === said);
+  if (exact !== undefined) return { licence: exact, country: "" };
+  const ported = / ([a-z]{2})$/.exec(said);
+  const base = ported === null ? undefined : said.slice(0, -3);
+  const found = EDITOR_LICENCES.find((one) => one.toLowerCase() === base);
+  return found !== undefined && isPortable(found) && ported !== null
+    ? { licence: found, country: ported[1]! }
+    : { licence: "", country: "" };
+}
 
 /**
  * The form for a picture's credit as it stands: the editor's own when there is
@@ -134,6 +169,6 @@ const licenceOf = (license: string | undefined): EditorLicence | "" =>
  */
 export const fieldsOf = (attribution: PictureAttribution | null | undefined): CreditFields => ({
   author: attribution?.author ?? "",
-  licence: licenceOf(attribution?.license),
+  ...licenceOf(attribution?.license),
   link: attribution?.link ?? "",
 });

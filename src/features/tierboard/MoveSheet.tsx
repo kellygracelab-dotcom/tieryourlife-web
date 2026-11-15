@@ -12,6 +12,8 @@ interface MoveSheetProps {
   onAbout?: (() => void) | undefined;
   /** The page the picture is from, in a new tab. */
   onOpenPage?: (() => void) | undefined;
+  /** Adjust picture: which part of it the tile shows. */
+  onAdjust?: (() => void) | undefined;
   tiers: readonly PublishedTier[];
   /** Where the card is now, or null in the pool. */
   current: number | null;
@@ -31,6 +33,7 @@ export function MoveSheet({
   name,
   onAbout,
   onOpenPage,
+  onAdjust,
   tiers,
   current,
   onPlace,
@@ -56,8 +59,9 @@ export function MoveSheet({
         <h2 id={`${id}-title`} className="dialog__title">
           {name}
         </h2>
-        {(onAbout !== undefined || onOpenPage !== undefined) && (
+        {(onAbout !== undefined || onOpenPage !== undefined || onAdjust !== undefined) && (
           <div className="move-sheet__picture">
+            {onAdjust && <Button onClick={onAdjust}>{strings.cover.adjustPicture}</Button>}
             {onAbout && <Button onClick={onAbout}>{strings.link.about}</Button>}
             {onOpenPage && <Button onClick={onOpenPage}>{strings.link.openPage}</Button>}
           </div>

@@ -75,7 +75,7 @@ export function fingerprintText(board: Board): string {
   if (board.anonymous) text += encode(["anonymous"]);
   // A game in progress last of all, as its canonical JSON (canonicalPlay).
   if (board.play !== null) text += encode([canonicalPlay(board.play)]);
-  // The cover's focus after everything, and only away from the middle, so every
+  // The cover's focus after everything, and only when it has one, so every
   // board without one keeps its fingerprint; whole numbers, so "1" and "1.0"
   // never part the phone and the site (agreed with Android, 15.11.2026).
   const focus = coverFocusOf(board);
@@ -85,6 +85,20 @@ export function fingerprintText(board: Board): string {
       String(Math.round(focus.x * 10_000)),
       String(Math.round(focus.y * 10_000)),
       String(Math.round(focus.zoom * 100)),
+    ]);
+  }
+  // Each card's focus after that, by uid, the trash's too, only on a card
+  // with a picture and a focus: every board without one keeps its fingerprint
+  // (CONTRACT, Cover focus; agreed with Android, 15.11.2026).
+  for (const item of [...board.items].sort(byUid)) {
+    const placed = item.pictureFocus;
+    if (placed === undefined || pictureOf(item) === null) continue;
+    text += encode([
+      "pictureFocus",
+      item.uid,
+      String(Math.round(placed.x * 10_000)),
+      String(Math.round(placed.y * 10_000)),
+      String(Math.round(placed.zoom * 100)),
     ]);
   }
   return text;

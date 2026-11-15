@@ -154,6 +154,10 @@ const request = (
     ...(item.credit === null ? {} : { credit: item.credit }),
     // So a card picked here publishes with its page link from another device.
     ...(item.attribution === undefined ? {} : { attribution: item.attribution }),
+    // Always said with a picture: left out, the account would keep a focus taken off here.
+    ...(item.imageUrl === null && item.pictureId === null
+      ? {}
+      : { pictureFocus: item.pictureFocus ?? null }),
     source: item.source,
     deletedAt: item.deletedAt,
   })),

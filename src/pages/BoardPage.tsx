@@ -1,3 +1,4 @@
+import type { CoverFocus } from "../lib/coverFocus";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { isTmdbPicture, type EditorCredit } from "../api/pictureAttribution";
@@ -27,6 +28,7 @@ import {
   restoreBoard,
   restoreTier,
   setCardCredit,
+  setPictureFocus,
   setCategory,
   setDisplayMode,
   trashBoard,
@@ -1123,6 +1125,12 @@ function OpenBoard({
                           if (itemUid !== undefined) creditCard(itemUid, given);
                         },
                       }),
+                  focus: (item: number, placed: CoverFocus | null) => {
+                    const itemUid = view.uids[item];
+                    if (itemUid !== undefined) {
+                      keep(setPictureFocus(latest(), itemUid, placed, now()));
+                    }
+                  },
                 },
               }}
             />

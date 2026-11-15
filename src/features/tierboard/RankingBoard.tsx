@@ -1,4 +1,7 @@
-import { MediaImage } from "../../ui/MediaImage";
+import { CoverAdjust } from "../../ui/CoverAdjust";
+import { FocusedPicture } from "../../ui/FocusedPicture";
+import { CARD_PREVIEWS } from "../../ui/focusPreviews";
+import type { CoverFocus } from "../../lib/coverFocus";
 import { useBrokenPicture } from "../../ui/useBrokenPicture";
 import {
   memo,
@@ -33,7 +36,7 @@ import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
 import { DragGhost } from "./DragGhost";
 import { AboutPicture, hasAbout, openPage, pageOf, type Anchor } from "./AboutPicture";
-import { CardCredit } from "./cardCredit";
+import { CardCredit, CardFocusing } from "./cardCredit";
 import { flyIn } from "./flight";
 import { DOUBLE_TAP_MS, type DragState } from "./drag";
 import { draftKey, loadDraft, loadPoolOrder, saveDraft, scopeOf } from "./draft";
@@ -103,6 +106,8 @@ export interface EditMode {
      * card's number, or null to take it off, from About the picture.
      */
     credit?: (item: number, credit: EditorCredit | null) => void;
+    /** Which part of a card's picture its tile shows, by the card's number; null for the default. */
+    focus?: (item: number, focus: CoverFocus | null) => void;
   };
 }
 
@@ -249,6 +254,8 @@ const Tile = memo(function Tile({
   const opener = useRef<HTMLButtonElement>(null);
   // On a house board every picture can be given the editor's own credit.
   const credit = useContext(CardCredit);
+  const focusing = useContext(CardFocusing);
+  const [adjusting, setAdjusting] = useState(false);
   const [broken, onBroken] = useBrokenPicture(card?.imageUrl);
   if (card === undefined) return null;
   const pictured = card.imageUrl !== null && !broken;
@@ -257,6 +264,7 @@ const Tile = memo(function Tile({
   const cardAt = (): Anchor | null => opener.current?.getBoundingClientRect() ?? null;
   const openCredits = knows ? () => setAbout(cardAt() ?? { x: 0, y: 0 }) : undefined;
   const openItsPage = page === null ? undefined : () => openPage(page);
+  const adjust = focusing === null || !pictured ? undefined : () => setAdjusting(true);
   const classes = [
     "tile",
     !pictured && "tile--name",
@@ -338,9 +346,9 @@ const Tile = memo(function Tile({
         }}
       >
         {pictured && card.imageUrl !== null ? (
-          <MediaImage
+          <FocusedPicture
             {...sizedFor(card.imageUrl, TILE_WIDTH)}
-            alt=""
+            focus={card.pictureFocus}
             loading="lazy"
             draggable={false}
             onError={onBroken}
@@ -373,6 +381,7 @@ const Tile = memo(function Tile({
       {moving !== null && !showCredits && !locked && moving.sheet && (
         <MoveSheet
           name={card.title}
+          onAdjust={adjust === undefined ? undefined : close(adjust)}
           onAbout={openCredits}
           onOpenPage={openItsPage === undefined ? undefined : close(openItsPage)}
           tiers={tiers}
@@ -386,6 +395,7 @@ const Tile = memo(function Tile({
       {moving !== null && !showCredits && !locked && !moving.sheet && (
         <CardMenu
           name={card.title}
+          onAdjust={adjust === undefined ? undefined : close(adjust)}
           onAbout={openCredits}
           onOpenPage={openItsPage === undefined ? undefined : close(openItsPage)}
           tiers={tiers}
@@ -396,6 +406,23 @@ const Tile = memo(function Tile({
           onUnplace={close(() => dispatch({ type: "unplace", item }))}
           onRemove={onRemove === undefined ? undefined : close(() => onRemove(item))}
           onClose={closeMove}
+        />
+      )}
+      {adjusting && focusing !== null && card.imageUrl !== null && (
+        <CoverAdjust
+          src={card.imageUrl}
+          focus={card.pictureFocus ?? null}
+          previews={CARD_PREVIEWS}
+          title={strings.cover.adjustPicture}
+          onCancel={() => {
+            setAdjusting(false);
+            opener.current?.focus({ preventScroll: true });
+          }}
+          onDone={(placed) => {
+            focusing(item, placed);
+            setAdjusting(false);
+            opener.current?.focus({ preventScroll: true });
+          }}
         />
       )}
     </li>
@@ -557,6 +584,16 @@ export function RankingBoard({
     [],
   );
   const cardCredit = edit?.owner?.credit === undefined ? null : creditCard;
+  // And for the owner's Adjust picture.
+  const focusNow = useRef(edit?.owner?.focus);
+  useEffect(() => {
+    focusNow.current = edit?.owner?.focus;
+  });
+  const focusCard = useCallback(
+    (item: number, placed: CoverFocus | null) => focusNow.current?.(item, placed),
+    [],
+  );
+  const cardFocusing = edit?.owner?.focus === undefined ? null : focusCard;
   const selected = state.selected;
   const selectedTitle = selected === null ? null : (list.items[selected]?.title ?? null);
   const section = useRef<HTMLElement>(null);
@@ -1254,7 +1291,11 @@ export function RankingBoard({
       />
     </section>
   );
-  return <CardCredit.Provider value={cardCredit}>{drawn}</CardCredit.Provider>;
+  return (
+    <CardCredit.Provider value={cardCredit}>
+      <CardFocusing.Provider value={cardFocusing}>{drawn}</CardFocusing.Provider>
+    </CardCredit.Provider>
+  );
 }
 
 /**

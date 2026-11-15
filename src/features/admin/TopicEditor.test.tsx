@@ -161,7 +161,7 @@ describe("TopicEditor", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Adjust position" }));
     const dialog = screen.getByRole("dialog", { name: "Adjust cover" });
-    const picture = dialog.querySelector<HTMLImageElement>(".cover-adjust__frame img")!;
+    const picture = dialog.querySelector<HTMLImageElement>(".cover-adjust__stage img")!;
     Object.defineProperty(picture, "naturalWidth", { value: 1600 });
     Object.defineProperty(picture, "naturalHeight", { value: 1000 });
     fireEvent.load(picture);

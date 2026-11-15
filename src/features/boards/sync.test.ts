@@ -347,6 +347,31 @@ describe("syncBoards", () => {
     expect(other).not.toHaveProperty("attribution");
   });
 
+  it("sends a card's focus up, null for a picture at its default, and brings it down", async () => {
+    const focus = { x: 0.3, y: 0.15, zoom: 2 };
+    const placed = (board: Board): Board => ({
+      ...board,
+      items: board.items.map((item) =>
+        item.title === "Dune"
+          ? { ...item, imageUrl: "https://x/d.jpg", pictureFocus: focus }
+          : { ...item, imageUrl: "https://x/h.jpg" },
+      ),
+    });
+    const { repository, account, run } = setUp();
+    repository.save(placed(films()));
+    await run();
+    const [dune, heat] = account.keeps[0]!.request.items;
+    expect(dune).toMatchObject({ title: "Dune", pictureFocus: focus });
+    expect(heat).toMatchObject({ pictureFocus: null });
+
+    const there = setUp();
+    there.account.holds(placed(films("theirs")));
+    await there.run();
+    const [down, other] = there.repository.get("theirs")!.items;
+    expect(down?.pictureFocus).toEqual(focus);
+    expect(other).not.toHaveProperty("pictureFocus");
+  });
+
   it("sends a board changed here over the revision it was working from", async () => {
     const { repository, account, run } = setUp();
     repository.save(films());

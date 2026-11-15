@@ -1,6 +1,6 @@
 import type { ApiClient } from "./client";
 import {
-  attributionOf,
+  catalogueCreditOf,
   creditAsAttribution,
   editorCreditOf,
   type EditorCredit,
@@ -192,9 +192,6 @@ export function topicCreditOf(topic: {
   return editorCreditOf(topic.pictureAttribution);
 }
 
-/** The catalogues a topic's picture may be credited to (CONTRACT, From a catalogue). */
-const TOPIC_CATALOGUES: readonly string[] = ["tmdb", "anilist", "igdb", "steam", "openlibrary"];
-
 /**
  * The credit of a topic's picture as About the picture shows it: one taken
  * from a catalogue's page names the catalogue, linked as a card's is; an
@@ -206,10 +203,7 @@ export function topicAttributionOf(topic: {
 }): PictureAttribution | null {
   const credit = topicCreditOf(topic);
   if (credit === null) return null;
-  const stored = attributionOf(topic.pictureAttribution);
-  return stored !== null && stored.manual !== true && TOPIC_CATALOGUES.includes(stored.source)
-    ? stored
-    : creditAsAttribution(credit);
+  return catalogueCreditOf(topic.pictureAttribution) ?? creditAsAttribution(credit);
 }
 
 /** The approved topics of a section, the biggest first. */

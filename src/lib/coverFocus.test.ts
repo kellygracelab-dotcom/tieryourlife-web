@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   CENTRE,
+  defaultFocusOf,
   focusOf,
+  shownFocus,
+  TALL_DEFAULT,
+  TALL_RATIO,
   focusOfFraming,
   frameOf,
   framingOfFocus,
@@ -10,16 +14,25 @@ import {
   roundedFocus,
 } from "./coverFocus";
 import { CENTRED } from "./framing";
-// Backend's shared cases (Proxy functions/test/cover-crop-vectors.json, #140), copied unchanged.
+// Backend's shared cases (Proxy functions/test/cover-crop-vectors.json, #140, #142), copied unchanged.
 import vectors from "./coverCropVectors.json";
 
 describe("the shared cover crop vectors", () => {
   it.each(vectors.cases)("$name", ({ width, height, aspect, focus, crop }) => {
-    const frame = frameOf({ width, height }, aspect, focus ?? CENTRE);
+    // A case without a focus is drawn by the picture's default, as every tile draws it.
+    const frame = frameOf({ width, height }, aspect, shownFocus(focus, { width, height }));
     expect(Math.abs(frame.left - crop.x)).toBeLessThanOrEqual(vectors.tolerance);
     expect(Math.abs(frame.top - crop.y)).toBeLessThanOrEqual(vectors.tolerance);
     expect(Math.abs(frame.width - crop.width)).toBeLessThanOrEqual(vectors.tolerance);
     expect(Math.abs(frame.height - crop.height)).toBeLessThanOrEqual(vectors.tolerance);
+  });
+
+  it("has the backend's defaults: high on a picture strictly taller than 1.2, else the middle", () => {
+    expect(TALL_RATIO).toBe(vectors.defaults.tallRatio);
+    expect(TALL_DEFAULT).toEqual(vectors.defaults.tall);
+    expect(CENTRE).toEqual(vectors.defaults.other);
+    expect(defaultFocusOf({ width: 1000, height: 1200 })).toEqual(vectors.defaults.other);
+    expect(defaultFocusOf({ width: 1000, height: 1201 })).toEqual(vectors.defaults.tall);
   });
 
   it("takes the focus values the backend takes, and none it refuses", () => {

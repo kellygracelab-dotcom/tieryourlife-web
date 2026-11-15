@@ -4,7 +4,14 @@ import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
 import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
-import { coverFocusOf, isOut, previewsOf, rankedTiers, type Board } from "./model";
+import {
+  cardFocusByPicture,
+  coverFocusOf,
+  isOut,
+  previewsOf,
+  rankedTiers,
+  type Board,
+} from "./model";
 
 interface BoardTileProps {
   board: Board;
@@ -41,6 +48,7 @@ export const BoardTile = memo(function BoardTile({
       cover={board.coverImageUrl}
       focus={coverFocusOf(board)}
       previews={board.coverImageUrls.length > 1 ? board.coverImageUrls : previewsOf(board)}
+      cellFocus={cardFocusByPicture(board)}
       tierColors={rankedTiers(board).map((tier) => tier.colorLight)}
     />
   );

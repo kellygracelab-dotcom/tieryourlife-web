@@ -29,6 +29,8 @@ import {
   setCategory,
   setCover,
   setCoverFocus,
+  setPictureFocus,
+  cardFocusByPicture,
   setFavourite,
   setTopic,
   shouldGroup,
@@ -264,8 +266,12 @@ describe("cards", () => {
     expect(placed.coverFocus).toEqual({ x: 0.1235, y: 0.2, zoom: 1.56 });
     expect(placed.editedAt).toBe(3);
     expect(setCoverFocus(placed, { x: 0.1235, y: 0.2, zoom: 1.56 }, 4)).toBe(placed);
-    // The middle is no focus at all.
-    expect(setCoverFocus(placed, { x: 0.5, y: 0.5, zoom: 1 }, 4)).not.toHaveProperty("coverFocus");
+    // The middle is kept: on a tall picture it is not the default (SPEC, second round).
+    expect(setCoverFocus(placed, { x: 0.5, y: 0.5, zoom: 1 }, 4).coverFocus).toEqual({
+      x: 0.5,
+      y: 0.5,
+      zoom: 1,
+    });
     expect(setCoverFocus(placed, null, 4)).not.toHaveProperty("coverFocus");
     // Another picture, a collage, or the cover card gone: the old place says nothing of it.
     expect(setCover(placed, ["https://x/p.jpg"], 4)).not.toHaveProperty("coverFocus");
@@ -760,5 +766,56 @@ describe("a card's picture changed", () => {
     const pool = poolTier(b1)!;
     const b2 = toPoolFront(b1, heat.uid, 5);
     expect(titlesIn(b2, pool.uid)).toEqual(["Heat", "Dune"]);
+  });
+});
+
+describe("a card's focus", () => {
+  const made = () => {
+    let n = 0;
+    const next = () => `u${n++}`;
+    return addToPool(
+      newBoard("b", "Animals", 1, next),
+      [
+        { title: "Fox", imageUrl: "https://x/fox.jpg" },
+        { title: "Words", imageUrl: null },
+      ],
+      1,
+      next,
+    );
+  };
+
+  it("keeps where a card's picture is looked at, rounded, until its picture changes", () => {
+    const b = made();
+    const [fox, words] = b.items;
+    const placed = setPictureFocus(b, fox!.uid, { x: 0.123456, y: 0.5, zoom: 1.234 }, 2);
+    expect(placed.items[0]!.pictureFocus).toEqual({ x: 0.1235, y: 0.5, zoom: 1.23 });
+    expect(placed.editedAt).toBe(2);
+    expect(setPictureFocus(placed, fox!.uid, { x: 0.1235, y: 0.5, zoom: 1.23 }, 3)).toBe(placed);
+    expect(cardFocusByPicture(placed).get("https://x/fox.jpg")).toEqual({
+      x: 0.1235,
+      y: 0.5,
+      zoom: 1.23,
+    });
+    // Null puts back the picture's default; a card without a picture has none.
+    expect(setPictureFocus(placed, fox!.uid, null, 3).items[0]).not.toHaveProperty("pictureFocus");
+    expect(setPictureFocus(b, words!.uid, { x: 0.2, y: 0.2, zoom: 1 }, 3)).toBe(b);
+    // Another picture starts at its own default.
+    const changed = setPicture(
+      placed,
+      fox!.uid,
+      { imageUrl: "https://x/fox2.jpg", pictureId: null, credit: null, source: "MANUAL" },
+      4,
+    );
+    expect(changed.items[0]).not.toHaveProperty("pictureFocus");
+    // Undo gives the old picture back with its focus.
+    const back = setPicture(changed, fox!.uid, pictureOf(placed.items[0]!), 5);
+    expect(back.items[0]!.pictureFocus).toEqual({ x: 0.1235, y: 0.5, zoom: 1.23 });
+    // Read back only on a card with a picture.
+    expect(parseBoard(placed)?.items[0]?.pictureFocus).toEqual({ x: 0.1235, y: 0.5, zoom: 1.23 });
+    const odd = {
+      ...placed,
+      items: [placed.items[0]!, { ...words!, pictureFocus: { x: 0.2, y: 0.2, zoom: 1 } }],
+    };
+    expect(parseBoard(odd)?.items[1]).not.toHaveProperty("pictureFocus");
   });
 });

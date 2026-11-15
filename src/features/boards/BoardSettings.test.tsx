@@ -1208,7 +1208,7 @@ describe("BoardSettings: cover", () => {
     const done = within(dialog).getByRole("button", { name: "Done" });
     // Nothing to keep until the picture's size is known.
     expect(done).toBeDisabled();
-    const picture = dialog.querySelector<HTMLImageElement>(".cover-adjust__frame img")!;
+    const picture = dialog.querySelector<HTMLImageElement>(".cover-adjust__stage img")!;
     Object.defineProperty(picture, "naturalWidth", { value: 1600 });
     Object.defineProperty(picture, "naturalHeight", { value: 900 });
     fireEvent.load(picture);

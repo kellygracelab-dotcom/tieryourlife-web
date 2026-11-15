@@ -590,6 +590,7 @@ describe("HousePane: made and changed on a board", () => {
       title: "Tonkotsu",
       imageUrl: null,
       pictureId: "p1",
+      pictureFocus: null,
       tierIndex: null,
     });
   });

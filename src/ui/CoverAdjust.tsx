@@ -9,43 +9,32 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
-  focusOfFraming,
-  framingOfFocus,
+  defaultFocusOf,
+  FOCUS_ZOOM_MAX,
+  frameOf,
+  keptFocus,
   placedBox,
-  roundedFocus,
+  shownFocus,
   type CoverFocus,
 } from "../lib/coverFocus";
-import {
-  CENTRED,
-  moved,
-  NUDGE_LONG_PX,
-  NUDGE_PX,
-  pinched,
-  pointInFrame,
-  wheelZoom,
-  ZOOM_MAX,
-  ZOOM_STEP,
-  zoomedAround,
-  type Framing,
-  type Point,
-  type Size,
-} from "../lib/framing";
+import { wheelZoom, ZOOM_STEP, type Size } from "../lib/framing";
 import { strings } from "../strings";
 import { Icon } from "./Icon";
+import { LIST_COVER_PREVIEWS, type FocusPreview } from "./focusPreviews";
 import { MediaImage } from "./MediaImage";
 import { useModal } from "./useModal";
 import "./CoverAdjust.css";
 
-/** The editor's frame: 4:3, as in the app (agreed with Android, 15.11.2026). */
-const ADJUST_ASPECT = 4 / 3;
+/** One press of an arrow moves the focus by this much of the picture; with Shift, the long step. */
+const NUDGE = 0.02;
+const NUDGE_LONG = 0.1;
+/** A press that moved less than this many pixels is a tap: the focus goes where it landed. */
+const TAP_PX = 6;
 
-/** How the cover is seen elsewhere, under the frame: a feed's tile here, the app's page header. */
-const COVER_PREVIEWS: readonly { label: () => string; aspect: number }[] = [
-  { label: () => strings.cover.feed, aspect: 16 / 10 },
-  { label: () => strings.cover.pageHeader, aspect: 2.05 },
-];
+const clamp = (value: number, low: number, high: number): number =>
+  Math.min(high, Math.max(low, value));
 
-const ARROWS: Record<string, Point> = {
+const ARROWS: Record<string, { x: number; y: number }> = {
   ArrowLeft: { x: -1, y: 0 },
   ArrowRight: { x: 1, y: 0 },
   ArrowUp: { x: 0, y: -1 },
@@ -53,101 +42,154 @@ const ARROWS: Record<string, Point> = {
 };
 const ZOOM_KEYS: Record<string, number> = { "+": ZOOM_STEP, "=": ZOOM_STEP, "-": 1 / ZOOM_STEP };
 
+const withZoom = (focus: CoverFocus, zoom: number): CoverFocus => ({
+  ...focus,
+  zoom: clamp(zoom, 1, FOCUS_ZOOM_MAX),
+});
+
 interface CoverAdjustProps {
   src: string;
   focus: CoverFocus | null;
-  /** Kept: where the frame's middle is on the picture, and how near. */
-  onDone: (focus: CoverFocus) => void;
+  /** The shapes the picture shows in, the widest first: its frame is drawn on the picture. */
+  previews?: readonly FocusPreview[];
+  /** The dialog's title; Adjust cover unless said. */
+  title?: string;
+  /** Kept: the point the picture is looked at and how near, or null for its default. */
+  onDone: (focus: CoverFocus | null) => void;
   onCancel: () => void;
 }
 
 /**
- * Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md): the picture
- * under a 4:3 frame, the rest of it dimmed around, dragged, pinched, scrolled
- * or keyed into place, zoomed by the slider too; under it the cover as a
- * feed's tile and as the app's page header show it. Done keeps the place,
- * Reset puts it back in the middle, ✕ leaves it as it was.
+ * Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md, second round):
+ * the whole picture, with the point it is looked at and the frame of its
+ * widest shape on it, the rest dimmed. The point moves anywhere on the
+ * picture, both ways: dragged, tapped, or keyed with the arrows; the slider,
+ * a pinch, the wheel and + and − zoom. Under it each shape the picture shows
+ * in, cut by the shared formula. Done keeps the place, Reset puts back the
+ * picture's default, ✕ leaves it as it was.
  */
-export function CoverAdjust({ src, focus, onDone, onCancel }: CoverAdjustProps) {
+export function CoverAdjust({
+  src,
+  focus,
+  previews = LIST_COVER_PREVIEWS,
+  title = strings.cover.adjust,
+  onDone,
+  onCancel,
+}: CoverAdjustProps) {
   const titleId = useId();
   const helpId = useId();
   const box = useRef<HTMLDivElement>(null);
-  const frame = useRef<HTMLDivElement>(null);
-  const area = useRef<HTMLDivElement>(null);
-  const pointers = useRef(new Map<number, Point>());
+  const stage = useRef<HTMLDivElement>(null);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  /** Where the press began and whether it has moved past a tap. */
+  const press = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const [size, setSize] = useState<Size | null>(null);
-  const [framing, setFraming] = useState<Framing>(CENTRED);
-  useModal(box, onCancel, ".cover-adjust__frame");
+  const [now, setNow] = useState<CoverFocus | null>(null);
+  useModal(box, onCancel, ".cover-adjust__stage");
 
-  const stage = (picture: Size) => ({ picture, aspect: ADJUST_ASPECT });
-  const reframe = (change: (current: Framing, picture: Size) => Framing) => {
-    if (size !== null) setFraming((current) => change(current, size));
-  };
-  const at = (clientX: number, clientY: number): Point | null => {
-    const rect = frame.current?.getBoundingClientRect();
-    return rect === undefined ? null : pointInFrame(rect, clientX, clientY);
-  };
+  const main = previews[0]?.aspect ?? 2.05;
+  const change = (next: (current: CoverFocus) => CoverFocus) =>
+    setNow((current) => (current === null ? current : next(current)));
 
   // The wheel is the mouse's pinch; taken here, or the page behind scrolls.
   useEffect(() => {
-    const target = area.current;
+    const target = stage.current;
     if (target === null || size === null) return;
     const onWheel = (event: WheelEvent) => {
-      const rect = frame.current?.getBoundingClientRect();
-      if (rect === undefined) return;
-      const point = pointInFrame(rect, event.clientX, event.clientY);
-      if (point === null) return;
       event.preventDefault();
       const factor = wheelZoom(event.deltaY, event.deltaMode);
-      setFraming((current) =>
-        zoomedAround(current, factor, point, { picture: size, aspect: ADJUST_ASPECT }),
-      );
+      setNow((current) => (current === null ? current : withZoom(current, current.zoom * factor)));
     };
     target.addEventListener("wheel", onWheel, { passive: false });
     return () => target.removeEventListener("wheel", onWheel);
   }, [size]);
 
-  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    const point = at(event.clientX, event.clientY);
-    if (size === null || point === null) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    pointers.current.set(event.pointerId, point);
+  /** A point on the screen as a place on the picture, 0 to 1 both ways. */
+  const onPicture = (clientX: number, clientY: number) => {
+    const rect = stage.current?.getBoundingClientRect();
+    if (rect === undefined || rect.width === 0 || rect.height === 0) return null;
+    return { x: (clientX - rect.left) / rect.width, y: (clientY - rect.top) / rect.height };
   };
-  // One finger or the mouse moves the picture; a second one pinches it.
+
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (now === null) return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    press.current =
+      pointers.current.size === 1 ? { x: event.clientX, y: event.clientY, moved: false } : null;
+  };
+  // One finger or the mouse moves the point with it; a second one pinches.
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const before = pointers.current.get(event.pointerId);
-    const point = at(event.clientX, event.clientY);
-    if (before === undefined || point === null) return;
+    const rect = stage.current?.getBoundingClientRect();
+    if (before === undefined || rect === undefined || rect.width === 0) return;
+    const point = { x: event.clientX, y: event.clientY };
     const other = [...pointers.current].find(([id]) => id !== event.pointerId)?.[1];
     pointers.current.set(event.pointerId, point);
-    reframe((current, picture) =>
-      other === undefined
-        ? moved(current, point.x - before.x, point.y - before.y, stage(picture))
-        : pinched(current, [before, other], [point, other], stage(picture)),
-    );
+    if (press.current !== null && !press.current.moved) {
+      const far = Math.hypot(point.x - press.current.x, point.y - press.current.y);
+      if (far < TAP_PX) return;
+      press.current.moved = true;
+    }
+    if (other === undefined) {
+      const dx = (point.x - before.x) / rect.width;
+      const dy = (point.y - before.y) / rect.height;
+      change((current) => ({
+        ...current,
+        x: clamp(current.x + dx, 0, 1),
+        y: clamp(current.y + dy, 0, 1),
+      }));
+    } else {
+      const was = Math.hypot(before.x - other.x, before.y - other.y);
+      const is = Math.hypot(point.x - other.x, point.y - other.y);
+      if (was > 0) change((current) => withZoom(current, (current.zoom * is) / was));
+    }
   };
   const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const tap = press.current !== null && !press.current.moved && pointers.current.size === 1;
     pointers.current.delete(event.pointerId);
+    if (event.type === "pointerup" && tap) {
+      const place = onPicture(event.clientX, event.clientY);
+      if (place !== null) {
+        change((current) => ({ ...current, x: clamp(place.x, 0, 1), y: clamp(place.y, 0, 1) }));
+      }
+    }
+    if (pointers.current.size === 0) press.current = null;
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const width = event.currentTarget.getBoundingClientRect().width;
-    if (size === null || width === 0) return;
+    if (now === null) return;
     const arrow = ARROWS[event.key];
     const zoom = ZOOM_KEYS[event.key];
     if (arrow !== undefined) {
-      const step = (event.shiftKey ? NUDGE_LONG_PX : NUDGE_PX) / width;
-      reframe((current, picture) => moved(current, arrow.x * step, arrow.y * step, stage(picture)));
+      const step = event.shiftKey ? NUDGE_LONG : NUDGE;
+      change((current) => ({
+        ...current,
+        x: clamp(current.x + arrow.x * step, 0, 1),
+        y: clamp(current.y + arrow.y * step, 0, 1),
+      }));
     } else if (zoom !== undefined) {
-      reframe((current, picture) => zoomedAround(current, zoom, { x: 0, y: 0 }, stage(picture)));
+      change((current) => withZoom(current, current.zoom * zoom));
     } else {
       return;
     }
     event.preventDefault();
   };
 
-  const now = size === null ? null : focusOfFraming(framing, size, ADJUST_ASPECT);
   const drawn = (aspect: number): CSSProperties | undefined =>
     size === null || now === null ? undefined : placedBox(size, aspect, now);
+  // The widest shape's frame on the whole picture, in its own percentages.
+  const edge = (): CSSProperties | undefined => {
+    if (size === null || now === null) return undefined;
+    const rect = frameOf(size, main, now);
+    const percent = (part: number, whole: number) => `${(part / whole) * 100}%`;
+    return {
+      left: percent(rect.left, size.width),
+      top: percent(rect.top, size.height),
+      width: percent(rect.width, size.width),
+      height: percent(rect.height, size.height),
+    };
+  };
+  const ratio = size === null ? 4 / 3 : size.width / size.height;
 
   return createPortal(
     <div className="scrim" onClick={onCancel}>
@@ -169,47 +211,56 @@ export function CoverAdjust({ src, focus, onDone, onCancel }: CoverAdjustProps) 
             <Icon name="close" />
           </button>
           <h2 id={titleId} className="cover-adjust__title">
-            {strings.cover.adjust}
+            {title}
           </h2>
         </div>
 
         <div
-          ref={area}
           className={
             size === null ? "cover-adjust__area cover-adjust__area--waiting" : "cover-adjust__area"
           }
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
         >
           <div
-            ref={frame}
-            className="cover-adjust__frame"
+            ref={stage}
+            className="cover-adjust__stage"
+            style={{
+              aspectRatio: String(ratio),
+              width: `min(100%, calc(var(--cover-adjust-height) * ${ratio}))`,
+            }}
             role="application"
             // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- it takes the arrows, + and −, so it takes the focus
             tabIndex={0}
             aria-label={strings.cover.frame}
             aria-describedby={helpId}
             onKeyDown={onKeyDown}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
           >
             <MediaImage
-              className="cover-adjust__picture"
+              className="cover-adjust__whole"
               src={src}
               alt=""
               draggable={false}
-              style={drawn(ADJUST_ASPECT)}
               onLoad={(event) => {
                 const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
                 if (width === 0 || height === 0) return;
                 const picture = { width, height };
                 setSize(picture);
-                setFraming(
-                  focus === null ? CENTRED : framingOfFocus(focus, picture, ADJUST_ASPECT),
-                );
+                setNow(shownFocus(focus, picture));
               }}
             />
-            <span className="cover-adjust__edge" aria-hidden="true" />
+            {now !== null && (
+              <>
+                <span className="cover-adjust__edge" style={edge()} aria-hidden="true" />
+                <span
+                  className="cover-adjust__point"
+                  style={{ left: `${now.x * 100}%`, top: `${now.y * 100}%` }}
+                  aria-hidden="true"
+                />
+              </>
+            )}
           </div>
         </div>
         <p id={helpId} className="visually-hidden">
@@ -221,22 +272,25 @@ export function CoverAdjust({ src, focus, onDone, onCancel }: CoverAdjustProps) 
           <input
             type="range"
             min={1}
-            max={ZOOM_MAX}
+            max={FOCUS_ZOOM_MAX}
             step={0.01}
-            value={framing.zoom}
-            disabled={size === null}
+            value={now?.zoom ?? 1}
+            disabled={now === null}
             onChange={(event) => {
               const zoom = Number(event.target.value);
-              reframe((current, picture) =>
-                zoomedAround(current, zoom / current.zoom, { x: 0, y: 0 }, stage(picture)),
-              );
+              change((current) => withZoom(current, zoom));
             }}
           />
         </label>
 
         <p className="cover-adjust__label">{strings.cover.preview}</p>
-        <div className="cover-adjust__previews">
-          {COVER_PREVIEWS.map((preview) => (
+        <div
+          className="cover-adjust__previews"
+          style={{
+            gridTemplateColumns: previews.map((preview) => `${preview.aspect}fr`).join(" "),
+          }}
+        >
+          {previews.map((preview) => (
             <figure key={preview.aspect} className="cover-adjust__preview">
               <span
                 className="cover-adjust__shape"
@@ -262,16 +316,18 @@ export function CoverAdjust({ src, focus, onDone, onCancel }: CoverAdjustProps) 
             type="button"
             className="btn btn--outlined"
             disabled={size === null}
-            onClick={() => setFraming(CENTRED)}
+            onClick={() => {
+              if (size !== null) setNow(defaultFocusOf(size));
+            }}
           >
             <span>{strings.cover.reset}</span>
           </button>
           <button
             type="button"
             className="btn btn--filled"
-            disabled={now === null}
+            disabled={now === null || size === null}
             onClick={() => {
-              if (now !== null) onDone(roundedFocus(now));
+              if (now !== null && size !== null) onDone(keptFocus(now, size));
             }}
           >
             <span>{strings.cover.done}</span>

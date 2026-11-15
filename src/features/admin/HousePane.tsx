@@ -130,6 +130,7 @@ function HouseRow({
           cover={list.coverImageUrl}
           focus={list.coverFocus}
           previews={list.previewImages}
+          previewFocus={list.previewFocus}
           tierColors={list.tierColors}
         />
       </span>

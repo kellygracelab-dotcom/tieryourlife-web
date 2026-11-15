@@ -13,7 +13,7 @@ import {
 } from "../../api/pictureAttribution";
 import { PICTURE_CREDIT_LIMIT, creditOf } from "../../api/pictureCredit";
 export { creditOf } from "../../api/pictureCredit";
-import { isCentre, roundedFocus, sameFocus, type CoverFocus } from "../../lib/coverFocus";
+import { roundedFocus, sameFocus, type CoverFocus } from "../../lib/coverFocus";
 import { holds } from "../../lib/locale";
 import { currentLocale } from "../../strings";
 
@@ -95,6 +95,11 @@ export interface BoardItem {
    * kept, synced and published with it, and gone with it. Not part of the fingerprint.
    */
   attribution?: PictureAttribution;
+  /**
+   * Which part of the card's picture its tile shows (CONTRACT, Cover focus):
+   * absent for the picture's default. It is the picture's: gone with it.
+   */
+  pictureFocus?: CoverFocus;
   source: ItemSource;
   /** When it went to the trash; null while it is on the board. */
   deletedAt: number | null;
@@ -188,6 +193,8 @@ export interface CardDraft {
   credit?: string | null;
   /** The picture's attribution; none is kept on a card without a picture. */
   attribution?: PictureAttribution | null;
+  /** Where the picture is looked at; none for its default. */
+  pictureFocus?: CoverFocus | null;
   source?: ItemSource;
 }
 
@@ -487,16 +494,19 @@ export const hasSingleCover = (board: Board): boolean =>
   board.coverImageUrls.length === 1 ||
   (board.coverImageUrls.length === 0 && (board.coverPictureId ?? board.coverImageUrl) !== null);
 
-/** Where the single cover is looked at; null for the middle, a collage or no cover. */
+/** Where the single cover is looked at; null for its default, a collage or no cover. */
 export function coverFocusOf(board: Board): CoverFocus | null {
   const focus = board.coverFocus;
-  return focus === undefined || isCentre(focus) || !hasSingleCover(board) ? null : focus;
+  return focus === undefined || !hasSingleCover(board) ? null : focus;
 }
 
-/** Another part of the single cover to show; the middle, or null, takes the focus off. */
+/**
+ * Another part of the single cover to show; null takes the focus off, and
+ * the cover shows as its shape has it (Adjust cover gives null for that).
+ */
 export function setCoverFocus(board: Board, focus: CoverFocus | null, now: number): Board {
   if (!hasSingleCover(board)) return board;
-  const next = focus === null || isCentre(focus) ? null : roundedFocus(focus);
+  const next = focus === null ? null : roundedFocus(focus);
   if (sameFocus(coverFocusOf(board), next)) return board;
   const { coverFocus: _was, ...rest } = board;
   return touched(next === null ? rest : { ...rest, coverFocus: next }, now);
@@ -578,6 +588,9 @@ export function addToPool(
         imageUrl: draft.imageUrl,
         credit: creditOf(draft.credit),
         ...attributionField(draft.imageUrl, draft.attribution),
+        ...(draft.imageUrl === null || (draft.pictureFocus ?? null) === null
+          ? {}
+          : { pictureFocus: draft.pictureFocus! }),
         source: draft.source ?? "MANUAL",
         deletedAt: null,
       },
@@ -593,6 +606,8 @@ export interface CardPicture {
   pictureId: string | null;
   credit: string | null;
   attribution?: PictureAttribution | null;
+  /** Where the picture is looked at; none for its default. */
+  pictureFocus?: CoverFocus | null;
   source: ItemSource;
 }
 
@@ -602,6 +617,7 @@ export const pictureOf = (item: BoardItem): CardPicture => ({
   pictureId: item.pictureId,
   credit: item.credit,
   attribution: item.attribution ?? null,
+  pictureFocus: item.pictureFocus ?? null,
   source: item.source,
 });
 
@@ -618,13 +634,16 @@ export function setPicture(
 ): Board {
   const card = board.items.find((item) => item.uid === itemUid && item.deletedAt === null);
   if (card === undefined) return board;
-  const { attribution: _was, ...rest } = card;
+  const { attribution: _was, pictureFocus: _placed, ...rest } = card;
+  const focus = picture.imageUrl === null ? null : (picture.pictureFocus ?? null);
   const changed: BoardItem = {
     ...rest,
     imageUrl: picture.imageUrl,
     pictureId: picture.pictureId,
     credit: creditOf(picture.credit),
     ...attributionField(picture.imageUrl, picture.attribution),
+    // A focus is its own picture's: another picture starts at its default.
+    ...(focus === null ? {} : { pictureFocus: focus }),
     source: picture.source,
   };
   const items = board.items.map((item) => (item === card ? changed : item));
@@ -645,6 +664,40 @@ export function setPicture(
     cover.filter((url) => url !== old),
     now,
   );
+}
+
+/**
+ * Another part of a card's picture to show on its tile; null puts back the
+ * picture's default (Adjust picture gives null for that). A card without a
+ * picture has none.
+ */
+export function setPictureFocus(
+  board: Board,
+  itemUid: string,
+  focus: CoverFocus | null,
+  now: number,
+): Board {
+  const card = board.items.find((item) => item.uid === itemUid && item.deletedAt === null);
+  if (card === undefined || card.imageUrl === null) return board;
+  const next = focus === null ? null : roundedFocus(focus);
+  if (sameFocus(card.pictureFocus ?? null, next)) return board;
+  const { pictureFocus: _was, ...rest } = card;
+  const changed: BoardItem = next === null ? rest : { ...rest, pictureFocus: next };
+  return touched(
+    { ...board, items: board.items.map((item) => (item === card ? changed : item)) },
+    now,
+  );
+}
+
+/** Where each card's picture is looked at, by its address: a collage cell cut as its card is. */
+export function cardFocusByPicture(board: Board): Map<string, CoverFocus> {
+  const found = new Map<string, CoverFocus>();
+  for (const item of board.items) {
+    if (item.deletedAt !== null || item.imageUrl === null || item.pictureFocus === undefined)
+      continue;
+    if (!found.has(item.imageUrl)) found.set(item.imageUrl, item.pictureFocus);
+  }
+  return found;
 }
 
 /**
