@@ -5,6 +5,7 @@ export const en = {
     opening: "Opening the page…",
     site: "Site",
     skipToContent: "Skip to content",
+    dismissNotice: "Dismiss",
     signIn: "Sign in",
     signOut: "Sign out",
     account: "Your account",

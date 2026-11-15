@@ -14,6 +14,7 @@ const fr: Translation = {
     opening: "Ouverture de la page…",
     site: "Site",
     skipToContent: "Aller au contenu",
+    dismissNotice: "Fermer",
     signIn: "Se connecter",
     signOut: "Se déconnecter",
     account: "Votre compte",

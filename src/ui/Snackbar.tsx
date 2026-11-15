@@ -1,18 +1,25 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
   type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
+import { strings } from "../strings";
+import { Icon } from "./Icon";
 import "./Snackbar.css";
 
 export interface SnackbarNotice {
   text: string;
   action?: { text: string; onClick: () => void };
-  /** Stays as long as the app's long snackbar: an Undo that is the only way back to something. */
+  /**
+   * Stays as long as the app's long snackbar: an Undo that is the only way
+   * back to something. A board's next action leaves it there.
+   */
   long?: boolean;
 }
 
@@ -20,21 +27,29 @@ export interface SnackbarNotice {
 export const SNACKBAR_MS = 6000;
 /** A long notice's time, the app's SnackbarDuration.Long. */
 export const SNACKBAR_LONG_MS = 10000;
+/** A board's notice: a card trashed, a tier taken away, a card added. The next action ends it sooner. */
+export const SNACKBAR_BOARD_MS = 4000;
+/** How far a notice is pushed sideways before it goes when let go: a little under a third of it. */
+const SWIPE_PX = 80;
+/** How far a finger goes before it is a swipe and not a tap. */
+const SWIPE_SLOP = 8;
 
 interface SnackbarProps {
   notice: SnackbarNotice | null;
   onDone: () => void;
+  /** A board's page: its notices are brief (`SNACKBAR_BOARD_MS`), its long ones as long as ever. */
+  onBoard?: boolean;
 }
 
 /**
- * One line at the bottom left, with at most one action, gone by itself.
- * The status region is there before anything is said in it, so the words
- * are read out when they come.
+ * One line at the bottom left, with at most one action, gone by itself, at
+ * its cross or pushed aside. The status region is there before anything is
+ * said in it, so the words are read out when they come.
  */
-export function Snackbar({ notice, onDone }: SnackbarProps) {
+export function Snackbar({ notice, onDone, onBoard = false }: SnackbarProps) {
   return (
     <div className="snackbar-region" role="status">
-      {notice !== null && <Notice notice={notice} onDone={onDone} />}
+      {notice !== null && <Notice notice={notice} onDone={onDone} onBoard={onBoard} />}
     </div>
   );
 }
@@ -49,9 +64,41 @@ export function SiteSnackbar({ notice, onDone }: SnackbarProps) {
   if (notice === null) return null;
   return (
     <div className="snackbar-region" role="alert">
-      <Notice notice={notice} onDone={onDone} />
+      <Notice notice={notice} onDone={onDone} onBoard={false} />
     </div>
   );
+}
+
+/** A board, and what a press on it acts with: a card or a control. A finger scrolling it does not. */
+const BOARD = ".ranking";
+const ACTS =
+  "[data-item], button, input, textarea, select, [role='button'], [contenteditable='true']";
+
+/**
+ * A board page's notice: one at a time, the newest in place of the one before
+ * (never after it), and gone at the next action on the board: a card taken
+ * up or pressed, a control of the board used, or a change to it (`acted`,
+ * called where the page keeps one). A long notice, the only way back to
+ * something, stays its time.
+ */
+export function useBoardNotice() {
+  const [notice, setNotice] = useState<SnackbarNotice | null>(null);
+  const done = useCallback(() => setNotice(null), []);
+  const acted = useCallback(
+    () => setNotice((shown) => (shown === null || shown.long === true ? shown : null)),
+    [],
+  );
+  const brief = notice !== null && notice.long !== true;
+  useEffect(() => {
+    if (!brief) return;
+    const onPress = (event: Event) => {
+      const on = event.target instanceof Element ? event.target : null;
+      if (on?.closest(BOARD) != null && on.closest(ACTS) !== null) acted();
+    };
+    document.addEventListener("pointerdown", onPress, { capture: true });
+    return () => document.removeEventListener("pointerdown", onPress, { capture: true });
+  }, [brief, acted]);
+  return { notice, setNotice, done, acted };
 }
 
 /** The room between two notices. */
@@ -111,40 +158,122 @@ function useStackLift(box: RefObject<HTMLDivElement | null>, notice: SnackbarNot
 }
 
 /**
- * While the pointer or the focus is on a notice, it waits. An action whose
- * press took the focus with it (a card removed, a list deleted) gets the
- * focus, so its Undo is one Enter away rather than the whole page.
+ * A notice pushed sideways by a finger (or a mouse) follows it, and goes when
+ * let go far enough out; short of that it comes back. A press on its buttons
+ * is theirs.
  */
-function Notice({ notice, onDone }: { notice: SnackbarNotice; onDone: () => void }) {
+function useSwipe(onDone: () => void) {
+  const [shift, setShift] = useState({ by: 0, fade: 1 });
+  const swipe = useRef<{ pointer: number; x: number; y: number; on: boolean } | null>(null);
+  const end = () => {
+    swipe.current = null;
+    setShift({ by: 0, fade: 1 });
+  };
+  return {
+    shift,
+    onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      if (event.target instanceof Element && event.target.closest("button") !== null) return;
+      swipe.current = { pointer: event.pointerId, x: event.clientX, y: event.clientY, on: false };
+    },
+    onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => {
+      const now = swipe.current;
+      if (now === null || now.pointer !== event.pointerId) return;
+      const by = event.clientX - now.x;
+      if (!now.on) {
+        if (Math.abs(by) < SWIPE_SLOP) return;
+        // Up or down is the page's scroll, not a swipe.
+        if (Math.abs(event.clientY - now.y) > Math.abs(by)) {
+          swipe.current = null;
+          return;
+        }
+        now.on = true;
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      }
+      const width = event.currentTarget.offsetWidth;
+      setShift({ by, fade: width > 0 ? Math.max(0.2, 1 - Math.abs(by) / width) : 1 });
+    },
+    onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => {
+      const now = swipe.current;
+      if (now === null || now.pointer !== event.pointerId) return;
+      const by = event.clientX - now.x;
+      if (now.on && Math.abs(by) >= SWIPE_PX) {
+        swipe.current = null;
+        onDone();
+        return;
+      }
+      end();
+    },
+    onPointerCancel: end,
+  };
+}
+
+/**
+ * While the pointer or a focus the person moved is on a notice, it waits. An
+ * action whose press took the focus with it (a card removed, a list deleted)
+ * gets the focus, so its Undo is one Enter away rather than the whole page;
+ * that focus, the notice's own doing, does not hold it, or the notice would
+ * stay until somebody clicked elsewhere.
+ */
+function Notice({
+  notice,
+  onDone,
+  onBoard,
+}: {
+  notice: SnackbarNotice;
+  onDone: () => void;
+  onBoard: boolean;
+}) {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const held = hovered || focused;
   const action = useRef<HTMLButtonElement>(null);
+  const taken = useRef(false);
   const box = useRef<HTMLDivElement>(null);
   const lift = useStackLift(box, notice);
+  const swipe = useSwipe(onDone);
 
   useEffect(() => {
     if (held) return;
-    const timer = setTimeout(onDone, notice.long === true ? SNACKBAR_LONG_MS : SNACKBAR_MS);
+    const time =
+      notice.long === true ? SNACKBAR_LONG_MS : onBoard ? SNACKBAR_BOARD_MS : SNACKBAR_MS;
+    const timer = setTimeout(onDone, time);
     return () => clearTimeout(timer);
-  }, [notice, onDone, held]);
+  }, [notice, onDone, held, onBoard]);
 
   useEffect(() => {
     const active = document.activeElement;
-    if (active === null || active === document.body) action.current?.focus();
+    if (active !== null && active !== document.body) return;
+    taken.current = true;
+    action.current?.focus();
+    taken.current = false;
   }, [notice]);
 
+  const swiped = swipe.shift.by !== 0;
   return (
     <div
       ref={box}
-      className="snackbar"
-      style={{ "--snackbar-lift": `${lift}px` } as CSSProperties}
+      className={swiped ? "snackbar snackbar--swiped" : "snackbar"}
+      style={
+        {
+          "--snackbar-lift": `${lift}px`,
+          ...(swiped
+            ? { "--snackbar-shift": `${swipe.shift.by}px`, "--snackbar-fade": swipe.shift.fade }
+            : {}),
+        } as CSSProperties
+      }
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
-      onFocus={() => setFocused(true)}
+      onPointerDown={swipe.onPointerDown}
+      onPointerMove={swipe.onPointerMove}
+      onPointerUp={swipe.onPointerUp}
+      onPointerCancel={swipe.onPointerCancel}
+      onFocus={() => {
+        if (!taken.current) setFocused(true);
+      }}
       onBlur={() => setFocused(false)}
     >
-      <span>{notice.text}</span>
+      <span className="snackbar__text">{notice.text}</span>
       {notice.action !== undefined && (
         <button
           ref={action}
@@ -158,6 +287,14 @@ function Notice({ notice, onDone }: { notice: SnackbarNotice; onDone: () => void
           {notice.action.text}
         </button>
       )}
+      <button
+        type="button"
+        className="snackbar__close"
+        aria-label={strings.nav.dismissNotice}
+        onClick={onDone}
+      >
+        <Icon name="close" />
+      </button>
     </div>
   );
 }

@@ -12,6 +12,7 @@ const ja: Translation = {
     opening: "ページを開いています…",
     site: "サイト",
     skipToContent: "本文へスキップ",
+    dismissNotice: "閉じる",
     signIn: "ログイン",
     signOut: "ログアウト",
     account: "アカウント",

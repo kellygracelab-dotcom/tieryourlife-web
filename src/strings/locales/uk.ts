@@ -10,6 +10,7 @@ const uk: Translation = {
     opening: "Відкриваємо сторінку…",
     site: "Сайт",
     skipToContent: "Перейти до вмісту",
+    dismissNotice: "Закрити",
     signIn: "Увійти",
     signOut: "Вийти",
     account: "Ваш акаунт",

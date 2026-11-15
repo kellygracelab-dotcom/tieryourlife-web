@@ -82,7 +82,7 @@ import { currentLocale, fill, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
-import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
+import { Snackbar, useBoardNotice } from "../ui/Snackbar";
 import { useBackCloses } from "../ui/useBackCloses";
 import { PlayButton } from "../features/play/PlayButton";
 import { localGames } from "../features/play/savedGames";
@@ -387,8 +387,8 @@ function OpenList({
     () => new URLSearchParams(location.search).get("rankings") === "1",
   );
   const rankings = useRankings(list.id);
-  const [notice, setNotice] = useState<SnackbarNotice | null>(null);
-  const clearNotice = useCallback(() => setNotice(null), []);
+  // Brief, and gone at the board's next action; the long Undo of a replaced Mine stays.
+  const { notice, setNotice, done: clearNotice, acted } = useBoardNotice();
   // The shape the board took on a wide screen, so the header lays itself out
   // to match, and a place in the header for the bar while the pool is under.
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
@@ -855,15 +855,17 @@ function OpenList({
               list={mineList}
               undoTo={mineBefore?.rows ?? null}
               undoToggles={mineBefore?.toggles === true}
-              onRows={(rows) =>
+              onRows={(rows) => {
+                // A move, not the board drawn again (it says its rows as it comes).
+                if (!sameRows(rows, mineRows ?? [])) acted();
                 // Nothing placed in Mine: Play starts from the author's, as before.
                 setMineRows(
                   rows.some((row) => row.length > 0) ||
                     loadPoolOrder(localStorageStore, scopeOf(list)) !== undefined
                     ? rows.map((row) => [...row])
                     : null,
-                )
-              }
+                );
+              }}
             />
           </BoardFrameContext.Provider>
         ) : own ? (
@@ -909,7 +911,15 @@ function OpenList({
           onClose={() => setSheet(false)}
         />
       )}
-      <Snackbar notice={notice} onDone={clearNotice} />
+      <Snackbar notice={notice} onDone={clearNotice} onBoard />
     </article>
   );
+}
+
+/** Whether two boards' rows hold the same cards in the same places; an empty board is no rows. */
+function sameRows(a: readonly (readonly number[])[], b: readonly (readonly number[])[]): boolean {
+  const placed = (rows: readonly (readonly number[])[]) =>
+    rows.some((row) => row.length > 0) ? rows : [];
+  const [x, y] = [placed(a), placed(b)];
+  return x.length === y.length && x.every((row, i) => row.join(",") === y[i]?.join(","));
 }

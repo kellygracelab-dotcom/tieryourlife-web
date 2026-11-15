@@ -1,10 +1,12 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   SiteSnackbar,
   Snackbar,
+  SNACKBAR_BOARD_MS,
   SNACKBAR_LONG_MS,
   SNACKBAR_MS,
+  useBoardNotice,
   type SnackbarNotice,
 } from "./Snackbar";
 
@@ -35,6 +37,8 @@ describe("Snackbar", () => {
       </>,
     );
     const undo = screen.getByRole("button", { name: "Undo" });
+    // The focus it took itself holds nothing; moved there by the person, it does.
+    act(() => screen.getByRole("button", { name: "Elsewhere" }).focus());
     act(() => undo.focus());
     act(() => vi.advanceTimersByTime(SNACKBAR_MS * 2));
     expect(onDone).not.toHaveBeenCalled();
@@ -133,5 +137,110 @@ describe("Snackbar", () => {
       expect(notice.style.bottom).toBe("");
       expect(notice.style.getPropertyValue("--snackbar-lift")).toMatch(/^\d+(\.\d+)?px$/);
     }
+  });
+
+  // Friends, 16.11: "Deleted: LOV66 · Undo" stayed on and on. The Undo had taken
+  // the focus the press left behind, and a focused notice waited for good.
+  it("goes in its time though its Undo took the focus the press left", () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    const { rerender } = render(<Snackbar notice={null} onDone={onDone} />);
+    rerender(<Snackbar notice={undoable} onDone={onDone} />);
+    expect(screen.getByRole("button", { name: "Undo" })).toHaveFocus();
+    act(() => vi.advanceTimersByTime(SNACKBAR_MS));
+    expect(onDone).toHaveBeenCalledOnce();
+  });
+
+  it("stays four seconds on a board, and a long notice there its ten", () => {
+    vi.useFakeTimers();
+    const onDone = vi.fn();
+    const { rerender } = render(
+      <Snackbar notice={{ text: "Card trashed" }} onDone={onDone} onBoard />,
+    );
+    act(() => vi.advanceTimersByTime(SNACKBAR_BOARD_MS - 1));
+    expect(onDone).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1));
+    expect(onDone).toHaveBeenCalledOnce();
+
+    rerender(<Snackbar notice={{ ...undoable, long: true }} onDone={onDone} onBoard />);
+    act(() => vi.advanceTimersByTime(SNACKBAR_LONG_MS - 1));
+    expect(onDone).toHaveBeenCalledOnce();
+    act(() => vi.advanceTimersByTime(1));
+    expect(onDone).toHaveBeenCalledTimes(2);
+  });
+
+  it("closes at its cross", () => {
+    const onDone = vi.fn();
+    const undo = vi.fn();
+    render(
+      <Snackbar
+        notice={{ text: "Card trashed", action: { text: "Undo", onClick: undo } }}
+        onDone={onDone}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(onDone).toHaveBeenCalledOnce();
+    expect(undo).not.toHaveBeenCalled();
+  });
+
+  it("goes when pushed aside far enough, and comes back from a short push or a scroll", () => {
+    const onDone = vi.fn();
+    render(<Snackbar notice={undoable} onDone={onDone} />);
+    const notice = screen.getByText("1 list deleted").parentElement!;
+    const push = (dx: number, dy = 0) => {
+      fireEvent.pointerDown(notice, { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
+      fireEvent.pointerMove(notice, { pointerId: 1, clientX: 100 + dx / 2, clientY: 100 + dy / 2 });
+      fireEvent.pointerMove(notice, { pointerId: 1, clientX: 100 + dx, clientY: 100 + dy });
+      fireEvent.pointerUp(notice, { pointerId: 1, clientX: 100 + dx, clientY: 100 + dy });
+    };
+    push(40);
+    push(10, 120);
+    expect(onDone).not.toHaveBeenCalled();
+    expect(notice).not.toHaveClass("snackbar--swiped");
+    push(-120);
+    expect(onDone).toHaveBeenCalledOnce();
+  });
+});
+
+describe("a board's notice", () => {
+  const card = { text: "Card trashed", action: { text: "Undo", onClick: () => undefined } };
+
+  it("is replaced by the next, and gone at the next change to the board", () => {
+    const { result } = renderHook(() => useBoardNotice());
+    act(() => result.current.setNotice(card));
+    act(() => {
+      result.current.acted();
+      result.current.setNotice({ text: "Tier removed" });
+    });
+    expect(result.current.notice).toEqual({ text: "Tier removed" });
+    act(() => result.current.acted());
+    expect(result.current.notice).toBeNull();
+  });
+
+  it("is gone at a press on a board's card or control, not on its bare ground", () => {
+    const { result } = renderHook(() => useBoardNotice());
+    const board = document.body.appendChild(document.createElement("div"));
+    board.className = "ranking";
+    const ground = board.appendChild(document.createElement("div"));
+    const tile = board.appendChild(document.createElement("div"));
+    tile.dataset.item = "3";
+    const picture = tile.appendChild(document.createElement("img"));
+    const elsewhere = document.body.appendChild(document.createElement("button"));
+    act(() => result.current.setNotice(card));
+    fireEvent.pointerDown(ground);
+    fireEvent.pointerDown(elsewhere);
+    expect(result.current.notice).toBe(card);
+    fireEvent.pointerDown(picture);
+    expect(result.current.notice).toBeNull();
+    board.remove();
+    elsewhere.remove();
+  });
+
+  it("keeps a long one, the only way back, through the board's next action", () => {
+    const { result } = renderHook(() => useBoardNotice());
+    const long = { ...card, long: true };
+    act(() => result.current.setNotice(long));
+    act(() => result.current.acted());
+    expect(result.current.notice).toBe(long);
   });
 });

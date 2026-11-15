@@ -12,6 +12,7 @@ const de: Translation = {
     opening: "Seite wird geöffnet…",
     site: "Website",
     skipToContent: "Zum Inhalt springen",
+    dismissNotice: "Schließen",
     signIn: "Anmelden",
     signOut: "Abmelden",
     account: "Dein Konto",
