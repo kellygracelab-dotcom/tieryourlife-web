@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { KeepBoardRequest, KeptBoard, KeptBoardEntry } from "../../api/boards";
+import type { KeepBoardRequest, KeptBoard, KeptBoardEntry, Removal } from "../../api/boards";
 import { ApiFailure } from "../../api/errors";
 import { memoryStore } from "../../lib/storage";
 import {
@@ -41,6 +41,7 @@ function fakeAccount(published: (string | PublishedEntry)[] | null = []) {
   const kept = new Map<string, KeptBoard>();
   const keeps: { uid: string; request: KeepBoardRequest }[] = [];
   const forgotten: string[] = [];
+  const removals: Removal[] = [];
   let conflictWith: KeptBoard | null = null;
   const entryOf = (board: KeptBoard): KeptBoardEntry => ({
     uid: board.uid,
@@ -48,6 +49,7 @@ function fakeAccount(published: (string | PublishedEntry)[] | null = []) {
     updatedAt: board.updatedAt,
     deviceName: board.deviceName,
     deleted: board.deleted,
+    ...(board.removal === undefined ? {} : { removal: board.removal }),
     fingerprint: board.fingerprint,
     title: board.title,
     itemCount: board.items.length,
@@ -77,10 +79,13 @@ function fakeAccount(published: (string | PublishedEntry)[] | null = []) {
       });
       return Promise.resolve({ uid, revision });
     },
-    forget: (uid) => {
+    forget: (uid, removal) => {
       forgotten.push(uid);
+      removals.push(removal);
       const was = kept.get(uid);
-      if (was !== undefined) kept.set(uid, { ...was, deleted: true, revision: was.revision + 1 });
+      if (was !== undefined) {
+        kept.set(uid, { ...was, deleted: true, removal, revision: was.revision + 1 });
+      }
       return Promise.resolve();
     },
     published: () => Promise.resolve(published === null ? null : published.map(entryOfList)),
@@ -101,6 +106,7 @@ function fakeAccount(published: (string | PublishedEntry)[] | null = []) {
     kept,
     keeps,
     forgotten,
+    removals,
     holds,
     refuseNextWith: (board: KeptBoard) => {
       conflictWith = board;
@@ -779,6 +785,42 @@ describe("syncBoards", () => {
     await run();
     expect(records.all()).toEqual([]);
     expect(account.forgotten).toEqual(["a"]);
+  });
+
+  it("says a board emptied from the trash here is gone for good", async () => {
+    const { repository, account, run } = setUp();
+    repository.save(films("a", "A"));
+    await run();
+    repository.remove("a");
+    await run();
+    expect(account.forgotten).toEqual(["a"]);
+    expect(account.removals).toEqual(["forever"]);
+  });
+
+  it("deletes here a board deleted for good elsewhere, and trashes one changed here since", async () => {
+    const { repository, records, account, run } = setUp();
+    repository.saveAll([films("a", "A"), films("b", "B"), films("c", "C")]);
+    await run();
+    repository.save(rename(repository.get("b")!, "B, with my work", 2000));
+    for (const [uid, removal] of [
+      ["a", "forever"],
+      ["b", "forever"],
+      ["c", "cloud"],
+    ] as const) {
+      const was = account.kept.get(uid)!;
+      account.kept.set(uid, { ...was, deleted: true, removal, revision: was.revision + 1 });
+    }
+    await run();
+    // Gone from here with its agreement, and the account is not asked again.
+    expect(repository.get("a")).toBeNull();
+    expect(records.all().some((record) => record.uid === "a")).toBe(false);
+    expect(account.forgotten).toEqual([]);
+    // Changed here: kept, in the trash, never lost unseen.
+    expect(repository.get("b")?.deletedAt).toBe(1000);
+    expect(repository.get("b")?.title).toBe("B, with my work");
+    // Only the account's copy went: the trash here, as before.
+    expect(repository.get("c")?.deletedAt).toBe(1000);
+    expect(await run()).toMatchObject({ carried: 0, deferred: 0 });
   });
 
   it("sends edits nobody else saw back over a marker instead of throwing them away", async () => {
