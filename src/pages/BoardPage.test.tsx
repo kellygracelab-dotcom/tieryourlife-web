@@ -6,6 +6,7 @@ vi.mock("../lib/firebase", async (original) => ({
 }));
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState, type ReactElement } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
@@ -97,6 +98,8 @@ const open = (
     houseStore?: KeyValueStore;
     houseRepository?: BoardsRepository;
     loadReports?: LoadReports;
+    /** Holds the page under a session of the test's own, in place of a fixed account. */
+    session?: (page: ReactElement) => ReactElement;
   } = {},
 ) => {
   const router = createMemoryRouter(
@@ -128,7 +131,9 @@ const open = (
   );
   const page = <RouterProvider router={router} />;
   render(
-    extra.account === undefined ? (
+    extra.session !== undefined ? (
+      extra.session(page)
+    ) : extra.account === undefined ? (
       page
     ) : (
       <SessionContext.Provider
@@ -1117,6 +1122,48 @@ describe("BoardPage: Publish beside Play", () => {
     expect(headerPublish()).toHaveAccessibleName("Publish");
     expect(headerPublish()).toHaveClass("btn--filled", "publish-button--main");
     expect(headerPublish()).not.toHaveClass("btn--tonal");
+  });
+
+  it("signs a guest in at Publish, and the publish goes on once they are", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      publish: vi.fn(() => Promise.resolve({ id: "L1", topicId: null })),
+    };
+    const signIn = vi.fn<Session["signIn"]>();
+    function Signing({ page }: { page: ReactElement }) {
+      const [account, setAccount] = useState<Session["account"]>({ kind: "guest", uid: "g1" });
+      signIn.mockImplementation(async () => {
+        setAccount(member);
+        return { kind: "signedIn", switched: false };
+      });
+      return (
+        <SessionContext.Provider
+          value={{ account, signIn, signOut: () => Promise.resolve(), refresh: () => undefined }}
+        >
+          {page}
+        </SessionContext.Provider>
+      );
+    }
+    open(repository, "/b/films", { publishing, session: (page) => <Signing page={page} /> });
+    await userEvent.click(headerPublish()!);
+    await waitFor(() => expect(signIn).toHaveBeenCalledOnce());
+    // Signed in, nothing more to press: the sheet opens on Publish again and it goes out.
+    await waitFor(() => expect(publishing.publish).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("Published. Anyone with the link can rank it.")).toBeVisible();
+    expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
+    expect(window.sessionStorage.getItem("tyl:publishAfterSignIn")).toBeNull();
+  });
+
+  it("forgets a guest's Publish when the sign-in is given up", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    const signIn = vi.fn<Session["signIn"]>(async () => ({ kind: "cancelled" }));
+    open(repository, "/b/films", { account: { kind: "guest", uid: "g1" }, signIn });
+    await userEvent.click(headerPublish()!);
+    await waitFor(() => expect(signIn).toHaveBeenCalledOnce());
+    await waitFor(() => expect(window.sessionStorage.getItem("tyl:publishAfterSignIn")).toBeNull());
   });
 
   it("opens the settings on Publish and sends the list", async () => {

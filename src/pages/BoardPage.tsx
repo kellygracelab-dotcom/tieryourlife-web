@@ -393,9 +393,14 @@ function OpenBoard({
   };
   useEffect(() => {
     if (me === null || sessionStorageStore.read(PUBLISH_AFTER_SIGN_IN) !== uid) return;
-    sessionStorageStore.remove(PUBLISH_AFTER_SIGN_IN);
-    setSettingsStart("publish");
-    setPanel("settings");
+    // Once the account's boards are in: the sheet that opens is the account's.
+    const timer = setTimeout(() => {
+      if (sessionStorageStore.read(PUBLISH_AFTER_SIGN_IN) !== uid) return;
+      sessionStorageStore.remove(PUBLISH_AFTER_SIGN_IN);
+      setSettingsStart("publish");
+      setPanel("settings");
+    });
+    return () => clearTimeout(timer);
   }, [me, uid]);
   // Brief, and gone at the board's next action (Friends, 16.11).
   const { notice, setNotice, done: forget, acted } = useBoardNotice();
