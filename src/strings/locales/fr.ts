@@ -30,6 +30,9 @@ const fr: Translation = {
     settings: "Paramètres",
     reports: "Signalements",
     newList: "Nouvelle liste",
+    inPlace: "dans {place}",
+    searchIn: "Rechercher dans {place}",
+    searchEverywhere: "Rechercher partout",
   },
   mod: {
     putBack: "Restaurer",

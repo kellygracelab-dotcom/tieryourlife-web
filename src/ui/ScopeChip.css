@@ -1,0 +1,51 @@
+/* The place a search looks in, at the start of its field. */
+.scope-chip {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 55%;
+  height: 28px;
+  padding: 0 2px 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+  color: var(--ink);
+  font: var(--text-small);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.scope-chip__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scope-chip__clear {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.scope-chip__clear:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.scope-chip__clear:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.scope-chip__clear .ms {
+  font-size: 18px;
+}

@@ -28,6 +28,9 @@ const ru: Translation = {
     settings: "Настройки",
     reports: "Жалобы",
     newList: "Новый список",
+    inPlace: "в {place}",
+    searchIn: "Искать в {place}",
+    searchEverywhere: "Искать везде",
   },
   mod: {
     putBack: "Вернуть",

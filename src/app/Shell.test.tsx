@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { PageTitle } from "./pageTitle";
+import { SearchScopeMark } from "./searchScope";
 import { routes } from "./routes";
 import { Shell } from "./Shell";
 import { RedirectFailedContext, SessionContext, type Session } from "./session";
@@ -109,6 +110,111 @@ describe("Shell search", () => {
     expect(box).toHaveFocus();
     // The page's head is a status region: what was asked and how much came are read out.
     expect(screen.getByRole("heading", { level: 1 }).closest("[role='status']")).not.toBeNull();
+  });
+});
+
+describe("Shell search in a place", () => {
+  const guest: Session = {
+    account: { kind: "guest", uid: null },
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    refresh: vi.fn(),
+  };
+  const openAt = (at: string) => {
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/",
+          element: <Shell />,
+          children: [
+            { path: "s/anime", element: <SearchScopeMark category="anime" name="Anime" /> },
+            {
+              path: "s/anime/t/t1",
+              element: <SearchScopeMark category="anime" topic="t1" name="Naruto" />,
+            },
+            { path: "about", element: <p>About</p> },
+            { path: "l/a1", element: <p>A list</p> },
+            { path: "search", element: <p>Results</p> },
+          ],
+        },
+      ],
+      { initialEntries: [at] },
+    );
+    render(
+      <SessionContext.Provider value={guest}>
+        <RouterProvider router={router} />
+      </SessionContext.Provider>,
+    );
+    return { router, bar: within(screen.getByRole("banner")) };
+  };
+
+  it("looks inside the section first, and says so with a chip", async () => {
+    const { router, bar } = openAt("/s/anime");
+    const field = await bar.findByRole("searchbox", { name: "Search in Anime" });
+    expect(bar.getByText("in Anime")).toBeInTheDocument();
+    await userEvent.type(field, "naruto{Enter}");
+    expect(router.state.location.pathname).toBe("/search");
+    expect(router.state.location.search).toBe("?q=naruto&category=anime");
+  });
+
+  it("looks inside the topic first: its lists", async () => {
+    const { router, bar } = openAt("/s/anime/t/t1");
+    expect(bar.getByText("in Naruto")).toBeInTheDocument();
+    await userEvent.type(bar.getByRole("searchbox", { name: "Search in Naruto" }), "best{Enter}");
+    expect(router.state.location.search).toBe("?q=best&category=anime&topic=t1");
+  });
+
+  it("searches everywhere once the chip's cross is pressed, keeping the focus in the field", async () => {
+    const { router, bar } = openAt("/s/anime");
+    await userEvent.click(bar.getByRole("button", { name: "Search everywhere" }));
+    expect(bar.queryByText("in Anime")).toBeNull();
+    const field = bar.getByRole("searchbox", { name: "Search lists" });
+    expect(field).toHaveFocus();
+    await userEvent.keyboard("naruto{Enter}");
+    expect(router.state.location.search).toBe("?q=naruto");
+  });
+
+  it("lets Backspace in the empty field take the chip away, and not while there are words", async () => {
+    const { bar } = openAt("/s/anime");
+    const field = bar.getByRole("searchbox", { name: "Search in Anime" });
+    await userEvent.type(field, "a{Backspace}");
+    expect(bar.getByText("in Anime")).toBeInTheDocument();
+    await userEvent.keyboard("{Backspace}");
+    expect(bar.queryByText("in Anime")).toBeNull();
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveFocus();
+  });
+
+  it("reaches the chip's cross from the keyboard", async () => {
+    const { bar } = openAt("/s/anime");
+    bar.getByRole("searchbox", { name: "Search in Anime" }).focus();
+    await userEvent.tab({ shift: true });
+    expect(bar.getByRole("button", { name: "Search everywhere" })).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    expect(bar.queryByText("in Anime")).toBeNull();
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveFocus();
+  });
+
+  it("brings the chip back on the section's page opened again", async () => {
+    const { router, bar } = openAt("/s/anime");
+    await userEvent.click(bar.getByRole("button", { name: "Search everywhere" }));
+    await act(() => router.navigate("/l/a1"));
+    expect(bar.queryByText("in Anime")).toBeNull();
+    await act(() => router.navigate("/s/anime"));
+    expect(bar.getByText("in Anime")).toBeInTheDocument();
+  });
+
+  it("has no chip elsewhere", () => {
+    const { bar } = openAt("/about");
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toBeInTheDocument();
+    expect(bar.queryByRole("button", { name: "Search everywhere" })).toBeNull();
+  });
+
+  it("leads a phone's search icon to the search inside the place", () => {
+    const { bar } = openAt("/s/anime/t/t1");
+    expect(bar.getByRole("link", { name: "Search in Naruto" })).toHaveAttribute(
+      "href",
+      "/search?category=anime&topic=t1",
+    );
   });
 });
 

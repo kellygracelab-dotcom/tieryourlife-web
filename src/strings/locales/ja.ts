@@ -28,6 +28,9 @@ const ja: Translation = {
     settings: "設定",
     reports: "通報",
     newList: "新しいリスト",
+    inPlace: "{place}内",
+    searchIn: "{place}内を検索",
+    searchEverywhere: "すべてを検索",
   },
   mod: {
     putBack: "戻す",

@@ -27,6 +27,9 @@ const es: Translation = {
     settings: "Ajustes",
     reports: "Denuncias",
     newList: "Nueva lista",
+    inPlace: "en {place}",
+    searchIn: "Buscar en {place}",
+    searchEverywhere: "Buscar en todo",
   },
   mod: {
     putBack: "Restaurar",

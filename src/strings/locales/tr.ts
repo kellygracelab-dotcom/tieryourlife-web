@@ -30,6 +30,9 @@ const tr: Translation = {
     settings: "Ayarlar",
     reports: "Şikayetler",
     newList: "Yeni liste",
+    inPlace: "{place} içinde",
+    searchIn: "{place} içinde ara",
+    searchEverywhere: "Her yerde ara",
   },
   mod: {
     putBack: "Geri al",

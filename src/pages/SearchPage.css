@@ -10,8 +10,9 @@
   max-width: var(--width-reading);
 }
 
-/* From 600 px the bar's field is the search; the page's own box would be the same thing twice. */
-@media (min-width: 600px) {
+/* From 720 px the bar's field is the search; the page's own box would be the same thing twice.
+   Below that the bar has only an icon, so the box stays. */
+@media (min-width: 720px) {
   .search > .search-box {
     display: none;
   }
