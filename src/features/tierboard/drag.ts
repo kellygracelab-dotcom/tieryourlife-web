@@ -155,9 +155,12 @@ export function targetOf(element: Element | null, at?: Point, dragged?: number):
 /**
  * A row's cards as drawn while a card is carried, the same for a tier and
  * for the pool, from wherever the card came: over this row, the card stands
- * where it would land, faded, and the others make room for it; carried
- * over another row (`landing` says it lands somewhere), it is gone from
- * here, as it will be once let go. Over nothing it stays where it was.
+ * where it would land, faded, and the others make room for it; anywhere else
+ * while it is carried (`landing`), it is gone from here, as it will be once
+ * let go over another row. The board carries it so from the moment it is
+ * lifted: a card that left its row only over another row came back between
+ * two, and its row moved at every crossing. Without `landing` it stays where
+ * it was.
  */
 export function carried(
   row: readonly number[],
