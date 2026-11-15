@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { NameTip } from "./NameTip";
 
 function board() {
@@ -59,10 +59,13 @@ describe("a card's name over it", () => {
 
   it("shows the name of a card the keyboard is on, and not of one a click focused", () => {
     const { pictured, elsewhere } = board();
-    const visible = (yes: boolean) => {
-      pictured.matches = (selector: string) =>
-        selector === ":focus-visible" ? yes : Element.prototype.matches.call(pictured, selector);
-    };
+    const matches = pictured.matches.bind(pictured);
+    const visible = (yes: boolean) =>
+      vi
+        .spyOn(pictured, "matches")
+        .mockImplementation((selector: string) =>
+          selector === ":focus-visible" ? yes : matches(selector),
+        );
     visible(true);
     fireEvent.focusIn(pictured);
     expect(tip()).toHaveTextContent("Ex Machina");
