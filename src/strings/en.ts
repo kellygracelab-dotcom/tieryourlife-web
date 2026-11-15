@@ -698,6 +698,9 @@ export const en = {
     picture: "Picture",
     translations: "Translations",
     translationsHelp: "One per language. Left empty, the name shows as typed.",
+    badTranslation:
+      "Not accepted. A translation needs a letter or a number, up to {max} characters.",
+    translationsRefused: "A translation wasn’t accepted. Check them and try again.",
     topicNamesRefusedIn: "Not accepted: {languages}. Each translation is up to {max} characters.",
     topicNameRefused: "This name wasn’t accepted. A topic name is up to {max} characters.",
     topicNamesRefused: "A translation wasn’t accepted. Each is up to {max} characters.",

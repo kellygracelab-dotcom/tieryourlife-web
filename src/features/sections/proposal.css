@@ -334,6 +334,13 @@
   margin-top: 8px;
 }
 
+.translations__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .translations__field {
   display: flex;
   flex-direction: column;
@@ -355,6 +362,10 @@
   background: var(--surface);
   color: var(--ink);
   font: var(--text-body);
+}
+
+.translations__field input[aria-invalid="true"] {
+  border-color: var(--error);
 }
 
 /* The icons: six to a row, the chosen one ringed. */

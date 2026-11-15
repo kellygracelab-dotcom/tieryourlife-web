@@ -16,6 +16,12 @@ export const SECTION_NAME_MAX = 24;
 export const PENDING_MAX = 3;
 /** Nor propose more than this in a rolling day, withdrawn ones counted (429 TOO_MANY_PROPOSALS). */
 export const PROPOSALS_PER_DAY = 10;
+/**
+ * A send not finished by then, the picture's upload included, is given up on
+ * and said, with Try again: a request has 20 s of its own, a token or an
+ * upload none.
+ */
+export const SEND_WITHIN_MS = 30_000;
 /** The name is asked about once typing has stopped this long. */
 export const NAME_CHECK_MS = 400;
 
@@ -27,6 +33,15 @@ export function isSectionName(name: string): boolean {
   const tidy = tidySectionName(name);
   const length = [...tidy].length;
   return length >= SECTION_NAME_MIN && length <= SECTION_NAME_MAX && /[\p{L}\p{N}]/u.test(tidy);
+}
+
+/**
+ * A translation may be one character, as 車 is in Japanese (Content's report
+ * of 15.11.2026): up to twenty-four with a letter or a digit in it.
+ */
+export function isSectionTranslation(name: string): boolean {
+  const tidy = tidySectionName(name);
+  return [...tidy].length <= SECTION_NAME_MAX && /[\p{L}\p{N}]/u.test(tidy);
 }
 
 /** The person's own proposals still waiting for a moderator. */
@@ -69,7 +84,8 @@ export function shortOf(size: Size): number | null {
 /** What a refusal means to the form, by where it is shown. */
 export type Trouble =
   | { kind: "nameTaken"; id: string | null }
-  | { kind: "badName" }
+  // `field`, where the backend names it: "name", "names" or "names.ja".
+  | { kind: "badName"; field?: string }
   | { kind: "tooSmall" }
   | { kind: "notImage" }
   | { kind: "notCropped" }
@@ -96,7 +112,9 @@ export function troubleOf(error: ApiError): Trouble {
     case "NAME_TAKEN":
       return { kind: "nameTaken", id: error.id ?? null };
     case "BAD_NAME":
-      return { kind: "badName" };
+      return error.field === undefined
+        ? { kind: "badName" }
+        : { kind: "badName", field: error.field };
     case "TOO_MANY_PENDING":
       return { kind: "tooMany" };
     case "BAD_FILE_UNDER":

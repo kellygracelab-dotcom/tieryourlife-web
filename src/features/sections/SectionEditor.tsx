@@ -41,6 +41,7 @@ import {
   fileUnderChoices,
   forgetProposal,
   isSectionName,
+  isSectionTranslation,
   keepProposal,
   NAME_CHECK_MS,
   PENDING_MAX,
@@ -48,6 +49,8 @@ import {
   readKeptProposal,
   SECTION_ASPECT,
   SECTION_NAME_MAX,
+  SECTION_NAME_MIN,
+  SEND_WITHIN_MS,
   shortOf,
   tidySectionName,
   translationsOf,
@@ -89,6 +92,15 @@ export type SectionEditorProps = Common &
 type Verdict = { name: string } & (
   { kind: "free" } | { kind: "taken"; id: string | null } | { kind: "bad" }
 );
+
+/**
+ * A name the send was refused for, under the field it is about: the main
+ * name, or the translations, these languages or, named by none, all of them.
+ */
+type Refused = { field: "name" } | { field: "names"; locales: readonly string[] };
+
+/** A send that has not finished within the time given: the failure bar's, with Try again. */
+class TooSlow extends Error {}
 
 interface Start extends SectionWords {
   fileUnder: string;
@@ -201,7 +213,10 @@ export function SectionEditor(props: SectionEditorProps) {
   const [adjusting, setAdjusting] = useState(false);
   const [pictureTrouble, setPictureTrouble] = useState<string | null>(null);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [refused, setRefused] = useState<Refused | null>(null);
   const [sending, setSending] = useState(false);
+  // Which send is the one waited for: one given up on that answers late is no longer heard, unless it saved.
+  const attempt = useRef(0);
   // The bar above the actions: a failure worth another try, or a refusal that is not.
   const [bar, setBar] = useState<Extract<
     Trouble,
@@ -230,13 +245,24 @@ export function SectionEditor(props: SectionEditorProps) {
   const refocused =
     mode === "edit" && picture?.kind === "kept" && !sameFocus(focus, start.focus ?? null);
   const pictureReady = picture === null || picture.kind === "kept" || picture.size !== null;
-  const nameTrouble =
-    verdict !== null && verdict.name === tidy && verdict.kind !== "free" ? verdict : null;
+  const nameTrouble: Verdict | null =
+    refused?.field === "name"
+      ? { name: tidy, kind: "bad" }
+      : verdict !== null && verdict.name === tidy && verdict.kind !== "free"
+        ? verdict
+        : null;
+  // A translation the backend's rule refuses is said at once and not sent.
+  const badLocales = LOCALES.filter((locale) => {
+    const text = tidySectionName(names[locale] ?? "");
+    return text !== "" && !isSectionTranslation(text);
+  });
   // A name already refused, or one the backend's rule refuses, is not sent:
   // it would only upload the picture to be refused again.
   const ready =
     (isSectionName(tidy) || (tidy !== "" && tidy === ownName)) &&
     nameTrouble === null &&
+    refused === null &&
+    badLocales.length === 0 &&
     pictureReady &&
     (mode === "propose"
       ? newPicture
@@ -279,6 +305,9 @@ export function SectionEditor(props: SectionEditorProps) {
       clearTimeout(timer);
     };
   }, [name, deps, ownId, ownName]);
+
+  // A refusal holds only for what was sent: any field changed, the form may be sent again.
+  useEffect(() => setRefused(null), [name, names, icon, fileUnder, picture, focus]);
 
   const ask = () => {
     askedFrom.current =
@@ -369,13 +398,32 @@ export function SectionEditor(props: SectionEditorProps) {
     );
   };
 
+  /**
+   * The field a BAD_NAME is about. The backend names it in `detail`; where
+   * it does not, it is the main name when it alone was sent or breaks the
+   * rule, and otherwise the translations, those shorter than a name may be
+   * first (the backend took two characters at least before 15.11.2026).
+   */
+  const refusalOf = (field: string | undefined): Refused => {
+    const sent: Record<string, string> =
+      mode === "create" ? translationsOf(names) : mode === "edit" ? (changes.names ?? {}) : {};
+    const locales = Object.keys(sent).filter((locale) => sent[locale] !== "");
+    const short = locales.filter((locale) => [...(sent[locale] ?? "")].length < SECTION_NAME_MIN);
+    if (field === "name") return { field: "name" };
+    if (field?.startsWith("names.") === true) return { field: "names", locales: [field.slice(6)] };
+    if (field === "names") return { field: "names", locales: short };
+    const nameSent = mode !== "edit" || changes.name !== undefined;
+    if (locales.length === 0 || (nameSent && !isSectionName(tidy))) return { field: "name" };
+    return { field: "names", locales: short };
+  };
+
   const fail = (trouble: Trouble, bytes: Blob | null) => {
     switch (trouble.kind) {
       case "nameTaken":
         setVerdict({ name: tidy, kind: "taken", id: trouble.id });
         return;
       case "badName":
-        setVerdict({ name: tidy, kind: "bad" });
+        setRefused(refusalOf(trouble.field));
         return;
       case "tooSmall":
       case "notImage":
@@ -428,8 +476,30 @@ export function SectionEditor(props: SectionEditorProps) {
     setSending(true);
     setBar(null);
     setAsking(false);
+    const mine = ++attempt.current;
+    const heard = () => attempt.current === mine;
+    // A send that hangs, a token or an upload that never answers among them,
+    // is given up on and said, with Try again (Content's report of
+    // 15.11.2026: the first try hung without a word). One that saves after
+    // all still closes the form: the section is there.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tooSlow = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new TooSlow()), deps.sendWithin ?? SEND_WITHIN_MS);
+    });
     let bytes: Blob | null = null;
     try {
+      await Promise.race([work(), tooSlow]);
+    } catch (reason: unknown) {
+      if (!heard()) return;
+      attempt.current++;
+      setSending(false);
+      fail(reason instanceof TooSlow ? { kind: "failed" } : troubleOf(errorOf(reason)), bytes);
+      refocus.current = true;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    async function work(): Promise<void> {
       let pictureId: string | null = null;
       if (picture?.kind === "framed" && picture.size !== null) {
         try {
@@ -439,6 +509,7 @@ export function SectionEditor(props: SectionEditorProps) {
           bytes = await deps.crop(drawn, cropOf(picture.framing, stage));
         } catch {
           // A picture the page may not draw cannot be anybody's tile.
+          if (!heard()) return;
           setSending(false);
           refusePicture({ kind: "notImage" });
           refocus.current = true;
@@ -455,6 +526,7 @@ export function SectionEditor(props: SectionEditorProps) {
               return null;
             },
           );
+          if (!heard()) return;
           if (refusal !== null) {
             setSending(false);
             fail(
@@ -467,13 +539,11 @@ export function SectionEditor(props: SectionEditorProps) {
         }
         pictureId = (await deps.upload(bytes)).pictureId;
       }
+      if (!heard()) return;
       const saved = await sendNow(pictureId);
       if (mode === "propose") forgetProposal(deps.keep);
+      attempt.current++;
       onDone(saved);
-    } catch (reason: unknown) {
-      setSending(false);
-      fail(troubleOf(errorOf(reason)), bytes);
-      refocus.current = true;
     }
   };
 
@@ -590,24 +660,43 @@ export function SectionEditor(props: SectionEditorProps) {
     </div>
   );
 
+  // Each refusal under the translation it is about; one the backend named no language for, under them all.
+  const refusedLocales = refused?.field === "names" ? refused.locales : [];
   const translationsField = (
     <fieldset className="section-editor__field translations">
       <legend className="section-editor__label">{strings.admin.translations}</legend>
       <p className="section-editor__help">{strings.admin.translationsHelp}</p>
+      {refused?.field === "names" && refusedLocales.length === 0 && (
+        <p className="section-editor__error" role="alert">
+          {strings.admin.translationsRefused}
+        </p>
+      )}
       <div className="translations__grid">
-        {LOCALES.map((locale) => (
-          <label key={locale} className="translations__field">
-            <span className="translations__language">{LOCALE_NAMES[locale]}</span>
-            <input
-              lang={locale}
-              dir={directionOf(locale)}
-              maxLength={SECTION_NAME_MAX}
-              value={names[locale] ?? ""}
-              placeholder={tidy}
-              onChange={(event) => setNames({ ...names, [locale]: event.target.value })}
-            />
-          </label>
-        ))}
+        {LOCALES.map((locale) => {
+          const bad = badLocales.includes(locale) || refusedLocales.includes(locale);
+          return (
+            <div key={locale} className="translations__cell">
+              <label className="translations__field">
+                <span className="translations__language">{LOCALE_NAMES[locale]}</span>
+                <input
+                  lang={locale}
+                  dir={directionOf(locale)}
+                  maxLength={SECTION_NAME_MAX}
+                  value={names[locale] ?? ""}
+                  placeholder={tidy}
+                  aria-invalid={bad}
+                  aria-describedby={bad ? `${id}-names-${locale}` : undefined}
+                  onChange={(event) => setNames({ ...names, [locale]: event.target.value })}
+                />
+              </label>
+              {bad && (
+                <p id={`${id}-names-${locale}`} className="section-editor__error" role="alert">
+                  {fill(strings.admin.badTranslation, { max: SECTION_NAME_MAX })}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </fieldset>
   );

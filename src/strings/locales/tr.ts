@@ -727,6 +727,9 @@ const tr: Translation = {
     picture: "Görsel",
     translations: "Çeviriler",
     translationsHelp: "Her dil için bir tane. Boş bırakılırsa ad yazıldığı gibi görünür.",
+    badTranslation:
+      "Kabul edilmedi. Çeviride bir harf ya da rakam olmalı, en fazla {max} karakter.",
+    translationsRefused: "Bir çeviri kabul edilmedi. Kontrol edip tekrar deneyin.",
     topicNamesRefusedIn:
       "Kabul edilmedi: {languages}. Her çeviri en fazla {max} karakter olabilir.",
     topicNameRefused: "Bu ad kabul edilmedi. Konu adı en fazla {max} karakter olabilir.",
