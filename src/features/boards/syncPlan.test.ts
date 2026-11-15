@@ -107,6 +107,52 @@ describe("planSync", () => {
     expect(planSync(...args)).toEqual(expected);
   });
 
+  describe("a board deleted for good on another device", () => {
+    const forever = (revision = 4): RemoteBoard[] => [
+      { uid: board, revision, deleted: true, forever: true, fingerprint: null },
+    ];
+    const foreverCases: [string, SyncStep[], Parameters<typeof planSync>][] = [
+      [
+        "goes from here too when nothing changed here since the agreement",
+        [{ kind: "dropLocal", uid: board }],
+        [local(), forever(), synced(3)],
+      ],
+      [
+        "goes from this device's trash too",
+        [{ kind: "dropLocal", uid: board }],
+        [local("aaa", true), forever(), synced(3)],
+      ],
+      [
+        "goes to the trash here when it changed here since",
+        [{ kind: "trashLocal", uid: board, revision: 4 }],
+        [local("bbb"), forever(), synced(3)],
+      ],
+      [
+        "goes to the trash here when this device never agreed about it",
+        [{ kind: "trashLocal", uid: board, revision: 4 }],
+        [local(), forever(), []],
+      ],
+      [
+        "costs nothing once in the trash here for that marker",
+        [],
+        [local("ccc", true), forever(), synced(4, "ccc")],
+      ],
+      [
+        "goes up again once brought back from the trash here",
+        [{ kind: "revive", uid: board, basedOn: 4 }],
+        [local("ddd"), forever(), synced(4, "ccc")],
+      ],
+      [
+        "made forever over the back-up's marker, goes from here as well",
+        [{ kind: "dropLocal", uid: board }],
+        [local("aaa", true), forever(5), synced(4)],
+      ],
+    ];
+    it.each(foreverCases)("%s", (_name, expected, args) => {
+      expect(planSync(...args)).toEqual(expected);
+    });
+  });
+
   it("gives every board its own step", () => {
     const steps = planSync(
       [

@@ -47,12 +47,22 @@ export interface KeptItem {
 }
 
 /** The index names enough for a device to decide whether it needs the board itself. */
+/**
+ * Why a board is gone from the account (CONTRACT, DELETE /boards/{uid}, since
+ * 15.11.2026): `forever` when its owner deleted it for good, so every device
+ * deletes its copy too; `cloud` when only the account's copy went, the back-up
+ * switched off, and the devices keep theirs.
+ */
+export type Removal = "forever" | "cloud";
+
 export interface KeptBoardEntry {
   uid: string;
   revision: number;
   updatedAt: number;
   deviceName: string | null;
   deleted: boolean;
+  /** On a marker only; one from before the account kept it reads as `cloud`. */
+  removal?: Removal;
   fingerprint: string | null;
   title: string;
   itemCount: number;
@@ -86,6 +96,8 @@ export interface KeptBoard {
   updatedAt: number;
   deviceName: string | null;
   deleted: boolean;
+  /** On a marker only, as in the index. */
+  removal?: Removal;
   fingerprint: string | null;
   title: string;
   displayMode: string;
@@ -203,7 +215,9 @@ export async function keepBoard(
   };
 }
 
-/** Leaves a marker rather than nothing, so the other device lets go of the board too. */
-export function forgetBoard(client: ApiClient, uid: string): Promise<void> {
-  return client.request<void>("DELETE", `/boards/${encodeURIComponent(uid)}`);
+/** Leaves a marker rather than nothing, saying why, so the other devices know what to do with theirs. */
+export function forgetBoard(client: ApiClient, uid: string, removal: Removal): Promise<void> {
+  return client.request<void>("DELETE", `/boards/${encodeURIComponent(uid)}`, {
+    query: { removal },
+  });
 }

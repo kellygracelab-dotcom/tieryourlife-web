@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode, useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import type { KeepBoardRequest, KeptBoard } from "../../api/boards";
+import type { KeepBoardRequest, KeptBoard, Removal } from "../../api/boards";
 import { GUEST, SessionContext, type Session } from "../../app/session";
 import type { Account } from "../../lib/account";
 import type { SignInOutcome } from "../../lib/signIn";
@@ -59,6 +59,7 @@ function fakeApi(
   const kept = new Map(theirs.map((board) => [board.uid, board]));
   const keeps: { uid: string; request: KeepBoardRequest }[] = [];
   const forgotten: string[] = [];
+  const removals: Removal[] = [];
   const indexReads: (string | null)[] = [];
   // Answers held back until the test lets them go, in the order they were asked.
   const held = {
@@ -105,10 +106,11 @@ function fakeApi(
       held.keeps.push(() => gate.resolve(answer()));
       return gate.promise;
     },
-    forget: (uid) => {
+    forget: (uid, removal) => {
       if (refuseForget) return Promise.reject(new Error("the account would not"));
       const answer = () => {
         forgotten.push(uid);
+        removals.push(removal);
         const was = kept.get(uid);
         if (was !== undefined) kept.set(uid, { ...was, deleted: true, revision: was.revision + 1 });
       };
@@ -130,6 +132,7 @@ function fakeApi(
     keeps,
     kept,
     forgotten,
+    removals,
     indexReads,
     releaseKeeps: release("keeps"),
     releaseForgets: release("forgets"),
@@ -405,7 +408,7 @@ describe("BoardSyncProvider", () => {
   it("switching the back-up off forgets every page of the account's copies, then turns off", async () => {
     const store = memoryStore();
     const repository = boardsRepository(store);
-    const { api, forgotten, indexReads } = fakeApi(
+    const { api, forgotten, removals, indexReads } = fakeApi(
       [theirBoard("a", "A"), theirBoard("b", "B"), theirBoard("c", "C")],
       { pageSize: 2 },
     );
@@ -421,6 +424,8 @@ describe("BoardSyncProvider", () => {
     await userEvent.click(screen.getByRole("button", { name: "stop" }));
     await waitFor(() => expect(screen.getByTestId("probe")).toHaveTextContent("off"));
     expect(forgotten.sort()).toEqual(["a", "b", "c"]);
+    // Only the account's copies go: every other device keeps its boards.
+    expect(removals).toEqual(["cloud", "cloud", "cloud"]);
     expect(indexReads).toEqual([null, "2"]);
     expect(readBackUp(store, "me")).toBe(false);
     expect(syncRecords(store, "me").all()).toEqual([]);
