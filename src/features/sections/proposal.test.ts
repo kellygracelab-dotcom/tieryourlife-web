@@ -196,18 +196,34 @@ describe("an edit", () => {
     });
   });
 
-  it("sends only what changed, translations left empty dropped", () => {
+  it("sends only what changed, a translation only when its language changed", () => {
     const start = { name: "Street food", names: { uk: "Їжа" }, icon: "restaurant" } as const;
     expect(changesOf(start, { ...start, name: " Street food " })).toEqual({});
     expect(changesOf(start, { ...start, name: "Street eats", icon: "pets" })).toEqual({
       name: "Street eats",
       icon: "pets",
     });
+    // The backend keeps the languages left out (Proxy #141): only the new one goes.
     expect(changesOf(start, { ...start, names: { uk: "Їжа", de: "Streetfood", fr: " " } })).toEqual(
       {
-        names: { uk: "Їжа", de: "Streetfood" },
+        names: { de: "Streetfood" },
       },
     );
+    expect(changesOf(start, { ...start, names: { uk: " Їжа " } })).toEqual({});
+  });
+
+  it("sends a language emptied as an empty text, which takes it away", () => {
+    const start = {
+      name: "Street food",
+      names: { uk: "Їжа", de: "Streetfood" },
+      icon: "restaurant",
+    } as const;
+    expect(changesOf(start, { ...start, names: { uk: "", de: "Strassenessen" } })).toEqual({
+      names: { uk: "", de: "Strassenessen" },
+    });
+    expect(changesOf(start, { ...start, names: { de: "Streetfood" } })).toEqual({
+      names: { uk: "" },
+    });
     expect(translationsOf({ en: "", ja: undefined, ar: " طعام " })).toEqual({ ar: "طعام" });
   });
 });

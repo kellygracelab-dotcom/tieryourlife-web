@@ -955,6 +955,20 @@ describe("the owner's Edit", () => {
     expect(deps.check).not.toHaveBeenCalled();
   });
 
+  it("takes a translation away by sending its language empty, and leaves the others out", async () => {
+    const { send } = edit(
+      stats("anime", {
+        name: "Anime",
+        names: { uk: "Аніме", de: "Anime" },
+        icon: "animation",
+        builtIn: true,
+      }),
+    );
+    await userEvent.clear(screen.getByRole("textbox", { name: "Українська" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(send).toHaveBeenCalledWith({ names: { uk: "" } }));
+  });
+
   it("shows a built-in's own picture once it has one, ready to replace", () => {
     edit(
       stats("anime", {

@@ -11,7 +11,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import type { ReaderRanking } from "../api/community";
 import { errorOf } from "../api/errors";
 import { tierWordsToSend } from "../api/rank";
-import { isOwnList, type BasedOn, type PublishedList } from "../api/types";
+import { isOwnList, type BasedOn, type ListSource, type PublishedList } from "../api/types";
 import { PageTitle } from "../app/pageTitle";
 import { useVisit } from "../app/visitMemory";
 import { useSession } from "../app/session";
@@ -210,6 +210,16 @@ function BasedOnLine({ basedOn }: { basedOn: BasedOn }) {
       {fillNodes(strings.list.basedOn, { title, name: author })}
     </p>
   );
+}
+
+/** Where a house list's cards came from: "Source: {label}", the label leading to its page. */
+function SourceLine({ source }: { source: ListSource }) {
+  const label = (
+    <a href={source.url} target="_blank" rel="noopener noreferrer">
+      {source.label}
+    </a>
+  );
+  return <p className="list-head__based-on">{fillNodes(strings.list.source, { label })}</p>;
 }
 
 interface WhoseSwitchProps {
@@ -768,6 +778,7 @@ function OpenList({
             </div>
           )}
           {list.basedOn != null && <BasedOnLine basedOn={list.basedOn} />}
+          {list.listSource !== undefined && <SourceLine source={list.listSource} />}
         </div>
         {switchShown && (
           <WhoseSwitch

@@ -9,6 +9,7 @@ import {
 import type {
   FeedPage,
   FeedQuery,
+  ListSource,
   ListSummary,
   PublishedItem,
   PublishedList,
@@ -105,25 +106,58 @@ export const itemsOf = (items: unknown): PublishedItem[] =>
 export const pictureOf = (value: unknown): string | null =>
   typeof value === "string" && value.startsWith("https://") ? value : null;
 
-/** A list as the site draws it: its cover and previews only real pictures, a focus only on a cover. */
+/** The longest source label the backend keeps (CONTRACT, MAX_LIST_SOURCE_LABEL). */
+export const LIST_SOURCE_LABEL_MAX = 120;
+/** The longest source address the backend keeps. */
+export const LIST_SOURCE_URL_MAX = 500;
+
+/** Whether an address is one a source may lead to: https, no login, no port, 500 characters at most. */
+export function isSourceUrl(value: string): boolean {
+  if (value.length > LIST_SOURCE_URL_MAX || !value.startsWith("https://")) return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" && url.username === "" && url.password === "" && url.port === ""
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** A house list's source as the site shows it: words to show and an https page, or null. */
+export function listSourceOf(value: unknown): ListSource | null {
+  if (typeof value !== "object" || value === null) return null;
+  const { label, url } = value as Record<string, unknown>;
+  if (typeof label !== "string" || label.trim() === "") return null;
+  if (typeof url !== "string" || !isSourceUrl(url)) return null;
+  return value as ListSource;
+}
+
+/**
+ * A list as the site draws it: its cover and previews only real pictures, a
+ * focus only on a cover, a source only with words and an https page.
+ */
 export const summaryOf = <T extends ListSummary>(list: T): T => {
   const previews = (list.previewImages ?? []).filter((url) => pictureOf(url) !== null);
   const cover = pictureOf(list.coverImageUrl);
   const read = cover === null ? null : focusOf(list.coverFocus);
   const focus = read === null || isCentre(read) ? null : read;
+  const source = listSourceOf(list.listSource);
   if (
     previews.length === list.previewImages?.length &&
     cover === list.coverImageUrl &&
-    (list.coverFocus ?? null) === focus
+    (list.coverFocus ?? null) === focus &&
+    (list.listSource ?? null) === source
   ) {
     return list;
   }
-  const { coverFocus: _sent, ...rest } = list;
+  const { coverFocus: _sent, listSource: _source, ...rest } = list;
   return {
     ...rest,
     previewImages: previews,
     coverImageUrl: cover,
     ...(focus === null ? {} : { coverFocus: focus }),
+    ...(source === null ? {} : { listSource: source }),
   } as T;
 };
 
@@ -171,6 +205,11 @@ export interface PublishRequest {
    * it off, absent keeps the one the same cover had (CONTRACT, Editor's credit).
    */
   coverAttribution?: ManualCredit | null;
+  /**
+   * A house publication only: where its cards came from; null takes it away,
+   * absent keeps the one the list has (CONTRACT, A house list's source).
+   */
+  listSource?: ListSource | null;
   /** An approved topic of the list's section, which files the list under it; null for none. */
   topicId?: string | null;
   /** True takes the list out of its topic; a null topicId alone keeps the old one. */

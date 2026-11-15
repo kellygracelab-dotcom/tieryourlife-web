@@ -373,3 +373,82 @@ describe("the house's send held back by its pictures", () => {
     expect(send.replace).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("the house list's source", () => {
+  const source = { label: "Nix's fruit stream", url: "https://www.twitch.tv/videos/123456789" };
+  const sending = (listSource?: typeof source): HouseSending => ({
+    publish: vi.fn(() => Promise.resolve({ id: "h1", topicId: null, revision: 1 })),
+    replace: vi.fn((id: string) => Promise.resolve({ id, topicId: null, revision: 4 })),
+    load: vi.fn(() =>
+      Promise.resolve(listSource === undefined ? asItStands : { ...asItStands, listSource }),
+    ),
+  });
+  const openSource = () => userEvent.click(screen.getByRole("button", { name: "Source" }));
+  const field = (name: string) => screen.getByRole("textbox", { name });
+  const update = () => userEvent.click(screen.getByRole("button", { name: "Update house list" }));
+
+  it("leaves the list's source out of an update nobody touched it in", async () => {
+    const send = sending(source);
+    bar(send, { listId: "h1" });
+    await update();
+    expect(vi.mocked(send.replace).mock.calls[0]![1]).not.toHaveProperty("listSource");
+  });
+
+  it("starts from the list's own source, and sends the one typed with the next update", async () => {
+    const send = sending(source);
+    bar(send, { listId: "h1" });
+    await openSource();
+    await waitFor(() => expect(field("Shown as")).toHaveValue(source.label));
+    expect(field("Link")).toHaveValue(source.url);
+    await userEvent.clear(field("Shown as"));
+    await userEvent.type(field("Shown as"), "  Nix   live ");
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      screen.getByText("Source “Nix live” goes out with the next publish or update."),
+    ).toBeInTheDocument();
+    await update();
+    expect(vi.mocked(send.replace).mock.calls[0]![1]).toMatchObject({
+      listSource: { label: "Nix live", url: source.url },
+    });
+    await waitFor(() => expect(screen.queryByText(/goes out with the next publish/)).toBeNull());
+  });
+
+  it("takes the source off when both fields are emptied", async () => {
+    const send = sending(source);
+    bar(send, { listId: "h1" });
+    await openSource();
+    await waitFor(() => expect(field("Link")).toHaveValue(source.url));
+    await userEvent.clear(field("Shown as"));
+    await userEvent.clear(field("Link"));
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.getByText("The source comes off with the next update.")).toBeInTheDocument();
+    await update();
+    expect(vi.mocked(send.replace).mock.calls[0]![1]).toMatchObject({ listSource: null });
+  });
+
+  it("refuses a link the backend would, and reads nothing for a list not out yet", async () => {
+    const send = sending();
+    bar(send);
+    await openSource();
+    expect(send.load).not.toHaveBeenCalled();
+    const done = screen.getByRole("button", { name: "Done" });
+    await userEvent.type(field("Shown as"), "Stream");
+    await userEvent.type(field("Link"), "http://example.com");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Use an https link without a login or a port.",
+    );
+    expect(done).toBeDisabled();
+    await userEvent.clear(field("Link"));
+    await userEvent.type(field("Link"), "https://example.com:8443/x");
+    expect(done).toBeDisabled();
+    await userEvent.clear(field("Link"));
+    await userEvent.type(field("Link"), "https://example.com/x");
+    expect(done).toBeEnabled();
+    await userEvent.click(done);
+    await userEvent.click(screen.getByRole("button", { name: "Publish to House lists" }));
+    expect(vi.mocked(send.publish).mock.calls[0]![0]).toMatchObject({
+      listSource: { label: "Stream", url: "https://example.com/x" },
+    });
+  });
+});

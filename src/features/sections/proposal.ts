@@ -175,11 +175,6 @@ export function translationsOf(
   );
 }
 
-const sameTranslations = (a: Record<string, string>, b: Record<string, string>): boolean => {
-  const keys = Object.keys(a);
-  return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key]);
-};
-
 /** The words and icon of a section as the form edits them. */
 export interface SectionWords {
   name: string;
@@ -203,13 +198,32 @@ export function wordsOf(stored: SectionStats, drawn: Pick<Section, "name" | "ico
   };
 }
 
+/**
+ * The translations an edit sends: only the languages that differ from where
+ * it started, a language emptied as "", which takes it away. The backend lays
+ * them over the ones it keeps, so a language left out stays as it is.
+ */
+export function changedTranslations(
+  start: Readonly<Partial<Record<string, string>>>,
+  now: Readonly<Partial<Record<string, string>>>,
+): Record<string, string> | null {
+  const was = translationsOf(start);
+  const is = translationsOf(now);
+  const changed = [...new Set([...Object.keys(was), ...Object.keys(is)])].filter(
+    (locale) => (was[locale] ?? "") !== (is[locale] ?? ""),
+  );
+  return changed.length === 0
+    ? null
+    : Object.fromEntries(changed.map((locale) => [locale, is[locale] ?? ""]));
+}
+
 /** What an edit sends: only the fields that differ from where it started, the picture apart. */
 export function changesOf(start: SectionWords, now: SectionWords): SectionChanges {
   const changes: SectionChanges = {};
   const name = tidySectionName(now.name);
   if (name !== tidySectionName(start.name)) changes.name = name;
-  const names = translationsOf(now.names);
-  if (!sameTranslations(names, translationsOf(start.names))) changes.names = names;
+  const names = changedTranslations(start.names, now.names);
+  if (names !== null) changes.names = names;
   if (now.icon !== start.icon) changes.icon = now.icon;
   return changes;
 }

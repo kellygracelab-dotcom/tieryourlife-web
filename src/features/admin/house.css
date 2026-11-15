@@ -67,3 +67,31 @@
 .house-words__row .translations__language {
   overflow-wrap: anywhere;
 }
+
+/* A house list's source: the words shown after "Source:" and the page they lead to. */
+.house-source {
+  width: min(440px, 100%);
+}
+
+.house-source__note {
+  margin: 12px 0 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.house-source__trouble {
+  margin: 8px 0 0;
+  font: var(--text-small);
+  color: var(--error);
+}
+
+.house-source__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.house-source__fields .dialog__actions {
+  margin-top: 8px;
+}

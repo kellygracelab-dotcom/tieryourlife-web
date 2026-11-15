@@ -40,6 +40,24 @@ describe("summaryOf", () => {
       "coverFocus",
     );
   });
+
+  it("keeps a source with words and an https page, and none of any other shape", () => {
+    const listSource = { label: "Nix's fruit stream", url: "https://www.twitch.tv/videos/1" };
+    expect(summaryOf({ ...list, listSource }).listSource).toEqual(listSource);
+    for (const wrong of [
+      { label: " ", url: listSource.url },
+      { label: "Nix", url: "http://www.twitch.tv/videos/1" },
+      { label: "Nix", url: "javascript:alert(1)" },
+      { label: "Nix", url: "https://me:pw@twitch.tv/" },
+      { label: "Nix", url: "https://twitch.tv:8443/" },
+      { label: 3, url: listSource.url },
+      "Nix",
+    ]) {
+      expect(
+        summaryOf({ ...list, listSource: wrong as unknown as typeof listSource }),
+      ).not.toHaveProperty("listSource");
+    }
+  });
 });
 
 describe("lists", () => {

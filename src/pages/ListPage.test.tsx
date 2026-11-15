@@ -982,6 +982,29 @@ describe("ListPage based on", () => {
   });
 });
 
+describe("ListPage source", () => {
+  it("says where a house list's cards came from, linked to the page", async () => {
+    mocks.loadList.mockResolvedValue({
+      ...list,
+      listSource: { label: "Nix's fruit stream", url: "https://www.twitch.tv/videos/123456789" },
+    });
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByText(/^Source:/)).toHaveTextContent("Source: Nix's fruit stream");
+    const link = screen.getByRole("link", { name: "Nix's fruit stream" });
+    expect(link).toHaveAttribute("href", "https://www.twitch.tv/videos/123456789");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("says nothing of a source on a list without one", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    open();
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByText(/^Source:/)).toBeNull();
+  });
+});
+
 describe("ListPage for its author", () => {
   const author: Session["account"] = {
     kind: "signedIn",

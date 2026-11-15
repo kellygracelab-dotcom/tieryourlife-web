@@ -186,6 +186,19 @@ describe("listPayload", () => {
     assert.equal(listPayload("abc12345", { basedOn: { title: "no id" } }).basedOn, null);
   });
 
+  it("carries a house list's source, and none of another shape", () => {
+    const listSource = { label: "Nix's fruit stream", url: "https://www.twitch.tv/videos/1" };
+    assert.deepEqual(
+      listPayload("abc12345", { listSource: { ...listSource, extra: 1 } }).listSource,
+      listSource,
+    );
+    assert.equal("listSource" in listPayload("abc12345", {}), false);
+    assert.equal(
+      "listSource" in listPayload("abc12345", { listSource: { label: "x", url: "http://a" } }),
+      false,
+    );
+  });
+
   it("carries how many readers' rankings the list keeps, which its menu says", () => {
     assert.equal(listPayload("abc12345", { takeCount: 40, rankingCount: 3 }).rankingCount, 3);
     assert.equal(listPayload("abc12345", {}).rankingCount, 0);
