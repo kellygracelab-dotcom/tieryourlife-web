@@ -208,7 +208,10 @@
 }
 
 .tier__band,
-.tier__items,
+.tier__items {
+  position: relative;
+}
+
 .tier__place {
   position: absolute;
   inset: 0;
