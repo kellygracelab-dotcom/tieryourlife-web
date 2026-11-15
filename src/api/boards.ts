@@ -77,7 +77,7 @@ export interface KeptBoardEntry {
  * answers by card index, and which tiers the cards came from.
  */
 export interface SyncedPlay {
-  kind: "swiss" | "hill" | "bracket";
+  kind: "swiss" | "hill" | "bracket" | "smart";
   count: number;
   seed: number;
   refine: boolean;
@@ -87,6 +87,11 @@ export interface SyncedPlay {
   /** The Swiss round reached; 0 for the other games. */
   round: number;
   startedAt: number;
+  /**
+   * Smart only, and always there: the tiers it sorts the cards into, 1 to
+   * count, fixed when it starts as the seed is (Proxy #154).
+   */
+  tiers?: number;
   /** The tiers the cards came from, the pool's uid among them; absent for the whole board. */
   scope?: string[];
   /** Present, and true, only with exactly one tier in scope: the game only orders that tier. */
@@ -119,7 +124,8 @@ export interface KeptBoard {
   takenFrom?: string | null;
   origin?: BoardOrigin | null;
   rankingChoice?: RankingChoice | null;
-  play?: SyncedPlay | null;
+  /** A game of a kind this site does not know goes back as it came. */
+  play?: SyncedPlay | Readonly<Record<string, unknown>> | null;
   tiers: KeptTier[];
   items: KeptItem[];
 }
@@ -146,7 +152,8 @@ export interface KeepBoardRequest {
   takenFrom?: string | null;
   origin?: BoardOrigin | null;
   rankingChoice?: RankingChoice | null;
-  play?: SyncedPlay | null;
+  /** A game of a kind this site does not know goes back as it came. */
+  play?: SyncedPlay | Readonly<Record<string, unknown>> | null;
   tiers: KeptTier[];
   items: KeptItem[];
 }

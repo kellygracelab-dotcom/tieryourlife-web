@@ -1094,6 +1094,9 @@ const de: Translation = {
     cardsFrom: { one: "{n} Karte aus „{title}“", other: "{n} Karten aus „{title}“" },
     chooseCards: "Karten wählen",
     game: "Spiel",
+    smart: "Clevere Auswahl",
+    smartLine:
+      "Fragt nur nach Karten, die noch die Stufe wechseln könnten. Fast dieselben Stufen mit viel weniger Duellen.",
     swiss: "Keiner fliegt raus",
     swissLine: "Alle spielen jede Runde. Langsamer, am besten, um die Stufen zu füllen.",
     hill: "König des Hügels",

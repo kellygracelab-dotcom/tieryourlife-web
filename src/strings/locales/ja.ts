@@ -1054,6 +1054,9 @@ const ja: Translation = {
     cardsFrom: { other: "「{title}」のカード {n} 枚" },
     chooseCards: "カードを選ぶ",
     game: "ゲーム",
+    smart: "スマート",
+    smartLine:
+      "まだティアが変わりうるカードだけを尋ねます。ずっと少ない対戦で、ほぼ同じティアになります。",
     swiss: "負けても残る",
     swissLine: "全員が毎ラウンド対戦します。時間はかかりますが、ティアを埋めるのに最適です。",
     hill: "勝ち抜き戦",

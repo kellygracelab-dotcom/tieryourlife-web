@@ -19,6 +19,8 @@ import vectorsText from "./play-vectors.json?raw";
  * The app's docs/play-vectors.json, copied byte for byte: the app's
  * SharedVectorsTest checks the same file. When the app regenerates it, copy
  * it again; a vector that fails here is a tier the two platforms disagree on.
+ * Version 2 adds the smart games, made here: a smart case's tierCount is also
+ * the tiers its spec carries.
  */
 interface Vectors {
   version: number;
@@ -56,11 +58,12 @@ interface GameCase {
 
 const vectors = JSON.parse(vectorsText) as Vectors;
 
-const specOf = ({ kind, count, seed, refine }: GameCase): GameSpec => ({
+const specOf = ({ kind, count, seed, refine, tierCount }: GameCase): GameSpec => ({
   kind,
   count,
   seed,
   refine,
+  ...(kind === "smart" ? { tiers: tierCount } : {}),
 });
 
 /** Plays a case to the end with its answer rule, as the app's SharedVectors.play does. */
@@ -82,7 +85,7 @@ function play(game: GameCase): Outcome[] {
 
 describe("the shared vectors", () => {
   it("are the version this engine was ported against, with every kind of vector it checks", () => {
-    expect(vectors.version).toBe(1);
+    expect(vectors.version).toBe(2);
     expect(Object.keys(vectors)).toEqual([
       "version",
       "mulberry32",

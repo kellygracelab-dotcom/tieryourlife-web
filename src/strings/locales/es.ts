@@ -1116,6 +1116,9 @@ const es: Translation = {
     },
     chooseCards: "Elegir tarjetas",
     game: "Juego",
+    smart: "Elección inteligente",
+    smartLine:
+      "Solo pregunta por las tarjetas que aún podrían cambiar de nivel. Casi los mismos niveles con muchos menos duelos.",
     swiss: "Nadie queda fuera",
     swissLine: "Todas juegan cada ronda. Más lento, lo mejor para llenar los niveles.",
     hill: "Rey de la colina",

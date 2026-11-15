@@ -88,7 +88,7 @@ function displayModeOf(raw: unknown): DisplayMode {
   return DISPLAY_MODES.find((mode) => mode === raw) ?? "WRAP";
 }
 
-const KINDS: readonly string[] = ["swiss", "hill", "bracket"];
+const KINDS: readonly string[] = ["smart", "swiss", "hill", "bracket"];
 const isInt = (value: unknown): value is number => Number.isInteger(value);
 
 /**
@@ -99,7 +99,8 @@ const isInt = (value: unknown): value is number => Number.isInteger(value);
 export function playOf(raw: unknown): SyncedPlay | null {
   if (raw === null || typeof raw !== "object") return null;
   const play = raw as Record<string, unknown>;
-  const { kind, count, seed, refine, ids, history, round, startedAt, scope, keepTier } = play;
+  const { kind, count, seed, refine, ids, history, round, startedAt, tiers, scope, keepTier } =
+    play;
   if (typeof kind !== "string" || !KINDS.includes(kind)) return null;
   if (
     !isInt(count) ||
@@ -110,6 +111,9 @@ export function playOf(raw: unknown): SyncedPlay | null {
   )
     return null;
   if (!isInt(round) || typeof startedAt !== "number") return null;
+  // Smart sorts into the tiers fixed at its start: without them it is no game (Proxy #154).
+  const smart = kind === "smart";
+  if (smart && (!isInt(tiers) || tiers < 1 || tiers > count)) return null;
   if (
     !Array.isArray(ids) ||
     ids.length !== count ||
@@ -134,7 +138,7 @@ export function playOf(raw: unknown): SyncedPlay | null {
   ) {
     return null;
   }
-  const tiers =
+  const rows =
     Array.isArray(scope) && scope.length > 0 && scope.every((uid) => typeof uid === "string")
       ? (scope as string[])
       : null;
@@ -147,11 +151,22 @@ export function playOf(raw: unknown): SyncedPlay | null {
     history: history as SyncedPlay["history"],
     round,
     startedAt,
-    ...(tiers === null ? {} : { scope: tiers }),
-    ...(tiers !== null && tiers.length === 1 && keepTier === true
-      ? { keepTier: true as const }
-      : {}),
+    ...(smart ? { tiers: tiers as number } : {}),
+    ...(rows === null ? {} : { scope: rows }),
+    ...(rows !== null && rows.length === 1 && keepTier === true ? { keepTier: true as const } : {}),
   };
+}
+
+/**
+ * A game of a kind this site does not know, a newer app's, kept whole so the
+ * board goes back with it; null for none, or for a kind known here.
+ */
+function otherPlayOf(raw: unknown): Readonly<Record<string, unknown>> | null {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const { kind } = raw as Record<string, unknown>;
+  return typeof kind === "string" && !KINDS.includes(kind)
+    ? (raw as Readonly<Record<string, unknown>>)
+    : null;
 }
 
 /** A house board's credit for its cover, as kept: the cover it is for, and the credit or null. */
@@ -237,6 +252,10 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
     .map((tier, index) => tierOf(tier, index))
     .filter((tier): tier is BoardTier => tier !== null);
   if (tiers.length === 0) return null;
+  // The account sends it as play; this device keeps it apart as otherPlay.
+  const play = playOf(source.play);
+  const otherPlay =
+    play === null ? (otherPlayOf(source.play) ?? otherPlayOf(source.otherPlay)) : null;
   if (!tiers.some((tier) => tier.isPool)) {
     tiers.push({
       uid: `${uid}:pool`,
@@ -303,7 +322,8 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
     ...(source.topicOff === true ? { topicOff: true } : {}),
     ...(source.heldForReview === true ? { heldForReview: true } : {}),
     anonymous: source.anonymous === true,
-    play: playOf(source.play),
+    play,
+    ...(otherPlay === null ? {} : { otherPlay }),
     ...(coverCredit === null ? {} : { coverCredit }),
   };
 }

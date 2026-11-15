@@ -132,7 +132,7 @@ const request = (
   ...(board.takenFrom === null ? {} : { takenFrom: board.takenFrom }),
   ...(board.origin ? { origin: board.origin } : {}),
   ...(board.rankingChoice ? { rankingChoice: board.rankingChoice } : {}),
-  play: board.play,
+  play: board.play ?? board.otherPlay ?? null,
   tiers: board.tiers.map((tier) => ({
     uid: tier.uid,
     position: tier.position,
@@ -719,6 +719,8 @@ function renamed(board: Board, from: string | null, nextUid: NextUid): Board {
   return {
     ...board,
     uid,
+    // A game this site cannot read cannot be moved to the copy's uids.
+    otherPlay: undefined,
     play:
       board.play === null
         ? null

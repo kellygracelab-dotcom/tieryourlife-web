@@ -9,8 +9,9 @@ import { gameProgress, type Resume } from "./game";
 import { estimateText, gameName, startedText } from "./labels";
 import { PlaySheet, SheetCancel } from "./PlaySheet";
 
-/** The three games in the picker's order, losers stay first, with the app's icons. */
+/** The games in the picker's order, smart first, with the app's icons. */
 const GAMES: readonly { kind: GameKind; icon: IconName; line: () => string }[] = [
+  { kind: "smart", icon: "auto_awesome", line: () => strings.play.smartLine },
   { kind: "swiss", icon: "autorenew", line: () => strings.play.swissLine },
   { kind: "hill", icon: "crown", line: () => strings.play.hillLine },
   { kind: "bracket", icon: "account_tree", line: () => strings.play.bracketLine },

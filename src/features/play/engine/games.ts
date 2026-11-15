@@ -1,14 +1,16 @@
 import { at, increment, zeros } from "./arrays";
 import { shuffled } from "./mulberry32";
 import { standing, type Duel, type Standing } from "./strength";
+import { edgePairs, SMART_OPENING, tierOfCards } from "./smart";
 import { isDashed, tiers } from "./tiers";
 
 /**
  * - hill: the winner stays and meets the next card.
  * - bracket: pairs; winners go on until one is left.
  * - swiss: Swiss rounds; a lost duel knocks nobody out, cards with equal records meet.
+ * - smart: swiss's first rounds, then only pairs across the tiers' edges, until they stop moving.
  */
-export type GameKind = "hill" | "bracket" | "swiss";
+export type GameKind = "hill" | "bracket" | "swiss" | "smart";
 
 /** What a game is: which, over how many cards, from which shuffle, and whether close calls are asked at the end. */
 export interface GameSpec {
@@ -18,6 +20,11 @@ export interface GameSpec {
   /** A signed 32-bit integer. */
   seed: number;
   refine: boolean;
+  /**
+   * Smart only: the tiers the cards are cut into, fixed when the game starts,
+   * so the next pair never hangs on the board (the count itself to order one tier).
+   */
+  tiers?: number;
 }
 
 /** Two cards to show, first on the left. */
@@ -121,6 +128,8 @@ export function mainGame(spec: GameSpec, history: readonly Outcome[]): MainGame 
       return bracketPairs(spec, history);
     case "swiss":
       return swissPairs(spec, history);
+    case "smart":
+      return smartPairs(spec, history);
   }
 }
 
@@ -181,6 +190,91 @@ function swissPairs(spec: GameSpec, history: readonly Outcome[]): MainGame {
     used += answered;
   }
   return { used, next: null, planned: used };
+}
+
+/** The most duels smart asks: what Losers stay's rounds would, never more. */
+export const smartLimit = (count: number): number => swissRounds(count) * Math.floor(count / 2);
+
+/**
+ * Swiss's opening rounds, then batches of `edgePairs` from the standing so
+ * far, each batch fixed when it starts. The game ends when a batch finds no
+ * pair, when a batch's answers move no card to another tier, or at
+ * `smartLimit`, the last batch cut short there.
+ */
+function smartPairs(spec: GameSpec, history: readonly Outcome[]): MainGame {
+  const { count } = spec;
+  const tierCount = Math.max(1, Math.min(spec.tiers ?? 1, count));
+  const limit = smartLimit(count);
+  const opening = SMART_OPENING;
+  const key = `${count}:${tierCount}`;
+  let state = resumed(key, history);
+  if (state === null) {
+    let used = 0;
+    for (let round = 0; round < opening; round++) {
+      const pairs = swissRound(count, history.slice(0, used));
+      if (pairs.length === 0) break;
+      const answered = Math.min(pairs.length, history.length - used);
+      const next = pairs[answered];
+      if (next !== undefined) {
+        const rest = (opening - round - 1) * Math.floor(count / 2);
+        const planned = Math.min(limit, used + pairs.length + rest);
+        return { used: used + answered, next, planned, round: round + 1 };
+      }
+      used += answered;
+    }
+    const scored = standing(count, duels(history.slice(0, used)));
+    state = { used, round: opening, scored, placed: tierOfCards(scored, tierCount) };
+  }
+  let { used, round, scored, placed } = state;
+  while (used < limit) {
+    remember(key, history, { used, round, scored, placed });
+    round++;
+    const met = meetings(count, history.slice(0, used));
+    const pairs = edgePairs(scored, tierCount, met).slice(0, limit - used);
+    if (pairs.length === 0) break;
+    const answered = Math.min(pairs.length, history.length - used);
+    const next = pairs[answered];
+    if (next !== undefined) {
+      const planned = Math.min(limit, used + 2 * pairs.length);
+      return { used: used + answered, next, planned, round };
+    }
+    used += answered;
+    scored = standing(count, duels(history.slice(0, used)));
+    const now = tierOfCards(scored, tierCount);
+    if (now.every((tier, card) => tier === placed[card])) break;
+    placed = now;
+  }
+  return { used, next: null, planned: used };
+}
+
+/** Where a smart game stood when a batch began: the next call goes on from there. */
+interface SmartState {
+  used: number;
+  round: number;
+  scored: Standing;
+  placed: number[];
+}
+
+/**
+ * The last batch start worked out, so each answer costs one batch rather than
+ * the whole game again. Only a speed-up: a history that does not begin with
+ * the remembered one starts over, and both reach the same pairs.
+ */
+let smartMemo: { key: string; prefix: Outcome[]; state: SmartState } | null = null;
+
+function resumed(key: string, history: readonly Outcome[]): SmartState | null {
+  const memo = smartMemo;
+  if (memo === null || memo.key !== key || memo.prefix.length > history.length) return null;
+  for (let i = 0; i < memo.prefix.length; i++) {
+    const was = at(memo.prefix, i);
+    const now = at(history, i);
+    if (was[0] !== now[0] || was[1] !== now[1] || was[2] !== now[2]) return null;
+  }
+  return memo.state;
+}
+
+function remember(key: string, history: readonly Outcome[], state: SmartState): void {
+  smartMemo = { key, prefix: history.slice(0, state.used), state };
 }
 
 /** Whether two cards were ever shown together, skips included. */

@@ -75,6 +75,7 @@ export function fingerprintText(board: Board): string {
   if (board.anonymous) text += encode(["anonymous"]);
   // A game in progress last of all, as its canonical JSON (canonicalPlay).
   if (board.play !== null) text += encode([canonicalPlay(board.play)]);
+  else if (board.otherPlay !== undefined) text += encode([canonicalOtherPlay(board.otherPlay)]);
   // The cover's focus after everything, and only when it has one, so every
   // board without one keeps its fingerprint; whole numbers, so "1" and "1.0"
   // never part the phone and the site (agreed with Android, 15.11.2026).
@@ -107,7 +108,9 @@ export function fingerprintText(board: Board): string {
 /**
  * A saved game as one line of JSON, the same on the phone: no spaces, the
  * keys in this order, scope only when there is one and keepTier only when
- * true, a skip's winner as null.
+ * true, a skip's winner as null. Smart's tiers stay out, as on the phones
+ * already out there, whose list of keys has none: it is fixed when the game
+ * starts, with the seed and startedAt that are in.
  */
 export function canonicalPlay(play: SyncedPlay): string {
   return JSON.stringify({
@@ -122,6 +125,25 @@ export function canonicalPlay(play: SyncedPlay): string {
     ...(play.scope === undefined || play.scope.length === 0 ? {} : { scope: play.scope }),
     ...(play.keepTier === true ? { keepTier: true } : {}),
   });
+}
+
+const PLAY_KEYS = ["kind", "count", "seed", "refine", "ids", "history", "round", "startedAt"];
+
+/**
+ * A game of a kind this site does not know, as the phone writes it: the same
+ * keys in the same order taken from what came, one absent or null left out,
+ * scope only as a list with something in it, keepTier only when true. A value
+ * goes as it came, but for a number such as 1.0, which the browser has read
+ * as 1 already.
+ */
+export function canonicalOtherPlay(play: Readonly<Record<string, unknown>>): string {
+  const kept: Record<string, unknown> = {};
+  for (const key of PLAY_KEYS) {
+    if (play[key] !== undefined && play[key] !== null) kept[key] = play[key];
+  }
+  if (Array.isArray(play.scope) && play.scope.length > 0) kept.scope = play.scope;
+  if (play.keepTier === true) kept.keepTier = true;
+  return JSON.stringify(kept);
 }
 
 const hex = (bytes: ArrayBuffer): string =>
