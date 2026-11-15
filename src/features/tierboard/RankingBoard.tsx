@@ -968,7 +968,11 @@ export function RankingBoard({
   const pointerDownFor = drag.onPointerDown;
   const dragNow = drag.current;
   const poolDropAt = dropTarget?.kind === "pool" ? dropTarget.index : null;
-  const poolLanding = dropTarget !== null;
+  // A card carried leaves its row once, as it is lifted, and the rows stand
+  // still after that. Taken out over a tier and put back between two, it
+  // moved every card after it at each crossing, and the pool flashed
+  // (Danylo, 15.11.2026). Over the pool it stands where it would land.
+  const poolLanding = lifted !== null;
   const poolTiles = useMemo(
     () =>
       carried(shown, lifted, poolDropAt, poolLanding).map((item) => (
@@ -1159,7 +1163,7 @@ export function RankingBoard({
               dropAt={
                 dropTarget?.kind === "tier" && dropTarget.tier === index ? dropTarget.index : null
               }
-              landing={dropTarget !== null}
+              landing={lifted !== null}
               pointerDownFor={drag.onPointerDown}
               lifted={lifted}
               locked={locked}
