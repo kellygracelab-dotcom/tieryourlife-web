@@ -216,6 +216,7 @@ ${card.imageUrl ?? ""}`;
       list.coverImageUrl === null ? null : (copies.get(list.coverImageUrl)?.pictureId ?? null),
     coverImageUrls: cover,
     coverImageUrl: cover.length === 1 ? (cover[0] ?? null) : null,
+    ...(cover.length === 1 && list.coverFocus !== undefined ? { coverFocus: list.coverFocus } : {}),
     // In step with the list, unless it carries changes the old editor had not sent.
     publishedEditedAt: kept === null ? board.editedAt : board.editedAt - 1,
   };

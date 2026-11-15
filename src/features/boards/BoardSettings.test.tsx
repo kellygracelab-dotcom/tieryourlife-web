@@ -5,7 +5,7 @@ vi.mock("../../lib/firebase", async (original) => ({
   getFirebaseAuth: () => actionAuth,
 }));
 import { boardView } from "./view";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
@@ -1195,6 +1195,37 @@ describe("BoardSettings: cover", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reset" }));
     expect(held.coverImageUrls).toEqual([]);
     expect(held.editedAt).toBe(500);
+  });
+
+  // Cover focus (15.11.2026): which part of a cover of one picture shows.
+  it("adjusts where a cover of one picture is looked at, and keeps it on Done", async () => {
+    show(filmBoard(), signedIn);
+    await userEvent.click(screen.getByRole("button", { name: /Cover/ }));
+    expect(screen.queryByRole("button", { name: "Adjust position" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Use The Witch on the cover" }));
+    await userEvent.click(screen.getByRole("button", { name: "Adjust position" }));
+    const dialog = screen.getByRole("dialog", { name: "Adjust cover" });
+    const done = within(dialog).getByRole("button", { name: "Done" });
+    // Nothing to keep until the picture's size is known.
+    expect(done).toBeDisabled();
+    const picture = dialog.querySelector<HTMLImageElement>(".cover-adjust__frame img")!;
+    Object.defineProperty(picture, "naturalWidth", { value: 1600 });
+    Object.defineProperty(picture, "naturalHeight", { value: 900 });
+    fireEvent.load(picture);
+    fireEvent.change(within(dialog).getByRole("slider", { name: "Zoom" }), {
+      target: { value: "2" },
+    });
+    await userEvent.click(done);
+    expect(screen.queryByRole("dialog", { name: "Adjust cover" })).not.toBeInTheDocument();
+    expect(held.coverFocus).toEqual({ x: 0.5, y: 0.5, zoom: 2 });
+    // ✕ leaves it as it was.
+    await userEvent.click(screen.getByRole("button", { name: "Adjust position" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(held.coverFocus).toEqual({ x: 0.5, y: 0.5, zoom: 2 });
+    // Another picture starts in the middle.
+    await userEvent.click(screen.getByRole("button", { name: "Use Ex Machina on the cover" }));
+    await userEvent.click(screen.getByRole("button", { name: "Use The Witch on the cover" }));
+    expect(held).not.toHaveProperty("coverFocus");
   });
 
   it("says when no card has a picture", async () => {

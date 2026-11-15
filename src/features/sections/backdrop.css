@@ -1,0 +1,7 @@
+/* A section's picture with a focus, where its background would be: under the scrim and the name. */
+.section-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+}

@@ -30,6 +30,8 @@ import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import { holds } from "../../lib/locale";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
+import { CoverAdjust } from "../../ui/CoverAdjust";
+import { FocusedPicture } from "../../ui/FocusedPicture";
 import { Icon } from "../../ui/Icon";
 import { onRadioKeys, radioTabIndex } from "../../ui/radioKeys";
 import { useModal } from "../../ui/useModal";
@@ -43,6 +45,7 @@ import {
   MAX_RANKED_TIERS,
   cleanTopicName,
   coverCreditOf,
+  coverFocusOf,
   DISPLAY_MODES,
   isBehind,
   isOut,
@@ -53,6 +56,7 @@ import {
   setAnonymous,
   setCover,
   setCoverCredit,
+  setCoverFocus,
   setHeld,
   setPublished,
   setRanking,
@@ -671,6 +675,9 @@ export function BoardSettings({
       pictures.set(card.imageUrl, card.title);
   }
   const chosen = board.coverImageUrls;
+  const focus = coverFocusOf(board);
+  // Adjust cover, over the sheet: opened by Adjust position, and by itself once a picture of one's own is the cover.
+  const [adjusting, setAdjusting] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const owner = signedIn ? account.uid : null;
   const [transfer, setTransfer] = useState<{
@@ -706,6 +713,7 @@ export function BoardSettings({
         coverPictureId: picture.pictureId,
       });
       setTransfer(null);
+      setAdjusting(true);
     } catch (failure) {
       if (!task.signal.aborted)
         setTransfer({
@@ -1198,7 +1206,12 @@ export function BoardSettings({
                 thumbnail === null ? (
                   <span className="sheet-row__thumb sheet-row__thumb--none" />
                 ) : (
-                  <MediaImage className="sheet-row__thumb" src={thumbnail} alt="" loading="lazy" />
+                  <FocusedPicture
+                    className="sheet-row__thumb"
+                    src={thumbnail}
+                    focus={chosen.length === 1 ? focus : null}
+                    loading="lazy"
+                  />
                 )
               }
               title={strings.boards.cover}
@@ -1216,11 +1229,25 @@ export function BoardSettings({
                       : fill(strings.boards.coverCollage, { n: chosen.length })}
                 </p>
                 {chosen.length === 1 && chosen[0] && (
-                  <MediaImage
-                    className="board-settings__cover-preview"
-                    src={chosen[0]}
-                    alt={strings.boards.cover}
-                  />
+                  <>
+                    <span className="board-settings__cover-frame">
+                      <FocusedPicture src={chosen[0]} focus={focus} />
+                    </span>
+                    <Button icon="zoom_in" disabled={uploading} onClick={() => setAdjusting(true)}>
+                      {strings.cover.adjustPosition}
+                    </Button>
+                    {adjusting && (
+                      <CoverAdjust
+                        src={chosen[0]}
+                        focus={focus}
+                        onCancel={() => setAdjusting(false)}
+                        onDone={(placed) => {
+                          keep(setCoverFocus(latest(), placed, now()));
+                          setAdjusting(false);
+                        }}
+                      />
+                    )}
+                  </>
                 )}
                 {house && chosen.length === 1 && (
                   <CoverCreditPanel

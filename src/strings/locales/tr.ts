@@ -918,6 +918,21 @@ const tr: Translation = {
     back: "Geri git",
     movesTo: "Onaylanınca {name} bölümüne taşınacak",
   },
+  // Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md).
+  cover: {
+    adjust: "Kapağı ayarla",
+    zoom: "Yakınlaştırma",
+    preview: "Önizleme",
+    feed: "Akış",
+    pageHeader: "Sayfa başlığı",
+    reset: "Sıfırla",
+    done: "Bitti",
+    cancel: "İptal",
+    adjustPosition: "Konumu ayarla",
+    frame: "Çerçeve içinde taşınıp yakınlaştırılacak kapak",
+    frameHelp:
+      "Taşımak için sürükleyin; yakınlaştırmak için iki parmakla veya tekerlekle kaydırın. Ok tuşları taşır, + ve − yakınlaştırır.",
+  },
   propose: {
     title: "Bölüm öner",
     intro:

@@ -210,6 +210,38 @@ describe("the fingerprint", () => {
     expect(anonymous).not.toBe(plain);
   });
 
+  // CONTRACT, Cover focus: a client that sends the focus puts it in the fingerprint.
+  it("adds the cover's focus at the very end, in whole numbers, and only away from the middle", () => {
+    const covered = { coverImageUrl: "https://c", coverImageUrls: ["https://c"] };
+    const plain = fingerprintText(board(covered));
+    expect(fingerprintText(board({ ...covered, coverFocus: { x: 0.5, y: 0.5, zoom: 1 } }))).toBe(
+      plain,
+    );
+    // A collage has no focus to draw, so none to compare.
+    expect(
+      fingerprintText(
+        board({
+          coverImageUrls: ["https://c", "https://d"],
+          coverFocus: { x: 0.3, y: 0.15, zoom: 2 },
+        }),
+      ),
+    ).toBe(fingerprintText(board({ coverImageUrls: ["https://c", "https://d"] })));
+    // The vector agreed with the app.
+    expect(
+      fingerprintText(
+        board({
+          uid: "u",
+          title: "T",
+          tiers: [],
+          items: [],
+          ...covered,
+          play: null,
+          coverFocus: { x: 0.3, y: 0.15, zoom: 2 },
+        }),
+      ),
+    ).toBe("1:u|1:T|4:WRAP|~|9:https://c|~|~|~|10:coverFocus|4:3000|4:1500|3:200|");
+  });
+
   it("writes the anonymous field in the phone's bytes, after everything else", () => {
     // The vector agreed with the app: a board with no tiers, its other fields absent or empty.
     expect(

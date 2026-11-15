@@ -956,6 +956,21 @@ const ptBR: Translation = {
     back: "Voltar",
     movesTo: "Vai para {name} quando for aprovada",
   },
+  // Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md).
+  cover: {
+    adjust: "Ajustar capa",
+    zoom: "Zoom",
+    preview: "Prévia",
+    feed: "Feed",
+    pageHeader: "Cabeçalho da página",
+    reset: "Redefinir",
+    done: "Concluído",
+    cancel: "Cancelar",
+    adjustPosition: "Ajustar posição",
+    frame: "A capa, para mover e ampliar dentro da moldura",
+    frameHelp:
+      "Arraste para mover; faça pinça ou role para ampliar. As setas movem, + e − ampliam.",
+  },
   propose: {
     title: "Propor uma seção",
     intro:

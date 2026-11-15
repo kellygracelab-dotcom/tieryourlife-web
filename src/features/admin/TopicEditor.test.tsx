@@ -151,6 +151,29 @@ describe("TopicEditor", () => {
     expect(send).toHaveBeenCalledWith({ pictureId: null });
   });
 
+  // Cover focus (15.11.2026): which part of the kept picture a topic shows.
+  it("adjusts where the kept picture is looked at, and sends only that", async () => {
+    const { send } = edit(
+      topic({
+        pictureUrl: "https://pictures.test/indies.webp",
+        pictureFocus: { x: 0.5, y: 0.2, zoom: 1 },
+      }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Adjust position" }));
+    const dialog = screen.getByRole("dialog", { name: "Adjust cover" });
+    const picture = dialog.querySelector<HTMLImageElement>(".cover-adjust__frame img")!;
+    Object.defineProperty(picture, "naturalWidth", { value: 1600 });
+    Object.defineProperty(picture, "naturalHeight", { value: 1000 });
+    fireEvent.load(picture);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reset" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("dialog", { name: "Adjust cover" })).toBeNull();
+    // Done closes Adjust cover alone; the topic's form stays open to be saved.
+    expect(screen.getByRole("dialog", { name: "Edit topic" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(send).toHaveBeenCalledWith({ pictureFocus: null });
+  });
+
   it("replaces the picture and the name in one save", async () => {
     const { send } = edit(topic());
     pick();

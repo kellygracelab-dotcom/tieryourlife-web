@@ -946,6 +946,21 @@ const de: Translation = {
     back: "Zurück",
     movesTo: "Zieht nach {name}, sobald er angenommen ist",
   },
+  // Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md).
+  cover: {
+    adjust: "Titelbild anpassen",
+    zoom: "Zoom",
+    preview: "Vorschau",
+    feed: "Feed",
+    pageHeader: "Seitenkopf",
+    reset: "Zurücksetzen",
+    done: "Fertig",
+    cancel: "Abbrechen",
+    adjustPosition: "Position anpassen",
+    frame: "Das Titelbild, im Rahmen zu verschieben und zu zoomen",
+    frameHelp:
+      "Ziehen zum Verschieben, mit zwei Fingern oder dem Mausrad zoomen. Die Pfeiltasten verschieben, + und − zoomen.",
+  },
   propose: {
     title: "Rubrik vorschlagen",
     intro:

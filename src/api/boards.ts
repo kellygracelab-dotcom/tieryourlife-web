@@ -1,3 +1,4 @@
+import type { CoverFocus } from "./coverFocus";
 import type { ApiClient } from "./client";
 import type { PictureAttribution } from "./pictureAttribution";
 
@@ -106,6 +107,8 @@ export interface KeptBoard {
   coverImageUrls: string[];
   /** The cover as one of the person's own photos, by id; absent from an older account. */
   coverPictureId?: string | null;
+  /** Which part of the single cover shows; absent for the middle (CONTRACT, Cover focus). */
+  coverFocus?: CoverFocus | null;
   authorName: string | null;
   publishedId: string | null;
   deletedAt: number | null;
@@ -132,6 +135,8 @@ export interface KeepBoardRequest {
   coverImageUrls: string[];
   /** Always said: null when the cover is not an own photo, so the account drops an old one. */
   coverPictureId: string | null;
+  /** Always said: null for the middle, a collage or no cover, so the account drops an old one. */
+  coverFocus: CoverFocus | null;
   authorName: string | null;
   publishedId: string | null;
   deletedAt: number | null;

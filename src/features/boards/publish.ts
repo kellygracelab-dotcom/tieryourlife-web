@@ -4,6 +4,7 @@ import type { PublishedList } from "../../api/types";
 import type { Draft } from "../editor/model";
 import {
   BOARD_LIMITS,
+  coverFocusOf,
   creditOf,
   itemsIn,
   liveItems,
@@ -48,25 +49,35 @@ const isPrivatePicture = (url: string): boolean => /\/o\/users%2F/i.test(url);
  */
 export function coverOf(
   board: Board,
-): Pick<PublishRequest, "coverImageUrl" | "coverPictureId" | "coverImageUrls"> {
+): Pick<PublishRequest, "coverImageUrl" | "coverPictureId" | "coverImageUrls" | "coverFocus"> {
+  const coverFocus = coverFocusOf(board);
   const ownCard = (url: string) =>
     liveItems(board).find((item) => item.pictureId !== null && item.imageUrl === url) ?? null;
   const [only] = board.coverImageUrls;
   if (board.coverImageUrls.length === 1 && only !== undefined) {
     const own = board.coverPictureId ?? ownCard(only)?.pictureId ?? null;
-    if (own !== null) return { coverImageUrl: null, coverPictureId: own, coverImageUrls: [] };
+    if (own !== null) {
+      return { coverImageUrl: null, coverPictureId: own, coverImageUrls: [], coverFocus };
+    }
   }
   // A cover the account named by id whose address this browser has not found yet.
   if (board.coverImageUrls.length === 0 && board.coverPictureId !== null) {
-    return { coverImageUrl: null, coverPictureId: board.coverPictureId, coverImageUrls: [] };
+    return {
+      coverImageUrl: null,
+      coverPictureId: board.coverPictureId,
+      coverImageUrls: [],
+      coverFocus,
+    };
   }
   const urls = board.coverImageUrls.filter(
     (url) => url.startsWith("https://") && ownCard(url) === null && !isPrivatePicture(url),
   );
+  const single = board.coverImageUrls.length === 1 ? (urls[0] ?? null) : null;
   return {
-    coverImageUrl: board.coverImageUrls.length === 1 ? (urls[0] ?? null) : null,
+    coverImageUrl: single,
     coverPictureId: null,
     coverImageUrls: urls,
+    coverFocus: single === null ? null : coverFocus,
   };
 }
 

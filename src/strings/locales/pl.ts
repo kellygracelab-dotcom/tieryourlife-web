@@ -990,6 +990,21 @@ const pl: Translation = {
     back: "Wstecz",
     movesTo: "Trafi do działu {name}, gdy zostanie zatwierdzony",
   },
+  // Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md).
+  cover: {
+    adjust: "Dostosuj okładkę",
+    zoom: "Powiększenie",
+    preview: "Podgląd",
+    feed: "Kanał",
+    pageHeader: "Nagłówek strony",
+    reset: "Resetuj",
+    done: "Gotowe",
+    cancel: "Anuluj",
+    adjustPosition: "Dostosuj położenie",
+    frame: "Okładka do przesuwania i powiększania w ramce",
+    frameHelp:
+      "Przeciągnij, aby przesunąć; zsuń palce lub przewiń, aby powiększyć. Strzałki przesuwają, + i − powiększają.",
+  },
   propose: {
     title: "Zaproponuj dział",
     intro:

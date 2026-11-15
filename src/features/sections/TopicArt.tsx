@@ -1,7 +1,7 @@
-import { MediaImage } from "../../ui/MediaImage";
+import { FocusedPicture } from "../../ui/FocusedPicture";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
-import { servedPicture, topicPicture } from "./model";
+import { pictureFocusOf, servedPicture, topicPicture } from "./model";
 import "./topics.css";
 
 /**
@@ -13,19 +13,18 @@ export function TopicArt({
   topic,
   icon,
 }: {
-  topic: { pictureUrl?: string | null };
+  topic: { pictureUrl?: string | null; pictureFocus?: unknown };
   icon: IconName;
 }) {
   const picture = topicPicture(topic);
   return picture === null ? (
     <Icon name={icon} />
   ) : (
-    <MediaImage
+    <FocusedPicture
       className="topic-art"
       src={servedPicture(picture)}
-      alt=""
+      focus={pictureFocusOf(topic)}
       loading="lazy"
-      decoding="async"
     />
   );
 }

@@ -1,0 +1,118 @@
+import { expect, test, type Locator, type Page } from "@playwright/test";
+import { mockBackend } from "./fixtures";
+import { shot } from "./signedIn";
+
+/*
+ * Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md): a cover of one
+ * picture is moved and zoomed under a 4:3 frame, Done keeps the place, and
+ * every tile that shows the cover cuts it there by the shared formula.
+ */
+
+const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
+
+// A portrait whose head is at the top: 400 × 800, the top fifth red.
+const PORTRAIT = [
+  '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="800">',
+  '<rect width="400" height="800" fill="#2d6a4f"/>',
+  '<rect width="400" height="160" fill="#d62828"/>',
+  '<circle cx="200" cy="80" r="56" fill="#f4d35e"/>',
+  "</svg>",
+].join("");
+
+async function boardWithPortrait(page: Page, touch: boolean) {
+  await mockBackend(page);
+  await page.route("**/lists/pictures?*", (route) =>
+    route.fulfill({
+      json: {
+        items: [
+          {
+            id: "tmdb:p0",
+            title: "Portrait",
+            imageUrl: "https://img.test/portrait.svg",
+            thumbUrl: null,
+            source: "tmdb",
+            kind: "movie",
+          },
+        ],
+        hasMore: false,
+        notices: [],
+      },
+    }),
+  );
+  await page.route("https://img.test/**", (route) =>
+    route.fulfill({ contentType: "image/svg+xml", body: PORTRAIT }),
+  );
+  await page.goto("/b");
+  await page.getByRole("link", { name: "New list" }).first().click();
+  const title = page.getByRole("textbox", { name: "Title" });
+  await title.fill("Portraits");
+  await title.press("Enter");
+  if (touch) await press(page.getByRole("button", { name: "Add", exact: true }), touch);
+  await page.getByRole("textbox", { name: "Add a card" }).fill("Portrait");
+  await press(page.getByRole("button", { name: "Portrait Film" }), touch);
+  await expect(page.getByRole("button", { name: "Portrait", exact: true })).toBeVisible();
+}
+
+/** Where the picture's top edge is drawn, as a share of its own box. */
+const topOf = (picture: Locator) => picture.evaluate((img) => (img as HTMLImageElement).style.top);
+
+test("adjusts a cover of one picture, and its tile shows the place kept", async ({
+  page,
+  hasTouch,
+}) => {
+  await boardWithPortrait(page, hasTouch);
+  await page.getByLabel("More about this board").click();
+  await page.getByRole("button", { name: "List settings" }).click();
+  await press(page.getByRole("button", { name: /Cover/ }), hasTouch);
+  await press(page.getByRole("button", { name: "Use Portrait on the cover" }), hasTouch);
+  await press(page.getByRole("button", { name: "Adjust position" }), hasTouch);
+
+  const dialog = page.getByRole("dialog", { name: "Adjust cover" });
+  await expect(dialog).toBeVisible();
+  const frame = dialog.getByRole("application", { name: /The cover/ });
+  await expect(frame).toBeFocused();
+  // The 4:3 frame stands inside the window, the previews and the buttons under it.
+  const box = (await frame.boundingBox())!;
+  expect(box.width / box.height).toBeCloseTo(4 / 3, 1);
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await expect(dialog.getByRole("button", { name: "Done" })).toBeEnabled();
+  await shot(page, `cover-adjust-${hasTouch ? "phone" : "desktop"}`);
+
+  // The 4:3 frame up as far as it goes, by the keys: its middle, 150 px down
+  // the 800 px portrait, is the focus (y 0.1875). A 16:10 frame around the same
+  // point starts 25 px down: drawn 10% of its height above the box.
+  for (let i = 0; i < 20; i++) await frame.press("Shift+ArrowDown");
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await expect(dialog).toBeHidden();
+  const preview = page.locator(".board-settings__cover-frame img");
+  await expect.poll(() => topOf(preview)).toBe("-10%");
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await press(page.getByRole("button", { name: "Adjust position" }), hasTouch);
+  await expect(dialog).toBeVisible();
+  await shot(page, `cover-adjust-${hasTouch ? "phone" : "desktop"}-dark`);
+  // ✕ leaves it as it was.
+  await press(dialog.getByRole("button", { name: "Cancel" }), hasTouch);
+  await expect(dialog).toBeHidden();
+  await expect.poll(() => topOf(preview)).toBe("-10%");
+  await page.emulateMedia({ colorScheme: "light" });
+
+  // The board's own tile on My boards, whatever its shape, is cut around the
+  // same point by the shared formula: a frame as wide as the portrait,
+  // 400 / A high, its middle 150 px down unless that runs over the top.
+  await page.getByRole("button", { name: "Done" }).click();
+  await page.goto("/b");
+  const tile = page.locator(".art--cover img").first();
+  await expect.poll(() => topOf(tile)).not.toBe("");
+  const { aspect, top } = await tile.evaluate((img) => {
+    const shape = img.parentElement!.getBoundingClientRect();
+    return {
+      aspect: shape.width / shape.height,
+      top: parseFloat((img as HTMLImageElement).style.top),
+    };
+  });
+  const high = 400 / aspect;
+  expect(top).toBeCloseTo((-Math.max(0, 150 - high / 2) / high) * 100, 2);
+  await shot(page, `cover-tile-${hasTouch ? "phone" : "desktop"}`);
+});

@@ -396,6 +396,11 @@ test("uploads a cover from the board settings and keeps the owner's photo after 
   await select("notes.txt", "text/plain", Buffer.from("test"));
   await expect(page.getByRole("alert")).toContainText("notes.txt");
   await select("poster.png", "image/png", PIXEL);
+  // A photo of one's own as the cover opens Adjust cover at once (cover focus, 15.11.2026); ✕ keeps the middle.
+  const adjust = page.getByRole("dialog", { name: "Adjust cover" });
+  await expect(adjust).toBeVisible();
+  await press(adjust.getByRole("button", { name: "Cancel" }), hasTouch);
+  await expect(adjust).toBeHidden();
   const cover = page.locator(".sheet-row__thumb").filter({ visible: true });
   const thumb = page.locator("img.sheet-row__thumb");
   await expect(thumb.last()).toHaveAttribute("src", /^blob:/);

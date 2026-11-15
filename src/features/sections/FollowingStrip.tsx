@@ -15,6 +15,7 @@ import {
   waitingPath,
   type Section,
 } from "./model";
+import { SectionBackdrop } from "./SectionBackdrop";
 import { TopicArt } from "./TopicArt";
 import { initialOf } from "../../lib/initial";
 import "./following.css";
@@ -56,6 +57,7 @@ export function FollowingStrip({ sections, topics, people, sectionOf, ref }: Fol
                 style={sectionStyle(section)}
                 aria-hidden="true"
               >
+                <SectionBackdrop section={section} />
                 <Icon name={section.icon} />
               </span>
               <span className="following-strip__name">{section.name}</span>

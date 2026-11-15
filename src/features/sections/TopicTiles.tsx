@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { MediaImage } from "../../ui/MediaImage";
+import { FocusedPicture } from "../../ui/FocusedPicture";
 import { Link } from "react-router";
 import type { Topic } from "../../api/sections";
 import { fill, plural, strings } from "../../strings";
@@ -7,6 +7,7 @@ import { Icon } from "../../ui/Icon";
 import {
   builtInSection,
   OTHER,
+  pictureFocusOf,
   sectionStyle,
   servedPicture,
   topicPath,
@@ -14,6 +15,7 @@ import {
   topicPicture,
   type Section,
 } from "./model";
+import { SectionBackdrop } from "./SectionBackdrop";
 import "./topics.css";
 
 interface TopicTilesProps {
@@ -151,13 +153,14 @@ function TopicTile({
     .join(" ");
   const inside = (
     <>
-      {picture !== null && (
-        <MediaImage
+      {picture === null ? (
+        <SectionBackdrop section={section} />
+      ) : (
+        <FocusedPicture
           className={loaded ? "topic-tile__picture topic-tile__picture--in" : "topic-tile__picture"}
           src={servedPicture(picture)}
-          alt=""
+          focus={pictureFocusOf(topic)}
           loading={eager ? "eager" : "lazy"}
-          decoding="async"
           onLoad={() => setLoaded(true)}
         />
       )}

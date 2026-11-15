@@ -8,6 +8,7 @@ import {
   recordTake,
   republish,
   revisionOf,
+  summaryOf,
   unpublish,
   type PublishRequest,
 } from "./lists";
@@ -17,6 +18,29 @@ function recordingClient(result: unknown) {
   const client: ApiClient = { request: request as ApiClient["request"] };
   return { client, request };
 }
+
+describe("summaryOf", () => {
+  const list = {
+    id: "l",
+    title: "T",
+    coverImageUrl: "https://img/c.jpg",
+    previewImages: [],
+  } as unknown as Parameters<typeof summaryOf>[0];
+
+  it("keeps a cover's focus in range, and none for the middle, the wrong shape or no cover", () => {
+    const focus = { x: 0.3, y: 0.15, zoom: 2 };
+    expect(summaryOf({ ...list, coverFocus: focus }).coverFocus).toEqual(focus);
+    expect(summaryOf({ ...list, coverFocus: { x: 0.5, y: 0.5, zoom: 1 } })).not.toHaveProperty(
+      "coverFocus",
+    );
+    expect(summaryOf({ ...list, coverFocus: { x: 0.3, y: 0.15, zoom: 9 } })).not.toHaveProperty(
+      "coverFocus",
+    );
+    expect(summaryOf({ ...list, coverImageUrl: null, coverFocus: focus })).not.toHaveProperty(
+      "coverFocus",
+    );
+  });
+});
 
 describe("lists", () => {
   it("reads one list by id, escaping the id", async () => {
