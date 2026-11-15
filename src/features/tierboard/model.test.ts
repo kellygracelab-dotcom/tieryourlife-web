@@ -286,6 +286,7 @@ describe("the pool's order", () => {
   it("orders a pool that kept none once a card is dragged in it", () => {
     const moved = reduce(init(2, 3), { type: "unplace", item: 0, index: 2 });
     expect(pool(moved)).toEqual([1, 2, 0]);
+    expect(pool(reduce(moved, { type: "undo" }))).toEqual([0, 1, 2]);
   });
 
   it("lets a card off a tier land at its place in the pool", () => {

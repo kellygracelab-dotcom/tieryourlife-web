@@ -92,7 +92,9 @@ const remember = (state: BoardState, rows: Rows, poolOrder?: readonly number[]):
   // A game's step pushed out of the history by a long evening is an ordinary past now.
   const at = toggleAt === undefined ? -1 : toggleAt - dropped;
   const reordered = poolOrder !== undefined && poolOrder !== state.poolOrder;
-  const pools = [...poolsOf(state).slice(dropped), reordered ? (state.poolOrder ?? null) : null];
+  // A pool that kept no order had the list's: Undo brings that back.
+  const was = state.poolOrder ?? Array.from({ length: state.itemCount }, (_, i) => i);
+  const pools = [...poolsOf(state).slice(dropped), reordered ? was : null];
   return {
     ...rest,
     ...(at >= 0 ? { toggleAt: at } : {}),
