@@ -201,6 +201,36 @@ describe("a pasted name in a section with catalogues of its own", () => {
     ).toBeNull();
   });
 
+  // Content on the live site, 15.11.2026: "Zelda" took IGDB's own record of that name.
+  it("gives the card of exactly the name up only to a game of the series far more rated", () => {
+    const rated = (id: string, title: string, popularity?: number) => ({
+      ...card(id, title, null),
+      ...(popularity === undefined ? {} : { popularity }),
+    });
+    const zeldas = [
+      rated("igdb:5", "Zelda", 14),
+      rated("igdb:1022", "The Legend of Zelda", 610),
+      rated("igdb:7346", "The Legend of Zelda: Breath of the Wild", 3100),
+    ];
+    expect(pick({ title: "Zelda", year: null }, zeldas, null, games)?.id).toBe("igdb:7346");
+    // Five times as rated is not enough: the 1986 game is the one asked for.
+    expect(pick({ title: "The Legend of Zelda", year: null }, zeldas, null, games)?.id).toBe(
+      "igdb:1022",
+    );
+    // A record nobody rated gives way to a game ten people did.
+    const unrated = [rated("igdb:6", "Tetris"), rated("igdb:7", "Tetris Effect", 10)];
+    expect(pick({ title: "Tetris", year: null }, unrated, null, games)?.id).toBe("igdb:7");
+    // Where nothing is rated, the name is the one.
+    expect(
+      pick(
+        { title: "Mario", year: null },
+        [card("igdb:9", "Mario Kart"), card("igdb:8", "Mario")],
+        null,
+        games,
+      )?.id,
+    ).toBe("igdb:8");
+  });
+
   it("compares names without case, accents or punctuation", () => {
     expect(plainName("Pokémon: Let's Go, Pikachu!")).toBe("pokemon let s go pikachu");
     expect(plainName("Ratchet & Clank")).toBe(plainName("Ratchet and Clank"));

@@ -154,6 +154,13 @@ const from =
  */
 const general = (item: CatalogueItem): boolean => item.id.startsWith("wikidata:");
 
+/**
+ * How many times more rated a game of the series must be than the one of
+ * exactly the name to be taken in its place. "The Legend of Zelda" stays the
+ * 1986 game beside Breath of the Wild, rated some five times as often.
+ */
+export const SERIES_OVER_NAME = 10;
+
 /** The most rated of these, or the catalogue's first where it says nothing of that. */
 const best = (cards: readonly CatalogueItem[]): CatalogueItem | null =>
   cards.reduce<CatalogueItem | null>(
@@ -194,7 +201,9 @@ export const plainName = (name: string): string =>
  * before Wikidata's, which answers everywhere. A name none of theirs carries
  * exactly takes their card with every word of it that most people rated, or
  * their first where they say nothing of that: "Pokémon" is the series' most
- * played game, not the first IGDB's search lists. Wikidata's card of exactly
+ * played game, not the first IGDB's search lists. Their card of exactly the
+ * name gives way only to one rated SERIES_OVER_NAME times as often: IGDB's
+ * own "Zelda" to the series' best known game. Wikidata's card of exactly
  * the name only when their catalogues know nothing like it. Anywhere
  * else a near miss would put the wrong poster on a card, and a card with its
  * name alone is the better mistake.
@@ -222,15 +231,23 @@ export function pick(
   if (preferred === null) {
     if (!loose || name === "") return named[0] ?? null;
     const own = named.find((item) => !general(item));
-    if (own !== undefined) return own;
     const words = name.split(" ");
     const near = found.filter((item) => {
       if (general(item) || !dated(item)) return false;
       const has = new Set(plainName(item.title).split(" "));
       return words.every((word) => has.has(word));
     });
+    const most = best(near);
+    // The card of exactly the name, unless a game of the series is far more
+    // played: IGDB's "Zelda" is a record of its own, rated by a handful.
+    if (own !== undefined) {
+      const rated = most?.popularity ?? 0;
+      return most !== null && rated >= SERIES_OVER_NAME * Math.max(own.popularity ?? 0, 1)
+        ? most
+        : own;
+    }
     // Only when the section's own catalogues know nothing like it: Wikidata's card of that name.
-    return best(near) ?? named[0] ?? null;
+    return most ?? named[0] ?? null;
   }
   const own = named.find(from(preferred));
   if (own !== undefined) return own;
