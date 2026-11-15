@@ -24,15 +24,17 @@ import { appIsLive, onApple, playUrl } from "../lib/links";
 import { IN_APP_BROWSER } from "../lib/inAppBrowser";
 import { lastSeen } from "../lib/signedInHint";
 import { storageRefused, subscribeToStorageTrouble } from "../lib/storage";
-import { strings } from "../strings";
+import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ClearButton } from "../ui/ClearButton";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
+import { ScopeChip } from "../ui/ScopeChip";
 import { sayOnTheSite, siteNotice, subscribeToSiteNotice } from "../ui/siteNotice";
 import { SiteSnackbar } from "../ui/Snackbar";
 import { documentTitleOf, PageTitleContext, TITLE_AFTER_PX, type PageName } from "./pageTitle";
 import { useScrollCatchUp } from "./scrollCatchUp";
+import { scopeKey, SearchScopeContext, searchPathOf, type SearchScope } from "./searchScope";
 import { useRedirectFailed, useSession } from "./session";
 import { initialOf } from "../lib/initial";
 import "./Shell.css";
@@ -138,9 +140,11 @@ function SiteTabs({ className, pathname }: { className: string; pathname: string
 /**
  * The bar's field: starts with the words the page was asked for, and takes
  * new ones to the search page. It stays the same field when the words asked
- * change, so a search made from it keeps the focus in it.
+ * change, so a search made from it keeps the focus in it. On a section's or
+ * a topic's page it looks there first, as the app does: a chip says where,
+ * and its cross (or Backspace in the empty field) lets it look everywhere.
  */
-function BarSearch({ asked }: { asked: string }) {
+function BarSearch({ asked, scope }: { asked: string; scope: SearchScope | null }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [query, setQuery] = useState(asked);
@@ -149,28 +153,58 @@ function BarSearch({ asked }: { asked: string }) {
     setShown(asked);
     setQuery(asked);
   }
+  // A place given up stays given up while the page is about it; another
+  // place, or the same one opened again, brings the chip back.
+  const key = scopeKey(scope);
+  const [placeKey, setPlaceKey] = useState(key);
+  const [dropped, setDropped] = useState(false);
+  if (placeKey !== key) {
+    setPlaceKey(key);
+    setDropped(false);
+  }
+  const place = dropped ? null : scope;
   const field = useRef<HTMLInputElement>(null);
   const onSearch = (event: FormEvent) => {
     event.preventDefault();
     const q = query.trim();
     if (q === "") return;
-    const search = new URLSearchParams({ q }).toString();
+    const path = searchPathOf(q, place);
     // The same words again are the same page: Back should not need two presses.
-    const same =
-      location.pathname === "/search" && new URLSearchParams(location.search).toString() === search;
-    void navigate(`/search?${search}`, { replace: same });
+    const same = location.pathname + location.search === path;
+    void navigate(path, { replace: same });
+  };
+  const everywhere = () => {
+    field.current?.focus();
+    if (location.pathname !== "/search") {
+      setDropped(true);
+      return;
+    }
+    // The search page's own place: what it shows goes everywhere at once.
+    const params = new URLSearchParams(location.search);
+    params.delete("category");
+    params.delete("topic");
+    const rest = params.toString();
+    void navigate(rest === "" ? "/search" : `/search?${rest}`, { replace: true });
   };
   return (
     <form className="top__search" role="search" onSubmit={onSearch}>
       <Icon name="search" />
+      {place !== null && <ScopeChip name={place.name} onClear={everywhere} />}
       <input
         ref={field}
         type="search"
         value={query}
         placeholder={strings.nav.search}
-        aria-label={strings.nav.search}
+        aria-label={
+          place === null ? strings.nav.search : fill(strings.nav.searchIn, { place: place.name })
+        }
         autoComplete="off"
         onChange={(event) => setQuery(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== "Backspace" || query !== "" || place === null) return;
+          event.preventDefault();
+          everywhere();
+        }}
       />
       {query !== "" && (
         <ClearButton
@@ -235,6 +269,8 @@ export function Shell() {
   // On a phone the list's heading scrolls away under the tray's work; once it
   // has, the app bar says what the page is instead of the brand.
   const [page, setPage] = useState<PageName | null>(null);
+  // Where the page's searches start: its section or topic, or anywhere.
+  const [scope, setScope] = useState<SearchScope | null>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > TITLE_AFTER_PX);
@@ -323,11 +359,19 @@ export function Shell() {
           </span>
         )}
         <SiteTabs className="top__tabs" pathname={location.pathname} />
-        {!home && <BarSearch asked={asked} />}
+        {!home && <BarSearch asked={asked} scope={scope} />}
         {/* Not a second navigation: what is here acts rather than leads somewhere. */}
         <div className="top__actions">
           {!home && (
-            <Link className="top__search-link" to="/search" aria-label={strings.nav.search}>
+            <Link
+              className="top__search-link"
+              to={searchPathOf("", scope)}
+              aria-label={
+                scope === null
+                  ? strings.nav.search
+                  : fill(strings.nav.searchIn, { place: scope.name })
+              }
+            >
               <Icon name="search" />
             </Link>
           )}
@@ -369,7 +413,9 @@ export function Shell() {
       )}
       <main id="main" className="shell__main" ref={main}>
         <PageTitleContext.Provider value={setPage}>
-          <Outlet />
+          <SearchScopeContext.Provider value={setScope}>
+            <Outlet />
+          </SearchScopeContext.Provider>
         </PageTitleContext.Provider>
       </main>
       <footer className="foot">

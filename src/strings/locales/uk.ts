@@ -26,6 +26,9 @@ const uk: Translation = {
     settings: "Налаштування",
     reports: "Скарги",
     newList: "Новий список",
+    inPlace: "у {place}",
+    searchIn: "Шукати в {place}",
+    searchEverywhere: "Шукати всюди",
   },
   mod: {
     putBack: "Повернути",

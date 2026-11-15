@@ -21,6 +21,9 @@ export const en = {
     settings: "Settings",
     reports: "Reports",
     newList: "New list",
+    inPlace: "in {place}",
+    searchIn: "Search in {place}",
+    searchEverywhere: "Search everywhere",
   },
   mod: {
     putBack: "Put back",

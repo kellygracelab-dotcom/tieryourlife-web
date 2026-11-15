@@ -1,4 +1,13 @@
-import { approvedOnly, sectionName, sectionPath, sectionsNamed } from "../features/sections/model";
+import {
+  approvedOnly,
+  OTHER,
+  sectionName,
+  sectionPath,
+  sectionsNamed,
+  topicNameOf,
+  topicPath,
+} from "../features/sections/model";
+import { useSearchScope, type SearchScope } from "../app/searchScope";
 import { usePageTitle } from "../app/pageTitle";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
@@ -13,7 +22,7 @@ import { useYours } from "../features/feed/yours";
 import { SectionTile } from "../features/sections/SectionTile";
 import { FoundTopicTiles } from "../features/sections/TopicTiles";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
-import { findTopics, noteSearchMiss } from "../lib/api";
+import { findTopics, loadTopic, noteSearchMiss } from "../lib/api";
 import { useResource } from "../lib/useResource";
 import { useWidthClass } from "../lib/useWidthClass";
 import { fill, plural, strings } from "../strings";
@@ -33,7 +42,12 @@ interface Filters {
   sort: FeedSort;
   /** A section's id: any, also one no chip shows. */
   category: string | undefined;
+  /** One topic: its lists alone, whatever section is asked (CONTRACT K6). */
+  topic: string | undefined;
 }
+
+/** A topic's id as the backend makes them; anything else in the address is not one. */
+const TOPIC_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 const read = (params: URLSearchParams): Filters => {
   const category = params.get("category") ?? "";
@@ -41,6 +55,9 @@ const read = (params: URLSearchParams): Filters => {
     q: (params.get("q") ?? "").trim(),
     sort: params.get("sort") === "recent" ? "recent" : "popular",
     category: isSectionId(category) ? category : undefined,
+    topic: TOPIC_ID.test(params.get("topic") ?? "")
+      ? (params.get("topic") ?? undefined)
+      : undefined,
   };
 };
 
@@ -48,6 +65,7 @@ const write = (filters: Filters): Record<string, string> => ({
   ...(filters.q.length > 0 ? { q: filters.q } : {}),
   ...(filters.sort === "recent" ? { sort: "recent" } : {}),
   ...(filters.category !== undefined ? { category: filters.category } : {}),
+  ...(filters.topic !== undefined ? { topic: filters.topic } : {}),
 });
 
 /** How many popular lists an empty search points at instead. */
@@ -110,13 +128,28 @@ function useFoundTopics(
     : [];
 }
 
+const NO_TOPIC = () => Promise.resolve(null);
+
+/**
+ * The topic searched in, to name it: null while it is asked for, and when
+ * it cannot be read the search still keeps to it, only without its name.
+ */
+function useTopicSearched(id: string | undefined, one: (id: string) => Promise<Topic>) {
+  const ask = useCallback(() => (id === undefined ? NO_TOPIC() : one(id)), [id, one]);
+  const { state } = useResource(id ?? "", ask);
+  return state.status === "ready" ? state.value : null;
+}
+
 export function SearchPage({
   store = sectionsStore,
   find = findTopics,
+  findTopic = loadTopic,
   noteMiss = noteSearchMiss,
 }: {
   store?: SectionsStore;
   find?: FindTopics;
+  /** One topic by its id, to name the topic searched in. */
+  findTopic?: (id: string) => Promise<Topic>;
   /** Says a search found nothing anywhere, so staff see what people look for. */
   noteMiss?: (q: string) => Promise<void>;
 }) {
@@ -124,6 +157,18 @@ export function SearchPage({
   const filters = read(params);
   const { sections, known } = useSections(store);
   const name = filters.category === undefined ? "" : sectionName(filters.category, sections);
+  const topic = useTopicSearched(filters.topic, findTopic);
+  const topicHome = topic?.section ?? filters.category ?? OTHER;
+  // Where the search looks, said by the field's chip; its cross widens it.
+  const scope: SearchScope | null =
+    filters.topic !== undefined
+      ? topic === null
+        ? null
+        : { category: topicHome, topic: topic.id, name: topicNameOf(topic) }
+      : filters.category !== undefined
+        ? { category: filters.category, name }
+        : null;
+  useSearchScope(scope);
   const [typed, setTyped] = useState(filters.q);
   // Words that arrive by the address — from the bar's field, or a link — go
   // into the box; the box's own words, written to the address after the pause,
@@ -167,13 +212,21 @@ export function SearchPage({
     q: searching ? filters.q : undefined,
     sort: filters.sort,
     category: filters.category,
+    topic: filters.topic,
   });
-  const found = useFoundTopics(searching ? filters.q : undefined, filters.category, find);
+  // Inside one topic the words look for its lists only.
+  const found = useFoundTopics(
+    searching && filters.topic === undefined ? filters.q : undefined,
+    filters.category,
+    find,
+  );
   // The results wait for the topics too, so that nothing moves when they come.
   const results = found === null ? WAITING : feed.state;
 
   const where =
-    filters.category === undefined ? (
+    topic !== null && filters.topic !== undefined ? (
+      <Link to={topicPath(topicHome, topic.id)}>{topicNameOf(topic)}</Link>
+    ) : filters.category === undefined ? (
       <Link to="/">{strings.search.browseHome}</Link>
     ) : (
       <Link to={sectionPath(filters.category)}>{name}</Link>
@@ -183,7 +236,9 @@ export function SearchPage({
   // Sections by any of their names, in any language: "аниме" finds Anime on
   // an English page. Not inside one section, where the words look for its lists.
   const named =
-    searching && known && filters.category === undefined ? sectionsNamed(sections, filters.q) : [];
+    searching && known && filters.category === undefined && filters.topic === undefined
+      ? sectionsNamed(sections, filters.q)
+      : [];
   const nothing = searching && noLists && topics.length === 0 && named.length === 0;
 
   // Once per search that found nothing anywhere: the address follows the
@@ -203,14 +258,22 @@ export function SearchPage({
 
   const noted = useRef<string | null>(null);
   useEffect(() => {
-    if (!nothing || noted.current === filters.q) return;
+    // Nothing inside one topic is not nothing anywhere.
+    if (!nothing || filters.topic !== undefined || noted.current === filters.q) return;
     noted.current = filters.q;
     noteMiss(filters.q).catch(() => undefined);
-  }, [nothing, filters.q, noteMiss]);
+  }, [nothing, filters.q, filters.topic, noteMiss]);
 
   return (
     <section className="search">
-      <SearchBox value={typed} onChange={setTyped} onSubmit={send} autoFocus={!wide} />
+      <SearchBox
+        value={typed}
+        onChange={setTyped}
+        onSubmit={send}
+        autoFocus={!wide}
+        place={scope?.name ?? null}
+        onEverywhere={() => narrow({ category: undefined, topic: undefined })}
+      />
       {/* Said aloud as it changes, what was asked and how much came. */}
       <div className="search__head" role="status">
         <h1 ref={heading} className="search__title" tabIndex={-1}>
@@ -240,7 +303,7 @@ export function SearchPage({
       <div className="search__chips" role="group" aria-label={strings.search.categories}>
         <Chip
           selected={filters.category === undefined}
-          onClick={() => narrow({ category: undefined })}
+          onClick={() => narrow({ category: undefined, topic: undefined })}
         >
           {strings.search.all}
         </Chip>
@@ -250,7 +313,7 @@ export function SearchPage({
           <Chip
             key={section.id}
             selected={filters.category === section.id}
-            onClick={() => narrow({ category: section.id })}
+            onClick={() => narrow({ category: section.id, topic: undefined })}
           >
             {section.name}
           </Chip>

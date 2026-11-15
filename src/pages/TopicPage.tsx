@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { PageTitle } from "../app/pageTitle";
+import { SearchScopeMark } from "../app/searchScope";
 import { Link, Navigate, useParams } from "react-router";
 import { errorOf } from "../api/errors";
 import { topicAttributionOf, type Topic } from "../api/sections";
@@ -150,6 +151,7 @@ function TopicContent({ section, topic, feed, sort, onSort, topics, report }: To
             {section.name}
           </span>
           <PageTitle title={name} inBar={false} />
+          <SearchScopeMark category={section.id} topic={topic.id} name={name} />
           <h1 className="section-head__name">{name}</h1>
           {waiting ? (
             <span className="section-head__pill">

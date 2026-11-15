@@ -28,6 +28,9 @@ const pl: Translation = {
     settings: "Ustawienia",
     reports: "Zgłoszenia",
     newList: "Nowa lista",
+    inPlace: "w: {place}",
+    searchIn: "Szukaj w: {place}",
+    searchEverywhere: "Szukaj wszędzie",
   },
   mod: {
     putBack: "Przywróć",

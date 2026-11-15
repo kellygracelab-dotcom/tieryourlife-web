@@ -1,3 +1,4 @@
+import { SearchScopeContext, type SearchScope } from "../app/searchScope";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
@@ -67,6 +68,8 @@ const topics = {
 const loadOne = vi.fn<(id: string) => Promise<SectionStats>>();
 const report = vi.fn<(id: string, request: ReportRequest) => Promise<void>>();
 const signIn = vi.fn<() => Promise<SignInOutcome>>();
+/** Where the page tells the bar's field to search. */
+const scoped = vi.fn<(scope: SearchScope | null) => void>();
 
 function open(path: string, account: Session["account"] = member) {
   const store = createSectionsStore({ ...sectionsDeps, now: () => 0 });
@@ -89,7 +92,9 @@ function open(path: string, account: Session["account"] = member) {
         refresh: () => undefined,
       }}
     >
-      <RouterProvider router={router} />
+      <SearchScopeContext.Provider value={scoped}>
+        <RouterProvider router={router} />
+      </SearchScopeContext.Provider>
     </SessionContext.Provider>,
   );
   return router;
@@ -570,6 +575,22 @@ describe("SectionPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("No connection");
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Ramen");
+  });
+});
+
+describe("search in a place", () => {
+  it("has the bar's field search the section first", async () => {
+    open("/s/games");
+    await waitFor(() =>
+      expect(scoped).toHaveBeenLastCalledWith({ category: "games", name: "Games" }),
+    );
+  });
+
+  it("has the bar's field search the topic first", async () => {
+    open("/s/games/t/t2");
+    await waitFor(() =>
+      expect(scoped).toHaveBeenLastCalledWith({ category: "games", topic: "t2", name: "Pokémon" }),
+    );
   });
 });
 

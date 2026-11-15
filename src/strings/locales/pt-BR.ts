@@ -28,6 +28,9 @@ const ptBR: Translation = {
     settings: "Configurações",
     reports: "Denúncias",
     newList: "Nova lista",
+    inPlace: "em {place}",
+    searchIn: "Buscar em {place}",
+    searchEverywhere: "Buscar em tudo",
   },
   mod: {
     putBack: "Restaurar",

@@ -28,6 +28,9 @@ const ar: Translation = {
     settings: "الإعدادات",
     reports: "البلاغات",
     newList: "قائمة جديدة",
+    inPlace: "في {place}",
+    searchIn: "ابحث في {place}",
+    searchEverywhere: "ابحث في كل مكان",
   },
   mod: {
     putBack: "إعادة",

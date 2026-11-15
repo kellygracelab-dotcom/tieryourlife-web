@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   loadFeed: vi.fn<(query: FeedQuery) => Promise<FeedPage>>(),
   findTopics: vi.fn<(q: string, section?: string) => Promise<{ topics: Topic[] }>>(),
   noteSearchMiss: vi.fn<(q: string) => Promise<void>>(),
+  loadTopic: vi.fn<(id: string) => Promise<Topic>>(),
 }));
 vi.mock("../lib/api", async () => ({
   ...(await import("../test/apiMock")).apiStubs(),
@@ -35,6 +36,7 @@ vi.mock("../lib/api", async () => ({
   loadFeed: mocks.loadFeed,
   findTopics: mocks.findTopics,
   noteSearchMiss: mocks.noteSearchMiss,
+  loadTopic: mocks.loadTopic,
   loadList: vi.fn(),
   loadRanking: vi.fn(),
   noteTake: vi.fn(),
@@ -94,6 +96,8 @@ beforeEach(() => {
   mocks.findTopics.mockResolvedValue({ topics: [] });
   mocks.noteSearchMiss.mockReset();
   mocks.noteSearchMiss.mockResolvedValue(undefined);
+  mocks.loadTopic.mockReset();
+  mocks.loadTopic.mockImplementation(async (id) => topic(id, "Naruto", { section: "anime" }));
 });
 
 describe("SearchPage", () => {
@@ -418,6 +422,92 @@ describe("SearchPage", () => {
       sort: "popular",
       category: "games",
     });
+  });
+});
+
+describe("SearchPage inside a section or a topic", () => {
+  const pageBox = () => within(screen.getByRole("main"));
+
+  it("searches one topic's lists alone and names the topic in the box", async () => {
+    open("/search?q=best&category=anime&topic=t1");
+    expect(mocks.loadFeed).toHaveBeenCalledWith({
+      q: "best",
+      sort: "popular",
+      category: "anime",
+      topic: "t1",
+    });
+    expect(await pageBox().findByRole("searchbox", { name: "Search in Naruto" })).toHaveValue(
+      "best",
+    );
+    expect(pageBox().getByText("in Naruto")).toBeInTheDocument();
+    // Inside a topic the words look for its lists, not for topics or sections.
+    expect(mocks.findTopics).not.toHaveBeenCalled();
+    expect(mocks.loadTopic).toHaveBeenCalledWith("t1");
+    // The bar's field carries the same place.
+    expect(
+      within(screen.getByRole("banner")).getByRole("searchbox", { name: "Search in Naruto" }),
+    ).toBeInTheDocument();
+  });
+
+  it("widens to the whole site on the chip's cross, keeping the words, in place", async () => {
+    const router = open("/search?q=best&category=anime&topic=t1");
+    await userEvent.click(await pageBox().findByRole("button", { name: "Search everywhere" }));
+    expect(router.state.location.search).toBe("?q=best");
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(mocks.loadFeed).toHaveBeenLastCalledWith({ q: "best", sort: "popular" });
+    expect(pageBox().getByRole("searchbox", { name: /Search lists/ })).toHaveFocus();
+    expect(pageBox().queryByText("in Naruto")).toBeNull();
+  });
+
+  it("names the section searched in, and Backspace in the empty box widens it", async () => {
+    const router = open("/search?category=anime");
+    const box = await pageBox().findByRole("searchbox", { name: "Search in Anime" });
+    await userEvent.type(box, "{Backspace}");
+    expect(router.state.location.search).toBe("");
+    expect(pageBox().queryByText("in Anime")).toBeNull();
+  });
+
+  it("widens to the whole site from the bar's chip too", async () => {
+    const router = open("/search?q=best&category=anime");
+    const bar = within(screen.getByRole("banner"));
+    await userEvent.click(await bar.findByRole("button", { name: "Search everywhere" }));
+    expect(router.state.location.search).toBe("?q=best");
+    expect(bar.getByRole("searchbox", { name: "Search lists" })).toHaveFocus();
+  });
+
+  it("keeps a search typed in the box inside the topic", async () => {
+    const router = open("/search?category=anime&topic=t1");
+    await userEvent.type(
+      await pageBox().findByRole("searchbox", { name: "Search in Naruto" }),
+      "x",
+    );
+    await waitFor(() => expect(router.state.location.search).toBe("?q=x&category=anime&topic=t1"));
+  });
+
+  it("points at the topic when nothing in it has the words, and tells staff nothing", async () => {
+    mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
+    open("/search?q=zzz&category=anime&topic=t1");
+    expect(await screen.findByText(/No lists match/)).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Naruto" })).toHaveAttribute(
+      "href",
+      "/s/anime/t/t1",
+    );
+    expect(mocks.noteSearchMiss).not.toHaveBeenCalled();
+  });
+
+  it("still keeps to the topic when its name cannot be read", async () => {
+    mocks.loadTopic.mockRejectedValue(new Error("down"));
+    open("/search?q=best&category=anime&topic=t1");
+    await screen.findByRole("link", { name: /Something/ });
+    expect(mocks.loadFeed).toHaveBeenCalledWith(expect.objectContaining({ topic: "t1" }));
+    expect(screen.queryByRole("button", { name: "Search everywhere" })).toBeNull();
+  });
+
+  it("drops the topic when a section chip is pressed", async () => {
+    const router = open("/search?q=best&category=anime&topic=t1");
+    const chips = within(await screen.findByRole("group", { name: "Category" }));
+    await userEvent.click(chips.getByRole("button", { name: "All" }));
+    expect(router.state.location.search).toBe("?q=best");
   });
 });
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageTitle } from "../app/pageTitle";
+import { SearchScopeMark } from "../app/searchScope";
 import { Navigate, useNavigate, useParams } from "react-router";
 import { useSession } from "../app/session";
 import type { SectionStats, Topic } from "../api/sections";
@@ -156,6 +157,7 @@ function SectionView({ section, load, store, topics, loadOne }: SectionViewProps
         <BackLink className="section-head__back" to="/" />
         <div className="section-head__text">
           <PageTitle title={section.name} inBar={false} />
+          <SearchScopeMark category={section.id} name={section.name} />
           <h1 className="section-head__name">
             <Icon name={section.icon} className="section-head__icon" />
             {section.name}
