@@ -1,0 +1,234 @@
+/*
+ * The pool one card at a time: the card large beside its name, a button in
+ * every tier's colour, and Skip. Beside the board the column is narrow and
+ * the card stands over the buttons; in a tray or a dock they stand side by side.
+ */
+.one {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 8px 8px 4px;
+}
+
+.one__card {
+  flex: none;
+  width: 120px;
+  height: 168px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--tile-placeholder);
+  color: var(--tile-label);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.one__card--name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.one__side {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.one__name {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font: var(--text-title);
+  color: var(--ink);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.one__tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 6px;
+}
+
+.one__tier {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 6px;
+  overflow: hidden;
+  border: none;
+  border-radius: 10px;
+  background: var(--band);
+  color: var(--on-band);
+  font: 500 18px/1 var(--font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.one__tier:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.one__tier:active:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.one__tier:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The tier a card tapped on the board is in: ringed, as the row's picked card is. */
+.one__tier[aria-current="true"] {
+  box-shadow:
+    inset 0 0 0 3px var(--paper),
+    0 0 0 2px var(--ink);
+}
+
+.one__tier:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.one__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.one__skip {
+  flex: none;
+}
+
+.one__keys {
+  margin: 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.one-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding-inline: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--ink-quiet);
+  font: var(--text-label);
+  color: var(--ink);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.one-toggle .ms {
+  font-size: 18px;
+}
+
+.one-toggle:hover {
+  background: var(--hover);
+}
+
+.one-toggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.one-toggle--on {
+  background: var(--primary-container);
+  box-shadow: none;
+  color: var(--on-primary-container);
+}
+
+.one-toggle--on:hover {
+  background: color-mix(in oklab, var(--primary-container) 88%, var(--ink));
+}
+
+.one-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* A finger has no keys to name. */
+@media (hover: none) and (pointer: coarse) {
+  .one__keys {
+    display: none;
+  }
+}
+
+/* A phone's tray: the card smaller, so the tiers keep most of the screen. */
+@media (max-width: 839px) and (min-height: 421px) and (hover: none) and (pointer: coarse) {
+  .one {
+    gap: 12px;
+    padding: 8px 14px 2px;
+  }
+
+  .one__card {
+    width: 96px;
+    height: 134px;
+  }
+
+  .one__name {
+    font: 500 15px/1.25 var(--font);
+  }
+
+  .one__tiers {
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  }
+
+  .one__tier {
+    min-height: 44px;
+  }
+
+  .one__skip {
+    align-self: stretch;
+    justify-content: center;
+    min-height: 40px;
+  }
+
+  .one__foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Beside the board the column is narrow: the card over its name and the buttons. */
+@media (min-width: 840px) {
+  .ranking:not(.ranking--under) .one {
+    order: 3;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 4px 0 0;
+  }
+
+  .ranking:not(.ranking--under) .one__card {
+    align-self: center;
+    width: 160px;
+    height: 224px;
+  }
+
+  .ranking:not(.ranking--under) .one-toggle {
+    order: 1;
+  }
+
+  .ranking--under .one {
+    width: 100%;
+    padding: 4px 0 0;
+  }
+
+  .ranking--under .one__side {
+    max-width: 640px;
+  }
+
+  .ranking--under .one-toggle {
+    order: 2;
+  }
+}

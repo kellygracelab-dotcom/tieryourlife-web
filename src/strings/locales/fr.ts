@@ -576,6 +576,13 @@ const fr: Translation = {
     placeIn: "Placer {name} dans {tier}",
     cardIn: "« {name} » dans {tier}",
     cardInPool: "« {name} » de retour dans le pool",
+    oneByOne: "Une par une",
+    oneByOneSkip: "Passer",
+    oneByOneToPool: "Dans le pool",
+    oneByOneDone: "Toutes les cartes sont placées",
+    oneByOneLeave: "Voir toutes les cartes",
+    oneByOneKeys: "{keys} pour son rang, Espace pour passer",
+    oneByOneKeysPlaced: "{keys} pour un autre rang, Retour arrière pour le pool",
     undo: "Annuler",
     // Not «Annuler»: that is what the undo button next to it says.
     cancel: "Abandonner",
