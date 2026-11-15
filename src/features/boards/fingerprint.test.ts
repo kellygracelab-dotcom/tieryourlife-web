@@ -211,11 +211,12 @@ describe("the fingerprint", () => {
   });
 
   // CONTRACT, Cover focus: a client that sends the focus puts it in the fingerprint.
-  it("adds the cover's focus at the very end, in whole numbers, and only away from the middle", () => {
+  it("adds the cover's focus at the very end, in whole numbers, whenever it has one", () => {
     const covered = { coverImageUrl: "https://c", coverImageUrls: ["https://c"] };
     const plain = fingerprintText(board(covered));
+    // The middle chosen on a tall picture is a focus of its own (SPEC, second round).
     expect(fingerprintText(board({ ...covered, coverFocus: { x: 0.5, y: 0.5, zoom: 1 } }))).toBe(
-      plain,
+      `${plain}10:coverFocus|4:5000|4:5000|3:100|`,
     );
     // A collage has no focus to draw, so none to compare.
     expect(
@@ -313,5 +314,29 @@ describe("the fingerprint", () => {
     expect(
       await fingerprintOf(board({ ...shared, anonymous: true, play: playOf(JSON.parse(example)) })),
     ).toBe("b97bfcf2595276d8399cacd16b85ec5341c62ae5ea9916330b394bf61c9cea89");
+  });
+
+  // CONTRACT, Cover focus (Proxy #142): each card's focus, by uid, after the cover's.
+  it("adds each pictured card's focus at the very end, by uid, in whole numbers", () => {
+    const plain = board();
+    const [arrival, dune] = plain.items;
+    const pictured = {
+      items: [
+        { ...dune!, imageUrl: "https://x/d.jpg", pictureFocus: { x: 0.3, y: 0.15, zoom: 2 } },
+        { ...arrival!, imageUrl: "https://x/a.jpg", pictureFocus: { x: 0.5, y: 0.5, zoom: 1 } },
+      ],
+    };
+    const without = fingerprintText(
+      board({ items: pictured.items.map(({ pictureFocus: _f, ...item }) => item) }),
+    );
+    expect(fingerprintText(board(pictured))).toBe(
+      `${without}12:pictureFocus|6:item-1|4:5000|4:5000|3:100|12:pictureFocus|6:item-2|4:3000|4:1500|3:200|`,
+    );
+    // A card without a picture has no focus to draw.
+    expect(
+      fingerprintText(
+        board({ items: [{ ...arrival!, pictureFocus: { x: 0.2, y: 0.2, zoom: 1 } }, dune!] }),
+      ),
+    ).toBe(fingerprintText(plain));
   });
 });

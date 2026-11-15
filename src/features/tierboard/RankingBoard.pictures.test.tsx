@@ -231,6 +231,36 @@ describe("a card's picture on the owner's board", () => {
     }
   });
 
+  it("places a card's picture from its menu, Adjust picture, only on a card with a picture", async () => {
+    const focus = vi.fn();
+    owned({ focus });
+    fireEvent.contextMenu(card("Fennec"), { clientX: 10, clientY: 10 });
+    const words = screen.getByRole("menu", { name: "Fennec" });
+    expect(within(words).queryByRole("menuitem", { name: "Adjust picture" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+
+    fireEvent.contextMenu(card("Arctic fox"), { clientX: 10, clientY: 10 });
+    const menu = within(screen.getByRole("menu", { name: "Arctic fox" }));
+    await userEvent.click(menu.getByRole("menuitem", { name: "Adjust picture" }));
+    const adjust = screen.getByRole("dialog", { name: "Adjust picture" });
+    const stage = within(adjust).getByRole("application");
+    const img = stage.querySelector("img")!;
+    Object.defineProperty(img, "naturalWidth", { value: 1600 });
+    Object.defineProperty(img, "naturalHeight", { value: 1000 });
+    fireEvent.load(img);
+    fireEvent.keyDown(stage, { key: "ArrowUp", shiftKey: true });
+    await userEvent.click(within(adjust).getByRole("button", { name: "Done" }));
+    expect(focus).toHaveBeenCalledWith(1, { x: 0.5, y: 0.4, zoom: 1 });
+    expect(screen.queryByRole("dialog", { name: "Adjust picture" })).toBeNull();
+  });
+
+  it("has no Adjust picture where the owner cannot place pictures", () => {
+    owned();
+    fireEvent.contextMenu(card("Arctic fox"), { clientX: 10, clientY: 10 });
+    const menu = screen.getByRole("menu", { name: "Arctic fox" });
+    expect(within(menu).queryByRole("menuitem", { name: "Adjust picture" })).toBeNull();
+  });
+
   it("leaves Shift with the right click to the browser's own menu", () => {
     owned();
     const shifted = createEvent.contextMenu(card("Red fox"), { shiftKey: true });

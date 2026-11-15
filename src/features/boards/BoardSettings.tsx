@@ -270,6 +270,7 @@ function CoverCreditPanel({
       <p className="sheet-pick__note">{strings.credit.coverAbout}</p>
       {form ? (
         <CreditForm
+          catalogue
           initial={fieldsOf(attribution)}
           editing={{
             save: onCredit,

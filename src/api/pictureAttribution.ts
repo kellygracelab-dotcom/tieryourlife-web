@@ -171,6 +171,23 @@ export function editorCreditOf(raw: unknown): EditorCredit | null {
   };
 }
 
+/** The catalogues a topic's picture or a house list's cover may be credited to (CONTRACT, From a catalogue). */
+const CREDIT_CATALOGUES: readonly string[] = ["tmdb", "anilist", "igdb", "steam", "openlibrary"];
+
+/**
+ * A credit the backend keeps as a catalogue's (`{source, link, id?}`): an
+ * editor credited the picture to its title's page there. Null for any other.
+ */
+export function catalogueCreditOf(raw: unknown): PictureAttribution | null {
+  const stored = attributionOf(raw);
+  return stored !== null &&
+    stored.manual !== true &&
+    stored.link !== undefined &&
+    CREDIT_CATALOGUES.includes(stored.source)
+    ? stored
+    : null;
+}
+
 /** The credit as the backend takes it. */
 export const manualCreditOf = (credit: EditorCredit): ManualCredit => ({ manual: true, ...credit });
 

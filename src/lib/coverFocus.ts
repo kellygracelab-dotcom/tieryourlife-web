@@ -1,4 +1,4 @@
-import { FOCUS_ZOOM_MAX, type CoverFocus } from "../api/coverFocus";
+import { CENTRE, FOCUS_ZOOM_MAX, sameFocus, type CoverFocus } from "../api/coverFocus";
 import { held, shownSize, type Framing, type PixelRect, type Size } from "./framing";
 
 export {
@@ -91,3 +91,26 @@ export const roundedFocus = (focus: CoverFocus): CoverFocus => ({
   y: Math.round(focus.y * 10_000) / 10_000,
   zoom: Math.round(focus.zoom * 100) / 100,
 });
+
+/** A picture taller than wide by more than this is a portrait or a poster (SPEC, second round). */
+export const TALL_RATIO = 1.2;
+/** Where a tall picture shows without a focus: faces and titles sit high on portraits and posters. */
+export const TALL_DEFAULT: CoverFocus = { x: 0.5, y: 0.35, zoom: 1 };
+
+/** The focus a picture shows with when it has none of its own: high on a tall one, else the middle. */
+export const defaultFocusOf = (picture: Size): CoverFocus =>
+  picture.height / picture.width > TALL_RATIO ? TALL_DEFAULT : CENTRE;
+
+/** The focus a picture is drawn with: its own, or the default for its shape. */
+export const shownFocus = (focus: CoverFocus | null | undefined, picture: Size): CoverFocus =>
+  focus ?? defaultFocusOf(picture);
+
+/**
+ * What a placed focus is kept as: null when it is the picture's own default,
+ * so it follows the default; else rounded. The middle of a tall picture is a
+ * choice of its own and is kept.
+ */
+export function keptFocus(focus: CoverFocus, picture: Size): CoverFocus | null {
+  const rounded = roundedFocus(focus);
+  return sameFocus(rounded, defaultFocusOf(picture)) ? null : rounded;
+}

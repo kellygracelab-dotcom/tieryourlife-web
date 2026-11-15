@@ -131,7 +131,7 @@ function CoverAbout({ list, onClose }: { list: PublishedList; onClose: () => voi
   return (
     <AboutPicture
       name={fill(strings.credit.coverOf, { name: list.title })}
-      attribution={creditAsAttribution(list.coverAttribution)}
+      attribution={list.coverCatalogue ?? creditAsAttribution(list.coverAttribution)}
       imageUrl={list.coverImageUrl}
       onClose={onClose}
     />

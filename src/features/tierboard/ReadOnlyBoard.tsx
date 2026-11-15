@@ -1,4 +1,4 @@
-import { MediaImage } from "../../ui/MediaImage";
+import { FocusedPicture } from "../../ui/FocusedPicture";
 import { useBrokenPicture } from "../../ui/useBrokenPicture";
 import { useRef, useState, type CSSProperties } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
@@ -42,8 +42,9 @@ function Tile({
   const className = pictured ? "tile" : "tile tile--name";
   const art =
     pictured && item.imageUrl !== null ? (
-      <MediaImage
+      <FocusedPicture
         {...sizedFor(item.imageUrl, 64)}
+        focus={item.pictureFocus}
         alt={item.title}
         loading="lazy"
         onError={onBroken}
@@ -95,6 +96,7 @@ function Tile({
           credit={item.credit}
           anchor={open.anchor}
           imageUrl={open.large ? item.imageUrl : null}
+          pictureFocus={item.pictureFocus ?? null}
           onClose={() => setOpen(null)}
         />
       )}

@@ -5,6 +5,7 @@ import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
 import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
 import {
+  cardFocusByPicture,
   coverFocusOf,
   isOut,
   poolCount,
@@ -78,6 +79,7 @@ export const BoardRow = memo(function BoardRow({
           cover={board.coverImageUrl}
           focus={coverFocusOf(board)}
           previews={board.coverImageUrls.length > 1 ? board.coverImageUrls : previewsOf(board)}
+          cellFocus={cardFocusByPicture(board)}
           tierColors={rankedTiers(board).map((tier) => tier.colorLight)}
         />
       </span>

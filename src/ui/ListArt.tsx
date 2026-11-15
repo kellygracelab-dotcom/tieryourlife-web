@@ -1,6 +1,5 @@
 import type { CoverFocus } from "../lib/coverFocus";
 import { FocusedPicture } from "./FocusedPicture";
-import { MediaImage } from "./MediaImage";
 import { strings } from "../strings";
 import "./ListArt.css";
 
@@ -9,6 +8,10 @@ interface ListArtProps {
   /** Which part of the cover shows; none for the middle. */
   focus?: CoverFocus | null;
   previews: string[];
+  /** Where each collage picture is looked at, by its address, as its card has it; the rest by their default. */
+  cellFocus?: ReadonlyMap<string, CoverFocus>;
+  /** A published list's: where each preview is cut, by its place (null: its default). */
+  previewFocus?: readonly (CoverFocus | null)[] | undefined;
   tierColors: string[];
   /** Drawn on the tile when there is no picture at all. */
   title?: string;
@@ -28,6 +31,8 @@ export function ListArt({
   cover,
   focus,
   previews,
+  cellFocus,
+  previewFocus,
   tierColors,
   title,
   decorative = false,
@@ -47,7 +52,13 @@ export function ListArt({
     return (
       <div className="art art--mosaic" data-count={Math.min(previews.length, MOSAIC_MAX)}>
         {previews.slice(0, MOSAIC_MAX).map((url, index) => (
-          <MediaImage key={`${index}-${url}`} src={url} alt="" loading="lazy" />
+          <FocusedPicture
+            key={`${index}-${url}`}
+            className="art__cell"
+            src={url}
+            focus={cellFocus?.get(url) ?? previewFocus?.[index] ?? null}
+            loading="lazy"
+          />
         ))}
       </div>
     );

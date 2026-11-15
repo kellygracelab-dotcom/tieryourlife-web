@@ -66,6 +66,12 @@ export interface ListSummary {
   /** Which part of the cover shows; absent for the middle (CONTRACT, Cover focus). */
   coverFocus?: CoverFocus;
   previewImages: string[];
+  /**
+   * Where each preview is cut, by its place in previewImages: the focus of
+   * the first card with that picture, or null for the picture's default.
+   * Absent when none has one (CONTRACT, previewFocus).
+   */
+  previewFocus?: (CoverFocus | null)[];
   tierColors: string[];
   updatedAt: number;
   takeCount: number;
@@ -105,6 +111,8 @@ export interface PublishedItem {
   credit?: string | null;
   /** Where the picture came from and whom it names; absent on cards without one and on older snapshots. */
   attribution?: PictureAttribution;
+  /** Which part of the picture its tile shows; absent for the picture's default (CONTRACT, Cover focus). */
+  pictureFocus?: CoverFocus;
   // Absent on snapshots published before the author's arrangement travelled.
   tierIndex?: number | null;
 }
@@ -127,6 +135,12 @@ export interface PublishedList extends ListSummary {
   underReview?: boolean;
   /** A house list's editor's credit for its cover (CONTRACT, Editor's credit); absent for none. */
   coverAttribution?: EditorCredit;
+  /**
+   * The same credit when it is a catalogue's (`{source, link, id?}`): the
+   * editor credited the cover to its title's page there. Shown naming the
+   * catalogue, as a topic's picture is.
+   */
+  coverCatalogue?: PictureAttribution;
   /**
    * The list's revision (CONTRACT, List revision): it moves on with every
    * write to what the list shows, whoever makes it, the house's translations

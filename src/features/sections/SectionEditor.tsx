@@ -13,7 +13,7 @@ import type { SectionChanges, SectionDraft } from "../../api/admin";
 import { errorOf } from "../../api/errors";
 import { useSession } from "../../app/session";
 import type { SectionProposal, SectionStats } from "../../api/sections";
-import { isCentre, sameFocus, type CoverFocus } from "../../lib/coverFocus";
+import { sameFocus, type CoverFocus } from "../../lib/coverFocus";
 import { CENTRED, cropOf } from "../../lib/framing";
 import { directionOf, LOCALE_NAMES, LOCALES } from "../../lib/locale";
 import { dataUrlOf, SECTION_PICTURE_MIN } from "../../lib/pictures";
@@ -22,6 +22,7 @@ import { useWidthClass } from "../../lib/useWidthClass";
 import { currentLocale, fill, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { CoverAdjust } from "../../ui/CoverAdjust";
+import { SECTION_PREVIEWS } from "../../ui/focusPreviews";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import { editorDeps, type EditorDeps } from "./editorDeps";
@@ -676,9 +677,10 @@ export function SectionEditor(props: SectionEditorProps) {
             <CoverAdjust
               src={servedPicture(picture.url, 1600)}
               focus={focus}
+              previews={SECTION_PREVIEWS}
               onCancel={() => setAdjusting(false)}
               onDone={(placed) => {
-                setFocus(isCentre(placed) ? null : placed);
+                setFocus(placed);
                 setAdjusting(false);
               }}
             />

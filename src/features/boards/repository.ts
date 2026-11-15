@@ -1,4 +1,4 @@
-import { focusOf, isCentre } from "../../lib/coverFocus";
+import { focusOf, type CoverFocus } from "../../lib/coverFocus";
 import { ownPictureRef } from "../../lib/privatePictureRef";
 import { attributionField, editorCreditOf } from "../../api/pictureAttribution";
 import { MAX_PLAY_ANSWERS, type SyncedPlay } from "../../api/boards";
@@ -211,9 +211,16 @@ function itemOf(
     credit: creditOf(item.credit),
     // Boards kept before attributions travelled have none, and load as they were.
     ...attributionField(imageUrl, item.attribution),
+    ...pictureFocusField(imageUrl, item.pictureFocus),
     source: source === "TMDB" || source === "GENERATED" ? source : "MANUAL",
     deletedAt: time(item.deletedAt),
   };
+}
+
+/** A card's focus, read with care: only on a card with a picture. */
+function pictureFocusField(imageUrl: string | null, raw: unknown): { pictureFocus?: CoverFocus } {
+  const focus = imageUrl === null ? null : focusOf(raw);
+  return focus === null ? {} : { pictureFocus: focus };
 }
 
 /**
@@ -276,7 +283,7 @@ export function parseBoard(raw: unknown, owner: string | null = null): Board | n
         ? [coverImageUrl]
         : covers,
     coverPictureId,
-    ...(coverFocus === null || isCentre(coverFocus) ? {} : { coverFocus }),
+    ...(coverFocus === null ? {} : { coverFocus }),
     authorName: text(source.authorName),
     publishedId: text(source.publishedId),
     takenFrom: origin?.listId ?? text(source.takenFrom),

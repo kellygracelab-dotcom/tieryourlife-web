@@ -1,38 +1,44 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { isCentre, placedBox, type CoverFocus } from "../lib/coverFocus";
+import { isCentre, placedBox, shownFocus, type CoverFocus } from "../lib/coverFocus";
 import type { Size } from "../lib/framing";
 import { MediaImage } from "./MediaImage";
 import "./FocusedPicture.css";
 
 interface FocusedPictureProps {
   src: string;
+  /** Larger copies for sharper screens, as sizedFor gives them. */
+  srcSet?: string;
   focus: CoverFocus | null | undefined;
   className?: string;
+  alt?: string;
   loading?: "lazy" | "eager";
+  draggable?: boolean;
   onLoad?: () => void;
+  onError?: () => void;
 }
 
 /**
- * A cover filling its box, cropped where its focus says (the SPEC's frame for
- * the box's own shape). Without a focus, or with the middle, it is the plain
- * covering picture every cover was before, so nothing changes for those.
- * With one, `className` goes on the box that clips it, so a picture laid out
- * by its class (placed, faded in) is laid out the same.
+ * A picture filling its box, cropped where its focus says (the SPEC's frame
+ * for the box's own shape). Without a focus it shows as its shape has it: a
+ * tall one high, where faces and titles sit, any other in the middle, the
+ * plain covering picture every cover was before. `className` goes on the box
+ * that clips it, so a picture laid out by its class is laid out the same.
  */
-export function FocusedPicture({ src, focus, className, loading, onLoad }: FocusedPictureProps) {
-  if (focus === null || focus === undefined || isCentre(focus)) {
-    return <MediaImage className={className} src={src} alt="" loading={loading} onLoad={onLoad} />;
-  }
-  return <Placed src={src} focus={focus} className={className} loading={loading} onLoad={onLoad} />;
+export function FocusedPicture(props: FocusedPictureProps) {
+  return <Placed {...props} />;
 }
 
 function Placed({
   src,
+  srcSet,
   focus,
   className,
+  alt = "",
   loading,
+  draggable,
   onLoad,
-}: FocusedPictureProps & { focus: CoverFocus }) {
+  onError,
+}: FocusedPictureProps) {
   const box = useRef<HTMLSpanElement>(null);
   const [aspect, setAspect] = useState<number | null>(null);
   const [size, setSize] = useState<Size | null>(null);
@@ -49,16 +55,18 @@ function Placed({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  // Until the picture's size and the box's shape are known, it covers as before.
+  // Until the picture's size and the box's shape are known, it covers as before,
+  // and the middle needs nothing else.
+  const shown = size === null ? null : shownFocus(focus, size);
   const style: CSSProperties | undefined =
-    size === null || aspect === null
+    size === null || aspect === null || shown === null || isCentre(shown)
       ? undefined
       : {
           position: "absolute",
           maxWidth: "none",
           maxHeight: "none",
           objectFit: "fill",
-          ...placedBox(size, aspect, focus),
+          ...placedBox(size, aspect, shown),
         };
   return (
     <span
@@ -67,8 +75,11 @@ function Placed({
     >
       <MediaImage
         src={src}
-        alt=""
+        srcSet={srcSet}
+        alt={alt}
         loading={loading}
+        draggable={draggable}
+        onError={onError}
         style={style}
         onLoad={(event) => {
           const { naturalWidth: width, naturalHeight: height } = event.currentTarget;

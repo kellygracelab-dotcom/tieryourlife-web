@@ -111,7 +111,7 @@ describe("a card one only looks at, and its picture", () => {
     fireEvent.contextMenu(screen.getByRole("button", { name: "The Witch" }));
     expect(screen.queryByRole("menu")).toBeNull();
     expect(
-      screen.getByRole("dialog", { name: "The Witch" }).querySelector(".card-detail__picture"),
+      screen.getByRole("dialog", { name: "The Witch" }).querySelector(".card-detail__picture img"),
     ).toHaveAttribute("src", "https://img/witch.jpg");
   });
 });

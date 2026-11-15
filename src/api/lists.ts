@@ -1,7 +1,8 @@
-import { focusOf, isCentre, type CoverFocus } from "./coverFocus";
+import { focusOf, type CoverFocus } from "./coverFocus";
 import type { AccountAction, ApiClient } from "./client";
 import {
   attributionField,
+  catalogueCreditOf,
   editorCreditOf,
   type ManualCredit,
   type PictureAttribution,
@@ -26,14 +27,17 @@ export async function loadList(client: ApiClient, id: string): Promise<Published
 export const publishedListOf = (list: PublishedList): PublishedList => {
   const { coverAttribution, revision, ...rest } = list;
   // The cover's credit is the cover picture's: none on a list drawn without one.
-  const coverCredit =
-    pictureOf(list.coverImageUrl) === null ? null : editorCreditOf(coverAttribution);
+  const covered = pictureOf(list.coverImageUrl) !== null;
+  const coverCredit = covered ? editorCreditOf(coverAttribution) : null;
+  const coverCatalogue =
+    covered && coverCredit !== null ? catalogueCreditOf(coverAttribution) : null;
   return {
     ...summaryOf(rest),
     authorName: textOf(list.authorName),
     tiers: tiersOf(list.tiers),
     items: itemsOf(list.items),
     ...(coverCredit === null ? {} : { coverAttribution: coverCredit }),
+    ...(coverCatalogue === null ? {} : { coverCatalogue }),
     ...revisionField(revision),
   };
 };
@@ -84,15 +88,17 @@ export const itemsOf = (items: unknown): PublishedItem[] =>
   Array.isArray(items)
     ? items.map((item: unknown) => {
         if (item === null || typeof item !== "object") return { title: "", imageUrl: null };
-        const { attribution, ...card } = item as PublishedItem;
+        const { attribution, pictureFocus: sent, ...card } = item as PublishedItem;
         const imageUrl =
           card.imageUrl === null || card.imageUrl === undefined ? null : pictureOf(card.imageUrl);
-        // The attribution is the picture's: cleaned, and none on a card drawn without one.
+        // The attribution and the focus are the picture's: cleaned, and none on a card drawn without one.
+        const pictureFocus = imageUrl === null ? null : focusOf(sent);
         return {
           ...card,
           title: textOf(card.title),
           imageUrl,
           ...attributionField(imageUrl, attribution),
+          ...(pictureFocus === null ? {} : { pictureFocus }),
         };
       })
     : [];
@@ -138,23 +144,32 @@ export function listSourceOf(value: unknown): ListSource | null {
  * focus only on a cover, a source only with words and an https page.
  */
 export const summaryOf = <T extends ListSummary>(list: T): T => {
-  const previews = (list.previewImages ?? []).filter((url) => pictureOf(url) !== null);
+  const sent = list.previewImages ?? [];
+  const kept = sent.flatMap((url, at) =>
+    pictureOf(url) === null ? [] : [{ url, focus: focusOf(list.previewFocus?.[at]) }],
+  );
+  const previews = kept.map((preview) => preview.url);
+  const previewFocus = kept.some((preview) => preview.focus !== null)
+    ? kept.map((preview) => preview.focus)
+    : null;
   const cover = pictureOf(list.coverImageUrl);
-  const read = cover === null ? null : focusOf(list.coverFocus);
-  const focus = read === null || isCentre(read) ? null : read;
+  const focus = cover === null ? null : focusOf(list.coverFocus);
   const source = listSourceOf(list.listSource);
   if (
     previews.length === list.previewImages?.length &&
+    list.previewFocus === undefined &&
+    previewFocus === null &&
     cover === list.coverImageUrl &&
     (list.coverFocus ?? null) === focus &&
     (list.listSource ?? null) === source
   ) {
     return list;
   }
-  const { coverFocus: _sent, listSource: _source, ...rest } = list;
+  const { coverFocus: _sent, listSource: _source, previewFocus: _previewFocus, ...rest } = list;
   return {
     ...rest,
     previewImages: previews,
+    ...(previewFocus === null ? {} : { previewFocus }),
     coverImageUrl: cover,
     ...(focus === null ? {} : { coverFocus: focus }),
     ...(source === null ? {} : { listSource: source }),
@@ -254,6 +269,8 @@ export interface PublishRequest {
      * rest, except a house editor's own credit (`manual`).
      */
     attribution?: PictureAttribution;
+    /** Where the card's picture is looked at; null for its default (CONTRACT, Cover focus). */
+    pictureFocus?: CoverFocus | null;
     tierIndex: number | null;
   }[];
 }

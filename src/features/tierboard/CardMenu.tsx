@@ -27,6 +27,8 @@ interface CardMenuProps {
   onAbout?: (() => void) | undefined;
   /** The page the picture is from, in a new tab. */
   onOpenPage?: (() => void) | undefined;
+  /** Adjust picture: which part of it the tile shows. The owner's, on a card with a picture. */
+  onAdjust?: (() => void) | undefined;
   tiers: readonly PublishedTier[];
   /** Where the card is now, or null in the pool. */
   current: number | null;
@@ -84,6 +86,7 @@ export function CardMenu({
   name,
   onAbout,
   onOpenPage,
+  onAdjust,
   tiers,
   current,
   at,
@@ -303,6 +306,18 @@ export function CardMenu({
             }}
           >
             <span className="card-menu__text">{strings.boards.removeFromList}</span>
+          </button>
+        )}
+        {onAdjust && (
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className="card-menu__item"
+            onPointerEnter={leaveTiers}
+            onClick={onAdjust}
+          >
+            <span className="card-menu__text">{strings.cover.adjustPicture}</span>
           </button>
         )}
         {onAbout && (

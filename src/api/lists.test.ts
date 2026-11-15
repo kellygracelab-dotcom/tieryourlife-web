@@ -27,12 +27,14 @@ describe("summaryOf", () => {
     previewImages: [],
   } as unknown as Parameters<typeof summaryOf>[0];
 
-  it("keeps a cover's focus in range, and none for the middle, the wrong shape or no cover", () => {
+  it("keeps a cover's focus in range, the middle too, and none of the wrong shape or with no cover", () => {
     const focus = { x: 0.3, y: 0.15, zoom: 2 };
     expect(summaryOf({ ...list, coverFocus: focus }).coverFocus).toEqual(focus);
-    expect(summaryOf({ ...list, coverFocus: { x: 0.5, y: 0.5, zoom: 1 } })).not.toHaveProperty(
-      "coverFocus",
-    );
+    expect(summaryOf({ ...list, coverFocus: { x: 0.5, y: 0.5, zoom: 1 } }).coverFocus).toEqual({
+      x: 0.5,
+      y: 0.5,
+      zoom: 1,
+    });
     expect(summaryOf({ ...list, coverFocus: { x: 0.3, y: 0.15, zoom: 9 } })).not.toHaveProperty(
       "coverFocus",
     );
@@ -67,6 +69,24 @@ describe("lists", () => {
     await expect(loadList(client, "a b")).resolves.toMatchObject({ id: "a b" });
 
     expect(request).toHaveBeenCalledWith("GET", "/lists/a%20b");
+  });
+
+  it("reads a card's focus only on a card with a picture, and only in range", async () => {
+    const focus = { x: 0.3, y: 0.15, zoom: 2 };
+    const { client } = recordingClient({
+      id: "abc",
+      title: "Animals",
+      tiers: [],
+      items: [
+        { title: "Fox", imageUrl: "https://img/fox.jpg", pictureFocus: focus },
+        { title: "Words", imageUrl: null, pictureFocus: focus },
+        { title: "Odd", imageUrl: "https://img/odd.jpg", pictureFocus: { x: 3, y: 0, zoom: 1 } },
+      ],
+    });
+    const list = await loadList(client, "abc");
+    expect(list.items[0]?.pictureFocus).toEqual(focus);
+    expect(list.items[1]).not.toHaveProperty("pictureFocus");
+    expect(list.items[2]).not.toHaveProperty("pictureFocus");
   });
 
   it("draws what it can of a list that came slightly wrong, keeping every card in its place", async () => {
@@ -194,6 +214,64 @@ describe("lists", () => {
       "h1",
     );
     expect(broken).not.toHaveProperty("coverAttribution");
+  });
+
+  it("reads a cover credited to its title's page in a catalogue, and not a manual one as that", async () => {
+    const list = {
+      id: "h1",
+      title: "Films",
+      coverImageUrl: "https://image.tmdb.org/t/p/w500/d.jpg",
+      previewImages: [],
+      tiers: [],
+      items: [],
+      coverAttribution: { source: "tmdb", link: "https://www.themoviedb.org/movie/438631" },
+    };
+    const opened = await loadList(recordingClient(list).client, "h1");
+    expect(opened.coverCatalogue).toEqual({
+      source: "tmdb",
+      link: "https://www.themoviedb.org/movie/438631",
+    });
+    const manual = await loadList(
+      recordingClient({
+        ...list,
+        coverAttribution: { manual: true, author: "Jane", link: "https://x.test/p" },
+      }).client,
+      "h1",
+    );
+    expect(manual).not.toHaveProperty("coverCatalogue");
+    const coverless = await loadList(
+      recordingClient({ ...list, coverImageUrl: null }).client,
+      "h1",
+    );
+    expect(coverless).not.toHaveProperty("coverCatalogue");
+  });
+
+  it("cuts a feed collage by each preview's focus, kept in step with the previews it keeps", async () => {
+    const focus = { x: 0.5, y: 0.1, zoom: 1 };
+    const { client } = recordingClient({
+      lists: [
+        {
+          id: "a",
+          title: "Films",
+          coverImageUrl: null,
+          previewImages: ["javascript:alert(1)", "https://img/a.jpg", "https://img/b.jpg"],
+          previewFocus: [focus, null, focus],
+          tierColors: [],
+        },
+        {
+          id: "b",
+          title: "Plain",
+          coverImageUrl: null,
+          previewImages: ["https://img/c.jpg"],
+          previewFocus: [null],
+          tierColors: [],
+        },
+      ],
+    });
+    const [films, plain] = (await loadFeed(client)).lists;
+    expect(films!.previewImages).toEqual(["https://img/a.jpg", "https://img/b.jpg"]);
+    expect(films!.previewFocus).toEqual([null, focus]);
+    expect(plain).not.toHaveProperty("previewFocus");
   });
 
   it("republishes one list in place, escaping the id", async () => {

@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { ListArt } from "./ListArt";
 
 describe("ListArt", () => {
@@ -23,6 +23,56 @@ describe("ListArt", () => {
     const { container } = render(<ListArt cover={null} previews={previews} tierColors={[]} />);
     expect(container.querySelector(".art--mosaic")).toHaveAttribute("data-count", "6");
     expect(container.querySelectorAll("img")).toHaveLength(6);
+  });
+
+  it("cuts each collage cell by the focus its card was given", () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      width: 160,
+      height: 150,
+    } as DOMRect);
+    const { container } = render(
+      <ListArt
+        cover={null}
+        previews={["https://img/a.jpg", "https://img/b.jpg"]}
+        tierColors={[]}
+        cellFocus={new Map([["https://img/a.jpg", { x: 0.5, y: 0, zoom: 1 }]])}
+      />,
+    );
+    const cells = container.querySelectorAll<HTMLImageElement>(".art__cell img");
+    expect(cells).toHaveLength(2);
+    for (const cell of cells) {
+      Object.defineProperty(cell, "naturalWidth", { value: 1000 });
+      Object.defineProperty(cell, "naturalHeight", { value: 1500 });
+      fireEvent.load(cell);
+    }
+    // Both posters are tall: the one placed at the top, the other at its default y 0.35.
+    expect(cells[0]!.style.top).toBe("0%");
+    expect(cells[1]!.style.top).not.toBe("0%");
+    vi.restoreAllMocks();
+  });
+
+  it("cuts a published list's collage by the focus sent for each preview, by its place", () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+      width: 160,
+      height: 150,
+    } as DOMRect);
+    const { container } = render(
+      <ListArt
+        cover={null}
+        previews={["https://img/a.jpg", "https://img/b.jpg"]}
+        previewFocus={[null, { x: 0.5, y: 0, zoom: 1 }]}
+        tierColors={[]}
+      />,
+    );
+    const cells = container.querySelectorAll<HTMLImageElement>(".art__cell img");
+    for (const cell of cells) {
+      Object.defineProperty(cell, "naturalWidth", { value: 1000 });
+      Object.defineProperty(cell, "naturalHeight", { value: 1500 });
+      fireEvent.load(cell);
+    }
+    expect(cells[0]!.style.top).not.toBe("0%");
+    expect(cells[1]!.style.top).toBe("0%");
+    vi.restoreAllMocks();
   });
 
   it("falls back to a titled tile with at most five tier colours along the bottom", () => {

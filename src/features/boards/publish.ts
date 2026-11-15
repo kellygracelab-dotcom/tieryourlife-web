@@ -136,6 +136,10 @@ export function publishRequestOf(board: Board): PublishRequest | null {
       // Sent back whole; the backend reads its link and originalUrl, which
       // keeps a catalogue copy under its own name when the copy goes out again.
       ...(item.attribution === undefined ? {} : { attribution: item.attribution }),
+      // Always said with a picture: left out, the backend would keep a focus taken off here.
+      ...(item.imageUrl === null && item.pictureId === null
+        ? {}
+        : { pictureFocus: item.pictureFocus ?? null }),
       tierIndex,
     })),
   };
@@ -202,6 +206,9 @@ function boardOf(makings: Makings, now: number, nextUid: NextUid): Board {
       imageUrl: card.imageUrl,
       credit: card.credit ?? null,
       ...attributionField(card.imageUrl, card.attribution),
+      ...(card.imageUrl === null || (card.pictureFocus ?? null) === null
+        ? {}
+        : { pictureFocus: card.pictureFocus! }),
       source: "MANUAL" as const,
       deletedAt: null,
     };
@@ -245,6 +252,7 @@ export const boardFromList = (
         // With its originalUrl when the picture is the list's copy of a
         // catalogue's: a publish of the copy sends it back with the address.
         ...attributionField(item.imageUrl, item.attribution),
+        pictureFocus: item.pictureFocus ?? null,
       })),
       rows,
       poolOrder,

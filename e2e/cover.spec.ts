@@ -3,9 +3,10 @@ import { mockBackend } from "./fixtures";
 import { shot } from "./signedIn";
 
 /*
- * Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md): a cover of one
- * picture is moved and zoomed under a 4:3 frame, Done keeps the place, and
- * every tile that shows the cover cuts it there by the shared formula.
+ * Adjust cover (_coordination/cover-focus-2026-11-15/SPEC.md, second round):
+ * the point a cover of one picture is looked at moves anywhere on the whole
+ * picture, Done keeps it, and every tile that shows the cover cuts it there
+ * by the shared formula.
  */
 
 const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
@@ -69,24 +70,24 @@ test("adjusts a cover of one picture, and its tile shows the place kept", async 
 
   const dialog = page.getByRole("dialog", { name: "Adjust cover" });
   await expect(dialog).toBeVisible();
-  const frame = dialog.getByRole("application", { name: /The cover/ });
+  const frame = dialog.getByRole("application", { name: /The picture/ });
   await expect(frame).toBeFocused();
-  // The 4:3 frame stands inside the window, the previews and the buttons under it.
+  // The whole picture, in its own shape, inside the window; the previews and the buttons under it.
   const box = (await frame.boundingBox())!;
-  expect(box.width / box.height).toBeCloseTo(4 / 3, 1);
+  expect(box.width / box.height).toBeCloseTo(400 / 800, 1);
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
   await expect(dialog.getByRole("button", { name: "Done" })).toBeEnabled();
   await shot(page, `cover-adjust-${hasTouch ? "phone" : "desktop"}`);
 
-  // The 4:3 frame up as far as it goes, by the keys: its middle, 150 px down
-  // the 800 px portrait, is the focus (y 0.1875). A 16:10 frame around the same
-  // point starts 25 px down: drawn 10% of its height above the box.
-  for (let i = 0; i < 20; i++) await frame.press("Shift+ArrowDown");
+  // A tall picture starts at its default, y 0.35; one long step up is y 0.25,
+  // 200 px down the 800 px portrait. A 16:10 frame around it, 250 high,
+  // starts 75 px down: drawn 30% of its height above the box.
+  await frame.press("Shift+ArrowUp");
   await dialog.getByRole("button", { name: "Done" }).click();
   await expect(dialog).toBeHidden();
   const preview = page.locator(".board-settings__cover-frame img");
-  await expect.poll(() => topOf(preview)).toBe("-10%");
+  await expect.poll(() => topOf(preview)).toBe("-30%");
 
   await page.emulateMedia({ colorScheme: "dark" });
   await press(page.getByRole("button", { name: "Adjust position" }), hasTouch);
@@ -95,12 +96,12 @@ test("adjusts a cover of one picture, and its tile shows the place kept", async 
   // ✕ leaves it as it was.
   await press(dialog.getByRole("button", { name: "Cancel" }), hasTouch);
   await expect(dialog).toBeHidden();
-  await expect.poll(() => topOf(preview)).toBe("-10%");
+  await expect.poll(() => topOf(preview)).toBe("-30%");
   await page.emulateMedia({ colorScheme: "light" });
 
   // The board's own tile on My boards, whatever its shape, is cut around the
   // same point by the shared formula: a frame as wide as the portrait,
-  // 400 / A high, its middle 150 px down unless that runs over the top.
+  // 400 / A high, its middle 200 px down unless that runs over the top.
   await page.getByRole("button", { name: "Done" }).click();
   await page.goto("/b");
   const tile = page.locator(".art--cover img").first();
@@ -113,6 +114,6 @@ test("adjusts a cover of one picture, and its tile shows the place kept", async 
     };
   });
   const high = 400 / aspect;
-  expect(top).toBeCloseTo((-Math.max(0, 150 - high / 2) / high) * 100, 2);
+  expect(top).toBeCloseTo((-Math.max(0, 200 - high / 2) / high) * 100, 2);
   await shot(page, `cover-tile-${hasTouch ? "phone" : "desktop"}`);
 });

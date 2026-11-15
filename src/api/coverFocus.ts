@@ -29,14 +29,17 @@ export const isCentre = (focus: CoverFocus | null | undefined): boolean =>
   focus === undefined ||
   (focus.x === CENTRE.x && focus.y === CENTRE.y && focus.zoom === CENTRE.zoom);
 
-/** The same place, the middle and none being the same. */
+/**
+ * The same place. None is not the middle: without a focus a tall picture
+ * shows high (SPEC, second round), so the middle chosen on one is kept.
+ */
 export const sameFocus = (
   a: CoverFocus | null | undefined,
   b: CoverFocus | null | undefined,
 ): boolean =>
-  isCentre(a) || isCentre(b)
-    ? isCentre(a) && isCentre(b)
-    : a?.x === b?.x && a?.y === b?.y && a?.zoom === b?.zoom;
+  a === null || a === undefined || b === null || b === undefined
+    ? (a ?? null) === (b ?? null)
+    : a.x === b.x && a.y === b.y && a.zoom === b.zoom;
 
 /**
  * A focus as somebody sent it, read with care: numbers in range, anything

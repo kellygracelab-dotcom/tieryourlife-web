@@ -5,6 +5,7 @@ import {
   creditProblemsOf,
   EDITOR_LICENCES,
   isCataloguePage,
+  isPortable,
   readsFromPage,
   type CreditFields,
   type CreditProblem,
@@ -29,7 +30,9 @@ const licenceName = (licence: EditorLicence): string =>
     ? strings.credit.publicDomain
     : licence === "Used with permission"
       ? strings.credit.permission
-      : licence;
+      : licence === "Copyrighted free use"
+        ? strings.credit.freeUse
+        : licence;
 
 /**
  * A house editor's credit for a picture (CONTRACT, Editor's credit): whom to
@@ -115,6 +118,20 @@ export function CreditForm({
           ))}
         </select>
       </label>
+      {isPortable(fields.licence) && (
+        <label className="credit-form__field">
+          <span className="credit-form__label">{strings.credit.country}</span>
+          <input
+            type="text"
+            dir="ltr"
+            value={fields.country}
+            maxLength={2}
+            autoComplete="off"
+            placeholder={strings.credit.optional}
+            onChange={(event) => set({ country: event.target.value })}
+          />
+        </label>
+      )}
       <label className="credit-form__field">
         <span className="credit-form__label">{strings.credit.link}</span>
         <input

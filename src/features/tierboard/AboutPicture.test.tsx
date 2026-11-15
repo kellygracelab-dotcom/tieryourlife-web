@@ -299,8 +299,37 @@ describe("About the picture on a house board", () => {
       .getAllByRole("option")
       .map((option) => option.textContent);
     expect(options[0]).toBe("Choose a licence");
-    expect(options.slice(-2)).toEqual(["Public domain", "Used with permission"]);
+    expect(options.slice(-3)).toEqual([
+      "Public domain",
+      "Copyrighted free use",
+      "Used with permission",
+    ]);
     expect(options).toContain("CC BY 1.0");
+  });
+
+  it("asks a ported licence's country, and saves it in the licence", async () => {
+    const { save, dialog } = open(null);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Add credit" }));
+    const licence = within(dialog).getByRole("combobox", { name: "Licence" });
+    await userEvent.selectOptions(licence, "CC BY 4.0");
+    expect(
+      within(dialog).queryByRole("textbox", { name: "Country of a ported licence" }),
+    ).toBeNull();
+    await userEvent.selectOptions(licence, "CC BY-SA 2.0");
+    await userEvent.type(
+      within(dialog).getByRole("textbox", { name: "Country of a ported licence" }),
+      "de",
+    );
+    await userEvent.type(
+      within(dialog).getByRole("textbox", { name: "Source link" }),
+      "https://example.com/fox",
+    );
+    await userEvent.click(within(dialog).getByRole("button", { name: "Save credit" }));
+    expect(save).toHaveBeenCalledWith({
+      license: "CC BY-SA 2.0 de",
+      licenseUrl: "https://creativecommons.org/licenses/by-sa/2.0/de/",
+      link: "https://example.com/fox",
+    });
   });
 
   it("saves only the link of a Commons file, saying the backend reads the rest", async () => {

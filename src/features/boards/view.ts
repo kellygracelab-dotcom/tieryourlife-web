@@ -1,3 +1,4 @@
+import { sameFocus } from "../../lib/coverFocus";
 import { sameAttribution } from "../../api/pictureAttribution";
 import type { PublishedItem, PublishedList, PublishedTier } from "../../api/types";
 import {
@@ -70,6 +71,7 @@ export function boardView(board: Board, untitled: string, before?: readonly stri
         imageUrl: item.imageUrl,
         credit: item.credit,
         ...(item.attribution === undefined ? {} : { attribution: item.attribution }),
+        ...(item.pictureFocus === undefined ? {} : { pictureFocus: item.pictureFocus }),
         tierIndex: placed.has(position) ? undefined : null,
       })),
     },
@@ -84,6 +86,7 @@ const sameItem = (a: PublishedItem, b: PublishedItem): boolean =>
   a.imageUrl === b.imageUrl &&
   a.credit === b.credit &&
   sameAttribution(a.attribution, b.attribution) &&
+  sameFocus(a.pictureFocus, b.pictureFocus) &&
   a.tierIndex === b.tierIndex;
 
 const sameTier = (a: PublishedTier, b: PublishedTier): boolean =>

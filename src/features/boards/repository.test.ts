@@ -17,13 +17,15 @@ describe("parseBoard", () => {
     expect(parseBoard(without)?.anonymous).toBe(false);
   });
 
-  it("reads a cover's focus in range, and none for the middle or anything else", () => {
+  it("reads a cover's focus in range, the middle too, and none for anything else", () => {
     const board = { ...newBoard("b1", "Films", 1, uids()), coverImageUrls: ["https://c"] };
     const focus = { x: 0.3, y: 0.15, zoom: 2 };
     expect(parseBoard({ ...board, coverFocus: focus })?.coverFocus).toEqual(focus);
-    expect(parseBoard({ ...board, coverFocus: { x: 0.5, y: 0.5, zoom: 1 } })).not.toHaveProperty(
-      "coverFocus",
-    );
+    expect(parseBoard({ ...board, coverFocus: { x: 0.5, y: 0.5, zoom: 1 } })?.coverFocus).toEqual({
+      x: 0.5,
+      y: 0.5,
+      zoom: 1,
+    });
     expect(parseBoard({ ...board, coverFocus: { x: 2, y: 0.5, zoom: 1 } })).not.toHaveProperty(
       "coverFocus",
     );
