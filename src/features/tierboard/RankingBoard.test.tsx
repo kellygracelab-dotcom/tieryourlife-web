@@ -785,3 +785,54 @@ describe("RankingBoard", () => {
     );
   });
 });
+
+describe("RankingBoard, one card at a time", () => {
+  const up = () => document.querySelector(".one__name");
+  const panel = () => within(document.querySelector<HTMLElement>(".one")!);
+  const draw = (device: KeyValueStore) =>
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} store={memoryStore()} device={device} />
+      </MemoryRouter>,
+    );
+
+  it("is the device's choice: a tier places the card up, Skip and Space come round, Backspace sends a placed card back", async () => {
+    const device = memoryStore();
+    const { unmount } = draw(device);
+    await userEvent.click(screen.getByRole("button", { name: "One by one" }));
+    expect(device.data.get("tyl.board.oneByOne")).toBe("1");
+    expect(up()).toHaveTextContent("Ex Machina");
+
+    await userEvent.click(panel().getByRole("button", { name: "Skip" }));
+    expect(up()).toHaveTextContent("The Witch");
+    await userEvent.keyboard(" ");
+    expect(up()).toHaveTextContent("Climax");
+    await userEvent.keyboard(" ");
+    expect(up()).toHaveTextContent("Ex Machina");
+
+    await userEvent.click(panel().getByRole("button", { name: "Place Ex Machina in A" }));
+    expect(within(tierList("A")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
+    expect(up()).toHaveTextContent("The Witch");
+
+    // A card on the board, picked, comes up with its tier marked; Backspace sends it back.
+    await userEvent.click(card("Ex Machina"));
+    expect(up()).toHaveTextContent("Ex Machina");
+    expect(panel().getByRole("button", { name: "Place Ex Machina in A" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(panel().getByRole("button", { name: "To the pool" })).toBeInTheDocument();
+    await userEvent.keyboard("{Backspace}");
+    expect(within(tierList("A")).queryAllByRole("button")).toHaveLength(0);
+
+    unmount();
+    draw(device);
+    expect(screen.getByRole("button", { name: "One by one" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "One by one" }));
+    expect(device.data.get("tyl.board.oneByOne")).toBe("0");
+    expect(document.querySelector(".one")).toBeNull();
+  });
+});

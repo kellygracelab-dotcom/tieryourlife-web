@@ -55,6 +55,7 @@ import { useTileDrag, type HitTest } from "./useTileDrag";
 import { useTierMove, type TierEditing } from "./useTierMove";
 import { BoardFrameContext } from "./boardFrame";
 import { DockToggle } from "./DockToggle";
+import { ONE_BY_ONE_KEY, OneByOne, OneByOneToggle } from "./OneByOne";
 import { bringsPicture, incomingOf, usePastedPictures, type Incoming } from "../../lib/incoming";
 import { useDock } from "./useDock";
 import { useHeadHeight } from "./useHeadHeight";
@@ -783,6 +784,17 @@ export function RankingBoard({
     setMenusOpened(next);
   }, [device]);
 
+  // The pool one card at a time, or every card at once: the device's choice, not synced.
+  const [oneByOne, setOneByOne] = useState(() => device.read(ONE_BY_ONE_KEY) === "1");
+  const chooseOneByOne = useCallback(
+    (on: boolean) => {
+      device.write(ONE_BY_ONE_KEY, on ? "1" : "0");
+      setOneByOne(on);
+    },
+    [device],
+  );
+  const single = oneByOne && !seeded;
+
   // The owner's page keeps the draft: every placement goes out as it happens.
   const report = useRef(edit?.owner?.onChange);
   const follow = useRef(onRows);
@@ -821,6 +833,50 @@ export function RankingBoard({
       (reason: unknown) => setSave({ status: "failed", error: errorOf(reason) }),
     );
   };
+
+  // The pool and its tiles are the same from one frame of a drag to the next:
+  // kept, they are not drawn again while a card travels over the rows.
+  const left = useMemo(() => pool(state), [state]);
+  const needle = query.trim();
+  const shown = useMemo(
+    () =>
+      needle === "" ? left : left.filter((item) => holds(list.items[item]?.title ?? "", needle)),
+    [left, needle, list.items],
+  );
+  useEffect(() => {
+    inSight.current = needle === "" ? null : shown;
+  });
+  // One card at a time: the picked card is the one up, and with none picked
+  // the pool's first in sight comes up by itself.
+  useEffect(() => {
+    if (!single || selected !== null || lifted !== null) return;
+    const first = shown[0];
+    if (first !== undefined) dispatch({ type: "select", item: first });
+  }, [single, selected, lifted, shown, dispatch]);
+  // A tier puts a card from the pool last in it, and the pool's next comes
+  // up; a card from the board moves there, and the pool's card comes back up.
+  const placeOne = useCallback(
+    (tier: number) => {
+      if (selected === null) return;
+      if (tierOf(state, selected) === null) return placeSelected(tier);
+      dispatch({ type: "place", item: selected, tier });
+      dispatch({ type: "select", item: null });
+    },
+    [dispatch, placeSelected, selected, state],
+  );
+  // Skip leaves the pool's order alone: the next card in sight, and round to the first.
+  const skipOne = useCallback(() => {
+    if (selected === null || shown.length < 2) return;
+    const at = shown.indexOf(selected);
+    if (at === -1) return;
+    dispatch({ type: "select", item: shown[(at + 1) % shown.length] ?? null });
+  }, [dispatch, selected, shown]);
+  // A card from the board back to the pool, last, as its menu sends it.
+  const unplaceOne = useCallback(() => {
+    if (selected === null || tierOf(state, selected) === null) return;
+    dispatch({ type: "unplace", item: selected });
+    dispatch({ type: "select", item: null });
+  }, [dispatch, selected, state]);
 
   useEffect(() => {
     if (locked) return;
@@ -880,25 +936,35 @@ export function RankingBoard({
             : { type: "place", item: selected, tier, index },
         );
       }
+      if (single && selected !== null) {
+        // A button keeps Space for its own press; anywhere else it skips the card.
+        if (event.key === " " && !(target instanceof HTMLButtonElement)) {
+          event.preventDefault();
+          return skipOne();
+        }
+        if (event.key === "Backspace" && tierOf(state, selected) !== null) {
+          event.preventDefault();
+          return unplaceOne();
+        }
+      }
       const tier = tierForKey(event.key, list.tiers.length);
-      if (tier !== null) placeSelected(tier);
+      if (tier !== null) (single ? placeOne : placeSelected)(tier);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dispatch, list.tiers.length, placeSelected, locked, selected, state]);
+  }, [
+    dispatch,
+    list.tiers.length,
+    placeSelected,
+    locked,
+    selected,
+    state,
+    single,
+    placeOne,
+    skipOne,
+    unplaceOne,
+  ]);
 
-  // The pool and its tiles are the same from one frame of a drag to the next:
-  // kept, they are not drawn again while a card travels over the rows.
-  const left = useMemo(() => pool(state), [state]);
-  const needle = query.trim();
-  const shown = useMemo(
-    () =>
-      needle === "" ? left : left.filter((item) => holds(list.items[item]?.title ?? "", needle)),
-    [left, needle, list.items],
-  );
-  useEffect(() => {
-    inSight.current = needle === "" ? null : shown;
-  });
   const pointerDownFor = drag.onPointerDown;
   const dragNow = drag.current;
   const poolDropAt = dropTarget?.kind === "pool" ? dropTarget.index : null;
@@ -949,6 +1015,23 @@ export function RankingBoard({
   );
   const picked = selected !== null && left.includes(selected);
   const allPlaced = left.length === 0;
+  const current = single && selected !== null ? list.items[selected] : undefined;
+  const panel =
+    current !== undefined && selected !== null ? (
+      <OneByOne
+        card={current}
+        item={selected}
+        tiers={list.tiers}
+        placedIn={tierOf(state, selected)}
+        board={boardSize}
+        locked={locked}
+        canSkip={shown.length > 1}
+        keys={keyboardTiers}
+        onPlace={placeOne}
+        onSkip={skipOne}
+        onUnplace={unplaceOne}
+      />
+    ) : null;
 
   // The dock is fixed to the window's foot; the page leaves room under the
   // board for it, its shadow says a row is underneath, and a card dragged
@@ -1156,11 +1239,13 @@ export function RankingBoard({
                 onKeyDown={resizeByKey}
               />
             )}
-            {allPlaced && !wide && !emptyPool ? (
+            {allPlaced && !wide && !emptyPool && panel === null ? (
               <div className="pool__done">
                 <p className="pool__done-title">
                   <Icon name="check_circle" className="pool__done-icon" />
-                  {plural(strings.rank.allPlaced, list.items.length)}
+                  {single
+                    ? strings.rank.oneByOneDone
+                    : plural(strings.rank.allPlaced, list.items.length)}
                 </p>
                 <p className="pool__done-note">
                   {edit === undefined || edit.owner?.live
@@ -1175,6 +1260,11 @@ export function RankingBoard({
                     disabled={locked || (edit.owner !== undefined && !edit.owner.canSave)}
                   >
                     {saveLabel(edit, false)}
+                  </Button>
+                )}
+                {single && (
+                  <Button variant="tonal" onClick={() => chooseOneByOne(false)}>
+                    {strings.rank.oneByOneLeave}
                   </Button>
                 )}
                 {addButton}
@@ -1195,7 +1285,9 @@ export function RankingBoard({
                     {allPlaced && !emptyPool ? (
                       <p className="pool__done-title">
                         <Icon name="check_circle" className="pool__done-icon" />
-                        {plural(strings.rank.allPlaced, list.items.length)}
+                        {single && panel === null
+                          ? strings.rank.oneByOneDone
+                          : plural(strings.rank.allPlaced, list.items.length)}
                       </p>
                     ) : (
                       <h2 className="pool__title">
@@ -1208,7 +1300,7 @@ export function RankingBoard({
                       </h2>
                     )}
                     {emptyPool ? !wide && addChip : addButton}
-                    {!wide && maxRows > 1 && !allPlaced && (
+                    {!wide && maxRows > 1 && !allPlaced && !single && (
                       <button
                         type="button"
                         className="pool__expand"
@@ -1219,10 +1311,23 @@ export function RankingBoard({
                         <Icon name="expand_more" />
                       </button>
                     )}
+                    {(!emptyPool || oneByOne) && (
+                      <OneByOneToggle on={oneByOne} onChange={chooseOneByOne} />
+                    )}
                     {wide && canDock && <DockToggle dock={dock} onChoose={choose} />}
                   </div>
                   {toolsPanel}
-                  {emptyPool && <p className="pool__empty">{strings.boards.poolEmpty}</p>}
+                  {emptyPool &&
+                    (single && list.items.length > 0 ? (
+                      <div className="one-done">
+                        <p className="pool__empty">{strings.rank.oneByOneDone}</p>
+                        <Button variant="tonal" onClick={() => chooseOneByOne(false)}>
+                          {strings.rank.oneByOneLeave}
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="pool__empty">{strings.boards.poolEmpty}</p>
+                    ))}
                   {!allPlaced && left.length > POOL_SEARCH_FROM && tools === undefined && (
                     <input
                       className="pool__search"
@@ -1238,7 +1343,15 @@ export function RankingBoard({
                       }}
                     />
                   )}
-                  {allPlaced ? (
+                  {single ? (
+                    allPlaced &&
+                    panel === null &&
+                    !emptyPool && (
+                      <Button variant="tonal" onClick={() => chooseOneByOne(false)}>
+                        {strings.rank.oneByOneLeave}
+                      </Button>
+                    )
+                  ) : allPlaced ? (
                     tools === undefined && (
                       <p className="pool__hint pool__hint--keys">{strings.rank.allPlacedHint}</p>
                     )
@@ -1259,37 +1372,40 @@ export function RankingBoard({
                     </>
                   )}
                 </div>
-                {!allPlaced && (
-                  <>
-                    <ul className="pool__items" ref={tray} onScroll={readPage}>
-                      {poolTiles}
-                    </ul>
-                    {shown.length === 0 && <p className="pool__none">{strings.rank.searchNone}</p>}
-                    {edit?.owner !== undefined && menusOpened < MENU_HINT_UNTIL && (
-                      // Hidden, not gone, while a card is picked: the cards above
-                      // must not move between the two clicks of a double click.
-                      <p
-                        className="pool__hint pool__hint--menu"
-                        style={selected === null ? undefined : { visibility: "hidden" }}
-                      >
-                        {strings.boards.menuHint}
-                      </p>
-                    )}
-                    {pages > 1 && (
-                      <div className="pool__dots" aria-hidden="true">
-                        {Array.from({ length: Math.min(pages, TRAY_DOTS) }, (_, i) => (
-                          <span
-                            key={i}
-                            className={i === page ? "pool__dot pool__dot--on" : "pool__dot"}
-                          />
-                        ))}
-                        {pages > TRAY_DOTS && (
-                          <span className="pool__dots-more">+{pages - TRAY_DOTS}</span>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
+                {panel ??
+                  (!allPlaced && (
+                    <>
+                      <ul className="pool__items" ref={tray} onScroll={readPage}>
+                        {poolTiles}
+                      </ul>
+                      {shown.length === 0 && (
+                        <p className="pool__none">{strings.rank.searchNone}</p>
+                      )}
+                      {edit?.owner !== undefined && menusOpened < MENU_HINT_UNTIL && (
+                        // Hidden, not gone, while a card is picked: the cards above
+                        // must not move between the two clicks of a double click.
+                        <p
+                          className="pool__hint pool__hint--menu"
+                          style={selected === null ? undefined : { visibility: "hidden" }}
+                        >
+                          {strings.boards.menuHint}
+                        </p>
+                      )}
+                      {pages > 1 && (
+                        <div className="pool__dots" aria-hidden="true">
+                          {Array.from({ length: Math.min(pages, TRAY_DOTS) }, (_, i) => (
+                            <span
+                              key={i}
+                              className={i === page ? "pool__dot pool__dot--on" : "pool__dot"}
+                            />
+                          ))}
+                          {pages > TRAY_DOTS && (
+                            <span className="pool__dots-more">+{pages - TRAY_DOTS}</span>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  ))}
               </>
             )}
           </div>
