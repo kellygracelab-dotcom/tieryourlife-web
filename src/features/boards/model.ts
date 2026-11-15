@@ -634,8 +634,19 @@ export function setPicture(
 ): Board {
   const card = board.items.find((item) => item.uid === itemUid && item.deletedAt === null);
   if (card === undefined) return board;
-  const { attribution: _was, pictureFocus: _placed, ...rest } = card;
-  const focus = picture.imageUrl === null ? null : (picture.pictureFocus ?? null);
+  const { attribution: _was, pictureFocus: placed, ...rest } = card;
+  // The same picture again (a link's answer that came twice, or late) keeps
+  // the place chosen on it meanwhile; a focus said with the picture (Undo's)
+  // is the one it goes with.
+  const same = picture.imageUrl === card.imageUrl && picture.pictureId === card.pictureId;
+  const focus =
+    picture.imageUrl === null
+      ? null
+      : picture.pictureFocus !== undefined
+        ? picture.pictureFocus
+        : same
+          ? (placed ?? null)
+          : null;
   const changed: BoardItem = {
     ...rest,
     imageUrl: picture.imageUrl,
