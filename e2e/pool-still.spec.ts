@@ -88,36 +88,65 @@ test("a card carried from the pool over the tiers leaves the pool standing still
   const card = pool.locator("[data-item]").nth(1);
   const box = (await card.boundingBox())!;
   const from = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  // Each tier's middle, and the gap under it: the pointer crosses every edge.
+  // Each tier's middle, and the middle of the gap under it, where the pointer
+  // is over no tier at all. Measured once the card is up: a desktop board
+  // moves up a little then, and a gap measured before was the next row.
   // Only the tiers in sight above the pool, which a dock or a tray lies over,
   // and clear of the edge where a carried card scrolls the page.
-  const poolTop = (await page.locator(".pool").boundingBox())!.y;
-  const stops: { x: number; y: number }[] = [];
-  for (const tier of [0, 1, 2]) {
-    const row = (await page.locator(`.tier[data-drop="tier:${tier}"]`).boundingBox())!;
-    const x = row.x + row.width * 0.6;
-    if (row.y + row.height + 3 > poolTop - 60) break;
-    stops.push({ x, y: row.y + row.height / 2 }, { x, y: row.y + row.height + 3 });
-  }
-  // An iPhone's two rows of tray leave one tier and its edge in sight.
-  expect(stops.length).toBeGreaterThanOrEqual(2);
+  const tierRow = (tier: number) => page.locator(`.tier[data-drop="tier:${tier}"]`).boundingBox();
+  const first = (await tierRow(0))!;
+  const over = { x: first.x + first.width * 0.6, y: first.y + first.height / 2 };
 
   // Lifted, and over the first tier.
   if (hasTouch) {
     await finger(page, "pointerdown", from, `.pool__items [data-item="${1}"]`);
     await page.waitForTimeout(300);
-    await finger(page, "pointermove", stops[0]!);
+    await finger(page, "pointermove", over);
   } else {
     await page.mouse.move(from.x, from.y);
     await page.mouse.down();
-    await page.mouse.move(stops[0]!.x, stops[0]!.y, { steps: 10 });
+    await page.mouse.move(over.x, over.y, { steps: 10 });
   }
   await expect(page.locator(".tile--lifted").first()).toBeVisible();
   await page.waitForTimeout(150);
 
+  const poolTop = (await page.locator(".pool").boundingBox())!.y;
+  const stops: { x: number; y: number }[] = [];
+  for (const tier of [0, 1, 2]) {
+    const row = (await tierRow(tier))!;
+    const next = (await tierRow(tier + 1))!;
+    const gap = (row.y + row.height + next.y) / 2;
+    if (gap > poolTop - 60) break;
+    stops.push({ x: over.x, y: row.y + row.height / 2 }, { x: over.x, y: gap });
+  }
+  // An iPhone's two rows of tray leave one tier and its edge in sight.
+  expect(stops.length).toBeGreaterThanOrEqual(2);
+  // The gaps are over no tier: the card crosses nothing there.
+  for (const gap of stops.filter((_, n) => n % 2 === 1)) {
+    const under = await page.evaluate(
+      (at) =>
+        document
+          .elementsFromPoint(at.x, at.y)
+          .find((element) => !element.closest(".ghost"))
+          ?.closest("[data-drop]")
+          ?.getAttribute("data-drop") ?? null,
+      gap,
+    );
+    expect(under).toBeNull();
+  }
+  if (hasTouch) await finger(page, "pointermove", stops[0]!);
+  else await page.mouse.move(stops[0]!.x, stops[0]!.y, { steps: 4 });
+  await page.waitForTimeout(150);
+
   // From here on, nothing in the pool may move, change or be drawn again.
   await pool.evaluate((tray) => {
-    const seen = { changes: 0, heights: new Set<number>() };
+    // Every frame, not only the stops: the pool flashed in passing too.
+    const orderOf = () =>
+      [...tray.querySelectorAll("[data-item]")]
+        .map((tile) => tile.getAttribute("data-item"))
+        .join();
+    const order = orderOf();
+    const seen = { changes: 0, heights: new Set<number>(), reordered: 0 };
     (window as unknown as { poolSeen: typeof seen }).poolSeen = seen;
     new MutationObserver((records) => (seen.changes += records.length)).observe(tray, {
       childList: true,
@@ -125,6 +154,7 @@ test("a card carried from the pool over the tiers leaves the pool standing still
     });
     const watch = () => {
       seen.heights.add(Math.round(tray.getBoundingClientRect().height));
+      if (orderOf() !== order) seen.reordered++;
       requestAnimationFrame(watch);
     };
     watch();
@@ -140,11 +170,14 @@ test("a card carried from the pool over the tiers leaves the pool standing still
     }
   }
   const seen = await page.evaluate(() => {
-    const { changes, heights } = (
-      window as unknown as { poolSeen: { changes: number; heights: Set<number> } }
+    const { changes, heights, reordered } = (
+      window as unknown as {
+        poolSeen: { changes: number; heights: Set<number>; reordered: number };
+      }
     ).poolSeen;
-    return { changes, heights: [...heights] };
+    return { changes, heights: [...heights], reordered };
   });
+  expect(seen.reordered).toBe(0);
   expect(seen.changes).toBe(0);
   expect(seen.heights).toHaveLength(1);
 
