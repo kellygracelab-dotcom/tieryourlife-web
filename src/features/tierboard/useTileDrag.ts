@@ -77,6 +77,10 @@ export function useTileDrag(
   // committed state still said "pressed", and the card fell back to the pool.
   const latest = useRef<DragState>(idle);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The pointer that took the card up: no other moves it or lets it go. A
+  // page scrolled under a finger's drag had WebKit send a mouse move from
+  // where the mouse last was, and the card jumped there (CI, 15.11.2026).
+  const pointer = useRef<number | undefined>(undefined);
   // Every pointermove changes where the card is; the board, some 2,000 tiles
   // on a big list, is drawn again only when what it shows changes. The ghost
   // follows the pointer by itself.
@@ -99,6 +103,7 @@ export function useTileDrag(
   const onPointerDown = useCallback(
     (item: number) => (event: ReactPointerEvent<HTMLElement>) => {
       if (event.button !== 0) return;
+      pointer.current = event.pointerId;
       const at = { x: event.clientX, y: event.clientY };
       const rect = event.currentTarget.getBoundingClientRect();
       const grab = {
@@ -121,9 +126,11 @@ export function useTileDrag(
 
   // Always listening: a listener added after the press can miss the release.
   useEffect(() => {
+    const another = (event: PointerEvent) =>
+      pointer.current !== undefined && event.pointerId !== pointer.current;
     const onMove = (event: PointerEvent) => {
       const current = latest.current;
-      if (current.phase === "idle") return;
+      if (current.phase === "idle" || another(event)) return;
       const at = { x: event.clientX, y: event.clientY };
       const under = () => targetOf(hitTest(at), at, current.item);
       const next = move(current, at, current.phase === "pressed" ? null : under());
@@ -148,8 +155,12 @@ export function useTileDrag(
       }
       become(idle);
     };
-    const onUp = () => finish(true);
-    const onCancel = () => finish(false);
+    const onUp = (event: PointerEvent) => {
+      if (!another(event)) finish(true);
+    };
+    const onCancel = (event: PointerEvent) => {
+      if (!another(event)) finish(false);
+    };
 
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);

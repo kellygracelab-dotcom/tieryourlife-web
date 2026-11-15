@@ -50,7 +50,7 @@ const pointer = (
   target: Element | Window,
   x: number,
   y: number,
-  extra: { button?: number; pointerType?: string } = {},
+  extra: { button?: number; pointerType?: string; pointerId?: number } = {},
 ) => {
   const event = new MouseEvent(type, {
     bubbles: true,
@@ -60,6 +60,9 @@ const pointer = (
     button: extra.button ?? 0,
   });
   Object.defineProperty(event, "pointerType", { value: extra.pointerType ?? "mouse" });
+  if (extra.pointerId !== undefined) {
+    Object.defineProperty(event, "pointerId", { value: extra.pointerId });
+  }
   return fireEvent(target, event);
 };
 
@@ -100,6 +103,32 @@ describe("dragging a card", () => {
     ).toBeInTheDocument();
     expect(document.querySelector(".ghost")).toBeNull();
     expect(screen.getByText(/of 2 placed/)).toHaveTextContent("1 of 2 placed");
+  });
+
+  it("follows only the pointer that took the card up", () => {
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} hitTest={hitTest} />
+      </MemoryRouter>,
+    );
+    pointer("pointerdown", card("Anora"), 10, 10, { pointerId: 7 });
+    under = tierRow("S");
+    pointer("pointermove", window, 40, 40, { pointerId: 7 });
+    expect(tierRow("S")).toHaveClass("tier--target");
+    // The mouse, moved by the browser as the page scrolled under a finger: the card stays.
+    under = tierRow("A");
+    pointer("pointermove", window, 200, 90, { pointerId: 1 });
+    expect(tierRow("S")).toHaveClass("tier--target");
+    expect(document.querySelector(".ghost")).toHaveStyle({
+      transform: "translate(30px, 30px) rotate(-4deg) scale(1.06)",
+    });
+    pointer("pointerup", window, 200, 90, { pointerId: 1 });
+    expect(document.querySelector(".ghost")).not.toBeNull();
+    under = tierRow("S");
+    pointer("pointerup", window, 40, 40, { pointerId: 7 });
+    expect(
+      within(screen.getByRole("list", { name: "S" })).getByRole("button", { name: "Anora" }),
+    ).toBeInTheDocument();
   });
 
   // A quick flick: the move that starts the drag and the release arrive before
