@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CoverFocus } from "../lib/coverFocus";
 import { CoverAdjust } from "./CoverAdjust";
+import { CARD_PREVIEWS } from "./focusPreviews";
 
 /** The stage drawn 200 × 300 at the window's corner. */
 function open(focus: CoverFocus | null, picture: { width: number; height: number }) {
@@ -70,6 +71,21 @@ describe("Adjust cover", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     done();
     expect(onDone).toHaveBeenLastCalledWith(null);
+  });
+
+  it("keeps a card's previews small: as wide as their shapes at 132 px high", () => {
+    render(
+      <CoverAdjust
+        src="https://img/p.jpg"
+        focus={null}
+        previews={CARD_PREVIEWS}
+        onDone={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    const row = document.querySelector<HTMLElement>(".cover-adjust__previews")!;
+    const wide = CARD_PREVIEWS.reduce((sum, preview) => sum + preview.aspect, 0) * 132 + 12;
+    expect(row.style.width).toBe(`min(100%, ${wide}px)`);
   });
 
   it("starts from the focus kept, zooms by the slider, and draws the widest frame on the picture", () => {

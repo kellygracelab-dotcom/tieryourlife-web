@@ -68,6 +68,10 @@ interface CoverAdjustProps {
  * in, cut by the shared formula. Done keeps the place, Reset puts back the
  * picture's default, ✕ leaves it as it was.
  */
+/** The previews' greatest height and the gap between them, in px. */
+const PREVIEW_HIGH = 132;
+const PREVIEW_GAP = 12;
+
 export function CoverAdjust({
   src,
   focus,
@@ -288,6 +292,11 @@ export function CoverAdjust({
           className="cover-adjust__previews"
           style={{
             gridTemplateColumns: previews.map((preview) => `${preview.aspect}fr`).join(" "),
+            // At most PREVIEW_HIGH tall: tall shapes (a card's tile) stay small.
+            width: `min(100%, ${
+              previews.reduce((sum, preview) => sum + preview.aspect, 0) * PREVIEW_HIGH +
+              PREVIEW_GAP * (previews.length - 1)
+            }px)`,
           }}
         >
           {previews.map((preview) => (
