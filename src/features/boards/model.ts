@@ -781,12 +781,16 @@ export function moveItem(
 /**
  * The whole arrangement at once, from the board on screen: one row of card
  * uids per ranked tier, in tier order. Cards in no row are in the pool, in
- * the order they had. Nothing changed means the same board back.
+ * the order they had, unless `poolOrder` gives the pool's as drawn: those
+ * cards then take the pool's places among them in that order, and a card it
+ * does not name (one added meanwhile) keeps its place. Nothing changed means
+ * the same board back.
  */
 export function arrangeItems(
   board: Board,
   rows: readonly (readonly string[])[],
   now: number,
+  poolOrder?: readonly string[],
 ): Board {
   const pool = poolTier(board);
   if (pool === null) return board;
@@ -798,14 +802,18 @@ export function arrangeItems(
     });
   });
   const tierOrder = new Map([pool, ...tiers].map((tier, i) => [tier.uid, i]));
-  const poolOrder = liveItems(board)
+  const unplaced = liveItems(board)
     .filter((item) => !place.has(item.uid))
     .sort(
       (a, b) =>
         (tierOrder.get(a.tierUid) ?? Infinity) - (tierOrder.get(b.tierUid) ?? Infinity) ||
         a.position - b.position,
     );
-  poolOrder.forEach((item, position) => place.set(item.uid, { tierUid: pool.uid, position }));
+  const inPool = reorderedSlots(
+    unplaced.map((item) => item.uid),
+    poolOrder ?? [],
+  );
+  inPool.forEach((uid, position) => place.set(uid, { tierUid: pool.uid, position }));
 
   let changed = false;
   const items = board.items.map((item) => {
@@ -817,6 +825,18 @@ export function arrangeItems(
     return { ...item, ...to };
   });
   return changed ? touched({ ...board, items }, now) : board;
+}
+
+/**
+ * The cards in their order, with the ones `order` names put in its order
+ * into the places those same cards held: the others stay where they were.
+ */
+function reorderedSlots(cards: readonly string[], order: readonly string[]): string[] {
+  const present = new Set(cards);
+  const named = [...new Set(order)].filter((uid) => present.has(uid));
+  const moving = new Set(named);
+  let next = 0;
+  return cards.map((uid) => (moving.has(uid) ? named[next++]! : uid));
 }
 
 /**

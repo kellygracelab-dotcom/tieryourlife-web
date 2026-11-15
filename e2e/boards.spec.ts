@@ -277,8 +277,9 @@ test("moves a card along its row: the others make room at once, and nothing is p
   const row = (await s.boundingBox())!;
   for (const name of ["Ex Machina", "The Witch", "Climax"]) {
     await carry(name, { x: row.x + row.width - 20, y: row.y + row.height / 2 });
-    // From the pool, an empty place of the card's size waits in the row.
-    await expect(s.locator(".tile--slot")).toHaveCount(1);
+    // From the pool, the card itself stands faded at the row's end, as within a row.
+    await expect(s.locator(".tile--lifted")).toHaveAccessibleName(name);
+    await expect.poll(order).toContain(name);
     await page.mouse.up();
   }
   await expect.poll(order).toEqual(["Ex Machina", "The Witch", "Climax"]);

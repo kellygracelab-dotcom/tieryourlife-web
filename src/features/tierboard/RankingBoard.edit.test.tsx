@@ -158,7 +158,7 @@ describe("RankingBoard's card menu", () => {
     await userEvent.click(tiers.getByRole("menuitem", { name: "A" }));
     expect(screen.queryByRole("menu")).toBeNull();
     expect(within(tier("A")).getByRole("button", { name: "Climax" })).toBeInTheDocument();
-    expect(onChange).toHaveBeenLastCalledWith([[1], [0, 2]]);
+    expect(onChange).toHaveBeenLastCalledWith([[1], [0, 2]], expect.any(Array));
     // The double click picked nothing: no card is waiting for a tier.
     for (const name of ["Ex Machina", "The Witch", "Climax"]) {
       expect(card(name)).toHaveAttribute("aria-pressed", "false");
@@ -171,7 +171,7 @@ describe("RankingBoard's card menu", () => {
     expect(here).toHaveTextContent("Currently here");
     expect(here).toHaveAttribute("aria-disabled", "true");
     await userEvent.click(here);
-    expect(onChange).toHaveBeenLastCalledWith([[1], [0, 2]]);
+    expect(onChange).toHaveBeenLastCalledWith([[1], [0, 2]], expect.any(Array));
     // Moving onto another item puts the tiers away, after a moment for a pointer
     // that only cuts across it on its way to them.
     fireEvent.pointerEnter(menu.getByRole("menuitem", { name: "Back to the pool" }));
@@ -182,7 +182,7 @@ describe("RankingBoard's card menu", () => {
     await waitFor(() => expect(screen.queryByRole("menu", { name: "Move to a tier" })).toBeNull());
     await userEvent.click(menu.getByRole("menuitem", { name: "Back to the pool" }));
     expect(within(tier("A")).queryByRole("button", { name: "Climax" })).toBeNull();
-    expect(onChange).toHaveBeenLastCalledWith([[1], [0]]);
+    expect(onChange).toHaveBeenLastCalledWith([[1], [0]], expect.any(Array));
 
     menu = await menuOf("The Witch");
     expect(menu.getByRole("menuitem", { name: "Remove from list" })).toHaveClass(
@@ -247,7 +247,7 @@ describe("RankingBoard's card menu", () => {
     await userEvent.keyboard("{Enter}");
     expect(within(tier("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
     expect(screen.queryByRole("menu")).toBeNull();
-    expect(onChange).toHaveBeenLastCalledWith([[1, 0], []]);
+    expect(onChange).toHaveBeenLastCalledWith([[1, 0], []], expect.any(Array));
   });
 
   it("opens where the pointer is, and goes at a press elsewhere, a scroll of the page or Tab", async () => {
@@ -370,7 +370,7 @@ describe("RankingBoard's card menu", () => {
     const sheet = within(screen.getByRole("dialog", { name: "Climax" }));
     expect(screen.queryByRole("menu")).toBeNull();
     await userEvent.click(sheet.getByRole("button", { name: "S" }));
-    expect(onChange).toHaveBeenLastCalledWith([[1, 2], [0]]);
+    expect(onChange).toHaveBeenLastCalledWith([[1, 2], [0]], expect.any(Array));
   });
 
   it("is the phone's sheet from the keyboard too where the pointer is a finger", async () => {

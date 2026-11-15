@@ -194,6 +194,33 @@ describe("cards", () => {
     expect(titlesIn(b4, s!.uid)).toEqual(["b"]);
   });
 
+  it("take the pool's order as drawn, and leave a card it does not name in its place", () => {
+    const { board: b0, next } = board();
+    const b1 = addToPool(
+      b0,
+      ["a", "b", "c", "d"].map((title) => ({ title, imageUrl: null })),
+      1,
+      next,
+    );
+    const [s] = rankedTiers(b1);
+    const pool = poolTier(b1)!;
+    const [ia, ib, ic, id] = itemsIn(b1, pool.uid).map((item) => item.uid);
+    // Dragged within the pool: d to the front.
+    const b2 = arrangeItems(b1, [[], [], [], [], []], 2, [id!, ia!, ib!, ic!]);
+    expect(titlesIn(b2, pool.uid)).toEqual(["d", "a", "b", "c"]);
+    expect(itemsIn(b2, pool.uid).map((item) => item.position)).toEqual([0, 1, 2, 3]);
+    // The same order again: the same board.
+    expect(arrangeItems(b2, [[], [], [], [], []], 3, [id!, ia!, ib!, ic!])).toBe(b2);
+    // From a tier to the pool, where it was dropped.
+    const b3 = arrangeItems(b2, [[ib!], [], [], [], []], 4, [id!, ia!, ic!]);
+    expect(titlesIn(b3, s!.uid)).toEqual(["b"]);
+    const b4 = arrangeItems(b3, [[], [], [], [], []], 5, [id!, ib!, ia!, ic!]);
+    expect(titlesIn(b4, pool.uid)).toEqual(["d", "b", "a", "c"]);
+    // A card the drawn order does not know yet keeps its place among them.
+    const b5 = arrangeItems(b4, [[], [], [], [], []], 6, [ic!, ia!, id!]);
+    expect(titlesIn(b5, pool.uid)).toEqual(["c", "b", "a", "d"]);
+  });
+
   it("are removed for good, not to the trash, and Undo puts them back where they were", () => {
     const { board: b0, next } = board();
     const b1 = addToPool(

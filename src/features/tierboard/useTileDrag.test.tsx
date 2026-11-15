@@ -180,30 +180,38 @@ describe("dragging a card", () => {
     expect(order()).toEqual(["Anora", "Conclave"]);
   });
 
-  it("opens an empty place of a card's size where a card from elsewhere would land", () => {
+  it("stands a card from elsewhere faded where it would land, as a card moved along its row", () => {
     render(
       <MemoryRouter>
         <RankingBoard list={list} hitTest={hitTest} />
       </MemoryRouter>,
     );
+    const inA = () => within(screen.getByRole("list", { name: "A" })).queryAllByRole("button");
+    const inPool = () => [...poolBox().querySelectorAll<HTMLElement>(".pool__items [data-item]")];
+    const named = (tiles: HTMLElement[]) => tiles.map((tile) => tile.getAttribute("aria-label"));
     pointer("pointerdown", card("Anora"), 10, 10, { button: 0 });
     under = tierRow("A");
     pointer("pointermove", window, 300, 40);
-    const slots = () => tierRow("A").querySelectorAll(".tile--slot");
-    expect(slots()).toHaveLength(1);
-    // Hidden from a screen reader: the row still holds no card.
-    expect(within(screen.getByRole("list", { name: "A" })).queryAllByRole("button")).toEqual([]);
-    // Off the row, the place closes.
+    // In the row, faded, and gone from the pool it came from.
+    expect(named(inA())).toEqual(["Anora"]);
+    expect(inA()[0]).toHaveClass("tile--lifted");
+    expect(named(inPool())).not.toContain("Anora");
+    // Back over the pool, it is back there and gone from the row.
     under = poolBox();
     pointer("pointermove", window, 300, 400);
-    expect(slots()).toHaveLength(0);
+    expect(inA()).toEqual([]);
+    expect(named(inPool())).toContain("Anora");
+    // Over nothing, it waits where it was.
+    under = null;
+    pointer("pointermove", window, 900, 900);
+    expect(inA()).toEqual([]);
+    expect(named(inPool())).toContain("Anora");
     under = tierRow("A");
     pointer("pointermove", window, 300, 40);
     pointer("pointerup", window, 300, 40);
-    expect(slots()).toHaveLength(0);
-    expect(
-      within(screen.getByRole("list", { name: "A" })).getByRole("button", { name: "Anora" }),
-    ).toBeInTheDocument();
+    expect(named(inA())).toEqual(["Anora"]);
+    expect(inA()[0]).not.toHaveClass("tile--lifted");
+    expect(named(inPool())).not.toContain("Anora");
   });
 
   it("does nothing when let go outside every target, or on a right button", () => {

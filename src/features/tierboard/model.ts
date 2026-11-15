@@ -14,6 +14,12 @@ export interface BoardState {
   readonly pickedByBoard?: boolean;
   readonly history: readonly Rows[];
   /**
+   * The pool's order before each step of the history, where the step changed
+   * it; null where it did not, or the step came from before pools had one.
+   * Read from the end, alongside the history.
+   */
+  readonly poolHistory?: readonly (readonly number[] | null)[];
+  /**
    * Where in the history a game's result stands as one step that Undo turns
    * over rather than spends: the entry there is the other side of it, the
    * board before the game or the game's arrangement, and Undo on it swaps the
@@ -31,7 +37,13 @@ export type BoardAction =
    * some: the next pick comes from those only.
    */
   | { type: "place"; item: number; tier: number; index?: number; among?: readonly number[] }
-  | { type: "unplace"; item: number }
+  /**
+   * Back to the pool. `index` is the card's place among the pool's other
+   * cards in sight (`among`, when a search hides some); a drag gives one, and
+   * a card dragged within the pool takes its new place. Without it the card
+   * goes last, or where the list had it when the pool keeps no order.
+   */
+  | { type: "unplace"; item: number; index?: number; among?: readonly number[] }
   | { type: "undo" }
   /** The list has other cards or tiers now (the owner's doing): the board starts over from these rows. */
   | {
@@ -66,21 +78,72 @@ export function init(
 const without = (rows: Rows, item: number): Rows =>
   rows.map((row) => (row.includes(item) ? row.filter((i) => i !== item) : row));
 
-const remember = (state: BoardState, rows: Rows): BoardState => {
+/** The pool's history as long as the history itself, nulls where it knew nothing. */
+const poolsOf = (state: BoardState): (readonly number[] | null)[] => {
+  const all = state.poolHistory ?? [];
+  const pools = all.slice(Math.max(0, all.length - state.history.length));
+  return [...Array.from({ length: state.history.length - pools.length }, () => null), ...pools];
+};
+
+const remember = (state: BoardState, rows: Rows, poolOrder?: readonly number[]): BoardState => {
   const kept = state.history.slice(-(MAX_HISTORY - 1));
   const dropped = state.history.length - kept.length;
-  const { toggleAt, ...rest } = state;
+  const { toggleAt, poolHistory: _pools, ...rest } = state;
   // A game's step pushed out of the history by a long evening is an ordinary past now.
   const at = toggleAt === undefined ? -1 : toggleAt - dropped;
+  const reordered = poolOrder !== undefined && poolOrder !== state.poolOrder;
+  const pools = [...poolsOf(state).slice(dropped), reordered ? (state.poolOrder ?? null) : null];
   return {
     ...rest,
     ...(at >= 0 ? { toggleAt: at } : {}),
+    ...(reordered ? { poolOrder } : {}),
+    ...(pools.some((order) => order !== null) ? { poolHistory: pools } : {}),
     rows,
     selected: null,
     pickedByBoard: false,
     history: [...kept, state.rows],
   };
 };
+
+/**
+ * The pool's order with the card at its new place: `index` counts the
+ * cards in sight before it, so it goes in front of the one it was dropped
+ * before, or after the last one in sight. The cards in tiers keep their
+ * places in the order behind the pool's.
+ */
+function poolWith(
+  state: BoardState,
+  item: number,
+  index: number | undefined,
+  among?: readonly number[],
+): number[] {
+  const others = pool(state).filter((card) => card !== item);
+  const inSight = among === undefined ? null : new Set(among);
+  const visible = others.filter((card) => inSight === null || inSight.has(card));
+  let at = others.length;
+  if (index !== undefined) {
+    const clamped = Math.min(Math.max(0, Math.trunc(index)), visible.length);
+    const before = visible[clamped];
+    at =
+      before !== undefined
+        ? others.indexOf(before)
+        : visible.length === 0
+          ? others.length
+          : others.indexOf(visible[visible.length - 1]!) + 1;
+  }
+  const order = [...others.slice(0, at), item, ...others.slice(at)];
+  const inPool = new Set(order);
+  const rest = [
+    ...new Set([
+      ...(state.poolOrder ?? []),
+      ...Array.from({ length: state.itemCount }, (_, i) => i),
+    ]),
+  ].filter((card) => !inPool.has(card));
+  return [...order, ...rest];
+}
+
+const sameOrder = (a: readonly number[], b: readonly number[]): boolean =>
+  a.length === b.length && a.every((card, i) => card === b[i]);
 
 export function reduce(state: BoardState, action: BoardAction): BoardState {
   switch (action.type) {
@@ -120,8 +183,22 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
       return { ...next, selected: following, pickedByBoard: following !== null };
     }
     case "unplace": {
-      if (tierOf(state, action.item) === null) return state;
-      return remember(state, without(state.rows, action.item));
+      if (!isItem(state, action.item)) return state;
+      const placed = tierOf(state, action.item) !== null;
+      // A pool that keeps no order and a card with no place asked: where the list had it.
+      if (action.index === undefined && state.poolOrder === undefined) {
+        return placed ? remember(state, without(state.rows, action.item)) : state;
+      }
+      const rows = placed ? without(state.rows, action.item) : state.rows;
+      const order = poolWith({ ...state, rows }, action.item, action.index, action.among);
+      const was = poolOf(rows, state.itemCount, state.poolOrder);
+      const now = poolOf(rows, state.itemCount, order);
+      if (!placed && sameOrder(was, now)) {
+        return state.selected === null ? state : { ...state, selected: null, pickedByBoard: false };
+      }
+      const next = remember(state, rows, order);
+      // Moved along the pool by keys, the card stays picked for the next step.
+      return !placed && state.selected === action.item ? { ...next, selected: action.item } : next;
     }
     case "reset":
       return init(action.tierCount, action.itemCount, action.rows, action.poolOrder);
@@ -130,8 +207,15 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
       if (previous === undefined) return state;
       // The game's step: what is on the board now becomes the other side of it.
       const turning = state.toggleAt === state.history.length - 1;
-      const restored = {
-        ...state,
+      const pools = poolsOf(state);
+      const order = pools[pools.length - 1] ?? null;
+      const { poolHistory: _pools, ...rest } = state;
+      // A game's step turned over stays a step, with no order of its own.
+      const back = turning ? [...pools.slice(0, -1), null] : pools.slice(0, -1);
+      const restored: BoardState = {
+        ...rest,
+        ...(order === null ? {} : { poolOrder: order }),
+        ...(back.some((one) => one !== null) ? { poolHistory: back } : {}),
         rows: previous,
         selected: null,
         pickedByBoard: false,
@@ -140,9 +224,9 @@ export function reduce(state: BoardState, action: BoardAction): BoardState {
       // The card that went back to the pool comes back picked: undo and
       // another tier is two taps.
       const before = new Set(pool(state));
-      const back = pool(restored).filter((item) => !before.has(item));
-      return back.length === 1
-        ? { ...restored, selected: back[0] ?? null, pickedByBoard: true }
+      const returned = pool(restored).filter((item) => !before.has(item));
+      return returned.length === 1
+        ? { ...restored, selected: returned[0] ?? null, pickedByBoard: true }
         : restored;
     }
   }

@@ -155,26 +155,6 @@
   }
 }
 
-/* The insertion marker takes no space, including in an empty tier. */
-.tile--slot {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: -3px;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--band);
-  pointer-events: none;
-}
-.tile--slot-after {
-  inset-inline-start: auto;
-  inset-inline-end: -3px;
-}
-.tile-slot {
-  position: absolute;
-  inset: var(--tier-pad);
-  pointer-events: none;
-}
-
 /* The pool has no colour of its own: dashed in the line's. */
 .pool--target {
   border-radius: var(--radius-card);
@@ -229,10 +209,6 @@
 
 .tier__band,
 .tier__items,
-.tile-anchor {
-  position: relative;
-}
-
 .tier__place {
   position: absolute;
   inset: 0;

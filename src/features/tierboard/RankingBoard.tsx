@@ -38,7 +38,7 @@ import { DragGhost } from "./DragGhost";
 import { AboutPicture, hasAbout, openPage, pageOf, type Anchor } from "./AboutPicture";
 import { CardCredit, CardFocusing } from "./cardCredit";
 import { flyIn } from "./flight";
-import { DOUBLE_TAP_MS, type DragState } from "./drag";
+import { carried, DOUBLE_TAP_MS, type DragState } from "./drag";
 import { draftKey, loadDraft, loadPoolOrder, saveDraft, scopeOf } from "./draft";
 import {
   canUndo,
@@ -81,7 +81,8 @@ export interface EditMode {
    */
   owner?: {
     canSave: boolean;
-    onChange: (rows: readonly (readonly number[])[]) => void;
+    /** Every move: the rows, and the pool's cards in their order. */
+    onChange: (rows: readonly (readonly number[])[], pool: readonly number[]) => void;
     remove: (item: number) => void;
     /** The owner's way of bringing cards in; it lives with the pool, wherever the pool is. */
     tools?: ReactNode;
@@ -189,7 +190,6 @@ interface TileProps {
   selected: boolean;
   coarse: boolean;
   lifted: boolean;
-  insertion?: "before" | "after" | undefined;
   locked: boolean;
   dispatch: (action: BoardAction) => void;
   pointerDownFor: PointerDownFor;
@@ -231,7 +231,6 @@ const Tile = memo(function Tile({
   selected,
   coarse,
   lifted,
-  insertion,
   locked,
   dispatch,
   pointerDownFor,
@@ -292,8 +291,7 @@ const Tile = memo(function Tile({
     then();
   };
   return (
-    <li className={insertion && "tile-anchor"}>
-      {insertion && <span className={`tile--slot tile--slot-${insertion}`} aria-hidden="true" />}
+    <li>
       <button
         ref={opener}
         type="button"
@@ -553,7 +551,7 @@ export function RankingBoard({
   const dispatch = useCallback(
     (action: BoardAction) =>
       dispatchBoard(
-        action.type === "place" && inSight.current !== null
+        (action.type === "place" || action.type === "unplace") && inSight.current !== null
           ? { ...action, among: inSight.current }
           : action,
       ),
@@ -790,9 +788,11 @@ export function RankingBoard({
     follow.current = onRows;
   });
   useEffect(() => {
-    report.current?.(state.rows);
+    report.current?.(state.rows, pool(state));
     follow.current?.(state.rows);
-  }, [state.rows]);
+    // The pool's order is a move of its own; the rest of the state is not.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.rows, state.poolOrder]);
 
   // Theirs on show: the first move, by a drag, a tap, a key or the card's
   // menu, starts the visitor's own board from it. Picking a card is not a move.
@@ -861,8 +861,9 @@ export function RankingBoard({
       if (event.key === "Escape") return dispatch({ type: "select", item: null });
       if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && selected !== null) {
         const tier = tierOf(state, selected);
-        const row = tier === null ? null : state.rows[tier];
-        if (tier === null || row == null) return;
+        // A card in the pool steps among the pool's cards in sight.
+        const row = tier === null ? (inSight.current ?? pool(state)) : state.rows[tier];
+        if (row == null || !row.includes(selected)) return;
         // Toward the row's start is left in English and right in Arabic.
         const rtl =
           section.current !== null && getComputedStyle(section.current).direction === "rtl";
@@ -870,7 +871,11 @@ export function RankingBoard({
         const index = row.indexOf(selected) + (back ? -1 : 1);
         if (index < 0 || index >= row.length) return;
         event.preventDefault();
-        return dispatch({ type: "place", item: selected, tier, index });
+        return dispatch(
+          tier === null
+            ? { type: "unplace", item: selected, index }
+            : { type: "place", item: selected, tier, index },
+        );
       }
       const tier = tierForKey(event.key, list.tiers.length);
       if (tier !== null) placeSelected(tier);
@@ -893,9 +898,11 @@ export function RankingBoard({
   });
   const pointerDownFor = drag.onPointerDown;
   const dragNow = drag.current;
+  const poolDropAt = dropTarget?.kind === "pool" ? dropTarget.index : null;
+  const poolLanding = dropTarget !== null;
   const poolTiles = useMemo(
     () =>
-      shown.map((item) => (
+      carried(shown, lifted, poolDropAt, poolLanding).map((item) => (
         <Tile
           key={item}
           card={list.items[item]}
@@ -916,6 +923,8 @@ export function RankingBoard({
       )),
     [
       shown,
+      poolDropAt,
+      poolLanding,
       coarse,
       list.items,
       list.tiers,
@@ -971,7 +980,7 @@ export function RankingBoard({
     !wide && rows > 1 && "pool--expanded",
     dropTarget?.kind === "pool" && "pool--target",
     picked && "pool--picked",
-    lifted !== null && left.includes(lifted) && "pool--dragging",
+    lifted !== null && left.includes(lifted) && dropTarget?.kind !== "pool" && "pool--dragging",
     over && "pool--over",
     dropping && "pool--drop",
   ]
@@ -1064,6 +1073,7 @@ export function RankingBoard({
               dropAt={
                 dropTarget?.kind === "tier" && dropTarget.tier === index ? dropTarget.index : null
               }
+              landing={dropTarget !== null}
               pointerDownFor={drag.onPointerDown}
               lifted={lifted}
               locked={locked}
@@ -1317,6 +1327,8 @@ interface TierRowProps {
   dispatch: (action: BoardAction) => void;
   /** Where among the row's other cards a card carried over it would land; null when none is. */
   dropAt: number | null;
+  /** A carried card would land somewhere, here or in another row. */
+  landing: boolean;
   pointerDownFor: PointerDownFor;
   lifted: number | null;
   locked: boolean;
@@ -1351,6 +1363,7 @@ const TierRow = memo(function TierRow({
   coarse,
   dispatch,
   dropAt,
+  landing,
   pointerDownFor,
   lifted,
   locked,
@@ -1363,15 +1376,7 @@ const TierRow = memo(function TierRow({
   if (meta === undefined) return null;
   const armed = !locked && selected !== null && !row.includes(selected);
   const targeted = dropAt !== null;
-  // Keep the destination's geometry while crossing tiers. A new flex item
-  // can wrap to another line and move the target out from under the pointer.
-  const local = lifted !== null && targeted && row.includes(lifted);
-  const others = local ? row.filter((item) => item !== lifted) : row;
-  const landing = targeted ? Math.min(dropAt, others.length) : null;
-  const shown =
-    local && landing !== null
-      ? [...others.slice(0, landing), lifted, ...others.slice(landing)]
-      : row;
+  const shown = carried(row, lifted, dropAt, landing);
   const place = () => onPlace(tier);
   // The tier as the row's button says it: its letter, and its caption when it has one.
   const where =
@@ -1442,20 +1447,8 @@ const TierRow = memo(function TierRow({
         )}
       </div>
       <ul className="tier__items" aria-label={meta.label}>
-        {targeted && row.length === 0 && (
-          <li className="tile-slot" aria-hidden="true">
-            <span className="tile--slot" />
-          </li>
-        )}
-        {shown.map((item, i) => (
+        {shown.map((item) => (
           <Tile
-            insertion={
-              !local && landing !== null && i === Math.min(landing, row.length - 1)
-                ? landing === row.length
-                  ? "after"
-                  : "before"
-                : undefined
-            }
             key={item}
             card={items[item]}
             tiers={tiers}

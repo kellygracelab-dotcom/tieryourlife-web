@@ -273,3 +273,54 @@ describe("board model", () => {
     expect(tierForKey("٠", 20)).toBeNull(); // ٠
   });
 });
+
+describe("the pool's order", () => {
+  it("puts a card dragged within the pool where it was let go, and Undo puts it back", () => {
+    const start = init(2, 4, null, [0, 1, 2, 3]);
+    const moved = reduce(start, { type: "unplace", item: 3, index: 1 });
+    expect(pool(moved)).toEqual([0, 3, 1, 2]);
+    expect(canUndo(moved)).toBe(true);
+    expect(pool(reduce(moved, { type: "undo" }))).toEqual([0, 1, 2, 3]);
+  });
+
+  it("orders a pool that kept none once a card is dragged in it", () => {
+    const moved = reduce(init(2, 3), { type: "unplace", item: 0, index: 2 });
+    expect(pool(moved)).toEqual([1, 2, 0]);
+  });
+
+  it("lets a card off a tier land at its place in the pool", () => {
+    const placed = run(init(2, 4, null, [0, 1, 2, 3]), { type: "place", item: 2, tier: 0 });
+    const back = reduce(placed, { type: "unplace", item: 2, index: 0 });
+    expect(back.rows[0]).toEqual([]);
+    expect(pool(back)).toEqual([2, 0, 1, 3]);
+    // Undo: in the tier again, and the pool as it was.
+    const undone = reduce(back, { type: "undo" });
+    expect(undone.rows[0]).toEqual([2]);
+    expect(pool(undone)).toEqual([0, 1, 3]);
+    expect(pool(reduce(undone, { type: "undo" }))).toEqual([0, 1, 2, 3]);
+  });
+
+  it("sends a card back from its menu to the end of an ordered pool", () => {
+    const placed = run(init(2, 3, null, [0, 1, 2]), { type: "place", item: 0, tier: 1 });
+    expect(pool(reduce(placed, { type: "unplace", item: 0 }))).toEqual([1, 2, 0]);
+  });
+
+  it("counts the place among the cards in sight when a search hides some", () => {
+    const start = init(1, 5, null, [0, 1, 2, 3, 4]);
+    // In sight: 1 and 3. Dropped before 3: in front of it in the whole pool.
+    const moved = reduce(start, { type: "unplace", item: 0, index: 1, among: [1, 3] });
+    expect(pool(moved)).toEqual([1, 2, 0, 3, 4]);
+    // After the last in sight.
+    const last = reduce(start, { type: "unplace", item: 0, index: 2, among: [1, 3] });
+    expect(pool(last)).toEqual([1, 2, 3, 0, 4]);
+  });
+
+  it("remembers nothing for a card let go where it was, and keeps a card moved by keys picked", () => {
+    const start = init(1, 3, null, [0, 1, 2]);
+    expect(reduce(start, { type: "unplace", item: 1, index: 1 })).toBe(start);
+    const picked = reduce(start, { type: "select", item: 1 });
+    const stepped = reduce(picked, { type: "unplace", item: 1, index: 0 });
+    expect(pool(stepped)).toEqual([1, 0, 2]);
+    expect(stepped.selected).toBe(1);
+  });
+});

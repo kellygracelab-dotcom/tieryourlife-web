@@ -133,8 +133,9 @@ export function useTileDrag(
       if (current.phase === "idle") return;
       if (drop && current.phase === "dragging") swallowClick();
       if (drop && current.phase === "dragging" && current.target !== null) {
-        if (current.target.kind === "pool") dispatch({ type: "unplace", item: current.item });
-        else {
+        if (current.target.kind === "pool") {
+          dispatch({ type: "unplace", item: current.item, index: current.target.index });
+        } else {
           const { tier, index } = current.target;
           dispatch({ type: "place", item: current.item, tier, index });
         }
