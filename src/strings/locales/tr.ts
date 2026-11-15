@@ -457,7 +457,6 @@ const tr: Translation = {
     seedStart: "Kendi sürümünüzü başlatmak için panodaki bir kartı taşıyın.",
   },
   rankings: {
-    checkOriginal: "Asıl liste kontrol ediliyor…",
     publicationPreview: "Yayını gözden geçir",
     previewRanking: "Sıralaman asıl listenin sıralamalarında görünecek.",
     notYours:
@@ -1191,7 +1190,6 @@ const tr: Translation = {
     backToPool: "Havuza geri gönder",
     removeFromList: "Listeden sil",
     photoBy: "Fotoğraf: {credit}",
-    publicTitle: "Herkese açık",
     publication: "Yayın",
     publishedStatus: "Yayımlandı",
     inRankingsStatus: "Sıralamalarda",

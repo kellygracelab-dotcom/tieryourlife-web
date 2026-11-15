@@ -155,10 +155,12 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
 
   await page.getByLabel("More about this board").click();
   await page.getByRole("button", { name: "List settings" }).click();
-  // A guest's switch asks them to sign in; the words under it say why.
-  const publicSwitch = page.getByRole("switch", { name: "Public" });
-  await expect(publicSwitch).toBeVisible();
-  await expect(publicSwitch).toBeEnabled();
+  // A guest's Publish asks them to sign in; the words under it say why.
+  const publishButton = page
+    .getByRole("dialog", { name: "List settings" })
+    .getByRole("button", { name: "Publish", exact: true });
+  await expect(publishButton).toBeVisible();
+  await expect(publishButton).toBeEnabled();
   await expect(page.getByText(/Sign in with Google to publish/)).toBeVisible();
   await page.getByRole("button", { name: /Cover/ }).click();
   await expect(page.getByText("None of this list’s cards have a picture yet.")).toBeVisible();

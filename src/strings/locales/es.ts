@@ -469,7 +469,6 @@ const es: Translation = {
     seedStart: "Mueve una tarjeta del tablero para empezar tu versión.",
   },
   rankings: {
-    checkOriginal: "Comprobando la lista original…",
     publicationPreview: "Revisar publicación",
     previewRanking: "Tu clasificación aparecerá en las clasificaciones de la lista original.",
     notYours:
@@ -1286,7 +1285,6 @@ const es: Translation = {
     backToPool: "Volver a la reserva",
     removeFromList: "Quitar de la lista",
     photoBy: "Foto: {credit}",
-    publicTitle: "Pública",
     publication: "Publicación",
     publishedStatus: "Publicada",
     inRankingsStatus: "En clasificaciones",

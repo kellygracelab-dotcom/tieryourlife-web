@@ -34,9 +34,8 @@ interface PublishButtonProps {
 
 /**
  * Beside Play on the board's header (Danylo and Android, 16.11.2026): tonal
- * while cards wait in the pool, filled once all are placed. Under 600 px the
- * tonal one is its icon alone, 40 round; the word stays its name, read out,
- * only out of sight.
+ * while cards wait in the pool, filled once all are placed. Its word is always in
+ * sight, on a phone too: an arrow alone read as upload or share.
  */
 export function PublishButton({ kind, main, onClick }: PublishButtonProps) {
   const { icon, word } = LOOKS[kind];

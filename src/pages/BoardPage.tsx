@@ -561,9 +561,8 @@ function OpenBoard({
         }}
       />
     );
-  }  // Publish, Update or Show in Rankings beside Play: the sheet's own, opened on it.
+  } // Publish, Update or Show in Rankings beside Play: the sheet's own, opened on it.
   const publishKind = publishKindOf(board, house !== null);
-
 
   // What the board is right now: what is kept, or the fresh one until it is.
   const latest = (): Board => repository.get(uid) ?? board;
@@ -1048,7 +1047,7 @@ function OpenBoard({
 
       {panel === "settings" && (
         <BoardSettings
-          key={JSON.stringify([board.uid, me])}
+          key={JSON.stringify(["settings", board.uid, me])}
           upload={upload}
           board={board}
           latest={latest}

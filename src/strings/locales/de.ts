@@ -469,7 +469,6 @@ const de: Translation = {
     seedStart: "Verschieb eine Karte auf dem Board, um deine Version zu beginnen.",
   },
   rankings: {
-    checkOriginal: "Originalliste wird geprüft…",
     publicationPreview: "Veröffentlichung prüfen",
     previewRanking: "Deine Anordnung erscheint in den Ranglisten der Originalliste.",
     notYours:
@@ -1233,7 +1232,6 @@ const de: Translation = {
     backToPool: "Zurück in den Pool",
     removeFromList: "Aus der Liste entfernen",
     photoBy: "Foto: {credit}",
-    publicTitle: "Öffentlich",
     publication: "Veröffentlichung",
     publishedStatus: "Veröffentlicht",
     inRankingsStatus: "In den Ranglisten",

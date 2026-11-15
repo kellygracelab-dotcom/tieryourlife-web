@@ -477,7 +477,6 @@ const uk: Translation = {
     seedStart: "Перемістіть картку на дошці, щоб почати свою версію.",
   },
   rankings: {
-    checkOriginal: "Звіряємо з початковим списком…",
     publicationPreview: "Що буде опубліковано",
     previewRanking: "Ваша розкладка зʼявиться в рейтингах початкового списку.",
     notYours:
@@ -1326,7 +1325,6 @@ const uk: Translation = {
     backToPool: "Повернути в пул",
     removeFromList: "Видалити зі списку",
     photoBy: "Фото: {credit}",
-    publicTitle: "Публічний",
     publication: "Публікація",
     publishedStatus: "Опублікований",
     inRankingsStatus: "У рейтингах",

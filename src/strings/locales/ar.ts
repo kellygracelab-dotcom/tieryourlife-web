@@ -513,7 +513,6 @@ const ar: Translation = {
     seedStart: "حرّك بطاقة على اللوحة لتبدأ نسختك.",
   },
   rankings: {
-    checkOriginal: "جارٍ التحقق من القائمة الأصلية…",
     publicationPreview: "مراجعة النشر",
     previewRanking: "سيظهر ترتيبك ضمن ترتيبات القائمة الأصلية.",
     notYours: "هذه قائمة شخص آخر، لذا لا يمكن نشرها كقائمة لك. يمكن نشر ترتيبك فقط، في ترتيباتها.",
@@ -1495,7 +1494,6 @@ const ar: Translation = {
     backToPool: "الإعادة إلى المجمّع",
     removeFromList: "إزالة من القائمة",
     photoBy: "الصورة: {credit}",
-    publicTitle: "عامة",
     publication: "النشر",
     publishedStatus: "منشورة",
     inRankingsStatus: "في الترتيبات",

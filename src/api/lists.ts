@@ -305,17 +305,6 @@ export interface Published {
   revision?: number;
 }
 
-export type PublicationPreview =
-  | { kind: "ranking"; listId: string; version: number }
-  | { kind: "list"; basedOn: PublishedList["basedOn"]; version?: number };
-export function classifyPublication(
-  client: ApiClient,
-  request: PublishRequest,
-  action?: AccountAction,
-): Promise<PublicationPreview> {
-  return client.request("POST", "/lists/classify", { body: request, action });
-}
-
 export function publish(
   client: ApiClient,
   request: PublishRequest,

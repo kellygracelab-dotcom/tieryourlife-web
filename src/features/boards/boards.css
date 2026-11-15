@@ -1018,22 +1018,13 @@
   white-space: nowrap;
 }
 
-/* Under 600 px the tonal one is its icon alone, 40 round; its word is still its name. */
+/*
+ * Under 600 px its word stays in sight, a little tighter (Danylo, 16.11.2026:
+ * an arrow in a circle read as upload or share, and publishing went unseen).
+ */
 @media (max-width: 599px) {
-  .btn.publish-button:not(.publish-button--main) {
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    border-radius: 50%;
-  }
-
-  .publish-button:not(.publish-button--main) .publish-button__word {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+  .btn.publish-button {
+    gap: 4px;
+    padding-inline: 12px 14px;
   }
 }

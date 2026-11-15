@@ -481,7 +481,6 @@ const ru: Translation = {
     seedStart: "Переместите карточку на доске, чтобы начать свою версию.",
   },
   rankings: {
-    checkOriginal: "Сверяем с исходным списком…",
     publicationPreview: "Что будет опубликовано",
     previewRanking: "Ваша раскладка появится в рейтингах исходного списка.",
     notYours:
@@ -1334,7 +1333,6 @@ const ru: Translation = {
     backToPool: "Вернуть в пул",
     removeFromList: "Удалить из списка",
     photoBy: "Фото: {credit}",
-    publicTitle: "Публичный",
     publication: "Публикация",
     publishedStatus: "Опубликован",
     inRankingsStatus: "В рейтингах",

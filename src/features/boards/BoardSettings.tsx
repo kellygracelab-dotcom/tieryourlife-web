@@ -342,7 +342,8 @@ export function BoardSettings({
   const isPublic = ownPublish && isOut(board);
   const behind = isBehind(board);
   // Somebody else's list's copy, or one's ranking out: it goes into a list's Rankings.
-  const ranks = board.rankingOf !== null || (board.takenFrom !== null && board.publishedId === null);
+  const ranks =
+    board.rankingOf !== null || (board.takenFrom !== null && board.publishedId === null);
   // Held for a moderator, the list's link answers 404 to everybody, the author too.
   const held = isPublic && board.heldForReview === true;
   // A ranking is out on the page of the list it ranks.
@@ -597,6 +598,18 @@ export function BoardSettings({
     }
   };
 
+  // Out or down, the row's button gives way to the other (Publish to Take it
+  // down, and back): the focus that was on it goes to the one that came.
+  const publicationRow = useRef<HTMLLIElement>(null);
+  const wasPublic = useRef(isPublic);
+  useEffect(() => {
+    if (wasPublic.current === isPublic) return;
+    wasPublic.current = isPublic;
+    const active = document.activeElement;
+    if (active !== null && active !== document.body && active !== box.current) return;
+    publicationRow.current?.querySelector<HTMLButtonElement>("button")?.focus();
+  }, [isPublic]);
+
   // The question at the end of the sheet takes the eye and the cursor.
   const ask = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -832,7 +845,7 @@ export function BoardSettings({
           </li>
 
           {ownPublish && (
-            <li className="sheet-row">
+            <li ref={publicationRow} className="sheet-row">
               {/* A button that says what it will do, and the line above it says
                   where it goes: no switch that stays off while a question waits
                   (Danylo, 16.11.2026). Out, the row says so, with Take it down. */}

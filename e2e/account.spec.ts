@@ -36,22 +36,28 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   await press(page.getByRole("button", { name: "List settings" }), hasTouch);
   await press(page.getByRole("button", { name: /Category/ }), hasTouch);
   await press(page.getByRole("radio", { name: "Film & TV" }), hasTouch);
-  const publicSwitch = page.getByRole("switch", { name: "Public" });
-  await expect(publicSwitch).toBeEnabled();
+  // The sheet's own Publish: the header beside Play has one too.
+  const settings = page.getByRole("dialog", { name: "List settings" });
+  const publishButton = settings.getByRole("button", { name: "Publish", exact: true });
+  // Out, the row says so where the button was (its icon's name is text too).
+  const status = settings.locator(".sheet-row__status");
+  await expect(publishButton).toBeEnabled();
 
-  // The first try is refused: said in words, the switch stays off, nothing kept.
+  // The first try is refused: said in words, Publish stays, nothing kept.
   // (An alert carries its icon's name as text, so the words are looked for in it.)
   account.failNext.set("POST /lists", 503);
-  await press(publicSwitch, hasTouch);
+  await press(publishButton, hasTouch);
   await expect(page.getByRole("alert")).toContainText(
     "Could not publish. Nothing was lost. Try again.",
   );
-  await expect(publicSwitch).not.toBeChecked();
+  await expect(status).toHaveCount(0);
+  await expect(publishButton).toBeEnabled();
   expect(account.published.size).toBe(0);
 
-  await press(publicSwitch, hasTouch);
+  await press(publishButton, hasTouch);
   await expect(page.getByText("Published. Anyone with the link can rank it.")).toBeVisible();
-  await expect(publicSwitch).toBeChecked();
+  await expect(status).toHaveText(/Published$/);
+  await expect(publishButton).toHaveCount(0);
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
     "href",
@@ -66,7 +72,8 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   // A change on the board puts the published copy behind; Update sends it again.
   await press(page.getByRole("radio", { name: "Ranking" }), hasTouch);
   await expect(page.getByText("The published copy is behind this board.")).toBeVisible();
-  await press(page.getByRole("button", { name: "Update" }), hasTouch);
+  // The sheet's Update: behind, the header beside Play says Update too.
+  await press(settings.getByRole("button", { name: "Update" }), hasTouch);
   await expect(page.getByText("Send this board again, over the same link.")).toBeVisible();
   expect(account.calls).toContain("POST /lists/L1");
 
@@ -75,12 +82,13 @@ test("publishes a board, sends it again and takes it down, and says when a try f
     .poll(() => [...account.boards.values()].find((b) => b.title === "Films I make people watch"))
     .toMatchObject({ body: { publishedId: "L1" } });
 
-  // Taken down from the same switch, once the sheet has asked.
-  await press(publicSwitch, hasTouch);
+  // Taken down from Take it down under Published, once the sheet has asked.
+  await press(settings.getByRole("button", { name: "Take it down" }), hasTouch);
   const ask = page.getByRole("group", { name: "Take Films I make people watch down?" });
   await press(ask.getByRole("button", { name: "Take it down" }), hasTouch);
   await expect(page.getByText("Unpublished. The link no longer works.")).toBeVisible();
-  await expect(publicSwitch).not.toBeChecked();
+  await expect(status).toHaveCount(0);
+  await expect(publishButton).toBeEnabled();
   expect(account.calls).toContain("DELETE /lists/L1");
   expect(account.published.size).toBe(0);
 });
@@ -98,7 +106,9 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
   await openSettings();
   await press(page.getByRole("button", { name: /Category/ }), hasTouch);
   await press(page.getByRole("radio", { name: "Film & TV" }), hasTouch);
-  await press(page.getByRole("switch", { name: "Public", exact: true }), hasTouch);
+  // The sheet's own buttons: the header beside Play has Publish and Update too.
+  const settings = page.getByRole("dialog", { name: "List settings" });
+  await press(settings.getByRole("button", { name: "Publish", exact: true }), hasTouch);
   await expect(page.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
     "href",
     "/l/L1",
@@ -124,14 +134,14 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
   await expect(page.getByRole("alert")).toContainText(
     "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
   );
-  await expect(page.getByRole("button", { name: "Update", exact: true })).toBeEnabled();
+  await expect(settings.getByRole("button", { name: "Update", exact: true })).toBeEnabled();
   expect(account.published.get("L1")?.anonymous).toBe(false);
   expect(refusedBody).toMatchObject({ anonymous: true, title: "Festival films" });
 
   await page.reload();
   await openSettings();
   await expect(anonymity).toBeChecked();
-  await press(page.getByRole("button", { name: "Update", exact: true }), hasTouch);
+  await press(settings.getByRole("button", { name: "Update", exact: true }), hasTouch);
   await expect(page.getByText("Send this board again, over the same link.")).toBeVisible();
   expect(account.published.size).toBe(1);
   expect(account.published.get("L1")).toEqual(refusedBody);
