@@ -728,6 +728,35 @@ describe("a card's picture changed", () => {
     });
   });
 
+  it("keeps the place chosen on a picture when the same picture comes again, and not on another", () => {
+    const { b1, dune } = cards();
+    const placed = { x: 0.3, y: 0.2, zoom: 1.5 };
+    // The link's answer lands, the editor places it, and the same answer lands once more.
+    const landed = setPicture(b1, dune.uid, fresh, 5);
+    const adjusted = setPictureFocus(landed, dune.uid, placed, 6);
+    const again = setPicture(adjusted, dune.uid, { ...fresh, credit: "Filled later" }, 7);
+    expect(liveItems(again).find((item) => item.uid === dune.uid)).toMatchObject({
+      imageUrl: "https://x/new.jpg",
+      credit: "Filled later",
+      pictureFocus: placed,
+    });
+    // Another picture starts at its default.
+    const other = setPicture(adjusted, dune.uid, { ...fresh, imageUrl: "https://x/other.jpg" }, 7);
+    expect(liveItems(other).find((item) => item.uid === dune.uid)).not.toHaveProperty(
+      "pictureFocus",
+    );
+    // The same address as another copy (another id) is another picture too.
+    const copy = setPicture(adjusted, dune.uid, { ...fresh, pictureId: "p10" }, 7);
+    expect(liveItems(copy).find((item) => item.uid === dune.uid)).not.toHaveProperty(
+      "pictureFocus",
+    );
+    // A focus said with the picture is the one it goes with: Undo's, none included.
+    const told = setPicture(adjusted, dune.uid, { ...fresh, pictureFocus: null }, 7);
+    expect(liveItems(told).find((item) => item.uid === dune.uid)).not.toHaveProperty(
+      "pictureFocus",
+    );
+  });
+
   it("drops the attribution with the picture, and changes nothing for a card that is gone", () => {
     const { b1, dune } = cards();
     const none = setPicture(

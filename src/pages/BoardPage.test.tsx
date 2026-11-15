@@ -18,6 +18,7 @@ import {
   poolTier,
   rankedTiers,
   setDisplayMode,
+  setPictureFocus,
 } from "../features/boards/model";
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import type { PublishingDeps } from "../features/boards/BoardSettings";
@@ -1507,6 +1508,34 @@ describe("BoardPage: pictures from links", () => {
     );
     expect(itemOf(repository, "The Witch")).toMatchObject({ imageUrl: null, pictureId: null });
     expect(itemOf(repository, "The Witch")).not.toHaveProperty("attribution");
+  });
+
+  it("keeps the place chosen on a linked picture when the same picture's answer lands again late", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    // Two answers for one picture: the second, a slow one, after the editor placed it.
+    let late: (answer: ReturnType<typeof linked>) => void = () => undefined;
+    const linkWeb = vi
+      .fn<LinkKeep>()
+      .mockImplementationOnce(async (ask) => linked(ask.url))
+      .mockImplementationOnce(() => new Promise((resolve) => (late = resolve)));
+    open(repository, "/b/films", { account: member, linkWeb });
+    const witch = screen.getByRole("button", { name: "The Witch" });
+    dropLink(witch, "https://img.test/witch.jpg");
+    await screen.findByText("Picture changed on “The Witch”");
+    dropLink(screen.getByRole("button", { name: "The Witch" }), "https://img.test/witch.jpg");
+    await waitFor(() => expect(linkWeb).toHaveBeenCalledTimes(2));
+    // Adjust picture, as its Done keeps it.
+    const placed = { x: 0.3, y: 0.2, zoom: 1.5 };
+    const uid = itemOf(repository, "The Witch").uid;
+    act(() => {
+      repository.save(setPictureFocus(repository.get("films")!, uid, placed, 9));
+    });
+    await act(async () => late(linked("https://img.test/witch.jpg")));
+    expect(itemOf(repository, "The Witch")).toMatchObject({
+      imageUrl: "https://img.test/witch.jpg",
+      pictureFocus: placed,
+    });
   });
 
   it("says why a link dropped on a card brought no picture, and changes nothing", async () => {
