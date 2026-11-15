@@ -1029,7 +1029,7 @@ const es: Translation = {
     namePlaceholder: "Comida callejera",
     nameTaken: "Ya hay una sección llamada «{name}».",
     openIt: "Abrirla",
-    badName: "Un nombre necesita de 2 a 24 caracteres, con alguna letra o número.",
+    badName: "Un nombre necesita de 1 a 24 caracteres, con alguna letra o número.",
     icon: "Icono",
     fileUnder: "Guardar mis listas en",
     fileUnderHelp: "Tus listas pasan a la nueva sección cuando se apruebe.",

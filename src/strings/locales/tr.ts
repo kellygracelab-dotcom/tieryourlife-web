@@ -981,7 +981,7 @@ const tr: Translation = {
     namePlaceholder: "Sokak lezzetleri",
     nameTaken: "“{name}” adında bir bölüm zaten var.",
     openIt: "Aç",
-    badName: "Ad 2 ile 24 karakter arasında olmalı ve bir harf ya da rakam içermeli.",
+    badName: "Ad 1 ile 24 karakter arasında olmalı ve bir harf ya da rakam içermeli.",
     icon: "Simge",
     fileUnder: "Listelerimi şuraya koy",
     fileUnderHelp: "Yeni bölüm onaylanınca listeleriniz oraya taşınır.",

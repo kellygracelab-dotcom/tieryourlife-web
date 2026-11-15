@@ -946,7 +946,7 @@ export const en = {
     namePlaceholder: "Street food",
     nameTaken: "There’s already a section called “{name}”.",
     openIt: "Open it",
-    badName: "A name needs 2 to 24 characters, with a letter or a number in it.",
+    badName: "A name needs 1 to 24 characters, with a letter or a number in it.",
     icon: "Icon",
     fileUnder: "File my lists under",
     fileUnderHelp: "Your lists move to the new section once it’s approved.",

@@ -1019,7 +1019,7 @@ const ptBR: Translation = {
     namePlaceholder: "Comida de rua",
     nameTaken: "Já existe uma seção chamada “{name}”.",
     openIt: "Abrir",
-    badName: "Um nome precisa de 2 a 24 caracteres, com alguma letra ou número.",
+    badName: "Um nome precisa de 1 a 24 caracteres, com alguma letra ou número.",
     icon: "Ícone",
     fileUnder: "Guardar minhas listas em",
     fileUnderHelp: "Suas listas passam para a nova seção quando ela for aprovada.",

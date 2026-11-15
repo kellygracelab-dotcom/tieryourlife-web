@@ -40,8 +40,8 @@ import {
   changesOf,
   fileUnderChoices,
   forgetProposal,
+  graphemeCount,
   isSectionName,
-  isSectionTranslation,
   keepProposal,
   NAME_CHECK_MS,
   PENDING_MAX,
@@ -49,7 +49,6 @@ import {
   readKeptProposal,
   SECTION_ASPECT,
   SECTION_NAME_MAX,
-  SECTION_NAME_MIN,
   SEND_WITHIN_MS,
   shortOf,
   tidySectionName,
@@ -262,7 +261,7 @@ export function SectionEditor(props: SectionEditorProps) {
   // A translation the backend's rule refuses is said at once and not sent.
   const badLocales = LOCALES.filter((locale) => {
     const text = tidySectionName(names[locale] ?? "");
-    return text !== "" && !isSectionTranslation(text);
+    return text !== "" && !isSectionName(text);
   });
   // A name already refused, or one the backend's rule refuses, is not sent:
   // it would only upload the picture to be refused again.
@@ -404,22 +403,20 @@ export function SectionEditor(props: SectionEditorProps) {
   };
 
   /**
-   * The field a BAD_NAME is about. The backend names it in `detail`; where
-   * it does not, it is the main name when it alone was sent or breaks the
-   * rule, and otherwise the translations, those shorter than a name may be
-   * first (the backend took two characters at least before 15.11.2026).
+   * The field a BAD_NAME is about, as the backend names it in `detail`
+   * (Proxy #151). Without one, from an older backend: the main name when it
+   * alone was sent or breaks the rule, else the translations.
    */
   const refusalOf = (field: string | undefined): Refused => {
-    const sent: Record<string, string> =
-      mode === "create" ? translationsOf(names) : mode === "edit" ? (changes.names ?? {}) : {};
-    const locales = Object.keys(sent).filter((locale) => sent[locale] !== "");
-    const short = locales.filter((locale) => [...(sent[locale] ?? "")].length < SECTION_NAME_MIN);
     if (field === "name") return { field: "name" };
     if (field?.startsWith("names.") === true) return { field: "names", locales: [field.slice(6)] };
-    if (field === "names") return { field: "names", locales: short };
+    if (field === "names") return { field: "names", locales: [] };
+    const sent: Record<string, string> =
+      mode === "create" ? translationsOf(names) : mode === "edit" ? (changes.names ?? {}) : {};
+    const translated = Object.values(sent).some((text) => text !== "");
     const nameSent = mode !== "edit" || changes.name !== undefined;
-    if (locales.length === 0 || (nameSent && !isSectionName(tidy))) return { field: "name" };
-    return { field: "names", locales: short };
+    if (!translated || (nameSent && !isSectionName(tidy))) return { field: "name" };
+    return { field: "names", locales: [] };
   };
 
   const fail = (trouble: Trouble, bytes: Blob | null) => {
@@ -644,13 +641,13 @@ export function SectionEditor(props: SectionEditorProps) {
         )}
         <span
           className={
-            name.length >= SECTION_NAME_MAX
+            graphemeCount(name) >= SECTION_NAME_MAX
               ? "section-editor__counter section-editor__counter--full"
               : "section-editor__counter"
           }
           aria-hidden="true"
         >
-          {fill(strings.settings.nameCounter, { n: name.length, max: SECTION_NAME_MAX })}
+          {fill(strings.settings.nameCounter, { n: graphemeCount(name), max: SECTION_NAME_MAX })}
         </span>
       </div>
     </div>
