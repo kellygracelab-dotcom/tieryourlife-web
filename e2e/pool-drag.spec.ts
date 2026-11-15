@@ -87,6 +87,11 @@ async function carry(page: Page, touch: boolean, card: Locator, to: { x: number;
         });
         await new Promise((resolve) => requestAnimationFrame(resolve));
       }
+      // A finger never stands quite still: one more move where it rests, a few frames on.
+      for (let frame = 0; frame < 3; frame++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      send(window, "pointermove", to);
     },
     { tile: handle, origin: { x: from.x, y: from.y }, to },
   );
