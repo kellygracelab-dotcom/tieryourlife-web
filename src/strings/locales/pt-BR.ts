@@ -945,8 +945,11 @@ const ptBR: Translation = {
     followSection: "Seguir {name}",
     emptyHelper:
       "Toque em + nas seções de que você gosta e siga todas de uma vez. Os temas ficam em cada seção; as pessoas, no perfil delas.",
-    pickFollow: "Seguir · {n}",
-    pickNone: "Escolha pelo menos uma",
+    pickFollow: {
+      one: "Seguir {n} seção",
+      many: "Seguir {n} seções",
+      other: "Seguir {n} seções",
+    },
     followedFailed: "Não foi possível carregar o que você segue.",
     nothingPublished: "Ninguém que você segue publicou nada ainda.",
     goExplore: "Ir para Explorar",

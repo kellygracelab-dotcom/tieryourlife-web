@@ -906,8 +906,7 @@ const ja: Translation = {
     followSection: "{name}をフォロー",
     emptyHelper:
       "好きなセクションの+をタップして、まとめてフォローしましょう。トピックは各セクションの中に、人はプロフィールにあります。",
-    pickFollow: "フォロー · {n}",
-    pickNone: "1つ以上選んでください",
+    pickFollow: { other: "{n}セクションをフォロー" },
     followedFailed: "フォロー中の項目を読み込めませんでした。",
     nothingPublished: "フォロー中の人はまだ何も公開していません。",
     goExplore: "見つけるへ",

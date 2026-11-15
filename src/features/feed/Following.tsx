@@ -8,7 +8,7 @@ import { followAuthor, loadFollowing, suggestedAuthors, unfollowAuthor } from ".
 import { isEditorialAuthor } from "../../lib/editorial";
 import { useVisit } from "../../app/visitMemory";
 import { useResource } from "../../lib/useResource";
-import { fill, strings } from "../../strings";
+import { plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { FollowButton } from "../community/FollowButton";
@@ -272,32 +272,32 @@ export function FollowingTab({
     followingPicked ||
     (feed.state.status === "ready" && feed.state.followingNobody && sets.sections.size === 0);
   if (nobody) {
+    // One column in the middle of the page (Danylo, 15.11.2026): the words,
+    // the sections to pick, and Follow only once something is picked.
     return (
-      <>
+      <div className="follow-start">
         <div className="following-empty">
           <p className="following-empty__title">{strings.sections.emptyTitle}</p>
           <p className="following-empty__body">{strings.sections.emptyBody}</p>
+          <p className="following-empty__helper">{strings.sections.emptyHelper}</p>
         </div>
         {/* Only what anybody may follow: one's own waiting section is not yet. */}
         <FollowSections sections={approvedOnly(sections)} picked={picked} onToggle={togglePick} />
-        <p className="following-empty__helper">{strings.sections.emptyHelper}</p>
-        <div className="pick-bar">
-          {pickFailed && (
-            <p className="follow__failed" role="alert">
-              <Icon name="cloud_off" />
-              {strings.sections.followFailed}
-            </p>
-          )}
-          <Button
-            variant="filled"
-            onClick={followPicked}
-            disabled={picked.size === 0 || followingPicked}
-          >
-            {picked.size > 0
-              ? fill(strings.sections.pickFollow, { n: picked.size })
-              : strings.sections.pickNone}
-          </Button>
-        </div>
+        {(picked.size > 0 || pickFailed) && (
+          <div className="pick-bar">
+            {pickFailed && (
+              <p className="follow__failed" role="alert">
+                <Icon name="cloud_off" />
+                {strings.sections.followFailed}
+              </p>
+            )}
+            {picked.size > 0 && (
+              <Button variant="filled" onClick={followPicked} disabled={followingPicked}>
+                {plural(strings.sections.pickFollow, picked.size)}
+              </Button>
+            )}
+          </div>
+        )}
         <Suggestions
           uid={uid}
           load={loadSuggestions}
@@ -305,7 +305,7 @@ export function FollowingTab({
           unfollow={unfollow}
           onFollowed={showFollowed}
         />
-      </>
+      </div>
     );
   }
 

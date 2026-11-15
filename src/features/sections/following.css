@@ -103,19 +103,34 @@
   white-space: nowrap;
 }
 
-/* Small section tiles with a badge to follow each. */
+/*
+ * The empty Following tab's sections to pick (15.11.2026): one grid in the
+ * middle of the page, a row short of full centred under the rest. Each tile
+ * is its section's picture, or its tint and hatch, in the light theme's tone
+ * in both themes so it stands out of a dark page; a tap anywhere picks it.
+ */
 .mini-sections {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-auto-rows: 84px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
+  width: 100%;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .mini-section {
-  position: relative;
+  flex: 0 0 calc((100% - 20px) / 3);
+  min-width: 0;
+  height: 84px;
+}
+
+@media (min-width: 600px) {
+  .mini-section {
+    flex-basis: calc((100% - 30px) / 4);
+    height: 88px;
+  }
 }
 
 .mini-section__tile {
@@ -125,8 +140,10 @@
   display: flex;
   align-items: flex-end;
   gap: 6px;
+  width: 100%;
   height: 100%;
-  padding: 0 10px 8px;
+  padding: 0 10px 9px;
+  border: 0;
   border-radius: 12px;
   overflow: hidden;
   background-color: var(--tint);
@@ -136,19 +153,71 @@
     transparent 4px 10px
   );
   color: #ffffff;
-  text-decoration: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
 }
 
-.mini-section__tile::before {
+.mini-section__tile--pictured {
+  background-image: var(--section-picture);
+  background-size: cover;
+  background-position: center;
+}
+
+/* Dark under the name only; darker all over on hover. */
+.mini-section__tile::before,
+.mini-section__tile::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -1px;
   z-index: -1;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.62));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.62));
 }
 
-.mini-section__tile:hover {
+.mini-section__tile::after {
+  background: rgba(0, 0, 0, 0.16);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.mini-section__tile:hover::after {
+  opacity: 1;
+}
+
+/* Picked: a ring around the tile and a filled ✓. */
+.mini-section__tile[aria-pressed="true"] {
+  outline: 3px solid var(--link);
+  outline-offset: 2px;
+}
+
+.mini-section__tile:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.mini-section__check {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.32);
   color: #ffffff;
+}
+
+.mini-section__check .ms {
+  font-size: 16px;
+}
+
+.mini-section__tile[aria-pressed="true"] .mini-section__check {
+  border-color: var(--link);
+  background: var(--link);
+  color: var(--on-link);
 }
 
 .mini-section__icon {
@@ -159,74 +228,28 @@
 .mini-section__name {
   min-width: 0;
   overflow: hidden;
-  font: 500 13px/18px var(--font);
+  font: 500 14px/18px var(--font);
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-.mini-section__tile--all {
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 0;
-  background: var(--surface-container-high);
-  color: var(--ink);
-}
-
-.mini-section__tile--all::before {
-  display: none;
-}
-
-.mini-section__tile--all:hover {
-  color: var(--ink);
-}
-
-.mini-section__count {
-  font: 400 11px/15px var(--font);
-  color: var(--ink-dim);
-}
-
-.mini-section__badge {
-  position: absolute;
-  top: 6px;
-  inset-inline-end: 6px;
-  display: flex;
+/* The rest of the sections, under the tiles in the middle. */
+.mini-sections__all {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--link);
-  cursor: pointer;
+  align-self: center;
+  gap: 2px;
+  font: var(--text-label);
 }
 
-.mini-section__badge .ms {
+.mini-sections__all .ms {
   font-size: 18px;
-}
-
-.mini-section__badge--on {
-  color: var(--followed);
-}
-
-.mini-section__badge:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-
-@media (min-width: 840px) {
-  .mini-sections {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    grid-auto-rows: 72px;
-    max-width: 720px;
-  }
 }
 
 /* The dark theme's tints, once for the system's choice and once for the person's. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) :is(.following-strip__section, .mini-section__tile) {
+  :root:not([data-theme="light"]) .following-strip__section {
     --tint: var(--tint-dark);
   }
 
@@ -236,7 +259,7 @@
   }
 }
 
-:root[data-theme="dark"] :is(.following-strip__section, .mini-section__tile) {
+:root[data-theme="dark"] .following-strip__section {
   --tint: var(--tint-dark);
 }
 
