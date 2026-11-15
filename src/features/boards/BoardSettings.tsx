@@ -21,8 +21,8 @@ import {
   classifyPublication,
   keepListRanking,
   loadListAsWritten,
+  loadAllTopics,
   loadTopic,
-  loadTopics,
   withdrawListRanking,
 } from "../../lib/api";
 import { fieldsOf } from "../../lib/editorCredit";
@@ -99,7 +99,11 @@ export interface PublishingDeps {
   rank?: typeof keepListRanking;
 }
 
-/** The approved topics of a section, the biggest first. */
+/**
+ * The approved topics of a section, the biggest first: every one of them,
+ * page by page. The first page alone left out a topic made today, with no
+ * list yet, once a section had more than twenty (Content, 15.11.2026).
+ */
 export type LoadTopics = (section: string) => Promise<{ topics: Topic[] }>;
 
 interface BoardSettingsProps {
@@ -304,7 +308,7 @@ export function BoardSettings({
   publishing,
   house = false,
   upload = uploadPicture,
-  topics: load = loadTopics,
+  topics: load = loadAllTopics,
   findTopic = loadTopic,
   onDone,
   now = Date.now,
