@@ -745,6 +745,10 @@ const de: Translation = {
     picture: "Bild",
     translations: "Übersetzungen",
     translationsHelp: "Eine pro Sprache. Leer gelassen, erscheint der Name wie eingegeben.",
+    badTranslation:
+      "Nicht angenommen. Eine Übersetzung braucht einen Buchstaben oder eine Ziffer, bis zu {max} Zeichen.",
+    translationsRefused:
+      "Eine Übersetzung wurde nicht angenommen. Prüf sie und versuch es noch einmal.",
     topicNamesRefusedIn:
       "Nicht angenommen: {languages}. Jede Übersetzung hat bis zu {max} Zeichen.",
     topicNameRefused:

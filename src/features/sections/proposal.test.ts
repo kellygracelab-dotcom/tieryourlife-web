@@ -8,6 +8,7 @@ import {
   fileUnderChoices,
   forgetProposal,
   isSectionName,
+  isSectionTranslation,
   KEPT_KEY,
   KEPT_PICTURE_KEY,
   keepProposal,
@@ -46,6 +47,14 @@ describe("a proposal's name", () => {
     // Characters, not UTF-16 units: twelve emoji and a letter are thirteen.
     expect(isSectionName(`${"🍜".repeat(12)}a`)).toBe(true);
     expect(isSectionName("Їжа")).toBe(true);
+  });
+
+  it("takes a translation of one character, as 車, with a letter or a digit, up to 24", () => {
+    expect(isSectionTranslation("車")).toBe(true);
+    expect(isSectionTranslation(" 7 ")).toBe(true);
+    expect(isSectionTranslation("—")).toBe(false);
+    expect(isSectionTranslation("a".repeat(24))).toBe(true);
+    expect(isSectionTranslation("a".repeat(25))).toBe(false);
   });
 });
 
@@ -93,6 +102,10 @@ describe("a refusal, placed", () => {
     [invalid("NAME_TAKEN", { id: "food" }), { kind: "nameTaken", id: "food" }],
     [invalid("NAME_TAKEN"), { kind: "nameTaken", id: null }],
     [invalid("BAD_NAME"), { kind: "badName" }],
+    [
+      { ...invalid("BAD_NAME"), field: "names.ja" },
+      { kind: "badName", field: "names.ja" },
+    ],
     [invalid("TOO_MANY_PENDING"), { kind: "tooMany" }],
     [invalid("BAD_PICTURE", { why: "too_small" }), { kind: "tooSmall" }],
     [invalid("BAD_PICTURE", { why: "not_16_10" }), { kind: "notCropped" }],

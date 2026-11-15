@@ -131,7 +131,7 @@ function pick(
 }
 
 const refuse = (error: ApiError) => new ApiFailure(error);
-const invalid = (code: string, more: { id?: string; why?: string } = {}) =>
+const invalid = (code: string, more: { id?: string; why?: string; field?: string } = {}) =>
   refuse({ kind: "invalid", detail: null, code, ...more });
 
 describe("Propose a section", () => {
@@ -899,6 +899,116 @@ describe("the owner's New section", () => {
         pictureId: "pic-1",
       }),
     );
+  });
+
+  describe("a refused name under the field it is about (Content's report of 15.11.2026)", () => {
+    async function refusedWith(field?: string) {
+      const opened = create();
+      opened.send.mockRejectedValueOnce(invalid("BAD_NAME", field === undefined ? {} : { field }));
+      await userEvent.type(nameField(), "Cars");
+      const translations = screen.getByRole("group", { name: "Translations" });
+      await userEvent.type(within(translations).getByRole("textbox", { name: "日本語" }), "車");
+      await userEvent.type(within(translations).getByRole("textbox", { name: "Deutsch" }), "Autos");
+      await userEvent.click(screen.getByRole("button", { name: "Create" }));
+      await waitFor(() => expect(opened.send).toHaveBeenCalledTimes(1));
+      return { ...opened, translations };
+    }
+
+    it("a translation of one character the backend refused: under it, not under the name", async () => {
+      const { translations } = await refusedWith();
+      const japanese = within(translations).getByRole("textbox", { name: "日本語" });
+      await waitFor(() => expect(japanese).toHaveAttribute("aria-invalid", "true"));
+      expect(japanese).toHaveAccessibleDescription(
+        "Not accepted. A translation needs a letter or a number, up to 24 characters.",
+      );
+      expect(screen.getAllByRole("alert")).toHaveLength(1);
+      expect(within(translations).getByRole("textbox", { name: "Deutsch" })).toHaveAttribute(
+        "aria-invalid",
+        "false",
+      );
+      expect(nameField()).toHaveAttribute("aria-invalid", "false");
+      // The focus goes to what to change.
+      expect(japanese).toHaveFocus();
+    });
+
+    it("the language the backend named, and Create back after a change to any field", async () => {
+      const { send, onDone, translations } = await refusedWith("names.de");
+      const german = within(translations).getByRole("textbox", { name: "Deutsch" });
+      await waitFor(() => expect(german).toHaveAttribute("aria-invalid", "true"));
+      expect(within(translations).getByRole("textbox", { name: "日本語" })).toHaveAttribute(
+        "aria-invalid",
+        "false",
+      );
+      const create_ = screen.getByRole("button", { name: "Create" });
+      expect(create_).toBeDisabled();
+      // Not the field refused: another, the icon.
+      await userEvent.click(screen.getByRole("radio", { name: "Restaurant" }));
+      expect(create_).toBeEnabled();
+      expect(screen.queryByRole("alert")).toBeNull();
+      await userEvent.click(create_);
+      await waitFor(() => expect(onDone).toHaveBeenCalled());
+      expect(send).toHaveBeenCalledTimes(2);
+    });
+
+    it("the name the backend named stays its own, and a change to a translation lets Create go again", async () => {
+      const { translations } = await refusedWith("name");
+      await waitFor(() => expect(nameField()).toHaveAttribute("aria-invalid", "true"));
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "A name needs 2 to 24 characters, with a letter or a number in it.",
+      );
+      await userEvent.type(within(translations).getByRole("textbox", { name: "Deutsch" }), "!");
+      expect(screen.getByRole("button", { name: "Create" })).toBeEnabled();
+    });
+
+    it("all the translations, when no language is named and none is short", async () => {
+      const opened = create();
+      opened.send.mockRejectedValueOnce(invalid("BAD_NAME", { field: "names" }));
+      await userEvent.type(nameField(), "Cars");
+      const translations = screen.getByRole("group", { name: "Translations" });
+      await userEvent.type(within(translations).getByRole("textbox", { name: "Deutsch" }), "Autos");
+      await userEvent.click(screen.getByRole("button", { name: "Create" }));
+      expect(await within(translations).findByRole("alert")).toHaveTextContent(
+        "A translation wasn’t accepted. Check them and try again.",
+      );
+      expect(nameField()).toHaveAttribute("aria-invalid", "false");
+    });
+
+    it("says at once a translation with no letter or number, and does not send it", async () => {
+      create();
+      await userEvent.type(nameField(), "Cars");
+      const translations = screen.getByRole("group", { name: "Translations" });
+      const french = within(translations).getByRole("textbox", { name: "Français" });
+      await userEvent.type(french, "—");
+      expect(french).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
+      await userEvent.clear(french);
+      expect(screen.getByRole("button", { name: "Create" })).toBeEnabled();
+    });
+  });
+
+  it("gives up on a send that hangs, says so with Try again, and sends again", async () => {
+    const deps = { ...makeDeps(), sendWithin: 50 };
+    const { send, onDone } = create(deps);
+    send.mockImplementationOnce(() => new Promise<SectionStats>(() => undefined));
+    await userEvent.type(nameField(), "Cars");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    const bar = await screen.findByRole("alert");
+    expect(bar).toHaveTextContent("Couldn’t save. Nothing was lost — try again.");
+    await userEvent.click(within(bar).getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("closes after all when a send given up on saves late", async () => {
+    const deps = { ...makeDeps(), sendWithin: 50 };
+    const { send, onDone } = create(deps);
+    let answer: (saved: SectionStats) => void = () => undefined;
+    send.mockImplementationOnce(() => new Promise<SectionStats>((resolve) => (answer = resolve)));
+    await userEvent.type(nameField(), "Cars");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await screen.findByRole("alert");
+    await act(async () => answer(stats("cars", { name: "Cars" })));
+    expect(onDone).toHaveBeenCalledWith(expect.objectContaining({ id: "cars" }));
   });
 
   it("says a refused save in the admin's words", async () => {

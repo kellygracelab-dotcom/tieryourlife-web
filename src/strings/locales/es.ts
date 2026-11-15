@@ -754,6 +754,9 @@ const es: Translation = {
     translations: "Traducciones",
     translationsHelp:
       "Una por idioma. Si se deja vacía, el nombre se muestra tal como se escribió.",
+    badTranslation:
+      "No aceptada. Una traducción necesita una letra o un número, hasta {max} caracteres.",
+    translationsRefused: "No se aceptó una traducción. Revísalas e inténtalo de nuevo.",
     topicNamesRefusedIn:
       "No se aceptó: {languages}. Cada traducción admite hasta {max} caracteres.",
     topicNameRefused:

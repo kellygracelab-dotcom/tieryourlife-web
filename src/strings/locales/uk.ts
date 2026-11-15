@@ -774,6 +774,8 @@ const uk: Translation = {
     picture: "Картинка",
     translations: "Переклади",
     translationsHelp: "По одному на мову. Якщо лишити порожнім, назва покажеться як написано.",
+    badTranslation: "Не прийнято. У перекладі потрібна літера або цифра, до {max} знаків.",
+    translationsRefused: "Якийсь переклад не прийнято. Перевірте їх і спробуйте ще раз.",
     topicNamesRefusedIn: "Не прийнято: {languages}. Кожен переклад — до {max} символів.",
     topicNameRefused: "Цю назву не прийнято. Назва теми — до {max} символів.",
     topicNamesRefused: "Переклад не прийнято. Кожен — до {max} символів.",

@@ -878,7 +878,10 @@ export function RankingBoard({
     dispatch({ type: "select", item: null });
   }, [dispatch, selected, state]);
 
-  useEffect(() => {
+  // Before the paint, so a key meets the card on screen: after it, one card
+  // up by itself could be shown while the keys still knew none, and a key
+  // pressed then did nothing (WebKit, 3 runs of 8 on 15.11.2026).
+  useLayoutEffect(() => {
     if (locked) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {

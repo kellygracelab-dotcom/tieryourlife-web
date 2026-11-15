@@ -769,6 +769,9 @@ const fr: Translation = {
     picture: "Image",
     translations: "Traductions",
     translationsHelp: "Une par langue. Laissée vide, le nom s’affiche tel qu’il a été saisi.",
+    badTranslation:
+      "Refusée. Une traduction doit contenir une lettre ou un chiffre, jusqu’à {max} caractères.",
+    translationsRefused: "Une traduction n’a pas été acceptée. Vérifiez-les et réessayez.",
     topicNamesRefusedIn:
       "Non acceptée : {languages}. Chaque traduction fait au plus {max} caractères.",
     topicNameRefused:

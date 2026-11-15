@@ -22,6 +22,8 @@ export interface EditorDeps {
    * costs no upload. Left out, a proposal goes straight to the upload.
    */
   room?: () => Promise<ProposalRoom>;
+  /** How long a send may take before it is given up on; `SEND_WITHIN_MS` left out. */
+  sendWithin?: number;
 }
 
 export const editorDeps: EditorDeps = {
