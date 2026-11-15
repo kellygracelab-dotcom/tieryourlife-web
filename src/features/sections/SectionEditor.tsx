@@ -213,7 +213,10 @@ export function SectionEditor(props: SectionEditorProps) {
   const [adjusting, setAdjusting] = useState(false);
   const [pictureTrouble, setPictureTrouble] = useState<string | null>(null);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
-  const [refused, setRefused] = useState<Refused | null>(null);
+  // A refusal holds only for what was sent: any field changed, the form may be sent again.
+  const [refusal, setRefusal] = useState<{ refused: Refused; sent: readonly unknown[] } | null>(
+    null,
+  );
   const [sending, setSending] = useState(false);
   // Which send is the one waited for: one given up on that answers late is no longer heard, unless it saved.
   const attempt = useRef(0);
@@ -245,6 +248,11 @@ export function SectionEditor(props: SectionEditorProps) {
   const refocused =
     mode === "edit" && picture?.kind === "kept" && !sameFocus(focus, start.focus ?? null);
   const pictureReady = picture === null || picture.kind === "kept" || picture.size !== null;
+  const typed: readonly unknown[] = [name, names, icon, fileUnder, picture, focus];
+  const refused =
+    refusal !== null && refusal.sent.every((value, n) => Object.is(value, typed[n]))
+      ? refusal.refused
+      : null;
   const nameTrouble: Verdict | null =
     refused?.field === "name"
       ? { name: tidy, kind: "bad" }
@@ -305,9 +313,6 @@ export function SectionEditor(props: SectionEditorProps) {
       clearTimeout(timer);
     };
   }, [name, deps, ownId, ownName]);
-
-  // A refusal holds only for what was sent: any field changed, the form may be sent again.
-  useEffect(() => setRefused(null), [name, names, icon, fileUnder, picture, focus]);
 
   const ask = () => {
     askedFrom.current =
@@ -423,7 +428,7 @@ export function SectionEditor(props: SectionEditorProps) {
         setVerdict({ name: tidy, kind: "taken", id: trouble.id });
         return;
       case "badName":
-        setRefused(refusalOf(trouble.field));
+        setRefusal({ refused: refusalOf(trouble.field), sent: typed });
         return;
       case "tooSmall":
       case "notImage":
