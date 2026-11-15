@@ -201,11 +201,12 @@ describe("dragging a card", () => {
     pointer("pointermove", window, 300, 400);
     expect(inA()).toEqual([]);
     expect(named(inPool())).toContain("Anora");
-    // Over nothing, it waits where it was.
+    // Over nothing, between two rows, it stays out of them all: had it come
+    // back to the pool there, the pool would move at every crossing.
     under = null;
     pointer("pointermove", window, 900, 900);
     expect(inA()).toEqual([]);
-    expect(named(inPool())).toContain("Anora");
+    expect(named(inPool())).not.toContain("Anora");
     under = tierRow("A");
     pointer("pointermove", window, 300, 40);
     pointer("pointerup", window, 300, 40);
