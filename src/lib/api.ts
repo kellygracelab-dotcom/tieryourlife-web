@@ -165,9 +165,6 @@ export const linkPicture: (ask: LinkAsk) => Promise<LinkAnswer> = limitedLink((a
 
 export const loadLinkQuota = (): Promise<LinkQuota | null> => pictures.linkQuota(api);
 
-export const classifyPublication = (request: PublishRequest, action?: AccountAction) =>
-  lists.classifyPublication(api, request, action);
-
 export const publish = (request: PublishRequest, action?: AccountAction): Promise<Published> =>
   lists.publish(api, request, action);
 

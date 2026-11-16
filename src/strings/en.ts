@@ -458,7 +458,6 @@ export const en = {
   // The readers' placings of a list. The title has no count, so it cannot
   // disagree with the chip's, which is the takes (Danylo, 28.10).
   rankings: {
-    checkOriginal: "Checking the original list…",
     publicationPreview: "Review publication",
     previewRanking: "Your arrangement will appear in the original list’s Rankings.",
     notYours:
@@ -1160,7 +1159,10 @@ export const en = {
     backToPool: "Back to the pool",
     removeFromList: "Remove from list",
     photoBy: "Photo: {credit}",
-    publicTitle: "Public",
+    publication: "Publication",
+    publishedStatus: "Published",
+    inRankingsStatus: "In Rankings",
+    rankedBody: "Your arrangement is in the original list’s Rankings.",
     publicBody: "Anyone with the link can rank it. It shows in Community.",
     needsAccount:
       "Sign in with Google to publish. Reading and saving others’ lists needs no account.",

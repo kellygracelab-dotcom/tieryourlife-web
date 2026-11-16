@@ -35,7 +35,6 @@ export function apiStubs() {
     keepPicture: pending(),
     linkPicture: pending(),
     loadLinkQuota: pending(),
-    classifyPublication: pending(),
     publish: pending(),
     republish: pending(),
     unpublish: pending(),

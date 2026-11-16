@@ -470,7 +470,6 @@ const ptBR: Translation = {
     seedStart: "Mova um cartão do quadro para começar sua versão.",
   },
   rankings: {
-    checkOriginal: "Verificando a lista original…",
     publicationPreview: "Revisar publicação",
     previewRanking: "Sua classificação aparecerá nas classificações da lista original.",
     notYours:
@@ -1275,7 +1274,10 @@ const ptBR: Translation = {
     backToPool: "Voltar para a reserva",
     removeFromList: "Remover da lista",
     photoBy: "Foto: {credit}",
-    publicTitle: "Pública",
+    publication: "Publicação",
+    publishedStatus: "Publicada",
+    inRankingsStatus: "Nas classificações",
+    rankedBody: "Sua classificação está nas classificações da lista original.",
     publicBody: "Qualquer pessoa com o link pode organizá-la. Ela aparece em Comunidade.",
     needsAccount:
       "Entre com o Google para publicar. Ler e salvar as dos outros não precisa de conta.",

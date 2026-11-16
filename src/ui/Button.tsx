@@ -23,6 +23,8 @@ interface ClickProps extends CommonProps {
   disabled?: boolean;
   /** The element that says more about the press, such as a status line. */
   "aria-describedby"?: string;
+  /** Pressable still, so its reason is heard, but it does nothing. */
+  "aria-disabled"?: boolean;
   type?: "button" | "submit";
 }
 
@@ -61,6 +63,7 @@ export function Button(props: ButtonProps) {
       onClick={props.onClick}
       disabled={props.disabled}
       aria-describedby={props["aria-describedby"]}
+      aria-disabled={props["aria-disabled"]}
     >
       {content}
     </button>

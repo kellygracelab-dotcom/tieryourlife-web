@@ -36,6 +36,7 @@ import {
   MAX_RANKED_TIERS,
   type Board,
 } from "../features/boards/model";
+import { PublishButton, publishKindOf } from "../features/boards/PublishButton";
 import {
   BoardSettings,
   type LoadTopics,
@@ -90,7 +91,7 @@ import type { FindPictures } from "../features/editor/usePictures";
 import { keepWebPicture, PictureRefused, uploadPicture } from "../lib/pictures";
 import { keepLinkedPicture, LinkRefused, linkRefusalOf } from "../lib/linkPictures";
 import { useSession } from "../app/session";
-import { type KeyValueStore, memoryStore } from "../lib/storage";
+import { type KeyValueStore, memoryStore, sessionStorageStore } from "../lib/storage";
 import { HOUSE_PANE_PATH, HouseBar, type HouseSending } from "../features/admin/HouseBar";
 import {
   boardFromHouseList,
@@ -294,6 +295,9 @@ export function BoardPage(props: BoardPageProps) {
   return <OpenBoard {...props} staff={staff} />;
 }
 
+/** The board a guest pressed Publish on, till they are signed in: this tab's. */
+const PUBLISH_AFTER_SIGN_IN = "tyl:publishAfterSignIn";
+
 function OpenBoard({
   repository: ownBoards = site,
   now = Date.now,
@@ -376,6 +380,28 @@ function OpenBoard({
     setSettingsStart(start);
     setPanel("settings");
   };
+  // A guest's Publish signs them in first; once the account is here, the
+  // sheet opens on Publish again and the publish goes on by itself. Kept for
+  // the tab, so a sign-in by a redirect comes back to it too.
+  const signInToPublish = async () => {
+    sessionStorageStore.write(PUBLISH_AFTER_SIGN_IN, uid);
+    const outcome = await signIn();
+    if (outcome.kind === "failed" || outcome.kind === "cancelled") {
+      sessionStorageStore.remove(PUBLISH_AFTER_SIGN_IN);
+    }
+    return outcome;
+  };
+  useEffect(() => {
+    if (me === null || sessionStorageStore.read(PUBLISH_AFTER_SIGN_IN) !== uid) return;
+    // Once the account's boards are in: the sheet that opens is the account's.
+    const timer = setTimeout(() => {
+      if (sessionStorageStore.read(PUBLISH_AFTER_SIGN_IN) !== uid) return;
+      sessionStorageStore.remove(PUBLISH_AFTER_SIGN_IN);
+      setSettingsStart("publish");
+      setPanel("settings");
+    });
+    return () => clearTimeout(timer);
+  }, [me, uid]);
   // Brief, and gone at the board's next action (Friends, 16.11).
   const { notice, setNotice, done: forget, acted } = useBoardNotice();
   // A paste or a drop for a new card, on its way to the add box.
@@ -540,7 +566,8 @@ function OpenBoard({
         }}
       />
     );
-  }
+  } // Publish, Update or Show in Rankings beside Play: the sheet's own, opened on it.
+  const publishKind = publishKindOf(board, house !== null);
 
   // What the board is right now: what is kept, or the fresh one until it is.
   const latest = (): Board => repository.get(uid) ?? board;
@@ -917,6 +944,13 @@ function OpenBoard({
           </p>
         </div>
         <span className="list-head__tools">
+          {publishKind !== null && (
+            <PublishButton
+              kind={publishKind}
+              main={view.pool.length === 0}
+              onClick={() => openSettings(publishKind === "update" ? "update" : "publish")}
+            />
+          )}
           <PlayButton {...play.button} />
           <Menu label={strings.boards.more} button={<Icon name="more_vert" />}>
             <>
@@ -1018,7 +1052,7 @@ function OpenBoard({
 
       {panel === "settings" && (
         <BoardSettings
-          key={JSON.stringify([board.uid, me])}
+          key={JSON.stringify(["settings", board.uid, me])}
           upload={upload}
           board={board}
           latest={latest}
@@ -1054,6 +1088,7 @@ function OpenBoard({
           onDone={closePanel}
           now={now}
           start={settingsStart}
+          signInToPublish={signInToPublish}
         />
       )}
       {panel === "propose" && (

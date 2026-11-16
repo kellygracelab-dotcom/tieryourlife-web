@@ -981,3 +981,50 @@
 .board-settings__credit .credit-form {
   align-self: stretch;
 }
+
+/* Out: what the board is now, beside the row's words, a tick before it. */
+.sheet-row__status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  font: var(--text-label);
+  color: var(--ink);
+}
+
+.sheet-row__status .ms {
+  font-size: 20px;
+  color: var(--link);
+}
+
+.sheet-row__link--button {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.sheet-row__link--button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/*
+ * Publish, Update or Show in Rankings beside Play on the board's header: tonal
+ * while cards wait in the pool, filled once all are placed (the main step).
+ */
+.btn.publish-button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+/*
+ * Under 600 px its word stays in sight, a little tighter (Danylo, 16.11.2026:
+ * an arrow in a circle read as upload or share, and publishing went unseen).
+ */
+@media (max-width: 599px) {
+  .btn.publish-button {
+    gap: 4px;
+    padding-inline: 12px 14px;
+  }
+}

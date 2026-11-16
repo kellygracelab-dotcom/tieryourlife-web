@@ -480,7 +480,6 @@ const fr: Translation = {
     seedStart: "Déplacez une carte du tableau pour commencer votre version.",
   },
   rankings: {
-    checkOriginal: "Vérification de la liste d’origine…",
     publicationPreview: "Vérifier la publication",
     previewRanking: "Ton classement figurera parmi ceux de la liste d’origine.",
     notYours:
@@ -1304,7 +1303,10 @@ const fr: Translation = {
     backToPool: "Remettre dans la réserve",
     removeFromList: "Supprimer de la liste",
     photoBy: "Photo : {credit}",
-    publicTitle: "Publique",
+    publication: "Publication",
+    publishedStatus: "Publiée",
+    inRankingsStatus: "Dans les classements",
+    rankedBody: "Ton classement figure parmi ceux de la liste d’origine.",
     publicBody: "Toute personne ayant le lien peut la classer. Elle apparaît dans Communauté.",
     needsAccount:
       "Connectez-vous avec Google pour publier. Lire et enregistrer celles des autres ne demande aucun compte.",
