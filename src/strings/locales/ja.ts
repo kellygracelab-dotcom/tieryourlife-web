@@ -1303,6 +1303,15 @@ const ja: Translation = {
     takingDown: "取り下げ中…",
     open: "開く",
     viewLabel: "表示: {mode}",
+    coverAuto: "コラージュ · 自動",
+    coverColours: "ティアの色 · 自動",
+    coverCard: "カードの画像",
+    coverOwn: "自分の写真",
+    coverMine: "自分のコラージュ · {n} 枚",
+    coverHint:
+      "自分の写真をアップロードして好きなように切り抜いたり、カードの画像をバナーにしたり、自分だけのコラージュを作ったりできます。",
+    changeCover: "カバーを変更",
+    coverBack: "公開に戻る",
   },
   sync: {
     offBusy: "削除中…",

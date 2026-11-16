@@ -1430,6 +1430,15 @@ const fr: Translation = {
     takingDown: "Retrait…",
     open: "Ouvrir",
     viewLabel: "Affichage : {mode}",
+    coverAuto: "Collage · automatique",
+    coverColours: "Couleurs des niveaux · automatique",
+    coverCard: "L’image d’une carte",
+    coverOwn: "Ta propre photo",
+    coverMine: "Ton collage · images : {n}",
+    coverHint:
+      "Importe ta propre photo et recadre-la comme tu veux, fais de l’image d’une carte la bannière, ou compose ton propre collage.",
+    changeCover: "Modifier la couverture",
+    coverBack: "Revenir à la publication",
   },
   sync: {
     offBusy: "Suppression…",

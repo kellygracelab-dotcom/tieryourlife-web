@@ -1400,6 +1400,15 @@ const ptBR: Translation = {
     takingDown: "Removendo…",
     open: "Abrir",
     viewLabel: "Exibição: {mode}",
+    coverAuto: "Colagem · automática",
+    coverColours: "Cores dos níveis · automático",
+    coverCard: "A imagem de um card",
+    coverOwn: "Sua própria foto",
+    coverMine: "Sua colagem · imagens: {n}",
+    coverHint:
+      "Envie sua própria foto e recorte como quiser, use a imagem de um card como banner ou monte sua própria colagem.",
+    changeCover: "Alterar a capa",
+    coverBack: "Voltar à publicação",
   },
   sync: {
     offBusy: "Apagando…",

@@ -1474,6 +1474,15 @@ const pl: Translation = {
     takingDown: "Wycofywanie…",
     open: "Otwórz",
     viewLabel: "Widok: {mode}",
+    coverAuto: "Kolaż · automatyczny",
+    coverColours: "Kolory poziomów · automatycznie",
+    coverCard: "Obraz karty",
+    coverOwn: "Twoje własne zdjęcie",
+    coverMine: "Twój kolaż · obrazy: {n}",
+    coverHint:
+      "Wgraj własne zdjęcie i przytnij je, jak chcesz, zrób z obrazu karty baner albo ułóż własny kolaż.",
+    changeCover: "Zmień okładkę",
+    coverBack: "Wróć do publikowania",
   },
   sync: {
     offBusy: "Usuwanie…",

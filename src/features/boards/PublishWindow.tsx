@@ -11,11 +11,13 @@ import { FocusedPicture } from "../../ui/FocusedPicture";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
 import { useModal } from "../../ui/useModal";
+import type { Upload } from "../editor/AddCardBox";
 import { failureText } from "../editor/failureText";
 import { sectionName, type Section } from "../sections/model";
 import { isSectionName, SECTION_NAME_MAX } from "../sections/proposal";
 import { titleOf } from "./boardText";
 import { rankingFailureText } from "./copyRanking";
+import { CoverPicker, CoverSummary } from "./CoverPicker";
 import {
   cleanTopicName,
   isBehind,
@@ -83,6 +85,8 @@ export interface PublishWindowProps {
    * again once the account is there. Without it, the window only signs in.
    */
   signInToPublish?: () => Promise<SignInOutcome>;
+  /** Where a photo of one's own for the cover goes. */
+  upload?: Upload;
 }
 
 /** What a refusal says, by the press it answers. */
@@ -191,10 +195,23 @@ export function PublishWindow({
   now = Date.now,
   start = false,
   signInToPublish,
+  upload,
 }: PublishWindowProps) {
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
-  useModal(box, onClose);
+  // The cover, changed as a step of the window: Escape and Back come back to
+  // publishing, with the section and topic as they were.
+  const [coverStep, setCoverStep] = useState(false);
+  const coverChange = useRef<HTMLButtonElement>(null);
+  const leaveCover = () => setCoverStep(false);
+  useModal(box, coverStep ? leaveCover : onClose);
+  const wasCover = useRef(coverStep);
+  useEffect(() => {
+    if (wasCover.current === coverStep) return;
+    wasCover.current = coverStep;
+    if (coverStep) box.current?.querySelector<HTMLElement>(".publish-window__back")?.focus();
+    else coverChange.current?.focus();
+  }, [coverStep]);
   const { account, signIn } = useSession();
   const me = account?.kind === "signedIn" ? account : null;
   const uid = me?.uid ?? null;
@@ -433,8 +450,44 @@ export function PublishWindow({
     </div>
   );
 
+  // What Community will show, at the top of the window: not for a ranking,
+  // which is shown under somebody else's list and not as a card of its own.
+  const cover =
+    board.rankingOf === null ? (
+      <CoverSummary board={board} onChange={() => setCoverStep(true)} changeRef={coverChange} />
+    ) : null;
+
   let content: ReactNode;
-  if (view === "rank") {
+  if (coverStep && view !== "rank") {
+    content = (
+      <>
+        <div className="publish-window__head">
+          <button
+            type="button"
+            className="publish-window__close publish-window__back"
+            aria-label={strings.publishWindow.coverBack}
+            onClick={leaveCover}
+          >
+            <Icon name="arrow_back" />
+          </button>
+          <div className="publish-window__heading">
+            <h2 id={`${id}-title`} className="publish-window__title">
+              {strings.boards.cover}
+            </h2>
+            <p className="publish-window__meta">{title}</p>
+          </div>
+        </div>
+        <div className="publish-window__body">
+          <CoverPicker board={board} latest={latest} keep={keep} upload={upload} now={now} />
+        </div>
+        <div className="dialog__actions">
+          <Button variant="filled" onClick={leaveCover}>
+            {strings.boards.done}
+          </Button>
+        </div>
+      </>
+    );
+  } else if (view === "rank") {
     const picture = previewsOf(board, 1)[0] ?? null;
     content = (
       <>
@@ -501,6 +554,7 @@ export function PublishWindow({
           </span>,
         )}
         <fieldset className="publish-window__body" disabled={busyNow}>
+          {cover}
           <dl className="publish-window__rows">
             {!ranking && (
               <>
@@ -627,6 +681,7 @@ export function PublishWindow({
       <>
         {head(fill(strings.publishWindow.title, { title }), meta)}
         <fieldset className="publish-window__body" disabled={busyNow}>
+          {cover}
           <section
             className={
               tried

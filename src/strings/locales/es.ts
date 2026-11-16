@@ -1416,6 +1416,15 @@ const es: Translation = {
     takingDown: "Retirando…",
     open: "Abrir",
     viewLabel: "Vista: {mode}",
+    coverAuto: "Collage · automático",
+    coverColours: "Colores de los niveles · automático",
+    coverCard: "La imagen de una tarjeta",
+    coverOwn: "Tu propia foto",
+    coverMine: "Tu collage · imágenes: {n}",
+    coverHint:
+      "Sube tu propia foto y recórtala como quieras, usa la imagen de una tarjeta como banner o arma tu propio collage.",
+    changeCover: "Cambiar la portada",
+    coverBack: "Volver a publicar",
   },
   sync: {
     offBusy: "Eliminando…",

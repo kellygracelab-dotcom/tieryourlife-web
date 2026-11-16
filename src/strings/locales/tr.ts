@@ -1312,6 +1312,15 @@ const tr: Translation = {
     takingDown: "Kaldırılıyor…",
     open: "Aç",
     viewLabel: "Görünüm: {mode}",
+    coverAuto: "Kolaj · otomatik",
+    coverColours: "Seviye renkleri · otomatik",
+    coverCard: "Bir kartın resmi",
+    coverOwn: "Kendi fotoğrafın",
+    coverMine: "Kendi kolajın · resim: {n}",
+    coverHint:
+      "Kendi fotoğrafını yükleyip istediğin gibi kırp, bir kartın resmini afiş yap ya da kendi kolajını oluştur.",
+    changeCover: "Kapağı değiştir",
+    coverBack: "Yayınlamaya dön",
   },
   sync: {
     offBusy: "Siliniyor…",
