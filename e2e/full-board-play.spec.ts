@@ -1,6 +1,12 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { list, mockBackend } from "./fixtures";
 
+/** Unfolds the other games when Smart keeps them folded (audit B4); leaves them open otherwise. */
+async function otherWays(page: Page) {
+  const more = page.getByRole("button", { name: "Other ways to play" });
+  if ((await more.getAttribute("aria-expanded")) === "false") await more.click();
+}
+
 const uid = "qa-full-board-play";
 const key = "tyl:board:" + uid;
 const title = "Local game fixture";
@@ -47,7 +53,8 @@ for (const mode of ["Smart", "Losers stay", "King of the hill", "Bracket"]) {
   test(mode + " keeps all 91 cards and the same next duel after reloading", async ({ page }) => {
     await openBoard(page);
     await play(page).click();
-    await expect(page.getByText("91 cards from " + title)).toBeVisible();
+    await expect(page.locator(".play-summary__line")).toContainText("91 cards");
+    await otherWays(page);
     await page.locator("label.play-game").filter({ hasText: mode }).click();
     await page.getByRole("button", { name: "Start", exact: true }).click();
     const picks = page.getByRole("button", { name: /^Pick / });
@@ -100,7 +107,7 @@ const labels = (tiles: Locator) =>
   tiles.evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
 
 test("applies a ranked game with its other ranked cards left in their places", async ({ page }) => {
-  await playTwo(page, "Ranked");
+  await playTwo(page, "Placed");
   await expect.poll(async () => (await persisted(page)).play).toBeNull();
   await page.reload();
   await expect(page.locator(".ranking .tile")).toHaveCount(91);
@@ -135,7 +142,7 @@ test("reset requires confirmation and restores pool then tier order after reload
 }) => {
   await openBoard(page);
   const more = page.locator(".list-head details.menu summary:not(.view-button)");
-  const reset = page.getByRole("button", { name: "Return all cards to the pool", exact: true });
+  const reset = page.getByRole("button", { name: "Return all cards to the deck", exact: true });
   await more.click();
   await reset.click();
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -147,7 +154,7 @@ test("reset requires confirmation and restores pool then tier order after reload
   await expect(page.locator(".tier .tile")).toHaveCount(4);
   await more.click();
   await reset.click();
-  await page.getByRole("button", { name: "Return to pool", exact: true }).click();
+  await page.getByRole("button", { name: "Return to the deck", exact: true }).click();
   const expected = [...board.items.slice(4), ...board.items.slice(0, 4)].map((i) => i.title);
   for (let i = 0; i < 2; i++) {
     await expect(page.locator(".pool__items .tile")).toHaveCount(91);
@@ -244,8 +251,8 @@ test("a guest can reset Mine and reopen it without altering the author's ranking
   const mine = page.getByRole("button", { name: "Mine", exact: true });
   await expect(mine).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("More about this list").click();
-  await page.getByRole("button", { name: "Return all cards to the pool" }).click();
-  await page.getByRole("button", { name: "Return to pool", exact: true }).click();
+  await page.getByRole("button", { name: "Return all cards to the deck" }).click();
+  await page.getByRole("button", { name: "Return to the deck", exact: true }).click();
   await page.reload();
   await expect(mine).toHaveAttribute("aria-pressed", "true");
   const pool = page.locator(".pool__items .tile");
@@ -262,7 +269,7 @@ test("a guest can reset Mine and reopen it without altering the author's ranking
 // The picker names the area as the app does: the board, Ranked, or the tier.
 const areaTitle: Record<string, string> = {
   "whole board": title,
-  "two tiers": "Ranked",
+  "two tiers": "Placed",
   "one occupied tier": "S",
 };
 
@@ -275,7 +282,7 @@ for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
     await openBoard(page, { ...board, items });
     await play(page).click();
     await page.getByRole("button", { name: "Choose cards" }).click();
-    if (scope === "two tiers") await page.getByRole("checkbox", { name: /The pool/ }).uncheck();
+    if (scope === "two tiers") await page.getByRole("checkbox", { name: /The deck/ }).uncheck();
     if (scope === "one occupied tier") {
       // Everything on a board of one tier; ticking the tier alone only orders it.
       const only = page.getByRole("checkbox", { name: /^Tier S/ });
@@ -285,7 +292,10 @@ for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
     }
     await page.getByRole("button", { name: "16", exact: true }).click();
     await page.getByRole("button", { name: "Continue" }).click();
-    await expect(page.getByText("16 cards from " + areaTitle[scope])).toBeVisible();
+    await expect(page.locator(".play-summary__line")).toContainText(
+      scope === "whole board" ? "16 cards ·" : "16 cards from " + areaTitle[scope],
+    );
+    await otherWays(page);
     await page.locator("label.play-game").filter({ hasText: "Bracket" }).click();
     await page.getByRole("button", { name: "Start", exact: true }).click();
     const pick = page.getByRole("button", { name: /^Pick / }).first();

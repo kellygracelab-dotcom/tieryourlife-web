@@ -133,6 +133,7 @@ describe("its progress", () => {
       total: 3,
       round: null,
       overall: { asked: 0, total: 3 },
+      about: false,
     });
     expect(gameProgress(pick(game, currentPair(game)![0])).asked).toBe(1);
   });
@@ -162,6 +163,7 @@ describe("its progress", () => {
       total: pairs.length,
       round: null,
       overall: { asked: over.history.length, total: over.history.length + pairs.length },
+      about: false,
     });
   });
 
@@ -353,7 +355,7 @@ describe("game areas (game-scopes WIRE-SPEC)", () => {
     const rows = resultOf(game, areaBoard);
     expect(rows).toEqual([["s3", "s1"], [], []]);
     expect(unplayedMatters(game, areaBoard)).toBe(false);
-    // "To the pool" changes nothing here: s2 follows the played cards.
+    // "To the deck" changes nothing here: s2 follows the played cards.
     const after = applied(areaBoard, rows, game, "pool");
     expect(after).toEqual([["s3", "s1", "s2"], ["a1", "a2"], []]);
     expect(pooled(after)).toEqual(["p1", "p2", "p3"]);

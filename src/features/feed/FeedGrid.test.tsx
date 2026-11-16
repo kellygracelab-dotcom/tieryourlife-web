@@ -56,6 +56,16 @@ describe("FeedGrid", () => {
     expect(screen.getAllByRole("alert")[1]).toHaveTextContent("Could not load the lists.");
   });
 
+  it("says a browser App Check could not vouch for as that, not as a lost connection (audit A1)", async () => {
+    const { retry } = show({ status: "error", error: { kind: "appUnverified" } });
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Couldn’t check this browser, so the lists can’t load.");
+    expect(alert).toHaveTextContent(/ad blocker/);
+    expect(alert).not.toHaveTextContent("No connection");
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
   it("says when there is nothing", () => {
     show(ready(null, "idle", []));
     expect(screen.getByText("Nothing published yet")).toBeInTheDocument();

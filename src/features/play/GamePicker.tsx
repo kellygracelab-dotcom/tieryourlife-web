@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
@@ -18,8 +18,8 @@ const GAMES: readonly { kind: GameKind; icon: IconName; line: () => string }[] =
 ];
 
 interface GamePickerProps {
-  /** The board's name, for "34 cards from Sci-fi films". */
-  title: string;
+  /** A part of the board the game is over, for "12 cards from S"; null for the whole board. */
+  from: string | null;
   /** How many cards the game would be over: the chosen ones, or the whole board. */
   count: number;
   kind: GameKind;
@@ -39,9 +39,14 @@ interface GamePickerProps {
   onCancel: () => void;
 }
 
-/** "Play": which game, over which cards, or the saved one. */
+/**
+ * "Play" as the phone's artboard 8 has it (audit B4): one line on what the
+ * game is, the game Start begins in one line with its length, Start itself
+ * large, and the other games behind "Other ways to play". Smart is the one
+ * chosen until somebody picks another; then their choice opens with them.
+ */
 export function GamePicker({
-  title,
+  from,
   count,
   kind,
   onKind,
@@ -58,27 +63,26 @@ export function GamePicker({
 }: GamePickerProps) {
   const id = useId();
   const fits = playable(count);
-  const subtitle = (
-    <>
-      <span>{fill(plural(strings.play.cardsFrom, count), { title })}</span>{" "}
-      <button type="button" className="play-link" onClick={onChooseCards}>
-        {strings.play.chooseCards}
-      </button>
-    </>
-  );
+  const [others, setOthers] = useState(kind !== "smart");
+  const cards =
+    from === null
+      ? plural(strings.boards.cards, count)
+      : fill(plural(strings.play.cardsFrom, count), { title: from });
+  const summary = !fits
+    ? strings.play.needsCards
+    : kind === "smart"
+      ? fill(strings.play.summary, { cards, estimate: estimateText(kind, count) })
+      : fill(strings.play.summaryOf, {
+          game: gameName(kind),
+          cards,
+          estimate: estimateText(kind, count),
+        });
   return (
     <PlaySheet
       title={strings.play.play}
-      subtitle={subtitle}
+      subtitle={strings.play.lead}
       onClose={onCancel}
-      actions={
-        <>
-          <SheetCancel />
-          <Button variant="tonal" className="play-tonal" onClick={onStart} disabled={!fits}>
-            {strings.play.start}
-          </Button>
-        </>
-      }
+      actions={<SheetCancel />}
     >
       <div className="play-choice">
         {saved !== null && (
@@ -93,30 +97,67 @@ export function GamePicker({
             <p className="play-choice__label">{strings.play.newGame}</p>
           </>
         )}
-        <div className="play-games" role="radiogroup" aria-label={strings.play.game}>
-          {GAMES.map((game) => (
-            <label key={game.kind} className="play-game">
-              <input
-                type="radio"
-                name={`${id}-game`}
-                className="play-game__input"
-                checked={kind === game.kind}
-                onChange={() => onKind(game.kind)}
-              />
-              <span className="play-radio" aria-hidden="true" />
-              <span className="play-game__icon" aria-hidden="true">
-                <Icon name={game.icon} />
-              </span>
-              <span className="play-game__text">
-                <span className="play-game__name">{gameName(game.kind)}</span>
-                <span className="play-game__line">{game.line()}</span>
-                {fits && (
-                  <span className="play-game__estimate">{estimateText(game.kind, count)}</span>
-                )}
-              </span>
-            </label>
-          ))}
+        <div className="play-summary">
+          <p className="play-summary__line" id={`${id}-summary`}>
+            {summary}
+          </p>
+          {fits && <p className="play-summary__note">{strings.play.kept}</p>}
         </div>
+        <Button
+          variant="filled"
+          className="play-start"
+          onClick={onStart}
+          disabled={!fits}
+          aria-describedby={`${id}-summary`}
+        >
+          {strings.play.start}
+        </Button>
+        <div className="play-more">
+          <button type="button" className="play-link" onClick={onChooseCards}>
+            {strings.play.chooseCards}
+          </button>
+          <button
+            type="button"
+            className="play-link"
+            aria-expanded={others}
+            aria-controls={`${id}-games`}
+            onClick={() => setOthers((open) => !open)}
+          >
+            {strings.play.otherWays}
+            <Icon name="expand_more" className="play-more__chevron" />
+          </button>
+        </div>
+        {others && (
+          <div
+            id={`${id}-games`}
+            className="play-games"
+            role="radiogroup"
+            aria-label={strings.play.game}
+          >
+            {GAMES.map((game) => (
+              <label key={game.kind} className="play-game">
+                <input
+                  type="radio"
+                  name={`${id}-game`}
+                  className="play-game__input"
+                  checked={kind === game.kind}
+                  onChange={() => onKind(game.kind)}
+                />
+                <span className="play-radio" aria-hidden="true" />
+                <span className="play-game__icon" aria-hidden="true">
+                  <Icon name={game.icon} />
+                </span>
+                <span className="play-game__text">
+                  <span className="play-game__name">{gameName(game.kind)}</span>
+                  <span className="play-game__line">{game.line()}</span>
+                  {fits && (
+                    <span className="play-game__estimate">{estimateText(game.kind, count)}</span>
+                  )}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
       {theirs && <p className="play-footnote">{strings.play.intoMine}</p>}
     </PlaySheet>

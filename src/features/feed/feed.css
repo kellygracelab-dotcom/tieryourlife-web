@@ -55,6 +55,13 @@
   border-radius: 0;
 }
 
+/* What helps, under the reason: smaller, and no wider than a line reads. */
+.feed__trouble-help {
+  max-width: 56ch;
+  margin-top: calc(-1 * var(--space-2));
+  font: var(--text-small);
+}
+
 .feed__trouble,
 .feed__empty {
   display: flex;

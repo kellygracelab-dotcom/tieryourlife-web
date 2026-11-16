@@ -90,7 +90,7 @@ test("one card at a time: a tier places it, Skip comes back round, a card from t
 
   // To the pool: it waits there, up again.
   await press(tier(page, "A").getByRole("button", { name: c, exact: true }));
-  await press(page.getByRole("button", { name: "To the pool" }));
+  await press(page.getByRole("button", { name: "To the deck" }));
   await expect.poll(() => names(tier(page, "A").locator("[data-item]"))).toEqual([]);
   await expect(up(page)).toHaveText(c!);
 

@@ -489,3 +489,46 @@ describe("Shell page title", () => {
     expect(document.querySelector(".top__title")).toBeNull();
   });
 });
+
+describe("Shell's bar on a list's page in a narrow window (audit C2)", () => {
+  // jsdom has no matchMedia: a narrow window answers every max-width query.
+  const narrowWindow = (query: string) =>
+    ({ matches: query.includes("max-width"), media: query }) as MediaQueryList;
+  const scrollTo = (y: number) => {
+    act(() => {
+      Object.defineProperty(window, "scrollY", { value: y, configurable: true });
+      window.dispatchEvent(new Event("scroll"));
+    });
+  };
+
+  it("goes up out of the way as the page scrolls down, and comes back as it scrolls up", () => {
+    vi.stubGlobal("matchMedia", narrowWindow);
+    try {
+      scrollTo(0);
+      open({}, "/b/films");
+      const bar = screen.getByRole("banner");
+      scrollTo(60);
+      expect(bar).not.toHaveClass("top--away");
+      scrollTo(400);
+      expect(bar).toHaveClass("top--away");
+      scrollTo(300);
+      expect(bar).not.toHaveClass("top--away");
+    } finally {
+      scrollTo(0);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("stays on any other page", () => {
+    vi.stubGlobal("matchMedia", narrowWindow);
+    try {
+      scrollTo(0);
+      open({}, "/about");
+      scrollTo(400);
+      expect(screen.getByRole("banner")).not.toHaveClass("top--away");
+    } finally {
+      scrollTo(0);
+      vi.unstubAllGlobals();
+    }
+  });
+});

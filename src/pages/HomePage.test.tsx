@@ -64,9 +64,9 @@ describe("HomePage", () => {
     });
     open();
 
-    const tiles = await within(
-      screen.getByRole("navigation", { name: "Categories" }),
-    ).findAllByRole("link");
+    const tiles = await within(screen.getByRole("navigation", { name: "Sections" })).findAllByRole(
+      "link",
+    );
     // The nine, in the app's order, until the backend says otherwise.
     expect(tiles.map((tile) => tile.getAttribute("href"))).toEqual(
       CATEGORIES.map((id) => `/s/${id}`),

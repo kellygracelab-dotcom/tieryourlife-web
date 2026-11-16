@@ -87,6 +87,7 @@ import { Snackbar, useBoardNotice } from "../ui/Snackbar";
 import { useBackCloses } from "../ui/useBackCloses";
 import { PlayButton } from "../features/play/PlayButton";
 import { localGames } from "../features/play/savedGames";
+import { wantsResume } from "../features/started/started";
 import { usePlay } from "../features/play/usePlay";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
@@ -531,6 +532,13 @@ function OpenList({
       );
       setAfterGame(true);
     },
+  });
+  // Resume game in "Continue" (audit B1): back into the game saved here, once, as the page opens.
+  const resumeAsked = useRef(wantsResume(location.state));
+  useEffect(() => {
+    if (!resumeAsked.current) return;
+    resumeAsked.current = false;
+    play.resumeSaved();
   });
   // Back closes the sheet first, then Play, before it leaves the list: one
   // blocker for both, the router keeping only one.

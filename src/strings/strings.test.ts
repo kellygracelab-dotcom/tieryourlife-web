@@ -298,3 +298,23 @@ describe("the dictionaries", () => {
     }
   });
 });
+
+describe("the dictionary (audit E2)", () => {
+  // One word for one thing, on the site and in the app: a list, not a board; a
+  // card, not an item; a section, not a category; cards left and the deck, not
+  // the pool or unranked. Staff's own pages keep their older words.
+  const OLD_WORDS = /\b(boards?|pool|unranked|categor(y|ies)|items?)\b/i;
+
+  function texts(value: unknown, path: string): [string, string][] {
+    if (typeof value === "string") return [[path, value.replace(/\{[^}]*\}/g, "")]];
+    if (typeof value !== "object" || value === null) return [];
+    return Object.entries(value).flatMap(([key, inner]) =>
+      texts(inner, path === "" ? key : `${path}.${key}`),
+    );
+  }
+
+  it("says list, card, section and cards left to people, never the old words", () => {
+    const users = texts(en, "").filter(([path]) => !path.startsWith("admin."));
+    expect(users.filter(([, text]) => OLD_WORDS.test(text)).map(([path]) => path)).toEqual([]);
+  });
+});

@@ -13,9 +13,8 @@ export interface PlayButtonProps {
 
 /**
  * Play on the board's bar: from 840 an outlined button, play_arrow before the
- * word; narrower, the icon alone, 40 round, in the primary colour, with the
- * word as its tooltip. One button whose word CSS hides, so the name it is
- * read by never changes with the window. Disabled it stays focusable
+ * word; narrower, a tonal pill that keeps its word, as a bare ▷ was not found
+ * (audit B2). The name it is read by never changes with the window. Disabled it stays focusable
  * (aria-disabled), so the reason reaches a tooltip and a screen reader alike;
  * the dot is said in words as well.
  */

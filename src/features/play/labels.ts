@@ -12,19 +12,27 @@ import {
 /** A game's name, as the picker, the header and the saved line say it. */
 export const gameName = (kind: GameKind): string => strings.play[kind];
 
-/** "≈ 136 duels · about 5 min": losers stay is an upper bound, the others exact. */
+/** "about 136 duels · 5 min": losers stay and smart are said "about", the others exact. */
 export function estimateText(kind: GameKind, count: number): string {
   const { duels, minutes, rough } = estimate(kind, count);
-  return fill(rough ? strings.play.estimateRough : strings.play.estimate, {
-    duels: plural(strings.play.duels, duels),
+  return fill(strings.play.estimate, {
+    duels: plural(rough ? strings.play.duelsAbout : strings.play.duels, duels),
     time: plural(strings.play.minutes, minutes),
   });
 }
 
-/** "Duel 12 of 136", or "Refine · 4 of 17": the duel being asked, counted from one. */
+/**
+ * "Duel 12 of about 63", "Duel 3 of 24", or "Refine · 4 of 17": the duel
+ * being asked, counted from one, of the number the picker said.
+ */
 export function duelText(progress: GameProgress): string {
   const n = Math.min(progress.asked + 1, Math.max(progress.total, 1));
-  const template = progress.phase === "refine" ? strings.play.refineOf : strings.play.duelOf;
+  const template =
+    progress.phase === "refine"
+      ? strings.play.refineOf
+      : progress.about
+        ? strings.play.duelOfAbout
+        : strings.play.duelOf;
   return fill(template, { n, total: progress.total });
 }
 

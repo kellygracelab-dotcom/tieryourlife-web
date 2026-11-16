@@ -286,7 +286,7 @@ describe("SectionGrid", () => {
         <SectionGrid sections={sectionsFrom(null)} width="expanded" known={false} />
       </MemoryRouter>,
     );
-    const grid = screen.getByRole("navigation", { name: "Categories" });
+    const grid = screen.getByRole("navigation", { name: "Sections" });
     expect(grid).toHaveAttribute("aria-busy", "true");
     expect(screen.queryAllByRole("link")).toEqual([]);
     expect(grid.querySelectorAll(".section-tile--blank")).toHaveLength(9);

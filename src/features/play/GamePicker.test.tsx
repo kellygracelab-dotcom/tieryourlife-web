@@ -20,7 +20,7 @@ function show(props: Partial<Parameters<typeof GamePicker>[0]> = {}) {
   };
   render(
     <GamePicker
-      title="Sci-fi films"
+      from="Sci-fi films"
       count={34}
       kind="swiss"
       saved={null}
@@ -43,7 +43,10 @@ describe("the game picker", () => {
   it("says what the game is over, and opens the choice of cards", async () => {
     const { onChooseCards } = show();
     expect(screen.getByRole("dialog", { name: "Play" })).toBeInTheDocument();
-    expect(screen.getByText("34 cards from Sci-fi films")).toBeInTheDocument();
+    expect(
+      screen.getByText("Losers stay · 34 cards from Sci-fi films · about 136 duels · 5 min"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Leave any time — the game is kept.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
     expect(onChooseCards).toHaveBeenCalled();
   });
@@ -54,17 +57,41 @@ describe("the game picker", () => {
     expect(radios).toHaveLength(4);
     expect(radios[0]).toHaveAccessibleName(expect.stringContaining("Smart"));
     expect(screen.getByRole("radio", { name: /Smart/ })).toHaveAccessibleName(
-      expect.stringContaining("≈ 85 duels · about 3 min"),
+      expect.stringContaining("about 85 duels · 3 min"),
     );
     expect(screen.getByRole("radio", { name: /King of the hill/ })).toBeChecked();
     expect(screen.getByRole("radio", { name: /Losers stay/ })).toHaveAccessibleName(
-      expect.stringContaining("≈ 136 duels · about 5 min"),
+      expect.stringContaining("about 136 duels · 5 min"),
     );
     expect(screen.getByRole("radio", { name: /Bracket/ })).toHaveAccessibleName(
-      expect.stringContaining("33 duels · about 1 min"),
+      expect.stringContaining("33 duels · 1 min"),
     );
     await userEvent.click(screen.getByRole("radio", { name: /Bracket/ }));
     expect(onKind).toHaveBeenCalledWith("bracket");
+  });
+
+  it("opens on Smart with one big Start, the other games folded away (audit B4)", async () => {
+    const { onStart, onKind } = show({ kind: "smart", from: null });
+    expect(screen.getByText("34 cards · about 85 duels · 3 min")).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    const more = screen.getByRole("button", { name: "Other ways to play" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    const start = screen.getByRole("button", { name: "Start" });
+    expect(start).toHaveClass("play-start");
+    expect(start).toHaveAccessibleDescription("34 cards · about 85 duels · 3 min");
+    await userEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
+    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    expect(onKind).toHaveBeenCalledWith("hill");
+    await userEvent.click(start);
+    expect(onStart).toHaveBeenCalled();
+  });
+
+  it("says a game needs more cards instead of a summary", () => {
+    show({ count: 1 });
+    expect(screen.getByText("Play needs at least 3 cards.")).toBeInTheDocument();
+    expect(screen.queryByText("Leave any time — the game is kept.")).not.toBeInTheDocument();
   });
 
   it("starts, cancels, and cannot start over too many cards or too few", async () => {
@@ -83,7 +110,7 @@ describe("the game picker", () => {
     expect(card.querySelector(".play-radio")).not.toBeNull();
     expect(card.querySelector(".play-game__icon")).toHaveTextContent("account_tree");
     expect(card.querySelector(".play-game__text > .play-game__estimate")).toHaveTextContent(
-      "33 duels · about 1 min",
+      "33 duels · 1 min",
     );
   });
 
@@ -125,7 +152,7 @@ describe("the game picker", () => {
   it("starts again a hill or a bracket whose board changed under it", async () => {
     const saved: Resume = { kind: "changed", game: savedGame("hill") };
     const { onStartAgain } = show({ saved });
-    expect(screen.getByText("The board changed, so this game can’t go on")).toBeInTheDocument();
+    expect(screen.getByText("The list changed, so this game can’t go on")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Resume" })).not.toBeInTheDocument();
     const again = screen.getByRole("button", { name: "Start again" });
     expect(again).toHaveClass("play-outlined");
@@ -136,7 +163,7 @@ describe("the game picker", () => {
   it("only lets go of a game a tier of whose area is gone, as the app does", async () => {
     const saved: Resume = { kind: "changed", game: savedGame("hill") };
     const { onStartAgain, onDiscard } = show({ saved, canStartAgain: false });
-    expect(screen.getByText("The board changed, so this game can’t go on")).toBeInTheDocument();
+    expect(screen.getByText("The list changed, so this game can’t go on")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Start again" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Discard" }));
     expect(onDiscard).toHaveBeenCalled();

@@ -140,7 +140,7 @@ test("the account carries all 91 participants and the next duel to a second devi
   }, uid);
   await page.reload();
   await page.getByRole("button", { name: "Play", exact: true }).click();
-  await expect(page.getByText("91 cards from " + title)).toBeVisible();
+  await expect(page.locator(".play-summary__line")).toContainText("91 cards");
   await page.getByRole("button", { name: "Start", exact: true }).click();
   const pick = page.getByRole("button", { name: /^Pick / });
   const upload = page.waitForResponse(

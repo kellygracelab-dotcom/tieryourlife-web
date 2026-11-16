@@ -5,6 +5,18 @@ import { poolCount, rankedCount, type Board } from "./model";
 export const titleOf = (board: Board): string =>
   board.title.trim().length > 0 ? board.title : strings.boards.untitled;
 
+/** The English name a new board is given, kept as it was written whatever the language later. */
+const UNTITLED_EN = "Untitled list";
+
+/**
+ * A board that still has the name a new one is given, or none: Publish asks
+ * for a name before it goes out (audit D1), or Community fills with them.
+ */
+export const isUntitled = (board: Board): boolean => {
+  const title = board.title.trim();
+  return title === "" || title === strings.boards.untitled || title === UNTITLED_EN;
+};
+
 /** Where a conflict's copy came from, "from Pixel 7"; null for a board that is no such copy. */
 export const fromOf = (board: Board): string | null =>
   board.arrivedFrom === null ? null : fill(strings.sync.arrivedFrom, { device: board.arrivedFrom });
@@ -15,12 +27,12 @@ export function spokenTitleOf(board: Board): string {
   return from === null ? titleOf(board) : `${titleOf(board)}, ${from}`;
 }
 
-/** How far along it is: "12 ranked · 6 in pool", "21 ranked · nothing in pool", or the pool and nothing ranked. */
+/**
+ * How far along it is, as the phone's artboard 9 says it: "25 cards · 12
+ * placed", or "1 card · nothing placed yet" (audit E2: no pool, no ranked).
+ */
 export function metaOf(board: Board): string {
-  const ranked = rankedCount(board);
-  const inPool = poolCount(board);
-  if (ranked === 0)
-    return `${plural(strings.boards.inPool, inPool)} · ${strings.boards.nothingRanked}`;
-  const pool = inPool === 0 ? strings.boards.nothingInPool : plural(strings.boards.inPool, inPool);
-  return `${plural(strings.boards.ranked, ranked)} · ${pool}`;
+  const placed = rankedCount(board);
+  const cards = plural(strings.boards.cards, placed + poolCount(board));
+  return `${cards} · ${placed === 0 ? strings.boards.nothingRanked : plural(strings.boards.ranked, placed)}`;
 }

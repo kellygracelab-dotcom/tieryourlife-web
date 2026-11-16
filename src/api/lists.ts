@@ -176,8 +176,17 @@ export const summaryOf = <T extends ListSummary>(list: T): T => {
   } as T;
 };
 
+/**
+ * How long the feed waits for the browser's App Check: a feed that is not
+ * there after this says why and offers Try again (audit A1, at most 5–6 s).
+ */
+export const FEED_CHECK_WAIT_MS = 5_000;
+
 export async function loadFeed(client: ApiClient, query: FeedQuery = {}): Promise<FeedPage> {
-  const page = await client.request<FeedPage>("GET", "/lists", { query });
+  const page = await client.request<FeedPage>("GET", "/lists", {
+    query,
+    appCheckWaitMs: FEED_CHECK_WAIT_MS,
+  });
   return { ...page, lists: (page.lists ?? []).map(summaryOf) };
 }
 

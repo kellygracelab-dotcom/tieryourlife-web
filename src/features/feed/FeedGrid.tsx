@@ -8,6 +8,7 @@ import { ListCard } from "../../ui/ListCard";
 import { Menu } from "../../ui/Menu";
 import { Skeleton } from "../../ui/Skeleton";
 import { isOutOfSight } from "../community/hidden";
+import { FeedTroubleText } from "./FeedTrouble";
 import { useHidden } from "../community/useHidden";
 import type { FeedState } from "./useFeed";
 import { useYours } from "./yours";
@@ -156,7 +157,7 @@ export function FeedGrid({
   if (state.status === "error") {
     return (
       <div className="feed__trouble" role="alert">
-        <p>{state.error.kind === "offline" ? strings.feed.offline : strings.feed.failed}</p>
+        <FeedTroubleText kind={state.error.kind} />
         <Button variant="filled" icon="refresh" onClick={retry}>
           {strings.feed.tryAgain}
         </Button>

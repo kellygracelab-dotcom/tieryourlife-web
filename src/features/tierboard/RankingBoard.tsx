@@ -602,7 +602,7 @@ export function RankingBoard({
   const boardEnd = useRef<HTMLDivElement>(null);
   const boardBox = useRef<HTMLDivElement>(null);
   const tierEditing = edit?.owner?.tiers;
-  const tierMove = useTierMove(boardBox, tierEditing, state.selected === null);
+  const tierMove = useTierMove(boardBox, tierEditing);
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
@@ -1331,12 +1331,15 @@ export function RankingBoard({
                       </p>
                     ) : (
                       <h2 className="pool__title">
+                        {/* One count on a phone (audit C2): the bar says "3 of 25 placed". */}
                         {emptyPool
                           ? fill(strings.boards.poolCount, { n: 0 })
-                          : plural(
-                              edit?.owner?.live ? strings.boards.pool : strings.rank.left,
-                              left.length,
-                            )}
+                          : !wide
+                            ? strings.boards.cardsLeft
+                            : plural(
+                                edit?.owner?.live ? strings.boards.pool : strings.rank.left,
+                                left.length,
+                              )}
                       </h2>
                     )}
                     {emptyPool ? !wide && addChip : addButton}
@@ -1556,8 +1559,10 @@ const TierRow = memo(function TierRow({
   // The tier as the row's button says it: its letter, and its caption when it has one.
   const where =
     meta.caption === null || meta.caption === "" ? meta.label : `${meta.label} · ${meta.caption}`;
-  // A card being placed has the band for its button; the tier is held only otherwise.
-  const held = armed ? undefined : band;
+  // One's own board keeps its bands for the tiers, a card picked or not (audit C1):
+  // a press on the letter opens the tier, and the row beside it takes the card.
+  // On somebody else's list the band is the row's button.
+  const held = band;
   const classes = [
     "tier",
     "band",
@@ -1584,6 +1589,8 @@ const TierRow = memo(function TierRow({
       <div
         className={held === undefined ? "tier__band" : "tier__band tier__band--held"}
         onPointerDown={held?.onPointerDown}
+        // The band's press is the tier's own: it does not reach the row, which places a card.
+        onClick={held === undefined ? undefined : (event) => event.stopPropagation()}
         onKeyDown={
           held === undefined
             ? undefined
@@ -1600,7 +1607,8 @@ const TierRow = memo(function TierRow({
         {armed && selectedTitle !== null && (
           <button
             type="button"
-            className="tier__place"
+            // On one's own board the band is the tier's: the button stays for the keyboard only.
+            className={held === undefined ? "tier__place" : "tier__place tier__place--keys"}
             aria-label={fill(strings.rank.placeIn, { name: selectedTitle, tier: where })}
             aria-keyshortcuts={tier < 9 ? String(tier + 1) : undefined}
             onClick={(event) => {

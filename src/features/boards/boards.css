@@ -941,40 +941,60 @@
 }
 
 /*
- * Below 840 the board's head is two rows (Danylo's canvas, 16.11.2026): its
- * name and the menu share the first; the view, Publish and Play the second,
- * the view at the start. Four buttons beside the name left it no room.
+ * Below 840 the board's head (Danylo's canvas, 16.11.2026; audit C2, as the
+ * phone's artboard 9): the way back, Publish, Play and the menu in the first
+ * row; the name whole in the second; the view, the one count and Undo in the
+ * third. The row "← Your lists" and the counts under the name are gone.
  */
+.list-head__back {
+  display: none;
+}
+
 @media (max-width: 839px) {
-  .board-page .list-head {
-    flex-wrap: wrap;
-    align-items: flex-start;
+  .board-page > .board-page__back {
+    display: none;
   }
 
-  .board-page .list-head__text {
-    flex: 1 1 calc(100% - 64px);
+  .board-page .list-head {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 4px;
+  }
+
+  .list-head__back {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-inline: -8px auto;
+    border-radius: 20px;
+    color: var(--ink);
+  }
+
+  .list-head__back:hover {
+    background: var(--hover);
   }
 
   .board-page .list-head > .list-head__tools {
     display: contents;
   }
 
-  .board-page .list-head__tools > .menu {
+  /* Wider than what the first row leaves, so the name starts the second, with the view beside it. */
+  .board-page .list-head__text {
     order: 1;
+    flex: 1 1 calc(100% - 140px);
   }
 
   .board-page .list-head__tools > .menu:has(> .view-button) {
-    order: 2;
-    margin-inline-end: auto;
-  }
-
-  .board-page .list-head__tools > .publish-button,
-  .board-page .list-head__tools > .play-button {
-    order: 2;
+    order: 1;
   }
 
   .board-page .list-head > .list-head__bar {
-    order: 3;
+    order: 2;
+    flex: 1 1 0;
+    min-width: 0;
   }
 }
 

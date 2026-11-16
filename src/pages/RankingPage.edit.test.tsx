@@ -72,20 +72,20 @@ describe("editing a ranking", () => {
     rearrange.mockResolvedValue({ code: ranking.code });
     open("/r/abcdefgh?edit");
     await userEvent.click(await screen.findByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Return all cards to the pool" }));
-    await userEvent.click(screen.getByRole("button", { name: "Return to pool" }));
+    await userEvent.click(screen.getByRole("button", { name: "Return all cards to the deck" }));
+    await userEvent.click(screen.getByRole("button", { name: "Return to the deck" }));
     expect(rearrange).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(rearrange).toHaveBeenCalledWith(ranking.code, [[], []], undefined, [2, 1, 0]);
-    expect(await screen.findByRole("heading", { name: "3 unranked" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "3 cards left" })).toBeInTheDocument();
   });
 
   it("drops the confirmed reset when editing is cancelled and reopened", async () => {
     load.mockResolvedValue(ranking);
     open("/r/abcdefgh?edit");
     await userEvent.click(await screen.findByLabelText("More about this list"));
-    await userEvent.click(screen.getByRole("button", { name: "Return all cards to the pool" }));
-    await userEvent.click(screen.getByRole("button", { name: "Return to pool" }));
+    await userEvent.click(screen.getByRole("button", { name: "Return all cards to the deck" }));
+    await userEvent.click(screen.getByRole("button", { name: "Return to the deck" }));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await userEvent.click(screen.getByRole("button", { name: "Edit" }));
     expect(within(tier("S")).getByRole("button", { name: "The Witch" })).toBeVisible();
@@ -117,7 +117,7 @@ describe("editing a ranking", () => {
     );
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     expect(screen.getByRole("region", { name: "Your ranking" })).toHaveTextContent("Ex Machina");
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 card left");
 
     act(() => {
       vi.advanceTimersByTime(SAVED_NOTE_MS + 100);
@@ -137,7 +137,7 @@ describe("editing a ranking", () => {
     expect(rearrange).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     expect(screen.getByRole("region", { name: "Your ranking" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 card left");
   });
 
   it("names a failed save and keeps the board open", async () => {

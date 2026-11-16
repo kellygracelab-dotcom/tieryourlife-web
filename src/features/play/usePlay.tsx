@@ -103,6 +103,8 @@ export interface Play {
   /** Play is on screen: the picker, the choice of cards or the duel layer. */
   playing: boolean;
   open: () => void;
+  /** Straight into the saved game, as Resume in the picker; nothing without one. */
+  resumeSaved: () => void;
   /** As the layer's Quit: keeps the game and closes, a sheet too. For the browser's back while playing. */
   quit: () => void;
 }
@@ -271,6 +273,21 @@ export function usePlay(
     show(resumed.game);
   };
 
+  // Resume game from elsewhere (audit B1): straight into the saved game once the screens are here.
+  const [resuming, setResuming] = useState(false);
+  const resumeSaved = () => {
+    if (savedGame === null || board.order.length < MIN_CARDS) return;
+    setResuming(true);
+    setScreen("picker");
+  };
+  useEffect(() => {
+    if (!resuming || shown === null) return;
+    setResuming(false);
+    resume(shown);
+    // resume reads this render's game and board; it runs once, when the screens arrive.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resuming, shown]);
+
   const quit = () => {
     // Nothing answered: nothing was kept, and nothing is said. (A game is on
     // screen only once the screens are here.)
@@ -336,9 +353,11 @@ export function usePlay(
   const view =
     shown === null ? null : (
       <SheetArrival.Provider value={arriving}>
-        {screen === "picker" && (
+        {screen === "picker" && !resuming && (
           <shown.GamePicker
-            title={areaTitle(board, current, title)}
+            from={
+              areaName(board, current).kind === "board" ? null : areaTitle(board, current, title)
+            }
             count={chosenIds(board, current).length}
             kind={kind}
             onKind={setKind}
@@ -389,6 +408,7 @@ export function usePlay(
     view,
     playing: screen !== "none",
     open,
+    resumeSaved,
     quit,
   };
 }

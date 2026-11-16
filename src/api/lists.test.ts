@@ -118,6 +118,8 @@ describe("lists", () => {
 
     expect(request).toHaveBeenCalledWith("GET", "/lists", {
       query: { category: "games", sort: "popular", following: true },
+      // No longer than this for App Check: past it the feed says the browser was not checked.
+      appCheckWaitMs: 5_000,
     });
   });
 
@@ -126,7 +128,7 @@ describe("lists", () => {
 
     await loadFeed(client);
 
-    expect(request).toHaveBeenCalledWith("GET", "/lists", { query: {} });
+    expect(request).toHaveBeenCalledWith("GET", "/lists", { query: {}, appCheckWaitMs: 5_000 });
   });
 
   it("leaves out the empty slots among a list's pictures, in the feed and in one's own lists", async () => {

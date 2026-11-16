@@ -8,7 +8,7 @@ describe("the house's words", () => {
   it("says why a board cannot go out, as its settings do", () => {
     const problems: PublishProblem[] = ["category", "noItems", "tooManyTiers", "tooManyItems"];
     expect(problems.map(problemText)).toEqual([
-      "Pick a category.",
+      "Pick a section.",
       "Add at least one card before you publish this list.",
       "At most 19 tiers.",
       "At most 2000 cards.",

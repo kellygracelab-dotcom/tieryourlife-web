@@ -117,6 +117,7 @@ describe("api", () => {
     await loadFeed({ category: "anime", sort: "popular" });
     expect(mocks.request).toHaveBeenCalledWith("GET", "/lists", {
       query: { category: "anime", sort: "popular" },
+      appCheckWaitMs: 5_000,
     });
   });
 

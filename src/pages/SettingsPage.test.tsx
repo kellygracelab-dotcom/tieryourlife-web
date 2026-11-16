@@ -512,7 +512,7 @@ describe("SettingsPage", () => {
       setBackUp,
       syncNow: () => Promise.resolve(),
     });
-    await userEvent.click(screen.getByLabelText(/Back up my boards/));
+    await userEvent.click(screen.getByLabelText(/Back up my lists/));
     await userEvent.click(screen.getByRole("button", { name: "Stop and delete" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The copy could not be deleted, so backup stays on. Try again.",
@@ -520,7 +520,7 @@ describe("SettingsPage", () => {
     expect(setBackUp).toHaveBeenCalledWith(false);
     // The dialog stays for another go, and the switch never moved.
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Back up my boards/)).toBeChecked();
+    expect(screen.getByLabelText(/Back up my lists/)).toBeChecked();
 
     setBackUp.mockResolvedValueOnce(undefined);
     await userEvent.click(screen.getByRole("button", { name: "Stop and delete" }));

@@ -21,7 +21,7 @@ const tier = (id: string, label: string, caption: string | null, cards: PlayCard
   cardIds: cards.map((card) => card.id),
 });
 
-// The pool 22, S 142 (too many for a game), A 30, B empty: 194 cards.
+// The deck 22, S 142 (too many for a game), A 30, B empty: 194 cards.
 const pool = many("p", 22);
 const s = many("s", 142);
 const a = many("a", 30);
@@ -43,7 +43,7 @@ describe("choosing cards", () => {
   it("lists the pool, occupied tiers and the exact whole-board count", () => {
     show();
     expect(screen.getByRole("dialog", { name: "Choose cards" })).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "The pool · 22 cards" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "The deck · 22 cards" })).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: /S Masterpieces/ })).toHaveAccessibleName(
       expect.stringContaining("142 cards"),
     );
@@ -57,7 +57,7 @@ describe("choosing cards", () => {
 
   it("counts what is ticked, and goes on with those rows", async () => {
     const { onDone } = show();
-    await userEvent.click(screen.getByRole("checkbox", { name: "The pool · 22 cards" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "The deck · 22 cards" }));
     await userEvent.click(screen.getByRole("checkbox", { name: /^Tier A/ }));
     expect(screen.getByText("52 selected")).toBeInTheDocument();
     // Two rows: no keeping them in a tier.
@@ -104,11 +104,11 @@ describe("choosing cards", () => {
 
   it("offers the ranked tiers as one area, written as the tiers that hold a card", async () => {
     const { onDone } = show();
-    const ranked = screen.getByRole("checkbox", { name: "Ranked · 172 cards" });
+    const ranked = screen.getByRole("checkbox", { name: "Placed · 172 cards" });
     await userEvent.click(ranked);
     expect(screen.getByText("172 selected")).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: /^Tier A/ })).toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "The pool · 22 cards" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "The deck · 22 cards" })).not.toBeChecked();
     // Random sizes double on, each below the cards there are.
     for (const size of ["16", "32", "64", "128"]) {
       expect(screen.getByRole("button", { name: size })).toBeInTheDocument();

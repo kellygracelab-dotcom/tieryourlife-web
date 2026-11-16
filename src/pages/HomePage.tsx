@@ -1,3 +1,4 @@
+import { ContinueBlock } from "../features/started/ContinueBlock";
 import { useEffect, useState } from "react";
 import { usePageTitle } from "../app/pageTitle";
 import { Link, Navigate, useLocation, useNavigate } from "react-router";
@@ -147,6 +148,8 @@ export function HomePage({
         />
       ) : (
         <>
+          {/* What one began on somebody else's list, before the feed (audit B1). */}
+          <ContinueBlock />
           <Explore load={load} store={store} />
           {/*
            * The app card after the lists, small: the first screen is for a board

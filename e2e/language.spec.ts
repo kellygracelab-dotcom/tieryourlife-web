@@ -53,11 +53,14 @@ const SPOKEN: {
   /** The switch's half for one's own board, in the app's word. */
   mine: string;
   left: string | RegExp;
+  /** The tray's head on a phone: the bar has the one count there (audit C2). */
+  heading: string;
   placed: string | RegExp;
   about: string;
 }[] = [
   {
     browser: "ru-RU",
+    heading: "Оставшиеся карточки",
     lang: "ru",
     mine: "Моя",
     left: "Осталось 3 карточки",
@@ -66,6 +69,7 @@ const SPOKEN: {
   },
   {
     browser: "pt-PT",
+    heading: "Cartões restantes",
     lang: "pt-BR",
     mine: "Meu",
     left: "Faltam 3 cartões",
@@ -74,6 +78,7 @@ const SPOKEN: {
   },
   {
     browser: "es-MX",
+    heading: "Por colocar",
     lang: "es",
     mine: "Mío",
     left: "Quedan 3 tarjetas",
@@ -82,6 +87,7 @@ const SPOKEN: {
   },
   {
     browser: "de-AT",
+    heading: "Verbleibende Karten",
     lang: "de",
     mine: "Meine",
     left: "Noch 3 Karten",
@@ -90,6 +96,7 @@ const SPOKEN: {
   },
   {
     browser: "fr-CA",
+    heading: "Cartes restantes",
     lang: "fr",
     mine: "Le mien",
     left: "3 cartes restantes",
@@ -98,6 +105,7 @@ const SPOKEN: {
   },
   {
     browser: "pl-PL",
+    heading: "Pozostałe karty",
     lang: "pl",
     mine: "Mój",
     left: "Zostały 3 karty",
@@ -106,6 +114,7 @@ const SPOKEN: {
   },
   {
     browser: "tr-TR",
+    heading: "Kalan kartlar",
     lang: "tr",
     mine: "Benimki",
     left: "3 kart kaldı",
@@ -114,6 +123,7 @@ const SPOKEN: {
   },
   {
     browser: "ja-JP",
+    heading: "残りのカード",
     lang: "ja",
     mine: "自分",
     left: "残り 3 枚",
@@ -123,6 +133,7 @@ const SPOKEN: {
   // The digits: Western in engines on CLDR 42 and later, Arabic-Indic before.
   {
     browser: "ar-EG",
+    heading: "البطاقات المتبقية",
     lang: "ar",
     dir: "rtl",
     mine: "ترتيبي",
@@ -132,7 +143,7 @@ const SPOKEN: {
   },
 ];
 
-for (const { browser, lang, dir, mine, left, placed, about } of SPOKEN) {
+for (const { browser, lang, dir, mine, left, heading, placed, about } of SPOKEN) {
   test.describe(`a browser set to ${browser}`, () => {
     test.use({ locale: browser });
 
@@ -144,7 +155,8 @@ for (const { browser, lang, dir, mine, left, placed, about } of SPOKEN) {
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
       // The list opens on the author's ranking; one's own board is a press away.
       await page.getByRole("button", { name: mine, exact: true }).click();
-      await expect(page.getByRole("heading", { level: 2 })).toHaveText(left);
+      const narrow = page.viewportSize()!.width < 840;
+      await expect(page.getByRole("heading", { level: 2 })).toHaveText(narrow ? heading : left);
       await expect(page.getByText(placed)).toBeVisible();
       // The foot waits while the tray is up on a phone; the settings page has it at every width.
       await page.goto("/settings");

@@ -128,6 +128,11 @@ export interface GameProgress {
   round: { n: number; of: number } | null;
   /** The whole game: every answer so far, of every duel it should take. */
   overall: { asked: number; total: number };
+  /**
+   * The total is the picker's estimate, a game whose length depends on the
+   * answers: said "about", the same number the picker gave (audit B3).
+   */
+  about: boolean;
 }
 
 export function gameProgress(game: Game): GameProgress {
@@ -141,15 +146,23 @@ export function gameProgress(game: Game): GameProgress {
       total,
       round: null,
       overall: { asked: game.history.length, total: fixed.from + total },
+      about: false,
     };
   }
   const main = mainGame(game.spec, game.history);
-  const overall = { asked: game.history.length, total: main.planned };
+  // One count everywhere (audit B3): the picker promised its estimate, so the
+  // duels count up to that, never to less than the engine still plans. Over,
+  // the game took what it took.
+  const said = estimate(game.spec.kind, game.spec.count);
+  const over = main.next === null;
+  const total = over ? main.planned : Math.max(said.duels, main.planned);
+  const overall = { asked: game.history.length, total };
   return {
     phase: "main",
     ...overall,
     overall,
     round: main.round === undefined ? null : { n: main.round, of: swissRounds(game.spec.count) },
+    about: said.rough && !over,
   };
 }
 

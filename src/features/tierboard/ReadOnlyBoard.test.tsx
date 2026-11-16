@@ -40,7 +40,7 @@ describe("ReadOnlyBoard", () => {
     render(
       <ReadOnlyBoard label="Yours" tiers={tiers} items={items} rows={[[0], [1]]} pool={[2]} />,
     );
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 card left");
     expect(screen.getByText("Climax")).toBeInTheDocument();
   });
 

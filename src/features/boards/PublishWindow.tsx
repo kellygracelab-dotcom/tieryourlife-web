@@ -15,15 +15,17 @@ import type { Upload } from "../editor/AddCardBox";
 import { failureText } from "../editor/failureText";
 import { sectionName, type Section } from "../sections/model";
 import { isSectionName, SECTION_NAME_MAX } from "../sections/proposal";
-import { titleOf } from "./boardText";
+import { isUntitled, titleOf } from "./boardText";
 import { rankingFailureText } from "./copyRanking";
 import { CoverPicker, CoverSummary } from "./CoverPicker";
 import {
+  BOARD_LIMITS,
   cleanTopicName,
   isBehind,
   isOut,
   liveItems,
   previewsOf,
+  rename,
   setTopic,
   settleTopic,
   TOPIC_NAME,
@@ -260,6 +262,11 @@ export function PublishWindow({
   // Publish pressed with no section: the section block says so.
   const [tried, setTried] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // An untitled list is named first, at the top of the window (audit D1).
+  const untitled = isUntitled(board);
+  const [named, setNamed] = useState("");
+  const [nameMissing, setNameMissing] = useState(false);
+  const nameInput = useRef<HTMLInputElement>(null);
   // Why a guest's Publish did not sign them in, when it could not.
   const [signInNote, setSignInNote] = useState<string | null>(null);
   // A topic being named here (null while the field is closed), or a section.
@@ -352,9 +359,24 @@ export function PublishWindow({
     });
   };
 
+  // The name typed in the window, kept on the board before anything else: a
+  // guest's sign-in comes back to a board with its name.
+  const nameFirst = (): boolean => {
+    if (!isUntitled(latest())) return true;
+    const name = named.replace(/\s+/g, " ").trim();
+    if (name === "") {
+      setNameMissing(true);
+      nameInput.current?.focus();
+      return false;
+    }
+    keep(rename(latest(), name, now()));
+    return true;
+  };
+
   // Publish, or Continue for a section of one's own.
   const go = () => {
     if (busyNow) return;
+    if (!nameFirst()) return;
     if (asSection && naming !== null) {
       propose(naming.replace(/\s+/g, " ").trim());
       return;
@@ -450,6 +472,15 @@ export function PublishWindow({
     </div>
   );
 
+  // A guest is told first, before choosing anything, that the press signs them in (audit D1).
+  const guestNote =
+    me === null ? (
+      <p className="publish-window__guest">
+        <Icon name="person" />
+        <span>{strings.boards.needsAccount}</span>
+      </p>
+    ) : null;
+
   // What Community will show, at the top of the window: not for a ranking,
   // which is shown under somebody else's list and not as a card of its own.
   const cover =
@@ -493,6 +524,7 @@ export function PublishWindow({
       <>
         {head(strings.rankings.progressShare, strings.publishWindow.rankSub)}
         <fieldset className="publish-window__body" disabled={busyNow}>
+          {guestNote}
           <div className="publish-window__original">
             {picture === null ? (
               <span className="publish-window__thumb publish-window__thumb--none" />
@@ -512,7 +544,6 @@ export function PublishWindow({
             <p className="publish-window__note">{strings.rankings.notYours}</p>
           )}
           {failure === null && <How icon="leaderboard">{strings.publishWindow.rankHow}</How>}
-          {me === null && <p className="publish-window__note">{strings.boards.needsAccount}</p>}
         </fieldset>
         {notes}
         <div className="dialog__actions">
@@ -533,7 +564,7 @@ export function PublishWindow({
             busyWord={strings.boards.publishing}
             onClick={rank}
           >
-            {strings.rankings.progressShare}
+            {me === null ? strings.publishWindow.signInAndShow : strings.rankings.progressShare}
           </GoButton>
         </div>
       </>
@@ -681,6 +712,48 @@ export function PublishWindow({
       <>
         {head(fill(strings.publishWindow.title, { title }), meta)}
         <fieldset className="publish-window__body" disabled={busyNow}>
+          {guestNote}
+          {untitled && (
+            <section className="publish-window__block" aria-labelledby={`${id}-name-label`}>
+              <label
+                id={`${id}-name-label`}
+                htmlFor={`${id}-name`}
+                className="publish-window__label"
+              >
+                {strings.publishWindow.name}
+              </label>
+              <span className="publish-window__field">
+                <input
+                  ref={nameInput}
+                  id={`${id}-name`}
+                  type="text"
+                  className="publish-window__input"
+                  value={named}
+                  maxLength={BOARD_LIMITS.title}
+                  placeholder={strings.publishWindow.namePlaceholder}
+                  aria-invalid={nameMissing || undefined}
+                  aria-describedby={nameMissing ? `${id}-name-missing` : undefined}
+                  autoComplete="off"
+                  onChange={(event) => {
+                    setNamed(event.target.value);
+                    setNameMissing(false);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      go();
+                    }
+                  }}
+                />
+              </span>
+              {nameMissing && (
+                <p id={`${id}-name-missing`} className="publish-window__missing" role="alert">
+                  <Icon name="error" />
+                  {strings.publishWindow.nameFirst}
+                </p>
+              )}
+            </section>
+          )}
           {cover}
           <section
             className={
@@ -799,8 +872,6 @@ export function PublishWindow({
             )}
           </section>
           {failure === null && <How icon="public">{strings.publishWindow.how}</How>}
-          {/* A guest is told before the press that it signs them in first. */}
-          {me === null && <p className="publish-window__note">{strings.boards.needsAccount}</p>}
         </fieldset>
         {notes}
         <div className="dialog__actions">
@@ -825,7 +896,7 @@ export function PublishWindow({
               busyWord={strings.boards.publishing}
               onClick={go}
             >
-              {strings.new.publish}
+              {me === null ? strings.publishWindow.signInAndPublish : strings.new.publish}
             </GoButton>
           )}
         </div>

@@ -76,8 +76,8 @@ test.describe("Play on a phone", () => {
   }) => {
     await openMine(page);
     const viewport = page.viewportSize()!;
-    // Below 600 the icon alone, still named Play.
-    await expect(page.locator(".play-button__word")).toBeHidden();
+    // The word stays on a phone too: a bare ▷ was not found (audit B2).
+    await expect(page.locator(".play-button__word")).toBeVisible();
     await playButton(page).tap();
 
     const sheet = page.getByRole("dialog", { name: "Play" });
@@ -88,6 +88,9 @@ test.describe("Play on a phone", () => {
     expect(Math.abs(box.y + box.height - viewport.height)).toBeLessThan(2);
     expect(Math.round(box.width)).toBe(viewport.width);
 
+    // Smart's summary and Start first, the other games one tap away (audit B4).
+    await expect(sheet.locator(".play-summary__line")).toContainText("about");
+    await page.getByRole("button", { name: "Other ways to play" }).tap();
     // The radio itself is drawn over by its card: tap the card, as a thumb would.
     await page.locator("label", { hasText: "King of the hill" }).tap();
     await expect(page.getByRole("radio", { name: /King of the hill/ })).toBeChecked();

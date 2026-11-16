@@ -404,7 +404,7 @@ describe("NewBoardPage: one's own published list is changed on its board", () =>
     const { repository } = open({ path: "/b/new?list=abc", copyBack });
     expect(
       await screen.findByText(
-        "Your list’s pictures could not be brought to its board. Nothing was lost. Try again.",
+        "Your list’s pictures could not be copied. Nothing was lost. Try again.",
       ),
     ).toBeInTheDocument();
     expect(repository.all()).toEqual([]);
