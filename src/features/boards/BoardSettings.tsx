@@ -10,20 +10,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import type { AddedCard } from "../../api/community";
-import { errorOf, type ApiError } from "../../api/errors";
-import type { Published, PublishRequest } from "../../api/lists";
 import { creditAsAttribution, type EditorCredit } from "../../api/pictureAttribution";
 import type { Topic } from "../../api/sections";
-import { isOwnList, type PublishedList } from "../../api/types";
 import { useSession } from "../../app/session";
-import {
-  keepListRanking,
-  loadListAsWritten,
-  loadAllTopics,
-  loadTopic,
-  withdrawListRanking,
-} from "../../lib/api";
+import { loadAllTopics, loadTopic } from "../../lib/api";
 import { fieldsOf } from "../../lib/editorCredit";
 import { IN_APP_BROWSER } from "../../lib/inAppBrowser";
 import type { SignInOutcome } from "../../lib/signIn";
@@ -53,16 +43,11 @@ import {
   liveItems,
   previewsOf,
   rankedTiers,
-  setAnonymous,
   setCover,
   setCoverCredit,
   setCoverFocus,
-  setHeld,
-  setPublished,
-  setRanking,
   setTopic,
   settleTopic,
-  topicSent,
   TOPIC_NAME,
   type Board,
   type BoardTopic,
@@ -70,33 +55,27 @@ import {
 } from "./model";
 import { titleOf } from "./boardText";
 import { AS_COMMUNITY } from "./ownList";
-import { publishProblemsOf, publishRequestOf } from "./publish";
-import type { AccountAction } from "../../api/client";
-import { captureAccountAction } from "../../lib/accountAction";
-import { boundToSource } from "./copiedPublication";
-import { copyRankingOf, rankingFailureText } from "./copyRanking";
+import { publishProblemsOf } from "./publish";
+import { rankingFailureText } from "./copyRanking";
 import { filedUnder, sectionChoices } from "./sectionChoices";
-import { sentTopic, settledTopic, type FindTopic } from "./topic";
+import { settledTopic, type FindTopic } from "./topic";
+import {
+  publicationActions,
+  publishedPath,
+  usePublicationState,
+  type OnPublished,
+  type PublicationState,
+  type PublishFailure,
+  type PublishingDeps,
+} from "./usePublication";
 import "./boards.css";
 
-export type PublishBoard = (request: PublishRequest, action: AccountAction) => Promise<Published>;
-export type RepublishBoard = (
-  id: string,
-  request: PublishRequest,
-  action: AccountAction,
-) => Promise<Published>;
-export type UnpublishBoard = (id: string) => Promise<void>;
-
-export interface PublishingDeps {
-  publish: PublishBoard;
-  republish: RepublishBoard;
-  unpublish: UnpublishBoard;
-  loadOriginal?: typeof loadListAsWritten;
-  /** Takes one's ranking of a list down; the site's own unless told otherwise. */
-  withdraw?: (listId: string) => Promise<unknown>;
-  /** Puts one's ranking of a list among its Rankings (K3); the site's own unless told otherwise. */
-  rank?: typeof keepListRanking;
-}
+export type {
+  PublishBoard,
+  PublishingDeps,
+  RepublishBoard,
+  UnpublishBoard,
+} from "./usePublication";
 
 /**
  * The approved topics of a section, the biggest first: every one of them,
@@ -120,17 +99,12 @@ interface BoardSettingsProps {
   onMode: (mode: DisplayMode) => void;
   /** New tier: the page adds one and opens it in the tier editor. */
   onNewTier: () => void;
+  onPublished: OnPublished;
   /**
-   * The board went public, was sent again, or came down; or the backend kept
-   * it as one's ranking of the list it was saved from, or kept it out of the
-   * feed until a moderator looks (`held`). The page says so.
+   * Where a publish stands, the page's own: a refusal met by the header's
+   * button is read here. The sheet keeps one of its own without it.
    */
-  onPublished: (
-    what: "published" | "updated" | "unpublished" | "ranking" | "held",
-    id: string | null,
-    /** Pictures from other sites the backend left out of this publish (QA S11). */
-    dropped?: number,
-  ) => void;
+  publication?: PublicationState;
   /**
    * How the board goes public under the person's name; null for a board that
    * goes out some other way (a house list), whose sheet then offers none of it.
@@ -158,16 +132,13 @@ interface BoardSettingsProps {
   signInToPublish?: () => Promise<SignInOutcome>;
 }
 
-export type SettingsStart = "publish" | "update" | "takeDown";
+/**
+ * What the sheet opens on: Publish, Update or Take it down from the ⋮ menu
+ * starts it; `publication` only shows the Publication row, where the reason
+ * the header's button could not go on is said (Danylo, 16.11.2026).
+ */
+export type SettingsStart = "publish" | "update" | "takeDown" | "publication";
 
-type Busy = "idle" | "publishing" | "updating" | "unpublishing";
-/** A refusal, by the press it answers: each is said beside its own button. */
-type Failure = {
-  error: ApiError;
-  on: "publish" | "update" | "takeDown";
-  /** Refused as one's ranking (K3): said in a ranking's words, naming a card of one's own. */
-  ranking?: readonly AddedCard[];
-};
 type Open = "none" | "category" | "topic" | "cover";
 /** What came back for a section's topics. */
 type Topics =
@@ -320,16 +291,25 @@ export function BoardSettings({
   now = Date.now,
   start,
   signInToPublish,
+  publication,
 }: BoardSettingsProps) {
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
   useModal(box, onDone);
   const { account, signIn } = useSession();
   const signedIn = account?.kind === "signedIn";
-  const [busy, setBusy] = useState<Busy>("idle");
-  const [failure, setFailure] = useState<Failure | null>(null);
-  // The backend said the copy goes out only as one's ranking of this list (409 RANK_INSTEAD).
-  const [rankInstead, setRankInstead] = useState<string | null>(null);
+  const ownState = usePublicationState(`${board.uid}:${signedIn ? account.uid : ""}`);
+  const state = publication ?? ownState;
+  const { busy, failure, rankInstead, setRankInstead } = state;
+  const { send, rankCopy, takeDown } = publicationActions(state, {
+    latest,
+    keep,
+    publishing,
+    account,
+    onPublished,
+    now,
+    findTopic,
+  });
   // Why a guest's Publish did not sign them in, when it could not.
   const [signInNote, setSignInNote] = useState<string | null>(null);
   const [open, setOpen] = useState<Open>("none");
@@ -347,10 +327,7 @@ export function BoardSettings({
   // Held for a moderator, the list's link answers 404 to everybody, the author too.
   const held = isPublic && board.heldForReview === true;
   // A ranking is out on the page of the list it ranks.
-  const published =
-    isPublic && !held
-      ? `/l/${encodeURIComponent(board.publishedId ?? board.rankingOf ?? "")}`
-      : null;
+  const published = ownPublish ? publishedPath(board) : null;
   const toggle = (which: Open) => setOpen(open === which ? "none" : which);
   // Choosing in a picker closes it and takes away the radio that had the
   // focus, which then fell to the page inside the open sheet: it goes back to
@@ -364,10 +341,9 @@ export function BoardSettings({
 
   // A topic of one's own that waits is asked about, as the phone asks when its
   // picker opens; the answer lands only if the board still has that topic.
-  const settle = (topic: BoardTopic | null, action?: AccountAction) => {
+  const settle = (topic: BoardTopic | null) => {
     if (topic === null || topic.id === null || topic.waiting !== true) return;
     void settledTopic(topic, findTopic).then((decided) => {
-      if (action && !action.isCurrent()) return;
       const current = latest();
       if (decided !== topic && current.topic?.id === topic.id) {
         keep(settleTopic(current, decided));
@@ -375,231 +351,8 @@ export function BoardSettings({
     });
   };
 
-  // The list's topic as the backend kept it, named, while the board still has none of its own.
-  // The topic the list sits under, as the answer said it, for a board that
-  // chose none: learnt, never sent back, and only one of the board's own
-  // section. One chosen here, or taken off here, is not touched.
-  const learn = (topicId: string | null, action: AccountAction) => {
-    const mayLearn = (board: Board) =>
-      board.topicOff !== true && (board.topic === null || board.topic.learned === true);
-    if (topicId === null) {
-      const current = latest();
-      if (mayLearn(current) && current.topic !== null) keep(settleTopic(current, null));
-      return;
-    }
-    findTopic(topicId).then(
-      (topic) => {
-        if (!action.isCurrent()) return;
-        const current = latest();
-        if (!mayLearn(current)) return;
-        const fits = topic.status === "approved" && topic.section === current.category;
-        keep(settleTopic(current, fits ? { id: topic.id, name: topic.name, learned: true } : null));
-      },
-      () => undefined,
-    );
-  };
-
-  /**
-   * Out it goes, at the press, with nothing more to confirm (Danylo, 16.11):
-   * what it will be was said on the button and above it. A copy of somebody
-   * else's list goes into that list's Rankings; a copy of one's own list goes
-   * out as a list (`ownSource`, found when its list is read).
-   */
-  const send = async (
-    what: "published" | "updated",
-    given?: AccountAction | null,
-    ownSource?: PublishedList,
-  ) => {
-    const action = given ?? (signedIn ? captureAccountAction(account.uid) : null);
-    if (!action?.isCurrent() || !signedIn || action.uid !== account.uid) return;
-    const current = latest();
-    // Out as one's ranking of a list: sent again as that ranking, with the
-    // cards of one's own, never as a publish, which would take them away.
-    if (current.rankingOf !== null && current.publishedId === null) {
-      await rankCopy(current.rankingOf, action);
-      return;
-    }
-    if (ownSource === undefined && current.takenFrom !== null && current.publishedId === null) {
-      await rankCopy(current.takenFrom, action);
-      return;
-    }
-    const request = publishRequestOf(current);
-    if (request === null || publishing === null) return;
-    setRankInstead(null);
-    setBusy(what === "published" ? "publishing" : "updating");
-    setFailure(null);
-    try {
-      // The board's uid goes with every send, as the phone's does: a first
-      // publish lost to a reload gets its list back, and a replace keeps it.
-      const outgoing =
-        ownSource === undefined
-          ? { ...request, boardUid: current.uid }
-          : boundToSource({ ...request, boardUid: current.uid }, ownSource);
-      let answer =
-        what === "updated" && current.publishedId !== null
-          ? await publishing.republish(current.publishedId, outgoing, action)
-          : await publishing.publish(outgoing, action);
-      if (!action.isCurrent()) return;
-      // Out already: an earlier publish made the list and its answer was lost
-      // on the way. Nothing of this one was written, so the board goes again
-      // over that list's link, or the edits since would never reach it.
-      if (answer.existing === true && answer.ranking !== true) {
-        answer = await publishing.republish(answer.id, outgoing, action);
-        if (!action.isCurrent()) return;
-      }
-      const name = account?.kind === "signedIn" ? account.displayName : null;
-      const after = latest();
-      // The cards as they came from the list they were saved from: the
-      // backend kept them as one's ranking of it, which has no id of its own.
-      const ranking = answer.ranking === true;
-      // Kept out of the feed until a moderator looks: its link works for nobody yet.
-      const waits = !ranking && answer.underReview === true;
-      const out = ranking
-        ? setRanking(after, answer.id, now())
-        : setHeld(setPublished(after, answer.id, name ?? after.authorName, now()), waits);
-      // A name proposed with it is a topic now, waiting for a moderator,
-      // unless another was chosen while the request was on its way.
-      const sent =
-        ranking || after.topic !== current.topic
-          ? out
-          : settleTopic(
-              current.topicOff === true ? topicSent(out) : out,
-              sentTopic(current.topic, answer.topicId),
-            );
-      // A change made while the request was on its way was not in it: the
-      // published copy is behind it, and Update still has it to send.
-      keep(
-        after.editedAt === current.editedAt
-          ? sent
-          : { ...sent, publishedEditedAt: sent.editedAt - 1 },
-      );
-      onPublished(
-        ranking ? "ranking" : waits ? "held" : what,
-        answer.id,
-        ranking ? 0 : (answer.droppedPictures ?? 0),
-      );
-      // The backend may have filed it under an approved topic of that name.
-      if (sent.topic !== current.topic) settle(sent.topic, action);
-      // Said nothing of a topic, the list kept its own, a moderator's move
-      // into one too: the board learns it, as the published copy has it.
-      const kept = answer.topicId;
-      const unchosen = sent.topic === null || sent.topic.learned === true;
-      if (!ranking && unchosen && sent.topicOff !== true && kept !== undefined) {
-        learn(kept === "" ? null : kept, action);
-      }
-    } catch (reason: unknown) {
-      if (!action.isCurrent()) return;
-      const error = errorOf(reason);
-      // Taken down elsewhere (its page, /me, the phone): the board is no longer
-      // public, and its switch says so; turned on, it goes out anew.
-      if (what === "updated" && error.kind === "notFound") {
-        keep(setPublished(latest(), null, null, now()));
-      }
-      // A topic of one's own that a moderator turned down meanwhile is not
-      // open any more: the board forgets it, and the next try goes without.
-      if (error.kind === "invalid" && error.code === "TOPIC_UNAVAILABLE") {
-        keep(setTopic(latest(), null, now()));
-      }
-      // Somebody else's list, changed: it goes out only as one's ranking of it.
-      if (error.kind === "rankInstead") setRankInstead(error.listId);
-      else setFailure({ error, on: what === "published" ? "publish" : "update" });
-    } finally {
-      setBusy("idle");
-    }
-  };
-
-  /**
-   * The board as one's ranking of the list it was saved from (K3, K4): the
-   * list's cards in their places, the board's others as cards of one's own.
-   * Every send carries them all, since a ranking sent without them loses them.
-   */
-  const rankCopy = async (listId: string, given?: AccountAction | null) => {
-    const action = given ?? (signedIn ? captureAccountAction(account.uid) : null);
-    if (!action?.isCurrent() || publishing === null) return;
-    setRankInstead(null);
-    setFailure(null);
-    setBusy("publishing");
-    let added: readonly AddedCard[] = [];
-    try {
-      const source = await (publishing.loadOriginal ?? loadListAsWritten)(listId);
-      if (!action.isCurrent()) return;
-      const current = latest();
-      // Made the ranking of a list it was not saved from, it has no places of the list's to keep.
-      const ranking = copyRankingOf(
-        current.takenFrom === listId
-          ? current
-          : { ...current, takenFrom: listId, origin: undefined },
-        source,
-      );
-      // A copy of one's own list goes out as a list, as it always could.
-      if (isOwnList(source, action.uid) && current.publishedId === null) {
-        setBusy("idle");
-        await send("published", action, source);
-        return;
-      }
-      if (ranking === null || isOwnList(source, action.uid)) {
-        setFailure({ error: { kind: "invalid", detail: null, code: null }, on: "publish" });
-        return;
-      }
-      added = ranking.addedCards;
-      await (publishing.rank ?? keepListRanking)(source, ranking.rows, action, {
-        addedCards: ranking.addedCards,
-        tierLabels: ranking.tierLabels,
-      });
-      if (!action.isCurrent()) return;
-      const after = latest();
-      const out = setRanking(after, listId, now());
-      // A change made while the ranking was on its way was not in it.
-      keep(
-        after.editedAt === current.editedAt ? out : { ...out, publishedEditedAt: out.editedAt - 1 },
-      );
-      onPublished("ranking", listId, 0);
-    } catch (reason: unknown) {
-      if (!action.isCurrent()) return;
-      setFailure({ error: errorOf(reason), on: "publish", ranking: added });
-    } finally {
-      setBusy("idle");
-    }
-  };
-
-  // Down, the board is one's own again: the name publishing put on it goes, or
-  // Your lists would take it for a copy of somebody else's. A ranking down
-  // keeps the author's name: the cards are still theirs.
-  const down = () => {
-    const at = now();
-    const was = latest();
-    keep(was.rankingOf !== null ? setRanking(was, null, at) : setPublished(was, null, null, at));
-    onPublished("unpublished", null);
-  };
-  const takeDown = async () => {
-    const current = latest();
-    if (!isOut(current) || publishing === null) return;
-    setBusy("unpublishing");
-    setFailure(null);
-    try {
-      if (current.rankingOf !== null) {
-        await (publishing.withdraw ?? withdrawListRanking)(current.rankingOf);
-      } else if (current.publishedId !== null) {
-        await publishing.unpublish(current.publishedId);
-      }
-      down();
-      setAsking(false);
-    } catch (reason: unknown) {
-      // Already gone is what was asked for.
-      const error = errorOf(reason);
-      if (error.kind === "notFound") {
-        down();
-        setAsking(false);
-      } else {
-        setFailure({ error, on: "takeDown" });
-      }
-    } finally {
-      setBusy("idle");
-    }
-  };
-
-  // Out or down, the row's button gives way to the other (Publish to Take it
-  // down, and back): the focus that was on it goes to the one that came.
+  // Out or down, the row's buttons change (Publish gives way to Update, View
+  // and Take it down, and back): the focus that was on one goes to the row's first.
   const publicationRow = useRef<HTMLLIElement>(null);
   const wasPublic = useRef(isPublic);
   useEffect(() => {
@@ -650,7 +403,7 @@ export function BoardSettings({
   const blocked = !isPublic && signedIn && blocker !== null;
 
   // Publish or Update from the ⋮ menu, once the sheet is up: a reason it
-  // cannot is said where the switch is.
+  // cannot is said in the Publication row, which the sheet then shows.
   const started = useRef(false);
   useEffect(() => {
     if (started.current || start === undefined || !ownPublish) return;
@@ -659,11 +412,16 @@ export function BoardSettings({
       started.current = true;
       if (start === "publish" && !isPublic && !blocked) onPublish();
       else if (start === "update" && isPublic && problems.length === 0) void send("updated");
+      else if (start === "publication" || start === "publish" || start === "update") {
+        const row = publicationRow.current;
+        row?.scrollIntoView?.({ block: "nearest" });
+        row?.querySelector<HTMLElement>("button, a")?.focus();
+      }
     });
     return () => clearTimeout(timer);
   });
   const why = !isPublic && blocker !== null ? `${id}-public-why` : undefined;
-  const failed = (on: Failure["on"]) =>
+  const failed = (on: PublishFailure["on"]) =>
     failure !== null && failure.on === on ? (
       <span className="sheet-row__problem" role="alert">
         <Icon name="error" />
@@ -728,12 +486,12 @@ export function BoardSettings({
       });
       setTransfer(null);
       setAdjusting(true);
-    } catch (failure) {
+    } catch (reason) {
       if (!task.signal.aborted)
         setTransfer({
           ...currentTransfer,
           busy: false,
-          error: pictureFailureText(file.name, failure),
+          error: pictureFailureText(file.name, reason),
         });
     }
   };
@@ -846,9 +604,10 @@ export function BoardSettings({
 
           {ownPublish && (
             <li ref={publicationRow} className="sheet-row">
-              {/* A button that says what it will do, and the line above it says
-                  where it goes: no switch that stays off while a question waits
-                  (Danylo, 16.11.2026). Out, the row says so, with Take it down. */}
+              {/* One row for all of it (Danylo, 16.11.2026): Publish or Show in
+                  Rankings before it is out; then its status, with Update, View
+                  and Take it down under it. Update is filled while the copy
+                  out is behind the board. */}
               <Row
                 icon={<Icon name={ranks ? "leaderboard" : "public"} />}
                 title={strings.boards.publication}
@@ -892,15 +651,37 @@ export function BoardSettings({
                     {blocker}
                   </span>
                 )}
+                {isPublic && behind && (
+                  <span className="sheet-row__note sheet-row__note--behind">
+                    {strings.boards.behind}
+                  </span>
+                )}
+                {isPublic && problem !== null && <span className="sheet-row__note">{problem}</span>}
                 {isPublic && (
-                  <button
-                    type="button"
-                    className="sheet-row__link sheet-row__link--button"
-                    disabled={busy !== "idle"}
-                    onClick={() => setAsking(true)}
-                  >
-                    {strings.boards.takeDown}
-                  </button>
+                  <span className="sheet-row__actions">
+                    <Button
+                      variant={behind ? "filled" : "tonal"}
+                      icon="cloud_upload"
+                      onClick={() => void send("updated")}
+                      disabled={busy !== "idle" || problems.length > 0}
+                    >
+                      {busy === "updating" ? strings.boards.updating : strings.boards.update}
+                    </Button>
+                    {published !== null && (
+                      <Link className="sheet-row__link" to={published} state={AS_COMMUNITY}>
+                        <Icon name="open_in_new" />
+                        <span>{strings.boards.seePublished}</span>
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      className="sheet-row__link sheet-row__link--button"
+                      disabled={busy !== "idle"}
+                      onClick={() => setAsking(true)}
+                    >
+                      {strings.boards.takeDown}
+                    </button>
+                  </span>
                 )}
                 {signInNote !== null && !signedIn && (
                   <span className="sheet-row__problem" role="alert">
@@ -932,64 +713,6 @@ export function BoardSettings({
                   </div>
                 )}
                 {failed("publish")}
-                {!isPublic && failed("update")}
-              </Row>
-            </li>
-          )}
-
-          {ownPublish && (
-            <li className="sheet-row">
-              <Row
-                icon={<Icon name="visibility_off" />}
-                title={
-                  <label htmlFor={`${id}-anonymous`} className="sheet-row__label">
-                    {strings.boards.anonymousTitle}
-                  </label>
-                }
-                sub={strings.boards.anonymousBody}
-                end={
-                  <input
-                    id={`${id}-anonymous`}
-                    type="checkbox"
-                    role="switch"
-                    className="switch"
-                    checked={board.anonymous}
-                    // A public list that cannot be sent cannot change either: the reason is under Update.
-                    disabled={busy !== "idle" || (isPublic && problem !== null)}
-                    onChange={(event) => {
-                      keep(setAnonymous(latest(), event.target.checked, now()));
-                      // A list already out changes at once, as on the phone.
-                      if (isPublic) void send("updated");
-                    }}
-                  />
-                }
-              />
-            </li>
-          )}
-
-          {isPublic && (
-            <li className="sheet-row">
-              <Row
-                icon={<Icon name="publish" />}
-                title={strings.boards.publishedVersion}
-                sub={behind ? strings.boards.behind : strings.boards.publishedVersionBody}
-                end={
-                  <Button
-                    variant="tonal"
-                    onClick={() => void send("updated")}
-                    disabled={busy !== "idle" || problems.length > 0}
-                  >
-                    {busy === "updating" ? strings.boards.updating : strings.boards.update}
-                  </Button>
-                }
-              >
-                {published !== null && (
-                  <Link className="sheet-row__link" to={published} state={AS_COMMUNITY}>
-                    <Icon name="open_in_new" />
-                    <span>{strings.boards.seeInCommunity}</span>
-                  </Link>
-                )}
-                {problem !== null && <span className="sheet-row__note">{problem}</span>}
                 {failed("update")}
               </Row>
             </li>
@@ -1350,7 +1073,11 @@ export function BoardSettings({
                   </Button>
                   <Button
                     className="dialog__danger"
-                    onClick={() => void takeDown()}
+                    onClick={() =>
+                      void takeDown().then((gone) => {
+                        if (gone) setAsking(false);
+                      })
+                    }
                     disabled={busy !== "idle"}
                   >
                     {strings.boards.takeDown}

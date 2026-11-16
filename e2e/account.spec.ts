@@ -55,26 +55,30 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   expect(account.published.size).toBe(0);
 
   await press(publishButton, hasTouch);
-  await expect(page.getByText("Published. Anyone with the link can rank it.")).toBeVisible();
+  // Said under the board, with View; the row says Published, View in it too.
+  await expect(page.locator(".snackbar")).toContainText("Published");
+  await expect(page.locator(".snackbar").getByRole("button", { name: "View" })).toBeVisible();
   await expect(status).toHaveText(/Published$/);
   await expect(publishButton).toHaveCount(0);
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
-    "href",
-    "/l/L1",
-  );
+  await expect(settings.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
   expect(account.publishes[0]).toMatchObject({
     title: "Films I make people watch",
     category: "film_tv",
   });
+  // Under the author's name: nothing asks to hide it any more.
+  expect(account.publishes[0]).not.toHaveProperty("anonymous");
   await shot(page, `publish-${hasTouch ? "phone" : "desktop"}`);
 
   // A change on the board puts the published copy behind; Update sends it again.
   await press(page.getByRole("radio", { name: "Ranking" }), hasTouch);
-  await expect(page.getByText("The published copy is behind this board.")).toBeVisible();
-  // The sheet's Update: behind, the header beside Play says Update too.
-  await press(settings.getByRole("button", { name: "Update" }), hasTouch);
-  await expect(page.getByText("Send this board again, over the same link.")).toBeVisible();
+  await expect(settings.getByText("Changes not published yet")).toBeVisible();
+  // The sheet's Update, filled while behind: the header beside Play says Update too.
+  const update = settings.getByRole("button", { name: "Update" });
+  await expect(update).toHaveClass(/btn--filled/);
+  await press(update, hasTouch);
+  await expect(page.locator(".snackbar")).toContainText("Updated");
+  await expect(settings.getByText("Changes not published yet")).toBeHidden();
   expect(account.calls).toContain("POST /lists/L1");
 
   // The account's own run keeps the id: the list is still among this account's.
@@ -93,6 +97,32 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   expect(account.published.size).toBe(0);
 });
 
+test("publishes from the board's header, and View opens what others see", async ({
+  page,
+  hasTouch,
+}) => {
+  const account = await signIn(page);
+  await newBoard(page, hasTouch, "Films from the header");
+  const publish = page.locator(".list-head .publish-button");
+  // No section yet: the sheet opens on Publication and says what is missing.
+  await press(publish, hasTouch);
+  const settings = page.getByRole("dialog", { name: "List settings" });
+  await expect(settings.getByText("Pick a category.")).toBeVisible();
+  await press(settings.getByRole("button", { name: /Category/ }), hasTouch);
+  await press(settings.getByRole("radio", { name: "Film & TV" }), hasTouch);
+  await press(settings.getByRole("button", { name: "Done" }), hasTouch);
+  await expect(settings).toHaveCount(0);
+
+  // Now it goes out from the board itself, no sheet in between.
+  await press(publish, hasTouch);
+  const said = page.locator(".snackbar");
+  await expect(said).toContainText("Published");
+  await expect(settings).toHaveCount(0);
+  expect(account.publishes).toHaveLength(1);
+  await press(said.getByRole("button", { name: "View" }), hasTouch);
+  await expect(page).toHaveURL(/\/l\/L1$/);
+});
+
 test("keeps local edits after PUBLICATION_CHANGED and retries the same publication", async ({
   page,
   hasTouch,
@@ -109,12 +139,11 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
   // The sheet's own buttons: the header beside Play has Publish and Update too.
   const settings = page.getByRole("dialog", { name: "List settings" });
   await press(settings.getByRole("button", { name: "Publish", exact: true }), hasTouch);
-  await expect(page.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
-    "href",
-    "/l/L1",
-  );
+  await expect(settings.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
 
-  const anonymity = page.getByRole("switch", { name: "Publish anonymously" });
+  // A change on the board, sent while the list changed on the backend.
+  const ranking = settings.getByRole("radio", { name: "Ranking" });
+  await press(ranking, hasTouch);
   let refusedBody: unknown;
   await page.route(
     "**/lists/L1",
@@ -130,19 +159,20 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
     },
     { times: 1 },
   );
-  await press(anonymity, hasTouch);
+  await press(settings.getByRole("button", { name: "Update", exact: true }), hasTouch);
   await expect(page.getByRole("alert")).toContainText(
     "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
   );
   await expect(settings.getByRole("button", { name: "Update", exact: true })).toBeEnabled();
-  expect(account.published.get("L1")?.anonymous).toBe(false);
-  expect(refusedBody).toMatchObject({ anonymous: true, title: "Festival films" });
+  expect(refusedBody).toMatchObject({ title: "Festival films" });
+  expect(refusedBody).not.toHaveProperty("anonymous");
 
   await page.reload();
   await openSettings();
-  await expect(anonymity).toBeChecked();
+  await expect(ranking).toBeChecked();
+  await expect(settings.getByText("Changes not published yet")).toBeVisible();
   await press(settings.getByRole("button", { name: "Update", exact: true }), hasTouch);
-  await expect(page.getByText("Send this board again, over the same link.")).toBeVisible();
+  await expect(page.locator(".snackbar")).toContainText("Updated");
   expect(account.published.size).toBe(1);
   expect(account.published.get("L1")).toEqual(refusedBody);
 });

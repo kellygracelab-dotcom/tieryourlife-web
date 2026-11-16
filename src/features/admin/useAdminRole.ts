@@ -50,14 +50,13 @@ export const PANES = [
   "sections",
   "topics",
   "lists",
-  "anonymous",
   "house",
   "searches",
   "moderators",
 ] as const;
 export type Pane = (typeof PANES)[number];
 
-const OWNER_ONLY: readonly Pane[] = ["anonymous", "moderators"];
+const OWNER_ONLY: readonly Pane[] = ["moderators"];
 
 export const panesFor = (role: AdminRole): Pane[] =>
   PANES.filter((pane) => role === "owner" || !OWNER_ONLY.includes(pane));

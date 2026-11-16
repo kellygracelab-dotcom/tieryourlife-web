@@ -147,7 +147,10 @@ export interface Board {
    * keeps the one it has, a moderator's move into a topic too. Never kept in the account.
    */
   topicOff?: boolean;
-  /** Published with no name or face: sent with every publish, and kept in the account when true. */
+  /**
+   * Published with no name or face, before 16.11.2026: kept in the account
+   * when true, as the phone keeps it. Never sent with a publish any more.
+   */
   anonymous: boolean;
   /**
    * The published list the board was saved
@@ -412,10 +415,6 @@ export function rename(board: Board, title: string, now: number): Board {
 /** A topic lives inside one section: another section leaves the list without one. */
 export const setCategory = (board: Board, category: string | null, now: number): Board =>
   category === board.category ? board : touched({ ...board, category, topic: null }, now);
-
-/** Anonymity goes out with the next publish too: changing it leaves the published copy behind. */
-export const setAnonymous = (board: Board, anonymous: boolean, now: number): Board =>
-  anonymous === board.anonymous ? board : touched({ ...board, anonymous }, now);
 
 const sameTopic = (a: BoardTopic | null, b: BoardTopic | null): boolean =>
   a === null || b === null

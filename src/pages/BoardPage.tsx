@@ -44,6 +44,14 @@ import {
   type SettingsStart,
 } from "../features/boards/BoardSettings";
 import { CopyRankingOffer } from "../features/boards/CopyRankingOffer";
+import { AS_COMMUNITY } from "../features/boards/ownList";
+import { publishProblemsOf } from "../features/boards/publish";
+import {
+  publicationActions,
+  publishedPath,
+  usePublicationState,
+  type OnPublished,
+} from "../features/boards/usePublication";
 import { noteRankingEdit } from "../features/boards/sourceRanking";
 import { RankedList } from "../features/boards/RankedList";
 import { metaOf } from "../features/boards/boardText";
@@ -372,8 +380,7 @@ function OpenBoard({
     askedName.current = false;
     if (empty) document.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
   }, [editingTitle, empty]);
-  // ?settings=1 opens the sheet at once: the admin's anonymous publish leads here.
-  const [panel, setPanel] = useState<Panel>(params.get("settings") === "1" ? "settings" : "none");
+  const [panel, setPanel] = useState<Panel>("none");
   // Publish, Update or Take it down chosen in the ⋮ menu: the sheet opens on it.
   const [settingsStart, setSettingsStart] = useState<SettingsStart | undefined>(undefined);
   const openSettings = (start?: SettingsStart) => {
@@ -404,6 +411,8 @@ function OpenBoard({
   }, [me, uid]);
   // Brief, and gone at the board's next action (Friends, 16.11).
   const { notice, setNotice, done: forget, acted } = useBoardNotice();
+  // Where a publish stands: the header's button and the sheet's press the same one.
+  const publication = usePublicationState(`${uid}:${me ?? ""}`);
   // A paste or a drop for a new card, on its way to the add box.
   const [incoming, setIncoming] = useState<Incoming | null>(null);
   const incomingTaken = useCallback(() => setIncoming(null), []);
@@ -566,7 +575,7 @@ function OpenBoard({
         }}
       />
     );
-  } // Publish, Update or Show in Rankings beside Play: the sheet's own, opened on it.
+  } // Publish, Update or Show in Rankings beside Play.
   const publishKind = publishKindOf(board, house !== null);
 
   // What the board is right now: what is kept, or the fresh one until it is.
@@ -578,6 +587,59 @@ function OpenBoard({
     if (next.takenFrom !== null && nextOrder !== arrangement) noteRankingEdit(next.uid);
     setOwnArrangement(nextOrder);
     repository.save(next);
+  };
+
+  // Said under the board: out, sent again, in a list's Rankings, or down.
+  // Out where others see it, with View to go and look (Danylo, 16.11.2026).
+  const onPublished: OnPublished = (what, _id, dropped = 0) => {
+    const said =
+      what === "unpublished"
+        ? strings.boards.unpublished
+        : what === "held"
+          ? strings.boards.publishedHeld
+          : what === "updated"
+            ? strings.boards.updatedShort
+            : what === "ranking"
+              ? strings.boards.rankedShort
+              : strings.boards.publishedShort;
+    // Pictures from other sites that could not be fetched or checked in time (QA S11).
+    const lost = plural(strings.boards.picturesDropped, dropped);
+    const text =
+      dropped === 0 ? said : /[.!?。]$/.test(said) ? `${said} ${lost}` : `${said}. ${lost}`;
+    const where = what === "unpublished" ? null : publishedPath(latest());
+    setNotice(
+      where === null
+        ? { text }
+        : {
+            text,
+            action: {
+              text: strings.boards.seePublished,
+              onClick: () => void navigate(where, { state: AS_COMMUNITY }),
+            },
+          },
+    );
+  };
+  // A house list never goes out under the person's name: it has none of this.
+  const ownPublishing = house === null ? publishing : null;
+  const publish = publicationActions(publication, {
+    latest,
+    keep,
+    publishing: ownPublishing,
+    account,
+    onPublished,
+    now,
+  });
+  // The header's button goes out from the board itself; the sheet opens, on
+  // its Publication row, only for what has to be done first: signing in, a
+  // section, cards, or a refusal to read (Danylo, 16.11.2026).
+  const publishFromHeader = () => {
+    if (me === null || publishProblemsOf(latest()).length > 0) {
+      openSettings("publication");
+      return;
+    }
+    void publish.send(publishKind === "update" ? "updated" : "published").then((out) => {
+      if (!out) openSettings("publication");
+    });
   };
 
   // Out as the house: the board is tied to the list from now on, and the address says which.
@@ -948,7 +1010,8 @@ function OpenBoard({
             <PublishButton
               kind={publishKind}
               main={view.pool.length === 0}
-              onClick={() => openSettings(publishKind === "update" ? "update" : "publish")}
+              busy={publication.busy === "publishing" || publication.busy === "updating"}
+              onClick={publishFromHeader}
             />
           )}
           <PlayButton {...play.button} />
@@ -1052,7 +1115,9 @@ function OpenBoard({
 
       {panel === "settings" && (
         <BoardSettings
-          key={JSON.stringify(["settings", board.uid, me])}
+          // Drawn afresh for what it opens on, as for whose it is: a sign-in
+          // that comes back to Publish starts it again.
+          key={JSON.stringify(["settings", board.uid, me, settingsStart ?? null])}
           upload={upload}
           board={board}
           latest={latest}
@@ -1063,25 +1128,10 @@ function OpenBoard({
           onPropose={openProposal}
           onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
           onNewTier={newTier}
-          onPublished={(what, _id, dropped = 0) => {
-            const said =
-              what === "unpublished"
-                ? strings.boards.unpublished
-                : what === "held"
-                  ? strings.boards.publishedHeld
-                  : what === "updated"
-                    ? strings.owner.saved
-                    : what === "ranking"
-                      ? strings.boards.publishedAsRanking
-                      : strings.boards.publishedNote;
-            // Pictures from other sites that could not be fetched or checked in time (QA S11).
-            setNotice({
-              text:
-                dropped > 0 ? `${said} ${plural(strings.boards.picturesDropped, dropped)}` : said,
-            });
-          }}
-          // A house list never goes out under the person's name: its sheet offers no Public switch.
-          publishing={house === null ? publishing : null}
+          onPublished={onPublished}
+          // A house list never goes out under the person's name: its sheet offers no Publication row.
+          publishing={ownPublishing}
+          publication={publication}
           // Its cover takes the editor's own credit, as its cards' pictures do.
           house={house !== null}
           topics={topics}

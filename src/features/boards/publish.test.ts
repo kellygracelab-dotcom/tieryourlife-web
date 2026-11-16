@@ -97,9 +97,10 @@ describe("publishing a board", () => {
     const chosen = setTopic(learnt, { id: "t1", name: "A24" }, 6);
     expect(chosen.topic).toEqual({ id: "t1", name: "A24" });
     expect(publishRequestOf(chosen)?.topicId).toBe("t1");
-    // Anonymity is said every time too, or a republish would put the name back.
-    expect(request.anonymous).toBe(false);
-    expect(publishRequestOf({ ...b, anonymous: true })?.anonymous).toBe(true);
+    // Anonymity is never sent (Danylo, 16.11.2026): the backend keeps an
+    // anonymous list as it was, and a new one carries the author's name.
+    expect(request).not.toHaveProperty("anonymous");
+    expect(publishRequestOf({ ...b, anonymous: true })).not.toHaveProperty("anonymous");
   });
 
   it("sends any section's id: a new one, or one of the person's own still waiting", () => {

@@ -343,23 +343,6 @@ export function loadAdminCounts(
   return client.request<{ reports: number; proposals: number }>("GET", "/lists/admin/counts");
 }
 
-/** A list published with no author, as the owner sees it: who it came from, kept from everybody else. */
-export interface AnonymousList extends ListSummary {
-  publishedBy: { uid: string; name: string };
-}
-
-/** The anonymous lists, newest first, twenty a page; 409 CURSOR_GONE when the cursor's list went. */
-export function loadAnonymousLists(
-  client: ApiClient,
-  after: string | null = null,
-): Promise<{ lists: AnonymousList[]; nextCursor: string | null }> {
-  return client.request<{ lists: AnonymousList[]; nextCursor: string | null }>(
-    "GET",
-    "/lists/anonymous",
-    { query: { after: after ?? undefined } },
-  );
-}
-
 /**
  * A published list as staff see it: under review or not, and who published
  * it, anonymous ones too. Whether it waits for a proposed section the

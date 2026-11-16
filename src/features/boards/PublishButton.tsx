@@ -29,24 +29,30 @@ interface PublishButtonProps {
   kind: PublishKind;
   /** Every card placed: the board's main step now, filled; Play stays outlined beside it. */
   main: boolean;
+  /** On its way: the button says so and waits. */
+  busy?: boolean;
   onClick: () => void;
 }
 
 /**
- * Beside Play on the board's header (Danylo and Android, 16.11.2026): tonal
+ * Beside Play on the board's header (Danylo and Android, 16.11.2026): it
+ * publishes or updates from the board itself, no sheet in between. Tonal
  * while cards wait in the pool, filled once all are placed. Its word is always in
  * sight, on a phone too: an arrow alone read as upload or share.
  */
-export function PublishButton({ kind, main, onClick }: PublishButtonProps) {
+export function PublishButton({ kind, main, busy = false, onClick }: PublishButtonProps) {
   const { icon, word } = LOOKS[kind];
   return (
     <button
       type="button"
       className={`btn publish-button ${main ? "btn--filled publish-button--main" : "btn--tonal"}`}
+      disabled={busy}
       onClick={onClick}
     >
       <Icon name={icon} className="btn__icon" />
-      <span className="publish-button__word">{word}</span>
+      <span className="publish-button__word">
+        {busy ? (kind === "update" ? strings.boards.updating : strings.boards.publishing) : word}
+      </span>
     </button>
   );
 }

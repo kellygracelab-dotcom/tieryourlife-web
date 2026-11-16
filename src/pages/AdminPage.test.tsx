@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 
 describe("AdminPage", () => {
-  it("opens all nine panes to the owner, with Reports first", async () => {
+  it("opens all eight panes to the owner, with Reports first", async () => {
     mocks.loadAdminSections.mockResolvedValue({ sections: [], role: "owner", version: 1 });
     open();
     expect(await screen.findByRole("heading", { name: "Admin" })).toBeInTheDocument();
@@ -71,7 +71,6 @@ describe("AdminPage", () => {
       "/admin/sections",
       "/admin/topics",
       "/admin/lists",
-      "/admin/anonymous",
       "/admin/house",
       "/admin/searches",
       "/admin/moderators",
@@ -169,13 +168,12 @@ describe("AdminPage", () => {
   it("shows nothing to a moderator until the sections answer names the role", async () => {
     let answer: (value: unknown) => void = () => undefined;
     mocks.loadAdminSections.mockReturnValue(new Promise((resolve) => (answer = resolve)));
-    open("/admin/anonymous");
+    open("/admin/moderators");
     await vi.waitFor(() => expect(mocks.loadReports).toHaveBeenCalled());
     await act(async () => undefined);
     expect(screen.queryByRole("navigation", { name: "Admin" })).toBeNull();
     act(() => answer({ sections: [], role: "moderator", version: 1 }));
     await screen.findByRole("heading", { name: "Admin" });
-    expect(panes()).not.toContain("/admin/anonymous");
     expect(panes()).not.toContain("/admin/moderators");
   });
 
