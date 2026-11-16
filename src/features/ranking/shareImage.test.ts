@@ -418,7 +418,7 @@ describe("a board's picture", () => {
     await drawShare(paint, { ...data, rows: [[], [], []], pool: [0, 1, 2] }, async () => null);
     expect(texts()).toEqual(
       expect.arrayContaining([
-        expect.stringMatching(/^Unranked @108,/),
+        expect.stringMatching(/^Not placed @108,/),
         expect.stringMatching(/^Film 0 @/),
         expect.stringMatching(/^Film 2 @/),
       ]),

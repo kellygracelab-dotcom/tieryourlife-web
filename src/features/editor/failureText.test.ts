@@ -50,7 +50,7 @@ describe("failureText", () => {
     );
     expect(
       failureText({ kind: "invalid", detail: "x", code: "INVALID", field: "category" }, "new"),
-    ).toBe("This category no longer takes lists. Choose another one under Category.");
+    ).toBe("This section no longer takes lists. Choose another one under Section.");
     // More tiers than the feed takes: what to change, not a bare refusal.
     for (const mode of ["new", "edit"] as const) {
       expect(

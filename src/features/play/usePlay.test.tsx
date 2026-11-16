@@ -10,6 +10,11 @@ import { PlayButton } from "./PlayButton";
 import { localGames, playKey } from "./savedGames";
 import { loadPlayScreens, usePlay, type PlayOptions } from "./usePlay";
 
+/** The Play window's summary holds this part ("3 cards", "Losers stay", …) between its dots. */
+const inSummary = (part: string) => (_: string, element: Element | null) =>
+  element?.classList.contains("play-summary__line") === true &&
+  (element.textContent ?? "").split(" · ").includes(part);
+
 const NOW = new Date(2026, 9, 28, 12, 0).getTime();
 
 const cardsOf = (n: number): PlayCard[] =>
@@ -65,10 +70,17 @@ function Page({
 
 const playButton = () => screen.getByRole("button", { name: "Play" });
 
+/** Picks a game, unfolding the other ways to play if Smart keeps them folded (audit B4). */
+async function pickGame(name: RegExp) {
+  const more = screen.getByRole("button", { name: "Other ways to play" });
+  if (more.getAttribute("aria-expanded") === "false") await userEvent.click(more);
+  await userEvent.click(screen.getByRole("radio", { name }));
+}
+
 /** Opens the picker and starts the game named. */
 async function startGame(name: RegExp) {
   await userEvent.click(playButton());
-  await userEvent.click(screen.getByRole("radio", { name }));
+  await pickGame(name);
   await userEvent.click(screen.getByRole("button", { name: "Start" }));
 }
 
@@ -101,8 +113,8 @@ describe("Play on a page", () => {
     render(<Page store={store} onApply={onApply} notify={notify} />);
 
     await userEvent.click(playButton());
-    expect(screen.getByText("3 cards from Films")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    expect(screen.getByText(inSummary("3 cards"))).toBeInTheDocument();
+    await pickGame(/King of the hill/);
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     expect(screen.getByRole("dialog", { name: "King of the hill" })).toBeInTheDocument();
     expect(screen.getByText("playing")).toBeInTheDocument();
@@ -123,7 +135,7 @@ describe("Play on a page", () => {
     expect(store.read(playKey("b1"))).toBeNull();
 
     const receipt = notify.mock.lastCall![0] as SnackbarNotice;
-    expect(receipt.text).toBe("Board arranged from 2 duels");
+    expect(receipt.text).toBe("List arranged from 2 duels");
     act(() => receipt.action!.onClick());
     expect(takeBack).toHaveBeenCalled();
   });
@@ -136,11 +148,11 @@ describe("Play on a page", () => {
     expect(
       screen.getByText("The result goes into Mine. The author’s ranking doesn’t change."),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("radio", { name: /Bracket/ }));
+    await pickGame(/Bracket/);
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     await pickLeft(2);
     await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
-    expect(notify).toHaveBeenCalledExactlyOnceWith({ text: "Board arranged from 2 duels" });
+    expect(notify).toHaveBeenCalledExactlyOnceWith({ text: "List arranged from 2 duels" });
   });
 
   it("puts nothing anywhere when every duel was skipped, and says so", async () => {
@@ -220,7 +232,7 @@ describe("Play on a page", () => {
   it("opens the game picker with the full board above 64", async () => {
     render(<Page store={memoryStore()} cards={cardsOf(91)} />);
     await userEvent.click(playButton());
-    expect(screen.getByText("91 cards from Films")).toBeInTheDocument();
+    expect(screen.getByText(inSummary("91 cards"))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
   });
 
@@ -231,10 +243,10 @@ describe("Play on a page", () => {
     await userEvent.click(playButton());
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
     await userEvent.click(screen.getByRole("checkbox", { name: /Everything/ }));
-    await userEvent.click(screen.getByRole("checkbox", { name: /The pool/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /The deck/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    // The pool alone: the picker names it, as the app does.
-    expect(screen.getByText("3 cards from The pool")).toBeInTheDocument();
+    // The deck alone: the picker names it, as the app does.
+    expect(screen.getByText(inSummary("3 cards from The deck"))).toBeInTheDocument();
     // Cancel there goes back to the picker, not out.
     // The arrow goes back to the picker; Cancel there closes the whole sheet, as on the app.
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
@@ -251,7 +263,7 @@ describe("Play on a page", () => {
     localGames(store, () => NOW).save("b1", old);
     render(<Page store={store} cards={cardsOf(4)} />);
     await userEvent.click(playButton());
-    expect(screen.getByText("4 cards from Films")).toBeInTheDocument();
+    expect(screen.getByText(inSummary("4 cards"))).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Resume" }));
     expect(screen.getByRole("dialog", { name: "Losers stay" })).toBeInTheDocument();
   });
@@ -265,7 +277,7 @@ describe("Play on a page", () => {
     localGames(store, () => NOW).save("b1", old);
     render(<Page store={store} />);
     await userEvent.click(playButton());
-    expect(screen.getByText("The board changed, so this game can’t go on")).toBeInTheDocument();
+    expect(screen.getByText("The list changed, so this game can’t go on")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Resume" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Start again" }));
     expect(screen.getByRole("dialog", { name: "King of the hill" })).toBeInTheDocument();
@@ -283,14 +295,14 @@ describe("Play on a page", () => {
     // A was deleted: its cards went to the pool.
     render(<Page store={store} tiers={[tier("s"), tier("b")]} />);
     await userEvent.click(playButton());
-    expect(screen.getByText("The board changed, so this game can’t go on")).toBeInTheDocument();
+    expect(screen.getByText("The list changed, so this game can’t go on")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Start again" })).not.toBeInTheDocument();
     // Never "0 cards" with Start off: a new game is over the whole board.
-    expect(screen.getByText("3 cards from Films")).toBeInTheDocument();
+    expect(screen.getByText(inSummary("3 cards"))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
     await userEvent.click(screen.getByRole("button", { name: "Discard" }));
     expect(
-      screen.queryByText("The board changed, so this game can’t go on"),
+      screen.queryByText("The list changed, so this game can’t go on"),
     ).not.toBeInTheDocument();
     expect(store.read(playKey("b1"))).toBeNull();
   });
@@ -308,16 +320,16 @@ describe("Play on a page", () => {
     await userEvent.click(playButton());
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
     await userEvent.click(screen.getByRole("checkbox", { name: /Everything/ }));
-    await userEvent.click(screen.getByRole("checkbox", { name: /The pool/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /The deck/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(screen.getByText("3 cards from The pool")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    expect(screen.getByText(inSummary("3 cards from The deck"))).toBeInTheDocument();
+    await pickGame(/King of the hill/);
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     await pickLeft(2);
     await waitFor(() => expect(onApply).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await userEvent.click(playButton());
-    expect(screen.getByText("4 cards from Films")).toBeInTheDocument();
+    expect(screen.getByText(inSummary("4 cards"))).toBeInTheDocument();
   });
 
   it("remembers the last game on this device", async () => {
@@ -328,6 +340,8 @@ describe("Play on a page", () => {
     unmount();
     render(<Page store={store} boardKey="b2" />);
     await userEvent.click(playButton());
+    // A game other than Smart opens with the choice unfolded, and says itself in the summary.
+    expect(screen.getByText(inSummary("Bracket"))).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /Bracket/ })).toBeChecked();
   });
 

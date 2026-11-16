@@ -126,6 +126,26 @@ describe("createApiClient", () => {
     expect(headersOf(calls[0]!)).toEqual({ Accept: "application/json" });
   });
 
+  it("stops waiting for App Check when told, and goes without it (audit A1)", async () => {
+    vi.useFakeTimers();
+    try {
+      const { fetch, calls } = stubFetch([ok({})]);
+      const client = createApiClient({
+        fetch,
+        appCheckToken: () => new Promise<string | null>(() => {}),
+        idToken: async () => null,
+      });
+      const sent = client.request("GET", "/lists", { appCheckWaitMs: 5_000 });
+      await vi.advanceTimersByTimeAsync(4_999);
+      expect(calls).toHaveLength(0);
+      await vi.advanceTimersByTimeAsync(1);
+      await sent;
+      expect(headersOf(calls[0]!)).toEqual({ Accept: "application/json" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not ask for an id token when only App Check is wanted", async () => {
     const { client, calls, idToken } = clientWith([ok({})]);
 

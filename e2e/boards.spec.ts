@@ -99,7 +99,7 @@ async function makeBoard(page: Page, touch: boolean) {
     await tiers.getByRole("menuitem", { name: "S", exact: true }).click();
     await expect(menu).toBeHidden();
   }
-  await expect(page.getByText(/1 ranked · 2 in pool/)).toBeVisible();
+  await expect(page.getByText(/1 of 3 placed/)).toBeVisible();
 }
 
 test("New list opens a new board, where the list is made", async ({ page, hasTouch }) => {
@@ -115,7 +115,7 @@ test("New list opens a new board, where the list is made", async ({ page, hasTou
   await expect(page.getByRole("button", { name: "Add tier" })).toBeVisible();
   // Nothing in the pool yet: it says so, and the catalogue's box takes the cursor,
   // at once on a wide window, from + Add on a phone.
-  await expect(page.getByRole("heading", { name: "Pool · 0" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cards left · 0" })).toBeVisible();
   await expect(page.getByText("Add cards by name, or search the catalogue.")).toBeVisible();
   if (hasTouch) await press(page.getByRole("button", { name: "Add", exact: true }), hasTouch);
   await expect(page.getByRole("textbox", { name: "Add a card" })).toBeFocused();
@@ -151,18 +151,20 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
   // The board is kept as it stands: a reload shows the same board.
   await page.reload();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Films I make people watch");
-  await expect(page.getByText(/1 ranked · 2 in pool/)).toBeVisible();
+  await expect(page.getByText(/1 of 3 placed/)).toBeVisible();
 
   // A guest's Publish opens the window, which says it signs them in first.
   await press(page.locator(".list-head .publish-button"), hasTouch);
   const window = page.getByRole("dialog", { name: "Publish “Films I make people watch”" });
-  await expect(window.getByRole("button", { name: "Publish", exact: true })).toBeEnabled();
+  await expect(
+    window.getByRole("button", { name: "Sign in and publish", exact: true }),
+  ).toBeEnabled();
   await expect(window.getByText(/Sign in with Google to publish/)).toBeVisible();
   await press(window.getByRole("button", { name: "Cancel" }), hasTouch);
   await expect(window).toBeHidden();
 
   // The menu's Cover: the cover, and the Publication line under it.
-  await page.getByLabel("More about this board").click();
+  await page.getByLabel("More about this list").click();
   await page.getByRole("button", { name: "Cover", exact: true }).click();
   const cover = page.getByRole("dialog", { name: "Cover" });
   await expect(cover.getByText("None of this list’s cards have a picture yet.")).toBeVisible();
@@ -171,7 +173,7 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
   await expect(cover).toBeHidden();
 
   // Share as image is in the board's menu, and draws a file.
-  await page.getByLabel("More about this board").click();
+  await page.getByLabel("More about this list").click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Share as image" }).click();
   expect((await download).suggestedFilename()).toMatch(/\.png$/);
@@ -346,7 +348,7 @@ test("saves somebody's list to my boards with one button, and only once", async 
   await saved.click();
   await expect(page).toHaveURL(/\/b\//);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
-  await expect(page.getByText(/2 ranked · 1 in pool/)).toBeVisible();
+  await expect(page.getByText(/2 of 3 placed/)).toBeVisible();
   await expect(
     page.getByRole("list", { name: "S" }).getByRole("button", { name: "Ex Machina", exact: true }),
   ).toBeVisible();

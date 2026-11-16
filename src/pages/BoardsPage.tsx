@@ -21,6 +21,7 @@ import {
 } from "../features/boards/model";
 import { type BoardsRepository } from "../features/boards/repository";
 import { boards as site } from "../features/boards/owners";
+import { ContinueBlock } from "../features/started/ContinueBlock";
 import { useBoardSync } from "../features/boards/boardSync";
 import { BoardRow } from "../features/boards/BoardRow";
 import { BoardTile } from "../features/boards/BoardTile";
@@ -406,6 +407,8 @@ export function BoardsPage({
           )}
         </div>
       </header>
+
+      <ContinueBlock repository={repository} />
 
       {live.length === 0 ? (
         <Empty />

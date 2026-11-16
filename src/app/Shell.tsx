@@ -251,6 +251,44 @@ function ShellBackGuard() {
   useBackCloses(false, () => {});
   return null;
 }
+/** A list's own page: a board of one's own, a published list, a ranking. */
+const LIST_PAGES = /^\/(b|l|r)\/[^/]+/;
+
+/** Below this the bar always shows: the page's top is where it is. */
+const AWAY_AFTER_PX = 120;
+
+/** A scroll smaller than this is a hand resting on the glass, not a direction. */
+const SCROLL_NOISE_PX = 4;
+
+/**
+ * On a list's page in a narrow window, the bar goes up out of the way as the
+ * page scrolls down and comes back as soon as it scrolls up (audit C2): the
+ * board is what the screen is for. A wide window has room for both.
+ */
+function useAwayOnScroll(listPage: boolean): boolean {
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    if (!listPage || typeof window.matchMedia !== "function") return;
+    const narrow = window.matchMedia("(max-width: 839px)");
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (!narrow.matches || y < AWAY_AFTER_PX) setAway(false);
+      else if (y > last + SCROLL_NOISE_PX) setAway(true);
+      else if (y < last - SCROLL_NOISE_PX) setAway(false);
+      else return;
+      last = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      // Off the list's page the bar is back, and back again on the next one.
+      setAway(false);
+    };
+  }, [listPage]);
+  return listPage && away;
+}
+
 export function Shell() {
   const { account, signIn } = useSession();
   const [seen] = useState(() => lastSeen());
@@ -279,6 +317,7 @@ export function Shell() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
   const titled = page !== null && page.inBar && scrolled;
+  const away = useAwayOnScroll(LIST_PAGES.test(location.pathname));
   useEffect(() => {
     document.title = documentTitleOf(page, strings.brand);
   }, [page]);
@@ -347,7 +386,9 @@ export function Shell() {
       <a className="skip-link" href="#main" onClick={skipToMain}>
         {strings.nav.skipToContent}
       </a>
-      <header className={titled ? "top top--titled" : "top"}>
+      <header
+        className={["top", titled && "top--titled", away && "top--away"].filter(Boolean).join(" ")}
+      >
         <Link className="brand" to="/">
           <img className="brand__mark" src="/favicon.svg" alt="" width="26" height="26" />
           <span className="brand__name">{strings.brand}</span>

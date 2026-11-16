@@ -260,7 +260,7 @@ describe("SearchPage", () => {
     );
     mocks.loadFeed.mockResolvedValue({ lists: [], nextCursor: null });
     render(<RouterProvider router={router} />);
-    const chips = within(screen.getByRole("group", { name: "Category" }));
+    const chips = within(screen.getByRole("group", { name: "Section" }));
     await waitFor(() =>
       expect(chips.getAllByRole("button").map((chip) => chip.textContent)).toEqual([
         "All",
@@ -507,7 +507,7 @@ describe("SearchPage inside a section or a topic", () => {
 
   it("drops the topic when a section chip is pressed", async () => {
     const router = open("/search?q=best&category=anime&topic=t1");
-    const chips = within(await screen.findByRole("group", { name: "Category" }));
+    const chips = within(await screen.findByRole("group", { name: "Section" }));
     await userEvent.click(chips.getByRole("button", { name: "All" }));
     expect(router.state.location.search).toBe("?q=best");
   });

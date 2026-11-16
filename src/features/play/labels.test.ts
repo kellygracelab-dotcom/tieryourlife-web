@@ -12,7 +12,12 @@ import {
 } from "./labels";
 import { fittedSize } from "./useFitText";
 
-const main = { phase: "main" as const, round: null, overall: { asked: 0, total: 0 } };
+const main = {
+  phase: "main" as const,
+  round: null,
+  overall: { asked: 0, total: 0 },
+  about: false,
+};
 
 describe("the words of a game", () => {
   it("names the games", () => {
@@ -21,15 +26,18 @@ describe("the words of a game", () => {
     expect(gameName("bracket")).toBe("Bracket");
   });
 
-  it("says the estimate, losers stay as an upper bound", () => {
-    expect(estimateText("swiss", 34)).toBe("≈ 136 duels · about 5 min");
-    expect(estimateText("hill", 34)).toBe("33 duels · about 1 min");
+  it("says the estimate, about for the games that adapt, the minutes plain", () => {
+    expect(estimateText("swiss", 34)).toBe("about 136 duels · 5 min");
+    expect(estimateText("smart", 34)).toBe("about 85 duels · 3 min");
+    expect(estimateText("hill", 34)).toBe("33 duels · 1 min");
   });
 
   it("counts the duel being asked from one, and refine on its own", () => {
     expect(duelText({ ...main, asked: 11, total: 136 })).toBe("Duel 12 of 136");
     expect(duelText({ ...main, asked: 136, total: 136 })).toBe("Duel 136 of 136");
     expect(duelText({ ...main, phase: "refine", asked: 3, total: 17 })).toBe("Refine · 4 of 17");
+    // The same D as the Play window said, while it is still a guess (audit B3).
+    expect(duelText({ ...main, about: true, asked: 0, total: 85 })).toBe("Duel 1 of about 85");
   });
 
   it("says the round of losers stay only", () => {

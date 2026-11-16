@@ -206,3 +206,46 @@ p {
     outline-offset: 2px;
   }
 }
+
+/*
+ * A finger's target is at least 48 square, 8 apart (audit E1; the project's
+ * own bar, WCAG 2.5.5): a control drawn smaller keeps its look, and an
+ * unseen box around it takes the touch. Bigger controls are left as they are.
+ */
+@media (pointer: coarse) {
+  :where(
+    .btn,
+    .menu__button,
+    .chip,
+    .dock__seg,
+    .one-toggle,
+    .play-link,
+    .list-head__back,
+    .board-page__edit,
+    .tier__edit,
+    .field-clear,
+    .duel__icon,
+    .top__search-link
+  ) {
+    position: relative;
+  }
+
+  :where(
+    .btn,
+    .menu__button,
+    .chip,
+    .dock__seg,
+    .one-toggle,
+    .play-link,
+    .list-head__back,
+    .board-page__edit,
+    .tier__edit,
+    .field-clear,
+    .duel__icon,
+    .top__search-link
+  )::after {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc(50% - 24px));
+  }
+}

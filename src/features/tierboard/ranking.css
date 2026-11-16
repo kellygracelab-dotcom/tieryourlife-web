@@ -227,9 +227,14 @@
   outline-offset: -3px;
 }
 
+/* One's own band: the place button for the keyboard, while a click or a tap there is the tier's. */
+.tier__place--keys {
+  pointer-events: none;
+}
+
 /*
  * The owner holds a tier by its band, as on the phone: a press and a move
- * with a mouse, a long press with a finger, and a double tap opens it. The
+ * with a mouse, a long press with a finger, and a click or a tap opens it. The
  * band's text is not for selecting, and a long press is not the phone's menu.
  */
 .tier__band--held {
@@ -261,7 +266,7 @@
   }
 }
 
-/* The way to the same editor for a keyboard, and for a mouse that does not know the double click. */
+/* The pencil: the band's click opens the same editor; this says so, and is the keyboard's way. */
 .tier__edit {
   position: absolute;
   bottom: 4px;
@@ -269,36 +274,28 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--on-band) 18%, transparent);
+  background: color-mix(in srgb, var(--on-band) 12%, transparent);
   color: var(--on-band);
   cursor: pointer;
-  opacity: 0;
 }
 
 .tier__edit .ms {
-  font-size: 18px;
+  font-size: 16px;
 }
 
-.tier__band--held:hover .tier__edit,
-.tier__edit:focus-visible {
-  opacity: 1;
+/* Always in view on one's own board (audit C1): a finger has no hover to find it by. */
+.tier__band--held:hover .tier__edit {
+  background: color-mix(in srgb, var(--on-band) 24%, transparent);
 }
 
 .tier__edit:focus-visible {
   outline: 2px solid var(--on-band);
   outline-offset: 1px;
-}
-
-/* A finger has the double tap; the hidden button must not take a tap meant for a hold. */
-@media (hover: none) {
-  .tier__edit {
-    pointer-events: none;
-  }
 }
 
 /* Under the last row, at the band's start edge, 12 below it: the board's gap and the rest. */

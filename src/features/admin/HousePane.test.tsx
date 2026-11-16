@@ -263,7 +263,7 @@ describe("HousePane", () => {
     const untitled = screen.getByRole("button", { name: /Untitled list/ });
     expect(untitled).toBeDisabled();
     expect(untitled).toHaveTextContent(
-      "Pick a category. Add at least one card before you publish this list.",
+      "Pick a section. Add at least one card before you publish this list.",
     );
     await userEvent.click(untitled);
     expect(deps.publish).not.toHaveBeenCalled();

@@ -264,7 +264,7 @@ describe("PublishWindow: the window", () => {
     expect(within(dialog).getByText("Topic in Film & TV · optional")).toBeVisible();
     expect(
       within(dialog).getByText(
-        "It shows in Community under your name. Anyone with the link can rank it. This board stays yours to edit.",
+        "It shows in Community under your name. Anyone with the link can rank it. This list stays yours to edit.",
       ),
     ).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeVisible();
@@ -608,9 +608,11 @@ describe("PublishWindow: a guest", () => {
     // No author to name yet, and a word on why Publish signs in first.
     expect(win().getByText("3 cards")).toBeVisible();
     expect(win().getByText(/Sign in with Google to publish/)).toBeVisible();
-    expect(go()).toBeEnabled();
-    expect(go()).not.toHaveAttribute("aria-disabled");
-    await userEvent.click(go());
+    // The button says what it does, and the line on signing in is at the top (audit D1).
+    expect(go("Sign in and publish")).toBeEnabled();
+    expect(go("Sign in and publish")).not.toHaveAttribute("aria-disabled");
+    expect(win().queryByRole("button", { name: "Publish" })).toBeNull();
+    await userEvent.click(go("Sign in and publish"));
     expect(signIn).toHaveBeenCalledTimes(1);
     expect(publish).not.toHaveBeenCalled();
     expect(outStatus()).toBeNull();
@@ -621,7 +623,7 @@ describe("PublishWindow: a guest", () => {
   it("signs a guest in before the section is asked for", async () => {
     const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
     show({ ...filmBoard(), category: null }, GUEST, {}, { signIn });
-    await userEvent.click(go());
+    await userEvent.click(go("Sign in and publish"));
     expect(signIn).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("Pick a section first.")).toBeNull();
   });
@@ -633,7 +635,7 @@ describe("PublishWindow: a guest", () => {
       .mockResolvedValue({ kind: "cancelled" });
     const publish = vi.fn();
     show(filmBoard(), GUEST, { publish }, { signIn, signInToPublish });
-    await userEvent.click(go());
+    await userEvent.click(go("Sign in and publish"));
     expect(signInToPublish).toHaveBeenCalledTimes(1);
     expect(signIn).not.toHaveBeenCalled();
     expect(publish).not.toHaveBeenCalled();
@@ -645,15 +647,34 @@ describe("PublishWindow: a guest", () => {
       .fn<Session["signIn"]>()
       .mockResolvedValue({ kind: "failed", code: "in-app-browser" });
     show(filmBoard(), GUEST, {}, { signIn });
-    await userEvent.click(go());
+    await userEvent.click(go("Sign in and publish"));
     expect(await screen.findByRole("alert")).toHaveTextContent(/Chrome or Safari/);
   });
 
   it("says a sign-in that failed for another reason", async () => {
     const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "failed", code: "x" });
     show(filmBoard(), GUEST, {}, { signIn });
-    await userEvent.click(go());
+    await userEvent.click(go("Sign in and publish"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Could not sign in. Try again.");
+  });
+
+  it("asks an untitled list's name first, and keeps it on the board before the sign-in", async () => {
+    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
+    show({ ...filmBoard(), title: "Untitled list" }, GUEST, {}, { signIn });
+    const name = win().getByRole("textbox", { name: "Name" });
+    await userEvent.click(go("Sign in and publish"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Give the list a name first.");
+    expect(name).toHaveFocus();
+    expect(signIn).not.toHaveBeenCalled();
+    await userEvent.type(name, "  Night   films ");
+    await userEvent.click(go("Sign in and publish"));
+    expect(held.title).toBe("Night films");
+    expect(signIn).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks no name of a list that has one", () => {
+    show(filmBoard(), GUEST);
+    expect(win().queryByRole("textbox", { name: "Name" })).toBeNull();
   });
 });
 
@@ -723,7 +744,7 @@ describe("PublishWindow: copies and rankings", () => {
     const rank = vi.fn();
     show({ ...filmBoard(), takenFrom: "SRC" }, GUEST, { rank }, { signIn });
     expect(win().getByText(/Sign in with Google to publish/)).toBeVisible();
-    await userEvent.click(go("Show in Rankings"));
+    await userEvent.click(go("Sign in and show"));
     expect(signIn).toHaveBeenCalledTimes(1);
     expect(rank).not.toHaveBeenCalled();
   });
@@ -755,7 +776,7 @@ describe("PublishWindow: copies and rankings", () => {
     // Said in advance, above the buttons.
     expect(
       win().getByText(
-        "Your arrangement goes into this list’s Rankings, under your name. No second list appears in the feed. This board stays yours to edit.",
+        "Your arrangement goes into this list’s Rankings, under your name. No second list appears in the feed. This list stays yours to edit.",
       ),
     ).toBeVisible();
     expect(win().getByText("by Olena")).toBeVisible();
@@ -1032,7 +1053,7 @@ describe("PublishWindow: a list out", () => {
     await userEvent.click(win().getByRole("button", { name: "Take it down" }));
     const ask = screen.getByRole("group", { name: "Take Films down?" });
     expect(ask).toHaveTextContent(
-      "It leaves Community and its link stops working. Your board stays in Your lists.",
+      "It leaves Community and its link stops working. You keep it in Your lists.",
     );
     await userEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
     expect(unpublish).not.toHaveBeenCalled();

@@ -507,25 +507,25 @@ describe("RankingBoard", () => {
       const board = () => document.querySelector(".ranking")!;
       expect(board()).toHaveClass("ranking--under");
       // The strip a drag resizes is a splitter the keyboard reaches too.
-      const grip = screen.getByRole("separator", { name: "Rows of cards under the board" });
+      const grip = screen.getByRole("separator", { name: "Rows of cards under the tiers" });
       expect(grip).toHaveAttribute("tabindex", "0");
       grip.focus();
       await userEvent.keyboard("{Home}");
       expect(grip).toHaveAttribute("aria-valuenow", "1");
       await userEvent.keyboard("{ArrowUp}");
       expect(grip).toHaveAttribute("aria-valuenow", "2");
-      expect(screen.getByRole("button", { name: "Cards under the board" })).toHaveAttribute(
+      expect(screen.getByRole("button", { name: "Cards under the tiers" })).toHaveAttribute(
         "aria-pressed",
         "true",
       );
 
-      await userEvent.click(screen.getByRole("button", { name: "Cards beside the board" }));
+      await userEvent.click(screen.getByRole("button", { name: "Cards beside the tiers" }));
       expect(board()).not.toHaveClass("ranking--under");
       expect(document.querySelector(".pool__grip")).toBeNull();
       expect(store.data.get("tyl:pool-dock")).toContain('"wide":{"dock":"beside"');
       // The picked card and the search survive the move.
       await userEvent.click(card("Ex Machina"));
-      await userEvent.click(screen.getByRole("button", { name: "Cards under the board" }));
+      await userEvent.click(screen.getByRole("button", { name: "Cards under the tiers" }));
       expect(card("Ex Machina")).toHaveAttribute("aria-pressed", "true");
     } finally {
       Object.assign(window, { innerWidth: had.width, innerHeight: had.height });
@@ -821,7 +821,7 @@ describe("RankingBoard, one card at a time", () => {
       "aria-current",
       "true",
     );
-    expect(panel().getByRole("button", { name: "To the pool" })).toBeInTheDocument();
+    expect(panel().getByRole("button", { name: "To the deck" })).toBeInTheDocument();
     await userEvent.keyboard("{Backspace}");
     expect(within(tierList("A")).queryAllByRole("button")).toHaveLength(0);
 

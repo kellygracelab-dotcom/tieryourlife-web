@@ -8,6 +8,12 @@ export interface DraftScope {
   updatedAt: number;
   itemCount: number;
   tierCount: number;
+  /**
+   * What "Continue" names the list by, and its first picture: kept with the
+   * draft so a ranking begun here can be found again (audit B1).
+   */
+  title?: string;
+  picture?: string | null;
 }
 
 /**
@@ -17,10 +23,14 @@ export interface DraftScope {
  */
 export type TierLabels = readonly (string | null)[];
 
-interface Draft {
+export interface Draft {
   listId: string;
   updatedAt: number;
   itemCount: number;
+  title?: string;
+  picture?: string | null;
+  /** When it was last changed here, for "Continue"'s order. */
+  savedAt?: number;
   rows: number[][];
   /** Left out while every tier keeps the list's own words. */
   labels?: (string | null)[];
@@ -33,6 +43,8 @@ export const scopeOf = (list: PublishedList): DraftScope => ({
   updatedAt: list.updatedAt,
   itemCount: list.items.length,
   tierCount: list.tiers.length,
+  title: list.title,
+  picture: list.coverImageUrl ?? list.items.find((item) => item.imageUrl != null)?.imageUrl ?? null,
 });
 
 export const draftKey = (listId: string): string => `tyl:draft:${listId}`;
@@ -55,6 +67,8 @@ export function serializeDraft(
     listId: scope.id,
     updatedAt: scope.updatedAt,
     itemCount: scope.itemCount,
+    ...(scope.title === undefined ? {} : { title: scope.title, picture: scope.picture ?? null }),
+    savedAt: Date.now(),
     ...(poolOrder === undefined ? {} : { poolOrder }),
     rows: rows.map((row) => [...row]),
     ...(someWords(labels) ? { labels: labels.map(wordOf) } : {}),

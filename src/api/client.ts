@@ -22,7 +22,25 @@ export interface RequestOptions {
   auth?: "user" | "appCheckOnly";
   /** "limited" for a request the server lets through once per token: a new ranking. */
   appCheck?: "session" | "limited";
+  /**
+   * How long the App Check token may be waited for, in ms. Past it the request
+   * goes without one and the server says so at once (APP_UNVERIFIED): a
+   * browser whose check hangs, behind a blocker, waited 10 to 20 s for an
+   * error before (audit A1).
+   */
+  appCheckWaitMs?: number;
 }
+
+/** The token, or null once `ms` have gone by; the check goes on in the background and is kept. */
+const within = <T>(token: Promise<T | null>, ms: number | undefined): Promise<T | null> =>
+  ms === undefined
+    ? token
+    : Promise.race([
+        token,
+        new Promise<null>((resolve) => {
+          setTimeout(() => resolve(null), ms);
+        }),
+      ]);
 
 export type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -74,9 +92,12 @@ export function createApiClient({
     // A missing token still lets the request go: the server names the refusal.
     // A one-use token is fetched afresh for each send, a retry included.
     const [appCheck, token] = await Promise.all([
-      options.appCheck === "limited" && limitedAppCheckToken !== undefined
-        ? limitedAppCheckToken()
-        : appCheckToken(),
+      within(
+        options.appCheck === "limited" && limitedAppCheckToken !== undefined
+          ? limitedAppCheckToken()
+          : appCheckToken(),
+        options.appCheckWaitMs,
+      ),
       options.action
         ? options.action.idToken(forceRefresh)
         : options.auth === "appCheckOnly"

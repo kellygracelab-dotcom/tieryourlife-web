@@ -138,7 +138,7 @@ describe("RankingPage", () => {
     );
     const board = screen.getByRole("region", { name: "Visitor’s ranking" });
     expect(board).toHaveTextContent("The Witch");
-    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 unranked");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("1 card left");
     expect(load).toHaveBeenCalledWith("abcdefgh", false);
 
     await userEvent.click(screen.getByRole("button", { name: "Their ranking" }));

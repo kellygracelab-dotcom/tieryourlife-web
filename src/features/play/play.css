@@ -71,27 +71,30 @@
   background: var(--link);
 }
 
-/* Narrower, the icon alone: 40 round, in the primary, the word its tooltip. */
+/*
+ * Narrower, the word stays (audit B2): a triangle alone read as "play a
+ * video". A tonal pill, 40 high, the icon before the word.
+ */
 @media (max-width: 839px) {
   .btn.play-button {
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    padding: 0;
+    gap: 4px;
+    min-height: 40px;
+    padding: 0 16px 0 12px;
+    background: var(--primary-container);
+    color: var(--on-primary-container);
     box-shadow: none;
-    color: var(--link);
+  }
+
+  .play-button:hover:not([aria-disabled="true"]) {
+    background: color-mix(in srgb, var(--primary-container) 88%, var(--ink));
   }
 
   .play-button .play-button__icon {
-    font-size: 24px;
-  }
-
-  .play-button__word {
-    display: none;
+    font-size: 20px;
   }
 
   .play-button__dot {
-    inset-block-start: 8px;
+    inset-block-start: 6px;
     inset-inline-end: 8px;
   }
 }
@@ -327,6 +330,62 @@
 .play-choice {
   display: flex;
   flex-direction: column;
+}
+
+/*
+ * The game Start begins, in one plate (audit B4, the phone's artboard 8):
+ * its cards, duels and minutes, and that leaving keeps it.
+ */
+.play-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface-container);
+}
+
+.play-summary__line {
+  font: 500 15px/21px var(--font);
+  color: var(--ink);
+}
+
+.play-summary__note {
+  font: 400 13px/18px var(--font);
+  color: var(--ink-dim);
+}
+
+/* Start, the window's one main action: filled, the full width, 56 high. */
+.btn.play-start {
+  justify-content: center;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 16px;
+  font-size: 16px;
+}
+
+/* Choose cards and Other ways to play: two quiet words under Start. */
+.play-more {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding-block: 8px;
+}
+
+.play-more .play-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 40px;
+}
+
+.play-more__chevron {
+  transition: transform 150ms;
+}
+
+.play-link[aria-expanded="true"] .play-more__chevron {
+  transform: rotate(180deg);
 }
 
 .play-choice__label {

@@ -148,7 +148,7 @@ describe("RankingBoard's card menu", () => {
     // Climax waits in the pool: its menu has no "back to the pool"; the first item has the focus.
     let menu = await menuOf("Climax");
     expect(menu.getByRole("menuitem", { name: "Move to a tier" })).toHaveFocus();
-    expect(menu.queryByRole("menuitem", { name: "Back to the pool" })).toBeNull();
+    expect(menu.queryByRole("menuitem", { name: "Back to the deck" })).toBeNull();
     let tiers = await tiersOf(menu);
     expect(menu.getByRole("menuitem", { name: "Move to a tier" })).toHaveAttribute(
       "aria-expanded",
@@ -174,13 +174,13 @@ describe("RankingBoard's card menu", () => {
     expect(onChange).toHaveBeenLastCalledWith([[1], [0, 2]], expect.any(Array));
     // Moving onto another item puts the tiers away, after a moment for a pointer
     // that only cuts across it on its way to them.
-    fireEvent.pointerEnter(menu.getByRole("menuitem", { name: "Back to the pool" }));
+    fireEvent.pointerEnter(menu.getByRole("menuitem", { name: "Back to the deck" }));
     fireEvent.pointerEnter(screen.getByRole("menu", { name: "Move to a tier" }));
     await new Promise((done) => setTimeout(done, TIERS_GRACE_MS + 20));
     expect(screen.getByRole("menu", { name: "Move to a tier" })).toBeInTheDocument();
-    fireEvent.pointerEnter(menu.getByRole("menuitem", { name: "Back to the pool" }));
+    fireEvent.pointerEnter(menu.getByRole("menuitem", { name: "Back to the deck" }));
     await waitFor(() => expect(screen.queryByRole("menu", { name: "Move to a tier" })).toBeNull());
-    await userEvent.click(menu.getByRole("menuitem", { name: "Back to the pool" }));
+    await userEvent.click(menu.getByRole("menuitem", { name: "Back to the deck" }));
     expect(within(tier("A")).queryByRole("button", { name: "Climax" })).toBeNull();
     expect(onChange).toHaveBeenLastCalledWith([[1], [0]], expect.any(Array));
 
@@ -207,7 +207,7 @@ describe("RankingBoard's card menu", () => {
     const items = menu.getAllByRole("menuitem");
     expect(items.map((item) => item.textContent)).toEqual([
       "Move to a tierchevron_right",
-      "Back to the pool",
+      "Back to the deck",
       "Remove from list",
     ]);
     expect(items[0]).toHaveFocus();

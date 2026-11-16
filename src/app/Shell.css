@@ -18,6 +18,18 @@
   background: color-mix(in srgb, var(--paper) 97%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--line);
+  transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Scrolled down a list's page on a phone: up out of the way, back on the way up or for the keyboard. */
+.top--away:not(:focus-within) {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .top {
+    transition: none;
+  }
 }
 
 /*

@@ -54,7 +54,6 @@ import {
 } from "../features/boards/usePublication";
 import { noteRankingEdit } from "../features/boards/sourceRanking";
 import { RankedList } from "../features/boards/RankedList";
-import { metaOf } from "../features/boards/boardText";
 import { filedUnder } from "../features/boards/sectionChoices";
 import { shareBoard as shareBoardPicture, type Share } from "../features/ranking/share";
 import type { EditorDeps } from "../features/sections/editorDeps";
@@ -986,6 +985,14 @@ function OpenBoard({
         <span>{house === null ? strings.boards.back : strings.admin.house}</span>
       </Link>
       <header className="list-head">
+        {/* Narrow, the way back is an arrow at the head's start, not a row of its own (audit C2). */}
+        <Link
+          className="list-head__back"
+          to={house === null ? "/b" : HOUSE_PANE_PATH}
+          aria-label={house === null ? strings.boards.back : strings.admin.house}
+        >
+          <Icon name="arrow_back" />
+        </Link>
         <div className="list-head__text">
           <TitleEditor
             board={board}
@@ -1001,12 +1008,10 @@ function OpenBoard({
               {strings.rankings.progressOriginal}
             </Link>
           )}
-          <p className="list-head__meta">
-            {[
-              metaOf(board),
-              ...(board.category === null ? [] : [filedUnder(board.category, sections, me, homes)]),
-            ].join(" · ")}
-          </p>
+          {/* Its section; how far it is placed is the one count, the bar's (audit C2). */}
+          {board.category !== null && (
+            <p className="list-head__meta">{filedUnder(board.category, sections, me, homes)}</p>
+          )}
         </div>
         <span className="list-head__tools">
           <ViewButton

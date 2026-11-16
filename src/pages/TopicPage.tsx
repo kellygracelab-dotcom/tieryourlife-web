@@ -212,7 +212,7 @@ function UnlistedTopic({
   if (state.status === "error") {
     const { kind } = state.error;
     if (kind === "notFound" || kind === "invalid") return <TopicMissing section={section} />;
-    return <SectionTrouble offline={kind === "offline"} retry={retry} />;
+    return <SectionTrouble kind={kind} retry={retry} />;
   }
   const topic = state.value;
   const home = topic.section ?? OTHER;

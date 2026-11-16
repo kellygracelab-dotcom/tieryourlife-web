@@ -3,10 +3,12 @@ import { MediaImage } from "../ui/MediaImage";
 import { SectionBackdrop } from "../features/sections/SectionBackdrop";
 import { Fragment, useCallback, type ReactNode } from "react";
 import { Navigate } from "react-router";
+import type { ApiError } from "../api/errors";
 import type { SectionStats } from "../api/sections";
 import { isCategory, type FeedSort } from "../api/types";
 import type { Report } from "../features/community/useReporting";
 import { FeedPlaceholder } from "../features/feed/FeedGrid";
+import { FeedTroubleText } from "../features/feed/FeedTrouble";
 import type { LoadFeed } from "../features/feed/useFeed";
 import {
   builtInSection,
@@ -156,11 +158,11 @@ export function SectionLoading() {
 }
 
 /** Something could not be asked about: why, and another try. */
-export function SectionTrouble({ offline, retry }: { offline: boolean; retry: () => void }) {
+export function SectionTrouble({ kind, retry }: { kind: ApiError["kind"]; retry: () => void }) {
   return (
     <section className="section-page">
       <div className="feed__trouble" role="alert">
-        <p>{offline ? strings.feed.offline : strings.feed.failed}</p>
+        <FeedTroubleText kind={kind} />
         <Button variant="filled" icon="refresh" onClick={retry}>
           {strings.feed.tryAgain}
         </Button>
@@ -229,5 +231,5 @@ function UnlistedSection({
     );
   }
   if (error.kind === "notFound" || error.kind === "merged") return <NotFoundPage />;
-  return <SectionTrouble offline={error.kind === "offline"} retry={retry} />;
+  return <SectionTrouble kind={error.kind} retry={retry} />;
 }

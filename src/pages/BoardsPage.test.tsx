@@ -166,11 +166,11 @@ describe("BoardsPage", () => {
     expect(
       [...tiles[0]!.querySelectorAll(".art--mosaic img")].map((img) => img.getAttribute("src")),
     ).toEqual(["https://img/a.jpg", "https://img/b.jpg", "https://img/c.jpg"]);
-    expect(within(tiles[0]!).getByText("4 in pool · nothing ranked yet")).toBeInTheDocument();
+    expect(within(tiles[0]!).getByText("4 cards · nothing placed yet")).toBeInTheDocument();
     expect(within(tiles[0]!).queryByText("Public")).toBeNull();
     // No pictures: the tier colours, as stripes.
     expect(tiles[1]!.querySelectorAll(".art--stripes span")).toHaveLength(5);
-    expect(within(tiles[1]!).getByText("2 ranked · 1 in pool")).toBeInTheDocument();
+    expect(within(tiles[1]!).getByText("3 cards · 2 placed")).toBeInTheDocument();
     expect(within(tiles[1]!).getByText("Public")).toHaveClass("board-tile__public");
     expect(screen.getByRole("button", { name: "Add Studio Ghibli to favourites" })).toBeVisible();
   });
@@ -210,7 +210,7 @@ describe("BoardsPage", () => {
 
     // Two ranked, one waiting: a segment for each tier with cards, the unranked last.
     const [films, ramen, all] = links;
-    expect(within(films!).getByText("2 ranked · 1 in pool")).toBeInTheDocument();
+    expect(within(films!).getByText("3 cards · 2 placed")).toBeInTheDocument();
     const segments = [...films!.querySelectorAll(".board-card__ribbon > span")] as HTMLElement[];
     expect(segments.map((segment) => [segment.className, segment.style.flexGrow])).toEqual([
       ["band", "1"],
@@ -218,10 +218,10 @@ describe("BoardsPage", () => {
       ["board-card__unranked", "1"],
     ]);
     // Nothing ranked: the hint instead of the ribbon.
-    expect(within(ramen!).getByText("3 in pool · nothing ranked yet")).toBeInTheDocument();
+    expect(within(ramen!).getByText("3 cards · nothing placed yet")).toBeInTheDocument();
     expect(within(ramen!).getByText("Start dragging to rank these")).toBeInTheDocument();
     expect(ramen!.querySelector(".board-card__ribbon")).toBeNull();
-    expect(within(all!).getByText("3 ranked · nothing in pool")).toBeInTheDocument();
+    expect(within(all!).getByText("3 cards · 3 placed")).toBeInTheDocument();
     expect(all!.querySelectorAll(".board-card__ribbon > span")).toHaveLength(1);
 
     await userEvent.click(screen.getByRole("link", { name: "Open Ramen in Kyiv" }));
@@ -239,7 +239,7 @@ describe("BoardsPage", () => {
     const favourites = screen.getByRole("region", { name: "Favourites" });
     expect(within(favourites).getByText("Albums")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("region", { name: "All boards" })).getByText("Books"),
+      within(screen.getByRole("region", { name: "All lists" })).getByText("Books"),
     ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Remove Albums from favourites" }));
@@ -302,11 +302,11 @@ describe("BoardsPage", () => {
     };
     await pick("Recent", "Name");
     expect(titles()).toEqual(["Open Albums", "Open Books", "Open Cheeses"]);
-    await pick("Name", "Most ranked");
+    await pick("Name", "Most placed");
     expect(titles()).toEqual(["Open Books", "Open Cheeses", "Open Albums"]);
-    await pick("Most ranked", "Most in pool");
+    await pick("Most placed", "Most left to place");
     expect(titles()).toEqual(["Open Albums", "Open Cheeses", "Open Books"]);
-    expect(order("Most in pool")).toBeInTheDocument();
+    expect(order("Most left to place")).toBeInTheDocument();
   });
 
   it.each([
@@ -527,7 +527,7 @@ describe("BoardsPage", () => {
     open(repository, "/b", undefined, rowsStore());
     const link = screen.getByRole("link", { name: "Open Albums" });
     expect(within(link).getByText("Public")).toHaveClass("board-card__public");
-    expect(link).toHaveAccessibleDescription("2 ranked · 1 in pool Public");
+    expect(link).toHaveAccessibleDescription("3 cards · 2 placed Public");
   });
 
   it("offers a guest the sign-in that keeps lists living only in this browser", () => {

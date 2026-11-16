@@ -5,6 +5,11 @@ import { memoryStore } from "../../lib/storage";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import type { PlayCard, PlayTier } from "./board";
 
+/** The Play window's summary holds this part ("3 cards", "Losers stay", …) between its dots. */
+const inSummary = (part: string) => (_: string, element: Element | null) =>
+  element?.classList.contains("play-summary__line") === true &&
+  (element.textContent ?? "").split(" · ").includes(part);
+
 // A chunk as the network brings it: held back, or not at all (and no reload).
 const chunk = vi.hoisted(() => ({ fail: false, held: null as Promise<void> | null, loads: 0 }));
 vi.mock("../../lib/freshChunk", () => ({
@@ -75,7 +80,7 @@ describe("Play's screens", () => {
     expect(play).toHaveFocus();
 
     release();
-    expect(await screen.findByText("3 cards from Films")).toBeInTheDocument();
+    expect(await screen.findByText(inSummary("3 cards"))).toBeInTheDocument();
   });
 
   it("close Play and say so when they will not come, and come on the next press", async () => {
@@ -94,7 +99,7 @@ describe("Play's screens", () => {
 
     chunk.fail = false;
     await userEvent.click(play);
-    expect(await screen.findByText("3 cards from Films")).toBeInTheDocument();
+    expect(await screen.findByText(inSummary("3 cards"))).toBeInTheDocument();
   });
 
   it("are fetched once, and a second opening shows them at once", async () => {
@@ -104,7 +109,7 @@ describe("Play's screens", () => {
     await waitFor(() => expect(screen.queryByText("playing")).not.toBeInTheDocument());
 
     await userEvent.click(play);
-    expect(screen.getByText("3 cards from Films")).toBeInTheDocument();
+    expect(screen.getByText(inSummary("3 cards"))).toBeInTheDocument();
     expect(chunk.loads).toBe(1);
   });
 });

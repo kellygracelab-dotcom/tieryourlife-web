@@ -257,6 +257,24 @@
   color: var(--ink-dim);
 }
 
+/* A guest is told at the top that Publish signs them in first (audit D1). */
+.publish-window__guest {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font: var(--text-small);
+}
+
+.publish-window__guest .ms {
+  flex: none;
+  font-size: 20px;
+}
+
 /* How it goes out, said once, before the buttons. */
 .publish-window__how {
   display: flex;

@@ -73,7 +73,9 @@ describe("RankingBoard showing somebody else's arrangement", () => {
     expect(within(tier("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
     expect(within(tier("A")).getByRole("button", { name: "The Witch" })).toBeInTheDocument();
     // What they left unranked is the board's pool (Danylo, 16.11.2026).
-    const pool = screen.getByRole("heading", { level: 2, name: "Pool · 1" }).closest(".pool")!;
+    const pool = screen
+      .getByRole("heading", { level: 2, name: "Cards left · 1" })
+      .closest(".pool")!;
     expect(within(pool as HTMLElement).getByRole("button", { name: "Climax" })).toBeInTheDocument();
     expect(screen.queryByRole("searchbox")).toBeNull();
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
@@ -140,7 +142,9 @@ describe("RankingBoard showing somebody else's arrangement", () => {
       </MemoryRouter>,
     );
     // All placed: the pool is empty, and still there to drop on.
-    const pool = screen.getByRole("heading", { name: "Pool · 0" }).closest<HTMLElement>(".pool")!;
+    const pool = screen
+      .getByRole("heading", { name: "Cards left · 0" })
+      .closest<HTMLElement>(".pool")!;
     pointer("pointerdown", screen.getByRole("button", { name: "Ex Machina" }), 10, 10);
     under = pool;
     pointer("pointermove", window, 40, 40);

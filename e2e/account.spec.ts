@@ -331,7 +331,7 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
   await expect(page.locator("header img.face")).toHaveAttribute("src", FACE_URL);
 
   // Switching the back-up off asks first, and goes off only once the account's copy is gone.
-  const backUp = page.getByLabel(/Back up my boards/);
+  const backUp = page.getByLabel(/Back up my lists/);
   await expect(backUp).toBeChecked();
   await press(backUp, hasTouch);
   const confirm = page.getByRole("dialog", { name: "Stop backing up?" });
@@ -353,7 +353,7 @@ test("takes a photo as the face, names a refused one, and switches the back-up o
   // Kept on the device: after a reload it is still off, and nothing goes up.
   const puts = account.calls.filter((call) => call.startsWith("PUT /boards")).length;
   await page.reload();
-  await expect(page.getByLabel(/Back up my boards/)).not.toBeChecked();
+  await expect(page.getByLabel(/Back up my lists/)).not.toBeChecked();
   expect(account.calls.filter((call) => call.startsWith("PUT /boards")).length).toBe(puts);
 });
 
@@ -434,7 +434,7 @@ test("uploads a cover from the board settings and keeps the owner's photo after 
   await newBoard(page, hasTouch, "A cover of my own");
   const boardUrl = page.url();
   const settings = async () => {
-    await press(page.getByLabel("More about this board"), hasTouch);
+    await press(page.getByLabel("More about this list"), hasTouch);
     await press(page.getByRole("button", { name: "Cover", exact: true }), hasTouch);
   };
   await settings();

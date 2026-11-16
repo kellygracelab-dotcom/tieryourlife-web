@@ -6,7 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type RefObject,
 } from "react";
-import { DOUBLE_TAP_MS, MOUSE_SLOP, TOUCH_SLOP } from "./drag";
+import { MOUSE_SLOP, TOUCH_SLOP } from "./drag";
 import { indexAt, middlesOf } from "./tierDrag";
 
 /** The owner's hold on the tiers themselves, from the board. */
@@ -52,8 +52,8 @@ export interface TierMove {
 /**
  * The phone's gestures on a tier's band: lift it and carry it up or down (a
  * press and a move with a mouse, a long press with a finger), or open it to
- * change it: a double click with a mouse, a tap with a finger when no card is
- * picked (`tapOpens`; with one picked, a tap on a row places the card).
+ * change it: a click or a tap, a card picked or not (audit C1: a click meant
+ * for the tier placed the picked card; the row beside the band places it).
  * Nothing moves in the board's order until the tier is let go; meanwhile the
  * rows only stand aside, so a board keyed by its tiers is not rebuilt under
  * the pointer.
@@ -61,17 +61,11 @@ export interface TierMove {
 export function useTierMove(
   board: RefObject<HTMLElement | null>,
   editing: TierEditing | undefined,
-  tapOpens = true,
 ): TierMove {
-  const opensOnTap = useRef(tapOpens);
-  useEffect(() => {
-    opensOnTap.current = tapOpens;
-  });
   const [lift, setLift] = useState<Lift | null>(null);
   const press = useRef<Press | null>(null);
   const carried = useRef<Lift | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastTap = useRef<{ tier: number; at: number } | null>(null);
 
   const show = useCallback((next: Lift | null) => {
     carried.current = next;
@@ -164,18 +158,7 @@ export function useTierMove(
         if (now !== null && now.target !== now.tier) editing.move(now.tier, now.target);
         return;
       }
-      if (held.touch) {
-        if (opensOnTap.current) editing.open(held.tier);
-        return;
-      }
-      const at = Date.now();
-      const before = lastTap.current;
-      if (before !== null && before.tier === held.tier && at - before.at < DOUBLE_TAP_MS) {
-        lastTap.current = null;
-        editing.open(held.tier);
-      } else {
-        lastTap.current = { tier: held.tier, at };
-      }
+      editing.open(held.tier);
     };
     const onCancel = (event: PointerEvent) => {
       if (press.current === null || event.pointerId !== press.current.pointerId) return;

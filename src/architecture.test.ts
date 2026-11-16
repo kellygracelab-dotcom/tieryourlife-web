@@ -102,6 +102,8 @@ describe("the architecture", () => {
       admin: ["sections", "moderation", "boards", "tierboard"],
       // Play's result and its picking draw cards and rows the way the board does, at its sizes.
       play: ["tierboard"],
+      // "Continue" finds a list begun here by its draft, its saved game and one's own lists.
+      started: ["boards", "play", "ranking", "tierboard"],
     };
     const wrong: string[] = [];
     for (const file of FILES.filter((f) => f.path.startsWith("features/"))) {
