@@ -375,7 +375,9 @@ test.describe("ranking a list on a phone", () => {
       "aria-pressed",
       "true",
     );
-    await expect(page.getByRole("heading", { level: 2 })).toHaveText("1 card left");
+    // On a phone the tray's head names it; the bar has the one count (audit C2).
+    await expect(page.getByRole("heading", { level: 2 })).toHaveText("Cards left");
+    await expect(page.getByText("2 of 3 placed")).toBeVisible();
   });
 
   test("the app bar says which list this is once the heading has scrolled away", async ({
@@ -421,7 +423,7 @@ test.describe("ranking a list on a phone", () => {
         route.fulfill({ json: { ...list, id: "longlist1", itemCount: items.length, items } }),
       );
       await page.goto("/l/longlist1");
-      await expect(page.getByRole("heading", { level: 2 })).toHaveText("12 cards left");
+      await expect(page.getByRole("heading", { level: 2 })).toHaveText("Cards left");
       await page.evaluate((dir) => {
         document.documentElement.dir = dir;
       }, direction);
