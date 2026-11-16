@@ -478,6 +478,10 @@ const fr: Translation = {
     seedHintUnnamed: "La placer fait partir votre version de ce classement.",
     dropToStart: "Lâchez-la pour commencer votre version.",
     seedStart: "Déplacez une carte du tableau pour commencer votre version.",
+    replaceAsk: "Partir du classement de {name} ?",
+    replaceAskUnnamed: "Partir de ce classement ?",
+    replaceBody: "Votre version sera remplacée.",
+    replace: "Remplacer",
   },
   rankings: {
     publicationPreview: "Vérifier la publication",

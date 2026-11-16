@@ -454,6 +454,10 @@ const ja: Translation = {
     seedHintUnnamed: "置くと、このランキングから自分のバージョンが始まります。",
     dropToStart: "ドロップすると自分のバージョンが始まります。",
     seedStart: "ボードのカードを動かすと、自分のバージョンが始まります。",
+    replaceAsk: "{name}のランキングから始めますか？",
+    replaceAskUnnamed: "このランキングから始めますか？",
+    replaceBody: "自分のバージョンは置き換えられます。",
+    replace: "置き換える",
   },
   rankings: {
     publicationPreview: "公開内容の確認",

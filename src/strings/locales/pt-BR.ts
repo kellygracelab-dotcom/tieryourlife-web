@@ -468,6 +468,10 @@ const ptBR: Translation = {
     seedHintUnnamed: "Ao colocá-lo, sua versão começa por esta classificação.",
     dropToStart: "Solte para começar sua versão.",
     seedStart: "Mova um cartão do quadro para começar sua versão.",
+    replaceAsk: "Começar pela classificação de {name}?",
+    replaceAskUnnamed: "Começar por esta classificação?",
+    replaceBody: "Sua versão será substituída.",
+    replace: "Substituir",
   },
   rankings: {
     publicationPreview: "Revisar publicação",

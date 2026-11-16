@@ -511,6 +511,10 @@ const ar: Translation = {
     seedHintUnnamed: "وضعها يبدأ نسختك من هذا الترتيب.",
     dropToStart: "أفلتها لتبدأ نسختك.",
     seedStart: "حرّك بطاقة على اللوحة لتبدأ نسختك.",
+    replaceAsk: "البدء من ترتيب {name}؟",
+    replaceAskUnnamed: "البدء من هذا الترتيب؟",
+    replaceBody: "ستُستبدل نسختك.",
+    replace: "استبدال",
   },
   rankings: {
     publicationPreview: "مراجعة النشر",

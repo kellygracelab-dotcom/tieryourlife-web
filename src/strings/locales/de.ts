@@ -467,6 +467,10 @@ const de: Translation = {
     seedHintUnnamed: "Wenn du sie platzierst, beginnt deine Version mit diesem Ranking.",
     dropToStart: "Lass sie los, um deine Version zu beginnen.",
     seedStart: "Verschieb eine Karte auf dem Board, um deine Version zu beginnen.",
+    replaceAsk: "Mit dem Ranking von {name} beginnen?",
+    replaceAskUnnamed: "Mit diesem Ranking beginnen?",
+    replaceBody: "Deine Version wird ersetzt.",
+    replace: "Ersetzen",
   },
   rankings: {
     publicationPreview: "Veröffentlichung prüfen",

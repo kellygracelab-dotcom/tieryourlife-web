@@ -479,6 +479,10 @@ const ru: Translation = {
     seedHintUnnamed: "Если поставить её, ваша версия начнётся с этого рейтинга.",
     dropToStart: "Отпустите, чтобы начать свою версию.",
     seedStart: "Переместите карточку на доске, чтобы начать свою версию.",
+    replaceAsk: "Начать с рейтинга: {name}?",
+    replaceAskUnnamed: "Начать с этого рейтинга?",
+    replaceBody: "Ваша версия будет заменена.",
+    replace: "Заменить",
   },
   rankings: {
     publicationPreview: "Что будет опубликовано",

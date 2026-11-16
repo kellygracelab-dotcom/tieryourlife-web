@@ -454,6 +454,11 @@ export const en = {
     seedHintUnnamed: "Placing it starts your version from this ranking.",
     dropToStart: "Drop it to start your version.",
     seedStart: "Move a card on the board to start your version.",
+    // A first move on Theirs over a Mine with cards placed asks first (Danylo and Android, 16.11.2026).
+    replaceAsk: "Start from {name}’s ranking?",
+    replaceAskUnnamed: "Start from this ranking?",
+    replaceBody: "Your version will be replaced.",
+    replace: "Replace",
   },
   // The readers' placings of a list. The title has no count, so it cannot
   // disagree with the chip's, which is the takes (Danylo, 28.10).

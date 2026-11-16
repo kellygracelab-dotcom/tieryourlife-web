@@ -455,6 +455,10 @@ const tr: Translation = {
     seedHintUnnamed: "Yerleştirince sürümünüz bu sıralamadan başlar.",
     dropToStart: "Kendi sürümünüzü başlatmak için bırakın.",
     seedStart: "Kendi sürümünüzü başlatmak için panodaki bir kartı taşıyın.",
+    replaceAsk: "{name} sıralamasından başlansın mı?",
+    replaceAskUnnamed: "Bu sıralamadan başlansın mı?",
+    replaceBody: "Sürümünüz değiştirilecek.",
+    replace: "Değiştir",
   },
   rankings: {
     publicationPreview: "Yayını gözden geçir",

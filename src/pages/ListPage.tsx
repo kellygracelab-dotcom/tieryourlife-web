@@ -81,6 +81,7 @@ import { useResource } from "../lib/useResource";
 import { currentLocale, fill, strings } from "../strings";
 import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
 import { Snackbar, useBoardNotice } from "../ui/Snackbar";
 import { useBackCloses } from "../ui/useBackCloses";
@@ -553,12 +554,20 @@ function OpenList({
   const theirsName =
     chosen?.authorName ?? (editorial || list.authorName.trim() === "" ? null : list.authorName);
 
+  // A first move on Theirs over a Mine with cards placed waits for a yes, each
+  // time (Danylo and Android, 16.11.2026): its rows, while the question is up.
+  const [replacing, setReplacing] = useState<Rows | null>(null);
+  // Cancel takes the move back: Theirs is drawn again as it came.
+  const [theirsRound, setTheirsRound] = useState(0);
+  const startFromTheirs = (rows: Rows) => {
+    if (loadPlacedDraft(localStorageStore, scopeOf(list)) !== null) setReplacing(rows);
+    else takeTheirs(rows, false);
+  };
   // A first move on Theirs starts Mine from it, as on the phone, and says so.
   // What Mine held before is kept for Undo, which puts it back byte for byte
   // and shows Theirs again.
-  const startFromTheirs = (rows: Rows) => {
+  const takeTheirs = (rows: Rows, replaced: boolean) => {
     const before = localStorageStore.read(draftKey(list.id));
-    const replaced = loadPlacedDraft(localStorageStore, scopeOf(list)) !== null;
     // What was on screen, the reader's tier words included (the app's mine.copy(tiers = theirs.tiers)),
     // each as short as a saved ranking keeps it, so Mine shows the words Finish will save.
     // Cards a reader added of their own (K3) are theirs: Mine holds the list's.
@@ -883,7 +892,7 @@ function OpenList({
           // What it left unranked is said under it, as the app's Theirs has it.
           <>
             <RankingBoard
-              key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}`}
+              key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}:${theirsRound}`}
               list={theirsList}
               seed={{
                 rows: theirs.rows,
@@ -909,6 +918,27 @@ function OpenList({
           onChoose={choose}
           onWithdraw={() => withdraw()}
           onClose={() => setSheet(false)}
+        />
+      )}
+      {replacing !== null && (
+        <ConfirmDialog
+          narrow
+          title={
+            theirsName === null
+              ? strings.list.replaceAskUnnamed
+              : fill(strings.list.replaceAsk, { name: theirsName })
+          }
+          body={strings.list.replaceBody}
+          confirmLabel={strings.list.replace}
+          cancelLabel={strings.rank.cancel}
+          onConfirm={() => {
+            setReplacing(null);
+            takeTheirs(replacing, true);
+          }}
+          onCancel={() => {
+            setReplacing(null);
+            setTheirsRound((round) => round + 1);
+          }}
         />
       )}
       <Snackbar notice={notice} onDone={clearNotice} onBoard />

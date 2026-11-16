@@ -475,6 +475,10 @@ const uk: Translation = {
     seedHintUnnamed: "Якщо поставити її, ваша версія почнеться з цього рейтингу.",
     dropToStart: "Відпустіть, щоб почати свою версію.",
     seedStart: "Перемістіть картку на дошці, щоб почати свою версію.",
+    replaceAsk: "Почати з рейтингу: {name}?",
+    replaceAskUnnamed: "Почати з цього рейтингу?",
+    replaceBody: "Вашу версію буде замінено.",
+    replace: "Замінити",
   },
   rankings: {
     publicationPreview: "Що буде опубліковано",
