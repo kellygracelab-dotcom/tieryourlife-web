@@ -218,7 +218,7 @@
 .reload-notice__loose {
   position: absolute;
   top: 20px;
-  left: 118px;
+  inset-inline-start: 118px;
   display: flex;
   align-items: center;
   justify-content: center;
