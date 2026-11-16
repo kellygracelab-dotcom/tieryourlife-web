@@ -107,7 +107,7 @@ const labels = (tiles: Locator) =>
   tiles.evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
 
 test("applies a ranked game with its other ranked cards left in their places", async ({ page }) => {
-  await playTwo(page, "Ranked");
+  await playTwo(page, "Placed");
   await expect.poll(async () => (await persisted(page)).play).toBeNull();
   await page.reload();
   await expect(page.locator(".ranking .tile")).toHaveCount(91);

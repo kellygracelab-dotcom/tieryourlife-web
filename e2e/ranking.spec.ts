@@ -102,7 +102,7 @@ test.describe("starting from the author's ranking", () => {
     const theirs = page.getByRole("region", { name: "Their ranking" });
     // What the author left unranked is the board's pool, as on Mine.
     const pool = theirs.locator(".pool");
-    await expect(pool.getByRole("heading")).toHaveText("Pool · 1");
+    await expect(pool.getByRole("heading")).toHaveText("Cards left · 1");
     await expect(pool.getByRole("button", { name: "Climax" })).toBeVisible();
     const from = await theirs.getByRole("button", { name: "Ex Machina" }).boundingBox();
     const to = await pool.boundingBox();
@@ -172,9 +172,15 @@ test("a move on Author over a begun Mine asks first: Cancel takes it back, Repla
   await expect(ask).toHaveCount(0);
   await expect(theirs.getByRole("list", { name: "S" })).toContainText("Ex Machina");
   await expect(mine).toHaveAttribute("aria-pressed", "false");
-  expect(await page.evaluate((key) => localStorage.getItem(key), `tyl:draft:${LIST_ID}`)).toBe(
-    draft,
-  );
+  // Mine as it was; a save also notes the list's name and when, for Continue (audit B1).
+  const kept = await page.evaluate((key) => localStorage.getItem(key), `tyl:draft:${LIST_ID}`);
+  const {
+    title: _t,
+    picture: _p,
+    savedAt: _s,
+    ...rest
+  } = JSON.parse(kept!) as Record<string, unknown>;
+  expect(rest).toEqual(JSON.parse(draft));
 
   await moveExMachinaToA();
   await ask.getByRole("button", { name: "Replace" }).click();

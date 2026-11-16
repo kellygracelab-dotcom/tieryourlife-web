@@ -20,7 +20,7 @@ test.describe("a wide screen", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
     await page.getByRole("button", { name: "Mine", exact: true }).click();
 
-    await page.getByRole("button", { name: "Cards beside the board" }).click();
+    await page.getByRole("button", { name: "Cards beside the tiers" }).click();
     const side = page.locator(".ranking__side");
     const board = page.locator(".board");
     const sideBox = (await side.boundingBox())!;
@@ -117,7 +117,7 @@ test.describe("a wide screen", () => {
     await expect(page.locator(".pool")).not.toHaveClass(/pool--over/);
     await page.evaluate(() => window.scrollTo(0, 0));
 
-    await page.getByRole("button", { name: "Cards beside the board" }).click();
+    await page.getByRole("button", { name: "Cards beside the tiers" }).click();
     await expect(board).not.toHaveClass(/ranking--under/);
     await expect(page.locator(".ranking__side")).toBeVisible();
     await page.reload();
@@ -125,7 +125,7 @@ test.describe("a wide screen", () => {
     // Nothing is placed yet, so the list opens on the author's ranking again.
     await page.getByRole("button", { name: "Mine", exact: true }).click();
     await expect(page.locator(".ranking")).not.toHaveClass(/ranking--under/);
-    await page.getByRole("button", { name: "Cards under the board" }).click();
+    await page.getByRole("button", { name: "Cards under the tiers" }).click();
     await expect(page.locator(".ranking")).toHaveClass(/ranking--under/);
   });
 
