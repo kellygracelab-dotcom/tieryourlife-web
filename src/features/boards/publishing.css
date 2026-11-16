@@ -619,3 +619,83 @@
     order: 2;
   }
 }
+
+/*
+ * The cover at the top of the Publish window (Danylo, 16.11.2026): the card
+ * Community shows, small, beside what kind of cover it is and Change.
+ */
+.publish-cover {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.publish-cover__card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 132px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface-container);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.publish-cover__card .art {
+  aspect-ratio: auto;
+  height: 80px;
+  border-radius: 0;
+  background: var(--surface-container-highest);
+}
+
+.publish-cover__title {
+  display: -webkit-box;
+  overflow: hidden;
+  padding: 6px 8px 8px;
+  font: var(--text-caption);
+  font-weight: 500;
+  color: var(--ink);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.publish-cover__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.publish-cover__kind {
+  font: var(--text-body);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.publish-cover__hint {
+  font: var(--text-caption);
+  color: var(--ink-dim);
+}
+
+.publish-cover__change {
+  margin-block-start: 6px;
+}
+
+/* The Cover step: Back sits where the window's own Close sat, at the start. */
+.publish-window__back {
+  margin-inline: -10px 0;
+}
+
+@media (max-width: 420px) {
+  .publish-cover__card {
+    width: 104px;
+  }
+
+  .publish-cover__card .art {
+    height: 64px;
+  }
+}

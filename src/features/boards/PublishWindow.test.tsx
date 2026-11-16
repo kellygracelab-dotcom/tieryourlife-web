@@ -18,6 +18,7 @@ import type { Account } from "../../lib/account";
 import type { SignInOutcome } from "../../lib/signIn";
 import { orderSections, sectionsFrom, type Section } from "../sections/model";
 import { addToPool, newBoard, setCategory, setCover, type Board } from "./model";
+import type { Upload } from "../editor/AddCardBox";
 import type { LoadTopics } from "./PublishPickers";
 import { PublishWindow } from "./PublishWindow";
 import type { FindTopic } from "./topic";
@@ -138,6 +139,7 @@ function Host({
   sections,
   signInToPublish,
   start,
+  upload,
 }: {
   initial: Board;
   publishing: PublishingDeps;
@@ -146,6 +148,7 @@ function Host({
   sections: readonly Section[];
   signInToPublish?: () => Promise<SignInOutcome>;
   start?: boolean;
+  upload?: Upload;
 }) {
   const [board, setBoard] = useState(initial);
   const keep = (next: Board) => {
@@ -177,6 +180,7 @@ function Host({
       now={() => 500}
       start={start}
       signInToPublish={signInToPublish}
+      upload={upload}
     />
   );
 }
@@ -192,6 +196,7 @@ const show = (
     sections?: readonly Section[];
     signInToPublish?: () => Promise<SignInOutcome>;
     start?: boolean;
+    upload?: Upload;
   } = {},
 ) => {
   actionAuth.currentUser = actionUser(account.uid ?? "guest");
@@ -218,6 +223,7 @@ const show = (
           sections={extra.sections ?? sectionsFrom(null)}
           signInToPublish={extra.signInToPublish}
           start={extra.start}
+          upload={extra.upload}
         />
       </MemoryRouter>
     </SessionContext.Provider>,
@@ -1479,5 +1485,130 @@ describe("PublishWindow: section and topic", () => {
     expect(await win().findByText("Could not load the topics.")).toBeInTheDocument();
     // Proposing one is still on offer.
     expect(win().getByRole("button", { name: "Propose a topic" })).toBeVisible();
+  });
+});
+
+describe("PublishWindow: the cover", () => {
+  const coverBlock = () => win().getByRole("region", { name: "Cover" });
+  const change = () => win().getByRole("button", { name: "Change the cover" });
+
+  it("shows the card Community will show at the top, the auto collage by default, and how it can change", () => {
+    show(filmBoard(), signedIn);
+    const block = coverBlock();
+    expect(within(block).getByText("Collage · auto")).toBeVisible();
+    expect(within(block).getByText("Films")).toBeInTheDocument();
+    expect(block.querySelectorAll(".art--mosaic .art__cell")).toHaveLength(2);
+    expect(change()).toHaveAccessibleDescription(
+      "Upload your own photo and crop it any way you like, make one card’s picture the banner, or build your own collage.",
+    );
+  });
+
+  it("says the tier colours stand in when no card has a picture", () => {
+    const next = uids();
+    show(
+      {
+        ...addToPool(
+          newBoard("words", "Words", 100, next),
+          [{ title: "Only words", imageUrl: null }],
+          100,
+          next,
+        ),
+        category: "film_tv",
+      },
+      signedIn,
+    );
+    expect(within(coverBlock()).getByText("Tier colours · auto")).toBeVisible();
+  });
+
+  it("changes the cover as a step of the window and comes back to publishing with the section kept", async () => {
+    show(filmBoard(), signedIn);
+    await userEvent.click(change());
+    const step = screen.getByRole("dialog", { name: "Cover" });
+    expect(within(step).getByRole("button", { name: "Back to publishing" })).toHaveFocus();
+    expect(within(step).queryByRole("button", { name: "Publish" })).toBeNull();
+
+    await userEvent.click(
+      within(step).getByRole("button", { name: "Use Ex Machina on the cover" }),
+    );
+    expect(held.coverImageUrls).toEqual([EX]);
+    await userEvent.click(within(step).getByRole("button", { name: "Done" }));
+
+    expect(screen.getByRole("dialog", { name: "Publish “Films”" })).toBeInTheDocument();
+    expect(within(coverBlock()).getByText("A card’s picture")).toBeVisible();
+    expect(change()).toHaveFocus();
+    expect(within(sectionGroup()).getByRole("radio", { name: /Film & TV/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it("names a collage of one's own with how many pictures it holds", async () => {
+    show(filmBoard(), signedIn);
+    await userEvent.click(change());
+    await userEvent.click(screen.getByRole("button", { name: "Use Ex Machina on the cover" }));
+    await userEvent.click(screen.getByRole("button", { name: "Use The Witch on the cover" }));
+    await userEvent.click(screen.getByRole("button", { name: "Back to publishing" }));
+    expect(within(coverBlock()).getByText("Your collage · 2 pictures")).toBeVisible();
+  });
+
+  it("goes back to publishing on Escape from the Cover step, not out of the window", async () => {
+    show(filmBoard(), signedIn);
+    await userEvent.click(change());
+    await userEvent.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: "Publish “Films”" })).toBeInTheDocument();
+    expect(close).not.toHaveBeenCalled();
+    await userEvent.keyboard("{Escape}");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("takes a photo of one's own as the cover, to place in Adjust position", async () => {
+    const upload = vi.fn<Upload>(() =>
+      Promise.resolve({ pictureId: "p1", previewUrl: "https://img.test/mine.jpg" }),
+    );
+    show(filmBoard(), signedIn, {}, { upload });
+    await userEvent.click(change());
+    const file = new File(["x"], "mine.jpg", { type: "image/jpeg" });
+    const input = screen
+      .getByRole("dialog", { name: "Cover" })
+      .querySelector<HTMLInputElement>("input[type=file]");
+    await userEvent.upload(input as HTMLInputElement, file);
+    await waitFor(() => expect(held.coverPictureId).toBe("p1"));
+    // Adjust cover opens by itself over the step; Cancel leaves the middle.
+    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Back to publishing" }));
+    expect(within(coverBlock()).getByText("Your own photo")).toBeVisible();
+  });
+
+  it("sends the chosen cover with the publish", async () => {
+    const publish = vi.fn(() => Promise.resolve({ id: "L1" }));
+    show(filmBoard(), signedIn, { publish });
+    await userEvent.click(change());
+    await userEvent.click(screen.getByRole("button", { name: "Use Ex Machina on the cover" }));
+    await userEvent.click(screen.getByRole("button", { name: "Use The Witch on the cover" }));
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    await userEvent.click(go());
+    await waitFor(() =>
+      expect(publish).toHaveBeenCalledWith(
+        expect.objectContaining({ coverImageUrls: [EX, WITCH] }),
+        expect.objectContaining({ uid: "me" }),
+      ),
+    );
+  });
+
+  it("is there for a list already out, and a new cover makes it behind for Update", async () => {
+    show({ ...outBehind(), editedAt: 100 }, signedIn);
+    expect(within(coverBlock()).getByText("Collage · auto")).toBeVisible();
+    expect(win().queryByRole("button", { name: "Update" })).toBeNull();
+    await userEvent.click(change());
+    await userEvent.click(screen.getByRole("button", { name: "Use Ex Machina on the cover" }));
+    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(win().getByRole("button", { name: "Update" })).toBeVisible();
+  });
+
+  it("is not there for Show in Rankings, where the list has no card of its own", () => {
+    show({ ...filmBoard(), takenFrom: "SRC" }, signedIn);
+    expect(screen.getByRole("dialog", { name: "Show in Rankings" })).toBeInTheDocument();
+    expect(win().queryByRole("region", { name: "Cover" })).toBeNull();
   });
 });

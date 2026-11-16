@@ -1636,6 +1636,15 @@ const ar: Translation = {
     takingDown: "جارٍ الإزالة…",
     open: "فتح",
     viewLabel: "العرض: {mode}",
+    coverAuto: "كولاج · تلقائي",
+    coverColours: "ألوان المستويات · تلقائي",
+    coverCard: "صورة بطاقة",
+    coverOwn: "صورتك الخاصة",
+    coverMine: "كولاجك · الصور: {n}",
+    coverHint:
+      "ارفع صورتك الخاصة واقتصّها كما تشاء، أو اجعل صورة إحدى البطاقات لافتة، أو اصنع كولاجك الخاص.",
+    changeCover: "تغيير الغلاف",
+    coverBack: "العودة إلى النشر",
   },
   sync: {
     offBusy: "جارٍ الحذف…",

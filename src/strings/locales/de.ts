@@ -1358,6 +1358,15 @@ const de: Translation = {
     takingDown: "Wird entfernt…",
     open: "Öffnen",
     viewLabel: "Ansicht: {mode}",
+    coverAuto: "Collage · automatisch",
+    coverColours: "Stufenfarben · automatisch",
+    coverCard: "Bild einer Karte",
+    coverOwn: "Dein eigenes Foto",
+    coverMine: "Deine Collage · Bilder: {n}",
+    coverHint:
+      "Lade ein eigenes Foto hoch und schneide es zu, wie du willst, mach das Bild einer Karte zum Banner oder stell deine eigene Collage zusammen.",
+    changeCover: "Titelbild ändern",
+    coverBack: "Zurück zum Veröffentlichen",
   },
   sync: {
     offBusy: "Wird gelöscht…",

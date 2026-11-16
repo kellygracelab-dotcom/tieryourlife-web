@@ -1123,6 +1123,7 @@ function OpenBoard({
           now={now}
           start={publishStart}
           signInToPublish={signInToPublish}
+          upload={upload}
         />
       )}
       {panel === "propose" && (

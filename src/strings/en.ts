@@ -1279,6 +1279,16 @@ export const en = {
     takingDown: "Taking it down…",
     open: "Open",
     viewLabel: "Display: {mode}",
+    coverAuto: "Collage · auto",
+    coverColours: "Tier colours · auto",
+    coverCard: "A card’s picture",
+    coverOwn: "Your own photo",
+    coverMine: "Your collage · {n} pictures",
+    // Under the Publish window's cover: the three ways to change it, so nobody takes the auto collage for the only one.
+    coverHint:
+      "Upload your own photo and crop it any way you like, make one card’s picture the banner, or build your own collage.",
+    changeCover: "Change the cover",
+    coverBack: "Back to publishing",
   },
   sync: {
     offBusy: "Deleting…",
