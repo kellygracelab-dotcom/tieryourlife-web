@@ -997,6 +997,20 @@
   color: var(--link);
 }
 
+/* Update, View and Take it down, under a published board's status (Danylo, 16.11.2026). */
+.sheet-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+
+.sheet-row__actions .sheet-row__link {
+  align-self: center;
+  margin-top: 0;
+}
+
 .sheet-row__link--button {
   padding: 0;
   border: none;

@@ -4,7 +4,6 @@ import type {
   AdminList,
   AdminListsQuery,
   AdminSections,
-  AnonymousList,
   Candidate,
   Moderator,
   PendingTopic,
@@ -393,11 +392,6 @@ export const findCandidates = (q: string): Promise<{ people: Candidate[] }> =>
 
 export const loadAdminCounts = (): Promise<{ reports: number; proposals: number }> =>
   admin.loadAdminCounts(api);
-
-export const loadAnonymousLists = (
-  after: string | null = null,
-): Promise<{ lists: AnonymousList[]; nextCursor: string | null }> =>
-  admin.loadAnonymousLists(api, after);
 
 export const loadAdminLists = (
   query: AdminListsQuery,

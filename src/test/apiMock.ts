@@ -102,7 +102,6 @@ export function apiStubs() {
     removeModerator: pending(),
     findCandidates: pending(),
     loadAdminCounts: pending(),
-    loadAnonymousLists: pending(),
     loadAdminLists: pending(),
     moveList: pending(),
     loadHouseLists: pending(),

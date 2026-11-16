@@ -241,8 +241,6 @@ export interface PublishRequest {
    * one, and the account's lists name their boards for a lost answer.
    */
   boardUid?: string;
-  /** No name or face on the list anywhere public; the owner still has it. */
-  anonymous?: boolean;
   /**
    * The published list the cards were saved from, as the app sends it: the
    * backend credits it, or keeps the publish as a ranking of it.

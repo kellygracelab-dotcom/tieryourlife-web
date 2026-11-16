@@ -126,6 +126,7 @@ const open = (
       { path: "/b", element: <h1>boards page</h1> },
       { path: "/admin/house", element: <h1>house lists pane</h1> },
       { path: "/trash", element: <h1>trash page</h1> },
+      { path: "/l/:id", element: <h1>list page</h1> },
     ],
     { initialEntries: [path] },
   );
@@ -155,6 +156,8 @@ const tier = (label: string) => screen.getByRole("list", { name: label });
 const settingsSheet = () => screen.getByRole("dialog", { name: "List settings" });
 /** The header's Publish, Update or Show in Rankings beside Play, if any. */
 const headerPublish = () => document.querySelector<HTMLButtonElement>(".list-head .publish-button");
+/** The page's snackbar, where a publish is said, with View on it. */
+const said = () => document.querySelector<HTMLElement>(".snackbar");
 /** An item of the board's ⋮ menu, once it is open. */
 const menuItem = (name: string) =>
   within(document.querySelector<HTMLElement>(".list-head .menu__list")!).getByRole("button", {
@@ -1046,14 +1049,17 @@ describe("BoardPage: share and publish", () => {
     open(repository, "/b/films", { share, publishing, account: member });
     await userEvent.click(screen.getByRole("button", { name: "List settings" }));
     await userEvent.click(within(settingsSheet()).getByRole("button", { name: "Publish" }));
-    expect(await screen.findByText("Published. Anyone with the link can rank it.")).toBeVisible();
+    await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
+    expect(within(said()!).getByRole("button", { name: "View" })).toBeInTheDocument();
     expect(within(settingsSheet()).getByText("Published")).toBeVisible();
     expect(publishing.publish).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Films", category: "film_tv" }),
       expect.objectContaining({ uid: "me" }),
     );
+    // No name-hiding is asked for any more (Danylo, 16.11.2026).
+    expect(vi.mocked(publishing.publish).mock.calls[0]?.[0]).not.toHaveProperty("anonymous");
     expect(repository.get("films")).toMatchObject({ publishedId: "L1", authorName: "Danylo" });
-    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+    expect(within(settingsSheet()).getByRole("link", { name: "View" })).toHaveAttribute(
       "href",
       "/l/L1",
     );
@@ -1083,7 +1089,8 @@ describe("BoardPage: share and publish", () => {
     expect(
       await screen.findByText("Saved. It waits for a moderator before others can see it."),
     ).toBeVisible();
-    expect(screen.queryByText("Published. Anyone with the link can rank it.")).toBeNull();
+    // Nobody can open it yet: nothing to view.
+    expect(within(said()!).queryByRole("button", { name: "View" })).toBeNull();
     // Read back as the browser keeps it: the hold is still known.
     expect(boardsRepository(store).get("films")).toMatchObject({
       publishedId: "L1",
@@ -1147,11 +1154,17 @@ describe("BoardPage: Publish beside Play", () => {
       );
     }
     open(repository, "/b/films", { publishing, session: (page) => <Signing page={page} /> });
+    // A guest's header press opens the sheet on Publication, which says why.
     await userEvent.click(headerPublish()!);
+    const publish = await within(settingsSheet()).findByRole("button", { name: "Publish" });
+    await waitFor(() => expect(publish).toHaveFocus());
+    expect(within(settingsSheet()).getByText(/Sign in with Google to publish/)).toBeVisible();
+    expect(signIn).not.toHaveBeenCalled();
+    await userEvent.click(publish);
     await waitFor(() => expect(signIn).toHaveBeenCalledOnce());
     // Signed in, nothing more to press: the sheet opens on Publish again and it goes out.
     await waitFor(() => expect(publishing.publish).toHaveBeenCalledTimes(1));
-    expect(await screen.findByText("Published. Anyone with the link can rank it.")).toBeVisible();
+    await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
     expect(window.sessionStorage.getItem("tyl:publishAfterSignIn")).toBeNull();
   });
@@ -1162,26 +1175,63 @@ describe("BoardPage: Publish beside Play", () => {
     const signIn = vi.fn<Session["signIn"]>(async () => ({ kind: "cancelled" }));
     open(repository, "/b/films", { account: { kind: "guest", uid: "g1" }, signIn });
     await userEvent.click(headerPublish()!);
+    await userEvent.click(within(settingsSheet()).getByRole("button", { name: "Publish" }));
     await waitFor(() => expect(signIn).toHaveBeenCalledOnce());
     await waitFor(() => expect(window.sessionStorage.getItem("tyl:publishAfterSignIn")).toBeNull());
   });
 
-  it("opens the settings on Publish and sends the list", async () => {
+  it("publishes from the board itself, says so, and View opens what others see", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({ ...filmBoard(), category: "film_tv" });
+    let answer: (published: { id: string; topicId: null }) => void = () => undefined;
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      publish: vi.fn(
+        () => new Promise<{ id: string; topicId: null }>((resolve) => (answer = resolve)),
+      ),
+    };
+    const router = open(repository, "/b/films", { publishing, account: member });
+    await userEvent.click(headerPublish()!);
+    // No sheet in between; the button says it is on its way.
+    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+    expect(headerPublish()).toHaveTextContent("Publishing…");
+    expect(headerPublish()).toBeDisabled();
+    await act(async () => answer({ id: "L1", topicId: null }));
+    expect(publishing.publish).toHaveBeenCalledTimes(1);
+    expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
+    expect(said()).toHaveTextContent(/^Published/);
+    // Out and up to date: nothing more to send from the header.
+    expect(headerPublish()).toBeNull();
+    await userEvent.click(within(said()!).getByRole("button", { name: "View" }));
+    expect(router.state.location.pathname).toBe("/l/L1");
+  });
+
+  it("opens the sheet on Publication with the reason when the board cannot go out yet", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    const publishing: PublishingDeps = { ...noPublishing, publish: vi.fn() };
+    open(repository, "/b/films", { publishing, account: member });
+    await userEvent.click(headerPublish()!);
+    const publish = within(settingsSheet()).getByRole("button", { name: "Publish" });
+    await waitFor(() => expect(publish).toHaveFocus());
+    const why = within(settingsSheet()).getByText("Pick a category.");
+    expect(publish.getAttribute("aria-describedby")).toBe(why.id);
+    expect(publishing.publish).not.toHaveBeenCalled();
+  });
+
+  it("opens the sheet on Publication when the backend refuses, with what it said", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "film_tv" });
     const publishing: PublishingDeps = {
       ...noPublishing,
-      publish: vi.fn(() => Promise.resolve({ id: "L1", topicId: null })),
+      publish: vi.fn(() => Promise.reject(new ApiFailure({ kind: "offline" }))),
     };
     open(repository, "/b/films", { publishing, account: member });
     await userEvent.click(headerPublish()!);
-    expect(settingsSheet()).toBeInTheDocument();
-    expect(await screen.findByText("Published. Anyone with the link can rank it.")).toBeVisible();
-    expect(publishing.publish).toHaveBeenCalledTimes(1);
-    expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
-    expect(within(settingsSheet()).getByText("Published")).toBeVisible();
-    // Out and up to date: nothing more to send from the header.
-    expect(headerPublish()).toBeNull();
+    const sheet = await screen.findByRole("dialog", { name: "List settings" });
+    expect(within(sheet).getByRole("alert")).toBeInTheDocument();
+    expect(repository.get("films")?.publishedId).toBeNull();
+    expect(headerPublish()).toBeEnabled();
   });
 
   it("offers nothing on a board with no cards", () => {
@@ -1233,7 +1283,7 @@ describe("BoardPage: one's own list from its ⋮ menu", () => {
     expect(screen.queryByRole("button", { name: "Take it down" })).toBeNull();
     await userEvent.click(menuItem("Publish"));
     // The sheet opens on it and sends it, as its own Publish does.
-    expect(await screen.findByText("Published. Anyone with the link can rank it.")).toBeVisible();
+    await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
     expect(publishing.publish).toHaveBeenCalledTimes(1);
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
     await userEvent.click(screen.getByRole("button", { name: "Done" }));

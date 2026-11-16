@@ -211,15 +211,7 @@ describe("BoardSettings: the sheet", () => {
   it("lists New tier, Publication, Category, Topic, Cover and Display, in the spec's order", () => {
     show(filmBoard(), signedIn);
     const titles = [...sheet().querySelectorAll(".sheet-row__title")].map((row) => row.textContent);
-    expect(titles).toEqual([
-      "New tier",
-      "Publication",
-      "Publish anonymously",
-      "Category",
-      "Topic",
-      "Cover",
-      "Display",
-    ]);
+    expect(titles).toEqual(["New tier", "Publication", "Category", "Topic", "Cover", "Display"]);
     expect(within(sheet()).getByText("5 tiers")).toBeInTheDocument();
     expect(
       within(sheet()).getByText("Anyone with the link can rank it. It shows in Community."),
@@ -228,34 +220,20 @@ describe("BoardSettings: the sheet", () => {
     expect(screen.queryByRole("button", { name: "Take it down" })).toBeNull();
   });
 
-  it("publishes anonymously on request: the switch marks the board, and the next publish says so", async () => {
-    const publish = vi.fn(async () => ({ id: "L1" }));
-    show(filmBoard(), signedIn, { publish });
-    const anonymous = screen.getByRole("switch", { name: "Publish anonymously" });
-    expect(anonymous).not.toBeChecked();
-    await userEvent.click(anonymous);
-    expect(held.anonymous).toBe(true);
+  // No anonymity any more (Danylo, 16.11.2026): a new list carries the
+  // author's name, and the backend keeps one already out without it as it was.
+  it("offers no Publish anonymously switch", () => {
+    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 1 }, signedIn);
+    expect(screen.queryByRole("switch", { name: /anonymous/i })).toBeNull();
+    expect(within(sheet()).queryByText("Publish anonymously")).toBeNull();
+  });
+
+  it("says nothing of anonymity in a publish, even of a board once published anonymously", async () => {
+    const publish = vi.fn<PublishingDeps["publish"]>(async () => ({ id: "L1" }));
+    show({ ...filmBoard(), anonymous: true }, signedIn, { publish });
     await userEvent.click(publishButton());
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ anonymous: true }),
-      expect.objectContaining({ uid: "me" }),
-    );
-  });
-
-  it("sends a public list again at once when its anonymity changes, as the phone does", async () => {
-    const republish = vi.fn(async () => ({ id: "L1" }));
-    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 1 }, signedIn, { republish });
-    await userEvent.click(screen.getByRole("switch", { name: "Publish anonymously" }));
-    expect(republish).toHaveBeenCalledWith(
-      "L1",
-      expect.objectContaining({ anonymous: true }),
-      expect.objectContaining({ uid: "me" }),
-    );
-  });
-
-  it("offers anonymity on a copy of somebody else's list too: it goes out as a list of one's own", () => {
-    show({ ...filmBoard(), authorName: "kenji" }, signedIn);
-    expect(screen.getByRole("switch", { name: "Publish anonymously" })).toBeInTheDocument();
+    await waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
+    expect(publish.mock.calls[0]?.[0]).not.toHaveProperty("anonymous");
   });
 
   it("goes with Done and with Escape", async () => {
@@ -537,14 +515,10 @@ describe("BoardSettings: public", () => {
       publishedEditedAt: 500,
     });
     expect(published).toHaveBeenCalledWith("published", "L1", 0);
-    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
-      "href",
-      "/l/L1",
-    );
-    expect(screen.getByText("Send this board again, over the same link.")).toBeInTheDocument();
-    // Out now: the Publication row has the way to take it down, under Published.
-    const takeDown = screen.getByRole("button", { name: "Take it down" });
-    expect(takeDown.closest("li")).toBe(outStatus()!.closest("li"));
+    // Out now: the Publication row has Update, View and Take it down, under Published.
+    const row = outStatus()!.closest("li")!;
+    expect(screen.getByRole("button", { name: "Take it down" }).closest("li")).toBe(row);
+    expect(within(row).getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
 
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(published).toHaveBeenCalledWith("updated", "L1", 0));
@@ -595,10 +569,8 @@ describe("BoardSettings: public", () => {
       publishedEditedAt: 500,
     });
     expect(published).toHaveBeenCalledWith("ranking", "SRC", 0);
-    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
-      "href",
-      "/l/SRC",
-    );
+    // A ranking is seen on the page of the list it ranks.
+    expect(screen.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/SRC");
 
     // Down from the list it ranks, not by deleting somebody else's list.
     await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
@@ -678,7 +650,7 @@ describe("BoardSettings: public", () => {
     expect(published).toHaveBeenCalledWith("ranking", "SRC", 0);
 
     // Sent again, it goes as the ranking with its own cards, never as a publish that would drop them.
-    await userEvent.click(screen.getByRole("switch", { name: /anonymous|name/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(rank).toHaveBeenCalledTimes(2));
     expect(rank.mock.calls[1]?.[3]).toEqual({
       addedCards: [{ title: "Climax" }],
@@ -766,7 +738,7 @@ describe("BoardSettings: public", () => {
     expect(published).toHaveBeenCalledWith("held", "L1", 0);
     expect(published).not.toHaveBeenCalledWith("published", "L1", 0);
     // Its link answers 404 to everybody, the author too: nothing leads there.
-    expect(screen.queryByRole("link", { name: "See it in Community" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "View" })).toBeNull();
     expect(
       within(sheet()).getAllByText("It waits for a moderator before others can see it.").length,
     ).toBeGreaterThan(0);
@@ -782,10 +754,7 @@ describe("BoardSettings: public", () => {
     await userEvent.click(screen.getByRole("button", { name: "Update" }));
     await waitFor(() => expect(published).toHaveBeenLastCalledWith("updated", "L1", 0));
     expect(held.heldForReview).toBeUndefined();
-    expect(screen.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
-      "href",
-      "/l/L1",
-    );
+    expect(screen.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
   });
 
   it("asks before taking it down, in the sheet, from Take it down under Published", async () => {
@@ -803,7 +772,7 @@ describe("BoardSettings: public", () => {
     );
     expect(outStatus()).toBeVisible();
     expect(within(sheet()).queryByRole("button", { name: "Publish" })).toBeNull();
-    expect(screen.getByText("The published copy is behind this board.")).toBeInTheDocument();
+    expect(screen.getByText("Changes not published yet")).toBeInTheDocument();
     // No question until it is asked for.
     expect(screen.queryByRole("group", { name: "Take Films down?" })).toBeNull();
 
@@ -863,7 +832,7 @@ describe("BoardSettings: public", () => {
     answer({ id: "L1" });
     await waitFor(() => expect(outStatus()).toBeVisible());
     expect(held.coverImageUrls).toEqual([EX]);
-    expect(screen.getByText("The published copy is behind this board.")).toBeInTheDocument();
+    expect(screen.getByText("Changes not published yet")).toBeInTheDocument();
   });
 
   it("says a refused take-down by its own name, beside the question", async () => {
@@ -988,14 +957,14 @@ describe("BoardSettings: public", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/Chrome or Safari/);
   });
 
-  it("says why a public list with no cards cannot be sent, and keeps its name on until it can", () => {
+  it("says why a public list with no cards cannot be sent, and still lets it be taken down", () => {
     const empty = { ...filmBoard(), items: [], publishedId: "L1", publishedEditedAt: 100 };
     show(empty, signedIn);
     expect(screen.getByRole("button", { name: "Update" })).toBeDisabled();
     expect(
       screen.getByText("Add at least one card before you publish this list."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Publish anonymously" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Take it down" })).toBeEnabled();
   });
 });
 
@@ -1048,17 +1017,35 @@ describe("BoardSettings: publication", () => {
     expect(within(ask).getByRole("button", { name: "Take it down" })).toBeInTheDocument();
   });
 
-  it("hands the focus from Publish to Take it down once out, and back once down", async () => {
+  it("hands the focus from Publish to Update once out, and back once down", async () => {
     const publish = vi.fn(async () => ({ id: "L1" }));
     const unpublish = vi.fn(async () => undefined);
     show(filmBoard(), signedIn, { publish, unpublish });
     const row = within(rowOf("Publication"));
     await userEvent.click(row.getByRole("button", { name: "Publish" }));
-    await waitFor(() => expect(row.getByRole("button", { name: "Take it down" })).toHaveFocus());
+    // Publish gives way to the row's actions: the first of them, Update, takes the keyboard.
+    await waitFor(() => expect(row.getByRole("button", { name: "Update" })).toHaveFocus());
     await userEvent.click(row.getByRole("button", { name: "Take it down" }));
     const ask = screen.getByRole("group", { name: "Take Films down?" });
     await userEvent.click(within(ask).getByRole("button", { name: "Take it down" }));
     await waitFor(() => expect(row.getByRole("button", { name: "Publish" })).toHaveFocus());
+  });
+
+  it("says a published copy behind the board is so, and fills Update to send it", () => {
+    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100, editedAt: 200 }, signedIn);
+    const row = within(rowOf("Publication"));
+    expect(row.getByText("Published")).toBeVisible();
+    expect(row.getByText("Changes not published yet")).toBeVisible();
+    expect(row.getByRole("button", { name: "Update" })).toHaveClass("btn--filled");
+  });
+
+  it("keeps Update tonal on a list up to date, with View leading to it", () => {
+    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100, editedAt: 100 }, signedIn);
+    const row = within(rowOf("Publication"));
+    expect(row.queryByText("Changes not published yet")).toBeNull();
+    expect(row.getByRole("button", { name: "Update" })).toHaveClass("btn--tonal");
+    expect(row.getByRole("button", { name: "Update" })).not.toHaveClass("btn--filled");
+    expect(row.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
   });
 
   it("says In Rankings when one's ranking of the list is out", () => {

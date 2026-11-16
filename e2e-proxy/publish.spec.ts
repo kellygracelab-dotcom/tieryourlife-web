@@ -19,7 +19,10 @@ async function setCategory(page: Page) {
 
 /** The published list's own address, from List settings' link to it. */
 async function listHref(page: Page): Promise<string> {
-  const href = await page.getByRole("link", { name: "See it in Community" }).getAttribute("href");
+  const href = await page
+    .getByRole("dialog", { name: "List settings" })
+    .getByRole("link", { name: "View" })
+    .getAttribute("href");
   expect(href).toMatch(/^\/l\/[A-Za-z0-9_-]+$/);
   return href ?? "";
 }
@@ -42,7 +45,7 @@ test("publishes, is read by a guest, sends an update and takes it down", async (
   const settings = page.getByRole("dialog", { name: "List settings" });
   const publishButton = settings.getByRole("button", { name: "Publish", exact: true });
   await publishButton.click();
-  await expect(page.getByText("Published. Anyone with the link can rank it.")).toBeVisible();
+  await expect(page.locator(".snackbar")).toContainText("Published");
   await expect(settings.locator(".sheet-row__status")).toHaveText(/Published$/);
   const href = await listHref(page);
 
@@ -61,9 +64,9 @@ test("publishes, is read by a guest, sends an update and takes it down", async (
 
   // A change on the board, then Update: the same list, the new order.
   await page.getByRole("radio", { name: "Ranking" }).click();
-  await expect(page.getByText("The published copy is behind this board.")).toBeVisible();
+  await expect(settings.getByText("Changes not published yet")).toBeVisible();
   await settings.getByRole("button", { name: "Update" }).click();
-  await expect(page.getByText("The published copy is behind this board.")).toBeHidden();
+  await expect(settings.getByText("Changes not published yet")).toBeHidden();
   expect(await listsTitled(title)).toHaveLength(1);
 
   // Taken down: the proxy forgets it and the guest's link stops working.
@@ -104,7 +107,7 @@ test("a publish whose answer was lost does not make a second list", async ({ pag
   // The person tries again: the proxy knows the board and answers with the
   // list it already has, so there is still one.
   await publishButton.click();
-  await expect(page.getByText("Published. Anyone with the link can rank it.")).toBeVisible();
+  await expect(page.locator(".snackbar")).toContainText("Published");
   expect(await listsTitled(title)).toHaveLength(1);
   const href = await listHref(page);
   expect((await listsTitled(title))[0]?.name.endsWith(href.slice(3))).toBe(true);

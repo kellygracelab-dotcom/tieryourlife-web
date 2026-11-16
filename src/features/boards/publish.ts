@@ -116,8 +116,8 @@ export function publishRequestOf(board: Board): PublishRequest | null {
     category: board.category,
     ...coverOf(board),
     ...topicOf(board),
-    // Sent every time too: a republish without it would put the name back.
-    anonymous: board.anonymous,
+    // No `anonymous` (Danylo, 16.11.2026): new lists carry the author's name,
+    // and the backend keeps a list already out without one as it was.
     // Where the cards came from, as the app sends it: the list credits it.
     ...(board.takenFrom === null ? {} : { takenFrom: board.takenFrom }),
     ...(board.origin ? { sourceVersion: board.origin.version } : {}),
