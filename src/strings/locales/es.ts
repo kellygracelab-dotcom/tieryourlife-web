@@ -467,6 +467,10 @@ const es: Translation = {
     seedHintUnnamed: "Al colocarla, tu versión parte de esta clasificación.",
     dropToStart: "Suéltala para empezar tu versión.",
     seedStart: "Mueve una tarjeta del tablero para empezar tu versión.",
+    replaceAsk: "¿Empezar desde la clasificación de {name}?",
+    replaceAskUnnamed: "¿Empezar desde esta clasificación?",
+    replaceBody: "Tu versión se reemplazará.",
+    replace: "Reemplazar",
   },
   rankings: {
     publicationPreview: "Revisar publicación",

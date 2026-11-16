@@ -94,6 +94,71 @@ test.describe("starting from the author's ranking", () => {
   });
 });
 
+// On every screen: a move on Author over a Mine with a card placed asks first.
+test("a move on Author over a begun Mine asks first: Cancel takes it back, Replace starts from it", async ({
+  page,
+  hasTouch,
+}) => {
+  await mockBackend(page);
+  // Mine begun on this device: Climax in S.
+  const draft = JSON.stringify({
+    listId: LIST_ID,
+    updatedAt: list.updatedAt,
+    itemCount: list.items.length,
+    rows: list.tiers.map((_, at) => (at === 0 ? [2] : [])),
+  });
+  await page.addInitScript(
+    ({ key, value }) => {
+      if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
+    },
+    { key: `tyl:draft:${LIST_ID}`, value: draft },
+  );
+  await page.goto(`/l/${LIST_ID}`);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+  await page.getByRole("button", { name: "Author", exact: true }).click();
+  const theirs = page.getByRole("region", { name: "Their ranking" });
+  await expect(theirs).toBeVisible();
+  await page.waitForFunction(() => document.getAnimations().length === 0);
+  const moveExMachinaToA = async () => {
+    if (hasTouch) {
+      await theirs.getByRole("button", { name: "Ex Machina" }).tap();
+      await theirs.locator(".tier__band").nth(1).tap();
+      return;
+    }
+    const from = await theirs.getByRole("button", { name: "Ex Machina" }).boundingBox();
+    const to = await theirs.getByRole("list", { name: "A" }).boundingBox();
+    if (from === null || to === null) throw new Error("board not laid out");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await page.mouse.up();
+  };
+  const mine = page.getByRole("button", { name: "Mine", exact: true });
+
+  await moveExMachinaToA();
+  const ask = page.getByRole("dialog", { name: "Start from danylo’s ranking?" });
+  await expect(ask).toContainText("Your version will be replaced.");
+  await ask.getByRole("button", { name: "Cancel" }).click();
+  await expect(ask).toHaveCount(0);
+  await expect(theirs.getByRole("list", { name: "S" })).toContainText("Ex Machina");
+  await expect(mine).toHaveAttribute("aria-pressed", "false");
+  expect(await page.evaluate((key) => localStorage.getItem(key), `tyl:draft:${LIST_ID}`)).toBe(
+    draft,
+  );
+
+  await moveExMachinaToA();
+  await ask.getByRole("button", { name: "Replace" }).click();
+  await expect(mine).toHaveAttribute("aria-pressed", "true");
+  const yours = page.getByRole("region", { name: "Your ranking" });
+  await expect(yours.getByRole("list", { name: "A" }).getByRole("button")).toHaveText([
+    "The Witch",
+    "Ex Machina",
+  ]);
+  await expect(page.locator(".snackbar")).toContainText(
+    "Replaced your version with danylo’s ranking",
+  );
+});
+
 // On every screen: the mouse on a desktop and in Safari, a held finger on the
 // phones. The pointer is driven on the real layout, so the place a card lands
 // is read from where the tiles actually are.
