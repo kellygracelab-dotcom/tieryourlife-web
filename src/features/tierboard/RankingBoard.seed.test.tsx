@@ -51,7 +51,7 @@ const pointer = (type: string, target: Element | Window, x: number, y: number) =
 };
 
 describe("RankingBoard showing somebody else's arrangement", () => {
-  it("draws their rows, keeps nothing on the device, and has no pool, bar or keys", () => {
+  it("draws their rows and their pool, keeps nothing on the device, and has no bar or keys", () => {
     const store = memoryStore();
     store.write(draftKey("abc"), "this device's own draft");
     render(
@@ -72,8 +72,10 @@ describe("RankingBoard showing somebody else's arrangement", () => {
     const board = screen.getByRole("region", { name: "Their ranking" });
     expect(within(tier("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
     expect(within(tier("A")).getByRole("button", { name: "The Witch" })).toBeInTheDocument();
-    expect(board).not.toHaveTextContent("Climax");
-    expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
+    // What they left unranked is the board's pool (Danylo, 16.11.2026).
+    const pool = screen.getByRole("heading", { level: 2, name: "Pool · 1" }).closest(".pool")!;
+    expect(within(pool as HTMLElement).getByRole("button", { name: "Climax" })).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).toBeNull();
     expect(screen.queryByRole("button", { name: "Finish" })).toBeNull();
     expect(screen.queryByText(/placed/)).toBeNull();
     expect(board.querySelector(".tier__key")).toBeNull();
@@ -115,6 +117,59 @@ describe("RankingBoard showing somebody else's arrangement", () => {
     await userEvent.keyboard("{Enter}2");
     expect(within(tier("A")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
     expect(onStart).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts Mine with a card taken out to the pool, everything placed or not", () => {
+    let under: Element | null = null;
+    const hitTest: HitTest = () => under;
+    const onStart = vi.fn();
+    render(
+      <MemoryRouter>
+        <RankingBoard
+          list={{ ...list, items: list.items.slice(0, 2) }}
+          store={memoryStore()}
+          hitTest={hitTest}
+          seed={{
+            rows: theirs,
+            label: "Their ranking",
+            hint: "Placing it starts yours",
+            dropHint: "Drop it to start yours",
+            onStart,
+          }}
+        />
+      </MemoryRouter>,
+    );
+    // All placed: the pool is empty, and still there to drop on.
+    const pool = screen.getByRole("heading", { name: "Pool · 0" }).closest<HTMLElement>(".pool")!;
+    pointer("pointerdown", screen.getByRole("button", { name: "Ex Machina" }), 10, 10);
+    under = pool;
+    pointer("pointermove", window, 40, 40);
+    expect(pool).toHaveClass("pool--target");
+    pointer("pointerup", window, 40, 40);
+    expect(onStart).toHaveBeenCalledTimes(1);
+    expect(onStart).toHaveBeenCalledWith([[], [1]]);
+  });
+
+  it("starts Mine with a card of their pool placed", async () => {
+    const onStart = vi.fn();
+    render(
+      <MemoryRouter>
+        <RankingBoard
+          list={list}
+          store={memoryStore()}
+          seed={{
+            rows: theirs,
+            label: "Their ranking",
+            hint: "Placing it starts yours",
+            dropHint: "Drop it to start yours",
+            onStart,
+          }}
+        />
+      </MemoryRouter>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Climax" }));
+    await userEvent.click(screen.getByRole("button", { name: "Place Climax in A" }));
+    expect(onStart).toHaveBeenCalledWith([[0], [1, 2]]);
   });
 
   it("leaves no lifted card behind when Mine takes its place in the middle of a drag", () => {

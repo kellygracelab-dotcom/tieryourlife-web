@@ -623,6 +623,7 @@ const es: Translation = {
     title: "El sitio no pudo iniciarse",
     body: "Una parte no llegó: se cortó la conexión, o el sitio se actualizó en este mismo minuto. Recargar suele bastar.",
     reload: "Recargar",
+    updated: "El sitio se actualizó.",
   },
   crash: {
     title: "Algo salió mal en esta página",

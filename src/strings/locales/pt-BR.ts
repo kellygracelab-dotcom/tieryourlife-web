@@ -624,6 +624,7 @@ const ptBR: Translation = {
     title: "O site não conseguiu iniciar",
     body: "Uma parte não chegou: a conexão caiu, ou o site foi atualizado neste exato minuto. Recarregar costuma resolver.",
     reload: "Recarregar",
+    updated: "O site foi atualizado.",
   },
   crash: {
     title: "Algo deu errado nesta página",

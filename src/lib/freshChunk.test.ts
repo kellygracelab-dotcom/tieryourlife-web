@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  CHUNK_RELEASE_KEY,
   CHUNK_RETRY_KEY,
+  entryOf,
   freshChunk,
   inTheMiddle,
+  recover,
   reloadInto,
   reloadOnce,
   resetFreshChunkForTests,
@@ -168,6 +171,130 @@ describe("freshChunk", () => {
     expect(reload).toHaveBeenCalledTimes(1);
     // The reload that follows still knows the try was made.
     expect(store.read(CHUNK_RETRY_KEY)).not.toBeNull();
+  });
+
+  describe("a newer release", () => {
+    const gone = async (): Promise<string> => {
+      throw new TypeError("Failed to fetch dynamically imported module");
+    };
+    // Two microtask hops are not enough once the site is asked: let them all run.
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it("is told by the script the site's front page names, and the tab follows every deploy", async () => {
+      const store = memoryStore();
+      const reload = vi.fn();
+      let live = "/assets/index-B.js";
+      const deps = {
+        store,
+        reload,
+        ownRelease: () => "/assets/index-A.js",
+        liveRelease: () => Promise.resolve(live),
+      };
+      reloadInto(() => "/b/films");
+      void freshChunk(gone, deps)();
+      await settle();
+      expect(reload).toHaveBeenCalledWith("/b/films");
+      expect(store.read(CHUNK_RELEASE_KEY)).toBe("/assets/index-B.js");
+      // The one reload a tab has for other troubles is still there.
+      expect(store.read(CHUNK_RETRY_KEY)).toBeNull();
+
+      // The same tab, hours on, after the next deploy: again, quietly.
+      resetFreshChunkForTests();
+      live = "/assets/index-C.js";
+      void freshChunk(gone, { ...deps, ownRelease: () => "/assets/index-B.js" })();
+      await settle();
+      expect(reload).toHaveBeenCalledTimes(2);
+      expect(store.read(CHUNK_RELEASE_KEY)).toBe("/assets/index-C.js");
+    });
+
+    it("reloads once for each release, so caches that lag cannot reload the tab again and again", async () => {
+      const store = memoryStore();
+      const reload = vi.fn();
+      const deps = {
+        store,
+        reload,
+        ownRelease: () => "/assets/index-A.js",
+        liveRelease: () => Promise.resolve("/assets/index-B.js"),
+      };
+      expect(await recover(deps)).toBe("reloading");
+      // The reload brought the old page back: the old rule's one reload, then a real failure.
+      resetFreshChunkForTests();
+      expect(await recover(deps)).toBe("reloading");
+      expect(store.read(CHUNK_RETRY_KEY)).not.toBeNull();
+      resetFreshChunkForTests();
+      expect(await recover(deps)).toBe("failed");
+      expect(reload).toHaveBeenCalledTimes(2);
+    });
+
+    it("leaves the page under someone's hands as it is, and says the site was updated", async () => {
+      const store = memoryStore();
+      const reload = vi.fn();
+      const announce = vi.fn();
+      const deps = {
+        store,
+        reload,
+        announce,
+        busy: () => true,
+        ownRelease: () => "/assets/index-A.js",
+        liveRelease: () => Promise.resolve("/assets/index-B.js"),
+      };
+      let settled = false;
+      void freshChunk(gone, deps)().finally(() => (settled = true));
+      await settle();
+      // No error page in the work's place: the piece simply has not come.
+      expect(settled).toBe(false);
+      expect(reload).not.toHaveBeenCalled();
+      expect(announce).toHaveBeenCalledOnce();
+      // Nothing spent: once the person is done, the next try reloads.
+      expect(store.read(CHUNK_RELEASE_KEY)).toBeNull();
+      resetFreshChunkForTests();
+      expect(await recover({ ...deps, busy: () => false })).toBe("reloading");
+    });
+
+    it("is not there when the front page names this tab's own script: the old rule decides", async () => {
+      const store = memoryStore();
+      const reload = vi.fn();
+      const deps = {
+        store,
+        reload,
+        ownRelease: () => "/assets/index-A.js",
+        liveRelease: () => Promise.resolve("/assets/index-A.js"),
+      };
+      expect(await recover(deps)).toBe("reloading");
+      expect(store.read(CHUNK_RELEASE_KEY)).toBeNull();
+      resetFreshChunkForTests();
+      await expect(freshChunk(gone, deps)()).rejects.toThrow(/dynamically imported/);
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
+
+    it("asks the site nothing offline, nor where the page names no script, nor twice at once", async () => {
+      const liveRelease = vi.fn(() => Promise.resolve("/assets/index-B.js"));
+      const reload = vi.fn();
+      expect(
+        await recover({ store: memoryStore(), reload, online: () => false, liveRelease }),
+      ).toBe("failed");
+      // A page that names no script: the old rule's one reload.
+      expect(
+        await recover({ store: memoryStore(), reload, ownRelease: () => null, liveRelease }),
+      ).toBe("reloading");
+      expect(liveRelease).not.toHaveBeenCalled();
+
+      resetFreshChunkForTests();
+      const deps = { store: memoryStore(), reload, ownRelease: () => "/a.js", liveRelease };
+      // A stylesheet and its module failing together: one question, one reload.
+      const [first, second] = await Promise.all([recover(deps), recover(deps)]);
+      expect([first, second]).toEqual(["reloading", "reloading"]);
+      expect(liveRelease).toHaveBeenCalledOnce();
+    });
+
+    it("reads the script a page names", () => {
+      const page = new DOMParser().parseFromString(
+        '<head><script>var x</script><script type="module" crossorigin src="/assets/index-CW_r0hSs.js"></script></head>',
+        "text/html",
+      );
+      expect(entryOf(page)).toBe("/assets/index-CW_r0hSs.js");
+      expect(entryOf(new DOMParser().parseFromString("<p>nothing</p>", "text/html"))).toBeNull();
+    });
   });
 
   it("keeps the try when a stylesheet failed but the module came, so the reload does not loop", async () => {

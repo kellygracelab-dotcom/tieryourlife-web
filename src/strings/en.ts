@@ -1335,6 +1335,8 @@ export const en = {
     title: "The site could not start",
     body: "Part of it did not arrive: the connection dropped, or the site was updated this very minute. Reloading usually does it.",
     reload: "Reload",
+    // Said, with Reload, while a newer release is out and the page stays under someone's hands.
+    updated: "The site was updated.",
   },
   crash: {
     title: "Something went wrong on this page",

@@ -254,6 +254,20 @@ describe("a card's picture on the owner's board", () => {
     expect(screen.queryByRole("dialog", { name: "Adjust picture" })).toBeNull();
   });
 
+  it("lights every item of the card's menu under the mouse, the lower ones too", async () => {
+    owned({ focus: vi.fn() });
+    fireEvent.contextMenu(card("Red fox"), { clientX: 10, clientY: 10 });
+    const items = within(screen.getByRole("menu", { name: "Red fox" })).getAllByRole("menuitem");
+    expect(items.map((item) => item.textContent)).toEqual(
+      expect.arrayContaining(["Adjust picture", "About the picture", "Open its page"]),
+    );
+    // The light is the focus (.card-menu__item:focus): the pointer gives it to each in turn.
+    for (const item of items) {
+      await userEvent.hover(item);
+      expect(item).toHaveFocus();
+    }
+  });
+
   it("has no Adjust picture where the owner cannot place pictures", () => {
     owned();
     fireEvent.contextMenu(card("Arctic fox"), { clientX: 10, clientY: 10 });

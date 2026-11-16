@@ -638,6 +638,7 @@ const fr: Translation = {
     title: "Le site n’a pas pu démarrer",
     body: "Une partie n’est pas arrivée : la connexion a lâché, ou le site a été mis à jour à cette minute même. Recharger suffit en général.",
     reload: "Recharger",
+    updated: "Le site a été mis à jour.",
   },
   crash: {
     title: "Quelque chose s’est mal passé sur cette page",

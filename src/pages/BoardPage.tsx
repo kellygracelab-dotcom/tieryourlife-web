@@ -32,7 +32,6 @@ import {
   setCategory,
   setDisplayMode,
   trashBoard,
-  isOut,
   MAX_RANKED_TIERS,
   type Board,
 } from "../features/boards/model";
@@ -1032,48 +1031,24 @@ function OpenBoard({
                   {strings.boards.settings}
                 </button>
               </li>
-              {/* One's own list goes out, is sent again and comes down from here
-                  too (Danylo, 14.11.2026); a saved copy goes out only as a ranking. */}
-              {house === null && board.takenFrom === null && !isOut(board) && (
+              {/* Publish and Update are the header's, beside Play, and the trash
+                  is reached from the boards page (Danylo, 16.11.2026): only
+                  taking a list down is left here, as it has no button of its own. */}
+              {house === null && board.publishedId !== null && (
                 <li>
                   <button
                     type="button"
                     className="menu__action"
-                    onClick={() => openSettings("publish")}
+                    onClick={() => openSettings("takeDown")}
                   >
-                    {strings.new.publish}
+                    {strings.boards.takeDown}
                   </button>
                 </li>
-              )}
-              {house === null && board.publishedId !== null && (
-                <>
-                  <li>
-                    <button
-                      type="button"
-                      className="menu__action"
-                      onClick={() => openSettings("update")}
-                    >
-                      {strings.boards.update}
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      type="button"
-                      className="menu__action"
-                      onClick={() => openSettings("takeDown")}
-                    >
-                      {strings.boards.takeDown}
-                    </button>
-                  </li>
-                </>
               )}
               <li>
                 <button type="button" className="menu__action" onClick={() => void shareBoard()}>
                   {strings.boards.shareImage}
                 </button>
-              </li>
-              <li>
-                <Link to="/trash">{strings.boards.trash}</Link>
               </li>
               <li className="menu__divider" role="separator" />
               <li>

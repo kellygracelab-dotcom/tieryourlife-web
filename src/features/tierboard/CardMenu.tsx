@@ -6,6 +6,7 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type PointerEvent,
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
@@ -228,6 +229,13 @@ export function CardMenu({
       openTiers(true);
     }
   };
+  // The pointer on any item but Move to a tier lights it, as the arrows do:
+  // the light is the focus, so every item takes it (Danylo, 16.11.2026: the
+  // lower ones stayed dark under the mouse).
+  const onOther = (event: PointerEvent<HTMLElement>) => {
+    event.currentTarget.focus({ preventScroll: true });
+    leaveTiers();
+  };
   useBackLayer(true, () => (tiersOpen ? closeTiers() : onClose()));
   const onTiersKey = (event: KeyboardEvent<HTMLDivElement>) => {
     event.stopPropagation();
@@ -285,10 +293,7 @@ export function CardMenu({
             tabIndex={-1}
             className="card-menu__item"
             onClick={onUnplace}
-            onPointerEnter={(event) => {
-              event.currentTarget.focus({ preventScroll: true });
-              leaveTiers();
-            }}
+            onPointerEnter={onOther}
           >
             <span className="card-menu__text">{strings.boards.backToPool}</span>
           </button>
@@ -300,10 +305,7 @@ export function CardMenu({
             tabIndex={-1}
             className="card-menu__item card-menu__item--danger"
             onClick={onRemove}
-            onPointerEnter={(event) => {
-              event.currentTarget.focus({ preventScroll: true });
-              leaveTiers();
-            }}
+            onPointerEnter={onOther}
           >
             <span className="card-menu__text">{strings.boards.removeFromList}</span>
           </button>
@@ -314,7 +316,7 @@ export function CardMenu({
             role="menuitem"
             tabIndex={-1}
             className="card-menu__item"
-            onPointerEnter={leaveTiers}
+            onPointerEnter={onOther}
             onClick={onAdjust}
           >
             <span className="card-menu__text">{strings.cover.adjustPicture}</span>
@@ -326,7 +328,7 @@ export function CardMenu({
             role="menuitem"
             tabIndex={-1}
             className="card-menu__item"
-            onPointerEnter={leaveTiers}
+            onPointerEnter={onOther}
             onClick={onAbout}
           >
             <span className="card-menu__text">{strings.link.about}</span>
@@ -338,7 +340,7 @@ export function CardMenu({
             role="menuitem"
             tabIndex={-1}
             className="card-menu__item"
-            onPointerEnter={leaveTiers}
+            onPointerEnter={onOther}
             onClick={onOpenPage}
           >
             <span className="card-menu__text">{strings.link.openPage}</span>

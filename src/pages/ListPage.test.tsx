@@ -518,17 +518,17 @@ describe("ListPage", () => {
     expect(screen.queryByText(`${window.location.host}/l/abc`)).toBeNull();
 
     // Author has no tray and no Finish: the author's cards where they put them,
-    // what they left unranked under the board, as the app shows it, and how to start.
+    // what they left unranked in the board's pool, and how to start.
     expect(within(whose()).getByRole("button", { name: "Author" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
     const theirs = screen.getByRole("region", { name: "Their ranking" });
     expect(within(theirs).getByRole("list", { name: "S" })).toHaveTextContent("Ex Machina");
-    expect(theirs).not.toHaveTextContent("The Witch");
-    expect(screen.getByRole("heading", { name: "1 unranked" }).parentElement).toHaveTextContent(
-      "The Witch",
-    );
+    expect(theirs.querySelector(".board")).not.toHaveTextContent("The Witch");
+    expect(
+      within(theirs).getByRole("heading", { name: "Pool · 1" }).closest(".pool"),
+    ).toHaveTextContent("The Witch");
     expect(within(theirs).getByRole("status")).toHaveTextContent(
       "Move a card on the board to start your version.",
     );

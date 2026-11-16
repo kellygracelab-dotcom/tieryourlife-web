@@ -604,6 +604,7 @@ const tr: Translation = {
     title: "Site başlatılamadı",
     body: "Bir parçası gelmedi: bağlantı koptu ya da site tam bu dakikada güncellendi. Yeniden yüklemek genellikle yeter.",
     reload: "Yeniden yükle",
+    updated: "Site güncellendi.",
   },
   crash: {
     title: "Bu sayfada bir şeyler ters gitti",

@@ -620,6 +620,7 @@ const de: Translation = {
     title: "Die Seite konnte nicht starten",
     body: "Ein Teil ist nicht angekommen: Die Verbindung ist abgerissen, oder die Seite wurde genau in dieser Minute aktualisiert. Neu laden hilft meistens.",
     reload: "Neu laden",
+    updated: "Die Website wurde aktualisiert.",
   },
   crash: {
     title: "Auf dieser Seite ist etwas schiefgegangen",
