@@ -134,7 +134,7 @@ test("reset requires confirmation and restores pool then tier order after reload
   page,
 }) => {
   await openBoard(page);
-  const more = page.locator(".list-head details.menu summary").first();
+  const more = page.locator(".list-head details.menu summary:not(.view-button)");
   const reset = page.getByRole("button", { name: "Return all cards to the pool", exact: true });
   await more.click();
   await reset.click();

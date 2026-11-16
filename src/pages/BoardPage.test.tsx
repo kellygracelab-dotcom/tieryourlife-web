@@ -153,16 +153,30 @@ const open = (
 };
 
 const tier = (label: string) => screen.getByRole("list", { name: label });
-const settingsSheet = () => screen.getByRole("dialog", { name: "List settings" });
-/** The header's Publish, Update or Show in Rankings beside Play, if any. */
+/** The thin settings window the ⋮ menu's Cover opens. */
+const coverDialog = () => screen.getByRole("dialog", { name: "Cover" });
+/** The Publish window, by its heading: Publish “Films” until the list is out. */
+const publishWindow = (name = "Publish “Films”") => screen.getByRole("dialog", { name });
+/** The header's Publish, Update, Published or Show in Rankings beside Play, if any. */
 const headerPublish = () => document.querySelector<HTMLButtonElement>(".list-head .publish-button");
 /** The page's snackbar, where a publish is said, with View on it. */
 const said = () => document.querySelector<HTMLElement>(".snackbar");
+/** The board's ⋮ menu, beside the view button's own. */
+const moreMenu = () =>
+  screen.getByLabelText("More about this board").closest("details")!.querySelector("ul")!;
 /** An item of the board's ⋮ menu, once it is open. */
-const menuItem = (name: string) =>
-  within(document.querySelector<HTMLElement>(".list-head .menu__list")!).getByRole("button", {
-    name,
-  });
+const menuItem = (name: string) => within(moreMenu()).getByRole("button", { name });
+/** The ⋮ menu's Cover, which opens the thin settings window. */
+const openCover = async () => {
+  await userEvent.click(screen.getByLabelText("More about this board"));
+  await userEvent.click(menuItem("Cover"));
+  return within(coverDialog());
+};
+/** The header's view button and one of its modes. */
+const chooseView = async (mode: "Rows" | "Single strip" | "Ranked list") => {
+  await userEvent.click(screen.getByLabelText(/^Display: /));
+  await userEvent.click(screen.getByRole("menuitemradio", { name: new RegExp(`^${mode}`) }));
+};
 const bandOf = (label: string) => tier(label).closest(".tier")!.querySelector(".tier__band")!;
 
 // jsdom has no PointerEvent and no layout: a pointer is a mouse event that
@@ -702,19 +716,26 @@ describe("BoardPage: tiers and settings", () => {
     }
   });
 
-  it("keeps the category and the display mode from the settings, and shows the ranked list", async () => {
+  it("keeps the section chosen in the Publish window, and the display mode from the header, and shows the ranked list", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
-    open(repository, "/b/films");
-    await userEvent.click(screen.getByLabelText("More about this board"));
-    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
-    const settings = within(screen.getByRole("dialog", { name: "List settings" }));
-    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
-    await userEvent.click(settings.getByRole("radio", { name: "Film & TV" }));
+    open(repository, "/b/films", { account: member });
+    await userEvent.click(headerPublish()!);
+    const box = within(publishWindow());
+    const section = box.getByRole("radiogroup", { name: "Section" });
+    await userEvent.click(within(section).getByRole("radio", { name: "Film & TV" }));
+    expect(within(section).getByRole("radio", { name: "Film & TV" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
     expect(repository.get("films")?.category).toBe("film_tv");
     expect(screen.getByText("1 ranked · 2 in pool · Film & TV")).toBeInTheDocument();
+    // Closed without publishing, the choice stays.
+    await userEvent.click(box.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog", { name: "Publish “Films”" })).toBeNull();
+    expect(repository.get("films")).toMatchObject({ category: "film_tv", publishedId: null });
 
-    await userEvent.click(settings.getByRole("radio", { name: "Ranking" }));
+    await chooseView("Ranked list");
     expect(repository.get("films")?.displayMode).toBe("FLAT_RANKED");
     const column = screen.getByRole("list", { name: "Ranked list" });
     expect(
@@ -726,17 +747,52 @@ describe("BoardPage: tiers and settings", () => {
     // Cards can still come in.
     expect(screen.getByRole("textbox", { name: "Add a card" })).toBeInTheDocument();
 
-    // The single strip: the rows, each one line of cards that scrolls sideways.
-    await userEvent.click(settings.getByRole("radio", { name: "Single strip" }));
-    expect(repository.get("films")?.displayMode).toBe("HORIZONTAL_SCROLL");
-    expect(screen.getByRole("list", { name: "S" }).closest(".board")).toHaveClass("board--strip");
-
-    await userEvent.click(settings.getByRole("radio", { name: "Rows" }));
+    await chooseView("Rows");
+    expect(repository.get("films")?.displayMode).toBe("WRAP");
     expect(screen.getByRole("list", { name: "S" }).closest(".board")).not.toHaveClass(
       "board--strip",
     );
-    await userEvent.click(settings.getByRole("button", { name: "Done" }));
-    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+  });
+
+  it("switches the display from the header's view button: Single strip, Ranked list, and back to Rows", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    // The button says the mode it is in.
+    expect(screen.getByLabelText("Display: Rows")).toHaveTextContent("Rows");
+    const checked = () =>
+      screen
+        .getAllByRole("menuitemradio")
+        .filter((item) => item.getAttribute("aria-checked") === "true")
+        .map((item) => item.querySelector(".view-menu__title")?.textContent);
+    await userEvent.click(screen.getByLabelText("Display: Rows"));
+    expect(screen.getAllByRole("menuitemradio")).toHaveLength(3);
+    expect(checked()).toEqual(["Rows"]);
+    // Each says what it does.
+    expect(screen.getByRole("menuitemradio", { name: /^Single strip/ })).toHaveTextContent(
+      "One line per tier, scrolls sideways",
+    );
+
+    // The single strip: the rows, each one line of cards that scrolls sideways.
+    await userEvent.click(screen.getByRole("menuitemradio", { name: /^Single strip/ }));
+    expect(repository.get("films")?.displayMode).toBe("HORIZONTAL_SCROLL");
+    expect(screen.getByRole("list", { name: "S" }).closest(".board")).toHaveClass("board--strip");
+    expect(screen.getByLabelText("Display: Single strip")).toBeInTheDocument();
+    expect(checked()).toEqual(["Single strip"]);
+
+    await chooseView("Ranked list");
+    expect(repository.get("films")?.displayMode).toBe("FLAT_RANKED");
+    expect(screen.getByRole("list", { name: "Ranked list" })).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "S" })).toBeNull();
+    expect(screen.getByLabelText("Display: Ranked list")).toBeInTheDocument();
+    expect(checked()).toEqual(["Ranked list"]);
+
+    await chooseView("Rows");
+    expect(repository.get("films")?.displayMode).toBe("WRAP");
+    expect(screen.getByRole("list", { name: "S" }).closest(".board")).not.toHaveClass(
+      "board--strip",
+    );
+    expect(screen.getByLabelText("Display: Rows")).toBeInTheDocument();
   });
 
   describe("the ranked list", () => {
@@ -818,31 +874,6 @@ describe("BoardPage: tiers and settings", () => {
       expect(screen.getByRole("button", { name: "Brand new" })).toBeVisible();
     });
   });
-
-  it("opens the tier editor on a new tier from the settings, the sheet out of the way", async () => {
-    const repository = boardsRepository(memoryStore());
-    repository.save(filmBoard());
-    open(repository, "/b/films");
-    await userEvent.click(screen.getByLabelText("More about this board"));
-    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
-    await userEvent.click(screen.getByRole("button", { name: /New tier/ }));
-    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
-    const dialog = screen.getByRole("dialog", { name: "New tier" });
-    expect(within(dialog).getByRole("textbox", { name: "Label" })).toHaveValue("E");
-    // Nothing is made until its Add tier.
-    expect(rankedTiers(repository.get("films")!)).toHaveLength(5);
-    await userEvent.clear(within(dialog).getByRole("textbox", { name: "Label" }));
-    await userEvent.type(within(dialog).getByRole("textbox", { name: "Label" }), "Meh");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Add tier" }));
-    expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual([
-      "S",
-      "A",
-      "B",
-      "C",
-      "D",
-      "Meh",
-    ]);
-  });
 });
 
 describe("BoardPage: sections of one's own", () => {
@@ -864,10 +895,20 @@ describe("BoardPage: sections of one's own", () => {
       unfollow: vi.fn(),
       now: () => 0,
     });
-  const openSettings = async () => {
-    await userEvent.click(screen.getByLabelText("More about this board"));
-    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
-    return within(screen.getByRole("dialog", { name: "List settings" }));
+  /**
+   * The Publish window's way to a section of one's own: Propose a topic, its
+   * name, ticked as a separate section, and Continue.
+   */
+  const continueAsSection = async (name: string) => {
+    await userEvent.click(headerPublish()!);
+    const box = within(publishWindow());
+    await userEvent.click(box.getByRole("button", { name: "Propose a topic" }));
+    await userEvent.type(box.getByRole("textbox", { name: "Name a new topic" }), name);
+    await userEvent.click(
+      box.getByRole("checkbox", { name: "Propose as a separate section, not a topic" }),
+    );
+    expect(box.getByRole("textbox", { name: "New section" })).toHaveValue(name);
+    await userEvent.click(box.getByRole("button", { name: "Continue" }));
   };
 
   it("says where a board in one's own waiting section goes, and names a section it does not know as Other", async () => {
@@ -887,26 +928,33 @@ describe("BoardPage: sections of one's own", () => {
     expect(await screen.findByText("1 ranked · 2 in pool · Other")).toBeInTheDocument();
   });
 
-  it("opens Propose a section in the sheet's place, filing under the board's section, and gives the sheet back", async () => {
+  it("opens Propose a section in the Publish window's place, with the name typed, filing under the board's section, and gives the window back", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "food" });
     const store = storeOf([stats("food"), stats("games"), stats("other")]);
-    open(repository, "/b/films", { account: member, store });
-    let settings = await openSettings();
-    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
-    await userEvent.click(settings.getByRole("button", { name: "Propose a section" }));
+    const publishing: PublishingDeps = { ...noPublishing, publish: vi.fn() };
+    open(repository, "/b/films", { account: member, store, publishing });
+    await continueAsSection("Night markets");
 
-    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+    expect(screen.queryByRole("dialog", { name: "Publish “Films”" })).toBeNull();
     const form = within(screen.getByRole("dialog", { name: "Propose a section" }));
+    expect(form.getByRole("textbox", { name: "Name" })).toHaveValue("Night markets");
     expect(form.getByRole("combobox", { name: "File my lists under" })).toHaveValue("food");
+    // Nothing went out: the list waits for its section.
+    expect(publishing.publish).not.toHaveBeenCalled();
+    // The name came with it, so Cancel asks first.
     await userEvent.click(form.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
 
     expect(screen.queryByRole("dialog", { name: "Propose a section" })).toBeNull();
-    settings = within(screen.getByRole("dialog", { name: "List settings" }));
-    expect(settings.getByRole("button", { name: /Category/ })).toHaveTextContent("Food");
+    const box = within(publishWindow());
+    expect(
+      within(box.getByRole("radiogroup", { name: "Section" })).getByRole("radio", { name: "Food" }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(repository.get("films")).toMatchObject({ category: "food", publishedId: null });
   });
 
-  it("shows the three already waiting instead of the form, and gives the sheet back after", async () => {
+  it("shows the three already waiting instead of the form, and gives the window back after", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "food" });
     const store = storeOf([
@@ -917,10 +965,14 @@ describe("BoardPage: sections of one's own", () => {
       stats("other"),
     ]);
     open(repository, "/b/films", { account: member, store });
-    const settings = await openSettings();
-    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
-    expect(await settings.findByRole("radio", { name: /Food trucks/ })).toBeInTheDocument();
-    await userEvent.click(settings.getByRole("button", { name: "Propose a section" }));
+    await userEvent.click(headerPublish()!);
+    // One's own waiting ones are among the sections, marked.
+    expect(
+      await within(publishWindow()).findByRole("radio", { name: /Food trucks/ }),
+    ).toBeInTheDocument();
+    await userEvent.click(within(publishWindow()).getByRole("button", { name: "Cancel" }));
+    await continueAsSection("Night markets");
+    expect(screen.queryByRole("dialog", { name: "Propose a section" })).toBeNull();
     const tooMany = within(screen.getByRole("dialog", { name: "3 proposals are waiting" }));
     expect(tooMany.getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Stalls",
@@ -928,28 +980,44 @@ describe("BoardPage: sections of one's own", () => {
       "Food trucks",
     ]);
     await userEvent.click(tooMany.getByRole("button", { name: "OK" }));
-    expect(screen.getByRole("dialog", { name: "List settings" })).toBeInTheDocument();
+    expect(publishWindow()).toBeInTheDocument();
   });
 
-  it("asks a guest to sign in before the form, and opens it once they have", async () => {
+  it("signs a guest in at Continue, and opens the form once they are, publishing nothing before the section", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "food" });
-    const signIn = vi
-      .fn<Session["signIn"]>()
-      .mockResolvedValueOnce({ kind: "cancelled" })
-      .mockResolvedValueOnce({ kind: "signedIn", switched: false });
     const store = storeOf([stats("food"), stats("other")]);
-    open(repository, "/b/films", { account: { kind: "guest", uid: null }, signIn, store });
-    const settings = await openSettings();
-    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
-    await userEvent.click(settings.getByRole("button", { name: "Propose a section" }));
-    expect(signIn).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("dialog", { name: "Propose a section" })).toBeNull();
-
-    await userEvent.click(settings.getByRole("button", { name: /Category/ }));
-    await userEvent.click(settings.getByRole("button", { name: "Propose a section" }));
-    expect(await screen.findByRole("dialog", { name: "Propose a section" })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      publish: vi.fn(() => Promise.resolve({ id: "L1", topicId: null })),
+    };
+    const signIn = vi.fn<Session["signIn"]>();
+    function Signing({ page }: { page: ReactElement }) {
+      const [account, setAccount] = useState<Session["account"]>({ kind: "guest", uid: "g1" });
+      signIn.mockImplementation(async () => {
+        setAccount(member);
+        return { kind: "signedIn", switched: false };
+      });
+      return (
+        <SessionContext.Provider
+          value={{ account, signIn, signOut: () => Promise.resolve(), refresh: () => undefined }}
+        >
+          {page}
+        </SessionContext.Provider>
+      );
+    }
+    open(repository, "/b/films", {
+      store,
+      publishing,
+      session: (page) => <Signing page={page} />,
+    });
+    await continueAsSection("Night markets");
+    await waitFor(() => expect(signIn).toHaveBeenCalledOnce());
+    // Signed in, the section is proposed first: the list does not go out without it.
+    const form = within(await screen.findByRole("dialog", { name: "Propose a section" }));
+    expect(form.getByRole("textbox", { name: "Name" })).toHaveValue("Night markets");
+    expect(publishing.publish).not.toHaveBeenCalled();
+    expect(repository.get("films")?.publishedId).toBeNull();
   });
 });
 
@@ -1038,7 +1106,7 @@ describe("BoardPage: share and publish", () => {
     );
   });
 
-  it("publishes from the settings and says so, then shares the published address", async () => {
+  it("publishes from the Cover window's Publication line and says so, then shares the published address", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "film_tv" });
     const share = vi.fn<Share>(() => Promise.resolve());
@@ -1047,11 +1115,18 @@ describe("BoardPage: share and publish", () => {
       publish: vi.fn(() => Promise.resolve({ id: "L1" })),
     };
     open(repository, "/b/films", { share, publishing, account: member });
-    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
-    await userEvent.click(within(settingsSheet()).getByRole("button", { name: "Publish" }));
+    let cover = await openCover();
+    expect(
+      cover.getByText("Anyone with the link can rank it. It shows in Community."),
+    ).toBeVisible();
+    // Publication's button opens the Publish window in the Cover window's place.
+    await userEvent.click(cover.getByRole("button", { name: "Publish" }));
+    expect(screen.queryByRole("dialog", { name: "Cover" })).toBeNull();
+    await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
     await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
     expect(within(said()!).getByRole("button", { name: "View" })).toBeInTheDocument();
-    expect(within(settingsSheet()).getByText("Published")).toBeVisible();
+    // Out, the window closed by itself.
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(publishing.publish).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Films", category: "film_tv" }),
       expect.objectContaining({ uid: "me" }),
@@ -1059,14 +1134,17 @@ describe("BoardPage: share and publish", () => {
     // No name-hiding is asked for any more (Danylo, 16.11.2026).
     expect(vi.mocked(publishing.publish).mock.calls[0]?.[0]).not.toHaveProperty("anonymous");
     expect(repository.get("films")).toMatchObject({ publishedId: "L1", authorName: "Danylo" });
-    expect(within(settingsSheet()).getByRole("link", { name: "View" })).toHaveAttribute(
-      "href",
-      "/l/L1",
-    );
 
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    // The Publication line says where it is now, and opens the window on it.
+    cover = await openCover();
+    expect(cover.getByText("Published · Film & TV")).toBeVisible();
+    await userEvent.click(cover.getByRole("button", { name: "Open" }));
+    const out = within(publishWindow("Films"));
+    expect(out.getByRole("link", { name: "See it in Community" })).toHaveAttribute("href", "/l/L1");
+    await userEvent.click(out.getByRole("button", { name: "Done" }));
+
     await userEvent.click(screen.getByLabelText("More about this board"));
-    await userEvent.click(screen.getByRole("button", { name: "Share as image" }));
+    await userEvent.click(menuItem("Share as image"));
     expect(share).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
@@ -1084,8 +1162,8 @@ describe("BoardPage: share and publish", () => {
       publish: vi.fn(() => Promise.resolve({ id: "L1", topicId: null, underReview: true })),
     };
     open(repository, "/b/films", { share, publishing, account: member });
-    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
-    await userEvent.click(within(settingsSheet()).getByRole("button", { name: "Publish" }));
+    await userEvent.click(headerPublish()!);
+    await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
     expect(
       await screen.findByText("Saved. It waits for a moderator before others can see it."),
     ).toBeVisible();
@@ -1096,10 +1174,15 @@ describe("BoardPage: share and publish", () => {
       publishedId: "L1",
       heldForReview: true,
     });
+    // The window says it waits, with no link to a list nobody can open.
+    await userEvent.click(headerPublish()!);
+    const out = within(publishWindow("Films"));
+    expect(out.getByText("It waits for a moderator before others can see it.")).toBeVisible();
+    expect(out.queryByRole("link", { name: "See it in Community" })).toBeNull();
+    await userEvent.click(out.getByRole("button", { name: "Done" }));
 
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
     await userEvent.click(screen.getByLabelText("More about this board"));
-    await userEvent.click(screen.getByRole("button", { name: "Share as image" }));
+    await userEvent.click(menuItem("Share as image"));
     expect(share).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
@@ -1154,19 +1237,18 @@ describe("BoardPage: Publish beside Play", () => {
       );
     }
     open(repository, "/b/films", { publishing, session: (page) => <Signing page={page} /> });
-    // A guest's header press opens the sheet on Publication, which says why.
+    // A guest's header press opens the window; nobody is asked to sign in yet.
     await userEvent.click(headerPublish()!);
-    const publish = await within(settingsSheet()).findByRole("button", { name: "Publish" });
-    await waitFor(() => expect(publish).toHaveFocus());
-    expect(within(settingsSheet()).getByText(/Sign in with Google to publish/)).toBeVisible();
+    const publish = within(publishWindow()).getByRole("button", { name: "Publish" });
     expect(signIn).not.toHaveBeenCalled();
     await userEvent.click(publish);
     await waitFor(() => expect(signIn).toHaveBeenCalledOnce());
-    // Signed in, nothing more to press: the sheet opens on Publish again and it goes out.
+    // Signed in, nothing more to press: the window opens on Publish again and it goes out.
     await waitFor(() => expect(publishing.publish).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
     expect(window.sessionStorage.getItem("tyl:publishAfterSignIn")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("forgets a guest's Publish when the sign-in is given up", async () => {
@@ -1175,12 +1257,14 @@ describe("BoardPage: Publish beside Play", () => {
     const signIn = vi.fn<Session["signIn"]>(async () => ({ kind: "cancelled" }));
     open(repository, "/b/films", { account: { kind: "guest", uid: "g1" }, signIn });
     await userEvent.click(headerPublish()!);
-    await userEvent.click(within(settingsSheet()).getByRole("button", { name: "Publish" }));
+    await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
     await waitFor(() => expect(signIn).toHaveBeenCalledOnce());
     await waitFor(() => expect(window.sessionStorage.getItem("tyl:publishAfterSignIn")).toBeNull());
+    // The window stays, for another try.
+    expect(publishWindow()).toBeInTheDocument();
   });
 
-  it("publishes from the board itself, says so, and View opens what others see", async () => {
+  it("publishes from the board's window, says so, and View opens what others see", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "film_tv" });
     let answer: (published: { id: string; topicId: null }) => void = () => undefined;
@@ -1192,34 +1276,53 @@ describe("BoardPage: Publish beside Play", () => {
     };
     const router = open(repository, "/b/films", { publishing, account: member });
     await userEvent.click(headerPublish()!);
-    // No sheet in between; the button says it is on its way.
-    expect(screen.queryByRole("dialog", { name: "List settings" })).toBeNull();
+    const box = within(publishWindow());
+    expect(box.getByText("3 cards · by Danylo")).toBeInTheDocument();
+    expect(
+      within(box.getByRole("radiogroup", { name: "Section" })).getByRole("radio", {
+        name: "Film & TV",
+      }),
+    ).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(box.getByRole("button", { name: "Publish" }));
+    // On its way: the window and the header both say so.
+    expect(box.getByRole("button", { name: "Publishing…" })).toBeDisabled();
     expect(headerPublish()).toHaveTextContent("Publishing…");
-    expect(headerPublish()).toBeDisabled();
     await act(async () => answer({ id: "L1", topicId: null }));
     expect(publishing.publish).toHaveBeenCalledTimes(1);
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
     expect(said()).toHaveTextContent(/^Published/);
-    // Out and up to date: nothing more to send from the header.
-    expect(headerPublish()).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // Out and up to date: the header says Published, quietly.
+    expect(headerPublish()).toHaveAccessibleName("Published");
+    expect(headerPublish()).toHaveClass("btn--text", "publish-button--quiet");
     await userEvent.click(within(said()!).getByRole("button", { name: "View" }));
     expect(router.state.location.pathname).toBe("/l/L1");
   });
 
-  it("opens the sheet on Publication with the reason when the board cannot go out yet", async () => {
+  it("says in the window that a section is wanted, with the cursor in its search, when the board cannot go out yet", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
     const publishing: PublishingDeps = { ...noPublishing, publish: vi.fn() };
     open(repository, "/b/films", { publishing, account: member });
     await userEvent.click(headerPublish()!);
-    const publish = within(settingsSheet()).getByRole("button", { name: "Publish" });
-    await waitFor(() => expect(publish).toHaveFocus());
-    const why = within(settingsSheet()).getByText("Pick a category.");
-    expect(publish.getAttribute("aria-describedby")).toBe(why.id);
+    const box = within(publishWindow());
+    // Never greyed out: a press says what is missing.
+    const publish = box.getByRole("button", { name: "Publish" });
+    expect(publish).toBeEnabled();
+    await userEvent.click(publish);
+    const why = box.getByRole("alert");
+    expect(why).toHaveTextContent("Pick a section first.");
+    const find = box.getByRole("searchbox", { name: "Find a section" });
+    expect(find).toHaveFocus();
+    expect(find.getAttribute("aria-describedby")).toBe(why.id);
     expect(publishing.publish).not.toHaveBeenCalled();
+
+    // A section chosen, the note goes.
+    await userEvent.click(box.getByRole("radio", { name: "Film & TV" }));
+    expect(box.queryByText("Pick a section first.")).toBeNull();
   });
 
-  it("opens the sheet on Publication when the backend refuses, with what it said", async () => {
+  it("keeps the window open when the backend refuses, with what it said", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "film_tv" });
     const publishing: PublishingDeps = {
@@ -1228,10 +1331,12 @@ describe("BoardPage: Publish beside Play", () => {
     };
     open(repository, "/b/films", { publishing, account: member });
     await userEvent.click(headerPublish()!);
-    const sheet = await screen.findByRole("dialog", { name: "List settings" });
-    expect(within(sheet).getByRole("alert")).toBeInTheDocument();
+    await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
+    expect(await within(publishWindow()).findByRole("alert")).toBeInTheDocument();
     expect(repository.get("films")?.publishedId).toBeNull();
+    expect(within(publishWindow()).getByRole("button", { name: "Publish" })).toBeEnabled();
     expect(headerPublish()).toBeEnabled();
+    expect(headerPublish()).toHaveAccessibleName("Publish");
   });
 
   it("offers nothing on a board with no cards", () => {
@@ -1242,7 +1347,7 @@ describe("BoardPage: Publish beside Play", () => {
     expect(headerPublish()).toBeNull();
   });
 
-  it("says Update when the published list is behind the board, and sends it", async () => {
+  it("says Update when the published list is behind the board, and sends it from the header at once", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({
       ...filmBoard(),
@@ -1258,18 +1363,70 @@ describe("BoardPage: Publish beside Play", () => {
     open(repository, "/b/films", { publishing, account: member });
     expect(headerPublish()).toHaveAccessibleName("Update");
     await userEvent.click(headerPublish()!);
+    // No window in between.
+    expect(screen.queryByRole("dialog")).toBeNull();
     await waitFor(() => expect(publishing.republish).toHaveBeenCalledTimes(1));
     expect(publishing.republish).toHaveBeenCalledWith(
       "L1",
       expect.objectContaining({ title: "Films" }),
       expect.objectContaining({ uid: "me" }),
     );
-    await waitFor(() => expect(headerPublish()).toBeNull());
+    await waitFor(() => expect(headerPublish()).toHaveAccessibleName("Published"));
+    expect(said()).toHaveTextContent(/^Updated/);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("opens the window on Update only when the update fails, with what it said", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({
+      ...filmBoard(),
+      category: "film_tv",
+      publishedId: "L1",
+      publishedEditedAt: 50,
+      authorName: "Danylo",
+    });
+    const publishing: PublishingDeps = {
+      ...noPublishing,
+      republish: vi.fn(() => Promise.reject(new ApiFailure({ kind: "offline" }))),
+    };
+    open(repository, "/b/films", { publishing, account: member });
+    await userEvent.click(headerPublish()!);
+    const out = within(await screen.findByRole("dialog", { name: "Films" }));
+    expect(out.getByRole("alert")).toBeInTheDocument();
+    expect(out.getByText("Changes not published yet")).toBeInTheDocument();
+    expect(out.getByRole("button", { name: "Update" })).toBeEnabled();
+    expect(headerPublish()).toHaveAccessibleName("Update");
+  });
+
+  it("is Published once out and up to date, and opens the window with See it in Community", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({
+      ...filmBoard(),
+      category: "film_tv",
+      publishedId: "L1",
+      publishedEditedAt: filmBoard().editedAt,
+      authorName: "Danylo",
+    });
+    const router = open(repository, "/b/films", { account: member });
+    expect(headerPublish()).toHaveAccessibleName("Published");
+    await userEvent.click(headerPublish()!);
+    const out = within(publishWindow("Films"));
+    expect(out.getByText("Published")).toBeInTheDocument();
+    expect(out.getByText("Up to date")).toBeInTheDocument();
+    expect(out.getByText("Film & TV")).toBeInTheDocument();
+    // Nothing to send: Done, not Update.
+    expect(out.queryByRole("button", { name: "Update" })).toBeNull();
+    expect(out.getByRole("button", { name: "Done" })).toBeInTheDocument();
+    expect(out.getByRole("button", { name: "Take it down" })).toBeInTheDocument();
+    const seeIt = out.getByRole("link", { name: "See it in Community" });
+    expect(seeIt).toHaveAttribute("href", "/l/L1");
+    await userEvent.click(seeIt);
+    expect(router.state.location.pathname).toBe("/l/L1");
   });
 });
 
 describe("BoardPage: one's own list from its ⋮ menu", () => {
-  it("leaves Publish and Update to the header and the trash to the boards page, and takes a list down", async () => {
+  it("leaves Publish, Update and Take it down to the Publish window and the trash to the boards page, and takes a list down there", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "film_tv" });
     const publishing: PublishingDeps = {
@@ -1279,27 +1436,41 @@ describe("BoardPage: one's own list from its ⋮ menu", () => {
     };
     open(repository, "/b/films", { publishing, account: member });
     await userEvent.click(screen.getByLabelText("More about this board"));
-    const menu = screen.getByRole("button", { name: "List settings" }).closest("ul")!;
+    const menu = within(moreMenu());
     // Danylo, 16.11.2026: the header has Publish; Trash read as a riddle here.
-    expect(within(menu).queryByRole("button", { name: "Publish" })).toBeNull();
-    expect(within(menu).queryByRole("button", { name: "Update" })).toBeNull();
-    expect(within(menu).queryByRole("button", { name: "Take it down" })).toBeNull();
-    expect(within(menu).queryByRole("link", { name: "Trash" })).toBeNull();
+    expect(menu.getAllByRole("button").map((item) => item.textContent)).toEqual([
+      "Return all cards to the pool",
+      "Cover",
+      "Share as image",
+      "Delete board",
+    ]);
+    expect(menu.queryByRole("button", { name: "Publish" })).toBeNull();
+    expect(menu.queryByRole("button", { name: "Update" })).toBeNull();
+    expect(menu.queryByRole("button", { name: "Take it down" })).toBeNull();
+    expect(menu.queryByRole("button", { name: "List settings" })).toBeNull();
+    expect(menu.queryByRole("link", { name: "Trash" })).toBeNull();
     await userEvent.keyboard("{Escape}");
     await userEvent.click(headerPublish()!);
+    await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
     await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
 
     await userEvent.click(screen.getByLabelText("More about this board"));
-    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
-    await userEvent.click(menuItem("Take it down"));
-    // Asked first, in the sheet, with the cursor on the way back.
-    const ask = screen.getByRole("group", { name: /Take .* down\?/ });
+    expect(within(moreMenu()).queryByRole("button", { name: "Take it down" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+
+    // Taken down from the window's out view, asked first, with the cursor on the way back.
+    await userEvent.click(headerPublish()!);
+    const out = within(publishWindow("Films"));
+    await userEvent.click(out.getByRole("button", { name: "Take it down" }));
+    const ask = out.getByRole("group", { name: /Take .* down\?/ });
     expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
     await userEvent.click(within(ask).getByRole("button", { name: "Take it down" }));
     await waitFor(() => expect(repository.get("films")?.publishedId).toBeNull());
     expect(publishing.unpublish).toHaveBeenCalledWith("L1");
+    await waitFor(() => expect(said()).toHaveTextContent("Unpublished. The link no longer works."));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(headerPublish()).toHaveAccessibleName("Publish");
   });
 
   it("offers no Publish on a list saved from somebody else's, nor on a house list's menu", async () => {
@@ -1307,9 +1478,17 @@ describe("BoardPage: one's own list from its ⋮ menu", () => {
     repository.save({ ...filmBoard(), takenFrom: "theirs" });
     open(repository, "/b/films", { account: member });
     await userEvent.click(screen.getByLabelText("More about this board"));
-    expect(screen.getByRole("button", { name: "List settings" })).toBeInTheDocument();
+    expect(menuItem("Cover")).toBeInTheDocument();
+    expect(within(moreMenu()).queryByRole("button", { name: /Publish/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Publish (a separate|as my)/ })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    // Its header offers that list's Rankings instead, in the window.
+    expect(headerPublish()).toHaveAccessibleName("Show in Rankings");
+    await userEvent.click(headerPublish()!);
+    const box = within(screen.getByRole("dialog", { name: "Show in Rankings" }));
+    expect(box.getByRole("button", { name: "Show in Rankings" })).toBeInTheDocument();
+    expect(box.queryByRole("button", { name: "Publish" })).toBeNull();
   });
 });
 
@@ -1392,7 +1571,7 @@ describe("BoardPage: a house list", () => {
     load: vi.fn(() => Promise.reject(new ApiFailure({ kind: "offline" }))),
   });
 
-  it("says a new board is the house's, leads back to House lists, and offers no Public switch", async () => {
+  it("says a new board is the house's, leads back to House lists, and files it from the Cover window, with no Publication there", async () => {
     const repository = boardsRepository(memoryStore());
     const houseRepository = boardsRepository(memoryStore());
     const houseStore = memoryStore();
@@ -1417,12 +1596,27 @@ describe("BoardPage: a house list", () => {
     expect(repository.all()).toEqual([]);
     expect(houseLinkOf("fresh", houseStore)).toEqual({ listId: null });
 
-    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
-    const settings = screen.getByRole("dialog", { name: "List settings" });
-    expect(within(settings).queryByRole("switch")).toBeNull();
-    expect(within(settings).queryByRole("button", { name: "Publish" })).toBeNull();
+    const settings = await openCover();
+    expect(settings.queryByRole("switch")).toBeNull();
+    // It goes out from the House bar: no Publication line, no Publish window.
+    expect(settings.queryByText("Publication")).toBeNull();
+    expect(settings.queryByRole("button", { name: "Publish" })).toBeNull();
+    expect(settings.queryByRole("button", { name: "Open" })).toBeNull();
     expect(headerPublish()).toBeNull();
-    await userEvent.click(within(settings).getByRole("button", { name: "Done" }));
+    // Its section and topic are chosen here instead.
+    const section = within(settings.getByRole("radiogroup", { name: "Section" }));
+    await userEvent.click(section.getByRole("radio", { name: "Film & TV" }));
+    expect(section.getByRole("radio", { name: "Film & TV" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(houseRepository.get("fresh")?.category).toBe("film_tv");
+    expect(
+      settings.getByRole("heading", { name: "Topic in Film & TV · optional" }),
+    ).toBeInTheDocument();
+    await userEvent.click(settings.getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("dialog", { name: "Cover" })).toBeNull();
+    expect(bar).toHaveTextContent("Add at least one card before you publish this list.");
 
     await userEvent.click(screen.getByRole("link", { name: "House lists" }));
     expect(router.state.location.pathname).toBe("/admin/house");
@@ -1891,7 +2085,7 @@ describe("BoardPage: the editor's credits on a house list", () => {
     expect(await aboutOf("The Witch")).toHaveTextContent("Jane Roe");
   });
 
-  it("credits the cover of one picture in the list's settings", async () => {
+  it("credits the cover of one picture in the Cover window", async () => {
     const houseRepository = boardsRepository(memoryStore());
     houseRepository.save({ ...pictured(), coverImageUrls: [POSTER], coverImageUrl: POSTER });
     const houseStore = memoryStore();
@@ -1899,10 +2093,9 @@ describe("BoardPage: the editor's credits on a house list", () => {
     const house = sending();
     open(boardsRepository(memoryStore()), "/b/films", { house, houseStore, houseRepository });
 
-    await userEvent.click(await screen.findByRole("button", { name: "List settings" }));
-    const settings = screen.getByRole("dialog", { name: "List settings" });
-    await userEvent.click(within(settings).getByRole("button", { name: /Cover/ }));
-    const panel = within(settings).getByRole("region", { name: "About the cover picture" });
+    await screen.findByRole("region", { name: "House list" });
+    const settings = await openCover();
+    const panel = settings.getByRole("region", { name: "About the cover picture" });
     await userEvent.click(within(panel).getByRole("button", { name: "Add credit" }));
     await userEvent.type(
       within(panel).getByRole("textbox", { name: "Source link" }),
@@ -1911,7 +2104,7 @@ describe("BoardPage: the editor's credits on a house list", () => {
     expect(panel).toHaveTextContent("Author and licence will be read from this page");
     await userEvent.click(within(panel).getByRole("button", { name: "Save credit" }));
     expect(within(panel).getByRole("link", { name: "flickr.com" })).toBeInTheDocument();
-    await userEvent.click(within(settings).getByRole("button", { name: "Done" }));
+    await userEvent.click(settings.getByRole("button", { name: "Done" }));
 
     await userEvent.click(screen.getByRole("button", { name: "Update house list" }));
     await screen.findByText("House list updated");
@@ -1981,9 +2174,8 @@ describe("BoardPage: the editor's credits on a house list", () => {
       coverImageUrls: [POSTER],
       coverImageUrl: POSTER,
     });
-    await userEvent.click(screen.getByRole("button", { name: "List settings" }));
-    const settings = screen.getByRole("dialog", { name: "List settings" });
-    await userEvent.click(within(settings).getByRole("button", { name: /Cover/ }));
-    expect(within(settings).queryByRole("region", { name: "About the cover picture" })).toBeNull();
+    const settings = await openCover();
+    expect(settings.getByText("One picture, the whole cover")).toBeInTheDocument();
+    expect(settings.queryByRole("region", { name: "About the cover picture" })).toBeNull();
   });
 });

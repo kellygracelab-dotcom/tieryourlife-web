@@ -40,8 +40,9 @@ import {
   BoardSettings,
   type LoadTopics,
   type PublishingDeps,
-  type SettingsStart,
 } from "../features/boards/BoardSettings";
+import { PublishWindow } from "../features/boards/PublishWindow";
+import { ViewButton } from "../features/boards/ViewButton";
 import { CopyRankingOffer } from "../features/boards/CopyRankingOffer";
 import { AS_COMMUNITY } from "../features/boards/ownList";
 import { publishProblemsOf } from "../features/boards/publish";
@@ -159,7 +160,7 @@ interface BoardPageProps {
 }
 
 /** The settings sheet, or what its Propose a section opened in its place: the form, or the three already waiting. */
-type Panel = "none" | "settings" | "propose" | "tooMany";
+type Panel = "none" | "settings" | "publish" | "propose" | "tooMany";
 
 /** The board's name, edited where it stands: a press on the pencil, Enter or leaving the field keeps it. */
 function TitleEditor({
@@ -380,14 +381,21 @@ function OpenBoard({
     if (empty) document.querySelector<HTMLInputElement>(".pool__tools input[type='text']")?.focus();
   }, [editingTitle, empty]);
   const [panel, setPanel] = useState<Panel>("none");
-  // Publish, Update or Take it down chosen in the ⋮ menu: the sheet opens on it.
-  const [settingsStart, setSettingsStart] = useState<SettingsStart | undefined>(undefined);
-  const openSettings = (start?: SettingsStart) => {
-    setSettingsStart(start);
-    setPanel("settings");
+  const openSettings = () => setPanel("settings");
+  // The Publish window, opened to go on by itself (start) after a sign-in or
+  // a section proposed from it.
+  const [publishStart, setPublishStart] = useState(false);
+  const openPublish = (start = false) => {
+    setPublishStart(start);
+    setPanel("publish");
   };
+  // A topic to be a section of its own: the proposal form starts with its name.
+  const [sectionDraft, setSectionDraft] = useState<{
+    name: string;
+    fileUnder: string | null;
+  } | null>(null);
   // A guest's Publish signs them in first; once the account is here, the
-  // sheet opens on Publish again and the publish goes on by itself. Kept for
+  // window opens on Publish again and the publish goes on by itself. Kept for
   // the tab, so a sign-in by a redirect comes back to it too.
   const signInToPublish = async () => {
     sessionStorageStore.write(PUBLISH_AFTER_SIGN_IN, uid);
@@ -399,12 +407,12 @@ function OpenBoard({
   };
   useEffect(() => {
     if (me === null || sessionStorageStore.read(PUBLISH_AFTER_SIGN_IN) !== uid) return;
-    // Once the account's boards are in: the sheet that opens is the account's.
+    // Once the account's boards are in: the window that opens is the account's.
     const timer = setTimeout(() => {
       if (sessionStorageStore.read(PUBLISH_AFTER_SIGN_IN) !== uid) return;
       sessionStorageStore.remove(PUBLISH_AFTER_SIGN_IN);
-      setSettingsStart("publish");
-      setPanel("settings");
+      setPublishStart(true);
+      setPanel("publish");
     });
     return () => clearTimeout(timer);
   }, [me, uid]);
@@ -628,16 +636,22 @@ function OpenBoard({
     onPublished,
     now,
   });
-  // The header's button goes out from the board itself; the sheet opens, on
-  // its Publication row, only for what has to be done first: signing in, a
-  // section, cards, or a refusal to read (Danylo, 16.11.2026).
+  // The header's button (Danylo's canvas, 16.11.2026): Update sends the
+  // changes at once, and the window opens only to say why it could not; the
+  // others open the Publish window, as does a press while a send is on its way.
   const publishFromHeader = () => {
-    if (me === null || publishProblemsOf(latest()).length > 0) {
-      openSettings("publication");
+    const sending = publication.busy !== "idle";
+    if (
+      publishKind !== "update" ||
+      sending ||
+      me === null ||
+      publishProblemsOf(latest()).length > 0
+    ) {
+      openPublish();
       return;
     }
-    void publish.send(publishKind === "update" ? "updated" : "published").then((out) => {
-      if (!out) openSettings("publication");
+    void publish.send("updated").then((out) => {
+      if (!out) openPublish();
     });
   };
 
@@ -798,24 +812,14 @@ function OpenBoard({
   };
   const openedAt = editorTiers.findIndex((tier) => tier.key === openTier);
   const opened = editorTiers[openedAt];
-  // New tier, from the settings: the sheet gives way to the tier editor, as Add tier opens it.
-  const newTier = () => {
-    if (!roomForTier) return;
-    closePanel();
-    setMakingTier(true);
-  };
-  // Propose a section, from the end of the section picker: the form takes the
-  // sheet's place, as a screen of its own does on the phone, and gives it back
-  // when it closes. A guest signs in first, as the Public switch asks them to.
+  // A topic proposed as a section of its own (Continue): the form to propose
+  // a section takes the window's place, its name and where the list waits
+  // filled in, and gives it back when it closes. Once it is sent, the list
+  // goes into it and out by itself.
   const waiting = myWaiting(sections, me);
-  const openProposal = () => {
-    if (account?.kind === "signedIn") {
-      setPanel(waiting.length >= PENDING_MAX ? "tooMany" : "propose");
-      return;
-    }
-    void signIn().then((outcome) => {
-      if (outcome.kind === "signedIn") setPanel("propose");
-    });
+  const openProposal = (name: string, fileUnder: string | null) => {
+    setSectionDraft({ name, fileUnder });
+    setPanel(waiting.length >= PENDING_MAX ? "tooMany" : "propose");
   };
 
   // The public copy comes down first, as on the phone; while it cannot, the
@@ -1005,6 +1009,10 @@ function OpenBoard({
           </p>
         </div>
         <span className="list-head__tools">
+          <ViewButton
+            mode={board.displayMode}
+            onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
+          />
           {publishKind !== null && (
             <PublishButton
               kind={publishKind}
@@ -1027,24 +1035,13 @@ function OpenBoard({
                 }
               />
               <li>
-                <button type="button" className="menu__action" onClick={() => openSettings()}>
-                  {strings.boards.settings}
+                <button type="button" className="menu__action" onClick={openSettings}>
+                  {strings.boards.cover}
                 </button>
               </li>
-              {/* Publish and Update are the header's, beside Play, and the trash
-                  is reached from the boards page (Danylo, 16.11.2026): only
-                  taking a list down is left here, as it has no button of its own. */}
-              {house === null && board.publishedId !== null && (
-                <li>
-                  <button
-                    type="button"
-                    className="menu__action"
-                    onClick={() => openSettings("takeDown")}
-                  >
-                    {strings.boards.takeDown}
-                  </button>
-                </li>
-              )}
+              {/* Publish, Update and Take it down are the Publish window's, opened
+                  from beside Play, and the trash is reached from the boards
+                  page (Danylo's canvas, 16.11.2026). */}
               <li>
                 <button type="button" className="menu__action" onClick={() => void shareBoard()}>
                   {strings.boards.shareImage}
@@ -1090,29 +1087,41 @@ function OpenBoard({
 
       {panel === "settings" && (
         <BoardSettings
-          // Drawn afresh for what it opens on, as for whose it is: a sign-in
-          // that comes back to Publish starts it again.
-          key={JSON.stringify(["settings", board.uid, me, settingsStart ?? null])}
+          key={JSON.stringify(["settings", board.uid, me])}
           upload={upload}
           board={board}
           latest={latest}
           keep={keep}
           sections={sections}
           proposalHomes={homes}
+          // A house list never goes out under the person's name: it chooses its section here.
+          onPublication={ownPublishing === null ? null : () => openPublish()}
           onCategory={(category) => keep(setCategory(latest(), category, now()))}
-          onPropose={openProposal}
-          onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
-          onNewTier={newTier}
-          onPublished={onPublished}
-          // A house list never goes out under the person's name: its sheet offers no Publication row.
-          publishing={ownPublishing}
-          publication={publication}
           // Its cover takes the editor's own credit, as its cards' pictures do.
           house={house !== null}
           topics={topics}
           onDone={closePanel}
           now={now}
-          start={settingsStart}
+        />
+      )}
+      {panel === "publish" && ownPublishing !== null && (
+        <PublishWindow
+          // Drawn afresh for whose it is: a sign-in that comes back to Publish starts it again.
+          key={JSON.stringify(["publish", board.uid, me, publishStart])}
+          board={board}
+          latest={latest}
+          keep={keep}
+          sections={sections}
+          proposalHomes={homes}
+          onCategory={(category) => keep(setCategory(latest(), category, now()))}
+          onProposeSection={openProposal}
+          onPublished={onPublished}
+          publishing={ownPublishing}
+          publication={publication}
+          topics={topics}
+          onClose={closePanel}
+          now={now}
+          start={publishStart}
           signInToPublish={signInToPublish}
         />
       )}
@@ -1120,7 +1129,8 @@ function OpenBoard({
         <SectionEditor
           mode="propose"
           sections={sections}
-          fileUnder={board.category ?? undefined}
+          name={sectionDraft?.name}
+          fileUnder={sectionDraft?.fileUnder ?? board.category ?? undefined}
           waiting={waiting.length}
           send={propose}
           deps={proposeDeps}
@@ -1130,17 +1140,20 @@ function OpenBoard({
             store.invalidate();
             store.refresh(me ?? "guest");
           }}
-          onClose={() => openSettings()}
-          onDone={() => {
-            openSettings();
+          onClose={() => openPublish()}
+          onDone={(section) => {
+            setSectionDraft(null);
+            // The list waits in the section proposed, and goes out into it now.
+            keep(setCategory(latest(), section.id, now()));
             setNotice({ text: strings.propose.proposed });
-            // The new proposal is offered in the picker at once: the sections are asked for again.
+            // The new proposal is offered among the sections at once: they are asked for again.
             store.invalidate();
             store.refresh(me ?? "guest");
+            openPublish(true);
           }}
         />
       )}
-      {panel === "tooMany" && <TooManyDialog waiting={waiting} onClose={() => openSettings()} />}
+      {panel === "tooMany" && <TooManyDialog waiting={waiting} onClose={() => openPublish()} />}
 
       {board.displayMode === "FLAT_RANKED" ? (
         <section className="owner" aria-label={strings.owner.title}>

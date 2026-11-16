@@ -32,36 +32,38 @@ test("publishes a board, sends it again and takes it down, and says when a try f
 }) => {
   const account = await signIn(page);
   await newBoard(page, hasTouch, "Films I make people watch");
-  await press(page.getByLabel("More about this board"), hasTouch);
-  await press(page.getByRole("button", { name: "List settings" }), hasTouch);
-  await press(page.getByRole("button", { name: /Category/ }), hasTouch);
-  await press(page.getByRole("radio", { name: "Film & TV" }), hasTouch);
-  // The sheet's own Publish: the header beside Play has one too.
-  const settings = page.getByRole("dialog", { name: "List settings" });
-  const publishButton = settings.getByRole("button", { name: "Publish", exact: true });
-  // Out, the row says so where the button was (its icon's name is text too).
-  const status = settings.locator(".sheet-row__status");
-  await expect(publishButton).toBeEnabled();
+  // The header's button beside Play opens the Publish window; its word says what it is.
+  const header = page.locator(".list-head .publish-button");
+  const word = header.locator(".publish-button__word");
+  await press(header, hasTouch);
+  const window = page.getByRole("dialog", { name: "Publish “Films I make people watch”" });
+  const publishButton = window.getByRole("button", { name: "Publish", exact: true });
+
+  // No section yet: Publish is not greyed out, it says so and sends nothing.
+  await press(publishButton, hasTouch);
+  await expect(window.getByRole("alert")).toContainText("Pick a section first.");
+  expect(account.publishes).toHaveLength(0);
+  await press(window.getByRole("radio", { name: "Film & TV" }), hasTouch);
+  await expect(window.getByText("Pick a section first.")).toHaveCount(0);
 
   // The first try is refused: said in words, Publish stays, nothing kept.
   // (An alert carries its icon's name as text, so the words are looked for in it.)
   account.failNext.set("POST /lists", 503);
   await press(publishButton, hasTouch);
-  await expect(page.getByRole("alert")).toContainText(
-    "Could not publish. Nothing was lost. Try again.",
-  );
-  await expect(status).toHaveCount(0);
+  await expect(
+    window
+      .getByRole("alert")
+      .filter({ hasText: "Could not publish. Nothing was lost. Try again." }),
+  ).toBeVisible();
   await expect(publishButton).toBeEnabled();
   expect(account.published.size).toBe(0);
 
   await press(publishButton, hasTouch);
-  // Said under the board, with View; the row says Published, View in it too.
+  // The window goes by itself; said under the board, with View; the header says Published.
+  await expect(window).toHaveCount(0);
   await expect(page.locator(".snackbar")).toContainText("Published");
   await expect(page.locator(".snackbar").getByRole("button", { name: "View" })).toBeVisible();
-  await expect(status).toHaveText(/Published$/);
-  await expect(publishButton).toHaveCount(0);
-  await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(settings.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
+  await expect(word).toHaveText("Published");
   expect(account.publishes[0]).toMatchObject({
     title: "Films I make people watch",
     category: "film_tv",
@@ -70,15 +72,14 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   expect(account.publishes[0]).not.toHaveProperty("anonymous");
   await shot(page, `publish-${hasTouch ? "phone" : "desktop"}`);
 
-  // A change on the board puts the published copy behind; Update sends it again.
-  await press(page.getByRole("radio", { name: "Ranking" }), hasTouch);
-  await expect(settings.getByText("Changes not published yet")).toBeVisible();
-  // The sheet's Update, filled while behind: the header beside Play says Update too.
-  const update = settings.getByRole("button", { name: "Update" });
-  await expect(update).toHaveClass(/btn--filled/);
-  await press(update, hasTouch);
+  // A change on the board puts the published copy behind; the header's Update sends it at once.
+  await press(page.getByLabel("Display: Rows"), hasTouch);
+  await press(page.getByRole("menuitemradio", { name: /Ranked list/ }), hasTouch);
+  await expect(word).toHaveText("Update");
+  await press(header, hasTouch);
   await expect(page.locator(".snackbar")).toContainText("Updated");
-  await expect(settings.getByText("Changes not published yet")).toBeHidden();
+  await expect(word).toHaveText("Published");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(account.calls).toContain("POST /lists/L1");
 
   // The account's own run keeps the id: the list is still among this account's.
@@ -86,13 +87,19 @@ test("publishes a board, sends it again and takes it down, and says when a try f
     .poll(() => [...account.boards.values()].find((b) => b.title === "Films I make people watch"))
     .toMatchObject({ body: { publishedId: "L1" } });
 
-  // Taken down from Take it down under Published, once the sheet has asked.
-  await press(settings.getByRole("button", { name: "Take it down" }), hasTouch);
+  // Published opens the window with the link, and Take it down there asks first.
+  await press(header, hasTouch);
+  const out = page.getByRole("dialog", { name: "Films I make people watch" });
+  await expect(out.getByRole("link", { name: "See it in Community" })).toHaveAttribute(
+    "href",
+    "/l/L1",
+  );
+  await press(out.getByRole("button", { name: "Take it down" }), hasTouch);
   const ask = page.getByRole("group", { name: "Take Films I make people watch down?" });
   await press(ask.getByRole("button", { name: "Take it down" }), hasTouch);
   await expect(page.getByText("Unpublished. The link no longer works.")).toBeVisible();
-  await expect(status).toHaveCount(0);
-  await expect(publishButton).toBeEnabled();
+  await expect(out).toHaveCount(0);
+  await expect(word).toHaveText("Publish");
   expect(account.calls).toContain("DELETE /lists/L1");
   expect(account.published.size).toBe(0);
 });
@@ -104,20 +111,24 @@ test("publishes from the board's header, and View opens what others see", async 
   const account = await signIn(page);
   await newBoard(page, hasTouch, "Films from the header");
   const publish = page.locator(".list-head .publish-button");
-  // No section yet: the sheet opens on Publication and says what is missing.
+  // A section chosen and the window closed without publishing: it is kept.
   await press(publish, hasTouch);
-  const settings = page.getByRole("dialog", { name: "List settings" });
-  await expect(settings.getByText("Pick a category.")).toBeVisible();
-  await press(settings.getByRole("button", { name: /Category/ }), hasTouch);
-  await press(settings.getByRole("radio", { name: "Film & TV" }), hasTouch);
-  await press(settings.getByRole("button", { name: "Done" }), hasTouch);
-  await expect(settings).toHaveCount(0);
+  const window = page.getByRole("dialog", { name: "Publish “Films from the header”" });
+  await press(window.getByRole("radio", { name: "Film & TV" }), hasTouch);
+  await press(window.getByRole("button", { name: "Cancel" }), hasTouch);
+  await expect(window).toHaveCount(0);
+  expect(account.publishes).toHaveLength(0);
 
-  // Now it goes out from the board itself, no sheet in between.
+  // Opened again, the window has it chosen, and Publish sends the list.
   await press(publish, hasTouch);
+  await expect(window.getByRole("radio", { name: "Film & TV" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await press(window.getByRole("button", { name: "Publish", exact: true }), hasTouch);
   const said = page.locator(".snackbar");
   await expect(said).toContainText("Published");
-  await expect(settings).toHaveCount(0);
+  await expect(window).toHaveCount(0);
   expect(account.publishes).toHaveLength(1);
   await press(said.getByRole("button", { name: "View" }), hasTouch);
   await expect(page).toHaveURL(/\/l\/L1$/);
@@ -129,21 +140,17 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
 }) => {
   const account = await signIn(page);
   await newBoard(page, hasTouch, "Festival films");
-  const openSettings = async () => {
-    await press(page.getByLabel("More about this board"), hasTouch);
-    await press(page.getByRole("button", { name: "List settings" }), hasTouch);
-  };
-  await openSettings();
-  await press(page.getByRole("button", { name: /Category/ }), hasTouch);
-  await press(page.getByRole("radio", { name: "Film & TV" }), hasTouch);
-  // The sheet's own buttons: the header beside Play has Publish and Update too.
-  const settings = page.getByRole("dialog", { name: "List settings" });
-  await press(settings.getByRole("button", { name: "Publish", exact: true }), hasTouch);
-  await expect(settings.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
+  const header = page.locator(".list-head .publish-button");
+  await press(header, hasTouch);
+  const window = page.getByRole("dialog", { name: "Publish “Festival films”" });
+  await press(window.getByRole("radio", { name: "Film & TV" }), hasTouch);
+  await press(window.getByRole("button", { name: "Publish", exact: true }), hasTouch);
+  await expect(page.locator(".snackbar")).toContainText("Published");
 
   // A change on the board, sent while the list changed on the backend.
-  const ranking = settings.getByRole("radio", { name: "Ranking" });
-  await press(ranking, hasTouch);
+  await press(page.getByLabel("Display: Rows"), hasTouch);
+  await press(page.getByRole("menuitemradio", { name: /Ranked list/ }), hasTouch);
+  await expect(header.locator(".publish-button__word")).toHaveText("Update");
   let refusedBody: unknown;
   await page.route(
     "**/lists/L1",
@@ -159,19 +166,24 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
     },
     { times: 1 },
   );
-  await press(settings.getByRole("button", { name: "Update", exact: true }), hasTouch);
-  await expect(page.getByRole("alert")).toContainText(
-    "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
-  );
-  await expect(settings.getByRole("button", { name: "Update", exact: true })).toBeEnabled();
+  // Update goes from the header at once; refused, the window opens on what was said.
+  await press(header, hasTouch);
+  const out = page.getByRole("dialog", { name: "Festival films" });
+  await expect(
+    out.getByRole("alert").filter({
+      hasText:
+        "The published list changed during the update. Your edits are saved on this device. Try publishing again.",
+    }),
+  ).toBeVisible();
+  await expect(out.getByText("Changes not published yet")).toBeVisible();
+  await expect(out.getByRole("button", { name: "Update", exact: true })).toBeEnabled();
   expect(refusedBody).toMatchObject({ title: "Festival films" });
   expect(refusedBody).not.toHaveProperty("anonymous");
 
   await page.reload();
-  await openSettings();
-  await expect(ranking).toBeChecked();
-  await expect(settings.getByText("Changes not published yet")).toBeVisible();
-  await press(settings.getByRole("button", { name: "Update", exact: true }), hasTouch);
+  await expect(page.getByLabel("Display: Ranked list")).toBeVisible();
+  await expect(header.locator(".publish-button__word")).toHaveText("Update");
+  await press(header, hasTouch);
   await expect(page.locator(".snackbar")).toContainText("Updated");
   expect(account.published.size).toBe(1);
   expect(account.published.get("L1")).toEqual(refusedBody);
@@ -423,8 +435,7 @@ test("uploads a cover from the board settings and keeps the owner's photo after 
   const boardUrl = page.url();
   const settings = async () => {
     await press(page.getByLabel("More about this board"), hasTouch);
-    await press(page.getByRole("button", { name: "List settings" }), hasTouch);
-    await press(page.getByRole("button", { name: /Cover/ }), hasTouch);
+    await press(page.getByRole("button", { name: "Cover", exact: true }), hasTouch);
   };
   await settings();
   const choose = page.getByRole("button", { name: "A photo from the gallery" });
@@ -441,9 +452,9 @@ test("uploads a cover from the board settings and keeps the owner's photo after 
   await expect(adjust).toBeVisible();
   await press(adjust.getByRole("button", { name: "Cancel" }), hasTouch);
   await expect(adjust).toBeHidden();
-  const cover = page.locator(".sheet-row__thumb img").filter({ visible: true });
-  // The thumbnail is cut by the cover's focus or its shape's default: its box carries the class.
-  const thumb = page.locator(".sheet-row__thumb img");
+  const cover = page.locator(".board-settings__cover-frame img").filter({ visible: true });
+  // The cover of one picture is shown cut by its focus: its frame carries the class.
+  const thumb = page.locator(".board-settings__cover-frame img");
   await expect(thumb.last()).toHaveAttribute("src", /^blob:/);
   const src = await thumb.last().getAttribute("src");
   await expect

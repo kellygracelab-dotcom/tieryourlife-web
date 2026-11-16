@@ -63,8 +63,7 @@ test("adjusts a cover of one picture, and its tile shows the place kept", async 
 }) => {
   await boardWithPortrait(page, hasTouch);
   await page.getByLabel("More about this board").click();
-  await page.getByRole("button", { name: "List settings" }).click();
-  await press(page.getByRole("button", { name: /Cover/ }), hasTouch);
+  await page.getByRole("button", { name: "Cover", exact: true }).click();
   await press(page.getByRole("button", { name: "Use Portrait on the cover" }), hasTouch);
   await press(page.getByRole("button", { name: "Adjust position" }), hasTouch);
 
