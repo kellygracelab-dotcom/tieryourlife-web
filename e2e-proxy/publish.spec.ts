@@ -38,10 +38,12 @@ test("publishes, is read by a guest, sends an update and takes it down", async (
   await openSettings(page);
   await setCategory(page);
 
-  const publicSwitch = page.getByRole("switch", { name: "Public" });
-  await publicSwitch.click();
+  // The sheet's own Publish: the header beside Play has one too.
+  const settings = page.getByRole("dialog", { name: "List settings" });
+  const publishButton = settings.getByRole("button", { name: "Publish", exact: true });
+  await publishButton.click();
   await expect(page.getByText("Published. Anyone with the link can rank it.")).toBeVisible();
-  await expect(publicSwitch).toBeChecked();
+  await expect(settings.locator(".sheet-row__status")).toHaveText(/Published$/);
   const href = await listHref(page);
 
   // The proxy kept one list, with its section and the board it came from.
@@ -60,12 +62,12 @@ test("publishes, is read by a guest, sends an update and takes it down", async (
   // A change on the board, then Update: the same list, the new order.
   await page.getByRole("radio", { name: "Ranking" }).click();
   await expect(page.getByText("The published copy is behind this board.")).toBeVisible();
-  await page.getByRole("button", { name: "Update" }).click();
+  await settings.getByRole("button", { name: "Update" }).click();
   await expect(page.getByText("The published copy is behind this board.")).toBeHidden();
   expect(await listsTitled(title)).toHaveLength(1);
 
   // Taken down: the proxy forgets it and the guest's link stops working.
-  await publicSwitch.click();
+  await settings.getByRole("button", { name: "Take it down" }).click();
   const ask = page.getByRole("group", { name: `Take ${title} down?` });
   await ask.getByRole("button", { name: "Take it down" }).click();
   await expect(page.getByText("Unpublished. The link no longer works.")).toBeVisible();
@@ -92,15 +94,16 @@ test("a publish whose answer was lost does not make a second list", async ({ pag
     await route.fetch();
     await route.abort("connectionreset");
   });
-  const publicSwitch = page.getByRole("switch", { name: "Public" });
-  await publicSwitch.click();
+  const settings = page.getByRole("dialog", { name: "List settings" });
+  const publishButton = settings.getByRole("button", { name: "Publish", exact: true });
+  await publishButton.click();
   await expect(page.getByRole("alert")).toBeVisible();
-  await expect(publicSwitch).not.toBeChecked();
+  await expect(settings.locator(".sheet-row__status")).toHaveCount(0);
   expect(await listsTitled(title)).toHaveLength(1);
 
   // The person tries again: the proxy knows the board and answers with the
   // list it already has, so there is still one.
-  await publicSwitch.click();
+  await publishButton.click();
   await expect(page.getByText("Published. Anyone with the link can rank it.")).toBeVisible();
   expect(await listsTitled(title)).toHaveLength(1);
   const href = await listHref(page);
