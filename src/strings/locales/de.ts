@@ -620,7 +620,7 @@ const de: Translation = {
     title: "Die Seite konnte nicht starten",
     body: "Ein Teil ist nicht angekommen: Die Verbindung ist abgerissen, oder die Seite wurde genau in dieser Minute aktualisiert. Neu laden hilft meistens.",
     reload: "Neu laden",
-    updated: "Die Website wurde aktualisiert.",
+    updated: "Eine neue Version der Website ist da",
   },
   crash: {
     title: "Auf dieser Seite ist etwas schiefgegangen",
@@ -628,6 +628,10 @@ const de: Translation = {
     offlineTitle: "Diese Seite lässt sich offline nicht öffnen",
     offlineBody:
       "Sie wurde bei diesem Besuch noch nicht geöffnet, und die Verbindung ist weg. Lade neu, sobald du wieder online bist; die schon geöffneten Seiten funktionieren weiter.",
+    newTitle: "Eine neue Version der Website ist da",
+    newBody:
+      "Wir haben TierYourLife aktualisiert, während dieser Tab offen war. Lade neu, um weiterzumachen. Deine Listen sind sicher.",
+    waiting: "Warten auf die Verbindung…",
   },
   notFound: {
     title: "Unter dieser Adresse gibt es nichts.",

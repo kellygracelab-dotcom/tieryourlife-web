@@ -6,6 +6,7 @@ import { Navigate } from "react-router";
 import type { SectionStats } from "../api/sections";
 import { isCategory, type FeedSort } from "../api/types";
 import type { Report } from "../features/community/useReporting";
+import { FeedPlaceholder } from "../features/feed/FeedGrid";
 import type { LoadFeed } from "../features/feed/useFeed";
 import {
   builtInSection,
@@ -110,6 +111,39 @@ export function SortRow({
         <Icon name="expand_more" />
       </label>
     </div>
+  );
+}
+
+const TOPIC_PLACEHOLDERS = [0, 1, 2, 3, 4];
+
+/**
+ * A section's page while its topics and first lists are on their way (section
+ * loading, 16.11): the same blocks it will have, grey and breathing together,
+ * under their real titles. One row of topic tiles, the line, the lists' row
+ * and two rows of cards; what comes takes their places without a jump, and
+ * with no topics only that row goes.
+ */
+export function SectionPlaceholder({ name, count }: { name: string; count?: number | null }) {
+  return (
+    <>
+      <div className="section-topics">
+        <div className="section-topics__head">
+          <BlockTitle title={strings.sections.topics} />
+          <Skeleton width="132px" height="28px" className="section-placeholder__pill" />
+        </div>
+        <div className="topic-tiles section-placeholder__tiles" aria-hidden="true">
+          {TOPIC_PLACEHOLDERS.map((n) => (
+            <Skeleton key={n} height="64px" className="section-placeholder__tile" />
+          ))}
+        </div>
+      </div>
+      <hr className="section-page__divider" />
+      <div className="section-sort">
+        <BlockTitle title={strings.sections.tierLists} count={count} />
+        <Skeleton width="96px" height="24px" />
+      </div>
+      <FeedPlaceholder label={name} count={8} />
+    </>
   );
 }
 

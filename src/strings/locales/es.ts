@@ -623,7 +623,7 @@ const es: Translation = {
     title: "El sitio no pudo iniciarse",
     body: "Una parte no llegó: se cortó la conexión, o el sitio se actualizó en este mismo minuto. Recargar suele bastar.",
     reload: "Recargar",
-    updated: "El sitio se actualizó.",
+    updated: "Hay una nueva versión del sitio",
   },
   crash: {
     title: "Algo salió mal en esta página",
@@ -631,6 +631,10 @@ const es: Translation = {
     offlineTitle: "Esta página no se puede abrir sin conexión",
     offlineBody:
       "No se abrió antes en esta visita y no hay conexión. Recarga cuando vuelvas a estar en línea; las páginas ya abiertas siguen funcionando.",
+    newTitle: "Hay una nueva versión del sitio",
+    newBody:
+      "Actualizamos TierYourLife mientras esta pestaña estaba abierta. Recarga para seguir. Tus listas están a salvo.",
+    waiting: "Esperando la conexión…",
   },
   notFound: {
     title: "No hay nada en esta dirección.",

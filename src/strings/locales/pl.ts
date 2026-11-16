@@ -630,7 +630,7 @@ const pl: Translation = {
     title: "Strona nie mogła się uruchomić",
     body: "Część nie dotarła: zerwało połączenie albo strona została właśnie zaktualizowana. Odświeżenie zwykle pomaga.",
     reload: "Odśwież",
-    updated: "Strona została zaktualizowana.",
+    updated: "Nowa wersja strony jest gotowa",
   },
   crash: {
     title: "Coś poszło nie tak na tej stronie",
@@ -638,6 +638,10 @@ const pl: Translation = {
     offlineTitle: "Tej strony nie da się otworzyć offline",
     offlineBody:
       "Nie była jeszcze otwierana podczas tej wizyty, a połączenie zostało przerwane. Odśwież, gdy wrócisz do sieci; strony już otwarte nadal działają.",
+    newTitle: "Nowa wersja strony jest gotowa",
+    newBody:
+      "Zaktualizowaliśmy TierYourLife, gdy ta zakładka była otwarta. Odśwież, aby kontynuować. Twoje listy są bezpieczne.",
+    waiting: "Czekam na połączenie…",
   },
   notFound: {
     title: "Pod tym adresem nic nie ma.",

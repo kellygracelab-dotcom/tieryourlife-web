@@ -5,6 +5,8 @@ import {
   entryOf,
   freshChunk,
   inTheMiddle,
+  isChunkFailure,
+  newerRelease,
   recover,
   reloadInto,
   reloadOnce,
@@ -285,6 +287,47 @@ describe("freshChunk", () => {
       const [first, second] = await Promise.all([recover(deps), recover(deps)]);
       expect([first, second]).toEqual(["reloading", "reloading"]);
       expect(liveRelease).toHaveBeenCalledOnce();
+    });
+
+    it("is remembered once seen, for the error page, where the tab could not follow it", async () => {
+      const store = memoryStore();
+      const reload = vi.fn();
+      const deps = {
+        store,
+        reload,
+        ownRelease: () => "/assets/index-A.js",
+        liveRelease: () => Promise.resolve("/assets/index-B.js"),
+      };
+      expect(newerRelease()).toBe(false);
+      // Followed quietly at first: the page goes, and nothing is let through.
+      expect(await recover(deps)).toBe("reloading");
+      expect(newerRelease()).toBe(true);
+
+      // The reloads are spent (caches that lag, twice): the failure comes through, known as a piece.
+      resetFreshChunkForTests();
+      store.write(CHUNK_RETRY_KEY, "1");
+      const failure = await freshChunk(gone, deps)().catch((error: unknown) => error);
+      expect(newerRelease()).toBe(true);
+      expect(isChunkFailure(failure)).toBe(true);
+      expect(isChunkFailure(new TypeError("Cannot read properties of undefined"))).toBe(false);
+      expect(isChunkFailure("a string")).toBe(false);
+      expect(reload).toHaveBeenCalledOnce();
+    });
+
+    it("is not remembered where the front page names this tab's own script, or cannot be read", async () => {
+      const store = memoryStore();
+      store.write(CHUNK_RETRY_KEY, "1");
+      const deps = { store, reload: vi.fn(), ownRelease: () => "/assets/index-A.js" };
+      const failure = await freshChunk(gone, {
+        ...deps,
+        liveRelease: () => Promise.resolve("/assets/index-A.js"),
+      })().catch((error: unknown) => error);
+      expect(isChunkFailure(failure)).toBe(true);
+      expect(newerRelease()).toBe(false);
+      await freshChunk(gone, { ...deps, liveRelease: () => Promise.resolve(null) })().catch(
+        () => undefined,
+      );
+      expect(newerRelease()).toBe(false);
     });
 
     it("reads the script a page names", () => {

@@ -98,6 +98,14 @@ describe("drawFailure", () => {
     expect(root.querySelector("[role=alert] h1")?.textContent).toBe("The site could not start");
     root.querySelector("button")?.click();
     expect(reload).toHaveBeenCalledOnce();
+    // The error page's look, in classes only: the S row with its fallen card, and a drawn icon.
+    const section = root.querySelector("section.reload-notice");
+    expect(section?.querySelector(".reload-notice__fallen")?.getAttribute("aria-hidden")).toBe(
+      "true",
+    );
+    expect(section?.querySelector(".reload-notice__loose")?.textContent).toBe("!");
+    expect(section?.querySelector("button.reload-notice__reload svg")).not.toBeNull();
+    expect(root.querySelector("button")?.textContent).toBe("Reload");
   });
 });
 

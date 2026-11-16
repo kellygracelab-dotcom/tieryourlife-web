@@ -83,20 +83,62 @@ export interface FailureWords {
   reload: string;
 }
 
-/** Plain DOM, no framework: whatever failed to load may be the framework's own part. */
+const SVG = "http://www.w3.org/2000/svg";
+
+/** An element with its class, and the children it holds. */
+const made = (tag: string, className: string, ...children: (Node | string)[]): HTMLElement => {
+  const element = document.createElement(tag);
+  element.className = className;
+  element.append(...children);
+  return element;
+};
+
+/** The refresh arrow, drawn: the icons' font may be what did not arrive. */
+function refreshIcon(): SVGSVGElement {
+  const icon = document.createElementNS(SVG, "svg");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("aria-hidden", "true");
+  const path = document.createElementNS(SVG, "path");
+  path.setAttribute("d", "M20 12a8 8 0 1 1-2.3-5.7M20 4.5v4.5h-4.5");
+  icon.append(path);
+  return icon;
+}
+
+/**
+ * Plain DOM, no framework: whatever failed to load may be the framework's own
+ * part. It wears the error page's look (src/app/RouteError.css, which main.tsx
+ * brings with the first stylesheet): the S row with a card fallen out of it,
+ * its swing all keyframes.
+ */
 export function drawFailure(root: HTMLElement, words: FailureWords, reload: () => void): void {
-  const section = document.createElement("section");
-  section.className = "boot-failed";
-  section.setAttribute("role", "alert");
-  const title = document.createElement("h1");
-  title.textContent = words.title;
-  const body = document.createElement("p");
-  body.textContent = words.body;
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "btn btn--filled";
-  button.textContent = words.reload;
+  const fallen = made(
+    "div",
+    "reload-notice__fallen",
+    made(
+      "div",
+      "reload-notice__row",
+      made("span", "reload-notice__tier", "S"),
+      made(
+        "span",
+        "reload-notice__cards",
+        made("span", "reload-notice__card"),
+        made("span", "reload-notice__card"),
+      ),
+    ),
+    made("span", "reload-notice__loose", "!"),
+  );
+  fallen.setAttribute("aria-hidden", "true");
+  const button = made("button", "reload-notice__reload", refreshIcon(), words.reload);
+  button.setAttribute("type", "button");
   button.addEventListener("click", reload);
-  section.append(title, body, button);
+  const section = made(
+    "section",
+    "reload-notice",
+    fallen,
+    made("h1", "reload-notice__title", words.title),
+    made("p", "reload-notice__text", words.body),
+    made("div", "reload-notice__actions", button),
+  );
+  section.setAttribute("role", "alert");
   root.replaceChildren(section);
 }

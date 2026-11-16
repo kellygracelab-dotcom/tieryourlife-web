@@ -419,6 +419,22 @@ describe("SectionPage", () => {
     expect(plain).toHaveStyle({ "--tint-light": "#3D6B58" });
   });
 
+  it("loads as grey blocks of the page's own shape under the real titles, with no spinner", async () => {
+    topics.load.mockReturnValue(new Promise(() => undefined));
+    open("/s/games");
+    // The header from the sections, at once; under it the blocks it will have.
+    expect(await screen.findByRole("heading", { level: 1, name: "Games" })).toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.getByRole("heading", { level: 2, name: "Topics" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Tier lists · 812" })).toBeInTheDocument();
+    expect(document.querySelectorAll(".section-placeholder__tile")).toHaveLength(5);
+    const cards = screen.getByLabelText("Games", { selector: ".feed--loading" });
+    expect(cards).toHaveAttribute("aria-busy", "true");
+    expect(cards.querySelectorAll(".list-card--placeholder")).toHaveLength(8);
+    expect(screen.queryByRole("button", { name: /Suggest a topic/ })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Order" })).toBeNull();
+  });
+
   it("keeps the Topics row with the way to suggest one when there are none, and no tiles", async () => {
     topics.load.mockResolvedValue({ topics: [] });
     topics.mine.mockResolvedValue({ topics: [] });
@@ -428,6 +444,8 @@ describe("SectionPage", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Topics" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Topics" })).toBeNull();
     expect(screen.getByRole("heading", { level: 2, name: "Tier lists · 812" })).toBeInTheDocument();
+    // Only the tiles' grey row went; nothing else is left waiting.
+    expect(document.querySelector(".skeleton")).toBeNull();
   });
 
   it("folds the topics to two rows, with Show all and Show fewer", async () => {
@@ -473,21 +491,22 @@ describe("SectionPage", () => {
     ).toHaveAttribute("href", "/b/new?category=games");
   });
 
-  it("puts the order with the lists, under the topics, after one ring for both", async () => {
+  it("puts the order with the lists, under the topics, after one wait for both", async () => {
     let answer: (value: { topics: Topic[] }) => void = () => undefined;
     topics.load.mockReturnValue(new Promise((resolve) => (answer = resolve)));
     open("/s/games");
-    expect(await screen.findByRole("progressbar", { name: "Games" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Games" })).toBeInTheDocument();
     expect(screen.queryByRole("combobox", { name: "Order" })).toBeNull();
     await waitFor(() => expect(load).toHaveBeenCalled());
-    // The lists are in, the topics not yet: still the ring, and no grey cards.
+    // The lists are in, the topics not yet: still the grey page, not the lists alone.
     expect(screen.queryByText("Nothing published yet")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Topics" })).toBeNull();
-    expect(document.querySelector(".feed--loading")).toBeNull();
+    expect(document.querySelector(".feed--loading")).not.toBeNull();
 
     answer({ topics: [topic("t2", "Pokémon")] });
     const nav = (await tiles()).getByRole("link", { name: "Pokémon" }).closest("nav")!;
-    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(document.querySelector(".feed--loading")).toBeNull();
+    expect(document.querySelector(".skeleton")).toBeNull();
     // The order sorts only the lists, so it comes after the topics, with them.
     const order = screen.getByRole("combobox", { name: "Order" });
     expect(nav.compareDocumentPosition(order) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
