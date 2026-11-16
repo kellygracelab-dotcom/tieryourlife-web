@@ -224,6 +224,23 @@ describe("the right-click menu of a card one only looks at", () => {
     expect(onAbout).not.toHaveBeenCalled();
   });
 
+  it("lights the item under the mouse, as the arrows do", async () => {
+    render(
+      <PictureMenu
+        name="Fox"
+        at={{ x: 10, y: 10 }}
+        onAbout={vi.fn()}
+        onOpenPage={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const [about, page] = screen.getAllByRole("menuitem");
+    await userEvent.hover(page!);
+    expect(page).toHaveFocus();
+    await userEvent.hover(about!);
+    expect(about).toHaveFocus();
+  });
+
   it("offers only what there is, and closes on Escape, a press elsewhere, a scroll or a resize", async () => {
     const onClose = vi.fn();
     render(<PictureMenu name="Fox" at={{ x: 10, y: 10 }} onAbout={vi.fn()} onClose={onClose} />);

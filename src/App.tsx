@@ -3,9 +3,11 @@ import { withPageTransitions } from "./app/pageTransitions";
 import { routes } from "./app/routes";
 import { SessionProvider } from "./app/SessionProvider";
 import { BoardSyncProvider } from "./features/boards/BoardSyncProvider";
-import { reloadInto } from "./lib/freshChunk";
+import { announceWith, reloadInto } from "./lib/freshChunk";
 import { spendPreload } from "./lib/preload";
+import { strings } from "./strings";
 import { NameTip } from "./ui/NameTip";
+import { sayOnTheSite } from "./ui/siteNotice";
 
 const router = withPageTransitions(createBrowserRouter(routes));
 
@@ -15,6 +17,15 @@ reloadInto(() => {
   const to = router.state.navigation.location;
   return to === undefined ? null : `${to.pathname}${to.search}${to.hash}`;
 });
+// A newer release found while someone is in the middle of something: the page
+// stays, and the shell says the site was updated, with Reload.
+announceWith(() =>
+  sayOnTheSite({
+    text: strings.boot.updated,
+    action: { text: strings.boot.reload, onClick: () => window.location.reload() },
+    long: true,
+  }),
+);
 
 // The page's own copy of its list is good for that page only: once the tab
 // has been anywhere else, coming back asks the proxy how the list is now.

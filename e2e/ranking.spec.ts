@@ -92,6 +92,36 @@ test.describe("starting from the author's ranking", () => {
     await said.getByRole("button", { name: "Undo" }).click();
     await expect(theirs.getByRole("list", { name: "S" })).toContainText("Ex Machina");
   });
+
+  test("a card taken out of a tier to Author's pool starts Mine with it there", async ({
+    page,
+  }) => {
+    await mockBackend(page);
+    await page.goto(`/l/${LIST_ID}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
+    const theirs = page.getByRole("region", { name: "Their ranking" });
+    // What the author left unranked is the board's pool, as on Mine.
+    const pool = theirs.locator(".pool");
+    await expect(pool.getByRole("heading")).toHaveText("Pool · 1");
+    await expect(pool.getByRole("button", { name: "Climax" })).toBeVisible();
+    const from = await theirs.getByRole("button", { name: "Ex Machina" }).boundingBox();
+    const to = await pool.boundingBox();
+    if (from === null || to === null) throw new Error("board not laid out");
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await expect(pool).toHaveClass(/pool--target/);
+    await page.mouse.up();
+    await expect(page.getByRole("button", { name: "Mine" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // Mine: The Witch where the author put it, Ex Machina back with Climax.
+    const yours = page.getByRole("region", { name: "Your ranking" });
+    await expect(yours.getByRole("list", { name: "S" }).getByRole("button")).toHaveCount(0);
+    await expect(yours.getByRole("list", { name: "A" })).toContainText("The Witch");
+    await expect(page.getByText("1 of 3 placed")).toBeVisible();
+  });
 });
 
 // On every screen: a move on Author over a Mine with a card placed asks first.

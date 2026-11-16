@@ -45,7 +45,7 @@ import { RankingsSheet } from "../features/community/RankingsSheet";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
 import { readKept } from "../features/ranking/kept";
-import { arrange, poolOf } from "../features/tierboard/arrange";
+import { arrange } from "../features/tierboard/arrange";
 import { BoardFrameContext } from "../features/tierboard/boardFrame";
 import type { Dock } from "../features/tierboard/dock";
 import {
@@ -63,7 +63,7 @@ import {
 import { flyIn } from "../features/tierboard/flight";
 import type { Rows } from "../features/tierboard/model";
 import { RankingBoard } from "../features/tierboard/RankingBoard";
-import { ReadOnlyBoard, UnrankedPool } from "../features/tierboard/ReadOnlyBoard";
+import { ReadOnlyBoard } from "../features/tierboard/ReadOnlyBoard";
 import {
   keepListRanking,
   loadList,
@@ -889,7 +889,7 @@ function OpenList({
         ) : (
           // A visitor may start from what is on show: a card moved here moves in Mine.
           // Outside the frame, so the header keeps the layout it has for Theirs.
-          // What it left unranked is said under it, as the app's Theirs has it.
+          // What it left unranked is its pool, where a card can be taken out too.
           <>
             <RankingBoard
               key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}:${theirsRound}`}
@@ -906,7 +906,6 @@ function OpenList({
                 onStart: startFromTheirs,
               }}
             />
-            <UnrankedPool items={theirs.items} pool={poolOf(theirs.rows, theirs.items.length)} />
           </>
         ))}
       {!own && !outOfSight && play.view}

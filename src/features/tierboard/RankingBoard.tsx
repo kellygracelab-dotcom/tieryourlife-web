@@ -1207,13 +1207,47 @@ export function RankingBoard({
           )}
       </div>
 
-      {/* Theirs keeps the column empty, so its tiers stand where Mine's do. */}
+      {/* Theirs has no bar, so its tiers stand where Mine's do. */}
       <div className="ranking__side">
         {seeded
           ? null
           : inHead && frame.headSlot !== null
             ? createPortal(bar, frame.headSlot)
             : bar}
+
+        {seeded && (
+          // Theirs' pool: what it left unranked, and where a card is taken out
+          // of a tier. A card taken out, or one from here placed, starts Mine
+          // as any other first move does (Danylo, 16.11.2026: with everything
+          // placed, nothing could go back to the pool to begin one's own).
+          <div
+            className={[
+              "pool",
+              "pool--seed",
+              // One row of cards, as Mine's pool starts out.
+              (docked || !wide) && "pool--single",
+              dropTarget?.kind === "pool" && "pool--target",
+              lifted !== null &&
+                left.includes(lifted) &&
+                dropTarget?.kind !== "pool" &&
+                "pool--dragging",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            // Measured as Mine's is: the page keeps room under the board for the tray.
+            ref={poolBox}
+            data-drop="pool"
+          >
+            <div className="pool__head">
+              <div className="pool__lead">
+                <h2 className="pool__title">
+                  {fill(strings.boards.poolCount, { n: left.length })}
+                </h2>
+              </div>
+            </div>
+            <ul className="pool__items">{poolTiles}</ul>
+          </div>
+        )}
 
         {!seeded && (
           <div

@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { boot, drawFailure, withoutFreshMark } from "./boot";
-import { reloadOnce } from "./lib/freshChunk";
+import { recover } from "./lib/freshChunk";
 import { applyLocale, LOCALE_PARAM, localeInAddress, pickLocale, readLocale } from "./lib/locale";
 import { localStorageStore, sessionStorageStore } from "./lib/storage";
 import { availableLocales, currentLocale, loadStrings, strings } from "./strings";
@@ -16,9 +16,12 @@ const reload = () => window.location.reload();
 // The page came after index.html's reload past the caches: the address goes back as it was.
 const unmarked = withoutFreshMark(window.location.href);
 if (unmarked !== null) window.history.replaceState(window.history.state, "", unmarked);
-// A file a page's piece leans on, gone with a deploy: the same one quiet reload.
+// A file a page's piece leans on, gone with a deploy: the same question to the
+// site, asked once with the piece's own. The import goes on meanwhile: a module
+// that is gone too fails there, and is answered by what is found here.
 window.addEventListener("vite:preloadError", (event) => {
-  if (reloadOnce()) event.preventDefault();
+  event.preventDefault();
+  void recover();
 });
 
 void boot({

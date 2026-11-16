@@ -1269,7 +1269,7 @@ describe("BoardPage: Publish beside Play", () => {
 });
 
 describe("BoardPage: one's own list from its ⋮ menu", () => {
-  it("publishes an own list, then updates it or takes it down, from the menu", async () => {
+  it("leaves Publish and Update to the header and the trash to the boards page, and takes a list down", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "film_tv" });
     const publishing: PublishingDeps = {
@@ -1279,18 +1279,20 @@ describe("BoardPage: one's own list from its ⋮ menu", () => {
     };
     open(repository, "/b/films", { publishing, account: member });
     await userEvent.click(screen.getByLabelText("More about this board"));
-    expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Take it down" })).toBeNull();
-    await userEvent.click(menuItem("Publish"));
-    // The sheet opens on it and sends it, as its own Publish does.
+    const menu = screen.getByRole("button", { name: "List settings" }).closest("ul")!;
+    // Danylo, 16.11.2026: the header has Publish; Trash read as a riddle here.
+    expect(within(menu).queryByRole("button", { name: "Publish" })).toBeNull();
+    expect(within(menu).queryByRole("button", { name: "Update" })).toBeNull();
+    expect(within(menu).queryByRole("button", { name: "Take it down" })).toBeNull();
+    expect(within(menu).queryByRole("link", { name: "Trash" })).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(headerPublish()!);
     await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
-    expect(publishing.publish).toHaveBeenCalledTimes(1);
     expect(repository.get("films")).toMatchObject({ publishedId: "L1" });
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
 
     await userEvent.click(screen.getByLabelText("More about this board"));
     expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
-    expect(menuItem("Update")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
     await userEvent.click(menuItem("Take it down"));
     // Asked first, in the sheet, with the cursor on the way back.
     const ask = screen.getByRole("group", { name: /Take .* down\?/ });

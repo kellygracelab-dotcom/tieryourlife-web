@@ -7,6 +7,7 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type PointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import type { PictureAttribution } from "../../api/pictureAttribution";
@@ -321,6 +322,9 @@ export function PictureMenu({
       items[(here + step + items.length) % items.length]?.focus();
     }
   };
+  // The item under the pointer lights as the arrows light it: by the focus.
+  const lit = (event: PointerEvent<HTMLElement>) =>
+    event.currentTarget.focus({ preventScroll: true });
   const choose = (then: () => void) => () => {
     onClose();
     then();
@@ -342,6 +346,7 @@ export function PictureMenu({
           role="menuitem"
           tabIndex={-1}
           className="card-menu__item"
+          onPointerEnter={lit}
           onClick={choose(onAbout)}
         >
           <span className="card-menu__text">{strings.link.about}</span>
@@ -353,6 +358,7 @@ export function PictureMenu({
           role="menuitem"
           tabIndex={-1}
           className="card-menu__item"
+          onPointerEnter={lit}
           onClick={choose(onOpenPage)}
         >
           <span className="card-menu__text">{strings.link.openPage}</span>

@@ -183,7 +183,9 @@ describe("ListPage rankings", () => {
     const board = screen.getByRole("region", { name: "olena" });
     // Their tier word, their placing: The Witch where the author had nothing.
     expect(within(board).getByRole("list", { name: "Best" })).toHaveTextContent("The Witch");
-    expect(board).not.toHaveTextContent("Ex Machina");
+    // Ex Machina, which they left unranked, is in their pool, off the tiers.
+    expect(board.querySelector(".board")).not.toHaveTextContent("Ex Machina");
+    expect(board.querySelector(".pool")).toHaveTextContent("Ex Machina");
 
     // The sheet remembers whose is on the board and does not ask again.
     const again = await openSheet();

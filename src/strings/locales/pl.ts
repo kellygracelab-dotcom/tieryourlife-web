@@ -630,6 +630,7 @@ const pl: Translation = {
     title: "Strona nie mogła się uruchomić",
     body: "Część nie dotarła: zerwało połączenie albo strona została właśnie zaktualizowana. Odświeżenie zwykle pomaga.",
     reload: "Odśwież",
+    updated: "Strona została zaktualizowana.",
   },
   crash: {
     title: "Coś poszło nie tak na tej stronie",

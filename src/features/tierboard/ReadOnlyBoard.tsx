@@ -118,7 +118,7 @@ function useTiles(items: readonly PublishedItem[]) {
  * The cards an arrangement left unranked, under its board: the author's own
  * view, a ranking's page and a visitor's Theirs all say them, as the app does.
  */
-export function UnrankedPool({
+function UnrankedPool({
   items,
   pool,
 }: {
