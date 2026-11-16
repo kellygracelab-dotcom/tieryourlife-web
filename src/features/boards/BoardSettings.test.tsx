@@ -1,25 +1,14 @@
-import { actionAuth, actionUser, deferred } from "../../test/actionAccount";
-
-vi.mock("../../lib/firebase", async (original) => ({
-  ...(await original<typeof import("../../lib/firebase")>()),
-  getFirebaseAuth: () => actionAuth,
-}));
-import { boardView } from "./view";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
-import { ApiFailure, parseApiError } from "../../api/errors";
-import type { SectionStats, Topic } from "../../api/sections";
-import type { PublishedList } from "../../api/types";
+import type { Topic } from "../../api/sections";
 import { GUEST, SessionContext, type Session } from "../../app/session";
 import type { Account } from "../../lib/account";
-import type { SignInOutcome } from "../../lib/signIn";
-import { orderSections, sectionsFrom, type Section } from "../sections/model";
-import { BoardSettings, type LoadTopics, type PublishingDeps } from "./BoardSettings";
-import { addTier, addToPool, newBoard, setCategory, type Board } from "./model";
-import type { FindTopic } from "./topic";
+import { sectionsFrom, type Section } from "../sections/model";
+import { BoardSettings, type LoadTopics } from "./BoardSettings";
+import { addToPool, newBoard, setCategory, type Board } from "./model";
 
 const uids = () => {
   let n = 0;
@@ -48,28 +37,10 @@ const filmBoard = (): Board => {
   };
 };
 
-const idle: PublishingDeps = {
-  publish: () => Promise.reject(new Error("not expected")),
-  republish: () => Promise.reject(new Error("not expected")),
-  unpublish: () => Promise.reject(new Error("not expected")),
-};
-
-// What keeping one's ranking of a list answers.
-const keptRanking = async () => ({
-  uid: "me",
-  authorName: "Danylo",
-  authorPhotoUrl: null,
-  arrangement: [],
-  rows: [],
-  tierLabels: [],
-  updatedAtMs: 1,
-  mine: true,
-});
-
-const topic = (id: string, name: string): Topic => ({
+const topic = (id: string, name: string, section = "film_tv"): Topic => ({
   id,
   name,
-  section: "film_tv",
+  section,
   status: "approved",
   listCount: 3,
   followerCount: 10,
@@ -78,58 +49,23 @@ const topic = (id: string, name: string): Topic => ({
   mergedInto: null,
 });
 
-const stats = (id: string, more: Partial<SectionStats> = {}): SectionStats => ({
-  id,
-  listCount: 0,
-  followerCount: 0,
-  newThisWeek: 0,
-  collage: [],
-  following: false,
-  ...more,
-});
-
-/**
- * Sections as the store holds them for "me": one followed, one the owner
- * pinned, one of the nine, Other, and a proposal of one's own and of somebody
- * else's still waiting.
- */
-const someSections = (): Section[] =>
-  orderSections(
-    sectionsFrom(
-      [
-        stats("film_tv"),
-        stats("street-food", { name: "Street food", rank: 1, approvedAt: 5 }),
-        stats("games", { following: true }),
-        stats("night-markets", { name: "Night markets", status: "pending", proposerUid: "me" }),
-        stats("food-trucks", { name: "Food trucks", status: "pending", proposerUid: "else" }),
-        stats("other"),
-      ],
-      "me",
-    ),
-  );
-
-// The board as the page would hold it: the settings read the latest through
+// The board as the page would hold it: the dialog reads the latest through
 // `latest`, and every change lands here.
 let held: Board;
-const published = vi.fn<(what: string, id: string | null, dropped?: number) => void>();
-const newTier = vi.fn();
 const done = vi.fn();
-const propose = vi.fn();
+const publication = vi.fn();
+const chose = vi.fn<(category: string) => void>();
 
 function Host({
   initial,
-  publishing,
+  house,
   topics,
-  findTopic,
   sections,
-  signInToPublish,
 }: {
   initial: Board;
-  publishing: PublishingDeps;
+  house: boolean;
   topics: LoadTopics;
-  findTopic: FindTopic;
   sections: readonly Section[];
-  signInToPublish?: () => Promise<SignInOutcome>;
 }) {
   const [board, setBoard] = useState(initial);
   const keep = (next: Board) => {
@@ -142,39 +78,27 @@ function Host({
       latest={() => held}
       keep={keep}
       sections={sections}
-      onCategory={(category) => keep(setCategory(held, category, 500))}
-      onPropose={propose}
-      onMode={(displayMode) => keep({ ...held, displayMode })}
-      onNewTier={newTier}
-      onPublished={published}
-      publishing={publishing}
+      onPublication={house ? null : publication}
+      onCategory={(category) => {
+        chose(category);
+        keep(setCategory(held, category, 500));
+      }}
       topics={topics}
-      findTopic={findTopic}
       onDone={done}
       now={() => 500}
-      signInToPublish={signInToPublish}
     />
   );
 }
 
 const show = (
   board: Board,
-  account: Account,
-  publishing: Partial<PublishingDeps> = {},
-  extra: {
-    topics?: LoadTopics;
-    findTopic?: FindTopic;
-    signIn?: Session["signIn"];
-    sections?: readonly Section[];
-    signInToPublish?: () => Promise<SignInOutcome>;
-  } = {},
+  account: Account = signedIn,
+  extra: { house?: boolean; topics?: LoadTopics; signIn?: Session["signIn"] } = {},
 ) => {
-  actionAuth.currentUser = actionUser(account.uid ?? "guest");
   held = board;
-  published.mockReset();
-  newTier.mockReset();
   done.mockReset();
-  propose.mockReset();
+  publication.mockReset();
+  chose.mockReset();
   const session: Session = {
     account,
     signIn: extra.signIn ?? (() => Promise.resolve({ kind: "cancelled" })),
@@ -186,1154 +110,51 @@ const show = (
       <MemoryRouter>
         <Host
           initial={board}
-          publishing={{ ...idle, ...publishing }}
+          house={extra.house ?? false}
           topics={extra.topics ?? (() => Promise.resolve({ topics: [] }))}
-          findTopic={extra.findTopic ?? (() => Promise.reject(new ApiFailure({ kind: "offline" })))}
           // The nine, as the site draws them before the backend answers.
-          sections={extra.sections ?? sectionsFrom(null)}
-          signInToPublish={extra.signInToPublish}
+          sections={sectionsFrom(null)}
         />
       </MemoryRouter>
     </SessionContext.Provider>,
   );
 };
 
-const sheet = () => screen.getByRole("dialog", { name: "List settings" });
-// The newest sheet, when a test shows a second one.
-const lastSheet = () => within(screen.getAllByRole("dialog", { name: "List settings" }).at(-1)!);
-/** The Publication row's button: Publish, or Show in Rankings for a copy of somebody else's list. */
-const publishButton = (name: string | RegExp = "Publish") =>
-  lastSheet().getByRole("button", { name });
-/** Out, the row says so where its button was: Published, or In Rankings. */
-const outStatus = (word = "Published") => lastSheet().queryByText(word);
+const dialog = () => within(screen.getByRole("dialog", { name: "Cover" }));
+/** The Publication line under the cover. */
+const line = () =>
+  within(screen.getByText("Publication").closest<HTMLElement>(".board-settings__publication")!);
 
-describe("BoardSettings: the sheet", () => {
-  it("lists New tier, Publication, Category, Topic, Cover and Display, in the spec's order", () => {
-    show(filmBoard(), signedIn);
-    const titles = [...sheet().querySelectorAll(".sheet-row__title")].map((row) => row.textContent);
-    expect(titles).toEqual(["New tier", "Publication", "Category", "Topic", "Cover", "Display"]);
-    expect(within(sheet()).getByText("5 tiers")).toBeInTheDocument();
-    expect(
-      within(sheet()).getByText("Anyone with the link can rank it. It shows in Community."),
-    ).toBeInTheDocument();
-    // Nothing to take down while the list is private.
-    expect(screen.queryByRole("button", { name: "Take it down" })).toBeNull();
-  });
-
-  // No anonymity any more (Danylo, 16.11.2026): a new list carries the
-  // author's name, and the backend keeps one already out without it as it was.
-  it("offers no Publish anonymously switch", () => {
-    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 1 }, signedIn);
-    expect(screen.queryByRole("switch", { name: /anonymous/i })).toBeNull();
-    expect(within(sheet()).queryByText("Publish anonymously")).toBeNull();
-  });
-
-  it("says nothing of anonymity in a publish, even of a board once published anonymously", async () => {
-    const publish = vi.fn<PublishingDeps["publish"]>(async () => ({ id: "L1" }));
-    show({ ...filmBoard(), anonymous: true }, signedIn, { publish });
-    await userEvent.click(publishButton());
-    await waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
-    expect(publish.mock.calls[0]?.[0]).not.toHaveProperty("anonymous");
+describe("BoardSettings: the dialog", () => {
+  it("is a dialog named Cover, with nothing of tiers, display or publishing in it", () => {
+    show(filmBoard());
+    expect(screen.getByRole("dialog", { name: "Cover" })).toHaveAttribute("aria-modal", "true");
+    expect(dialog().queryByRole("button", { name: /New tier/ })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "Display" })).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(dialog().queryByRole("button", { name: "Take it down" })).toBeNull();
+    expect(dialog().queryByRole("button", { name: "Update" })).toBeNull();
+    // Section and topic are the Publish window's, for a list of one's own.
+    expect(screen.queryByRole("radiogroup", { name: "Section" })).toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "Topic" })).toBeNull();
   });
 
   it("goes with Done and with Escape", async () => {
-    show(filmBoard(), signedIn);
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    show(filmBoard());
+    await userEvent.click(dialog().getByRole("button", { name: "Done" }));
     expect(done).toHaveBeenCalledTimes(1);
     await userEvent.keyboard("{Escape}");
     expect(done).toHaveBeenCalledTimes(2);
-  });
-
-  it("hands New tier to the page, and has none past twenty tiers", async () => {
-    show(filmBoard(), signedIn);
-    await userEvent.click(screen.getByRole("button", { name: /New tier/ }));
-    expect(newTier).toHaveBeenCalledTimes(1);
-
-    const next = uids();
-    let full = filmBoard();
-    for (let i = 0; i < 15; i++) {
-      full = addTier(
-        full,
-        { label: `T${i}`, caption: null, colorLight: "#000000", colorDark: "#ffffff" },
-        1,
-        next,
-      );
-    }
-    show(full, signedIn);
-    expect(screen.getAllByRole("button", { name: /New tier/ })[1]).toBeDisabled();
-  });
-
-  it("shows the board as rows, a single strip or a ranking, the phone's names kept", async () => {
-    show(filmBoard(), signedIn);
-    const display = within(screen.getByRole("radiogroup", { name: "Display" }));
-    expect(display.getAllByRole("radio").map((radio) => radio.textContent)).toEqual([
-      "checkRows",
-      "Single strip",
-      "Ranking",
-    ]);
-    expect(display.getByRole("radio", { name: /Rows/ })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByText("Every item visible, rows grow taller")).toBeInTheDocument();
-
-    await userEvent.click(display.getByRole("radio", { name: "Single strip" }));
-    expect(held.displayMode).toBe("HORIZONTAL_SCROLL");
-    expect(display.getByRole("radio", { name: /Single strip/ })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    expect(screen.getByText("One line per tier, scrolls sideways")).toBeInTheDocument();
-    await userEvent.click(display.getByRole("radio", { name: "Ranking" }));
-    expect(held.displayMode).toBe("FLAT_RANKED");
-  });
-
-  it("moves the display with the arrows, as radios do", async () => {
-    show(filmBoard(), signedIn);
-    const display = within(screen.getByRole("radiogroup", { name: "Display" }));
-    display.getByRole("radio", { name: /Rows/ }).focus();
-    await userEvent.keyboard("{ArrowRight}");
-    expect(held.displayMode).toBe("HORIZONTAL_SCROLL");
-    expect(display.getByRole("radio", { name: /Single strip/ })).toHaveFocus();
-    await userEvent.keyboard("{ArrowLeft}{ArrowLeft}");
-    expect(held.displayMode).toBe("FLAT_RANKED");
-  });
-});
-
-describe("BoardSettings: public", () => {
-  it("sends a copy of somebody else's list into its Rankings at one press, and a copy of one's own out as a list bound to the list's version", async () => {
-    const board = {
-      ...filmBoard(),
-      takenFrom: "SRC",
-      origin: { listId: "SRC", version: 30 },
-      items: filmBoard().items.map((item, sourceIndex) => ({ ...item, sourceIndex })),
-    };
-    const source = {
-      ...boardView(board, "Films").list,
-      id: "SRC",
-      authorUid: "author",
-      updatedAt: 32,
-    };
-    const publish = vi.fn<PublishingDeps["publish"]>(async () => ({ id: "new-list" }));
-    const rank = vi.fn<NonNullable<PublishingDeps["rank"]>>(keptRanking);
-    const deps = { publish, rank, loadOriginal: async () => source };
-    // Somebody else's: nothing to review, it goes into the list's Rankings.
-    show(board, signedIn, deps);
-    await userEvent.click(publishButton("Show in Rankings"));
-    await waitFor(() => expect(outStatus("In Rankings")).toBeVisible());
-    expect(screen.queryByRole("group", { name: "Review publication" })).toBeNull();
-    expect(rank).toHaveBeenCalledExactlyOnceWith(
-      source,
-      expect.anything(),
-      expect.objectContaining({ uid: "me" }),
-      expect.anything(),
-    );
-    expect(publish).not.toHaveBeenCalled();
-    expect(held).toMatchObject({ publishedId: null, rankingOf: "SRC" });
-    cleanup();
-
-    // The list's own author: out as a list, over the version it was read at;
-    // the positions of an older version are left out.
-    show(board, { ...signedIn, uid: "author" }, deps);
-    await userEvent.click(publishButton(/^(Publish|Show in Rankings)$/));
-    await waitFor(() => expect(outStatus()).toBeVisible());
-    expect(screen.queryByRole("group", { name: "Review publication" })).toBeNull();
-    expect(publish).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ takenFrom: "SRC", sourceVersion: 32 }),
-      expect.objectContaining({ uid: "author" }),
-    );
-    expect(JSON.stringify(publish.mock.calls[0])).not.toContain("sourceIndex");
-    expect(rank).toHaveBeenCalledTimes(1);
-    expect(held).toMatchObject({ publishedId: "new-list", rankingOf: null });
-    cleanup();
-
-    // Saved from the version it is sent over, the positions tell its twins apart.
-    publish.mockClear();
-    show(
-      { ...board, origin: { listId: "SRC", version: 32 } },
-      { ...signedIn, uid: "author" },
-      deps,
-    );
-    await userEvent.click(publishButton(/^(Publish|Show in Rankings)$/));
-    await waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
-    expect(JSON.stringify(publish.mock.calls[0])).toContain('"sourceIndex":2');
-  });
-
-  it("ignores the original and a late publish receipt that come after the account changed", async () => {
-    const board = { ...filmBoard(), takenFrom: "SRC" };
-    const source: PublishedList = { ...boardView(board, "Films").list, id: "SRC", updatedAt: 25 };
-    const original = deferred<PublishedList>();
-    const rank = vi.fn<NonNullable<PublishingDeps["rank"]>>(keptRanking);
-    show(board, signedIn, { rank, loadOriginal: () => original.promise });
-    await userEvent.click(publishButton("Show in Rankings"));
-    actionAuth.currentUser = actionUser("author");
-    await act(async () => original.resolve(source));
-    expect(rank).not.toHaveBeenCalled();
-    expect(held.rankingOf).toBeNull();
-    cleanup();
-
-    const receipt = deferred<{ id: string; existing: true }>();
-    const publish = vi.fn(() => receipt.promise);
-    const republish = vi.fn();
-    show(filmBoard(), signedIn, { publish, republish });
-    await userEvent.click(publishButton());
-    expect(publish).toHaveBeenCalledTimes(1);
-    actionAuth.currentUser = actionUser("author");
-    await act(async () => receipt.resolve({ id: "prior", existing: true }));
-    expect(republish).not.toHaveBeenCalled();
-    expect(published).not.toHaveBeenCalled();
-    expect(held.publishedId).toBeNull();
-  });
-
-  it.each([false, true])(
-    "explains a publication limit at the Publish button (weekly=%s)",
-    async (weekly) => {
-      const retryAt = Date.UTC(2026, 10, 13, 10, 15);
-      const body = JSON.stringify({ code: "TOO_MANY_LISTS", ...(weekly ? { retryAt } : {}) });
-      const publish = vi.fn().mockRejectedValue(new ApiFailure(parseApiError(409, body)));
-      show(filmBoard(), signedIn, { publish });
-      await userEvent.click(publishButton());
-      const alert = await screen.findByRole("alert");
-      if (weekly) {
-        expect(alert).toHaveTextContent(
-          new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "medium" }).format(
-            retryAt,
-          ),
-        );
-        expect(alert).not.toHaveTextContent("Take one down");
-      } else {
-        expect(alert).toHaveTextContent("Take one down first: show the Public ones in Your lists");
-      }
-      expect(outStatus()).toBeNull();
-      expect(publishButton()).toBeEnabled();
-      expect(publish).toHaveBeenCalledTimes(1);
-    },
-  );
-
-  it("asks a guest to sign in from Publish, and leaves the board as it was", async () => {
-    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
-    const publish = vi.fn();
-    show(filmBoard(), GUEST, { publish }, { signIn });
-    expect(screen.getByText(/Sign in with Google to publish/)).toBeInTheDocument();
-    expect(publishButton()).toBeEnabled();
-    expect(publishButton()).not.toHaveAttribute("aria-disabled");
-    await userEvent.click(publishButton());
-    expect(signIn).toHaveBeenCalledTimes(1);
-    expect(publish).not.toHaveBeenCalled();
-    expect(outStatus()).toBeNull();
-    expect(held.publishedId).toBeNull();
-  });
-
-  it("gives the focus back to Publish once the publishing that greyed it out is over", async () => {
-    let refuse: (reason: unknown) => void = () => undefined;
-    const publish = vi.fn(
-      () =>
-        new Promise<{ id: string }>((_, no) => {
-          refuse = no;
-        }),
-    );
-    show(filmBoard(), signedIn, { publish });
-    publishButton().focus();
-    await userEvent.keyboard(" ");
-    const button = publishButton("Publishing…");
-    expect(button).toBeDisabled();
-    // A browser drops the focus of a button greyed out under it to the page; jsdom keeps it.
-    const doneButton = screen.getByRole("button", { name: "Done" });
-    act(() => {
-      doneButton.focus();
-      doneButton.blur();
-    });
-    expect(document.body).toHaveFocus();
-    // Refused, it is Publish again, and the keyboard is back on it.
-    await act(async () => refuse(new ApiFailure({ kind: "offline" })));
-    expect(publishButton()).toBe(button);
-    expect(publishButton()).toBeEnabled();
-    expect(publishButton()).toHaveFocus();
-  });
-
-  it("names the category as what stands in the way of a signed-in person, on the Publish button itself", async () => {
-    const publish = vi.fn();
-    show({ ...filmBoard(), category: null }, signedIn, { publish });
-    // Still a Tab stop, so the keyboard reaches it and hears why.
-    expect(publishButton()).toBeEnabled();
-    expect(publishButton()).toHaveAttribute("aria-disabled", "true");
-    expect(publishButton()).toHaveAccessibleDescription("Pick a category.");
-    await userEvent.click(publishButton());
-    expect(outStatus()).toBeNull();
-    expect(publish).not.toHaveBeenCalled();
-  });
-
-  it("names the tier limit as what stands in the way of a new list ranked in twenty tiers", () => {
-    const board = filmBoard();
-    const pool = board.tiers.find((tier) => tier.isPool)!;
-    const ranked = Array.from({ length: 20 }, (_, n) => ({
-      ...pool,
-      uid: `t${n}`,
-      position: n,
-      label: `T${n}`,
-      isPool: false,
-    }));
-    show({ ...board, tiers: [...ranked, { ...pool, position: 20 }] }, signedIn);
-    expect(publishButton()).toHaveAttribute("aria-disabled", "true");
-    expect(publishButton()).toHaveAccessibleDescription("At most 19 tiers.");
-  });
-
-  // QA S11: pictures from other sites the backend could not fetch or check in time.
-  it("passes on how many pictures from other sites were left out", async () => {
-    const publish = vi.fn(() => Promise.resolve({ id: "L1", droppedPictures: 2 }));
-    show(filmBoard(), signedIn, { publish });
-    await userEvent.click(publishButton());
-    await waitFor(() => expect(published).toHaveBeenCalledWith("published", "L1", 2));
-  });
-
-  it("publishes the board, keeps the id and the name, and sends it again on Update", async () => {
-    const publish = vi.fn(() => Promise.resolve({ id: "L1" }));
-    const republish = vi.fn(() => Promise.resolve({ id: "L1" }));
-    show(filmBoard(), signedIn, { publish, republish });
-    expect(publishButton()).toBeEnabled();
-    expect(outStatus()).toBeNull();
-
-    await userEvent.click(publishButton());
-    await waitFor(() => expect(outStatus()).toBeVisible());
-    expect(within(sheet()).queryByRole("button", { name: "Publish" })).toBeNull();
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Films", category: "film_tv" }),
-      expect.objectContaining({ uid: "me" }),
-    );
-    // No topic chosen, none is said.
-    expect(publish).not.toHaveBeenCalledWith(
-      expect.objectContaining({ noTopic: true }),
-      expect.objectContaining({ uid: "me" }),
-    );
-    // The board's uid goes with a first publish, so publishing again after a
-    // reload gets the same list back rather than a second one.
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ boardUid: filmBoard().uid }),
-      expect.objectContaining({ uid: "me" }),
-    );
-    expect(held).toMatchObject({
-      publishedId: "L1",
-      authorName: "Danylo",
-      editedAt: 500,
-      publishedEditedAt: 500,
-    });
-    expect(published).toHaveBeenCalledWith("published", "L1", 0);
-    // Out now: the Publication row has Update, View and Take it down, under Published.
-    const row = outStatus()!.closest("li")!;
-    expect(screen.getByRole("button", { name: "Take it down" }).closest("li")).toBe(row);
-    expect(within(row).getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
-
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(published).toHaveBeenCalledWith("updated", "L1", 0));
-    expect(republish).toHaveBeenCalledWith(
-      "L1",
-      expect.objectContaining({ title: "Films" }),
-      expect.objectContaining({ uid: "me" }),
-    );
-    expect(republish).toHaveBeenCalledWith(
-      "L1",
-      expect.objectContaining({ boardUid: filmBoard().uid }),
-      expect.objectContaining({ uid: "me" }),
-    );
-  });
-
-  it("sends the list a copy of one's own was saved from, and keeps a publish the backend took as a ranking as one", async () => {
-    const publish = vi.fn(() => Promise.resolve({ id: "SRC", ranking: true }));
-    const unpublish = vi.fn(() => Promise.resolve());
-    const withdraw = vi.fn(() => Promise.resolve());
-    const source = {
-      ...boardView(filmBoard(), "Films").list,
-      id: "SRC",
-      authorUid: "me",
-      updatedAt: 120,
-    };
-    show({ ...filmBoard(), takenFrom: "SRC", authorName: "Olena" }, signedIn, {
-      publish,
-      unpublish,
-      withdraw,
-      loadOriginal: async () => source,
-    });
-    // Said in advance, above the button.
-    expect(
-      screen.getByText("Your arrangement will appear in the original list’s Rankings."),
-    ).toBeVisible();
-    await userEvent.click(publishButton(/^(Publish|Show in Rankings)$/));
-    await waitFor(() => expect(outStatus("In Rankings")).toBeVisible());
-    expect(screen.getByText("Your arrangement is in the original list’s Rankings.")).toBeVisible();
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ takenFrom: "SRC" }),
-      expect.objectContaining({ uid: "me" }),
-    );
-    // Out as one's ranking of the original: no list of its own, the cards still Olena's.
-    expect(held).toMatchObject({
-      publishedId: null,
-      rankingOf: "SRC",
-      authorName: "Olena",
-      publishedEditedAt: 500,
-    });
-    expect(published).toHaveBeenCalledWith("ranking", "SRC", 0);
-    // A ranking is seen on the page of the list it ranks.
-    expect(screen.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/SRC");
-
-    // Down from the list it ranks, not by deleting somebody else's list.
-    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
-    await userEvent.click(screen.getAllByRole("button", { name: "Take it down" }).at(-1)!);
-    await waitFor(() => expect(outStatus("In Rankings")).toBeNull());
-    expect(publishButton("Show in Rankings")).toBeEnabled();
-    expect(withdraw).toHaveBeenCalledExactlyOnceWith("SRC");
-    expect(unpublish).not.toHaveBeenCalled();
-    expect(held).toMatchObject({ publishedId: null, rankingOf: null, authorName: "Olena" });
-  });
-
-  it("never publishes a renamed copy of somebody else's list as a list: it goes into the list's Rankings", async () => {
-    const board = filmBoard();
-    const source = {
-      ...boardView(board, "Films").list,
-      id: "SRC",
-      authorUid: "author",
-      updatedAt: 125,
-    };
-    const publish = vi.fn(async () => ({ id: "NEW" }));
-    const rank = vi.fn<NonNullable<PublishingDeps["rank"]>>(keptRanking);
-    show(
-      {
-        ...board,
-        title: "My favourites",
-        takenFrom: "SRC",
-        origin: { listId: "SRC", version: 100 },
-        items: board.items.map((item, sourceIndex) => ({ ...item, sourceIndex })),
-      },
-      signedIn,
-      { publish, rank, loadOriginal: async () => source },
-    );
-    expect(within(sheet()).queryByRole("button", { name: "Publish" })).toBeNull();
-    await userEvent.click(publishButton("Show in Rankings"));
-    await waitFor(() => expect(rank).toHaveBeenCalledTimes(1));
-    expect(rank).toHaveBeenCalledWith(
-      source,
-      expect.anything(),
-      expect.objectContaining({ uid: "me" }),
-      expect.anything(),
-    );
-    expect(publish).not.toHaveBeenCalled();
-    expect(held).toMatchObject({ publishedId: null, rankingOf: "SRC" });
-  });
-
-  it("puts a changed copy of somebody else's list in its Rankings with the cards of one's own, never as a list", async () => {
-    const original = filmBoard();
-    const source = {
-      ...boardView(original, "Films").list,
-      id: "SRC",
-      authorUid: "author",
-      updatedAt: 125,
-      // The list has two of the board's three cards: Climax is one's own.
-      items: boardView(original, "Films").list.items.slice(0, 2),
-    };
-    const publish = vi.fn(async () => ({ id: "NEW" }));
-    const rank = vi.fn<NonNullable<PublishingDeps["rank"]>>(keptRanking);
-    show({ ...original, takenFrom: "SRC" }, signedIn, {
-      publish,
-      rank,
-      loadOriginal: async () => source,
-    });
-    await userEvent.click(publishButton("Show in Rankings"));
-    await waitFor(() => expect(outStatus("In Rankings")).toBeVisible());
-    expect(screen.queryByRole("group", { name: "Review publication" })).toBeNull();
-    expect(rank).toHaveBeenCalledExactlyOnceWith(
-      source,
-      source.tiers.map(() => []),
-      expect.objectContaining({ uid: "me" }),
-      {
-        addedCards: [{ title: "Climax" }],
-        tierLabels: source.tiers.map((tier) => tier.label),
-      },
-    );
-    expect(publish).not.toHaveBeenCalled();
-    expect(held).toMatchObject({ publishedId: null, rankingOf: "SRC" });
-    expect(published).toHaveBeenCalledWith("ranking", "SRC", 0);
-
-    // Sent again, it goes as the ranking with its own cards, never as a publish that would drop them.
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(rank).toHaveBeenCalledTimes(2));
-    expect(rank.mock.calls[1]?.[3]).toEqual({
-      addedCards: [{ title: "Climax" }],
-      tierLabels: source.tiers.map((tier) => tier.label),
-    });
-    expect(publish).not.toHaveBeenCalled();
-  });
-
-  it("offers the list's Rankings when the backend finds a list of one's own is somebody else's (RANK_INSTEAD)", async () => {
-    const original = filmBoard();
-    const source = {
-      ...boardView(original, "Films").list,
-      id: "SRC",
-      authorUid: "author",
-      updatedAt: 125,
-      items: boardView(original, "Films").list.items.slice(0, 2),
-    };
-    const publish = vi.fn(async () => {
-      throw new ApiFailure(
-        parseApiError(409, JSON.stringify({ code: "RANK_INSTEAD", listId: "SRC" })),
-      );
-    });
-    const rank = vi.fn<NonNullable<PublishingDeps["rank"]>>(keptRanking);
-    show(original, signedIn, { publish, rank, loadOriginal: async () => source });
-    await userEvent.click(publishButton());
-    const ask = await screen.findByRole("group", { name: "Review publication" });
-    expect(ask).toHaveTextContent("This is someone else’s list");
-    expect(rank).not.toHaveBeenCalled();
-    await userEvent.click(within(ask).getByRole("button", { name: "Show in Rankings" }));
-    await waitFor(() => expect(outStatus("In Rankings")).toBeVisible());
-    expect(screen.queryByRole("group", { name: "Review publication" })).toBeNull();
-    expect(rank).toHaveBeenCalledExactlyOnceWith(
-      source,
-      source.tiers.map(() => []),
-      expect.objectContaining({ uid: "me" }),
-      {
-        addedCards: [{ title: "Climax" }],
-        tierLabels: source.tiers.map((tier) => tier.label),
-      },
-    );
-    expect(publish).toHaveBeenCalledTimes(1);
-    expect(held).toMatchObject({ publishedId: null, rankingOf: "SRC" });
-  });
-
-  it("names the card of one's own whose picture the ranking was refused for", async () => {
-    const original = filmBoard();
-    const source = {
-      ...boardView(original, "Films").list,
-      id: "SRC",
-      authorUid: "author",
-      items: boardView(original, "Films").list.items.slice(1),
-    };
-    const rank = vi.fn(async () => {
-      throw new ApiFailure(
-        parseApiError(
-          422,
-          JSON.stringify({ code: "PICTURE_REFUSED", because: "adult", addedIndex: 0 }),
-        ),
-      );
-    });
-    show({ ...original, takenFrom: "SRC" }, signedIn, {
-      ...idle,
-      rank,
-      loadOriginal: async () => source,
-    });
-    await userEvent.click(publishButton("Show in Rankings"));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The picture on “Ex Machina” cannot go in the public feed.",
-    );
-    expect(outStatus("In Rankings")).toBeNull();
-    expect(publishButton("Show in Rankings")).toBeEnabled();
-  });
-
-  it("says a list the backend holds for a moderator waits, and offers no link to it until an Update comes back without the hold", async () => {
-    const publish = vi.fn(() => Promise.resolve({ id: "L1", topicId: null, underReview: true }));
-    const republish = vi
-      .fn<PublishingDeps["republish"]>()
-      .mockResolvedValueOnce({ id: "L1", topicId: null, underReview: true })
-      .mockResolvedValueOnce({ id: "L1", topicId: null, underReview: false });
-    show(filmBoard(), signedIn, { publish, republish });
-
-    await userEvent.click(publishButton());
-    await waitFor(() => expect(outStatus()).toBeVisible());
-    expect(held).toMatchObject({ publishedId: "L1", heldForReview: true });
-    expect(published).toHaveBeenCalledWith("held", "L1", 0);
-    expect(published).not.toHaveBeenCalledWith("published", "L1", 0);
-    // Its link answers 404 to everybody, the author too: nothing leads there.
-    expect(screen.queryByRole("link", { name: "View" })).toBeNull();
-    expect(
-      within(sheet()).getAllByText("It waits for a moderator before others can see it.").length,
-    ).toBeGreaterThan(0);
-    expect(screen.queryByText(/Anyone with the link/)).toBeNull();
-
-    // Still held after an Update: said again, not "Saved".
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(published).toHaveBeenCalledTimes(2));
-    expect(published).toHaveBeenLastCalledWith("held", "L1", 0);
-    expect(held).toMatchObject({ heldForReview: true });
-
-    // Staff looked: the next Update finds it in the feed, and the link is back.
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(published).toHaveBeenLastCalledWith("updated", "L1", 0));
-    expect(held.heldForReview).toBeUndefined();
-    expect(screen.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
-  });
-
-  it("asks before taking it down, in the sheet, from Take it down under Published", async () => {
-    const unpublish = vi.fn(() => Promise.resolve());
-    show(
-      {
-        ...filmBoard(),
-        publishedId: "L1",
-        publishedEditedAt: 100,
-        editedAt: 200,
-        authorName: "Danylo",
-      },
-      signedIn,
-      { unpublish },
-    );
-    expect(outStatus()).toBeVisible();
-    expect(within(sheet()).queryByRole("button", { name: "Publish" })).toBeNull();
-    expect(screen.getByText("Changes not published yet")).toBeInTheDocument();
-    // No question until it is asked for.
-    expect(screen.queryByRole("group", { name: "Take Films down?" })).toBeNull();
-
-    // Cancel leaves the list where it is.
-    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
-    const ask = screen.getByRole("group", { name: "Take Films down?" });
-    expect(ask).toHaveTextContent(
-      "It leaves Community and its link stops working. Your board stays in Your lists.",
-    );
-    expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
-    await userEvent.click(within(ask).getByRole("button", { name: "Cancel" }));
-    expect(unpublish).not.toHaveBeenCalled();
-    expect(outStatus()).toBeVisible();
-    expect(screen.queryByRole("group", { name: "Take Films down?" })).toBeNull();
-
-    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
-    const confirm = within(screen.getByRole("group", { name: "Take Films down?" })).getByRole(
-      "button",
-      { name: "Take it down" },
-    );
-    expect(confirm).toHaveClass("dialog__danger");
-    await userEvent.click(confirm);
-    await waitFor(() => expect(outStatus()).toBeNull());
-    expect(publishButton()).toBeEnabled();
-    expect(unpublish).toHaveBeenCalledWith("L1");
-    // One's own again: no name of somebody else's on it, nothing published.
-    expect(held).toMatchObject({ publishedId: null, publishedEditedAt: null, authorName: null });
-    expect(published).toHaveBeenCalledWith("unpublished", null);
-    expect(screen.queryByRole("button", { name: "Update" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Take it down" })).toBeNull();
-  });
-
-  it("treats a list that is already gone as taken down, and names any other failure", async () => {
-    const unpublish = vi.fn(() => Promise.reject(new ApiFailure({ kind: "notFound" })));
-    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 }, signedIn, { unpublish });
-    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
-    await userEvent.click(screen.getAllByRole("button", { name: "Take it down" }).at(-1)!);
-    await waitFor(() => expect(held.publishedId).toBeNull());
-
-    const publish = vi.fn(() => Promise.reject(new ApiFailure({ kind: "offline" })));
-    show(filmBoard(), signedIn, { publish });
-    await userEvent.click(publishButton());
-    expect(await screen.findByRole("alert")).toHaveTextContent(/./);
-    expect(held.publishedId).toBeNull();
-    expect(outStatus()).toBeNull();
-    expect(publishButton()).toBeEnabled();
-  });
-
-  it("leaves the copy behind a change made while it was on its way", async () => {
-    let answer: (value: { id: string }) => void = () => undefined;
-    const publish = vi.fn(() => new Promise<{ id: string }>((resolve) => (answer = resolve)));
-    show(filmBoard(), signedIn, { publish });
-    await userEvent.click(publishButton());
-    // Meanwhile a cover is chosen: it was not in what went out.
-    await userEvent.click(screen.getByRole("button", { name: /Cover/ }));
-    await userEvent.click(screen.getByRole("button", { name: "Use Ex Machina on the cover" }));
-    answer({ id: "L1" });
-    await waitFor(() => expect(outStatus()).toBeVisible());
-    expect(held.coverImageUrls).toEqual([EX]);
-    expect(screen.getByText("Changes not published yet")).toBeInTheDocument();
-  });
-
-  it("says a refused take-down by its own name, beside the question", async () => {
-    const unpublish = vi.fn(() => Promise.reject(new ApiFailure({ kind: "unavailable" })));
-    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 }, signedIn, { unpublish });
-    await userEvent.click(screen.getByRole("button", { name: "Take it down" }));
-    const ask = screen.getByRole("group", { name: "Take Films down?" });
-    await userEvent.click(within(ask).getByRole("button", { name: "Take it down" }));
-    expect(await within(ask).findByRole("alert")).toHaveTextContent(
-      "Could not take it down. Try again in a minute.",
-    );
-    expect(held.publishedId).toBe("L1");
-  });
-
-  it("sends the board again over the list's link when an earlier publish's answer was lost", async () => {
-    // The first publish made L1, but its answer never came: the retry is told so, and nothing was written.
-    const publish = vi.fn(async () => ({ id: "L1", topicId: null, existing: true }));
-    const republish = vi.fn(async () => ({ id: "L1" }));
-    show({ ...filmBoard(), title: "Films, renamed" }, signedIn, { publish, republish });
-    await userEvent.click(publishButton());
-    await waitFor(() => expect(held.publishedId).toBe("L1"));
-    expect(republish).toHaveBeenCalledWith(
-      "L1",
-      expect.objectContaining({ title: "Films, renamed", boardUid: "films" }),
-      expect.objectContaining({ uid: "me" }),
-    );
-    expect(held.publishedEditedAt).toBe(held.editedAt);
-  });
-
-  it("keeps a moderator's topic on Update of a board without one, and learns it", async () => {
-    const republish = vi.fn(async () => ({ id: "L1", topicId: "t1" }));
-    const findTopic = vi.fn(async (id: string) => topic(id, "A24"));
-    show(
-      { ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 },
-      signedIn,
-      { republish },
-      {
-        findTopic,
-      },
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(republish).toHaveBeenCalled());
-    // Nothing said of a topic: the list keeps the one a moderator moved it into.
-    const request = (republish.mock.calls[0] as unknown[])[1];
-    expect(request).not.toHaveProperty("noTopic");
-    expect(request).not.toHaveProperty("topicId");
-    await waitFor(() => expect(held.topic).toEqual({ id: "t1", name: "A24", learned: true }));
-    // Learnt from the answer, it is no edit: the list is not behind it.
-    expect(held.publishedEditedAt).toBe(held.editedAt);
-  });
-
-  it("says nothing of a learnt topic on the next Update, so a moderator's later move holds, and learns that one", async () => {
-    const republish = vi
-      .fn<PublishingDeps["republish"]>()
-      .mockResolvedValueOnce({ id: "L1", topicId: "t2" })
-      .mockResolvedValueOnce({ id: "L1", topicId: null });
-    const findTopic = vi.fn(async (id: string) => topic(id, id === "t2" ? "Neon" : "A24"));
-    show(
-      {
-        ...filmBoard(),
-        publishedId: "L1",
-        publishedEditedAt: 100,
-        topic: { id: "t1", name: "A24", learned: true },
-      },
-      signedIn,
-      { republish },
-      { findTopic },
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(republish).toHaveBeenCalledTimes(1));
-    const request = (republish.mock.calls[0] as unknown[])[1];
-    expect(request).not.toHaveProperty("topicId");
-    expect(request).not.toHaveProperty("noTopic");
-    // The moderator moved it again meanwhile: the board learns where it is now.
-    await waitFor(() => expect(held.topic).toEqual({ id: "t2", name: "Neon", learned: true }));
-
-    // Moved out of every topic: the learnt one goes, and nothing is taken off by the person.
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(republish).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(held.topic).toBeNull());
-    expect(held.topicOff).toBeUndefined();
-  });
-
-  it("does not learn a topic of another section than the board's", async () => {
-    const republish = vi.fn(async () => ({ id: "L1", topicId: "g1" }));
-    const findTopic = vi.fn(async (id: string) => ({ ...topic(id, "Indie"), section: "games" }));
-    show(
-      { ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 },
-      signedIn,
-      { republish },
-      { findTopic },
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(findTopic).toHaveBeenCalledWith("g1"));
-    await act(async () => undefined);
-    expect(held.topic).toBeNull();
-  });
-
-  it("says a refused Update under Update, and lets a list taken down elsewhere go", async () => {
-    const republish = vi
-      .fn<PublishingDeps["republish"]>()
-      .mockRejectedValueOnce(new ApiFailure({ kind: "unavailable" }))
-      .mockRejectedValueOnce(new ApiFailure({ kind: "notFound" }));
-    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 }, signedIn, { republish });
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    const row = screen.getByRole("button", { name: "Update" }).closest("li")!;
-    expect(await within(row).findByRole("alert")).toHaveTextContent("Could not publish");
-
-    await userEvent.click(screen.getByRole("button", { name: "Update" }));
-    await waitFor(() => expect(outStatus()).toBeNull());
-    expect(publishButton()).toBeEnabled();
-    expect(held.publishedId).toBeNull();
-    expect(screen.getByRole("alert")).toHaveTextContent("This list isn’t published anymore.");
-  });
-
-  it("tells a guest in an app's own browser to open the page in Chrome or Safari", async () => {
-    const signIn = vi
-      .fn<Session["signIn"]>()
-      .mockResolvedValue({ kind: "failed", code: "in-app-browser" });
-    show(filmBoard(), GUEST, {}, { signIn });
-    await userEvent.click(publishButton());
-    expect(await screen.findByRole("alert")).toHaveTextContent(/Chrome or Safari/);
-  });
-
-  it("says why a public list with no cards cannot be sent, and still lets it be taken down", () => {
-    const empty = { ...filmBoard(), items: [], publishedId: "L1", publishedEditedAt: 100 };
-    show(empty, signedIn);
-    expect(screen.getByRole("button", { name: "Update" })).toBeDisabled();
-    expect(
-      screen.getByText("Add at least one card before you publish this list."),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Take it down" })).toBeEnabled();
-  });
-});
-
-describe("BoardSettings: publication", () => {
-  // The row under its title, with its sub line, button or status, and notes.
-  const rowOf = (title: string) =>
-    [...sheet().querySelectorAll(".sheet-row__title")]
-      .find((one) => one.textContent === title)!
-      .closest("li")!;
-
-  it("offers Publish on one's own list that is not out, and says where it goes", () => {
-    show(filmBoard(), signedIn);
-    const row = within(rowOf("Publication"));
-    expect(row.getByRole("button", { name: "Publish" })).toHaveClass("btn--tonal");
-    expect(row.getByText("Anyone with the link can rank it. It shows in Community.")).toBeVisible();
-    expect(row.queryByText("Published")).toBeNull();
-    expect(row.queryByRole("button", { name: "Take it down" })).toBeNull();
-    expect(row.queryByRole("button", { name: "Show in Rankings" })).toBeNull();
-  });
-
-  it("offers Show in Rankings on a copy of somebody else's list, and one press puts it there", async () => {
-    const board = { ...filmBoard(), takenFrom: "SRC" };
-    const source = { ...boardView(board, "Films").list, id: "SRC", authorUid: "author" };
-    const publish = vi.fn();
-    const rank = vi.fn<NonNullable<PublishingDeps["rank"]>>(keptRanking);
-    show(board, signedIn, { publish, rank, loadOriginal: async () => source });
-    const row = within(rowOf("Publication"));
-    expect(
-      row.getByText("Your arrangement will appear in the original list’s Rankings."),
-    ).toBeVisible();
-    expect(row.queryByRole("button", { name: "Publish" })).toBeNull();
-    await userEvent.click(row.getByRole("button", { name: "Show in Rankings" }));
-    await waitFor(() => expect(rank).toHaveBeenCalledTimes(1));
-    expect(screen.queryByRole("group", { name: "Review publication" })).toBeNull();
-    expect(screen.queryByText("Checking the original list…")).toBeNull();
-    expect(publish).not.toHaveBeenCalled();
-    expect(await row.findByText("In Rankings")).toBeVisible();
-  });
-
-  it("says Published when out, with Take it down under it that asks first", async () => {
-    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 }, signedIn);
-    const row = within(rowOf("Publication"));
-    expect(row.getByText("Published")).toBeVisible();
-    expect(row.queryByRole("button", { name: "Publish" })).toBeNull();
-    expect(row.getByText("Anyone with the link can rank it. It shows in Community.")).toBeVisible();
-    expect(screen.queryByRole("group", { name: "Take Films down?" })).toBeNull();
-    await userEvent.click(row.getByRole("button", { name: "Take it down" }));
-    const ask = screen.getByRole("group", { name: "Take Films down?" });
-    expect(within(ask).getByRole("button", { name: "Cancel" })).toHaveFocus();
-    expect(within(ask).getByRole("button", { name: "Take it down" })).toBeInTheDocument();
-  });
-
-  it("hands the focus from Publish to Update once out, and back once down", async () => {
-    const publish = vi.fn(async () => ({ id: "L1" }));
-    const unpublish = vi.fn(async () => undefined);
-    show(filmBoard(), signedIn, { publish, unpublish });
-    const row = within(rowOf("Publication"));
-    await userEvent.click(row.getByRole("button", { name: "Publish" }));
-    // Publish gives way to the row's actions: the first of them, Update, takes the keyboard.
-    await waitFor(() => expect(row.getByRole("button", { name: "Update" })).toHaveFocus());
-    await userEvent.click(row.getByRole("button", { name: "Take it down" }));
-    const ask = screen.getByRole("group", { name: "Take Films down?" });
-    await userEvent.click(within(ask).getByRole("button", { name: "Take it down" }));
-    await waitFor(() => expect(row.getByRole("button", { name: "Publish" })).toHaveFocus());
-  });
-
-  it("says a published copy behind the board is so, and fills Update to send it", () => {
-    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100, editedAt: 200 }, signedIn);
-    const row = within(rowOf("Publication"));
-    expect(row.getByText("Published")).toBeVisible();
-    expect(row.getByText("Changes not published yet")).toBeVisible();
-    expect(row.getByRole("button", { name: "Update" })).toHaveClass("btn--filled");
-  });
-
-  it("keeps Update tonal on a list up to date, with View leading to it", () => {
-    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100, editedAt: 100 }, signedIn);
-    const row = within(rowOf("Publication"));
-    expect(row.queryByText("Changes not published yet")).toBeNull();
-    expect(row.getByRole("button", { name: "Update" })).toHaveClass("btn--tonal");
-    expect(row.getByRole("button", { name: "Update" })).not.toHaveClass("btn--filled");
-    expect(row.getByRole("link", { name: "View" })).toHaveAttribute("href", "/l/L1");
-  });
-
-  it("says In Rankings when one's ranking of the list is out", () => {
-    show({ ...filmBoard(), takenFrom: "SRC", rankingOf: "SRC", publishedEditedAt: 100 }, signedIn);
-    const row = within(rowOf("Publication"));
-    expect(row.getByText("In Rankings")).toBeVisible();
-    expect(row.queryByText("Published")).toBeNull();
-    expect(row.getByText("Your arrangement is in the original list’s Rankings.")).toBeVisible();
-    expect(row.getByRole("button", { name: "Take it down" })).toBeEnabled();
-  });
-
-  it("says a list held for a moderator waits, Published still", () => {
-    show(
-      { ...filmBoard(), publishedId: "L1", publishedEditedAt: 100, heldForReview: true },
-      signedIn,
-    );
-    const row = within(rowOf("Publication"));
-    expect(row.getByText("Published")).toBeVisible();
-    expect(row.getByText("It waits for a moderator before others can see it.")).toBeVisible();
-  });
-
-  it("hands a guest's Publish to the page's sign-in for publishing, when it has one, and leaves the board", async () => {
-    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
-    const signInToPublish = vi
-      .fn<() => Promise<SignInOutcome>>()
-      .mockResolvedValue({ kind: "cancelled" });
-    const publish = vi.fn();
-    show(filmBoard(), GUEST, { publish }, { signIn, signInToPublish });
-    await userEvent.click(publishButton());
-    expect(signInToPublish).toHaveBeenCalledTimes(1);
-    expect(signIn).not.toHaveBeenCalled();
-    expect(publish).not.toHaveBeenCalled();
-    expect(held.publishedId).toBeNull();
-  });
-});
-
-describe("BoardSettings: category and topic", () => {
-  it("picks the section from a list that a word narrows, and forgets the topic of the old one", async () => {
-    show({ ...filmBoard(), topic: { id: "t1", name: "A24" } }, signedIn);
-    const row = screen.getByRole("button", { name: /Category/ });
-    expect(row).toHaveTextContent("Film & TV");
-    expect(row).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(row);
-    const picker = screen.getByRole("radiogroup", { name: "Category" });
-    expect(within(picker).getByRole("radio", { name: /Film & TV/ })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    await userEvent.type(screen.getByRole("searchbox", { name: "Find a section" }), "gam");
-    expect(
-      within(picker)
-        .getAllByRole("radio")
-        .map((radio) => radio.textContent),
-    ).toEqual(["Games"]);
-    await userEvent.click(within(picker).getByRole("radio", { name: "Games" }));
-    expect(held).toMatchObject({ category: "games", topic: null });
-    expect(screen.queryByRole("radiogroup", { name: "Category" })).toBeNull();
-    expect(screen.getByRole("button", { name: /Category/ })).toHaveTextContent("Games");
-  });
-
-  it("moves through the sections with the arrows, one Tab stop, and takes one only on Enter", async () => {
-    show(filmBoard(), signedIn);
-    await userEvent.click(screen.getByRole("button", { name: /Category/ }));
-    const picker = within(screen.getByRole("radiogroup", { name: "Category" }));
-    const film = picker.getByRole("radio", { name: /Film & TV/ });
-    expect(picker.getAllByRole("radio").filter((radio) => radio.tabIndex === 0)).toEqual([film]);
-    film.focus();
-    await userEvent.keyboard("{ArrowDown}");
-    const next = document.activeElement;
-    expect(next).not.toBe(film);
-    expect(next).toHaveAttribute("role", "radio");
-    // Moving chose nothing, and the picker is still open.
-    expect(held.category).toBe("film_tv");
-    expect(film).toHaveAttribute("aria-checked", "true");
-    await userEvent.keyboard("{Enter}");
-    expect(held.category).not.toBe("film_tv");
-    expect(screen.queryByRole("radiogroup", { name: "Category" })).toBeNull();
-    // The radio chosen is gone: the focus is on the row, not dropped to the page.
-    expect(screen.getByRole("button", { name: /Category/ })).toHaveFocus();
-  });
-
-  it("offers the approved sections in the site's order, then one's own waiting ones, then Propose a section", async () => {
-    show({ ...filmBoard(), category: null }, signedIn, {}, { sections: someSections() });
-    await userEvent.click(screen.getByRole("button", { name: /Category/ }));
-    const picker = screen.getByRole("radiogroup", { name: "Category" });
-    expect(
-      within(picker)
-        .getAllByRole("radio")
-        .map((radio) => radio.textContent),
-    ).toEqual([
-      "Games",
-      "Street food",
-      "Film & TV",
-      "Other",
-      "Night marketsWaiting for a moderator",
-    ]);
-
-    // The word narrows the waiting ones too; somebody else's proposal is never offered.
-    await userEvent.type(screen.getByRole("searchbox", { name: "Find a section" }), "ma");
-    expect(
-      within(picker)
-        .getAllByRole("radio")
-        .map((radio) => radio.textContent),
-    ).toEqual(["Night marketsWaiting for a moderator"]);
-
-    await userEvent.click(screen.getByRole("button", { name: "Propose a section" }));
-    expect(propose).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("radiogroup", { name: "Category" })).toBeNull();
-  });
-
-  it("files the list under a waiting section of one's own, says where it goes, and publishes into it", async () => {
-    const publish = vi.fn(() => Promise.resolve({ id: "L1" }));
-    show(filmBoard(), signedIn, { publish }, { sections: someSections() });
-    await userEvent.click(screen.getByRole("button", { name: /Category/ }));
-    await userEvent.click(screen.getByRole("radio", { name: /Night markets/ }));
-    expect(held.category).toBe("night-markets");
-    expect(screen.getByRole("button", { name: /Category/ })).toHaveTextContent(
-      "Moves to Night markets once it’s approved",
-    );
-
-    await userEvent.click(publishButton());
-    await waitFor(() => expect(outStatus()).toBeVisible());
-    expect(publish).toHaveBeenCalledWith(
-      expect.objectContaining({ category: "night-markets" }),
-      expect.objectContaining({ uid: "me" }),
-    );
-  });
-
-  it("keeps a section it has no name for, and calls it Other", () => {
-    show({ ...filmBoard(), category: "k-dramas" }, signedIn, {}, { sections: someSections() });
-    expect(screen.getByRole("button", { name: /Category/ })).toHaveTextContent("Other");
-    expect(publishButton()).toBeEnabled();
-    expect(publishButton()).not.toHaveAttribute("aria-disabled");
-  });
-
-  it("offers the section's topics and None, and sends the one chosen with the list", async () => {
-    let answer: (topics: { topics: Topic[] }) => void = () => undefined;
-    const topics = vi.fn<LoadTopics>(
-      () =>
-        new Promise((resolve) => {
-          answer = resolve;
-        }),
-    );
-    const publish = vi.fn(() => Promise.resolve({ id: "L1" }));
-    show(filmBoard(), signedIn, { publish }, { topics });
-    const row = screen.getByRole("button", { name: /Topic/ });
-    expect(row).toHaveTextContent("None");
-    expect(topics).not.toHaveBeenCalled();
-
-    await userEvent.click(row);
-    expect(topics).toHaveBeenCalledWith("film_tv");
-    const picker = screen.getByRole("radiogroup", { name: "Topic" });
-    expect(within(picker).getByRole("status")).toHaveTextContent("Loading topics…");
-    answer({ topics: [topic("t1", "A24"), topic("t2", "Oscars")] });
-    expect(await within(picker).findByRole("radio", { name: "Oscars" })).toBeInTheDocument();
-    expect(
-      within(picker)
-        .getAllByRole("radio")
-        .map((radio) => radio.textContent),
-    ).toEqual(["Nonecheck", "A24", "Oscars"]);
-    within(picker).getByRole("radio", { name: "Oscars" }).focus();
-    await userEvent.keyboard(" ");
-    expect(held.topic).toEqual({ id: "t2", name: "Oscars" });
-    expect(screen.getByRole("button", { name: /Topic/ })).toHaveTextContent("Oscars");
-    expect(screen.getByRole("button", { name: /Topic/ })).toHaveFocus();
-
-    await userEvent.click(publishButton());
-    await waitFor(() =>
-      expect(publish).toHaveBeenCalledWith(
-        expect.objectContaining({ topicId: "t2" }),
-        expect.objectContaining({ uid: "me" }),
-      ),
-    );
-  });
-
-  it("names a new topic, sends it alone with the list, and shows it waiting after", async () => {
-    const publish = vi.fn(() => Promise.resolve({ id: "L1", topicId: "t9" }));
-    const findTopic = vi.fn<FindTopic>(async () => ({
-      ...topic("t9", "Space operas"),
-      status: "pending",
-    }));
-    show(
-      filmBoard(),
-      signedIn,
-      { publish },
-      {
-        topics: async () => ({ topics: [topic("t1", "A24")] }),
-        findTopic,
-      },
-    );
-    await userEvent.click(screen.getByRole("button", { name: /Topic/ }));
-    const field = screen.getByRole("textbox", { name: "Name a new topic" });
-    expect(field).toHaveAccessibleDescription(/waits for a moderator/);
-    // A sign alone is not a name; one letter is (犬, Proxy #134).
-    await userEvent.type(field, "-");
-    expect(screen.getByRole("button", { name: "Suggest" })).toBeDisabled();
-    await userEvent.clear(field);
-    await userEvent.type(field, "S");
-    expect(screen.getByRole("button", { name: "Suggest" })).toBeEnabled();
-    await userEvent.type(field, "pace   operas{Enter}");
-    expect(held.topic).toEqual({ id: null, name: "Space operas" });
-    expect(screen.getByRole("button", { name: /Topic/ })).toHaveTextContent(
-      "Space operas · waiting for approval",
-    );
-    // Opened again, the picker shows it chosen, above the section's own.
-    await userEvent.click(screen.getByRole("button", { name: /Topic/ }));
-    const picker = screen.getByRole("radiogroup", { name: "Topic" });
-    expect(within(picker).getByRole("radio", { checked: true })).toHaveTextContent(
-      "Space operasWaiting for approval",
-    );
-    expect(findTopic).not.toHaveBeenCalled();
-
-    await userEvent.click(publishButton());
-    await waitFor(() => expect(held.publishedId).toBe("L1"));
-    const request = (publish.mock.calls[0] as unknown[])[0];
-    expect(request).toMatchObject({ newTopic: "Space operas" });
-    expect(request).not.toHaveProperty("topicId");
-    expect(request).not.toHaveProperty("noTopic");
-    expect(held.topic).toEqual({ id: "t9", name: "Space operas", waiting: true });
-    await waitFor(() => expect(findTopic).toHaveBeenCalledWith("t9"));
-    expect(held.topic).toEqual({ id: "t9", name: "Space operas", waiting: true });
-    // What the backend answered is not an edit: the list is not behind it.
-    expect(held.publishedEditedAt).toBe(held.editedAt);
-  });
-
-  it("takes a name the section already has as that topic, not a twin", async () => {
-    show(filmBoard(), signedIn, {}, { topics: async () => ({ topics: [topic("t1", "A24")] }) });
-    await userEvent.click(screen.getByRole("button", { name: /Topic/ }));
-    await screen.findByRole("radio", { name: "A24" });
-    await userEvent.type(screen.getByRole("textbox", { name: "Name a new topic" }), "a24{Enter}");
-    expect(held.topic).toEqual({ id: "t1", name: "A24" });
-  });
-
-  it("settles a waiting topic of one's own when the picker opens", async () => {
-    const findTopic = vi.fn<FindTopic>(async () => topic("t9", "Space opera"));
-    show(
-      { ...filmBoard(), topic: { id: "t9", name: "Space operas", waiting: true } },
-      signedIn,
-      {},
-      { findTopic },
-    );
-    await userEvent.click(screen.getByRole("button", { name: /Topic/ }));
-    await waitFor(() => expect(held.topic).toEqual({ id: "t9", name: "Space opera" }));
-    expect(findTopic).toHaveBeenCalledTimes(1);
-  });
-
-  it("says when too many topics wait, and forgets one a moderator turned down", async () => {
-    const tooMany = vi.fn(() => Promise.reject(new ApiFailure({ kind: "tooManyTopics" })));
-    show({ ...filmBoard(), topic: { id: null, name: "Space operas" } }, signedIn, {
-      publish: tooMany,
-    });
-    await userEvent.click(publishButton());
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Three of your topics are waiting for a moderator.",
-    );
-    expect(held.topic).toEqual({ id: null, name: "Space operas" });
-
-    const refused = vi.fn(() =>
-      Promise.reject(new ApiFailure({ kind: "invalid", detail: null, code: "TOPIC_UNAVAILABLE" })),
-    );
-    show({ ...filmBoard(), topic: { id: "t9", name: "Space operas", waiting: true } }, signedIn, {
-      publish: refused,
-    });
-    await userEvent.click(publishButton());
-    expect(await screen.findByText(/That topic was turned down/)).toBeInTheDocument();
-    expect(held.topic).toBeNull();
-  });
-
-  it("has no topic to offer before the section is chosen, and says when the topics do not come", async () => {
-    show({ ...filmBoard(), category: null }, signedIn);
-    expect(screen.getByRole("button", { name: /Topic/ })).toBeDisabled();
-
-    show(filmBoard(), signedIn, {}, { topics: () => Promise.reject(new Error("offline")) });
-    await userEvent.click(screen.getAllByRole("button", { name: /Topic/ }).at(-1)!);
-    expect(await screen.findByText("Could not load the topics.")).toBeInTheDocument();
   });
 });
 
 describe("BoardSettings: cover", () => {
   it("presses the board's own pictures into the cover in order, up to six, and resets", async () => {
-    show(filmBoard(), signedIn);
-    const row = screen.getByRole("button", { name: /Cover/ });
-    expect(row).toHaveTextContent("None");
-    // The row's 40 px picture: the cards' first, while none is chosen.
-    expect(row.querySelector("img")).toHaveAttribute("src", EX);
-    await userEvent.click(row);
+    show(filmBoard());
+    // Open from the start: no row to press first.
     expect(screen.getByText("Nothing chosen: up to six of the list’s own pictures")).toBeVisible();
     expect(screen.getByText("Your cards · 2")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
     const pick = (name: string) => screen.getByRole("button", { name: `Use ${name} on the cover` });
 
     await userEvent.click(pick("The Witch"));
@@ -1341,11 +162,6 @@ describe("BoardSettings: cover", () => {
     expect(pick("The Witch")).toHaveAttribute("aria-pressed", "true");
     expect(pick("The Witch")).toHaveTextContent("1");
     expect(screen.getByText("One picture, the whole cover")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Cover/ })).toHaveTextContent("Chosen");
-    expect(screen.getByRole("button", { name: /Cover/ }).querySelector("img")).toHaveAttribute(
-      "src",
-      WITCH,
-    );
 
     await userEvent.click(pick("Ex Machina"));
     expect(held.coverImageUrls).toEqual([WITCH, EX]);
@@ -1363,25 +179,26 @@ describe("BoardSettings: cover", () => {
 
   // Cover focus (15.11.2026): which part of a cover of one picture shows.
   it("adjusts where a cover of one picture is looked at, and keeps it on Done", async () => {
-    show(filmBoard(), signedIn);
-    await userEvent.click(screen.getByRole("button", { name: /Cover/ }));
+    show(filmBoard());
     expect(screen.queryByRole("button", { name: "Adjust position" })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Use The Witch on the cover" }));
     await userEvent.click(screen.getByRole("button", { name: "Adjust position" }));
-    const dialog = screen.getByRole("dialog", { name: "Adjust cover" });
-    const done = within(dialog).getByRole("button", { name: "Done" });
+    const adjust = screen.getByRole("dialog", { name: "Adjust cover" });
+    const doneButton = within(adjust).getByRole("button", { name: "Done" });
     // Nothing to keep until the picture's size is known.
-    expect(done).toBeDisabled();
-    const picture = dialog.querySelector<HTMLImageElement>(".cover-adjust__stage img")!;
+    expect(doneButton).toBeDisabled();
+    const picture = adjust.querySelector<HTMLImageElement>(".cover-adjust__stage img")!;
     Object.defineProperty(picture, "naturalWidth", { value: 1600 });
     Object.defineProperty(picture, "naturalHeight", { value: 900 });
     fireEvent.load(picture);
-    fireEvent.change(within(dialog).getByRole("slider", { name: "Zoom" }), {
+    fireEvent.change(within(adjust).getByRole("slider", { name: "Zoom" }), {
       target: { value: "2" },
     });
-    await userEvent.click(done);
+    await userEvent.click(doneButton);
     expect(screen.queryByRole("dialog", { name: "Adjust cover" })).not.toBeInTheDocument();
     expect(held.coverFocus).toEqual({ x: 0.5, y: 0.5, zoom: 2 });
+    // The cover dialog is still there: its Done was not pressed.
+    expect(done).not.toHaveBeenCalled();
     // ✕ leaves it as it was.
     await userEvent.click(screen.getByRole("button", { name: "Adjust position" }));
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
@@ -1392,16 +209,131 @@ describe("BoardSettings: cover", () => {
     expect(held).not.toHaveProperty("coverFocus");
   });
 
-  it("says when no card has a picture", async () => {
+  it("says when no card has a picture", () => {
     const next = uids();
-    show(
-      {
-        ...addToPool(newBoard("b", "B", 1, next), [{ title: "Plain", imageUrl: null }], 1, next),
-        category: "games",
-      },
-      signedIn,
-    );
-    await userEvent.click(screen.getByRole("button", { name: /Cover/ }));
+    show({
+      ...addToPool(newBoard("b", "B", 1, next), [{ title: "Plain", imageUrl: null }], 1, next),
+      category: "games",
+    });
     expect(screen.getByText("None of this list’s cards have a picture yet.")).toBeInTheDocument();
+  });
+
+  it("asks a guest to sign in before a picture of their own is chosen", async () => {
+    const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
+    show(filmBoard(), GUEST, { signIn });
+    await userEvent.click(screen.getByRole("button", { name: "A photo from the gallery" }));
+    expect(signIn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("BoardSettings: publication", () => {
+  it("offers Publish on one's own list that is not out, and hands it to the page", async () => {
+    show(filmBoard());
+    expect(
+      line().getByText("Anyone with the link can rank it. It shows in Community."),
+    ).toBeVisible();
+    expect(line().queryByRole("button", { name: "Open" })).toBeNull();
+    await userEvent.click(line().getByRole("button", { name: "Publish" }));
+    expect(publication).toHaveBeenCalledTimes(1);
+    // The page opens the Publish window: this dialog does not close itself.
+    expect(done).not.toHaveBeenCalled();
+  });
+
+  it("says Published with the section and the topic when out, and Open hands it to the page", async () => {
+    show({
+      ...filmBoard(),
+      publishedId: "L1",
+      publishedEditedAt: 100,
+      topic: { id: "t1", name: "A24" },
+    });
+    expect(line().getByText("Published · Film & TV · A24")).toBeVisible();
+    expect(line().queryByRole("button", { name: "Publish" })).toBeNull();
+    await userEvent.click(line().getByRole("button", { name: "Open" }));
+    expect(publication).toHaveBeenCalledTimes(1);
+  });
+
+  it("says a list held for a moderator waits", () => {
+    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100, heldForReview: true });
+    expect(
+      line().getByText("It waits for a moderator before others can see it. · Film & TV"),
+    ).toBeVisible();
+    expect(line().getByRole("button", { name: "Open" })).toBeVisible();
+  });
+
+  it("offers Show in Rankings on a copy of somebody else's list, and hands it to the page", async () => {
+    show({ ...filmBoard(), takenFrom: "SRC" });
+    expect(
+      line().getByText("Your arrangement will appear in the original list’s Rankings."),
+    ).toBeVisible();
+    expect(line().queryByRole("button", { name: "Publish" })).toBeNull();
+    await userEvent.click(line().getByRole("button", { name: "Show in Rankings" }));
+    expect(publication).toHaveBeenCalledTimes(1);
+  });
+
+  it("says In Rankings, with no section of its own, when one's ranking of the list is out", () => {
+    show({
+      ...filmBoard(),
+      takenFrom: "SRC",
+      rankingOf: "SRC",
+      publishedEditedAt: 100,
+      topic: { id: "t1", name: "A24" },
+    });
+    expect(line().getByText("In Rankings")).toBeVisible();
+    expect(line().getByRole("button", { name: "Open" })).toBeVisible();
+  });
+});
+
+describe("BoardSettings: a house board", () => {
+  it("has no Publication line, and chooses its section and its topic here", async () => {
+    const topics = vi.fn<LoadTopics>(async (section) => ({
+      topics: section === "games" ? [topic("g1", "Indie", "games")] : [topic("t1", "A24")],
+    }));
+    show({ ...filmBoard(), topic: { id: "t1", name: "A24" } }, signedIn, { house: true, topics });
+    expect(screen.queryByText("Publication")).toBeNull();
+    const sections = screen.getByRole("radiogroup", { name: "Section" });
+    expect(within(sections).getByRole("radio", { name: /Film & TV/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(dialog().getByText("Topic in Film & TV · optional")).toBeVisible();
+    expect(topics).toHaveBeenCalledWith("film_tv");
+    const a24 = await within(screen.getByRole("radiogroup", { name: "Topic" })).findByRole(
+      "radio",
+      { name: "A24" },
+    );
+    expect(a24).toHaveAttribute("aria-checked", "true");
+
+    // The chosen section again changes nothing.
+    await userEvent.click(within(sections).getByRole("radio", { name: /Film & TV/ }));
+    expect(chose).not.toHaveBeenCalled();
+
+    await userEvent.click(within(sections).getByRole("radio", { name: /Games/ }));
+    expect(chose).toHaveBeenCalledExactlyOnceWith("games");
+    expect(held).toMatchObject({ category: "games", topic: null });
+    expect(dialog().getByText("Topic in Games · optional")).toBeVisible();
+    await waitFor(() => expect(topics).toHaveBeenCalledWith("games"));
+
+    const group = screen.getByRole("radiogroup", { name: "Topic" });
+    await userEvent.click(await within(group).findByRole("radio", { name: "Indie" }));
+    expect(held.topic).toEqual({ id: "g1", name: "Indie" });
+    // Pressed again, it comes off: a topic is optional.
+    await userEvent.click(within(group).getByRole("radio", { name: "Indie" }));
+    expect(held.topic).toBeNull();
+  });
+
+  it("has no topic to offer before the section is chosen", async () => {
+    const topics = vi.fn<LoadTopics>(async () => ({ topics: [] }));
+    show({ ...filmBoard(), category: null }, signedIn, { house: true, topics });
+    expect(dialog().getByText("Pick a section to see its topics.")).toBeVisible();
+    expect(screen.queryByRole("radiogroup", { name: "Topic" })).toBeNull();
+    await act(async () => undefined);
+    expect(topics).not.toHaveBeenCalled();
+  });
+
+  it("asks nothing of the topics for a list of one's own", async () => {
+    const topics = vi.fn<LoadTopics>(async () => ({ topics: [] }));
+    show(filmBoard(), signedIn, { topics });
+    await act(async () => undefined);
+    expect(topics).not.toHaveBeenCalled();
   });
 });

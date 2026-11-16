@@ -940,15 +940,41 @@
   color: var(--ink);
 }
 
-/* Below 840 the board's head is its name and the menu: they share one line. */
+/*
+ * Below 840 the board's head is two rows (Danylo's canvas, 16.11.2026): its
+ * name and the menu share the first; the view, Publish and Play the second,
+ * the view at the start. Four buttons beside the name left it no room.
+ */
 @media (max-width: 839px) {
   .board-page .list-head {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: flex-start;
   }
 
   .board-page .list-head__text {
-    flex: 1 1 0;
+    flex: 1 1 calc(100% - 64px);
+  }
+
+  .board-page .list-head > .list-head__tools {
+    display: contents;
+  }
+
+  .board-page .list-head__tools > .menu {
+    order: 1;
+  }
+
+  .board-page .list-head__tools > .menu:has(> .view-button) {
+    order: 2;
+    margin-inline-end: auto;
+  }
+
+  .board-page .list-head__tools > .publish-button,
+  .board-page .list-head__tools > .play-button {
+    order: 2;
+  }
+
+  .board-page .list-head > .list-head__bar {
+    order: 3;
   }
 }
 

@@ -75,6 +75,8 @@ export type SectionEditorProps = Common &
         /** Every section the person sees, for "File my lists under". */
         sections: readonly Section[];
         fileUnder?: string;
+        /** The name to start with: a topic the Publish window turns into a section. */
+        name?: string;
         /** How many of the person's proposals already wait. */
         waiting?: number;
         onTooMany: () => void;
@@ -121,9 +123,11 @@ function startOf(props: SectionEditorProps, keep: KeyValueStore, owner: string |
   }
   const fileUnder = props.mode === "propose" ? (props.fileUnder ?? OTHER) : OTHER;
   const kept = props.mode === "propose" ? readKeptProposal(keep, owner) : null;
-  if (kept === null) return { name: "", names: {}, icon: "category", fileUnder, picture: null };
+  const given = props.mode === "propose" ? props.name : undefined;
+  if (kept === null)
+    return { name: given ?? "", names: {}, icon: "category", fileUnder, picture: null };
   return {
-    name: kept.name,
+    name: given ?? kept.name,
     names: {},
     icon: kept.icon,
     fileUnder: kept.fileUnder,

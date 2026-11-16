@@ -43,14 +43,14 @@ describe("publishKindOf", () => {
     expect(publishKindOf({ ...filmBoard(), takenFrom: "SRC" }, false)).toBe("share");
   });
 
-  it("offers Update once out with changes not sent, and nothing when it is up to date", () => {
+  it("offers Update once out with changes not sent, and Published when it is up to date", () => {
     const out = { ...filmBoard(), publishedId: "L1", editedAt: 200 };
     expect(publishKindOf({ ...out, publishedEditedAt: 100 }, false)).toBe("update");
-    expect(publishKindOf({ ...out, publishedEditedAt: 200 }, false)).toBeNull();
+    expect(publishKindOf({ ...out, publishedEditedAt: 200 }, false)).toBe("published");
     // One's ranking of the list is out the same way.
     const ranking = { ...filmBoard(), takenFrom: "SRC", rankingOf: "SRC", editedAt: 200 };
     expect(publishKindOf({ ...ranking, publishedEditedAt: 100 }, false)).toBe("update");
-    expect(publishKindOf({ ...ranking, publishedEditedAt: 200 }, false)).toBeNull();
+    expect(publishKindOf({ ...ranking, publishedEditedAt: 200 }, false)).toBe("published");
   });
 });
 
@@ -82,5 +82,31 @@ describe("PublishButton", () => {
     );
     expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show in Rankings" })).toBeInTheDocument();
+  });
+
+  it("marks Update with a dot, and says Published quietly", () => {
+    render(
+      <>
+        <PublishButton kind="update" main onClick={() => undefined} />
+        <PublishButton kind="published" main onClick={() => undefined} />
+      </>,
+    );
+    const update = screen.getByRole("button", { name: "Update" });
+    expect(update).toHaveClass("btn--outlined", "publish-button--update");
+    expect(update.querySelector(".publish-button__dot")).not.toBeNull();
+    const published = screen.getByRole("button", { name: "Published" });
+    expect(published).toHaveClass("btn--text", "publish-button--quiet");
+    expect(published).not.toHaveClass("btn--filled");
+  });
+
+  it("turns a ring in place of its icon while on its way, and still opens on a press", async () => {
+    const onClick = vi.fn();
+    render(<PublishButton kind="publish" main={false} busy onClick={onClick} />);
+    const button = screen.getByRole("button", { name: "Publishing…" });
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).toBeEnabled();
+    expect(button.querySelector(".publish-ring")).not.toBeNull();
+    await userEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

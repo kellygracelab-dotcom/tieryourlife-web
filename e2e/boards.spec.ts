@@ -153,19 +153,22 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Films I make people watch");
   await expect(page.getByText(/1 ranked · 2 in pool/)).toBeVisible();
 
+  // A guest's Publish opens the window, which says it signs them in first.
+  await press(page.locator(".list-head .publish-button"), hasTouch);
+  const window = page.getByRole("dialog", { name: "Publish “Films I make people watch”" });
+  await expect(window.getByRole("button", { name: "Publish", exact: true })).toBeEnabled();
+  await expect(window.getByText(/Sign in with Google to publish/)).toBeVisible();
+  await press(window.getByRole("button", { name: "Cancel" }), hasTouch);
+  await expect(window).toBeHidden();
+
+  // The menu's Cover: the cover, and the Publication line under it.
   await page.getByLabel("More about this board").click();
-  await page.getByRole("button", { name: "List settings" }).click();
-  // A guest's Publish asks them to sign in; the words under it say why.
-  const publishButton = page
-    .getByRole("dialog", { name: "List settings" })
-    .getByRole("button", { name: "Publish", exact: true });
-  await expect(publishButton).toBeVisible();
-  await expect(publishButton).toBeEnabled();
-  await expect(page.getByText(/Sign in with Google to publish/)).toBeVisible();
-  await page.getByRole("button", { name: /Cover/ }).click();
-  await expect(page.getByText("None of this list’s cards have a picture yet.")).toBeVisible();
-  await page.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByRole("dialog", { name: "List settings" })).toBeHidden();
+  await page.getByRole("button", { name: "Cover", exact: true }).click();
+  const cover = page.getByRole("dialog", { name: "Cover" });
+  await expect(cover.getByText("None of this list’s cards have a picture yet.")).toBeVisible();
+  await expect(cover.getByRole("button", { name: "Publish", exact: true })).toBeVisible();
+  await cover.getByRole("button", { name: "Done" }).click();
+  await expect(cover).toBeHidden();
 
   // Share as image is in the board's menu, and draws a file.
   await page.getByLabel("More about this board").click();
