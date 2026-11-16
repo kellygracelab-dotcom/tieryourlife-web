@@ -30,10 +30,10 @@ import { fill, strings } from "../strings";
 import { BackLink } from "../ui/BackLink";
 import { Icon } from "../ui/Icon";
 import { sayOnTheSite } from "../ui/siteNotice";
-import { Spinner } from "../ui/Spinner";
 import {
   BlockTitle,
   HeadArt,
+  SectionPlaceholder,
   SectionRoute,
   SortRow,
   type SectionPageProps,
@@ -172,7 +172,7 @@ function SectionView({ section, load, store, topics, loadOne }: SectionViewProps
         </div>
       )}
 
-      {!ready && <Spinner className="section-page__loading" label={section.name} />}
+      {!ready && <SectionPlaceholder name={section.name} count={section.listCount} />}
 
       {/* Topics, a line, then the tier lists with their order (section layout,
           14.11): each block under its own title, so the two never run together. */}

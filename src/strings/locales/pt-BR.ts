@@ -624,7 +624,7 @@ const ptBR: Translation = {
     title: "O site não conseguiu iniciar",
     body: "Uma parte não chegou: a conexão caiu, ou o site foi atualizado neste exato minuto. Recarregar costuma resolver.",
     reload: "Recarregar",
-    updated: "O site foi atualizado.",
+    updated: "Uma nova versão do site está pronta",
   },
   crash: {
     title: "Algo deu errado nesta página",
@@ -632,6 +632,10 @@ const ptBR: Translation = {
     offlineTitle: "Esta página não abre sem conexão",
     offlineBody:
       "Ela ainda não tinha sido aberta nesta visita, e a conexão caiu. Recarregue quando voltar a ficar online; as páginas já abertas continuam funcionando.",
+    newTitle: "Uma nova versão do site está pronta",
+    newBody:
+      "Atualizamos o TierYourLife enquanto esta aba estava aberta. Recarregue para continuar. Suas listas estão seguras.",
+    waiting: "Aguardando a conexão…",
   },
   notFound: {
     title: "Não há nada neste endereço.",

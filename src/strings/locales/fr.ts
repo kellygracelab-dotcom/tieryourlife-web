@@ -638,7 +638,7 @@ const fr: Translation = {
     title: "Le site n’a pas pu démarrer",
     body: "Une partie n’est pas arrivée : la connexion a lâché, ou le site a été mis à jour à cette minute même. Recharger suffit en général.",
     reload: "Recharger",
-    updated: "Le site a été mis à jour.",
+    updated: "Une nouvelle version du site est prête",
   },
   crash: {
     title: "Quelque chose s’est mal passé sur cette page",
@@ -646,6 +646,10 @@ const fr: Translation = {
     offlineTitle: "Cette page ne peut pas s’ouvrir hors ligne",
     offlineBody:
       "Elle n’a pas encore été ouverte pendant cette visite, et la connexion est coupée. Rechargez une fois de retour en ligne ; les pages déjà ouvertes fonctionnent toujours.",
+    newTitle: "Une nouvelle version du site est prête",
+    newBody:
+      "Nous avons mis à jour TierYourLife pendant que cet onglet était ouvert. Rechargez pour continuer. Vos listes sont en sécurité.",
+    waiting: "En attente de la connexion…",
   },
   notFound: {
     title: "Il n’y a rien à cette adresse.",

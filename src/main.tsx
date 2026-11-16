@@ -9,6 +9,8 @@ import { availableLocales, currentLocale, loadStrings, strings } from "./strings
 import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "./index.css";
+// The error page's look, here for the screen boot.ts draws when the app itself did not come.
+import "./app/RouteError.css";
 
 const root = document.getElementById("root");
 if (root === null) throw new Error("index.html has no #root");

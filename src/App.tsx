@@ -18,7 +18,7 @@ reloadInto(() => {
   return to === undefined ? null : `${to.pathname}${to.search}${to.hash}`;
 });
 // A newer release found while someone is in the middle of something: the page
-// stays, and the shell says the site was updated, with Reload.
+// stays, and the shell says a new version of the site is ready, with Reload.
 announceWith(() =>
   sayOnTheSite({
     text: strings.boot.updated,

@@ -34,6 +34,10 @@ test("says so, with a way out, when the site cannot start at all", async ({ page
   const trouble = page.getByRole("alert");
   await expect(trouble.getByRole("heading", { level: 1 })).toHaveText("The site could not start");
   await expect(trouble).toContainText("Reloading usually does it.");
+  // Dressed as the error page, by the first stylesheet alone: no app came to draw it.
+  await expect(trouble).toHaveClass(/reload-notice/);
+  await expect(trouble).toHaveCSS("display", "flex");
+  await expect(trouble.locator(".reload-notice__loose")).toBeVisible();
   // One quiet reload and no more: it must not go round for ever.
   expect(asked).toBe(2);
 

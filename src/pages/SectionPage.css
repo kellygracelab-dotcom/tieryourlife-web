@@ -303,7 +303,23 @@
   --tint: var(--tint-dark);
 }
 
-/* The app's SectionLoading: the ring a little way under the sort. */
-.section-page__loading {
-  padding-top: 96px;
+/*
+ * The page while its topics and lists come (section loading, 16.11): one row
+ * of topic tiles, however many columns fit, so the ones that would wrap are
+ * cut off rather than drawn a row lower.
+ */
+.topic-tiles.section-placeholder__tiles {
+  grid-template-rows: 64px;
+  grid-auto-rows: 0;
+  row-gap: 0;
+  overflow: hidden;
+}
+
+.skeleton.section-placeholder__tile {
+  border-radius: 12px;
+}
+
+/* Where Suggest a topic will be. */
+.skeleton.section-placeholder__pill {
+  border-radius: 14px;
 }

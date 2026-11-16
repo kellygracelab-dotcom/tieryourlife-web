@@ -1,0 +1,288 @@
+/*
+ * When a page cannot be drawn (reload notice, 16.11.2026): a new version of
+ * the site, which is no fault and says so calmly, or a real error. Both are
+ * the same centred column; the boot screen in src/boot.ts and index.html's
+ * own fallback wear these classes too, with no React to draw them, so all
+ * the movement here is keyframes.
+ */
+.reload-notice {
+  /*
+   * The tiers' full-strength colours, the ones a board's blocks wear in either
+   * scheme under a white letter: --tier-s to --tier-d of the light scheme.
+   */
+  --notice-s: #b03a32;
+  --notice-a: #c06a25;
+  --notice-b: #a98b1f;
+  --notice-c: #3f7f55;
+  --notice-d: #3c6e99;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: var(--width-reading);
+  margin: 0 auto;
+  padding: 72px var(--space-4) var(--space-8);
+  text-align: center;
+  animation: reload-notice-enter 200ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.reload-notice__title {
+  margin: 0;
+  font: var(--text-headline);
+  color: var(--ink);
+}
+
+.reload-notice__text {
+  max-width: 420px;
+  margin: 0;
+  font: 400 15px/22px var(--font);
+  color: var(--ink-dim);
+}
+
+.reload-notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* The boot screen has no Button.css: the button carries its whole look here. */
+.reload-notice__reload,
+.reload-notice__home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--radius-pill);
+  font: var(--text-label);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.reload-notice__reload,
+.reload-notice__reload:hover:not(:disabled) {
+  color: var(--on-accent);
+}
+
+.reload-notice__reload {
+  background: var(--accent);
+}
+
+.reload-notice__reload:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.reload-notice__reload svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.reload-notice__home {
+  background: transparent;
+  color: var(--link);
+}
+
+.reload-notice__home:hover {
+  background: var(--hover);
+  color: var(--link);
+}
+
+/* Offline the page waits for the connection itself, and says so, in place of Reload. */
+.reload-notice__waiting {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-container);
+  color: var(--ink-dim);
+  font: var(--text-label);
+}
+
+.reload-notice__dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-quiet);
+  animation: reload-notice-breathe 1.4s ease-in-out infinite;
+}
+
+/*
+ * A new version: five tier rows, S to D, settle in from the start of the
+ * line one after another, there and back five times, then stay (about 6 s).
+ */
+.reload-notice__bars {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  height: 74px;
+  margin-bottom: 8px;
+  direction: ltr;
+}
+
+.reload-notice__bar {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  animation: reload-notice-settle 1.2s cubic-bezier(0.2, 0, 0, 1) 5 alternate both;
+}
+
+.reload-notice__bar:nth-child(1) {
+  width: 64px;
+  background: var(--notice-s);
+}
+
+.reload-notice__bar:nth-child(2) {
+  width: 54px;
+  background: var(--notice-a);
+  animation-delay: 120ms;
+}
+
+.reload-notice__bar:nth-child(3) {
+  width: 44px;
+  background: var(--notice-b);
+  animation-delay: 240ms;
+}
+
+.reload-notice__bar:nth-child(4) {
+  width: 34px;
+  background: var(--notice-c);
+  animation-delay: 360ms;
+}
+
+.reload-notice__bar:nth-child(5) {
+  width: 24px;
+  background: var(--notice-d);
+  animation-delay: 480ms;
+}
+
+/*
+ * A real error: an S row with one card fallen out of it, swinging a little
+ * three times and then hanging. No red ground: calm, but plainly broken.
+ */
+.reload-notice__fallen {
+  position: relative;
+  width: 168px;
+  height: 74px;
+  margin-bottom: 8px;
+  direction: ltr;
+}
+
+.reload-notice__row {
+  display: flex;
+  height: 56px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--notice-s) var(--band-tint), var(--paper));
+}
+
+.reload-notice__tier {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  background: var(--notice-s);
+  color: #ffffff;
+  font: 500 20px/24px var(--font);
+}
+
+.reload-notice__cards {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+}
+
+.reload-notice__card {
+  display: block;
+  width: 32px;
+  height: 44px;
+  border-radius: 6px;
+  background: var(--tile-placeholder);
+}
+
+.reload-notice__loose {
+  position: absolute;
+  top: 20px;
+  inset-inline-start: 118px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 48px;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--error) 14%, var(--surface-container-high));
+  color: var(--error);
+  font: 700 18px/20px var(--font);
+  transform-origin: 50% 0;
+  animation: reload-notice-sway 2.4s ease-in-out 3 alternate both;
+}
+
+@keyframes reload-notice-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes reload-notice-settle {
+  from {
+    opacity: 0.3;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes reload-notice-sway {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(-9deg);
+  }
+}
+
+@keyframes reload-notice-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Everything stands still: the rows in their places, the card hanging at −6°. */
+@media (prefers-reduced-motion: reduce) {
+  .reload-notice,
+  .reload-notice__bar,
+  .reload-notice__dot {
+    animation: none;
+  }
+
+  .reload-notice__loose {
+    animation: none;
+    transform: rotate(-6deg);
+  }
+}

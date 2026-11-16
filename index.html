@@ -37,23 +37,34 @@
           } catch (e) {}
           var root = document.getElementById("root");
           if (!root) return;
+          // boot.ts's screen, simpler: the same classes, which the site's
+          // stylesheet dresses when it came; plain words in a column when not.
           var section = document.createElement("section");
+          section.className = "reload-notice";
           section.setAttribute("role", "alert");
-          section.style.cssText =
-            "max-width:40rem;margin:0 auto;padding:72px 16px;font-family:sans-serif";
           var title = document.createElement("h1");
+          title.className = "reload-notice__title";
           title.textContent = "The site could not start";
           var body = document.createElement("p");
+          body.className = "reload-notice__text";
           body.textContent =
             "Part of it did not arrive: the connection dropped, or the site was updated this very minute. Reloading usually does it.";
           var button = document.createElement("button");
           button.type = "button";
+          button.className = "reload-notice__reload";
           button.textContent = "Reload";
           button.addEventListener("click", function () {
             location.reload();
           });
-          section.append(title, body, button);
+          var actions = document.createElement("div");
+          actions.className = "reload-notice__actions";
+          actions.append(button);
+          section.append(title, body, actions);
           root.replaceChildren(section);
+          if (getComputedStyle(section).display !== "flex") {
+            section.style.cssText =
+              "max-width:40rem;margin:0 auto;padding:72px 16px;font-family:sans-serif;text-align:center";
+          }
         },
         true,
       );

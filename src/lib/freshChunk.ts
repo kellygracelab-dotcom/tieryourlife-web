@@ -120,11 +120,31 @@ const read = (store: KeyValueStore, key: string): string | null | undefined => {
 let reloading = false;
 /** One question to the site at a time: a stylesheet and its module failing together ask once. */
 let asking: Promise<Recovery> | null = null;
+/**
+ * Whether the site's front page named another script than this tab's. Once
+ * it has, a page that still would not come is this tab being out of date, not
+ * a fault: it was reloaded for that release already, or nothing can be kept
+ * to remember a reload by, and it says a new version is ready (16.11.2026).
+ */
+let newer = false;
+
+export function newerRelease(): boolean {
+  return newer;
+}
+
+/** The failures this module let through, so the error page can tell a chunk that would not come. */
+const letThrough = new WeakSet<object>();
+
+/** Whether a route's error is a page's chunk that would not come, after every try here. */
+export function isChunkFailure(error: unknown): boolean {
+  return typeof error === "object" && error !== null && letThrough.has(error);
+}
 
 /** Tests play several page loads in one module. */
 export function resetFreshChunkForTests(): void {
   reloading = false;
   asking = null;
+  newer = false;
   goingTo = () => null;
 }
 
@@ -177,6 +197,7 @@ async function ask(deps: FreshDeps): Promise<Recovery> {
   const own = ownRelease();
   const live = own === null ? null : await liveRelease();
   if (live !== null && live !== own) {
+    newer = true;
     // A newer release is out. Reloaded for it already and still on the old
     // one, the site's caches have not caught up: the old rule decides.
     const reloadedFor = read(store, CHUNK_RELEASE_KEY);
@@ -206,6 +227,7 @@ export function freshChunk<T>(load: () => Promise<T>, deps: FreshDeps = {}): () 
       // The page is going away, or stays as it was with the word that the
       // site was updated: nothing should draw an error in the meantime.
       if ((await recover(deps)) !== "failed") return new Promise<T>(() => undefined);
+      if (typeof failure === "object" && failure !== null) letThrough.add(failure);
       throw failure;
     }
   };

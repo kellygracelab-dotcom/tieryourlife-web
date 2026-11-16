@@ -604,7 +604,7 @@ const tr: Translation = {
     title: "Site başlatılamadı",
     body: "Bir parçası gelmedi: bağlantı koptu ya da site tam bu dakikada güncellendi. Yeniden yüklemek genellikle yeter.",
     reload: "Yeniden yükle",
-    updated: "Site güncellendi.",
+    updated: "Sitenin yeni sürümü hazır",
   },
   crash: {
     title: "Bu sayfada bir şeyler ters gitti",
@@ -612,6 +612,10 @@ const tr: Translation = {
     offlineTitle: "Bu sayfa çevrimdışıyken açılamaz",
     offlineBody:
       "Bu ziyarette daha önce açılmadı ve bağlantı kesik. Tekrar çevrimiçi olunca yeniden yükleyin; zaten açılmış sayfalar çalışmaya devam eder.",
+    newTitle: "Sitenin yeni sürümü hazır",
+    newBody:
+      "Bu sekme açıkken TierYourLife’ı güncelledik. Devam etmek için yeniden yükleyin. Listeleriniz güvende.",
+    waiting: "Bağlantı bekleniyor…",
   },
   notFound: {
     title: "Bu adreste bir şey yok.",

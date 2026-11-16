@@ -39,8 +39,6 @@ interface FeedGridProps {
 
 type Slot = { kind: "card"; list: ListSummary } | { kind: "hidden"; list: ListSummary };
 
-const PLACEHOLDERS = [0, 1, 2, 3, 4, 5];
-
 /** A card still on its way: the same boxes, flat, breathing with the rest. */
 function CardPlaceholder() {
   return (
@@ -57,6 +55,20 @@ function CardPlaceholder() {
         </span>
         <Skeleton width="44px" height="10px" className="list-card__count" />
       </span>
+    </div>
+  );
+}
+
+/**
+ * The grid while its first page is on its way: grey cards in the feed's own
+ * columns, so the lists take their places without a jump.
+ */
+export function FeedPlaceholder({ label, count = 6 }: { label: string; count?: number }) {
+  return (
+    <div className="feed feed--loading" aria-busy="true" aria-label={label}>
+      {Array.from({ length: count }, (_, n) => (
+        <CardPlaceholder key={n} />
+      ))}
     </div>
   );
 }
@@ -139,15 +151,7 @@ export function FeedGrid({
       ?.querySelector<HTMLElement>(`[data-list="${CSS.escape(id)}"] .feed__hidden button`)
       ?.focus();
   }, [hiddenThisVisit]);
-  if (state.status === "loading") {
-    return (
-      <div className="feed feed--loading" aria-busy="true" aria-label={label}>
-        {PLACEHOLDERS.map((n) => (
-          <CardPlaceholder key={n} />
-        ))}
-      </div>
-    );
-  }
+  if (state.status === "loading") return <FeedPlaceholder label={label} />;
 
   if (state.status === "error") {
     return (

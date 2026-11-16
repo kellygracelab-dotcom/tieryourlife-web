@@ -161,28 +161,6 @@ p {
   font-size: 16px;
 }
 
-/* What a person sees when the site itself could not load; drawn by src/boot.ts without the app. */
-.boot-failed {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-3);
-  max-width: var(--width-reading);
-  margin: 0 auto;
-  padding: 72px var(--space-4) var(--space-8);
-}
-
-.boot-failed h1 {
-  margin: 0;
-  font: var(--text-headline);
-}
-
-.boot-failed p {
-  margin: 0;
-  font: var(--text-lead);
-  color: var(--ink-dim);
-}
-
 /* Said to a screen reader, not shown: live announcements and labels the layout already makes plain. */
 .visually-hidden {
   position: absolute;

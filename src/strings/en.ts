@@ -1335,8 +1335,8 @@ export const en = {
     title: "The site could not start",
     body: "Part of it did not arrive: the connection dropped, or the site was updated this very minute. Reloading usually does it.",
     reload: "Reload",
-    // Said, with Reload, while a newer release is out and the page stays under someone's hands.
-    updated: "The site was updated.",
+    // Said, with Reload, while a newer release is out and the page stays under someone's hands; the same words as crash.newTitle.
+    updated: "A new version of the site is ready",
   },
   crash: {
     title: "Something went wrong on this page",
@@ -1344,6 +1344,12 @@ export const en = {
     offlineTitle: "This page cannot open offline",
     offlineBody:
       "It was not opened earlier in this visit, and the connection is down. Reload once you’re back online; the pages already open still work.",
+    // A page whose piece went with the old release, after a deploy: said calmly, not as an error. See src/app/RouteError.tsx.
+    newTitle: "A new version of the site is ready",
+    newBody:
+      "We updated TierYourLife while this tab was open. Reload to carry on. Your lists are safe.",
+    // In place of Reload while offline; it comes back with the connection.
+    waiting: "Waiting for the connection…",
   },
   notFound: {
     title: "There is nothing at this address.",
