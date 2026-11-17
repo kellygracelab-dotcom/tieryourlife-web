@@ -140,5 +140,4 @@ test("a laptop shows somebody else's cards four to a row in a column with no scr
   expect(await play.evaluate((button) => getComputedStyle(button).backgroundColor)).not.toBe(
     "rgba(0, 0, 0, 0)",
   );
-  await page.screenshot({ path: "../shots/31-laptop.png" });
 });

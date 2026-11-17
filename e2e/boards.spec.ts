@@ -482,7 +482,6 @@ test("a laptop's column shows the catalogue's answers under the field in place o
   await expect(page.locator(".cards__pick-hint")).toHaveText(
     "Click a result to add it. Enter adds “dune” as a card with just a name.",
   );
-  await page.screenshot({ path: "../shots/32-laptop.png" });
   await add.press("Enter");
   await expect(page.getByRole("button", { name: "dune", exact: true })).toBeVisible();
 });
