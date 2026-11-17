@@ -3,7 +3,9 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
+import { MoreButton } from "./BoardTile";
 import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
+import { RenameField } from "./RenameField";
 import {
   cardFocusByPicture,
   coverFocusOf,
@@ -22,6 +24,9 @@ interface BoardRowProps {
   selected: boolean;
   onSelect: (uid: string) => void;
   onStar: (board: Board) => void;
+  /** Its name is a field (Rename in its menu). */
+  renaming?: boolean;
+  onRename?: (board: Board, title: string | null) => void;
 }
 
 /**
@@ -63,6 +68,8 @@ export const BoardRow = memo(function BoardRow({
   selected,
   onSelect,
   onStar,
+  renaming = false,
+  onRename,
 }: BoardRowProps) {
   const title = titleOf(board);
   const from = fromOf(board);
@@ -85,7 +92,15 @@ export const BoardRow = memo(function BoardRow({
       </span>
       <span className="board-card__text">
         <span className="board-card__title">
-          <bdi>{title}</bdi>
+          {renaming ? (
+            <RenameField
+              className="board-rename"
+              title={board.title}
+              onDone={(next) => onRename?.(board, next)}
+            />
+          ) : (
+            <bdi>{title}</bdi>
+          )}
           {from !== null && <span className="board-card__from">{from}</span>}
         </span>
         <span className="board-card__meta">
@@ -108,7 +123,10 @@ export const BoardRow = memo(function BoardRow({
     </>
   );
   return (
-    <li className={selected ? "board-card board-card--selected" : "board-card"}>
+    <li
+      className={selected ? "board-card board-card--selected" : "board-card"}
+      data-board={board.uid}
+    >
       {selecting ? (
         // The box at the end is what a screen reader and the keyboard use; the
         // row is only a larger place for a pointer to press.
@@ -121,6 +139,8 @@ export const BoardRow = memo(function BoardRow({
         >
           {words}
         </button>
+      ) : renaming ? (
+        <div className="board-card__main">{words}</div>
       ) : (
         <Link
           className="board-card__main"
@@ -154,6 +174,7 @@ export const BoardRow = memo(function BoardRow({
           >
             <Icon name="star" />
           </button>
+          <MoreButton name={spoken} className="board-card__more" />
           <Icon name="chevron_right" className="board-card__chevron" />
         </>
       )}

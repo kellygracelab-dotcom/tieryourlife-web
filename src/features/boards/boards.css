@@ -1303,3 +1303,90 @@
   font: 400 13px/18px var(--font);
   color: var(--ink-dim);
 }
+
+/* ⋮ on a list (artboard 39): under the star on a tile, before the chevron in a
+   row; shown where the list is pointed at or focused, and always on a touch screen. */
+.board-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.board-tile__more {
+  position: absolute;
+  top: 46px;
+  inset-inline-end: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #202124;
+  color: #ffffff;
+  box-shadow: 0 1px 3px #0009;
+}
+
+.board-tile__more:hover {
+  background: #35373b;
+}
+
+.board-tile__more .ms {
+  font-size: 18px;
+}
+
+.board-card__more {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  background: none;
+  color: var(--ink-dim);
+}
+
+.board-card__more:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .board-more {
+    opacity: 0;
+  }
+
+  .board-tile:hover .board-more,
+  .board-card:hover .board-more,
+  .board-tile:focus-within .board-more,
+  .board-card:focus-within .board-more {
+    opacity: 1;
+  }
+}
+
+/* A long press opens the menu: no text chosen, no system menu over it. */
+.board-tile,
+.board-card,
+.started__card {
+  -webkit-touch-callout: none;
+}
+
+@media (hover: none) {
+  .board-tile__main,
+  .board-card__main {
+    user-select: none;
+  }
+}
+
+/* Rename on the list: the name a field in its place. */
+.board-rename {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 2px 6px;
+  margin-inline: -6px;
+  border: 1px solid var(--focus);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+}

@@ -4,6 +4,7 @@ import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
 import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
+import { RenameField } from "./RenameField";
 import {
   cardFocusByPicture,
   coverFocusOf,
@@ -19,6 +20,24 @@ interface BoardTileProps {
   selected: boolean;
   onSelect: (uid: string) => void;
   onStar: (board: Board) => void;
+  /** Its name is a field (Rename in its menu). */
+  renaming?: boolean;
+  onRename?: (board: Board, title: string | null) => void;
+}
+
+/** ⋮ on a list: its menu (artboard 39), on a computer when the list is pointed at or focused. */
+export function MoreButton({ name, className }: { name: string; className: string }) {
+  return (
+    <button
+      type="button"
+      className={`board-more ${className}`}
+      data-menu-button=""
+      aria-haspopup="menu"
+      aria-label={fill(strings.listMenu.label, { name })}
+    >
+      <Icon name="more_vert" />
+    </button>
+  );
 }
 
 /**
@@ -34,6 +53,8 @@ export const BoardTile = memo(function BoardTile({
   selected,
   onSelect,
   onStar,
+  renaming = false,
+  onRename,
 }: BoardTileProps) {
   const starred = board.favouritedAt !== null;
   // A conflict's copy says where it came from, here as in rows and on the phone.
@@ -54,7 +75,15 @@ export const BoardTile = memo(function BoardTile({
   );
   const words = (
     <span className="board-tile__words">
-      <bdi className="board-tile__title">{titleOf(board)}</bdi>
+      {renaming ? (
+        <RenameField
+          className="board-tile__title board-rename"
+          title={board.title}
+          onDone={(title) => onRename?.(board, title)}
+        />
+      ) : (
+        <bdi className="board-tile__title">{titleOf(board)}</bdi>
+      )}
       {from !== null && <span className="board-tile__from">{from}</span>}
       <span className="board-tile__meta" id={`${id}-meta`}>
         {metaOf(board)}
@@ -68,7 +97,10 @@ export const BoardTile = memo(function BoardTile({
     </span>
   );
   return (
-    <li className={selected ? "board-tile board-tile--selected" : "board-tile"}>
+    <li
+      className={selected ? "board-tile board-tile--selected" : "board-tile"}
+      data-board={board.uid}
+    >
       {selecting ? (
         <button
           type="button"
@@ -84,6 +116,11 @@ export const BoardTile = memo(function BoardTile({
             <Icon name={selected ? "check" : "add"} />
           </span>
         </button>
+      ) : renaming ? (
+        <div className="board-tile__main">
+          {art}
+          {words}
+        </div>
       ) : (
         <>
           <Link
@@ -106,6 +143,7 @@ export const BoardTile = memo(function BoardTile({
           >
             <Icon name="star" />
           </button>
+          <MoreButton name={spoken} className="board-tile__more" />
         </>
       )}
     </li>

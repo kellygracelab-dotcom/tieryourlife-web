@@ -1,6 +1,6 @@
 import type { CoverFocus } from "../lib/coverFocus";
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { isTmdbPicture, type EditorCredit } from "../api/pictureAttribution";
 import type { SectionProposal, SectionStats } from "../api/sections";
 import { isSectionId, type PublishedList } from "../api/types";
@@ -134,6 +134,11 @@ import "./ListPage.css";
 import "../features/editor/owner.css";
 import "../features/editor/editor.css";
 import "./BoardPage.css";
+
+/** Play or Publish… chosen in the list's menu in Your lists (artboard 39): opened as the page opens. */
+export interface BoardPageState {
+  open: "play" | "publish";
+}
 
 interface BoardPageProps {
   repository?: BoardsRepository;
@@ -575,6 +580,17 @@ function OpenBoard({
     },
   });
   usePlayBack(play);
+  const location = useLocation();
+  const fromMenu = useRef((location.state as Partial<BoardPageState> | null)?.open ?? null);
+  useEffect(() => {
+    const what = fromMenu.current;
+    if (what === null || board === null) return;
+    fromMenu.current = null;
+    // Once: Back and a reload find the board as it is.
+    void navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    if (what === "play") play.open();
+    else openPublish();
+  });
 
   if (board === null || view === null) return <NotFound />;
   // Not a board to edit while it is in the trash: an edit would be kept on a
