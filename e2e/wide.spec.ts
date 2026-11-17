@@ -2,13 +2,17 @@ import { devices, expect, test } from "@playwright/test";
 import { LIST_ID, list, mockBackend } from "./fixtures";
 
 // From 840 px the pool is a card in a column beside the board; the count and
-// the buttons stand in the page's header, and both stay in view while a long
+// the buttons stand in the page's header, which stays in view while a long
 // board scrolls.
 test.describe("a wide screen", () => {
   test.skip(({ hasTouch }) => hasTouch, "a laptop's layout");
 
-  // From 1600: a laptop's column has no scroll of its own and goes with the page (artboard 31).
-  test("keeps the pool beside the board while the page scrolls", async ({ page }) => {
+  // One scroll, the page's (artboard 31): the header stays under the app bar,
+  // the column goes with the board, and it has no scroll bar of its own to
+  // take a column of cards (a 1920 screen, 17.11).
+  test("keeps the header while the page scrolls, and the pool goes with the board", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1700, height: 720 });
     await mockBackend(page);
     const tiers = Array.from({ length: 20 }, (_, i) => ({
@@ -29,6 +33,7 @@ test.describe("a wide screen", () => {
     const boardBox = (await board.boundingBox())!;
     expect(sideBox.x).toBeGreaterThanOrEqual(boardBox.x + boardBox.width - 1);
     await expect(page.locator(".pool__items")).toHaveCSS("display", "grid");
+    await expect(page.locator(".pool__items")).toHaveCSS("overflow-y", "visible");
     // Moving the pool does not move the buttons: they are the header's.
     const head = page.locator(".list-head");
     await expect(head.getByRole("button", { name: "Undo" })).toBeVisible();
@@ -38,20 +43,22 @@ test.describe("a wide screen", () => {
     const header = await page.evaluate(() =>
       parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-height")),
     );
-    // Over the board: a wheel over the column would scroll the pool instead.
-    await page.mouse.move(boardBox.x + 40, boardBox.y + 40);
+    const onPage = () =>
+      page.evaluate(() =>
+        Math.round(document.querySelector(".pool")!.getBoundingClientRect().top + window.scrollY),
+      );
+    const poolTop = await onPage();
+    // The wheel over the column scrolls the page too: it has no scroll of its own.
+    await page.mouse.move(sideBox.x + 40, sideBox.y + 120);
     await page.mouse.wheel(0, 800);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(400);
-    // The header stays under the app bar, and the card 16 px under the header.
+    // The header stays under the app bar; the column has gone up with the page:
+    // where it stands on the page, measured with the scroll in one go, is unchanged.
     await expect
       .poll(async () => Math.round((await head.boundingBox())!.y))
       .toBe(Math.round(header));
-    // The header is as tall as its title and buttons make it, not a fixed 72 px.
-    const headHeight = (await head.boundingBox())!.height;
-    await expect
-      .poll(async () => Math.round((await page.locator(".pool").boundingBox())!.y))
-      .toBe(Math.round(header + headHeight + 16));
-    await expect(side.getByRole("button", { name: "Ex Machina" })).toBeInViewport();
+    await expect.poll(onPage).toBe(poolTop);
+    expect((await page.locator(".pool").boundingBox())!.y).toBeLessThan(poolTop - 300);
   });
 
   test("shows the author's ranking as wide as the visitor's board, beside or under", async ({

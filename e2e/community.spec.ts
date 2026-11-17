@@ -298,3 +298,30 @@ test("a wide window's home uses its width: sections in one row, eight lists acro
   );
   expect(rows.filter((top) => top === rows[0])).toHaveLength(8);
 });
+
+// A browser window as narrow as a phone, with a mouse: the sections' row
+// scrolls sideways on the wheel (it moved from the keyboard alone, 17.11),
+// and at its end the wheel scrolls the page again.
+test("a mouse's wheel turns the narrow home's sections sideways, then the page", async ({
+  page,
+  hasTouch,
+}) => {
+  test.skip(hasTouch, "a mouse");
+  await mockBackend(page);
+  await page.setViewportSize({ width: 480, height: 900 });
+  await page.goto("/");
+  const row = page.locator(".home .sections-grid");
+  await expect(row.locator("> *").first()).toBeVisible();
+  const box = (await row.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(0, 200);
+  await expect.poll(() => row.evaluate((one) => one.scrollLeft)).toBeGreaterThan(100);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  // To the row's end, then on down the page.
+  const end = await row.evaluate((one) => one.scrollWidth - one.clientWidth);
+  for (let turn = 0; turn < Math.ceil(end / 200) + 1; turn++) await page.mouse.wheel(0, 200);
+  await expect.poll(() => row.evaluate((one) => Math.round(one.scrollLeft))).toBe(end);
+  await page.mouse.wheel(0, 300);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+});

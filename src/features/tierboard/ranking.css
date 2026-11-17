@@ -1146,14 +1146,17 @@
     white-space: nowrap;
   }
 
+  /*
+   * The column is as tall as its cards and goes with the page: one scroll,
+   * the page's (artboard 31). Its own scroll bar took a column of cards and
+   * left a strip of nothing at its side on a 1920 screen (Danylo, 17.11).
+   */
   .ranking:not(.ranking--under) .pool {
-    position: sticky;
-    top: calc(var(--header-height) + var(--list-head-h, 72px) + 16px);
+    position: relative;
     display: flex;
     flex: none;
     flex-direction: column;
     gap: 12px;
-    max-height: calc(100vh - var(--header-height) - var(--list-head-h, 72px) - 32px);
     min-height: 0;
     margin: 0;
     padding: 16px;
@@ -1180,7 +1183,7 @@
     order: 3;
     flex: 0 1 auto;
     min-height: 0;
-    overflow-y: auto;
+    overflow: visible;
     gap: var(--tile-gap);
     padding: 0;
   }
@@ -1404,12 +1407,18 @@
 /*
  * A phone on its side, 840 and wider: the page's header scrolls away
  * (ListPage.css), as the bar does under 840, so the column sticks under the
- * app bar alone and takes the rest of the short screen.
+ * app bar alone and takes the rest of the short screen, scrolling its own
+ * cards: the screen is too short for the page to carry them.
  */
 @media (min-width: 840px) and (max-height: 420px) and (hover: none) and (pointer: coarse) {
   .ranking:not(.ranking--under) .pool {
+    position: sticky;
     top: calc(var(--header-height) + 16px);
     max-height: calc(100vh - var(--header-height) - 32px);
+  }
+
+  .ranking:not(.ranking--under) .pool__items {
+    overflow-y: auto;
   }
 }
 
@@ -2260,12 +2269,6 @@
     padding-inline: 0;
   }
 
-  .ranking:not(.ranking--under) .pool:has(.pool__tools .cards__found) {
-    position: relative;
-    top: auto;
-    max-height: none;
-  }
-
   .ranking:not(.ranking--under)
     .pool:has(.pool__tools .cards__found)
     :is(.pool__items, .pool__none, .pool__hint, .pool__empty) {
@@ -2296,8 +2299,8 @@
 
 /*
  * A laptop (artboard 31): the column about a third of the window (429 of
- * 1351), cards 88 × 124 four to a row, and one scroll, the page's. Its own scroll in a 318 px
- * column showed three cards a row beside a bar.
+ * 1351), cards 88 × 124 four to a row. A 318 px column showed three cards a
+ * row beside its own scroll bar.
  */
 @media (min-width: 1200px) and (max-width: 1599px) {
   .board-frame,
@@ -2310,13 +2313,5 @@
     --tile-w: 88px;
     --tile-h: 124px;
     --tile-gap: 15px;
-
-    position: relative;
-    top: auto;
-    max-height: none;
-  }
-
-  .ranking:not(.ranking--under) .pool__items {
-    overflow: visible;
   }
 }

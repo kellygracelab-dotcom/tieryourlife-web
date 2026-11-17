@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { boot, drawFailure, withoutFreshMark } from "./boot";
 import { recover } from "./lib/freshChunk";
+import { installSidewaysWheel } from "./lib/sidewaysWheel";
 import { applyLocale, LOCALE_PARAM, localeInAddress, pickLocale, readLocale } from "./lib/locale";
 import { localStorageStore, sessionStorageStore } from "./lib/storage";
 import { availableLocales, currentLocale, loadStrings, strings } from "./strings";
@@ -47,6 +48,7 @@ void boot({
     applyLocale(currentLocale());
     const { App, opened } = await import("./App.tsx");
     await opened();
+    installSidewaysWheel();
     return {
       mount: () =>
         createRoot(root).render(
