@@ -66,9 +66,13 @@ describe("the lists begun here (audit B1)", () => {
     ]);
   });
 
-  it("leaves out a list with nothing placed, one with no name, one kept in one's lists and one finished", () => {
+  it("leaves out a list with nothing placed, one with no name, one kept in one's lists, one finished and one fully placed", () => {
     const store = memoryStore();
     begin(store, "empty", [[], []]);
+    begin(store, "placed", [
+      [0, 1],
+      [2, 3, 4],
+    ]);
     begin(store, "nameless", [[0]], { title: undefined });
     begin(store, "saved", [[0]]);
     begin(store, "done", [[0]]);

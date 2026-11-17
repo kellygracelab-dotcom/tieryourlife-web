@@ -60,7 +60,7 @@ const SPOKEN: {
 }[] = [
   {
     browser: "ru-RU",
-    heading: "Оставшиеся карточки",
+    heading: "Осталось карточек",
     lang: "ru",
     mine: "Моя",
     left: "Осталось 3 карточки",
@@ -156,7 +156,10 @@ for (const { browser, lang, dir, mine, left, heading, placed, about } of SPOKEN)
       // The list opens on the author's ranking; one's own board is a press away.
       await page.getByRole("button", { name: mine, exact: true }).click();
       const narrow = page.viewportSize()!.width < 840;
-      await expect(page.getByRole("heading", { level: 2 })).toHaveText(narrow ? heading : left);
+      await expect(page.getByRole("heading", { level: 2 })).toHaveText(
+        // On a phone "Cards left · 3", as the app has it.
+        narrow ? new RegExp(`^${heading} · [3٣]`) : left,
+      );
       await expect(page.getByText(placed)).toBeVisible();
       // The foot waits while the tray is up on a phone; the settings page has it at every width.
       await page.goto("/settings");

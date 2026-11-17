@@ -793,7 +793,7 @@
 .tier-dialog__caption {
   max-width: 100%;
   font: 500 9px/12px var(--font);
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 /* The label and the caption side by side, the caption a little the wider. */

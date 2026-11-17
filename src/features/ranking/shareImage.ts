@@ -313,11 +313,29 @@ function nameTile(paint: Paint, x: number, y: number, title: string) {
   });
 }
 
-/** A pictured card's name along its foot, white on a shade, two lines at most. */
+/**
+ * A pictured card's name along its foot, white on a shade, two lines at most,
+ * as the board and the app draw it (17.11): broken between words only; a word
+ * too wide makes the type smaller by half steps, 13 px down to 10; still too
+ * wide, a hyphenated word breaks after its hyphen ("Detroit-" / "style"), and
+ * what is still wider than the line ends in an ellipsis.
+ */
 function nameStrip(paint: Paint, x: number, y: number, title: string) {
   const { width, height } = SHARE.tile;
-  paint.font = `500 13px ${FONT}`;
-  const lines = wrap(paint, title, width - 8, 2);
+  const room = width - 8;
+  const widest = () =>
+    Math.max(0, ...title.split(/\s+/).map((word) => paint.measureText(word).width));
+  let size = 13;
+  paint.font = `500 ${size}px ${FONT}`;
+  while (size > 10 && widest() > room) {
+    size -= 0.5;
+    paint.font = `500 ${size}px ${FONT}`;
+  }
+  const words = title
+    .split(/\s+/)
+    .flatMap((word) => (paint.measureText(word).width > room ? word.split(/(?<=-)(?=.)/) : [word]))
+    .join(" ");
+  const lines = wrap(paint, words, room, 2);
   if (lines.length === 0) return;
   const strip = 8 + lines.length * 15;
   paint.fillStyle = "rgba(0, 0, 0, 0.66)";
@@ -440,12 +458,22 @@ export async function drawShare(
   return plan;
 }
 
+/** How long one picture may take: one that never answers is left out, not waited on forever. */
+export const IMAGE_WAIT_MS = 8000;
+
 const fetchImage = (url: string) =>
   new Promise<HTMLImageElement | null>((resolve) => {
     const image = new Image();
+    const late = setTimeout(() => resolve(null), IMAGE_WAIT_MS);
     image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => resolve(null);
+    image.onload = () => {
+      clearTimeout(late);
+      resolve(image);
+    };
+    image.onerror = () => {
+      clearTimeout(late);
+      resolve(null);
+    };
     image.src = mediaSrc(url);
   });
 

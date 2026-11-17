@@ -44,7 +44,7 @@ describe("the game picker", () => {
     const { onChooseCards } = show();
     expect(screen.getByRole("dialog", { name: "Play" })).toBeInTheDocument();
     expect(
-      screen.getByText("Losers stay · 34 cards from Sci-fi films · about 136 duels · 5 min"),
+      screen.getByText("Losers stay · 34 cards from Sci-fi films · about 136 duels · 9 min"),
     ).toBeInTheDocument();
     expect(screen.getByText("Leave any time — the game is kept.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Choose cards" }));
@@ -57,14 +57,14 @@ describe("the game picker", () => {
     expect(radios).toHaveLength(4);
     expect(radios[0]).toHaveAccessibleName(expect.stringContaining("Smart"));
     expect(screen.getByRole("radio", { name: /Smart/ })).toHaveAccessibleName(
-      expect.stringContaining("about 85 duels · 3 min"),
+      expect.stringContaining("about 85 duels · 6 min"),
     );
     expect(screen.getByRole("radio", { name: /King of the hill/ })).toBeChecked();
     expect(screen.getByRole("radio", { name: /Losers stay/ })).toHaveAccessibleName(
-      expect.stringContaining("about 136 duels · 5 min"),
+      expect.stringContaining("about 136 duels · 9 min"),
     );
     expect(screen.getByRole("radio", { name: /Bracket/ })).toHaveAccessibleName(
-      expect.stringContaining("33 duels · 1 min"),
+      expect.stringContaining("33 duels · 2 min"),
     );
     await userEvent.click(screen.getByRole("radio", { name: /Bracket/ }));
     expect(onKind).toHaveBeenCalledWith("bracket");
@@ -72,13 +72,13 @@ describe("the game picker", () => {
 
   it("opens on Smart with one big Start, the other games folded away (audit B4)", async () => {
     const { onStart, onKind } = show({ kind: "smart", from: null });
-    expect(screen.getByText("34 cards · about 85 duels · 3 min")).toBeInTheDocument();
+    expect(screen.getByText("34 cards · about 85 duels · 6 min")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     const more = screen.getByRole("button", { name: "Other ways to play" });
     expect(more).toHaveAttribute("aria-expanded", "false");
     const start = screen.getByRole("button", { name: "Start" });
     expect(start).toHaveClass("play-start");
-    expect(start).toHaveAccessibleDescription("34 cards · about 85 duels · 3 min");
+    expect(start).toHaveAccessibleDescription("34 cards · about 85 duels · 6 min");
     await userEvent.click(more);
     expect(more).toHaveAttribute("aria-expanded", "true");
     expect(screen.getAllByRole("radio")).toHaveLength(4);
@@ -93,7 +93,7 @@ describe("the game picker", () => {
     const warning = "You’ve placed 4 cards. The game rearranges them; Undo brings them back.";
     expect(screen.getByText(warning)).toHaveClass("play-placed");
     expect(screen.getByRole("button", { name: "Start" })).toHaveAccessibleDescription(
-      `34 cards · about 85 duels · 3 min ${warning}`,
+      `34 cards · about 85 duels · 6 min ${warning}`,
     );
   });
 
@@ -124,7 +124,7 @@ describe("the game picker", () => {
     expect(card.querySelector(".play-radio")).not.toBeNull();
     expect(card.querySelector(".play-game__icon")).toHaveTextContent("account_tree");
     expect(card.querySelector(".play-game__text > .play-game__estimate")).toHaveTextContent(
-      "33 duels · 1 min",
+      "33 duels · 2 min",
     );
   });
 

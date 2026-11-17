@@ -858,8 +858,11 @@ function OpenBoard({
   // otherwise. A house board is tied to its list by the house's link, not by an id of its own.
   // A list held for a moderator answers 404 to everybody: the picture names the site instead.
   const listId = board.heldForReview === true ? null : (board.publishedId ?? houseListId);
-  const shareBoard = () =>
-    share(
+  // Drawing takes a moment while the pictures load: the page says so at once (designer 17.11).
+  const making = { text: strings.rank.downloading };
+  const shareBoard = () => {
+    setNotice(making);
+    return share(
       view.list,
       view.rows,
       listId === null
@@ -867,11 +870,13 @@ function OpenBoard({
         : `${window.location.origin}/l/${encodeURIComponent(listId)}`,
     ).then(
       // A computer's download shows next to nothing: the page says the picture is saved.
-      (how) => {
-        if (how === "saved") setNotice({ text: strings.boards.imageSaved });
-      },
+      (how) =>
+        setNotice((shown) =>
+          how === "saved" ? { text: strings.boards.imageSaved } : shown === making ? null : shown,
+        ),
       () => setNotice({ text: strings.rank.downloadFailed }),
     );
+  };
 
   // A picture belongs to an account: a guest is asked to sign in at the first
   // one, and the add box sends the rest only once that one is in.

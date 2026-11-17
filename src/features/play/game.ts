@@ -234,8 +234,11 @@ export function dashedIds(game: Game): Set<string> {
 export const isThinResult = (game: Game): boolean =>
   isThin({ played: duelsPlayed(game.spec.count, game.history) });
 
-/** A duel takes about this long to answer, for the picker's estimate. */
-const SECONDS_PER_DUEL = 2.2;
+/**
+ * A duel takes about this long to answer, for the picker's estimate: 2.2 s
+ * promised a minute for a game of 38 duels (QA 17.11). The same as the app's.
+ */
+export const SECONDS_PER_DUEL = 4;
 
 export interface Estimate {
   duels: number;
