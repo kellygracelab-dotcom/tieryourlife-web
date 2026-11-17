@@ -2,7 +2,7 @@ import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
 import { Menu } from "../../ui/Menu";
-import { useCardNames } from "../tierboard/cardNames";
+import { useCardNames } from "../../lib/cardNames";
 import { DISPLAY_MODES, type DisplayMode } from "./model";
 import "./boards.css";
 import "./publishing.css";

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { localStorageStore, type KeyValueStore } from "../../lib/storage";
+import { localStorageStore, type KeyValueStore } from "./storage";
 
 /**
  * Whether a card's name is written on its picture, as a strip along its foot

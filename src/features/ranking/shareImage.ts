@@ -4,7 +4,7 @@ import type { PublishedItem, PublishedList, PublishedTier } from "../../api/type
 import { isEditorial } from "../../lib/editorial";
 import { drawnLines, fitText, type Measure } from "../../lib/textFit";
 import { plural, strings } from "../../strings";
-import { cardNamesOn } from "../tierboard/cardNames";
+import { cardNamesOn } from "../../lib/cardNames";
 
 /**
  * The picture a finished ranking is shared as. 4:5, the tallest ratio feeds

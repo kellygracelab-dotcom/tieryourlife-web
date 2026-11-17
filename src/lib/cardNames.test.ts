@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { memoryStore } from "../../lib/storage";
+import { memoryStore } from "./storage";
 import { cardNamesOn, setCardNames } from "./cardNames";
 
 describe("card names", () => {
