@@ -43,19 +43,22 @@ test.describe("a wide screen", () => {
     const header = await page.evaluate(() =>
       parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-height")),
     );
-    const poolTop = (await page.locator(".pool").boundingBox())!.y;
+    const onPage = () =>
+      page.evaluate(() =>
+        Math.round(document.querySelector(".pool")!.getBoundingClientRect().top + window.scrollY),
+      );
+    const poolTop = await onPage();
     // The wheel over the column scrolls the page too: it has no scroll of its own.
     await page.mouse.move(sideBox.x + 40, sideBox.y + 120);
     await page.mouse.wheel(0, 800);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(400);
-    const scrolled = await page.evaluate(() => window.scrollY);
-    // The header stays under the app bar; the column has gone up with the page.
+    // The header stays under the app bar; the column has gone up with the page:
+    // where it stands on the page, measured with the scroll in one go, is unchanged.
     await expect
       .poll(async () => Math.round((await head.boundingBox())!.y))
       .toBe(Math.round(header));
-    await expect
-      .poll(async () => Math.round((await page.locator(".pool").boundingBox())!.y))
-      .toBe(Math.round(poolTop - scrolled));
+    await expect.poll(onPage).toBe(poolTop);
+    expect((await page.locator(".pool").boundingBox())!.y).toBeLessThan(poolTop - 300);
   });
 
   test("shows the author's ranking as wide as the visitor's board, beside or under", async ({
