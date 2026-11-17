@@ -311,6 +311,8 @@ const es: Translation = {
       animal: "Animal",
     },
     addAsName: "Añadir «{name}» como tarjeta",
+    pickHint:
+      "Haz clic en un resultado para añadirlo. Enter añade «{name}» como tarjeta solo con el nombre.",
     add: "Añadir",
     unnamed: "Tarjeta sin título",
     noCardsYet: "Todavía no hay tarjetas. Busca en el catálogo o escribe un nombre y pulsa Intro.",

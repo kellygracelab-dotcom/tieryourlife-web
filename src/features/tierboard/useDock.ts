@@ -55,7 +55,11 @@ const sizeOf = () => ({ width: window.innerWidth, height: window.innerHeight });
  * window are not the same place — with the window's default where nothing
  * was chosen: under the board only on a wide, tall window.
  */
-export function useDock(store: KeyValueStore = localStorageStore): DockState {
+export function useDock(
+  store: KeyValueStore = localStorageStore,
+  /** Somebody else's list: its cards beside the board on a wide window unless chosen otherwise. */
+  besideOnWide = false,
+): DockState {
   const [size, setSize] = useState(sizeOf);
   useEffect(() => {
     const onResize = () => setSize(sizeOf());
@@ -142,7 +146,7 @@ export function useDock(store: KeyValueStore = localStorageStore): DockState {
   // A choice of under is kept on a window too short for it, for when it is tall again.
   const canDock = underFits(size.height);
   return {
-    dock: canDock ? (choice.dock ?? defaultDock(size.width, size.height)) : "beside",
+    dock: canDock ? (choice.dock ?? defaultDock(size.width, size.height, besideOnWide)) : "beside",
     // The choice is kept as made; a shorter window shows what it can.
     rows: shown,
     wide: size.width >= WIDE_BOARD_FROM,

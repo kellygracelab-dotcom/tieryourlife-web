@@ -487,6 +487,9 @@ describe("ListPage", () => {
       await screen.findByRole("heading", { level: 1 });
       await userEvent.click(screen.getByRole("button", { name: "Mine" }));
       const article = document.querySelector(".list-page")!;
+      // Somebody else's list on a wide window has its cards beside the board at first (artboard 21).
+      expect(article).toHaveClass("list-page--beside");
+      await userEvent.click(screen.getByRole("button", { name: "Cards under the tiers" }));
       expect(article).toHaveClass("list-page--under");
       const head = within(document.querySelector<HTMLElement>(".list-head")!);
       expect(document.querySelector(".list-head .ranking__bar")).not.toBeNull();

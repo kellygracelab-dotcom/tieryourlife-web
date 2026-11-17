@@ -20,6 +20,14 @@ describe("the pool's dock", () => {
     expect(bandOf(1400)).toBe("wide");
   });
 
+  it("keeps somebody else's cards beside the board on a wide window (artboard 21)", () => {
+    expect(defaultDock(2560, 1271, true)).toBe("beside");
+    expect(defaultDock(1400, 900, true)).toBe("beside");
+    // Narrower, the same as one's own.
+    expect(defaultDock(1399, 900, true)).toBe("under");
+    expect(defaultDock(2560, 1271)).toBe("under");
+  });
+
   it("shows only as many rows as leave the board two occupied rows on a window this tall", () => {
     expect(rowsThatFit(970)).toBe(4);
     expect(rowsThatFit(858)).toBe(4);

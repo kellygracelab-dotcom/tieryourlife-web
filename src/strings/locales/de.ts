@@ -305,6 +305,8 @@ const de: Translation = {
       animal: "Tier",
     },
     addAsName: "„{name}“ als Karte hinzufügen",
+    pickHint:
+      "Klicke auf ein Ergebnis, um es hinzuzufügen. Enter fügt „{name}“ als Karte nur mit Namen hinzu.",
     add: "Hinzufügen",
     unnamed: "Unbenannte Karte",
     noCardsYet: "Noch keine Karten. Such im Katalog oder tipp einen Namen und drück Enter.",

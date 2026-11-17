@@ -55,3 +55,27 @@ test("a phone gives one's own list a one-row head with no site bar", async ({ pa
   // The view's button gives way; its choices are in ⋮.
   await expect(head.getByLabel(/^Display: /)).toBeHidden();
 });
+
+// Artboard 21: somebody else's list on a wide, tall window has its cards
+// beside the board, the list's buttons over the board's right edge rather
+// than the window's, and its section and count under the name.
+test("a wide window shows somebody else's list with its cards beside the board", async ({
+  page,
+  hasTouch,
+}) => {
+  test.skip(hasTouch, "the desktop layout");
+  await mockBackend(page);
+  await page.setViewportSize({ width: 2560, height: 1271 });
+  await page.goto(`/l/${LIST_ID}`);
+  await expect(page.locator(".list-head__count")).toHaveText(/^.+ · \d+ cards?$/);
+  const pool = (await page.locator(".ranking__side").boundingBox())!;
+  const head = page.locator(".list-head");
+  const lastTool = (await head.getByLabel("More about this list").boundingBox())!;
+  expect(Math.abs(lastTool.x + lastTool.width - (pool.x + pool.width))).toBeLessThan(24);
+  const title = (await head.getByRole("heading", { level: 1 }).boundingBox())!;
+  const board = (await page.locator(".board").first().boundingBox())!;
+  // The cards beside the board, level with its top, not docked under it.
+  expect(pool.x).toBeGreaterThan(board.x + board.width);
+  expect(Math.abs(pool.y - board.y)).toBeLessThan(24);
+  expect(Math.abs(title.x - board.x)).toBeLessThan(24);
+});

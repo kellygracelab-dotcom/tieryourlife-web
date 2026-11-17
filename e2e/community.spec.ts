@@ -260,3 +260,41 @@ test("opens on a list one can open, a phone's first screen too, and keeps the ap
   expect(cardBox!.y).toBeGreaterThan(listBox!.y + listBox!.height);
   expect(cardBox!.height).toBeLessThanOrEqual(140);
 });
+
+// Artboard 20: a 2560 window's home grows with it, to about 2200: the
+// sections in one row, the feed eight lists across at a card's usual size.
+test("a wide window's home uses its width: sections in one row, eight lists across", async ({
+  page,
+  hasTouch,
+}) => {
+  test.skip(hasTouch, "the desktop layout");
+  await mockBackend(page);
+  const lists = Array.from({ length: 16 }, (_, n) => ({
+    ...summary,
+    id: `wide${n}`,
+    title: `List ${n + 1}`,
+  }));
+  await page.route("**/lists?**", (route) => route.fulfill({ json: { lists, nextCursor: null } }));
+  await page.setViewportSize({ width: 2560, height: 1271 });
+  await page.goto("/");
+  const cards = page.locator(".home .feed > li");
+  await expect(cards).toHaveCount(16);
+
+  const width = (await page.locator(".home").boundingBox())!.width;
+  expect(width).toBeGreaterThan(2100);
+  expect(width).toBeLessThanOrEqual(2200);
+
+  const tiles = page.locator(".home .sections-grid > *");
+  const tops = new Set(
+    (await tiles.evaluateAll((all) => all.map((one) => one.getBoundingClientRect().top))).map(
+      Math.round,
+    ),
+  );
+  expect(await tiles.count()).toBeGreaterThanOrEqual(9);
+  expect(tops.size).toBe(1);
+
+  const rows = await cards.evaluateAll((all) =>
+    all.map((one) => Math.round(one.getBoundingClientRect().top)),
+  );
+  expect(rows.filter((top) => top === rows[0])).toHaveLength(8);
+});

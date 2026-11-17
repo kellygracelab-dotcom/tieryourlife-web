@@ -7,6 +7,25 @@
   padding-top: var(--space-8);
 }
 
+/*
+ * A wide window (artboard 20): the column grows with it, the sections stand
+ * in one row once they fit, and the feed has as many lists across as fit at
+ * the size a card has now (eight on 2560).
+ */
+@media (min-width: 1400px) {
+  .home {
+    max-width: none;
+  }
+
+  .home .sections-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .home .feed {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
 .home__notice {
   margin: 0;
   text-align: center;

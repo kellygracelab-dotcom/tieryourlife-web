@@ -310,6 +310,8 @@ const ptBR: Translation = {
       animal: "Animal",
     },
     addAsName: "Adicionar “{name}” como cartão",
+    pickHint:
+      "Clique em um resultado para adicioná-lo. Enter adiciona “{name}” como cartão só com o nome.",
     add: "Adicionar",
     unnamed: "Cartão sem título",
     noCardsYet: "Nenhum cartão ainda. Pesquise no catálogo ou digite um nome e aperte Enter.",

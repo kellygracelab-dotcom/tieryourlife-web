@@ -2045,3 +2045,59 @@
     order: 2;
   }
 }
+
+/* The catalogue's hint for a mouse: only the dock's wide panel shows it (artboard 23). */
+.cards__pick-hint {
+  display: none;
+}
+
+/*
+ * In the dock (artboard 23) the catalogue's answers are a panel as wide as
+ * the board, over the row of cards: one row of results, as many as fit, the
+ * rest a scroll away. A box 430 wide showed three.
+ */
+@media (min-width: 840px) {
+  .ranking--under .pool__tools,
+  .ranking--under .pool__tools .cards__add {
+    position: static;
+  }
+
+  .ranking--under .pool__tools .cards__found,
+  .ranking--under .pool__tools .cards__paste--open {
+    inset-inline: max(var(--space-8), calc((100vw - var(--board-cap)) / 2));
+  }
+
+  .ranking--under .pool__tools .cards__paste--open {
+    inset-inline-end: auto;
+    width: min(540px, calc(100vw - 2 * var(--space-8)));
+  }
+
+  .ranking--under .pool__tools .cards__found {
+    max-height: min(60vh, 480px);
+  }
+
+  .ranking--under .pool__tools .cards__picks {
+    grid-template-columns: none;
+    grid-auto-columns: 128px;
+    grid-auto-flow: column;
+    gap: 10px 16px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  /* With a mouse the hint says what a click and Enter do; the button stays for Enter and a reader. */
+  @media (hover: hover) and (pointer: fine) {
+    .ranking--under .pool__tools .cards__pick-hint {
+      display: block;
+    }
+
+    .ranking--under .pool__tools .cards__result--name {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+}
