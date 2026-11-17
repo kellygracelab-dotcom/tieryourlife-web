@@ -1,6 +1,7 @@
 /*
- * "Continue" at the top of Your lists and the home page (audit B1): somebody
- * else's lists begun here, a row each, the latest first.
+ * "Continue" at the top of Your lists (audit B1, artboard 14): somebody
+ * else's lists begun here, a card each, the latest first. A group's label
+ * over them, as "CONTINUE · 1"; on a wide window the cards stand side by side.
  */
 .started {
   display: flex;
@@ -10,46 +11,68 @@
 }
 
 .started__title {
-  font: var(--text-title);
-  color: var(--ink);
+  margin: 0;
+  font: 500 12px/16px var(--font);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
 }
 
 .started__list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.started__row {
+.started__card {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  padding: 10px 12px;
-  border-radius: var(--radius-card);
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
   background: var(--surface-container);
 }
 
-.started__thumb {
-  display: inline-flex;
-  flex: none;
+.started__top {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.started__thumbs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.started__thumb {
+  display: block;
+  flex: none;
+  width: 30px;
+  height: 44px;
+  border-radius: 4px;
   object-fit: cover;
   background: var(--surface);
+}
+
+.started__thumb--none {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  border-radius: 8px;
   color: var(--ink-dim);
 }
 
 .started__text {
   display: flex;
-  flex: 1 1 160px;
+  flex: 1 1 auto;
   flex-direction: column;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -62,13 +85,32 @@
 }
 
 .started__meta {
-  font: var(--text-small);
+  font: 400 13px/18px var(--font);
   color: var(--ink-dim);
+}
+
+.started__bar {
+  display: block;
+  overflow: hidden;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-container-high);
+}
+
+.started__fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--link);
 }
 
 .started__actions {
   display: flex;
-  flex: none;
   gap: 8px;
-  margin-inline-start: auto;
+}
+
+.btn.started__go {
+  flex: 1 1 0;
+  justify-content: center;
+  min-height: 48px;
 }

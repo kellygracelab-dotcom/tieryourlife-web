@@ -1096,6 +1096,11 @@ export const en = {
     discard: "Discard",
     nothingToApply: "Every duel was skipped, so there is nothing to apply.",
     arranged: { one: "List arranged from {n} duel", other: "List arranged from {n} duels" },
+    // Over Start when the chosen cards already stand in tiers (artboards 15, 24).
+    placedWarning: {
+      one: "You’ve placed {n} card. The game rearranges it; Undo brings it back.",
+      other: "You’ve placed {n} cards. The game rearranges them; Undo brings them back.",
+    },
   },
   boards: {
     title: "Your lists",
@@ -1179,8 +1184,6 @@ export const en = {
     inRankingsStatus: "In Rankings",
     rankedBody: "Your arrangement is in the original list’s Rankings.",
     publicBody: "Anyone with the link can rank it. It shows in Community.",
-    needsAccount:
-      "Sign in with Google to publish. Reading and saving others’ lists needs no account.",
     needsItems: "Add at least one card before you publish this list.",
     update: "Update",
     updating: "Updating…",
@@ -1259,7 +1262,11 @@ export const en = {
   // Somebody else's lists begun here, at the top of Your lists and the home page (audit B1).
   started: {
     title: "Continue",
+    // Over the begun lists in Your lists, as a group's label: "CONTINUE · 2" (artboard 14).
+    count: "Continue · {n}",
     placed: "{n} of {total} placed",
+    // "Anime · 4 of 25 placed".
+    placedIn: "{section} · {n} of {total} placed",
     continue: "Continue",
     continueOf: "Continue “{title}”",
     resume: "Resume game",
@@ -1311,11 +1318,15 @@ export const en = {
     coverBack: "Back to publishing",
     // A list still called "Untitled list" is named before it goes out (audit D1).
     name: "Name",
-    namePlaceholder: "What is this list?",
+    namePlaceholder: "Give the list a name",
     nameFirst: "Give the list a name first.",
     // A guest's press: it signs them in, then goes on (audit D1).
     signInAndPublish: "Sign in and publish",
     signInAndShow: "Sign in and show",
+    // An untitled list's window and the guest's plate in it (artboard 19).
+    titleUntitled: "Publish your list",
+    nameHint: "It’s still called “{untitled}”. People find lists by name.",
+    needsAccount: "Publishing needs a Google account. Your list stays here while you sign in.",
   },
   sync: {
     offBusy: "Deleting…",

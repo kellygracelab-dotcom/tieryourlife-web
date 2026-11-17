@@ -66,6 +66,28 @@ test.describe("Play on a wide screen", () => {
     expect(box.y).toBeGreaterThan(0);
     expect(box.y + box.height).toBeLessThan(viewport.height);
   });
+
+  test("on a big screen the duel's cards grow with the window and Skip stands under them", async ({
+    page,
+  }) => {
+    // The artboard's screen (22): 2560 × 1271, cards about 436 × 614.
+    await page.setViewportSize({ width: 2560, height: 1271 });
+    await openMine(page);
+    await playButton(page).click();
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await settled(page);
+    const [left, right] = await page.getByRole("button", { name: /^Pick / }).all();
+    const a = await boxOf(left!);
+    const b = await boxOf(right!);
+    expect(a.width).toBeGreaterThan(420);
+    expect(a.width).toBeLessThan(450);
+    expect(a.x + a.width).toBeLessThanOrEqual(b.x);
+    const skip = await boxOf(page.getByRole("button", { name: /^Skip/ }));
+    // Right under the cards and their keys, not down at the window's foot.
+    expect(skip.y).toBeGreaterThan(a.y + a.height);
+    expect(skip.y - (a.y + a.height)).toBeLessThan(90);
+    expect(skip.y + skip.height).toBeLessThan(1271 - 120);
+  });
 });
 
 test.describe("Play on a phone", () => {

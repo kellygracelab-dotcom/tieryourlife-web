@@ -113,13 +113,23 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
 
   const settle = (ms: number) => later(ms, () => setMotion(null));
 
-  const act = (action: Action) => {
-    if (motion !== null || over) return;
+  /**
+   * An answer. One given while the last still plays out is not lost (artboard
+   * 16: of 30 quick presses of an arrow one counted): the motion is cut short
+   * and the answer goes to the duel that comes next, which the game already
+   * holds. Only a card tapped mid-motion is let go: it is the old pair's.
+   */
+  const act = (action: Action, byCard = false) => {
+    if (motion !== null && byCard) return;
+    const live = currentPair(game);
     if (action === "undo") {
-      if (canUndo(game)) onChange(undo(game));
+      if (!canUndo(game)) return;
+      cutShort();
+      onChange(undo(game));
       return;
     }
-    if (pair === null) return;
+    if (live === null) return;
+    cutShort();
     const reduced = lessMotion();
     if (action === "skip") {
       setMotion({ kind: "skip", from: game });
@@ -127,10 +137,10 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
       settle(reduced ? REDUCED_MS : SKIP_DONE_MS);
       return;
     }
-    const winner = action === "first" ? pair[0] : pair[1];
+    const winner = action === "first" ? live[0] : live[1];
     const next = pick(game, winner);
     const coming = currentPair(next);
-    const stays: [boolean, boolean] = [coming?.[0] === pair[0], coming?.[1] === pair[1]];
+    const stays: [boolean, boolean] = [coming?.[0] === live[0], coming?.[1] === live[1]];
     onChange(next);
     if (reduced) {
       setMotion({ kind: "pick", winner, fading: true, stays, from: game });
@@ -143,6 +153,12 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
     );
     settle(PICK_DONE_MS);
   };
+  /** Ends the motion on the stage at once, its timers with it. */
+  function cutShort() {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    setMotion(null);
+  }
   // The key listener is added once; it reaches the latest game through here.
   const latest = useRef(act);
   const ended = useRef(over);
@@ -224,7 +240,7 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
             keycap={side === 0 ? "←" : "→"}
             state={stateOf(motion, pair, side)}
             leaving={leavingOf(motion, side)}
-            onPick={() => act(side === 0 ? "first" : "second")}
+            onPick={() => act(side === 0 ? "first" : "second", true)}
           />
         ));
 

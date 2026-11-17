@@ -159,7 +159,7 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
   await expect(
     window.getByRole("button", { name: "Sign in and publish", exact: true }),
   ).toBeEnabled();
-  await expect(window.getByText(/Sign in with Google to publish/)).toBeVisible();
+  await expect(window.getByText(/Publishing needs a Google account/)).toBeVisible();
   await press(window.getByRole("button", { name: "Cancel" }), hasTouch);
   await expect(window).toBeHidden();
 

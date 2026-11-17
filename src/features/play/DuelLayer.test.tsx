@@ -180,10 +180,34 @@ describe("the duel layer", () => {
     expect(last().history).toHaveLength(0);
   });
 
-  it("takes one answer at a time: a key while a pick settles is not a second one", async () => {
-    const { onChange } = play();
-    await userEvent.keyboard("{ArrowLeft}{ArrowRight}{ArrowDown}");
-    await waitFor(() => expect(moving()).toBe(false));
+  it("takes every quick key, cutting the last motion short (artboard 16)", () => {
+    windowWhere(FULL_MOTION);
+    vi.useFakeTimers();
+    const { game, onChange } = play();
+    const [first] = currentPair(game)!;
+    // Three answers inside one pick's 340 ms: none is lost.
+    act(() => void window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft" })));
+    act(() => vi.advanceTimersByTime(50));
+    act(() => void window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" })));
+    act(() => vi.advanceTimersByTime(50));
+    act(() => void window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" })));
+    expect(onChange).toHaveBeenCalledTimes(3);
+    const answers = onChange.mock.lastCall![0].history;
+    expect(answers).toHaveLength(3);
+    expect(answers[0]![2]).toBe(first);
+    act(() => vi.advanceTimersByTime(SKIP_DONE_MS));
+    expect(moving()).toBe(false);
+  });
+
+  it("lets a card tapped while a pick plays out go: it is the old pair's", () => {
+    windowWhere(FULL_MOTION);
+    vi.useFakeTimers();
+    const { game, onChange } = play();
+    const [first] = currentPair(game)!;
+    const card = screen.getByRole("button", { name: `Pick ${nameOf(game, first)}` });
+    act(() => card.click());
+    act(() => vi.advanceTimersByTime(100));
+    act(() => card.click());
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 

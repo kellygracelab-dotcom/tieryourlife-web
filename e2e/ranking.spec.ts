@@ -172,11 +172,14 @@ test("a move on Author over a begun Mine asks first: Cancel takes it back, Repla
   await expect(ask).toHaveCount(0);
   await expect(theirs.getByRole("list", { name: "S" })).toContainText("Ex Machina");
   await expect(mine).toHaveAttribute("aria-pressed", "false");
-  // Mine as it was; a save also notes the list's name and when, for Continue (audit B1).
+  // Mine as it was; a save also notes the list's name, section, first pictures
+  // and when, for Continue (audit B1, artboard 14).
   const kept = await page.evaluate((key) => localStorage.getItem(key), `tyl:draft:${LIST_ID}`);
   const {
     title: _t,
     picture: _p,
+    pictures: _ps,
+    category: _c,
     savedAt: _s,
     ...rest
   } = JSON.parse(kept!) as Record<string, unknown>;

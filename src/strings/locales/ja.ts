@@ -1124,6 +1124,9 @@ const ja: Translation = {
     discard: "破棄",
     nothingToApply: "すべての対戦をスキップしたため、適用するものはありません。",
     arranged: { other: "{n} 回の対戦でリストを並べました" },
+    placedWarning: {
+      other: "{n}枚のカードを配置済みです。ゲームで並べ替わりますが、「元に戻す」で戻せます。",
+    },
   },
   boards: {
     title: "あなたのリスト",
@@ -1203,8 +1206,6 @@ const ja: Translation = {
     inRankingsStatus: "ランキングに表示中",
     rankedBody: "作成した順位は元のリストのランキングに表示されています。",
     publicBody: "リンクを知っている人なら誰でも並べられます。コミュニティに表示されます。",
-    needsAccount:
-      "公開するには Google でログインしてください。読むことと保存はアカウントなしでできます。",
     needsItems: "リストを公開する前に、カードを1枚以上追加してください。",
     update: "更新",
     updating: "更新中…",
@@ -1280,7 +1281,9 @@ const ja: Translation = {
   },
   started: {
     title: "続きから",
+    count: "続きから · {n}",
     placed: "{total}枚中{n}枚配置済み",
+    placedIn: "{section} · {total}枚中{n}枚配置済み",
     continue: "続ける",
     continueOf: "「{title}」を続ける",
     resume: "ゲームを再開",
@@ -1330,10 +1333,13 @@ const ja: Translation = {
     changeCover: "カバーを変更",
     coverBack: "公開に戻る",
     name: "名前",
-    namePlaceholder: "どんなリストですか？",
+    namePlaceholder: "リストに名前を付けてください",
     nameFirst: "先にリストに名前を付けてください。",
     signInAndPublish: "ログインして公開",
     signInAndShow: "ログインして表示",
+    titleUntitled: "リストを公開",
+    nameHint: "まだ「{untitled}」という名前です。リストは名前で探されます。",
+    needsAccount: "公開には Google アカウントが必要です。ログインの間もリストはここに残ります。",
   },
   sync: {
     offBusy: "削除中…",

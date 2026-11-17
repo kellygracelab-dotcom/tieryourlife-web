@@ -180,6 +180,9 @@ function GoButton({
  * without publishing opens on it again; the window closes by itself once
  * the list is out, and the page says so under the board.
  */
+/** The name field of an untitled list, where the window opens. */
+const NAME_INPUT = ".publish-window__input--name";
+
 export function PublishWindow({
   board,
   latest,
@@ -206,7 +209,9 @@ export function PublishWindow({
   const [coverStep, setCoverStep] = useState(false);
   const coverChange = useRef<HTMLButtonElement>(null);
   const leaveCover = () => setCoverStep(false);
-  useModal(box, coverStep ? leaveCover : onClose);
+  // An untitled list opens on its name, the cursor in it (artboard 19); read once, so the focus stays put as it is named.
+  const [openedUntitled] = useState(() => isUntitled(board));
+  useModal(box, coverStep ? leaveCover : onClose, openedUntitled ? NAME_INPUT : undefined);
   const wasCover = useRef(coverStep);
   useEffect(() => {
     if (wasCover.current === coverStep) return;
@@ -477,7 +482,7 @@ export function PublishWindow({
     me === null ? (
       <p className="publish-window__guest">
         <Icon name="person" />
-        <span>{strings.boards.needsAccount}</span>
+        <span>{strings.publishWindow.needsAccount}</span>
       </p>
     ) : null;
 
@@ -710,7 +715,12 @@ export function PublishWindow({
     const typed = naming ?? "";
     content = (
       <>
-        {head(fill(strings.publishWindow.title, { title }), meta)}
+        {head(
+          untitled
+            ? strings.publishWindow.titleUntitled
+            : fill(strings.publishWindow.title, { title }),
+          meta,
+        )}
         <fieldset className="publish-window__body" disabled={busyNow}>
           {guestNote}
           {untitled && (
@@ -727,12 +737,14 @@ export function PublishWindow({
                   ref={nameInput}
                   id={`${id}-name`}
                   type="text"
-                  className="publish-window__input"
+                  className="publish-window__input publish-window__input--name"
                   value={named}
                   maxLength={BOARD_LIMITS.title}
                   placeholder={strings.publishWindow.namePlaceholder}
                   aria-invalid={nameMissing || undefined}
-                  aria-describedby={nameMissing ? `${id}-name-missing` : undefined}
+                  aria-describedby={
+                    nameMissing ? `${id}-name-hint ${id}-name-missing` : `${id}-name-hint`
+                  }
                   autoComplete="off"
                   onChange={(event) => {
                     setNamed(event.target.value);
@@ -746,6 +758,9 @@ export function PublishWindow({
                   }}
                 />
               </span>
+              <p id={`${id}-name-hint`} className="publish-window__hint">
+                {fill(strings.publishWindow.nameHint, { untitled: strings.boards.untitled })}
+              </p>
               {nameMissing && (
                 <p id={`${id}-name-missing`} className="publish-window__missing" role="alert">
                   <Icon name="error" />

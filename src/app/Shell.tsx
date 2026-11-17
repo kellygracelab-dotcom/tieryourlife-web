@@ -62,12 +62,13 @@ function FaceOf({ name, photoUrl }: { name: string | null; photoUrl: string | nu
 }
 
 /**
- * Where a signed-in person's own things are. Signing out is a setting, and
- * lives with the settings. Drawn from who was here last time until Firebase
- * says, so a press before then opens it too; Admin waits for the account.
+ * Where a signed-in person's own things are, each row with its icon at the
+ * start (artboard 25), and Sign out under a line at the end; Settings keeps
+ * one too. Drawn from who was here last time until Firebase says, so a press
+ * before then opens it too; Admin waits for the account.
  */
 function AccountMenu({ name, photoUrl }: { name: string | null; photoUrl: string | null }) {
-  const { account } = useSession();
+  const { account, signOut } = useSession();
   const moderator = useModerator();
   const waiting = useAdminCounts(
     moderator.status === "yes" && account?.kind === "signedIn" ? account.uid : null,
@@ -87,12 +88,16 @@ function AccountMenu({ name, photoUrl }: { name: string | null; photoUrl: string
       <>
         <li className="menu__who">{name ?? strings.nav.you}</li>
         <li>
-          <Link to="/b">{strings.nav.boards}</Link>
+          <Link to="/b" className="menu__row">
+            <Icon name="view_list" />
+            <span>{strings.nav.boards}</span>
+          </Link>
         </li>
         {appIsLive() && !onApple() && (
           <li>
-            <a href={playUrl("menu")} target="_blank" rel="noopener">
-              {strings.android.menu}
+            <a href={playUrl("menu")} target="_blank" rel="noopener" className="menu__row">
+              <Icon name="install_mobile" />
+              <span>{strings.android.menu}</span>
             </a>
           </li>
         )}
@@ -107,7 +112,17 @@ function AccountMenu({ name, photoUrl }: { name: string | null; photoUrl: string
           </li>
         )}
         <li>
-          <Link to="/settings">{strings.nav.settings}</Link>
+          <Link to="/settings" className="menu__row">
+            <Icon name="settings" />
+            <span>{strings.nav.settings}</span>
+          </Link>
+        </li>
+        <li className="menu__divider" role="separator" />
+        <li>
+          <button type="button" className="menu__action menu__row" onClick={() => void signOut()}>
+            <Icon name="logout" />
+            <span>{strings.nav.signOut}</span>
+          </button>
         </li>
       </>
     </Menu>

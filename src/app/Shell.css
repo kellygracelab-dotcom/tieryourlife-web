@@ -299,11 +299,29 @@
   background: var(--hover);
 }
 
+/* A row with its icon at the start, the word after it (artboard 25); a count, if any, at the end. */
 .menu__list .menu__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+  min-height: 40px;
+  padding-block: 0;
+}
+
+.menu__row .ms {
+  flex: none;
+  font-size: 20px;
+  color: var(--ink-dim);
+}
+
+.menu__row .menu__pill {
+  margin-inline-start: auto;
+}
+
+.menu__divider {
+  height: 1px;
+  margin: 6px 0;
+  background: var(--line);
 }
 
 .menu__pill {

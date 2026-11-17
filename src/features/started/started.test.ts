@@ -34,12 +34,19 @@ describe("the lists begun here (audit B1)", () => {
   it("names each with how far it is placed, latest first", () => {
     const store = memoryStore();
     begin(store, "a", [[0], [1, 2]], { savedAt: NOW - 10 });
-    begin(store, "b", [[3]], { savedAt: NOW, picture: "https://example.com/b.jpg" });
+    begin(store, "b", [[3]], {
+      savedAt: NOW,
+      picture: "https://example.com/b.jpg",
+      category: "anime",
+      pictures: ["https://example.com/1.jpg", "https://example.com/2.jpg"],
+    });
     expect(startedLists(store, new Set(), NOW)).toEqual([
       {
         listId: "b",
         title: "List b",
         picture: "https://example.com/b.jpg",
+        pictures: ["https://example.com/1.jpg", "https://example.com/2.jpg"],
+        category: "anime",
         placed: 1,
         total: 5,
         game: false,
@@ -49,6 +56,8 @@ describe("the lists begun here (audit B1)", () => {
         listId: "a",
         title: "List a",
         picture: null,
+        pictures: [],
+        category: null,
         placed: 3,
         total: 5,
         game: false,

@@ -1169,6 +1169,11 @@ const de: Translation = {
     discard: "Verwerfen",
     nothingToApply: "Alle Duelle wurden übersprungen, es gibt nichts zu übernehmen.",
     arranged: { one: "Liste aus {n} Duell geordnet", other: "Liste aus {n} Duellen geordnet" },
+    placedWarning: {
+      one: "Du hast {n} Karte platziert. Das Spiel ordnet sie neu; „Rückgängig“ holt sie zurück.",
+      other:
+        "Du hast {n} Karten platziert. Das Spiel ordnet sie neu; „Rückgängig“ holt sie zurück.",
+    },
   },
   boards: {
     title: "Deine Listen",
@@ -1251,8 +1256,6 @@ const de: Translation = {
     inRankingsStatus: "In den Ranglisten",
     rankedBody: "Deine Anordnung steht in den Ranglisten der Originalliste.",
     publicBody: "Alle mit dem Link können sie einordnen. Sie erscheint in der Community.",
-    needsAccount:
-      "Melde dich mit Google an, um zu veröffentlichen. Lesen und Speichern geht ohne Konto.",
     needsItems: "Füge mindestens eine Karte hinzu, bevor du die Liste veröffentlichst.",
     update: "Aktualisieren",
     updating: "Wird aktualisiert…",
@@ -1332,7 +1335,9 @@ const de: Translation = {
   },
   started: {
     title: "Weitermachen",
+    count: "Weitermachen · {n}",
     placed: "{n} von {total} platziert",
+    placedIn: "{section} · {n} von {total} platziert",
     continue: "Weiter",
     continueOf: "„{title}“ fortsetzen",
     resume: "Spiel fortsetzen",
@@ -1383,10 +1388,14 @@ const de: Translation = {
     changeCover: "Titelbild ändern",
     coverBack: "Zurück zum Veröffentlichen",
     name: "Titel",
-    namePlaceholder: "Worum geht es in dieser Liste?",
+    namePlaceholder: "Gib der Liste einen Namen",
     nameFirst: "Gib der Liste zuerst einen Titel.",
     signInAndPublish: "Anmelden und veröffentlichen",
     signInAndShow: "Anmelden und zeigen",
+    titleUntitled: "Liste veröffentlichen",
+    nameHint: "Sie heißt noch „{untitled}“. Listen werden über ihren Namen gefunden.",
+    needsAccount:
+      "Zum Veröffentlichen brauchst du ein Google-Konto. Deine Liste bleibt hier, während du dich anmeldest.",
   },
   sync: {
     offBusy: "Wird gelöscht…",
