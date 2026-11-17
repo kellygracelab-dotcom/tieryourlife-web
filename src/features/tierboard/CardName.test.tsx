@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { CardName, type FitName } from "./CardName";
+import { CardName, TileCaption, type FitName } from "./CardName";
 
 describe("CardName", () => {
   it("draws the name at the size it was fitted to, breaking words only between them", () => {
@@ -37,5 +37,25 @@ describe("CardName", () => {
     render(<CardName title="Moonlight" board="small" wide fit={fit} />);
     expect(fit).toHaveBeenCalledWith("Moonlight", "small", "wide");
     expect(screen.getByText("Moonlight")).toHaveStyle({ fontSize: "12px" });
+  });
+});
+
+describe("a pictured card's caption", () => {
+  it("tells the board how wide its longest word is, so the type can keep it whole (QA 36)", () => {
+    const widest = (title: string) => Math.max(...title.split(" ").map((word) => word.length * 5));
+    const { container } = render(<TileCaption title="Interstellar" widest={widest} />);
+    const caption = container.querySelector<HTMLElement>(".tile__caption")!;
+    expect(caption).toHaveTextContent("Interstellar");
+    // 9 px of type over a 60 px word.
+    expect(caption.style.getPropertyValue("--caption-fit")).toBe("0.1500");
+  });
+
+  it("keeps the stylesheet's size without a canvas, and says nothing for a blank name", () => {
+    const { container } = render(<TileCaption title="Dune" widest={() => null} />);
+    expect(
+      container.querySelector<HTMLElement>(".tile__caption")!.getAttribute("style"),
+    ).toBeNull();
+    const blank = render(<TileCaption title="  " widest={() => 10} />);
+    expect(blank.container.querySelector(".tile__caption")).toBeNull();
   });
 });

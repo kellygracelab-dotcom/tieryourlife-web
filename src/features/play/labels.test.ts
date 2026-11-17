@@ -27,9 +27,9 @@ describe("the words of a game", () => {
   });
 
   it("says the estimate, about for the games that adapt, the minutes plain", () => {
-    expect(estimateText("swiss", 34)).toBe("about 136 duels · 5 min");
-    expect(estimateText("smart", 34)).toBe("about 85 duels · 3 min");
-    expect(estimateText("hill", 34)).toBe("33 duels · 1 min");
+    expect(estimateText("swiss", 34)).toBe("about 136 duels · 9 min");
+    expect(estimateText("smart", 34)).toBe("about 85 duels · 6 min");
+    expect(estimateText("hill", 34)).toBe("33 duels · 2 min");
   });
 
   it("counts the duel being asked from one, and refine on its own", () => {

@@ -14,7 +14,7 @@ import { Button } from "../../ui/Button";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import { DOUBLE_TAP_MS } from "../tierboard/drag";
-import { TierLabel } from "../tierboard/TierLabel";
+import { TierCaption, TierLabel } from "../tierboard/TierLabel";
 import { LIMITS, type EditorAction, type EditorTier } from "./model";
 import { TierColours } from "./TierColours";
 import "./editor.css";
@@ -157,7 +157,10 @@ export function TierDialog({ tier, mode, canRemove, place, dispatch, onClose }: 
             caption={caption.trim().length > 0 ? caption : null}
             band="preview"
           />
-          {caption.trim().length > 0 && <span className="tier-dialog__caption">{caption}</span>}
+          {caption.trim().length > 0 && (
+            // As the board shows it: "Masterpiece" smaller, never "Masterpiec / es" (designer 17.11).
+            <TierCaption className="tier-dialog__caption" caption={caption} band="preview" />
+          )}
         </span>
       </div>
     </figure>

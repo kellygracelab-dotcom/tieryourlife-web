@@ -70,7 +70,8 @@ function hasGame(store: KeyValueStore, listId: string, now: number): boolean {
 /**
  * The lists begun here, latest first, at most CONTINUE_MAX: a card placed
  * and the list's name known. A list kept in one's own lists (`saved`) is
- * found there, and one whose ranking was finished here is done.
+ * found there, and one whose ranking was finished here is done; so is one
+ * with every card placed: nothing is left to continue (designer 17.11).
  */
 export function startedLists(
   store: KeyValueStore,
@@ -89,7 +90,7 @@ export function startedLists(
       (sum: number, row: unknown) => sum + (Array.isArray(row) ? row.length : 0),
       0,
     );
-    if (placed === 0) continue;
+    if (placed === 0 || placed >= draft.itemCount) continue;
     found.push({
       listId,
       title: draft.title,

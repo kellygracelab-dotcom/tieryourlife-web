@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import {
   canvasMeasure,
   nameFitter,
@@ -65,10 +66,43 @@ export function CardName({ title, board, wide = false, fit = fitShared }: CardNa
  * without a hover, on a phone too. Hidden where the reader turned names off
  * (cardNames.ts); the button's own label already names it to a screen reader.
  */
-export function TileCaption({ title }: { title: string }) {
+/** The caption's type, in px: as set in board.css, and the smallest it shrinks to. */
+export const CAPTION_SIZE = 9;
+export const CAPTION_FLOOR = 7;
+
+// The caption's longest word at its own size, on the canvas the names use.
+let captionMeasure: ((word: string, size: number) => number) | null | undefined;
+const widestWord = (title: string): number | null => {
+  if (captionMeasure === undefined) captionMeasure = canvasMeasure();
+  if (captionMeasure === null) return null;
+  const measure = captionMeasure;
+  return Math.max(0, ...title.split(/\s+/).map((word) => measure(word, CAPTION_SIZE)));
+};
+
+export function TileCaption({
+  title,
+  widest = widestWord,
+}: {
+  title: string;
+  /** The longest word's width at 9 px; measured on a canvas unless a test says otherwise. */
+  widest?: (title: string) => number | null;
+}) {
   if (title.trim() === "") return null;
+  const wide = widest(title);
   return (
-    <span className="tile__caption" aria-hidden="true" dir="auto">
+    <span
+      className="tile__caption"
+      aria-hidden="true"
+      dir="auto"
+      // How much of the card's width one px of type takes for the longest
+      // word: board.css makes the type as large as the card lets that word be
+      // whole on one line (artboard 36; "Interstell / ar", 17.11).
+      style={
+        wide === null || wide === 0
+          ? undefined
+          : ({ "--caption-fit": (CAPTION_SIZE / wide).toFixed(4) } as CSSProperties)
+      }
+    >
       {title}
     </span>
   );

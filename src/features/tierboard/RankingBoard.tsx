@@ -1340,11 +1340,11 @@ export function RankingBoard({
                       </p>
                     ) : (
                       <h2 className="pool__title">
-                        {/* One count on a phone (audit C2): the bar says "3 of 25 placed". */}
+                        {/* On a phone "Cards left · 3", as the app has it (QA 17.11). */}
                         {emptyPool
                           ? fill(strings.boards.poolCount, { n: 0 })
                           : !wide
-                            ? strings.boards.cardsLeft
+                            ? fill(strings.boards.poolCount, { n: left.length })
                             : plural(
                                 edit?.owner?.live ? strings.boards.pool : strings.rank.left,
                                 left.length,

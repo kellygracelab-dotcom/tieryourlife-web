@@ -65,10 +65,13 @@ export function TierCaption({
   caption,
   band,
   measure = measureShared,
+  className = "tier__caption",
 }: {
   caption: string;
   band: BoardSize | "preview";
   measure?: Measure;
+  /** The tier editor's preview dresses it as its own. */
+  className?: string;
 }) {
   const type = BAND_TYPE[band];
   const start = type.caption.size;
@@ -81,7 +84,7 @@ export function TierCaption({
   const broken = widest * (size / start) > type.width;
   return (
     <bdi
-      className="tier__caption"
+      className={className}
       style={
         size === start
           ? undefined

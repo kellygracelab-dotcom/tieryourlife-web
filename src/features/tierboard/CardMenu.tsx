@@ -24,7 +24,7 @@ export interface ScreenPoint {
 interface CardMenuProps {
   /** The card's name, which names the menu. */
   name: string;
-  /** About the picture: who made it, its licence, the page it is from. At the menu's foot. */
+  /** About the picture: who made it, its licence, the page it is from. */
   onAbout?: (() => void) | undefined;
   /** The page the picture is from, in a new tab. */
   onOpenPage?: (() => void) | undefined;
@@ -76,7 +76,8 @@ function focusFirstTier(box: HTMLElement) {
 
 /**
  * A card's menu on a computer, where the pointer is: Move to a tier with the
- * tiers in a menu of their own, Back to the pool, Remove from list. The phone's
+ * tiers in a menu of their own, Back to the pool, the picture's three, and
+ * last, under a line, Remove from list (the order of artboards 11 and 37). The phone's
  * sheet has the same three (MoveSheet); this is its desktop form, as a right
  * click opens in any app. The keyboard has the menu's own keys: the arrows go
  * up and down and in and out of the tiers, Home and End to either end, Enter
@@ -298,18 +299,6 @@ export function CardMenu({
             <span className="card-menu__text">{strings.boards.backToPool}</span>
           </button>
         )}
-        {onRemove !== undefined && (
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="card-menu__item card-menu__item--danger"
-            onClick={onRemove}
-            onPointerEnter={onOther}
-          >
-            <span className="card-menu__text">{strings.boards.removeFromList}</span>
-          </button>
-        )}
         {onAdjust && (
           <button
             type="button"
@@ -345,6 +334,21 @@ export function CardMenu({
           >
             <span className="card-menu__text">{strings.link.openPage}</span>
           </button>
+        )}
+        {onRemove !== undefined && (
+          <>
+            <div className="card-menu__line" role="separator" />
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              className="card-menu__item card-menu__item--danger"
+              onClick={onRemove}
+              onPointerEnter={onOther}
+            >
+              <span className="card-menu__text">{strings.boards.removeFromList}</span>
+            </button>
+          </>
         )}
       </div>
       {tiersOpen && (

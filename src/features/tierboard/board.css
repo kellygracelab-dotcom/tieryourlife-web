@@ -144,10 +144,25 @@
   color: #fff;
   font: 500 9px/10px var(--font);
   text-align: center;
-  /* Between words; a word wider than the card takes a hyphen where the language has them. */
-  hyphens: auto;
-  overflow-wrap: break-word;
+  /* Between words, or after a word's own hyphen; never inside a word: what is wider still ends in "…". */
+  hyphens: manual;
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
   pointer-events: none;
+}
+
+/*
+ * The longest word whole: the type as large as the card's width lets it be,
+ * 9 px down to 7 (--caption-fit, CardName.tsx). "Interstellar" broke as
+ * "Interstell / ar" on a phone's 44 px card (17.11).
+ */
+.tile:has(> .tile__caption) {
+  container-type: inline-size;
+}
+
+.tile__caption[style*="--caption-fit"] {
+  padding-inline: 1px;
+  font-size: clamp(7px, calc((100cqi - 2px) * var(--caption-fit)), 9px);
 }
 
 :root[data-card-names="off"] .tile__caption {

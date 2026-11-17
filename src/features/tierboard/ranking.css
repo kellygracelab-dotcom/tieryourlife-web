@@ -520,8 +520,10 @@
     opacity: 0.4;
   }
 
+  /* The hint keeps one line: where the head's row has no room for it, it takes the next (QA 17.11). */
   .pool__head {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    row-gap: 2px;
     padding: 0 14px;
   }
 
@@ -537,9 +539,18 @@
 
   .pool__hint--touch {
     display: block;
+    flex: 1 0 auto;
     font: 400 11px/15px var(--font);
     color: var(--ink-faint);
     text-align: end;
+    white-space: nowrap;
+  }
+
+  /* With + Add in the row the hint has no room there: it is the line under it, after the switch. */
+  .pool__head:has(.pool__add) .pool__hint--touch {
+    flex-basis: 100%;
+    order: 10;
+    text-align: start;
   }
 
   .pool--picked .pool__hint--touch {
@@ -1652,6 +1663,13 @@
 .card-menu__item[aria-disabled="true"] {
   color: var(--ink-dim);
   cursor: default;
+}
+
+/* Remove from list stands apart, last, under a line (artboard 37). */
+.card-menu__line {
+  height: 1px;
+  margin: 4px 12px;
+  background: var(--line);
 }
 
 .card-menu__item--danger {

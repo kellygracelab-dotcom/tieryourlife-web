@@ -259,10 +259,10 @@ describe("the result", () => {
 });
 
 describe("the estimate", () => {
-  it("says the design's numbers for 34 cards", () => {
-    expect(estimate("swiss", 34)).toEqual({ duels: 136, minutes: 5, rough: true });
-    expect(estimate("hill", 34)).toEqual({ duels: 33, minutes: 1, rough: false });
-    expect(estimate("bracket", 34)).toEqual({ duels: 33, minutes: 1, rough: false });
+  it("says the numbers for 34 cards, at 4 s a duel as the app counts", () => {
+    expect(estimate("swiss", 34)).toEqual({ duels: 136, minutes: 9, rough: true });
+    expect(estimate("hill", 34)).toEqual({ duels: 33, minutes: 2, rough: false });
+    expect(estimate("bracket", 34)).toEqual({ duels: 33, minutes: 2, rough: false });
   });
 
   it("never says less than a minute", () => {

@@ -7,6 +7,7 @@ import {
   downloadShare,
   drawShare,
   fileNameFor,
+  IMAGE_WAIT_MS,
   loadCanvasImage,
   planShare,
   renderShare,
@@ -358,6 +359,24 @@ describe("loadCanvasImage", () => {
       "https://img/bad.jpg",
       "https://img/bad.jpg?canvas=1",
     ]);
+  });
+
+  it("leaves out a picture that never answers rather than wait for it (designer 17.11)", async () => {
+    vi.useFakeTimers();
+    try {
+      class SilentImage {
+        crossOrigin = "";
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        src = "";
+      }
+      vi.stubGlobal("Image", SilentImage);
+      const loaded = loadCanvasImage("https://img/slow.jpg");
+      await vi.advanceTimersByTimeAsync(IMAGE_WAIT_MS * 2);
+      expect(await loaded).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
