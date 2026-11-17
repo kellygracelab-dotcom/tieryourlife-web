@@ -233,8 +233,14 @@ describe("AddCardBox", () => {
       quick: true,
     });
     expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent("Animal");
-    // The photographer its license asks to name, beside the picture; none where none is asked.
-    expect(screen.getByRole("button", { name: /Red fox/ })).toHaveTextContent(
+    // The photographer its license asks to name, beside the picture, short: "author, licence"
+    // (artboard 23); the whole line on hover. None where none is asked.
+    const credit = screen
+      .getByRole("button", { name: /Red fox/ })
+      .querySelector(".cards__pick-credit")!;
+    expect(credit).toHaveTextContent(/^Commons contributor, CC BY$/);
+    expect(credit).toHaveAttribute(
+      "title",
       "Commons contributor ".repeat(25) + "CC BY 4.0 https://creativecommons.org/licenses/by/4.0/",
     );
     expect(screen.getByRole("button", { name: /Fennec/ })).not.toHaveTextContent("(c)");

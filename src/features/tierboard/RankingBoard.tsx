@@ -141,6 +141,8 @@ interface RankingBoardProps {
    * store by default, the browser's for a page whose store is scratch.
    */
   device?: KeyValueStore;
+  /** Somebody else's list: on a wide window its cards stand beside the board unless chosen otherwise (artboard 21). */
+  besideOnWide?: boolean;
   edit?: EditMode;
   /** Every tier one line of cards that scrolls sideways: the phone's Single strip. */
   strip?: boolean;
@@ -528,6 +530,7 @@ export function RankingBoard({
   hitTest,
   store = localStorageStore,
   device = store,
+  besideOnWide = false,
   edit,
   strip = false,
   seed,
@@ -606,8 +609,10 @@ export function RankingBoard({
 
   // The pool's place on a wide screen, and what the page lends the board: a
   // slot in its header for the bar while the pool is docked under the board.
-  const { dock, rows, wide, canDock, choose, resize, startResize, resizeByKey, maxRows } =
-    useDock(device);
+  const { dock, rows, wide, canDock, choose, resize, startResize, resizeByKey, maxRows } = useDock(
+    device,
+    besideOnWide,
+  );
   // On a narrow window the box that brings cards in waits behind Add, in the
   // pool, whichever head the pool shows; on a wide one it stands in the pool,
   // and an empty pool gives it the cursor. Opened, the catalogue's field

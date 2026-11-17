@@ -317,6 +317,8 @@ const fr: Translation = {
       animal: "Animal",
     },
     addAsName: "Ajouter « {name} » comme carte",
+    pickHint:
+      "Cliquez sur un résultat pour l’ajouter. Entrée ajoute « {name} » comme carte avec son seul nom.",
     add: "Ajouter",
     unnamed: "Carte sans titre",
     noCardsYet:

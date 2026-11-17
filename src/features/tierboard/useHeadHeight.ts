@@ -19,7 +19,8 @@ export function useHeadHeight(slot: HTMLElement | null): void {
         `${Math.ceil(head.getBoundingClientRect().height)}px`,
       ),
     );
-    observer.observe(head);
+    // Its whole box: the padding changes with the pool's place while the content stays.
+    observer.observe(head, { box: "border-box" });
     return () => {
       observer.disconnect();
       root.style.removeProperty("--list-head-h");

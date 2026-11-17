@@ -77,7 +77,8 @@ test.describe("a wide screen", () => {
     }
   });
 
-  // A wide, tall window docks the pool under the board; the choice to put it beside is kept.
+  // Somebody else's list on a wide window has its cards beside the board
+  // (artboard 21); under is a choice, kept, as is the way back beside.
   test("docks the pool under the board on a wide window and remembers a choice", async ({
     page,
   }) => {
@@ -95,6 +96,8 @@ test.describe("a wide screen", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every A24 film, ranked");
     await page.getByRole("button", { name: "Mine", exact: true }).click();
     const board = page.locator(".ranking");
+    await expect(board).not.toHaveClass(/ranking--under/);
+    await page.getByRole("button", { name: "Cards under the tiers" }).click();
     await expect(board).toHaveClass(/ranking--under/);
     await expect(page.locator(".pool")).toHaveCSS("position", "fixed");
     await expect(page.locator(".list-head").getByRole("button", { name: "Undo" })).toBeVisible();

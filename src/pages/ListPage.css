@@ -172,6 +172,13 @@
   color: var(--ink-dim);
 }
 
+/* A phone's head is the name and its buttons (artboard 13); the count is a wider window's. */
+@media (max-width: 599px) {
+  .list-head__count {
+    display: none;
+  }
+}
+
 /*
  * Under the title: the author with Follow, the rankings chip; the list it was
  * made from under them. Title, 2 and a 28 chip fill the 72 row's 56 inside.

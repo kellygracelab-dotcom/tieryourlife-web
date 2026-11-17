@@ -363,3 +363,52 @@ test("saves somebody's list to my boards with one button, and only once", async 
   await page.getByRole("link", { name: "Your lists" }).first().click();
   await expect(page.getByRole("link", { name: `Open ${list.title}` })).toHaveCount(1);
 });
+
+// Artboard 23: on a wide window with the cards docked under the board, the
+// catalogue's answers are a panel as wide as the board, one row of them.
+test("a wide window's catalogue answers in a panel as wide as the board, one row", async ({
+  page,
+  hasTouch,
+}) => {
+  test.skip(hasTouch, "the desktop layout");
+  await mockBackend(page);
+  await page.setViewportSize({ width: 2560, height: 1271 });
+  await page.route("**/lists/pictures?*", (route) => {
+    const q = new URL(route.request().url()).searchParams.get("q") ?? "";
+    const items = Array.from({ length: 14 }, (_, at) => ({
+      id: `tmdb:${q}${at}`,
+      title: `${q} ${at}`,
+      imageUrl: `https://img.test/${at}.png`,
+      thumbUrl: null,
+      source: "tmdb",
+      kind: "movie",
+    }));
+    return route.fulfill({ json: { items, hasMore: false, notices: [] } });
+  });
+  await page.route("https://img.test/**", (route) =>
+    route.fulfill({ contentType: "image/png", body: PIXEL }),
+  );
+  await page.goto("/b");
+  await page.getByRole("link", { name: "New list" }).first().click();
+  const title = page.getByRole("textbox", { name: "Title" });
+  await title.fill("Dune and more");
+  await title.press("Enter");
+  await expect(page.locator(".ranking")).toHaveClass(/ranking--under/);
+  await page.getByRole("textbox", { name: "Add a card" }).fill("dune");
+  await expect(page.getByRole("button", { name: "dune 13" })).toBeAttached();
+
+  const panel = (await page.locator(".pool__tools .cards__found").boundingBox())!;
+  const board = (await page.locator(".board").first().boundingBox())!;
+  expect(Math.abs(panel.x - board.x)).toBeLessThan(4);
+  expect(Math.abs(panel.width - board.width)).toBeLessThan(4);
+  const tops = await page
+    .locator(".cards__pick")
+    .evaluateAll((all) => all.map((one) => Math.round(one.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
+  await expect(page.locator(".cards__pick-hint")).toHaveText(
+    "Click a result to add it. Enter adds “dune” as a card with just a name.",
+  );
+  // Enter still adds the name alone.
+  await page.getByRole("textbox", { name: "Add a card" }).press("Enter");
+  await expect(page.getByRole("button", { name: "dune", exact: true })).toBeVisible();
+});

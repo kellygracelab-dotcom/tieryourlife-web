@@ -357,6 +357,7 @@ const ar: Translation = {
       animal: "حيوان",
     },
     addAsName: "إضافة «{name}» كبطاقة",
+    pickHint: "انقر على نتيجة لإضافتها. يضيف Enter «{name}» كبطاقة بالاسم فقط.",
     add: "إضافة",
     unnamed: "بطاقة بلا عنوان",
     noCardsYet: "لا بطاقات بعد. ابحث في الفهرس أو اكتب اسمًا واضغط Enter.",

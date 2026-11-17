@@ -85,6 +85,8 @@ test.describe("a notice over a board", () => {
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await openMine(page, 12);
+    // Somebody else's list starts with its cards beside the board (artboard 21); under is a choice.
+    await page.getByRole("button", { name: "Cards under the tiers" }).click();
     await expect(page.locator(".ranking")).toHaveClass(/ranking--under/);
     await expect(page.locator(".pool")).toHaveCSS("position", "fixed");
     await saveToMine(page);

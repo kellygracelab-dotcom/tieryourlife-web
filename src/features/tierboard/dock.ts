@@ -43,9 +43,18 @@ export interface DockChoice {
 
 export const bandOf = (width: number): Band => (width >= WIDE_FROM ? "wide" : "narrow");
 
-/** The place the pool takes when nobody has chosen: under the board only on a wide, tall window. */
-export const defaultDock = (width: number, height: number): Dock =>
-  width >= WIDE_BOARD_FROM && underFits(height) ? "under" : "beside";
+/**
+ * The place the pool takes when nobody has chosen: under the board only on a
+ * wide, tall window. Somebody else's list keeps its cards beside the board
+ * from WIDE_FROM (artboard 21): there all of them wait to be placed, and a
+ * dock under a 1760 board left them 900 px from its top row.
+ */
+export const defaultDock = (width: number, height: number, besideOnWide = false): Dock =>
+  besideOnWide && width >= WIDE_FROM
+    ? "beside"
+    : width >= WIDE_BOARD_FROM && underFits(height)
+      ? "under"
+      : "beside";
 
 const isDock = (value: unknown): value is Dock => value === "beside" || value === "under";
 const isRows = (value: unknown): value is DockRows =>

@@ -301,6 +301,7 @@ const tr: Translation = {
       animal: "Hayvan",
     },
     addAsName: "“{name}” kart olarak ekle",
+    pickHint: "Eklemek için bir sonuca tıkla. Enter, “{name}” kartını yalnızca adıyla ekler.",
     add: "Ekle",
     unnamed: "Başlıksız kart",
     noCardsYet: "Henüz kart yok. Katalogda arayın ya da bir ad yazıp Enter’a basın.",

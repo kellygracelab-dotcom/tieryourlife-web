@@ -298,6 +298,7 @@ export const en = {
       animal: "Animal",
     },
     addAsName: "Add “{name}” as a card",
+    pickHint: "Click a result to add it. Enter adds “{name}” as a card with just a name.",
     add: "Add",
     unnamed: "Untitled card",
     noCardsYet: "No cards yet. Search the catalogue or type a name and press Enter.",

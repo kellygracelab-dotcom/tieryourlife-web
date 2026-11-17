@@ -499,9 +499,15 @@
   max-width: none;
 }
 
-/* The home page's feed is four across. */
+/* The home page's feed is four across; a wide window's column grows with it, to about 2200 (artboard 20). */
 .shell__main:has(.home) {
   max-width: 1160px;
+}
+
+@media (min-width: 1400px) {
+  .shell__main:has(.home) {
+    max-width: calc(2200px + 2 * var(--space-8));
+  }
 }
 
 .foot {

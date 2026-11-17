@@ -300,6 +300,8 @@ const ja: Translation = {
       animal: "動物",
     },
     addAsName: "「{name}」をカードとして追加",
+    pickHint:
+      "結果をクリックして追加します。Enter で「{name}」を名前だけのカードとして追加します。",
     add: "追加",
     unnamed: "無題のカード",
     noCardsYet:

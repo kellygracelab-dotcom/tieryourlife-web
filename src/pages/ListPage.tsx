@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type RefObject,
 } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router";
@@ -78,7 +79,9 @@ import { isEditorial, isEditorialAuthor } from "../lib/editorial";
 import { spendPreload } from "../lib/preload";
 import { type KeyValueStore, localStorageStore } from "../lib/storage";
 import { useResource } from "../lib/useResource";
-import { currentLocale, fill, strings } from "../strings";
+import { currentLocale, fill, plural, strings } from "../strings";
+import { sectionName } from "../features/sections/model";
+import { sectionsStore } from "../features/sections/useSections";
 import { fillNodes } from "../strings/fillNodes";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -354,6 +357,12 @@ function OpenList({
   // see the list as they published it, and the way to change it.
   const own = account?.kind === "signedIn" && isOwnList(list, account.uid);
   const editorial = isEditorial(list);
+  // The sections' names as last known here; the nine stand in until the backend answered.
+  const knownSections = useSyncExternalStore(
+    sectionsStore.subscribe,
+    sectionsStore.get,
+    sectionsStore.get,
+  ).sections;
   const outOfSight = !own && isOutOfSight(hidden, list);
   const author = useMemo(() => arrange(list), [list]);
   // What somebody came for, as in the app: the author's ranking, unless this
@@ -773,6 +782,13 @@ function OpenList({
           <h1 className="list-head__title">
             <bdi>{list.title}</bdi>
           </h1>
+          {/* Its section and how many cards it has: "Anime · 25 cards" (artboard 21). */}
+          <p className="list-head__meta list-head__count">
+            {[
+              sectionName(list.category, knownSections),
+              plural(strings.card.items, list.itemCount),
+            ].join(" · ")}
+          </p>
           {/* One's own anonymous list says it is one's own, and that nobody else sees so. */}
           {own && list.anonymous === true && (
             <div className="list-head__lines">
@@ -869,6 +885,7 @@ function OpenList({
             {/* Play starts from Mine as it stands, hand moves made since included. */}
             <RankingBoard
               key={`${list.id}:${mineRound}`}
+              besideOnWide
               list={mineList}
               undoTo={mineBefore?.rows ?? null}
               undoToggles={mineBefore?.toggles === true}
@@ -900,6 +917,7 @@ function OpenList({
           // What it left unranked is its pool, where a card can be taken out too.
           <>
             <RankingBoard
+              besideOnWide
               key={`theirs:${list.id}:${chosen?.uid ?? ""}:${mineRound}:${theirsRound}`}
               list={theirsList}
               seed={{

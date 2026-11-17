@@ -48,6 +48,7 @@ import {
 import { LOOKUP_DEBOUNCE_MS, usePictures, type FindPictures } from "./usePictures";
 import { sizedFor } from "../../lib/pictureSize";
 import { pasteLimitText, searchLimitText } from "../../lib/searchLimit";
+import { shortCredit } from "./shortCredit";
 
 /** Pictures going up at once: enough to keep the line busy, few enough not to starve each other. */
 const UPLOADS_AT_ONCE = 4;
@@ -177,6 +178,7 @@ function PictureTile({
 }) {
   const [broken, setBroken] = useState(false);
   const line = [kindName(found.kind), found.subtitle].filter(Boolean).join(" · ");
+  const credit = shortCredit(found);
   // A picture that will not load leaves no empty tile behind.
   if (broken) return null;
   return (
@@ -204,9 +206,9 @@ function PictureTile({
       <span className="cards__pick-title">{found.title}</span>
       {line !== "" && <span className="cards__pick-sub">{line}</span>}
       {/* The license asks for the name beside the picture. */}
-      {found.credit !== null && (
-        <span className="cards__pick-credit" title={found.credit}>
-          {found.credit}
+      {credit !== null && (
+        <span className="cards__pick-credit" title={found.credit ?? credit}>
+          {credit}
         </span>
       )}
     </button>
@@ -1021,6 +1023,8 @@ export function AddCardBox({
                 {strings.new.lookingFurther}
               </p>
             )}
+            {/* A mouse in the dock's wide panel reads this instead of the button (artboard 23). */}
+            <p className="cards__note cards__pick-hint">{fill(strings.new.pickHint, { name })}</p>
             <button type="submit" className="cards__result cards__result--name">
               <Icon name="add" />
               <span className="cards__result-text">{fill(strings.new.addAsName, { name })}</span>
