@@ -2,7 +2,7 @@ import { useId, useRef, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import type { PublishedTier } from "../../api/types";
 import { strings } from "../../strings";
-import { Button } from "../../ui/Button";
+import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 
 interface MoveSheetProps {
@@ -24,10 +24,12 @@ interface MoveSheetProps {
 }
 
 /**
- * The phone's move sheet: every tier by a press, back to the pool, off the
- * list. It lies on the body, not in the tile, so a pool that scrolls cannot
- * clip it; a press outside closes it, and the keyboard gets what `useModal`
- * gives every dialog.
+ * A card's sheet (artboard 37, as the app's 11): its name with a cross, the
+ * picture's links, MOVE TO A TIER with every tier a row (the current one lit,
+ * "Currently here"), then Back to the deck and, last and red, Remove from
+ * list, each under a line. It lies on the body, not in the tile, so a pool
+ * that scrolls cannot clip it; the cross, a press outside and Escape close
+ * it, and the keyboard gets what `useModal` gives every dialog.
  */
 export function MoveSheet({
   name,
@@ -44,10 +46,18 @@ export function MoveSheet({
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
 
-  useModal(box, onClose, "button:not([disabled])");
+  useModal(box, onClose, ".move-sheet__tier:not([disabled]), button:not([disabled])");
 
   return createPortal(
-    <div className="scrim" onClick={onClose}>
+    <div
+      className="scrim"
+      onClick={onClose}
+      // A double click opens the sheet with its first click; its second lands
+      // here and must neither close the sheet nor press the row under it.
+      onClickCapture={(event) => {
+        if (event.detail > 1) event.stopPropagation();
+      }}
+    >
       <div
         ref={box}
         className="dialog dialog--narrow move-sheet"
@@ -56,14 +66,36 @@ export function MoveSheet({
         aria-labelledby={`${id}-title`}
         onClick={(event) => event.stopPropagation()}
       >
-        <h2 id={`${id}-title`} className="dialog__title">
-          {name}
-        </h2>
+        <div className="move-sheet__head">
+          <h2 id={`${id}-title`} className="dialog__title move-sheet__title">
+            {name}
+          </h2>
+          <button
+            type="button"
+            className="move-sheet__close"
+            aria-label={strings.rankings.close}
+            onClick={onClose}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
         {(onAbout !== undefined || onOpenPage !== undefined || onAdjust !== undefined) && (
           <div className="move-sheet__picture">
-            {onAdjust && <Button onClick={onAdjust}>{strings.cover.adjustPicture}</Button>}
-            {onAbout && <Button onClick={onAbout}>{strings.link.about}</Button>}
-            {onOpenPage && <Button onClick={onOpenPage}>{strings.link.openPage}</Button>}
+            {onAbout && (
+              <button type="button" className="move-sheet__link" onClick={onAbout}>
+                {strings.link.about}
+              </button>
+            )}
+            {onOpenPage && (
+              <button type="button" className="move-sheet__link" onClick={onOpenPage}>
+                {strings.link.openPage}
+              </button>
+            )}
+            {onAdjust && (
+              <button type="button" className="move-sheet__link" onClick={onAdjust}>
+                {strings.cover.adjustPicture}
+              </button>
+            )}
           </div>
         )}
         <p className="move-sheet__who">{strings.boards.moveTo}</p>
@@ -72,7 +104,9 @@ export function MoveSheet({
             <li key={`${index}-${tier.label}`}>
               <button
                 type="button"
-                className="move-sheet__tier"
+                className={
+                  index === current ? "move-sheet__tier move-sheet__tier--here" : "move-sheet__tier"
+                }
                 disabled={index === current}
                 onClick={() => onPlace(index)}
               >
@@ -97,19 +131,28 @@ export function MoveSheet({
             </li>
           ))}
         </ul>
-        <div className="dialog__actions move-sheet__actions">
-          {current !== null && (
-            <Button variant="tonal" onClick={onUnplace}>
+        {current !== null && (
+          <>
+            <hr className="move-sheet__line" />
+            <button type="button" className="move-sheet__row" onClick={onUnplace}>
+              <Icon name="undo" className="move-sheet__row-icon" />
               {strings.boards.backToPool}
-            </Button>
-          )}
-          {onRemove !== undefined && (
-            <Button className="move-sheet__danger" onClick={onRemove}>
+            </button>
+          </>
+        )}
+        {onRemove !== undefined && (
+          <>
+            <hr className="move-sheet__line" />
+            <button
+              type="button"
+              className="move-sheet__row move-sheet__row--danger"
+              onClick={onRemove}
+            >
+              <Icon name="delete" className="move-sheet__row-icon" />
               {strings.boards.removeFromList}
-            </Button>
-          )}
-          <Button onClick={onClose}>{strings.rank.cancel}</Button>
-        </div>
+            </button>
+          </>
+        )}
       </div>
     </div>,
     document.body,

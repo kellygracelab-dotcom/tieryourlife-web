@@ -827,6 +827,26 @@ describe("BoardPage: tiers and settings", () => {
       return itemsIn(board, uid).map((item) => item.title);
     };
 
+    it("opens the sheet on a right or double click, closes it on its cross, and has no Cancel (QA 37)", async () => {
+      ranked();
+      const row = screen.getByRole("button", { name: "1. Ex Machina in S" });
+      fireEvent.contextMenu(row);
+      let sheet = within(screen.getByRole("dialog", { name: "Ex Machina" }));
+      expect(sheet.queryByRole("button", { name: "Cancel" })).toBeNull();
+      expect(sheet.getByText("Move to a tier")).toBeInTheDocument();
+      expect(sheet.getByRole("button", { name: /^S/ })).toHaveTextContent("Currently here");
+      await userEvent.click(sheet.getByRole("button", { name: "Close" }));
+      expect(screen.queryByRole("dialog")).toBeNull();
+
+      // The double click's second press lands on the open sheet and is let go.
+      await userEvent.dblClick(row);
+      sheet = within(screen.getByRole("dialog", { name: "Ex Machina" }));
+      fireEvent.click(sheet.getByRole("button", { name: "B" }), { detail: 2 });
+      expect(screen.getByRole("dialog", { name: "Ex Machina" })).toBeInTheDocument();
+      await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
     it("opens the move sheet from a row, as the phone does, and moves the card", async () => {
       const repository = ranked();
       const row = screen.getByRole("button", { name: "1. Ex Machina in S" });

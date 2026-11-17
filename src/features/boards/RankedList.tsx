@@ -106,6 +106,12 @@ export function RankedList({ board, onMove, onRemove, onCredit }: RankedListProp
         aria-label={label}
         aria-haspopup="dialog"
         onClick={() => setMoving(item.uid)}
+        // A right click opens the same sheet, not the browser's menu (artboard 37);
+        // a double click is a click that already did.
+        onContextMenu={(event) => {
+          event.preventDefault();
+          setMoving(item.uid);
+        }}
       >
         {children}
       </button>

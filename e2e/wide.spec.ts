@@ -7,7 +7,9 @@ import { LIST_ID, list, mockBackend } from "./fixtures";
 test.describe("a wide screen", () => {
   test.skip(({ hasTouch }) => hasTouch, "a laptop's layout");
 
+  // From 1600: a laptop's column has no scroll of its own and goes with the page (artboard 31).
   test("keeps the pool beside the board while the page scrolls", async ({ page }) => {
+    await page.setViewportSize({ width: 1700, height: 720 });
     await mockBackend(page);
     const tiers = Array.from({ length: 20 }, (_, i) => ({
       label: `T${i + 1}`,
@@ -133,11 +135,12 @@ test.describe("a wide screen", () => {
   });
 
   // Beside, the board stops at 1120 and the pool grows by whole columns of cards:
-  // five at 1568, the two together in the middle, nothing left over at one side.
+  // six at 1700, the two together in the middle, nothing left over at one side.
+  // (A laptop, 1200 to 1599, has four larger cards instead: artboard 31.)
   test("widens the pool by whole columns of cards and centres the two on a wide window", async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1568, height: 900 });
+    await page.setViewportSize({ width: 1700, height: 900 });
     await page.addInitScript(() =>
       localStorage.setItem("tyl:pool-dock", JSON.stringify({ wide: { dock: "beside" } })),
     );
@@ -161,16 +164,16 @@ test.describe("a wide screen", () => {
     const columns = await page
       .locator(".pool__items")
       .evaluate((grid) => getComputedStyle(grid).gridTemplateColumns.split(" ").length);
-    expect(columns).toBe(5);
+    expect(columns).toBe(6);
     const board = (await page.locator(".board").boundingBox())!;
     const pool = (await page.locator(".pool").boundingBox())!;
-    // 2 × 16 + 5 × 64 + 4 × 10, and 24 between it and the board.
-    expect(Math.round(pool.width)).toBe(392);
+    // 2 × 16 + 6 × 64 + 5 × 10, and 24 between it and the board.
+    expect(Math.round(pool.width)).toBe(466);
     expect(Math.round(pool.x - (board.x + board.width))).toBe(24);
     // No dead strip at either side: the board takes what the column leaves, the margins equal.
-    expect(Math.round(board.width)).toBe(1088);
+    expect(Math.round(board.width)).toBe(1120);
     const left = board.x;
-    const right = 1568 - (pool.x + pool.width);
+    const right = 1700 - (pool.x + pool.width);
     expect(Math.abs(left - right)).toBeLessThanOrEqual(1);
   });
 

@@ -125,6 +125,19 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   expect(account.published.size).toBe(0);
 });
 
+test("asks an untitled list's name with the hint right under the field (QA 34)", async ({
+  page,
+  hasTouch,
+}) => {
+  await signIn(page);
+  await newBoard(page, hasTouch, "");
+  await press(page.locator(".list-head .publish-button"), hasTouch);
+  const window = page.getByRole("dialog", { name: "Publish your list" });
+  const field = await window.getByRole("textbox", { name: "Name" }).boundingBox();
+  const hint = await window.getByText(/People find lists by name/).boundingBox();
+  expect(hint!.y - (field!.y + field!.height)).toBeLessThan(24);
+});
+
 test("publishes from the board's header, and View opens what others see", async ({
   page,
   hasTouch,

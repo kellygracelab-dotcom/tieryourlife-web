@@ -231,6 +231,11 @@
   flex: 1 1 240px;
 }
 
+/* In the name's column the 240 would be a height: 200px of nothing under the field (QA 34). */
+.publish-window__block > .publish-window__field {
+  flex: none;
+}
+
 .publish-window__input {
   padding-inline-end: 64px;
   border-radius: 12px;

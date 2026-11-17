@@ -48,11 +48,15 @@ interface BoardsPageProps {
   /** Where the search, the filter and the order wait while a list is open. */
   shelfStore?: KeyValueStore;
   unpublish?: UnpublishBoard;
+  /** Up to how many lists the page goes without its tools; a test of the tools sets none. */
+  fewLists?: number;
 }
 
 /** Pictures in a grid, as the phone shows them first, or one board to a row with its tier ribbon. */
 type BoardsView = "grid" | "rows";
 export const VIEW_KEY = "boards.view";
+/** Up to this many lists the page is the lists and a new one's tile, without its tools. */
+export const FEW_LISTS = 6;
 const viewIn = (store: KeyValueStore): BoardsView =>
   store.read(VIEW_KEY) === "rows" ? "rows" : "grid";
 
@@ -117,6 +121,7 @@ function Group({
   selected,
   onSelect,
   onStar,
+  newTile = false,
 }: {
   heading: string | null;
   boards: Board[];
@@ -125,6 +130,8 @@ function Group({
   selected: ReadonlySet<string>;
   onSelect: (uid: string) => void;
   onStar: (board: Board) => void;
+  /** A tile that starts a new list, after the lists (artboard 33). */
+  newTile?: boolean;
 }) {
   if (boards.length === 0) return null;
   return (
@@ -151,6 +158,14 @@ function Group({
               onStar={onStar}
             />
           ),
+        )}
+        {newTile && (
+          <li className="boards__new">
+            <Link className="boards__new-link" to="/b/new">
+              <Icon name="add" className="boards__new-icon" />
+              <span>{strings.boards.newBoard}</span>
+            </Link>
+          </li>
         )}
       </ul>
     </section>
@@ -195,6 +210,7 @@ export function BoardsPage({
   store = localStorageStore,
   shelfStore = sessionStorageStore,
   unpublish = unpublishList,
+  fewLists = FEW_LISTS,
 }: BoardsPageProps) {
   usePageTitle(strings.boards.title);
   const all = useBoards(repository);
@@ -257,13 +273,17 @@ export function BoardsPage({
 
   const kept = deleting.size === 0 ? all : all.filter((board) => !deleting.has(board.uid));
   const live = kept.filter((board) => board.deletedAt === null);
-  const filters = { show, query };
+  // A few lists are just the lists and a tile for a new one: search, filters,
+  // order, the view and Select come with the seventh (artboard 33).
+  const few = live.length <= fewLists;
+  const filters = few ? { show: "all" as const, query: "" } : { show, query };
+  const viewNow: BoardsView = few ? "grid" : view;
   const arranged = arrangeBoards(kept, sort, filters);
   const narrowed = isNarrowed(filters);
   const grouped = shouldGroup(arranged, narrowed);
   const shown = [...arranged.favourites, ...arranged.rest];
   const publicCount = live.filter(isOut).length;
-  const rankings = live.reduce((sum, board) => sum + rankedCount(board), 0);
+  const placed = live.reduce((sum, board) => sum + rankedCount(board), 0);
 
   // Only the lists on screen are deleted: one chosen and then hidden by a
   // filter or a search stays out of it until it is shown again.
@@ -388,7 +408,8 @@ export function BoardsPage({
             <p className="boards__count">
               {[
                 plural(strings.boards.count, live.length),
-                plural(strings.boards.rankings, rankings),
+                // Cards placed across the lists, as the number always was (QA 21).
+                plural(strings.boards.ranked, placed),
                 ...(publicCount > 0 ? [plural(strings.boards.published, publicCount)] : []),
               ].join(" · ")}
             </p>
@@ -399,12 +420,6 @@ export function BoardsPage({
             <Icon name="delete" className="btn__icon" />
             <span>{strings.boards.trash}</span>
           </Link>
-          {live.length > 0 && (
-            <Link className="btn btn--filled" to="/b/new">
-              <Icon name="add" className="btn__icon" />
-              <span>{strings.boards.newBoard}</span>
-            </Link>
-          )}
         </div>
       </header>
 
@@ -414,83 +429,85 @@ export function BoardsPage({
         <Empty />
       ) : (
         <>
-          <div className="boards__tools">
-            <label className="boards__search">
-              <Icon name="search" />
-              <input
-                type="search"
-                value={query}
-                placeholder={strings.boards.search}
-                aria-label={strings.boards.search}
-                autoComplete="off"
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </label>
-            <div className="boards__filters">
-              <div className="boards__chips" role="group" aria-label={strings.boards.show}>
-                {BOARD_SHOWS.map((option) => (
-                  <Chip key={option} selected={show === option} onClick={() => setShow(option)}>
-                    {SHOW_TEXT[option]}
-                  </Chip>
-                ))}
-              </div>
-              <div className="boards__end">
-                <Menu
-                  label={fill(strings.boards.sortLabel, { sort: SORT_TEXT[sort] })}
-                  buttonClassName="chip boards__sort"
-                  button={
-                    <>
-                      <span>{SORT_TEXT[sort]}</span>
-                      <Icon name="expand_more" className="chip__icon" />
-                    </>
-                  }
-                >
-                  {BOARD_SORTS.map((option) => (
-                    <li key={option}>
-                      <button
-                        type="button"
-                        className="menu__action boards__sort-option"
-                        aria-current={sort === option}
-                        onClick={() => setSort(option)}
-                      >
-                        {SORT_TEXT[option]}
-                        {sort === option && <Icon name="check" />}
-                      </button>
-                    </li>
+          {!few && (
+            <div className="boards__tools">
+              <label className="boards__search">
+                <Icon name="search" />
+                <input
+                  type="search"
+                  value={query}
+                  placeholder={strings.boards.search}
+                  aria-label={strings.boards.search}
+                  autoComplete="off"
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </label>
+              <div className="boards__filters">
+                <div className="boards__chips" role="group" aria-label={strings.boards.show}>
+                  {BOARD_SHOWS.map((option) => (
+                    <Chip key={option} selected={show === option} onClick={() => setShow(option)}>
+                      {SHOW_TEXT[option]}
+                    </Chip>
                   ))}
-                </Menu>
-                <div className="boards__view" role="group" aria-label={strings.boards.view}>
-                  <button
-                    type="button"
-                    className="boards__view-option"
-                    aria-pressed={view === "grid"}
-                    aria-label={strings.boards.viewGrid}
-                    title={strings.boards.viewGrid}
-                    onClick={() => showAs("grid")}
-                  >
-                    <Icon name="grid_view" />
-                  </button>
-                  <button
-                    type="button"
-                    className="boards__view-option"
-                    aria-pressed={view === "rows"}
-                    aria-label={strings.boards.viewRows}
-                    title={strings.boards.viewRows}
-                    onClick={() => showAs("rows")}
-                  >
-                    <Icon name="view_agenda" />
-                  </button>
                 </div>
-                {/* An action, not a filter: a plain button in the chips' dress. */}
-                {!selecting && (
-                  <button type="button" className="chip boards__choose" onClick={startSelection}>
-                    <Icon name="check" className="chip__icon" />
-                    <span>{strings.boards.choose}</span>
-                  </button>
-                )}
+                <div className="boards__end">
+                  <Menu
+                    label={fill(strings.boards.sortLabel, { sort: SORT_TEXT[sort] })}
+                    buttonClassName="chip boards__sort"
+                    button={
+                      <>
+                        <span>{SORT_TEXT[sort]}</span>
+                        <Icon name="expand_more" className="chip__icon" />
+                      </>
+                    }
+                  >
+                    {BOARD_SORTS.map((option) => (
+                      <li key={option}>
+                        <button
+                          type="button"
+                          className="menu__action boards__sort-option"
+                          aria-current={sort === option}
+                          onClick={() => setSort(option)}
+                        >
+                          {SORT_TEXT[option]}
+                          {sort === option && <Icon name="check" />}
+                        </button>
+                      </li>
+                    ))}
+                  </Menu>
+                  <div className="boards__view" role="group" aria-label={strings.boards.view}>
+                    <button
+                      type="button"
+                      className="boards__view-option"
+                      aria-pressed={view === "grid"}
+                      aria-label={strings.boards.viewGrid}
+                      title={strings.boards.viewGrid}
+                      onClick={() => showAs("grid")}
+                    >
+                      <Icon name="grid_view" />
+                    </button>
+                    <button
+                      type="button"
+                      className="boards__view-option"
+                      aria-pressed={view === "rows"}
+                      aria-label={strings.boards.viewRows}
+                      title={strings.boards.viewRows}
+                      onClick={() => showAs("rows")}
+                    >
+                      <Icon name="view_agenda" />
+                    </button>
+                  </div>
+                  {/* An action, not a filter: a plain button in the chips' dress. */}
+                  {!selecting && (
+                    <button type="button" className="chip boards__choose" onClick={startSelection}>
+                      <Icon name="check" className="chip__icon" />
+                      <span>{strings.boards.choose}</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {selecting && (
             <div
@@ -534,7 +551,7 @@ export function BoardsPage({
                 <p className="boards__empty-body">{strings.boards.noMatchBody}</p>
               )}
             </div>
-          ) : grouped ? (
+          ) : grouped && !few ? (
             <>
               <Group
                 heading={strings.boards.favourites}
@@ -559,13 +576,15 @@ export function BoardsPage({
             <Group
               heading={null}
               boards={shown}
-              view={view}
+              view={viewNow}
               selecting={selecting}
               selected={selected}
               onSelect={toggle}
               onStar={star}
+              newTile={few}
             />
           )}
+          {few && <p className="boards__few">{strings.boards.fewLists}</p>}
         </>
       )}
       {/* Lists kept only in this browser, and the way to keep them for good, as the phone offers. */}

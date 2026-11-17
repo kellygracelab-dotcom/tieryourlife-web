@@ -86,7 +86,8 @@ function LinkItems({ list, notify }: { list: PublishedList; notify: Notify }) {
   const { copy, refused, canShare, share } = useListLink(list);
   return (
     <>
-      <li>
+      {/* From 840 the head has Copy link as a chip: the menu does not say it twice. */}
+      <li className="list-menu__copy">
         <button
           type="button"
           className="menu__action"
