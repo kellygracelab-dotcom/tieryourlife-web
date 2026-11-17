@@ -685,3 +685,19 @@
   flex-wrap: wrap;
   gap: 4px;
 }
+
+/* "3 rankings — see how others placed them": a link into the Rankings window (artboard 36). */
+.list-head__rankings {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: start;
+}
+
+.list-head__rankings:hover {
+  text-decoration: underline;
+}

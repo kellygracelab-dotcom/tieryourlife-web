@@ -115,9 +115,12 @@ const openAs = (
 const whose = () => screen.getByRole("group", { name: "Whose arrangement to show" });
 
 /** The menu's lines in their order, the separator as "—". */
+/** The menu's lines as read; a toggle's check is its state, said by aria-checked, not a word. */
 const menuLines = () =>
   [...document.querySelectorAll(".list-head .menu__list > li")].map((line) =>
-    line.getAttribute("role") === "separator" ? "—" : line.textContent,
+    line.getAttribute("role") === "separator"
+      ? "—"
+      : (line.textContent ?? "").replace(/check$/, ""),
   );
 
 let hiddenStore = memoryStore();
@@ -433,6 +436,23 @@ describe("ListPage report and hide", () => {
 });
 
 describe("ListPage menu", () => {
+  it("says under the title how many others ranked it, a way into their rankings (artboard 36)", async () => {
+    mocks.loadList.mockResolvedValue(list);
+    openAs(member);
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(
+      screen.getByRole("button", { name: "3 rankings — see how others placed them" }),
+    );
+    expect(await screen.findByRole("dialog", { name: "Rankings" })).toBeInTheDocument();
+  });
+
+  it("has no such line for a list nobody else ranked", async () => {
+    mocks.loadList.mockResolvedValue({ ...list, rankingCount: 0 });
+    openAs(member);
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByRole("button", { name: /see how others placed them/ })).toBeNull();
+  });
+
   it("has the app's lines in the app's order, the report in the error colour", async () => {
     mocks.loadList.mockResolvedValue(list);
     openAs(member);
@@ -443,6 +463,7 @@ describe("ListPage menu", () => {
     expect(menuLines()).toEqual([
       "Rankings · 3",
       "Return all cards to the deck",
+      "Names on cards",
       "View danylo",
       "Copy link",
       "Save author’s list",
@@ -469,9 +490,10 @@ describe("ListPage menu", () => {
     open();
     await screen.findByRole("heading", { level: 1 });
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(menuLines().slice(0, 3)).toEqual([
+    expect(menuLines().slice(0, 4)).toEqual([
       "Rankings · 3",
       "Return all cards to the deck",
+      "Names on cards",
       "Copy link",
     ]);
   });
@@ -1128,7 +1150,7 @@ describe("ListPage for its author", () => {
 
     // The owner's menu: the link and taking it down; nothing to report or hide, nothing to publish as theirs.
     await userEvent.click(screen.getByLabelText("More about this list"));
-    expect(menuLines()).toEqual(["Rankings · 3", "Copy link", "Take it down"]);
+    expect(menuLines()).toEqual(["Rankings · 3", "Names on cards", "Copy link", "Take it down"]);
     expect(screen.getByRole("button", { name: "Take it down" })).toHaveClass(
       "menu__action--danger",
     );
@@ -1159,7 +1181,7 @@ describe("ListPage for its author", () => {
           .map((link) => link.getAttribute("href")),
       ).toEqual(["/b/new?list=abc"]);
       await userEvent.click(screen.getByLabelText("More about this list"));
-      expect(menuLines()).toEqual(["Rankings · 3", "Take it down"]);
+      expect(menuLines()).toEqual(["Rankings · 3", "Names on cards", "Take it down"]);
     } finally {
       Reflect.deleteProperty(navigator, "share");
     }
@@ -1332,14 +1354,20 @@ describe("ListPage, Play", () => {
   // The screens come as a chunk of their own; fetched here, Play opens in the frame it is pressed.
   beforeAll(() => loadPlayScreens());
 
-  /** Answers with ← until the game is over and its result is on the board. */
-  const playToTheEnd = async () => {
+  /** Answers with ← until the game is over and its result is on the board, in the end window. */
+  const playToTheWindow = async () => {
     const label = () => screen.queryAllByText(/^Duel/)[0]?.textContent;
     while (label() !== undefined) {
       const before = label();
       await userEvent.keyboard("{ArrowLeft}");
       await waitFor(() => expect(label()).not.toBe(before));
     }
+    return screen.findByRole("dialog", { name: "Your ranking is ready" }, { timeout: 3000 });
+  };
+  /** The same, and See my list closes the window. */
+  const playToTheEnd = async () => {
+    const ready = await playToTheWindow();
+    await userEvent.click(within(ready).getByRole("button", { name: "See my list" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 3000 });
   };
   /** The board's Undo, not a snackbar's. */
@@ -1366,8 +1394,6 @@ describe("ListPage, Play", () => {
     expect(screen.queryByRole("button", { name: /^(Put in Mine|Refine|Apply)$/ })).toBeNull();
     const after = rowsNow();
     expect(after).not.toEqual(before);
-    const said = snackbar("List arranged from 2 duels");
-    expect(said.queryByRole("button", { name: "Undo" })).toBeNull();
     const played = mineS().textContent;
 
     // Undo: Mine as it was before the game. Undo again: the game's arrangement.
@@ -1423,12 +1449,39 @@ describe("ListPage, Play", () => {
     await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
     await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
-    await playToTheEnd();
+    // The end window says it first; the offer under it waits until it closes (artboard 35).
+    const ready = await playToTheWindow();
+    expect(
+      within(ready).getByRole("button", { name: "Sign in to show it in Rankings" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("complementary", { name: "Show others how you ranked it?" }),
+    ).toBeNull();
+    await userEvent.click(within(ready).getByRole("button", { name: "See my list" }));
     const offer = await screen.findByRole("complementary", {
       name: "Show others how you ranked it?",
     });
     expect(within(offer).getByRole("button", { name: "Sign in to share" })).toBeInTheDocument();
     await userEvent.click(within(offer).getByRole("button", { name: "Not now" }));
+    expect(
+      screen.queryByRole("complementary", { name: "Show others how you ranked it?" }),
+    ).toBeNull();
+    localStorage.clear();
+  });
+
+  it("takes the offer away with the game the board's Undo takes back (QA 25)", async () => {
+    localStorage.clear();
+    saveDraft(localStorageStore, scopeOf(twoTiers), [[1], []]);
+    mocks.loadList.mockResolvedValue(twoTiers);
+    openAs({ kind: "guest", uid: "g1" });
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "Play" }));
+    await userEvent.click(screen.getByRole("button", { name: "Other ways to play" }));
+    await userEvent.click(screen.getByRole("radio", { name: /King of the hill/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await playToTheEnd();
+    await screen.findByRole("complementary", { name: "Show others how you ranked it?" });
+    await userEvent.click(barUndo());
     expect(
       screen.queryByRole("complementary", { name: "Show others how you ranked it?" }),
     ).toBeNull();

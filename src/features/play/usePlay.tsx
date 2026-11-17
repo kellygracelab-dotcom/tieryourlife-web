@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { freshChunk } from "../../lib/freshChunk";
 import type { KeyValueStore } from "../../lib/storage";
-import { fill, plural, strings } from "../../strings";
+import { fill, strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
 import { boardOf, type PlayBoard, type PlayCard, type PlayTier } from "./board";
 import {
@@ -18,6 +18,7 @@ import {
 import type { GameKind } from "./engine";
 import type { Game, Unplayed } from "./game";
 import type { PlayButtonProps } from "./PlayButton";
+import { GameReady, type Ready, type ReadyRankings } from "./GameReady";
 import { OnEnd } from "./OnEnd";
 import { SheetArrival } from "./sheet";
 import { lastGame, localGames, rememberGame, type SavedGames } from "./savedGames";
@@ -84,12 +85,15 @@ export interface PlayOptions {
    * app: every ranked tier's card ids after the result, the board's tiers in
    * order; a card in no row is in the pool. The played cards take their new
    * places and the unplayed ones stay where they were. The board's own Undo
-   * takes the result back as one step; a way to take it back returned here
-   * is offered on the receipt "Board arranged from 136 duels" too.
+   * takes the result back as one step. The end window says what was done.
    */
-  onApply: (rows: string[][], played: Played) => (() => void) | void;
+  onApply: (rows: string[][], played: Played) => void;
   /** Where Play's notices go: the page's snackbar. */
   notify: (notice: SnackbarNotice) => void;
+  /** The end window's Share as image: the board's picture as it now stands. */
+  share?: () => void;
+  /** The end window's Show in Rankings: somebody else's list only. */
+  rankings?: ReadyRankings | null;
   /** Where games are kept; this device's by default. The account-backed one goes here later. */
   games?: SavedGames;
   now?: () => number;
@@ -101,7 +105,7 @@ export interface Play {
   button: PlayButtonProps;
   /** The picker, the choice of cards and the duel layer: render it once, anywhere in the page. */
   view: ReactNode;
-  /** Play is on screen: the picker, the choice of cards or the duel layer. */
+  /** Play is on screen: the picker, the choice of cards, the duel layer or the end window. */
   playing: boolean;
   open: () => void;
   /** Straight into the saved game, as Resume in the picker; nothing without one. */
@@ -110,7 +114,7 @@ export interface Play {
   quit: () => void;
 }
 
-type Screen = "none" | "picker" | "cards" | "layer";
+type Screen = "none" | "picker" | "cards" | "layer" | "ready";
 
 /**
  * Play mode for one board, everything a page needs in one call.
@@ -143,7 +147,16 @@ export function usePlay(
   store: KeyValueStore,
   options: PlayOptions,
 ): Play {
-  const { title, theirs = false, onApply, notify, now = Date.now, random = Math.random } = options;
+  const {
+    title,
+    theirs = false,
+    onApply,
+    notify,
+    share,
+    rankings,
+    now = Date.now,
+    random = Math.random,
+  } = options;
   const games = useMemo(() => options.games ?? localGames(store, now), [options.games, store, now]);
   const board = useMemo(() => boardOf(cards, tiers), [cards, tiers]);
 
@@ -160,6 +173,8 @@ export function usePlay(
   // The game on the layer; the saved one is what the store holds for this board.
   const [game, setGame] = useState<Game | null>(null);
   const [chosen, setChosen] = useState<Chosen>(EVERYTHING);
+  // What the last game put on the board, for the end window while it is open.
+  const [ready, setReady] = useState<Ready | null>(null);
   const [kind, setKind] = useState<GameKind>(() => lastGame(store));
   const [saved, setSaved] = useState(() => ({ key: boardKey, game: games.load(boardKey) }));
   if (saved.key !== boardKey) setSaved({ key: boardKey, game: games.load(boardKey) });
@@ -290,6 +305,10 @@ export function usePlay(
   }, [resuming, shown]);
 
   const quit = () => {
+    if (screen === "ready") {
+      close();
+      return;
+    }
     // Nothing answered: nothing was kept, and nothing is said. (A game is on
     // screen only once the screens are here.)
     if (game !== null && game.history.length > 0 && shown !== null) {
@@ -319,18 +338,17 @@ export function usePlay(
       cards: finished.ids.length,
       duels: rules.answered(finished),
     };
-    const takeBack = onApply(rules.applied(board, result, finished, unplayed), played);
+    const rows = rules.applied(board, result, finished, unplayed);
+    onApply(rows, played);
     forget();
     // The cards are elsewhere now: the next game starts from the whole board,
     // not from members and rows the result has just moved (QA W-GS1).
     setChosen(EVERYTHING);
-    close();
-    const text = plural(strings.play.arranged, played.duels);
-    notify(
-      typeof takeBack === "function"
-        ? { text, action: { text: strings.play.undo, onClick: takeBack } }
-        : { text },
-    );
+    setGame(null);
+    // The result in a window over the board, where a corner's notice used to
+    // say it for four seconds (artboard 35).
+    setReady({ cards: played.cards, duels: played.duels, rows });
+    setScreen("ready");
   };
 
   // Over: the result is on the board, with nothing to confirm. A game whose
@@ -389,6 +407,16 @@ export function usePlay(
             // Reached from the picker, the arrow goes back to it; Cancel closes the sheet, as on the app.
             onBack={() => setScreen("picker")}
             onCancel={close}
+          />
+        )}
+        {screen === "ready" && ready !== null && (
+          <GameReady
+            ready={ready}
+            board={board}
+            onShare={share}
+            rankings={rankings}
+            onClose={close}
+            onAgain={() => setScreen("picker")}
           />
         )}
         {screen === "layer" && game !== null && (

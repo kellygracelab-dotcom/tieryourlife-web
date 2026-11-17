@@ -98,9 +98,12 @@ async function playTwo(page: Page, row: string) {
     .getByRole("button", { name: /^Pick / })
     .first()
     .click();
-  // No result screen: the game ends on the board, its result already there.
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  // The game ends on the board, its result already there and said in a window over it (artboard 35).
+  const ready = page.getByRole("dialog", { name: "Your ranking is ready" });
+  await expect(ready).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your result" })).toHaveCount(0);
+  await ready.getByRole("button", { name: "See my list" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
 const labels = (tiles: Locator) =>
@@ -314,7 +317,9 @@ for (const scope of ["whole board", "two tiers", "one occupied tier"]) {
       await expect(page.getByRole("heading", { name: "Duel " + (i + 1) + " of 15" })).toBeVisible();
       await pick.click();
     }
-    // The last duel ends the game on the board, the 16 placed by it.
+    // The last duel ends the game on the board, the 16 placed by it; Escape closes the window that says so.
+    await expect(page.getByRole("dialog", { name: "Your ranking is ready" })).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect.poll(async () => (await persisted(page)).play).toBeNull();
     const placed = await labels(page.locator(".tier .tile"));

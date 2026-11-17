@@ -4,6 +4,7 @@ import type { PublishedItem, PublishedList, PublishedTier } from "../../api/type
 import { isEditorial } from "../../lib/editorial";
 import { drawnLines, fitText, type Measure } from "../../lib/textFit";
 import { plural, strings } from "../../strings";
+import { cardNamesOn } from "../tierboard/cardNames";
 
 /**
  * The picture a finished ranking is shared as. 4:5, the tallest ratio feeds
@@ -120,6 +121,8 @@ export interface ShareData {
   address: string;
   /** A board's cards still in its pool, drawn after the tiers; a ranking's picture has none. */
   pool?: readonly number[];
+  /** Each pictured card's name on its foot, as the board shows it while names are on (artboard 36). */
+  names?: boolean;
 }
 
 /** The plan for the data: a board's picture has its pool as one more row, under the tiers. */
@@ -310,6 +313,23 @@ function nameTile(paint: Paint, x: number, y: number, title: string) {
   });
 }
 
+/** A pictured card's name along its foot, white on a shade, two lines at most. */
+function nameStrip(paint: Paint, x: number, y: number, title: string) {
+  const { width, height } = SHARE.tile;
+  paint.font = `500 13px ${FONT}`;
+  const lines = wrap(paint, title, width - 8, 2);
+  if (lines.length === 0) return;
+  const strip = 8 + lines.length * 15;
+  paint.fillStyle = "rgba(0, 0, 0, 0.66)";
+  paint.fillRect(x, y + height - strip, width, strip);
+  paint.fillStyle = "#ffffff";
+  paint.textAlign = "center";
+  paint.textBaseline = "middle";
+  lines.forEach((text, index) => {
+    paint.fillText(text, x + width / 2, y + height - strip + 4 + 7.5 + index * 15);
+  });
+}
+
 export async function drawShare(
   paint: Paint,
   data: ShareData,
@@ -383,6 +403,7 @@ export async function drawShare(
       paint.roundRect(card.x, y, tile.width, tile.height, SHARE.tileRadius);
       paint.clip();
       paint.drawImage(picture, card.x, y, tile.width, tile.height);
+      if (data.names === true) nameStrip(paint, card.x, y, item.title);
       paint.restore();
     }
     if (row.overflow > 0) {
@@ -486,11 +507,12 @@ export function saveBlob(blob: Blob, fileName: string, doc: Document = document)
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** "saved" when the picture went to a file, which the page says, since a download shows little. */
 export type Share = (
   list: PublishedList,
   rows: readonly (readonly number[])[],
   address: string,
-) => Promise<void>;
+) => Promise<"saved" | void>;
 
 /** The share sheet's part of a navigator: a test hands in its own. */
 export type ShareSheet = Partial<Pick<Navigator, "canShare" | "share">>;
@@ -503,6 +525,7 @@ const onPhone = (): boolean =>
  * One's own board as a picture, as the phone shares it: every tier and the
  * pool, handed to the share sheet with the link beside it, or saved as a file
  * where there is no sheet. A sheet closed without sharing is no failure.
+ * Says "saved" when the file was saved, so the page can say where it went.
  */
 export async function shareBoardPicture(
   list: PublishedList,
@@ -511,7 +534,7 @@ export async function shareBoardPicture(
   render: typeof renderShare = renderShare,
   save: typeof saveBlob = saveBlob,
   sheet: ShareSheet | null = onPhone() ? navigator : null,
-): Promise<void> {
+): Promise<"saved" | void> {
   const placed = new Set(rows.flat());
   const blob = await render({
     title: list.title,
@@ -522,6 +545,7 @@ export async function shareBoardPicture(
     rows,
     address,
     pool: list.items.flatMap((_, index) => (placed.has(index) ? [] : [index])),
+    names: cardNamesOn(),
   });
   const name = fileNameFor(list.title);
   const files = [new File([blob], name, { type: "image/png" })];
@@ -535,6 +559,7 @@ export async function shareBoardPicture(
     }
   }
   save(blob, name);
+  return "saved";
 }
 
 export async function downloadShare(
@@ -552,6 +577,7 @@ export async function downloadShare(
     items: list.items,
     rows,
     address,
+    names: cardNamesOn(),
   });
   save(blob, fileNameFor(list.title));
 }

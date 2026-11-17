@@ -68,6 +68,8 @@ function Offer({
   if (state === "waiting" && due && !restoring) {
     setState(!known && localStorageStore.read(key) === null ? "open" : "closed");
   }
+  // No longer due (the game Undo took back, say): it goes, and having been seen is not asked again.
+  if (state === "open" && !due && !busy) setState("closed");
   // Once: seen, it is not asked again, answered or not.
   useEffect(() => {
     if (state === "open" && localStorageStore.read(key) === null) {

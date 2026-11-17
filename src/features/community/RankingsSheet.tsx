@@ -21,6 +21,11 @@ interface RankingsSheetProps {
   rankings: Rankings;
   /** Whose placing the left half of the switch shows: a reader's uid, or null for the author's. */
   chosen: string | null;
+  /**
+   * The board shows the reader's own Mine, not the switch's left half: the
+   * check is on their own row, or on none when Mine is not among them.
+   */
+  showingMine?: boolean;
   onChoose: (ranking: ReaderRanking | null) => void;
   onWithdraw: () => void;
   onClose: () => void;
@@ -210,6 +215,7 @@ export function RankingsSheet({
   list,
   rankings,
   chosen,
+  showingMine = false,
   onChoose,
   onWithdraw,
   onClose,
@@ -288,10 +294,13 @@ export function RankingsSheet({
             name={editorial || authorName === "" ? strings.rankings.author : list.authorName}
             photoUrl={editorial ? null : list.authorPhotoUrl}
             when={list.updatedAt}
-            selected={chosen === null}
+            selected={!showingMine && chosen === null}
             pill={editorial || authorName === "" ? undefined : strings.rankings.author}
             onClick={() => onChoose(null)}
           />
+          {/* The list's own arrangement apart from its readers', whom the menu's
+              "Rankings · N" and the head's link count (artboard 36). */}
+          {state.rankings.length > 0 && <li className="rankings__divider" role="separator" />}
           {state.rankings.map((ranking) => {
             const name = readerName(ranking.authorName);
             const gone = state.gone.includes(ranking.uid);
@@ -302,7 +311,7 @@ export function RankingsSheet({
                   name={name}
                   photoUrl={ranking.authorPhotoUrl}
                   when={ranking.updatedAtMs}
-                  selected={chosen === ranking.uid}
+                  selected={showingMine ? ranking.mine : chosen === ranking.uid}
                   pill={ranking.mine ? strings.rankings.you : undefined}
                   onClick={() => onChoose(ranking)}
                   trailing={

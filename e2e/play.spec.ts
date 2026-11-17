@@ -144,7 +144,15 @@ test.describe("Play on a phone", () => {
       .getByRole("button", { name: /^Pick / })
       .first()
       .tap();
-    // The game ends on the list's board, its result in Mine: no result screen to leave.
+    // The game ends on the list's board, its result in Mine, said in a window that fits the phone (artboard 35).
+    const ready = page.getByRole("dialog", { name: "Your ranking is ready" });
+    await expect(ready).toBeVisible();
+    await settled(page);
+    const window = await boxOf(ready);
+    expect(window.x).toBeGreaterThanOrEqual(0);
+    expect(window.x + window.width).toBeLessThanOrEqual(viewport.width);
+    expect(window.y + window.height).toBeLessThanOrEqual(viewport.height);
+    await ready.getByRole("button", { name: "See my list" }).tap();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Your result" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Mine", exact: true })).toHaveAttribute(

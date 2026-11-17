@@ -68,8 +68,8 @@
   max-width: 100%;
   font: var(--text-caption);
   font-weight: 500;
-  /* Between words; only a word wider than the band is broken, rather than spill onto the row. */
-  overflow-wrap: anywhere;
+  /* Between words: TierCaption makes a word wider than the band smaller, and breaks only one too long even so. */
+  overflow-wrap: normal;
 }
 
 .tier__items,
@@ -106,6 +106,7 @@
 }
 
 .tile {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -124,6 +125,33 @@
   object-fit: cover;
   /* A finger held on a card is the card's, not the picture's: Android offers no image menu over the drag. */
   pointer-events: none;
+}
+
+/*
+ * A pictured card's name on its foot (artboard 36): a shade rising from the
+ * bottom edge and the name in white over it, two lines at most. The reader
+ * can turn it off for every board (`data-card-names="off"` on the root).
+ */
+.tile__caption {
+  position: absolute;
+  inset: auto 0 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  padding: 14px 2px 3px;
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.82) 45%);
+  color: #fff;
+  font: 500 9px/10px var(--font);
+  text-align: center;
+  /* Between words; a word wider than the card takes a hyphen where the language has them. */
+  hyphens: auto;
+  overflow-wrap: break-word;
+  pointer-events: none;
+}
+
+:root[data-card-names="off"] .tile__caption {
+  display: none;
 }
 
 /*

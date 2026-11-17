@@ -1533,12 +1533,17 @@ describe("BoardPage: Play", () => {
       const [left] = await screen.findAllByRole("button", { name: /^Pick / });
       await userEvent.click(left!);
     }
-    // The game ends on the board itself: no result screen, nothing to apply.
-    const receipt = (
-      await screen.findByText("List arranged from 2 duels", undefined, { timeout: 3000 })
-    ).closest(".snackbar")!;
+    // The game ends on the board itself, said in a window over it (artboard 35): nothing to apply.
+    const ready = await screen.findByRole(
+      "dialog",
+      { name: "Your ranking is ready" },
+      { timeout: 3000 },
+    );
+    expect(within(ready).getByText("3 cards placed from 2 duels")).toBeInTheDocument();
+    // One's own list has no rankings to show it in.
+    expect(within(ready).queryByRole("button", { name: /Rankings/ })).toBeNull();
+    await userEvent.click(within(ready).getByRole("button", { name: "See my list" }));
     expect(screen.queryByRole("heading", { name: "Your result" })).toBeNull();
-    expect(within(receipt as HTMLElement).queryByRole("button", { name: "Undo" })).toBeNull();
     const played = repository.get("films")!;
     expect(poolTier(played) === null ? 0 : itemsIn(played, poolTier(played)!.uid).length).toBe(0);
     expect(await screen.findByText("3 of 3 placed")).toBeInTheDocument();

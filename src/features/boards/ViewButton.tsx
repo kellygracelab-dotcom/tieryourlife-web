@@ -2,6 +2,7 @@ import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
 import { Menu } from "../../ui/Menu";
+import { useCardNames } from "../tierboard/cardNames";
 import { DISPLAY_MODES, type DisplayMode } from "./model";
 import "./boards.css";
 import "./publishing.css";
@@ -97,6 +98,46 @@ export function ViewItems({
           </button>
         </li>
       ))}
+      <CardNamesItem className={className} />
     </>
+  );
+}
+
+/**
+ * Names on the cards' pictures, on or off for every board on this device
+ * (artboard 36); a ranked list writes every name anyway. A list's ⋮, which
+ * has no Display, carries it as a plain row with its check.
+ */
+export function CardNamesItem({
+  className,
+  plain = false,
+}: {
+  className?: string;
+  plain?: boolean;
+}) {
+  const [on, setOn] = useCardNames();
+  return (
+    <li className={className}>
+      <button
+        type="button"
+        role="menuitemcheckbox"
+        aria-checked={on}
+        className={
+          plain
+            ? "menu__action view-menu__item"
+            : on
+              ? "menu__action view-menu__item view-menu__item--on"
+              : "menu__action view-menu__item"
+        }
+        onClick={() => setOn(!on)}
+      >
+        {!plain && <Icon name="label" className="view-menu__icon" />}
+        <span className="view-menu__text">
+          <span className="view-menu__title">{strings.boards.cardNames}</span>
+          {!plain && <span className="view-menu__sub">{strings.boards.cardNamesSub}</span>}
+        </span>
+        {on && <Icon name="check" className="view-menu__check" />}
+      </button>
+    </li>
   );
 }
