@@ -1232,6 +1232,11 @@ const fr: Translation = {
       many: "Liste classée d’après {n} duels",
       other: "Liste classée d’après {n} duels",
     },
+    placedWarning: {
+      one: "Vous avez placé {n} carte. Le jeu la replace ; « Annuler » la remet.",
+      many: "Vous avez placé {n} cartes. Le jeu les replace ; « Annuler » les remet.",
+      other: "Vous avez placé {n} cartes. Le jeu les replace ; « Annuler » les remet.",
+    },
   },
   boards: {
     title: "Vos listes",
@@ -1323,8 +1328,6 @@ const fr: Translation = {
     inRankingsStatus: "Dans les classements",
     rankedBody: "Ton classement figure parmi ceux de la liste d’origine.",
     publicBody: "Toute personne ayant le lien peut la classer. Elle apparaît dans Communauté.",
-    needsAccount:
-      "Connectez-vous avec Google pour publier. Lire et enregistrer celles des autres ne demande aucun compte.",
     needsItems: "Ajoutez au moins une carte avant de publier la liste.",
     update: "Mettre à jour",
     updating: "Mise à jour…",
@@ -1406,7 +1409,9 @@ const fr: Translation = {
   },
   started: {
     title: "Continuer",
+    count: "Continuer · {n}",
     placed: "{n} sur {total} placées",
+    placedIn: "{section} · {n} sur {total} placées",
     continue: "Continuer",
     continueOf: "Continuer « {title} »",
     resume: "Reprendre la partie",
@@ -1457,10 +1462,13 @@ const fr: Translation = {
     changeCover: "Modifier la couverture",
     coverBack: "Revenir à la publication",
     name: "Titre",
-    namePlaceholder: "De quoi parle cette liste ?",
+    namePlaceholder: "Donnez un nom à la liste",
     nameFirst: "Donnez d’abord un titre à la liste.",
     signInAndPublish: "Se connecter et publier",
     signInAndShow: "Se connecter et afficher",
+    titleUntitled: "Publier votre liste",
+    nameHint: "Elle s’appelle encore « {untitled} ». On trouve les listes par leur nom.",
+    needsAccount: "Publier demande un compte Google. Votre liste reste ici pendant la connexion.",
   },
   sync: {
     offBusy: "Suppression…",

@@ -1262,6 +1262,12 @@ const pl: Translation = {
       many: "Lista ułożona na podstawie {n} pojedynków",
       other: "Lista ułożona na podstawie {n} pojedynku",
     },
+    placedWarning: {
+      one: "Umieszczono {n} kartę. Gra ją przestawi; „Cofnij” ją przywróci.",
+      few: "Umieszczono {n} karty. Gra je przestawi; „Cofnij” je przywróci.",
+      many: "Umieszczono {n} kart. Gra je przestawi; „Cofnij” je przywróci.",
+      other: "Umieszczono {n} karty. Gra je przestawi; „Cofnij” je przywróci.",
+    },
   },
   boards: {
     title: "Twoje listy",
@@ -1366,8 +1372,6 @@ const pl: Translation = {
     inRankingsStatus: "W rankingach",
     rankedBody: "Twój układ jest w rankingach oryginalnej listy.",
     publicBody: "Każdy, kto ma link, może ją ułożyć. Pojawi się w Społeczności.",
-    needsAccount:
-      "Zaloguj się przez Google, aby publikować. Czytanie i zapisywanie cudzych nie wymaga konta.",
     needsItems: "Dodaj co najmniej jedną kartę, zanim opublikujesz listę.",
     update: "Aktualizuj",
     updating: "Aktualizowanie…",
@@ -1460,7 +1464,9 @@ const pl: Translation = {
   },
   started: {
     title: "Kontynuuj",
+    count: "Kontynuuj · {n}",
     placed: "Umieszczono {n} z {total}",
+    placedIn: "{section} · umieszczono {n} z {total}",
     continue: "Kontynuuj",
     continueOf: "Kontynuuj „{title}”",
     resume: "Wznów grę",
@@ -1511,10 +1517,13 @@ const pl: Translation = {
     changeCover: "Zmień okładkę",
     coverBack: "Wróć do publikowania",
     name: "Tytuł",
-    namePlaceholder: "Co to za lista?",
+    namePlaceholder: "Nadaj liście nazwę",
     nameFirst: "Najpierw nadaj liście tytuł.",
     signInAndPublish: "Zaloguj się i opublikuj",
     signInAndShow: "Zaloguj się i pokaż",
+    titleUntitled: "Opublikuj listę",
+    nameHint: "Wciąż nazywa się „{untitled}”. Listy wyszukuje się po nazwie.",
+    needsAccount: "Publikowanie wymaga konta Google. Lista zostaje tutaj, gdy się logujesz.",
   },
   sync: {
     offBusy: "Usuwanie…",

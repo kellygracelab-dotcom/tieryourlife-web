@@ -1127,6 +1127,10 @@ const tr: Translation = {
     discard: "Vazgeç",
     nothingToApply: "Tüm düellolar geçildi, uygulanacak bir şey yok.",
     arranged: { other: "Liste {n} düelloya göre dizildi" },
+    placedWarning: {
+      one: "{n} kart yerleştirdin. Oyun onu yeniden dizer; “Geri al” geri getirir.",
+      other: "{n} kart yerleştirdin. Oyun onları yeniden dizer; “Geri al” geri getirir.",
+    },
   },
   boards: {
     title: "Listeleriniz",
@@ -1209,8 +1213,6 @@ const tr: Translation = {
     inRankingsStatus: "Sıralamalarda",
     rankedBody: "Sıralaman asıl listenin sıralamalarında.",
     publicBody: "Bağlantıya sahip herkes sıralayabilir. Toplulukta görünür.",
-    needsAccount:
-      "Yayımlamak için Google ile oturum açın. Başkalarınınkini okumak ve kaydetmek hesap istemez.",
     needsItems: "Listeyi yayımlamadan önce en az bir kart ekleyin.",
     update: "Güncelle",
     updating: "Güncelleniyor…",
@@ -1288,7 +1290,9 @@ const tr: Translation = {
   },
   started: {
     title: "Devam et",
+    count: "Devam et · {n}",
     placed: "{n}/{total} yerleştirildi",
+    placedIn: "{section} · {n}/{total} yerleştirildi",
     continue: "Devam et",
     continueOf: "“{title}” ile devam et",
     resume: "Oyuna devam et",
@@ -1338,10 +1342,13 @@ const tr: Translation = {
     changeCover: "Kapağı değiştir",
     coverBack: "Yayınlamaya dön",
     name: "Ad",
-    namePlaceholder: "Bu liste ne hakkında?",
+    namePlaceholder: "Listeye bir ad ver",
     nameFirst: "Önce listeye bir ad ver.",
     signInAndPublish: "Oturum aç ve yayımla",
     signInAndShow: "Oturum aç ve göster",
+    titleUntitled: "Listeni yayınla",
+    nameHint: "Hâlâ “{untitled}” adını taşıyor. Listeler adlarıyla bulunur.",
+    needsAccount: "Yayınlamak için Google hesabı gerekir. Sen giriş yaparken listen burada kalır.",
   },
   sync: {
     offBusy: "Siliniyor…",

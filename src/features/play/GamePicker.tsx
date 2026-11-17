@@ -22,6 +22,8 @@ interface GamePickerProps {
   from: string | null;
   /** How many cards the game would be over: the chosen ones, or the whole board. */
   count: number;
+  /** How many of them already stand in a tier, which a game would move. */
+  placed?: number;
   kind: GameKind;
   onKind: (kind: GameKind) => void;
   /** The game saved for this board, met with the board as it is now; null when none is. */
@@ -48,6 +50,7 @@ interface GamePickerProps {
 export function GamePicker({
   from,
   count,
+  placed = 0,
   kind,
   onKind,
   saved,
@@ -64,6 +67,7 @@ export function GamePicker({
   const id = useId();
   const fits = playable(count);
   const [others, setOthers] = useState(kind !== "smart");
+  const warned = fits && placed > 0;
   const cards =
     from === null
       ? plural(strings.boards.cards, count)
@@ -103,12 +107,18 @@ export function GamePicker({
           </p>
           {fits && <p className="play-summary__note">{strings.play.kept}</p>}
         </div>
+        {warned && (
+          // Cards placed by hand are moved by the game, said before Start (artboards 15, 24).
+          <p className="play-placed" id={`${id}-placed`}>
+            {plural(strings.play.placedWarning, placed)}
+          </p>
+        )}
         <Button
           variant="filled"
           className="play-start"
           onClick={onStart}
           disabled={!fits}
-          aria-describedby={`${id}-summary`}
+          aria-describedby={warned ? `${id}-summary ${id}-placed` : `${id}-summary`}
         >
           {strings.play.start}
         </Button>

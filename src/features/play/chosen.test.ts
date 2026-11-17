@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { boardOf, cardOf, type PlayTier } from "./board";
-import { chosenIds, EVERYTHING, keptTier, playable } from "./chosen";
+import { chosenIds, EVERYTHING, keptTier, placedChosen, playable } from "./chosen";
 
 const tier = (id: string, cardIds: string[]): PlayTier => ({
   id,
@@ -53,6 +53,19 @@ describe("the chosen cards", () => {
     expect(chosenIds(board, { kind: "picked", tier: "gone", ids: ["b"], keepTier: true })).toEqual(
       [],
     );
+  });
+
+  it("count the ones placed in tiers, none when the game keeps them in their tier", () => {
+    expect(placedChosen(board, EVERYTHING)).toBe(3);
+    expect(placedChosen(board, { kind: "rows", tiers: ["a"], pool: true, keepTier: false })).toBe(
+      1,
+    );
+    expect(placedChosen(board, { kind: "rows", tiers: ["s"], pool: false, keepTier: true })).toBe(
+      0,
+    );
+    expect(
+      placedChosen(board, { kind: "picked", tier: null, ids: ["c", "e"], keepTier: false }),
+    ).toBe(0);
   });
 
   it("stay in their tier only when they are one tier's and that is asked", () => {

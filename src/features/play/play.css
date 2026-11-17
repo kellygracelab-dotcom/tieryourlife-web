@@ -355,13 +355,33 @@
   color: var(--ink-dim);
 }
 
-/* Start, the window's one main action: filled, the full width, 56 high. */
+/*
+ * Cards placed by hand, which the game will move (artboards 15, 24): an
+ * outlined line under the plate, so Start is not pressed blind.
+ */
+.play-placed {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  font: 400 13px/18px var(--font);
+  color: var(--ink);
+}
+
+/* Start, the window's one main action: filled, the full width, 56 high; 48 under a mouse (artboard 24). */
 .btn.play-start {
   justify-content: center;
   width: 100%;
   min-height: 56px;
   margin-top: 16px;
   font-size: 16px;
+}
+
+@media (min-width: 600px) and (hover: hover) and (pointer: fine) {
+  .btn.play-start {
+    min-height: 48px;
+    font-size: 14px;
+  }
 }
 
 /* Choose cards and Other ways to play: two quiet words under Start. */
@@ -377,7 +397,7 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  min-height: 40px;
+  min-height: 48px;
 }
 
 .play-more__chevron {
@@ -902,9 +922,10 @@
   text-align: center;
 }
 
+/* "Duel 4 of about 63", bold over the game's name (artboards 16, 22). */
 .duel__title {
   min-height: 24px;
-  font: 500 16px/24px var(--font);
+  font: 700 16px/24px var(--font);
   outline: none;
 }
 
@@ -969,6 +990,14 @@
    */
   width: min(300px, max(160px, calc((100vh - 306px) * 0.711)));
   width: min(300px, max(160px, calc((100dvh - 306px) * 0.711)));
+  /*
+   * A tall window grows them past 300 (artboard 22): a card stands 48% of the
+   * window high, 614 at 1271 (436 wide), while two and the gap still fit across.
+   */
+  width: max(
+    min(300px, max(160px, calc((100dvh - 306px) * 0.711))),
+    min(calc(48dvh * 0.711), calc((100vw - 128px) / 2))
+  );
   animation: duel-in 200ms cubic-bezier(0.05, 0.7, 0.1, 1) backwards;
 }
 
@@ -1138,6 +1167,7 @@
 }
 
 .duel__skip {
+  min-width: 140px;
   min-height: 44px;
   padding-inline: 24px;
   background: transparent;
@@ -1159,6 +1189,28 @@
 /* Past the first duels the line keeps its height, unseen, so nothing above it moves. */
 .duel__help--spent {
   visibility: hidden;
+}
+
+/* A finger's Skip: 48 high (artboard 16). */
+@media (pointer: coarse) {
+  .duel__skip {
+    min-height: 48px;
+  }
+}
+
+/*
+ * Wider than a phone, Skip stands right under the names, not at the window's
+ * foot (artboard 22): the cards and Skip are centred as one.
+ */
+@media (min-width: 600px) {
+  .duel__stage {
+    margin-block: auto 0;
+    padding-block-end: 0;
+  }
+
+  .duel__foot {
+    margin-block-end: auto;
+  }
 }
 
 @keyframes duel-in {
@@ -1193,6 +1245,26 @@
 @media (max-width: 599px) {
   .duel__head {
     height: 56px;
+  }
+
+  .duel__line {
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  /* 6 px on a phone, inset from the edges, where 4 is hard to see (artboard 16). */
+  .duel__bar {
+    height: 6px;
+    margin-inline: 16px;
+    border-radius: 3px;
+  }
+
+  .duel__done {
+    border-radius: 3px;
+  }
+
+  .duel__skip {
+    min-height: 48px;
   }
 
   .duel__stage {

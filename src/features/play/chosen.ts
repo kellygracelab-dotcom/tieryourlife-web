@@ -46,6 +46,17 @@ export function chosenIds(board: PlayBoard, chosen: Chosen): string[] {
   }
 }
 
+/**
+ * How many of the chosen cards already stand in a tier, for "You’ve placed 4
+ * cards" in Play (artboards 15, 24): a game that re-tiers them moves them.
+ * None when the game only orders the one tier they stay in.
+ */
+export function placedChosen(board: PlayBoard, chosen: Chosen): number {
+  if (keptTier(board, chosen) !== null) return 0;
+  const pool = new Set(board.pool);
+  return chosenIds(board, chosen).filter((id) => !pool.has(id)).length;
+}
+
 /** The selection a chosen set was drawn from: a sample's source, or itself. */
 export const sourceOf = (chosen: Chosen): Selection =>
   chosen.kind === "sample" ? chosen.source : chosen;

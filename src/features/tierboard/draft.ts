@@ -14,6 +14,9 @@ export interface DraftScope {
    */
   title?: string;
   picture?: string | null;
+  /** Its section, and the first three cards' pictures, for the same row (artboard 14). */
+  category?: string;
+  pictures?: readonly string[];
 }
 
 /**
@@ -29,6 +32,8 @@ export interface Draft {
   itemCount: number;
   title?: string;
   picture?: string | null;
+  category?: string;
+  pictures?: readonly string[];
   /** When it was last changed here, for "Continue"'s order. */
   savedAt?: number;
   rows: number[][];
@@ -36,6 +41,9 @@ export interface Draft {
   labels?: (string | null)[];
   poolOrder?: readonly number[];
 }
+
+/** How many of a list's pictures its row in "Continue" shows. */
+const CONTINUE_PICTURES = 3;
 
 /** The scope of a list's draft: the parts a republish changes. */
 export const scopeOf = (list: PublishedList): DraftScope => ({
@@ -45,6 +53,10 @@ export const scopeOf = (list: PublishedList): DraftScope => ({
   tierCount: list.tiers.length,
   title: list.title,
   picture: list.coverImageUrl ?? list.items.find((item) => item.imageUrl != null)?.imageUrl ?? null,
+  category: list.category,
+  pictures: list.items
+    .flatMap((item) => (item.imageUrl == null ? [] : [item.imageUrl]))
+    .slice(0, CONTINUE_PICTURES),
 });
 
 export const draftKey = (listId: string): string => `tyl:draft:${listId}`;
@@ -68,6 +80,8 @@ export function serializeDraft(
     updatedAt: scope.updatedAt,
     itemCount: scope.itemCount,
     ...(scope.title === undefined ? {} : { title: scope.title, picture: scope.picture ?? null }),
+    ...(scope.category === undefined ? {} : { category: scope.category }),
+    ...(scope.pictures === undefined ? {} : { pictures: scope.pictures }),
     savedAt: Date.now(),
     ...(poolOrder === undefined ? {} : { poolOrder }),
     rows: rows.map((row) => [...row]),

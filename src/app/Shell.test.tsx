@@ -441,8 +441,12 @@ describe("Shell account", () => {
     expect(menu.getByRole("link", { name: "Settings" })).toHaveAttribute("href", "/settings");
   });
 
-  it("gives a signed-in person their initial and their rankings, and leaves signing out to the settings", () => {
-    open({ account: { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: null } });
+  it("gives a signed-in person their initial and their lists, and Sign out at the menu's end", async () => {
+    const signOut = vi.fn(async () => undefined);
+    open({
+      account: { kind: "signedIn", uid: "u1", displayName: "Danylo", photoUrl: null },
+      signOut,
+    });
     expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
     expect(screen.getByText("D")).toHaveClass("face--initial");
     expect(screen.getByText("Danylo")).toBeInTheDocument();
@@ -451,7 +455,19 @@ describe("Shell account", () => {
     expect(menu.getByRole("link", { name: "Your lists" })).toHaveAttribute("href", "/b");
     expect(screen.queryByRole("link", { name: "Your public lists" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Your rankings" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+    // Artboard 25: each row with its icon first, a line, then Sign out.
+    const rows = [...document.querySelectorAll(".menu__list > li")].map((row) =>
+      row.getAttribute("role") === "separator" ? "—" : row.textContent,
+    );
+    expect(rows.slice(1)).toEqual([
+      "view_listYour lists",
+      "settingsSettings",
+      "—",
+      "logoutSign out",
+    ]);
+    await userEvent.click(screen.getByLabelText("Your account"));
+    await userEvent.click(menu.getByRole("button", { name: "Sign out" }));
+    expect(signOut).toHaveBeenCalledTimes(1);
   });
 
   it("shows the Google photo when there is one, without telling Google where from", () => {

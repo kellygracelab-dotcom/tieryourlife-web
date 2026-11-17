@@ -88,6 +88,20 @@ describe("the game picker", () => {
     expect(onStart).toHaveBeenCalled();
   });
 
+  it("warns over Start that the game moves cards placed by hand (artboards 15, 24)", () => {
+    show({ kind: "smart", from: null, placed: 4 });
+    const warning = "You’ve placed 4 cards. The game rearranges them; Undo brings them back.";
+    expect(screen.getByText(warning)).toHaveClass("play-placed");
+    expect(screen.getByRole("button", { name: "Start" })).toHaveAccessibleDescription(
+      `34 cards · about 85 duels · 3 min ${warning}`,
+    );
+  });
+
+  it("says nothing of placed cards when none are", () => {
+    show({ placed: 0 });
+    expect(screen.queryByText(/You’ve placed/)).not.toBeInTheDocument();
+  });
+
   it("says a game needs more cards instead of a summary", () => {
     show({ count: 1 });
     expect(screen.getByText("Play needs at least 3 cards.")).toBeInTheDocument();

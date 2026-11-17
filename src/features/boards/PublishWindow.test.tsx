@@ -607,7 +607,7 @@ describe("PublishWindow: a guest", () => {
     show(filmBoard(), GUEST, { publish }, { signIn });
     // No author to name yet, and a word on why Publish signs in first.
     expect(win().getByText("3 cards")).toBeVisible();
-    expect(win().getByText(/Sign in with Google to publish/)).toBeVisible();
+    expect(win().getByText(/Publishing needs a Google account/)).toBeVisible();
     // The button says what it does, and the line on signing in is at the top (audit D1).
     expect(go("Sign in and publish")).toBeEnabled();
     expect(go("Sign in and publish")).not.toHaveAttribute("aria-disabled");
@@ -661,10 +661,18 @@ describe("PublishWindow: a guest", () => {
   it("asks an untitled list's name first, and keeps it on the board before the sign-in", async () => {
     const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
     show({ ...filmBoard(), title: "Untitled list" }, GUEST, {}, { signIn });
+    // Artboard 19: the window is "Publish your list" and opens in the name, which says why.
+    expect(screen.getByRole("dialog", { name: /^Publish your list/ })).toBeInTheDocument();
     const name = win().getByRole("textbox", { name: "Name" });
+    expect(name).toHaveFocus();
+    expect(name).toHaveAttribute("placeholder", "Give the list a name");
+    expect(name).toHaveAccessibleDescription(
+      "It’s still called “Untitled list”. People find lists by name.",
+    );
     await userEvent.click(go("Sign in and publish"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Give the list a name first.");
     expect(name).toHaveFocus();
+    expect(name).toHaveAttribute("aria-invalid", "true");
     expect(signIn).not.toHaveBeenCalled();
     await userEvent.type(name, "  Night   films ");
     await userEvent.click(go("Sign in and publish"));
@@ -743,7 +751,7 @@ describe("PublishWindow: copies and rankings", () => {
     const signIn = vi.fn<Session["signIn"]>().mockResolvedValue({ kind: "cancelled" });
     const rank = vi.fn();
     show({ ...filmBoard(), takenFrom: "SRC" }, GUEST, { rank }, { signIn });
-    expect(win().getByText(/Sign in with Google to publish/)).toBeVisible();
+    expect(win().getByText(/Publishing needs a Google account/)).toBeVisible();
     await userEvent.click(go("Sign in and show"));
     expect(signIn).toHaveBeenCalledTimes(1);
     expect(rank).not.toHaveBeenCalled();

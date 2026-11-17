@@ -25,6 +25,10 @@ export interface Started {
   listId: string;
   title: string;
   picture: string | null;
+  /** The first cards' pictures, at most three; the list's picture when the draft is older. */
+  pictures: string[];
+  /** Its section's id, when the draft knows it. */
+  category: string | null;
   placed: number;
   total: number;
   /** A game over it is saved here: Resume game goes straight back into it. */
@@ -44,6 +48,15 @@ function readDraft(text: string | null): Partial<Draft> | null {
   } catch {
     return null;
   }
+}
+
+/** The row's pictures: the first cards', or the one picture an older draft kept. */
+function picturesOf(draft: Partial<Draft>): string[] {
+  const kept = Array.isArray(draft.pictures)
+    ? draft.pictures.filter((url): url is string => typeof url === "string")
+    : [];
+  if (kept.length > 0) return kept.slice(0, 3);
+  return typeof draft.picture === "string" ? [draft.picture] : [];
 }
 
 /** A game kept for the list's page, still within its month. */
@@ -81,6 +94,8 @@ export function startedLists(
       listId,
       title: draft.title,
       picture: typeof draft.picture === "string" ? draft.picture : null,
+      pictures: picturesOf(draft),
+      category: typeof draft.category === "string" ? draft.category : null,
       placed: Math.min(placed, draft.itemCount),
       total: draft.itemCount,
       game: hasGame(store, listId, now),

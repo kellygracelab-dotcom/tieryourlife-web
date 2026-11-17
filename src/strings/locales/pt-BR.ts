@@ -1208,6 +1208,11 @@ const ptBR: Translation = {
       many: "Lista organizada a partir de {n} duelos",
       other: "Lista organizada a partir de {n} duelos",
     },
+    placedWarning: {
+      one: "Você posicionou {n} carta. O jogo a reorganiza; “Desfazer” a traz de volta.",
+      many: "Você posicionou {n} cartas. O jogo as reorganiza; “Desfazer” as traz de volta.",
+      other: "Você posicionou {n} cartas. O jogo as reorganiza; “Desfazer” as traz de volta.",
+    },
   },
   boards: {
     title: "Suas listas",
@@ -1299,8 +1304,6 @@ const ptBR: Translation = {
     inRankingsStatus: "Nas classificações",
     rankedBody: "Sua classificação está nas classificações da lista original.",
     publicBody: "Qualquer pessoa com o link pode organizá-la. Ela aparece em Comunidade.",
-    needsAccount:
-      "Entre com o Google para publicar. Ler e salvar as dos outros não precisa de conta.",
     needsItems: "Adicione ao menos um cartão antes de publicar a lista.",
     update: "Atualizar",
     updating: "Atualizando…",
@@ -1381,7 +1384,9 @@ const ptBR: Translation = {
   },
   started: {
     title: "Continuar",
+    count: "Continuar · {n}",
     placed: "{n} de {total} posicionados",
+    placedIn: "{section} · {n} de {total} posicionados",
     continue: "Continuar",
     continueOf: "Continuar “{title}”",
     resume: "Retomar jogo",
@@ -1431,10 +1436,13 @@ const ptBR: Translation = {
     changeCover: "Alterar a capa",
     coverBack: "Voltar à publicação",
     name: "Nome",
-    namePlaceholder: "Do que é esta lista?",
+    namePlaceholder: "Dê um nome à lista",
     nameFirst: "Dê um nome à lista primeiro.",
     signInAndPublish: "Entrar e publicar",
     signInAndShow: "Entrar e mostrar",
+    titleUntitled: "Publique sua lista",
+    nameHint: "Ela ainda se chama “{untitled}”. As pessoas encontram listas pelo nome.",
+    needsAccount: "Publicar exige uma conta Google. Sua lista fica aqui enquanto você entra.",
   },
   sync: {
     offBusy: "Apagando…",

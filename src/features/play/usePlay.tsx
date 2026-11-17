@@ -7,6 +7,7 @@ import { boardOf, type PlayBoard, type PlayCard, type PlayTier } from "./board";
 import {
   areaName,
   chosenIds,
+  placedChosen,
   EVERYTHING,
   keptTier,
   lostTier,
@@ -359,6 +360,7 @@ export function usePlay(
               areaName(board, current).kind === "board" ? null : areaTitle(board, current, title)
             }
             count={chosenIds(board, current).length}
+            placed={placedChosen(board, current)}
             kind={kind}
             onKind={setKind}
             saved={savedGame === null ? null : shown.reconcile(savedGame, board)}
