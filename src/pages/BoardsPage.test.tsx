@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -65,6 +65,8 @@ const open = (
   store: KeyValueStore = memoryStore(),
   unpublish: (id: string) => Promise<void> = async () => undefined,
   shelfStore: KeyValueStore = memoryStore(),
+  // The tools are under test: they show from the first list. Few lists' page has tests of its own.
+  fewLists = 0,
 ) => {
   const router = createMemoryRouter(
     [
@@ -77,6 +79,7 @@ const open = (
             store={store}
             shelfStore={shelfStore}
             unpublish={unpublish}
+            fewLists={fewLists}
           />
         ),
       },
@@ -93,6 +96,44 @@ const open = (
 const opened = () => screen.getAllByRole("link", { name: /^Open / });
 
 describe("BoardsPage", () => {
+  it("is the lists and a new one's tile while there are six or fewer, the tools from the seventh (artboard 33)", async () => {
+    const repository = boardsRepository(memoryStore());
+    const lists = Array.from({ length: 6 }, (_, at) => ranked(`b${at}`, `List ${at}`, 1));
+    repository.saveAll(lists);
+    const router = createMemoryRouter(
+      [
+        {
+          path: "/b",
+          element: (
+            <BoardsPage
+              repository={repository}
+              now={() => 5000}
+              store={memoryStore()}
+              shelfStore={memoryStore()}
+            />
+          ),
+        },
+        { path: "/b/new", element: <h1>new board</h1> },
+      ],
+      { initialEntries: ["/b"] },
+    );
+    render(<RouterProvider router={router} />);
+    expect(opened()).toHaveLength(6);
+    expect(screen.queryByRole("searchbox", { name: "Search your lists" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Which lists to show" })).toBeNull();
+    expect(
+      screen.getByText(
+        "Search, filters and sorting appear here when you have more than six lists.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "New list" })).toHaveAttribute("href", "/b/new");
+
+    act(() => repository.save(ranked("b6", "List 6", 1)));
+    expect(await screen.findByRole("searchbox", { name: "Search your lists" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "New list" })).toBeNull();
+    expect(screen.queryByText(/appear here when you have more than six lists/)).toBeNull();
+  });
+
   it("starts empty with the phone's suggestions, each a new list in its section", async () => {
     const repository = boardsRepository(memoryStore());
     const router = open(repository);
@@ -156,7 +197,8 @@ describe("BoardsPage", () => {
       pictured,
     ]);
     open(repository);
-    expect(screen.getByRole("link", { name: "New list" })).toHaveAttribute("href", "/b/new");
+    // A new list is the site header's, and the tile's on a page of few lists.
+    expect(screen.queryByRole("link", { name: "New list" })).toBeNull();
     const tiles = opened();
     expect(tiles.map((tile) => tile.closest("li")?.className)).toEqual([
       "board-tile",
@@ -199,7 +241,7 @@ describe("BoardsPage", () => {
       arrangeItems(done, [liveItems(done).map((item) => item.uid), [], [], [], []], 0),
     ]);
     const router = open(repository, "/b", undefined, rowsStore());
-    expect(screen.getByText("3 lists · 5 rankings")).toBeInTheDocument();
+    expect(screen.getByText("3 lists · 5 placed")).toBeInTheDocument();
     const links = opened();
     expect(links.map((link) => link.textContent)).toEqual([
       expect.stringContaining("Films I make people watch"),
@@ -255,7 +297,7 @@ describe("BoardsPage", () => {
       { ...ranked("c", "Ghibli films", 3), authorName: "someone", favouritedAt: 9 },
     ]);
     open(repository);
-    expect(screen.getByText("3 lists · 4 rankings · 1 public")).toBeInTheDocument();
+    expect(screen.getByText("3 lists · 4 placed · 1 public")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Favourites" })).toBeInTheDocument();
     const shows = within(screen.getByRole("group", { name: "Which lists to show" }));
     expect(shows.getAllByRole("button").map((chip) => chip.textContent)).toEqual([

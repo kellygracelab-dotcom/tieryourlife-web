@@ -412,3 +412,77 @@ test("a wide window's catalogue answers in a panel as wide as the board, one row
   await page.getByRole("textbox", { name: "Add a card" }).press("Enter");
   await expect(page.getByRole("button", { name: "dune", exact: true })).toBeVisible();
 });
+
+// Artboard 32: on a laptop, with the cards beside the board, the catalogue's
+// answers stand in the column under the field, three to a row, in place of
+// the cards, with the hint under them; the field's words are whole.
+test("a laptop's column shows the catalogue's answers under the field in place of the cards", async ({
+  page,
+  hasTouch,
+}) => {
+  test.skip(hasTouch, "the desktop layout");
+  await mockBackend(page);
+  await page.setViewportSize({ width: 1351, height: 870 });
+  await page.route("**/lists/pictures?*", (route) => {
+    const q = new URL(route.request().url()).searchParams.get("q") ?? "";
+    const items = Array.from({ length: 9 }, (_, at) => ({
+      id: `tmdb:${q}${at}`,
+      title: `${q} ${at}`,
+      imageUrl: `https://img.test/${at}.png`,
+      thumbUrl: null,
+      source: "tmdb",
+      kind: "movie",
+    }));
+    return route.fulfill({ json: { items, hasMore: false, notices: [] } });
+  });
+  await page.route("https://img.test/**", (route) =>
+    route.fulfill({ contentType: "image/png", body: PIXEL }),
+  );
+  await page.goto("/b");
+  await page.getByRole("link", { name: "New list" }).first().click();
+  const title = page.getByRole("textbox", { name: "Title" });
+  await title.fill("Dune and more");
+  await title.press("Enter");
+  const add = page.getByRole("textbox", { name: "Add a card" });
+  await add.fill("Fern");
+  await add.press("Enter");
+  await page.getByRole("button", { name: "Cards beside the tiers" }).click();
+  await expect(page.locator(".ranking")).not.toHaveClass(/ranking--under/);
+  await expect(page.locator(".pool__title")).toHaveText("1 card left");
+  const count = (await page.locator(".pool__title").boundingBox())!;
+  expect(count.height).toBeLessThan(30);
+  expect(
+    await add.evaluate((field: HTMLInputElement) => field.scrollWidth <= field.clientWidth),
+  ).toBe(true);
+  const placeholderFits = await add.evaluate((field: HTMLInputElement) => {
+    const probe = document.createElement("span");
+    probe.style.font = getComputedStyle(field).font;
+    probe.style.whiteSpace = "pre";
+    probe.textContent = field.placeholder;
+    document.body.append(probe);
+    const wide = probe.getBoundingClientRect().width;
+    probe.remove();
+    return wide <= field.clientWidth;
+  });
+  expect(placeholderFits).toBe(true);
+
+  await add.fill("dune");
+  await expect(page.getByRole("button", { name: "dune 8" })).toBeAttached();
+  const column = (await page.locator(".pool").boundingBox())!;
+  const found = (await page.locator(".pool__tools .cards__found").boundingBox())!;
+  const field = (await add.boundingBox())!;
+  expect(found.x).toBeGreaterThanOrEqual(column.x);
+  expect(found.x + found.width).toBeLessThanOrEqual(column.x + column.width + 1);
+  expect(found.y).toBeGreaterThan(field.y + field.height);
+  const tops = await page
+    .locator(".cards__pick")
+    .evaluateAll((all) => all.map((one) => Math.round(one.getBoundingClientRect().top)));
+  expect(tops.filter((top) => top === tops[0])).toHaveLength(3);
+  await expect(page.locator(".pool__items")).toBeHidden();
+  await expect(page.locator(".cards__pick-hint")).toHaveText(
+    "Click a result to add it. Enter adds “dune” as a card with just a name.",
+  );
+  await page.screenshot({ path: "../shots/32-laptop.png" });
+  await add.press("Enter");
+  await expect(page.getByRole("button", { name: "dune", exact: true })).toBeVisible();
+});

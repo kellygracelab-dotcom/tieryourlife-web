@@ -447,6 +447,7 @@ function OpenBoard({
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
   // A phone's one-row head carries the count and Undo under the name (artboard 18).
   const phoneHead = useMedia(PHONE);
+  const tightHead = useTightHead(phoneHead);
   const frame = useMemo(
     () => ({ headSlot, report: setBoardDock, phoneHead }),
     [headSlot, phoneHead],
@@ -997,7 +998,7 @@ function OpenBoard({
         <Icon name="arrow_back" />
         <span>{house === null ? strings.boards.back : strings.admin.house}</span>
       </Link>
-      <header className="list-head">
+      <header className={tightHead ? "list-head list-head--tight" : "list-head"}>
         {/* Narrow, the way back is an arrow at the head's start, not a row of its own (audit C2). */}
         <Link
           className="list-head__back"
@@ -1269,4 +1270,28 @@ function OpenBoard({
       <Snackbar notice={notice} onDone={forget} onBoard />
     </article>
   );
+}
+
+/**
+ * Whether a phone's head is scrolled into its one row (artboard 38): the
+ * buttons over the whole name until the page moves, then back, the name cut
+ * short, Publish, Play and the menu in one line. It goes tight past 56 px and
+ * opens again only at the top, so the height it gives up cannot bounce it, and
+ * a page with too little to scroll keeps it open. While ⋮ is open it stays as
+ * it is.
+ */
+function useTightHead(phone: boolean): boolean {
+  const [tight, setTight] = useState(false);
+  useEffect(() => {
+    if (!phone) return;
+    const check = () => {
+      // With ⋮ open the head keeps its shape: the menu would move from under the finger.
+      if (document.querySelector(".board-page .list-head details[open]") !== null) return;
+      const room = document.documentElement.scrollHeight - window.innerHeight;
+      setTight((was) => (was ? window.scrollY > 2 : window.scrollY > 56 && room > 160));
+    };
+    window.addEventListener("scroll", check, { passive: true });
+    return () => window.removeEventListener("scroll", check);
+  }, [phone]);
+  return phone && tight;
 }

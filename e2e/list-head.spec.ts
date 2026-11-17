@@ -24,15 +24,18 @@ test("a phone gives the list's title its own row, and Play and Save the row unde
   expect(save!.height).toBeGreaterThanOrEqual(48);
 });
 
-// Artboard 18: one's own list on a phone has one row, 64 high, and no site bar
-// over it: back, the name with the one count under it, Publish, Play and ⋮.
-test("a phone gives one's own list a one-row head with no site bar", async ({ page }) => {
+// Artboard 38 (on 18): one's own list on a phone has no site bar; back,
+// Publish, Play and ⋮ in the first row, the name whole under them, then the
+// count. Scrolled, the head stays at the top in one row, 64 high.
+test("a phone gives one's own list its buttons over the whole name, and one row once scrolled", async ({
+  page,
+}) => {
   test.skip((page.viewportSize()?.width ?? 0) >= 600, "the phone layout");
   await mockBackend(page);
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
   const title = page.getByRole("textbox", { name: "Title" });
-  await title.fill("Frieren characters");
+  await title.fill("Frieren characters, every one");
   await title.press("Enter");
   const add = page.getByRole("textbox", { name: "Add a card" });
   if (!(await add.isVisible()))
@@ -41,19 +44,45 @@ test("a phone gives one's own list a one-row head with no site bar", async ({ pa
   await add.press("Enter");
   await expect(page.locator(".top")).toBeHidden();
   const head = page.locator(".list-head");
-  const box = (await head.boundingBox())!;
-  expect(box.height).toBeLessThanOrEqual(72);
-  const centre = box.y + box.height / 2;
-  for (const name of ["Publish", "Play"]) {
-    const button = (await head.getByRole("button", { name, exact: true }).boundingBox())!;
-    expect(Math.abs(button.y + button.height / 2 - centre)).toBeLessThan(6);
-    expect(button.height).toBeGreaterThanOrEqual(48);
-  }
-  const name = (await head.getByRole("heading", { level: 1 }).boundingBox())!;
-  const count = (await head.getByText(/of 1 placed/).boundingBox())!;
+  const heading = head.getByRole("heading", { level: 1 });
+  const row = async () => {
+    const publish = (await head
+      .getByRole("button", { name: "Publish", exact: true })
+      .boundingBox())!;
+    const play = (await head.getByRole("button", { name: "Play", exact: true }).boundingBox())!;
+    expect(Math.abs(publish.y - play.y)).toBeLessThan(2);
+    expect(play.height).toBeGreaterThanOrEqual(48);
+    return play;
+  };
+
+  let play = await row();
+  let name = (await heading.boundingBox())!;
+  expect(name.y).toBeGreaterThanOrEqual(play.y + play.height - 1);
+  // The name whole, on as many lines as it takes.
+  expect(await heading.evaluate((h) => h.scrollWidth <= h.clientWidth)).toBe(true);
+  await expect(heading).toHaveText("Frieren characters, every one");
+  let count = (await head.getByText(/of 1 placed/).boundingBox())!;
   expect(count.y).toBeGreaterThanOrEqual(name.y + name.height - 1);
-  // The view's button gives way; its choices are in ⋮.
   await expect(head.getByLabel(/^Display: /)).toBeHidden();
+
+  // Room to scroll, then the head in one row at the top.
+  await page.evaluate(() => {
+    document.body.style.paddingBottom = "1200px";
+    window.scrollTo(0, 400);
+  });
+  await expect(head).toHaveClass(/list-head--tight/);
+  const box = (await head.boundingBox())!;
+  expect(Math.abs(box.y)).toBeLessThan(2);
+  expect(box.height).toBeLessThanOrEqual(72);
+  play = await row();
+  name = (await heading.boundingBox())!;
+  expect(Math.abs(play.y + play.height / 2 - (box.y + box.height / 2))).toBeLessThan(6);
+  count = (await head.getByText(/of 1 placed/).boundingBox())!;
+  expect(count.y).toBeGreaterThanOrEqual(name.y + name.height - 1);
+
+  // Back at the top, the name whole again.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(head).not.toHaveClass(/list-head--tight/);
 });
 
 // Artboard 21: somebody else's list on a wide, tall window has its cards
@@ -78,4 +107,38 @@ test("a wide window shows somebody else's list with its cards beside the board",
   expect(pool.x).toBeGreaterThan(board.x + board.width);
   expect(Math.abs(pool.y - board.y)).toBeLessThan(24);
   expect(Math.abs(title.x - board.x)).toBeLessThan(24);
+});
+
+// Artboard 31: somebody else's list on a laptop has a column about a third of
+// the window, cards 88 × 124 four to a row, one scroll (the page's), and Play
+// filled among outlined buttons.
+test("a laptop shows somebody else's cards four to a row in a column with no scroll of its own", async ({
+  page,
+  hasTouch,
+}) => {
+  test.skip(hasTouch, "the desktop layout");
+  await mockBackend(page);
+  await page.setViewportSize({ width: 1351, height: 870 });
+  await page.goto(`/l/${LIST_ID}`);
+  await page.getByRole("button", { name: "Mine", exact: true }).click();
+  await page.getByRole("button", { name: "Cards beside the tiers" }).click();
+  const pool = page.locator(".ranking:not(.ranking--under) .pool");
+  await expect(pool).toBeVisible();
+  const box = (await pool.boundingBox())!;
+  expect(box.width).toBeGreaterThan(400);
+  expect(box.width).toBeLessThan(460);
+  const items = pool.locator(".pool__items");
+  expect(await items.evaluate((list) => getComputedStyle(list).gridTemplateColumns)).toBe(
+    "88px 88px 88px 88px",
+  );
+  const tile = (await pool.locator(".tile").first().boundingBox())!;
+  expect(Math.round(tile.height)).toBe(124);
+  expect(await items.evaluate((list) => getComputedStyle(list).overflowY)).toBe("visible");
+  const count = (await pool.locator(".pool__title").boundingBox())!;
+  expect(count.height).toBeLessThan(30);
+  const play = page.locator(".list-head").getByRole("button", { name: "Play", exact: true });
+  expect(await play.evaluate((button) => getComputedStyle(button).backgroundColor)).not.toBe(
+    "rgba(0, 0, 0, 0)",
+  );
+  await page.screenshot({ path: "../shots/31-laptop.png" });
 });

@@ -701,3 +701,25 @@
 .list-head__rankings:hover {
   text-decoration: underline;
 }
+
+/* Somebody else's list: Play filled at every width, the head's other buttons outlined (artboards 13, 31). */
+.list-head--visitor > .list-head__tools > .btn.play-button {
+  background: var(--link);
+  box-shadow: none;
+  color: var(--on-link);
+}
+
+.list-head--visitor > .list-head__tools > .btn.play-button:hover:not([aria-disabled="true"]) {
+  background: color-mix(in srgb, var(--link) 88%, var(--ink));
+}
+
+.list-head--visitor > .list-head__tools > .play-button .play-button__dot {
+  background: var(--on-link);
+}
+
+/* The head's Copy link chip and the menu's line were the same thing twice. */
+@media (min-width: 840px) {
+  .list-head:has(.list-head__copy) .list-menu__copy {
+    display: none;
+  }
+}

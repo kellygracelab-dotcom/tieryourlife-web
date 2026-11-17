@@ -1430,9 +1430,45 @@
 }
 
 /* A card's menu, by a double tap: the tiers as rows with their colour, then the ways out. */
+.move-sheet__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.move-sheet__title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.move-sheet__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: -6px -10px 0 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+}
+
+.move-sheet__close:hover,
+.move-sheet__close:focus-visible {
+  background: var(--paper);
+}
+
+/* MOVE TO A TIER: the label of the rows under it, apart from the links above (artboard 37). */
 .move-sheet__who {
-  margin: 0 0 4px;
-  font: var(--text-small);
+  margin: 16px 0 6px;
+  padding-inline: 12px;
+  font: var(--text-caption);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink-dim);
 }
 
@@ -1468,8 +1504,12 @@
 }
 
 .move-sheet__tier:disabled {
-  color: var(--ink-dim);
   cursor: default;
+}
+
+/* Where the card is now: the row lit, "Currently here" at its end. */
+.move-sheet__tier--here {
+  background: var(--paper);
 }
 
 .move-sheet__swatch {
@@ -1505,12 +1545,42 @@
   color: var(--ink-dim);
 }
 
-.move-sheet__actions {
-  flex-direction: column;
-  align-items: stretch;
+.move-sheet__line {
+  height: 1px;
+  margin: 8px 12px;
+  border: none;
+  background: var(--line);
 }
 
-.move-sheet__danger {
+.move-sheet__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: 500 14px/20px var(--font);
+  text-align: start;
+  cursor: pointer;
+}
+
+.move-sheet__row:hover,
+.move-sheet__row:focus-visible {
+  background: var(--paper);
+}
+
+.move-sheet__row-icon {
+  width: 22px;
+  color: var(--ink-dim);
+  text-align: center;
+}
+
+.move-sheet__row--danger,
+.move-sheet__row--danger .move-sheet__row-icon {
   color: var(--error);
 }
 
@@ -1749,7 +1819,22 @@
 .move-sheet__picture {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px 16px;
+  margin-top: 6px;
+}
+
+.move-sheet__link {
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--link);
+  font: 500 13px/18px var(--font);
+  cursor: pointer;
+}
+
+.move-sheet__link:hover {
+  text-decoration: underline;
 }
 
 /*
@@ -2099,5 +2184,139 @@
       clip-path: inset(50%);
       white-space: nowrap;
     }
+  }
+}
+
+/*
+ * Beside the board, the catalogue's answers are the column's own (artboard
+ * 32): while a search is open they stand under the field in place of the
+ * pool's cards, three to a row, with the hint for a mouse under them. They
+ * hung in a box 440 wide over the board's edge. The form steps aside so the
+ * answers can take a row of their own under the field and its two buttons.
+ */
+@media (min-width: 840px) {
+  .ranking:not(.ranking--under) .pool__tools {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .cards__add {
+    display: contents;
+  }
+
+  /* The field takes what the two buttons leave, its words whole ("Search, type a na…" was cut). */
+  .ranking:not(.ranking--under) .pool__tools {
+    column-gap: 8px;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .editor__field {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-inline: 12px 8px;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .editor__field input {
+    font: 400 13px/20px var(--font);
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .editor__field {
+    gap: 6px;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .editor__field > .ms {
+    width: 20px;
+    overflow: hidden;
+    font-size: 20px;
+  }
+
+  /* The hint right under the field, before the places to look (artboard 32). */
+  .ranking:not(.ranking--under) .pool__tools .cards__pick-hint {
+    order: -1;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .cards__upload {
+    order: 1;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .cards__paste {
+    order: 2;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .cards__found {
+    position: static;
+    flex: 1 1 100%;
+    order: 3;
+    width: auto;
+    max-height: none;
+    overflow: visible;
+    background: none;
+    box-shadow: none;
+  }
+
+  .ranking:not(.ranking--under) .pool__tools .cards__found .cards__scopes,
+  .ranking:not(.ranking--under) .pool__tools .cards__found .cards__picks,
+  .ranking:not(.ranking--under) .pool__tools .cards__found .cards__source,
+  .ranking:not(.ranking--under) .pool__tools .cards__found .cards__note {
+    padding-inline: 0;
+  }
+
+  .ranking:not(.ranking--under) .pool:has(.pool__tools .cards__found) {
+    position: relative;
+    top: auto;
+    max-height: none;
+  }
+
+  .ranking:not(.ranking--under)
+    .pool:has(.pool__tools .cards__found)
+    :is(.pool__items, .pool__none, .pool__hint, .pool__empty) {
+    display: none;
+  }
+
+  /* "25 cards left", "1 card left": one line, as the app has it. */
+  .ranking:not(.ranking--under) .pool__title {
+    white-space: nowrap;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .ranking:not(.ranking--under) .pool__tools .cards__pick-hint {
+      display: block;
+      padding-inline: 0;
+    }
+
+    .ranking:not(.ranking--under) .pool__tools .cards__result--name {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+}
+
+/*
+ * A laptop (artboard 31): the column about a third of the window (429 of
+ * 1351), cards 88 × 124 four to a row, and one scroll, the page's. Its own scroll in a 318 px
+ * column showed three cards a row beside a bar.
+ */
+@media (min-width: 1200px) and (max-width: 1599px) {
+  .board-frame,
+  .ranking {
+    --pool-cols: 4;
+    --pool-w: calc(2 * 16px + 4 * 88px + 3 * 15px);
+  }
+
+  .ranking:not(.ranking--under) .pool {
+    --tile-w: 88px;
+    --tile-h: 124px;
+    --tile-gap: 15px;
+
+    position: relative;
+    top: auto;
+    max-height: none;
+  }
+
+  .ranking:not(.ranking--under) .pool__items {
+    overflow: visible;
   }
 }
