@@ -1,5 +1,6 @@
 import type { CSSProperties, MouseEvent } from "react";
 import type { PublishedItem, PublishedTier } from "../../api/types";
+import { forWhiteLetter } from "../../lib/whiteLetter";
 import { sizedFor } from "../../lib/pictureSize";
 import { fill, strings } from "../../strings";
 import "../../ui/Button.css";
@@ -82,9 +83,23 @@ export function OneByOne({
         )}
       </div>
       <div className="one__side">
-        <p className="one__name" aria-live="polite">
-          <bdi>{card.title}</bdi>
-        </p>
+        {/* The name and Skip, a word beside it (artboard 18), over the tiers. */}
+        <div className="one__head">
+          <p className="one__name" aria-live="polite">
+            <bdi>{card.title}</bdi>
+          </p>
+          <button
+            type="button"
+            className="btn btn--text one__skip"
+            aria-keyshortcuts={placedIn === null ? "Space" : "Backspace"}
+            disabled={locked || (placedIn === null && !canSkip)}
+            onClick={pressed(placedIn === null ? onSkip : onUnplace)}
+          >
+            <span>
+              {placedIn === null ? strings.rank.oneByOneSkip : strings.rank.oneByOneToPool}
+            </span>
+          </button>
+        </div>
         <div className="one__tiers">
           {tiers.map((tier, index) => {
             const where =
@@ -98,7 +113,8 @@ export function OneByOne({
                 className="one__tier band"
                 style={
                   {
-                    "--band-light": tier.colorLight,
+                    // A white letter reads on it: A's orange and B's ochre a shade darker (artboard 18).
+                    "--band-light": forWhiteLetter(tier.colorLight),
                     "--band-dark": tier.colorDark,
                   } as CSSProperties
                 }
@@ -113,20 +129,6 @@ export function OneByOne({
               </button>
             );
           })}
-        </div>
-        <div className="one__foot">
-          <button
-            type="button"
-            className="btn btn--tonal one__skip"
-            aria-keyshortcuts={placedIn === null ? "Space" : "Backspace"}
-            disabled={locked || (placedIn === null && !canSkip)}
-            onClick={pressed(placedIn === null ? onSkip : onUnplace)}
-          >
-            <Icon name={placedIn === null ? "skip_next" : "undo"} className="btn__icon" />
-            <span>
-              {placedIn === null ? strings.rank.oneByOneSkip : strings.rank.oneByOneToPool}
-            </span>
-          </button>
         </div>
       </div>
     </div>

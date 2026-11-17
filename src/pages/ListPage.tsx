@@ -767,7 +767,7 @@ function OpenList({
           : `list-page board-frame list-page--${boardDock}`
       }
     >
-      <header className="list-head">
+      <header className={own ? "list-head" : "list-head list-head--visitor"}>
         <PageTitle title={list.title} />
         <div className="list-head__text">
           <h1 className="list-head__title">

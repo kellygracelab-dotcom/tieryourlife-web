@@ -268,6 +268,11 @@ function ShellBackGuard() {
 }
 /** A list's own page: a board of one's own, a published list, a ranking. */
 const LIST_PAGES = /^\/(b|l|r)\/[^/]+/;
+/**
+ * One's own list: on a phone it has a one-row head of its own and no site bar
+ * (artboard 18). Said by a class from here, where the route is known.
+ */
+const OWN_LIST = /^\/b\/(?!new$)[^/]+$/;
 
 /** Below this the bar always shows: the page's top is where it is. */
 const AWAY_AFTER_PX = 120;
@@ -333,6 +338,7 @@ export function Shell() {
   }, []);
   const titled = page !== null && page.inBar && scrolled;
   const away = useAwayOnScroll(LIST_PAGES.test(location.pathname));
+  const ownList = OWN_LIST.test(location.pathname);
   useEffect(() => {
     document.title = documentTitleOf(page, strings.brand);
   }, [page]);
@@ -402,7 +408,9 @@ export function Shell() {
         {strings.nav.skipToContent}
       </a>
       <header
-        className={["top", titled && "top--titled", away && "top--away"].filter(Boolean).join(" ")}
+        className={["top", titled && "top--titled", away && "top--away", ownList && "top--own-list"]
+          .filter(Boolean)
+          .join(" ")}
       >
         <Link className="brand" to="/">
           <img className="brand__mark" src="/favicon.svg" alt="" width="26" height="26" />
@@ -467,7 +475,11 @@ export function Shell() {
           {strings.nav.storageRefused}
         </p>
       )}
-      <main id="main" className="shell__main" ref={main}>
+      <main
+        id="main"
+        className={ownList ? "shell__main shell__main--own-list" : "shell__main"}
+        ref={main}
+      >
         <PageTitleContext.Provider value={setPage}>
           <SearchScopeContext.Provider value={setScope}>
             <Outlet />

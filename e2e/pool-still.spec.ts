@@ -83,7 +83,13 @@ test("a card carried from the pool over the tiers leaves the pool standing still
     await expand.click();
     await expect(expand).toHaveAttribute("aria-expanded", "true");
   }
-  await page.evaluate(() => window.scrollTo(0, 0));
+  // The first tier some 220px down, where a phone's one-row head left it: a
+  // visitor's head now has its buttons on a row of their own (artboard 13).
+  const tierTop = await page
+    .locator(".tier")
+    .first()
+    .evaluate((tier) => tier.getBoundingClientRect().top + window.scrollY);
+  await page.evaluate((y) => window.scrollTo(0, y), Math.max(0, tierTop - 220));
   const pool = page.locator(".pool__items");
   const card = pool.locator("[data-item]").nth(1);
   const box = (await card.boundingBox())!;

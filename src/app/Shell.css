@@ -678,3 +678,22 @@
     animation: none !important;
   }
 }
+
+/* One's own list on a phone has its own one-row head and no site bar (artboard 18). */
+@media (max-width: 599px) {
+  /* Not even as a page sliding in: a header of the view's transition that
+     went away crashed WebKit's page (17.11.2026). */
+  .top--own-list {
+    display: none;
+    view-transition-name: none;
+  }
+
+  .shell__main--own-list {
+    padding-top: 0;
+  }
+
+  /* No bar over it, so nothing on it sits under one. */
+  .shell__main--own-list .board-page {
+    --header-height: 0px;
+  }
+}

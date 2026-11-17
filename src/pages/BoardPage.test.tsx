@@ -172,10 +172,12 @@ const openCover = async () => {
   await userEvent.click(menuItem("Cover"));
   return within(coverDialog());
 };
+/** The header's view button's own menu; ⋮ carries the same choices for a phone (artboard 18). */
+const viewMenu = () => within(screen.getByLabelText(/^Display: /).closest("details")!);
 /** The header's view button and one of its modes. */
 const chooseView = async (mode: "Rows" | "Single strip" | "Ranked list") => {
   await userEvent.click(screen.getByLabelText(/^Display: /));
-  await userEvent.click(screen.getByRole("menuitemradio", { name: new RegExp(`^${mode}`) }));
+  await userEvent.click(viewMenu().getByRole("menuitemradio", { name: new RegExp(`^${mode}`) }));
 };
 const bandOf = (label: string) => tier(label).closest(".tier")!.querySelector(".tier__band")!;
 
@@ -758,6 +760,19 @@ describe("BoardPage: tiers and settings", () => {
     );
   });
 
+  it("offers the display's choices in ⋮ as well, for a phone's head with no room for the button (artboard 18)", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    const more = within(moreMenu());
+    const modes = more.getAllByRole("menuitemradio");
+    expect(modes).toHaveLength(3);
+    for (const mode of modes) expect(mode.closest("li")).toHaveClass("view-menu__phone");
+    await userEvent.click(more.getByRole("menuitemradio", { name: /^Ranked list/ }));
+    expect(repository.get("films")?.displayMode).toBe("FLAT_RANKED");
+  });
+
   it("switches the display from the header's view button: Single strip, Ranked list, and back to Rows", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
@@ -765,20 +780,20 @@ describe("BoardPage: tiers and settings", () => {
     // The button says the mode it is in.
     expect(screen.getByLabelText("Display: Rows")).toHaveTextContent("Rows");
     const checked = () =>
-      screen
+      viewMenu()
         .getAllByRole("menuitemradio")
         .filter((item) => item.getAttribute("aria-checked") === "true")
         .map((item) => item.querySelector(".view-menu__title")?.textContent);
     await userEvent.click(screen.getByLabelText("Display: Rows"));
-    expect(screen.getAllByRole("menuitemradio")).toHaveLength(3);
+    expect(viewMenu().getAllByRole("menuitemradio")).toHaveLength(3);
     expect(checked()).toEqual(["Rows"]);
     // Each says what it does.
-    expect(screen.getByRole("menuitemradio", { name: /^Single strip/ })).toHaveTextContent(
+    expect(viewMenu().getByRole("menuitemradio", { name: /^Single strip/ })).toHaveTextContent(
       "One line per tier, scrolls sideways",
     );
 
     // The single strip: the rows, each one line of cards that scrolls sideways.
-    await userEvent.click(screen.getByRole("menuitemradio", { name: /^Single strip/ }));
+    await userEvent.click(viewMenu().getByRole("menuitemradio", { name: /^Single strip/ }));
     expect(repository.get("films")?.displayMode).toBe("HORIZONTAL_SCROLL");
     expect(screen.getByRole("list", { name: "S" }).closest(".board")).toHaveClass("board--strip");
     expect(screen.getByLabelText("Display: Single strip")).toBeInTheDocument();
