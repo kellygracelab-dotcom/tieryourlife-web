@@ -10,6 +10,28 @@ import { FACE_URL, PIXEL, shot, signIn } from "./signedIn";
 
 const press = (target: Locator, touch: boolean) => (touch ? target.tap() : target.click());
 
+/** A phone's one-row head has no room for the view's button: its choices are in ⋮ (artboard 18). */
+const phoneHead = (page: Page) => (page.viewportSize()?.width ?? 0) < 600;
+
+async function showRankedList(page: Page, touch: boolean) {
+  if (phoneHead(page)) await press(page.getByLabel("More about this list"), touch);
+  else await press(page.getByLabel("Display: Rows"), touch);
+  await press(page.getByRole("menuitemradio", { name: /Ranked list/ }), touch);
+}
+
+async function expectRankedList(page: Page, touch: boolean) {
+  if (!phoneHead(page)) {
+    await expect(page.getByLabel("Display: Ranked list")).toBeVisible();
+    return;
+  }
+  await press(page.getByLabel("More about this list"), touch);
+  await expect(page.getByRole("menuitemradio", { name: /Ranked list/ })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await page.keyboard.press("Escape");
+}
+
 async function newBoard(page: Page, touch: boolean, title: string) {
   await page.goto("/b");
   await page.getByRole("link", { name: "New list" }).first().click();
@@ -73,8 +95,7 @@ test("publishes a board, sends it again and takes it down, and says when a try f
   await shot(page, `publish-${hasTouch ? "phone" : "desktop"}`);
 
   // A change on the board puts the published copy behind; the header's Update sends it at once.
-  await press(page.getByLabel("Display: Rows"), hasTouch);
-  await press(page.getByRole("menuitemradio", { name: /Ranked list/ }), hasTouch);
+  await showRankedList(page, hasTouch);
   await expect(word).toHaveText("Update");
   await press(header, hasTouch);
   await expect(page.locator(".snackbar")).toContainText("Updated");
@@ -148,8 +169,7 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
   await expect(page.locator(".snackbar")).toContainText("Published");
 
   // A change on the board, sent while the list changed on the backend.
-  await press(page.getByLabel("Display: Rows"), hasTouch);
-  await press(page.getByRole("menuitemradio", { name: /Ranked list/ }), hasTouch);
+  await showRankedList(page, hasTouch);
   await expect(header.locator(".publish-button__word")).toHaveText("Update");
   let refusedBody: unknown;
   await page.route(
@@ -181,7 +201,7 @@ test("keeps local edits after PUBLICATION_CHANGED and retries the same publicati
   expect(refusedBody).not.toHaveProperty("anonymous");
 
   await page.reload();
-  await expect(page.getByLabel("Display: Ranked list")).toBeVisible();
+  await expectRankedList(page, hasTouch);
   await expect(header.locator(".publish-button__word")).toHaveText("Update");
   await press(header, hasTouch);
   await expect(page.locator(".snackbar")).toContainText("Updated");

@@ -1790,8 +1790,18 @@
   min-width: 0;
 }
 
+/* The name and Skip beside it, a word (artboard 18). */
+.one__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
 .one__name {
   display: -webkit-box;
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   overflow: hidden;
   font: var(--text-title);
@@ -1847,15 +1857,11 @@
   cursor: default;
 }
 
-.one__foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-}
-
-.one__skip {
+.btn.one__skip {
   flex: none;
+  min-height: 48px;
+  padding-inline: 10px;
+  color: var(--link);
 }
 
 .one-toggle {
@@ -1912,32 +1918,41 @@
     padding: 8px 14px 2px;
   }
 
-  .one__card {
-    width: 96px;
-    height: 134px;
+  /*
+   * The card small beside its name and Skip, the tiers in one row of 48
+   * under both, the tray's width (artboard 18).
+   */
+  .one {
+    display: grid;
+    grid-template-columns: 60px minmax(0, 1fr);
+    align-items: center;
   }
 
-  .one__name {
-    font: 500 15px/1.25 var(--font);
+  .one__side {
+    display: contents;
+  }
+
+  .one__card {
+    width: 60px;
+    height: 84px;
+    border-radius: 10px;
   }
 
   .one__tiers {
-    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    grid-column: 1 / -1;
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+
+  .one__name {
+    font: 500 16px/1.25 var(--font);
   }
 
   .one__tier {
-    min-height: 44px;
-  }
-
-  .one__skip {
-    align-self: stretch;
-    justify-content: center;
-    min-height: 40px;
-  }
-
-  .one__foot {
-    flex-direction: column;
-    align-items: stretch;
+    min-height: 48px;
+    padding: 0 2px;
+    font: 700 17px/1 var(--font);
   }
 
   /*

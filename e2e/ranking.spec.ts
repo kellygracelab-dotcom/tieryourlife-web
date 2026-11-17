@@ -332,9 +332,8 @@ test.describe("ranking a list on a phone", () => {
     await expect(tier(page, "S").getByRole("button", { name: "Ex Machina" })).toBeVisible();
     await expect(page.getByText("2 of 3 placed")).toBeVisible();
 
-    // On a phone the save is a line of the ⋮ menu.
-    await page.getByLabel("More about this list").tap();
-    await page.getByRole("button", { name: "Save my list" }).first().tap();
+    // On a phone the save is a button under the title (artboard 13).
+    await page.locator(".list-head__save").tap();
     await expect(page.getByText("Saved to your lists.")).toBeVisible();
     expect(backend.rankRequests).toHaveLength(0);
   });

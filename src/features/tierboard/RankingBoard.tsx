@@ -735,8 +735,9 @@ export function RankingBoard({
   const docked = wide && dock === "under";
   const frame = useContext(BoardFrameContext);
   // On a wide screen the count and the actions stand in the page's header,
-  // wherever the pool is: moving the pool does not move the buttons.
-  const inHead = wide && frame.headSlot !== null;
+  // wherever the pool is: moving the pool does not move the buttons. One's
+  // own list on a phone puts them there too, under its name (artboard 18).
+  const inHead = (wide || frame.phoneHead === true) && frame.headSlot !== null;
   useHeadHeight(wide ? frame.headSlot : null);
   useEffect(() => {
     // Theirs on show has no pool to place: the page keeps its own layout for it.

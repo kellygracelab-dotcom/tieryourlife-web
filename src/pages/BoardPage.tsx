@@ -42,7 +42,8 @@ import {
   type PublishingDeps,
 } from "../features/boards/BoardSettings";
 import { PublishWindow } from "../features/boards/PublishWindow";
-import { ViewButton } from "../features/boards/ViewButton";
+import { ViewButton, ViewItems } from "../features/boards/ViewButton";
+import { PHONE, useMedia } from "../features/play/media";
 import { CopyRankingOffer } from "../features/boards/CopyRankingOffer";
 import { AS_COMMUNITY } from "../features/boards/ownList";
 import { publishProblemsOf } from "../features/boards/publish";
@@ -444,7 +445,12 @@ function OpenBoard({
   });
   const [boardDock, setBoardDock] = useState<Dock | null>(null);
   const [headSlot, setHeadSlot] = useState<HTMLElement | null>(null);
-  const frame = useMemo(() => ({ headSlot, report: setBoardDock }), [headSlot]);
+  // A phone's one-row head carries the count and Undo under the name (artboard 18).
+  const phoneHead = useMedia(PHONE);
+  const frame = useMemo(
+    () => ({ headSlot, report: setBoardDock, phoneHead }),
+    [headSlot, phoneHead],
+  );
   // The board's own scratch for the ranking board: nothing of it outlives the
   // page. Where the pool sits and the menu's hint are the device's, and stay.
   const [scratch] = useState(() => memoryStore());
@@ -1029,6 +1035,13 @@ function OpenBoard({
           <PlayButton {...play.button} />
           <Menu label={strings.boards.more} button={<Icon name="more_vert" />}>
             <>
+              {/* On a phone the header has no room for the view's button: its choices are here (artboard 18). */}
+              <ViewItems
+                mode={board.displayMode}
+                onMode={(mode) => keep(setDisplayMode(latest(), mode, now()))}
+                className="view-menu__phone"
+              />
+              <li className="menu__divider view-menu__phone" role="separator" />
               <ResetPoolItem
                 onReset={
                   view.rows.some((row) => row.length > 0)

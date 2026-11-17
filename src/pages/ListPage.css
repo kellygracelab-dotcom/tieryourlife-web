@@ -602,6 +602,56 @@
   .list-head__bar {
     order: 3;
   }
+
+  /*
+   * Somebody else's list (artboard 13): the title has its row, whole, with ⋮
+   * beside it; Play (filled) and Save my list (outlined), 48 high, take the
+   * row under it. Russian titles were cut to "Frie re…" beside the buttons.
+   */
+  .list-head--visitor > .list-head__tools {
+    display: contents;
+  }
+
+  .list-head--visitor .list-head__title {
+    font: 500 22px/28px var(--font);
+  }
+
+  .list-head--visitor > .list-head__tools > .menu {
+    align-self: flex-start;
+  }
+
+  /* An empty item the width of the row: what comes after it starts the next one. */
+  .list-head--visitor::before {
+    content: "";
+    flex-basis: 100%;
+    order: 1;
+    height: 0;
+    margin-block-end: -8px;
+  }
+
+  .list-head--visitor > .list-head__tools > .play-button,
+  .list-head--visitor > .list-head__tools > .list-head__save {
+    order: 1;
+    min-height: 48px;
+  }
+
+  .list-head--visitor > .list-head__tools > .btn.play-button {
+    padding: 0 20px 0 14px;
+    background: var(--link);
+    color: var(--on-link);
+  }
+
+  .list-head--visitor > .list-head__tools > .play-button:hover:not([aria-disabled="true"]) {
+    background: color-mix(in srgb, var(--link) 88%, var(--ink));
+  }
+
+  .list-head--visitor > .list-head__tools > .list-head__save {
+    display: inline-flex;
+    padding: 0 18px 0 14px;
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+    color: var(--ink);
+  }
 }
 
 .ranking-offer {

@@ -48,11 +48,35 @@ export function ViewButton({
         </>
       }
     >
-      <li className="view-menu__head" role="presentation">
+      <ViewItems mode={mode} onMode={onMode} />
+    </Menu>
+  );
+}
+
+/**
+ * The three ways to show a board as menu rows under "Display". The phone's
+ * board menu (⋮) carries them too, where its header has no room for the
+ * button (artboard 18); there they wear "view-menu__phone", shown only there.
+ */
+export function ViewItems({
+  mode,
+  onMode,
+  className,
+}: {
+  mode: DisplayMode;
+  onMode: (mode: DisplayMode) => void;
+  className?: string;
+}) {
+  return (
+    <>
+      <li
+        className={className === undefined ? "view-menu__head" : `view-menu__head ${className}`}
+        role="presentation"
+      >
         {strings.boards.display}
       </li>
       {DISPLAY_MODES.map((one) => (
-        <li key={one}>
+        <li key={one} className={className}>
           <button
             type="button"
             role="menuitemradio"
@@ -73,6 +97,6 @@ export function ViewButton({
           </button>
         </li>
       ))}
-    </Menu>
+    </>
   );
 }

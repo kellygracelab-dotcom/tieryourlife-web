@@ -14,9 +14,13 @@ const box = async (page: Page, selector: string) => {
 };
 
 const saveToMine = async (page: Page) => {
-  await page.getByLabel("More about this list").click();
-  // On Mine, the one button saves one's own version.
-  await page.getByRole("button", { name: "Save my list" }).click();
+  // On Mine, the one button saves one's own version: in the head where there is room, else in ⋮.
+  if (await page.locator(".list-head__save").isVisible()) {
+    await page.locator(".list-head__save").click();
+  } else {
+    await page.getByLabel("More about this list").click();
+    await page.getByRole("button", { name: "Save my list" }).click();
+  }
   await expect(page.locator(".snackbar")).toContainText("Saved to your lists.");
 };
 

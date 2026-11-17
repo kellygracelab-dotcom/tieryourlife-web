@@ -184,13 +184,28 @@
 }
 
 /*
- * A tier carries both of its colours, but the block wears the full-strength
- * one in either scheme with a white letter on it, as the app's dark mapping
- * has it; the row's tint starts from the same colour, mixed into the paper
- * in oklab, so dark rows do not turn to mud. The pastel stays with the list
- * for whatever wants a lighter touch.
+ * A tier carries both of its colours and wears the one of the scheme
+ * (artboard 17, as the app and the tier editor's Dark preview have it): the
+ * light one with a white letter, the dark one with a near-black letter. The
+ * row's tint starts from the same colour, mixed into the paper in oklab, so
+ * dark rows do not turn to mud. A list's pictures (Share as image, a cover's
+ * tier strips) are the same for everybody and keep the light colours.
  */
 .band {
   --band: var(--band-light);
   --band-base: var(--band-light);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .band {
+    --band: var(--band-dark, var(--band-light));
+    --band-base: var(--band-dark, var(--band-light));
+    --on-band: #121318;
+  }
+}
+
+:root[data-theme="dark"] .band {
+  --band: var(--band-dark, var(--band-light));
+  --band-base: var(--band-dark, var(--band-light));
+  --on-band: #121318;
 }

@@ -139,7 +139,8 @@ test("the old /new and a suggestion of the empty page make a list in its section
   await expect(title).toHaveValue("Restaurants");
   await title.fill("Ramen in Kyiv");
   await title.press("Enter");
-  await expect(page.getByText(/Food/)).toBeVisible();
+  // Its section: under the name, or on a phone's one-row head (artboard 18) only in the markup.
+  await expect(page.locator(".list-head__meta")).toHaveText("Food");
 });
 
 test("keeps a new board, and its settings say why a guest cannot publish it", async ({
@@ -336,8 +337,13 @@ test("saves somebody's list to my boards with one button, and only once", async 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(list.title);
 
   // On Author, the one button saves the author's arrangement; nothing asks whose.
-  await page.getByLabel("More about this list").click();
-  await page.getByRole("button", { name: "Save author’s list" }).click();
+  // A button in the head where there is room, a phone's included (artboard 13); else a line of ⋮.
+  if (await page.locator(".list-head__save").isVisible()) {
+    await page.locator(".list-head__save").click();
+  } else {
+    await page.getByLabel("More about this list").click();
+    await page.getByRole("button", { name: "Save author’s list" }).click();
+  }
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByText("Saved to your lists.")).toBeVisible();
 
