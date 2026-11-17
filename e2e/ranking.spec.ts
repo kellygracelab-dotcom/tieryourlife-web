@@ -378,7 +378,7 @@ test.describe("ranking a list on a phone", () => {
       "true",
     );
     // On a phone the tray's head names it; the bar has the one count (audit C2).
-    await expect(page.getByRole("heading", { level: 2 })).toHaveText("Cards left");
+    await expect(page.getByRole("heading", { level: 2 })).toHaveText(/^Cards left · \d+$/);
     await expect(page.getByText("2 of 3 placed")).toBeVisible();
   });
 
@@ -425,7 +425,7 @@ test.describe("ranking a list on a phone", () => {
         route.fulfill({ json: { ...list, id: "longlist1", itemCount: items.length, items } }),
       );
       await page.goto("/l/longlist1");
-      await expect(page.getByRole("heading", { level: 2 })).toHaveText("Cards left");
+      await expect(page.getByRole("heading", { level: 2 })).toHaveText(/^Cards left · \d+$/);
       await page.evaluate((dir) => {
         document.documentElement.dir = dir;
       }, direction);

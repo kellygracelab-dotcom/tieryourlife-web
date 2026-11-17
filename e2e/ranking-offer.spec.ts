@@ -56,9 +56,9 @@ test("asks once when the last card is placed, keeps nothing by itself, and not a
   await expect(offer(page)).toHaveCount(0);
   await page.goto("/b");
   await expect(page.getByRole("heading", { level: 1, name: "Your lists" })).toBeVisible();
-  // No list of one's own was made; Continue leads back to the begun one (audit B1).
+  // No list of one's own was made; a list with every card placed is not offered to Continue (designer 17.11).
   await expect(page.locator(".board-card", { hasText: source.title })).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Continue" })).toContainText(source.title);
+  await expect(page.getByRole("region", { name: "Continue" })).toHaveCount(0);
   await page.goto("/l/abc");
   await expect(page.getByText("20 of 20 placed")).toBeVisible();
   await expect(offer(page)).toHaveCount(0);
