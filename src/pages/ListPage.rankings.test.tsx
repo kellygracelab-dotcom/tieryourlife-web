@@ -303,6 +303,21 @@ describe("ListPage rankings", () => {
     expect(screen.getByRole("region", { name: "Their ranking" })).toBeInTheDocument();
   });
 
+  it("checks the arrangement on the board: one's own while Mine is shown (artboard 36)", async () => {
+    openAs();
+    await userEvent.click((await opened()).getByRole("button", { name: "Mine" }));
+    const sheet = await openSheet();
+    expect(await within(sheet).findByRole("button", { name: /^Reader/ })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(within(sheet).getByRole("button", { name: /^danylo/ })).not.toHaveAttribute(
+      "aria-current",
+    );
+    // The author's row stands apart from the readers' the menu counts.
+    expect(within(sheet).getByRole("separator")).toBeInTheDocument();
+  });
+
   it("asks before withdrawing one's own, in the sheet, and takes it down", async () => {
     openAs();
     const sheet = await openSheet();

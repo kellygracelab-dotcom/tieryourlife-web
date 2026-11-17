@@ -152,6 +152,15 @@ describe("drawShare", () => {
     expect(texts().some((text) => text.includes("more tier"))).toBe(false);
   });
 
+  it("writes a pictured card's name on its foot only while names are on (artboard 36)", async () => {
+    const off = recorder();
+    await drawShare(off.paint, data, async () => picture);
+    expect(off.texts().some((text) => text.startsWith("Film 0 "))).toBe(false);
+    const on = recorder();
+    await drawShare(on.paint, { ...data, names: true }, async () => picture);
+    expect(on.texts().some((text) => text.startsWith("Film 0 "))).toBe(true);
+  });
+
   it("names nobody on a list without an author", async () => {
     const { paint, texts } = recorder();
     await drawShare(paint, { ...data, authorName: "" }, async () => null);
@@ -444,7 +453,10 @@ describe("a board's picture", () => {
     expect(save).not.toHaveBeenCalled();
 
     // No sheet, or a refusal: the file is saved.
-    await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, null);
+    // A file saved is said, so the page can tell where the picture went.
+    await expect(
+      shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, null),
+    ).resolves.toBe("saved");
     share.mockRejectedValueOnce(new DOMException("too late", "NotAllowedError"));
     await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, sheet);
     expect(save).toHaveBeenCalledTimes(2);
@@ -482,6 +494,8 @@ describe("downloadShare", () => {
       items: list.items,
       rows: [[1], [0], []],
       address: "host/r/abcdefgh",
+      // Names on the pictures, as the board shows them unless turned off (artboard 36).
+      names: true,
     });
     expect(save).toHaveBeenCalledWith(blob, "oscar-films-2025-tieryourlife.png");
   });

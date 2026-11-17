@@ -43,6 +43,7 @@ import {
 } from "../features/boards/ownCards";
 import { useSaveToMine, type Shown } from "../features/boards/useSaveToMine";
 import { RankingsSheet } from "../features/community/RankingsSheet";
+import { shareBoard } from "../features/ranking/share";
 import { useHidden } from "../features/community/useHidden";
 import { useRankings } from "../features/community/useRankings";
 import { readKept } from "../features/ranking/kept";
@@ -526,6 +527,20 @@ function OpenList({
     theirs: true,
     games,
     notify: setNotice,
+    // The end window's ways on (artboard 35): Mine as a picture, and Mine among the list's rankings.
+    share: () => {
+      void shareBoard(
+        mineList,
+        loadPlacedDraft(localStorageStore, scopeOf(list)) ?? [],
+        `${window.location.origin}/l/${encodeURIComponent(list.id)}`,
+      ).then(
+        (how) => {
+          if (how === "saved") setNotice({ text: strings.boards.imageSaved });
+        },
+        () => setNotice({ text: strings.rank.downloadFailed }),
+      );
+    },
+    rankings: { signedIn: account?.kind === "signedIn", show: () => void showToOthers() },
     // The game ends on Mine, its result one step of the board's history:
     // Undo puts Mine back as it was before the game, and again brings the
     // game's arrangement back.
@@ -782,12 +797,28 @@ function OpenList({
           <h1 className="list-head__title">
             <bdi>{list.title}</bdi>
           </h1>
-          {/* Its section and how many cards it has: "Anime · 25 cards" (artboard 21). */}
+          {/* Its section and how many cards it has: "Anime · 25 cards" (artboard 21),
+              then how many others ranked it, a way into their rankings (artboard 36). */}
           <p className="list-head__meta list-head__count">
             {[
               sectionName(list.category, knownSections),
               plural(strings.card.items, list.itemCount),
             ].join(" · ")}
+            {rankingsEntry !== null && rankingsEntry.count > 0 && (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  className="list-head__rankings"
+                  aria-haspopup="dialog"
+                  onClick={rankingsEntry.open}
+                >
+                  {fill(strings.list.rankingsLink, {
+                    rankings: plural(strings.card.rankings, rankingsEntry.count),
+                  })}
+                </button>
+              </>
+            )}
           </p>
           {/* One's own anonymous list says it is one's own, and that nobody else sees so. */}
           {own && list.anonymous === true && (
@@ -892,6 +923,10 @@ function OpenList({
               onRows={(rows) => {
                 // A move, not the board drawn again (it says its rows as it comes).
                 if (!sameRows(rows, mineRows ?? [])) acted();
+                // Undo took the game back: the offer it brought goes with it (QA 25).
+                if (afterGame && mineBefore?.toggles === true && sameRows(rows, mineBefore.rows)) {
+                  setAfterGame(false);
+                }
                 // Nothing placed in Mine: Play starts from the author's, as before.
                 setMineRows(
                   rows.some((row) => row.length > 0) ||
@@ -940,6 +975,7 @@ function OpenList({
           list={list}
           rankings={rankings}
           chosen={chosen?.uid ?? null}
+          showingMine={shown === "mine"}
           onChoose={choose}
           onWithdraw={() => withdraw()}
           onClose={() => setSheet(false)}

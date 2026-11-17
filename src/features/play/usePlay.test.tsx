@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { memoryStore, type KeyValueStore } from "../../lib/storage";
@@ -40,6 +40,8 @@ interface PageProps {
   onApply?: PlayOptions["onApply"];
   notify?: (notice: SnackbarNotice) => void;
   theirs?: boolean;
+  share?: PlayOptions["share"];
+  rankings?: PlayOptions["rankings"];
 }
 
 function Page({
@@ -50,12 +52,16 @@ function Page({
   onApply = () => undefined,
   notify = () => undefined,
   theirs,
+  share,
+  rankings,
 }: PageProps) {
   const play = usePlay(boardKey, cards, tiers, store, {
     title: "Films",
     theirs,
     onApply,
     notify,
+    share,
+    rankings,
     now: () => NOW,
     random: () => 0.5,
   });
@@ -107,8 +113,7 @@ describe("Play on a page", () => {
 
   it("plays a game from the picker to the board", async () => {
     const store = memoryStore();
-    const takeBack = vi.fn();
-    const onApply = vi.fn<PlayOptions["onApply"]>(() => takeBack);
+    const onApply = vi.fn<PlayOptions["onApply"]>();
     const notify = vi.fn();
     render(<Page store={store} onApply={onApply} notify={notify} />);
 
@@ -131,19 +136,32 @@ describe("Play on a page", () => {
     expect(rows).toHaveLength(3);
     expect(rows.flat().sort()).toEqual(["c0", "c1", "c2"]);
     expect(played).toEqual({ kind: "hill", cards: 3, duels: 2 });
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(store.read(playKey("b1"))).toBeNull();
 
-    const receipt = notify.mock.lastCall![0] as SnackbarNotice;
-    expect(receipt.text).toBe("List arranged from 2 duels");
-    act(() => receipt.action!.onClick());
-    expect(takeBack).toHaveBeenCalled();
+    // The result in a window over the board (artboard 35), not a corner's notice.
+    const ready = await screen.findByRole("dialog", { name: "Your ranking is ready" });
+    expect(within(ready).getByText("3 cards placed from 2 duels")).toBeInTheDocument();
+    expect(within(ready).getByRole("button", { name: "See my list" })).toHaveFocus();
+    expect(notify).not.toHaveBeenCalled();
+    expect(screen.getByText("playing")).toBeInTheDocument();
+    await userEvent.click(within(ready).getByRole("button", { name: "See my list" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText("playing")).not.toBeInTheDocument();
   });
 
-  it("says what a game did with no Undo of its own when the board's Undo takes it back", async () => {
-    const notify = vi.fn();
-    const onApply = vi.fn<PlayOptions["onApply"]>(() => undefined);
-    render(<Page store={memoryStore()} notify={notify} onApply={onApply} theirs />);
+  it("ends on the result's tiers and the ways on: a picture, the rankings, another game", async () => {
+    const onApply = vi.fn<PlayOptions["onApply"]>();
+    const share = vi.fn();
+    const show = vi.fn();
+    const { rerender } = render(
+      <Page
+        store={memoryStore()}
+        onApply={onApply}
+        theirs
+        share={share}
+        rankings={{ signedIn: false, show }}
+      />,
+    );
     await userEvent.click(playButton());
     expect(
       screen.getByText("The result goes into Mine. The author’s ranking doesn’t change."),
@@ -151,8 +169,44 @@ describe("Play on a page", () => {
     await pickGame(/Bracket/);
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     await pickLeft(2);
-    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
-    expect(notify).toHaveBeenCalledExactlyOnceWith({ text: "List arranged from 2 duels" });
+    let ready = await screen.findByRole("dialog", { name: "Your ranking is ready" });
+    // The first tiers with cards in them, by their letters.
+    const [rows] = onApply.mock.lastCall!;
+    const filled = TIERS.filter((_, index) => (rows[index] ?? []).length > 0);
+    for (const one of filled.slice(0, 3)) {
+      expect(within(ready).getByText(one.label)).toBeInTheDocument();
+    }
+    // A guest is asked to sign in to show it.
+    await userEvent.click(
+      within(ready).getByRole("button", { name: "Sign in to show it in Rankings" }),
+    );
+    expect(show).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    rerender(
+      <Page
+        store={memoryStore()}
+        onApply={onApply}
+        theirs
+        share={share}
+        rankings={{ signedIn: true, show }}
+      />,
+    );
+    await userEvent.click(playButton());
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await pickLeft(2);
+    ready = await screen.findByRole("dialog", { name: "Your ranking is ready" });
+    expect(within(ready).getByRole("button", { name: "Show in Rankings" })).toBeInTheDocument();
+    await userEvent.click(within(ready).getByRole("button", { name: "Share as image" }));
+    expect(share).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(playButton());
+    await userEvent.click(screen.getByRole("button", { name: "Start" }));
+    await pickLeft(2);
+    ready = await screen.findByRole("dialog", { name: "Your ranking is ready" });
+    // Play again: the picker, for the next game.
+    await userEvent.click(within(ready).getByRole("button", { name: "Play again" }));
+    expect(await screen.findByRole("button", { name: "Start" })).toBeInTheDocument();
   });
 
   it("puts nothing anywhere when every duel was skipped, and says so", async () => {
@@ -327,7 +381,7 @@ describe("Play on a page", () => {
     await userEvent.click(screen.getByRole("button", { name: "Start" }));
     await pickLeft(2);
     await waitFor(() => expect(onApply).toHaveBeenCalled());
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await userEvent.click(await screen.findByRole("button", { name: "See my list" }));
     await userEvent.click(playButton());
     expect(screen.getByText(inSummary("4 cards"))).toBeInTheDocument();
   });

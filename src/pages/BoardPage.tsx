@@ -554,6 +554,7 @@ function OpenBoard({
     title: board?.title || strings.boards.untitled,
     games,
     notify: setNotice,
+    share: () => void shareBoard(),
     // The result replaces the arrangement, one step of the board's history.
     onApply: (rows) => {
       const before = repository.get(uid) ?? board;
@@ -863,7 +864,13 @@ function OpenBoard({
       listId === null
         ? window.location.origin
         : `${window.location.origin}/l/${encodeURIComponent(listId)}`,
-    ).catch(() => setNotice({ text: strings.rank.downloadFailed }));
+    ).then(
+      // A computer's download shows next to nothing: the page says the picture is saved.
+      (how) => {
+        if (how === "saved") setNotice({ text: strings.boards.imageSaved });
+      },
+      () => setNotice({ text: strings.rank.downloadFailed }),
+    );
 
   // A picture belongs to an account: a guest is asked to sign in at the first
   // one, and the add box sends the rest only once that one is in.

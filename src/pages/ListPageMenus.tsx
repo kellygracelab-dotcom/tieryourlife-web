@@ -17,6 +17,7 @@ import { fill, formatCount, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { AboutPicture } from "../features/tierboard/AboutPicture";
 import { ResetPoolItem } from "../features/tierboard/ResetPoolItem";
+import { CardNamesItem } from "../features/boards/ViewButton";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
@@ -267,6 +268,7 @@ function VisitorMenu({
           <RankingsItem rankings={rankings} />
           <ShowMineItem showMine={showMine} />
           {resetMine !== undefined && <ResetPoolItem onReset={resetMine} />}
+          <CardNamesItem plain />
           {author !== null && (
             <li>
               <Link
@@ -423,6 +425,7 @@ function AuthorMenu({
       <Menu label={strings.list.more} button={<Icon name="more_vert" />}>
         <>
           <RankingsItem rankings={rankings} />
+          <CardNamesItem plain />
           {/* Held, the link answers nobody else yet: it is not handed out. */}
           {list.underReview !== true && <LinkItems list={list} notify={notify} />}
           <li>

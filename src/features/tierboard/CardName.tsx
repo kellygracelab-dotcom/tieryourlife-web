@@ -58,3 +58,18 @@ export function CardName({ title, board, wide = false, fit = fitShared }: CardNa
     </span>
   );
 }
+
+/**
+ * A pictured card's name along the picture's foot, white on a shade, two
+ * lines at most (artboard 36): which picture is History and which is Art reads
+ * without a hover, on a phone too. Hidden where the reader turned names off
+ * (cardNames.ts); the button's own label already names it to a screen reader.
+ */
+export function TileCaption({ title }: { title: string }) {
+  if (title.trim() === "") return null;
+  return (
+    <span className="tile__caption" aria-hidden="true" dir="auto">
+      {title}
+    </span>
+  );
+}

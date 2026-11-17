@@ -61,8 +61,8 @@ import { useDock } from "./useDock";
 import { useHeadHeight } from "./useHeadHeight";
 import { useFixedDock } from "./useFixedDock";
 import { TRAY_DOTS, useTray } from "./useTray";
-import { CardName } from "./CardName";
-import { TierLabel } from "./TierLabel";
+import { CardName, TileCaption } from "./CardName";
+import { TierCaption, TierLabel } from "./TierLabel";
 import { useBoardSize } from "./useBoardSize";
 import type { BoardSize } from "./nameFit";
 import "./board.css";
@@ -346,13 +346,16 @@ const Tile = memo(function Tile({
         }}
       >
         {pictured && card.imageUrl !== null ? (
-          <FocusedPicture
-            {...sizedFor(card.imageUrl, TILE_WIDTH)}
-            focus={card.pictureFocus}
-            loading="lazy"
-            draggable={false}
-            onError={onBroken}
-          />
+          <>
+            <FocusedPicture
+              {...sizedFor(card.imageUrl, TILE_WIDTH)}
+              focus={card.pictureFocus}
+              loading="lazy"
+              draggable={false}
+              onError={onBroken}
+            />
+            <TileCaption title={card.title} />
+          </>
         ) : (
           <CardName title={card.title} board={board} wide />
         )}
@@ -1609,7 +1612,7 @@ const TierRow = memo(function TierRow({
         }
       >
         <TierLabel label={meta.label} caption={meta.caption} band={board} />
-        {meta.caption !== null && <bdi className="tier__caption">{meta.caption}</bdi>}
+        {meta.caption !== null && <TierCaption caption={meta.caption} band={board} />}
         {armed && selectedTitle !== null && (
           <button
             type="button"

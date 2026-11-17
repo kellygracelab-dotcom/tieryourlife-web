@@ -52,3 +52,43 @@ export function TierLabel({
     </span>
   );
 }
+
+/** The smallest a caption goes before its longest word is broken after all. */
+const CAPTION_FLOOR = 8;
+
+/**
+ * A tier's caption under its letter, broken between words only: a word wider
+ * than the band makes the caption's type smaller, down to a floor, rather
+ * than break as "Masterpiece / s"; only a word too long even then is broken.
+ */
+export function TierCaption({
+  caption,
+  band,
+  measure = measureShared,
+}: {
+  caption: string;
+  band: BoardSize | "preview";
+  measure?: Measure;
+}) {
+  const type = BAND_TYPE[band];
+  const start = type.caption.size;
+  const words = caption.split(/\s+/).filter((word) => word !== "");
+  const widest = Math.max(0, ...words.map((word) => measure(word, start)));
+  const size =
+    widest <= type.width
+      ? start
+      : Math.max(CAPTION_FLOOR, Math.floor((start * type.width) / widest));
+  const broken = widest * (size / start) > type.width;
+  return (
+    <bdi
+      className="tier__caption"
+      style={
+        size === start
+          ? undefined
+          : { fontSize: size, lineHeight: 1.3, overflowWrap: broken ? "anywhere" : "normal" }
+      }
+    >
+      {caption}
+    </bdi>
+  );
+}

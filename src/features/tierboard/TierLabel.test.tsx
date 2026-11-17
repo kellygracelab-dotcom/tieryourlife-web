@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { estimateMeasure } from "../../lib/textFit";
 import { BAND_TYPE, fitLabel } from "./bandFit";
-import { TierLabel } from "./TierLabel";
+import { TierCaption, TierLabel } from "./TierLabel";
 
 // Letters 0.6 of the size wide, as Roboto's are.
 const measure = estimateMeasure;
@@ -47,5 +47,30 @@ describe("TierLabel", () => {
     const label = screen.getByText("Supercalifragilisticexpialidocious");
     expect(label.style.fontSize).toBe(`${BAND_TYPE.medium.floor}px`);
     expect(label.style.hyphens).toBe("auto");
+  });
+});
+
+describe("TierCaption", () => {
+  // Every letter as wide as half the type's size.
+  const halves = (text: string, size: number) => text.length * size * 0.5;
+
+  it("keeps a caption whose every word fits at the band's size", () => {
+    render(<TierCaption caption="so good" band="medium" measure={halves} />);
+    expect(screen.getByText("so good")).not.toHaveAttribute("style");
+  });
+
+  it("makes a word wider than the band smaller instead of breaking it (QA 24)", () => {
+    render(<TierCaption caption="Masterpieces" band="medium" measure={halves} />);
+    const caption = screen.getByText("Masterpieces");
+    // 66 at 11 on a 64 band; 60 at 10 fits it whole.
+    expect(caption.style.fontSize).toBe("10px");
+    expect(caption.style.overflowWrap).toBe("normal");
+  });
+
+  it("breaks only a word too long even at the floor", () => {
+    render(<TierCaption caption="Supercalifragilistic" band="medium" measure={halves} />);
+    const caption = screen.getByText("Supercalifragilistic");
+    expect(caption.style.fontSize).toBe("8px");
+    expect(caption.style.overflowWrap).toBe("anywhere");
   });
 });

@@ -5,8 +5,8 @@ import type { PublishedItem, PublishedTier } from "../../api/types";
 import { plural, strings } from "../../strings";
 import { DOUBLE_TAP_MS } from "./drag";
 import { AboutPicture, hasAbout, openPage, pageOf, PictureMenu, type Anchor } from "./AboutPicture";
-import { CardName } from "./CardName";
-import { TierLabel } from "./TierLabel";
+import { CardName, TileCaption } from "./CardName";
+import { TierCaption, TierLabel } from "./TierLabel";
 import { useBoardSize } from "./useBoardSize";
 import type { BoardSize } from "./nameFit";
 import "./board.css";
@@ -42,13 +42,16 @@ function Tile({
   const className = pictured ? "tile" : "tile tile--name";
   const art =
     pictured && item.imageUrl !== null ? (
-      <FocusedPicture
-        {...sizedFor(item.imageUrl, 64)}
-        focus={item.pictureFocus}
-        alt={item.title}
-        loading="lazy"
-        onError={onBroken}
-      />
+      <>
+        <FocusedPicture
+          {...sizedFor(item.imageUrl, 64)}
+          focus={item.pictureFocus}
+          alt={item.title}
+          loading="lazy"
+          onError={onBroken}
+        />
+        <TileCaption title={item.title} />
+      </>
     ) : (
       <CardName title={item.title} board={board} wide />
     );
@@ -150,7 +153,7 @@ export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoard
         >
           <div className="tier__band">
             <TierLabel label={tier.label} caption={tier.caption} band={board} />
-            {tier.caption !== null && <bdi className="tier__caption">{tier.caption}</bdi>}
+            {tier.caption !== null && <TierCaption caption={tier.caption} band={board} />}
           </div>
           <ul className="tier__items" aria-label={tier.label}>
             {(rows[index] ?? []).map(tileOf)}
