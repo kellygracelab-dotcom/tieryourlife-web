@@ -4,7 +4,7 @@ import { useBackLayer } from "../../ui/backLayers";
 import { Icon } from "../../ui/Icon";
 import type { IconName } from "../../ui/icons";
 import { placed, type ScreenPoint } from "../tierboard/CardMenu";
-import "./listMenu.css";
+import "./boards.css";
 
 export interface ListMenuEntry {
   key: string;
