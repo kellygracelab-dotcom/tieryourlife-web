@@ -162,8 +162,8 @@ const general = (item: CatalogueItem): boolean => item.id.startsWith("wikidata:"
 export const SERIES_OVER_NAME = 10;
 
 /** The most rated of these, or the catalogue's first where it says nothing of that. */
-const best = (cards: readonly CatalogueItem[]): CatalogueItem | null =>
-  cards.reduce<CatalogueItem | null>(
+const best = <T extends CatalogueItem>(cards: readonly T[]): T | null =>
+  cards.reduce<T | null>(
     (most, item) =>
       most === null || (item.popularity ?? -1) > (most.popularity ?? -1) ? item : most,
     null,
@@ -217,12 +217,12 @@ export const plainName = (name: string): string =>
  * association football, and "Muse (Q22151)" the band that a search by the
  * name does not reach.
  */
-export function pick(
+export function pick<T extends CatalogueItem>(
   wanted: Wanted,
-  found: readonly CatalogueItem[],
+  found: readonly T[],
   preferred: Preferred = null,
   loose = false,
-): CatalogueItem | null {
+): T | null {
   if (wanted.id !== undefined) return found.find((item) => item.id === wanted.id) ?? null;
   const name = plainName(wanted.title);
   const year = wanted.year;
@@ -274,8 +274,8 @@ export { BUSY_FALLBACK_MS, BUSY_TRIES, BUSY_WAIT_MAX_MS, busyUntil } from "../..
  * too busy to answer (`busy`) until when (`retryAt`). A plain list is cards
  * with every catalogue answering.
  */
-export interface LookedUp {
-  items: CatalogueItem[];
+export interface LookedUp<T extends CatalogueItem = CatalogueItem> {
+  items: T[];
   busy?: readonly string[];
   retryAt?: number;
 }
@@ -322,8 +322,8 @@ const pause = (ms: number): Promise<void> =>
   });
 
 /** One search for a name, as the paste reads it. */
-interface Searched {
-  items: CatalogueItem[];
+interface Searched<T extends CatalogueItem> {
+  items: T[];
   busy: readonly string[];
   retryAt?: number | undefined;
   /** Nothing was found while a catalogue it needs was busy (503 SOURCE_BUSY). */
@@ -331,8 +331,8 @@ interface Searched {
 }
 
 /** What the catalogue gave a name in the end, and whether a busy one was given up on. */
-interface Found {
-  items: CatalogueItem[];
+interface Found<T extends CatalogueItem> {
+  items: T[];
   stayedBusy?: true;
 }
 
@@ -344,6 +344,16 @@ export interface PastedCard {
   key?: string;
   credit?: string | null;
   attribution?: PictureAttribution;
+}
+
+/**
+ * Where a pasted card's picture came from: the catalogue's answer it took, if
+ * any, and why none came, if none did. A picture from the line's own link is
+ * neither.
+ */
+export interface PastedFrom<T extends CatalogueItem = CatalogueItem> {
+  found: T | null;
+  missing: MissReason | null;
 }
 
 /**
@@ -376,10 +386,10 @@ export interface PasteLimited {
  * Past `BUSY_TRIES` or `BUSY_WAIT_MAX_MS`, the name takes what was found, or
  * goes alone, and `onMissing` says the site stayed busy.
  */
-export async function cardsFor(
+export async function cardsFor<T extends CatalogueItem = CatalogueItem>(
   wanted: readonly Wanted[],
-  lookup: (query: string) => Promise<CatalogueItem[] | LookedUp>,
-  onCard: (card: PastedCard, done: number) => void,
+  lookup: (query: string) => Promise<T[] | LookedUp<T>>,
+  onCard: (card: PastedCard, done: number, from: PastedFrom<T>) => void,
   {
     going = () => true,
     preferred = null,
@@ -413,7 +423,7 @@ export async function cardsFor(
   // is the only answer: nothing depends on what else carries the name.
   // None at all once the searches ran out: undefined, not an empty answer.
   // A search that found nothing while a catalogue was busy is `unknown`.
-  const ask = async (one: Wanted): Promise<Searched | undefined> => {
+  const ask = async (one: Wanted): Promise<Searched<T> | undefined> => {
     if (limit !== null) return undefined;
     try {
       const answer = await lookup(
@@ -436,10 +446,10 @@ export async function cardsFor(
   // one to take, or when nothing could be found without it. One that says
   // nothing may still have been busy: the one this name is for gets a second
   // question before the name goes alone.
-  const answerFor = async (one: Wanted): Promise<Found | undefined> => {
+  const answerFor = async (one: Wanted): Promise<Found<T> | undefined> => {
     const needed = one.id === undefined ? preferred : "wikidata";
     const waits = one.id === undefined ? waitFor : (catalogue: string) => catalogue === "wikidata";
-    const waiting = (answer: Searched) => answer.unknown || answer.busy.some(waits);
+    const waiting = (answer: Searched<T>) => answer.unknown || answer.busy.some(waits);
     let first = await ask(one);
     for (let tries = 1; first !== undefined && waiting(first); tries++) {
       if (!(await waitedOut(first.retryAt, tries))) {
@@ -500,7 +510,7 @@ export async function cardsFor(
       return refused;
     }
   };
-  type Answer = Found | undefined | PastedCard | MissReason;
+  type Answer = Found<T> | undefined | PastedCard | MissReason;
   const answerOf = (one: Wanted): Promise<Answer> =>
     one.picture === undefined ? answerFor(one) : linked(one, one.picture);
 
@@ -521,21 +531,24 @@ export async function cardsFor(
       const done = start + index + 1;
       if (typeof answer === "string") {
         onMissing?.(one.title, answer);
-        onCard({ title: one.title, imageUrl: null }, done);
+        onCard({ title: one.title, imageUrl: null }, done, { found: null, missing: answer });
         return;
       }
       if (answer !== undefined && !("items" in answer)) {
-        onCard(answer, done);
+        onCard(answer, done, { found: null, missing: null });
         return;
       }
       if (answer === undefined) unanswered++;
       const card = pick(one, answer?.items ?? [], preferred, loose);
-      if (card === null) {
-        onMissing?.(
-          one.title,
-          answer === undefined ? "searchLimit" : answer.stayedBusy === true ? "busy" : "notFound",
-        );
-      }
+      const missing: MissReason | null =
+        card !== null
+          ? null
+          : answer === undefined
+            ? "searchLimit"
+            : answer.stayedBusy === true
+              ? "busy"
+              : "notFound";
+      if (missing !== null) onMissing?.(one.title, missing);
       onCard(
         card === null
           ? { title: one.title, imageUrl: null }
@@ -549,6 +562,7 @@ export async function cardsFor(
                 : { attribution: card.attribution }),
             },
         done,
+        { found: card, missing },
       );
     });
   }
