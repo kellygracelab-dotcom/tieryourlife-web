@@ -280,6 +280,7 @@ const tr: Translation = {
     animals: "Hayvanlar",
     fromSources: "Kaynak: {sources}",
     webSource: "web",
+    searchedAs: "{text} için sonuçlar gösteriliyor",
     nothingIn: "{scope}: bu adla bir şey yok.",
     lookEverywhere: "Her yerde ara",
     webDailyLimit:
@@ -1425,6 +1426,15 @@ const tr: Translation = {
       book: "Bir kitap kapağı — doğru mu?",
       animal: "Bir hayvan fotoğrafı — doğru mu?",
       thing: "Bu adda başka bir şey — doğru mu?",
+    },
+    reason: {
+      namesakes: "Bu adla başkaları da var — bu mu?",
+      otherName: "Başka bir adla bulundu — doğru mu?",
+      spelling: "Başka bir yazımla bulundu — doğru mu?",
+      otherKind: "Bu listedeki türden bir resim değil — doğru mu?",
+      noSection: "Listenin bölümü yok, kontrol edilemiyor",
+      web: "Webden bir resim — doğru mu?",
+      unsure: "Bunun o olduğundan emin değiliz — doğru mu?",
     },
     nothingFound: "Bu adla bir şey bulunamadı",
     fromLink: "Bağlantınızdan",

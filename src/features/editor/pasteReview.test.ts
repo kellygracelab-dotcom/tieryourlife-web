@@ -7,6 +7,7 @@ import {
   needsLook,
   reviewOrder,
   rowDoubt,
+  rowReason,
   summaryOf,
   type PasteRow,
 } from "./pasteReview";
@@ -118,5 +119,37 @@ describe("the check's rows", () => {
     expect(summaryOf(rows, "sport")).toEqual({ names: 6, right: 3, doubtful: 1, none: 2 });
     expect(summaryOf(rows, null)).toEqual({ names: 6, right: 4, doubtful: 0, none: 2 });
     expect(summaryOf([], "sport")).toEqual({ names: 0, right: 0, doubtful: 0, none: 0 });
+  });
+});
+
+describe("a picture the search was not sure of", () => {
+  const judged = (
+    index: number,
+    confidence: "high" | "medium" | "low",
+    doubts?: ("namesakes" | "otherName" | "otherKind")[],
+    more: Partial<PasteRow> = {},
+  ) =>
+    row(index, {
+      origin: { ...origin("movie"), confidence, ...(doubts === undefined ? {} : { doubts }) },
+      ...more,
+    });
+
+  it("needs a look unless the search was sure, and says its first doubt", () => {
+    expect(rowReason(judged(0, "high"))).toBeNull();
+    expect(rowReason(judged(1, "medium", ["otherName", "namesakes"]))).toBe("otherName");
+    expect(rowReason(judged(2, "low"))).toBe("unsure");
+    expect(rowReason(judged(3, "low", ["namesakes"], { chosen: true }))).toBeNull();
+    expect(rowReason(row(4))).toBeNull();
+    expect(rowReason(row(5, { origin: "link" }))).toBeNull();
+    // The search's word stands for the kind it found: a movie in Sport is fine when it is sure.
+    expect(rowDoubt(judged(6, "high"), "sport")).toBeNull();
+  });
+
+  it("counts what it doubted as needing a look, wherever the list is filed", () => {
+    const rows = [judged(0, "high"), judged(1, "medium", ["otherKind"]), judged(2, "low"), none(3)];
+    expect(summaryOf(rows, "sport")).toEqual({ names: 4, right: 1, doubtful: 2, none: 1 });
+    expect(summaryOf(rows, null)).toEqual({ names: 4, right: 1, doubtful: 2, none: 1 });
+    expect(needsLook(judged(1, "medium"), null)).toBe(true);
+    expect(reviewOrder(rows, null).map((one) => one.index)).toEqual([1, 2, 3, 0]);
   });
 });

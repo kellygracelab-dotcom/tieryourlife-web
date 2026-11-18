@@ -116,6 +116,17 @@ describe("AddCardBox", () => {
     });
   });
 
+  it("says what it searched instead when nothing matched the words as typed", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page([picture("tmdb:1", { title: "Dune", source: "tmdb", kind: "movie" })], {
+        searchedAs: { text: "Dune", how: "spelling" },
+      }),
+    );
+    setup({ find, category: "film_tv" });
+    await typeAndWait("duen");
+    expect(screen.getByText("Showing results for Dune")).toBeInTheDocument();
+  });
+
   it("names IGDB by IGDB.com under its covers, as its terms ask", async () => {
     const find = vi.fn<FindPictures>(async () =>
       page([picture("igdb:1942", { title: "The Witcher 3", source: "igdb", kind: "game" })]),

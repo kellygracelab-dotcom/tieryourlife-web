@@ -24,6 +24,7 @@ import {
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import type { PublishingDeps } from "../features/boards/BoardSettings";
 import type { Share } from "../features/ranking/share";
+import type { FindPictures } from "../features/editor/usePictures";
 import { TIER_PRESETS } from "../features/editor/model";
 import { MENU_COUNT_KEY } from "../features/tierboard/RankingBoard";
 import { TIER_HOLD_MS } from "../features/tierboard/useTierMove";
@@ -92,6 +93,7 @@ const open = (
     account?: Session["account"];
     upload?: Upload;
     linkWeb?: LinkKeep;
+    find?: FindPictures;
     signIn?: Session["signIn"];
     store?: SectionsStore;
     house?: HouseSending;
@@ -110,7 +112,10 @@ const open = (
           <BoardPage
             repository={repository}
             now={() => ++clock}
-            find={() => Promise.resolve({ items: [], hasMore: false, notices: [], rest: false })}
+            find={
+              extra.find ??
+              (() => Promise.resolve({ items: [], hasMore: false, notices: [], rest: false }))
+            }
             upload={extra.upload ?? (() => Promise.reject(new Error("no uploads here")))}
             linkWeb={extra.linkWeb ?? (() => Promise.reject(new Error("no links here")))}
             publishing={extra.publishing ?? noPublishing}
@@ -2351,5 +2356,54 @@ describe("BoardPage: the editor's credits on a house list", () => {
     const settings = await openCover();
     expect(settings.getByText("One picture, the whole cover")).toBeInTheDocument();
     expect(settings.queryByRole("region", { name: "About the cover picture" })).toBeNull();
+  });
+});
+
+describe("a picture search from the list", () => {
+  it("says the list's section always, and its topic once the backend knows it", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({
+      ...filmBoard(),
+      category: "film_tv",
+      topic: { id: "space-films", name: "Space films" },
+    });
+    const find = vi.fn<FindPictures>(async () => ({
+      items: [],
+      hasMore: false,
+      notices: [],
+      rest: false,
+    }));
+    open(repository, "/b/films", { find });
+    fireEvent.change(await screen.findByRole("textbox", { name: "Add a card" }), {
+      target: { value: "dune" },
+    });
+    await waitFor(() => expect(find).toHaveBeenCalled());
+    expect(find.mock.calls[0]?.[0]).toMatchObject({
+      q: "dune",
+      section: "film_tv",
+      topic: "space-films",
+    });
+  });
+
+  it("sends no topic the backend has not seen yet", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save({
+      ...filmBoard(),
+      category: "film_tv",
+      topic: { id: null, name: "Space films" },
+    });
+    const find = vi.fn<FindPictures>(async () => ({
+      items: [],
+      hasMore: false,
+      notices: [],
+      rest: false,
+    }));
+    open(repository, "/b/films", { find });
+    fireEvent.change(await screen.findByRole("textbox", { name: "Add a card" }), {
+      target: { value: "dune" },
+    });
+    await waitFor(() => expect(find).toHaveBeenCalled());
+    expect(find.mock.calls[0]?.[0]).toMatchObject({ section: "film_tv" });
+    expect(find.mock.calls[0]?.[0]).not.toHaveProperty("topic");
   });
 });

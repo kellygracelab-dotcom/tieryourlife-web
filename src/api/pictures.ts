@@ -64,6 +64,31 @@ export const PICTURE_KINDS = [
 ] as const;
 export type PictureKind = (typeof PICTURE_KINDS)[number];
 
+/** How sure the backend is that a hit is what the typed name means in this list (picture search, stage 1). */
+export type PictureConfidence = "high" | "medium" | "low";
+const CONFIDENCES: readonly string[] = ["high", "medium", "low"];
+
+/**
+ * Why a hit is not `high`, so the person is told what to look at. A word this
+ * site does not know yet is no reason it can name, and is left out.
+ */
+export type PictureDoubt =
+  "namesakes" | "otherName" | "spelling" | "otherKind" | "noSection" | "web";
+const DOUBTS: readonly string[] = [
+  "namesakes",
+  "otherName",
+  "spelling",
+  "otherKind",
+  "noSection",
+  "web",
+];
+
+/** How a search that found nothing as typed was tried again: a cut tail, the other keyboard, a spelling. */
+export interface SearchedAs {
+  text: string;
+  how: string;
+}
+
 export interface FoundPicture extends CatalogueItem {
   imageUrl: string;
   /** A smaller copy for the grid; null when the picture is drawn from imageUrl itself. */
@@ -74,6 +99,12 @@ export interface FoundPicture extends CatalogueItem {
   credit: string | null;
   /** Where the picture came from and whom it names; null from a backend that says nothing of it. */
   attribution: PictureAttribution | null;
+  /** The name of it that matches what was typed, when that is not its title: "Kyiv" for "Киев". */
+  matchedName?: string;
+  /** On the first page of a backend from stage 1; absent from an older one and on later pages. */
+  confidence?: PictureConfidence;
+  /** Why it is not `high`, the words this site knows only. */
+  doubts?: PictureDoubt[];
 }
 
 /** A quiet line over the results: the web is done for today, or for now. */
@@ -94,6 +125,8 @@ export interface PicturePage {
   busy?: string[];
   /** When the busy catalogues may be asked again (epoch ms); only beside `busy`. */
   retryAt?: number;
+  /** Nothing matched the words as typed; these hits are for what was searched instead. */
+  searchedAs?: SearchedAs;
 }
 
 export interface PictureAsk {
@@ -105,6 +138,13 @@ export interface PictureAsk {
   web: boolean;
   /** Only the catalogues that answer in a second or two, never the web; `rest` says whether the whole search is worth asking. */
   quick?: boolean;
+  /**
+   * The list's section (its `category`), whatever the scope: the backend puts
+   * the kind of picture the list holds first, and says how sure it is.
+   */
+  section?: string;
+  /** The list's topic id, when it has one: cars, plants, clubs say more than Other does. */
+  topic?: string;
 }
 
 /** The backend refuses fewer letters than this. */
@@ -140,7 +180,27 @@ export function pictureOf(raw: unknown): FoundPicture | null {
     item.popularity >= 0
       ? { popularity: item.popularity }
       : {}),
+    ...(typeof item.matchedName === "string" && item.matchedName.trim() !== ""
+      ? { matchedName: item.matchedName }
+      : {}),
+    ...(oneOf(CONFIDENCES as readonly PictureConfidence[], item.confidence)
+      ? { confidence: item.confidence }
+      : {}),
+    ...(Array.isArray(item.doubts)
+      ? {
+          doubts: item.doubts.filter((one): one is PictureDoubt => DOUBTS.includes(one as string)),
+        }
+      : {}),
   };
+}
+
+/** What a second attempt searched instead, or null for anything that is not one. */
+function searchedAsOf(value: unknown): SearchedAs | null {
+  if (value === null || typeof value !== "object") return null;
+  const { text, how } = value as Record<string, unknown>;
+  return typeof text === "string" && text.trim() !== ""
+    ? { text, how: typeof how === "string" ? how : "" }
+    : null;
 }
 
 export async function searchPictures(
@@ -154,6 +214,7 @@ export async function searchPictures(
     rest?: unknown;
     busy?: unknown;
     retryAt?: unknown;
+    searchedAs?: unknown;
   }>("GET", "/lists/pictures", {
     query: {
       q: ask.q.trim().slice(0, MAX_PICTURE_QUERY),
@@ -162,8 +223,11 @@ export async function searchPictures(
       page: ask.page,
       ...(ask.web ? { web: 1 } : {}),
       ...(ask.quick === true ? { part: "quick" } : {}),
+      ...(ask.section === undefined || ask.section === "" ? {} : { section: ask.section }),
+      ...(ask.topic === undefined || ask.topic === "" ? {} : { topic: ask.topic }),
     },
   });
+  const searchedAs = searchedAsOf(answer.searchedAs);
   const items = Array.isArray(answer.items) ? answer.items : [];
   const notices = Array.isArray(answer.notices) ? answer.notices : [];
   const busy = busyOf(answer.busy);
@@ -180,6 +244,7 @@ export async function searchPictures(
     rest: answer.rest === true,
     // A backend from before busy catalogues says nothing of them: none was.
     ...(busy === null ? {} : { busy, ...(retryAt === null ? {} : { retryAt }) }),
+    ...(searchedAs === null ? {} : { searchedAs }),
   };
 }
 

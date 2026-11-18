@@ -1,7 +1,12 @@
 import { errorOf } from "../../api/errors";
 import type { LinkQuota } from "../../api/linkQuota";
 import type { PictureAttribution } from "../../api/pictureAttribution";
-import { scopeFor, type LinkAsk } from "../../api/pictures";
+import {
+  scopeFor,
+  type LinkAsk,
+  type PictureConfidence,
+  type PictureDoubt,
+} from "../../api/pictures";
 import type { CatalogueItem } from "../../api/types";
 import { busyUntil } from "../../lib/busyWait";
 import {
@@ -217,16 +222,23 @@ export const plainName = (name: string): string =>
  * association football, and "Muse (Q22151)" the band that a search by the
  * name does not reach.
  */
-export function pick<T extends CatalogueItem>(
+export function pick<T extends CatalogueItem & Judged>(
   wanted: Wanted,
   found: readonly T[],
   preferred: Preferred = null,
   loose = false,
 ): T | null {
   if (wanted.id !== undefined) return found.find((item) => item.id === wanted.id) ?? null;
-  const name = plainName(wanted.title);
   const year = wanted.year;
   const dated = (item: CatalogueItem) => year === null || item.subtitle?.includes(year) === true;
+  // A backend that judges its hits (picture search, stage 1) put its best guess
+  // first: the first it is sure enough of is taken, under another name too
+  // ("Kyiv" for "Киев"); with a year, the first of those that carries it. All
+  // of them doubtful, the name goes alone, as before.
+  if (found.some((item) => item.confidence !== undefined)) {
+    return found.find((item) => isSureEnough(item) && dated(item)) ?? null;
+  }
+  const name = plainName(wanted.title);
   const named = found.filter((item) => plainName(item.title) === name && dated(item));
   if (preferred === null) {
     if (!loose || name === "") return named[0] ?? null;
@@ -254,6 +266,16 @@ export function pick<T extends CatalogueItem>(
   if (preferred === "wikidata" && !found.some(from("wikidata"))) return null;
   return named[0] ?? null;
 }
+
+/** What the backend says of a hit since stage 1: how sure it is, and why not more. */
+export interface Judged {
+  confidence?: PictureConfidence;
+  doubts?: readonly PictureDoubt[];
+}
+
+/** A hit a pasted name may take: one the backend is fairly sure of. */
+export const isSureEnough = (item: Judged): boolean =>
+  item.confidence === "high" || item.confidence === "medium";
 
 /** How many of the catalogue's answers are waited for at once. */
 export const PASTE_AT_ONCE = 3;

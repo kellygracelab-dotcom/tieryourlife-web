@@ -279,6 +279,7 @@ const ja: Translation = {
     animals: "動物",
     fromSources: "提供: {sources}",
     webSource: "ウェブ",
+    searchedAs: "「{text}」の結果を表示しています",
     nothingIn: "{scope}：その名前では見つかりません。",
     lookEverywhere: "すべてを検索",
     webDailyLimit:
@@ -1411,6 +1412,15 @@ const ja: Translation = {
       book: "本の表紙です。合っていますか？",
       animal: "動物の写真です。合っていますか？",
       thing: "同じ名前の別のものです。合っていますか？",
+    },
+    reason: {
+      namesakes: "同じ名前のものが他にもあります。これで合っていますか？",
+      otherName: "別の名前で見つかりました。合っていますか？",
+      spelling: "別のつづりで見つかりました。合っていますか？",
+      otherKind: "このリストの種類の画像ではありません。合っていますか？",
+      noSection: "リストにセクションがないため確認できません",
+      web: "ウェブの画像です。合っていますか？",
+      unsure: "これかどうか確かではありません。合っていますか？",
     },
     nothingFound: "その名前では見つかりません",
     fromLink: "あなたのリンクから",

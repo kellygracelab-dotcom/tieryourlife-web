@@ -337,6 +337,7 @@ const ar: Translation = {
     animals: "حيوانات",
     fromSources: "من {sources}",
     webSource: "الويب",
+    searchedAs: "عرض نتائج {text}",
     nothingIn: "{scope}: لا شيء بهذا الاسم.",
     lookEverywhere: "ابحث في كل مكان",
     webDailyLimit:
@@ -1819,6 +1820,15 @@ const ar: Translation = {
       book: "غلاف كتاب — هل هذا صحيح؟",
       animal: "صورة حيوان — هل هذا صحيح؟",
       thing: "شيء آخر بهذا الاسم — هل هذا صحيح؟",
+    },
+    reason: {
+      namesakes: "هناك غيره بهذا الاسم — هل هذا هو؟",
+      otherName: "وُجد باسم آخر — هل هذا صحيح؟",
+      spelling: "وُجد بتهجئة أخرى — هل هذا صحيح؟",
+      otherKind: "ليست من نوع صور هذه القائمة — هل هذا صحيح؟",
+      noSection: "ليس للقائمة قسم، فلا يمكن التحقق",
+      web: "صورة من الويب — هل هذا صحيح؟",
+      unsure: "لسنا متأكدين أنه هو — هل هذا صحيح؟",
     },
     nothingFound: "لم يُعثر على شيء بهذا الاسم",
     fromLink: "من رابطك",

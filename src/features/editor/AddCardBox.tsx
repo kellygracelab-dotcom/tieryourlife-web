@@ -747,6 +747,12 @@ export function AddCardBox({
             )}
             {found.status === "ready" && found.items.length > 0 && (
               <>
+                {found.searchedAs !== undefined && (
+                  <p className="cards__notice" role="status">
+                    <Icon name="info" />
+                    <span>{fill(strings.new.searchedAs, { text: found.searchedAs.text })}</span>
+                  </p>
+                )}
                 {sources !== null && <p className="cards__source">{sources}</p>}
                 <div className="cards__picks">
                   {found.items.map((picture) => (

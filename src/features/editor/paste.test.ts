@@ -95,6 +95,39 @@ describe("pick", () => {
   });
 });
 
+describe("pick, when the search says how sure it is", () => {
+  const judged = (
+    id: string,
+    title: string,
+    confidence: "high" | "medium" | "low",
+    subtitle: string | null = null,
+  ) => ({ ...card(id, title, subtitle), confidence });
+
+  it("takes the first hit it is sure enough of, under another name too", () => {
+    const found = [
+      judged("wikidata:Q1", "Kiev Oblast", "low"),
+      judged("wikidata:Q2", "Kyiv", "medium"),
+      judged("wikidata:Q3", "Kyiv", "high"),
+    ];
+    expect(pick({ title: "Киев", year: null }, found)?.id).toBe("wikidata:Q2");
+  });
+
+  it("takes nothing when every hit is doubtful, even one of exactly that name", () => {
+    const found = [judged("tmdb:1", "Up", "low"), judged("tmdb:2", "Up", "low")];
+    expect(pick({ title: "Up", year: null }, found)).toBeNull();
+  });
+
+  it("with a year, takes the first sure hit that carries it", () => {
+    const found = [
+      judged("tmdb:1", "Dune", "high", "1984"),
+      judged("tmdb:2", "Dune", "medium", "2021"),
+      judged("tmdb:3", "Dune", "low", "2000"),
+    ];
+    expect(pick({ title: "Dune", year: "2021" }, found)?.id).toBe("tmdb:2");
+    expect(pick({ title: "Dune", year: "2000" }, found)).toBeNull();
+  });
+});
+
 describe("a pasted name in a section with catalogues of its own", () => {
   // IGDB's answers for a search, in its own order, as the proxy hands them on.
   const mario = [

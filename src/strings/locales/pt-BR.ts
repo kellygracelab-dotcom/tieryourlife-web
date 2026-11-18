@@ -289,6 +289,7 @@ const ptBR: Translation = {
     animals: "Animais",
     fromSources: "De {sources}",
     webSource: "web",
+    searchedAs: "Mostrando resultados para {text}",
     nothingIn: "{scope}: nada com esse nome.",
     lookEverywhere: "Buscar em tudo",
     webDailyLimit:
@@ -1522,6 +1523,15 @@ const ptBR: Translation = {
       book: "Uma capa de livro — está certo?",
       animal: "Uma foto de um animal — está certo?",
       thing: "Outra coisa com esse nome — está certo?",
+    },
+    reason: {
+      namesakes: "Há outros com este nome — é este?",
+      otherName: "Encontrado com outro nome — está certo?",
+      spelling: "Encontrado com outra grafia — está certo?",
+      otherKind: "Não é o tipo de imagem desta lista — está certo?",
+      noSection: "A lista não tem seção, não dá para verificar",
+      web: "Uma imagem da web — está certo?",
+      unsure: "Não é certo que seja este — está certo?",
     },
     nothingFound: "Nada encontrado com esse nome",
     fromLink: "Do seu link",

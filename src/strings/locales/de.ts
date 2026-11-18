@@ -284,6 +284,7 @@ const de: Translation = {
     animals: "Tiere",
     fromSources: "Aus {sources}",
     webSource: "dem Web",
+    searchedAs: "Ergebnisse für {text}",
     nothingIn: "{scope}: nichts unter diesem Namen.",
     lookEverywhere: "Überall suchen",
     webDailyLimit:
@@ -1473,6 +1474,15 @@ const de: Translation = {
       book: "Ein Buchcover – stimmt das?",
       animal: "Ein Tierfoto – stimmt das?",
       thing: "Etwas anderes mit diesem Namen – stimmt das?",
+    },
+    reason: {
+      namesakes: "Es gibt mehrere mit diesem Namen – ist es dieser?",
+      otherName: "Unter einem anderen Namen gefunden – stimmt das?",
+      spelling: "Mit anderer Schreibweise gefunden – stimmt das?",
+      otherKind: "Nicht die Art Bild dieser Liste – stimmt das?",
+      noSection: "Die Liste hat keinen Bereich, das lässt sich nicht prüfen",
+      web: "Ein Bild aus dem Web – stimmt das?",
+      unsure: "Nicht sicher, ob es das ist – stimmt das?",
     },
     nothingFound: "Nichts mit diesem Namen gefunden",
     fromLink: "Aus deinem Link",
