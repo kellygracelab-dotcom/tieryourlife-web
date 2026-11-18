@@ -6,6 +6,7 @@ import {
   linkQuota,
   pictureOf,
   scopeFor,
+  searchPictureBatch,
   searchPictures,
 } from "./pictures";
 
@@ -334,5 +335,80 @@ describe("a picture from a link", () => {
     await expect(linkQuota(client)).resolves.toEqual(quota);
     expect(request).toHaveBeenCalledWith("GET", "/lists/pictures/link");
     await expect(linkQuota(recordingClient({}).client)).resolves.toBeNull();
+  });
+});
+
+describe("the batch of a pasted list's names (stage 2)", () => {
+  it("sends the names with the list's section, and reads one result a name, in order", async () => {
+    const { client, request } = recordingClient({
+      results: [
+        { q: "naruto", status: "found", item: raw({ confidence: "high" }) },
+        {
+          q: "Bleech",
+          status: "unsure",
+          item: raw({ id: "anilist:1", confidence: "low", doubts: ["spelling"] }),
+          searchedAs: { text: "Bleach", how: "spelling" },
+        },
+        { q: "zz", status: "none" },
+        { q: "One Piece", status: "busy", retryAt: 1_700_000_000_000 },
+        { q: "Naruto 2", status: "limited", retryAt: "soon" },
+        { q: "Death Note", status: "later" },
+        { q: "Odd", status: "what" },
+      ],
+    });
+    const names = [
+      " naruto ",
+      "Bleech",
+      "zz",
+      "One Piece",
+      "Naruto 2",
+      "Death Note",
+      "Odd",
+      "x".repeat(120),
+    ];
+    const results = await searchPictureBatch(client, {
+      names,
+      scope: "anime",
+      section: "anime",
+      lang: "en",
+    });
+    expect(request).toHaveBeenCalledWith("POST", "/lists/pictures/batch", {
+      body: {
+        names: [
+          "naruto",
+          "Bleech",
+          "zz",
+          "One Piece",
+          "Naruto 2",
+          "Death Note",
+          "Odd",
+          "x".repeat(100),
+        ],
+        scope: "anime",
+        lang: "en",
+        section: "anime",
+      },
+    });
+    expect(results.map((one) => one.status)).toEqual([
+      "found",
+      "unsure",
+      "none",
+      "busy",
+      "limited",
+      "later",
+      // A status this page does not know, and a result missing, are names to ask again.
+      "later",
+      "later",
+    ]);
+    expect(results[0]).toMatchObject({
+      q: "naruto",
+      item: { id: "anilist:20", confidence: "high" },
+    });
+    expect(results[1]).toMatchObject({
+      item: { confidence: "low", doubts: ["spelling"] },
+      searchedAs: { text: "Bleach", how: "spelling" },
+    });
+    expect(results[3]).toEqual({ q: "One Piece", status: "busy", retryAt: 1_700_000_000_000 });
+    expect(results[4]).toEqual({ q: "Naruto 2", status: "limited", retryAt: null });
   });
 });

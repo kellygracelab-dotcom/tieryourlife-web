@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { LinkQuota } from "../../api/linkQuota";
-import { scopeFor, type FoundPicture, type LinkAsk, type PictureScope } from "../../api/pictures";
+import {
+  PICTURE_BATCH,
+  scopeFor,
+  type FoundPicture,
+  type LinkAsk,
+  type PictureScope,
+} from "../../api/pictures";
 import type { LinkedPicture } from "../../lib/linkPictures";
 import { sizedFor } from "../../lib/pictureSize";
 import { pasteLimitText, searchLimitText } from "../../lib/searchLimit";
@@ -22,6 +28,7 @@ import {
   type PastedCard,
   type Wanted,
 } from "./paste";
+import { batchedLookup, type FindPictureBatch } from "./pasteBatch";
 import {
   expectedArea,
   isUnfound,
@@ -342,6 +349,7 @@ export function PasteBox({
   category,
   dispatch,
   find,
+  findMany,
   link,
   house,
   loadQuota,
@@ -352,6 +360,8 @@ export function PasteBox({
   category: string | null;
   dispatch: (action: EditorAction) => void;
   find: FindPictures;
+  /** The names in batches of ten (stage 2); without it, one search a name. */
+  findMany?: FindPictureBatch | undefined;
   /** None for a guest: their lines with a link come by name. */
   link: ((ask: LinkAsk) => Promise<LinkedPicture>) | undefined;
   house: boolean;
@@ -463,9 +473,12 @@ export function PasteBox({
     const pageless = new Set<string>();
     setProgress({ done, total });
     onNote(null);
+    const single = lookupIn(where);
     void cardsFor(
       asked.map(({ one }) => one),
-      lookupIn(where),
+      findMany === undefined
+        ? single
+        : batchedLookup((names) => findMany({ names, scope: where }), single),
       (card, at, from) => {
         const ask = asked[at - 1];
         if (ask === undefined) return;
@@ -490,6 +503,7 @@ export function PasteBox({
       },
       {
         going,
+        ...(findMany === undefined ? {} : { atOnce: PICTURE_BATCH }),
         preferred: preferredFor(basis),
         loose: looseIn(basis),
         waitFor: waitsForIn(basis),

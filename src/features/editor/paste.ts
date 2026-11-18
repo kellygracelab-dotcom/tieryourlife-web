@@ -307,6 +307,11 @@ export interface LookedUp<T extends CatalogueItem = CatalogueItem> {
   items: T[];
   busy?: readonly string[];
   retryAt?: number;
+  /**
+   * The backend's last word on the name (the batch, stage 2): it already
+   * looked everywhere the name needs, so it is not asked a second time.
+   */
+  final?: boolean;
 }
 
 /** Why a pasted card came without a picture. */
@@ -324,6 +329,8 @@ export interface PasteOptions {
    */
   waitFor?: (catalogue: string) => boolean;
   paceMs?: number;
+  /** How many names are looked up together: a batch takes PICTURE_BATCH at once. */
+  atOnce?: number;
   /**
    * How a line's own picture is kept, by its address; none for a guest,
    * whose lines with a picture come as their names alone.
@@ -357,6 +364,8 @@ interface Searched<T extends CatalogueItem> {
   retryAt?: number | undefined;
   /** Nothing was found while a catalogue it needs was busy (503 SOURCE_BUSY). */
   unknown: boolean;
+  /** The backend's last word: no second question (`LookedUp.final`). */
+  final?: boolean;
 }
 
 /** What the catalogue gave a name in the end, and whether a busy one was given up on. */
@@ -425,6 +434,7 @@ export async function cardsFor<T extends CatalogueItem & Judged = CatalogueItem>
     loose = false,
     waitFor = (catalogue) => catalogue === preferred,
     paceMs = PASTE_PACE_MS,
+    atOnce = PASTE_AT_ONCE,
     link,
     onMissing,
     onQuota,
@@ -460,7 +470,13 @@ export async function cardsFor<T extends CatalogueItem & Judged = CatalogueItem>
       );
       return Array.isArray(answer)
         ? { items: answer, busy: [], unknown: false }
-        : { items: answer.items, busy: answer.busy ?? [], retryAt: answer.retryAt, unknown: false };
+        : {
+            items: answer.items,
+            busy: answer.busy ?? [],
+            retryAt: answer.retryAt,
+            unknown: false,
+            ...(answer.final === true ? { final: true } : {}),
+          };
     } catch (reason) {
       const error = errorOf(reason);
       if (error.kind === "sourceBusy") {
@@ -490,6 +506,7 @@ export async function cardsFor<T extends CatalogueItem & Judged = CatalogueItem>
       first = again;
     }
     if (first === undefined) return undefined;
+    if (first.final === true) return { items: first.items };
     if (needed === null ? first.items.length > 0 : first.items.some(from(needed))) {
       return { items: first.items };
     }
@@ -556,9 +573,9 @@ export async function cardsFor<T extends CatalogueItem & Judged = CatalogueItem>
   const answerOf = (one: Wanted): Promise<Answer> =>
     one.picture === undefined ? lookedFor(one) : linked(one, one.picture);
 
-  for (let start = 0; start < wanted.length; start += PASTE_AT_ONCE) {
-    const few = wanted.slice(start, start + PASTE_AT_ONCE);
-    const last = start + PASTE_AT_ONCE >= wanted.length;
+  for (let start = 0; start < wanted.length; start += atOnce) {
+    const few = wanted.slice(start, start + atOnce);
+    const last = start + atOnce >= wanted.length;
     // Only the catalogues need the pause; a few links alone go on at once.
     const searched = few.some((one) => one.picture === undefined);
     const [answers] = await Promise.all([

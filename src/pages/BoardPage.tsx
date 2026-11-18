@@ -64,6 +64,7 @@ import { SectionEditor } from "../features/sections/SectionEditor";
 import { TooManyDialog } from "../features/sections/TooManyDialog";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import {
+  findPictureBatch,
   findPictures,
   keepPicture,
   linkPicture,
@@ -103,6 +104,7 @@ import { usePastedPictures, type Incoming } from "../lib/incoming";
 import { refusedText } from "../features/editor/linkText";
 import type { EditorAction, EditorItem, EditorTier } from "../features/editor/model";
 import { TierDialog } from "../features/editor/TierDialog";
+import type { FindPictureBatch } from "../features/editor/pasteBatch";
 import type { FindPictures } from "../features/editor/usePictures";
 import { keepWebPicture, PictureRefused, uploadPicture } from "../lib/pictures";
 import { keepLinkedPicture, LinkRefused, linkRefusalOf } from "../lib/linkPictures";
@@ -152,6 +154,8 @@ interface BoardPageProps {
   repository?: BoardsRepository;
   now?: () => number;
   find?: FindPictures;
+  /** A pasted list's names in batches; by default the backend's, unless `find` is given. */
+  findMany?: FindPictureBatch;
   upload?: Upload;
   keepWeb?: Keep;
   /** How a picture from a link is kept. */
@@ -323,6 +327,7 @@ function OpenBoard({
   repository: ownBoards = site,
   now = Date.now,
   find,
+  findMany,
   upload = (file) => uploadPicture(file),
   keepWeb = (url) => keepWebPicture(url, keepPicture),
   linkWeb = (ask) => keepLinkedPicture(ask, linkPicture),
@@ -533,6 +538,18 @@ function OpenBoard({
         ...(topicId === null || topicId === "" ? {} : { topic: topicId }),
       });
   }, [find, listSection, topicId]);
+  // A pasted list asks for its names ten at a time, judged the same way (stage 2).
+  // A page given its own `find` (a test) searches name by name unless given this too.
+  const listFindMany = useMemo<FindPictureBatch | undefined>(() => {
+    const base = findMany ?? (find === undefined ? findPictureBatch : undefined);
+    if (base === undefined) return undefined;
+    return (ask) =>
+      base({
+        ...ask,
+        ...(listSection === null || listSection === "" ? {} : { section: listSection }),
+        ...(topicId === null || topicId === "" ? {} : { topic: topicId }),
+      });
+  }, [find, findMany, listSection, topicId]);
   // One's own board keeps its game in the board itself, so the account
   // carries it to the phone; without changing when the board was last edited.
   const poolId = board === null ? null : (poolTier(board)?.uid ?? null);
@@ -1042,6 +1059,7 @@ function OpenBoard({
       category={board.category}
       dispatch={dispatch}
       find={listFind}
+      findMany={listFindMany}
       upload={uploadAsAccount}
       keep={keepAsAccount}
       link={linkAsAccount}

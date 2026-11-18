@@ -31,6 +31,7 @@ export function apiStubs() {
     removeRanking: pending(),
     rankingStillThere: pending(),
     loadMyLists: pending(),
+    findPictureBatch: pending(),
     findPictures: pending(),
     keepPicture: pending(),
     linkPicture: pending(),
