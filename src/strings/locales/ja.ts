@@ -1330,6 +1330,7 @@ const ja: Translation = {
     continue: "続ける",
     continueOf: "「{title}」を続ける",
     resume: "ゲームを再開",
+    discard: "破棄",
   },
   publishWindow: {
     title: "「{title}」を公開",

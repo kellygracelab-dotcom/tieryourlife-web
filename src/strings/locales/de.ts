@@ -1390,6 +1390,7 @@ const de: Translation = {
     continue: "Weiter",
     continueOf: "„{title}“ fortsetzen",
     resume: "Spiel fortsetzen",
+    discard: "Verwerfen",
   },
   publishWindow: {
     title: "„{title}“ veröffentlichen",

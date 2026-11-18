@@ -15,6 +15,7 @@ import type { BoardsRepository } from "../boards/repository";
 import { useBoards } from "../boards/useBoards";
 import { sectionName } from "../sections/model";
 import { sectionsStore, type SectionsStore } from "../sections/useSections";
+import { useSwipeAway } from "./swipeAway";
 import { discardStarted, RESUME_GAME, SAVE_MINE, startedLists, type Started } from "./started";
 import "./started.css";
 
@@ -103,55 +104,14 @@ export function ContinueBlock({
         onPointerUp={triggers.onPointerUp}
         onPointerCancel={triggers.onPointerCancel}
       >
-        {started.map((one) => {
-          const path = `/l/${encodeURIComponent(one.listId)}`;
-          const section = one.category === null ? null : sectionName(one.category, known);
-          const share = one.total === 0 ? 0 : Math.round((one.placed / one.total) * 100);
-          return (
-            <li key={one.listId} className="started__card" data-started={one.listId}>
-              <div className="started__top">
-                {one.pictures.length === 0 ? (
-                  <span className="started__thumb started__thumb--none" aria-hidden="true">
-                    <Icon name="leaderboard" />
-                  </span>
-                ) : (
-                  <span className="started__thumbs" aria-hidden="true">
-                    {one.pictures.map((url) => (
-                      <MediaImage
-                        key={url}
-                        className="started__thumb"
-                        {...sizedFor(url, 96)}
-                        alt=""
-                      />
-                    ))}
-                  </span>
-                )}
-                <span className="started__text">
-                  <bdi className="started__name">{one.title}</bdi>
-                  <span className="started__meta">{progressText(one, section)}</span>
-                </span>
-                <MoreButton name={one.title} className="started__more" />
-              </div>
-              <span className="started__bar" aria-hidden="true">
-                <span className="started__fill" style={{ inlineSize: `${share}%` }} />
-              </span>
-              <span className="started__actions">
-                <Link
-                  className="btn btn--filled started__go"
-                  to={path}
-                  aria-label={fill(strings.started.continueOf, { title: one.title })}
-                >
-                  <span>{strings.started.continue}</span>
-                </Link>
-                {one.game && (
-                  <Link className="btn btn--outlined started__go" to={path} state={RESUME_GAME}>
-                    <span>{strings.started.resume}</span>
-                  </Link>
-                )}
-              </span>
-            </li>
-          );
-        })}
+        {started.map((one) => (
+          <StartedCard
+            key={one.listId}
+            one={one}
+            section={one.category === null ? null : sectionName(one.category, known)}
+            onDiscard={() => discard(one)}
+          />
+        ))}
       </ul>
       {menu !== null && chosen !== undefined && (
         <ListMenu
@@ -195,5 +155,77 @@ export function ContinueBlock({
         />
       )}
     </section>
+  );
+}
+
+/**
+ * One begun list: its pictures, name and how far it is, a bar of that,
+ * Continue and Resume game. On a touch screen it swipes aside either way to
+ * discard the arrangement (artboard 45), a red bin showing where it was.
+ */
+function StartedCard({
+  one,
+  section,
+  onDiscard,
+}: {
+  one: Started;
+  section: string | null;
+  onDiscard: () => void;
+}) {
+  const { offset, phase, handlers } = useSwipeAway(onDiscard);
+  const path = `/l/${encodeURIComponent(one.listId)}`;
+  const share = one.total === 0 ? 0 : Math.round((one.placed / one.total) * 100);
+  return (
+    <li className={`started__card started__card--${phase}`} data-started={one.listId} {...handlers}>
+      {offset !== 0 && (
+        <span
+          className={`started__under started__under--${offset > 0 ? "left" : "right"}`}
+          aria-hidden="true"
+        >
+          <Icon name="delete" />
+          <span>{strings.started.discard}</span>
+        </span>
+      )}
+      <div
+        className="started__face"
+        style={offset === 0 ? undefined : { transform: `translateX(${offset}px)` }}
+      >
+        <div className="started__top">
+          {one.pictures.length === 0 ? (
+            <span className="started__thumb started__thumb--none" aria-hidden="true">
+              <Icon name="leaderboard" />
+            </span>
+          ) : (
+            <span className="started__thumbs" aria-hidden="true">
+              {one.pictures.map((url) => (
+                <MediaImage key={url} className="started__thumb" {...sizedFor(url, 96)} alt="" />
+              ))}
+            </span>
+          )}
+          <span className="started__text">
+            <bdi className="started__name">{one.title}</bdi>
+            <span className="started__meta">{progressText(one, section)}</span>
+          </span>
+          <MoreButton name={one.title} className="started__more" />
+        </div>
+        <span className="started__bar" aria-hidden="true">
+          <span className="started__fill" style={{ inlineSize: `${share}%` }} />
+        </span>
+        <span className="started__actions">
+          <Link
+            className="btn btn--filled started__go"
+            to={path}
+            aria-label={fill(strings.started.continueOf, { title: one.title })}
+          >
+            <span>{strings.started.continue}</span>
+          </Link>
+          {one.game && (
+            <Link className="btn btn--outlined started__go" to={path} state={RESUME_GAME}>
+              <span>{strings.started.resume}</span>
+            </Link>
+          )}
+        </span>
+      </div>
+    </li>
   );
 }
