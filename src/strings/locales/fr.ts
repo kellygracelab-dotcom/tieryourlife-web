@@ -124,6 +124,9 @@ const fr: Translation = {
     faceLetterCaption: "Lettre",
     faceFailed: "Impossible d’enregistrer : le serveur n’a pas répondu.",
     faceListsFailed: "Impossible de charger vos listes publiées.",
+    shareSite: "Partager TierYourLife",
+    feedback: "Envoyer un avis",
+    feedbackSubject: "Avis sur TierYourLife",
     privacyTitle: "Confidentialité",
     signOutNote:
       "Vos listes restent dans votre compte et dans ce navigateur, masquées jusqu’à votre prochaine connexion. Déconnecté, vous ne voyez que les listes créées sans compte.",

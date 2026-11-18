@@ -52,6 +52,7 @@ link
 local_cafe
 lock
 logout
+mail
 menu_book
 mic
 military_tech
@@ -78,6 +79,7 @@ schedule
 science
 search
 settings
+share
 shield
 skip_next
 sports_basketball

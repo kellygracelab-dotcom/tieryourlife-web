@@ -124,6 +124,9 @@ const uk: Translation = {
     faceLetterCaption: "Літера",
     faceFailed: "Не вдалося зберегти — сервер не відповів.",
     faceListsFailed: "Не вдалося завантажити ваші опубліковані списки.",
+    shareSite: "Поділитися TierYourLife",
+    feedback: "Написати нам",
+    feedbackSubject: "Відгук про TierYourLife",
     privacyTitle: "Конфіденційність",
     signOutNote:
       "Списки залишаться в акаунті й у цьому браузері, приховані, доки ви знову не ввійдете. Без входу видно лише списки, створені без акаунта.",

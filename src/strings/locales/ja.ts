@@ -116,6 +116,9 @@ const ja: Translation = {
     faceLetterCaption: "頭文字",
     faceFailed: "保存できませんでした。サーバーが応答しません。",
     faceListsFailed: "公開したリストを読み込めませんでした。",
+    shareSite: "TierYourLifeを共有",
+    feedback: "フィードバックを送る",
+    feedbackSubject: "TierYourLifeへのフィードバック",
     privacyTitle: "プライバシー",
     signOutNote:
       "リストはアカウントとこのブラウザに残り、もう一度ログインするまで非表示になります。ログアウト中は、アカウントなしで作ったリストだけが表示されます。",

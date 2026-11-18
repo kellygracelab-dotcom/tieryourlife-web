@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider, type RouteObject } from "react-router";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import type { ListSummary } from "../api/types";
 import { SessionContext, ShowFaceContext, type Session } from "../app/session";
 import { ApiFailure } from "../api/errors";
@@ -20,8 +20,10 @@ import {
   type RefreshAuthor,
   type Rename,
   type MakeFace,
+  type ShareSite,
   type UploadFace,
 } from "./SettingsPage";
+import { sayOnTheSite, siteNotice } from "../ui/siteNotice";
 
 vi.mock("../lib/api", () => ({
   followState: vi.fn(() => new Promise(() => undefined)),
@@ -78,7 +80,11 @@ function FrontPage() {
   return <h1>Front page</h1>;
 }
 
-const open = (account: Session["account"] = member, sync?: BoardSyncControls) => {
+const open = (
+  account: Session["account"] = member,
+  sync?: BoardSyncControls,
+  share?: ShareSite,
+) => {
   const session: Session = {
     account,
     signIn: vi.fn(async () => ({ kind: "signedIn" as const, switched: false })),
@@ -98,6 +104,7 @@ const open = (account: Session["account"] = member, sync?: BoardSyncControls) =>
           cut={cut}
           refreshAuthor={refreshAuthor}
           erase={erase}
+          {...(share === undefined ? {} : { share })}
         />
       ),
     },
@@ -165,6 +172,40 @@ describe("faceChoicesOf", () => {
     ]);
     const many = Array.from({ length: 20 }, (_, i) => `https://img/${i}.jpg`);
     expect(faceChoicesOf([published("Many", many)])).toHaveLength(12);
+  });
+});
+
+describe("the site to someone else, the app and a word to us", () => {
+  it("shares the site's address, and says so when it went to the clipboard", async () => {
+    const share = vi.fn<ShareSite>(async () => "copied");
+    open({ kind: "guest", uid: "g1" }, undefined, share);
+    onTestFinished(() => sayOnTheSite(null));
+    await userEvent.click(screen.getByRole("button", { name: "Share TierYourLife" }));
+    expect(share).toHaveBeenCalledWith(`${window.location.origin}/`);
+    expect(siteNotice()).toEqual({ text: "Link copied" });
+
+    // The share sheet says nothing of itself; a clipboard that refused spells the address out.
+    sayOnTheSite(null);
+    share.mockResolvedValueOnce("shared");
+    await userEvent.click(screen.getByRole("button", { name: "Share TierYourLife" }));
+    expect(siteNotice()).toBeNull();
+    share.mockRejectedValueOnce(new Error("no clipboard"));
+    await userEvent.click(screen.getByRole("button", { name: "Share TierYourLife" }));
+    await waitFor(() =>
+      expect(siteNotice()).toEqual({
+        text: `Could not copy the link: ${window.location.origin}/`,
+      }),
+    );
+  });
+
+  it("writes to the developer's public address, and names the app as coming soon until it opens", () => {
+    open({ kind: "guest", uid: "g1" });
+    expect(screen.getByRole("link", { name: "Send feedback" })).toHaveAttribute(
+      "href",
+      "mailto:kellygracelab@gmail.com?subject=TierYourLife%20feedback",
+    );
+    expect(screen.getByText("Android app · coming soon")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Android/ })).toBeNull();
   });
 });
 
