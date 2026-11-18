@@ -1331,6 +1331,7 @@ const ja: Translation = {
     continueOf: "「{title}」を続ける",
     resume: "ゲームを再開",
     discard: "破棄",
+    updatedElsewhere: "別のデバイスで更新されました",
   },
   publishWindow: {
     title: "「{title}」を公開",

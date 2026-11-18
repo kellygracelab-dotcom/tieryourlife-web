@@ -56,6 +56,8 @@ interface KeptEntry {
 /** The account as the proxy would hold it, and the failures a test asks for. */
 export interface Account {
   boards: Map<string, KeptEntry>;
+  /** Begun lists kept with the account (`/boards/started`), and their tombstones. */
+  started: Map<string, Record<string, unknown>>;
   published: Map<string, Record<string, unknown>>;
   followed: { uid: string; name: string; photoUrl: string | null }[];
   followedLists: Record<string, unknown>[];
@@ -91,6 +93,61 @@ const summaryOf = (id: string, body: Record<string, unknown>) => ({
   takeCount: 0,
 });
 
+let startedClock = 1_800_000_000_000;
+
+/**
+ * `/boards/started` as the contract has it (shared Continue, 18.11.2026): a
+ * version by the server's clock with every write, the later change winning,
+ * a tombstone for a list taken out of Continue, 409 with what the server has.
+ */
+async function startedRoute(route: Route, account: Account, method: string, listId?: string) {
+  const request = route.request();
+  const url = new URL(request.url());
+  const was = listId === undefined ? undefined : account.started.get(listId);
+  const conflict = () => json(route, 409, { code: "CONFLICT", started: was });
+  if (method === "GET" && listId === undefined) {
+    const since = Number(url.searchParams.get("since") ?? -1);
+    const fresh = [...account.started.values()].filter((r) => Number(r.updatedAt) > since);
+    return json(route, 200, {
+      started: fresh.filter((r) => r.removed === undefined),
+      removed: fresh.filter((r) => r.removed !== undefined),
+      now: startedClock,
+    });
+  }
+  if (listId === undefined) return json(route, 405, { code: "METHOD_NOT_ALLOWED" });
+  if (method === "PUT") {
+    const { basedOn, ...content } = request.postDataJSON() as Record<string, unknown>;
+    if (
+      was !== undefined &&
+      basedOn !== was.updatedAt &&
+      !(Number(content.changedAt) > Number(was.changedAt))
+    ) {
+      return conflict();
+    }
+    const updatedAt = ++startedClock;
+    const placed = (content.rows as number[][]).flat().length;
+    account.started.set(listId, { ...content, listId, updatedAt, placed });
+    return json(route, 200, { listId, updatedAt, placed });
+  }
+  if (method === "DELETE") {
+    const reason = url.searchParams.get("reason");
+    const changedAt = Number(url.searchParams.get("changedAt"));
+    const basedOn = url.searchParams.get("basedOn");
+    if (
+      was !== undefined &&
+      was.removed === undefined &&
+      Number(basedOn) !== was.updatedAt &&
+      Number(was.changedAt) > changedAt
+    ) {
+      return conflict();
+    }
+    const updatedAt = ++startedClock;
+    account.started.set(listId, { listId, updatedAt, changedAt, removed: reason });
+    return json(route, 200, { listId, updatedAt, removed: reason });
+  }
+  return json(route, 405, { code: "METHOD_NOT_ALLOWED" });
+}
+
 /** The proxy's `/lists…` and `/boards…` for this account. */
 async function mockAccount(page: Page, account: Account): Promise<void> {
   await page.route(
@@ -115,6 +172,7 @@ async function mockAccount(page: Page, account: Account): Promise<void> {
       const body = (): Record<string, unknown> => request.postDataJSON() as Record<string, unknown>;
       const [, root, id, verb] = path.split("/");
 
+      if (root === "boards" && id === "started") return startedRoute(route, account, method, verb);
       if (root === "boards") {
         if (method === "GET" && id === undefined) {
           return json(route, 200, {
@@ -331,10 +389,11 @@ const storedUserKey = (page: Page) =>
  */
 export async function signIn(
   page: Page,
-  seed: Partial<Pick<Account, "boards" | "followed" | "followedLists">> = {},
+  seed: Partial<Pick<Account, "boards" | "started" | "followed" | "followedLists">> = {},
 ): Promise<Account> {
   const account: Account = {
     boards: seed.boards ?? new Map(),
+    started: seed.started ?? new Map(),
     published: new Map(),
     followed: seed.followed ?? [],
     followedLists: seed.followedLists ?? [],

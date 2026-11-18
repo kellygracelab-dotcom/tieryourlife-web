@@ -16,7 +16,16 @@ import { useBoards } from "../boards/useBoards";
 import { sectionName } from "../sections/model";
 import { sectionsStore, type SectionsStore } from "../sections/useSections";
 import { useSwipeAway } from "./swipeAway";
-import { discardStarted, RESUME_GAME, SAVE_MINE, startedLists, type Started } from "./started";
+import {
+  discardStarted,
+  startedChanged,
+  startedVersion,
+  subscribeStarted,
+  RESUME_GAME,
+  SAVE_MINE,
+  startedLists,
+  type Started,
+} from "./started";
 import "./started.css";
 
 /** How far one begun list is: "Anime · 4 of 25 placed", the section left out when unknown. */
@@ -48,8 +57,8 @@ export function ContinueBlock({
 }) {
   const boards = useBoards(repository);
   const navigate = useNavigate();
-  // Bumped when a begun list is discarded or put back: the store says nothing of its own.
-  const [, setChanged] = useState(0);
+  // Drawn again when a begun list is discarded or put back, here or on another device.
+  useSyncExternalStore(subscribeStarted, startedVersion, startedVersion);
   // The names as last known here; the nine stand in until the backend answered.
   const known = useSyncExternalStore(sections.subscribe, sections.get, sections.get).sections;
   // Read afresh on every drawing: a discard or its Undo changes the store and draws again by `changed`.
@@ -76,14 +85,14 @@ export function ContinueBlock({
   const pathOf = (one: Started) => `/l/${encodeURIComponent(one.listId)}`;
   const discard = (one: Started) => {
     const undo = discardStarted(store, one.listId);
-    setChanged((was) => was + 1);
+    startedChanged(true);
     onNotice?.({
       text: strings.listMenu.discarded,
       action: {
         text: strings.boards.undo,
         onClick: () => {
           undo();
-          setChanged((was) => was + 1);
+          startedChanged(true);
         },
       },
     });

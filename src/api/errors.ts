@@ -39,7 +39,8 @@ export type ApiError =
   /** 429 LIKE_LIMIT (K2): more than an hour's likes; none until `retryAt`. */
   | { kind: "likeLimit"; retryAt?: number }
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
-  | { kind: "conflict"; board?: unknown; status?: string }
+  /** `started` is the server's begun list or its tombstone, on a write that lost (shared Continue). */
+  | { kind: "conflict"; board?: unknown; status?: string; started?: unknown }
   | { kind: "tooLarge"; detail: string | null }
   /**
    * A refused request, with the proxy's code for what was wrong (NAME_TAKEN,
@@ -132,6 +133,7 @@ interface ErrorBody {
   cover?: unknown;
   quota?: unknown;
   board?: unknown;
+  started?: unknown;
   busy?: unknown;
   mergedInto?: unknown;
   mergedTopicId?: unknown;
@@ -272,6 +274,7 @@ export function parseApiError(
       return {
         kind: "conflict",
         ...(body.board === undefined ? {} : { board: body.board }),
+        ...(body.started === undefined ? {} : { started: body.started }),
         ...(status === null ? {} : { status }),
       };
     }

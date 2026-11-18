@@ -1391,6 +1391,7 @@ const de: Translation = {
     continueOf: "„{title}“ fortsetzen",
     resume: "Spiel fortsetzen",
     discard: "Verwerfen",
+    updatedElsewhere: "Von einem anderen Gerät aktualisiert",
   },
   publishWindow: {
     title: "„{title}“ veröffentlichen",

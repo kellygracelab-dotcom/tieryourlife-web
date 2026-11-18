@@ -35,6 +35,26 @@ export function discardStarted(store: KeyValueStore, listId: string): () => void
   };
 }
 
+let version = 0;
+const listeners = new Set<(here: boolean) => void>();
+
+/** Bumped with every change to the begun lists, for Continue to draw them again. */
+export const startedVersion = (): number => version;
+
+export function subscribeStarted(listener: (here: boolean) => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/**
+ * The begun lists changed: here (`here`, a Discard or its Undo), which the
+ * account hears at once, or from the account, which Continue draws.
+ */
+export function startedChanged(here: boolean): void {
+  version++;
+  for (const listener of listeners) listener(here);
+}
+
 /** How many begun lists "Continue" offers: the latest ones. */
 export const CONTINUE_MAX = 3;
 

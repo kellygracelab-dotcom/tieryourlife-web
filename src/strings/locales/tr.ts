@@ -1345,6 +1345,7 @@ const tr: Translation = {
     continueOf: "“{title}” ile devam et",
     resume: "Oyuna devam et",
     discard: "At",
+    updatedElsewhere: "Başka bir cihazdan güncellendi",
   },
   publishWindow: {
     title: "“{title}” listesini yayımla",

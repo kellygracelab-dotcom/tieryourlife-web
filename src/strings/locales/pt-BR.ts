@@ -1442,6 +1442,7 @@ const ptBR: Translation = {
     continueOf: "Continuar “{title}”",
     resume: "Retomar jogo",
     discard: "Descartar",
+    updatedElsewhere: "Atualizado em outro dispositivo",
   },
   publishWindow: {
     title: "Publicar “{title}”",

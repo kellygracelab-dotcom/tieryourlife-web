@@ -1,5 +1,6 @@
 ﻿import { expect, test, type Page } from "@playwright/test";
 import { mockBackend } from "./fixtures";
+import { signIn } from "./signedIn";
 
 const LIST_ID = "a24";
 const DRAFT = `tyl:draft:${LIST_ID}`;
@@ -136,4 +137,61 @@ test("a begun list swipes aside on a touch screen: back before a third, away pas
   expect(await stored(page)).toEqual([true, true]);
   // Nothing was opened by the finger.
   await expect(page).toHaveURL(/\/b$/);
+});
+
+// Shared Continue (18.11.2026): signed in, a list begun on the phone is here,
+// its game too; Discard takes it away on the account, Undo puts it back there.
+test("a list begun on the phone continues here, and Discard and Undo reach the account", async ({
+  page,
+}) => {
+  const now = Date.now();
+  const account = await signIn(page, {
+    started: new Map([
+      [
+        "got",
+        {
+          listId: "got",
+          updatedAt: 5,
+          changedAt: now - 60_000,
+          listVersion: 7,
+          itemCount: 45,
+          tierCount: 5,
+          title: "Game of Thrones characters",
+          picture: null,
+          pictures: [],
+          category: "film_tv",
+          rows: [[3, 7], [1], [], [12], []],
+          placed: 4,
+          play: {
+            kind: "hill",
+            count: 3,
+            seed: 1,
+            refine: false,
+            ids: ["0", "2", "4"],
+            history: [],
+            round: 0,
+            startedAt: now - 60_000,
+          },
+        },
+      ],
+    ]),
+  });
+  await page.goto("/b");
+  const block = page.getByRole("region", { name: "Continue · 1" });
+  await expect(block.getByText("Film & TV · 4 of 45 placed")).toBeVisible();
+  await expect(block.getByRole("link", { name: "Resume game" })).toBeVisible();
+  await block.getByRole("button", { name: "More for Game of Thrones characters" }).click();
+  await page.getByRole("menuitem", { name: /Discard my arrangement/ }).click();
+  await expect(block).toHaveCount(0);
+  await expect.poll(() => account.started.get("got")?.removed).toBe("discard");
+  const gone = account.started.get("got")!.updatedAt;
+  await page.locator(".snackbar").getByRole("button", { name: "Undo" }).click();
+  await expect(block.getByRole("link", { name: "Resume game" })).toBeVisible();
+  await expect.poll(() => account.started.get("got")?.removed).toBeUndefined();
+  expect(account.started.get("got")).toMatchObject({ placed: 4, play: { ids: ["0", "2", "4"] } });
+  expect(Number(account.started.get("got")!.updatedAt)).toBeGreaterThan(Number(gone));
+  expect(account.calls.filter((call) => call.includes("/boards/started/"))).toEqual([
+    "DELETE /boards/started/got",
+    "PUT /boards/started/got",
+  ]);
 });

@@ -1309,6 +1309,8 @@ export const en = {
     resume: "Resume game",
     // Under a begun list swiped aside on a touch screen, by the bin (artboard 45).
     discard: "Discard",
+    // A begun list here replaced by a later version from the phone or another browser (shared Continue).
+    updatedElsewhere: "Updated from another device",
   },
   publishWindow: {
     title: "Publish “{title}”",
