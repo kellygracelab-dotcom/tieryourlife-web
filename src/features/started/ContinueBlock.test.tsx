@@ -99,7 +99,10 @@ describe("Continue", () => {
     // A group's label with the count, the list's section and how far it is (artboard 14).
     const block = within(screen.getByRole("region", { name: "Continue · 1" }));
     expect(block.getByText("Every A24 film")).toBeInTheDocument();
-    expect(block.getByText("Film & TV · 3 of 10 placed")).toBeInTheDocument();
+    // On one line, the section giving way when short of room; the whole in its title (artboard 46).
+    expect(block.getByTitle("Film & TV · 3 of 10 placed")).toHaveTextContent(
+      "Film & TV · 3 of 10 placed",
+    );
     expect(block.getByRole("link", { name: "Continue “Every A24 film”" })).toHaveAttribute(
       "href",
       "/l/a24",

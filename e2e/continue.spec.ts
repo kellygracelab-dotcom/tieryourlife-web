@@ -137,3 +137,66 @@ test("a begun list swipes aside on a touch screen: back before a third, away pas
   // Nothing was opened by the finger.
   await expect(page).toHaveURL(/\/b$/);
 });
+
+// Side by side the rows keep one height, Continue level across them: a long
+// name and its count stay on one line each, the whole in their title (artboard 46).
+for (const width of [1351, 375]) {
+  test(`rows of one height at ${width} px, whatever their names and games`, async ({ page }) => {
+    test.skip(test.info().project.name !== "desktop", "a window's width, not a device");
+    await page.setViewportSize({ width, height: 900 });
+    await mockBackend(page);
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem("begun") !== null) return;
+      sessionStorage.setItem("begun", "1");
+      const now = Date.now();
+      const draft = (id: string, title: string, itemCount: number, placed: number, at: number) =>
+        localStorage.setItem(
+          `tyl:draft:${id}`,
+          JSON.stringify({
+            listId: id,
+            updatedAt: 1,
+            itemCount,
+            title,
+            picture: null,
+            // Three pictures, as a list begun with its first cards: the text has what is left.
+            pictures: [1, 2, 3].map((n) => `https://example.com/${id}-${n}.jpg`),
+            category: "film_tv",
+            savedAt: at,
+            rows: [Array.from({ length: placed }, (_, i) => i)],
+          }),
+        );
+      draft("sea", "Sea creatures", 40, 3, now);
+      draft(
+        "tv",
+        "Best TV Series of All Time, from every decade and every country",
+        117,
+        7,
+        now - 1,
+      );
+    });
+    await page.goto("/b");
+    const rows = page.locator("li[data-started]");
+    await expect(rows).toHaveCount(2);
+    const name = rows.nth(1).locator(".started__name");
+    await expect(name).toHaveAttribute(
+      "title",
+      "Best TV Series of All Time, from every decade and every country",
+    );
+    // Each line one line high, however narrow.
+    for (const line of [name, rows.nth(1).locator(".started__meta")]) {
+      const lineHeight = await line.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+      expect((await line.boundingBox())!.height).toBeLessThanOrEqual(lineHeight + 1);
+    }
+    // The count whole: short of room, only the section gives way.
+    const meta = rows.nth(1).locator(".started__meta");
+    await expect(meta).toHaveText("Film & TV · 7 of 117 placed");
+    expect(await meta.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    if (width < 700) return;
+    const [a, b] = [(await rows.nth(0).boundingBox())!, (await rows.nth(1).boundingBox())!];
+    expect(a.y).toBe(b.y);
+    expect(a.height).toBe(b.height);
+    const go = page.getByRole("link", { name: /^Continue “/ });
+    const [ga, gb] = [(await go.nth(0).boundingBox())!, (await go.nth(1).boundingBox())!];
+    expect(ga.y).toBe(gb.y);
+  });
+}
