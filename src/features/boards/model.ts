@@ -374,7 +374,21 @@ export const tierShares = (board: Board): { color: string; colorDark: string; co
     count: itemsIn(board, tier.uid).length,
   }));
 
-/** The first few pictures on the board, for its card. */
+/** An address only the device that made it can open: a phone's picture not sent yet. */
+const DEVICE_ONLY = /^(blob:|content:|file:)/i;
+
+/**
+ * A card's picture as the site can draw it, or null for a card without one:
+ * no address, an empty one, or one only another device can open (a board
+ * synced from a phone may keep such a card). The board shows that card as
+ * its name; a collage leaves it out rather than draw a blank tile (night W7).
+ */
+export const pictureOfCard = (card: Pick<BoardItem, "imageUrl">): string | null =>
+  card.imageUrl === null || card.imageUrl.trim() === "" || DEVICE_ONLY.test(card.imageUrl)
+    ? null
+    : card.imageUrl;
+
+/** The first few pictures on the board, for its card: only cards that have one. */
 export function previewsOf(board: Board, limit = 6): string[] {
   const seen = new Set<string>();
   const pictures: string[] = [];
@@ -382,9 +396,10 @@ export function previewsOf(board: Board, limit = 6): string[] {
   const pool = poolTier(board);
   const inPool = pool === null ? [] : itemsIn(board, pool.uid);
   for (const item of [...ranked, ...inPool]) {
-    if (item.imageUrl === null || seen.has(item.imageUrl)) continue;
-    seen.add(item.imageUrl);
-    pictures.push(item.imageUrl);
+    const picture = pictureOfCard(item);
+    if (picture === null || seen.has(picture)) continue;
+    seen.add(picture);
+    pictures.push(picture);
     if (pictures.length === limit) break;
   }
   return pictures;

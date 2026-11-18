@@ -936,6 +936,8 @@ export const en = {
     frame: "The picture, with the point it is looked at",
     frameHelp:
       "Drag the point or tap where it should be. Pinch, scroll or use the slider to zoom. The arrow keys move it, + and − zoom.",
+    // Over the cover window's preview of the cover (artboard 41).
+    previewLabel: "Preview",
   },
   propose: {
     title: "Propose a section",

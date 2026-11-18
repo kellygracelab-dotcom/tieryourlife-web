@@ -1171,9 +1171,8 @@ function OpenBoard({
           latest={latest}
           keep={keep}
           sections={sections}
-          proposalHomes={homes}
           // A house list never goes out under the person's name: it chooses its section here.
-          onPublication={ownPublishing === null ? null : () => openPublish()}
+          chooseFiling={ownPublishing === null}
           onCategory={(category) => keep(setCategory(latest(), category, now()))}
           // Its cover takes the editor's own credit, as its cards' pictures do.
           house={house !== null}

@@ -3,7 +3,7 @@ import {
   canvasMeasure,
   nameFitter,
   NAME_TYPE,
-  WIDE_NAME_TYPE,
+  BOARD_NAME_TYPE,
   type BoardSize,
   type NameFit,
   type NameShape,
@@ -20,7 +20,7 @@ const fitShared: FitName = (name, board, shape = "poster") => {
     shared =
       measure === null
         ? (_, at, kind) => ({
-            size: (kind === "wide" ? WIDE_NAME_TYPE : NAME_TYPE)[at].start,
+            size: (kind === "board" ? BOARD_NAME_TYPE : NAME_TYPE)[at].start,
             hyphenate: true,
           })
         : nameFitter(measure);
@@ -31,8 +31,8 @@ const fitShared: FitName = (name, board, shape = "poster") => {
 interface CardNameProps {
   title: string;
   board: BoardSize;
-  /** On the board's wider name tile (`.tile--name`), not a poster-wide one. */
-  wide?: boolean;
+  /** On the board's name tile (`.tile--name`), which keeps the whole name in its three lines. */
+  onBoard?: boolean;
   /** How the name is fitted; measured on a canvas unless a test says otherwise. */
   fit?: FitName;
 }
@@ -43,8 +43,8 @@ interface CardNameProps {
  * where the browser has no hyphens for its language, rather than cut off at
  * the tile's edge.
  */
-export function CardName({ title, board, wide = false, fit = fitShared }: CardNameProps) {
-  const { size, hyphenate } = fit(title, board, wide ? "wide" : "poster");
+export function CardName({ title, board, onBoard = false, fit = fitShared }: CardNameProps) {
+  const { size, hyphenate } = fit(title, board, onBoard ? "board" : "poster");
   return (
     <span
       className="tile__name"

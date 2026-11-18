@@ -1072,6 +1072,7 @@ const pl: Translation = {
     frame: "Obraz z punktem, na który patrzy kadr",
     frameHelp:
       "Przeciągnij punkt albo stuknij tam, gdzie ma być. Powiększaj dwoma palcami, kółkiem lub suwakiem. Strzałki go przesuwają, + i − powiększają.",
+    previewLabel: "Podgląd",
   },
   propose: {
     title: "Zaproponuj dział",

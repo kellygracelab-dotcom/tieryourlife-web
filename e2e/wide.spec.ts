@@ -241,7 +241,7 @@ test.describe("a wide screen", () => {
   });
 
   // A tablet held upright: the docked tray, cards 52 × 76 as in the rows (a name
-  // without a picture one and a half wide), the band 80.
+  // without a picture as wide as a picture, night pass W3), the band 80.
   test("docks a taller tray on a tablet held upright", async ({ browser }) => {
     const tablet = await browser.newContext({ ...devices["iPad (gen 7)"] });
     const page = await tablet.newPage();
@@ -258,7 +258,7 @@ test.describe("a wide screen", () => {
         const tile = (await page.getByRole("button", { name: "Ex Machina" }).boundingBox())!;
         return [Math.round(tile.width), Math.round(tile.height)];
       })
-      .toEqual([78, 76]);
+      .toEqual([52, 76]);
     const band = (await page.locator(".tier__band").first().boundingBox())!;
     expect(Math.round(band.width)).toBe(80);
     // An empty tier is as tall as one holding a card: 76 + 2 × 12.

@@ -85,7 +85,7 @@ test("adjusts a cover of one picture, and its tile shows the place kept", async 
   await frame.press("Shift+ArrowUp");
   await dialog.getByRole("button", { name: "Done" }).click();
   await expect(dialog).toBeHidden();
-  const preview = page.locator(".board-settings__cover-frame img");
+  const preview = page.locator(".cover-preview img");
   await expect.poll(() => topOf(preview)).toBe("-30%");
 
   await page.emulateMedia({ colorScheme: "dark" });

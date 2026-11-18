@@ -1037,6 +1037,7 @@ const es: Translation = {
     frame: "La imagen, con el punto al que mira el encuadre",
     frameHelp:
       "Arrastra el punto o toca donde debe ir. Haz zoom con dos dedos, la rueda o el control. Las flechas lo mueven; + y − hacen zoom.",
+    previewLabel: "Vista previa",
   },
   propose: {
     title: "Proponer una sección",

@@ -1015,6 +1015,7 @@ const de: Translation = {
     frame: "Das Bild mit dem Punkt, auf den der Ausschnitt schaut",
     frameHelp:
       "Ziehe den Punkt oder tippe dorthin, wo er sein soll. Zoomen mit zwei Fingern, dem Mausrad oder dem Regler. Pfeiltasten bewegen ihn, + und − zoomen.",
+    previewLabel: "Vorschau",
   },
   propose: {
     title: "Rubrik vorschlagen",
