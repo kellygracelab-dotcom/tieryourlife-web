@@ -296,6 +296,7 @@ const fr: Translation = {
     animals: "Animaux",
     fromSources: "Depuis {sources}",
     webSource: "le web",
+    searchedAs: "Résultats pour {text}",
     nothingIn: "{scope} : rien sous ce nom.",
     lookEverywhere: "Chercher partout",
     webDailyLimit:
@@ -1548,6 +1549,15 @@ const fr: Translation = {
       book: "Une couverture de livre : est-ce bien ça ?",
       animal: "Une photo d’animal : est-ce bien ça ?",
       thing: "Autre chose de ce nom : est-ce bien ça ?",
+    },
+    reason: {
+      namesakes: "D’autres portent ce nom — est-ce le bon ?",
+      otherName: "Trouvé sous un autre nom — est-ce juste ?",
+      spelling: "Trouvé avec une autre orthographe — est-ce juste ?",
+      otherKind: "Pas le genre d’image de cette liste — est-ce juste ?",
+      noSection: "La liste n’a pas de rubrique, impossible de vérifier",
+      web: "Une image du web — est-ce juste ?",
+      unsure: "Pas sûr que ce soit le bon — est-ce juste ?",
     },
     nothingFound: "Rien trouvé sous ce nom",
     fromLink: "Depuis votre lien",

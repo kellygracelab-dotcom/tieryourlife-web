@@ -26,7 +26,9 @@ import {
   expectedArea,
   isUnfound,
   reviewOrder,
+  doubtOf,
   rowDoubt,
+  rowReason,
   summaryOf,
   type PasteRow,
 } from "./pasteReview";
@@ -73,6 +75,8 @@ const originOf = (found: FoundPicture): PasteRow["origin"] => ({
   kind: found.kind,
   source: found.source,
   subtitle: found.subtitle,
+  ...(found.confidence === undefined ? {} : { confidence: found.confidence }),
+  ...(found.doubts === undefined ? {} : { doubts: found.doubts }),
 });
 
 /** A catalogue's picture as a pasted card, the name kept as it was written. */
@@ -205,6 +209,18 @@ function RowSearch({
 
 /** What a row says under its name: what is in doubt, why none came, or where the picture is from. */
 function lineOf(row: PasteRow, area: string | null): { text: string; look: boolean } {
+  const reason = rowReason(row);
+  if (reason !== null) {
+    // Not what the list holds: the kind it shows says more than the word does.
+    const kind =
+      reason === "otherKind" && row.origin !== null && row.origin !== "link"
+        ? doubtOf(row.origin, area)
+        : null;
+    return {
+      text: kind === null ? strings.pasteList.reason[reason] : strings.pasteList.doubt[kind],
+      look: true,
+    };
+  }
   const doubt = rowDoubt(row, area);
   if (doubt !== null) return { text: strings.pasteList.doubt[doubt], look: true };
   if (isUnfound(row)) {

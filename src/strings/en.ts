@@ -277,6 +277,8 @@ export const en = {
     animals: "Animals",
     fromSources: "From {sources}",
     webSource: "the web",
+    // Over the pictures, when nothing matched the words as typed and the search tried them otherwise.
+    searchedAs: "Showing results for {text}",
     nothingIn: "{scope}: nothing by that name.",
     lookEverywhere: "Search everywhere",
     webDailyLimit:
@@ -1395,6 +1397,16 @@ export const en = {
       book: "A book cover — is that right?",
       animal: "A photo of an animal — is that right?",
       thing: "Something else by that name — is that right?",
+    },
+    // Why the backend is not sure of a picture it found (picture search, stage 1), by its first reason.
+    reason: {
+      namesakes: "Others go by this name — is this the one?",
+      otherName: "Found under another name — is that right?",
+      spelling: "Found by another spelling — is that right?",
+      otherKind: "Not the kind of picture this list holds — is that right?",
+      noSection: "The list has no section, so this can’t be checked",
+      web: "A picture from the web — is that right?",
+      unsure: "Not sure this is the one — is that right?",
     },
     nothingFound: "Nothing found by that name",
     fromLink: "From your link",

@@ -290,6 +290,7 @@ const es: Translation = {
     animals: "Animales",
     fromSources: "De {sources}",
     webSource: "la web",
+    searchedAs: "Mostrando resultados de {text}",
     nothingIn: "{scope}: nada con ese nombre.",
     lookEverywhere: "Buscar en todas partes",
     webDailyLimit:
@@ -1534,6 +1535,15 @@ const es: Translation = {
       book: "Una portada de libro: ¿es correcto?",
       animal: "Una foto de un animal: ¿es correcto?",
       thing: "Otra cosa con ese nombre: ¿es correcto?",
+    },
+    reason: {
+      namesakes: "Hay otros con este nombre: ¿es este?",
+      otherName: "Encontrado con otro nombre: ¿es correcto?",
+      spelling: "Encontrado con otra ortografía: ¿es correcto?",
+      otherKind: "No es el tipo de imagen de esta lista: ¿es correcto?",
+      noSection: "La lista no tiene sección, no se puede comprobar",
+      web: "Una imagen de la web: ¿es correcto?",
+      unsure: "No es seguro que sea este: ¿es correcto?",
     },
     nothingFound: "No se encontró nada con ese nombre",
     fromLink: "De tu enlace",

@@ -64,6 +64,7 @@ import { SectionEditor } from "../features/sections/SectionEditor";
 import { TooManyDialog } from "../features/sections/TooManyDialog";
 import { sectionsStore, useSections, type SectionsStore } from "../features/sections/useSections";
 import {
+  findPictures,
   keepPicture,
   linkPicture,
   proposeSection,
@@ -519,6 +520,19 @@ function OpenBoard({
           })),
     [board],
   );
+  // Every picture search from the list says its section, and its topic when
+  // the backend knows it, so the search can judge what it found (picture search, stage 1).
+  const listSection = board?.category ?? null;
+  const topicId = board?.topic?.id ?? null;
+  const listFind = useMemo<FindPictures>(() => {
+    const base = find ?? findPictures;
+    return (ask) =>
+      base({
+        ...ask,
+        ...(listSection === null || listSection === "" ? {} : { section: listSection }),
+        ...(topicId === null || topicId === "" ? {} : { topic: topicId }),
+      });
+  }, [find, listSection, topicId]);
   // One's own board keeps its game in the board itself, so the account
   // carries it to the phone; without changing when the board was last edited.
   const poolId = board === null ? null : (poolTier(board)?.uid ?? null);
@@ -1027,7 +1041,7 @@ function OpenBoard({
       items={editorItems}
       category={board.category}
       dispatch={dispatch}
-      find={find}
+      find={listFind}
       upload={uploadAsAccount}
       keep={keepAsAccount}
       link={linkAsAccount}

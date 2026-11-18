@@ -233,3 +233,44 @@ describe("Paste a list, step 2", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 });
+
+describe("Paste a list, when the search says how sure it is", () => {
+  it("takes a sure hit under another name, and asks about the rest with the first reason", async () => {
+    const judged: Record<string, FoundPicture[]> = {
+      Киев: [
+        picture("wikidata:Q1899", {
+          title: "Kyiv",
+          subtitle: "capital of Ukraine",
+          confidence: "high",
+          matchedName: "Kyiv",
+        }),
+      ],
+      Paris: [
+        picture("wikidata:Q90", {
+          title: "Paris",
+          subtitle: "capital of France",
+          confidence: "medium",
+          doubts: ["namesakes"],
+        }),
+      ],
+      Lviv: [picture("wikidata:Q36036", { title: "Lviv", confidence: "low" })],
+    };
+    const find = vi.fn<FindPictures>(async ({ q }) => page(judged[q] ?? []));
+    render(
+      <AddCardBox
+        items={[]}
+        category="places"
+        dispatch={vi.fn<(action: EditorAction) => void>()}
+        find={find}
+        upload={vi.fn<Upload>()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Paste a list" }));
+    await findFor("Киев\nParis\nLviv", "Find pictures for 3 names");
+    expect(rows()).toEqual([
+      { name: "Paris", line: "Others go by this name — is this the one?", look: true },
+      { name: "Lviv", line: "Nothing found by that name", look: true },
+      { name: "Киев", line: "capital of Ukraine · Wikidata", look: false },
+    ]);
+  });
+});

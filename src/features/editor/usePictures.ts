@@ -7,6 +7,7 @@ import {
   type PictureNotice,
   type PicturePage,
   type PictureScope,
+  type SearchedAs,
 } from "../../api/pictures";
 import { findPictures } from "../../lib/api";
 import { isSearchLimit, searchLimitOf } from "../../lib/searchLimit";
@@ -44,6 +45,8 @@ export type PicturesState =
       more: boolean;
       /** Shown from the quick answer; the whole search is still adding to it. */
       filling: boolean;
+      /** Nothing matched the words as typed: what was searched instead (picture search, stage 1). */
+      searchedAs?: SearchedAs;
     })
   | (Asked & {
       status: "failed";
@@ -124,6 +127,7 @@ export function usePictures(
         next: page.hasMore && !filling ? 2 : null,
         more: false,
         filling,
+        ...(page.searchedAs === undefined ? {} : { searchedAs: page.searchedAs }),
       });
     // The whole search's hits the quick answer did not have go below it; its
     // pages and notices are the ones that count from then on.
@@ -132,8 +136,11 @@ export function usePictures(
       setAnswer((now) => {
         if (now.status !== "ready" || !same(now, asked)) return now;
         const seen = new Set(now.items.map((item) => item.id));
+        // The whole search's word counts: it may have matched the words as typed after all.
+        const { searchedAs: _quickAs, ...was } = now;
         return {
-          ...now,
+          ...was,
+          ...(whole.searchedAs === undefined ? {} : { searchedAs: whole.searchedAs }),
           items: [...now.items, ...whole.items.filter((item) => !seen.has(item.id))],
           notices: whole.notices,
           next: whole.hasMore ? 2 : null,

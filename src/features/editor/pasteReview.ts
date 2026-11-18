@@ -1,4 +1,10 @@
-import type { PictureKind, PictureScope, PictureSource } from "../../api/pictures";
+import type {
+  PictureConfidence,
+  PictureDoubt,
+  PictureKind,
+  PictureScope,
+  PictureSource,
+} from "../../api/pictures";
 import type { MissReason, PastedCard } from "./paste";
 
 /** What a catalogue's answer says of its picture: what it shows, and whose it is. */
@@ -6,6 +12,10 @@ export interface PictureOrigin {
   kind: PictureKind;
   source: PictureSource;
   subtitle: string | null;
+  /** How sure the backend was of it (picture search, stage 1); absent from an older backend. */
+  confidence?: PictureConfidence;
+  /** Why not more sure, in the backend's words. */
+  doubts?: readonly PictureDoubt[];
 }
 
 /**
@@ -72,9 +82,34 @@ export function doubtOf(origin: PictureOrigin, area: string | null): Doubt | nul
   return expected.includes(kind) ? null : kind;
 }
 
-/** A row's doubt: none once the person chose, nor for a picture of their own link. */
+/**
+ * A row's doubt by the kind its picture shows: none once the person chose,
+ * nor for a picture of their own link, nor where the backend judged it (then
+ * `rowReason` says).
+ */
 export const rowDoubt = (row: PasteRow, area: string | null): Doubt | null =>
-  row.chosen || row.origin === null || row.origin === "link" ? null : doubtOf(row.origin, area);
+  row.chosen || row.origin === null || row.origin === "link" || row.origin.confidence !== undefined
+    ? null
+    : doubtOf(row.origin, area);
+
+/** A backend's doubt this site has no words for: it is not sure, and says no more. */
+export type Reason = PictureDoubt | "unsure";
+
+/**
+ * Why a row the backend judged needs a look (picture search, stage 1): every
+ * picture it was not sure of, with its first reason; null for a sure one, one
+ * the person chose, and anything an older backend found.
+ */
+export function rowReason(row: PasteRow): Reason | null {
+  if (row.chosen || row.origin === null || row.origin === "link") return null;
+  const { confidence, doubts } = row.origin;
+  if (confidence === undefined || confidence === "high") return null;
+  return doubts?.[0] ?? "unsure";
+}
+
+/** A row whose picture is in doubt, by the backend's word or by its kind. */
+export const inDoubt = (row: PasteRow, area: string | null): boolean =>
+  rowReason(row) !== null || rowDoubt(row, area) !== null;
 
 /** A row the search left without a picture: nothing found, or a refusal. */
 export const isUnfound = (row: PasteRow): boolean =>
@@ -82,7 +117,7 @@ export const isUnfound = (row: PasteRow): boolean =>
 
 /** A row the person should look at: a picture of the wrong kind, or none found. */
 export const needsLook = (row: PasteRow, area: string | null): boolean =>
-  rowDoubt(row, area) !== null || isUnfound(row);
+  inDoubt(row, area) || isUnfound(row);
 
 /**
  * The rows as the check shows them: those to look at first, the rest after,
@@ -110,7 +145,7 @@ export function summaryOf(rows: readonly PasteRow[], area: string | null): Paste
   let none = 0;
   for (const row of rows) {
     if (row.card.imageUrl === null) none++;
-    else if (rowDoubt(row, area) !== null) doubtful++;
+    else if (inDoubt(row, area)) doubtful++;
   }
   return { names: rows.length, right: rows.length - doubtful - none, doubtful, none };
 }

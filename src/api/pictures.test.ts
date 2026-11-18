@@ -162,6 +162,55 @@ describe("pictures", () => {
     expect(pictureOf("text")).toBeNull();
   });
 
+  it("says the list's section and topic, and reads how sure the search is of each hit", async () => {
+    const { client, request } = recordingClient({
+      items: [
+        raw({ id: "a", matchedName: "Kyiv", confidence: "high", doubts: [] }),
+        raw({ id: "b", confidence: "low", doubts: ["namesakes", "somethingNew", 3, "otherKind"] }),
+        raw({ id: "c", confidence: "sure", matchedName: "  ", kind: "plant" }),
+      ],
+      hasMore: false,
+      notices: [],
+      searchedAs: { text: "Kyiv", how: "translated" },
+    });
+    const page = await searchPictures(client, {
+      q: "Киев",
+      scope: "all",
+      page: 1,
+      web: false,
+      lang: "ru",
+      section: "places",
+      topic: "cities",
+    });
+    expect(request).toHaveBeenCalledWith("GET", "/lists/pictures", {
+      query: { q: "Киев", scope: "all", lang: "ru", page: 1, section: "places", topic: "cities" },
+    });
+    expect(page.searchedAs).toEqual({ text: "Kyiv", how: "translated" });
+    expect(page.items[0]).toMatchObject({ matchedName: "Kyiv", confidence: "high", doubts: [] });
+    // Doubts this page does not know yet are left unsaid.
+    expect(page.items[1]).toMatchObject({ confidence: "low", doubts: ["namesakes", "otherKind"] });
+    // A kind this page does not draw yet is a thing; an unknown confidence is none.
+    expect(page.items[2]?.kind).toBe("thing");
+    expect(page.items[2]).not.toHaveProperty("confidence");
+    expect(page.items[2]).not.toHaveProperty("matchedName");
+
+    // An empty section or topic is not sent, and a broken searchedAs is not read.
+    const other = recordingClient({ items: [], searchedAs: { text: " ", how: "x" } });
+    const none = await searchPictures(other.client, {
+      q: "up",
+      scope: "all",
+      page: 1,
+      web: false,
+      lang: "en",
+      section: "",
+      topic: "",
+    });
+    expect(other.request).toHaveBeenCalledWith("GET", "/lists/pictures", {
+      query: { q: "up", scope: "all", lang: "en", page: 1 },
+    });
+    expect(none).not.toHaveProperty("searchedAs");
+  });
+
   it("says which catalogues were busy, and when they may be asked again", async () => {
     const ask = { q: "naruto", scope: "anime", page: 1, web: false, lang: "en" } as const;
     const busy = recordingClient({

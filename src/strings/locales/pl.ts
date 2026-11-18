@@ -297,6 +297,7 @@ const pl: Translation = {
     animals: "Zwierzęta",
     fromSources: "Z {sources}",
     webSource: "internetu",
+    searchedAs: "Wyniki dla {text}",
     nothingIn: "{scope}: nic o tej nazwie.",
     lookEverywhere: "Szukaj wszędzie",
     webDailyLimit:
@@ -1635,6 +1636,15 @@ const pl: Translation = {
       book: "Okładka książki — czy to dobrze?",
       animal: "Zdjęcie zwierzęcia — czy to dobrze?",
       thing: "Coś innego o tej nazwie — czy to dobrze?",
+    },
+    reason: {
+      namesakes: "Jest więcej o tej nazwie — czy to ten?",
+      otherName: "Znalezione pod inną nazwą — czy to dobrze?",
+      spelling: "Znalezione w innej pisowni — czy to dobrze?",
+      otherKind: "To nie ten rodzaj obrazka co w tej liście — czy to dobrze?",
+      noSection: "Lista nie ma działu, nie da się tego sprawdzić",
+      web: "Obrazek z internetu — czy to dobrze?",
+      unsure: "Nie wiadomo, czy to ten — czy to dobrze?",
     },
     nothingFound: "Nic nie znaleziono pod tą nazwą",
     fromLink: "Z twojego linku",
