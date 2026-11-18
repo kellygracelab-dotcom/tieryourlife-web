@@ -579,6 +579,11 @@ const ja: Translation = {
       "ランキング中に作者がこのリストを変更しました。読み込み直すと、今のリストでランキングできます。",
     loadAgain: "読み込み直す",
   },
+  shareCard: {
+    placed: { other: "{n} 枚を配置済み" },
+    notPlaced: { other: "未配置のカードがあと {n} 枚" },
+    rankIt: "自分でランク付け",
+  },
   keep: {
     google: "Google で続ける",
     busy: "ログイン中…",

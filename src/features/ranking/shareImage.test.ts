@@ -14,6 +14,9 @@ import {
   saveBlob,
   SHARE,
   shareBoardPicture,
+  shortAddress,
+  titleLines,
+  topFor,
   type Paint,
   type ShareData,
 } from "./shareImage";
@@ -56,9 +59,16 @@ function recorder() {
     drawImage: (_image, x, y, w, h) => {
       calls.push(`image @${x},${y} ${w}x${h}`);
     },
+    arc: () => {},
   };
   const texts = () => calls.filter((c) => c.startsWith("text ")).map((c) => c.slice(5));
-  return { paint, calls, texts };
+  const fonts: string[] = [];
+  const fillText = paint.fillText;
+  paint.fillText = (text, x, y) => {
+    fonts.push(paint.font);
+    fillText(text, x, y);
+  };
+  return { paint, calls, texts, fonts };
 }
 
 const data: ShareData = {
@@ -80,7 +90,7 @@ describe("planShare", () => {
     expect(plan.moreTiers).toBe(0);
     const left = SHARE.pad + SHARE.band + SHARE.gap;
     expect(plan.rows[0]?.cards[1]?.x).toBe(left + SHARE.tile.width + SHARE.gap);
-    expect(plan.rows[1]?.y).toBe(SHARE.pad + SHARE.header + plan.rowHeight + SHARE.rowGap);
+    expect(plan.rows[1]?.y).toBe(topFor(1) + plan.rowHeight + SHARE.rowGap);
   });
 
   it("gives the last slot to a +N chip when a tier overflows", () => {
@@ -111,14 +121,36 @@ describe("planShare", () => {
     expect(plan.rows).toHaveLength(6);
     expect(plan.moreTiers).toBe(4);
     const last = plan.rows[5];
-    expect((last?.y ?? 0) + plan.rowHeight).toBeLessThanOrEqual(
+    expect(plan.bottom).toBe((last?.y ?? 0) + plan.rowHeight);
+    // The line counting the rest has its room above the footer.
+    expect(plan.bottom + SHARE.note).toBeLessThanOrEqual(SHARE.height - SHARE.footer - SHARE.pad);
+  });
+
+  it("starts lower under a name of two lines, and keeps a line's room for the cards not placed", () => {
+    const one = planShare(5, [], undefined, { top: topFor(1), notes: 1 });
+    const two = planShare(5, [], undefined, { top: topFor(2), notes: 1 });
+    expect(two.rows[0]?.y).toBe((one.rows[0]?.y ?? 0) + SHARE.title.line);
+    expect(two.rows).toHaveLength(5);
+    expect(two.bottom + SHARE.note).toBeLessThanOrEqual(SHARE.height - SHARE.footer - SHARE.pad);
+    // Six tiers do not fit under two lines and a note: the sixth is counted instead.
+    const six = planShare(6, [], undefined, { top: topFor(2), notes: 1 });
+    expect(six.rows).toHaveLength(5);
+    expect(six.moreTiers).toBe(1);
+    // Six would fit under one line and a note, but not with the line that counts the rest.
+    const seven = planShare(7, [], undefined, { top: topFor(1), notes: 1 });
+    expect(seven.rows).toHaveLength(5);
+    expect(seven.moreTiers).toBe(2);
+    expect(seven.bottom + 2 * SHARE.note).toBeLessThanOrEqual(
       SHARE.height - SHARE.footer - SHARE.pad,
     );
+    // A board's page grows by the note too.
+    const tall = planShare(9, [], BOARD_SHAPE, { top: topFor(1), notes: 1 });
+    expect(tall.height).toBe(tall.bottom + SHARE.note + SHARE.footer + SHARE.pad);
   });
 });
 
 describe("drawShare", () => {
-  it("paints the title, the tiers, pictures, name tiles and the address", async () => {
+  it("paints the title, the counts, the tiers, pictures, name tiles and the footer", async () => {
     const { paint, calls, texts } = recorder();
     const loadImage = vi.fn(async (url: string) => (url.endsWith("2.jpg") ? null : picture));
     await drawShare(paint, data, loadImage);
@@ -130,27 +162,29 @@ describe("drawShare", () => {
     ]);
     expect(calls).toEqual(
       expect.arrayContaining([
-        "round 48,198 984x156 rgba(255, 112, 67, 0.12)",
-        "round 48,198 120x156 #ff7043",
-        "round 48,530 984x156 #dad7e0",
-        "image @178,208 96x136",
+        "round 48,180 984x156 rgba(255, 112, 67, 0.12)",
+        "round 48,180 120x156 #ff7043",
+        "round 48,512 984x156 #dad7e0",
+        "image @178,190 96x136",
       ]),
     );
     expect(texts()).toEqual(
       expect.arrayContaining([
-        "Oscar films 2025 @48,100",
-        "Danylo · 3 cards @48,146",
-        "S @108,263",
-        "best @108,302",
-        "A @108,442",
-        "Film 1 @332,276",
-        "Film 2 @226,608",
-        "TierYourLife @48,1278",
-        "tieryourlife.web.app/r/abcdefgh @1032,1278",
+        "Oscar films 2025 @48,95",
+        "3 cards · 3 placed · by Danylo @48,140",
+        "S @108,245",
+        "best @108,284",
+        "A @108,424",
+        "Film 1 @332,258",
+        "Film 2 @226,590",
+        "TierYourLife @118,1275",
+        "Rank it yourself · tieryourlife.web.app/r/abcdefgh @505,1275",
       ]),
     );
     expect(texts().some((text) => text.startsWith("+"))).toBe(false);
     expect(texts().some((text) => text.includes("more tier"))).toBe(false);
+    // Every card is placed: no line says otherwise.
+    expect(texts().some((text) => text.includes("not placed"))).toBe(false);
   });
 
   it("writes a pictured card's name on its foot only while names are on (artboard 36)", async () => {
@@ -165,8 +199,111 @@ describe("drawShare", () => {
   it("names nobody on a list without an author", async () => {
     const { paint, texts } = recorder();
     await drawShare(paint, { ...data, authorName: "" }, async () => null);
-    expect(texts()).toEqual(expect.arrayContaining(["3 cards @48,146"]));
+    expect(texts()).toEqual(expect.arrayContaining(["3 cards · 3 placed @48,140"]));
     expect(texts().some((text) => text.includes("Danylo"))).toBe(false);
+  });
+
+  it("names the author only of a list with a link of its own, and leads to the site otherwise", async () => {
+    const { paint, texts, fonts } = recorder();
+    await drawShare(paint, { ...data, address: "https://tieryourlife.web.app" }, async () => null);
+    expect(texts()).toEqual(
+      expect.arrayContaining([
+        "3 cards · 3 placed @48,140",
+        "Rank it yourself · tieryourlife.web.app @615,1275",
+      ]),
+    );
+    expect(texts().some((text) => text.includes("Danylo"))).toBe(false);
+    // The address in the site's type, not a monospace one.
+    expect(fonts.some((font) => /mono|Consolas/i.test(font))).toBe(false);
+
+    const own = recorder();
+    await drawShare(
+      own.paint,
+      { ...data, address: "https://tieryourlife.web.app/l/L1" },
+      async () => null,
+    );
+    expect(own.texts()).toEqual(
+      expect.arrayContaining([
+        "3 cards · 3 placed · by Danylo @48,140",
+        "Rank it yourself · tieryourlife.web.app/l/L1 @565,1275",
+      ]),
+    );
+  });
+
+  it("makes the pill's type smaller for a long link, then lets the link stand alone", async () => {
+    // Letters 0.5 of the size wide.
+    const halfSize = (on: Paint) => (text: string) => ({
+      width: text.length * Number(/([\d.]+)px/.exec(on.font)?.[1] ?? 0) * 0.5,
+    });
+    const { paint, texts, fonts } = recorder();
+    paint.measureText = halfSize(paint);
+    const id = "a1B2c3D4e5F6g7H8i9J0";
+    await drawShare(
+      paint,
+      { ...data, address: `https://tieryourlife.web.app/l/${id}` },
+      async () => null,
+    );
+    const at = texts().findIndex((text) =>
+      text.startsWith(`Rank it yourself · tieryourlife.web.app/l/${id} @`),
+    );
+    expect(at).toBeGreaterThan(-1);
+    expect(fonts[at]).toMatch(/^400 2[0-5]px /);
+
+    const long = recorder();
+    long.paint.measureText = halfSize(long.paint);
+    await drawShare(
+      long.paint,
+      { ...data, address: `https://tieryourlife.web.app/l/${"x".repeat(60)}` },
+      async () => null,
+    );
+    const pill = long.texts().find((text) => text.includes("tieryourlife.web.app/l/"));
+    expect(pill).toMatch(/^tieryourlife\.web\.app\/l\/x+… @/);
+  });
+
+  it("sets a long name whole on two lines, and cuts only what a third would take", async () => {
+    const { paint, texts } = recorder();
+    const name =
+      "Every breakfast cereal I have eaten since the year I turned seven, ranked by how much I miss it on a cold Monday morning before school";
+    await drawShare(paint, { ...data, title: name }, async () => null);
+    const lines = texts().filter((text) => /@48,(95|151)$/.test(text));
+    expect(lines).toHaveLength(2);
+    expect(lines.map((text) => text.replace(/ @48,\d+$/, "")).join(" ")).toBe(name);
+    // The counts and the tiers move down by a line.
+    expect(texts()).toContain("3 cards · 3 placed · by Danylo @48,196");
+    expect(texts()).toContain("S @108,301");
+
+    const third = recorder();
+    await drawShare(third.paint, { ...data, title: "x".repeat(250) }, async () => null);
+    const cut = third.texts().filter((text) => text.startsWith("xxx"));
+    expect(cut).toHaveLength(2);
+    expect(cut[0]).toMatch(/^x{97}- @48,95$/);
+    expect(cut[1]).toMatch(/^x+… @48,151$/);
+  });
+
+  it("breaks a name with no spaces between its characters, without a hyphen in Japanese", () => {
+    const { paint } = recorder();
+    // Each character 40 px: 24 to a line of 984.
+    paint.measureText = (text) => ({ width: Array.from(text).length * 40 });
+    const name = "これまでに食べたすべての朝食用シリアルの決定版ランキングと理由";
+    const lines = titleLines(paint, name);
+    expect(lines).toHaveLength(2);
+    expect(lines.join("")).toBe(name);
+    expect(lines.some((line) => line.endsWith("-"))).toBe(false);
+  });
+
+  it("says in one line how many cards are not placed, under the tiers, instead of drawing them", async () => {
+    const { paint, texts } = recorder();
+    const items = Array.from({ length: 30 }, (_, n) => item(n));
+    const plan = await drawShare(
+      paint,
+      { ...data, itemCount: 30, items, rows: [[0, 1], [2], []], board: true },
+      async () => null,
+    );
+    expect(texts()).toContain("30 cards · 3 placed · by Danylo @48,140");
+    expect(texts()).toContain(`27 more cards not placed yet @48,${plan.bottom + 34}`);
+    // Only the placed cards are drawn; no row for the rest.
+    expect(texts().some((text) => text.startsWith("Film 3 "))).toBe(false);
+    expect(texts().some((text) => text.startsWith("Not placed"))).toBe(false);
   });
 
   it("trims a long title, marks what a line cannot hold and counts hidden tiers", async () => {
@@ -177,8 +314,8 @@ describe("drawShare", () => {
       paint,
       {
         ...data,
-        title: "x".repeat(120),
-        itemCount: 12,
+        title: "x".repeat(250),
+        itemCount: 13,
         items,
         tiers: tall,
         rows: [items.map((_, n) => n), [], [], [], [], [], [], [], []],
@@ -186,11 +323,42 @@ describe("drawShare", () => {
       async () => picture,
     );
     const all = texts();
-    expect(all.find((text) => text.startsWith("xxx"))).toMatch(/^x{97}… @48,100$/);
-    expect(all).toContain("+5 @968,276");
-    expect(all).toContain("and 3 more tiers @48,1218");
-    expect(all.some((text) => text.startsWith("T5 "))).toBe(true);
-    expect(all.some((text) => text.startsWith("T6 "))).toBe(false);
+    expect(all.filter((text) => text.startsWith("xxx"))).toHaveLength(2);
+    expect(all).toContain("+5 @968,314");
+    // Under a name of two lines and over a note, five tiers fit; the two notes follow them.
+    expect(all).toContain("and 4 more tiers @48,1090");
+    expect(all).toContain("1 more card not placed yet @48,1130");
+    expect(all.some((text) => text.startsWith("T4 "))).toBe(true);
+    expect(all.some((text) => text.startsWith("T5 "))).toBe(false);
+  });
+
+  it("draws in the dark scheme when the person sees the site dark", async () => {
+    const { paint, calls, texts } = recorder();
+    const colours: string[] = [];
+    const fillText = paint.fillText;
+    paint.fillText = (text, x, y) => {
+      colours.push(`${text} ${String(paint.fillStyle)}`);
+      fillText(text, x, y);
+    };
+    await drawShare(paint, { ...data, dark: true }, async () => null);
+    expect(calls[0]).toBe(`rect 0,0 ${SHARE.width}x${SHARE.height} #131318`);
+    expect(calls).toEqual(
+      expect.arrayContaining([
+        // The tier's dark colour, its row tinted more, as the site's dark rows are.
+        "round 48,180 984x156 rgba(191, 54, 12, 0.2)",
+        "round 48,180 120x156 #bf360c",
+        // A card without a picture on the dark tile.
+        "round 178,522 96x136 #26262c",
+      ]),
+    );
+    expect(colours).toEqual(
+      expect.arrayContaining([
+        "Oscar films 2025 #e4e1e9",
+        "S #121318",
+        "Rank it yourself · tieryourlife.web.app/r/abcdefgh #1b1b21",
+      ]),
+    );
+    expect(texts()).toContain("TierYourLife @118,1275");
   });
 
   it("sets a long tier name and caption on the band between words, smaller, never cut", async () => {
@@ -253,11 +421,11 @@ describe("drawShare", () => {
     );
     expect(texts()).toEqual(
       expect.arrayContaining([
-        "Danylo · 1 card @48,146",
-        "A @108,276",
-        "Alpha @226,258",
-        "Beta @226,276",
-        "Gamma D… @226,294",
+        "1 card · 1 placed · by Danylo @48,140",
+        "A @108,258",
+        "Alpha @226,240",
+        "Beta @226,258",
+        "Gamma D… @226,276",
       ]),
     );
     expect(texts().some((text) => text.includes("more tier"))).toBe(false);
@@ -277,7 +445,7 @@ describe("drawShare", () => {
       async () => null,
     );
     expect(texts()).toEqual(
-      expect.arrayContaining(["Superca… @226,258", "and @226,276", "other v… @226,294"]),
+      expect.arrayContaining(["Superca… @226,240", "and @226,258", "other v… @226,276"]),
     );
   });
 
@@ -291,7 +459,7 @@ describe("drawShare", () => {
       { ...data, tiers: tall, rows: [[0, 1, 2], [], [], [], [], [], [], [], []] },
       async () => null,
     );
-    expect(texts()).toContain("и ещё 3 уровня @48,1218");
+    expect(texts()).toContain("и ещё 3 уровня @48,1200");
   });
 });
 
@@ -312,6 +480,18 @@ describe("renderShare", () => {
     const blob = await renderShare(data, async () => null, make);
     expect([canvas.width, canvas.height]).toEqual([1080, 1350]);
     expect(blob.size).toBe(3);
+  });
+
+  it("makes a board's canvas as tall as its tiers under a name of two lines", async () => {
+    const { paint } = recorder();
+    const { canvas, make } = fakeCanvas(paint);
+    const tall = Array.from({ length: 8 }, (_, n) => ({ ...tiers[1]!, label: `T${n}` }));
+    const board = { ...data, title: "word ".repeat(30), tiers: tall, rows: [], board: true };
+    await renderShare(board, async () => null, make);
+    // Eight tiers of one line, then the line for the three cards not placed.
+    expect(canvas.height).toBe(
+      topFor(2) + 8 * 156 + 7 * 10 + SHARE.note + SHARE.footer + SHARE.pad,
+    );
   });
 
   it("fails plainly without a context or a picture", async () => {
@@ -441,16 +621,11 @@ describe("a board's picture", () => {
     items: [item(0), item(1), item(2)],
   };
 
-  it("draws the cards still in the pool as a last row", async () => {
+  it("counts the cards still in the pool under the tiers rather than drawing them (artboard 40)", async () => {
     const { paint, texts } = recorder();
-    await drawShare(paint, { ...data, rows: [[], [], []], pool: [0, 1, 2] }, async () => null);
-    expect(texts()).toEqual(
-      expect.arrayContaining([
-        expect.stringMatching(/^Not placed @108,/),
-        expect.stringMatching(/^Film 0 @/),
-        expect.stringMatching(/^Film 2 @/),
-      ]),
-    );
+    await drawShare(paint, { ...data, rows: [[], [], []], board: true }, async () => null);
+    expect(texts()).toContainEqual(expect.stringMatching(/^3 more cards not placed yet @48,/));
+    expect(texts().some((text) => /^(Not placed|Film \d) @/.test(text))).toBe(false);
   });
 
   it("hands the picture and the link to a phone's share sheet", async () => {
@@ -460,7 +635,9 @@ describe("a board's picture", () => {
     const share = vi.fn(async () => undefined);
     const sheet = { canShare: () => true, share };
     await shareBoardPicture(board, [[1], [], []], "host/l/L1", render, save, sheet);
-    expect(render).toHaveBeenCalledWith(expect.objectContaining({ pool: [0, 2] }));
+    expect(render).toHaveBeenCalledWith(
+      expect.objectContaining({ board: true, rows: [[1], [], []], dark: false }),
+    );
     expect(share).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Films", text: "Films\nhost/l/L1" }),
     );
@@ -515,7 +692,37 @@ describe("downloadShare", () => {
       address: "host/r/abcdefgh",
       // Names on the pictures, as the board shows them unless turned off (artboard 36).
       names: true,
+      // In the scheme the page is shown in: light here, where nothing chose dark.
+      dark: false,
     });
     expect(save).toHaveBeenCalledWith(blob, "oscar-films-2025-tieryourlife.png");
+  });
+
+  it("draws dark while the site is dark", async () => {
+    document.documentElement.dataset.theme = "dark";
+    onTestFinished(() => {
+      delete document.documentElement.dataset.theme;
+    });
+    const render = vi.fn(async () => new Blob(["png"]));
+    await downloadShare(
+      { ...({} as PublishedList), title: "Films", authorName: "", tiers, items: [item(0)] },
+      [[0]],
+      "host/r/abcdefgh",
+      render,
+      vi.fn(),
+    );
+    expect(render).toHaveBeenCalledWith(expect.objectContaining({ dark: true }));
+  });
+});
+
+describe("shortAddress", () => {
+  it.each([
+    ["https://tieryourlife.web.app", "tieryourlife.web.app"],
+    ["https://tieryourlife.web.app/", "tieryourlife.web.app"],
+    ["https://tieryourlife.web.app/l/a1B2c3", "tieryourlife.web.app/l/a1B2c3"],
+    ["http://127.0.0.1:4173/l/x%20y", "127.0.0.1:4173/l/x%20y"],
+    ["tieryourlife.web.app/r/abcdefgh", "tieryourlife.web.app/r/abcdefgh"],
+  ])("shows %s as %s", (address, short) => {
+    expect(shortAddress(address)).toBe(short);
   });
 });
