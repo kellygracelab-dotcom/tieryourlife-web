@@ -35,6 +35,20 @@ export const systemPrefersDark = (): boolean =>
   window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 /**
+ * The scheme the page shows now: the person's choice where <html> carries
+ * one (applyTheme puts it there), the system's otherwise. What the site draws
+ * outside its stylesheet, such as the picture of a list, follows it.
+ */
+export function shownScheme(
+  root: HTMLElement = document.documentElement,
+  dark: boolean = systemPrefersDark(),
+): "light" | "dark" {
+  const chosen = root.dataset.theme;
+  if (chosen === "light" || chosen === "dark") return chosen;
+  return dark ? "dark" : "light";
+}
+
+/**
  * Puts the choice on <html>, where the stylesheet reads it; the system choice
  * takes the attribute away so the media query decides. index.html does the
  * same before the first paint, from the same key.

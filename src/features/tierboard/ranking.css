@@ -910,14 +910,22 @@
     order: 2;
   }
 
+  /* A long list scrolls inside the box, which keeps to the window's height. */
   .pool__tools .cards__paste--open {
     position: absolute;
     inset-inline: 0;
     z-index: 5;
+    max-height: min(80vh, 640px);
     padding: 12px;
+    overflow-y: auto;
     border-radius: var(--radius-card);
     background: var(--paper);
     box-shadow: var(--shadow-up);
+  }
+
+  /* The check's rows scroll on their own, between its title and its buttons. */
+  .pool__tools .cards__paste--check {
+    overflow-y: hidden;
   }
 
   .pool__tools .cards__paste:not(.cards__paste--open) .btn {
@@ -998,11 +1006,16 @@
     position: static;
   }
 
-  .ranking:not(.ranking--under) .pool__tools .cards__found,
-  .ranking:not(.ranking--under) .pool__tools .cards__paste--open {
+  .ranking:not(.ranking--under) .pool__tools .cards__found {
     top: calc(100% + 4px);
     inset-inline: auto 0;
     width: min(440px, calc(100vw - 32px));
+  }
+
+  /* Paste a list keeps to the panel: as wide as the row of tools, never over its edge. */
+  .ranking:not(.ranking--under) .pool__tools .cards__paste--open {
+    top: calc(100% + 4px);
+    inset-inline: 0;
   }
 
   /* In the dock the box opens upward, over the board. */
@@ -1753,6 +1766,11 @@
 
 .pool__tools--sheet .cards__add {
   flex: 1 1 240px;
+}
+
+/* The pool's own words end above the sheet's paste box: its title stands apart from them. */
+.pool__tools--sheet .cards__paste--open {
+  margin-top: var(--space-2);
 }
 
 /* Wider windows, a column of cards more each step, up to eight. */

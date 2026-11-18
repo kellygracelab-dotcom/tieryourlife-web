@@ -576,10 +576,11 @@ describe("AddCardBox", () => {
     );
     const { dispatch } = setup({ find });
     await userEvent.click(screen.getByRole("button", { name: "Paste a list" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Names, one to a line" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Paste a list" }), {
       target: { value: "Naruto" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "Add 1 card" }));
+    await userEvent.click(screen.getByRole("button", { name: "Find pictures for 1 name" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add 1 card" }));
     await vi.waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({
         type: "addItem",
@@ -609,13 +610,15 @@ describe("AddCardBox", () => {
     });
     const { dispatch } = setup({ find });
     await userEvent.click(screen.getByRole("button", { name: "Paste a list" }));
-    fireEvent.change(screen.getByRole("textbox", { name: "Names, one to a line" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Paste a list" }), {
       target: { value: "Naruto\nBleach" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "Add 2 cards" }));
+    await userEvent.click(screen.getByRole("button", { name: "Find pictures for 2 names" }));
     await vi.waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(/Too many picture searches/),
     );
+    expect(screen.getByText("too many picture searches")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Add 2 cards" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "addItem", title: "Bleach", imageUrl: null });
     expect(find).toHaveBeenCalledTimes(2);
   });
@@ -687,7 +690,7 @@ describe("AddCardBox, with a busy catalogue", () => {
       .mockResolvedValue(page([picture("anilist:20", { title: "Naruto" })]));
     const { dispatch } = setup({ find });
     fireEvent.click(screen.getByRole("button", { name: "Paste a list" }));
-    const field = screen.getByRole("textbox", { name: "Names, one to a line" });
+    const field = screen.getByRole("textbox", { name: "Paste a list" });
     fireEvent.change(field, { target: { value: "Naruto" } });
     await act(async () => {
       fireEvent.submit(field.closest("form")!);
@@ -700,6 +703,7 @@ describe("AddCardBox, with a busy catalogue", () => {
       await vi.advanceTimersByTimeAsync(20_000);
     });
     expect(find).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "Add 1 card" }));
     expect(dispatch).toHaveBeenCalledWith({
       type: "addItem",
       title: "Naruto",

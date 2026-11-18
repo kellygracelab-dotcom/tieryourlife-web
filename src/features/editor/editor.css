@@ -673,12 +673,14 @@
   color: var(--error);
 }
 
-/* Many names at once: a button until it is wanted, then a box as wide as the editor. */
+/* Many names at once: a button until it is wanted, then a box as wide as the editor,
+   and no wider: the places to look scroll sideways inside it on a phone. */
 .cards__paste--open {
   display: flex;
   flex: 1 1 100%;
   flex-direction: column;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .cards__paste-text {
@@ -1218,4 +1220,199 @@
 
 .cards__paste-missing-why {
   color: var(--ink-dim);
+}
+
+/*
+ * Paste a list in two steps (artboard 44): a title and a line on what to do,
+ * the places to look under the names, then every name beside its picture.
+ * What needs a look is said in the A tier's amber, taken toward the ink so
+ * small words read on the light paper as on the dark.
+ */
+.cards__paste--open {
+  --paste-look: color-mix(in srgb, var(--tier-a) 70%, var(--ink));
+}
+
+.cards__paste-title {
+  margin: 0;
+  font: var(--text-title);
+  color: var(--ink);
+}
+
+.cards__paste-caption {
+  margin: -4px 0 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.cards__paste-text::placeholder {
+  color: var(--ink-faint);
+}
+
+.cards__paste-where {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cards__paste-label {
+  margin: 0;
+  font: var(--text-label);
+  color: var(--ink-dim);
+}
+
+.cards__paste-where .cards__scopes {
+  padding: 4px 0;
+}
+
+.cards__paste-summary {
+  margin: -4px 0 0;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.cards__paste-summary-look {
+  color: var(--paste-look);
+}
+
+/* The rows scroll on their own; the title above and Back and Add below stay. */
+.cards__paste-rows {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.paste-row {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-tile);
+}
+
+/* A picture of a kind the area does not expect, or none found: tinted, and said in its colour. */
+.paste-row--look {
+  background: color-mix(in srgb, var(--tier-a) 16%, transparent);
+}
+
+.paste-row__main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.paste-row__picture {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: var(--radius-tile);
+  background: var(--tile-placeholder);
+}
+
+.paste-row__picture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.paste-row__picture--none {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  color: var(--ink-dim);
+  font: var(--text-label);
+}
+
+.paste-row__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.paste-row__name,
+.paste-row__line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paste-row__name {
+  font: var(--text-label);
+  color: var(--ink);
+}
+
+.paste-row__line {
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
+.paste-row--look .paste-row__line {
+  color: var(--paste-look);
+}
+
+.paste-row__actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.paste-row__action {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--link);
+  font: var(--text-label);
+  cursor: pointer;
+}
+
+.paste-row__action--quiet {
+  color: var(--ink-dim);
+}
+
+.paste-row__action:hover {
+  background: var(--hover);
+}
+
+.paste-row__action:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.paste-row__search {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 8px 8px;
+  min-width: 0;
+}
+
+.paste-row__search .cards__scopes,
+.paste-row__search .cards__picks {
+  padding-inline: 0;
+}
+
+.paste-row__search .cards__note {
+  padding-inline: 0;
+}
+
+.cards__paste-actions--apart {
+  justify-content: space-between;
+}
+
+/* What needs a look is read whole, on a second line where the row is narrow. */
+.paste-row--look .paste-row__line {
+  white-space: normal;
 }
