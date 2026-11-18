@@ -6,7 +6,6 @@ import { uploadPicture } from "../../lib/pictures";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { CoverAdjust } from "../../ui/CoverAdjust";
-import { FocusedPicture } from "../../ui/FocusedPicture";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
 import { MediaImage } from "../../ui/MediaImage";
@@ -19,6 +18,7 @@ import {
   coverCreditOf,
   coverFocusOf,
   liveItems,
+  pictureOfCard,
   previewsOf,
   rankedTiers,
   setCover,
@@ -31,14 +31,46 @@ import "./publishing.css";
 
 const MAX_COVER = 6;
 
-/** Each card picture once, with the name of the first card that has it. */
+/** Each card picture once, with the name of the first card that has it; cards without one are left out. */
 function cardPictures(board: Board): Map<string, string> {
   const pictures = new Map<string, string>();
   for (const card of liveItems(board)) {
-    if (card.imageUrl !== null && !pictures.has(card.imageUrl))
-      pictures.set(card.imageUrl, card.title);
+    const picture = pictureOfCard(card);
+    if (picture !== null && !pictures.has(picture)) pictures.set(picture, card.title);
   }
   return pictures;
+}
+
+/** The pictures a collage cover is drawn from: the ones chosen, else the board's own first few. */
+const collageOf = (board: Board): string[] =>
+  board.coverImageUrls.length > 1 ? board.coverImageUrls : previewsOf(board);
+
+/** What kind of cover the board has, in a few words: "Collage · auto", "A card’s picture"… */
+function coverKindOf(board: Board): string {
+  const chosen = board.coverImageUrls;
+  const [only] = chosen;
+  if (chosen.length > 1) return fill(strings.publishWindow.coverMine, { n: chosen.length });
+  if (chosen.length === 1 && only !== undefined)
+    return cardPictures(board).has(only)
+      ? strings.publishWindow.coverCard
+      : strings.publishWindow.coverOwn;
+  return collageOf(board).length > 0
+    ? strings.publishWindow.coverAuto
+    : strings.publishWindow.coverColours;
+}
+
+/** The cover as Community will draw it, for the board as it is now. */
+function CoverArt({ board }: { board: Board }) {
+  return (
+    <ListArt
+      cover={board.coverImageUrl}
+      focus={coverFocusOf(board)}
+      previews={collageOf(board)}
+      cellFocus={cardFocusByPicture(board)}
+      tierColors={rankedTiers(board).map((tier) => tier.colorLight)}
+      decorative
+    />
+  );
 }
 
 /**
@@ -106,6 +138,7 @@ export function CoverPicker({
   upload = uploadPicture,
   now = Date.now,
 }: CoverPickerProps) {
+  const id = useId();
   const { account, signIn } = useSession();
   const signedIn = account?.kind === "signedIn";
   const owner = signedIn ? account.uid : null;
@@ -170,33 +203,45 @@ export function CoverPicker({
 
   return (
     <div className="sheet-pick sheet-pick--cover board-settings__cover-pick">
-      <p className="sheet-pick__note">
-        {chosen.length === 0
-          ? strings.boards.coverAutomatic
-          : chosen.length === 1
-            ? strings.boards.coverOne
-            : fill(strings.boards.coverCollage, { n: chosen.length })}
-      </p>
-      {chosen.length === 1 && chosen[0] && (
-        <>
-          <span className="board-settings__cover-frame">
-            <FocusedPicture src={chosen[0]} focus={focus} />
+      {/* The cover as it will look, as on the app's Cover screen (artboard 41): it changes with each choice below. */}
+      <section className="cover-preview" aria-labelledby={`${id}-preview`}>
+        <span className="cover-preview__art" aria-hidden="true">
+          <CoverArt board={board} />
+        </span>
+        <span className="cover-preview__text">
+          <span id={`${id}-preview`} className="publish-window__label">
+            {strings.cover.previewLabel}
           </span>
-          <Button icon="zoom_in" disabled={uploading} onClick={() => setAdjusting(true)}>
-            {strings.cover.adjustPosition}
-          </Button>
-          {adjusting && (
-            <CoverAdjust
-              src={chosen[0]}
-              focus={focus}
-              onCancel={() => setAdjusting(false)}
-              onDone={(placed) => {
-                keep(setCoverFocus(latest(), placed, now()));
-                setAdjusting(false);
-              }}
-            />
+          <span className="cover-preview__kind">{coverKindOf(board)}</span>
+          <span className="cover-preview__note">
+            {chosen.length === 0
+              ? strings.boards.coverAutomatic
+              : chosen.length === 1
+                ? strings.boards.coverOne
+                : fill(strings.boards.coverCollage, { n: chosen.length })}
+          </span>
+          {chosen.length === 1 && chosen[0] && (
+            <Button
+              variant="outlined"
+              icon="zoom_in"
+              disabled={uploading}
+              onClick={() => setAdjusting(true)}
+            >
+              {strings.cover.adjustPosition}
+            </Button>
           )}
-        </>
+        </span>
+      </section>
+      {chosen.length === 1 && chosen[0] && adjusting && (
+        <CoverAdjust
+          src={chosen[0]}
+          focus={focus}
+          onCancel={() => setAdjusting(false)}
+          onDone={(placed) => {
+            keep(setCoverFocus(latest(), placed, now()));
+            setAdjusting(false);
+          }}
+        />
       )}
       {house && chosen.length === 1 && (
         <CoverCreditPanel
@@ -219,6 +264,7 @@ export function CoverPicker({
       />
       <span className="board-settings__cover-tools">
         <Button
+          variant="outlined"
           icon="add_photo_alternate"
           disabled={uploading}
           onClick={() => (signedIn ? fileInput.current?.click() : void signIn())}
@@ -227,6 +273,7 @@ export function CoverPicker({
         </Button>
         {chosen.length > 0 && (
           <Button
+            variant="outlined"
             icon="undo"
             disabled={uploading}
             onClick={() => keep(setCover(latest(), [], now()))}
@@ -289,35 +336,15 @@ export function CoverSummary({
   changeRef?: Ref<HTMLButtonElement>;
 }) {
   const id = useId();
-  const chosen = board.coverImageUrls;
-  const pictures = cardPictures(board);
-  const previews = chosen.length > 1 ? chosen : previewsOf(board);
-  const kind =
-    chosen.length > 1
-      ? fill(strings.publishWindow.coverMine, { n: chosen.length })
-      : chosen.length === 1 && chosen[0] !== undefined
-        ? pictures.has(chosen[0])
-          ? strings.publishWindow.coverCard
-          : strings.publishWindow.coverOwn
-        : previews.length > 0
-          ? strings.publishWindow.coverAuto
-          : strings.publishWindow.coverColours;
   return (
     <section className="publish-cover" aria-label={strings.boards.cover}>
       <span className="publish-cover__card" aria-hidden="true">
-        <ListArt
-          cover={board.coverImageUrl}
-          focus={coverFocusOf(board)}
-          previews={previews}
-          cellFocus={cardFocusByPicture(board)}
-          tierColors={rankedTiers(board).map((tier) => tier.colorLight)}
-          decorative
-        />
+        <CoverArt board={board} />
         <bdi className="publish-cover__title">{titleOf(board)}</bdi>
       </span>
       <span className="publish-cover__text">
         <span className="publish-window__label">{strings.boards.cover}</span>
-        <span className="publish-cover__kind">{kind}</span>
+        <span className="publish-cover__kind">{coverKindOf(board)}</span>
         <span id={`${id}-hint`} className="publish-cover__hint">
           {strings.publishWindow.coverHint}
         </span>

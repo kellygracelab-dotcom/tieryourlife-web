@@ -189,15 +189,12 @@
 }
 
 /*
- * On the board, a card without a picture is one and a half posters wide and
- * as tall, so its name reads at a glance: larger type, whole words on a line
- * (nameFit.ts, "wide"). Posters keep their size and shape.
+ * On the board, a card without a picture is a poster's size, so the rows and
+ * the pool's grid stay even (night W3, 18.11.2026): its name wraps and shrinks
+ * inside (nameFit.ts, "board"), padded less so a long word keeps its line.
  */
-.tile--name {
-  width: calc(var(--tile-w) * 1.5);
-}
-
 .tile--name .tile__name {
+  padding-inline: 2px;
   text-wrap: balance;
 }
 

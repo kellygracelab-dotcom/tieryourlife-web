@@ -4,9 +4,9 @@
  * never becomes "Machin / a". Only a word too long even at the smallest size
  * is left to the breaker, and then with hyphens.
  *
- * On the board a card without a picture is wider than a poster (`.tile--name`,
- * one and a half posters), so its name starts larger, never goes as small,
- * and must also fit the tile's three lines.
+ * On the board a card without a picture is as wide as a poster (`.tile--name`;
+ * night W3, 18.11.2026: a wider one left the rows and the pool's grid uneven),
+ * so its name may go smaller there and must also fit the tile's three lines.
  */
 
 /** The board's three sizes, by the window's width (board.css draws the same). */
@@ -15,8 +15,8 @@ export type BoardSize = "small" | "medium" | "large";
 export const boardSizeOf = (width: number): BoardSize =>
   width < 600 ? "small" : width < 1200 ? "medium" : "large";
 
-/** A name on a poster-wide tile (Play's cards), or on the board's wider name tile. */
-export type NameShape = "poster" | "wide";
+/** A name on a poster-wide tile (Play's cards), or on the board's name tile, as wide. */
+export type NameShape = "poster" | "board";
 
 interface NameType {
   /** The tile's width and height, in px. */
@@ -34,15 +34,21 @@ export const NAME_TYPE: Record<BoardSize, NameType> = {
   large: { tile: 64, height: 90, start: 11, floor: 9 },
 };
 
-/** The board's name tile: one and a half posters wide (board.css, `.tile--name`), as tall. */
-export const WIDE_NAME_TYPE: Record<BoardSize, NameType> = {
-  small: { tile: 66, height: 64, start: 13, floor: 10 },
-  medium: { tile: 78, height: 76, start: 13, floor: 10 },
-  large: { tile: 96, height: 90, start: 14, floor: 11 },
+/**
+ * The board's name tile: a poster's size (board.css, `.tile--name`). Its name
+ * starts a size up and may go a size under a poster's, so a long word stays
+ * whole on a phone's 44 px card.
+ */
+export const BOARD_NAME_TYPE: Record<BoardSize, NameType> = {
+  small: { tile: 44, height: 64, start: 10, floor: 7 },
+  medium: { tile: 52, height: 76, start: 11, floor: 8 },
+  large: { tile: 64, height: 90, start: 12, floor: 9 },
 };
 
 /** The tile's padding on both sides: the name has the rest of its width. */
 const INSET = 8;
+/** The board's name tile pads its name less (board.css, `.tile--name .tile__name`). */
+const BOARD_INSET = 4;
 /**
  * A word measured on the canvas lands a hair narrower than the page sets it
  * (the face may still be loading): "Moonlight" fitted to the pixel and lost
@@ -89,14 +95,14 @@ export function fitName(
   measure: Measure,
   shape: NameShape = "poster",
 ): NameFit {
-  const wide = shape === "wide";
-  const { tile, height, start, floor } = (wide ? WIDE_NAME_TYPE : NAME_TYPE)[board];
-  const room = tile - INSET - (wide ? SLACK : 0);
+  const onBoard = shape === "board";
+  const { tile, height, start, floor } = (onBoard ? BOARD_NAME_TYPE : NAME_TYPE)[board];
+  const room = tile - (onBoard ? BOARD_INSET + SLACK : INSET);
   const words = name.split(/\s+/).filter((word) => word.length > 0);
   const wordsFit = (size: number) => words.every((word) => measure(word, size) <= room);
-  // A wide tile has the room to keep the whole name in sight, not only each word.
+  // On the board the whole name stays in sight, not only each word.
   const linesFit = (size: number) => {
-    if (!wide) return true;
+    if (!onBoard) return true;
     const shown = Math.min(MAX_LINES, Math.floor((height - BLOCK_INSET) / (size * LINE_HEIGHT)));
     return linesOf(words, size, room, measure) <= shown;
   };

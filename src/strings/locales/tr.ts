@@ -966,6 +966,7 @@ const tr: Translation = {
     frame: "Görsel ve kadrajın baktığı nokta",
     frameHelp:
       "Noktayı sürükleyin ya da olması gereken yere dokunun. İki parmakla, tekerlekle veya kaydırıcıyla yakınlaştırın. Ok tuşları taşır, + ve − yakınlaştırır.",
+    previewLabel: "Önizleme",
   },
   propose: {
     title: "Bölüm öner",

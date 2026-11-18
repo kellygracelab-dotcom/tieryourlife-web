@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { MemoryRouter } from "react-router";
@@ -53,7 +53,6 @@ const topic = (id: string, name: string, section = "film_tv"): Topic => ({
 // `latest`, and every change lands here.
 let held: Board;
 const done = vi.fn();
-const publication = vi.fn();
 const chose = vi.fn<(category: string) => void>();
 
 function Host({
@@ -78,7 +77,7 @@ function Host({
       latest={() => held}
       keep={keep}
       sections={sections}
-      onPublication={house ? null : publication}
+      chooseFiling={house}
       onCategory={(category) => {
         chose(category);
         keep(setCategory(held, category, 500));
@@ -97,7 +96,6 @@ const show = (
 ) => {
   held = board;
   done.mockReset();
-  publication.mockReset();
   chose.mockReset();
   const session: Session = {
     account,
@@ -121,9 +119,11 @@ const show = (
 };
 
 const dialog = () => within(screen.getByRole("dialog", { name: "Cover" }));
-/** The Publication line under the cover. */
-const line = () =>
-  within(screen.getByText("Publication").closest<HTMLElement>(".board-settings__publication")!);
+/** The preview of the cover at the window's top. */
+const preview = () => screen.getByRole("region", { name: "Preview" });
+/** The pictures the preview draws, in order. */
+const drawn = () =>
+  Array.from(preview().querySelectorAll("img"), (image) => image.getAttribute("src"));
 
 describe("BoardSettings: the dialog", () => {
   it("is a dialog named Cover, with nothing of tiers, display or publishing in it", () => {
@@ -226,60 +226,52 @@ describe("BoardSettings: cover", () => {
   });
 });
 
-describe("BoardSettings: publication", () => {
-  it("offers Publish on one's own list that is not out, and hands it to the page", async () => {
+describe("BoardSettings: the preview (artboard 41)", () => {
+  it("shows the cover as it will be, and changes with each choice", async () => {
     show(filmBoard());
-    expect(
-      line().getByText("Anyone with the link can rank it. It shows in Community."),
-    ).toBeVisible();
-    expect(line().queryByRole("button", { name: "Open" })).toBeNull();
-    await userEvent.click(line().getByRole("button", { name: "Publish" }));
-    expect(publication).toHaveBeenCalledTimes(1);
-    // The page opens the Publish window: this dialog does not close itself.
-    expect(done).not.toHaveBeenCalled();
+    // Nothing chosen: the automatic collage of the cards that have a picture, never Climax's blank.
+    expect(within(preview()).getByText("Preview")).toBeInTheDocument();
+    expect(within(preview()).getByText("Collage · auto")).toBeInTheDocument();
+    expect(drawn()).toEqual([EX, WITCH]);
+    const pick = (name: string) => screen.getByRole("button", { name: `Use ${name} on the cover` });
+
+    await userEvent.click(pick("The Witch"));
+    expect(within(preview()).getByText("A card’s picture")).toBeInTheDocument();
+    expect(within(preview()).getByText("One picture, the whole cover")).toBeInTheDocument();
+    expect(drawn()).toEqual([WITCH]);
+    expect(within(preview()).getByRole("button", { name: "Adjust position" })).toBeVisible();
+
+    await userEvent.click(pick("Ex Machina"));
+    expect(within(preview()).getByText("Your collage · 2 pictures")).toBeInTheDocument();
+    expect(drawn()).toEqual([WITCH, EX]);
+    expect(within(preview()).queryByRole("button", { name: "Adjust position" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(within(preview()).getByText("Collage · auto")).toBeInTheDocument();
+    expect(drawn()).toEqual([EX, WITCH]);
   });
 
-  it("says Published with the section and the topic when out, and Open hands it to the page", async () => {
+  it("draws the tier colours when no card has a picture", () => {
+    const next = uids();
     show({
-      ...filmBoard(),
-      publishedId: "L1",
-      publishedEditedAt: 100,
-      topic: { id: "t1", name: "A24" },
+      ...addToPool(newBoard("b", "B", 1, next), [{ title: "Plain", imageUrl: null }], 1, next),
+      category: "games",
     });
-    expect(line().getByText("Published · Film & TV · A24")).toBeVisible();
-    expect(line().queryByRole("button", { name: "Publish" })).toBeNull();
-    await userEvent.click(line().getByRole("button", { name: "Open" }));
-    expect(publication).toHaveBeenCalledTimes(1);
+    expect(within(preview()).getByText("Tier colours · auto")).toBeInTheDocument();
+    expect(drawn()).toEqual([]);
   });
 
-  it("says a list held for a moderator waits", () => {
-    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100, heldForReview: true });
-    expect(
-      line().getByText("It waits for a moderator before others can see it. · Film & TV"),
-    ).toBeVisible();
-    expect(line().getByRole("button", { name: "Open" })).toBeVisible();
-  });
-
-  it("offers Show in Rankings on a copy of somebody else's list, and hands it to the page", async () => {
-    show({ ...filmBoard(), takenFrom: "SRC" });
-    expect(
-      line().getByText("Your arrangement will appear in the original list’s Rankings."),
-    ).toBeVisible();
-    expect(line().queryByRole("button", { name: "Publish" })).toBeNull();
-    await userEvent.click(line().getByRole("button", { name: "Show in Rankings" }));
-    expect(publication).toHaveBeenCalledTimes(1);
-  });
-
-  it("says In Rankings, with no section of its own, when one's ranking of the list is out", () => {
-    show({
-      ...filmBoard(),
-      takenFrom: "SRC",
-      rankingOf: "SRC",
-      publishedEditedAt: 100,
-      topic: { id: "t1", name: "A24" },
-    });
-    expect(line().getByText("In Rankings")).toBeVisible();
-    expect(line().getByRole("button", { name: "Open" })).toBeVisible();
+  it("has nothing of publishing in it: the header's Publish has its own window", () => {
+    show(filmBoard());
+    expect(screen.queryByText("Publication")).toBeNull();
+    expect(dialog().queryByRole("button", { name: "Publish" })).toBeNull();
+    expect(dialog().queryByRole("button", { name: "Open" })).toBeNull();
+    expect(dialog().queryByRole("button", { name: "Show in Rankings" })).toBeNull();
+    // Out already, the same.
+    cleanup();
+    show({ ...filmBoard(), publishedId: "L1", publishedEditedAt: 100 });
+    expect(screen.queryByText(/^Published/)).toBeNull();
+    expect(dialog().queryByRole("button", { name: "Open" })).toBeNull();
   });
 });
 

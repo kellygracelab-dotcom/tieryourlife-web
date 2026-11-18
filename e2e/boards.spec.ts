@@ -164,12 +164,13 @@ test("keeps a new board, and its settings say why a guest cannot publish it", as
   await press(window.getByRole("button", { name: "Cancel" }), hasTouch);
   await expect(window).toBeHidden();
 
-  // The menu's Cover: the cover, and the Publication line under it.
+  // The menu's Cover: a preview of the cover over the pictures, and nothing of publishing (artboard 41).
   await page.getByLabel("More about this list").click();
   await page.getByRole("button", { name: "Cover", exact: true }).click();
   const cover = page.getByRole("dialog", { name: "Cover" });
+  await expect(cover.getByRole("region", { name: "Preview" })).toContainText("Tier colours · auto");
   await expect(cover.getByText("None of this list’s cards have a picture yet.")).toBeVisible();
-  await expect(cover.getByRole("button", { name: "Publish", exact: true })).toBeVisible();
+  await expect(cover.getByRole("button", { name: "Publish", exact: true })).toHaveCount(0);
   await cover.getByRole("button", { name: "Done" }).click();
   await expect(cover).toBeHidden();
 

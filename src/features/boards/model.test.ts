@@ -17,6 +17,7 @@ import {
   nextTierLabel,
   poolCount,
   poolTier,
+  pictureOfCard,
   previewsOf,
   rankedCount,
   rankedTiers,
@@ -525,6 +526,35 @@ describe("the board's card", () => {
     expect(poolCount(b2)).toBe(1);
     expect(tierShares(b2).map((share) => share.count)).toEqual([1, 1, 0, 0, 0]);
     expect(previewsOf(b2)).toEqual(["https://x/a.jpg"]);
+  });
+
+  // Night W7 (18.11.2026): no blank tile in the automatic collage.
+  it("draws its collage from the cards that have a picture only", () => {
+    const { board: b0, next } = board();
+    const b1 = addToPool(
+      b0,
+      [
+        { title: "none", imageUrl: null },
+        { title: "empty", imageUrl: "" },
+        { title: "phone's own", imageUrl: "content://media/external/images/1" },
+        { title: "file", imageUrl: "file:///sdcard/a.jpg" },
+        { title: "pictured", imageUrl: "https://x/a.jpg" },
+        { title: "again", imageUrl: "https://x/a.jpg" },
+        { title: "another", imageUrl: "https://x/b.jpg" },
+      ],
+      1,
+      next,
+    );
+    expect(previewsOf(b1)).toEqual(["https://x/a.jpg", "https://x/b.jpg"]);
+    expect(liveItems(b1).map(pictureOfCard)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      "https://x/a.jpg",
+      "https://x/a.jpg",
+      "https://x/b.jpg",
+    ]);
   });
 });
 

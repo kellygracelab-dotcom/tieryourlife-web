@@ -1007,6 +1007,7 @@ const ptBR: Translation = {
     frame: "A imagem, com o ponto para onde o enquadramento olha",
     frameHelp:
       "Arraste o ponto ou toque onde ele deve ficar. Dê zoom com dois dedos, a roda do mouse ou o controle. As setas o movem; + e − dão zoom.",
+    previewLabel: "Prévia",
   },
   propose: {
     title: "Propor uma seção",

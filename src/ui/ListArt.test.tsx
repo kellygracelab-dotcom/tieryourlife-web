@@ -75,6 +75,26 @@ describe("ListArt", () => {
     vi.restoreAllMocks();
   });
 
+  // Night W7 (18.11.2026): a card whose picture fails shows its name on the board, and leaves the collage.
+  it("leaves a picture that fails to load out of the collage, with no blank tile", () => {
+    const { container } = render(
+      <ListArt
+        cover={null}
+        previews={["https://img/a.jpg", "https://img/gone.jpg", "https://img/b.jpg"]}
+        tierColors={["#000"]}
+      />,
+    );
+    expect(container.querySelector(".art--mosaic")).toHaveAttribute("data-count", "3");
+    fireEvent.error(container.querySelectorAll("img")[1]!);
+    expect(container.querySelector(".art--mosaic")).toHaveAttribute("data-count", "2");
+    expect(Array.from(container.querySelectorAll("img"), (img) => img.getAttribute("src"))).toEqual(
+      ["https://img/a.jpg", "https://img/b.jpg"],
+    );
+    // Every one gone: the tier colours, as for a list without pictures.
+    for (const img of Array.from(container.querySelectorAll("img"))) fireEvent.error(img);
+    expect(container.querySelector(".art--stripes")).not.toBeNull();
+  });
+
   it("falls back to a titled tile with at most five tier colours along the bottom", () => {
     render(
       <ListArt
