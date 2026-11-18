@@ -248,6 +248,74 @@ export async function searchPictures(
   };
 }
 
+/** At most this many names go in one batch (POST /lists/pictures/batch). */
+export const PICTURE_BATCH = 10;
+
+/** A whole list's names, searched as one request: the rest as a single search's. */
+export type PictureBatchAsk = Omit<PictureAsk, "q" | "page" | "web" | "quick"> & {
+  names: readonly string[];
+};
+
+/**
+ * What the batch says of one name (picture search, stage 2): its first hit
+ * when the backend is fairly sure of it (`found`) or not (`unsure`); nothing
+ * by it (`none`); a catalogue it needs busy, or the searches used up, until
+ * `retryAt` (`busy`, `limited`); or not begun in time (`later`): ask again.
+ */
+export type PictureBatchResult =
+  | { q: string; status: "found" | "unsure"; item: FoundPicture | null; searchedAs?: SearchedAs }
+  | { q: string; status: "none" | "later" }
+  | { q: string; status: "busy" | "limited"; retryAt: number | null };
+
+const BATCH_STATUSES = ["found", "unsure", "none", "busy", "limited", "later"] as const;
+
+/** One result as this page reads it; one it cannot read is a name to ask again. */
+function batchResultOf(raw: unknown, q: string): PictureBatchResult {
+  const one = (raw ?? {}) as Record<string, unknown>;
+  const status = oneOf(BATCH_STATUSES, one.status) ? one.status : "later";
+  if (status === "found" || status === "unsure") {
+    const searchedAs = searchedAsOf(one.searchedAs);
+    return {
+      q,
+      status,
+      item: pictureOf(one.item),
+      ...(searchedAs === null ? {} : { searchedAs }),
+    };
+  }
+  if (status === "busy" || status === "limited") {
+    const at = one.retryAt;
+    return {
+      q,
+      status,
+      retryAt: typeof at === "number" && Number.isFinite(at) && at > 0 ? at : null,
+    };
+  }
+  return { q, status };
+}
+
+/**
+ * Up to PICTURE_BATCH names in one request, one result for each, in the order
+ * sent. Each name is one search of the day's.
+ */
+export async function searchPictureBatch(
+  client: ApiClient,
+  ask: PictureBatchAsk & { lang: string },
+): Promise<PictureBatchResult[]> {
+  const names = ask.names.map((name) => name.trim().slice(0, MAX_PICTURE_QUERY));
+  const answer = await client.request<{ results?: unknown }>("POST", "/lists/pictures/batch", {
+    body: {
+      names,
+      scope: ask.scope,
+      lang: ask.lang,
+      ...(ask.section === undefined || ask.section === "" ? {} : { section: ask.section }),
+      ...(ask.topic === undefined || ask.topic === "" ? {} : { topic: ask.topic }),
+    },
+  });
+  const results = Array.isArray(answer.results) ? answer.results : [];
+  // One for each name sent, by its place: a result missing is a name to ask again.
+  return names.map((q, index) => batchResultOf(results[index], q));
+}
+
 /**
  * A picture found on the web, copied by the backend into the person's own
  * pictures, as an upload would be: the card then depends on no other site,

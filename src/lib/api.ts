@@ -155,6 +155,12 @@ export const findPictures: (ask: PictureAsk) => Promise<PicturePage> = limitedSe
   pictures.searchPictures(api, { ...ask, lang: currentLocale() }),
 );
 
+// A pasted list's names, ten to a request, each counted as one search (stage 2).
+export const findPictureBatch = (
+  ask: pictures.PictureBatchAsk,
+): Promise<pictures.PictureBatchResult[]> =>
+  pictures.searchPictureBatch(api, { ...ask, lang: currentLocale() });
+
 export const keepPicture = (url: string): Promise<string> => pictures.keepPicture(api, url);
 
 // A picture by its address; once the hour's or the day's are used up, none is

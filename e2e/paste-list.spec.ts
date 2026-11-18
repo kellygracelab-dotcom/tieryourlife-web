@@ -134,3 +134,45 @@ test("Paste a list: the names and where to look, then the pictures checked", asy
     await expect(page.getByRole("button", { name, exact: true })).toBeAttached();
   }
 });
+
+test("Paste a list: the names go to the backend together, judged there", async ({
+  page,
+  hasTouch,
+}) => {
+  await pasteBox(page, hasTouch);
+  const batches: string[][] = [];
+  let singles = 0;
+  page.on("request", (request) => {
+    if (request.url().includes("/lists/pictures?")) singles++;
+  });
+  await page.route("**/lists/pictures/batch", (route) => {
+    const body = route.request().postDataJSON() as { names: string[]; section?: string };
+    batches.push(body.names);
+    const club = (q: string) => ({ ...(CLUBS[q]?.[0] ?? {}), confidence: "high" });
+    return route.fulfill({
+      json: {
+        results: body.names.map((q) =>
+          q === "PSG"
+            ? { q, status: "none" }
+            : q === "Arsenal"
+              ? {
+                  q,
+                  status: "found",
+                  item: { ...club(q), confidence: "medium", doubts: ["namesakes"] },
+                }
+              : { q, status: "found", item: club(q) },
+        ),
+      },
+    });
+  });
+  await page
+    .getByRole("textbox", { name: "Paste a list" })
+    .fill("Liverpool\nArsenal\nPSG\nReal Madrid");
+  await press(page.getByRole("button", { name: "Find pictures for 4 names" }), hasTouch);
+  const check = page.getByRole("region", { name: "Check the pictures" });
+  await expect(check.getByRole("status")).toHaveText(
+    "4 names · 2 look right · 1 needs a look · 1 has no picture",
+  );
+  expect(batches).toEqual([["Liverpool", "Arsenal", "PSG", "Real Madrid"]]);
+  expect(singles).toBe(0);
+});

@@ -40,6 +40,7 @@ import { LIMITS, type EditorAction, type EditorItem } from "./model";
 import { LOOKUP_DEBOUNCE_MS, usePictures, type FindPictures } from "./usePictures";
 import { searchLimitText } from "../../lib/searchLimit";
 import { PasteBox, PasteNote, type PasteOutcome } from "./PasteBox";
+import type { FindPictureBatch } from "./pasteBatch";
 import { scopeName, scopesFrom, sourcesOf } from "./pictureNames";
 import { PictureTile } from "./PictureTile";
 
@@ -80,6 +81,8 @@ interface AddCardBoxProps {
   category?: string | null;
   dispatch: (action: EditorAction) => void;
   find?: FindPictures;
+  /** A pasted list's names in batches (stage 2); without it, name by name. */
+  findMany?: FindPictureBatch;
   upload: Upload;
   keep?: Keep;
   /** How a picture from a link is kept. */
@@ -229,6 +232,7 @@ export function AddCardBox({
   category = null,
   dispatch: given,
   find = findPictures,
+  findMany,
   upload,
   keep = (url) => keepWebPicture(url, keepPicture),
   link = defaultLink,
@@ -814,6 +818,7 @@ export function AddCardBox({
         category={category}
         dispatch={dispatch}
         find={find}
+        findMany={findMany}
         link={signedIn ? link : undefined}
         house={house}
         loadQuota={loadQuota}
