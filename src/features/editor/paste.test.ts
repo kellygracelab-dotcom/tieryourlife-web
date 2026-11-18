@@ -126,6 +126,21 @@ describe("pick, when the search says how sure it is", () => {
     expect(pick({ title: "Dune", year: "2021" }, found)?.id).toBe("tmdb:2");
     expect(pick({ title: "Dune", year: "2000" }, found)).toBeNull();
   });
+
+  it("takes the web's first picture when every catalogue hit is doubtful", () => {
+    const web = (id: string) => ({
+      ...card(id, "Some page"),
+      confidence: "low" as const,
+      doubts: ["web" as const],
+    });
+    const found = [judged("tmdb:1", "Upside", "low"), web("web:1"), web("web:2")];
+    expect(pick({ title: "Up", year: null }, found)?.id).toBe("web:1");
+    // A sure catalogue hit comes before the web, and a year does not keep the web out.
+    expect(
+      pick({ title: "Up", year: null }, [web("web:1"), judged("tmdb:2", "Up", "high")])?.id,
+    ).toBe("tmdb:2");
+    expect(pick({ title: "Up", year: "2009" }, found)?.id).toBe("web:1");
+  });
 });
 
 describe("a pasted name in a section with catalogues of its own", () => {
@@ -692,6 +707,53 @@ describe("cardsFor, with pictures from links", () => {
       { title: "Heat", imageUrl: "https://img/tmdb:Heat.jpg", key: "tmdb:Heat" },
     ]);
     expect(onQuota).toHaveBeenCalledWith({ left: 9, limit: 50, resetsAt: 5 });
+  });
+
+  it("copies the web picture a name took, with the page it stands on, and keeps the hit as its origin", async () => {
+    const hit = {
+      ...card("web:abc", "Borscht recipe", null, "https://cdn.site.test/borscht.jpg"),
+      confidence: "low" as const,
+      doubts: ["web" as const],
+      attribution: { source: "web", link: "https://site.test/borscht" },
+    };
+    const link = vi.fn(async (ask: LinkAsk) =>
+      linked(ask.url, { attribution: { source: "web", link: "https://site.test/borscht" } }),
+    );
+    const got: { card: PastedCard; found: CatalogueItem | null }[] = [];
+    await cardsFor(
+      wantedOf("Borscht", 100),
+      async () => [hit],
+      (one, _done, from) => got.push({ card: one, found: from.found }),
+      { paceMs: 0, link },
+    );
+    expect(link).toHaveBeenCalledWith({
+      url: "https://cdn.site.test/borscht.jpg",
+      link: "https://site.test/borscht",
+    });
+    expect(got).toEqual([
+      {
+        card: {
+          title: "Borscht",
+          imageUrl: "https://cdn.site.test/borscht.jpg#copy",
+          pictureId: "p1",
+          key: "web:abc",
+          attribution: { source: "web", link: "https://site.test/borscht" },
+        },
+        found: hit,
+      },
+    ]);
+
+    // Signed out, nothing can be copied: the name goes alone, and says why.
+    const alone: PastedCard[] = [];
+    await cardsFor(
+      wantedOf("Borscht", 100),
+      async () => [hit],
+      (one) => alone.push(one),
+      {
+        paceMs: 0,
+      },
+    );
+    expect(alone).toEqual([{ title: "Borscht", imageUrl: null }]);
   });
 
   it("keeps a catalogue's own attribution and credit, its page untouched", async () => {
