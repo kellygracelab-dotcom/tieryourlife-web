@@ -11,6 +11,7 @@ import { chosenIds, playable, sampleIds, sampleSizes, type Chosen, type Selectio
 import { PlaySheet, SheetCancel } from "./PlaySheet";
 import { SheetArrival } from "./sheet";
 import "../tierboard/board.css";
+import { shownLight } from "../../lib/tierColour";
 
 interface ChooseCardsProps {
   board: PlayBoard;
@@ -31,7 +32,7 @@ const tierTitle = (tier: PlayTier): string =>
   captioned(tier) ? tier.caption : fill(strings.play.tierNamed, { tier: tier.label });
 
 const bandOf = (tier: PlayTier) =>
-  ({ "--band-light": tier.colorLight, "--band-dark": tier.colorDark }) as CSSProperties;
+  ({ "--band-light": shownLight(tier.colorLight), "--band-dark": tier.colorDark }) as CSSProperties;
 
 /** A row of the board to choose from: a tier by its id, or the pool as null. */
 type Row = string | null;

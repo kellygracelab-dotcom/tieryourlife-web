@@ -20,6 +20,10 @@ export const LIST_TILES = 10;
 export const SHARE_PICTURES = 24;
 
 const PAPER = "#e9e7e2";
+
+/** B's old light colour is drawn as the new gold, as the site and the app draw it (artboard 54, 18.11.2026). */
+const shownLight = (hex: string): string =>
+  hex.trim().toLowerCase() === "#a98b1f" ? "#B88A00" : hex;
 const SURFACE = "#ffffff";
 const INK = "#1a1a1a";
 const INK_DIM = "#5d5c66";
@@ -212,7 +216,7 @@ const band = (tier: ShareTier, size: number): Node => {
       height: size,
       padding: 4,
       borderRadius: 10,
-      background: tier.colorLight,
+      background: shownLight(tier.colorLight),
       color: SURFACE,
       flexShrink: 0,
       overflow: "hidden",

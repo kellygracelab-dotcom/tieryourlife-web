@@ -6,6 +6,7 @@ import { drawnLines, fitText, type Measure } from "../../lib/textFit";
 import { fill, plural, strings } from "../../strings";
 import { cardNamesOn } from "../../lib/cardNames";
 import { shownScheme } from "../../lib/theme";
+import { shownLight } from "../../lib/tierColour";
 
 /**
  * The picture a finished ranking is shared as. 4:5, the tallest ratio feeds
@@ -565,7 +566,8 @@ export async function drawShare(
   const { width, pad, band, tile } = SHARE;
   const height = plan.height;
   const scheme = data.dark === true ? DARK : LIGHT;
-  const colourOf = (tier: PublishedTier) => (data.dark === true ? tier.colorDark : tier.colorLight);
+  const colourOf = (tier: PublishedTier) =>
+    data.dark === true ? tier.colorDark : shownLight(tier.colorLight);
 
   paint.fillStyle = scheme.paper;
   paint.fillRect(0, 0, width, height);

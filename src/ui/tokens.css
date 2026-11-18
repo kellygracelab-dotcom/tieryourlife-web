@@ -6,7 +6,7 @@
 :root {
   color-scheme: light;
 
-  --paper: #e9e7e2;
+  --paper: #fbf8ff;
   --surface: #ffffff;
   --surface-soft: rgba(255, 255, 255, 0.5);
   --ink: #1a1a1a;
@@ -20,8 +20,9 @@
   --on-link: #ffffff;
   --primary-container: #dee0ff;
   --on-primary-container: #2c3a80;
-  --accent: #1a1a1a;
-  --accent-hover: #333333;
+  /* The main button is the app's blue, as Play and Start are on the phone (artboard 54). */
+  --accent: #4a5baa;
+  --accent-hover: #2c3a80;
   --on-accent: #ffffff;
   --error: #b3261e;
   --error-container: #ffdad6;
@@ -34,7 +35,7 @@
 
   --tier-s: #b03a32;
   --tier-a: #c06a25;
-  --tier-b: #a98b1f;
+  --tier-b: #b88a00;
   --tier-c: #3f7f55;
   --tier-d: #3c6e99;
   --pool: #dad7e0;
@@ -51,8 +52,10 @@
   --surface-container: #efedf4;
   --surface-container-high: #e7e4ed;
   --surface-container-highest: #e4e1e9;
-  /* For lines and outlines; small text is --ink-faint, which keeps 4.5:1 on all of these. */
-  --ink-quiet: rgba(0, 0, 0, 0.46);
+  /* The bar's search: a soft fill, where white was lost on the near-white paper (artboard 54). */
+  --search-field: var(--surface-container);
+  /* Quiet words ("127 cards") and outlines: 62% keeps 4.5:1 on the paper and every surface (artboard 54). */
+  --ink-quiet: rgba(0, 0, 0, 0.62);
   --followed: #3f7f55;
 
   --radius-card: 12px;
@@ -89,6 +92,7 @@
 
     --paper: #131318;
     --surface: #1e1e24;
+    --search-field: #1e1e24;
     --surface-soft: rgba(30, 30, 36, 0.5);
     --ink: #e4e1e9;
     --ink-dim: #c7c5d0;
@@ -139,6 +143,7 @@
 
   --paper: #131318;
   --surface: #1e1e24;
+  --search-field: #1e1e24;
   --surface-soft: rgba(30, 30, 36, 0.5);
   --ink: #e4e1e9;
   --ink-dim: #c7c5d0;

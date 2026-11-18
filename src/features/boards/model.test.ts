@@ -73,7 +73,7 @@ describe("a new board", () => {
     expect(rankedTiers(b).map((tier) => tier.colorLight)).toEqual([
       "#B03A32",
       "#C06A25",
-      "#A98B1F",
+      "#B88A00",
       "#3F7F55",
       "#3C6E99",
     ]);

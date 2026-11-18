@@ -4,6 +4,7 @@ import type { PublishedTier } from "../../api/types";
 import { strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
+import { shownLight } from "../../lib/tierColour";
 
 interface MoveSheetProps {
   /** The card's name, which is the sheet's title. */
@@ -117,7 +118,7 @@ export function MoveSheet({
                   className="move-sheet__swatch band"
                   style={
                     {
-                      "--band-light": tier.colorLight,
+                      "--band-light": shownLight(tier.colorLight),
                       "--band-dark": tier.colorDark,
                     } as CSSProperties
                   }

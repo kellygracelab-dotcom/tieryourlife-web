@@ -16,6 +16,7 @@ import {
   tierShares,
   type Board,
 } from "./model";
+import { shownLight } from "../../lib/tierColour";
 
 interface BoardRowProps {
   board: Board;
@@ -44,7 +45,7 @@ function TierRibbon({ board }: { board: Board }) {
           style={
             {
               flex: share.count,
-              "--band-light": share.color,
+              "--band-light": shownLight(share.color),
               "--band-dark": share.colorDark,
             } as CSSProperties
           }

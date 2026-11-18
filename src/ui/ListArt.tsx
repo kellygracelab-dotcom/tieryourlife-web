@@ -3,6 +3,7 @@ import type { CoverFocus } from "../lib/coverFocus";
 import { FocusedPicture } from "./FocusedPicture";
 import { strings } from "../strings";
 import "./ListArt.css";
+import { shownLight } from "../lib/tierColour";
 
 interface ListArtProps {
   cover: string | null;
@@ -77,7 +78,7 @@ export function ListArt({
     return (
       <div className="art art--stripes" {...named(strings.card.noArt)}>
         {tierColors.slice(0, BARS_MAX).map((color, index) => (
-          <span key={`${index}-${color}`} style={{ backgroundColor: color }} />
+          <span key={`${index}-${color}`} style={{ backgroundColor: shownLight(color) }} />
         ))}
       </div>
     );
@@ -90,7 +91,7 @@ export function ListArt({
       {tierColors.length > 0 && (
         <span className="art__bars" aria-hidden="true">
           {tierColors.slice(0, BARS_MAX).map((color, index) => (
-            <span key={`${index}-${color}`} style={{ backgroundColor: color }} />
+            <span key={`${index}-${color}`} style={{ backgroundColor: shownLight(color) }} />
           ))}
         </span>
       )}

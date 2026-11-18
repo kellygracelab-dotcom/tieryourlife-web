@@ -54,7 +54,7 @@ describe("theme", () => {
 
     applyTheme("light", root, true);
     expect(root.dataset.theme).toBe("light");
-    expect(meta.content).toBe("#e9e7e2");
+    expect(meta.content).toBe("#fbf8ff");
 
     applyTheme("system", root, true);
     expect(root.dataset.theme).toBeUndefined();

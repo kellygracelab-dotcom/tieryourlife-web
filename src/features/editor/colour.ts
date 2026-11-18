@@ -1,3 +1,4 @@
+import { shownLight } from "../../lib/tierColour";
 import { TIER_PRESETS } from "./model";
 
 /** "#RRGGBB", upper-case, or null for anything that is not six hex digits. */
@@ -6,11 +7,11 @@ export function hexOf(value: string): string | null {
   return /^[0-9a-f]{6}$/i.test(digits) ? `#${digits.toUpperCase()}` : null;
 }
 
-/** One of the eight pairs the editor offers, as against a colour of one's own. */
+/** One of the eight pairs the editor offers, as against a colour of one's own; the old B is the new. */
 export function isPreset(colorLight: string, colorDark: string): boolean {
   return TIER_PRESETS.some(
     (preset) =>
-      preset.light.toLowerCase() === colorLight.toLowerCase() &&
+      preset.light.toLowerCase() === shownLight(colorLight).toLowerCase() &&
       preset.dark.toLowerCase() === colorDark.toLowerCase(),
   );
 }

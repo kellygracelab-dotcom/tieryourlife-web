@@ -14,6 +14,7 @@ import type { PublishedTier } from "../../api/types";
 import { strings } from "../../strings";
 import { useBackLayer } from "../../ui/backLayers";
 import { Icon } from "../../ui/Icon";
+import { shownLight } from "../../lib/tierColour";
 
 /** A point on the screen, in the viewport's own pixels. */
 export interface ScreenPoint {
@@ -396,7 +397,7 @@ export function CardMenu({
                 className="card-menu__swatch band"
                 style={
                   {
-                    "--band-light": tier.colorLight,
+                    "--band-light": shownLight(tier.colorLight),
                     "--band-dark": tier.colorDark,
                   } as CSSProperties
                 }

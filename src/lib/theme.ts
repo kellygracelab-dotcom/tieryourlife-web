@@ -9,7 +9,7 @@ export const isTheme = (value: unknown): value is Theme =>
   value === "system" || value === "light" || value === "dark";
 
 /** The colour the browser paints around the page: the paper of each scheme. */
-const PAPER = { light: "#e9e7e2", dark: "#121318" } as const;
+const PAPER = { light: "#fbf8ff", dark: "#121318" } as const;
 
 export function readTheme(store: KeyValueStore): Theme {
   try {

@@ -11,6 +11,7 @@ import { useBoardSize } from "./useBoardSize";
 import type { BoardSize } from "./nameFit";
 import "./board.css";
 import { sizedFor } from "../../lib/pictureSize";
+import { shownLight } from "../../lib/tierColour";
 
 interface ReadOnlyBoardProps {
   label: string;
@@ -148,7 +149,10 @@ export function ReadOnlyBoard({ label, tiers, items, rows, pool }: ReadOnlyBoard
           key={`${index}-${tier.label}`}
           className="tier band"
           style={
-            { "--band-light": tier.colorLight, "--band-dark": tier.colorDark } as CSSProperties
+            {
+              "--band-light": shownLight(tier.colorLight),
+              "--band-dark": tier.colorDark,
+            } as CSSProperties
           }
         >
           <div className="tier__band">

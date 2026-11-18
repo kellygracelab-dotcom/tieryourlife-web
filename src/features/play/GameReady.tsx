@@ -5,6 +5,7 @@ import { MediaImage } from "../../ui/MediaImage";
 import { useModal } from "../../ui/useModal";
 import { cardOf, type PlayBoard } from "./board";
 import "./play.css";
+import { shownLight } from "../../lib/tierColour";
 
 /** How many tiers the window draws; the rest are counted under them. */
 const TIERS_SHOWN = 3;
@@ -86,7 +87,7 @@ export function GameReady({ ready, board, onShare, rankings, onClose, onAgain }:
                 className="game-ready__band band"
                 style={
                   {
-                    "--band-light": tier.colorLight,
+                    "--band-light": shownLight(tier.colorLight),
                     "--band-dark": tier.colorDark,
                   } as CSSProperties
                 }
