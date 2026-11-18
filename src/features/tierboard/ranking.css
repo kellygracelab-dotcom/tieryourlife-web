@@ -239,7 +239,7 @@
  */
 .tier__band--held {
   position: relative;
-  cursor: grab;
+  cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
@@ -266,36 +266,27 @@
   }
 }
 
-/* The pencil: the band's click opens the same editor; this says so, and is the keyboard's way. */
+/* No pencil on a band (Danylo, 18.11.2026; artboard 18's item 4 undone): the
+   band itself opens its tier, lit under the pointer. The button lies unseen over
+   the band for the keyboard and lets every press through to the band, which
+   also lifts and carries the tier. */
 .tier__edit {
   position: absolute;
-  bottom: 4px;
-  inset-inline-end: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
+  inset: 0;
   padding: 0;
   border: none;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--on-band) 12%, transparent);
-  color: var(--on-band);
-  cursor: pointer;
+  border-radius: inherit;
+  background: transparent;
+  pointer-events: none;
 }
 
-.tier__edit .ms {
-  font-size: 16px;
-}
-
-/* Always in view on one's own board (audit C1): a finger has no hover to find it by. */
 .tier__band--held:hover .tier__edit {
-  background: color-mix(in srgb, var(--on-band) 24%, transparent);
+  background: color-mix(in srgb, var(--on-band) 12%, transparent);
 }
 
 .tier__edit:focus-visible {
   outline: 2px solid var(--on-band);
-  outline-offset: 1px;
+  outline-offset: -4px;
 }
 
 /* Under the last row, at the band's start edge, 12 below it: the board's gap and the rest. */
