@@ -1303,3 +1303,207 @@
   font: 400 13px/18px var(--font);
   color: var(--ink-dim);
 }
+
+/* ⋮ on a list (artboard 39): under the star on a tile, before the chevron in a
+   row; shown where the list is pointed at or focused, and always on a touch screen. */
+.board-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.board-tile__more {
+  position: absolute;
+  top: 46px;
+  inset-inline-end: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #202124;
+  color: #ffffff;
+  box-shadow: 0 1px 3px #0009;
+}
+
+.board-tile__more:hover {
+  background: #35373b;
+}
+
+.board-tile__more .ms {
+  font-size: 18px;
+}
+
+.board-card__more {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  background: none;
+  color: var(--ink-dim);
+}
+
+.board-card__more:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .board-more {
+    opacity: 0;
+  }
+
+  .board-tile:hover .board-more,
+  .board-card:hover .board-more,
+  .board-tile:focus-within .board-more,
+  .board-card:focus-within .board-more {
+    opacity: 1;
+  }
+}
+
+/* A long press opens the menu: no text chosen, no system menu over it. */
+.board-tile,
+.board-card,
+.started__card {
+  -webkit-touch-callout: none;
+}
+
+@media (hover: none) {
+  .board-tile__main,
+  .board-card__main {
+    user-select: none;
+  }
+}
+
+/* Rename on the list: the name a field in its place. */
+.board-rename {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 2px 6px;
+  margin-inline: -6px;
+  border: 1px solid var(--focus);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+}
+
+/* A list's menu in Your lists (artboard 39): the account menu's look, at the pointer. */
+.list-menu {
+  position: fixed;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  width: 252px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  box-sizing: border-box;
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-container);
+  box-shadow: var(--shadow-lift);
+  outline: none;
+}
+
+.list-menu__head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px 8px;
+  min-width: 0;
+}
+
+.list-menu__title {
+  overflow: hidden;
+  font: 500 14px/20px var(--font);
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-menu__meta {
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+.list-menu__line {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--line);
+}
+
+.list-menu__entry {
+  display: contents;
+}
+
+.list-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font: 500 14px/20px var(--font);
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.list-menu__item:focus {
+  outline: none;
+  background: var(--hover);
+}
+
+.list-menu__item:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.list-menu__item[aria-disabled="true"] {
+  cursor: default;
+  color: var(--ink-dim);
+}
+
+.list-menu__icon {
+  flex: none;
+  font-size: 20px;
+  color: var(--ink-dim);
+}
+
+.list-menu__item--danger,
+.list-menu__item--danger .list-menu__icon {
+  color: var(--error);
+}
+
+.list-menu__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding-block: 8px;
+}
+
+.list-menu__note {
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+/* The keys only where there is a keyboard to press them. */
+.list-menu__keys {
+  display: none;
+  font: 400 12px/16px var(--font);
+  color: var(--ink-dim);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .list-menu__keys {
+    display: inline;
+  }
+}

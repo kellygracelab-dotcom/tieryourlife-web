@@ -1477,6 +1477,27 @@ const ru: Translation = {
       other: "{n} списка удалено, их публичные копии сняты",
     },
   },
+  // The menu of a list in Your lists: a right click, ⋮, a long press (artboard 39).
+  listMenu: {
+    label: "Ещё для «{name}»",
+    private: "личный",
+    public: "публичный",
+    open: "Открыть",
+    rename: "Переименовать",
+    renameLabel: "Название списка",
+    favourite: "Добавить в избранное",
+    unfavourite: "Убрать из избранного",
+    publish: "Опубликовать…",
+    delete: "Удалить",
+    deleteMany: {
+      one: "Удалить {n} список",
+      few: "Удалить {n} списка",
+      many: "Удалить {n} списков",
+      other: "Удалить {n} списка",
+    },
+    discard: "Сбросить мою расстановку",
+    discarded: "Расстановка сброшена",
+  },
   started: {
     title: "Продолжить",
     count: "Продолжить · {n}",

@@ -1345,6 +1345,22 @@ const de: Translation = {
       other: "{n} Listen gelöscht, die öffentlichen Kopien entfernt",
     },
   },
+  // The menu of a list in Your lists: a right click, ⋮, a long press (artboard 39).
+  listMenu: {
+    label: "Mehr zu „{name}“",
+    private: "privat",
+    public: "öffentlich",
+    open: "Öffnen",
+    rename: "Umbenennen",
+    renameLabel: "Name der Liste",
+    favourite: "Zu Favoriten hinzufügen",
+    unfavourite: "Aus Favoriten entfernen",
+    publish: "Veröffentlichen…",
+    delete: "Löschen",
+    deleteMany: { one: "{n} Liste löschen", other: "{n} Listen löschen" },
+    discard: "Meine Anordnung verwerfen",
+    discarded: "Anordnung verworfen",
+  },
   started: {
     title: "Weitermachen",
     count: "Weitermachen · {n}",

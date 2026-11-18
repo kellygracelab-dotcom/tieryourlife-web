@@ -91,7 +91,7 @@ import { Snackbar, useBoardNotice } from "../ui/Snackbar";
 import { useBackCloses } from "../ui/useBackCloses";
 import { PlayButton } from "../features/play/PlayButton";
 import { localGames } from "../features/play/savedGames";
-import { wantsResume } from "../features/started/started";
+import { wantsResume, wantsSave } from "../features/started/started";
 import { usePlay } from "../features/play/usePlay";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
@@ -664,6 +664,14 @@ function OpenList({
     },
     label: authorShown ? strings.list.saveAuthors : strings.list.saveMyList,
   };
+  // Save my list in a begun list's menu in Your lists (artboard 39): once, as
+  // the page opens on Mine; on the author's ranking it waits rather than save theirs.
+  const saveAsked = useRef(wantsSave(location.state));
+  useEffect(() => {
+    if (!saveAsked.current || authorShown || own) return;
+    saveAsked.current = false;
+    saving.start();
+  });
   // The visitor's switch whenever there is a Theirs; the author's only for a reader's placing.
   const switchShown = !outOfSight && (own ? chosen !== null : theirsKnown);
   // Who else ranked it is a line of the menu, the one place the number is said.

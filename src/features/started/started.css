@@ -114,3 +114,19 @@
   justify-content: center;
   min-height: 48px;
 }
+
+/* ⋮ on a begun list (artboard 39), at the end of its name. */
+.started__more {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-inline-start: auto;
+  border-radius: 20px;
+  background: none;
+  color: var(--ink-dim);
+}
+
+.started__more:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
