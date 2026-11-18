@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { KeyValueStore } from "./storage";
-import { applyTheme, keepTheme, readTheme, THEME_KEY } from "./theme";
+import { applyTheme, keepTheme, readTheme, shownScheme, THEME_KEY } from "./theme";
 
 const memory = (): KeyValueStore & { kept: Map<string, string> } => {
   const kept = new Map<string, string>();
@@ -60,5 +60,18 @@ describe("theme", () => {
     expect(root.dataset.theme).toBeUndefined();
     expect(meta.content).toBe("#121318");
     meta.remove();
+  });
+
+  it("says which scheme is shown: the person's choice, else the system's", () => {
+    const root = document.documentElement;
+    expect(shownScheme(root, false)).toBe("light");
+    expect(shownScheme(root, true)).toBe("dark");
+    applyTheme("dark", root, false);
+    expect(shownScheme(root, false)).toBe("dark");
+    applyTheme("light", root, true);
+    expect(shownScheme(root, true)).toBe("light");
+    // Where nothing can ask the system, as here, the light one.
+    applyTheme("system", root, false);
+    expect(shownScheme()).toBe("light");
   });
 });

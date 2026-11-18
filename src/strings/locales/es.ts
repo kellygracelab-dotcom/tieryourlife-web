@@ -598,6 +598,15 @@ const es: Translation = {
       "El autor cambió esta lista mientras la clasificabas. Vuelve a cargarla para clasificarla tal como está ahora.",
     loadAgain: "Volver a cargarla",
   },
+  shareCard: {
+    placed: { one: "{n} clasificada", many: "{n} clasificadas", other: "{n} clasificadas" },
+    notPlaced: {
+      one: "{n} tarjeta más aún sin clasificar",
+      many: "{n} tarjetas más aún sin clasificar",
+      other: "{n} tarjetas más aún sin clasificar",
+    },
+    rankIt: "Clasifícala tú",
+  },
   keep: {
     google: "Continuar con Google",
     busy: "Iniciando sesión…",

@@ -599,6 +599,15 @@ const ptBR: Translation = {
       "O autor mudou esta lista enquanto você a classificava. Carregue de novo para classificá-la como está agora.",
     loadAgain: "Carregar de novo",
   },
+  shareCard: {
+    placed: { one: "{n} classificado", many: "{n} classificados", other: "{n} classificados" },
+    notPlaced: {
+      one: "Mais {n} cartão ainda sem classificar",
+      many: "Mais {n} cartões ainda sem classificar",
+      other: "Mais {n} cartões ainda sem classificar",
+    },
+    rankIt: "Classifique você",
+  },
   keep: {
     google: "Continuar com o Google",
     busy: "Entrando…",
