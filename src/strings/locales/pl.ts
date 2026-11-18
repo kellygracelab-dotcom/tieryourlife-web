@@ -99,10 +99,10 @@ const pl: Translation = {
   },
   settings: {
     faceGallery: "Zdjęcie z galerii",
-    faceGalleryCaption: "Zdjęcie",
+    faceGalleryCaption: "Prześlij",
     facePhotoCaption: "Twoje zdjęcie",
     faceNote:
-      "Obrazy kart zostają tam, gdzie są w sieci. Zdjęcie z galerii jest sprawdzane i przechowywane przy Twoim koncie.",
+      "Inni widzą twoje zdjęcie obok twojej nazwy na listach, które publikujesz. Wybrana karta lub zdjęcie są sprawdzane i przechowywane przy twoim koncie.",
     faceNotMade: "To zdjęcie nie może być Twoim awatarem. Wybierz inne.",
     title: "Ustawienia",
     guestTitle: "Zaloguj się, aby zmieniać ustawienia.",

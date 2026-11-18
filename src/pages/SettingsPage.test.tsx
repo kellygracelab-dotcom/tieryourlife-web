@@ -12,6 +12,7 @@ import { type CutFace, PictureRefused, type UploadedPicture } from "../lib/pictu
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { memoryStore } from "../lib/storage";
+import { readOwnFace, useOwnFaceStoreForTests } from "../lib/ownFace";
 import {
   SettingsPage,
   type Erase,
@@ -154,10 +155,12 @@ beforeEach(() => {
   refreshAuthor.mockReset();
   refreshAuthor.mockResolvedValue({ updated: 0 });
   erase.mockReset();
+  useOwnFaceStoreForTests(memoryStore());
 });
 
 describe("faceChoicesOf", () => {
-  it("offers the catalogue pictures of the lists, once each, with the list they came from", () => {
+  // The feed's own copies too: since 13.11.2026 nearly every card is one (FaceSection cuts those).
+  it("offers the pictures of the lists, once each, with the list they came from", () => {
     const lists = [
       published("A24 films", [
         "https://image.tmdb.org/t/p/w500/1.jpg",
@@ -168,6 +171,10 @@ describe("faceChoicesOf", () => {
     ];
     expect(faceChoicesOf(lists)).toEqual([
       { url: "https://image.tmdb.org/t/p/w500/1.jpg", from: "A24 films" },
+      {
+        url: "https://firebasestorage.googleapis.com/v0/b/x/o/published%2Fa%2Fp?alt=media",
+        from: "A24 films",
+      },
       { url: "https://image.tmdb.org/t/p/w500/2.jpg", from: "A24 films" },
       { url: "https://img/3.jpg", from: "Ghibli" },
     ]);
@@ -588,6 +595,69 @@ describe("SettingsPage", () => {
     load.mockResolvedValue({ lists: [] });
     open({ ...member, uid: "u2" });
     expect(await screen.findByText(/Publish a list and its pictures/)).toBeInTheDocument();
+  });
+
+  // Danylo, 19.11.2026: the letter took the uploaded photo away for good. The photo keeps its tile.
+  it("keeps the uploaded photo as a choice after the letter, and puts it back with a press", async () => {
+    const PHOTO = "https://faces/p1.jpg";
+    load.mockResolvedValue({ lists: [published("A24 films", ["https://img/1.jpg"])] });
+    face.mockResolvedValue(undefined);
+    const worn = open({ ...member, photoUrl: PHOTO });
+    await within(faces()).findByRole("button", { name: "Card from A24 films" });
+    // Letter, Your photo, then the cards; the upload's own button is the file field's.
+    expect(
+      within(faces())
+        .getAllByRole("button")
+        .map((b) => [b.getAttribute("aria-label"), b.getAttribute("aria-pressed")]),
+    ).toEqual([
+      ["Just the letter", "false"],
+      ["Your photo", "true"],
+      ["Card from A24 films", "false"],
+    ]);
+    expect(readOwnFace("u1")).toBe(PHOTO);
+    await userEvent.click(within(faces()).getByRole("button", { name: "Just the letter" }));
+    expect(face).toHaveBeenLastCalledWith(null);
+    worn.unmount();
+
+    // The letter worn now: the photo waits on its tile, and a press wears it, no placing.
+    open({ ...member, photoUrl: null });
+    await within(faces()).findByRole("button", { name: "Card from A24 films" });
+    const photo = within(faces()).getByRole("button", { name: "Your photo" });
+    expect(photo).toHaveAttribute("aria-pressed", "false");
+    expect(within(faces()).getByRole("button", { name: "Just the letter" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(photo);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(showFace).toHaveBeenCalledWith(PHOTO);
+    expect(face).toHaveBeenLastCalledWith(PHOTO);
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it("wears a card of the feed's own copies as it is, and leaves the uploaded photo be", async () => {
+    const PHOTO = "https://faces/p1.jpg";
+    const COPY =
+      "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2Fl1%2Fc1?alt=media";
+    load.mockResolvedValue({ lists: [published("A24 films", [COPY])] });
+    face.mockResolvedValue(undefined);
+    const first = open({ ...member, photoUrl: PHOTO });
+    await userEvent.click(await within(faces()).findByRole("button", { name: /Card from/ }));
+    placeLoaded();
+    await pressUseThis();
+    // Not cut: every cut goes up as the account's photo, and a card must not take its place.
+    expect(cut).not.toHaveBeenCalled();
+    expect(face).toHaveBeenCalledWith(COPY);
+    expect(readOwnFace("u1")).toBe(PHOTO);
+    first.unmount();
+
+    open({ ...member, photoUrl: COPY });
+    const card = await within(faces()).findByRole("button", { name: /Card from/ });
+    expect(card).toHaveAttribute("aria-pressed", "true");
+    expect(within(faces()).getByRole("button", { name: "Your photo" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("keeps the back-up on, and says so, when the account would not delete the copy", async () => {

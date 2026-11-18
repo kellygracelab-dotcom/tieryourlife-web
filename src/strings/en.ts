@@ -77,10 +77,10 @@ export const en = {
   },
   settings: {
     faceGallery: "A photo from the gallery",
-    faceGalleryCaption: "Photo",
+    faceGalleryCaption: "Upload",
     facePhotoCaption: "Your photo",
     faceNote:
-      "Card art stays where it lives on the web. A photo from the gallery is checked and kept with your account.",
+      "People see your face next to your name on the lists you publish. A card or a photo you pick is checked and kept with your account.",
     faceNotMade: "That picture cannot be your face. Pick another.",
     title: "Settings",
     guestTitle: "Sign in to change your settings.",

@@ -84,10 +84,10 @@ const de: Translation = {
   },
   settings: {
     faceGallery: "Ein Foto aus der Galerie",
-    faceGalleryCaption: "Foto",
+    faceGalleryCaption: "Hochladen",
     facePhotoCaption: "Dein Foto",
     faceNote:
-      "Kartenbilder bleiben, wo sie im Netz liegen. Ein Foto aus der Galerie wird geprüft und bei deinem Konto aufbewahrt.",
+      "Andere sehen dein Bild neben deinem Namen auf den Listen, die du veröffentlichst. Eine gewählte Karte oder ein Foto wird geprüft und bei deinem Konto gespeichert.",
     faceNotMade: "Dieses Bild kann nicht dein Profilbild sein. Wähle ein anderes.",
     title: "Einstellungen",
     guestTitle: "Melde dich an, um deine Einstellungen zu ändern.",
