@@ -132,6 +132,9 @@ const pl: Translation = {
     faceLetterCaption: "Litera",
     faceFailed: "Nie udało się zapisać – serwer nie odpowiedział.",
     faceListsFailed: "Nie udało się wczytać twoich opublikowanych list.",
+    shareSite: "Udostępnij TierYourLife",
+    feedback: "Wyślij opinię",
+    feedbackSubject: "Opinia o TierYourLife",
     privacyTitle: "Prywatność",
     signOutNote:
       "Twoje listy zostają na koncie i w tej przeglądarce, ukryte do ponownego zalogowania. Po wylogowaniu widać tylko listy zrobione bez konta.",

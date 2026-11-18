@@ -109,6 +109,10 @@ export const en = {
     faceLetterCaption: "Letter",
     faceFailed: "Couldn’t save — the server didn’t answer.",
     faceListsFailed: "Couldn’t load your published lists.",
+    // The site to someone else, and a word to us (Testers Community, 18.11.2026).
+    shareSite: "Share TierYourLife",
+    feedback: "Send feedback",
+    feedbackSubject: "TierYourLife feedback",
     privacyTitle: "Privacy",
     signOutNote:
       "Your lists stay in your account and in this browser, hidden until you sign in again. Signed out, you’ll see only lists made without an account.",

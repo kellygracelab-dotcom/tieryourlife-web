@@ -118,6 +118,9 @@ const de: Translation = {
     faceLetterCaption: "Buchstabe",
     faceFailed: "Konnte nicht speichern – der Server hat nicht geantwortet.",
     faceListsFailed: "Deine veröffentlichten Listen ließen sich nicht laden.",
+    shareSite: "TierYourLife teilen",
+    feedback: "Feedback senden",
+    feedbackSubject: "Feedback zu TierYourLife",
     privacyTitle: "Datenschutz",
     signOutNote:
       "Deine Listen bleiben in deinem Konto und in diesem Browser, versteckt, bis du dich wieder anmeldest. Abgemeldet siehst du nur Listen, die ohne Konto gemacht wurden.",

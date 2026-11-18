@@ -10,7 +10,10 @@ export const APP_STATUS: AppStatus = "testing";
 export const appIsLive = (status: AppStatus = APP_STATUS): boolean => status === "live";
 
 /** Where a link to the app stands, so Play Console can tell which place brings installs. */
-export type PlaySlot = "home" | "boards" | "result" | "footer" | "about" | "menu";
+export type PlaySlot = "home" | "boards" | "result" | "footer" | "about" | "menu" | "settings";
+
+/** The developer's public address, as the privacy policy gives it: where Send feedback writes. */
+export const FEEDBACK_EMAIL = "kellygracelab@gmail.com";
 
 const PACKAGE = "com.artiuillab.tieryourlife";
 

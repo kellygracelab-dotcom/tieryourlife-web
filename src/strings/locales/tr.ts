@@ -117,6 +117,9 @@ const tr: Translation = {
     faceLetterCaption: "Harf",
     faceFailed: "Kaydedilemedi: sunucu yanıt vermedi.",
     faceListsFailed: "Yayımladığınız listeler yüklenemedi.",
+    shareSite: "TierYourLife’ı paylaş",
+    feedback: "Görüş gönder",
+    feedbackSubject: "TierYourLife hakkında görüş",
     privacyTitle: "Gizlilik",
     signOutNote:
       "Listeleriniz hesabınızda ve bu tarayıcıda kalır, yeniden giriş yapana kadar gizli olur. Oturum kapalıyken yalnızca hesapsız yapılan listeleri görürsünüz.",

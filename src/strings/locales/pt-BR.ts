@@ -121,6 +121,9 @@ const ptBR: Translation = {
     faceLetterCaption: "Letra",
     faceFailed: "Não foi possível salvar: o servidor não respondeu.",
     faceListsFailed: "Não foi possível carregar suas listas publicadas.",
+    shareSite: "Compartilhar o TierYourLife",
+    feedback: "Enviar feedback",
+    feedbackSubject: "Feedback sobre o TierYourLife",
     privacyTitle: "Privacidade",
     signOutNote:
       "Suas listas ficam na sua conta e neste navegador, ocultas até você entrar de novo. Fora da conta, você vê só as listas feitas sem conta.",

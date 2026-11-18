@@ -141,6 +141,9 @@ const ar: Translation = {
     faceLetterCaption: "الحرف",
     faceFailed: "تعذّر الحفظ: لم يستجب الخادم.",
     faceListsFailed: "تعذّر تحميل قوائمك المنشورة.",
+    shareSite: "مشاركة TierYourLife",
+    feedback: "أرسل ملاحظاتك",
+    feedbackSubject: "ملاحظات حول TierYourLife",
     privacyTitle: "الخصوصية",
     signOutNote:
       "تبقى قوائمك في حسابك وفي هذا المتصفح، مخفية حتى تسجّل الدخول مجددًا. وأنت خارج الحساب لا ترى إلا القوائم التي أُنشئت بلا حساب.",

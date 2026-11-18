@@ -120,6 +120,9 @@ const es: Translation = {
     faceLetterCaption: "Letra",
     faceFailed: "No se pudo guardar: el servidor no respondió.",
     faceListsFailed: "No se pudieron cargar tus listas publicadas.",
+    shareSite: "Compartir TierYourLife",
+    feedback: "Enviar comentarios",
+    feedbackSubject: "Comentarios sobre TierYourLife",
     privacyTitle: "Privacidad",
     signOutNote:
       "Tus listas se quedan en tu cuenta y en este navegador, ocultas hasta que vuelvas a iniciar sesión. Sin sesión, solo verás las listas hechas sin cuenta.",

@@ -126,6 +126,9 @@ const ru: Translation = {
     faceLetterCaption: "Буква",
     faceFailed: "Не удалось сохранить — сервер не ответил.",
     faceListsFailed: "Не удалось загрузить ваши опубликованные списки.",
+    shareSite: "Поделиться TierYourLife",
+    feedback: "Написать нам",
+    feedbackSubject: "Отзыв о TierYourLife",
     privacyTitle: "Конфиденциальность",
     signOutNote:
       "Списки останутся в аккаунте и в этом браузере, скрытые, пока вы снова не войдёте. Без входа видны только списки, сделанные без аккаунта.",

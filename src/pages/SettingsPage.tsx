@@ -25,12 +25,14 @@ import {
 } from "../lib/api";
 import { type CutFace, cutFaceOnCanvas, uploadPicture } from "../lib/pictures";
 import { renameAccount, setFace } from "../lib/profile";
+import { appIsLive, FEEDBACK_EMAIL, onApple, playUrl } from "../lib/links";
 import { localStorageStore } from "../lib/storage";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Icon } from "../ui/Icon";
 import { Skeleton } from "../ui/Skeleton";
+import { sayOnTheSite } from "../ui/siteNotice";
 import "./SettingsPage.css";
 import { usePageTitle } from "../app/pageTitle";
 
@@ -48,6 +50,7 @@ interface SettingsPageProps {
   cut?: CutFace;
   refreshAuthor?: RefreshAuthor;
   erase?: Erase;
+  share?: ShareSite;
 }
 
 function ThemeCard({ note }: { note: string | null }) {
@@ -101,6 +104,63 @@ function HiddenCard() {
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+/** The site's own address, to hand on: the phone's share sheet, or the clipboard. */
+export type ShareSite = (url: string) => Promise<"shared" | "copied">;
+
+const shareSite: ShareSite = async (url) => {
+  if (typeof navigator.share === "function") {
+    // Closing the sheet is not a failure, and says nothing.
+    await navigator.share({ title: strings.brand, url }).catch(() => undefined);
+    return "shared";
+  }
+  if (navigator.clipboard === undefined) throw new Error("no clipboard");
+  await navigator.clipboard.writeText(url);
+  return "copied";
+};
+
+/**
+ * The site to someone else, the app, and a word to us, as the app's Settings
+ * has them (Testers Community, 18.11.2026). The app's row follows the one
+ * switch the rest of the site does: plain words until Google Play opens it to
+ * everyone, nothing on an iPhone.
+ */
+function AppCard({ share }: { share: ShareSite }) {
+  const url = `${window.location.origin}/`;
+  const onShare = () => {
+    share(url).then(
+      (how) => {
+        if (how === "copied") sayOnTheSite({ text: strings.list.linkCopied });
+      },
+      () => sayOnTheSite({ text: fill(strings.list.copyFailed, { link: url }) }),
+    );
+  };
+  const feedback = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(strings.settings.feedbackSubject)}`;
+  return (
+    <section className="settings__card" aria-labelledby="app-title">
+      <h2 id="app-title" className="settings__title">
+        {strings.brand}
+      </h2>
+      <button type="button" className="settings__row settings__row--button" onClick={onShare}>
+        <span>{strings.settings.shareSite}</span>
+        <Icon name="share" className="settings__row-icon" />
+      </button>
+      {!onApple() &&
+        (appIsLive() ? (
+          <a className="settings__row" href={playUrl("settings")} target="_blank" rel="noopener">
+            <span>{strings.android.menu}</span>
+            <Icon name="open_in_new" className="settings__row-icon" />
+          </a>
+        ) : (
+          <p className="settings__row settings__row--quiet">{strings.android.footerSoon}</p>
+        ))}
+      <a className="settings__row" href={feedback}>
+        <span>{strings.settings.feedback}</span>
+        <Icon name="mail" className="settings__row-icon" />
+      </a>
     </section>
   );
 }
@@ -209,6 +269,7 @@ export function SettingsPage({
   cut = cutFaceOnCanvas,
   refreshAuthor = refreshPublishedAuthor,
   erase = eraseMyAccount,
+  share = shareSite,
 }: SettingsPageProps) {
   usePageTitle(strings.settings.title, { inBar: false });
   const { account, signOut, refresh } = useSession();
@@ -288,6 +349,7 @@ export function SettingsPage({
       <LanguageCard />
       <DataCard />
       <HiddenCard />
+      <AppCard share={share} />
       <PrivacyCard />
 
       {account?.kind === "signedIn" && (
