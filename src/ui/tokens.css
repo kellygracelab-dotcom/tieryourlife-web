@@ -43,6 +43,8 @@
   --on-band: #ffffff;
   --band-tint: 12%;
   --band-tint-hover: 24%;
+  /* What a tier row's tint is mixed into: the page in Lavender, the palette's lightest surface in a colour (palette.ts). */
+  --band-paper: var(--paper);
   --tile-placeholder: #dad7e0;
   --tile-label: #5d5c66;
 

@@ -14,3 +14,4 @@ public/delete-account.html
 src/features/play/engine/play-vectors.json
 # A byte-for-byte copy of the proxy's functions/test/cover-crop-vectors.json (#140)
 src/lib/coverCropVectors.json
+src/test/theme-vectors.json

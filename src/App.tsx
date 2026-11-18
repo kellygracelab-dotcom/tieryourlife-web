@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 import { withPageTransitions } from "./app/pageTransitions";
 import { routes } from "./app/routes";
 import { SessionProvider } from "./app/SessionProvider";
+import { ColourSync } from "./features/account/ColourSync";
 import { BoardSyncProvider } from "./features/boards/BoardSyncProvider";
 import { StartedSync } from "./features/started/StartedSyncRunner";
 import { announceWith, reloadInto } from "./lib/freshChunk";
@@ -79,6 +80,8 @@ export function App() {
         <Tips />
         {/* Continue follows the account too: the lists begun on the phone show here. */}
         <StartedSync />
+        {/* The colour the site is drawn in follows the account too. */}
+        <ColourSync />
       </BoardSyncProvider>
     </SessionProvider>
   );

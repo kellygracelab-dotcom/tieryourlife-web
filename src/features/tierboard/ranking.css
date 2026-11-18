@@ -143,7 +143,7 @@
 .tier--armed:active:not(:has(.tile:active)) {
   outline: 2px dashed var(--band);
   outline-offset: -2px;
-  background: color-mix(in oklab, var(--band-base) var(--band-tint-hover), var(--paper));
+  background: color-mix(in oklab, var(--band-base) var(--band-tint-hover), var(--band-paper));
 }
 
 /* A finger's hover stays where it tapped: only a pointer that hovers aims by it. */
@@ -151,7 +151,7 @@
   .ranking:not(.ranking--drag) .tier--armed:hover:not(:has(.tile:hover)) {
     outline: 2px dashed var(--band);
     outline-offset: -2px;
-    background: color-mix(in oklab, var(--band-base) var(--band-tint-hover), var(--paper));
+    background: color-mix(in oklab, var(--band-base) var(--band-tint-hover), var(--band-paper));
   }
 }
 

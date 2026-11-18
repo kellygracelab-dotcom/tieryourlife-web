@@ -60,8 +60,22 @@ export function applyTheme(
 ): void {
   if (theme === "system") delete root.dataset.theme;
   else root.dataset.theme = theme;
-  const shown = theme === "system" ? (dark ? "dark" : "light") : theme;
+  paintAround(root, dark);
+}
+
+/**
+ * Tells the browser the page's paper, for what it paints around it: the
+ * colour's palette paper when one is on (palette.ts), the hand-made one else.
+ */
+export function paintAround(
+  root: HTMLElement = document.documentElement,
+  dark: boolean = systemPrefersDark(),
+): void {
+  const painted = root.ownerDocument.defaultView
+    ?.getComputedStyle(root)
+    .getPropertyValue("--paper")
+    .trim();
   root.ownerDocument
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", PAPER[shown]);
+    ?.setAttribute("content", painted ? painted : PAPER[shownScheme(root, dark)]);
 }

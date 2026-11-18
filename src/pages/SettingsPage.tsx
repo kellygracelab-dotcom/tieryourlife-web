@@ -10,6 +10,7 @@ import {
 import { LanguageCard } from "../features/account/LanguageCard";
 import { NameSection, type Rename } from "../features/account/NameSection";
 import type { Publish } from "../features/account/useSaving";
+import { ColourPicker } from "../features/account/ColourPicker";
 import { HowItWorks } from "../features/account/HowItWorks";
 import { DataCard } from "../features/boards/DataCard";
 import { owners } from "../features/boards/owners";
@@ -54,7 +55,7 @@ interface SettingsPageProps {
   share?: ShareSite;
 }
 
-function ThemeCard({ note }: { note: string | null }) {
+function ThemeCard({ note, signedIn }: { note: string | null; signedIn: boolean }) {
   return (
     <section className="settings__card" aria-labelledby="theme-title">
       <h2 id="theme-title" className="settings__title">
@@ -62,6 +63,7 @@ function ThemeCard({ note }: { note: string | null }) {
       </h2>
       <ThemeSwitch />
       {note !== null && <p className="settings__note">{note}</p>}
+      <ColourPicker signedIn={signedIn} />
     </section>
   );
 }
@@ -388,7 +390,10 @@ export function SettingsPage({
         </>
       )}
 
-      <ThemeCard note={account?.kind === "guest" ? strings.settings.themeGuestNote : null} />
+      <ThemeCard
+        note={account?.kind === "guest" ? strings.settings.themeGuestNote : null}
+        signedIn={account?.kind === "signedIn"}
+      />
       <LanguageCard />
       <DataCard />
       <HiddenCard />
