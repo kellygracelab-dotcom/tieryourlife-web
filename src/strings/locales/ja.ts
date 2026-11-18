@@ -84,10 +84,10 @@ const ja: Translation = {
   },
   settings: {
     faceGallery: "ギャラリーの写真",
-    faceGalleryCaption: "写真",
+    faceGalleryCaption: "アップロード",
     facePhotoCaption: "あなたの写真",
     faceNote:
-      "カードの画像はウェブ上の元の場所に残ります。ギャラリーの写真は確認のうえ、アカウントに保存されます。",
+      "公開したリストでは、名前の横にアイコンが表示されます。選んだカードや写真は確認され、アカウントに保存されます。",
     faceNotMade: "この画像はプロフィールに使えません。別のものを選んでください。",
     title: "設定",
     guestTitle: "設定を変えるにはログインしてください。",

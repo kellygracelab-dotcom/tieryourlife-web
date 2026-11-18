@@ -9,16 +9,17 @@ export interface FaceChoice {
 }
 
 /**
- * The pictures a face may be: cards from the person's own lists that live on
- * the catalogue's servers. The feed's own copies of uploaded pictures go away
- * with a republish or an unpublish, so a face could not be one of those.
+ * The pictures a face may be: cards from the person's own published lists.
+ * Since 13.11.2026 nearly all of them are the feed's own copies, which go
+ * with a republish or an unpublish, so FaceSection cuts one of those and
+ * keeps the cut with the account; a catalogue's picture is worn where it is.
  */
 export function faceChoicesOf(lists: readonly ListSummary[]): FaceChoice[] {
   const seen = new Map<string, FaceChoice>();
   for (const list of lists) {
     for (const url of list.previewImages) {
       if (seen.size >= FACE_CHOICES) return [...seen.values()];
-      if (!url.includes("firebasestorage.googleapis.com") && !seen.has(url)) {
+      if (!seen.has(url)) {
         seen.set(url, { url, from: list.title });
       }
     }

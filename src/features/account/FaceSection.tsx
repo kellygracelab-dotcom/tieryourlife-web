@@ -17,6 +17,8 @@ import { type FaceSource, PlaceFaceDialog, type Placed } from "./PlaceFaceDialog
 import { SavedLine } from "./SavedLine";
 import { type Publish, useSaving } from "./useSaving";
 import { initialOf } from "../../lib/initial";
+import { keepCardFace, keepOwnFace, readCardFace, readOwnFace } from "../../lib/ownFace";
+import { storedPublicMedia } from "../../../functions/src/publicMedia";
 
 export type LoadLists = () => Promise<{ lists: ListSummary[] }>;
 export type Face = (photoUrl: string | null) => Promise<void>;
@@ -77,6 +79,27 @@ export function FaceSection({
   // broken picture in the header. The face worn already stays in sight.
   const [dead, setDead] = useState<ReadonlySet<string>>(() => new Set());
   const offered = choices.filter((choice) => !dead.has(choice.url) || choice.url === current);
+  // The uploaded photo's slot. A face worn that is none of the cards takes
+  // it too: put on from another device, or before the slot was kept.
+  const [slot, setSlot] = useState(() => readOwnFace(uid));
+  const [cardFace, setCardFace] = useState(() => readCardFace(uid));
+  const wears = (card: string) =>
+    card === current || (cardFace !== null && cardFace.card === card && cardFace.face === current);
+  const wornPhoto =
+    state.status === "ready" &&
+    current !== null &&
+    current !== cardFace?.face &&
+    !choices.some((choice) => choice.url === current)
+      ? current
+      : null;
+  const ownPhoto = wornPhoto ?? slot;
+  useEffect(() => {
+    if (wornPhoto !== null && wornPhoto !== readOwnFace(uid)) keepOwnFace(uid, wornPhoto);
+  }, [uid, wornPhoto]);
+  const remember = (url: string) => {
+    keepOwnFace(uid, url);
+    setSlot(url);
+  };
 
   // A photo is shown from an address of its own while it is placed, and only then.
   useEffect(() => {
@@ -108,7 +131,7 @@ export function FaceSection({
   // The phone's way with anything placed by hand or from the device: cut on
   // this device, up to the person's own folder, checked and copied by the
   // backend, then on the account like any face. Shown from the cut at once.
-  const cutAndSend = async (placed: Placed, from: string | null) => {
+  const cutAndSend = async (placed: Placed, from: string | null, card: string | null) => {
     let cutFace: FaceCut;
     try {
       cutFace = cut(placed.picture, placed.square);
@@ -122,6 +145,12 @@ export function FaceSection({
       const { pictureId } = await upload(await cutFace.bytes);
       const { url } = await makeFace(pictureId);
       await face(url);
+      // A photo takes the photo's slot; a card's cut is its card's, and leaves the photo be.
+      if (card === null) remember(url);
+      else {
+        keepCardFace(uid, { card, face: url });
+        setCardFace({ card, face: url });
+      }
       await saved();
     } catch (reason: unknown) {
       failed(faceFailureText(from, reason));
@@ -141,12 +170,14 @@ export function FaceSection({
     place({ kind: "photo", url: URL.createObjectURL(file), name: file.name });
   };
 
-  // A card left in the middle is worn where it lives; a photo, or a card
-  // moved or zoomed, is cut first. The cut is drawn before the dialog goes.
+  // A catalogue's card left in the middle is worn where it lives; a photo, a
+  // card moved or zoomed, or one of the feed's copies (gone with a republish)
+  // is cut first. The cut is drawn before the dialog goes.
   const use = (placed: Placed | null) => {
     if (placing === null) return;
-    if (placed !== null && (placing.kind === "photo" || placed.moved)) {
-      void cutAndSend(placed, placing.kind === "photo" ? placing.name : null);
+    const card = placing.kind === "card" ? placing.url : null;
+    if (placed !== null && (card === null || placed.moved || storedPublicMedia(card) !== null)) {
+      void cutAndSend(placed, placing.kind === "photo" ? placing.name : null, card);
     } else if (placing.kind === "card") {
       wearAtOnce(placing.url);
     }
@@ -162,9 +193,6 @@ export function FaceSection({
     }
     setPlacing(null);
   };
-
-  // A photo already chosen is none of the cards: it shows as its own choice.
-  const photo = current !== null && !choices.some((choice) => choice.url === current);
 
   return (
     <section className="settings__card" aria-labelledby="face-title">
@@ -188,6 +216,23 @@ export function FaceSection({
           </button>
           <span className="settings__face-from">{strings.settings.faceLetterCaption}</span>
         </li>
+        {ownPhoto !== null && (
+          <li className="settings__face">
+            <button
+              type="button"
+              className="settings__choice"
+              aria-label={strings.settings.facePhotoCaption}
+              aria-pressed={current === ownPhoto}
+              onClick={() => {
+                if (current !== ownPhoto && !busy) wearAtOnce(ownPhoto);
+              }}
+            >
+              <MediaImage src={ownPhoto} alt="" loading="lazy" />
+              {current === ownPhoto && <Icon name="check" className="settings__choice-check" />}
+            </button>
+            <span className="settings__face-from">{strings.settings.facePhotoCaption}</span>
+          </li>
+        )}
         <li className="settings__face">
           <input
             ref={picker}
@@ -215,20 +260,6 @@ export function FaceSection({
           </button>
           <span className="settings__face-from">{strings.settings.faceGalleryCaption}</span>
         </li>
-        {photo && (
-          <li className="settings__face">
-            <button
-              type="button"
-              className="settings__choice"
-              aria-label={strings.settings.facePhotoCaption}
-              aria-pressed="true"
-            >
-              <MediaImage src={current} alt="" loading="lazy" />
-              <Icon name="check" className="settings__choice-check" />
-            </button>
-            <span className="settings__face-from">{strings.settings.facePhotoCaption}</span>
-          </li>
-        )}
         {offered.map((choice) => (
           <li key={choice.url} className="settings__face">
             <button
@@ -236,7 +267,7 @@ export function FaceSection({
               className="settings__choice"
               aria-label={fill(strings.settings.faceChoice, { list: choice.from })}
               title={choice.from}
-              aria-pressed={choice.url === current}
+              aria-pressed={wears(choice.url)}
               onClick={() => place({ kind: "card", url: choice.url })}
             >
               <MediaImage
@@ -245,7 +276,7 @@ export function FaceSection({
                 loading="lazy"
                 onError={() => setDead((gone) => new Set(gone).add(choice.url))}
               />
-              {choice.url === current && <Icon name="check" className="settings__choice-check" />}
+              {wears(choice.url) && <Icon name="check" className="settings__choice-check" />}
             </button>
             {choice.from.length <= CAPTION_MAX && (
               <span className="settings__face-from">{choice.from}</span>
