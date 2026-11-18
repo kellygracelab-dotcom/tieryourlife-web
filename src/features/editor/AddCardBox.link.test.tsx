@@ -409,27 +409,30 @@ describe("a pasted list with pictures from links", () => {
     await userEvent.click(screen.getByRole("button", { name: "Paste a list" }));
   };
 
-  it("counts the cards from the catalogue and from links, and says which came without a picture", async () => {
+  it("counts the cards from the catalogue and from links, and shows which came without a picture", async () => {
     const link = vi.fn<LinkKeep>(async (ask) =>
       ask.url.includes("page") ? Promise.reject(new LinkRefused("notAPicture")) : linked(),
     );
     const { dispatch } = setup({ link });
     await openPaste();
-    fireEvent.change(screen.getByRole("textbox", { name: "Names, one to a line" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Paste a list" }), {
       target: { value: "Dune https://img.test/dune.jpg\nHeat https://site.test/page" },
     });
     expect(screen.getByText("0 from the catalogue")).toBeInTheDocument();
     expect(screen.getByText("2 from links")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Add 2 cards" }));
-    await vi.waitFor(() =>
-      expect(screen.getByText("2 cards added. 1 came without a picture:")).toBeInTheDocument(),
+    await userEvent.click(screen.getByRole("button", { name: "Find pictures for 2 names" }));
+    // The check names the refused link first, and the kept one after it.
+    const rows = (await screen.findAllByRole("listitem")).map((row) => row.textContent);
+    expect(rows[0]).toContain("Heatthe link is a page, not a picture");
+    expect(rows[1]).toContain("DuneFrom your link");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "2 names · 1 looks right · 1 has no picture",
     );
+    await userEvent.click(screen.getByRole("button", { name: "Add 2 cards" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "addItem", title: "Heat", imageUrl: null });
-    expect(screen.getByText("Heat")).toBeInTheDocument();
-    expect(screen.getByText("the link is a page, not a picture")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "OK" }));
+    // The check said it all: no note after.
     expect(screen.queryByText(/came without a picture/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Sign in" })).toBeNull();
   });
 
   it("waits for a busy picture site, says until when, then asks the line again", async () => {
@@ -440,15 +443,16 @@ describe("a pasted list with pictures from links", () => {
       .mockResolvedValue(linked());
     const { dispatch } = setup({ link });
     await openPaste();
-    fireEvent.change(screen.getByRole("textbox", { name: "Names, one to a line" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Paste a list" }), {
       target: { value: "Dune https://img.test/dune.jpg" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "Add 1 card" }));
+    await userEvent.click(screen.getByRole("button", { name: "Find pictures for 1 name" }));
     expect(
       await screen.findByText(`Waiting for the source until ${searchAgainAt(retryAt)}…`),
     ).toHaveAttribute("role", "status");
     await vi.waitFor(() => expect(link).toHaveBeenCalledTimes(2), { timeout: 4_000 });
     expect(link.mock.calls[1]).toEqual(link.mock.calls[0]);
+    await userEvent.click(await screen.findByRole("button", { name: "Add 1 card" }));
     await vi.waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith(
         expect.objectContaining({ type: "addItem", title: "Dune", pictureId: "p1" }),
@@ -463,13 +467,15 @@ describe("a pasted list with pictures from links", () => {
     const signIn = vi.fn<Session["signIn"]>(async () => ({ kind: "cancelled" }));
     setup({ signedIn: false, link, signIn });
     await openPaste();
-    fireEvent.change(screen.getByRole("textbox", { name: "Names, one to a line" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Paste a list" }), {
       target: { value: "Dune https://img.test/dune.jpg" },
     });
+    await userEvent.click(screen.getByRole("button", { name: "Find pictures for 1 name" }));
+    expect(await screen.findByText("sign in to add pictures from links")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Add 1 card" }));
-    await vi.waitFor(() =>
-      expect(screen.getByText("sign in to add pictures from links")).toBeInTheDocument(),
-    );
+    // The note after the check keeps the sign-in at hand.
+    expect(screen.getByText("1 card added. 1 came without a picture:")).toBeInTheDocument();
+    expect(screen.getByText("sign in to add pictures from links")).toBeInTheDocument();
     expect(link).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(signIn).toHaveBeenCalled();
@@ -481,7 +487,7 @@ describe("a pasted list with pictures from links", () => {
       loadQuota: async () => ({ left: 42, limit: 50, resetsAt: 9 }),
     });
     await openPaste();
-    const text = screen.getByRole("textbox", { name: "Name | picture link | page it’s from" });
+    const text = screen.getByRole("textbox", { name: "Paste a list" });
     expect(await screen.findByText("42 of 50 pictures left today")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -499,7 +505,7 @@ describe("a pasted list with pictures from links", () => {
     });
     // Nothing is held back: only the backend knows which pictures need their page.
     expect(screen.queryByRole("alert")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Add 3 cards" }));
+    await userEvent.click(screen.getByRole("button", { name: "Find pictures for 3 names" }));
     await vi.waitFor(() => expect(link).toHaveBeenCalledTimes(3));
     expect(link).toHaveBeenCalledWith({
       url: "https://img.test/dune.jpg",
@@ -520,19 +526,17 @@ describe("a pasted list with pictures from links", () => {
     );
     const { dispatch } = setup({ house: true, link });
     await openPaste();
-    fireEvent.change(
-      screen.getByRole("textbox", { name: "Name | picture link | page it’s from" }),
-      {
-        target: {
-          value: [
-            "Mango | https://commons.wikimedia.org/wiki/File:Mango.jpg |",
-            "Heat | https://img.test/heat.jpg",
-            "Dune | https://img.test/dune.jpg | https://site.test/dune",
-          ].join("\n"),
-        },
+    fireEvent.change(screen.getByRole("textbox", { name: "Paste a list" }), {
+      target: {
+        value: [
+          "Mango | https://commons.wikimedia.org/wiki/File:Mango.jpg |",
+          "Heat | https://img.test/heat.jpg",
+          "Dune | https://img.test/dune.jpg | https://site.test/dune",
+        ].join("\n"),
       },
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Add 3 cards" }));
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Find pictures for 3 names" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add 3 cards" }));
     await vi.waitFor(() =>
       expect(screen.getByText("1 needs the page its picture is from:")).toBeInTheDocument(),
     );
@@ -553,10 +557,11 @@ describe("a pasted list with pictures from links", () => {
   it("does not name a card without its page outside the house", async () => {
     setup({ link: vi.fn<LinkKeep>(async () => linked()) });
     await openPaste();
-    fireEvent.change(screen.getByRole("textbox", { name: "Names, one to a line" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Paste a list" }), {
       target: { value: "Heat https://img.test/heat.jpg" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "Add 1 card" }));
+    await userEvent.click(screen.getByRole("button", { name: "Find pictures for 1 name" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Add 1 card" }));
     await vi.waitFor(() =>
       expect(screen.getByRole("button", { name: "Paste a list" })).toBeEnabled(),
     );
