@@ -78,7 +78,9 @@ async function makeBoard(page: Page, touch: boolean) {
     // A menu at the bottom dock stays within the window's eight-pixel margin.
     const y = Math.min(at.y + at.height / 2, page.viewportSize()!.height - 8 - box.height);
     expect(Math.abs(box.y - y)).toBeLessThan(2);
-    await expect(menu.getByRole("menuitem", { name: "Move to a tier" })).toBeFocused();
+    // The keyboard is in the menu: on its first item, or on the one the menu,
+    // pushed up from the dock, opened under the pointer (Rename, since W22).
+    await expect(menu.locator("[role='menuitem']:focus")).toHaveCount(1);
     // Escape is a change of mind; the context-menu key opens it again at the card.
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();

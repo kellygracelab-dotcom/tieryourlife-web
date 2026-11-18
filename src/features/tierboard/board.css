@@ -448,3 +448,15 @@
     box-shadow: 0 0 0 3px var(--accent);
   }
 }
+
+/* Rename in a card's menu: its name over the field, Cancel and Save under it. */
+.rename-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.rename-card .dialog__actions {
+  margin-top: 12px;
+}

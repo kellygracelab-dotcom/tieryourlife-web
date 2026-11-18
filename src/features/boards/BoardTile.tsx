@@ -3,16 +3,9 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
-import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
+import { fromOf, labelOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
 import { RenameField } from "./RenameField";
-import {
-  cardFocusByPicture,
-  coverFocusOf,
-  isOut,
-  previewsOf,
-  rankedTiers,
-  type Board,
-} from "./model";
+import { cardFocusByPicture, coverFocusOf, previewsOf, rankedTiers, type Board } from "./model";
 
 interface BoardTileProps {
   board: Board;
@@ -40,12 +33,31 @@ export function MoreButton({ name, className }: { name: string; className: strin
   );
 }
 
+/** Public or Saved before the count (artboard 42), in a tile and in a row alike. */
+export function ListLabel({
+  text,
+  id,
+  className,
+}: {
+  text: string;
+  id: string;
+  className: string;
+}) {
+  return (
+    <span className={`list-label ${className}`} id={id}>
+      {text}
+    </span>
+  );
+}
+
 /**
- * One board as the phone's grid shows it: its picture, its name, how far
- * along it is and, once out, that it is public, with the star over the
- * picture's corner. The picture is the chosen cover, else a collage of the
- * first cards, else the tier colours. Drawn again only when its own board or
- * choice changes: a star or a keystroke elsewhere leaves it be.
+ * One board as the phone's grid shows it: its picture, its name, and on one
+ * line Public or Saved before how far along it is (artboard 42). The star
+ * over the picture's corner shows on a favourite, and on a computer where the
+ * tile is pointed at or reached by the keyboard; ⋮ waits in the lower corner.
+ * The picture is the chosen cover, else a collage of the first cards, else
+ * the tier colours. Drawn again only when its own board or choice changes: a
+ * star or a keystroke elsewhere leaves it be.
  */
 export const BoardTile = memo(function BoardTile({
   board,
@@ -60,10 +72,11 @@ export const BoardTile = memo(function BoardTile({
   // A conflict's copy says where it came from, here as in rows and on the phone.
   const from = fromOf(board);
   const spoken = spokenTitleOf(board);
-  // The name replaces what the link holds, so how far along it is and that it
-  // is public are read after it instead of lost.
+  // The name replaces what the link holds, so whose it is and how far along
+  // it is are read after it instead of lost.
   const id = useId();
-  const facts = !isOut(board) ? `${id}-meta` : `${id}-meta ${id}-public`;
+  const label = labelOf(board);
+  const facts = label === null ? `${id}-meta` : `${id}-label ${id}-meta`;
   const art = (
     <ListArt
       cover={board.coverImageUrl}
@@ -85,15 +98,14 @@ export const BoardTile = memo(function BoardTile({
         <bdi className="board-tile__title">{titleOf(board)}</bdi>
       )}
       {from !== null && <span className="board-tile__from">{from}</span>}
-      <span className="board-tile__meta" id={`${id}-meta`}>
-        {metaOf(board)}
-      </span>
-      {isOut(board) && (
-        <span className="board-tile__public" id={`${id}-public`}>
-          <Icon name="public" />
-          {strings.boards.filterPublic}
+      <span className="board-tile__facts">
+        {label !== null && (
+          <ListLabel text={label} id={`${id}-label`} className="board-tile__label" />
+        )}
+        <span className="board-tile__meta" id={`${id}-meta`}>
+          {metaOf(board)}
         </span>
-      )}
+      </span>
     </span>
   );
   return (

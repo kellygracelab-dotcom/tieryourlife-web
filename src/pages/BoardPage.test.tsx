@@ -299,6 +299,27 @@ describe("BoardPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Sign in to add your own pictures");
   });
 
+  it("names an uploaded picture's card right after it goes up, on the board that keeps it (W22)", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    const upload = vi.fn<Upload>(async (file) => ({
+      pictureId: file.name,
+      previewUrl: `https://dl.test/${file.name}`,
+    }));
+    open(repository, "/b/films", { account: member, upload });
+    await userEvent.upload(
+      screen.getByLabelText("Upload images"),
+      new File(["a"], "garden.png", { type: "image/png" }),
+    );
+    const field = await screen.findByRole("textbox", { name: "Card name" });
+    const card = () =>
+      liveItems(repository.get("films")!).find((item) => item.pictureId === "garden.png");
+    expect(card()?.title).toBe("Untitled card");
+    await userEvent.type(field, "Grandma's garden{Enter}");
+    expect(card()?.title).toBe("Grandma's garden");
+    expect(screen.queryByRole("textbox", { name: "Card name" })).toBeNull();
+  });
+
   it("renames the board where it stands", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save(filmBoard());
@@ -357,6 +378,53 @@ describe("BoardPage", () => {
     expect(
       repository.get("films")?.items.find((item) => item.title === "Climax")?.deletedAt,
     ).toBeNull();
+  });
+
+  it("renames a card of one's own from its menu, and keeps the new name at once (W22)", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    const before = repository.get("films")!.editedAt;
+
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Climax" }));
+    await userEvent.click(
+      within(screen.getByRole("menu", { name: "Climax" })).getByRole("menuitem", {
+        name: "Rename",
+      }),
+    );
+    const dialog = within(screen.getByRole("dialog", { name: "Rename card" }));
+    const field = dialog.getByRole("textbox", { name: "Card name" });
+    expect(field).toHaveValue("Climax");
+    expect(field).toHaveFocus();
+    // Emptied, the name stays as it was.
+    await userEvent.clear(field);
+    await userEvent.click(dialog.getByRole("button", { name: "Save" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(repository.get("films")!.editedAt).toBe(before);
+
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Climax" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    await userEvent.clear(screen.getByRole("textbox", { name: "Card name" }));
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Card name" }),
+      "Climax (2018){Enter}",
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "Climax (2018)" })).toBeInTheDocument();
+    const kept = repository.get("films")!;
+    expect(itemsIn(kept, poolTier(kept)!.uid).map((item) => item.title)).toEqual([
+      "The Witch",
+      "Climax (2018)",
+    ]);
+    expect(kept.editedAt).toBeGreaterThan(before);
+
+    // Escape leaves the name as it is.
+    fireEvent.contextMenu(screen.getByRole("button", { name: "Climax (2018)" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Card name" }), "x");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "Climax (2018)" })).toBeInTheDocument();
   });
 
   it("remembers on this device that a card's menu was opened, past the page", async () => {
@@ -519,6 +587,55 @@ describe("BoardPage: tiers and settings", () => {
     expect(within(screen.getByRole("status")).getByRole("button", { name: "Undo" })).toHaveFocus();
     await userEvent.click(within(screen.getByRole("status")).getByRole("button", { name: "Undo" }));
     expect(kept().label).toBe("Top");
+  });
+
+  it("takes a removed tier back with the header's Undo too, after the moves made since (W15)", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    const labels = () => rankedTiers(repository.get("films")!).map((t) => t.label);
+    const headerUndo = () =>
+      screen
+        .getAllByRole("button", { name: "Undo" })
+        .find((button) => button.closest("[role='status']") === null)!;
+    expect(headerUndo()).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Edit tier S" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove tier" }));
+    expect(labels()).toEqual(["A", "B", "C", "D"]);
+    expect(headerUndo()).toBeEnabled();
+
+    // A move made after it is undone first, then the tier.
+    await userEvent.click(screen.getByRole("button", { name: "The Witch" }));
+    await userEvent.keyboard("1");
+    expect(within(tier("A")).getByRole("button", { name: "The Witch" })).toBeInTheDocument();
+    await userEvent.click(headerUndo());
+    expect(within(tier("A")).queryByRole("button", { name: "The Witch" })).toBeNull();
+    expect(labels()).toEqual(["A", "B", "C", "D"]);
+
+    await userEvent.click(headerUndo());
+    expect(labels()).toEqual(["S", "A", "B", "C", "D"]);
+    expect(within(tier("S")).getByRole("button", { name: "Ex Machina" })).toBeInTheDocument();
+    // Nothing older to take back.
+    expect(headerUndo()).toBeDisabled();
+  });
+
+  it("takes a removed tier back with Ctrl+Z when the board has no move of its own to undo (W15)", async () => {
+    const repository = boardsRepository(memoryStore());
+    repository.save(filmBoard());
+    open(repository, "/b/films");
+    await userEvent.click(screen.getByRole("button", { name: "Edit tier S" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove tier" }));
+    expect(rankedTiers(repository.get("films")!)).toHaveLength(4);
+    await userEvent.click(screen.getByRole("button", { name: "The Witch" }));
+    await userEvent.keyboard("{Control>}z{/Control}");
+    expect(rankedTiers(repository.get("films")!).map((t) => t.label)).toEqual([
+      "S",
+      "A",
+      "B",
+      "C",
+      "D",
+    ]);
   });
 
   it("names a tier in words, as the phone does, and counts the characters near the limit", async () => {
@@ -901,6 +1018,19 @@ describe("BoardPage: tiers and settings", () => {
       expect(screen.getByRole("status")).toHaveTextContent("Removed Climax");
       // The last card gone from the pool, so is the pool.
       expect(screen.queryByRole("region", { name: /^Pool/ })).toBeNull();
+    });
+
+    it("renames a card from its sheet, as the phone does (W22)", async () => {
+      const repository = ranked();
+      await userEvent.click(screen.getByRole("button", { name: "1. Ex Machina in S" }));
+      const sheet = within(screen.getByRole("dialog", { name: "Ex Machina" }));
+      await userEvent.click(sheet.getByRole("button", { name: "Rename" }));
+      const field = screen.getByRole("textbox", { name: "Card name" });
+      await userEvent.clear(field);
+      await userEvent.type(field, "Ex Machina (2014){Enter}");
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(titlesIn(repository, 0)).toEqual(["Ex Machina (2014)"]);
+      expect(screen.getByRole("button", { name: "1. Ex Machina (2014) in S" })).toBeInTheDocument();
     });
 
     it("shows a card just added, in the pool it opens", async () => {

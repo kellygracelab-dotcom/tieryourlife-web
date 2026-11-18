@@ -865,11 +865,11 @@ export const en = {
     notThisTopicSent: "Noted. A moderator will move it if it belongs elsewhere.",
     backToSection: "Back to {section}",
     suggestTopic: "Suggest a topic",
-    tierLists: "Tier lists",
+    tierLists: "Lists",
     showAllTopics: { one: "Show all {n} topics", other: "Show all {n} topics" },
     showFewer: "Show fewer",
     suggestTopicBody:
-      "Topics are named or chosen under Topic in a list’s List settings. A new one goes out with the list when it is published and waits for a moderator.",
+      "Topics are named or chosen under Topic in a list’s Publish window, which Publish at the top of the list opens. A new one goes out with the list and waits for a moderator.",
     suggestTopicMake: "Make a list in {section}",
     sortPopular: "Popular",
     sortNewest: "Newest",
@@ -1286,6 +1286,8 @@ export const en = {
     deleteMany: { one: "Delete {n} list", other: "Delete {n} lists" },
     discard: "Discard my arrangement",
     discarded: "Arrangement discarded",
+    savedLabel: "Saved",
+    publicLabel: "Public",
   },
   started: {
     title: "Continue",
@@ -1474,6 +1476,16 @@ export const en = {
     noArt: "No picture",
     yours: "Your list",
     yoursAnonymous: "Your list, published anonymously",
+    rename: "Rename",
+    renameTitle: "Rename card",
+    nameLabel: "Card name",
+    renameSave: "Save",
+    nameUploads: {
+      one: "Name the picture you uploaded",
+      other: "Name the {n} pictures you uploaded",
+    },
+    nameHint: "Left empty, a card is called “{untitled}”.",
+    nameDone: "Done",
   },
   // A picture from a link, a paste or a drop, and who made a picture
   // (docs/design-spec-picture-link.md).

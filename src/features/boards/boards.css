@@ -839,17 +839,31 @@
   white-space: nowrap;
 }
 
-/* Out in Community: said under the rest, in the primary colour. */
-.board-tile__public {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font: 400 11px/15px var(--font);
-  color: var(--link);
+/*
+ * Public or Saved, then how far along it is (artboard 42): one line that
+ * wraps as words do, with room at its end for ⋮ in the tile's corner.
+ */
+.board-tile__facts {
+  padding-inline-end: 30px;
+  font: 400 11px/20px var(--font);
+  color: var(--ink-dim);
 }
 
-.board-tile__public .ms {
-  font-size: 12px;
+.board-tile__facts .board-tile__meta {
+  font: inherit;
+}
+
+/* An outlined pill, read before the count; the rows' is the same. */
+.list-label {
+  display: inline-block;
+  margin-inline-end: 6px;
+  padding: 0 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  font: 500 11px/16px var(--font);
+  color: var(--ink-dim);
+  white-space: nowrap;
+  vertical-align: 1px;
 }
 
 @media (max-width: 599px) {
@@ -899,6 +913,36 @@
 
 .board-tile__star--on {
   color: #ffc94d;
+}
+
+/*
+ * The star only on a favourite (artboard 42), and on a computer where the
+ * list is pointed at; the keyboard finds it on its way through the list. A
+ * finger adds a favourite from the list's menu. Hidden rather than see-through,
+ * so an empty corner takes no tap.
+ */
+.board-tile__star:not(.board-tile__star--on),
+.board-card__star:not(.board-card__star--on) {
+  visibility: hidden;
+}
+
+.board-tile:has(:focus-visible) .board-tile__star,
+.board-card:has(:focus-visible) .board-card__star {
+  visibility: visible;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .board-tile:hover .board-tile__star,
+  .board-card:hover .board-card__star {
+    visibility: visible;
+  }
+
+  /* The tile pointed at has a thin ring at its edge (artboard 42), over its
+     picture, lighter than a picked one's; the keyboard's ring stands instead. */
+  .board-tile:not(.board-tile--selected, :has(:focus-visible)):hover {
+    outline: 1.5px solid color-mix(in oklab, var(--link) 55%, transparent);
+    outline-offset: -1.5px;
+  }
 }
 
 .board-tile__pick {
@@ -1304,8 +1348,9 @@
   color: var(--ink-dim);
 }
 
-/* ⋮ on a list (artboard 39): under the star on a tile, before the chevron in a
-   row; shown where the list is pointed at or focused, and always on a touch screen. */
+/* ⋮ on a list (artboard 39): in a tile's lower end corner (artboard 42), before
+   the chevron in a row; shown where the list is pointed at or focused, and
+   always on a touch screen. */
 .board-more {
   display: inline-flex;
   align-items: center;
@@ -1317,18 +1362,17 @@
 
 .board-tile__more {
   position: absolute;
-  top: 46px;
-  inset-inline-end: 10px;
+  bottom: 8px;
+  inset-inline-end: 8px;
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #202124;
-  color: #ffffff;
-  box-shadow: 0 1px 3px #0009;
+  background: var(--surface-container-high);
+  color: var(--ink);
 }
 
 .board-tile__more:hover {
-  background: #35373b;
+  background: color-mix(in oklab, var(--surface-container-high) 88%, var(--ink));
 }
 
 .board-tile__more .ms {

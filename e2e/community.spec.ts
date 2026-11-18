@@ -220,7 +220,7 @@ test("a section's topics are low tiles, two rows at most, then the lists under t
     await expect(grid.getByRole("link")).toHaveCount(topics.length);
   }
   // The lists under a line and their own title, with their order beside it.
-  const lists = page.getByRole("heading", { level: 2, name: "Tier lists · 9" });
+  const lists = page.getByRole("heading", { level: 2, name: "Lists · 9" });
   await expect(lists).toBeVisible();
   const [gridBottom, listsTop] = await Promise.all([
     grid.evaluate((element) => element.getBoundingClientRect().bottom),

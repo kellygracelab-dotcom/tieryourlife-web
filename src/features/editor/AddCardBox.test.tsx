@@ -458,6 +458,84 @@ describe("AddCardBox", () => {
     expect(field).toHaveValue("Pets");
   });
 
+  it("offers a field for the name of each picture uploaded without one, and leaves an empty one unnamed (W22)", async () => {
+    const upload = vi.fn<Upload>(async (file) => ({
+      pictureId: file.name,
+      previewUrl: `https://dl/${file.name}`,
+    }));
+    const dispatch = vi.fn<(action: EditorAction) => void>();
+    const onRename = vi.fn<(key: string, title: string) => void>();
+    render(
+      <AddCardBox
+        items={[]}
+        category="anime"
+        dispatch={dispatch}
+        find={async () => page([])}
+        upload={upload}
+        keep={vi.fn<Keep>()}
+        onRename={onRename}
+      />,
+    );
+    const picker = document.querySelector<HTMLInputElement>("input[type='file']")!;
+    const png = (name: string) => new File(["x"], name, { type: "image/png" });
+    await userEvent.upload(picker, [png("a.png"), png("b.png")]);
+    const names = await screen.findByRole("group", { name: "Name the 2 pictures you uploaded" });
+    // Each card went in under a key of its own, for its name to find it by.
+    const keys = dispatch.mock.calls.map(([action]) => "key" in action && action.key);
+    expect(keys).toHaveLength(2);
+    expect(keys.every((key) => typeof key === "string" && key.length > 0)).toBe(true);
+    expect(new Set(keys).size).toBe(2);
+
+    const first = within(names).getByRole("textbox", { name: "Card name 1" });
+    expect(first).toHaveFocus();
+    expect(first).toHaveAttribute("placeholder", "Untitled card");
+    expect(names).toHaveTextContent("Left empty, a card is called “Untitled card”.");
+    await userEvent.type(first, "  Grandma's garden {Enter}");
+    expect(onRename).toHaveBeenCalledWith(keys[0], "Grandma's garden");
+    // Enter goes on to the next; left empty, its card keeps its name.
+    const second = within(names).getByRole("textbox", { name: "Card name 2" });
+    expect(second).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    expect(onRename).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("group", { name: /Name the/ })).toBeNull();
+  });
+
+  it("puts the names away on Done, and asks for none for a picture named as it went up", async () => {
+    const upload = vi.fn<Upload>(async (file) => ({
+      pictureId: file.name,
+      previewUrl: `https://dl/${file.name}`,
+    }));
+    const dispatch = vi.fn<(action: EditorAction) => void>();
+    const onRename = vi.fn<(key: string, title: string) => void>();
+    render(
+      <AddCardBox
+        items={[]}
+        category="anime"
+        dispatch={dispatch}
+        find={async () => page([])}
+        upload={upload}
+        keep={vi.fn<Keep>()}
+        onRename={onRename}
+      />,
+    );
+    const picker = document.querySelector<HTMLInputElement>("input[type='file']")!;
+    const png = (name: string) => new File(["x"], name, { type: "image/png" });
+    await userEvent.upload(picker, png("cat.png"));
+    const names = await screen.findByRole("group", { name: "Name the picture you uploaded" });
+    await userEvent.type(within(names).getByRole("textbox", { name: "Card name" }), "Tom");
+    await userEvent.click(within(names).getByRole("button", { name: "Done" }));
+    expect(onRename).toHaveBeenCalledWith(expect.any(String), "Tom");
+    expect(screen.queryByRole("group", { name: /Name the/ })).toBeNull();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Add a card" }), {
+      target: { value: "Jerry" },
+    });
+    await userEvent.upload(picker, png("mouse.png"));
+    await vi.waitFor(() => expect(dispatch).toHaveBeenCalledTimes(2));
+    expect(dispatch.mock.calls[1]![0]).not.toHaveProperty("key");
+    expect(screen.queryByRole("group", { name: /Name the/ })).toBeNull();
+  });
+
   it("says a full board is full, keeps the words, and sends no picture up for it", async () => {
     const upload = vi.fn<Upload>();
     const keep = vi.fn<Keep>();

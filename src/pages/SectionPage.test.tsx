@@ -157,7 +157,7 @@ describe("SectionPage", () => {
     const grid = await tiles();
     // Each block under its own title, with its count (section layout, 14.11).
     expect(screen.getByRole("heading", { level: 2, name: "Topics · 3" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "Tier lists · 812" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Lists · 812" })).toBeInTheDocument();
     expect(screen.getByRole("separator")).toBeInTheDocument();
     const all = screen.getByRole("navigation", { name: "Topics" }).querySelectorAll("a, button");
     // By followers, then this person's waiting ones.
@@ -426,7 +426,7 @@ describe("SectionPage", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Games" })).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).toBeNull();
     expect(screen.getByRole("heading", { level: 2, name: "Topics" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 2, name: "Tier lists · 812" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Lists · 812" })).toBeInTheDocument();
     expect(document.querySelectorAll(".section-placeholder__tile")).toHaveLength(5);
     const cards = screen.getByLabelText("Games", { selector: ".feed--loading" });
     expect(cards).toHaveAttribute("aria-busy", "true");
@@ -443,7 +443,7 @@ describe("SectionPage", () => {
     expect(await screen.findByRole("button", { name: /Suggest a topic/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Topics" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Topics" })).toBeNull();
-    expect(screen.getByRole("heading", { level: 2, name: "Tier lists · 812" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Lists · 812" })).toBeInTheDocument();
     // Only the tiles' grey row went; nothing else is left waiting.
     expect(document.querySelector(".skeleton")).toBeNull();
   });
@@ -475,7 +475,9 @@ describe("SectionPage", () => {
     await tiles();
     await userEvent.click(screen.getByRole("button", { name: /Suggest a topic/ }));
     const ask = screen.getByRole("dialog", { name: "Suggest a topic" });
-    expect(ask).toHaveTextContent(/List settings/);
+    // Night pass W16: the site has no List settings; a topic is named in the Publish window.
+    expect(ask).toHaveTextContent(/Topic in a list’s Publish window/);
+    expect(ask).not.toHaveTextContent(/List settings/);
     // A new one is named there now, not only in the app.
     expect(ask).toHaveTextContent(/A new one goes out with the list/);
     expect(ask).not.toHaveTextContent(/in the app/);

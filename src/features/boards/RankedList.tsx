@@ -7,6 +7,7 @@ import { fill, plural, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { AboutPicture, hasAbout, openPage, pageOf } from "../tierboard/AboutPicture";
 import { MoveSheet } from "../tierboard/MoveSheet";
+import { RenameCard } from "../tierboard/RenameCard";
 import { itemsIn, liveItems, poolTier, rankedTiers, type Board, type BoardItem } from "./model";
 import "./boards.css";
 
@@ -16,6 +17,8 @@ interface RankedListProps {
   onMove: (itemUid: string, tierUid: string | null) => void;
   /** A card off the list. */
   onRemove: (itemUid: string) => void;
+  /** Another name for a card (night pass W22). */
+  onRename?: ((itemUid: string, title: string) => void) | undefined;
   /** A house board's: the editor's own credit for a card's picture, or null to take it off. */
   onCredit?: ((itemUid: string, credit: EditorCredit | null) => void) | undefined;
 }
@@ -46,7 +49,7 @@ function Poster({ item }: { item: BoardItem }) {
  * the list. Under it the pool, folded to its count until opened; a card just
  * added opens it and shows there.
  */
-export function RankedList({ board, onMove, onRemove, onCredit }: RankedListProps) {
+export function RankedList({ board, onMove, onRemove, onRename, onCredit }: RankedListProps) {
   // The card whose About the picture is open, by its uid: it shows the card as it is now.
   const [creditedUid, setCredited] = useState<string | null>(null);
   const credited =
@@ -61,6 +64,12 @@ export function RankedList({ board, onMove, onRemove, onCredit }: RankedListProp
   const [open, setOpen] = useState(false);
   // The card whose sheet is open, by its uid.
   const [moving, setMoving] = useState<string | null>(null);
+  // The card whose Rename is open, by its uid.
+  const [renamingUid, setRenaming] = useState<string | null>(null);
+  const renaming =
+    renamingUid === null
+      ? null
+      : (liveItems(board).find((item) => item.uid === renamingUid) ?? null);
   // The card the keyboard follows after a move, and the one just added, to show.
   const follow = useRef<{ uid: string; from: Board } | null>(null);
   const [added, setAdded] = useState<string | null>(null);
@@ -232,11 +241,26 @@ export function RankedList({ board, onMove, onRemove, onCredit }: RankedListProp
           current={current === -1 ? null : current}
           onPlace={(index) => move(chosen.uid, tiers[index]?.uid ?? null)}
           onUnplace={() => move(chosen.uid, null)}
+          onRename={
+            onRename === undefined
+              ? undefined
+              : () => {
+                  setMoving(null);
+                  setRenaming(chosen.uid);
+                }
+          }
           onRemove={() => {
             setMoving(null);
             onRemove(chosen.uid);
           }}
           onClose={() => setMoving(null)}
+        />
+      )}
+      {renaming !== null && onRename !== undefined && (
+        <RenameCard
+          name={renaming.title}
+          onRename={(title) => onRename(renaming.uid, title)}
+          onClose={() => setRenaming(null)}
         />
       )}
     </>

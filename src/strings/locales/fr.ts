@@ -677,6 +677,17 @@ const fr: Translation = {
     noArt: "Sans image",
     yours: "Votre liste",
     yoursAnonymous: "Votre liste, publiée anonymement",
+    rename: "Renommer",
+    renameTitle: "Renommer la carte",
+    nameLabel: "Nom de la carte",
+    renameSave: "Enregistrer",
+    nameUploads: {
+      one: "Nommez l’image importée",
+      many: "Nommez les {n} images importées",
+      other: "Nommez les {n} images importées",
+    },
+    nameHint: "Laissée vide, la carte s’appelle « {untitled} ».",
+    nameDone: "Terminé",
   },
   android: {
     title: "TierYourLife pour Android",
@@ -963,7 +974,7 @@ const fr: Translation = {
     notThisTopicSent: "Noté. Un modérateur la déplacera si elle va ailleurs.",
     backToSection: "Retour à {section}",
     suggestTopic: "Proposer un thème",
-    tierLists: "Tier lists",
+    tierLists: "Listes",
     showAllTopics: {
       one: "Voir les {n} sujets",
       many: "Voir les {n} sujets",
@@ -971,7 +982,7 @@ const fr: Translation = {
     },
     showFewer: "Voir moins",
     suggestTopicBody:
-      "Les thèmes se nomment ou se choisissent sous « Thème » dans les Paramètres de la liste. Un nouveau part avec la liste à sa publication et attend un modérateur.",
+      "Les thèmes se nomment ou se choisissent sous « Thème » dans la fenêtre Publier d’une liste, qu’ouvre « Publier » en haut de la liste. Un nouveau part avec la liste et attend un modérateur.",
     suggestTopicMake: "Créer une liste dans {section}",
     sortPopular: "Populaires",
     sortNewest: "Récentes",
@@ -1434,6 +1445,8 @@ const fr: Translation = {
     deleteMany: { one: "Supprimer {n} liste", other: "Supprimer {n} listes" },
     discard: "Abandonner mon classement",
     discarded: "Classement abandonné",
+    savedLabel: "Enregistrée",
+    publicLabel: "Publique",
   },
   started: {
     title: "Continuer",

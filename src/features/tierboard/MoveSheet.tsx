@@ -19,6 +19,8 @@ interface MoveSheetProps {
   current: number | null;
   onPlace: (tier: number) => void;
   onUnplace: () => void;
+  /** Rename: the owner's, on any card of their own list (night pass W22). */
+  onRename?: (() => void) | undefined;
   onRemove?: () => void;
   onClose: () => void;
 }
@@ -26,8 +28,8 @@ interface MoveSheetProps {
 /**
  * A card's sheet (artboard 37, as the app's 11): its name with a cross, the
  * picture's links, MOVE TO A TIER with every tier a row (the current one lit,
- * "Currently here"), then Back to the deck and, last and red, Remove from
- * list, each under a line. It lies on the body, not in the tile, so a pool
+ * "Currently here"), then Back to the deck, Rename on one's own list and,
+ * last and red, Remove from list, each under a line. It lies on the body, not in the tile, so a pool
  * that scrolls cannot clip it; the cross, a press outside and Escape close
  * it, and the keyboard gets what `useModal` gives every dialog.
  */
@@ -40,6 +42,7 @@ export function MoveSheet({
   current,
   onPlace,
   onUnplace,
+  onRename,
   onRemove,
   onClose,
 }: MoveSheetProps) {
@@ -137,6 +140,15 @@ export function MoveSheet({
             <button type="button" className="move-sheet__row" onClick={onUnplace}>
               <Icon name="undo" className="move-sheet__row-icon" />
               {strings.boards.backToPool}
+            </button>
+          </>
+        )}
+        {onRename !== undefined && (
+          <>
+            <hr className="move-sheet__line" />
+            <button type="button" className="move-sheet__row" onClick={onRename}>
+              <Icon name="edit" className="move-sheet__row-icon" />
+              {strings.card.rename}
             </button>
           </>
         )}

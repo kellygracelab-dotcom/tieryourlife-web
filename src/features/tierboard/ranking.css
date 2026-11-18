@@ -544,6 +544,23 @@
     text-align: start;
   }
 
+  /*
+   * Without + Add, somebody else's list, the head stays one line whatever the
+   * hint says (night pass W21): a picked card's long "Tap a tier to place …"
+   * pushed the switch onto a second line and the deck's head jumped. The hint
+   * gives way, cut short, and the switch stays where the finger left it.
+   */
+  .pool__head:has(> .pool__hint--touch):not(:has(.pool__add)) {
+    flex-wrap: nowrap;
+  }
+
+  .pool__head:has(> .pool__hint--touch):not(:has(.pool__add)) .pool__hint--touch {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .pool--picked .pool__hint--touch {
     color: var(--link);
   }

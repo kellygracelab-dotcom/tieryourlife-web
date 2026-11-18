@@ -213,8 +213,14 @@ describe("BoardsPage", () => {
     // No pictures: the tier colours, as stripes.
     expect(tiles[1]!.querySelectorAll(".art--stripes span")).toHaveLength(5);
     expect(within(tiles[1]!).getByText("3 cards · 2 placed")).toBeInTheDocument();
-    expect(within(tiles[1]!).getByText("Public")).toHaveClass("board-tile__public");
-    expect(screen.getByRole("button", { name: "Add Studio Ghibli to favourites" })).toBeVisible();
+    // Artboard 42: Public as a label before the count, read after the name.
+    expect(within(tiles[1]!).getByText("Public")).toHaveClass("list-label", "board-tile__label");
+    expect(tiles[1]).toHaveAccessibleDescription("Public 3 cards · 2 placed");
+    expect(tiles[0]).toHaveAccessibleDescription("4 cards · nothing placed yet");
+    // The star of a list that is no favourite waits for a pointer or the keyboard.
+    const star = screen.getByRole("button", { name: "Add Studio Ghibli to favourites" });
+    expect(star).toHaveClass("board-tile__star");
+    expect(star).not.toHaveClass("board-tile__star--on");
   });
 
   it("switches between the grid and rows, and remembers the choice on this device", async () => {
@@ -241,7 +247,7 @@ describe("BoardsPage", () => {
       arrangeItems(done, [liveItems(done).map((item) => item.uid), [], [], [], []], 0),
     ]);
     const router = open(repository, "/b", undefined, rowsStore());
-    expect(screen.getByText("3 lists · 5 placed")).toBeInTheDocument();
+    expect(document.querySelector(".boards__count")).toHaveTextContent(/^3 lists$/);
     const links = opened();
     expect(links.map((link) => link.textContent)).toEqual([
       expect.stringContaining("Films I make people watch"),
@@ -297,7 +303,16 @@ describe("BoardsPage", () => {
       { ...ranked("c", "Ghibli films", 3), authorName: "someone", favouritedAt: 9 },
     ]);
     open(repository);
-    expect(screen.getByText("3 lists · 4 placed · 1 public")).toBeInTheDocument();
+    // Only how many lists under the title (artboard 42); Public and Saved are on the lists.
+    expect(document.querySelector(".boards__count")).toHaveTextContent(/^3 lists$/);
+    const label = (name: string) =>
+      screen.getByRole("link", { name: `Open ${name}` }).querySelector(".list-label")?.textContent;
+    expect(label("Pizza in Lisbon")).toBeUndefined();
+    expect(label("Games of 2024")).toBe("Public");
+    expect(label("Ghibli films")).toBe("Saved");
+    expect(screen.getByRole("button", { name: "Remove Ghibli films from favourites" })).toHaveClass(
+      "board-tile__star--on",
+    );
     expect(screen.getByRole("heading", { name: "Favourites" })).toBeInTheDocument();
     const shows = within(screen.getByRole("group", { name: "Which lists to show" }));
     expect(shows.getAllByRole("button").map((chip) => chip.textContent)).toEqual([
@@ -568,8 +583,19 @@ describe("BoardsPage", () => {
     repository.saveAll([{ ...ranked("a", "Albums", 1), publishedId: "L1" }]);
     open(repository, "/b", undefined, rowsStore());
     const link = screen.getByRole("link", { name: "Open Albums" });
-    expect(within(link).getByText("Public")).toHaveClass("board-card__public");
-    expect(link).toHaveAccessibleDescription("3 cards · 2 placed Public");
+    expect(within(link).getByText("Public")).toHaveClass("list-label", "board-card__label");
+    expect(link).toHaveAccessibleDescription("Public 3 cards · 2 placed");
+  });
+
+  it("says in rows that a list was saved from somebody else, before its count", () => {
+    const repository = boardsRepository(memoryStore());
+    repository.saveAll([{ ...ranked("a", "Albums", 1), authorName: "someone" }]);
+    open(repository, "/b", undefined, rowsStore());
+    const link = screen.getByRole("link", { name: "Open Albums" });
+    expect(within(link).getByText("Saved")).toHaveClass("list-label", "board-card__label");
+    expect(link).toHaveAccessibleDescription("Saved 3 cards · 2 placed");
+    const star = screen.getByRole("button", { name: "Add Albums to favourites" });
+    expect(star).not.toHaveClass("board-card__star--on");
   });
 
   it("offers a guest the sign-in that keeps lists living only in this browser", () => {

@@ -1,5 +1,5 @@
 import { MediaImage } from "../../ui/MediaImage";
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import type { LinkQuota } from "../../api/linkQuota";
 import {
   PICTURE_SCOPES,
@@ -99,6 +99,87 @@ interface AddCardBoxProps {
   house?: boolean;
   /** What is left of today's pictures from links, for the house's count. */
   loadQuota?: () => Promise<LinkQuota | null>;
+  /**
+   * Another name for a card the box added, by the key it gave it: pictures
+   * uploaded without one are offered fields for theirs (night pass W22).
+   */
+  onRename?: (key: string, title: string) => void;
+}
+
+/** A picture uploaded without a name, by the key its card was added under. */
+interface Unnamed {
+  key: string;
+  imageUrl: string;
+}
+
+/**
+ * Pictures just uploaded without a name, each beside a field for one (night
+ * pass W22). A name goes on its card as the field is left or Enter pressed;
+ * a field left empty keeps the card's "Untitled card". Done puts it away.
+ */
+function NameUploads({
+  cards,
+  onName,
+  onDone,
+}: {
+  cards: readonly Unnamed[];
+  onName: (key: string, title: string) => void;
+  onDone: () => void;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const headId = useId();
+  const many = cards.length > 1;
+  // Enter gives a name and moves on, and the field it leaves gives it again:
+  // each name goes to its card once.
+  const given = useRef(new Map<string, string>());
+  const give = (key: string, value: string) => {
+    const name = value.trim();
+    if (name === "" || given.current.get(key) === name) return;
+    given.current.set(key, name);
+    onName(key, name);
+  };
+  return (
+    <div className="cards__names" ref={box} role="group" aria-labelledby={headId}>
+      <p id={headId} className="cards__names-head">
+        {plural(strings.card.nameUploads, cards.length)}
+      </p>
+      <ul className="cards__names-list">
+        {cards.map((card, index) => (
+          <li key={card.key} className="cards__name">
+            <MediaImage className="cards__name-picture" {...sizedFor(card.imageUrl, 48)} alt="" />
+            <input
+              className="draft__input cards__name-field"
+              type="text"
+              placeholder={strings.new.unnamed}
+              aria-label={many ? `${strings.card.nameLabel} ${index + 1}` : strings.card.nameLabel}
+              maxLength={LIMITS.title}
+              autoComplete="off"
+              // The first takes the cursor as the panel comes: the person is naming now.
+              autoFocus={index === 0}
+              onBlur={(event) => give(card.key, event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                give(card.key, event.currentTarget.value);
+                const fields = [
+                  ...(box.current?.querySelectorAll<HTMLInputElement>(".cards__name-field") ?? []),
+                ];
+                const next = fields[fields.indexOf(event.currentTarget) + 1];
+                if (next === undefined) onDone();
+                else next.focus();
+              }}
+            />
+          </li>
+        ))}
+      </ul>
+      <p className="cards__note">
+        {fill(strings.card.nameHint, { untitled: strings.new.unnamed })}
+      </p>
+      <Button variant="tonal" onClick={onDone}>
+        {strings.card.nameDone}
+      </Button>
+    </div>
+  );
 }
 
 export function pictureFailureText(name: string, failure: unknown): string {
@@ -485,11 +566,14 @@ export function AddCardBox({
   onIncomingTaken,
   house = false,
   loadQuota = loadLinkQuota,
+  onRename,
 }: AddCardBoxProps) {
   const { account, signIn } = useSession();
   const signedIn = account?.kind === "signedIn";
   const [typed, setTyped] = useState("");
   const [uploading, setUploading] = useState(0);
+  // The last upload's pictures that came without a name, waiting for one.
+  const [unnamed, setUnnamed] = useState<readonly Unnamed[]>([]);
   const [note, setNote] = useState<string | null>(null);
   const [pasted, setPasted] = useState<PasteOutcome | null>(null);
   const own = scopeFor(category);
@@ -632,20 +716,32 @@ export function AddCardBox({
   // guest to sign in; the rest then go up together, and each card comes in as
   // soon as it and the ones before it are up. A single picture takes the name
   // typed for it, as the phone's dialog lets one photo be named; several from
-  // the picker go in unnamed, and several dropped are named from their files.
+  // the picker go in unnamed, each then offered a field for its name, and
+  // several dropped are named from their files.
   const addFiles = async (files: readonly File[], namedFromFiles: boolean) => {
     if (files.length === 0 || full()) return;
     const [first, ...rest] = files.slice(0, room);
     if (first === undefined) return;
     setNote(files.length > room ? strings.new.tooManyCards : null);
     setUploading(rest.length + 1);
+    setUnnamed([]);
     const typedName = rest.length === 0 && linkTyped === null ? name : "";
     const nameFor = (file: File) => (namedFromFiles ? nameOfFile(file) : typedName);
     /** Whether to go on: a guest who would not sign in has said no to all of them. */
     const take = async (file: File, picture: Promise<UploadedPicture>) => {
       try {
         const { previewUrl, pictureId } = await picture;
-        dispatch({ type: "addItem", title: nameFor(file), imageUrl: previewUrl, pictureId });
+        const title = nameFor(file);
+        // A card that comes unnamed is added under a key of its own, for the name to find it by.
+        const key = title === "" && onRename !== undefined ? crypto.randomUUID() : undefined;
+        dispatch({
+          type: "addItem",
+          title,
+          imageUrl: previewUrl,
+          pictureId,
+          ...(key === undefined ? {} : { key }),
+        });
+        if (key !== undefined) setUnnamed((was) => [...was, { key, imageUrl: previewUrl }]);
         if (typedName !== "" && !namedFromFiles) setTyped("");
         return true;
       } catch (failure) {
@@ -857,6 +953,9 @@ export function AddCardBox({
           </p>
         )}
       </div>
+      {unnamed.length > 0 && onRename !== undefined && (
+        <NameUploads cards={unnamed} onName={onRename} onDone={() => setUnnamed([])} />
+      )}
 
       <form
         ref={form}

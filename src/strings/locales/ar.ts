@@ -728,6 +728,20 @@ const ar: Translation = {
     noArt: "بدون صورة",
     yours: "قائمتك",
     yoursAnonymous: "قائمتك، منشورة دون اسم",
+    rename: "إعادة التسمية",
+    renameTitle: "إعادة تسمية البطاقة",
+    nameLabel: "اسم البطاقة",
+    renameSave: "حفظ",
+    nameUploads: {
+      zero: "سمِّ الصور التي رفعتها",
+      one: "سمِّ الصورة التي رفعتها",
+      two: "سمِّ الصورتين اللتين رفعتهما",
+      few: "سمِّ الصور الـ{n} التي رفعتها",
+      many: "سمِّ الصور الـ{n} التي رفعتها",
+      other: "سمِّ الصور الـ{n} التي رفعتها",
+    },
+    nameHint: "إن تُرك الاسم فارغًا، تُسمّى البطاقة «{untitled}».",
+    nameDone: "تم",
   },
   android: {
     title: "TierYourLife لنظام Android",
@@ -1046,7 +1060,7 @@ const ar: Translation = {
     notThisTopicSent: "تم التسجيل. سينقلها مشرف إن كان مكانها آخر.",
     backToSection: "العودة إلى {section}",
     suggestTopic: "اقتراح موضوع",
-    tierLists: "قوائم التصنيف",
+    tierLists: "القوائم",
     showAllTopics: {
       zero: "عرض كل المواضيع",
       one: "عرض الموضوع",
@@ -1057,7 +1071,7 @@ const ar: Translation = {
     },
     showFewer: "عرض أقل",
     suggestTopicBody:
-      "تُسمّى المواضيع أو تُختار تحت «الموضوع» في «إعدادات القائمة». يخرج الموضوع الجديد مع القائمة عند نشرها وينتظر مشرفًا.",
+      "تُسمّى المواضيع أو تُختار تحت «الموضوع» في نافذة النشر، التي يفتحها زر «نشر» أعلى القائمة. يخرج الموضوع الجديد مع القائمة وينتظر مشرفًا.",
     suggestTopicMake: "أنشئ قائمة في {section}",
     sortPopular: "الأكثر رواجًا",
     sortNewest: "الأحدث",
@@ -1658,6 +1672,8 @@ const ar: Translation = {
     },
     discard: "تجاهل ترتيبي",
     discarded: "تم تجاهل الترتيب",
+    savedLabel: "محفوظة",
+    publicLabel: "عامة",
   },
   started: {
     title: "متابعة",

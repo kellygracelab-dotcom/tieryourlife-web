@@ -9,7 +9,7 @@ import {
   rankedTiers,
   restoreTier,
 } from "./model";
-import { applyTierAction, editorTiersOf, newTierOf } from "./tierEditing";
+import { applyTierAction, editorTiersOf, newTierOf, tiersKeyOf } from "./tierEditing";
 
 const uids = () => {
   let n = 0;
@@ -103,6 +103,14 @@ describe("tier editing on a board", () => {
     expect(labels(back)).toEqual(["S", "A", "B", "C", "D"]);
     expect(itemsIn(back, s!.uid).map((i) => i.title)).toEqual(["a"]);
     expect(itemsIn(back, a!.uid).map((i) => i.title)).toEqual(["b"]);
+    // The header's Undo knows the tiers it removed from by their uids (W15).
+    expect(tiersKeyOf(back)).toBe(tiersKeyOf(b1));
+    expect(tiersKeyOf(change.board)).not.toBe(tiersKeyOf(b1));
+    expect(tiersKeyOf(b1)).toBe(
+      rankedTiers(b1)
+        .map((tier) => tier.uid)
+        .join(","),
+    );
     // Nothing happens to a tier that is not there, and the editor's other actions are not for here.
     expect(applyTierAction(b1, { type: "removeTier", key: "ghost" }, 5, next)).toEqual({
       board: b1,
