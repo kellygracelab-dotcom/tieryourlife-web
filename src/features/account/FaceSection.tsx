@@ -18,7 +18,6 @@ import { SavedLine } from "./SavedLine";
 import { type Publish, useSaving } from "./useSaving";
 import { initialOf } from "../../lib/initial";
 import { keepCardFace, keepOwnFace, readCardFace, readOwnFace } from "../../lib/ownFace";
-import { storedPublicMedia } from "../../../functions/src/publicMedia";
 
 export type LoadLists = () => Promise<{ lists: ListSummary[] }>;
 export type Face = (photoUrl: string | null) => Promise<void>;
@@ -170,13 +169,14 @@ export function FaceSection({
     place({ kind: "photo", url: URL.createObjectURL(file), name: file.name });
   };
 
-  // A catalogue's card left in the middle is worn where it lives; a photo, a
-  // card moved or zoomed, or one of the feed's copies (gone with a republish)
-  // is cut first. The cut is drawn before the dialog goes.
+  // A card left in the middle is worn where it lives, the feed's copy too:
+  // every cut goes up as the account's photo since Proxy #169, and a card
+  // must not take the photo's place. A photo, or a card moved or zoomed, is
+  // cut first. The cut is drawn before the dialog goes.
   const use = (placed: Placed | null) => {
     if (placing === null) return;
     const card = placing.kind === "card" ? placing.url : null;
-    if (placed !== null && (card === null || placed.moved || storedPublicMedia(card) !== null)) {
+    if (placed !== null && (card === null || placed.moved)) {
       void cutAndSend(placed, placing.kind === "photo" ? placing.name : null, card);
     } else if (placing.kind === "card") {
       wearAtOnce(placing.url);

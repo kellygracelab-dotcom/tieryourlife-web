@@ -10,9 +10,8 @@ export interface FaceChoice {
 
 /**
  * The pictures a face may be: cards from the person's own published lists.
- * Since 13.11.2026 nearly all of them are the feed's own copies, which go
- * with a republish or an unpublish, so FaceSection cuts one of those and
- * keeps the cut with the account; a catalogue's picture is worn where it is.
+ * Since 13.11.2026 nearly all of them are the feed's own copies; a face put
+ * on lists and rankings is copied to the author's own folder by the backend.
  */
 export function faceChoicesOf(lists: readonly ListSummary[]): FaceChoice[] {
   const seen = new Map<string, FaceChoice>();

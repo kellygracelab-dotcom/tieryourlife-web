@@ -635,26 +635,23 @@ describe("SettingsPage", () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
-  it("cuts a card of the feed's own copies, checks its tile, and leaves the uploaded photo be", async () => {
+  it("wears a card of the feed's own copies as it is, and leaves the uploaded photo be", async () => {
     const PHOTO = "https://faces/p1.jpg";
     const COPY =
       "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2Fl1%2Fc1?alt=media";
-    useOwnFaceStoreForTests(memoryStore());
     load.mockResolvedValue({ lists: [published("A24 films", [COPY])] });
-    upload.mockResolvedValue({ pictureId: "p3", previewUrl: "blob:p3" });
-    makeFace.mockResolvedValue({ url: "https://faces/p3.jpg" });
     face.mockResolvedValue(undefined);
     const first = open({ ...member, photoUrl: PHOTO });
     await userEvent.click(await within(faces()).findByRole("button", { name: /Card from/ }));
     placeLoaded();
     await pressUseThis();
-    // Left in the middle, and cut all the same: a republish takes the feed's copy away.
-    expect(cut).toHaveBeenCalled();
-    await waitFor(() => expect(face).toHaveBeenCalledWith("https://faces/p3.jpg"));
+    // Not cut: every cut goes up as the account's photo, and a card must not take its place.
+    expect(cut).not.toHaveBeenCalled();
+    expect(face).toHaveBeenCalledWith(COPY);
     expect(readOwnFace("u1")).toBe(PHOTO);
     first.unmount();
 
-    open({ ...member, photoUrl: "https://faces/p3.jpg" });
+    open({ ...member, photoUrl: COPY });
     const card = await within(faces()).findByRole("button", { name: /Card from/ });
     expect(card).toHaveAttribute("aria-pressed", "true");
     expect(within(faces()).getByRole("button", { name: "Your photo" })).toHaveAttribute(
