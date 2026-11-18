@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { SessionContext, type Session } from "../../app/session";
 import type { Incoming } from "../../lib/incoming";
 import { LinkRefused, type LinkedPicture } from "../../lib/linkPictures";
@@ -567,5 +567,55 @@ describe("a pasted list with pictures from links", () => {
     );
     expect(screen.queryByText(/needs the page/)).toBeNull();
     expect(screen.queryByText(/Pictures from other sites need the page/)).toBeNull();
+  });
+});
+
+describe("the web's picture for a name the catalogues do not know", () => {
+  const borscht = {
+    id: "web:borscht",
+    title: "Borscht — a recipe",
+    subtitle: null,
+    imageUrl: "https://cdn.site.test/borscht.jpg",
+    thumbUrl: null,
+    source: "web" as const,
+    kind: "web" as const,
+    credit: null,
+    attribution: { source: "web", link: "https://site.test/borscht" },
+    confidence: "low" as const,
+    doubts: ["web" as const],
+  };
+  const answer = { items: [borscht], hasMore: false, notices: [], rest: false };
+  const empty = { items: [], hasMore: false, notices: [], rest: false };
+
+  it("is copied with its page in a pasted list, and the check asks about it", async () => {
+    find.mockImplementation(async () => answer);
+    onTestFinished(() => {
+      find.mockImplementation(async () => empty);
+    });
+    const link = vi.fn<LinkKeep>(async () =>
+      linked({ attribution: { source: "web", link: "https://site.test/borscht" } }),
+    );
+    const { dispatch } = setup({ link });
+    await userEvent.click(screen.getByRole("button", { name: "Paste a list" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Paste a list" }), {
+      target: { value: "Borscht" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Find pictures for 1 name" }));
+    const rows = (await screen.findAllByRole("listitem")).map((row) => row.textContent);
+    expect(rows[0]).toContain("BorschtA picture from the web — is that right?");
+    expect(link).toHaveBeenCalledWith({
+      url: "https://cdn.site.test/borscht.jpg",
+      link: "https://site.test/borscht",
+    });
+    expect(screen.getByRole("status")).toHaveTextContent("1 name · 0 look right · 1 needs a look");
+    await userEvent.click(screen.getByRole("button", { name: "Add 1 card" }));
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "addItem",
+        title: "Borscht",
+        pictureId: "p1",
+        attribution: { source: "web", link: "https://site.test/borscht" },
+      }),
+    );
   });
 });

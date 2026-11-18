@@ -549,6 +549,8 @@ export function AddCardBox({
             imageUrl: previewUrl,
             pictureId,
             key: picture.id,
+            // The page it stands on goes out with the publication (CONTRACT, Picture attribution).
+            ...(picture.attribution === null ? {} : { attribution: picture.attribution }),
           });
         },
         (failure: unknown) => setNote(pictureFailureText(picture.title, failure)),

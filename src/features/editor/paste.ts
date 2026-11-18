@@ -234,9 +234,10 @@ export function pick<T extends CatalogueItem & Judged>(
   // A backend that judges its hits (picture search, stage 1) put its best guess
   // first: the first it is sure enough of is taken, under another name too
   // ("Kyiv" for "Киев"); with a year, the first of those that carries it. All
-  // of them doubtful, the name goes alone, as before.
+  // of them doubtful, the web's first picture, which the backend found when
+  // the catalogues had nothing (stage 1b), or else the name goes alone.
   if (found.some((item) => item.confidence !== undefined)) {
-    return found.find((item) => isSureEnough(item) && dated(item)) ?? null;
+    return found.find((item) => isSureEnough(item) && dated(item)) ?? found.find(isWebHit) ?? null;
   }
   const name = plainName(wanted.title);
   const named = found.filter((item) => plainName(item.title) === name && dated(item));
@@ -272,6 +273,12 @@ export interface Judged {
   confidence?: PictureConfidence;
   doubts?: readonly PictureDoubt[];
 }
+
+/**
+ * A picture the backend found on the web (stage 1b): another site's, so it is
+ * copied into the person's own before it goes on a card, with its page.
+ */
+export const isWebHit = (item: Judged): boolean => item.doubts?.includes("web") === true;
 
 /** A hit a pasted name may take: one the backend is fairly sure of. */
 export const isSureEnough = (item: Judged): boolean =>
@@ -408,7 +415,7 @@ export interface PasteLimited {
  * Past `BUSY_TRIES` or `BUSY_WAIT_MAX_MS`, the name takes what was found, or
  * goes alone, and `onMissing` says the site stayed busy.
  */
-export async function cardsFor<T extends CatalogueItem = CatalogueItem>(
+export async function cardsFor<T extends CatalogueItem & Judged = CatalogueItem>(
   wanted: readonly Wanted[],
   lookup: (query: string) => Promise<T[] | LookedUp<T>>,
   onCard: (card: PastedCard, done: number, from: PastedFrom<T>) => void,
@@ -532,9 +539,22 @@ export async function cardsFor<T extends CatalogueItem = CatalogueItem>(
       return refused;
     }
   };
-  type Answer = Found<T> | undefined | PastedCard | MissReason;
+  // The web's picture a name took, copied as a line's own link is, with the
+  // page it stands on; the hit stays its origin, for the check to ask about.
+  type Copied = { copied: PastedCard; found: T };
+  type Answer = Found<T> | undefined | PastedCard | MissReason | Copied;
+  const lookedFor = async (one: Wanted): Promise<Answer> => {
+    const answer = await answerFor(one);
+    const card = answer === undefined ? null : pick(one, answer.items, preferred, loose);
+    if (card === null || !isWebHit(card) || card.imageUrl === null) return answer;
+    const page = card.attribution?.link;
+    const copied = await linked({ ...one, ...(page === undefined ? {} : { page }) }, card.imageUrl);
+    return typeof copied === "string"
+      ? copied
+      : { copied: { ...copied, key: card.id }, found: card };
+  };
   const answerOf = (one: Wanted): Promise<Answer> =>
-    one.picture === undefined ? answerFor(one) : linked(one, one.picture);
+    one.picture === undefined ? lookedFor(one) : linked(one, one.picture);
 
   for (let start = 0; start < wanted.length; start += PASTE_AT_ONCE) {
     const few = wanted.slice(start, start + PASTE_AT_ONCE);
@@ -554,6 +574,10 @@ export async function cardsFor<T extends CatalogueItem = CatalogueItem>(
       if (typeof answer === "string") {
         onMissing?.(one.title, answer);
         onCard({ title: one.title, imageUrl: null }, done, { found: null, missing: answer });
+        return;
+      }
+      if (answer !== undefined && "copied" in answer) {
+        onCard(answer.copied, done, { found: answer.found, missing: null });
         return;
       }
       if (answer !== undefined && !("items" in answer)) {

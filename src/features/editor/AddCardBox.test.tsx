@@ -311,10 +311,10 @@ describe("AddCardBox", () => {
     }));
     const { dispatch } = setup({ find, keep, category: null });
     await typeAndWait("borscht");
-    expect(screen.getByText("From the web")).toBeInTheDocument();
-    // The web's pages have no kind worth a label: the site alone.
+    expect(screen.getByText("From the web", { selector: ".cards__source" })).toBeInTheDocument();
+    // The web's pages have no kind worth a label: the tile says it is the web's, and the site.
     expect(screen.getByRole("button", { name: /Borscht/ })).toHaveTextContent(
-      /^Borschtsite\.test$/,
+      /^BorschtFrom the web · site\.test$/,
     );
     await userEvent.click(screen.getByRole("button", { name: /Borscht/ }));
     expect(keep).toHaveBeenCalledWith("https://img.test/web:abc.jpg");
@@ -324,6 +324,34 @@ describe("AddCardBox", () => {
       imageUrl: "https://dl/kept-1",
       pictureId: "kept-1",
       key: "web:abc",
+    });
+  });
+
+  it("keeps the page a web picture stands on, for the publication", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page([
+        picture("web:abc", {
+          title: "Borscht",
+          source: "web",
+          kind: "web",
+          attribution: { source: "web", link: "https://site.test/borscht" },
+        }),
+      ]),
+    );
+    const keep = vi.fn<Keep>(async () => ({
+      pictureId: "kept-1",
+      previewUrl: "https://dl/kept-1",
+    }));
+    const { dispatch } = setup({ find, keep, category: null });
+    await typeAndWait("borscht");
+    await userEvent.click(screen.getByRole("button", { name: /Borscht/ }));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "addItem",
+      title: "Borscht",
+      imageUrl: "https://dl/kept-1",
+      pictureId: "kept-1",
+      key: "web:abc",
+      attribution: { source: "web", link: "https://site.test/borscht" },
     });
   });
 

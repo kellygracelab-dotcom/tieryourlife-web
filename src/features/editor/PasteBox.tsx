@@ -425,14 +425,19 @@ export function PasteBox({
     setSearching(null);
   };
 
-  // Pasted names are looked for where the person chose, in the catalogues
-  // alone: a web picture is copied one at a time, by somebody choosing it.
+  // Pasted names are looked for where the person chose. The web's pictures
+  // come only where the catalogues found nothing like the name (stage 1b):
+  // the first is taken, copied with its page, and asked about in the check.
   // The catalogues that were busy come along: a name may wait for its own.
   const lookupIn =
     (where: PictureScope) =>
     (query: string): Promise<LookedUp<FoundPicture>> =>
       find({ q: query, scope: where, page: 1, web: false }).then((page) => ({
-        items: page.items.filter((item) => item.source !== "web"),
+        // A backend from before stage 1b judges nothing: its web pictures
+        // stay out, as a name would take one by its title and not copy it.
+        items: page.items.some((item) => item.confidence !== undefined)
+          ? page.items
+          : page.items.filter((item) => item.source !== "web"),
         ...(page.busy === undefined ? {} : { busy: page.busy }),
         ...(page.retryAt === undefined ? {} : { retryAt: page.retryAt }),
       }));

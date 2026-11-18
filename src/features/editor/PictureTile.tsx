@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FoundPicture } from "../../api/pictures";
 import { sizedFor } from "../../lib/pictureSize";
+import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { MediaImage } from "../../ui/MediaImage";
 import { kindName } from "./pictureNames";
@@ -19,7 +20,12 @@ export function PictureTile({
   onPick: () => void;
 }) {
   const [broken, setBroken] = useState(false);
-  const line = [kindName(found.kind), found.subtitle].filter(Boolean).join(" · ");
+  // Another site's picture says so: nobody vouches for it as a catalogue does (stage 1b).
+  const from =
+    found.source === "web"
+      ? fill(strings.new.fromSources, { sources: strings.new.webSource })
+      : null;
+  const line = [from, kindName(found.kind), found.subtitle].filter(Boolean).join(" · ");
   const credit = shortCredit(found);
   // A picture that will not load leaves no empty tile behind.
   if (broken) return null;
