@@ -33,6 +33,8 @@
  */
 .started__card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-radius: 16px;
   touch-action: pan-y;
@@ -42,8 +44,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 12px;
-  height: 100%;
   box-sizing: border-box;
   padding: 14px;
   border-radius: inherit;
@@ -145,9 +147,20 @@
   white-space: nowrap;
 }
 
+/* One line each, so the rows side by side keep one height (artboard 46); the whole is in their title. */
 .started__meta {
+  display: flex;
+  overflow: hidden;
   font: 400 13px/18px var(--font);
   color: var(--ink-dim);
+  white-space: pre;
+}
+
+/* Short of room the section gives way; how far the list is stays whole. */
+.started__section {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 
 .started__bar {
@@ -165,9 +178,11 @@
   background: var(--link);
 }
 
+/* At the foot of the row: Continue level with its neighbours' whatever stands above. */
 .started__actions {
   display: flex;
   gap: 8px;
+  margin-block-start: auto;
 }
 
 .btn.started__go {
