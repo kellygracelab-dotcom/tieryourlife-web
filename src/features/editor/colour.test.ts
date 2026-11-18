@@ -24,6 +24,8 @@ describe("a tier colour of one's own", () => {
   it("tells a preset pair from a custom one, whatever the case", () => {
     expect(isPreset("#b03a32", "#F1948C")).toBe(true);
     expect(isPreset("#B03A32", "#000000")).toBe(false);
+    // B before 18.11.2026: the lists made then keep it, and it is still the B preset.
+    expect(isPreset("#A98B1F", "#D8C05A")).toBe(true);
   });
 
   it("measures contrast the WCAG way: 21 for black on white, 1 for a colour on itself", () => {

@@ -9,6 +9,7 @@ import { Icon } from "../../ui/Icon";
 import { useBrokenPicture } from "../../ui/useBrokenPicture";
 import { CardName } from "./CardName";
 import type { BoardSize } from "./nameFit";
+import { shownLight } from "../../lib/tierColour";
 
 /** Where the device keeps whether the pool shows one card at a time; it is not synced. */
 export const ONE_BY_ONE_KEY = "tyl.board.oneByOne";
@@ -114,7 +115,7 @@ export function OneByOne({
                 style={
                   {
                     // A white letter reads on it: A's orange and B's ochre a shade darker (artboard 18).
-                    "--band-light": forWhiteLetter(tier.colorLight),
+                    "--band-light": forWhiteLetter(shownLight(tier.colorLight)),
                     "--band-dark": tier.colorDark,
                   } as CSSProperties
                 }

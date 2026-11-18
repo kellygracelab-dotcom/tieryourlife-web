@@ -139,8 +139,14 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  padding: 14px 2px 3px;
-  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.82) 45%);
+  /*
+   * The clip is the padding's edge: a padding at the foot let the top of a
+   * third line show under the two (18.11.2026). The foot's 3 px are a border
+   * of the shade's own colour instead, outside the clip.
+   */
+  padding: 14px 2px 0;
+  border-bottom: 3px solid rgba(0, 0, 0, 0.82);
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.82) 45%) padding-box;
   color: #fff;
   font: 500 9px/10px var(--font);
   text-align: center;

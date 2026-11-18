@@ -13,6 +13,7 @@ import {
   READABLE_FROM,
 } from "./colour";
 import { TIER_PRESETS } from "./model";
+import { shownLight } from "../../lib/tierColour";
 
 /**
  * A tier's colour, as the designer has it (walk 3, B): the phone's eight
@@ -44,7 +45,7 @@ export function TierColours({
       <div className="tiers__swatches">
         {TIER_PRESETS.map((preset) => {
           const chosen =
-            preset.light.toLowerCase() === colorLight.toLowerCase() &&
+            preset.light.toLowerCase() === shownLight(colorLight).toLowerCase() &&
             preset.dark.toLowerCase() === colorDark.toLowerCase();
           return (
             <button

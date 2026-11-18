@@ -751,7 +751,7 @@
  * and the app's near-black one on the dark.
  */
 .tier-dialog__theme--light {
-  --preview-paper: #e9e7e2;
+  --preview-paper: #fbf8ff;
   --preview-letter: #ffffff;
   --preview-tint: 12%;
 }

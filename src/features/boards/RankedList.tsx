@@ -10,6 +10,7 @@ import { MoveSheet } from "../tierboard/MoveSheet";
 import { RenameCard } from "../tierboard/RenameCard";
 import { itemsIn, liveItems, poolTier, rankedTiers, type Board, type BoardItem } from "./model";
 import "./boards.css";
+import { shownLight } from "../../lib/tierColour";
 
 interface RankedListProps {
   board: Board;
@@ -154,7 +155,7 @@ export function RankedList({ board, onMove, onRemove, onRename, onCredit }: Rank
                   className="ranked__badge band"
                   style={
                     {
-                      "--band-light": tier.colorLight,
+                      "--band-light": shownLight(tier.colorLight),
                       "--band-dark": tier.colorDark,
                     } as CSSProperties
                   }

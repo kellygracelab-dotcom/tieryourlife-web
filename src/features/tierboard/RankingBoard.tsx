@@ -70,6 +70,7 @@ import type { BoardSize } from "./nameFit";
 import "./board.css";
 import "./ranking.css";
 import { sizedFor } from "../../lib/pictureSize";
+import { shownLight } from "../../lib/tierColour";
 
 /** The board as the owner's editor: it starts from what is saved, and Save writes it back. */
 export interface EditMode {
@@ -1665,7 +1666,7 @@ const TierRow = memo(function TierRow({
       className={classes}
       style={
         {
-          "--band-light": meta.colorLight,
+          "--band-light": shownLight(meta.colorLight),
           "--band-dark": meta.colorDark,
           transform: held?.offset ? `translateY(${held.offset}px)` : undefined,
         } as CSSProperties

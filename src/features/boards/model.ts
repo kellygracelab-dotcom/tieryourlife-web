@@ -235,7 +235,7 @@ export const MAX_RANKED_TIERS = BOARD_LIMITS.tiers - 1;
 export const DEFAULT_TIER_DRAFTS: readonly TierDraft[] = [
   { label: "S", caption: null, colorLight: "#B03A32", colorDark: "#F1948C" },
   { label: "A", caption: null, colorLight: "#C06A25", colorDark: "#E9A867" },
-  { label: "B", caption: null, colorLight: "#A98B1F", colorDark: "#D8C05A" },
+  { label: "B", caption: null, colorLight: "#B88A00", colorDark: "#D8C05A" },
   { label: "C", caption: null, colorLight: "#3F7F55", colorDark: "#7FC393" },
   { label: "D", caption: null, colorLight: "#3C6E99", colorDark: "#86B8DE" },
 ];

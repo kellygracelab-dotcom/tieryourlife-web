@@ -13,7 +13,7 @@ interface TierPreset {
 export const TIER_PRESETS: readonly [TierPreset, ...TierPreset[]] = [
   { light: "#B03A32", dark: "#F1948C" },
   { light: "#C06A25", dark: "#E9A867" },
-  { light: "#A98B1F", dark: "#D8C05A" },
+  { light: "#B88A00", dark: "#D8C05A" },
   { light: "#3F7F55", dark: "#8FD3A3" },
   { light: "#3C6E99", dark: "#8FC3E8" },
   { light: "#6B4E9E", dark: "#C9A9F0" },
@@ -30,7 +30,7 @@ export const TIER_PRESETS: readonly [TierPreset, ...TierPreset[]] = [
 export const DEFAULT_TIERS: readonly PublishedTier[] = [
   { label: "S", caption: null, colorLight: "#B03A32", colorDark: "#F1948C" },
   { label: "A", caption: null, colorLight: "#C06A25", colorDark: "#E9A867" },
-  { label: "B", caption: null, colorLight: "#A98B1F", colorDark: "#D8C05A" },
+  { label: "B", caption: null, colorLight: "#B88A00", colorDark: "#D8C05A" },
   { label: "C", caption: null, colorLight: "#3F7F55", colorDark: "#7FC393" },
   { label: "D", caption: null, colorLight: "#3C6E99", colorDark: "#86B8DE" },
 ];
