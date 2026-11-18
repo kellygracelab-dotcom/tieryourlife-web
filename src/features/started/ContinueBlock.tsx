@@ -1,6 +1,7 @@
 import { useCallback, useState, useSyncExternalStore } from "react";
 import { Link, useNavigate } from "react-router";
-import { fill, strings } from "../../strings";
+import { fill, formatCount, strings } from "../../strings";
+import { fillNodes } from "../../strings/fillNodes";
 import { localStorageStore, type KeyValueStore } from "../../lib/storage";
 import { sizedFor } from "../../lib/pictureSize";
 import { Icon } from "../../ui/Icon";
@@ -212,8 +213,19 @@ function StartedCard({
             </span>
           )}
           <span className="started__text">
-            <bdi className="started__name">{one.title}</bdi>
-            <span className="started__meta">{progressText(one, section)}</span>
+            <bdi className="started__name" title={one.title}>
+              {one.title}
+            </bdi>
+            <span className="started__meta" title={progressText(one, section)}>
+              {section === null
+                ? progressText(one, section)
+                : // Short of room the section gives way, never how far the list is.
+                  fillNodes(strings.started.placedIn, {
+                    section: <span className="started__section">{section}</span>,
+                    n: formatCount(one.placed),
+                    total: formatCount(one.total),
+                  })}
+            </span>
           </span>
           <MoreButton name={one.title} className="started__more" />
         </div>
