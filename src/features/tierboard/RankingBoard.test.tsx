@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { tipWanted, useTipsStoreForTests } from "../../ui/tipMemory";
 import { MemoryRouter } from "react-router";
 import type { PublishedList } from "../../api/types";
 import type { KeyValueStore } from "../../lib/storage";
@@ -46,6 +47,27 @@ const card = (title: string) => screen.getByRole("button", { name: title });
 const progress = () => screen.getByText(/of 3 placed/);
 
 describe("RankingBoard", () => {
+  it("offers the newcomer's first tip on the first card while nothing is placed, and a card placed makes it pointless", async () => {
+    const tips = memoryStore();
+    useTipsStoreForTests(tips);
+    onTestFinished(() => useTipsStoreForTests(null));
+    render(
+      <MemoryRouter>
+        <RankingBoard list={list} />
+      </MemoryRouter>,
+    );
+    const first = document.querySelectorAll("[data-tip]");
+    expect(first).toHaveLength(1);
+    expect(first[0]).toHaveAttribute("data-tip", "place");
+    expect(first[0]).toHaveAttribute("data-tip-keys", "1–2");
+    expect(tipWanted("place")).toBe(true);
+    card("Ex Machina").focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("1");
+    expect(document.querySelector("[data-tip]")).toBeNull();
+    expect(tipWanted("place")).toBe(false);
+  });
+
   it("starts empty whatever the author did, with every card in the pool", () => {
     render(
       <MemoryRouter>

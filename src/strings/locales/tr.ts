@@ -120,6 +120,15 @@ const tr: Translation = {
     shareSite: "TierYourLife’ı paylaş",
     feedback: "Görüş gönder",
     feedbackSubject: "TierYourLife hakkında görüş",
+    howItWorksSub: "Sırala, oyna, kendininkini yap",
+    shareSiteSub: "Bağlantıyı bir arkadaşına gönder",
+    androidSub: "Google Play’de ücretsiz",
+    feedbackSub: "Fikirler, sorunlar, her şey: bize yaz",
+    writeTo: "{email} adresine yaz",
+    copyAddress: "Kopyala",
+    addressCopied: "Adres kopyalandı",
+    shareText:
+      "TierYourLife’ta tier listeleri yapıyorum: her şeyi S’den D’ye sıralıyorum, kararsız kaldıklarımı düellolarla çözüyorum ve başkalarının nasıl sıraladığına bakıyorum.\nWeb: {link}",
     privacyTitle: "Gizlilik",
     signOutNote:
       "Listeleriniz hesabınızda ve bu tarayıcıda kalır, yeniden giriş yapana kadar gizli olur. Oturum kapalıyken yalnızca hesapsız yapılan listeleri görürsünüz.",
@@ -1649,6 +1658,35 @@ const tr: Translation = {
       tooLong: "bir alan çok uzun. Yazarı ya da bağlantıyı kısalt.",
       other: "kontrol edip yeniden dene.",
     },
+  },
+  tips: {
+    startHere: "Buradan başlayın:",
+    place: "{start} bir karta, sonra ait olduğu seviyeye dokunun. Ya da oraya sürükleyin.",
+    placeKeys:
+      "{start} bir kart, sonra bir seviye seçin — ya da {keys} tuşlarına basın. Sürüklemek de olur.",
+    play: "{n} kartı tek tek yerleştirmek istemiyor musunuz? {play}: ikisinden iyisini seçin, seviyeler kendiliğinden dolsun.",
+    add: "Bir ad yazın — resmi onunla gelir.",
+    gotIt: "Anladım",
+    noMore: "Başka ipucu yok",
+  },
+  howItWorks: {
+    title: "Nasıl çalışır",
+    place: "Yerleştir",
+    placeText: "bir karta, sonra bir seviyeye dokunun. Ya da sürükleyin.",
+    play: "Oyna",
+    playText: "iki karttan iyisini seçin; seviyeler kendiliğinden dolar.",
+    own: "Kendi listeniz",
+    ownText: "adları yazın, resimler onlarla gelir.",
+    share: "Paylaş",
+    shareText: "listenizi yayımlayın ya da resim olarak gönderin.",
+    again: "İpuçlarını yeniden göster",
+    againDone: "İpuçları yeniden gösterilecek.",
+    close: "Kapat",
+  },
+  readyList: {
+    eyebrow: "Yeni misiniz?",
+    meta: "Hazır bir liste · {cards}",
+    try: "Deneyin",
   },
 };
 

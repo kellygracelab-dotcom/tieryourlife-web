@@ -14,6 +14,8 @@ const ALLOWED = new Set([
   "src/features/tierboard/ranking.css|left: 0;",
   // The docked tray spans the screen: both sides, symmetric.
   "src/features/tierboard/ranking.css|right: 0;",
+  // A tip's arrow sits over its element's middle, measured on the screen.
+  "src/ui/Tips.css|left: calc(var(--tip-arrow, 24px) - 7px);",
 ]);
 
 function stylesheets(dir: string): string[] {

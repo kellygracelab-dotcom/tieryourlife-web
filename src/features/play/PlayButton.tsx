@@ -1,6 +1,7 @@
 import { useId } from "react";
 import { strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
+import { tipSeen } from "../../ui/tipMemory";
 import "./play.css";
 
 export interface PlayButtonProps {
@@ -9,6 +10,8 @@ export interface PlayButtonProps {
   disabled: boolean;
   /** A game is saved for this board: a dot on the button's corner. */
   saved: boolean;
+  /** The board's cards, where the newcomer's Play tip may point here (ui/Tips); null where not. */
+  tip?: number | null;
 }
 
 /**
@@ -18,7 +21,7 @@ export interface PlayButtonProps {
  * (aria-disabled), so the reason reaches a tooltip and a screen reader alike;
  * the dot is said in words as well.
  */
-export function PlayButton({ onClick, disabled, saved }: PlayButtonProps) {
+export function PlayButton({ onClick, disabled, saved, tip = null }: PlayButtonProps) {
   const id = useId();
   const description = [disabled && strings.play.needsCards, saved && strings.play.savedGame]
     .filter(Boolean)
@@ -34,7 +37,17 @@ export function PlayButton({ onClick, disabled, saved }: PlayButtonProps) {
         aria-label={disabled ? strings.play.play : undefined}
         aria-describedby={description === "" ? undefined : `${id}-why`}
         title={disabled ? strings.play.needsCards : strings.play.play}
-        onClick={disabled ? undefined : onClick}
+        data-tip={tip === null ? undefined : "play"}
+        data-tip-n={tip ?? undefined}
+        onClick={
+          disabled
+            ? undefined
+            : () => {
+                // Opened once, its tip has nothing left to say.
+                tipSeen("play");
+                onClick();
+              }
+        }
       >
         <Icon name="play_arrow" className="btn__icon play-button__icon" />
         <span className="play-button__word" aria-hidden="true">

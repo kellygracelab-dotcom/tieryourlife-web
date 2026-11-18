@@ -1,0 +1,28 @@
+/* Settings → How it works (HowItWorks.tsx): four lines with their icons, artboard 50. */
+.how__rows {
+  display: grid;
+  gap: 14px;
+  margin: 12px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.how__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.how__icon {
+  flex: none;
+  font-size: 20px;
+  color: var(--link);
+}
+
+.how__text {
+  margin: 0;
+  font: var(--text-body);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+}

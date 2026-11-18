@@ -7,7 +7,8 @@ import { DEFAULT_TIERS, NEW_DRAFT_KEY, saveEditorDraft } from "../features/edito
 import { boardsRepository, type BoardsRepository } from "../features/boards/repository";
 import { ApiFailure } from "../api/errors";
 import { memoryStore, type KeyValueStore } from "../lib/storage";
-import { BoardsPage, VIEW_KEY } from "./BoardsPage";
+import { BoardsPage, VIEW_KEY, type LoadReadyList } from "./BoardsPage";
+import type { ListSummary } from "../api/types";
 
 vi.mock("../lib/api", async () => (await import("../test/apiMock")).apiStubs());
 vi.mock("../lib/pictures", () => ({ uploadPicture: vi.fn() }));
@@ -67,6 +68,7 @@ const open = (
   shelfStore: KeyValueStore = memoryStore(),
   // The tools are under test: they show from the first list. Few lists' page has tests of its own.
   fewLists = 0,
+  loadReady: LoadReadyList = async () => null,
 ) => {
   const router = createMemoryRouter(
     [
@@ -80,6 +82,7 @@ const open = (
             shelfStore={shelfStore}
             unpublish={unpublish}
             fewLists={fewLists}
+            loadReady={loadReady}
           />
         ),
       },
@@ -94,6 +97,65 @@ const open = (
 };
 
 const opened = () => screen.getAllByRole("link", { name: /^Open / });
+
+describe("New here? on an empty Your lists", () => {
+  const eurovision = {
+    id: "euro",
+    title: "Eurovision winners since 2000",
+    authorUid: "h",
+    authorName: "TierYourLife",
+    authorPhotoUrl: null,
+    category: "music",
+    itemCount: 25,
+    coverImageUrl: null,
+    previewImages: [],
+    tierColors: [],
+    updatedAt: 0,
+    takeCount: 900,
+  } as ListSummary;
+
+  it("offers a popular list to try at once, by its name and its cards", async () => {
+    const repository = boardsRepository(memoryStore());
+    open(
+      repository,
+      "/b",
+      undefined,
+      memoryStore(),
+      undefined,
+      memoryStore(),
+      0,
+      async () => eurovision,
+    );
+    expect(await screen.findByText("New here?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Eurovision winners since 2000" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("A ready list · 25 cards")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Try it" })).toHaveAttribute("href", "/l/euro");
+    expect(screen.getByText("No lists yet")).toBeInTheDocument();
+  });
+
+  it("is not there once one has a list begun, or when the feed has none", async () => {
+    const begun = memoryStore();
+    begun.write(
+      "tyl:draft:other",
+      JSON.stringify({ listId: "other", title: "Pizza", rows: [[0]], itemCount: 5 }),
+    );
+    const load = vi.fn(async () => eurovision);
+    open(
+      boardsRepository(memoryStore()),
+      "/b",
+      undefined,
+      begun,
+      undefined,
+      memoryStore(),
+      0,
+      load,
+    );
+    expect(await screen.findByText("No lists yet")).toBeInTheDocument();
+    expect(screen.queryByText("New here?")).toBeNull();
+  });
+});
 
 describe("BoardsPage", () => {
   it("is the lists and a new one's tile while there are six or fewer, the tools from the seventh (artboard 33)", async () => {

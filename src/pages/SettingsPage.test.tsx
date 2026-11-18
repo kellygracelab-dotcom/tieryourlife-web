@@ -24,6 +24,7 @@ import {
   type UploadFace,
 } from "./SettingsPage";
 import { sayOnTheSite, siteNotice } from "../ui/siteNotice";
+import { tipsOff, tipWanted, useTipsStoreForTests } from "../ui/tipMemory";
 
 vi.mock("../lib/api", () => ({
   followState: vi.fn(() => new Promise(() => undefined)),
@@ -180,17 +181,17 @@ describe("the site to someone else, the app and a word to us", () => {
     const share = vi.fn<ShareSite>(async () => "copied");
     open({ kind: "guest", uid: "g1" }, undefined, share);
     onTestFinished(() => sayOnTheSite(null));
-    await userEvent.click(screen.getByRole("button", { name: "Share TierYourLife" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Share TierYourLife/ }));
     expect(share).toHaveBeenCalledWith(`${window.location.origin}/`);
     expect(siteNotice()).toEqual({ text: "Link copied" });
 
     // The share sheet says nothing of itself; a clipboard that refused spells the address out.
     sayOnTheSite(null);
     share.mockResolvedValueOnce("shared");
-    await userEvent.click(screen.getByRole("button", { name: "Share TierYourLife" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Share TierYourLife/ }));
     expect(siteNotice()).toBeNull();
     share.mockRejectedValueOnce(new Error("no clipboard"));
-    await userEvent.click(screen.getByRole("button", { name: "Share TierYourLife" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Share TierYourLife/ }));
     await waitFor(() =>
       expect(siteNotice()).toEqual({
         text: `Could not copy the link: ${window.location.origin}/`,
@@ -198,14 +199,60 @@ describe("the site to someone else, the app and a word to us", () => {
     );
   });
 
-  it("writes to the developer's public address, and names the app as coming soon until it opens", () => {
+  it("writes to the developer's public address and says it with Copy, and leaves the app out until it opens", async () => {
     open({ kind: "guest", uid: "g1" });
-    expect(screen.getByRole("link", { name: "Send feedback" })).toHaveAttribute(
+    onTestFinished(() => sayOnTheSite(null));
+    const feedback = screen.getByRole("link", { name: /^Send feedback/ });
+    expect(feedback).toHaveAttribute(
       "href",
       "mailto:kellygracelab@gmail.com?subject=TierYourLife%20feedback",
     );
-    expect(screen.getByText("Android app · coming soon")).toBeInTheDocument();
+    expect(feedback).toHaveTextContent("Ideas, problems, anything: write to us");
+    expect(screen.getByRole("button", { name: /^Share TierYourLife/ })).toHaveTextContent(
+      "Send the link to a friend",
+    );
+    // No grey line in the card: the footer already says the app is coming.
+    expect(screen.queryByText("Android app · coming soon")).toBeNull();
     expect(screen.queryByRole("link", { name: /Android/ })).toBeNull();
+
+    // The mail program opens, and the address is said too: a computer often has none.
+    const stay = (event: MouseEvent) => event.preventDefault();
+    document.addEventListener("click", stay);
+    onTestFinished(() => document.removeEventListener("click", stay));
+    const writeText = vi.fn(async () => undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
+    fireEvent.click(feedback);
+    const notice = siteNotice();
+    expect(notice).toMatchObject({ text: "Write to kellygracelab@gmail.com", long: true });
+    expect(notice?.action?.text).toBe("Copy");
+    notice?.action?.onClick();
+    expect(writeText).toHaveBeenCalledWith("kellygracelab@gmail.com");
+    await waitFor(() => expect(siteNotice()).toEqual({ text: "Address copied" }));
+  });
+
+  it("opens How it works first, and Show the tips again brings the tips back", async () => {
+    const tips = memoryStore();
+    useTipsStoreForTests(tips);
+    onTestFinished(() => {
+      useTipsStoreForTests(null);
+      sayOnTheSite(null);
+    });
+    tipsOff();
+    open({ kind: "guest", uid: "g1" });
+    const how = screen.getByRole("button", { name: /^How it works/ });
+    expect(how).toHaveTextContent("Place, play, make your own");
+    const card = how.closest("section");
+    if (card === null) throw new Error("no card");
+    expect(within(card).getAllByRole("button")[0]).toBe(how);
+    await userEvent.click(how);
+    const dialog = screen.getByRole("dialog", { name: "How it works" });
+    await userEvent.click(within(dialog).getByRole("button", { name: "Show the tips again" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(tipWanted("place")).toBe(true);
+    expect(siteNotice()).toEqual({ text: "The tips will show again." });
   });
 });
 

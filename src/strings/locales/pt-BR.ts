@@ -124,6 +124,15 @@ const ptBR: Translation = {
     shareSite: "Compartilhar o TierYourLife",
     feedback: "Enviar feedback",
     feedbackSubject: "Feedback sobre o TierYourLife",
+    howItWorksSub: "Classifique, jogue, crie as suas",
+    shareSiteSub: "Envie o link para um amigo",
+    androidSub: "Grátis no Google Play",
+    feedbackSub: "Ideias, problemas, qualquer coisa: escreva para nós",
+    writeTo: "Escreva para {email}",
+    copyAddress: "Copiar",
+    addressCopied: "Endereço copiado",
+    shareText:
+      "Faço tier lists no TierYourLife: classifico qualquer coisa de S a D, decido as dúvidas em duelos e vejo como os outros classificaram.\nSite: {link}",
     privacyTitle: "Privacidade",
     signOutNote:
       "Suas listas ficam na sua conta e neste navegador, ocultas até você entrar de novo. Fora da conta, você vê só as listas feitas sem conta.",
@@ -1756,6 +1765,35 @@ const ptBR: Translation = {
       tooLong: "um campo é longo demais. Encurte o autor ou o link.",
       other: "confira e tente de novo.",
     },
+  },
+  tips: {
+    startHere: "Comece aqui:",
+    place: "{start} toque em um cartão e depois no nível dele. Ou arraste-o até lá.",
+    placeKeys:
+      "{start} escolha um cartão e depois um nível — ou pressione {keys}. Arrastar também funciona.",
+    play: "Não quer colocar {n} à mão? {play}: escolha o melhor de dois e os níveis se preenchem.",
+    add: "Digite um nome — a imagem vem junto.",
+    gotIt: "Entendi",
+    noMore: "Sem mais dicas",
+  },
+  howItWorks: {
+    title: "Como funciona",
+    place: "Colocar",
+    placeText: "toque em um cartão e depois em um nível. Ou arraste.",
+    play: "Jogar",
+    playText: "escolha o melhor de dois cartões; os níveis se preenchem.",
+    own: "Crie a sua",
+    ownText: "digite nomes, as imagens vêm junto.",
+    share: "Compartilhar",
+    shareText: "publique sua lista ou envie como imagem.",
+    again: "Mostrar as dicas de novo",
+    againDone: "As dicas vão aparecer de novo.",
+    close: "Fechar",
+  },
+  readyList: {
+    eyebrow: "Novo por aqui?",
+    meta: "Uma lista pronta · {cards}",
+    try: "Experimentar",
   },
 };
 

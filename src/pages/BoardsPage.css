@@ -351,6 +351,41 @@
   text-align: center;
 }
 
+/* New here? (artboard 50): a ready list to try, over the suggestions. */
+.boards__ready {
+  box-sizing: border-box;
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: var(--radius-card);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  text-align: start;
+}
+
+.boards__ready-eyebrow {
+  margin: 0;
+  font: var(--text-label);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.boards__ready-title {
+  margin: 0;
+  font: var(--text-title);
+  color: var(--ink);
+}
+
+.boards__ready-meta {
+  margin: 0 0 8px;
+  font: var(--text-small);
+  color: var(--ink-dim);
+}
+
 .boards__empty--search {
   padding-top: 24px;
 }

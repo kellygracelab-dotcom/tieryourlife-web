@@ -1,6 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { memoryStore } from "../../lib/storage";
+import { tipWanted, useTipsStoreForTests } from "../../ui/tipMemory";
 import { PlayButton } from "./PlayButton";
 
 describe("the Play button", () => {
@@ -46,5 +48,21 @@ describe("the Play button", () => {
     expect(button).toHaveTextContent("play_arrow");
     // The word is the one below 840 hides: the name stays on the button itself.
     expect(button.querySelector(".play-button__word")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("is where Play's tip points on a board worth a game, and opening it is enough of a lesson", () => {
+    const tips = memoryStore();
+    useTipsStoreForTests(tips);
+    onTestFinished(() => useTipsStoreForTests(null));
+    const onClick = vi.fn();
+    const view = render(<PlayButton onClick={onClick} disabled={false} saved={false} tip={25} />);
+    const button = screen.getByRole("button", { name: "Play" });
+    expect(button).toHaveAttribute("data-tip", "play");
+    expect(button).toHaveAttribute("data-tip-n", "25");
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalled();
+    expect(tipWanted("play")).toBe(false);
+    view.rerender(<PlayButton onClick={onClick} disabled={false} saved={false} tip={null} />);
+    expect(button).not.toHaveAttribute("data-tip");
   });
 });

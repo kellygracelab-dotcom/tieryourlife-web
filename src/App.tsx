@@ -8,6 +8,7 @@ import { announceWith, reloadInto } from "./lib/freshChunk";
 import { spendPreload } from "./lib/preload";
 import { strings } from "./strings";
 import { NameTip } from "./ui/NameTip";
+import { Tips } from "./ui/Tips";
 import { sayOnTheSite } from "./ui/siteNotice";
 
 const router = withPageTransitions(createBrowserRouter(routes));
@@ -74,6 +75,8 @@ export function App() {
       <BoardSyncProvider>
         <RouterProvider router={router} />
         <NameTip />
+        {/* A newcomer's tips, each by what it explains, on whatever page offers one. */}
+        <Tips />
         {/* Continue follows the account too: the lists begun on the phone show here. */}
         <StartedSync />
       </BoardSyncProvider>

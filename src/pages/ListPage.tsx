@@ -91,7 +91,7 @@ import { Snackbar, useBoardNotice } from "../ui/Snackbar";
 import { useBackCloses } from "../ui/useBackCloses";
 import { PlayButton } from "../features/play/PlayButton";
 import { localGames } from "../features/play/savedGames";
-import { wantsResume, wantsSave } from "../features/started/started";
+import { wantsMine, wantsResume, wantsSave } from "../features/started/started";
 import { usePlay } from "../features/play/usePlay";
 import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
@@ -371,14 +371,16 @@ function OpenList({
   // Mine starts from the board the list was saved to; once anything is placed,
   // here or there, it is never put over Mine again while the page is open.
   const minePlaced = useRef(false);
+  const location = useLocation();
   const [view, setView] = useState<View>(() => {
     mineFromCopy(localStorageStore, list, (repository ?? site).all());
+    // New here?'s ready list opens on one's own half, where the first tip waits.
+    if (wantsMine(location.state)) return "mine";
     return author.known && !begunHere(localStorageStore, list) ? "theirs" : "mine";
   });
   // A reader's placing chosen in the rankings sheet, shown in the left half.
   // It is kept in the history entry too, so Back, Forward and a reload bring
   // it back as the app's saved state does.
-  const location = useLocation();
   const navigate = useNavigate();
   const [chosen, setChosen] = useState<ReaderRanking | null>(() => {
     const kept = readerKeptIn(location.state, list);

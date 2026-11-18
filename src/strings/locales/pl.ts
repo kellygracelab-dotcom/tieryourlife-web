@@ -135,6 +135,15 @@ const pl: Translation = {
     shareSite: "Udostępnij TierYourLife",
     feedback: "Wyślij opinię",
     feedbackSubject: "Opinia o TierYourLife",
+    howItWorksSub: "Układaj, graj, twórz własne",
+    shareSiteSub: "Wyślij link znajomemu",
+    androidSub: "Za darmo w Google Play",
+    feedbackSub: "Pomysły, problemy, cokolwiek: napisz do nas",
+    writeTo: "Napisz na {email}",
+    copyAddress: "Kopiuj",
+    addressCopied: "Adres skopiowany",
+    shareText:
+      "Robię tier listy w TierYourLife: układam cokolwiek od S do D, rozstrzygam spory w pojedynkach i patrzę, jak ułożyli inni.\nStrona: {link}",
     privacyTitle: "Prywatność",
     signOutNote:
       "Twoje listy zostają na koncie i w tej przeglądarce, ukryte do ponownego zalogowania. Po wylogowaniu widać tylko listy zrobione bez konta.",
@@ -1882,6 +1891,35 @@ const pl: Translation = {
       tooLong: "jedno z pól jest za długie. Skróć autora albo link.",
       other: "sprawdź ją i spróbuj ponownie.",
     },
+  },
+  tips: {
+    startHere: "Zacznij tutaj:",
+    place: "{start} dotknij karty, a potem jej poziomu. Albo przeciągnij ją tam.",
+    placeKeys:
+      "{start} wybierz kartę, potem poziom — albo naciśnij {keys}. Przeciąganie też działa.",
+    play: "Nie chcesz układać {n} ręcznie? {play}: wybieraj lepszą z dwóch, a poziomy wypełnią się same.",
+    add: "Wpisz nazwę — obrazek przyjdzie z nią.",
+    gotIt: "Rozumiem",
+    noMore: "Bez podpowiedzi",
+  },
+  howItWorks: {
+    title: "Jak to działa",
+    place: "Układaj",
+    placeText: "dotknij karty, potem poziomu. Albo ją przeciągnij.",
+    play: "Graj",
+    playText: "wybieraj lepszą z dwóch kart; poziomy wypełnią się same.",
+    own: "Własna lista",
+    ownText: "wpisuj nazwy, obrazki przyjdą z nimi.",
+    share: "Udostępnij",
+    shareText: "opublikuj listę albo wyślij ją jako obrazek.",
+    again: "Pokaż podpowiedzi ponownie",
+    againDone: "Podpowiedzi pokażą się ponownie.",
+    close: "Zamknij",
+  },
+  readyList: {
+    eyebrow: "Pierwszy raz tutaj?",
+    meta: "Gotowa lista · {cards}",
+    try: "Wypróbuj",
   },
 };
 

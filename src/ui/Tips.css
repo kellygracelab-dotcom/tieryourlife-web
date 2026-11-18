@@ -1,0 +1,111 @@
+/*
+ * A newcomer's tip by the element it explains (Tips.tsx, artboards 47–50):
+ * the inverse of the page, dark on light and light on dark, an arrow to the
+ * element and a thin ring on it. Nothing darkens.
+ */
+.tip {
+  --tip-bg: #2f2f36;
+  --tip-ink: #f2eff7;
+  --tip-quiet: #c7c5d0;
+  --tip-action: #dee0ff;
+  --tip-ring: #4a5baa;
+  /* Screen coordinates, set beside its element (Tips.tsx), not a side of the text. */
+  position: fixed;
+  z-index: 94;
+  box-sizing: border-box;
+  width: min(300px, calc(100vw - 16px));
+  padding: 12px 14px 4px;
+  border-radius: 14px;
+  background: var(--tip-bg);
+  color: var(--tip-ink);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tip {
+    --tip-bg: #e4e1e9;
+    --tip-ink: #1b1b1f;
+    --tip-quiet: #5e5d67;
+    --tip-action: #323c8c;
+  }
+
+  :root:not([data-theme="light"]) .tip-ring {
+    --tip-ring: #bac3ff;
+  }
+}
+
+:root[data-theme="dark"] .tip {
+  --tip-bg: #e4e1e9;
+  --tip-ink: #1b1b1f;
+  --tip-quiet: #5e5d67;
+  --tip-action: #323c8c;
+}
+
+:root[data-theme="dark"] .tip-ring {
+  --tip-ring: #bac3ff;
+}
+
+/*
+ * The arrow: under the tip, or over it when the tip stands below its element.
+ * Its place is a screen position, measured from the left in every language.
+ */
+.tip::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--tip-arrow, 24px) - 7px);
+  bottom: -6px;
+  width: 14px;
+  height: 14px;
+  background: var(--tip-bg);
+  transform: rotate(45deg);
+}
+
+.tip--below::before {
+  top: -6px;
+  bottom: auto;
+}
+
+.tip__text {
+  position: relative;
+  margin: 0;
+  font: var(--text-body);
+  font-size: 14px;
+  line-height: 19px;
+}
+
+.tip__actions {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+/* 48 px to press, drawn as words. */
+.tip__button {
+  min-height: 48px;
+  padding: 0 8px;
+  border: none;
+  background: none;
+  color: var(--tip-action);
+  font: var(--text-label);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tip__button--quiet {
+  color: var(--tip-quiet);
+  font-weight: 500;
+}
+
+.tip__button:focus-visible {
+  outline: 2px solid var(--tip-action);
+  outline-offset: -4px;
+  border-radius: 8px;
+}
+
+.tip-ring {
+  --tip-ring: #4a5baa;
+  outline: 2px solid var(--tip-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--tip-ring) 25%, transparent);
+}

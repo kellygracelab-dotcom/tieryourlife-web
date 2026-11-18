@@ -421,15 +421,6 @@
   accent-color: var(--link);
 }
 
-.settings__row--quiet {
-  color: var(--ink-dim);
-}
-
-.settings__row--quiet:hover {
-  background: none;
-  color: var(--ink-dim);
-}
-
 .settings__row--button {
   width: calc(100% + 16px);
   border: none;
