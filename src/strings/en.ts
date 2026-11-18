@@ -1271,6 +1271,22 @@ export const en = {
   },
   // The board's Publish window and its header (Danylo's canvas, 16.11.2026).
   // Somebody else's lists begun here, at the top of Your lists and the home page (audit B1).
+  // The menu of a list in Your lists: a right click, ⋮, a long press (artboard 39).
+  listMenu: {
+    label: "More for {name}",
+    private: "private",
+    public: "public",
+    open: "Open",
+    rename: "Rename",
+    renameLabel: "List name",
+    favourite: "Add to favourites",
+    unfavourite: "Remove from favourites",
+    publish: "Publish…",
+    delete: "Delete",
+    deleteMany: { one: "Delete {n} list", other: "Delete {n} lists" },
+    discard: "Discard my arrangement",
+    discarded: "Arrangement discarded",
+  },
   started: {
     title: "Continue",
     // Over the begun lists in Your lists, as a group's label: "CONTINUE · 2" (artboard 14).

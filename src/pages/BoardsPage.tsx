@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { Link, useLocation, useNavigate } from "react-router";
 import type { Category } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
@@ -10,7 +17,9 @@ import {
   BOARD_SORTS,
   isNarrowed,
   isOut,
+  poolCount,
   rankedCount,
+  rename,
   restoreBoard,
   setFavourite,
   shouldGroup,
@@ -25,6 +34,13 @@ import { ContinueBlock } from "../features/started/ContinueBlock";
 import { useBoardSync } from "../features/boards/boardSync";
 import { BoardRow } from "../features/boards/BoardRow";
 import { BoardTile } from "../features/boards/BoardTile";
+import { metaOf, titleOf } from "../features/boards/boardText";
+import { ListMenu, type ListMenuEntry } from "../features/boards/ListMenu";
+import { useMenuTriggers } from "../features/boards/listMenuTriggers";
+import { boardView } from "../features/boards/view";
+import { shareBoard as shareBoardPicture, type Share } from "../features/ranking/share";
+import type { ScreenPoint } from "../features/tierboard/CardMenu";
+import type { BoardPageState } from "./BoardPage";
 import { keepOldDraft } from "../features/boards/ownList";
 import { takenDown, unpublished } from "../features/boards/takeDown";
 import { nextUid, useBoards } from "../features/boards/useBoards";
@@ -50,7 +66,17 @@ interface BoardsPageProps {
   unpublish?: UnpublishBoard;
   /** Up to how many lists the page goes without its tools; a test of the tools sets none. */
   fewLists?: number;
+  /** Share as image in a list's menu; a test hands in its own. */
+  share?: Share;
+  copy?: (text: string) => Promise<void>;
 }
+
+const clipboardCopy = (text: string): Promise<void> => navigator.clipboard.writeText(text);
+
+/** The way into a list from the keyboard, where its focus goes back to after a rename. */
+const MAIN = ".board-tile__main, .board-card__main";
+const listMain = (root: ParentNode | null, uid: string) =>
+  root?.querySelector<HTMLElement>(`[data-board="${CSS.escape(uid)}"] :is(${MAIN})`) ?? null;
 
 /** Pictures in a grid, as the phone shows them first, or one board to a row with its tier ribbon. */
 type BoardsView = "grid" | "rows";
@@ -121,6 +147,8 @@ function Group({
   selected,
   onSelect,
   onStar,
+  renaming,
+  onRename,
   newTile = false,
 }: {
   heading: string | null;
@@ -130,6 +158,8 @@ function Group({
   selected: ReadonlySet<string>;
   onSelect: (uid: string) => void;
   onStar: (board: Board) => void;
+  renaming: string | null;
+  onRename: (board: Board, title: string | null) => void;
   /** A tile that starts a new list, after the lists (artboard 33). */
   newTile?: boolean;
 }) {
@@ -147,6 +177,8 @@ function Group({
               selected={selected.has(board.uid)}
               onSelect={onSelect}
               onStar={onStar}
+              renaming={renaming === board.uid}
+              onRename={onRename}
             />
           ) : (
             <BoardRow
@@ -156,6 +188,8 @@ function Group({
               selected={selected.has(board.uid)}
               onSelect={onSelect}
               onStar={onStar}
+              renaming={renaming === board.uid}
+              onRename={onRename}
             />
           ),
         )}
@@ -211,6 +245,8 @@ export function BoardsPage({
   shelfStore = sessionStorageStore,
   unpublish = unpublishList,
   fewLists = FEW_LISTS,
+  share = shareBoardPicture,
+  copy = clipboardCopy,
 }: BoardsPageProps) {
   usePageTitle(strings.boards.title);
   const all = useBoards(repository);
@@ -356,10 +392,13 @@ export function BoardsPage({
 
   // Public copies come down first, as on the phone: a board whose copy could
   // not be taken down stays, and a notice after the others' Undo says so.
-  const deleteSelected = async () => {
+  const deleteSelected = () => {
     const going = chosen;
-    const uids = going.map((board) => board.uid);
     leaveSelection();
+    void deleteBoards(going);
+  };
+  const deleteBoards = async (going: readonly Board[]) => {
+    const uids = going.map((board) => board.uid);
     setDeleting((was) => new Set([...was, ...uids]));
     // Which copies this account really took down: one already gone, or another
     // account's, is let go without a word about it.
@@ -397,10 +436,173 @@ export function BoardsPage({
       ...(trashed.length < going.length ? [{ text: strings.trash.stillPublic }] : []),
     ]);
   };
+  // A list's own menu (artboard 39): a right click, ⋮, a long press or the
+  // menu key on a list; while choosing, a right click on a chosen list
+  // deletes all the chosen.
+  const [menu, setMenu] = useState<{ uids: readonly string[]; at: ScreenPoint } | null>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const boardOf = (target: Element): Board | null => {
+    const uid = target.closest<HTMLElement>("[data-board]")?.dataset.board;
+    return uid === undefined ? null : (shown.find((board) => board.uid === uid) ?? null);
+  };
+  const openMenu = (target: Element, at: ScreenPoint): boolean => {
+    const board = boardOf(target);
+    if (board === null || renaming !== null) return false;
+    if (selecting) {
+      if (!selected.has(board.uid) || chosen.length === 0) return false;
+      setMenu({ uids: chosen.map((one) => one.uid), at });
+      return true;
+    }
+    setMenu({ uids: [board.uid], at });
+    return true;
+  };
+  const triggers = useMenuTriggers(openMenu);
+  const closeMenu = useCallback(() => setMenu(null), []);
+
+  const renamed = useCallback(
+    (board: Board, title: string | null) => {
+      if (title !== null) {
+        const latest = repository.get(board.uid);
+        if (latest !== null) repository.save(rename(latest, title.trim(), now()));
+      }
+      setRenaming(null);
+      // Back on the list, a link again once drawn.
+      window.requestAnimationFrame(() => listMain(page.current, board.uid)?.focus());
+    },
+    [repository, now],
+  );
+
+  // A list deleted from its menu or by its key hands the focus to the one beside it.
+  const deleteOne = (board: Board) => {
+    const at = shown.findIndex((one) => one.uid === board.uid);
+    const next = shown[at + 1] ?? shown[at - 1];
+    if (next !== undefined) listMain(page.current, next.uid)?.focus();
+    void deleteBoards([board]);
+  };
+
+  const addressOf = (board: Board) =>
+    board.publishedId === null || board.heldForReview === true
+      ? window.location.origin
+      : `${window.location.origin}/l/${encodeURIComponent(board.publishedId)}`;
+  // As on the list's own page: said at once, since drawing waits for the pictures.
+  const shareImage = (board: Board) => {
+    const drawn = boardView(board, strings.boards.untitled);
+    const making: SnackbarNotice = { text: strings.rank.downloading };
+    setNotices([making]);
+    share(drawn.list, drawn.rows, addressOf(board)).then(
+      (how) =>
+        setNotices((queued) =>
+          how === "saved"
+            ? [{ text: strings.boards.imageSaved }]
+            : queued.filter((shownNow) => shownNow !== making),
+        ),
+      () => setNotices([{ text: strings.rank.downloadFailed }]),
+    );
+  };
+  const copyLink = (board: Board) => {
+    const link = addressOf(board);
+    copy(link).then(
+      () => setNotices([{ text: strings.list.linkCopied }]),
+      () => setNotices([{ text: fill(strings.list.copyFailed, { link }) }]),
+    );
+  };
+  const openBoard = (board: Board, state?: BoardPageState) =>
+    void navigate(`/b/${encodeURIComponent(board.uid)}`, state === undefined ? {} : { state });
+
+  const entriesFor = (board: Board): ListMenuEntry[] => {
+    const tooFew = rankedCount(board) + poolCount(board) < 3;
+    return [
+      {
+        key: "open",
+        icon: "chevron_right",
+        text: strings.listMenu.open,
+        keys: "Enter",
+        onSelect: () => openBoard(board),
+      },
+      {
+        key: "play",
+        icon: "play_arrow",
+        text: strings.play.play,
+        disabled: tooFew,
+        ...(tooFew ? { note: strings.play.needsCards } : {}),
+        onSelect: () => openBoard(board, { open: "play" }),
+      },
+      {
+        key: "rename",
+        icon: "edit",
+        text: strings.listMenu.rename,
+        keys: "F2",
+        onSelect: () => setRenaming(board.uid),
+      },
+      {
+        key: "star",
+        icon: "star",
+        text:
+          board.favouritedAt === null ? strings.listMenu.favourite : strings.listMenu.unfavourite,
+        onSelect: () => star(board),
+      },
+      board.publishedId === null
+        ? {
+            key: "publish",
+            icon: "publish",
+            text: strings.listMenu.publish,
+            onSelect: () => openBoard(board, { open: "publish" }),
+          }
+        : {
+            key: "link",
+            icon: "link",
+            text: strings.list.copyLink,
+            onSelect: () => copyLink(board),
+          },
+      {
+        key: "image",
+        icon: "photo_camera",
+        text: strings.boards.shareImage,
+        onSelect: () => shareImage(board),
+      },
+      {
+        key: "delete",
+        icon: "delete",
+        text: strings.listMenu.delete,
+        keys: "Delete",
+        danger: true,
+        line: true,
+        onSelect: () => deleteOne(board),
+      },
+    ];
+  };
+  const menuBoards = menu === null ? [] : shown.filter((board) => menu.uids.includes(board.uid));
+  const one = menuBoards.length === 1 && !selecting ? menuBoards[0] : undefined;
+
+  // The keys on a list: F2 renames it, Delete sends it to the trash; Enter opens it, as a link does.
+  const onListKey = (event: ReactKeyboardEvent<HTMLElement>) => {
+    triggers.onKeyDown(event);
+    if (event.defaultPrevented || selecting || renaming !== null) return;
+    if (event.key !== "F2" && event.key !== "Delete") return;
+    const target = event.target as Element;
+    if (target.closest(MAIN) === null) return;
+    const board = boardOf(target);
+    if (board === null) return;
+    event.preventDefault();
+    if (event.key === "F2") setRenaming(board.uid);
+    else deleteOne(board);
+  };
+
   const countId = useId();
 
   return (
-    <section className="boards" ref={page}>
+    <section
+      className="boards"
+      ref={page}
+      onContextMenu={triggers.onContextMenu}
+      onKeyDown={onListKey}
+      onClick={triggers.onClick}
+      onClickCapture={triggers.onClickCapture}
+      onPointerDown={triggers.onPointerDown}
+      onPointerMove={triggers.onPointerMove}
+      onPointerUp={triggers.onPointerUp}
+      onPointerCancel={triggers.onPointerCancel}
+    >
       <header className="boards__head">
         <div className="boards__text">
           <h1 className="boards__title">{strings.boards.title}</h1>
@@ -423,7 +625,7 @@ export function BoardsPage({
         </div>
       </header>
 
-      <ContinueBlock repository={repository} />
+      <ContinueBlock repository={repository} onNotice={(said) => setNotices([said])} />
 
       {live.length === 0 ? (
         <Empty />
@@ -524,7 +726,7 @@ export function BoardsPage({
               <Button
                 variant="tonal"
                 icon="delete"
-                onClick={() => void deleteSelected()}
+                onClick={deleteSelected}
                 disabled={chosen.length === 0}
               >
                 {strings.boards.deleteSelected}
@@ -561,6 +763,8 @@ export function BoardsPage({
                 selected={selected}
                 onSelect={toggle}
                 onStar={star}
+                renaming={renaming}
+                onRename={renamed}
               />
               <Group
                 heading={strings.boards.allBoards}
@@ -570,6 +774,8 @@ export function BoardsPage({
                 selected={selected}
                 onSelect={toggle}
                 onStar={star}
+                renaming={renaming}
+                onRename={renamed}
               />
             </>
           ) : (
@@ -581,6 +787,8 @@ export function BoardsPage({
               selected={selected}
               onSelect={toggle}
               onStar={star}
+              renaming={renaming}
+              onRename={renamed}
               newTile={few}
             />
           )}
@@ -598,6 +806,36 @@ export function BoardsPage({
         </div>
       )}
       <Snackbar notice={notice} onDone={forget} />
+      {menu !== null && menuBoards.length > 0 && (
+        <ListMenu
+          label={
+            one === undefined
+              ? plural(strings.listMenu.deleteMany, menuBoards.length)
+              : fill(strings.listMenu.label, { name: titleOf(one) })
+          }
+          {...(one === undefined
+            ? {}
+            : {
+                title: titleOf(one),
+                meta: `${metaOf(one)} · ${isOut(one) ? strings.listMenu.public : strings.listMenu.private}`,
+              })}
+          entries={
+            one === undefined
+              ? [
+                  {
+                    key: "delete",
+                    icon: "delete",
+                    text: plural(strings.listMenu.deleteMany, menuBoards.length),
+                    danger: true,
+                    onSelect: deleteSelected,
+                  },
+                ]
+              : entriesFor(one)
+          }
+          at={menu.at}
+          onClose={closeMenu}
+        />
+      )}
     </section>
   );
 }

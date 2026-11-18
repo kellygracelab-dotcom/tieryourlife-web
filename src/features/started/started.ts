@@ -14,6 +14,27 @@ export const wantsResume = (state: unknown): boolean =>
   state !== null &&
   (state as { resumeGame?: unknown }).resumeGame === true;
 
+/** What the list's page reads from Save my list in a begun list's menu: saved to one's lists as it opens. */
+export const SAVE_MINE = { saveMine: true } as const;
+
+export const wantsSave = (state: unknown): boolean =>
+  typeof state === "object" &&
+  state !== null &&
+  (state as { saveMine?: unknown }).saveMine === true;
+
+/**
+ * Discard my arrangement in a begun list's menu (artboard 39): the draft and
+ * a game saved over it go, and the function it gives back puts both back (Undo).
+ */
+export function discardStarted(store: KeyValueStore, listId: string): () => void {
+  const keys = [`${DRAFT_PREFIX}${listId}`, playKey(`list:${listId}`)];
+  const kept = keys.map((key) => [key, store.read(key)] as const);
+  for (const key of keys) store.remove(key);
+  return () => {
+    for (const [key, text] of kept) if (text !== null) store.write(key, text);
+  };
+}
+
 /** How many begun lists "Continue" offers: the latest ones. */
 export const CONTINUE_MAX = 3;
 

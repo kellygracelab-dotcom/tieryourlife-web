@@ -1291,6 +1291,22 @@ const ja: Translation = {
       other: "{n}件のリストを削除し、公開中のコピーも取り下げました",
     },
   },
+  // The menu of a list in Your lists: a right click, ⋮, a long press (artboard 39).
+  listMenu: {
+    label: "「{name}」のその他の操作",
+    private: "非公開",
+    public: "公開",
+    open: "開く",
+    rename: "名前を変更",
+    renameLabel: "リスト名",
+    favourite: "お気に入りに追加",
+    unfavourite: "お気に入りから削除",
+    publish: "公開…",
+    delete: "削除",
+    deleteMany: { other: "{n}件のリストを削除" },
+    discard: "自分の並びを破棄",
+    discarded: "並びを破棄しました",
+  },
   started: {
     title: "続きから",
     count: "続きから · {n}",

@@ -1469,6 +1469,27 @@ const uk: Translation = {
       other: "{n} списку видалено, їхні публічні копії знято",
     },
   },
+  // The menu of a list in Your lists: a right click, ⋮, a long press (artboard 39).
+  listMenu: {
+    label: "Ще для «{name}»",
+    private: "особистий",
+    public: "публічний",
+    open: "Відкрити",
+    rename: "Перейменувати",
+    renameLabel: "Назва списку",
+    favourite: "Додати до вибраного",
+    unfavourite: "Прибрати з вибраного",
+    publish: "Опублікувати…",
+    delete: "Видалити",
+    deleteMany: {
+      one: "Видалити {n} список",
+      few: "Видалити {n} списки",
+      many: "Видалити {n} списків",
+      other: "Видалити {n} списку",
+    },
+    discard: "Скинути мою розстановку",
+    discarded: "Розстановку скинуто",
+  },
   started: {
     title: "Продовжити",
     count: "Продовжити · {n}",

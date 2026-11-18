@@ -1299,6 +1299,22 @@ const tr: Translation = {
       other: "{n} liste silindi ve herkese açık kopyaları kaldırıldı",
     },
   },
+  // The menu of a list in Your lists: a right click, ⋮, a long press (artboard 39).
+  listMenu: {
+    label: "“{name}” için daha fazla",
+    private: "özel",
+    public: "herkese açık",
+    open: "Aç",
+    rename: "Yeniden adlandır",
+    renameLabel: "Liste adı",
+    favourite: "Favorilere ekle",
+    unfavourite: "Favorilerden çıkar",
+    publish: "Yayınla…",
+    delete: "Sil",
+    deleteMany: { one: "{n} listeyi sil", other: "{n} listeyi sil" },
+    discard: "Düzenlememi at",
+    discarded: "Düzenleme atıldı",
+  },
   started: {
     title: "Devam et",
     count: "Devam et · {n}",

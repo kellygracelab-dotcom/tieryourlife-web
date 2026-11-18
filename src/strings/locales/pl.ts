@@ -1474,6 +1474,27 @@ const pl: Translation = {
       other: "{n} listy usunięto, a ich publiczne kopie wycofano",
     },
   },
+  // The menu of a list in Your lists: a right click, ⋮, a long press (artboard 39).
+  listMenu: {
+    label: "Więcej dla „{name}”",
+    private: "prywatna",
+    public: "publiczna",
+    open: "Otwórz",
+    rename: "Zmień nazwę",
+    renameLabel: "Nazwa listy",
+    favourite: "Dodaj do ulubionych",
+    unfavourite: "Usuń z ulubionych",
+    publish: "Opublikuj…",
+    delete: "Usuń",
+    deleteMany: {
+      one: "Usuń {n} listę",
+      few: "Usuń {n} listy",
+      many: "Usuń {n} list",
+      other: "Usuń {n} listy",
+    },
+    discard: "Odrzuć mój układ",
+    discarded: "Układ odrzucony",
+  },
   started: {
     title: "Kontynuuj",
     count: "Kontynuuj · {n}",

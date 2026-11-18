@@ -53,7 +53,7 @@ const EDGE = 8;
 export const TIERS_GRACE_MS = 250;
 
 /** Place a box of this size at `at`, or as near as the window allows. */
-function placed(at: ScreenPoint, width: number, height: number, rtl: boolean): ScreenPoint {
+export function placed(at: ScreenPoint, width: number, height: number, rtl: boolean): ScreenPoint {
   const room = { w: window.innerWidth - EDGE, h: window.innerHeight - EDGE };
   // A menu opens towards the line's end from the pointer, and turns back at the window's edge.
   let x = rtl ? at.x - width : at.x;

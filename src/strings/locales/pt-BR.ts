@@ -1394,6 +1394,22 @@ const ptBR: Translation = {
       other: "{n} listas excluídas e as cópias públicas retiradas",
     },
   },
+  // The menu of a list in Your lists: a right click, ⋮, a long press (artboard 39).
+  listMenu: {
+    label: "Mais para “{name}”",
+    private: "privada",
+    public: "pública",
+    open: "Abrir",
+    rename: "Renomear",
+    renameLabel: "Nome da lista",
+    favourite: "Adicionar aos favoritos",
+    unfavourite: "Remover dos favoritos",
+    publish: "Publicar…",
+    delete: "Excluir",
+    deleteMany: { one: "Excluir {n} lista", other: "Excluir {n} listas" },
+    discard: "Descartar minha organização",
+    discarded: "Organização descartada",
+  },
   started: {
     title: "Continuar",
     count: "Continuar · {n}",
