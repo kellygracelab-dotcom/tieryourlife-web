@@ -1,15 +1,6 @@
-import { MediaImage } from "../../ui/MediaImage";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import type { LinkQuota } from "../../api/linkQuota";
-import {
-  PICTURE_SCOPES,
-  scopeFor,
-  type FoundPicture,
-  type LinkAsk,
-  type PictureKind,
-  type PictureScope,
-  type PictureSource,
-} from "../../api/pictures";
+import { scopeFor, type FoundPicture, type LinkAsk, type PictureScope } from "../../api/pictures";
 import { useSession } from "../../app/session";
 import { findPictures, keepPicture, linkPicture, loadLinkQuota } from "../../lib/api";
 import {
@@ -33,22 +24,13 @@ import {
   type DraftToResume,
 } from "./draftAfterSignIn";
 import { nameOfFile, type Incoming } from "../../lib/incoming";
-import { busyText, missText, refusedText, waitingText } from "./linkText";
+import { busyText, refusedText, waitingText } from "./linkText";
 import { LIMITS, type EditorAction, type EditorItem } from "./model";
-import {
-  cardsFor,
-  looseIn,
-  preferredFor,
-  sourcesCount,
-  waitsForIn,
-  wantedOf,
-  type LookedUp,
-  type MissReason,
-} from "./paste";
 import { LOOKUP_DEBOUNCE_MS, usePictures, type FindPictures } from "./usePictures";
-import { sizedFor } from "../../lib/pictureSize";
-import { pasteLimitText, searchLimitText } from "../../lib/searchLimit";
-import { shortCredit } from "./shortCredit";
+import { searchLimitText } from "../../lib/searchLimit";
+import { PasteBox, PasteNote, type PasteOutcome } from "./PasteBox";
+import { scopeName, scopesFrom, sourcesOf } from "./pictureNames";
+import { PictureTile } from "./PictureTile";
 
 /** Pictures going up at once: enough to keep the line busy, few enough not to starve each other. */
 const UPLOADS_AT_ONCE = 4;
@@ -130,332 +112,9 @@ export function draftFailureOf(failure: unknown): DraftPicture & { status: "fail
   };
 }
 
-const scopeName = (scope: PictureScope): string =>
-  scope === "all"
-    ? strings.search.all
-    : scope === "animals"
-      ? strings.new.animals
-      : strings.category[scope];
-
-/** All first, then the board's own section, then the rest, as on the phone. */
-const scopesFrom = (own: PictureScope): PictureScope[] =>
-  own === "all"
-    ? [...PICTURE_SCOPES]
-    : ["all", own, ...PICTURE_SCOPES.filter((one) => one !== own && one !== "all")];
-
-/** Wikidata's things and the web's pages have nothing worth a label. */
-const kindName = (kind: PictureKind): string | null =>
-  kind === "thing" || kind === "web" ? null : strings.new.kinds[kind];
-
-const SOURCE_NAMES: Record<Exclude<PictureSource, "web" | "other">, string> = {
-  tmdb: "TMDB",
-  anilist: "AniList",
-  steam: "Steam",
-  igdb: "IGDB.com",
-  openlibrary: "Open Library",
-  wikidata: "Wikidata",
-  inaturalist: "iNaturalist",
-};
-
-/** Whose pictures these are, in the order they first come; one not known yet goes unnamed. */
-function sourcesOf(items: readonly FoundPicture[]): string | null {
-  const names = [...new Set(items.map((item) => item.source))]
-    .filter((source) => source !== "other")
-    .map((source) => (source === "web" ? strings.new.webSource : SOURCE_NAMES[source]));
-  return names.length === 0 ? null : fill(strings.new.fromSources, { sources: names.join(", ") });
-}
-
-function PictureTile({
-  found,
-  added,
-  busy,
-  onPick,
-}: {
-  found: FoundPicture;
-  added: boolean;
-  busy: boolean;
-  onPick: () => void;
-}) {
-  const [broken, setBroken] = useState(false);
-  const line = [kindName(found.kind), found.subtitle].filter(Boolean).join(" · ");
-  const credit = shortCredit(found);
-  // A picture that will not load leaves no empty tile behind.
-  if (broken) return null;
-  return (
-    // Not disabled when added: a disabled button drops the keyboard's focus to
-    // the page, and the person picking several would have to find the grid again.
-    <button
-      type="button"
-      className="cards__pick"
-      onClick={() => {
-        if (!added && !busy) onPick();
-      }}
-      aria-disabled={added || busy}
-      aria-pressed={added}
-      aria-busy={busy || undefined}
-    >
-      <span className="cards__pick-picture">
-        <MediaImage
-          {...sizedFor(found.thumbUrl ?? found.imageUrl, 120)}
-          alt=""
-          loading="lazy"
-          onError={() => setBroken(true)}
-        />
-        {added && <Icon name="check" className="cards__pick-tick" />}
-      </span>
-      <span className="cards__pick-title">{found.title}</span>
-      {line !== "" && <span className="cards__pick-sub">{line}</span>}
-      {/* The license asks for the name beside the picture. */}
-      {credit !== null && (
-        <span className="cards__pick-credit" title={found.credit ?? credit}>
-          {credit}
-        </span>
-      )}
-    </button>
-  );
-}
-
-/** What a paste of many lines came to: how many cards, and those without a picture, and why. */
-export interface PasteOutcome {
-  added: number;
-  missing: { title: string; reason: MissReason }[];
-  /**
-   * The house's cards whose picture was copied from another site without the
-   * page it is from: the list is refused until they have one.
-   */
-  pageless: string[];
-}
-
 /** Whether a paste has anything to say once it is done. */
 const worthSaying = (outcome: PasteOutcome): boolean =>
   outcome.missing.length > 0 || outcome.pageless.length > 0;
-
-/**
- * Many cards at once: names pasted one to a line, each looked up in the
- * catalogue for its picture, or given its own by a link after the name. A
- * list of fifty films is a minute, not an hour. On a house board a picture
- * from another site wants its page: nothing is held back, since only the
- * backend knows a catalogue's or Commons' picture, which needs none; the
- * cards that came back copied without one are named when the paste is done.
- */
-function PasteBox({
-  room,
-  category,
-  dispatch,
-  lookup,
-  link,
-  house,
-  loadQuota,
-  onNote,
-  onDone,
-}: {
-  room: number;
-  category: string | null;
-  dispatch: (action: EditorAction) => void;
-  lookup: (query: string) => Promise<LookedUp>;
-  /** None for a guest: their lines with a link come by name. */
-  link: LinkKeep | undefined;
-  house: boolean;
-  loadQuota: () => Promise<LinkQuota | null>;
-  /** Said where the box's other warnings are, since the paste box closes when it is done. */
-  onNote: (note: string | null) => void;
-  onDone: (outcome: PasteOutcome) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  const [quota, setQuota] = useState<LinkQuota | null>(null);
-  // A busy picture site: the paste waits for it until this time.
-  const [waiting, setWaiting] = useState<number | null>(null);
-  const here = useRef(true);
-  useEffect(() => {
-    here.current = true;
-    return () => {
-      here.current = false;
-    };
-  }, []);
-  // The house sees what is left of today's pictures from links once the backend says.
-  const counted = open && house && link !== undefined;
-  useEffect(() => {
-    if (!counted) return;
-    let current = true;
-    loadQuota().then(
-      (now) => {
-        if (current && now !== null) setQuota(now);
-      },
-      () => undefined,
-    );
-    return () => {
-      current = false;
-    };
-  }, [counted, loadQuota]);
-
-  const wanted = wantedOf(text, Math.max(0, room), house);
-  const counts = sourcesCount(wanted);
-  const busy = progress !== null;
-
-  const onSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    if (busy || wanted.length === 0) return;
-    setProgress({ done: 0, total: wanted.length });
-    onNote(null);
-    const missing: PasteOutcome["missing"] = [];
-    const pageless: string[] = [];
-    let added = 0;
-    void cardsFor(
-      wanted,
-      lookup,
-      (card, done) => {
-        dispatch({ type: "addItem", ...card });
-        added++;
-        setProgress({ done, total: wanted.length });
-      },
-      {
-        going: () => here.current,
-        preferred: preferredFor(category),
-        loose: looseIn(category),
-        waitFor: waitsForIn(category),
-        link,
-        onMissing: (title, reason) => missing.push({ title, reason }),
-        onQuota: (now) => {
-          if (here.current) setQuota(now);
-        },
-        ...(house ? { onPageless: (title: string) => pageless.push(title) } : {}),
-        onWaiting: (until) => {
-          if (here.current) setWaiting(until);
-        },
-      },
-    )
-      .then((ranOut) => {
-        if (!here.current) return;
-        if (ranOut !== null) onNote(pasteLimitText(ranOut.unanswered, ranOut.retryAt));
-        onDone({ added, missing, pageless });
-      })
-      .finally(() => {
-        if (!here.current) return;
-        setProgress(null);
-        setWaiting(null);
-        setText("");
-        setOpen(false);
-      });
-  };
-
-  if (!open) {
-    return (
-      <div className="cards__paste" title={strings.new.paste}>
-        <Button icon="content_paste" onClick={() => setOpen(true)} disabled={room <= 0}>
-          {strings.new.paste}
-        </Button>
-      </div>
-    );
-  }
-  return (
-    <form className="cards__paste cards__paste--open" onSubmit={onSubmit}>
-      <label className="editor__label" htmlFor="paste-input">
-        {house ? strings.link.houseLabel : strings.new.pasteLabel}
-      </label>
-      <textarea
-        id="paste-input"
-        className="cards__paste-text"
-        rows={8}
-        value={text}
-        disabled={busy}
-        aria-describedby="paste-hint"
-        onChange={(event) => setText(event.target.value)}
-      />
-      <div id="paste-hint" className="cards__paste-hints">
-        <p className="cards__note">{strings.new.pasteHint}</p>
-        <p className="cards__note">{strings.link.pasteHint}</p>
-        {house && <p className="cards__note">{strings.link.houseHint}</p>}
-      </div>
-      {wanted.length > 0 && (
-        <p className="cards__pills">
-          <span className="cards__pill">
-            {fill(strings.link.fromCatalogue, { n: counts.catalogue })}
-          </span>
-          <span className="cards__pill">{fill(strings.link.fromLinks, { n: counts.links })}</span>
-        </p>
-      )}
-      {house && quota !== null && (
-        <p className="cards__note" role="status">
-          {fill(strings.link.quota, { left: quota.left, limit: quota.limit })}
-        </p>
-      )}
-      {busy && waiting !== null && (
-        <p className="cards__note" role="status">
-          {waitingText(waiting)}
-        </p>
-      )}
-      <div className="cards__paste-actions">
-        <Button onClick={() => setOpen(false)} disabled={busy}>
-          {strings.rank.cancel}
-        </Button>
-        <Button variant="filled" type="submit" disabled={busy || wanted.length === 0}>
-          {busy
-            ? fill(strings.new.pasting, { done: progress.done, total: progress.total })
-            : plural(strings.new.pasteAdd, wanted.length)}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-/**
- * The note a paste leaves in the pool when some of its cards came without a
- * picture: which, and why, and how to give them one.
- */
-function PasteNote({
-  outcome,
-  onSignIn,
-  onClose,
-}: {
-  outcome: PasteOutcome;
-  onSignIn: (() => void) | null;
-  onClose: () => void;
-}) {
-  return (
-    <div className="cards__paste-note" role="status">
-      <p className="cards__paste-note-head">
-        {plural(strings.link.doneAdded, outcome.added)}
-        {outcome.missing.length > 0 && (
-          <> {plural(strings.link.doneMissing, outcome.missing.length)}</>
-        )}
-      </p>
-      {outcome.missing.length > 0 && (
-        <>
-          <ul className="cards__paste-missing">
-            {outcome.missing.map(({ title, reason }, index) => (
-              <li key={`${index}-${title}`}>
-                <span className="cards__paste-missing-name">{title || strings.new.unnamed}</span>
-                <span className="cards__paste-missing-why">{missText(reason)}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="cards__note">{strings.link.doneHint}</p>
-        </>
-      )}
-      {outcome.pageless.length > 0 && (
-        <>
-          <p className="cards__paste-note-head">
-            {plural(strings.link.pageless, outcome.pageless.length)}
-          </p>
-          <ul className="cards__paste-missing">
-            {outcome.pageless.map((title, index) => (
-              <li key={`${index}-${title}`}>{title || strings.new.unnamed}</li>
-            ))}
-          </ul>
-          <p className="cards__note">{strings.link.pagelessHint}</p>
-        </>
-      )}
-      <div className="cards__paste-actions">
-        {onSignIn !== null && <Button onClick={onSignIn}>{strings.nav.signIn}</Button>}
-        <Button variant="filled" onClick={onClose}>
-          {strings.link.ok}
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 const defaultLink: LinkKeep = (ask) => keepLinkedPicture(ask, linkPicture);
 
@@ -821,16 +480,6 @@ export function AddCardBox({
 
   const added = new Set(items.map((item) => item.key));
   const sources = found.status === "ready" ? sourcesOf(found.items) : null;
-  // Pasted names are looked for where the board is about, in the catalogues
-  // alone: a web picture is copied one at a time, by somebody choosing it.
-  // The catalogues that were busy come along: a name may wait for its own.
-  const pasteLookup = (query: string): Promise<LookedUp> =>
-    find({ q: query, scope: own, page: 1, web: false }).then((page) => ({
-      items: page.items.filter((item) => item.source !== "web"),
-      ...(page.busy === undefined ? {} : { busy: page.busy }),
-      ...(page.retryAt === undefined ? {} : { retryAt: page.retryAt }),
-    }));
-
   return (
     <>
       <div className="cards__upload" title={strings.new.upload}>
@@ -1037,7 +686,7 @@ export function AddCardBox({
         room={room}
         category={category}
         dispatch={dispatch}
-        lookup={pasteLookup}
+        find={find}
         link={signedIn ? link : undefined}
         house={house}
         loadQuota={loadQuota}
