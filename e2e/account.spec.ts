@@ -485,9 +485,9 @@ test("uploads a cover from the board settings and keeps the owner's photo after 
   await expect(adjust).toBeVisible();
   await press(adjust.getByRole("button", { name: "Cancel" }), hasTouch);
   await expect(adjust).toBeHidden();
-  const cover = page.locator(".board-settings__cover-frame img").filter({ visible: true });
-  // The cover of one picture is shown cut by its focus: its frame carries the class.
-  const thumb = page.locator(".board-settings__cover-frame img");
+  const cover = page.locator(".cover-preview img").filter({ visible: true });
+  // The cover of one picture is shown in the preview, cut by its focus.
+  const thumb = page.locator(".cover-preview img");
   await expect(thumb.last()).toHaveAttribute("src", /^blob:/);
   const src = await thumb.last().getAttribute("src");
   await expect

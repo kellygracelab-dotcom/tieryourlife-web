@@ -357,7 +357,7 @@ const Tile = memo(function Tile({
             <TileCaption title={card.title} />
           </>
         ) : (
-          <CardName title={card.title} board={board} wide />
+          <CardName title={card.title} board={board} onBoard />
         )}
       </button>
       {about !== null && (

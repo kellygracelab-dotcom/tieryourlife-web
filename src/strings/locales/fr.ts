@@ -1045,6 +1045,7 @@ const fr: Translation = {
     frame: "L’image, avec le point que regarde le cadrage",
     frameHelp:
       "Faites glisser le point ou touchez l’endroit voulu. Zoomez en pinçant, avec la molette ou le curseur. Les flèches le déplacent, + et − zooment.",
+    previewLabel: "Aperçu",
   },
   propose: {
     title: "Proposer une rubrique",

@@ -1122,10 +1122,10 @@ describe("BoardPage: a new board", () => {
     expect(screen.queryByRole("textbox", { name: "Add a card" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(screen.getByRole("textbox", { name: "Add a card" })).toHaveFocus();
-    // The names drawn without pictures are the phone's size, on the board's wider name tile.
+    // The names drawn without pictures are the phone's size, on the board's name tile.
     await userEvent.type(screen.getByRole("textbox", { name: "Add a card" }), "Heat{Enter}");
     const heat = screen.getByText("Heat", { selector: ".tile__name" });
-    expect(heat).toHaveStyle({ fontSize: "13px" });
+    expect(heat).toHaveStyle({ fontSize: "10px" });
     expect(heat.closest(".tile")).toHaveClass("tile--name");
   });
 });
@@ -1145,7 +1145,7 @@ describe("BoardPage: share and publish", () => {
     );
   });
 
-  it("publishes from the Cover window's Publication line and says so, then shares the published address", async () => {
+  it("publishes from the header and says so, then shares the published address; the Cover window has nothing of it", async () => {
     const repository = boardsRepository(memoryStore());
     repository.save({ ...filmBoard(), category: "film_tv" });
     const share = vi.fn<Share>(() => Promise.resolve());
@@ -1154,13 +1154,12 @@ describe("BoardPage: share and publish", () => {
       publish: vi.fn(() => Promise.resolve({ id: "L1" })),
     };
     open(repository, "/b/films", { share, publishing, account: member });
-    let cover = await openCover();
-    expect(
-      cover.getByText("Anyone with the link can rank it. It shows in Community."),
-    ).toBeVisible();
-    // Publication's button opens the Publish window in the Cover window's place.
-    await userEvent.click(cover.getByRole("button", { name: "Publish" }));
-    expect(screen.queryByRole("dialog", { name: "Cover" })).toBeNull();
+    // The Cover window is the cover's alone (artboard 41): publishing has its own window.
+    const cover = await openCover();
+    expect(cover.queryByText("Publication")).toBeNull();
+    expect(cover.queryByRole("button", { name: "Publish" })).toBeNull();
+    await userEvent.click(cover.getByRole("button", { name: "Done" }));
+    await userEvent.click(headerPublish()!);
     await userEvent.click(within(publishWindow()).getByRole("button", { name: "Publish" }));
     await waitFor(() => expect(said()).toHaveTextContent(/^Published/));
     expect(within(said()!).getByRole("button", { name: "View" })).toBeInTheDocument();
@@ -1174,10 +1173,8 @@ describe("BoardPage: share and publish", () => {
     expect(vi.mocked(publishing.publish).mock.calls[0]?.[0]).not.toHaveProperty("anonymous");
     expect(repository.get("films")).toMatchObject({ publishedId: "L1", authorName: "Danylo" });
 
-    // The Publication line says where it is now, and opens the window on it.
-    cover = await openCover();
-    expect(cover.getByText("Published · Film & TV")).toBeVisible();
-    await userEvent.click(cover.getByRole("button", { name: "Open" }));
+    // The header's button opens the window on the list as it is now.
+    await userEvent.click(headerPublish()!);
     const out = within(publishWindow("Films"));
     expect(out.getByRole("link", { name: "See it in Community" })).toHaveAttribute("href", "/l/L1");
     await userEvent.click(out.getByRole("button", { name: "Done" }));

@@ -36,7 +36,7 @@ export function DragGhost({ now, subscribe, items, board }: DragGhostProps) {
       {card.imageUrl !== null ? (
         <FocusedPicture {...sizedFor(card.imageUrl, 64)} focus={card.pictureFocus} />
       ) : (
-        <CardName title={card.title} board={board} wide />
+        <CardName title={card.title} board={board} onBoard />
       )}
     </div>
   );

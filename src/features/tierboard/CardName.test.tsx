@@ -32,10 +32,10 @@ describe("CardName", () => {
     expect(screen.getByText("Heat")).toHaveStyle({ fontSize: "11px", hyphens: "auto" });
   });
 
-  it("fits a name on the board's wider tile as wide", () => {
+  it("fits a name on the board's name tile as the board's", () => {
     const fit = vi.fn<FitName>(() => ({ size: 12, hyphenate: false }));
-    render(<CardName title="Moonlight" board="small" wide fit={fit} />);
-    expect(fit).toHaveBeenCalledWith("Moonlight", "small", "wide");
+    render(<CardName title="Moonlight" board="small" onBoard fit={fit} />);
+    expect(fit).toHaveBeenCalledWith("Moonlight", "small", "board");
     expect(screen.getByText("Moonlight")).toHaveStyle({ fontSize: "12px" });
   });
 });

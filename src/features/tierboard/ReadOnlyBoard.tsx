@@ -53,7 +53,7 @@ function Tile({
         <TileCaption title={item.title} />
       </>
     ) : (
-      <CardName title={item.title} board={board} wide />
+      <CardName title={item.title} board={board} onBoard />
     );
   return (
     <li>

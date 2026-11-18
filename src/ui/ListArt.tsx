@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { CoverFocus } from "../lib/coverFocus";
 import { FocusedPicture } from "./FocusedPicture";
 import { strings } from "../strings";
@@ -37,6 +38,12 @@ export function ListArt({
   title,
   decorative = false,
 }: ListArtProps) {
+  // A picture that fails to load leaves the collage, as a card whose picture
+  // fails shows its name on the board: no blank tile among the others (night W7).
+  const [broken, setBroken] = useState<ReadonlySet<string>>(() => new Set());
+  const drawn = previews.flatMap((url, at) =>
+    broken.has(url) ? [] : [{ url, at, focus: cellFocus?.get(url) ?? previewFocus?.[at] ?? null }],
+  );
   const named = (label: string) =>
     decorative
       ? ({ "aria-hidden": true } as const)
@@ -48,16 +55,17 @@ export function ListArt({
       </div>
     );
   }
-  if (previews.length > 0) {
+  if (drawn.length > 0) {
     return (
-      <div className="art art--mosaic" data-count={Math.min(previews.length, MOSAIC_MAX)}>
-        {previews.slice(0, MOSAIC_MAX).map((url, index) => (
+      <div className="art art--mosaic" data-count={Math.min(drawn.length, MOSAIC_MAX)}>
+        {drawn.slice(0, MOSAIC_MAX).map(({ url, at, focus: cell }) => (
           <FocusedPicture
-            key={`${index}-${url}`}
+            key={`${at}-${url}`}
             className="art__cell"
             src={url}
-            focus={cellFocus?.get(url) ?? previewFocus?.[index] ?? null}
+            focus={cell}
             loading="lazy"
+            onError={() => setBroken((gone) => new Set(gone).add(url))}
           />
         ))}
       </div>

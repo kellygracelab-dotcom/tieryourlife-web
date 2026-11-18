@@ -5,12 +5,11 @@ import { loadAllTopics } from "../../lib/api";
 import { uploadPicture } from "../../lib/pictures";
 import { strings } from "../../strings";
 import { Button } from "../../ui/Button";
-import { Icon } from "../../ui/Icon";
 import { useModal } from "../../ui/useModal";
 import type { Upload } from "../editor/AddCardBox";
 import { sectionName, type Section } from "../sections/model";
 import { CoverPicker } from "./CoverPicker";
-import { isOut, setTopic, type Board } from "./model";
+import { setTopic, type Board } from "./model";
 import {
   SectionChips,
   TopicChips,
@@ -18,7 +17,6 @@ import {
   useSectionTopics,
   type LoadTopics,
 } from "./PublishPickers";
-import { filedUnder } from "./sectionChoices";
 import "./boards.css";
 import "./publishing.css";
 
@@ -37,14 +35,11 @@ interface BoardSettingsProps {
   keep: (board: Board) => void;
   /** The sections as the site holds them, the person's own waiting ones among them. */
   sections: readonly Section[];
-  /** Where the person's own proposals no longer waiting keep their lists, by id. */
-  proposalHomes?: Readonly<Record<string, string>>;
   /**
-   * Publication's button: the page opens the Publish window. Null for a
-   * board that goes out some other way (a house list), whose section and
-   * topic are then chosen here instead.
+   * A board that goes out some other way than the Publish window (a house
+   * list): its section and topic are chosen here instead.
    */
-  onPublication: (() => void) | null;
+  chooseFiling: boolean;
   onCategory: (category: string) => void;
   /** A house board: its cover of one picture takes the editor's own credit here. */
   house?: boolean;
@@ -58,9 +53,9 @@ interface BoardSettingsProps {
  * The board's cover, in a window in the middle (Danylo's canvas,
  * 16.11.2026): what is left of the list settings once the header took the
  * display and the Publish window took the section, the topic and the rest
- * of publishing. Under the cover, one Publication line: where the list
- * stands, and the button that opens the Publish window. A house board,
- * which goes out from the House bar, chooses its section and topic here.
+ * of publishing. Nothing of publishing stays here (artboard 41, 18.11.2026):
+ * the header's Publish opens its own window. A house board, which goes out
+ * from the House bar, chooses its section and topic here.
  * Each change is kept the moment it is made.
  */
 export function BoardSettings({
@@ -68,8 +63,7 @@ export function BoardSettings({
   latest,
   keep,
   sections,
-  proposalHomes = {},
-  onPublication,
+  chooseFiling,
   onCategory,
   house = false,
   upload = uploadPicture,
@@ -85,27 +79,7 @@ export function BoardSettings({
 
   // A house board's section and topic, chosen here as it has no Publish window.
   const category = board.category;
-  const topics = useSectionTopics(category, load, onPublication === null && category !== null);
-  const where = category === null ? null : filedUnder(category, sections, uid, proposalHomes);
-
-  // Where the list stands, in one line: out or not, and under what.
-  const ranks =
-    board.rankingOf !== null || (board.takenFrom !== null && board.publishedId === null);
-  const out = isOut(board);
-  const held = out && board.heldForReview === true;
-  const standing = out
-    ? [
-        held
-          ? strings.boards.heldBody
-          : ranks
-            ? strings.boards.inRankingsStatus
-            : strings.boards.publishedStatus,
-        ...(ranks || where === null ? [] : [where]),
-        ...(ranks || board.topic === null ? [] : [board.topic.name]),
-      ].join(" · ")
-    : ranks
-      ? strings.rankings.previewRanking
-      : strings.boards.publicBody;
+  const topics = useSectionTopics(category, load, chooseFiling && category !== null);
 
   return createPortal(
     <div className="scrim" onClick={onDone}>
@@ -133,33 +107,7 @@ export function BoardSettings({
           now={now}
         />
 
-        {onPublication !== null ? (
-          <div className="board-settings__publication">
-            <Icon
-              name={ranks ? "leaderboard" : "public"}
-              className="board-settings__publication-icon"
-            />
-            <span className="board-settings__publication-text">
-              <span className="board-settings__publication-title">
-                {strings.boards.publication}
-              </span>
-              <span className="board-settings__publication-sub">{standing}</span>
-            </span>
-            {out ? (
-              <Button variant="outlined" onClick={onPublication}>
-                {strings.publishWindow.open}
-              </Button>
-            ) : (
-              <Button
-                variant="tonal"
-                icon={ranks ? "leaderboard" : "publish"}
-                onClick={onPublication}
-              >
-                {ranks ? strings.rankings.progressShare : strings.new.publish}
-              </Button>
-            )}
-          </div>
-        ) : (
+        {chooseFiling && (
           <div className="board-settings__filing">
             <section aria-labelledby={`${id}-section`}>
               <h3 id={`${id}-section`} className="publish-window__label">
