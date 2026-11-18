@@ -579,6 +579,12 @@ export const en = {
       "The author changed this list while you were ranking it. Load it again to rank it as it is now.",
     loadAgain: "Load it again",
   },
+  /** The picture a list is shared as (artboard 40): the counts under the name, the footer's pill. */
+  shareCard: {
+    placed: { one: "{n} placed", other: "{n} placed" },
+    notPlaced: { one: "{n} more card not placed yet", other: "{n} more cards not placed yet" },
+    rankIt: "Rank it yourself",
+  },
   keep: {
     google: "Continue with Google",
     busy: "Signing in…",

@@ -576,6 +576,14 @@ const tr: Translation = {
       "Siz sıralarken yazar bu listeyi değiştirdi. Şimdiki hâliyle sıralamak için yeniden yükleyin.",
     loadAgain: "Yeniden yükle",
   },
+  shareCard: {
+    placed: { one: "{n} sıralandı", other: "{n} sıralandı" },
+    notPlaced: {
+      one: "{n} kart daha henüz sıralanmadı",
+      other: "{n} kart daha henüz sıralanmadı",
+    },
+    rankIt: "Kendiniz sıralayın",
+  },
   keep: {
     google: "Google ile devam et",
     busy: "Oturum açılıyor…",

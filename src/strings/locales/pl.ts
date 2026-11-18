@@ -609,6 +609,21 @@ const pl: Translation = {
       "Autor zmienił tę listę w trakcie układania rankingu. Wczytaj ją ponownie, aby ułożyć ją w obecnej wersji.",
     loadAgain: "Wczytaj ponownie",
   },
+  shareCard: {
+    placed: {
+      one: "{n} ułożona",
+      few: "{n} ułożone",
+      many: "{n} ułożonych",
+      other: "{n} ułożonej",
+    },
+    notPlaced: {
+      one: "Jeszcze {n} karta czeka na miejsce",
+      few: "Jeszcze {n} karty czekają na miejsce",
+      many: "Jeszcze {n} kart czeka na miejsce",
+      other: "Jeszcze {n} karty czeka na miejsce",
+    },
+    rankIt: "Oceń po swojemu",
+  },
   keep: {
     google: "Kontynuuj przez Google",
     busy: "Logowanie…",

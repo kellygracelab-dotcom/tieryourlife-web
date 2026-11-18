@@ -592,6 +592,14 @@ const de: Translation = {
       "Der Autor hat diese Liste geändert, während du sie eingestuft hast. Lade sie neu, um sie so einzustufen, wie sie jetzt ist.",
     loadAgain: "Neu laden",
   },
+  shareCard: {
+    placed: { one: "{n} eingeordnet", other: "{n} eingeordnet" },
+    notPlaced: {
+      one: "{n} weitere Karte noch nicht eingeordnet",
+      other: "{n} weitere Karten noch nicht eingeordnet",
+    },
+    rankIt: "Ordne sie selbst ein",
+  },
   keep: {
     google: "Weiter mit Google",
     busy: "Anmeldung läuft…",

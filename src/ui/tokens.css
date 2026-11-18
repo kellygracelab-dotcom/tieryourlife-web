@@ -188,8 +188,9 @@
  * (artboard 17, as the app and the tier editor's Dark preview have it): the
  * light one with a white letter, the dark one with a near-black letter. The
  * row's tint starts from the same colour, mixed into the paper in oklab, so
- * dark rows do not turn to mud. A list's pictures (Share as image, a cover's
- * tier strips) are the same for everybody and keep the light colours.
+ * dark rows do not turn to mud. A cover's tier strips are the same for
+ * everybody and keep the light colours; Share as image draws in the scheme
+ * the person sees (artboard 40, shareImage.ts keeps its own copy of these).
  */
 .band {
   --band: var(--band-light);
