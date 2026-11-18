@@ -1536,6 +1536,7 @@ const ru: Translation = {
     continue: "Продолжить",
     continueOf: "Продолжить «{title}»",
     resume: "Продолжить игру",
+    discard: "Сбросить",
   },
   publishWindow: {
     title: "Опубликовать «{title}»",

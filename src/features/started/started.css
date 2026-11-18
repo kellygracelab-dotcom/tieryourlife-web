@@ -27,13 +27,74 @@
   list-style: none;
 }
 
+/*
+ * A begun list swipes aside on a touch screen (artboard 45): its face follows
+ * the finger over a red bin at the edge it left; up and down stay the page's.
+ */
 .started__card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  touch-action: pan-y;
+}
+
+.started__face {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  height: 100%;
+  box-sizing: border-box;
   padding: 14px;
-  border-radius: 16px;
+  border-radius: inherit;
   background: var(--surface-container);
+}
+
+.started__card--back .started__face,
+.started__card--away .started__face {
+  transition: transform 200ms ease-out;
+}
+
+.started__card--drag,
+.started__card--away {
+  user-select: none;
+}
+
+.started__under {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-inline: 22px;
+  border-radius: inherit;
+  background: var(--error-container);
+  color: var(--on-error-container);
+  font: 500 14px/20px var(--font);
+}
+
+/* The bin at the edge the row left, whichever way the page reads. */
+.started__under--left {
+  justify-content: flex-start;
+}
+
+.started__under--right {
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .started__under--left {
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .started__under--right {
+  justify-content: flex-start;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .started__card--back .started__face,
+  .started__card--away .started__face {
+    transition: none;
+  }
 }
 
 .started__top {

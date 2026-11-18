@@ -1533,6 +1533,7 @@ const pl: Translation = {
     continue: "Kontynuuj",
     continueOf: "Kontynuuj „{title}”",
     resume: "Wznów grę",
+    discard: "Odrzuć",
   },
   publishWindow: {
     title: "Opublikuj „{title}”",

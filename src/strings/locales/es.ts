@@ -1451,6 +1451,7 @@ const es: Translation = {
     continue: "Continuar",
     continueOf: "Continuar «{title}»",
     resume: "Reanudar partida",
+    discard: "Descartar",
   },
   publishWindow: {
     title: "Publicar «{title}»",

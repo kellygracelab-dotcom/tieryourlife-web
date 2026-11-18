@@ -1307,6 +1307,8 @@ export const en = {
     continue: "Continue",
     continueOf: "Continue “{title}”",
     resume: "Resume game",
+    // Under a begun list swiped aside on a touch screen, by the bin (artboard 45).
+    discard: "Discard",
   },
   publishWindow: {
     title: "Publish “{title}”",

@@ -1703,6 +1703,7 @@ const ar: Translation = {
     continue: "متابعة",
     continueOf: "متابعة «{title}»",
     resume: "استئناف اللعبة",
+    discard: "تجاهل",
   },
   publishWindow: {
     title: "نشر «{title}»",
