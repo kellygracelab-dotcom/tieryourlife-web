@@ -211,8 +211,8 @@ p {
  * A finger's target is at least 48 square, 8 apart (audit E1; the project's
  * own bar, WCAG 2.5.5): a control drawn smaller keeps its look, and an
  * unseen box around it takes the touch. Bigger controls are left as they are.
- * A tier's pencil is not widened: its whole band, 48 and more, opens the tier
- * at a tap, and a box over the band's middle would take its long press.
+ * A tier's band needs no box: the whole of it, 48 and more, opens the tier
+ * at a tap, and lifts it at a long press.
  */
 @media (pointer: coarse) {
   :where(

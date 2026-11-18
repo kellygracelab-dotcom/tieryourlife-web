@@ -1604,7 +1604,7 @@ const TierRow = memo(function TierRow({
           held === undefined
             ? undefined
             : (event) => {
-                // Alt and an arrow on the band, its pencil focused: the tier one place up or down.
+                // Alt and an arrow on the band, its button focused: the tier one place up or down.
                 if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
                 event.preventDefault();
                 held.step(event.key === "ArrowUp" ? -1 : 1);
@@ -1627,15 +1627,15 @@ const TierRow = memo(function TierRow({
           />
         )}
         {held !== undefined && (
+          // No pencil (Danylo, 18.11.2026): the band opens its tier at a press,
+          // and this unseen button over it is the keyboard's way, ringing the band when focused.
           <button
             type="button"
             className="tier__edit"
             aria-label={fill(strings.boards.editTierOf, { name: meta.label })}
             aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
             onClick={held.open}
-          >
-            <Icon name="edit" />
-          </button>
+          />
         )}
       </div>
       <ul className="tier__items" aria-label={meta.label}>

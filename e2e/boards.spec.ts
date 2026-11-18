@@ -485,3 +485,31 @@ test("a laptop's column shows the catalogue's answers under the field in place o
   await add.press("Enter");
   await expect(page.getByRole("button", { name: "dune", exact: true })).toBeVisible();
 });
+
+test("a tier's band has no pencil: the band opens the tier at a press, and the keyboard finds it by Tab and Enter", async ({
+  page,
+  hasTouch,
+}) => {
+  await mockBackend(page);
+  await page.goto("/b/new");
+  const title = page.getByRole("textbox", { name: "Title" });
+  await title.fill("Cheeses");
+  await title.press("Enter");
+  const band = page.locator(".board > .tier").first().locator(".tier__band");
+  const edit = page.getByRole("button", { name: "Edit tier S" });
+  // Nothing drawn on the band but its letter (Danylo, 18.11.2026), and a hand over it.
+  await expect(edit).toBeAttached();
+  await expect(edit.locator(".ms")).toHaveCount(0);
+  expect(await band.evaluate((node) => getComputedStyle(node).cursor)).toBe("pointer");
+  // A press on the band opens the tier.
+  if (hasTouch) await band.tap();
+  else await band.click();
+  const dialog = page.getByRole("dialog", { name: "Edit tier" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toBeHidden();
+  // The keyboard: the band's own button, ringed when focused, opens it with Enter.
+  await edit.focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeVisible();
+});
