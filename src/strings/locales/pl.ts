@@ -690,6 +690,18 @@ const pl: Translation = {
     noArt: "Bez obrazu",
     yours: "Twoja lista",
     yoursAnonymous: "Twoja lista, opublikowana anonimowo",
+    rename: "Zmień nazwę",
+    renameTitle: "Zmień nazwę karty",
+    nameLabel: "Nazwa karty",
+    renameSave: "Zapisz",
+    nameUploads: {
+      one: "Nazwij przesłany obraz",
+      few: "Nazwij {n} przesłane obrazy",
+      many: "Nazwij {n} przesłanych obrazów",
+      other: "Nazwij {n} przesłanego obrazu",
+    },
+    nameHint: "Gdy pole zostanie puste, karta nazywa się „{untitled}”.",
+    nameDone: "Gotowe",
   },
   android: {
     title: "TierYourLife na Androida",
@@ -986,7 +998,7 @@ const pl: Translation = {
     notThisTopicSent: "Zapisane. Moderator przeniesie listę, jeśli należy gdzie indziej.",
     backToSection: "Wróć do działu {section}",
     suggestTopic: "Zaproponuj temat",
-    tierLists: "Tier listy",
+    tierLists: "Listy",
     showAllTopics: {
       one: "Pokaż {n} temat",
       few: "Pokaż wszystkie {n} tematy",
@@ -995,7 +1007,7 @@ const pl: Translation = {
     },
     showFewer: "Pokaż mniej",
     suggestTopicBody:
-      "Tematy nazywa się lub wybiera w polu „Temat” w Ustawieniach listy. Nowy wychodzi razem z listą przy publikacji i czeka na moderatora.",
+      "Tematy nazywa się lub wybiera w polu „Temat” w oknie publikacji listy, które otwiera „Opublikuj” u góry listy. Nowy wychodzi razem z listą i czeka na moderatora.",
     suggestTopicMake: "Utwórz listę w: {section}",
     sortPopular: "Popularne",
     sortNewest: "Najnowsze",
@@ -1510,6 +1522,8 @@ const pl: Translation = {
     },
     discard: "Odrzuć mój układ",
     discarded: "Układ odrzucony",
+    savedLabel: "Zapisana",
+    publicLabel: "Publiczna",
   },
   started: {
     title: "Kontynuuj",

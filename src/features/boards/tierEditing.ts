@@ -43,6 +43,15 @@ export function newTierOf(board: Board): EditorTier {
   };
 }
 
+/**
+ * The ranked tiers by uid, in their order: a board on screen is drawn afresh
+ * when they change, and a removed tier's Undo holds only while they stand.
+ */
+export const tiersKeyOf = (board: Board): string =>
+  rankedTiers(board)
+    .map((tier) => tier.uid)
+    .join(",");
+
 /** What a removed tier leaves behind, so Undo can put it back with its cards. */
 export interface RemovedTier {
   tier: BoardTier;

@@ -7,8 +7,9 @@ import type { Section } from "./model";
 
 /**
  * What "Suggest a topic" means: a topic is named or chosen in a list's
- * settings when it is published, so the way to one is a list in this
- * section. Nothing is made until the person asks for the list.
+ * Publish window when it is published (night pass W16: the site has no List
+ * settings for it), so the way to one is a list in this section. Nothing is
+ * made until the person asks for the list.
  */
 export function SuggestTopicDialog({
   section,

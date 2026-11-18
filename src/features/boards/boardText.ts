@@ -1,5 +1,5 @@
 import { fill, plural, strings } from "../../strings";
-import { poolCount, rankedCount, type Board } from "./model";
+import { isOut, isSavedCopy, poolCount, rankedCount, type Board } from "./model";
 
 /** The board's name, or what an unnamed one is called. */
 export const titleOf = (board: Board): string =>
@@ -25,6 +25,15 @@ export const fromOf = (board: Board): string | null =>
 export function spokenTitleOf(board: Board): string {
   const from = fromOf(board);
   return from === null ? titleOf(board) : `${titleOf(board)}, ${from}`;
+}
+
+/**
+ * The label before a list's count in Your lists (artboard 42): Public for one
+ * out in Community, Saved for a copy of somebody else's, none for one's own.
+ */
+export function labelOf(board: Board): string | null {
+  if (isOut(board)) return strings.listMenu.publicLabel;
+  return isSavedCopy(board) ? strings.listMenu.savedLabel : null;
 }
 
 /**

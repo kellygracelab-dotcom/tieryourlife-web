@@ -11,6 +11,8 @@ import type { PictureAttribution } from "./pictureAttribution";
 /** Limits shared with the board sync service. */
 export const MAX_BOARD_ITEMS = 2000;
 export const MAX_PLAY_ANSWERS = 14_000;
+/** A list's name and each card's, as the service cleans them. */
+export const MAX_TITLE_LENGTH = 80;
 
 export interface KeptTier {
   uid: string;

@@ -1148,6 +1148,53 @@
   padding: 0;
 }
 
+/* Pictures just uploaded without a name, each beside a field for one (night pass W22). */
+.cards__names {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.cards__names-head {
+  margin: 0;
+  font: var(--text-label);
+}
+
+.cards__names-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: stretch;
+  max-height: 240px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.cards__name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cards__name-picture {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.cards__names .cards__note {
+  padding: 0;
+}
+
 .cards__paste-note-head {
   margin: 0;
   font: var(--text-label);

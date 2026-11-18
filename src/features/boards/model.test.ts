@@ -8,6 +8,7 @@ import {
   coverFocusOf,
   editTier,
   isNarrowed,
+  isSavedCopy,
   itemsIn,
   liveItems,
   markedTitle,
@@ -23,6 +24,7 @@ import {
   rankedTiers,
   removeTier,
   rename,
+  renameItem,
   reorderTiers,
   restoreBoard,
   restoreItem,
@@ -46,6 +48,7 @@ import {
   withoutTrash,
   type Board,
 } from "./model";
+import { fingerprintText } from "./fingerprint";
 import { parseBoard } from "./repository";
 import { setStrings } from "../../strings";
 
@@ -634,6 +637,10 @@ describe("the list of boards", () => {
     expect(ids({ show: "public" })).toEqual(["films"]);
     // A list one published carries one's own name: it is not somebody else's.
     expect(ids({ show: "saved" })).toEqual(["saved"]);
+    // A copy taken from a published list is saved too, even before its author's name comes.
+    expect(isSavedCopy(at("copy", 6, { takenFrom: "L9" }))).toBe(true);
+    expect(isSavedCopy(boards[0]!)).toBe(false);
+    expect(isSavedCopy(boards[2]!)).toBe(false);
     expect(ids({ query: "PIZ" })).toEqual(["Pizza in Lisbon"]);
     expect(ids({ query: "  " })).toHaveLength(5);
     expect(isNarrowed({ show: "all", query: " " })).toBe(false);
@@ -903,5 +910,31 @@ describe("a card's focus", () => {
       items: [placed.items[0]!, { ...words!, pictureFocus: { x: 0.2, y: 0.2, zoom: 1 } }],
     };
     expect(parseBoard(odd)?.items[1]).not.toHaveProperty("pictureFocus");
+  });
+
+  it("renames a card within the title's limit, touches the board and changes what syncs (W22)", () => {
+    const { board: b, next } = board();
+    const pooled = addToPool(
+      b,
+      [{ title: "Untitled card", imageUrl: "https://x/up.jpg" }],
+      2,
+      next,
+    );
+    const [card] = liveItems(pooled);
+    const named = renameItem(pooled, card!.uid, "  Grandma's   garden ", 7);
+    expect(named.items.find((item) => item.uid === card!.uid)?.title).toBe("Grandma's garden");
+    expect(named.editedAt).toBe(7);
+    expect(fingerprintText(named)).not.toBe(fingerprintText(pooled));
+    // Cut at the limit, as a title typed anywhere else.
+    const long = renameItem(pooled, card!.uid, "x".repeat(BOARD_LIMITS.title + 20), 8);
+    expect(long.items.find((item) => item.uid === card!.uid)?.title).toHaveLength(
+      BOARD_LIMITS.title,
+    );
+    // An empty name, the same name, a card thrown away or none at all leave the board as it is.
+    expect(renameItem(named, card!.uid, "   ", 9)).toBe(named);
+    expect(renameItem(named, card!.uid, "Grandma's garden", 9)).toBe(named);
+    expect(renameItem(named, "nobody", "New", 9)).toBe(named);
+    const gone = removeItem(named, card!.uid, 9);
+    expect(renameItem(gone, card!.uid, "New", 10)).toBe(gone);
   });
 });

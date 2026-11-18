@@ -437,7 +437,9 @@ test("restores favourites without labelling an account's boards as device-only",
   await signIn(page);
   await newBoard(page, hasTouch, "Weekend films");
   await page.goto("/b");
-  await page.getByRole("button", { name: /Add Weekend films to favourites/ }).click();
+  // The star is shown only on favourites (artboard 42): a list becomes one from its menu.
+  await press(page.getByRole("button", { name: "More for Weekend films" }), hasTouch);
+  await press(page.getByRole("menuitem", { name: "Add to favourites" }), hasTouch);
   const favourite = page.getByRole("button", { name: /Remove Weekend films from favourites/ });
   await expect(favourite).toHaveAttribute("aria-pressed", "true");
   const auth = gate();

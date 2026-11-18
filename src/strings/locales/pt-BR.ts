@@ -664,6 +664,17 @@ const ptBR: Translation = {
     noArt: "Sem imagem",
     yours: "Sua lista",
     yoursAnonymous: "Sua lista, publicada anonimamente",
+    rename: "Renomear",
+    renameTitle: "Renomear cartão",
+    nameLabel: "Nome do cartão",
+    renameSave: "Salvar",
+    nameUploads: {
+      one: "Dê um nome à imagem que você enviou",
+      many: "Dê nomes às {n} imagens que você enviou",
+      other: "Dê nomes às {n} imagens que você enviou",
+    },
+    nameHint: "Se ficar vazio, o cartão se chama “{untitled}”.",
+    nameDone: "Concluído",
   },
   android: {
     title: "TierYourLife para Android",
@@ -944,7 +955,7 @@ const ptBR: Translation = {
     notThisTopicSent: "Anotado. Um moderador vai movê-la se for de outro lugar.",
     backToSection: "Voltar para {section}",
     suggestTopic: "Sugerir um tema",
-    tierLists: "Tier lists",
+    tierLists: "Listas",
     showAllTopics: {
       one: "Ver todos os {n} temas",
       many: "Ver todos os {n} temas",
@@ -952,7 +963,7 @@ const ptBR: Translation = {
     },
     showFewer: "Ver menos",
     suggestTopicBody:
-      "Os temas são nomeados ou escolhidos em “Tema” nas Configurações da lista. Um novo sai com a lista quando ela é publicada e aguarda um moderador.",
+      "Os temas são nomeados ou escolhidos em “Tema” na janela Publicar da lista, aberta por “Publicar” no topo da lista. Um novo sai com a lista e aguarda um moderador.",
     suggestTopicMake: "Criar uma lista em {section}",
     sortPopular: "Populares",
     sortNewest: "Recentes",
@@ -1419,6 +1430,8 @@ const ptBR: Translation = {
     deleteMany: { one: "Excluir {n} lista", other: "Excluir {n} listas" },
     discard: "Descartar minha organização",
     discarded: "Organização descartada",
+    savedLabel: "Salva",
+    publicLabel: "Pública",
   },
   started: {
     title: "Continuar",

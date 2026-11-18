@@ -1,5 +1,6 @@
 import {
   MAX_BOARD_ITEMS,
+  MAX_TITLE_LENGTH,
   type SyncedPlay,
   type BoardOrigin,
   type RankingChoice,
@@ -216,7 +217,7 @@ export interface TierDraft {
 
 /** The backend's ceilings, the same as for a published list. */
 export const BOARD_LIMITS = {
-  title: 80,
+  title: MAX_TITLE_LENGTH,
   caption: 60,
   tiers: 20,
   items: MAX_BOARD_ITEMS,
@@ -578,6 +579,14 @@ export const setRanking = (board: Board, listId: string | null, now: number): Bo
 export const isOut = (board: Board): boolean =>
   board.publishedId !== null || board.rankingOf !== null;
 
+/**
+ * Somebody else's list saved here: taken from their list, or still carrying
+ * their name, and not made one's own by publishing it. Out as one's ranking of
+ * it, it is still theirs: Your lists says Public on it, and its filter keeps it.
+ */
+export const isSavedCopy = (board: Board): boolean =>
+  board.publishedId === null && (board.takenFrom !== null || board.authorName !== null);
+
 /** Whether the board moved on since its published copy was sent. */
 export const isBehind = (board: Board): boolean =>
   isOut(board) && board.publishedEditedAt !== null && board.editedAt > board.publishedEditedAt;
@@ -716,6 +725,23 @@ export function setPictureFocus(
   const changed: BoardItem = next === null ? rest : { ...rest, pictureFocus: next };
   return touched(
     { ...board, items: board.items.map((item) => (item === card ? changed : item)) },
+    now,
+  );
+}
+
+/**
+ * Another name on a card, within the length a card is made with: its picture
+ * and its place stay. A name emptied keeps the old one, as a list's does.
+ */
+export function renameItem(board: Board, itemUid: string, title: string, now: number): Board {
+  const card = board.items.find((item) => item.uid === itemUid && item.deletedAt === null);
+  const next = clip(title, BOARD_LIMITS.title);
+  if (card === undefined || next === "" || next === card.title) return board;
+  return touched(
+    {
+      ...board,
+      items: board.items.map((item) => (item === card ? { ...item, title: next } : item)),
+    },
     now,
   );
 }
@@ -1097,8 +1123,7 @@ export interface BoardArrangement {
 
 /**
  * In progress: something waits in the pool, or nothing is ranked yet. Saved
- * from others: a copy that still carries somebody's name, which publishing
- * makes one's own.
+ * from others: a copy of somebody's list, which publishing makes one's own.
  */
 const shows = (board: Board, show: BoardShow): boolean => {
   switch (show) {
@@ -1107,7 +1132,7 @@ const shows = (board: Board, show: BoardShow): boolean => {
     case "public":
       return isOut(board);
     case "saved":
-      return board.authorName !== null && board.publishedId === null;
+      return isSavedCopy(board);
     default:
       return true;
   }

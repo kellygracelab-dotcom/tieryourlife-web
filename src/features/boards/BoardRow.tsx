@@ -3,13 +3,12 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
-import { MoreButton } from "./BoardTile";
-import { fromOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
+import { ListLabel, MoreButton } from "./BoardTile";
+import { fromOf, labelOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
 import { RenameField } from "./RenameField";
 import {
   cardFocusByPicture,
   coverFocusOf,
-  isOut,
   poolCount,
   previewsOf,
   rankedCount,
@@ -57,8 +56,9 @@ function TierRibbon({ board }: { board: Board }) {
 }
 
 /**
- * One board to a row, as the phone lists them: its picture, its name, how far
- * along it is and the ribbon of its tiers, the star and the way in at the end.
+ * One board to a row, as the phone lists them: its picture, its name, Public
+ * or Saved before how far along it is, and the ribbon of its tiers; the star
+ * (a favourite's, or where pointed at, as on a tile) and the way in at the end.
  * Picking boards to delete puts a box where the star was. Drawn again only
  * when its own board or choice changes, as a tile is.
  */
@@ -76,9 +76,10 @@ export const BoardRow = memo(function BoardRow({
   const spoken = spokenTitleOf(board);
   const ranked = rankedCount(board);
   const starred = board.favouritedAt !== null;
-  // As on a tile: how far along it is and that it is public are read after the name.
+  // As on a tile: whose it is and how far along it is are read after the name.
   const id = useId();
-  const facts = !isOut(board) ? `${id}-meta` : `${id}-meta ${id}-public`;
+  const label = labelOf(board);
+  const facts = label === null ? `${id}-meta` : `${id}-label ${id}-meta`;
   const words = (
     <>
       <span className="board-card__thumb">
@@ -104,13 +105,10 @@ export const BoardRow = memo(function BoardRow({
           {from !== null && <span className="board-card__from">{from}</span>}
         </span>
         <span className="board-card__meta">
-          <span id={`${id}-meta`}>{metaOf(board)}</span>
-          {isOut(board) && (
-            <span className="board-card__public" id={`${id}-public`}>
-              <Icon name="public" />
-              {strings.boards.filterPublic}
-            </span>
+          {label !== null && (
+            <ListLabel text={label} id={`${id}-label`} className="board-card__label" />
           )}
+          <span id={`${id}-meta`}>{metaOf(board)}</span>
         </span>
         {ranked > 0 ? (
           <TierRibbon board={board} />

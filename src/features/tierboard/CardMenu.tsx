@@ -39,6 +39,8 @@ interface CardMenuProps {
   opener: RefObject<HTMLElement | null>;
   onPlace: (tier: number) => void;
   onUnplace: () => void;
+  /** Rename: the owner's, on any card of their own list (night pass W22). */
+  onRename?: (() => void) | undefined;
   onRemove?: () => void;
   onClose: () => void;
 }
@@ -76,8 +78,9 @@ function focusFirstTier(box: HTMLElement) {
 
 /**
  * A card's menu on a computer, where the pointer is: Move to a tier with the
- * tiers in a menu of their own, Back to the pool, the picture's three, and
- * last, under a line, Remove from list (the order of artboards 11 and 37). The phone's
+ * tiers in a menu of their own, Back to the pool, Rename on one's own list,
+ * the picture's three, and last, under a line, Remove from list (the order
+ * of artboards 11 and 37). The phone's
  * sheet has the same three (MoveSheet); this is its desktop form, as a right
  * click opens in any app. The keyboard has the menu's own keys: the arrows go
  * up and down and in and out of the tiers, Home and End to either end, Enter
@@ -95,6 +98,7 @@ export function CardMenu({
   opener,
   onPlace,
   onUnplace,
+  onRename,
   onRemove,
   onClose,
 }: CardMenuProps) {
@@ -297,6 +301,18 @@ export function CardMenu({
             onPointerEnter={onOther}
           >
             <span className="card-menu__text">{strings.boards.backToPool}</span>
+          </button>
+        )}
+        {onRename && (
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className="card-menu__item"
+            onPointerEnter={onOther}
+            onClick={onRename}
+          >
+            <span className="card-menu__text">{strings.card.rename}</span>
           </button>
         )}
         {onAdjust && (

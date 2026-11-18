@@ -34,6 +34,7 @@ import { isCovered } from "../../ui/covered";
 import { Icon } from "../../ui/Icon";
 import { CardMenu, type ScreenPoint } from "./CardMenu";
 import { MoveSheet } from "./MoveSheet";
+import { RenameCard } from "./RenameCard";
 import { DragGhost } from "./DragGhost";
 import { AboutPicture, hasAbout, openPage, pageOf, type Anchor } from "./AboutPicture";
 import { CardCredit, CardFocusing } from "./cardCredit";
@@ -85,6 +86,8 @@ export interface EditMode {
     /** Every move: the rows, and the pool's cards in their order. */
     onChange: (rows: readonly (readonly number[])[], pool: readonly number[]) => void;
     remove: (item: number) => void;
+    /** Rename in a card's menu (night pass W22): the card by its number, and its new name. */
+    rename?: (item: number, title: string) => void;
     /** The owner's way of bringing cards in; it lives with the pool, wherever the pool is. */
     tools?: ReactNode;
     /** What the owner has to know about the changes; it stands in the header when the bar does. */
@@ -159,6 +162,12 @@ interface RankingBoardProps {
    * Undo turns over, before the game and after it, as often as it is pressed.
    */
   undoToggles?: boolean;
+  /**
+   * A step the page made before this board was drawn, which the board's own
+   * history does not hold: a tier taken away (night pass W15). Once the
+   * board's own moves are undone, the bar's Undo and Ctrl+Z take it back.
+   */
+  undoPast?: (() => void) | null;
 }
 
 type SaveState = { status: "idle" } | { status: "saving" } | { status: "failed"; error: ApiError };
@@ -202,6 +211,8 @@ interface TileProps {
   current: number | null;
   /** The owner may take a card off the list, from its menu. */
   onRemove?: (item: number) => void;
+  /** And give it another name, from its menu. */
+  onRename?: (item: number, title: string) => void;
   /** The card's menu opened: the board counts it, for its hint. */
   onMenu: () => void;
 }
@@ -240,9 +251,12 @@ const Tile = memo(function Tile({
   dragNow,
   current,
   onRemove,
+  onRename,
   onMenu,
 }: TileProps) {
   const [moving, setMoving] = useState<CardMenuAt | null>(null);
+  // Rename, open over the board from the card's menu.
+  const [renaming, setRenaming] = useState(false);
   // About the picture, open beside the card or the point it was asked from.
   const [about, setAbout] = useState<Anchor | null>(null);
   const showCredits = about !== null;
@@ -293,6 +307,7 @@ const Tile = memo(function Tile({
     setMoving(null);
     then();
   };
+  const rename = onRename === undefined ? undefined : close(() => setRenaming(true));
   return (
     <li>
       <button
@@ -391,6 +406,7 @@ const Tile = memo(function Tile({
           current={current}
           onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
           onUnplace={close(() => dispatch({ type: "unplace", item }))}
+          onRename={rename}
           onRemove={onRemove === undefined ? undefined : close(() => onRemove(item))}
           onClose={closeMove}
         />
@@ -407,8 +423,19 @@ const Tile = memo(function Tile({
           opener={opener}
           onPlace={(tier) => close(() => dispatch({ type: "place", item, tier }))()}
           onUnplace={close(() => dispatch({ type: "unplace", item }))}
+          onRename={rename}
           onRemove={onRemove === undefined ? undefined : close(() => onRemove(item))}
           onClose={closeMove}
+        />
+      )}
+      {renaming && onRename !== undefined && (
+        <RenameCard
+          name={card.title}
+          onRename={(title) => onRename(item, title)}
+          onClose={() => {
+            setRenaming(false);
+            opener.current?.focus({ preventScroll: true });
+          }}
         />
       )}
       {adjusting && focusing !== null && card.imageUrl !== null && (
@@ -540,6 +567,7 @@ export function RankingBoard({
   onRows,
   undoTo = null,
   undoToggles = false,
+  undoPast = null,
 }: RankingBoardProps) {
   const seeded = seed !== undefined;
   const [state, dispatchBoard] = useBoard(
@@ -581,6 +609,29 @@ export function RankingBoard({
   });
   const removeCard = useCallback((item: number) => removeNow.current?.(item), []);
   const onRemove = edit?.owner?.remove === undefined ? undefined : removeCard;
+  // And for Rename, the same way.
+  const renameNow = useRef(edit?.owner?.rename);
+  useEffect(() => {
+    renameNow.current = edit?.owner?.rename;
+  });
+  const renameCard = useCallback(
+    (item: number, title: string) => renameNow.current?.(item, title),
+    [],
+  );
+  const onRename = edit?.owner?.rename === undefined ? undefined : renameCard;
+  // Undo goes through the board's own moves first, then the page's step from before them.
+  const undoPastNow = useRef(undoPast);
+  useEffect(() => {
+    undoPastNow.current = undoPast;
+  });
+  const undo = useCallback(
+    (own: boolean) => {
+      const past = undoPastNow.current;
+      if (!own && past !== null) past();
+      else dispatch({ type: "undo" });
+    },
+    [dispatch],
+  );
   // The same for a house editor's credit, handed to the tiles that open About the picture.
   const creditNow = useRef(edit?.owner?.credit);
   useEffect(() => {
@@ -901,7 +952,7 @@ export function RankingBoard({
       const z = event.key.toLowerCase() === "z" || event.code === "KeyZ";
       if ((event.ctrlKey || event.metaKey) && z) {
         event.preventDefault();
-        return dispatch({ type: "undo" });
+        return undo(canUndo(state));
       }
       // Alt+1 or Ctrl+1 belongs to the browser or the system, not to the board.
       if (event.altKey || event.ctrlKey || event.metaKey) return;
@@ -965,6 +1016,7 @@ export function RankingBoard({
     return () => window.removeEventListener("keydown", onKey);
   }, [
     dispatch,
+    undo,
     list.tiers.length,
     placeSelected,
     locked,
@@ -1003,6 +1055,7 @@ export function RankingBoard({
           onMenu={onMenu}
           current={null}
           onRemove={onRemove}
+          onRename={onRename}
         />
       )),
     [
@@ -1021,6 +1074,7 @@ export function RankingBoard({
       dragNow,
       onMenu,
       onRemove,
+      onRename,
     ],
   );
   const keyboardTiers = Math.min(list.tiers.length, 9);
@@ -1105,8 +1159,8 @@ export function RankingBoard({
       <div className="ranking__actions">
         <Button
           icon="undo"
-          onClick={() => dispatch({ type: "undo" })}
-          disabled={locked || !canUndo(state)}
+          onClick={() => undo(canUndo(state))}
+          disabled={locked || (!canUndo(state) && undoPast === null)}
         >
           {strings.rank.undo}
         </Button>
@@ -1182,6 +1236,7 @@ export function RankingBoard({
               dragNow={drag.current}
               onMenu={onMenu}
               onRemove={onRemove}
+              onRename={onRename}
               band={
                 tierEditing === undefined || locked
                   ? undefined
@@ -1525,6 +1580,8 @@ interface TierRowProps {
   onMenu: () => void;
   /** The owner's: a card off the list, from the card's menu. */
   onRemove?: (item: number) => void;
+  /** The owner's: another name for a card, from its menu. */
+  onRename?: (item: number, title: string) => void;
   /** The owner's hold on the tier itself, by its band. */
   band?: {
     onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
@@ -1558,6 +1615,7 @@ const TierRow = memo(function TierRow({
   dragNow,
   onMenu,
   onRemove,
+  onRename,
   band,
 }: TierRowProps) {
   if (meta === undefined) return null;
@@ -1656,6 +1714,7 @@ const TierRow = memo(function TierRow({
             onMenu={onMenu}
             current={tier}
             onRemove={onRemove}
+            onRename={onRename}
           />
         ))}
       </ul>

@@ -23,6 +23,7 @@ import {
   poolTier,
   rankedTiers,
   rename,
+  renameItem,
   putBack,
   removeItem,
   restoreBoard,
@@ -73,7 +74,13 @@ import {
 import { houseBoards, type BoardsRepository } from "../features/boards/repository";
 import { boards as site } from "../features/boards/owners";
 import { takenDown, unpublished } from "../features/boards/takeDown";
-import { applyTierAction, editorTiersOf, newTierOf } from "../features/boards/tierEditing";
+import {
+  applyTierAction,
+  editorTiersOf,
+  newTierOf,
+  tiersKeyOf,
+  type RemovedTier,
+} from "../features/boards/tierEditing";
 import { nextUid, useBoard } from "../features/boards/useBoards";
 import {
   arrangementOf,
@@ -556,6 +563,9 @@ function OpenBoard({
   const [gameStep, setGameStep] = useState<{ round: number; rows: string[][] } | null>(null);
   // A game has just put its result on the board: the offer to show it may come.
   const [afterGame, setAfterGame] = useState(false);
+  // The last tier taken away, with its cards, and the tiers it left: the
+  // header's Undo can bring it back (night pass W15).
+  const [tierStep, setTierStep] = useState<(RemovedTier & { tiers: string }) | null>(null);
   const play = usePlay(uid, playCards, playTiers, localStorageStore, {
     title: board?.title || strings.boards.untitled,
     games,
@@ -576,6 +586,8 @@ function OpenBoard({
       const round = arranged + 1;
       setArranged(round);
       setGameStep({ round, rows: was });
+      // The game's step is the one Undo turns over now.
+      setTierStep(null);
       setAfterGame(true);
     },
   });
@@ -744,6 +756,11 @@ function OpenBoard({
     });
   };
 
+  // Another name for a card, from its menu or the add box's names for uploads
+  // (night pass W22): kept, and synced and published, as any other edit is.
+  const renameCard = (itemUid: string, title: string) =>
+    keep(renameItem(latest(), itemUid, title, now()));
+
   // The add-card box speaks the editor's language; here its cards go to the pool.
   const dispatch = (action: EditorAction) => {
     if (action.type !== "addItem") return;
@@ -794,12 +811,13 @@ function OpenBoard({
   }));
 
   // The tier actions, each a change to the board; a tier taken away can come
-  // back with its cards from the snackbar.
+  // back with its cards from the snackbar, and from the header's Undo after it.
   const onTier = (action: EditorAction) => {
     const change = applyTierAction(latest(), action, now(), nextUid);
     keep(change.board);
     const removed = change.removed;
     if (removed !== undefined) {
+      setTierStep({ ...removed, tiers: tiersKeyOf(change.board) });
       const cards = removed.itemUids.length;
       setNotice({
         text:
@@ -818,6 +836,16 @@ function OpenBoard({
       });
     }
   };
+  // The header's Undo brings the tier back once the board's own moves since
+  // are undone (night pass W15): only while the tiers are as the removal left
+  // them, so a tier added, moved or brought back since ends it.
+  const undoPast =
+    tierStep === null || tierStep.tiers !== tiersKeyOf(board)
+      ? null
+      : () => {
+          setTierStep(null);
+          keep(restoreTier(latest(), tierStep.tier, tierStep.itemUids, now()));
+        };
   const editorTiers: EditorTier[] = editorTiersOf(board);
   const closePanel = () => setPanel("none");
   // The tiers are changed on the board itself, as on the phone.
@@ -1006,6 +1034,7 @@ function OpenBoard({
       incoming={incoming}
       onIncomingTaken={incomingTaken}
       house={house !== null}
+      onRename={renameCard}
     />
   );
 
@@ -1077,6 +1106,8 @@ function OpenBoard({
                     ? () => {
                         repository.save(arrangeItems(latest(), [], now()));
                         setArranged((round) => round + 1);
+                        // All back in the deck: a tier brought back now would take its old cards out again.
+                        setTierStep(null);
                       }
                     : null
                 }
@@ -1213,6 +1244,7 @@ function OpenBoard({
               if (to !== undefined) keep(moveItem(current, itemUid, to, Infinity, now()));
             }}
             onRemove={(itemUid) => remove(view.uids.indexOf(itemUid))}
+            onRename={renameCard}
             onCredit={creditCard}
           />
         </section>
@@ -1222,14 +1254,13 @@ function OpenBoard({
             <RankingBoard
               // The rows are held by index: a tier added, taken away or moved
               // means a fresh board over the same cards, as does Play's result.
-              key={`${board.uid}:${arranged}:${rankedTiers(board)
-                .map((tier) => tier.uid)
-                .join(",")}`}
+              key={`${board.uid}:${arranged}:${tiersKeyOf(board)}`}
               list={view.list}
               store={scratch}
               device={localStorageStore}
               undoTo={beforeGame}
               undoToggles
+              undoPast={undoPast}
               strip={board.displayMode === "HORIZONTAL_SCROLL"}
               edit={{
                 rows: view.rows,
@@ -1241,6 +1272,10 @@ function OpenBoard({
                   canSave: false,
                   onChange: onRows,
                   remove,
+                  rename: (item: number, title: string) => {
+                    const itemUid = view.uids[item];
+                    if (itemUid !== undefined) renameCard(itemUid, title);
+                  },
                   tools,
                   tiers: tierEditing,
                   pictures: takePictures,

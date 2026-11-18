@@ -267,18 +267,9 @@
   color: var(--ink-dim);
 }
 
-/* Public in rows as in the grid. */
-.board-card__public {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-inline-start: 8px;
-  color: var(--link);
-  vertical-align: bottom;
-}
-
-.board-card__public .ms {
-  font-size: 13px;
+/* Public or Saved before the count, in rows as in the grid (artboard 42). */
+.board-card__meta .list-label {
+  line-height: 15px;
 }
 
 /* Each tier's share of the cards in its colour, 1 px apart, the unranked last. */

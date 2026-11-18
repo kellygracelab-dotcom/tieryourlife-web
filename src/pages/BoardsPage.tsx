@@ -318,8 +318,6 @@ export function BoardsPage({
   const narrowed = isNarrowed(filters);
   const grouped = shouldGroup(arranged, narrowed);
   const shown = [...arranged.favourites, ...arranged.rest];
-  const publicCount = live.filter(isOut).length;
-  const placed = live.reduce((sum, board) => sum + rankedCount(board), 0);
 
   // Only the lists on screen are deleted: one chosen and then hidden by a
   // filter or a search stays out of it until it is shown again.
@@ -607,14 +605,9 @@ export function BoardsPage({
         <div className="boards__text">
           <h1 className="boards__title">{strings.boards.title}</h1>
           {live.length > 0 && (
-            <p className="boards__count">
-              {[
-                plural(strings.boards.count, live.length),
-                // Cards placed across the lists, as the number always was (QA 21).
-                plural(strings.boards.ranked, placed),
-                ...(publicCount > 0 ? [plural(strings.boards.published, publicCount)] : []),
-              ].join(" · ")}
-            </p>
+            // How many lists, and only that (artboard 42): a sum of cards placed
+            // across them said nothing, and Public shows on each list that is.
+            <p className="boards__count">{plural(strings.boards.count, live.length)}</p>
           )}
         </div>
         <div className="boards__actions">
