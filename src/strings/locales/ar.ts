@@ -1704,6 +1704,7 @@ const ar: Translation = {
     continueOf: "متابعة «{title}»",
     resume: "استئناف اللعبة",
     discard: "تجاهل",
+    updatedElsewhere: "تم التحديث من جهاز آخر",
   },
   publishWindow: {
     title: "نشر «{title}»",

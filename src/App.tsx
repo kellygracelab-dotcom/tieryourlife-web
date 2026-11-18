@@ -3,6 +3,7 @@ import { withPageTransitions } from "./app/pageTransitions";
 import { routes } from "./app/routes";
 import { SessionProvider } from "./app/SessionProvider";
 import { BoardSyncProvider } from "./features/boards/BoardSyncProvider";
+import { StartedSync } from "./features/started/StartedSyncRunner";
 import { announceWith, reloadInto } from "./lib/freshChunk";
 import { spendPreload } from "./lib/preload";
 import { strings } from "./strings";
@@ -73,6 +74,8 @@ export function App() {
       <BoardSyncProvider>
         <RouterProvider router={router} />
         <NameTip />
+        {/* Continue follows the account too: the lists begun on the phone show here. */}
+        <StartedSync />
       </BoardSyncProvider>
     </SessionProvider>
   );

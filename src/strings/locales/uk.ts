@@ -1529,6 +1529,7 @@ const uk: Translation = {
     continueOf: "Продовжити «{title}»",
     resume: "Продовжити гру",
     discard: "Скинути",
+    updatedElsewhere: "Оновлено з іншого пристрою",
   },
   publishWindow: {
     title: "Опублікувати «{title}»",

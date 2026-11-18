@@ -21,6 +21,7 @@ import type {
   TopicDraft,
 } from "../api/admin";
 import * as boards from "../api/boards";
+import * as started from "../api/started";
 import type { KeepBoardRequest, KeptBoard, KeptBoardIndex } from "../api/boards";
 import type { AdoptedGuest } from "../api/account";
 import { createApiClient, type AccountAction } from "../api/client";
@@ -308,6 +309,23 @@ export const keepBoard = (uid: string, request: KeepBoardRequest): Promise<board
 
 export const forgetBoard = (uid: string, removal: boards.Removal): Promise<void> =>
   boards.forgetBoard(api, uid, removal);
+
+export const loadStarted = (since: number | null): Promise<started.StartedPage> =>
+  started.loadStarted(api, since);
+
+export const keepStarted = (
+  listId: string,
+  content: started.StartedContent,
+  basedOn: number | null,
+): Promise<{ updatedAt: number; placed: number }> =>
+  started.keepStarted(api, listId, content, basedOn);
+
+export const forgetStarted = (
+  listId: string,
+  reason: Exclude<started.StartedRemoval, "evicted">,
+  basedOn: number | null,
+  changedAt: number,
+): Promise<{ updatedAt: number }> => started.forgetStarted(api, listId, reason, basedOn, changedAt);
 
 // The only thing "popular" counts. Once per person, and never worth failing
 // a finished ranking over.

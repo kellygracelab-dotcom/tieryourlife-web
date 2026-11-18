@@ -1452,6 +1452,7 @@ const es: Translation = {
     continueOf: "Continuar «{title}»",
     resume: "Reanudar partida",
     discard: "Descartar",
+    updatedElsewhere: "Actualizado desde otro dispositivo",
   },
   publishWindow: {
     title: "Publicar «{title}»",

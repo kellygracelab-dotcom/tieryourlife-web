@@ -1534,6 +1534,7 @@ const pl: Translation = {
     continueOf: "Kontynuuj „{title}”",
     resume: "Wznów grę",
     discard: "Odrzuć",
+    updatedElsewhere: "Zaktualizowano na innym urządzeniu",
   },
   publishWindow: {
     title: "Opublikuj „{title}”",
