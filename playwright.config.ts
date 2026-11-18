@@ -21,6 +21,17 @@ export default defineConfig({
   use: {
     baseURL: `http://${HOST}:${PORT}`,
     trace: "retain-on-failure",
+    // The newcomer's tips stay away from the smokes, which are about something
+    // else; e2e/tips.spec.ts asks for them with a clean browser.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: `http://${HOST}:${PORT}`,
+          localStorage: [{ name: "tyl.tips", value: '{"off":true,"seen":[]}' }],
+        },
+      ],
+    },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },

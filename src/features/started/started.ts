@@ -14,6 +14,12 @@ export const wantsResume = (state: unknown): boolean =>
   state !== null &&
   (state as { resumeGame?: unknown }).resumeGame === true;
 
+/** What the list's page reads from New here?'s Try it: one's own half first, the cards to place. */
+export const TRY_MINE = { tryMine: true } as const;
+
+export const wantsMine = (state: unknown): boolean =>
+  typeof state === "object" && state !== null && (state as { tryMine?: unknown }).tryMine === true;
+
 /** What the list's page reads from Save my list in a begun list's menu: saved to one's lists as it opens. */
 export const SAVE_MINE = { saveMine: true } as const;
 

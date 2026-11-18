@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { sizedFor } from "../../lib/pictureSize";
 import { MediaImage } from "../../ui/MediaImage";
 import type { LinkQuota } from "../../api/linkQuota";
@@ -18,6 +26,7 @@ import { Button } from "../../ui/Button";
 import { Chip } from "../../ui/Chip";
 import { ClearButton } from "../../ui/ClearButton";
 import { Icon } from "../../ui/Icon";
+import { tipSeen } from "../../ui/tipMemory";
 import { DraftCard, type Draft, type DraftPicture, type DraftSource } from "./DraftCard";
 import {
   forgetDraftForSignIn,
@@ -218,7 +227,7 @@ const uploaded = ({ pictureId, previewUrl }: UploadedPicture): LinkedPicture => 
 export function AddCardBox({
   items,
   category = null,
-  dispatch,
+  dispatch: given,
   find = findPictures,
   upload,
   keep = (url) => keepWebPicture(url, keepPicture),
@@ -231,6 +240,14 @@ export function AddCardBox({
 }: AddCardBoxProps) {
   const { account, signIn } = useSession();
   const signedIn = account?.kind === "signedIn";
+  // A card added here, whichever way: the newcomer's Add tip has nothing left to say.
+  const dispatch = useCallback(
+    (action: EditorAction) => {
+      if (action.type === "addItem") tipSeen("add");
+      given(action);
+    },
+    [given],
+  );
   const [typed, setTyped] = useState("");
   const [uploading, setUploading] = useState(0);
   // The last upload's pictures that came without a name, waiting for one.
@@ -627,7 +644,8 @@ export function AddCardBox({
         <label className="editor__label" htmlFor="card-input">
           {strings.new.addLabel}
         </label>
-        <div className="editor__field">
+        {/* A first empty list's field: the newcomer's third tip points here (ui/Tips). */}
+        <div className="editor__field" data-tip={items.length === 0 ? "add" : undefined}>
           <Icon name={linkTyped === null ? "search" : "link"} />
           <input
             ref={field}

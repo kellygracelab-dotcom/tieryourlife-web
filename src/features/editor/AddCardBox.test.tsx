@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { memoryStore } from "../../lib/storage";
+import { tipWanted, useTipsStoreForTests } from "../../ui/tipMemory";
 import { ApiFailure } from "../../api/errors";
 import type { FoundPicture, PicturePage } from "../../api/pictures";
 import { PictureRefused } from "../../lib/pictures";
@@ -149,6 +151,21 @@ describe("AddCardBox", () => {
       page: 1,
       quick: true,
     });
+  });
+
+  it("is where the newcomer's Add tip points on an empty list, and a card added is enough of a lesson", async () => {
+    const tips = memoryStore();
+    useTipsStoreForTests(tips);
+    onTestFinished(() => useTipsStoreForTests(null));
+    const find = vi.fn<FindPictures>(async () =>
+      page([picture("anilist:20", { title: "Naruto" })]),
+    );
+    setup({ find });
+    const field = screen.getByRole("textbox", { name: "Add a card" }).closest(".editor__field");
+    expect(field).toHaveAttribute("data-tip", "add");
+    await typeAndWait("naruto");
+    await userEvent.click(screen.getByRole("button", { name: /^Naruto/ }));
+    expect(tipWanted("add")).toBe(false);
   });
 
   it("adds a catalogue's picture at its address, and stays open for the next", async () => {

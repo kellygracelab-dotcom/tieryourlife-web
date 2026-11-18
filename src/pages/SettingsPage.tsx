@@ -10,6 +10,7 @@ import {
 import { LanguageCard } from "../features/account/LanguageCard";
 import { NameSection, type Rename } from "../features/account/NameSection";
 import type { Publish } from "../features/account/useSaving";
+import { HowItWorks } from "../features/account/HowItWorks";
 import { DataCard } from "../features/boards/DataCard";
 import { owners } from "../features/boards/owners";
 import { forgetKeptOf } from "../features/ranking/kept";
@@ -113,8 +114,10 @@ export type ShareSite = (url: string) => Promise<"shared" | "copied">;
 
 const shareSite: ShareSite = async (url) => {
   if (typeof navigator.share === "function") {
+    // Marketing's words with the site's address, in the sender's voice (18.11.2026).
+    const text = fill(strings.settings.shareText, { link: url });
     // Closing the sheet is not a failure, and says nothing.
-    await navigator.share({ title: strings.brand, url }).catch(() => undefined);
+    await navigator.share({ title: strings.brand, text }).catch(() => undefined);
     return "shared";
   }
   if (navigator.clipboard === undefined) throw new Error("no clipboard");
@@ -122,45 +125,85 @@ const shareSite: ShareSite = async (url) => {
   return "copied";
 };
 
+/** A row's name with its line under it, as Export data has. */
+function RowText({ name, sub }: { name: string; sub: string }) {
+  return (
+    <span className="settings__switch-text">
+      <span>{name}</span>
+      <span className="settings__note">{sub}</span>
+    </span>
+  );
+}
+
 /**
- * The site to someone else, the app, and a word to us, as the app's Settings
- * has them (Testers Community, 18.11.2026). The app's row follows the one
- * switch the rest of the site does: plain words until Google Play opens it to
- * everyone, nothing on an iPhone.
+ * Learn, help us, write to us (artboard 52, 18.11.2026): How it works, the
+ * site to someone else, the app once Google Play opens it to everyone (never
+ * on an iPhone), and a word to us. A computer often has no mail program, so
+ * Send feedback also says the address with Copy.
  */
 function AppCard({ share }: { share: ShareSite }) {
+  const [how, setHow] = useState(false);
   const url = `${window.location.origin}/`;
   const onShare = () => {
     share(url).then(
-      (how) => {
-        if (how === "copied") sayOnTheSite({ text: strings.list.linkCopied });
+      (way) => {
+        if (way === "copied") sayOnTheSite({ text: strings.list.linkCopied });
       },
       () => sayOnTheSite({ text: fill(strings.list.copyFailed, { link: url }) }),
     );
   };
+  const copyAddress = () => {
+    const copied = navigator.clipboard?.writeText(FEEDBACK_EMAIL);
+    if (copied === undefined) return;
+    copied.then(
+      () => sayOnTheSite({ text: strings.settings.addressCopied }),
+      () => undefined,
+    );
+  };
+  const onFeedback = () =>
+    sayOnTheSite({
+      text: fill(strings.settings.writeTo, { email: FEEDBACK_EMAIL }),
+      action: { text: strings.settings.copyAddress, onClick: copyAddress },
+      long: true,
+    });
   const feedback = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(strings.settings.feedbackSubject)}`;
   return (
     <section className="settings__card" aria-labelledby="app-title">
       <h2 id="app-title" className="settings__title">
         {strings.brand}
       </h2>
+      <button
+        type="button"
+        className="settings__row settings__row--button"
+        aria-haspopup="dialog"
+        onClick={() => setHow(true)}
+      >
+        <RowText name={strings.howItWorks.title} sub={strings.settings.howItWorksSub} />
+        <Icon name="chevron_right" className="settings__row-icon" />
+      </button>
       <button type="button" className="settings__row settings__row--button" onClick={onShare}>
-        <span>{strings.settings.shareSite}</span>
+        <RowText name={strings.settings.shareSite} sub={strings.settings.shareSiteSub} />
         <Icon name="share" className="settings__row-icon" />
       </button>
-      {!onApple() &&
-        (appIsLive() ? (
-          <a className="settings__row" href={playUrl("settings")} target="_blank" rel="noopener">
-            <span>{strings.android.menu}</span>
-            <Icon name="open_in_new" className="settings__row-icon" />
-          </a>
-        ) : (
-          <p className="settings__row settings__row--quiet">{strings.android.footerSoon}</p>
-        ))}
-      <a className="settings__row" href={feedback}>
-        <span>{strings.settings.feedback}</span>
+      {!onApple() && appIsLive() && (
+        <a className="settings__row" href={playUrl("settings")} target="_blank" rel="noopener">
+          <RowText name={strings.android.menu} sub={strings.settings.androidSub} />
+          <Icon name="open_in_new" className="settings__row-icon" />
+        </a>
+      )}
+      <a className="settings__row" href={feedback} onClick={onFeedback}>
+        <RowText name={strings.settings.feedback} sub={strings.settings.feedbackSub} />
         <Icon name="mail" className="settings__row-icon" />
       </a>
+      {how && (
+        <HowItWorks
+          onClose={() => setHow(false)}
+          onAgain={() => {
+            setHow(false);
+            sayOnTheSite({ text: strings.howItWorks.againDone });
+          }}
+        />
+      )}
     </section>
   );
 }

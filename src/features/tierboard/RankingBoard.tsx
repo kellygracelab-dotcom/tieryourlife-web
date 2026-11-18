@@ -1,6 +1,7 @@
 import { CoverAdjust } from "../../ui/CoverAdjust";
 import { FocusedPicture } from "../../ui/FocusedPicture";
 import { CARD_PREVIEWS } from "../../ui/focusPreviews";
+import { tipSeen } from "../../ui/tipMemory";
 import type { CoverFocus } from "../../lib/coverFocus";
 import { useBrokenPicture } from "../../ui/useBrokenPicture";
 import {
@@ -195,6 +196,11 @@ const NO_ROW: readonly number[] = [];
  */
 interface TileProps {
   card: PublishedItem | undefined;
+  /**
+   * The first card while nothing is placed: the newcomer's first tip points
+   * at it (ui/Tips), naming the tiers' number keys.
+   */
+  tip?: string;
   /** The list's tiers, for the card's menu. */
   tiers: PublishedTier[];
   item: number;
@@ -253,6 +259,7 @@ const Tile = memo(function Tile({
   onRemove,
   onRename,
   onMenu,
+  tip,
 }: TileProps) {
   const [moving, setMoving] = useState<CardMenuAt | null>(null);
   // Rename, open over the board from the card's menu.
@@ -320,6 +327,8 @@ const Tile = memo(function Tile({
         aria-keyshortcuts="Shift+F10"
         disabled={locked && !knows}
         data-item={item}
+        data-tip={tip === undefined ? undefined : "place"}
+        data-tip-keys={tip}
         onClick={(event) => {
           // The armed row underneath would take the same tap as "place here".
           event.stopPropagation();
@@ -1036,12 +1045,22 @@ export function RankingBoard({
   // moved every card after it at each crossing, and the pool flashed
   // (Danylo, 15.11.2026). Over the pool it stands where it would land.
   const poolLanding = lifted !== null;
+  // The newcomer's first tip, while nothing on the board is placed; a card
+  // placed here makes it pointless anywhere (ui/tipMemory).
+  const placed = placedCount(state);
+  const placedBefore = useRef(placed);
+  useEffect(() => {
+    if (placed > placedBefore.current) tipSeen("place");
+    placedBefore.current = placed;
+  }, [placed]);
+  const placeTip = placed === 0 && !locked ? `1–${Math.min(list.tiers.length, 9)}` : null;
   const poolTiles = useMemo(
     () =>
-      carried(shown, lifted, poolDropAt, poolLanding).map((item) => (
+      carried(shown, lifted, poolDropAt, poolLanding).map((item, index) => (
         <Tile
           key={item}
           card={list.items[item]}
+          tip={index === 0 && placeTip !== null ? placeTip : undefined}
           tiers={list.tiers}
           item={item}
           board={boardSize}
@@ -1059,6 +1078,7 @@ export function RankingBoard({
         />
       )),
     [
+      placeTip,
       shown,
       poolDropAt,
       poolLanding,

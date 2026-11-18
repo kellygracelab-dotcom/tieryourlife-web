@@ -127,6 +127,15 @@ const fr: Translation = {
     shareSite: "Partager TierYourLife",
     feedback: "Envoyer un avis",
     feedbackSubject: "Avis sur TierYourLife",
+    howItWorksSub: "Classer, jouer, créer les vôtres",
+    shareSiteSub: "Envoyer le lien à un ami",
+    androidSub: "Gratuit sur Google Play",
+    feedbackSub: "Idées, problèmes, tout : écrivez-nous",
+    writeTo: "Écrivez à {email}",
+    copyAddress: "Copier",
+    addressCopied: "Adresse copiée",
+    shareText:
+      "Je fais des tier lists dans TierYourLife : je classe n’importe quoi de S à D, je tranche en duels et je vois comment les autres classent.\nWeb : {link}",
     privacyTitle: "Confidentialité",
     signOutNote:
       "Vos listes restent dans votre compte et dans ce navigateur, masquées jusqu’à votre prochaine connexion. Déconnecté, vous ne voyez que les listes créées sans compte.",
@@ -1784,6 +1793,35 @@ const fr: Translation = {
       tooLong: "un champ est trop long. Raccourcissez l’auteur ou le lien.",
       other: "vérifiez-le et réessayez.",
     },
+  },
+  tips: {
+    startHere: "Pour commencer :",
+    place: "{start} touchez une carte, puis son rang. Ou faites-la glisser.",
+    placeKeys:
+      "{start} choisissez une carte, puis un rang — ou appuyez sur {keys}. Le glisser marche aussi.",
+    play: "Pas envie de placer {n} cartes à la main ? {play} : choisissez la meilleure de deux, les rangs se remplissent.",
+    add: "Tapez un nom : l’image vient avec.",
+    gotIt: "Compris",
+    noMore: "Plus de conseils",
+  },
+  howItWorks: {
+    title: "Comment ça marche",
+    place: "Placer",
+    placeText: "touchez une carte, puis un rang. Ou faites-la glisser.",
+    play: "Jouer",
+    playText: "choisissez la meilleure de deux cartes ; les rangs se remplissent.",
+    own: "Créer la vôtre",
+    ownText: "tapez des noms, les images viennent avec.",
+    share: "Partager",
+    shareText: "publiez votre liste ou envoyez-la en image.",
+    again: "Revoir les conseils",
+    againDone: "Les conseils s’afficheront à nouveau.",
+    close: "Fermer",
+  },
+  readyList: {
+    eyebrow: "Nouveau ici ?",
+    meta: "Une liste toute prête · {cards}",
+    try: "Essayer",
   },
 };
 

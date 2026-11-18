@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { freshChunk } from "../../lib/freshChunk";
+import { TIP_CARDS } from "../../ui/tipMemory";
 import type { KeyValueStore } from "../../lib/storage";
 import { fill, strings } from "../../strings";
 import type { SnackbarNotice } from "../../ui/Snackbar";
@@ -434,6 +435,12 @@ export function usePlay(
       disabled,
       // The game stays kept, but the dot is only on a Play that can open it, as on the app.
       saved: savedGame !== null && !disabled,
+      // The newcomer's second tip: once a card is placed by hand, on a board
+      // worth a game (artboard 47, 8 cards and more).
+      tip:
+        !disabled && board.pool.length < board.order.length && board.order.length >= TIP_CARDS
+          ? board.order.length
+          : null,
     },
     view,
     playing: screen !== "none",

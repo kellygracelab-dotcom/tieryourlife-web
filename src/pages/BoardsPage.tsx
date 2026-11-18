@@ -5,9 +5,10 @@ import {
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
 } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import type { Category } from "../api/types";
+import type { Category, ListSummary } from "../api/types";
 import { usePageTitle } from "../app/pageTitle";
 import { useSession } from "../app/session";
 import { SignInButton } from "../app/SignInButton";
@@ -46,9 +47,12 @@ import { takenDown, unpublished } from "../features/boards/takeDown";
 import { nextUid, useBoards } from "../features/boards/useBoards";
 import type { UnpublishBoard } from "../features/boards/BoardSettings";
 import "../features/boards/boards.css";
-import { unpublish as unpublishList } from "../lib/api";
+import { loadFeed, unpublish as unpublishList } from "../lib/api";
+import { TIP_CARDS } from "../ui/tipMemory";
+import { startedLists, TRY_MINE } from "../features/started/started";
+import { titleIn } from "../lib/translated";
 import { localStorageStore, sessionStorageStore, type KeyValueStore } from "../lib/storage";
-import { fill, plural, strings } from "../strings";
+import { currentLocale, fill, plural, strings } from "../strings";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Icon } from "../ui/Icon";
@@ -69,6 +73,8 @@ interface BoardsPageProps {
   /** Share as image in a list's menu; a test hands in its own. */
   share?: Share;
   copy?: (text: string) => Promise<void>;
+  /** New here?'s list; a test hands in its own. */
+  loadReady?: LoadReadyList;
 }
 
 const clipboardCopy = (text: string): Promise<void> => navigator.clipboard.writeText(text);
@@ -206,10 +212,58 @@ function Group({
   );
 }
 
+/** A list worth trying first: a popular one with Play's eight cards and more. */
+export type LoadReadyList = () => Promise<ListSummary | null>;
+
+/** The first list of the popular feed with 8 cards or more (agreed with Android, 18.11.2026). */
+const popularReady: LoadReadyList = () =>
+  loadFeed({ sort: "popular" }).then(
+    (page) => page.lists.find((list) => list.itemCount >= TIP_CARDS) ?? null,
+    () => null,
+  );
+
+/**
+ * New here? (artboard 50): a ready list of the community to try at once, the
+ * newcomer's tips waiting on it. Only while one has no list of one's own nor
+ * one begun; nothing when the feed has none or does not answer.
+ */
+function ReadyList({ load }: { load: LoadReadyList }) {
+  const [list, setList] = useState<ListSummary | null>(null);
+  useEffect(() => {
+    let here = true;
+    void load().then((found) => {
+      if (here) setList(found);
+    });
+    return () => {
+      here = false;
+    };
+  }, [load]);
+  if (list === null) return null;
+  return (
+    <section className="boards__ready" aria-labelledby="ready-title">
+      <p className="boards__ready-eyebrow">{strings.readyList.eyebrow}</p>
+      <h2 id="ready-title" className="boards__ready-title">
+        <bdi>{titleIn(list, currentLocale())}</bdi>
+      </h2>
+      <p className="boards__ready-meta">
+        {fill(strings.readyList.meta, { cards: plural(strings.card.items, list.itemCount) })}
+      </p>
+      <Link
+        className="btn btn--tonal boards__ready-try"
+        to={`/l/${encodeURIComponent(list.id)}`}
+        state={TRY_MINE}
+      >
+        <span>{strings.readyList.try}</span>
+      </Link>
+    </section>
+  );
+}
+
 /** No lists yet: the phone's suggestions to start from, and New list for anything else. */
-function Empty() {
+function Empty({ ready }: { ready: ReactNode }) {
   return (
     <div className="boards__empty">
+      {ready}
       <Icon name="view_list" className="boards__empty-icon" />
       <p className="boards__empty-title">{strings.boards.emptyTitle}</p>
       <p className="boards__start-with">{strings.boards.startWith}</p>
@@ -247,6 +301,7 @@ export function BoardsPage({
   fewLists = FEW_LISTS,
   share = shareBoardPicture,
   copy = clipboardCopy,
+  loadReady = popularReady,
 }: BoardsPageProps) {
   usePageTitle(strings.boards.title);
   const all = useBoards(repository);
@@ -621,7 +676,11 @@ export function BoardsPage({
       <ContinueBlock repository={repository} onNotice={(said) => setNotices([said])} />
 
       {live.length === 0 ? (
-        <Empty />
+        <Empty
+          ready={
+            startedLists(store, new Set()).length === 0 ? <ReadyList load={loadReady} /> : null
+          }
+        />
       ) : (
         <>
           {!few && (
