@@ -192,9 +192,11 @@ export function ColourPicker({ signedIn }: { signedIn: boolean }) {
     // One's own circle is the wheel of hues until it is chosen, then two tones of its hue.
     return ownHue === null ? null : tonesOf(palette.rolesOf(ownHue, false));
   };
-  // The slider opens on the hue the site is drawn in now; Lavender's is the phone's first own hue.
+  // The slider opens on one's own hue once there is one, as on the phone; before
+  // that, on the hue the site is drawn in now (Lavender's is the phone's first own hue).
   const firstHue =
-    shown === "custom" || shown === "lavender" ? (ownHue ?? FIRST_OWN_HUE) : PRESET_HUES[shown];
+    choice?.hue ??
+    (shown === "custom" || shown === "lavender" ? FIRST_OWN_HUE : PRESET_HUES[shown]);
   return (
     <div className="colour">
       <p className="colour__title">
