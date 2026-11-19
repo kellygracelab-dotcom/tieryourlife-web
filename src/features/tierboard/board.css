@@ -40,7 +40,7 @@
   display: flex;
   min-height: calc(var(--tile-h) + 2 * var(--tier-pad));
   border-radius: 14px;
-  background: color-mix(in oklab, var(--band-base) var(--band-tint), var(--paper));
+  background: color-mix(in oklab, var(--band-base) var(--band-tint), var(--band-paper));
   overflow: hidden;
 }
 

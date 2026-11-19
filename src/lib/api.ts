@@ -21,6 +21,7 @@ import type {
   TopicDraft,
 } from "../api/admin";
 import * as boards from "../api/boards";
+import * as settings from "../api/settings";
 import * as started from "../api/started";
 import type { KeepBoardRequest, KeptBoard, KeptBoardIndex } from "../api/boards";
 import type { AdoptedGuest } from "../api/account";
@@ -315,6 +316,13 @@ export const keepBoard = (uid: string, request: KeepBoardRequest): Promise<board
 
 export const forgetBoard = (uid: string, removal: boards.Removal): Promise<void> =>
   boards.forgetBoard(api, uid, removal);
+
+// The colour the site is drawn in, kept by the account the same as on the phone.
+export const loadColourSetting = (): Promise<settings.ColourChoice | null> =>
+  settings.loadColourSetting(api);
+
+export const keepColourSetting = (choice: settings.ColourChoice): Promise<settings.ColourWritten> =>
+  settings.keepColourSetting(api, choice);
 
 export const loadStarted = (since: number | null): Promise<started.StartedPage> =>
   started.loadStarted(api, since);

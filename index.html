@@ -13,6 +13,14 @@
       try {
         var theme = localStorage.getItem("tyl:theme");
         if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+        // And the colour's palette as last drawn (lib/colourTheme.ts), Lavender being none.
+        var look = localStorage.getItem("tyl:colour-look");
+        if (look) {
+          var style = document.createElement("style");
+          style.id = "tyl-colour";
+          style.textContent = look;
+          document.head.appendChild(style);
+        }
       } catch (e) {}
     </script>
     <script>
