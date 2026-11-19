@@ -79,7 +79,7 @@ describe("the colour picker", () => {
     expect(radio(strings.colour.custom).querySelector(".colour__mark")).not.toBeNull();
   });
 
-  it("opens the slider on the hue the site is drawn in, and paints Done in the hue's button", async () => {
+  it("opens the slider on one's own hue, else on the hue the site is drawn in, and paints Done in the hue's button", async () => {
     const { rolesOf } = await import("../../lib/palette");
     render(<ColourPicker signedIn={false} />);
     await userEvent.click(radio(strings.colour.custom));
@@ -108,6 +108,12 @@ describe("the colour picker", () => {
         .querySelector<HTMLElement>(".colour__disc")!
         .style.getPropertyValue("--swatch-primary"),
     ).toBe(rolesOf(30, false).primary);
+    await userEvent.click(radio(strings.colour.custom));
+    expect(screen.getByRole("slider", { name: strings.colour.hue })).toHaveValue("30");
+    await userEvent.click(screen.getByRole("button", { name: strings.colour.cancel }));
+
+    // One's own hue is kept under a ready colour, and the slider opens on it again, as on the phone.
+    await userEvent.click(radio(strings.colour.peach));
     await userEvent.click(radio(strings.colour.custom));
     expect(screen.getByRole("slider", { name: strings.colour.hue })).toHaveValue("30");
   });
