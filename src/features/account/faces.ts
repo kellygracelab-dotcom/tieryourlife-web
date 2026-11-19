@@ -28,21 +28,41 @@ export function faceChoicesOf(lists: readonly ListSummary[]): FaceChoice[] {
   return [...seen.values()];
 }
 
+/** The site's hosts, each serving the bucket's public pictures under /img/original/. */
+const SITE_HOSTS = new Set(["tieryourlife.web.app", "tieryourlife.firebaseapp.com"]);
+
 /**
- * The bucket path a face's address shows, however it is written: Storage's
- * own address, or the site's `/img/original/…` that shows the same bytes.
+ * The bucket path a picture's address shows, however it is written: Storage's
+ * own address, or the site's `/img/original/…` on either of its hosts (or
+ * this page's own), which shows the same bytes. Null for anybody else's.
  */
-function mediaPathOf(url: string): string | null {
+export function ownMediaPath(url: string, here: string = window.location.origin): string | null {
   const stored = storedPublicMedia(url);
   if (stored !== null) return stored;
+  let parsed: URL;
   try {
-    const { pathname } = new URL(url, "https://tieryourlife.web.app");
-    const match = /^\/img\/original\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(pathname);
-    return match === null ? null : publicMediaPath(match[1]!, match[2]!, match[3]!);
+    parsed = new URL(url, here);
   } catch {
     return null;
   }
+  const ours =
+    parsed.origin === here || (parsed.protocol === "https:" && SITE_HOSTS.has(parsed.hostname));
+  if (!ours) return null;
+  const match = /^\/img\/original\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(parsed.pathname);
+  return match === null ? null : publicMediaPath(match[1]!, match[2]!, match[3]!);
 }
+
+/**
+ * Where this page reads one of the bucket's pictures from itself, so a canvas
+ * may cut it on either host (QA 19.11: on tieryourlife.firebaseapp.com a card
+ * on web.app could only be used as it is).
+ */
+export function readableFaceSrc(url: string): string {
+  const path = ownMediaPath(url);
+  return path === null ? url : `/img/original/${path}`;
+}
+
+const mediaPathOf = (url: string): string | null => ownMediaPath(url);
 
 /**
  * Whether two faces are one picture (QA 19.11, D13): the account may wear its
