@@ -81,6 +81,8 @@ export interface PlayOptions {
   title: string;
   /** Somebody else's list: the picker says the result goes into Mine. */
   theirs?: boolean;
+  /** The cards in tiers stand where the author put them, not the person playing (QA 19.11). */
+  placedByAuthor?: boolean;
   /**
    * The game is over and its result goes on the board at once, as on the
    * app: every ranked tier's card ids after the result, the board's tiers in
@@ -151,6 +153,7 @@ export function usePlay(
   const {
     title,
     theirs = false,
+    placedByAuthor = false,
     onApply,
     notify,
     share,
@@ -380,6 +383,7 @@ export function usePlay(
             }
             count={chosenIds(board, current).length}
             placed={placedChosen(board, current)}
+            placedByAuthor={placedByAuthor}
             kind={kind}
             onKind={setKind}
             saved={savedGame === null ? null : shown.reconcile(savedGame, board)}

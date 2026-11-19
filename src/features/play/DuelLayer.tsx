@@ -42,6 +42,18 @@ function actionOf(event: KeyboardEvent): Action | null {
   return null;
 }
 
+/** Ctrl+Z, or ⌘Z on a Mac, with nothing else held. */
+const undoChord = (event: KeyboardEvent): boolean =>
+  (event.ctrlKey || event.metaKey) &&
+  !event.altKey &&
+  !event.shiftKey &&
+  (event.key.toLowerCase() === "z" || event.code === "KeyZ");
+
+/** A field the keys type into, whose own Ctrl+Z is the text's. */
+const typing = (target: EventTarget | null): boolean =>
+  target instanceof HTMLElement &&
+  (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+
 /**
  * An answer the game has already taken, still playing out on the stage: the
  * duel it answered stays in view until the motion ends.
@@ -175,7 +187,16 @@ export function DuelLayer({ game, board, onChange, onQuit, children }: DuelLayer
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" || event.key === "Tab") return;
       event.stopPropagation();
-      if (event.ctrlKey || event.metaKey || event.altKey || ended.current) return;
+      if (ended.current) return;
+      // Ctrl+Z and ⌘Z take the last answer back, as the Undo button does
+      // (QA 19.11), except where somebody is typing.
+      if (undoChord(event)) {
+        if (typing(event.target)) return;
+        event.preventDefault();
+        latest.current("undo");
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
       const action = actionOf(event);
       if (action === null) return;
       event.preventDefault();

@@ -24,6 +24,8 @@ interface GamePickerProps {
   count: number;
   /** How many of them already stand in a tier, which a game would move. */
   placed?: number;
+  /** Those were placed by the list's author, on a visitor's game (QA 19.11). */
+  placedByAuthor?: boolean;
   kind: GameKind;
   onKind: (kind: GameKind) => void;
   /** The game saved for this board, met with the board as it is now; null when none is. */
@@ -51,6 +53,7 @@ export function GamePicker({
   from,
   count,
   placed = 0,
+  placedByAuthor = false,
   kind,
   onKind,
   saved,
@@ -110,7 +113,10 @@ export function GamePicker({
         {warned && (
           // Cards placed by hand are moved by the game, said before Start (artboards 15, 24).
           <p className="play-placed" id={`${id}-placed`}>
-            {plural(strings.play.placedWarning, placed)}
+            {plural(
+              placedByAuthor ? strings.play.placedWarningAuthor : strings.play.placedWarning,
+              placed,
+            )}
           </p>
         )}
         <Button

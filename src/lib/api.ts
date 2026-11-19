@@ -175,8 +175,36 @@ export const linkPicture: (ask: LinkAsk) => Promise<LinkAnswer> = limitedLink((a
 
 export const loadLinkQuota = (): Promise<LinkQuota | null> => pictures.linkQuota(api);
 
+/** What warms a picture: the page's own fetch; a unit test has nothing to ask. */
+const askQuietly: (url: string, init: RequestInit) => Promise<unknown> =
+  import.meta.env.MODE === "test"
+    ? async () => undefined
+    : (url, init) => globalThis.fetch(url, init);
+
+/**
+ * Asks once for a new list's picture for links, without waiting: the first
+ * ask draws it (some 4 s, QA 19.11) and keeps it, so the first chat a link
+ * goes to gets it at once. A ranking has no picture of its own.
+ */
+export function warmShareImage(answer: Published, ask = askQuietly): void {
+  if (answer.ranking === true) return;
+  try {
+    void ask(`/og/l/${encodeURIComponent(answer.id)}.png`, { priority: "low" }).catch(
+      () => undefined,
+    );
+  } catch {
+    // Nothing to warm, nothing lost.
+  }
+}
+
+const warmed = (call: Promise<Published>): Promise<Published> =>
+  call.then((answer) => {
+    warmShareImage(answer);
+    return answer;
+  });
+
 export const publish = (request: PublishRequest, action?: AccountAction): Promise<Published> =>
-  lists.publish(api, request, action);
+  warmed(lists.publish(api, request, action));
 
 /** The call, and then word that the list is no longer as any page last read it; gone already, too. */
 const changing = async <T>(id: string, call: Promise<T>): Promise<T> => {
@@ -194,7 +222,7 @@ export const republish = (
   id: string,
   request: PublishRequest,
   action?: AccountAction,
-): Promise<Published> => changing(id, lists.republish(api, id, request, action));
+): Promise<Published> => warmed(changing(id, lists.republish(api, id, request, action)));
 
 export const unpublish = (id: string): Promise<void> => changing(id, lists.unpublish(api, id));
 

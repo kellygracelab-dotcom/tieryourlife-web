@@ -180,6 +180,24 @@ describe("the duel layer", () => {
     expect(last().history).toHaveLength(0);
   });
 
+  // QA 19.11: Ctrl+Z did nothing while the button worked.
+  it("takes the last answer back with Ctrl+Z and ⌘Z too, but not from a field being typed in", async () => {
+    const { last, onChange } = play();
+    await answer("{ArrowDown}", onChange);
+    await answer("{ArrowDown}", onChange);
+    await userEvent.keyboard("{Control>}z{/Control}");
+    expect(last().history).toHaveLength(1);
+    // Ctrl+Shift+Z is no undo, nor Ctrl+Z in a field.
+    await userEvent.keyboard("{Control>}{Shift>}z{/Shift}{/Control}");
+    const field = document.createElement("input");
+    document.body.append(field);
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true }));
+    field.remove();
+    expect(last().history).toHaveLength(1);
+    await userEvent.keyboard("{Meta>}z{/Meta}");
+    expect(last().history).toHaveLength(0);
+  });
+
   it("takes every quick key, cutting the last motion short (artboard 16)", () => {
     windowWhere(FULL_MOTION);
     vi.useFakeTimers();

@@ -1274,6 +1274,12 @@ const es: Translation = {
       many: "Has colocado {n} cartas. El juego las reordena; «Deshacer» las devuelve.",
       other: "Has colocado {n} cartas. El juego las reordena; «Deshacer» las devuelve.",
     },
+    // A visitor's game over the author's placing (QA 19.11).
+    placedWarningAuthor: {
+      one: "El autor colocó {n} carta. El juego la reordena en «Mío»; «Deshacer» la devuelve.",
+      many: "El autor colocó {n} cartas. El juego las reordena en «Mío»; «Deshacer» las devuelve.",
+      other: "El autor colocó {n} cartas. El juego las reordena en «Mío»; «Deshacer» las devuelve.",
+    },
   },
   boards: {
     title: "Tus listas",

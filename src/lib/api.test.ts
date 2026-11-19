@@ -66,6 +66,7 @@ import {
   unfollowAuthor,
   unpublish,
   withdrawListRanking,
+  warmShareImage,
 } from "./api";
 import { setStrings } from "../strings";
 import { ApiFailure } from "../api/errors";
@@ -250,5 +251,22 @@ describe("api", () => {
     const [sent, to] = (mocks.request.mock.calls[0] ?? []) as unknown[];
     expect(sent).toBe(method);
     expect(to).toBe(path);
+  });
+});
+
+// QA 19.11: a new list's picture for links took 4.5 s at the first ask.
+describe("a published list's picture for links", () => {
+  it("is asked for once, quietly, so a chat finds it drawn already", async () => {
+    const ask = vi.fn(async () => new Response(""));
+    warmShareImage({ id: "abc/1" }, ask);
+    expect(ask).toHaveBeenCalledWith("/og/l/abc%2F1.png", { priority: "low" });
+    warmShareImage({ id: "r1", ranking: true }, ask);
+    expect(ask).toHaveBeenCalledTimes(1);
+    // A failed ask is nobody's business.
+    expect(() =>
+      warmShareImage({ id: "x" }, async () => {
+        throw new Error("offline");
+      }),
+    ).not.toThrow();
   });
 });

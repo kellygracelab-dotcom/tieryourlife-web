@@ -97,6 +97,17 @@ describe("the game picker", () => {
     );
   });
 
+  // QA 19.11: a visitor on somebody's list placed nothing; the author did.
+  it("says the author placed the cards on a visitor's game", () => {
+    show({ kind: "smart", from: null, placed: 3, theirs: true, placedByAuthor: true });
+    expect(
+      screen.getByText(
+        "The author placed 3 cards. The game rearranges them in Mine; Undo brings them back.",
+      ),
+    ).toHaveClass("play-placed");
+    expect(screen.queryByText(/You’ve placed/)).not.toBeInTheDocument();
+  });
+
   it("says nothing of placed cards when none are", () => {
     show({ placed: 0 });
     expect(screen.queryByText(/You’ve placed/)).not.toBeInTheDocument();
