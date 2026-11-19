@@ -41,7 +41,15 @@ export function labelOf(board: Board): string | null {
  * placed", or "1 card · nothing placed yet" (audit E2: no pool, no ranked).
  */
 export function metaOf(board: Board): string {
+  return metaPartsOf(board).join(" · ");
+}
+
+/** The count and how far along, apart: a narrow tile breaks the line between them, not inside them (QA 19.11). */
+export function metaPartsOf(board: Board): [string, string] {
   const placed = rankedCount(board);
   const cards = plural(strings.boards.cards, placed + poolCount(board));
-  return `${cards} · ${placed === 0 ? strings.boards.nothingRanked : plural(strings.boards.ranked, placed)}`;
+  return [
+    cards,
+    placed === 0 ? strings.boards.nothingRanked : plural(strings.boards.ranked, placed),
+  ];
 }

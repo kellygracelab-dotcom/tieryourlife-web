@@ -1,11 +1,11 @@
-import { render, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import type { ColourChoice } from "../../api/settings";
 import { GUEST, SessionContext, type Session } from "../../app/session";
 import { chooseColour, readColour, useColourStoreForTests } from "../../lib/colourTheme";
 import { COLOUR_KEY } from "../../lib/colourTheme";
 import { memoryStore, type KeyValueStore } from "../../lib/storage";
-import { ColourSync, type ColourApi } from "./ColourSync";
+import { ColourSync, RECHECK_GAP_MS, type ColourApi } from "./ColourSync";
 
 vi.mock("../../lib/api", () => ({
   loadColourSetting: vi.fn(),
@@ -99,6 +99,44 @@ describe("the colour following the account", () => {
       expect(remote.keep).toHaveBeenCalledWith({ name: "sky", hue: null, changedAt: 50 }),
     );
     await waitFor(() => expect(readColour()).toEqual(kept));
+  });
+
+  it("sends one's own hue with a ready colour, so the account never loses it (QA 19.11, D3)", async () => {
+    const remote = api(null);
+    renderSync(member, remote);
+    await waitFor(() => expect(remote.load).toHaveBeenCalled());
+    chooseColour("custom", 264, 40);
+    chooseColour("sky", null, 50);
+    await waitFor(() =>
+      expect(remote.keep).toHaveBeenLastCalledWith({ name: "sky", hue: 264, changedAt: 50 }),
+    );
+    expect(remote.keep).not.toHaveBeenCalledWith(expect.objectContaining({ hue: 220 }));
+  });
+
+  it("reads the account again on coming back to the tab, no oftener than the gap (QA 19.11, D4)", async () => {
+    let now = 1_000_000;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
+    onTestFinished(() => clock.mockRestore());
+    const remote = api(null);
+    remote.load.mockResolvedValueOnce(null);
+    renderSync(member, remote);
+    await waitFor(() => expect(remote.load).toHaveBeenCalledTimes(1));
+
+    // Back too soon: nothing asked.
+    now += RECHECK_GAP_MS - 1;
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(remote.load).toHaveBeenCalledTimes(1);
+
+    // Back later: the phone's Sky shows.
+    now += 1;
+    remote.load.mockResolvedValueOnce({ name: "sky", hue: 264, changedAt: 70 });
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await waitFor(() => expect(readColour()).toEqual({ name: "sky", hue: 264, changedAt: 70 }));
+    expect(remote.load).toHaveBeenCalledTimes(2);
   });
 
   it("leaves a guest's choice on the device", async () => {

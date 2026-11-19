@@ -144,6 +144,7 @@ import "./ListPage.css";
 import "../features/editor/owner.css";
 import "../features/editor/editor.css";
 import "./BoardPage.css";
+import { siteOrigin } from "../lib/links";
 
 /** Play or Publish… chosen in the list's menu in Your lists (artboard 39): opened as the page opens. */
 export interface BoardPageState {
@@ -940,9 +941,7 @@ function OpenBoard({
     return share(
       view.list,
       view.rows,
-      listId === null
-        ? window.location.origin
-        : `${window.location.origin}/l/${encodeURIComponent(listId)}`,
+      listId === null ? siteOrigin() : `${siteOrigin()}/l/${encodeURIComponent(listId)}`,
     ).then(
       // A computer's download shows next to nothing: the page says the picture is saved.
       (how) =>

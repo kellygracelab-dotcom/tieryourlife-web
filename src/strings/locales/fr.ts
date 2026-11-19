@@ -99,6 +99,7 @@ const fr: Translation = {
     faceUndo: "Annuler",
     faceNote:
       "Votre image apparaît à côté de votre nom sur les listes que vous publiez. La carte ou la photo choisie est vérifiée et gardée avec votre compte.",
+    faceUnchecked: "Cette image ne peut pas être vérifiée. Essayez une photo fixe.",
     faceNotMade: "Cette image ne peut pas être votre photo. Choisissez-en une autre.",
     title: "Paramètres",
     guestTitle: "Connectez-vous pour modifier vos paramètres.",
@@ -386,6 +387,11 @@ const fr: Translation = {
     failedTooLarge: "La liste est trop grande pour être publiée.",
     failedPictureRefusedCard:
       "L’image de « {title} » ne peut pas figurer dans le fil public. Changez-la ou gardez la liste privée.",
+    failedPictureUnchecked:
+      "Une de vos photos ne peut pas être vérifiée. Utilisez une photo fixe ou gardez la liste privée.",
+    failedPictureUncheckedCard:
+      "L’image de « {title} » ne peut pas être vérifiée. Utilisez une photo fixe ou gardez la liste privée.",
+    failedVisionToday: "Trop de photos ont été vérifiées aujourd’hui. Réessayez plus tard.",
     failedWebPicturesToday:
       "La liste contient plus d’images d’autres sites que ce compte ne peut en publier aujourd’hui. Réessayez demain ou utilisez-en moins.",
     failedWebPicturesTooMany:
@@ -560,6 +566,7 @@ const fr: Translation = {
     send: "Signaler",
     cancel: "Annuler",
     failed: "Impossible d’envoyer le signalement : rien n’a été envoyé. Réessayez dans une minute.",
+    dailyLimit: "Vous avez envoyé beaucoup de signalements aujourd’hui. Réessayez plus tard.",
     staffList:
       "Cette liste est celle d’un membre de l’équipe : seul le propriétaire peut la signaler.",
     sentTitle: "Signalée et masquée pour vous",

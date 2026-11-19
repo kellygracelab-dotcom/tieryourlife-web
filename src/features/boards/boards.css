@@ -853,6 +853,12 @@
   font: inherit;
 }
 
+/* The count and how far along each keep together while they fit (QA 19.11). */
+.board-meta__part {
+  display: inline-block;
+  max-width: 100%;
+}
+
 /* An outlined pill, read before the count; the rows' is the same. */
 .list-label {
   display: inline-block;

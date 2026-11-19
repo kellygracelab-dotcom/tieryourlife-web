@@ -59,6 +59,7 @@ import { Icon } from "../ui/Icon";
 import { Menu } from "../ui/Menu";
 import { Snackbar, type SnackbarNotice } from "../ui/Snackbar";
 import "./BoardsPage.css";
+import { siteOrigin } from "../lib/links";
 
 interface BoardsPageProps {
   repository?: BoardsRepository;
@@ -535,8 +536,8 @@ export function BoardsPage({
 
   const addressOf = (board: Board) =>
     board.publishedId === null || board.heldForReview === true
-      ? window.location.origin
-      : `${window.location.origin}/l/${encodeURIComponent(board.publishedId)}`;
+      ? siteOrigin()
+      : `${siteOrigin()}/l/${encodeURIComponent(board.publishedId)}`;
   // As on the list's own page: said at once, since drawing waits for the pictures.
   const shareImage = (board: Board) => {
     const drawn = boardView(board, strings.boards.untitled);

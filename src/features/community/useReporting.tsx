@@ -99,6 +99,12 @@ export function useReporting({ report, notify, onDone }: ReportingDeps): Reporti
         (left.current || gone.current ? sayOnTheSite : notify)({ text: strings.report.staffList });
         return;
       }
+      // The day's new reports are used up (since 19.11.2026): sending it again now would not help.
+      const error = errorOf(reason);
+      if (error.kind === "tooManyRequests" && error.code === "REPORT_DAILY_LIMIT") {
+        (left.current || gone.current ? sayOnTheSite : notify)({ text: strings.report.dailyLimit });
+        return;
+      }
       if (left.current || gone.current) {
         // Wherever the reader is now: Try again sends the same report again.
         sayOnTheSite({

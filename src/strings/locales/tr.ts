@@ -94,6 +94,7 @@ const tr: Translation = {
     faceUndo: "Geri al",
     faceNote:
       "Yayımladığınız listelerde profil resminiz adınızın yanında görünür. Seçtiğiniz kart ya da fotoğraf kontrol edilir ve hesabınızla saklanır.",
+    faceUnchecked: "Bu görsel kontrol edilemiyor. Hareketsiz bir fotoğraf deneyin.",
     faceNotMade: "Bu görsel profil resminiz olamaz. Başka birini seçin.",
     title: "Ayarlar",
     guestTitle: "Ayarlarınızı değiştirmek için oturum açın.",
@@ -366,6 +367,11 @@ const tr: Translation = {
     failedTooLarge: "Liste yayımlanamayacak kadar büyük.",
     failedPictureRefusedCard:
       "“{title}” kartındaki görsel herkese açık akışta yer alamaz. Değiştirin ya da listeyi özel tutun.",
+    failedPictureUnchecked:
+      "Fotoğraflarınızdan biri kontrol edilemiyor. Hareketsiz bir fotoğraf kullanın ya da listeyi özel tutun.",
+    failedPictureUncheckedCard:
+      "“{title}” kartındaki görsel kontrol edilemiyor. Hareketsiz bir fotoğraf kullanın ya da listeyi özel tutun.",
+    failedVisionToday: "Bugün çok fazla fotoğraf kontrol edildi. Daha sonra tekrar deneyin.",
     failedWebPicturesToday:
       "Listede bu hesabın bugün yayımlayabileceğinden fazla başka sitelerden görsel var. Yarın yeniden deneyin ya da daha azını kullanın.",
     failedWebPicturesTooMany:
@@ -534,6 +540,7 @@ const tr: Translation = {
     send: "Bildir",
     cancel: "İptal",
     failed: "Şikayet gönderilemedi: hiçbir şey gönderilmedi. Bir dakika sonra tekrar deneyin.",
+    dailyLimit: "Bugün çok sayıda şikayet gönderdiniz. Daha sonra tekrar deneyin.",
     staffList: "Bu liste ekipten birine ait: yalnızca sahibi bildirebilir.",
     sentTitle: "Bildirildi ve sizin için gizlendi",
     sentBody: "Şikayetleri bir kişi inceler. O ana kadar başkaları hâlâ görebilir.",

@@ -369,6 +369,25 @@ describe("ListPage report and hide", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("You hid this list");
   });
 
+  // Proxy #173: past the day's new reports, Try again would only be refused again.
+  it("says the day's reports are used up, with no Try again", async () => {
+    useHiddenStoreForTests(hiddenStore);
+    mocks.loadList.mockResolvedValue(list);
+    mocks.report.mockRejectedValue(
+      new ApiFailure({ kind: "tooManyRequests", code: "REPORT_DAILY_LIMIT", retryAt: 1 }),
+    );
+    openAs(member);
+    await screen.findByRole("heading", { level: 1 });
+    await userEvent.click(screen.getByLabelText("More about this list"));
+    await userEvent.click(screen.getByRole("button", { name: "Report this list" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Spam or advertising" }));
+    await userEvent.click(screen.getByRole("button", { name: "Report" }));
+    expect(
+      await screen.findByText("You’ve sent many reports today. Try again later."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
   it("takes a guest's report with no sign-in, as the proxy takes it from the guest's own account", async () => {
     mocks.loadList.mockResolvedValue(list);
     mocks.report.mockResolvedValue(undefined);

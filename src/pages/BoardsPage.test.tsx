@@ -98,6 +98,10 @@ const open = (
 
 const opened = () => screen.getAllByRole("link", { name: /^Open / });
 
+/** A list's "4 cards · nothing placed yet", drawn in two pieces that keep together. */
+const caption = (text: string) => (_: string, node: Element | null) =>
+  node !== null && node.id.endsWith("-meta") && node.textContent === text;
+
 describe("New here? on an empty Your lists", () => {
   const eurovision = {
     id: "euro",
@@ -270,11 +274,13 @@ describe("BoardsPage", () => {
     expect(
       [...tiles[0]!.querySelectorAll(".art--mosaic img")].map((img) => img.getAttribute("src")),
     ).toEqual(["https://img/a.jpg", "https://img/b.jpg", "https://img/c.jpg"]);
-    expect(within(tiles[0]!).getByText("4 cards · nothing placed yet")).toBeInTheDocument();
+    expect(
+      within(tiles[0]!).getByText(caption("4 cards · nothing placed yet")),
+    ).toBeInTheDocument();
     expect(within(tiles[0]!).queryByText("Public")).toBeNull();
     // No pictures: the tier colours, as stripes.
     expect(tiles[1]!.querySelectorAll(".art--stripes span")).toHaveLength(5);
-    expect(within(tiles[1]!).getByText("3 cards · 2 placed")).toBeInTheDocument();
+    expect(within(tiles[1]!).getByText(caption("3 cards · 2 placed"))).toBeInTheDocument();
     // Artboard 42: Public as a label before the count, read after the name.
     expect(within(tiles[1]!).getByText("Public")).toHaveClass("list-label", "board-tile__label");
     expect(tiles[1]).toHaveAccessibleDescription("Public 3 cards · 2 placed");
@@ -320,7 +326,7 @@ describe("BoardsPage", () => {
 
     // Two ranked, one waiting: a segment for each tier with cards, the unranked last.
     const [films, ramen, all] = links;
-    expect(within(films!).getByText("3 cards · 2 placed")).toBeInTheDocument();
+    expect(within(films!).getByText(caption("3 cards · 2 placed"))).toBeInTheDocument();
     const segments = [...films!.querySelectorAll(".board-card__ribbon > span")] as HTMLElement[];
     expect(segments.map((segment) => [segment.className, segment.style.flexGrow])).toEqual([
       ["band", "1"],
@@ -328,10 +334,10 @@ describe("BoardsPage", () => {
       ["board-card__unranked", "1"],
     ]);
     // Nothing ranked: the hint instead of the ribbon.
-    expect(within(ramen!).getByText("3 cards · nothing placed yet")).toBeInTheDocument();
+    expect(within(ramen!).getByText(caption("3 cards · nothing placed yet"))).toBeInTheDocument();
     expect(within(ramen!).getByText("Start dragging to rank these")).toBeInTheDocument();
     expect(ramen!.querySelector(".board-card__ribbon")).toBeNull();
-    expect(within(all!).getByText("3 cards · 3 placed")).toBeInTheDocument();
+    expect(within(all!).getByText(caption("3 cards · 3 placed"))).toBeInTheDocument();
     expect(all!.querySelectorAll(".board-card__ribbon > span")).toHaveLength(1);
 
     await userEvent.click(screen.getByRole("link", { name: "Open Ramen in Kyiv" }));

@@ -98,13 +98,17 @@ export type Reason = PictureDoubt | "unsure";
 /**
  * Why a row the backend judged needs a look (picture search, stage 1): every
  * picture it was not sure of, with its first reason; null for a sure one, one
- * the person chose, and anything an older backend found.
+ * the person chose, and anything an older backend found. A list without a
+ * section is no reason by itself: every row would carry it, and the mark
+ * would say nothing (QA 19.11, D7).
  */
 export function rowReason(row: PasteRow): Reason | null {
   if (row.chosen || row.origin === null || row.origin === "link") return null;
   const { confidence, doubts } = row.origin;
   if (confidence === undefined || confidence === "high") return null;
-  return doubts?.[0] ?? "unsure";
+  const said = doubts?.filter((doubt) => doubt !== "noSection");
+  if (doubts !== undefined && doubts.length > 0 && said?.length === 0) return null;
+  return said?.[0] ?? "unsure";
 }
 
 /** A row whose picture is in doubt, by the backend's word or by its kind. */

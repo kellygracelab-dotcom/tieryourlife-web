@@ -95,6 +95,7 @@ const es: Translation = {
     faceUndo: "Deshacer",
     faceNote:
       "La gente ve tu imagen junto a tu nombre en las listas que publicas. La tarjeta o la foto que elijas se revisa y se guarda con tu cuenta.",
+    faceUnchecked: "Esta imagen no se puede revisar. Prueba con una foto fija.",
     faceNotMade: "Esa imagen no puede ser tu foto. Elige otra.",
     title: "Ajustes",
     guestTitle: "Inicia sesión para cambiar tus ajustes.",
@@ -376,6 +377,11 @@ const es: Translation = {
     failedTooLarge: "La lista es demasiado grande para publicarse.",
     failedPictureRefusedCard:
       "La imagen de «{title}» no puede aparecer en el feed público. Cámbiala o mantén la lista privada.",
+    failedPictureUnchecked:
+      "Una de tus fotos no se puede revisar. Usa una foto fija o mantén la lista privada.",
+    failedPictureUncheckedCard:
+      "La imagen de «{title}» no se puede revisar. Usa una foto fija o mantén la lista privada.",
+    failedVisionToday: "Hoy se revisaron demasiadas fotos. Inténtalo más tarde.",
     failedWebPicturesToday:
       "La lista tiene más imágenes de otros sitios de las que esta cuenta puede publicar hoy. Vuelve a intentarlo mañana o usa menos.",
     failedWebPicturesTooMany:
@@ -549,6 +555,7 @@ const es: Translation = {
     send: "Denunciar",
     cancel: "Cancelar",
     failed: "No se pudo enviar la denuncia: no se envió nada. Inténtalo de nuevo en un minuto.",
+    dailyLimit: "Hoy enviaste muchos reportes. Inténtalo más tarde.",
     staffList: "Esta lista es del equipo: solo el propietario puede denunciarla.",
     sentTitle: "Denunciada y oculta para ti",
     sentBody: "Una persona revisa las denuncias. Hasta entonces otros pueden seguir viéndola.",

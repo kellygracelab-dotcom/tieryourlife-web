@@ -92,6 +92,7 @@ const de: Translation = {
     faceUndo: "Rückgängig",
     faceNote:
       "Andere sehen dein Bild neben deinem Namen auf den Listen, die du veröffentlichst. Eine gewählte Karte oder ein Foto wird geprüft und bei deinem Konto gespeichert.",
+    faceUnchecked: "Dieses Bild lässt sich nicht prüfen. Versuch es mit einem unbewegten Foto.",
     faceNotMade: "Dieses Bild kann nicht dein Profilbild sein. Wähle ein anderes.",
     title: "Einstellungen",
     guestTitle: "Melde dich an, um deine Einstellungen zu ändern.",
@@ -373,6 +374,11 @@ const de: Translation = {
     failedTooLarge: "Die Liste ist zu groß zum Veröffentlichen.",
     failedPictureRefusedCard:
       "Das Bild bei „{title}“ darf nicht in den öffentlichen Feed. Ändere es oder behalte die Liste privat.",
+    failedPictureUnchecked:
+      "Eines deiner Fotos lässt sich nicht prüfen. Nimm ein unbewegtes Foto oder behalte die Liste privat.",
+    failedPictureUncheckedCard:
+      "Das Bild bei „{title}“ lässt sich nicht prüfen. Nimm ein unbewegtes Foto oder behalte die Liste privat.",
+    failedVisionToday: "Heute wurden zu viele Fotos geprüft. Versuch es später noch einmal.",
     failedWebPicturesToday:
       "Die Liste hat mehr Bilder von anderen Seiten, als dieses Konto heute veröffentlichen kann. Versuch es morgen wieder oder nimm weniger davon.",
     failedWebPicturesTooMany:
@@ -548,6 +554,7 @@ const de: Translation = {
     cancel: "Abbrechen",
     failed:
       "Die Meldung konnte nicht gesendet werden – nichts wurde gesendet. Versuch es in einer Minute noch einmal.",
+    dailyLimit: "Du hast heute viele Meldungen gesendet. Versuch es später noch einmal.",
     staffList: "Diese Liste ist vom Team: nur der Inhaber kann sie melden.",
     sentTitle: "Gemeldet und für dich ausgeblendet",
     sentBody: "Ein Mensch prüft Meldungen. Bis dahin bleibt sie für andere vielleicht sichtbar.",

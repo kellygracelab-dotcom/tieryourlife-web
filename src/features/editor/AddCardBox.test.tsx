@@ -1,7 +1,9 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { GUEST, SessionContext, type Session } from "../../app/session";
 import { memoryStore } from "../../lib/storage";
+import { strings } from "../../strings";
 import { tipWanted, useTipsStoreForTests } from "../../ui/tipMemory";
 import { ApiFailure } from "../../api/errors";
 import type { FoundPicture, PicturePage } from "../../api/pictures";
@@ -39,25 +41,36 @@ function setup({
   category = "anime",
   items = [],
   upload = vi.fn<Upload>(),
+  guest = false,
 }: {
   find: FindPictures;
   keep?: Keep;
   category?: string | null;
   items?: EditorItem[];
   upload?: Upload;
+  guest?: boolean;
 }) {
   const dispatch = vi.fn<(action: EditorAction) => void>();
+  const signIn = vi.fn(async () => ({ kind: "failed" as const, code: "test" }));
+  const session: Session = {
+    account: guest ? GUEST : { kind: "signedIn", uid: "u1", displayName: null, photoUrl: null },
+    signIn,
+    signOut: async () => undefined,
+    refresh: () => undefined,
+  };
   render(
-    <AddCardBox
-      items={items}
-      category={category}
-      dispatch={dispatch}
-      find={find}
-      upload={upload}
-      keep={keep}
-    />,
+    <SessionContext.Provider value={session}>
+      <AddCardBox
+        items={items}
+        category={category}
+        dispatch={dispatch}
+        find={find}
+        upload={upload}
+        keep={keep}
+      />
+    </SessionContext.Provider>,
   );
-  return { dispatch };
+  return { dispatch, signIn };
 }
 
 const typeAndWait = async (words: string) => {
@@ -370,6 +383,24 @@ describe("AddCardBox", () => {
       key: "web:abc",
       attribution: { source: "web", link: "https://site.test/borscht" },
     });
+  });
+
+  it("tells a guest at once, in the answers, that a picture from the web needs an account", async () => {
+    const find = vi.fn<FindPictures>(async () =>
+      page([picture("web:abc", { title: "Borscht", source: "web", kind: "web" })]),
+    );
+    const keep = vi.fn<Keep>();
+    const { dispatch, signIn } = setup({ find, keep, guest: true });
+    await typeAndWait("borscht");
+    await userEvent.click(screen.getByRole("button", { name: /Borscht/ }));
+    // The first press says it, with no trip to the backend, and the field keeps its place.
+    const said = screen.getByText(strings.new.pictureSignIn).closest<HTMLElement>("[role=status]")!;
+    expect(screen.getByRole("group", { name: strings.new.suggestions })).toContainElement(said);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(keep).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+    await userEvent.click(within(said).getByRole("button", { name: strings.nav.signIn }));
+    expect(signIn).toHaveBeenCalled();
   });
 
   it("says when the web pictures for today are used up", async () => {

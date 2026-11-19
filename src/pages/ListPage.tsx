@@ -97,6 +97,7 @@ import type { PlayCard, PlayTier } from "../features/play/board";
 import { AuthorTools, VisitorTools, type Report, type Unpublish } from "./ListPageMenus";
 import { ListPageLoading, ListPageTrouble } from "./ListPageStates";
 import "./ListPage.css";
+import { siteOrigin } from "../lib/links";
 
 /** Whose arrangement is on screen, in the app's words: the author's (or a reader's), or this person's own. */
 type View = "theirs" | "mine";
@@ -534,7 +535,7 @@ function OpenList({
       void shareBoard(
         mineList,
         loadPlacedDraft(localStorageStore, scopeOf(list)) ?? [],
-        `${window.location.origin}/l/${encodeURIComponent(list.id)}`,
+        `${siteOrigin()}/l/${encodeURIComponent(list.id)}`,
       ).then(
         (how) => {
           if (how === "saved") setNotice({ text: strings.boards.imageSaved });

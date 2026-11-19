@@ -3,8 +3,8 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
-import { ListLabel, MoreButton } from "./BoardTile";
-import { fromOf, labelOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
+import { ListLabel, MetaParts, MoreButton } from "./BoardTile";
+import { fromOf, labelOf, spokenTitleOf, titleOf } from "./boardText";
 import { RenameField } from "./RenameField";
 import {
   cardFocusByPicture,
@@ -109,7 +109,9 @@ export const BoardRow = memo(function BoardRow({
           {label !== null && (
             <ListLabel text={label} id={`${id}-label`} className="board-card__label" />
           )}
-          <span id={`${id}-meta`}>{metaOf(board)}</span>
+          <span id={`${id}-meta`}>
+            <MetaParts board={board} />
+          </span>
         </span>
         {ranked > 0 ? (
           <TierRibbon board={board} />

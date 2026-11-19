@@ -126,7 +126,7 @@ describe("a picture the search was not sure of", () => {
   const judged = (
     index: number,
     confidence: "high" | "medium" | "low",
-    doubts?: ("namesakes" | "otherName" | "otherKind")[],
+    doubts?: ("namesakes" | "otherName" | "otherKind" | "noSection")[],
     more: Partial<PasteRow> = {},
   ) =>
     row(index, {
@@ -151,5 +151,12 @@ describe("a picture the search was not sure of", () => {
     expect(summaryOf(rows, null)).toEqual({ names: 4, right: 1, doubtful: 2, none: 1 });
     expect(needsLook(judged(1, "medium"), null)).toBe(true);
     expect(reviewOrder(rows, null).map((one) => one.index)).toEqual([1, 2, 3, 0]);
+  });
+
+  it("does not mark a row only because the list has no section (QA 19.11, D7)", () => {
+    expect(rowReason(judged(0, "medium", ["noSection"]))).toBeNull();
+    expect(rowReason(judged(1, "low", ["noSection", "namesakes"]))).toBe("namesakes");
+    const rows = [judged(0, "medium", ["noSection"]), judged(1, "medium", ["noSection"]), none(2)];
+    expect(summaryOf(rows, null)).toEqual({ names: 3, right: 2, doubtful: 0, none: 1 });
   });
 });

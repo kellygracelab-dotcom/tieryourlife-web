@@ -239,6 +239,22 @@ describe("parseApiError", () => {
       { kind: "tooManyRequests", code: "TOO_MANY_PROPOSALS" },
     ],
     [429, "", { kind: "tooManyRequests", code: null }],
+    // Proxy #173 (19.11.2026): the day's photographs checked, and the day's reports.
+    [
+      429,
+      json({ code: "VISION_DAILY_LIMIT", retryAt: 1_800_000_000_000 }),
+      { kind: "tooManyRequests", code: "VISION_DAILY_LIMIT", retryAt: 1_800_000_000_000 },
+    ],
+    [
+      429,
+      json({ code: "REPORT_DAILY_LIMIT" }),
+      { kind: "tooManyRequests", code: "REPORT_DAILY_LIMIT" },
+    ],
+    [
+      422,
+      json({ code: "PICTURE_REFUSED", because: "unchecked" }),
+      { kind: "pictureRefused", because: "unchecked", code: "PICTURE_REFUSED" },
+    ],
     [
       429,
       json({ error: "Too many picture searches", code: "SEARCH_LIMIT", retryAt: 1794571200000 }),

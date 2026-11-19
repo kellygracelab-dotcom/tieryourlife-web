@@ -25,6 +25,7 @@ import type { SnackbarNotice } from "../ui/Snackbar";
 import { useLeave } from "../ui/useLeave";
 import "../features/community/report.css";
 import "./ListPage.css";
+import { siteOrigin } from "../lib/links";
 
 export type Report = typeof sendReport;
 export type Unpublish = typeof unpublishList;
@@ -33,7 +34,7 @@ type Notify = (notice: SnackbarNotice) => void;
 
 /** The list's address, and the two ways to hand it to someone. */
 function useListLink(list: PublishedList) {
-  const link = `${window.location.origin}/l/${encodeURIComponent(list.id)}`;
+  const link = `${siteOrigin()}/l/${encodeURIComponent(list.id)}`;
   const copy = (): Promise<void> =>
     navigator.clipboard?.writeText(link) ?? Promise.reject(new Error("no clipboard"));
   // The clipboard said no: the link is spelled out, to be copied by hand.

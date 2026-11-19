@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { ListArt } from "../../ui/ListArt";
-import { fromOf, labelOf, metaOf, spokenTitleOf, titleOf } from "./boardText";
+import { fromOf, labelOf, metaPartsOf, spokenTitleOf, titleOf } from "./boardText";
 import { RenameField } from "./RenameField";
 import { cardFocusByPicture, coverFocusOf, previewsOf, rankedTiers, type Board } from "./model";
 
@@ -34,6 +34,20 @@ export function MoreButton({ name, className }: { name: string; className: strin
 }
 
 /** Public or Saved before the count (artboard 42), in a tile and in a row alike. */
+/**
+ * "14 cards · nothing placed yet" in two pieces that each keep together while
+ * they fit, so a narrow tile breaks between them rather than a word to a line.
+ */
+export function MetaParts({ board }: { board: Board }) {
+  const [count, progress] = metaPartsOf(board);
+  return (
+    <>
+      <span className="board-meta__part">{count} ·</span>{" "}
+      <span className="board-meta__part">{progress}</span>
+    </>
+  );
+}
+
 export function ListLabel({
   text,
   id,
@@ -103,7 +117,7 @@ export const BoardTile = memo(function BoardTile({
           <ListLabel text={label} id={`${id}-label`} className="board-tile__label" />
         )}
         <span className="board-tile__meta" id={`${id}-meta`}>
-          {metaOf(board)}
+          <MetaParts board={board} />
         </span>
       </span>
     </span>

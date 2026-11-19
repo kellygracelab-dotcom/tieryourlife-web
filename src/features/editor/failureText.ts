@@ -30,11 +30,17 @@ export function failureText(
             ),
           });
     // Trying again sends the same photo: the way out is to remove it or keep the list private.
+    // An animation, or a photo SafeSearch could not judge (since 19.11.2026): a still one will do.
     case "pictureRefused": {
       const title = error.imageUrl === undefined ? null : titleOf(error.imageUrl);
-      return title === null
-        ? strings.new.failedPictureRefused
-        : fill(strings.new.failedPictureRefusedCard, { title });
+      const unchecked = error.because === "unchecked";
+      if (title === null) {
+        return unchecked ? strings.new.failedPictureUnchecked : strings.new.failedPictureRefused;
+      }
+      return fill(
+        unchecked ? strings.new.failedPictureUncheckedCard : strings.new.failedPictureRefusedCard,
+        { title },
+      );
     }
     case "sourceChanged":
       return strings.rank.failedChanged;
@@ -61,10 +67,12 @@ export function failureText(
       return error.detail === WEB_PICTURES_TOO_MANY
         ? strings.new.failedWebPicturesTooMany
         : strings.new.failedTooLarge;
-    // The account's pictures from other sites for today are used up; nothing was published.
+    // The account's pictures from other sites, or photographs checked, for today
+    // are used up; nothing was published.
     case "tooManyRequests":
-      return error.code === "WEB_PICTURES_DAILY_LIMIT"
-        ? strings.new.failedWebPicturesToday
+      if (error.code === "WEB_PICTURES_DAILY_LIMIT") return strings.new.failedWebPicturesToday;
+      return error.code === "VISION_DAILY_LIMIT"
+        ? strings.new.failedVisionToday
         : strings.new.failedOther;
     // A section that no longer takes lists is changed under Category, so the text says where.
     // More tiers than the feed takes says what to change: the limit itself.

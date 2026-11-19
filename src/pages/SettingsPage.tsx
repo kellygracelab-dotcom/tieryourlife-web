@@ -33,7 +33,7 @@ import {
 } from "../lib/api";
 import { type CutFace, cutFaceOnCanvas, uploadPicture } from "../lib/pictures";
 import { renameAccount, setFace } from "../lib/profile";
-import { appIsLive, FEEDBACK_EMAIL, onApple, playUrl } from "../lib/links";
+import { appIsLive, FEEDBACK_EMAIL, onApple, playUrl, siteOrigin } from "../lib/links";
 import { localStorageStore } from "../lib/storage";
 import { fill, strings } from "../strings";
 import { Button } from "../ui/Button";
@@ -162,7 +162,7 @@ function RowText({ name, sub }: { name: string; sub: string }) {
  */
 function AppCard({ share }: { share: ShareSite }) {
   const [how, setHow] = useState(false);
-  const url = `${window.location.origin}/`;
+  const url = `${siteOrigin()}/`;
   const onShare = () => {
     share(url).then(
       (way) => {

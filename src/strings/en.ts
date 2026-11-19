@@ -85,6 +85,7 @@ export const en = {
     faceUndo: "Undo",
     faceNote:
       "People see your face next to your name on the lists you publish. A card or a photo you pick is checked and kept with your account.",
+    faceUnchecked: "This picture can’t be checked. Try a still photo.",
     faceNotMade: "That picture cannot be your face. Pick another.",
     title: "Settings",
     guestTitle: "Sign in to change your settings.",
@@ -365,6 +366,11 @@ export const en = {
     failedTooLarge: "The list is too big to publish.",
     failedPictureRefusedCard:
       "The picture on “{title}” cannot go in the public feed. Change it, or keep this list private.",
+    failedPictureUnchecked:
+      "One of your photos can’t be checked. Use a still photo, or keep this list private.",
+    failedPictureUncheckedCard:
+      "The picture on “{title}” can’t be checked. Use a still photo, or keep this list private.",
+    failedVisionToday: "Too many photos were checked today. Try again later.",
     failedWebPicturesToday:
       "This list has more pictures from other sites than this account can publish today. Try again tomorrow, or use fewer of them.",
     failedWebPicturesTooMany:
@@ -540,6 +546,7 @@ export const en = {
     send: "Report",
     cancel: "Cancel",
     failed: "Couldn’t send the report — nothing was sent. Try again in a minute.",
+    dailyLimit: "You’ve sent many reports today. Try again later.",
     staffList: "This list is by staff: only the owner can report it.",
     sentTitle: "Reported, and hidden for you",
     sentBody: "A person reviews reports by hand. Until then it may stay up for other people.",

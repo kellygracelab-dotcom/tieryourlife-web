@@ -316,6 +316,17 @@
   color: var(--ink-dim);
 }
 
+/* A guest's press on a picture from the web: what it needs, and the way to it. */
+.cards__notice--sign-in {
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--ink);
+}
+
+.cards__notice--sign-in > span {
+  flex: 1 1 12em;
+}
+
 .cards__notice .ms {
   flex: none;
   font-size: 18px;
