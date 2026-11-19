@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import vectors from "../test/theme-vectors.json";
 import { PRESET_HUES } from "./colourTheme";
-import { paletteCss, ROLES, rolesOf, seedOf, type Roles } from "./palette";
+import { paletteCss, ROLES, rolesFor, rolesOf, seedOf, type Roles } from "./palette";
+import { PRESET_ROLES } from "./presetPalettes";
 
 const rgb = (hex: string) => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
 
@@ -19,35 +20,50 @@ function expectClose(ours: Roles, theirs: Record<string, string>, where: string)
   }
 }
 
-describe("a palette from one hue, the same as the app's (shared vectors)", () => {
-  it("knows the ready colours by the vectors' hues", () => {
-    for (const [name, hue] of Object.entries(PRESET_HUES)) {
-      expect(vectors.presets[name as keyof typeof vectors.presets].hue).toBe(hue);
+const presets = Object.entries(vectors.presets) as [
+  keyof typeof PRESET_ROLES,
+  (typeof vectors.presets)["matcha"],
+][];
+
+describe("the palettes, the same as the app's (shared vectors)", () => {
+  it("takes the ready colours' tables as they are, light and dark", () => {
+    expect(Object.keys(PRESET_ROLES).sort()).toEqual(presets.map(([name]) => name).sort());
+    for (const [name, preset] of presets) {
+      for (const mode of ["light", "dark"] as const) {
+        const theirs = Object.fromEntries(
+          Object.entries(preset[mode]).map(([role, hex]) => [role, hex.toUpperCase()]),
+        );
+        expect(PRESET_ROLES[name][mode], `${name} ${mode}`).toEqual(theirs);
+        expect(Object.keys(theirs).sort()).toEqual([...ROLES].sort());
+      }
+      expect(rolesFor(name, true)).toBe(PRESET_ROLES[name].dark);
     }
   });
 
-  it("builds every role of the ready colours, light and dark, within the tolerance", () => {
-    for (const [name, preset] of Object.entries(vectors.presets)) {
-      expect(seedOf(preset.hue)).toBe(preset.seed.toUpperCase());
-      expectClose(rolesOf(preset.hue, false), preset.light, `${name} light`);
-      expectClose(rolesOf(preset.hue, true), preset.dark, `${name} dark`);
+  it("opens Your colour from a ready colour on its main hue", () => {
+    for (const [name, preset] of presets) {
+      expect(PRESET_HUES[name]).toBe(preset.palettes.primary.hue);
     }
   });
 
   it("builds every role of the own hues the vectors hold, light and dark", () => {
     for (const own of vectors.ownHues) {
+      expect(seedOf(own.hue)).toBe(own.seed.toUpperCase());
       expectClose(rolesOf(own.hue, false), own.light, `hue ${own.hue} light`);
       expectClose(rolesOf(own.hue, true), own.dark, `hue ${own.hue} dark`);
+      expectClose(rolesFor(own.hue, true), own.dark, `hue ${own.hue} dark`);
     }
   });
 
   it("draws the page and the main button from the palette and never touches a tier's colour", () => {
-    const css = paletteCss(PRESET_HUES.matcha);
-    const light = rolesOf(PRESET_HUES.matcha, false);
+    const css = paletteCss("matcha");
+    const light = PRESET_ROLES.matcha.light;
     expect(css).toContain(`--paper:${light.surfaceContainerHigh}`);
     expect(css).toContain(`--surface:${light.surfaceContainerLow}`);
     expect(css).toContain(`--accent:${light.primary}`);
+    expect(css).toContain(`--accent:${PRESET_ROLES.matcha.dark.primary}`);
     expect(css).toContain(':root:root[data-theme="dark"]{');
     expect(css).not.toMatch(/--tier-|--band-light|--band-dark/);
+    expect(paletteCss(300)).toContain(`--accent:${rolesOf(300, false).primary}`);
   });
 });

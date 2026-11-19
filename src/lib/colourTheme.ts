@@ -18,8 +18,11 @@ export type ColourName = "lavender" | "matcha" | "peach" | "sky" | "phone" | "cu
 export const SITE_COLOURS = ["lavender", "matcha", "peach", "sky", "custom"] as const;
 export type SiteColour = (typeof SITE_COLOURS)[number];
 
-/** The ready colours' hues, shared with the app and the backend's vectors. */
-export const PRESET_HUES = { matcha: 125, peach: 42, sky: 212 } as const;
+/**
+ * The ready colours' main hues (the vectors' palettes.primary.hue): Your
+ * colour's slider opens on them. Their palettes are fixed tables (palette.ts).
+ */
+export const PRESET_HUES = { matcha: 136, peach: 41, sky: 220 } as const;
 
 /** Where the own colour's slider starts before one was ever chosen, as on the phone. */
 export const FIRST_OWN_HUE = 265;
@@ -38,12 +41,12 @@ export function shownColour(choice: ColourChoice | null): SiteColour {
     : "lavender";
 }
 
-/** The hue a choice is built from, or null for Lavender's hand-made palette. */
-export function hueOf(choice: ColourChoice | null): number | null {
+/** What a choice is drawn from: a ready colour's table, one's own hue, or null for Lavender's hand-made palette. */
+export function sourceOf(choice: ColourChoice | null): "matcha" | "peach" | "sky" | number | null {
   const shown = shownColour(choice);
   if (shown === "lavender") return null;
   if (shown === "custom") return choice?.hue ?? null;
-  return PRESET_HUES[shown];
+  return shown;
 }
 
 let store: KeyValueStore = localStorageStore;
@@ -110,14 +113,14 @@ let drawing = 0;
 
 export async function showColour(choice: ColourChoice | null, doc: Document = document) {
   const turn = ++drawing;
-  const hue = hueOf(choice);
-  if (hue === null) {
+  const source = sourceOf(choice);
+  if (source === null) {
     applyLook(null, doc);
     return;
   }
   const { paletteCss } = await import("./palette");
   // Another choice came meanwhile: only the latest is drawn.
-  if (turn === drawing) applyLook(paletteCss(hue), doc);
+  if (turn === drawing) applyLook(paletteCss(source), doc);
 }
 
 const chosenListeners = new Set<(choice: ColourChoice) => void>();

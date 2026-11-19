@@ -4,7 +4,7 @@ import {
   chooseColour,
   COLOUR_KEY,
   colourVersion,
-  hueOf,
+  sourceOf,
   LOOK_KEY,
   readColour,
   showColour,
@@ -39,12 +39,12 @@ describe("the colour a choice shows", () => {
   });
 
   it("builds a ready colour from its hue, one's own from the kept hue, and Lavender from none", () => {
-    expect(hueOf({ name: "matcha", hue: 300, changedAt: 1 })).toBe(125);
-    expect(hueOf({ name: "peach", hue: null, changedAt: 1 })).toBe(42);
-    expect(hueOf({ name: "sky", hue: null, changedAt: 1 })).toBe(212);
-    expect(hueOf({ name: "custom", hue: 300, changedAt: 1 })).toBe(300);
-    expect(hueOf({ name: "lavender", hue: 300, changedAt: 1 })).toBeNull();
-    expect(hueOf({ name: "phone", hue: 300, changedAt: 1 })).toBeNull();
+    expect(sourceOf({ name: "matcha", hue: 300, changedAt: 1 })).toBe("matcha");
+    expect(sourceOf({ name: "peach", hue: null, changedAt: 1 })).toBe("peach");
+    expect(sourceOf({ name: "sky", hue: null, changedAt: 1 })).toBe("sky");
+    expect(sourceOf({ name: "custom", hue: 300, changedAt: 1 })).toBe(300);
+    expect(sourceOf({ name: "lavender", hue: 300, changedAt: 1 })).toBeNull();
+    expect(sourceOf({ name: "phone", hue: 300, changedAt: 1 })).toBeNull();
   });
 });
 
@@ -92,7 +92,7 @@ describe("drawing a colour", () => {
     const second = showColour({ name: "peach", hue: null, changedAt: 2 });
     await Promise.all([first, second]);
     const { paletteCss } = await import("./palette");
-    expect(look()?.textContent).toBe(paletteCss(42));
+    expect(look()?.textContent).toBe(paletteCss("peach"));
     expect(look()?.textContent).toContain('[data-theme="dark"]');
 
     await showColour({ name: "lavender", hue: null, changedAt: 3 });
