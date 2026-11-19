@@ -79,6 +79,13 @@ jobs:
     name: Browser smokes (${{ matrix.shard }}/4)
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    # Playwright's own image holds Chromium, WebKit and their system packages,
+    # so the shards no longer fetch them from apt, where they hung for half an
+    # hour now and then. Its version is the lock file's @playwright/test
+    # (tests/config/ci-browsers.test.ts); the digest pins the exact image.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f
+      options: --ipc=host
     strategy:
       fail-fast: false
       matrix:
@@ -90,13 +97,6 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci --prefer-offline --no-audit --no-fund
-      - name: Cache Chromium and WebKit
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: pw-${{ runner.os }}-both-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium webkit
-        timeout-minutes: 10
       - run: npm run e2e -- --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: failure()
