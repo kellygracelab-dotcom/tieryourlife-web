@@ -53,7 +53,10 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: pw-${{ runner.os }}-chromium-${{ hashFiles('package-lock.json') }}
+      # The system packages now and then hang on the runner: a stuck install
+      # fails after ten minutes, so the job can be run again.
       - run: npx playwright install --with-deps chromium
+        timeout-minutes: 10
       - name: Smoke the actual production build
         run: node scripts/smoke-build.mjs
       - name: Pack this push's checked output
@@ -93,6 +96,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: pw-${{ runner.os }}-both-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium webkit
+        timeout-minutes: 10
       - run: npm run e2e -- --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: failure()
@@ -172,6 +176,7 @@ jobs:
           key: pw-${{ runner.os }}-chromium-${{ hashFiles('package-lock.json') }}
       - name: Install the smoke browser
         run: npx playwright install --with-deps chromium
+        timeout-minutes: 10
 
       - name: Smokes against the proxy
         run: npm run e2e:proxy

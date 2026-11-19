@@ -1,3 +1,4 @@
+import { errorOf } from "./errors";
 import type { AccountAction, ApiClient } from "./client";
 import { itemsOf } from "./lists";
 import type { Topic } from "./sections";
@@ -328,12 +329,108 @@ export async function loadFollowing(client: ApiClient): Promise<Following> {
 }
 
 /**
+ * The photo a person uploaded for their face, kept with the account (Proxy
+ * #169): what "Your photo" shows, worn again with a press. The letter or a
+ * card leaves it be; a new upload replaces it everywhere, and so does Remove.
+ */
+export interface PhotoSlot {
+  pictureId: string;
+  url: string;
+  setAt: number;
+}
+
+/** The slot as the backend says it, or null for none or what is not one. */
+export function photoSlotOf(value: unknown): PhotoSlot | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  const { pictureId, url, setAt } = value as Record<string, unknown>;
+  return typeof pictureId === "string" &&
+    typeof url === "string" &&
+    url.startsWith("https://") &&
+    typeof setAt === "number"
+    ? { pictureId, url, setAt }
+    : null;
+}
+
+/** What a new face from an upload became: its copy's address, and the account's photo it now is. */
+export interface MadeFace {
+  url: string;
+  photo: PhotoSlot | null;
+}
+
+/**
  * One of the person's own uploaded pictures becomes their face: the backend
- * checks it and keeps a copy where everybody may see it. 422 PICTURE_REFUSED
+ * checks it and keeps a copy where everybody may see it. A photo from the
+ * device (`?upload=1`, Proxy #171) is the account's photo from then on and
+ * replaces the one before; a card's cut is a copy only. 422 PICTURE_REFUSED
  * when the picture cannot be a face.
  */
-export function makeFace(client: ApiClient, pictureId: string): Promise<{ url: string }> {
-  return client.request<{ url: string }>("POST", `/lists/face/${encodeURIComponent(pictureId)}`);
+export async function makeFace(
+  client: ApiClient,
+  pictureId: string,
+  upload: boolean,
+): Promise<MadeFace> {
+  const answer = await client.request<{ url: string; photo?: unknown }>(
+    "POST",
+    `/lists/face/${encodeURIComponent(pictureId)}${upload ? "?upload=1" : ""}`,
+  );
+  return { url: answer.url, photo: photoSlotOf(answer.photo ?? null) };
+}
+
+/** The account's photo (`GET /boards/settings`), or null when it has none. */
+export async function loadPhotoSlot(client: ApiClient): Promise<PhotoSlot | null> {
+  const answer = await client.request<{ photo?: unknown }>("GET", "/boards/settings");
+  return photoSlotOf(answer.photo ?? null);
+}
+
+/** What a removal did: whether the photo was the face (the letter is now), and until when Undo can bring it back. */
+export interface RemovedPhoto {
+  wasWorn: boolean;
+  undoUntil: number | null;
+}
+
+/**
+ * Remove your photo (`DELETE /lists/face`, Proxy #170), sent at once: gone
+ * from the account and from every list and ranking that showed it (the
+ * letter there). Its copy waits ten minutes for Undo. Safe to repeat.
+ */
+export async function removePhotoSlot(client: ApiClient): Promise<RemovedPhoto> {
+  const answer = await client.request<{ wasWorn?: unknown; undoUntil?: unknown }>(
+    "DELETE",
+    "/lists/face",
+  );
+  return {
+    wasWorn: answer.wasWorn === true,
+    undoUntil: typeof answer.undoUntil === "number" ? answer.undoUntil : null,
+  };
+}
+
+/**
+ * Undo of a removal (`POST /lists/face/restore`): the photo back as the
+ * account's, to be worn again when it was. Too late or nothing to bring back
+ * (404) is "gone"; a photo uploaded since (409) stays, and is said.
+ */
+export type RestoredPhoto =
+  | { kind: "restored"; photo: PhotoSlot; wasWorn: boolean }
+  | { kind: "replaced"; photo: PhotoSlot | null }
+  | { kind: "gone" };
+
+export async function restorePhotoSlot(client: ApiClient): Promise<RestoredPhoto> {
+  try {
+    const answer = await client.request<{ photo?: unknown; wasWorn?: unknown }>(
+      "POST",
+      "/lists/face/restore",
+    );
+    const photo = photoSlotOf(answer.photo ?? null);
+    return photo === null
+      ? { kind: "gone" }
+      : { kind: "restored", photo, wasWorn: answer.wasWorn === true };
+  } catch (reason: unknown) {
+    const error = errorOf(reason);
+    if (error.kind === "notFound") return { kind: "gone" };
+    if (error.kind === "conflict")
+      return { kind: "replaced", photo: photoSlotOf(error.photo ?? null) };
+    throw reason;
+  }
 }
 
 /**

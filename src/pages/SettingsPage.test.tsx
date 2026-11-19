@@ -12,12 +12,15 @@ import { type CutFace, PictureRefused, type UploadedPicture } from "../lib/pictu
 import { HIDDEN_KEY } from "../features/community/hidden";
 import { useHiddenStoreForTests } from "../features/community/useHidden";
 import { memoryStore } from "../lib/storage";
-import { readOwnFace, useOwnFaceStoreForTests } from "../lib/ownFace";
+import { useCardFaceStoreForTests } from "../lib/cardFace";
 import {
   SettingsPage,
   type Erase,
   type Face,
   type LoadLists,
+  type LoadPhoto,
+  type RemovePhoto,
+  type RestorePhoto,
   type RefreshAuthor,
   type Rename,
   type MakeFace,
@@ -73,6 +76,9 @@ const refreshAuthor = vi.fn<RefreshAuthor>();
 const erase = vi.fn<Erase>();
 const upload = vi.fn<UploadFace>();
 const makeFace = vi.fn<MakeFace>();
+const loadPhoto = vi.fn<LoadPhoto>();
+const removePhoto = vi.fn<RemovePhoto>();
+const restorePhoto = vi.fn<RestorePhoto>();
 const cut = vi.fn<CutFace>();
 const showFace = vi.fn<(photoUrl: string | null | undefined) => void>();
 const CUT = new Blob(["face"], { type: "image/jpeg" });
@@ -103,6 +109,9 @@ const open = (
           face={face}
           upload={upload}
           makeFace={makeFace}
+          loadPhoto={loadPhoto}
+          removePhoto={removePhoto}
+          restorePhoto={restorePhoto}
           cut={cut}
           refreshAuthor={refreshAuthor}
           erase={erase}
@@ -155,7 +164,12 @@ beforeEach(() => {
   refreshAuthor.mockReset();
   refreshAuthor.mockResolvedValue({ updated: 0 });
   erase.mockReset();
-  useOwnFaceStoreForTests(memoryStore());
+  loadPhoto.mockReset();
+  loadPhoto.mockResolvedValue(null);
+  removePhoto.mockReset();
+  removePhoto.mockResolvedValue({ wasWorn: false, undoUntil: null });
+  restorePhoto.mockReset();
+  useCardFaceStoreForTests(memoryStore());
 });
 
 describe("faceChoicesOf", () => {
@@ -463,7 +477,7 @@ describe("SettingsPage", () => {
     expect(showFace).toHaveBeenCalledWith(SHOWN);
     await waitFor(() => expect(face).toHaveBeenCalledWith("https://faces/p2.jpg"));
     expect(upload).toHaveBeenCalledWith(CUT);
-    expect(makeFace).toHaveBeenCalledWith("p2");
+    expect(makeFace).toHaveBeenCalledWith("p2", false);
 
     // Lost on the way up: a card's square has no file name to give.
     upload.mockRejectedValue(new PictureRefused("upload"));
@@ -511,8 +525,9 @@ describe("SettingsPage", () => {
 
     act(() => sent({ pictureId: "p1", previewUrl: "blob:p1" }));
     await waitFor(() => expect(face).toHaveBeenCalledWith("https://faces/p1.jpg"));
-    expect(makeFace).toHaveBeenCalledWith("p1");
+    expect(makeFace).toHaveBeenCalledWith("p1", true);
     expect(await screen.findByRole("status")).toHaveTextContent(/Saved/);
+    expect(within(faces()).getByRole("button", { name: "Your photo" })).toBeInTheDocument();
     await waitFor(() => expect(showFace).toHaveBeenLastCalledWith(undefined));
 
     // The backend would not have it as a face: the old one comes back.
@@ -597,9 +612,10 @@ describe("SettingsPage", () => {
     expect(await screen.findByText(/Publish a list and its pictures/)).toBeInTheDocument();
   });
 
-  // Danylo, 19.11.2026: the letter took the uploaded photo away for good. The photo keeps its tile.
-  it("keeps the uploaded photo as a choice after the letter, and puts it back with a press", async () => {
+  // Danylo, 19.11.2026: the letter took the uploaded photo away for good. The account keeps it now.
+  it("keeps the account's photo as a choice after the letter, and puts it back with a press", async () => {
     const PHOTO = "https://faces/p1.jpg";
+    loadPhoto.mockResolvedValue({ pictureId: "p1", url: PHOTO, setAt: 1 });
     load.mockResolvedValue({ lists: [published("A24 films", ["https://img/1.jpg"])] });
     face.mockResolvedValue(undefined);
     const worn = open({ ...member, photoUrl: PHOTO });
@@ -614,15 +630,13 @@ describe("SettingsPage", () => {
       ["Your photo", "true"],
       ["Card from A24 films", "false"],
     ]);
-    expect(readOwnFace("u1")).toBe(PHOTO);
     await userEvent.click(within(faces()).getByRole("button", { name: "Just the letter" }));
     expect(face).toHaveBeenLastCalledWith(null);
     worn.unmount();
 
     // The letter worn now: the photo waits on its tile, and a press wears it, no placing.
     open({ ...member, photoUrl: null });
-    await within(faces()).findByRole("button", { name: "Card from A24 films" });
-    const photo = within(faces()).getByRole("button", { name: "Your photo" });
+    const photo = await within(faces()).findByRole("button", { name: "Your photo" });
     expect(photo).toHaveAttribute("aria-pressed", "false");
     expect(within(faces()).getByRole("button", { name: "Just the letter" })).toHaveAttribute(
       "aria-pressed",
@@ -635,29 +649,85 @@ describe("SettingsPage", () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
-  it("wears a card of the feed's own copies as it is, and leaves the uploaded photo be", async () => {
+  it("cuts a card of the feed's own copies, checks its tile, and leaves the account's photo be", async () => {
     const PHOTO = "https://faces/p1.jpg";
     const COPY =
       "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/published%2Fl1%2Fc1?alt=media";
+    loadPhoto.mockResolvedValue({ pictureId: "p1", url: PHOTO, setAt: 1 });
     load.mockResolvedValue({ lists: [published("A24 films", [COPY])] });
+    upload.mockResolvedValue({ pictureId: "p3", previewUrl: "blob:p3" });
+    makeFace.mockResolvedValue({ url: "https://faces/p3.jpg", photo: null });
     face.mockResolvedValue(undefined);
     const first = open({ ...member, photoUrl: PHOTO });
     await userEvent.click(await within(faces()).findByRole("button", { name: /Card from/ }));
     placeLoaded();
     await pressUseThis();
-    // Not cut: every cut goes up as the account's photo, and a card must not take its place.
-    expect(cut).not.toHaveBeenCalled();
-    expect(face).toHaveBeenCalledWith(COPY);
-    expect(readOwnFace("u1")).toBe(PHOTO);
+    // Left in the middle, and cut all the same: a republish takes the feed's copy away.
+    // Not an upload: the account's photo stays as it is.
+    expect(cut).toHaveBeenCalled();
+    await waitFor(() => expect(face).toHaveBeenCalledWith("https://faces/p3.jpg"));
+    expect(makeFace).toHaveBeenCalledWith("p3", false);
     first.unmount();
 
-    open({ ...member, photoUrl: COPY });
+    open({ ...member, photoUrl: "https://faces/p3.jpg" });
     const card = await within(faces()).findByRole("button", { name: /Card from/ });
     expect(card).toHaveAttribute("aria-pressed", "true");
-    expect(within(faces()).getByRole("button", { name: "Your photo" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
+    const photo = await within(faces()).findByRole("button", { name: "Your photo" });
+    expect(photo).toHaveAttribute("aria-pressed", "false");
+    expect(photo.querySelector("img")).toHaveAttribute("src", PHOTO);
+  });
+
+  it("removes the photo at once, the letter worn if it was, and Undo brings it back worn", async () => {
+    const PHOTO = "https://faces/p1.jpg";
+    const SLOT = { pictureId: "p1", url: PHOTO, setAt: 1 };
+    loadPhoto.mockResolvedValue(SLOT);
+    removePhoto.mockResolvedValue({ wasWorn: true, undoUntil: 600_000 });
+    restorePhoto.mockResolvedValue({ kind: "restored", photo: SLOT, wasWorn: true });
+    face.mockResolvedValue(undefined);
+    open({ ...member, photoUrl: PHOTO });
+    onTestFinished(() => sayOnTheSite(null));
+    await within(faces()).findByRole("button", { name: "Your photo" });
+
+    await userEvent.click(screen.getByRole("button", { name: "Remove your photo" }));
+    expect(removePhoto).toHaveBeenCalledTimes(1);
+    expect(showFace).toHaveBeenCalledWith(null);
+    expect(within(faces()).queryByRole("button", { name: "Your photo" })).toBeNull();
+    await waitFor(() => expect(siteNotice()?.text).toBe("Photo removed"));
+    expect(face).toHaveBeenLastCalledWith(null);
+    expect(screen.queryByRole("button", { name: "Remove your photo" })).toBeNull();
+
+    // Undo: the account puts it back, and it is worn again, as from its tile.
+    await act(async () => siteNotice()?.action?.onClick());
+    expect(restorePhoto).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(face).toHaveBeenLastCalledWith(PHOTO));
+    expect(within(faces()).getByRole("button", { name: "Your photo" })).toBeInTheDocument();
+  });
+
+  it("says when the photo can no longer come back, and when it was not removed", async () => {
+    const PHOTO = "https://faces/p1.jpg";
+    loadPhoto.mockResolvedValue({ pictureId: "p1", url: PHOTO, setAt: 1 });
+    restorePhoto.mockResolvedValue({ kind: "gone" });
+    open({ ...member, photoUrl: null });
+    onTestFinished(() => sayOnTheSite(null));
+    await userEvent.click(await screen.findByRole("button", { name: "Remove your photo" }));
+    await waitFor(() => expect(siteNotice()?.text).toBe("Photo removed"));
+    expect(face).not.toHaveBeenCalled();
+    await act(async () => siteNotice()?.action?.onClick());
+    expect(await screen.findByRole("alert")).toHaveTextContent("Too late to bring the photo back.");
+    expect(within(faces()).queryByRole("button", { name: "Your photo" })).toBeNull();
+
+    // Offline: nothing was removed, and the photo stays where it was.
+    loadPhoto.mockResolvedValue({ pictureId: "p2", url: "https://faces/p2.jpg", setAt: 2 });
+    removePhoto.mockRejectedValue(new Error("offline"));
+    open({ ...member, uid: "u2", photoUrl: null });
+    const second = screen.getAllByRole("list", { name: "Your face" }).at(-1)!;
+    await within(second).findByRole("button", { name: "Your photo" });
+    const removes = screen.getAllByRole("button", { name: "Remove your photo" });
+    await userEvent.click(removes.at(-1)!);
+    await waitFor(() =>
+      expect(within(second).getByRole("button", { name: "Your photo" })).toBeInTheDocument(),
     );
+    expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent("Couldn’t save");
   });
 
   it("keeps the back-up on, and says so, when the account would not delete the copy", async () => {
