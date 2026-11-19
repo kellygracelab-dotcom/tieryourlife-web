@@ -1267,6 +1267,13 @@ const ptBR: Translation = {
       many: "Você posicionou {n} cartas. O jogo as reorganiza; “Desfazer” as traz de volta.",
       other: "Você posicionou {n} cartas. O jogo as reorganiza; “Desfazer” as traz de volta.",
     },
+    // A visitor's game over the author's placing (QA 19.11).
+    placedWarningAuthor: {
+      one: "O autor posicionou {n} carta. O jogo a reorganiza em “Meu”; “Desfazer” a traz de volta.",
+      many: "O autor posicionou {n} cartas. O jogo as reorganiza em “Meu”; “Desfazer” as traz de volta.",
+      other:
+        "O autor posicionou {n} cartas. O jogo as reorganiza em “Meu”; “Desfazer” as traz de volta.",
+    },
   },
   boards: {
     title: "Suas listas",

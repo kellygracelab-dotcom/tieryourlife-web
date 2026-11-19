@@ -1328,6 +1328,13 @@ const pl: Translation = {
       many: "Umieszczono {n} kart. Gra je przestawi; „Cofnij” je przywróci.",
       other: "Umieszczono {n} karty. Gra je przestawi; „Cofnij” je przywróci.",
     },
+    // A visitor's game over the author's placing (QA 19.11).
+    placedWarningAuthor: {
+      one: "Autor umieścił {n} kartę. Gra przestawi ją w „Mój”; „Cofnij” ją przywróci.",
+      few: "Autor umieścił {n} karty. Gra przestawi je w „Mój”; „Cofnij” je przywróci.",
+      many: "Autor umieścił {n} kart. Gra przestawi je w „Mój”; „Cofnij” je przywróci.",
+      other: "Autor umieścił {n} karty. Gra przestawi je w „Mój”; „Cofnij” je przywróci.",
+    },
   },
   boards: {
     title: "Twoje listy",

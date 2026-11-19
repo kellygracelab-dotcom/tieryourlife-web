@@ -528,6 +528,8 @@ function OpenList({
   const play = usePlay(`list:${list.id}`, playCards, playTiers, localStorageStore, {
     title: list.title,
     theirs: true,
+    // Until the visitor places a card themselves, the tiers are the author's.
+    placedByAuthor: mineRows === null,
     games,
     notify: setNotice,
     // The end window's ways on (artboard 35): Mine as a picture, and Mine among the list's rankings.

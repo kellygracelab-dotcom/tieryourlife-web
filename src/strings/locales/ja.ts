@@ -1173,6 +1173,11 @@ const ja: Translation = {
     placedWarning: {
       other: "{n}枚のカードを配置済みです。ゲームで並べ替わりますが、「元に戻す」で戻せます。",
     },
+    // A visitor's game over the author's placing (QA 19.11).
+    placedWarningAuthor: {
+      other:
+        "作者が{n}枚のカードを配置しています。ゲームで「自分」の中で並べ替わりますが、「元に戻す」で戻せます。",
+    },
   },
   boards: {
     title: "あなたのリスト",

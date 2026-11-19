@@ -1182,6 +1182,12 @@ const tr: Translation = {
       one: "{n} kart yerleştirdin. Oyun onu yeniden dizer; “Geri al” geri getirir.",
       other: "{n} kart yerleştirdin. Oyun onları yeniden dizer; “Geri al” geri getirir.",
     },
+    // A visitor's game over the author's placing (QA 19.11).
+    placedWarningAuthor: {
+      one: "Yazar {n} kart yerleştirdi. Oyun onu “Benimki” içinde yeniden dizer; “Geri al” geri getirir.",
+      other:
+        "Yazar {n} kart yerleştirdi. Oyun onları “Benimki” içinde yeniden dizer; “Geri al” geri getirir.",
+    },
   },
   boards: {
     title: "Listeleriniz",

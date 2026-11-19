@@ -1226,6 +1226,12 @@ const de: Translation = {
       other:
         "Du hast {n} Karten platziert. Das Spiel ordnet sie neu; „Rückgängig“ holt sie zurück.",
     },
+    // A visitor's game over the author's placing (QA 19.11).
+    placedWarningAuthor: {
+      one: "Der Autor hat {n} Karte platziert. Das Spiel ordnet sie in „Meine“ neu; „Rückgängig“ holt sie zurück.",
+      other:
+        "Der Autor hat {n} Karten platziert. Das Spiel ordnet sie in „Meine“ neu; „Rückgängig“ holt sie zurück.",
+    },
   },
   boards: {
     title: "Deine Listen",

@@ -1291,6 +1291,13 @@ const fr: Translation = {
       many: "Vous avez placé {n} cartes. Le jeu les replace ; « Annuler » les remet.",
       other: "Vous avez placé {n} cartes. Le jeu les replace ; « Annuler » les remet.",
     },
+    // A visitor's game over the author's placing (QA 19.11).
+    placedWarningAuthor: {
+      one: "L’auteur a placé {n} carte. Le jeu la replace dans « Le mien » ; « Annuler » la remet.",
+      many: "L’auteur a placé {n} cartes. Le jeu les replace dans « Le mien » ; « Annuler » les remet.",
+      other:
+        "L’auteur a placé {n} cartes. Le jeu les replace dans « Le mien » ; « Annuler » les remet.",
+    },
   },
   boards: {
     title: "Vos listes",

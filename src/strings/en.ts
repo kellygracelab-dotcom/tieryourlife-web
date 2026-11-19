@@ -1143,6 +1143,12 @@ export const en = {
       one: "You’ve placed {n} card. The game rearranges it; Undo brings it back.",
       other: "You’ve placed {n} cards. The game rearranges them; Undo brings them back.",
     },
+    // A visitor's game over the author's placing (QA 19.11).
+    placedWarningAuthor: {
+      one: "The author placed {n} card. The game rearranges it in Mine; Undo brings it back.",
+      other:
+        "The author placed {n} cards. The game rearranges them in Mine; Undo brings them back.",
+    },
   },
   boards: {
     title: "Your lists",
