@@ -114,6 +114,10 @@ const ar: Translation = {
     faceGallery: "صورة من المعرض",
     faceGalleryCaption: "رفع",
     facePhotoCaption: "صورتك",
+    faceRemovePhoto: "إزالة صورتك",
+    facePhotoRemoved: "أُزيلت الصورة",
+    facePhotoGone: "فات الأوان لإعادة الصورة.",
+    faceUndo: "تراجع",
     faceNote:
       "يرى الناس صورتك بجانب اسمك في القوائم التي تنشرها. البطاقة أو الصورة التي تختارها تُفحص وتُحفظ مع حسابك.",
     faceNotMade: "لا يمكن استخدام هذه الصورة. اختر غيرها.",

@@ -40,7 +40,7 @@ export type ApiError =
   | { kind: "likeLimit"; retryAt?: number }
   /** A refused write may hand back what is stored, for the caller to keep beside its own. */
   /** `started` is the server's begun list or its tombstone, on a write that lost (shared Continue). */
-  | { kind: "conflict"; board?: unknown; status?: string; started?: unknown }
+  | { kind: "conflict"; board?: unknown; status?: string; started?: unknown; photo?: unknown }
   | { kind: "tooLarge"; detail: string | null }
   /**
    * A refused request, with the proxy's code for what was wrong (NAME_TAKEN,
@@ -116,6 +116,8 @@ export class ApiFailure extends Error {
 
 interface ErrorBody {
   error?: unknown;
+  /** 409 of a photo's Undo: the photo uploaded since, which stays. */
+  photo?: unknown;
   code?: unknown;
   id?: unknown;
   why?: unknown;
@@ -275,6 +277,7 @@ export function parseApiError(
         kind: "conflict",
         ...(body.board === undefined ? {} : { board: body.board }),
         ...(body.started === undefined ? {} : { started: body.started }),
+        ...(body.photo === undefined ? {} : { photo: body.photo }),
         ...(status === null ? {} : { status }),
       };
     }

@@ -6,6 +6,9 @@ import {
   type LoadLists,
   type MakeFace,
   type UploadFace,
+  type LoadPhoto,
+  type RemovePhoto,
+  type RestorePhoto,
 } from "../features/account/FaceSection";
 import { LanguageCard } from "../features/account/LanguageCard";
 import { NameSection, type Rename } from "../features/account/NameSection";
@@ -22,7 +25,10 @@ import { ThemeSwitch } from "../app/ThemeSwitch";
 import {
   eraseMyAccount,
   loadMyLists,
+  loadPhotoSlot,
   makeFace as makeFaceOf,
+  removePhotoSlot,
+  restorePhotoSlot,
   refreshPublishedAuthor,
 } from "../lib/api";
 import { type CutFace, cutFaceOnCanvas, uploadPicture } from "../lib/pictures";
@@ -38,7 +44,15 @@ import { sayOnTheSite } from "../ui/siteNotice";
 import "./SettingsPage.css";
 import { usePageTitle } from "../app/pageTitle";
 
-export type { Face, LoadLists, MakeFace, UploadFace } from "../features/account/FaceSection";
+export type {
+  Face,
+  LoadLists,
+  LoadPhoto,
+  MakeFace,
+  RemovePhoto,
+  RestorePhoto,
+  UploadFace,
+} from "../features/account/FaceSection";
 export type { Rename } from "../features/account/NameSection";
 export type RefreshAuthor = () => Promise<unknown>;
 export type Erase = () => Promise<void>;
@@ -49,6 +63,9 @@ interface SettingsPageProps {
   face?: Face;
   upload?: UploadFace;
   makeFace?: MakeFace;
+  loadPhoto?: LoadPhoto;
+  removePhoto?: RemovePhoto;
+  restorePhoto?: RestorePhoto;
   cut?: CutFace;
   refreshAuthor?: RefreshAuthor;
   erase?: Erase;
@@ -311,6 +328,9 @@ export function SettingsPage({
   // A face is cut to its square already: it goes up as it is.
   upload = (square) => uploadPicture(square, async (bytes) => bytes),
   makeFace = makeFaceOf,
+  loadPhoto = loadPhotoSlot,
+  removePhoto = removePhotoSlot,
+  restorePhoto = restorePhotoSlot,
   cut = cutFaceOnCanvas,
   refreshAuthor = refreshPublishedAuthor,
   erase = eraseMyAccount,
@@ -383,6 +403,9 @@ export function SettingsPage({
             face={face}
             upload={upload}
             makeFace={makeFace}
+            loadPhoto={loadPhoto}
+            removePhoto={removePhoto}
+            restorePhoto={restorePhoto}
             cut={cut}
             show={showFace}
             publish={publish}

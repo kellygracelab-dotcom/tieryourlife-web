@@ -188,7 +188,7 @@ export function ColourPicker({ signedIn }: { signedIn: boolean }) {
   const tones = (colour: SiteColour): Tones | null => {
     if (colour === "lavender") return LAVENDER;
     if (palette === null) return null;
-    if (colour !== "custom") return tonesOf(palette.rolesOf(PRESET_HUES[colour], false));
+    if (colour !== "custom") return tonesOf(palette.rolesFor(colour, false));
     // One's own circle is the wheel of hues until it is chosen, then two tones of its hue.
     return ownHue === null ? null : tonesOf(palette.rolesOf(ownHue, false));
   };

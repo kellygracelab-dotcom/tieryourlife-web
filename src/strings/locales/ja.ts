@@ -86,6 +86,10 @@ const ja: Translation = {
     faceGallery: "ギャラリーの写真",
     faceGalleryCaption: "アップロード",
     facePhotoCaption: "あなたの写真",
+    faceRemovePhoto: "写真を削除",
+    facePhotoRemoved: "写真を削除しました",
+    facePhotoGone: "写真はもう元に戻せません。",
+    faceUndo: "元に戻す",
     faceNote:
       "公開したリストでは、名前の横にアイコンが表示されます。選んだカードや写真は確認され、アカウントに保存されます。",
     faceNotMade: "この画像はプロフィールに使えません。別のものを選んでください。",

@@ -93,6 +93,10 @@ const fr: Translation = {
     faceGallery: "Une photo de la galerie",
     faceGalleryCaption: "Importer",
     facePhotoCaption: "Votre photo",
+    faceRemovePhoto: "Retirer votre photo",
+    facePhotoRemoved: "Photo retirée",
+    facePhotoGone: "Trop tard pour remettre la photo.",
+    faceUndo: "Annuler",
     faceNote:
       "Votre image apparaît à côté de votre nom sur les listes que vous publiez. La carte ou la photo choisie est vérifiée et gardée avec votre compte.",
     faceNotMade: "Cette image ne peut pas être votre photo. Choisissez-en une autre.",

@@ -1,16 +1,18 @@
 import {
+  DynamicScheme,
   Hct,
   hexFromArgb,
   MaterialDynamicColors,
-  SchemeTonalSpot,
+  TonalPalette,
   type DynamicColor,
 } from "@material/material-color-utilities";
+import { PRESET_ROLES } from "./presetPalettes";
 
 /**
- * A whole palette from one hue (artboards 58–59), built as the app and the
- * backend's vectors build it: Material Color Utilities 0.3.0, the seed
- * Hct.from(hue, 36, 50), SchemeTonalSpot at contrast 0, light and dark from
- * the same seed. Only Lavender is drawn by hand (tokens.css).
+ * The site's palettes (artboards 58–59), the same as the app's and the
+ * backend's shared vectors: Matcha, Peach and Sky are fixed tables
+ * (presetPalettes.ts); one's own colour is built from its hue with Material
+ * Color Utilities 0.3.0 (rolesOf). Only Lavender is drawn by hand (tokens.css).
  */
 export const ROLES = [
   "primary",
@@ -58,15 +60,44 @@ export type Roles = Record<Role, string>;
 export const seedOf = (hue: number): string =>
   hexFromArgb(Hct.from(hue, 36, 50).toInt()).toUpperCase();
 
-/** Every role of a hue's palette, light or dark, as "#RRGGBB". */
+/** Variant.TONAL_SPOT; 0.3.0 does not export the enum. */
+const TONAL_SPOT = 2 as ConstructorParameters<typeof DynamicScheme>[0]["variant"];
+
+/**
+ * Every role of one's own hue's palette, light or dark, as "#RRGGBB"
+ * (Proxy #172): TonalSpot's five palettes around the seed's hue, with the
+ * neutrals a little stronger than TonalSpot's own (8 and 10 in place of 6
+ * and 8), so the page takes the hue's tint as the ready colours do.
+ */
 export function rolesOf(hue: number, dark: boolean): Roles {
-  const seed = Hct.fromInt(Hct.from(hue, 36, 50).toInt());
-  const scheme = new SchemeTonalSpot(seed, dark, 0);
+  const at = Hct.fromInt(Hct.from(hue, 36, 50).toInt()).hue;
+  const tonal = (h: number, chroma: number) => TonalPalette.fromHueAndChroma(h, chroma);
+  const primary = tonal(at, 36);
+  const scheme = new DynamicScheme({
+    sourceColorArgb: primary.keyColor.toInt(),
+    variant: TONAL_SPOT,
+    contrastLevel: 0,
+    isDark: dark,
+    primaryPalette: primary,
+    secondaryPalette: tonal(at, 16),
+    tertiaryPalette: tonal((at + 60) % 360, 24),
+    neutralPalette: tonal(at, 8),
+    neutralVariantPalette: tonal(at, 10),
+  });
   const colours = MaterialDynamicColors as unknown as Record<Role, DynamicColor>;
   return Object.fromEntries(
     ROLES.map((role) => [role, hexFromArgb(colours[role].getArgb(scheme)).toUpperCase()]),
   ) as Roles;
 }
+
+/** A ready colour's name, or one's own hue. */
+export type PaletteSource = keyof typeof PRESET_ROLES | number;
+
+/** The roles a palette is drawn in: a ready colour's fixed table, or built from one's own hue. */
+export const rolesFor = (source: PaletteSource, dark: boolean): Roles =>
+  typeof source === "number"
+    ? rolesOf(source, dark)
+    : PRESET_ROLES[source][dark ? "dark" : "light"];
 
 /**
  * The site's tokens from a palette's roles. The page is surfaceContainerHigh
@@ -108,13 +139,13 @@ const block = (selector: string, tokens: Record<string, string>): string =>
     .join(";")}}`;
 
 /**
- * The stylesheet that draws the site in a hue's palette, over tokens.css:
- * the light for the light scheme, the dark for the dark one, chosen or the
+ * The stylesheet that draws the site in a palette, over tokens.css: the
+ * light for the light scheme, the dark for the dark one, chosen or the
  * system's. `:root:root` outranks the hand-made palette wherever it stands.
  */
-export function paletteCss(hue: number): string {
-  const light = tokensOf(rolesOf(hue, false), false);
-  const dark = tokensOf(rolesOf(hue, true), true);
+export function paletteCss(source: PaletteSource): string {
+  const light = tokensOf(rolesFor(source, false), false);
+  const dark = tokensOf(rolesFor(source, true), true);
   return [
     block(":root:root", light),
     `@media (prefers-color-scheme: dark){${block(':root:root:not([data-theme="light"])', dark)}}`,

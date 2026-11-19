@@ -101,6 +101,10 @@ const pl: Translation = {
     faceGallery: "Zdjęcie z galerii",
     faceGalleryCaption: "Prześlij",
     facePhotoCaption: "Twoje zdjęcie",
+    faceRemovePhoto: "Usuń swoje zdjęcie",
+    facePhotoRemoved: "Zdjęcie usunięte",
+    facePhotoGone: "Za późno, by przywrócić zdjęcie.",
+    faceUndo: "Cofnij",
     faceNote:
       "Inni widzą twoje zdjęcie obok twojej nazwy na listach, które publikujesz. Wybrana karta lub zdjęcie są sprawdzane i przechowywane przy twoim koncie.",
     faceNotMade: "To zdjęcie nie może być Twoim awatarem. Wybierz inne.",

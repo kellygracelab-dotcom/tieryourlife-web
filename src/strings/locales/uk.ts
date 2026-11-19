@@ -94,6 +94,10 @@ const uk: Translation = {
     faceGallery: "Фото з галереї",
     faceGalleryCaption: "Завантажити",
     facePhotoCaption: "Ваше фото",
+    faceRemovePhoto: "Видалити ваше фото",
+    facePhotoRemoved: "Фото видалено",
+    facePhotoGone: "Повернути фото вже не можна.",
+    faceUndo: "Скасувати",
     faceNote:
       "Ваш аватар видно поруч з іменем на списках, які ви публікуєте. Вибрана картка чи фото перевіряються й зберігаються з вашим акаунтом.",
     faceNotMade: "Ця картинка не може бути вашою аватаркою. Оберіть іншу.",

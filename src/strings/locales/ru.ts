@@ -96,6 +96,10 @@ const ru: Translation = {
     faceGallery: "Фото из галереи",
     faceGalleryCaption: "Загрузить",
     facePhotoCaption: "Ваше фото",
+    faceRemovePhoto: "Удалить ваше фото",
+    facePhotoRemoved: "Фото удалено",
+    facePhotoGone: "Вернуть фото уже нельзя.",
+    faceUndo: "Отменить",
     faceNote:
       "Ваш аватар виден рядом с именем на опубликованных вами списках. Выбранная карточка или фото проверяются и хранятся с вашим аккаунтом.",
     faceNotMade: "Эта картинка не может быть вашей аватаркой. Выберите другую.",

@@ -79,6 +79,10 @@ export const en = {
     faceGallery: "A photo from the gallery",
     faceGalleryCaption: "Upload",
     facePhotoCaption: "Your photo",
+    faceRemovePhoto: "Remove your photo",
+    facePhotoRemoved: "Photo removed",
+    facePhotoGone: "Too late to bring the photo back.",
+    faceUndo: "Undo",
     faceNote:
       "People see your face next to your name on the lists you publish. A card or a photo you pick is checked and kept with your account.",
     faceNotMade: "That picture cannot be your face. Pick another.",

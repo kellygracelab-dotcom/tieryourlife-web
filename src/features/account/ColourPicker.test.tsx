@@ -58,16 +58,16 @@ describe("the colour picker", () => {
   });
 
   it("draws each ready colour in two tones of its light palette, and one's own as the wheel", async () => {
-    const { rolesOf } = await import("../../lib/palette");
+    const { rolesFor } = await import("../../lib/palette");
     render(<ColourPicker signedIn={false} />);
     const disc = (name: string) => radio(name).querySelector<HTMLElement>(".colour__disc")!;
     await waitFor(() =>
       expect(disc(strings.colour.matcha).style.getPropertyValue("--swatch-primary")).toBe(
-        rolesOf(125, false).primary,
+        rolesFor("matcha", false).primary,
       ),
     );
     expect(disc(strings.colour.matcha).style.getPropertyValue("--swatch-container")).toBe(
-      rolesOf(125, false).primaryContainer,
+      rolesFor("matcha", false).primaryContainer,
     );
     expect(disc(strings.colour.lavender).style.getPropertyValue("--swatch-primary")).toBe(
       "#4A5BAA",
@@ -88,10 +88,10 @@ describe("the colour picker", () => {
 
     await userEvent.click(radio(strings.colour.sky));
     await userEvent.click(radio(strings.colour.custom));
-    expect(screen.getByRole("slider", { name: strings.colour.hue })).toHaveValue("212");
+    expect(screen.getByRole("slider", { name: strings.colour.hue })).toHaveValue("220");
     const dialog = screen.getByRole("dialog", { name: strings.colour.yourColour });
     await waitFor(() =>
-      expect(dialog.style.getPropertyValue("--own-button")).toBe(rolesOf(212, false).primary),
+      expect(dialog.style.getPropertyValue("--own-button")).toBe(rolesOf(220, false).primary),
     );
     fireEvent.change(screen.getByRole("slider", { name: strings.colour.hue }), {
       target: { value: "30" },
