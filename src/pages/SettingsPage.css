@@ -188,9 +188,10 @@
   object-fit: cover;
 }
 
+/* Material's container pair (QA 19.11, D14): the letter stays legible in every palette, dark ones too. */
 .settings__choice--letter {
-  background: color-mix(in srgb, var(--link) 22%, var(--surface));
-  color: var(--link-hover);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
   font: 500 28px/1 var(--font);
 }
 

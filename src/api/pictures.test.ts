@@ -8,6 +8,7 @@ import {
   scopeFor,
   searchPictureBatch,
   searchPictures,
+  uploadsLeft,
 } from "./pictures";
 
 function recordingClient(result: unknown) {
@@ -410,5 +411,42 @@ describe("the batch of a pasted list's names (stage 2)", () => {
     });
     expect(results[3]).toEqual({ q: "One Piece", status: "busy", retryAt: 1_700_000_000_000 });
     expect(results[4]).toEqual({ q: "Naruto 2", status: "limited", retryAt: null });
+  });
+});
+
+// Proxy #174 (19.11.2026).
+describe("the day's own uploads", () => {
+  it("asks for a whole selection, at most a hundred at once, and reads the answer", async () => {
+    const { client, request } = recordingClient({
+      uploads: {
+        used: 185,
+        left: 15,
+        limit: 200,
+        guest: true,
+        warnAt: 180,
+        resetsAt: 1_800_000_000_000,
+      },
+    });
+    await expect(uploadsLeft(client, 3)).resolves.toEqual({
+      used: 185,
+      left: 15,
+      limit: 200,
+      guest: true,
+      warnAt: 180,
+      resetsAt: 1_800_000_000_000,
+    });
+    expect(request).toHaveBeenCalledWith("GET", "/lists/pictures/uploads", { query: { count: 3 } });
+    await uploadsLeft(client, 250);
+    expect(request).toHaveBeenLastCalledWith("GET", "/lists/pictures/uploads", {
+      query: { count: 100 },
+    });
+  });
+
+  it("takes an answer it cannot read as room enough", async () => {
+    const { client } = recordingClient({});
+    await expect(uploadsLeft(client, 1)).resolves.toMatchObject({
+      left: Number.POSITIVE_INFINITY,
+      warnAt: null,
+    });
   });
 });

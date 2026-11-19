@@ -387,3 +387,44 @@ export async function linkQuota(client: ApiClient): Promise<LinkQuota | null> {
   const answer = await client.request<{ quota?: unknown }>("GET", "/lists/pictures/link");
   return quotaOf(answer.quota);
 }
+
+/** The day's own uploads as the backend counts them (GET /lists/pictures/uploads). */
+export interface UploadAllowance {
+  used: number;
+  left: number;
+  limit: number;
+  guest: boolean;
+  /** For a guest, the count past which signing in may be offered; null for an account. */
+  warnAt: number | null;
+  /** The next UTC midnight, in ms. */
+  resetsAt: number;
+}
+
+/** The most a client may ask about at once (`count` 1-100). */
+export const MAX_UPLOADS_ASKED = 100;
+
+/**
+ * Whether `count` more own pictures fit today, asked once for a whole
+ * selection before any goes up: the backend removes an upload past the day's
+ * limit after it lands. Refused with 429 SIGN_IN_FOR_MORE_UPLOADS (a guest) or
+ * UPLOAD_DAILY_LIMIT (an account); asking counts nothing (since 19.11.2026).
+ */
+export async function uploadsLeft(client: ApiClient, count: number): Promise<UploadAllowance> {
+  const asked = Math.min(MAX_UPLOADS_ASKED, Math.max(1, Math.floor(count)));
+  const answer = await client.request<{ uploads?: Partial<UploadAllowance> }>(
+    "GET",
+    "/lists/pictures/uploads",
+    { query: { count: asked } },
+  );
+  const uploads = answer.uploads ?? {};
+  const whole = (value: unknown): number | null =>
+    typeof value === "number" && Number.isFinite(value) ? value : null;
+  return {
+    used: whole(uploads.used) ?? 0,
+    left: whole(uploads.left) ?? Number.POSITIVE_INFINITY,
+    limit: whole(uploads.limit) ?? Number.POSITIVE_INFINITY,
+    guest: uploads.guest === true,
+    warnAt: whole(uploads.warnAt),
+    resetsAt: whole(uploads.resetsAt) ?? 0,
+  };
+}

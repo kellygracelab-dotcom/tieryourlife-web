@@ -1,7 +1,7 @@
 import { attributionOf } from "../../api/pictureAttribution";
 import { creditOf } from "../../api/pictureCredit";
 import type { PublishedList } from "../../api/types";
-import { publishedPictureOf, type UploadedPicture } from "../../lib/pictures";
+import { askUploads, publishedPictureOf, type UploadedPicture } from "../../lib/pictures";
 import type { KeyValueStore } from "../../lib/storage";
 import { draftOf, loadEditorDraft, NEW_DRAFT_KEY, type Draft } from "../editor/model";
 import type { Board, NextUid } from "./model";
@@ -107,6 +107,7 @@ export async function boardForOwnList(
   copyBack: CopyBack,
   now: number,
   nextUid: NextUid,
+  ask: (count: number) => Promise<unknown> = askUploads,
 ): Promise<Board> {
   const draft = kept ?? draftOf(list);
   const wanted = [
@@ -121,6 +122,8 @@ export async function boardForOwnList(
       ),
     ]),
   ];
+  // Asked once for all of them: each copy is an upload of the day's.
+  await ask(wanted.length);
   const copies = new Map<string, UploadedPicture>();
   for (let start = 0; start < wanted.length; start += COPIES_AT_ONCE) {
     const batch = wanted.slice(start, start + COPIES_AT_ONCE);

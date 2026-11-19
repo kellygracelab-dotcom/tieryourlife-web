@@ -307,6 +307,7 @@ const de: Translation = {
     webDailyLimit:
       "Die Websuche ist für heute aufgebraucht. Die Kataloge suchen weiter – morgen wieder überall.",
     webOff: "Die Websuche ist gerade aus. Die Kataloge suchen weiter.",
+    pictureUploadLimit: "Du hast heute sehr viele Bilder hinzugefügt. Versuch es morgen wieder.",
     pictureDailyLimit:
       "Für heute sind das alle Bilder aus dem Web. Nimm eins aus einem Katalog oder lade dein eigenes hoch.",
     kinds: {

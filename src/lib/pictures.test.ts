@@ -25,13 +25,16 @@ vi.mock("./firebase", () => ({
 }));
 
 import { ApiFailure } from "../api/errors";
+import type { UploadAllowance } from "../api/pictures";
 import {
+  askUploads,
   copyPublishedBack,
   cropSectionOnCanvas,
   cutFaceOnCanvas,
   dataUrlOf,
   discardPictures,
   FACE_EDGE,
+  forgetUploadRoom,
   keepWebPicture,
   JPEG_QUALITY,
   MAX_BYTES,
@@ -54,6 +57,7 @@ beforeEach(() => {
   mocks.deleteObject.mockClear();
   mocks.ref.mockClear();
   shrink.mockClear();
+  forgetUploadRoom();
 });
 
 describe("uploadPicture", () => {
@@ -122,6 +126,65 @@ describe("uploadPicture", () => {
     const failure = await uploadPicture(image(), shrink).catch((e: unknown) => e);
     expect(failure).toBeInstanceOf(PictureRefused);
     expect((failure as PictureRefused).reason).toBe("upload");
+  });
+});
+
+// Proxy #174: the day's own uploads are asked about before they go up.
+describe("the day's own uploads", () => {
+  const room = (left: number): UploadAllowance => ({
+    used: 2000 - left,
+    left,
+    limit: 2000,
+    guest: false,
+    warnAt: null,
+    resetsAt: 0,
+  });
+
+  it("asks once for a selection, and its pictures then go up without asking", async () => {
+    const ask = vi.fn(async () => room(10));
+    await askUploads(2, ask);
+    expect(ask).toHaveBeenCalledWith(2);
+    await uploadPicture(image(), shrink, () => "a", ask);
+    await uploadPicture(image(), shrink, () => "b", ask);
+    expect(ask).toHaveBeenCalledTimes(1);
+    // A third is a new question, for itself.
+    await uploadPicture(image(), shrink, () => "c", ask);
+    expect(ask).toHaveBeenCalledTimes(2);
+    expect(ask).toHaveBeenLastCalledWith(1);
+    expect(mocks.uploadBytes).toHaveBeenCalledTimes(3);
+  });
+
+  it("sends nothing past the account's day, and asks a guest to sign in", async () => {
+    const full = vi.fn(async () => {
+      throw new ApiFailure({ kind: "tooManyRequests", code: "UPLOAD_DAILY_LIMIT", retryAt: 1 });
+    });
+    await expect(uploadPicture(image(), shrink, () => "x", full)).rejects.toMatchObject({
+      reason: "uploadLimit",
+    });
+    const guest = vi.fn(async () => {
+      throw new ApiFailure({ kind: "tooManyRequests", code: "SIGN_IN_FOR_MORE_UPLOADS" });
+    });
+    await expect(askUploads(3, guest)).rejects.toMatchObject({ reason: "signIn" });
+    expect(mocks.uploadBytes).not.toHaveBeenCalled();
+  });
+
+  it("lets the first that still fit go, a selection over a hundred checked against what is left", async () => {
+    const ask = vi.fn(async () => room(120));
+    await expect(askUploads(150, ask)).resolves.toBe(120);
+    await expect(askUploads(30, ask)).resolves.toBe(30);
+    const some = vi.fn(async () => {
+      throw new ApiFailure({ kind: "tooManyRequests", code: "UPLOAD_DAILY_LIMIT", left: 4 });
+    });
+    await expect(askUploads(10, some)).resolves.toBe(4);
+  });
+
+  it("uploads as before when the backend does not answer", async () => {
+    const silent = vi.fn(async () => {
+      throw new ApiFailure({ kind: "unknown", status: 404 });
+    });
+    await expect(uploadPicture(image(), shrink, () => "y", silent)).resolves.toMatchObject({
+      pictureId: "y",
+    });
   });
 });
 

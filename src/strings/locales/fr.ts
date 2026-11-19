@@ -319,6 +319,7 @@ const fr: Translation = {
     webDailyLimit:
       "La recherche sur le web est épuisée pour aujourd’hui. Les catalogues cherchent toujours ; demain, partout à nouveau.",
     webOff: "La recherche sur le web est coupée pour l’instant. Les catalogues cherchent toujours.",
+    pictureUploadLimit: "Vous avez ajouté beaucoup d’images aujourd’hui. Réessayez demain.",
     pictureDailyLimit:
       "C’est tout pour les images du web aujourd’hui. Choisissez-en une dans un catalogue ou importez la vôtre.",
     kinds: {

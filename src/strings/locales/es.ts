@@ -313,6 +313,7 @@ const es: Translation = {
     webDailyLimit:
       "La búsqueda web de hoy se agotó. Los catálogos siguen buscando; mañana, otra vez en todas partes.",
     webOff: "La búsqueda web está desactivada por ahora. Los catálogos siguen buscando.",
+    pictureUploadLimit: "Hoy agregaste muchas imágenes. Vuelve a intentarlo mañana.",
     pictureDailyLimit:
       "Ya no quedan imágenes de la web por hoy. Elige una de un catálogo o sube la tuya.",
     kinds: {

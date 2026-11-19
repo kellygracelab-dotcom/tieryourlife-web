@@ -320,6 +320,7 @@ const pl: Translation = {
     webDailyLimit:
       "Wyszukiwanie w internecie na dziś się skończyło. Katalogi dalej szukają — jutro znowu wszędzie.",
     webOff: "Wyszukiwanie w internecie jest na razie wyłączone. Katalogi dalej szukają.",
+    pictureUploadLimit: "Dodano dziś bardzo dużo obrazków. Spróbuj ponownie jutro.",
     pictureDailyLimit:
       "Na dziś to wszystkie obrazki z internetu. Wybierz z katalogu albo prześlij własny.",
     kinds: {

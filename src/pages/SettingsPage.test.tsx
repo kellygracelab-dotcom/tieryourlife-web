@@ -79,6 +79,7 @@ const makeFace = vi.fn<MakeFace>();
 const loadPhoto = vi.fn<LoadPhoto>();
 const removePhoto = vi.fn<RemovePhoto>();
 const restorePhoto = vi.fn<RestorePhoto>();
+const reread = vi.fn(async () => undefined);
 const cut = vi.fn<CutFace>();
 const showFace = vi.fn<(photoUrl: string | null | undefined) => void>();
 const CUT = new Blob(["face"], { type: "image/jpeg" });
@@ -112,6 +113,7 @@ const open = (
           loadPhoto={loadPhoto}
           removePhoto={removePhoto}
           restorePhoto={restorePhoto}
+          reread={reread}
           cut={cut}
           refreshAuthor={refreshAuthor}
           erase={erase}
@@ -169,6 +171,7 @@ beforeEach(() => {
   removePhoto.mockReset();
   removePhoto.mockResolvedValue({ wasWorn: false, undoUntil: null });
   restorePhoto.mockReset();
+  reread.mockClear();
   useCardFaceStoreForTests(memoryStore());
 });
 
@@ -728,6 +731,32 @@ describe("SettingsPage", () => {
       expect(within(second).getByRole("button", { name: "Your photo" })).toBeInTheDocument(),
     );
     expect(screen.getAllByRole("alert").at(-1)).toHaveTextContent("Couldn’t save");
+  });
+
+  // QA 19.11, D13: the face is worn by the site's address, the slot names Storage's.
+  it("marks the photo worn when the face is the same picture by another address", async () => {
+    const STORED =
+      "https://firebasestorage.googleapis.com/v0/b/tieryourlife.firebasestorage.app/o/avatars%2Fu1%2Fp1?alt=media";
+    loadPhoto.mockResolvedValue({ pictureId: "p1", url: STORED, setAt: 1 });
+    open({ ...member, photoUrl: "https://tieryourlife.web.app/img/original/avatars/u1/p1" });
+    const photo = await within(faces()).findByRole("button", { name: "Your photo" });
+    await waitFor(() => expect(photo).toHaveAttribute("aria-pressed", "true"));
+    expect(within(faces()).getByRole("button", { name: "Just the letter" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  // QA 19.11, D12: the server may have removed it before it failed; the page shows what it has.
+  it("reads the photo and the face again when the server failed a removal", async () => {
+    const PHOTO = "https://faces/p1.jpg";
+    loadPhoto.mockResolvedValue({ pictureId: "p1", url: PHOTO, setAt: 1 });
+    removePhoto.mockRejectedValue(new Error("503"));
+    open({ ...member, photoUrl: PHOTO });
+    await userEvent.click(await screen.findByRole("button", { name: "Remove your photo" }));
+    await waitFor(() => expect(reread).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(loadPhoto).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(showFace).toHaveBeenLastCalledWith(undefined));
   });
 
   it("keeps the back-up on, and says so, when the account would not delete the copy", async () => {

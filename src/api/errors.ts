@@ -85,7 +85,7 @@ export type ApiError =
    * VISION_DAILY_LIMIT (the day's photographs checked) and REPORT_DAILY_LIMIT
    * (the day's new reports), none until `retryAt`.
    */
-  | { kind: "tooManyRequests"; code: string | null; retryAt?: number }
+  | { kind: "tooManyRequests"; code: string | null; retryAt?: number; left?: number }
   /** Too many picture searches this hour or day (429 SEARCH_LIMIT): none until `retryAt`. */
   | { kind: "searchLimit"; retryAt?: number }
   /** Too many pictures from links this hour or day (429 LINK_LIMIT): none until `retryAt`. */
@@ -131,6 +131,7 @@ interface ErrorBody {
   section?: unknown;
   until?: unknown;
   retryAt?: unknown;
+  uploads?: unknown;
   because?: unknown;
   imageUrl?: unknown;
   itemIndex?: unknown;
@@ -331,9 +332,18 @@ export function parseApiError(
         };
       }
       const retryAt = publicationRetryAt(body.retryAt, retryAfter);
-      return retryAt === undefined
-        ? { kind: "tooManyRequests", code }
-        : { kind: "tooManyRequests", code, retryAt };
+      // The day's own uploads say how many still fit (Proxy #174).
+      const uploads = body.uploads;
+      const left =
+        typeof uploads === "object" && uploads !== null && "left" in uploads
+          ? indexOrNull(uploads.left)
+          : null;
+      return {
+        kind: "tooManyRequests",
+        code,
+        ...(retryAt === undefined ? {} : { retryAt }),
+        ...(left === null ? {} : { left }),
+      };
     }
     case 503: {
       if (code === "PICTURES_NOT_COPIED") {

@@ -302,6 +302,7 @@ export const en = {
     webDailyLimit:
       "Web search is used up for today. The catalogues still answer; tomorrow it’s everywhere again.",
     webOff: "Web search is off for now. The catalogues still answer.",
+    pictureUploadLimit: "You’ve added a lot of pictures today. Try again tomorrow.",
     pictureDailyLimit:
       "That’s all the web pictures for today. Pick one from a catalogue or upload your own.",
     kinds: {

@@ -12,7 +12,7 @@ import { useResource } from "../../lib/useResource";
 import { fill, strings } from "../../strings";
 import { Icon } from "../../ui/Icon";
 import { Skeleton } from "../../ui/Skeleton";
-import { faceChoicesOf } from "./faces";
+import { faceChoicesOf, samePicture } from "./faces";
 import { type FaceSource, PlaceFaceDialog, type Placed } from "./PlaceFaceDialog";
 import { SavedLine } from "./SavedLine";
 import { type Publish, useSaving } from "./useSaving";
@@ -49,6 +49,7 @@ const CAPTION_MAX = 12;
 function faceFailureText(name: string | null, reason: unknown): string {
   if (reason instanceof PictureRefused) {
     if (reason.reason === "signIn") return strings.new.pictureSignIn;
+    if (reason.reason === "uploadLimit") return strings.new.pictureUploadLimit;
     return name === null ? strings.settings.faceFailed : fill(strings.new.pictureFailed, { name });
   }
   const error = errorOf(reason);
@@ -77,6 +78,7 @@ export function FaceSection({
   cut,
   show,
   publish,
+  reread = async () => undefined,
 }: {
   uid: string;
   current: string | null;
@@ -92,6 +94,8 @@ export function FaceSection({
   /** Puts a face on the account before Firebase has it; undefined puts the account's own back. */
   show: (photoUrl: string | null | undefined) => void;
   publish: Publish;
+  /** The account's face as the server has it now, read again into the session. */
+  reread?: () => Promise<void>;
 }) {
   const loadFor = useCallback(() => load(), [load]);
   const { state, retry } = useResource(uid, loadFor);
@@ -103,16 +107,19 @@ export function FaceSection({
   // A card whose picture no longer loads is no choice: worn, it would be a
   // broken picture in the header. The face worn already stays in sight.
   const [dead, setDead] = useState<ReadonlySet<string>>(() => new Set());
-  const offered = choices.filter((choice) => !dead.has(choice.url) || choice.url === current);
+  const offered = choices.filter(
+    (choice) => !dead.has(choice.url) || samePicture(choice.url, current),
+  );
   const [cardFace, setCardFace] = useState(() => readCardFace(uid));
-  const cardWorn = cardFace !== null && cardFace.face === current;
-  const wears = (card: string) => card === current || (cardWorn && cardFace.card === card);
+  const cardWorn = cardFace !== null && samePicture(cardFace.face, current);
+  const wears = (card: string) =>
+    samePicture(card, current) || (cardWorn && cardFace.card === card);
 
   // The account's photo (Proxy #169): there whatever is worn, until a new
   // upload or Remove. Until the account has said, a face worn that is none
   // of the cards stands for it.
   const photoFor = useCallback(() => loadPhoto(), [loadPhoto]);
-  const { state: photoState } = useResource(uid, photoFor);
+  const { state: photoState, retry: rereadPhoto } = useResource(uid, photoFor);
   // An upload or a removal made here since the account said.
   const [changed, setChanged] = useState<{ url: string | null } | null>(null);
   // Removed, while its Undo is still on the screen.
@@ -121,7 +128,7 @@ export function FaceSection({
     state.status === "ready" &&
     current !== null &&
     !cardWorn &&
-    !choices.some((choice) => choice.url === current)
+    !choices.some((choice) => samePicture(choice.url, current))
       ? current
       : null;
   const fromAccount =
@@ -189,6 +196,7 @@ export function FaceSection({
       await saved();
     } catch (reason: unknown) {
       failed(faceFailureText(from, reason));
+      if (card === null) resync();
     }
   };
 
@@ -246,14 +254,14 @@ export function FaceSection({
     if (ownPhoto === null || busy) return;
     const was = ownPhoto;
     setHidden(was);
-    if (current === was) show(null);
+    if (samePicture(current, was)) show(null);
     setSaving({ status: "busy" });
     removePhoto().then(
       async (removed) => {
         setChanged({ url: null });
         setHidden(null);
         // The backend took it off the account already; this browser's sign-in learns it.
-        if (removed.wasWorn || current === was) await face(null).catch(() => undefined);
+        if (removed.wasWorn || samePicture(current, was)) await face(null).catch(() => undefined);
         await saved();
         sayOnTheSite({
           text: strings.settings.facePhotoRemoved,
@@ -264,8 +272,20 @@ export function FaceSection({
       () => {
         setHidden(null);
         failed();
+        resync();
       },
     );
+  };
+
+  // A photo change the server failed may still have been made there (QA
+  // 19.11, D12): the slot and the face are read again, and what the account
+  // has is shown rather than what this page guessed.
+  const resync = () => {
+    setChanged(null);
+    rereadPhoto();
+    void reread()
+      .catch(() => undefined)
+      .then(() => show(undefined));
   };
 
   const unreadable = () => {
@@ -306,13 +326,13 @@ export function FaceSection({
               type="button"
               className="settings__choice"
               aria-label={strings.settings.facePhotoCaption}
-              aria-pressed={current === ownPhoto && !cardWorn}
+              aria-pressed={samePicture(current, ownPhoto) && !cardWorn}
               onClick={() => {
-                if ((current !== ownPhoto || cardWorn) && !busy) wearAtOnce(ownPhoto);
+                if ((!samePicture(current, ownPhoto) || cardWorn) && !busy) wearAtOnce(ownPhoto);
               }}
             >
               <MediaImage src={ownPhoto} alt="" loading="lazy" />
-              {current === ownPhoto && !cardWorn && (
+              {samePicture(current, ownPhoto) && !cardWorn && (
                 <Icon name="check" className="settings__choice-check" />
               )}
             </button>
