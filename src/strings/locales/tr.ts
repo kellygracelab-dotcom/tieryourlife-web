@@ -86,10 +86,10 @@ const tr: Translation = {
   },
   settings: {
     faceGallery: "Galeriden bir fotoğraf",
-    faceGalleryCaption: "Fotoğraf",
+    faceGalleryCaption: "Yükle",
     facePhotoCaption: "Fotoğrafınız",
     faceNote:
-      "Kart görselleri web’de oldukları yerde kalır. Galeriden bir fotoğraf denetlenir ve hesabınızla saklanır.",
+      "Yayımladığınız listelerde profil resminiz adınızın yanında görünür. Seçtiğiniz kart ya da fotoğraf kontrol edilir ve hesabınızla saklanır.",
     faceNotMade: "Bu görsel profil resminiz olamaz. Başka birini seçin.",
     title: "Ayarlar",
     guestTitle: "Ayarlarınızı değiştirmek için oturum açın.",

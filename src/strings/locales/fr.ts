@@ -91,10 +91,10 @@ const fr: Translation = {
   },
   settings: {
     faceGallery: "Une photo de la galerie",
-    faceGalleryCaption: "Photo",
+    faceGalleryCaption: "Importer",
     facePhotoCaption: "Votre photo",
     faceNote:
-      "Les images des cartes restent là où elles vivent sur le web. Une photo de la galerie est vérifiée et conservée avec votre compte.",
+      "Votre image apparaît à côté de votre nom sur les listes que vous publiez. La carte ou la photo choisie est vérifiée et gardée avec votre compte.",
     faceNotMade: "Cette image ne peut pas être votre photo. Choisissez-en une autre.",
     title: "Paramètres",
     guestTitle: "Connectez-vous pour modifier vos paramètres.",

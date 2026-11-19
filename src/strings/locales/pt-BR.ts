@@ -88,10 +88,10 @@ const ptBR: Translation = {
   },
   settings: {
     faceGallery: "Uma foto da galeria",
-    faceGalleryCaption: "Foto",
+    faceGalleryCaption: "Enviar",
     facePhotoCaption: "Sua foto",
     faceNote:
-      "As imagens dos cartões ficam onde estão na web. Uma foto da galeria é verificada e guardada com sua conta.",
+      "As pessoas veem sua imagem ao lado do seu nome nas listas que você publica. O cartão ou a foto que você escolher é verificado e fica com sua conta.",
     faceNotMade: "Essa imagem não pode ser sua foto. Escolha outra.",
     title: "Configurações",
     guestTitle: "Entre para mudar suas configurações.",

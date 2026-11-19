@@ -87,10 +87,10 @@ const es: Translation = {
   },
   settings: {
     faceGallery: "Una foto de la galería",
-    faceGalleryCaption: "Foto",
+    faceGalleryCaption: "Subir",
     facePhotoCaption: "Tu foto",
     faceNote:
-      "Las imágenes de las tarjetas se quedan donde están en la web. Una foto de la galería se revisa y se guarda con tu cuenta.",
+      "La gente ve tu imagen junto a tu nombre en las listas que publicas. La tarjeta o la foto que elijas se revisa y se guarda con tu cuenta.",
     faceNotMade: "Esa imagen no puede ser tu foto. Elige otra.",
     title: "Ajustes",
     guestTitle: "Inicia sesión para cambiar tus ajustes.",
