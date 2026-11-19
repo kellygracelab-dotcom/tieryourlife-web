@@ -239,6 +239,12 @@ describe("parseApiError", () => {
       { kind: "tooManyRequests", code: "TOO_MANY_PROPOSALS" },
     ],
     [429, "", { kind: "tooManyRequests", code: null }],
+    // Proxy #174: how many of the day's own uploads still fit.
+    [
+      429,
+      json({ code: "UPLOAD_DAILY_LIMIT", retryAt: 1_800_000_000_000, uploads: { left: 3 } }),
+      { kind: "tooManyRequests", code: "UPLOAD_DAILY_LIMIT", retryAt: 1_800_000_000_000, left: 3 },
+    ],
     // Proxy #173 (19.11.2026): the day's photographs checked, and the day's reports.
     [
       429,

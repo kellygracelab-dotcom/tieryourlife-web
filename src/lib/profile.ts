@@ -35,6 +35,11 @@ export async function renameAccount(name: string): Promise<string> {
 }
 
 /** An https address someone else already hosts, or nothing: just the letter. */
+/** The account's name and face as Firebase has them now: the server may have changed them. */
+export async function rereadProfile(): Promise<void> {
+  await signedInUser().reload();
+}
+
 export async function setFace(photoURL: string | null): Promise<void> {
   const user = signedInUser();
   await updateProfile(user, { photoURL: photoURL ?? "" });

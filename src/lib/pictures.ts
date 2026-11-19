@@ -1,5 +1,6 @@
 import { mediaSrc } from "../../functions/src/publicMedia";
 import { errorOf } from "../api/errors";
+import type { UploadAllowance } from "../api/pictures";
 import { getFirebaseAuth, getFirebaseStorage } from "./firebase";
 import { MAX_PICTURE_BYTES, ownPictureRef, picturePath } from "./privatePictureRef";
 import { forgetPrivateBytes, keepPrivateBytes, privatePictureBytes } from "./privatePictureBytes";
@@ -159,8 +160,12 @@ export interface UploadedPicture {
   previewUrl: string;
 }
 
-/** dailyLimit: the backend copies only so many web pictures a day for one person. */
-export type PictureFailure = "signIn" | "notAnImage" | "tooBig" | "upload" | "dailyLimit";
+/**
+ * dailyLimit: the backend copies only so many web pictures a day for one
+ * person; uploadLimit: the account's own uploads for today are used up.
+ */
+export type PictureFailure =
+  "signIn" | "notAnImage" | "tooBig" | "upload" | "dailyLimit" | "uploadLimit";
 
 export class PictureRefused extends Error {
   readonly reason: PictureFailure;
@@ -173,6 +178,80 @@ export class PictureRefused extends Error {
 }
 
 export { picturePath } from "./privatePictureRef";
+
+export type AskUploads = (count: number) => Promise<UploadAllowance>;
+
+/**
+ * The backend's word, fetched with the first question (the API client is not
+ * needed before). A unit test has no backend to ask: there every upload fits,
+ * and a test of the limit hands in its own answer.
+ */
+const askBackend: AskUploads =
+  import.meta.env.MODE === "test"
+    ? async () => ({
+        used: 0,
+        left: Number.POSITIVE_INFINITY,
+        limit: Number.POSITIVE_INFINITY,
+        guest: false,
+        warnAt: null,
+        resetsAt: 0,
+      })
+    : async (count) => (await import("./api")).uploadsLeft(count);
+
+/**
+ * Uploads the backend said have room today, and until when the word holds:
+ * a selection is asked about once, and its pictures then go up without
+ * asking again (CONTRACT, GET /lists/pictures/uploads).
+ */
+const allowance = { room: 0, until: 0 };
+const ALLOWANCE_MS = 10 * 60_000;
+
+/** Forgets what was allowed: a new account, or a test. */
+export function forgetUploadRoom(): void {
+  allowance.room = 0;
+  allowance.until = 0;
+}
+
+/**
+ * Asks once how many of `count` own pictures fit today, before any of them
+ * goes up: the backend removes an upload past the day's limit after it lands,
+ * and its card would lose the picture. The first that many may go (CONTRACT,
+ * "the upload limit in short"); none fitting is refused as uploadLimit (an
+ * account) or signIn (a guest). A backend that does not answer leaves the
+ * uploads to go as before.
+ */
+export async function askUploads(count: number, ask: AskUploads = askBackend): Promise<number> {
+  if (count <= 0) return 0;
+  let left = Number.POSITIVE_INFINITY;
+  try {
+    ({ left } = await ask(count));
+  } catch (failure) {
+    const why = errorOf(failure);
+    if (why.kind === "tooManyRequests" && why.code === "UPLOAD_DAILY_LIMIT") left = why.left ?? 0;
+    else if (why.kind === "tooManyRequests" && why.code === "SIGN_IN_FOR_MORE_UPLOADS") {
+      if ((why.left ?? 0) <= 0) {
+        forgetUploadRoom();
+        throw new PictureRefused("signIn");
+      }
+      left = why.left ?? 0;
+    }
+  }
+  // One question covers up to 100; what is left says whether more fit.
+  const fit = Math.max(0, Math.min(count, left));
+  if (fit === 0) {
+    forgetUploadRoom();
+    throw new PictureRefused("uploadLimit");
+  }
+  allowance.room = (Date.now() < allowance.until ? allowance.room : 0) + fit;
+  allowance.until = Date.now() + ALLOWANCE_MS;
+  return fit;
+}
+
+/** One upload from what a selection was allowed, or asked about alone. */
+async function claimUpload(ask: AskUploads): Promise<void> {
+  if (allowance.room <= 0 || Date.now() >= allowance.until) await askUploads(1, ask);
+  allowance.room -= 1;
+}
 
 /** Storage's calls and the bucket, fetched with the first picture that needs them. */
 async function bucket() {
@@ -197,6 +276,7 @@ export async function uploadPicture(
   file: Blob,
   shrink: Shrink = shrinkOnCanvas,
   newId: () => string = () => crypto.randomUUID(),
+  ask: AskUploads = askBackend,
 ): Promise<UploadedPicture> {
   const uid = ownerUid();
   if (uid === null) throw new PictureRefused("signIn");
@@ -208,6 +288,7 @@ export async function uploadPicture(
     throw new PictureRefused("notAnImage");
   }
   if (bytes.size >= MAX_BYTES) throw new PictureRefused("tooBig");
+  await claimUpload(ask);
   const pictureId = newId();
   try {
     const { ref, storage, uploadBytes } = await bucket();
@@ -288,9 +369,11 @@ export function publishedPictureOf(url: string, listId: string): string | null {
 export async function copyPublishedBack(
   url: string,
   newId: () => string = () => crypto.randomUUID(),
+  ask: AskUploads = askBackend,
 ): Promise<UploadedPicture> {
   const uid = ownerUid();
   if (uid === null) throw new PictureRefused("signIn");
+  await claimUpload(ask);
   let bytes: Blob;
   try {
     const response = await fetch(mediaSrc(url));

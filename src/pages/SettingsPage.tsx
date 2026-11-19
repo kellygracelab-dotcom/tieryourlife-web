@@ -32,7 +32,7 @@ import {
   refreshPublishedAuthor,
 } from "../lib/api";
 import { type CutFace, cutFaceOnCanvas, uploadPicture } from "../lib/pictures";
-import { renameAccount, setFace } from "../lib/profile";
+import { renameAccount, rereadProfile, setFace } from "../lib/profile";
 import { appIsLive, FEEDBACK_EMAIL, onApple, playUrl, siteOrigin } from "../lib/links";
 import { localStorageStore } from "../lib/storage";
 import { fill, strings } from "../strings";
@@ -67,6 +67,8 @@ interface SettingsPageProps {
   removePhoto?: RemovePhoto;
   restorePhoto?: RestorePhoto;
   cut?: CutFace;
+  /** The account as Firebase has it now, after a change the server may have made. */
+  reread?: () => Promise<void>;
   refreshAuthor?: RefreshAuthor;
   erase?: Erase;
   share?: ShareSite;
@@ -332,6 +334,7 @@ export function SettingsPage({
   removePhoto = removePhotoSlot,
   restorePhoto = restorePhotoSlot,
   cut = cutFaceOnCanvas,
+  reread = rereadProfile,
   refreshAuthor = refreshPublishedAuthor,
   erase = eraseMyAccount,
   share = shareSite,
@@ -409,6 +412,10 @@ export function SettingsPage({
             cut={cut}
             show={showFace}
             publish={publish}
+            reread={async () => {
+              await reread();
+              refresh();
+            }}
           />
         </>
       )}

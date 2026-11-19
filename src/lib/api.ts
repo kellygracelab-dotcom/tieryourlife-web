@@ -164,6 +164,9 @@ export const findPictureBatch = (
 
 export const keepPicture = (url: string): Promise<string> => pictures.keepPicture(api, url);
 
+export const uploadsLeft = (count: number): Promise<pictures.UploadAllowance> =>
+  pictures.uploadsLeft(api, count);
+
 // A picture by its address; once the hour's or the day's are used up, none is
 // asked for until the time given.
 export const linkPicture: (ask: LinkAsk) => Promise<LinkAnswer> = limitedLink((ask) =>

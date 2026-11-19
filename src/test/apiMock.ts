@@ -34,6 +34,7 @@ export function apiStubs() {
     findPictureBatch: pending(),
     findPictures: pending(),
     keepPicture: pending(),
+    uploadsLeft: pending(),
     linkPicture: pending(),
     loadLinkQuota: pending(),
     publish: pending(),

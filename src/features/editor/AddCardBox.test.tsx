@@ -42,6 +42,7 @@ function setup({
   items = [],
   upload = vi.fn<Upload>(),
   guest = false,
+  askUploads,
 }: {
   find: FindPictures;
   keep?: Keep;
@@ -49,6 +50,7 @@ function setup({
   items?: EditorItem[];
   upload?: Upload;
   guest?: boolean;
+  askUploads?: (count: number) => Promise<number>;
 }) {
   const dispatch = vi.fn<(action: EditorAction) => void>();
   const signIn = vi.fn(async () => ({ kind: "failed" as const, code: "test" }));
@@ -67,6 +69,7 @@ function setup({
         find={find}
         upload={upload}
         keep={keep}
+        {...(askUploads === undefined ? {} : { askUploads })}
       />
     </SessionContext.Provider>,
   );
@@ -512,6 +515,45 @@ describe("AddCardBox", () => {
     await userEvent.click(screen.getByRole("button", { name: "Show more" }));
     expect(await screen.findByRole("button", { name: /Two/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+  });
+
+  // Proxy #174: past the day's uploads the backend would remove each one after it lands.
+  it("asks once for a whole selection, and sends none of it past the day's limit", async () => {
+    const upload = vi.fn<Upload>(async (file) => ({
+      pictureId: file.name,
+      previewUrl: `https://dl/${file.name}`,
+    }));
+    const askUploads = vi.fn(async () => {
+      throw new PictureRefused("uploadLimit");
+    });
+    const { dispatch } = setup({ find: async () => page([]), upload, askUploads });
+    const picker = document.querySelector<HTMLInputElement>("input[type='file']")!;
+    const png = (name: string) => new File(["x"], name, { type: "image/png" });
+    await userEvent.upload(picker, [png("a.png"), png("b.png"), png("c.png")]);
+    expect(
+      await screen.findByText("You’ve added a lot of pictures today. Try again tomorrow."),
+    ).toBeInTheDocument();
+    expect(askUploads).toHaveBeenCalledTimes(1);
+    expect(askUploads).toHaveBeenCalledWith(3);
+    expect(upload).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("sends the first pictures that still fit today, and says why the rest did not go", async () => {
+    const upload = vi.fn<Upload>(async (file) => ({
+      pictureId: file.name,
+      previewUrl: `https://dl/${file.name}`,
+    }));
+    const askUploads = vi.fn(async () => 2);
+    const { dispatch } = setup({ find: async () => page([]), upload, askUploads });
+    const picker = document.querySelector<HTMLInputElement>("input[type='file']")!;
+    const png = (name: string) => new File(["x"], name, { type: "image/png" });
+    await userEvent.upload(picker, [png("a.png"), png("b.png"), png("c.png")]);
+    expect(
+      await screen.findByText("You’ve added a lot of pictures today. Try again tomorrow."),
+    ).toBeInTheDocument();
+    expect(upload.mock.calls.map(([file]) => file.name)).toEqual(["a.png", "b.png"]);
+    expect(dispatch).toHaveBeenCalledTimes(2);
   });
 
   it("names a single picture with the words typed for it, and leaves several unnamed", async () => {

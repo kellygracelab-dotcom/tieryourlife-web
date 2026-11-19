@@ -303,6 +303,7 @@ const tr: Translation = {
     webDailyLimit:
       "Bugünkü web araması bitti. Kataloglar aramaya devam ediyor; yarın yine her yerde.",
     webOff: "Web araması şimdilik kapalı. Kataloglar aramaya devam ediyor.",
+    pictureUploadLimit: "Bugün çok sayıda görsel eklediniz. Yarın tekrar deneyin.",
     pictureDailyLimit:
       "Bugünlük web resimleri bu kadar. Bir katalogdan seçin ya da kendi resminizi yükleyin.",
     kinds: {

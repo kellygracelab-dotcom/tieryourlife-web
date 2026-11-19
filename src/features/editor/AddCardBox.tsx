@@ -20,7 +20,12 @@ import {
   pageLinkOf,
   type LinkedPicture,
 } from "../../lib/linkPictures";
-import { keepWebPicture, PictureRefused, type UploadedPicture } from "../../lib/pictures";
+import {
+  askUploads as askUploadRoom,
+  keepWebPicture,
+  PictureRefused,
+  type UploadedPicture,
+} from "../../lib/pictures";
 import { fill, plural, strings } from "../../strings";
 import { Button } from "../../ui/Button";
 import { Chip } from "../../ui/Chip";
@@ -84,6 +89,8 @@ interface AddCardBoxProps {
   /** A pasted list's names in batches (stage 2); without it, name by name. */
   findMany?: FindPictureBatch;
   upload: Upload;
+  /** Whether a selection of own pictures fits today, asked once before any goes up. */
+  askUploads?: (count: number) => Promise<number>;
   keep?: Keep;
   /** How a picture from a link is kept. */
   link?: LinkKeep;
@@ -189,6 +196,8 @@ export function pictureFailureText(name: string, failure: unknown): string {
       return fill(strings.new.pictureTooBig, { name });
     case "dailyLimit":
       return strings.new.pictureDailyLimit;
+    case "uploadLimit":
+      return strings.new.pictureUploadLimit;
     default:
       return fill(strings.new.pictureFailed, { name });
   }
@@ -234,6 +243,7 @@ export function AddCardBox({
   find = findPictures,
   findMany,
   upload,
+  askUploads = askUploadRoom,
   keep = (url) => keepWebPicture(url, keepPicture),
   link = defaultLink,
   incoming = null,
@@ -404,9 +414,23 @@ export function AddCardBox({
   // several dropped are named from their files.
   const addFiles = async (files: readonly File[], namedFromFiles: boolean) => {
     if (files.length === 0 || full()) return;
-    const [first, ...rest] = files.slice(0, room);
-    if (first === undefined) return;
+    const chosen = files.slice(0, room);
+    if (chosen.length === 0) return;
     setNote(files.length > room ? strings.new.tooManyCards : null);
+    // Asked once for the whole selection: past the day's limit the backend
+    // would remove each upload after it lands, so only the first that fit go.
+    // A guest's first upload asks them to sign in, as before.
+    let fit = chosen.length;
+    if (signedIn) {
+      try {
+        fit = await askUploads(chosen.length);
+      } catch (failure) {
+        setNote(pictureFailureText(chosen[0]?.name ?? "", failure));
+        return;
+      }
+    }
+    const [first, ...rest] = chosen.slice(0, fit);
+    if (first === undefined) return;
     setUploading(rest.length + 1);
     setUnnamed([]);
     const typedName = rest.length === 0 && linkTyped === null ? name : "";
@@ -443,6 +467,7 @@ export function AddCardBox({
         if (!(await take(item, result))) break;
       }
     }
+    if (fit < chosen.length) setNote(strings.new.pictureUploadLimit);
     setUploading(0);
   };
   const onFiles = (event: ChangeEvent<HTMLInputElement>) => {

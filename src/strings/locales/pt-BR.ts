@@ -312,6 +312,7 @@ const ptBR: Translation = {
     webDailyLimit:
       "A busca na web acabou por hoje. Os catálogos continuam buscando; amanhã, em tudo de novo.",
     webOff: "A busca na web está desligada por enquanto. Os catálogos continuam buscando.",
+    pictureUploadLimit: "Você adicionou muitas imagens hoje. Tente de novo amanhã.",
     pictureDailyLimit:
       "Acabaram as imagens da web por hoje. Escolha uma de um catálogo ou envie a sua.",
     kinds: {
